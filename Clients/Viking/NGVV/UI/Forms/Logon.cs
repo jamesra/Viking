@@ -78,16 +78,17 @@ namespace Viking.UI.Forms
                 System.IO.Directory.CreateDirectory(this.KeyFileFolderPath);
             }
 
-            this.textUsername.Text = readUserName = Viking.Properties.Settings.Default.CachedUsername;
+            
              
-            string cachedPassword = ReadStringFromEncryptedFile();
-            if (cachedPassword == null)
+            NetworkCredential cachedCredentials = ReadCredentialsFromEncryptedFile();
+            if (cachedCredentials == null)
             {
                 this.btnLogin.Enabled = false;
             }
             else
             {
-                this.textPassword.Text = cachedPassword;
+                this.textUsername.Text = readUserName = cachedCredentials.UserName;
+                this.textPassword.Text = cachedCredentials.Password;
                 this.btnLogin.Enabled = true;
                 this.AcceptButton = btnLogin;
             }
@@ -141,11 +142,9 @@ namespace Viking.UI.Forms
 
                 if (remember_me_check_box.Checked)
                 {
-                    Properties.Settings.Default["CachedUsername"] = this.userName;
-                    Properties.Settings.Default.Save();
                     try
                     {
-                        WriteStringInEncryptedFile(password);
+                        WriteCredentialsInEncryptedFile(new NetworkCredential(userName, password));
                     }
                     catch(IOException except)
                     {
@@ -177,13 +176,13 @@ namespace Viking.UI.Forms
 
         }
 
-        private bool WriteStringInEncryptedFile(string password)
+        private bool WriteCredentialsInEncryptedFile(NetworkCredential credentials)
         { 
             if (!System.IO.File.Exists(this.KeyFileFullPath))
             {
                 using (StreamWriter sw = new StreamWriter(System.IO.File.Create(this.KeyFileFullPath)))
                 {
-                    string content = password;
+                    string content = credentials.UserName + "," + credentials.Password;
                      
                     sw.Write(EncryptString(content, this.passkey));
 
@@ -200,9 +199,10 @@ namespace Viking.UI.Forms
             return false; 
         }
 
-        private string ReadStringFromEncryptedFile()
+        private NetworkCredential ReadCredentialsFromEncryptedFile()
         {
             string keyFileFullPath = this.KeyFileFullPath;
+            NetworkCredential credentials = null; 
             if (System.IO.File.Exists(KeyFileFullPath))
             {
 
@@ -213,11 +213,13 @@ namespace Viking.UI.Forms
                     using (StreamReader sr = new StreamReader(new FileStream(KeyFileFullPath, FileMode.Open, FileAccess.Read)))
                     {
 
-                        string data = DecryptString(sr.ReadToEnd(), passkey);
+                        string[] data = DecryptString(sr.ReadToEnd(), passkey).Split(',');
 
                         sr.Close();
 
-                        return String.Copy(data);
+                        credentials = new NetworkCredential(data[0], data[1]);
+
+                        return credentials;
                     }
                 }
                 catch (System.Exception e)
