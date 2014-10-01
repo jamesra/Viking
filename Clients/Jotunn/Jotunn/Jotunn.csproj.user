@@ -1,0 +1,29 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|AnyCPU'">
+    <StartArguments>http://connectomes.utah.edu/Rabbit/VolumeTest.xml</StartArguments>
+    <StartAction>Project</StartAction>
+    <StartProgram>C:\Users\Jamesan\AppData\Local\Apps\2.0\48BKH8X4.574\7QT5LH5A.D77\jotu..tion_e72036eea52768d7_0000.0001_dab9637c586fec37\Jotunn.exe</StartProgram>
+  </PropertyGroup>
+  <PropertyGroup>
+    <PublishUrlHistory>D:\src\Viking\PublishJotunn\|publishJotunn\|publish\</PublishUrlHistory>
+    <InstallUrlHistory>http://connectomes.utah.edu/JotunnTest/</InstallUrlHistory>
+    <SupportUrlHistory />
+    <UpdateUrlHistory />
+    <BootstrapperUrlHistory />
+    <ErrorReportUrlHistory />
+    <FallbackCulture>en-US</FallbackCulture>
+    <VerifyUploadedFiles>false</VerifyUploadedFiles>
+  </PropertyGroup>
+  <PropertyGroup>
+    <EnableSecurityDebugging>false</EnableSecurityDebugging>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|AnyCPU'">
+    <StartArguments>http://connectomes.utah.edu/Rabbit/VolumeTest.XML</StartArguments>
+    <StartWorkingDirectory>
+    </StartWorkingDirectory>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'ReleaseWithSymbols|AnyCPU'">
+    <StartArguments>http://connectomes.utah.edu/Rabbit/VolumeTest.XML</StartArguments>
+  </PropertyGroup>
+</Project>

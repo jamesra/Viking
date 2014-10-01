@@ -1,0 +1,2 @@
+﻿<%@ServiceHost Service="Annotation.AnnotateService"%>
+<%@Assembly Name="AnnotationService" %>

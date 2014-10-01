@@ -1,0 +1,113 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<xs:schema id="WebAnnotationUserSettings"
+    targetNamespace="http://connectomes.utah.edu/XSD/WebAnnotationUserSettings.xsd"
+    elementFormDefault="qualified"
+    xmlns="http://connectomes.utah.edu/XSD/WebAnnotationUserSettings.xsd"
+    xmlns:mstns="http://connectomes.utah.edu/XSD/WebAnnotationUserSettings.xsd"
+	  xmlns:xs="http://www.w3.org/2001/XMLSchema"
+>
+
+  <xs:element name="Parameters">
+    <xs:complexType>
+      <xs:choice minOccurs ="1" maxOccurs="unbounded">
+        <xs:element ref="Value"/>
+        <xs:element ref="Action"/>
+        <xs:element ref="Variable"/>
+      </xs:choice>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="Value">
+    <xs:complexType>
+      <xs:attribute name ="Type"  type="xs:string" default="System.String" use="optional">
+        <xs:annotation>
+          <xs:documentation>The .NET type of the parameter, defaults to string</xs:documentation>
+        </xs:annotation>
+      </xs:attribute>
+      <xs:attribute name="Value" type="xs:string" use="required">
+        <xs:annotation>
+          <xs:documentation>The value of the parameter</xs:documentation>
+        </xs:annotation>
+      </xs:attribute>
+      <xs:attribute name="Index"  type="xs:int" use ="required"/>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="Variable">
+    <xs:complexType>
+      <xs:attribute name="Object" type="xs:string" use="required"/>
+      <xs:attribute name="Property" type ="xs:string"  use="required">
+      
+        <xs:annotation>
+          <xs:documentation>The variable to use</xs:documentation>
+        </xs:annotation>
+      </xs:attribute>
+      <xs:attribute name="Index"  type="xs:int" use ="required"/>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="CreateStructureCommandAction">
+    <xs:complexType>
+      <xs:attribute name="TypeID" type="xs:integer" use="required"/>
+      <xs:attribute name="Name" type="xs:string" use="required"/>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="Action">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="Parameters" minOccurs ="1" maxOccurs ="1"/>
+      </xs:sequence>
+      <xs:attribute name="Name"  type ="xs:string" use="required">
+        <xs:annotation>
+          <xs:documentation>The name used to refer to this action elsewhere in the XML file.</xs:documentation>
+        </xs:annotation>
+      </xs:attribute>
+      <xs:attribute name="Type"  type ="xs:string" use ="required"/>
+      <xs:attribute name="Index"  type="xs:int" use ="optional"/>
+      <xs:attribute name="MethodName"  type ="xs:string" use="optional">
+        <xs:annotation>
+          <xs:documentation>Optional method name, if missing we invoke the type constructor with the parameters instead.</xs:documentation>
+        </xs:annotation>
+      </xs:attribute >
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="Hotkey">
+    <xs:complexType >
+      <xs:annotation>
+        <xs:documentation>Pressing the key creates an instance of the type with the following parameters passed to the constructor</xs:documentation>
+      </xs:annotation>
+
+      <xs:attribute name="KeyName" type="xs:string" use ="required"/>
+      <xs:attribute name ="Action" type="xs:string" use="required"/>
+      <xs:attribute name ="Shift"  type ="xs:boolean" default="0" use ="optional"/>
+      <xs:attribute name ="Ctrl"   type ="xs:boolean" default="0" use ="optional"/>
+      <xs:attribute name ="Alt"    type ="xs:boolean" default="0" use ="optional"/>
+    </xs:complexType>
+  </xs:element >
+
+  <xs:element name ="UserSettings">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Actions" minOccurs ="1" maxOccurs ="1">
+          <xs:complexType>
+            <xs:choice minOccurs ="1" maxOccurs="unbounded">
+              <xs:element ref="Action"/>
+              <xs:element ref="CreateStructureCommandAction"/>
+            </xs:choice>
+          </xs:complexType>
+        </xs:element >
+        <xs:element name="Shortcuts" minOccurs ="1" maxOccurs ="1">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element ref="Hotkey"  minOccurs ="0" maxOccurs ="unbounded">
+
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

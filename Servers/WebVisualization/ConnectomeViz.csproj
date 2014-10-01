@@ -1,0 +1,930 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>9.0.30729</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{BD6C2700-D37C-4D1A-9751-9E5E8B4A96E8}</ProjectGuid>
+    <ProjectTypeGuids>{E3E379DF-F4C6-4180-9B81-6769533ABE47};{349c5851-65df-11da-9384-00065b846f21};{fae04ec0-301f-11d3-bf4b-00c04f79efbc}</ProjectTypeGuids>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>ConnectomeViz</RootNamespace>
+    <AssemblyName>ConnectomeViz</AssemblyName>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <MvcBuildViews>false</MvcBuildViews>
+    <FileUpgradeFlags>0</FileUpgradeFlags>
+    <UpgradeBackupLocation>
+    </UpgradeBackupLocation>
+    <OldToolsVersion>4.0</OldToolsVersion>
+    <UseIISExpress>false</UseIISExpress>
+    <TargetFrameworkProfile />
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
+    <PublishDatabaseSettings>
+      <Objects>
+        <ObjectGroup Name="RabbitConnectionString-Deployment" Order="1">
+          <Destination Path="" />
+          <Object Type="dbFullSql">
+            <PreSource Path="Data Source=155.100.105.9,1433\SQLEXPRESS%3bInitial Catalog=Rabbit%3bPersist Security Info=True%3bUser ID=Website" ScriptSchema="True" ScriptData="False" CopyAllFullTextCatalogs="False" DriDefaults="True" />
+            <Source Path="obj\Debug\AutoScripts\RabbitConnectionString-Deployment_SchemaOnly.sql" Transacted="True" />
+          </Object>
+        </ObjectGroup>
+      </Objects>
+    </PublishDatabaseSettings>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Hammock.ClientProfile">
+      <HintPath>C:\Users\Shoeb\Desktop\lib\3.5\Hammock.ClientProfile.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Dynamic, Version=1.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\..\Program Files (x86)\IronPython 2.6\Microsoft.Dynamic.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Microsoft.Scripting, Version=1.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\..\Program Files (x86)\IronPython 2.6\Microsoft.Scripting.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Microsoft.Scripting.Core, Version=1.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\..\Program Files (x86)\IronPython 2.6\Microsoft.Scripting.Core.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Microsoft.Scripting.ExtensionAttribute, Version=2.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\..\Program Files (x86)\IronPython 2.6\Microsoft.Scripting.ExtensionAttribute.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="MvcReCaptcha">
+      <HintPath>C:\Users\Shoeb\Desktop\MvcReCaptcha\bin\Debug\MvcReCaptcha.dll</HintPath>
+    </Reference>
+    <Reference Include="Newtonsoft.Json, Version=3.5.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>Libs\Newtonsoft.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="Newtonsoft.Json.Net35, Version=4.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>Libs\3.5\Newtonsoft.Json.Net35.dll</HintPath>
+    </Reference>
+    <Reference Include="Recaptcha, Version=1.0.2.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>C:\Users\Shoeb\Desktop\MvcReCaptcha\bin\Debug\Recaptcha.dll</HintPath>
+    </Reference>
+    <Reference Include="SampleAccessProviders, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL" />
+    <Reference Include="System">
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="System.ComponentModel.DataAnnotations" />
+    <Reference Include="System.Data">
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="System.Data.Linq">
+      <RequiredTargetFramework>3.5</RequiredTargetFramework>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="System.Runtime.Serialization">
+      <RequiredTargetFramework>3.0</RequiredTargetFramework>
+    </Reference>
+    <Reference Include="System.Security" />
+    <Reference Include="System.ServiceModel">
+      <RequiredTargetFramework>3.0</RequiredTargetFramework>
+    </Reference>
+    <Reference Include="System.Web.ApplicationServices" />
+    <Reference Include="System.Web.DynamicData" />
+    <Reference Include="System.Web.Entity" />
+    <Reference Include="System.Drawing">
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="System.Web">
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="System.Web.Abstractions">
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Web.Extensions" />
+    <Reference Include="System.Web.Mvc, Version=4.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>C:\Program Files (x86)\Microsoft ASP.NET\ASP.NET MVC 4\Assemblies\System.Web.Mvc.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Web.Routing">
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Xml">
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="System.Configuration">
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Web.Services">
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.EnterpriseServices">
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="System.Web.Mobile">
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="TweetSharp">
+      <HintPath>C:\Users\Shoeb\Desktop\lib\3.5\TweetSharp.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Properties\Resources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
+    <Compile Include="Properties\Settings.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTimeSharedInput>True</DesignTimeSharedInput>
+      <DependentUpon>Settings.settings</DependentUpon>
+    </Compile>
+    <Compile Include="Utils\SVG.cs" />
+    <Compile Include="Views\Shared\EndpointSelectorControl.ascx.cs">
+      <DependentUpon>EndpointSelectorControl.ascx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="Views\Shared\EndpointSelectorControl.ascx.designer.cs">
+      <DependentUpon>EndpointSelectorControl.ascx</DependentUpon>
+    </Compile>
+    <Compile Include="Views\Shared\NetworkGraphInterface.ascx.cs">
+      <DependentUpon>NetworkGraphInterface.ascx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="Views\Shared\NetworkGraphInterface.ascx.designer.cs">
+      <DependentUpon>NetworkGraphInterface.ascx</DependentUpon>
+    </Compile>
+    <Compile Include="Views\Shared\NetworkOptions.ascx.cs">
+      <DependentUpon>NetworkOptions.ascx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="Views\Shared\NetworkOptions.ascx.designer.cs">
+      <DependentUpon>NetworkOptions.ascx</DependentUpon>
+    </Compile>
+    <Content Include="Content\ajax-loader.gif" />
+    <Content Include="Content\closelabel.png" />
+    <Content Include="Content\colorpicker.css" />
+    <Content Include="Content\cupertino\images\ui-bg_diagonals-thick_90_eeeeee_40x40.png" />
+    <Content Include="Content\cupertino\images\ui-bg_flat_15_cd0a0a_40x100.png" />
+    <Content Include="Content\cupertino\images\ui-bg_glass_100_e4f1fb_1x400.png" />
+    <Content Include="Content\cupertino\images\ui-bg_glass_50_3baae3_1x400.png" />
+    <Content Include="Content\cupertino\images\ui-bg_glass_80_d7ebf9_1x400.png" />
+    <Content Include="Content\cupertino\images\ui-bg_highlight-hard_100_f2f5f7_1x100.png" />
+    <Content Include="Content\cupertino\images\ui-bg_highlight-hard_70_000000_1x100.png" />
+    <Content Include="Content\cupertino\images\ui-bg_highlight-soft_100_deedf7_1x100.png" />
+    <Content Include="Content\cupertino\images\ui-bg_highlight-soft_25_ffef8f_1x100.png" />
+    <Content Include="Content\cupertino\images\ui-icons_2694e8_256x240.png" />
+    <Content Include="Content\cupertino\images\ui-icons_2e83ff_256x240.png" />
+    <Content Include="Content\cupertino\images\ui-icons_3d80b3_256x240.png" />
+    <Content Include="Content\cupertino\images\ui-icons_72a7cf_256x240.png" />
+    <Content Include="Content\cupertino\images\ui-icons_ffffff_256x240.png" />
+    <Content Include="Content\cupertino\jquery-ui-1.8.11.custom.css" />
+    <Content Include="Content\delete.gif" />
+    <Content Include="Content\elementsStyler.css" />
+    <Content Include="Content\facebox.css" />
+    <Content Include="Content\favicon.ico" />
+    <Content Include="Content\images\ajax-loader.gif" />
+    <Content Include="Content\images\contact.png" />
+    <Content Include="Content\images\feedback.png" />
+    <Content Include="Content\images\feedback_oo.png" />
+    <Content Include="Content\images\feedback-he.png" />
+    <Content Include="Content\images\feedback_p.png" />
+    <Content Include="Content\images\feedback_s.png" />
+    <Content Include="Content\loading\loading1.gif" />
+    <Content Include="Content\loading\loading10.gif" />
+    <Content Include="Content\loading_bar.gif" />
+    <Content Include="Content\loading\loading12.gif" />
+    <Content Include="Content\loading\loading13.gif" />
+    <Content Include="Content\loading\loading14.gif" />
+    <Content Include="Content\loading\loading15.gif" />
+    <Content Include="Content\loading\loading16.gif" />
+    <Content Include="Content\loading\loading17.gif" />
+    <Content Include="Content\loading\loading18.gif" />
+    <Content Include="Content\loading\loading19.gif" />
+    <Content Include="Content\loading\loading2.gif" />
+    <Content Include="Content\loading\loading20.gif" />
+    <Content Include="Content\loading\loading21.gif" />
+    <Content Include="Content\loading\loading22.gif" />
+    <Content Include="Content\loading\loading23.gif" />
+    <Content Include="Content\loading\loading24.gif" />
+    <Content Include="Content\loading\loading25.gif" />
+    <Content Include="Content\loading\loading26.gif" />
+    <Content Include="Content\loading\loading27.gif" />
+    <Content Include="Content\loading\loading28.gif" />
+    <Content Include="Content\loading\loading29.gif" />
+    <Content Include="Content\loading\loading3.gif" />
+    <Content Include="Content\loading\loading30.gif" />
+    <Content Include="Content\loading\loading31.gif" />
+    <Content Include="Content\loading\loading32.gif" />
+    <Content Include="Content\loading\loading33.gif" />
+    <Content Include="Content\loading\loading34.gif" />
+    <Content Include="Content\loading\loading35.gif" />
+    <Content Include="Content\loading\loading36.gif" />
+    <Content Include="Content\loading\loading37.gif" />
+    <Content Include="Content\loading\loading39.gif" />
+    <Content Include="Content\loading\loading4.gif" />
+    <Content Include="Content\loading\loading40.gif" />
+    <Content Include="Content\loading\loading41.gif" />
+    <Content Include="Content\loading\loading42.gif" />
+    <Content Include="Content\loading\loading43.gif" />
+    <Content Include="Content\loading\loading44.gif" />
+    <Content Include="Content\loading\loading45.gif" />
+    <Content Include="Content\loading\loading46.gif" />
+    <Content Include="Content\loading\loading47.gif" />
+    <Content Include="Content\loading\loading48.gif" />
+    <Content Include="Content\loading\loading49.gif" />
+    <Content Include="Content\loading\loading5.gif" />
+    <Content Include="Content\loading\loading50.gif" />
+    <Content Include="Content\loading\loading51.gif" />
+    <Content Include="Content\loading\loading6.gif" />
+    <Content Include="Content\loading\loading7.gif" />
+    <Content Include="Content\loading\loading8.gif" />
+    <Content Include="Content\loading\loading9.gif" />
+    <Content Include="Content\loading\READ ME!!.txt" />
+    <Content Include="Content\redmond\images\ui-anim_basic_16x16.gif" />
+    <Content Include="Content\redmond\images\ui-bg_flat_0_aaaaaa_40x100.png" />
+    <Content Include="Content\redmond\images\ui-bg_flat_55_fbec88_40x100.png" />
+    <Content Include="Content\redmond\images\ui-bg_glass_75_d0e5f5_1x400.png" />
+    <Content Include="Content\redmond\images\ui-bg_glass_85_dfeffc_1x400.png" />
+    <Content Include="Content\redmond\images\ui-bg_glass_95_fef1ec_1x400.png" />
+    <Content Include="Content\redmond\images\ui-bg_gloss-wave_55_5c9ccc_500x100.png" />
+    <Content Include="Content\redmond\images\ui-bg_inset-hard_100_f5f8f9_1x100.png" />
+    <Content Include="Content\redmond\images\ui-bg_inset-hard_100_fcfdfd_1x100.png" />
+    <Content Include="Content\redmond\images\ui-icons_217bc0_256x240.png" />
+    <Content Include="Content\redmond\images\ui-icons_2e83ff_256x240.png" />
+    <Content Include="Content\redmond\images\ui-icons_469bdd_256x240.png" />
+    <Content Include="Content\redmond\images\ui-icons_6da8d5_256x240.png" />
+    <Content Include="Content\redmond\images\ui-icons_cd0a0a_256x240.png" />
+    <Content Include="Content\redmond\images\ui-icons_d8e7f3_256x240.png" />
+    <Content Include="Content\redmond\images\ui-icons_f9bd01_256x240.png" />
+    <Content Include="Content\redmond\jquery-ui-1.8.2.custom.css" />
+    <Content Include="Content\jquery.searchFilter.css" />
+    <Content Include="Content\sunny\images\ui-bg_diagonals-medium_20_d34d17_40x40.png" />
+    <Content Include="Content\sunny\images\ui-bg_flat_30_cccccc_40x100.png" />
+    <Content Include="Content\sunny\images\ui-bg_flat_50_5c5c5c_40x100.png" />
+    <Content Include="Content\sunny\images\ui-bg_gloss-wave_45_817865_500x100.png" />
+    <Content Include="Content\sunny\images\ui-bg_gloss-wave_60_fece2f_500x100.png" />
+    <Content Include="Content\sunny\images\ui-bg_gloss-wave_70_ffdd57_500x100.png" />
+    <Content Include="Content\sunny\images\ui-bg_gloss-wave_90_fff9e5_500x100.png" />
+    <Content Include="Content\sunny\images\ui-bg_highlight-soft_100_feeebd_1x100.png" />
+    <Content Include="Content\sunny\images\ui-bg_inset-soft_30_ffffff_1x100.png" />
+    <Content Include="Content\sunny\images\ui-icons_3d3d3d_256x240.png" />
+    <Content Include="Content\sunny\images\ui-icons_bd7b00_256x240.png" />
+    <Content Include="Content\sunny\images\ui-icons_d19405_256x240.png" />
+    <Content Include="Content\sunny\images\ui-icons_eb990f_256x240.png" />
+    <Content Include="Content\sunny\images\ui-icons_ed9f26_256x240.png" />
+    <Content Include="Content\sunny\images\ui-icons_fadc7a_256x240.png" />
+    <Content Include="Content\sunny\images\ui-icons_ffe180_256x240.png" />
+    <Content Include="Content\sunny\jquery-ui-1.8.11.custom.css" />
+    <Content Include="Content\ui.jqgrid.css" />
+    <Content Include="Content\ui.multiselect.css" />
+    <Content Include="Content\contactable.css" />
+    <Content Include="Scripts\3DVizScript.js" />
+    <Content Include="Scripts\facebox.js" />
+    <Content Include="Content\farbtastic.css" />
+    <Content Include="Content\images\AlphaBar.png" />
+    <Content Include="Content\images\bar-opacity.png" />
+    <Content Include="Content\images\Bars.png" />
+    <Content Include="Content\images\blank.gif" />
+    <Content Include="Content\images\colorpicker_background.png" />
+    <Content Include="Content\images\colorpicker_hex.png" />
+    <Content Include="Content\images\colorpicker_hsb_b.png" />
+    <Content Include="Content\images\colorpicker_hsb_h.png" />
+    <Content Include="Content\images\colorpicker_hsb_s.png" />
+    <Content Include="Content\images\colorpicker_indic.gif" />
+    <Content Include="Content\images\colorpicker_overlay.png" />
+    <Content Include="Content\images\colorpicker_rgb_b.png" />
+    <Content Include="Content\images\colorpicker_rgb_g.png" />
+    <Content Include="Content\images\colorpicker_rgb_r.png" />
+    <Content Include="Content\images\colorpicker_select.gif" />
+    <Content Include="Content\images\colorpicker_submit.png" />
+    <Content Include="Content\images\custom_background.png" />
+    <Content Include="Content\images\custom_hex.png" />
+    <Content Include="Content\images\custom_hsb_b.png" />
+    <Content Include="Content\images\custom_hsb_h.png" />
+    <Content Include="Content\images\custom_hsb_s.png" />
+    <Content Include="Content\images\custom_indic.gif" />
+    <Content Include="Content\images\custom_rgb_b.png" />
+    <Content Include="Content\images\custom_rgb_g.png" />
+    <Content Include="Content\images\custom_rgb_r.png" />
+    <Content Include="Content\images\custom_submit.png" />
+    <Content Include="Content\images\map-opacity.png" />
+    <Content Include="Content\images\mappoint.gif" />
+    <Content Include="Content\images\Maps.png" />
+    <Content Include="Content\images\NoColor.png" />
+    <Content Include="Content\images\picker.gif" />
+    <Content Include="Content\images\preview-opacity.png" />
+    <Content Include="Content\images\rangearrows.gif" />
+    <Content Include="Content\images\select.png" />
+    <Content Include="Content\images\select2.png" />
+    <Content Include="Content\images\slider.png" />
+    <Content Include="Content\jPicker-1.1.6.css" />
+    <Content Include="Content\jPicker-1.1.6.min.css" />
+    <Content Include="Content\jPicker.css" />
+    <Content Include="Content\jquery.autocomplete.css" />
+    <Content Include="Content\checkbox.css" />
+    <Compile Include="Controllers\AccountController.cs" />
+    <Compile Include="Controllers\AdminController.cs" />
+    <Compile Include="Controllers\MotifsController.cs" />
+    <Compile Include="Controllers\NetworkController.cs" />
+    <Compile Include="Controllers\TwitterController.cs" />
+    <Compile Include="Helpers\AnnotationQueries.cs" />
+    <Compile Include="Models\DefaultController.cs" />
+    <Compile Include="Controllers\FormRequestController.cs" />
+    <Compile Include="Controllers\ProfileController.cs" />
+    <Compile Include="Controllers\StatsController.cs" />
+    <Compile Include="Controllers\StructureController.cs" />
+    <Compile Include="Controllers\UserController.cs" />
+    <Compile Include="Controllers\UserFormViewModel.cs" />
+    <Compile Include="Controllers\UserRoleController.cs" />
+    <Compile Include="Controllers\VikingPlotController.cs" />
+    <Compile Include="Default.aspx.cs">
+      <DependentUpon>Default.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="Global.asax.cs">
+      <DependentUpon>Global.asax</DependentUpon>
+    </Compile>
+    <Compile Include="Helpers\AuthorizeControlPoint.cs" />
+    <Compile Include="Helpers\Extensions.cs" />
+    <Compile Include="Helpers\PaginatedList.cs" />
+    <Compile Include="Helpers\RequiresSSL.cs" />
+    <Compile Include="Helpers\TabControl.cs">
+    </Compile>
+    <Compile Include="Models\CallScript.cs" />
+    <Content Include="Content\crir.css" />
+    <Content Include="Content\green-arrow-right.gif" />
+    <Content Include="Content\green-arrow.gif" />
+    <Content Include="Content\layout.css" />
+    <Content Include="Content\loading.gif" />
+    <Content Include="Content\marker.png" />
+    <Content Include="Content\mask.png" />
+    <Content Include="Content\mooRainbow.css" />
+    <Content Include="Content\tipsy.css" />
+    <Content Include="Content\tipsy.gif" />
+    <Content Include="Content\twitter.png" />
+    <Content Include="Content\wheel.png" />
+    <Content Include="Scripts\colorpicker.js" />
+    <Content Include="Scripts\elementsStyling.js" />
+    <Content Include="Scripts\eye.js" />
+    <Content Include="Scripts\farbtastic.js" />
+    <Content Include="Scripts\jpicker-1.1.6.js" />
+    <Content Include="Scripts\jpicker-1.1.6.min.js" />
+    <Content Include="Content\jquery.autocompletefb.css" />
+    <Content Include="Scripts\jquery-1.8.0.js" />
+    <Content Include="Scripts\jquery.autocompletefb.js" />
+    <Content Include="Scripts\jquery.dimensions.js" />
+    <Content Include="Scripts\jquery.ui.mouse.js" />
+    <Content Include="Scripts\jquery-1.4.4.min.js" />
+    <Content Include="Scripts\jquery.contactable.js" />
+    <Content Include="Scripts\jquery.contactable.min.js" />
+    <Content Include="Scripts\jquery.jqGrid.min.js" />
+    <Content Include="Scripts\jquery.js" />
+    <Content Include="Scripts\jquery.qtip-1.0.0.min.js" />
+    <Content Include="Scripts\jquery.svg.js" />
+    <Content Include="Scripts\jquery.tipsy.js" />
+    <Content Include="Scripts\jquery.ui.slider.js" />
+    <Content Include="Scripts\jquery.ui.widget.js" />
+    <Content Include="Scripts\jquery.validate.pack.js" />
+    <Content Include="Scripts\MotifScript.js" />
+    <Content Include="Scripts\NetworkScript.js" />
+    <Content Include="Scripts\NetworkUtils.js" />
+    <Content Include="Scripts\o3d\3DLoaderSingle.js" />
+    <Content Include="Scripts\o3d\3DLoader.js" />
+    <Content Include="Scripts\o3d\o3d-webgl\archive_request.js" />
+    <Content Include="Scripts\o3d\o3d-webgl\base.js" />
+    <Content Include="Scripts\o3d\o3d-webgl\bitmap.js" />
+    <Content Include="Scripts\o3d\o3d-webgl\bounding_box.js" />
+    <Content Include="Scripts\o3d\o3d-webgl\buffer.js" />
+    <Content Include="Scripts\o3d\o3d-webgl\clear_buffer.js" />
+    <Content Include="Scripts\o3d\o3d-webgl\client.js" />
+    <Content Include="Scripts\o3d\o3d-webgl\counter.js" />
+    <Content Include="Scripts\o3d\o3d-webgl\curve.js" />
+    <Content Include="Scripts\o3d\o3d-webgl\draw_context.js" />
+    <Content Include="Scripts\o3d\o3d-webgl\draw_element.js" />
+    <Content Include="Scripts\o3d\o3d-webgl\draw_list.js" />
+    <Content Include="Scripts\o3d\o3d-webgl\draw_pass.js" />
+    <Content Include="Scripts\o3d\o3d-webgl\effect.js" />
+    <Content Include="Scripts\o3d\o3d-webgl\element.js" />
+    <Content Include="Scripts\o3d\o3d-webgl\event.js" />
+    <Content Include="Scripts\o3d\o3d-webgl\field.js" />
+    <Content Include="Scripts\o3d\o3d-webgl\file_request.js" />
+    <Content Include="Scripts\o3d\o3d-webgl\function.js" />
+    <Content Include="Scripts\o3d\o3d-webgl\material.js" />
+    <Content Include="Scripts\o3d\o3d-webgl\named_object.js" />
+    <Content Include="Scripts\o3d\o3d-webgl\named_object_base.js" />
+    <Content Include="Scripts\o3d\o3d-webgl\object_base.js" />
+    <Content Include="Scripts\o3d\o3d-webgl\pack.js" />
+    <Content Include="Scripts\o3d\o3d-webgl\param.js" />
+    <Content Include="Scripts\o3d\o3d-webgl\param_array.js" />
+    <Content Include="Scripts\o3d\o3d-webgl\param_object.js" />
+    <Content Include="Scripts\o3d\o3d-webgl\param_operation.js" />
+    <Content Include="Scripts\o3d\o3d-webgl\primitive.js" />
+    <Content Include="Scripts\o3d\o3d-webgl\raw_data.js" />
+    <Content Include="Scripts\o3d\o3d-webgl\ray_intersection_info.js" />
+    <Content Include="Scripts\o3d\o3d-webgl\render_node.js" />
+    <Content Include="Scripts\o3d\o3d-webgl\render_surface.js" />
+    <Content Include="Scripts\o3d\o3d-webgl\render_surface_set.js" />
+    <Content Include="Scripts\o3d\o3d-webgl\sampler.js" />
+    <Content Include="Scripts\o3d\o3d-webgl\shape.js" />
+    <Content Include="Scripts\o3d\o3d-webgl\skin.js" />
+    <Content Include="Scripts\o3d\o3d-webgl\state.js" />
+    <Content Include="Scripts\o3d\o3d-webgl\state_set.js" />
+    <Content Include="Scripts\o3d\o3d-webgl\stream.js" />
+    <Content Include="Scripts\o3d\o3d-webgl\stream_bank.js" />
+    <Content Include="Scripts\o3d\o3d-webgl\texture.js" />
+    <Content Include="Scripts\o3d\o3d-webgl\transform.js" />
+    <Content Include="Scripts\o3d\o3d-webgl\tree_traversal.js" />
+    <Content Include="Scripts\o3d\o3d-webgl\types.js" />
+    <Content Include="Scripts\o3d\o3d-webgl\vertex_source.js" />
+    <Content Include="Scripts\o3d\o3d-webgl\viewport.js" />
+    <Content Include="Scripts\o3d\o3djs\arcball.js" />
+    <Content Include="Scripts\o3d\o3djs\base.js" />
+    <Content Include="Scripts\o3d\o3djs\camera.js" />
+    <Content Include="Scripts\o3d\o3djs\cameracontroller.js" />
+    <Content Include="Scripts\o3d\o3djs\canvas.js" />
+    <Content Include="Scripts\o3d\o3djs\debug.js" />
+    <Content Include="Scripts\o3d\o3djs\dump.js" />
+    <Content Include="Scripts\o3d\o3djs\effect.js" />
+    <Content Include="Scripts\o3d\o3djs\element.js" />
+    <Content Include="Scripts\o3d\o3djs\error.js" />
+    <Content Include="Scripts\o3d\o3djs\event.js" />
+    <Content Include="Scripts\o3d\o3djs\fps.js" />
+    <Content Include="Scripts\o3d\o3djs\gpu2d.js" />
+    <Content Include="Scripts\o3d\o3djs\io.js" />
+    <Content Include="Scripts\o3d\o3djs\lineprimitives.js" />
+    <Content Include="Scripts\o3d\o3djs\loader.js" />
+    <Content Include="Scripts\o3d\o3djs\manipulators.js" />
+    <Content Include="Scripts\o3d\o3djs\material.js" />
+    <Content Include="Scripts\o3d\o3djs\math.js" />
+    <Content Include="Scripts\o3d\o3djs\pack.js" />
+    <Content Include="Scripts\o3d\o3djs\particles.js" />
+    <Content Include="Scripts\o3d\o3djs\performance.js" />
+    <Content Include="Scripts\o3d\o3djs\picking.js" />
+    <Content Include="Scripts\o3d\o3djs\primitives.js" />
+    <Content Include="Scripts\o3d\o3djs\quaternions.js" />
+    <Content Include="Scripts\o3d\o3djs\rendergraph.js" />
+    <Content Include="Scripts\o3d\o3djs\scene.js" />
+    <Content Include="Scripts\o3d\o3djs\serialization.js" />
+    <Content Include="Scripts\o3d\o3djs\shape.js" />
+    <Content Include="Scripts\o3d\o3djs\simple.js" />
+    <Content Include="Scripts\o3d\o3djs\test.js" />
+    <Content Include="Scripts\o3d\o3djs\texture.js" />
+    <Content Include="Scripts\o3d\o3djs\util.js" />
+    <Content Include="Scripts\o3d\o3djs\webgl.js" />
+    <Content Include="Scripts\StatsScript.js" />
+    <Content Include="Scripts\js\i18n\grid.locale-bg.js" />
+    <Content Include="Scripts\js\i18n\grid.locale-bg1251.js" />
+    <Content Include="Scripts\js\i18n\grid.locale-cat.js" />
+    <Content Include="Scripts\js\i18n\grid.locale-cs.js" />
+    <Content Include="Scripts\js\i18n\grid.locale-de.js" />
+    <Content Include="Scripts\js\i18n\grid.locale-dk.js" />
+    <Content Include="Scripts\js\i18n\grid.locale-el.js" />
+    <Content Include="Scripts\js\i18n\grid.locale-en.js" />
+    <Content Include="Scripts\js\i18n\grid.locale-fa.js" />
+    <Content Include="Scripts\js\i18n\grid.locale-fi.js" />
+    <Content Include="Scripts\js\i18n\grid.locale-fr.js" />
+    <Content Include="Scripts\js\i18n\grid.locale-he.js" />
+    <Content Include="Scripts\js\i18n\grid.locale-is.js" />
+    <Content Include="Scripts\js\i18n\grid.locale-it.js" />
+    <Content Include="Scripts\js\i18n\grid.locale-jp.js" />
+    <Content Include="Scripts\js\i18n\grid.locale-nl.js" />
+    <Content Include="Scripts\js\i18n\grid.locale-no.js" />
+    <Content Include="Scripts\js\i18n\grid.locale-pl.js" />
+    <Content Include="Scripts\js\i18n\grid.locale-pt-br.js" />
+    <Content Include="Scripts\js\i18n\grid.locale-pt.js" />
+    <Content Include="Scripts\js\i18n\grid.locale-ro.js" />
+    <Content Include="Scripts\js\i18n\grid.locale-ru.js" />
+    <Content Include="Scripts\js\i18n\grid.locale-sp.js" />
+    <Content Include="Scripts\js\i18n\grid.locale-sv.js" />
+    <Content Include="Scripts\js\i18n\grid.locale-tr.js" />
+    <Content Include="Scripts\js\i18n\grid.locale-ua.js" />
+    <Content Include="Scripts\js\jquery-ui-1.8.2.custom.min.js" />
+    <Content Include="Scripts\js\jquery.contextmenu.js" />
+    <Content Include="Scripts\js\jquery.jqGrid.min.js" />
+    <Content Include="Scripts\js\jquery.layout.js" />
+    <Content Include="Scripts\js\jquery.min.js" />
+    <Content Include="Scripts\js\jquery.tablednd.js" />
+    <Content Include="Scripts\js\src\css\ellipsis-xbl.xml" />
+    <Content Include="Scripts\js\src\css\jquery.searchFilter.css" />
+    <Content Include="Scripts\js\src\css\ui.jqgrid.css" />
+    <Content Include="Scripts\js\src\css\ui.multiselect.css" />
+    <Content Include="Scripts\js\src\grid.base.js" />
+    <Content Include="Scripts\js\src\grid.celledit.js" />
+    <Content Include="Scripts\js\src\grid.common.js" />
+    <Content Include="Scripts\js\src\grid.custom.js" />
+    <Content Include="Scripts\js\src\grid.formedit.js" />
+    <Content Include="Scripts\js\src\grid.grouping.js" />
+    <Content Include="Scripts\js\src\grid.import.js" />
+    <Content Include="Scripts\js\src\grid.inlinedit.js" />
+    <Content Include="Scripts\js\src\grid.jqueryui.js" />
+    <Content Include="Scripts\js\src\grid.loader.js" />
+    <Content Include="Scripts\js\src\grid.postext.js" />
+    <Content Include="Scripts\js\src\grid.setcolumns.js" />
+    <Content Include="Scripts\js\src\grid.subgrid.js" />
+    <Content Include="Scripts\js\src\grid.tbltogrid.js" />
+    <Content Include="Scripts\js\src\grid.treegrid.js" />
+    <Content Include="Scripts\js\src\i18n\grid.locale-bg.js" />
+    <Content Include="Scripts\js\src\i18n\grid.locale-bg1251.js" />
+    <Content Include="Scripts\js\src\i18n\grid.locale-cat.js" />
+    <Content Include="Scripts\js\src\i18n\grid.locale-cn.js" />
+    <Content Include="Scripts\js\src\i18n\grid.locale-cs.js" />
+    <Content Include="Scripts\js\src\i18n\grid.locale-da.js" />
+    <Content Include="Scripts\js\src\i18n\grid.locale-de.js" />
+    <Content Include="Scripts\js\src\i18n\grid.locale-dk.js" />
+    <Content Include="Scripts\js\src\i18n\grid.locale-el.js" />
+    <Content Include="Scripts\js\src\i18n\grid.locale-en.js" />
+    <Content Include="Scripts\js\src\i18n\grid.locale-es.js" />
+    <Content Include="Scripts\js\src\i18n\grid.locale-fa.js" />
+    <Content Include="Scripts\js\src\i18n\grid.locale-fi.js" />
+    <Content Include="Scripts\js\src\i18n\grid.locale-fr.js" />
+    <Content Include="Scripts\js\src\i18n\grid.locale-gl.js" />
+    <Content Include="Scripts\js\src\i18n\grid.locale-he.js" />
+    <Content Include="Scripts\js\src\i18n\grid.locale-hu.js" />
+    <Content Include="Scripts\js\src\i18n\grid.locale-is.js" />
+    <Content Include="Scripts\js\src\i18n\grid.locale-it.js" />
+    <Content Include="Scripts\js\src\i18n\grid.locale-ja.js" />
+    <Content Include="Scripts\js\src\i18n\grid.locale-jp.js" />
+    <Content Include="Scripts\js\src\i18n\grid.locale-nl.js" />
+    <Content Include="Scripts\js\src\i18n\grid.locale-no.js" />
+    <Content Include="Scripts\js\src\i18n\grid.locale-pl.js" />
+    <Content Include="Scripts\js\src\i18n\grid.locale-pt-br.js" />
+    <Content Include="Scripts\js\src\i18n\grid.locale-pt.js" />
+    <Content Include="Scripts\js\src\i18n\grid.locale-ro.js" />
+    <Content Include="Scripts\js\src\i18n\grid.locale-ru.js" />
+    <Content Include="Scripts\js\src\i18n\grid.locale-sk.js" />
+    <Content Include="Scripts\js\src\i18n\grid.locale-sp.js" />
+    <Content Include="Scripts\js\src\i18n\grid.locale-sv.js" />
+    <Content Include="Scripts\js\src\i18n\grid.locale-tr.js" />
+    <Content Include="Scripts\js\src\i18n\grid.locale-ua.js" />
+    <Content Include="Scripts\js\src\jqDnR.js" />
+    <Content Include="Scripts\js\src\jqModal.js" />
+    <Content Include="Scripts\js\src\jquery.fmatter.js" />
+    <Content Include="Scripts\js\jquery.jqGrid.js" />
+    <Content Include="Scripts\js\src\jquery.searchFilter.js" />
+    <Content Include="Scripts\js\src\JsonXml.js" />
+    <Content Include="Scripts\js\src\ui.multiselect.js" />
+    <Content Include="Scripts\js\tablednd.js" />
+    <Content Include="Scripts\js\ui.multiselect.js" />
+    <Content Include="Scripts\layer.js" />
+    <Content Include="Scripts\PostLoading.js" />
+    <Content Include="Scripts\ProcessGraph.js" />
+    <Content Include="Scripts\RunCommand_new.js" />
+    <Content Include="Scripts\layout.js" />
+    <Content Include="Scripts\mooRainbow.js" />
+    <Content Include="Scripts\mootools.js" />
+    <Content Include="Scripts\crir.js" />
+    <Content Include="Scripts\jquery.min.js" />
+    <Content Include="Scripts\CircuitScript.js" />
+    <Content Include="Scripts\jquery.autocomplete.js" />
+    <Content Include="Scripts\jquery.bgiframe.min.js" />
+    <Content Include="Scripts\GlobalStyling.js" />
+    <Content Include="Scripts\jquery.usermode.js" />
+    <Content Include="Scripts\jquery.bind.js" />
+    <Content Include="Scripts\SharedVariables.js" />
+    <Content Include="Scripts\TabControl.js" />
+    <Content Include="Scripts\ui.checkbox.js" />
+    <Content Include="Scripts\StructureScript.js" />
+    <Content Include="Scripts\effect_old.js" />
+    <Compile Include="Models\ClientXMLReader.cs" />
+    <Compile Include="Service References\ObjectFileService\Reference.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Reference.svcmap</DependentUpon>
+    </Compile>
+    <Compile Include="Utils\LoadServices.cs" />
+    <Compile Include="Models\State.cs" />
+    <Compile Include="Models\Edge.cs" />
+    <Compile Include="Models\NetworkGraph.cs" />
+    <Compile Include="Models\NewClasses.cs" />
+    <Compile Include="Models\Node.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Utils\Bounds.cs" />
+    <Compile Include="Utils\ConfigChange.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Default.aspx" />
+    <Content Include="Global.asax" />
+    <Content Include="Scripts\jquery-1.4.1-vsdoc.js" />
+    <Content Include="Scripts\jquery-1.4.1.js" />
+    <Content Include="Scripts\jquery-1.4.1.min.js" />
+    <Content Include="Scripts\jquery.validate-vsdoc.js" />
+    <Content Include="Scripts\jquery.validate.js" />
+    <Content Include="Scripts\jquery.validate.min.js" />
+    <Content Include="Scripts\MicrosoftMvcValidation.debug.js" />
+    <Content Include="Scripts\MicrosoftMvcValidation.js" />
+    <None Include="Content\images\Thumbs.db" />
+    <None Include="Properties\DataSources\AnnotationUtils.AnnotationService.Graphx.datasource" />
+    <None Include="Properties\DataSources\AnnotationUtils.AnnotationService.Location.datasource" />
+    <None Include="Properties\DataSources\AnnotationUtils.AnnotationService.LocationLink.datasource" />
+    <None Include="Properties\DataSources\AnnotationUtils.AnnotationService.Structure.datasource" />
+    <None Include="Properties\DataSources\AnnotationUtils.AnnotationService.StructureLink.datasource" />
+    <None Include="Properties\DataSources\AnnotationUtils.AnnotationService.StructureType.datasource" />
+    <None Include="Properties\DataSources\AnnotationUtils.AnnotationService.SynapseObject.datasource" />
+    <None Include="Properties\Settings.settings">
+      <Generator>SettingsSingleFileGenerator</Generator>
+      <LastGenOutput>Settings.Designer.cs</LastGenOutput>
+    </None>
+    <None Include="Scripts\o3d\o3d-webgl\.svn\all-wcprops" />
+    <None Include="Scripts\o3d\o3d-webgl\.svn\entries" />
+    <None Include="Scripts\o3d\o3d-webgl\.svn\prop-base\archive_request.js.svn-base" />
+    <None Include="Scripts\o3d\o3d-webgl\.svn\prop-base\base.js.svn-base" />
+    <None Include="Scripts\o3d\o3d-webgl\.svn\prop-base\bitmap.js.svn-base" />
+    <None Include="Scripts\o3d\o3d-webgl\.svn\prop-base\bounding_box.js.svn-base" />
+    <None Include="Scripts\o3d\o3d-webgl\.svn\prop-base\buffer.js.svn-base" />
+    <None Include="Scripts\o3d\o3d-webgl\.svn\prop-base\clear_buffer.js.svn-base" />
+    <None Include="Scripts\o3d\o3d-webgl\.svn\prop-base\client.js.svn-base" />
+    <None Include="Scripts\o3d\o3d-webgl\.svn\prop-base\draw_context.js.svn-base" />
+    <None Include="Scripts\o3d\o3d-webgl\.svn\prop-base\draw_element.js.svn-base" />
+    <None Include="Scripts\o3d\o3d-webgl\.svn\prop-base\draw_list.js.svn-base" />
+    <None Include="Scripts\o3d\o3d-webgl\.svn\prop-base\draw_pass.js.svn-base" />
+    <None Include="Scripts\o3d\o3d-webgl\.svn\prop-base\effect.js.svn-base" />
+    <None Include="Scripts\o3d\o3d-webgl\.svn\prop-base\element.js.svn-base" />
+    <None Include="Scripts\o3d\o3d-webgl\.svn\prop-base\event.js.svn-base" />
+    <None Include="Scripts\o3d\o3d-webgl\.svn\prop-base\field.js.svn-base" />
+    <None Include="Scripts\o3d\o3d-webgl\.svn\prop-base\file_request.js.svn-base" />
+    <None Include="Scripts\o3d\o3d-webgl\.svn\prop-base\material.js.svn-base" />
+    <None Include="Scripts\o3d\o3d-webgl\.svn\prop-base\named_object.js.svn-base" />
+    <None Include="Scripts\o3d\o3d-webgl\.svn\prop-base\named_object_base.js.svn-base" />
+    <None Include="Scripts\o3d\o3d-webgl\.svn\prop-base\object_base.js.svn-base" />
+    <None Include="Scripts\o3d\o3d-webgl\.svn\prop-base\pack.js.svn-base" />
+    <None Include="Scripts\o3d\o3d-webgl\.svn\prop-base\param.js.svn-base" />
+    <None Include="Scripts\o3d\o3d-webgl\.svn\prop-base\param_object.js.svn-base" />
+    <None Include="Scripts\o3d\o3d-webgl\.svn\prop-base\primitive.js.svn-base" />
+    <None Include="Scripts\o3d\o3d-webgl\.svn\prop-base\raw_data.js.svn-base" />
+    <None Include="Scripts\o3d\o3d-webgl\.svn\prop-base\ray_intersection_info.js.svn-base" />
+    <None Include="Scripts\o3d\o3d-webgl\.svn\prop-base\render_node.js.svn-base" />
+    <None Include="Scripts\o3d\o3d-webgl\.svn\prop-base\render_surface.js.svn-base" />
+    <None Include="Scripts\o3d\o3d-webgl\.svn\prop-base\render_surface_set.js.svn-base" />
+    <None Include="Scripts\o3d\o3d-webgl\.svn\prop-base\sampler.js.svn-base" />
+    <None Include="Scripts\o3d\o3d-webgl\.svn\prop-base\shape.js.svn-base" />
+    <None Include="Scripts\o3d\o3d-webgl\.svn\prop-base\state.js.svn-base" />
+    <None Include="Scripts\o3d\o3d-webgl\.svn\prop-base\state_set.js.svn-base" />
+    <None Include="Scripts\o3d\o3d-webgl\.svn\prop-base\stream.js.svn-base" />
+    <None Include="Scripts\o3d\o3d-webgl\.svn\prop-base\stream_bank.js.svn-base" />
+    <None Include="Scripts\o3d\o3d-webgl\.svn\prop-base\texture.js.svn-base" />
+    <None Include="Scripts\o3d\o3d-webgl\.svn\prop-base\transform.js.svn-base" />
+    <None Include="Scripts\o3d\o3d-webgl\.svn\prop-base\tree_traversal.js.svn-base" />
+    <None Include="Scripts\o3d\o3d-webgl\.svn\prop-base\types.js.svn-base" />
+    <None Include="Scripts\o3d\o3d-webgl\.svn\prop-base\viewport.js.svn-base" />
+    <None Include="Scripts\o3d\o3d-webgl\.svn\text-base\archive_request.js.svn-base" />
+    <None Include="Scripts\o3d\o3d-webgl\.svn\text-base\base.js.svn-base" />
+    <None Include="Scripts\o3d\o3d-webgl\.svn\text-base\bitmap.js.svn-base" />
+    <None Include="Scripts\o3d\o3d-webgl\.svn\text-base\bounding_box.js.svn-base" />
+    <None Include="Scripts\o3d\o3d-webgl\.svn\text-base\buffer.js.svn-base" />
+    <None Include="Scripts\o3d\o3d-webgl\.svn\text-base\clear_buffer.js.svn-base" />
+    <None Include="Scripts\o3d\o3d-webgl\.svn\text-base\client.js.svn-base" />
+    <None Include="Scripts\o3d\o3d-webgl\.svn\text-base\counter.js.svn-base" />
+    <None Include="Scripts\o3d\o3d-webgl\.svn\text-base\curve.js.svn-base" />
+    <None Include="Scripts\o3d\o3d-webgl\.svn\text-base\draw_context.js.svn-base" />
+    <None Include="Scripts\o3d\o3d-webgl\.svn\text-base\draw_element.js.svn-base" />
+    <None Include="Scripts\o3d\o3d-webgl\.svn\text-base\draw_list.js.svn-base" />
+    <None Include="Scripts\o3d\o3d-webgl\.svn\text-base\draw_pass.js.svn-base" />
+    <None Include="Scripts\o3d\o3d-webgl\.svn\text-base\effect.js.svn-base" />
+    <None Include="Scripts\o3d\o3d-webgl\.svn\text-base\element.js.svn-base" />
+    <None Include="Scripts\o3d\o3d-webgl\.svn\text-base\event.js.svn-base" />
+    <None Include="Scripts\o3d\o3d-webgl\.svn\text-base\field.js.svn-base" />
+    <None Include="Scripts\o3d\o3d-webgl\.svn\text-base\file_request.js.svn-base" />
+    <None Include="Scripts\o3d\o3d-webgl\.svn\text-base\function.js.svn-base" />
+    <None Include="Scripts\o3d\o3d-webgl\.svn\text-base\material.js.svn-base" />
+    <None Include="Scripts\o3d\o3d-webgl\.svn\text-base\named_object.js.svn-base" />
+    <None Include="Scripts\o3d\o3d-webgl\.svn\text-base\named_object_base.js.svn-base" />
+    <None Include="Scripts\o3d\o3d-webgl\.svn\text-base\object_base.js.svn-base" />
+    <None Include="Scripts\o3d\o3d-webgl\.svn\text-base\pack.js.svn-base" />
+    <None Include="Scripts\o3d\o3d-webgl\.svn\text-base\param.js.svn-base" />
+    <None Include="Scripts\o3d\o3d-webgl\.svn\text-base\param_array.js.svn-base" />
+    <None Include="Scripts\o3d\o3d-webgl\.svn\text-base\param_object.js.svn-base" />
+    <None Include="Scripts\o3d\o3d-webgl\.svn\text-base\param_operation.js.svn-base" />
+    <None Include="Scripts\o3d\o3d-webgl\.svn\text-base\primitive.js.svn-base" />
+    <None Include="Scripts\o3d\o3d-webgl\.svn\text-base\raw_data.js.svn-base" />
+    <None Include="Scripts\o3d\o3d-webgl\.svn\text-base\ray_intersection_info.js.svn-base" />
+    <None Include="Scripts\o3d\o3d-webgl\.svn\text-base\render_node.js.svn-base" />
+    <None Include="Scripts\o3d\o3d-webgl\.svn\text-base\render_surface.js.svn-base" />
+    <None Include="Scripts\o3d\o3d-webgl\.svn\text-base\render_surface_set.js.svn-base" />
+    <None Include="Scripts\o3d\o3d-webgl\.svn\text-base\sampler.js.svn-base" />
+    <None Include="Scripts\o3d\o3d-webgl\.svn\text-base\shape.js.svn-base" />
+    <None Include="Scripts\o3d\o3d-webgl\.svn\text-base\skin.js.svn-base" />
+    <None Include="Scripts\o3d\o3d-webgl\.svn\text-base\state.js.svn-base" />
+    <None Include="Scripts\o3d\o3d-webgl\.svn\text-base\state_set.js.svn-base" />
+    <None Include="Scripts\o3d\o3d-webgl\.svn\text-base\stream.js.svn-base" />
+    <None Include="Scripts\o3d\o3d-webgl\.svn\text-base\stream_bank.js.svn-base" />
+    <None Include="Scripts\o3d\o3d-webgl\.svn\text-base\texture.js.svn-base" />
+    <None Include="Scripts\o3d\o3d-webgl\.svn\text-base\transform.js.svn-base" />
+    <None Include="Scripts\o3d\o3d-webgl\.svn\text-base\tree_traversal.js.svn-base" />
+    <None Include="Scripts\o3d\o3d-webgl\.svn\text-base\types.js.svn-base" />
+    <None Include="Scripts\o3d\o3d-webgl\.svn\text-base\vertex_source.js.svn-base" />
+    <None Include="Scripts\o3d\o3d-webgl\.svn\text-base\viewport.js.svn-base" />
+    <None Include="Scripts\o3d\o3djs\.svn\all-wcprops" />
+    <None Include="Scripts\o3d\o3djs\.svn\entries" />
+    <None Include="Scripts\o3d\o3djs\.svn\prop-base\base.js.svn-base" />
+    <None Include="Scripts\o3d\o3djs\.svn\prop-base\webgl.js.svn-base" />
+    <None Include="Scripts\o3d\o3djs\.svn\text-base\arcball.js.svn-base" />
+    <None Include="Scripts\o3d\o3djs\.svn\text-base\base.js.svn-base" />
+    <None Include="Scripts\o3d\o3djs\.svn\text-base\camera.js.svn-base" />
+    <None Include="Scripts\o3d\o3djs\.svn\text-base\cameracontroller.js.svn-base" />
+    <None Include="Scripts\o3d\o3djs\.svn\text-base\canvas.js.svn-base" />
+    <None Include="Scripts\o3d\o3djs\.svn\text-base\debug.js.svn-base" />
+    <None Include="Scripts\o3d\o3djs\.svn\text-base\dump.js.svn-base" />
+    <None Include="Scripts\o3d\o3djs\.svn\text-base\effect.js.svn-base" />
+    <None Include="Scripts\o3d\o3djs\.svn\text-base\element.js.svn-base" />
+    <None Include="Scripts\o3d\o3djs\.svn\text-base\error.js.svn-base" />
+    <None Include="Scripts\o3d\o3djs\.svn\text-base\event.js.svn-base" />
+    <None Include="Scripts\o3d\o3djs\.svn\text-base\fps.js.svn-base" />
+    <None Include="Scripts\o3d\o3djs\.svn\text-base\gpu2d.js.svn-base" />
+    <None Include="Scripts\o3d\o3djs\.svn\text-base\io.js.svn-base" />
+    <None Include="Scripts\o3d\o3djs\.svn\text-base\lineprimitives.js.svn-base" />
+    <None Include="Scripts\o3d\o3djs\.svn\text-base\loader.js.svn-base" />
+    <None Include="Scripts\o3d\o3djs\.svn\text-base\manipulators.js.svn-base" />
+    <None Include="Scripts\o3d\o3djs\.svn\text-base\material.js.svn-base" />
+    <None Include="Scripts\o3d\o3djs\.svn\text-base\math.js.svn-base" />
+    <None Include="Scripts\o3d\o3djs\.svn\text-base\pack.js.svn-base" />
+    <None Include="Scripts\o3d\o3djs\.svn\text-base\particles.js.svn-base" />
+    <None Include="Scripts\o3d\o3djs\.svn\text-base\performance.js.svn-base" />
+    <None Include="Scripts\o3d\o3djs\.svn\text-base\picking.js.svn-base" />
+    <None Include="Scripts\o3d\o3djs\.svn\text-base\primitives.js.svn-base" />
+    <None Include="Scripts\o3d\o3djs\.svn\text-base\quaternions.js.svn-base" />
+    <None Include="Scripts\o3d\o3djs\.svn\text-base\rendergraph.js.svn-base" />
+    <None Include="Scripts\o3d\o3djs\.svn\text-base\scene.js.svn-base" />
+    <None Include="Scripts\o3d\o3djs\.svn\text-base\serialization.js.svn-base" />
+    <None Include="Scripts\o3d\o3djs\.svn\text-base\shape.js.svn-base" />
+    <None Include="Scripts\o3d\o3djs\.svn\text-base\simple.js.svn-base" />
+    <None Include="Scripts\o3d\o3djs\.svn\text-base\test.js.svn-base" />
+    <None Include="Scripts\o3d\o3djs\.svn\text-base\texture.js.svn-base" />
+    <None Include="Scripts\o3d\o3djs\.svn\text-base\util.js.svn-base" />
+    <None Include="Scripts\o3d\o3djs\.svn\text-base\webgl.js.svn-base" />
+    <Content Include="Scripts\moocheck.js" />
+    <Content Include="Scripts\rounded-corners.js" />
+    <Content Include="Scripts\utils.js" />
+    <None Include="Service References\ObjectFileService\configuration91.svcinfo" />
+    <None Include="Service References\ObjectFileService\configuration.svcinfo" />
+    <None Include="Service References\ObjectFileService\Reference.svcmap">
+      <Generator>WCF Proxy Generator</Generator>
+      <LastGenOutput>Reference.cs</LastGenOutput>
+    </None>
+    <Content Include="Services.xml">
+      <SubType>Designer</SubType>
+    </Content>
+    <Content Include="Views\Account\ChangePassword.aspx" />
+    <Content Include="Views\Account\ChangePasswordSuccess.aspx" />
+    <Content Include="Views\Account\LogOn.aspx" />
+    <Content Include="Views\Account\Register.aspx" />
+    <Content Include="Views\Admin\Index.aspx" />
+    <Content Include="Views\Shared\EndpointSelectorControl.ascx" />
+    <Content Include="Views\Shared\MotifGraphInterface.ascx" />
+    <Content Include="Views\Motifs\Index.aspx" />
+    <Content Include="Views\Motifs\Trace.aspx" />
+    <Content Include="Views\Network\Trace.aspx" />
+    <Content Include="Views\Default\Index.aspx" />
+    <Content Include="Views\Shared\Manage.aspx" />
+    <Content Include="Views\Shared\NetworkGraphInterface.ascx" />
+    <Content Include="Views\Shared\NetworkOptions.ascx" />
+    <Content Include="Views\Stats\Index.aspx" />
+    <Content Include="Views\Stats\Visualize.aspx" />
+    <Content Include="Views\Structure\Index.aspx" />
+    <Content Include="Views\Structure\Locations.aspx" />
+    <Content Include="Views\Structure\Locations3D.aspx" />
+    <Content Include="Views\UserRole\Create.aspx" />
+    <Content Include="Views\UserRole\List.aspx" />
+    <Content Include="Views\User\Create.aspx" />
+    <Content Include="Views\User\Details.aspx" />
+    <Content Include="Views\User\Edit.aspx" />
+    <Content Include="Views\User\Error.aspx" />
+    <Content Include="Views\User\List.aspx" />
+    <Content Include="Views\User\UserForm.ascx" />
+    <Content Include="Views\VikingPlot\Index.aspx" />
+    <Content Include="Views\VikingPlot\Plot.aspx" />
+    <Content Include="Web.config">
+      <SubType>Designer</SubType>
+    </Content>
+    <Content Include="Content\Site.css" />
+    <Content Include="Scripts\jquery-1.3.2.js" />
+    <Content Include="Scripts\jquery-1.3.2.min.js" />
+    <Content Include="Scripts\jquery-1.3.2-vsdoc.js" />
+    <Content Include="Scripts\jquery-1.3.2.min-vsdoc.js" />
+    <Content Include="Scripts\MicrosoftAjax.js" />
+    <Content Include="Scripts\MicrosoftAjax.debug.js" />
+    <Content Include="Scripts\MicrosoftMvcAjax.js" />
+    <Content Include="Scripts\MicrosoftMvcAjax.debug.js" />
+    <Content Include="Views\Network\Index.aspx" />
+    <Content Include="Views\Shared\Error.aspx" />
+    <Content Include="Views\Shared\LogOnUserControl.ascx" />
+    <Content Include="Views\Shared\Site.Master" />
+    <Content Include="Views\Web.config">
+      <SubType>Designer</SubType>
+    </Content>
+    <None Include="Service References\ObjectFileService\service.wsdl" />
+    <None Include="Service References\ObjectFileService\service.xsd">
+      <SubType>Designer</SubType>
+    </None>
+    <None Include="Service References\ObjectFileService\service1.xsd">
+      <SubType>Designer</SubType>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Service Include="{3259AA49-8AA1-44D3-9025-A0B520596A8C}" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Content\Admin.css" />
+    <Content Include="Content\marclab.png" />
+    <Content Include="Scripts\effect.js" />
+    <Content Include="Scripts\jquery.WAT.js" />
+    <Content Include="Scripts\RunCommand.js" />
+    <Content Include="Scripts\svg.htc" />
+    <Content Include="Scripts\svg.js" />
+    <Content Include="Scripts\SVGzoom.js" />
+    <Content Include="Scripts\zooming.js" />
+    <Content Include="Views\Account\Done.aspx" />
+    <Content Include="Views\Account\ResetPassword.aspx" />
+    <Content Include="Views\Account\Verify.aspx" />
+    <Content Include="Views\Shared\Admin.Master" />
+    <Content Include="Views\Shared\PaginatedListFooter.ascx" />
+    <Content Include="Views\Account\Stats\Index.aspx" />
+  </ItemGroup>
+  <ItemGroup>
+    <WCFMetadata Include="Service References\" />
+  </ItemGroup>
+  <ItemGroup>
+    <WCFMetadataStorage Include="Service References\ObjectFileService\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Scripts\o3d\o3d-webgl\.svn\props\" />
+    <Folder Include="Scripts\o3d\o3d-webgl\.svn\tmp\prop-base\" />
+    <Folder Include="Scripts\o3d\o3d-webgl\.svn\tmp\props\" />
+    <Folder Include="Scripts\o3d\o3d-webgl\.svn\tmp\text-base\" />
+    <Folder Include="Scripts\o3d\o3djs\.svn\props\" />
+    <Folder Include="Scripts\o3d\o3djs\.svn\tmp\prop-base\" />
+    <Folder Include="Scripts\o3d\o3djs\.svn\tmp\props\" />
+    <Folder Include="Scripts\o3d\o3djs\.svn\tmp\text-base\" />
+    <Folder Include="Views\Profile\" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\GraphLib\GraphLib.csproj">
+      <Project>{D6F219FC-733B-481F-BF78-D34A7CB893EC}</Project>
+      <Name>GraphLib</Name>
+    </ProjectReference>
+    <ProjectReference Include="AnnotationGraphLib\AnnotationUtils.csproj">
+      <Project>{A89A628B-3FFA-4271-B99A-E45C3D72D3E3}</Project>
+      <Name>AnnotationUtils</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+  </ItemGroup>
+  <PropertyGroup>
+    <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>
+    <VSToolsPath Condition="'$(VSToolsPath)' == ''">$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)</VSToolsPath>
+  </PropertyGroup>
+  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
+  <Import Project="$(VSToolsPath)\WebApplications\Microsoft.WebApplication.targets" Condition="'$(VSToolsPath)' != ''" />
+  <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v10.0\WebApplications\Microsoft.WebApplication.targets" Condition="false" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target> -->
+  <Target Name="AfterBuild" Condition="'$(MvcBuildViews)'=='true'">
+    <AspNetCompiler VirtualPath="temp" PhysicalPath="$(ProjectDir)\..\$(ProjectName)" />
+  </Target>
+  <ProjectExtensions>
+    <VisualStudio>
+      <FlavorProperties GUID="{349c5851-65df-11da-9384-00065b846f21}">
+        <WebProjectProperties>
+          <UseIIS>True</UseIIS>
+          <AutoAssignPort>True</AutoAssignPort>
+          <DevelopmentServerPort>10610</DevelopmentServerPort>
+          <DevelopmentServerVPath>/Viz</DevelopmentServerVPath>
+          <IISUrl>http://connectomes.utah.edu/test</IISUrl>
+          <NTLMAuthentication>False</NTLMAuthentication>
+          <UseCustomServer>False</UseCustomServer>
+          <CustomServerUrl>http://connectomes.utah.edu/viz</CustomServerUrl>
+          <SaveServerSettingsInUserFile>False</SaveServerSettingsInUserFile>
+        </WebProjectProperties>
+      </FlavorProperties>
+    </VisualStudio>
+  </ProjectExtensions>
+</Project>

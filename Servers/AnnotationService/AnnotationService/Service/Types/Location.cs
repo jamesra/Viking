@@ -1,0 +1,407 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.ServiceModel;
+using System.Runtime.Serialization;
+using Annotation.Database;
+
+namespace Annotation
+{
+    
+    [DataContract]
+    [Serializable]
+    public struct AnnotationPoint 
+    {
+        private double _X;
+        private double _Y;
+        private double _Z; 
+
+        [DataMember]
+        public double X
+        {
+            get { return _X; }
+            set { _X = value; }
+        }
+
+        [DataMember]
+        public double Y
+        {
+            get {return _Y; }
+            set { _Y = value; }
+        }
+
+        [DataMember]
+        public double Z
+        {
+            get { return _Z; }
+            set { _Z = value; }
+        }
+
+        public AnnotationPoint(double x, double y, double z)
+        {
+            _X = x;
+            _Y = y;
+            _Z = z; 
+        }
+    }
+
+    [DataContract]
+    public class LocationPositionOnly : DataObjectWithKey<long>
+    {
+        AnnotationPoint _Position;
+        private double _Radius;
+
+        [DataMember]
+        public AnnotationPoint Position
+        {
+            get { return _Position; }
+            set { _Position = value; }
+        }
+
+        [DataMember]
+        [Column("Radius")]
+        public double Radius
+        {
+            get { return _Radius; }
+            set { _Radius = value; }
+        }
+
+        public LocationPositionOnly(Annotation.Database.SelectUnfinishedStructureBranchesWithPositionResult db)
+        {
+            this.ID = db.ID;
+            this.Position = new AnnotationPoint(db.X, db.Y, db.Z);
+            this.Radius = db.Radius;
+        }
+
+        public LocationPositionOnly(Annotation.Database.DBLocation db)
+        {
+            this.ID = db.ID;
+            this.Position = new AnnotationPoint(db.X, db.Y, db.Z);
+            this.Radius = db.Radius;
+        } 
+    }
+
+    [DataContract]
+    public class Location : DataObjectWithKey<long>
+    {
+        private long _ParentID;
+        private long _Section;
+        AnnotationPoint _Position;
+        AnnotationPoint _VolumePosition;
+        AnnotationPoint[] _Verticies = new AnnotationPoint[0]; 
+        private bool _Closed;
+        private string[] _Tags = new string[0];
+        private long[] _Links = new long[0];
+        private bool _Terminal;
+        private bool _OffEdge;
+        private double _Radius;
+        private short _TypeCode;
+        private long _LastModified;
+        private string _Username;
+        private string _Xml;
+
+        static System.Runtime.Serialization.Formatters.Binary.BinaryFormatter serializer = new System.Runtime.Serialization.Formatters.Binary.BinaryFormatter(); 
+            
+
+        [DataMember]
+        public long ParentID
+        {
+            get { return _ParentID; }
+            set { _ParentID = value; }
+        }
+
+        [DataMember]
+        public long Section
+        {
+            get { return _Section; }
+            set { _Section = value;
+                  this._Position.Z = (double)value; 
+            }
+        }
+
+        [DataMember]
+        public AnnotationPoint Position
+        {
+            get { return _Position; }
+            set { _Position = value; }
+        }
+
+        [DataMember]
+        public AnnotationPoint VolumePosition
+        {
+            get { return _VolumePosition; }
+            set { _VolumePosition = value; }
+        }
+
+        [DataMember]
+        public AnnotationPoint[] Verticies
+        {
+            get { return _Verticies; }
+            set { _Verticies = value; }
+        }
+
+        [DataMember]
+        [Column("Closed")]
+        public bool Closed
+        {
+            get { return _Closed; }
+            set { _Closed = value; }
+        }
+
+        [DataMember]
+        [Column("Tags")]
+        public string[] Tags
+        {
+            get { return _Tags; }
+            set { _Tags = value; }
+        }
+
+        [DataMember]
+        public string AttributesXml
+        {
+            get { return _Xml; }
+            set { _Xml = value; }
+        }
+
+        [DataMember]
+        [Column("Links")]
+        public long[] Links
+        {
+            get { return _Links; }
+            set { _Links = value; }
+        }
+
+        [DataMember]
+        [Column("Extensible")]
+        public bool Terminal
+        {
+            get { return _Terminal; }
+            set { _Terminal = value; }
+        }
+
+        [DataMember]
+        [Column("OffEdge")]
+        public bool OffEdge
+        {
+            get { return _OffEdge; }
+            set { _OffEdge = value; }
+        }
+
+        [DataMember]
+        [Column("Radius")]
+        public double Radius
+        {
+            get { return _Radius; }
+            set { _Radius = value; }
+        }
+
+        [DataMember]
+        [Column("TypeCode")]
+        public short TypeCode
+        {
+            get { return _TypeCode; }
+            set { _TypeCode = value; }
+        }
+
+        [DataMember]
+        [Column("LastModified")]
+        public long LastModified
+        {
+            get { return _LastModified; }
+            set { _LastModified = value; }
+        }
+
+        [DataMember]
+        [Column("Username")]
+        public string Username
+        {
+            get { return _Username; }
+            set { _Username = value; }
+        }
+
+        public Location()
+        {
+
+        }
+
+        public Location(DBLocation db)
+        {
+            this.ID = db.ID;
+
+            this.ParentID = db.ParentID;
+
+            this.Section = (long)db.Z;
+            this.Position = new AnnotationPoint(db.X, db.Y, db.Z);
+            this.VolumePosition = new AnnotationPoint(db.VolumeX, db.VolumeY, db.Z); 
+            
+            
+            System.IO.MemoryStream vertStream = null;
+            if (db.Verticies != null)
+            {
+                vertStream = new System.IO.MemoryStream(db.Verticies.ToArray());
+            }
+            
+
+            this._Links = new long[db.IsLinkedTo.Count + db.IsLinkedFrom.Count];
+        //    this._Links = new long[0]; 
+           
+            this._Closed = db.Closed;
+            
+            int i = 0; 
+            
+            
+            foreach (DBLocationLink link in db.IsLinkedTo)
+            {
+                _Links[i] = link.LinkedTo;
+                i++;
+            }
+
+            foreach (DBLocationLink link in db.IsLinkedFrom)
+            {
+                _Links[i] = link.LinkedFrom;
+                i++; 
+            }
+            
+
+            this._Terminal = db.Terminal;
+            this._OffEdge = db.OffEdge;
+            this._TypeCode = db.TypeCode;
+            this._Radius = db.Radius;
+
+            
+            if (vertStream != null)
+            {
+                try
+                {
+                    this.Verticies = serializer.Deserialize(vertStream) as AnnotationPoint[];
+                }
+                catch (Exception e)
+                {
+                    this.Verticies = new AnnotationPoint[0]; 
+                }
+                finally
+                {
+                    vertStream.Close();
+                }
+            }
+            else
+            {
+             
+                this.Verticies = new AnnotationPoint[0];
+            }
+
+            if (db.Tags == null)
+            {
+                //_Tags = new string[0];
+                _Xml = "";
+            }
+            else
+            {
+                //    _Tags = db.Tags.Split(';');
+                _Xml = db.Tags;
+            } 
+
+            this._LastModified = db.LastModified.Ticks;
+            this._Username = db.Username;
+        }
+
+        public void Sync(DBLocation db)
+        {
+            //This is a hack.  I want to update VolumeX and VolumeY with the viking client, but I don't want to 
+            //write all the code for a server utility to update it manually.  So if the only column changing is 
+            //VolumeX and VolumeY we do not update the username field.  Currently if I regenerate the volume transforms the
+            //next client to run viking would plaster the username history if I did not do this.
+            bool UpdateUserName = false;
+
+            UpdateUserName |= db.ParentID != this.ParentID; 
+            db.ParentID = this.ParentID;
+
+            UpdateUserName |= db.X != this.Position.X; 
+            db.X = this.Position.X;
+
+            UpdateUserName |= db.Y != this.Position.Y; 
+            db.Y = this.Position.Y;
+
+            UpdateUserName |= db.Z != this.Position.Z; 
+            db.Z = this.Position.Z;
+
+            //See above comment before adding UpdateUserName test...
+            db.VolumeX = this.VolumePosition.X;
+            db.VolumeY = this.VolumePosition.Y; 
+
+            //Save the verticies as a binary stream
+            using (System.IO.MemoryStream stream = new System.IO.MemoryStream(sizeof(double) * 3 * this.Verticies.Length))
+            {
+                serializer.Serialize(stream, this.Verticies);
+                db.Verticies = new System.Data.Linq.Binary(stream.ToArray());
+            }
+
+            UpdateUserName |= db.Closed != this.Closed; 
+            db.Closed = this.Closed;
+
+            //Update the tags
+            /*
+            string tags = "";
+            foreach (string s in _Tags)
+            {
+                tags = s + ';';
+            }
+            */
+            if (db.Tags != null)
+                if (db.Tags != this.AttributesXml)
+                    if (!(db.Tags.Length <= 1 && this.AttributesXml.Length <= 1))
+                        UpdateUserName = true;
+
+            db.Tags = this.AttributesXml;
+
+            UpdateUserName |= db.Terminal != this._Terminal; 
+            db.Terminal = this._Terminal;
+
+            UpdateUserName |= db.OffEdge != this._OffEdge; 
+            db.OffEdge = this._OffEdge;
+
+            UpdateUserName |= db.TypeCode != this._TypeCode; 
+            db.TypeCode = this._TypeCode;
+
+            UpdateUserName |= db.Radius != this._Radius; 
+            db.Radius = this._Radius;
+
+            if (UpdateUserName)
+            {
+                db.Username = ServiceModelUtil.GetUserForCall();
+            }
+            else
+            {
+                db.Username = this.Username; 
+            }
+
+            /*  This doesn't work because we don't have the actual LocationLink objects so LINQ doesn't create the field correctly
+            //Create links
+            db.LinkedFrom.Clear();
+            db.LinkedTo.Clear();        
+
+            //Enforce the rule of A < B in the database for now since we don't have directionality
+            for (int i = 0; i < _Links.Length; i++)
+            {
+                long LinkID = _Links[i];
+                if (LinkID < this.ID)
+                {
+                    DBLocationLink newLink = new DBLocationLink();
+                    newLink.LinkedFrom = LinkID;
+                    newLink.LinkedTo = this.ID;
+                    db.LinkedFrom.Add(newLink);
+                }
+                else
+                {
+                    DBLocationLink newLink = new DBLocationLink();
+                    newLink.LinkedFrom = this.ID;
+                    newLink.LinkedTo = LinkID;
+                    db.LinkedTo.Add(newLink);
+                }
+            }
+             */
+        }
+    }
+     
+}

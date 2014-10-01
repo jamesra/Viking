@@ -1,0 +1,174 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>9.0.30729</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{1483085C-F381-4252-B2AE-FFFBF1ABD7A2}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Annotation</RootNamespace>
+    <AssemblyName>AnnotationService</AssemblyName>
+    <ProjectTypeGuids>{3D9AD99F-2412-4246-B90B-4EAA41C64699};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
+    <StartArguments>/client:"WcfTestClient.exe"</StartArguments>
+    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
+    <RunPostBuildEvent>OnBuildSuccess</RunPostBuildEvent>
+    <FileUpgradeFlags>
+    </FileUpgradeFlags>
+    <OldToolsVersion>3.5</OldToolsVersion>
+    <UpgradeBackupLocation />
+    <TargetFrameworkProfile />
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.configuration" />
+    <Reference Include="System.Core">
+      <RequiredTargetFramework>3.5</RequiredTargetFramework>
+    </Reference>
+    <Reference Include="System.Data" />
+    <Reference Include="System.Data.Linq">
+      <RequiredTargetFramework>3.5</RequiredTargetFramework>
+    </Reference>
+    <Reference Include="System.Runtime.Serialization">
+      <RequiredTargetFramework>3.0</RequiredTargetFramework>
+    </Reference>
+    <Reference Include="System.ServiceModel">
+      <RequiredTargetFramework>3.0</RequiredTargetFramework>
+    </Reference>
+    <Reference Include="System.Web" />
+    <Reference Include="System.Xml" />
+    <Reference Include="System.Xml.Linq">
+      <RequiredTargetFramework>3.5</RequiredTargetFramework>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="AnnotateService.cs" />
+    <Compile Include="GraphClasses\Edgex.cs" />
+    <Compile Include="GraphClasses\Graphx.cs" />
+    <Compile Include="GraphClasses\LocationInfo.cs" />
+    <Compile Include="GraphClasses\SynapseClasses.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Properties\Settings.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTimeSharedInput>True</DesignTimeSharedInput>
+      <DependentUpon>Settings.settings</DependentUpon>
+    </Compile>
+    <Compile Include="Service\Attributes.cs" />
+    <Compile Include="Service\Interfaces\IAnnotateLocations.cs" />
+    <Compile Include="Service\Interfaces\IAnnotateStructures.cs" />
+    <Compile Include="Service\Interfaces\IAnnotateStructureTypes.cs" />
+    <Compile Include="Service\Interfaces\ICircuit.cs" />
+    <Compile Include="Service\Types\DataObject.cs" />
+    <Compile Include="Service\Types\Enums.cs" />
+    <Compile Include="Service\Types\Location.cs" />
+    <Compile Include="Service\Types\LocationLink.cs" />
+    <Compile Include="Service\Types\Structure.cs" />
+    <Compile Include="Service\Types\StructureLink.cs" />
+    <Compile Include="Service\Types\StructureType.cs" />
+    <Compile Include="ServiceModelUtil.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="TagSchema.xsd">
+      <SubType>Designer</SubType>
+    </None>
+    <None Include="web.config">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <SubType>Designer</SubType>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Annotate.svc">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <Service Include="{3259AA49-8AA1-44D3-9025-A0B520596A8C}" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="app.config" />
+    <None Include="GraphClasses\.svn\entries" />
+    <None Include="Properties\Settings.settings">
+      <Generator>SettingsSingleFileGenerator</Generator>
+      <LastGenOutput>Settings.Designer.cs</LastGenOutput>
+    </None>
+    <None Include="webBinary.config">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <SubType>Designer</SubType>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\AnnotationDatabase\AnnotationDatabase.csproj">
+      <Project>{E89D1721-2F91-446A-8BD9-F5712F131CC8}</Project>
+      <Name>AnnotationDatabase</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="GraphClasses\.svn\prop-base\" />
+    <Folder Include="GraphClasses\.svn\props\" />
+    <Folder Include="GraphClasses\.svn\text-base\" />
+    <Folder Include="GraphClasses\.svn\tmp\prop-base\" />
+    <Folder Include="GraphClasses\.svn\tmp\props\" />
+    <Folder Include="GraphClasses\.svn\tmp\text-base\" />
+  </ItemGroup>
+  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+  <ProjectExtensions>
+    <VisualStudio>
+      <FlavorProperties GUID="{3D9AD99F-2412-4246-B90B-4EAA41C64699}">
+        <WcfProjectProperties>
+          <AutoStart>True</AutoStart>
+        </WcfProjectProperties>
+      </FlavorProperties>
+    </VisualStudio>
+  </ProjectExtensions>
+  <PropertyGroup>
+    <PostBuildEvent>copy "$(ProjectDir)bin\Debug\*.dll" "\WebServices\TextDebug\bin"
+copy "$(ProjectDir)bin\Debug\*.pdb" "\WebServices\TextDebug\bin"
+copy "$(ProjectDir)bin\Debug\*.svc" "\WebServices\TextDebug"
+copy "$(ProjectDir)bin\Debug\web.config" "\WebServices\TextDebug\web.config"
+
+copy "$(ProjectDir)bin\Debug\*.dll" "\WebServices\BinaryDebug\bin"
+copy "$(ProjectDir)bin\Debug\*.pdb" "\WebServices\BinaryDebug\bin"
+copy "$(ProjectDir)bin\Debug\*.svc" "\WebServices\BinaryDebug\"
+copy "$(ProjectDir)bin\Debug\webBinary.config" "\WebServices\BinaryDebug\web.config"
+
+copy $(ProjectDir)bin\Release\*.dll \WebServices\Text\bin
+copy $(ProjectDir)bin\Release\*.pdb \WebServices\Text\bin
+copy $(ProjectDir)bin\Release\*.svc \WebServices\Text\
+copy $(ProjectDir)bin\Release\web.config \WebServices\Text\web.config
+
+copy $(ProjectDir)bin\Release\*.dll \WebServices\Binary\bin
+copy $(ProjectDir)bin\Release\*.pdb \WebServices\Binary\bin
+copy $(ProjectDir)bin\Release\*.svc \WebServices\Binary\
+copy $(ProjectDir)bin\Release\webBinary.config \WebServices\Binary\web.config
+
+</PostBuildEvent>
+  </PropertyGroup>
+</Project>

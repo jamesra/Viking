@@ -1,0 +1,218 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ClassDiagram MajorVersion="1" MinorVersion="1">
+  <Class Name="WebAnnotationModel.LocationStore" Collapsed="true">
+    <Position X="15.25" Y="9.25" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAEBAAICAAAIAACAAAAAAAEUIEEAQEEIAAACIAAQAEA=</HashCode>
+      <FileName>LocationStore.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="WebAnnotationModel.StoreBase&lt;PROXY, INTERFACE, KEY, OBJECT, WCFOBJECT&gt;" Collapsed="true">
+    <Position X="14" Y="6.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAACAAAAAAAIAAAAgAEAAAEAAFAAAAACAAAQEAA=</HashCode>
+      <FileName>Store\StoreBase.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" />
+  </Class>
+  <Class Name="WebAnnotationModel.StoreBaseWithKey&lt;PROXY, INTERFACE, KEY, OBJECT, WCFOBJECT&gt;" Collapsed="true">
+    <Position X="13" Y="7.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>IAABAIIAAQAAAACAQAAAAAAAEAAAAAEIAAAAAAAAIAA=</HashCode>
+      <FileName>Store\StoreBaseWithKey.cs</FileName>
+      <NewMemberFileName>Store\StoreBaseWithIndexKey.cs</NewMemberFileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="WebAnnotationModel.StoreBaseWithIndexKeyAndParent&lt;PROXY, INTERFACE, KEY, KEYGEN, OBJECT, WCFOBJECT&gt;" Collapsed="true">
+    <Position X="11.75" Y="9.25" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>EAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Store\StoreBaseWithIndexKeyAndParent.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="WebAnnotationModel.StructureStore" Collapsed="true">
+    <Position X="10.75" Y="10.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAABAAICAABAAACAAEAAAAAAIQEAAEEIAAACAAAQAAA=</HashCode>
+      <FileName>Store\StructureStore.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="WebAnnotationModel.StructureTypeStore" Collapsed="true">
+    <Position X="13" Y="10.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAABAAICAAAAAACBAAAABAAAAAEAAEEIAAACAAAQAAA=</HashCode>
+      <FileName>Store\StructureTypeStore.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="WebAnnotationModel.Objects.LocationObj" Collapsed="true">
+    <Position X="0.75" Y="9.25" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>BAAoAAAgEAAAhAUkBgIAQAACACAAAEAgCAgAgIAQYAE=</HashCode>
+      <FileName>Objects\LocationObj.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="WebAnnotationModel.Objects.StructureLinkObj" Collapsed="true">
+    <Position X="7.5" Y="9.25" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAQAAAAAgAAAAAAAAQAAAAAAAIAAAAgAAABAAAA=</HashCode>
+      <FileName>Objects\StructureLinkObj.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="WebAnnotationModel.Objects.StructureObj" Collapsed="true">
+    <Position X="3" Y="10.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAgABAAAAgAgAAEAAoAAAAAAKAAAEAACQgAgAACBAA=</HashCode>
+      <FileName>Objects\StructureObj.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="WebAnnotationModel.Objects.StructureTypeObj" Collapsed="true">
+    <Position X="5.25" Y="10.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAgABAAAAAAgAAEAAAgAAQAAAAAAAAAAAgAgAAAAAA=</HashCode>
+      <FileName>Objects\StructureTypeObj.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="WebAnnotationModel.Objects.WCFObjBase&lt;T&gt;" Collapsed="true">
+    <Position X="4" Y="6.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAEAAAAAAAIAAAgBAAgACBABAAAAggAAQAAAA=</HashCode>
+      <FileName>Objects\WCFObjBase.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" />
+  </Class>
+  <Class Name="WebAnnotationModel.Objects.WCFObjBaseWithKey&lt;T&gt;" Collapsed="true">
+    <Position X="3" Y="7.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAIAAAgAAEgAAAAAAAAAAAAIAAAAgAAAAAAAA=</HashCode>
+      <FileName>Objects\WCFObjBaseWithKey.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="WebAnnotationModel.Objects.WCFObjBaseWithParent&lt;T, THISTYPE&gt;" Collapsed="true">
+    <Position X="4" Y="9.25" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAABAAAAAAEAAAAAAUQAAAAAKAAAAAAAAAgAAQAAA=</HashCode>
+      <FileName>Objects\WCFObjBaseWithParent.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="WebAnnotationModel.Service.StructureType" Collapsed="true">
+    <Position X="9.75" Y="4.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAQoAAABAABAgCAAAAAkAAQAAoQAAEAAAAAggAAEAAA=</HashCode>
+      <FileName>Service References\Service\Reference.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="WebAnnotationModel.Service.DataObject" Collapsed="true">
+    <Position X="5.25" Y="0.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAACAAAAAAAAAAAAAAAAgAAAAAAEAAEAAAYAAAA=</HashCode>
+      <FileName>Service References\Service\Reference.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" />
+  </Class>
+  <Class Name="WebAnnotationModel.Service.StructureLink" Collapsed="true">
+    <Position X="0.75" Y="1.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAIAAQAAAAAAQAAAYAABQAAAAAAQEAAAAAAAABAAAA=</HashCode>
+      <FileName>Service References\Service\Reference.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="WebAnnotationModel.Service.LocationLink" Collapsed="true">
+    <Position X="3" Y="1.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAQAAAAAAAQAAAAAAQAAAAAAAAABAAAA=</HashCode>
+      <FileName>Service References\Service\Reference.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="WebAnnotationModel.Service.DataObjectWithKeyOflong" Collapsed="true">
+    <Position X="7.5" Y="1.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAIAAAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Service References\Service\Reference.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="WebAnnotationModel.Service.Location" Collapsed="true">
+    <Position X="5.25" Y="3.25" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AACJAIAhQAAABSUgAQABBASCAAAAAEAQCAAAgICAAAA=</HashCode>
+      <FileName>Service References\Service\Reference.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="WebAnnotationModel.Service.DataObjectWithParentOflong" Collapsed="true">
+    <Position X="8.75" Y="3.25" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAACAAAAAAAAAAAAAAAAAAAAAAgAAAAAA=</HashCode>
+      <FileName>Service References\Service\Reference.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="WebAnnotationModel.Service.Structure" Collapsed="true">
+    <Position X="7.5" Y="4.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAEoAAAAEAAEAAAAAQAABACAIoAEAEAgCAABAAACAAA=</HashCode>
+      <FileName>Service References\Service\Reference.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="WebAnnotationModel.StructureLinkStore" Collapsed="true">
+    <Position X="17.5" Y="9.25" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAABAAICAAAAAACAABAAAAAAAAEAAEEIAAACAAAQAAA=</HashCode>
+      <FileName>Store\StructureLinkStore.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Interface Name="WebAnnotationModel.Service.IAnnotateStructureTypes" Collapsed="true">
+    <Position X="3.5" Y="12.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAgDAAIAAAIABAAAAAIAAAAEACAAAAgAgAAAAQwA=</HashCode>
+      <FileName>Service References\Service\Reference.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="WebAnnotationModel.Service.IAnnotateStructureTypesChannel" Collapsed="true">
+    <Position X="3.5" Y="13.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Service References\Service\Reference.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="WebAnnotationModel.Service.IAnnotateStructures" Collapsed="true">
+    <Position X="11.5" Y="0.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>ACAECIEAIABgAIQEJAgQACCABYAABQAQAAAFasAAAAA=</HashCode>
+      <FileName>Service References\Service\Reference.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="WebAnnotationModel.Service.IAnnotateStructuresChannel" Collapsed="true">
+    <Position X="11.5" Y="1.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Service References\Service\Reference.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="WebAnnotationModel.Service.IAnnotateLocations" Collapsed="true">
+    <Position X="0.5" Y="10.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAZAQAIAIAgYAAAQAUAAQgAEAgQAAAgAAAAACAAAAAA=</HashCode>
+      <FileName>Service References\Service\Reference.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="WebAnnotationModel.Service.IAnnotateLocationsChannel" Collapsed="true">
+    <Position X="0.5" Y="11.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Service References\Service\Reference.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="WebAnnotationModel.Service.ICircuit" Collapsed="true">
+    <Position X="0.5" Y="3.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAEAAAkBAABAAIgAIJAAAAJAAAEAABQAAACQAEAAAAA=</HashCode>
+      <FileName>Service References\Service\Reference.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="WebAnnotationModel.Service.ICircuitChannel" Collapsed="true">
+    <Position X="0.5" Y="4.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Service References\Service\Reference.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Font Name="Segoe UI" Size="9" />
+</ClassDiagram>

@@ -1,0 +1,1 @@
+sqlcmd -S .\SQLEXPRESS -i "C:\Users\Administrator\Documents\RepairScripts\SwapStructureLinks.sql"

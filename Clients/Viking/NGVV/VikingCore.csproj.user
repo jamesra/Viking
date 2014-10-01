@@ -1,0 +1,37 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <PublishUrlHistory>publish\</PublishUrlHistory>
+    <InstallUrlHistory>
+    </InstallUrlHistory>
+    <SupportUrlHistory>
+    </SupportUrlHistory>
+    <UpdateUrlHistory>
+    </UpdateUrlHistory>
+    <BootstrapperUrlHistory>
+    </BootstrapperUrlHistory>
+    <FallbackCulture>en-US</FallbackCulture>
+    <VerifyUploadedFiles>false</VerifyUploadedFiles>
+    <ErrorReportUrlHistory>
+    </ErrorReportUrlHistory>
+    <ProjectView>ProjectFiles</ProjectView>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <StartArguments>http://155.100.105.9/MouseVolume/Volume.xml</StartArguments>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|x86' ">
+    <StartArguments>http://155.100.105.9/RABBIT/Volume.xml</StartArguments>
+    <StartAction>Program</StartAction>
+    <StartProgram>D:\Src\Viking\Viking\bin\Debug\Viking.exe</StartProgram>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|x86' ">
+    <StartArguments>http://155.100.105.9/RABBIT/Volume.xml</StartArguments>
+    <StartAction>Program</StartAction>
+    <StartProgram>C:\Src\NGVV\Viking\bin\Release\Viking.exe</StartProgram>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'ReleaseWithSymbols|x86'">
+    <StartProgram>C:\Src\NGVV\Viking\bin\Release\Viking.exe</StartProgram>
+    <StartArguments>http://155.100.105.9/RABBIT/Volume.xml</StartArguments>
+    <StartAction>Program</StartAction>
+  </PropertyGroup>
+</Project>

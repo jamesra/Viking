@@ -1,0 +1,537 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="12.0">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>9.0.30729</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{AEB1B24B-C968-40F9-B9F5-5C1FCE2EFD6D}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Viking</RootNamespace>
+    <AssemblyName>VikingCore</AssemblyName>
+    <FileUpgradeFlags>
+    </FileUpgradeFlags>
+    <OldToolsVersion>3.5</OldToolsVersion>
+    <UpgradeBackupLocation>
+    </UpgradeBackupLocation>
+    <TargetFrameworkVersion>v4.5.1</TargetFrameworkVersion>
+    <TargetZone>LocalIntranet</TargetZone>
+    <GenerateManifests>false</GenerateManifests>
+    <IsWebBootstrapper>false</IsWebBootstrapper>
+    <StartupObject>
+    </StartupObject>
+    <PublishUrl>publish\</PublishUrl>
+    <Install>true</Install>
+    <InstallFrom>Disk</InstallFrom>
+    <UpdateEnabled>false</UpdateEnabled>
+    <UpdateMode>Foreground</UpdateMode>
+    <UpdateInterval>7</UpdateInterval>
+    <UpdateIntervalUnits>Days</UpdateIntervalUnits>
+    <UpdatePeriodically>false</UpdatePeriodically>
+    <UpdateRequired>false</UpdateRequired>
+    <MapFileExtensions>true</MapFileExtensions>
+    <ApplicationRevision>0</ApplicationRevision>
+    <ApplicationVersion>1.0.0.%2a</ApplicationVersion>
+    <UseApplicationTrust>false</UseApplicationTrust>
+    <BootstrapperEnabled>true</BootstrapperEnabled>
+    <TargetFrameworkProfile>
+    </TargetFrameworkProfile>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <PlatformTarget>x86</PlatformTarget>
+    <CodeAnalysisRuleSet>..\Viking\Main.ruleset</CodeAnalysisRuleSet>
+    <RunCodeAnalysis>true</RunCodeAnalysis>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <PlatformTarget>x86</PlatformTarget>
+    <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|x86' ">
+    <DebugSymbols>true</DebugSymbols>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <DebugType>full</DebugType>
+    <PlatformTarget>x86</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|x86' ">
+    <OutputPath>bin\x86\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <Optimize>true</Optimize>
+    <DebugType>pdbonly</DebugType>
+    <PlatformTarget>x86</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'ReleaseWithSymbols|AnyCPU'">
+    <OutputPath>bin\ReleaseWithSymbols\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <DebugType>pdbonly</DebugType>
+    <PlatformTarget>x86</PlatformTarget>
+    <CodeAnalysisLogFile>bin\Release\VikingCore.dll.CodeAnalysisLog.xml</CodeAnalysisLogFile>
+    <CodeAnalysisUseTypeNameInSuppression>true</CodeAnalysisUseTypeNameInSuppression>
+    <CodeAnalysisModuleSuppressionsFile>GlobalSuppressions.cs</CodeAnalysisModuleSuppressionsFile>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
+    <CodeAnalysisRuleSetDirectories>;C:\Program Files (x86)\Microsoft Visual Studio 10.0\Team Tools\Static Analysis Tools\\Rule Sets</CodeAnalysisRuleSetDirectories>
+    <CodeAnalysisIgnoreBuiltInRuleSets>false</CodeAnalysisIgnoreBuiltInRuleSets>
+    <CodeAnalysisRuleDirectories>;C:\Program Files (x86)\Microsoft Visual Studio 10.0\Team Tools\Static Analysis Tools\FxCop\\Rules</CodeAnalysisRuleDirectories>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'ReleaseWithSymbols|x86'">
+    <OutputPath>bin\x86\ReleaseWithSymbols\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <Optimize>true</Optimize>
+    <DebugType>full</DebugType>
+    <PlatformTarget>x86</PlatformTarget>
+    <CodeAnalysisLogFile>bin\x86\Release\VikingCore.dll.CodeAnalysisLog.xml</CodeAnalysisLogFile>
+    <CodeAnalysisUseTypeNameInSuppression>true</CodeAnalysisUseTypeNameInSuppression>
+    <CodeAnalysisModuleSuppressionsFile>GlobalSuppressions.cs</CodeAnalysisModuleSuppressionsFile>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
+    <CodeAnalysisRuleSetDirectories>;C:\Program Files (x86)\Microsoft Visual Studio 10.0\Team Tools\Static Analysis Tools\\Rule Sets</CodeAnalysisRuleSetDirectories>
+    <CodeAnalysisIgnoreBuiltInRuleSets>false</CodeAnalysisIgnoreBuiltInRuleSets>
+    <CodeAnalysisRuleDirectories>;C:\Program Files (x86)\Microsoft Visual Studio 10.0\Team Tools\Static Analysis Tools\FxCop\\Rules</CodeAnalysisRuleDirectories>
+    <CodeAnalysisIgnoreBuiltInRules>false</CodeAnalysisIgnoreBuiltInRules>
+    <DebugSymbols>true</DebugSymbols>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Microsoft.Xna.Framework, Version=4.0.0.0, Culture=neutral, PublicKeyToken=842cf8be1de50553, processorArchitecture=x86" />
+    <Reference Include="Microsoft.Xna.Framework.Graphics, Version=4.0.0.0, Culture=neutral, PublicKeyToken=842cf8be1de50553, processorArchitecture=x86" />
+    <Reference Include="System" />
+    <Reference Include="System.Core">
+      <RequiredTargetFramework>3.5</RequiredTargetFramework>
+    </Reference>
+    <Reference Include="System.Data" />
+    <Reference Include="System.Deployment" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xml" />
+    <Reference Include="System.Xml.Linq">
+      <RequiredTargetFramework>3.5</RequiredTargetFramework>
+    </Reference>
+    <Reference Include="WindowsBase">
+      <RequiredTargetFramework>3.0</RequiredTargetFramework>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Common\Attributes.cs" />
+    <Compile Include="Common\Enums.cs" />
+    <Compile Include="Common\EventArgs.cs" />
+    <Compile Include="Common\Interfaces.cs" />
+    <Compile Include="Global.cs" />
+    <Compile Include="GridDrawExtensions.cs" />
+    <Compile Include="Objects\GenericTreeNode.cs" />
+    <Compile Include="Objects\UIObjBase.cs" />
+    <Compile Include="PropertyPages\SectionChannelsPage.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="PropertyPages\SectionChannelsPage.Designer.cs">
+      <DependentUpon>SectionChannelsPage.cs</DependentUpon>
+    </Compile>
+    <Compile Include="PropertyPages\SectionGeneralPage.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="PropertyPages\SectionGeneralPage.Designer.cs">
+      <DependentUpon>SectionGeneralPage.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Threading\DisposeTextureThreadingObj.cs" />
+    <Compile Include="ExtensionManager.cs" />
+    <Compile Include="Threading\StreamToTexture.cs" />
+    <Compile Include="Threading\TextureRequestQueue.cs" />
+    <Compile Include="TileViewModelCache.cs" />
+    <Compile Include="UI\BaseClasses\DockableUserControl.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="UI\BaseClasses\DockableUserControl.Designer.cs">
+      <DependentUpon>DockableUserControl.cs</DependentUpon>
+    </Compile>
+    <Compile Include="UI\BaseClasses\DockingTreeControl.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="UI\BaseClasses\DockingTreeControl.Designer.cs">
+      <DependentUpon>DockingTreeControl.cs</DependentUpon>
+    </Compile>
+    <Compile Include="UI\BaseClasses\DocklingListControl.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="UI\BaseClasses\DocklingListControl.Designer.cs">
+      <DependentUpon>DocklingListControl.cs</DependentUpon>
+    </Compile>
+    <Compile Include="UI\BaseClasses\ModuleTabControl.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="UI\BaseClasses\ModuleTabControl.Designer.cs">
+      <DependentUpon>ModuleTabControl.cs</DependentUpon>
+    </Compile>
+    <Compile Include="UI\BaseClasses\TagMenuItem.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="UI\Command\Command.cs" />
+    <Compile Include="UI\Controls\ChannelPickerControl.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="UI\Controls\ChannelPickerControl.Designer.cs">
+      <DependentUpon>ChannelPickerControl.cs</DependentUpon>
+    </Compile>
+    <Compile Include="UI\Controls\EnableToolBar.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="UI\Controls\EnableToolBar.Designer.cs">
+      <DependentUpon>EnableToolBar.cs</DependentUpon>
+    </Compile>
+    <Compile Include="UI\Controls\NumericTextBox.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="UI\Controls\ChannelSetupControl.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="UI\Controls\ChannelSetupControl.Designer.cs">
+      <DependentUpon>ChannelSetupControl.cs</DependentUpon>
+    </Compile>
+    <Compile Include="UI\Forms\AboutBox.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="UI\Forms\AboutBox.Designer.cs">
+      <DependentUpon>AboutBox.cs</DependentUpon>
+    </Compile>
+    <Compile Include="UI\Forms\FrameCapturesForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="UI\Forms\FrameCapturesForm.Designer.cs">
+      <DependentUpon>FrameCapturesForm.cs</DependentUpon>
+    </Compile>
+    <Compile Include="UI\Controls\ObjectLinkLabel.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="UI\Controls\ObjectLinkLabel.Designer.cs">
+      <DependentUpon>ObjectLinkLabel.cs</DependentUpon>
+    </Compile>
+    <Compile Include="UI\Controls\ObjectListView.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="UI\Controls\ObjectListView.Designer.cs">
+      <DependentUpon>ObjectListView.cs</DependentUpon>
+    </Compile>
+    <Compile Include="UI\BaseClasses\PropertyPageBase.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="UI\BaseClasses\VikingControl.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="UI\BaseClasses\VikingObjectEventControl.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="UI\BaseClasses\VikingObjectEventControl.Designer.cs">
+      <DependentUpon>VikingObjectEventControl.cs</DependentUpon>
+    </Compile>
+    <Compile Include="UI\Controls\ObjectTreeView.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="UI\Controls\ObjectTreeView.Designer.cs">
+      <DependentUpon>ObjectTreeView.cs</DependentUpon>
+    </Compile>
+    <Compile Include="UI\Controls\PropertySheetControl.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="UI\Controls\PropertySheetControl.Designer.cs">
+      <DependentUpon>PropertySheetControl.cs</DependentUpon>
+    </Compile>
+    <Compile Include="UI\Controls\SectionViewerControl.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="UI\Controls\SectionViewerControl.Designer.cs">
+      <DependentUpon>SectionViewerControl.cs</DependentUpon>
+    </Compile>
+    <Compile Include="UI\Command\DefaultCommand.cs" />
+    <Compile Include="UI\Forms\GenericProgressForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="UI\Forms\GenericProgressForm.Designer.cs">
+      <DependentUpon>GenericProgressForm.cs</DependentUpon>
+    </Compile>
+    <Compile Include="UI\Forms\GoToLocationForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="UI\Forms\GoToLocationForm.Designer.cs">
+      <DependentUpon>GoToLocationForm.cs</DependentUpon>
+    </Compile>
+    <Compile Include="UI\Forms\Logon.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="UI\Forms\Logon.Designer.cs">
+      <DependentUpon>Logon.cs</DependentUpon>
+    </Compile>
+    <Compile Include="UI\Forms\PropertySheetForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="UI\Forms\PropertySheetForm.Designer.cs">
+      <DependentUpon>PropertySheetForm.cs</DependentUpon>
+    </Compile>
+    <Compile Include="UI\Forms\ScreenshotForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="UI\Forms\ScreenshotForm.Designer.cs">
+      <DependentUpon>ScreenshotForm.cs</DependentUpon>
+    </Compile>
+    <Compile Include="UI\Forms\SectionChooserForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="UI\Forms\SectionChooserForm.Designer.cs">
+      <DependentUpon>SectionChooserForm.cs</DependentUpon>
+    </Compile>
+    <Compile Include="UI\Forms\SectionViewerForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="UI\Forms\SectionViewerForm.Designer.cs">
+      <DependentUpon>SectionViewerForm.cs</DependentUpon>
+    </Compile>
+    <Compile Include="UI\Forms\SetupChannelsForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="UI\Forms\SetupChannelsForm.Designer.cs">
+      <DependentUpon>SetupChannelsForm.cs</DependentUpon>
+    </Compile>
+    <Compile Include="UI\Forms\TileExportForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="UI\Forms\TileExportForm.Designer.cs">
+      <DependentUpon>TileExportForm.cs</DependentUpon>
+    </Compile>
+    <Compile Include="UI\Forms\VikingForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="UI\Forms\VikingForm.Designer.cs">
+      <DependentUpon>VikingForm.cs</DependentUpon>
+    </Compile>
+    <Compile Include="UI\Command\RectangleCommand.cs" />
+    <Compile Include="UI\Command\ScreenCaptureCommand.cs" />
+    <Compile Include="UI\State.cs" />
+    <Compile Include="UI\Forms\VikingMain.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="UI\Forms\VikingMain.Designer.cs">
+      <DependentUpon>VikingMain.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <EmbeddedResource Include="PropertyPages\SectionChannelsPage.resx">
+      <DependentUpon>SectionChannelsPage.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="PropertyPages\SectionGeneralPage.resx">
+      <DependentUpon>SectionGeneralPage.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UI\BaseClasses\DockableUserControl.resx">
+      <DependentUpon>DockableUserControl.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UI\BaseClasses\DockingTreeControl.resx">
+      <DependentUpon>DockingTreeControl.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UI\BaseClasses\DocklingListControl.resx">
+      <DependentUpon>DocklingListControl.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UI\BaseClasses\ModuleTabControl.resx">
+      <DependentUpon>ModuleTabControl.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UI\BaseClasses\PropertyPageBase.resx">
+      <DependentUpon>PropertyPageBase.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UI\BaseClasses\VikingControl.resx">
+      <DependentUpon>VikingControl.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UI\Controls\ChannelPickerControl.resx">
+      <DependentUpon>ChannelPickerControl.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UI\Controls\EnableToolBar.resx">
+      <DependentUpon>EnableToolBar.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UI\Controls\ObjectLinkLabel.resx">
+      <DependentUpon>ObjectLinkLabel.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UI\Controls\ObjectTreeView.resx">
+      <DependentUpon>ObjectTreeView.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UI\Controls\SectionViewerControl.resx">
+      <DependentUpon>SectionViewerControl.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UI\Controls\ChannelSetupControl.resx">
+      <DependentUpon>ChannelSetupControl.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UI\Forms\AboutBox.resx">
+      <DependentUpon>AboutBox.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UI\Forms\FrameCapturesForm.resx">
+      <DependentUpon>FrameCapturesForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UI\Forms\GenericProgressForm.resx">
+      <DependentUpon>GenericProgressForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UI\Forms\GoToLocationForm.resx">
+      <DependentUpon>GoToLocationForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UI\Forms\Logon.resx">
+      <DependentUpon>Logon.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UI\Forms\ScreenshotForm.resx">
+      <DependentUpon>ScreenshotForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UI\Forms\SectionChooserForm.resx">
+      <DependentUpon>SectionChooserForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UI\Forms\SetupChannelsForm.resx">
+      <DependentUpon>SetupChannelsForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UI\Forms\TileExportForm.resx">
+      <DependentUpon>TileExportForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UI\Forms\VikingMain.resx">
+      <SubType>Designer</SubType>
+      <DependentUpon>VikingMain.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UI\Forms\PropertySheetForm.resx">
+      <DependentUpon>PropertySheetForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UI\Forms\SectionViewerForm.resx">
+      <DependentUpon>SectionViewerForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UI\Forms\SplashForm.resx">
+      <DependentUpon>SplashForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UI\Forms\VikingForm.resx">
+      <DependentUpon>VikingForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UI\VolumeControls\SectionList.resx">
+      <DependentUpon>SectionList.cs</DependentUpon>
+    </EmbeddedResource>
+    <Compile Include="Properties\Resources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Resources.resx</DependentUpon>
+      <DesignTime>True</DesignTime>
+    </Compile>
+    <None Include="app.config" />
+    <None Include="ClassDiagram1.cd" />
+    <None Include="Properties\CVS\app.manifest" />
+    <None Include="Properties\Settings.settings">
+      <Generator>SettingsSingleFileGenerator</Generator>
+      <LastGenOutput>Settings.Designer.cs</LastGenOutput>
+    </None>
+    <Compile Include="Properties\Settings.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Settings.settings</DependentUpon>
+      <DesignTimeSharedInput>True</DesignTimeSharedInput>
+    </Compile>
+    <Compile Include="UI\Command\ROIRectCommand.cs" />
+    <Compile Include="TextureCache.cs">
+    </Compile>
+    <Compile Include="Threading\TextureReader.cs" />
+    <Compile Include="Util\BmpWriter.cs" />
+    <Compile Include="ViewModels\TriangulationViewModel.cs" />
+    <Compile Include="ViewModels\TileViewModel.cs" />
+    <Compile Include="UI\Forms\SplashForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="UI\Forms\SplashForm.Designer.cs">
+      <DependentUpon>SplashForm.cs</DependentUpon>
+    </Compile>
+    <Compile Include="UI\VolumeControls\SectionList.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="UI\VolumeControls\SectionList.Designer.cs">
+      <DependentUpon>SectionList.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Util\Defaults.cs" />
+    <Compile Include="Util\ListViewColumnSorter.cs" />
+    <Compile Include="Util\Util.cs" />
+    <Compile Include="ViewModels\SectionViewModel.cs" />
+    <Compile Include="ViewModels\VolumeViewModel.cs" />
+    <Compile Include="ViewportExtension.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <BootstrapperPackage Include="Microsoft.Net.Client.3.5">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 3.5 SP1 Client Profile</ProductName>
+      <Install>false</Install>
+    </BootstrapperPackage>
+    <BootstrapperPackage Include="Microsoft.Net.Framework.2.0">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 2.0 %28x86%29</ProductName>
+      <Install>false</Install>
+    </BootstrapperPackage>
+    <BootstrapperPackage Include="Microsoft.Net.Framework.3.0">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 3.0 %28x86%29</ProductName>
+      <Install>false</Install>
+    </BootstrapperPackage>
+    <BootstrapperPackage Include="Microsoft.Net.Framework.3.5">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 3.5</ProductName>
+      <Install>false</Install>
+    </BootstrapperPackage>
+    <BootstrapperPackage Include="Microsoft.Net.Framework.3.5.SP1">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 3.5 SP1</ProductName>
+      <Install>true</Install>
+    </BootstrapperPackage>
+    <BootstrapperPackage Include="Microsoft.Windows.Installer.3.1">
+      <Visible>False</Visible>
+      <ProductName>Windows Installer 3.1</ProductName>
+      <Install>true</Install>
+    </BootstrapperPackage>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\Common\Common.csproj">
+      <Project>{B35B0C61-EC9C-425A-846D-F160D5B12158}</Project>
+      <Name>Common</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\Geometry\Geometry.csproj">
+      <Project>{EACB87E8-A5E3-417E-A9EF-B80C2A68C020}</Project>
+      <Name>Geometry</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\VikingXNAGraphics\VikingXNAGraphics.csproj">
+      <Project>{7EDE0B00-89F9-4EF5-A629-2ED66CEE273B}</Project>
+      <Name>VikingXNAGraphics</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\VolumeModel\VolumeModel.csproj">
+      <Project>{2EBA2A77-F7F0-4EFC-AC06-A12FE249388F}</Project>
+      <Name>VolumeModel</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\marclab.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <WCFMetadata Include="Service References\" />
+  </ItemGroup>
+  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

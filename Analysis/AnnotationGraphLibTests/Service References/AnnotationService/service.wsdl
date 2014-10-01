@@ -1,0 +1,917 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<wsdl:definitions xmlns:wsap="http://schemas.xmlsoap.org/ws/2004/08/addressing/policy" xmlns:wsa10="http://www.w3.org/2005/08/addressing" xmlns:tns="http://tempuri.org/" xmlns:msc="http://schemas.microsoft.com/ws/2005/12/wsdl/contract" xmlns:soapenc="http://schemas.xmlsoap.org/soap/encoding/" xmlns:wsp="http://schemas.xmlsoap.org/ws/2004/09/policy" xmlns:wsam="http://www.w3.org/2007/05/addressing/metadata" xmlns:soap12="http://schemas.xmlsoap.org/wsdl/soap12/" xmlns:wsa="http://schemas.xmlsoap.org/ws/2004/08/addressing" xmlns:wsaw="http://www.w3.org/2006/05/addressing/wsdl" xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/" xmlns:wsu="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd" xmlns:xsd="http://www.w3.org/2001/XMLSchema" name="AnnotateService" targetNamespace="http://tempuri.org/" xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/">
+  <wsp:Policy wsu:Id="Annotation.Service.Interfaces.IAnnotateStructureTypes-Binary_policy">
+    <wsp:ExactlyOne>
+      <wsp:All>
+        <msb:BinaryEncoding xmlns:msb="http://schemas.microsoft.com/ws/06/2004/mspolicy/netbinary1" />
+        <sp:TransportBinding xmlns:sp="http://schemas.xmlsoap.org/ws/2005/07/securitypolicy">
+          <wsp:Policy>
+            <sp:TransportToken>
+              <wsp:Policy>
+                <sp:HttpsToken RequireClientCertificate="false" />
+              </wsp:Policy>
+            </sp:TransportToken>
+            <sp:AlgorithmSuite>
+              <wsp:Policy>
+                <sp:Basic256 />
+              </wsp:Policy>
+            </sp:AlgorithmSuite>
+            <sp:Layout>
+              <wsp:Policy>
+                <sp:Strict />
+              </wsp:Policy>
+            </sp:Layout>
+            <sp:IncludeTimestamp />
+          </wsp:Policy>
+        </sp:TransportBinding>
+        <sp:SignedSupportingTokens xmlns:sp="http://schemas.xmlsoap.org/ws/2005/07/securitypolicy">
+          <wsp:Policy>
+            <sp:UsernameToken sp:IncludeToken="http://schemas.xmlsoap.org/ws/2005/07/securitypolicy/IncludeToken/AlwaysToRecipient">
+              <wsp:Policy>
+                <sp:WssUsernameToken10 />
+              </wsp:Policy>
+            </sp:UsernameToken>
+          </wsp:Policy>
+        </sp:SignedSupportingTokens>
+        <sp:Wss11 xmlns:sp="http://schemas.xmlsoap.org/ws/2005/07/securitypolicy">
+          <wsp:Policy>
+            <sp:MustSupportRefKeyIdentifier />
+            <sp:MustSupportRefIssuerSerial />
+            <sp:MustSupportRefThumbprint />
+            <sp:MustSupportRefEncryptedKey />
+          </wsp:Policy>
+        </sp:Wss11>
+        <sp:Trust10 xmlns:sp="http://schemas.xmlsoap.org/ws/2005/07/securitypolicy">
+          <wsp:Policy>
+            <sp:MustSupportIssuedTokens />
+            <sp:RequireClientEntropy />
+            <sp:RequireServerEntropy />
+          </wsp:Policy>
+        </sp:Trust10>
+        <wsaw:UsingAddressing />
+      </wsp:All>
+    </wsp:ExactlyOne>
+  </wsp:Policy>
+  <wsp:Policy wsu:Id="Annotation.Service.Interfaces.IAnnotateStructures-Binary_policy">
+    <wsp:ExactlyOne>
+      <wsp:All>
+        <msb:BinaryEncoding xmlns:msb="http://schemas.microsoft.com/ws/06/2004/mspolicy/netbinary1" />
+        <sp:TransportBinding xmlns:sp="http://schemas.xmlsoap.org/ws/2005/07/securitypolicy">
+          <wsp:Policy>
+            <sp:TransportToken>
+              <wsp:Policy>
+                <sp:HttpsToken RequireClientCertificate="false" />
+              </wsp:Policy>
+            </sp:TransportToken>
+            <sp:AlgorithmSuite>
+              <wsp:Policy>
+                <sp:Basic256 />
+              </wsp:Policy>
+            </sp:AlgorithmSuite>
+            <sp:Layout>
+              <wsp:Policy>
+                <sp:Strict />
+              </wsp:Policy>
+            </sp:Layout>
+            <sp:IncludeTimestamp />
+          </wsp:Policy>
+        </sp:TransportBinding>
+        <sp:SignedSupportingTokens xmlns:sp="http://schemas.xmlsoap.org/ws/2005/07/securitypolicy">
+          <wsp:Policy>
+            <sp:UsernameToken sp:IncludeToken="http://schemas.xmlsoap.org/ws/2005/07/securitypolicy/IncludeToken/AlwaysToRecipient">
+              <wsp:Policy>
+                <sp:WssUsernameToken10 />
+              </wsp:Policy>
+            </sp:UsernameToken>
+          </wsp:Policy>
+        </sp:SignedSupportingTokens>
+        <sp:Wss11 xmlns:sp="http://schemas.xmlsoap.org/ws/2005/07/securitypolicy">
+          <wsp:Policy>
+            <sp:MustSupportRefKeyIdentifier />
+            <sp:MustSupportRefIssuerSerial />
+            <sp:MustSupportRefThumbprint />
+            <sp:MustSupportRefEncryptedKey />
+          </wsp:Policy>
+        </sp:Wss11>
+        <sp:Trust10 xmlns:sp="http://schemas.xmlsoap.org/ws/2005/07/securitypolicy">
+          <wsp:Policy>
+            <sp:MustSupportIssuedTokens />
+            <sp:RequireClientEntropy />
+            <sp:RequireServerEntropy />
+          </wsp:Policy>
+        </sp:Trust10>
+        <wsaw:UsingAddressing />
+      </wsp:All>
+    </wsp:ExactlyOne>
+  </wsp:Policy>
+  <wsp:Policy wsu:Id="Annotation.Service.Interfaces.IAnnotateLocations-Binary_policy">
+    <wsp:ExactlyOne>
+      <wsp:All>
+        <msb:BinaryEncoding xmlns:msb="http://schemas.microsoft.com/ws/06/2004/mspolicy/netbinary1" />
+        <sp:TransportBinding xmlns:sp="http://schemas.xmlsoap.org/ws/2005/07/securitypolicy">
+          <wsp:Policy>
+            <sp:TransportToken>
+              <wsp:Policy>
+                <sp:HttpsToken RequireClientCertificate="false" />
+              </wsp:Policy>
+            </sp:TransportToken>
+            <sp:AlgorithmSuite>
+              <wsp:Policy>
+                <sp:Basic256 />
+              </wsp:Policy>
+            </sp:AlgorithmSuite>
+            <sp:Layout>
+              <wsp:Policy>
+                <sp:Strict />
+              </wsp:Policy>
+            </sp:Layout>
+            <sp:IncludeTimestamp />
+          </wsp:Policy>
+        </sp:TransportBinding>
+        <sp:SignedSupportingTokens xmlns:sp="http://schemas.xmlsoap.org/ws/2005/07/securitypolicy">
+          <wsp:Policy>
+            <sp:UsernameToken sp:IncludeToken="http://schemas.xmlsoap.org/ws/2005/07/securitypolicy/IncludeToken/AlwaysToRecipient">
+              <wsp:Policy>
+                <sp:WssUsernameToken10 />
+              </wsp:Policy>
+            </sp:UsernameToken>
+          </wsp:Policy>
+        </sp:SignedSupportingTokens>
+        <sp:Wss11 xmlns:sp="http://schemas.xmlsoap.org/ws/2005/07/securitypolicy">
+          <wsp:Policy>
+            <sp:MustSupportRefKeyIdentifier />
+            <sp:MustSupportRefIssuerSerial />
+            <sp:MustSupportRefThumbprint />
+            <sp:MustSupportRefEncryptedKey />
+          </wsp:Policy>
+        </sp:Wss11>
+        <sp:Trust10 xmlns:sp="http://schemas.xmlsoap.org/ws/2005/07/securitypolicy">
+          <wsp:Policy>
+            <sp:MustSupportIssuedTokens />
+            <sp:RequireClientEntropy />
+            <sp:RequireServerEntropy />
+          </wsp:Policy>
+        </sp:Trust10>
+        <wsaw:UsingAddressing />
+      </wsp:All>
+    </wsp:ExactlyOne>
+  </wsp:Policy>
+  <wsp:Policy wsu:Id="Annotation.Service.Interfaces.ICircuit-Binary_policy">
+    <wsp:ExactlyOne>
+      <wsp:All>
+        <msb:BinaryEncoding xmlns:msb="http://schemas.microsoft.com/ws/06/2004/mspolicy/netbinary1" />
+        <sp:TransportBinding xmlns:sp="http://schemas.xmlsoap.org/ws/2005/07/securitypolicy">
+          <wsp:Policy>
+            <sp:TransportToken>
+              <wsp:Policy>
+                <sp:HttpsToken RequireClientCertificate="false" />
+              </wsp:Policy>
+            </sp:TransportToken>
+            <sp:AlgorithmSuite>
+              <wsp:Policy>
+                <sp:Basic256 />
+              </wsp:Policy>
+            </sp:AlgorithmSuite>
+            <sp:Layout>
+              <wsp:Policy>
+                <sp:Strict />
+              </wsp:Policy>
+            </sp:Layout>
+            <sp:IncludeTimestamp />
+          </wsp:Policy>
+        </sp:TransportBinding>
+        <sp:SignedSupportingTokens xmlns:sp="http://schemas.xmlsoap.org/ws/2005/07/securitypolicy">
+          <wsp:Policy>
+            <sp:UsernameToken sp:IncludeToken="http://schemas.xmlsoap.org/ws/2005/07/securitypolicy/IncludeToken/AlwaysToRecipient">
+              <wsp:Policy>
+                <sp:WssUsernameToken10 />
+              </wsp:Policy>
+            </sp:UsernameToken>
+          </wsp:Policy>
+        </sp:SignedSupportingTokens>
+        <sp:Wss11 xmlns:sp="http://schemas.xmlsoap.org/ws/2005/07/securitypolicy">
+          <wsp:Policy>
+            <sp:MustSupportRefKeyIdentifier />
+            <sp:MustSupportRefIssuerSerial />
+            <sp:MustSupportRefThumbprint />
+            <sp:MustSupportRefEncryptedKey />
+          </wsp:Policy>
+        </sp:Wss11>
+        <sp:Trust10 xmlns:sp="http://schemas.xmlsoap.org/ws/2005/07/securitypolicy">
+          <wsp:Policy>
+            <sp:MustSupportIssuedTokens />
+            <sp:RequireClientEntropy />
+            <sp:RequireServerEntropy />
+          </wsp:Policy>
+        </sp:Trust10>
+        <wsaw:UsingAddressing />
+      </wsp:All>
+    </wsp:ExactlyOne>
+  </wsp:Policy>
+  <wsdl:types>
+    <xsd:schema targetNamespace="http://tempuri.org/Imports">
+      <xsd:import namespace="http://tempuri.org/" />
+      <xsd:import namespace="http://schemas.microsoft.com/2003/10/Serialization/" />
+      <xsd:import namespace="http://schemas.datacontract.org/2004/07/Annotation" />
+      <xsd:import namespace="http://schemas.microsoft.com/2003/10/Serialization/Arrays" />
+      <xsd:import namespace="http://schemas.datacontract.org/2004/07/" />
+      <xsd:import namespace="http://schemas.datacontract.org/2004/07/Annotation.Service.GraphClasses" />
+    </xsd:schema>
+  </wsdl:types>
+  <wsdl:message name="IAnnotateStructureTypes_GetStructureTypes_InputMessage">
+    <wsdl:part name="parameters" element="tns:GetStructureTypes" />
+  </wsdl:message>
+  <wsdl:message name="IAnnotateStructureTypes_GetStructureTypes_OutputMessage">
+    <wsdl:part name="parameters" element="tns:GetStructureTypesResponse" />
+  </wsdl:message>
+  <wsdl:message name="IAnnotateStructureTypes_GetStructureTypeByID_InputMessage">
+    <wsdl:part name="parameters" element="tns:GetStructureTypeByID" />
+  </wsdl:message>
+  <wsdl:message name="IAnnotateStructureTypes_GetStructureTypeByID_OutputMessage">
+    <wsdl:part name="parameters" element="tns:GetStructureTypeByIDResponse" />
+  </wsdl:message>
+  <wsdl:message name="IAnnotateStructureTypes_GetStructureTypesByIDs_InputMessage">
+    <wsdl:part name="parameters" element="tns:GetStructureTypesByIDs" />
+  </wsdl:message>
+  <wsdl:message name="IAnnotateStructureTypes_GetStructureTypesByIDs_OutputMessage">
+    <wsdl:part name="parameters" element="tns:GetStructureTypesByIDsResponse" />
+  </wsdl:message>
+  <wsdl:message name="IAnnotateStructureTypes_GetStructuresForType_InputMessage">
+    <wsdl:part name="parameters" element="tns:GetStructuresForType" />
+  </wsdl:message>
+  <wsdl:message name="IAnnotateStructureTypes_GetStructuresForType_OutputMessage">
+    <wsdl:part name="parameters" element="tns:GetStructuresForTypeResponse" />
+  </wsdl:message>
+  <wsdl:message name="IAnnotateStructureTypes_UpdateStructureTypes_InputMessage">
+    <wsdl:part name="parameters" element="tns:UpdateStructureTypes" />
+  </wsdl:message>
+  <wsdl:message name="IAnnotateStructureTypes_UpdateStructureTypes_OutputMessage">
+    <wsdl:part name="parameters" element="tns:UpdateStructureTypesResponse" />
+  </wsdl:message>
+  <wsdl:message name="IAnnotateStructureTypes_TestMethod_InputMessage">
+    <wsdl:part name="parameters" element="tns:TestMethod" />
+  </wsdl:message>
+  <wsdl:message name="IAnnotateStructureTypes_TestMethod_OutputMessage">
+    <wsdl:part name="parameters" element="tns:TestMethodResponse" />
+  </wsdl:message>
+  <wsdl:message name="IAnnotateStructures_GetStructures_InputMessage">
+    <wsdl:part name="parameters" element="tns:GetStructures" />
+  </wsdl:message>
+  <wsdl:message name="IAnnotateStructures_GetStructures_OutputMessage">
+    <wsdl:part name="parameters" element="tns:GetStructuresResponse" />
+  </wsdl:message>
+  <wsdl:message name="IAnnotateStructures_GetStructuresForSection_InputMessage">
+    <wsdl:part name="parameters" element="tns:GetStructuresForSection" />
+  </wsdl:message>
+  <wsdl:message name="IAnnotateStructures_GetStructuresForSection_OutputMessage">
+    <wsdl:part name="parameters" element="tns:GetStructuresForSectionResponse" />
+  </wsdl:message>
+  <wsdl:message name="IAnnotateStructures_GetStructureByID_InputMessage">
+    <wsdl:part name="parameters" element="tns:GetStructureByID" />
+  </wsdl:message>
+  <wsdl:message name="IAnnotateStructures_GetStructureByID_OutputMessage">
+    <wsdl:part name="parameters" element="tns:GetStructureByIDResponse" />
+  </wsdl:message>
+  <wsdl:message name="IAnnotateStructures_GetStructuresByIDs_InputMessage">
+    <wsdl:part name="parameters" element="tns:GetStructuresByIDs" />
+  </wsdl:message>
+  <wsdl:message name="IAnnotateStructures_GetStructuresByIDs_OutputMessage">
+    <wsdl:part name="parameters" element="tns:GetStructuresByIDsResponse" />
+  </wsdl:message>
+  <wsdl:message name="IAnnotateStructures_CreateStructureLink_InputMessage">
+    <wsdl:part name="parameters" element="tns:CreateStructureLink" />
+  </wsdl:message>
+  <wsdl:message name="IAnnotateStructures_CreateStructureLink_OutputMessage">
+    <wsdl:part name="parameters" element="tns:CreateStructureLinkResponse" />
+  </wsdl:message>
+  <wsdl:message name="IAnnotateStructures_GetLinkedStructuresByID_InputMessage">
+    <wsdl:part name="parameters" element="tns:GetLinkedStructuresByID" />
+  </wsdl:message>
+  <wsdl:message name="IAnnotateStructures_GetLinkedStructuresByID_OutputMessage">
+    <wsdl:part name="parameters" element="tns:GetLinkedStructuresByIDResponse" />
+  </wsdl:message>
+  <wsdl:message name="IAnnotateStructures_GetLocationsForStructure_InputMessage">
+    <wsdl:part name="parameters" element="tns:GetLocationsForStructure" />
+  </wsdl:message>
+  <wsdl:message name="IAnnotateStructures_GetLocationsForStructure_OutputMessage">
+    <wsdl:part name="parameters" element="tns:GetLocationsForStructureResponse" />
+  </wsdl:message>
+  <wsdl:message name="IAnnotateStructures_NumberOfLocationsForStructure_InputMessage">
+    <wsdl:part name="parameters" element="tns:NumberOfLocationsForStructure" />
+  </wsdl:message>
+  <wsdl:message name="IAnnotateStructures_NumberOfLocationsForStructure_OutputMessage">
+    <wsdl:part name="parameters" element="tns:NumberOfLocationsForStructureResponse" />
+  </wsdl:message>
+  <wsdl:message name="IAnnotateStructures_CreateStructure_InputMessage">
+    <wsdl:part name="parameters" element="tns:CreateStructure" />
+  </wsdl:message>
+  <wsdl:message name="IAnnotateStructures_CreateStructure_OutputMessage">
+    <wsdl:part name="parameters" element="tns:CreateStructureResponse" />
+  </wsdl:message>
+  <wsdl:message name="IAnnotateStructures_UpdateStructures_InputMessage">
+    <wsdl:part name="parameters" element="tns:UpdateStructures" />
+  </wsdl:message>
+  <wsdl:message name="IAnnotateStructures_UpdateStructures_OutputMessage">
+    <wsdl:part name="parameters" element="tns:UpdateStructuresResponse" />
+  </wsdl:message>
+  <wsdl:message name="IAnnotateStructures_UpdateStructureLinks_InputMessage">
+    <wsdl:part name="parameters" element="tns:UpdateStructureLinks" />
+  </wsdl:message>
+  <wsdl:message name="IAnnotateStructures_UpdateStructureLinks_OutputMessage">
+    <wsdl:part name="parameters" element="tns:UpdateStructureLinksResponse" />
+  </wsdl:message>
+  <wsdl:message name="IAnnotateStructures_Merge_InputMessage">
+    <wsdl:part name="parameters" element="tns:Merge" />
+  </wsdl:message>
+  <wsdl:message name="IAnnotateStructures_Merge_OutputMessage">
+    <wsdl:part name="parameters" element="tns:MergeResponse" />
+  </wsdl:message>
+  <wsdl:message name="IAnnotateStructures_Split_InputMessage">
+    <wsdl:part name="parameters" element="tns:Split" />
+  </wsdl:message>
+  <wsdl:message name="IAnnotateStructures_Split_OutputMessage">
+    <wsdl:part name="parameters" element="tns:SplitResponse" />
+  </wsdl:message>
+  <wsdl:message name="IAnnotateLocations_GetLocationByID_InputMessage">
+    <wsdl:part name="parameters" element="tns:GetLocationByID" />
+  </wsdl:message>
+  <wsdl:message name="IAnnotateLocations_GetLocationByID_OutputMessage">
+    <wsdl:part name="parameters" element="tns:GetLocationByIDResponse" />
+  </wsdl:message>
+  <wsdl:message name="IAnnotateLocations_GetLocationsByID_InputMessage">
+    <wsdl:part name="parameters" element="tns:GetLocationsByID" />
+  </wsdl:message>
+  <wsdl:message name="IAnnotateLocations_GetLocationsByID_OutputMessage">
+    <wsdl:part name="parameters" element="tns:GetLocationsByIDResponse" />
+  </wsdl:message>
+  <wsdl:message name="IAnnotateLocations_GetLastModifiedLocation_InputMessage">
+    <wsdl:part name="parameters" element="tns:GetLastModifiedLocation" />
+  </wsdl:message>
+  <wsdl:message name="IAnnotateLocations_GetLastModifiedLocation_OutputMessage">
+    <wsdl:part name="parameters" element="tns:GetLastModifiedLocationResponse" />
+  </wsdl:message>
+  <wsdl:message name="IAnnotateLocations_GetLocationsForSection_InputMessage">
+    <wsdl:part name="parameters" element="tns:GetLocationsForSection" />
+  </wsdl:message>
+  <wsdl:message name="IAnnotateLocations_GetLocationsForSection_OutputMessage">
+    <wsdl:part name="parameters" element="tns:GetLocationsForSectionResponse" />
+  </wsdl:message>
+  <wsdl:message name="IAnnotateLocations_GetLocationChanges_InputMessage">
+    <wsdl:part name="parameters" element="tns:GetLocationChanges" />
+  </wsdl:message>
+  <wsdl:message name="IAnnotateLocations_GetLocationChanges_OutputMessage">
+    <wsdl:part name="parameters" element="tns:GetLocationChangesResponse" />
+  </wsdl:message>
+  <wsdl:message name="IAnnotateLocations_Update_InputMessage">
+    <wsdl:part name="parameters" element="tns:Update" />
+  </wsdl:message>
+  <wsdl:message name="IAnnotateLocations_Update_OutputMessage">
+    <wsdl:part name="parameters" element="tns:UpdateResponse" />
+  </wsdl:message>
+  <wsdl:message name="IAnnotateLocations_CreateLocationLink_InputMessage">
+    <wsdl:part name="parameters" element="tns:CreateLocationLink" />
+  </wsdl:message>
+  <wsdl:message name="IAnnotateLocations_CreateLocationLink_OutputMessage">
+    <wsdl:part name="parameters" element="tns:CreateLocationLinkResponse" />
+  </wsdl:message>
+  <wsdl:message name="IAnnotateLocations_DeleteLocationLink_InputMessage">
+    <wsdl:part name="parameters" element="tns:DeleteLocationLink" />
+  </wsdl:message>
+  <wsdl:message name="IAnnotateLocations_DeleteLocationLink_OutputMessage">
+    <wsdl:part name="parameters" element="tns:DeleteLocationLinkResponse" />
+  </wsdl:message>
+  <wsdl:message name="IAnnotateLocations_LocationLinksForSection_InputMessage">
+    <wsdl:part name="parameters" element="tns:LocationLinksForSection" />
+  </wsdl:message>
+  <wsdl:message name="IAnnotateLocations_LocationLinksForSection_OutputMessage">
+    <wsdl:part name="parameters" element="tns:LocationLinksForSectionResponse" />
+  </wsdl:message>
+  <wsdl:message name="ICircuit_getGraph_InputMessage">
+    <wsdl:part name="parameters" element="tns:getGraph" />
+  </wsdl:message>
+  <wsdl:message name="ICircuit_getGraph_OutputMessage">
+    <wsdl:part name="parameters" element="tns:getGraphResponse" />
+  </wsdl:message>
+  <wsdl:message name="ICircuit_getStructuresByTypeID_InputMessage">
+    <wsdl:part name="parameters" element="tns:getStructuresByTypeID" />
+  </wsdl:message>
+  <wsdl:message name="ICircuit_getStructuresByTypeID_OutputMessage">
+    <wsdl:part name="parameters" element="tns:getStructuresByTypeIDResponse" />
+  </wsdl:message>
+  <wsdl:message name="ICircuit_getSynapses_InputMessage">
+    <wsdl:part name="parameters" element="tns:getSynapses" />
+  </wsdl:message>
+  <wsdl:message name="ICircuit_getSynapses_OutputMessage">
+    <wsdl:part name="parameters" element="tns:getSynapsesResponse" />
+  </wsdl:message>
+  <wsdl:message name="ICircuit_getSynapseStats_InputMessage">
+    <wsdl:part name="parameters" element="tns:getSynapseStats" />
+  </wsdl:message>
+  <wsdl:message name="ICircuit_getSynapseStats_OutputMessage">
+    <wsdl:part name="parameters" element="tns:getSynapseStatsResponse" />
+  </wsdl:message>
+  <wsdl:message name="ICircuit_getTopConnectedStructures_InputMessage">
+    <wsdl:part name="parameters" element="tns:getTopConnectedStructures" />
+  </wsdl:message>
+  <wsdl:message name="ICircuit_getTopConnectedStructures_OutputMessage">
+    <wsdl:part name="parameters" element="tns:getTopConnectedStructuresResponse" />
+  </wsdl:message>
+  <wsdl:message name="ICircuit_getTopConnectedCells_InputMessage">
+    <wsdl:part name="parameters" element="tns:getTopConnectedCells" />
+  </wsdl:message>
+  <wsdl:message name="ICircuit_getTopConnectedCells_OutputMessage">
+    <wsdl:part name="parameters" element="tns:getTopConnectedCellsResponse" />
+  </wsdl:message>
+  <wsdl:portType name="IAnnotateStructureTypes">
+    <wsdl:operation name="GetStructureTypes">
+      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateStructureTypes/GetStructureTypes" message="tns:IAnnotateStructureTypes_GetStructureTypes_InputMessage" />
+      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateStructureTypes/GetStructureTypesResponse" message="tns:IAnnotateStructureTypes_GetStructureTypes_OutputMessage" />
+    </wsdl:operation>
+    <wsdl:operation name="GetStructureTypeByID">
+      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateStructureTypes/GetStructureTypeByID" message="tns:IAnnotateStructureTypes_GetStructureTypeByID_InputMessage" />
+      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateStructureTypes/GetStructureTypeByIDResponse" message="tns:IAnnotateStructureTypes_GetStructureTypeByID_OutputMessage" />
+    </wsdl:operation>
+    <wsdl:operation name="GetStructureTypesByIDs">
+      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateStructureTypes/GetStructureTypesByIDs" message="tns:IAnnotateStructureTypes_GetStructureTypesByIDs_InputMessage" />
+      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateStructureTypes/GetStructureTypesByIDsResponse" message="tns:IAnnotateStructureTypes_GetStructureTypesByIDs_OutputMessage" />
+    </wsdl:operation>
+    <wsdl:operation name="GetStructuresForType">
+      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateStructureTypes/GetStructuresForType" message="tns:IAnnotateStructureTypes_GetStructuresForType_InputMessage" />
+      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateStructureTypes/GetStructuresForTypeResponse" message="tns:IAnnotateStructureTypes_GetStructuresForType_OutputMessage" />
+    </wsdl:operation>
+    <wsdl:operation name="UpdateStructureTypes">
+      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateStructureTypes/UpdateStructureTypes" message="tns:IAnnotateStructureTypes_UpdateStructureTypes_InputMessage" />
+      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateStructureTypes/UpdateStructureTypesResponse" message="tns:IAnnotateStructureTypes_UpdateStructureTypes_OutputMessage" />
+    </wsdl:operation>
+    <wsdl:operation name="TestMethod">
+      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateStructureTypes/TestMethod" message="tns:IAnnotateStructureTypes_TestMethod_InputMessage" />
+      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateStructureTypes/TestMethodResponse" message="tns:IAnnotateStructureTypes_TestMethod_OutputMessage" />
+    </wsdl:operation>
+  </wsdl:portType>
+  <wsdl:portType name="IAnnotateStructures">
+    <wsdl:operation name="GetStructures">
+      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateStructures/GetStructures" message="tns:IAnnotateStructures_GetStructures_InputMessage" />
+      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateStructures/GetStructuresResponse" message="tns:IAnnotateStructures_GetStructures_OutputMessage" />
+    </wsdl:operation>
+    <wsdl:operation name="GetStructuresForSection">
+      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateStructures/GetStructuresForSection" message="tns:IAnnotateStructures_GetStructuresForSection_InputMessage" />
+      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateStructures/GetStructuresForSectionResponse" message="tns:IAnnotateStructures_GetStructuresForSection_OutputMessage" />
+    </wsdl:operation>
+    <wsdl:operation name="GetStructureByID">
+      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateStructures/GetStructureByID" message="tns:IAnnotateStructures_GetStructureByID_InputMessage" />
+      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateStructures/GetStructureByIDResponse" message="tns:IAnnotateStructures_GetStructureByID_OutputMessage" />
+    </wsdl:operation>
+    <wsdl:operation name="GetStructuresByIDs">
+      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateStructures/GetStructuresByIDs" message="tns:IAnnotateStructures_GetStructuresByIDs_InputMessage" />
+      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateStructures/GetStructuresByIDsResponse" message="tns:IAnnotateStructures_GetStructuresByIDs_OutputMessage" />
+    </wsdl:operation>
+    <wsdl:operation name="CreateStructureLink">
+      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateStructures/CreateStructureLink" message="tns:IAnnotateStructures_CreateStructureLink_InputMessage" />
+      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateStructures/CreateStructureLinkResponse" message="tns:IAnnotateStructures_CreateStructureLink_OutputMessage" />
+    </wsdl:operation>
+    <wsdl:operation name="GetLinkedStructuresByID">
+      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateStructures/GetLinkedStructuresByID" message="tns:IAnnotateStructures_GetLinkedStructuresByID_InputMessage" />
+      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateStructures/GetLinkedStructuresByIDResponse" message="tns:IAnnotateStructures_GetLinkedStructuresByID_OutputMessage" />
+    </wsdl:operation>
+    <wsdl:operation name="GetLocationsForStructure">
+      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateStructures/GetLocationsForStructure" message="tns:IAnnotateStructures_GetLocationsForStructure_InputMessage" />
+      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateStructures/GetLocationsForStructureResponse" message="tns:IAnnotateStructures_GetLocationsForStructure_OutputMessage" />
+    </wsdl:operation>
+    <wsdl:operation name="NumberOfLocationsForStructure">
+      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateStructures/NumberOfLocationsForStructure" message="tns:IAnnotateStructures_NumberOfLocationsForStructure_InputMessage" />
+      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateStructures/NumberOfLocationsForStructureResponse" message="tns:IAnnotateStructures_NumberOfLocationsForStructure_OutputMessage" />
+    </wsdl:operation>
+    <wsdl:operation name="CreateStructure">
+      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateStructures/CreateStructure" message="tns:IAnnotateStructures_CreateStructure_InputMessage" />
+      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateStructures/CreateStructureResponse" message="tns:IAnnotateStructures_CreateStructure_OutputMessage" />
+    </wsdl:operation>
+    <wsdl:operation name="UpdateStructures">
+      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateStructures/UpdateStructures" message="tns:IAnnotateStructures_UpdateStructures_InputMessage" />
+      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateStructures/UpdateStructuresResponse" message="tns:IAnnotateStructures_UpdateStructures_OutputMessage" />
+    </wsdl:operation>
+    <wsdl:operation name="UpdateStructureLinks">
+      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateStructures/UpdateStructureLinks" message="tns:IAnnotateStructures_UpdateStructureLinks_InputMessage" />
+      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateStructures/UpdateStructureLinksResponse" message="tns:IAnnotateStructures_UpdateStructureLinks_OutputMessage" />
+    </wsdl:operation>
+    <wsdl:operation name="Merge">
+      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateStructures/Merge" message="tns:IAnnotateStructures_Merge_InputMessage" />
+      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateStructures/MergeResponse" message="tns:IAnnotateStructures_Merge_OutputMessage" />
+    </wsdl:operation>
+    <wsdl:operation name="Split">
+      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateStructures/Split" message="tns:IAnnotateStructures_Split_InputMessage" />
+      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateStructures/SplitResponse" message="tns:IAnnotateStructures_Split_OutputMessage" />
+    </wsdl:operation>
+  </wsdl:portType>
+  <wsdl:portType name="IAnnotateLocations">
+    <wsdl:operation name="GetLocationByID">
+      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateLocations/GetLocationByID" message="tns:IAnnotateLocations_GetLocationByID_InputMessage" />
+      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateLocations/GetLocationByIDResponse" message="tns:IAnnotateLocations_GetLocationByID_OutputMessage" />
+    </wsdl:operation>
+    <wsdl:operation name="GetLocationsByID">
+      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateLocations/GetLocationsByID" message="tns:IAnnotateLocations_GetLocationsByID_InputMessage" />
+      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateLocations/GetLocationsByIDResponse" message="tns:IAnnotateLocations_GetLocationsByID_OutputMessage" />
+    </wsdl:operation>
+    <wsdl:operation name="GetLastModifiedLocation">
+      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateLocations/GetLastModifiedLocation" message="tns:IAnnotateLocations_GetLastModifiedLocation_InputMessage" />
+      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateLocations/GetLastModifiedLocationResponse" message="tns:IAnnotateLocations_GetLastModifiedLocation_OutputMessage" />
+    </wsdl:operation>
+    <wsdl:operation name="GetLocationsForSection">
+      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateLocations/GetLocationsForSection" message="tns:IAnnotateLocations_GetLocationsForSection_InputMessage" />
+      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateLocations/GetLocationsForSectionResponse" message="tns:IAnnotateLocations_GetLocationsForSection_OutputMessage" />
+    </wsdl:operation>
+    <wsdl:operation name="GetLocationChanges">
+      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateLocations/GetLocationChanges" message="tns:IAnnotateLocations_GetLocationChanges_InputMessage" />
+      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateLocations/GetLocationChangesResponse" message="tns:IAnnotateLocations_GetLocationChanges_OutputMessage" />
+    </wsdl:operation>
+    <wsdl:operation name="Update">
+      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateLocations/Update" message="tns:IAnnotateLocations_Update_InputMessage" />
+      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateLocations/UpdateResponse" message="tns:IAnnotateLocations_Update_OutputMessage" />
+    </wsdl:operation>
+    <wsdl:operation name="CreateLocationLink">
+      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateLocations/CreateLocationLink" message="tns:IAnnotateLocations_CreateLocationLink_InputMessage" />
+      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateLocations/CreateLocationLinkResponse" message="tns:IAnnotateLocations_CreateLocationLink_OutputMessage" />
+    </wsdl:operation>
+    <wsdl:operation name="DeleteLocationLink">
+      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateLocations/DeleteLocationLink" message="tns:IAnnotateLocations_DeleteLocationLink_InputMessage" />
+      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateLocations/DeleteLocationLinkResponse" message="tns:IAnnotateLocations_DeleteLocationLink_OutputMessage" />
+    </wsdl:operation>
+    <wsdl:operation name="LocationLinksForSection">
+      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateLocations/LocationLinksForSection" message="tns:IAnnotateLocations_LocationLinksForSection_InputMessage" />
+      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateLocations/LocationLinksForSectionResponse" message="tns:IAnnotateLocations_LocationLinksForSection_OutputMessage" />
+    </wsdl:operation>
+  </wsdl:portType>
+  <wsdl:portType name="ICircuit">
+    <wsdl:operation name="getGraph">
+      <wsdl:input wsaw:Action="http://tempuri.org/ICircuit/getGraph" message="tns:ICircuit_getGraph_InputMessage" />
+      <wsdl:output wsaw:Action="http://tempuri.org/ICircuit/getGraphResponse" message="tns:ICircuit_getGraph_OutputMessage" />
+    </wsdl:operation>
+    <wsdl:operation name="getStructuresByTypeID">
+      <wsdl:input wsaw:Action="http://tempuri.org/ICircuit/getStructuresByTypeID" message="tns:ICircuit_getStructuresByTypeID_InputMessage" />
+      <wsdl:output wsaw:Action="http://tempuri.org/ICircuit/getStructuresByTypeIDResponse" message="tns:ICircuit_getStructuresByTypeID_OutputMessage" />
+    </wsdl:operation>
+    <wsdl:operation name="getSynapses">
+      <wsdl:input wsaw:Action="http://tempuri.org/ICircuit/getSynapses" message="tns:ICircuit_getSynapses_InputMessage" />
+      <wsdl:output wsaw:Action="http://tempuri.org/ICircuit/getSynapsesResponse" message="tns:ICircuit_getSynapses_OutputMessage" />
+    </wsdl:operation>
+    <wsdl:operation name="getSynapseStats">
+      <wsdl:input wsaw:Action="http://tempuri.org/ICircuit/getSynapseStats" message="tns:ICircuit_getSynapseStats_InputMessage" />
+      <wsdl:output wsaw:Action="http://tempuri.org/ICircuit/getSynapseStatsResponse" message="tns:ICircuit_getSynapseStats_OutputMessage" />
+    </wsdl:operation>
+    <wsdl:operation name="getTopConnectedStructures">
+      <wsdl:input wsaw:Action="http://tempuri.org/ICircuit/getTopConnectedStructures" message="tns:ICircuit_getTopConnectedStructures_InputMessage" />
+      <wsdl:output wsaw:Action="http://tempuri.org/ICircuit/getTopConnectedStructuresResponse" message="tns:ICircuit_getTopConnectedStructures_OutputMessage" />
+    </wsdl:operation>
+    <wsdl:operation name="getTopConnectedCells">
+      <wsdl:input wsaw:Action="http://tempuri.org/ICircuit/getTopConnectedCells" message="tns:ICircuit_getTopConnectedCells_InputMessage" />
+      <wsdl:output wsaw:Action="http://tempuri.org/ICircuit/getTopConnectedCellsResponse" message="tns:ICircuit_getTopConnectedCells_OutputMessage" />
+    </wsdl:operation>
+  </wsdl:portType>
+  <wsdl:binding name="Annotation.Service.Interfaces.IAnnotateStructureTypes-Binary" type="tns:IAnnotateStructureTypes">
+    <wsp:PolicyReference URI="#Annotation.Service.Interfaces.IAnnotateStructureTypes-Binary_policy" />
+    <soap12:binding transport="http://schemas.xmlsoap.org/soap/http" />
+    <wsdl:operation name="GetStructureTypes">
+      <soap12:operation soapAction="http://tempuri.org/IAnnotateStructureTypes/GetStructureTypes" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="GetStructureTypeByID">
+      <soap12:operation soapAction="http://tempuri.org/IAnnotateStructureTypes/GetStructureTypeByID" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="GetStructureTypesByIDs">
+      <soap12:operation soapAction="http://tempuri.org/IAnnotateStructureTypes/GetStructureTypesByIDs" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="GetStructuresForType">
+      <soap12:operation soapAction="http://tempuri.org/IAnnotateStructureTypes/GetStructuresForType" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="UpdateStructureTypes">
+      <soap12:operation soapAction="http://tempuri.org/IAnnotateStructureTypes/UpdateStructureTypes" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="TestMethod">
+      <soap12:operation soapAction="http://tempuri.org/IAnnotateStructureTypes/TestMethod" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+  </wsdl:binding>
+  <wsdl:binding name="Annotation.Service.Interfaces.IAnnotateStructures-Binary" type="tns:IAnnotateStructures">
+    <wsp:PolicyReference URI="#Annotation.Service.Interfaces.IAnnotateStructures-Binary_policy" />
+    <soap12:binding transport="http://schemas.xmlsoap.org/soap/http" />
+    <wsdl:operation name="GetStructures">
+      <soap12:operation soapAction="http://tempuri.org/IAnnotateStructures/GetStructures" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="GetStructuresForSection">
+      <soap12:operation soapAction="http://tempuri.org/IAnnotateStructures/GetStructuresForSection" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="GetStructureByID">
+      <soap12:operation soapAction="http://tempuri.org/IAnnotateStructures/GetStructureByID" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="GetStructuresByIDs">
+      <soap12:operation soapAction="http://tempuri.org/IAnnotateStructures/GetStructuresByIDs" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="CreateStructureLink">
+      <soap12:operation soapAction="http://tempuri.org/IAnnotateStructures/CreateStructureLink" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="GetLinkedStructuresByID">
+      <soap12:operation soapAction="http://tempuri.org/IAnnotateStructures/GetLinkedStructuresByID" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="GetLocationsForStructure">
+      <soap12:operation soapAction="http://tempuri.org/IAnnotateStructures/GetLocationsForStructure" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="NumberOfLocationsForStructure">
+      <soap12:operation soapAction="http://tempuri.org/IAnnotateStructures/NumberOfLocationsForStructure" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="CreateStructure">
+      <soap12:operation soapAction="http://tempuri.org/IAnnotateStructures/CreateStructure" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="UpdateStructures">
+      <soap12:operation soapAction="http://tempuri.org/IAnnotateStructures/UpdateStructures" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="UpdateStructureLinks">
+      <soap12:operation soapAction="http://tempuri.org/IAnnotateStructures/UpdateStructureLinks" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="Merge">
+      <soap12:operation soapAction="http://tempuri.org/IAnnotateStructures/Merge" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="Split">
+      <soap12:operation soapAction="http://tempuri.org/IAnnotateStructures/Split" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+  </wsdl:binding>
+  <wsdl:binding name="Annotation.Service.Interfaces.IAnnotateLocations-Binary" type="tns:IAnnotateLocations">
+    <wsp:PolicyReference URI="#Annotation.Service.Interfaces.IAnnotateLocations-Binary_policy" />
+    <soap12:binding transport="http://schemas.xmlsoap.org/soap/http" />
+    <wsdl:operation name="GetLocationByID">
+      <soap12:operation soapAction="http://tempuri.org/IAnnotateLocations/GetLocationByID" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="GetLocationsByID">
+      <soap12:operation soapAction="http://tempuri.org/IAnnotateLocations/GetLocationsByID" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="GetLastModifiedLocation">
+      <soap12:operation soapAction="http://tempuri.org/IAnnotateLocations/GetLastModifiedLocation" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="GetLocationsForSection">
+      <soap12:operation soapAction="http://tempuri.org/IAnnotateLocations/GetLocationsForSection" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="GetLocationChanges">
+      <soap12:operation soapAction="http://tempuri.org/IAnnotateLocations/GetLocationChanges" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="Update">
+      <soap12:operation soapAction="http://tempuri.org/IAnnotateLocations/Update" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="CreateLocationLink">
+      <soap12:operation soapAction="http://tempuri.org/IAnnotateLocations/CreateLocationLink" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="DeleteLocationLink">
+      <soap12:operation soapAction="http://tempuri.org/IAnnotateLocations/DeleteLocationLink" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="LocationLinksForSection">
+      <soap12:operation soapAction="http://tempuri.org/IAnnotateLocations/LocationLinksForSection" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+  </wsdl:binding>
+  <wsdl:binding name="Annotation.Service.Interfaces.ICircuit-Binary" type="tns:ICircuit">
+    <wsp:PolicyReference URI="#Annotation.Service.Interfaces.ICircuit-Binary_policy" />
+    <soap12:binding transport="http://schemas.xmlsoap.org/soap/http" />
+    <wsdl:operation name="getGraph">
+      <soap12:operation soapAction="http://tempuri.org/ICircuit/getGraph" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getStructuresByTypeID">
+      <soap12:operation soapAction="http://tempuri.org/ICircuit/getStructuresByTypeID" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getSynapses">
+      <soap12:operation soapAction="http://tempuri.org/ICircuit/getSynapses" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getSynapseStats">
+      <soap12:operation soapAction="http://tempuri.org/ICircuit/getSynapseStats" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getTopConnectedStructures">
+      <soap12:operation soapAction="http://tempuri.org/ICircuit/getTopConnectedStructures" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getTopConnectedCells">
+      <soap12:operation soapAction="http://tempuri.org/ICircuit/getTopConnectedCells" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+  </wsdl:binding>
+  <wsdl:service name="AnnotateService">
+    <wsdl:port name="Annotation.Service.Interfaces.IAnnotateStructureTypes-Binary" binding="tns:Annotation.Service.Interfaces.IAnnotateStructureTypes-Binary">
+      <soap12:address location="https://opr-marc-rc1.ad.utah.edu/Services/RabbitBinary/Annotate.svc" />
+      <wsa10:EndpointReference>
+        <wsa10:Address>https://opr-marc-rc1.ad.utah.edu/Services/RabbitBinary/Annotate.svc</wsa10:Address>
+      </wsa10:EndpointReference>
+    </wsdl:port>
+    <wsdl:port name="Annotation.Service.Interfaces.IAnnotateStructures-Binary" binding="tns:Annotation.Service.Interfaces.IAnnotateStructures-Binary">
+      <soap12:address location="https://opr-marc-rc1.ad.utah.edu/Services/RabbitBinary/Annotate.svc" />
+      <wsa10:EndpointReference>
+        <wsa10:Address>https://opr-marc-rc1.ad.utah.edu/Services/RabbitBinary/Annotate.svc</wsa10:Address>
+      </wsa10:EndpointReference>
+    </wsdl:port>
+    <wsdl:port name="Annotation.Service.Interfaces.IAnnotateLocations-Binary" binding="tns:Annotation.Service.Interfaces.IAnnotateLocations-Binary">
+      <soap12:address location="https://opr-marc-rc1.ad.utah.edu/Services/RabbitBinary/Annotate.svc" />
+      <wsa10:EndpointReference>
+        <wsa10:Address>https://opr-marc-rc1.ad.utah.edu/Services/RabbitBinary/Annotate.svc</wsa10:Address>
+      </wsa10:EndpointReference>
+    </wsdl:port>
+    <wsdl:port name="Annotation.Service.Interfaces.ICircuit-Binary" binding="tns:Annotation.Service.Interfaces.ICircuit-Binary">
+      <soap12:address location="https://opr-marc-rc1.ad.utah.edu/Services/RabbitBinary/Annotate.svc" />
+      <wsa10:EndpointReference>
+        <wsa10:Address>https://opr-marc-rc1.ad.utah.edu/Services/RabbitBinary/Annotate.svc</wsa10:Address>
+      </wsa10:EndpointReference>
+    </wsdl:port>
+  </wsdl:service>
+</wsdl:definitions>
