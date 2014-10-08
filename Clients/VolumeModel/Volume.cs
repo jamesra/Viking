@@ -7,7 +7,8 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Xml.Linq;
-using System.IO.Compression;
+//using System.IO.Compression;
+using Ionic.Zip;
 using Utils;
 using Geometry;
 using Geometry.Transforms; 
@@ -435,20 +436,16 @@ namespace Viking.VolumeModel
 
                         using (MemoryStream memStream = new MemoryStream(buffer))
                         {
-                            using (ZipArchive zipFile = new ZipArchive(memStream, ZipArchiveMode.Read))
-                            { 
-
+                            using (ZipFile zipFile = ZipFile.Read(memStream))
+                            {
                                 //ZipFile takes a reference to the stream instead of copying it (which it should not do).  We cannot close the memory stream.
                                 //until zipfile is closed
-
                                 if(System.IO.Directory.Exists(LocalCachePath))
                                 {
                                     System.IO.Directory.Delete(LocalCachePath, true);
                                 }
 
-                                zipFile.ExtractToDirectory(LocalCachePath);
-
-                                //zipFile.ExtractAll(LocalCachePath, ExtractExistingFileAction.OverwriteSilently);
+                                zipFile.ExtractAll(LocalCachePath, ExtractExistingFileAction.OverwriteSilently);                                
                             }
                         }
                     }

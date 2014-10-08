@@ -1,0 +1,1 @@
+This MSI installs the DotNetZip help content into the VisualStudio Integrated help system. After installing this MSI, pressing F1 within Visual Studio, with your cursor on a type defined within the DotNetZip assembly, will open the appropriate help within Visual Studio.

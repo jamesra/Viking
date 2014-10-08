@@ -17,7 +17,7 @@
     <XnaUpgrade>
     </XnaUpgrade>
     <XnaOutputType>Library</XnaOutputType>
-    <XnaProfile>Reach</XnaProfile>
+    <XnaProfile>HiDef</XnaProfile>
     <TargetFrameworkProfile>
     </TargetFrameworkProfile>
     <FileUpgradeFlags>
