@@ -65,6 +65,21 @@ namespace Viking.VolumeModel
         /// </summary>
         public string DefaultVolumeTransform = "None";
 
+        /// <summary>
+        /// Name of the default stos group
+        /// </summary>
+        public string DefaultStosGroup = null;
+
+        /// <summary>
+        /// Name of the default image pyramid
+        /// </summary>
+        public string DefaultImagePyramid= null;
+
+        /// <summary>
+        /// Name of the default tile-to-mosaic transform when using pyramids
+        /// </summary>
+        public string DefaultMosaicTransform = null;
+
         private string _UniqueID = "";
         /// <summary>
         /// Unique ID for this volume on the server
@@ -465,6 +480,44 @@ namespace Viking.VolumeModel
             return true; 
         } 
 
+        /// <summary>
+        /// We load any default values for the volume model first.  At the time I added this section
+        /// loading threads referred to these values.  We don't want a race
+        /// </summary>
+        /// <param name="volumeElement"></param>
+        private void LoadDefaultsFromXML(XElement volumeElement)
+        {
+            foreach (XNode node in volumeElement.Nodes().ToList<XNode>())
+            {
+                if (node.NodeType == System.Xml.XmlNodeType.Whitespace)
+                    continue;
+
+                XElement elem = node as XElement;
+                if (elem == null)
+                    continue;
+
+                //Fetch the name if we know it
+                switch (elem.Name.LocalName.ToLower())
+                {
+                    case "defaulttileset":
+                        this.DefaultTileset = IO.GetAttributeCaseInsensitive(elem, "name").Value;
+                        break;
+                    case "defaultimagepyramid":
+                        this.DefaultImagePyramid = IO.GetAttributeCaseInsensitive(elem, "name").Value;
+                        break;
+                    case "defaultmosaictransform":
+                        this.DefaultMosaicTransform = IO.GetAttributeCaseInsensitive(elem, "name").Value;
+                        break;
+                    case "defaultstosgroup":
+                        this.DefaultStosGroup = IO.GetAttributeCaseInsensitive(elem, "name").Value;
+                        break;
+                    case "channelinfo":
+                        this.DefaultChannels = ChannelInfo.FromXML(elem);
+                        break;
+                }
+            }
+        } 
+
           
         void Initialize(XDocument reader, BackgroundWorker workerThread)
         {
@@ -523,7 +576,9 @@ namespace Viking.VolumeModel
             int countStos = 0;
             int countSections = 0;
             ListSectionThreadingObj.Capacity = NumSections;
-            ListStosGridTransformThreadingObj.Capacity = NumStosFiles; 
+            ListStosGridTransformThreadingObj.Capacity = NumStosFiles;
+
+            LoadDefaultsFromXML(volumeElement);
 
             foreach (XNode node in volumeElement.Nodes().ToList<XNode>())
             {
@@ -596,9 +651,7 @@ namespace Viking.VolumeModel
 
                         ListStosGridTransformThreadingObj.Add(CreateStosThreadObj); 
                         System.Threading.ThreadPool.QueueUserWorkItem(CreateStosThreadObj.ThreadPoolCallback);
-
-                        
-
+                          
                         break;
                     case "section":
                         //string SectionPath = VolumePath + '/' + GetAttributeCaseInsensitive(elem,"path").Value;
@@ -633,12 +686,7 @@ namespace Viking.VolumeModel
                         TileServerInfo info = TileServerInfo.CreateFromElement(elem);
                         this.TileServerList[info.Name] = info;
                         break;
-                    case "defaulttileset":
-                        this.DefaultTileset = IO.GetAttributeCaseInsensitive(elem, "name").Value;
-                        break;
-                    case "channelinfo":
-                        DefaultChannels = ChannelInfo.FromXML(elem);
-                        break;
+                    
                     default:
                         break;
                 } 

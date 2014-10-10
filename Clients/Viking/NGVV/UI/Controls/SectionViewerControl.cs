@@ -324,8 +324,10 @@ namespace Viking.UI.Controls
 
                 if (NewValue)
                 {
+
                     string OldTransform = _CurrentVolumeTransform;
                     _CurrentVolumeTransform = value;
+                    _CurrentTransformID = new int?();
 
                     if (OnVolumeTransformChanged != null)
                     {
@@ -334,6 +336,23 @@ namespace Viking.UI.Controls
 
                     this.Invalidate();
                 }
+            }
+        }
+
+        private int? _CurrentTransformID= new int?(); 
+        /// <summary>
+        /// Return an unique ID for the current transform being used so we can quickly check if we need to recalculate positions
+        /// </summary>
+        public int CurrentTransformUniqueID
+        {
+            get
+            {
+                if (!_CurrentTransformID.HasValue) 
+                {
+                    this._CurrentTransformID = this.CurrentVolumeTransform.GetHashCode();
+                }
+
+                return this._CurrentTransformID.Value;
             }
         }
 

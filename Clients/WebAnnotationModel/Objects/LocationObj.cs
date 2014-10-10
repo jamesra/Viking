@@ -148,7 +148,24 @@ namespace WebAnnotationModel
             }
         }
 
+        /// <summary>
+        /// Record the hashcode of the volume transform used to map the location. 
+        /// </summary>
+        public int? VolumeTransformID = new int?();
 
+        /// <summary>
+        /// Return true if the location's volume position has not yet been mapped by this Viking client
+        /// </summary>
+        public bool VolumePositionHasBeenCalculated
+        {
+            get { return this.VolumeTransformID.HasValue; }
+        }
+
+        public void ResetVolumePositionHasBeenCalculated()
+        {
+            this.VolumeTransformID = new int?();
+        }
+        
         private const double g_MinimumRadius = 1.0;
         public double Radius
         {

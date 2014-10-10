@@ -118,7 +118,7 @@ namespace WebAnnotation.ViewModel
                 */
                 //RemoveLocations(new LocationObj[] { loc }, true);
                 //RemoveStructureLinks(new LocationObj[] { loc }); 
-
+                loc.ResetVolumePositionHasBeenCalculated();
                 AddLocations(new LocationObj[] { loc }, false);
                 AddStructureLinks(new LocationObj[] { loc });
       //          bool Success = Locations.TryAdd(locView.VolumePosition, locView);
@@ -268,6 +268,10 @@ namespace WebAnnotation.ViewModel
         private bool MapLocation(LocationObj loc)
         {
             GridVector2 VolumePosition = new GridVector2(-1, -1);
+            //Don't bother mapping if the location was already mapped
+            if (loc.VolumeTransformID == parent.CurrentTransformUniqueID)
+                return true; 
+
             bool mappedPosition = parent.TrySectionToVolume(loc.Position, this.Section.section, out VolumePosition);
             if (!mappedPosition) //Remove locations we can't map
             {
@@ -276,8 +280,9 @@ namespace WebAnnotation.ViewModel
             }
 
             loc.VolumePosition = VolumePosition;
+            loc.VolumeTransformID = parent.CurrentTransformUniqueID;
 
-            return true; 
+            return true;
         }
 
         protected void AddLocations(IEnumerable<LocationObj> listLocations)
@@ -312,13 +317,15 @@ namespace WebAnnotation.ViewModel
                 //Add the location to our mapping if the location is on our section
                 if (loc.Section == Section.Number)
                 {
+                    bool FirstMapping = !loc.VolumePositionHasBeenCalculated;
+
                     GridVector2 original = loc.VolumePosition;
                     bool mapped = MapLocation(loc);
                     if (!mapped)
                         continue;
 
 #if SUBMITVOLUMEPOSITION
-                    if (UpdateVolumeLocations)
+                    if (UpdateVolumeLocations && FirstMapping)
                     {
                         if (GridVector2.DistanceSquared(original, loc.VolumePosition) > 25.0)
                         {
@@ -327,7 +334,7 @@ namespace WebAnnotation.ViewModel
                         }
                     }
 #endif
-                    
+
                     //Add location if it hasn't been seen before
                     Location_CanvasViewModel locView = new Location_CanvasViewModel(loc);
                     bool Added = Locations.TryAdd(locView.VolumePosition, locView);
@@ -342,7 +349,6 @@ namespace WebAnnotation.ViewModel
                             NotifyPropertyChangingEventManager.AddListener(loc, this);
                             NotifyPropertyChangedEventManager.AddListener(loc, this);
  
-
                             //loc.PropertyChanged += this.OnLocationPropertyChangedEventHandler;
                             //loc.PropertyChanging += this.OnLocationPropertyChangingEventHandler;
                         }
