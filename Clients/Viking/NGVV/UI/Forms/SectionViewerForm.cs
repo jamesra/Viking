@@ -49,7 +49,7 @@ namespace Viking.UI.Forms
                 this.Text = this.BuildTitleString(e.NewSection.ToString()); 
             }
 
-            this.Refresh();
+            this.Invalidate(); 
         }
 
 
