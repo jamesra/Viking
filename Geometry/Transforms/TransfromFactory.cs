@@ -818,10 +818,11 @@ namespace Geometry.Transforms
 
             for (int iP = 0; iP < NumPoints; iP++)
             {
-                GridVector2 Mapped = new GridVector2((System.Convert.ToDouble(parts[iVariableParameters + 2 + (iP * 4)]) * ImageWidth) + Left,
-                                                     (System.Convert.ToDouble(parts[iVariableParameters + 3 + (iP * 4)]) * ImageHeight) + Bottom); 
-                GridVector2 Control = new GridVector2(System.Convert.ToDouble(parts[iVariableParameters + 4 + (iP * 4)]) * PixelSpacing,
-                                                     System.Convert.ToDouble(parts[iVariableParameters + 5 + (iP * 4)]) * PixelSpacing);
+                int iOffset = (iP * 4) + iVariableParameters;
+                GridVector2 Mapped = new GridVector2((System.Convert.ToDouble(parts[2 + iOffset]) * ImageWidth) + Left,
+                                                     (System.Convert.ToDouble(parts[3 + iOffset]) * ImageHeight) + Bottom);
+                GridVector2 Control = new GridVector2(System.Convert.ToDouble(parts[4 + iOffset]) * PixelSpacing,
+                                                     System.Convert.ToDouble(parts[5 + iOffset]) * PixelSpacing);
 
                 Points[iP] = new MappingGridVector2(Control, Mapped); 
             }
