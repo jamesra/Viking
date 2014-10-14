@@ -1036,6 +1036,7 @@ namespace Viking
             Texture2D tex = null;
             try
             {
+                Debug.Assert(texdata.width * texdata.height == texdata.pixelBytes.Length);
                 if (graphicsDevice.GraphicsProfile == GraphicsProfile.Reach)
                 {
                     tex = new Texture2D(graphicsDevice, texdata.width, texdata.height, mipmap, SurfaceFormat.Color);
@@ -1043,7 +1044,7 @@ namespace Viking
                     //return Texture2D.FromStream(graphicsDevice, stream);
                 }
                 else
-                {
+                {       
                     tex = new Texture2D(graphicsDevice, texdata.width, texdata.height, mipmap, SurfaceFormat.Alpha8);
                     tex.SetData<Byte>(texdata.pixelBytes);
                 }
