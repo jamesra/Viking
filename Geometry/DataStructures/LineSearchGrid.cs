@@ -508,8 +508,9 @@ namespace Geometry
                         List<GridLineSegment> lines = _LineGrid[coord.iX, coord.iY];
                         
                         //This happens when structurelinks or location links are duplicated in the database.f
-                        Debug.Assert(lines.Contains(line) == false);
-                        if(!lines.Contains(line))
+                        bool ContainsLine = lines.Contains(line);
+                        Debug.Assert(ContainsLine == false);
+                        if (!ContainsLine)
                             lines.Add(line);
                     }
 
