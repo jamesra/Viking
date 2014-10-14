@@ -75,8 +75,9 @@ namespace WebAnnotationModel
                     else
                     {
                         //Added the false for dynamic structure loading change, may cause bugs
-                        newObj.Parent = GetObjectByID(newObj.ParentID.Value, false);
-                        if (newObj.Parent == null)
+                        OBJECT parent = GetObjectByID(newObj.ParentID.Value, false);
+                        //Don't use newObj.Parent in if test because get method will fetch parent
+                        if (parent == null)
                         {
                             //If it is a new parentID then add it
                             if (listMissingParents.Contains(newObj.ParentID.Value) == false)
@@ -84,9 +85,13 @@ namespace WebAnnotationModel
 
                             listObjNeedingParents.Add(newObj); 
                         }
+                        else
+                        {
+                            newObj.Parent = parent;
+                        }
                         
                         //If it returns null we couldn't find the parent on the server, what the hell?
-                        Debug.Assert(newObj.Parent != null, "Couldn't locate parent of the structureType, Hit continue to reload all structure types in a panic");
+                        //Debug.Assert(newObj.Parent != null, "Couldn't locate parent of the structureType, Hit continue to reload all structure types in a panic");
                     }
 
                     listAddedObj.Add(newObj);
@@ -111,7 +116,7 @@ namespace WebAnnotationModel
                 if (newObj.Parent != null)
                 {
                     //TODO: This shouldn't happen unless the parent was somehow deleted from the server...
-
+                    //InternalDelete(newObj.ID);
                 }
             }
             
