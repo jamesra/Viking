@@ -764,8 +764,12 @@ namespace Geometry
                 }
 
                 listCoords.Add(end);
-                listCoords.Sort(); 
 
+                return UniqueItems<Coord>(listCoords);
+                /*
+                listCoords.Sort(); 
+    
+                
                 List<Coord> uniqueCoords = new List<Coord>(listCoords.Count);
                 
                 //Remove duplicates
@@ -784,6 +788,7 @@ namespace Geometry
                 }
 
                 listCoords = uniqueCoords; 
+                */
             }
 
 #if DEBUG
@@ -862,26 +867,29 @@ namespace Geometry
                 }
             }
 
-            _LastIntersectingLineCount = LineList.Count; 
+            _LastIntersectingLineCount = LineList.Count;
 
+            return UniqueItems<GridLineSegment>(LineList);
+        }
+
+        protected List<T> UniqueItems<T>(List<T> LineList)
+        {
             //Only return unique values
-            List<GridLineSegment> UniqueLines = new List<GridLineSegment>(LineList.Count);
+            List<T> unique_list = new List<T>(LineList.Count);
             LineList.Sort();
-            GridLineSegment lastLine = default(GridLineSegment);
-            foreach (GridLineSegment item in LineList)
+            T lastItem = default(T);
+            foreach (T item in LineList)
             {
-                if (item == lastLine)
+                if (item.Equals(lastItem))
                     continue;
                 else
                 {
-                    UniqueLines.Add(item);
-                    lastLine = item;
+                    unique_list.Add(item);
+                    lastItem = item;
                 }
             }
 
-            
-
-            return UniqueLines;
+            return unique_list;
         }
 
         /// <summary>
