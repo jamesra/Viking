@@ -524,7 +524,7 @@ namespace WebAnnotation
             {
                 //Refresh the annotations on F5
                 case Keys.F5:
-                    CurrentSectionAnnotations.LoadSectionAnnotations();
+                    LoadSectionAnnotations();
                     return;
                 case Keys.F3:
                     OnContinueLastTrace();
@@ -543,7 +543,6 @@ namespace WebAnnotation
 
                     }
                     return; 
-
             }
 
             try
@@ -628,7 +627,7 @@ namespace WebAnnotation
                     //Only load the annotations for any section once so we can't fire multiple requests by pounding the spacebar
                     if (CurrentSectionAnnotations.HaveLoadedSectionAnnotations == false)
                     {
-                        CurrentSectionAnnotations.LoadSectionAnnotations();
+                        LoadSectionAnnotations();
                     }
 
                     this._Parent.Invalidate();
@@ -727,7 +726,8 @@ namespace WebAnnotation
             
             //Don't load annotations when flipping sections if the user is holding down space bar to hide them
             if (_Parent.ShowOverlays)
-            {
+            { 
+                
                 LoadSectionAnnotations();
             }
         }
@@ -739,7 +739,8 @@ namespace WebAnnotation
         }
 
         /// <summary>
-        /// Organize the changes so we only call the SectionAnnotationViewModel objects that we have to
+        /// Organize the changes so we only call the SectionAnnotationViewModel objects that we have to.
+        /// Can be called from any thread
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
@@ -780,7 +781,8 @@ namespace WebAnnotation
                 }
             }
 
-            Parent.Invalidate(); 
+            //Invalidate can always be called from any thread
+            Parent.Invalidate();
         }
 
         /// <summary>
@@ -1016,10 +1018,11 @@ namespace WebAnnotation
             //Draw the text for each location
             foreach (Location_CanvasViewModel loc in Locations)
             {
-                if (loc.Parent == null)
+                Structure ParentStructure = loc.Parent;
+                if (ParentStructure == null)
                     continue;
 
-                if (loc.Parent.Type == null)
+                if (ParentStructure.Type == null)
                     continue;
 
                 GridVector2 WorldPosition = loc.VolumePosition; 
@@ -1069,10 +1072,11 @@ namespace WebAnnotation
                     continue; 
 
                 //If we could not map a reference section we may not have a transformed location, so we should skip them
-                if (loc.Parent == null)
+                Structure ParentStructure = loc.Parent;
+                if (ParentStructure == null)
                     continue;
 
-                if (loc.Parent.Type == null)
+                if (ParentStructure.Type == null)
                     continue;
 
                 GridVector2 WorldPosition = loc.VolumePosition;
