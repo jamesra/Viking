@@ -246,8 +246,9 @@ namespace VikingXNA
 #endif
                 Rectangle sourceRectangle = new Rectangle(0, 0, ClientSize.Width,
                                                                 ClientSize.Height);
-
-                Device.Present(sourceRectangle, null, this.Handle);
+                
+                if(Device.GraphicsDeviceStatus == GraphicsDeviceStatus.Normal)
+                    Device.Present(sourceRectangle, null, this.Handle);
 #if !DEBUG
             }
             catch
