@@ -136,50 +136,74 @@ namespace WebAnnotationModel
             get { return Data.Username; }
         }
 
+        private object LinksLock = new object();
         private ObservableCollection<StructureLinkObj> _Links = null;
-        public ObservableCollection<StructureLinkObj> Links
+        internal ObservableCollection<StructureLinkObj> Links
         {
             get
             {
-                if (_Links == null)
-                {
-                    _Links = new ObservableCollection<StructureLinkObj>();
-
-                    //Initialize from the Data object
-                    foreach (StructureLink link in Data.Links)
+                lock (LinksLock)
+                { 
+                    if (_Links == null)
                     {
-                        Debug.Assert(link != null);
-                        StructureLinkObj linkObj = new StructureLinkObj(link);
+                        _Links = new ObservableCollection<StructureLinkObj>();
 
-                        Debug.Assert(linkObj != null); 
-                        //Add it if it doesn't exist, otherwise get the official version
-                        linkObj = Store.StructureLinks.InternalAdd(linkObj);
-                        Debug.Assert(linkObj != null, "If structureObj has the value the store should have the value.   Does it link to itself?");
-                        if (linkObj != null)
+                        //Initialize from the Data object
+                        foreach (StructureLink link in Data.Links)
                         {
-                            _Links.Add(linkObj);
+                            Debug.Assert(link != null);
+                            StructureLinkObj linkObj = new StructureLinkObj(link);
+
+                            Debug.Assert(linkObj != null); 
+                            //Add it if it doesn't exist, otherwise get the official version
+                            linkObj = Store.StructureLinks.InternalAdd(linkObj);
+                            Debug.Assert(linkObj != null, "If structureObj has the value the store should have the value.   Does it link to itself?");
+                            if (linkObj != null)
+                            {
+                                _Links.Add(linkObj);
+                            }
                         }
+
+
+                        _Links.CollectionChanged += this.OnLinksChanged;
                     }
 
-
-                    _Links.CollectionChanged += this.OnLinksChanged;
+                    return _Links;
                 }
-
-                return _Links;
             }
         }
 
+        public int NumLinks
+        {
+            get
+            {
+                lock (LinksLock)
+                {
+                    if(this._Links == null)
+                    {
+                        return 0;
+                    }
+                    else
+                    {
+                        return _Links.Count;
+                    }
+                }
+            }
+        }
 
         /// <summary>
-        /// This provides a copy of the links collection so there is no danger of another thread changing the collection while it is enumerated
+        /// This provides a copy of the links collection so there is no danger of another thread changing the collection while it is enumerated.
         /// </summary>
         public StructureLinkObj[] LinksCopy
         {
             get
             {
-                StructureLinkObj[] copy = new StructureLinkObj[this.Links.Count];
-                Links.CopyTo(copy, 0);
-                return copy; 
+                lock (LinksLock)
+                {
+                    StructureLinkObj[] copy = new StructureLinkObj[this.Links.Count];
+                    Links.CopyTo(copy, 0);
+                    return copy; 
+                }
             }
         }
         
@@ -198,43 +222,51 @@ namespace WebAnnotationModel
         }
 
         /// <summary>
-        /// Allows LocationLinkStore to adjust the client after a link is created
+        /// Allows LocationLinkStore to adjust the client after a link is created.
+        /// Because Links is an observable collection all modifications must be syncronized
         /// </summary>
         /// <param name="ID"></param>
         internal void AddLink(StructureLinkObj ID)
         {
-            if (Links.Contains(ID))
-                return;
+            lock (LinksLock)
+            {
+                if (Links.Contains(ID))
+                    return;
 
-            /*
-            List<StructureLink> listLinks = Data.Links.ToList<StructureLink>();
-            listLinks.Add(ID.GetData());
+                /*
+                List<StructureLink> listLinks = Data.Links.ToList<StructureLink>();
+                listLinks.Add(ID.GetData());
 
-            Data.Links = listLinks.ToArray();
+                Data.Links = listLinks.ToArray();
 
-            if (!Links.Contains(ID))
-            */
-            
-            Links.Add(ID);
+                if (!Links.Contains(ID))
+                */
+
+                Links.Add(ID);
+            }
         }
 
         /// <summary>
         /// Adjust the client after a link is removed
+        /// Because Links is an observable collection all modifications must be syncronized
         /// </summary>
         /// <param name="ID"></param>
         internal void RemoveLink(StructureLinkObj ID)
         {
-            if (!Links.Contains(ID))
-                return;
+            lock (LinksLock)
+            {
+                if (!Links.Contains(ID))
+                    return;
 
-            /*
-            List<StructureLink> listLinks = Data.Links.ToList<StructureLink>();
-            listLinks.Remove(ID.GetData());
+                /*
+                List<StructureLink> listLinks = Data.Links.ToList<StructureLink>();
+                listLinks.Remove(ID.GetData());
 
-            Data.Links = listLinks.ToArray();
-            */
+                Data.Links = listLinks.ToArray();
+                */
 
-            Links.Remove(ID);
+                Links.Remove(ID);
+            }
         }
         
         /*
