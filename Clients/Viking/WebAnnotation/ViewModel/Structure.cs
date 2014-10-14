@@ -90,7 +90,7 @@ namespace WebAnnotation.ViewModel
         [Column("Num Links")]
         public int NumLinks
         {
-            get { return modelObj.Links.Count(); }
+            get { return modelObj.NumLinks; }
         }
 
 
