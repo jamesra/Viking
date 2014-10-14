@@ -108,41 +108,55 @@ namespace WebAnnotation.ViewModel
             get { return modelObj.ParentID; }
         }
 
+        private Structure _Parent = null;
+
+        private void ResetParentCache() { _Parent = null;  }
+
         public Structure Parent
         {
             get
             {
-                if (this.modelObj.Parent != null)
-                    return new Structure(this.modelObj.Parent);
-                else
-                    return null; 
+                if (this.modelObj.Parent == null)
+                    return null;
+
+                if (this._Parent == null)
+                    _Parent = new Structure(this.modelObj.Parent);
+                
+                return _Parent;
             }
         }
 
         #region Weak Events
+        private object EventsLock = new object();
         private bool EventsRegistered = false;
         internal void RegisterEvents()
         {
             if (EventsRegistered)
                 return;
 
-            NotifyPropertyChangedEventManager.AddListener(this.modelObj, this);
-
-            if (this.modelObj.Parent == null)
+            lock (EventsLock)
             {
-                Action<long> GetParent = delegate(long ParentID)
+                if (EventsRegistered)
+                    return;
+
+                NotifyPropertyChangedEventManager.AddListener(this.modelObj, this);
+
+                if (this.modelObj.Parent == null)
                 {
-                    StructureObj parent = Store.Structures.GetObjectByID(ParentID, true);
-                    if (parent != null)
-                        NotifyPropertyChangedEventManager.AddListener(this.modelObj.Parent, this);
-                };
+                    Action<long> GetParent = delegate(long ParentID)
+                    {
+                        StructureObj parent = Store.Structures.GetObjectByID(ParentID, true);
+                        if (parent != null)
+                            NotifyPropertyChangedEventManager.AddListener(this.modelObj.Parent, this);
+                    };
 
-                AnnotationOverlay.CurrentOverlay.Parent.BeginInvoke(GetParent, new object[] { this.modelObj.ParentID.Value });
+                    AnnotationOverlay.CurrentOverlay.Parent.BeginInvoke(GetParent, new object[] { this.modelObj.ParentID.Value });
+                }
+                else
+                    NotifyPropertyChangedEventManager.AddListener(this.modelObj.Parent, this);
+
+                EventsRegistered = true;
             }
-            else
-                NotifyPropertyChangedEventManager.AddListener(this.modelObj.Parent, this);
-
-            EventsRegistered = true;
         }
 
         internal void DeregisterEvents()
@@ -150,10 +164,16 @@ namespace WebAnnotation.ViewModel
             if (!EventsRegistered)
                 return;
 
-            NotifyPropertyChangedEventManager.RemoveListener(this.modelObj, this);
-            NotifyPropertyChangedEventManager.RemoveListener(this.modelObj.Parent, this);
+            lock (EventsLock)
+            {
+                if (!EventsRegistered)
+                    return;
 
-            EventsRegistered = false;
+                NotifyPropertyChangedEventManager.RemoveListener(this.modelObj, this);
+                NotifyPropertyChangedEventManager.RemoveListener(this.modelObj.Parent, this);
+
+                EventsRegistered = false;
+            }
         }
         #endregion
 
@@ -344,6 +364,7 @@ namespace WebAnnotation.ViewModel
 
         protected virtual void OnParentPropertyChanged(object o, PropertyChangedEventArgs args)
         {
+            this.ResetParentCache();
             return;
         }
 
@@ -471,6 +492,14 @@ namespace WebAnnotation.ViewModel
         public int Section
         {
             get { return (int)modelObj.Section; }
+        }
+
+        /// <summary>
+        /// Return true if the locations volume position has been calculated
+        /// </summary>
+        public bool VolumePositionHasBeenCalculated
+        {
+            get { return this.modelObj.VolumePositionHasBeenCalculated; }
         }
 
         #endregion
@@ -675,6 +704,8 @@ namespace WebAnnotation.ViewModel
                 _LabelSizeMeasured = false;
                 _InfoLabelSizeMeasured = false;
             }
+
+            base.OnParentPropertyChanged(o, args);
         }
 
         protected override void OnObjPropertyChanged(object o, PropertyChangedEventArgs args)
