@@ -53,9 +53,17 @@ namespace WebAnnotation.UI.Controls
         {
             Location_PropertyPageViewModel loc = sender as Location_PropertyPageViewModel;
             Debug.Assert(loc != null);
-            if(loc != null)
-                this.ListItems.AddObject(loc); 
-
+            if (loc != null)
+            {
+                if (InvokeRequired)
+                {
+                    this.ListItems.Invoke(new Action(() => this.ListItems.AddObject(loc)));
+                }
+                else
+                {
+                    this.ListItems.AddObject(loc);
+                }
+            }
         }
 
         protected override void parentForm_Closing(object sender, CancelEventArgs e)

@@ -53,8 +53,14 @@ namespace WebAnnotation.UI.Controls
             Structure structure = sender as Structure;
             Debug.Assert(structure != null);
             if (structure != null)
-                this.ListItems.AddObject(structure);
-
+                if(InvokeRequired)
+                {
+                    this.ListItems.Invoke(new Action(() => this.ListItems.AddObject(structure)));
+                }
+                else
+                { 
+                    this.ListItems.AddObject(structure);
+                }
         }
 
         protected override void parentForm_Closing(object sender, CancelEventArgs e)
