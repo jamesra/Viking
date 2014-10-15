@@ -149,6 +149,7 @@ namespace WebAnnotationModel.Objects
 
         public void Dispose()
         {
+            GC.SuppressFinalize(this);
            // Trace.WriteLine("Disposing of object: " + this.ToString());
         }
     }
