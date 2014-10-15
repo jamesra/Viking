@@ -69,22 +69,23 @@ namespace WebAnnotationModel
         {
             //lock (LockObject)
             {
-                AnnotateLocationsClient proxy = CreateProxy();
-
-                try
+                using (AnnotateLocationsClient proxy = CreateProxy())
                 {
-                    proxy.Open();
-                    proxy.CreateLocationLink(A, B);
-                }
-                catch (Exception e)
-                {
-                    //TODO: Better message
-                    Trace.WriteLine("Error creating link between locations, link not created: " + e.Message);
-                }
-                finally
-                {
-                    if (proxy != null)
-                        proxy.Close();
+                    try
+                    {
+                        proxy.Open();
+                        proxy.CreateLocationLink(A, B);
+                    }
+                    catch (Exception e)
+                    {
+                        //TODO: Better message
+                        Trace.WriteLine("Error creating link between locations, link not created: " + e.Message);
+                    }
+                    finally
+                    {
+                        if (proxy != null)
+                            proxy.Close();
+                    }
                 }
                 
                 InternalAdd(new LocationLinkObj(A, B)); 
@@ -127,7 +128,7 @@ namespace WebAnnotationModel
             SectionLocationLinks = SectionToLocationLinks.GetOrAdd(SectionNumber, SectionLocationLinks);
             
             //Request updates after fetching the list so we don't update the list mid-query
-            GetObjectsForSection(SectionNumber);
+            GetObjectsForSectionAsynch(SectionNumber);
 
             return SectionLocationLinks;
         }
@@ -146,16 +147,34 @@ namespace WebAnnotationModel
             return new ConcurrentDictionary<LocationLinkKey, LocationLinkObj>(); 
         }
 
-        protected override ConcurrentDictionary<LocationLinkKey, LocationLinkObj> ProxyBeginGetBySection(AnnotateLocationsClient proxy, long SectionNumber, DateTime LastQuery, AsyncCallback callback, object asynchState)
+        protected override LocationLink[] ProxyGetBySection(AnnotateLocationsClient proxy, long SectionNumber, DateTime LastQuery, out long TicksAtQueryExecute, out LocationLinkKey[] DeletedLinkKeys)
         {
-            ConcurrentDictionary<LocationLinkKey, LocationLinkObj> SectionLocationLinks = GetLocalObjectsForSection(SectionNumber); 
+            LocationLink[] deleted_links = null; 
+            LocationLink[] links = proxy.LocationLinksForSection(out TicksAtQueryExecute, out deleted_links, SectionNumber, LastQuery.Ticks);
 
-            proxy.BeginLocationLinksForSection(SectionNumber,
+            if( deleted_links == null)
+            {
+                DeletedLinkKeys = new LocationLinkKey[0];
+            }
+            else 
+            {
+                DeletedLinkKeys = new LocationLinkKey[deleted_links.Length];
+                for(int i = 0; i < deleted_links.Length; i++)
+                {
+                    DeletedLinkKeys[i] = new LocationLinkKey(deleted_links[i].SourceID, deleted_links[i].TargetID);
+                }
+            }
+
+            return links; 
+        }
+
+        protected override IAsyncResult ProxyBeginGetBySection(AnnotateLocationsClient proxy, long SectionNumber, DateTime LastQuery, AsyncCallback callback, object asynchState)
+        {
+            
+            return proxy.BeginLocationLinksForSection(SectionNumber,
                                                  LastQuery.Ticks,
                                                  GetObjectsBySectionCallback,
-                                                 new GetObjectBySectionCallbackState(proxy, SectionNumber));
-
-            return SectionLocationLinks; 
+                                                 new GetObjectBySectionCallbackState(proxy, SectionNumber, LastQuery));
         }
 
         protected override LocationLink[] ProxyGetBySectionCallback(out long TicksAtQueryExecute,
@@ -255,7 +274,8 @@ namespace WebAnnotationModel
             {
                 foreach (long linkID in obj.Links)
                 {
-                    links.Add(new LocationLinkObj(obj.ID, linkID));
+                    obj.AddLink(linkID);
+                    //links.Add(new LocationLinkObj(obj.ID, linkID));
                 }
             }
 
@@ -306,8 +326,10 @@ namespace WebAnnotationModel
 
         
         /// <summary>
-        /// This is a symptom of passing location links with both location objects and location link objects
-        /// To make the code cleaner I should not pass the links with the locations, and query them directly instead.
+        /// Events from the location store are listened to because locations can arrive with Link information. 
+        /// When that occurs we add those links to our own store.
+        /// This is a symptom of passing location links with both location objects and location link objects.
+        /// To make the code cleaner I could not pass the links with the locations, and query them directly instead.
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>

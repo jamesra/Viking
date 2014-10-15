@@ -49,28 +49,28 @@ namespace WebAnnotationModel
             }
 
             StringBuilder sbuilder = new StringBuilder();
-            System.Xml.XmlWriter xwriter = XmlWriter.Create(sbuilder);
-            xwriter.WriteStartElement("Structure");
-
-            foreach (ObjAttribute attrib in attributes)
+            using (System.Xml.XmlWriter xwriter = XmlWriter.Create(sbuilder))
             {
-                xwriter.WriteStartElement("Attrib");
+                xwriter.WriteStartElement("Structure");
 
-                xwriter.WriteAttributeString("Name", attrib.Name);
-                if(attrib.Value != null)
+                foreach (ObjAttribute attrib in attributes)
                 {
-                    if (attrib.Value.Length > 0)
+                    xwriter.WriteStartElement("Attrib");
+
+                    xwriter.WriteAttributeString("Name", attrib.Name);
+                    if (attrib.Value != null)
                     {
-                        xwriter.WriteAttributeString("Value", attrib.Value);
+                        if (attrib.Value.Length > 0)
+                        {
+                            xwriter.WriteAttributeString("Value", attrib.Value);
+                        }
                     }
+
+                    xwriter.WriteEndElement();
                 }
 
                 xwriter.WriteEndElement();
             }
-
-            xwriter.WriteEndElement();
-
-            xwriter.Close();
 
             return sbuilder.ToString();
         }
@@ -97,9 +97,7 @@ namespace WebAnnotationModel
         }
 
         private static List<ObjAttribute> FromXml(string XMLString)
-        {
-            List<ObjAttribute> attribList = new List<ObjAttribute>();
-
+        { 
             System.Xml.Linq.XDocument doc = System.Xml.Linq.XDocument.Load(new StringReader(XMLString));
             
             XElement structureElem = doc.Element("Structure");
@@ -179,6 +177,27 @@ namespace WebAnnotationModel
             else
                 return compval;
         }
+
+        public static bool operator ==(ObjAttribute A, ObjAttribute B)
+        {
+            if (A == null && B == null)
+                return true;
+            if (A == null || B == null)
+                return false;
+
+            return String.Compare(A.Name, B.Name) == 0; 
+        }
+
+        public static bool operator !=(ObjAttribute A, ObjAttribute B)
+        {
+            if (A == null && B == null)
+                return false;
+            if (A == null || B == null)
+                return true;
+
+            return String.Compare(A.Name, B.Name) != 0; 
+        }
+
     }
 
 }
