@@ -41,84 +41,92 @@ namespace WebAnnotation.UI
 
         protected void OnStructureTypeCollectionChanged(object sender, NotifyCollectionChangedEventArgs args)
         {
-            switch (args.Action)
+            if(InvokeRequired)
             {
-                case NotifyCollectionChangedAction.Add:
-                    foreach (object o in args.NewItems)
-                    {
-                        StructureTypeObj newTypeObj = o as StructureTypeObj;
-                        if(newTypeObj != null)
+                //Ensure UI controls are updated in main thread
+                this.Invoke( new Action(() => this.OnStructureTypeCollectionChanged(sender, args)));
+                return; 
+            }
+            else
+            { 
+                switch (args.Action)
+                {
+                    case NotifyCollectionChangedAction.Add:
+                        foreach (object o in args.NewItems)
                         {
-                            StructureType newType = new StructureType(newTypeObj); 
-                            if (newType.Parent != null)
+                            StructureTypeObj newTypeObj = o as StructureTypeObj;
+                            if(newTypeObj != null)
                             {
-                                GenericTreeNode[] Nodes = Tree.GetNodesForObject(newType.Parent);
-                                foreach (GenericTreeNode node in Nodes)
+                                StructureType newType = new StructureType(newTypeObj); 
+                                if (newType.Parent != null)
                                 {
-                                    node.UpdateChildNodes();
+                                    GenericTreeNode[] Nodes = Tree.GetNodesForObject(newType.Parent);
+                                    foreach (GenericTreeNode node in Nodes)
+                                    {
+                                        node.UpdateChildNodes();
+                                    }
                                 }
-                            }
-                            else
-                                Tree.AddObjects(new IUIObject[] { newType });
-                        }
-                    }
-                    break;
-                case NotifyCollectionChangedAction.Remove:
-
-                    foreach (object o in args.OldItems)
-                    {
-                        StructureTypeObj oldTypeObj = o as StructureTypeObj;
-                        if (oldTypeObj != null)
-                        {
-                            StructureType oldType = new StructureType(oldTypeObj);
-                            Viking.UI.Controls.GenericTreeNode[] nodes = Tree.GetNodesForObject(oldType);
-                            foreach (Viking.UI.Controls.GenericTreeNode node in nodes)
-                            {
-                                Tree.RemoveNode(node);
+                                else
+                                    Tree.AddObjects(new IUIObject[] { newType });
                             }
                         }
-                    }
-                    break;
+                        break;
+                    case NotifyCollectionChangedAction.Remove:
 
-                case NotifyCollectionChangedAction.Replace:
-                    foreach (object o in args.OldItems)
-                    {
-                        StructureTypeObj TypeObj = o as StructureTypeObj;
-                        if (TypeObj != null)
+                        foreach (object o in args.OldItems)
                         {
-                            StructureType t = new StructureType(TypeObj);
-                            if (t.Parent != null)
+                            StructureTypeObj oldTypeObj = o as StructureTypeObj;
+                            if (oldTypeObj != null)
                             {
-                                Viking.UI.Controls.GenericTreeNode[] nodes = Tree.GetNodesForObject(t);
+                                StructureType oldType = new StructureType(oldTypeObj);
+                                Viking.UI.Controls.GenericTreeNode[] nodes = Tree.GetNodesForObject(oldType);
                                 foreach (Viking.UI.Controls.GenericTreeNode node in nodes)
                                 {
-                                    node.UpdateChildNodes();
+                                    Tree.RemoveNode(node);
                                 }
                             }
                         }
-                    }
-                    break; 
+                        break;
 
-                case NotifyCollectionChangedAction.Reset:
-                    foreach (object o in args.OldItems)
-                    {
-                        StructureTypeObj TypeObj = o as StructureTypeObj;
-                        if (TypeObj != null)
+                    case NotifyCollectionChangedAction.Replace:
+                        foreach (object o in args.OldItems)
                         {
-                            StructureType t = new StructureType(TypeObj);
-                            if (t.Parent != null)
+                            StructureTypeObj TypeObj = o as StructureTypeObj;
+                            if (TypeObj != null)
                             {
-                                Viking.UI.Controls.GenericTreeNode[] nodes = Tree.GetNodesForObject(t);
-                                foreach (Viking.UI.Controls.GenericTreeNode node in nodes)
+                                StructureType t = new StructureType(TypeObj);
+                                if (t.Parent != null)
                                 {
-                                    node.UpdateChildNodes();
+                                    Viking.UI.Controls.GenericTreeNode[] nodes = Tree.GetNodesForObject(t);
+                                    foreach (Viking.UI.Controls.GenericTreeNode node in nodes)
+                                    {
+                                        node.UpdateChildNodes();
+                                    }
                                 }
                             }
                         }
-                    }
-                    break; 
-                   
+                        break; 
 
+                    case NotifyCollectionChangedAction.Reset:
+                        foreach (object o in args.OldItems)
+                        {
+                            StructureTypeObj TypeObj = o as StructureTypeObj;
+                            if (TypeObj != null)
+                            {
+                                StructureType t = new StructureType(TypeObj);
+                                if (t.Parent != null)
+                                {
+                                    Viking.UI.Controls.GenericTreeNode[] nodes = Tree.GetNodesForObject(t);
+                                    foreach (Viking.UI.Controls.GenericTreeNode node in nodes)
+                                    {
+                                        node.UpdateChildNodes();
+                                    }
+                                }
+                            }
+                        }
+                        break;
+
+                }
             }
         }
 
