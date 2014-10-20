@@ -244,6 +244,7 @@ namespace WebAnnotationModel
         /// <returns></returns>
         internal override LocationLinkObj[] InternalAdd(LocationLinkObj[] newObj)
         {
+            //Make sure the LocationObjects know about the new links we've pulled from the database
             foreach (LocationLinkObj link in newObj)
             {
                 LocationObj AObj = Store.Locations.GetObjectByID(link.A, false);
@@ -274,8 +275,8 @@ namespace WebAnnotationModel
             {
                 foreach (long linkID in obj.Links)
                 {
-                    obj.AddLink(linkID);
-                    //links.Add(new LocationLinkObj(obj.ID, linkID));
+                    //obj.AddLink(linkID);
+                    links.Add(new LocationLinkObj(obj.ID, linkID));
                 }
             }
 
