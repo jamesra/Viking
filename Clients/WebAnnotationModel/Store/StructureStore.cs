@@ -34,7 +34,7 @@ namespace WebAnnotationModel
                     proxy.Close();
                     proxy = null; 
                 }
-                throw e;
+                throw;
             }
 
             return proxy; 
@@ -90,6 +90,11 @@ namespace WebAnnotationModel
             return new ConcurrentDictionary<long, StructureObj>(); 
         }
 
+        protected override Structure[] ProxyGetBySection(AnnotateStructuresClient proxy, long SectionNumber, DateTime LastQuery, out long TicksAtQueryExecute, out long[] DeletedLocations)
+        {
+            return proxy.GetStructuresForSection(out TicksAtQueryExecute, out DeletedLocations, SectionNumber, LastQuery.Ticks);
+        }
+
         /// <summary>
         /// This currently always returns the empty result because its main purpose is to populate the cache so locations can determine thier type
         /// </summary>
@@ -99,7 +104,7 @@ namespace WebAnnotationModel
         /// <param name="callback"></param>
         /// <param name="asynchState"></param>
         /// <returns></returns>
-        protected override ConcurrentDictionary<long, StructureObj> ProxyBeginGetBySection(AnnotateStructuresClient proxy,
+        protected override IAsyncResult ProxyBeginGetBySection(AnnotateStructuresClient proxy,
                                                                                             long SectionNumber,
                                                                                             DateTime LastQuery,
                                                                                             AsyncCallback callback,
@@ -107,9 +112,7 @@ namespace WebAnnotationModel
         {
             Debug.WriteLine("Get Structures for section: ", SectionNumber.ToString());
 
-            proxy.BeginGetStructuresForSection(SectionNumber, LastQuery.Ticks, callback, asynchState);
-            
-            return new ConcurrentDictionary<long, StructureObj>(); 
+            return proxy.BeginGetStructuresForSection(SectionNumber, LastQuery.Ticks, callback, asynchState);
         }
 
         protected override Structure[] ProxyGetBySectionCallback(out long TicksAtQueryExecute, out long[] DeletedIDs, GetObjectBySectionCallbackState state, IAsyncResult result)

@@ -55,7 +55,12 @@ namespace WebAnnotationModel
             throw new NotImplementedException();
         }
 
-        protected override System.Collections.Concurrent.ConcurrentDictionary<StructureLinkKey, StructureLinkObj> ProxyBeginGetBySection(AnnotateStructuresClient proxy, long SectionNumber, DateTime LastQuery, AsyncCallback callback, object asynchState)
+        protected override StructureLink[] ProxyGetBySection(AnnotateStructuresClient proxy, long SectionNumber, DateTime LastQuery, out long TicksAtQueryExecute, out StructureLinkKey[] DeletedLocations)
+        {
+            throw new NotImplementedException();
+        }
+
+        protected override IAsyncResult ProxyBeginGetBySection(AnnotateStructuresClient proxy, long SectionNumber, DateTime LastQuery, AsyncCallback callback, object asynchState)
         {
             throw new NotImplementedException();
         }

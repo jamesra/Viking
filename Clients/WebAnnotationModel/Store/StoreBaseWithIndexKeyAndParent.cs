@@ -119,13 +119,8 @@ namespace WebAnnotationModel
                     //InternalDelete(newObj.ID);
                 }
             }
-            
-            if (listAddedObj.Count > 0)
-            {
-                OBJECT[] listCopy = new OBJECT[listAddedObj.Count];
-                listAddedObj.CopyTo(listCopy);
-                CallOnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, listCopy));
-            }
+
+            CallOnCollectionChangedForAdd(listAddedObj);
 
             return listAddedObj.ToArray();
         }
@@ -212,11 +207,13 @@ namespace WebAnnotationModel
                 }
 
                 CallOnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Replace, newItemsCopy, oldItemsCopy));
-
+                
+                /*
                 foreach(OBJECT obj in listOldObjs)
                 {
                     obj.Dispose(); 
                 }
+                 */
 
                 listOldObjs.Clear(); 
             }

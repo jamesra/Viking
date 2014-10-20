@@ -12,6 +12,22 @@ using System.Collections.Specialized;
 namespace WebAnnotationModel
 {
     /// <summary>
+    /// Returned type used by queries which return a local cache immediately and a handle on the server request for updates
+    /// </summary>
+    /// <typeparam name="KEY"></typeparam>
+    /// <typeparam name="OBJECT"></typeparam>
+    public class MixedLocalAndRemoteQueryResults<KEY, OBJECT>
+    {
+        public readonly IAsyncResult ServerRequestResult = null;
+        public readonly ConcurrentDictionary<KEY, OBJECT> KnownObjects = null; 
+
+        public MixedLocalAndRemoteQueryResults(IAsyncResult result, ConcurrentDictionary<KEY, OBJECT> known_objects)
+        {
+            this.ServerRequestResult = result;
+            this.KnownObjects = known_objects; 
+        }
+    }
+    /// <summary>
     /// This base class implements the basic functionality to talk to a WCF Service
     /// </summary>
     public abstract class StoreBase<PROXY, INTERFACE, OBJECT, WCFOBJECT> : INotifyCollectionChanged
@@ -53,15 +69,40 @@ namespace WebAnnotationModel
 
         /// <summary>
         /// This is fired when all objects retrieved from a call to the database have been added/updated/removed
+        /// It needs to be called on the main UI thread
         /// </summary>
       //  public event OnAllUpdatesCompletedEventHandler OnAllUpdatesCompleted; 
 
+        protected void CallOnCollectionChangedForAdd(List<OBJECT> listAddedObj)
+        {
+            //InternalUpdate will send its own notification for the updated objects
+            if (listAddedObj.Count > 0)
+            {                
+                OBJECT[] listCopy = new OBJECT[listAddedObj.Count];
+                listAddedObj.CopyTo(listCopy);
+                //CallOnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, listAddedObj));
+                CallOnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, listCopy));
+            }
+        }
+
         protected void CallOnCollectionChanged(NotifyCollectionChangedEventArgs e)
         {
-            if (OnCollectionChanged != null)
+            lock (this)
             {
-               
-                OnCollectionChanged(this, e);
+                if (OnCollectionChanged != null)
+                {
+                    //System.Threading.Tasks.Task.Factory.StartNew(() => OnCollectionChanged(this, e));
+                    //Action a = new Action(() => OnCollectionChanged(this, e));
+                    //a.BeginInvoke(null, null);
+
+                    //Because we are handling collection changes these events need to appear in order, however there are
+                    //too many cascading events...  RIght now the worst case is a location doesn't show in the UI as expected.
+                    //This can be fixed by implementing the replaced collection change action for delete instead of using
+                    //remove and then add.  When we seperate the operation the order can be flipped.
+                    Action a = new Action(() => OnCollectionChanged(this, e));
+                    a.BeginInvoke(null, null);
+                    //OnCollectionChanged(this, e);
+                }
             }
         }
 
@@ -83,8 +124,6 @@ namespace WebAnnotationModel
             Trace.WriteLine(e.Message);
             //System.Windows.Forms.MessageBox.Show("An error occurred:\n" + e.Message, "WebAnnotation");
         }
-
-        
 
         #region Proxy Calls
 

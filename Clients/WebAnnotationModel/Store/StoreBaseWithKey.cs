@@ -71,7 +71,30 @@ namespace WebAnnotationModel
 
         protected abstract WCFOBJECT ProxyGetByID(PROXY proxy, KEY ID);
         protected abstract WCFOBJECT[] ProxyGetByIDs(PROXY proxy, KEY[] IDs);
-        protected abstract ConcurrentDictionary<KEY, OBJECT> ProxyBeginGetBySection(PROXY proxy,
+
+        /// <summary>
+        /// Synchronous query for objects on the section
+        /// </summary>
+        /// <param name="proxy"></param>
+        /// <param name="SectionNumber"></param>
+        /// <param name="LastQuery"></param>
+        /// <returns></returns>
+        protected abstract WCFOBJECT[] ProxyGetBySection(PROXY proxy,
+                                                             long SectionNumber,
+                                                             DateTime LastQuery,
+                                                             out long TicksAtQueryExecute,
+                                                             out KEY[] DeletedLocations) ;
+
+        /// <summary>
+        /// Asynchronous query for objects on the section
+        /// </summary>
+        /// <param name="proxy"></param>
+        /// <param name="SectionNumber"></param>
+        /// <param name="LastQuery"></param>
+        /// <param name="callback"></param>
+        /// <param name="asynchState"></param>
+        /// <returns></returns>
+        protected abstract IAsyncResult ProxyBeginGetBySection(PROXY proxy,
                                                              long SectionNumber,
                                                              DateTime LastQuery,
                                                              AsyncCallback callback,
@@ -340,35 +363,88 @@ namespace WebAnnotationModel
 
         public abstract ConcurrentDictionary<KEY, OBJECT> GetLocalObjectsForSection(long SectionNumber);
 
+         
         public virtual ConcurrentDictionary<KEY, OBJECT> GetObjectsForSection(long SectionNumber)
         {
+            GetObjectBySectionCallbackState state = new GetObjectBySectionCallbackState(null, SectionNumber, GetLastQueryTimeForSection(SectionNumber));
+
+            WCFOBJECT[] objects = new WCFOBJECT[0];
+            long QueryExecutedTime;
+            KEY[] deleted_objects = new KEY[0];
+            PROXY proxy = null; 
+
+            try
+            {
+               
+                proxy = CreateProxy();
+                proxy.Open();
+
+                objects = ProxyGetBySection(proxy,
+                                                        SectionNumber,
+                                                        state.LastQueryExecutedTime,
+                                                        out QueryExecutedTime,
+                                                        out deleted_objects); 
+            }
+            catch (EndpointNotFoundException e)
+            {
+                Trace.WriteLine("Could not connect to annotation database: " + e.ToString());
+            }
+            catch (Exception e)
+            {
+                ShowStandardExceptionMessage(e);
+            }
+            finally
+            {
+                if (proxy != null)
+                {
+                    proxy.Close();
+                    proxy = null;
+                }
+            }
+
+            ParseQuery(objects, deleted_objects, state);
+
+            return GetLocalObjectsForSection(SectionNumber);
+        }
+
+
+
+        /// <summary>
+        /// Get objects appearing on the section asynchronously.  Locally cached objects may be returned first.  Objects
+        /// returned remotely can be detected with the OnCollectionChanged notification
+        /// </summary>
+        /// <param name="SectionNumber"></param>
+        /// <returns></returns>
+
+        public virtual MixedLocalAndRemoteQueryResults<KEY, OBJECT> GetObjectsForSectionAsynch(long SectionNumber)
+        {
             GetObjectBySectionCallbackState requestState;
+            ConcurrentDictionary<KEY, OBJECT> knownObjects = GetLocalObjectsForSection(SectionNumber);
+            
             bool OutstandingRequest = OutstandingSectionQueries.TryGetValue(SectionNumber, out requestState);                
             if(OutstandingRequest)
             {
-                return GetLocalObjectsForSection(SectionNumber); 
+                return new MixedLocalAndRemoteQueryResults<KEY, OBJECT>(null, knownObjects);
             }
             
             PROXY proxy = null;
-            ConcurrentDictionary<KEY, OBJECT> knownObjects = new ConcurrentDictionary<KEY, OBJECT>();
+            
+            IAsyncResult result = null; 
             try
             {
                 proxy = CreateProxy();
                 proxy.Open();
 
 //                WCFOBJECT[] locations = new WCFOBJECT[0];
-                GetObjectBySectionCallbackState newState = new GetObjectBySectionCallbackState(proxy, SectionNumber);
+                GetObjectBySectionCallbackState newState = new GetObjectBySectionCallbackState(proxy, SectionNumber, GetLastQueryTimeForSection(SectionNumber));
                 bool NoOutstandingRequest = OutstandingSectionQueries.TryAdd(SectionNumber, newState);
                 if (NoOutstandingRequest)
-                {
-                    DateTime LastQuery = DateTime.MinValue;
-                    if (LastQueryForSection.ContainsKey(SectionNumber))
-                        LastQuery = LastQueryForSection[SectionNumber];
+                { 
 
                     //Build list of Locations to check
-                    knownObjects = ProxyBeginGetBySection(proxy,
+                    result = ProxyBeginGetBySection(proxy,
                                             SectionNumber,
-                                            LastQuery,
+                                            newState.LastQueryExecutedTime,
                                             new AsyncCallback(GetObjectsBySectionCallback),
                                             newState);
                 }
@@ -387,14 +463,15 @@ namespace WebAnnotationModel
                     proxy = null;
                 }
             }
-            
-            return knownObjects; 
+
+            return new MixedLocalAndRemoteQueryResults<KEY, OBJECT>(result, knownObjects);
         }
 
         protected class GetObjectBySectionCallbackState
         {
             public readonly PROXY Proxy;
             public readonly long SectionNumber;
+            public readonly DateTime LastQueryExecutedTime;
             public readonly DateTime StartTime = DateTime.Now;
 
             public override string ToString()
@@ -402,16 +479,25 @@ namespace WebAnnotationModel
                 return SectionNumber.ToString() + " : " + StartTime.TimeOfDay.ToString(); 
             }
 
-            public GetObjectBySectionCallbackState(PROXY proxy, long number)
+            public GetObjectBySectionCallbackState(PROXY proxy, long number, DateTime lastQueryExecutedTime)
             {
                 this.Proxy = proxy;
                 SectionNumber = number;
+                this.LastQueryExecutedTime = lastQueryExecutedTime;
             }
         }
 
         protected void GetObjectsBySectionCallback(IAsyncResult result)
         {
+            //Remove the entry from outstanding queries so we can query again.  It also prevents the proxy from being aborted if too many 
+            //queries are in-flight
             GetObjectBySectionCallbackState state = result.AsyncState as GetObjectBySectionCallbackState;
+
+            GetObjectBySectionCallbackState unused;
+            if (!OutstandingSectionQueries.TryRemove(state.SectionNumber, out unused))
+                //We aren't in the outstanding queries collection.  Currently the only reason would be we are about to be aborted
+                return;
+            
             PROXY proxy = state.Proxy;
 
             //This happens if we called abort
@@ -451,36 +537,21 @@ namespace WebAnnotationModel
                     proxy.Close();
             }
 
-            DateTime TraceQueryEnd = DateTime.Now; 
-
-            DateTime QueryExecuteTime = new DateTime(TicksAtQueryExecute, DateTimeKind.Utc);
-            DateTime LastQuery;
-            bool HaveLastQuery = LastQueryForSection.TryGetValue(state.SectionNumber, out LastQuery);
-            if(false == HaveLastQuery)
-                LastQuery = DateTime.MinValue;
+            DateTime TraceQueryEnd = DateTime.Now;
 
             //Don't update if we've got results from a query executed after this one
-            
-
-            if(LastQuery < QueryExecuteTime)
+            if (TrySetLastQueryTimeForSection(state.SectionNumber, TicksAtQueryExecute, state.LastQueryExecutedTime))
             {
                 ParseQuery(objs, DeletedLocations, state);
 
                 DateTime TraceParseEnd = DateTime.Now; 
-                
-
-                //Record the time our query executed
-                LastQueryForSection[state.SectionNumber] = QueryExecuteTime;
-
+                  
                 Trace.WriteLine("Sxn " + state.SectionNumber.ToString() + " finished " + typeof(OBJECT).ToString() + " query.  " + objs.Length.ToString() + " returned");
                 Trace.WriteLine("\tQuery Time: " + new TimeSpan(TraceQueryEnd.Ticks - state.StartTime.Ticks).TotalSeconds.ToString() + " (sec) elapsed");
                 Trace.WriteLine("\tParse Time: " + new TimeSpan(TraceParseEnd.Ticks - TraceQueryEnd.Ticks).TotalSeconds.ToString() + " (sec) elapsed");
             }
             else
                 Trace.WriteLine(this.GetType().ToString() + " ignoring stale query results for section: " + state.SectionNumber.ToString(), "WebAnnotation");
-            
-            //Remove the entry from outstanding queries so we can query again
-            OutstandingSectionQueries.TryRemove(state.SectionNumber, out state);
         }
 
         /// <summary>
@@ -511,6 +582,26 @@ namespace WebAnnotationModel
         }
 
         #endregion
+
+        private DateTime GetLastQueryTimeForSection(long SectionNumber)
+        {
+            DateTime LastQuery = DateTime.MinValue;
+            if (LastQueryForSection.ContainsKey(SectionNumber))
+                LastQuery = LastQueryForSection[SectionNumber];
+
+            return LastQuery;
+        }
+
+        private bool TrySetLastQueryTimeForSection(long SectionNumber, long TicksAtQueryExecute, DateTime OldQueryExecuteTime)
+        {
+            DateTime QueryExecuteTime = new DateTime(TicksAtQueryExecute, DateTimeKind.Utc);
+            if (!LastQueryForSection.TryAdd(SectionNumber, QueryExecuteTime))
+            {
+                return LastQueryForSection.TryUpdate(SectionNumber, QueryExecuteTime, OldQueryExecuteTime);
+            }
+            return true;
+
+        }
 
         private static int CompareCallbacksByTime(GetObjectBySectionCallbackState x, GetObjectBySectionCallbackState y)
         {
@@ -554,8 +645,8 @@ namespace WebAnnotationModel
                         GetObjectBySectionCallbackState state = stateList[iCut];
                         bool success = OutstandingSectionQueries.TryRemove(state.SectionNumber, out state);
                         if (success == false)
-                            continue;
-
+                            continue; 
+                         
                         state.Proxy.Abort();
                     }
                 }
@@ -644,7 +735,6 @@ namespace WebAnnotationModel
             if (changedObjects.Count == 0)
                 return true;
 
-            List<OBJECT> output = new List<OBJECT>(changedObjects.Count);
             List<WCFOBJECT> changedDBObj = new List<WCFOBJECT>(changedObjects.Count);
 
             try
@@ -657,10 +747,9 @@ namespace WebAnnotationModel
                 PROXY proxy = CreateProxy();
                 proxy.Open();
 
-                long[] newIDs = new long[0];
                 try
                 {
-                    newIDs = ProxyUpdate(proxy, changedDBObj.ToArray());
+                    ProxyUpdate(proxy, changedDBObj.ToArray());
                 }
                 catch (Exception e)
                 {
@@ -758,13 +847,7 @@ namespace WebAnnotationModel
                 }
             }
 
-            if (listAddedObj.Count > 0)
-            {
-                OBJECT[] listCopy = new OBJECT[listAddedObj.Count];
-                listAddedObj.CopyTo(listCopy);
-
-                CallOnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, listCopy));
-            }
+            CallOnCollectionChangedForAdd(listAddedObj);
 
             if (listUpdateObj.Count > 0)
             {
@@ -802,7 +885,7 @@ namespace WebAnnotationModel
                     //    oldObj.Dispose();
                     //    oldObj = null;
                    // }
-
+                    /*
                     if (existingObj != null)
                     {
                         existingObj.Dispose();
@@ -813,7 +896,7 @@ namespace WebAnnotationModel
                     {
                         updateObj.Dispose();
                         updateObj = null;
-                    }
+                    }*/
                 }
             }
 
@@ -837,7 +920,7 @@ namespace WebAnnotationModel
                 {
                     listDeleted.Add(existingObj);
                     existingObj.PropertyChanged -= this.OnOBJECTPropertyChangedEventHandler;
-                    existingObj.Dispose(); 
+                    //existingObj.Dispose(); 
                 }
             }
 

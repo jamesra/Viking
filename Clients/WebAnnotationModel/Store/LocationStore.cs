@@ -59,18 +59,18 @@ namespace WebAnnotationModel
             return new ConcurrentDictionary<long, LocationObj>();
         }
 
-        protected override ConcurrentDictionary<long, LocationObj> ProxyBeginGetBySection(AnnotateLocationsClient proxy,
+        protected override Location[] ProxyGetBySection(AnnotateLocationsClient proxy, long SectionNumber, DateTime LastQuery, out long TicksAtQueryExecute, out long[] deleted_objs)
+        {
+            return proxy.GetLocationChanges(out TicksAtQueryExecute, out deleted_objs, SectionNumber, LastQuery.Ticks);
+        }
+
+        protected override IAsyncResult ProxyBeginGetBySection(AnnotateLocationsClient proxy,
                                                         long SectionNumber,
                                                         DateTime LastQuery,
                                                         AsyncCallback callback,
                                                         object asynchState)
         {
-            //Return the objects we have and then send a request for updates
-            ConcurrentDictionary<long, LocationObj> SectionLocations = GetLocalObjectsForSection(SectionNumber); 
-
-            proxy.BeginGetLocationChanges(SectionNumber, LastQuery.Ticks, callback, asynchState);
-
-            return SectionLocations; 
+            return proxy.BeginGetLocationChanges(SectionNumber, LastQuery.Ticks, callback, asynchState);
         }
 
         protected override Location[] ProxyGetBySectionCallback(out long TicksAtQueryExecute,
@@ -83,7 +83,6 @@ namespace WebAnnotationModel
         
 
         #endregion
-        
         
         
 
@@ -212,12 +211,7 @@ namespace WebAnnotationModel
             }
 
             //InternalUpdate will send its own notification for the updated objects
-            if (listAddedObj.Count > 0)
-            {
-                LocationObj[] listCopy = new LocationObj[listAddedObj.Count];
-                listAddedObj.CopyTo(listCopy);
-                CallOnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, listCopy));
-            }
+            CallOnCollectionChangedForAdd(listAddedObj);
 
             if (listUpdateObj.Count > 0)
             {

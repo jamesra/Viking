@@ -37,7 +37,7 @@ namespace WebAnnotationModel
                     proxy.Close();
                     proxy = null; 
                 }
-                throw e; 
+                throw;
 
             }
             return proxy; 
@@ -102,12 +102,23 @@ namespace WebAnnotationModel
             return proxy.GetStructureTypesByIDs(IDs);
         }
 
+        
+
         protected override StructureType[] ProxyGetBySectionCallback(out long TicksAtQueryExecute, out long[] DeletedLocations, StoreBaseWithKey<AnnotateStructureTypesClient, IAnnotateStructureTypes, long, StructureTypeObj, StructureType>.GetObjectBySectionCallbackState state, IAsyncResult result)
         {
             throw new NotImplementedException();
         }
 
-        protected override ConcurrentDictionary<long, StructureTypeObj> ProxyBeginGetBySection(AnnotateStructureTypesClient proxy,
+        protected override StructureType[] ProxyGetBySection(AnnotateStructureTypesClient proxy, long SectionNumber, DateTime LastQuery, 
+                                                                out long TicksAtQueryExecute,
+                                                                out long[] deleted_objects)
+        {
+            deleted_objects = new long[0];
+            TicksAtQueryExecute = 0; 
+            return proxy.GetStructureTypes();
+        }
+
+        protected override IAsyncResult ProxyBeginGetBySection(AnnotateStructureTypesClient proxy,
                                                              long SectionNumber,
                                                              DateTime LastQuery,
                                                              AsyncCallback callback,
