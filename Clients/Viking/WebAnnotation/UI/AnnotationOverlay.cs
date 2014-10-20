@@ -15,6 +15,7 @@ using WebAnnotation.UI.Commands;
 using WebAnnotation.ViewModel;
 using WebAnnotationModel;
 using connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd;
+using System.Threading.Tasks;
 
 namespace WebAnnotation
 {
@@ -29,7 +30,7 @@ namespace WebAnnotation
         Viking.UI.Controls.SectionViewerControl _Parent;
         public Viking.UI.Controls.SectionViewerControl Parent { get { return _Parent; } }
 
-        private TransformChangedEventHandler SectionChangedEventHandler;
+        protected TransformChangedEventHandler SectionChangedEventHandler;
         private EventHandler AnnotationChangedEventHandler;
         //private NotifyCollectionChangedEventHandler LocationsChangedEventHandler;
         //private NotifyCollectionChangedEventHandler StructuresChangedEventHandler; 
@@ -822,23 +823,37 @@ namespace WebAnnotation
 
         protected void LoadSectionAnnotations()
         {
-            
-            SectionLocationsViewModel SectionAnnotations = GetOrCreateAnnotationsForSection(_Parent.Section.Number, _Parent, AnnotationChangedEventHandler);
-            SectionAnnotations.LoadSectionAnnotations();
+            int StartingSectionNumber = _Parent.Section.Number; 
+            SectionLocationsViewModel SectionAnnotations;
+            SectionLocationsViewModel SectionAnnotationsAbove;
+            SectionLocationsViewModel SectionAnnotationsBelow;
+            SectionAnnotations = GetOrCreateAnnotationsForSection(_Parent.Section.Number, _Parent, AnnotationChangedEventHandler);
+            //SectionAnnotations.LoadSectionAnnotations();
+            Task.Factory.StartNew(() => SectionAnnotations.LoadSectionAnnotations());
 
+            int refSectionNumberAbove=0;
+            int refSectionNumberBelow=-1;
             if (_Parent.Section.ReferenceSectionAbove != null)
             {
-                int refSectionNumber = _Parent.Section.ReferenceSectionAbove.Number;
-                SectionAnnotations = GetOrCreateAnnotationsForSection(refSectionNumber, _Parent, AnnotationChangedEventHandler);
-                SectionAnnotations.LoadSectionAnnotations();
+                refSectionNumberAbove = _Parent.Section.ReferenceSectionAbove.Number;
+                SectionAnnotationsAbove = GetOrCreateAnnotationsForSection(refSectionNumberAbove, _Parent, AnnotationChangedEventHandler);
+                //SectionAnnotationsAbove.LoadSectionAnnotations();
+                Task.Factory.StartNew(() => SectionAnnotationsAbove.LoadSectionAnnotations());
             }
 
             if (_Parent.Section.ReferenceSectionBelow != null)
             {
-                int refSectionNumber = _Parent.Section.ReferenceSectionBelow.Number;
-                SectionAnnotations = GetOrCreateAnnotationsForSection(refSectionNumber, _Parent, AnnotationChangedEventHandler);
-                SectionAnnotations.LoadSectionAnnotations();
+                refSectionNumberBelow = _Parent.Section.ReferenceSectionBelow.Number;
+                SectionAnnotationsBelow = GetOrCreateAnnotationsForSection(refSectionNumberBelow, _Parent, AnnotationChangedEventHandler);
+                //SectionAnnotationsBelow.LoadSectionAnnotations();
+                Task.Factory.StartNew(() => SectionAnnotationsBelow.LoadSectionAnnotations());
             }
+
+            int EndingSectionNumber = _Parent.Section.Number; 
+            Debug.Assert(refSectionNumberAbove != refSectionNumberBelow);
+            Debug.Assert(StartingSectionNumber == EndingSectionNumber);
+            Debug.Assert(SectionAnnotations.Section.Number == StartingSectionNumber); 
+            
 
             linksView.LoadSection(_Parent.Section.Number); 
             //AnnotationCache.LoadSectionAnnotations(_Parent.Section); 
