@@ -52,27 +52,27 @@ namespace WebAnnotation.UI.Commands
         /// </summary>
         /// <param name="NearestTarget"></param>
         /// <returns></returns>
-        protected Location_CanvasViewModel ValidateTarget(Location_CanvasViewModel NearestTarget)
+        protected Location_CanvasViewModel ValidateTarget(Location_CanvasViewModel nearest_target)
         {
-            if (NearestTarget != null)
+            if (nearest_target != null)
             {
                 //Check to make sure it isn't the same structure on the same section
-                if (NearestTarget.ParentID == OriginObj.ParentID)
+                if (nearest_target.ParentID == OriginObj.ParentID)
                 {
-                    if (NearestTarget.Z == OriginObj.Z)
+                    if (nearest_target.Z == OriginObj.Z)
                     {
                         //Not a valid target for a link
-                        NearestTarget = null;
+                        nearest_target = null;
                     }
                     else
                     {
                         //Make sure the locations aren't already linked
                         foreach (long linkID in OriginObj.Links)
                         {
-                            if (linkID == NearestTarget.ID)
+                            if (linkID == nearest_target.ID)
                             {
                                 //They are already linked, so not a valid target
-                                NearestTarget = null;
+                                nearest_target = null;
                                 break;
                             }
                         }
@@ -80,7 +80,7 @@ namespace WebAnnotation.UI.Commands
                 }
             }
 
-            return NearestTarget; 
+            return nearest_target; 
         }
 
         protected override void OnMouseUp(object sender, MouseEventArgs e)

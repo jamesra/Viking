@@ -925,7 +925,7 @@ namespace WebAnnotation.ViewModel
             return GetAlphaForScale(scale, ViewingDistanceAlpha, 1f, 0f, 0.05f, 2f, 0.6f);
         }
 
-        private float GetAlphaForScale(float scale, float OptimalViewingAlpha, float MaxAlpha, float MinAlpha, float opaqueBelowScaleCutoff, float InvisibleAboveScaleCutoff, float OptimalViewingScale)
+        private static float GetAlphaForScale(float scale, float OptimalViewingAlpha, float MaxAlpha, float MinAlpha, float opaqueBelowScaleCutoff, float InvisibleAboveScaleCutoff, float OptimalViewingScale)
         {
             //adjust alpha depending on zoom factor
             float scaledAlpha = OptimalViewingAlpha;
@@ -956,7 +956,7 @@ namespace WebAnnotation.ViewModel
             return scaledAlpha;
         }
 
-        private bool ScaleReducedForLowMag(float baseScale)
+        private static bool ScaleReducedForLowMag(float baseScale)
         { 
             return baseScale < 1.0;
         }
@@ -985,7 +985,7 @@ namespace WebAnnotation.ViewModel
             }
         }
 
-        private bool LabelToSmallToSee(float baseScale, float LineSpacing)
+        private static bool LabelIsTooSmallToSee(float baseScale, float LineSpacing)
         {
             return LineSpacing * baseScale < Location_CanvasViewModel.LabelVisibleCutoff;
         }
@@ -1056,10 +1056,10 @@ namespace WebAnnotation.ViewModel
             //Scale is used to adjust for the magnification factor of the viewer.  Otherwise text would remain at constant size regardless of mag factor.
             //offsets must be multiplied by scale before use
             float baseScale = BaseScaleForType(modelObj.TypeCode, DirectionToVisiblePlane, MagnificationFactor, font);  //The base scale used for Label text, adjusted for additional info text
-            bool ScaleReducedForLowMag = this.ScaleReducedForLowMag(baseScale); 
+            bool LowMagScale = ScaleReducedForLowMag(baseScale); 
 
             //Don't draw labels if no human could read them
-            if (LabelToSmallToSee(baseScale, font.LineSpacing))
+            if (LabelIsTooSmallToSee(baseScale, font.LineSpacing))
                 return;
 
             StructureType type = this.Parent.Type;
@@ -1095,7 +1095,7 @@ namespace WebAnnotation.ViewModel
 
 
             byte scaledAlpha = color.A;
-            if (!UsingArtificialRadiusForLowMag && !ScaleReducedForLowMag)
+            if (!UsingArtificialRadiusForLowMag && !LowMagScale)
             {
                 scaledAlpha = (byte)(GetAlphaForScale(baseScale, (float)color.A / 255) * 255.0);
                 color.A = scaledAlpha;
@@ -1118,7 +1118,7 @@ namespace WebAnnotation.ViewModel
 //                string ParentLabel = this.Parent.Parent.ToString();
                 float ParentScale = baseScale / 1.75f;
 
-                if (LabelToSmallToSee(ParentScale, font.LineSpacing))
+                if (LabelIsTooSmallToSee(ParentScale, font.LineSpacing))
                     return;
 
                 Microsoft.Xna.Framework.Color ParentColor = new Microsoft.Xna.Framework.Color(ParentType.Color.R,
@@ -1298,7 +1298,7 @@ namespace WebAnnotation.ViewModel
                  
                 Vector2[] LabelOffsetArray = GetInfoLabelSizeOnCircle(fullLabelText, font, InfoLabelScale);
 
-                if (!LabelToSmallToSee(InfoLabelScale, font.LineSpacing))
+                if (!LabelIsTooSmallToSee(InfoLabelScale, font.LineSpacing))
                 {
                     float LineStep = font.LineSpacing * InfoLabelScale;  //How much do we increment Y to move down a line?
                     float yOffset = -(font.LineSpacing * 0.66f) * InfoLabelScale;  //What is the offset to draw the line at the correct position?  We have to draw below label if it exists
@@ -1395,7 +1395,7 @@ namespace WebAnnotation.ViewModel
         }
 
 
-        public VertexPositionColorTexture[] GetPointBackgroundVerts(int DirectionToVisiblePlane, out int[] indicies)
+        public static VertexPositionColorTexture[] GetPointBackgroundVerts(int DirectionToVisiblePlane, out int[] indicies)
         {
             indicies = new int[0];
             return null; 

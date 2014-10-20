@@ -39,13 +39,13 @@ namespace WebAnnotation
         }
          */
 
-        public static double DefaultLocationJumpDownsample = 4; //Jumping to a location causes it's diameter to occupy 1/8 the width of the screen
-        public static int NumSectionsInMemory = 15;
+        internal static double DefaultLocationJumpDownsample = 4; //Jumping to a location causes it's diameter to occupy 1/8 the width of the screen
+        internal static int NumSectionsInMemory = 15;
 
         /// <summary>
         /// This is hardcoded for now, but should be read from the VikingXML file
         /// </summary>
-        public static Geometry.GridVector3 Scale;
+        internal static Geometry.GridVector3 Scale;
 
         static string WebAnnotationPath = Viking.UI.State.VolumeCachePath + System.IO.Path.DirectorySeparatorChar + "WebAnnotation";
 
@@ -146,33 +146,25 @@ namespace WebAnnotation
                 request.Credentials = Viking.UI.State.UserCredentials;
 
 
-            XDocument XMLMapping = null;
-            WebResponse response = null;
+            XDocument XMLMapping = null; 
             try
             {
-                response = request.GetResponse();
-                
-                using(Stream responseStream = response.GetResponseStream())
+                using (WebResponse response = request.GetResponse())
                 {
-                    using(StreamReader XMLStream = new StreamReader(responseStream))
+                    using (Stream responseStream = response.GetResponseStream())
                     {
-                         XMLMapping = XDocument.Parse(XMLStream.ReadToEnd());
+                        using (StreamReader XMLStream = new StreamReader(responseStream))
+                        {
+                            XMLMapping = XDocument.Parse(XMLStream.ReadToEnd());
+                        }
                     }
                 }
             }
             catch (WebException)
             {
                 Trace.WriteLine("Could not locate WebAnnotationMapping.XML, disabling WebAnnotations.", "WebAnnotation");
-                if (response != null)
-                    response.Close();
-
                 return false;
-            }
-            finally
-            {
-                if(response != null)
-                    response.Close();
-            }
+            } 
 
             return GetEndpointFromXML(XMLMapping);
         }

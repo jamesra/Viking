@@ -8,7 +8,7 @@ using System.Diagnostics;
 
 namespace WebAnnotationModel
 {
-    public struct LocationLinkKey
+    public struct LocationLinkKey : IComparable<LocationLinkKey>
     {
         public readonly long A;
         public readonly long B;
@@ -38,6 +38,11 @@ namespace WebAnnotationModel
             return this == other; 
         }
 
+        public override string ToString()
+        {
+            return A.ToString() + " - " + B.ToString();
+        }
+
         public override int GetHashCode()
         {
             return (int)(A % int.MaxValue); 
@@ -52,6 +57,14 @@ namespace WebAnnotationModel
         {
             return !((A.A == B.A) && (A.B == B.B));
         }
+
+        public int CompareTo(LocationLinkKey other)
+        {
+            if (A != other.A)
+                return (int)(other.A - A);
+            else
+                return (int)(other.B - B);
+        }   
     }
 
     public class LocationLinkObj : WCFObjBaseWithKey<LocationLinkKey, LocationLink>
