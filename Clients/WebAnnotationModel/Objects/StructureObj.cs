@@ -179,14 +179,7 @@ namespace WebAnnotationModel
             {
                 lock (LinksLock)
                 {
-                    if(this._Links == null)
-                    {
-                        return 0;
-                    }
-                    else
-                    {
-                        return _Links.Count;
-                    }
+                    return Data.Links.Length;
                 }
             }
         }
@@ -200,7 +193,11 @@ namespace WebAnnotationModel
             {
                 lock (LinksLock)
                 {
-                    StructureLinkObj[] copy = new StructureLinkObj[this.Links.Count];
+                    if(NumLinks == 0)
+                        return new StructureLinkObj[0];
+
+                    StructureLinkObj[] copy = new StructureLinkObj[Links.Count];
+                    
                     Links.CopyTo(copy, 0);
                     return copy; 
                 }
@@ -209,14 +206,17 @@ namespace WebAnnotationModel
         
         private void OnLinksChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
         {
-            //Update the underlying object we will send to the server]
-            StructureLink[] newLinks = new StructureLink[_Links.Count];
-            for(int i = 0; i < _Links.Count; i++)
+            lock (LinksLock)
             {
-                newLinks[i] = _Links[i].GetData();
-            }
+                //Update the underlying object we will send to the server]
+                StructureLink[] newLinks = new StructureLink[_Links.Count];
+                for (int i = 0; i < _Links.Count; i++)
+                {
+                    newLinks[i] = _Links[i].GetData();
+                }
 
-            Data.Links = newLinks; 
+                Data.Links = newLinks;
+            }
 
             SetDBActionForChange();
         }

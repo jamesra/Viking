@@ -75,8 +75,9 @@ namespace WebAnnotationModel
                 //Queue a request for later
                 if (_Parent == null)
                 {
-                    Action<long> request = new Action<long>((ID) => Store.Structures.GetObjectByID(ID));
-                    request.BeginInvoke(ParentID.Value, null, null); 
+                    System.Threading.Tasks.Task.Factory.StartNew(() => Store.Structures.GetObjectByID(ParentID.Value));
+                    //Action<long> request = new Action<long>((ID) => Store.Structures.GetObjectByID(ID));
+                    //request.BeginInvoke(ParentID.Value, null, null); 
                 }
 
                 return _Parent;
@@ -209,7 +210,7 @@ namespace WebAnnotationModel
         {
             get
             {
-                if (Links.Count >= 2)
+                if (NumLinks >= 2)
                     return false; 
                 return !(Terminal || OffEdge);
             }
@@ -231,35 +232,60 @@ namespace WebAnnotationModel
         {
             get { return Data.Username; }
         }
-        
+
+        private object LinkLock = new object();
         private ObservableCollection<long> _Links = null;
         public ObservableCollection<long> Links
         {
             get {
-                if (_Links == null)
+                lock (LinkLock)
                 {
-
-                    //Initialize from the Data object
-                    if (Data.Links == null)
+                    if (_Links == null)
                     {
-                        _Links = new ObservableCollection<long>();
-                        _Links.CollectionChanged += this.OnLinksChanged; 
+
+                        //Initialize from the Data object
+                        if (Data.Links == null)
+                        {
+                            _Links = new ObservableCollection<long>();
+                            _Links.CollectionChanged += this.OnLinksChanged;
+                        }
+                        else
+                        {
+                            _Links = new ObservableCollection<long>(Data.Links);
+                            _Links.CollectionChanged += this.OnLinksChanged;
+                        }
+                    }
+
+                    return _Links;
+                }
+            }
+        }
+
+        public int NumLinks
+        {
+            get
+            {
+                lock (LinkLock)
+                {
+                    if (this._Links == null)
+                    {
+                        return 0;
                     }
                     else
                     {
-                        _Links = new ObservableCollection<long>(Data.Links);
-                        _Links.CollectionChanged += this.OnLinksChanged;
+                        return _Links.Count;
                     }
                 }
-
-                return _Links; 
             }
         }
 
         private void OnLinksChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
         {
-            //Update the underlying object we will send to the server
-            Data.Links = _Links.ToArray();
+            lock (LinkLock)
+            {
+                //Update the underlying object we will send to the server
+                Data.Links = _Links.ToArray();
+            }
         }
 
         /// <summary>
@@ -271,10 +297,13 @@ namespace WebAnnotationModel
             if (ID == this.ID)
                 throw new ArgumentException("Can't add own ID from location links");
 
-            if (Links.Contains(ID))
-                return;
-            
-            Links.Add(ID); 
+            lock (LinkLock)
+            {
+                if (Links.Contains(ID))
+                    return;
+
+                Links.Add(ID);
+            }
         }
 
         /// <summary>
@@ -286,9 +315,12 @@ namespace WebAnnotationModel
             if (ID == this.ID)
                 throw new ArgumentException("Can't remove own ID from location links");
 
-            if (!Links.Contains(ID))
-                return;
-            Links.Remove(ID);
+            lock (LinkLock)
+            {
+                if (!Links.Contains(ID))
+                    return;
+                Links.Remove(ID);
+            }
         }
 
         public bool Terminal
