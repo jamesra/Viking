@@ -17,6 +17,22 @@ namespace Viking.ViewModels
 
         public bool IsLocal { get { return _Volume.IsLocal; } }
 
+        public int DefaultSectionNumber
+        {
+            get
+            {
+                if(_Volume.DefaultSectionNumber.HasValue)
+                { 
+                    if(SectionViewModels.ContainsKey(_Volume.DefaultSectionNumber.Value))
+                    {
+                        return _Volume.DefaultSectionNumber.Value; 
+                    }
+                }
+
+                return SectionViewModels.Keys[0]; 
+            }
+        }
+
         public string DefaultVolumeTransform { get { return _Volume.DefaultVolumeTransform; } }
 
         public ChannelInfo[] DefaultChannels { get { return _Volume.DefaultChannels; } set { _Volume.DefaultChannels = value; } }

@@ -80,6 +80,11 @@ namespace Viking.VolumeModel
         /// </summary>
         public string DefaultMosaicTransform = null;
 
+        /// <summary>
+        /// The starting section number read from meta-data
+        /// </summary>
+        public int? DefaultSectionNumber = new int?();
+
         private string _UniqueID = "";
         /// <summary>
         /// Unique ID for this volume on the server
@@ -502,21 +507,56 @@ namespace Viking.VolumeModel
                     case "defaulttileset":
                         this.DefaultTileset = IO.GetAttributeCaseInsensitive(elem, "name").Value;
                         break;
-                    case "defaultimagepyramid":
-                        this.DefaultImagePyramid = IO.GetAttributeCaseInsensitive(elem, "name").Value;
-                        break;
-                    case "defaultmosaictransform":
-                        this.DefaultMosaicTransform = IO.GetAttributeCaseInsensitive(elem, "name").Value;
-                        break;
-                    case "defaultstosgroup":
-                        this.DefaultStosGroup = IO.GetAttributeCaseInsensitive(elem, "name").Value;
-                        break;
                     case "channelinfo":
                         this.DefaultChannels = ChannelInfo.FromXML(elem);
                         break;
-                }
+                 }
             }
         } 
+
+        private void LoadDefaultsFromVolumeElement(XElement volumeElement)
+        {
+            this.Name = IO.GetAttributeCaseInsensitive(volumeElement, "Name").Value;
+
+            XAttribute defaulttileset = IO.GetAttributeCaseInsensitive(volumeElement, "defaulttileset");
+            if(defaulttileset != null)
+            {
+                this.DefaultTileset = defaulttileset.Value; 
+            }
+
+            XAttribute defaultimagepyramid = IO.GetAttributeCaseInsensitive(volumeElement, "defaultimagepyramid");
+            if(defaultimagepyramid != null)
+            {
+                this.DefaultImagePyramid = defaultimagepyramid.Value; 
+            }
+
+            XAttribute defaultmosaictransform = IO.GetAttributeCaseInsensitive(volumeElement, "defaultmosaictransform");
+            if(defaultmosaictransform != null)
+            {
+                this.DefaultMosaicTransform = defaultmosaictransform.Value; 
+            }
+
+            XAttribute defaultstosgroup = IO.GetAttributeCaseInsensitive(volumeElement, "defaultstosgroup");
+            if(defaultstosgroup != null)
+            {
+                this.DefaultTileset = defaultstosgroup.Value; 
+            }
+
+            XAttribute defaultsection = IO.GetAttributeCaseInsensitive(volumeElement, "defaultsection");
+            if (defaultsection != null)
+            {
+                try
+                {
+                    this.DefaultSectionNumber = new int?(Convert.ToInt32(defaultsection.Value));
+                }
+                catch(FormatException e)
+                {
+                    Trace.WriteLine("Unable to parse default section: " + defaultsection.Value);
+                } 
+            }
+
+            return; 
+        }
 
           
         void Initialize(XDocument reader, BackgroundWorker workerThread)
@@ -536,7 +576,7 @@ namespace Viking.VolumeModel
             }
 
             XElement volumeElement = VolumeElements.First();
-            this.Name = IO.GetAttributeCaseInsensitive(volumeElement, "Name").Value;
+            LoadDefaultsFromVolumeElement(volumeElement);
 
             int NumStosFiles = System.Convert.ToInt32(IO.GetAttributeCaseInsensitive(volumeElement, "num_stos").Value);
             int NumSections = System.Convert.ToInt32(IO.GetAttributeCaseInsensitive(volumeElement, "num_sections").Value);

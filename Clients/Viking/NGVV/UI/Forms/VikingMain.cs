@@ -153,8 +153,8 @@ namespace Viking
             if (UI.State.volume.Sections.Length == 0)
                 return;
              */
-            
-            SectionViewModel DefaultSection = UI.State.volume.SectionViewModels.Values[0];
+
+            SectionViewModel DefaultSection = UI.State.volume.SectionViewModels[UI.State.volume.DefaultSectionNumber];
 
             SectionViewerForm SectionViewer = SectionViewerForm.Show(DefaultSection);
 
