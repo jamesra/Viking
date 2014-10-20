@@ -60,11 +60,21 @@ namespace WebAnnotation.ViewModel
             }
         }
 
+        /// <summary>
+        /// According to MSDN all public methods on WeakEventManager are thread safe
+        /// </summary>
+        /// <param name="source"></param>
+        /// <param name="listener"></param>
         public static void AddListener(Object source, IWeakEventListener listener)
         {
             Current.ProtectedAddListener(source, listener); 
         }
 
+        /// <summary>
+        /// According to MSDN all public methods on WeakEventManager are thread safe
+        /// </summary>
+        /// <param name="source"></param>
+        /// <param name="listener"></param>
         public static void RemoveListener(Object source, IWeakEventListener listener)
         {
             Current.ProtectedRemoveListener(source, listener); 
