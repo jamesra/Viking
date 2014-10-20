@@ -15,6 +15,7 @@ using WebAnnotation.UI;
 using Viking.ViewModels;
 using WebAnnotationModel;
 using System.ComponentModel; 
+using System.Threading.Tasks;
 
 
 namespace WebAnnotation.ViewModel
@@ -24,7 +25,7 @@ namespace WebAnnotation.ViewModel
         /// <summary>
         /// The section we store annotations for
         /// <summary>
-        public SectionViewModel Section;
+        public readonly SectionViewModel Section;
 
         /// <summary>
         /// Set to true if the annotations have been requested for this section
@@ -58,11 +59,12 @@ namespace WebAnnotation.ViewModel
         /// This is a symptom of being halfway to the Jotunn architecture.  This is a pointer to the 
         /// parent section viewer control which can perform transforms
         /// </summary>
-        public Viking.UI.Controls.SectionViewerControl parent;
+        public readonly Viking.UI.Controls.SectionViewerControl parent;
 
         public SectionLocationsViewModel(SectionViewModel section,  Viking.UI.Controls.SectionViewerControl Parent)
         {
-            this.parent = Parent; 
+            this.parent = Parent;
+            Trace.WriteLine("Create SectionLocationsViewModel for " + section.Number.ToString());
             this.Section = section;
 
             GridRectangle bounds = AnnotationOverlay.SectionBounds(parent, parent.Section.Number);
@@ -297,11 +299,10 @@ namespace WebAnnotation.ViewModel
         /// <param name="e"></param>
         protected void AddLocations(IEnumerable<LocationObj> listLocations, bool Subscribe)
         {
-
-
 #if SUBMITVOLUMEPOSITION
             bool UpdateVolumeLocations = false;
             bool SubmitUpdatedVolumeLocations = false;
+            long VolumePositionUpdatedCount = 0; 
 
             
             if (this.parent.CurrentVolumeTransform == this.Section.VolumeViewModel.DefaultVolumeTransform)
@@ -309,59 +310,22 @@ namespace WebAnnotation.ViewModel
                 UpdateVolumeLocations = true;
             }
 #endif
-            
-
+                        
             foreach(LocationObj loc in listLocations)
             {
-              //Trace.WriteLine("AddLocation: " + obj.ToString(), "WebAnnotation");
-                //Add the location to our mapping if the location is on our section
-                if (loc.Section == Section.Number)
+
+                if(AddLocation(loc, Subscribe, UpdateVolumeLocations))
                 {
-                    bool FirstMapping = !loc.VolumePositionHasBeenCalculated;
-
-                    GridVector2 original = loc.VolumePosition;
-                    bool mapped = MapLocation(loc);
-                    if (!mapped)
-                        continue;
-
-#if SUBMITVOLUMEPOSITION
-                    if (UpdateVolumeLocations && FirstMapping)
-                    {
-                        if (GridVector2.DistanceSquared(original, loc.VolumePosition) > 25.0)
-                        {
-                            loc.SubmitOnNextUpdate();
-                            SubmitUpdatedVolumeLocations = true;
-                        }
-                    }
-#endif
-
-                    //Add location if it hasn't been seen before
-                    Location_CanvasViewModel locView = new Location_CanvasViewModel(loc);
-                    bool Added = Locations.TryAdd(locView.VolumePosition, locView);
-
-                    if (Added)
-                    {
-                        locView.RegisterEvents();
-
-                        
-                        if (Subscribe)
-                        {
-                            NotifyPropertyChangingEventManager.AddListener(loc, this);
-                            NotifyPropertyChangedEventManager.AddListener(loc, this);
- 
-                            //loc.PropertyChanged += this.OnLocationPropertyChangedEventHandler;
-                            //loc.PropertyChanging += this.OnLocationPropertyChangingEventHandler;
-                        }
-
-                        ConcurrentDictionary<long, Location_CanvasViewModel> KnownLocationsForStructure;
-                        KnownLocationsForStructure = LocationsForStructure.GetOrAdd(loc.ParentID.Value, (key) => { return new ConcurrentDictionary<long, Location_CanvasViewModel>(); });
-                        KnownLocationsForStructure.TryAdd(locView.ID, locView);
-                    }
-
+                    VolumePositionUpdatedCount++; 
+                    SubmitUpdatedVolumeLocations |= true; 
+                }
+                //Add the location to our mapping if the location is on our section
+                
+                   
                    // Debug.Assert(Added);
 
                 //    AddLocationLinks(locView);
-                }
+                
             }
 #if SUBMITVOLUMEPOSITION
             if (SubmitUpdatedVolumeLocations)
@@ -369,9 +333,74 @@ namespace WebAnnotation.ViewModel
                 //System.Threading.ThreadPool.QueueUserWorkItem( f => { Store.Locations.Save(); } );
 
                 //System.Windows.Threading.Dispatcher.CurrentDispatcher.BeginInvoke(new Func<bool>(Store.Locations.Save), System.Windows.Threading.DispatcherPriority.Background, null);
+
+                Trace.WriteLine("Updated " + VolumePositionUpdatedCount.ToString() + " volume positions");
                 Store.Locations.Save(); 
             }
 #endif
+        }
+        
+        /// <summary>
+        /// Add a location to the view model. 
+        /// </summary>
+        /// <param name="loc">Location to add</param>
+        /// <param name="Subscribe">Subscribe to the location's change events</param>
+        /// <param name="UpdateVolumeLocations">Return True if the volume position of the location was updated</param>
+        private bool AddLocation(LocationObj loc, bool Subscribe, bool UpdateVolumeLocations)
+        {
+            if (loc.Section != Section.Number)
+                return false; 
+
+             //Trace.WriteLine("AddLocation: " + obj.ToString(), "WebAnnotation");
+
+            bool FirstMapping = !loc.VolumePositionHasBeenCalculated;
+            bool UpdatedVolumeLocation = false;
+            GridVector2 original = loc.VolumePosition;
+            bool mapped = MapLocation(loc);
+            if (!mapped)
+                return false;
+
+#if SUBMITVOLUMEPOSITION
+            if (UpdateVolumeLocations && FirstMapping)
+            {
+                if (GridVector2.DistanceSquared(original, loc.VolumePosition) > 225.0)
+                {
+                    loc.SubmitOnNextUpdate();
+                    UpdatedVolumeLocation = true;
+                }
+            }
+#endif
+
+            //Add location if it hasn't been seen before
+            Location_CanvasViewModel locView = new Location_CanvasViewModel(loc);
+            bool Added = Locations.TryAdd(locView.VolumePosition, locView);
+
+            if (Added)
+            {            
+                if (Subscribe)
+                {
+                    locView.RegisterEvents();
+                    SubscribeToLocationChangeEvents(loc);
+                }
+
+                ConcurrentDictionary<long, Location_CanvasViewModel> KnownLocationsForStructure;
+                KnownLocationsForStructure = LocationsForStructure.GetOrAdd(loc.ParentID.Value, (key) => { return new ConcurrentDictionary<long, Location_CanvasViewModel>(); });
+                KnownLocationsForStructure.TryAdd(locView.ID, locView);
+            }
+
+            return UpdatedVolumeLocation;
+        }
+
+        private void SubscribeToLocationChangeEvents(LocationObj loc)
+        {
+            NotifyPropertyChangingEventManager.AddListener(loc, this);
+            NotifyPropertyChangedEventManager.AddListener(loc, this);
+        }
+
+        private void UnsubscribeToLocationChangeEvents(LocationObj loc)
+        {                
+           NotifyPropertyChangingEventManager.RemoveListener(loc, this);
+           NotifyPropertyChangedEventManager.RemoveListener(loc, this); 
         }
 
         protected void RemoveLocations(IEnumerable<LocationObj> listLocations)
@@ -398,17 +427,12 @@ namespace WebAnnotation.ViewModel
                     bool RemoveSuccess = Locations.TryRemove(locView, out RemovedValue);
                     if (RemoveSuccess)
                     {
-                        
+                        RemovedValue.DeregisterEvents();
 
                         if (Unsubscribe)
                         {
-                            RemovedValue.DeregisterEvents();
-                            NotifyPropertyChangingEventManager.RemoveListener(loc, this);
-                            NotifyPropertyChangedEventManager.RemoveListener(loc, this); 
-                            //loc.PropertyChanged -= this.OnLocationPropertyChangedEventHandler;
-                            //loc.PropertyChanging -= this.OnLocationPropertyChangingEventHandler;
+                            UnsubscribeToLocationChangeEvents(loc);
                         }
-
 //                        Debug.Assert(RemoveSuccess); 
                        // RemoveLocationLinks(obj);
                     }
@@ -470,22 +494,24 @@ namespace WebAnnotation.ViewModel
             return foundLocations; 
         }
 
+        /*
         public LocationObj[] GetReferenceLocations()
         {
             List<LocationObj> listRefLocations = new List<LocationObj>();
 
             if (Section.ReferenceSectionAbove != null)
             {
-                listRefLocations.AddRange(Store.Locations.GetObjectsForSection(Section.ReferenceSectionAbove.Number).Values);
+                listRefLocations.AddRange(Store.Locations.GetLocalObjectsForSection(Section.ReferenceSectionAbove.Number).Values);
             }
 
             if (Section.ReferenceSectionBelow != null)
             {
-                listRefLocations.AddRange(Store.Locations.GetObjectsForSection(Section.ReferenceSectionBelow.Number).Values);
+                listRefLocations.AddRange(Store.Locations.GetLocalObjectsForSection(Section.ReferenceSectionBelow.Number).Values);
             }
 
             return listRefLocations.ToArray();
         }
+         */
 
         /// <summary>
         /// Returns the position of the requested locationID in the current transform
@@ -621,8 +647,16 @@ namespace WebAnnotation.ViewModel
         {
             Trace.WriteLine("LoadSectionAnnotations: " + Section.Number.ToString(), "WebAnnotation");
 
+
+//            Task.Factory.StartNew(() => { 
+                                            //Store.Structures.GetObjectsForSection(Section.Number); 
+                                            //Store.Locations.GetObjectsForSectionAsynch(Section.Number); 
+                                            //});
+
+            MixedLocalAndRemoteQueryResults<long, StructureObj> structure_results = Store.Structures.GetObjectsForSectionAsynch(Section.Number);
 #if DEBUG
-            Store.Structures.GetObjectsForSection(Section.Number);
+            //structure_results.ServerRequestResult.AsyncWaitHandle.WaitOne();
+            //Store.Structures.GetObjectsForSection(Section.Number); 
 #else
             Store.Structures.GetObjectsForSection(Section.Number);
 #endif
@@ -634,17 +668,19 @@ namespace WebAnnotation.ViewModel
             //if (!HaveLoadedSectionAnnotations)
             //    AddLocations(Store.Locations.GetLocationsForSection(Section.Number).Values);
        
-            ConcurrentDictionary<long, LocationObj> knownLocations = Store.Locations.GetObjectsForSection(Section.Number);
+            MixedLocalAndRemoteQueryResults<long, LocationObj> results = Store.Locations.GetObjectsForSectionAsynch(Section.Number);
+            //ConcurrentDictionary<long, LocationObj> KnownObjects = Store.Locations.GetLocalObjectsForSection(Section.Number);
 
-            this.AddLocations(knownLocations.Values); 
+            
+            //System.Threading.Tasks.Task.Factory.StartNew(() => this.AddLocations(results.KnownObjects.Values));
+            //System.Windows.Threading.Dispatcher.CurrentDispatcher.BeginInvoke(new Action(() => this.AddLocations(results.KnownObjects.Values)));
+            this.AddLocations(results.KnownObjects.Values);
 #if DEBUG
 //            Store.Structures.FreeExcessSections(40, 5);
             Store.Locations.FreeExcessSections(40, 5);
 #else
             Store.Locations.FreeExcessSections(40, 5);
-#endif
-
-            
+#endif 
 
             HaveLoadedSectionAnnotations = true;
         }
@@ -672,7 +708,7 @@ namespace WebAnnotation.ViewModel
                 if (parent == null)
                     continue;
 
-                if (parent.Links.Count > 0)
+                if (parent.NumLinks > 0)
                 {
                     AddStructureLinks(parent.LinksCopy);
                 }
@@ -683,7 +719,7 @@ namespace WebAnnotation.ViewModel
         {
             foreach (StructureObj structObj in structures)
             {
-                if (structObj.Links.Count > 0)
+                if (structObj.NumLinks > 0)
                     AddStructureLinks(structObj.LinksCopy);
             }
         }
@@ -754,7 +790,7 @@ namespace WebAnnotation.ViewModel
                 if (parent == null)
                     continue;
 
-                if (parent.Links.Count > 0)
+                if (parent.NumLinks > 0)
                     RemoveStructureLinks(parent.LinksCopy);
             }
         }
@@ -763,7 +799,7 @@ namespace WebAnnotation.ViewModel
         {
             foreach(StructureObj structObj in structures)
             {
-                if (structObj.Links.Count > 0)
+                if (structObj.NumLinks > 0)
                     RemoveStructureLinks(structObj.LinksCopy);
             }
         }
