@@ -160,7 +160,7 @@ namespace WebAnnotation.ViewModel
             foreach (LocationLinkObj link in links)
             {
 
-                AddLocationLinks(new LocationLinkKey(link)); 
+                AddLocationLink(new LocationLinkKey(link)); 
             }
         }
 
@@ -178,22 +178,23 @@ namespace WebAnnotation.ViewModel
 
                 foreach (long linkID in loc.Links)
                 {
-                    AddLocationLinks(new LocationLinkKey(loc.ID, linkID));
+                    AddLocationLink(new LocationLinkKey(loc.ID, linkID));
                 }
             }
         }
 
-        private bool AddLocationLinks(LocationLinkKey key)
+        private bool AddLocationLink(LocationLinkKey key)
         {
+            //Trace.WriteLine("Add Link " + key.A.ToString() + " -> " + key.B.ToString());
             LocationObj AObj = Store.Locations.GetObjectByID(key.A, false);
             LocationObj BObj = Store.Locations.GetObjectByID(key.B, false);
 
             if (AObj == null)
-                return false;  
+                return false;
 
             if (BObj == null)
                 return false;
-
+            
             if (AObj.VolumePosition.X < 0 && AObj.VolumePosition.Y < 0)
                 return false;
 
@@ -359,7 +360,7 @@ namespace WebAnnotation.ViewModel
                 {
                     LocationLinkKey key = new LocationLinkKey(loc.ID, linkID);
                     RemoveLocationLinks(key);
-                    AddLocationLinks(key); 
+                    AddLocationLink(key); 
                 }
             }
         }
