@@ -94,6 +94,7 @@ namespace GeometryTests
 
             MappingGridVector2[] newPoints = result.MapPoints;
 
+            Debug.Assert(newPoints.Length == 4);
             Debug.Assert(newPoints[0].ControlPoint.X == 0 && newPoints[0].ControlPoint.Y == 0);
             Debug.Assert(newPoints[1].ControlPoint.X == 0 && newPoints[1].ControlPoint.Y == 2.5);
             Debug.Assert(newPoints[2].ControlPoint.X == 2.5 && newPoints[2].ControlPoint.Y == 0);
@@ -135,6 +136,7 @@ namespace GeometryTests
 
             MappingGridVector2[] newPoints = result.MapPoints;
 
+            Debug.Assert(newPoints.Length == 4);
             Debug.Assert(newPoints[0].ControlPoint.X == 0 && newPoints[0].ControlPoint.Y == 0);
             Debug.Assert(newPoints[1].ControlPoint.X == 0 && newPoints[1].ControlPoint.Y == 2.5);
             Debug.Assert(newPoints[2].ControlPoint.X == 2.5 && newPoints[2].ControlPoint.Y == 0);
@@ -180,6 +182,7 @@ namespace GeometryTests
 
             MappingGridVector2[] newPoints = result.MapPoints;
 
+            Debug.Assert(newPoints.Length == 4);
             Debug.Assert(newPoints[0].ControlPoint.X == 2.5 && newPoints[0].ControlPoint.Y == 2.5);
             Debug.Assert(newPoints[1].ControlPoint.X == 2.5 && newPoints[1].ControlPoint.Y == 10);
             Debug.Assert(newPoints[2].ControlPoint.X == 10 && newPoints[2].ControlPoint.Y == 2.5);
@@ -222,6 +225,7 @@ namespace GeometryTests
 
             MappingGridVector2[] newPoints = result.MapPoints;
 
+            Debug.Assert(newPoints.Length == 3);
             Debug.Assert(newPoints[0].ControlPoint.X == 2.5 && newPoints[0].ControlPoint.Y == 2.5);
             Debug.Assert(newPoints[1].ControlPoint.X == 2.5 && newPoints[1].ControlPoint.Y == 10);
             Debug.Assert(newPoints[2].ControlPoint.X == 10 && newPoints[2].ControlPoint.Y == 2.5);
