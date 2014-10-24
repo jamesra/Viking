@@ -24,8 +24,8 @@ namespace Viking
             {
                 try
                 {
-                    this.texture.Dispose();
                     Global.RemoveTexture(this.texture); 
+                    this.texture.Dispose();
                 }
                 catch(Exception e)
                 {

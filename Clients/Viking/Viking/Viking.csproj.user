@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <StartArguments>http://connectomes.utah.edu/Rabbit/VolumefullTest.VikingXml</StartArguments>
+    <StartArguments>http://connectomes.utah.edu/Rabbit/VolumeEmpty.VikingXml</StartArguments>
     <EnableUnmanagedDebugging>true</EnableUnmanagedDebugging>
     <EnableSQLServerDebugging>false</EnableSQLServerDebugging>
     <StartAction>Project</StartAction>
@@ -13,7 +13,7 @@
     <StartAction>Project</StartAction>
   </PropertyGroup>
   <PropertyGroup>
-    <PublishUrlHistory>C:\Src\Viking\Publish\|X:\Volumes\Software\Viking4\|D:\Src\Viking\Publish\|X:\Volumes\SoftwareTest\|X:\Volumes\Software\</PublishUrlHistory>
+    <PublishUrlHistory>C:\Src\git\Viking\Publish\|C:\Src\Viking\Publish\|X:\Volumes\Software\Viking4\|D:\Src\Viking\Publish\|X:\Volumes\SoftwareTest\</PublishUrlHistory>
     <InstallUrlHistory>http://connectomes.utah.edu/Software/Viking4/|http://connectomes.utah.edu/SoftwareTest/|http://connectomes.utah.edu/Software/|http://localhost/Software/|http://localhost/</InstallUrlHistory>
     <SupportUrlHistory>http://connectomes.utah.edu/</SupportUrlHistory>
     <UpdateUrlHistory>
