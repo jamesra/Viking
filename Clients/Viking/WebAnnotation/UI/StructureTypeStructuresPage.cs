@@ -50,9 +50,9 @@ namespace WebAnnotation.UI
             {
                 this.UseWaitCursor = true; 
 
-                StructureObj[] structureObjs = Store.StructureTypes.GetStructuresForType(this.Obj.ID);
+                ICollection<StructureObj> structureObjs = Store.Structures.GetStructuresOfType(this.Obj.ID);
 
-                List<Structure> structures = new List<Structure>(structureObjs.Length);
+                List<Structure> structures = new List<Structure>(structureObjs.Count);
 
                 foreach (StructureObj s in structureObjs)
                 {

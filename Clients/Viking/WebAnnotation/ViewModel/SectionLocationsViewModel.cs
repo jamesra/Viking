@@ -193,7 +193,6 @@ namespace WebAnnotation.ViewModel
                     //}
 
                     break;
-                /*Updates are not sent anymore*/
                 case NotifyCollectionChangedAction.Replace:
                     RemoveStructureLinks(e.OldItems.Cast<LocationObj>()); 
                     RemoveLocations(e.OldItems.Cast<LocationObj>());
@@ -704,7 +703,10 @@ namespace WebAnnotation.ViewModel
         {
             foreach (LocationObj locObj in locations)
             {
-                StructureObj parent = locObj.Parent;
+                if (!locObj.ParentID.HasValue)
+                    continue; 
+
+                StructureObj parent = Store.Structures.GetObjectByID(locObj.ParentID.Value, true);//locObj.Parent;
                 if (parent == null)
                     continue;
 

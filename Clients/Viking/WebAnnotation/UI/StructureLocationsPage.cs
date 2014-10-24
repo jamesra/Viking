@@ -46,8 +46,8 @@ namespace WebAnnotation.UI
             {
 
                 this.UseWaitCursor = true;
-                LocationObj[] locations = Store.Structures.GetLocationsForStructure(Obj.ID);
-                List<Location_PropertyPageViewModel> listLocationViews = new List<Location_PropertyPageViewModel>(locations.Length);
+                ICollection<LocationObj> locations = Store.Locations.GetLocationsForStructure(Obj.ID);
+                List<Location_PropertyPageViewModel> listLocationViews = new List<Location_PropertyPageViewModel>(locations.Count);
 
                 foreach (LocationObj loc in locations)
                 {

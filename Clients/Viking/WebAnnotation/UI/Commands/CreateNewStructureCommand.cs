@@ -35,7 +35,8 @@ namespace WebAnnotation.UI.Commands
         protected override void Execute()
         {
            //Create the new structure
-           Store.Structures.Create(newStruct.modelObj, newLoc.modelObj);
+            LocationObj unused;
+            Store.Structures.Create(newStruct.modelObj, newLoc.modelObj, out unused);
 
            base.Execute();
         }

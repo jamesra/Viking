@@ -211,7 +211,7 @@ namespace WebAnnotation.ViewModel
 
             if (result != DialogResult.Cancel)
             {
-                newType = Store.StructureTypes.Add(newType);
+                newType = Store.StructureTypes.Create(newType);
                 Store.StructureTypes.Save(); 
             }
 

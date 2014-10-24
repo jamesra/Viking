@@ -147,7 +147,8 @@ namespace WebAnnotation.ViewModel
         {
             get
             {
-                LocationObj[] locations = Store.Structures.GetLocationsForStructure(ID);
+                LocationObj[] locations = Store.Locations.GetLocationsForStructure(ID).ToArray<LocationObj>();
+                
                 if (locations != null)
                 {
                     double sumX = 0;

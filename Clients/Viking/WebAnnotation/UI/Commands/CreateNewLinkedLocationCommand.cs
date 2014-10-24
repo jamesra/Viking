@@ -41,22 +41,8 @@ namespace WebAnnotation.UI.Commands
         {
             try
             {
-                Store.Locations.Add(NewLoc.modelObj);
-
-                //Save the new location
-                bool Success = Store.Locations.Save();
-                if (Success)
-                {
-                    //Create a link between the two objects
-                    Store.LocationLinks.CreateLink(NewLoc.ID, ExistingLoc.ID);
-                    LastEditedLocation = NewLoc;
-                }
-                else
-                {
-                    //Remove the new location
-                    Store.Locations.Remove(NewLoc.modelObj);
-                    LastEditedLocation = null; //Clear the last edited location
-                }
+                LocationObj NewLocation = Store.Locations.Create(NewLoc.modelObj, new long[] { ExistingLoc.ID });
+                LastEditedLocation = new Location_CanvasViewModel(NewLocation); 
             }
             catch (ArgumentOutOfRangeException )
             {

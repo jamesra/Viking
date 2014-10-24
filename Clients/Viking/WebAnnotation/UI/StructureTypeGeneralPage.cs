@@ -39,6 +39,8 @@ namespace WebAnnotation.UI
 
             this.textNotes.Text = this.Obj.Notes;
 
+            this.textID.Text = this.Obj.ID.ToString(); 
+
             this.btnColor.BackColor = this.Obj.Color; 
         }
 

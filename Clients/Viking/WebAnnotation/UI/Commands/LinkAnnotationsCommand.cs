@@ -125,8 +125,7 @@ namespace WebAnnotation.UI.Commands
                     try
                     {
                         StructureLinkObj linkStruct = new StructureLinkObj(OriginObj.ParentID.Value, NearestTarget.ParentID.Value, false);
-                        Store.StructureLinks.Add(linkStruct);
-                        Store.StructureLinks.Save();
+                        linkStruct = Store.StructureLinks.Create(linkStruct);
                     }
                     catch (Exception except)
                     {

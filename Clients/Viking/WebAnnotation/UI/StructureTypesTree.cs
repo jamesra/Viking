@@ -39,6 +39,46 @@ namespace WebAnnotation.UI
             Tree.AddObjects(listRootTypes.ToArray());
         }
 
+        protected void UpdateNodeChildren(StructureType obj)
+        {
+            GenericTreeNode[] Nodes = Tree.GetNodesForObject(obj);
+            foreach (GenericTreeNode node in Nodes)
+            {
+                node.UpdateChildNodes();
+            }
+        }
+
+        protected void AddNewObjects(ICollection<StructureTypeObj> added)
+        {
+            //Find all of the root objects
+            List<StructureType> listRoots = new List<StructureType>(added.Count);
+            Dictionary<long, StructureType> listParents = new Dictionary<long, StructureType>(added.Count);
+
+            foreach (StructureTypeObj newTypeObj in added)
+            {  
+                StructureType newType = new StructureType(newTypeObj);
+                if(!newTypeObj.ParentID.HasValue)
+                {
+                    if (!Tree.Contains(newType))
+                        listRoots.Add(newType);
+                    else if(!listParents.ContainsKey(newType.ID))
+                        listParents.Add(newType.ID, newType);
+                }
+                else
+                {
+                    if(!listParents.ContainsKey(newTypeObj.ParentID.Value))
+                        listParents.Add(newTypeObj.ParentID.Value, newType.Parent);
+                } 
+            }
+
+            Tree.AddObjects(listRoots); 
+
+            foreach(StructureType parent in listParents.Values)
+            {
+                UpdateNodeChildren(parent); 
+            }
+        }
+
         protected void OnStructureTypeCollectionChanged(object sender, NotifyCollectionChangedEventArgs args)
         {
             if(InvokeRequired)
@@ -52,6 +92,16 @@ namespace WebAnnotation.UI
                 switch (args.Action)
                 {
                     case NotifyCollectionChangedAction.Add:
+
+                        List<StructureTypeObj> newItems = new List<StructureTypeObj>(args.NewItems.Count);
+                        //I'd rather case, but can't figure it out with IList interface...
+                        foreach(object obj in args.NewItems)
+                        {
+                            newItems.Add((StructureTypeObj)obj);
+                        }
+                        
+                        AddNewObjects(newItems);
+                        /*
                         foreach (object o in args.NewItems)
                         {
                             StructureTypeObj newTypeObj = o as StructureTypeObj;
@@ -60,16 +110,13 @@ namespace WebAnnotation.UI
                                 StructureType newType = new StructureType(newTypeObj); 
                                 if (newType.Parent != null)
                                 {
-                                    GenericTreeNode[] Nodes = Tree.GetNodesForObject(newType.Parent);
-                                    foreach (GenericTreeNode node in Nodes)
-                                    {
-                                        node.UpdateChildNodes();
-                                    }
+                                    UpdateNodeChildren(newType.Parent);
                                 }
                                 else
                                     Tree.AddObjects(new IUIObject[] { newType });
                             }
                         }
+                         */
                         break;
                     case NotifyCollectionChangedAction.Remove:
 
@@ -97,11 +144,7 @@ namespace WebAnnotation.UI
                                 StructureType t = new StructureType(TypeObj);
                                 if (t.Parent != null)
                                 {
-                                    Viking.UI.Controls.GenericTreeNode[] nodes = Tree.GetNodesForObject(t);
-                                    foreach (Viking.UI.Controls.GenericTreeNode node in nodes)
-                                    {
-                                        node.UpdateChildNodes();
-                                    }
+                                    UpdateNodeChildren(t);
                                 }
                             }
                         }
@@ -116,11 +159,7 @@ namespace WebAnnotation.UI
                                 StructureType t = new StructureType(TypeObj);
                                 if (t.Parent != null)
                                 {
-                                    Viking.UI.Controls.GenericTreeNode[] nodes = Tree.GetNodesForObject(t);
-                                    foreach (Viking.UI.Controls.GenericTreeNode node in nodes)
-                                    {
-                                        node.UpdateChildNodes();
-                                    }
+                                    UpdateNodeChildren(t);
                                 }
                             }
                         }
@@ -160,7 +199,7 @@ namespace WebAnnotation.UI
 
             if (newType.ShowPropertiesDialog(this.ParentForm) == DialogResult.OK)
             {
-                newTypeObj = Store.StructureTypes.Add(newTypeObj);
+                newTypeObj = Store.StructureTypes.Create(newTypeObj);
                 Store.StructureTypes.Save();
 
                 Viking.UI.State.SelectedObject = new StructureType(newTypeObj); 

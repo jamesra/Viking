@@ -63,6 +63,12 @@ namespace Viking.UI.Controls
 
         #region Public Node Hashtable Functions
 
+
+        public bool Contains(IUIObject obj)
+        {
+            return ObjectNodesTable.ContainsKey(obj); 
+        }
+
         public GenericTreeNode[] GetNodesForObject(IUIObject Obj)
         {
             if (Obj == null)
