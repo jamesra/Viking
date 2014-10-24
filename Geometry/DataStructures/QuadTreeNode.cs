@@ -290,9 +290,9 @@ namespace Geometry
                     else
                     {
                         //Looks like we are the last node in the tree
-                        Tree.ValueToNodeTable.Remove(this.Value);
-                        this.Value = default(T);
-                        this.HasValue = false;
+                        //Tree.ValueToNodeTable.Remove(this.Value);
+                        //this.Value = default(T);
+                        //this.HasValue = false;
                     }
                 }
             }

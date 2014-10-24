@@ -829,6 +829,8 @@ namespace Geometry
                 end_iY = NumGridsY;
 
 //            int numCells = (end_iX - start_iX) * (end_iY - start_iY);
+            //TODO
+            //SortedSet<GridLineSegment> 
             List<GridLineSegment> LineList = new List<GridLineSegment>(_LastIntersectingLineCount);
 
             Coord start = new Coord(start_iX, start_iY);
