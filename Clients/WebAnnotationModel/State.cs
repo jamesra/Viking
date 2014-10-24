@@ -10,6 +10,8 @@ namespace WebAnnotationModel
     {
         static public System.Net.NetworkCredential UserCredentials = new System.Net.NetworkCredential("anonymous", "connectome");
 
+        static public bool UseAsynchEvents = true;
+
         static public EndpointAddress EndpointAddress
         {
             get; set;
