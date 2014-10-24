@@ -104,7 +104,7 @@ namespace WebAnnotationModel
                 if (loc != null)
                 {
                     LocationObj LastModifiedLoc = new LocationObj(loc);
-                    LastModifiedLoc  = InternalAdd(LastModifiedLoc);
+                    LastModifiedLoc = Add(LastModifiedLoc);
                     return LastModifiedLoc;
                 }
             }
@@ -112,24 +112,53 @@ namespace WebAnnotationModel
             return null; 
         }
 
-        public  LocationObj Create(Structure s)
+
+        /// <summary>
+        /// Create a new location on the server.  Add the location to the local store.
+        /// </summary>
+        /// <param name="new_location"></param>
+        /// <param name="linked_locations"></param>
+        /// <returns></returns>
+        public LocationObj Create(LocationObj new_location, long[] linked_locations)
         {
-            Location loc = new Location();
-            loc.ID = GetTempKey();
-            loc.ParentID = s.ID; 
-            
-            LocationObj newObj = new LocationObj(loc);
+            AnnotateLocationsClient proxy = null;
+            LocationObj created_location = null; 
+            try
+            {
+                proxy = CreateProxy();
+                Location created_db_location = proxy.CreateLocation(new_location.GetData(), linked_locations);
+                if (created_db_location == null)
+                    return null; 
 
-            newObj = InternalAdd(newObj); 
+                created_location = new LocationObj(created_db_location);
 
-            return newObj; 
+                Add(created_location);
+
+                /*
+                //Ensure linked locations are updated
+                List<LocationLinkObj> listLinks = new List<LocationLinkObj>(linked_locations.Length);
+                foreach(long linked_ID in linked_locations)
+                {
+                    listLinks.Add(new LocationLinkObj(created_location.ID, linked_ID));
+                }
+
+                Store.LocationLinks.Add(listLinks); 
+                */
+                return created_location;
+            }
+            finally
+            {
+                if (proxy != null)
+                    proxy.Close(); 
+            }
         }
 
         public override bool Remove(LocationObj obj)
         {
             obj.DBAction = DBACTION.DELETE;
 
-            InternalDelete(obj.ID);
+            LocationObj deletedObj = InternalDelete(obj.ID);
+            CallOnCollectionChangedForDelete(new LocationObj[] { deletedObj }); 
 
             return true; 
         }
@@ -173,57 +202,7 @@ namespace WebAnnotationModel
             return updatedObjs.ToArray(); 
         }
         */
-
-        internal override LocationObj[] InternalAdd(LocationObj[] addObjs)
-        {
-            List<LocationObj> listAddedObj = new List<LocationObj>(addObjs.Length);
-
-            //This list records objects we can't add which must be updated instead
-            List<LocationObj> listUpdateObj = new List<LocationObj>(addObjs.Length); 
-
-            for (int iObj = 0; iObj < addObjs.Length; iObj++)
-            {
-                LocationObj obj = addObjs[iObj];
-                Debug.Assert(obj != null); 
-
-                if (IDToObject.TryAdd(obj.ID, obj))
-                {
-                    ConcurrentDictionary<long, LocationObj> listSectionLocations;
-
-                    listSectionLocations = SectionToLocations.GetOrAdd(obj.Section, (key) => {return new ConcurrentDictionary<long,LocationObj>();});
-
-                    bool Success = listSectionLocations.TryAdd(obj.ID, obj);
-                    if (!Success)
-                    {
-                        //Somebody already added the object to the list sections collection...
-                        Trace.WriteLine("Race condition in LocationStore.Add", "WebAnnotation");
-                        Debug.Assert(false);
-                    }
-                    
-
-                    listAddedObj.Add(obj);
-                    obj.PropertyChanged += this.OnOBJECTPropertyChangedEventHandler;
-                }
-                else
-                {
-                    listUpdateObj.Add(obj);
-                }
-            }
-
-            //InternalUpdate will send its own notification for the updated objects
-            CallOnCollectionChangedForAdd(listAddedObj);
-
-            if (listUpdateObj.Count > 0)
-            {
-                LocationObj[] updatedObjs = InternalUpdate(listUpdateObj.ToArray());
-
-                //Add the updated objects to our output array
-                listAddedObj.AddRange(updatedObjs); 
-            }
-
-            return listAddedObj.ToArray(); 
-        }
-
+         
         protected void InternalDelete(LocationObj[] objs)
         {
             long[] IDs = new long[objs.Length];
@@ -234,45 +213,112 @@ namespace WebAnnotationModel
 
             InternalDelete(IDs);
         }
+         
 
-        internal override void InternalDelete(long[] IDs)
+        protected override bool TryAddObject(LocationObj newObj)
         {
-
-            List<LocationObj> listDeleted = new List<LocationObj>(IDs.Length); 
-
-            for (int iObj = 0; iObj < IDs.Length; iObj++)
+            bool added = IDToObject.TryAdd(newObj.ID, newObj);
+            if (added)
             {
-                long ID = IDs[iObj];
-                LocationObj loc = null;
-                
-                bool Success = IDToObject.TryRemove(ID, out loc);
-                
-                if(Success)              
-                {
-                    listDeleted.Add(loc);
-                    loc.PropertyChanged -= this.OnOBJECTPropertyChangedEventHandler;
-
-                    //Remove it from the mapping of sections to locations on that section
-                    ConcurrentDictionary<long, LocationObj> listSectionLocations = null;
-                    Success = SectionToLocations.TryGetValue(loc.Section, out listSectionLocations);
-                    if (Success)
-                    {
-                        LocationObj listSectionLocationsObj = null;
-                        listSectionLocations.TryRemove(ID, out listSectionLocationsObj);
-                    }
-                }
-
+                newObj.PropertyChanged += this.OnOBJECTPropertyChangedEventHandler; 
+                TryAddLocationToSection(newObj);
             }
 
-            //Let consumers know the key went away
-            //We used to do this before removing from the collection before using collections.Concurrent
-            if (listDeleted.Count > 0)
-            {
-                LocationObj[] listCopy = new LocationObj[listDeleted.Count];
-                listDeleted.CopyTo(listCopy);
-                CallOnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, listCopy));
-            }
+            return added;
         }
+
+        protected override LocationObj TryRemoveObject(long key)
+        {
+            LocationObj existingObj;
+            bool success = IDToObject.TryRemove(key, out existingObj);
+            if (success)
+            {
+                existingObj.PropertyChanged -= this.OnOBJECTPropertyChangedEventHandler;
+                //existingObj.Dispose(); 
+
+                TryRemoveLocationFromSection(existingObj);
+            }
+            else
+            {
+                existingObj = null;
+            }
+
+            return existingObj;
+        }
+
+
+        private bool TryAddLocationToSection(LocationObj obj)
+        {
+            ConcurrentDictionary<long, LocationObj> listSectionLocations;
+            listSectionLocations = SectionToLocations.GetOrAdd(obj.Section, (key) => { return new ConcurrentDictionary<long, LocationObj>(); });
+
+            bool Success = listSectionLocations.TryAdd(obj.ID, obj);
+            if (!Success)
+            {
+                //Somebody already added the object to the list sections collection...
+                Trace.WriteLine("Race condition in LocationStore.Add", "WebAnnotation");
+                Debug.Assert(false);
+            }
+
+            return Success;
+        }
+
+        private bool TryRemoveLocationFromSection(LocationObj removed_loc)
+        {
+            //Remove it from the mapping of sections to locations on that section
+            ConcurrentDictionary<long, LocationObj> listSectionLocations = null;
+            bool Success = SectionToLocations.TryGetValue(removed_loc.Section, out listSectionLocations);
+            if (Success)
+            {
+                LocationObj listSectionLocationsObj = null;
+                return listSectionLocations.TryRemove(removed_loc.ID, out listSectionLocationsObj);
+            }
+
+            return false;
+            
+        }
+
+
+        public ICollection<LocationObj> GetLocationsForStructure(long StructureID)
+        {
+            Location[] data = null;
+            AnnotateLocationsClient proxy = null;
+            try
+            {
+                proxy = CreateProxy();
+                proxy.Open();
+
+                data = proxy.GetLocationsForStructure(StructureID);
+            }
+            catch (Exception e)
+            {
+                ShowStandardExceptionMessage(e);
+                data = null;
+            }
+            finally
+            {
+                if (proxy != null)
+                    proxy.Close();
+            }
+
+            if (null == data)
+                return new LocationObj[0];
+
+            List<LocationObj> listLocations = new List<LocationObj>(data.Length);
+            foreach (Location loc in data)
+            {
+                Debug.Assert(loc != null);
+
+                LocationObj newObj = new LocationObj(loc);
+                listLocations.Add(newObj);
+            }
+
+            ChangeInventory<LocationObj> output = InternalAdd(listLocations.ToArray()); //Add might return an existing object, which we should use instead
+            CallOnCollectionChanged(output); 
+            //TODO, handle events
+            return output.ObjectsInStore;
+        }
+
 
         #endregion
 

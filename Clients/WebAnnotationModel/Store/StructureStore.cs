@@ -14,9 +14,21 @@ using WebAnnotationModel.Objects;
 
 namespace WebAnnotationModel
 {
+    public class CreateStructureAndLocationRetval
+    {
+        public readonly StructureObj structure;
+        public readonly LocationObj location;
+
+        internal CreateStructureAndLocationRetval(StructureObj s, LocationObj l)
+        {
+            structure = s;
+            location = l;
+        }
+    }
     public class StructureStore : StoreBaseWithIndexKeyAndParent<AnnotateStructuresClient, IAnnotateStructures, long, LongIndexGenerator, StructureObj, Structure>
     {
         #region Proxy
+
 
         protected override AnnotateStructuresClient CreateProxy()
         {
@@ -25,7 +37,7 @@ namespace WebAnnotationModel
             {
                 proxy = new Service.AnnotateStructuresClient("Annotation.Service.Interfaces.IAnnotateStructures-Binary", State.EndpointAddress);
                 proxy.ClientCredentials.UserName.UserName = State.UserCredentials.UserName;
-                proxy.ClientCredentials.UserName.Password = State.UserCredentials.Password;
+                proxy.ClientCredentials.UserName.Password = State.UserCredentials.Password; 
             }
             catch (Exception e)
             {
@@ -165,7 +177,8 @@ namespace WebAnnotationModel
                     proxy.Close();
             }
 
-            ParseQuery(structures, new long[0], null); 
+            ChangeInventory<StructureObj> inventory = ParseQuery(structures, new long[0], null);
+            CallOnCollectionChanged(inventory);
 
             Trace.WriteLine("GetAllStructures, End", "WebAnnotation");
         }
@@ -230,38 +243,37 @@ namespace WebAnnotationModel
             }
         }
 
-        public void Create(StructureObj newStruct, LocationObj newLocation)
-        {
-            InternalAdd(newStruct);
+        public StructureObj Create(StructureObj newStruct, LocationObj newLocation, out LocationObj created_loc)
+        { 
             AnnotateStructuresClient proxy = null;
-            try
-            {
 
+            created_loc = null; 
+            try
+            { 
                 proxy = CreateProxy();
                 proxy.Open();
 
-                long[] newIDs = proxy.CreateStructure(newStruct.GetData(), newLocation.GetData());
+                CreateStructureRetval retval = proxy.CreateStructure(newStruct.GetData(), newLocation.GetData());
+                 
+                //We should not insert created objects into the store before they are created on the server
+                Debug.Assert(this.GetObjectByID(newStruct.ID, false) == null);
 
-                Store.Locations.Remove(newLocation);
-                InternalDelete(newStruct.ID); 
+                StructureObj created_struct = new StructureObj(retval.structure);
 
-                newStruct.GetData().ID = newIDs[0];
-                newStruct.DBAction = DBACTION.NONE;
+                InternalAdd(created_struct);
 
-                InternalAdd(newStruct);
+                created_loc = new LocationObj(retval.location); 
 
-                newLocation.GetData().ID = newIDs[1];
-                newLocation.GetData().ParentID = newIDs[0];
-                newLocation.DBAction = DBACTION.NONE;
+                CallOnCollectionChangedForAdd(new StructureObj[] { created_struct });
+                Store.Locations.AddFromFriend(new LocationObj[] { created_loc });
 
-                Store.Locations.InternalAdd(newLocation);
-
+                return created_struct; 
             }
             catch (Exception e)
             {
                 ShowStandardExceptionMessage(e);
                 InternalDelete(newStruct.ID);
-                return;
+                return null; 
             }
             finally
             {
@@ -277,46 +289,7 @@ namespace WebAnnotationModel
             return true; 
         }
 
-        public LocationObj[] GetLocationsForStructure(long StructureID)
-        {
-            Location[] data = null;
-            AnnotateStructuresClient proxy = null;
-            try
-            {
-                proxy = CreateProxy();
-                proxy.Open();
-
-                data = proxy.GetLocationsForStructure(StructureID);
-            }
-            catch (Exception e)
-            {
-                ShowStandardExceptionMessage(e);
-                data = null;
-            }
-            finally
-            {
-                if (proxy != null)
-                    proxy.Close();
-            }
-
-            if (null == data)
-                return new LocationObj[0]; 
-            
-            List<LocationObj> listLocations = new List<LocationObj>(data.Length); 
-            foreach (Location loc in data)
-            {
-                Debug.Assert(loc != null); 
-
-                LocationObj newObj = new LocationObj(loc);
-                listLocations.Add(newObj); 
-            }
-
-            LocationObj[] newObjs = Store.Locations.InternalAdd(listLocations.ToArray()); //Add might return an existing object, which we should use instead
-
-            return newObjs; 
-        }
-
-        public StructureObj[] GetChildStructuresForStructure(long ID)
+        public ICollection<StructureObj> GetChildStructuresForStructure(long ID)
         {
             AnnotateStructuresClient proxy = null;
             try
@@ -329,7 +302,10 @@ namespace WebAnnotationModel
                 {
                     if (data.ChildIDs.Length > 0)
                     {
-                        return this.GetObjectsByIDs(data.ChildIDs, true).ToArray();
+                        ICollection<StructureObj> list_structures = this.GetObjectsByIDs(data.ChildIDs, true);
+                        ChangeInventory<StructureObj> inventory = InternalAdd(list_structures.ToArray());
+                        CallOnCollectionChanged(inventory);
+                        return inventory.ObjectsInStore; 
                     }
                 }
             }
@@ -368,6 +344,46 @@ namespace WebAnnotationModel
             }
 
             return 0; 
+        }
+
+
+        public ICollection<StructureObj> GetStructuresOfType(long StructureTypeID)
+        {
+            Structure[] data = null;
+            AnnotateStructuresClient proxy = null;
+            try
+            {
+                proxy = CreateProxy();
+                proxy.Open();
+
+                data = proxy.GetStructuresOfType(StructureTypeID);
+            }
+            catch (Exception e)
+            {
+                ShowStandardExceptionMessage(e);
+                data = null;
+            }
+            finally
+            {
+                if (proxy != null)
+                    proxy.Close();
+            }
+
+            if (null == data)
+                return new StructureObj[0];
+
+            List<StructureObj> listStructures = new List<StructureObj>(data.Length);
+            foreach (Structure s in data)
+            {
+                Debug.Assert(s != null);
+
+                StructureObj newObj = new StructureObj(s);
+                listStructures.Add(newObj);
+            }
+
+            ChangeInventory<StructureObj> output = InternalAdd(listStructures.ToArray()); //Add might return an existing object, which we should use instead
+            CallOnCollectionChanged(output);
+            return output.ObjectsInStore;
         }
     }
 }

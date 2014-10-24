@@ -218,6 +218,12 @@
       <xsd:import namespace="http://schemas.datacontract.org/2004/07/Annotation.Service.GraphClasses" />
     </xsd:schema>
   </wsdl:types>
+  <wsdl:message name="IAnnotateStructureTypes_CreateStructureType_InputMessage">
+    <wsdl:part name="parameters" element="tns:CreateStructureType" />
+  </wsdl:message>
+  <wsdl:message name="IAnnotateStructureTypes_CreateStructureType_OutputMessage">
+    <wsdl:part name="parameters" element="tns:CreateStructureTypeResponse" />
+  </wsdl:message>
   <wsdl:message name="IAnnotateStructureTypes_GetStructureTypes_InputMessage">
     <wsdl:part name="parameters" element="tns:GetStructureTypes" />
   </wsdl:message>
@@ -236,12 +242,6 @@
   <wsdl:message name="IAnnotateStructureTypes_GetStructureTypesByIDs_OutputMessage">
     <wsdl:part name="parameters" element="tns:GetStructureTypesByIDsResponse" />
   </wsdl:message>
-  <wsdl:message name="IAnnotateStructureTypes_GetStructuresForType_InputMessage">
-    <wsdl:part name="parameters" element="tns:GetStructuresForType" />
-  </wsdl:message>
-  <wsdl:message name="IAnnotateStructureTypes_GetStructuresForType_OutputMessage">
-    <wsdl:part name="parameters" element="tns:GetStructuresForTypeResponse" />
-  </wsdl:message>
   <wsdl:message name="IAnnotateStructureTypes_UpdateStructureTypes_InputMessage">
     <wsdl:part name="parameters" element="tns:UpdateStructureTypes" />
   </wsdl:message>
@@ -253,6 +253,12 @@
   </wsdl:message>
   <wsdl:message name="IAnnotateStructureTypes_TestMethod_OutputMessage">
     <wsdl:part name="parameters" element="tns:TestMethodResponse" />
+  </wsdl:message>
+  <wsdl:message name="IAnnotateStructures_CreateStructure_InputMessage">
+    <wsdl:part name="parameters" element="tns:CreateStructure" />
+  </wsdl:message>
+  <wsdl:message name="IAnnotateStructures_CreateStructure_OutputMessage">
+    <wsdl:part name="parameters" element="tns:CreateStructureResponse" />
   </wsdl:message>
   <wsdl:message name="IAnnotateStructures_GetStructures_InputMessage">
     <wsdl:part name="parameters" element="tns:GetStructures" />
@@ -296,23 +302,11 @@
   <wsdl:message name="IAnnotateStructures_GetLinkedStructuresByID_OutputMessage">
     <wsdl:part name="parameters" element="tns:GetLinkedStructuresByIDResponse" />
   </wsdl:message>
-  <wsdl:message name="IAnnotateStructures_GetLocationsForStructure_InputMessage">
-    <wsdl:part name="parameters" element="tns:GetLocationsForStructure" />
-  </wsdl:message>
-  <wsdl:message name="IAnnotateStructures_GetLocationsForStructure_OutputMessage">
-    <wsdl:part name="parameters" element="tns:GetLocationsForStructureResponse" />
-  </wsdl:message>
   <wsdl:message name="IAnnotateStructures_NumberOfLocationsForStructure_InputMessage">
     <wsdl:part name="parameters" element="tns:NumberOfLocationsForStructure" />
   </wsdl:message>
   <wsdl:message name="IAnnotateStructures_NumberOfLocationsForStructure_OutputMessage">
     <wsdl:part name="parameters" element="tns:NumberOfLocationsForStructureResponse" />
-  </wsdl:message>
-  <wsdl:message name="IAnnotateStructures_CreateStructure_InputMessage">
-    <wsdl:part name="parameters" element="tns:CreateStructure" />
-  </wsdl:message>
-  <wsdl:message name="IAnnotateStructures_CreateStructure_OutputMessage">
-    <wsdl:part name="parameters" element="tns:CreateStructureResponse" />
   </wsdl:message>
   <wsdl:message name="IAnnotateStructures_UpdateStructures_InputMessage">
     <wsdl:part name="parameters" element="tns:UpdateStructures" />
@@ -338,6 +332,12 @@
   <wsdl:message name="IAnnotateStructures_GetUnfinishedLocationsWithPosition_OutputMessage">
     <wsdl:part name="parameters" element="tns:GetUnfinishedLocationsWithPositionResponse" />
   </wsdl:message>
+  <wsdl:message name="IAnnotateStructures_GetStructuresOfType_InputMessage">
+    <wsdl:part name="parameters" element="tns:GetStructuresOfType" />
+  </wsdl:message>
+  <wsdl:message name="IAnnotateStructures_GetStructuresOfType_OutputMessage">
+    <wsdl:part name="parameters" element="tns:GetStructuresOfTypeResponse" />
+  </wsdl:message>
   <wsdl:message name="IAnnotateStructures_Merge_InputMessage">
     <wsdl:part name="parameters" element="tns:Merge" />
   </wsdl:message>
@@ -349,6 +349,12 @@
   </wsdl:message>
   <wsdl:message name="IAnnotateStructures_Split_OutputMessage">
     <wsdl:part name="parameters" element="tns:SplitResponse" />
+  </wsdl:message>
+  <wsdl:message name="IAnnotateLocations_CreateLocation_InputMessage">
+    <wsdl:part name="parameters" element="tns:CreateLocation" />
+  </wsdl:message>
+  <wsdl:message name="IAnnotateLocations_CreateLocation_OutputMessage">
+    <wsdl:part name="parameters" element="tns:CreateLocationResponse" />
   </wsdl:message>
   <wsdl:message name="IAnnotateLocations_GetLocationByID_InputMessage">
     <wsdl:part name="parameters" element="tns:GetLocationByID" />
@@ -368,11 +374,23 @@
   <wsdl:message name="IAnnotateLocations_GetLastModifiedLocation_OutputMessage">
     <wsdl:part name="parameters" element="tns:GetLastModifiedLocationResponse" />
   </wsdl:message>
+  <wsdl:message name="IAnnotateLocations_GetLinkedLocations_InputMessage">
+    <wsdl:part name="parameters" element="tns:GetLinkedLocations" />
+  </wsdl:message>
+  <wsdl:message name="IAnnotateLocations_GetLinkedLocations_OutputMessage">
+    <wsdl:part name="parameters" element="tns:GetLinkedLocationsResponse" />
+  </wsdl:message>
   <wsdl:message name="IAnnotateLocations_GetLocationsForSection_InputMessage">
     <wsdl:part name="parameters" element="tns:GetLocationsForSection" />
   </wsdl:message>
   <wsdl:message name="IAnnotateLocations_GetLocationsForSection_OutputMessage">
     <wsdl:part name="parameters" element="tns:GetLocationsForSectionResponse" />
+  </wsdl:message>
+  <wsdl:message name="IAnnotateLocations_GetLocationsForStructure_InputMessage">
+    <wsdl:part name="parameters" element="tns:GetLocationsForStructure" />
+  </wsdl:message>
+  <wsdl:message name="IAnnotateLocations_GetLocationsForStructure_OutputMessage">
+    <wsdl:part name="parameters" element="tns:GetLocationsForStructureResponse" />
   </wsdl:message>
   <wsdl:message name="IAnnotateLocations_GetLocationChanges_InputMessage">
     <wsdl:part name="parameters" element="tns:GetLocationChanges" />
@@ -441,6 +459,10 @@
     <wsdl:part name="parameters" element="tns:getTopConnectedCellsResponse" />
   </wsdl:message>
   <wsdl:portType name="IAnnotateStructureTypes">
+    <wsdl:operation name="CreateStructureType">
+      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateStructureTypes/CreateStructureType" message="tns:IAnnotateStructureTypes_CreateStructureType_InputMessage" />
+      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateStructureTypes/CreateStructureTypeResponse" message="tns:IAnnotateStructureTypes_CreateStructureType_OutputMessage" />
+    </wsdl:operation>
     <wsdl:operation name="GetStructureTypes">
       <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateStructureTypes/GetStructureTypes" message="tns:IAnnotateStructureTypes_GetStructureTypes_InputMessage" />
       <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateStructureTypes/GetStructureTypesResponse" message="tns:IAnnotateStructureTypes_GetStructureTypes_OutputMessage" />
@@ -453,10 +475,6 @@
       <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateStructureTypes/GetStructureTypesByIDs" message="tns:IAnnotateStructureTypes_GetStructureTypesByIDs_InputMessage" />
       <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateStructureTypes/GetStructureTypesByIDsResponse" message="tns:IAnnotateStructureTypes_GetStructureTypesByIDs_OutputMessage" />
     </wsdl:operation>
-    <wsdl:operation name="GetStructuresForType">
-      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateStructureTypes/GetStructuresForType" message="tns:IAnnotateStructureTypes_GetStructuresForType_InputMessage" />
-      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateStructureTypes/GetStructuresForTypeResponse" message="tns:IAnnotateStructureTypes_GetStructuresForType_OutputMessage" />
-    </wsdl:operation>
     <wsdl:operation name="UpdateStructureTypes">
       <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateStructureTypes/UpdateStructureTypes" message="tns:IAnnotateStructureTypes_UpdateStructureTypes_InputMessage" />
       <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateStructureTypes/UpdateStructureTypesResponse" message="tns:IAnnotateStructureTypes_UpdateStructureTypes_OutputMessage" />
@@ -467,6 +485,10 @@
     </wsdl:operation>
   </wsdl:portType>
   <wsdl:portType name="IAnnotateStructures">
+    <wsdl:operation name="CreateStructure">
+      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateStructures/CreateStructure" message="tns:IAnnotateStructures_CreateStructure_InputMessage" />
+      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateStructures/CreateStructureResponse" message="tns:IAnnotateStructures_CreateStructure_OutputMessage" />
+    </wsdl:operation>
     <wsdl:operation name="GetStructures">
       <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateStructures/GetStructures" message="tns:IAnnotateStructures_GetStructures_InputMessage" />
       <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateStructures/GetStructuresResponse" message="tns:IAnnotateStructures_GetStructures_OutputMessage" />
@@ -495,17 +517,9 @@
       <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateStructures/GetLinkedStructuresByID" message="tns:IAnnotateStructures_GetLinkedStructuresByID_InputMessage" />
       <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateStructures/GetLinkedStructuresByIDResponse" message="tns:IAnnotateStructures_GetLinkedStructuresByID_OutputMessage" />
     </wsdl:operation>
-    <wsdl:operation name="GetLocationsForStructure">
-      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateStructures/GetLocationsForStructure" message="tns:IAnnotateStructures_GetLocationsForStructure_InputMessage" />
-      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateStructures/GetLocationsForStructureResponse" message="tns:IAnnotateStructures_GetLocationsForStructure_OutputMessage" />
-    </wsdl:operation>
     <wsdl:operation name="NumberOfLocationsForStructure">
       <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateStructures/NumberOfLocationsForStructure" message="tns:IAnnotateStructures_NumberOfLocationsForStructure_InputMessage" />
       <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateStructures/NumberOfLocationsForStructureResponse" message="tns:IAnnotateStructures_NumberOfLocationsForStructure_OutputMessage" />
-    </wsdl:operation>
-    <wsdl:operation name="CreateStructure">
-      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateStructures/CreateStructure" message="tns:IAnnotateStructures_CreateStructure_InputMessage" />
-      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateStructures/CreateStructureResponse" message="tns:IAnnotateStructures_CreateStructure_OutputMessage" />
     </wsdl:operation>
     <wsdl:operation name="UpdateStructures">
       <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateStructures/UpdateStructures" message="tns:IAnnotateStructures_UpdateStructures_InputMessage" />
@@ -523,6 +537,10 @@
       <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateStructures/GetUnfinishedLocationsWithPosition" message="tns:IAnnotateStructures_GetUnfinishedLocationsWithPosition_InputMessage" />
       <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateStructures/GetUnfinishedLocationsWithPositionResponse" message="tns:IAnnotateStructures_GetUnfinishedLocationsWithPosition_OutputMessage" />
     </wsdl:operation>
+    <wsdl:operation name="GetStructuresOfType">
+      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateStructures/GetStructuresOfType" message="tns:IAnnotateStructures_GetStructuresOfType_InputMessage" />
+      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateStructures/GetStructuresOfTypeResponse" message="tns:IAnnotateStructures_GetStructuresOfType_OutputMessage" />
+    </wsdl:operation>
     <wsdl:operation name="Merge">
       <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateStructures/Merge" message="tns:IAnnotateStructures_Merge_InputMessage" />
       <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateStructures/MergeResponse" message="tns:IAnnotateStructures_Merge_OutputMessage" />
@@ -533,6 +551,10 @@
     </wsdl:operation>
   </wsdl:portType>
   <wsdl:portType name="IAnnotateLocations">
+    <wsdl:operation name="CreateLocation">
+      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateLocations/CreateLocation" message="tns:IAnnotateLocations_CreateLocation_InputMessage" />
+      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateLocations/CreateLocationResponse" message="tns:IAnnotateLocations_CreateLocation_OutputMessage" />
+    </wsdl:operation>
     <wsdl:operation name="GetLocationByID">
       <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateLocations/GetLocationByID" message="tns:IAnnotateLocations_GetLocationByID_InputMessage" />
       <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateLocations/GetLocationByIDResponse" message="tns:IAnnotateLocations_GetLocationByID_OutputMessage" />
@@ -545,9 +567,17 @@
       <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateLocations/GetLastModifiedLocation" message="tns:IAnnotateLocations_GetLastModifiedLocation_InputMessage" />
       <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateLocations/GetLastModifiedLocationResponse" message="tns:IAnnotateLocations_GetLastModifiedLocation_OutputMessage" />
     </wsdl:operation>
+    <wsdl:operation name="GetLinkedLocations">
+      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateLocations/GetLinkedLocations" message="tns:IAnnotateLocations_GetLinkedLocations_InputMessage" />
+      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateLocations/GetLinkedLocationsResponse" message="tns:IAnnotateLocations_GetLinkedLocations_OutputMessage" />
+    </wsdl:operation>
     <wsdl:operation name="GetLocationsForSection">
       <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateLocations/GetLocationsForSection" message="tns:IAnnotateLocations_GetLocationsForSection_InputMessage" />
       <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateLocations/GetLocationsForSectionResponse" message="tns:IAnnotateLocations_GetLocationsForSection_OutputMessage" />
+    </wsdl:operation>
+    <wsdl:operation name="GetLocationsForStructure">
+      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateLocations/GetLocationsForStructure" message="tns:IAnnotateLocations_GetLocationsForStructure_InputMessage" />
+      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateLocations/GetLocationsForStructureResponse" message="tns:IAnnotateLocations_GetLocationsForStructure_OutputMessage" />
     </wsdl:operation>
     <wsdl:operation name="GetLocationChanges">
       <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateLocations/GetLocationChanges" message="tns:IAnnotateLocations_GetLocationChanges_InputMessage" />
@@ -599,6 +629,15 @@
   <wsdl:binding name="Annotation.Service.Interfaces.IAnnotateStructureTypes-Binary" type="tns:IAnnotateStructureTypes">
     <wsp:PolicyReference URI="#Annotation.Service.Interfaces.IAnnotateStructureTypes-Binary_policy" />
     <soap12:binding transport="http://schemas.xmlsoap.org/soap/http" />
+    <wsdl:operation name="CreateStructureType">
+      <soap12:operation soapAction="http://tempuri.org/IAnnotateStructureTypes/CreateStructureType" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
     <wsdl:operation name="GetStructureTypes">
       <soap12:operation soapAction="http://tempuri.org/IAnnotateStructureTypes/GetStructureTypes" style="document" />
       <wsdl:input>
@@ -619,15 +658,6 @@
     </wsdl:operation>
     <wsdl:operation name="GetStructureTypesByIDs">
       <soap12:operation soapAction="http://tempuri.org/IAnnotateStructureTypes/GetStructureTypesByIDs" style="document" />
-      <wsdl:input>
-        <soap12:body use="literal" />
-      </wsdl:input>
-      <wsdl:output>
-        <soap12:body use="literal" />
-      </wsdl:output>
-    </wsdl:operation>
-    <wsdl:operation name="GetStructuresForType">
-      <soap12:operation soapAction="http://tempuri.org/IAnnotateStructureTypes/GetStructuresForType" style="document" />
       <wsdl:input>
         <soap12:body use="literal" />
       </wsdl:input>
@@ -657,6 +687,15 @@
   <wsdl:binding name="Annotation.Service.Interfaces.IAnnotateStructures-Binary" type="tns:IAnnotateStructures">
     <wsp:PolicyReference URI="#Annotation.Service.Interfaces.IAnnotateStructures-Binary_policy" />
     <soap12:binding transport="http://schemas.xmlsoap.org/soap/http" />
+    <wsdl:operation name="CreateStructure">
+      <soap12:operation soapAction="http://tempuri.org/IAnnotateStructures/CreateStructure" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
     <wsdl:operation name="GetStructures">
       <soap12:operation soapAction="http://tempuri.org/IAnnotateStructures/GetStructures" style="document" />
       <wsdl:input>
@@ -720,26 +759,8 @@
         <soap12:body use="literal" />
       </wsdl:output>
     </wsdl:operation>
-    <wsdl:operation name="GetLocationsForStructure">
-      <soap12:operation soapAction="http://tempuri.org/IAnnotateStructures/GetLocationsForStructure" style="document" />
-      <wsdl:input>
-        <soap12:body use="literal" />
-      </wsdl:input>
-      <wsdl:output>
-        <soap12:body use="literal" />
-      </wsdl:output>
-    </wsdl:operation>
     <wsdl:operation name="NumberOfLocationsForStructure">
       <soap12:operation soapAction="http://tempuri.org/IAnnotateStructures/NumberOfLocationsForStructure" style="document" />
-      <wsdl:input>
-        <soap12:body use="literal" />
-      </wsdl:input>
-      <wsdl:output>
-        <soap12:body use="literal" />
-      </wsdl:output>
-    </wsdl:operation>
-    <wsdl:operation name="CreateStructure">
-      <soap12:operation soapAction="http://tempuri.org/IAnnotateStructures/CreateStructure" style="document" />
       <wsdl:input>
         <soap12:body use="literal" />
       </wsdl:input>
@@ -783,6 +804,15 @@
         <soap12:body use="literal" />
       </wsdl:output>
     </wsdl:operation>
+    <wsdl:operation name="GetStructuresOfType">
+      <soap12:operation soapAction="http://tempuri.org/IAnnotateStructures/GetStructuresOfType" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
     <wsdl:operation name="Merge">
       <soap12:operation soapAction="http://tempuri.org/IAnnotateStructures/Merge" style="document" />
       <wsdl:input>
@@ -805,6 +835,15 @@
   <wsdl:binding name="Annotation.Service.Interfaces.IAnnotateLocations-Binary" type="tns:IAnnotateLocations">
     <wsp:PolicyReference URI="#Annotation.Service.Interfaces.IAnnotateLocations-Binary_policy" />
     <soap12:binding transport="http://schemas.xmlsoap.org/soap/http" />
+    <wsdl:operation name="CreateLocation">
+      <soap12:operation soapAction="http://tempuri.org/IAnnotateLocations/CreateLocation" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
     <wsdl:operation name="GetLocationByID">
       <soap12:operation soapAction="http://tempuri.org/IAnnotateLocations/GetLocationByID" style="document" />
       <wsdl:input>
@@ -832,8 +871,26 @@
         <soap12:body use="literal" />
       </wsdl:output>
     </wsdl:operation>
+    <wsdl:operation name="GetLinkedLocations">
+      <soap12:operation soapAction="http://tempuri.org/IAnnotateLocations/GetLinkedLocations" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
     <wsdl:operation name="GetLocationsForSection">
       <soap12:operation soapAction="http://tempuri.org/IAnnotateLocations/GetLocationsForSection" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="GetLocationsForStructure">
+      <soap12:operation soapAction="http://tempuri.org/IAnnotateLocations/GetLocationsForStructure" style="document" />
       <wsdl:input>
         <soap12:body use="literal" />
       </wsdl:input>

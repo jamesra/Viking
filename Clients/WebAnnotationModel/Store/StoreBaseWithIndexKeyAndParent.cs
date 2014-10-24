@@ -34,7 +34,7 @@ namespace WebAnnotationModel
         /// </summary>
         /// <param name="updateObj"></param>
         /// <returns></returns>
-        internal override OBJECT[] InternalAdd(OBJECT[] newType)
+        protected override ChangeInventory<OBJECT> InternalAdd(OBJECT[] newType)
         {
             return InternalAdd(newType, false);
         }
@@ -44,7 +44,7 @@ namespace WebAnnotationModel
         /// </summary>
         /// <param name="updateObj"></param>
         /// <returns></returns>
-        internal virtual OBJECT[] InternalAdd(OBJECT[] addObjs, bool LoadParents)
+        protected virtual ChangeInventory<OBJECT> InternalAdd(OBJECT[] addObjs, bool LoadParents)
         {
             List<OBJECT> listAddedObj = new List<OBJECT>(addObjs.Length);
 
@@ -60,14 +60,14 @@ namespace WebAnnotationModel
             {
                 OBJECT newObj = addObjs[iObj];
 
-                bool added = IDToObject.TryAdd(newObj.ID, newObj);
+                bool added = TryAddObject(newObj);
+                
                 if (false == added)
                 {
                     listUpdateObj.Add(newObj);
                 }
                 else
                 {
-                    newObj.PropertyChanged += this.OnOBJECTPropertyChangedEventHandler;
                     if (newObj.ParentID.HasValue == false)
                     {
                         rootObjects.TryAdd(newObj.ID, newObj);
@@ -98,14 +98,21 @@ namespace WebAnnotationModel
                 }
             }
 
+            ChangeInventory<OBJECT> inventory = new ChangeInventory<OBJECT>();
+            inventory.AddedObjects.AddRange(listAddedObj); 
+
             //Go find all of the missing parent objects and make sure they have been downloaded
-            if(listMissingParents.Count > 0)
-                GetObjectsByIDs(listMissingParents.ToArray(), true);
+            if (listMissingParents.Count > 0)
+            {
+                ChangeInventory<OBJECT> parent_inventory = InternalGetObjectsByIDs(listMissingParents.ToArray(), true);
+                inventory.Add(parent_inventory);
+            }
+                
             
             if (listUpdateObj.Count > 0)
             {
                 OBJECT[] updatedObjs = InternalUpdate(listUpdateObj.ToArray());
-                listAddedObj.AddRange(updatedObjs);
+                inventory.UpdatedObjects.AddRange(updatedObjs);
             }
 
             //OK, now go through and make sure every object is correctly assigned to its parent.
@@ -120,12 +127,10 @@ namespace WebAnnotationModel
                 }
             }
 
-            CallOnCollectionChangedForAdd(listAddedObj);
-
-            return listAddedObj.ToArray();
+            return inventory;
         }
 
-        internal override OBJECT[] InternalUpdate(OBJECT[] newObjs)
+        protected override OBJECT[] InternalUpdate(OBJECT[] newObjs)
         {
             return InternalUpdate(newObjs, false);
         }
@@ -187,37 +192,7 @@ namespace WebAnnotationModel
                     }
                 }
             }
-
-            if (listUpdatedObjs.Count > 0)
-            {
-                //Create copies of the changed objects because I have a mysterious bug where the collections in these notifications have been modified
-                OBJECT[] newItemsCopy = null;
-                OBJECT[] oldItemsCopy = null;
-
-                if (listUpdatedObjs != null)
-                {
-                    newItemsCopy = new OBJECT[listUpdatedObjs.Count];
-                    listUpdatedObjs.CopyTo(newItemsCopy);
-                }
-
-                if (listOldObjs != null)
-                {
-                    oldItemsCopy = new OBJECT[listOldObjs.Count];
-                    listOldObjs.CopyTo(oldItemsCopy);
-                }
-
-                CallOnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Replace, newItemsCopy, oldItemsCopy));
-                
-                /*
-                foreach(OBJECT obj in listOldObjs)
-                {
-                    obj.Dispose(); 
-                }
-                 */
-
-                listOldObjs.Clear(); 
-            }
-
+            
             return listUpdatedObjs.ToArray();
         }
 
@@ -228,42 +203,57 @@ namespace WebAnnotationModel
         /// </summary>
         /// <param name="updateObj"></param>
         /// <returns></returns>
-        internal override void InternalDelete(KEY[] IDs)
+        protected override List<OBJECT> InternalDelete(KEY[] IDs)
         {
             List<OBJECT> listDeleted = new List<OBJECT>(IDs.Length);
 
             for (int iObj = 0; iObj < IDs.Length; iObj++)
             {
                 KEY ID = IDs[iObj];
-                OBJECT obj;
-                bool Success = IDToObject.TryRemove(ID, out obj);
-
-                if (Success)
+                OBJECT obj = TryRemoveObject(ID); 
+                if (obj != null)
                 {
                     listDeleted.Add(obj);
-                    obj.PropertyChanged -= this.OnOBJECTPropertyChangedEventHandler;
-
-                    if (obj.ParentID.HasValue == false)
-                    {
-                        OBJECT outVal;
-                        rootObjects.TryRemove(ID, out outVal);
-                    }
-                    else
-                    {
-                        //Long winded way of removing ourselves from our parents list
-                        if(obj.Parent != null)
-                            obj.Parent.RemoveChild(obj);
-                    }
                 }
             }
 
-            //Let consumers know this key is about to go away
-            if (listDeleted.Count > 0)
+            return listDeleted;
+        }
+
+
+        protected override OBJECT TryRemoveObject(KEY key)
+        {
+            OBJECT existingObj;
+            bool success = IDToObject.TryRemove(key, out existingObj);
+            if (success)
             {
-                OBJECT[] listCopy = new OBJECT[listDeleted.Count];
-                listDeleted.CopyTo(listCopy);
-                CallOnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, listCopy));
+                existingObj.PropertyChanged -= this.OnOBJECTPropertyChangedEventHandler;
+                //existingObj.Dispose(); 
+
+                TryRemoveFromParent(existingObj);
             }
+            else
+            {
+                existingObj = null;
+            }
+
+            return existingObj;
+        } 
+
+        private void TryRemoveFromParent(OBJECT obj)
+        {
+            if (obj.ParentID.HasValue == false)
+            {
+                OBJECT outVal;
+                rootObjects.TryRemove(obj.ID, out outVal);
+            }
+            else
+            {
+                //Long winded way of removing ourselves from our parents list
+                if (obj.Parent != null)
+                    obj.Parent.RemoveChild(obj);
+            }
+
         }
     }
 }

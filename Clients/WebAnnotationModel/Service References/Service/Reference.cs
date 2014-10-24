@@ -15,157 +15,6 @@ namespace WebAnnotationModel.Service {
     
     [System.Diagnostics.DebuggerStepThroughAttribute()]
     [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Runtime.Serialization", "4.0.0.0")]
-    [System.Runtime.Serialization.DataContractAttribute(Name="StructureType", Namespace="http://schemas.datacontract.org/2004/07/Annotation")]
-    [System.SerializableAttribute()]
-    public partial class StructureType : WebAnnotationModel.Service.DataObjectWithParentOflong {
-        
-        [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private bool AbstractField;
-        
-        [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private string CodeField;
-        
-        [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private int ColorField;
-        
-        [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private char HotKeyField;
-        
-        [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private string MarkupTypeField;
-        
-        [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private string NameField;
-        
-        [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private string NotesField;
-        
-        [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private string[] StructureTagsField;
-        
-        [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private string[] TagsField;
-        
-        [System.Runtime.Serialization.DataMemberAttribute()]
-        public bool Abstract {
-            get {
-                return this.AbstractField;
-            }
-            set {
-                if ((this.AbstractField.Equals(value) != true)) {
-                    this.AbstractField = value;
-                    this.RaisePropertyChanged("Abstract");
-                }
-            }
-        }
-        
-        [System.Runtime.Serialization.DataMemberAttribute()]
-        public string Code {
-            get {
-                return this.CodeField;
-            }
-            set {
-                if ((object.ReferenceEquals(this.CodeField, value) != true)) {
-                    this.CodeField = value;
-                    this.RaisePropertyChanged("Code");
-                }
-            }
-        }
-        
-        [System.Runtime.Serialization.DataMemberAttribute()]
-        public int Color {
-            get {
-                return this.ColorField;
-            }
-            set {
-                if ((this.ColorField.Equals(value) != true)) {
-                    this.ColorField = value;
-                    this.RaisePropertyChanged("Color");
-                }
-            }
-        }
-        
-        [System.Runtime.Serialization.DataMemberAttribute()]
-        public char HotKey {
-            get {
-                return this.HotKeyField;
-            }
-            set {
-                if ((this.HotKeyField.Equals(value) != true)) {
-                    this.HotKeyField = value;
-                    this.RaisePropertyChanged("HotKey");
-                }
-            }
-        }
-        
-        [System.Runtime.Serialization.DataMemberAttribute()]
-        public string MarkupType {
-            get {
-                return this.MarkupTypeField;
-            }
-            set {
-                if ((object.ReferenceEquals(this.MarkupTypeField, value) != true)) {
-                    this.MarkupTypeField = value;
-                    this.RaisePropertyChanged("MarkupType");
-                }
-            }
-        }
-        
-        [System.Runtime.Serialization.DataMemberAttribute()]
-        public string Name {
-            get {
-                return this.NameField;
-            }
-            set {
-                if ((object.ReferenceEquals(this.NameField, value) != true)) {
-                    this.NameField = value;
-                    this.RaisePropertyChanged("Name");
-                }
-            }
-        }
-        
-        [System.Runtime.Serialization.DataMemberAttribute()]
-        public string Notes {
-            get {
-                return this.NotesField;
-            }
-            set {
-                if ((object.ReferenceEquals(this.NotesField, value) != true)) {
-                    this.NotesField = value;
-                    this.RaisePropertyChanged("Notes");
-                }
-            }
-        }
-        
-        [System.Runtime.Serialization.DataMemberAttribute()]
-        public string[] StructureTags {
-            get {
-                return this.StructureTagsField;
-            }
-            set {
-                if ((object.ReferenceEquals(this.StructureTagsField, value) != true)) {
-                    this.StructureTagsField = value;
-                    this.RaisePropertyChanged("StructureTags");
-                }
-            }
-        }
-        
-        [System.Runtime.Serialization.DataMemberAttribute()]
-        public string[] Tags {
-            get {
-                return this.TagsField;
-            }
-            set {
-                if ((object.ReferenceEquals(this.TagsField, value) != true)) {
-                    this.TagsField = value;
-                    this.RaisePropertyChanged("Tags");
-                }
-            }
-        }
-    }
-    
-    [System.Diagnostics.DebuggerStepThroughAttribute()]
-    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Runtime.Serialization", "4.0.0.0")]
     [System.Runtime.Serialization.DataContractAttribute(Name="DataObject", Namespace="http://schemas.datacontract.org/2004/07/Annotation")]
     [System.SerializableAttribute()]
     [System.Runtime.Serialization.KnownTypeAttribute(typeof(WebAnnotationModel.Service.StructureLink))]
@@ -833,6 +682,157 @@ namespace WebAnnotationModel.Service {
         }
     }
     
+    [System.Diagnostics.DebuggerStepThroughAttribute()]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Runtime.Serialization", "4.0.0.0")]
+    [System.Runtime.Serialization.DataContractAttribute(Name="StructureType", Namespace="http://schemas.datacontract.org/2004/07/Annotation")]
+    [System.SerializableAttribute()]
+    public partial class StructureType : WebAnnotationModel.Service.DataObjectWithParentOflong {
+        
+        [System.Runtime.Serialization.OptionalFieldAttribute()]
+        private bool AbstractField;
+        
+        [System.Runtime.Serialization.OptionalFieldAttribute()]
+        private string CodeField;
+        
+        [System.Runtime.Serialization.OptionalFieldAttribute()]
+        private int ColorField;
+        
+        [System.Runtime.Serialization.OptionalFieldAttribute()]
+        private char HotKeyField;
+        
+        [System.Runtime.Serialization.OptionalFieldAttribute()]
+        private string MarkupTypeField;
+        
+        [System.Runtime.Serialization.OptionalFieldAttribute()]
+        private string NameField;
+        
+        [System.Runtime.Serialization.OptionalFieldAttribute()]
+        private string NotesField;
+        
+        [System.Runtime.Serialization.OptionalFieldAttribute()]
+        private string[] StructureTagsField;
+        
+        [System.Runtime.Serialization.OptionalFieldAttribute()]
+        private string[] TagsField;
+        
+        [System.Runtime.Serialization.DataMemberAttribute()]
+        public bool Abstract {
+            get {
+                return this.AbstractField;
+            }
+            set {
+                if ((this.AbstractField.Equals(value) != true)) {
+                    this.AbstractField = value;
+                    this.RaisePropertyChanged("Abstract");
+                }
+            }
+        }
+        
+        [System.Runtime.Serialization.DataMemberAttribute()]
+        public string Code {
+            get {
+                return this.CodeField;
+            }
+            set {
+                if ((object.ReferenceEquals(this.CodeField, value) != true)) {
+                    this.CodeField = value;
+                    this.RaisePropertyChanged("Code");
+                }
+            }
+        }
+        
+        [System.Runtime.Serialization.DataMemberAttribute()]
+        public int Color {
+            get {
+                return this.ColorField;
+            }
+            set {
+                if ((this.ColorField.Equals(value) != true)) {
+                    this.ColorField = value;
+                    this.RaisePropertyChanged("Color");
+                }
+            }
+        }
+        
+        [System.Runtime.Serialization.DataMemberAttribute()]
+        public char HotKey {
+            get {
+                return this.HotKeyField;
+            }
+            set {
+                if ((this.HotKeyField.Equals(value) != true)) {
+                    this.HotKeyField = value;
+                    this.RaisePropertyChanged("HotKey");
+                }
+            }
+        }
+        
+        [System.Runtime.Serialization.DataMemberAttribute()]
+        public string MarkupType {
+            get {
+                return this.MarkupTypeField;
+            }
+            set {
+                if ((object.ReferenceEquals(this.MarkupTypeField, value) != true)) {
+                    this.MarkupTypeField = value;
+                    this.RaisePropertyChanged("MarkupType");
+                }
+            }
+        }
+        
+        [System.Runtime.Serialization.DataMemberAttribute()]
+        public string Name {
+            get {
+                return this.NameField;
+            }
+            set {
+                if ((object.ReferenceEquals(this.NameField, value) != true)) {
+                    this.NameField = value;
+                    this.RaisePropertyChanged("Name");
+                }
+            }
+        }
+        
+        [System.Runtime.Serialization.DataMemberAttribute()]
+        public string Notes {
+            get {
+                return this.NotesField;
+            }
+            set {
+                if ((object.ReferenceEquals(this.NotesField, value) != true)) {
+                    this.NotesField = value;
+                    this.RaisePropertyChanged("Notes");
+                }
+            }
+        }
+        
+        [System.Runtime.Serialization.DataMemberAttribute()]
+        public string[] StructureTags {
+            get {
+                return this.StructureTagsField;
+            }
+            set {
+                if ((object.ReferenceEquals(this.StructureTagsField, value) != true)) {
+                    this.StructureTagsField = value;
+                    this.RaisePropertyChanged("StructureTags");
+                }
+            }
+        }
+        
+        [System.Runtime.Serialization.DataMemberAttribute()]
+        public string[] Tags {
+            get {
+                return this.TagsField;
+            }
+            set {
+                if ((object.ReferenceEquals(this.TagsField, value) != true)) {
+                    this.TagsField = value;
+                    this.RaisePropertyChanged("Tags");
+                }
+            }
+        }
+    }
+    
     [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Runtime.Serialization", "4.0.0.0")]
     [System.Runtime.Serialization.DataContractAttribute(Name="DBACTION", Namespace="http://schemas.datacontract.org/2004/07/Annotation")]
     public enum DBACTION : int {
@@ -919,6 +919,67 @@ namespace WebAnnotationModel.Service {
         public event System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
         
         void RaisePropertyChanged(string propertyName) {
+            System.ComponentModel.PropertyChangedEventHandler propertyChanged = this.PropertyChanged;
+            if ((propertyChanged != null)) {
+                propertyChanged(this, new System.ComponentModel.PropertyChangedEventArgs(propertyName));
+            }
+        }
+    }
+    
+    [System.Diagnostics.DebuggerStepThroughAttribute()]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Runtime.Serialization", "4.0.0.0")]
+    [System.Runtime.Serialization.DataContractAttribute(Name="CreateStructureRetval", Namespace="http://schemas.datacontract.org/2004/07/Annotation")]
+    [System.SerializableAttribute()]
+    public partial class CreateStructureRetval : object, System.Runtime.Serialization.IExtensibleDataObject, System.ComponentModel.INotifyPropertyChanged {
+        
+        [System.NonSerializedAttribute()]
+        private System.Runtime.Serialization.ExtensionDataObject extensionDataField;
+        
+        [System.Runtime.Serialization.OptionalFieldAttribute()]
+        private WebAnnotationModel.Service.Location locationField;
+        
+        [System.Runtime.Serialization.OptionalFieldAttribute()]
+        private WebAnnotationModel.Service.Structure structureField;
+        
+        [global::System.ComponentModel.BrowsableAttribute(false)]
+        public System.Runtime.Serialization.ExtensionDataObject ExtensionData {
+            get {
+                return this.extensionDataField;
+            }
+            set {
+                this.extensionDataField = value;
+            }
+        }
+        
+        [System.Runtime.Serialization.DataMemberAttribute()]
+        public WebAnnotationModel.Service.Location location {
+            get {
+                return this.locationField;
+            }
+            set {
+                if ((object.ReferenceEquals(this.locationField, value) != true)) {
+                    this.locationField = value;
+                    this.RaisePropertyChanged("location");
+                }
+            }
+        }
+        
+        [System.Runtime.Serialization.DataMemberAttribute()]
+        public WebAnnotationModel.Service.Structure structure {
+            get {
+                return this.structureField;
+            }
+            set {
+                if ((object.ReferenceEquals(this.structureField, value) != true)) {
+                    this.structureField = value;
+                    this.RaisePropertyChanged("structure");
+                }
+            }
+        }
+        
+        public event System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
+        
+        protected void RaisePropertyChanged(string propertyName) {
             System.ComponentModel.PropertyChangedEventHandler propertyChanged = this.PropertyChanged;
             if ((propertyChanged != null)) {
                 propertyChanged(this, new System.ComponentModel.PropertyChangedEventArgs(propertyName));
@@ -1411,6 +1472,14 @@ namespace WebAnnotationModel.Service {
     [System.ServiceModel.ServiceContractAttribute(ConfigurationName="Service.IAnnotateStructureTypes")]
     public interface IAnnotateStructureTypes {
         
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructureTypes/CreateStructureType", ReplyAction="http://tempuri.org/IAnnotateStructureTypes/CreateStructureTypeResponse")]
+        WebAnnotationModel.Service.StructureType CreateStructureType(WebAnnotationModel.Service.StructureType obj);
+        
+        [System.ServiceModel.OperationContractAttribute(AsyncPattern=true, Action="http://tempuri.org/IAnnotateStructureTypes/CreateStructureType", ReplyAction="http://tempuri.org/IAnnotateStructureTypes/CreateStructureTypeResponse")]
+        System.IAsyncResult BeginCreateStructureType(WebAnnotationModel.Service.StructureType obj, System.AsyncCallback callback, object asyncState);
+        
+        WebAnnotationModel.Service.StructureType EndCreateStructureType(System.IAsyncResult result);
+        
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructureTypes/GetStructureTypes", ReplyAction="http://tempuri.org/IAnnotateStructureTypes/GetStructureTypesResponse")]
         WebAnnotationModel.Service.StructureType[] GetStructureTypes();
         
@@ -1435,14 +1504,6 @@ namespace WebAnnotationModel.Service {
         
         WebAnnotationModel.Service.StructureType[] EndGetStructureTypesByIDs(System.IAsyncResult result);
         
-        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructureTypes/GetStructuresForType", ReplyAction="http://tempuri.org/IAnnotateStructureTypes/GetStructuresForTypeResponse")]
-        WebAnnotationModel.Service.Structure[] GetStructuresForType(long typeID);
-        
-        [System.ServiceModel.OperationContractAttribute(AsyncPattern=true, Action="http://tempuri.org/IAnnotateStructureTypes/GetStructuresForType", ReplyAction="http://tempuri.org/IAnnotateStructureTypes/GetStructuresForTypeResponse")]
-        System.IAsyncResult BeginGetStructuresForType(long typeID, System.AsyncCallback callback, object asyncState);
-        
-        WebAnnotationModel.Service.Structure[] EndGetStructuresForType(System.IAsyncResult result);
-        
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructureTypes/UpdateStructureTypes", ReplyAction="http://tempuri.org/IAnnotateStructureTypes/UpdateStructureTypesResponse")]
         long[] UpdateStructureTypes(WebAnnotationModel.Service.StructureType[] structType);
         
@@ -1462,6 +1523,25 @@ namespace WebAnnotationModel.Service {
     
     [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
     public interface IAnnotateStructureTypesChannel : WebAnnotationModel.Service.IAnnotateStructureTypes, System.ServiceModel.IClientChannel {
+    }
+    
+    [System.Diagnostics.DebuggerStepThroughAttribute()]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
+    public partial class CreateStructureTypeCompletedEventArgs : System.ComponentModel.AsyncCompletedEventArgs {
+        
+        private object[] results;
+        
+        public CreateStructureTypeCompletedEventArgs(object[] results, System.Exception exception, bool cancelled, object userState) : 
+                base(exception, cancelled, userState) {
+            this.results = results;
+        }
+        
+        public WebAnnotationModel.Service.StructureType Result {
+            get {
+                base.RaiseExceptionIfNecessary();
+                return ((WebAnnotationModel.Service.StructureType)(this.results[0]));
+            }
+        }
     }
     
     [System.Diagnostics.DebuggerStepThroughAttribute()]
@@ -1523,25 +1603,6 @@ namespace WebAnnotationModel.Service {
     
     [System.Diagnostics.DebuggerStepThroughAttribute()]
     [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
-    public partial class GetStructuresForTypeCompletedEventArgs : System.ComponentModel.AsyncCompletedEventArgs {
-        
-        private object[] results;
-        
-        public GetStructuresForTypeCompletedEventArgs(object[] results, System.Exception exception, bool cancelled, object userState) : 
-                base(exception, cancelled, userState) {
-            this.results = results;
-        }
-        
-        public WebAnnotationModel.Service.Structure[] Result {
-            get {
-                base.RaiseExceptionIfNecessary();
-                return ((WebAnnotationModel.Service.Structure[])(this.results[0]));
-            }
-        }
-    }
-    
-    [System.Diagnostics.DebuggerStepThroughAttribute()]
-    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
     public partial class UpdateStructureTypesCompletedEventArgs : System.ComponentModel.AsyncCompletedEventArgs {
         
         private object[] results;
@@ -1582,6 +1643,12 @@ namespace WebAnnotationModel.Service {
     [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
     public partial class AnnotateStructureTypesClient : System.ServiceModel.ClientBase<WebAnnotationModel.Service.IAnnotateStructureTypes>, WebAnnotationModel.Service.IAnnotateStructureTypes {
         
+        private BeginOperationDelegate onBeginCreateStructureTypeDelegate;
+        
+        private EndOperationDelegate onEndCreateStructureTypeDelegate;
+        
+        private System.Threading.SendOrPostCallback onCreateStructureTypeCompletedDelegate;
+        
         private BeginOperationDelegate onBeginGetStructureTypesDelegate;
         
         private EndOperationDelegate onEndGetStructureTypesDelegate;
@@ -1599,12 +1666,6 @@ namespace WebAnnotationModel.Service {
         private EndOperationDelegate onEndGetStructureTypesByIDsDelegate;
         
         private System.Threading.SendOrPostCallback onGetStructureTypesByIDsCompletedDelegate;
-        
-        private BeginOperationDelegate onBeginGetStructuresForTypeDelegate;
-        
-        private EndOperationDelegate onEndGetStructuresForTypeDelegate;
-        
-        private System.Threading.SendOrPostCallback onGetStructuresForTypeCompletedDelegate;
         
         private BeginOperationDelegate onBeginUpdateStructureTypesDelegate;
         
@@ -1637,17 +1698,67 @@ namespace WebAnnotationModel.Service {
                 base(binding, remoteAddress) {
         }
         
+        public event System.EventHandler<CreateStructureTypeCompletedEventArgs> CreateStructureTypeCompleted;
+        
         public event System.EventHandler<GetStructureTypesCompletedEventArgs> GetStructureTypesCompleted;
         
         public event System.EventHandler<GetStructureTypeByIDCompletedEventArgs> GetStructureTypeByIDCompleted;
         
         public event System.EventHandler<GetStructureTypesByIDsCompletedEventArgs> GetStructureTypesByIDsCompleted;
         
-        public event System.EventHandler<GetStructuresForTypeCompletedEventArgs> GetStructuresForTypeCompleted;
-        
         public event System.EventHandler<UpdateStructureTypesCompletedEventArgs> UpdateStructureTypesCompleted;
         
         public event System.EventHandler<TestMethodCompletedEventArgs> TestMethodCompleted;
+        
+        public WebAnnotationModel.Service.StructureType CreateStructureType(WebAnnotationModel.Service.StructureType obj) {
+            return base.Channel.CreateStructureType(obj);
+        }
+        
+        [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
+        public System.IAsyncResult BeginCreateStructureType(WebAnnotationModel.Service.StructureType obj, System.AsyncCallback callback, object asyncState) {
+            return base.Channel.BeginCreateStructureType(obj, callback, asyncState);
+        }
+        
+        [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
+        public WebAnnotationModel.Service.StructureType EndCreateStructureType(System.IAsyncResult result) {
+            return base.Channel.EndCreateStructureType(result);
+        }
+        
+        private System.IAsyncResult OnBeginCreateStructureType(object[] inValues, System.AsyncCallback callback, object asyncState) {
+            WebAnnotationModel.Service.StructureType obj = ((WebAnnotationModel.Service.StructureType)(inValues[0]));
+            return this.BeginCreateStructureType(obj, callback, asyncState);
+        }
+        
+        private object[] OnEndCreateStructureType(System.IAsyncResult result) {
+            WebAnnotationModel.Service.StructureType retVal = this.EndCreateStructureType(result);
+            return new object[] {
+                    retVal};
+        }
+        
+        private void OnCreateStructureTypeCompleted(object state) {
+            if ((this.CreateStructureTypeCompleted != null)) {
+                InvokeAsyncCompletedEventArgs e = ((InvokeAsyncCompletedEventArgs)(state));
+                this.CreateStructureTypeCompleted(this, new CreateStructureTypeCompletedEventArgs(e.Results, e.Error, e.Cancelled, e.UserState));
+            }
+        }
+        
+        public void CreateStructureTypeAsync(WebAnnotationModel.Service.StructureType obj) {
+            this.CreateStructureTypeAsync(obj, null);
+        }
+        
+        public void CreateStructureTypeAsync(WebAnnotationModel.Service.StructureType obj, object userState) {
+            if ((this.onBeginCreateStructureTypeDelegate == null)) {
+                this.onBeginCreateStructureTypeDelegate = new BeginOperationDelegate(this.OnBeginCreateStructureType);
+            }
+            if ((this.onEndCreateStructureTypeDelegate == null)) {
+                this.onEndCreateStructureTypeDelegate = new EndOperationDelegate(this.OnEndCreateStructureType);
+            }
+            if ((this.onCreateStructureTypeCompletedDelegate == null)) {
+                this.onCreateStructureTypeCompletedDelegate = new System.Threading.SendOrPostCallback(this.OnCreateStructureTypeCompleted);
+            }
+            base.InvokeAsync(this.onBeginCreateStructureTypeDelegate, new object[] {
+                        obj}, this.onEndCreateStructureTypeDelegate, this.onCreateStructureTypeCompletedDelegate, userState);
+        }
         
         public WebAnnotationModel.Service.StructureType[] GetStructureTypes() {
             return base.Channel.GetStructureTypes();
@@ -1797,56 +1908,6 @@ namespace WebAnnotationModel.Service {
                         IDs}, this.onEndGetStructureTypesByIDsDelegate, this.onGetStructureTypesByIDsCompletedDelegate, userState);
         }
         
-        public WebAnnotationModel.Service.Structure[] GetStructuresForType(long typeID) {
-            return base.Channel.GetStructuresForType(typeID);
-        }
-        
-        [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
-        public System.IAsyncResult BeginGetStructuresForType(long typeID, System.AsyncCallback callback, object asyncState) {
-            return base.Channel.BeginGetStructuresForType(typeID, callback, asyncState);
-        }
-        
-        [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
-        public WebAnnotationModel.Service.Structure[] EndGetStructuresForType(System.IAsyncResult result) {
-            return base.Channel.EndGetStructuresForType(result);
-        }
-        
-        private System.IAsyncResult OnBeginGetStructuresForType(object[] inValues, System.AsyncCallback callback, object asyncState) {
-            long typeID = ((long)(inValues[0]));
-            return this.BeginGetStructuresForType(typeID, callback, asyncState);
-        }
-        
-        private object[] OnEndGetStructuresForType(System.IAsyncResult result) {
-            WebAnnotationModel.Service.Structure[] retVal = this.EndGetStructuresForType(result);
-            return new object[] {
-                    retVal};
-        }
-        
-        private void OnGetStructuresForTypeCompleted(object state) {
-            if ((this.GetStructuresForTypeCompleted != null)) {
-                InvokeAsyncCompletedEventArgs e = ((InvokeAsyncCompletedEventArgs)(state));
-                this.GetStructuresForTypeCompleted(this, new GetStructuresForTypeCompletedEventArgs(e.Results, e.Error, e.Cancelled, e.UserState));
-            }
-        }
-        
-        public void GetStructuresForTypeAsync(long typeID) {
-            this.GetStructuresForTypeAsync(typeID, null);
-        }
-        
-        public void GetStructuresForTypeAsync(long typeID, object userState) {
-            if ((this.onBeginGetStructuresForTypeDelegate == null)) {
-                this.onBeginGetStructuresForTypeDelegate = new BeginOperationDelegate(this.OnBeginGetStructuresForType);
-            }
-            if ((this.onEndGetStructuresForTypeDelegate == null)) {
-                this.onEndGetStructuresForTypeDelegate = new EndOperationDelegate(this.OnEndGetStructuresForType);
-            }
-            if ((this.onGetStructuresForTypeCompletedDelegate == null)) {
-                this.onGetStructuresForTypeCompletedDelegate = new System.Threading.SendOrPostCallback(this.OnGetStructuresForTypeCompleted);
-            }
-            base.InvokeAsync(this.onBeginGetStructuresForTypeDelegate, new object[] {
-                        typeID}, this.onEndGetStructuresForTypeDelegate, this.onGetStructuresForTypeCompletedDelegate, userState);
-        }
-        
         public long[] UpdateStructureTypes(WebAnnotationModel.Service.StructureType[] structType) {
             return base.Channel.UpdateStructureTypes(structType);
         }
@@ -1950,6 +2011,14 @@ namespace WebAnnotationModel.Service {
     [System.ServiceModel.ServiceContractAttribute(ConfigurationName="Service.IAnnotateStructures")]
     public interface IAnnotateStructures {
         
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/CreateStructure", ReplyAction="http://tempuri.org/IAnnotateStructures/CreateStructureResponse")]
+        WebAnnotationModel.Service.CreateStructureRetval CreateStructure(WebAnnotationModel.Service.Structure structure, WebAnnotationModel.Service.Location location);
+        
+        [System.ServiceModel.OperationContractAttribute(AsyncPattern=true, Action="http://tempuri.org/IAnnotateStructures/CreateStructure", ReplyAction="http://tempuri.org/IAnnotateStructures/CreateStructureResponse")]
+        System.IAsyncResult BeginCreateStructure(WebAnnotationModel.Service.Structure structure, WebAnnotationModel.Service.Location location, System.AsyncCallback callback, object asyncState);
+        
+        WebAnnotationModel.Service.CreateStructureRetval EndCreateStructure(System.IAsyncResult result);
+        
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/GetStructures", ReplyAction="http://tempuri.org/IAnnotateStructures/GetStructuresResponse")]
         WebAnnotationModel.Service.Structure[] GetStructures();
         
@@ -1983,12 +2052,12 @@ namespace WebAnnotationModel.Service {
         WebAnnotationModel.Service.Structure[] EndGetStructuresByIDs(System.IAsyncResult result);
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/CreateStructureLink", ReplyAction="http://tempuri.org/IAnnotateStructures/CreateStructureLinkResponse")]
-        void CreateStructureLink(WebAnnotationModel.Service.StructureLink link);
+        WebAnnotationModel.Service.StructureLink CreateStructureLink(WebAnnotationModel.Service.StructureLink link);
         
         [System.ServiceModel.OperationContractAttribute(AsyncPattern=true, Action="http://tempuri.org/IAnnotateStructures/CreateStructureLink", ReplyAction="http://tempuri.org/IAnnotateStructures/CreateStructureLinkResponse")]
         System.IAsyncResult BeginCreateStructureLink(WebAnnotationModel.Service.StructureLink link, System.AsyncCallback callback, object asyncState);
         
-        void EndCreateStructureLink(System.IAsyncResult result);
+        WebAnnotationModel.Service.StructureLink EndCreateStructureLink(System.IAsyncResult result);
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/GetLinkedStructures", ReplyAction="http://tempuri.org/IAnnotateStructures/GetLinkedStructuresResponse")]
         WebAnnotationModel.Service.StructureLink[] GetLinkedStructures();
@@ -2006,14 +2075,6 @@ namespace WebAnnotationModel.Service {
         
         WebAnnotationModel.Service.StructureLink[] EndGetLinkedStructuresByID(System.IAsyncResult result);
         
-        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/GetLocationsForStructure", ReplyAction="http://tempuri.org/IAnnotateStructures/GetLocationsForStructureResponse")]
-        WebAnnotationModel.Service.Location[] GetLocationsForStructure(long structureID);
-        
-        [System.ServiceModel.OperationContractAttribute(AsyncPattern=true, Action="http://tempuri.org/IAnnotateStructures/GetLocationsForStructure", ReplyAction="http://tempuri.org/IAnnotateStructures/GetLocationsForStructureResponse")]
-        System.IAsyncResult BeginGetLocationsForStructure(long structureID, System.AsyncCallback callback, object asyncState);
-        
-        WebAnnotationModel.Service.Location[] EndGetLocationsForStructure(System.IAsyncResult result);
-        
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/NumberOfLocationsForStructure", ReplyAction="http://tempuri.org/IAnnotateStructures/NumberOfLocationsForStructureResponse")]
         long NumberOfLocationsForStructure(long structureID);
         
@@ -2021,14 +2082,6 @@ namespace WebAnnotationModel.Service {
         System.IAsyncResult BeginNumberOfLocationsForStructure(long structureID, System.AsyncCallback callback, object asyncState);
         
         long EndNumberOfLocationsForStructure(System.IAsyncResult result);
-        
-        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/CreateStructure", ReplyAction="http://tempuri.org/IAnnotateStructures/CreateStructureResponse")]
-        long[] CreateStructure(WebAnnotationModel.Service.Structure structure, WebAnnotationModel.Service.Location location);
-        
-        [System.ServiceModel.OperationContractAttribute(AsyncPattern=true, Action="http://tempuri.org/IAnnotateStructures/CreateStructure", ReplyAction="http://tempuri.org/IAnnotateStructures/CreateStructureResponse")]
-        System.IAsyncResult BeginCreateStructure(WebAnnotationModel.Service.Structure structure, WebAnnotationModel.Service.Location location, System.AsyncCallback callback, object asyncState);
-        
-        long[] EndCreateStructure(System.IAsyncResult result);
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/UpdateStructures", ReplyAction="http://tempuri.org/IAnnotateStructures/UpdateStructuresResponse")]
         long[] UpdateStructures(WebAnnotationModel.Service.Structure[] structure);
@@ -2064,6 +2117,14 @@ namespace WebAnnotationModel.Service {
         
         WebAnnotationModel.Service.LocationPositionOnly[] EndGetUnfinishedLocationsWithPosition(System.IAsyncResult result);
         
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/GetStructuresOfType", ReplyAction="http://tempuri.org/IAnnotateStructures/GetStructuresOfTypeResponse")]
+        WebAnnotationModel.Service.Structure[] GetStructuresOfType(long typeID);
+        
+        [System.ServiceModel.OperationContractAttribute(AsyncPattern=true, Action="http://tempuri.org/IAnnotateStructures/GetStructuresOfType", ReplyAction="http://tempuri.org/IAnnotateStructures/GetStructuresOfTypeResponse")]
+        System.IAsyncResult BeginGetStructuresOfType(long typeID, System.AsyncCallback callback, object asyncState);
+        
+        WebAnnotationModel.Service.Structure[] EndGetStructuresOfType(System.IAsyncResult result);
+        
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/Merge", ReplyAction="http://tempuri.org/IAnnotateStructures/MergeResponse")]
         long Merge(long KeepID, long MergeID);
         
@@ -2083,6 +2144,25 @@ namespace WebAnnotationModel.Service {
     
     [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
     public interface IAnnotateStructuresChannel : WebAnnotationModel.Service.IAnnotateStructures, System.ServiceModel.IClientChannel {
+    }
+    
+    [System.Diagnostics.DebuggerStepThroughAttribute()]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
+    public partial class CreateStructureCompletedEventArgs : System.ComponentModel.AsyncCompletedEventArgs {
+        
+        private object[] results;
+        
+        public CreateStructureCompletedEventArgs(object[] results, System.Exception exception, bool cancelled, object userState) : 
+                base(exception, cancelled, userState) {
+            this.results = results;
+        }
+        
+        public WebAnnotationModel.Service.CreateStructureRetval Result {
+            get {
+                base.RaiseExceptionIfNecessary();
+                return ((WebAnnotationModel.Service.CreateStructureRetval)(this.results[0]));
+            }
+        }
     }
     
     [System.Diagnostics.DebuggerStepThroughAttribute()]
@@ -2177,6 +2257,25 @@ namespace WebAnnotationModel.Service {
     
     [System.Diagnostics.DebuggerStepThroughAttribute()]
     [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
+    public partial class CreateStructureLinkCompletedEventArgs : System.ComponentModel.AsyncCompletedEventArgs {
+        
+        private object[] results;
+        
+        public CreateStructureLinkCompletedEventArgs(object[] results, System.Exception exception, bool cancelled, object userState) : 
+                base(exception, cancelled, userState) {
+            this.results = results;
+        }
+        
+        public WebAnnotationModel.Service.StructureLink Result {
+            get {
+                base.RaiseExceptionIfNecessary();
+                return ((WebAnnotationModel.Service.StructureLink)(this.results[0]));
+            }
+        }
+    }
+    
+    [System.Diagnostics.DebuggerStepThroughAttribute()]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
     public partial class GetLinkedStructuresCompletedEventArgs : System.ComponentModel.AsyncCompletedEventArgs {
         
         private object[] results;
@@ -2215,25 +2314,6 @@ namespace WebAnnotationModel.Service {
     
     [System.Diagnostics.DebuggerStepThroughAttribute()]
     [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
-    public partial class GetLocationsForStructureCompletedEventArgs : System.ComponentModel.AsyncCompletedEventArgs {
-        
-        private object[] results;
-        
-        public GetLocationsForStructureCompletedEventArgs(object[] results, System.Exception exception, bool cancelled, object userState) : 
-                base(exception, cancelled, userState) {
-            this.results = results;
-        }
-        
-        public WebAnnotationModel.Service.Location[] Result {
-            get {
-                base.RaiseExceptionIfNecessary();
-                return ((WebAnnotationModel.Service.Location[])(this.results[0]));
-            }
-        }
-    }
-    
-    [System.Diagnostics.DebuggerStepThroughAttribute()]
-    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
     public partial class NumberOfLocationsForStructureCompletedEventArgs : System.ComponentModel.AsyncCompletedEventArgs {
         
         private object[] results;
@@ -2247,25 +2327,6 @@ namespace WebAnnotationModel.Service {
             get {
                 base.RaiseExceptionIfNecessary();
                 return ((long)(this.results[0]));
-            }
-        }
-    }
-    
-    [System.Diagnostics.DebuggerStepThroughAttribute()]
-    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
-    public partial class CreateStructureCompletedEventArgs : System.ComponentModel.AsyncCompletedEventArgs {
-        
-        private object[] results;
-        
-        public CreateStructureCompletedEventArgs(object[] results, System.Exception exception, bool cancelled, object userState) : 
-                base(exception, cancelled, userState) {
-            this.results = results;
-        }
-        
-        public long[] Result {
-            get {
-                base.RaiseExceptionIfNecessary();
-                return ((long[])(this.results[0]));
             }
         }
     }
@@ -2329,6 +2390,25 @@ namespace WebAnnotationModel.Service {
     
     [System.Diagnostics.DebuggerStepThroughAttribute()]
     [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
+    public partial class GetStructuresOfTypeCompletedEventArgs : System.ComponentModel.AsyncCompletedEventArgs {
+        
+        private object[] results;
+        
+        public GetStructuresOfTypeCompletedEventArgs(object[] results, System.Exception exception, bool cancelled, object userState) : 
+                base(exception, cancelled, userState) {
+            this.results = results;
+        }
+        
+        public WebAnnotationModel.Service.Structure[] Result {
+            get {
+                base.RaiseExceptionIfNecessary();
+                return ((WebAnnotationModel.Service.Structure[])(this.results[0]));
+            }
+        }
+    }
+    
+    [System.Diagnostics.DebuggerStepThroughAttribute()]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
     public partial class MergeCompletedEventArgs : System.ComponentModel.AsyncCompletedEventArgs {
         
         private object[] results;
@@ -2368,6 +2448,12 @@ namespace WebAnnotationModel.Service {
     [System.Diagnostics.DebuggerStepThroughAttribute()]
     [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
     public partial class AnnotateStructuresClient : System.ServiceModel.ClientBase<WebAnnotationModel.Service.IAnnotateStructures>, WebAnnotationModel.Service.IAnnotateStructures {
+        
+        private BeginOperationDelegate onBeginCreateStructureDelegate;
+        
+        private EndOperationDelegate onEndCreateStructureDelegate;
+        
+        private System.Threading.SendOrPostCallback onCreateStructureCompletedDelegate;
         
         private BeginOperationDelegate onBeginGetStructuresDelegate;
         
@@ -2411,23 +2497,11 @@ namespace WebAnnotationModel.Service {
         
         private System.Threading.SendOrPostCallback onGetLinkedStructuresByIDCompletedDelegate;
         
-        private BeginOperationDelegate onBeginGetLocationsForStructureDelegate;
-        
-        private EndOperationDelegate onEndGetLocationsForStructureDelegate;
-        
-        private System.Threading.SendOrPostCallback onGetLocationsForStructureCompletedDelegate;
-        
         private BeginOperationDelegate onBeginNumberOfLocationsForStructureDelegate;
         
         private EndOperationDelegate onEndNumberOfLocationsForStructureDelegate;
         
         private System.Threading.SendOrPostCallback onNumberOfLocationsForStructureCompletedDelegate;
-        
-        private BeginOperationDelegate onBeginCreateStructureDelegate;
-        
-        private EndOperationDelegate onEndCreateStructureDelegate;
-        
-        private System.Threading.SendOrPostCallback onCreateStructureCompletedDelegate;
         
         private BeginOperationDelegate onBeginUpdateStructuresDelegate;
         
@@ -2452,6 +2526,12 @@ namespace WebAnnotationModel.Service {
         private EndOperationDelegate onEndGetUnfinishedLocationsWithPositionDelegate;
         
         private System.Threading.SendOrPostCallback onGetUnfinishedLocationsWithPositionCompletedDelegate;
+        
+        private BeginOperationDelegate onBeginGetStructuresOfTypeDelegate;
+        
+        private EndOperationDelegate onEndGetStructuresOfTypeDelegate;
+        
+        private System.Threading.SendOrPostCallback onGetStructuresOfTypeCompletedDelegate;
         
         private BeginOperationDelegate onBeginMergeDelegate;
         
@@ -2484,6 +2564,8 @@ namespace WebAnnotationModel.Service {
                 base(binding, remoteAddress) {
         }
         
+        public event System.EventHandler<CreateStructureCompletedEventArgs> CreateStructureCompleted;
+        
         public event System.EventHandler<GetStructuresCompletedEventArgs> GetStructuresCompleted;
         
         public event System.EventHandler<GetStructuresForSectionCompletedEventArgs> GetStructuresForSectionCompleted;
@@ -2492,17 +2574,13 @@ namespace WebAnnotationModel.Service {
         
         public event System.EventHandler<GetStructuresByIDsCompletedEventArgs> GetStructuresByIDsCompleted;
         
-        public event System.EventHandler<System.ComponentModel.AsyncCompletedEventArgs> CreateStructureLinkCompleted;
+        public event System.EventHandler<CreateStructureLinkCompletedEventArgs> CreateStructureLinkCompleted;
         
         public event System.EventHandler<GetLinkedStructuresCompletedEventArgs> GetLinkedStructuresCompleted;
         
         public event System.EventHandler<GetLinkedStructuresByIDCompletedEventArgs> GetLinkedStructuresByIDCompleted;
         
-        public event System.EventHandler<GetLocationsForStructureCompletedEventArgs> GetLocationsForStructureCompleted;
-        
         public event System.EventHandler<NumberOfLocationsForStructureCompletedEventArgs> NumberOfLocationsForStructureCompleted;
-        
-        public event System.EventHandler<CreateStructureCompletedEventArgs> CreateStructureCompleted;
         
         public event System.EventHandler<UpdateStructuresCompletedEventArgs> UpdateStructuresCompleted;
         
@@ -2512,9 +2590,63 @@ namespace WebAnnotationModel.Service {
         
         public event System.EventHandler<GetUnfinishedLocationsWithPositionCompletedEventArgs> GetUnfinishedLocationsWithPositionCompleted;
         
+        public event System.EventHandler<GetStructuresOfTypeCompletedEventArgs> GetStructuresOfTypeCompleted;
+        
         public event System.EventHandler<MergeCompletedEventArgs> MergeCompleted;
         
         public event System.EventHandler<SplitCompletedEventArgs> SplitCompleted;
+        
+        public WebAnnotationModel.Service.CreateStructureRetval CreateStructure(WebAnnotationModel.Service.Structure structure, WebAnnotationModel.Service.Location location) {
+            return base.Channel.CreateStructure(structure, location);
+        }
+        
+        [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
+        public System.IAsyncResult BeginCreateStructure(WebAnnotationModel.Service.Structure structure, WebAnnotationModel.Service.Location location, System.AsyncCallback callback, object asyncState) {
+            return base.Channel.BeginCreateStructure(structure, location, callback, asyncState);
+        }
+        
+        [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
+        public WebAnnotationModel.Service.CreateStructureRetval EndCreateStructure(System.IAsyncResult result) {
+            return base.Channel.EndCreateStructure(result);
+        }
+        
+        private System.IAsyncResult OnBeginCreateStructure(object[] inValues, System.AsyncCallback callback, object asyncState) {
+            WebAnnotationModel.Service.Structure structure = ((WebAnnotationModel.Service.Structure)(inValues[0]));
+            WebAnnotationModel.Service.Location location = ((WebAnnotationModel.Service.Location)(inValues[1]));
+            return this.BeginCreateStructure(structure, location, callback, asyncState);
+        }
+        
+        private object[] OnEndCreateStructure(System.IAsyncResult result) {
+            WebAnnotationModel.Service.CreateStructureRetval retVal = this.EndCreateStructure(result);
+            return new object[] {
+                    retVal};
+        }
+        
+        private void OnCreateStructureCompleted(object state) {
+            if ((this.CreateStructureCompleted != null)) {
+                InvokeAsyncCompletedEventArgs e = ((InvokeAsyncCompletedEventArgs)(state));
+                this.CreateStructureCompleted(this, new CreateStructureCompletedEventArgs(e.Results, e.Error, e.Cancelled, e.UserState));
+            }
+        }
+        
+        public void CreateStructureAsync(WebAnnotationModel.Service.Structure structure, WebAnnotationModel.Service.Location location) {
+            this.CreateStructureAsync(structure, location, null);
+        }
+        
+        public void CreateStructureAsync(WebAnnotationModel.Service.Structure structure, WebAnnotationModel.Service.Location location, object userState) {
+            if ((this.onBeginCreateStructureDelegate == null)) {
+                this.onBeginCreateStructureDelegate = new BeginOperationDelegate(this.OnBeginCreateStructure);
+            }
+            if ((this.onEndCreateStructureDelegate == null)) {
+                this.onEndCreateStructureDelegate = new EndOperationDelegate(this.OnEndCreateStructure);
+            }
+            if ((this.onCreateStructureCompletedDelegate == null)) {
+                this.onCreateStructureCompletedDelegate = new System.Threading.SendOrPostCallback(this.OnCreateStructureCompleted);
+            }
+            base.InvokeAsync(this.onBeginCreateStructureDelegate, new object[] {
+                        structure,
+                        location}, this.onEndCreateStructureDelegate, this.onCreateStructureCompletedDelegate, userState);
+        }
         
         public WebAnnotationModel.Service.Structure[] GetStructures() {
             return base.Channel.GetStructures();
@@ -2724,8 +2856,8 @@ namespace WebAnnotationModel.Service {
                         IncludeChildren}, this.onEndGetStructuresByIDsDelegate, this.onGetStructuresByIDsCompletedDelegate, userState);
         }
         
-        public void CreateStructureLink(WebAnnotationModel.Service.StructureLink link) {
-            base.Channel.CreateStructureLink(link);
+        public WebAnnotationModel.Service.StructureLink CreateStructureLink(WebAnnotationModel.Service.StructureLink link) {
+            return base.Channel.CreateStructureLink(link);
         }
         
         [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
@@ -2734,8 +2866,8 @@ namespace WebAnnotationModel.Service {
         }
         
         [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
-        public void EndCreateStructureLink(System.IAsyncResult result) {
-            base.Channel.EndCreateStructureLink(result);
+        public WebAnnotationModel.Service.StructureLink EndCreateStructureLink(System.IAsyncResult result) {
+            return base.Channel.EndCreateStructureLink(result);
         }
         
         private System.IAsyncResult OnBeginCreateStructureLink(object[] inValues, System.AsyncCallback callback, object asyncState) {
@@ -2744,14 +2876,15 @@ namespace WebAnnotationModel.Service {
         }
         
         private object[] OnEndCreateStructureLink(System.IAsyncResult result) {
-            this.EndCreateStructureLink(result);
-            return null;
+            WebAnnotationModel.Service.StructureLink retVal = this.EndCreateStructureLink(result);
+            return new object[] {
+                    retVal};
         }
         
         private void OnCreateStructureLinkCompleted(object state) {
             if ((this.CreateStructureLinkCompleted != null)) {
                 InvokeAsyncCompletedEventArgs e = ((InvokeAsyncCompletedEventArgs)(state));
-                this.CreateStructureLinkCompleted(this, new System.ComponentModel.AsyncCompletedEventArgs(e.Error, e.Cancelled, e.UserState));
+                this.CreateStructureLinkCompleted(this, new CreateStructureLinkCompletedEventArgs(e.Results, e.Error, e.Cancelled, e.UserState));
             }
         }
         
@@ -2871,56 +3004,6 @@ namespace WebAnnotationModel.Service {
                         ID}, this.onEndGetLinkedStructuresByIDDelegate, this.onGetLinkedStructuresByIDCompletedDelegate, userState);
         }
         
-        public WebAnnotationModel.Service.Location[] GetLocationsForStructure(long structureID) {
-            return base.Channel.GetLocationsForStructure(structureID);
-        }
-        
-        [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
-        public System.IAsyncResult BeginGetLocationsForStructure(long structureID, System.AsyncCallback callback, object asyncState) {
-            return base.Channel.BeginGetLocationsForStructure(structureID, callback, asyncState);
-        }
-        
-        [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
-        public WebAnnotationModel.Service.Location[] EndGetLocationsForStructure(System.IAsyncResult result) {
-            return base.Channel.EndGetLocationsForStructure(result);
-        }
-        
-        private System.IAsyncResult OnBeginGetLocationsForStructure(object[] inValues, System.AsyncCallback callback, object asyncState) {
-            long structureID = ((long)(inValues[0]));
-            return this.BeginGetLocationsForStructure(structureID, callback, asyncState);
-        }
-        
-        private object[] OnEndGetLocationsForStructure(System.IAsyncResult result) {
-            WebAnnotationModel.Service.Location[] retVal = this.EndGetLocationsForStructure(result);
-            return new object[] {
-                    retVal};
-        }
-        
-        private void OnGetLocationsForStructureCompleted(object state) {
-            if ((this.GetLocationsForStructureCompleted != null)) {
-                InvokeAsyncCompletedEventArgs e = ((InvokeAsyncCompletedEventArgs)(state));
-                this.GetLocationsForStructureCompleted(this, new GetLocationsForStructureCompletedEventArgs(e.Results, e.Error, e.Cancelled, e.UserState));
-            }
-        }
-        
-        public void GetLocationsForStructureAsync(long structureID) {
-            this.GetLocationsForStructureAsync(structureID, null);
-        }
-        
-        public void GetLocationsForStructureAsync(long structureID, object userState) {
-            if ((this.onBeginGetLocationsForStructureDelegate == null)) {
-                this.onBeginGetLocationsForStructureDelegate = new BeginOperationDelegate(this.OnBeginGetLocationsForStructure);
-            }
-            if ((this.onEndGetLocationsForStructureDelegate == null)) {
-                this.onEndGetLocationsForStructureDelegate = new EndOperationDelegate(this.OnEndGetLocationsForStructure);
-            }
-            if ((this.onGetLocationsForStructureCompletedDelegate == null)) {
-                this.onGetLocationsForStructureCompletedDelegate = new System.Threading.SendOrPostCallback(this.OnGetLocationsForStructureCompleted);
-            }
-            base.InvokeAsync(this.onBeginGetLocationsForStructureDelegate, new object[] {
-                        structureID}, this.onEndGetLocationsForStructureDelegate, this.onGetLocationsForStructureCompletedDelegate, userState);
-        }
-        
         public long NumberOfLocationsForStructure(long structureID) {
             return base.Channel.NumberOfLocationsForStructure(structureID);
         }
@@ -2969,58 +3052,6 @@ namespace WebAnnotationModel.Service {
             }
             base.InvokeAsync(this.onBeginNumberOfLocationsForStructureDelegate, new object[] {
                         structureID}, this.onEndNumberOfLocationsForStructureDelegate, this.onNumberOfLocationsForStructureCompletedDelegate, userState);
-        }
-        
-        public long[] CreateStructure(WebAnnotationModel.Service.Structure structure, WebAnnotationModel.Service.Location location) {
-            return base.Channel.CreateStructure(structure, location);
-        }
-        
-        [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
-        public System.IAsyncResult BeginCreateStructure(WebAnnotationModel.Service.Structure structure, WebAnnotationModel.Service.Location location, System.AsyncCallback callback, object asyncState) {
-            return base.Channel.BeginCreateStructure(structure, location, callback, asyncState);
-        }
-        
-        [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
-        public long[] EndCreateStructure(System.IAsyncResult result) {
-            return base.Channel.EndCreateStructure(result);
-        }
-        
-        private System.IAsyncResult OnBeginCreateStructure(object[] inValues, System.AsyncCallback callback, object asyncState) {
-            WebAnnotationModel.Service.Structure structure = ((WebAnnotationModel.Service.Structure)(inValues[0]));
-            WebAnnotationModel.Service.Location location = ((WebAnnotationModel.Service.Location)(inValues[1]));
-            return this.BeginCreateStructure(structure, location, callback, asyncState);
-        }
-        
-        private object[] OnEndCreateStructure(System.IAsyncResult result) {
-            long[] retVal = this.EndCreateStructure(result);
-            return new object[] {
-                    retVal};
-        }
-        
-        private void OnCreateStructureCompleted(object state) {
-            if ((this.CreateStructureCompleted != null)) {
-                InvokeAsyncCompletedEventArgs e = ((InvokeAsyncCompletedEventArgs)(state));
-                this.CreateStructureCompleted(this, new CreateStructureCompletedEventArgs(e.Results, e.Error, e.Cancelled, e.UserState));
-            }
-        }
-        
-        public void CreateStructureAsync(WebAnnotationModel.Service.Structure structure, WebAnnotationModel.Service.Location location) {
-            this.CreateStructureAsync(structure, location, null);
-        }
-        
-        public void CreateStructureAsync(WebAnnotationModel.Service.Structure structure, WebAnnotationModel.Service.Location location, object userState) {
-            if ((this.onBeginCreateStructureDelegate == null)) {
-                this.onBeginCreateStructureDelegate = new BeginOperationDelegate(this.OnBeginCreateStructure);
-            }
-            if ((this.onEndCreateStructureDelegate == null)) {
-                this.onEndCreateStructureDelegate = new EndOperationDelegate(this.OnEndCreateStructure);
-            }
-            if ((this.onCreateStructureCompletedDelegate == null)) {
-                this.onCreateStructureCompletedDelegate = new System.Threading.SendOrPostCallback(this.OnCreateStructureCompleted);
-            }
-            base.InvokeAsync(this.onBeginCreateStructureDelegate, new object[] {
-                        structure,
-                        location}, this.onEndCreateStructureDelegate, this.onCreateStructureCompletedDelegate, userState);
         }
         
         public long[] UpdateStructures(WebAnnotationModel.Service.Structure[] structure) {
@@ -3222,6 +3253,56 @@ namespace WebAnnotationModel.Service {
                         structureID}, this.onEndGetUnfinishedLocationsWithPositionDelegate, this.onGetUnfinishedLocationsWithPositionCompletedDelegate, userState);
         }
         
+        public WebAnnotationModel.Service.Structure[] GetStructuresOfType(long typeID) {
+            return base.Channel.GetStructuresOfType(typeID);
+        }
+        
+        [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
+        public System.IAsyncResult BeginGetStructuresOfType(long typeID, System.AsyncCallback callback, object asyncState) {
+            return base.Channel.BeginGetStructuresOfType(typeID, callback, asyncState);
+        }
+        
+        [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
+        public WebAnnotationModel.Service.Structure[] EndGetStructuresOfType(System.IAsyncResult result) {
+            return base.Channel.EndGetStructuresOfType(result);
+        }
+        
+        private System.IAsyncResult OnBeginGetStructuresOfType(object[] inValues, System.AsyncCallback callback, object asyncState) {
+            long typeID = ((long)(inValues[0]));
+            return this.BeginGetStructuresOfType(typeID, callback, asyncState);
+        }
+        
+        private object[] OnEndGetStructuresOfType(System.IAsyncResult result) {
+            WebAnnotationModel.Service.Structure[] retVal = this.EndGetStructuresOfType(result);
+            return new object[] {
+                    retVal};
+        }
+        
+        private void OnGetStructuresOfTypeCompleted(object state) {
+            if ((this.GetStructuresOfTypeCompleted != null)) {
+                InvokeAsyncCompletedEventArgs e = ((InvokeAsyncCompletedEventArgs)(state));
+                this.GetStructuresOfTypeCompleted(this, new GetStructuresOfTypeCompletedEventArgs(e.Results, e.Error, e.Cancelled, e.UserState));
+            }
+        }
+        
+        public void GetStructuresOfTypeAsync(long typeID) {
+            this.GetStructuresOfTypeAsync(typeID, null);
+        }
+        
+        public void GetStructuresOfTypeAsync(long typeID, object userState) {
+            if ((this.onBeginGetStructuresOfTypeDelegate == null)) {
+                this.onBeginGetStructuresOfTypeDelegate = new BeginOperationDelegate(this.OnBeginGetStructuresOfType);
+            }
+            if ((this.onEndGetStructuresOfTypeDelegate == null)) {
+                this.onEndGetStructuresOfTypeDelegate = new EndOperationDelegate(this.OnEndGetStructuresOfType);
+            }
+            if ((this.onGetStructuresOfTypeCompletedDelegate == null)) {
+                this.onGetStructuresOfTypeCompletedDelegate = new System.Threading.SendOrPostCallback(this.OnGetStructuresOfTypeCompleted);
+            }
+            base.InvokeAsync(this.onBeginGetStructuresOfTypeDelegate, new object[] {
+                        typeID}, this.onEndGetStructuresOfTypeDelegate, this.onGetStructuresOfTypeCompletedDelegate, userState);
+        }
+        
         public long Merge(long KeepID, long MergeID) {
             return base.Channel.Merge(KeepID, MergeID);
         }
@@ -3331,6 +3412,14 @@ namespace WebAnnotationModel.Service {
     [System.ServiceModel.ServiceContractAttribute(ConfigurationName="Service.IAnnotateLocations")]
     public interface IAnnotateLocations {
         
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateLocations/CreateLocation", ReplyAction="http://tempuri.org/IAnnotateLocations/CreateLocationResponse")]
+        WebAnnotationModel.Service.Location CreateLocation(WebAnnotationModel.Service.Location obj, long[] LinkedIDs);
+        
+        [System.ServiceModel.OperationContractAttribute(AsyncPattern=true, Action="http://tempuri.org/IAnnotateLocations/CreateLocation", ReplyAction="http://tempuri.org/IAnnotateLocations/CreateLocationResponse")]
+        System.IAsyncResult BeginCreateLocation(WebAnnotationModel.Service.Location obj, long[] LinkedIDs, System.AsyncCallback callback, object asyncState);
+        
+        WebAnnotationModel.Service.Location EndCreateLocation(System.IAsyncResult result);
+        
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateLocations/GetLocationByID", ReplyAction="http://tempuri.org/IAnnotateLocations/GetLocationByIDResponse")]
         WebAnnotationModel.Service.Location GetLocationByID(long ID);
         
@@ -3355,6 +3444,14 @@ namespace WebAnnotationModel.Service {
         
         WebAnnotationModel.Service.Location EndGetLastModifiedLocation(System.IAsyncResult result);
         
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateLocations/GetLinkedLocations", ReplyAction="http://tempuri.org/IAnnotateLocations/GetLinkedLocationsResponse")]
+        long[] GetLinkedLocations(long ID);
+        
+        [System.ServiceModel.OperationContractAttribute(AsyncPattern=true, Action="http://tempuri.org/IAnnotateLocations/GetLinkedLocations", ReplyAction="http://tempuri.org/IAnnotateLocations/GetLinkedLocationsResponse")]
+        System.IAsyncResult BeginGetLinkedLocations(long ID, System.AsyncCallback callback, object asyncState);
+        
+        long[] EndGetLinkedLocations(System.IAsyncResult result);
+        
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateLocations/GetLocationsForSection", ReplyAction="http://tempuri.org/IAnnotateLocations/GetLocationsForSectionResponse")]
         WebAnnotationModel.Service.Location[] GetLocationsForSection(out long QueryExecutedTime, long section);
         
@@ -3362,6 +3459,14 @@ namespace WebAnnotationModel.Service {
         System.IAsyncResult BeginGetLocationsForSection(long section, System.AsyncCallback callback, object asyncState);
         
         WebAnnotationModel.Service.Location[] EndGetLocationsForSection(out long QueryExecutedTime, System.IAsyncResult result);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateLocations/GetLocationsForStructure", ReplyAction="http://tempuri.org/IAnnotateLocations/GetLocationsForStructureResponse")]
+        WebAnnotationModel.Service.Location[] GetLocationsForStructure(long structureID);
+        
+        [System.ServiceModel.OperationContractAttribute(AsyncPattern=true, Action="http://tempuri.org/IAnnotateLocations/GetLocationsForStructure", ReplyAction="http://tempuri.org/IAnnotateLocations/GetLocationsForStructureResponse")]
+        System.IAsyncResult BeginGetLocationsForStructure(long structureID, System.AsyncCallback callback, object asyncState);
+        
+        WebAnnotationModel.Service.Location[] EndGetLocationsForStructure(System.IAsyncResult result);
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateLocations/GetLocationChanges", ReplyAction="http://tempuri.org/IAnnotateLocations/GetLocationChangesResponse")]
         WebAnnotationModel.Service.Location[] GetLocationChanges(out long QueryExecutedTime, out long[] DeletedIDs, long section, long ModifiedAfterThisTime);
@@ -3406,6 +3511,25 @@ namespace WebAnnotationModel.Service {
     
     [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
     public interface IAnnotateLocationsChannel : WebAnnotationModel.Service.IAnnotateLocations, System.ServiceModel.IClientChannel {
+    }
+    
+    [System.Diagnostics.DebuggerStepThroughAttribute()]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
+    public partial class CreateLocationCompletedEventArgs : System.ComponentModel.AsyncCompletedEventArgs {
+        
+        private object[] results;
+        
+        public CreateLocationCompletedEventArgs(object[] results, System.Exception exception, bool cancelled, object userState) : 
+                base(exception, cancelled, userState) {
+            this.results = results;
+        }
+        
+        public WebAnnotationModel.Service.Location Result {
+            get {
+                base.RaiseExceptionIfNecessary();
+                return ((WebAnnotationModel.Service.Location)(this.results[0]));
+            }
+        }
     }
     
     [System.Diagnostics.DebuggerStepThroughAttribute()]
@@ -3467,6 +3591,25 @@ namespace WebAnnotationModel.Service {
     
     [System.Diagnostics.DebuggerStepThroughAttribute()]
     [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
+    public partial class GetLinkedLocationsCompletedEventArgs : System.ComponentModel.AsyncCompletedEventArgs {
+        
+        private object[] results;
+        
+        public GetLinkedLocationsCompletedEventArgs(object[] results, System.Exception exception, bool cancelled, object userState) : 
+                base(exception, cancelled, userState) {
+            this.results = results;
+        }
+        
+        public long[] Result {
+            get {
+                base.RaiseExceptionIfNecessary();
+                return ((long[])(this.results[0]));
+            }
+        }
+    }
+    
+    [System.Diagnostics.DebuggerStepThroughAttribute()]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
     public partial class GetLocationsForSectionCompletedEventArgs : System.ComponentModel.AsyncCompletedEventArgs {
         
         private object[] results;
@@ -3487,6 +3630,25 @@ namespace WebAnnotationModel.Service {
             get {
                 base.RaiseExceptionIfNecessary();
                 return ((WebAnnotationModel.Service.Location[])(this.results[1]));
+            }
+        }
+    }
+    
+    [System.Diagnostics.DebuggerStepThroughAttribute()]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
+    public partial class GetLocationsForStructureCompletedEventArgs : System.ComponentModel.AsyncCompletedEventArgs {
+        
+        private object[] results;
+        
+        public GetLocationsForStructureCompletedEventArgs(object[] results, System.Exception exception, bool cancelled, object userState) : 
+                base(exception, cancelled, userState) {
+            this.results = results;
+        }
+        
+        public WebAnnotationModel.Service.Location[] Result {
+            get {
+                base.RaiseExceptionIfNecessary();
+                return ((WebAnnotationModel.Service.Location[])(this.results[0]));
             }
         }
     }
@@ -3580,6 +3742,12 @@ namespace WebAnnotationModel.Service {
     [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
     public partial class AnnotateLocationsClient : System.ServiceModel.ClientBase<WebAnnotationModel.Service.IAnnotateLocations>, WebAnnotationModel.Service.IAnnotateLocations {
         
+        private BeginOperationDelegate onBeginCreateLocationDelegate;
+        
+        private EndOperationDelegate onEndCreateLocationDelegate;
+        
+        private System.Threading.SendOrPostCallback onCreateLocationCompletedDelegate;
+        
         private BeginOperationDelegate onBeginGetLocationByIDDelegate;
         
         private EndOperationDelegate onEndGetLocationByIDDelegate;
@@ -3598,11 +3766,23 @@ namespace WebAnnotationModel.Service {
         
         private System.Threading.SendOrPostCallback onGetLastModifiedLocationCompletedDelegate;
         
+        private BeginOperationDelegate onBeginGetLinkedLocationsDelegate;
+        
+        private EndOperationDelegate onEndGetLinkedLocationsDelegate;
+        
+        private System.Threading.SendOrPostCallback onGetLinkedLocationsCompletedDelegate;
+        
         private BeginOperationDelegate onBeginGetLocationsForSectionDelegate;
         
         private EndOperationDelegate onEndGetLocationsForSectionDelegate;
         
         private System.Threading.SendOrPostCallback onGetLocationsForSectionCompletedDelegate;
+        
+        private BeginOperationDelegate onBeginGetLocationsForStructureDelegate;
+        
+        private EndOperationDelegate onEndGetLocationsForStructureDelegate;
+        
+        private System.Threading.SendOrPostCallback onGetLocationsForStructureCompletedDelegate;
         
         private BeginOperationDelegate onBeginGetLocationChangesDelegate;
         
@@ -3653,13 +3833,19 @@ namespace WebAnnotationModel.Service {
                 base(binding, remoteAddress) {
         }
         
+        public event System.EventHandler<CreateLocationCompletedEventArgs> CreateLocationCompleted;
+        
         public event System.EventHandler<GetLocationByIDCompletedEventArgs> GetLocationByIDCompleted;
         
         public event System.EventHandler<GetLocationsByIDCompletedEventArgs> GetLocationsByIDCompleted;
         
         public event System.EventHandler<GetLastModifiedLocationCompletedEventArgs> GetLastModifiedLocationCompleted;
         
+        public event System.EventHandler<GetLinkedLocationsCompletedEventArgs> GetLinkedLocationsCompleted;
+        
         public event System.EventHandler<GetLocationsForSectionCompletedEventArgs> GetLocationsForSectionCompleted;
+        
+        public event System.EventHandler<GetLocationsForStructureCompletedEventArgs> GetLocationsForStructureCompleted;
         
         public event System.EventHandler<GetLocationChangesCompletedEventArgs> GetLocationChangesCompleted;
         
@@ -3670,6 +3856,58 @@ namespace WebAnnotationModel.Service {
         public event System.EventHandler<System.ComponentModel.AsyncCompletedEventArgs> DeleteLocationLinkCompleted;
         
         public event System.EventHandler<LocationLinksForSectionCompletedEventArgs> LocationLinksForSectionCompleted;
+        
+        public WebAnnotationModel.Service.Location CreateLocation(WebAnnotationModel.Service.Location obj, long[] LinkedIDs) {
+            return base.Channel.CreateLocation(obj, LinkedIDs);
+        }
+        
+        [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
+        public System.IAsyncResult BeginCreateLocation(WebAnnotationModel.Service.Location obj, long[] LinkedIDs, System.AsyncCallback callback, object asyncState) {
+            return base.Channel.BeginCreateLocation(obj, LinkedIDs, callback, asyncState);
+        }
+        
+        [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
+        public WebAnnotationModel.Service.Location EndCreateLocation(System.IAsyncResult result) {
+            return base.Channel.EndCreateLocation(result);
+        }
+        
+        private System.IAsyncResult OnBeginCreateLocation(object[] inValues, System.AsyncCallback callback, object asyncState) {
+            WebAnnotationModel.Service.Location obj = ((WebAnnotationModel.Service.Location)(inValues[0]));
+            long[] LinkedIDs = ((long[])(inValues[1]));
+            return this.BeginCreateLocation(obj, LinkedIDs, callback, asyncState);
+        }
+        
+        private object[] OnEndCreateLocation(System.IAsyncResult result) {
+            WebAnnotationModel.Service.Location retVal = this.EndCreateLocation(result);
+            return new object[] {
+                    retVal};
+        }
+        
+        private void OnCreateLocationCompleted(object state) {
+            if ((this.CreateLocationCompleted != null)) {
+                InvokeAsyncCompletedEventArgs e = ((InvokeAsyncCompletedEventArgs)(state));
+                this.CreateLocationCompleted(this, new CreateLocationCompletedEventArgs(e.Results, e.Error, e.Cancelled, e.UserState));
+            }
+        }
+        
+        public void CreateLocationAsync(WebAnnotationModel.Service.Location obj, long[] LinkedIDs) {
+            this.CreateLocationAsync(obj, LinkedIDs, null);
+        }
+        
+        public void CreateLocationAsync(WebAnnotationModel.Service.Location obj, long[] LinkedIDs, object userState) {
+            if ((this.onBeginCreateLocationDelegate == null)) {
+                this.onBeginCreateLocationDelegate = new BeginOperationDelegate(this.OnBeginCreateLocation);
+            }
+            if ((this.onEndCreateLocationDelegate == null)) {
+                this.onEndCreateLocationDelegate = new EndOperationDelegate(this.OnEndCreateLocation);
+            }
+            if ((this.onCreateLocationCompletedDelegate == null)) {
+                this.onCreateLocationCompletedDelegate = new System.Threading.SendOrPostCallback(this.OnCreateLocationCompleted);
+            }
+            base.InvokeAsync(this.onBeginCreateLocationDelegate, new object[] {
+                        obj,
+                        LinkedIDs}, this.onEndCreateLocationDelegate, this.onCreateLocationCompletedDelegate, userState);
+        }
         
         public WebAnnotationModel.Service.Location GetLocationByID(long ID) {
             return base.Channel.GetLocationByID(ID);
@@ -3819,6 +4057,56 @@ namespace WebAnnotationModel.Service {
             base.InvokeAsync(this.onBeginGetLastModifiedLocationDelegate, null, this.onEndGetLastModifiedLocationDelegate, this.onGetLastModifiedLocationCompletedDelegate, userState);
         }
         
+        public long[] GetLinkedLocations(long ID) {
+            return base.Channel.GetLinkedLocations(ID);
+        }
+        
+        [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
+        public System.IAsyncResult BeginGetLinkedLocations(long ID, System.AsyncCallback callback, object asyncState) {
+            return base.Channel.BeginGetLinkedLocations(ID, callback, asyncState);
+        }
+        
+        [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
+        public long[] EndGetLinkedLocations(System.IAsyncResult result) {
+            return base.Channel.EndGetLinkedLocations(result);
+        }
+        
+        private System.IAsyncResult OnBeginGetLinkedLocations(object[] inValues, System.AsyncCallback callback, object asyncState) {
+            long ID = ((long)(inValues[0]));
+            return this.BeginGetLinkedLocations(ID, callback, asyncState);
+        }
+        
+        private object[] OnEndGetLinkedLocations(System.IAsyncResult result) {
+            long[] retVal = this.EndGetLinkedLocations(result);
+            return new object[] {
+                    retVal};
+        }
+        
+        private void OnGetLinkedLocationsCompleted(object state) {
+            if ((this.GetLinkedLocationsCompleted != null)) {
+                InvokeAsyncCompletedEventArgs e = ((InvokeAsyncCompletedEventArgs)(state));
+                this.GetLinkedLocationsCompleted(this, new GetLinkedLocationsCompletedEventArgs(e.Results, e.Error, e.Cancelled, e.UserState));
+            }
+        }
+        
+        public void GetLinkedLocationsAsync(long ID) {
+            this.GetLinkedLocationsAsync(ID, null);
+        }
+        
+        public void GetLinkedLocationsAsync(long ID, object userState) {
+            if ((this.onBeginGetLinkedLocationsDelegate == null)) {
+                this.onBeginGetLinkedLocationsDelegate = new BeginOperationDelegate(this.OnBeginGetLinkedLocations);
+            }
+            if ((this.onEndGetLinkedLocationsDelegate == null)) {
+                this.onEndGetLinkedLocationsDelegate = new EndOperationDelegate(this.OnEndGetLinkedLocations);
+            }
+            if ((this.onGetLinkedLocationsCompletedDelegate == null)) {
+                this.onGetLinkedLocationsCompletedDelegate = new System.Threading.SendOrPostCallback(this.OnGetLinkedLocationsCompleted);
+            }
+            base.InvokeAsync(this.onBeginGetLinkedLocationsDelegate, new object[] {
+                        ID}, this.onEndGetLinkedLocationsDelegate, this.onGetLinkedLocationsCompletedDelegate, userState);
+        }
+        
         public WebAnnotationModel.Service.Location[] GetLocationsForSection(out long QueryExecutedTime, long section) {
             return base.Channel.GetLocationsForSection(out QueryExecutedTime, section);
         }
@@ -3869,6 +4157,56 @@ namespace WebAnnotationModel.Service {
             }
             base.InvokeAsync(this.onBeginGetLocationsForSectionDelegate, new object[] {
                         section}, this.onEndGetLocationsForSectionDelegate, this.onGetLocationsForSectionCompletedDelegate, userState);
+        }
+        
+        public WebAnnotationModel.Service.Location[] GetLocationsForStructure(long structureID) {
+            return base.Channel.GetLocationsForStructure(structureID);
+        }
+        
+        [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
+        public System.IAsyncResult BeginGetLocationsForStructure(long structureID, System.AsyncCallback callback, object asyncState) {
+            return base.Channel.BeginGetLocationsForStructure(structureID, callback, asyncState);
+        }
+        
+        [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
+        public WebAnnotationModel.Service.Location[] EndGetLocationsForStructure(System.IAsyncResult result) {
+            return base.Channel.EndGetLocationsForStructure(result);
+        }
+        
+        private System.IAsyncResult OnBeginGetLocationsForStructure(object[] inValues, System.AsyncCallback callback, object asyncState) {
+            long structureID = ((long)(inValues[0]));
+            return this.BeginGetLocationsForStructure(structureID, callback, asyncState);
+        }
+        
+        private object[] OnEndGetLocationsForStructure(System.IAsyncResult result) {
+            WebAnnotationModel.Service.Location[] retVal = this.EndGetLocationsForStructure(result);
+            return new object[] {
+                    retVal};
+        }
+        
+        private void OnGetLocationsForStructureCompleted(object state) {
+            if ((this.GetLocationsForStructureCompleted != null)) {
+                InvokeAsyncCompletedEventArgs e = ((InvokeAsyncCompletedEventArgs)(state));
+                this.GetLocationsForStructureCompleted(this, new GetLocationsForStructureCompletedEventArgs(e.Results, e.Error, e.Cancelled, e.UserState));
+            }
+        }
+        
+        public void GetLocationsForStructureAsync(long structureID) {
+            this.GetLocationsForStructureAsync(structureID, null);
+        }
+        
+        public void GetLocationsForStructureAsync(long structureID, object userState) {
+            if ((this.onBeginGetLocationsForStructureDelegate == null)) {
+                this.onBeginGetLocationsForStructureDelegate = new BeginOperationDelegate(this.OnBeginGetLocationsForStructure);
+            }
+            if ((this.onEndGetLocationsForStructureDelegate == null)) {
+                this.onEndGetLocationsForStructureDelegate = new EndOperationDelegate(this.OnEndGetLocationsForStructure);
+            }
+            if ((this.onGetLocationsForStructureCompletedDelegate == null)) {
+                this.onGetLocationsForStructureCompletedDelegate = new System.Threading.SendOrPostCallback(this.OnGetLocationsForStructureCompleted);
+            }
+            base.InvokeAsync(this.onBeginGetLocationsForStructureDelegate, new object[] {
+                        structureID}, this.onEndGetLocationsForStructureDelegate, this.onGetLocationsForStructureCompletedDelegate, userState);
         }
         
         public WebAnnotationModel.Service.Location[] GetLocationChanges(out long QueryExecutedTime, out long[] DeletedIDs, long section, long ModifiedAfterThisTime) {

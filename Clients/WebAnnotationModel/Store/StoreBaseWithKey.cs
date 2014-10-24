@@ -104,12 +104,22 @@ namespace WebAnnotationModel
                                                                 GetObjectBySectionCallbackState state, 
                                                                 IAsyncResult result);
 
-        #endregion
 
         /// <summary>
-        /// Create a local instance of a new item in the store
-        /// This item is not sent to the server until save is 
-        /// called.
+        /// Update the server with the new values
+        /// </summary>
+        /// <param name="proxy"></param>
+        /// <param name="objects"></param>
+        /// <returns></returns>
+        protected abstract KEY[] ProxyUpdate(PROXY proxy, WCFOBJECT[] objects);
+
+        #endregion
+
+
+
+        /// <summary>
+        /// Add an item to the store and send notification events
+        /// The item should already exist on the server
         /// 
         /// Each store took a different set of parameters so I removed this, but it belongs here in spirit
         /// </summary>
@@ -118,10 +128,32 @@ namespace WebAnnotationModel
         public override OBJECT Add(OBJECT obj)
         {
             //Default implementation
-            InternalAdd(obj);
-            ChangedObjects.TryAdd(obj.ID, obj);
-            return obj; 
+            ChangeInventory<OBJECT> inventory = InternalAdd(obj);
+            CallOnCollectionChanged(inventory);
+            if(inventory.ObjectsInStore.Count > 0)
+            {
+                return inventory.ObjectsInStore[0];
+            }
+
+            return null;
         }
+
+        /// <summary>
+        /// Add an item to the store and send notification events
+        /// The item should already exist on the server
+        /// 
+        /// Each store took a different set of parameters so I removed this, but it belongs here in spirit
+        /// </summary>
+        /// <param name="obj"></param>
+        /// <returns></returns>
+        public override ICollection<OBJECT> Add(ICollection<OBJECT> objs)
+        {
+            //Default implementation
+            ChangeInventory<OBJECT> inventory = InternalAdd(objs.ToArray());
+            CallOnCollectionChanged(inventory);
+            return inventory.ObjectsInStore;
+        }
+         
 
         /// <summary>
         /// Remove the passed object from the store. The item will be
@@ -135,8 +167,11 @@ namespace WebAnnotationModel
             obj.DBAction = DBACTION.DELETE;
             InternalDelete(obj.ID);
             ChangedObjects.TryAdd(obj.ID, obj);
+            CallOnCollectionChangedForDelete(new OBJECT[] { obj });
             return true; 
         }
+
+
 
         
         #region Internal Add/Update/Remove methods
@@ -151,12 +186,10 @@ namespace WebAnnotationModel
         /// </summary>
         /// <param name="updateObj"></param>
         /// <returns></returns>
-        internal OBJECT InternalAdd(OBJECT newObj)
+        protected ChangeInventory<OBJECT> InternalAdd(OBJECT newObj)
         {
-            OBJECT[] retVal = InternalAdd(new OBJECT[] { newObj });
-            if (retVal != null && retVal.Length > 0)
-                return retVal[0];
-            return null; 
+            ChangeInventory<OBJECT> retVal = InternalAdd(new OBJECT[] { newObj });
+            return retVal;
         }
 
         /// <summary>
@@ -187,9 +220,24 @@ namespace WebAnnotationModel
         /// </summary>
         /// <param name="updateObj"></param>
         /// <returns></returns>
-        internal void InternalDelete(KEY ID)
+        protected OBJECT InternalDelete(KEY ID)
         {
-            InternalDelete(new KEY[] { ID });
+            List<OBJECT> listDeleted = InternalDelete(new KEY[] { ID });
+            if (listDeleted.Count == 0)
+                return null;
+
+            return listDeleted[0]; 
+        }
+
+
+        /// <summary>
+        /// Replace the object entirely with the new object
+        /// </summary>
+        /// <param name="ID"></param>
+        /// <param name="newObj"></param>
+        protected ChangeInventory<OBJECT> InternalReplace(KEY ID, OBJECT newObj)
+        {
+            return InternalReplace(new KEY[] { ID }, new OBJECT[] { newObj });
         }
 
         /*
@@ -293,41 +341,51 @@ namespace WebAnnotationModel
                 {
                     newObj = new OBJECT();
                     newObj.Synch(data);
-                    newObj = InternalAdd(newObj);
-
- //                   CallOnAllUpdatesCompleted(new OnAllUpdatesCompletedEventArgs(new OBJECT[] { newObj }));
+                    newObj = Add(newObj);
+                     
                 }
 
                 return newObj;
             }
         }
 
-        public List<OBJECT> GetObjectsByIDs(KEY[] IDs, bool AskServer)
+        /// <summary>
+        /// Get objects with the specified ID.  Change notifications are sent for objects fetched from server.
+        /// </summary>
+        /// <param name="IDs"></param>
+        /// <param name="AskServer"></param>
+        /// <returns></returns>
+        public List<OBJECT> GetObjectsByIDs(ICollection<KEY> IDs, bool AskServer)
         {
+            ChangeInventory<OBJECT> inventory = InternalGetObjectsByIDs(IDs, AskServer);
+
+            CallOnCollectionChanged(inventory);
+
+            return inventory.ObjectsInStore;
+        }
+         
+
+        /// <summary>
+        /// Does not fire collection change events
+        /// </summary>
+        /// <param name="IDs"></param>
+        /// <param name="AskServer"></param>
+        /// <returns></returns>
+        protected ChangeInventory<OBJECT> InternalGetObjectsByIDs(ICollection<KEY> IDs, bool AskServer)
+        {
+            //Objects not cached locally
+            List<KEY> listRemoteObjs;
 
             //Objects we've already fetched
-            List<OBJECT> listObjs = new List<OBJECT>(IDs.Length);
-
-            //Objects not cached locally
-            List<KEY> listRemoteObjs = new List<KEY>(IDs.Length);
-
-            foreach (KEY ID in IDs)
-            {
-                OBJECT obj = null;
-                bool Success = IDToObject.TryGetValue(ID, out obj);
-                if (Success)
-                {
-                    listObjs.Add(obj);
-                }
-                else
-                {
-                    listRemoteObjs.Add(ID);
-                }
-            }
+            List<OBJECT> listLocalObjs = GetLocalObjects(IDs, out listRemoteObjs);
 
             if (!AskServer || listRemoteObjs.Count == 0)
-                return listObjs;
-
+            {
+                ChangeInventory<OBJECT> inventory = new ChangeInventory<OBJECT>(IDs.Count);
+                inventory.UnchangedObjects.AddRange(listLocalObjs);
+                return inventory;
+            }
+                
             //If not check if the server knows what we're asking for
             WCFOBJECT[] listServerObjs = null;
             PROXY proxy = null;
@@ -353,13 +411,41 @@ namespace WebAnnotationModel
                 }
             }
 
+            ChangeInventory<OBJECT> server_inventory = ParseQuery(listServerObjs, new KEY[0], null);
 
-            OBJECT[] serverObjs = ParseQuery(listServerObjs, new KEY[0], null);
+            server_inventory.UnchangedObjects.AddRange(listLocalObjs);
+             
+            return server_inventory;
+        } 
 
-            listObjs.AddRange(serverObjs); 
 
-            return listObjs;
+        /// <summary>
+        /// Returns a list of objects that we have locally and a list of objects which are not local
+        /// </summary>
+        /// <param name="IDs"></param>
+        /// <param name="listKeysNotFound"></param>
+        /// <returns></returns>
+        private List<OBJECT> GetLocalObjects(ICollection<KEY> IDs, out List<KEY> listKeysNotFound)
+        {
+            List<OBJECT> localObjs = new List<OBJECT>(IDs.Count);
+            listKeysNotFound = new List<KEY>(IDs.Count);
+            foreach (KEY ID in IDs)
+            {
+                OBJECT obj = null;
+                bool Success = IDToObject.TryGetValue(ID, out obj);
+                if (Success)
+                {
+                    localObjs.Add(obj);
+                }
+                else
+                {
+                    listKeysNotFound.Add(ID);
+                }
+            }
+
+            return localObjs;
         }
+
 
         public abstract ConcurrentDictionary<KEY, OBJECT> GetLocalObjectsForSection(long SectionNumber);
 
@@ -402,7 +488,9 @@ namespace WebAnnotationModel
                 }
             }
 
-            ParseQuery(objects, deleted_objects, state);
+            ChangeInventory<OBJECT> inventory = ParseQuery(objects, deleted_objects, state);
+
+            CallOnCollectionChanged(inventory);
 
             return GetLocalObjectsForSection(SectionNumber);
         }
@@ -415,7 +503,6 @@ namespace WebAnnotationModel
         /// </summary>
         /// <param name="SectionNumber"></param>
         /// <returns></returns>
-
         public virtual MixedLocalAndRemoteQueryResults<KEY, OBJECT> GetObjectsForSectionAsynch(long SectionNumber)
         {
             GetObjectBySectionCallbackState requestState;
@@ -542,7 +629,9 @@ namespace WebAnnotationModel
             //Don't update if we've got results from a query executed after this one
             if (TrySetLastQueryTimeForSection(state.SectionNumber, TicksAtQueryExecute, state.LastQueryExecutedTime))
             {
-                ParseQuery(objs, DeletedLocations, state);
+                ChangeInventory<OBJECT> inventory = ParseQuery(objs, DeletedLocations, state);
+
+                CallOnCollectionChanged(inventory); 
 
                 DateTime TraceParseEnd = DateTime.Now; 
                   
@@ -560,7 +649,7 @@ namespace WebAnnotationModel
         /// <param name="locations">Objects which have been added or modified since the last query</param>
         /// <param name="DeletedLocations">Objects which have been deleted since the last query</param>
         /// <param name="state">Reports section number of query, Nullable</param>
-        protected virtual OBJECT[] ParseQuery(WCFOBJECT[] locations, KEY[] DeletedLocations, GetObjectBySectionCallbackState state)
+        protected virtual ChangeInventory<OBJECT> ParseQuery(WCFOBJECT[] locations, KEY[] DeletedLocations, GetObjectBySectionCallbackState state)
         {
             OBJECT[] listObj = new OBJECT[0];
                        
@@ -577,9 +666,8 @@ namespace WebAnnotationModel
                 listNewObj[i] = newObj;
             });
 
-            listObj = InternalAdd(listNewObj);
-            return listObj; 
-        }
+            return InternalAdd(listNewObj);
+        } 
 
         #endregion
 
@@ -736,6 +824,7 @@ namespace WebAnnotationModel
                 return true;
 
             List<WCFOBJECT> changedDBObj = new List<WCFOBJECT>(changedObjects.Count);
+            KEY[] keys;
 
             try
             {
@@ -744,12 +833,13 @@ namespace WebAnnotationModel
                     changedDBObj.Add(dbObj.GetData()); 
                 }
 
-                PROXY proxy = CreateProxy();
-                proxy.Open();
-
+                
+                PROXY proxy = null; 
                 try
                 {
-                    ProxyUpdate(proxy, changedDBObj.ToArray());
+                    proxy = CreateProxy();
+                    proxy.Open();
+                    keys = ProxyUpdate(proxy, changedDBObj.ToArray());
                 }
                 catch (Exception e)
                 {
@@ -758,9 +848,11 @@ namespace WebAnnotationModel
                 }
                 finally
                 {
-                    proxy.Close();
+                    if(proxy != null)
+                        proxy.Close();
                 }
 
+                List<OBJECT> addObjList = new List<OBJECT>(changedDBObj.Count);
                 List<KEY> delObjList = new List<KEY>(changedDBObj.Count);
 
                 //Reset DBAction of each object, fire events
@@ -774,10 +866,13 @@ namespace WebAnnotationModel
                     if (keyObj == null)
                         continue;
 
+                    OBJECT obj = IDToObject[keys[iObj]];
+
                     switch (lastAction)
                     {
                         case DBACTION.INSERT:
                             //keyObj.FireAfterSaveEvent();
+                            addObjList.Add(obj); 
                             break; 
                         case DBACTION.UPDATE:
                             //keyObj.FireAfterSaveEvent();
@@ -790,7 +885,9 @@ namespace WebAnnotationModel
                     }
                 }
 
-                InternalDelete(delObjList.ToArray()); 
+                ChangeInventory<OBJECT> inventory = InternalAdd(addObjList.ToArray());
+                inventory.DeletedObjects.AddRange(InternalDelete(delObjList.ToArray()));
+                CallOnCollectionChanged(inventory); 
             }
             catch (FaultException )
             {
@@ -824,7 +921,22 @@ namespace WebAnnotationModel
             return true;
         }
 
-        internal virtual OBJECT[] InternalAdd(OBJECT[] newObjs)
+        /// <summary>
+        /// A workaround used when another store has objects for us to add.  In this case we are resposible for firing events and should
+        /// replace any passed objects with local copies if they already existed
+        /// </summary>
+        /// <param name="newObjs"></param>
+        /// <returns></returns>
+        internal List<OBJECT> AddFromFriend(OBJECT[] newObjs)
+        {
+            ChangeInventory<OBJECT> inventory = InternalAdd(newObjs);
+
+            CallOnCollectionChanged(inventory);
+
+            return inventory.ObjectsInStore;
+        }
+
+        protected virtual ChangeInventory<OBJECT> InternalAdd(OBJECT[] newObjs)
         {
             List<OBJECT> listAddedObj = new List<OBJECT>(newObjs.Length);
 
@@ -835,30 +947,30 @@ namespace WebAnnotationModel
             {
                 OBJECT newObj = newObjs[iObj];
 
-                bool added = IDToObject.TryAdd(newObj.ID, newObj);
+                bool added = TryAddObject(newObj);
                 if (false == added)
                 {
                     listUpdateObj.Add(newObj);
                 }
                 else
                 {
-                    listAddedObj.Add(newObj);
-                    newObj.PropertyChanged += this.OnOBJECTPropertyChangedEventHandler;
+                    listAddedObj.Add(newObj); 
                 }
             }
 
-            CallOnCollectionChangedForAdd(listAddedObj);
+            ChangeInventory<OBJECT> changeInventory = new ChangeInventory<OBJECT>(newObjs.Length);
+
+            changeInventory.AddedObjects = listAddedObj; 
 
             if (listUpdateObj.Count > 0)
             {
-                OBJECT[] links = InternalUpdate(listUpdateObj.ToArray());
-                listAddedObj.AddRange(links);
+                changeInventory.UpdatedObjects.AddRange(InternalUpdate(listUpdateObj.ToArray()));
             }
 
-            return listAddedObj.ToArray();
+            return changeInventory;
         }
 
-        internal virtual OBJECT[] InternalUpdate(OBJECT[] updateObjs)
+        protected virtual OBJECT[] InternalUpdate(OBJECT[] updateObjs)
         {
             List<OBJECT> listUpdatedObjs = new List<OBJECT>(updateObjs.Length);
             //List<OBJECT> listOldObjs = new List<OBJECT>(updateObjs.Length);
@@ -906,31 +1018,115 @@ namespace WebAnnotationModel
             return listUpdatedObjs.ToArray();
         }
 
-        internal virtual void InternalDelete(KEY[] Keys)
+        
+        /// <summary>
+        /// Delete the specified keys.  Return the objects removed from the store.
+        /// </summary>
+        /// <param name="Keys"></param>
+        /// <returns></returns>
+        protected virtual List<OBJECT> InternalDelete(KEY[] Keys)
         {
             List<OBJECT> listDeleted = new List<OBJECT>(Keys.Length);
 
             for (int iObj = 0; iObj < Keys.Length; iObj++)
             {
                 KEY Key = Keys[iObj];
-                OBJECT existingObj;
-                bool success = IDToObject.TryRemove(Key, out existingObj);
-
-                if (success)
+                OBJECT removedObj = TryRemoveObject(Key);
+                if(removedObj != null)
                 {
-                    listDeleted.Add(existingObj);
-                    existingObj.PropertyChanged -= this.OnOBJECTPropertyChangedEventHandler;
-                    //existingObj.Dispose(); 
+                    listDeleted.Add(removedObj);
+                } 
+            }
+
+            //CallOnCollectionChangedForDelete(listDeleted);
+
+            return listDeleted;
+        }
+
+        protected virtual ChangeInventory<OBJECT> InternalReplace(KEY[] Keys, OBJECT[] newObjs)
+        {
+            ChangeInventory<OBJECT> output = new ChangeInventory<OBJECT>(Keys.Length);
+            Debug.Assert(Keys.Length == newObjs.Length);
+            List<KEY> listReplacedObjects = new List<KEY>(Keys.Length);
+            List<OBJECT> listAddedObjects = new List<OBJECT>();
+            for (int iObj = 0; iObj < Keys.Length; iObj++)
+            {
+                KEY Key = Keys[iObj];
+                OBJECT inserted_object = newObjs[iObj];
+                bool ObjectAdded;
+                OBJECT old_object = TryReplaceObject(Key, inserted_object, out ObjectAdded);
+                if(old_object != null && ObjectAdded)
+                {
+                    //Everything is OK
+                    output.OldObjectsReplaced.Add(old_object);
+                    output.NewObjectReplacements.Add(inserted_object);
+                }
+                else if(ObjectAdded)
+                {
+                    listAddedObjects.Add(inserted_object);
                 }
             }
 
-            if (listDeleted.Count > 0)
-            {
-                OBJECT[] listCopy = new OBJECT[listDeleted.Count];
-                listDeleted.CopyTo(listCopy);
+            return output;
 
-                CallOnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, listCopy));
+            //CallOnCollectionChangedForReplace(listReplacedObjects, newObjs);
+            //CallOnCollectionChangedForAdd(listAddedObjects); 
+        }
+
+
+        /// <summary>
+        /// Add the object to our collection.  Return true if the object was not already in the collection. 
+        /// PropertyChanged events should be subscribed to.
+        /// </summary>
+        /// <param name="newObj"></param>
+        /// <returns></returns>
+        protected virtual bool TryAddObject(OBJECT newObj)
+        {
+            bool added = IDToObject.TryAdd(newObj.ID, newObj);
+            if (added)
+            { 
+                newObj.PropertyChanged += this.OnOBJECTPropertyChangedEventHandler;
             }
+
+            return added; 
+        }
+
+        /// <summary>
+        /// Remove an object from IDToObject.  Delete event subscriptions on the object.
+        /// Return object reference if the object was found an removed.
+        /// </summary>
+        protected virtual OBJECT TryRemoveObject(KEY key)
+        {
+            OBJECT existingObj;
+            bool success = IDToObject.TryRemove(key, out existingObj);
+            if (success)
+            {
+                existingObj.PropertyChanged -= this.OnOBJECTPropertyChangedEventHandler;
+                //existingObj.Dispose(); 
+            }
+            else
+            {
+                existingObj = null; 
+            }
+
+            return existingObj;
+        }
+
+        /// <summary>
+        /// Replace an existing object with a new object.
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="newObj"></param>
+        /// /// <param name="ObjectAdded">Return true if the new object was added</param>
+        /// <returns></returns>
+        protected virtual OBJECT TryReplaceObject(KEY key, OBJECT newObj, out bool ObjectAdded)
+        {
+            //InternalUpdate(keyObj); 
+            //Remove from our old spot in the database 
+            OBJECT ExistingObj = TryRemoveObject(key);
+            ObjectAdded = TryAddObject(newObj);
+
+            return ExistingObj;
         }
     }
 }

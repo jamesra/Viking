@@ -30,7 +30,7 @@ namespace WebAnnotationModel
                 proxy.ClientCredentials.UserName.UserName = State.UserCredentials.UserName;
                 proxy.ClientCredentials.UserName.Password = State.UserCredentials.Password;
             }
-            catch (Exception e)
+            catch
             {
                 if(proxy != null)
                 {
@@ -139,6 +139,32 @@ namespace WebAnnotationModel
  	        LoadStructureTypes();
         }
 
+
+        public StructureTypeObj Create(StructureTypeObj new_type)
+        {
+            AnnotateStructureTypesClient proxy = null;
+            StructureTypeObj created_structuretype = null;
+            try
+            {
+                proxy = CreateProxy();
+                StructureType created_db_structuretype = proxy.CreateStructureType(new_type.GetData());
+                if (created_db_structuretype == null)
+                    return null;
+
+                created_structuretype = new StructureTypeObj(created_db_structuretype);
+
+                Add(created_structuretype);
+
+                return created_structuretype;
+            }
+            finally
+            {
+                if (proxy != null)
+                    proxy.Close();
+            }
+
+        }
+
         /// <summary>
         /// At startup we load the entire structure types table since it is fairly static
         /// </summary>
@@ -175,7 +201,8 @@ namespace WebAnnotationModel
                 //InternalAdd(typeObj, false); 
             }
 
-            InternalAdd(objList, false); 
+            ChangeInventory<StructureTypeObj> inventory = InternalAdd(objList, false);
+            CallOnCollectionChanged(inventory); 
             //Populate Parent/Child relationships
 
             /*
@@ -186,43 +213,5 @@ namespace WebAnnotationModel
              */
         }
 
-        public StructureObj[] GetStructuresForType(long StructureTypeID)
-        {
-            Structure[] data = null;
-            AnnotateStructureTypesClient proxy = null;
-            try
-            {
-                proxy = CreateProxy();
-                proxy.Open();
-
-                data = proxy.GetStructuresForType(StructureTypeID);
-            }
-            catch (Exception e)
-            {
-                ShowStandardExceptionMessage(e);
-                data = null;
-            }
-            finally
-            {
-                if (proxy != null)
-                    proxy.Close();
-            }
-
-            if (null == data)
-                return new StructureObj[0];
-
-            List<StructureObj> listStructures = new List<StructureObj>(data.Length);
-            foreach (Structure s in data)
-            {
-                Debug.Assert(s != null);
-
-                StructureObj newObj = new StructureObj(s);
-                listStructures.Add(newObj);
-            }
-
-            StructureObj[] newObjs = Store.Structures.InternalAdd(listStructures.ToArray()); //Add might return an existing object, which we should use instead
-
-            return newObjs;
-        }
     }
 }

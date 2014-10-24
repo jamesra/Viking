@@ -67,6 +67,9 @@ namespace WebAnnotationModel
         public override StructureLinkKey ID
         {
             get { return new StructureLinkKey(this);  }
+            internal set { Data.SourceID = value.SourceID;
+                           Data.TargetID = value.TargetID;
+            }
         }
 
         protected override int GenerateHashCode()

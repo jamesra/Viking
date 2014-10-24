@@ -34,10 +34,10 @@ namespace WebAnnotationModel
             return proxy;
         }
 
-        protected override long[] ProxyUpdate(AnnotateStructuresClient proxy, StructureLink[] linkObjs)
+        protected override StructureLinkKey[] ProxyUpdate(AnnotateStructuresClient proxy, StructureLink[] linkObjs)
         {
             proxy.UpdateStructureLinks(linkObjs);
-            return new long[0];
+            return new StructureLinkKey[0];
         }
         
         protected override StructureLink ProxyGetByID(AnnotateStructuresClient proxy, StructureLinkKey ID)
@@ -70,7 +70,27 @@ namespace WebAnnotationModel
             throw new NotImplementedException();
         }
 
-        internal override StructureLinkObj[] InternalAdd(StructureLinkObj[] newObjs)
+        public StructureLinkObj Create(StructureLinkObj link)
+        {
+            AnnotateStructuresClient proxy = null;
+            try
+            {
+                proxy = CreateProxy();
+                StructureLink dblink = proxy.CreateStructureLink(link.GetData());
+                StructureLinkObj created_link = new StructureLinkObj(dblink);
+                Add(created_link);
+                return created_link; 
+            }
+            finally
+            {
+                if (proxy != null)
+                {
+                    proxy.Close();
+                }
+            }
+        }
+
+        protected override ChangeInventory<StructureLinkObj> InternalAdd(StructureLinkObj[] newObjs)
         {
             List<StructureLinkObj> ValidObjs = new List<StructureLinkObj>(newObjs.Length);
 
@@ -80,8 +100,8 @@ namespace WebAnnotationModel
                 if (link.SourceID == link.TargetID)
                     continue; 
 
-                StructureObj SourceObj = Store.Structures.GetObjectByID(link.SourceID);
-                StructureObj TargetObj = Store.Structures.GetObjectByID(link.TargetID);
+                StructureObj SourceObj = Store.Structures.GetObjectByID(link.SourceID, false);
+                StructureObj TargetObj = Store.Structures.GetObjectByID(link.TargetID, false);
 
                 if (SourceObj != null)
                     SourceObj.AddLink(link);
@@ -95,11 +115,11 @@ namespace WebAnnotationModel
             return base.InternalAdd(ValidObjs.ToArray());
         }
 
-        internal override void InternalDelete(StructureLinkKey[] linkKeys)
+        protected override List<StructureLinkObj> InternalDelete(StructureLinkKey[] linkKeys)
         {
             foreach (StructureLinkKey key in linkKeys)
             {
-                StructureLinkObj link = Store.StructureLinks.GetObjectByID(key);
+                StructureLinkObj link = Store.StructureLinks.GetObjectByID(key, false);
                 if (link == null)
                     continue; 
 
@@ -113,7 +133,7 @@ namespace WebAnnotationModel
                     TargetObj.RemoveLink(link);
             }
 
-            base.InternalDelete(linkKeys);
+            return base.InternalDelete(linkKeys);
         }
     }
 }

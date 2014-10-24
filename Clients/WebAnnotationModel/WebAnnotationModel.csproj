@@ -22,7 +22,7 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <CodeAnalysisRuleSet>..\Viking\Main.ruleset</CodeAnalysisRuleSet>
+    <CodeAnalysisRuleSet>..\Main.ruleset</CodeAnalysisRuleSet>
     <RunCodeAnalysis>false</RunCodeAnalysis>
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
@@ -66,7 +66,6 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="EventArgs.cs" />
-    <Compile Include="LinkStore.cs" />
     <Compile Include="Objects\Attribute.cs" />
     <Compile Include="Objects\LocationLinkObj.cs" />
     <Compile Include="Store\LocationLinkStore.cs" />
@@ -105,6 +104,8 @@
     <None Include="ClassDiagram.cd" />
     <None Include="ClassDiagram1.cd" />
     <None Include="ClassDiagram2.cd" />
+    <None Include="ClassDiagram3.cd" />
+    <None Include="ClassDiagram4.cd" />
     <None Include="Service References\Service\Annotation.Service.GraphClasses11.xsd">
       <SubType>Designer</SubType>
     </None>
@@ -123,6 +124,9 @@
     </None>
     <None Include="Service References\Service\service33.xsd">
       <SubType>Designer</SubType>
+    </None>
+    <None Include="Service References\Service\WebAnnotationModel.Service.CreateStructureRetval.datasource">
+      <DependentUpon>Reference.svcmap</DependentUpon>
     </None>
     <None Include="Service References\Service\WebAnnotationModel.Service.Graphx.datasource">
       <DependentUpon>Reference.svcmap</DependentUpon>

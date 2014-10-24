@@ -54,6 +54,7 @@ namespace WebAnnotationModel
             return Save(changed);
         }
 
+        
 
         /// <summary>
         /// Save all changes to locations, returns true if the method completed without errors, otherwise false
@@ -67,6 +68,7 @@ namespace WebAnnotationModel
             if (input.Count == 0)
                 return true;
 
+            ChangeInventory<OBJECT> inventory;
             List<OBJECT> output = new List<OBJECT>(input.Count);
             List<WCFOBJECT> changedDBObj = null; 
             try
@@ -81,7 +83,7 @@ namespace WebAnnotationModel
                                 
                 PROXY proxy =null;
                     
-                long[] newIDs = new long[0];
+                KEY[] newIDs = new KEY[0];
                 try
                 {
                     proxy = CreateProxy();
@@ -97,7 +99,7 @@ namespace WebAnnotationModel
                 }
                 finally
                 {
-                    if (proxy == null)
+                    if (proxy != null)
                     {
                         proxy.Close();
                         proxy = null;
@@ -106,72 +108,7 @@ namespace WebAnnotationModel
 
                 Debug.Assert(changedDBObj.Count == newIDs.Length);
 
-                List<OBJECT> newObjList = new List<OBJECT>(changedDBObj.Count);
-                List<OBJECT> updateObjList = new List<OBJECT>(changedDBObj.Count);
-                List<KEY> delObjList = new List<KEY>(changedDBObj.Count);
-
-                //Update ID's of new objects
-                for (int iObj = 0; iObj < input.Count; iObj++)
-                {
-                    WCFOBJECT data = changedDBObj[iObj];
-                    //I have to do this because WCF does not marshal the templates for the WCFObject types
-                    //This should be fairly future proof
-                    WCFObjBaseWithKey<KEY, WCFOBJECT> keyObj = input[iObj]; 
-                    if (IDToObject.ContainsKey(keyObj.ID) == false)
-                    {
-                        data.DBAction = DBACTION.NONE;
-                        continue;
-                    }
-
-                    OBJECT obj = IDToObject[keyObj.ID];                        
-
-                    switch (data.DBAction)
-                    {
-                        case DBACTION.INSERT:
-                            if (newIDs.Length > iObj)
-                            {
-                                //InternalUpdate(keyObj); 
-                                //Remove from our old spot in the database
-                                InternalDelete(keyObj.ID);
-
-                                //Update the ID of the object
-                                keyObj.GetData().ID = newIDs[iObj];
-
-                                //Insert in the new correct location
-                                //newobj = InternalAdd(obj);
-                                newObjList.Add(obj); 
-                            }
-
-                            // obj.FireAfterSaveEvent();
-                            break;
-                        case DBACTION.UPDATE:
-                            //newobj = InternalUpdate(obj);
-                            updateObjList.Add(obj); 
-                            // obj.FireAfterSaveEvent();
-                            break;
-
-                        case DBACTION.DELETE:
-                            //Remove from our old spot in the database
-                            delObjList.Add(obj.ID);
-                            //InternalDelete(obj.ID);
-                            // obj.FireAfterDeleteEvent();
-                            break;
-
-                        default:
-                            break;
-                    }
-
-                    data.DBAction = DBACTION.NONE;
-                    // if (ChangedObjects.ContainsKey(keyObj.ID))
-                    // {
-                    //     OBJECT Trash; 
-                    //     ChangedObjects.TryRemove(keyObj.ID, out Trash); 
-                    // }
-                }
-
-                InternalDelete(delObjList.ToArray());
-                output.AddRange(InternalUpdate(updateObjList.ToArray()));
-                output.AddRange(InternalAdd(newObjList.ToArray()));
+                inventory = ProcessUpdateResults(newIDs, input, changedDBObj);
             }
             catch (FaultException )
             {
@@ -179,6 +116,7 @@ namespace WebAnnotationModel
 
                 if (changedDBObj != null)
                 {
+                    List<OBJECT> listDeleted = new List<OBJECT>(changedDBObj.Count);
                     //Update ID's of new objects
                     for (int iObj = 0; iObj < changedDBObj.Count; iObj++)
                     {
@@ -202,7 +140,7 @@ namespace WebAnnotationModel
                         {
                             case DBACTION.INSERT:
                                 //Remove from our old spot in the database
-                                InternalDelete(keyObj.ID);
+                                listDeleted.Add(InternalDelete(keyObj.ID));
 
                                 break;
 
@@ -216,15 +154,132 @@ namespace WebAnnotationModel
 
                         data.DBAction = DBACTION.NONE;
                     }
+
+                    CallOnCollectionChangedForDelete(listDeleted);
                 }
 
                 //If we caught an exception return false
                 return false;
             }
 
+            if(inventory != null)
+            {
+                CallOnCollectionChanged(inventory);
+            }
+
             //CallOnAllUpdatesCompleted(new OnAllUpdatesCompletedEventArgs(output.ToArray()));
 
             return true;
         }
+
+
+        protected ChangeInventory<OBJECT> ProcessUpdateResults(KEY[] newIDs, List<OBJECT> input, List<WCFOBJECT> changedDBObj)
+        {
+            List<OBJECT> newObjList = new List<OBJECT>(newIDs.Length);
+            List<OBJECT> updateObjList = new List<OBJECT>(changedDBObj.Count);
+            List<KEY> delObjList = new List<KEY>(changedDBObj.Count);
+
+
+            List<KEY> replacedKeysList = new List<KEY>(newIDs.Length);
+            List<OBJECT> replacedObjList = new List<OBJECT>(newIDs.Length); 
+
+
+            //Update ID's of new objects
+            for (int iObj = 0; iObj < input.Count; iObj++)
+            {
+                WCFOBJECT data = changedDBObj[iObj];
+                //I have to do this because WCF does not marshal the templates for the WCFObject types
+                //This should be fairly future proof
+                WCFObjBaseWithKey<KEY, WCFOBJECT> keyObj = input[iObj];
+                if (IDToObject.ContainsKey(keyObj.ID) == false)
+                {
+                    data.DBAction = DBACTION.NONE;
+                    continue;
+                }
+
+                OBJECT obj = IDToObject[keyObj.ID];
+
+                switch (data.DBAction)
+                {
+                    case DBACTION.INSERT:
+                        if (newIDs.Length > iObj)
+                        {
+                            replacedKeysList.Add(keyObj.ID);
+                            obj.ID = newIDs[iObj]; 
+                            //keyObj.ServerGeneratedID = newIDs[iObj];
+                            //OBJECT objCopy = obj.Clone() as OBJECT;
+                            //objCopy.ID = newIDs[iObj];
+                            replacedObjList.Add(obj);
+                            //keyObj.GetData().ID = newIDs[iObj];
+                            newObjList.Add(obj); 
+                        }
+
+                        // obj.FireAfterSaveEvent();
+                        break;
+                    case DBACTION.UPDATE:
+                        //newobj = InternalUpdate(obj);
+                        updateObjList.Add(obj);
+                        // obj.FireAfterSaveEvent();
+                        break;
+
+                    case DBACTION.DELETE:
+                        //Remove from our old spot in the database
+                        delObjList.Add(obj.ID);
+                        //InternalDelete(obj.ID);
+                        // obj.FireAfterDeleteEvent();
+                        break;
+
+                    default:
+                        break;
+                }
+
+                data.DBAction = DBACTION.NONE;
+                // if (ChangedObjects.ContainsKey(keyObj.ID))
+                // {
+                //     OBJECT Trash; 
+                //     ChangedObjects.TryRemove(keyObj.ID, out Trash); 
+                // }
+            }
+
+            
+            ChangeInventory<OBJECT> output = InternalAdd(newObjList.ToArray());
+            output.UpdatedObjects.AddRange(InternalUpdate(updateObjList.ToArray()) );
+            output.DeletedObjects = InternalDelete(delObjList.ToArray());
+
+            /*
+            if (replacedKeysList.Count > 0)
+            {
+                ChangeInventory<OBJECT> new_objects_for_replacements = InternalGetObjectsByIDs(replacedKeysList, true);
+                ChangeInventory<OBJECT> replacement_output = InternalReplace(replacedKeysList.ToArray(), new_objects_for_replacements.AddedObjects.ToArray());
+                output.Add(replacement_output);
+            }
+            */
+
+            //Fetch the inserted version of our objects from the server
+            //replacementObjList = this.GetObjectsByIDs(replacedKeysList, true);
+            //InternalReplace(replacedKeysList.ToArray(), replacementObjList.ToArray());
+              
+            return output;
+        }
+
+        /// <summary>
+        /// Replace an existing object with a new object.
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="newObj"></param>
+        /// /// <param name="ObjectAdded">Return true if the new object was added</param>
+        /// <returns></returns>
+        protected override OBJECT TryReplaceObject(KEY key, OBJECT newObj, out bool ObjectAdded)
+        {
+            //InternalUpdate(keyObj); 
+            //Remove from our old spot in the database 
+            OBJECT ExistingObj = TryRemoveObject(key);
+            
+            ObjectAdded = TryAddObject(newObj);
+
+            return ExistingObj;
+        }
+
+
     }
 }

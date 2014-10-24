@@ -60,7 +60,7 @@ namespace WebAnnotationModel
             return proxy; 
         }
 
-        protected override long[] ProxyUpdate(AnnotateLocationsClient proxy, LocationLink[] objects)
+        protected override LocationLinkKey[] ProxyUpdate(AnnotateLocationsClient proxy, LocationLink[] objects)
         {
             throw new NotImplementedException();
         }
@@ -88,7 +88,8 @@ namespace WebAnnotationModel
                     }
                 }
                 
-                InternalAdd(new LocationLinkObj(A, B)); 
+                ChangeInventory<LocationLinkObj> inventory = InternalAdd(new LocationLinkObj(A, B));
+                CallOnCollectionChanged(inventory); 
             }
         }
 
@@ -97,6 +98,7 @@ namespace WebAnnotationModel
             //lock (LockObject)
             {
                 AnnotateLocationsClient proxy = null; 
+                LocationLinkObj deletedLink = null;
 
 //                LocationObj AObj = Store.Locations.GetObjectByID(A);
 //                LocationObj BObj = Store.Locations.GetObjectByID(B);
@@ -107,7 +109,7 @@ namespace WebAnnotationModel
                     proxy.Open();
                     proxy.DeleteLocationLink(A, B);
                     
-                    InternalDelete(new LocationLinkKey(A, B));
+                    deletedLink = InternalDelete(new LocationLinkKey(A, B));
                 }
                 catch (Exception e)
                 {
@@ -118,6 +120,11 @@ namespace WebAnnotationModel
                 {
                     if (proxy != null)
                         proxy.Close();
+                }
+
+                if(deletedLink != null)
+                {
+                    CallOnCollectionChangedForDelete(new LocationLinkObj[] { deletedLink });
                 }
             }
         }
@@ -201,7 +208,7 @@ namespace WebAnnotationModel
         /// <param name="locations"></param>
         /// <param name="state"></param>
         /// <param name="DeletedLocations"></param>
-        protected override LocationLinkObj[] ParseQuery(LocationLink[] newLinks,                                            
+        protected override ChangeInventory<LocationLinkObj> ParseQuery(LocationLink[] newLinks,                                            
                                            LocationLinkKey[] DeletedLocations,
                                            GetObjectBySectionCallbackState state)
         {
@@ -230,7 +237,7 @@ namespace WebAnnotationModel
                 return InternalAdd(listNewObj);
             }
 
-            return new LocationLinkObj[0]; 
+            return new ChangeInventory<LocationLinkObj>();
         }
 
         #endregion
@@ -242,7 +249,7 @@ namespace WebAnnotationModel
         /// </summary>
         /// <param name="newObj"></param>
         /// <returns></returns>
-        internal override LocationLinkObj[] InternalAdd(LocationLinkObj[] newObj)
+        protected override ChangeInventory<LocationLinkObj> InternalAdd(LocationLinkObj[] newObj)
         {
             //Make sure the LocationObjects know about the new links we've pulled from the database
             foreach (LocationLinkObj link in newObj)
@@ -268,7 +275,7 @@ namespace WebAnnotationModel
         /// </summary>
         /// <param name="newObjs"></param>
         /// <returns></returns>
-        internal LocationLinkObj[] InternalAdd(IEnumerable<LocationObj> newObjs)
+        protected ChangeInventory<LocationLinkObj> InternalAdd(IEnumerable<LocationObj> newObjs)
         {
             List<LocationLinkObj> links = new List<LocationLinkObj>();
             foreach (LocationObj obj in newObjs)
@@ -283,7 +290,7 @@ namespace WebAnnotationModel
             return InternalAdd(links.ToArray());
         }
 
-        internal override void InternalDelete(LocationLinkKey[] keys)
+        protected override List<LocationLinkObj> InternalDelete(LocationLinkKey[] keys)
         {
             foreach (LocationLinkKey link in keys)
             {
@@ -301,7 +308,7 @@ namespace WebAnnotationModel
             }
 
 
-            base.InternalDelete(keys);
+            return base.InternalDelete(keys);
         }
 
         /// <summary>
@@ -309,7 +316,7 @@ namespace WebAnnotationModel
         /// </summary>
         /// <param name="delObjs"></param>
         /// <returns></returns>
-        internal void InternalDelete(IEnumerable<LocationObj> delObjs)
+        protected List<LocationLinkObj> InternalDelete(IEnumerable<LocationObj> delObjs)
         {
             List<LocationLinkKey> links = new List<LocationLinkKey>();
             foreach (LocationObj obj in delObjs)
@@ -320,7 +327,7 @@ namespace WebAnnotationModel
                 }
             }
 
-            InternalDelete(links.ToArray());
+            return InternalDelete(links.ToArray());
         }
 
         #endregion
@@ -339,19 +346,22 @@ namespace WebAnnotationModel
             switch (e.Action)
             {
                 case NotifyCollectionChangedAction.Add:
-                    InternalAdd(e.NewItems.Cast<LocationObj>());
+                    ChangeInventory<LocationLinkObj> inventory = InternalAdd(e.NewItems.Cast<LocationObj>());
+                    CallOnCollectionChanged(inventory);
                     break;
-
+                /*
                 case NotifyCollectionChangedAction.Replace:
                     // Debug.Assert(false, "Locations links are created or deleted, but never replaced...");
                     //TODO: We don't care about updates, but since links come with locations this means we will miss new links from the server
                     //unless we query for them directly,
-                    //InternalDelete(e.OldItems.Cast<LocationObj>());
-                    //InternalAdd(e.NewItems.Cast<LocationObj>());
+                    InternalDelete(e.OldItems.Cast<LocationObj>());
+                    InternalAdd(e.NewItems.Cast<LocationObj>());
                     break;
+                 */
 
                 case NotifyCollectionChangedAction.Remove:
-                    InternalDelete(e.OldItems.Cast<LocationObj>());
+                    List<LocationLinkObj> listDeleted = InternalDelete(e.OldItems.Cast<LocationObj>());
+                    CallOnCollectionChangedForDelete(listDeleted); 
                     break;
 
                 default:

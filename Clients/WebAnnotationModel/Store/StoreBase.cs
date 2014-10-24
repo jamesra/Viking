@@ -27,6 +27,9 @@ namespace WebAnnotationModel
             this.KnownObjects = known_objects; 
         }
     }
+
+    
+
     /// <summary>
     /// This base class implements the basic functionality to talk to a WCF Service
     /// </summary>
@@ -36,6 +39,96 @@ namespace WebAnnotationModel
         where WCFOBJECT : DataObject, new()
         where OBJECT : WCFObjBase<WCFOBJECT>, new()
     {
+        /// <summary>
+        /// Groups the objects according to how the store saw them during an operation.  Used to 
+        /// store up all changes so a single set of collection changed events can be sent
+        /// </summary>
+        /// <typeparam name="OBJECT"></typeparam>
+        protected class ChangeInventory<OBJECT>
+        {
+            /// <summary>
+            /// Objects freshly added to the store
+            /// </summary>
+            public List<OBJECT> AddedObjects;
+
+            /// <summary>
+            /// Objects that existed in the store but had some properties updated
+            /// </summary>
+            public List<OBJECT> UpdatedObjects;
+
+            /// <summary>
+            /// Objects we deleted from the store
+            /// </summary>
+            public List<OBJECT> DeletedObjects;
+
+            /// <summary>
+            /// An object that was in the store but was removed and replaced with a new object
+            /// </summary>
+            public List<OBJECT> OldObjectsReplaced;
+
+            /// <summary>
+            /// Objects that are now in the store and replaced an object that existed previously, common when server sends a new ID on update
+            /// </summary>
+            public List<OBJECT> NewObjectReplacements;
+
+            /// <summary>
+            /// Objects that were found already existing in the store and required no updates
+            /// </summary>
+            public List<OBJECT> UnchangedObjects;
+
+            public ChangeInventory()
+            {
+                AddedObjects = new List<OBJECT>();
+                UpdatedObjects = new List<OBJECT>();
+                DeletedObjects = new List<OBJECT>();
+                OldObjectsReplaced = new List<OBJECT>();
+                NewObjectReplacements = new List<OBJECT>();
+                UnchangedObjects = new List<OBJECT>();
+
+            }
+
+            public ChangeInventory(int numObjects)
+            {
+                AddedObjects = new List<OBJECT>(numObjects);
+                UpdatedObjects = new List<OBJECT>(numObjects);
+                DeletedObjects = new List<OBJECT>(numObjects);
+                OldObjectsReplaced = new List<OBJECT>(numObjects);
+                NewObjectReplacements = new List<OBJECT>(numObjects);
+                UnchangedObjects = new List<OBJECT>(numObjects);
+            }
+
+            /// <summary>
+            /// Return a concatenation of all affected objects minus objects that were deleted
+            /// </summary>
+            /// <returns></returns>
+            public List<OBJECT> ObjectsInStore
+            {
+                get
+                {
+                    List<OBJECT> listObjects = new List<OBJECT>(AddedObjects.Count + UpdatedObjects.Count + NewObjectReplacements.Count);
+                    listObjects.AddRange(AddedObjects);
+                    listObjects.AddRange(UpdatedObjects);
+                    listObjects.AddRange(NewObjectReplacements);
+                    listObjects.AddRange(UnchangedObjects);
+                    return listObjects;
+                }
+            }
+
+            /// <summary>
+            /// Add all elements from another inventory to our own
+            /// </summary>
+            /// <param name="inventory"></param>
+            public void Add(ChangeInventory<OBJECT> inventory)
+            { 
+                AddedObjects.AddRange(inventory.AddedObjects);
+                UpdatedObjects.AddRange(inventory.UpdatedObjects);
+                DeletedObjects.AddRange(inventory.DeletedObjects);
+                OldObjectsReplaced.AddRange(inventory.OldObjectsReplaced);
+                NewObjectReplacements.AddRange(inventory.NewObjectReplacements);
+                UnchangedObjects.AddRange(inventory.UnchangedObjects);
+            }
+        }
+
         //Perform any required initialization
         public abstract void Init();
 
@@ -44,20 +137,29 @@ namespace WebAnnotationModel
                 
         #region Public Creation/Removal methods
 
+        
         /// <summary>
         /// Create a local instance of a new item in the store
-        /// This item is not sent to the server until save is 
-        /// called.
-        /// 
-        /// Each store took a different set of parameters so I removed this, but it belongs here in spirit
+        /// This item should already exist on the store
+        /// Collection change notification events will be sent
         /// </summary>
         /// <param name="obj"></param>
         /// <returns></returns>
         public abstract OBJECT Add(OBJECT obj);
 
+
         /// <summary>
-        /// Remove the passed object from the store. The item will be
-        /// deleted from the server until save is called
+        /// Create a local instance of a new item in the store
+        /// This item should already exist on the store
+        /// Collection change notification events will be sent
+        /// </summary>
+        /// <param name="obj"></param>
+        /// <returns></returns>
+        public abstract ICollection<OBJECT> Add(ICollection<OBJECT> objs);
+         
+
+        /// <summary>
+        /// Remove the passed object from the local store and server.
         /// </summary>
         /// <param name="obj"></param>
         /// <returns></returns>
@@ -67,43 +169,117 @@ namespace WebAnnotationModel
 
         #region Events
 
+        private void InvokeEventAction(Action a)
+        {
+            if(State.UseAsynchEvents)
+            {
+                a.BeginInvoke(null, null);
+            }
+            else
+            {
+                a.Invoke(); 
+            }
+        }
+
+        protected void CallOnCollectionChanged(ChangeInventory<OBJECT> inventory)
+        {
+            Action a = new Action(() =>
+                {
+                    CallOnCollectionChangedForDelete(inventory.DeletedObjects);
+                    CallOnCollectionChangedForReplace(inventory.OldObjectsReplaced, inventory.NewObjectReplacements);
+                    CallOnCollectionChangedForAdd(inventory.AddedObjects);
+                });
+            InvokeEventAction(a); 
+            
+        }
+
         /// <summary>
         /// This is fired when all objects retrieved from a call to the database have been added/updated/removed
         /// It needs to be called on the main UI thread
         /// </summary>
       //  public event OnAllUpdatesCompletedEventHandler OnAllUpdatesCompleted; 
 
-        protected void CallOnCollectionChangedForAdd(List<OBJECT> listAddedObj)
+        protected void CallOnCollectionChangedForAdd(ICollection<OBJECT> listAddedObj)
         {
             //InternalUpdate will send its own notification for the updated objects
             if (listAddedObj.Count > 0)
-            {                
-                OBJECT[] listCopy = new OBJECT[listAddedObj.Count];
-                listAddedObj.CopyTo(listCopy);
-                //CallOnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, listAddedObj));
-                CallOnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, listCopy));
+            {
+                Action a = new Action(() =>
+                {
+                    OBJECT[] listCopy = new OBJECT[listAddedObj.Count];
+                    listAddedObj.CopyTo(listCopy, 0);
+                    //CallOnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, listAddedObj));
+                    CallOnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, listCopy));
+                });
+
+                InvokeEventAction(a); 
             }
         }
 
-        protected void CallOnCollectionChanged(NotifyCollectionChangedEventArgs e)
+        protected void CallOnCollectionChangedForDelete(ICollection<OBJECT> listObj)
         {
-            lock (this)
+            //InternalUpdate will send its own notification for the updated objects
+            if (listObj.Count > 0)
             {
-                if (OnCollectionChanged != null)
+                Action a = new Action(() =>
                 {
-                    //System.Threading.Tasks.Task.Factory.StartNew(() => OnCollectionChanged(this, e));
-                    //Action a = new Action(() => OnCollectionChanged(this, e));
-                    //a.BeginInvoke(null, null);
+                    OBJECT[] listCopy = new OBJECT[listObj.Count];
+                    listObj.CopyTo(listCopy, 0);
+                    //CallOnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, listAddedObj));
+                    CallOnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, listCopy));
+                });
 
-                    //Because we are handling collection changes these events need to appear in order, however there are
-                    //too many cascading events...  RIght now the worst case is a location doesn't show in the UI as expected.
-                    //This can be fixed by implementing the replaced collection change action for delete instead of using
-                    //remove and then add.  When we seperate the operation the order can be flipped.
-                    Action a = new Action(() => OnCollectionChanged(this, e));
-                    a.BeginInvoke(null, null);
-                    //OnCollectionChanged(this, e);
-                }
+                InvokeEventAction(a); 
             }
+        }
+
+
+        protected void CallOnCollectionChangedForReplace(ICollection<OBJECT> listOldObjects, ICollection<OBJECT> listNewObjects)
+        {
+            Debug.Assert(listOldObjects.Count == listNewObjects.Count);
+            if (listNewObjects.Count > 0)
+            {
+                Action a = new Action(() =>
+                {
+                    OBJECT[] listOldObjectsCopy = new OBJECT[listOldObjects.Count];
+                    OBJECT[] listNewObjectsCopy = new OBJECT[listNewObjects.Count];
+                    listOldObjects.CopyTo(listOldObjectsCopy, 0);
+                    listNewObjects.CopyTo(listNewObjectsCopy, 0);
+                    NotifyCollectionChangedEventArgs e = new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Replace,
+                                                                                              listNewObjectsCopy, listOldObjectsCopy);
+                    CallOnCollectionChanged(e);
+                });
+
+                InvokeEventAction(a); 
+            }
+        }
+
+
+        private void CallOnCollectionChanged(NotifyCollectionChangedEventArgs e)
+        {
+            if (OnCollectionChanged != null)
+            {
+                OnCollectionChanged(this,e);
+                //System.Threading.Tasks.Task.Factory.StartNew(() => OnCollectionChanged(this, e));
+                //Action a = new Action(() => OnCollectionChanged(this, e));
+                //a.BeginInvoke(null, null);
+
+                //Because we are handling collection changes these events need to appear in order, however there are
+                //too many cascading events...  RIght now the worst case is a location doesn't show in the UI as expected.
+                //This can be fixed by implementing the replaced collection change action for delete instead of using
+                //remove and then add.  When we seperate the operation the order can be flipped.
+                /*
+                Action a = new Action(() => OnCollectionChanged(this, e));
+                if (State.UseAsynchEvents)
+                {
+                    a.BeginInvoke(null, null);
+                }
+                else
+                {
+                    a.Invoke(); 
+                }
+                */ 
+            } 
         }
 
         /*
@@ -127,13 +303,6 @@ namespace WebAnnotationModel
 
         #region Proxy Calls
 
-        /// <summary>
-        /// Update the server with the new values
-        /// </summary>
-        /// <param name="proxy"></param>
-        /// <param name="objects"></param>
-        /// <returns></returns>
-        protected abstract long[] ProxyUpdate(PROXY proxy, WCFOBJECT[] objects);
 
         #endregion
 

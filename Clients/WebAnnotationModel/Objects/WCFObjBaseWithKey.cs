@@ -11,7 +11,7 @@ namespace WebAnnotationModel.Objects
         where KEY : struct
         where T : DataObject, new()
     {
-        public abstract KEY ID { get; }
+        public abstract KEY ID { get; internal set; }
 
                 
         public override string ToString()
@@ -78,6 +78,6 @@ namespace WebAnnotationModel.Objects
                 return _HashCode.Value;
             }
         }
-       
+ 
     }
 }

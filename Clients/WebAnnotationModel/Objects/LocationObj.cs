@@ -28,6 +28,12 @@ namespace WebAnnotationModel
         public override long ID
         {
             get { return Data.ID; }
+            internal set 
+            {
+                OnPropertyChanging("ID");
+                Data.ID = value;
+                OnPropertyChanged("ID");
+            }
         }
 
         /// <summary>
@@ -327,6 +333,9 @@ namespace WebAnnotationModel
         {
             get { return Data.Terminal; }
             set {
+                if (Data.Terminal == value)
+                    return;
+
                 OnPropertyChanging("Terminal"); 
                 Data.Terminal = value;
                 SetDBActionForChange();
@@ -338,6 +347,9 @@ namespace WebAnnotationModel
         {
             get { return Data.OffEdge; }
             set {
+                if (Data.OffEdge == value)
+                    return;
+
                 OnPropertyChanging("OffEdge"); 
                 Data.OffEdge = value;
                 SetDBActionForChange();
