@@ -51,7 +51,7 @@
     <Compile Include="UnitTest1.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Geometry\Geometry.csproj">
+    <ProjectReference Include="..\..\Geometry\Geometry.csproj">
       <Project>{EACB87E8-A5E3-417E-A9EF-B80C2A68C020}</Project>
       <Name>Geometry</Name>
     </ProjectReference>
