@@ -51,9 +51,31 @@ namespace WebAnnotation.UI
         {
             this.Obj.InfoLabel = this.textLabel.Text;
 
+            RemoveBlankAttributesFromList(this.ListTags); 
+
             this.Obj.Attributes = this.ListTags;
         }
 
+        private static void RemoveBlankAttributesFromList(BindingList<WebAnnotationModel.ObjAttribute> list)
+        {
+            for(int i = list.Count -1; i >= 0; i--)
+            {
+                WebAnnotationModel.ObjAttribute item = list[i]; 
+                if(item.Name == null)
+                {
+                    list.RemoveAt(i);
+                    continue;
+                }
+
+                if (item.Name.Length == 0)
+                {
+                    list.RemoveAt(i);
+                    continue;
+                }
+            }
+
+            return;
+        }
         
 
         private void StructureGeneralPage_Load(object sender, EventArgs e)
@@ -84,6 +106,10 @@ namespace WebAnnotation.UI
 
                 foreach(int iDelRow in iDeleteRowList)
                 {
+                    //Don't delete the new row, it is an invalid operation.
+                    if (dataGridTags.Rows[iDelRow].IsNewRow)
+                        continue; 
+
                     dataGridTags.Rows.RemoveAt(iDelRow);
                 }
             } 
