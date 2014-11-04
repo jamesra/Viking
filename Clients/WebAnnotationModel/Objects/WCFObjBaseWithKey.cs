@@ -11,7 +11,7 @@ namespace WebAnnotationModel.Objects
         where KEY : struct
         where T : DataObject, new()
     {
-        public abstract KEY ID { get; internal set; }
+        public abstract KEY ID { get; }
 
                 
         public override string ToString()

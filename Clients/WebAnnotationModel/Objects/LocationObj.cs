@@ -27,13 +27,7 @@ namespace WebAnnotationModel
     {
         public override long ID
         {
-            get { return Data.ID; }
-            internal set 
-            {
-                OnPropertyChanging("ID");
-                Data.ID = value;
-                OnPropertyChanged("ID");
-            }
+            get { return Data.ID; } 
         }
 
         /// <summary>
@@ -241,6 +235,11 @@ namespace WebAnnotationModel
 
         private object LinkLock = new object();
         private ObservableCollection<long> _Links = null;
+
+        /// <summary>
+        /// This needs sorting out.  We are subscribing to our own event.  We need to ensure
+        /// that we do not keep ourselves alive with event subscriptions.
+        /// </summary>
         public ObservableCollection<long> Links
         {
             get {
@@ -285,12 +284,17 @@ namespace WebAnnotationModel
             }
         }
 
+        /// <summary>
+        /// On links changed is static so that our subscription to links does not keep our object alive longer than necessary
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void OnLinksChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
         {
-            lock (LinkLock)
+            lock (this.LinkLock)
             {
                 //Update the underlying object we will send to the server
-                Data.Links = _Links.ToArray();
+                this.Data.Links = this._Links.ToArray();
             }
         }
 
@@ -326,6 +330,7 @@ namespace WebAnnotationModel
                 if (!Links.Contains(ID))
                     return;
                 Links.Remove(ID);
+
             }
         }
 

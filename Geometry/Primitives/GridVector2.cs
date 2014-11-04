@@ -151,8 +151,10 @@ namespace Geometry
 
         static public double Distance(IPoint A, IPoint B)
         {
-            if(A == null || B == null)
-                throw new ArgumentNullException("A or B"); 
+            if(A == null)
+                throw new ArgumentNullException("A"); 
+            if(B == null)
+                throw new ArgumentNullException("B"); 
 
             double dX = A.X - B.X;
             double dY = A.Y - B.Y;
@@ -170,8 +172,10 @@ namespace Geometry
 
         static public double DistanceSquared(IPoint A, IPoint B)
         {
-            if (A == null || B == null)
-                throw new ArgumentNullException("A or B");
+            if (A == null)
+                throw new ArgumentNullException("A");
+            if (B == null)
+                throw new ArgumentNullException("B"); 
 
             double dX = A.X - B.X;
             double dY = A.Y - B.Y;
@@ -273,10 +277,10 @@ namespace Geometry
         public static GridRectangle Border(GridVector2[] points)
         {
             if(points == null)
-                throw new ArgumentNullException("GridRectangle Border");
+                throw new ArgumentNullException("points");
 
             if (points.Length == 0)
-                throw new ArgumentException("GridRectangle Border"); 
+                throw new ArgumentException("GridRectangle Border is empty", "points"); 
 
             double minX = double.MaxValue;
             double minY = double.MaxValue;

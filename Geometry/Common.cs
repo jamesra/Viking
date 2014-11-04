@@ -10,24 +10,24 @@ namespace Geometry
         public static string[] StreamToLines(System.IO.Stream stream)
         {
             if (stream == null)
-                throw new ArgumentNullException("stream"); 
+                throw new ArgumentNullException("stream");
 
-            System.IO.StreamReader MosaicStream = new System.IO.StreamReader(stream);
-            if (stream.CanSeek)
+            using (System.IO.StreamReader MosaicStream = new System.IO.StreamReader(stream))
             {
-                stream.Seek(0, System.IO.SeekOrigin.Begin); 
+                if (stream.CanSeek)
+                {
+                    stream.Seek(0, System.IO.SeekOrigin.Begin);
+                }
+
+                List<string> Lines = new List<string>();
+                while (!MosaicStream.EndOfStream)
+                {
+                    string line = MosaicStream.ReadLine();
+                    Lines.Add(line);
+                }
+                 
+                return Lines.ToArray(); 
             }
-
-            List<string> Lines = new List<string>();
-            while (!MosaicStream.EndOfStream)
-            {
-                string line = MosaicStream.ReadLine();
-                Lines.Add(line);
-            }
-
-            MosaicStream.Close();
-
-            return Lines.ToArray(); 
         }
     }
 }

@@ -126,6 +126,13 @@ namespace WebAnnotation.UI
             if (e.ColumnIndex > 0)
                 return;
 
+            //It is OK to leave a blank, and have multiple blanks. 
+            //Blanks/Nulls are removed when the page is saved
+            if(dataval == "")
+            {
+                return; 
+            }
+
             for (int i = 0; i < dataGridTags.Rows.Count; i++)
             {
                 if(i == e.RowIndex)

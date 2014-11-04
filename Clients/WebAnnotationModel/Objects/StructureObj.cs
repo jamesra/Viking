@@ -15,16 +15,7 @@ namespace WebAnnotationModel
     {
         public override long ID
         {
-            get { return Data.ID; }
-            internal set
-            {
-                if (value != Data.ID)
-                {
-                    OnPropertyChanging("ID");
-                    Data.ID = value;
-                    OnPropertyChanged("ID");
-                }
-            }
+            get { return Data.ID; } 
         }
 
         public override long? ParentID

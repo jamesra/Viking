@@ -404,8 +404,7 @@ namespace WebAnnotationModelTest
             */
             EventLogger LocationEventLog = new EventLogger();
             LocationEventLog.SubscribeToCollectionChangedEvents(Store.Locations);
-            
-
+             
             EventLogger LocationLinkEventLog = new EventLogger();
             LocationLinkEventLog.SubscribeToCollectionChangedEvents(Store.LocationLinks);
 
@@ -471,6 +470,11 @@ namespace WebAnnotationModelTest
                 structObj.DBAction = DBACTION.DELETE; 
                 bool result = Store.Structures.Save();
             }
+
+            //OK, check that the location objects and structure objects have no references and are GC'ed.
+            System.GC.Collect();
+
+            int i = 0;  
         }
 
         #endregion 

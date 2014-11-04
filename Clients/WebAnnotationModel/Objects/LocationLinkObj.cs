@@ -85,11 +85,7 @@ namespace WebAnnotationModel
     {
         public override LocationLinkKey ID
         {
-            get { return new LocationLinkKey(this); }
-            internal set { 
-                  Data.SourceID = value.A;
-                  Data.TargetID = value.B;
-            }
+            get { return new LocationLinkKey(this); } 
         }
 
         public override string ToString()

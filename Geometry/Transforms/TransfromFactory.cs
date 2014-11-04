@@ -10,6 +10,91 @@ using Utils;
 
 namespace Geometry.Transforms
 {
+     
+    public class TransformParameters
+    {
+        public string transform_name;
+        public double[] fixedParameters = new double[0];
+        public double[] variableParameters = new double[0];
+
+        /// <summary>
+        /// An enumerator which returns strings from a transform, deliminated by spaces, no empty strings are returned
+        /// </summary>
+        /// <param name="transform_points"></param>
+        /// <returns></returns>
+        private static IEnumerable<string> TransformParts(string transform_points)
+        {
+            return transform_points.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            /*
+            char[] seperator = new char[] { ' ' };
+            string[] parts = transform_points.Split(seperator, 2, StringSplitOptions.RemoveEmptyEntries);
+            while (parts.LongLength == 2)
+            {
+                yield return parts[0];
+                parts = parts[1].Split(seperator, 2, StringSplitOptions.RemoveEmptyEntries);
+            }
+
+            if (parts.LongLength == 1)
+                yield return parts[0];
+             */
+        }
+
+        /// <summary>
+        /// Read parameters from an enumerator of strings and return an array of numbers.  First value is number of values.  Remaining strings are values themselves.
+        /// </summary>
+        /// <param name="NumParameters">Space delimited string, first value is number of parameters.</param>
+        /// <param name="parts"></param>
+        /// <returns></returns>
+        static private double[] ReadParameterValues(IEnumerator<string> parts)
+        {
+
+            parts.MoveNext();
+            ulong number_of_params = Convert.ToUInt64(parts.Current);
+            double[] parameter_values = new double[number_of_params];
+
+            double val;
+            for (ulong i = 0; i < number_of_params; i++)
+            {
+                if (!parts.MoveNext())
+                    throw new ArgumentException("Insufficient parameter values in transform string");
+
+                val = Convert.ToDouble(parts.Current);
+                parameter_values[i] = val;
+
+                Debug.Assert(!(double.IsInfinity(val) || double.IsNaN(val)));
+                if (double.IsInfinity(val) || double.IsNaN(val))
+                    throw new ArgumentException("Infinite or NaN found in transform parameters file");
+            }
+
+            return parameter_values;
+        }
+
+        static public TransformParameters Parse(string transform)
+        {
+            TransformParameters parameters = new TransformParameters();
+
+            IEnumerator<string> parts = TransformParts(transform).GetEnumerator();
+            if (!parts.MoveNext())
+                throw new ArgumentException("Missing transform string");
+
+            parameters.transform_name = parts.Current;
+
+            while (parts.MoveNext())
+            {
+                if (parts.Current == "vp")
+                {
+                    parameters.variableParameters = ReadParameterValues(parts);
+                }
+                else if (parts.Current == "fp")
+                {
+                    parameters.fixedParameters = ReadParameterValues(parts);
+                }
+            }
+
+            return parameters;
+        }
+    }
+
     public static class TransformFactory
     {
         public static TransformBase TransformFromPoints(MappingGridVector2[] Points)
@@ -89,6 +174,11 @@ namespace Geometry.Transforms
             }
         }
 
+
+
+
+        
+
         public static TransformBase ParseStos(Stream stream, StosTransformInfo info, int pixelSpacing)
         {
             string[] lines = StreamUtil.StreamToLines(stream); 
@@ -107,48 +197,20 @@ namespace Geometry.Transforms
             MappedBounds.Bottom = (int)(System.Convert.ToDouble(mappedDims[1]) * pixelSpacing);
             MappedBounds.Right = ControlBounds.Left + (int)(System.Convert.ToDouble(mappedDims[2]) * pixelSpacing);
             MappedBounds.Top = ControlBounds.Bottom + (int)(System.Convert.ToDouble(mappedDims[3]) * pixelSpacing);
+                        
             
-            string[] parts = lines[6].Split(new char[] {' '}, StringSplitOptions.RemoveEmptyEntries);
-
-            //Find the dimensions of the grid
-            int iFixedParameters = 0;
-            int iVariableParameters = 0;
-            for (int i = 0; i < parts.Length; i++)
-            {
-                if (parts[i] == "vp")
-                {
-                    iVariableParameters = i;
-                    continue;
-                }
-
-                if (parts[i] == "fp")
-                {
-                    iFixedParameters = i;
-                    continue;
-                }
-
-                if(iVariableParameters > 0)
-                {
-                    double val  = System.Convert.ToDouble(parts[i]);
-
-                    Debug.Assert(!(double.IsInfinity(val) || double.IsNaN(val))); 
-
-                    if (double.IsInfinity(val) || double.IsNaN(val))
-                        throw new ArgumentException("Infinite or NaN found in stos file" + info.ToString());
-                }
-            }
             
             //Check the parts to make sure they are actually numbers
-            
+            TransformParameters transform_parts = TransformParameters.Parse(lines[6]);
 
-            Debug.Assert(iFixedParameters > 0 && iVariableParameters > 0, "StosGridTransform::ParseGridTransform"); 
-            
+            Debug.Assert(transform_parts.fixedParameters.Length > 0 && transform_parts.variableParameters.Length > 0, "StosGridTransform::ParseGridTransform");
 
-            switch (parts[0].ToLower())
+
+            switch (transform_parts.transform_name.ToLower())
             {
                 case "gridtransform_double_2_2":
                     //return ParseGridTransform(parts, info, (float)pixelSpacing, iFixedParameters, iVariableParameters, ControlBounds, MappedBounds);
-                    return ParseGridTransform(parts, pixelSpacing, info);
+                    return ParseGridTransform(transform_parts, pixelSpacing, info);
                 case "legendrepolynomialtransform_double_2_2_3":
                     throw new NotImplementedException("stos transform not supported: legendrepolynomialtransform_double_2_2_3");
                     //MapPoints = ParsePolyTransform(parts, (float)pixelSpacing, iFixedParameters, iVariableParameters, MappedBounds).ToArray();
@@ -156,7 +218,7 @@ namespace Geometry.Transforms
                     throw new NotImplementedException("stos transform not supported: fixedcenterofrotationaffinetransform_double_2_2");
                     //MapPoints = ParseRotateTranslateAffineTransform(parts, (float)pixelSpacing, iFixedParameters, iVariableParameters, MappedBounds, ControlBounds).ToArray();
                 case "meshtransform_double_2_2":
-                    return ParseMeshTransform(parts, info, pixelSpacing); 
+                    return ParseMeshTransform(transform_parts, info, pixelSpacing); 
                 default:
                     Debug.Assert(false, "Trying to read stos tranform I don't understand");
                     return null;
@@ -220,7 +282,7 @@ namespace Geometry.Transforms
             return new ReadOnlyCollection<MappingGridVector2>(mappings);
         }
 
-        static private GridTransform ParseGridTransform(string[] parts,
+        static private GridTransform ParseGridTransform(TransformParameters transform,
                                                                 StosTransformInfo info,
                                                                 float pixelSpacing, 
                                                                 int iFixedParameters,
@@ -232,10 +294,10 @@ namespace Geometry.Transforms
             MappingGridVector2[] mappings;
 
             float MappedWidth = (float)MappedBounds.Width;
-            float MappedHeight = (float)MappedBounds.Height; 
-            
-            int gridWidth = System.Convert.ToInt32(System.Convert.ToDouble(parts[iFixedParameters + 4]) + 1.0);
-            int gridHeight = System.Convert.ToInt32(System.Convert.ToDouble(parts[iFixedParameters + 3]) + 1.0);
+            float MappedHeight = (float)MappedBounds.Height;
+
+            int gridWidth = System.Convert.ToInt32(transform.fixedParameters[2] + 1.0);
+            int gridHeight = System.Convert.ToInt32(transform.fixedParameters[1] + 1.0);
             double NumPts = gridHeight * gridWidth;
 
             mappings = new MappingGridVector2[gridWidth * gridHeight];
@@ -245,8 +307,8 @@ namespace Geometry.Transforms
 
             for (int i = 0; i < NumPts; i++)
             {
-                Points[i].X = System.Convert.ToDouble(parts[iPoints + (i * 2)]) * pixelSpacing;
-                Points[i].Y = System.Convert.ToDouble(parts[iPoints + (i * 2) + 1]) * pixelSpacing;
+                Points[i].X = transform.variableParameters[i*2] * pixelSpacing;
+                Points[i].Y = transform.variableParameters[(i * 2) + 1] * pixelSpacing;
             }
 
             for (int y = 0; y < gridHeight; y++)
@@ -288,36 +350,26 @@ namespace Geometry.Transforms
         /// <param name="iVariableParameters"></param>
         /// <param name="MappedBounds"></param>
         /// <returns></returns>
-        public static List<MappingGridVector2> ParsePolyTransform(string[] parts, float pixelSpacing, int iFixedParameters, int iVariableParameters, GridRectangle MappedBounds)
+        public static List<MappingGridVector2> ParsePolyTransform(TransformParameters transform , float pixelSpacing, int iFixedParameters, int iVariableParameters, GridRectangle MappedBounds)
         {
-            if (parts == null)
+            if (transform == null)
                 throw new ArgumentNullException(); 
 
             List<MappingGridVector2> mappings = new List<MappingGridVector2>();
 
             float MappedWidth = (float)MappedBounds.Width;
-            float MappedHeight = (float)MappedBounds.Height; 
-            
-            int numParams = System.Convert.ToInt32(parts[iVariableParameters +1]); 
-            
-            //Skip two so we skip the "vp 5" part of the file and our indicies line up with Paul's code
-            iFixedParameters += 2; 
-            iVariableParameters += 2;
+            float MappedHeight = (float)MappedBounds.Height;
 
-            double uc = System.Convert.ToDouble(parts[iFixedParameters]);
-            double vc = System.Convert.ToDouble(parts[iFixedParameters + 1]);
-            double xmax = System.Convert.ToDouble(parts[iFixedParameters + 2]);
-            double ymax = System.Convert.ToDouble(parts[iFixedParameters + 3]);
+            int numParams = transform.variableParameters.Length;
 
-            uc = xmax / 2;
-            vc = ymax / 2; 
+            double uc = transform.fixedParameters[0];
+            double vc = transform.fixedParameters[1];
+            double xmax = transform.fixedParameters[2];
+            double ymax = transform.fixedParameters[3];
 
-            double[] parameters = new double[numParams]; 
-            for(int iVP = 0; iVP < numParams; iVP++)
-            {
-                parameters[iVP] = System.Convert.ToDouble(parts[iVariableParameters + iVP]); 
-            }
-
+            uc = xmax / 2.0;
+            vc = ymax / 2.0; 
+              
             int gridHeight = 5;
             int gridWidth = 5;
 
@@ -357,8 +409,8 @@ namespace Geometry.Transforms
                         {
                             int k = i - j;
                             double PjQk = P[j] * Q[k];
-                            Sa += parameters[index_a(j, k)] * PjQk;
-                            Sb += parameters[index_b(j, k)] * PjQk;
+                            Sa += transform.variableParameters[index_a(j, k)] * PjQk;
+                            Sb += transform.variableParameters[index_b(j, k)] * PjQk;
                         }
                     }
 
@@ -548,29 +600,27 @@ namespace Geometry.Transforms
 
         private static ReferencePointBasedTransform ParseMosaicTileEntry(string transformString, TransformInfo info)
         {
-            string[] parts = transformString.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            TransformParameters transform = TransformParameters.Parse(transformString);
 
-            string transformType = parts[0];
-
-            switch (transformType)
+            switch (transform.transform_name.ToLower())
             {
                 case "GridTransform_double_2_2":
-                    return ParseGridTransform(parts, info);
+                    return ParseGridTransform(transform, info);
                     
                 case "LegendrePolynomialTransform_double_2_2_1":
-                    return ParsePolyTransform(parts, info);
+                    return ParsePolyTransform(transform, info);
                     
                 case "TranslationTransform_double_2_2":
-                    return ParseTranslateTransform(parts, info);
+                    return ParseTranslateTransform(transform, info);
 
                 case "meshtransform_double_2_2":
-                    return ParseMeshTransform(parts, info);
+                    return ParseMeshTransform(transform, info);
 
                 case "MeshTransform_double_2_2":
-                    return ParseMeshTransform(parts, info); 
+                    return ParseMeshTransform(transform, info); 
                     
                 default:
-                    Debug.Assert(false, "Unexpected transform type: " + transformType);
+                    Debug.Assert(false, "Unexpected transform type: " + transform.transform_name);
                     break;
             }
 
@@ -578,37 +628,19 @@ namespace Geometry.Transforms
         }
 
 
-        private static ReferencePointBasedTransform ParsePolyTransform(string[] parts, TransformInfo info)
+        private static ReferencePointBasedTransform ParsePolyTransform(TransformParameters transform, TransformInfo info)
         {
-            //Find the dimensions of the grid
-            int iFixedParameters = 0;
-//            int iVariableParameters = 0;
-            for (int i = 0; i < parts.Length; i++)
-            {
-                if (parts[i] == "vp")
-                {
-                    //iVariableParameters = i;
-                    continue;
-                }
-
-                if (parts[i] == "fp")
-                {
-                    iFixedParameters = i;
-                    break;
-                }
-            }
-
             //            string filename = System.IO.Path.GetFileName(parts[1]);
             //            string[] fileparts = filename.Split(new char[] { '.' }, StringSplitOptions.RemoveEmptyEntries);
             //            this.Number = System.Convert.ToInt32(fileparts[1]); 
 
             //Figure out tile size
-            int ImageWidth = System.Convert.ToInt32(System.Convert.ToDouble(parts[iFixedParameters + 4])) * 2;
-            int ImageHeight = System.Convert.ToInt32(System.Convert.ToDouble(parts[iFixedParameters + 5])) * 2;
+            int ImageWidth = System.Convert.ToInt32(transform.fixedParameters[2]) * 2;
+            int ImageHeight = System.Convert.ToInt32(transform.fixedParameters[3]) * 2;
 
             //The poly transform parameters dictate the center of the image
-            double x = System.Convert.ToDouble(parts[iFixedParameters + 2]) - (ImageWidth / 2);
-            double y = System.Convert.ToDouble(parts[iFixedParameters + 3]) - (ImageHeight / 2);
+            double x = transform.fixedParameters[0] - (ImageWidth / 2.0);
+            double y = transform.fixedParameters[1] - (ImageHeight / 2.0);
 
             GridVector2 ctrlBotLeft = new GridVector2(x, y);
             GridVector2 ctrlBotRight = new GridVector2(x + ImageWidth, y);
@@ -630,37 +662,19 @@ namespace Geometry.Transforms
             return new GridTransform(MapPoints, new GridRectangle(0, ImageWidth, 0, ImageHeight), 2, 2, info); 
         }
 
-        private static ReferencePointBasedTransform ParseTranslateTransform(string[] parts, TransformInfo info)
+        private static ReferencePointBasedTransform ParseTranslateTransform(TransformParameters transform, TransformInfo info)
         {
-            if (parts == null)
-                throw new ArgumentNullException("parts"); 
-
-            //Find the dimensions of the grid
-            int iFixedParameters = 0;
-            int iVariableParameters = 0;
-            for (int i = 0; i < parts.Length; i++)
-            {
-                if (parts[i] == "vp")
-                {
-                    iVariableParameters = i;
-                    continue;
-                }
-
-                if (parts[i] == "fp")
-                {
-                    iFixedParameters = i;
-                    break;
-                }
-            }
-
+            if (transform == null)
+                throw new ArgumentNullException("transform"); 
+              
             //string filename = System.IO.Path.GetFileName(parts[1]);
 
             //Figure out tile size if we haven't already
-            int ImageWidth = System.Convert.ToInt32(parts[iFixedParameters + 4]) * 2;
-            int ImageHeight = System.Convert.ToInt32(parts[iFixedParameters + 5]) * 2;
+            int ImageWidth = System.Convert.ToInt32(transform.fixedParameters[2]) * 2;
+            int ImageHeight = System.Convert.ToInt32(transform.fixedParameters[3]) * 2;
 
-            double x = System.Convert.ToDouble(parts[iVariableParameters + 2]);
-            double y = System.Convert.ToDouble(parts[iVariableParameters + 3]);
+            double x = transform.variableParameters[0];
+            double y = transform.variableParameters[1];
 
             GridVector2 ctrlBotLeft = new GridVector2(x, y);
             GridVector2 ctrlBotRight = new GridVector2(x + ImageWidth, y);
@@ -682,45 +696,27 @@ namespace Geometry.Transforms
             return new GridTransform(mapPoints, new GridRectangle(0, ImageWidth, 0, ImageHeight), 2, 2, info);
         }
 
-        private static GridTransform ParseGridTransform(string[] parts, TransformInfo info)
+        private static GridTransform ParseGridTransform(TransformParameters transform, TransformInfo info)
         {
-            return ParseGridTransform(parts, 1, info); 
+            return ParseGridTransform(transform, 1, info); 
         }
 
-        private static GridTransform ParseGridTransform(string[] parts, double PixelSpacing, TransformInfo info)
-        {
-            //Find the dimensions of the grid
-            int iFixedParameters = 0;
-//            int iVariableParameters = 0;
-            for (int i = 0; i < parts.Length; i++)
-            {
-                if (parts[i] == "vp")
-                {
-                    //iVariableParameters = i;
-                    continue;
-                }
-
-                if (parts[i] == "fp")
-                {
-                    iFixedParameters = i;
-                    break;
-                }
-            }
-
+        private static GridTransform ParseGridTransform(TransformParameters transform, double PixelSpacing, TransformInfo info)
+        { 
             //string filename = System.IO.Path.GetFileName(parts[1]);
             //string[] fileparts = filename.Split(new char[] { '.' }, StringSplitOptions.RemoveEmptyEntries);
             //this.Number = System.Convert.ToInt32(fileparts[1]); 
 
-            int gridWidth = System.Convert.ToInt32(System.Convert.ToDouble(parts[iFixedParameters + 4]) + 1.0);
-            int gridHeight = System.Convert.ToInt32(System.Convert.ToDouble(parts[iFixedParameters + 3]) + 1.0);
+            int gridWidth = System.Convert.ToInt32(transform.fixedParameters[2] + 1.0);
+            int gridHeight = System.Convert.ToInt32(transform.fixedParameters[1] + 1.0);
 
-            int ImageWidth = System.Convert.ToInt32(System.Convert.ToDouble(parts[iFixedParameters + 7]) * PixelSpacing);
-            int ImageHeight = System.Convert.ToInt32(System.Convert.ToDouble(parts[iFixedParameters + 8]) * PixelSpacing);
+            int ImageWidth = System.Convert.ToInt32(transform.fixedParameters[5] * PixelSpacing);
+            int ImageHeight = System.Convert.ToInt32(transform.fixedParameters[6] * PixelSpacing);
             
             GridRectangle MappedBounds = new GridRectangle(0, ImageWidth, 0, ImageHeight);
 
-            int NumPts = System.Convert.ToInt32(parts[2]) / 2;
-            GridVector2[] Points = new GridVector2[System.Convert.ToInt32(NumPts)];
+            int NumPts = transform.variableParameters.Length / 2; 
+            GridVector2[] Points = new GridVector2[NumPts];
 
             //           verticies = new VertexPositionNormalTexture[numPts];
 
@@ -732,9 +728,9 @@ namespace Geometry.Transforms
             //Every number in the array is seperated by an empty space in the array
             for (int i = 0; i < NumPts; i++)
             {
-                int iPoint = 3 + (i * 2);
-                Double x = System.Convert.ToDouble(parts[iPoint]) * PixelSpacing;
-                Double y = System.Convert.ToDouble(parts[iPoint + 1]) * PixelSpacing;
+                int iPoint = (i * 2);
+                Double x = transform.variableParameters[iPoint] * PixelSpacing;
+                Double y = transform.variableParameters[iPoint+1] * PixelSpacing;
 
                 Points[i] = new GridVector2(x, y);
 
@@ -785,44 +781,26 @@ namespace Geometry.Transforms
             return new GridTransform(mapList, MappedBounds, gridWidth, gridHeight, info);
         }
 
-        private static MeshTransform ParseMeshTransform(string[] parts, TransformInfo info, double PixelSpacing= 1.0 )
+        private static MeshTransform ParseMeshTransform(TransformParameters transform, TransformInfo info, double PixelSpacing= 1.0 )
         {
-            //Find the dimensions of the grid
-            int iFixedParameters = 0;
-            int iVariableParameters = 0;
-            for (int i = 0; i < parts.Length; i++)
-            {
-                if (parts[i] == "vp")
-                {
-                    iVariableParameters = i;
-                    continue;
-                }
-
-                if (parts[i] == "fp")
-                {
-                    iFixedParameters = i;
-                    break;
-                }
-            }
-
-            int NumVariableParameters = System.Convert.ToInt32(parts[iVariableParameters + 1]);
+            int NumVariableParameters = transform.variableParameters.Length;
             Debug.Assert(NumVariableParameters % 4 == 0);
             int NumPoints = NumVariableParameters / 4;
 
-            double Left = System.Convert.ToInt32(System.Convert.ToDouble(parts[iFixedParameters + 5]) * PixelSpacing);
-            double Bottom = System.Convert.ToInt32(System.Convert.ToDouble(parts[iFixedParameters + 6]) * PixelSpacing);
-            double ImageWidth = System.Convert.ToInt32(System.Convert.ToDouble(parts[iFixedParameters + 7]) * PixelSpacing);
-            double ImageHeight = System.Convert.ToInt32(System.Convert.ToDouble(parts[iFixedParameters + 8]) * PixelSpacing);
+            double Left = System.Convert.ToInt32(transform.fixedParameters[3] * PixelSpacing);
+            double Bottom = System.Convert.ToInt32(transform.fixedParameters[4] * PixelSpacing);
+            double ImageWidth = System.Convert.ToInt32(transform.fixedParameters[5] * PixelSpacing);
+            double ImageHeight = System.Convert.ToInt32(transform.fixedParameters[6] * PixelSpacing);
 
             MappingGridVector2[] Points = new MappingGridVector2[NumPoints];
 
             for (int iP = 0; iP < NumPoints; iP++)
             {
-                int iOffset = (iP * 4) + iVariableParameters;
-                GridVector2 Mapped = new GridVector2((System.Convert.ToDouble(parts[2 + iOffset]) * ImageWidth) + Left,
-                                                     (System.Convert.ToDouble(parts[3 + iOffset]) * ImageHeight) + Bottom);
-                GridVector2 Control = new GridVector2(System.Convert.ToDouble(parts[4 + iOffset]) * PixelSpacing,
-                                                     System.Convert.ToDouble(parts[5 + iOffset]) * PixelSpacing);
+                int iOffset = (iP * 4);
+                GridVector2 Mapped = new GridVector2((transform.variableParameters[iOffset] * ImageWidth) + Left,
+                                                     (transform.variableParameters[iOffset+1] * ImageHeight) + Bottom);
+                GridVector2 Control = new GridVector2(transform.variableParameters[iOffset+2] * PixelSpacing,
+                                                     transform.variableParameters[iOffset+3] * PixelSpacing);
 
                 Points[iP] = new MappingGridVector2(Control, Mapped); 
             }

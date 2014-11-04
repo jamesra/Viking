@@ -202,10 +202,10 @@ namespace WebAnnotationModel
                 switch (data.DBAction)
                 {
                     case DBACTION.INSERT:
-                        if (newIDs.Length > iObj)
+                        Debug.Fail("Insert operations should not be performed with update when the object has a database generated index.  Use specific create methods instead.");
+                        /*if (newIDs.Length > iObj)
                         {
-                            replacedKeysList.Add(keyObj.ID);
-                            obj.ID = newIDs[iObj]; 
+                            replacedKeysList.Add(keyObj.ID); 
                             //keyObj.ServerGeneratedID = newIDs[iObj];
                             //OBJECT objCopy = obj.Clone() as OBJECT;
                             //objCopy.ID = newIDs[iObj];
@@ -213,7 +213,7 @@ namespace WebAnnotationModel
                             //keyObj.GetData().ID = newIDs[iObj];
                             newObjList.Add(obj); 
                         }
-
+                        */
                         // obj.FireAfterSaveEvent();
                         break;
                     case DBACTION.UPDATE:

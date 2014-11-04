@@ -428,12 +428,15 @@ namespace Viking.VolumeModel
         
         protected static XDocument LoadLocal(string path)
         {
-            XDocument reader = null; 
-            using (StreamReader XMLStreamReader = new StreamReader(File.OpenRead(path)))
-            { 
-                string text = XMLStreamReader.ReadToEnd();
-                reader = XDocument.Parse(text);
-            } 
+            XDocument reader = null;
+            using (FileStream f = File.OpenRead(path))
+            {
+                using (StreamReader XMLStreamReader = new StreamReader(f))
+                {
+                    string text = XMLStreamReader.ReadToEnd();
+                    reader = XDocument.Parse(text);
+                }
+            }
 
             return reader;
         }
@@ -549,7 +552,7 @@ namespace Viking.VolumeModel
                 {
                     this.DefaultSectionNumber = new int?(Convert.ToInt32(defaultsection.Value));
                 }
-                catch(FormatException e)
+                catch(FormatException)
                 {
                     Trace.WriteLine("Unable to parse default section: " + defaultsection.Value);
                 } 
