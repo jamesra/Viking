@@ -336,7 +336,7 @@ namespace WebAnnotation.ViewModel
             if (refCount == 0)
             {
                 NotifyPropertyChangedEventManager.RemoveListener(loc, this);
-                NotifyCollectionChangedEventManager.RemoveListener(loc, this);
+                NotifyCollectionChangedEventManager.RemoveListener(loc.Links, this);
             }
 
             return refCount;
