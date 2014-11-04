@@ -123,7 +123,6 @@ namespace Viking
 
 
             }
-            set { }
 
         }
 
