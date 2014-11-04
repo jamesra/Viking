@@ -364,9 +364,11 @@ namespace Viking.UI.BaseClasses
 					IUIObject ContextObj = ObjectForItem(listItem);
                     if (ContextObj != null)
                     {
-                        ContextMenu ObjectContextMenu = ContextObj.ContextMenu;
-                        if (ObjectContextMenu != null)
-                            _ContextMenu.MergeMenu(ContextObj.ContextMenu);
+                        using (ContextMenu ObjectContextMenu = ContextObj.ContextMenu)
+                        {
+                            if (ObjectContextMenu != null)
+                                _ContextMenu.MergeMenu(ObjectContextMenu);
+                        } 
                     }
 				}
 				
@@ -383,16 +385,18 @@ namespace Viking.UI.BaseClasses
 					_ContextMenu.MenuItems.Add(item);
 
 				// add our menu to show/hide columns
-				ContextMenu ColumnMenu = this.ColumnMenu;
-				if(null != ColumnMenu)
-				{
-                    if (ColumnMenu.MenuItems.Count > 1)
+                using (ContextMenu ColumnMenu = this.ColumnMenu)
+                {
+                    if (null != ColumnMenu)
                     {
-                        MenuItem ColumnMenuItem = new MenuItem("Columns");
-                        ColumnMenuItem.MergeMenu(ColumnMenu);
-                        _ContextMenu.MenuItems.Add(ColumnMenuItem);
+                        if (ColumnMenu.MenuItems.Count > 1)
+                        {
+                            MenuItem ColumnMenuItem = new MenuItem("Columns");
+                            ColumnMenuItem.MergeMenu(ColumnMenu);
+                            _ContextMenu.MenuItems.Add(ColumnMenuItem);
+                        }
                     }
-				}
+                }
 
 				return _ContextMenu;
 			}
