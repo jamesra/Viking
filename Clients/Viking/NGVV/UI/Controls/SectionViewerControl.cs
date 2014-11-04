@@ -1156,6 +1156,7 @@ namespace Viking.UI.Controls
             RenderTarget2D renderTarget = new RenderTarget2D(graphicsDevice,
                                               scene.Viewport.Width,
                                               scene.Viewport.Height, false, SurfaceFormat.Color, DepthFormat.Depth24Stencil8);
+        
 
 
             //        Debug.Assert(graphicsDevice.Viewport.Width == ClientRectangle.Width); 
@@ -1195,8 +1196,8 @@ namespace Viking.UI.Controls
                     //Don't bother with huge tiles
                     string tileFileName = t.TextureFullPath;
                     //Calculate the path of the tile
-                    if(!(t.TextureFullPath.StartsWith(System.Uri.UriSchemeHttps) || 
-                       t.TextureFullPath.StartsWith(System.Uri.UriSchemeHttp)))
+                    if (!(t.TextureFullPath.StartsWith(System.Uri.UriSchemeHttps) ||
+                        t.TextureFullPath.StartsWith(System.Uri.UriSchemeHttp)))
                     {
                         tileFileName = section.Path + System.IO.Path.DirectorySeparatorChar + tileFileName;
                     }
@@ -1219,7 +1220,7 @@ namespace Viking.UI.Controls
                     {
                         tileViewModel.DrawMesh(graphicsDevice, basicEffect);
 
-                        tileViewModel.DrawLabels(graphicsDevice, this); 
+                        tileViewModel.DrawLabels(this);
                     }
 
                     iColor++;
@@ -1229,7 +1230,7 @@ namespace Viking.UI.Controls
                 //         break; 
             }
 
-            
+
             if (Viking.UI.State.ShowStosMesh)
             {
                 Geometry.Transforms.TriangulationTransform transform = null;
@@ -1241,11 +1242,11 @@ namespace Viking.UI.Controls
                 }
                 else
                 {
-                   TileGridToVolumeMapping TGStosMapping = Mapping as TileGridToVolumeMapping;
-                   if (TGStosMapping != null)
-                   {
-                       transform = TGStosMapping.VolumeTransform;
-                   }
+                    TileGridToVolumeMapping TGStosMapping = Mapping as TileGridToVolumeMapping;
+                    if (TGStosMapping != null)
+                    {
+                        transform = TGStosMapping.VolumeTransform;
+                    }
                 }
 
                 if (transform != null)
@@ -1256,7 +1257,7 @@ namespace Viking.UI.Controls
                     using (TriangulationViewModel stosMeshViewModel = new TriangulationViewModel(transform))
                     {
                         stosMeshViewModel.DrawMesh(graphicsDevice, basicEffect);
-                        stosMeshViewModel.DrawLabels(graphicsDevice, this);
+                        stosMeshViewModel.DrawLabels(this);
                     }
                 }
             }
@@ -1295,7 +1296,7 @@ namespace Viking.UI.Controls
 
                 
             }
-             */
+                */
 
             RenderTargetBinding[] renderedTargets = graphicsDevice.GetRenderTargets();
 
@@ -1312,6 +1313,7 @@ namespace Viking.UI.Controls
 
 
             return null;
+            
         }
 
         private Texture DrawSectionsWithChannels(GraphicsDevice graphicsDevice, ChannelInfo[] Channelset, Scene scene, out Texture ChannelOverlay)
@@ -1752,9 +1754,9 @@ namespace Viking.UI.Controls
         /// <param name="e"></param>
         private void OnSectionChannelPyramidClick(object sender, EventArgs e)
         {
-            ToolStripMenuItem menuSectionChannel = sender as ToolStripMenuItem;
-            Debug.Assert(menuSectionChannel != null);
-            this.CurrentChannel = menuSectionChannel.Text;
+            ToolStripMenuItem menu = sender as ToolStripMenuItem;
+            Debug.Assert(menu != null);
+            this.CurrentChannel = menu.Text;
             this.CurrentTransform = Section.DefaultPyramidTransform;
         }
 
@@ -1798,43 +1800,46 @@ namespace Viking.UI.Controls
 
         private void menuExportFrames_Click(object sender, EventArgs e)
         {
-            Viking.UI.Forms.FrameCapturesForm form = new FrameCapturesForm();
+            using (Viking.UI.Forms.FrameCapturesForm form = new FrameCapturesForm())
+            {  
+                DialogResult result = form.ShowDialog();
+                if (result == DialogResult.Cancel)
+                    return;
 
-            DialogResult result = form.ShowDialog();
-            if (result == DialogResult.Cancel)
-                return;
+                //Capture each of the requested frames
+                using (GenericProgressForm progressForm = new GenericProgressForm())
+                {
+                    progressForm.Show();
 
-            //Capture each of the requested frames
-            GenericProgressForm progressForm = new GenericProgressForm();
-            progressForm.Show();
+                    //Request the UI to capture each frame
+                    for (int i = 0; i < form.Frames.Length; i++)
+                    {
+                        FrameCapture frame = form.Frames[i];
+                        int Z = (int)Math.Round(frame.Z);
+                        if (State.volume.SectionViewModels.ContainsKey(Z) == false)
+                            continue;
+                        // {
+                        //   DialogResult mbResult = MessageBox.Show("Could not location section #" + Z.ToString() + " in volume, skipping", "Info", MessageBoxButtons.OKCancel);
+                        //   if (mbResult == DialogResult.Cancel)
+                        //       break;
+                        //   else
+                        //       continue;
+                        //  }
 
-            //Request the UI to capture each frame
-            for (int i = 0; i < form.Frames.Length; i++)
-            {
-                FrameCapture frame = form.Frames[i];
-                int Z = (int)Math.Round(frame.Z);
-                if (State.volume.SectionViewModels.ContainsKey(Z) == false)
-                    continue;
-                // {
-                //   DialogResult mbResult = MessageBox.Show("Could not location section #" + Z.ToString() + " in volume, skipping", "Info", MessageBoxButtons.OKCancel);
-                //   if (mbResult == DialogResult.Cancel)
-                //       break;
-                //   else
-                //       continue;
-                //  }
+                        //Keep memory to a minimum when switching sections
+                        SectionViewModel S = State.volume.SectionViewModels[Z];
+                        this.Section = S;
 
-                //Keep memory to a minimum when switching sections
-                SectionViewModel S = State.volume.SectionViewModels[Z];
-                this.Section = S;
+                        this.ExportImage(frame.Filename, frame.Rect, frame.downsample, frame.IncludeOverlay);
+                        progressForm.ShowProgress("Exported frame: " + frame.Filename, (double)i / (double)form.Frames.Length);
+                        //System.Windows.Forms.Application.DoEvents();
+                        if (progressForm.DialogResult == DialogResult.Cancel)
+                            break;
+                    }
 
-                this.ExportImage(frame.Filename, frame.Rect, frame.downsample, frame.IncludeOverlay);
-                progressForm.ShowProgress("Exported frame: " + frame.Filename, (double)i / (double)form.Frames.Length);
-                //System.Windows.Forms.Application.DoEvents();
-                if (progressForm.DialogResult == DialogResult.Cancel)
-                    break;
+                    progressForm.Close();
+                }
             }
-
-            progressForm.Close();
         }
 
         private void ExportTiles(string ExportPath, int FirstSection, int LastSection, int Downsample = 1)
@@ -2161,12 +2166,13 @@ namespace Viking.UI.Controls
 
         private void menuSetupChannels_Click(object sender, EventArgs e)
         {
-            SetupChannelsForm ChannelSetup = new SetupChannelsForm(this.Section.VolumeViewModel.DefaultChannels, this.Section.VolumeViewModel.ChannelNames);
-
-            if (ChannelSetup.ShowDialog() == DialogResult.OK)
-            {
-                this.Section.VolumeViewModel.DefaultChannels = ChannelSetup.ChannelInfo;
-                this.Invalidate();
+            using (SetupChannelsForm ChannelSetup = new SetupChannelsForm(this.Section.VolumeViewModel.DefaultChannels, this.Section.VolumeViewModel.ChannelNames))
+            { 
+                if (ChannelSetup.ShowDialog() == DialogResult.OK)
+                {
+                    this.Section.VolumeViewModel.DefaultChannels = ChannelSetup.ChannelInfo;
+                    this.Invalidate();
+                }
             }
 
         }
@@ -2199,27 +2205,29 @@ namespace Viking.UI.Controls
 
         private void menuExportTiles_Click(object sender, EventArgs e)
         {
-            TileExportForm exportProperties = new TileExportForm();
-            if (exportProperties.ShowDialog() != DialogResult.OK)
+            using (TileExportForm exportProperties = new TileExportForm())
             {
-                return;
-            }
+                if (exportProperties.ShowDialog() != DialogResult.OK)
+                {
+                    return;
+                }
 
-            int FirstExportSection;
-            int LastExportSection;
+                int FirstExportSection;
+                int LastExportSection;
 
-            if (exportProperties.ExportAll)
-            {
-                FirstExportSection = this.Section.VolumeViewModel.SectionViewModels.First().Key;
-                LastExportSection = this.Section.VolumeViewModel.SectionViewModels.Last().Key;
-            }
-            else
-            {
-                FirstExportSection = exportProperties.FirstSectionInExport;
-                LastExportSection = exportProperties.LastSectionInExport;
-            }
+                if (exportProperties.ExportAll)
+                {
+                    FirstExportSection = this.Section.VolumeViewModel.SectionViewModels.First().Key;
+                    LastExportSection = this.Section.VolumeViewModel.SectionViewModels.Last().Key;
+                }
+                else
+                {
+                    FirstExportSection = exportProperties.FirstSectionInExport;
+                    LastExportSection = exportProperties.LastSectionInExport;
+                }
 
-            ExportTiles(exportProperties.ExportPath, FirstExportSection, LastExportSection, exportProperties.Downsample);
+                ExportTiles(exportProperties.ExportPath, FirstExportSection, LastExportSection, exportProperties.Downsample);
+            }
         }
         
         private void menuSectionShowTileMesh_Click(object sender, EventArgs e)

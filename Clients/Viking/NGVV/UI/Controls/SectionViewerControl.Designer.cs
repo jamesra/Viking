@@ -16,6 +16,17 @@
             if (disposing && (components != null))
             {
                 components.Dispose();
+
+                if(_OverlayBackgroundDepthState != null)
+                    _OverlayBackgroundDepthState.Dispose();
+                if (_DrawSectionDepthState != null)
+                    _DrawSectionDepthState.Dispose();
+                if (_DepthDisabledState != null)
+                    _DepthDisabledState.Dispose();
+                if (_OverlayDepthState != null)
+                    _OverlayDepthState.Dispose();
+                if (_defaultDepthState != null)
+                    _defaultDepthState.Dispose(); 
             }
             base.Dispose(disposing);
         }

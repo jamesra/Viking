@@ -25,8 +25,7 @@ namespace Viking
 
         private int _TotalRead = 0;
 
-        public string TextureURI = null;
-        private bool Disposed = false;
+        public string TextureURI = null; 
 
         public int ID = 0;
         private static int NextID = 0; 
@@ -57,33 +56,38 @@ namespace Viking
         { 
             return BUFFER_SIZE < BytesRemaining ? BUFFER_SIZE : BytesRemaining;
         } 
+
+        public virtual void Dispose(bool disposing)
+        {
+            if(disposing)
+            {
+                //Trace.WriteLine("Disposing AsyncState #" + this.ID.ToString() + ": " + this.TextureURI);   
+                if (request != null)
+                {
+                    this.request.Abort();
+                    this.request = null;
+                }
+
+                if (responseStream != null)
+                {
+                    responseStream.Close();
+                    responseStream = null;
+                }
+
+                if (response != null)
+                {
+                    response.Close();
+                    response = null;
+                }
+
+                databuffer = null;  
+            }
+        }
          
         public void Dispose()
         {
-            //Trace.WriteLine("Disposing AsyncState #" + this.ID.ToString() + ": " + this.TextureURI); 
-            
-            this.Disposed = true;
-
-            if (request != null)
-            {
-                this.request.Abort();
-                this.request = null; 
-            }
-
-            if (responseStream != null)
-            {
-                responseStream.Close();
-                responseStream = null;
-            }
-
-            if (response != null)
-            {
-                response.Close();
-                response = null;
-            } 
-
-            databuffer = null; 
-            
+            Dispose(true);
+            GC.SuppressFinalize(this); 
         }
     }
 
@@ -249,7 +253,7 @@ namespace Viking
                             BodyRequestState.request.Abort();                            
                             BodyRequestState = null;
                         }
-                        catch (WebException e)
+                        catch (WebException)
                         {
                             //Trace.WriteLine(e.Message, "TextureReader.Dispose");
                         }
@@ -360,7 +364,7 @@ namespace Viking
             return TileStream; 
         }
 
-        private void TryLoadingFromServer(Uri textureUri, string CacheFilename)
+        private void TryLoadingFromServer(Uri textureUri)
         {
             lock (this)
             {
@@ -636,19 +640,19 @@ namespace Viking
             }
         }
 
-        private void TryDeleteFile(string Filename)
+        private void TryDeleteFile(string filepath)
         {
             try
             {
-                if (System.IO.File.Exists(Filename))
+                if (System.IO.File.Exists(filepath))
                 {
-                    System.IO.File.Delete(Filename);
+                    System.IO.File.Delete(filepath);
                 }
             }
-            catch (Exception e)
+            catch (System.IO.IOException e)
             {
-                //Trace.WriteLine("Could not delete file: " + Filename);
-                //Trace.WriteLine(e.Message);
+                Trace.WriteLine("Could not delete file: " + Filename);
+                Trace.WriteLine(e.Message);
             }
         }
 
@@ -732,7 +736,7 @@ namespace Viking
                         //If we didn't already load the tilestream from the cache
                         
 
-                        TryLoadingFromServer(this.Filename, CacheFilename);
+                        TryLoadingFromServer(this.Filename);
                         //SetTexture(null);
                         return;
                     } 
@@ -836,9 +840,9 @@ namespace Viking
             return Filename.GetHashCode(); 
         }
 
-        protected void TextureFromStream(GraphicsDevice graphicsDevice, Byte[] streamdata)
+        protected void TextureFromStream(GraphicsDevice device, Byte[] streamdata)
         {
-            TextureData data = TextureReader.TextureDataFromStream(graphicsDevice, streamdata);
+            TextureData data = TextureReader.TextureDataFromStream(device, streamdata);
             if(data == null)
             {
                 this.SetTexture(null);
@@ -850,7 +854,7 @@ namespace Viking
             return;
         }
         
-        protected void TextureFromStreamAsync(GraphicsDevice graphicsDevice, Byte[] streamdata)
+        protected void TextureFromStreamAsync(GraphicsDevice device, Byte[] streamdata)
         {
             //Trace.WriteLine("TextureFromStreamAsync: " + this.Filename.ToString()); 
             if (this.Aborted || this.IsDisposed)
@@ -858,7 +862,7 @@ namespace Viking
 
             Func<GraphicsDevice, byte[], TextureData> func = TextureReader.TextureDataFromStream;
 
-            IAsyncResult result = func.BeginInvoke(graphicsDevice, streamdata, EndTextureDataFromStream, func);
+            IAsyncResult result = func.BeginInvoke(device, streamdata, EndTextureDataFromStream, func);
         }
 
         protected void EndTextureDataFromStream(IAsyncResult result)
@@ -1065,7 +1069,7 @@ namespace Viking
 
         #region IDisposable Members
 
-        public void Dispose()
+        protected virtual void Dispose(bool disposing)
         {
             lock (this)
             {
@@ -1077,24 +1081,26 @@ namespace Viking
                 if (_Result != null)
                 {
                     _Result.Dispose();
-                    _Result = null; 
+                    _Result = null;
                 }
-                
+
                 //Abort the request if we haven't already
                 if (BodyRequestState != null)
                 {
                     if (BodyRequestState.request != null)
-                    { 
+                    {
                         try
-                        { 
-                            BodyRequestState.request.Abort(); 
+                        {
+                            BodyRequestState.request.Abort();
                             BodyRequestState = null;
                         }
                         catch (WebException e)
                         {
                             //Trace.WriteLine(e.Message, "TextureReader.Dispose");
                         }
-                    } 
+                    }
+
+                    BodyRequestState.Dispose();
                 }
 
                 if (DoneEvent != null)
@@ -1103,9 +1109,15 @@ namespace Viking
                     DoneEvent = null;
                 }
             }
-#if DEBUG            
+#if DEBUG
             Global.RemoveTextureReader(this);
 #endif
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);  
         }
 
         #endregion

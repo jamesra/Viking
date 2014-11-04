@@ -180,15 +180,16 @@ namespace Viking.UI.Forms
         { 
             if (!System.IO.File.Exists(this.KeyFileFullPath))
             {
-                using (StreamWriter sw = new StreamWriter(System.IO.File.Create(this.KeyFileFullPath)))
+                using (System.IO.FileStream f = System.IO.File.Create(this.KeyFileFullPath))
                 {
-                    string content = credentials.UserName + "," + credentials.Password;
-                     
-                    sw.Write(EncryptString(content, this.passkey));
+                    using (StreamWriter sw = new StreamWriter(f))
+                    {
+                        string content = credentials.UserName + "," + credentials.Password;
 
-                    sw.Flush();
+                        sw.Write(EncryptString(content, this.passkey));
 
-                    sw.Close();
+                        sw.Flush(); 
+                    }
                 }
 
                 File.Encrypt(this.KeyFileFullPath);
@@ -210,16 +211,17 @@ namespace Viking.UI.Forms
                 {
                     File.Decrypt(KeyFileFullPath);
 
-                    using (StreamReader sr = new StreamReader(new FileStream(KeyFileFullPath, FileMode.Open, FileAccess.Read)))
+                    using (System.IO.FileStream f = new FileStream(KeyFileFullPath, FileMode.Open, FileAccess.Read))
                     {
+                        using (StreamReader sr = new StreamReader(f))
+                        {
 
-                        string[] data = DecryptString(sr.ReadToEnd(), passkey).Split(',');
+                            string[] data = DecryptString(sr.ReadToEnd(), passkey).Split(',');
+                              
+                            credentials = new NetworkCredential(data[0], data[1]);
 
-                        sr.Close();
-
-                        credentials = new NetworkCredential(data[0], data[1]);
-
-                        return credentials;
+                            return credentials;
+                        }
                     }
                 }
                 catch (System.Exception e)
@@ -263,7 +265,6 @@ namespace Viking.UI.Forms
 
         }
        
-
         string createConnection()
         { 
             string postdata = string.Format("userName={0}&password={1}", userName, password);

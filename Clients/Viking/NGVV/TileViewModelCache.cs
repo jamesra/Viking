@@ -79,14 +79,14 @@ namespace Viking
                         tileViewModel = null;
                     }
                 }
-                catch (Exception e)
+                catch (Exception)
                 {
                     if(tileViewModel != null)
                     {
                         tileViewModel.Dispose();
                         tileViewModel = null;
                     }
-                    throw e;
+                    throw;
                 }
 
 

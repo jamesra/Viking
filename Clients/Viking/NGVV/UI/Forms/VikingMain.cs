@@ -213,9 +213,11 @@ namespace Viking
 
         private void vikingHomepageToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            System.Diagnostics.Process WebBrowser = new System.Diagnostics.Process();
-            WebBrowser.StartInfo.FileName = "http://connectomes.utah.edu/";
-            WebBrowser.Start();
+            using (System.Diagnostics.Process WebBrowser = new System.Diagnostics.Process())
+            {
+                WebBrowser.StartInfo.FileName = "http://connectomes.utah.edu/";
+                WebBrowser.Start();
+            }
         }
 
         private void versionInfoToolStripMenuItem_Click(object sender, EventArgs e)

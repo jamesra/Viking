@@ -128,12 +128,10 @@ namespace Viking.ViewModels
         static SpriteFont _font;
         static SpriteBatch _spriteBatch;
 
-        
 
-        public void DrawLabels(GraphicsDevice graphicsDevice, Viking.UI.Controls.SectionViewerControl _Parent)
-        { 
-              
 
+        public void DrawLabels(Viking.UI.Controls.SectionViewerControl _Parent)
+        {  
             float Scale = (float)(1.0f / _Parent.StatusMagnification) * 10;
 
             _Parent.spriteBatch.Begin();

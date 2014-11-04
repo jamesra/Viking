@@ -74,7 +74,6 @@ namespace Viking.UI.Forms
                 Rect.Width = Rect.Width * (float)(Progress / (float)MaxProgress);
                 e.Graphics.Clear(Color.LightGray);
                 e.Graphics.FillRectangle(FillBrush, Rect);
-                FillBrush.Dispose(); 
             }
         }
 

@@ -127,10 +127,10 @@ namespace Viking
         protected LocalTextureCacheEntry CreateEntry(string filename, byte[] textureBuffer, bool async)
         {
             System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(filename));
-
+            FileStream stream = null; 
             try
             {
-                FileStream stream = new FileStream(filename, FileMode.Create, FileAccess.Write);
+                stream = new FileStream(filename, FileMode.Create, FileAccess.Write);
                 if (stream != null)
                 {
                     if (async)

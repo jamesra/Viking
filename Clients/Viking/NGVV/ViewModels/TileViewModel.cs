@@ -167,14 +167,14 @@ namespace Viking.ViewModels
 
                 vb.SetData<VertexPositionNormalTexture>(vertArray);
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 if (vb != null)
                 {
                     vb.Dispose();
                     vb = null;
                 }
-                throw e; 
+                throw;
             }
 
             return vb; 
@@ -539,6 +539,23 @@ namespace Viking.ViewModels
 
         //int[] MeshEdges = null;
 
+        public static VertexPositionColor[] CreateMeshVerticies(Tile t, Color color)
+        {
+            VertexPositionColor[] meshVerticies = new VertexPositionColor[t.Verticies.Length];
+
+            if (meshVerticies.Length == 0)
+                throw new ArgumentException("No verticies for tile", "t");
+
+            for (int iVert = 0; iVert < meshVerticies.Length; iVert++)
+            {
+                meshVerticies[iVert] = new VertexPositionColor(new Vector3((float)t.Verticies[iVert].Position.X,
+                                                                               (float)t.Verticies[iVert].Position.Y, (float)0)
+                                                                                                            , color);
+            }
+
+            return meshVerticies;
+        }
+
         private void CreateMesh(GraphicsDevice graphicsDevice)
         {
             Random ColorGen = new Random(this.GetHashCode());
@@ -548,21 +565,10 @@ namespace Viking.ViewModels
             randColorBytes[1] = randColorBytes[1] < 128 ? (byte)(randColorBytes[1] + 128) : randColorBytes[1];
             randColorBytes[2] = randColorBytes[2] < 128 ? (byte)(randColorBytes[2] + 128) : randColorBytes[2];
             Color color = new Color(randColorBytes[0], randColorBytes[1], randColorBytes[2]);
-            VertexPositionColor[] MeshVerticies = new VertexPositionColor[this.Tile.Verticies.Length];
+            VertexPositionColor[] meshVerticies = TileViewModel.CreateMeshVerticies(this.Tile, color); 
 
-            if (MeshVerticies.Length == 0)
-                return; 
-
-            for (int iVert = 0; iVert < MeshVerticies.Length; iVert++)
-            {
-                MeshVerticies[iVert] = new VertexPositionColor(new Vector3((float)this.Tile.Verticies[iVert].Position.X,
-                                                                               (float)this.Tile.Verticies[iVert].Position.Y, (float)0)
-                                                                                                            , color);
-            }
-
-            
-            vbMesh = new VertexBuffer(graphicsDevice, typeof(VertexPositionColor), MeshVerticies.Length, BufferUsage.None);
-            vbMesh.SetData<VertexPositionColor>(MeshVerticies);  
+            vbMesh = new VertexBuffer(graphicsDevice, typeof(VertexPositionColor), meshVerticies.Length, BufferUsage.None);
+            vbMesh.SetData<VertexPositionColor>(meshVerticies);  
 
             List<int> TrianglesAsLines = new List<int>();
 
@@ -577,7 +583,7 @@ namespace Viking.ViewModels
             }
 
             ibMesh = new IndexBuffer(graphicsDevice, typeof(int),  TrianglesAsLines.Count, BufferUsage.None);
-            ibMesh.SetData<int>(TrianglesAsLines.ToArray()); 
+            ibMesh.SetData<int>(TrianglesAsLines.ToArray());
         }
 
         public void DrawMesh(GraphicsDevice graphicsDevice, BasicEffect basicEffect)
@@ -623,7 +629,7 @@ namespace Viking.ViewModels
 
         }
 
-        public void DrawLabels(GraphicsDevice graphicsDevice, Viking.UI.Controls.SectionViewerControl _Parent)
+        public void DrawLabels(Viking.UI.Controls.SectionViewerControl _Parent)
         {
             float Scale = (float)(1.0f / _Parent.StatusMagnification);
             Vector2 Offset;
@@ -677,51 +683,61 @@ namespace Viking.ViewModels
 
         public void Dispose()
         {
-            lock (this)
-            {
-                //This disposes of the texture
-                //_texture = null;
-                if (this._texture != null)
-                {
-                    if (!this._texture.IsDisposed)
-                    {
-                        this._texture.Dispose();
-                        this._texture = null; 
-                    }
-                }
-
-                if (_TexReader != null)
-                {
-                    _TexReader.AbortRequest();
-                    _TexReader.Dispose();
-                    _TexReader = null; 
-                }
-
-                if (vbMesh != null)
-                {
-                    vbMesh.Dispose();
-                    vbMesh = null; 
-                }
-
-                if (ibMesh != null)
-                {
-                    ibMesh.Dispose();
-                    ibMesh = null;
-                }
-           
-                if (VertBuffer != null)
-                {
-                    this.VertBuffer.Dispose();
-                    this.VertBuffer = null;
-                }
-
-                if (IndBuffer != null)
-                {
-                    this.IndBuffer.Dispose();
-                    this.IndBuffer = null;
-                } 
-            }   
+            Dispose(true);
+            GC.SuppressFinalize(this); 
         }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if(disposing)
+            {
+                lock (this)
+                {
+                    //This disposes of the texture
+                    //_texture = null;
+                    if (this._texture != null)
+                    {
+                        if (!this._texture.IsDisposed)
+                        {
+                            this._texture.Dispose();
+                            this._texture = null; 
+                        }
+                    }
+
+                    if (_TexReader != null)
+                    {
+                        _TexReader.AbortRequest();
+                        _TexReader.Dispose();
+                        _TexReader = null; 
+                    }
+
+                    if (vbMesh != null)
+                    {
+                        vbMesh.Dispose();
+                        vbMesh = null; 
+                    }
+
+                    if (ibMesh != null)
+                    {
+                        ibMesh.Dispose();
+                        ibMesh = null;
+                    }
+           
+                    if (VertBuffer != null)
+                    {
+                        this.VertBuffer.Dispose();
+                        this.VertBuffer = null;
+                    }
+
+                    if (IndBuffer != null)
+                    {
+                        this.IndBuffer.Dispose();
+                        this.IndBuffer = null;
+                    } 
+                }   
+            }
+        }
+
 
         #endregion
     }
