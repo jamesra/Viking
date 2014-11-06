@@ -203,7 +203,7 @@ namespace WebAnnotationModel
         }
         */
          
-        protected void InternalDelete(LocationObj[] objs)
+        protected ICollection<LocationObj> InternalDelete(LocationObj[] objs)
         {
             long[] IDs = new long[objs.Length];
             for (int i = 0; i < objs.Length; i++)
@@ -211,7 +211,7 @@ namespace WebAnnotationModel
                 IDs[i] = objs[i].ID; 
             }
 
-            InternalDelete(IDs);
+            return InternalDelete(IDs);
         }
          
 
@@ -336,11 +336,14 @@ namespace WebAnnotationModel
             if (!success)
                 return true;
 
-            InternalDelete(sectionLocations.Values.ToArray());
+            ICollection<LocationObj> deleted_list = InternalDelete(sectionLocations.Values.ToArray());
+
+            CallOnCollectionChangedForDelete(deleted_list); 
 
             sectionLocations.Clear(); 
             return true; 
         }
+         
 
         #region Callbacks
 
