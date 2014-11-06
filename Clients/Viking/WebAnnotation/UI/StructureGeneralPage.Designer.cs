@@ -31,7 +31,6 @@
             this.components = new System.ComponentModel.Container();
             this.labelID = new System.Windows.Forms.Label();
             this.labelType = new System.Windows.Forms.Label();
-            this.linkType = new Viking.UI.Controls.ObjectLinkLabel();
             this.textID = new System.Windows.Forms.TextBox();
             this.labelLabel = new System.Windows.Forms.Label();
             this.textLabel = new System.Windows.Forms.TextBox();
@@ -41,6 +40,7 @@
             this.tagBindingSource = new System.Windows.Forms.BindingSource(this.components);
             this.labelTags = new System.Windows.Forms.Label();
             this.labelDataGridError = new System.Windows.Forms.Label();
+            this.linkType = new Viking.UI.Controls.ObjectLinkLabel();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridTags)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.tagBindingSource)).BeginInit();
             this.SuspendLayout();
@@ -62,16 +62,6 @@
             this.labelType.Size = new System.Drawing.Size(34, 13);
             this.labelType.TabIndex = 1;
             this.labelType.Text = "Type:";
-            // 
-            // linkType
-            // 
-            this.linkType.Location = new System.Drawing.Point(15, 53);
-            this.linkType.Name = "linkType";
-            this.linkType.ReadOnly = true;
-            this.linkType.Size = new System.Drawing.Size(253, 21);
-            this.linkType.SourceObject = null;
-            this.linkType.SourceType = null;
-            this.linkType.TabIndex = 4;
             // 
             // textID
             // 
@@ -152,6 +142,16 @@
             this.labelDataGridError.TabIndex = 15;
             this.labelDataGridError.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
             // 
+            // linkType
+            // 
+            this.linkType.Location = new System.Drawing.Point(15, 53);
+            this.linkType.Name = "linkType";
+            this.linkType.ReadOnly = true;
+            this.linkType.Size = new System.Drawing.Size(253, 21);
+            this.linkType.SourceObject = null;
+            this.linkType.SourceType = null;
+            this.linkType.TabIndex = 4;
+            // 
             // StructureGeneralPage
             // 
             this.Controls.Add(this.labelDataGridError);
@@ -176,7 +176,6 @@
 
         private System.Windows.Forms.Label labelID;
         private System.Windows.Forms.Label labelType;
-        private Viking.UI.Controls.ObjectLinkLabel linkType;
         private System.Windows.Forms.TextBox textID;
         private System.Windows.Forms.Label labelLabel;
         private System.Windows.Forms.TextBox textLabel;
@@ -186,5 +185,6 @@
         private System.Windows.Forms.DataGridViewTextBoxColumn valueDataGridViewTextBoxColumn;
         private System.Windows.Forms.BindingSource tagBindingSource;
         private System.Windows.Forms.Label labelDataGridError;
+        private Viking.UI.Controls.ObjectLinkLabel linkType;
     }
 }

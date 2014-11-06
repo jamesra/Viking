@@ -39,10 +39,11 @@ namespace WebAnnotation.UI
 
             this.textID.Text= this.Obj.ID.ToString();
             this.textLabel.Text = this.Obj.InfoLabel;
+            this.linkType.Text = this.Obj.Type.Name;
 
             this.ListTags = new BindingList<WebAnnotationModel.ObjAttribute>(new List<ObjAttribute>(this.Obj.Attributes));
             
-             this.dataGridTags.DataSource = this.ListTags;
+            this.dataGridTags.DataSource = this.ListTags;
         }
 
         
