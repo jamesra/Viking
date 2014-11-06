@@ -57,23 +57,27 @@ namespace Geometry.Transforms
             get { return _mapPoints; }
             protected set
             {
-                List<MappingGridVector2> listPoints = new List<MappingGridVector2>(value);
-                listPoints.Sort();
-
+                //SortedSet<MappingGridVector2> listPoints = new SortedSet<MappingGridVector2>(value);
+                Array.Sort(value);
+                _mapPoints = value; 
 #if DEBUG
-                //Check for duplicate points
-                for (int i = 1; i < listPoints.Count; i++)
-                {
-                    Debug.Assert(listPoints[i - 1].ControlPoint != listPoints[i].ControlPoint, "Duplicate Points found in transform.  This breaks Delaunay.");
-                    Debug.Assert(listPoints[i - 1].MappedPoint != listPoints[i].MappedPoint, "Duplicate Points found in transform.  This breaks Delaunay.");
-                }
+                DebugVerifyPointsAreUnique(_mapPoints); 
 #endif
-                _mapPoints = listPoints.ToArray();
-
+                 
                 //Reset the bounds
                 MappedBounds = new GridRectangle();
                 ControlBounds = new GridRectangle(); 
             }
+        }
+
+        private static void DebugVerifyPointsAreUnique(MappingGridVector2[] listPoints)
+        {
+            //Check for duplicate points
+            for (int i = 1; i < listPoints.Length; i++)
+            {
+                Debug.Assert(listPoints[i - 1].ControlPoint != listPoints[i].ControlPoint, "Duplicate Points found in transform.  This breaks Delaunay.");
+                Debug.Assert(listPoints[i - 1].MappedPoint != listPoints[i].MappedPoint, "Duplicate Points found in transform.  This breaks Delaunay.");
+            } 
         }
 
         protected ReferencePointBasedTransform(MappingGridVector2[] points, TransformInfo info)
