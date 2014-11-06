@@ -849,7 +849,7 @@ namespace Viking
                 return;
             }
 
-            Texture2D tex = this.TextureFromData(data, this.MipMapLevels> 0);
+            Texture2D tex = TextureFromData(graphicsDevice, data, this.MipMapLevels> 0);
             this.SetTexture(tex);
             return;
         }
@@ -887,7 +887,7 @@ namespace Viking
                     }
 
                     //Trace.WriteLine("CreateTextureFromData: " + this.Filename.ToString()); 
-                    Texture2D tex = TextureFromData(texdata, this.MipMapLevels > 0);
+                    Texture2D tex = TextureFromData(graphicsDevice, texdata, this.MipMapLevels > 0);
                     this.SetTexture(tex); 
                 }
                 catch (ArgumentException e)
@@ -1028,13 +1028,13 @@ namespace Viking
             return null;
         }
 
-        public Texture2D TextureFromStream(Stream texStream, bool mipmap)
+        public static Texture2D TextureFromStream(GraphicsDevice graphicsDevice, Stream texStream, bool mipmap)
         {
             TextureData texData = TextureDataFromStream(graphicsDevice, texStream);
-            return TextureFromData(texData, mipmap);
+            return TextureFromData(graphicsDevice, texData, mipmap);
         }
 
-        public Texture2D TextureFromData(TextureData texdata, bool mipmap)
+        public static Texture2D TextureFromData(GraphicsDevice graphicsDevice, TextureData texdata, bool mipmap)
         {
             //Trace.WriteLine("TextureFromData: " + this.Filename.ToString()); 
             Texture2D tex = null;
