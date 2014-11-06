@@ -118,7 +118,7 @@ namespace WebAnnotationModel
             get {return Data.Position.Z; }
         }
 
-        
+
 
         /// <summary>
         /// VolumeX is the x position in volume space. It only exists to inform the database of an estimate of the locations position in volume space.
@@ -234,17 +234,40 @@ namespace WebAnnotationModel
         }
 
         private object LinkLock = new object();
-        private ObservableCollection<long> _Links = null;
+
+        private ObservableCollection<long> _ObservableLinks = null;
+        private ReadOnlyObservableCollection<long> _ReadOnlyObservableLinks = null;
+
+
+        public long[] LinksCopy
+        {
+            get
+            {
+                lock (LinkLock)
+                {
+                    return _ObservableLinks.ToArray();
+                }
+            }
+        }
 
         /// <summary>
         /// This needs sorting out.  We are subscribing to our own event.  We need to ensure
         /// that we do not keep ourselves alive with event subscriptions.
         /// </summary>
-        public ObservableCollection<long> Links
+        public ReadOnlyObservableCollection<long> Links
         {
             get {
                 lock (LinkLock)
                 {
+                    if(_ObservableLinks == null)
+                    {
+                        _ObservableLinks = new ObservableCollection<long>(Data.Links);
+                        _ReadOnlyObservableLinks = new ReadOnlyObservableCollection<long>(_ObservableLinks); 
+                    }
+
+                    return _ReadOnlyObservableLinks;
+                    /*
+                    return new ReadOnlyObservableCollection<long>(_Links); 
                     if (_Links == null)
                     {
 
@@ -262,42 +285,20 @@ namespace WebAnnotationModel
                     }
 
                     return _Links;
+                    */
                 }
             }
         }
+        
 
         public int NumLinks
         {
             get
             {
-                lock (LinkLock)
-                {
-                    if (this._Links == null)
-                    {
-                        return 0;
-                    }
-                    else
-                    {
-                        return _Links.Count;
-                    }
-                }
+                return Data.Links.Length;
             }
         }
-
-        /// <summary>
-        /// On links changed is static so that our subscription to links does not keep our object alive longer than necessary
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void OnLinksChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
-        {
-            lock (this.LinkLock)
-            {
-                //Update the underlying object we will send to the server
-                this.Data.Links = this._Links.ToArray();
-            }
-        }
-
+        
         /// <summary>
         /// Allows LocationLinkStore to adjust the client after a link is created
         /// </summary>
@@ -312,7 +313,8 @@ namespace WebAnnotationModel
                 if (Links.Contains(ID))
                     return;
 
-                Links.Add(ID);
+                _ObservableLinks.Add(ID);
+                this.Data.Links = this._ObservableLinks.ToArray();
             }
         }
 
@@ -329,8 +331,9 @@ namespace WebAnnotationModel
             {
                 if (!Links.Contains(ID))
                     return;
-                Links.Remove(ID);
 
+                _ObservableLinks.Remove(ID);
+                this.Data.Links = this._ObservableLinks.ToArray();
             }
         }
 

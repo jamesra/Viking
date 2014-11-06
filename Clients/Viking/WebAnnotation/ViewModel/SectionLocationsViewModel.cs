@@ -378,7 +378,7 @@ namespace WebAnnotation.ViewModel
             {            
                 if (Subscribe)
                 {
-                    locView.RegisterEvents();
+                    locView.RegisterForLocationEvents();
                     SubscribeToLocationChangeEvents(loc);
                 }
 
@@ -426,7 +426,7 @@ namespace WebAnnotation.ViewModel
                     bool RemoveSuccess = Locations.TryRemove(locView, out RemovedValue);
                     if (RemoveSuccess)
                     {
-                        RemovedValue.DeregisterEvents();
+                        RemovedValue.DeregisterForLocationEvents();
 
                         if (Unsubscribe)
                         {
@@ -674,12 +674,6 @@ namespace WebAnnotation.ViewModel
             //System.Threading.Tasks.Task.Factory.StartNew(() => this.AddLocations(results.KnownObjects.Values));
             //System.Windows.Threading.Dispatcher.CurrentDispatcher.BeginInvoke(new Action(() => this.AddLocations(results.KnownObjects.Values)));
             this.AddLocations(results.KnownObjects.Values);
-#if DEBUG
-//            Store.Structures.FreeExcessSections(40, 5);
-            Store.Locations.FreeExcessSections(40, 5);
-#else
-            Store.Locations.FreeExcessSections(40, 5);
-#endif 
 
             HaveLoadedSectionAnnotations = true;
         }

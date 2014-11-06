@@ -259,6 +259,9 @@ namespace WebAnnotation
                     Location_CanvasViewModel locToDraw = listToDraw[iObj];
                     int[] locIndicies;
 
+                    if (!locToDraw.OverlappingLocationLinksCanBeSeen(Scene.Camera.Downsample))
+                        continue; 
+
                     VertexPositionColorTexture[] objVerts = locToDraw.GetLinkedLocationBackgroundVerts(Scene.VisibleWorldBounds, Scene.Camera.Downsample, 
                                                                                                        out locIndicies);
 

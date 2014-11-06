@@ -158,8 +158,7 @@ namespace WebAnnotation.ViewModel
             
             // Add links to each section they intersect
             foreach (LocationLinkObj link in links)
-            {
-
+            { 
                 AddLocationLink(new LocationLinkKey(link)); 
             }
         }
@@ -182,9 +181,16 @@ namespace WebAnnotation.ViewModel
                 }
             }
         }
+         
 
         private bool AddLocationLink(LocationLinkKey key)
         {
+            //Check if we know about this key already
+            if(LinkKeyToLinkView.ContainsKey(key))
+            {
+                return false; 
+            }
+
             //Trace.WriteLine("Add Link " + key.A.ToString() + " -> " + key.B.ToString());
             LocationObj AObj = Store.Locations.GetObjectByID(key.A, false);
             LocationObj BObj = Store.Locations.GetObjectByID(key.B, false);
@@ -199,22 +205,31 @@ namespace WebAnnotation.ViewModel
                 return false;
 
             if (BObj.VolumePosition.X < 0 && BObj.VolumePosition.Y < 0)
-                return false; 
+                return false;
 
-            Location_CanvasViewModel AView = new Location_CanvasViewModel(AObj);
-            Location_CanvasViewModel BView = new Location_CanvasViewModel(BObj); 
+            if (AObj.VolumePosition == BObj.VolumePosition)
+                return false;
+             
+            //LocationLinkKey key = new LocationLinkKey(link); 
+            //LocationLink linkView = new LocationLink(AView, BView);
+            LocationLink linkView;  
+            linkView = LinkKeyToLinkView.GetOrAdd(key, (newLink) => { return new LocationLink(AObj, BObj); });
+            bool success = AddLocationLinkToSectionSearchGrids(AObj, BObj, linkView); 
 
+            if (success)
+            {
+                AddRefLocation(AObj);
+                AddRefLocation(BObj);
+            }
+
+            return true; 
+        }
+
+        private bool AddLocationLinkToSectionSearchGrids(LocationObj AObj, LocationObj BObj, LocationLink linkView)
+        {
             int minSection = AObj.Section < BObj.Section ? AObj.Section : BObj.Section;
             int maxSection = AObj.Section < BObj.Section ? BObj.Section : AObj.Section;
 
-            if (AView.VolumePosition == BView.VolumePosition)
-                return false; 
-
-            //LocationLinkKey key = new LocationLinkKey(link); 
-            //LocationLink linkView = new LocationLink(AView, BView);
-            LocationLink linkView; 
-
-            linkView = LinkKeyToLinkView.GetOrAdd(key, (newLink) => { return new LocationLink(AView, BView); });
             GridLineSegment lineSegment = new GridLineSegment(AObj.VolumePosition, BObj.VolumePosition);
 
             bool success = false;
@@ -227,10 +242,10 @@ namespace WebAnnotation.ViewModel
 
                 //int EstimatedLinks = Store.Locations.GetObjectsForSection(iSection).Count;
                 //if (EstimatedLinks < 2000)
-                int EstimatedLinks = 2500; 
+                int EstimatedLinks = 2500;
 
                 LineSearchGrid<LocationLink> searchGrid = GetOrAddSearchGrid(iSection, EstimatedLinks);
-     //           Debug.WriteLine(iSection.ToString() + " add    : " + linkView.ToString() + " " + searchGrid.Count.ToString());
+                //           Debug.WriteLine(iSection.ToString() + " add    : " + linkView.ToString() + " " + searchGrid.Count.ToString());
 
                 //Debug.Assert(false == searchGrid.Contains(linkView));
                 bool sectionSuccess = searchGrid.TryAdd(lineSegment, linkView);
@@ -238,13 +253,7 @@ namespace WebAnnotation.ViewModel
                 //Debug.Assert(success); 
             }
 
-            if (success)
-            {
-                AddRefLocation(AObj);
-                AddRefLocation(BObj);
-            }
-
-            return true; 
+            return success; 
         }
 
         /// <summary>
@@ -281,20 +290,32 @@ namespace WebAnnotation.ViewModel
             if(false == success)
                 return; 
             
-            LocationObj AObj = linkView.A.modelObj; 
-            LocationObj BObj = linkView.B.modelObj;
-            
-            success = false;
-            for(int iSection = linkView.minSection; iSection <= linkView.maxSection; iSection++)
+            success = RemoveLocationLinkFromSectionSearchGrids(linkView);
+
+            if (success)
+            {
+
+                LocationObj AObj = linkView.A;
+                LocationObj BObj = linkView.B;
+
+                ReleaseRefLocation(AObj);
+                ReleaseRefLocation(BObj);
+            }
+        }
+
+        private bool RemoveLocationLinkFromSectionSearchGrids(LocationLink linkView)
+        {
+            bool success = false;
+            for (int iSection = linkView.minSection; iSection <= linkView.maxSection; iSection++)
             {
                 if (parent.Section.VolumeViewModel.SectionViewModels.ContainsKey(iSection) == false)
-                    continue; 
+                    continue;
 
-        //        Debug.WriteLine(iSection.ToString() + " remove : " + linkView.ToString());
+                //        Debug.WriteLine(iSection.ToString() + " remove : " + linkView.ToString());
                 LineSearchGrid<LocationLink> searchGrid = GetSearchGrid(iSection);
 
                 if (searchGrid == null)
-                    continue; 
+                    continue;
 
                 GridLineSegment line;
                 bool sectionSuccess = searchGrid.TryRemove(linkView, out line);
@@ -304,15 +325,11 @@ namespace WebAnnotation.ViewModel
                 //Free all the memory for the search grid if this was the last location link
                 if (searchGrid.Count == 0)
                 {
-                    TryRemoveSearchGrid(iSection); 
+                    TryRemoveSearchGrid(iSection);
                 }
             }
 
-            if (success)
-            {
-                ReleaseRefLocation(AObj);
-                ReleaseRefLocation(BObj);
-            }
+            return success; 
         }
 
 #endregion
@@ -394,7 +411,7 @@ namespace WebAnnotation.ViewModel
             parent.Invalidate(); 
         }
         
-
+        
         //Called when a key is added or removed from the store
         public void OnLocationsStoreChanged(object sender, NotifyCollectionChangedEventArgs e)
         {
@@ -421,6 +438,7 @@ namespace WebAnnotation.ViewModel
 
             parent.Invalidate(); 
         }
+        
 
         public void OnLocationLinksChanged(object sender, NotifyCollectionChangedEventArgs e)
         {

@@ -129,7 +129,7 @@ namespace WebAnnotation.ViewModel
         #region Weak Events
         private object EventsLock = new object();
         private bool EventsRegistered = false;
-        internal void RegisterEvents()
+        internal void RegisterForLocationEvents()
         {
             if (EventsRegistered)
                 return;
@@ -159,7 +159,7 @@ namespace WebAnnotation.ViewModel
             }
         }
 
-        internal void DeregisterEvents()
+        internal void DeregisterForLocationEvents()
         {
             if (!EventsRegistered)
                 return;
@@ -539,7 +539,7 @@ namespace WebAnnotation.ViewModel
             {
                 if (_BackgroundVerts == null)
                 {
-                    RegisterEvents();
+                    RegisterForLocationEvents();
                     _BackgroundVerts = new VertexPositionColorTexture[GlobalPrimitives.SquareVerts.Length];
                     GlobalPrimitives.SquareVerts.CopyTo(_BackgroundVerts, 0);
 
@@ -563,7 +563,7 @@ namespace WebAnnotation.ViewModel
             {
                 if (_AboveSectionBackgroundVerts == null)
                 {
-                    RegisterEvents();
+                    RegisterForLocationEvents();
                     _AboveSectionBackgroundVerts = new VertexPositionColorTexture[GlobalPrimitives.SquareVerts.Length];
                     GlobalPrimitives.SquareVerts.CopyTo(_AboveSectionBackgroundVerts, 0);
 
@@ -587,7 +587,7 @@ namespace WebAnnotation.ViewModel
             {
                 if (_BelowSectionBackgroundVerts == null)
                 {
-                    RegisterEvents();
+                    RegisterForLocationEvents();
                     _BelowSectionBackgroundVerts = new VertexPositionColorTexture[GlobalPrimitives.SquareVerts.Length];
                     GlobalPrimitives.SquareVerts.CopyTo(_BelowSectionBackgroundVerts, 0);
 
@@ -658,10 +658,8 @@ namespace WebAnnotation.ViewModel
             }
         }
          */
-
-        
-
-        public System.Collections.ObjectModel.ObservableCollection<long> Links
+         
+        public ICollection<long> Links
         {
             get { return modelObj.Links; }
         }
@@ -757,6 +755,18 @@ namespace WebAnnotation.ViewModel
             }
         }
 
+        /// <summary>
+        /// How large is a locations radius on the panel when we are viewing an adjacent section 
+        /// </summary>
+        /// <param name="radius"></param>
+        /// <returns></returns>
+        public static float CalcOffSectionRadius(double radius)
+        {
+            if (radius < 128f)
+                return (float)radius;
+
+            return (float)(radius / 2.0f < 64f ? 64f : radius / 2.0f);
+        }
         
         /// <summary>
         /// The radius to use when the location is displayed as a reference location on another section
@@ -765,10 +775,7 @@ namespace WebAnnotation.ViewModel
         {
             get
             {
-                if (this.Radius < 128f)
-                    return (float)this.Radius;
-
-                return (float)(this.Radius / 2 < 64f ? 64f : this.Radius / 2);
+                return CalcOffSectionRadius(this.Radius);
                 //return (float)this.Radius; 
             }
         }
@@ -1620,23 +1627,21 @@ namespace WebAnnotation.ViewModel
             {
                 if (_OverlappingLinkedLocationCircles == null)
                 {
-                    RegisterEvents();
+                    RegisterForLocationEvents();
                     _OverlappingLinkedLocationCircles = CalculateOverlappedLocationCircles();
-                    NotifyCollectionChangedEventManager.AddListener(Links, this); 
+                    NotifyCollectionChangedEventManager.AddListener(this.modelObj.Links, this); 
                 }
+                    /*
                 else
                 {
                     if (Links != null)
-                    {
-                        if (_OverlappingLinkedLocationCircles.Count != Links.Count)
-                        {
-                            _OverlappingLinkedLocationCircles = CalculateOverlappedLocationCircles();
-                            _OverlappingLinkedLocationVerts = null;
-                            _OverlappingLinkedLocationIndicies = null;
-                        }
+                    { 
+                        _OverlappingLinkedLocationCircles = CalculateOverlappedLocationCircles();
+                        _OverlappingLinkedLocationVerts = null;
+                        _OverlappingLinkedLocationIndicies = null; 
                     }
                 }
-
+                */
 
                 return _OverlappingLinkedLocationCircles;
             }
@@ -1732,7 +1737,7 @@ namespace WebAnnotation.ViewModel
 
                 GridCircle circle = new GridCircle(this.VolumePosition + new GridVector2(positionOffset.X, positionOffset.Y), UpperArcLinkRadius);
 
-                OverlappedLocation overlapLocation = new OverlappedLocation(new LocationLink(this, linkLoc), linkLoc.modelObj, circle);
+                OverlappedLocation overlapLocation = new OverlappedLocation(new LocationLink(this.modelObj, linkLoc.modelObj), linkLoc.modelObj, circle);
                 bool added = listCircles.TryAdd(overlapLocation, circle);
                 if (!added)
                 {
@@ -1757,7 +1762,7 @@ namespace WebAnnotation.ViewModel
 
                 GridCircle circle = new GridCircle(this.VolumePosition + new GridVector2(positionOffset.X, positionOffset.Y), LowerArcLinkRadius);
 
-                OverlappedLocation overlapLocation = new OverlappedLocation(new LocationLink(this, linkLoc), linkLoc.modelObj, circle);
+                OverlappedLocation overlapLocation = new OverlappedLocation(new LocationLink(this.modelObj, linkLoc.modelObj), linkLoc.modelObj, circle);
                 bool added = listCircles.TryAdd(overlapLocation, circle);
                 if (!added)
                 {
@@ -1769,6 +1774,16 @@ namespace WebAnnotation.ViewModel
             return listCircles; 
         }
 
+        /// <summary>
+        /// When locations are very small we should not bother rendering text
+        /// </summary>
+        /// <param name="Downsample"></param>
+        /// <returns></returns>
+        public bool OverlappingLocationLinksCanBeSeen(double downsample)
+        {
+            return this.Radius / downsample >= 64;
+        }
+
         public VertexPositionColorTexture[] GetLinkedLocationBackgroundVerts(double downsample,
                                                                              Microsoft.Xna.Framework.Color unselectedColor,
                                                                              Microsoft.Xna.Framework.Color selectionColor,
@@ -1777,12 +1792,11 @@ namespace WebAnnotation.ViewModel
             indicies = _OverlappingLinkedLocationIndicies;
 
             //Figure out if we are too small to display location link icons
-            if(this.Radius / downsample <= 64)
+            if (!OverlappingLocationLinksCanBeSeen(downsample))
             {
                 //Free the memory just in case
                 _OverlappingLinkedLocationVerts = null;
-                _OverlappingLinkedLocationIndicies = null;
-                _OverlappingLinkedLocationCircles = null; 
+                _OverlappingLinkedLocationIndicies = null; 
 
                 return new VertexPositionColorTexture[0];
             }
@@ -1801,7 +1815,7 @@ namespace WebAnnotation.ViewModel
             if (overlapLocation != null)
             {
                 //Redo our verticies if we are
-                if (overlapLocation.link.A == this || overlapLocation.link.B == this)
+                if (overlapLocation.link.A.ID == this.ID || overlapLocation.link.B.ID == this.ID)
                 {
                     _OverlappingLinkedLocationCircles = CalculateOverlappedLocationCircles();
                     _OverlappingLinkedLocationVerts = null;

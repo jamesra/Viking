@@ -856,6 +856,14 @@ namespace WebAnnotation
             
 
             linksView.LoadSection(_Parent.Section.Number); 
+            
+            #if DEBUG
+                //            Store.Structures.FreeExcessSections(40, 5);
+                Task.Factory.StartNew(() => Store.Locations.FreeExcessSections(4, 3));
+                //Task.Factory.StartNew(() => Store.Locations.FreeExcessSections(Global.NumSectionsInMemory, 5));
+            #else
+                Task.Factory.StartNew(() => Store.Locations.FreeExcessSections(Global.NumSectionsInMemory, 5));
+            #endif
             //AnnotationCache.LoadSectionAnnotations(_Parent.Section); 
         }
 
@@ -950,40 +958,31 @@ namespace WebAnnotation
             
             foreach (LocationLink link in VisibleLinks)
             {                
-                Location_CanvasViewModel locA = link.A;
-                Location_CanvasViewModel locB = link.B;
+                LocationObj locA = link.A;
+                LocationObj locB = link.B;
+
+                if (!locA.VolumePositionHasBeenCalculated)
+                    continue;
+                if (!locB.VolumePositionHasBeenCalculated)
+                    continue;
+
+                if (!link.LinksVisible(_Parent.Downsample))
+                    continue;
+                                   
+                //Don't draw if the link falls within the radius of the location we are drawing
+                if (link.LinksOverlap(Parent.Section.Number))
+                    continue; 
 
                 if (locA.Parent == null)
                     continue;
 
-                if (locA.Parent.Type == null)
+                StructureType type = new StructureType(locA.Parent.Type);
+                if (type == null)
                     continue;
-
-                //Don't draw if the link falls within the radius of the location we are drawing
-                if (locA.Section == Parent.Section.Number)
-                {
-
-                    if (GridVector2.Distance(locA.VolumePosition, locB.VolumePosition) <= locA.Radius + locB.OffSectionRadius)
-                    {
-                        continue;
-                    }
-                }
-
-                if (locB.Section == Parent.Section.Number)
-                {
-                    if (GridVector2.Distance(locA.VolumePosition, locB.VolumePosition) <= locB.Radius + locA.OffSectionRadius)
-                    {
-                       continue;
-                    }
-                }
-
-                StructureType type = locA.Parent.Type;
-
 
                 int distanceFactor = link.maxSection - link.minSection;
                 if (distanceFactor == 0)
-                    distanceFactor = 1;
-                
+                    distanceFactor = 1; 
 
                 //Give the colors a nudge towards red or blue depending on the direction to the link
                 double directionFactor = 1;
@@ -1032,13 +1031,9 @@ namespace WebAnnotation
             
             //Draw the text for each location
             foreach (Location_CanvasViewModel loc in Locations)
-            {
-                Structure ParentStructure = loc.Parent;
-                if (ParentStructure == null)
-                    continue;
-
-                if (ParentStructure.Type == null)
-                    continue;
+            { 
+                if (!loc.VolumePositionHasBeenCalculated)
+                    continue; 
 
                 GridVector2 WorldPosition = loc.VolumePosition; 
 
@@ -1058,7 +1053,13 @@ namespace WebAnnotation
                 {
                     Debug.Fail("Unknown location type");
                 }
-                
+
+                Structure ParentStructure = loc.Parent;
+                if (ParentStructure == null)
+                    continue;
+
+                if (ParentStructure.Type == null)
+                    continue;
 
                 listLocationsToDraw.Add(loc); 
             }
@@ -1084,15 +1085,10 @@ namespace WebAnnotation
             foreach (Location_CanvasViewModel loc in RefLocations)
             {
                 if (loc == null)
-                    continue; 
-
-                //If we could not map a reference section we may not have a transformed location, so we should skip them
-                Structure ParentStructure = loc.Parent;
-                if (ParentStructure == null)
                     continue;
 
-                if (ParentStructure.Type == null)
-                    continue;
+                if (!loc.VolumePositionHasBeenCalculated)
+                    continue;  
 
                 GridVector2 WorldPosition = loc.VolumePosition;
                 
@@ -1136,6 +1132,13 @@ namespace WebAnnotation
                     Debug.Fail("Unknown location type");
                 }
 
+                Structure ParentStructure = loc.Parent;
+                if (ParentStructure == null)
+                    continue;
+
+                if (ParentStructure.Type == null)
+                    continue;
+
                 listAdacentNonOverlappingLocationsToDraw.Add(loc); 
                 //listLocationsToDraw.Add(loc); 
             }
@@ -1159,7 +1162,7 @@ namespace WebAnnotation
                 LocationLink SelectedLink = OverlappingLocation.link;
                 //Give the colors a nudge towards red or blue depending on the direction to the link
                 double directionFactor = 1;
-                StructureType type = SelectedLink.A.Parent.Type;
+                StructureType type = new StructureType(SelectedLink.A.Parent.Type);
                 int distanceFactor = SelectedLink.maxSection - SelectedLink.minSection;
                 if (distanceFactor == 0)
                     distanceFactor = 1;

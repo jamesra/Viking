@@ -5,7 +5,8 @@ using System.Text;
 using Viking.Common;
 using System.Windows.Forms;
 using WebAnnotationModel;
-using System.Diagnostics; 
+using System.Diagnostics;
+using Geometry;
 
 namespace WebAnnotation.ViewModel
 {
@@ -63,12 +64,12 @@ namespace WebAnnotation.ViewModel
         /// <summary>
         /// LocationOnSection is the location on the section being viewed
         /// </summary>
-        public Location_CanvasViewModel A; 
+        public LocationObj A; 
 
         /// <summary>
         /// LocationOnSection is the location on the section being viewed
         /// </summary>
-        public Location_CanvasViewModel B;
+        public LocationObj B;
 
         public int minSection { get { return A.Section < B.Section ? A.Section : B.Section; } }
         public int maxSection { get { return A.Section > B.Section ? A.Section : B.Section; } }
@@ -80,10 +81,10 @@ namespace WebAnnotation.ViewModel
             {
                 if (_lineGraphic == null)
                 {
-                    _lineGraphic = new RoundLineCode.RoundLine((float)A.VolumeX,
-                                                      (float)A.VolumeY,
-                                                      (float)B.VolumeX,
-                                                      (float)B.VolumeY);
+                    _lineGraphic = new RoundLineCode.RoundLine((float)A.VolumePosition.X,
+                                                      (float)A.VolumePosition.Y,
+                                                      (float)B.VolumePosition.X,
+                                                      (float)B.VolumePosition.Y);
                 }
 
                 return _lineGraphic;
@@ -99,7 +100,7 @@ namespace WebAnnotation.ViewModel
             }
         }
 
-        public LocationLink(Location_CanvasViewModel LocOne, Location_CanvasViewModel LocTwo)
+        public LocationLink(LocationObj LocOne, LocationObj LocTwo)
         {
             if (LocOne == null)
                 throw new ArgumentNullException("LocOne");
@@ -112,8 +113,38 @@ namespace WebAnnotation.ViewModel
             this.B = LocOne.ID > LocTwo.ID ? LocOne : LocTwo; 
 
             
-           // lineSegment = new Geometry.GridLineSegment(A.VolumePosition, B.VolumePosition);
-            
+           // lineSegment = new Geometry.GridLineSegment(A.VolumePosition, B.VolumePosition); 
+        }
+
+        /// <summary>
+        /// Return true if the locations overlap when viewed from the passed section
+        /// </summary>
+        /// <param name="sectionNumber"></param>
+        /// <returns></returns>
+        public bool LinksOverlap(int sectionNumber)
+        { 
+            //Don't draw if the link falls within the radius of the location we are drawing
+            if (A.Section == sectionNumber)
+            {
+                return GridVector2.Distance(A.VolumePosition, B.VolumePosition) <= A.Radius + Location_CanvasViewModel.CalcOffSectionRadius((float)B.Radius);
+            }
+
+            if (A.Section == sectionNumber)
+            {
+                return GridVector2.Distance(A.VolumePosition, B.VolumePosition) <= B.Radius + Location_CanvasViewModel.CalcOffSectionRadius((float)A.Radius);
+            } 
+
+            return false; 
+        }
+
+        /// <summary>
+        /// Return true if the link can be seen at the given downsample level
+        /// </summary>
+        /// <param name="Downsample"></param>
+        /// <returns></returns>
+        public bool LinksVisible(double Downsample)
+        {
+            return Location_CanvasViewModel.CalcOffSectionRadius(this.Radius) / Downsample > 2.0;
         }
 
         #region IUIObjectBasic Members

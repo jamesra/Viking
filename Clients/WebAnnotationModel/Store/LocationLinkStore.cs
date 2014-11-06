@@ -280,6 +280,9 @@ namespace WebAnnotationModel
             List<LocationLinkObj> links = new List<LocationLinkObj>();
             foreach (LocationObj obj in newObjs)
             {
+                if (obj.NumLinks == 0)
+                    continue; 
+
                 foreach (long linkID in obj.Links)
                 {
                     //obj.AddLink(linkID);
@@ -312,7 +315,7 @@ namespace WebAnnotationModel
         }
 
         /// <summary>
-        /// Add links from objects, no object update needed
+        /// Add links from objects, no object update needed.  The object is being deleted.
         /// </summary>
         /// <param name="delObjs"></param>
         /// <returns></returns>
@@ -321,13 +324,13 @@ namespace WebAnnotationModel
             List<LocationLinkKey> links = new List<LocationLinkKey>();
             foreach (LocationObj obj in delObjs)
             {
-                foreach (long linkID in obj.Links)
+                foreach (long linkID in obj.LinksCopy)
                 {
                     links.Add(new LocationLinkKey(obj.ID, linkID));
                 }
             }
 
-            return InternalDelete(links.ToArray());
+            return base.InternalDelete(links.ToArray());
         }
 
         #endregion
