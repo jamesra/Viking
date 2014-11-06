@@ -40,7 +40,18 @@ namespace WebAnnotation
          */
 
         internal static double DefaultLocationJumpDownsample = 4; //Jumping to a location causes it's diameter to occupy 1/8 the width of the screen
-        internal static int NumSectionsInMemory = 15;
+
+        /// <summary>
+        /// Number of sections we should be attempting to load at the same time before cancelling a request
+        /// </summary>
+        internal static int NumSectionsLoading = 5;
+
+#if DEBUG
+        internal static int NumSectionsInMemory = 25;
+        
+#else
+        internal static int NumSectionsInMemory = 20;
+#endif
 
         /// <summary>
         /// This is hardcoded for now, but should be read from the VikingXML file
