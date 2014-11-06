@@ -954,63 +954,9 @@ namespace WebAnnotation
 
             //Get all the lines to draw first so the text and geometric shapes are over top of them
             LocationLink[] VisibleLinks = linksView.VisibleLocationLinks(_Parent.Section.Number, Bounds);
-
-            
             foreach (LocationLink link in VisibleLinks)
-            {                
-                LocationObj locA = link.A;
-                LocationObj locB = link.B;
-
-                if (!locA.VolumePositionHasBeenCalculated)
-                    continue;
-                if (!locB.VolumePositionHasBeenCalculated)
-                    continue;
-
-                if (!link.LinksVisible(_Parent.Downsample))
-                    continue;
-                                   
-                //Don't draw if the link falls within the radius of the location we are drawing
-                if (link.LinksOverlap(Parent.Section.Number))
-                    continue; 
-
-                if (locA.Parent == null)
-                    continue;
-
-                StructureType type = new StructureType(locA.Parent.Type);
-                if (type == null)
-                    continue;
-
-                int distanceFactor = link.maxSection - link.minSection;
-                if (distanceFactor == 0)
-                    distanceFactor = 1; 
-
-                //Give the colors a nudge towards red or blue depending on the direction to the link
-                double directionFactor = 1;
-                directionFactor = link.maxSection == SectionNumber ? 1 : -1;
-
-                int red = (int)((float)(type.Color.R * .5) + (128 * directionFactor));
-                red = 255 - (red / distanceFactor); 
-                red = red > 255 ? 255 : red;
-                int blue = (int)((float)(type.Color.B * .5) + (128 * (1 - directionFactor)));
-                blue = 255 - (blue / distanceFactor); 
-                blue = blue > 255 ? 255 : blue;
-                int green = (int)((float)type.Color.G);
-                green = 255 - (green / distanceFactor); 
-
-                int alpha = 64;
-                if (LastMouseOverObject == link)
-                {
-                    alpha = 128; 
-                }
-
-                //If you don't cast to byte the wrong constructor is used and the alpha value is wrong
-                Microsoft.Xna.Framework.Color color = new Microsoft.Xna.Framework.Color((byte)(red),
-                    (byte)(green),
-                    (byte)(blue),
-                    (byte)(alpha));
-
-                _Parent.LineManager.Draw(link.lineGraphic, (float)link.Radius, color,
-                                             ViewProjMatrix, Time, null);
+            {
+                DrawLocationLink(link, ViewProjMatrix);
             }
 
             IncrementDepthStencilValue(graphicsDevice, ref nextStencilValue);
@@ -1193,56 +1139,7 @@ namespace WebAnnotation
                 _Parent.LineManager.Draw(SelectedLink.lineGraphic, (float)SelectedLink.Radius, color,
                                              basicEffect.View * basicEffect.Projection, Time, null);
             }
-
-            /*
-            //Draw a rectangle around each LocationObj in this section
-            VertexDeclaration oldVertexDeclaration = graphicsDevice.VertexDeclaration;
- 
-            graphicsDevice.RenderState.FillMode = FillMode.Solid; 
-            graphicsDevice.RenderState.PointSize = 5.0f;
-            graphicsDevice.VertexDeclaration = _Parent.VertexPositionColorDeclaration; 
-
-            basicEffect.Alpha = 1f;
-
-//            //GraphicsDevice.RenderState.SourceBlend = Blend.SourceAlpha;
-//            //GraphicsDevice.RenderState.DestinationBlend = Blend.InverseSourceAlpha;
-            
-            
-            graphicsDevice.RenderState.DestinationBlend = Blend.DestinationColor;
-
-            graphicsDevice.RenderState.SourceBlend = Blend.SourceAlpha;
-            graphicsDevice.RenderState.DestinationBlend = Blend.DestinationColor;
-
-            basicEffect.LightingEnabled = false; 
-            basicEffect.Texture = null;
-            basicEffect.TextureEnabled = false;
-            basicEffect.VertexColorEnabled = true;
-            basicEffect.CommitChanges();
-
-
-            basicEffect.Begin();
-            foreach (EffectPass pass in basicEffect.CurrentTechnique.Passes)
-            {
-                pass.Begin();
-
-                foreach (LocationObj loc in listToDraw)
-                {
-                    loc.DrawBackground(graphicsDevice,
-                                       (int)((long)SectionNumber - loc.Section));
-                }
-
-                pass.End();
-            }
-
-            basicEffect.End();
-
-            graphicsDevice.RenderState.SourceBlend = Blend.SourceAlpha;
-            graphicsDevice.RenderState.DestinationBlend = Blend.InverseSourceAlpha;
-            */
-
-            //graphicsDevice.BlendState.Dispose();
-
-
+               
             if (defaultBlendState == null || defaultBlendState.IsDisposed)
             {
                 defaultBlendState = new BlendState();
@@ -1257,32 +1154,10 @@ namespace WebAnnotation
             graphicsDevice.BlendState = defaultBlendState;
 
             //Get all the lines to draw
-            StructureLink[] VisibleStructureLinks = currentSectionAnnotations.VisibleStructureLinks(Bounds);
-            
+            StructureLink[] VisibleStructureLinks = currentSectionAnnotations.VisibleStructureLinks(Bounds); 
             foreach (StructureLink link in VisibleStructureLinks)
             {
-                int alpha = 128;
-                if (LastMouseOverObject == link)
-                {
-                    alpha = 192;
-                }
-
-                //If you don't cast to byte the wrong constructor is used and the alpha value is wrong
-                Microsoft.Xna.Framework.Color color = new Microsoft.Xna.Framework.Color((byte)(255),
-                    (byte)(255),
-                    (byte)(255),
-                    (byte)(alpha));
-
-                if (link.Bidirectional)
-                {
-                    _Parent.LineManager.Draw(link.lineGraphic, (float)link.Radius, color,
-                                             ViewProjMatrix, Time, "AnimatedBidirectional");
-                }
-                else
-                {
-                    _Parent.LineManager.Draw(link.lineGraphic, (float)link.Radius, color,
-                                             ViewProjMatrix, Time, "AnimatedLinear");
-                }
+                DrawStructureLink(link, ViewProjMatrix, Time);
             }
             
             graphicsDevice.BlendState = defaultBlendState;
@@ -1341,6 +1216,101 @@ namespace WebAnnotation
             basicEffect.CommitChanges(); 
             graphicsDevice.VertexDeclaration = oldVertexDeclaration; 
             */
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="StructureTypeColor"></param>
+        /// <param name="section_span_distance">Number of sections the location link crosses</param>
+        /// <param name="direction">Direction the link is in from the current section</param>
+        /// <returns></returns>
+        private Microsoft.Xna.Framework.Color GetLocationLinkColor(System.Drawing.Color structure_type_color, int section_span_distance, double direction, bool IsMouseOver)
+        {
+            int red = (int)((float)(structure_type_color.R * .5) + (128 * direction));
+            red = 255 - (red / section_span_distance);
+            red = red > 255 ? 255 : red;
+            int blue = (int)((float)(structure_type_color.B * .5) + (128 * (1 - direction)));
+            blue = 255 - (blue / section_span_distance);
+            blue = blue > 255 ? 255 : blue;
+            int green = (int)((float)structure_type_color.G);
+            green = 255 - (green / section_span_distance);
+
+            int alpha = 64;
+            if (IsMouseOver)
+            {
+                alpha = 128;
+            }
+
+            //If you don't cast to byte the wrong constructor is used and the alpha value is wrong
+            return new Microsoft.Xna.Framework.Color((byte)(red),
+                (byte)(green),
+                (byte)(blue),
+                (byte)(alpha));
+        }
+
+        private void DrawLocationLink(LocationLink link, Matrix ViewProjMatrix)
+        {
+            LocationObj locA = link.A;
+            LocationObj locB = link.B;
+
+            if (!link.LinksVisible(_Parent.Downsample))
+                return;
+
+            if (!locA.VolumePositionHasBeenCalculated)
+                return;
+            if (!locB.VolumePositionHasBeenCalculated)
+                return;
+
+            //Don't draw if the link falls within the radius of the location we are drawing
+            if (link.LinksOverlap(Parent.Section.Number))
+                return;
+
+            if (locA.Parent == null)
+                return;
+
+            StructureType type = new StructureType(locA.Parent.Type);
+            if (type == null)
+                return;
+
+            int distanceFactor = link.maxSection - link.minSection;
+            if (distanceFactor == 0)
+                distanceFactor = 1;
+
+            //Give the colors a nudge towards red or blue depending on the direction to the link
+            double directionFactor = 1;
+            directionFactor = link.maxSection == _Parent.Section.Number ? 1 : -1;
+
+            Microsoft.Xna.Framework.Color color = GetLocationLinkColor(type.Color, distanceFactor, directionFactor, LastMouseOverObject == link);
+              
+            _Parent.LineManager.Draw(link.lineGraphic, (float)link.Radius, color,
+                                         ViewProjMatrix, 0, null);
+        }
+
+        private void DrawStructureLink(StructureLink link, Matrix ViewProjMatrix, float time_offset)
+        {
+            int alpha = 128;
+            if (LastMouseOverObject == link)
+            {
+                alpha = 192;
+            }
+
+            //If you don't cast to byte the wrong constructor is used and the alpha value is wrong
+            Microsoft.Xna.Framework.Color color = new Microsoft.Xna.Framework.Color((byte)(255),
+                (byte)(255),
+                (byte)(255),
+                (byte)(alpha));
+
+            if (link.Bidirectional)
+            {
+                _Parent.LineManager.Draw(link.lineGraphic, (float)link.Radius, color,
+                                         ViewProjMatrix, time_offset, "AnimatedBidirectional");
+            }
+            else
+            {
+                _Parent.LineManager.Draw(link.lineGraphic, (float)link.Radius, color,
+                                         ViewProjMatrix, time_offset, "AnimatedLinear");
+            }
         }
 
         #endregion

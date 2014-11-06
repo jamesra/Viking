@@ -206,6 +206,7 @@
       <DependentUpon>StructureTypeStructuresPage.cs</DependentUpon>
     </Compile>
     <Compile Include="ViewModel\LocationViewBase.cs" />
+    <Compile Include="ViewModel\Location_ViewModelBase.cs" />
     <Compile Include="ViewModel\SectionStructureLinksViewModel.cs" />
     <Compile Include="WeakEvents\NotifyCollectionChangedEventManager.cs" />
     <Compile Include="WeakEvents\NotifyPropertyChangingEventManager.cs" />
@@ -329,7 +330,9 @@
       <Name>WebAnnotationModel</Name>
     </ProjectReference>
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Folder Include="View\" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

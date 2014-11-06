@@ -19,32 +19,9 @@ using System.Collections.Concurrent;
 
 namespace WebAnnotation.ViewModel
 {
-    public class Location_PropertyPageViewModel : Location_ViewModelBase
-    { 
-        public Location_PropertyPageViewModel(LocationObj location)
-            : base(location)
-        {
-            
-        }
-
-    }
-
     public class Location_ViewModelBase : Viking.Objects.UIObjBase, IEqualityComparer<Location_ViewModelBase>, IEqualityComparer<LocationObj>, IComparable<Location_ViewModelBase>, System.Windows.IWeakEventListener
     {
         public readonly LocationObj modelObj;
-
-        static public Location_ViewModelBase CreateCanvasLocationViewModel(LocationObj obj)
-        {
-            switch(obj.TypeCode)
-            {
-                case LocationType.CIRCLE:
-                    return new Location_CanvasCircleAnnotationViewModel(obj);
-                case LocationType.POLYLINE:
-                    return new Location_CanvasPolyLineViewModel(obj);
-                default:
-                    return null; 
-            }
-        }
 
         public Location_ViewModelBase(LocationObj location)
         {
@@ -131,52 +108,72 @@ namespace WebAnnotation.ViewModel
             get { return modelObj.ParentID; }
         }
 
+        private Structure _Parent = null;
+
+        private void ResetParentCache() { _Parent = null; }
+
         public Structure Parent
         {
             get
             {
-                if (this.modelObj.Parent != null)
-                    return new Structure(this.modelObj.Parent);
-                else
-                    return null; 
+                if (this.modelObj.Parent == null)
+                    return null;
+
+                if (this._Parent == null)
+                    _Parent = new Structure(this.modelObj.Parent);
+
+                return _Parent;
             }
         }
 
         #region Weak Events
+        private object EventsLock = new object();
         private bool EventsRegistered = false;
-        internal void RegisterEvents()
+        internal void RegisterForLocationEvents()
         {
             if (EventsRegistered)
                 return;
 
-            NotifyPropertyChangedEventManager.AddListener(this.modelObj, this);
-
-            if (this.modelObj.Parent == null)
+            lock (EventsLock)
             {
-                Action<long> GetParent = delegate(long ParentID)
+                if (EventsRegistered)
+                    return;
+
+                NotifyPropertyChangedEventManager.AddListener(this.modelObj, this);
+
+                if (this.modelObj.Parent == null)
                 {
-                    StructureObj parent = Store.Structures.GetObjectByID(ParentID, true);
-                    if (parent != null)
-                        NotifyPropertyChangedEventManager.AddListener(this.modelObj.Parent, this);
-                };
+                    Action<long> GetParent = delegate(long ParentID)
+                    {
+                        StructureObj parent = Store.Structures.GetObjectByID(ParentID, true);
+                        if (parent != null)
+                            NotifyPropertyChangedEventManager.AddListener(this.modelObj.Parent, this);
+                    };
 
-                AnnotationOverlay.CurrentOverlay.Parent.BeginInvoke(GetParent, new object[] { this.modelObj.ParentID.Value });
+                    AnnotationOverlay.CurrentOverlay.Parent.BeginInvoke(GetParent, new object[] { this.modelObj.ParentID.Value });
+                }
+                else
+                    NotifyPropertyChangedEventManager.AddListener(this.modelObj.Parent, this);
+
+                EventsRegistered = true;
             }
-            else
-                NotifyPropertyChangedEventManager.AddListener(this.modelObj.Parent, this);
-
-            EventsRegistered = true;
         }
 
-        internal void DeregisterEvents()
+        internal void DeregisterForLocationEvents()
         {
             if (!EventsRegistered)
                 return;
 
-            NotifyPropertyChangedEventManager.RemoveListener(this.modelObj, this);
-            NotifyPropertyChangedEventManager.RemoveListener(this.modelObj.Parent, this);
+            lock (EventsLock)
+            {
+                if (!EventsRegistered)
+                    return;
 
-            EventsRegistered = false;
+                NotifyPropertyChangedEventManager.RemoveListener(this.modelObj, this);
+                NotifyPropertyChangedEventManager.RemoveListener(this.modelObj.Parent, this);
+
+                EventsRegistered = false;
+            }
         }
         #endregion
 
@@ -367,6 +364,7 @@ namespace WebAnnotation.ViewModel
 
         protected virtual void OnParentPropertyChanged(object o, PropertyChangedEventArgs args)
         {
+            this.ResetParentCache();
             return;
         }
 
@@ -377,7 +375,7 @@ namespace WebAnnotation.ViewModel
 
         protected virtual void OnLinksChanged(object o, NotifyCollectionChangedEventArgs args)
         {
-           return;
+            return;
         }
         #endregion
 
@@ -496,11 +494,15 @@ namespace WebAnnotation.ViewModel
             get { return (int)modelObj.Section; }
         }
 
+        /// <summary>
+        /// Return true if the locations volume position has been calculated
+        /// </summary>
+        public bool VolumePositionHasBeenCalculated
+        {
+            get { return this.modelObj.VolumePositionHasBeenCalculated; }
+        }
+
         #endregion
 
     }
-
-
-
-    
 }

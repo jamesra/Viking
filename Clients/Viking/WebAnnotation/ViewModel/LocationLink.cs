@@ -129,7 +129,7 @@ namespace WebAnnotation.ViewModel
                 return GridVector2.Distance(A.VolumePosition, B.VolumePosition) <= A.Radius + Location_CanvasViewModel.CalcOffSectionRadius((float)B.Radius);
             }
 
-            if (A.Section == sectionNumber)
+            if (B.Section == sectionNumber)
             {
                 return GridVector2.Distance(A.VolumePosition, B.VolumePosition) <= B.Radius + Location_CanvasViewModel.CalcOffSectionRadius((float)A.Radius);
             } 
