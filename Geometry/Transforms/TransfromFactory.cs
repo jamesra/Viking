@@ -6,6 +6,7 @@ using System.Text;
 using System.IO;
 using System.Xml.Linq;
 using System.Diagnostics;
+using System.Threading.Tasks;
 using Utils;
 
 namespace Geometry.Transforms
@@ -16,55 +17,39 @@ namespace Geometry.Transforms
         public string transform_name;
         public double[] fixedParameters = new double[0];
         public double[] variableParameters = new double[0];
-
-        /// <summary>
-        /// An enumerator which returns strings from a transform, deliminated by spaces, no empty strings are returned
-        /// </summary>
-        /// <param name="transform_points"></param>
-        /// <returns></returns>
-        private static IEnumerable<string> TransformParts(string transform_points)
-        {
-            return transform_points.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-            /*
-            char[] seperator = new char[] { ' ' };
-            string[] parts = transform_points.Split(seperator, 2, StringSplitOptions.RemoveEmptyEntries);
-            while (parts.LongLength == 2)
-            {
-                yield return parts[0];
-                parts = parts[1].Split(seperator, 2, StringSplitOptions.RemoveEmptyEntries);
-            }
-
-            if (parts.LongLength == 1)
-                yield return parts[0];
-             */
-        }
-
+         
         /// <summary>
         /// Read parameters from an enumerator of strings and return an array of numbers.  First value is number of values.  Remaining strings are values themselves.
         /// </summary>
         /// <param name="NumParameters">Space delimited string, first value is number of parameters.</param>
         /// <param name="parts"></param>
         /// <returns></returns>
-        static private double[] ReadParameterValues(IEnumerator<string> parts)
+        static private double[] ReadParameterValues(string[] parts, long iStart)
         {
-
-            parts.MoveNext();
-            ulong number_of_params = Convert.ToUInt64(parts.Current);
-            double[] parameter_values = new double[number_of_params];
-
-            double val;
-            for (ulong i = 0; i < number_of_params; i++)
+            if(parts.Length < iStart)
             {
-                if (!parts.MoveNext())
-                    throw new ArgumentException("Insufficient parameter values in transform string");
+                throw new ArgumentException("Insufficient parameter values in transform string");
+            }
 
-                val = Convert.ToDouble(parts.Current);
-                parameter_values[i] = val;
+            long number_of_params = Convert.ToInt64(parts[iStart]);
+            iStart += 1; //Start reading at parameter values
+
+            if(parts.Length < iStart + number_of_params)
+            {
+                throw new ArgumentException("Insufficient parameter values in transform string");
+            }
+
+            double[] parameter_values = new double[number_of_params]; 
+
+            Parallel.For(iStart, iStart + number_of_params, i =>
+            {
+                double val = Convert.ToDouble(parts[i]);
+                parameter_values[i-iStart] = val;
 
                 Debug.Assert(!(double.IsInfinity(val) || double.IsNaN(val)));
                 if (double.IsInfinity(val) || double.IsNaN(val))
                     throw new ArgumentException("Infinite or NaN found in transform parameters file");
-            }
+            });
 
             return parameter_values;
         }
@@ -73,21 +58,29 @@ namespace Geometry.Transforms
         {
             TransformParameters parameters = new TransformParameters();
 
-            IEnumerator<string> parts = TransformParts(transform).GetEnumerator();
-            if (!parts.MoveNext())
-                throw new ArgumentException("Missing transform string");
+            string[] transform_parts = transform.Split(new Char[] {' '}, StringSplitOptions.RemoveEmptyEntries);
 
-            parameters.transform_name = parts.Current;
+            parameters.transform_name = transform_parts[0];
 
-            while (parts.MoveNext())
+            long iWord = 1;
+            
+            while(iWord < transform_parts.Length)
             {
-                if (parts.Current == "vp")
+                if (transform_parts[iWord].ToLower() == "vp")
                 {
-                    parameters.variableParameters = ReadParameterValues(parts);
+                    ++iWord; 
+                    parameters.variableParameters = ReadParameterValues(transform_parts, iWord);
+                    iWord += parameters.variableParameters.Length+1;
                 }
-                else if (parts.Current == "fp")
+                else if (transform_parts[iWord].ToLower() == "fp")
                 {
-                    parameters.fixedParameters = ReadParameterValues(parts);
+                    ++iWord; 
+                    parameters.fixedParameters = ReadParameterValues(transform_parts, iWord);
+                    iWord += parameters.fixedParameters.Length+1;
+                }
+                else
+                {
+                    iWord++; 
                 }
             }
 
