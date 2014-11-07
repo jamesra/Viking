@@ -140,10 +140,25 @@ namespace Geometry
             double YDist = p.Y - this.Center.Y;
 
             return (XDist * XDist) + (YDist * YDist) <= this.RadiusSquared; 
-             
         }
 
-        public bool Contains(GridCircle c)
+        /// <summary>
+        /// True if the circle intersects the circle with center c and radius r
+        /// </summary>
+        /// <param name="c"></param>
+        /// <param name="radius"></param>
+        /// <returns></returns>
+        public bool Intersects(GridVector2 p, double radius)
+        {
+
+            double XDist = p.X - this.Center.X;
+            double YDist = p.Y - this.Center.Y;
+            double CombinedRadiusSquared = this.Radius + radius;
+            CombinedRadiusSquared *= CombinedRadiusSquared; 
+            return (XDist * XDist) + (YDist * YDist) <= CombinedRadiusSquared;
+        }
+
+        public bool Intersects(GridCircle c)
         {
             
             double XDist = c.Center.X - this.Center.X;
