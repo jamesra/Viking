@@ -1026,59 +1026,33 @@ namespace WebAnnotation
             graphicsDevice.BlendState = defaultBlendState;
             
             //Draw text
+
+            DrawLocationLabels(listLocationsToDraw);
+
+            DrawLocationLabels(listVisibleNonOverlappingLocationsOnAdjacentSections); 
+             
+            graphicsDevice.RasterizerState = OriginalRasterState;
+        }
+
+        private void DrawLocationLabels(ICollection<Location_CanvasViewModel> locations)
+        {
             _Parent.spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.AlphaBlend);
             
-            foreach (Location_CanvasViewModel loc in listLocationsToDraw)
-            {
-                GridVector2 WorldPosition = loc.VolumePosition; 
-                
-                /*bool Success = currentSectionAnnotations.TryGetPositionForLocation(loc, out WorldPosition);
-                if (!Success)
-                    continue; 
-                */
-
-                GridVector2 DrawPosition = _Parent.WorldToScreen(WorldPosition.X, WorldPosition.Y);
-
-                loc.DrawLabel(_Parent.spriteBatch,
-                              _Parent.fontArial,
-                              new Vector2((float)DrawPosition.X, (float)DrawPosition.Y),
-                              (float)(1 / _Parent.StatusMagnification),
-                              (int)((long)SectionNumber - loc.Section));
-            }
-
-            foreach (Location_CanvasViewModel loc in listVisibleNonOverlappingLocationsOnAdjacentSections)
+            long section_number = _Parent.Section.Number;
+            foreach (Location_CanvasViewModel loc in locations)
             {
                 GridVector2 WorldPosition = loc.VolumePosition;
 
-                /*bool Success = currentSectionAnnotations.TryGetPositionForLocation(loc, out WorldPosition);
-                if (!Success)
-                    continue; 
-                */
-
                 GridVector2 DrawPosition = _Parent.WorldToScreen(WorldPosition.X, WorldPosition.Y);
 
                 loc.DrawLabel(_Parent.spriteBatch,
                               _Parent.fontArial,
                               new Vector2((float)DrawPosition.X, (float)DrawPosition.Y),
                               (float)(1 / _Parent.StatusMagnification),
-                              (int)((long)SectionNumber - loc.Section));
+                              (int)(section_number - loc.Section));
             }
 
             _Parent.spriteBatch.End();
-
-            
-            //graphicsDevice.RenderState.CullMode = CullMode.None;
-            
-            //PORT XNA 4
-            //graphicsDevice.RenderState.AlphaTestEnable = false;
-
-            graphicsDevice.RasterizerState = OriginalRasterState;
-
-            /*
-            basicEffect.VertexColorEnabled = false;
-            basicEffect.CommitChanges(); 
-            graphicsDevice.VertexDeclaration = oldVertexDeclaration; 
-            */
         }
 
         private static bool TryDrawLineFromOverlappingLocation(OverlappedLocation OverlappingLocation, RoundLineCode.RoundLineManager lineManager, int section_number, float time_offset)
