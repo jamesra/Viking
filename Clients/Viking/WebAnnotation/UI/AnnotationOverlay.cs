@@ -332,9 +332,7 @@ namespace WebAnnotation
             //I'm only expecting this to be set once
             Debug.Assert(_Parent == null, "Not expecting parent to be set twice, OK to ignore, but annotation display may be incorrect"); 
             this._Parent = parent;
-
-
-
+              
             //Load the locations for the current sections
             this._Parent.OnSectionChanged += new SectionChangedEventHandler(this.OnSectionChanged);
             this._Parent.OnSectionTransformChanged += new TransformChangedEventHandler(this.OnSectionTransformChanged);
@@ -356,9 +354,7 @@ namespace WebAnnotation
             LoadSectionAnnotations();
         }
 
-        
-
-                
+         
         protected void OnMouseMove(object sender, MouseEventArgs e)
         {
             if (_Parent.CurrentCommand == null)
@@ -958,58 +954,19 @@ namespace WebAnnotation
             {
                 DrawLocationLink(link, ViewProjMatrix);
             }
+            graphicsDevice.Clear(ClearOptions.DepthBuffer, Color.Black, float.MaxValue, 0);             
 
             IncrementDepthStencilValue(graphicsDevice, ref nextStencilValue);
-
-            graphicsDevice.Clear(ClearOptions.DepthBuffer, Color.Black, float.MaxValue, 0);             
 
             //graphicsDevice.Clear(ClearOptions.DepthBuffer, Color.Black, float.MaxValue, 0); 
             //IncrementDepthStencilValue(graphicsDevice, ref nextStencilValue);
 
-            Location_CanvasViewModel[] Locations = currentSectionAnnotations.GetLocations().ToArray();
-            List<Location_CanvasViewModel> listLocationsToDraw = new List<Location_CanvasViewModel>(Locations.Length);
-            List<Location_CanvasViewModel> listAdacentOverlappingLocationsToDraw = new List<Location_CanvasViewModel>(Locations.Length);
-            List<Location_CanvasViewModel> listAdacentNonOverlappingLocationsToDraw = new List<Location_CanvasViewModel>(Locations.Length);
-           
-
+            ICollection<Location_CanvasViewModel> Locations = currentSectionAnnotations.GetLocations();
+            List<Location_CanvasViewModel> listLocationsToDraw = FindVisibleLocations(Locations, Bounds);
+            
             //Find a circle that encloses the visible bounds
             GridCircle VisibleCircle = new GridCircle(Bounds.Center, GridVector2.Distance(Bounds.Center, new GridVector2(Bounds.Left, Bounds.Top)));
             
-            //Draw the text for each location
-            foreach (Location_CanvasViewModel loc in Locations)
-            { 
-                if (!loc.VolumePositionHasBeenCalculated)
-                    continue; 
-
-                GridVector2 WorldPosition = loc.VolumePosition; 
-
-                //Find out if we should draw the location
-                if (loc.TypeCode == LocationType.CIRCLE)
-                {
-                    GridCircle locCircle = new GridCircle(WorldPosition, loc.Radius);
-                    if (VisibleCircle.Contains(locCircle) == false)
-                        continue; 
-                }
-                else if (loc.TypeCode == LocationType.POINT)
-                {
-                    if (Bounds.Contains(WorldPosition) == false)
-                        continue;
-                }
-                else
-                {
-                    Debug.Fail("Unknown location type");
-                }
-
-                Structure ParentStructure = loc.Parent;
-                if (ParentStructure == null)
-                    continue;
-
-                if (ParentStructure.Type == null)
-                    continue;
-
-                listLocationsToDraw.Add(loc); 
-            }
-
             List<Location_CanvasViewModel> RefLocations = new List<Location_CanvasViewModel>();
             if(_Parent.Section.ReferenceSectionBelow != null)
             {
@@ -1028,66 +985,8 @@ namespace WebAnnotation
             }
             
             //Draw text for locations on the reference sections
-            foreach (Location_CanvasViewModel loc in RefLocations)
-            {
-                if (loc == null)
-                    continue;
-
-                if (!loc.VolumePositionHasBeenCalculated)
-                    continue;  
-
-                GridVector2 WorldPosition = loc.VolumePosition;
-                
-                //Find out if we should draw the location
-                if (loc.TypeCode == LocationType.CIRCLE)
-                {
-                    GridCircle locCircle = new GridCircle(WorldPosition, loc.OffSectionRadius);
-                    if (locCircle.Contains(VisibleCircle) == false)
-                        continue;
-
-                    Boolean SkipLocation = false; 
-                    //Don't draw circles within other locations we are linked to.
-                    foreach(long linked in loc.Links)
-                    {
-                        LocationObj LinkedObj = Store.Locations.GetObjectByID(linked, false);
-                        if (LinkedObj == null)
-                            continue; 
-
-                        if(LinkedObj.Section == Parent.Section.Number)
-                        {
-                            GridCircle linkedLocCircle = new GridCircle(LinkedObj.VolumePosition, LinkedObj.Radius);
-                            if (locCircle.Contains(linkedLocCircle))
-                            {
-                                listAdacentOverlappingLocationsToDraw.Add(loc); 
-                                SkipLocation = true;
-                                break;
-                            }
-                        }
-                    }
-
-                    if (SkipLocation)
-                        continue; 
-                }
-                else if (loc.TypeCode == LocationType.POINT)
-                {
-                    if (Bounds.Contains(WorldPosition) == false)
-                        continue;
-                }
-                else
-                {
-                    Debug.Fail("Unknown location type");
-                }
-
-                Structure ParentStructure = loc.Parent;
-                if (ParentStructure == null)
-                    continue;
-
-                if (ParentStructure.Type == null)
-                    continue;
-
-                listAdacentNonOverlappingLocationsToDraw.Add(loc); 
-                //listLocationsToDraw.Add(loc); 
-            }
+            List<Location_CanvasViewModel> listVisibleNonOverlappingLocationsOnAdjacentSections = FindVisibleLocations(RefLocations, Bounds); 
+            List<Location_CanvasViewModel> listVisibleOverlappingLocationsOnAdjacentSections = RemoveOverlappingLocations(listVisibleNonOverlappingLocationsOnAdjacentSections, _Parent.Section.Number); 
 
             //Draw all of the locations on the current section
             WebAnnotation.LocationObjRenderer.DrawBackgrounds(listLocationsToDraw, graphicsDevice, basicEffect, overlayEffect, scene, SectionNumber);
@@ -1095,50 +994,14 @@ namespace WebAnnotation
             IncrementDepthStencilValue(graphicsDevice, ref nextStencilValue);
             graphicsDevice.Clear(ClearOptions.DepthBuffer, Color.Black, float.MaxValue, 0);
 
-            WebAnnotation.LocationObjRenderer.DrawBackgrounds(listAdacentNonOverlappingLocationsToDraw, graphicsDevice, basicEffect, overlayEffect, scene, SectionNumber);
+            WebAnnotation.LocationObjRenderer.DrawBackgrounds(listVisibleNonOverlappingLocationsOnAdjacentSections, graphicsDevice, basicEffect, overlayEffect, scene, SectionNumber);
 
             IncrementDepthStencilValue(graphicsDevice, ref nextStencilValue);
             graphicsDevice.Clear(ClearOptions.DepthBuffer, Color.Black, float.MaxValue, 0);
 
             WebAnnotation.LocationObjRenderer.DrawOverlappedAdjacentLinkedLocations(listLocationsToDraw, scene, graphicsDevice, basicEffect, overlayEffect, SectionNumber);
 
-            OverlappedLocation OverlappingLocation = AnnotationOverlay.LastMouseOverObject as OverlappedLocation;
-            if (OverlappingLocation != null) 
-            {
-                LocationLink SelectedLink = OverlappingLocation.link;
-                //Give the colors a nudge towards red or blue depending on the direction to the link
-                double directionFactor = 1;
-                StructureType type = new StructureType(SelectedLink.A.Parent.Type);
-                int distanceFactor = SelectedLink.maxSection - SelectedLink.minSection;
-                if (distanceFactor == 0)
-                    distanceFactor = 1;
-
-                directionFactor = SelectedLink.maxSection == SectionNumber ? 1 : -1;
-
-                int red = (int)((float)(type.Color.R * .5) + (128 * directionFactor));
-                red = 255 - (red / distanceFactor);
-                red = red > 255 ? 255 : red;
-                int blue = (int)((float)(type.Color.B * .5) + (128 * (1 - directionFactor)));
-                blue = 255 - (blue / distanceFactor);
-                blue = blue > 255 ? 255 : blue;
-                int green = (int)((float)type.Color.G);
-                green = 255 - (green / distanceFactor);
-
-                int alpha = 85;
-                if (LastMouseOverObject == SelectedLink)
-                {
-                    alpha = 192;
-                }
-
-                //If you don't cast to byte the wrong constructor is used and the alpha value is wrong
-                Microsoft.Xna.Framework.Color color = new Microsoft.Xna.Framework.Color((byte)(red),
-                    (byte)(green),
-                    (byte)(blue),
-                    (byte)(alpha));
-
-                _Parent.LineManager.Draw(SelectedLink.lineGraphic, (float)SelectedLink.Radius, color,
-                                             basicEffect.View * basicEffect.Projection, Time, null);
-            }
+            TryDrawLineFromOverlappingLocation(AnnotationOverlay.LastMouseOverObject as OverlappedLocation, _Parent.LineManager, _Parent.Section.Number, Time);
                
             if (defaultBlendState == null || defaultBlendState.IsDisposed)
             {
@@ -1183,7 +1046,7 @@ namespace WebAnnotation
                               (int)((long)SectionNumber - loc.Section));
             }
 
-            foreach (Location_CanvasViewModel loc in listAdacentNonOverlappingLocationsToDraw)
+            foreach (Location_CanvasViewModel loc in listVisibleNonOverlappingLocationsOnAdjacentSections)
             {
                 GridVector2 WorldPosition = loc.VolumePosition;
 
@@ -1216,6 +1079,131 @@ namespace WebAnnotation
             basicEffect.CommitChanges(); 
             graphicsDevice.VertexDeclaration = oldVertexDeclaration; 
             */
+        }
+
+        private static bool TryDrawLineFromOverlappingLocation(OverlappedLocation OverlappingLocation, RoundLineCode.RoundLineManager lineManager, int section_number, float time_offset)
+        { 
+            if (OverlappingLocation != null)
+            {
+                LocationLink SelectedLink = OverlappingLocation.link;
+                //Give the colors a nudge towards red or blue depending on the direction to the link
+                double directionFactor = 1;
+                StructureType type = new StructureType(SelectedLink.A.Parent.Type);
+                int distanceFactor = SelectedLink.maxSection - SelectedLink.minSection;
+                if (distanceFactor == 0)
+                    distanceFactor = 1;
+
+                directionFactor = SelectedLink.maxSection == section_number ? 1 : -1;
+
+                int red = (int)((float)(type.Color.R * .5) + (128 * directionFactor));
+                red = 255 - (red / distanceFactor);
+                red = red > 255 ? 255 : red;
+                int blue = (int)((float)(type.Color.B * .5) + (128 * (1 - directionFactor)));
+                blue = 255 - (blue / distanceFactor);
+                blue = blue > 255 ? 255 : blue;
+                int green = (int)((float)type.Color.G);
+                green = 255 - (green / distanceFactor);
+
+                int alpha = 85;
+                if (LastMouseOverObject == SelectedLink)
+                {
+                    alpha = 192;
+                }
+
+                //If you don't cast to byte the wrong constructor is used and the alpha value is wrong
+                Microsoft.Xna.Framework.Color color = new Microsoft.Xna.Framework.Color((byte)(red),
+                    (byte)(green),
+                    (byte)(blue),
+                    (byte)(alpha));
+
+                lineManager.Draw(SelectedLink.lineGraphic, (float)SelectedLink.Radius, color,
+                                             basicEffect.View * basicEffect.Projection, time_offset, null);
+
+                return true; 
+            }
+
+            return false; 
+        }
+
+        private static List<Location_CanvasViewModel> FindVisibleLocations(ICollection<Location_CanvasViewModel> locations,  GridRectangle VisibleBounds)
+        {
+            GridCircle VisibleCircle = new GridCircle(VisibleBounds.Center, GridVector2.Distance(VisibleBounds.Center, new GridVector2(VisibleBounds.Left, VisibleBounds.Top)));
+            List<Location_CanvasViewModel> listLocationsToDraw = new List<Location_CanvasViewModel>(locations.Count);
+
+            foreach (Location_CanvasViewModel loc in locations)
+            {
+                if (loc == null)
+                    continue;
+
+                if (!loc.VolumePositionHasBeenCalculated)
+                    continue;
+
+                GridVector2 WorldPosition = loc.VolumePosition;
+
+                //Find out if we should draw the location
+                if (loc.TypeCode == LocationType.CIRCLE)
+                {
+                    if (VisibleCircle.Intersects(loc.VolumePosition, loc.Radius) == false)
+                        continue;
+                }
+                else if (loc.TypeCode == LocationType.POINT)
+                {
+                    if (VisibleBounds.Contains(loc.VolumePosition) == false)
+                        continue;
+                }
+                else
+                {
+                    Debug.Fail("Unknown location type");
+                }
+
+                Structure ParentStructure = loc.Parent;
+                if (ParentStructure == null)
+                    continue;
+
+                if (ParentStructure.Type == null)
+                    continue;
+
+                listLocationsToDraw.Add(loc);
+            }
+
+            return listLocationsToDraw; 
+        }
+
+
+        /// <summary>
+        /// Remove all locations from the collection which overlap locations on the specified section
+        /// </summary>
+        /// <param name="locations">The collection to remove overlapping locations from</param>
+        /// <returns>The removed locations which overlap</returns>
+        private static List<Location_CanvasViewModel> RemoveOverlappingLocations(List<Location_CanvasViewModel> locations, int section_number)
+        {
+            List<Location_CanvasViewModel> listOverlappingLocations = new List<Location_CanvasViewModel>(locations.Count);
+            for (int i = locations.Count - 1; i >= 0; i--)
+            {
+                Location_CanvasViewModel loc = locations.ElementAt(i);
+                if (loc.TypeCode == LocationType.CIRCLE)
+                {
+                    GridCircle locCircle = new GridCircle(loc.VolumePosition, loc.OffSectionRadius);
+                    foreach (long linked in loc.Links)
+                    {
+                        LocationObj LinkedObj = Store.Locations.GetObjectByID(linked, false);
+                        if (LinkedObj == null)
+                            continue;
+
+                        if (LinkedObj.Section == section_number)
+                        {
+                            if (locCircle.Intersects(LinkedObj.VolumePosition, LinkedObj.Radius))
+                            {
+                                listOverlappingLocations.Add(loc);
+                                locations.RemoveAt(i);
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+
+            return listOverlappingLocations;
         }
 
         /// <summary>
