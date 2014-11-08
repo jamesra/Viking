@@ -301,7 +301,7 @@ namespace WebAnnotation.ViewModel
 #if SUBMITVOLUMEPOSITION
             bool UpdateVolumeLocations = false;
             bool SubmitUpdatedVolumeLocations = false;
-            long VolumePositionUpdatedCount = 0; 
+            long VolumePositionUpdatedCount = 0;
 
             
             if (this.parent.CurrentVolumeTransform == this.Section.VolumeViewModel.DefaultVolumeTransform)
@@ -348,7 +348,7 @@ namespace WebAnnotation.ViewModel
         private bool AddLocation(LocationObj loc, bool Subscribe, bool UpdateVolumeLocations)
         {
             if (loc.Section != Section.Number)
-                return false; 
+                return false;
 
              //Trace.WriteLine("AddLocation: " + obj.ToString(), "WebAnnotation");
 
@@ -652,12 +652,15 @@ namespace WebAnnotation.ViewModel
                                             //Store.Locations.GetObjectsForSectionAsynch(Section.Number); 
                                             //});
 
+            //
             MixedLocalAndRemoteQueryResults<long, StructureObj> structure_results = Store.Structures.GetObjectsForSectionAsynch(Section.Number);
+            //Store.Structures.GetObjectsForSection(Section.Number);
 #if DEBUG
+            
             //structure_results.ServerRequestResult.AsyncWaitHandle.WaitOne();
             //Store.Structures.GetObjectsForSection(Section.Number); 
 #else
-            Store.Structures.GetObjectsForSection(Section.Number);
+            
 #endif
             //        
             
