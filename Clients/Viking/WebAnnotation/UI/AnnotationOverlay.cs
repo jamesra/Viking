@@ -743,7 +743,7 @@ namespace WebAnnotation
         /// <param name="e"></param>
         protected void OnLocationCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
         {
-            SortedList<int, int> changedSections = new SortedList<int, int>();
+            SortedSet<int> changedSections = new SortedSet<int>();
 
   //          if (e.Action == NotifyCollectionChangedAction.Replace)
   //          {
@@ -755,7 +755,8 @@ namespace WebAnnotation
                 for (int iObj = 0; iObj < e.NewItems.Count; iObj++)
                 {
                     LocationObj locNewObj = e.NewItems[iObj] as LocationObj;
-                    changedSections[locNewObj.Section] = locNewObj.Section;
+                    if(!changedSections.Contains(locNewObj.Section))
+                        changedSections.Add(locNewObj.Section);
                 }
             }
 
@@ -764,12 +765,12 @@ namespace WebAnnotation
                 for (int iObj = 0; iObj < e.OldItems.Count; iObj++)
                 {
                     LocationObj locOldObj = e.OldItems[iObj] as LocationObj;
-                    changedSections[locOldObj.Section] = locOldObj.Section;
-                }
-
+                    if (!changedSections.Contains(locOldObj.Section))
+                        changedSections.Add(locOldObj.Section); 
+                } 
             }
 
-            foreach (int section in changedSections.Keys)
+            foreach (int section in changedSections)
             {
                 SectionLocationsViewModel SLVModel = cacheSectionAnnotations.Fetch(section);
                 if (SLVModel != null)
@@ -905,12 +906,27 @@ namespace WebAnnotation
         static private BasicEffect basicEffect = null;
         static private BlendState defaultBlendState = null; 
 
+        
         public void Draw(Microsoft.Xna.Framework.Graphics.GraphicsDevice graphicsDevice,
                          VikingXNA.Scene scene, 
                          Microsoft.Xna.Framework.Graphics.Texture BackgroundLuma,
                          Microsoft.Xna.Framework.Graphics.Texture BackgroundColors,
                         ref int nextStencilValue)
         {
+            /// <summary>
+            /// Steps:
+            ///     Find all the locations for a section.  This could be optimized to return only visible sections immediately with a better data structure
+            ///     Filter out invisible locations
+            ///     Draw the backgrounds
+            ///     Draw the overlapping linked locations over the backgrounds
+            ///     Draw the structure links 
+            ///     Draw the labels
+            /// </summary>
+            /// <param name="graphicsDevice"></param>
+            /// <param name="scene"></param>
+            /// <param name="BackgroundLuma"></param>
+            /// <param name="BackgroundColors"></param>
+            /// <param name="nextStencilValue"></param>
 
             if(_Parent.Section == null)
                 return;
@@ -1026,7 +1042,6 @@ namespace WebAnnotation
             graphicsDevice.BlendState = defaultBlendState;
             
             //Draw text
-
             DrawLocationLabels(listLocationsToDraw);
 
             DrawLocationLabels(listVisibleNonOverlappingLocationsOnAdjacentSections); 
@@ -1048,7 +1063,7 @@ namespace WebAnnotation
                 loc.DrawLabel(_Parent.spriteBatch,
                               _Parent.fontArial,
                               new Vector2((float)DrawPosition.X, (float)DrawPosition.Y),
-                              (float)(1 / _Parent.StatusMagnification),
+                              (float)(1.0 / _Parent.StatusMagnification),
                               (int)(section_number - loc.Section));
             }
 
@@ -1111,9 +1126,7 @@ namespace WebAnnotation
 
                 if (!loc.VolumePositionHasBeenCalculated)
                     continue;
-
-                GridVector2 WorldPosition = loc.VolumePosition;
-
+                
                 //Find out if we should draw the location
                 if (loc.TypeCode == LocationType.CIRCLE)
                 {
