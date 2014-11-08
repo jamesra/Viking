@@ -19,8 +19,9 @@ namespace WebAnnotationModel
     {
         POINT = 0,
         CIRCLE = 1,
-        POLYLINE = 2,
-        POLYGON = 3
+        ELLIPSE = 2,
+        POLYLINE = 3,
+        POLYGON = 4
     };
 
     public class LocationObj : WCFObjBaseWithKey<long, Location>
@@ -118,8 +119,7 @@ namespace WebAnnotationModel
             get {return Data.Position.Z; }
         }
 
-
-
+        private GridVector2? _VolumePosition;
         /// <summary>
         /// VolumeX is the x position in volume space. It only exists to inform the database of an estimate of the locations position in volume space.
         /// We want the database to have this value so data processing tools don't need to implement the transforms
@@ -129,12 +129,16 @@ namespace WebAnnotationModel
         {
             get
             {
-                return new GridVector2(Data.VolumePosition.X, Data.VolumePosition.Y);
+                if(!_VolumePosition.HasValue)
+                    _VolumePosition = new GridVector2(Data.VolumePosition.X, Data.VolumePosition.Y);
+
+                return _VolumePosition.Value; 
             }
             set
             {
                 if (GridVector2.Equals(this.VolumePosition, value))
                     return;
+
 
                 OnPropertyChanging("VolumePosition");
 
@@ -143,6 +147,7 @@ namespace WebAnnotationModel
                 point.Y = value.Y;
                 point.Z = Data.Position.Z;
                 Data.VolumePosition = point;
+                _VolumePosition = value; 
                 OnPropertyChanged("VolumePosition");
 
 //                SetDBActionForChange();
@@ -245,6 +250,9 @@ namespace WebAnnotationModel
             {
                 lock (LinkLock)
                 {
+                    if (_ObservableLinks == null)
+                        return new long[0];
+
                     return _ObservableLinks.ToArray();
                 }
             }
@@ -261,8 +269,16 @@ namespace WebAnnotationModel
                 {
                     if(_ObservableLinks == null)
                     {
-                        _ObservableLinks = new ObservableCollection<long>(Data.Links);
-                        _ReadOnlyObservableLinks = new ReadOnlyObservableCollection<long>(_ObservableLinks); 
+                        if (Data.Links != null)
+                        {
+                            _ObservableLinks = new ObservableCollection<long>(Data.Links);
+                        }
+                        else
+                        {
+                            _ObservableLinks = new ObservableCollection<long>();
+                        }
+
+                        _ReadOnlyObservableLinks = new ReadOnlyObservableCollection<long>(_ObservableLinks);
                     }
 
                     return _ReadOnlyObservableLinks;
@@ -295,6 +311,9 @@ namespace WebAnnotationModel
         {
             get
             {
+                if (Data.Links == null)
+                    return 0;
+
                 return Data.Links.Length;
             }
         }
@@ -314,6 +333,7 @@ namespace WebAnnotationModel
                     return;
 
                 _ObservableLinks.Add(ID);
+
                 this.Data.Links = this._ObservableLinks.ToArray();
             }
         }
@@ -333,7 +353,12 @@ namespace WebAnnotationModel
                     return;
 
                 _ObservableLinks.Remove(ID);
-                this.Data.Links = this._ObservableLinks.ToArray();
+
+                if (_ObservableLinks.Count > 0)
+                    this.Data.Links = this._ObservableLinks.ToArray();
+                else
+                    this.Data.Links = null; 
+
             }
         }
 
@@ -407,12 +432,11 @@ namespace WebAnnotationModel
         {
             this.Data = new Location();
             this.Data.DBAction = DBACTION.INSERT;
-            this.Data.ID = Store.Locations.GetTempKey();
-            this.Data.Tags = new String[0];
+            this.Data.ID = Store.Locations.GetTempKey(); 
             this.Data.Verticies = new AnnotationPoint[0];
             this.Data.TypeCode = 1;
             this.Data.Radius = 16;
-            this.Data.Links = new long[0];
+            this.Data.Links = null; 
 
             AnnotationPoint P = new AnnotationPoint();
             P.X = position.X;
