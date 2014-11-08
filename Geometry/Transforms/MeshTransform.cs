@@ -105,35 +105,36 @@ namespace Geometry.Transforms
 
             double Downsample = 1.0;
 
-            string output = ""; 
+            StringBuilder output = new StringBuilder();
             string transform = "meshtransform_double_2_2";
 
-            output += "0\n0\n";
+            output.Append("0\n0\n");
             //output += string.Format("{0:g} {1:g} {2:g} {3:g}\n", ControlBounds.Left, ControlBounds.Bottom, ControlBounds.Right, ControlBounds.Top);
             //output += string.Format("{0:g} {1:g} {2:g} {3:g}\n", MappedBounds.Left, MappedBounds.Bottom, MappedBounds.Right, MappedBounds.Top);
-            output += string.Format("{0:g} {1:g} {2:g} {3:g}\n", 0, 0, ControlBounds.Width / Downsample, ControlBounds.Height/Downsample);
+            output.AppendFormat("{0:g} {1:g} {2:g} {3:g}\n", 0, 0, ControlBounds.Width / Downsample, ControlBounds.Height / Downsample);
             //output += string.Format("{0:g} {1:g} {2:g} {3:g}\n", 0, 0, MappedBounds.Width, MappedBounds.Height);
 
-            output += string.Format("{0:g} {1:g} {2:g} {3:g}\n", MappedBounds.Left/Downsample, MappedBounds.Bottom/Downsample, MappedBounds.Width/Downsample, MappedBounds.Height/Downsample);
+            output.AppendFormat("{0:g} {1:g} {2:g} {3:g}\n", MappedBounds.Left / Downsample, MappedBounds.Bottom / Downsample, MappedBounds.Width / Downsample, MappedBounds.Height / Downsample);
 
-            output += transform + " vp " + string.Format("{0:d}", this.MapPoints.Length * 4); 
+            output.Append(transform + " vp ");
+            output.AppendFormat("{0:d}", this.MapPoints.Length * 4);
 
             foreach(MappingGridVector2 p in this.MapPoints)
             {
-                output += string.Format(" {0:g} {1:g} {2:g} {3:g}",
+                output.AppendFormat(" {0:g} {1:g} {2:g} {3:g}",
                                         (p.MappedPoint.X - MappedBounds.Left) / MappedBounds.Width,
                                         (p.MappedPoint.Y - MappedBounds.Bottom) / MappedBounds.Height,
                                         (p.ControlPoint.X) / Downsample,
                                         (p.ControlPoint.Y) / Downsample);
             }
 
-            output += " fp 8 0 0 0 ";
-            output += string.Format("{0:g} {1:g} {2:g} {3:g}", MappedBounds.Left / Downsample, MappedBounds.Bottom / Downsample, MappedBounds.Width / Downsample, MappedBounds.Height / Downsample);
+            output.Append(" fp 8 0 0 0 ");
+            output.AppendFormat("{0:g} {1:g} {2:g} {3:g}", MappedBounds.Left / Downsample, MappedBounds.Bottom / Downsample, MappedBounds.Width / Downsample, MappedBounds.Height / Downsample);
             //output += string.Format("{0:g} {1:g} {2:g} {3:g}", 0,0, MappedBounds.Width, MappedBounds.Height);
 
-            output += string.Format(" {0:d}\n", this.MapPoints.Length);
+            output.AppendFormat(" {0:d}\n", this.MapPoints.Length);
 
-            stream.Write(output); 
+            stream.Write(output.ToString()); 
         }
 
         #region ISerializable Members
