@@ -652,10 +652,10 @@ namespace WebAnnotationModel
         protected virtual ChangeInventory<OBJECT> ParseQuery(WCFOBJECT[] locations, KEY[] DeletedLocations, GetObjectBySectionCallbackState state)
         {
             OBJECT[] listObj = new OBJECT[0];
-                       
+            List<OBJECT> deleted = new List<OBJECT>(DeletedLocations.Length);
             if (DeletedLocations != null)
             {
-                InternalDelete(DeletedLocations);
+                deleted = InternalDelete(DeletedLocations);
             }
 
             OBJECT[] listNewObj = new OBJECT[locations.Length];
@@ -666,7 +666,9 @@ namespace WebAnnotationModel
                 listNewObj[i] = newObj;
             });
 
-            return InternalAdd(listNewObj);
+            ChangeInventory<OBJECT> inventory = InternalAdd(listNewObj);
+            inventory.DeletedObjects = deleted;
+            return inventory;
         } 
 
         #endregion
