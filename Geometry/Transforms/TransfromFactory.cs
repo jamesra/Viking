@@ -595,7 +595,7 @@ namespace Geometry.Transforms
         {
             TransformParameters transform = TransformParameters.Parse(transformString);
 
-            switch (transform.transform_name.ToLower())
+            switch (transform.transform_name)
             {
                 case "GridTransform_double_2_2":
                     return ParseGridTransform(transform, info);
