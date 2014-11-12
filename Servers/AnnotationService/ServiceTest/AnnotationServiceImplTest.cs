@@ -8,7 +8,10 @@ using System.Security.Principal;
 namespace ServiceTest
 {
 
-
+    public static class Parameters
+    {
+        public static string TestDatabaseName = "Empty";
+    }
     /// <summary>
     ///This is a test class for AnnotationServiceImplTest and is intended
     ///to contain all AnnotationServiceImplTest Unit Tests
@@ -66,9 +69,15 @@ namespace ServiceTest
         #endregion
 
 
-        private StructureType CreateStructureType(string Name)
+        private StructureType CreatePopulatedStructureType(string Name)
         {
             StructureType t = new StructureType();
+            PopulateStructureType(t, Name);
+            return t; 
+        }
+
+        private void PopulateStructureType(StructureType t, string Name)
+        {
             t.Abstract = false;
             t.Code = "T";
             t.Color = 0;
@@ -76,9 +85,129 @@ namespace ServiceTest
             t.MarkupType = "Point";
             t.Name = Name;
             t.Notes = "";
-            t.ParentID = new long?();
+            t.ParentID = new long?(); 
+        }
 
-            return t; 
+        private void PopulateLocation(Location newPos, long parentID)
+        {
+            newPos.ParentID = parentID;
+            AnnotationPoint P = new AnnotationPoint();
+            P.X = 0;
+            P.Y = 0;
+            P.Z = 0;
+            newPos.Position = P; 
+        }
+
+        
+
+        private void Delete(StructureType t)
+        {
+            AnnotateService target = new AnnotateService(Parameters.TestDatabaseName);
+            t.DBAction = DBACTION.DELETE;
+
+            //Delete the structure type we created for the test
+            target.Update(new StructureType[] { t });
+            Assert.IsNull(target.GetStructureTypeByID(t.ID));
+        }
+
+        private void Delete(Structure t)
+        {
+            AnnotateService target = new AnnotateService(Parameters.TestDatabaseName);
+            t.DBAction = DBACTION.DELETE;
+
+            //Delete the structure type we created for the test
+            target.Update(new Structure[] { t });
+            Assert.IsNull(target.GetStructureByID(t.ID, false));
+        }
+
+        private void Delete(Location t)
+        {
+            AnnotateService target = new AnnotateService(Parameters.TestDatabaseName);
+            t.DBAction = DBACTION.DELETE;
+
+            //Delete the structure type we created for the test
+            target.Update(new Location[] { t });
+            Assert.IsNull(target.GetLocationByID(t.ID));
+        }
+
+        private StructureType CreateStructureType(StructureType t)
+        {
+            AnnotateService target = new AnnotateService(Parameters.TestDatabaseName); // TODO: Initialize to an appropriate value
+
+            StructureType returned_t = target.CreateStructureType(t);
+
+            //Make sure the database gave us a new ID
+            Assert.AreNotEqual(t.ID, returned_t.ID);
+
+            //We should not find the original structure type's generated ID in the database
+            Assert.IsNull(target.GetStructureTypeByID(t.ID));
+            Assert.IsNotNull(target.GetStructureTypeByID(returned_t.ID));
+
+            return returned_t;
+        }
+
+        private CreateStructureRetval CreateStructure(Structure s, Location l)
+        {
+            AnnotateService target = new AnnotateService(Parameters.TestDatabaseName); // TODO: Initialize to an appropriate value
+
+            CreateStructureRetval retval = target.CreateStructure(s, l);
+            Assert.IsNull(target.GetStructureByID(s.ID,false));
+            Assert.IsNull(target.GetLocationByID(l.ID));
+
+            Assert.IsNotNull(target.GetStructureByID(retval.structure.ID, false));
+            Assert.IsNotNull(target.GetLocationByID(retval.location.ID));
+
+            return retval; 
+        }
+
+        private Location CreateAndLinkLocation(Location linkedLocation)
+        {
+            AnnotateService target = new AnnotateService(Parameters.TestDatabaseName); // TODO: Initialize to an appropriate value
+
+            Location newPos = new Location();
+            PopulateLocation(newPos, linkedLocation.ParentID);
+
+            Location created_location = target.CreateLocation(newPos, new long[] { linkedLocation.ID });
+
+            Assert.AreNotEqual(newPos.ID, created_location.ID);
+            Assert.IsNull(target.GetLocationByID(newPos.ID));
+            Assert.IsNotNull(target.GetLocationByID(created_location.ID));
+
+            Assert.AreEqual(created_location.Links.Length,1);
+            Assert.AreEqual(created_location.Links[0], linkedLocation.ID);
+
+            long[] LinkedLocations = target.GetLinkedLocations(created_location.ID);
+            Assert.AreEqual(1, LinkedLocations.Length);
+            Assert.AreEqual(linkedLocation.ID, LinkedLocations[0]);
+
+            return created_location; 
+        }
+         
+
+        [TestMethod()]
+        public void CreateTest()
+        {
+            AddPrincipalToThread();
+
+            string StructureTypeName = "CreateTest";
+            StructureType stype = CreatePopulatedStructureType(StructureTypeName);
+            stype = CreateStructureType(stype);
+
+            Structure newStruct = new Structure();
+            newStruct.TypeID = stype.ID;
+
+            Location newPos = new Location();
+            PopulateLocation(newPos, newStruct.ID);
+
+            CreateStructureRetval retval = CreateStructure(newStruct, newPos); 
+
+            //Create a new location and link it to the first structure location
+            Location created_location = CreateAndLinkLocation(retval.location);
+
+            Delete(retval.location);
+            Delete(created_location);
+            Delete(retval.structure);
+            Delete(stype); 
         }
 
         /// <summary>
@@ -89,10 +218,10 @@ namespace ServiceTest
         {
             AddPrincipalToThread();
 
-            AnnotateService target = new AnnotateService(); // TODO: Initialize to an appropriate value
+            AnnotateService target = new AnnotateService(Parameters.TestDatabaseName); // TODO: Initialize to an appropriate value
             string StructureTypeName = "TestStructureTypeInsert";
 
-            StructureType t = CreateStructureType(StructureTypeName); 
+            StructureType t = CreatePopulatedStructureType(StructureTypeName); 
 
             long[] IDs = target.UpdateStructureTypes(new StructureType[] { t } );
             long testID = IDs[0];
@@ -161,7 +290,7 @@ namespace ServiceTest
         {
             AddPrincipalToThread();
 
-            AnnotateService target = new AnnotateService(); // TODO: Initialize to an appropriate value
+            AnnotateService target = new AnnotateService(Parameters.TestDatabaseName); // TODO: Initialize to an appropriate value
             StructureType[] actual;
             actual = target.GetStructureTypes();
         }
@@ -174,9 +303,9 @@ namespace ServiceTest
         {
             AddPrincipalToThread();
 
-            AnnotateService target = new AnnotateService(); // TODO: Initialize to an appropriate value
+            AnnotateService target = new AnnotateService(Parameters.TestDatabaseName); // TODO: Initialize to an appropriate value
 
-            StructureType t = CreateStructureType("Test");
+            StructureType t = CreatePopulatedStructureType("Test");
 
             long[] IDs = target.UpdateStructureTypes(new StructureType[] { t });
             long StructureTypeID = IDs[0];
@@ -194,13 +323,13 @@ namespace ServiceTest
             P.Z = 0;
             newPos.Position = P;
 
-            IDs = target.CreateStructure(newStruct, newPos);
+            CreateStructureRetval retval = target.CreateStructure(newStruct, newPos);
 
-            Structure dbStruct = target.GetStructureByID(IDs[0], false);
-            Location dbPos = target.GetLocationByID(IDs[1]);
+            Structure dbStruct = target.GetStructureByID(retval.structure.ID, false);
+            Location dbPos = target.GetLocationByID(retval.location.ID);
 
-            Assert.IsTrue(dbStruct != null && dbStruct.ID == IDs[0]);
-            Assert.IsTrue(dbPos != null && dbPos.ID == IDs[1]);
+            Assert.IsTrue(dbStruct != null && dbStruct.ID == retval.structure.ID);
+            Assert.IsTrue(dbPos != null && dbPos.ID == retval.location.ID);
 
             dbPos.DBAction = DBACTION.DELETE;
             target.Update(new Location[] { dbPos });
@@ -213,8 +342,8 @@ namespace ServiceTest
             dbStruct.DBAction = DBACTION.DELETE;
             target.UpdateStructures(new Structure[] { dbStruct });
 
-            Structure dbStructNull = target.GetStructureByID(IDs[0], false);
-            Location dbPosNull = target.GetLocationByID(IDs[1]);
+            Structure dbStructNull = target.GetStructureByID(retval.structure.ID, false);
+            Location dbPosNull = target.GetLocationByID(retval.location.ID);
 
             Assert.IsNull(dbStructNull);
             Assert.IsNull(dbPosNull);
@@ -232,9 +361,9 @@ namespace ServiceTest
         {
             AddPrincipalToThread();
 
-            AnnotateService target = new AnnotateService(); // TODO: Initialize to an appropriate value
+            AnnotateService target = new AnnotateService(Parameters.TestDatabaseName); // TODO: Initialize to an appropriate value
 
-            StructureType t = CreateStructureType("Test");
+            StructureType t = CreatePopulatedStructureType(Parameters.TestDatabaseName);
 
             long[] IDs = target.UpdateStructureTypes(new StructureType[] { t });
             long[] IDsA; //ID's for struct A
@@ -259,7 +388,7 @@ namespace ServiceTest
             P.Z = 0;
             newPosA.Position = P;
 
-            IDsA = target.CreateStructure(newStructA, newPosA);
+            CreateStructureRetval retvalA = target.CreateStructure(newStructA, newPosA);
 
             //CreateLocationB
             Location newPosB = new Location();
@@ -270,24 +399,24 @@ namespace ServiceTest
             Pb.Y = -1;
             Pb.Z = -1;
             newPosA.Position = Pb;
-            
-            IDsB = target.CreateStructure(newStructB, newPosB);
 
-            Structure dbStructA = target.GetStructureByID(IDsA[0], false);
-            Location dbPosA = target.GetLocationByID(IDsA[1]);
+            CreateStructureRetval retvalB = target.CreateStructure(newStructB, newPosB);
 
-            Structure dbStructB = target.GetStructureByID(IDsB[0], false);
-            Location dbPosB = target.GetLocationByID(IDsB[1]);
+            Structure dbStructA = target.GetStructureByID(retvalA.structure.ID, false);
+            Location dbPosA = target.GetLocationByID(retvalA.location.ID);
 
-            Assert.IsTrue(dbStructA != null && dbStructA.ID == IDsA[0]);
-            Assert.IsTrue(dbPosA != null && dbPosA.ID == IDsA[1]);
-            Assert.IsTrue(dbStructB != null && dbStructB.ID == IDsB[0]);
-            Assert.IsTrue(dbPosB != null && dbPosB.ID == IDsB[1]);
+            Structure dbStructB = target.GetStructureByID(retvalB.structure.ID, false);
+            Location dbPosB = target.GetLocationByID(retvalB.location.ID);
+
+            Assert.IsTrue(dbStructA != null && dbStructA.ID == retvalA.structure.ID);
+            Assert.IsTrue(dbPosA != null && dbPosA.ID == retvalA.location.ID);
+            Assert.IsTrue(dbStructB != null && dbStructB.ID == retvalB.structure.ID);
+            Assert.IsTrue(dbPosB != null && dbPosB.ID == retvalB.location.ID);
 
             //Link the structures
             StructureLink link = new StructureLink();
-            link.SourceID = IDsA[0];
-            link.TargetID = IDsB[0];
+            link.SourceID = retvalA.structure.ID;
+            link.TargetID = retvalB.structure.ID;
             
             target.CreateStructureLink(link); 
 
@@ -309,10 +438,10 @@ namespace ServiceTest
             dbStructB.DBAction = DBACTION.DELETE;
             target.UpdateStructures(new Structure[] { dbStructA, dbStructB });
 
-            Structure dbStructANull = target.GetStructureByID(IDsA[0], false);
-            Location dbPosANull = target.GetLocationByID(IDsA[1]);
-            Structure dbStructBNull = target.GetStructureByID(IDsB[0], false);
-            Location dbPosBNull = target.GetLocationByID(IDsB[1]);
+            Structure dbStructANull = target.GetStructureByID(retvalA.structure.ID, false);
+            Location dbPosANull = target.GetLocationByID(retvalA.location.ID);
+            Structure dbStructBNull = target.GetStructureByID(retvalB.structure.ID, false);
+            Location dbPosBNull = target.GetLocationByID(retvalB.location.ID);
 
             Assert.IsNull(dbStructANull);
             Assert.IsNull(dbPosANull);
@@ -332,10 +461,10 @@ namespace ServiceTest
         {
             AddPrincipalToThread();
 
-            AnnotateService target = new AnnotateService(); // TODO: Initialize to an appropriate value
+            AnnotateService target = new AnnotateService(Parameters.TestDatabaseName); // TODO: Initialize to an appropriate value
 
             //Create a structure type, a structure, and some links
-            StructureType t = CreateStructureType("Test");
+            StructureType t = CreatePopulatedStructureType("Test");
 
             long[] IDs = target.UpdateStructureTypes(new StructureType[] { t });
             long StructureTypeID = IDs[0];
@@ -352,9 +481,9 @@ namespace ServiceTest
             P.Z = 0;
             newPos.Position = P;
 
-            IDs = target.CreateStructure(newStruct, newPos);
-            long StructureID = IDs[0];
-            long LocationAID = IDs[1]; 
+            CreateStructureRetval retval = target.CreateStructure(newStruct, newPos);
+            long StructureID = retval.structure.ID;
+            long LocationAID = retval.location.ID;
 
             //Create a second location for the structure, linked to the first
             Location B = new Location();
@@ -401,10 +530,10 @@ namespace ServiceTest
         {
             AddPrincipalToThread();
 
-            AnnotateService target = new AnnotateService(); // TODO: Initialize to an appropriate value
+            AnnotateService target = new AnnotateService(Parameters.TestDatabaseName); // TODO: Initialize to an appropriate value
 
             //Create a structure type, a structure, and some links
-            StructureType t = CreateStructureType("Test");
+            StructureType t = CreatePopulatedStructureType("Test");
 
             long[] IDs = target.UpdateStructureTypes(new StructureType[] { t });
             long StructureTypeID = IDs[0];
@@ -421,9 +550,9 @@ namespace ServiceTest
             P.Z = 0;
             newPos.Position = P;
 
-            IDs = target.CreateStructure(newStruct, newPos);
-            long StructureID = IDs[0];
-            long LocationAID = IDs[1];
+            CreateStructureRetval retval = target.CreateStructure(newStruct, newPos);
+            long StructureID = retval.structure.ID;
+            long LocationAID = retval.location.ID;
 
             //Create a second location for the structure
             Location B = new Location();
@@ -593,7 +722,7 @@ namespace ServiceTest
         {
             AddPrincipalToThread();
 
-            AnnotateService target = new AnnotateService(); // TODO: Initialize to an appropriate value
+            AnnotateService target = new AnnotateService(Parameters.TestDatabaseName); ; // TODO: Initialize to an appropriate value
 
             Location[] Data = target.GetLocationsForStructure(514);
 

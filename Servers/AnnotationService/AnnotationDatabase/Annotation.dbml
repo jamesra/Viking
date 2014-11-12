@@ -16,7 +16,7 @@
       <Column Name="HotKey" Type="System.Char" DbType="Char(1) NOT NULL" CanBeNull="false" />
       <Column Name="Username" Type="System.String" DbType="NChar NOT NULL" CanBeNull="false" IsDelayLoaded="true" />
       <Column Name="LastModified" AutoSync="Never" Type="System.DateTime" DbType="DateTime NOT NULL" IsReadOnly="true" IsDbGenerated="true" CanBeNull="false" />
-      <Column Name="Created" AutoSync="Never" Type="System.DateTime" DbType="DateTime NOT NULL" IsReadOnly="true" IsDbGenerated="true" CanBeNull="false" />
+      <Column Name="Created" AutoSync="OnInsert" Type="System.DateTime" DbType="DateTime NOT NULL" IsReadOnly="true" IsDbGenerated="true" CanBeNull="false" />
       <Association Name="DBStructureType_DBStructureType" Member="Children" Storage="_dbStructureTypes" ThisKey="ID" OtherKey="ParentID" Type="DBStructureType" />
       <Association Name="DBStructureType_StructureTemplate" Member="StructureTemplates" ThisKey="ID" OtherKey="StructureTypeID" Type="StructureTemplate" />
       <Association Name="DBStructureType_DBStructure" Member="Structures" Storage="_DBStructures" ThisKey="ID" OtherKey="TypeID" Type="DBStructure" />

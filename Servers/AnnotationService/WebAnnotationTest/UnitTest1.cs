@@ -4,9 +4,17 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Diagnostics;
 using WebAnnotationTest.AnnotationService;
 using Annotation;
+using System.Security.Principal;
 
 namespace WebServiceTest
 {
+
+
+    public static class Parameters
+    {
+        public static string TestDatabaseName = "Empty";
+    }
+
     /// <summary>
     ///This is a test class for AnnotationServiceImplTest and is intended
     ///to contain all AnnotationServiceImplTest Unit Tests
@@ -15,6 +23,14 @@ namespace WebServiceTest
     public class AnnotationServiceImplTest
     {
 
+        private void AddPrincipalToThread()
+        {
+            GenericIdentity ident = new GenericIdentity("Test");
+            string[] roles = new string[] { @"Admin", @"Modify", @"Read" };
+            GenericPrincipal principle = new GenericPrincipal(ident, roles);
+
+            System.Threading.Thread.CurrentPrincipal = principle;
+        }
 
         private TestContext testContextInstance;
 
@@ -143,7 +159,7 @@ namespace WebServiceTest
         [TestMethod()]
         public void GetStructureTypesTest()
         {
-
+            AddPrincipalToThread();
 
             System.Net.ServicePointManager.ServerCertificateValidationCallback =
                             ((sender, certificate, chain, sslPolicyErrors) => true);
@@ -152,7 +168,7 @@ namespace WebServiceTest
             //client.ClientCredentials.UserName.UserName = "anonymous";
             //client.ClientCredentials.UserName.Password = "connectome";
 
-            AnnotateService service = new AnnotateService();
+            AnnotateService service = new AnnotateService(Parameters.TestDatabaseName);
 
             service.getTopConnectedStructures(1);
             

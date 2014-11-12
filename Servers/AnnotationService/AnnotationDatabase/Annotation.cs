@@ -57,25 +57,90 @@ namespace Annotation.Database
             return ResultOrEmptyList<DBStructure>(results);
         }
 
-        public List<DBLocation> SectionLocationsAndLinks(double z)
+        public IList<DBLocation> SectionLocationsAndLinks(double z)
         {
             IMultipleResults results = InternalSelectSectionLocationsAndLinks(new double?(z), new DateTime?());
 
             return CreateLocationsHeirarchy(results);
         }
 
-        public List<DBLocation> SectionLocationsAndLinks(double z, DateTime? ModifiedAfter)
+        public IList<DBLocation> SectionLocationsAndLinks(double z, DateTime? ModifiedAfter)
         {
             IMultipleResults results = InternalSelectSectionLocationsAndLinks(new double?(z), ValidateDate(ModifiedAfter));
 
             return CreateLocationsHeirarchy(results);
         }
 
-        private List<DBLocation> CreateLocationsHeirarchy(IMultipleResults results)
+        class DBLocationComparer : IComparer<DBLocation>
+        { 
+            int IComparer<DBLocation>.Compare(DBLocation x, DBLocation y)
+            {
+                return (int)(x.ID - y.ID);
+            }
+        }
+
+        class DBLocationLinkComparer : IComparer<DBLocationLink>
+        {
+            int IComparer<DBLocationLink>.Compare(DBLocationLink x, DBLocationLink y)
+            {
+
+                int diff = (int)(x.LinkedTo - y.LinkedTo);
+                if(diff == 0)
+                {
+                    diff = (int)(x.LinkedFrom - y.LinkedFrom);
+                }
+
+                return diff; 
+            }
+        }
+         
+        /// <summary>
+        /// This was the slowest portion of location queries.  Old solutions have been commented.  The slowest version 
+        /// </summary>
+        /// <param name="results"></param>
+        /// <returns></returns>
+        private IList<DBLocation> CreateLocationsHeirarchy(IMultipleResults results)
         {
             List<DBLocation> listLocations = ResultOrEmptyList<DBLocation>(results);
             List<DBLocationLink> listLocLinks = ResultOrEmptyList<DBLocationLink>(results);
 
+
+            /* Do not do this, very slow runtime
+            var linkedToGroups = listLocLinks.GroupBy(link => link.LinkedTo);
+            var linkedFromGroups = listLocLinks.GroupBy(link => link.LinkedFrom);
+
+            listLocations.ForEach(
+                loc => loc.IsLinkedFrom.SetSource(
+                    linkedToGroups.Where(link => link.Key == loc.ID).FirstOrDefault()));
+
+            listLocations.ForEach(
+                loc => loc.IsLinkedTo.SetSource(
+                    linkedFromGroups.Where(link => link.Key == loc.ID).FirstOrDefault()));
+            */
+
+            
+            // About 3 seconds for 6000 locations
+            SortedList<long, DBLocation> sortedLocations = new SortedList<long, DBLocation>(listLocations.Count);
+            listLocations.ForEach(loc => sortedLocations.Add(loc.ID, loc));
+              
+            var linkedToGroups = listLocLinks.GroupBy(link => link.LinkedTo);
+            var linkedFromGroups = listLocLinks.GroupBy(link => link.LinkedFrom);
+
+            foreach (var link in linkedToGroups)
+            {
+                if(sortedLocations.ContainsKey(link.Key))
+                    sortedLocations[link.Key].IsLinkedFrom.SetSource(link);
+            }
+
+            foreach( var link in linkedFromGroups)
+            {
+                if (sortedLocations.ContainsKey(link.Key))
+                    sortedLocations[link.Key].IsLinkedTo.SetSource(link);
+            }
+             
+            return sortedLocations.Values;
+
+            /* Reasonably fast, about eight seconds for 6000 locations
             listLocations.ForEach(
                 loc => loc.IsLinkedFrom.SetSource(listLocLinks.Where(
                     link => link.LinkedTo == loc.ID)));
@@ -83,9 +148,8 @@ namespace Annotation.Database
             listLocations.ForEach(
                 loc => loc.IsLinkedTo.SetSource(listLocLinks.Where(
                     link => link.LinkedFrom == loc.ID)));
-
-            return listLocations; 
-
+            */
+            //return listLocations; 
         }
 
         [Function(Name = "SelectSectionLocationsAndLinks")]

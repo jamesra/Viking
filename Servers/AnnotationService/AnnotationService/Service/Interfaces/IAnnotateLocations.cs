@@ -13,6 +13,15 @@ namespace Annotation.Service.Interfaces
     public interface IAnnotateLocations
     {
         /// <summary>
+        /// Create a new location in the database.  Generate Location links for the passed LinkedIDs
+        /// </summary>
+        /// <param name="obj"></param>
+        /// <param name="LinkedIDs"></param>
+        /// <returns>Return new Location object with Database generated ID</returns>
+        [OperationContract]
+        Location CreateLocation(Location obj, long[] LinkedIDs);
+
+        /// <summary>
         /// Return a single location from the Database
         /// </summary>
         /// <returns></returns>
@@ -35,12 +44,27 @@ namespace Annotation.Service.Interfaces
         Location GetLastModifiedLocation();
 
         /// <summary>
+        /// Return Location IDs linked to the passed location ID
+        /// </summary>
+        /// <param name="IDs"></param>
+        /// <returns></returns>
+        [OperationContract]
+        long[] GetLinkedLocations(long ID);
+
+        /// <summary>
         /// Find all locations in a given section.  Returns time query executed so GetLocationChanges can be called i
         /// the future
         /// </summary>
         /// <returns></returns>
         [OperationContract]
         Location[] GetLocationsForSection(long section, out long QueryExecutedTime);
+
+        /// <summary>
+        /// Return all locations for this structure
+        /// </summary>
+        /// <returns></returns>
+        [OperationContract]
+        Location[] GetLocationsForStructure(long structureID);
 
         /// <summary>
         /// Returns all locations modified after a set date.  

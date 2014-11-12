@@ -10,6 +10,29 @@ using Annotation.Database;
 namespace Annotation
 {
     [DataContract]
+    public class CreateStructureRetval
+    {
+        private Structure _structure;
+        private Location _location;
+
+        [DataMember]
+        public Structure structure { get { return _structure; } set { _structure = value; } }
+
+        [DataMember]
+        public Location location { get { return _location; } set { _location = value; }  }
+
+        public CreateStructureRetval(Structure s, Location l)
+        {
+            _structure = s;
+            _location = l;
+        }
+
+        public CreateStructureRetval()
+        {
+        }
+    }
+
+    [DataContract]
     public class Structure : DataObjectWithParent<long>
     {
         private long _Type;
