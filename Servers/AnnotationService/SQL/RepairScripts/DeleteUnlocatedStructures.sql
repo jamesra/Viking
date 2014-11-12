@@ -1,6 +1,3 @@
-
-use Rabbit
-
 delete from StructureLink where TargetID = SourceID
 go
 

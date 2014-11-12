@@ -8,6 +8,7 @@ using System.Data.Linq;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Web.Configuration;
+using System.Transactions;
 using System.Security.Permissions;
 
 using Annotation.Service.Interfaces;
@@ -19,6 +20,19 @@ namespace Annotation
     [AspNetCompatibilityRequirements(RequirementsMode= AspNetCompatibilityRequirementsMode.Required)]
     public class AnnotateService : IAnnotateStructureTypes, IAnnotateStructures, IAnnotateLocations, IDisposable, ICircuit
     {
+
+        public string DefaultVolumeName = null;
+
+        public AnnotateService(string DefaultVolumeName)
+        {
+            this.DefaultVolumeName = DefaultVolumeName;
+        }
+
+        public AnnotateService()
+        {
+            
+        }
+
         Annotation.Database.AnnotationDataContext _db;
         Annotation.Database.AnnotationDataContext db
         {
@@ -53,30 +67,7 @@ namespace Annotation
 
                 //Look at the application path name, attempt to use that path to set the database for the connection
 
-                System.Configuration.ConnectionStringSettingsCollection connStrings = WebConfigurationManager.ConnectionStrings;
-                string UnformattedConnstring = connStrings["VikingGenericConnection"].ConnectionString;
-
-                string AppPath = System.Web.HttpContext.Current.Request.ApplicationPath;
-
-                //Take only the last directory from the name
-                string VolumeName = System.IO.Path.GetFileNameWithoutExtension(AppPath);
-
-                VolumeName = VolumeName.ToLower();
-
-                //Remove terms Text and Binary from path
-                VolumeName = VolumeName.Replace("binary", "");
-                VolumeName = VolumeName.Replace("text", "");
-                VolumeName = VolumeName.Replace("debug", "");
-
-#if DEBUG
-                //Hack for debug purposes
-                if (VolumeName.Length == 0)
-                    VolumeName = "rabbit";
-#endif
-
-                //VolumeName = "DebelloOB1";
-                //Magic: The volumeName should match the database name
-                string FormattedConnString = string.Format(UnformattedConnstring, VolumeName);
+                string FormattedConnString = BuildConnectionString(); 
 
                 _db = new Annotation.Database.AnnotationDataContext(FormattedConnString);
 
@@ -93,7 +84,76 @@ namespace Annotation
             }
         }
 
+        protected string BuildConnectionString()
+        {
+            System.Configuration.ConnectionStringSettingsCollection connStrings = WebConfigurationManager.ConnectionStrings;
+            string UnformattedConnstring = connStrings["VikingGenericConnection"].ConnectionString;
+
+            string VolumeName = TryGetVolumeFromRequest(); 
+
+            if(VolumeName == null)
+                VolumeName = this.DefaultVolumeName;
+            else if (VolumeName.Length == 0)
+                VolumeName = this.DefaultVolumeName;
+
+            //VolumeName = "DebelloOB1";
+            //Magic: The volumeName should match the database name
+            string FormattedConnString = string.Format(UnformattedConnstring, VolumeName);
+
+            return FormattedConnString;
+        }
+
+        /// <summary>
+        /// If there is an HTTP context extract the volume name from the application path
+        /// </summary>
+        /// <returns></returns>
+        protected string TryGetVolumeFromRequest()
+        {
+            if (System.Web.HttpContext.Current == null)
+                return null; 
+
+            string AppPath = System.Web.HttpContext.Current.Request.ApplicationPath;
+
+            //Take only the last directory from the name
+            string VolumeName = System.IO.Path.GetFileNameWithoutExtension(AppPath);
+
+            VolumeName = VolumeName.ToLower();
+
+            //Remove terms Text and Binary from path
+            VolumeName = VolumeName.Replace("binary", "");
+            VolumeName = VolumeName.Replace("text", "");
+            VolumeName = VolumeName.Replace("debug", "");
+
+            return VolumeName;
+        }
+
         #region IAnnotateStructureTypes Members
+
+        [PrincipalPermission(SecurityAction.Demand, Role = "Modify")]
+        public StructureType CreateStructureType(StructureType new_structureType)
+        {
+            try
+            {
+                DBStructureType db_obj = new DBStructureType();
+                //Create the object to get the ID
+                new_structureType.Sync(db_obj);
+                db.DBStructureTypes.InsertOnSubmit(db_obj);
+
+                db.Log = Console.Out;
+                db.SubmitChanges();
+                Console.Out.Flush();
+
+                StructureType output_obj = new StructureType(db_obj);
+                return output_obj;
+            }
+            finally
+            {
+                if (db != null)
+                    db.Connection.Close();
+            }
+
+            return null;
+        }
 
         [PrincipalPermission(SecurityAction.Demand, Role = "Read")]
         public StructureType[] GetStructureTypes()
@@ -168,6 +228,13 @@ namespace Annotation
 
         [PrincipalPermission(SecurityAction.Demand, Role = "Read")]
         public Structure[] GetStructuresForType(long TypeID)
+        {
+            return GetStructuresOfType(TypeID);
+        }
+
+
+        [PrincipalPermission(SecurityAction.Demand, Role = "Read")]
+        public Structure[] GetStructuresOfType(long TypeID)
         {
             try
             {
@@ -265,15 +332,20 @@ namespace Annotation
             return ListStructureTypes.ToArray();
         }
 
+        [PrincipalPermission(SecurityAction.Demand, Role = "Modify")]
+        public long[] UpdateStructureTypes(StructureType[] structTypes)
+        {
+            return Update(structTypes);
+        }
+
         /// <summary>
         /// Submits passed structure types to the database
         /// </summary>
         /// <param name="structTypes"></param>
         /// <returns>Returns ID's of each object in the order they were passed. Used to recover ID's of inserted rows</returns>
         [PrincipalPermission(SecurityAction.Demand, Role = "Modify")]
-        public long[] UpdateStructureTypes(StructureType[] structTypes)
-        {
-
+        public long[] Update(StructureType[] structTypes)
+        { 
             IQueryable<DBStructureType> types = from t in db.DBStructureTypes select t;
 
             Dictionary<DBStructureType, int> mapNewTypeToIndex = new Dictionary<DBStructureType, int>(structTypes.Length);
@@ -292,7 +364,7 @@ namespace Annotation
                         case DBACTION.INSERT:
 
                             DBStructureType newType = new DBStructureType();
-                            t.Sync(newType);
+                            t.Sync(newType); 
                             db.DBStructureTypes.InsertOnSubmit(newType);
                             mapNewTypeToIndex.Add(newType, iObj);
                             break;
@@ -442,9 +514,7 @@ namespace Annotation
             {
                 Debug.WriteLine(e.ToString());
             }
-
-            
-
+              
             return new Structure[0];
         }
 
@@ -539,20 +609,22 @@ namespace Annotation
             return ListStructures.ToArray();
         }
 
-        [PrincipalPermission(SecurityAction.Demand, Role = "Modify")]
+        [PrincipalPermission(SecurityAction.Demand, Role = "Read")]
         public void ApproximateStructureLocation(long ID)
         {
             db.ApproximateStructureLocation(new int?((int)ID));  
         }
 
         [PrincipalPermission(SecurityAction.Demand, Role = "Modify")]
-        public void CreateStructureLink(StructureLink link)
+        public StructureLink CreateStructureLink(StructureLink link)
         {
             DBStructureLink newRow = new DBStructureLink();
-            link.Sync(newRow);
+            link.Sync(newRow);    
             db.DBStructureLinks.InsertOnSubmit(newRow);
-
             db.SubmitChanges();
+
+            StructureLink newLink = new StructureLink(newRow);
+            return newLink; 
         }
 
         [PrincipalPermission(SecurityAction.Demand, Role = "Modify")]
@@ -621,15 +693,15 @@ namespace Annotation
                             break;
                     }
                 }
+
+                db.SubmitChanges();
             }
             catch (Exception e)
             {
                 Debug.WriteLine(e.ToString());
                 throw e;
-
             }
 
-            db.SubmitChanges();
 
             //Recover the ID's for new objects
             return;
@@ -761,8 +833,16 @@ namespace Annotation
             return 0;
         }
 
+        
+
         [PrincipalPermission(SecurityAction.Demand, Role = "Modify")]
         public long[] UpdateStructures(Structure[] structures)
+        {
+            return Update(structures);
+        }
+
+        [PrincipalPermission(SecurityAction.Demand, Role = "Modify")]
+        public long[] Update(Structure[] structures)
         {
             Dictionary<DBStructure, int> mapNewObjToIndex = new Dictionary<DBStructure, int>(structures.Length);
 
@@ -864,6 +944,38 @@ namespace Annotation
         }
 
         [PrincipalPermission(SecurityAction.Demand, Role = "Modify")]
+        public CreateStructureRetval CreateStructure(Structure structure, Location location)
+        {
+            try
+            {
+                DBStructure DBStruct = new DBStructure();
+                structure.Sync(DBStruct);
+
+                db.DBStructures.InsertOnSubmit(DBStruct);
+
+                DBLocation DBLoc = new DBLocation();
+                location.Sync(DBLoc);
+                DBLoc.DBStructure = DBStruct;
+
+                db.DBLocations.InsertOnSubmit(DBLoc);
+
+                db.SubmitChanges();
+
+                //Return new ID's to the caller
+                CreateStructureRetval retval = new CreateStructureRetval(new Structure(DBStruct, false), new Location(DBLoc));
+                return retval; 
+            }
+            finally
+            {
+                if (db != null)
+                    db.Connection.Close();
+            }
+
+            return null;
+        }
+
+        /*
+        [PrincipalPermission(SecurityAction.Demand, Role = "Modify")]
         public long[] CreateStructure(Structure structure, Location location)
         {
             DBStructure DBStruct = new DBStructure();
@@ -882,6 +994,7 @@ namespace Annotation
             //Return new ID's to the caller
             return new long[] { DBStruct.ID, DBLoc.ID };
         }
+         */
 
         /// <summary>
         /// Merges the specified structures into a single structure. Structures must be of the same type.
@@ -1034,7 +1147,7 @@ namespace Annotation
             {
 
                 //IQueryable<DBLocation> queryResults = from l in db.DBLocations where ((double)section) == l.Z select l;
-                List<DBLocation> locations = db.SectionLocationsAndLinks(section);
+                IList<DBLocation> locations = db.SectionLocationsAndLinks(section);
                 //List<DBLocation> locations = queryResults.ToList<DBLocation>();
 
                 Debug.WriteLine(section.ToString() + ": Query: " + new TimeSpan(DateTime.Now.Ticks - start.Ticks).TotalMilliseconds);
@@ -1115,7 +1228,7 @@ namespace Annotation
                                                             (ModifiedAfterThisTime <= l.LastModified)
                                                       select l;
                 */
-                List<DBLocation> listLocations = db.SectionLocationsAndLinks((double)section, ModifiedAfterThisTime);
+                IList<DBLocation> listLocations = db.SectionLocationsAndLinks((double)section, ModifiedAfterThisTime);
 
                 elapsed = new TimeSpan(DateTime.Now.Ticks - start.Ticks);
                 Debug.WriteLine(section.ToString() + ": Query: " + elapsed.TotalMilliseconds);
@@ -1201,6 +1314,48 @@ namespace Annotation
 
 
             return retList;
+        }
+
+        [PrincipalPermission(SecurityAction.Demand, Role = "Modify")]
+        public Location CreateLocation(Location new_location, long[] links)
+        {
+            try
+            {
+                DBLocation db_obj = new DBLocation();
+                string username = ServiceModelUtil.GetUserForCall();
+                using (var transaction = new TransactionScope())
+                {
+                    //Create the object to get the ID
+                    new_location.Sync(db_obj);
+                    new_location.Username = username;
+                    db.DBLocations.InsertOnSubmit(db_obj);
+
+                    db.Log = Console.Out;
+                    db.SubmitChanges();
+                    Console.Out.Flush();
+
+                    //Build a new location link for every link in the array
+                    List<DBLocationLink> listLinks = new List<DBLocationLink>(links.Length);
+                    foreach (long linked_locationID in links)
+                    {
+                        DBLocationLink created_link = _CreateLocationLink(db_obj.ID, linked_locationID, username);
+                        listLinks.Add(created_link); 
+                    }
+
+                    db.DBLocationLinks.InsertAllOnSubmit(listLinks);
+                    db.SubmitChanges(); 
+                    transaction.Complete();
+                }
+
+                Location output_loc = new Location(db_obj);
+                output_loc.Links = links;
+                return output_loc;
+            }
+            finally
+            {
+                if (db != null)
+                    db.Connection.Close();
+            }
         }
 
         [PrincipalPermission(SecurityAction.Demand, Role = "Modify")]
@@ -1308,9 +1463,11 @@ namespace Annotation
             return listID;
         }
 
-        [PrincipalPermission(SecurityAction.Demand, Role = "Modify")]
-        public void CreateLocationLink(long SourceID, long TargetID)
+        private DBLocationLink _CreateLocationLink(long SourceID, long TargetID, string username)
         {
+            if(username == null)
+                username = ServiceModelUtil.GetUserForCall();
+
             DBLocationLink newLink = new DBLocationLink();
             DBLocation Source = null;
             DBLocation Target = null;
@@ -1329,6 +1486,11 @@ namespace Annotation
                 throw new ArgumentException("CreateLocationLink: The specified source or target does not exist");
             }
 
+            if (Source.ParentID != Target.ParentID)
+            {
+                throw new ArgumentException("Location links can only be created between locations belonging to the same structure");
+            }
+
             newLink.Username = ServiceModelUtil.GetUserForCall();
 
             //Source and target are poorly named.  Right now source is always the smaller ID value, links are unidirectional
@@ -1343,8 +1505,19 @@ namespace Annotation
                 newLink.TargetLocation = Source;
             }
 
+            newLink.Username = username;
+
+            return newLink; 
+        }
+
+        [PrincipalPermission(SecurityAction.Demand, Role = "Modify")]
+        public void CreateLocationLink(long SourceID, long TargetID)
+        {
+            DBLocationLink newLink = _CreateLocationLink(SourceID, TargetID, null); 
             db.DBLocationLinks.InsertOnSubmit(newLink);
             db.SubmitChanges();
+
+            return;
         }
 
         [PrincipalPermission(SecurityAction.Demand, Role = "Modify")]
@@ -1442,9 +1615,10 @@ namespace Annotation
         }
 
         [PrincipalPermission(SecurityAction.Demand, Role = "Read")]
-        public Location[] GetLinkedLocations(long ID)
+        public long[] GetLinkedLocations(long ID)
         {
-            throw new NotImplementedException();
+            var links = (from u in db.DBLocationLinks where u.LinkedTo == ID select u.LinkedFrom).Union(from u in db.DBLocationLinks where u.LinkedFrom == ID select u.LinkedTo);
+            return links.ToArray();
         }
 
         #endregion
@@ -1467,6 +1641,7 @@ namespace Annotation
 
         public SortedDictionary<long, StructureType> StructureTypesDictionary = new SortedDictionary<long, StructureType>();
 
+        [PrincipalPermission(SecurityAction.Demand, Role = "Read")]
         public Graphx getGraph(int cellID, int numHops)
         {
             // Create a new graph
@@ -1655,6 +1830,7 @@ namespace Annotation
             return ListAbsentParents;
         }
 
+        [PrincipalPermission(SecurityAction.Demand, Role = "Read")]
         public long[] getStructuresByTypeID(int typeID)
         {
             long[] structuresList;
@@ -1668,6 +1844,7 @@ namespace Annotation
 
         // num=1 structures
         // num=0 locations
+        [PrincipalPermission(SecurityAction.Demand, Role = "Read")]
         public string[] getTopConnectedStructures(int num)
         {
 
@@ -1723,6 +1900,7 @@ namespace Annotation
 
         }
 
+        [PrincipalPermission(SecurityAction.Demand, Role = "Read")]
         public string[] getTopConnectedCells()
         {
             List<string> result = new List<string>();
@@ -1782,6 +1960,7 @@ namespace Annotation
             return labelDictionary; 
         }
 
+        [PrincipalPermission(SecurityAction.Demand, Role = "Read")]
         public SynapseObject getSynapseStats()
         {
             SortedDictionary<long, long> topConnections = new SortedDictionary<long, long>();
@@ -1836,6 +2015,7 @@ namespace Annotation
 
         }
 
+        [PrincipalPermission(SecurityAction.Demand, Role = "Read")]
         public string[] getSynapses(int cellID)
         {
             Structure mainStructure = GetStructureByID(cellID, true);

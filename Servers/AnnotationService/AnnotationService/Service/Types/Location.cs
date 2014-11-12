@@ -91,7 +91,6 @@ namespace Annotation
         AnnotationPoint _VolumePosition;
         AnnotationPoint[] _Verticies = new AnnotationPoint[0]; 
         private bool _Closed;
-        private string[] _Tags = new string[0];
         private long[] _Links = new long[0];
         private bool _Terminal;
         private bool _OffEdge;
@@ -148,15 +147,7 @@ namespace Annotation
             get { return _Closed; }
             set { _Closed = value; }
         }
-
-        [DataMember]
-        [Column("Tags")]
-        public string[] Tags
-        {
-            get { return _Tags; }
-            set { _Tags = value; }
-        }
-
+        
         [DataMember]
         public string AttributesXml
         {
@@ -225,6 +216,30 @@ namespace Annotation
 
         }
 
+        private static long[] PopulateLinks(DBLocation db)
+        {
+            if (! (db.IsLinkedTo.Any() || db.IsLinkedFrom.Any()))
+                return null; 
+
+            long[] _Links = new long[db.IsLinkedTo.Count + db.IsLinkedFrom.Count];
+            //    this._Links = new long[0]; 
+
+            int i = 0;
+            foreach (DBLocationLink link in db.IsLinkedTo)
+            {
+                _Links[i] = link.LinkedTo;
+                i++;
+            }
+
+            foreach (DBLocationLink link in db.IsLinkedFrom)
+            {
+                _Links[i] = link.LinkedFrom;
+                i++;
+            }
+
+            return _Links; 
+        }
+
         public Location(DBLocation db)
         {
             this.ID = db.ID;
@@ -241,34 +256,14 @@ namespace Annotation
             {
                 vertStream = new System.IO.MemoryStream(db.Verticies.ToArray());
             }
-            
 
-            this._Links = new long[db.IsLinkedTo.Count + db.IsLinkedFrom.Count];
-        //    this._Links = new long[0]; 
-           
             this._Closed = db.Closed;
-            
-            int i = 0; 
-            
-            
-            foreach (DBLocationLink link in db.IsLinkedTo)
-            {
-                _Links[i] = link.LinkedTo;
-                i++;
-            }
-
-            foreach (DBLocationLink link in db.IsLinkedFrom)
-            {
-                _Links[i] = link.LinkedFrom;
-                i++; 
-            }
-            
+            this._Links = PopulateLinks(db);
 
             this._Terminal = db.Terminal;
             this._OffEdge = db.OffEdge;
             this._TypeCode = db.TypeCode;
             this._Radius = db.Radius;
-
             
             if (vertStream != null)
             {
@@ -287,8 +282,7 @@ namespace Annotation
             }
             else
             {
-             
-                this.Verticies = new AnnotationPoint[0];
+                this.Verticies = null; 
             }
 
             if (db.Tags == null)
@@ -328,13 +322,24 @@ namespace Annotation
 
             //See above comment before adding UpdateUserName test...
             db.VolumeX = this.VolumePosition.X;
-            db.VolumeY = this.VolumePosition.Y; 
+            db.VolumeY = this.VolumePosition.Y;
 
-            //Save the verticies as a binary stream
-            using (System.IO.MemoryStream stream = new System.IO.MemoryStream(sizeof(double) * 3 * this.Verticies.Length))
+            //Save the verticies as a binary stream.  A zero length array takes 142 bytes, so just store null instead.
+            if (this.Verticies == null)
             {
-                serializer.Serialize(stream, this.Verticies);
-                db.Verticies = new System.Data.Linq.Binary(stream.ToArray());
+                db.Verticies = null;
+            }
+            else if (this.Verticies.Length == 0)
+            {
+                db.Verticies = null;
+            }
+            else
+            {
+                using (System.IO.MemoryStream stream = new System.IO.MemoryStream(sizeof(double) * 3 * this.Verticies.Length))
+                {
+                    serializer.Serialize(stream, this.Verticies);
+                    db.Verticies = new System.Data.Linq.Binary(stream.ToArray());
+                }
             }
 
             UpdateUserName |= db.Closed != this.Closed; 
@@ -367,13 +372,18 @@ namespace Annotation
             UpdateUserName |= db.Radius != this._Radius; 
             db.Radius = this._Radius;
 
+            UpdateUserName |= db.Username == null; 
+
             if (UpdateUserName)
             {
                 db.Username = ServiceModelUtil.GetUserForCall();
             }
-            else
+            else if (db.Username == null)
             {
-                db.Username = this.Username; 
+                if(this.Username != null)
+                    db.Username = this.Username; 
+                else
+                    db.Username = ServiceModelUtil.GetUserForCall();
             }
 
             /*  This doesn't work because we don't have the actual LocationLink objects so LINQ doesn't create the field correctly

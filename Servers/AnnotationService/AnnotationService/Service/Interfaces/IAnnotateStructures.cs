@@ -13,6 +13,15 @@ namespace Annotation.Service.Interfaces
     public interface IAnnotateStructures
     {
         /// <summary>
+        /// Create a new structure in the database.
+        /// </summary>
+        /// <param name="obj"></param>
+        /// <param name="LinkedIDs"></param>
+        /// <returns>Return new Structure object with Database generated ID</returns>
+        [OperationContract]
+        CreateStructureRetval CreateStructure(Structure structure, Location location);
+         
+        /// <summary>
         /// Return all structures from the Database
         /// </summary>
         /// <returns></returns>
@@ -49,7 +58,7 @@ namespace Annotation.Service.Interfaces
         /// <param name="To"></param>
         /// <returns></returns>
         [OperationContract]
-        void CreateStructureLink(StructureLink link);
+        StructureLink CreateStructureLink(StructureLink link);
 
         /// <summary>
         /// Returns all linked structures
@@ -69,8 +78,8 @@ namespace Annotation.Service.Interfaces
         /// Return all locations for this structure
         /// </summary>
         /// <returns></returns>
-        [OperationContract]
-        Location[] GetLocationsForStructure(long structureID);
+        //[OperationContract]
+        //Location[] GetLocationsForStructure(long structureID);
 
         /// <summary>
         /// Returnst the number of locations a structure has
@@ -80,22 +89,16 @@ namespace Annotation.Service.Interfaces
         [OperationContract]
         long NumberOfLocationsForStructure(long structureID); 
 
-        /// <summary>
-        /// Create a new structure at the given location
-        /// </summary>
-        /// <param name="structure"></param>
-        /// <param name="location"></param>
-        /// <returns></returns>
-        [OperationContract]
-        long[] CreateStructure(Structure structure, Location location);
+        
 
         /// <summary>
-        /// Updates or creates a new structure
+        /// Updates or creates a new structure 
         /// </summary>
         /// <param name="structType"></param>
         /// <returns>IDs of updated</returns.
         [OperationContract]
         long[] UpdateStructures(Structure[] structure);
+         
 
         /// <summary>
         /// Updates or creates structure links
@@ -121,6 +124,14 @@ namespace Annotation.Service.Interfaces
         /// <returns></returns>
         [OperationContract]
         LocationPositionOnly[] GetUnfinishedLocationsWithPosition(long structureID);
+
+        /// <summary>
+        /// Returns all structures with the given typeID 
+        /// </summary>
+        /// <param name="typeID"></param>
+        /// <returns></returns>
+        [OperationContract]
+        Structure[] GetStructuresOfType(long typeID);
 
         /// <summary>
         /// Merges the specified structures into a single structure. Structures must be of the same type.

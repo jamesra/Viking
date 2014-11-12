@@ -1,11 +1,11 @@
 /**** You need to replace the following templates to use this script ****/
-/**** RC2 = Name of the database  */
+/**** {DATABASE_NAME} = Name of the database  */
 /**** {DATABASE_DIRECTORY} = Directory Datbase lives in if it needs to be created, with the trailing slash i.e. C:\Database\
 */
 DECLARE @DATABASE_NAME VARCHAR(50)
-SET @DATABASE_NAME = 'RC2'
+SET @DATABASE_NAME = '{DATABASE_NAME}'
 DECLARE @DATABASE_DIRECTORY VARCHAR(50)
-SET @DATABASE_DIRECTORY = 'D:\Database\'
+SET @DATABASE_DIRECTORY = 'C:\Database\'
 
 USE [master]
 
@@ -28,12 +28,11 @@ BEGIN
 	DROP TABLE #UpdateVars;
 END
 	
-CREATE TABLE #UpdateVars ([Version] INT);
-INSERT INTO #UpdateVars Values (DB_ID(N'RC2'));
-GO
+CREATE TABLE #UpdateVars ([Version] VARCHAR(100));
+INSERT INTO #UpdateVars Values (N'{DATABASE_NAME}');
 
-DECLARE @db_id int;
-SET @db_id = (Select Version from #UpdateVars)
+DECLARE @db_id VARCHAR(100);
+SET @db_id = db_id(@DATABASE_NAME)
 
 print @db_id
 
@@ -41,60 +40,74 @@ IF @db_id IS NULL
 BEGIN
 	print N'Database does not exist, creating...' 
 	
-	/****** Object:  Database [RC2]    Script Date: 06/14/2011 13:13:50 ******/
-	CREATE DATABASE [RC2] ON  PRIMARY 
-		( NAME = N'RC2', FILENAME = N'C:\Database\RC2\RC2.mdf' , SIZE = 4096KB , MAXSIZE = UNLIMITED, FILEGROWTH = 1024KB )
+	declare @Path varchar(100)
+	set @Path = N'C:\Database\{DATABASE_NAME}\'
+	EXEC master.dbo.xp_create_subdir @Path
+	
+	/****** Object:  Database [{DATABASE_NAME}]    Script Date: 06/14/2011 13:13:50 ******/
+	CREATE DATABASE [{DATABASE_NAME}] ON  PRIMARY 
+		( NAME = N'{DATABASE_NAME}', FILENAME = N'C:\Database\{DATABASE_NAME}\{DATABASE_NAME}.mdf' , SIZE = 4096KB , MAXSIZE = UNLIMITED, FILEGROWTH = 1024KB )
 		 LOG ON 
-		( NAME = N'RC2_log', FILENAME = N'C:\Database\RC2\RC2_log.ldf' , SIZE = 4096KB , MAXSIZE = 2048GB , FILEGROWTH = 10%)
+		( NAME = N'{DATABASE_NAME}_log', FILENAME = N'C:\Database\{DATABASE_NAME}\{DATABASE_NAME}_log.ldf' , SIZE = 4096KB , MAXSIZE = 2048GB , FILEGROWTH = 10%)
 		
-	ALTER DATABASE [RC2] SET COMPATIBILITY_LEVEL = 100
+	ALTER DATABASE [{DATABASE_NAME}] SET COMPATIBILITY_LEVEL = 100
 	
 	IF (1 = FULLTEXTSERVICEPROPERTY('IsFullTextInstalled'))
 	begin
-		EXEC [RC2].[dbo].[sp_fulltext_database] @action = 'enable'
+		EXEC [{DATABASE_NAME}].[dbo].[sp_fulltext_database] @action = 'enable'
 	end
 	
-	ALTER DATABASE [RC2] SET ANSI_NULL_DEFAULT OFF
-	ALTER DATABASE [RC2] SET ANSI_NULLS OFF
-	ALTER DATABASE [RC2] SET ANSI_PADDING OFF
-	ALTER DATABASE [RC2] SET ANSI_WARNINGS OFF
-	ALTER DATABASE [RC2] SET ARITHABORT OFF
-	ALTER DATABASE [RC2] SET AUTO_CLOSE OFF
-	ALTER DATABASE [RC2] SET AUTO_CREATE_STATISTICS ON
-	ALTER DATABASE [RC2] SET AUTO_SHRINK OFF
-	ALTER DATABASE [RC2] SET AUTO_UPDATE_STATISTICS ON
-	ALTER DATABASE [RC2] SET CURSOR_CLOSE_ON_COMMIT OFF
-	ALTER DATABASE [RC2] SET CURSOR_DEFAULT  GLOBAL
-	ALTER DATABASE [RC2] SET CONCAT_NULL_YIELDS_NULL OFF
-	ALTER DATABASE [RC2] SET NUMERIC_ROUNDABORT OFF
-	ALTER DATABASE [RC2] SET QUOTED_IDENTIFIER OFF
-	ALTER DATABASE [RC2] SET RECURSIVE_TRIGGERS OFF
-	ALTER DATABASE [RC2] SET  DISABLE_BROKER
-	ALTER DATABASE [RC2] SET AUTO_UPDATE_STATISTICS_ASYNC OFF
-	ALTER DATABASE [RC2] SET DATE_CORRELATION_OPTIMIZATION OFF
-	ALTER DATABASE [RC2] SET TRUSTWORTHY OFF
-	ALTER DATABASE [RC2] SET ALLOW_SNAPSHOT_ISOLATION OFF
-	ALTER DATABASE [RC2] SET PARAMETERIZATION SIMPLE
-	ALTER DATABASE [RC2] SET READ_COMMITTED_SNAPSHOT OFF
-	ALTER DATABASE [RC2] SET HONOR_BROKER_PRIORITY OFF
-	ALTER DATABASE [RC2] SET  READ_WRITE
-	ALTER DATABASE [RC2] SET RECOVERY SIMPLE
-	ALTER DATABASE [RC2] SET  MULTI_USER
-	ALTER DATABASE [RC2] SET PAGE_VERIFY CHECKSUM
-	ALTER DATABASE [RC2] SET DB_CHAINING OFF
+	ALTER DATABASE [{DATABASE_NAME}] SET ANSI_NULL_DEFAULT OFF
+	ALTER DATABASE [{DATABASE_NAME}] SET ANSI_NULLS OFF
+	ALTER DATABASE [{DATABASE_NAME}] SET ANSI_PADDING OFF
+	ALTER DATABASE [{DATABASE_NAME}] SET ANSI_WARNINGS OFF
+	ALTER DATABASE [{DATABASE_NAME}] SET ARITHABORT OFF
+	ALTER DATABASE [{DATABASE_NAME}] SET AUTO_CLOSE OFF
+	ALTER DATABASE [{DATABASE_NAME}] SET AUTO_CREATE_STATISTICS ON
+	ALTER DATABASE [{DATABASE_NAME}] SET AUTO_SHRINK OFF
+	ALTER DATABASE [{DATABASE_NAME}] SET AUTO_UPDATE_STATISTICS ON
+	ALTER DATABASE [{DATABASE_NAME}] SET CURSOR_CLOSE_ON_COMMIT OFF
+	ALTER DATABASE [{DATABASE_NAME}] SET CURSOR_DEFAULT  GLOBAL
+	ALTER DATABASE [{DATABASE_NAME}] SET CONCAT_NULL_YIELDS_NULL OFF
+	ALTER DATABASE [{DATABASE_NAME}] SET NUMERIC_ROUNDABORT OFF
+	ALTER DATABASE [{DATABASE_NAME}] SET QUOTED_IDENTIFIER OFF
+	ALTER DATABASE [{DATABASE_NAME}] SET RECURSIVE_TRIGGERS OFF
+	ALTER DATABASE [{DATABASE_NAME}] SET  DISABLE_BROKER
+	ALTER DATABASE [{DATABASE_NAME}] SET AUTO_UPDATE_STATISTICS_ASYNC OFF
+	ALTER DATABASE [{DATABASE_NAME}] SET DATE_CORRELATION_OPTIMIZATION OFF
+	ALTER DATABASE [{DATABASE_NAME}] SET TRUSTWORTHY OFF
+	ALTER DATABASE [{DATABASE_NAME}] SET ALLOW_SNAPSHOT_ISOLATION OFF
+	ALTER DATABASE [{DATABASE_NAME}] SET PARAMETERIZATION SIMPLE
+	ALTER DATABASE [{DATABASE_NAME}] SET READ_COMMITTED_SNAPSHOT OFF
+	ALTER DATABASE [{DATABASE_NAME}] SET HONOR_BROKER_PRIORITY OFF
+	ALTER DATABASE [{DATABASE_NAME}] SET  READ_WRITE
+	ALTER DATABASE [{DATABASE_NAME}] SET RECOVERY SIMPLE
+	ALTER DATABASE [{DATABASE_NAME}] SET  MULTI_USER
+	ALTER DATABASE [{DATABASE_NAME}] SET PAGE_VERIFY CHECKSUM
+	ALTER DATABASE [{DATABASE_NAME}] SET DB_CHAINING OFF
 	
 	print N'Created Database...' 
+	INSERT INTO #UpdateVars Values (DB_ID(N'CreateTables'));
 END
 
 GO
 
-USE [RC2]
+USE [{DATABASE_NAME}]
 GO
 
-DECLARE @db_id int;
-SET @db_id = (select * from #UpdateVars)
-IF @db_id IS NULL
-BEGIN	
+/*Find out if we need to create the tables in our database*/
+print N'Checking for table existence'
+
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = N'Location' AND type = 'U')
+BEGIN 
+	INSERT INTO #UpdateVars Values (N'CreateTables');
+	print N'Tables are missing, creating them'
+END
+ 
+DECLARE @db_id VARCHAR(100);
+SET @db_id = (select * from #UpdateVars where Version='CreateTables')
+IF @db_id IS NOT NULL
+BEGIN
 	/****** Object:  FullTextCatalog [FullTextCatalog]    Script Date: 06/14/2011 13:13:50 ******/
 	CREATE FULLTEXT CATALOG [FullTextCatalog]WITH ACCENT_SENSITIVITY = ON
 	AS DEFAULT
@@ -111,9 +124,9 @@ BEGIN
 END;
 GO
 
-DECLARE @db_id int;
-SET @db_id = (select * from #UpdateVars)
-IF @db_id IS NULL
+DECLARE @db_id VARCHAR(100);
+SET @db_id = (select * from #UpdateVars where Version='CreateTables')
+IF @db_id IS NOT NULL
 BEGIN
 	/****** Object:  Table [dbo].[LocationLink]    Script Date: 06/14/2011 13:13:51 ******/
 	SET ANSI_NULLS ON
@@ -134,9 +147,9 @@ BEGIN
 END
 
 GO
-DECLARE @db_id int;
-SET @db_id = (select * from #UpdateVars)
-IF @db_id IS NULL
+DECLARE @db_id VARCHAR(100);
+SET @db_id = (select * from #UpdateVars where Version='CreateTables')
+IF @db_id IS NOT NULL
 BEGIN
 	CREATE NONCLUSTERED INDEX [a] ON [dbo].[LocationLink] 
 	(
@@ -156,9 +169,9 @@ BEGIN
 END	
 
 GO
-DECLARE @db_id int;
-SET @db_id = (select * from #UpdateVars)
-IF @db_id IS NULL
+DECLARE @db_id VARCHAR(100);
+SET @db_id = (select * from #UpdateVars where Version='CreateTables')
+IF @db_id IS NOT NULL
 	EXEC('
 	/****** Object:  StoredProcedure [dbo].[SelectAllStructureLocationLinks]    Script Date: 06/14/2011 13:13:52 ******/
 	
@@ -181,9 +194,9 @@ IF @db_id IS NULL
 
 GO
 
-DECLARE @db_id int;
-SET @db_id = (select * from #UpdateVars)
-IF @db_id IS NULL
+DECLARE @db_id VARCHAR(100);
+SET @db_id = (select * from #UpdateVars where Version='CreateTables')
+IF @db_id IS NOT NULL
 BEGIN	
 	/****** Object:  Table [dbo].[Location]    Script Date: 06/14/2011 13:13:52 ******/
 	SET ANSI_NULLS ON
@@ -228,9 +241,9 @@ BEGIN
 END
 
 GO
-DECLARE @db_id int;
-SET @db_id = (select * from #UpdateVars)
-IF @db_id IS NULL
+DECLARE @db_id VARCHAR(100);
+SET @db_id = (select * from #UpdateVars where Version='CreateTables')
+IF @db_id IS NOT NULL
 BEGIN	
 	SET ANSI_PADDING OFF
 	
@@ -272,9 +285,9 @@ END
 
 	
 GO
-DECLARE @db_id int;
-SET @db_id = (select * from #UpdateVars)
-IF @db_id IS NULL
+DECLARE @db_id VARCHAR(100);
+SET @db_id = (select * from #UpdateVars where Version='CreateTables')
+IF @db_id IS NOT NULL
 	EXEC('
 	/****** Object:  View [dbo].[UserActivity]    Script Date: 06/14/2011 13:13:53 ******/
 	CREATE VIEW [dbo].[UserActivity]
@@ -285,9 +298,9 @@ IF @db_id IS NULL
 	');
 	
 GO
-DECLARE @db_id int;
-SET @db_id = (select * from #UpdateVars)
-IF @db_id IS NULL	
+DECLARE @db_id VARCHAR(100);
+SET @db_id = (select * from #UpdateVars where Version='CreateTables')
+IF @db_id IS NOT NULL	
 BEGIN
 	EXEC sys.sp_addextendedproperty @name=N'MS_DiagramPane1', @value=N'[0E232FF0-B466-11cf-A24F-00AA00A3EFFF, 1.00]
 	Begin DesignProperties = 
@@ -414,10 +427,10 @@ BEGIN
 END
 
 GO
-DECLARE @db_id int;
-SET @db_id = (select * from #UpdateVars)
+DECLARE @db_id VARCHAR(100);
+SET @db_id = (select * from #UpdateVars where Version='CreateTables')
 
-IF @db_id IS NULL
+IF @db_id IS NOT NULL
 	EXEC('
 	/****** Object:  StoredProcedure [dbo].[SelectSectionLocationsAndLinks]    Script Date: 06/14/2011 13:13:53 ******/
 	-- =============================================
@@ -448,14 +461,14 @@ IF @db_id IS NULL
 			 WHERE (
 						(A in 
 							(SELECT ID
-								FROM [RC2].[dbo].[Location]
+								FROM [dbo].[Location]
 								WHERE Z = @Z
 							)
 						)
 						OR
 						(B in 
 							(SELECT ID
-								FROM [RC2].[dbo].[Location]
+								FROM [dbo].[Location]
 								WHERE Z = @Z
 							)
 						)
@@ -466,13 +479,13 @@ IF @db_id IS NULL
 			Select * from LocationLink
 			 WHERE ((A in 
 			(SELECT ID
-			  FROM [RC2].[dbo].[Location]
+			  FROM [dbo].[Location]
 			  WHERE Z = @Z)
 			 )
 			  OR
 			  (B in 
 			(SELECT ID
-			  FROM [RC2].[dbo].[Location]
+			  FROM [dbo].[Location]
 			  WHERE Z = @Z)
 			 ))
 		
@@ -481,9 +494,9 @@ IF @db_id IS NULL
 	')
 	
 GO
-DECLARE @db_id int;
-SET @db_id = (select * from #UpdateVars)
-IF @db_id IS NULL	
+DECLARE @db_id VARCHAR(100);
+SET @db_id = (select * from #UpdateVars where Version='CreateTables')
+IF @db_id IS NOT NULL	
 	EXEC('
 	/****** Object:  StoredProcedure [dbo].[SelectSectionLocationLinks]    Script Date: 06/14/2011 13:13:53 ******/
 	-- =============================================
@@ -504,25 +517,25 @@ IF @db_id IS NULL
 		Select * from LocationLink
 		 WHERE (((A in 
 		(SELECT ID
-		  FROM [RC2].[dbo].[Location]
+		  FROM [dbo].[Location]
 		  WHERE Z >= @Z)
 		 )
 		  AND
 		  (B in 
 		(SELECT ID
-		  FROM [RC2].[dbo].[Location]
+		  FROM [dbo].[Location]
 		  WHERE Z <= @Z)
 		 ))
 		 OR
 		 ((A in
 		 (SELECT ID
-		  FROM [RC2].[dbo].[Location]
+		  FROM [dbo].[Location]
 		  WHERE Z <= @Z)
 		 )
 		  AND
 		  (B in 
 		(SELECT ID
-		  FROM [RC2].[dbo].[Location]
+		  FROM [dbo].[Location]
 		  WHERE Z >= @Z)
 		 )))
 		 AND Created >= @QueryDate
@@ -531,12 +544,12 @@ IF @db_id IS NULL
 	')
 	
 GO
-DECLARE @db_id int;
-SET @db_id = (select * from #UpdateVars)
-IF @db_id IS NULL	
+DECLARE @db_id VARCHAR(100);
+SET @db_id = (select * from #UpdateVars where Version='CreateTables')
+IF @db_id IS NOT NULL	
 	EXEC('
-	/****** Object:  StoredProcedure [dbo].[ApproximaRC2ructureLocation]    Script Date: 06/14/2011 13:13:53 ******/
-	CREATE PROCEDURE [dbo].[ApproximaRC2ructureLocation]
+	/****** Object:  StoredProcedure [dbo].[ApproximatestructureLocation]    Script Date: 06/14/2011 13:13:53 ******/
+	CREATE PROCEDURE [dbo].[ApproximatestructureLocation]
 	@StructureID int
 	AS
 		select SUM(VolumeX*Radius*Radius)/SUM(Radius*Radius) as X,SUM(VolumeY*Radius*Radius)/SUM(Radius*Radius) as Y,SUM(Z*Radius*Radius)/SUM(Radius*Radius) as Z, AVG(Radius) as Radius
@@ -544,9 +557,9 @@ IF @db_id IS NULL
 	')
 
 GO
-DECLARE @db_id int;
-SET @db_id = (select * from #UpdateVars)
-IF @db_id IS NULL
+DECLARE @db_id VARCHAR(100);
+SET @db_id = (select * from #UpdateVars where Version='CreateTables')
+IF @db_id IS NOT NULL
 BEGIN
 	/****** Object:  Table [dbo].[StructureType]    Script Date: 06/14/2011 13:13:53 ******/
 	SET ANSI_NULLS ON
@@ -578,9 +591,9 @@ BEGIN
 END
 
 GO
-DECLARE @db_id int;
-SET @db_id = (select * from #UpdateVars)
-IF @db_id IS NULL
+DECLARE @db_id VARCHAR(100);
+SET @db_id = (select * from #UpdateVars where Version='CreateTables')
+IF @db_id IS NOT NULL
 BEGIN	
 	SET ANSI_PADDING OFF
 	CREATE NONCLUSTERED INDEX [ParentID] ON [dbo].[StructureType] 
@@ -597,9 +610,9 @@ BEGIN
 END
 
 GO
-DECLARE @db_id int;
-SET @db_id = (select * from #UpdateVars)
-IF @db_id IS NULL
+DECLARE @db_id VARCHAR(100);
+SET @db_id = (select * from #UpdateVars where Version='CreateTables')
+IF @db_id IS NOT NULL
 BEGIN	
 	/****** Object:  Table [dbo].[Structure]    Script Date: 06/14/2011 13:13:53 ******/
 	SET ANSI_NULLS ON
@@ -627,9 +640,9 @@ BEGIN
 END
 
 GO
-DECLARE @db_id int;
-SET @db_id = (select * from #UpdateVars)
-IF @db_id IS NULL
+DECLARE @db_id VARCHAR(100);
+SET @db_id = (select * from #UpdateVars where Version='CreateTables')
+IF @db_id IS NOT NULL
 BEGIN
 	SET ANSI_PADDING OFF
 	
@@ -658,9 +671,9 @@ BEGIN
 END
 
 GO
-DECLARE @db_id int;
-SET @db_id = (select * from #UpdateVars)
-IF @db_id IS NULL	
+DECLARE @db_id VARCHAR(100);
+SET @db_id = (select * from #UpdateVars where Version='CreateTables')
+IF @db_id IS NOT NULL	
 	EXEC('
 	/****** Object:  StoredProcedure [dbo].[SelectStructureLocations]    Script Date: 06/14/2011 13:13:53 ******/
 	CREATE PROCEDURE [dbo].[SelectStructureLocations]
@@ -682,7 +695,7 @@ IF @db_id IS NULL
 		  ,J.TypeID
 		  ,[X]
 		  ,[Y]
-		  FROM [RC2].[dbo].[Location] L
+		  FROM [dbo].[Location] L
 		  INNER JOIN 
 		   (SELECT ID, TYPEID
 			FROM Structure
@@ -693,9 +706,9 @@ IF @db_id IS NULL
 	');
 	
 GO
-DECLARE @db_id int;
-SET @db_id = (select * from #UpdateVars)
-IF @db_id IS NULL	
+DECLARE @db_id VARCHAR(100);
+SET @db_id = (select * from #UpdateVars where Version='CreateTables')
+IF @db_id IS NOT NULL	
 	EXEC('
 	/****** Object:  StoredProcedure [dbo].[SelectStructureLocationLinks]    Script Date: 06/14/2011 13:13:53 ******/
 	-- =============================================
@@ -716,7 +729,7 @@ IF @db_id IS NULL
 		Select * from LocationLink
 		 WHERE (A in 
 		(SELECT L.ID
-		  FROM [RC2].[dbo].[Location] L
+		  FROM [dbo].[Location] L
 		  INNER JOIN 
 		   (SELECT ID, TYPEID
 			FROM Structure
@@ -725,7 +738,7 @@ IF @db_id IS NULL
 		  OR
 		  (B in 
 		(SELECT L.ID
-		  FROM [RC2].[dbo].[Location] L
+		  FROM [dbo].[Location] L
 		  INNER JOIN 
 		   (SELECT ID, TYPEID
 			FROM Structure
@@ -736,12 +749,12 @@ IF @db_id IS NULL
 	')
 	
 GO
-DECLARE @db_id int;
-SET @db_id = (select * from #UpdateVars)
-IF @db_id IS NULL	
+DECLARE @db_id VARCHAR(100);
+SET @db_id = (select * from #UpdateVars where Version='CreateTables')
+IF @db_id IS NOT NULL	
 	EXEC('
 	/****** Object:  StoredProcedure [dbo].[SelectAllStructureLocations]    Script Date: 06/14/2011 13:13:53 ******/
-	ALTER PROCEDURE [dbo].[SelectAllStructureLocations]
+	CREATE PROCEDURE [dbo].[SelectAllStructureLocations]
 	AS
 	BEGIN
 		-- SET NOCOUNT ON added to prevent extra result sets from
@@ -758,7 +771,7 @@ IF @db_id IS NULL
 		  ,J.TypeID
 		  ,[X]
 		  ,[Y]
-		  FROM [RC2].[dbo].[Location] L
+		  FROM [dbo].[Location] L
 		  INNER JOIN 
 		   (SELECT ID, TYPEID
 			FROM Structure) J
@@ -767,9 +780,9 @@ IF @db_id IS NULL
 	END
 	'); 
 GO
-DECLARE @db_id int;
-SET @db_id = (select * from #UpdateVars)
-IF @db_id IS NULL
+DECLARE @db_id VARCHAR(100);
+SET @db_id = (select * from #UpdateVars where Version='CreateTables')
+IF @db_id IS NOT NULL
 BEGIN	
 	/****** Object:  Table [dbo].[StructureTemplates]    Script Date: 06/14/2011 13:13:53 ******/
 	SET ANSI_NULLS ON
@@ -792,9 +805,9 @@ BEGIN
 END
 
 GO
-DECLARE @db_id int;
-SET @db_id = (select * from #UpdateVars)
-IF @db_id IS NULL
+DECLARE @db_id VARCHAR(100);
+SET @db_id = (select * from #UpdateVars where Version='CreateTables')
+IF @db_id IS NOT NULL
 BEGIN	
 	SET ANSI_PADDING OFF
 	EXEC sys.sp_addextendedproperty @name=N'MS_Description', @value=N'Name of template' , @level0type=N'SCHEMA',@level0name=N'dbo', @level1type=N'TABLE',@level1name=N'StructureTemplates', @level2type=N'COLUMN',@level2name=N'Name'
@@ -803,9 +816,9 @@ BEGIN
 END
 
 GO
-DECLARE @db_id int;
-SET @db_id = (select * from #UpdateVars)
-IF @db_id IS NULL
+DECLARE @db_id VARCHAR(100);
+SET @db_id = (select * from #UpdateVars where Version='CreateTables')
+IF @db_id IS NOT NULL
 BEGIN
 	/****** Object:  Table [dbo].[StructureLink]    Script Date: 06/14/2011 13:13:53 ******/
 	SET ANSI_NULLS ON
@@ -824,9 +837,9 @@ BEGIN
 END
 
 GO
-DECLARE @db_id int;
-SET @db_id = (select * from #UpdateVars)
-IF @db_id IS NULL
+DECLARE @db_id VARCHAR(100);
+SET @db_id = (select * from #UpdateVars where Version='CreateTables')
+IF @db_id IS NOT NULL
 BEGIN	
 	CREATE NONCLUSTERED INDEX [SourceID] ON [dbo].[StructureLink] 
 	(
@@ -847,9 +860,9 @@ END
 
 
 GO
-DECLARE @db_id int;
-SET @db_id = (select * from #UpdateVars)
-IF @db_id IS NULL
+DECLARE @db_id VARCHAR(100);
+SET @db_id = (select * from #UpdateVars where Version='CreateTables')
+IF @db_id IS NOT NULL
 	EXEC('
 	/****** Object:  StoredProcedure [dbo].[SelectStructuresForSection]    Script Date: 06/14/2011 13:13:53 ******/
 	-- =============================================
@@ -892,9 +905,9 @@ IF @db_id IS NULL
 	
 
 GO
-DECLARE @db_id int;
-SET @db_id = (select * from #UpdateVars)
-IF @db_id IS NULL
+DECLARE @db_id VARCHAR(100);
+SET @db_id = (select * from #UpdateVars where Version='CreateTables')
+IF @db_id IS NOT NULL
 	EXEC('	
 	/****** Object:  StoredProcedure [dbo].[MergeStructures]    Script Date: 06/14/2011 13:13:53 ******/
 	-- =============================================
@@ -936,9 +949,9 @@ IF @db_id IS NULL
 	
 
 GO
-DECLARE @db_id int;
-SET @db_id = (select * from #UpdateVars)
-IF @db_id IS NULL
+DECLARE @db_id VARCHAR(100);
+SET @db_id = (select * from #UpdateVars where Version='CreateTables')
+IF @db_id IS NOT NULL
 	EXEC('
 	
 	/****** Object:  StoredProcedure [dbo].[SelectStructuresAndLinks]    Script Date: 06/14/2011 13:13:53 ******/
@@ -965,9 +978,9 @@ IF @db_id IS NULL
 
 
 GO
-DECLARE @db_id int;
-SET @db_id = (select * from #UpdateVars)
-IF @db_id IS NULL
+DECLARE @db_id VARCHAR(100);
+SET @db_id = (select * from #UpdateVars where Version='CreateTables')
+IF @db_id IS NOT NULL
 BEGIN	
 	/****** Object:  Default [DF_LocationLink_Username]    Script Date: 06/14/2011 13:13:51 ******/
 	ALTER TABLE [dbo].[LocationLink] ADD  CONSTRAINT [DF_LocationLink_Username]  DEFAULT (N'') FOR [Username]
@@ -1088,10 +1101,10 @@ END
 */  
 GO
 
-Use [RC2]
+Use [{DATABASE_NAME}]
 GO
 
-	BEGIN TRANSACTION main
+BEGIN TRANSACTION main
 		
 	--make sure the DBVersion table exists
 	if(not exists (select (1) from dbo.sysobjects 
@@ -1131,10 +1144,15 @@ GO
    begin
      print N'Modifying stored procedures for new VikingPlot version'
      BEGIN TRANSACTION two
+		
+		IF EXISTS(select * from sys.procedures where name = 'SelectAllStructureLocations')
+		BEGIN
+			EXEC('DROP PROCEDURE [dbo].[SelectAllStructureLocations]');
+		END
 	
 		 EXEC('
 		 --add the column, or whatever else you may need to do
-		 ALTER PROCEDURE [dbo].[SelectAllStructureLocations]
+		 CREATE PROCEDURE [dbo].[SelectAllStructureLocations]
 			AS
 			BEGIN
 				-- SET NOCOUNT ON added to prevent extra result sets from
@@ -1150,7 +1168,7 @@ GO
 				  ,[Radius]
 				  ,[X]
 				  ,[Y]
-				  FROM [RC2].[dbo].[Location] L
+				  FROM [dbo].[Location] L
 				  ORDER BY ID
 			END
 		');
@@ -1161,9 +1179,14 @@ GO
 		   ROLLBACK TRANSACTION
 		   RETURN
 		 end
+		 
+		IF EXISTS(select * from sys.procedures where name = 'SelectStructureLocations')
+		BEGIN
+			EXEC('DROP PROCEDURE [dbo].[SelectStructureLocations]');
+		END
      
 		EXEC('
-		ALTER PROCEDURE [dbo].[SelectStructureLocations]
+		CREATE PROCEDURE [dbo].[SelectStructureLocations]
 			-- Add the parameters for the stored procedure here
 			@StructureID bigint
 		AS
@@ -1181,7 +1204,7 @@ GO
 			  ,[Radius]
 			  ,[X]
 			  ,[Y]
-			  FROM [RC2].[dbo].[Location] L
+			  FROM [dbo].[Location] L
 			  INNER JOIN 
 			   (SELECT ID, TYPEID
 				FROM Structure
@@ -1197,6 +1220,11 @@ GO
 		   ROLLBACK TRANSACTION
 		   RETURN
 		 end
+		 
+		IF EXISTS(select * from sys.procedures where name = 'SelectAllStructures')
+		BEGIN
+			EXEC('DROP PROCEDURE [dbo].[SelectAllStructures]');
+		END
 	    
 		EXEC(' 
 		CREATE PROCEDURE [dbo].[SelectAllStructures]
@@ -1213,7 +1241,7 @@ GO
 			   ,[TypeID]
 			   ,[Label]
 			   ,[LastModified]
-			  FROM [RC2].[dbo].Structure S
+			  FROM [dbo].Structure S
 			  ORDER BY ID
 		END
 		');
@@ -1224,6 +1252,11 @@ GO
 		   ROLLBACK TRANSACTION
 		   RETURN
 		 end
+		 
+		IF EXISTS(select * from sys.procedures where name = 'SelectStructure')
+		BEGIN
+			EXEC('DROP PROCEDURE [dbo].[SelectStructure]');
+		END
 	    
 		EXEC('
 		CREATE PROCEDURE [dbo].[SelectStructure]
@@ -1241,7 +1274,7 @@ GO
 			   ,[TypeID]
 			   ,[Label]
 			   ,[LastModified]
-			  FROM [RC2].[dbo].Structure S
+			  FROM [dbo].Structure S
 			  WHERE ID = @StructureID OR ParentID = @StructureID
 			  ORDER BY ID
 		END
@@ -1268,7 +1301,12 @@ end
    begin
      print N'Adding SP to calculate average locations for all structures'
      BEGIN TRANSACTION three
-	
+		
+	    IF EXISTS(select * from sys.procedures where name = 'ApproximateStructureLocations')
+		BEGIN
+			EXEC('DROP PROCEDURE [dbo].[ApproximateStructureLocations]');
+		END
+		
 		 EXEC('
 		 CREATE PROCEDURE [dbo].[ApproximateStructureLocations]
          AS
@@ -1308,9 +1346,14 @@ end
    begin
      print N'Adding SP to calculate average locations for one structure'
      BEGIN TRANSACTION four
+     
+		 IF EXISTS(select * from sys.procedures where name = 'ApproximateStructureLocation')
+		 BEGIN
+			EXEC('DROP PROCEDURE [dbo].[ApproximateStructureLocation]');
+		 END
 	
 		 EXEC('
-		 ALTER PROCEDURE [dbo].[ApproximateStructureLocation]
+		 CREATE PROCEDURE [dbo].[ApproximateStructureLocation]
 		 @StructureID int
          AS
          BEGIN
@@ -1380,6 +1423,11 @@ end
 	begin
      print N'Adding SP for latest modification by user'
      BEGIN TRANSACTION six
+     
+		IF EXISTS(select * from sys.procedures where name = 'SelectLastModifiedLocationByUsers')
+		BEGIN
+			EXEC('DROP PROCEDURE [dbo].[SelectLastModifiedLocationByUsers]');
+		END
 	
 		EXEC('
 			CREATE PROCEDURE [dbo].[SelectLastModifiedLocationByUsers]
@@ -1430,6 +1478,11 @@ end
 	begin
      print N'Adding SP for number of connections per structure'
      BEGIN TRANSACTION seven
+     
+        IF EXISTS(select * from sys.procedures where name = 'SelectNumConnectionsPerStructure')
+		BEGIN
+			EXEC('DROP PROCEDURE [dbo].[SelectNumConnectionsPerStructure]');
+		END
 	
 		EXEC('
 			 CREATE PROCEDURE [dbo].[SelectNumConnectionsPerStructure] 
@@ -1448,7 +1501,7 @@ end
 								(SourceID in 
 									(
 									SELECT S.ID
-										FROM [RC2].[dbo].[Structure] S
+										FROM [dbo].[Structure] S
 									) 
 								)
 						)
@@ -1462,7 +1515,7 @@ end
 								(TargetID in 
 									(
 										SELECT S.ID
-										FROM [RC2].[dbo].[Structure] S
+										FROM [dbo].[Structure] S
 									) 
 								)
 						)
@@ -1490,8 +1543,16 @@ end
 	begin
      print N'Adding SP for SelectStructureLocationsNoChildren'
      BEGIN TRANSACTION eight
-		DROP Procedure [dbo].[SelectStructureLocationLinksNoChildren];
-		DROP Procedure [dbo].[SelectChildrenStructureLinks];
+		IF EXISTS(select * from sys.procedures where name = 'SelectStructureLocationLinksNoChildren')
+		BEGIN
+			EXEC('DROP PROCEDURE [dbo].[SelectStructureLocationLinksNoChildren]');
+		END
+		
+		IF EXISTS(select * from sys.procedures where name = 'SelectChildrenStructureLinks')
+		BEGIN
+			EXEC('DROP PROCEDURE [dbo].[SelectChildrenStructureLinks]');
+		END
+		
 		EXEC('
 			CREATE PROCEDURE [dbo].[SelectStructureLocationLinksNoChildren]
 			-- Add the parameters for the stored procedure here
@@ -1506,7 +1567,7 @@ end
 				Select * from LocationLink
 					 WHERE (A in 
 						     (SELECT L.ID
-							  FROM [RC2].[dbo].[Location] L
+							  FROM [dbo].[Location] L
 								INNER JOIN 
 								(SELECT ID, TYPEID
 									FROM Structure
@@ -1517,7 +1578,7 @@ end
 							OR
 							(B in 
 								(SELECT L.ID
-								 FROM [RC2].[dbo].[Location] L
+								 FROM [dbo].[Location] L
 									INNER JOIN 
 									(SELECT ID, TYPEID
 										FROM Structure
@@ -1755,8 +1816,150 @@ end
 
 	 COMMIT TRANSACTION thirteen
 	end
+	
+	if(not(exists(select (1) from DBVersion where DBVersionID = 14)))
+	begin
+     print N'Verify triggers are added'
+     BEGIN TRANSACTION fourteen
+		IF EXISTS(select * from sys.triggers where name = 'Location_update')
+		BEGIN
+			DROP TRIGGER [dbo].[Location_update];
+		END
+		
+		IF EXISTS(select * from sys.triggers where name = 'Location_delete')
+		BEGIN
+			DROP TRIGGER [dbo].[Location_delete];
+		END
+		
+		IF EXISTS(select * from sys.triggers where name = 'Structure_LastModified')
+		BEGIN
+			DROP TRIGGER [dbo].[Structure_LastModified];
+		END
+		
+		IF EXISTS(select * from sys.triggers where name = 'StructureType_LastModified')
+		BEGIN
+			DROP TRIGGER [dbo].[StructureType_LastModified];
+		END
+		
+		EXEC('
+			 CREATE TRIGGER [dbo].[Location_update] 
+				ON  [dbo].[Location]
+				FOR UPDATE
+				AS 
+					Update dbo.Location
+					Set LastModified = (GETUTCDATE())
+					WHERE ID in (SELECT ID FROM inserted)
+					-- SET NOCOUNT ON added to prevent extra result sets from
+					-- interfering with SELECT statements.
+					SET NOCOUNT ON;');
+								
+		EXEC('
+			 CREATE TRIGGER [dbo].[Location_delete] 
+			   ON  [dbo].[Location]
+			   FOR DELETE
+			 AS 
+				INSERT INTO [dbo].[DeletedLocations] (ID)
+				SELECT deleted.ID FROM deleted
+				
+				delete from LocationLink 
+					where A in  (SELECT deleted.ID FROM deleted)
+						or B in (SELECT deleted.ID FROM deleted)
+				
+				SET NOCOUNT ON;');
+				
+		EXEC('CREATE TRIGGER [dbo].[Structure_LastModified] 
+			   ON  [dbo].[Structure]
+			   FOR UPDATE
+			AS 
+				Update dbo.[Structure]
+				Set LastModified = (GETUTCDATE())
+				WHERE ID in (SELECT ID FROM inserted)
+				-- SET NOCOUNT ON added to prevent extra result sets from
+				-- interfering with SELECT statements.
+				SET NOCOUNT ON;');
+				
+		EXEC('CREATE TRIGGER [dbo].[StructureType_LastModified] 
+			   ON  [dbo].[StructureType]
+			   FOR UPDATE
+			AS 
+				Update dbo.[StructureType]
+				Set LastModified = (GETUTCDATE())
+				WHERE ID in (SELECT ID FROM inserted)
+				-- SET NOCOUNT ON added to prevent extra result sets from
+				-- interfering with SELECT statements.
+				SET NOCOUNT ON;');
+			
+		--any potential errors get reported, and the script is rolled back and terminated
+		 if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
 
+		  --insert the second version marker
+		 INSERT INTO DBVersion values (14, 
+		   'Verify triggers are added',getDate(),User_ID())
 
+	 COMMIT TRANSACTION fourteen
+	end
+	
+	if(not(exists(select (1) from DBVersion where DBVersionID = 15)))
+	begin
+     print N'Verify structure link Source->Target are unique'
+     BEGIN TRANSACTION fifteen
+		
+		;WITH cte
+			 AS (SELECT ROW_NUMBER() OVER (PARTITION BY SourceID, TargetID
+											   ORDER BY ( SELECT 0)) RN
+				 FROM StructureLink)
+		delete from cte where RN > 1
+		
+		ALTER TABLE dbo.StructureLink
+		    ADD CONSTRAINT source_target_unique UNIQUE(SOURCEID,TARGETID)
+			
+		--any potential errors get reported, and the script is rolled back and terminated
+		 if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
+		  --insert the second version marker
+		 INSERT INTO DBVersion values (15, 
+		   'Verify structure link Source->Target are unique',getDate(),User_ID())
+
+	 COMMIT TRANSACTION fifteen
+	end
+	
+	if(not(exists(select (1) from DBVersion where DBVersionID = 16)))
+	begin
+     print N'Add procedure for power users to more safely change structures type without UPDATE SET WHERE query'
+     BEGIN TRANSACTION sixteen
+		 
+		EXEC('
+			 CREATE PROCEDURE UpdateStructureType
+				@StructureID bigint,
+				@TypeID bigint
+			 AS
+			 BEGIN
+			 SET NOCOUNT ON;
+  
+			 UPDATE STRUCTURE SET TypeID=@TypeID WHERE ID = @STRUCTUREID
+			 END');
+				
+		--any potential errors get reported, and the script is rolled back and terminated
+		 if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
+		  --insert the second version marker
+		 INSERT INTO DBVersion values (16, 
+		   'Add procedure for power users to more safely change structures type without UPDATE SET WHERE query',getDate(),User_ID())
+
+	 COMMIT TRANSACTION sixteen
+	end
 
 --from here on, continually add steps in the previous manner as needed.
 	COMMIT TRANSACTION main
