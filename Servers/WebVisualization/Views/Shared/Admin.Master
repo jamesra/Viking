@@ -1,0 +1,34 @@
+<%@ Master Language="C#" Inherits="System.Web.Mvc.ViewMasterPage" MasterPageFile="~/Views/Shared/Site.Master" %>
+
+<asp:Content ID="Content1" ContentPlaceHolderID="TitleContent" runat="server">
+    <asp:ContentPlaceHolder runat="server" ID="AdminTitle"></asp:ContentPlaceHolder>
+</asp:Content>
+
+<asp:Content ID="Content2" ContentPlaceHolderID="HeadContent" runat="server">
+    <link rel="Stylesheet" type="text/css" href="<%= Url.Content("~/content/admin.css") %>" media="screen" />
+    
+    <script language="javascript" type="text/javascript" src="<%= Url.Content("~/scripts/jquery-1.3.2.min.js") %>"></script>
+    <script language="javascript" type="text/javascript" src="<%= Url.Content("~/scripts/jquery.WAT.js") %>"></script>
+    
+</asp:Content>
+
+<asp:Content ID="Content3" ContentPlaceHolderID="MainContent" runat="server">
+    <fieldset id="admin_container">
+        <legend>
+            <ul class="menu">
+                <%= Html.MenuItem("Account Home", "Index", "Admin", null, new { title="Back to the WSM Home page" })%>
+                <% if (Page.User.IsInRole("admin"))
+                   { %>
+                <%= Html.MenuItem("Users List", "List", "User", null, new { title="Manage users" })%>
+                <%= Html.MenuItem("Roles", "List", "UserRole", null, new { title="Manage user roles" })%>
+                <% } %>
+                <%= Html.MenuItem("Account Details", "Details", "User", new { userName = Page.User.Identity.Name }, new { title="Manage your account" })%>
+            </ul>
+        </legend>
+        <asp:ContentPlaceHolder runat="server" ID="AdminContent"></asp:ContentPlaceHolder>
+        <br />
+    </fieldset>
+</asp:Content>
+
+
+

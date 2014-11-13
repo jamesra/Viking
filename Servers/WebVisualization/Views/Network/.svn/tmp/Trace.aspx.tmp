@@ -1,0 +1,400 @@
+<%@ Page Language="C#" MasterPageFile="~/Views/Shared/Site.Master" Inherits="System.Web.Mvc.ViewPage"  %>
+
+<script runat="server">
+
+    
+        
+    protected void Page_Load(object sender, EventArgs e)
+    {
+        string vHost = "http://" + HttpContext.Current.Request.Url.Authority;
+        string vPath = HttpContext.Current.Request.ApplicationPath;
+        if (vPath == "/")
+            vPath = "";
+        string webPath = vHost + vPath + "/Circuit/Trace/";
+        form1.Action = webPath;
+
+        foreach (String t in ConnectomeViz.Models.State.labsDictionary.Keys.ToArray<String>())
+        {
+            labName.Items.Insert(labName.Items.Count, new ListItem(t, t));
+        }
+
+        labName.SelectedIndex = 0;
+
+
+        ConnectomeViz.Models.State.selectedLab = labName.SelectedValue.ToString();
+
+        foreach (string str in ConnectomeViz.Models.State.labsDictionary[ConnectomeViz.Models.State.selectedLab])
+        {
+            dataSource.Items.Insert(dataSource.Items.Count, new ListItem(str, str));
+        }
+
+        dataSource.SelectedIndex = 0;
+
+
+        string val = ConnectomeViz.Models.State.selectedService;
+
+        if (!String.IsNullOrEmpty(val))
+        {
+            List<string> keys = ConnectomeViz.Models.State.serviceDictionary.Keys.ToList<string>();
+            for (int i = 0; i < keys.Count; i++)
+            {
+                if (keys[i].ToString().Equals(val))
+                    dataSource.SelectedIndex = i;
+            }
+        }
+
+
+
+
+        //updateIDBox();
+
+
+    }
+
+    protected void updateIDBox()
+    {
+        //ConnectomeViz.Models.State.selectedDataSource = dataSource.SelectedItem.ToString();
+        //ConnectomeViz.AnnotationService.CircuitClient client = ConnectomeViz.Models.State.CreateCircuitClient();
+
+
+        //System.ServiceModel.WSHttpBinding binding = new System.ServiceModel.WSHttpBinding();
+        //System.ServiceModel.EndpointAddress endpoint = new System.ServiceModel.EndpointAddress(new Uri("https://connectomes.utah.edu/WebServices/BinaryDebug/Annnotate.svc"));
+        //System.ServiceModel.Description.ServiceEndpoint tempEndpoint = new System.ServiceModel.Description.ServiceEndpoint();
+        //tempEndpoint.Address =  new System.ServiceModel.EndpointAddress(new Uri("https://connectomes.utah.edu/WebServices/BinaryDebug/Annnotate.svc"));
+
+        //System.ServiceModel.ChannelFactory<ConnectomeViz.AnnotationService.ICircuit> myChannelFactory =
+        //   new System.ServiceModel.ChannelFactory<ConnectomeViz.AnnotationService.ICircuit>(binding, endpoint);
+
+        //ConnectomeViz.AnnotationService.ICircuit proxy = myChannelFactory.CreateChannel();
+        //((ConnectomeViz.AnnotationService.ICircuit)proxy).Open();
+        //string[] res = proxy.getTopConnectedStructures(1);
+
+        //((ConnectomeViz.AnnotationService.ICircuit)proxy).Close();
+        
+        //string[] result = client.getTopConnectedStructures(1);
+
+        //client.Close();
+
+
+        //List<string> temp = new List<string>(result);
+        //temp.Sort();    
+        //result = temp.ToArray();
+
+        //structureID.DataSource = new List<string>();
+        //structureID.DataBind();
+        
+        //ListItem emptyItem = new ListItem(ConnectomeViz.Models.State.selectedDataSource + " - " + "IDs Ordered by Type", "");
+        //structureID.Items.Insert(0, emptyItem);
+
+        //int length = result.Length;
+        //for (int i = 0; i < length; i++)
+        //{
+        //    ListItem item = new ListItem(result[i], result[i].Replace(" ", "").Split('-')[1]);
+        //    structureID.Items.Insert(i + 1, item);
+        //}
+    }
+
+    protected void Page_LoadComplete(object sender, EventArgs e)
+    {
+       
+    }
+
+    protected void dataSource_SelectedIndexChanged(object sender, EventArgs e)
+    {
+        updateIDBox();
+    }
+</script>
+
+<asp:Content ID="indexTitle" ContentPlaceHolderID="TitleContent" runat="server">
+   Circuit Visualization
+</asp:Content>
+
+<asp:Content ID="indexContent" ContentPlaceHolderID="MainContent" runat="server"> 
+    <%string rootPath = HttpContext.Current.Request.ApplicationPath; %>   
+<script type="text/javascript" language="javascript">
+
+    var submitted = "false";
+    var source;
+    var lab;
+
+    function update_button() {
+        var cellid = document.getElementById("cellid").value;
+        var id = document.getElementById("submitButton");
+        if (cellid.length > 0)
+            id.disabled = false;
+        else
+            id.disabled = true;
+
+    };
+
+
+
+    function callServer() {
+        var urlAppend = "FormRequest/GetTopStructures?request=";
+        var root = window.location
+
+        var re = new RegExp('^(?:f|ht)tp(?:s)?\://(.*?)/(.*?)/', 'im');
+        var mat = root.toString().match(re)[0];
+
+        var Url = mat + urlAppend + lab + "," + source + "," + "1";
+//        alert(Url);
+
+        xmlHttp = new XMLHttpRequest();
+        xmlHttp.onreadystatechange = ProcessRequest;
+        xmlHttp.open("GET", Url, true);
+
+        xmlHttp.send(null);
+
+    };
+
+    function removeOptionSelected(param) {
+        var elSel = document.getElementById(param);
+        var i;
+        for (i = elSel.length - 1; i >= 0; i--) {
+            elSel.remove(i);
+        }
+
+
+    };
+
+
+    function ProcessRequest() {
+
+        if (xmlHttp.readyState == 4 && xmlHttp.status == 200) {
+
+
+            if (xmlHttp.responseText == "Not found") {
+                alert("Sorry couldn't connect to server, try again after some time");
+            }
+            else {
+                var info = eval("(" + xmlHttp.responseText + ")");
+                removeOptionSelected('<%=structureID.ClientID%>');
+                // No parsing necessary with JSON!
+                for (var i in info) {
+
+                    var oSelField = document.getElementById("<%=structureID.ClientID%>");
+                    var elOptNew = document.createElement('option');
+                    elOptNew.text = info[i];
+                    if (i == 0)
+                        elOptNew.value = 0;
+                    else
+                        elOptNew.value = info[i].replace(" ", "").split('-')[1];
+
+                    try {
+                        oSelField.add(elOptNew, null); // Other browsers
+                    }
+                    catch (ex) {
+                        oSelField.add(elOptNew); // IE only
+                    }
+
+                }
+            }
+        }
+    };
+
+    function animate() {
+        var id = document.getElementById("progress");
+        id.style.visibility = "visible";
+        var msg = document.getElementById("message");
+        msg.innerHTML = "Generating Graph...";
+
+
+    };
+
+    function updateLab() {
+
+        lab = document.getElementById("<%=labName.ClientID%>").value;
+        callLabServer();
+        updateList();
+    };
+
+    function callLabServer() {
+        var urlAppend = "FormRequest/GetVolumes?request=";
+        var root = window.location
+
+        var re = new RegExp('^(?:f|ht)tp(?:s)?\://(.*?)/(.*?)/', 'im');
+        var mat = root.toString().match(re)[0];
+
+        var Url = mat + urlAppend + lab;
+//        alert(Url);
+
+        xmlHttp = new XMLHttpRequest();
+        xmlHttp.onreadystatechange = ProcessRequestLab;
+        xmlHttp.open("GET", Url, true);
+
+        xmlHttp.send(null);
+
+    };
+
+    function ProcessRequestLab() {
+
+        if (xmlHttp.readyState == 4 && xmlHttp.status == 200) {
+
+
+            if (xmlHttp.responseText == "Not found") {
+                alert("Sorry couldn't connect to server, try again after some time");
+            }
+            else {
+                var info = eval("(" + xmlHttp.responseText + ")");
+                removeOptionSelected('<%=dataSource.ClientID%>');
+                // No parsing necessary with JSON!
+                for (var i in info) {
+
+                    var oSelField = document.getElementById("<%=dataSource.ClientID%>");
+                    var elOptNew = document.createElement('option');
+                    elOptNew.text = info[i];
+                    elOptNew.value = info[i];
+
+                    try {
+                        oSelField.add(elOptNew, null); // Other browsers
+                    }
+                    catch (ex) {
+                        oSelField.add(elOptNew); // IE only
+                    }
+
+                }
+            }
+        }
+
+    };
+
+    function updateList() {
+        source = document.getElementById("<%=dataSource.ClientID%>").value;
+        lab = document.getElementById("<%=labName.ClientID%>").value;
+
+        callServer();
+
+    };
+
+    function update_button1() {
+        var val = document.getElementById("<%=structureID.ClientID%>").value;
+        if (val != 0) {
+            document.getElementById("cellid").disabled = true;
+            document.getElementById("submitButton").disabled = false;
+        }
+        else {
+            document.getElementById("cellid").disabled = false;
+            if (document.getElementById("cellid").value.length == 0)
+                document.getElementById("submitButton").disabled = true;
+            else
+                document.getElementById("submitButton").disabled = false;
+        }
+
+    };
+
+    window.onunload = function () {
+        document.getElementById("progress").style.visibility = "hidden";
+        document.getElementById("message").innerHTML = "";
+    };
+
+    window.onload = function () {
+        document.getElementById("cellid").focus();
+        updateList();
+    };
+</script>
+  <div>
+  
+      <form id="form1" runat="server">
+        <label style="font-size: medium">
+        <br />
+        &nbsp; Select Lab&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; :&nbsp; &nbsp;<asp:DropDownList 
+            id="labName" clientIDMode="Static" runat="server" 
+            onselectedindexchanged="dataSource_SelectedIndexChanged">
+        </asp:DropDownList>&nbsp;&amp; Data Source :&nbsp;&nbsp;<asp:DropDownList id="dataSource"  clientIDMode="Static" onchange="updateList()"
+         runat="server"></asp:DropDownList>&nbsp;then&nbsp;&nbsp;&nbsp;
+      <br />
+&nbsp;<br />
+        &nbsp; Enter Cell ID&nbsp;&nbsp;&nbsp; :</label>&nbsp;&nbsp;&nbsp; <input type="text" id="cellid" name="cellid" 
+         onkeydown="update_button()" onkeyup="update_button()" onfocus="update_button()" onmousemove="update_button()" 
+         onchange="update_button()" onkeypress="update_button()" onmouseout="update_button()"/>
+       &nbsp;<label style="font-size:medium"></label>
+        <label style="font-size: medium">
+        (or) 
+      <br />
+      <br />
+&nbsp; Select Cell ID&nbsp;&nbsp; : </label>
+&nbsp; <asp:DropDownList id="structureID" clientIDMode="Static" onchange= "update_button1()" runat="server"></asp:DropDownList>&nbsp;&nbsp;
+        <label style="font-size:medium"> & choose Hops #:</label>
+        <select name="hops">
+        <option value="1">1</option>
+        <option value="2">2</option>
+        <option value="3" selected="selected">3</option>
+        <option value="4">4</option>
+        <option value="5">5</option>
+        <option value="6">6</option>
+        <option value="7">7</option>
+        <option value="7">8</option>
+        <option value="7">9</option>
+        <option value="7">10</option>
+
+        </select> 
+        &nbsp;&nbsp;
+       <input type="submit" id="submitButton" disabled="disabled" value="Go" onclick="animate()"/>&nbsp;
+       <img id="progress" style="visibility:hidden;" height="25" width="25" src="../../Content/ajax-loader.gif" align="absmiddle" alt="Loading..."/>
+       <label id="message" style="font-size:small"></label>
+           <br /><br /> 
+         <input type="radio" name="group1" value="generate" id="generate" checked="checked"/> 
+        <strong>Interactive Graph </strong> 
+        
+        &nbsp;<input type="radio" name="group1" value="flash" id="download" /> <strong>Flash Graph</strong>        
+        &nbsp;|&nbsp;
+         <input name="reduceEdges" type="checkbox" value="reduce" checked="checked" /><strong>Reduce edges</strong>&nbsp;&nbsp; 
+        |&nbsp;
+        <input name="pinNodes" type="checkbox" value="nodepos" checked="checked" /> <strong>Anatomical Node Positions </strong> 
+        |&nbsp;
+        <input name="freshQuery" type="checkbox" value="latest" /><strong>Update to latest</strong> <br/><br />         
+        
+      </form>
+
+<% bool flash = false;
+    if (ConnectomeViz.Models.State.graphType == "flash")
+   {
+       flash = true;%>
+   
+    <script src="../../Scripts/svg.js" data-path="../../Scripts" data-debug="false"></script>
+    <meta name="svg.render.forceflash" content="true">
+
+    <%} %>
+</div>
+
+  <h3>Trace of Cell Number: <a onclick="animate()" href="<%=ViewData["virtualRoot"]%>/Circuit/Trace/<%= ViewData["cellid"]%>"><%=ViewData["cellid"]%></a> &nbsp; || &nbsp;
+    
+        <% if (!flash)
+           {%>
+        Zoom: Scroll wheel, Pan: Left click white area and drag
+        <%}
+           else
+           { %>
+        
+        Zoom: Right Click -> "Zoom in", Pan: - 
+        <%} %>
+  &nbsp; || &nbsp;        
+    <a href="<%=ViewData["userURL"]%>.svg"> Save as SVG </a> | <a href="<%=ViewData["userURL"]%>.png"> Save as PNG </a> | <a href="<%=ViewData["userURL"]%>.pdf"> Save as PDF </a>
+    
+    </h3>
+<%-- <p>   
+    
+<embed src="<%=ViewData["virtualRoot"]%>/Files/<%= ViewData["username"] %>/<%= ViewData["cellid"] %>.svg" type="image/svg+xml" width="1000" height="800" pluginspage="http://www.adobe.com/svg/viewer/install"></embed>
+
+<!--<comment><object data="<%=ViewData["virtualRoot"]%>/Files/<%= ViewData["cellid"] %>.svg" type="image/svg+xml" width="1000" height="800" class= "svg" ></object> </comment>-->
+       
+ </p>--%>
+<div align="center">
+<<<<<<< .mine
+
+
+      <object data="<%=ViewData["userURL"]%>.svg" type="image/svg+xml" 
+              width="100%" height="1280"
+              id="SVGGraph" onload="runcheck()">
+      
+=======
+
+      <object data="<%=ViewData["virtualRoot"]%>/Files/<%= ViewData["username"] %>/<%= ViewData["cellid"] %>.svg" type="image/svg+xml" 
+              width="100%" height="1280"
+              id="SVGGraph" onload="runcheck()">
+ 
+>>>>>>> .r1121
+      </object>
+
+</div>
+</asp:Content>

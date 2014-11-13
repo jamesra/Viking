@@ -1,0 +1,194 @@
+<%@ Master Language="C#" Inherits="System.Web.Mvc.ViewMasterPage" %> 
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<script runat="server">
+
+    protected void Page_Load(object sender, EventArgs e)
+    {
+
+
+    }
+</script>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head runat="server">
+    <% string vHost = "http://" + HttpContext.Current.Request.Url.Authority;
+       string vPath = HttpContext.Current.Request.ApplicationPath;
+       if (vPath == "/")
+           vPath = "";
+       string webPath = vHost + vPath; %>
+    <link href="../../Content/Site.css" rel="stylesheet" type="text/css" />
+    <link rel="icon" href="../../Content/favicon.ico" />
+    <script type="text/javascript" src="<%=webPath%>/Scripts/SharedVariables.js"></script>
+    <script type="text/javascript" src="<%=webPath%>/Scripts/jquery-1.4.4.min.js"></script>
+    <link rel="stylesheet" href="../../Content/jquery.autocomplete.css" type="text/css" />
+    <script type="text/javascript" src="<%=webPath%>/Scripts/jquery.bgiframe.min.js"></script>
+    <script type="text/javascript" src="<%=webPath%>/Scripts/jquery.dimensions.js"></script>
+    <script type="text/javascript" src="<%=webPath%>/Scripts/jquery.autocomplete.js"></script>
+    <link rel="stylesheet" href="../../Content/tipsy.css" type="text/css" />
+    <script type="text/javascript" src="<%=webPath%>/Scripts/jquery.tipsy.js"></script> 
+    <script type="text/javascript" src="<%=webPath%>/Scripts/jquery.qtip-1.0.0.min.js"></script>
+    <script type="text/javascript" language="javascript" src="<%=webPath%>/Scripts/TabControl.js"></script>
+    <script type="text/javascript" src="<%=webPath%>/Scripts/layer.js"></script>
+    <script type="text/javascript" src="<%=webPath%>/Scripts/GlobalStyling.js"></script>
+    <script type="text/javascript" src="<%=webPath%>/Scripts/jquery.svg.js"></script>
+    <script type="text/javascirpt" language="javascript" src="<%=webPath%>/Scripts/ProcessGraph.js"></script>
+    <script type="text/javascript" language="javascript" src="<%=webPath%>/Scripts/RunCommand.js"></script>
+    <link href="../../Content/redmond/jquery-ui-1.8.2.custom.css" media="screen" type="text/css" rel="stylesheet"/>
+    <%--<link href="../../Content/cupertino/jquery-ui-1.8.11.custom.css" media="screen" type="text/css" rel="stylesheet">--%>
+    <link href="../../Content/ui.jqgrid.css" rel="Stylesheet" type="text/css" />
+    <link href="../../Content/jquery.searchFilter.css" rel="Stylesheet" type="text/css" />
+    <script src="<%=webPath%>/Scripts/js/jquery.layout.js" type="text/javascript"></script>
+    <script src="<%=webPath%>/Scripts/js/i18n/grid.locale-en.js" type="text/javascript"></script>
+    <script src="<%=webPath%>/Scripts/js/jquery.jqGrid.min.js" type="text/javascript"></script>
+    <title>
+        <asp:ContentPlaceHolder ID="TitleContent" runat="server" />
+    </title>
+    <asp:ContentPlaceHolder ID="HeadContent" runat="server">
+    </asp:ContentPlaceHolder>
+    <!--
+    <script type="text/javascript">
+
+        var _gaq = _gaq || [];
+        _gaq.push(['_setAccount', 'UA-18216157-1']);
+        _gaq.push(['_trackPageview']);
+
+        (function () {
+            var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+            ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+            var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+        })();
+
+    </script>
+    -->
+</head>
+<body>
+    <div class="page">
+        <% string vHost = "http://" + HttpContext.Current.Request.Url.Authority;
+           string vPath = HttpContext.Current.Request.ApplicationPath;
+           if (vPath == "/")
+               vPath = "";
+           string webPath = vHost + vPath;%>
+        <div id="header">
+            <div id="title" class="dude">
+                <h1>
+                    <a href="<%=webPath%>/Default">Connectome Viz >></a></h1>
+            </div>
+            <div id="logindisplay" class="dude">
+                <a href="http://prometheus.med.utah.edu/~marclab/index.html" target="_blank">Marc Lab,
+                    Moran Eye Institute, University Of Utah </a>
+            </div>
+            <div id="menucontainer">
+                <ul id="menu">
+                    <span id="logindisplayspan">
+                        <% string user = "";
+                           string email = "";
+                           if (Request.IsAuthenticated)
+                           {
+                               user = Page.User.Identity.Name;
+                               email = Membership.GetUser(user).Email;
+                               Response.Write("<b>");
+                               Response.Write("<a href=\"" + webPath + "/Admin\" id=\"manageAccount\"\">" + user + "</a>");
+                               Response.Write("</b>");
+                               Response.Write(" [ ");
+                               Response.Write(Html.ActionLink("Log Off", "LogOff", "Account"));
+                               Response.Write(" ]");
+                           }%>
+                    </span>
+                    <li><a href="<%=webPath%>/Network" id="Network">Network</a></li>
+                    <li><a href="<%=webPath%>/Motifs" id="Motifs">Motifs <sub style="font-size: 0.6em">beta</sub></a></li>
+                    <li><a href="<%=webPath%>/Structure" id="Structure">Structure</a></li>
+                    <li><a href="<%=webPath%>/Stats" id="Stats">Statistics</a></li>
+                    <li><a href="<%=webPath%>/VikingPlot" id="VikingPlot">3D Viz <sub style="font-size: 0.6em">
+                        beta</sub></a></li>
+                </ul>
+                <script type="text/javascript">
+                    function updateName() {
+                        userName = "<%=user%>"
+                        userEmail = "<%=email%>"
+                    }
+                    updateName();
+                </script>
+            </div>
+
+           
+
+        </div>
+        
+        <div id="main">
+            <asp:ContentPlaceHolder ID="MainContent" runat="server" /> 
+            <div id="footer">
+                <a href="http://www.utah.edu" id="uofuWebpage" target="_blank">&copy 2011 Marc Lab,
+                    University of Utah</a> | Best viewable in Firefox, Safari and Chrome - Optimized
+                for Wide screens | <a href="http://www.cs.utah.edu/~shoeb" id="devContact" target="_blank">
+                    Contact Developer </a>|
+                <!--twitter icon code start-->
+                <span id="twitterLink">
+                    <script type="text/javascript">
+                        function Initadjt() {
+                            t = "marclab_utah"; x = document.getElementsByName('tinadjt'); xG = document.getElementsByName('tinGadjt'); y = new Array(104, 116, 116, 112, 58, 47, 47, 116, 119, 105, 116, 116, 101, 114, 46, 99, 111, 109, 47); z = ''; for (i in y) { z += String.fromCharCode(y[i]); } for (i in x) { x[i].href = z + t; } for (i in xG) { xG[i].href = z + t; }
+                        }
+                        function OnOveradjt() {
+                            x = document.getElementsByName('tinadjt');
+                            xG = document.getElementsByName('tinGadjt');
+                            for (i = 0; i < x.length; i++) { x[i].style.display = 'inline'; }
+                            for (i = 0; i < xG.length; i++) { xG[i].style.display = 'none'; }
+                        }
+                        function OnOutadjt() {
+                            x = document.getElementsByName('tinadjt');
+                            xG = document.getElementsByName('tinGadjt');
+                            for (i = 0; i < x.length; i++) { x[i].style.display = 'none'; }
+                            for (i = 0; i < xG.length; i++) { xG[i].style.display = 'inline'; }
+                        }
+                    </script>
+                    <a name="tinadjt" href="http://www.twittericongallery.com" target="_blank" title="follow us on twitter"
+                        onmouseover='OnOveradjt();' onmouseout='OnOutadjt()'>
+                        <img src="http://www.twittericongallery.com/buttons/new/001.png" alt="follow us on twitter"
+                            border="0" align="top" /></a> <a name="tinGadjt" href="http://www.twitterfollowmeicons.com"
+                                target="_blank" title="follow us on twitter" onmouseover='OnOveradjt();' onmouseout='OnOutadjt()'>
+                                <img src="http://www.twitterfollowmeicons.com/buttons/new/gray/001.png" alt="twitter icons"
+                                    border="0" align="top" /></a>
+                    <script type="text/javascript">
+                        Initadjt();
+                        OnOutadjt();
+                        preload_image = new Image(25, 25);
+                        preload_image.src = "http://www.twittericongallery.com/buttons/new/001.png"; 
+                    </script>
+                    <!--twitter icon code end-->
+                </span>
+                <%--<a href="#contact" name="modal">Contact / Feedback</a>
+       </div>
+    </div>--%>
+                <div id="boxes">
+                    <div id="contact" class="window">
+                        Simple Modal Window | <a href="#" class="close" />Close it</a>
+                    </div>
+                    <div id="networkGrid" class="window">
+                        <table id="networkList">
+                        </table>
+                        <div id="networkPager">
+                        </div>
+                    </div>
+                    <div id="structureGrid" class="window">
+                        <table id="structureList">
+                        </table>
+                        <div id="structurePager">
+                        </div>
+                    </div>
+                    <div id="mask">
+                    </div>
+                </div>
+                <!--start contactable -->
+                <div id="contactable">
+                    <!-- contactable html placeholder -->
+                </div>
+            </div>
+            </div>
+
+                <script type="text/javascript" src="<%=webPath%>/Scripts/jquery.validate.pack.js"></script>
+                <script type="text/javascript" src="<%=webPath %>/Scripts/jquery.contactable.js"></script>
+                <link rel="stylesheet" href="<%=webPath%>/Content/contactable.css" type="text/css" />
+                <script>                    $(function () { $('#contactable').contactable({ subject: 'feedback URL:' + location.href }); });</script>
+                <!--end contactable -->
+</body>
+</html>
