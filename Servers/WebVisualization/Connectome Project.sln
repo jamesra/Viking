@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 11.00
 # Visual Studio 2010
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConnectomeViz", "ConnectomeViz.csproj", "{BD6C2700-D37C-4D1A-9751-9E5E8B4A96E8}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GraphLib", "..\GraphLib\GraphLib.csproj", "{D6F219FC-733B-481F-BF78-D34A7CB893EC}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GraphLib", "..\..\GraphLib\GraphLib.csproj", "{D6F219FC-733B-481F-BF78-D34A7CB893EC}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AnnotationUtils", "AnnotationGraphLib\AnnotationUtils.csproj", "{A89A628B-3FFA-4271-B99A-E45C3D72D3E3}"
 EndProject

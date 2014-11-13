@@ -58,16 +58,6 @@
     </Compile>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\GraphLib\GraphLib.csproj">
-      <Project>{D6F219FC-733B-481F-BF78-D34A7CB893EC}</Project>
-      <Name>GraphLib</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\AnnotationGraphLib\AnnotationUtils.csproj">
-      <Project>{A89A628B-3FFA-4271-B99A-E45C3D72D3E3}</Project>
-      <Name>AnnotationUtils</Name>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
     <WCFMetadata Include="Service References\" />
   </ItemGroup>
   <ItemGroup>
@@ -117,6 +107,16 @@
       <Generator>WCF Proxy Generator</Generator>
       <LastGenOutput>Reference.cs</LastGenOutput>
     </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\GraphLib\GraphLib.csproj">
+      <Project>{D6F219FC-733B-481F-BF78-D34A7CB893EC}</Project>
+      <Name>GraphLib</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\AnnotationGraphLib\AnnotationUtils.csproj">
+      <Project>{A89A628B-3FFA-4271-B99A-E45C3D72D3E3}</Project>
+      <Name>AnnotationUtils</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

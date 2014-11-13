@@ -882,7 +882,13 @@
     <Folder Include="Views\Profile\" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\GraphLib\GraphLib.csproj">
+    <EmbeddedResource Include="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\GraphLib\GraphLib.csproj">
       <Project>{D6F219FC-733B-481F-BF78-D34A7CB893EC}</Project>
       <Name>GraphLib</Name>
     </ProjectReference>
@@ -890,12 +896,6 @@
       <Project>{A89A628B-3FFA-4271-B99A-E45C3D72D3E3}</Project>
       <Name>AnnotationUtils</Name>
     </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
-    <EmbeddedResource Include="Properties\Resources.resx">
-      <Generator>ResXFileCodeGenerator</Generator>
-      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
-    </EmbeddedResource>
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v10.0\WebApplications\Microsoft.WebApplication.targets" />
