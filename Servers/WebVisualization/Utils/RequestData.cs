@@ -107,6 +107,16 @@ namespace ConnectomeViz
 
             data.GlobalPath = data.ApplicationPath + "\\Files\\Global" + "\\";
 
+            if (!System.IO.Directory.Exists(data.UserOutputPath))
+            {
+                System.IO.Directory.CreateDirectory(data.UserOutputPath);
+            }
+
+            if (!System.IO.Directory.Exists(data.GlobalPath))
+            {
+                System.IO.Directory.CreateDirectory(data.GlobalPath);
+            }
+
             return data;
         }
 

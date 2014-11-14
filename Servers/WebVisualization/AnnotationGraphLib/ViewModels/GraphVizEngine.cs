@@ -299,11 +299,11 @@ namespace AnnotationUtils
 
         public void SaveDOT(string DotFileFullPath)
         {
-                using(StreamWriter write = new StreamWriter(DotFileFullPath, false))
-                {
-                    write.Write(this.ToString());
-                    write.Close();
-                }
+            using(StreamWriter write = new StreamWriter(DotFileFullPath, false))
+            {
+                write.Write(this.ToString());
+                write.Close();
+            }
             
             Debug.Assert(System.IO.File.Exists(DotFileFullPath), "Dot file we just wrote does not exist"); 
         }

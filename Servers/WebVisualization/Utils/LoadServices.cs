@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Web;
+using System.Web.Hosting;
 using System.Xml;
 using System.Xml.Linq;
 
@@ -23,8 +24,8 @@ namespace ConnectomeViz.Models
 
         public void Task()
         {
-            string path = State.filesPath + "\\Services.xml";
-
+            string path = System.IO.Path.Combine(new string[] {HostingEnvironment.ApplicationPhysicalPath,"Services.xml"});
+            
             XDocument xmlDoc = XDocument.Load(path);
 
             var Servers = from server in xmlDoc.Descendants("Server")
