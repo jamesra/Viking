@@ -21,12 +21,24 @@ namespace WebAnnotationModel.Objects
         {
             return Data;
         }
-        
+
+        bool _SynchCalled = false; 
+        /// <summary>
+        /// Called once when the object is first created
+        /// </summary>
+        /// <param name="newdata"></param>
+        internal virtual void Synch(T newdata)
+        {
+            Debug.Assert(!_SynchCalled);
+            this.Data = newdata; 
+            _SynchCalled = true; 
+        }
+
         /// <summary>
         /// Called when the database is queried and the results might have new values for our object
         /// </summary>
         /// <param name="newdata"></param>
-        internal virtual void Synch(T newdata)
+        internal virtual void Update(T newdata)
         {
             bool ChangeEvent = false;
             if (this.Data != newdata)
@@ -35,7 +47,7 @@ namespace WebAnnotationModel.Objects
             }
 
             if (ChangeEvent)
-                OnPropertyChanging(""); 
+                OnPropertyChanging("");
 
             this.Data = newdata;
 

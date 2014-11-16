@@ -260,8 +260,7 @@ namespace WebAnnotationModel
 
                 StructureObj created_struct = new StructureObj(retval.structure);
 
-                InternalAdd(created_struct);
-
+                ChangeInventory<StructureObj> inventory = InternalAdd(created_struct);
                 created_loc = new LocationObj(retval.location); 
 
                 CallOnCollectionChangedForAdd(new StructureObj[] { created_struct });
@@ -272,7 +271,8 @@ namespace WebAnnotationModel
             catch (Exception e)
             {
                 ShowStandardExceptionMessage(e);
-                InternalDelete(newStruct.ID);
+                StructureObj deletedObj = InternalDelete(newStruct.ID);
+                CallOnCollectionChangedForDelete(new StructureObj[] {deletedObj});
                 return null; 
             }
             finally

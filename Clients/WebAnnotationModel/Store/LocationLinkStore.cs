@@ -138,7 +138,8 @@ namespace WebAnnotationModel
             GetObjectsForSectionAsynch(SectionNumber);
 
             return SectionLocationLinks;
-        }
+        } 
+
 
         #region GetLocationLinksForSection
 
@@ -214,6 +215,8 @@ namespace WebAnnotationModel
         {
             ConcurrentDictionary<LocationLinkKey, LocationLinkObj> SectionLocationLinks = new ConcurrentDictionary<LocationLinkKey, LocationLinkObj>(); 
             SectionLocationLinks = SectionToLocationLinks.GetOrAdd(state.SectionNumber, SectionLocationLinks);
+            ChangeInventory<LocationLinkObj> change_inventory = new ChangeInventory<LocationLinkObj>();
+            List<LocationLinkObj> deleted_objects = null; 
             if (SectionLocationLinks != null)
             {
                 if (DeletedLocations != null)
@@ -224,7 +227,7 @@ namespace WebAnnotationModel
                         SectionLocationLinks.TryRemove(key, out value);
                     }
 
-                    InternalDelete(DeletedLocations);
+                    deleted_objects = InternalDelete(DeletedLocations);
                 }
 
                 LocationLinkObj[] listNewObj = new LocationLinkObj[newLinks.Length];
@@ -234,10 +237,13 @@ namespace WebAnnotationModel
                     SectionLocationLinks.TryAdd(new LocationLinkKey(listNewObj[iLink]), listNewObj[iLink]);
                 });
 
-                return InternalAdd(listNewObj);
+                change_inventory = InternalAdd(listNewObj);
             }
 
-            return new ChangeInventory<LocationLinkObj>();
+            if (deleted_objects != null)
+                change_inventory.DeletedObjects = deleted_objects;
+
+            return change_inventory; 
         }
 
         #endregion
@@ -295,7 +301,10 @@ namespace WebAnnotationModel
 
         protected override List<LocationLinkObj> InternalDelete(LocationLinkKey[] keys)
         {
-            foreach (LocationLinkKey link in keys)
+            
+            List<LocationLinkObj> deletedLinks = base.InternalDelete(keys);
+
+            foreach (LocationLinkObj link in deletedLinks)
             {
                 LocationObj AObj = Store.Locations.GetObjectByID(link.A, false);
                 if (AObj != null)
@@ -310,8 +319,7 @@ namespace WebAnnotationModel
                 }
             }
 
-
-            return base.InternalDelete(keys);
+            return deletedLinks; 
         }
 
         /// <summary>
@@ -330,7 +338,7 @@ namespace WebAnnotationModel
                 }
             }
 
-            return base.InternalDelete(links.ToArray());
+            return InternalDelete(links.ToArray());
         }
 
         #endregion

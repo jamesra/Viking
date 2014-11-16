@@ -165,9 +165,9 @@ namespace WebAnnotationModel
         {
             //Default implementation
             obj.DBAction = DBACTION.DELETE;
-            InternalDelete(obj.ID);
+            OBJECT deleted_obj = InternalDelete(obj.ID);
             ChangedObjects.TryAdd(obj.ID, obj);
-            CallOnCollectionChangedForDelete(new OBJECT[] { obj });
+            CallOnCollectionChangedForDelete(new OBJECT[] { deleted_obj });
             return true; 
         }
 
@@ -457,7 +457,8 @@ namespace WebAnnotationModel
             WCFOBJECT[] objects = new WCFOBJECT[0];
             long QueryExecutedTime;
             KEY[] deleted_objects = new KEY[0];
-            PROXY proxy = null; 
+            PROXY proxy = null;
+            DateTime StartTime = DateTime.UtcNow;
 
             try
             {
@@ -488,7 +489,15 @@ namespace WebAnnotationModel
                 }
             }
 
+            DateTime TraceQueryEnd = DateTime.UtcNow;            
+
             ChangeInventory<OBJECT> inventory = ParseQuery(objects, deleted_objects, state);
+
+            DateTime TraceParseEnd = DateTime.UtcNow;
+
+            Trace.WriteLine("Sxn " + state.SectionNumber.ToString() + " finished " + typeof(OBJECT).ToString() + " query.  " + inventory.ObjectsInStore.Count + " returned");
+            Trace.WriteLine("\tQuery Time: " + new TimeSpan(TraceQueryEnd.Ticks - StartTime.Ticks).TotalSeconds.ToString() + " (sec) elapsed");
+            Trace.WriteLine("\tParse Time: " + new TimeSpan(TraceParseEnd.Ticks - TraceQueryEnd.Ticks).TotalSeconds.ToString() + " (sec) elapsed");
 
             CallOnCollectionChanged(inventory);
 
@@ -549,6 +558,10 @@ namespace WebAnnotationModel
                     proxy.Close();
                     proxy = null;
                 }
+            }
+            finally
+            {
+                //Do not free the proxy.  The callback function handles that
             }
 
             return new MixedLocalAndRemoteQueryResults<KEY, OBJECT>(result, knownObjects);
@@ -990,7 +1003,7 @@ namespace WebAnnotationModel
 
                     //listOldObjs.Add(oldObj);
 
-                    existingObj.Synch(updateObj.GetData());
+                    existingObj.Update(updateObj.GetData());
 
                     listUpdatedObjs.Add(existingObj);
 

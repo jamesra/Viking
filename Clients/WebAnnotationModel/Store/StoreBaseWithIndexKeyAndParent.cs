@@ -173,7 +173,7 @@ namespace WebAnnotationModel
                         }
                     }
 
-                    existingObj.Synch(updateObj.GetData());
+                    existingObj.Update(updateObj.GetData());
 
                     listUpdatedObjs.Add(existingObj);
 

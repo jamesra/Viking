@@ -139,7 +139,6 @@ namespace WebAnnotationModel
                 if (GridVector2.Equals(this.VolumePosition, value))
                     return;
 
-
                 OnPropertyChanging("VolumePosition");
 
                 AnnotationPoint point = new AnnotationPoint();
@@ -259,8 +258,8 @@ namespace WebAnnotationModel
         }
 
         /// <summary>
-        /// This needs sorting out.  We are subscribing to our own event.  We need to ensure
-        /// that we do not keep ourselves alive with event subscriptions.
+        /// This needs sorting out.  Do we need this as an observable collection or should 
+        /// we fire our own collection changed events with Add/Remove link calls.
         /// </summary>
         public ReadOnlyObservableCollection<long> Links
         {
@@ -311,10 +310,18 @@ namespace WebAnnotationModel
         {
             get
             {
-                if (Data.Links == null)
-                    return 0;
-
-                return Data.Links.Length;
+                if (_ObservableLinks == null)
+                {
+                    if (Data.Links == null)
+                        return 0;
+                    else
+                        return Data.Links.Length;
+                }
+                else
+                { 
+                    //Debug.Assert(Data.Links.Length == Links.Count);
+                    return _ObservableLinks.Count;
+                }
             }
         }
         
@@ -459,7 +466,31 @@ namespace WebAnnotationModel
             }
 
 //          CallOnCreate(); 
-        }     
+        }
+
+        /// <summary>
+        /// Override and write each property individually so we send specific property changed events
+        /// </summary>
+        /// <param name="newdata"></param>
+        internal override void Update(Location newdata)
+        {
+            Debug.Assert(this.Data.ID == newdata.ID);
+            this.Data.DBAction = DBACTION.NONE;
+            this.Data.Closed = newdata.Closed;
+            this.Data.TypeCode = newdata.TypeCode;
+            this.Data.Position = newdata.Position;
+            this.Data.VolumePosition = newdata.VolumePosition;
+            this.Data.Radius = newdata.Radius;
+            this.Data.Section = newdata.Section;
+            this.Data.Tags = newdata.Tags;
+            this.Data.Terminal = newdata.Terminal;
+            this.Data.OffEdge = newdata.OffEdge;
+            this.Data.ParentID = newdata.ParentID;
+            this.Data.Verticies = newdata.Verticies;
+            this.Data.Username = newdata.Username;
+            this.Data.LastModified = newdata.LastModified;
+            this.Data.Links = newdata.Links;  
+        }
         
 
         /*

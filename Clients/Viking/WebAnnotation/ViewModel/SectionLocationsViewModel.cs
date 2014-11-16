@@ -20,6 +20,10 @@ using System.Threading.Tasks;
 
 namespace WebAnnotation.ViewModel
 {
+    /// <summary>
+    /// This class manages LocationViewModels used on a canvas.  
+    /// It handles hit detection, search, and positioning using canvas transforms
+    /// </summary>
     public class SectionLocationsViewModel : System.Windows.IWeakEventListener, IDisposable
     {
         /// <summary>
@@ -184,14 +188,7 @@ namespace WebAnnotation.ViewModel
                 case NotifyCollectionChangedAction.Add:
                     listNewObjs = e.NewItems.Cast<LocationObj>();
                     AddLocations(listNewObjs);
-                    AddStructureLinks(listNewObjs);
-
-                    //foreach (LocationObj locObj in listNewObjs)
-                    //{
-                    //    locObj.PropertyChanging += this.OnLocationPropertyChanging;
-                    //    locObj.PropertyChanged += this.OnLocationPropertyChanged;
-                    //}
-
+                    AddStructureLinks(listNewObjs); 
                     break;
                 case NotifyCollectionChangedAction.Replace:
                     RemoveStructureLinks(e.OldItems.Cast<LocationObj>()); 
@@ -204,12 +201,6 @@ namespace WebAnnotation.ViewModel
                     listOldObjs = e.OldItems.Cast<LocationObj>();
                     RemoveStructureLinks(listOldObjs);
                     RemoveLocations(listOldObjs);
-
-                    //foreach (LocationObj locObj in listOldObjs)
-                    //{
-                    //    locObj.PropertyChanging -= this.OnLocationPropertyChanging;
-                    //    locObj.PropertyChanged -= this.OnLocationPropertyChanged;
-                    //}
                     break;
 
                 default:
@@ -280,9 +271,9 @@ namespace WebAnnotation.ViewModel
                 return false;
             }
 
-            loc.VolumePosition = VolumePosition;
             loc.VolumeTransformID = parent.CurrentTransformUniqueID;
-
+            loc.VolumePosition = VolumePosition;
+            
             return true;
         }
 
@@ -671,6 +662,11 @@ namespace WebAnnotation.ViewModel
             //    AddLocations(Store.Locations.GetLocationsForSection(Section.Number).Values);
        
             MixedLocalAndRemoteQueryResults<long, LocationObj> results = Store.Locations.GetObjectsForSectionAsynch(Section.Number);
+            //ConcurrentDictionary<long,LocationObj> locations = Store.Locations.GetObjectsForSection(Section.Number);
+            //this.AddLocations(locations.Values);
+
+            //Store.LocationLinks.GetObjectsForSection(Section.Number);
+
             //ConcurrentDictionary<long, LocationObj> KnownObjects = Store.Locations.GetLocalObjectsForSection(Section.Number);
 
             

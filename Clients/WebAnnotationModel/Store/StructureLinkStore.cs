@@ -123,8 +123,8 @@ namespace WebAnnotationModel
                 if (link == null)
                     continue; 
 
-                StructureObj SourceObj = Store.Structures.GetObjectByID(link.SourceID);
-                StructureObj TargetObj = Store.Structures.GetObjectByID(link.TargetID);
+                StructureObj SourceObj = Store.Structures.GetObjectByID(link.SourceID, false);
+                StructureObj TargetObj = Store.Structures.GetObjectByID(link.TargetID, false);
 
                 if (SourceObj != null)
                     SourceObj.RemoveLink(link);
