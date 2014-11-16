@@ -12,7 +12,7 @@ using System.Web.Script.Serialization;
 using System.Net.Mail;
 using System.Web.Security;
 using System.Net;
-using AnnotationUtils.AnnotationService;
+using AnnotationVizLib.AnnotationService;
 
 using ConnectomeViz.Helpers;
 
@@ -57,9 +57,9 @@ namespace ConnectomeViz.Controllers
 
             ConnectomeViz.Models.State.selectedVolume = volumeName;
 
-            string[] result = new string[0]; 
+            string[] result = new string[0];
 
-            using (AnnotationUtils.AnnotationService.CircuitClient client = ConnectomeViz.Models.State.CreateNetworkClient())
+            using (AnnotationVizLib.AnnotationService.CircuitClient client = ConnectomeViz.Models.State.CreateNetworkClient())
             {
 
                 result = client.getTopConnectedStructures(type); // 1 for structures and 0 for locations

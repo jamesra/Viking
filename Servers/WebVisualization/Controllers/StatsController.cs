@@ -6,7 +6,7 @@ using System.Web.Mvc;
 using System.Web.Mvc.Ajax;
 using ConnectomeViz.Models;
 using System.Web.Security;
-using AnnotationUtils.AnnotationService;
+using AnnotationVizLib.AnnotationService;
 
 namespace ConnectomeViz.Controllers
 {

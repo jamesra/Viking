@@ -14,8 +14,8 @@ using System.ServiceModel;
 using System.Reflection; 
 using System.Xml;
 using System.Web.Script.Serialization;
-using AnnotationUtils;
-using AnnotationUtils.AnnotationService;
+using AnnotationVizLib;
+using AnnotationVizLib.AnnotationService;
 using ConnectomeViz;
 
 
@@ -23,7 +23,7 @@ namespace ConnectomeViz.Controllers
 {
     public class NetworkGraphRequestData
     {
-        public int NumHops = 1;
+        public uint NumHops = 1;
         public bool RefreshGraph = false;
         public bool ReduceEdges = true;
         public bool ShowExtraHop = false;
@@ -53,7 +53,7 @@ namespace ConnectomeViz.Controllers
         public static NetworkGraphRequestData Create(HttpRequestBase Request)
         {
             NetworkGraphRequestData data = new NetworkGraphRequestData();
-            data.NumHops = Convert.ToInt32(Request["hops"]);
+            data.NumHops = Convert.ToUInt32(Request["hops"]);
             data.RefreshGraph = IsCheckboxSet(Request["freshQuery"]);
             data.ReduceEdges = IsCheckboxSet(Request["reduceEdges"]);
             data.ShowExtraHop = IsCheckboxSet(Request["showExtraHop"]);
@@ -157,7 +157,7 @@ namespace ConnectomeViz.Controllers
             if(!System.IO.File.Exists(userDotFileFullPath) || graph_data.RefreshGraph)
             {
                 State.ReadServices();
-                NeuronGraph graph = AnnotationUtils.NeuronGraph.BuildGraph(graph_data.CellIDs, graph_data.NumHops, State.SelectedEndpoint, State.userCredentials);
+                NeuronGraph graph = AnnotationVizLib.NeuronGraph.BuildGraph(graph_data.CellIDs, graph_data.NumHops, State.SelectedEndpoint, State.userCredentials);
                   
                 NeuronDOTView dotGraph = NeuronDOTView.ToDOT(graph, graph_data.ShowExtraHop); 
                 dotGraph.SaveDOT(userDotFileFullPath);
@@ -203,7 +203,7 @@ namespace ConnectomeViz.Controllers
 
             
                
-            int hops = Convert.ToInt32(Request["hops"]);
+            uint hops = Convert.ToUInt32(Request["hops"]);
 
             ViewData["numHops"] = hops;
             
@@ -261,7 +261,7 @@ namespace ConnectomeViz.Controllers
 
             if(!System.IO.File.Exists(userDotFileFullPath) || freshQuery)
             {
-                NeuronGraph graph = AnnotationUtils.NeuronGraph.BuildGraph(graph_data.CellIDs, hops, State.SelectedEndpoint, State.userCredentials);
+                NeuronGraph graph = AnnotationVizLib.NeuronGraph.BuildGraph(graph_data.CellIDs, hops, State.SelectedEndpoint, State.userCredentials);
                   
                 NeuronDOTView dotGraph = NeuronDOTView.ToDOT(graph, showExtraHop); 
                 dotGraph.SaveDOT(userDotFileFullPath);
@@ -753,7 +753,7 @@ namespace ConnectomeViz.Controllers
                 double length = 0; 
 
                 //Create an edge for GraphViz
-                GraphVizEdge<long> tempEdge = new GraphVizEdge<long>();
+                GraphViewEdge<long> tempEdge = new GraphViewEdge<long>();
                 connectionsGraph.addEdge(tempEdge);
                 tempEdge.from = edge.SourceParentID;
                 tempEdge.to = edge.TargetParentID;
@@ -987,7 +987,7 @@ namespace ConnectomeViz.Controllers
                 //If the edge is bidirectional clone it, reverse the direction, and make it invisible to help directional layout algorithms.
                 if (dir == "both")
                 {
-                    GraphVizEdge<long> reverseTempEdge = tempEdge.Clone() as GraphVizEdge<long>;
+                    GraphViewEdge<long> reverseTempEdge = tempEdge.Clone() as GraphViewEdge<long>;
                     reverseTempEdge.to = tempEdge.from;
                     reverseTempEdge.from = tempEdge.to;
                     reverseTempEdge.Attributes.Add("style", "invis"); //invisible
@@ -1023,7 +1023,7 @@ namespace ConnectomeViz.Controllers
 
             foreach (long nodeID in graph.InvolvedCells)
             {
-                GraphVizNode<long> tempNode = connectionsGraph.addNode(nodeID);
+                GraphViewNode<long> tempNode = connectionsGraph.addNode(nodeID);
 
                 try
                 {
@@ -1113,7 +1113,7 @@ namespace ConnectomeViz.Controllers
                 if (connectionsGraph.nodes.ContainsKey(ID))
                     continue;
 
-                GraphVizNode<long> tempNode = connectionsGraph.addNode(ID);
+                GraphViewNode<long> tempNode = connectionsGraph.addNode(ID);
 
 
                 try

@@ -1,4 +1,4 @@
-﻿using AnnotationUtils.AnnotationService;
+﻿using AnnotationVizLib.AnnotationService;
 
 namespace ConnectomeViz.Utils
 {

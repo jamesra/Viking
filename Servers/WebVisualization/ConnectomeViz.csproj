@@ -34,13 +34,14 @@
       <Objects>
         <ObjectGroup Name="RabbitConnectionString-Deployment" Order="1">
           <Destination Path="" />
-          <Object Type="dbFullSql">
-            <PreSource Path="Data Source=155.100.105.9,1433\SQLEXPRESS%3bInitial Catalog=Rabbit%3bPersist Security Info=True%3bUser ID=Website" ScriptSchema="True" ScriptData="False" CopyAllFullTextCatalogs="False" DriDefaults="True" />
+          <Object Type="dbFullSql" Enabled="False">
+            <PreSource Path="Data Source=OpR-Marc-RC1,1433\SQLEXPRESS%3bInitial Catalog=Rabbit%3bPersist Security Info=True%3bUser ID=Website" ScriptSchema="True" ScriptData="False" CopyAllFullTextCatalogs="False" DriDefaults="True" />
             <Source Path="obj\Debug\AutoScripts\RabbitConnectionString-Deployment_SchemaOnly.sql" Transacted="True" />
           </Object>
         </ObjectGroup>
       </Objects>
     </PublishDatabaseSettings>
+    <DeployIisAppPath>Default Web Site/Test</DeployIisAppPath>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -692,13 +693,13 @@
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\AnnotationVizLib\AnnotationVizLib.csproj">
+      <Project>{A89A628B-3FFA-4271-B99A-E45C3D72D3E3}</Project>
+      <Name>AnnotationVizLib</Name>
+    </ProjectReference>
     <ProjectReference Include="..\..\GraphLib\GraphLib.csproj">
       <Project>{D6F219FC-733B-481F-BF78-D34A7CB893EC}</Project>
       <Name>GraphLib</Name>
-    </ProjectReference>
-    <ProjectReference Include="AnnotationGraphLib\AnnotationUtils.csproj">
-      <Project>{A89A628B-3FFA-4271-B99A-E45C3D72D3E3}</Project>
-      <Name>AnnotationUtils</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
@@ -718,7 +719,7 @@
           <AutoAssignPort>True</AutoAssignPort>
           <DevelopmentServerPort>10610</DevelopmentServerPort>
           <DevelopmentServerVPath>/Viz</DevelopmentServerVPath>
-          <IISUrl>http://connectomes.utah.edu/test</IISUrl>
+          <IISUrl>http://connectomes.utah.edu/VizTest</IISUrl>
           <NTLMAuthentication>False</NTLMAuthentication>
           <UseCustomServer>False</UseCustomServer>
           <CustomServerUrl>http://connectomes.utah.edu/viz</CustomServerUrl>

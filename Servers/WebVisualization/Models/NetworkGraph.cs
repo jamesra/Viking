@@ -10,8 +10,8 @@ using System.Web.UI.HtmlControls;
 using System.Web.UI.WebControls;
 using System.Web.UI.WebControls.WebParts;
 using System.Xml.Linq;
-using AnnotationUtils;
-using AnnotationUtils.AnnotationService;
+using AnnotationVizLib;
+using AnnotationVizLib.AnnotationService;
 
 namespace ConnectomeViz.Models
 {

@@ -12,8 +12,8 @@ using System.Web.Script.Serialization;
 using System.Web.Security;
 using System.ServiceModel;
 using System.Runtime.Serialization.Formatters.Binary;
-using AnnotationUtils;
-using AnnotationUtils.AnnotationService;
+using AnnotationVizLib;
+using AnnotationVizLib.AnnotationService;
 
 
 

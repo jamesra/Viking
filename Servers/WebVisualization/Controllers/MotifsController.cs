@@ -12,13 +12,13 @@ using System.Web.UI;
 using System.Web.Security;
 using System.ServiceModel;
 using System.Reflection;
-using AnnotationUtils.AnnotationService;
+using AnnotationVizLib.AnnotationService;
 using System.Xml;
 using System.Web.Script.Serialization;
 
 using ConnectomeViz.Helpers;
 using ConnectomeViz;
-using AnnotationUtils;
+using AnnotationVizLib;
 
 
 namespace ConnectomeViz.Controllers

@@ -5,16 +5,20 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConnectomeViz", "Connectome
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GraphLib", "..\..\GraphLib\GraphLib.csproj", "{D6F219FC-733B-481F-BF78-D34A7CB893EC}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AnnotationUtils", "AnnotationGraphLib\AnnotationUtils.csproj", "{A89A628B-3FFA-4271-B99A-E45C3D72D3E3}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AnnotationUtilsTests", "AnnotationUtilsTests\AnnotationUtilsTests.csproj", "{B80BF900-A7CF-4A14-8A96-8C590A2435D4}"
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{72911505-DB93-432C-B340-FBEE8D23037B}"
 	ProjectSection(SolutionItems) = preProject
 		Connectome Project.vsmdi = Connectome Project.vsmdi
 		Local.testsettings = Local.testsettings
 		TraceAndTestImpact.testsettings = TraceAndTestImpact.testsettings
 	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DataExport", "..\DataExport\DataExport.csproj", "{73CB157C-8882-480E-A70A-23D2A4CBA7E9}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DataExport.Tests", "..\DataExport.Tests\DataExport.Tests.csproj", "{E353CD96-8B73-46A1-AE33-3E64CEA1C43F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AnnotationVizLib", "..\..\AnnotationVizLib\AnnotationVizLib.csproj", "{A89A628B-3FFA-4271-B99A-E45C3D72D3E3}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AnnotationVizLibTests", "..\..\AnnotationVizLibTests\AnnotationVizLibTests.csproj", "{B80BF900-A7CF-4A14-8A96-8C590A2435D4}"
 EndProject
 Global
 	GlobalSection(TestCaseManagementSettings) = postSolution
@@ -33,6 +37,14 @@ Global
 		{D6F219FC-733B-481F-BF78-D34A7CB893EC}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D6F219FC-733B-481F-BF78-D34A7CB893EC}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D6F219FC-733B-481F-BF78-D34A7CB893EC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{73CB157C-8882-480E-A70A-23D2A4CBA7E9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{73CB157C-8882-480E-A70A-23D2A4CBA7E9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{73CB157C-8882-480E-A70A-23D2A4CBA7E9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{73CB157C-8882-480E-A70A-23D2A4CBA7E9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E353CD96-8B73-46A1-AE33-3E64CEA1C43F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E353CD96-8B73-46A1-AE33-3E64CEA1C43F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E353CD96-8B73-46A1-AE33-3E64CEA1C43F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E353CD96-8B73-46A1-AE33-3E64CEA1C43F}.Release|Any CPU.Build.0 = Release|Any CPU
 		{A89A628B-3FFA-4271-B99A-E45C3D72D3E3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{A89A628B-3FFA-4271-B99A-E45C3D72D3E3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A89A628B-3FFA-4271-B99A-E45C3D72D3E3}.Release|Any CPU.ActiveCfg = Release|Any CPU

@@ -45,11 +45,7 @@ namespace ConnectomeViz
               "testpath",                                              // Route name
               "Test/{controller}/{action}/{id}",                           // URL with parameters
               new { controller = "Default", action = "Index", id = (string)null }  // Parameter defaults
-          );
-
-       
-
-
+          ); 
         }
 
         protected void Application_Start()

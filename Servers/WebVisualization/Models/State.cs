@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Web;
-using System.Net; 
-using AnnotationUtils.AnnotationService;
+using System.Net;
+using AnnotationVizLib.AnnotationService;
 
 
 namespace ConnectomeViz.Models
