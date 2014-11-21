@@ -15,44 +15,21 @@ namespace AnnotationVizLib
 
         public static MotifDOTView ToDOT(MotifGraph graph, bool IncludeUnlabeled = false)
         {
-            string DOT = "";
-
             MotifDOTView DotGraph = new MotifDOTView();
 
-            DotGraph.AddAttributes(AttributeMaps.StandardGraphDOTAttributes); 
+            DotGraph.AddAttributes(DOTAttributes.StandardGraphDOTAttributes); 
             
             foreach(MotifNode node in graph.Nodes.Values)
             {
                 if(node.Key == "Unlabeled" && !IncludeUnlabeled)
                     continue; 
 
-                GraphViewNode<string> DOTNode = DotGraph.addNode(node.Key);
+                GraphViewNode<string> DOTNode = DotGraph.createNode(node.Key);
                 DOTNode = GraphVizNodeFromMotifNode(DOTNode, node);  
             }
 
             DotGraph.Attributes.Add("nslimit", Math.Ceiling(Math.Sqrt(graph.Nodes.Count)).ToString());
             DotGraph.Attributes.Add("mclimit", Math.Ceiling(Math.Sqrt(graph.Nodes.Count)).ToString());
-            /*
-            List<MotifEdge> UniqueEdges = new List<MotifEdge>();
-            foreach (MotifEdge edge in graph.Edges)
-            {
-                bool AddEdge = true; 
-                foreach (MotifEdge existingEdge in UniqueEdges)
-                {
-                    if (existingEdge == edge)
-                    {
-                        AddEdge = false;
-                        existingEdge.Weight = existingEdge.Weight + 1;
-                        break;
-                    }
-                }
-
-                if (AddEdge)
-                {
-                    UniqueEdges.Add(edge); 
-                }
-            }
-             */
 
             foreach (MotifEdge edge in graph.Edges.Values)
             {
@@ -74,11 +51,11 @@ namespace AnnotationVizLib
         {
             string label = node.Key;
 
-            DotNode.AddAttributes(AttributeMaps.StandardNodeDOTAttributes);
+            DotNode.AddAttributes(DOTAttributes.StandardNodeDOTAttributes);
 
             DotNode.Attributes.Add("label", node.Key);
 
-            IDictionary<string, string> AttribsForLabel = AttributeMaps.AttribsForLabel(DotNode.label, AttributeMaps.StandardLabelToNodeDOTAppearance);
+            IDictionary<string, string> AttribsForLabel = AttributeMapper.AttribsForLabel(DotNode.label, DOTAttributes.StandardLabelToNodeDOTAppearance);
 
             if (AttribsForLabel == null)
             {
@@ -113,26 +90,16 @@ namespace AnnotationVizLib
 
         public static  GraphViewEdge<string> GraphVizEdgeFromMotifEdge(GraphViewEngine<string> DotEngine, MotifGraph graph, MotifEdge edge)
         {
-            GraphViewEdge<string> DotEdge = new GraphViewEdge<string>();
+            GraphVizEdge<string> DotEdge = new GraphVizEdge<string>();
             float additionFactor = 1f;
             float mulFactor = 0.5f; 
-            //Set the arrow properties
-            string color = "black";
-            string arrowhead = "";
-            string arrowtail = "";
-            string tooltip = "";
-            string dir = "";
             float arrowsize = additionFactor;
             float pensize = additionFactor;
-
-            dir = "";
-            string StoredToolTip = "";
-
             DotEdge.from = edge.SourceNodeKey;
             DotEdge.to = edge.TargetNodeKey;
 
-            IDictionary<string, string> EdgeAttribs = AttributeMaps.AttribsForLabel(edge.SynapseType.ToUpper(),
-                                                                                     AttributeMaps.StandardEdgeLabelToDOTAppearance);
+            IDictionary<string, string> EdgeAttribs = AttributeMapper.AttribsForLabel(edge.SynapseType.ToUpper(),
+                                                                                     DOTAttributes.StandardEdgeSourceLabelToDOTAppearance);
 
             if (EdgeAttribs == null)
             {
@@ -201,9 +168,8 @@ namespace AnnotationVizLib
             //If the edge is bidirectional clone it, reverse the direction, and make it invisible to help directional layout algorithms.
             if (DotEdge.Attributes["dir"] == "both")
             {
-                GraphViewEdge<string> reverseTempEdge = DotEdge.Clone() as GraphViewEdge<string>;
-                reverseTempEdge.to = DotEdge.from;
-                reverseTempEdge.from = DotEdge.to;
+                GraphVizEdge<string> reverseTempEdge = DotEdge.Clone() as GraphVizEdge<string>;
+                reverseTempEdge.Reverse(); 
                 reverseTempEdge.Attributes.Add("style", "invis"); //invisible
                   
                 DotEngine.addEdge(reverseTempEdge);

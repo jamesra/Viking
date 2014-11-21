@@ -43,10 +43,11 @@ namespace DataExport.Controllers
                 System.IO.Directory.CreateDirectory(userDotDirectory);
 
             string userDotFileFullPath = System.IO.Path.Combine(userDotDirectory, "motifs.tlp");
-
+             
             MotifGraph motifGraph = MotifGraph.BuildGraph(EndpointURL, AppSettings.EndpointCredentials);
             MotifTLPView TlpGraph = MotifTLPView.ToTLP(motifGraph);
             TlpGraph.SaveTLP(userDotFileFullPath);
+            
 
             return File(userDotFileFullPath, "text/plain", "motifs.tlp");
         } 

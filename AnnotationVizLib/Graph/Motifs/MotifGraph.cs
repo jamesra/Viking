@@ -146,9 +146,7 @@ namespace AnnotationVizLib
 
         public static MotifGraph BuildGraph(string Endpoint, System.Net.NetworkCredential userCredentials)
         {
-            ConnectionFactory.SetConnection(Endpoint, userCredentials);
-            
-            List<long> UnmappedStructures = null;
+            ConnectionFactory.SetConnection(Endpoint, userCredentials);          
 
             MotifGraph graph = new MotifGraph(); 
 

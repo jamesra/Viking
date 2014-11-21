@@ -353,7 +353,7 @@ namespace WebAnnotation.ViewModel
 #if SUBMITVOLUMEPOSITION
             if (UpdateVolumeLocations && FirstMapping)
             {
-                if (GridVector2.DistanceSquared(original, loc.VolumePosition) > 225.0)
+                if (GridVector2.DistanceSquared(original, loc.VolumePosition) > 0)
                 {
                     loc.SubmitOnNextUpdate();
                     UpdatedVolumeLocation = true;

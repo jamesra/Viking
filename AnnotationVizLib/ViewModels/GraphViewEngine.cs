@@ -30,6 +30,8 @@ namespace AnnotationVizLib
         /// <returns></returns>
         public void AddAttributes(System.Collections.Generic.IDictionary<string, string> attribs)
         {
+            if (attribs == null)
+                return;
 
             foreach (string key in attribs.Keys)
             {
@@ -42,68 +44,41 @@ namespace AnnotationVizLib
 
         public override string ToString()
         {
-            string str = label + "\n";
+            StringBuilder sb = new StringBuilder();
+            sb.AppendLine(label);
             foreach (string key in this.Attributes.Keys)
             {
-                str = str + "\t" + key + " : " + this.Attributes[key];
+                sb.AppendLine("\t" + key + " : " + this.Attributes[key]);
             }
 
-            return str;
+            return sb.ToString();
         }
     }
 
     public class GraphViewNode<KEY> : GraphViewEntity<KEY>
         where KEY : IComparable<KEY>
     {
-        public KEY ID;
+        public KEY Key;
         
-        public GraphViewNode(KEY id, string lbl)
+        public GraphViewNode(KEY key, string lbl)
         {
-            this.ID = id;
+            this.Key = key;
             this.label = lbl;
         }
 
-        public GraphViewNode(KEY id)
+        public GraphViewNode(KEY key)
         {
-            this.ID = id;
-            this.label = id.ToString();
+            this.Key = key;
+            this.label = key.ToString();
         } 
     }
 
-    public class GraphViewEdge<KEY> : GraphViewEntity<KEY>, ICloneable
+    public class GraphViewEdge<KEY> : GraphViewEntity<KEY>
         where KEY : IComparable<KEY>
     {
         public KEY from;
         public KEY to;
-        
-        #region ICloneable Members
-
-        public object Clone()
-        {
-            GraphViewEdge<KEY> clone = new GraphViewEdge<KEY>();
-            clone.label = label;
-            clone.from = from;
-            clone.to = to;
-            foreach (string key in Attributes.Keys)
-            {
-                clone.Attributes.Add(key, Attributes[key]);
-            }
-
-            return clone; 
-        }
-
-        /// <summary>
-        /// This string lists the parent structures connected, i.e. cells
-        /// </summary>
-        public string KeyString
-        {
-            get
-            {
-                return to + "->" + from;
-            }
-        }
-
-        #endregion
+          
     }
 
     /// <summary>
@@ -133,25 +108,25 @@ namespace AnnotationVizLib
         }
 
 
-        public GraphViewNode<KEY> addNode(KEY ID)
+        public virtual GraphViewNode<KEY> createNode(KEY ID)
         {
             GraphViewNode<KEY> tempNode = new GraphViewNode<KEY>(ID);
             nodes.Add(ID,tempNode);
             return tempNode;
         }
 
-        public void removeNode(KEY label)
+        public virtual void removeNode(KEY label)
         {
             if (nodes.ContainsKey(label))
                 nodes.Remove(label);
         }
 
-        public void addEdge(GraphViewEdge<KEY> edge)
+        public virtual void addEdge(GraphViewEdge<KEY> edge)
         {
             edges.Add(edge); 
         }
 
-        public void removeEdge(GraphViewEdge<KEY> edge)
+        public virtual void removeEdge(GraphViewEdge<KEY> edge)
         {
             if(edges.Contains(edge))
                 edges.Remove(edge);

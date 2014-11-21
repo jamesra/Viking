@@ -7,7 +7,7 @@ using System.Diagnostics;
 
 namespace AnnotationVizLib
 {
-    public class MotifTLPView
+    public class MotifTLPView : TLPView<string>
     {
         MotifGraph motifGraph = null;
 
@@ -16,56 +16,74 @@ namespace AnnotationVizLib
             motifGraph = graph;
         }
 
-        private static string Header()
+        public TLPViewNode CreateTLPNode(MotifNode node)
         {
-            return "(tlp \"2.0\"";
+            TLPViewNode tlpnode = createNode(node.Key);  
+            IDictionary<string, string> NodeAttribs = AttributeMapper.AttribsForLabel(node.Key, TLPAttributes.StandardLabelToNodeTLPAppearance);
+            if(!NodeAttribs.ContainsKey("viewLabel"))
+                NodeAttribs.Add("viewLabel", node.Key);
+
+            NodeAttribs.Add("StructureIDs", SourceStructures(node));
+
+            tlpnode.AddAttributes(NodeAttribs);
+
+            return tlpnode;
         }
 
-        private static string Footer()
+        public TLPViewEdge CreateTLPEdge(MotifEdge edge)
         {
-            return ")";
+            TLPViewEdge tlpedge = this.addEdge(edge.SourceNodeKey, edge.TargetNodeKey);
+            IDictionary<string, string> EdgeAttribs = AttributeMapper.AttribsForLabel(edge.SynapseType, TLPAttributes.StandardEdgeSourceLabelToTLPAppearance);
+
+            EdgeAttribs.Add("SourceStructures", EdgeStructuresString(edge.SourceStructIDs));
+            EdgeAttribs.Add("TargetStructures", EdgeStructuresString(edge.TargetStructIDs));
+            
+            /*
+            foreach(long sourceID in edge.SourceStructIDs)
+            {
+                string key = string.Format("Source_{0}", sourceID);
+                EdgeAttribs.Add(key, string.Format("https://connectomes.utah.edu/Services/RC1/ConnectomeData.svc/Structures({0}L)", sourceID));
+            }
+
+            foreach(long targetID in edge.TargetStructIDs)
+            {
+                string key = string.Format("Target_{0}", targetID);
+                EdgeAttribs.Add(key, string.Format("https://connectomes.utah.edu/Services/RC1/ConnectomeData.svc/Structures({0}L)", targetID));
+            }
+            */
+
+            tlpedge.AddAttributes(EdgeAttribs);
+
+            return tlpedge;
         }
 
-        /// <summary>
-        /// Map the motif edge to an arbitrary id used by TLP
-        /// </summary>
-        SortedDictionary<ulong, MotifEdge> edges = new SortedDictionary<ulong, MotifEdge>();
-
-
-        /// <summary>
-        /// Map the motif label to the arbitrary id used by TLP
-        /// </summary>
-        SortedDictionary<MotifEdge, ulong> EdgeToIndex = new SortedDictionary<MotifEdge, ulong>();
-
-
-        /// <summary>
-        /// Map the motif node to an arbitrary id used by TLP
-        /// </summary>
-        SortedDictionary<ulong, MotifNode> nodes = new SortedDictionary<ulong, MotifNode>();
-
-
-        /// <summary>
-        /// Map the motif label to the arbitrary id used by TLP
-        /// </summary>
-        SortedDictionary<string, ulong> LabelToIndex = new SortedDictionary<string, ulong>();
-
-
-        private ulong nextNodeIndex = 0;
-        private void addNode(MotifNode node)
+        private string SourceStructures(MotifNode node)
         {
-            LabelToIndex.Add(node.Key, nextNodeIndex); 
-            nodes.Add(nextNodeIndex++, node); 
+            StringBuilder sb = new StringBuilder();
+            
+            foreach(AnnotationService.Structure s in node.Structures)
+            {
+                sb.AppendLine(s.ID.ToString());
+            }
+
+            return sb.ToString(); 
         }
 
-
-        private ulong nextEdgeIndex = 0;
-        private void addEdge(MotifEdge edge)
+        private string EdgeStructuresString(IList<long> structIDs)
         {
-            EdgeToIndex.Add(edge, nextEdgeIndex);
-            edges.Add(nextEdgeIndex++, edge);
+            StringBuilder sb = new StringBuilder();
+            foreach (long sourceID in structIDs)
+            {
+                sb.AppendLine(sourceID.ToString());
+            }
+
+            return sb.ToString();
         }
 
-        
+        public void PopulateTLPNode(MotifNode node, TLPViewNode tlpnode)
+        {
+            
+        }
 
         public static MotifTLPView ToTLP(MotifGraph graph, bool IncludeUnlabeled = false)
         {
@@ -76,96 +94,18 @@ namespace AnnotationVizLib
                 if (node.Key == "Unlabeled" && !IncludeUnlabeled)
                     continue;
 
-                view.addNode(node);
+                view.CreateTLPNode(node);
             }
 
             foreach (MotifEdge edge in graph.Edges.Values)
             {
                 if (edge.SourceNodeKey == "Unlabeled" || edge.TargetNodeKey == "Unlabeled")
-                    continue; 
+                    continue;
 
-                view.addEdge(edge);
+                view.CreateTLPEdge(edge);
             }
 
             return view; 
-        }
-
-        private static string NodesToString(ICollection<ulong> ids)
-        {
-            StringBuilder s = new StringBuilder();
-            s.Append("(nodes ");
-            foreach (ulong id in ids)
-            {
-                s.Append(id.ToString() + " ");
-            }
-            s.Append(")");
-
-            return s.ToString();
-        }
-
-        private string EdgesToString()
-        {
-            StringBuilder s = new StringBuilder();
-            foreach (MotifEdge edge in EdgeToIndex.Keys)
-            {
-                s.AppendLine(EdgeToString(edge));
-            }
-
-            return s.ToString();
-        }
-
-        private string EdgeToString(MotifEdge edge)
-        {
-            StringBuilder s = new StringBuilder();
-            s.Append("(edge ");
-            ulong edgeID = EdgeToIndex[edge];
-            ulong sourceID = LabelToIndex[edge.SourceNodeKey];
-            ulong targetID = LabelToIndex[edge.TargetNodeKey];
-
-            return string.Format("(edge {0} {1} {2})", new object[] { edgeID.ToString(), sourceID.ToString(), targetID.ToString() });
-        }
-
-        private string LabelProperties()
-        {
-            StringBuilder s = new StringBuilder();
-            s.AppendLine("(property 0 string \"viewLabel\"");
-            s.AppendLine("\t(default \"\" \"\")");
-            foreach (ulong id in nodes.Keys)
-            {
-                MotifNode node = nodes[id];
-                s.AppendLine("\t(node " + id.ToString() + " \"" + node.Key + "\")");
-            }
-            s.AppendLine(")");
-
-            return s.ToString(); 
-        }
-
-        public override string ToString()
-        {
-            using(StringWriter sw = new StringWriter())
-            {
-                sw.WriteLine(MotifTLPView.Header());
-
-                sw.WriteLine(MotifTLPView.NodesToString(nodes.Keys));
-
-                sw.WriteLine(EdgesToString());
-
-                sw.WriteLine(LabelProperties()); 
-
-                sw.WriteLine(MotifTLPView.Footer());
-                return sw.ToString();
-            } 
-        }
-
-        public void SaveTLP(string FullPath)
-        {
-            using (StreamWriter write = new StreamWriter(FullPath, false))
-            {
-                write.Write(this.ToString());
-                write.Close();
-            }
-
-            Debug.Assert(System.IO.File.Exists(FullPath), "Dot file we just wrote does not exist"); 
-        }
+        } 
     }
 }

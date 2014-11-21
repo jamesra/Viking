@@ -8,12 +8,13 @@
 //------------------------------------------------------------------------------
 
 using System;
+using System.ComponentModel;
+using System.Data.EntityClient;
 using System.Data.Objects;
 using System.Data.Objects.DataClasses;
-using System.Data.EntityClient;
-using System.ComponentModel;
-using System.Xml.Serialization;
+using System.Linq;
 using System.Runtime.Serialization;
+using System.Xml.Serialization;
 
 [assembly: EdmSchemaAttribute()]
 #region EDM Relationship Metadata
@@ -207,6 +208,7 @@ namespace ConnectomeOpenData
         private ObjectSet<StructureType> _StructureTypes;
 
         #endregion
+
         #region AddTo Methods
     
         /// <summary>
@@ -274,6 +276,7 @@ namespace ConnectomeOpenData
         }
 
         #endregion
+
         #region Function Imports
     
         /// <summary>
@@ -418,11 +421,11 @@ namespace ConnectomeOpenData
         }
 
         #endregion
+
     }
-    
 
     #endregion
-    
+
     #region Entities
     
     /// <summary>
@@ -453,6 +456,7 @@ namespace ConnectomeOpenData
         }
 
         #endregion
+
         #region Primitive Properties
     
         /// <summary>
@@ -564,6 +568,7 @@ namespace ConnectomeOpenData
         partial void OnUserIDChanged();
 
         #endregion
+
     
     }
     
@@ -591,6 +596,7 @@ namespace ConnectomeOpenData
         }
 
         #endregion
+
         #region Primitive Properties
     
         /// <summary>
@@ -645,6 +651,7 @@ namespace ConnectomeOpenData
         partial void OnDeletedOnChanged();
 
         #endregion
+
     
     }
     
@@ -700,6 +707,7 @@ namespace ConnectomeOpenData
         }
 
         #endregion
+
         #region Primitive Properties
     
         /// <summary>
@@ -1162,6 +1170,7 @@ namespace ConnectomeOpenData
         partial void OnUsernameChanged();
 
         #endregion
+
     
         #region Navigation Properties
     
@@ -1248,6 +1257,7 @@ namespace ConnectomeOpenData
         }
 
         #endregion
+
     }
     
     /// <summary>
@@ -1278,6 +1288,7 @@ namespace ConnectomeOpenData
         }
 
         #endregion
+
         #region Primitive Properties
     
         /// <summary>
@@ -1383,6 +1394,7 @@ namespace ConnectomeOpenData
         partial void OnCreatedChanged();
 
         #endregion
+
     
         #region Navigation Properties
     
@@ -1463,6 +1475,7 @@ namespace ConnectomeOpenData
         }
 
         #endregion
+
     }
     
     /// <summary>
@@ -1501,6 +1514,7 @@ namespace ConnectomeOpenData
         }
 
         #endregion
+
         #region Primitive Properties
     
         /// <summary>
@@ -1795,6 +1809,7 @@ namespace ConnectomeOpenData
         partial void OnLastModifiedChanged();
 
         #endregion
+
     
         #region Navigation Properties
     
@@ -1963,6 +1978,7 @@ namespace ConnectomeOpenData
         }
 
         #endregion
+
     }
     
     /// <summary>
@@ -1997,6 +2013,7 @@ namespace ConnectomeOpenData
         }
 
         #endregion
+
         #region Primitive Properties
     
         /// <summary>
@@ -2186,6 +2203,7 @@ namespace ConnectomeOpenData
         partial void OnLastModifiedChanged();
 
         #endregion
+
     
         #region Navigation Properties
     
@@ -2266,6 +2284,7 @@ namespace ConnectomeOpenData
         }
 
         #endregion
+
     }
     
     /// <summary>
@@ -2298,6 +2317,7 @@ namespace ConnectomeOpenData
         }
 
         #endregion
+
         #region Primitive Properties
     
         /// <summary>
@@ -2424,6 +2444,7 @@ namespace ConnectomeOpenData
         partial void OnVersionChanged();
 
         #endregion
+
     
         #region Navigation Properties
     
@@ -2466,6 +2487,7 @@ namespace ConnectomeOpenData
         }
 
         #endregion
+
     }
     
     /// <summary>
@@ -2510,6 +2532,7 @@ namespace ConnectomeOpenData
         }
 
         #endregion
+
         #region Primitive Properties
     
         /// <summary>
@@ -2876,6 +2899,7 @@ namespace ConnectomeOpenData
         partial void OnCreatedChanged();
 
         #endregion
+
     
         #region Navigation Properties
     
@@ -2984,9 +3008,11 @@ namespace ConnectomeOpenData
         }
 
         #endregion
+
     }
 
     #endregion
+
     #region ComplexTypes
     
     /// <summary>
@@ -3096,6 +3122,7 @@ namespace ConnectomeOpenData
         partial void OnRadiusChanged();
 
         #endregion
+
     }
     
     /// <summary>
@@ -3120,6 +3147,7 @@ namespace ConnectomeOpenData
         }
 
         #endregion
+
         #region Primitive Properties
     
         /// <summary>
@@ -3243,8 +3271,10 @@ namespace ConnectomeOpenData
         partial void OnParentIDChanged();
 
         #endregion
+
     }
 
     #endregion
+
     
 }

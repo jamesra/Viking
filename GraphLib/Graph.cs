@@ -12,7 +12,7 @@ namespace GraphLib
         where EDGETYPE : Edge<KEY>
     {
         // Contains all edges
-        public System.Collections.Generic.SortedList<EDGETYPE, EDGETYPE> Edges = new SortedList<EDGETYPE, EDGETYPE>();
+        public SortedList<EDGETYPE, EDGETYPE> Edges = new SortedList<EDGETYPE, EDGETYPE>();
 
         public Dictionary<KEY,NODETYPE> Nodes = new Dictionary<KEY,NODETYPE>(); 
         

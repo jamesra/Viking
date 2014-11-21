@@ -10,15 +10,13 @@ namespace AnnotationVizLib
     {
         public static NeuronDOTView ToDOT(NeuronGraph graph, bool ShowFreeEdges)
         {
-            string DOT = "";
-
             NeuronDOTView DotGraph = new NeuronDOTView();
 
-            DotGraph.AddAttributes(AttributeMaps.StandardGraphDOTAttributes);
+            DotGraph.AddAttributes(DOTAttributes.StandardGraphDOTAttributes);
 
             foreach (NeuronNode node in graph.Nodes.Values)
             {
-                GraphViewNode<long> DOTNode = DotGraph.addNode(node.Key);
+                GraphViewNode<long> DOTNode = DotGraph.createNode(node.Key);
                 DOTNode = GraphVizNodeFromNeuronNode(DOTNode, node);
             }
 
@@ -76,9 +74,9 @@ namespace AnnotationVizLib
 
             DotNode.label = nodelabel; 
 
-            DotNode.AddAttributes(AttributeMaps.StandardNodeDOTAttributes); 
+            DotNode.AddAttributes(DOTAttributes.StandardNodeDOTAttributes);
 
-            IDictionary<string, string> AttribsForLabel = AttributeMaps.AttribsForLabel(nodelabel, AttributeMaps.StandardLabelToNodeDOTAppearance);
+            IDictionary<string, string> AttribsForLabel = AttributeMapper.AttribsForLabel(nodelabel, DOTAttributes.StandardLabelToNodeDOTAppearance);
 
             string label = node.Key.ToString() + " " + node.Structure.Label;
               
@@ -103,26 +101,21 @@ namespace AnnotationVizLib
 
         public static GraphViewEdge<long> GraphVizEdgeFromNeuronEdge(GraphViewEngine<long> DotEngine, NeuronEdge edge)
         {
-            GraphViewEdge<long> DotEdge = new GraphViewEdge<long>();
+            GraphVizEdge<long> DotEdge = new GraphVizEdge<long>();
             float additionFactor = 1f;
             float mulFactor = 0.5f;
-            //Set the arrow properties
-            string color = "black";
-            string arrowhead = "";
-            string arrowtail = "";
-            string tooltip = edge.ToString();
-            string dir = "";
+            //Set the arrow properties 
+            string tooltip = edge.ToString(); 
             float arrowsize = additionFactor;
             float pensize = additionFactor;
 
-            dir = "";
-            string StoredToolTip = "";
+             
 
             DotEdge.from = edge.SourceNodeKey;
             DotEdge.to = edge.TargetNodeKey;
 
-            IDictionary<string, string> EdgeAttribs = AttributeMaps.AttribsForLabel(edge.SynapseType.ToUpper(),
-                                                                                     AttributeMaps.StandardEdgeLabelToDOTAppearance);
+            IDictionary<string, string> EdgeAttribs = AttributeMapper.AttribsForLabel(edge.SynapseType.ToUpper(),
+                                                                                     DOTAttributes.StandardEdgeSourceLabelToDOTAppearance);
 
             if (EdgeAttribs == null)
             {
@@ -155,9 +148,8 @@ namespace AnnotationVizLib
             //If the edge is bidirectional clone it, reverse the direction, and make it invisible to help directional layout algorithms.
             if (DotEdge.Attributes["dir"] == "both")
             {
-                GraphViewEdge<long> reverseTempEdge = DotEdge.Clone() as GraphViewEdge<long>;
-                reverseTempEdge.to = DotEdge.from;
-                reverseTempEdge.from = DotEdge.to;
+                GraphVizEdge<long> reverseTempEdge = DotEdge.Clone() as GraphVizEdge<long>;
+                reverseTempEdge.Reverse();
                 reverseTempEdge.Attributes.Add("style", "invis"); //invisible
 
                 DotEngine.addEdge(reverseTempEdge);

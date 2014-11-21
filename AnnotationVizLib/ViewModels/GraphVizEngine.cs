@@ -7,6 +7,55 @@ using System.IO;
 
 namespace AnnotationVizLib
 {
+    public class GraphVizNode<KEY> : GraphViewNode<KEY>
+        where KEY : IComparable<KEY>
+    {
+        public GraphVizNode(KEY key) : base(key) { }
+    }
+
+    public class GraphVizEdge<KEY> : GraphViewEdge<KEY>, ICloneable
+        where KEY : IComparable<KEY>
+    {  
+
+        public void Reverse()
+        {
+            KEY temp = this.from;
+            this.from = this.to;
+            this.to = temp; 
+        }
+
+        #region ICloneable Members
+
+        public object Clone()
+        {
+            GraphViewEdge<KEY> clone = new GraphViewEdge<KEY>();
+            clone.label = label;
+            clone.from = from;
+            clone.to = to;
+            foreach (string key in Attributes.Keys)
+            {
+                clone.Attributes.Add(key, Attributes[key]);
+            }
+
+            return clone;
+        }
+
+        #endregion
+
+        /// <summary>
+        /// This string lists the parent structures connected, i.e. cells
+        /// </summary>
+        public string KeyString
+        {
+            get
+            {
+                return to + "->" + from;
+            }
+        }
+
+        
+    }
+
     public class GraphVizEngine<KEY> : GraphViewEngine<KEY>
         where KEY : IComparable<KEY>
     {
@@ -19,7 +68,7 @@ namespace AnnotationVizLib
         public List<string> outputFormats = new List<string>();
         public bool minimize;
 
-        public void createDirectedGraph(string name)
+        protected void createDirectedGraph(string name)
         {
             graphType = "directed";
             connector = "->";
@@ -27,7 +76,7 @@ namespace AnnotationVizLib
             graphDefinition = "digraph " + name + "{\n";
         }
 
-        public void createUndirectedGraph(string name)
+        protected void createUndirectedGraph(string name)
         {
             graphType = "undirected";
             connector = "--";
@@ -79,8 +128,6 @@ namespace AnnotationVizLib
 
                 //StreamWriter sw = new StreamWriter(fs);
                 sw.Write(graphDefinition);
-
-                bool first = true;
                 sw.Write("graph");
                 WriteAttributesToDOT(sw, this.Attributes);
                 sw.Write("\n");

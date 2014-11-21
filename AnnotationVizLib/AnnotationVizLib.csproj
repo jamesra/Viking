@@ -44,7 +44,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Graph\AttributeMaps.cs" />
+    <Compile Include="AttributeMapping\AttributeMaps.cs" />
+    <Compile Include="AttributeMapping\DOTAttributes.cs" />
+    <Compile Include="AttributeMapping\TLPAttributes.cs" />
     <Compile Include="Graph\Motifs\MotifJSONView.cs" />
     <Compile Include="Graph\Motifs\MotifTLPView.cs" />
     <Compile Include="Graph\Neurons\NeuronJSONView.cs" />
@@ -52,6 +54,7 @@
     <Compile Include="Graph\Motifs\MotifGraph.cs" />
     <Compile Include="Graph\Neurons\NeuronDOTView.cs" />
     <Compile Include="Graph\Neurons\NeuronGraph.cs" />
+    <Compile Include="Graph\Neurons\NeuronTLPView.cs" />
     <Compile Include="Utils.cs" />
     <Compile Include="ViewModels\GraphViewEngine.cs" />
     <Compile Include="Queries.cs" />
@@ -63,7 +66,7 @@
       <DependentUpon>Reference.svcmap</DependentUpon>
     </Compile>
     <Compile Include="ViewModels\GraphVizEngine.cs" />
-    <Compile Include="ViewModels\TLPEngine.cs" />
+    <Compile Include="ViewModels\TLPView.cs" />
   </ItemGroup>
   <ItemGroup>
     <WCFMetadata Include="Service References\" />
@@ -135,8 +138,8 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\..\GraphLib\GraphLib.csproj">
-      <Project>{D6F219FC-733B-481F-BF78-D34A7CB893EC}</Project>
+    <ProjectReference Include="..\GraphLib\GraphLib.csproj">
+      <Project>{d6f219fc-733b-481f-bf78-d34a7cb893ec}</Project>
       <Name>GraphLib</Name>
     </ProjectReference>
   </ItemGroup>

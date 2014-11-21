@@ -799,7 +799,7 @@
         <EntityTypeShape EntityType="ConnectomeModel.Location" Width="1.5" PointX="5.25" PointY="1.375" Height="4.5505582682291656" IsExpanded="true" />
         <EntityTypeShape EntityType="ConnectomeModel.LocationLink" Width="1.5" PointX="7.5" PointY="2.625" Height="1.9210009765624996" IsExpanded="true" />
         <EntityTypeShape EntityType="ConnectomeModel.Structure" Width="1.5" PointX="3" PointY="3.25" Height="3.8931689453124996" IsExpanded="true" />
-        <EntityTypeShape EntityType="ConnectomeModel.StructureLink" Width="1.5" PointX="5.25" PointY="6.625" Height="2.4140429687500005" IsExpanded="true" />
+        <EntityTypeShape EntityType="ConnectomeModel.StructureLink" Width="1.5" PointX="5.25" PointY="6.875" Height="2.4140429687500005" IsExpanded="true" />
         <EntityTypeShape EntityType="ConnectomeModel.StructureTemplate" Width="1.5" PointX="3" PointY="9.75" Height="1.9210009765624996" IsExpanded="true" />
         <EntityTypeShape EntityType="ConnectomeModel.StructureType" Width="1.5" PointX="0.75" PointY="4.5" Height="4.0575162760416674" IsExpanded="true" />
         <AssociationConnector Association="ConnectomeModel.FK_Location_StructureBase1" ManuallyRouted="false">
