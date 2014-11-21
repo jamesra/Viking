@@ -168,8 +168,6 @@ copy $(ProjectDir)bin\Release\web.config \WebServices\Text\web.config
 copy $(ProjectDir)bin\Release\*.dll \WebServices\Binary\bin
 copy $(ProjectDir)bin\Release\*.pdb \WebServices\Binary\bin
 copy $(ProjectDir)bin\Release\*.svc \WebServices\Binary\
-copy $(ProjectDir)bin\Release\webBinary.config \WebServices\Binary\web.config
-
-</PostBuildEvent>
+copy $(ProjectDir)bin\Release\webBinary.config \WebServices\Binary\web.config</PostBuildEvent>
   </PropertyGroup>
 </Project>

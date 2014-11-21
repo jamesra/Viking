@@ -111,6 +111,18 @@ namespace Annotation.Service.Interfaces
         /// <returns></returns>
         [OperationContract]
         LocationLink[] LocationLinksForSection(long section, long ModifiedAfterThisTime, out long QueryExecutedTime, out LocationLink[] DeletedLinks);
+
+
+        /// <summary>
+        /// Return a list of location objects that have changed in the time interval
+        /// </summary>
+        /// <param name="structure_id">Optional ParentID</param>
+        /// <param name="begin_time">Optional begin time</param>
+        /// <param name="end_time">Optional end time</param>
+        /// <returns></returns>
+        [OperationContract]
+        LocationHistory[] GetLocationChangeLog(long? structure_id, DateTime? begin_time, DateTime? end_time);
+
     }
          
 }

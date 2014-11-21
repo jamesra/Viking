@@ -85,20 +85,20 @@ namespace Annotation
     [DataContract]
     public class Location : DataObjectWithKey<long>
     {
-        private long _ParentID;
-        private long _Section;
-        AnnotationPoint _Position;
-        AnnotationPoint _VolumePosition;
-        AnnotationPoint[] _Verticies = new AnnotationPoint[0]; 
-        private bool _Closed;
-        private long[] _Links = new long[0];
-        private bool _Terminal;
-        private bool _OffEdge;
-        private double _Radius;
-        private short _TypeCode;
-        private long _LastModified;
-        private string _Username;
-        private string _Xml;
+        protected long _ParentID;
+        protected long _Section;
+        protected AnnotationPoint _Position;
+        protected AnnotationPoint _VolumePosition;
+        protected AnnotationPoint[] _Verticies = new AnnotationPoint[0];
+        protected bool _Closed;
+        protected long[] _Links = new long[0];
+        protected bool _Terminal;
+        protected bool _OffEdge;
+        protected double _Radius;
+        protected short _TypeCode;
+        protected long _LastModified;
+        protected string _Username;
+        protected string _Xml;
 
         static System.Runtime.Serialization.Formatters.Binary.BinaryFormatter serializer = new System.Runtime.Serialization.Formatters.Binary.BinaryFormatter(); 
             
@@ -240,6 +240,32 @@ namespace Annotation
             return _Links; 
         }
 
+        protected static AnnotationPoint[] LoadVerticies(System.Data.Linq.Binary db_verticies)
+        {
+            System.IO.MemoryStream vertStream = null;
+            AnnotationPoint[] verticies = null;
+            if (db_verticies != null)
+            {
+                if (db_verticies.Length > 0)
+                {
+                    using (vertStream = new System.IO.MemoryStream(db_verticies.ToArray()))
+                    {
+
+                        try
+                        {
+                            verticies = serializer.Deserialize(vertStream) as AnnotationPoint[];
+                        }
+                        catch (Exception e)
+                        {
+                            verticies = null;
+                        }
+                    }
+                }
+            }
+
+            return verticies;
+        }
+
         public Location(DBLocation db)
         {
             this.ID = db.ID;
@@ -248,15 +274,7 @@ namespace Annotation
 
             this.Section = (long)db.Z;
             this.Position = new AnnotationPoint(db.X, db.Y, db.Z);
-            this.VolumePosition = new AnnotationPoint(db.VolumeX, db.VolumeY, db.Z); 
-            
-            
-            System.IO.MemoryStream vertStream = null;
-            if (db.Verticies != null)
-            {
-                vertStream = new System.IO.MemoryStream(db.Verticies.ToArray());
-            }
-
+            this.VolumePosition = new AnnotationPoint(db.VolumeX, db.VolumeY, db.Z);  
             this._Closed = db.Closed;
             this._Links = PopulateLinks(db);
 
@@ -264,27 +282,8 @@ namespace Annotation
             this._OffEdge = db.OffEdge;
             this._TypeCode = db.TypeCode;
             this._Radius = db.Radius;
-            
-            if (vertStream != null)
-            {
-                try
-                {
-                    this.Verticies = serializer.Deserialize(vertStream) as AnnotationPoint[];
-                }
-                catch (Exception e)
-                {
-                    this.Verticies = new AnnotationPoint[0]; 
-                }
-                finally
-                {
-                    vertStream.Close();
-                }
-            }
-            else
-            {
-                this.Verticies = null; 
-            }
-
+            this._Verticies = LoadVerticies(db.Verticies);
+             
             if (db.Tags == null)
             {
                 //_Tags = new string[0];
@@ -413,5 +412,53 @@ namespace Annotation
              */
         }
     }
-     
+
+    [DataContract]
+    public class LocationHistory : Location
+    {
+        protected ulong  _ChangedColumnMask = 0;
+
+        [DataMember]
+        [Column("ChangedColumnMask")]
+        public ulong ChangedColumnMask
+        {
+            get
+            {
+                return _ChangedColumnMask;
+            }
+        }
+
+
+        public LocationHistory(SelectStructureLocationChangeLogResult db)
+        {
+            this.ID = db.ID.Value; 
+            this.ParentID = db.ParentID.Value;
+
+            this.Section = (long)db.Z;
+            this.Position = new AnnotationPoint(db.X.Value, db.Y.Value, db.Z.Value);
+            this.VolumePosition = new AnnotationPoint(db.VolumeX.Value, db.VolumeY.Value, db.Z.Value);
+            this._Verticies = Location.LoadVerticies(db.Verticies); 
+            this._Closed = db.Closed.Value;
+            this._Links = null; 
+            this._Terminal = db.Terminal.Value;
+            this._OffEdge = db.OffEdge.Value;
+            this._TypeCode = db.TypeCode.Value;
+            this._Radius = db.Radius.Value; 
+            this._ChangedColumnMask = System.Convert.ToUInt64(db.___update_mask); 
+
+            if (db.Tags == null)
+            {
+                //_Tags = new string[0];
+                _Xml = "";
+            }
+            else
+            {
+                //    _Tags = db.Tags.Split(';');
+                _Xml = db.Tags.Value;
+            }
+
+            this._LastModified = db.LastModified.Value.Ticks;
+            this._Username = db.Username;
+        }
+    }
 }

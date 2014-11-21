@@ -54,7 +54,7 @@ namespace Annotation.Database
     #endregion
 		
 		public AnnotationDataContext() : 
-				base(global::AnnotationDatabase.Properties.Settings.Default.RabbitConnectionString1, mappingSource)
+				base(global::AnnotationDatabase.Properties.Settings.Default.RabbitConnectionString2, mappingSource)
 		{
 			OnCreated();
 		}
@@ -207,6 +207,20 @@ namespace Annotation.Database
 		{
 			IExecuteResult result = this.ExecuteMethodCall(this, ((MethodInfo)(MethodInfo.GetCurrentMethod())), structureID);
 			return ((ISingleResult<SelectUnfinishedStructureBranchesWithPositionResult>)(result.ReturnValue));
+		}
+		
+		[global::System.Data.Linq.Mapping.FunctionAttribute(Name="dbo.SelectStructureChangeLog")]
+		public ISingleResult<SelectStructureChangeLogResult> SelectStructureChangeLog([global::System.Data.Linq.Mapping.ParameterAttribute(DbType="BigInt")] System.Nullable<long> structure_ID, [global::System.Data.Linq.Mapping.ParameterAttribute(DbType="DateTime")] System.Nullable<System.DateTime> begin_time, [global::System.Data.Linq.Mapping.ParameterAttribute(DbType="DateTime")] System.Nullable<System.DateTime> end_time)
+		{
+			IExecuteResult result = this.ExecuteMethodCall(this, ((MethodInfo)(MethodInfo.GetCurrentMethod())), structure_ID, begin_time, end_time);
+			return ((ISingleResult<SelectStructureChangeLogResult>)(result.ReturnValue));
+		}
+		
+		[global::System.Data.Linq.Mapping.FunctionAttribute(Name="dbo.SelectStructureLocationChangeLog")]
+		public ISingleResult<SelectStructureLocationChangeLogResult> SelectStructureLocationChangeLog([global::System.Data.Linq.Mapping.ParameterAttribute(DbType="BigInt")] System.Nullable<long> structure_ID, [global::System.Data.Linq.Mapping.ParameterAttribute(DbType="DateTime")] System.Nullable<System.DateTime> begin_time, [global::System.Data.Linq.Mapping.ParameterAttribute(DbType="DateTime")] System.Nullable<System.DateTime> end_time)
+		{
+			IExecuteResult result = this.ExecuteMethodCall(this, ((MethodInfo)(MethodInfo.GetCurrentMethod())), structure_ID, begin_time, end_time);
+			return ((ISingleResult<SelectStructureLocationChangeLogResult>)(result.ReturnValue));
 		}
 	}
 	
@@ -2931,6 +2945,724 @@ namespace Annotation.Database
 				if ((this._Radius != value))
 				{
 					this._Radius = value;
+				}
+			}
+		}
+	}
+	
+	public partial class SelectStructureChangeLogResult
+	{
+		
+		private System.Data.Linq.Binary ____start_lsn;
+		
+		private System.Data.Linq.Binary ____seqval;
+		
+		private System.Nullable<int> ____operation;
+		
+		private System.Data.Linq.Binary ____update_mask;
+		
+		private System.Nullable<long> _ID;
+		
+		private System.Nullable<long> _TypeID;
+		
+		private string _Notes;
+		
+		private System.Nullable<bool> _Verified;
+		
+		private System.Xml.Linq.XElement _Tags;
+		
+		private System.Nullable<double> _Confidence;
+		
+		private System.Data.Linq.Binary _Version;
+		
+		private System.Nullable<long> _ParentID;
+		
+		private System.Nullable<System.DateTime> _Created;
+		
+		private string _Label;
+		
+		private string _Username;
+		
+		private System.Nullable<System.DateTime> _LastModified;
+		
+		public SelectStructureChangeLogResult()
+		{
+		}
+		
+		[global::System.Data.Linq.Mapping.ColumnAttribute(Name="[__$start_lsn]", Storage="____start_lsn", DbType="Binary(10)")]
+		public System.Data.Linq.Binary ___start_lsn
+		{
+			get
+			{
+				return this.____start_lsn;
+			}
+			set
+			{
+				if ((this.____start_lsn != value))
+				{
+					this.____start_lsn = value;
+				}
+			}
+		}
+		
+		[global::System.Data.Linq.Mapping.ColumnAttribute(Name="[__$seqval]", Storage="____seqval", DbType="Binary(10)")]
+		public System.Data.Linq.Binary ___seqval
+		{
+			get
+			{
+				return this.____seqval;
+			}
+			set
+			{
+				if ((this.____seqval != value))
+				{
+					this.____seqval = value;
+				}
+			}
+		}
+		
+		[global::System.Data.Linq.Mapping.ColumnAttribute(Name="[__$operation]", Storage="____operation", DbType="Int")]
+		public System.Nullable<int> ___operation
+		{
+			get
+			{
+				return this.____operation;
+			}
+			set
+			{
+				if ((this.____operation != value))
+				{
+					this.____operation = value;
+				}
+			}
+		}
+		
+		[global::System.Data.Linq.Mapping.ColumnAttribute(Name="[__$update_mask]", Storage="____update_mask", DbType="VarBinary(128)")]
+		public System.Data.Linq.Binary ___update_mask
+		{
+			get
+			{
+				return this.____update_mask;
+			}
+			set
+			{
+				if ((this.____update_mask != value))
+				{
+					this.____update_mask = value;
+				}
+			}
+		}
+		
+		[global::System.Data.Linq.Mapping.ColumnAttribute(Storage="_ID", DbType="BigInt")]
+		public System.Nullable<long> ID
+		{
+			get
+			{
+				return this._ID;
+			}
+			set
+			{
+				if ((this._ID != value))
+				{
+					this._ID = value;
+				}
+			}
+		}
+		
+		[global::System.Data.Linq.Mapping.ColumnAttribute(Storage="_TypeID", DbType="BigInt")]
+		public System.Nullable<long> TypeID
+		{
+			get
+			{
+				return this._TypeID;
+			}
+			set
+			{
+				if ((this._TypeID != value))
+				{
+					this._TypeID = value;
+				}
+			}
+		}
+		
+		[global::System.Data.Linq.Mapping.ColumnAttribute(Storage="_Notes", DbType="NText", UpdateCheck=UpdateCheck.Never)]
+		public string Notes
+		{
+			get
+			{
+				return this._Notes;
+			}
+			set
+			{
+				if ((this._Notes != value))
+				{
+					this._Notes = value;
+				}
+			}
+		}
+		
+		[global::System.Data.Linq.Mapping.ColumnAttribute(Storage="_Verified", DbType="Bit")]
+		public System.Nullable<bool> Verified
+		{
+			get
+			{
+				return this._Verified;
+			}
+			set
+			{
+				if ((this._Verified != value))
+				{
+					this._Verified = value;
+				}
+			}
+		}
+		
+		[global::System.Data.Linq.Mapping.ColumnAttribute(Storage="_Tags", DbType="Xml")]
+		public System.Xml.Linq.XElement Tags
+		{
+			get
+			{
+				return this._Tags;
+			}
+			set
+			{
+				if ((this._Tags != value))
+				{
+					this._Tags = value;
+				}
+			}
+		}
+		
+		[global::System.Data.Linq.Mapping.ColumnAttribute(Storage="_Confidence", DbType="Float")]
+		public System.Nullable<double> Confidence
+		{
+			get
+			{
+				return this._Confidence;
+			}
+			set
+			{
+				if ((this._Confidence != value))
+				{
+					this._Confidence = value;
+				}
+			}
+		}
+		
+		[global::System.Data.Linq.Mapping.ColumnAttribute(Storage="_Version", DbType="Binary(8)")]
+		public System.Data.Linq.Binary Version
+		{
+			get
+			{
+				return this._Version;
+			}
+			set
+			{
+				if ((this._Version != value))
+				{
+					this._Version = value;
+				}
+			}
+		}
+		
+		[global::System.Data.Linq.Mapping.ColumnAttribute(Storage="_ParentID", DbType="BigInt")]
+		public System.Nullable<long> ParentID
+		{
+			get
+			{
+				return this._ParentID;
+			}
+			set
+			{
+				if ((this._ParentID != value))
+				{
+					this._ParentID = value;
+				}
+			}
+		}
+		
+		[global::System.Data.Linq.Mapping.ColumnAttribute(Storage="_Created", DbType="DateTime")]
+		public System.Nullable<System.DateTime> Created
+		{
+			get
+			{
+				return this._Created;
+			}
+			set
+			{
+				if ((this._Created != value))
+				{
+					this._Created = value;
+				}
+			}
+		}
+		
+		[global::System.Data.Linq.Mapping.ColumnAttribute(Storage="_Label", DbType="VarChar(64)")]
+		public string Label
+		{
+			get
+			{
+				return this._Label;
+			}
+			set
+			{
+				if ((this._Label != value))
+				{
+					this._Label = value;
+				}
+			}
+		}
+		
+		[global::System.Data.Linq.Mapping.ColumnAttribute(Storage="_Username", DbType="NChar(16)")]
+		public string Username
+		{
+			get
+			{
+				return this._Username;
+			}
+			set
+			{
+				if ((this._Username != value))
+				{
+					this._Username = value;
+				}
+			}
+		}
+		
+		[global::System.Data.Linq.Mapping.ColumnAttribute(Storage="_LastModified", DbType="DateTime")]
+		public System.Nullable<System.DateTime> LastModified
+		{
+			get
+			{
+				return this._LastModified;
+			}
+			set
+			{
+				if ((this._LastModified != value))
+				{
+					this._LastModified = value;
+				}
+			}
+		}
+	}
+	
+	public partial class SelectStructureLocationChangeLogResult
+	{
+		
+		private System.Data.Linq.Binary ____start_lsn;
+		
+		private System.Data.Linq.Binary ____seqval;
+		
+		private System.Nullable<int> ____operation;
+		
+		private System.Data.Linq.Binary ____update_mask;
+		
+		private System.Nullable<long> _ID;
+		
+		private System.Nullable<long> _ParentID;
+		
+		private System.Nullable<double> _X;
+		
+		private System.Nullable<double> _Y;
+		
+		private System.Nullable<double> _Z;
+		
+		private System.Data.Linq.Binary _Verticies;
+		
+		private System.Nullable<bool> _Closed;
+		
+		private System.Data.Linq.Binary _Version;
+		
+		private System.Data.Linq.Binary _Overlay;
+		
+		private System.Xml.Linq.XElement _Tags;
+		
+		private System.Nullable<double> _VolumeX;
+		
+		private System.Nullable<double> _VolumeY;
+		
+		private System.Nullable<bool> _Terminal;
+		
+		private System.Nullable<bool> _OffEdge;
+		
+		private System.Nullable<double> _Radius;
+		
+		private System.Nullable<short> _TypeCode;
+		
+		private System.Nullable<System.DateTime> _LastModified;
+		
+		private System.Nullable<System.DateTime> _Created;
+		
+		private string _Username;
+		
+		public SelectStructureLocationChangeLogResult()
+		{
+		}
+		
+		[global::System.Data.Linq.Mapping.ColumnAttribute(Name="[__$start_lsn]", Storage="____start_lsn", DbType="Binary(10)")]
+		public System.Data.Linq.Binary ___start_lsn
+		{
+			get
+			{
+				return this.____start_lsn;
+			}
+			set
+			{
+				if ((this.____start_lsn != value))
+				{
+					this.____start_lsn = value;
+				}
+			}
+		}
+		
+		[global::System.Data.Linq.Mapping.ColumnAttribute(Name="[__$seqval]", Storage="____seqval", DbType="Binary(10)")]
+		public System.Data.Linq.Binary ___seqval
+		{
+			get
+			{
+				return this.____seqval;
+			}
+			set
+			{
+				if ((this.____seqval != value))
+				{
+					this.____seqval = value;
+				}
+			}
+		}
+		
+		[global::System.Data.Linq.Mapping.ColumnAttribute(Name="[__$operation]", Storage="____operation", DbType="Int")]
+		public System.Nullable<int> ___operation
+		{
+			get
+			{
+				return this.____operation;
+			}
+			set
+			{
+				if ((this.____operation != value))
+				{
+					this.____operation = value;
+				}
+			}
+		}
+		
+		[global::System.Data.Linq.Mapping.ColumnAttribute(Name="[__$update_mask]", Storage="____update_mask", DbType="VarBinary(128)")]
+		public System.Data.Linq.Binary ___update_mask
+		{
+			get
+			{
+				return this.____update_mask;
+			}
+			set
+			{
+				if ((this.____update_mask != value))
+				{
+					this.____update_mask = value;
+				}
+			}
+		}
+		
+		[global::System.Data.Linq.Mapping.ColumnAttribute(Storage="_ID", DbType="BigInt")]
+		public System.Nullable<long> ID
+		{
+			get
+			{
+				return this._ID;
+			}
+			set
+			{
+				if ((this._ID != value))
+				{
+					this._ID = value;
+				}
+			}
+		}
+		
+		[global::System.Data.Linq.Mapping.ColumnAttribute(Storage="_ParentID", DbType="BigInt")]
+		public System.Nullable<long> ParentID
+		{
+			get
+			{
+				return this._ParentID;
+			}
+			set
+			{
+				if ((this._ParentID != value))
+				{
+					this._ParentID = value;
+				}
+			}
+		}
+		
+		[global::System.Data.Linq.Mapping.ColumnAttribute(Storage="_X", DbType="Float")]
+		public System.Nullable<double> X
+		{
+			get
+			{
+				return this._X;
+			}
+			set
+			{
+				if ((this._X != value))
+				{
+					this._X = value;
+				}
+			}
+		}
+		
+		[global::System.Data.Linq.Mapping.ColumnAttribute(Storage="_Y", DbType="Float")]
+		public System.Nullable<double> Y
+		{
+			get
+			{
+				return this._Y;
+			}
+			set
+			{
+				if ((this._Y != value))
+				{
+					this._Y = value;
+				}
+			}
+		}
+		
+		[global::System.Data.Linq.Mapping.ColumnAttribute(Storage="_Z", DbType="Float")]
+		public System.Nullable<double> Z
+		{
+			get
+			{
+				return this._Z;
+			}
+			set
+			{
+				if ((this._Z != value))
+				{
+					this._Z = value;
+				}
+			}
+		}
+		
+		[global::System.Data.Linq.Mapping.ColumnAttribute(Storage="_Verticies", DbType="VarBinary(MAX)")]
+		public System.Data.Linq.Binary Verticies
+		{
+			get
+			{
+				return this._Verticies;
+			}
+			set
+			{
+				if ((this._Verticies != value))
+				{
+					this._Verticies = value;
+				}
+			}
+		}
+		
+		[global::System.Data.Linq.Mapping.ColumnAttribute(Storage="_Closed", DbType="Bit")]
+		public System.Nullable<bool> Closed
+		{
+			get
+			{
+				return this._Closed;
+			}
+			set
+			{
+				if ((this._Closed != value))
+				{
+					this._Closed = value;
+				}
+			}
+		}
+		
+		[global::System.Data.Linq.Mapping.ColumnAttribute(Storage="_Version", DbType="Binary(8)")]
+		public System.Data.Linq.Binary Version
+		{
+			get
+			{
+				return this._Version;
+			}
+			set
+			{
+				if ((this._Version != value))
+				{
+					this._Version = value;
+				}
+			}
+		}
+		
+		[global::System.Data.Linq.Mapping.ColumnAttribute(Storage="_Overlay", DbType="VarBinary(MAX)")]
+		public System.Data.Linq.Binary Overlay
+		{
+			get
+			{
+				return this._Overlay;
+			}
+			set
+			{
+				if ((this._Overlay != value))
+				{
+					this._Overlay = value;
+				}
+			}
+		}
+		
+		[global::System.Data.Linq.Mapping.ColumnAttribute(Storage="_Tags", DbType="Xml")]
+		public System.Xml.Linq.XElement Tags
+		{
+			get
+			{
+				return this._Tags;
+			}
+			set
+			{
+				if ((this._Tags != value))
+				{
+					this._Tags = value;
+				}
+			}
+		}
+		
+		[global::System.Data.Linq.Mapping.ColumnAttribute(Storage="_VolumeX", DbType="Float")]
+		public System.Nullable<double> VolumeX
+		{
+			get
+			{
+				return this._VolumeX;
+			}
+			set
+			{
+				if ((this._VolumeX != value))
+				{
+					this._VolumeX = value;
+				}
+			}
+		}
+		
+		[global::System.Data.Linq.Mapping.ColumnAttribute(Storage="_VolumeY", DbType="Float")]
+		public System.Nullable<double> VolumeY
+		{
+			get
+			{
+				return this._VolumeY;
+			}
+			set
+			{
+				if ((this._VolumeY != value))
+				{
+					this._VolumeY = value;
+				}
+			}
+		}
+		
+		[global::System.Data.Linq.Mapping.ColumnAttribute(Storage="_Terminal", DbType="Bit")]
+		public System.Nullable<bool> Terminal
+		{
+			get
+			{
+				return this._Terminal;
+			}
+			set
+			{
+				if ((this._Terminal != value))
+				{
+					this._Terminal = value;
+				}
+			}
+		}
+		
+		[global::System.Data.Linq.Mapping.ColumnAttribute(Storage="_OffEdge", DbType="Bit")]
+		public System.Nullable<bool> OffEdge
+		{
+			get
+			{
+				return this._OffEdge;
+			}
+			set
+			{
+				if ((this._OffEdge != value))
+				{
+					this._OffEdge = value;
+				}
+			}
+		}
+		
+		[global::System.Data.Linq.Mapping.ColumnAttribute(Storage="_Radius", DbType="Float")]
+		public System.Nullable<double> Radius
+		{
+			get
+			{
+				return this._Radius;
+			}
+			set
+			{
+				if ((this._Radius != value))
+				{
+					this._Radius = value;
+				}
+			}
+		}
+		
+		[global::System.Data.Linq.Mapping.ColumnAttribute(Storage="_TypeCode", DbType="SmallInt")]
+		public System.Nullable<short> TypeCode
+		{
+			get
+			{
+				return this._TypeCode;
+			}
+			set
+			{
+				if ((this._TypeCode != value))
+				{
+					this._TypeCode = value;
+				}
+			}
+		}
+		
+		[global::System.Data.Linq.Mapping.ColumnAttribute(Storage="_LastModified", DbType="DateTime")]
+		public System.Nullable<System.DateTime> LastModified
+		{
+			get
+			{
+				return this._LastModified;
+			}
+			set
+			{
+				if ((this._LastModified != value))
+				{
+					this._LastModified = value;
+				}
+			}
+		}
+		
+		[global::System.Data.Linq.Mapping.ColumnAttribute(Storage="_Created", DbType="DateTime")]
+		public System.Nullable<System.DateTime> Created
+		{
+			get
+			{
+				return this._Created;
+			}
+			set
+			{
+				if ((this._Created != value))
+				{
+					this._Created = value;
+				}
+			}
+		}
+		
+		[global::System.Data.Linq.Mapping.ColumnAttribute(Storage="_Username", DbType="NChar(16)")]
+		public string Username
+		{
+			get
+			{
+				return this._Username;
+			}
+			set
+			{
+				if ((this._Username != value))
+				{
+					this._Username = value;
 				}
 			}
 		}

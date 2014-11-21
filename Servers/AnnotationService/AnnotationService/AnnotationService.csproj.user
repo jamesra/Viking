@@ -7,6 +7,9 @@
     <StartProgram>C:\Program Files (x86)\Microsoft Visual Studio 9.0\Common7\IDE\WcfSvcHost.exe</StartProgram>
     <StartWorkingDirectory>E:\src\AnnotationService\AnnotationService\bin\Debug</StartWorkingDirectory>
   </PropertyGroup>
+  <PropertyGroup>
+    <ProjectView>ShowAllFiles</ProjectView>
+  </PropertyGroup>
   <ProjectExtensions>
     <VisualStudio>
       <FlavorProperties GUID="{3D9AD99F-2412-4246-B90B-4EAA41C64699}">

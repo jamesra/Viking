@@ -1621,6 +1621,19 @@ namespace Annotation
             return links.ToArray();
         }
 
+        public LocationHistory[] GetLocationChangeLog(long? structure_id, DateTime? begin_time, DateTime? end_time)
+        {
+            ISingleResult<SelectStructureLocationChangeLogResult> result = db.SelectStructureLocationChangeLog(structure_id, begin_time, end_time);
+            List<LocationHistory> locations = new List<LocationHistory>(result.Count());
+            foreach (SelectStructureLocationChangeLogResult row in result)
+            {
+                locations.Add(new LocationHistory(row));
+            }
+
+            return locations.ToArray();
+        }
+
+
         #endregion
 
 

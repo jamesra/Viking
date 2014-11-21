@@ -1,9 +1,9 @@
 /**** You need to replace the following templates to use this script ****/
-/**** {DATABASE_NAME} = Name of the database  */
+/**** TEST = Name of the database  */
 /**** {DATABASE_DIRECTORY} = Directory Datbase lives in if it needs to be created, with the trailing slash i.e. C:\Database\
 */
 DECLARE @DATABASE_NAME VARCHAR(50)
-SET @DATABASE_NAME = '{DATABASE_NAME}'
+SET @DATABASE_NAME = 'TEST'
 DECLARE @DATABASE_DIRECTORY VARCHAR(50)
 SET @DATABASE_DIRECTORY = 'C:\Database\'
 
@@ -29,62 +29,63 @@ BEGIN
 END
 	
 CREATE TABLE #UpdateVars ([Version] VARCHAR(100));
-INSERT INTO #UpdateVars Values (N'{DATABASE_NAME}');
+INSERT INTO #UpdateVars Values (N'TEST');
 
 DECLARE @db_id VARCHAR(100);
 SET @db_id = db_id(@DATABASE_NAME)
 
 print @db_id
 
+
 IF @db_id IS NULL
 BEGIN
 	print N'Database does not exist, creating...' 
 	
 	declare @Path varchar(100)
-	set @Path = N'C:\Database\{DATABASE_NAME}\'
+	set @Path = N'C:\Database\TEST\'
 	EXEC master.dbo.xp_create_subdir @Path
 	
-	/****** Object:  Database [{DATABASE_NAME}]    Script Date: 06/14/2011 13:13:50 ******/
-	CREATE DATABASE [{DATABASE_NAME}] ON  PRIMARY 
-		( NAME = N'{DATABASE_NAME}', FILENAME = N'C:\Database\{DATABASE_NAME}\{DATABASE_NAME}.mdf' , SIZE = 4096KB , MAXSIZE = UNLIMITED, FILEGROWTH = 1024KB )
+	/****** Object:  Database [TEST]    Script Date: 06/14/2011 13:13:50 ******/
+	CREATE DATABASE [TEST] ON  PRIMARY 
+		( NAME = N'TEST', FILENAME = N'C:\Database\TEST\TEST.mdf' , SIZE = 4096KB , MAXSIZE = UNLIMITED, FILEGROWTH = 1024KB )
 		 LOG ON 
-		( NAME = N'{DATABASE_NAME}_log', FILENAME = N'C:\Database\{DATABASE_NAME}\{DATABASE_NAME}_log.ldf' , SIZE = 4096KB , MAXSIZE = 2048GB , FILEGROWTH = 10%)
+		( NAME = N'TEST_log', FILENAME = N'C:\Database\TEST\TEST_log.ldf' , SIZE = 4096KB , MAXSIZE = 2048GB , FILEGROWTH = 10%)
 		
-	ALTER DATABASE [{DATABASE_NAME}] SET COMPATIBILITY_LEVEL = 100
+	ALTER DATABASE [TEST] SET COMPATIBILITY_LEVEL = 100
 	
 	IF (1 = FULLTEXTSERVICEPROPERTY('IsFullTextInstalled'))
 	begin
-		EXEC [{DATABASE_NAME}].[dbo].[sp_fulltext_database] @action = 'enable'
+		EXEC [TEST].[dbo].[sp_fulltext_database] @action = 'enable'
 	end
 	
-	ALTER DATABASE [{DATABASE_NAME}] SET ANSI_NULL_DEFAULT OFF
-	ALTER DATABASE [{DATABASE_NAME}] SET ANSI_NULLS OFF
-	ALTER DATABASE [{DATABASE_NAME}] SET ANSI_PADDING OFF
-	ALTER DATABASE [{DATABASE_NAME}] SET ANSI_WARNINGS OFF
-	ALTER DATABASE [{DATABASE_NAME}] SET ARITHABORT OFF
-	ALTER DATABASE [{DATABASE_NAME}] SET AUTO_CLOSE OFF
-	ALTER DATABASE [{DATABASE_NAME}] SET AUTO_CREATE_STATISTICS ON
-	ALTER DATABASE [{DATABASE_NAME}] SET AUTO_SHRINK OFF
-	ALTER DATABASE [{DATABASE_NAME}] SET AUTO_UPDATE_STATISTICS ON
-	ALTER DATABASE [{DATABASE_NAME}] SET CURSOR_CLOSE_ON_COMMIT OFF
-	ALTER DATABASE [{DATABASE_NAME}] SET CURSOR_DEFAULT  GLOBAL
-	ALTER DATABASE [{DATABASE_NAME}] SET CONCAT_NULL_YIELDS_NULL OFF
-	ALTER DATABASE [{DATABASE_NAME}] SET NUMERIC_ROUNDABORT OFF
-	ALTER DATABASE [{DATABASE_NAME}] SET QUOTED_IDENTIFIER OFF
-	ALTER DATABASE [{DATABASE_NAME}] SET RECURSIVE_TRIGGERS OFF
-	ALTER DATABASE [{DATABASE_NAME}] SET  DISABLE_BROKER
-	ALTER DATABASE [{DATABASE_NAME}] SET AUTO_UPDATE_STATISTICS_ASYNC OFF
-	ALTER DATABASE [{DATABASE_NAME}] SET DATE_CORRELATION_OPTIMIZATION OFF
-	ALTER DATABASE [{DATABASE_NAME}] SET TRUSTWORTHY OFF
-	ALTER DATABASE [{DATABASE_NAME}] SET ALLOW_SNAPSHOT_ISOLATION OFF
-	ALTER DATABASE [{DATABASE_NAME}] SET PARAMETERIZATION SIMPLE
-	ALTER DATABASE [{DATABASE_NAME}] SET READ_COMMITTED_SNAPSHOT OFF
-	ALTER DATABASE [{DATABASE_NAME}] SET HONOR_BROKER_PRIORITY OFF
-	ALTER DATABASE [{DATABASE_NAME}] SET  READ_WRITE
-	ALTER DATABASE [{DATABASE_NAME}] SET RECOVERY SIMPLE
-	ALTER DATABASE [{DATABASE_NAME}] SET  MULTI_USER
-	ALTER DATABASE [{DATABASE_NAME}] SET PAGE_VERIFY CHECKSUM
-	ALTER DATABASE [{DATABASE_NAME}] SET DB_CHAINING OFF
+	ALTER DATABASE [TEST] SET ANSI_NULL_DEFAULT OFF
+	ALTER DATABASE [TEST] SET ANSI_NULLS OFF
+	ALTER DATABASE [TEST] SET ANSI_PADDING OFF
+	ALTER DATABASE [TEST] SET ANSI_WARNINGS OFF
+	ALTER DATABASE [TEST] SET ARITHABORT OFF
+	ALTER DATABASE [TEST] SET AUTO_CLOSE OFF
+	ALTER DATABASE [TEST] SET AUTO_CREATE_STATISTICS ON
+	ALTER DATABASE [TEST] SET AUTO_SHRINK OFF
+	ALTER DATABASE [TEST] SET AUTO_UPDATE_STATISTICS ON
+	ALTER DATABASE [TEST] SET CURSOR_CLOSE_ON_COMMIT OFF
+	ALTER DATABASE [TEST] SET CURSOR_DEFAULT  GLOBAL
+	ALTER DATABASE [TEST] SET CONCAT_NULL_YIELDS_NULL OFF
+	ALTER DATABASE [TEST] SET NUMERIC_ROUNDABORT OFF
+	ALTER DATABASE [TEST] SET QUOTED_IDENTIFIER OFF
+	ALTER DATABASE [TEST] SET RECURSIVE_TRIGGERS OFF
+	ALTER DATABASE [TEST] SET  DISABLE_BROKER
+	ALTER DATABASE [TEST] SET AUTO_UPDATE_STATISTICS_ASYNC OFF
+	ALTER DATABASE [TEST] SET DATE_CORRELATION_OPTIMIZATION OFF
+	ALTER DATABASE [TEST] SET TRUSTWORTHY OFF
+	ALTER DATABASE [TEST] SET ALLOW_SNAPSHOT_ISOLATION OFF
+	ALTER DATABASE [TEST] SET PARAMETERIZATION SIMPLE
+	ALTER DATABASE [TEST] SET READ_COMMITTED_SNAPSHOT OFF
+	ALTER DATABASE [TEST] SET HONOR_BROKER_PRIORITY OFF
+	ALTER DATABASE [TEST] SET  READ_WRITE
+	ALTER DATABASE [TEST] SET RECOVERY SIMPLE
+	ALTER DATABASE [TEST] SET  MULTI_USER
+	ALTER DATABASE [TEST] SET PAGE_VERIFY CHECKSUM
+	ALTER DATABASE [TEST] SET DB_CHAINING OFF
 	
 	print N'Created Database...' 
 	INSERT INTO #UpdateVars Values (DB_ID(N'CreateTables'));
@@ -92,7 +93,11 @@ END
 
 GO
 
-USE [{DATABASE_NAME}]
+USE [TEST]
+GO
+
+--Need to specify database owner before enabling change tracking
+EXEC sp_changedbowner 'sa'
 GO
 
 /*Find out if we need to create the tables in our database*/
@@ -1101,7 +1106,7 @@ END
 */  
 GO
 
-Use [{DATABASE_NAME}]
+Use [TEST]
 GO
 
 BEGIN TRANSACTION main
@@ -1935,7 +1940,8 @@ end
 	begin
      print N'Add procedure for power users to more safely change structures type without UPDATE SET WHERE query'
      BEGIN TRANSACTION sixteen
-		 
+		  
+
 		EXEC('
 			 CREATE PROCEDURE UpdateStructureType
 				@StructureID bigint,
@@ -1961,6 +1967,182 @@ end
 	 COMMIT TRANSACTION sixteen
 	end
 
+	if(not(exists(select (1) from DBVersion where DBVersionID = 17)))
+	begin
+     print N'Create role for change logging'
+     BEGIN TRANSACTION seventeen
+
+	    CREATE ROLE [ChangeTracker]
+		if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
+		  --insert the second version marker
+		 INSERT INTO DBVersion values (17, 
+		   'Create role for change logging',getDate(),User_ID())
+
+	 COMMIT TRANSACTION seventeen
+	end
+
+	
+	if(not(exists(select (1) from DBVersion where DBVersionID = 18)))
+	begin
+     print N'Enable change logging'
+	 BEGIN TRANSACTION eighteen
+		
+		
+
+		EXEC sys.sp_cdc_enable_db
+		
+		EXEC sys.sp_cdc_enable_table
+			@source_schema = N'dbo',
+			@source_name = N'Location',
+			@capture_instance = N'Location',
+			@role_name = N'ChangeTracker',
+			@supports_net_changes = 1
+		
+		EXEC sys.sp_cdc_enable_table
+			@source_schema = N'dbo',
+			@source_name = N'Structure',
+			@capture_instance = N'Structure',
+			@role_name = N'ChangeTracker',
+			@supports_net_changes = 1
+
+		EXEC sys.sp_cdc_enable_table
+			@source_schema = N'dbo',
+			@source_name = N'StructureType',
+			@capture_instance = N'StructureType',
+			@role_name = N'ChangeTracker',
+			@supports_net_changes = 1
+
+		EXEC sys.sp_cdc_enable_table
+			@source_schema = N'dbo',
+			@source_name = N'StructureLink',
+			@capture_instance = N'StructureLink',
+			@role_name = N'ChangeTracker'
+
+		EXEC sys.sp_cdc_enable_table
+			@source_schema = N'dbo',
+			@source_name = N'LocationLink',
+			@capture_instance = N'LocationLink',
+			@role_name = N'ChangeTracker'
+				
+
+		--any potential errors get reported, and the script is rolled back and terminated
+		 if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
+		  --insert the second version marker
+		 INSERT INTO DBVersion values (18, 
+		   'Enable change logging',getDate(),User_ID())
+
+	 COMMIT TRANSACTION eighteen
+	end
+
+	if(not(exists(select (1) from DBVersion where DBVersionID = 19)))
+	begin
+     print N'Add stored procedures to query changes'
+	 BEGIN TRANSACTION nineteen
+		  
+		EXEC('
+			CREATE PROCEDURE [dbo].SelectStructureChangeLog
+				-- Add the parameters for the stored procedure here
+				@structure_ID bigint = NULL,
+				@begin_time datetime = NULL,
+				@end_time datetime = NULL 
+			AS
+			BEGIN
+				-- SET NOCOUNT ON added to prevent extra result sets from
+				-- interfering with SELECT statements.
+				SET NOCOUNT ON;
+
+				DECLARE @capture_instance_name varchar(128)
+				set @capture_instance_name = ''Structure''
+
+				DECLARE @from_lsn binary(10), @to_lsn binary(10), @filter NVarChar(64)
+				IF @begin_time IS NOT NULL
+					set @from_lsn = sys.fn_cdc_map_time_to_lsn(''smallest greater than'', @begin_time)
+				ELSE
+					set @from_lsn  = sys.fn_cdc_get_min_lsn(@capture_instance_name)
+	 
+				IF @end_time IS NOT NULL
+					set @to_lsn = sys.fn_cdc_map_time_to_lsn(''largest less than or equal'', @end_time)
+				ELSE
+					set @to_lsn  = sys.fn_cdc_get_max_lsn()
+	 
+				set @filter = N''all''
+
+				if @structure_ID IS NOT NULL
+					SELECT *
+						FROM cdc.fn_cdc_get_all_changes_Structure(@from_lsn, @to_lsn, @filter) 
+						where ID=@structure_ID 
+						order by __$seqval
+				ELSE 
+					SELECT *
+						FROM cdc.fn_cdc_get_all_changes_Structure(@from_lsn, @to_lsn, @filter) 
+						order by __$seqval
+			END')
+
+		EXEC('
+			CREATE PROCEDURE [dbo].SelectStructureLocationChangeLog
+				-- Add the parameters for the stored procedure here
+				@structure_ID bigint = NULL,
+				@begin_time datetime = NULL,
+				@end_time datetime = NULL 
+			AS
+			BEGIN
+				-- SET NOCOUNT ON added to prevent extra result sets from
+				-- interfering with SELECT statements.
+				SET NOCOUNT ON;
+
+				DECLARE @capture_instance_name varchar(128)
+				set @capture_instance_name = ''Location''
+
+				DECLARE @from_lsn binary(10), @to_lsn binary(10), @filter NVarChar(64)
+				IF @begin_time IS NOT NULL
+					set @from_lsn = sys.fn_cdc_map_time_to_lsn(''smallest greater than'', @begin_time)
+				ELSE
+					set @from_lsn  = sys.fn_cdc_get_min_lsn(@capture_instance_name)
+	 
+				IF @end_time IS NOT NULL
+					set @to_lsn = sys.fn_cdc_map_time_to_lsn(''largest less than or equal'', @end_time)
+				ELSE
+					set @to_lsn  = sys.fn_cdc_get_max_lsn()
+	 
+				set @filter = N''all''
+
+				if @structure_ID IS NOT NULL
+					SELECT *
+						FROM cdc.fn_cdc_get_all_changes_Location(@from_lsn, @to_lsn, @filter) 
+						where ParentID=@structure_ID 
+						order by __$seqval
+				ELSE 
+					SELECT *
+						FROM cdc.fn_cdc_get_all_changes_Location(@from_lsn, @to_lsn, @filter) 
+						order by __$seqval
+			END
+		')
+		
+				
+
+		--any potential errors get reported, and the script is rolled back and terminated
+		 if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
+		  --insert the second version marker
+		 INSERT INTO DBVersion values (19, 
+		   'Add stored procedures to query changes',getDate(),User_ID())
+
+	 COMMIT TRANSACTION nineteen
+	end
+
 --from here on, continually add steps in the previous manner as needed.
 	COMMIT TRANSACTION main
- 

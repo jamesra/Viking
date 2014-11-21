@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?><Database Name="Rabbit" Class="AnnotationDataContext" xmlns="http://schemas.microsoft.com/linqtosql/dbml/2007">
-  <Connection Mode="AppSettings" ConnectionString="Data Source=OpR-Marc-RC1\SQLEXPRESS;Initial Catalog=Rabbit;Integrated Security=True" SettingsObjectName="AnnotationDatabase.Properties.Settings" SettingsPropertyName="RabbitConnectionString1" Provider="System.Data.SqlClient" />
+  <Connection Mode="AppSettings" ConnectionString="Data Source=OpR-Marc-DB1;Initial Catalog=Rabbit;Integrated Security=True" SettingsObjectName="AnnotationDatabase.Properties.Settings" SettingsPropertyName="RabbitConnectionString2" Provider="System.Data.SqlClient" />
   <Table Name="dbo.StructureType" Member="DBStructureTypes">
     <Type Name="DBStructureType">
       <Column Name="ID" Type="System.Int64" DbType="BigInt NOT NULL IDENTITY" IsPrimaryKey="true" IsDbGenerated="true" CanBeNull="false" />
@@ -174,6 +174,59 @@
       <Column Name="Y" Type="System.Double" DbType="Float NOT NULL" CanBeNull="false" />
       <Column Name="Z" Type="System.Double" DbType="Float NOT NULL" CanBeNull="false" />
       <Column Name="Radius" Type="System.Double" DbType="Float NOT NULL" CanBeNull="false" />
+    </ElementType>
+  </Function>
+  <Function Name="dbo.SelectStructureChangeLog" Method="SelectStructureChangeLog">
+    <Parameter Name="structure_ID" Type="System.Int64" DbType="BigInt" />
+    <Parameter Name="begin_time" Type="System.DateTime" DbType="DateTime" />
+    <Parameter Name="end_time" Type="System.DateTime" DbType="DateTime" />
+    <ElementType Name="SelectStructureChangeLogResult">
+      <Column Name="[__$start_lsn]" Member="___start_lsn" Type="System.Data.Linq.Binary" DbType="Binary(10)" CanBeNull="true" />
+      <Column Name="[__$seqval]" Member="___seqval" Type="System.Data.Linq.Binary" DbType="Binary(10)" CanBeNull="true" />
+      <Column Name="[__$operation]" Member="___operation" Type="System.Int32" DbType="Int" CanBeNull="true" />
+      <Column Name="[__$update_mask]" Member="___update_mask" Type="System.Data.Linq.Binary" DbType="VarBinary(128)" CanBeNull="true" />
+      <Column Name="ID" Type="System.Int64" DbType="BigInt" CanBeNull="true" />
+      <Column Name="TypeID" Type="System.Int64" DbType="BigInt" CanBeNull="true" />
+      <Column Name="Notes" Type="System.String" DbType="NText" CanBeNull="true" UpdateCheck="Never" />
+      <Column Name="Verified" Type="System.Boolean" DbType="Bit" CanBeNull="true" />
+      <Column Name="Tags" Type="System.Xml.Linq.XElement" DbType="Xml" CanBeNull="true" />
+      <Column Name="Confidence" Type="System.Double" DbType="Float" CanBeNull="true" />
+      <Column Name="Version" Type="System.Data.Linq.Binary" DbType="Binary(8)" CanBeNull="true" />
+      <Column Name="ParentID" Type="System.Int64" DbType="BigInt" CanBeNull="true" />
+      <Column Name="Created" Type="System.DateTime" DbType="DateTime" CanBeNull="true" />
+      <Column Name="Label" Type="System.String" DbType="VarChar(64)" CanBeNull="true" />
+      <Column Name="Username" Type="System.String" DbType="NChar(16)" CanBeNull="true" />
+      <Column Name="LastModified" Type="System.DateTime" DbType="DateTime" CanBeNull="true" />
+    </ElementType>
+  </Function>
+  <Function Name="dbo.SelectStructureLocationChangeLog" Method="SelectStructureLocationChangeLog">
+    <Parameter Name="structure_ID" Type="System.Int64" DbType="BigInt" />
+    <Parameter Name="begin_time" Type="System.DateTime" DbType="DateTime" />
+    <Parameter Name="end_time" Type="System.DateTime" DbType="DateTime" />
+    <ElementType Name="SelectStructureLocationChangeLogResult">
+      <Column Name="[__$start_lsn]" Member="___start_lsn" Type="System.Data.Linq.Binary" DbType="Binary(10)" CanBeNull="true" />
+      <Column Name="[__$seqval]" Member="___seqval" Type="System.Data.Linq.Binary" DbType="Binary(10)" CanBeNull="true" />
+      <Column Name="[__$operation]" Member="___operation" Type="System.Int32" DbType="Int" CanBeNull="true" />
+      <Column Name="[__$update_mask]" Member="___update_mask" Type="System.Data.Linq.Binary" DbType="VarBinary(128)" CanBeNull="true" />
+      <Column Name="ID" Type="System.Int64" DbType="BigInt" CanBeNull="true" />
+      <Column Name="ParentID" Type="System.Int64" DbType="BigInt" CanBeNull="true" />
+      <Column Name="X" Type="System.Double" DbType="Float" CanBeNull="true" />
+      <Column Name="Y" Type="System.Double" DbType="Float" CanBeNull="true" />
+      <Column Name="Z" Type="System.Double" DbType="Float" CanBeNull="true" />
+      <Column Name="Verticies" Type="System.Data.Linq.Binary" DbType="VarBinary(MAX)" CanBeNull="true" />
+      <Column Name="Closed" Type="System.Boolean" DbType="Bit" CanBeNull="true" />
+      <Column Name="Version" Type="System.Data.Linq.Binary" DbType="Binary(8)" CanBeNull="true" />
+      <Column Name="Overlay" Type="System.Data.Linq.Binary" DbType="VarBinary(MAX)" CanBeNull="true" />
+      <Column Name="Tags" Type="System.Xml.Linq.XElement" DbType="Xml" CanBeNull="true" />
+      <Column Name="VolumeX" Type="System.Double" DbType="Float" CanBeNull="true" />
+      <Column Name="VolumeY" Type="System.Double" DbType="Float" CanBeNull="true" />
+      <Column Name="Terminal" Type="System.Boolean" DbType="Bit" CanBeNull="true" />
+      <Column Name="OffEdge" Type="System.Boolean" DbType="Bit" CanBeNull="true" />
+      <Column Name="Radius" Type="System.Double" DbType="Float" CanBeNull="true" />
+      <Column Name="TypeCode" Type="System.Int16" DbType="SmallInt" CanBeNull="true" />
+      <Column Name="LastModified" Type="System.DateTime" DbType="DateTime" CanBeNull="true" />
+      <Column Name="Created" Type="System.DateTime" DbType="DateTime" CanBeNull="true" />
+      <Column Name="Username" Type="System.String" DbType="NChar(16)" CanBeNull="true" />
     </ElementType>
   </Function>
 </Database>
