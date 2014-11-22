@@ -38,6 +38,32 @@ namespace DataExport.Controllers
             return File(userDotFileFullPath, "text/plain", "network.dot");
         }
 
+        [ActionName("GetTLP")]
+        public ActionResult GetTLP()
+        {
+            string database = Request.RequestContext.RouteData.Values["database"].ToString();
+            string EndpointURL = string.Format(AppSettings.WebServiceURLTemplate, database);
+            string userDotDirectory = Server.MapPath("~/Dot/");
+
+            AnnotationVizLib.ConnectionFactory.SetConnection(EndpointURL, AppSettings.EndpointCredentials);
+
+            if (!System.IO.Directory.Exists(userDotDirectory))
+                System.IO.Directory.CreateDirectory(userDotDirectory);
+
+            ICollection<long> requestIDs = GetQueryStringIDs();
+            if (requestIDs == null || requestIDs.Count == 0)
+                requestIDs = Queries.GetLinkedStructureParentIDs();
+
+            string userDotFileFullPath = System.IO.Path.Combine(userDotDirectory, "network.tlp");
+
+            NeuronGraph neuronGraph = NeuronGraph.BuildGraph(requestIDs, GetNumHops(), EndpointURL, AppSettings.EndpointCredentials);
+            NeuronTLPView TlpGraph = NeuronTLPView.ToTLP(neuronGraph);
+            TlpGraph.SaveTLP(userDotFileFullPath);
+
+
+            return File(userDotFileFullPath, "text/plain", "network.tlp");
+        } 
+
         private ICollection<long> GetQueryStringIDs()
         {
             string idListstr = Request.RequestContext.HttpContext.Request.QueryString["id"];

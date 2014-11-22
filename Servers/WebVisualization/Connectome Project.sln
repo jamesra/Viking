@@ -1,6 +1,8 @@
 ﻿
-Microsoft Visual Studio Solution File, Format Version 11.00
-# Visual Studio 2010
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2013
+VisualStudioVersion = 12.0.31101.0
+MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConnectomeViz", "ConnectomeViz.csproj", "{BD6C2700-D37C-4D1A-9751-9E5E8B4A96E8}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GraphLib", "..\..\GraphLib\GraphLib.csproj", "{D6F219FC-733B-481F-BF78-D34A7CB893EC}"
@@ -20,10 +22,11 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AnnotationVizLib", "..\..\A
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AnnotationVizLibTests", "..\..\AnnotationVizLibTests\AnnotationVizLibTests.csproj", "{B80BF900-A7CF-4A14-8A96-8C590A2435D4}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AnnotationService", "..\AnnotationService\AnnotationService\AnnotationService.csproj", "{1483085C-F381-4252-B2AE-FFFBF1ABD7A2}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AnnotationDatabase", "..\AnnotationService\AnnotationDatabase\AnnotationDatabase.csproj", "{E89D1721-2F91-446A-8BD9-F5712F131CC8}"
+EndProject
 Global
-	GlobalSection(TestCaseManagementSettings) = postSolution
-		CategoryFile = Connectome Project.vsmdi
-	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Release|Any CPU = Release|Any CPU
@@ -53,8 +56,19 @@ Global
 		{B80BF900-A7CF-4A14-8A96-8C590A2435D4}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B80BF900-A7CF-4A14-8A96-8C590A2435D4}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B80BF900-A7CF-4A14-8A96-8C590A2435D4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1483085C-F381-4252-B2AE-FFFBF1ABD7A2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1483085C-F381-4252-B2AE-FFFBF1ABD7A2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1483085C-F381-4252-B2AE-FFFBF1ABD7A2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1483085C-F381-4252-B2AE-FFFBF1ABD7A2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E89D1721-2F91-446A-8BD9-F5712F131CC8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E89D1721-2F91-446A-8BD9-F5712F131CC8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E89D1721-2F91-446A-8BD9-F5712F131CC8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E89D1721-2F91-446A-8BD9-F5712F131CC8}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(TestCaseManagementSettings) = postSolution
+		CategoryFile = Connectome Project.vsmdi
 	EndGlobalSection
 EndGlobal

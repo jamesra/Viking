@@ -22,6 +22,10 @@ namespace DataExport
                             new { controller = "Network", action = "GetDot"},
                             new { controller = "Network"});
 
+            routes.MapRoute("Network_TLP", "{database}/Network/TLP",
+                            new { controller = "Network", action = "GetTLP" },
+                            new { controller = "Network" });
+
             routes.MapRoute("Motifs_Dot", "{database}/Motifs/Dot",
                             new { controller = "Motif", action = "GetDot"},
                             new { controller = "Motif"});

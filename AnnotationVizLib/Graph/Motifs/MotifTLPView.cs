@@ -8,12 +8,10 @@ using System.Diagnostics;
 namespace AnnotationVizLib
 {
     public class MotifTLPView : TLPView<string>
-    {
-        MotifGraph motifGraph = null;
+    { 
 
         private MotifTLPView(MotifGraph graph)
-        {
-            motifGraph = graph;
+        { 
         }
 
         public TLPViewNode CreateTLPNode(MotifNode node)

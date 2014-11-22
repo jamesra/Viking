@@ -136,13 +136,13 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\..\GraphLib\GraphLib.csproj">
-      <Project>{D6F219FC-733B-481F-BF78-D34A7CB893EC}</Project>
-      <Name>GraphLib</Name>
-    </ProjectReference>
     <ProjectReference Include="..\AnnotationVizLib\AnnotationVizLib.csproj">
       <Project>{A89A628B-3FFA-4271-B99A-E45C3D72D3E3}</Project>
       <Name>AnnotationVizLib</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\GraphLib\GraphLib.csproj">
+      <Project>{d6f219fc-733b-481f-bf78-d34a7cb893ec}</Project>
+      <Name>GraphLib</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
