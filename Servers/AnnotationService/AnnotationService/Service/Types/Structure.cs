@@ -35,16 +35,16 @@ namespace Annotation
     [DataContract]
     public class Structure : DataObjectWithParent<long>
     {
-        private long _Type;
-        private string _Notes;
-        private bool _Verified;
-        private string[] _Tags = new string[0];
-        private double _Confidence;
-        private StructureLink[] _Links;
-        private long[] _ChildIDs;
-        private string _Label;
-        private string _Username;
-        private string _Xml;
+        protected long _Type;
+        protected string _Notes;
+        protected bool _Verified;
+        protected string[] _Tags = new string[0];
+        protected double _Confidence;
+        protected StructureLink[] _Links;
+        protected long[] _ChildIDs;
+        protected string _Label;
+        protected string _Username;
+        protected string _Xml;
         
         [DataMember]
         public long TypeID
@@ -140,7 +140,7 @@ namespace Annotation
             if (db.Tags == null)
             {
                 //_Tags = new string[0];
-                _Xml = "";
+                _Xml = null; 
             }
             else
             {
@@ -206,6 +206,37 @@ namespace Annotation
             db.Label = this.Label;
             db.Username = ServiceModelUtil.GetUserForCall();
         }
+    }
+
+    
+    [DataContract]
+    public class StructureHistory : Structure
+    {
+
+        public StructureHistory(SelectStructureChangeLogResult db)
+        {
+
+            this.ID = db.ID.Value;
+            this.TypeID = db.TypeID.Value;
+            this.Notes = db.Notes;
+            this.Verified = db.Verified.Value;
+
+            if (db.Tags == null)
+            { 
+                _Xml = null;
+            }
+            else
+            { 
+                _Xml = db.Tags.ToString();
+            }
+
+
+            this.Confidence = db.Confidence.Value;
+            this.ParentID = db.ParentID.Value;
+            this._Label = db.Label;
+            this._Username = db.Username; 
+        }
+
     }
 }
 

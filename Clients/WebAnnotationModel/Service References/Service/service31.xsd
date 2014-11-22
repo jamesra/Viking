@@ -482,6 +482,22 @@
       </xs:sequence>
     </xs:complexType>
   </xs:element>
+  <xs:element name="GetLocationChangeLog">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element minOccurs="0" name="structure_id" nillable="true" type="xs:long" />
+        <xs:element minOccurs="0" name="begin_time" nillable="true" type="xs:dateTime" />
+        <xs:element minOccurs="0" name="end_time" nillable="true" type="xs:dateTime" />
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="GetLocationChangeLogResponse">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element xmlns:q45="http://schemas.datacontract.org/2004/07/Annotation" minOccurs="0" name="GetLocationChangeLogResult" nillable="true" type="q45:ArrayOfLocationHistory" />
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
   <xs:element name="getGraph">
     <xs:complexType>
       <xs:sequence>
@@ -493,7 +509,7 @@
   <xs:element name="getGraphResponse">
     <xs:complexType>
       <xs:sequence>
-        <xs:element xmlns:q45="http://schemas.datacontract.org/2004/07/" minOccurs="0" name="getGraphResult" nillable="true" type="q45:Graphx" />
+        <xs:element xmlns:q46="http://schemas.datacontract.org/2004/07/" minOccurs="0" name="getGraphResult" nillable="true" type="q46:Graphx" />
       </xs:sequence>
     </xs:complexType>
   </xs:element>
@@ -507,7 +523,7 @@
   <xs:element name="getStructuresByTypeIDResponse">
     <xs:complexType>
       <xs:sequence>
-        <xs:element xmlns:q46="http://schemas.microsoft.com/2003/10/Serialization/Arrays" minOccurs="0" name="getStructuresByTypeIDResult" nillable="true" type="q46:ArrayOflong" />
+        <xs:element xmlns:q47="http://schemas.microsoft.com/2003/10/Serialization/Arrays" minOccurs="0" name="getStructuresByTypeIDResult" nillable="true" type="q47:ArrayOflong" />
       </xs:sequence>
     </xs:complexType>
   </xs:element>
@@ -521,7 +537,7 @@
   <xs:element name="getSynapsesResponse">
     <xs:complexType>
       <xs:sequence>
-        <xs:element xmlns:q47="http://schemas.microsoft.com/2003/10/Serialization/Arrays" minOccurs="0" name="getSynapsesResult" nillable="true" type="q47:ArrayOfstring" />
+        <xs:element xmlns:q48="http://schemas.microsoft.com/2003/10/Serialization/Arrays" minOccurs="0" name="getSynapsesResult" nillable="true" type="q48:ArrayOfstring" />
       </xs:sequence>
     </xs:complexType>
   </xs:element>
@@ -533,7 +549,7 @@
   <xs:element name="getSynapseStatsResponse">
     <xs:complexType>
       <xs:sequence>
-        <xs:element xmlns:q48="http://schemas.datacontract.org/2004/07/Annotation.Service.GraphClasses" minOccurs="0" name="getSynapseStatsResult" nillable="true" type="q48:SynapseObject" />
+        <xs:element xmlns:q49="http://schemas.datacontract.org/2004/07/Annotation.Service.GraphClasses" minOccurs="0" name="getSynapseStatsResult" nillable="true" type="q49:SynapseObject" />
       </xs:sequence>
     </xs:complexType>
   </xs:element>
@@ -547,7 +563,7 @@
   <xs:element name="getTopConnectedStructuresResponse">
     <xs:complexType>
       <xs:sequence>
-        <xs:element xmlns:q49="http://schemas.microsoft.com/2003/10/Serialization/Arrays" minOccurs="0" name="getTopConnectedStructuresResult" nillable="true" type="q49:ArrayOfstring" />
+        <xs:element xmlns:q50="http://schemas.microsoft.com/2003/10/Serialization/Arrays" minOccurs="0" name="getTopConnectedStructuresResult" nillable="true" type="q50:ArrayOfstring" />
       </xs:sequence>
     </xs:complexType>
   </xs:element>
@@ -559,7 +575,7 @@
   <xs:element name="getTopConnectedCellsResponse">
     <xs:complexType>
       <xs:sequence>
-        <xs:element xmlns:q50="http://schemas.microsoft.com/2003/10/Serialization/Arrays" minOccurs="0" name="getTopConnectedCellsResult" nillable="true" type="q50:ArrayOfstring" />
+        <xs:element xmlns:q51="http://schemas.microsoft.com/2003/10/Serialization/Arrays" minOccurs="0" name="getTopConnectedCellsResult" nillable="true" type="q51:ArrayOfstring" />
       </xs:sequence>
     </xs:complexType>
   </xs:element>

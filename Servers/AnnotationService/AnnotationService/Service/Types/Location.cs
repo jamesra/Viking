@@ -426,6 +426,10 @@ namespace Annotation
             {
                 return _ChangedColumnMask;
             }
+            set
+            {
+                _ChangedColumnMask = value; 
+            }
         }
 
 
@@ -443,18 +447,18 @@ namespace Annotation
             this._Terminal = db.Terminal.Value;
             this._OffEdge = db.OffEdge.Value;
             this._TypeCode = db.TypeCode.Value;
-            this._Radius = db.Radius.Value; 
-            this._ChangedColumnMask = System.Convert.ToUInt64(db.___update_mask); 
+            this._Radius = db.Radius.Value;
+            this._ChangedColumnMask = 0; //TODO: System.Convert.ToUInt64(db.___update_mask); 
 
             if (db.Tags == null)
             {
                 //_Tags = new string[0];
-                _Xml = "";
+                _Xml = null; 
             }
             else
             {
                 //    _Tags = db.Tags.Split(';');
-                _Xml = db.Tags.Value;
+                _Xml = db.Tags.ToString();
             }
 
             this._LastModified = db.LastModified.Value.Ticks;

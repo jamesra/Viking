@@ -728,6 +728,15 @@ namespace ServiceTest
         }
 
         [TestMethod()]
+        public void CheckLogging()
+        {
+            AnnotateService target = new AnnotateService(Parameters.TestDatabaseName); // TODO: Initialize to an appropriate value
+
+            long structureID = 37;
+            target.GetLocationChangeLog(structureID, new DateTime?(), new DateTime?());
+        }
+
+        [TestMethod()]
         public void TestGetAnnotationLocations()
         {
             AddPrincipalToThread();

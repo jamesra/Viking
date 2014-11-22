@@ -21,6 +21,7 @@ namespace WebAnnotationModel.Service {
     [System.Runtime.Serialization.KnownTypeAttribute(typeof(WebAnnotationModel.Service.LocationLink))]
     [System.Runtime.Serialization.KnownTypeAttribute(typeof(WebAnnotationModel.Service.DataObjectWithKeyOflong))]
     [System.Runtime.Serialization.KnownTypeAttribute(typeof(WebAnnotationModel.Service.Location))]
+    [System.Runtime.Serialization.KnownTypeAttribute(typeof(WebAnnotationModel.Service.LocationHistory))]
     [System.Runtime.Serialization.KnownTypeAttribute(typeof(WebAnnotationModel.Service.LocationPositionOnly))]
     [System.Runtime.Serialization.KnownTypeAttribute(typeof(WebAnnotationModel.Service.DataObjectWithParentOflong))]
     [System.Runtime.Serialization.KnownTypeAttribute(typeof(WebAnnotationModel.Service.Structure))]
@@ -197,6 +198,7 @@ namespace WebAnnotationModel.Service {
     [System.Runtime.Serialization.DataContractAttribute(Name="DataObjectWithKeyOflong", Namespace="http://schemas.datacontract.org/2004/07/Annotation")]
     [System.SerializableAttribute()]
     [System.Runtime.Serialization.KnownTypeAttribute(typeof(WebAnnotationModel.Service.Location))]
+    [System.Runtime.Serialization.KnownTypeAttribute(typeof(WebAnnotationModel.Service.LocationHistory))]
     [System.Runtime.Serialization.KnownTypeAttribute(typeof(WebAnnotationModel.Service.LocationPositionOnly))]
     [System.Runtime.Serialization.KnownTypeAttribute(typeof(WebAnnotationModel.Service.DataObjectWithParentOflong))]
     [System.Runtime.Serialization.KnownTypeAttribute(typeof(WebAnnotationModel.Service.Structure))]
@@ -224,6 +226,7 @@ namespace WebAnnotationModel.Service {
     [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Runtime.Serialization", "4.0.0.0")]
     [System.Runtime.Serialization.DataContractAttribute(Name="Location", Namespace="http://schemas.datacontract.org/2004/07/Annotation")]
     [System.SerializableAttribute()]
+    [System.Runtime.Serialization.KnownTypeAttribute(typeof(WebAnnotationModel.Service.LocationHistory))]
     public partial class Location : WebAnnotationModel.Service.DataObjectWithKeyOflong {
         
         [System.Runtime.Serialization.OptionalFieldAttribute()]
@@ -252,9 +255,6 @@ namespace WebAnnotationModel.Service {
         
         [System.Runtime.Serialization.OptionalFieldAttribute()]
         private long SectionField;
-        
-        [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private string[] TagsField;
         
         [System.Runtime.Serialization.OptionalFieldAttribute()]
         private bool TerminalField;
@@ -389,19 +389,6 @@ namespace WebAnnotationModel.Service {
         }
         
         [System.Runtime.Serialization.DataMemberAttribute()]
-        public string[] Tags {
-            get {
-                return this.TagsField;
-            }
-            set {
-                if ((object.ReferenceEquals(this.TagsField, value) != true)) {
-                    this.TagsField = value;
-                    this.RaisePropertyChanged("Tags");
-                }
-            }
-        }
-        
-        [System.Runtime.Serialization.DataMemberAttribute()]
         public bool Terminal {
             get {
                 return this.TerminalField;
@@ -462,6 +449,29 @@ namespace WebAnnotationModel.Service {
                 if ((this.VolumePositionField.Equals(value) != true)) {
                     this.VolumePositionField = value;
                     this.RaisePropertyChanged("VolumePosition");
+                }
+            }
+        }
+    }
+    
+    [System.Diagnostics.DebuggerStepThroughAttribute()]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Runtime.Serialization", "4.0.0.0")]
+    [System.Runtime.Serialization.DataContractAttribute(Name="LocationHistory", Namespace="http://schemas.datacontract.org/2004/07/Annotation")]
+    [System.SerializableAttribute()]
+    public partial class LocationHistory : WebAnnotationModel.Service.Location {
+        
+        [System.Runtime.Serialization.OptionalFieldAttribute()]
+        private ulong ChangedColumnMaskField;
+        
+        [System.Runtime.Serialization.DataMemberAttribute()]
+        public ulong ChangedColumnMask {
+            get {
+                return this.ChangedColumnMaskField;
+            }
+            set {
+                if ((this.ChangedColumnMaskField.Equals(value) != true)) {
+                    this.ChangedColumnMaskField = value;
+                    this.RaisePropertyChanged("ChangedColumnMask");
                 }
             }
         }
@@ -3507,6 +3517,14 @@ namespace WebAnnotationModel.Service {
         System.IAsyncResult BeginLocationLinksForSection(long section, long ModifiedAfterThisTime, System.AsyncCallback callback, object asyncState);
         
         WebAnnotationModel.Service.LocationLink[] EndLocationLinksForSection(out long QueryExecutedTime, out WebAnnotationModel.Service.LocationLink[] DeletedLinks, System.IAsyncResult result);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateLocations/GetLocationChangeLog", ReplyAction="http://tempuri.org/IAnnotateLocations/GetLocationChangeLogResponse")]
+        WebAnnotationModel.Service.LocationHistory[] GetLocationChangeLog(System.Nullable<long> structure_id, System.Nullable<System.DateTime> begin_time, System.Nullable<System.DateTime> end_time);
+        
+        [System.ServiceModel.OperationContractAttribute(AsyncPattern=true, Action="http://tempuri.org/IAnnotateLocations/GetLocationChangeLog", ReplyAction="http://tempuri.org/IAnnotateLocations/GetLocationChangeLogResponse")]
+        System.IAsyncResult BeginGetLocationChangeLog(System.Nullable<long> structure_id, System.Nullable<System.DateTime> begin_time, System.Nullable<System.DateTime> end_time, System.AsyncCallback callback, object asyncState);
+        
+        WebAnnotationModel.Service.LocationHistory[] EndGetLocationChangeLog(System.IAsyncResult result);
     }
     
     [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
@@ -3740,6 +3758,25 @@ namespace WebAnnotationModel.Service {
     
     [System.Diagnostics.DebuggerStepThroughAttribute()]
     [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
+    public partial class GetLocationChangeLogCompletedEventArgs : System.ComponentModel.AsyncCompletedEventArgs {
+        
+        private object[] results;
+        
+        public GetLocationChangeLogCompletedEventArgs(object[] results, System.Exception exception, bool cancelled, object userState) : 
+                base(exception, cancelled, userState) {
+            this.results = results;
+        }
+        
+        public WebAnnotationModel.Service.LocationHistory[] Result {
+            get {
+                base.RaiseExceptionIfNecessary();
+                return ((WebAnnotationModel.Service.LocationHistory[])(this.results[0]));
+            }
+        }
+    }
+    
+    [System.Diagnostics.DebuggerStepThroughAttribute()]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
     public partial class AnnotateLocationsClient : System.ServiceModel.ClientBase<WebAnnotationModel.Service.IAnnotateLocations>, WebAnnotationModel.Service.IAnnotateLocations {
         
         private BeginOperationDelegate onBeginCreateLocationDelegate;
@@ -3814,6 +3851,12 @@ namespace WebAnnotationModel.Service {
         
         private System.Threading.SendOrPostCallback onLocationLinksForSectionCompletedDelegate;
         
+        private BeginOperationDelegate onBeginGetLocationChangeLogDelegate;
+        
+        private EndOperationDelegate onEndGetLocationChangeLogDelegate;
+        
+        private System.Threading.SendOrPostCallback onGetLocationChangeLogCompletedDelegate;
+        
         public AnnotateLocationsClient() {
         }
         
@@ -3856,6 +3899,8 @@ namespace WebAnnotationModel.Service {
         public event System.EventHandler<System.ComponentModel.AsyncCompletedEventArgs> DeleteLocationLinkCompleted;
         
         public event System.EventHandler<LocationLinksForSectionCompletedEventArgs> LocationLinksForSectionCompleted;
+        
+        public event System.EventHandler<GetLocationChangeLogCompletedEventArgs> GetLocationChangeLogCompleted;
         
         public WebAnnotationModel.Service.Location CreateLocation(WebAnnotationModel.Service.Location obj, long[] LinkedIDs) {
             return base.Channel.CreateLocation(obj, LinkedIDs);
@@ -4471,6 +4516,60 @@ namespace WebAnnotationModel.Service {
             base.InvokeAsync(this.onBeginLocationLinksForSectionDelegate, new object[] {
                         section,
                         ModifiedAfterThisTime}, this.onEndLocationLinksForSectionDelegate, this.onLocationLinksForSectionCompletedDelegate, userState);
+        }
+        
+        public WebAnnotationModel.Service.LocationHistory[] GetLocationChangeLog(System.Nullable<long> structure_id, System.Nullable<System.DateTime> begin_time, System.Nullable<System.DateTime> end_time) {
+            return base.Channel.GetLocationChangeLog(structure_id, begin_time, end_time);
+        }
+        
+        [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
+        public System.IAsyncResult BeginGetLocationChangeLog(System.Nullable<long> structure_id, System.Nullable<System.DateTime> begin_time, System.Nullable<System.DateTime> end_time, System.AsyncCallback callback, object asyncState) {
+            return base.Channel.BeginGetLocationChangeLog(structure_id, begin_time, end_time, callback, asyncState);
+        }
+        
+        [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
+        public WebAnnotationModel.Service.LocationHistory[] EndGetLocationChangeLog(System.IAsyncResult result) {
+            return base.Channel.EndGetLocationChangeLog(result);
+        }
+        
+        private System.IAsyncResult OnBeginGetLocationChangeLog(object[] inValues, System.AsyncCallback callback, object asyncState) {
+            System.Nullable<long> structure_id = ((System.Nullable<long>)(inValues[0]));
+            System.Nullable<System.DateTime> begin_time = ((System.Nullable<System.DateTime>)(inValues[1]));
+            System.Nullable<System.DateTime> end_time = ((System.Nullable<System.DateTime>)(inValues[2]));
+            return this.BeginGetLocationChangeLog(structure_id, begin_time, end_time, callback, asyncState);
+        }
+        
+        private object[] OnEndGetLocationChangeLog(System.IAsyncResult result) {
+            WebAnnotationModel.Service.LocationHistory[] retVal = this.EndGetLocationChangeLog(result);
+            return new object[] {
+                    retVal};
+        }
+        
+        private void OnGetLocationChangeLogCompleted(object state) {
+            if ((this.GetLocationChangeLogCompleted != null)) {
+                InvokeAsyncCompletedEventArgs e = ((InvokeAsyncCompletedEventArgs)(state));
+                this.GetLocationChangeLogCompleted(this, new GetLocationChangeLogCompletedEventArgs(e.Results, e.Error, e.Cancelled, e.UserState));
+            }
+        }
+        
+        public void GetLocationChangeLogAsync(System.Nullable<long> structure_id, System.Nullable<System.DateTime> begin_time, System.Nullable<System.DateTime> end_time) {
+            this.GetLocationChangeLogAsync(structure_id, begin_time, end_time, null);
+        }
+        
+        public void GetLocationChangeLogAsync(System.Nullable<long> structure_id, System.Nullable<System.DateTime> begin_time, System.Nullable<System.DateTime> end_time, object userState) {
+            if ((this.onBeginGetLocationChangeLogDelegate == null)) {
+                this.onBeginGetLocationChangeLogDelegate = new BeginOperationDelegate(this.OnBeginGetLocationChangeLog);
+            }
+            if ((this.onEndGetLocationChangeLogDelegate == null)) {
+                this.onEndGetLocationChangeLogDelegate = new EndOperationDelegate(this.OnEndGetLocationChangeLog);
+            }
+            if ((this.onGetLocationChangeLogCompletedDelegate == null)) {
+                this.onGetLocationChangeLogCompletedDelegate = new System.Threading.SendOrPostCallback(this.OnGetLocationChangeLogCompleted);
+            }
+            base.InvokeAsync(this.onBeginGetLocationChangeLogDelegate, new object[] {
+                        structure_id,
+                        begin_time,
+                        end_time}, this.onEndGetLocationChangeLogDelegate, this.onGetLocationChangeLogCompletedDelegate, userState);
         }
     }
     

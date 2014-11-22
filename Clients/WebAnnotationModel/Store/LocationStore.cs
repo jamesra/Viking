@@ -343,6 +343,24 @@ namespace WebAnnotationModel
             sectionLocations.Clear(); 
             return true; 
         }
+
+        public List<LocationObj> GetStructureLocationChangeLog(long structureid)
+        {
+            AnnotateLocationsClient proxy = null;
+            List<LocationObj> listLocations = new List<LocationObj>(); 
+            using(proxy = CreateProxy())
+            {
+                LocationHistory[] history = proxy.GetLocationChangeLog(structureid, new DateTime?(), new DateTime?());
+
+                listLocations.Capacity = history.Length;
+                foreach (LocationHistory db_loc in history)
+                {
+                    listLocations.Add(new LocationObj(db_loc));
+                }
+            }
+
+            return listLocations;
+        }
          
 
         #region Callbacks

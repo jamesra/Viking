@@ -168,6 +168,12 @@
     <Compile Include="UI\StructureGeneralPage.Designer.cs">
       <DependentUpon>StructureGeneralPage.cs</DependentUpon>
     </Compile>
+    <Compile Include="UI\StructureLocationsChangeLogPropertiesPage.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="UI\StructureLocationsChangeLogPropertiesPage.Designer.cs">
+      <DependentUpon>StructureLocationsChangeLogPropertiesPage.cs</DependentUpon>
+    </Compile>
     <Compile Include="UI\StructureLocationsPage.cs">
       <SubType>UserControl</SubType>
     </Compile>
@@ -255,6 +261,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="UI\StructureGeneralPage.resx">
       <DependentUpon>StructureGeneralPage.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UI\StructureLocationsChangeLogPropertiesPage.resx">
+      <DependentUpon>StructureLocationsChangeLogPropertiesPage.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="UI\StructureLocationsPage.resx">
       <DependentUpon>StructureLocationsPage.cs</DependentUpon>

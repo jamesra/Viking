@@ -208,4 +208,20 @@
     </xs:sequence>
   </xs:complexType>
   <xs:element name="ArrayOfLocationLink" nillable="true" type="tns:ArrayOfLocationLink" />
+  <xs:complexType name="ArrayOfLocationHistory">
+    <xs:sequence>
+      <xs:element minOccurs="0" maxOccurs="unbounded" name="LocationHistory" nillable="true" type="tns:LocationHistory" />
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="ArrayOfLocationHistory" nillable="true" type="tns:ArrayOfLocationHistory" />
+  <xs:complexType name="LocationHistory">
+    <xs:complexContent mixed="false">
+      <xs:extension base="tns:Location">
+        <xs:sequence>
+          <xs:element minOccurs="0" name="ChangedColumnMask" type="xs:unsignedLong" />
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:element name="LocationHistory" nillable="true" type="tns:LocationHistory" />
 </xs:schema>

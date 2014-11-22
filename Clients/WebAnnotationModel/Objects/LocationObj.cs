@@ -481,8 +481,7 @@ namespace WebAnnotationModel
             this.Data.Position = newdata.Position;
             this.Data.VolumePosition = newdata.VolumePosition;
             this.Data.Radius = newdata.Radius;
-            this.Data.Section = newdata.Section;
-            this.Data.Tags = newdata.Tags;
+            this.Data.Section = newdata.Section; 
             this.Data.Terminal = newdata.Terminal;
             this.Data.OffEdge = newdata.OffEdge;
             this.Data.ParentID = newdata.ParentID;

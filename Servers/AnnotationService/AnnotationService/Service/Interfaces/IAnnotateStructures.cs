@@ -152,7 +152,17 @@ namespace Annotation.Service.Interfaces
         /// <returns>ID of new structure</returns>
         [OperationContract]
         long Split(long StructureA, LocationLink locLink);
-        
+
+
+        /// <summary>
+        /// Return a list of location objects that have changed in the time interval
+        /// </summary>
+        /// <param name="structure_id">Optional ParentID</param>
+        /// <param name="begin_time">Optional begin time</param>
+        /// <param name="end_time">Optional end time</param>
+        /// <returns></returns>
+        [OperationContract]
+        StructureHistory[] GetStructureChangeLog(long? structure_id, DateTime? begin_time, DateTime? end_time);
     }
      
 }

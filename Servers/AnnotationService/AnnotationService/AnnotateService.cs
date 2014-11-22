@@ -1022,6 +1022,22 @@ namespace Annotation
             return 0;
         }
 
+        [PrincipalPermission(SecurityAction.Demand, Role = "Read")]
+        public StructureHistory[] GetStructureChangeLog(long? structure_id, DateTime? begin_time, DateTime? end_time)
+        {
+            ISingleResult<SelectStructureChangeLogResult> result = db.SelectStructureChangeLog(structure_id, begin_time, end_time);
+            List<SelectStructureChangeLogResult> listChanges = new List<SelectStructureChangeLogResult>(result);
+            List<StructureHistory> structures = new List<StructureHistory>(listChanges.Count);
+            foreach (SelectStructureChangeLogResult row in listChanges)
+            {
+                structures.Add(new StructureHistory(row));
+            }
+
+            return structures.ToArray();
+        }
+
+
+
         #endregion
 
         #region IAnnotateLocations Members
@@ -1621,6 +1637,7 @@ namespace Annotation
             return links.ToArray();
         }
 
+        [PrincipalPermission(SecurityAction.Demand, Role = "Read")]
         public LocationHistory[] GetLocationChangeLog(long? structure_id, DateTime? begin_time, DateTime? end_time)
         {
             ISingleResult<SelectStructureLocationChangeLogResult> result = db.SelectStructureLocationChangeLog(structure_id, begin_time, end_time);

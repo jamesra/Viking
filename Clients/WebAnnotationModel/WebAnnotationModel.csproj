@@ -134,6 +134,9 @@
     <None Include="Service References\Service\WebAnnotationModel.Service.Location.datasource">
       <DependentUpon>Reference.svcmap</DependentUpon>
     </None>
+    <None Include="Service References\Service\WebAnnotationModel.Service.LocationHistory.datasource">
+      <DependentUpon>Reference.svcmap</DependentUpon>
+    </None>
     <None Include="Service References\Service\WebAnnotationModel.Service.LocationLink.datasource">
       <DependentUpon>Reference.svcmap</DependentUpon>
     </None>
