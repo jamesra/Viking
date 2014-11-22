@@ -28,7 +28,7 @@ namespace AnnotationVizLib
 
         public object Clone()
         {
-            GraphViewEdge<KEY> clone = new GraphViewEdge<KEY>();
+            GraphVizEdge<KEY> clone = new GraphVizEdge<KEY>();
             clone.label = label;
             clone.from = from;
             clone.to = to;

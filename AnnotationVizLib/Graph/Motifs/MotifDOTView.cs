@@ -166,7 +166,7 @@ namespace AnnotationVizLib
             DotEdge.Attributes.Add("weight", (Weight * Weight).ToString());
 
             //If the edge is bidirectional clone it, reverse the direction, and make it invisible to help directional layout algorithms.
-            if (DotEdge.Attributes["dir"] == "both")
+            if (DotEdge.Attributes.ContainsKey("dir") && DotEdge.Attributes["dir"] == "both")
             {
                 GraphVizEdge<string> reverseTempEdge = DotEdge.Clone() as GraphVizEdge<string>;
                 reverseTempEdge.Reverse(); 
