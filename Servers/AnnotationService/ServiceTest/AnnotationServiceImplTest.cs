@@ -530,6 +530,8 @@ namespace ServiceTest
         {
             AddPrincipalToThread();
 
+            DateTime test_start = DateTime.UtcNow;
+
             AnnotateService target = new AnnotateService(Parameters.TestDatabaseName); // TODO: Initialize to an appropriate value
 
             //Create a structure type, a structure, and some links
@@ -568,7 +570,7 @@ namespace ServiceTest
             Location[] Locations = target.GetLocationsForStructure(StructureID);
             Assert.IsTrue(Locations.Length == 2);
 
-             
+            CheckLocationLog(target, StructureID, test_start);
 
             //Create a third location for the structure
             Location C = new Location();
@@ -715,6 +717,14 @@ namespace ServiceTest
             t.DBAction = DBACTION.DELETE;
 
             target.UpdateStructureTypes(new StructureType[] { t });
+
+            CheckLocationLog(target, StructureID, test_start);
+        }
+
+        private void CheckLocationLog(AnnotateService target, long structureID, DateTime test_start)
+        {
+            LocationHistory[] history = target.GetLocationChangeLog(structureID, new DateTime?(), new DateTime?());
+            Assert.IsTrue(history.Length >= 0);
         }
 
         [TestMethod()]

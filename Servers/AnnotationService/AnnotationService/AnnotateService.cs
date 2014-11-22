@@ -1624,8 +1624,9 @@ namespace Annotation
         public LocationHistory[] GetLocationChangeLog(long? structure_id, DateTime? begin_time, DateTime? end_time)
         {
             ISingleResult<SelectStructureLocationChangeLogResult> result = db.SelectStructureLocationChangeLog(structure_id, begin_time, end_time);
-            List<LocationHistory> locations = new List<LocationHistory>(result.Count());
-            foreach (SelectStructureLocationChangeLogResult row in result)
+            List<SelectStructureLocationChangeLogResult> listChanges = new List<SelectStructureLocationChangeLogResult>(result);
+            List<LocationHistory> locations = new List<LocationHistory>(listChanges.Count);
+            foreach (SelectStructureLocationChangeLogResult row in listChanges)
             {
                 locations.Add(new LocationHistory(row));
             }
