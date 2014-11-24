@@ -80,6 +80,10 @@ namespace AnnotationVizLib
             { "brown1", "(211,140,33,127)"},
             
             { "blue", "(0,0,255,127)"},
+            { "gainsboro", "(220,220,220,127)"},
+            { "goldenrod2", "(238,173,14,127)"},
+            { "cornsilk", "(255,248,220,127)"},
+            { "azure3", "(193,205,205,127)"},
             { "grey", "(127,127,127,127)"},
             { "orange", "(255,128,0,127)"},
             { "darkkhaki", "(194,111,61,127)"},
@@ -284,6 +288,29 @@ namespace AnnotationVizLib
                             {"viewTgtAnchorShape", IntForEdgeTerminalShape(EdgeExtremityShapes.Arrow)},
                             {"viewSrcAnchorShape", IntForEdgeTerminalShape(EdgeExtremityShapes.Arrow)},
                             {"viewColor", ColorMap["white"]}
+                }
+            ),
+            new AttributeMap("ADHERENS", new SortedList<string,string> {
+                            {"viewTgtAnchorShape", IntForEdgeTerminalShape(EdgeExtremityShapes.Arrow)},
+                            {"viewSrcAnchorShape", IntForEdgeTerminalShape(EdgeExtremityShapes.Arrow)},
+                            {"viewColor", ColorMap["gainsboro"]}
+                }
+            ),
+            new AttributeMap("CISTERN PRE", new SortedList<string,string> {
+                            {"viewTgtAnchorShape", IntForEdgeTerminalShape(EdgeExtremityShapes.Arrow)},
+                            {"viewColor", ColorMap["cornsilk"]}
+                }
+            ),
+            new AttributeMap("TOUCH", new SortedList<string,string> {
+                            {"viewTgtAnchorShape", IntForEdgeTerminalShape(EdgeExtremityShapes.Arrow)},
+                            {"viewSrcAnchorShape", IntForEdgeTerminalShape(EdgeExtremityShapes.Arrow)},
+                            {"viewColor", ColorMap["grey"]}
+                }
+            ),
+            new AttributeMap("NEUROGLIAL ADHERENS", new SortedList<string,string> {
+                            {"viewTgtAnchorShape", IntForEdgeTerminalShape(EdgeExtremityShapes.Arrow)},
+                            {"viewSrcAnchorShape", IntForEdgeTerminalShape(EdgeExtremityShapes.Arrow)},
+                            {"viewColor", ColorMap["azure3"]}
                 }
             ),
             new AttributeMap("UNKNOWN", new SortedList<string,string> {

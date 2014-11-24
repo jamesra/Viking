@@ -36,10 +36,10 @@ namespace AnnotationVizLib
             return node.Key.ToString();
         }
 
-        public static string EdgeLabel(NeuronEdge edge)
+        public static string LinkedStructures(NeuronEdge edge)
         {
             StringBuilder sb = new StringBuilder();
-            sb.Append(edge.SynapseType);
+            //sb.Append(edge.SynapseType);
             foreach (AnnotationService.StructureLink link in edge.Links)
             {
                 sb.Append("\t" + LinkString(link));
@@ -64,7 +64,8 @@ namespace AnnotationVizLib
                 AttributeMapper.CopyAttributes(TLPAttributes.UnknownTLPEdgeAttributes, EdgeAttribs);
             }
 
-            EdgeAttribs.Add("viewLabel", EdgeLabel(edge));
+            EdgeAttribs.Add("viewLabel", edge.SynapseType);
+            EdgeAttribs.Add("LinkedStructures", LinkedStructures(edge));
 
             /*
             foreach(long sourceID in edge.SourceStructIDs)

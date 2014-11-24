@@ -35,7 +35,8 @@ namespace AnnotationVizLib
 
             EdgeAttribs.Add("SourceStructures", EdgeStructuresString(edge.SourceStructIDs));
             EdgeAttribs.Add("TargetStructures", EdgeStructuresString(edge.TargetStructIDs));
-            
+            EdgeAttribs.Add("viewLabel", EdgeLabel(edge));
+
             /*
             foreach(long sourceID in edge.SourceStructIDs)
             {
@@ -76,6 +77,11 @@ namespace AnnotationVizLib
             }
 
             return sb.ToString();
+        }
+
+        private string EdgeLabel(MotifEdge edge)
+        {
+            return edge.SynapseType;
         }
 
         public void PopulateTLPNode(MotifNode node, TLPViewNode tlpnode)
