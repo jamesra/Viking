@@ -148,23 +148,25 @@ namespace WebAnnotationModel
                     {
                         _Links = new ObservableCollection<StructureLinkObj>();
 
-                        //Initialize from the Data object
-                        foreach (StructureLink link in Data.Links)
+                        if (Data.Links != null)
                         {
-                            Debug.Assert(link != null);
-                            StructureLinkObj linkObj = new StructureLinkObj(link);
-
-                            Debug.Assert(linkObj != null); 
-                            //Add it if it doesn't exist, otherwise get the official version
-                            linkObj = Store.StructureLinks.Add(linkObj);
-                            Debug.Assert(linkObj != null, "If structureObj has the value the store should have the value.   Does it link to itself?");
-                            if (linkObj != null)
+                            //Initialize from the Data object
+                            foreach (StructureLink link in Data.Links)
                             {
-                                _Links.Add(linkObj);
+                                Debug.Assert(link != null);
+                                StructureLinkObj linkObj = new StructureLinkObj(link);
+
+                                Debug.Assert(linkObj != null);
+                                //Add it if it doesn't exist, otherwise get the official version
+                                linkObj = Store.StructureLinks.Add(linkObj);
+                                Debug.Assert(linkObj != null, "If structureObj has the value the store should have the value.   Does it link to itself?");
+                                if (linkObj != null)
+                                {
+                                    _Links.Add(linkObj);
+                                }
                             }
                         }
-
-
+                         
                         _Links.CollectionChanged += this.OnLinksChanged;
                     }
 
@@ -179,7 +181,7 @@ namespace WebAnnotationModel
             {
                 lock (LinksLock)
                 {
-                    return Data.Links.Length;
+                    return Data.Links == null ? 0 : Data.Links.Length;
                 }
             }
         }
@@ -333,7 +335,7 @@ namespace WebAnnotationModel
             this.Data.Notes = ""; 
             this.Data.Confidence = 0.5;
             this.Data.ParentID = new long?();
-            this.Data.Links = new StructureLink[0];
+            this.Data.Links = null; 
         }
 
         private StructureTypeObj _Type = null;

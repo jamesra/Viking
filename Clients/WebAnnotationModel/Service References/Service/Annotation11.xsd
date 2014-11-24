@@ -196,6 +196,20 @@
     </xs:complexContent>
   </xs:complexType>
   <xs:element name="LocationLink" nillable="true" type="tns:LocationLink" />
+  <xs:complexType name="ArrayOfStructureHistory">
+    <xs:sequence>
+      <xs:element minOccurs="0" maxOccurs="unbounded" name="StructureHistory" nillable="true" type="tns:StructureHistory" />
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="ArrayOfStructureHistory" nillable="true" type="tns:ArrayOfStructureHistory" />
+  <xs:complexType name="StructureHistory">
+    <xs:complexContent mixed="false">
+      <xs:extension base="tns:Structure">
+        <xs:sequence />
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:element name="StructureHistory" nillable="true" type="tns:StructureHistory" />
   <xs:complexType name="ArrayOfLocation">
     <xs:sequence>
       <xs:element minOccurs="0" maxOccurs="unbounded" name="Location" nillable="true" type="tns:Location" />

@@ -350,6 +350,12 @@
   <wsdl:message name="IAnnotateStructures_Split_OutputMessage">
     <wsdl:part name="parameters" element="tns:SplitResponse" />
   </wsdl:message>
+  <wsdl:message name="IAnnotateStructures_GetStructureChangeLog_InputMessage">
+    <wsdl:part name="parameters" element="tns:GetStructureChangeLog" />
+  </wsdl:message>
+  <wsdl:message name="IAnnotateStructures_GetStructureChangeLog_OutputMessage">
+    <wsdl:part name="parameters" element="tns:GetStructureChangeLogResponse" />
+  </wsdl:message>
   <wsdl:message name="IAnnotateLocations_CreateLocation_InputMessage">
     <wsdl:part name="parameters" element="tns:CreateLocation" />
   </wsdl:message>
@@ -554,6 +560,10 @@
     <wsdl:operation name="Split">
       <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateStructures/Split" message="tns:IAnnotateStructures_Split_InputMessage" />
       <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateStructures/SplitResponse" message="tns:IAnnotateStructures_Split_OutputMessage" />
+    </wsdl:operation>
+    <wsdl:operation name="GetStructureChangeLog">
+      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateStructures/GetStructureChangeLog" message="tns:IAnnotateStructures_GetStructureChangeLog_InputMessage" />
+      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateStructures/GetStructureChangeLogResponse" message="tns:IAnnotateStructures_GetStructureChangeLog_OutputMessage" />
     </wsdl:operation>
   </wsdl:portType>
   <wsdl:portType name="IAnnotateLocations">
@@ -834,6 +844,15 @@
     </wsdl:operation>
     <wsdl:operation name="Split">
       <soap12:operation soapAction="http://tempuri.org/IAnnotateStructures/Split" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="GetStructureChangeLog">
+      <soap12:operation soapAction="http://tempuri.org/IAnnotateStructures/GetStructureChangeLog" style="document" />
       <wsdl:input>
         <soap12:body use="literal" />
       </wsdl:input>

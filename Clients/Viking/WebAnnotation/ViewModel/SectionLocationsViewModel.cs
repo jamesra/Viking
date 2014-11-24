@@ -65,6 +65,14 @@ namespace WebAnnotation.ViewModel
         /// </summary>
         public readonly Viking.UI.Controls.SectionViewerControl parent;
 
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="section"></param>
+        /// <param name="Parent"></param>
+        private bool SubmitUpdatedVolumePositions = false;
+
         public SectionLocationsViewModel(SectionViewModel section,  Viking.UI.Controls.SectionViewerControl Parent)
         {
             this.parent = Parent;
@@ -75,6 +83,8 @@ namespace WebAnnotation.ViewModel
 
             if (Locations == null)
                 Locations = new QuadTree<Location_CanvasViewModel>(bounds);
+
+            this.SubmitUpdatedVolumePositions = section.VolumeViewModel.UpdateServerVolumePositions;
 
             LocationsForStructure = new ConcurrentDictionary<long, ConcurrentDictionary<long, Location_CanvasViewModel>>();
             
@@ -289,17 +299,15 @@ namespace WebAnnotation.ViewModel
         /// <param name="e"></param>
         protected void AddLocations(IEnumerable<LocationObj> listLocations, bool Subscribe)
         {
-#if SUBMITVOLUMEPOSITION
             bool UpdateVolumeLocations = false;
-            bool SubmitUpdatedVolumeLocations = false;
+            bool HaveUpdatedVolumePositionsToSubmit = false;
             long VolumePositionUpdatedCount = 0;
 
-            
-            if (this.parent.CurrentVolumeTransform == this.Section.VolumeViewModel.DefaultVolumeTransform)
+
+            if (this.SubmitUpdatedVolumePositions && this.parent.CurrentVolumeTransform == this.Section.VolumeViewModel.DefaultVolumeTransform)
             {
                 UpdateVolumeLocations = true;
-            }
-#endif
+            }  
                         
             foreach(LocationObj loc in listLocations)
             {
@@ -307,7 +315,7 @@ namespace WebAnnotation.ViewModel
                 if(AddLocation(loc, Subscribe, UpdateVolumeLocations))
                 {
                     VolumePositionUpdatedCount++; 
-                    SubmitUpdatedVolumeLocations |= true; 
+                    HaveUpdatedVolumePositionsToSubmit |= true; 
                 }
                 //Add the location to our mapping if the location is on our section
                 
@@ -317,8 +325,8 @@ namespace WebAnnotation.ViewModel
                 //    AddLocationLinks(locView);
                 
             }
-#if SUBMITVOLUMEPOSITION
-            if (SubmitUpdatedVolumeLocations)
+
+            if (UpdateVolumeLocations && HaveUpdatedVolumePositionsToSubmit)
             {
                 //System.Threading.ThreadPool.QueueUserWorkItem( f => { Store.Locations.Save(); } );
 
@@ -326,8 +334,7 @@ namespace WebAnnotation.ViewModel
 
                 Trace.WriteLine("Updated " + VolumePositionUpdatedCount.ToString() + " volume positions");
                 Store.Locations.Save(); 
-            }
-#endif
+            } 
         }
         
         /// <summary>
@@ -349,8 +356,7 @@ namespace WebAnnotation.ViewModel
             bool mapped = MapLocation(loc);
             if (!mapped)
                 return false;
-
-#if SUBMITVOLUMEPOSITION
+             
             if (UpdateVolumeLocations && FirstMapping)
             {
                 if (GridVector2.DistanceSquared(original, loc.VolumePosition) > 0)
@@ -358,8 +364,7 @@ namespace WebAnnotation.ViewModel
                     loc.SubmitOnNextUpdate();
                     UpdatedVolumeLocation = true;
                 }
-            }
-#endif
+            } 
 
             //Add location if it hasn't been seen before
             Location_CanvasViewModel locView = new Location_CanvasViewModel(loc);

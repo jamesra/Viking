@@ -412,6 +412,9 @@ namespace WebAnnotationModel
 
                 string xmlstring = ObjAttribute.ToXml(value);
 
+                if (xmlstring == "")
+                    xmlstring = null; 
+
                 if (Data.AttributesXml != xmlstring)
                 {
                     OnPropertyChanging("Attributes");

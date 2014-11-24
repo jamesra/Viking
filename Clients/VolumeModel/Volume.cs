@@ -49,7 +49,8 @@ namespace Viking.VolumeModel
     }
 
     /// <summary>
-    /// Collection of volumes, sections and tiles. There is only one dataset loaded at a time
+    /// Collection of volumes, sections and tiles. There is only one dataset loaded at a time.
+    /// TODO: Split parsing the VikingXML into a seperate class
     /// </summary>
     public class Volume
     {
@@ -84,6 +85,11 @@ namespace Viking.VolumeModel
         /// The starting section number read from meta-data
         /// </summary>
         public int? DefaultSectionNumber = new int?();
+
+        /// <summary>
+        /// If true the VikingXML requests the client update the server volume positions if they are noticeably different.
+        /// </summary>
+        public bool UpdateServerVolumePositions = false; 
 
         private string _UniqueID = "";
         /// <summary>
@@ -543,6 +549,12 @@ namespace Viking.VolumeModel
             if(defaultstosgroup != null)
             {
                 this.DefaultTileset = defaultstosgroup.Value; 
+            }
+
+            XAttribute updateVolumePositions = IO.GetAttributeCaseInsensitive(volumeElement, "updateservervolumepositions");
+            if(updateVolumePositions != null)
+            {
+                this.UpdateServerVolumePositions = Convert.ToBoolean(updateVolumePositions.Value);
             }
 
             XAttribute defaultsection = IO.GetAttributeCaseInsensitive(volumeElement, "defaultsection");

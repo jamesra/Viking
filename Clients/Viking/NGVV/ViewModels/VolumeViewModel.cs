@@ -43,6 +43,8 @@ namespace Viking.ViewModels
 
         public XDocument VolumeXML { get { return _Volume.VolumeXML; } }
 
+        public bool UpdateServerVolumePositions { get { return _Volume.UpdateServerVolumePositions; } }
+
         public VolumeViewModel(string path, string localCachePath, System.ComponentModel.BackgroundWorker workerThread)
         {
             _Volume = new Volume(path, localCachePath, workerThread);

@@ -146,6 +146,9 @@
     <None Include="Service References\Service\WebAnnotationModel.Service.Structure.datasource">
       <DependentUpon>Reference.svcmap</DependentUpon>
     </None>
+    <None Include="Service References\Service\WebAnnotationModel.Service.StructureHistory.datasource">
+      <DependentUpon>Reference.svcmap</DependentUpon>
+    </None>
     <None Include="Service References\Service\WebAnnotationModel.Service.StructureLink.datasource">
       <DependentUpon>Reference.svcmap</DependentUpon>
     </None>

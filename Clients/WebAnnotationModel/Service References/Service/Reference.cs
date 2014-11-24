@@ -25,6 +25,7 @@ namespace WebAnnotationModel.Service {
     [System.Runtime.Serialization.KnownTypeAttribute(typeof(WebAnnotationModel.Service.LocationPositionOnly))]
     [System.Runtime.Serialization.KnownTypeAttribute(typeof(WebAnnotationModel.Service.DataObjectWithParentOflong))]
     [System.Runtime.Serialization.KnownTypeAttribute(typeof(WebAnnotationModel.Service.Structure))]
+    [System.Runtime.Serialization.KnownTypeAttribute(typeof(WebAnnotationModel.Service.StructureHistory))]
     [System.Runtime.Serialization.KnownTypeAttribute(typeof(WebAnnotationModel.Service.StructureType))]
     public partial class DataObject : object, System.Runtime.Serialization.IExtensibleDataObject, System.ComponentModel.INotifyPropertyChanged {
         
@@ -202,6 +203,7 @@ namespace WebAnnotationModel.Service {
     [System.Runtime.Serialization.KnownTypeAttribute(typeof(WebAnnotationModel.Service.LocationPositionOnly))]
     [System.Runtime.Serialization.KnownTypeAttribute(typeof(WebAnnotationModel.Service.DataObjectWithParentOflong))]
     [System.Runtime.Serialization.KnownTypeAttribute(typeof(WebAnnotationModel.Service.Structure))]
+    [System.Runtime.Serialization.KnownTypeAttribute(typeof(WebAnnotationModel.Service.StructureHistory))]
     [System.Runtime.Serialization.KnownTypeAttribute(typeof(WebAnnotationModel.Service.StructureType))]
     public partial class DataObjectWithKeyOflong : WebAnnotationModel.Service.DataObject {
         
@@ -521,6 +523,7 @@ namespace WebAnnotationModel.Service {
     [System.Runtime.Serialization.DataContractAttribute(Name="DataObjectWithParentOflong", Namespace="http://schemas.datacontract.org/2004/07/Annotation")]
     [System.SerializableAttribute()]
     [System.Runtime.Serialization.KnownTypeAttribute(typeof(WebAnnotationModel.Service.Structure))]
+    [System.Runtime.Serialization.KnownTypeAttribute(typeof(WebAnnotationModel.Service.StructureHistory))]
     [System.Runtime.Serialization.KnownTypeAttribute(typeof(WebAnnotationModel.Service.StructureType))]
     public partial class DataObjectWithParentOflong : WebAnnotationModel.Service.DataObjectWithKeyOflong {
         
@@ -545,6 +548,7 @@ namespace WebAnnotationModel.Service {
     [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Runtime.Serialization", "4.0.0.0")]
     [System.Runtime.Serialization.DataContractAttribute(Name="Structure", Namespace="http://schemas.datacontract.org/2004/07/Annotation")]
     [System.SerializableAttribute()]
+    [System.Runtime.Serialization.KnownTypeAttribute(typeof(WebAnnotationModel.Service.StructureHistory))]
     public partial class Structure : WebAnnotationModel.Service.DataObjectWithParentOflong {
         
         [System.Runtime.Serialization.OptionalFieldAttribute()]
@@ -690,6 +694,13 @@ namespace WebAnnotationModel.Service {
                 }
             }
         }
+    }
+    
+    [System.Diagnostics.DebuggerStepThroughAttribute()]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Runtime.Serialization", "4.0.0.0")]
+    [System.Runtime.Serialization.DataContractAttribute(Name="StructureHistory", Namespace="http://schemas.datacontract.org/2004/07/Annotation")]
+    [System.SerializableAttribute()]
+    public partial class StructureHistory : WebAnnotationModel.Service.Structure {
     }
     
     [System.Diagnostics.DebuggerStepThroughAttribute()]
@@ -2150,6 +2161,14 @@ namespace WebAnnotationModel.Service {
         System.IAsyncResult BeginSplit(long StructureA, WebAnnotationModel.Service.LocationLink locLink, System.AsyncCallback callback, object asyncState);
         
         long EndSplit(System.IAsyncResult result);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/GetStructureChangeLog", ReplyAction="http://tempuri.org/IAnnotateStructures/GetStructureChangeLogResponse")]
+        WebAnnotationModel.Service.StructureHistory[] GetStructureChangeLog(System.Nullable<long> structure_id, System.Nullable<System.DateTime> begin_time, System.Nullable<System.DateTime> end_time);
+        
+        [System.ServiceModel.OperationContractAttribute(AsyncPattern=true, Action="http://tempuri.org/IAnnotateStructures/GetStructureChangeLog", ReplyAction="http://tempuri.org/IAnnotateStructures/GetStructureChangeLogResponse")]
+        System.IAsyncResult BeginGetStructureChangeLog(System.Nullable<long> structure_id, System.Nullable<System.DateTime> begin_time, System.Nullable<System.DateTime> end_time, System.AsyncCallback callback, object asyncState);
+        
+        WebAnnotationModel.Service.StructureHistory[] EndGetStructureChangeLog(System.IAsyncResult result);
     }
     
     [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
@@ -2457,6 +2476,25 @@ namespace WebAnnotationModel.Service {
     
     [System.Diagnostics.DebuggerStepThroughAttribute()]
     [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
+    public partial class GetStructureChangeLogCompletedEventArgs : System.ComponentModel.AsyncCompletedEventArgs {
+        
+        private object[] results;
+        
+        public GetStructureChangeLogCompletedEventArgs(object[] results, System.Exception exception, bool cancelled, object userState) : 
+                base(exception, cancelled, userState) {
+            this.results = results;
+        }
+        
+        public WebAnnotationModel.Service.StructureHistory[] Result {
+            get {
+                base.RaiseExceptionIfNecessary();
+                return ((WebAnnotationModel.Service.StructureHistory[])(this.results[0]));
+            }
+        }
+    }
+    
+    [System.Diagnostics.DebuggerStepThroughAttribute()]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
     public partial class AnnotateStructuresClient : System.ServiceModel.ClientBase<WebAnnotationModel.Service.IAnnotateStructures>, WebAnnotationModel.Service.IAnnotateStructures {
         
         private BeginOperationDelegate onBeginCreateStructureDelegate;
@@ -2555,6 +2593,12 @@ namespace WebAnnotationModel.Service {
         
         private System.Threading.SendOrPostCallback onSplitCompletedDelegate;
         
+        private BeginOperationDelegate onBeginGetStructureChangeLogDelegate;
+        
+        private EndOperationDelegate onEndGetStructureChangeLogDelegate;
+        
+        private System.Threading.SendOrPostCallback onGetStructureChangeLogCompletedDelegate;
+        
         public AnnotateStructuresClient() {
         }
         
@@ -2605,6 +2649,8 @@ namespace WebAnnotationModel.Service {
         public event System.EventHandler<MergeCompletedEventArgs> MergeCompleted;
         
         public event System.EventHandler<SplitCompletedEventArgs> SplitCompleted;
+        
+        public event System.EventHandler<GetStructureChangeLogCompletedEventArgs> GetStructureChangeLogCompleted;
         
         public WebAnnotationModel.Service.CreateStructureRetval CreateStructure(WebAnnotationModel.Service.Structure structure, WebAnnotationModel.Service.Location location) {
             return base.Channel.CreateStructure(structure, location);
@@ -3415,6 +3461,60 @@ namespace WebAnnotationModel.Service {
             base.InvokeAsync(this.onBeginSplitDelegate, new object[] {
                         StructureA,
                         locLink}, this.onEndSplitDelegate, this.onSplitCompletedDelegate, userState);
+        }
+        
+        public WebAnnotationModel.Service.StructureHistory[] GetStructureChangeLog(System.Nullable<long> structure_id, System.Nullable<System.DateTime> begin_time, System.Nullable<System.DateTime> end_time) {
+            return base.Channel.GetStructureChangeLog(structure_id, begin_time, end_time);
+        }
+        
+        [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
+        public System.IAsyncResult BeginGetStructureChangeLog(System.Nullable<long> structure_id, System.Nullable<System.DateTime> begin_time, System.Nullable<System.DateTime> end_time, System.AsyncCallback callback, object asyncState) {
+            return base.Channel.BeginGetStructureChangeLog(structure_id, begin_time, end_time, callback, asyncState);
+        }
+        
+        [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
+        public WebAnnotationModel.Service.StructureHistory[] EndGetStructureChangeLog(System.IAsyncResult result) {
+            return base.Channel.EndGetStructureChangeLog(result);
+        }
+        
+        private System.IAsyncResult OnBeginGetStructureChangeLog(object[] inValues, System.AsyncCallback callback, object asyncState) {
+            System.Nullable<long> structure_id = ((System.Nullable<long>)(inValues[0]));
+            System.Nullable<System.DateTime> begin_time = ((System.Nullable<System.DateTime>)(inValues[1]));
+            System.Nullable<System.DateTime> end_time = ((System.Nullable<System.DateTime>)(inValues[2]));
+            return this.BeginGetStructureChangeLog(structure_id, begin_time, end_time, callback, asyncState);
+        }
+        
+        private object[] OnEndGetStructureChangeLog(System.IAsyncResult result) {
+            WebAnnotationModel.Service.StructureHistory[] retVal = this.EndGetStructureChangeLog(result);
+            return new object[] {
+                    retVal};
+        }
+        
+        private void OnGetStructureChangeLogCompleted(object state) {
+            if ((this.GetStructureChangeLogCompleted != null)) {
+                InvokeAsyncCompletedEventArgs e = ((InvokeAsyncCompletedEventArgs)(state));
+                this.GetStructureChangeLogCompleted(this, new GetStructureChangeLogCompletedEventArgs(e.Results, e.Error, e.Cancelled, e.UserState));
+            }
+        }
+        
+        public void GetStructureChangeLogAsync(System.Nullable<long> structure_id, System.Nullable<System.DateTime> begin_time, System.Nullable<System.DateTime> end_time) {
+            this.GetStructureChangeLogAsync(structure_id, begin_time, end_time, null);
+        }
+        
+        public void GetStructureChangeLogAsync(System.Nullable<long> structure_id, System.Nullable<System.DateTime> begin_time, System.Nullable<System.DateTime> end_time, object userState) {
+            if ((this.onBeginGetStructureChangeLogDelegate == null)) {
+                this.onBeginGetStructureChangeLogDelegate = new BeginOperationDelegate(this.OnBeginGetStructureChangeLog);
+            }
+            if ((this.onEndGetStructureChangeLogDelegate == null)) {
+                this.onEndGetStructureChangeLogDelegate = new EndOperationDelegate(this.OnEndGetStructureChangeLog);
+            }
+            if ((this.onGetStructureChangeLogCompletedDelegate == null)) {
+                this.onGetStructureChangeLogCompletedDelegate = new System.Threading.SendOrPostCallback(this.OnGetStructureChangeLogCompleted);
+            }
+            base.InvokeAsync(this.onBeginGetStructureChangeLogDelegate, new object[] {
+                        structure_id,
+                        begin_time,
+                        end_time}, this.onEndGetStructureChangeLogDelegate, this.onGetStructureChangeLogCompletedDelegate, userState);
         }
     }
     
