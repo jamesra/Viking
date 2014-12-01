@@ -27,9 +27,9 @@ namespace ConnectomeOpenData
             config.SetServiceOperationAccessRule("*", ServiceOperationRights.AllRead);
             
             ConfigureTable(config, "*");
-
+            
             // config.SetServiceOperationAccessRule("MyServiceOperation", ServiceOperationRights.All);
-            config.DataServiceBehavior.MaxProtocolVersion = DataServiceProtocolVersion.V2;
+            config.DataServiceBehavior.MaxProtocolVersion = DataServiceProtocolVersion.V3;
         }
 
 
