@@ -158,7 +158,7 @@ namespace AnnotationVizLib
             //Create edges
             foreach (Structure child in ChildStructures)
             {
-                if (child.Links.Length == 0)
+                if (child.Links == null || child.Links.Length == 0)
                     continue; 
 
                 foreach (StructureLink link in child.Links)
@@ -237,6 +237,9 @@ namespace AnnotationVizLib
 
                 IDToStructure[s.ID] = s;
 
+                if (s.ChildIDs == null)
+                    continue; 
+
                 //Find all of the details on child synapses, which we probably do not have
                 foreach (long childID in s.ChildIDs)
                 {
@@ -265,6 +268,9 @@ namespace AnnotationVizLib
                 {
                     IDToStructure.Add(child.ID, child); 
                 }
+
+                if (child.Links == null)
+                    continue; 
 
                 foreach (StructureLink link in child.Links)
                 {

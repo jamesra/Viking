@@ -201,7 +201,7 @@ namespace AnnotationVizLib
                         Debug.Assert(graph.IDToStructure.ContainsKey(ParentID));
                         Structure Parent = graph.IDToStructure[ParentID];
                         graph.ChildIDToParent[s.ID] = Parent;
-                        List<long> children = new List<long>(Parent.ChildIDs);
+                        List<long> children = Parent.ChildIDs == null ? new List<long>() : new List<long>(Parent.ChildIDs);
                         children.Add(s.ID);
                         Parent.ChildIDs = children.ToArray();
                     }

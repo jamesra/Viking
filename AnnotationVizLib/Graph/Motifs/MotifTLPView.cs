@@ -22,6 +22,7 @@ namespace AnnotationVizLib
                 NodeAttribs.Add("viewLabel", node.Key);
 
             NodeAttribs.Add("StructureIDs", SourceStructures(node));
+            NodeAttribs.Add("StructureURL", StructureLabelUrl(node));
 
             tlpnode.AddAttributes(NodeAttribs);
 
@@ -36,24 +37,16 @@ namespace AnnotationVizLib
             EdgeAttribs.Add("SourceStructures", EdgeStructuresString(edge.SourceStructIDs));
             EdgeAttribs.Add("TargetStructures", EdgeStructuresString(edge.TargetStructIDs));
             EdgeAttribs.Add("viewLabel", EdgeLabel(edge));
-
-            /*
-            foreach(long sourceID in edge.SourceStructIDs)
-            {
-                string key = string.Format("Source_{0}", sourceID);
-                EdgeAttribs.Add(key, string.Format("https://connectomes.utah.edu/Services/RC1/ConnectomeData.svc/Structures({0}L)", sourceID));
-            }
-
-            foreach(long targetID in edge.TargetStructIDs)
-            {
-                string key = string.Format("Target_{0}", targetID);
-                EdgeAttribs.Add(key, string.Format("https://connectomes.utah.edu/Services/RC1/ConnectomeData.svc/Structures({0}L)", targetID));
-            }
-            */
-
+            EdgeAttribs.Add("edgeType", edge.SynapseType);
+              
             tlpedge.AddAttributes(EdgeAttribs);
 
             return tlpedge;
+        }
+
+        public static string StructureLabelUrl(MotifNode node)
+        {
+            return string.Format("http://connectomes.utah.edu/Services/RC1/ConnectomeData.svc/Structures?$filter=startswith(Label,'{0}') eq true", node.Key);
         }
 
         private string SourceStructures(MotifNode node)

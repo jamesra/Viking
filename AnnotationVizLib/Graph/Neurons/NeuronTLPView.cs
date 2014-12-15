@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -21,7 +22,7 @@ namespace AnnotationVizLib
             if (!NodeAttribs.ContainsKey("viewLabel"))
                 NodeAttribs.Add("viewLabel", LabelForNode(node));
 
-            NodeAttribs.Add("StructureURL", string.Format("https://connectomes.utah.edu/Services/RC1/ConnectomeData.svc/Structures({0}L)", node.Key));
+            NodeAttribs.Add("StructureURL", string.Format("http://connectomes.utah.edu/Services/RC1/ConnectomeData.svc/Structures({0}L)", node.Key));
 
             tlpnode.AddAttributes(NodeAttribs);
 
@@ -53,9 +54,24 @@ namespace AnnotationVizLib
             return link.SourceID + " -> " + link.TargetID;
         }
 
+        /// <summary>
+        /// Create an edge between two nodes.  Returns null if the nodes do not exist
+        /// </summary>
+        /// <param name="edge"></param>
+        /// <returns></returns>
         public TLPViewEdge CreateTLPEdge(NeuronEdge edge)
         {
-            TLPViewEdge tlpedge = this.addEdge(edge.SourceNodeKey, edge.TargetNodeKey);
+            TLPViewEdge tlpedge = null;
+            try
+            {
+                tlpedge = this.addEdge(edge.SourceNodeKey, edge.TargetNodeKey);
+            }
+            catch(KeyNotFoundException e)
+            {
+                Trace.WriteLine(string.Format("Nodes missing for edge {0}", edge.ToString()));
+                return null;
+            }
+            
             IDictionary<string, string> EdgeAttribs = AttributeMapper.AttribsForLabel(edge.SynapseType, TLPAttributes.StandardEdgeSourceLabelToTLPAppearance);
 
             if (EdgeAttribs.Count == 0)
@@ -65,19 +81,20 @@ namespace AnnotationVizLib
             }
 
             EdgeAttribs.Add("viewLabel", edge.SynapseType);
+            EdgeAttribs.Add("edgeType", edge.SynapseType);
             EdgeAttribs.Add("LinkedStructures", LinkedStructures(edge));
 
             /*
             foreach(long sourceID in edge.SourceStructIDs)
             {
                 string key = string.Format("Source_{0}", sourceID);
-                EdgeAttribs.Add(key, string.Format("https://connectomes.utah.edu/Services/RC1/ConnectomeData.svc/Structures({0}L)", sourceID));
+                EdgeAttribs.Add(key, string.Format("http://connectomes.utah.edu/Services/RC1/ConnectomeData.svc/Structures({0}L)", sourceID));
             }
 
             foreach(long targetID in edge.TargetStructIDs)
             {
                 string key = string.Format("Target_{0}", targetID);
-                EdgeAttribs.Add(key, string.Format("https://connectomes.utah.edu/Services/RC1/ConnectomeData.svc/Structures({0}L)", targetID));
+                EdgeAttribs.Add(key, string.Format("http://connectomes.utah.edu/Services/RC1/ConnectomeData.svc/Structures({0}L)", targetID));
             }
             */
 
