@@ -88,7 +88,8 @@ namespace AnnotationVizLib
             { "orange", "(255,128,0,127)"},
             { "darkkhaki", "(194,111,61,127)"},
             { "saddlebrown", "(107,61,33,127)"},
-            { "chartreuse4", "(69,139,0,127)"}
+            { "chartreuse4", "(69,139,0,127)"},
+            { "yellow", "(255,255,0,127)"}
         };
           
         public static SortedDictionary<string, string> StandardGraphDefaultAttributeValues = new SortedDictionary<string, string>()
@@ -281,7 +282,7 @@ namespace AnnotationVizLib
             new AttributeMap("GAP JUNCTION", new SortedList<string,string> {
                             {"viewTgtAnchorShape", IntForEdgeTerminalShape(EdgeExtremityShapes.Diamond)},
                             {"viewSrcAnchorShape", IntForEdgeTerminalShape(EdgeExtremityShapes.Diamond)},
-                            {"viewColor", ColorMap["purple"]}
+                            {"viewColor", ColorMap["yellow"]}
                 }
             ),
             new AttributeMap("FRONTIER", new SortedList<string,string> {
