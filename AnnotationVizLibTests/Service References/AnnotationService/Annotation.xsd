@@ -126,7 +126,6 @@
           <xs:element minOccurs="0" name="Position" type="tns:AnnotationPoint" />
           <xs:element minOccurs="0" name="Radius" type="xs:double" />
           <xs:element minOccurs="0" name="Section" type="xs:long" />
-          <xs:element xmlns:q5="http://schemas.microsoft.com/2003/10/Serialization/Arrays" minOccurs="0" name="Tags" nillable="true" type="q5:ArrayOfstring" />
           <xs:element minOccurs="0" name="Terminal" type="xs:boolean" />
           <xs:element minOccurs="0" name="TypeCode" type="xs:short" />
           <xs:element minOccurs="0" name="Username" nillable="true" type="xs:string" />
