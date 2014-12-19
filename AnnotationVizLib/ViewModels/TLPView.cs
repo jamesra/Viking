@@ -60,7 +60,7 @@ namespace AnnotationVizLib
         }
     }
 
-    public class TLPView<VIEWED_KEY>: GraphViewEngine<ulong>
+    public abstract class TLPView<VIEWED_KEY>: GraphViewEngine<ulong>
         where VIEWED_KEY : IComparable<VIEWED_KEY>
     { 
         /*
@@ -71,22 +71,38 @@ namespace AnnotationVizLib
         */
 
         /// <summary>
+        /// Return a dictionary of default values for attributes
+        /// </summary>
+        protected abstract SortedDictionary<string, string> DefaultAttributes {  get; }
+
+        /// <summary>
         /// Map the motif label to the arbitrary id used by TLP
         /// </summary>
         SortedDictionary<VIEWED_KEY, ulong> KeyToIndex = new SortedDictionary<VIEWED_KEY, ulong>();
-        
 
+        /// <summary>
+        /// Map the motif label to the arbitrary id used by TLP
+        /// </summary>
+        SortedList<ulong, TLPView<VIEWED_KEY>> Subgraphs = new SortedList<ulong, TLPView<VIEWED_KEY>>();
+        
         private ulong nextNodeIndex = 0;
+
+        private ulong nextSubgraphID = 1; 
+
         protected TLPViewNode createNode(VIEWED_KEY key)
         {
             TLPViewNode tempNode = new TLPViewNode(nextNodeIndex);
-            nodes.Add(tempNode.Key, tempNode);
-            KeyToIndex.Add(key, tempNode.Key);
+            addNode(key, tempNode);
             nextNodeIndex += 1;
             return tempNode;
         }
 
-
+        protected void addNode(VIEWED_KEY key, TLPViewNode node)
+        {
+            nodes.Add(node.Key, node);
+            KeyToIndex.Add(key, node.Key);  
+        }
+        
         private ulong nextEdgeIndex = 0;
         protected TLPViewEdge addEdge(VIEWED_KEY source, VIEWED_KEY target)
         {
@@ -97,6 +113,11 @@ namespace AnnotationVizLib
             nextEdgeIndex += 1; 
             return edge; 
         }
+
+        protected void AddSubGraph(ulong id, TLPView<VIEWED_KEY> subgraph)
+        {
+            Subgraphs.Add(id, subgraph);
+        }
         
         private static string Header
         {
@@ -104,6 +125,11 @@ namespace AnnotationVizLib
             {
                 return "(tlp \"2.0\"";
             }
+        }
+
+        private static string ClusterHeader(ulong id, string name)
+        {
+            return string.Format("(cluster {0} \"{1}\"", id, name);
         }
 
         private static string Footer
@@ -158,7 +184,7 @@ namespace AnnotationVizLib
         private IList<string> EntityAttributeList()
         {
             SortedSet<string> attribNames = new SortedSet<string>();
-            foreach (string attribName in TLPAttributes.DefaultForAttribute.Keys)
+            foreach (string attribName in this.DefaultAttributes.Keys)
             {
                 if (!attribNames.Contains(attribName))
                 {
@@ -212,9 +238,9 @@ namespace AnnotationVizLib
 
             sb.AppendLine(PropertyHeader(attribname));
 
-            if(TLPAttributes.DefaultForAttribute.ContainsKey(attribname))
+            if(this.DefaultAttributes.ContainsKey(attribname))
             {
-                sb.AppendLine(string.Format("(default {0} )", TLPAttributes.DefaultForAttribute[attribname]));
+                sb.AppendLine(string.Format("(default {0} )", DefaultAttributes[attribname]));
             }
 
             foreach(TLPViewNode node in nodes.Values)
@@ -235,20 +261,6 @@ namespace AnnotationVizLib
 
             return sb.ToString(); 
         }
-
-
-        /*
-        private string EdgeToString(MotifEdge edge)
-        {
-            StringBuilder s = new StringBuilder();
-            s.Append("(edge ");
-            ulong edgeID = EdgeToIndex[edge];
-            ulong sourceID = KeyToIndex[edge.SourceNodeKey];
-            ulong targetID = KeyToIndex[edge.TargetNodeKey];
-
-            return string.Format("(edge {0} {1} {2})", new object[] { edgeID.ToString(), sourceID.ToString(), targetID.ToString() });
-        }
-        */
          
 
         public override string ToString()
@@ -257,11 +269,40 @@ namespace AnnotationVizLib
             {
                 sw.WriteLine(MotifTLPView.Header);
 
-                sw.WriteLine(MotifTLPView.NodesDefinitionString(nodes.Keys));
-
-                sw.WriteLine(EdgesDefinitionString());
+                sw.WriteLine(this.GraphBody());
 
                 sw.WriteLine(AttributeValueString());
+
+                sw.WriteLine(MotifTLPView.Footer);
+                return sw.ToString();
+            }
+        }
+
+        private string GraphBody()
+        {
+            using (StringWriter sw = new StringWriter())
+            {
+                sw.WriteLine(NodesDefinitionString(nodes.Keys));
+
+                sw.WriteLine(EdgesDefinitionString());
+                 
+                foreach (ulong subgraph_id in this.Subgraphs.Keys)
+                {
+                    sw.WriteLine(this.Subgraphs[subgraph_id].ToClusterString(subgraph_id));
+                }
+
+                return sw.ToString(); 
+            } 
+        }
+         
+
+        public string ToClusterString(ulong subgraph_id)
+        {
+            using (StringWriter sw = new StringWriter())
+            {
+                sw.WriteLine(ClusterHeader(subgraph_id, subgraph_id.ToString()));
+
+                sw.WriteLine(GraphBody());
 
                 sw.WriteLine(MotifTLPView.Footer);
                 return sw.ToString();

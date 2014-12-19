@@ -8,7 +8,10 @@ using Annotation;
 
 namespace Annotation.Service.Interfaces
 {
-    
+    /// <summary>
+    /// All of the query based functions should be deprecated and replaced by OData, one issue may be that  interfaces return binary streams instead of text.
+    /// Using OData also ties clients to our schema.
+    /// </summary>
     [ServiceContract]
     public interface IAnnotateLocations
     {

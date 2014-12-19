@@ -287,7 +287,7 @@ namespace Annotation
             if (db.Tags == null)
             {
                 //_Tags = new string[0];
-                _Xml = "";
+                _Xml = null;
             }
             else
             {
@@ -357,7 +357,10 @@ namespace Annotation
                     if (!(db.Tags.Length <= 1 && this.AttributesXml.Length <= 1))
                         UpdateUserName = true;
 
-            db.Tags = this.AttributesXml;
+            if (this.AttributesXml == "")
+                db.Tags = null;
+            else
+                db.Tags = this.AttributesXml;
 
             UpdateUserName |= db.Terminal != this._Terminal; 
             db.Terminal = this._Terminal;
@@ -450,16 +453,17 @@ namespace Annotation
             this._Radius = db.Radius.Value;
             this._ChangedColumnMask = 0; //TODO: System.Convert.ToUInt64(db.___update_mask); 
 
+            
             if (db.Tags == null)
             {
                 //_Tags = new string[0];
-                _Xml = null; 
+                _Xml = null;
             }
             else
             {
                 //    _Tags = db.Tags.Split(';');
-                _Xml = db.Tags.ToString();
-            }
+                _Xml = db.Tags.Value;
+            } 
 
             this._LastModified = db.LastModified.Value.Ticks;
             this._Username = db.Username;

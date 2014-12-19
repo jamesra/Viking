@@ -3,8 +3,6 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2013
 VisualStudioVersion = 12.0.31101.0
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConnectomeViz", "ConnectomeViz.csproj", "{BD6C2700-D37C-4D1A-9751-9E5E8B4A96E8}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GraphLib", "..\..\GraphLib\GraphLib.csproj", "{D6F219FC-733B-481F-BF78-D34A7CB893EC}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{72911505-DB93-432C-B340-FBEE8D23037B}"
@@ -26,16 +24,16 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AnnotationService", "..\Ann
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AnnotationDatabase", "..\AnnotationService\AnnotationDatabase\AnnotationDatabase.csproj", "{E89D1721-2F91-446A-8BD9-F5712F131CC8}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Viz", "Viz\Viz.csproj", "{37810011-79F8-45A2-B396-1912AEF6F840}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConnectomeOpenData", "..\ConnectomeOpenData\ConnectomeOpenData.csproj", "{25F5D47B-74C1-46EA-8EE1-DDE17E12047A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{BD6C2700-D37C-4D1A-9751-9E5E8B4A96E8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{BD6C2700-D37C-4D1A-9751-9E5E8B4A96E8}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{BD6C2700-D37C-4D1A-9751-9E5E8B4A96E8}.Release|Any CPU.ActiveCfg = Debug|Any CPU
-		{BD6C2700-D37C-4D1A-9751-9E5E8B4A96E8}.Release|Any CPU.Build.0 = Debug|Any CPU
 		{D6F219FC-733B-481F-BF78-D34A7CB893EC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{D6F219FC-733B-481F-BF78-D34A7CB893EC}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D6F219FC-733B-481F-BF78-D34A7CB893EC}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -64,6 +62,14 @@ Global
 		{E89D1721-2F91-446A-8BD9-F5712F131CC8}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E89D1721-2F91-446A-8BD9-F5712F131CC8}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E89D1721-2F91-446A-8BD9-F5712F131CC8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{37810011-79F8-45A2-B396-1912AEF6F840}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{37810011-79F8-45A2-B396-1912AEF6F840}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{37810011-79F8-45A2-B396-1912AEF6F840}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{37810011-79F8-45A2-B396-1912AEF6F840}.Release|Any CPU.Build.0 = Release|Any CPU
+		{25F5D47B-74C1-46EA-8EE1-DDE17E12047A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{25F5D47B-74C1-46EA-8EE1-DDE17E12047A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{25F5D47B-74C1-46EA-8EE1-DDE17E12047A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{25F5D47B-74C1-46EA-8EE1-DDE17E12047A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

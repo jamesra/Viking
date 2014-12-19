@@ -1767,6 +1767,9 @@ namespace Annotation
 
             foreach (Structure structure in MissingStructures)
             {
+                if (structure.ChildIDs == null)
+                    continue; 
+
                 foreach (long childID in structure.ChildIDs)
                 {
                     if (graph.NodeList.ContainsKey(childID) == false)
@@ -1785,8 +1788,8 @@ namespace Annotation
             foreach (Structure child in ChildStructObjs)
             {
                 //Temp Hack to skip desmosomes
-                if (child.TypeID == 85)
-                    continue;
+                if (child.Links == null)
+                    continue; 
 
                 foreach (StructureLink link in child.Links)
                 {
@@ -1810,6 +1813,9 @@ namespace Annotation
             //Find missing structures and populate the list
             foreach (Structure child in ChildStructObjs)
             {
+                if (child.Links == null)
+                    continue; 
+
                 foreach (StructureLink link in child.Links)
                 {
                     if (!graph.NodeList.ContainsKey(link.SourceID))
@@ -2050,6 +2056,11 @@ namespace Annotation
         public string[] getSynapses(int cellID)
         {
             Structure mainStructure = GetStructureByID(cellID, true);
+            if(mainStructure.ChildIDs == null)
+            {
+                return new string[0];
+            }
+
             Structure[] synapses = GetStructuresByIDs(mainStructure.ChildIDs, false);
             SortedDictionary<long, long> temp = new SortedDictionary<long, long>();
 

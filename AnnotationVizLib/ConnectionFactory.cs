@@ -55,6 +55,16 @@ namespace AnnotationVizLib
             return proxy;
         }
 
+        public static AnnotationService.AnnotateLocationsClient CreateLocationsClient()
+        {
+            Debug.Assert(_Endpoint != null, "SetConnection(endpoint, userCredentials) has not been called");
+            AnnotationService.AnnotateLocationsClient proxy = new AnnotationService.AnnotateLocationsClient();
+            proxy.Endpoint.Address = new System.ServiceModel.EndpointAddress(ConnectionFactory.Endpoint);
+            proxy.ClientCredentials.UserName.UserName = ConnectionFactory.userCredentials.UserName;
+            proxy.ClientCredentials.UserName.Password = ConnectionFactory.userCredentials.Password;
+            return proxy;
+        }
+
         static ConnectionFactory()
         {
             System.Net.ServicePointManager.ServerCertificateValidationCallback += RemoteCertificateValidate;

@@ -14,8 +14,8 @@ namespace DataExport.Controllers
         // GET: /Motifs/ 
         [ActionName("GetDot")]
         public ActionResult GetDot()
-        { 
-            string database = Request.RequestContext.RouteData.Values["database"].ToString();
+        {
+            string database = AppSettings.GetDatabaseCatalogName();
             string EndpointURL = string.Format(AppSettings.WebServiceURLTemplate, database);
             string userDotDirectory = Server.MapPath("~/Dot/");
 
@@ -35,7 +35,7 @@ namespace DataExport.Controllers
         [ActionName("GetTLP")]
         public ActionResult GetTLP()
         {
-            string database = Request.RequestContext.RouteData.Values["database"].ToString();
+            string database = AppSettings.GetDatabaseCatalogName();
             string EndpointURL = string.Format(AppSettings.WebServiceURLTemplate, database);
             string userDotDirectory = Server.MapPath("~/Dot/");
 

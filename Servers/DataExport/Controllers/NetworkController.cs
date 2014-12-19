@@ -15,14 +15,13 @@ namespace DataExport.Controllers
         [ActionName("GetDot")]
         public ActionResult GetDot()
         {
-
-            string database = Request.RequestContext.RouteData.Values["database"].ToString();
+            string database = AppSettings.GetDatabaseCatalogName();
             string EndpointURL = string.Format(AppSettings.WebServiceURLTemplate, database);
             string userDotDirectory = Server.MapPath("~/Dot/");
 
             AnnotationVizLib.ConnectionFactory.SetConnection(EndpointURL, AppSettings.EndpointCredentials);
 
-            ICollection<long> requestIDs = GetQueryStringIDs();
+            ICollection<long> requestIDs = RequestVariables.GetQueryStringIDs(Request).Cast<long>().ToArray();
             if (requestIDs == null || requestIDs.Count == 0)
                 requestIDs = Queries.GetLinkedStructureParentIDs();
 
@@ -41,7 +40,7 @@ namespace DataExport.Controllers
         [ActionName("GetTLP")]
         public ActionResult GetTLP()
         {
-            string database = Request.RequestContext.RouteData.Values["database"].ToString();
+            string database = AppSettings.GetDatabaseCatalogName();
             string EndpointURL = string.Format(AppSettings.WebServiceURLTemplate, database);
             string userDotDirectory = Server.MapPath("~/Dot/");
 
@@ -50,7 +49,7 @@ namespace DataExport.Controllers
             if (!System.IO.Directory.Exists(userDotDirectory))
                 System.IO.Directory.CreateDirectory(userDotDirectory);
 
-            ICollection<long> requestIDs = GetQueryStringIDs();
+            ICollection<long> requestIDs = RequestVariables.GetQueryStringIDs(Request).Cast<long>().ToArray();
             if (requestIDs == null || requestIDs.Count == 0)
                 requestIDs = Queries.GetLinkedStructureParentIDs();
 
@@ -64,30 +63,6 @@ namespace DataExport.Controllers
             return File(userDotFileFullPath, "text/plain", "network.tlp");
         } 
 
-        private ICollection<long> GetQueryStringIDs()
-        {
-            string idListstr = Request.RequestContext.HttpContext.Request.QueryString["id"];
-            if (idListstr == null)
-            {
-                return null; 
-            }
-
-            string[] parts = idListstr.Split(new char[]{',',';',' '}, StringSplitOptions.RemoveEmptyEntries); 
-            List<long> ids = new List<long>(parts.Length);
-            foreach(string id in parts)
-            {
-                try
-                {
-                    ids.Add(Convert.ToInt64(id));
-                }
-                catch(FormatException)
-                {
-                    continue;
-                }
-            }
-
-            return ids;
-        }
 
 
         private uint GetNumHops()

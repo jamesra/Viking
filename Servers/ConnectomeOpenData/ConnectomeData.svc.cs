@@ -32,6 +32,18 @@ namespace ConnectomeOpenData
             config.DataServiceBehavior.MaxProtocolVersion = DataServiceProtocolVersion.V3;
         }
 
+        protected override ConnectomeEntities CreateDataSource()
+        {
+            System.Data.EntityClient.EntityConnection connection = new System.Data.EntityClient.EntityConnection(BuildConnectionString());
+
+            return new ConnectomeEntities(connection);
+        }
+
+        private string BuildConnectionString()
+        {
+            string template = AppSettings.GetConnectionString("ConnectionTemplate");
+            return string.Format(template, AppSettings.GetDatabaseServer(), AppSettings.GetCatalogName());
+        } 
 
         private static void ConfigureTable(DataServiceConfiguration config, string Tablename)
         {
@@ -72,5 +84,24 @@ namespace ConnectomeOpenData
 
             //return entities.SelectStructureLocationLinks(Convert.ToInt64(StructureID)).ToList();
         }
+
+        [WebGet]
+        public IQueryable<SelectStructureChangeLog_Result> StructureChangeLog(Int64? structure_ID)
+        {
+            //return new List<LocationLink>();
+            return CurrentDataSource.SelectStructureChangeLog(structure_ID, null, null).AsQueryable();
+
+            //return entities.SelectStructureLocationLinks(Convert.ToInt64(StructureID)).ToList();
+        }
+
+        [WebGet]
+        public IQueryable<SelectStructureLocationChangeLog_Result> StructureLocationChangeLog(Int64? structure_ID)
+        {
+            //return new List<LocationLink>();
+            return CurrentDataSource.SelectStructureLocationChangeLog(structure_ID, null, null).AsQueryable();
+
+            //return entities.SelectStructureLocationLinks(Convert.ToInt64(StructureID)).ToList();
+        }
+         
     }
 }

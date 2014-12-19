@@ -70,11 +70,11 @@ namespace AnnotationVizLib
         /// <param name="proxy"></param>
         /// <param name="IDs"></param>
         /// <returns></returns>
-        public static Structure[] GetStructuresByIDs(long[] IDs)
+        public static Structure[] GetStructuresByIDs(long[] IDs, bool include_children=false)
         {
             using(AnnotateStructuresClient proxy = ConnectionFactory.CreateStructuresClient())
             {
-                return GetStructuresByIDs(proxy, IDs);
+                return GetStructuresByIDs(proxy, IDs, include_children);
             }
         }
 
@@ -84,7 +84,7 @@ namespace AnnotationVizLib
         /// <param name="proxy"></param>
         /// <param name="IDs"></param>
         /// <returns></returns>
-        public static Structure[] GetStructuresByIDs(AnnotateStructuresClient proxy, long[] IDs)
+        public static Structure[] GetStructuresByIDs(AnnotateStructuresClient proxy, long[] IDs, bool include_children=false)
         {
             int i = 0;
             int ChunkSize = 4096;
@@ -97,7 +97,7 @@ namespace AnnotationVizLib
 
                 Array.Copy(IDs, i, subArray, 0, iEnd - i);
 
-                listStructures.AddRange(proxy.GetStructuresByIDs(subArray, false));
+                listStructures.AddRange(proxy.GetStructuresByIDs(subArray, include_children));
 
                 i = iEnd;
             }

@@ -8,7 +8,11 @@ using System.Diagnostics;
 namespace AnnotationVizLib
 {
     public class MotifTLPView : TLPView<string>
-    { 
+    {
+        protected override SortedDictionary<string, string> DefaultAttributes
+        {
+            get { return TLPAttributes.DefaultForAttribute; }
+        }
 
         private MotifTLPView(MotifGraph graph)
         { 

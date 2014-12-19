@@ -55,6 +55,9 @@
     <Compile Include="Graph\Neurons\NeuronDOTView.cs" />
     <Compile Include="Graph\Neurons\NeuronGraph.cs" />
     <Compile Include="Graph\Neurons\NeuronTLPView.cs" />
+    <Compile Include="Graph\Morphology\MorphologyTLPView.cs" />
+    <Compile Include="Graph\Morphology\MorphologyGraph.cs" />
+    <Compile Include="Scale.cs" />
     <Compile Include="Utils.cs" />
     <Compile Include="ViewModels\GraphViewEngine.cs" />
     <Compile Include="Queries.cs" />

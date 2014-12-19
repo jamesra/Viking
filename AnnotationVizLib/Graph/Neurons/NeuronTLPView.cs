@@ -8,6 +8,11 @@ namespace AnnotationVizLib
 {
     public class NeuronTLPView : TLPView<long>
     {
+        protected override SortedDictionary<string, string> DefaultAttributes
+        {
+            get { return TLPAttributes.DefaultForAttribute; }
+        }
+
         public TLPViewNode CreateTLPNode(NeuronNode node)
         {
             TLPViewNode tlpnode = createNode(node.Key);

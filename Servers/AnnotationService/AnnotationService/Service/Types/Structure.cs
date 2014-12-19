@@ -37,8 +37,7 @@ namespace Annotation
     {
         protected long _Type;
         protected string _Notes;
-        protected bool _Verified;
-        protected string[] _Tags = new string[0];
+        protected bool _Verified; 
         protected double _Confidence;
         protected StructureLink[] _Links;
         protected long[] _ChildIDs;
@@ -119,6 +118,29 @@ namespace Annotation
             set { _Username = value; }
         }
 
+        private static StructureLink[] PopulateLinks(DBStructure db)
+        {
+            if (!(db.IsSourceOf.Any() || db.IsTargetOf.Any()))
+                return null;
+
+            StructureLink[] _Links = new StructureLink[db.IsSourceOf.Count + db.IsTargetOf.Count];
+
+            int i = 0;
+            foreach (DBStructureLink link in db.IsSourceOf)
+            {
+                _Links[i] = new StructureLink(link);
+                i++;
+            }
+
+            foreach (DBStructureLink link in db.IsTargetOf)
+            {
+                _Links[i] = new StructureLink(link);
+                i++;
+            }
+
+            return _Links;
+        }
+
         public Structure()
         {
         }
@@ -137,10 +159,11 @@ namespace Annotation
             this.Notes = db.Notes;
             this.Verified = db.Verified;
 
+
             if (db.Tags == null)
             {
                 //_Tags = new string[0];
-                _Xml = null; 
+                _Xml = ""; 
             }
             else
             {
@@ -152,7 +175,7 @@ namespace Annotation
             this.Confidence = db.Confidence;
             this.ParentID = db.ParentID;
 
-            this._Links = new StructureLink[db.IsSourceOf.Count + db.IsTargetOf.Count];
+            this._Links = PopulateLinks(db);
 
             if (IncludeChildren)
             {
@@ -165,22 +188,9 @@ namespace Annotation
             }
             else
             {
-                this._ChildIDs = new long[0]; 
+                this._ChildIDs = null; 
             }
-
-            int i = 0;
-            foreach (DBStructureLink link in db.IsSourceOf)
-            {
-                _Links[i] = new StructureLink(link);
-                i++;
-            }
-
-            foreach (DBStructureLink link in db.IsTargetOf)
-            {
-                _Links[i] = new StructureLink(link);
-                i++;
-            }
-
+             
             this._Label = db.Label;
             this._Username = db.Username; 
         }
@@ -221,15 +231,16 @@ namespace Annotation
             this.Notes = db.Notes;
             this.Verified = db.Verified.Value;
 
+            /*
             if (db.Tags == null)
             { 
-                _Xml = null;
+                _Xml = "";
             }
             else
             { 
                 _Xml = db.Tags.ToString();
             }
-
+            */
 
             this.Confidence = db.Confidence.Value;
             this.ParentID = db.ParentID.Value;

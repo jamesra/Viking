@@ -18,21 +18,25 @@ namespace DataExport
     {
         public static void RegisterRoutes(RouteCollection routes)
         {
-            routes.MapRoute("Network_Dot", "{database}/Network/Dot", 
+            routes.MapRoute("Network_Dot", "Network/Dot",
                             new { controller = "Network", action = "GetDot"},
                             new { controller = "Network"});
 
-            routes.MapRoute("Network_TLP", "{database}/Network/TLP",
+            routes.MapRoute("Network_TLP", "Network/TLP",
                             new { controller = "Network", action = "GetTLP" },
                             new { controller = "Network" });
 
-            routes.MapRoute("Motifs_Dot", "{database}/Motifs/Dot",
+            routes.MapRoute("Motifs_Dot", "Motifs/Dot",
                             new { controller = "Motif", action = "GetDot"},
                             new { controller = "Motif"});
 
-            routes.MapRoute("Motifs_TLP", "{database}/Motifs/TLP",
+            routes.MapRoute("Motifs_TLP", "Motifs/TLP",
                             new { controller = "Motif", action = "GetTLP" },
                             new { controller = "Motif" });
+             
+            routes.MapRoute("Morphology_TLP", "Morphology/TLP",
+                            new { controller = "Morphology", action = "GetTLP" },
+                            new { controller = "Morphology" });
         }
 
         protected void Application_Start()
