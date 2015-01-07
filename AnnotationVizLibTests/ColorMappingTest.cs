@@ -31,7 +31,7 @@ namespace AnnotationVizLibTests
             ColorMapImageData colormap = null;
             using(System.IO.Stream imagestream = System.IO.File.OpenRead("Resources\\ColorMap3x2.png"))
             {
-                colormap = new ColorMapImageData(imagestream, scale);
+                colormap = new ColorMapImageData(imagestream, 0, scale);
             }
 
             Microsoft.VisualStudio.TestTools.UnitTesting.Assert.IsTrue(ColorsMatch(colormap.GetColor(0, 0), Color.Black));
@@ -61,7 +61,7 @@ namespace AnnotationVizLibTests
             ColorMapImageData colormap = null;
             using (System.IO.Stream imagestream = System.IO.File.OpenRead("Resources\\ColorMap12x8.png"))
             {
-                colormap = new ColorMapImageData(imagestream, scale);
+                colormap = new ColorMapImageData(imagestream, 0, scale);
             }
 
             Microsoft.VisualStudio.TestTools.UnitTesting.Assert.IsTrue(ColorsMatch(colormap.GetColor(0, 0), Color.Black));
@@ -75,6 +75,27 @@ namespace AnnotationVizLibTests
             Microsoft.VisualStudio.TestTools.UnitTesting.Assert.IsTrue(ColorsMatch(colormap.GetColor(0, 2), Color.Empty));
             Microsoft.VisualStudio.TestTools.UnitTesting.Assert.IsTrue(ColorsMatch(colormap.GetColor(-1, 0), Color.Empty));
             Microsoft.VisualStudio.TestTools.UnitTesting.Assert.IsTrue(ColorsMatch(colormap.GetColor(0, -1), Color.Empty));
+        }
+
+        /// <summary>
+        /// Check that we can load a set of images and average them correctly.
+        /// </summary>
+        [TestMethod]
+        public void TestColorMappingConfig()
+        {
+
+            string config = System.IO.File.ReadAllText("Resources\\ImageColorMaps.txt");
+            ColorMapping mapping = ColorMapping.Create(config, "Resources");
+
+            //We expect the two identical images to be averaged using the color scalars in the text file
+
+            Microsoft.VisualStudio.TestTools.UnitTesting.Assert.IsTrue(ColorsMatch(mapping.GetColor(0, 1, 1), Color.FromArgb(127, 255, 127)));
+            Microsoft.VisualStudio.TestTools.UnitTesting.Assert.IsTrue(ColorsMatch(mapping.GetColor(0, 0, 1), Color.Black));
+
+            Microsoft.VisualStudio.TestTools.UnitTesting.Assert.IsTrue(ColorsMatch(mapping.GetColor(3, 0, 1), Color.Empty));
+            Microsoft.VisualStudio.TestTools.UnitTesting.Assert.IsTrue(ColorsMatch(mapping.GetColor(0, 2, 1), Color.Empty));
+            Microsoft.VisualStudio.TestTools.UnitTesting.Assert.IsTrue(ColorsMatch(mapping.GetColor(-1, 0,1), Color.Empty));
+            Microsoft.VisualStudio.TestTools.UnitTesting.Assert.IsTrue(ColorsMatch(mapping.GetColor(0, -1,1), Color.Empty));
         }
     }
 }
