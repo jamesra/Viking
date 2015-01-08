@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
@@ -11,9 +11,10 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>AnnotationVizLibTests</RootNamespace>
     <AssemblyName>AnnotationVizLibTests</AssemblyName>
-    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.5.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <ProjectTypeGuids>{3AC096D0-A1C2-E12C-1390-A8335801FDAB};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -23,6 +24,7 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -31,6 +33,7 @@
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Microsoft.VisualStudio.QualityTools.UnitTestFramework, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL" />
@@ -38,6 +41,7 @@
     <Reference Include="System.Core">
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
     </Reference>
+    <Reference Include="System.Drawing" />
     <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.ServiceModel" />
     <Reference Include="System.Xml" />
@@ -48,6 +52,7 @@
     </CodeAnalysisDependentAssemblyPaths>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ColorMappingTest.cs" />
     <Compile Include="MotifGraphTest.cs" />
     <Compile Include="NeuronGraphTest.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -73,38 +78,20 @@
     <None Include="Properties\DataSources\AnnotationUtils.AnnotationService.StructureLink.datasource" />
     <None Include="Properties\DataSources\AnnotationUtils.AnnotationService.StructureType.datasource" />
     <None Include="Properties\DataSources\AnnotationUtils.AnnotationService.SynapseObject.datasource" />
+    <None Include="Properties\DataSources\AnnotationVizLib.AnnotationService.CreateStructureRetval.datasource" />
+    <None Include="Properties\DataSources\AnnotationVizLib.AnnotationService.Graphx.datasource" />
+    <None Include="Properties\DataSources\AnnotationVizLib.AnnotationService.Location.datasource" />
+    <None Include="Properties\DataSources\AnnotationVizLib.AnnotationService.LocationLink.datasource" />
+    <None Include="Properties\DataSources\AnnotationVizLib.AnnotationService.LocationPositionOnly.datasource" />
+    <None Include="Properties\DataSources\AnnotationVizLib.AnnotationService.Structure.datasource" />
+    <None Include="Properties\DataSources\AnnotationVizLib.AnnotationService.StructureLink.datasource" />
+    <None Include="Properties\DataSources\AnnotationVizLib.AnnotationService.StructureType.datasource" />
+    <None Include="Properties\DataSources\AnnotationVizLib.AnnotationService.SynapseObject.datasource" />
     <None Include="Service References\AnnotationService\Annotation.Service.GraphClasses.xsd">
       <SubType>Designer</SubType>
     </None>
     <None Include="Service References\AnnotationService\Annotation.xsd">
       <SubType>Designer</SubType>
-    </None>
-    <None Include="Service References\AnnotationService\AnnotationVizLibTests.AnnotationService.CreateStructureRetval.datasource">
-      <DependentUpon>Reference.svcmap</DependentUpon>
-    </None>
-    <None Include="Service References\AnnotationService\AnnotationVizLibTests.AnnotationService.Graphx.datasource">
-      <DependentUpon>Reference.svcmap</DependentUpon>
-    </None>
-    <None Include="Service References\AnnotationService\AnnotationVizLibTests.AnnotationService.Location.datasource">
-      <DependentUpon>Reference.svcmap</DependentUpon>
-    </None>
-    <None Include="Service References\AnnotationService\AnnotationVizLibTests.AnnotationService.LocationLink.datasource">
-      <DependentUpon>Reference.svcmap</DependentUpon>
-    </None>
-    <None Include="Service References\AnnotationService\AnnotationVizLibTests.AnnotationService.LocationPositionOnly.datasource">
-      <DependentUpon>Reference.svcmap</DependentUpon>
-    </None>
-    <None Include="Service References\AnnotationService\AnnotationVizLibTests.AnnotationService.Structure.datasource">
-      <DependentUpon>Reference.svcmap</DependentUpon>
-    </None>
-    <None Include="Service References\AnnotationService\AnnotationVizLibTests.AnnotationService.StructureLink.datasource">
-      <DependentUpon>Reference.svcmap</DependentUpon>
-    </None>
-    <None Include="Service References\AnnotationService\AnnotationVizLibTests.AnnotationService.StructureType.datasource">
-      <DependentUpon>Reference.svcmap</DependentUpon>
-    </None>
-    <None Include="Service References\AnnotationService\AnnotationVizLibTests.AnnotationService.SynapseObject.datasource">
-      <DependentUpon>Reference.svcmap</DependentUpon>
     </None>
     <None Include="Service References\AnnotationService\Arrays.xsd">
       <SubType>Designer</SubType>
@@ -113,10 +100,10 @@
     <None Include="Service References\AnnotationService\service.xsd">
       <SubType>Designer</SubType>
     </None>
-    <None Include="Service References\AnnotationService\service1.xsd">
+    <None Include="Service References\AnnotationService\service3.xsd">
       <SubType>Designer</SubType>
     </None>
-    <None Include="Service References\AnnotationService\service2.xsd">
+    <None Include="Service References\AnnotationService\service31.xsd">
       <SubType>Designer</SubType>
     </None>
   </ItemGroup>
@@ -144,6 +131,21 @@
       <Project>{d6f219fc-733b-481f-bf78-d34a7cb893ec}</Project>
       <Name>GraphLib</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup />
+  <ItemGroup>
+    <Content Include="Resources\ColorMap12x8.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\ColorMap3x2.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\ImageColorMaps.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\StructureTypeColors.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

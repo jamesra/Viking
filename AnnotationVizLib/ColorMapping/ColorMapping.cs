@@ -101,15 +101,48 @@ namespace AnnotationVizLib
         }
     }
 
+    class ConfigStringHelper
+    {
+        /// <summary>
+        /// Strip whitespace and ensure the line starts with a number
+        /// </summary>
+        /// <param name="line"></param>
+        /// <returns></returns>
+        public static bool StartsWithNumber(string str)
+        {
+            if (str.Length == 0)
+                return false; 
+
+            return char.IsDigit(str.Trim()[0]);
+        }
+
+        /// <summary>
+        /// Convert a string with a floating point number from 0 to 1 into a 0-255 value for building Colors
+        /// </summary>
+        /// <param name="str"></param>
+        /// <returns></returns>
+        public static int NormalizedStringToByte(string str)
+        {
+            double val = System.Convert.ToDouble(str);
+            if(val < 0.0 || val > 1.0)
+            {
+                throw new ArgumentException("String value must fall between 0 and 1.");
+            }
+
+            return System.Convert.ToInt32(Math.Floor(val * 255.0));
+        }
+
+    }
 
     /// <summary>
-    /// Maps a position in the volume to an RGB color
+    /// Maps a position in the volume to an RGB color based on the X,Y,Z coordinates.
+    /// Averages color values when multiple images overlap the target coordinates
     /// </summary>
-    public class ColorMapping
+    public class ColorMapWithImages
     {  
         SortedList<int, List<ColorMapImageData>> ColorMapTable = new SortedList<int,List<ColorMapImageData>>();
  
-        protected ColorMapping()
+        protected ColorMapWithImages()
         {
 
         }
@@ -135,6 +168,14 @@ namespace AnnotationVizLib
             return;
         }
 
+        public IList<int> SectionNumbers
+        {
+            get
+            {
+                return ColorMapTable.Keys;
+            }
+        }
+
         public Color GetColor(double X, double Y, int Z)
         {
             if(!ColorMapTable.ContainsKey(Z))
@@ -142,6 +183,8 @@ namespace AnnotationVizLib
 
             List<ColorMapImageData> colormapimages = ColorMapTable[Z];
             List<Color> colors = new List<Color>(colormapimages.Count);
+
+            
 
             for (int i = 0; i < colormapimages.Count; i++ )
             {
@@ -152,6 +195,9 @@ namespace AnnotationVizLib
                 }
             }
 
+            if (colors.Count == 0)
+                return Color.Empty;
+            
             //Average the colors together
             return AverageColors(colors); 
         }
@@ -192,9 +238,9 @@ namespace AnnotationVizLib
         ///371	0	0	32	32	1	1	1	0371_PCAImage.png
         /// </summary>
         /// <param name="config"></param>
-        public static ColorMapping Create(string config_data, string ImageDir)
+        public static ColorMapWithImages Create(string config_data, string ImageDir)
         {
-            ColorMapping mapping = new ColorMapping(); 
+            ColorMapWithImages mapping = new ColorMapWithImages(); 
 
             SortedList<int, List<ColorMapImageData>> ColorMapList = new SortedList<int, List<ColorMapImageData>>();
             string[] lines = config_data.Split(new char[] { '\n' });
@@ -234,8 +280,10 @@ namespace AnnotationVizLib
         {
             line = line.Trim().ToLower();
             string[] parts = line.Split();
-
-            if (parts[0].Trim() == "section")
+            if(parts.Length < 10)
+                throw new ArgumentException("Not enough arguments in line:\n" + line);
+            
+            if (!ConfigStringHelper.StartsWithNumber(parts[0]))
                 throw new FormatException("Attempting to parse header row");
 
             int SectionNumber = System.Convert.ToInt32(parts[0]);
@@ -247,11 +295,11 @@ namespace AnnotationVizLib
             AxisUnits Z_Scale = new AxisUnits(0, "");
 
             Scale scale = new Scale(X_Scale, Y_Scale, Z_Scale);
-            
-            ColorScalars scalars = new ColorScalars(System.Convert.ToDouble(parts[5]),
-                                                    System.Convert.ToDouble(parts[6]),
-                                                    System.Convert.ToDouble(parts[7]),
-                                                    System.Convert.ToDouble(parts[8]));
+
+            ColorScalars scalars = new ColorScalars(ConfigStringHelper.NormalizedStringToByte(parts[5]),
+                                                    ConfigStringHelper.NormalizedStringToByte(parts[6]),
+                                                    ConfigStringHelper.NormalizedStringToByte(parts[7]),
+                                                    ConfigStringHelper.NormalizedStringToByte(parts[8]));
 
             string Filename = parts[9];  
             if(ImageDir != null)
@@ -269,7 +317,98 @@ namespace AnnotationVizLib
                 ColorMapImageData image = new ColorMapImageData(stream, SectionNumber, scale, scalars, offset);
                 return image; 
             }
-        } 
-        
+        }  
     }
+
+    /// <summary>
+    /// Return a color based on a key value
+    /// </summary>
+    public class ColorMapWithLong
+    {
+        SortedList<long, Color> ColorMapTable = new SortedList<long, Color>();
+ 
+        private static long ConvertKey(string str)
+        {
+            return System.Convert.ToInt64(str);
+        }
+
+        public void Add(long key, Color color)
+        {
+            this.ColorMapTable.Add(key, color);
+        }
+
+        public bool ContainsKey(long key)
+        {
+            return this.ColorMapTable.ContainsKey(key);
+        }
+
+        public Color GetColor(long key)
+        {
+            return this.ColorMapTable[key];
+        }
+
+        public static ColorMapWithLong Create(string config_data)
+        {
+            ColorMapWithLong mapping = new ColorMapWithLong();
+             
+            string[] lines = config_data.Split(new char[] { '\n' });
+            foreach (string line in lines)
+            {
+                string trim_line = line.Trim();
+                if (trim_line.Count() == 0)
+                    continue; 
+
+                try
+                {
+                    long Key;
+                    Color color = ColorMapWithLong.TryParseConfigLine(trim_line, out Key);
+
+                    if(color != Color.Empty)
+                        mapping.Add(Key, color);
+                    
+                }
+                catch (System.FormatException e)
+                {
+                    System.Diagnostics.Trace.WriteLine("Unable to parse Color Map Config line: " + line);
+                }
+                catch (System.ArgumentException e)
+                {
+                    Trace.WriteLine(e.Message);
+                    continue;
+                }
+            }
+
+            return mapping; 
+        }
+
+        
+
+        private static Color TryParseConfigLine(string line, out long Key)
+        {
+            if (!ConfigStringHelper.StartsWithNumber(line))
+                throw new FormatException("Attempting to parse header row");
+
+            line = line.Trim();
+            string[] parts = line.Split();
+
+            if(parts.Length < 4)
+                throw new ArgumentException("Not enough parameters in line:\n" + line);
+
+            Key = ConvertKey(parts[0]);
+
+            try
+            {
+                Color color = Color.FromArgb(ConfigStringHelper.NormalizedStringToByte(parts[4]),
+                                             ConfigStringHelper.NormalizedStringToByte(parts[1]),
+                                             ConfigStringHelper.NormalizedStringToByte(parts[2]),
+                                             ConfigStringHelper.NormalizedStringToByte(parts[3]));
+
+                return color;
+            }
+            catch(FormatException e)
+            {
+                throw new FormatException("Unable to parse line:\n" + line, e);
+            } 
+        }
+    } 
 }

@@ -1,0 +1,6 @@
+35 1 0 .2 1 %Postsynapse
+
+34 0 0 1 1   %Conventional Presynapse
+28 1 1 0 1  %Gap junction
+73 0 1 0 1  %Ribbon
+85 1 1 1 1  %Desmosome            

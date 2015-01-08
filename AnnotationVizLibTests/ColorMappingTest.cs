@@ -85,7 +85,7 @@ namespace AnnotationVizLibTests
         {
 
             string config = System.IO.File.ReadAllText("Resources\\ImageColorMaps.txt");
-            ColorMapping mapping = ColorMapping.Create(config, "Resources");
+            ColorMapWithImages mapping = ColorMapWithImages.Create(config, "Resources");
 
             //We expect the two identical images to be averaged using the color scalars in the text file
 
@@ -96,6 +96,26 @@ namespace AnnotationVizLibTests
             Microsoft.VisualStudio.TestTools.UnitTesting.Assert.IsTrue(ColorsMatch(mapping.GetColor(0, 2, 1), Color.Empty));
             Microsoft.VisualStudio.TestTools.UnitTesting.Assert.IsTrue(ColorsMatch(mapping.GetColor(-1, 0,1), Color.Empty));
             Microsoft.VisualStudio.TestTools.UnitTesting.Assert.IsTrue(ColorsMatch(mapping.GetColor(0, -1,1), Color.Empty));
+        }
+
+        /// <summary>
+        /// Check that we can load a set of images and average them correctly.
+        /// </summary>
+        [TestMethod]
+        public void TestColorMappingByKeysConfig()
+        {
+
+            string config = System.IO.File.ReadAllText("Resources\\StructureTypeColors.txt");
+            ColorMapWithLong mapping = ColorMapWithLong.Create(config);
+
+            //We expect the two identical images to be averaged using the color scalars in the text file
+
+            Microsoft.VisualStudio.TestTools.UnitTesting.Assert.IsTrue(ColorsMatch(mapping.GetColor(35), Color.FromArgb(255, 255, 0, 51)));
+            Microsoft.VisualStudio.TestTools.UnitTesting.Assert.IsTrue(ColorsMatch(mapping.GetColor(34), Color.FromArgb(255, 0, 0, 255)));
+            Microsoft.VisualStudio.TestTools.UnitTesting.Assert.IsTrue(ColorsMatch(mapping.GetColor(85), Color.FromArgb(255, 255, 255, 255)));
+
+            Microsoft.VisualStudio.TestTools.UnitTesting.Assert.IsTrue(mapping.ContainsKey(35));
+            Microsoft.VisualStudio.TestTools.UnitTesting.Assert.IsFalse(mapping.ContainsKey(0));
         }
     }
 }
