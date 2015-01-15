@@ -11,6 +11,7 @@
       <xs:element xmlns:q4="http://schemas.microsoft.com/2003/10/Serialization/Arrays" minOccurs="0" name="ReducedEdges" nillable="true" type="q4:ArrayOflong" />
       <xs:element xmlns:q5="http://schemas.microsoft.com/2003/10/Serialization/Arrays" minOccurs="0" name="_FrontierNodes" nillable="true" type="q5:ArrayOflong" />
       <xs:element xmlns:q6="http://schemas.microsoft.com/2003/10/Serialization/Arrays" minOccurs="0" name="locationInfo" nillable="true" type="q6:ArrayOfKeyValueOflongLocationInfolLTIrbuF" />
+      <xs:element xmlns:q7="http://schemas.microsoft.com/2003/10/Serialization/Arrays" minOccurs="0" name="zLocationForSynapses" nillable="true" type="q7:ArrayOfKeyValueOflonglong" />
     </xs:sequence>
   </xs:complexType>
   <xs:element name="Graphx" nillable="true" type="tns:Graphx" />
@@ -22,7 +23,7 @@
   <xs:element name="ArrayOfEdgex" nillable="true" type="tns:ArrayOfEdgex" />
   <xs:complexType name="Edgex">
     <xs:sequence>
-      <xs:element xmlns:q7="http://schemas.datacontract.org/2004/07/Annotation" minOccurs="0" name="Link" nillable="true" type="q7:StructureLink" />
+      <xs:element xmlns:q8="http://schemas.datacontract.org/2004/07/Annotation" minOccurs="0" name="Link" nillable="true" type="q8:StructureLink" />
       <xs:element minOccurs="0" name="SourceID" type="xs:long" />
       <xs:element minOccurs="0" name="SourceParentID" type="xs:long" />
       <xs:element minOccurs="0" name="SourceTypeName" nillable="true" type="xs:string" />

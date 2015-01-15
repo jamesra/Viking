@@ -23,10 +23,10 @@
   <Metadata>
     <MetadataFile FileName="service.wsdl" MetadataType="Wsdl" ID="7f3c9645-2701-4040-8c11-2aa7fc2f9d8e" SourceId="1" SourceUrl="https://connectomes.utah.edu/Services/RabbitBinary/Annotate.svc/mex" />
     <MetadataFile FileName="service.xsd" MetadataType="Schema" ID="382c18b8-6e94-41fe-928f-f83d0ec0786b" SourceId="1" SourceUrl="https://connectomes.utah.edu/Services/RabbitBinary/Annotate.svc/mex" />
-    <MetadataFile FileName="service1.xsd" MetadataType="Schema" ID="3b9ef61b-d050-4e01-b14a-5645fa2d4700" SourceId="1" SourceUrl="https://connectomes.utah.edu/Services/RabbitBinary/Annotate.svc/mex" />
+    <MetadataFile FileName="service3.xsd" MetadataType="Schema" ID="572bb0f6-7c1e-4810-b6d9-b32a97a6e229" SourceId="1" SourceUrl="https://connectomes.utah.edu/Services/RabbitBinary/Annotate.svc/mex" />
     <MetadataFile FileName="Annotation.xsd" MetadataType="Schema" ID="6b82b166-b71a-4ea6-8423-8929b97d68af" SourceId="1" SourceUrl="https://connectomes.utah.edu/Services/RabbitBinary/Annotate.svc/mex" />
     <MetadataFile FileName="Arrays.xsd" MetadataType="Schema" ID="bb4863f9-9f25-45ff-94e9-33da65fcc557" SourceId="1" SourceUrl="https://connectomes.utah.edu/Services/RabbitBinary/Annotate.svc/mex" />
-    <MetadataFile FileName="service2.xsd" MetadataType="Schema" ID="f0389813-1633-42d6-be79-2e8e5a5a21c5" SourceId="1" SourceUrl="https://connectomes.utah.edu/Services/RabbitBinary/Annotate.svc/mex" />
+    <MetadataFile FileName="service31.xsd" MetadataType="Schema" ID="f708ca4a-bbbb-4082-b592-e0dc8c7e347c" SourceId="1" SourceUrl="https://connectomes.utah.edu/Services/RabbitBinary/Annotate.svc/mex" />
     <MetadataFile FileName="Annotation.Service.GraphClasses.xsd" MetadataType="Schema" ID="d4b77555-8c62-4fca-8ece-8bdbdb2d0283" SourceId="1" SourceUrl="https://connectomes.utah.edu/Services/RabbitBinary/Annotate.svc/mex" />
   </Metadata>
   <Extensions>

@@ -5,6 +5,7 @@ using System.Data.Services.Common;
 using System.Linq;
 using System.ServiceModel.Web;
 using System.Web;
+using VikingWebAppSettings;
 
 namespace ConnectomeOpenData
 {
@@ -42,7 +43,7 @@ namespace ConnectomeOpenData
         private string BuildConnectionString()
         {
             string template = AppSettings.GetConnectionString("ConnectionTemplate");
-            return string.Format(template, AppSettings.GetDatabaseServer(), AppSettings.GetCatalogName());
+            return string.Format(template, AppSettings.GetDatabaseServer(), AppSettings.GetDatabaseCatalogName());
         } 
 
         private static void ConfigureTable(DataServiceConfiguration config, string Tablename)

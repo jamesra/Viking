@@ -21,6 +21,17 @@ namespace AnnotationVizLib
         {
         }
 
+        public System.Drawing.Color Color
+        {
+            set
+            {  
+                this.Attributes["viewColor"] = string.Format("({0},{1},{2},{3})", value.R,
+                                                                                 value.G,
+                                                                                 value.B,
+                                                                                 value.A); 
+            }            
+        }
+
         public string AttributeToString(string attrib_name)
         {
             if (!this.Attributes.ContainsKey(attrib_name))

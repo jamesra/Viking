@@ -102,7 +102,7 @@ namespace ServiceTest
 
         private void Delete(StructureType t)
         {
-            AnnotateService target = new AnnotateService(Parameters.TestDatabaseName);
+            AnnotateService target = new AnnotateService();
             t.DBAction = DBACTION.DELETE;
 
             //Delete the structure type we created for the test
@@ -112,7 +112,7 @@ namespace ServiceTest
 
         private void Delete(Structure t)
         {
-            AnnotateService target = new AnnotateService(Parameters.TestDatabaseName);
+            AnnotateService target = new AnnotateService();
             t.DBAction = DBACTION.DELETE;
 
             //Delete the structure type we created for the test
@@ -122,7 +122,7 @@ namespace ServiceTest
 
         private void Delete(Location t)
         {
-            AnnotateService target = new AnnotateService(Parameters.TestDatabaseName);
+            AnnotateService target = new AnnotateService();
             t.DBAction = DBACTION.DELETE;
 
             //Delete the structure type we created for the test
@@ -132,7 +132,7 @@ namespace ServiceTest
 
         private StructureType CreateStructureType(StructureType t)
         {
-            AnnotateService target = new AnnotateService(Parameters.TestDatabaseName); // TODO: Initialize to an appropriate value
+            AnnotateService target = new AnnotateService(); // TODO: Initialize to an appropriate value
 
             StructureType returned_t = target.CreateStructureType(t);
 
@@ -148,7 +148,7 @@ namespace ServiceTest
 
         private CreateStructureRetval CreateStructure(Structure s, Location l)
         {
-            AnnotateService target = new AnnotateService(Parameters.TestDatabaseName); // TODO: Initialize to an appropriate value
+            AnnotateService target = new AnnotateService(); // TODO: Initialize to an appropriate value
 
             CreateStructureRetval retval = target.CreateStructure(s, l);
             Assert.IsNull(target.GetStructureByID(s.ID,false));
@@ -162,7 +162,7 @@ namespace ServiceTest
 
         private Location CreateAndLinkLocation(Location linkedLocation)
         {
-            AnnotateService target = new AnnotateService(Parameters.TestDatabaseName); // TODO: Initialize to an appropriate value
+            AnnotateService target = new AnnotateService(); // TODO: Initialize to an appropriate value
 
             Location newPos = new Location();
             PopulateLocation(newPos, linkedLocation.ParentID);
@@ -218,7 +218,7 @@ namespace ServiceTest
         {
             AddPrincipalToThread();
 
-            AnnotateService target = new AnnotateService(Parameters.TestDatabaseName); // TODO: Initialize to an appropriate value
+            AnnotateService target = new AnnotateService(); // TODO: Initialize to an appropriate value
             string StructureTypeName = "TestStructureTypeInsert";
 
             StructureType t = CreatePopulatedStructureType(StructureTypeName); 
@@ -290,7 +290,7 @@ namespace ServiceTest
         {
             AddPrincipalToThread();
 
-            AnnotateService target = new AnnotateService(Parameters.TestDatabaseName); // TODO: Initialize to an appropriate value
+            AnnotateService target = new AnnotateService(); // TODO: Initialize to an appropriate value
             StructureType[] actual;
             actual = target.GetStructureTypes();
         }
@@ -303,7 +303,7 @@ namespace ServiceTest
         {
             AddPrincipalToThread();
 
-            AnnotateService target = new AnnotateService(Parameters.TestDatabaseName); // TODO: Initialize to an appropriate value
+            AnnotateService target = new AnnotateService(); // TODO: Initialize to an appropriate value
 
             StructureType t = CreatePopulatedStructureType("Test");
 
@@ -361,7 +361,7 @@ namespace ServiceTest
         {
             AddPrincipalToThread();
 
-            AnnotateService target = new AnnotateService(Parameters.TestDatabaseName); // TODO: Initialize to an appropriate value
+            AnnotateService target = new AnnotateService(); // TODO: Initialize to an appropriate value
 
             StructureType t = CreatePopulatedStructureType(Parameters.TestDatabaseName);
 
@@ -461,7 +461,7 @@ namespace ServiceTest
         {
             AddPrincipalToThread();
 
-            AnnotateService target = new AnnotateService(Parameters.TestDatabaseName); // TODO: Initialize to an appropriate value
+            AnnotateService target = new AnnotateService(); // TODO: Initialize to an appropriate value
 
             //Create a structure type, a structure, and some links
             StructureType t = CreatePopulatedStructureType("Test");
@@ -532,7 +532,7 @@ namespace ServiceTest
 
             DateTime test_start = DateTime.UtcNow;
 
-            AnnotateService target = new AnnotateService(Parameters.TestDatabaseName); // TODO: Initialize to an appropriate value
+            AnnotateService target = new AnnotateService(); // TODO: Initialize to an appropriate value
 
             //Create a structure type, a structure, and some links
             StructureType t = CreatePopulatedStructureType("Test");
@@ -595,10 +595,10 @@ namespace ServiceTest
 
             //Check that location C appears when we ask for locations modified after the updatetime
             long[] deletedIDs;
-            long queryTimeInTicks;
+            long queryCompletedTime;
             Location[] updatedLocations = target.GetLocationChanges(LocationA.Section,
                                                                     UpdateTime.Ticks,
-                                                                    out queryTimeInTicks,
+                                                                    out queryCompletedTime,
                                                                     out deletedIDs);
 
             //Nothing was deleted, so this should be true
@@ -615,26 +615,29 @@ namespace ServiceTest
             {
                 Assert.IsTrue(loc.ID != LocationAID && loc.ID != LocationBID);
                 if (loc.ID == LocationCID)
-                    CFound = true; 
+                    CFound = true;
+
+                Assert.IsTrue(loc.LastModified >= UpdateTime.Ticks);
             }
 
             Assert.IsTrue(CFound, "Could not find location C");
 
             //This will only be true if the test is run on the server
-            UpdateTime = new DateTime(queryTimeInTicks, DateTimeKind.Utc);
+            DateTime second_UpdateTime = new DateTime(queryCompletedTime, DateTimeKind.Utc);
 
-            System.Diagnostics.Debug.WriteLine("UpdateTime: " + UpdateTime.ToFileTime().ToString());
+            System.Diagnostics.Debug.WriteLine("UpdateTime: " + second_UpdateTime.ToFileTime().ToString());
             
             //Delete location B, and check that it shows up in the deleted IDs
             LocationB.DBAction = DBACTION.DELETE;
             target.Update(new Location[] { LocationA, LocationB, LocationC });
             
             //Just so I don't reference it again. 
-            LocationB = null; 
+            LocationB = null;
 
+            long second_queryTimeInTicks;
             updatedLocations = target.GetLocationChanges(LocationA.Section,
-                                                         UpdateTime.Ticks,
-                                                         out queryTimeInTicks,
+                                                         second_UpdateTime.Ticks,
+                                                         out second_queryTimeInTicks,
                                                          out deletedIDs);
 
             //B was deleted, so make sure it is in the results
@@ -654,9 +657,9 @@ namespace ServiceTest
             foreach (Location loc in updatedLocations)
             {
                 Assert.IsTrue(loc.ID != LocationAID && loc.ID != LocationCID);
+                Assert.IsTrue(loc.LastModified >= second_UpdateTime.Ticks);
             }
-
-
+             
             //Update A location and delete C
             LocationA.OffEdge = true;
             LocationA.DBAction = DBACTION.UPDATE;
@@ -667,14 +670,15 @@ namespace ServiceTest
 
             LocationA = target.GetLocationByID(LocationAID);
 
-            UpdateTime = new DateTime(LocationA.LastModified, DateTimeKind.Utc);
+            DateTime third_UpdateTime = new DateTime(LocationA.LastModified, DateTimeKind.Utc);
 //            UpdateTime = UpdateTime.Subtract(new TimeSpan(TimeSpan.TicksPerMillisecond)); //The server only returns changes after the query 
 
             System.Diagnostics.Debug.WriteLine("UpdateTime: " + LocationA.LastModified.ToString());
 
+            long third_queryCompletedTime;
             updatedLocations = target.GetLocationChanges(LocationA.Section,
-                                                         UpdateTime.Ticks,
-                                                         out queryTimeInTicks,
+                                                         third_UpdateTime.Ticks,
+                                                         out third_queryCompletedTime,
                                                          out deletedIDs);
 
             //Check to see that we find location C in deletedIDs and LocationA in the updated set
@@ -730,7 +734,8 @@ namespace ServiceTest
         [TestMethod()]
         public void CheckLogging()
         {
-            AnnotateService target = new AnnotateService(Parameters.TestDatabaseName); // TODO: Initialize to an appropriate value
+            AddPrincipalToThread();
+            AnnotateService target = new AnnotateService(); // TODO: Initialize to an appropriate value
 
             long structureID = 37;
             target.GetLocationChangeLog(structureID, new DateTime?(), new DateTime?());
@@ -741,7 +746,7 @@ namespace ServiceTest
         {
             AddPrincipalToThread();
 
-            AnnotateService target = new AnnotateService(Parameters.TestDatabaseName); ; // TODO: Initialize to an appropriate value
+            AnnotateService target = new AnnotateService(); ; // TODO: Initialize to an appropriate value
 
             Location[] Data = target.GetLocationsForStructure(514);
 

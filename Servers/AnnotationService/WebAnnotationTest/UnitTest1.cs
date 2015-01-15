@@ -21,8 +21,7 @@ namespace WebServiceTest
     ///</summary>
     [TestClass()]
     public class AnnotationServiceImplTest
-    {
-
+    { 
         private void AddPrincipalToThread()
         {
             GenericIdentity ident = new GenericIdentity("Test");

@@ -66,8 +66,8 @@ namespace AnnotationVizLib
             X += offset.X;
             Y += offset.Y;
 
-            int bmp_X = (int)Math.Round(X * scale.X.Value);
-            int bmp_Y = (int)Math.Round(Y * scale.Y.Value);
+            int bmp_X = (int)Math.Round(X / scale.X.Value);
+            int bmp_Y = (int)Math.Round(Y / scale.Y.Value);
             Color color = Color.Empty;
 
             if (bmp_X < 0 || bmp_X >= image.Size.Width)
@@ -117,6 +117,23 @@ namespace AnnotationVizLib
         }
 
         /// <summary>
+        /// We use the % to indicate comments
+        /// </summary>
+        /// <param name="str"></param>
+        /// <returns></returns>
+        public static bool StartsWithComment(string str)
+        {
+            if (str.Length == 0)
+                return false;
+
+            string trimmed = str.TrimStart();
+            if (trimmed.Length == 0)
+                return false;
+
+            return trimmed[0] == '%';
+        }
+
+        /// <summary>
         /// Convert a string with a floating point number from 0 to 1 into a 0-255 value for building Colors
         /// </summary>
         /// <param name="str"></param>
@@ -147,9 +164,15 @@ namespace AnnotationVizLib
 
         }
 
-        private void ParseConfigText(string image_config_txt_full_path)
+        /// <summary>
+        /// Read the images form the image config text file.  This function expects image paths to be relative to the text file path
+        /// </summary>
+        /// <param name="image_config_txt_full_path"></param>
+        /// <returns></returns>
+        public static ColorMapWithImages CreateFromConfigFile(string image_config_txt_full_path)
         {
-
+            string config = System.IO.File.ReadAllText(image_config_txt_full_path);
+            return ColorMapWithImages.Create(config, System.IO.Path.GetDirectoryName(image_config_txt_full_path));
         }
 
         public void AddColorMapImage(int SectionNumber, ColorMapImageData data)
@@ -183,9 +206,7 @@ namespace AnnotationVizLib
 
             List<ColorMapImageData> colormapimages = ColorMapTable[Z];
             List<Color> colors = new List<Color>(colormapimages.Count);
-
-            
-
+             
             for (int i = 0; i < colormapimages.Count; i++ )
             {
                 Color color = colormapimages[i].GetColor(X, Y);
@@ -199,16 +220,49 @@ namespace AnnotationVizLib
                 return Color.Empty;
             
             //Average the colors together
-            return AverageColors(colors); 
+            return AverageColors(colors);
+        }
+
+        /// <summary>
+        /// Get average color for all locations based on position
+        /// </summary>
+        /// <param name="locations"></param>
+        /// <returns></returns>
+        public Color GetColor(List<AnnotationService.Location> locations)
+        {
+            List<AnnotationService.AnnotationPoint> listPoints = locations.ConvertAll(loc => loc.VolumePosition);
+
+            return GetColor(listPoints);
+        }
+
+        /// <summary>
+        /// Get average color for all locations based on position
+        /// </summary>
+        /// <param name="locations"></param>
+        /// <returns></returns>
+        public Color GetColor(IList<AnnotationService.AnnotationPoint> points)
+        {
+            if (points.Count == 0)
+                return Color.Empty;
+
+            IEnumerable<AnnotationService.AnnotationPoint> filteredPoints = points.Where(p => ColorMapTable.ContainsKey((int)p.Z));
+            IList<Color> colors = filteredPoints.Select<AnnotationService.AnnotationPoint, Color>(p => GetColor(p.X, p.Y, (int)p.Z)).ToList();
+            return AverageColors(colors);
         }
 
         public Color AverageColors(IList<Color> colors)
         {
+            if (colors.Count == 0)
+                return Color.Empty;
+
+            if (colors.Count == 1)
+                return colors[0]; 
+
             int R = 0; 
             int G = 0;
             int B = 0;
             int A = 0;
-
+            
             foreach(Color c in colors)
             {
                 A += System.Convert.ToInt32(c.A);
@@ -279,6 +333,10 @@ namespace AnnotationVizLib
         private static ColorMapImageData ParseConfigLine(string line, string ImageDir)
         {
             line = line.Trim().ToLower();
+
+            if (ConfigStringHelper.StartsWithComment(line))
+                throw new ArgumentException("Skipping comment");
+
             string[] parts = line.Split();
             if(parts.Length < 10)
                 throw new ArgumentException("Not enough arguments in line:\n" + line);
@@ -347,6 +405,12 @@ namespace AnnotationVizLib
             return this.ColorMapTable[key];
         }
 
+        public static ColorMapWithLong CreateFromConfigFile(string config_txt_full_path)
+        {
+            string config = System.IO.File.ReadAllText(config_txt_full_path);
+            return ColorMapWithLong.Create(config);
+        }
+
         public static ColorMapWithLong Create(string config_data)
         {
             ColorMapWithLong mapping = new ColorMapWithLong();
@@ -381,10 +445,11 @@ namespace AnnotationVizLib
             return mapping; 
         }
 
-        
-
         private static Color TryParseConfigLine(string line, out long Key)
         {
+            if (ConfigStringHelper.StartsWithComment(line))
+                throw new ArgumentException("Skipping comment");
+
             if (!ConfigStringHelper.StartsWithNumber(line))
                 throw new FormatException("Attempting to parse header row");
 
@@ -410,5 +475,6 @@ namespace AnnotationVizLib
                 throw new FormatException("Unable to parse line:\n" + line, e);
             } 
         }
-    } 
+    }
+     
 }

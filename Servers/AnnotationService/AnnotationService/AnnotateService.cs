@@ -20,14 +20,7 @@ namespace Annotation
     [AspNetCompatibilityRequirements(RequirementsMode= AspNetCompatibilityRequirementsMode.Required)]
     public class AnnotateService : IAnnotateStructureTypes, IAnnotateStructures, IAnnotateLocations, IDisposable, ICircuit
     {
-
-        public string DefaultVolumeName = null;
-
-        public AnnotateService(string DefaultVolumeName)
-        {
-            this.DefaultVolumeName = DefaultVolumeName;
-        }
-
+ 
         public AnnotateService()
         {
             
@@ -67,7 +60,7 @@ namespace Annotation
 
                 //Look at the application path name, attempt to use that path to set the database for the connection
 
-                string FormattedConnString = BuildConnectionString(); 
+                string FormattedConnString = GetConnectionString(); 
 
                 _db = new Annotation.Database.AnnotationDataContext(FormattedConnString);
 
@@ -84,47 +77,11 @@ namespace Annotation
             }
         }
 
-        protected string BuildConnectionString()
+        protected string GetConnectionString()
         {
             System.Configuration.ConnectionStringSettingsCollection connStrings = WebConfigurationManager.ConnectionStrings;
-            string UnformattedConnstring = connStrings["VikingGenericConnection"].ConnectionString;
-
-            string VolumeName = TryGetVolumeFromRequest(); 
-
-            if(VolumeName == null)
-                VolumeName = this.DefaultVolumeName;
-            else if (VolumeName.Length == 0)
-                VolumeName = this.DefaultVolumeName;
-
-            //VolumeName = "DebelloOB1";
-            //Magic: The volumeName should match the database name
-            string FormattedConnString = string.Format(UnformattedConnstring, VolumeName);
-
-            return FormattedConnString;
-        }
-
-        /// <summary>
-        /// If there is an HTTP context extract the volume name from the application path
-        /// </summary>
-        /// <returns></returns>
-        protected string TryGetVolumeFromRequest()
-        {
-            if (System.Web.HttpContext.Current == null)
-                return null; 
-
-            string AppPath = System.Web.HttpContext.Current.Request.ApplicationPath;
-
-            //Take only the last directory from the name
-            string VolumeName = System.IO.Path.GetFileNameWithoutExtension(AppPath);
-
-            VolumeName = VolumeName.ToLower();
-
-            //Remove terms Text and Binary from path
-            VolumeName = VolumeName.Replace("binary", "");
-            VolumeName = VolumeName.Replace("text", "");
-            VolumeName = VolumeName.Replace("debug", "");
-
-            return VolumeName;
+            string UnformattedConnstring = connStrings["VikingDatabaseConnection"].ConnectionString;
+            return UnformattedConnstring;
         }
 
         #region IAnnotateStructureTypes Members
@@ -1207,20 +1164,20 @@ namespace Annotation
         [PrincipalPermission(SecurityAction.Demand, Role = "Read")]
         public Location[] GetLocationChanges(long section, long ModifiedAfterThisUtcTime,  out long QueryExecutedTime, out long[] DeletedIDs)
         {
-            DateTime start = DateTime.Now;
+            DateTime start = DateTime.UtcNow;
             TimeSpan elapsed;
 
             DateTime? ModifiedAfterThisTime = new DateTime?();
             if(ModifiedAfterThisUtcTime > 0)
-                ModifiedAfterThisTime = new DateTime?(new DateTime(ModifiedAfterThisUtcTime, DateTimeKind.Unspecified));
+                ModifiedAfterThisTime = new DateTime?(new DateTime(ModifiedAfterThisUtcTime, DateTimeKind.Utc));
 
             ModifiedAfterThisTime = AnnotationDataContext.ValidateDate(ModifiedAfterThisTime); 
 
             DeletedIDs = new long[0];
 
-            Location[] retList = new Location[0]; 
+            Location[] retList = new Location[0];
 
-            QueryExecutedTime = DateTime.Now.ToUniversalTime().Ticks;
+            QueryExecutedTime = start.Ticks;
             try
             {
                 //// Find all the IDs that still exist
@@ -1275,61 +1232,76 @@ namespace Annotation
                 //This means there was no row with that ID; 
                 Debug.WriteLine("Could not find locations for section: " + section.ToString());
             }
-
-            //Try to find if any rows were deleted from the passed list of IDs
-            try
-            {
-                if (ModifiedAfterThisTime.HasValue)
-                {
-                    //// Find all the IDs that still exist
-                    //IQueryable<DateTime> queryDebug = from l in db.DBDeletedLocations
-                    //                                select l.DeletedOn;
-
-                    //foreach (DateTime date in queryDebug)
-                    //{
-                    //    System.Diagnostics.Debug.WriteLine(date.ToString()); 
-
-                    //    if(date > ModifiedAfterThisTime)
-                    //        System.Diagnostics.Debug.WriteLine("*******MATCH*******");
-                    //}
-
-                    // Find all the IDs that still exist
-                    IQueryable<long> queryResults = from l in db.DBDeletedLocations
-                                                    where (l.DeletedOn > ModifiedAfterThisTime)
-                                                    select l.ID;
-
-                    elapsed = new TimeSpan(DateTime.Now.Ticks - start.Ticks);
-                    Debug.WriteLine(section.ToString() + ": Deleted Query: " + elapsed.TotalMilliseconds);
-
-                    //Figure out which IDs are not in the returned list
-                    DeletedIDs = queryResults.ToArray();
-                }
-                else
-                {
-                    DeletedIDs = new long[0];
-                }
-
-                
-
-            }
-            catch (System.ArgumentNullException)
-            {
-                //This means there was no row with that ID; 
-                Debug.WriteLine("Could not find locations for section: " + section.ToString());
-            }
-            catch (System.InvalidOperationException e)
-            {
-                //This means there was no row with that ID; 
-                Debug.WriteLine("Could not find locations for section: " + section.ToString());
-            }
             finally
             {
                 if (db != null)
                     db.Connection.Close();
             }
 
-
+            //TODO: Optimize this function to only return locations from the section we specify.  It currently returns all sections
+            DeletedIDs = GetDeletedLocations(ModifiedAfterThisTime);
+            
             return retList;
+        }
+
+        /// <summary>
+        /// TODO: Optimize this function to use the new change tracking tables
+        /// </summary>
+        /// <param name="DeletedAfterThisTime"></param>
+        /// <returns>An array, may be zero length if no locations were deleted</returns>
+        [PrincipalPermission(SecurityAction.Demand, Role = "Read")]
+        public long[] GetDeletedLocations(DateTime? DeletedAfterThisTime)
+        {
+            //Try to find if any rows were deleted from the passed list of IDs
+            DateTime start = DateTime.UtcNow; 
+
+            if (!DeletedAfterThisTime.HasValue)
+            {
+                return new long[0];
+            }
+
+            try
+            { 
+                //// Find all the IDs that still exist
+                //IQueryable<DateTime> queryDebug = from l in db.DBDeletedLocations
+                //                                select l.DeletedOn;
+
+                //foreach (DateTime date in queryDebug)
+                //{
+                //    System.Diagnostics.Debug.WriteLine(date.ToString()); 
+
+                //    if(date > ModifiedAfterThisTime)
+                //        System.Diagnostics.Debug.WriteLine("*******MATCH*******");
+                //}
+
+                // Find all the IDs that still exist
+                IQueryable<long> queryResults = from l in db.DBDeletedLocations
+                                                where (l.DeletedOn > DeletedAfterThisTime)
+                                                select l.ID;
+
+                TimeSpan elapsed = new TimeSpan(DateTime.Now.Ticks - start.Ticks);
+                Debug.WriteLine("\tDeleted Query: " + elapsed.TotalMilliseconds);
+
+                //Figure out which IDs are not in the returned list
+                return queryResults.ToArray(); 
+            }
+            catch (System.ArgumentNullException)
+            {
+                //This means there was no row with that ID; 
+                Debug.WriteLine("Could not find deleted locations after " + DeletedAfterThisTime.ToString());
+            }
+            catch (System.InvalidOperationException e)
+            {
+                //This means there was no row with that ID; 
+                Debug.WriteLine("Could not find deleted locations after " + DeletedAfterThisTime.ToString());
+            }
+            finally
+            {
+                if (db != null)
+                    db.Connection.Close();
+            }
+             
+            return new long[0]; 
         }
 
         [PrincipalPermission(SecurityAction.Demand, Role = "Modify")]

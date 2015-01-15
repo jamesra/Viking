@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Web;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using AnnotationVizLib;
 
@@ -7,6 +8,11 @@ namespace DataExport.Tests
     [TestClass]
     public class MotifTest
     {
+        [TestInitialize]
+        public void TestInit()
+        { 
+        }
+
         private MotifGraph CreateMotifGraph()
         {
             MotifGraph graph = new MotifGraph();
@@ -42,6 +48,16 @@ namespace DataExport.Tests
             MotifGraph motifGraph = CreateMotifGraph();
             MotifTLPView TlpGraph = MotifTLPView.ToTLP(motifGraph);
             TlpGraph.SaveTLP("motif.tlp");
+        }
+
+        [TestMethod]
+        public void TestMorphologyGraphs()
+        {  
+            HttpContext.Current = new HttpContext(new HttpRequest("", "http://tempuri.org", "id=180,476"), new HttpResponse(new System.IO.StringWriter()));
+            DataExport.Controllers.MorphologyController controller = new Controllers.MorphologyController();
+
+
+            controller.GetTLP();
         }
     }
 }

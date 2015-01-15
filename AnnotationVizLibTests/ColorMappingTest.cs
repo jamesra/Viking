@@ -55,9 +55,9 @@ namespace AnnotationVizLibTests
         public void TestScaledColorMapImage()
         {
 
-            Scale scale = new Scale(new AxisUnits(4.0, "nm"),
-                                    new AxisUnits(4.0, "nm"),
-                                    new AxisUnits(4.0, "nm"));
+            Scale scale = new Scale(new AxisUnits(1.0/4.0, "nm"),
+                                    new AxisUnits(1.0/4.0, "nm"),
+                                    new AxisUnits(1.0/4.0, "nm"));
             ColorMapImageData colormap = null;
             using (System.IO.Stream imagestream = System.IO.File.OpenRead("Resources\\ColorMap12x8.png"))
             {

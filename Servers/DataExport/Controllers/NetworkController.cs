@@ -5,6 +5,7 @@ using System.Web;
 using System.Web.Mvc;
 using DataExport;
 using AnnotationVizLib;
+using VikingWebAppSettings;
 
 namespace DataExport.Controllers
 {

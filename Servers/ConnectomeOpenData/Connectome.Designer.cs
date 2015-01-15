@@ -691,7 +691,7 @@ namespace ConnectomeOpenData
 
         #endregion
 
-        #region Primitive Properties
+        #region Simple Properties
     
         /// <summary>
         /// No Metadata Documentation available.
@@ -710,7 +710,7 @@ namespace ConnectomeOpenData
                 {
                     OnDBVersionIDChanging(value);
                     ReportPropertyChanging("DBVersionID");
-                    _DBVersionID = StructuralObject.SetValidValue(value);
+                    _DBVersionID = StructuralObject.SetValidValue(value, "DBVersionID");
                     ReportPropertyChanged("DBVersionID");
                     OnDBVersionIDChanged();
                 }
@@ -737,7 +737,7 @@ namespace ConnectomeOpenData
                 {
                     OnDescriptionChanging(value);
                     ReportPropertyChanging("Description");
-                    _Description = StructuralObject.SetValidValue(value, false);
+                    _Description = StructuralObject.SetValidValue(value, false, "Description");
                     ReportPropertyChanged("Description");
                     OnDescriptionChanged();
                 }
@@ -764,7 +764,7 @@ namespace ConnectomeOpenData
                 {
                     OnExecutionDateChanging(value);
                     ReportPropertyChanging("ExecutionDate");
-                    _ExecutionDate = StructuralObject.SetValidValue(value);
+                    _ExecutionDate = StructuralObject.SetValidValue(value, "ExecutionDate");
                     ReportPropertyChanged("ExecutionDate");
                     OnExecutionDateChanged();
                 }
@@ -791,7 +791,7 @@ namespace ConnectomeOpenData
                 {
                     OnUserIDChanging(value);
                     ReportPropertyChanging("UserID");
-                    _UserID = StructuralObject.SetValidValue(value);
+                    _UserID = StructuralObject.SetValidValue(value, "UserID");
                     ReportPropertyChanged("UserID");
                     OnUserIDChanged();
                 }
@@ -803,7 +803,6 @@ namespace ConnectomeOpenData
 
         #endregion
 
-    
     }
     
     /// <summary>
@@ -831,7 +830,7 @@ namespace ConnectomeOpenData
 
         #endregion
 
-        #region Primitive Properties
+        #region Simple Properties
     
         /// <summary>
         /// No Metadata Documentation available.
@@ -850,7 +849,7 @@ namespace ConnectomeOpenData
                 {
                     OnIDChanging(value);
                     ReportPropertyChanging("ID");
-                    _ID = StructuralObject.SetValidValue(value);
+                    _ID = StructuralObject.SetValidValue(value, "ID");
                     ReportPropertyChanged("ID");
                     OnIDChanged();
                 }
@@ -875,7 +874,7 @@ namespace ConnectomeOpenData
             {
                 OnDeletedOnChanging(value);
                 ReportPropertyChanging("DeletedOn");
-                _DeletedOn = StructuralObject.SetValidValue(value);
+                _DeletedOn = StructuralObject.SetValidValue(value, "DeletedOn");
                 ReportPropertyChanged("DeletedOn");
                 OnDeletedOnChanged();
             }
@@ -886,7 +885,6 @@ namespace ConnectomeOpenData
 
         #endregion
 
-    
     }
     
     /// <summary>
@@ -942,7 +940,7 @@ namespace ConnectomeOpenData
 
         #endregion
 
-        #region Primitive Properties
+        #region Simple Properties
     
         /// <summary>
         /// No Metadata Documentation available.
@@ -961,7 +959,7 @@ namespace ConnectomeOpenData
                 {
                     OnIDChanging(value);
                     ReportPropertyChanging("ID");
-                    _ID = StructuralObject.SetValidValue(value);
+                    _ID = StructuralObject.SetValidValue(value, "ID");
                     ReportPropertyChanged("ID");
                     OnIDChanged();
                 }
@@ -986,7 +984,7 @@ namespace ConnectomeOpenData
             {
                 OnParentIDChanging(value);
                 ReportPropertyChanging("ParentID");
-                _ParentID = StructuralObject.SetValidValue(value);
+                _ParentID = StructuralObject.SetValidValue(value, "ParentID");
                 ReportPropertyChanged("ParentID");
                 OnParentIDChanged();
             }
@@ -1010,7 +1008,7 @@ namespace ConnectomeOpenData
             {
                 OnXChanging(value);
                 ReportPropertyChanging("X");
-                _X = StructuralObject.SetValidValue(value);
+                _X = StructuralObject.SetValidValue(value, "X");
                 ReportPropertyChanged("X");
                 OnXChanged();
             }
@@ -1034,7 +1032,7 @@ namespace ConnectomeOpenData
             {
                 OnYChanging(value);
                 ReportPropertyChanging("Y");
-                _Y = StructuralObject.SetValidValue(value);
+                _Y = StructuralObject.SetValidValue(value, "Y");
                 ReportPropertyChanged("Y");
                 OnYChanged();
             }
@@ -1058,7 +1056,7 @@ namespace ConnectomeOpenData
             {
                 OnZChanging(value);
                 ReportPropertyChanging("Z");
-                _Z = StructuralObject.SetValidValue(value);
+                _Z = StructuralObject.SetValidValue(value, "Z");
                 ReportPropertyChanged("Z");
                 OnZChanged();
             }
@@ -1082,7 +1080,7 @@ namespace ConnectomeOpenData
             {
                 OnVerticiesChanging(value);
                 ReportPropertyChanging("Verticies");
-                _Verticies = StructuralObject.SetValidValue(value, true);
+                _Verticies = StructuralObject.SetValidValue(value, true, "Verticies");
                 ReportPropertyChanged("Verticies");
                 OnVerticiesChanged();
             }
@@ -1106,7 +1104,7 @@ namespace ConnectomeOpenData
             {
                 OnClosedChanging(value);
                 ReportPropertyChanging("Closed");
-                _Closed = StructuralObject.SetValidValue(value);
+                _Closed = StructuralObject.SetValidValue(value, "Closed");
                 ReportPropertyChanged("Closed");
                 OnClosedChanged();
             }
@@ -1130,7 +1128,7 @@ namespace ConnectomeOpenData
             {
                 OnVersionChanging(value);
                 ReportPropertyChanging("Version");
-                _Version = StructuralObject.SetValidValue(value, true);
+                _Version = StructuralObject.SetValidValue(value, true, "Version");
                 ReportPropertyChanged("Version");
                 OnVersionChanged();
             }
@@ -1154,7 +1152,7 @@ namespace ConnectomeOpenData
             {
                 OnOverlayChanging(value);
                 ReportPropertyChanging("Overlay");
-                _Overlay = StructuralObject.SetValidValue(value, true);
+                _Overlay = StructuralObject.SetValidValue(value, true, "Overlay");
                 ReportPropertyChanged("Overlay");
                 OnOverlayChanged();
             }
@@ -1178,7 +1176,7 @@ namespace ConnectomeOpenData
             {
                 OnTagsChanging(value);
                 ReportPropertyChanging("Tags");
-                _Tags = StructuralObject.SetValidValue(value, true);
+                _Tags = StructuralObject.SetValidValue(value, true, "Tags");
                 ReportPropertyChanged("Tags");
                 OnTagsChanged();
             }
@@ -1202,7 +1200,7 @@ namespace ConnectomeOpenData
             {
                 OnVolumeXChanging(value);
                 ReportPropertyChanging("VolumeX");
-                _VolumeX = StructuralObject.SetValidValue(value);
+                _VolumeX = StructuralObject.SetValidValue(value, "VolumeX");
                 ReportPropertyChanged("VolumeX");
                 OnVolumeXChanged();
             }
@@ -1226,7 +1224,7 @@ namespace ConnectomeOpenData
             {
                 OnVolumeYChanging(value);
                 ReportPropertyChanging("VolumeY");
-                _VolumeY = StructuralObject.SetValidValue(value);
+                _VolumeY = StructuralObject.SetValidValue(value, "VolumeY");
                 ReportPropertyChanged("VolumeY");
                 OnVolumeYChanged();
             }
@@ -1250,7 +1248,7 @@ namespace ConnectomeOpenData
             {
                 OnTerminalChanging(value);
                 ReportPropertyChanging("Terminal");
-                _Terminal = StructuralObject.SetValidValue(value);
+                _Terminal = StructuralObject.SetValidValue(value, "Terminal");
                 ReportPropertyChanged("Terminal");
                 OnTerminalChanged();
             }
@@ -1274,7 +1272,7 @@ namespace ConnectomeOpenData
             {
                 OnOffEdgeChanging(value);
                 ReportPropertyChanging("OffEdge");
-                _OffEdge = StructuralObject.SetValidValue(value);
+                _OffEdge = StructuralObject.SetValidValue(value, "OffEdge");
                 ReportPropertyChanged("OffEdge");
                 OnOffEdgeChanged();
             }
@@ -1298,7 +1296,7 @@ namespace ConnectomeOpenData
             {
                 OnRadiusChanging(value);
                 ReportPropertyChanging("Radius");
-                _Radius = StructuralObject.SetValidValue(value);
+                _Radius = StructuralObject.SetValidValue(value, "Radius");
                 ReportPropertyChanged("Radius");
                 OnRadiusChanged();
             }
@@ -1322,7 +1320,7 @@ namespace ConnectomeOpenData
             {
                 OnTypeCodeChanging(value);
                 ReportPropertyChanging("TypeCode");
-                _TypeCode = StructuralObject.SetValidValue(value);
+                _TypeCode = StructuralObject.SetValidValue(value, "TypeCode");
                 ReportPropertyChanged("TypeCode");
                 OnTypeCodeChanged();
             }
@@ -1346,7 +1344,7 @@ namespace ConnectomeOpenData
             {
                 OnLastModifiedChanging(value);
                 ReportPropertyChanging("LastModified");
-                _LastModified = StructuralObject.SetValidValue(value);
+                _LastModified = StructuralObject.SetValidValue(value, "LastModified");
                 ReportPropertyChanged("LastModified");
                 OnLastModifiedChanged();
             }
@@ -1370,7 +1368,7 @@ namespace ConnectomeOpenData
             {
                 OnCreatedChanging(value);
                 ReportPropertyChanging("Created");
-                _Created = StructuralObject.SetValidValue(value);
+                _Created = StructuralObject.SetValidValue(value, "Created");
                 ReportPropertyChanged("Created");
                 OnCreatedChanged();
             }
@@ -1394,7 +1392,7 @@ namespace ConnectomeOpenData
             {
                 OnUsernameChanging(value);
                 ReportPropertyChanging("Username");
-                _Username = StructuralObject.SetValidValue(value, false);
+                _Username = StructuralObject.SetValidValue(value, false, "Username");
                 ReportPropertyChanged("Username");
                 OnUsernameChanged();
             }
@@ -1405,7 +1403,6 @@ namespace ConnectomeOpenData
 
         #endregion
 
-    
         #region Navigation Properties
     
         /// <summary>
@@ -1521,7 +1518,7 @@ namespace ConnectomeOpenData
 
         #endregion
 
-        #region Primitive Properties
+        #region Simple Properties
     
         /// <summary>
         /// No Metadata Documentation available.
@@ -1540,7 +1537,7 @@ namespace ConnectomeOpenData
                 {
                     OnC___start_lsnChanging(value);
                     ReportPropertyChanging("C___start_lsn");
-                    _C___start_lsn = StructuralObject.SetValidValue(value, false);
+                    _C___start_lsn = StructuralObject.SetValidValue(value, false, "C___start_lsn");
                     ReportPropertyChanged("C___start_lsn");
                     OnC___start_lsnChanged();
                 }
@@ -1565,7 +1562,7 @@ namespace ConnectomeOpenData
             {
                 OnC___end_lsnChanging(value);
                 ReportPropertyChanging("C___end_lsn");
-                _C___end_lsn = StructuralObject.SetValidValue(value, true);
+                _C___end_lsn = StructuralObject.SetValidValue(value, true, "C___end_lsn");
                 ReportPropertyChanged("C___end_lsn");
                 OnC___end_lsnChanged();
             }
@@ -1591,7 +1588,7 @@ namespace ConnectomeOpenData
                 {
                     OnC___seqvalChanging(value);
                     ReportPropertyChanging("C___seqval");
-                    _C___seqval = StructuralObject.SetValidValue(value, false);
+                    _C___seqval = StructuralObject.SetValidValue(value, false, "C___seqval");
                     ReportPropertyChanged("C___seqval");
                     OnC___seqvalChanged();
                 }
@@ -1618,7 +1615,7 @@ namespace ConnectomeOpenData
                 {
                     OnC___operationChanging(value);
                     ReportPropertyChanging("C___operation");
-                    _C___operation = StructuralObject.SetValidValue(value);
+                    _C___operation = StructuralObject.SetValidValue(value, "C___operation");
                     ReportPropertyChanged("C___operation");
                     OnC___operationChanged();
                 }
@@ -1643,7 +1640,7 @@ namespace ConnectomeOpenData
             {
                 OnC___update_maskChanging(value);
                 ReportPropertyChanging("C___update_mask");
-                _C___update_mask = StructuralObject.SetValidValue(value, true);
+                _C___update_mask = StructuralObject.SetValidValue(value, true, "C___update_mask");
                 ReportPropertyChanged("C___update_mask");
                 OnC___update_maskChanged();
             }
@@ -1667,7 +1664,7 @@ namespace ConnectomeOpenData
             {
                 OnIDChanging(value);
                 ReportPropertyChanging("ID");
-                _ID = StructuralObject.SetValidValue(value);
+                _ID = StructuralObject.SetValidValue(value, "ID");
                 ReportPropertyChanged("ID");
                 OnIDChanged();
             }
@@ -1691,7 +1688,7 @@ namespace ConnectomeOpenData
             {
                 OnParentIDChanging(value);
                 ReportPropertyChanging("ParentID");
-                _ParentID = StructuralObject.SetValidValue(value);
+                _ParentID = StructuralObject.SetValidValue(value, "ParentID");
                 ReportPropertyChanged("ParentID");
                 OnParentIDChanged();
             }
@@ -1715,7 +1712,7 @@ namespace ConnectomeOpenData
             {
                 OnXChanging(value);
                 ReportPropertyChanging("X");
-                _X = StructuralObject.SetValidValue(value);
+                _X = StructuralObject.SetValidValue(value, "X");
                 ReportPropertyChanged("X");
                 OnXChanged();
             }
@@ -1739,7 +1736,7 @@ namespace ConnectomeOpenData
             {
                 OnYChanging(value);
                 ReportPropertyChanging("Y");
-                _Y = StructuralObject.SetValidValue(value);
+                _Y = StructuralObject.SetValidValue(value, "Y");
                 ReportPropertyChanged("Y");
                 OnYChanged();
             }
@@ -1763,7 +1760,7 @@ namespace ConnectomeOpenData
             {
                 OnZChanging(value);
                 ReportPropertyChanging("Z");
-                _Z = StructuralObject.SetValidValue(value);
+                _Z = StructuralObject.SetValidValue(value, "Z");
                 ReportPropertyChanged("Z");
                 OnZChanged();
             }
@@ -1787,7 +1784,7 @@ namespace ConnectomeOpenData
             {
                 OnVerticiesChanging(value);
                 ReportPropertyChanging("Verticies");
-                _Verticies = StructuralObject.SetValidValue(value, true);
+                _Verticies = StructuralObject.SetValidValue(value, true, "Verticies");
                 ReportPropertyChanged("Verticies");
                 OnVerticiesChanged();
             }
@@ -1811,7 +1808,7 @@ namespace ConnectomeOpenData
             {
                 OnClosedChanging(value);
                 ReportPropertyChanging("Closed");
-                _Closed = StructuralObject.SetValidValue(value);
+                _Closed = StructuralObject.SetValidValue(value, "Closed");
                 ReportPropertyChanged("Closed");
                 OnClosedChanged();
             }
@@ -1835,7 +1832,7 @@ namespace ConnectomeOpenData
             {
                 OnVersionChanging(value);
                 ReportPropertyChanging("Version");
-                _Version = StructuralObject.SetValidValue(value, true);
+                _Version = StructuralObject.SetValidValue(value, true, "Version");
                 ReportPropertyChanged("Version");
                 OnVersionChanged();
             }
@@ -1859,7 +1856,7 @@ namespace ConnectomeOpenData
             {
                 OnOverlayChanging(value);
                 ReportPropertyChanging("Overlay");
-                _Overlay = StructuralObject.SetValidValue(value, true);
+                _Overlay = StructuralObject.SetValidValue(value, true, "Overlay");
                 ReportPropertyChanged("Overlay");
                 OnOverlayChanged();
             }
@@ -1883,7 +1880,7 @@ namespace ConnectomeOpenData
             {
                 OnTagsChanging(value);
                 ReportPropertyChanging("Tags");
-                _Tags = StructuralObject.SetValidValue(value, true);
+                _Tags = StructuralObject.SetValidValue(value, true, "Tags");
                 ReportPropertyChanged("Tags");
                 OnTagsChanged();
             }
@@ -1907,7 +1904,7 @@ namespace ConnectomeOpenData
             {
                 OnVolumeXChanging(value);
                 ReportPropertyChanging("VolumeX");
-                _VolumeX = StructuralObject.SetValidValue(value);
+                _VolumeX = StructuralObject.SetValidValue(value, "VolumeX");
                 ReportPropertyChanged("VolumeX");
                 OnVolumeXChanged();
             }
@@ -1931,7 +1928,7 @@ namespace ConnectomeOpenData
             {
                 OnVolumeYChanging(value);
                 ReportPropertyChanging("VolumeY");
-                _VolumeY = StructuralObject.SetValidValue(value);
+                _VolumeY = StructuralObject.SetValidValue(value, "VolumeY");
                 ReportPropertyChanged("VolumeY");
                 OnVolumeYChanged();
             }
@@ -1955,7 +1952,7 @@ namespace ConnectomeOpenData
             {
                 OnTerminalChanging(value);
                 ReportPropertyChanging("Terminal");
-                _Terminal = StructuralObject.SetValidValue(value);
+                _Terminal = StructuralObject.SetValidValue(value, "Terminal");
                 ReportPropertyChanged("Terminal");
                 OnTerminalChanged();
             }
@@ -1979,7 +1976,7 @@ namespace ConnectomeOpenData
             {
                 OnOffEdgeChanging(value);
                 ReportPropertyChanging("OffEdge");
-                _OffEdge = StructuralObject.SetValidValue(value);
+                _OffEdge = StructuralObject.SetValidValue(value, "OffEdge");
                 ReportPropertyChanged("OffEdge");
                 OnOffEdgeChanged();
             }
@@ -2003,7 +2000,7 @@ namespace ConnectomeOpenData
             {
                 OnRadiusChanging(value);
                 ReportPropertyChanging("Radius");
-                _Radius = StructuralObject.SetValidValue(value);
+                _Radius = StructuralObject.SetValidValue(value, "Radius");
                 ReportPropertyChanged("Radius");
                 OnRadiusChanged();
             }
@@ -2027,7 +2024,7 @@ namespace ConnectomeOpenData
             {
                 OnTypeCodeChanging(value);
                 ReportPropertyChanging("TypeCode");
-                _TypeCode = StructuralObject.SetValidValue(value);
+                _TypeCode = StructuralObject.SetValidValue(value, "TypeCode");
                 ReportPropertyChanged("TypeCode");
                 OnTypeCodeChanged();
             }
@@ -2051,7 +2048,7 @@ namespace ConnectomeOpenData
             {
                 OnLastModifiedChanging(value);
                 ReportPropertyChanging("LastModified");
-                _LastModified = StructuralObject.SetValidValue(value);
+                _LastModified = StructuralObject.SetValidValue(value, "LastModified");
                 ReportPropertyChanged("LastModified");
                 OnLastModifiedChanged();
             }
@@ -2075,7 +2072,7 @@ namespace ConnectomeOpenData
             {
                 OnCreatedChanging(value);
                 ReportPropertyChanging("Created");
-                _Created = StructuralObject.SetValidValue(value);
+                _Created = StructuralObject.SetValidValue(value, "Created");
                 ReportPropertyChanged("Created");
                 OnCreatedChanged();
             }
@@ -2099,7 +2096,7 @@ namespace ConnectomeOpenData
             {
                 OnUsernameChanging(value);
                 ReportPropertyChanging("Username");
-                _Username = StructuralObject.SetValidValue(value, true);
+                _Username = StructuralObject.SetValidValue(value, true, "Username");
                 ReportPropertyChanged("Username");
                 OnUsernameChanged();
             }
@@ -2110,7 +2107,6 @@ namespace ConnectomeOpenData
 
         #endregion
 
-    
     }
     
     /// <summary>
@@ -2142,7 +2138,7 @@ namespace ConnectomeOpenData
 
         #endregion
 
-        #region Primitive Properties
+        #region Simple Properties
     
         /// <summary>
         /// No Metadata Documentation available.
@@ -2161,7 +2157,7 @@ namespace ConnectomeOpenData
                 {
                     OnAChanging(value);
                     ReportPropertyChanging("A");
-                    _A = StructuralObject.SetValidValue(value);
+                    _A = StructuralObject.SetValidValue(value, "A");
                     ReportPropertyChanged("A");
                     OnAChanged();
                 }
@@ -2188,7 +2184,7 @@ namespace ConnectomeOpenData
                 {
                     OnBChanging(value);
                     ReportPropertyChanging("B");
-                    _B = StructuralObject.SetValidValue(value);
+                    _B = StructuralObject.SetValidValue(value, "B");
                     ReportPropertyChanged("B");
                     OnBChanged();
                 }
@@ -2213,7 +2209,7 @@ namespace ConnectomeOpenData
             {
                 OnUsernameChanging(value);
                 ReportPropertyChanging("Username");
-                _Username = StructuralObject.SetValidValue(value, false);
+                _Username = StructuralObject.SetValidValue(value, false, "Username");
                 ReportPropertyChanged("Username");
                 OnUsernameChanged();
             }
@@ -2237,7 +2233,7 @@ namespace ConnectomeOpenData
             {
                 OnCreatedChanging(value);
                 ReportPropertyChanging("Created");
-                _Created = StructuralObject.SetValidValue(value);
+                _Created = StructuralObject.SetValidValue(value, "Created");
                 ReportPropertyChanged("Created");
                 OnCreatedChanged();
             }
@@ -2248,7 +2244,6 @@ namespace ConnectomeOpenData
 
         #endregion
 
-    
         #region Navigation Properties
     
         /// <summary>
@@ -2358,7 +2353,7 @@ namespace ConnectomeOpenData
 
         #endregion
 
-        #region Primitive Properties
+        #region Simple Properties
     
         /// <summary>
         /// No Metadata Documentation available.
@@ -2377,7 +2372,7 @@ namespace ConnectomeOpenData
                 {
                     OnC___start_lsnChanging(value);
                     ReportPropertyChanging("C___start_lsn");
-                    _C___start_lsn = StructuralObject.SetValidValue(value, false);
+                    _C___start_lsn = StructuralObject.SetValidValue(value, false, "C___start_lsn");
                     ReportPropertyChanged("C___start_lsn");
                     OnC___start_lsnChanged();
                 }
@@ -2402,7 +2397,7 @@ namespace ConnectomeOpenData
             {
                 OnC___end_lsnChanging(value);
                 ReportPropertyChanging("C___end_lsn");
-                _C___end_lsn = StructuralObject.SetValidValue(value, true);
+                _C___end_lsn = StructuralObject.SetValidValue(value, true, "C___end_lsn");
                 ReportPropertyChanged("C___end_lsn");
                 OnC___end_lsnChanged();
             }
@@ -2428,7 +2423,7 @@ namespace ConnectomeOpenData
                 {
                     OnC___seqvalChanging(value);
                     ReportPropertyChanging("C___seqval");
-                    _C___seqval = StructuralObject.SetValidValue(value, false);
+                    _C___seqval = StructuralObject.SetValidValue(value, false, "C___seqval");
                     ReportPropertyChanged("C___seqval");
                     OnC___seqvalChanged();
                 }
@@ -2455,7 +2450,7 @@ namespace ConnectomeOpenData
                 {
                     OnC___operationChanging(value);
                     ReportPropertyChanging("C___operation");
-                    _C___operation = StructuralObject.SetValidValue(value);
+                    _C___operation = StructuralObject.SetValidValue(value, "C___operation");
                     ReportPropertyChanged("C___operation");
                     OnC___operationChanged();
                 }
@@ -2480,7 +2475,7 @@ namespace ConnectomeOpenData
             {
                 OnC___update_maskChanging(value);
                 ReportPropertyChanging("C___update_mask");
-                _C___update_mask = StructuralObject.SetValidValue(value, true);
+                _C___update_mask = StructuralObject.SetValidValue(value, true, "C___update_mask");
                 ReportPropertyChanged("C___update_mask");
                 OnC___update_maskChanged();
             }
@@ -2504,7 +2499,7 @@ namespace ConnectomeOpenData
             {
                 OnAChanging(value);
                 ReportPropertyChanging("A");
-                _A = StructuralObject.SetValidValue(value);
+                _A = StructuralObject.SetValidValue(value, "A");
                 ReportPropertyChanged("A");
                 OnAChanged();
             }
@@ -2528,7 +2523,7 @@ namespace ConnectomeOpenData
             {
                 OnBChanging(value);
                 ReportPropertyChanging("B");
-                _B = StructuralObject.SetValidValue(value);
+                _B = StructuralObject.SetValidValue(value, "B");
                 ReportPropertyChanged("B");
                 OnBChanged();
             }
@@ -2552,7 +2547,7 @@ namespace ConnectomeOpenData
             {
                 OnUsernameChanging(value);
                 ReportPropertyChanging("Username");
-                _Username = StructuralObject.SetValidValue(value, true);
+                _Username = StructuralObject.SetValidValue(value, true, "Username");
                 ReportPropertyChanged("Username");
                 OnUsernameChanged();
             }
@@ -2576,7 +2571,7 @@ namespace ConnectomeOpenData
             {
                 OnCreatedChanging(value);
                 ReportPropertyChanging("Created");
-                _Created = StructuralObject.SetValidValue(value);
+                _Created = StructuralObject.SetValidValue(value, "Created");
                 ReportPropertyChanged("Created");
                 OnCreatedChanged();
             }
@@ -2587,7 +2582,6 @@ namespace ConnectomeOpenData
 
         #endregion
 
-    
     }
     
     /// <summary>
@@ -2613,7 +2607,7 @@ namespace ConnectomeOpenData
 
         #endregion
 
-        #region Primitive Properties
+        #region Simple Properties
     
         /// <summary>
         /// No Metadata Documentation available.
@@ -2632,7 +2626,7 @@ namespace ConnectomeOpenData
                 {
                     Onstart_lsnChanging(value);
                     ReportPropertyChanging("start_lsn");
-                    _start_lsn = StructuralObject.SetValidValue(value, false);
+                    _start_lsn = StructuralObject.SetValidValue(value, false, "start_lsn");
                     ReportPropertyChanged("start_lsn");
                     Onstart_lsnChanged();
                 }
@@ -2657,7 +2651,7 @@ namespace ConnectomeOpenData
             {
                 Ontran_begin_timeChanging(value);
                 ReportPropertyChanging("tran_begin_time");
-                _tran_begin_time = StructuralObject.SetValidValue(value);
+                _tran_begin_time = StructuralObject.SetValidValue(value, "tran_begin_time");
                 ReportPropertyChanged("tran_begin_time");
                 Ontran_begin_timeChanged();
             }
@@ -2681,7 +2675,7 @@ namespace ConnectomeOpenData
             {
                 Ontran_end_timeChanging(value);
                 ReportPropertyChanging("tran_end_time");
-                _tran_end_time = StructuralObject.SetValidValue(value);
+                _tran_end_time = StructuralObject.SetValidValue(value, "tran_end_time");
                 ReportPropertyChanged("tran_end_time");
                 Ontran_end_timeChanged();
             }
@@ -2705,7 +2699,7 @@ namespace ConnectomeOpenData
             {
                 Ontran_idChanging(value);
                 ReportPropertyChanging("tran_id");
-                _tran_id = StructuralObject.SetValidValue(value, true);
+                _tran_id = StructuralObject.SetValidValue(value, true, "tran_id");
                 ReportPropertyChanged("tran_id");
                 Ontran_idChanged();
             }
@@ -2729,7 +2723,7 @@ namespace ConnectomeOpenData
             {
                 Ontran_begin_lsnChanging(value);
                 ReportPropertyChanging("tran_begin_lsn");
-                _tran_begin_lsn = StructuralObject.SetValidValue(value, true);
+                _tran_begin_lsn = StructuralObject.SetValidValue(value, true, "tran_begin_lsn");
                 ReportPropertyChanged("tran_begin_lsn");
                 Ontran_begin_lsnChanged();
             }
@@ -2740,7 +2734,6 @@ namespace ConnectomeOpenData
 
         #endregion
 
-    
     }
     
     /// <summary>
@@ -2780,7 +2773,7 @@ namespace ConnectomeOpenData
 
         #endregion
 
-        #region Primitive Properties
+        #region Simple Properties
     
         /// <summary>
         /// No Metadata Documentation available.
@@ -2799,7 +2792,7 @@ namespace ConnectomeOpenData
                 {
                     OnIDChanging(value);
                     ReportPropertyChanging("ID");
-                    _ID = StructuralObject.SetValidValue(value);
+                    _ID = StructuralObject.SetValidValue(value, "ID");
                     ReportPropertyChanged("ID");
                     OnIDChanged();
                 }
@@ -2824,7 +2817,7 @@ namespace ConnectomeOpenData
             {
                 OnTypeIDChanging(value);
                 ReportPropertyChanging("TypeID");
-                _TypeID = StructuralObject.SetValidValue(value);
+                _TypeID = StructuralObject.SetValidValue(value, "TypeID");
                 ReportPropertyChanged("TypeID");
                 OnTypeIDChanged();
             }
@@ -2848,7 +2841,7 @@ namespace ConnectomeOpenData
             {
                 OnNotesChanging(value);
                 ReportPropertyChanging("Notes");
-                _Notes = StructuralObject.SetValidValue(value, true);
+                _Notes = StructuralObject.SetValidValue(value, true, "Notes");
                 ReportPropertyChanged("Notes");
                 OnNotesChanged();
             }
@@ -2872,7 +2865,7 @@ namespace ConnectomeOpenData
             {
                 OnVerifiedChanging(value);
                 ReportPropertyChanging("Verified");
-                _Verified = StructuralObject.SetValidValue(value);
+                _Verified = StructuralObject.SetValidValue(value, "Verified");
                 ReportPropertyChanged("Verified");
                 OnVerifiedChanged();
             }
@@ -2896,7 +2889,7 @@ namespace ConnectomeOpenData
             {
                 OnTagsChanging(value);
                 ReportPropertyChanging("Tags");
-                _Tags = StructuralObject.SetValidValue(value, true);
+                _Tags = StructuralObject.SetValidValue(value, true, "Tags");
                 ReportPropertyChanged("Tags");
                 OnTagsChanged();
             }
@@ -2920,7 +2913,7 @@ namespace ConnectomeOpenData
             {
                 OnConfidenceChanging(value);
                 ReportPropertyChanging("Confidence");
-                _Confidence = StructuralObject.SetValidValue(value);
+                _Confidence = StructuralObject.SetValidValue(value, "Confidence");
                 ReportPropertyChanged("Confidence");
                 OnConfidenceChanged();
             }
@@ -2944,7 +2937,7 @@ namespace ConnectomeOpenData
             {
                 OnVersionChanging(value);
                 ReportPropertyChanging("Version");
-                _Version = StructuralObject.SetValidValue(value, true);
+                _Version = StructuralObject.SetValidValue(value, true, "Version");
                 ReportPropertyChanged("Version");
                 OnVersionChanged();
             }
@@ -2968,7 +2961,7 @@ namespace ConnectomeOpenData
             {
                 OnParentIDChanging(value);
                 ReportPropertyChanging("ParentID");
-                _ParentID = StructuralObject.SetValidValue(value);
+                _ParentID = StructuralObject.SetValidValue(value, "ParentID");
                 ReportPropertyChanged("ParentID");
                 OnParentIDChanged();
             }
@@ -2992,7 +2985,7 @@ namespace ConnectomeOpenData
             {
                 OnCreatedChanging(value);
                 ReportPropertyChanging("Created");
-                _Created = StructuralObject.SetValidValue(value);
+                _Created = StructuralObject.SetValidValue(value, "Created");
                 ReportPropertyChanged("Created");
                 OnCreatedChanged();
             }
@@ -3016,7 +3009,7 @@ namespace ConnectomeOpenData
             {
                 OnLabelChanging(value);
                 ReportPropertyChanging("Label");
-                _Label = StructuralObject.SetValidValue(value, true);
+                _Label = StructuralObject.SetValidValue(value, true, "Label");
                 ReportPropertyChanged("Label");
                 OnLabelChanged();
             }
@@ -3040,7 +3033,7 @@ namespace ConnectomeOpenData
             {
                 OnUsernameChanging(value);
                 ReportPropertyChanging("Username");
-                _Username = StructuralObject.SetValidValue(value, false);
+                _Username = StructuralObject.SetValidValue(value, false, "Username");
                 ReportPropertyChanged("Username");
                 OnUsernameChanged();
             }
@@ -3064,7 +3057,7 @@ namespace ConnectomeOpenData
             {
                 OnLastModifiedChanging(value);
                 ReportPropertyChanging("LastModified");
-                _LastModified = StructuralObject.SetValidValue(value);
+                _LastModified = StructuralObject.SetValidValue(value, "LastModified");
                 ReportPropertyChanged("LastModified");
                 OnLastModifiedChanged();
             }
@@ -3075,7 +3068,6 @@ namespace ConnectomeOpenData
 
         #endregion
 
-    
         #region Navigation Properties
     
         /// <summary>
@@ -3273,7 +3265,7 @@ namespace ConnectomeOpenData
 
         #endregion
 
-        #region Primitive Properties
+        #region Simple Properties
     
         /// <summary>
         /// No Metadata Documentation available.
@@ -3292,7 +3284,7 @@ namespace ConnectomeOpenData
                 {
                     OnC___start_lsnChanging(value);
                     ReportPropertyChanging("C___start_lsn");
-                    _C___start_lsn = StructuralObject.SetValidValue(value, false);
+                    _C___start_lsn = StructuralObject.SetValidValue(value, false, "C___start_lsn");
                     ReportPropertyChanged("C___start_lsn");
                     OnC___start_lsnChanged();
                 }
@@ -3317,7 +3309,7 @@ namespace ConnectomeOpenData
             {
                 OnC___end_lsnChanging(value);
                 ReportPropertyChanging("C___end_lsn");
-                _C___end_lsn = StructuralObject.SetValidValue(value, true);
+                _C___end_lsn = StructuralObject.SetValidValue(value, true, "C___end_lsn");
                 ReportPropertyChanged("C___end_lsn");
                 OnC___end_lsnChanged();
             }
@@ -3343,7 +3335,7 @@ namespace ConnectomeOpenData
                 {
                     OnC___seqvalChanging(value);
                     ReportPropertyChanging("C___seqval");
-                    _C___seqval = StructuralObject.SetValidValue(value, false);
+                    _C___seqval = StructuralObject.SetValidValue(value, false, "C___seqval");
                     ReportPropertyChanged("C___seqval");
                     OnC___seqvalChanged();
                 }
@@ -3370,7 +3362,7 @@ namespace ConnectomeOpenData
                 {
                     OnC___operationChanging(value);
                     ReportPropertyChanging("C___operation");
-                    _C___operation = StructuralObject.SetValidValue(value);
+                    _C___operation = StructuralObject.SetValidValue(value, "C___operation");
                     ReportPropertyChanged("C___operation");
                     OnC___operationChanged();
                 }
@@ -3395,7 +3387,7 @@ namespace ConnectomeOpenData
             {
                 OnC___update_maskChanging(value);
                 ReportPropertyChanging("C___update_mask");
-                _C___update_mask = StructuralObject.SetValidValue(value, true);
+                _C___update_mask = StructuralObject.SetValidValue(value, true, "C___update_mask");
                 ReportPropertyChanged("C___update_mask");
                 OnC___update_maskChanged();
             }
@@ -3419,7 +3411,7 @@ namespace ConnectomeOpenData
             {
                 OnIDChanging(value);
                 ReportPropertyChanging("ID");
-                _ID = StructuralObject.SetValidValue(value);
+                _ID = StructuralObject.SetValidValue(value, "ID");
                 ReportPropertyChanged("ID");
                 OnIDChanged();
             }
@@ -3443,7 +3435,7 @@ namespace ConnectomeOpenData
             {
                 OnTypeIDChanging(value);
                 ReportPropertyChanging("TypeID");
-                _TypeID = StructuralObject.SetValidValue(value);
+                _TypeID = StructuralObject.SetValidValue(value, "TypeID");
                 ReportPropertyChanged("TypeID");
                 OnTypeIDChanged();
             }
@@ -3467,7 +3459,7 @@ namespace ConnectomeOpenData
             {
                 OnNotesChanging(value);
                 ReportPropertyChanging("Notes");
-                _Notes = StructuralObject.SetValidValue(value, true);
+                _Notes = StructuralObject.SetValidValue(value, true, "Notes");
                 ReportPropertyChanged("Notes");
                 OnNotesChanged();
             }
@@ -3491,7 +3483,7 @@ namespace ConnectomeOpenData
             {
                 OnVerifiedChanging(value);
                 ReportPropertyChanging("Verified");
-                _Verified = StructuralObject.SetValidValue(value);
+                _Verified = StructuralObject.SetValidValue(value, "Verified");
                 ReportPropertyChanged("Verified");
                 OnVerifiedChanged();
             }
@@ -3515,7 +3507,7 @@ namespace ConnectomeOpenData
             {
                 OnTagsChanging(value);
                 ReportPropertyChanging("Tags");
-                _Tags = StructuralObject.SetValidValue(value, true);
+                _Tags = StructuralObject.SetValidValue(value, true, "Tags");
                 ReportPropertyChanged("Tags");
                 OnTagsChanged();
             }
@@ -3539,7 +3531,7 @@ namespace ConnectomeOpenData
             {
                 OnConfidenceChanging(value);
                 ReportPropertyChanging("Confidence");
-                _Confidence = StructuralObject.SetValidValue(value);
+                _Confidence = StructuralObject.SetValidValue(value, "Confidence");
                 ReportPropertyChanged("Confidence");
                 OnConfidenceChanged();
             }
@@ -3563,7 +3555,7 @@ namespace ConnectomeOpenData
             {
                 OnVersionChanging(value);
                 ReportPropertyChanging("Version");
-                _Version = StructuralObject.SetValidValue(value, true);
+                _Version = StructuralObject.SetValidValue(value, true, "Version");
                 ReportPropertyChanged("Version");
                 OnVersionChanged();
             }
@@ -3587,7 +3579,7 @@ namespace ConnectomeOpenData
             {
                 OnParentIDChanging(value);
                 ReportPropertyChanging("ParentID");
-                _ParentID = StructuralObject.SetValidValue(value);
+                _ParentID = StructuralObject.SetValidValue(value, "ParentID");
                 ReportPropertyChanged("ParentID");
                 OnParentIDChanged();
             }
@@ -3611,7 +3603,7 @@ namespace ConnectomeOpenData
             {
                 OnCreatedChanging(value);
                 ReportPropertyChanging("Created");
-                _Created = StructuralObject.SetValidValue(value);
+                _Created = StructuralObject.SetValidValue(value, "Created");
                 ReportPropertyChanged("Created");
                 OnCreatedChanged();
             }
@@ -3635,7 +3627,7 @@ namespace ConnectomeOpenData
             {
                 OnLabelChanging(value);
                 ReportPropertyChanging("Label");
-                _Label = StructuralObject.SetValidValue(value, true);
+                _Label = StructuralObject.SetValidValue(value, true, "Label");
                 ReportPropertyChanged("Label");
                 OnLabelChanged();
             }
@@ -3659,7 +3651,7 @@ namespace ConnectomeOpenData
             {
                 OnUsernameChanging(value);
                 ReportPropertyChanging("Username");
-                _Username = StructuralObject.SetValidValue(value, true);
+                _Username = StructuralObject.SetValidValue(value, true, "Username");
                 ReportPropertyChanged("Username");
                 OnUsernameChanged();
             }
@@ -3683,7 +3675,7 @@ namespace ConnectomeOpenData
             {
                 OnLastModifiedChanging(value);
                 ReportPropertyChanging("LastModified");
-                _LastModified = StructuralObject.SetValidValue(value);
+                _LastModified = StructuralObject.SetValidValue(value, "LastModified");
                 ReportPropertyChanged("LastModified");
                 OnLastModifiedChanged();
             }
@@ -3694,7 +3686,6 @@ namespace ConnectomeOpenData
 
         #endregion
 
-    
     }
     
     /// <summary>
@@ -3730,7 +3721,7 @@ namespace ConnectomeOpenData
 
         #endregion
 
-        #region Primitive Properties
+        #region Simple Properties
     
         /// <summary>
         /// No Metadata Documentation available.
@@ -3749,7 +3740,7 @@ namespace ConnectomeOpenData
                 {
                     OnSourceIDChanging(value);
                     ReportPropertyChanging("SourceID");
-                    _SourceID = StructuralObject.SetValidValue(value);
+                    _SourceID = StructuralObject.SetValidValue(value, "SourceID");
                     ReportPropertyChanged("SourceID");
                     OnSourceIDChanged();
                 }
@@ -3776,7 +3767,7 @@ namespace ConnectomeOpenData
                 {
                     OnTargetIDChanging(value);
                     ReportPropertyChanging("TargetID");
-                    _TargetID = StructuralObject.SetValidValue(value);
+                    _TargetID = StructuralObject.SetValidValue(value, "TargetID");
                     ReportPropertyChanged("TargetID");
                     OnTargetIDChanged();
                 }
@@ -3803,7 +3794,7 @@ namespace ConnectomeOpenData
                 {
                     OnBidirectionalChanging(value);
                     ReportPropertyChanging("Bidirectional");
-                    _Bidirectional = StructuralObject.SetValidValue(value);
+                    _Bidirectional = StructuralObject.SetValidValue(value, "Bidirectional");
                     ReportPropertyChanged("Bidirectional");
                     OnBidirectionalChanged();
                 }
@@ -3828,7 +3819,7 @@ namespace ConnectomeOpenData
             {
                 OnTagsChanging(value);
                 ReportPropertyChanging("Tags");
-                _Tags = StructuralObject.SetValidValue(value, true);
+                _Tags = StructuralObject.SetValidValue(value, true, "Tags");
                 ReportPropertyChanged("Tags");
                 OnTagsChanged();
             }
@@ -3854,7 +3845,7 @@ namespace ConnectomeOpenData
                 {
                     OnUsernameChanging(value);
                     ReportPropertyChanging("Username");
-                    _Username = StructuralObject.SetValidValue(value, false);
+                    _Username = StructuralObject.SetValidValue(value, false, "Username");
                     ReportPropertyChanged("Username");
                     OnUsernameChanged();
                 }
@@ -3881,7 +3872,7 @@ namespace ConnectomeOpenData
                 {
                     OnCreatedChanging(value);
                     ReportPropertyChanging("Created");
-                    _Created = StructuralObject.SetValidValue(value);
+                    _Created = StructuralObject.SetValidValue(value, "Created");
                     ReportPropertyChanged("Created");
                     OnCreatedChanged();
                 }
@@ -3908,7 +3899,7 @@ namespace ConnectomeOpenData
                 {
                     OnLastModifiedChanging(value);
                     ReportPropertyChanging("LastModified");
-                    _LastModified = StructuralObject.SetValidValue(value);
+                    _LastModified = StructuralObject.SetValidValue(value, "LastModified");
                     ReportPropertyChanged("LastModified");
                     OnLastModifiedChanged();
                 }
@@ -3920,7 +3911,6 @@ namespace ConnectomeOpenData
 
         #endregion
 
-    
         #region Navigation Properties
     
         /// <summary>
@@ -4030,7 +4020,7 @@ namespace ConnectomeOpenData
 
         #endregion
 
-        #region Primitive Properties
+        #region Simple Properties
     
         /// <summary>
         /// No Metadata Documentation available.
@@ -4049,7 +4039,7 @@ namespace ConnectomeOpenData
                 {
                     OnC___start_lsnChanging(value);
                     ReportPropertyChanging("C___start_lsn");
-                    _C___start_lsn = StructuralObject.SetValidValue(value, false);
+                    _C___start_lsn = StructuralObject.SetValidValue(value, false, "C___start_lsn");
                     ReportPropertyChanged("C___start_lsn");
                     OnC___start_lsnChanged();
                 }
@@ -4074,7 +4064,7 @@ namespace ConnectomeOpenData
             {
                 OnC___end_lsnChanging(value);
                 ReportPropertyChanging("C___end_lsn");
-                _C___end_lsn = StructuralObject.SetValidValue(value, true);
+                _C___end_lsn = StructuralObject.SetValidValue(value, true, "C___end_lsn");
                 ReportPropertyChanged("C___end_lsn");
                 OnC___end_lsnChanged();
             }
@@ -4100,7 +4090,7 @@ namespace ConnectomeOpenData
                 {
                     OnC___seqvalChanging(value);
                     ReportPropertyChanging("C___seqval");
-                    _C___seqval = StructuralObject.SetValidValue(value, false);
+                    _C___seqval = StructuralObject.SetValidValue(value, false, "C___seqval");
                     ReportPropertyChanged("C___seqval");
                     OnC___seqvalChanged();
                 }
@@ -4127,7 +4117,7 @@ namespace ConnectomeOpenData
                 {
                     OnC___operationChanging(value);
                     ReportPropertyChanging("C___operation");
-                    _C___operation = StructuralObject.SetValidValue(value);
+                    _C___operation = StructuralObject.SetValidValue(value, "C___operation");
                     ReportPropertyChanged("C___operation");
                     OnC___operationChanged();
                 }
@@ -4152,7 +4142,7 @@ namespace ConnectomeOpenData
             {
                 OnC___update_maskChanging(value);
                 ReportPropertyChanging("C___update_mask");
-                _C___update_mask = StructuralObject.SetValidValue(value, true);
+                _C___update_mask = StructuralObject.SetValidValue(value, true, "C___update_mask");
                 ReportPropertyChanged("C___update_mask");
                 OnC___update_maskChanged();
             }
@@ -4176,7 +4166,7 @@ namespace ConnectomeOpenData
             {
                 OnSourceIDChanging(value);
                 ReportPropertyChanging("SourceID");
-                _SourceID = StructuralObject.SetValidValue(value);
+                _SourceID = StructuralObject.SetValidValue(value, "SourceID");
                 ReportPropertyChanged("SourceID");
                 OnSourceIDChanged();
             }
@@ -4200,7 +4190,7 @@ namespace ConnectomeOpenData
             {
                 OnTargetIDChanging(value);
                 ReportPropertyChanging("TargetID");
-                _TargetID = StructuralObject.SetValidValue(value);
+                _TargetID = StructuralObject.SetValidValue(value, "TargetID");
                 ReportPropertyChanged("TargetID");
                 OnTargetIDChanged();
             }
@@ -4224,7 +4214,7 @@ namespace ConnectomeOpenData
             {
                 OnBidirectionalChanging(value);
                 ReportPropertyChanging("Bidirectional");
-                _Bidirectional = StructuralObject.SetValidValue(value);
+                _Bidirectional = StructuralObject.SetValidValue(value, "Bidirectional");
                 ReportPropertyChanged("Bidirectional");
                 OnBidirectionalChanged();
             }
@@ -4248,7 +4238,7 @@ namespace ConnectomeOpenData
             {
                 OnTagsChanging(value);
                 ReportPropertyChanging("Tags");
-                _Tags = StructuralObject.SetValidValue(value, true);
+                _Tags = StructuralObject.SetValidValue(value, true, "Tags");
                 ReportPropertyChanged("Tags");
                 OnTagsChanged();
             }
@@ -4272,7 +4262,7 @@ namespace ConnectomeOpenData
             {
                 OnUsernameChanging(value);
                 ReportPropertyChanging("Username");
-                _Username = StructuralObject.SetValidValue(value, true);
+                _Username = StructuralObject.SetValidValue(value, true, "Username");
                 ReportPropertyChanged("Username");
                 OnUsernameChanged();
             }
@@ -4296,7 +4286,7 @@ namespace ConnectomeOpenData
             {
                 OnCreatedChanging(value);
                 ReportPropertyChanging("Created");
-                _Created = StructuralObject.SetValidValue(value);
+                _Created = StructuralObject.SetValidValue(value, "Created");
                 ReportPropertyChanged("Created");
                 OnCreatedChanged();
             }
@@ -4320,7 +4310,7 @@ namespace ConnectomeOpenData
             {
                 OnLastModifiedChanging(value);
                 ReportPropertyChanging("LastModified");
-                _LastModified = StructuralObject.SetValidValue(value);
+                _LastModified = StructuralObject.SetValidValue(value, "LastModified");
                 ReportPropertyChanged("LastModified");
                 OnLastModifiedChanged();
             }
@@ -4331,7 +4321,6 @@ namespace ConnectomeOpenData
 
         #endregion
 
-    
     }
     
     /// <summary>
@@ -4365,7 +4354,7 @@ namespace ConnectomeOpenData
 
         #endregion
 
-        #region Primitive Properties
+        #region Simple Properties
     
         /// <summary>
         /// No Metadata Documentation available.
@@ -4384,7 +4373,7 @@ namespace ConnectomeOpenData
                 {
                     OnIDChanging(value);
                     ReportPropertyChanging("ID");
-                    _ID = StructuralObject.SetValidValue(value);
+                    _ID = StructuralObject.SetValidValue(value, "ID");
                     ReportPropertyChanged("ID");
                     OnIDChanged();
                 }
@@ -4409,7 +4398,7 @@ namespace ConnectomeOpenData
             {
                 OnNameChanging(value);
                 ReportPropertyChanging("Name");
-                _Name = StructuralObject.SetValidValue(value, false);
+                _Name = StructuralObject.SetValidValue(value, false, "Name");
                 ReportPropertyChanged("Name");
                 OnNameChanged();
             }
@@ -4433,7 +4422,7 @@ namespace ConnectomeOpenData
             {
                 OnStructureTypeIDChanging(value);
                 ReportPropertyChanging("StructureTypeID");
-                _StructureTypeID = StructuralObject.SetValidValue(value);
+                _StructureTypeID = StructuralObject.SetValidValue(value, "StructureTypeID");
                 ReportPropertyChanged("StructureTypeID");
                 OnStructureTypeIDChanged();
             }
@@ -4457,7 +4446,7 @@ namespace ConnectomeOpenData
             {
                 OnStructureTagsChanging(value);
                 ReportPropertyChanging("StructureTags");
-                _StructureTags = StructuralObject.SetValidValue(value, false);
+                _StructureTags = StructuralObject.SetValidValue(value, false, "StructureTags");
                 ReportPropertyChanged("StructureTags");
                 OnStructureTagsChanged();
             }
@@ -4481,7 +4470,7 @@ namespace ConnectomeOpenData
             {
                 OnVersionChanging(value);
                 ReportPropertyChanging("Version");
-                _Version = StructuralObject.SetValidValue(value, true);
+                _Version = StructuralObject.SetValidValue(value, true, "Version");
                 ReportPropertyChanged("Version");
                 OnVersionChanged();
             }
@@ -4492,7 +4481,6 @@ namespace ConnectomeOpenData
 
         #endregion
 
-    
         #region Navigation Properties
     
         /// <summary>
@@ -4580,7 +4568,7 @@ namespace ConnectomeOpenData
 
         #endregion
 
-        #region Primitive Properties
+        #region Simple Properties
     
         /// <summary>
         /// No Metadata Documentation available.
@@ -4599,7 +4587,7 @@ namespace ConnectomeOpenData
                 {
                     OnIDChanging(value);
                     ReportPropertyChanging("ID");
-                    _ID = StructuralObject.SetValidValue(value);
+                    _ID = StructuralObject.SetValidValue(value, "ID");
                     ReportPropertyChanged("ID");
                     OnIDChanged();
                 }
@@ -4624,7 +4612,7 @@ namespace ConnectomeOpenData
             {
                 OnParentIDChanging(value);
                 ReportPropertyChanging("ParentID");
-                _ParentID = StructuralObject.SetValidValue(value);
+                _ParentID = StructuralObject.SetValidValue(value, "ParentID");
                 ReportPropertyChanged("ParentID");
                 OnParentIDChanged();
             }
@@ -4648,7 +4636,7 @@ namespace ConnectomeOpenData
             {
                 OnNameChanging(value);
                 ReportPropertyChanging("Name");
-                _Name = StructuralObject.SetValidValue(value, false);
+                _Name = StructuralObject.SetValidValue(value, false, "Name");
                 ReportPropertyChanged("Name");
                 OnNameChanged();
             }
@@ -4672,7 +4660,7 @@ namespace ConnectomeOpenData
             {
                 OnNotesChanging(value);
                 ReportPropertyChanging("Notes");
-                _Notes = StructuralObject.SetValidValue(value, true);
+                _Notes = StructuralObject.SetValidValue(value, true, "Notes");
                 ReportPropertyChanged("Notes");
                 OnNotesChanged();
             }
@@ -4696,7 +4684,7 @@ namespace ConnectomeOpenData
             {
                 OnMarkupTypeChanging(value);
                 ReportPropertyChanging("MarkupType");
-                _MarkupType = StructuralObject.SetValidValue(value, false);
+                _MarkupType = StructuralObject.SetValidValue(value, false, "MarkupType");
                 ReportPropertyChanged("MarkupType");
                 OnMarkupTypeChanged();
             }
@@ -4720,7 +4708,7 @@ namespace ConnectomeOpenData
             {
                 OnTagsChanging(value);
                 ReportPropertyChanging("Tags");
-                _Tags = StructuralObject.SetValidValue(value, true);
+                _Tags = StructuralObject.SetValidValue(value, true, "Tags");
                 ReportPropertyChanged("Tags");
                 OnTagsChanged();
             }
@@ -4744,7 +4732,7 @@ namespace ConnectomeOpenData
             {
                 OnStructureTagsChanging(value);
                 ReportPropertyChanging("StructureTags");
-                _StructureTags = StructuralObject.SetValidValue(value, true);
+                _StructureTags = StructuralObject.SetValidValue(value, true, "StructureTags");
                 ReportPropertyChanged("StructureTags");
                 OnStructureTagsChanged();
             }
@@ -4768,7 +4756,7 @@ namespace ConnectomeOpenData
             {
                 OnAbstractChanging(value);
                 ReportPropertyChanging("Abstract");
-                _Abstract = StructuralObject.SetValidValue(value);
+                _Abstract = StructuralObject.SetValidValue(value, "Abstract");
                 ReportPropertyChanged("Abstract");
                 OnAbstractChanged();
             }
@@ -4792,7 +4780,7 @@ namespace ConnectomeOpenData
             {
                 OnColorChanging(value);
                 ReportPropertyChanging("Color");
-                _Color = StructuralObject.SetValidValue(value);
+                _Color = StructuralObject.SetValidValue(value, "Color");
                 ReportPropertyChanged("Color");
                 OnColorChanged();
             }
@@ -4816,7 +4804,7 @@ namespace ConnectomeOpenData
             {
                 OnVersionChanging(value);
                 ReportPropertyChanging("Version");
-                _Version = StructuralObject.SetValidValue(value, true);
+                _Version = StructuralObject.SetValidValue(value, true, "Version");
                 ReportPropertyChanged("Version");
                 OnVersionChanged();
             }
@@ -4840,7 +4828,7 @@ namespace ConnectomeOpenData
             {
                 OnCodeChanging(value);
                 ReportPropertyChanging("Code");
-                _Code = StructuralObject.SetValidValue(value, false);
+                _Code = StructuralObject.SetValidValue(value, false, "Code");
                 ReportPropertyChanged("Code");
                 OnCodeChanged();
             }
@@ -4864,7 +4852,7 @@ namespace ConnectomeOpenData
             {
                 OnHotKeyChanging(value);
                 ReportPropertyChanging("HotKey");
-                _HotKey = StructuralObject.SetValidValue(value, false);
+                _HotKey = StructuralObject.SetValidValue(value, false, "HotKey");
                 ReportPropertyChanged("HotKey");
                 OnHotKeyChanged();
             }
@@ -4888,7 +4876,7 @@ namespace ConnectomeOpenData
             {
                 OnUsernameChanging(value);
                 ReportPropertyChanging("Username");
-                _Username = StructuralObject.SetValidValue(value, false);
+                _Username = StructuralObject.SetValidValue(value, false, "Username");
                 ReportPropertyChanged("Username");
                 OnUsernameChanged();
             }
@@ -4912,7 +4900,7 @@ namespace ConnectomeOpenData
             {
                 OnLastModifiedChanging(value);
                 ReportPropertyChanging("LastModified");
-                _LastModified = StructuralObject.SetValidValue(value);
+                _LastModified = StructuralObject.SetValidValue(value, "LastModified");
                 ReportPropertyChanged("LastModified");
                 OnLastModifiedChanged();
             }
@@ -4936,7 +4924,7 @@ namespace ConnectomeOpenData
             {
                 OnCreatedChanging(value);
                 ReportPropertyChanging("Created");
-                _Created = StructuralObject.SetValidValue(value);
+                _Created = StructuralObject.SetValidValue(value, "Created");
                 ReportPropertyChanged("Created");
                 OnCreatedChanged();
             }
@@ -4947,7 +4935,6 @@ namespace ConnectomeOpenData
 
         #endregion
 
-    
         #region Navigation Properties
     
         /// <summary>
@@ -5085,7 +5072,7 @@ namespace ConnectomeOpenData
 
         #endregion
 
-        #region Primitive Properties
+        #region Simple Properties
     
         /// <summary>
         /// No Metadata Documentation available.
@@ -5104,7 +5091,7 @@ namespace ConnectomeOpenData
                 {
                     OnC___start_lsnChanging(value);
                     ReportPropertyChanging("C___start_lsn");
-                    _C___start_lsn = StructuralObject.SetValidValue(value, false);
+                    _C___start_lsn = StructuralObject.SetValidValue(value, false, "C___start_lsn");
                     ReportPropertyChanged("C___start_lsn");
                     OnC___start_lsnChanged();
                 }
@@ -5129,7 +5116,7 @@ namespace ConnectomeOpenData
             {
                 OnC___end_lsnChanging(value);
                 ReportPropertyChanging("C___end_lsn");
-                _C___end_lsn = StructuralObject.SetValidValue(value, true);
+                _C___end_lsn = StructuralObject.SetValidValue(value, true, "C___end_lsn");
                 ReportPropertyChanged("C___end_lsn");
                 OnC___end_lsnChanged();
             }
@@ -5155,7 +5142,7 @@ namespace ConnectomeOpenData
                 {
                     OnC___seqvalChanging(value);
                     ReportPropertyChanging("C___seqval");
-                    _C___seqval = StructuralObject.SetValidValue(value, false);
+                    _C___seqval = StructuralObject.SetValidValue(value, false, "C___seqval");
                     ReportPropertyChanged("C___seqval");
                     OnC___seqvalChanged();
                 }
@@ -5182,7 +5169,7 @@ namespace ConnectomeOpenData
                 {
                     OnC___operationChanging(value);
                     ReportPropertyChanging("C___operation");
-                    _C___operation = StructuralObject.SetValidValue(value);
+                    _C___operation = StructuralObject.SetValidValue(value, "C___operation");
                     ReportPropertyChanged("C___operation");
                     OnC___operationChanged();
                 }
@@ -5207,7 +5194,7 @@ namespace ConnectomeOpenData
             {
                 OnC___update_maskChanging(value);
                 ReportPropertyChanging("C___update_mask");
-                _C___update_mask = StructuralObject.SetValidValue(value, true);
+                _C___update_mask = StructuralObject.SetValidValue(value, true, "C___update_mask");
                 ReportPropertyChanged("C___update_mask");
                 OnC___update_maskChanged();
             }
@@ -5231,7 +5218,7 @@ namespace ConnectomeOpenData
             {
                 OnIDChanging(value);
                 ReportPropertyChanging("ID");
-                _ID = StructuralObject.SetValidValue(value);
+                _ID = StructuralObject.SetValidValue(value, "ID");
                 ReportPropertyChanged("ID");
                 OnIDChanged();
             }
@@ -5255,7 +5242,7 @@ namespace ConnectomeOpenData
             {
                 OnParentIDChanging(value);
                 ReportPropertyChanging("ParentID");
-                _ParentID = StructuralObject.SetValidValue(value);
+                _ParentID = StructuralObject.SetValidValue(value, "ParentID");
                 ReportPropertyChanged("ParentID");
                 OnParentIDChanged();
             }
@@ -5279,7 +5266,7 @@ namespace ConnectomeOpenData
             {
                 OnNameChanging(value);
                 ReportPropertyChanging("Name");
-                _Name = StructuralObject.SetValidValue(value, true);
+                _Name = StructuralObject.SetValidValue(value, true, "Name");
                 ReportPropertyChanged("Name");
                 OnNameChanged();
             }
@@ -5303,7 +5290,7 @@ namespace ConnectomeOpenData
             {
                 OnNotesChanging(value);
                 ReportPropertyChanging("Notes");
-                _Notes = StructuralObject.SetValidValue(value, true);
+                _Notes = StructuralObject.SetValidValue(value, true, "Notes");
                 ReportPropertyChanged("Notes");
                 OnNotesChanged();
             }
@@ -5327,7 +5314,7 @@ namespace ConnectomeOpenData
             {
                 OnMarkupTypeChanging(value);
                 ReportPropertyChanging("MarkupType");
-                _MarkupType = StructuralObject.SetValidValue(value, true);
+                _MarkupType = StructuralObject.SetValidValue(value, true, "MarkupType");
                 ReportPropertyChanged("MarkupType");
                 OnMarkupTypeChanged();
             }
@@ -5351,7 +5338,7 @@ namespace ConnectomeOpenData
             {
                 OnTagsChanging(value);
                 ReportPropertyChanging("Tags");
-                _Tags = StructuralObject.SetValidValue(value, true);
+                _Tags = StructuralObject.SetValidValue(value, true, "Tags");
                 ReportPropertyChanged("Tags");
                 OnTagsChanged();
             }
@@ -5375,7 +5362,7 @@ namespace ConnectomeOpenData
             {
                 OnStructureTagsChanging(value);
                 ReportPropertyChanging("StructureTags");
-                _StructureTags = StructuralObject.SetValidValue(value, true);
+                _StructureTags = StructuralObject.SetValidValue(value, true, "StructureTags");
                 ReportPropertyChanged("StructureTags");
                 OnStructureTagsChanged();
             }
@@ -5399,7 +5386,7 @@ namespace ConnectomeOpenData
             {
                 OnAbstractChanging(value);
                 ReportPropertyChanging("Abstract");
-                _Abstract = StructuralObject.SetValidValue(value);
+                _Abstract = StructuralObject.SetValidValue(value, "Abstract");
                 ReportPropertyChanged("Abstract");
                 OnAbstractChanged();
             }
@@ -5423,7 +5410,7 @@ namespace ConnectomeOpenData
             {
                 OnColorChanging(value);
                 ReportPropertyChanging("Color");
-                _Color = StructuralObject.SetValidValue(value);
+                _Color = StructuralObject.SetValidValue(value, "Color");
                 ReportPropertyChanged("Color");
                 OnColorChanged();
             }
@@ -5447,7 +5434,7 @@ namespace ConnectomeOpenData
             {
                 OnVersionChanging(value);
                 ReportPropertyChanging("Version");
-                _Version = StructuralObject.SetValidValue(value, true);
+                _Version = StructuralObject.SetValidValue(value, true, "Version");
                 ReportPropertyChanged("Version");
                 OnVersionChanged();
             }
@@ -5471,7 +5458,7 @@ namespace ConnectomeOpenData
             {
                 OnCodeChanging(value);
                 ReportPropertyChanging("Code");
-                _Code = StructuralObject.SetValidValue(value, true);
+                _Code = StructuralObject.SetValidValue(value, true, "Code");
                 ReportPropertyChanged("Code");
                 OnCodeChanged();
             }
@@ -5495,7 +5482,7 @@ namespace ConnectomeOpenData
             {
                 OnHotKeyChanging(value);
                 ReportPropertyChanging("HotKey");
-                _HotKey = StructuralObject.SetValidValue(value, true);
+                _HotKey = StructuralObject.SetValidValue(value, true, "HotKey");
                 ReportPropertyChanged("HotKey");
                 OnHotKeyChanged();
             }
@@ -5519,7 +5506,7 @@ namespace ConnectomeOpenData
             {
                 OnUsernameChanging(value);
                 ReportPropertyChanging("Username");
-                _Username = StructuralObject.SetValidValue(value, true);
+                _Username = StructuralObject.SetValidValue(value, true, "Username");
                 ReportPropertyChanged("Username");
                 OnUsernameChanged();
             }
@@ -5543,7 +5530,7 @@ namespace ConnectomeOpenData
             {
                 OnLastModifiedChanging(value);
                 ReportPropertyChanging("LastModified");
-                _LastModified = StructuralObject.SetValidValue(value);
+                _LastModified = StructuralObject.SetValidValue(value, "LastModified");
                 ReportPropertyChanged("LastModified");
                 OnLastModifiedChanged();
             }
@@ -5567,7 +5554,7 @@ namespace ConnectomeOpenData
             {
                 OnCreatedChanging(value);
                 ReportPropertyChanging("Created");
-                _Created = StructuralObject.SetValidValue(value);
+                _Created = StructuralObject.SetValidValue(value, "Created");
                 ReportPropertyChanged("Created");
                 OnCreatedChanged();
             }
@@ -5578,7 +5565,6 @@ namespace ConnectomeOpenData
 
         #endregion
 
-    
     }
 
     #endregion
@@ -5593,7 +5579,7 @@ namespace ConnectomeOpenData
     [Serializable()]
     public partial class ApproximateStructureLocation_Result : ComplexObject
     {
-        #region Primitive Properties
+        #region Simple Properties
     
         /// <summary>
         /// No Metadata Documentation available.
@@ -5610,7 +5596,7 @@ namespace ConnectomeOpenData
             {
                 OnXChanging(value);
                 ReportPropertyChanging("X");
-                _X = StructuralObject.SetValidValue(value);
+                _X = StructuralObject.SetValidValue(value, "X");
                 ReportPropertyChanged("X");
                 OnXChanged();
             }
@@ -5634,7 +5620,7 @@ namespace ConnectomeOpenData
             {
                 OnYChanging(value);
                 ReportPropertyChanging("Y");
-                _Y = StructuralObject.SetValidValue(value);
+                _Y = StructuralObject.SetValidValue(value, "Y");
                 ReportPropertyChanged("Y");
                 OnYChanged();
             }
@@ -5658,7 +5644,7 @@ namespace ConnectomeOpenData
             {
                 OnZChanging(value);
                 ReportPropertyChanging("Z");
-                _Z = StructuralObject.SetValidValue(value);
+                _Z = StructuralObject.SetValidValue(value, "Z");
                 ReportPropertyChanged("Z");
                 OnZChanged();
             }
@@ -5682,7 +5668,7 @@ namespace ConnectomeOpenData
             {
                 OnRadiusChanging(value);
                 ReportPropertyChanging("Radius");
-                _Radius = StructuralObject.SetValidValue(value);
+                _Radius = StructuralObject.SetValidValue(value, "Radius");
                 ReportPropertyChanged("Radius");
                 OnRadiusChanged();
             }
@@ -5718,7 +5704,7 @@ namespace ConnectomeOpenData
 
         #endregion
 
-        #region Primitive Properties
+        #region Simple Properties
     
         /// <summary>
         /// No Metadata Documentation available.
@@ -5735,7 +5721,7 @@ namespace ConnectomeOpenData
             {
                 OnXChanging(value);
                 ReportPropertyChanging("X");
-                _X = StructuralObject.SetValidValue(value);
+                _X = StructuralObject.SetValidValue(value, "X");
                 ReportPropertyChanged("X");
                 OnXChanged();
             }
@@ -5759,7 +5745,7 @@ namespace ConnectomeOpenData
             {
                 OnYChanging(value);
                 ReportPropertyChanging("Y");
-                _Y = StructuralObject.SetValidValue(value);
+                _Y = StructuralObject.SetValidValue(value, "Y");
                 ReportPropertyChanged("Y");
                 OnYChanged();
             }
@@ -5783,7 +5769,7 @@ namespace ConnectomeOpenData
             {
                 OnZChanging(value);
                 ReportPropertyChanging("Z");
-                _Z = StructuralObject.SetValidValue(value);
+                _Z = StructuralObject.SetValidValue(value, "Z");
                 ReportPropertyChanged("Z");
                 OnZChanged();
             }
@@ -5807,7 +5793,7 @@ namespace ConnectomeOpenData
             {
                 OnRadiusChanging(value);
                 ReportPropertyChanging("Radius");
-                _Radius = StructuralObject.SetValidValue(value);
+                _Radius = StructuralObject.SetValidValue(value, "Radius");
                 ReportPropertyChanged("Radius");
                 OnRadiusChanged();
             }
@@ -5831,7 +5817,7 @@ namespace ConnectomeOpenData
             {
                 OnParentIDChanging(value);
                 ReportPropertyChanging("ParentID");
-                _ParentID = StructuralObject.SetValidValue(value);
+                _ParentID = StructuralObject.SetValidValue(value, "ParentID");
                 ReportPropertyChanged("ParentID");
                 OnParentIDChanged();
             }
@@ -5852,7 +5838,7 @@ namespace ConnectomeOpenData
     [Serializable()]
     public partial class SelectNumConnectionsPerStructure_Result : ComplexObject
     {
-        #region Primitive Properties
+        #region Simple Properties
     
         /// <summary>
         /// No Metadata Documentation available.
@@ -5869,7 +5855,7 @@ namespace ConnectomeOpenData
             {
                 OnStructureIDChanging(value);
                 ReportPropertyChanging("StructureID");
-                _StructureID = StructuralObject.SetValidValue(value);
+                _StructureID = StructuralObject.SetValidValue(value, "StructureID");
                 ReportPropertyChanged("StructureID");
                 OnStructureIDChanged();
             }
@@ -5893,7 +5879,7 @@ namespace ConnectomeOpenData
             {
                 OnLabelChanging(value);
                 ReportPropertyChanging("Label");
-                _Label = StructuralObject.SetValidValue(value, true);
+                _Label = StructuralObject.SetValidValue(value, true, "Label");
                 ReportPropertyChanged("Label");
                 OnLabelChanged();
             }
@@ -5917,7 +5903,7 @@ namespace ConnectomeOpenData
             {
                 OnNumConnectionsChanging(value);
                 ReportPropertyChanging("NumConnections");
-                _NumConnections = StructuralObject.SetValidValue(value);
+                _NumConnections = StructuralObject.SetValidValue(value, "NumConnections");
                 ReportPropertyChanged("NumConnections");
                 OnNumConnectionsChanged();
             }
@@ -5938,7 +5924,7 @@ namespace ConnectomeOpenData
     [Serializable()]
     public partial class SelectStructureChangeLog_Result : ComplexObject
     {
-        #region Primitive Properties
+        #region Simple Properties
     
         /// <summary>
         /// No Metadata Documentation available.
@@ -5955,7 +5941,7 @@ namespace ConnectomeOpenData
             {
                 OnC___start_lsnChanging(value);
                 ReportPropertyChanging("C___start_lsn");
-                _C___start_lsn = StructuralObject.SetValidValue(value, true);
+                _C___start_lsn = StructuralObject.SetValidValue(value, true, "C___start_lsn");
                 ReportPropertyChanged("C___start_lsn");
                 OnC___start_lsnChanged();
             }
@@ -5979,7 +5965,7 @@ namespace ConnectomeOpenData
             {
                 OnC___seqvalChanging(value);
                 ReportPropertyChanging("C___seqval");
-                _C___seqval = StructuralObject.SetValidValue(value, true);
+                _C___seqval = StructuralObject.SetValidValue(value, true, "C___seqval");
                 ReportPropertyChanged("C___seqval");
                 OnC___seqvalChanged();
             }
@@ -6003,7 +5989,7 @@ namespace ConnectomeOpenData
             {
                 OnC___operationChanging(value);
                 ReportPropertyChanging("C___operation");
-                _C___operation = StructuralObject.SetValidValue(value);
+                _C___operation = StructuralObject.SetValidValue(value, "C___operation");
                 ReportPropertyChanged("C___operation");
                 OnC___operationChanged();
             }
@@ -6027,7 +6013,7 @@ namespace ConnectomeOpenData
             {
                 OnC___update_maskChanging(value);
                 ReportPropertyChanging("C___update_mask");
-                _C___update_mask = StructuralObject.SetValidValue(value, true);
+                _C___update_mask = StructuralObject.SetValidValue(value, true, "C___update_mask");
                 ReportPropertyChanged("C___update_mask");
                 OnC___update_maskChanged();
             }
@@ -6051,7 +6037,7 @@ namespace ConnectomeOpenData
             {
                 OnIDChanging(value);
                 ReportPropertyChanging("ID");
-                _ID = StructuralObject.SetValidValue(value);
+                _ID = StructuralObject.SetValidValue(value, "ID");
                 ReportPropertyChanged("ID");
                 OnIDChanged();
             }
@@ -6075,7 +6061,7 @@ namespace ConnectomeOpenData
             {
                 OnTypeIDChanging(value);
                 ReportPropertyChanging("TypeID");
-                _TypeID = StructuralObject.SetValidValue(value);
+                _TypeID = StructuralObject.SetValidValue(value, "TypeID");
                 ReportPropertyChanged("TypeID");
                 OnTypeIDChanged();
             }
@@ -6099,7 +6085,7 @@ namespace ConnectomeOpenData
             {
                 OnNotesChanging(value);
                 ReportPropertyChanging("Notes");
-                _Notes = StructuralObject.SetValidValue(value, true);
+                _Notes = StructuralObject.SetValidValue(value, true, "Notes");
                 ReportPropertyChanged("Notes");
                 OnNotesChanged();
             }
@@ -6123,7 +6109,7 @@ namespace ConnectomeOpenData
             {
                 OnVerifiedChanging(value);
                 ReportPropertyChanging("Verified");
-                _Verified = StructuralObject.SetValidValue(value);
+                _Verified = StructuralObject.SetValidValue(value, "Verified");
                 ReportPropertyChanged("Verified");
                 OnVerifiedChanged();
             }
@@ -6147,7 +6133,7 @@ namespace ConnectomeOpenData
             {
                 OnTagsChanging(value);
                 ReportPropertyChanging("Tags");
-                _Tags = StructuralObject.SetValidValue(value, true);
+                _Tags = StructuralObject.SetValidValue(value, true, "Tags");
                 ReportPropertyChanged("Tags");
                 OnTagsChanged();
             }
@@ -6171,7 +6157,7 @@ namespace ConnectomeOpenData
             {
                 OnConfidenceChanging(value);
                 ReportPropertyChanging("Confidence");
-                _Confidence = StructuralObject.SetValidValue(value);
+                _Confidence = StructuralObject.SetValidValue(value, "Confidence");
                 ReportPropertyChanged("Confidence");
                 OnConfidenceChanged();
             }
@@ -6195,7 +6181,7 @@ namespace ConnectomeOpenData
             {
                 OnVersionChanging(value);
                 ReportPropertyChanging("Version");
-                _Version = StructuralObject.SetValidValue(value, true);
+                _Version = StructuralObject.SetValidValue(value, true, "Version");
                 ReportPropertyChanged("Version");
                 OnVersionChanged();
             }
@@ -6219,7 +6205,7 @@ namespace ConnectomeOpenData
             {
                 OnParentIDChanging(value);
                 ReportPropertyChanging("ParentID");
-                _ParentID = StructuralObject.SetValidValue(value);
+                _ParentID = StructuralObject.SetValidValue(value, "ParentID");
                 ReportPropertyChanged("ParentID");
                 OnParentIDChanged();
             }
@@ -6243,7 +6229,7 @@ namespace ConnectomeOpenData
             {
                 OnCreatedChanging(value);
                 ReportPropertyChanging("Created");
-                _Created = StructuralObject.SetValidValue(value);
+                _Created = StructuralObject.SetValidValue(value, "Created");
                 ReportPropertyChanged("Created");
                 OnCreatedChanged();
             }
@@ -6267,7 +6253,7 @@ namespace ConnectomeOpenData
             {
                 OnLabelChanging(value);
                 ReportPropertyChanging("Label");
-                _Label = StructuralObject.SetValidValue(value, true);
+                _Label = StructuralObject.SetValidValue(value, true, "Label");
                 ReportPropertyChanged("Label");
                 OnLabelChanged();
             }
@@ -6291,7 +6277,7 @@ namespace ConnectomeOpenData
             {
                 OnUsernameChanging(value);
                 ReportPropertyChanging("Username");
-                _Username = StructuralObject.SetValidValue(value, true);
+                _Username = StructuralObject.SetValidValue(value, true, "Username");
                 ReportPropertyChanged("Username");
                 OnUsernameChanged();
             }
@@ -6315,7 +6301,7 @@ namespace ConnectomeOpenData
             {
                 OnLastModifiedChanging(value);
                 ReportPropertyChanging("LastModified");
-                _LastModified = StructuralObject.SetValidValue(value);
+                _LastModified = StructuralObject.SetValidValue(value, "LastModified");
                 ReportPropertyChanged("LastModified");
                 OnLastModifiedChanged();
             }
@@ -6336,7 +6322,7 @@ namespace ConnectomeOpenData
     [Serializable()]
     public partial class SelectStructureLocationChangeLog_Result : ComplexObject
     {
-        #region Primitive Properties
+        #region Simple Properties
     
         /// <summary>
         /// No Metadata Documentation available.
@@ -6353,7 +6339,7 @@ namespace ConnectomeOpenData
             {
                 OnC___start_lsnChanging(value);
                 ReportPropertyChanging("C___start_lsn");
-                _C___start_lsn = StructuralObject.SetValidValue(value, true);
+                _C___start_lsn = StructuralObject.SetValidValue(value, true, "C___start_lsn");
                 ReportPropertyChanged("C___start_lsn");
                 OnC___start_lsnChanged();
             }
@@ -6377,7 +6363,7 @@ namespace ConnectomeOpenData
             {
                 OnC___seqvalChanging(value);
                 ReportPropertyChanging("C___seqval");
-                _C___seqval = StructuralObject.SetValidValue(value, true);
+                _C___seqval = StructuralObject.SetValidValue(value, true, "C___seqval");
                 ReportPropertyChanged("C___seqval");
                 OnC___seqvalChanged();
             }
@@ -6401,7 +6387,7 @@ namespace ConnectomeOpenData
             {
                 OnC___operationChanging(value);
                 ReportPropertyChanging("C___operation");
-                _C___operation = StructuralObject.SetValidValue(value);
+                _C___operation = StructuralObject.SetValidValue(value, "C___operation");
                 ReportPropertyChanged("C___operation");
                 OnC___operationChanged();
             }
@@ -6425,7 +6411,7 @@ namespace ConnectomeOpenData
             {
                 OnC___update_maskChanging(value);
                 ReportPropertyChanging("C___update_mask");
-                _C___update_mask = StructuralObject.SetValidValue(value, true);
+                _C___update_mask = StructuralObject.SetValidValue(value, true, "C___update_mask");
                 ReportPropertyChanged("C___update_mask");
                 OnC___update_maskChanged();
             }
@@ -6449,7 +6435,7 @@ namespace ConnectomeOpenData
             {
                 OnIDChanging(value);
                 ReportPropertyChanging("ID");
-                _ID = StructuralObject.SetValidValue(value);
+                _ID = StructuralObject.SetValidValue(value, "ID");
                 ReportPropertyChanged("ID");
                 OnIDChanged();
             }
@@ -6473,7 +6459,7 @@ namespace ConnectomeOpenData
             {
                 OnParentIDChanging(value);
                 ReportPropertyChanging("ParentID");
-                _ParentID = StructuralObject.SetValidValue(value);
+                _ParentID = StructuralObject.SetValidValue(value, "ParentID");
                 ReportPropertyChanged("ParentID");
                 OnParentIDChanged();
             }
@@ -6497,7 +6483,7 @@ namespace ConnectomeOpenData
             {
                 OnXChanging(value);
                 ReportPropertyChanging("X");
-                _X = StructuralObject.SetValidValue(value);
+                _X = StructuralObject.SetValidValue(value, "X");
                 ReportPropertyChanged("X");
                 OnXChanged();
             }
@@ -6521,7 +6507,7 @@ namespace ConnectomeOpenData
             {
                 OnYChanging(value);
                 ReportPropertyChanging("Y");
-                _Y = StructuralObject.SetValidValue(value);
+                _Y = StructuralObject.SetValidValue(value, "Y");
                 ReportPropertyChanged("Y");
                 OnYChanged();
             }
@@ -6545,7 +6531,7 @@ namespace ConnectomeOpenData
             {
                 OnZChanging(value);
                 ReportPropertyChanging("Z");
-                _Z = StructuralObject.SetValidValue(value);
+                _Z = StructuralObject.SetValidValue(value, "Z");
                 ReportPropertyChanged("Z");
                 OnZChanged();
             }
@@ -6569,7 +6555,7 @@ namespace ConnectomeOpenData
             {
                 OnVerticiesChanging(value);
                 ReportPropertyChanging("Verticies");
-                _Verticies = StructuralObject.SetValidValue(value, true);
+                _Verticies = StructuralObject.SetValidValue(value, true, "Verticies");
                 ReportPropertyChanged("Verticies");
                 OnVerticiesChanged();
             }
@@ -6593,7 +6579,7 @@ namespace ConnectomeOpenData
             {
                 OnClosedChanging(value);
                 ReportPropertyChanging("Closed");
-                _Closed = StructuralObject.SetValidValue(value);
+                _Closed = StructuralObject.SetValidValue(value, "Closed");
                 ReportPropertyChanged("Closed");
                 OnClosedChanged();
             }
@@ -6617,7 +6603,7 @@ namespace ConnectomeOpenData
             {
                 OnVersionChanging(value);
                 ReportPropertyChanging("Version");
-                _Version = StructuralObject.SetValidValue(value, true);
+                _Version = StructuralObject.SetValidValue(value, true, "Version");
                 ReportPropertyChanged("Version");
                 OnVersionChanged();
             }
@@ -6641,7 +6627,7 @@ namespace ConnectomeOpenData
             {
                 OnOverlayChanging(value);
                 ReportPropertyChanging("Overlay");
-                _Overlay = StructuralObject.SetValidValue(value, true);
+                _Overlay = StructuralObject.SetValidValue(value, true, "Overlay");
                 ReportPropertyChanged("Overlay");
                 OnOverlayChanged();
             }
@@ -6665,7 +6651,7 @@ namespace ConnectomeOpenData
             {
                 OnTagsChanging(value);
                 ReportPropertyChanging("Tags");
-                _Tags = StructuralObject.SetValidValue(value, true);
+                _Tags = StructuralObject.SetValidValue(value, true, "Tags");
                 ReportPropertyChanged("Tags");
                 OnTagsChanged();
             }
@@ -6689,7 +6675,7 @@ namespace ConnectomeOpenData
             {
                 OnVolumeXChanging(value);
                 ReportPropertyChanging("VolumeX");
-                _VolumeX = StructuralObject.SetValidValue(value);
+                _VolumeX = StructuralObject.SetValidValue(value, "VolumeX");
                 ReportPropertyChanged("VolumeX");
                 OnVolumeXChanged();
             }
@@ -6713,7 +6699,7 @@ namespace ConnectomeOpenData
             {
                 OnVolumeYChanging(value);
                 ReportPropertyChanging("VolumeY");
-                _VolumeY = StructuralObject.SetValidValue(value);
+                _VolumeY = StructuralObject.SetValidValue(value, "VolumeY");
                 ReportPropertyChanged("VolumeY");
                 OnVolumeYChanged();
             }
@@ -6737,7 +6723,7 @@ namespace ConnectomeOpenData
             {
                 OnTerminalChanging(value);
                 ReportPropertyChanging("Terminal");
-                _Terminal = StructuralObject.SetValidValue(value);
+                _Terminal = StructuralObject.SetValidValue(value, "Terminal");
                 ReportPropertyChanged("Terminal");
                 OnTerminalChanged();
             }
@@ -6761,7 +6747,7 @@ namespace ConnectomeOpenData
             {
                 OnOffEdgeChanging(value);
                 ReportPropertyChanging("OffEdge");
-                _OffEdge = StructuralObject.SetValidValue(value);
+                _OffEdge = StructuralObject.SetValidValue(value, "OffEdge");
                 ReportPropertyChanged("OffEdge");
                 OnOffEdgeChanged();
             }
@@ -6785,7 +6771,7 @@ namespace ConnectomeOpenData
             {
                 OnRadiusChanging(value);
                 ReportPropertyChanging("Radius");
-                _Radius = StructuralObject.SetValidValue(value);
+                _Radius = StructuralObject.SetValidValue(value, "Radius");
                 ReportPropertyChanged("Radius");
                 OnRadiusChanged();
             }
@@ -6809,7 +6795,7 @@ namespace ConnectomeOpenData
             {
                 OnTypeCodeChanging(value);
                 ReportPropertyChanging("TypeCode");
-                _TypeCode = StructuralObject.SetValidValue(value);
+                _TypeCode = StructuralObject.SetValidValue(value, "TypeCode");
                 ReportPropertyChanged("TypeCode");
                 OnTypeCodeChanged();
             }
@@ -6833,7 +6819,7 @@ namespace ConnectomeOpenData
             {
                 OnLastModifiedChanging(value);
                 ReportPropertyChanging("LastModified");
-                _LastModified = StructuralObject.SetValidValue(value);
+                _LastModified = StructuralObject.SetValidValue(value, "LastModified");
                 ReportPropertyChanged("LastModified");
                 OnLastModifiedChanged();
             }
@@ -6857,7 +6843,7 @@ namespace ConnectomeOpenData
             {
                 OnCreatedChanging(value);
                 ReportPropertyChanging("Created");
-                _Created = StructuralObject.SetValidValue(value);
+                _Created = StructuralObject.SetValidValue(value, "Created");
                 ReportPropertyChanged("Created");
                 OnCreatedChanged();
             }
@@ -6881,7 +6867,7 @@ namespace ConnectomeOpenData
             {
                 OnUsernameChanging(value);
                 ReportPropertyChanging("Username");
-                _Username = StructuralObject.SetValidValue(value, true);
+                _Username = StructuralObject.SetValidValue(value, true, "Username");
                 ReportPropertyChanged("Username");
                 OnUsernameChanged();
             }
@@ -6896,5 +6882,4 @@ namespace ConnectomeOpenData
 
     #endregion
 
-    
 }

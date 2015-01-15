@@ -1,10 +1,10 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<edmx:Edmx Version="2.0" xmlns:edmx="http://schemas.microsoft.com/ado/2008/10/edmx"  xmlns:m="http://schemas.microsoft.com/ado/2007/08/dataservices/metadata">
+<edmx:Edmx Version="3.0" xmlns:edmx="http://schemas.microsoft.com/ado/2009/11/edmx">
   <!-- EF Runtime content -->
   <edmx:Runtime>
     <!-- SSDL content -->
     <edmx:StorageModels>
-    <Schema Namespace="ConnectomeModel.Store" Provider="System.Data.SqlClient" ProviderManifestToken="2008" Alias="Self" xmlns:store="http://schemas.microsoft.com/ado/2007/12/edm/EntityStoreSchemaGenerator" xmlns:customannotation="http://schemas.microsoft.com/ado/2013/11/edm/customannotation" xmlns="http://schemas.microsoft.com/ado/2009/02/edm/ssdl">
+    <Schema Namespace="ConnectomeModel.Store" Provider="System.Data.SqlClient" ProviderManifestToken="2008" Alias="Self" xmlns="http://schemas.microsoft.com/ado/2009/11/edm/ssdl">
         <!--Errors Found During Generation:
 warning 6002: The table/view 'Rabbit.cdc.Location_CT' does not have a primary key defined. The key has been inferred and the definition was created as a read-only table/view.-->
         <EntityType Name="Location_CT">
@@ -421,14 +421,14 @@ warning 6002: The table/view 'Rabbit.dbo.StructureLink' does not have a primary 
           <Parameter Name="QueryDate" Type="datetime" Mode="In" />
         </Function>
         <EntityContainer Name="ConnectomeModelStoreContainer">
-          <EntitySet Name="lsn_time_mapping" EntityType="Self.lsn_time_mapping" Schema="cdc" store:Type="Tables" />
-          <EntitySet Name="DeletedLocations" EntityType="Self.DeletedLocations" Schema="dbo" store:Type="Tables" />
-          <EntitySet Name="Location" EntityType="Self.Location" Schema="dbo" store:Type="Tables" />
-          <EntitySet Name="LocationLink" EntityType="Self.LocationLink" Schema="dbo" store:Type="Tables" />
-          <EntitySet Name="Structure" EntityType="Self.Structure" Schema="dbo" store:Type="Tables" />
-          <EntitySet Name="StructureTemplates" EntityType="Self.StructureTemplates" Schema="dbo" store:Type="Tables" />
-          <EntitySet Name="StructureType" EntityType="Self.StructureType" Schema="dbo" store:Type="Tables" />
-          <EntitySet Name="Location_CT" EntityType="Self.Location_CT" store:Type="Tables" store:Schema="cdc">
+          <EntitySet Name="lsn_time_mapping" EntityType="Self.lsn_time_mapping" Schema="cdc" store:Type="Tables" xmlns:store="http://schemas.microsoft.com/ado/2007/12/edm/EntityStoreSchemaGenerator" />
+          <EntitySet Name="DeletedLocations" EntityType="Self.DeletedLocations" Schema="dbo" store:Type="Tables" xmlns:store="http://schemas.microsoft.com/ado/2007/12/edm/EntityStoreSchemaGenerator" />
+          <EntitySet Name="Location" EntityType="Self.Location" Schema="dbo" store:Type="Tables" xmlns:store="http://schemas.microsoft.com/ado/2007/12/edm/EntityStoreSchemaGenerator" />
+          <EntitySet Name="LocationLink" EntityType="Self.LocationLink" Schema="dbo" store:Type="Tables" xmlns:store="http://schemas.microsoft.com/ado/2007/12/edm/EntityStoreSchemaGenerator" />
+          <EntitySet Name="Structure" EntityType="Self.Structure" Schema="dbo" store:Type="Tables" xmlns:store="http://schemas.microsoft.com/ado/2007/12/edm/EntityStoreSchemaGenerator" />
+          <EntitySet Name="StructureTemplates" EntityType="Self.StructureTemplates" Schema="dbo" store:Type="Tables" xmlns:store="http://schemas.microsoft.com/ado/2007/12/edm/EntityStoreSchemaGenerator" />
+          <EntitySet Name="StructureType" EntityType="Self.StructureType" Schema="dbo" store:Type="Tables" xmlns:store="http://schemas.microsoft.com/ado/2007/12/edm/EntityStoreSchemaGenerator" />
+          <EntitySet Name="Location_CT" EntityType="Self.Location_CT" store:Type="Tables" store:Schema="cdc" xmlns:store="http://schemas.microsoft.com/ado/2007/12/edm/EntityStoreSchemaGenerator">
             <DefiningQuery>SELECT 
 [Location_CT].[__$start_lsn] AS [__$start_lsn], 
 [Location_CT].[__$end_lsn] AS [__$end_lsn], 
@@ -456,7 +456,7 @@ warning 6002: The table/view 'Rabbit.dbo.StructureLink' does not have a primary 
 [Location_CT].[Username] AS [Username]
 FROM [cdc].[Location_CT] AS [Location_CT]</DefiningQuery>
           </EntitySet>
-          <EntitySet Name="LocationLink_CT" EntityType="Self.LocationLink_CT" store:Type="Tables" store:Schema="cdc">
+          <EntitySet Name="LocationLink_CT" EntityType="Self.LocationLink_CT" store:Type="Tables" store:Schema="cdc" xmlns:store="http://schemas.microsoft.com/ado/2007/12/edm/EntityStoreSchemaGenerator">
             <DefiningQuery>SELECT 
 [LocationLink_CT].[__$start_lsn] AS [__$start_lsn], 
 [LocationLink_CT].[__$end_lsn] AS [__$end_lsn], 
@@ -469,7 +469,7 @@ FROM [cdc].[Location_CT] AS [Location_CT]</DefiningQuery>
 [LocationLink_CT].[Created] AS [Created]
 FROM [cdc].[LocationLink_CT] AS [LocationLink_CT]</DefiningQuery>
           </EntitySet>
-          <EntitySet Name="Structure_CT" EntityType="Self.Structure_CT" store:Type="Tables" store:Schema="cdc">
+          <EntitySet Name="Structure_CT" EntityType="Self.Structure_CT" store:Type="Tables" store:Schema="cdc" xmlns:store="http://schemas.microsoft.com/ado/2007/12/edm/EntityStoreSchemaGenerator">
             <DefiningQuery>SELECT 
 [Structure_CT].[__$start_lsn] AS [__$start_lsn], 
 [Structure_CT].[__$end_lsn] AS [__$end_lsn], 
@@ -490,7 +490,7 @@ FROM [cdc].[LocationLink_CT] AS [LocationLink_CT]</DefiningQuery>
 [Structure_CT].[LastModified] AS [LastModified]
 FROM [cdc].[Structure_CT] AS [Structure_CT]</DefiningQuery>
           </EntitySet>
-          <EntitySet Name="StructureLink_CT" EntityType="Self.StructureLink_CT" store:Type="Tables" store:Schema="cdc">
+          <EntitySet Name="StructureLink_CT" EntityType="Self.StructureLink_CT" store:Type="Tables" store:Schema="cdc" xmlns:store="http://schemas.microsoft.com/ado/2007/12/edm/EntityStoreSchemaGenerator">
             <DefiningQuery>SELECT 
 [StructureLink_CT].[__$start_lsn] AS [__$start_lsn], 
 [StructureLink_CT].[__$end_lsn] AS [__$end_lsn], 
@@ -506,7 +506,7 @@ FROM [cdc].[Structure_CT] AS [Structure_CT]</DefiningQuery>
 [StructureLink_CT].[LastModified] AS [LastModified]
 FROM [cdc].[StructureLink_CT] AS [StructureLink_CT]</DefiningQuery>
           </EntitySet>
-          <EntitySet Name="StructureType_CT" EntityType="Self.StructureType_CT" store:Type="Tables" store:Schema="cdc">
+          <EntitySet Name="StructureType_CT" EntityType="Self.StructureType_CT" store:Type="Tables" store:Schema="cdc" xmlns:store="http://schemas.microsoft.com/ado/2007/12/edm/EntityStoreSchemaGenerator">
             <DefiningQuery>SELECT 
 [StructureType_CT].[__$start_lsn] AS [__$start_lsn], 
 [StructureType_CT].[__$end_lsn] AS [__$end_lsn], 
@@ -530,7 +530,7 @@ FROM [cdc].[StructureLink_CT] AS [StructureLink_CT]</DefiningQuery>
 [StructureType_CT].[Created] AS [Created]
 FROM [cdc].[StructureType_CT] AS [StructureType_CT]</DefiningQuery>
           </EntitySet>
-          <EntitySet Name="DBVersion" EntityType="Self.DBVersion" store:Type="Tables" store:Schema="dbo">
+          <EntitySet Name="DBVersion" EntityType="Self.DBVersion" store:Type="Tables" store:Schema="dbo" xmlns:store="http://schemas.microsoft.com/ado/2007/12/edm/EntityStoreSchemaGenerator">
             <DefiningQuery>SELECT 
 [DBVersion].[DBVersionID] AS [DBVersionID], 
 [DBVersion].[Description] AS [Description], 
@@ -538,7 +538,7 @@ FROM [cdc].[StructureType_CT] AS [StructureType_CT]</DefiningQuery>
 [DBVersion].[UserID] AS [UserID]
 FROM [dbo].[DBVersion] AS [DBVersion]</DefiningQuery>
           </EntitySet>
-          <EntitySet Name="StructureLink" EntityType="Self.StructureLink" store:Type="Tables" store:Schema="dbo">
+          <EntitySet Name="StructureLink" EntityType="Self.StructureLink" store:Type="Tables" store:Schema="dbo" xmlns:store="http://schemas.microsoft.com/ado/2007/12/edm/EntityStoreSchemaGenerator">
             <DefiningQuery>SELECT 
 [StructureLink].[SourceID] AS [SourceID], 
 [StructureLink].[TargetID] AS [TargetID], 
@@ -589,8 +589,8 @@ FROM [dbo].[StructureLink] AS [StructureLink]</DefiningQuery>
       </Schema></edmx:StorageModels>
     <!-- CSDL content -->
     <edmx:ConceptualModels>
-      <Schema Namespace="ConnectomeModel" Alias="Self" xmlns:annotation="http://schemas.microsoft.com/ado/2009/02/edm/annotation" xmlns="http://schemas.microsoft.com/ado/2008/09/edm">
-        <EntityContainer Name="ConnectomeEntities" annotation:LazyLoadingEnabled="true">
+      <Schema Namespace="ConnectomeModel" Alias="Self" xmlns="http://schemas.microsoft.com/ado/2009/11/edm" annotation:UseStrongSpatialTypes="false" xmlns:annotation="http://schemas.microsoft.com/ado/2009/02/edm/annotation">
+        <EntityContainer Name="ConnectomeEntities" annotation:LazyLoadingEnabled="true" xmlns:annotation="http://schemas.microsoft.com/ado/2009/02/edm/annotation">
           <EntitySet Name="DBVersions" EntityType="ConnectomeModel.DBVersion" />
           <EntitySet Name="DeletedLocations" EntityType="ConnectomeModel.DeletedLocation" />
           <EntitySet Name="Locations" EntityType="ConnectomeModel.Location" />
@@ -689,14 +689,14 @@ FROM [dbo].[StructureLink] AS [StructureLink]</DefiningQuery>
           <Key>
             <PropertyRef Name="ID" />
           </Key>
-          <Property Name="ID" Type="Int64" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="ID" Type="Int64" Nullable="false" annotation:StoreGeneratedPattern="Identity" xmlns:annotation="http://schemas.microsoft.com/ado/2009/02/edm/annotation" />
           <Property Name="ParentID" Type="Int64" Nullable="false" />
           <Property Name="X" Type="Double" Nullable="false" />
           <Property Name="Y" Type="Double" Nullable="false" />
           <Property Name="Z" Type="Double" Nullable="false" />
           <Property Name="Verticies" Type="Binary" MaxLength="Max" FixedLength="false" />
           <Property Name="Closed" Type="Boolean" Nullable="false" />
-          <Property Name="Version" Type="Binary" Nullable="false" MaxLength="8" FixedLength="true" annotation:StoreGeneratedPattern="Computed" />
+          <Property Name="Version" Type="Binary" Nullable="false" MaxLength="8" FixedLength="true" annotation:StoreGeneratedPattern="Computed" xmlns:annotation="http://schemas.microsoft.com/ado/2009/02/edm/annotation" />
           <Property Name="Overlay" Type="Binary" MaxLength="Max" FixedLength="false" />
           <Property Name="Tags" Type="String" MaxLength="Max" Unicode="true" FixedLength="false" />
           <Property Name="VolumeX" Type="Double" Nullable="false" />
@@ -728,13 +728,13 @@ FROM [dbo].[StructureLink] AS [StructureLink]</DefiningQuery>
           <Key>
             <PropertyRef Name="ID" />
           </Key>
-          <Property Name="ID" Type="Int64" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="ID" Type="Int64" Nullable="false" annotation:StoreGeneratedPattern="Identity" xmlns:annotation="http://schemas.microsoft.com/ado/2009/02/edm/annotation" />
           <Property Name="TypeID" Type="Int64" Nullable="false" />
           <Property Name="Notes" Type="String" MaxLength="Max" Unicode="true" FixedLength="false" />
           <Property Name="Verified" Type="Boolean" Nullable="false" />
           <Property Name="Tags" Type="String" MaxLength="Max" Unicode="true" FixedLength="false" />
           <Property Name="Confidence" Type="Double" Nullable="false" />
-          <Property Name="Version" Type="Binary" Nullable="false" MaxLength="8" FixedLength="true" annotation:StoreGeneratedPattern="Computed" />
+          <Property Name="Version" Type="Binary" Nullable="false" MaxLength="8" FixedLength="true" annotation:StoreGeneratedPattern="Computed" xmlns:annotation="http://schemas.microsoft.com/ado/2009/02/edm/annotation" />
           <Property Name="ParentID" Type="Int64" />
           <Property Name="Created" Type="DateTime" Nullable="false" Precision="3" />
           <Property Name="Label" Type="String" MaxLength="64" Unicode="false" FixedLength="false" />
@@ -770,18 +770,18 @@ FROM [dbo].[StructureLink] AS [StructureLink]</DefiningQuery>
           <Key>
             <PropertyRef Name="ID" />
           </Key>
-          <Property Name="ID" Type="Int64" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="ID" Type="Int64" Nullable="false" annotation:StoreGeneratedPattern="Identity" xmlns:annotation="http://schemas.microsoft.com/ado/2009/02/edm/annotation" />
           <Property Name="Name" Type="String" Nullable="false" MaxLength="64" Unicode="false" FixedLength="true" />
           <Property Name="StructureTypeID" Type="Int64" Nullable="false" />
           <Property Name="StructureTags" Type="String" Nullable="false" MaxLength="Max" Unicode="false" FixedLength="false" />
-          <Property Name="Version" Type="Binary" Nullable="false" MaxLength="8" FixedLength="true" annotation:StoreGeneratedPattern="Computed" />
+          <Property Name="Version" Type="Binary" Nullable="false" MaxLength="8" FixedLength="true" annotation:StoreGeneratedPattern="Computed" xmlns:annotation="http://schemas.microsoft.com/ado/2009/02/edm/annotation" />
           <NavigationProperty Name="StructureType" Relationship="ConnectomeModel.FK_StructureTemplates_StructureType" FromRole="StructureTemplates" ToRole="StructureType" />
         </EntityType>
         <EntityType Name="StructureType">
           <Key>
             <PropertyRef Name="ID" />
           </Key>
-          <Property Name="ID" Type="Int64" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="ID" Type="Int64" Nullable="false" annotation:StoreGeneratedPattern="Identity" xmlns:annotation="http://schemas.microsoft.com/ado/2009/02/edm/annotation" />
           <Property Name="ParentID" Type="Int64" />
           <Property Name="Name" Type="String" Nullable="false" MaxLength="128" Unicode="true" FixedLength="true" />
           <Property Name="Notes" Type="String" MaxLength="Max" Unicode="true" FixedLength="false" />
@@ -790,7 +790,7 @@ FROM [dbo].[StructureLink] AS [StructureLink]</DefiningQuery>
           <Property Name="StructureTags" Type="String" MaxLength="Max" Unicode="true" FixedLength="false" />
           <Property Name="Abstract" Type="Boolean" Nullable="false" />
           <Property Name="Color" Type="Int32" Nullable="false" />
-          <Property Name="Version" Type="Binary" Nullable="false" MaxLength="8" FixedLength="true" annotation:StoreGeneratedPattern="Computed" />
+          <Property Name="Version" Type="Binary" Nullable="false" MaxLength="8" FixedLength="true" annotation:StoreGeneratedPattern="Computed" xmlns:annotation="http://schemas.microsoft.com/ado/2009/02/edm/annotation" />
           <Property Name="Code" Type="String" Nullable="false" MaxLength="16" Unicode="true" FixedLength="true" />
           <Property Name="HotKey" Type="String" Nullable="false" MaxLength="1" Unicode="false" FixedLength="true" />
           <Property Name="Username" Type="String" Nullable="false" MaxLength="16" Unicode="true" FixedLength="true" />
@@ -852,7 +852,7 @@ FROM [dbo].[StructureLink] AS [StructureLink]</DefiningQuery>
           </ReferentialConstraint>
         </Association>
         <Association Name="FK_StructureBase_StructureType">
-          <End Role="StructureType" Type="ConnectomeModel.StructureType" Multiplicity="1" ></End>
+          <End Role="StructureType" Type="ConnectomeModel.StructureType" Multiplicity="1" />
           <End Role="Structure" Type="ConnectomeModel.Structure" Multiplicity="*" />
           <ReferentialConstraint>
             <Principal Role="StructureType">
@@ -1103,7 +1103,7 @@ FROM [dbo].[StructureLink] AS [StructureLink]</DefiningQuery>
     </edmx:ConceptualModels>
     <!-- C-S mapping content -->
     <edmx:Mappings>
-      <Mapping Space="C-S" xmlns="http://schemas.microsoft.com/ado/2008/09/mapping/cs">
+      <Mapping Space="C-S" xmlns="http://schemas.microsoft.com/ado/2009/11/mapping/cs">
         <EntityContainerMapping StorageEntityContainer="ConnectomeModelStoreContainer" CdmEntityContainer="ConnectomeEntities">
           <EntitySetMapping Name="DBVersions"><EntityTypeMapping TypeName="ConnectomeModel.DBVersion"><MappingFragment StoreEntitySet="DBVersion">
             <ScalarProperty Name="DBVersionID" ColumnName="DBVersionID" />
@@ -1401,7 +1401,7 @@ FROM [dbo].[StructureLink] AS [StructureLink]</DefiningQuery>
     </edmx:Mappings>
   </edmx:Runtime>
   <!-- EF Designer content (DO NOT EDIT MANUALLY BELOW HERE) -->
-  <Designer xmlns="http://schemas.microsoft.com/ado/2008/10/edmx">
+  <Designer xmlns="http://schemas.microsoft.com/ado/2009/11/edmx">
     <Connection>
       <DesignerInfoPropertySet>
         <DesignerProperty Name="MetadataArtifactProcessing" Value="EmbedInOutputAssembly" />

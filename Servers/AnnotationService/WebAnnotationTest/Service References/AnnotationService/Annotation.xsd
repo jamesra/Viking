@@ -2,12 +2,6 @@
 <xs:schema xmlns:ser="http://schemas.microsoft.com/2003/10/Serialization/" xmlns:tns="http://schemas.datacontract.org/2004/07/Annotation" elementFormDefault="qualified" targetNamespace="http://schemas.datacontract.org/2004/07/Annotation" xmlns:xs="http://www.w3.org/2001/XMLSchema">
   <xs:import namespace="http://schemas.microsoft.com/2003/10/Serialization/" />
   <xs:import namespace="http://schemas.microsoft.com/2003/10/Serialization/Arrays" />
-  <xs:complexType name="ArrayOfStructureType">
-    <xs:sequence>
-      <xs:element minOccurs="0" maxOccurs="unbounded" name="StructureType" nillable="true" type="tns:StructureType" />
-    </xs:sequence>
-  </xs:complexType>
-  <xs:element name="ArrayOfStructureType" nillable="true" type="tns:ArrayOfStructureType" />
   <xs:complexType name="StructureType">
     <xs:complexContent mixed="false">
       <xs:extension base="tns:DataObjectWithParentOflong">
@@ -75,22 +69,22 @@
     </xs:restriction>
   </xs:simpleType>
   <xs:element name="DBACTION" nillable="true" type="tns:DBACTION" />
-  <xs:complexType name="ArrayOfStructure">
+  <xs:complexType name="ArrayOfStructureType">
     <xs:sequence>
-      <xs:element minOccurs="0" maxOccurs="unbounded" name="Structure" nillable="true" type="tns:Structure" />
+      <xs:element minOccurs="0" maxOccurs="unbounded" name="StructureType" nillable="true" type="tns:StructureType" />
     </xs:sequence>
   </xs:complexType>
-  <xs:element name="ArrayOfStructure" nillable="true" type="tns:ArrayOfStructure" />
+  <xs:element name="ArrayOfStructureType" nillable="true" type="tns:ArrayOfStructureType" />
   <xs:complexType name="Structure">
     <xs:complexContent mixed="false">
       <xs:extension base="tns:DataObjectWithParentOflong">
         <xs:sequence>
+          <xs:element minOccurs="0" name="AttributesXml" nillable="true" type="xs:string" />
           <xs:element xmlns:q3="http://schemas.microsoft.com/2003/10/Serialization/Arrays" minOccurs="0" name="ChildIDs" nillable="true" type="q3:ArrayOflong" />
           <xs:element minOccurs="0" name="Confidence" type="xs:double" />
           <xs:element minOccurs="0" name="Label" nillable="true" type="xs:string" />
           <xs:element minOccurs="0" name="Links" nillable="true" type="tns:ArrayOfStructureLink" />
           <xs:element minOccurs="0" name="Notes" nillable="true" type="xs:string" />
-          <xs:element xmlns:q4="http://schemas.microsoft.com/2003/10/Serialization/Arrays" minOccurs="0" name="Tags" nillable="true" type="q4:ArrayOfstring" />
           <xs:element minOccurs="0" name="TypeID" type="xs:long" />
           <xs:element minOccurs="0" name="Username" nillable="true" type="xs:string" />
           <xs:element minOccurs="0" name="Verified" type="xs:boolean" />
@@ -113,32 +107,28 @@
           <xs:element minOccurs="0" name="SourceID" type="xs:long" />
           <xs:element minOccurs="0" name="Tags" nillable="true" type="xs:string" />
           <xs:element minOccurs="0" name="TargetID" type="xs:long" />
+          <xs:element minOccurs="0" name="Username" nillable="true" type="xs:string" />
         </xs:sequence>
       </xs:extension>
     </xs:complexContent>
   </xs:complexType>
   <xs:element name="StructureLink" nillable="true" type="tns:StructureLink" />
-  <xs:complexType name="ArrayOfLocation">
-    <xs:sequence>
-      <xs:element minOccurs="0" maxOccurs="unbounded" name="Location" nillable="true" type="tns:Location" />
-    </xs:sequence>
-  </xs:complexType>
-  <xs:element name="ArrayOfLocation" nillable="true" type="tns:ArrayOfLocation" />
   <xs:complexType name="Location">
     <xs:complexContent mixed="false">
       <xs:extension base="tns:DataObjectWithKeyOflong">
         <xs:sequence>
+          <xs:element minOccurs="0" name="AttributesXml" nillable="true" type="xs:string" />
           <xs:element minOccurs="0" name="Closed" type="xs:boolean" />
           <xs:element minOccurs="0" name="LastModified" type="xs:long" />
-          <xs:element xmlns:q5="http://schemas.microsoft.com/2003/10/Serialization/Arrays" minOccurs="0" name="Links" nillable="true" type="q5:ArrayOflong" />
+          <xs:element xmlns:q4="http://schemas.microsoft.com/2003/10/Serialization/Arrays" minOccurs="0" name="Links" nillable="true" type="q4:ArrayOflong" />
           <xs:element minOccurs="0" name="OffEdge" type="xs:boolean" />
           <xs:element minOccurs="0" name="ParentID" type="xs:long" />
           <xs:element minOccurs="0" name="Position" type="tns:AnnotationPoint" />
           <xs:element minOccurs="0" name="Radius" type="xs:double" />
           <xs:element minOccurs="0" name="Section" type="xs:long" />
-          <xs:element xmlns:q6="http://schemas.microsoft.com/2003/10/Serialization/Arrays" minOccurs="0" name="Tags" nillable="true" type="q6:ArrayOfstring" />
           <xs:element minOccurs="0" name="Terminal" type="xs:boolean" />
           <xs:element minOccurs="0" name="TypeCode" type="xs:short" />
+          <xs:element minOccurs="0" name="Username" nillable="true" type="xs:string" />
           <xs:element minOccurs="0" name="Verticies" nillable="true" type="tns:ArrayOfAnnotationPoint" />
           <xs:element minOccurs="0" name="VolumePosition" type="tns:AnnotationPoint" />
         </xs:sequence>
@@ -165,6 +155,36 @@
     </xs:sequence>
   </xs:complexType>
   <xs:element name="ArrayOfAnnotationPoint" nillable="true" type="tns:ArrayOfAnnotationPoint" />
+  <xs:complexType name="CreateStructureRetval">
+    <xs:sequence>
+      <xs:element minOccurs="0" name="location" nillable="true" type="tns:Location" />
+      <xs:element minOccurs="0" name="structure" nillable="true" type="tns:Structure" />
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="CreateStructureRetval" nillable="true" type="tns:CreateStructureRetval" />
+  <xs:complexType name="ArrayOfStructure">
+    <xs:sequence>
+      <xs:element minOccurs="0" maxOccurs="unbounded" name="Structure" nillable="true" type="tns:Structure" />
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="ArrayOfStructure" nillable="true" type="tns:ArrayOfStructure" />
+  <xs:complexType name="ArrayOfLocationPositionOnly">
+    <xs:sequence>
+      <xs:element minOccurs="0" maxOccurs="unbounded" name="LocationPositionOnly" nillable="true" type="tns:LocationPositionOnly" />
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="ArrayOfLocationPositionOnly" nillable="true" type="tns:ArrayOfLocationPositionOnly" />
+  <xs:complexType name="LocationPositionOnly">
+    <xs:complexContent mixed="false">
+      <xs:extension base="tns:DataObjectWithKeyOflong">
+        <xs:sequence>
+          <xs:element minOccurs="0" name="Position" type="tns:AnnotationPoint" />
+          <xs:element minOccurs="0" name="Radius" type="xs:double" />
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:element name="LocationPositionOnly" nillable="true" type="tns:LocationPositionOnly" />
   <xs:complexType name="LocationLink">
     <xs:complexContent mixed="false">
       <xs:extension base="tns:DataObject">
@@ -176,4 +196,16 @@
     </xs:complexContent>
   </xs:complexType>
   <xs:element name="LocationLink" nillable="true" type="tns:LocationLink" />
+  <xs:complexType name="ArrayOfLocation">
+    <xs:sequence>
+      <xs:element minOccurs="0" maxOccurs="unbounded" name="Location" nillable="true" type="tns:Location" />
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="ArrayOfLocation" nillable="true" type="tns:ArrayOfLocation" />
+  <xs:complexType name="ArrayOfLocationLink">
+    <xs:sequence>
+      <xs:element minOccurs="0" maxOccurs="unbounded" name="LocationLink" nillable="true" type="tns:LocationLink" />
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="ArrayOfLocationLink" nillable="true" type="tns:ArrayOfLocationLink" />
 </xs:schema>
