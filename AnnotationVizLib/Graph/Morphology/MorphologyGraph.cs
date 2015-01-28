@@ -105,6 +105,9 @@ namespace AnnotationVizLib
             System.Threading.Tasks.Parallel.ForEach<Structure>(structures, s =>
             {
                 MorphologyGraph graph = MorphologyForStructure(s);
+                if (graph == null)
+                    return; 
+
                 graph.structure = s;
                 rootGraph.Subgraphs.TryAdd((ulong)s.ID, graph);
 

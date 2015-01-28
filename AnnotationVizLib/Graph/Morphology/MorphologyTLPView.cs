@@ -9,9 +9,10 @@ namespace AnnotationVizLib
     public class MorphologyTLPView : TLPView<ulong>
     {
         public readonly Scale scale;
-        public readonly System.Drawing.Color structure_color; 
-        
-         
+        public readonly System.Drawing.Color structure_color;
+
+        public SortedDictionary<MorphologyEdge, ulong> MorphologyEdgeToTulipID = new SortedDictionary<MorphologyEdge, ulong>();
+
         protected override SortedDictionary<string, string> DefaultAttributes
         {
             get { return TLPAttributes.DefaultForMorphologyAttribute; }
@@ -40,8 +41,7 @@ namespace AnnotationVizLib
         {
             return createNode(node.Key); 
         }
-         
-        
+          
         public TLPViewNode CreateTLPNode(MorphologyNode node, System.Drawing.Color color)
         {
             TLPViewNode tlpnode = createNode(node.Key);
@@ -91,6 +91,20 @@ namespace AnnotationVizLib
             return node.Key.ToString();
         }
 
+        public string LabelForStructure(AnnotationService.Structure s)
+        {
+            if (s == null)
+                return "";
+
+            if (s.Label == null || s.Label.Length == 0)
+            {
+                //TODO: Return StructureTypeID
+                return string.Format("{0} #{1}", s.TypeID, s.ID);
+            }
+
+            return string.Format("{0} #{1}", s.ID, s.Label);
+        }
+
         public static string LinkString(AnnotationService.StructureLink link)
         {
             return link.SourceID + " -> " + link.TargetID;
@@ -125,6 +139,8 @@ namespace AnnotationVizLib
             try
             {
                 tlpedge = this.addEdge(edge.SourceNodeKey, edge.TargetNodeKey);
+
+                MorphologyEdgeToTulipID.Add(edge, tlpedge.tulip_id);
             }
             catch(KeyNotFoundException e)
             {
@@ -166,8 +182,14 @@ namespace AnnotationVizLib
 
             AddAllSubgraphNodesAndEdges(view, graph, colorMap);
 
-            //AssignNodesToSubgraphs(view, graph);
-
+            foreach(ulong subgraph_key in graph.Subgraphs.Keys)
+            {
+                ulong subgraph_tlp_id = view.GenerateNextSubgraphID();
+                MorphologyGraph subgraph = graph.Subgraphs[subgraph_key];
+                TLPViewSubgraph subgraph_view = AssignNodesToSubgraphs(view, subgraph, colorMap);
+                view.AddSubGraph(subgraph_tlp_id, subgraph_view);
+            }
+             
             return view;
         }
 
@@ -194,31 +216,34 @@ namespace AnnotationVizLib
 
                 AddAllSubgraphNodesAndEdges(view, subgraph, colorMap);
                 //view.AddSubGraph(subgraph_id, subgraph_view);
-            }
+            } 
         }
 
-        private static void AssignNodesToSubgraphs(MorphologyTLPView view, MorphologyGraph structuregraph, StructureMorphologyColorMap colorMap)
+        private static TLPViewSubgraph AssignNodesToSubgraphs(MorphologyTLPView view, MorphologyGraph structuregraph, StructureMorphologyColorMap colorMap)
         {
+            TLPViewSubgraph subgraph_view = new TLPViewSubgraph(view.GenerateNextSubgraphID(),
+                                                                    view.LabelForStructure(structuregraph.structure));
+            subgraph_view.Color = GetStructureColor(structuregraph, colorMap);
+
             foreach (MorphologyNode node in structuregraph.Nodes.Values)
             {
-                view.CreateTLPSubgraphNode(node);
+                subgraph_view.AddNode(node.Key);
             }
 
             foreach (MorphologyEdge edge in structuregraph.Edges.Values)
             {
-                view.CreateTLPSubgraphEdge(edge);
+                subgraph_view.AddEdge(view.MorphologyEdgeToTulipID[edge]);
             }
 
             foreach (ulong subgraph_id in structuregraph.Subgraphs.Keys)
             {
                 MorphologyGraph subgraph = structuregraph.Subgraphs[subgraph_id];
-                MorphologyTLPView subgraph_view = new MorphologyTLPView(view.scale, GetStructureColor(subgraph, colorMap));
-               
-                //CreateSubgraph(subgraph_view,subgraph); 
-
-                AssignNodesToSubgraphs(subgraph_view, subgraph, colorMap);
-                view.AddSubGraph(subgraph_id, subgraph_view);
+                   
+                subgraph_view.AddSubgraph(view.GenerateNextSubgraphID(),
+                                          AssignNodesToSubgraphs(view, subgraph, colorMap));
             }
+
+            return subgraph_view;
         }
     }
 }
