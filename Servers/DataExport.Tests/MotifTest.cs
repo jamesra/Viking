@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Web;
+using System.Web.Mvc;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using AnnotationVizLib;
 
@@ -57,7 +58,9 @@ namespace DataExport.Tests
             DataExport.Controllers.MorphologyController controller = new Controllers.MorphologyController();
 
 
-            controller.GetTLP();
+            ActionResult result = controller.GetTLP();
+            Assert.IsTrue(result.GetType() == typeof(FilePathResult));
+
         }
     }
 }

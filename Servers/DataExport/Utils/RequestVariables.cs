@@ -20,7 +20,11 @@ namespace DataExport.Controllers
                 string idListstr = Request.RequestContext.HttpContext.Request.QueryString["id"];
                 if (idListstr == null)
                 {
-                    return null; 
+                     idListstr = Request.RequestContext.HttpContext.Request.QueryString["ids"];
+                     if (idListstr == null)
+                     {
+                         return null;
+                     }            
                 }
 
                 string[] parts = idListstr.Split(new char[]{',',';',' '}, StringSplitOptions.RemoveEmptyEntries);

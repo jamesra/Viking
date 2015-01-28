@@ -1,0 +1,55 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <title>Instructions for file export</title>
+</head>
+<body>
+
+    <h2>Prerequisites</h2>
+    Use of the TLP file extensions require <a href="http://tulip.labri.fr/">Tulip</a>  to be installed on the machine.
+
+    <h2>Export</h2>
+    <p>
+        The base URL for all exports is:
+        http://connectomes.utah.edu/Rabbit/Export/<b><i>REPORTTYPE</i></b>/<b><i>FORMAT</i></b>/?<b><i>query string</i></b>
+    </p>
+
+    <h3>Reporttype</h3>
+    <p> is what form the exported data should take.  Allowed values are:</p>
+    <ul>
+        <li>Network: The connectivity of individual cells</li>
+        <li>Motifs: The connectivity of cells sharing the same label</li>
+        <li>Morphology: The 3D structure of cells</li>
+    </ul>
+                
+    <h3>Format</h3>
+    <p> is what type of file to create.  Allowed values are: </p>
+    <ul>
+        <li>DOT: Graphviz format</li>
+        <li>TLP: Tulip format</li>
+    </ul>
+
+    <h3>Examples</h3>
+    <p>
+        Morphology example for structures 180, 476,and 514:
+        <a href="http://connectomes.utah.edu/Rabbit/Export/Morphology/TLP?ids=180,476,514">http://connectomes.utah.edu/Rabbit/Export/Morphology/TLP?ids=180,476,514</a>
+    </p>
+
+    <p>
+        The URL’s “ids” query parameter is a comma delimited list of structure IDs.
+    </p>
+
+    <p>Network example for all neurons within two degrees of separation from structure 180:
+        <a href="http://connectomes.utah.edu/Rabbit/Export/Network/TLP?ids=180&hops=2">http://connectomes.utah.edu/Rabbit/Export/Network/TLP?ids=180&hops=2</a>
+    </p>
+
+    <p>
+        The URL’s “hops” query parameter is the degree of seperation to include for the requested cells
+    </p>
+    
+    <p>
+        Motifs example.  Currently all cells are included in motif queries:
+        <a href="http://connectomes.utah.edu/Rabbit/Export/Motifs/TLP">http://connectomes.utah.edu/Rabbit/Export/Motifs/TLP/</a>
+    </p>
+</body>
+</html>

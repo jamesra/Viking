@@ -10,15 +10,32 @@ using VikingWebAppSettings;
 namespace DataExport.Controllers
 {
     public class NetworkController : Controller
-    { 
+    {
+        public string DefaultOutputFile = "network";
+
+        private static long _next_id = 0;
+
+        public static long NextFilenameID
+        {
+            get
+            {
+                return _next_id++;
+            }
+        }
+
+        public string GetOutputFilename(string ext)
+        {
+            return string.Format("{0}{1}.{2}", DefaultOutputFile, NextFilenameID, ext);
+        }
+
         //
         // GET: /Network/Dot 
         [ActionName("GetDot")]
         public ActionResult GetDot()
         {
-            string database = AppSettings.GetDatabaseCatalogName();
-            string EndpointURL = string.Format(AppSettings.WebServiceURLTemplate, database);
-            string userDotDirectory = Server.MapPath("~/Dot/");
+            
+            string EndpointURL = AppSettings.WebServiceURL; 
+            string userDotDirectory = Server.MapPath("~/Output/");
 
             AnnotationVizLib.ConnectionFactory.SetConnection(EndpointURL, AppSettings.EndpointCredentials);
 
@@ -29,21 +46,21 @@ namespace DataExport.Controllers
             if (!System.IO.Directory.Exists(userDotDirectory))
                 System.IO.Directory.CreateDirectory(userDotDirectory);
 
-            string userDotFileFullPath = System.IO.Path.Combine(userDotDirectory, "network.dot");
+            string outputFilename = GetOutputFilename("dot");
+            string userDotFileFullPath = System.IO.Path.Combine(userDotDirectory, outputFilename);
 
             NeuronGraph neuronGraph = NeuronGraph.BuildGraph(requestIDs, GetNumHops(), EndpointURL, AppSettings.EndpointCredentials);
             NeuronDOTView DotGraph = NeuronDOTView.ToDOT(neuronGraph, false);
             DotGraph.SaveDOT(userDotFileFullPath);
 
-            return File(userDotFileFullPath, "text/plain", "network.dot");
+            return File(userDotFileFullPath, "text/plain", outputFilename);
         }
 
         [ActionName("GetTLP")]
         public ActionResult GetTLP()
         {
-            string database = AppSettings.GetDatabaseCatalogName();
-            string EndpointURL = string.Format(AppSettings.WebServiceURLTemplate, database);
-            string userDotDirectory = Server.MapPath("~/Dot/");
+            string EndpointURL = AppSettings.WebServiceURL; 
+            string userDotDirectory = Server.MapPath("~/Output/");
 
             AnnotationVizLib.ConnectionFactory.SetConnection(EndpointURL, AppSettings.EndpointCredentials);
 
@@ -54,14 +71,14 @@ namespace DataExport.Controllers
             if (requestIDs == null || requestIDs.Count == 0)
                 requestIDs = Queries.GetLinkedStructureParentIDs();
 
-            string userDotFileFullPath = System.IO.Path.Combine(userDotDirectory, "network.tlp");
+            string outputFilename = GetOutputFilename("tlp");
+            string userDotFileFullPath = System.IO.Path.Combine(userDotDirectory, outputFilename);
 
             NeuronGraph neuronGraph = NeuronGraph.BuildGraph(requestIDs, GetNumHops(), EndpointURL, AppSettings.EndpointCredentials);
             NeuronTLPView TlpGraph = NeuronTLPView.ToTLP(neuronGraph);
             TlpGraph.SaveTLP(userDotFileFullPath);
 
-
-            return File(userDotFileFullPath, "text/plain", "network.tlp");
+            return File(userDotFileFullPath, "text/plain", outputFilename);
         } 
 
 

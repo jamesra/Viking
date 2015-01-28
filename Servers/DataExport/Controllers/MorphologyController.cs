@@ -12,20 +12,37 @@ namespace DataExport.Controllers
 {
     public class MorphologyController : Controller
     { 
-        public static string DefaultOutputFile = "structures";
+        public static string DefaultOutputFile = "morphology";
+
+        private static long _next_id = 0;
+
+        public static long NextFilenameID
+        {
+            get
+            {
+                return _next_id++; 
+            }
+        }
+
+        public string GetOutputFilename()
+        {
+            return string.Format("{0}{1}.tlp", DefaultOutputFile, NextFilenameID); 
+        }
+
                
         [ActionName("GetTLP")]
         public ActionResult GetTLP()
-        { 
-            string OutputFile = DefaultOutputFile + ".tlp";
+        {
+            string OutputFile = GetOutputFilename(); GetOutputFilename();
             string userOutputDirectory = GetAndCreateOutputDirectories("~/Output/");
             string userOutputFileFullPath = System.IO.Path.Combine(userOutputDirectory, OutputFile);
             Scale scale = AppSettings.GetScale();
              
-            MorphologyGraph structure_graph = GetGraph();
             StructureMorphologyColorMap colorMap = new StructureMorphologyColorMap(GetStructureTypeColorMap(),
                                                                                    GetStructureColorMap(),
                                                                                    GetColorMapImage());
+
+            MorphologyGraph structure_graph = GetGraph();
             MorphologyTLPView TlpGraph = MorphologyTLPView.ToTLP(structure_graph, scale, colorMap);
             TlpGraph.SaveTLP(userOutputFileFullPath);
 
@@ -69,14 +86,14 @@ namespace DataExport.Controllers
         }
           
         private MorphologyGraph GetGraph()
-        { 
-            string EndpointURL = string.Format(AppSettings.WebServiceURL); 
+        {
+            AnnotationVizLib.ConnectionFactory.SetConnection(AppSettings.WebServiceURL , AppSettings.EndpointCredentials);
 
             ICollection<long> requestIDs = RequestVariables.GetQueryStringIDs(Request);
             if (requestIDs == null || requestIDs.Count == 0)
                 requestIDs = Queries.GetLinkedStructureParentIDs();
-            
-            return MorphologyGraph.BuildGraphs(requestIDs, false, EndpointURL, AppSettings.EndpointCredentials);
+
+            return MorphologyGraph.BuildGraphs(requestIDs, false, AppSettings.WebServiceURL, AppSettings.EndpointCredentials);
         }
     }
 }

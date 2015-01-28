@@ -80,14 +80,31 @@ namespace VikingWebAppSettings
 
         public static Scale GetScale()
         {
-            AxisUnits X = new AxisUnits(System.Convert.ToDouble(GetApplicationSetting("XScaleValue")),
-                                        GetApplicationSetting("XScaleUnits"));
+            AxisUnits X, Y, Z;
 
-            AxisUnits Y = new AxisUnits(System.Convert.ToDouble(GetApplicationSetting("YScaleValue")),
-                                        GetApplicationSetting("YScaleUnits"));
+#if DEBUG
+            try
+            {
+#endif
+                X = new AxisUnits(System.Convert.ToDouble(GetApplicationSetting("XScaleValue")),
+                                            GetApplicationSetting("XScaleUnits"));
 
-            AxisUnits Z = new AxisUnits(System.Convert.ToDouble(GetApplicationSetting("ZScaleValue")),
-                                        GetApplicationSetting("ZScaleUnits"));
+                Y = new AxisUnits(System.Convert.ToDouble(GetApplicationSetting("YScaleValue")),
+                                            GetApplicationSetting("YScaleUnits"));
+
+                Z = new AxisUnits(System.Convert.ToDouble(GetApplicationSetting("ZScaleValue")),
+                                            GetApplicationSetting("ZScaleUnits"));
+#if DEBUG
+            }
+            catch(ArgumentException)
+            {
+                X = new AxisUnits(2.18, "nm");
+
+                Y = new AxisUnits(2.18, "nm");
+
+                Z = new AxisUnits(90, "nm");
+            }
+#endif
 
             return new Scale(X, Y, Z); 
         }

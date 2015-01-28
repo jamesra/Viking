@@ -6,23 +6,35 @@ by editing this MSBuild file. In order to learn more about this please visit htt
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <TimeStampOfAssociatedLegacyPublishXmlFile>2014-11-15T21:59:50.8797577-08:00</TimeStampOfAssociatedLegacyPublishXmlFile>
-    <_PublishTargetUrl>C:\Src\Git\Viking\Servers\Deployment\Release\DataExport</_PublishTargetUrl>
+    <_PublishTargetUrl>C:\Src\Git\Viking\Servers\Deployment\Release\Export</_PublishTargetUrl>
   </PropertyGroup>
   <ItemGroup>
     <File Include="bin/AnnotationVizLib.dll">
-      <publishTime>01/09/2015 12:53:57</publishTime>
+      <publishTime>01/27/2015 14:04:14</publishTime>
+    </File>
+    <File Include="bin/Content/Index.html">
+      <publishTime>01/27/2015 12:52:58</publishTime>
     </File>
     <File Include="bin/DataExport.dll">
-      <publishTime>01/09/2015 12:53:57</publishTime>
+      <publishTime>01/27/2015 14:12:18</publishTime>
     </File>
     <File Include="bin/GraphLib.dll">
       <publishTime>11/22/2014 09:54:58</publishTime>
     </File>
     <File Include="bin/Microsoft.Web.Infrastructure.dll">
-      <publishTime>07/08/2013 16:15:08</publishTime>
+      <publishTime>01/13/2015 16:59:45</publishTime>
     </File>
     <File Include="bin/Newtonsoft.Json.dll">
       <publishTime>01/09/2015 12:46:12</publishTime>
+    </File>
+    <File Include="bin/Resources/ColorMapping/DefaultLocationColorMap.txt">
+      <publishTime>01/14/2015 16:29:20</publishTime>
+    </File>
+    <File Include="bin/Resources/ColorMapping/DefaultStructureColors.txt">
+      <publishTime>01/14/2015 16:28:50</publishTime>
+    </File>
+    <File Include="bin/Resources/ColorMapping/DefaultStructureTypeColors.txt">
+      <publishTime>01/14/2015 16:28:24</publishTime>
     </File>
     <File Include="bin/System.Net.Http.dll">
       <publishTime>08/13/2013 01:19:06</publishTime>
@@ -43,16 +55,22 @@ by editing this MSBuild file. In order to learn more about this please visit htt
       <publishTime>09/25/2014 16:41:52</publishTime>
     </File>
     <File Include="bin/System.Web.Razor.dll">
-      <publishTime>07/09/2013 12:05:12</publishTime>
+      <publishTime>01/13/2015 16:59:40</publishTime>
     </File>
     <File Include="bin/System.Web.WebPages.Deployment.dll">
-      <publishTime>07/09/2013 12:05:12</publishTime>
+      <publishTime>01/13/2015 16:59:42</publishTime>
     </File>
     <File Include="bin/System.Web.WebPages.dll">
-      <publishTime>07/09/2013 12:05:12</publishTime>
+      <publishTime>01/13/2015 16:59:42</publishTime>
     </File>
     <File Include="bin/System.Web.WebPages.Razor.dll">
-      <publishTime>07/09/2013 12:05:12</publishTime>
+      <publishTime>01/13/2015 16:59:42</publishTime>
+    </File>
+    <File Include="bin/VikingWebAppSettings.dll">
+      <publishTime>01/27/2015 14:04:14</publishTime>
+    </File>
+    <File Include="Content/Index.html">
+      <publishTime>01/27/2015 12:52:58</publishTime>
     </File>
     <File Include="Content/Site.css">
       <publishTime>11/15/2014 21:59:50</publishTime>
@@ -219,11 +237,23 @@ by editing this MSBuild file. In order to learn more about this please visit htt
     <File Include="Content/themes/base/minified/jquery.ui.theme.min.css">
       <publishTime>11/15/2014 21:59:50</publishTime>
     </File>
+    <File Include="Docs/UsingDataExport.rst">
+      <publishTime>01/16/2015 13:08:28</publishTime>
+    </File>
     <File Include="Global.asax">
       <publishTime>11/15/2014 21:59:50</publishTime>
     </File>
     <File Include="packages.config">
       <publishTime>01/09/2015 12:46:26</publishTime>
+    </File>
+    <File Include="Resources/ColorMapping/DefaultLocationColorMap.txt">
+      <publishTime>01/14/2015 16:29:20</publishTime>
+    </File>
+    <File Include="Resources/ColorMapping/DefaultStructureColors.txt">
+      <publishTime>01/14/2015 16:28:50</publishTime>
+    </File>
+    <File Include="Resources/ColorMapping/DefaultStructureTypeColors.txt">
+      <publishTime>01/14/2015 16:28:24</publishTime>
     </File>
     <File Include="Views/Shared/Error.aspx">
       <publishTime>11/15/2014 21:59:51</publishTime>
@@ -232,7 +262,7 @@ by editing this MSBuild file. In order to learn more about this please visit htt
       <publishTime>11/15/2014 21:59:51</publishTime>
     </File>
     <File Include="Web.config">
-      <publishTime>01/09/2015 12:53:57</publishTime>
+      <publishTime>01/27/2015 14:04:15</publishTime>
     </File>
   </ItemGroup>
 </Project>
