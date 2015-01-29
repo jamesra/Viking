@@ -1,5 +1,7 @@
 .. Viking Documentation master file.
 
+
+
 #################################
 Welcome to Viking's Documentation
 #################################
@@ -9,8 +11,7 @@ Viking is a multi-user web-based collaborative management system for images and 
 annotate images with their own annotation schema, and summarize the results. Viking was developed by James Anderson at the `Marc Lab`_ for
 use with the first retinal connectome which was assembled using `SSTEM and Computation Molecular Phenotyping`_
 
-Viking's role begins after images are collected and registered into a volume.  We use `Nornir`_ to build our volumes.  
-
+Viking's role begins after images are collected and registered into a volume.  The Marc Lab uses `Nornir`_ to build our volumes.
 
 Viking Client Installation
 ==========================
@@ -20,9 +21,9 @@ Viking Client Installation
 Viking requires a windows OS with a dedicated GPU.  Newer Intel chips with embedded graphics may also work.
 
 .. toctree::
-   Client Useage <Client/useage>
+   Client Usage <Client/useage>
    Server Installation <installation/toctree>
-   Export <export/toctree>
+   Data Export <export/toctree>
    :maxdepth: 2
    
 

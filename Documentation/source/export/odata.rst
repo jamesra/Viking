@@ -21,8 +21,7 @@ Enter the OData URL into the prompt provided by Excel:
 
 .. image:: Excel2010_ODataImport2.jpg
 
-This provides access to the raw annotation data from the database. 
-
+This provides access to the raw annotation data from the database.  
 
 Python
 ------
