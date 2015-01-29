@@ -1,6 +1,8 @@
 .. Viking Documentation master file.
 
-
+.. image::  Banner.jpg 
+   :align: center
+   :scale: 66%
 
 #################################
 Welcome to Viking's Documentation
@@ -16,24 +18,34 @@ Viking's role begins after images are collected and registered into a volume.  T
 Viking Client Installation
 ==========================
 
-`Click here to install the Viking client`_
+:`Click here to install the Viking client`_:
 
-Viking requires a windows OS with a dedicated GPU.  Newer Intel chips with embedded graphics may also work.
+Viking requires the following, which should be provided by the installer:
+   * Windows 7+ 
+   * A dedicated GPU.  Newer Intel chips with embedded graphics may also work.
+   * An internet connection
+   * .NET Framework 4
+   * XNA 4.0
+
+Contents
+========
 
 .. toctree::
-   Client Usage <Client/useage>
-   Server Installation <installation/toctree>
-   Data Export <export/toctree>
+   User Documentation <client/toctree>
+   Exporting Data <export/toctree>
+   Developer Documentation <server/toctree>
+   About <about>
    :maxdepth: 2
    
-
 Indices and tables
 ==================
 
 * :ref:`genindex`
 * :ref:`search`
 
+.. _Papers: 
 .. _Click here to install the Viking client: http://connectomes.utah.edu/Software/Viking4/setup.exe
-.. _Marc Lab : http://prometheus.med.utah.edu/~marclab/index.html
+.. _Marc Lab : http://marclab.org/
+.. _Marc Lab Papers: http://marclab.org/science/papers/
 .. _Nornir: http://nornir.github.io
 .. _SSTEM and Computation Molecular Phenotyping: http://www.plosbiology.org/article/info%3Adoi%2F10.1371%2Fjournal.pbio.1000074#abstract0
