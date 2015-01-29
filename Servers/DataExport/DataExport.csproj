@@ -113,6 +113,9 @@
     <Compile Include="Utils\RequestVariables.cs" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Content\Index.html">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="Content\themes\base\images\ui-bg_flat_0_aaaaaa_40x100.png" />
     <Content Include="Content\themes\base\images\ui-bg_flat_75_ffffff_40x100.png" />
     <Content Include="Content\themes\base\images\ui-bg_glass_55_fbf9ee_1x400.png" />
@@ -214,6 +217,7 @@
     <None Include="Properties\PublishProfiles\Production_Package.pubxml" />
     <None Include="Properties\PublishProfiles\Test.pubxml" />
     <None Include="Properties\PublishProfiles\Test_Package.pubxml" />
+    <Content Include="Docs\UsingDataExport.rst" />
   </ItemGroup>
   <PropertyGroup>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>

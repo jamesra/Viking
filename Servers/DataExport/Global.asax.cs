@@ -37,6 +37,9 @@ namespace DataExport
             routes.MapRoute("Morphology_TLP", "Morphology/TLP",
                             new { controller = "Morphology", action = "GetTLP" },
                             new { controller = "Morphology" });
+
+            //Ignore the root level so we can load our static index.html file
+            routes.IgnoreRoute("");
         }
 
         protected void Application_Start()
@@ -50,6 +53,5 @@ namespace DataExport
             FilterConfig.RegisterGlobalFilters(GlobalFilters.Filters);
             RouteConfig.RegisterRoutes(RouteTable.Routes);
         }
-
     }
 }
