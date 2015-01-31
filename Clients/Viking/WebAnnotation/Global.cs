@@ -46,6 +46,8 @@ namespace WebAnnotation
         /// </summary>
         internal static int NumSectionsLoading = 5;
 
+        internal static Export Export = null; 
+
 #if DEBUG
         internal static int NumSectionsInMemory = 25;
         
@@ -208,6 +210,7 @@ namespace WebAnnotation
                             break;
 
                         Global.PopulateEndpointStateFromVolumeToEndpointElement(MappingElements.First());
+
                         
                         break;
                     default:
@@ -238,6 +241,12 @@ namespace WebAnnotation
                 #else
                     WebAnnotationModel.State.EndpointAddress = new EndpointAddress(EndpointAttribute.Value);                       
                 #endif
+            }
+
+            XAttribute ExportURLAttribute = MappingElement.Attribute("ExportURL");
+            if(ExportURLAttribute != null)
+            {
+                Global.Export = new WebAnnotation.Export(new Uri(ExportURLAttribute.Value));
             }
                 
             /*

@@ -10,6 +10,7 @@ using System.Diagnostics;
 using System.Web.Configuration;
 using System.Transactions;
 using System.Security.Permissions;
+using System.Security;
 
 using Annotation.Service.Interfaces;
 using Annotation.Service.GraphClasses;
@@ -296,6 +297,38 @@ namespace Annotation
         }
 
         /// <summary>
+        /// Raise a SecurityException if the caller is not in the admin role
+        /// </summary>
+        protected void DemandAdminPermissions()
+        {
+            PrincipalPermission permission = new PrincipalPermission(null, "Admin");
+
+            permission.Demand();
+        }
+
+        /// <summary>
+        /// Raise a SecurityException if the caller is not in the admin role
+        /// </summary>
+        protected void DemandUser(string username)
+        {
+            PrincipalPermission permission = new PrincipalPermission(username, null);
+
+            permission.Demand();
+        }
+
+        protected void DemandAdminOrUser(string username)
+        {
+            try{
+                DemandAdminPermissions();
+            }
+            catch(SecurityException)
+            {
+                DemandUser(username);
+            }
+            
+        }
+
+        /// <summary>
         /// Submits passed structure types to the database
         /// </summary>
         /// <param name="structTypes"></param>
@@ -342,15 +375,22 @@ namespace Annotation
                                 break;
                             }
 
+                           
+
                             t.Sync(updateType);
                             listID[iObj] = updateType.ID;
                             //  db.DBStructureTypes.(updateType);
                             break;
                         case DBACTION.DELETE:
+
+                            DemandAdminPermissions();
+
                             DBStructureType deleteType;
                             try
                             {
                                 deleteType = (from u in types where u.ID == t.ID select u).Single();
+
+                                
                             }
                             catch (System.ArgumentNullException e)
                             {

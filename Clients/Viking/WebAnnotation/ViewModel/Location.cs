@@ -39,6 +39,7 @@ namespace WebAnnotation.ViewModel
                 ContextMenu menu = new ContextMenu();
                 menu.MenuItems.Add("Properties", ContextMenu_OnProperties);
 
+                this._AddExportMenus(menu);
                 this._AddTerminalOffEdgeMenus(menu);
                 this.Parent.ContextMenu_AddUnverifiedBranchTerminals(menu); 
                 this._AddDeleteMenu(menu);

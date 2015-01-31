@@ -112,6 +112,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Cache\SectionLocationViewModelCache.cs" />
+    <Compile Include="Export.cs" />
     <Compile Include="Global.cs" />
     <Compile Include="GlobalPrimitives.cs" />
     <Compile Include="LocationObjRenderer.cs" />

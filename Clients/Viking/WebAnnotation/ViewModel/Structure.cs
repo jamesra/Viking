@@ -211,6 +211,11 @@ namespace WebAnnotation.ViewModel
             get
             {
                 ContextMenu menu = new ContextMenu();
+                if(Global.Export != null)
+                {
+                    menu.MenuItems.Add("Export Morphology", ContextMenu_OnMorphology); 
+                }
+
                 menu.MenuItems.Add("Properties", ContextMenu_OnProperties);
                 menu.MenuItems.Add("");
                 menu.MenuItems.Add("Delete", ContextMenu_OnDelete);
@@ -240,6 +245,12 @@ namespace WebAnnotation.ViewModel
         }
 
         #endregion
+
+        protected void ContextMenu_OnMorphology(object sender, EventArgs e)
+        {
+            Global.Export.OpenMorphology(this.ID);
+        }
+
 
         protected void ContextMenu_OnProperties(object sender, EventArgs e)
         {

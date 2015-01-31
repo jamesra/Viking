@@ -6,11 +6,14 @@ by editing this MSBuild file. In order to learn more about this please visit htt
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <TimeStampOfAssociatedLegacyPublishXmlFile />
-    <_PublishTargetUrl>C:\Src\Git\Viking\Servers\Deployment\Release\ConnectomeOpenData</_PublishTargetUrl>
+    <_PublishTargetUrl>C:\Src\Git\Viking\Servers\Deployment\Release\OData</_PublishTargetUrl>
   </PropertyGroup>
   <ItemGroup>
+    <File Include="bin/AnnotationVizLib.dll">
+      <publishTime>01/27/2015 14:04:14</publishTime>
+    </File>
     <File Include="bin/ConnectomeOpenData.dll">
-      <publishTime>01/09/2015 12:53:50</publishTime>
+      <publishTime>01/27/2015 14:28:33</publishTime>
     </File>
     <File Include="bin/de/Microsoft.Data.Edm.resources.dll">
       <publishTime>12/01/2014 10:03:47</publishTime>
@@ -56,6 +59,9 @@ by editing this MSBuild file. In order to learn more about this please visit htt
     </File>
     <File Include="bin/fr/System.Spatial.resources.dll">
       <publishTime>12/01/2014 10:03:46</publishTime>
+    </File>
+    <File Include="bin/GraphLib.dll">
+      <publishTime>11/22/2014 09:54:58</publishTime>
     </File>
     <File Include="bin/it/Microsoft.Data.Edm.resources.dll">
       <publishTime>12/01/2014 10:03:47</publishTime>
@@ -147,6 +153,9 @@ by editing this MSBuild file. In order to learn more about this please visit htt
     <File Include="bin/System.Web.Http.WebHost.dll">
       <publishTime>01/09/2015 12:46:12</publishTime>
     </File>
+    <File Include="bin/VikingWebAppSettings.dll">
+      <publishTime>01/27/2015 14:04:14</publishTime>
+    </File>
     <File Include="bin/zh-Hans/Microsoft.Data.Edm.resources.dll">
       <publishTime>12/01/2014 10:03:47</publishTime>
     </File>
@@ -184,7 +193,7 @@ by editing this MSBuild file. In order to learn more about this please visit htt
       <publishTime>01/09/2015 12:46:22</publishTime>
     </File>
     <File Include="Web.config">
-      <publishTime>01/09/2015 12:53:50</publishTime>
+      <publishTime>01/16/2015 10:56:17</publishTime>
     </File>
   </ItemGroup>
 </Project>

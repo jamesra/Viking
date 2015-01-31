@@ -69,6 +69,54 @@
         </xs:documentation>
       </xs:annotation>
       <xs:sequence>
+        <xs:element name="DefaultWebAnnotationUserSettings" minOccurs="0" maxOccurs="1">
+          <xs:complexType>
+            <xs:attribute name="Uri" type="xs:anyURI" use="optional">
+              <xs:annotation>
+                <xs:documentation>
+                  URL of default hotkey mapping for volume
+                </xs:documentation>
+              </xs:annotation>
+            </xs:attribute>
+          </xs:complexType>
+        </xs:element>
+        
+        <xs:element name="VolumeToEndpoint" minOccurs="0" maxOccurs="1">
+          <xs:complexType>
+            <xs:attribute name="Name" type="xs:string" use="required">
+              <xs:annotation>
+                <xs:documentation>
+                  Name of the endpoint database
+                </xs:documentation>
+              </xs:annotation>
+            </xs:attribute>
+
+            <xs:attribute name="Endpoint" type="xs:anyURI" use="required">
+              <xs:annotation>
+                <xs:documentation>
+                  Endpoint URL for Viking annotations
+                </xs:documentation>
+              </xs:annotation>
+            </xs:attribute>
+
+            <xs:attribute name="ExportURL" type="xs:anyURI" use="optional">
+              <xs:annotation>
+                <xs:documentation>
+                  URL for file exporting
+                </xs:documentation>
+              </xs:annotation>
+            </xs:attribute>
+
+            <xs:attribute name="Authentication" type="xs:anyURI" use="optional">
+              <xs:annotation>
+                <xs:documentation>
+                  URL for authenticating users
+                </xs:documentation>
+              </xs:annotation>
+            </xs:attribute>
+          </xs:complexType>
+        </xs:element>
+        
         <xs:element name="ChannelInfo" minOccurs="0" maxOccurs="1" type="ChannelInfo"/>
         <xs:element name="stos" minOccurs="0" maxOccurs="unbounded">
           <xs:complexType>
@@ -177,10 +225,25 @@
           </xs:complexType>
         </xs:element>
       </xs:sequence>
+      <xs:attribute name="DefaultSection" type="xs:integer" use="optional">
+        <xs:annotation>
+          <xs:documentation>
+            Section to display when volume loads
+          </xs:documentation>
+        </xs:annotation>
+      </xs:attribute>
       <xs:attribute name="name" type="xs:string" />
       <xs:attribute name="num_stos" type="xs:integer" />
       <xs:attribute name="num_sections" type="xs:integer" />
+      <xs:attribute name="StosZip" type="xs:string" use="optional">
+        <xs:annotation>
+          <xs:documentation>
+            Optional path to .zip file containing all .stos transforms
+          </xs:documentation>
+        </xs:annotation>
+      </xs:attribute>
       <xs:attribute name="path" type="xs:string" />
+      
     </xs:complexType>
   </xs:element>
 </xs:schema>

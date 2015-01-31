@@ -194,6 +194,52 @@ namespace WebAnnotation.ViewModel
             remove { modelObj.PropertyChanged -= value; }
         }
 
+        protected ContextMenu _AddExportMenus(ContextMenu menu)
+        {
+            if(Global.Export != null)
+            {
+                MenuItem menuExport = new MenuItem("Export");
+
+                _AddExportToTulipURL(menuExport);
+
+                menu.MenuItems.Add(menuExport);
+            }
+
+            return menu; 
+        }
+
+        private void _AddExportToTulipURL(MenuItem menu)
+        {
+            MenuItem menuTulipURL = new MenuItem("TulipURL");
+            MenuItem menuMorphology = new MenuItem("Morphology", ContextMenu_ExportMorphology);
+
+            menuTulipURL.MenuItems.Add(menuMorphology);
+            _AddExportToTulipNetwork(menuTulipURL); 
+            menu.MenuItems.Add(menuTulipURL);  
+        }
+
+        private void _AddExportToTulipNetwork(MenuItem menu)
+        {
+            MenuItem menuNetwork = new MenuItem("Network", ContextMenu_ExportNetwork);
+            menuNetwork.Tag = new long?(); //Tag contains the number of hops
+
+            MenuItem menuOneHop = new MenuItem("1 degree  of seperation", ContextMenu_ExportNetwork);
+            menuOneHop.Tag = new long?(1);
+            MenuItem menuTwoHop = new MenuItem("2 degrees of seperation", ContextMenu_ExportNetwork);
+            menuTwoHop.Tag = new long?(2);
+            MenuItem menuThreeHop = new MenuItem("3 degrees of seperation", ContextMenu_ExportNetwork);
+            menuThreeHop.Tag = new long?(3);
+            MenuItem menuAllHop = new MenuItem("All connected", ContextMenu_ExportNetwork);
+            menuAllHop.Tag = new long?(); 
+
+            menu.MenuItems.Add(menuNetwork);
+
+            menuNetwork.MenuItems.Add(menuOneHop);
+            menuNetwork.MenuItems.Add(menuTwoHop);
+            menuNetwork.MenuItems.Add(menuThreeHop);
+            menuNetwork.MenuItems.Add(menuAllHop);
+        }
+
         protected ContextMenu _AddTerminalOffEdgeMenus(ContextMenu menu)
         {
             MenuItem menuExtensible = new MenuItem("Terminal", ContextMenu_OnTerminal);
@@ -265,6 +311,19 @@ namespace WebAnnotation.ViewModel
                 this.modelObj.Terminal = !this.modelObj.Terminal;
             }
 
+        }
+
+        protected void ContextMenu_ExportMorphology(object sender, EventArgs e)
+        {
+            Global.Export.OpenMorphology(this.ParentID.Value); 
+        }
+
+        protected void ContextMenu_ExportNetwork(object sender, EventArgs e)
+        {
+            MenuItem item = sender as MenuItem; 
+            long? hops = item.Tag as long?;
+
+            Global.Export.OpenNetwork(this.ParentID.Value, hops);
         }
 
         protected void ContextMenu_OnOffEdge(object sender, EventArgs e)
