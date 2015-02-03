@@ -100,13 +100,22 @@
       <SubType>Designer</SubType>
     </None>
     <None Include="packages.config" />
-    <None Include="Service References\AnnotationService\Annotation.Service.GraphClasses.xsd">
+    <None Include="Service References\AnnotationService\Annotation.Service.GraphClasses1.xsd">
       <SubType>Designer</SubType>
     </None>
-    <None Include="Service References\AnnotationService\Annotation.xsd">
+    <None Include="Service References\AnnotationService\Annotation1.xsd">
       <SubType>Designer</SubType>
     </None>
     <None Include="Service References\AnnotationService\AnnotationVizLib.AnnotationService.CreateStructureRetval.datasource">
+      <DependentUpon>Reference.svcmap</DependentUpon>
+    </None>
+    <None Include="Service References\AnnotationService\AnnotationVizLib.AnnotationService.GetLocationChangesResponse.datasource">
+      <DependentUpon>Reference.svcmap</DependentUpon>
+    </None>
+    <None Include="Service References\AnnotationService\AnnotationVizLib.AnnotationService.GetLocationsForSectionResponse.datasource">
+      <DependentUpon>Reference.svcmap</DependentUpon>
+    </None>
+    <None Include="Service References\AnnotationService\AnnotationVizLib.AnnotationService.GetStructuresForSectionResponse.datasource">
       <DependentUpon>Reference.svcmap</DependentUpon>
     </None>
     <None Include="Service References\AnnotationService\AnnotationVizLib.AnnotationService.Graphx.datasource">
@@ -115,13 +124,22 @@
     <None Include="Service References\AnnotationService\AnnotationVizLib.AnnotationService.Location.datasource">
       <DependentUpon>Reference.svcmap</DependentUpon>
     </None>
+    <None Include="Service References\AnnotationService\AnnotationVizLib.AnnotationService.LocationHistory.datasource">
+      <DependentUpon>Reference.svcmap</DependentUpon>
+    </None>
     <None Include="Service References\AnnotationService\AnnotationVizLib.AnnotationService.LocationLink.datasource">
+      <DependentUpon>Reference.svcmap</DependentUpon>
+    </None>
+    <None Include="Service References\AnnotationService\AnnotationVizLib.AnnotationService.LocationLinksForSectionResponse.datasource">
       <DependentUpon>Reference.svcmap</DependentUpon>
     </None>
     <None Include="Service References\AnnotationService\AnnotationVizLib.AnnotationService.LocationPositionOnly.datasource">
       <DependentUpon>Reference.svcmap</DependentUpon>
     </None>
     <None Include="Service References\AnnotationService\AnnotationVizLib.AnnotationService.Structure.datasource">
+      <DependentUpon>Reference.svcmap</DependentUpon>
+    </None>
+    <None Include="Service References\AnnotationService\AnnotationVizLib.AnnotationService.StructureHistory.datasource">
       <DependentUpon>Reference.svcmap</DependentUpon>
     </None>
     <None Include="Service References\AnnotationService\AnnotationVizLib.AnnotationService.StructureLink.datasource">
@@ -133,17 +151,17 @@
     <None Include="Service References\AnnotationService\AnnotationVizLib.AnnotationService.SynapseObject.datasource">
       <DependentUpon>Reference.svcmap</DependentUpon>
     </None>
-    <None Include="Service References\AnnotationService\Arrays.xsd">
+    <None Include="Service References\AnnotationService\Arrays1.xsd">
       <SubType>Designer</SubType>
     </None>
-    <None Include="Service References\AnnotationService\service.wsdl" />
-    <None Include="Service References\AnnotationService\service.xsd">
+    <None Include="Service References\AnnotationService\service1.wsdl" />
+    <None Include="Service References\AnnotationService\service1.xsd">
       <SubType>Designer</SubType>
     </None>
-    <None Include="Service References\AnnotationService\service3.xsd">
+    <None Include="Service References\AnnotationService\service11.xsd">
       <SubType>Designer</SubType>
     </None>
-    <None Include="Service References\AnnotationService\service31.xsd">
+    <None Include="Service References\AnnotationService\service12.xsd">
       <SubType>Designer</SubType>
     </None>
   </ItemGroup>

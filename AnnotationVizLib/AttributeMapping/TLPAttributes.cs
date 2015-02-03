@@ -133,6 +133,7 @@ namespace AnnotationVizLib
             {"viewSize", " \"(1,1,1)\" \"(1,1,1)\""},
             {"viewBorderColor", string.Format("\"{0}\" \"{0}\"", ColorMap["clear"], ColorMap["clear"]) },
             {"viewShape", string.Format(" \"{0}\" \"{1}\"", IntForShape(NodeShapes.Cylinder), IntForEdgeShape(EdgeShapes.Polyline))},
+            {"NumLinkedStructures", "0,0"},
         };
           
         public static string IntForShape(NodeShapes type)

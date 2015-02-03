@@ -61,13 +61,31 @@ namespace AnnotationVizLib
             NodeAttribs.Add("LocationID", node.Location.ID.ToString());
             NodeAttribs.Add("ParentID", node.Location.ParentID.ToString());
             NodeAttribs.Add("LocationInViking", NodeVikingLocation(node));
-
             NodeAttribs.Add("StructureURL", string.Format("http://connectomes.utah.edu/Services/RC1/ConnectomeData.svc/Locations({0}L)", node.Location.ID));
+
+            if(NodeShape(node) != null)
+            {
+                NodeAttribs.Add("viewShape", NodeShape(node)); 
+            }
+
+            if (node.Graph.structure.Links.Count() > 0)
+            {
+                NodeAttribs.Add("NumLinkedStructures", node.Graph.structure.Links.Count().ToString());
+            } 
 
             tlpnode.AddAttributes(NodeAttribs);
 
             return tlpnode;
         }
+
+        public static string NodeShape(MorphologyNode node)
+        {
+            if (node.Graph.structure.Links.Count() > 0)
+                return TLPAttributes.IntForShape(TLPAttributes.NodeShapes.GlowSphere);
+
+            return null; 
+        }
+         
 
         public static string NodeVikingLocation(MorphologyNode node)
         {
