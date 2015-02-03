@@ -9,10 +9,38 @@ using System.Windows.Forms;
 namespace WebAnnotation.UI
 {
     [MenuAttribute("Annotation")]
-    class AnnotationMenu
+    class AnnotationMenu : Viking.Common.IMenuFactory
     {
         static FindStructureNumberForm _FindStructureNumberForm = null;
         static MergeStructuresForm _MergeStructuresForm = null;
+
+        System.Windows.Forms.ToolStripItem Viking.Common.IMenuFactory.CreateMenuItem()
+        {
+            //Create a menu containing each of our bookmarks
+            ToolStripMenuItem menuRoot = new ToolStripMenuItem("Annotation");
+
+            //Create the option to hide bookmarks on the display
+            ToolStripMenuItem menuExport = new ToolStripMenuItem("Export");
+
+            //Create the option to hide bookmarks on the display
+            ToolStripMenuItem menuExportMotifs = new ToolStripMenuItem("Motifs");
+
+            ToolStripMenuItem menuExportMotifTLP = new ToolStripMenuItem("To Tulip Format");
+            menuExportMotifTLP.Click += OnExportMotifsTLP;
+
+            menuExportMotifs.DropDownItems.Add(menuExportMotifTLP);
+            menuExport.DropDownItems.Add(menuExportMotifs);
+            menuRoot.DropDownItems.Add(menuExport);
+
+            return menuRoot as ToolStripItem; 
+        }
+
+        static public void OnExportMotifsTLP(object sender, EventArgs e)
+        {
+            Debug.Print("OnExportMotifsTLP");
+
+            Global.Export.OpenMotif();
+        }
 
         [MenuItem("Open Last Modified Location")]
         static public void GoToLastModifiedLocation(object sender, EventArgs e)
@@ -60,6 +88,14 @@ namespace WebAnnotation.UI
 
             _MergeStructuresForm.ShowDialog();
             _MergeStructuresForm.Focus();
+        }
+
+        [MenuItem("Export")]
+        static public void Export(object sender, EventArgs e)
+        {
+            Debug.Print("Export");
+
+            
         }
 
        

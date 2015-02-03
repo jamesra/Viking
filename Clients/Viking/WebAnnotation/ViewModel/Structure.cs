@@ -213,7 +213,7 @@ namespace WebAnnotation.ViewModel
                 ContextMenu menu = new ContextMenu();
                 if(Global.Export != null)
                 {
-                    menu.MenuItems.Add("Export Morphology", ContextMenu_OnMorphology); 
+                    menu.MenuItems.Add("Export Morphology To Tulip", ContextMenu_OnMorphology); 
                 }
 
                 menu.MenuItems.Add("Properties", ContextMenu_OnProperties);

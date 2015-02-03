@@ -210,7 +210,7 @@ namespace WebAnnotation.ViewModel
 
         private void _AddExportToTulipURL(MenuItem menu)
         {
-            MenuItem menuTulipURL = new MenuItem("TulipURL");
+            MenuItem menuTulipURL = new MenuItem("Tulip URL");
             MenuItem menuMorphology = new MenuItem("Morphology", ContextMenu_ExportMorphology);
 
             menuTulipURL.MenuItems.Add(menuMorphology);
