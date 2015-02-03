@@ -35,7 +35,7 @@ namespace AnnotationVizLib
         public string AttributeToString(string attrib_name)
         {
             if (!this.Attributes.ContainsKey(attrib_name))
-                return null; 
+                return null;
 
             return string.Format("(node {0} \"{1}\")", this.Key, this.Attributes[attrib_name]);
         }
@@ -57,6 +57,17 @@ namespace AnnotationVizLib
             this.tulip_id = id;
         }
 
+        public System.Drawing.Color Color
+        {
+            set
+            {
+                this.Attributes["viewColor"] = string.Format("({0},{1},{2},{3})", value.R,
+                                                                                 value.G,
+                                                                                 value.B,
+                                                                                 value.A);
+            }
+        }
+
         public string DefinitionString()
         {
             return string.Format("(edge {0} {1} {2})", tulip_id, from, to);
@@ -73,6 +84,7 @@ namespace AnnotationVizLib
 
     internal static class TLPFile
     {
+          
         public static string FileHeader
         {
             get
