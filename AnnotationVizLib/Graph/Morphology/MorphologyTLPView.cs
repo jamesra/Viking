@@ -68,7 +68,7 @@ namespace AnnotationVizLib
                 NodeAttribs.Add("viewShape", NodeShape(node)); 
             }
 
-            if (node.Graph.structure.Links.Count() > 0)
+            if (node.Graph != null && node.Graph.structure.Links != null && node.Graph.structure.Links.Count() > 0)
             {
                 NodeAttribs.Add("NumLinkedStructures", node.Graph.structure.Links.Count().ToString());
             } 
@@ -80,7 +80,7 @@ namespace AnnotationVizLib
 
         public static string NodeShape(MorphologyNode node)
         {
-            if (node.Graph.structure.Links.Count() > 0)
+            if (node.Graph != null && node.Graph.structure.Links != null && node.Graph.structure.Links.Count() > 0)
                 return TLPAttributes.IntForShape(TLPAttributes.NodeShapes.GlowSphere);
 
             return null; 
@@ -151,14 +151,16 @@ namespace AnnotationVizLib
         /// </summary>
         /// <param name="edge"></param>
         /// <returns></returns>
-        public TLPViewEdge CreateTLPEdge(MorphologyEdge edge)
+        public TLPViewEdge CreateTLPEdge(MorphologyEdge edge, System.Drawing.Color color)
         {
             TLPViewEdge tlpedge = null;
             try
             {
                 tlpedge = this.addEdge(edge.SourceNodeKey, edge.TargetNodeKey);
+                tlpedge.Color = color;
 
-                MorphologyEdgeToTulipID.Add(edge, tlpedge.tulip_id);
+                MorphologyEdgeToTulipID.Add(edge, tlpedge.tulip_id); 
+
             }
             catch(KeyNotFoundException e)
             {
@@ -222,7 +224,7 @@ namespace AnnotationVizLib
 
             foreach (MorphologyEdge edge in structuregraph.Edges.Values)
             {
-                view.CreateTLPEdge(edge);
+                view.CreateTLPEdge(edge, color);
             }
 
             foreach (ulong subgraph_id in structuregraph.Subgraphs.Keys)
