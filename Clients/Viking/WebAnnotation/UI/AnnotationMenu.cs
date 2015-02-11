@@ -19,18 +19,21 @@ namespace WebAnnotation.UI
             //Create a menu containing each of our bookmarks
             ToolStripMenuItem menuRoot = new ToolStripMenuItem("Annotation");
 
-            //Create the option to hide bookmarks on the display
-            ToolStripMenuItem menuExport = new ToolStripMenuItem("Export");
+            if (Global.Export != null)
+            {
+                //Create the option to hide bookmarks on the display
+                ToolStripMenuItem menuExport = new ToolStripMenuItem("Export");
 
-            //Create the option to hide bookmarks on the display
-            ToolStripMenuItem menuExportMotifs = new ToolStripMenuItem("Motifs");
+                //Create the option to hide bookmarks on the display
+                ToolStripMenuItem menuExportMotifs = new ToolStripMenuItem("Motifs");
 
-            ToolStripMenuItem menuExportMotifTLP = new ToolStripMenuItem("To Tulip Format");
-            menuExportMotifTLP.Click += OnExportMotifsTLP;
+                ToolStripMenuItem menuExportMotifTLP = new ToolStripMenuItem("To Tulip Format");
+                menuExportMotifTLP.Click += OnExportMotifsTLP;
 
-            menuExportMotifs.DropDownItems.Add(menuExportMotifTLP);
-            menuExport.DropDownItems.Add(menuExportMotifs);
-            menuRoot.DropDownItems.Add(menuExport);
+                menuExportMotifs.DropDownItems.Add(menuExportMotifTLP);
+                menuExport.DropDownItems.Add(menuExportMotifs);
+                menuRoot.DropDownItems.Add(menuExport);
+            }
 
             return menuRoot as ToolStripItem; 
         }
