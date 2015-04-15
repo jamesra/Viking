@@ -37,6 +37,13 @@ Contents
    About <about>
    :maxdepth: 2
    
+Account creation
+================
+
+Accounts are only required to write to the database.  Read-only access via Viking may be done anonymously.
+
+Create accounts and do some basic visualization on the `original visualization site`_
+   
 Indices and tables
 ==================
 
@@ -49,3 +56,4 @@ Indices and tables
 .. _Marc Lab Papers: http://marclab.org/science/papers/
 .. _Nornir: http://nornir.github.io
 .. _SSTEM and Computation Molecular Phenotyping: http://www.plosbiology.org/article/info%3Adoi%2F10.1371%2Fjournal.pbio.1000074#abstract0
+.. _original visualization site: http://connectomes.utah.edu/viz/

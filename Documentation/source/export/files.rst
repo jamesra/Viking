@@ -80,6 +80,8 @@ Morphology
 
    Returns a 3D graph using annotations to determine node position.
    
+   Nodes with a glowing effect are involved in a structure link.
+   
    **Format:**
       * *TLP* - Tulip file format
      
