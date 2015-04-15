@@ -4,7 +4,7 @@
   <edmx:Runtime>
     <!-- SSDL content -->
     <edmx:StorageModels>
-    <Schema Namespace="ConnectomeModel.Store" Provider="System.Data.SqlClient" ProviderManifestToken="2008" Alias="Self" xmlns="http://schemas.microsoft.com/ado/2009/11/edm/ssdl">
+    <Schema Namespace="ConnectomeModel.Store" Provider="System.Data.SqlClient" ProviderManifestToken="2008" Alias="Self" xmlns:store="http://schemas.microsoft.com/ado/2007/12/edm/EntityStoreSchemaGenerator" xmlns:customannotation="http://schemas.microsoft.com/ado/2013/11/edm/customannotation" xmlns="http://schemas.microsoft.com/ado/2009/11/edm/ssdl">
         <!--Errors Found During Generation:
 warning 6002: The table/view 'Rabbit.cdc.Location_CT' does not have a primary key defined. The key has been inferred and the definition was created as a read-only table/view.-->
         <EntityType Name="Location_CT">
@@ -373,10 +373,299 @@ warning 6002: The table/view 'Rabbit.dbo.StructureLink' does not have a primary 
             </Dependent>
           </ReferentialConstraint>
         </Association>
+        <Function Name="fn_cdc_get_all_changes______" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="true" ParameterTypeSemantics="AllowImplicitConversion" Schema="cdc" StoreFunctionName="fn_cdc_get_all_changes_ ... ">
+          <Parameter Name="from_lns" Type="binary" Mode="In" />
+          <Parameter Name="to_lsn" Type="binary" Mode="In" />
+          <Parameter Name="row_filter_options" Type="nvarchar" Mode="In" />
+          <ReturnType>
+            <CollectionType>
+              <RowType>
+                <Property Name="col" Type="int" Nullable="false" />
+              </RowType>
+            </CollectionType>
+          </ReturnType>
+        </Function>
+        <Function Name="fn_cdc_get_all_changes____" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="true" ParameterTypeSemantics="AllowImplicitConversion" Schema="cdc" StoreFunctionName="fn_cdc_get_all_changes_...">
+          <Parameter Name="from_lns" Type="binary" Mode="In" />
+          <Parameter Name="to_lsn" Type="binary" Mode="In" />
+          <Parameter Name="row_filter_options" Type="nvarchar" Mode="In" />
+          <ReturnType>
+            <CollectionType>
+              <RowType>
+                <Property Name="col" Type="int" Nullable="false" />
+              </RowType>
+            </CollectionType>
+          </ReturnType>
+        </Function>
+        <Function Name="fn_cdc_get_all_changes_Location" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="true" ParameterTypeSemantics="AllowImplicitConversion" Schema="cdc">
+          <Parameter Name="from_lsn" Type="binary" Mode="In" />
+          <Parameter Name="to_lsn" Type="binary" Mode="In" />
+          <Parameter Name="row_filter_option" Type="nvarchar" Mode="In" />
+          <ReturnType>
+            <CollectionType>
+              <RowType>
+                <Property Name="__$start_lsn" Type="binary" MaxLength="10" />
+                <Property Name="__$seqval" Type="binary" MaxLength="10" />
+                <Property Name="__$operation" Type="int" />
+                <Property Name="__$update_mask" Type="varbinary" MaxLength="128" />
+                <Property Name="ID" Type="bigint" />
+                <Property Name="ParentID" Type="bigint" />
+                <Property Name="X" Type="float" />
+                <Property Name="Y" Type="float" />
+                <Property Name="Z" Type="float" />
+                <Property Name="Verticies" Type="varbinary(max)" />
+                <Property Name="Closed" Type="bit" />
+                <Property Name="Version" Type="binary" MaxLength="8" />
+                <Property Name="Overlay" Type="varbinary(max)" />
+                <Property Name="Tags" Type="xml" />
+                <Property Name="VolumeX" Type="float" />
+                <Property Name="VolumeY" Type="float" />
+                <Property Name="Terminal" Type="bit" />
+                <Property Name="OffEdge" Type="bit" />
+                <Property Name="Radius" Type="float" />
+                <Property Name="TypeCode" Type="smallint" />
+                <Property Name="LastModified" Type="datetime" />
+                <Property Name="Created" Type="datetime" />
+                <Property Name="Username" Type="nchar" MaxLength="16" />
+              </RowType>
+            </CollectionType>
+          </ReturnType>
+        </Function>
+        <Function Name="fn_cdc_get_all_changes_LocationLink" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="true" ParameterTypeSemantics="AllowImplicitConversion" Schema="cdc">
+          <Parameter Name="from_lsn" Type="binary" Mode="In" />
+          <Parameter Name="to_lsn" Type="binary" Mode="In" />
+          <Parameter Name="row_filter_option" Type="nvarchar" Mode="In" />
+          <ReturnType>
+            <CollectionType>
+              <RowType>
+                <Property Name="__$start_lsn" Type="binary" MaxLength="10" />
+                <Property Name="__$seqval" Type="binary" MaxLength="10" />
+                <Property Name="__$operation" Type="int" />
+                <Property Name="__$update_mask" Type="varbinary" MaxLength="128" />
+                <Property Name="A" Type="bigint" />
+                <Property Name="B" Type="bigint" />
+                <Property Name="Username" Type="nchar" MaxLength="16" />
+                <Property Name="Created" Type="datetime" />
+              </RowType>
+            </CollectionType>
+          </ReturnType>
+        </Function>
+        <Function Name="fn_cdc_get_all_changes_Structure" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="true" ParameterTypeSemantics="AllowImplicitConversion" Schema="cdc">
+          <Parameter Name="from_lsn" Type="binary" Mode="In" />
+          <Parameter Name="to_lsn" Type="binary" Mode="In" />
+          <Parameter Name="row_filter_option" Type="nvarchar" Mode="In" />
+          <ReturnType>
+            <CollectionType>
+              <RowType>
+                <Property Name="__$start_lsn" Type="binary" MaxLength="10" />
+                <Property Name="__$seqval" Type="binary" MaxLength="10" />
+                <Property Name="__$operation" Type="int" />
+                <Property Name="__$update_mask" Type="varbinary" MaxLength="128" />
+                <Property Name="ID" Type="bigint" />
+                <Property Name="TypeID" Type="bigint" />
+                <Property Name="Notes" Type="ntext" />
+                <Property Name="Verified" Type="bit" />
+                <Property Name="Tags" Type="xml" />
+                <Property Name="Confidence" Type="float" />
+                <Property Name="Version" Type="binary" MaxLength="8" />
+                <Property Name="ParentID" Type="bigint" />
+                <Property Name="Created" Type="datetime" />
+                <Property Name="Label" Type="varchar" MaxLength="64" />
+                <Property Name="Username" Type="nchar" MaxLength="16" />
+                <Property Name="LastModified" Type="datetime" />
+              </RowType>
+            </CollectionType>
+          </ReturnType>
+        </Function>
+        <Function Name="fn_cdc_get_all_changes_StructureLink" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="true" ParameterTypeSemantics="AllowImplicitConversion" Schema="cdc">
+          <Parameter Name="from_lsn" Type="binary" Mode="In" />
+          <Parameter Name="to_lsn" Type="binary" Mode="In" />
+          <Parameter Name="row_filter_option" Type="nvarchar" Mode="In" />
+          <ReturnType>
+            <CollectionType>
+              <RowType>
+                <Property Name="__$start_lsn" Type="binary" MaxLength="10" />
+                <Property Name="__$seqval" Type="binary" MaxLength="10" />
+                <Property Name="__$operation" Type="int" />
+                <Property Name="__$update_mask" Type="varbinary" MaxLength="128" />
+                <Property Name="SourceID" Type="bigint" />
+                <Property Name="TargetID" Type="bigint" />
+                <Property Name="Bidirectional" Type="bit" />
+                <Property Name="Tags" Type="xml" />
+                <Property Name="Username" Type="nchar" MaxLength="16" />
+                <Property Name="Created" Type="datetime" />
+                <Property Name="LastModified" Type="datetime" />
+              </RowType>
+            </CollectionType>
+          </ReturnType>
+        </Function>
+        <Function Name="fn_cdc_get_all_changes_StructureType" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="true" ParameterTypeSemantics="AllowImplicitConversion" Schema="cdc">
+          <Parameter Name="from_lsn" Type="binary" Mode="In" />
+          <Parameter Name="to_lsn" Type="binary" Mode="In" />
+          <Parameter Name="row_filter_option" Type="nvarchar" Mode="In" />
+          <ReturnType>
+            <CollectionType>
+              <RowType>
+                <Property Name="__$start_lsn" Type="binary" MaxLength="10" />
+                <Property Name="__$seqval" Type="binary" MaxLength="10" />
+                <Property Name="__$operation" Type="int" />
+                <Property Name="__$update_mask" Type="varbinary" MaxLength="128" />
+                <Property Name="ID" Type="bigint" />
+                <Property Name="ParentID" Type="bigint" />
+                <Property Name="Name" Type="nchar" MaxLength="128" />
+                <Property Name="Notes" Type="ntext" />
+                <Property Name="MarkupType" Type="nchar" MaxLength="16" />
+                <Property Name="Tags" Type="xml" />
+                <Property Name="StructureTags" Type="xml" />
+                <Property Name="Abstract" Type="bit" />
+                <Property Name="Color" Type="int" />
+                <Property Name="Version" Type="binary" MaxLength="8" />
+                <Property Name="Code" Type="nchar" MaxLength="16" />
+                <Property Name="HotKey" Type="char" MaxLength="1" />
+                <Property Name="Username" Type="nchar" MaxLength="16" />
+                <Property Name="LastModified" Type="datetime" />
+                <Property Name="Created" Type="datetime" />
+              </RowType>
+            </CollectionType>
+          </ReturnType>
+        </Function>
+        <Function Name="fn_cdc_get_net_changes______" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="true" ParameterTypeSemantics="AllowImplicitConversion" Schema="cdc" StoreFunctionName="fn_cdc_get_net_changes_ ... ">
+          <Parameter Name="from_lns" Type="binary" Mode="In" />
+          <Parameter Name="to_lsn" Type="binary" Mode="In" />
+          <Parameter Name="row_filter_options" Type="nvarchar" Mode="In" />
+          <ReturnType>
+            <CollectionType>
+              <RowType>
+                <Property Name="col" Type="int" Nullable="false" />
+              </RowType>
+            </CollectionType>
+          </ReturnType>
+        </Function>
+        <Function Name="fn_cdc_get_net_changes____" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="true" ParameterTypeSemantics="AllowImplicitConversion" Schema="cdc" StoreFunctionName="fn_cdc_get_net_changes_...">
+          <Parameter Name="from_lns" Type="binary" Mode="In" />
+          <Parameter Name="to_lsn" Type="binary" Mode="In" />
+          <Parameter Name="row_filter_options" Type="nvarchar" Mode="In" />
+          <ReturnType>
+            <CollectionType>
+              <RowType>
+                <Property Name="col" Type="int" Nullable="false" />
+              </RowType>
+            </CollectionType>
+          </ReturnType>
+        </Function>
+        <Function Name="fn_cdc_get_net_changes_Location" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="true" ParameterTypeSemantics="AllowImplicitConversion" Schema="cdc">
+          <Parameter Name="from_lsn" Type="binary" Mode="In" />
+          <Parameter Name="to_lsn" Type="binary" Mode="In" />
+          <Parameter Name="row_filter_option" Type="nvarchar" Mode="In" />
+          <ReturnType>
+            <CollectionType>
+              <RowType>
+                <Property Name="__$start_lsn" Type="binary" MaxLength="10" />
+                <Property Name="__$operation" Type="int" />
+                <Property Name="__$update_mask" Type="varbinary" MaxLength="128" />
+                <Property Name="ID" Type="bigint" />
+                <Property Name="ParentID" Type="bigint" />
+                <Property Name="X" Type="float" />
+                <Property Name="Y" Type="float" />
+                <Property Name="Z" Type="float" />
+                <Property Name="Verticies" Type="varbinary(max)" />
+                <Property Name="Closed" Type="bit" />
+                <Property Name="Version" Type="binary" MaxLength="8" />
+                <Property Name="Overlay" Type="varbinary(max)" />
+                <Property Name="Tags" Type="xml" />
+                <Property Name="VolumeX" Type="float" />
+                <Property Name="VolumeY" Type="float" />
+                <Property Name="Terminal" Type="bit" />
+                <Property Name="OffEdge" Type="bit" />
+                <Property Name="Radius" Type="float" />
+                <Property Name="TypeCode" Type="smallint" />
+                <Property Name="LastModified" Type="datetime" />
+                <Property Name="Created" Type="datetime" />
+                <Property Name="Username" Type="nchar" MaxLength="16" />
+              </RowType>
+            </CollectionType>
+          </ReturnType>
+        </Function>
+        <Function Name="fn_cdc_get_net_changes_LocationLink" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="true" ParameterTypeSemantics="AllowImplicitConversion" Schema="cdc">
+          <Parameter Name="from_lsn" Type="binary" Mode="In" />
+          <Parameter Name="to_lsn" Type="binary" Mode="In" />
+          <Parameter Name="row_filter_option" Type="nvarchar" Mode="In" />
+          <ReturnType>
+            <CollectionType>
+              <RowType>
+                <Property Name="__$start_lsn" Type="binary" MaxLength="10" />
+                <Property Name="__$operation" Type="int" />
+                <Property Name="__$update_mask" Type="varbinary" MaxLength="128" />
+                <Property Name="A" Type="bigint" />
+                <Property Name="B" Type="bigint" />
+                <Property Name="Username" Type="nchar" MaxLength="16" />
+                <Property Name="Created" Type="datetime" />
+              </RowType>
+            </CollectionType>
+          </ReturnType>
+        </Function>
+        <Function Name="fn_cdc_get_net_changes_Structure" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="true" ParameterTypeSemantics="AllowImplicitConversion" Schema="cdc">
+          <Parameter Name="from_lsn" Type="binary" Mode="In" />
+          <Parameter Name="to_lsn" Type="binary" Mode="In" />
+          <Parameter Name="row_filter_option" Type="nvarchar" Mode="In" />
+          <ReturnType>
+            <CollectionType>
+              <RowType>
+                <Property Name="__$start_lsn" Type="binary" MaxLength="10" />
+                <Property Name="__$operation" Type="int" />
+                <Property Name="__$update_mask" Type="varbinary" MaxLength="128" />
+                <Property Name="ID" Type="bigint" />
+                <Property Name="TypeID" Type="bigint" />
+                <Property Name="Notes" Type="ntext" />
+                <Property Name="Verified" Type="bit" />
+                <Property Name="Tags" Type="xml" />
+                <Property Name="Confidence" Type="float" />
+                <Property Name="Version" Type="binary" MaxLength="8" />
+                <Property Name="ParentID" Type="bigint" />
+                <Property Name="Created" Type="datetime" />
+                <Property Name="Label" Type="varchar" MaxLength="64" />
+                <Property Name="Username" Type="nchar" MaxLength="16" />
+                <Property Name="LastModified" Type="datetime" />
+              </RowType>
+            </CollectionType>
+          </ReturnType>
+        </Function>
+        <Function Name="fn_cdc_get_net_changes_StructureType" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="true" ParameterTypeSemantics="AllowImplicitConversion" Schema="cdc">
+          <Parameter Name="from_lsn" Type="binary" Mode="In" />
+          <Parameter Name="to_lsn" Type="binary" Mode="In" />
+          <Parameter Name="row_filter_option" Type="nvarchar" Mode="In" />
+          <ReturnType>
+            <CollectionType>
+              <RowType>
+                <Property Name="__$start_lsn" Type="binary" MaxLength="10" />
+                <Property Name="__$operation" Type="int" />
+                <Property Name="__$update_mask" Type="varbinary" MaxLength="128" />
+                <Property Name="ID" Type="bigint" />
+                <Property Name="ParentID" Type="bigint" />
+                <Property Name="Name" Type="nchar" MaxLength="128" />
+                <Property Name="Notes" Type="ntext" />
+                <Property Name="MarkupType" Type="nchar" MaxLength="16" />
+                <Property Name="Tags" Type="xml" />
+                <Property Name="StructureTags" Type="xml" />
+                <Property Name="Abstract" Type="bit" />
+                <Property Name="Color" Type="int" />
+                <Property Name="Version" Type="binary" MaxLength="8" />
+                <Property Name="Code" Type="nchar" MaxLength="16" />
+                <Property Name="HotKey" Type="char" MaxLength="1" />
+                <Property Name="Username" Type="nchar" MaxLength="16" />
+                <Property Name="LastModified" Type="datetime" />
+                <Property Name="Created" Type="datetime" />
+              </RowType>
+            </CollectionType>
+          </ReturnType>
+        </Function>
         <Function Name="ApproximateStructureLocation" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="false" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo">
           <Parameter Name="StructureID" Type="int" Mode="In" />
         </Function>
         <Function Name="ApproximateStructureLocations" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="false" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo" />
+        <Function Name="CountChildStructuresByType" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="false" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo">
+          <Parameter Name="StructureID" Type="bigint" Mode="In" />
+        </Function>
         <Function Name="SelectAllStructureLocationLinks" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="false" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo" />
         <Function Name="SelectAllStructureLocations" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="false" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo" />
         <Function Name="SelectAllStructures" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="false" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo" />
@@ -385,6 +674,7 @@ warning 6002: The table/view 'Rabbit.dbo.StructureLink' does not have a primary 
         </Function>
         <Function Name="SelectLastModifiedLocationByUsers" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="false" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo" />
         <Function Name="SelectNumConnectionsPerStructure" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="false" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo" />
+        <Function Name="SelectRootStructures" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="false" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo" />
         <Function Name="SelectSectionLocationLinks" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="false" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo">
           <Parameter Name="Z" Type="float" Mode="In" />
           <Parameter Name="QueryDate" Type="datetime" Mode="In" />
@@ -401,6 +691,7 @@ warning 6002: The table/view 'Rabbit.dbo.StructureLink' does not have a primary 
           <Parameter Name="begin_time" Type="datetime" Mode="In" />
           <Parameter Name="end_time" Type="datetime" Mode="In" />
         </Function>
+        <Function Name="SelectStructureLabels" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="false" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo" />
         <Function Name="SelectStructureLocationChangeLog" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="false" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo">
           <Parameter Name="structure_ID" Type="bigint" Mode="In" />
           <Parameter Name="begin_time" Type="datetime" Mode="In" />
@@ -420,15 +711,21 @@ warning 6002: The table/view 'Rabbit.dbo.StructureLink' does not have a primary 
           <Parameter Name="Z" Type="float" Mode="In" />
           <Parameter Name="QueryDate" Type="datetime" Mode="In" />
         </Function>
+        <Function Name="SelectUnfinishedStructureBranches" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="false" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo">
+          <Parameter Name="StructureID" Type="bigint" Mode="In" />
+        </Function>
+        <Function Name="SelectUnfinishedStructureBranchesWithPosition" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="false" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo">
+          <Parameter Name="StructureID" Type="bigint" Mode="In" />
+        </Function>
         <EntityContainer Name="ConnectomeModelStoreContainer">
-          <EntitySet Name="lsn_time_mapping" EntityType="Self.lsn_time_mapping" Schema="cdc" store:Type="Tables" xmlns:store="http://schemas.microsoft.com/ado/2007/12/edm/EntityStoreSchemaGenerator" />
-          <EntitySet Name="DeletedLocations" EntityType="Self.DeletedLocations" Schema="dbo" store:Type="Tables" xmlns:store="http://schemas.microsoft.com/ado/2007/12/edm/EntityStoreSchemaGenerator" />
-          <EntitySet Name="Location" EntityType="Self.Location" Schema="dbo" store:Type="Tables" xmlns:store="http://schemas.microsoft.com/ado/2007/12/edm/EntityStoreSchemaGenerator" />
-          <EntitySet Name="LocationLink" EntityType="Self.LocationLink" Schema="dbo" store:Type="Tables" xmlns:store="http://schemas.microsoft.com/ado/2007/12/edm/EntityStoreSchemaGenerator" />
-          <EntitySet Name="Structure" EntityType="Self.Structure" Schema="dbo" store:Type="Tables" xmlns:store="http://schemas.microsoft.com/ado/2007/12/edm/EntityStoreSchemaGenerator" />
-          <EntitySet Name="StructureTemplates" EntityType="Self.StructureTemplates" Schema="dbo" store:Type="Tables" xmlns:store="http://schemas.microsoft.com/ado/2007/12/edm/EntityStoreSchemaGenerator" />
-          <EntitySet Name="StructureType" EntityType="Self.StructureType" Schema="dbo" store:Type="Tables" xmlns:store="http://schemas.microsoft.com/ado/2007/12/edm/EntityStoreSchemaGenerator" />
-          <EntitySet Name="Location_CT" EntityType="Self.Location_CT" store:Type="Tables" store:Schema="cdc" xmlns:store="http://schemas.microsoft.com/ado/2007/12/edm/EntityStoreSchemaGenerator">
+          <EntitySet Name="lsn_time_mapping" EntityType="Self.lsn_time_mapping" Schema="cdc" store:Type="Tables" />
+          <EntitySet Name="DeletedLocations" EntityType="Self.DeletedLocations" Schema="dbo" store:Type="Tables" />
+          <EntitySet Name="Location" EntityType="Self.Location" Schema="dbo" store:Type="Tables" />
+          <EntitySet Name="LocationLink" EntityType="Self.LocationLink" Schema="dbo" store:Type="Tables" />
+          <EntitySet Name="Structure" EntityType="Self.Structure" Schema="dbo" store:Type="Tables" />
+          <EntitySet Name="StructureTemplates" EntityType="Self.StructureTemplates" Schema="dbo" store:Type="Tables" />
+          <EntitySet Name="StructureType" EntityType="Self.StructureType" Schema="dbo" store:Type="Tables" />
+          <EntitySet Name="Location_CT" EntityType="Self.Location_CT" store:Type="Tables" store:Schema="cdc">
             <DefiningQuery>SELECT 
 [Location_CT].[__$start_lsn] AS [__$start_lsn], 
 [Location_CT].[__$end_lsn] AS [__$end_lsn], 
@@ -456,7 +753,7 @@ warning 6002: The table/view 'Rabbit.dbo.StructureLink' does not have a primary 
 [Location_CT].[Username] AS [Username]
 FROM [cdc].[Location_CT] AS [Location_CT]</DefiningQuery>
           </EntitySet>
-          <EntitySet Name="LocationLink_CT" EntityType="Self.LocationLink_CT" store:Type="Tables" store:Schema="cdc" xmlns:store="http://schemas.microsoft.com/ado/2007/12/edm/EntityStoreSchemaGenerator">
+          <EntitySet Name="LocationLink_CT" EntityType="Self.LocationLink_CT" store:Type="Tables" store:Schema="cdc">
             <DefiningQuery>SELECT 
 [LocationLink_CT].[__$start_lsn] AS [__$start_lsn], 
 [LocationLink_CT].[__$end_lsn] AS [__$end_lsn], 
@@ -469,7 +766,7 @@ FROM [cdc].[Location_CT] AS [Location_CT]</DefiningQuery>
 [LocationLink_CT].[Created] AS [Created]
 FROM [cdc].[LocationLink_CT] AS [LocationLink_CT]</DefiningQuery>
           </EntitySet>
-          <EntitySet Name="Structure_CT" EntityType="Self.Structure_CT" store:Type="Tables" store:Schema="cdc" xmlns:store="http://schemas.microsoft.com/ado/2007/12/edm/EntityStoreSchemaGenerator">
+          <EntitySet Name="Structure_CT" EntityType="Self.Structure_CT" store:Type="Tables" store:Schema="cdc">
             <DefiningQuery>SELECT 
 [Structure_CT].[__$start_lsn] AS [__$start_lsn], 
 [Structure_CT].[__$end_lsn] AS [__$end_lsn], 
@@ -490,7 +787,7 @@ FROM [cdc].[LocationLink_CT] AS [LocationLink_CT]</DefiningQuery>
 [Structure_CT].[LastModified] AS [LastModified]
 FROM [cdc].[Structure_CT] AS [Structure_CT]</DefiningQuery>
           </EntitySet>
-          <EntitySet Name="StructureLink_CT" EntityType="Self.StructureLink_CT" store:Type="Tables" store:Schema="cdc" xmlns:store="http://schemas.microsoft.com/ado/2007/12/edm/EntityStoreSchemaGenerator">
+          <EntitySet Name="StructureLink_CT" EntityType="Self.StructureLink_CT" store:Type="Tables" store:Schema="cdc">
             <DefiningQuery>SELECT 
 [StructureLink_CT].[__$start_lsn] AS [__$start_lsn], 
 [StructureLink_CT].[__$end_lsn] AS [__$end_lsn], 
@@ -506,7 +803,7 @@ FROM [cdc].[Structure_CT] AS [Structure_CT]</DefiningQuery>
 [StructureLink_CT].[LastModified] AS [LastModified]
 FROM [cdc].[StructureLink_CT] AS [StructureLink_CT]</DefiningQuery>
           </EntitySet>
-          <EntitySet Name="StructureType_CT" EntityType="Self.StructureType_CT" store:Type="Tables" store:Schema="cdc" xmlns:store="http://schemas.microsoft.com/ado/2007/12/edm/EntityStoreSchemaGenerator">
+          <EntitySet Name="StructureType_CT" EntityType="Self.StructureType_CT" store:Type="Tables" store:Schema="cdc">
             <DefiningQuery>SELECT 
 [StructureType_CT].[__$start_lsn] AS [__$start_lsn], 
 [StructureType_CT].[__$end_lsn] AS [__$end_lsn], 
@@ -530,7 +827,7 @@ FROM [cdc].[StructureLink_CT] AS [StructureLink_CT]</DefiningQuery>
 [StructureType_CT].[Created] AS [Created]
 FROM [cdc].[StructureType_CT] AS [StructureType_CT]</DefiningQuery>
           </EntitySet>
-          <EntitySet Name="DBVersion" EntityType="Self.DBVersion" store:Type="Tables" store:Schema="dbo" xmlns:store="http://schemas.microsoft.com/ado/2007/12/edm/EntityStoreSchemaGenerator">
+          <EntitySet Name="DBVersion" EntityType="Self.DBVersion" store:Type="Tables" store:Schema="dbo">
             <DefiningQuery>SELECT 
 [DBVersion].[DBVersionID] AS [DBVersionID], 
 [DBVersion].[Description] AS [Description], 
@@ -538,7 +835,7 @@ FROM [cdc].[StructureType_CT] AS [StructureType_CT]</DefiningQuery>
 [DBVersion].[UserID] AS [UserID]
 FROM [dbo].[DBVersion] AS [DBVersion]</DefiningQuery>
           </EntitySet>
-          <EntitySet Name="StructureLink" EntityType="Self.StructureLink" store:Type="Tables" store:Schema="dbo" xmlns:store="http://schemas.microsoft.com/ado/2007/12/edm/EntityStoreSchemaGenerator">
+          <EntitySet Name="StructureLink" EntityType="Self.StructureLink" store:Type="Tables" store:Schema="dbo">
             <DefiningQuery>SELECT 
 [StructureLink].[SourceID] AS [SourceID], 
 [StructureLink].[TargetID] AS [TargetID], 
@@ -664,6 +961,85 @@ FROM [dbo].[StructureLink] AS [StructureLink]</DefiningQuery>
             <Parameter Name="structure_ID" Mode="In" Type="Int64" />
             <Parameter Name="begin_time" Mode="In" Type="DateTime" />
             <Parameter Name="end_time" Mode="In" Type="DateTime" />
+          </FunctionImport>
+          <FunctionImport Name="fn_cdc_get_all_changes______" IsComposable="true" ReturnType="Collection(Int32)">
+            <Parameter Name="from_lns" Mode="In" Type="Binary" />
+            <Parameter Name="to_lsn" Mode="In" Type="Binary" />
+            <Parameter Name="row_filter_options" Mode="In" Type="String" />
+          </FunctionImport>
+          <FunctionImport Name="fn_cdc_get_all_changes____" IsComposable="true" ReturnType="Collection(Int32)">
+            <Parameter Name="from_lns" Mode="In" Type="Binary" />
+            <Parameter Name="to_lsn" Mode="In" Type="Binary" />
+            <Parameter Name="row_filter_options" Mode="In" Type="String" />
+          </FunctionImport>
+          <FunctionImport Name="fn_cdc_get_all_changes_Location" IsComposable="true" ReturnType="Collection(ConnectomeModel.fn_cdc_get_all_changes_Location_Result)">
+            <Parameter Name="from_lsn" Mode="In" Type="Binary" />
+            <Parameter Name="to_lsn" Mode="In" Type="Binary" />
+            <Parameter Name="row_filter_option" Mode="In" Type="String" />
+          </FunctionImport>
+          <FunctionImport Name="fn_cdc_get_all_changes_LocationLink" IsComposable="true" ReturnType="Collection(ConnectomeModel.fn_cdc_get_all_changes_LocationLink_Result)">
+            <Parameter Name="from_lsn" Mode="In" Type="Binary" />
+            <Parameter Name="to_lsn" Mode="In" Type="Binary" />
+            <Parameter Name="row_filter_option" Mode="In" Type="String" />
+          </FunctionImport>
+          <FunctionImport Name="fn_cdc_get_all_changes_Structure" IsComposable="true" ReturnType="Collection(ConnectomeModel.fn_cdc_get_all_changes_Structure_Result)">
+            <Parameter Name="from_lsn" Mode="In" Type="Binary" />
+            <Parameter Name="to_lsn" Mode="In" Type="Binary" />
+            <Parameter Name="row_filter_option" Mode="In" Type="String" />
+          </FunctionImport>
+          <FunctionImport Name="fn_cdc_get_all_changes_StructureLink" IsComposable="true" ReturnType="Collection(ConnectomeModel.fn_cdc_get_all_changes_StructureLink_Result)">
+            <Parameter Name="from_lsn" Mode="In" Type="Binary" />
+            <Parameter Name="to_lsn" Mode="In" Type="Binary" />
+            <Parameter Name="row_filter_option" Mode="In" Type="String" />
+          </FunctionImport>
+          <FunctionImport Name="fn_cdc_get_all_changes_StructureType" IsComposable="true" ReturnType="Collection(ConnectomeModel.fn_cdc_get_all_changes_StructureType_Result)">
+            <Parameter Name="from_lsn" Mode="In" Type="Binary" />
+            <Parameter Name="to_lsn" Mode="In" Type="Binary" />
+            <Parameter Name="row_filter_option" Mode="In" Type="String" />
+          </FunctionImport>
+          <FunctionImport Name="fn_cdc_get_net_changes______" IsComposable="true" ReturnType="Collection(Int32)">
+            <Parameter Name="from_lns" Mode="In" Type="Binary" />
+            <Parameter Name="to_lsn" Mode="In" Type="Binary" />
+            <Parameter Name="row_filter_options" Mode="In" Type="String" />
+          </FunctionImport>
+          <FunctionImport Name="fn_cdc_get_net_changes____" IsComposable="true" ReturnType="Collection(Int32)">
+            <Parameter Name="from_lns" Mode="In" Type="Binary" />
+            <Parameter Name="to_lsn" Mode="In" Type="Binary" />
+            <Parameter Name="row_filter_options" Mode="In" Type="String" />
+          </FunctionImport>
+          <FunctionImport Name="fn_cdc_get_net_changes_Location" IsComposable="true" ReturnType="Collection(ConnectomeModel.fn_cdc_get_net_changes_Location_Result)">
+            <Parameter Name="from_lsn" Mode="In" Type="Binary" />
+            <Parameter Name="to_lsn" Mode="In" Type="Binary" />
+            <Parameter Name="row_filter_option" Mode="In" Type="String" />
+          </FunctionImport>
+          <FunctionImport Name="fn_cdc_get_net_changes_LocationLink" IsComposable="true" ReturnType="Collection(ConnectomeModel.fn_cdc_get_net_changes_LocationLink_Result)">
+            <Parameter Name="from_lsn" Mode="In" Type="Binary" />
+            <Parameter Name="to_lsn" Mode="In" Type="Binary" />
+            <Parameter Name="row_filter_option" Mode="In" Type="String" />
+          </FunctionImport>
+          <FunctionImport Name="fn_cdc_get_net_changes_Structure" IsComposable="true" ReturnType="Collection(ConnectomeModel.fn_cdc_get_net_changes_Structure_Result)">
+            <Parameter Name="from_lsn" Mode="In" Type="Binary" />
+            <Parameter Name="to_lsn" Mode="In" Type="Binary" />
+            <Parameter Name="row_filter_option" Mode="In" Type="String" />
+          </FunctionImport>
+          <FunctionImport Name="fn_cdc_get_net_changes_StructureType" IsComposable="true" ReturnType="Collection(ConnectomeModel.fn_cdc_get_net_changes_StructureType_Result)">
+            <Parameter Name="from_lsn" Mode="In" Type="Binary" />
+            <Parameter Name="to_lsn" Mode="In" Type="Binary" />
+            <Parameter Name="row_filter_option" Mode="In" Type="String" />
+          </FunctionImport>
+          <FunctionImport Name="CountChildStructuresByType" ReturnType="Collection(ConnectomeModel.CountChildStructuresByType_Result)">
+          <Parameter Name="StructureID" Mode="In" Type="Int64" />
+          </FunctionImport>
+          <FunctionImport Name="SelectRootStructures" EntitySet="Structures" ReturnType="Collection(ConnectomeModel.Structure)" />
+          <FunctionImport Name="SelectStructureLabels" ReturnType="Collection(ConnectomeModel.SelectStructureLabels_Result)" />
+          <FunctionImport Name="SelectUnfinishedStructureBranches" ReturnType="Collection(Int64)">
+          <Parameter Name="StructureID" Mode="In" Type="Int64" />
+          </FunctionImport>
+          <FunctionImport Name="SelectUnfinishedStructureBranchesWithPosition" ReturnType="Collection(ConnectomeModel.SelectUnfinishedStructureBranchesWithPosition_Result)">
+          <Parameter Name="StructureID" Mode="In" Type="Int64" />
+          </FunctionImport>
+          <FunctionImport Name="SelectStructureLocations" ReturnType="Collection(ConnectomeModel.SelectStructureLocations_Result)">
+          <Parameter Name="StructureID" Mode="In" Type="Int64" />
           </FunctionImport>
         </EntityContainer>
         <EntityType Name="DBVersion">
@@ -1099,6 +1475,202 @@ FROM [dbo].[StructureLink] AS [StructureLink]</DefiningQuery>
           <Property Type="DateTime" Name="Created" Nullable="true" Precision="23" />
           <Property Type="String" Name="Username" Nullable="true" MaxLength="16" />
         </ComplexType>
+        <ComplexType Name="fn_cdc_get_all_changes_Location_Result">
+          <Property Type="Binary" Name="C___start_lsn" Nullable="true" MaxLength="10" />
+          <Property Type="Binary" Name="C___seqval" Nullable="true" MaxLength="10" />
+          <Property Type="Int32" Name="C___operation" Nullable="true" />
+          <Property Type="Binary" Name="C___update_mask" Nullable="true" MaxLength="128" />
+          <Property Type="Int64" Name="ID" Nullable="true" />
+          <Property Type="Int64" Name="ParentID" Nullable="true" />
+          <Property Type="Double" Name="X" Nullable="true" />
+          <Property Type="Double" Name="Y" Nullable="true" />
+          <Property Type="Double" Name="Z" Nullable="true" />
+          <Property Type="Binary" Name="Verticies" Nullable="true" />
+          <Property Type="Boolean" Name="Closed" Nullable="true" />
+          <Property Type="Binary" Name="Version" Nullable="true" MaxLength="8" />
+          <Property Type="Binary" Name="Overlay" Nullable="true" />
+          <Property Type="String" Name="Tags" Nullable="true" />
+          <Property Type="Double" Name="VolumeX" Nullable="true" />
+          <Property Type="Double" Name="VolumeY" Nullable="true" />
+          <Property Type="Boolean" Name="Terminal" Nullable="true" />
+          <Property Type="Boolean" Name="OffEdge" Nullable="true" />
+          <Property Type="Double" Name="Radius" Nullable="true" />
+          <Property Type="Int16" Name="TypeCode" Nullable="true" />
+          <Property Type="DateTime" Name="LastModified" Nullable="true" Precision="23" />
+          <Property Type="DateTime" Name="Created" Nullable="true" Precision="23" />
+          <Property Type="String" Name="Username" Nullable="true" MaxLength="16" />
+        </ComplexType>
+        <ComplexType Name="fn_cdc_get_all_changes_LocationLink_Result">
+          <Property Type="Binary" Name="C___start_lsn" Nullable="true" MaxLength="10" />
+          <Property Type="Binary" Name="C___seqval" Nullable="true" MaxLength="10" />
+          <Property Type="Int32" Name="C___operation" Nullable="true" />
+          <Property Type="Binary" Name="C___update_mask" Nullable="true" MaxLength="128" />
+          <Property Type="Int64" Name="A" Nullable="true" />
+          <Property Type="Int64" Name="B" Nullable="true" />
+          <Property Type="String" Name="Username" Nullable="true" MaxLength="16" />
+          <Property Type="DateTime" Name="Created" Nullable="true" Precision="23" />
+        </ComplexType>
+        <ComplexType Name="fn_cdc_get_all_changes_Structure_Result">
+          <Property Type="Binary" Name="C___start_lsn" Nullable="true" MaxLength="10" />
+          <Property Type="Binary" Name="C___seqval" Nullable="true" MaxLength="10" />
+          <Property Type="Int32" Name="C___operation" Nullable="true" />
+          <Property Type="Binary" Name="C___update_mask" Nullable="true" MaxLength="128" />
+          <Property Type="Int64" Name="ID" Nullable="true" />
+          <Property Type="Int64" Name="TypeID" Nullable="true" />
+          <Property Type="String" Name="Notes" Nullable="true" MaxLength="Max" />
+          <Property Type="Boolean" Name="Verified" Nullable="true" />
+          <Property Type="String" Name="Tags" Nullable="true" />
+          <Property Type="Double" Name="Confidence" Nullable="true" />
+          <Property Type="Binary" Name="Version" Nullable="true" MaxLength="8" />
+          <Property Type="Int64" Name="ParentID" Nullable="true" />
+          <Property Type="DateTime" Name="Created" Nullable="true" Precision="23" />
+          <Property Type="String" Name="Label" Nullable="true" MaxLength="64" />
+          <Property Type="String" Name="Username" Nullable="true" MaxLength="16" />
+          <Property Type="DateTime" Name="LastModified" Nullable="true" Precision="23" />
+        </ComplexType>
+        <ComplexType Name="fn_cdc_get_all_changes_StructureLink_Result">
+          <Property Type="Binary" Name="C___start_lsn" Nullable="true" MaxLength="10" />
+          <Property Type="Binary" Name="C___seqval" Nullable="true" MaxLength="10" />
+          <Property Type="Int32" Name="C___operation" Nullable="true" />
+          <Property Type="Binary" Name="C___update_mask" Nullable="true" MaxLength="128" />
+          <Property Type="Int64" Name="SourceID" Nullable="true" />
+          <Property Type="Int64" Name="TargetID" Nullable="true" />
+          <Property Type="Boolean" Name="Bidirectional" Nullable="true" />
+          <Property Type="String" Name="Tags" Nullable="true" />
+          <Property Type="String" Name="Username" Nullable="true" MaxLength="16" />
+          <Property Type="DateTime" Name="Created" Nullable="true" Precision="23" />
+          <Property Type="DateTime" Name="LastModified" Nullable="true" Precision="23" />
+        </ComplexType>
+        <ComplexType Name="fn_cdc_get_all_changes_StructureType_Result">
+          <Property Type="Binary" Name="C___start_lsn" Nullable="true" MaxLength="10" />
+          <Property Type="Binary" Name="C___seqval" Nullable="true" MaxLength="10" />
+          <Property Type="Int32" Name="C___operation" Nullable="true" />
+          <Property Type="Binary" Name="C___update_mask" Nullable="true" MaxLength="128" />
+          <Property Type="Int64" Name="ID" Nullable="true" />
+          <Property Type="Int64" Name="ParentID" Nullable="true" />
+          <Property Type="String" Name="Name" Nullable="true" MaxLength="128" />
+          <Property Type="String" Name="Notes" Nullable="true" MaxLength="Max" />
+          <Property Type="String" Name="MarkupType" Nullable="true" MaxLength="16" />
+          <Property Type="String" Name="Tags" Nullable="true" />
+          <Property Type="String" Name="StructureTags" Nullable="true" />
+          <Property Type="Boolean" Name="Abstract" Nullable="true" />
+          <Property Type="Int32" Name="Color" Nullable="true" />
+          <Property Type="Binary" Name="Version" Nullable="true" MaxLength="8" />
+          <Property Type="String" Name="Code" Nullable="true" MaxLength="16" />
+          <Property Type="String" Name="HotKey" Nullable="true" MaxLength="1" />
+          <Property Type="String" Name="Username" Nullable="true" MaxLength="16" />
+          <Property Type="DateTime" Name="LastModified" Nullable="true" Precision="23" />
+          <Property Type="DateTime" Name="Created" Nullable="true" Precision="23" />
+        </ComplexType>
+        <ComplexType Name="fn_cdc_get_net_changes_Location_Result">
+          <Property Type="Binary" Name="C___start_lsn" Nullable="true" MaxLength="10" />
+          <Property Type="Int32" Name="C___operation" Nullable="true" />
+          <Property Type="Binary" Name="C___update_mask" Nullable="true" MaxLength="128" />
+          <Property Type="Int64" Name="ID" Nullable="true" />
+          <Property Type="Int64" Name="ParentID" Nullable="true" />
+          <Property Type="Double" Name="X" Nullable="true" />
+          <Property Type="Double" Name="Y" Nullable="true" />
+          <Property Type="Double" Name="Z" Nullable="true" />
+          <Property Type="Binary" Name="Verticies" Nullable="true" />
+          <Property Type="Boolean" Name="Closed" Nullable="true" />
+          <Property Type="Binary" Name="Version" Nullable="true" MaxLength="8" />
+          <Property Type="Binary" Name="Overlay" Nullable="true" />
+          <Property Type="String" Name="Tags" Nullable="true" />
+          <Property Type="Double" Name="VolumeX" Nullable="true" />
+          <Property Type="Double" Name="VolumeY" Nullable="true" />
+          <Property Type="Boolean" Name="Terminal" Nullable="true" />
+          <Property Type="Boolean" Name="OffEdge" Nullable="true" />
+          <Property Type="Double" Name="Radius" Nullable="true" />
+          <Property Type="Int16" Name="TypeCode" Nullable="true" />
+          <Property Type="DateTime" Name="LastModified" Nullable="true" Precision="23" />
+          <Property Type="DateTime" Name="Created" Nullable="true" Precision="23" />
+          <Property Type="String" Name="Username" Nullable="true" MaxLength="16" />
+        </ComplexType>
+        <ComplexType Name="fn_cdc_get_net_changes_LocationLink_Result">
+          <Property Type="Binary" Name="C___start_lsn" Nullable="true" MaxLength="10" />
+          <Property Type="Int32" Name="C___operation" Nullable="true" />
+          <Property Type="Binary" Name="C___update_mask" Nullable="true" MaxLength="128" />
+          <Property Type="Int64" Name="A" Nullable="true" />
+          <Property Type="Int64" Name="B" Nullable="true" />
+          <Property Type="String" Name="Username" Nullable="true" MaxLength="16" />
+          <Property Type="DateTime" Name="Created" Nullable="true" Precision="23" />
+        </ComplexType>
+        <ComplexType Name="fn_cdc_get_net_changes_Structure_Result">
+          <Property Type="Binary" Name="C___start_lsn" Nullable="true" MaxLength="10" />
+          <Property Type="Int32" Name="C___operation" Nullable="true" />
+          <Property Type="Binary" Name="C___update_mask" Nullable="true" MaxLength="128" />
+          <Property Type="Int64" Name="ID" Nullable="true" />
+          <Property Type="Int64" Name="TypeID" Nullable="true" />
+          <Property Type="String" Name="Notes" Nullable="true" MaxLength="Max" />
+          <Property Type="Boolean" Name="Verified" Nullable="true" />
+          <Property Type="String" Name="Tags" Nullable="true" />
+          <Property Type="Double" Name="Confidence" Nullable="true" />
+          <Property Type="Binary" Name="Version" Nullable="true" MaxLength="8" />
+          <Property Type="Int64" Name="ParentID" Nullable="true" />
+          <Property Type="DateTime" Name="Created" Nullable="true" Precision="23" />
+          <Property Type="String" Name="Label" Nullable="true" MaxLength="64" />
+          <Property Type="String" Name="Username" Nullable="true" MaxLength="16" />
+          <Property Type="DateTime" Name="LastModified" Nullable="true" Precision="23" />
+        </ComplexType>
+        <ComplexType Name="fn_cdc_get_net_changes_StructureType_Result">
+          <Property Type="Binary" Name="C___start_lsn" Nullable="true" MaxLength="10" />
+          <Property Type="Int32" Name="C___operation" Nullable="true" />
+          <Property Type="Binary" Name="C___update_mask" Nullable="true" MaxLength="128" />
+          <Property Type="Int64" Name="ID" Nullable="true" />
+          <Property Type="Int64" Name="ParentID" Nullable="true" />
+          <Property Type="String" Name="Name" Nullable="true" MaxLength="128" />
+          <Property Type="String" Name="Notes" Nullable="true" MaxLength="Max" />
+          <Property Type="String" Name="MarkupType" Nullable="true" MaxLength="16" />
+          <Property Type="String" Name="Tags" Nullable="true" />
+          <Property Type="String" Name="StructureTags" Nullable="true" />
+          <Property Type="Boolean" Name="Abstract" Nullable="true" />
+          <Property Type="Int32" Name="Color" Nullable="true" />
+          <Property Type="Binary" Name="Version" Nullable="true" MaxLength="8" />
+          <Property Type="String" Name="Code" Nullable="true" MaxLength="16" />
+          <Property Type="String" Name="HotKey" Nullable="true" MaxLength="1" />
+          <Property Type="String" Name="Username" Nullable="true" MaxLength="16" />
+          <Property Type="DateTime" Name="LastModified" Nullable="true" Precision="23" />
+          <Property Type="DateTime" Name="Created" Nullable="true" Precision="23" />
+        </ComplexType>
+        <ComplexType Name="CountChildStructuresByType_Result">
+          <Property Type="Int64" Name="TypeID" Nullable="false" />
+          <Property Type="Int32" Name="Count" Nullable="true" />
+        </ComplexType>
+        <ComplexType Name="SelectRootStructures_Result">
+          <Property Type="Int64" Name="ID" Nullable="false" />
+          <Property Type="Int64" Name="TypeID" Nullable="false" />
+          <Property Type="String" Name="Notes" Nullable="true" MaxLength="Max" />
+          <Property Type="Boolean" Name="Verified" Nullable="false" />
+          <Property Type="String" Name="Tags" Nullable="true" MaxLength="Max" />
+          <Property Type="Double" Name="Confidence" Nullable="false" />
+          <Property Type="Binary" Name="Version" Nullable="false" MaxLength="8" />
+          <Property Type="Int64" Name="ParentID" Nullable="true" />
+          <Property Type="DateTime" Name="Created" Nullable="false" Precision="23" />
+          <Property Type="String" Name="Label" Nullable="true" MaxLength="64" />
+          <Property Type="String" Name="Username" Nullable="false" MaxLength="16" />
+          <Property Type="DateTime" Name="LastModified" Nullable="false" Precision="23" />
+        </ComplexType>
+        <ComplexType Name="SelectStructureLabels_Result">
+          <Property Type="Int64" Name="ID" Nullable="false" />
+          <Property Type="String" Name="Label" Nullable="true" MaxLength="64" />
+        </ComplexType>
+        <ComplexType Name="SelectUnfinishedStructureBranchesWithPosition_Result">
+          <Property Type="Int64" Name="ID" Nullable="false" />
+          <Property Type="Double" Name="X" Nullable="false" />
+          <Property Type="Double" Name="Y" Nullable="false" />
+          <Property Type="Double" Name="Z" Nullable="false" />
+          <Property Type="Double" Name="Radius" Nullable="false" />
+        </ComplexType>
+        <ComplexType Name="SelectStructureLocations_Result">
+          <Property Type="Int64" Name="ID" Nullable="false" />
+          <Property Type="Int64" Name="ParentID" Nullable="false" />
+          <Property Type="Double" Name="VolumeX" Nullable="false" />
+          <Property Type="Double" Name="VolumeY" Nullable="false" />
+          <Property Type="Double" Name="Z" Nullable="false" />
+          <Property Type="Double" Name="Radius" Nullable="false" />
+          <Property Type="Double" Name="X" Nullable="false" />
+          <Property Type="Double" Name="Y" Nullable="false" />
+        </ComplexType>
       </Schema>
     </edmx:ConceptualModels>
     <!-- C-S mapping content -->
@@ -1396,6 +1968,247 @@ FROM [dbo].[StructureLink] AS [StructureLink]</DefiningQuery>
               </ComplexTypeMapping>
             </ResultMapping>
           </FunctionImportMapping>
+          <FunctionImportMapping FunctionImportName="fn_cdc_get_all_changes______" FunctionName="ConnectomeModel.Store.fn_cdc_get_all_changes______" />
+          <FunctionImportMapping FunctionImportName="fn_cdc_get_all_changes____" FunctionName="ConnectomeModel.Store.fn_cdc_get_all_changes____" />
+          <FunctionImportMapping FunctionImportName="fn_cdc_get_all_changes_Location" FunctionName="ConnectomeModel.Store.fn_cdc_get_all_changes_Location">
+            <ResultMapping>
+              <ComplexTypeMapping TypeName="ConnectomeModel.fn_cdc_get_all_changes_Location_Result">
+                <ScalarProperty Name="C___start_lsn" ColumnName="__$start_lsn" />
+                <ScalarProperty Name="C___seqval" ColumnName="__$seqval" />
+                <ScalarProperty Name="C___operation" ColumnName="__$operation" />
+                <ScalarProperty Name="C___update_mask" ColumnName="__$update_mask" />
+                <ScalarProperty Name="ID" ColumnName="ID" />
+                <ScalarProperty Name="ParentID" ColumnName="ParentID" />
+                <ScalarProperty Name="X" ColumnName="X" />
+                <ScalarProperty Name="Y" ColumnName="Y" />
+                <ScalarProperty Name="Z" ColumnName="Z" />
+                <ScalarProperty Name="Verticies" ColumnName="Verticies" />
+                <ScalarProperty Name="Closed" ColumnName="Closed" />
+                <ScalarProperty Name="Version" ColumnName="Version" />
+                <ScalarProperty Name="Overlay" ColumnName="Overlay" />
+                <ScalarProperty Name="Tags" ColumnName="Tags" />
+                <ScalarProperty Name="VolumeX" ColumnName="VolumeX" />
+                <ScalarProperty Name="VolumeY" ColumnName="VolumeY" />
+                <ScalarProperty Name="Terminal" ColumnName="Terminal" />
+                <ScalarProperty Name="OffEdge" ColumnName="OffEdge" />
+                <ScalarProperty Name="Radius" ColumnName="Radius" />
+                <ScalarProperty Name="TypeCode" ColumnName="TypeCode" />
+                <ScalarProperty Name="LastModified" ColumnName="LastModified" />
+                <ScalarProperty Name="Created" ColumnName="Created" />
+                <ScalarProperty Name="Username" ColumnName="Username" />
+              </ComplexTypeMapping>
+            </ResultMapping>
+          </FunctionImportMapping>
+          <FunctionImportMapping FunctionImportName="fn_cdc_get_all_changes_LocationLink" FunctionName="ConnectomeModel.Store.fn_cdc_get_all_changes_LocationLink">
+            <ResultMapping>
+              <ComplexTypeMapping TypeName="ConnectomeModel.fn_cdc_get_all_changes_LocationLink_Result">
+                <ScalarProperty Name="C___start_lsn" ColumnName="__$start_lsn" />
+                <ScalarProperty Name="C___seqval" ColumnName="__$seqval" />
+                <ScalarProperty Name="C___operation" ColumnName="__$operation" />
+                <ScalarProperty Name="C___update_mask" ColumnName="__$update_mask" />
+                <ScalarProperty Name="A" ColumnName="A" />
+                <ScalarProperty Name="B" ColumnName="B" />
+                <ScalarProperty Name="Username" ColumnName="Username" />
+                <ScalarProperty Name="Created" ColumnName="Created" />
+              </ComplexTypeMapping>
+            </ResultMapping>
+          </FunctionImportMapping>
+          <FunctionImportMapping FunctionImportName="fn_cdc_get_all_changes_Structure" FunctionName="ConnectomeModel.Store.fn_cdc_get_all_changes_Structure">
+            <ResultMapping>
+              <ComplexTypeMapping TypeName="ConnectomeModel.fn_cdc_get_all_changes_Structure_Result">
+                <ScalarProperty Name="C___start_lsn" ColumnName="__$start_lsn" />
+                <ScalarProperty Name="C___seqval" ColumnName="__$seqval" />
+                <ScalarProperty Name="C___operation" ColumnName="__$operation" />
+                <ScalarProperty Name="C___update_mask" ColumnName="__$update_mask" />
+                <ScalarProperty Name="ID" ColumnName="ID" />
+                <ScalarProperty Name="TypeID" ColumnName="TypeID" />
+                <ScalarProperty Name="Notes" ColumnName="Notes" />
+                <ScalarProperty Name="Verified" ColumnName="Verified" />
+                <ScalarProperty Name="Tags" ColumnName="Tags" />
+                <ScalarProperty Name="Confidence" ColumnName="Confidence" />
+                <ScalarProperty Name="Version" ColumnName="Version" />
+                <ScalarProperty Name="ParentID" ColumnName="ParentID" />
+                <ScalarProperty Name="Created" ColumnName="Created" />
+                <ScalarProperty Name="Label" ColumnName="Label" />
+                <ScalarProperty Name="Username" ColumnName="Username" />
+                <ScalarProperty Name="LastModified" ColumnName="LastModified" />
+              </ComplexTypeMapping>
+            </ResultMapping>
+          </FunctionImportMapping>
+          <FunctionImportMapping FunctionImportName="fn_cdc_get_all_changes_StructureLink" FunctionName="ConnectomeModel.Store.fn_cdc_get_all_changes_StructureLink">
+            <ResultMapping>
+              <ComplexTypeMapping TypeName="ConnectomeModel.fn_cdc_get_all_changes_StructureLink_Result">
+                <ScalarProperty Name="C___start_lsn" ColumnName="__$start_lsn" />
+                <ScalarProperty Name="C___seqval" ColumnName="__$seqval" />
+                <ScalarProperty Name="C___operation" ColumnName="__$operation" />
+                <ScalarProperty Name="C___update_mask" ColumnName="__$update_mask" />
+                <ScalarProperty Name="SourceID" ColumnName="SourceID" />
+                <ScalarProperty Name="TargetID" ColumnName="TargetID" />
+                <ScalarProperty Name="Bidirectional" ColumnName="Bidirectional" />
+                <ScalarProperty Name="Tags" ColumnName="Tags" />
+                <ScalarProperty Name="Username" ColumnName="Username" />
+                <ScalarProperty Name="Created" ColumnName="Created" />
+                <ScalarProperty Name="LastModified" ColumnName="LastModified" />
+              </ComplexTypeMapping>
+            </ResultMapping>
+          </FunctionImportMapping>
+          <FunctionImportMapping FunctionImportName="fn_cdc_get_all_changes_StructureType" FunctionName="ConnectomeModel.Store.fn_cdc_get_all_changes_StructureType">
+            <ResultMapping>
+              <ComplexTypeMapping TypeName="ConnectomeModel.fn_cdc_get_all_changes_StructureType_Result">
+                <ScalarProperty Name="C___start_lsn" ColumnName="__$start_lsn" />
+                <ScalarProperty Name="C___seqval" ColumnName="__$seqval" />
+                <ScalarProperty Name="C___operation" ColumnName="__$operation" />
+                <ScalarProperty Name="C___update_mask" ColumnName="__$update_mask" />
+                <ScalarProperty Name="ID" ColumnName="ID" />
+                <ScalarProperty Name="ParentID" ColumnName="ParentID" />
+                <ScalarProperty Name="Name" ColumnName="Name" />
+                <ScalarProperty Name="Notes" ColumnName="Notes" />
+                <ScalarProperty Name="MarkupType" ColumnName="MarkupType" />
+                <ScalarProperty Name="Tags" ColumnName="Tags" />
+                <ScalarProperty Name="StructureTags" ColumnName="StructureTags" />
+                <ScalarProperty Name="Abstract" ColumnName="Abstract" />
+                <ScalarProperty Name="Color" ColumnName="Color" />
+                <ScalarProperty Name="Version" ColumnName="Version" />
+                <ScalarProperty Name="Code" ColumnName="Code" />
+                <ScalarProperty Name="HotKey" ColumnName="HotKey" />
+                <ScalarProperty Name="Username" ColumnName="Username" />
+                <ScalarProperty Name="LastModified" ColumnName="LastModified" />
+                <ScalarProperty Name="Created" ColumnName="Created" />
+              </ComplexTypeMapping>
+            </ResultMapping>
+          </FunctionImportMapping>
+          <FunctionImportMapping FunctionImportName="fn_cdc_get_net_changes______" FunctionName="ConnectomeModel.Store.fn_cdc_get_net_changes______" />
+          <FunctionImportMapping FunctionImportName="fn_cdc_get_net_changes____" FunctionName="ConnectomeModel.Store.fn_cdc_get_net_changes____" />
+          <FunctionImportMapping FunctionImportName="fn_cdc_get_net_changes_Location" FunctionName="ConnectomeModel.Store.fn_cdc_get_net_changes_Location">
+            <ResultMapping>
+              <ComplexTypeMapping TypeName="ConnectomeModel.fn_cdc_get_net_changes_Location_Result">
+                <ScalarProperty Name="C___start_lsn" ColumnName="__$start_lsn" />
+                <ScalarProperty Name="C___operation" ColumnName="__$operation" />
+                <ScalarProperty Name="C___update_mask" ColumnName="__$update_mask" />
+                <ScalarProperty Name="ID" ColumnName="ID" />
+                <ScalarProperty Name="ParentID" ColumnName="ParentID" />
+                <ScalarProperty Name="X" ColumnName="X" />
+                <ScalarProperty Name="Y" ColumnName="Y" />
+                <ScalarProperty Name="Z" ColumnName="Z" />
+                <ScalarProperty Name="Verticies" ColumnName="Verticies" />
+                <ScalarProperty Name="Closed" ColumnName="Closed" />
+                <ScalarProperty Name="Version" ColumnName="Version" />
+                <ScalarProperty Name="Overlay" ColumnName="Overlay" />
+                <ScalarProperty Name="Tags" ColumnName="Tags" />
+                <ScalarProperty Name="VolumeX" ColumnName="VolumeX" />
+                <ScalarProperty Name="VolumeY" ColumnName="VolumeY" />
+                <ScalarProperty Name="Terminal" ColumnName="Terminal" />
+                <ScalarProperty Name="OffEdge" ColumnName="OffEdge" />
+                <ScalarProperty Name="Radius" ColumnName="Radius" />
+                <ScalarProperty Name="TypeCode" ColumnName="TypeCode" />
+                <ScalarProperty Name="LastModified" ColumnName="LastModified" />
+                <ScalarProperty Name="Created" ColumnName="Created" />
+                <ScalarProperty Name="Username" ColumnName="Username" />
+              </ComplexTypeMapping>
+            </ResultMapping>
+          </FunctionImportMapping>
+          <FunctionImportMapping FunctionImportName="fn_cdc_get_net_changes_LocationLink" FunctionName="ConnectomeModel.Store.fn_cdc_get_net_changes_LocationLink">
+            <ResultMapping>
+              <ComplexTypeMapping TypeName="ConnectomeModel.fn_cdc_get_net_changes_LocationLink_Result">
+                <ScalarProperty Name="C___start_lsn" ColumnName="__$start_lsn" />
+                <ScalarProperty Name="C___operation" ColumnName="__$operation" />
+                <ScalarProperty Name="C___update_mask" ColumnName="__$update_mask" />
+                <ScalarProperty Name="A" ColumnName="A" />
+                <ScalarProperty Name="B" ColumnName="B" />
+                <ScalarProperty Name="Username" ColumnName="Username" />
+                <ScalarProperty Name="Created" ColumnName="Created" />
+              </ComplexTypeMapping>
+            </ResultMapping>
+          </FunctionImportMapping>
+          <FunctionImportMapping FunctionImportName="fn_cdc_get_net_changes_Structure" FunctionName="ConnectomeModel.Store.fn_cdc_get_net_changes_Structure">
+            <ResultMapping>
+              <ComplexTypeMapping TypeName="ConnectomeModel.fn_cdc_get_net_changes_Structure_Result">
+                <ScalarProperty Name="C___start_lsn" ColumnName="__$start_lsn" />
+                <ScalarProperty Name="C___operation" ColumnName="__$operation" />
+                <ScalarProperty Name="C___update_mask" ColumnName="__$update_mask" />
+                <ScalarProperty Name="ID" ColumnName="ID" />
+                <ScalarProperty Name="TypeID" ColumnName="TypeID" />
+                <ScalarProperty Name="Notes" ColumnName="Notes" />
+                <ScalarProperty Name="Verified" ColumnName="Verified" />
+                <ScalarProperty Name="Tags" ColumnName="Tags" />
+                <ScalarProperty Name="Confidence" ColumnName="Confidence" />
+                <ScalarProperty Name="Version" ColumnName="Version" />
+                <ScalarProperty Name="ParentID" ColumnName="ParentID" />
+                <ScalarProperty Name="Created" ColumnName="Created" />
+                <ScalarProperty Name="Label" ColumnName="Label" />
+                <ScalarProperty Name="Username" ColumnName="Username" />
+                <ScalarProperty Name="LastModified" ColumnName="LastModified" />
+              </ComplexTypeMapping>
+            </ResultMapping>
+          </FunctionImportMapping>
+          <FunctionImportMapping FunctionImportName="fn_cdc_get_net_changes_StructureType" FunctionName="ConnectomeModel.Store.fn_cdc_get_net_changes_StructureType">
+            <ResultMapping>
+              <ComplexTypeMapping TypeName="ConnectomeModel.fn_cdc_get_net_changes_StructureType_Result">
+                <ScalarProperty Name="C___start_lsn" ColumnName="__$start_lsn" />
+                <ScalarProperty Name="C___operation" ColumnName="__$operation" />
+                <ScalarProperty Name="C___update_mask" ColumnName="__$update_mask" />
+                <ScalarProperty Name="ID" ColumnName="ID" />
+                <ScalarProperty Name="ParentID" ColumnName="ParentID" />
+                <ScalarProperty Name="Name" ColumnName="Name" />
+                <ScalarProperty Name="Notes" ColumnName="Notes" />
+                <ScalarProperty Name="MarkupType" ColumnName="MarkupType" />
+                <ScalarProperty Name="Tags" ColumnName="Tags" />
+                <ScalarProperty Name="StructureTags" ColumnName="StructureTags" />
+                <ScalarProperty Name="Abstract" ColumnName="Abstract" />
+                <ScalarProperty Name="Color" ColumnName="Color" />
+                <ScalarProperty Name="Version" ColumnName="Version" />
+                <ScalarProperty Name="Code" ColumnName="Code" />
+                <ScalarProperty Name="HotKey" ColumnName="HotKey" />
+                <ScalarProperty Name="Username" ColumnName="Username" />
+                <ScalarProperty Name="LastModified" ColumnName="LastModified" />
+                <ScalarProperty Name="Created" ColumnName="Created" />
+              </ComplexTypeMapping>
+            </ResultMapping>
+          </FunctionImportMapping>
+          <FunctionImportMapping FunctionImportName="CountChildStructuresByType" FunctionName="ConnectomeModel.Store.CountChildStructuresByType">
+            <ResultMapping>
+              <ComplexTypeMapping TypeName="ConnectomeModel.CountChildStructuresByType_Result">
+                <ScalarProperty Name="TypeID" ColumnName="TypeID" />
+                <ScalarProperty Name="Count" ColumnName="Count" />
+              </ComplexTypeMapping>
+            </ResultMapping>
+          </FunctionImportMapping>
+          <FunctionImportMapping FunctionImportName="SelectRootStructures" FunctionName="ConnectomeModel.Store.SelectRootStructures">
+          </FunctionImportMapping>
+          <FunctionImportMapping FunctionImportName="SelectStructureLabels" FunctionName="ConnectomeModel.Store.SelectStructureLabels">
+            <ResultMapping>
+              <ComplexTypeMapping TypeName="ConnectomeModel.SelectStructureLabels_Result">
+                <ScalarProperty Name="ID" ColumnName="ID" />
+                <ScalarProperty Name="Label" ColumnName="Label" />
+              </ComplexTypeMapping>
+            </ResultMapping>
+          </FunctionImportMapping>
+          <FunctionImportMapping FunctionImportName="SelectUnfinishedStructureBranches" FunctionName="ConnectomeModel.Store.SelectUnfinishedStructureBranches" />
+          <FunctionImportMapping FunctionImportName="SelectUnfinishedStructureBranchesWithPosition" FunctionName="ConnectomeModel.Store.SelectUnfinishedStructureBranchesWithPosition">
+            <ResultMapping>
+              <ComplexTypeMapping TypeName="ConnectomeModel.SelectUnfinishedStructureBranchesWithPosition_Result">
+                <ScalarProperty Name="ID" ColumnName="ID" />
+                <ScalarProperty Name="X" ColumnName="X" />
+                <ScalarProperty Name="Y" ColumnName="Y" />
+                <ScalarProperty Name="Z" ColumnName="Z" />
+                <ScalarProperty Name="Radius" ColumnName="Radius" />
+              </ComplexTypeMapping>
+            </ResultMapping>
+          </FunctionImportMapping>
+          <FunctionImportMapping FunctionImportName="SelectStructureLocations" FunctionName="ConnectomeModel.Store.SelectStructureLocations" >
+            <ResultMapping>
+              <ComplexTypeMapping TypeName="ConnectomeModel.SelectStructureLocations_Result">
+                <ScalarProperty Name="ID" ColumnName="ID" />
+                <ScalarProperty Name="ParentID" ColumnName="ParentID" />
+                <ScalarProperty Name="VolumeX" ColumnName="VolumeX" />
+                <ScalarProperty Name="VolumeY" ColumnName="VolumeY" />
+                <ScalarProperty Name="Z" ColumnName="Z" />
+                <ScalarProperty Name="Radius" ColumnName="Radius" />
+                <ScalarProperty Name="X" ColumnName="X" />
+                <ScalarProperty Name="Y" ColumnName="Y" />
+              </ComplexTypeMapping>
+            </ResultMapping>
+          </FunctionImportMapping>
         </EntityContainerMapping>
       </Mapping>
     </edmx:Mappings>
@@ -1419,7 +2232,7 @@ FROM [dbo].[StructureLink] AS [StructureLink]</DefiningQuery>
     <Diagrams>
       <Diagram Name="Connectome">
         <EntityTypeShape EntityType="ConnectomeModel.DBVersion" Width="1.5" PointX="0.75" PointY="0.75" Height="1.5923063151041665" IsExpanded="true" />
-        <EntityTypeShape EntityType="ConnectomeModel.DeletedLocation" Width="1.5" PointX="7.75" PointY="5.75" Height="1.2636116536458335" IsExpanded="true" />
+        <EntityTypeShape EntityType="ConnectomeModel.DeletedLocation" Width="1.5" PointX="7.375" PointY="6.875" Height="1.2636116536458335" IsExpanded="true" />
         <EntityTypeShape EntityType="ConnectomeModel.Location" Width="1.5" PointX="5.25" PointY="1.375" Height="4.5505582682291656" IsExpanded="true" />
         <EntityTypeShape EntityType="ConnectomeModel.LocationLink" Width="1.5" PointX="7.5" PointY="2.625" Height="1.9210009765624996" IsExpanded="true" />
         <EntityTypeShape EntityType="ConnectomeModel.Structure" Width="1.5" PointX="3" PointY="3.25" Height="3.8931689453124996" IsExpanded="true" />

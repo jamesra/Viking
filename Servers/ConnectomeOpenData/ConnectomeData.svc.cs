@@ -42,8 +42,10 @@ namespace ConnectomeOpenData
 
         private string BuildConnectionString()
         {
-            string template = AppSettings.GetConnectionString("ConnectionTemplate");
+            //string conn_name = AppSettings.GetApplicationSetting("ODataConnection");
+            string template = AppSettings.GetConnectionString("ODataConnectionTemplate");
             return string.Format(template, AppSettings.GetDatabaseServer(), AppSettings.GetDatabaseCatalogName());
+            //return template;
         } 
 
         private static void ConfigureTable(DataServiceConfiguration config, string Tablename)
@@ -53,28 +55,45 @@ namespace ConnectomeOpenData
         }
 
         [WebGet]
-        public IQueryable<LocationLink> SelectStructureLocationLinks(Int64 StructureID)
+        public IQueryable<Structure> SelectRootStructures(Int64? ID)
         {
             //return new List<LocationLink>();
-            return CurrentDataSource.SelectStructureLocationLinksNoChildren(StructureID).AsQueryable();
+            return CurrentDataSource.SelectRootStructures().AsQueryable();
+
+            //return entities.SelectStructureLocationLinks(Convert.ToInt64(StructureID)).ToList();
+        }
+
+        [WebGet]
+        public IQueryable<SelectStructureLocations_Result> SelectStructureLocations(Int64? ID)
+        {
+            //return new List<LocationLink>();
+            return CurrentDataSource.SelectStructureLocations(ID).AsQueryable();
+
+            //return entities.SelectStructureLocationLinks(Convert.ToInt64(StructureID)).ToList();
+        }
+        [WebGet]
+        public IQueryable<LocationLink> SelectStructureLocationLinks(Int64 ID)
+        {
+            //return new List<LocationLink>();
+            return CurrentDataSource.SelectStructureLocationLinksNoChildren(ID).AsQueryable();
             
             //return entities.SelectStructureLocationLinks(Convert.ToInt64(StructureID)).ToList();
         }
 
         [WebGet]
-        public IQueryable<StructureLink> SelectChildStructureLinks(Int64 StructureID)
+        public IQueryable<StructureLink> SelectChildStructureLinks(Int64 ID)
         {
             //return new List<LocationLink>();
-            return CurrentDataSource.SelectChildStructureLinks(StructureID).AsQueryable();
+            return CurrentDataSource.SelectChildStructureLinks(ID).AsQueryable();
 
             //return entities.SelectStructureLocationLinks(Convert.ToInt64(StructureID)).ToList();
         }
 
         [WebGet]
-        public IQueryable<ApproximateStructureLocation_Result> ApproximateStructureLocation(Int64 StructureID)
+        public IQueryable<ApproximateStructureLocation_Result> ApproximateStructureLocation(Int64 ID)
         {
             //return new List<LocationLink>();
-            return CurrentDataSource.ApproximateStructureLocation(Convert.ToInt32(StructureID)).AsQueryable();
+            return CurrentDataSource.ApproximateStructureLocation(Convert.ToInt32(ID)).AsQueryable();
         }
 
         [WebGet]
@@ -87,22 +106,21 @@ namespace ConnectomeOpenData
         }
 
         [WebGet]
-        public IQueryable<SelectStructureChangeLog_Result> StructureChangeLog(Int64? structure_ID)
+        public IQueryable<SelectStructureChangeLog_Result> StructureChangeLog(Int64? ID)
         {
             //return new List<LocationLink>();
-            return CurrentDataSource.SelectStructureChangeLog(structure_ID, null, null).AsQueryable();
+            return CurrentDataSource.SelectStructureChangeLog(ID, null, null).AsQueryable();
 
             //return entities.SelectStructureLocationLinks(Convert.ToInt64(StructureID)).ToList();
         }
 
         [WebGet]
-        public IQueryable<SelectStructureLocationChangeLog_Result> StructureLocationChangeLog(Int64? structure_ID)
+        public IQueryable<SelectStructureLocationChangeLog_Result> StructureLocationChangeLog(Int64? ID)
         {
             //return new List<LocationLink>();
-            return CurrentDataSource.SelectStructureLocationChangeLog(structure_ID, null, null).AsQueryable();
+            return CurrentDataSource.SelectStructureLocationChangeLog(ID, null, null).AsQueryable();
 
             //return entities.SelectStructureLocationLinks(Convert.ToInt64(StructureID)).ToList();
         }
-         
     }
 }
