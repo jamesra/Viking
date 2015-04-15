@@ -418,7 +418,20 @@ namespace ServiceTest
             link.SourceID = retvalA.structure.ID;
             link.TargetID = retvalB.structure.ID;
             
-            target.CreateStructureLink(link); 
+            target.CreateStructureLink(link);
+
+            StructureLink[] reportedLinks = target.GetLinkedStructures();
+            Assert.IsTrue(reportedLinks.Length == 1);
+
+            StructureLink[] LinkedToSource = target.GetLinkedStructuresByID(link.SourceID);
+            Assert.IsTrue(LinkedToSource.Length == 1);
+            Assert.IsTrue(LinkedToSource[0].SourceID == link.SourceID);
+            Assert.IsTrue(LinkedToSource[0].TargetID == link.TargetID);
+
+            StructureLink[] LinkedToTarget = target.GetLinkedStructuresByID(link.TargetID);
+            Assert.IsTrue(LinkedToTarget.Length == 1);
+            Assert.IsTrue(LinkedToTarget[0].SourceID == link.SourceID);
+            Assert.IsTrue(LinkedToTarget[0].TargetID == link.TargetID);
 
             //Delete the link
             link.DBAction = DBACTION.DELETE;
@@ -437,6 +450,8 @@ namespace ServiceTest
             dbStructA.DBAction = DBACTION.DELETE;
             dbStructB.DBAction = DBACTION.DELETE;
             target.UpdateStructures(new Structure[] { dbStructA, dbStructB });
+
+            
 
             Structure dbStructANull = target.GetStructureByID(retvalA.structure.ID, false);
             Location dbPosANull = target.GetLocationByID(retvalA.location.ID);
