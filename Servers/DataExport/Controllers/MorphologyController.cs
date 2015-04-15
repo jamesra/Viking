@@ -43,7 +43,7 @@ namespace DataExport.Controllers
                                                                                    GetColorMapImage());
 
             MorphologyGraph structure_graph = GetGraph();
-            MorphologyTLPView TlpGraph = MorphologyTLPView.ToTLP(structure_graph, scale, colorMap);
+            MorphologyTLPView TlpGraph = MorphologyTLPView.ToTLP(structure_graph, scale, colorMap, AppSettings.VolumeURL);
             TlpGraph.SaveTLP(userOutputFileFullPath);
 
             return File(userOutputFileFullPath, "text/plain", OutputFile); 
@@ -52,19 +52,39 @@ namespace DataExport.Controllers
         private ColorMapWithImages GetColorMapImage()
         {
             string ColorMapImagePath = AppSettings.GetApplicationSetting("DefaultLocationColorMapsPath");
+            if (ColorMapImagePath == null || ColorMapImagePath.Length == 0)
+                return null;
 
-            return ColorMapWithImages.CreateFromConfigFile(ColorMapImagePath);
+
+            /*try
+            {
+             */
+                return ColorMapWithImages.CreateFromConfigFile(ColorMapImagePath);
+            /*
+            }
+            catch(System.IO.DirectoryNotFoundException)
+            {}
+            catch (System.IO.FileNotFoundException)
+            { }
+            */
+             
         }
 
         private ColorMapWithLong GetStructureColorMap()
         {
             string ColorMapPath = AppSettings.GetApplicationSetting("DefaultStructureColorsPath");
-            return ColorMapWithLong.CreateFromConfigFile(ColorMapPath);
+            if (ColorMapPath == null || ColorMapPath.Length == 0)
+                return null;  
+
+            return ColorMapWithLong.CreateFromConfigFile(ColorMapPath); 
         }
          
         private ColorMapWithLong GetStructureTypeColorMap()
         {
             string ColorMapPath = AppSettings.GetApplicationSetting("DefaultStructureTypeColorsPath");
+            if (ColorMapPath == null || ColorMapPath.Length == 0)
+                return null; 
+            
             return ColorMapWithLong.CreateFromConfigFile(ColorMapPath);
         }
 
@@ -93,7 +113,7 @@ namespace DataExport.Controllers
             if (requestIDs == null || requestIDs.Count == 0)
                 requestIDs = Queries.GetLinkedStructureParentIDs();
 
-            return MorphologyGraph.BuildGraphs(requestIDs, false, AppSettings.WebServiceURL, AppSettings.EndpointCredentials);
+            return MorphologyGraph.BuildGraphs(requestIDs, true, AppSettings.WebServiceURL, AppSettings.EndpointCredentials);
         }
     }
 }

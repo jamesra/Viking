@@ -10,25 +10,25 @@ by editing this MSBuild file. In order to learn more about this please visit htt
   </PropertyGroup>
   <ItemGroup>
     <File Include="bin/AnnotationVizLib.dll">
-      <publishTime>01/27/2015 14:01:22</publishTime>
+      <publishTime>02/19/2015 15:19:07</publishTime>
     </File>
     <File Include="bin/AnnotationVizLib.pdb">
-      <publishTime>01/27/2015 14:01:22</publishTime>
+      <publishTime>02/19/2015 15:19:06</publishTime>
     </File>
     <File Include="bin/Content/Index.html">
       <publishTime>01/27/2015 12:52:58</publishTime>
     </File>
     <File Include="bin/DataExport.dll">
-      <publishTime>01/27/2015 14:28:05</publishTime>
+      <publishTime>02/19/2015 15:19:07</publishTime>
     </File>
     <File Include="bin/DataExport.pdb">
-      <publishTime>01/27/2015 14:28:05</publishTime>
+      <publishTime>02/19/2015 15:19:07</publishTime>
     </File>
     <File Include="bin/GraphLib.dll">
-      <publishTime>11/21/2014 21:01:33</publishTime>
+      <publishTime>02/02/2015 14:19:38</publishTime>
     </File>
     <File Include="bin/GraphLib.pdb">
-      <publishTime>11/21/2014 21:01:33</publishTime>
+      <publishTime>02/02/2015 14:19:38</publishTime>
     </File>
     <File Include="bin/Microsoft.Web.Infrastructure.dll">
       <publishTime>01/13/2015 16:59:45</publishTime>
@@ -76,10 +76,10 @@ by editing this MSBuild file. In order to learn more about this please visit htt
       <publishTime>01/13/2015 16:59:42</publishTime>
     </File>
     <File Include="bin/VikingWebAppSettings.dll">
-      <publishTime>01/27/2015 14:01:22</publishTime>
+      <publishTime>02/19/2015 15:19:07</publishTime>
     </File>
     <File Include="bin/VikingWebAppSettings.pdb">
-      <publishTime>01/27/2015 14:01:22</publishTime>
+      <publishTime>02/19/2015 15:19:07</publishTime>
     </File>
     <File Include="Content/Index.html">
       <publishTime>01/27/2015 12:52:58</publishTime>
@@ -274,7 +274,7 @@ by editing this MSBuild file. In order to learn more about this please visit htt
       <publishTime>11/15/2014 21:59:51</publishTime>
     </File>
     <File Include="Web.config">
-      <publishTime>01/27/2015 14:04:05</publishTime>
+      <publishTime>02/04/2015 14:37:20</publishTime>
     </File>
   </ItemGroup>
 </Project>

@@ -47,8 +47,8 @@ namespace DataExport.Tests
         public void TestMotifGraphs()
         { 
             MotifGraph motifGraph = CreateMotifGraph();
-            MotifTLPView TlpGraph = MotifTLPView.ToTLP(motifGraph);
-            TlpGraph.SaveTLP("motif.tlp");
+            MotifTLPView TlpGraph = MotifTLPView.ToTLP(motifGraph, "http://localhost/");
+            TlpGraph.SaveTLP("C:\\Temp\\motif.tlp");
         }
 
         [TestMethod]

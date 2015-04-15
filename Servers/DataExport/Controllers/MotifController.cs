@@ -54,7 +54,8 @@ namespace DataExport.Controllers
         [ActionName("GetTLP")]
         public ActionResult GetTLP()
         {
-            string EndpointURL = AppSettings.WebServiceURL; 
+            string EndpointURL = AppSettings.WebServiceURL;
+            string VolumeURL = AppSettings.VolumeURL;
             string userDotDirectory = Server.MapPath("~/Output/");
 
             if (!System.IO.Directory.Exists(userDotDirectory))
@@ -64,7 +65,7 @@ namespace DataExport.Controllers
             string userDotFileFullPath = System.IO.Path.Combine(userDotDirectory, outputFilename);
              
             MotifGraph motifGraph = MotifGraph.BuildGraph(EndpointURL, AppSettings.EndpointCredentials);
-            MotifTLPView TlpGraph = MotifTLPView.ToTLP(motifGraph);
+            MotifTLPView TlpGraph = MotifTLPView.ToTLP(motifGraph, VolumeURL);
             TlpGraph.SaveTLP(userDotFileFullPath);
 
 

@@ -59,7 +59,8 @@ namespace DataExport.Controllers
         [ActionName("GetTLP")]
         public ActionResult GetTLP()
         {
-            string EndpointURL = AppSettings.WebServiceURL; 
+            string EndpointURL = AppSettings.WebServiceURL;
+            string VolumeURL = AppSettings.VolumeURL; 
             string userDotDirectory = Server.MapPath("~/Output/");
 
             AnnotationVizLib.ConnectionFactory.SetConnection(EndpointURL, AppSettings.EndpointCredentials);
@@ -75,14 +76,12 @@ namespace DataExport.Controllers
             string userDotFileFullPath = System.IO.Path.Combine(userDotDirectory, outputFilename);
 
             NeuronGraph neuronGraph = NeuronGraph.BuildGraph(requestIDs, GetNumHops(), EndpointURL, AppSettings.EndpointCredentials);
-            NeuronTLPView TlpGraph = NeuronTLPView.ToTLP(neuronGraph);
+            NeuronTLPView TlpGraph = NeuronTLPView.ToTLP(neuronGraph, VolumeURL);
             TlpGraph.SaveTLP(userDotFileFullPath);
 
             return File(userDotFileFullPath, "text/plain", outputFilename);
         } 
-
-
-
+         
         private uint GetNumHops()
         {
             string hopstr = Request.RequestContext.HttpContext.Request.QueryString["hops"];
