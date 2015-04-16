@@ -13,6 +13,10 @@ namespace AnnotationVizLib
             get { return TLPAttributes.DefaultForAttribute; }
         }
 
+        public NeuronTLPView(string VolumeURL) : base(VolumeURL)
+        {
+        }
+
         public TLPViewNode CreateTLPNode(NeuronNode node)
         {
             TLPViewNode tlpnode = createNode(node.Key);
@@ -27,7 +31,7 @@ namespace AnnotationVizLib
             if (!NodeAttribs.ContainsKey("viewLabel"))
                 NodeAttribs.Add("viewLabel", LabelForNode(node));
 
-            NodeAttribs.Add("StructureURL", string.Format("http://connectomes.utah.edu/Services/RC1/ConnectomeData.svc/Structures({0}L)", node.Key));
+            NodeAttribs.Add("StructureURL", string.Format("{0}/OData/ConnectomeData.svc/Structures({1}L)", this.VolumeURL, node.Key));
 
             tlpnode.AddAttributes(NodeAttribs);
 
@@ -108,9 +112,9 @@ namespace AnnotationVizLib
             return tlpedge;
         }
 
-        public static NeuronTLPView ToTLP(NeuronGraph graph, bool IncludeUnlabeled = false)
+        public static NeuronTLPView ToTLP(NeuronGraph graph, string VolumeURL, bool IncludeUnlabeled = false)
         {
-            NeuronTLPView view = new NeuronTLPView();
+            NeuronTLPView view = new NeuronTLPView(VolumeURL);
 
             foreach (NeuronNode node in graph.Nodes.Values)
             {

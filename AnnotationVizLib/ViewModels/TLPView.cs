@@ -271,6 +271,11 @@ namespace AnnotationVizLib
         */
 
         /// <summary>
+        /// URL to build custom properties which query the export service
+        /// </summary>
+        protected string VolumeURL = null; 
+
+        /// <summary>
         /// Return a dictionary of default values for attributes
         /// </summary>
         protected abstract SortedDictionary<string, string> DefaultAttributes {  get; }
@@ -296,6 +301,16 @@ namespace AnnotationVizLib
             ulong next_id = _nextSubgraphID;
             _nextSubgraphID++;
             return next_id; 
+        }
+
+        public TLPView()
+        {
+        }
+
+        public TLPView(string VolumeURL)
+            : base()
+        {
+            this.VolumeURL = VolumeURL;
         }
 
         protected TLPViewNode createNode(VIEWED_KEY key)

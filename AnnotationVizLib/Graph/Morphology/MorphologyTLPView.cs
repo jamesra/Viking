@@ -18,7 +18,7 @@ namespace AnnotationVizLib
             get { return TLPAttributes.DefaultForMorphologyAttribute; }
         }
 
-        public MorphologyTLPView(Scale scale, System.Drawing.Color ColorMap)
+        public MorphologyTLPView(Scale scale, System.Drawing.Color ColorMap, string VolumeURL) : base(VolumeURL)
         {
             this.scale = scale;
             this.structure_color = ColorMap;
@@ -61,7 +61,7 @@ namespace AnnotationVizLib
             NodeAttribs.Add("LocationID", node.Location.ID.ToString());
             NodeAttribs.Add("ParentID", node.Location.ParentID.ToString());
             NodeAttribs.Add("LocationInViking", NodeVikingLocation(node));
-            NodeAttribs.Add("StructureURL", string.Format("http://connectomes.utah.edu/Services/RC1/ConnectomeData.svc/Locations({0}L)", node.Location.ID));
+            NodeAttribs.Add("StructureURL", string.Format("{0}/OData/ConnectomeData.svc/Locations({1}L)", this.VolumeURL, node.Location.ID));
 
             if(NodeShape(node) != null)
             {
@@ -196,9 +196,9 @@ namespace AnnotationVizLib
             return colorMap.GetColor(graph); 
         }
 
-        public static MorphologyTLPView ToTLP(MorphologyGraph graph,  Scale scale, StructureMorphologyColorMap colorMap)
+        public static MorphologyTLPView ToTLP(MorphologyGraph graph,  Scale scale, StructureMorphologyColorMap colorMap, string VolumeURL)
         {
-            MorphologyTLPView view = new MorphologyTLPView(scale, GetStructureColor(graph, colorMap));
+            MorphologyTLPView view = new MorphologyTLPView(scale, GetStructureColor(graph, colorMap), VolumeURL);
 
             AddAllSubgraphNodesAndEdges(view, graph, colorMap);
 

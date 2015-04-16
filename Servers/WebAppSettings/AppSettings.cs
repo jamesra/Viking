@@ -51,21 +51,20 @@ namespace VikingWebAppSettings
 
             return conn_string;
         }
-         
-        public static string WebServiceURLTemplate
-        {
-            get
-            {
-                return GetApplicationSetting("EndpointURLTemplate");
-            }
-        }
-
-
+          
         public static string WebServiceURL
         {
             get
             {
                 return GetApplicationSetting("EndpointURL");
+            }
+        }
+
+        public static string VolumeURL
+        {
+            get
+            {
+                return GetApplicationSetting("VolumeURL");
             }
         }
 

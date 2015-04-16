@@ -97,7 +97,10 @@ namespace AnnotationVizLib
             {"viewColor", " \"(128,128,128,64)\" \"(128,128,128,64)\"" },
             {"viewLabel", " \"\" \"\"" },
             {"viewSize", " \"(10,10,10)\" \"(10,10,10)\"" },
-            {"viewShape", " \"0\" \"0\"" }
+            {"viewShape", " \"0\" \"0\"" },
+            {"LocationID", " \"0\" \"0\"" },
+            {"ParentID", " \"0\" \"0\"" },
+            {"NumLinkedStructures", " \"0\" \"0\"" },
         };
 
         public static SortedDictionary<string, string> TLPTypeForAttribute = new SortedDictionary<string, string>()
@@ -111,6 +114,10 @@ namespace AnnotationVizLib
             {"viewShape", "int"},
             {"viewSrcAnchorShape", "int"},
             {"viewTgtAnchorShape", "int"},
+            {"NumLinkedStructures", "int"},
+            {"LocationID", "int"},
+            {"ParentID", "int"},
+
         };
 
         public static SortedDictionary<string, string> DefaultForAttribute = new SortedDictionary<string, string>()
@@ -132,8 +139,7 @@ namespace AnnotationVizLib
             //{"viewLayout", " \"()\" \"()\""}, 
             {"viewSize", " \"(1,1,1)\" \"(1,1,1)\""},
             {"viewBorderColor", string.Format("\"{0}\" \"{0}\"", ColorMap["clear"], ColorMap["clear"]) },
-            {"viewShape", string.Format(" \"{0}\" \"{1}\"", IntForShape(NodeShapes.Cylinder), IntForEdgeShape(EdgeShapes.Polyline))},
-            {"NumLinkedStructures", "0,0"},
+            {"viewShape", string.Format(" \"{0}\" \"{1}\"", IntForShape(NodeShapes.Cylinder), IntForEdgeShape(EdgeShapes.Polyline))}
         };
           
         public static string IntForShape(NodeShapes type)

@@ -9,13 +9,15 @@ namespace AnnotationVizLib
 {
     public class MotifTLPView : TLPView<string>
     {
+        
+
         protected override SortedDictionary<string, string> DefaultAttributes
         {
             get { return TLPAttributes.DefaultForAttribute; }
         }
 
-        private MotifTLPView(MotifGraph graph)
-        { 
+        protected MotifTLPView(MotifGraph graph, string VolumeURL) : base(VolumeURL)
+        {
         }
 
         public TLPViewNode CreateTLPNode(MotifNode node)
@@ -26,7 +28,12 @@ namespace AnnotationVizLib
                 NodeAttribs.Add("viewLabel", node.Key);
 
             NodeAttribs.Add("StructureIDs", SourceStructures(node));
-            NodeAttribs.Add("StructureURL", StructureLabelUrl(node));
+
+            if (VolumeURL != null)
+                NodeAttribs.Add("StructureURL", StructureLabelUrl(node));
+
+            if (VolumeURL != null)
+                NodeAttribs.Add("MorphologyURL", MorphologyUrl(node));
 
             tlpnode.AddAttributes(NodeAttribs);
 
@@ -48,18 +55,39 @@ namespace AnnotationVizLib
             return tlpedge;
         }
 
-        public static string StructureLabelUrl(MotifNode node)
+        public string StructureLabelUrl(MotifNode node)
         {
-            return string.Format("http://connectomes.utah.edu/Services/RC1/ConnectomeData.svc/Structures?$filter=startswith(Label,'{0}') eq true", node.Key);
+            if (this.VolumeURL != null)
+            {
+                return string.Format("{0}/OData/ConnectomeData.svc/Structures?$filter=startswith(Label,'{1}') eq true", VolumeURL, node.Key);
+            }
+
+            return null;  
+        }
+
+        public  string MorphologyUrl(MotifNode node)
+        {
+            if (VolumeURL != null)
+            {
+                return string.Format("{0}/Export/Morphology/Tlp?id={1}", VolumeURL, SourceStructures(node));
+            }
+
+            return null; 
         }
 
         private string SourceStructures(MotifNode node)
         {
             StringBuilder sb = new StringBuilder();
-            
+
+            bool first = false; 
             foreach(AnnotationService.Structure s in node.Structures)
             {
-                sb.AppendLine(s.ID.ToString());
+                if (!first)
+                    first = true;
+                else
+                    sb.Append(", ");
+
+                sb.Append(s.ID.ToString());
             }
 
             return sb.ToString(); 
@@ -68,9 +96,16 @@ namespace AnnotationVizLib
         private string EdgeStructuresString(IList<long> structIDs)
         {
             StringBuilder sb = new StringBuilder();
+            bool first = false; 
+
             foreach (long sourceID in structIDs)
             {
-                sb.AppendLine(sourceID.ToString());
+                if (!first)
+                    first = true;
+                else
+                    sb.Append(", ");
+
+                sb.Append(sourceID.ToString()); 
             }
 
             return sb.ToString();
@@ -86,9 +121,9 @@ namespace AnnotationVizLib
             
         }
 
-        public static MotifTLPView ToTLP(MotifGraph graph, bool IncludeUnlabeled = false)
+        public static MotifTLPView ToTLP(MotifGraph graph, string ExportURLBase, bool IncludeUnlabeled = false)
         {
-            MotifTLPView view = new MotifTLPView(graph);
+            MotifTLPView view = new MotifTLPView(graph, ExportURLBase);
 
             foreach (MotifNode node in graph.Nodes.Values)
             {
