@@ -120,19 +120,26 @@ namespace Viking.VolumeModel
 
                 Uri mosaicURI = new Uri(this.RootPath + '/' + MosaicPath);
 
-                
-                DateTime lastModified = DateTime.MaxValue;
+
+                DateTime serverlastModified = DateTime.MaxValue;
                 try
                 {
-                    lastModified = ServerSideLastModifed(mosaicURI); 
+                    serverlastModified = ServerSideLastModifed(mosaicURI); 
 
                     //Do we need to delete a stale version of the cache file?
-                    if (this.LastModified > DateTime.MinValue && System.IO.File.GetLastWriteTime(this.CachedTransformsFileName) < this.LastModified)
+                    if (System.IO.File.Exists(this.CachedTransformsFileName))
                     {
-                        if (System.IO.File.Exists(this.CachedTransformsFileName))
+                        if (System.IO.File.GetLastWriteTime(this.CachedTransformsFileName) < serverlastModified)
                         {
                             Trace.WriteLine("Deleting stale cache file: " + this.CachedTransformsFileName);
-                            System.IO.File.Delete(this.CachedTransformsFileName);
+                            try
+                            {
+                                System.IO.File.Delete(this.CachedTransformsFileName);
+                            }
+                            catch(System.IO.IOException e)
+                            {
+                                Trace.WriteLine("Failed to delete stale cache file: " + this.CachedTransformsFileName);
+                            }
                         }
                     }
 
@@ -172,7 +179,7 @@ namespace Viking.VolumeModel
                         {
                             string[] MosaicLines = Geometry.StreamUtil.StreamToLines(MosaicDataStream);
 
-                            this._TileTransforms = TransformFactory.LoadMosaic(this.RootPath, MosaicLines, lastModified);
+                            this._TileTransforms = TransformFactory.LoadMosaic(this.RootPath, MosaicLines, serverlastModified);
 
                             HasBeenLoaded = _TileTransforms != null;
                             if (HasBeenLoaded)
