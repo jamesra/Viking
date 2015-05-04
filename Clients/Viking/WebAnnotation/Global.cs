@@ -143,23 +143,29 @@ namespace WebAnnotation
             //Check the VikingXML for the endpoint first.  
             if (GetEndpointFromXML(volume.VolumeXML))
             {
-                LoadUserPreferences(); 
+                LoadUserPreferences();
                 return true;
             }
-
-            LoadUserPreferences(); 
+            else
+            {
+                return false;
+            }
 
             //LEGACY, check the about.xml file for the endpoint.  This needs to be removed when we have rebuilt the VikingXML files using new
             //CreateXML.py script from 11/2/10
+            //LoadUserPreferences(); 
+            //XDocument AboutXML = GetAboutXML(new Uri(volume.Host + "/About.xml"));
+            //return GetEndpointFromXML(AboutXML);
+        }
 
+        private static XDocument GetAboutXML(Uri AboutURI)
+        {
             //See if we can load the WebAnnotationMapping file
-            Uri MappingURI = new Uri(volume.Host + "/About.xml");
-            HttpWebRequest request = WebRequest.Create(MappingURI) as HttpWebRequest;
-            if (MappingURI.Scheme.ToLower() == "https")
+            HttpWebRequest request = WebRequest.Create(AboutURI) as HttpWebRequest;
+            if (AboutURI.Scheme.ToLower() == "https")
                 request.Credentials = Viking.UI.State.UserCredentials;
 
-
-            XDocument XMLMapping = null; 
+            XDocument XMLMapping = null;
             try
             {
                 using (WebResponse response = request.GetResponse())
@@ -168,7 +174,7 @@ namespace WebAnnotation
                     {
                         using (StreamReader XMLStream = new StreamReader(responseStream))
                         {
-                            XMLMapping = XDocument.Parse(XMLStream.ReadToEnd());
+                            return XDocument.Parse(XMLStream.ReadToEnd());
                         }
                     }
                 }
@@ -176,10 +182,8 @@ namespace WebAnnotation
             catch (WebException)
             {
                 Trace.WriteLine("Could not locate WebAnnotationMapping.XML, disabling WebAnnotations.", "WebAnnotation");
-                return false;
+                return null; 
             } 
-
-            return GetEndpointFromXML(XMLMapping);
         }
 
         static bool GetEndpointFromXML(XDocument XMLMapping)
