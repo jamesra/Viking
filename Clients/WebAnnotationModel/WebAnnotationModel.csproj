@@ -106,23 +106,23 @@
     <None Include="ClassDiagram2.cd" />
     <None Include="ClassDiagram3.cd" />
     <None Include="ClassDiagram4.cd" />
-    <None Include="Service References\Service\Annotation.Service.GraphClasses11.xsd">
+    <None Include="Service References\Service\Annotation.Service.GraphClasses.xsd">
       <SubType>Designer</SubType>
     </None>
-    <None Include="Service References\Service\Annotation11.xsd">
+    <None Include="Service References\Service\Annotation.xsd">
       <SubType>Designer</SubType>
     </None>
-    <None Include="Service References\Service\Arrays11.xsd">
+    <None Include="Service References\Service\Arrays.xsd">
+      <SubType>Designer</SubType>
+    </None>
+    <None Include="Service References\Service\service.xsd">
+      <SubType>Designer</SubType>
+    </None>
+    <None Include="Service References\Service\service1.xsd">
       <SubType>Designer</SubType>
     </None>
     <None Include="Service References\Service\service2.wsdl" />
-    <None Include="Service References\Service\service31.xsd">
-      <SubType>Designer</SubType>
-    </None>
-    <None Include="Service References\Service\service32.xsd">
-      <SubType>Designer</SubType>
-    </None>
-    <None Include="Service References\Service\service33.xsd">
+    <None Include="Service References\Service\service2.xsd">
       <SubType>Designer</SubType>
     </None>
     <None Include="Service References\Service\WebAnnotationModel.Service.CreateStructureRetval.datasource">

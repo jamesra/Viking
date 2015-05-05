@@ -135,7 +135,7 @@
             this.MaximizeBox = false;
             this.Name = "SplashForm";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
-            this.Text = "Initializing NGVV";
+            this.Text = "Initializing";
             this.Load += new System.EventHandler(this.SplashForm_Load);
             this.ResumeLayout(false);
 
