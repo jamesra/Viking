@@ -3,7 +3,7 @@
 Usage
 #####
 
-This documentation is the orinal documentation for Viking.  For a more comprehensive introduction we recommend this :download:`guide prepared by Andrea Bordt <VikingUsage_MarshakLab2014.pdf>` based on the Marc Lab Annotation Fest. 
+This documentation is the orinal documentation for Viking.  For a more comprehensive introduction we recommend this :download:`guide organized by Andrea Bordt <VikingUsage_MarshakLab2014.pdf>` based on documentation from the Marc Lab Annotation Fest. 
 
 Startup
 -------
