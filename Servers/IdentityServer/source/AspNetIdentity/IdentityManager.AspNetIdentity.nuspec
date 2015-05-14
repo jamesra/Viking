@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<package >
+  <metadata>
+    <id>IdentityManager.AspNetIdentity</id>
+    <version>0.0.0</version>
+    <title>IdentityManager - AspNetIdentity</title>
+    <authors>Brock Allen, Dominick Baier</authors>
+    <owners>Brock Allen, Dominick Baier</owners>
+    <projectUrl>https://github.com/IdentityManager/IdentityManager.AspNetIdentity</projectUrl>
+    <iconUrl>https://identityserver.github.io/Documentation/assets/images/icons/IDmanager_icon144.jpg</iconUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>"IdentityManager - AspNetIdentity" is a AspNetIdentity-based identity manager provider for IdentityManager.</description>
+    <releaseNotes>First beta version</releaseNotes>
+    <copyright>Copyright 2015</copyright>
+    <tags>IdentityManager AspNetIdentity Identity Management</tags>
+
+    <!--<dependencies>
+      <dependency id="IdentityManager" version="1.0.0-beta5" />
+      <dependency id="Microsoft.AspNet.Identity.Core" version="2.2.1" />
+    </dependencies>-->
+  </metadata>
+  <files>
+    <file src="..\..\build\$id$.pdb" target="lib\net45" />
+  </files>
+</package>
