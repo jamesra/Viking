@@ -11,6 +11,9 @@ using System.Net;
 
 namespace Viking.VolumeModel
 {
+    /// <summary>
+    /// Map tiles to a section, as in a .mosaic file
+    /// </summary>
     class TilesToSectionMapping : FixedTileCountMapping
     {
         /// <summary>
@@ -104,7 +107,7 @@ namespace Viking.VolumeModel
 
             using (HttpWebResponse headerResponse = headerRequest.GetResponse() as HttpWebResponse)
             {
-                return headerResponse.LastModified;
+                return headerResponse.LastModified.ToUniversalTime();
             }
         }
 

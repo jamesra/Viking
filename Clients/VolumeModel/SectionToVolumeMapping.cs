@@ -12,7 +12,7 @@ using System.Runtime.Serialization.Formatters.Binary;
 namespace Viking.VolumeModel
 {
     /// <summary>
-    /// This class represents the warped version of a single section using a transform
+    /// This class represents the warped version of a single section into volume space by passing a .mosaic transform through a slice-to-volume transform
     /// </summary>
     /// 
     public class SectionToVolumeMapping : FixedTileCountMapping
