@@ -88,9 +88,10 @@ namespace IdentityManager.Host
 
             System.IdentityModel.Tokens.JwtSecurityTokenHandler.InboundClaimTypeMap = new Dictionary<string, string>();
 
+
             app.UseCookieAuthentication(new Microsoft.Owin.Security.Cookies.CookieAuthenticationOptions
             {
-                AuthenticationType = "Cookies" 
+                AuthenticationType = "Cookies"
             });
 
             string AuthorityUri = WebConfigurationManager.AppSettings.Get("AuthorityUri");
@@ -140,7 +141,7 @@ namespace IdentityManager.Host
                     SiteName = "Viking Connectome Identity Server",
                     Factory = idServerFactory,
                     RequireSsl = true,
-                    SigningCertificate = VikingIdentityServer.Certificate.SelectCertificate(),
+                    //SigningCertificate = VikingIdentityServer.Certificate.SelectCertificate(),
                     CorsPolicy = CorsPolicy.AllowAll,
                     LoggingOptions = new LoggingOptions { EnableHttpLogging = true, EnableWebApiDiagnostics = true, IncludeSensitiveDataInLogs = true, WebApiDiagnosticsIsVerbose = true}
                 };
@@ -149,10 +150,10 @@ namespace IdentityManager.Host
             });
               
             // used to redirect to the main admin page visiting the root of the host
-            app.Run(ctx =>
-            { 
-                return Task.FromResult(0);
-            });
+            //app.Run(ctx =>
+            //{ 
+                //return Task.FromResult(0);
+            //});
         }
 
     }

@@ -14,6 +14,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".nuget", ".nuget", "{7A5544
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AspNetIdentityUserService", "AspNetIdentityUserService\AspNetIdentityUserService.csproj", "{409B7496-B359-40EB-B92B-733F0B1F0088}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UserRegistration", "UserRegistration\UserRegistration.csproj", "{EAB921D0-11C3-4892-9F50-FD8C4E29AC6C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		AzureWebSites|Any CPU = AzureWebSites|Any CPU
@@ -39,6 +41,12 @@ Global
 		{409B7496-B359-40EB-B92B-733F0B1F0088}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{409B7496-B359-40EB-B92B-733F0B1F0088}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{409B7496-B359-40EB-B92B-733F0B1F0088}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EAB921D0-11C3-4892-9F50-FD8C4E29AC6C}.AzureWebSites|Any CPU.ActiveCfg = Release|Any CPU
+		{EAB921D0-11C3-4892-9F50-FD8C4E29AC6C}.AzureWebSites|Any CPU.Build.0 = Release|Any CPU
+		{EAB921D0-11C3-4892-9F50-FD8C4E29AC6C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EAB921D0-11C3-4892-9F50-FD8C4E29AC6C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EAB921D0-11C3-4892-9F50-FD8C4E29AC6C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EAB921D0-11C3-4892-9F50-FD8C4E29AC6C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

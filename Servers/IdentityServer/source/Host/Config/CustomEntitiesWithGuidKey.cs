@@ -64,7 +64,8 @@ namespace IdentityManager.Host
         public CustomUserManager(CustomUserStore store)
             : base(store)
         {
-            this.ClaimsIdentityFactory = new CustomClaimsFactory();
+            
+            this.ClaimsIdentityFactory = new CustomClaimsFactory(); 
         }
     }
 

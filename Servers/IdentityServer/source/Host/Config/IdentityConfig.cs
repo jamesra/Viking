@@ -29,8 +29,7 @@ namespace IdentityManager.Host
 
             const string AdminRoleName = "Admin";
             string name = "Admin";
-            string password = "administrator";
-            string test = "test";
+            string password = "administrator"; 
              
             //Create Role Admin if it does not exist
             if (!RoleManager.RoleExists(AdminRoleName))
