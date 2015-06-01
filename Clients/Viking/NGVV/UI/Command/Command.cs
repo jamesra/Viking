@@ -455,6 +455,10 @@ namespace Viking.UI.Commands
                     Parent.Camera.LookAt -= new Vector2((float)Diff.X, (float)Diff.Y);
                     this.Parent.Invalidate();
                     break; 
+                case Keys.Home:
+                    Parent.Downsample = Math.Round(Parent.Downsample) < 1.0 ? 0.5 : Math.Round(Parent.Downsample);
+                    this.Parent.Invalidate();
+                    break;
             }
         }
 
