@@ -7,4 +7,5 @@ Viking Client Usage
    :maxdepth: 2
     
    useage
+   versionhistory
    movies
