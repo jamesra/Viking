@@ -50,6 +50,8 @@ Keyboard commands
 
 * **+** and **-** move down and up 1 slice
 * **SHIFT +** and **-** move down and up 10 slices
+* **PageUp/PageDown** Increase/Decrease zoom
+* **Home** Roounds the zoom to the nearest integer.  If the zoom rounds to zero we use a zoom of 200%, downsampled by 0.5. 
    
 Menu commands
 =============
