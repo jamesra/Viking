@@ -151,7 +151,7 @@ namespace Geometry.Transforms
                 using (System.Net.HttpWebResponse response = (System.Net.HttpWebResponse)request.GetResponse())
                 {
                     StosTransformInfo info = null;
-                    info = new StosTransformInfo(ControlSection, MappedSection, response.LastModified);
+                    info = new StosTransformInfo(ControlSection, MappedSection, response.LastModified.ToUniversalTime());
 
                     Trace.WriteLine(stosURI.ToString() + " From Cache: " + response.IsFromCache.ToString() + " Modified: " + info.LastModified.ToString(), "Geometry");
                     using (Stream stream = response.GetResponseStream())
