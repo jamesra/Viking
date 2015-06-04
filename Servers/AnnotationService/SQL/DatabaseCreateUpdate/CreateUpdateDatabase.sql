@@ -1,9 +1,9 @@
 /**** You need to replace the following templates to use this script ****/
-/**** TEST = Name of the database  */
+/**** EMPTY = Name of the database  */
 /**** {DATABASE_DIRECTORY} = Directory Datbase lives in if it needs to be created, with the trailing slash i.e. C:\Database\
 */
 DECLARE @DATABASE_NAME VARCHAR(50)
-SET @DATABASE_NAME = 'TEST'
+SET @DATABASE_NAME = 'EMPTY'
 DECLARE @DATABASE_DIRECTORY VARCHAR(50)
 SET @DATABASE_DIRECTORY = 'C:\Database\'
 
@@ -29,7 +29,7 @@ BEGIN
 END
 	
 CREATE TABLE #UpdateVars ([Version] VARCHAR(100));
-INSERT INTO #UpdateVars Values (N'TEST');
+INSERT INTO #UpdateVars Values (N'EMPTY');
 
 DECLARE @db_id VARCHAR(100);
 SET @db_id = db_id(@DATABASE_NAME)
@@ -42,50 +42,50 @@ BEGIN
 	print N'Database does not exist, creating...' 
 	
 	declare @Path varchar(100)
-	set @Path = N'C:\Database\TEST\'
+	set @Path = N'C:\Database\EMPTY\'
 	EXEC master.dbo.xp_create_subdir @Path
 	
-	/****** Object:  Database [TEST]    Script Date: 06/14/2011 13:13:50 ******/
-	CREATE DATABASE [TEST] ON  PRIMARY 
-		( NAME = N'TEST', FILENAME = N'C:\Database\TEST\TEST.mdf' , SIZE = 4096KB , MAXSIZE = UNLIMITED, FILEGROWTH = 1024KB )
+	/****** Object:  Database [EMPTY]    Script Date: 06/14/2011 13:13:50 ******/
+	CREATE DATABASE [EMPTY] ON  PRIMARY 
+		( NAME = N'EMPTY', FILENAME = N'C:\Database\EMPTY\EMPTY.mdf' , SIZE = 4096KB , MAXSIZE = UNLIMITED, FILEGROWTH = 1024KB )
 		 LOG ON 
-		( NAME = N'TEST_log', FILENAME = N'C:\Database\TEST\TEST_log.ldf' , SIZE = 4096KB , MAXSIZE = 2048GB , FILEGROWTH = 10%)
+		( NAME = N'EMPTY_log', FILENAME = N'C:\Database\EMPTY\EMPTY_log.ldf' , SIZE = 4096KB , MAXSIZE = 2048GB , FILEGROWTH = 10%)
 		
-	ALTER DATABASE [TEST] SET COMPATIBILITY_LEVEL = 100
+	ALTER DATABASE [EMPTY] SET COMPATIBILITY_LEVEL = 100
 	
 	IF (1 = FULLTEXTSERVICEPROPERTY('IsFullTextInstalled'))
 	begin
-		EXEC [TEST].[dbo].[sp_fulltext_database] @action = 'enable'
+		EXEC [EMPTY].[dbo].[sp_fulltext_database] @action = 'enable'
 	end
 	
-	ALTER DATABASE [TEST] SET ANSI_NULL_DEFAULT OFF
-	ALTER DATABASE [TEST] SET ANSI_NULLS OFF
-	ALTER DATABASE [TEST] SET ANSI_PADDING OFF
-	ALTER DATABASE [TEST] SET ANSI_WARNINGS OFF
-	ALTER DATABASE [TEST] SET ARITHABORT OFF
-	ALTER DATABASE [TEST] SET AUTO_CLOSE OFF
-	ALTER DATABASE [TEST] SET AUTO_CREATE_STATISTICS ON
-	ALTER DATABASE [TEST] SET AUTO_SHRINK OFF
-	ALTER DATABASE [TEST] SET AUTO_UPDATE_STATISTICS ON
-	ALTER DATABASE [TEST] SET CURSOR_CLOSE_ON_COMMIT OFF
-	ALTER DATABASE [TEST] SET CURSOR_DEFAULT  GLOBAL
-	ALTER DATABASE [TEST] SET CONCAT_NULL_YIELDS_NULL OFF
-	ALTER DATABASE [TEST] SET NUMERIC_ROUNDABORT OFF
-	ALTER DATABASE [TEST] SET QUOTED_IDENTIFIER OFF
-	ALTER DATABASE [TEST] SET RECURSIVE_TRIGGERS OFF
-	ALTER DATABASE [TEST] SET  DISABLE_BROKER
-	ALTER DATABASE [TEST] SET AUTO_UPDATE_STATISTICS_ASYNC OFF
-	ALTER DATABASE [TEST] SET DATE_CORRELATION_OPTIMIZATION OFF
-	ALTER DATABASE [TEST] SET TRUSTWORTHY OFF
-	ALTER DATABASE [TEST] SET ALLOW_SNAPSHOT_ISOLATION OFF
-	ALTER DATABASE [TEST] SET PARAMETERIZATION SIMPLE
-	ALTER DATABASE [TEST] SET READ_COMMITTED_SNAPSHOT OFF
-	ALTER DATABASE [TEST] SET HONOR_BROKER_PRIORITY OFF
-	ALTER DATABASE [TEST] SET  READ_WRITE
-	ALTER DATABASE [TEST] SET RECOVERY SIMPLE
-	ALTER DATABASE [TEST] SET  MULTI_USER
-	ALTER DATABASE [TEST] SET PAGE_VERIFY CHECKSUM
-	ALTER DATABASE [TEST] SET DB_CHAINING OFF
+	ALTER DATABASE [EMPTY] SET ANSI_NULL_DEFAULT OFF
+	ALTER DATABASE [EMPTY] SET ANSI_NULLS OFF
+	ALTER DATABASE [EMPTY] SET ANSI_PADDING OFF
+	ALTER DATABASE [EMPTY] SET ANSI_WARNINGS OFF
+	ALTER DATABASE [EMPTY] SET ARITHABORT OFF
+	ALTER DATABASE [EMPTY] SET AUTO_CLOSE OFF
+	ALTER DATABASE [EMPTY] SET AUTO_CREATE_STATISTICS ON
+	ALTER DATABASE [EMPTY] SET AUTO_SHRINK OFF
+	ALTER DATABASE [EMPTY] SET AUTO_UPDATE_STATISTICS ON
+	ALTER DATABASE [EMPTY] SET CURSOR_CLOSE_ON_COMMIT OFF
+	ALTER DATABASE [EMPTY] SET CURSOR_DEFAULT  GLOBAL
+	ALTER DATABASE [EMPTY] SET CONCAT_NULL_YIELDS_NULL OFF
+	ALTER DATABASE [EMPTY] SET NUMERIC_ROUNDABORT OFF
+	ALTER DATABASE [EMPTY] SET QUOTED_IDENTIFIER OFF
+	ALTER DATABASE [EMPTY] SET RECURSIVE_TRIGGERS OFF
+	ALTER DATABASE [EMPTY] SET  DISABLE_BROKER
+	ALTER DATABASE [EMPTY] SET AUTO_UPDATE_STATISTICS_ASYNC OFF
+	ALTER DATABASE [EMPTY] SET DATE_CORRELATION_OPTIMIZATION OFF
+	ALTER DATABASE [EMPTY] SET TRUSTWORTHY OFF
+	ALTER DATABASE [EMPTY] SET ALLOW_SNAPSHOT_ISOLATION OFF
+	ALTER DATABASE [EMPTY] SET PARAMETERIZATION SIMPLE
+	ALTER DATABASE [EMPTY] SET READ_COMMITTED_SNAPSHOT OFF
+	ALTER DATABASE [EMPTY] SET HONOR_BROKER_PRIORITY OFF
+	ALTER DATABASE [EMPTY] SET  READ_WRITE
+	ALTER DATABASE [EMPTY] SET RECOVERY SIMPLE
+	ALTER DATABASE [EMPTY] SET  MULTI_USER
+	ALTER DATABASE [EMPTY] SET PAGE_VERIFY CHECKSUM
+	ALTER DATABASE [EMPTY] SET DB_CHAINING OFF
 	
 	print N'Created Database...' 
 	INSERT INTO #UpdateVars Values (DB_ID(N'CreateTables'));
@@ -93,7 +93,7 @@ END
 
 GO
 
-USE [TEST]
+USE [EMPTY]
 GO
 
 --Need to specify database owner before enabling change tracking
@@ -553,8 +553,8 @@ DECLARE @db_id VARCHAR(100);
 SET @db_id = (select * from #UpdateVars where Version='CreateTables')
 IF @db_id IS NOT NULL	
 	EXEC('
-	/****** Object:  StoredProcedure [dbo].[ApproximatestructureLocation]    Script Date: 06/14/2011 13:13:53 ******/
-	CREATE PROCEDURE [dbo].[ApproximatestructureLocation]
+	/****** Object:  StoredProcedure [dbo].[ApproximaEMPTYructureLocation]    Script Date: 06/14/2011 13:13:53 ******/
+	CREATE PROCEDURE [dbo].[ApproximaEMPTYructureLocation]
 	@StructureID int
 	AS
 		select SUM(VolumeX*Radius*Radius)/SUM(Radius*Radius) as X,SUM(VolumeY*Radius*Radius)/SUM(Radius*Radius) as Y,SUM(Z*Radius*Radius)/SUM(Radius*Radius) as Z, AVG(Radius) as Radius
@@ -1106,7 +1106,7 @@ END
 */  
 GO
 
-Use [TEST]
+Use [EMPTY]
 GO
 
 BEGIN TRANSACTION main
@@ -1307,13 +1307,13 @@ end
      print N'Adding SP to calculate average locations for all structures'
      BEGIN TRANSACTION three
 		
-	    IF EXISTS(select * from sys.procedures where name = 'ApproximateStructureLocations')
+	    IF EXISTS(select * from sys.procedures where name = 'ApproximaEMPTYructureLocations')
 		BEGIN
-			EXEC('DROP PROCEDURE [dbo].[ApproximateStructureLocations]');
+			EXEC('DROP PROCEDURE [dbo].[ApproximaEMPTYructureLocations]');
 		END
 		
 		 EXEC('
-		 CREATE PROCEDURE [dbo].[ApproximateStructureLocations]
+		 CREATE PROCEDURE [dbo].[ApproximaEMPTYructureLocations]
          AS
          BEGIN
 			-- SET NOCOUNT ON added to prevent extra result sets from
@@ -1352,13 +1352,13 @@ end
      print N'Adding SP to calculate average locations for one structure'
      BEGIN TRANSACTION four
      
-		 IF EXISTS(select * from sys.procedures where name = 'ApproximateStructureLocation')
+		 IF EXISTS(select * from sys.procedures where name = 'ApproximaEMPTYructureLocation')
 		 BEGIN
-			EXEC('DROP PROCEDURE [dbo].[ApproximateStructureLocation]');
+			EXEC('DROP PROCEDURE [dbo].[ApproximaEMPTYructureLocation]');
 		 END
 	
 		 EXEC('
-		 CREATE PROCEDURE [dbo].[ApproximateStructureLocation]
+		 CREATE PROCEDURE [dbo].[ApproximaEMPTYructureLocation]
 		 @StructureID int
          AS
          BEGIN
@@ -1426,7 +1426,7 @@ end
 	
 	if(not(exists(select (1) from DBVersion where DBVersionID = 6)))
 	begin
-     print N'Adding SP for latest modification by user'
+     print N'Adding SP for laEMPTY modification by user'
      BEGIN TRANSACTION six
      
 		IF EXISTS(select * from sys.procedures where name = 'SelectLastModifiedLocationByUsers')
@@ -1448,7 +1448,7 @@ end
 
 			select L.* from
 				(
-				select MAX(LastModifiedByUser.ID) as LatestID, LastModifiedByUser.Username
+				select MAX(LastModifiedByUser.ID) as LaEMPTYID, LastModifiedByUser.Username
 					from (
 						select  Username, MAX(LastModified) as lm
 							from Location
@@ -1460,7 +1460,7 @@ end
 					group by LastModifiedByUser.Username
 					)
 					as IDList
-				inner join Location as L on IDList.LatestID = ID
+				inner join Location as L on IDList.LaEMPTYID = ID
 			order by L.Username
 		END');
 		
@@ -1473,7 +1473,7 @@ end
 
 		  --insert the second version marker
 		 INSERT INTO DBVersion values (6, 
-		   'SP to calculate latest modification by user',getDate(),User_ID())
+		   'SP to calculate laEMPTY modification by user',getDate(),User_ID())
 
 	COMMIT TRANSACTION six
 	
@@ -1943,7 +1943,7 @@ end
 		  
 
 		EXEC('
-			 CREATE PROCEDURE UpdateStructureType
+			 CREATE PROCEDURE UpdaEMPTYructureType
 				@StructureID bigint,
 				@TypeID bigint
 			 AS
@@ -2142,6 +2142,28 @@ end
 		   'Add stored procedures to query changes',getDate(),User_ID())
 
 	 COMMIT TRANSACTION nineteen
+	end
+
+	if(not(exists(select (1) from DBVersion where DBVersionID = 20)))
+	begin
+     print N'Disable capture data cleanup job so change data is always retained'
+	 BEGIN TRANSACTION twenty
+		  
+		EXECUTE sys.sp_cdc_drop_job 
+			@job_type = N'cleanup'
+
+		--any potential errors get reported, and the script is rolled back and terminated
+		 if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
+		  --insert the second version marker
+		 INSERT INTO DBVersion values (20, 
+		   'Disable capture data cleanup job so change data is always retained',getDate(),User_ID())
+
+	 COMMIT TRANSACTION twenty
 	end
 
 --from here on, continually add steps in the previous manner as needed.
