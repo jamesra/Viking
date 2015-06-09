@@ -10,6 +10,53 @@ using Geometry;
 
 namespace MeasurementExtension
 {
+   
+    struct UnitsAndScale
+    {
+        static string[] MetricUnits = { "nm", "um", "mm", "cm", "m", "km" };
+        public string Units;
+        public double Scalar;
+
+        public UnitsAndScale(string units, double scalar)
+        {
+            this.Units = units;
+            this.Scalar = scalar;
+        }
+
+        /// <summary>
+        /// Given a starting distance and measurement we return a unit and scalar that will result in a distance of less than 1,000 
+        /// </summary>
+        /// <param name="UnitOfMeasure"></param>
+        /// <param name="distance"></param>
+        /// <returns></returns>
+        public static UnitsAndScale ConvertToReadableUnits(string UnitOfMeasure, double distance)
+        {
+            if(distance <= 0)
+                return new UnitsAndScale(UnitOfMeasure, 1.0);
+
+            double numDigits = Convert.ToInt32(Math.Ceiling(Math.Log10(distance)));
+
+            if(numDigits <= 3)
+            {
+                return new UnitsAndScale(UnitOfMeasure, 1.0);
+            }
+
+            int iStartUnit = Array.IndexOf(MetricUnits, UnitOfMeasure.ToLower());
+
+            //Figure out how many 1,000 sized steps we make
+            int numUnitHops = Convert.ToInt32(Math.Floor(numDigits / 3.0));
+            
+            if(numUnitHops + iStartUnit > MetricUnits.Length)
+            {
+                numUnitHops = MetricUnits.Length - iStartUnit;
+            }
+
+            int iUnit = numUnitHops + iStartUnit;
+
+            return new UnitsAndScale(MetricUnits[iUnit], 1.0 / Math.Pow(1000, numUnitHops));
+        }
+    }
+
     [Viking.Common.CommandAttribute()]
     class MeasureCommand : Viking.UI.Commands.Command
     {
@@ -45,6 +92,30 @@ namespace MeasurementExtension
 
             Parent.Invalidate(); 
         }
+         
+
+        private string DistanceToString(double distance)
+        {
+            UnitsAndScale us = UnitsAndScale.ConvertToReadableUnits(Global.UnitOfMeasure, distance);
+
+            double scaledDistance = distance * us.Scalar;
+            return scaledDistance.ToString("#0.000") + " " + us.Units;
+        }
+
+        private double? GetMosaicDistance()
+        {
+            GridVector2 mosaic_origin;
+            GridVector2 mosaic_target;
+            bool transformed_origin = this.Parent.TryVolumeToSection(Origin, this.Parent.Section, out mosaic_origin);
+            bool transformed_current = this.Parent.TryVolumeToSection(this.oldWorldPosition, this.Parent.Section, out mosaic_target);
+                     
+            if (transformed_origin && transformed_current)
+            {
+                return new double?(GridVector2.Distance(mosaic_origin, mosaic_target) * MeasurementExtension.Global.UnitsPerPixel);
+            }
+
+            return new double?();
+        }
 
         public override void OnDraw(GraphicsDevice graphicsDevice, VikingXNA.Scene scene, BasicEffect basicEffect)
         {
@@ -55,7 +126,25 @@ namespace MeasurementExtension
             Vector3 target = new Vector3((float)this.oldWorldPosition.X, (float)oldWorldPosition.Y, 0f); ;
             Color lineColor = new Color(Color.YellowGreen.R, Color.YellowGreen.G, Color.YellowGreen.B, 0.75f);
 
-            double Distance = GridVector2.Distance(Origin, this.oldWorldPosition) * MeasurementExtension.Global.UnitsPerPixel;
+            double VolumeDistance = GridVector2.Distance(Origin, this.oldWorldPosition) * MeasurementExtension.Global.UnitsPerPixel;
+
+
+            string mosaic_space_string =  "No mosaic transform";
+
+            if (this.Parent.UsingVolumeTransform)
+            {
+                double? mosaicDistance = GetMosaicDistance();
+                if (mosaicDistance.HasValue)
+                {
+                    mosaic_space_string = DistanceToString(mosaicDistance.Value);
+                }
+            }
+            else
+            {
+                mosaic_space_string = null; 
+            }
+
+            string volume_space_string = DistanceToString(VolumeDistance);
 
             RoundLineCode.RoundLine lineToParent = new RoundLineCode.RoundLine((float)Origin.X,
                                                    (float)Origin.Y,
@@ -74,8 +163,18 @@ namespace MeasurementExtension
 
             GridVector2 DrawPosition = Parent.WorldToScreen(target.X, target.Y);
 
+            string output_string = null;
+            if(mosaic_space_string != null)
+            {
+                output_string = "Mosaic " + mosaic_space_string + "\n" + "Volume " + volume_space_string;
+            }
+            else
+            {
+                output_string = volume_space_string;
+            }
+
             Parent.spriteBatch.DrawString(Parent.fontArial,
-                Distance.ToString("#0.00") + " " + Global.UnitOfMeasure,
+                output_string,
                 new Vector2((float)DrawPosition.X, (float)DrawPosition.Y),
                 lineColor,
                 0,

@@ -313,6 +313,15 @@ namespace Viking.UI.Controls
             }
         }
 
+        public bool UsingVolumeTransform
+        {
+            get
+            {
+                return this.CurrentVolumeTransform.ToLower() != "none";
+            }
+        }
+
+
         protected string _CurrentVolumeTransform;
         public string CurrentVolumeTransform
         {
