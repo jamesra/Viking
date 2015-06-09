@@ -1,14 +1,14 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <StartArguments>http://internal.connectomes.utah.edu/RC2/SliceToVolume.VikingXML</StartArguments>
+    <StartArguments>http://internal.connectomes.utah.edu/RPC1/SliceToVolume.vikingxml</StartArguments>
     <EnableUnmanagedDebugging>true</EnableUnmanagedDebugging>
     <EnableSQLServerDebugging>false</EnableSQLServerDebugging>
     <StartAction>Project</StartAction>
     <StartURL>http://connectomes.utah.edu/softwaretest/viking.application?http://155.100.104.153/Cornea/Volume.VikingXML</StartURL>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <StartArguments>http://internal.connectomes.utah.edu/RPC1/SliceToVolume.VikingXML</StartArguments>
+    <StartArguments>http://internal.connectomes.utah.edu/RC2/Volume.VikingXML</StartArguments>
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
     <StartAction>Project</StartAction>
   </PropertyGroup>
