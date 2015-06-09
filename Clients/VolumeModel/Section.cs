@@ -314,7 +314,10 @@ namespace Viking.VolumeModel
 
                         PyramidTransformNames.Add(Name);
 
-                        WarpedTo.Add(Name, mapping);
+                        if (WarpedTo.ContainsKey(Name))
+                            Trace.WriteLine("Duplicate transform found " + Name + " : " + this.Path);
+                        else
+                            WarpedTo.Add(Name, mapping);
 
                         if (UseForVolume ||  string.IsNullOrEmpty(DefaultPyramidTransform))
                         {
