@@ -286,12 +286,15 @@ namespace Viking
             if(textureUri == null)
                 return true;
 
+            if(!System.IO.File.Exists(CacheFilename))
+                return false;
+             
             HttpWebRequest headerRequest = TextureReader.CreateBasicRequest(textureUri);
             headerRequest.Method = "HEAD";
             headerRequest.CachePolicy = TextureReader.HeaderCachePolicy;
             using (HttpWebResponse headerResponse = headerRequest.GetResponse() as HttpWebResponse)
             {
-                bool valid = headerResponse.LastModified <= System.IO.File.GetCreationTimeUtc(CacheFilename);
+                bool valid = headerResponse.LastModified.ToUniversalTime() <= System.IO.File.GetCreationTimeUtc(CacheFilename);
                 return valid;
             }
         }
@@ -305,9 +308,12 @@ namespace Viking
         private static void DeleteFileFromCache(string CacheFilename)
         { 
             //Trace.WriteLine("Deleting bad cache file: " + CacheFilename, "TextureUse");
+            if (!System.IO.File.Exists(CacheFilename))
+                return;
+
             try
             {
-                System.IO.File.Delete(CacheFilename);
+                System.IO.File.Delete(CacheFilename); 
             }
             catch (System.IO.IOException)
             {
@@ -324,20 +330,16 @@ namespace Viking
                 //First, check the cache to see if it is locally available
                 if (CacheFilename != null)
                 {
-                    TileStream = Global.TextureCache.Fetch(CacheFilename);
-                    if (TileStream != null)
+                    if (!CachedResourceIsValid(CacheFilename, textureUri))
                     {
-                        if (!CachedResourceIsValid(CacheFilename, textureUri))
-                        {
-                            //Trace.WriteLine("Deleting stale cache file: " + CacheFilename, "TextureUse");
-                            System.IO.File.Delete(CacheFilename);
-                            return null;
-                        }
-                        else
-                        {
-                            return TileStream;
-                        }
-                    } 
+                        //Trace.WriteLine("Deleting stale cache file: " + CacheFilename, "TextureUse");
+                        DeleteFileFromCache(CacheFilename);
+                        return null;
+                    }
+                    else
+                    {
+                        return Global.TextureCache.Fetch(CacheFilename);
+                    }
                 }
             }
             catch (ArgumentException e)
@@ -347,6 +349,7 @@ namespace Viking
                 //TODO: There is an interaction with aborting requests where an corrupt version of the image ends up in the cache and continues to be used.  I have to 
                 //figure out how to flush that bad image out of the cache if this occurs. Currently the workaround is to never cache images
                 HandleCachedFileException(e, CacheFilename);
+                return null;
             }
             catch (InvalidOperationException e)
             {
@@ -355,10 +358,12 @@ namespace Viking
                 //TODO: There is an interaction with aborting requests where an corrupt version of the image ends up in the cache and continues to be used.  I have to 
                 //figure out how to flush that bad image out of the cache if this occurs. Currently the workaround is to never cache images
                 HandleCachedFileException(e, CacheFilename);
+                return null;
             }
             catch (Exception e)
             {
                 HandleCachedFileException(e, CacheFilename);
+                return null;
             }
 
             return TileStream; 
