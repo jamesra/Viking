@@ -15,7 +15,7 @@
       <FlavorProperties GUID="{3D9AD99F-2412-4246-B90B-4EAA41C64699}">
         <WcfProjectProperties>
           <PublishCopyOption>RunFiles</PublishCopyOption>
-          <PublishTargetLocation>C:\Src\Git\Viking\Servers\Deployment\Debug\AnnotationService\</PublishTargetLocation>
+          <PublishTargetLocation>C:\Src\Git\Viking\Servers\Deployment\Release\AnnotationService\</PublishTargetLocation>
           <PublishDeleteAllFiles>True</PublishDeleteAllFiles>
         </WcfProjectProperties>
       </FlavorProperties>
