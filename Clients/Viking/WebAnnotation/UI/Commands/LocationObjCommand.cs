@@ -88,7 +88,7 @@ namespace WebAnnotation.UI.Commands
 
                     Location_CanvasViewModel newLocView = new Location_CanvasViewModel(newLoc);
 
-                    Viking.UI.Commands.Command.EnqueueCommand(typeof(ResizeLocationCommand), new object[] { Parent, selected.Parent.Type, newLocView });
+                    Viking.UI.Commands.Command.EnqueueCommand(typeof(ResizeCircleCommand), new object[] { Parent, selected.Parent.Type.Color, WorldPos, new ResizeCircleCommand.OnCommandSuccess((double radius) => { newLocView.Radius = radius; }) });
                     Viking.UI.Commands.Command.EnqueueCommand(typeof(CreateNewLinkedLocationCommand), new object[] { Parent, selected, newLocView });
 
                     Viking.UI.State.SelectedObject = null;

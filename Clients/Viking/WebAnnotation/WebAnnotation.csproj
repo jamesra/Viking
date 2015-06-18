@@ -125,6 +125,8 @@
     <Compile Include="UI\Commands\LinkAnnotationsCommand.cs" />
     <Compile Include="UI\Commands\LinkStructureToParentCommand.cs" />
     <Compile Include="UI\Commands\LocationObjCommand.cs" />
+    <Compile Include="UI\Commands\PlacePolylineCommand.cs" />
+    <Compile Include="UI\Commands\ResizeCircleCommand.cs" />
     <Compile Include="UI\Commands\ResizeLocationCommand.cs" />
     <Compile Include="UI\Commands\StaticExtensionCommands.cs" />
     <Compile Include="UI\Controls\ListLocations.cs">

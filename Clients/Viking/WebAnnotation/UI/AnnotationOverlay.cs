@@ -479,7 +479,15 @@ namespace WebAnnotation
                         {
                             if (distance >= (loc.Radius * RadiusToResizeCircle))
                             {
-                                _Parent.CurrentCommand = new ResizeLocationCommand(Parent);
+                                Location_CanvasViewModel selected_loc = Viking.UI.State.SelectedObject as Location_CanvasViewModel;
+                                SectionLocationsViewModel sectionAnnotations = AnnotationOverlay.GetAnnotationsForSection(Parent.Section.Number);
+                                if (sectionAnnotations == null)
+                                    return;
+
+                                _Parent.CurrentCommand = new ResizeCircleCommand(Parent,
+                                        selected_loc.Parent.Type.Color,
+                                        sectionAnnotations.GetPositionForLocation(selected_loc),
+                                        (radius) => { selected_loc.Radius = radius; Store.Locations.Save(); });
                             }
                             else if (distance >= (loc.Radius * RadiusToLinkCircle))
                             {
@@ -492,7 +500,6 @@ namespace WebAnnotation
                         }
                     }
                 }
-                
             }
         }
 
@@ -658,18 +665,14 @@ namespace WebAnnotation
                 Structure newStructView = new Structure(newStruct);
                 Location_CanvasViewModel newLocationView = new Location_CanvasViewModel(newLocation);
 
-                if (type.Parent == null)
+                Viking.UI.Commands.Command.EnqueueCommand(typeof(ResizeCircleCommand), new object[] { Parent, type.Color, WorldPos, new ResizeCircleCommand.OnCommandSuccess((double radius) => { newLocationView.Radius = radius; }) });
+                if (type.Parent != null)
                 {
-                    Viking.UI.Commands.Command.EnqueueCommand(typeof(ResizeLocationCommand), new object[] { Parent, type, newLocationView });
-                    Viking.UI.Commands.Command.EnqueueCommand(typeof(CreateNewStructureCommand), new object[] { Parent, newStructView, newLocationView });
-                }
-                else
-                {
-                    //Enqueue two commands to resize the location and then select a parent
-                    Viking.UI.Commands.Command.EnqueueCommand(typeof(ResizeLocationCommand), new object[] { Parent, type, newLocationView });
+                    //Enqueue extra command to select a parent
                     Viking.UI.Commands.Command.EnqueueCommand(typeof(LinkStructureToParentCommand), new object[] { Parent, newStructView, newLocationView });
-                    Viking.UI.Commands.Command.EnqueueCommand(typeof(CreateNewStructureCommand), new object[] { Parent, newStructView, newLocationView });
                 }
+
+                Viking.UI.Commands.Command.EnqueueCommand(typeof(CreateNewStructureCommand), new object[] { Parent, newStructView, newLocationView });
             }
             else
                 Trace.WriteLine("Could not find hotkey ID for type: " + TypeID.ToString()); 
@@ -703,7 +706,7 @@ namespace WebAnnotation
 
                     Location_CanvasViewModel newLocView = new Location_CanvasViewModel(newLoc);
 
-                    Viking.UI.Commands.Command.EnqueueCommand(typeof(ResizeLocationCommand), new object[] { Parent, template.Parent.Type, newLocView });
+                    Viking.UI.Commands.Command.EnqueueCommand(typeof(ResizeCircleCommand), new object[] { Parent, template.Parent.Type.Color, WorldPos, new ResizeCircleCommand.OnCommandSuccess((double radius) => { newLocView.Radius = radius; }) });
                     Viking.UI.Commands.Command.EnqueueCommand(typeof(CreateNewLinkedLocationCommand), new object[] { Parent, template, newLocView });
 
                     Viking.UI.State.SelectedObject = null;

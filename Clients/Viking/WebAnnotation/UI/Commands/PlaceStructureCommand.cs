@@ -90,19 +90,15 @@ namespace WebAnnotation.UI.Commands
                 Structure newStructView = new Structure(newStruct); 
                 Location_CanvasViewModel newLocationView = new Location_CanvasViewModel(newLocation);
 
-                if (Type.Parent == null)
+                Viking.UI.Commands.Command.EnqueueCommand(typeof(ResizeCircleCommand), new object[] { Parent, Type.Color, WorldPos, new ResizeCircleCommand.OnCommandSuccess((double radius) => { newLocationView.Radius = radius; }) });
+                if (Type.Parent != null)
                 {
-                    Viking.UI.Commands.Command.EnqueueCommand(typeof(ResizeLocationCommand), new object[] { Parent, Type, newLocationView });
-                    Viking.UI.Commands.Command.EnqueueCommand(typeof(CreateNewStructureCommand), new object[] { Parent, newStructView, newLocationView });
-                }
-                else
-                {
-                    //Enqueue two commands to resize the location and then select a parent
-                    Viking.UI.Commands.Command.EnqueueCommand(typeof(ResizeLocationCommand), new object[] { Parent, Type, newLocationView });
+                    //Enqueue extra command to select a parent
                     Viking.UI.Commands.Command.EnqueueCommand(typeof(LinkStructureToParentCommand), new object[] { Parent, newStructView, newLocationView });
-                    Viking.UI.Commands.Command.EnqueueCommand(typeof(CreateNewStructureCommand), new object[] { Parent, newStructView, newLocationView });
                 }
 
+                Viking.UI.Commands.Command.EnqueueCommand(typeof(CreateNewStructureCommand), new object[] { Parent, newStructView, newLocationView });
+            
                 Execute();
             }
             else if (e.Button == MouseButtons.Right)
