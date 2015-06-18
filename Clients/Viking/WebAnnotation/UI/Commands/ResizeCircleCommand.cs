@@ -11,11 +11,11 @@ using WebAnnotationModel;
 
 namespace WebAnnotation.UI.Commands
 {
-    class ResizeCircleCommand : AnnotationCommandBase
+    class ResizeCircleCommand : Viking.UI.Commands.Command
     {
         public double radius;
          
-        GridVector2 Origin;
+        public GridVector2 Origin;
         System.Drawing.Color CircleColor; 
  
         //DateTime CreationTime; 
@@ -23,25 +23,6 @@ namespace WebAnnotation.UI.Commands
 
         public delegate void OnCommandSuccess(double radius);
         OnCommandSuccess success_callback;
-         
-        /*
-        public ResizeCircleCommand(Viking.UI.Controls.SectionViewerControl parent)
-            : base(parent)
-        {
-            selected = Viking.UI.State.SelectedObject as Location_CanvasViewModel; 
-            Debug.Assert(selected != null);
-
-            CircleColor = selected.Parent.Type.Color;
-
-            SectionLocationsViewModel sectionAnnotations = AnnotationOverlay.GetAnnotationsForSection(Parent.Section.Number);
-            if (sectionAnnotations == null)
-                return;
-
-            Origin = sectionAnnotations.GetPositionForLocation(selected);
-            parent.Cursor = Cursors.SizeAll;
-            SaveToDB = true; 
-        }
-        */
 
         public ResizeCircleCommand(Viking.UI.Controls.SectionViewerControl parent, 
                                      System.Drawing.Color color,  
