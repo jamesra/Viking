@@ -65,31 +65,7 @@ namespace WebAnnotation.UI.Commands
                 GridVector2 WorldPos = Parent.ScreenToWorld(e.X, e.Y);
 
                 this.radius = GridVector2.Distance(Origin, WorldPos); 
-
-                /*
-                //Send changes to DB if we aren't in a queue of events
-                if (SaveToDB)
-                {
-                    selected.Radius = radius;
-                    Store.Locations.Save();
-                    Viking.UI.State.SelectedObject = null;
-                }
-                else
-                {
-                    //If we are in a chain of events make sure a reasonable amount of time has elapsed, this tells us whether the 
-                    //user had time to size the location or 
-
-                    if (HasMouseMoved && radius > 0)
-                    {
-                        selected.Radius = radius;
-                    }
-                    else
-                    {
-                        selected.Radius = 128f; 
-                    }
-                }
-                */
-
+                
                 this.Execute(); 
             }
 
@@ -99,25 +75,15 @@ namespace WebAnnotation.UI.Commands
         public override void OnDraw(Microsoft.Xna.Framework.Graphics.GraphicsDevice graphicsDevice, VikingXNA.Scene scene, Microsoft.Xna.Framework.Graphics.BasicEffect basicEffect)
         {
 //            double OldRadius = selected.Radius;
-            SectionLocationsViewModel sectionAnnotations = AnnotationOverlay.GetAnnotationsForSection(Parent.Section.Number);
-            if (sectionAnnotations == null)
-                return;
-
             GridVector2 Pos = Origin;
 
-            /*
-            bool found = sectionAnnotations.TryGetPositionForLocation(selected, out Pos);
-            if (found == false)
-                return; 
-            */
             Microsoft.Xna.Framework.Color color = new Microsoft.Xna.Framework.Color(CircleColor.R,
                 CircleColor.G,
                 CircleColor.B,
                 128);
 
             GlobalPrimitives.DrawCircle(graphicsDevice, basicEffect, Pos, this.radius, color); 
-              
-
+            
             base.OnDraw(graphicsDevice, scene, basicEffect);
         }
     }
