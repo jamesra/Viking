@@ -40,8 +40,7 @@ namespace AnnotationVizLib
             : base(key)
         {
             this.Location = value;
-            this.Graph = parent; 
-            
+            this.Graph = parent;
         }
 
         public MorphologyNode(long key, MorphologyGraph parent, Location value)
@@ -70,6 +69,17 @@ namespace AnnotationVizLib
         public ConcurrentDictionary<ulong, MorphologyGraph> Subgraphs = new ConcurrentDictionary<ulong, MorphologyGraph>();
 
         public Structure structure = null;
+
+        public StructureType structureType
+        {
+            get
+            {
+                if (structure == null)
+                    return null;
+
+                return Queries.IDToStructureType[this.structure.TypeID];
+            }
+        }
 
         public MorphologyGraph(ulong subgraph_id)
         {
@@ -101,13 +111,17 @@ namespace AnnotationVizLib
         private static void MorphologyForStructures(MorphologyGraph rootGraph, ICollection<long> StructureIDs, bool include_children)
         {
             Structure[] structures = Queries.GetStructuresByIDs(StructureIDs.ToArray(), include_children);
-             
+
+            Queries.PopulateStructureTypes();
+
             // Get the nodes and build graph for numHops
             System.Threading.Tasks.Parallel.ForEach<Structure>(structures, s =>
             { 
                 MorphologyGraph graph = MorphologyForStructure(s);
                 if (graph == null)
                     return;
+
+                StructureType type = Queries.IDToStructureType[s.TypeID];
 
                 graph.structure = s;
                 rootGraph.Subgraphs.TryAdd((ulong)s.ID, graph);

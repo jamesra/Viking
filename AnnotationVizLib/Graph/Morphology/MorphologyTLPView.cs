@@ -61,7 +61,10 @@ namespace AnnotationVizLib
             NodeAttribs.Add("LocationID", node.Location.ID.ToString());
             NodeAttribs.Add("ParentID", node.Location.ParentID.ToString());
             NodeAttribs.Add("LocationInViking", NodeVikingLocation(node));
-            NodeAttribs.Add("StructureURL", string.Format("{0}/OData/ConnectomeData.svc/Locations({1}L)", this.VolumeURL, node.Location.ID));
+            NodeAttribs.Add("StructureURL", string.Format("{0}/OData/ConnectomeData.svc/Locations({1}L)", this.VolumeURL, node.Location.ID));            
+
+            if(node.Graph.structureType != null)
+                NodeAttribs.Add("Type", node.Graph.structureType.Name); 
 
             if(NodeShape(node) != null)
             {

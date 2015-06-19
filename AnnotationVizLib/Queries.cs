@@ -19,6 +19,16 @@ namespace AnnotationVizLib
             }
         }
 
+        /// <summary>
+        /// Ensure the StructureType dictionary is populated
+        /// </summary>
+        public static void PopulateStructureTypes()
+        {
+            if (_IDToStructureType == null)
+                _IDToStructureType = Queries.GetStructureTypes();
+        }
+
+
         private static SortedDictionary<long, StructureType> _IDToStructureType = null;
 
         public static SortedList<string, List<Structure>> LabelToStructuresMap()
