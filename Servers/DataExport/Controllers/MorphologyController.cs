@@ -33,7 +33,7 @@ namespace DataExport.Controllers
         [ActionName("GetTLP")]
         public ActionResult GetTLP()
         {
-            string OutputFile = GetOutputFilename(); GetOutputFilename();
+            string OutputFile = GetOutputFilename();
             string userOutputDirectory = GetAndCreateOutputDirectories("~/Output/");
             string userOutputFileFullPath = System.IO.Path.Combine(userOutputDirectory, OutputFile);
             Scale scale = AppSettings.GetScale();
