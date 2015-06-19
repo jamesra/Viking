@@ -381,15 +381,9 @@ namespace RoundLineCode
         /// <summary>
         /// Draw a list of Lines.
         /// </summary>
-        public void Draw(List<RoundLine> roundLines, float lineRadius, Color lineColor, Matrix viewProjMatrix, 
+        public void Draw(IEnumerable<RoundLine> roundLines, float lineRadius, Color lineColor, Matrix viewProjMatrix, 
             float time, string techniqueName)
         {
-            /*PORT XNA 4
-            VertexDeclaration oldVertexDeclaration = device.VertexDeclaration;
-            device.VertexDeclaration = vdecl;
-            device.Vertices[0].SetSource(vb, 0, bytesPerVertex);
-            */
-
             device.SetVertexBuffer(vb); 
             device.Indices = ib;
 
@@ -403,12 +397,9 @@ namespace RoundLineCode
                 effect.CurrentTechnique = effect.Techniques["Standard"];
             else
                 effect.CurrentTechnique = effect.Techniques[techniqueName];
-            //PORT XNA 4
-            //effect.Begin();
+
             EffectPass pass = effect.CurrentTechnique.Passes[0];
 
-            //PORT XNA 4
-            //pass.Begin();
             pass.Apply(); 
             
             int iData = 0;
@@ -424,8 +415,6 @@ namespace RoundLineCode
                 if (numInstancesThisDraw == numInstances)
                 {
                     instanceDataParameter.SetValue(translationData);
-                    //PORT XNA 4
-                    //effect.CommitChanges();
                     device.DrawIndexedPrimitives(PrimitiveType.TriangleList, 0, 0, numVertices, 0, numPrimitivesPerInstance * numInstancesThisDraw);
                     NumLinesDrawn += numInstancesThisDraw;
                     numInstancesThisDraw = 0;
@@ -435,21 +424,9 @@ namespace RoundLineCode
             if (numInstancesThisDraw > 0)
             {
                 instanceDataParameter.SetValue(translationData);
-                //PORT XNA 4
-                //effect.CommitChanges();
                 device.DrawIndexedPrimitives(PrimitiveType.TriangleList, 0, 0, numVertices, 0, numPrimitivesPerInstance * numInstancesThisDraw);
                 NumLinesDrawn += numInstancesThisDraw;
             }
-            //PORT XNA 4
-            //pass.End();
-
-            //PORT XNA 4
-            //effect.End();
-
-            //PORT XNA 4
-            //device.VertexDeclaration = oldVertexDeclaration;
-            //device.RenderState.CullMode = CullMode.None; 
-            //device.RasterizerState.CullMode = CullMode.None; 
         }
     }
 }
