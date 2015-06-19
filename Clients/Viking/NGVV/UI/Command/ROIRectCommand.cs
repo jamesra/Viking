@@ -50,23 +50,6 @@ namespace Viking.UI.Commands
 
         public override void OnDraw(GraphicsDevice graphicsDevice, VikingXNA.Scene scene, BasicEffect basicEffect)
         {
-            //PORT XNA 4
-            //basicEffect.Begin();
-
-//            foreach (EffectPass pass in basicEffect.CurrentTechnique.Passes)
-//            {
-                //PORT XNA 4
-                //pass.Begin();
-
-                //rectangle.Draw(graphicsDevice);
-
-                //PORT XNA 4
-                //pass.End();
- //           }
-
-            //PORT XNA 4
-            //basicEffect.End();
-
             base.OnDraw(graphicsDevice, scene, basicEffect); 
         }
 

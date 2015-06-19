@@ -86,18 +86,8 @@ namespace Viking.UI.Commands
             if (CommandActive == false)
                 return;
 
-            //PORT XNA 4
-            //VertexDeclaration oldVertexDeclaration = graphicsDevice.VertexDeclaration;
-
-            //PORT XNA 4
-            //graphicsDevice.VertexDeclaration = Parent.VertexPositionColorDeclaration;
-
             basicEffect.VertexColorEnabled = true; 
-            basicEffect.TextureEnabled = false;
-            //PORT XNA 4
-            //basicEffect.CommitChanges();
-
-            
+            basicEffect.TextureEnabled = false;            
             VertexPositionColor[] verts = new VertexPositionColor[] { new VertexPositionColor( new Vector3((float)MyRect.Left, (float)MyRect.Bottom, 1), Color.Yellow), 
                                                                        new VertexPositionColor( new Vector3((float)MyRect.Right, (float)MyRect.Bottom, 1), Color.Yellow), 
                                                                         new VertexPositionColor( new Vector3((float)MyRect.Right, (float)MyRect.Top, 1), Color.Yellow), 
@@ -114,37 +104,14 @@ namespace Viking.UI.Commands
 
             int[] indicies = new int[] { 0, 1, 2, 3, 0 };
             int[] crossIndicies = new int[] { 0, 1, 2, 3 }; 
-
-            //PORT XNA 4
-            //basicEffect.Begin();
-
+            
             foreach (EffectPass pass in basicEffect.CurrentTechnique.Passes)
             {
-                //PORT XNA 4
-                //pass.Begin();
                 pass.Apply(); 
-
-                //if(gridIndicies.Count > 0)
-
-            //    MyRect.Draw(graphicsDevice); 
 
                 graphicsDevice.DrawUserIndexedPrimitives<VertexPositionColor>(PrimitiveType.LineStrip, verts, 0, verts.Length, indicies, 0, indicies.Length - 1);
                 graphicsDevice.DrawUserIndexedPrimitives<VertexPositionColor>(PrimitiveType.LineList, crossVerts, 0, crossVerts.Length, crossIndicies, 0, crossIndicies.Length / 2); 
-
-//                graphicsDevice.DrawUserIndexedPrimitives<VertexPositionNormalTexture>(PrimitiveType.TriangleList, this.verticies, 0, verticies.Length, gridIndicies, 0, gridIndicies.Length / 3);
-                // graphicsDevice.DrawUserPrimitives<VertexPositionNormalTexture>(PrimitiveType.TriangleList, this.verticies, 0, verticies.Length / 3); 
-                //  GraphicsDevice.DrawUserIndexedPrimitives<VertexPositionNormalTexture>(PrimitiveType.TriangleList, GridVerticies, 0, GridVerticies.Length, GridIndicies, 2, 2); 
-                // graphicsDevice.DrawUserIndexedPrimitives<VertexPositionNormalTexture>(PrimitiveType.TriangleList, this.verticies, 0, verticies.Length, gridIndicies, 0, 1);
-
-                //PORT XNA 4
-                //pass.End();
             }
-
-            //PORT XNA 4
-            //basicEffect.End();
-
-            //PORT XNA 4
-            //graphicsDevice.VertexDeclaration = oldVertexDeclaration; 
 
             basicEffect.TextureEnabled = true;
             basicEffect.VertexColorEnabled = false; 
