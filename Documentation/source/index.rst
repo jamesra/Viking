@@ -1,8 +1,8 @@
 .. Viking Documentation master file.
 
 .. image::  Banner.jpg 
+   :width: 768
    :align: center
-   :scale: 66%
 
 #################################
 Welcome to Viking's Documentation
@@ -43,6 +43,10 @@ Account creation
 Accounts are only required to write to the database.  Read-only access via Viking may be done anonymously.
 
 Create accounts and do some basic visualization on the `original visualization site`_
+
+.. image::  Footer_v2.jpg  
+   :width: 768
+   :align: center
    
 Indices and tables
 ==================

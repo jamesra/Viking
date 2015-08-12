@@ -1,17 +1,17 @@
 
-###################
-Export File Formats
-###################
+#####################
+Network Visualization
+#####################
 
 The Viking web services can export files for use in external tools.  While a nicer interface is planned, currently the export is performed with URL's.
 
 Prerequisites
--------------
+=============
 
-For graph visualization we recommend using `Tulip`_ and the TLP file format.
+For graph visualization we recommend using `Tulip`_ and the TLP file format.  We also provide .dot files for use with `Graphviz`_.
 
 Export directly from a URL
---------------------------
+==========================
 
 Exports are available under a volume URL's /export/ subpath.  An Export URL has the following components
 
@@ -95,8 +95,9 @@ Morphology
       
       .. sourcecode:: http
       
-         http://websvc1.connectomes.utah.edu/RC1/morphology/tlp?id=180,476
+         http://websvc1.connectomes.utah.edu/RC1/export/morphology/tlp?id=180,476
          
       .. figure:: Morphology_Export1.png
   
 .. _Tulip: http://tulip.labri.fr/
+.. _Graphviz: http://www.graphviz.org/
