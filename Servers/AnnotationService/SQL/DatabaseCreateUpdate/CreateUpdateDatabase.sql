@@ -2265,5 +2265,46 @@ end
 	 COMMIT TRANSACTION twentytwo
 	end
 
+	if(not(exists(select (1) from DBVersion where DBVersionID = 23)))
+	begin
+     print N'Add procedure to select structures linked to specified structure via child structures'
+	 BEGIN TRANSACTION twentythree
+		
+		EXEC('
+			CREATE PROCEDURE [dbo].[SelectStructuresLinkedViaChildren]
+			-- Add the parameters for the stored procedure here
+			@StructureID bigint 
+			AS
+			BEGIN  
+
+				IF OBJECT_ID(''tempdb..#ChildStructure'') IS NOT NULL DROP TABLE #ChildStructure
+				IF OBJECT_ID(''tempdb..#LinkedStructures'') IS NOT NULL DROP TABLE #LinkedStructures 
+
+				select ID into #ChildStructure from structure where ParentID = @StructureID
+				select * into #LinkedStructures from StructureLink where SourceID in (Select ID from #ChildStructure) or TargetID in (Select ID from #CHildStructure)
+				
+				select Distinct ParentID from Structure where ID in (select SourceID from #LinkedStructures) or ID in (select TargetID from #LinkedStructures)
+
+				DROP TABLE #ChildStructure
+				DROP TABLE #LinkedStructures 
+			END
+			')
+		
+					
+		--any potential errors get reported, and the script is rolled back and terminated
+		 if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
+		  --insert the second version marker
+		 INSERT INTO DBVersion values (23, 
+		   N'Add procedure to select structures linked to specified structure via child structures',getDate(),User_ID())
+
+	 COMMIT TRANSACTION twentythree
+	end
+
+
 --from here on, continually add steps in the previous manner as needed.
 	COMMIT TRANSACTION main
