@@ -1299,6 +1299,25 @@ namespace ConnectomeOpenData
     
             return base.ExecuteFunction<SelectStructureLocations_Result>("SelectStructureLocations", structureIDParameter);
         }
+    
+        /// <summary>
+        /// No Metadata Documentation available.
+        /// </summary>
+        /// <param name="iD">No Metadata Documentation available.</param>
+        public ObjectResult<Nullable<global::System.Int64>> SelectStructuresLinkedViaChildren(Nullable<global::System.Int64> iD)
+        {
+            ObjectParameter iDParameter;
+            if (iD.HasValue)
+            {
+                iDParameter = new ObjectParameter("ID", iD);
+            }
+            else
+            {
+                iDParameter = new ObjectParameter("ID", typeof(global::System.Int64));
+            }
+    
+            return base.ExecuteFunction<Nullable<global::System.Int64>>("SelectStructuresLinkedViaChildren", iDParameter);
+        }
 
         #endregion
 
@@ -1986,7 +2005,7 @@ namespace ConnectomeOpenData
             {
                 return _LastModified;
             }
-            set
+            private set
             {
                 OnLastModifiedChanging(value);
                 ReportPropertyChanging("LastModified");
@@ -2038,7 +2057,7 @@ namespace ConnectomeOpenData
             {
                 OnUsernameChanging(value);
                 ReportPropertyChanging("Username");
-                _Username = StructuralObject.SetValidValue(value, false, "Username");
+                _Username = StructuralObject.SetValidValue(value, true, "Username");
                 ReportPropertyChanged("Username");
                 OnUsernameChanged();
             }
@@ -3679,7 +3698,7 @@ namespace ConnectomeOpenData
             {
                 OnUsernameChanging(value);
                 ReportPropertyChanging("Username");
-                _Username = StructuralObject.SetValidValue(value, false, "Username");
+                _Username = StructuralObject.SetValidValue(value, true, "Username");
                 ReportPropertyChanged("Username");
                 OnUsernameChanged();
             }
@@ -3699,7 +3718,7 @@ namespace ConnectomeOpenData
             {
                 return _LastModified;
             }
-            set
+            private set
             {
                 OnLastModifiedChanging(value);
                 ReportPropertyChanging("LastModified");
@@ -5542,7 +5561,7 @@ namespace ConnectomeOpenData
             {
                 return _LastModified;
             }
-            set
+            private set
             {
                 OnLastModifiedChanging(value);
                 ReportPropertyChanging("LastModified");
