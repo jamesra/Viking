@@ -5,7 +5,7 @@ using System.Text;
 using System.ServiceModel;
 using System.Runtime.Serialization;
 
-using Annotation.Database;
+using ConnectomeDataModel;
 
 namespace Annotation
 {
@@ -118,7 +118,7 @@ namespace Annotation
             set { _Username = value; }
         }
 
-        private static StructureLink[] PopulateLinks(DBStructure db)
+        private static StructureLink[] PopulateLinks(ConnectomeDataModel.Structure structObj)
         {
             if (!(db.IsSourceOf.Any() || db.IsTargetOf.Any()))
                 return null;
@@ -126,13 +126,13 @@ namespace Annotation
             StructureLink[] _Links = new StructureLink[db.IsSourceOf.Count + db.IsTargetOf.Count];
 
             int i = 0;
-            foreach (DBStructureLink link in db.IsSourceOf)
+            foreach (ConnectomeDataModel.StructureLink link in structObj.SourceOfLinks)
             {
                 _Links[i] = new StructureLink(link);
                 i++;
             }
 
-            foreach (DBStructureLink link in db.IsTargetOf)
+            foreach (ConnectomeDataModel.StructureLink link in structObj.TargetOfLinks)
             {
                 _Links[i] = new StructureLink(link);
                 i++;
@@ -150,37 +150,37 @@ namespace Annotation
         /// </summary>
         /// <param name="obj"></param>
         /// <param name="IncludeChildren">Include children is set to false to save space when children aren't needed</param>
-        public Structure(DBStructure obj, bool IncludeChildren)
+        public Structure(ConnectomeDataModel.Structure obj, bool IncludeChildren)
         {
-            DBStructure db = obj as DBStructure;
+            ConnectomeDataModel.Structure dbStructObj = obj as ConnectomeDataModel.Structure;
 
-            this.ID = db.ID;
-            this.TypeID = db.TypeID;
-            this.Notes = db.Notes;
-            this.Verified = db.Verified;
+            this.ID = dbStructObj.ID;
+            this.TypeID = dbStructObj.TypeID;
+            this.Notes = dbStructObj.Notes;
+            this.Verified = dbStructObj.Verified;
 
 
-            if (db.Tags == null)
+            if (dbStructObj.Tags == null)
             {
                 //_Tags = new string[0];
                 _Xml = ""; 
             }
             else
             {
-            //    _Tags = db.Tags.Split(';');
-                _Xml = db.Tags;
+            //    _Tags = dbStructObj.Tags.Split(';');
+                _Xml = dbStructObj.Tags;
             }
                 
 
-            this.Confidence = db.Confidence;
-            this.ParentID = db.ParentID;
+            this.Confidence = dbStructObj.Confidence;
+            this.ParentID = dbStructObj.ParentID;
 
-            this._Links = PopulateLinks(db);
+            this._Links = PopulateLinks(dbStructObj);
 
             if (IncludeChildren)
             {
-                List<long> childIDs = new List<long>(db.ChildStructures.Count);
-                foreach (DBStructure Child in db.ChildStructures)
+                List<long> childIDs = new List<long>(dbStructObj.Children.Count);
+                foreach (ConnectomeDataModel.Structure Child in dbStructObj.Children)
                 {
                     childIDs.Add(Child.ID);
                 }
@@ -191,15 +191,15 @@ namespace Annotation
                 this._ChildIDs = null; 
             }
              
-            this._Label = db.Label;
-            this._Username = db.Username; 
+            this._Label = dbStructObj.Label;
+            this._Username = dbStructObj.Username; 
         }
 
-        public void Sync(DBStructure db)
+        public void Sync(ConnectomeDataModel.Structure dbStructObj)
         {
-            db.TypeID = this.TypeID;
-            db.Notes = this.Notes;
-            db.Verified = this.Verified;        
+            dbStructObj.TypeID = this.TypeID;
+            dbStructObj.Notes = this.Notes;
+            dbStructObj.Verified = this.Verified;        
             /*
             string tags = "";
             foreach (string s in _Tags)
@@ -210,11 +210,11 @@ namespace Annotation
                     tags = s; 
             }
             */
-            db.Tags = this.AttributesXml;
-            db.Confidence = this.Confidence;
-            db.ParentID = this.ParentID;
-            db.Label = this.Label;
-            db.Username = ServiceModelUtil.GetUserForCall();
+            dbStructObj.Tags = this.AttributesXml;
+            dbStructObj.Confidence = this.Confidence;
+            dbStructObj.ParentID = this.ParentID;
+            dbStructObj.Label = this.Label;
+            dbStructObj.Username = ServiceModelUtil.GetUserForCall();
         }
     }
 
@@ -223,29 +223,29 @@ namespace Annotation
     public class StructureHistory : Structure
     {
 
-        public StructureHistory(SelectStructureChangeLogResult db)
+        public StructureHistory(SelectStructureChangeLog_Result dbStructObj)
         {
 
-            this.ID = db.ID.Value;
-            this.TypeID = db.TypeID.Value;
-            this.Notes = db.Notes;
-            this.Verified = db.Verified.Value;
+            this.ID = dbStructObj.ID.Value;
+            this.TypeID = dbStructObj.TypeID.Value;
+            this.Notes = dbStructObj.Notes;
+            this.Verified = dbStructObj.Verified.Value;
 
             /*
-            if (db.Tags == null)
+            if (dbStructObj.Tags == null)
             { 
                 _Xml = "";
             }
             else
             { 
-                _Xml = db.Tags.ToString();
+                _Xml = dbStructObj.Tags.ToString();
             }
             */
 
-            this.Confidence = db.Confidence.Value;
-            this.ParentID = db.ParentID.Value;
-            this._Label = db.Label;
-            this._Username = db.Username; 
+            this.Confidence = dbStructObj.Confidence.Value;
+            this.ParentID = dbStructObj.ParentID.Value;
+            this._Label = dbStructObj.Label;
+            this._Username = dbStructObj.Username; 
         }
 
     }

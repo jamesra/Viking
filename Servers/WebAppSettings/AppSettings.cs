@@ -36,17 +36,35 @@ namespace VikingWebAppSettings
             return GetApplicationSetting("DatabaseCatalog");
         } 
 
+        public static string GetDefaultDatabaseConnectionStringName()
+        { 
+            return GetApplicationSetting("DatabaseConnectionName");
+        }
+
+        public static string GetDefaultConnectionString()
+        {
+            return GetConnectionString(GetDefaultDatabaseConnectionStringName());
+        }
+
         public static string GetConnectionString(string name)
         { 
+            if (WebConfigurationManager.ConnectionStrings == null)
+            {
+                throw new ArgumentException("WebConfigurationManager.ConnectionStrings is null");
+            }
             if (WebConfigurationManager.ConnectionStrings.Count == 0)
             {
-                throw new ArgumentException(name + " not configured as ConnectionString");
+                throw new ArgumentException("Connection string " + name + " not configured.");
+            }
+            if (WebConfigurationManager.ConnectionStrings[name] == null)
+            {
+                throw new ArgumentException("Connection string " + name + " has a null ConnectionStringSettings value");
             }
 
             string conn_string = WebConfigurationManager.ConnectionStrings[name].ConnectionString;
             if(conn_string == null)
             {
-                throw new ArgumentException(name + " not configured as ConnectionString");
+                throw new ArgumentException("Connection string " + name + " returned null ConnectionString");
             }
 
             return conn_string;
@@ -106,7 +124,6 @@ namespace VikingWebAppSettings
 #endif
 
             return new Scale(X, Y, Z); 
-        }
-          
+        } 
     }
 }

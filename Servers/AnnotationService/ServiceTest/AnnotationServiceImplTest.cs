@@ -2,7 +2,8 @@
 using System; 
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Security;
-using System.Security.Principal; 
+using System.Security.Principal;
+using System.Collections.Generic;
 //using System.Diagnostics;
 
 namespace ServiceTest
@@ -10,7 +11,7 @@ namespace ServiceTest
 
     public static class Parameters
     {
-        public static string TestDatabaseName = "Empty";
+        public static string TestDatabaseName = "Test";
     }
     /// <summary>
     ///This is a test class for AnnotationServiceImplTest and is intended
@@ -95,7 +96,10 @@ namespace ServiceTest
             P.X = 0;
             P.Y = 0;
             P.Z = 0;
-            newPos.Position = P; 
+            newPos.Position = P;
+
+            newPos.MosaicShape = System.Data.Entity.Spatial.DbGeometry.FromText("POINT(0 0 0)");
+            newPos.VolumeShape = System.Data.Entity.Spatial.DbGeometry.FromText("POINT(0 0 0)");
         }
 
         
@@ -301,6 +305,7 @@ namespace ServiceTest
         [TestMethod()]
         public void CreateStructureTest()
         {
+           
             AddPrincipalToThread();
 
             AnnotateService target = new AnnotateService(); // TODO: Initialize to an appropriate value
@@ -316,17 +321,14 @@ namespace ServiceTest
             newStruct.TypeID = t.ID;
 
             Location newPos = new Location();
-            newPos.ParentID = newStruct.ID;
-            AnnotationPoint P = new AnnotationPoint();
-            P.X = 0;
-            P.Y = 0;
-            P.Z = 0;
-            newPos.Position = P;
-
+            PopulateLocation(newPos, newStruct.ID);
+            
             CreateStructureRetval retval = target.CreateStructure(newStruct, newPos);
 
             Structure dbStruct = target.GetStructureByID(retval.structure.ID, false);
             Location dbPos = target.GetLocationByID(retval.location.ID);
+
+            
 
             Assert.IsTrue(dbStruct != null && dbStruct.ID == retval.structure.ID);
             Assert.IsTrue(dbPos != null && dbPos.ID == retval.location.ID);
@@ -335,8 +337,7 @@ namespace ServiceTest
             target.Update(new Location[] { dbPos });
 
             //Check to make sure there aren't any locations for the structure
-            long queryTimeInTicks;
-            Location[] structLocs = target.GetLocationsForSection(dbStruct.ID, out queryTimeInTicks);
+            Location[] structLocs = target.GetLocationsForStructure(dbStruct.ID);
             Assert.IsTrue(structLocs.Length == 0);
 
             dbStruct.DBAction = DBACTION.DELETE;
@@ -359,6 +360,8 @@ namespace ServiceTest
         [TestMethod()]
         public void CreateStructureLinkTest()
         {
+            long TestStartTime = DateTime.UtcNow.Ticks;
+
             AddPrincipalToThread();
 
             AnnotateService target = new AnnotateService(); // TODO: Initialize to an appropriate value
@@ -366,8 +369,8 @@ namespace ServiceTest
             StructureType t = CreatePopulatedStructureType(Parameters.TestDatabaseName);
 
             long[] IDs = target.UpdateStructureTypes(new StructureType[] { t });
-            long[] IDsA; //ID's for struct A
-            long[] IDsB; //ID's for struct B
+            //long[] IDsA; //ID's for struct A
+            //long[] IDsB; //ID's for struct B
             long StructureTypeID = IDs[0];
 
             t = target.GetStructureTypeByID(StructureTypeID);
@@ -380,19 +383,16 @@ namespace ServiceTest
 
             //Create location A
             Location newPosA = new Location();
-            newPosA.ParentID = newStructA.ID;
+            PopulateLocation(newPosA, newStructA.ID);
 
-            AnnotationPoint P = new AnnotationPoint();
-            P.X = 0;
-            P.Y = 0;
-            P.Z = 0;
+            AnnotationPoint P = new AnnotationPoint(); 
             newPosA.Position = P;
 
             CreateStructureRetval retvalA = target.CreateStructure(newStructA, newPosA);
 
             //CreateLocationB
             Location newPosB = new Location();
-            newPosB.ParentID = newStructB.ID;
+            PopulateLocation(newPosB, newStructB.ID); 
 
             AnnotationPoint Pb = new AnnotationPoint();
             Pb.X = -1;
@@ -420,8 +420,14 @@ namespace ServiceTest
             
             target.CreateStructureLink(link);
 
+            long QueryExecutedTime;
+            long[] DeletedIDs;
+            Structure[] structuresForSection = target.GetStructuresForSection((long)newPosA.Position.Z, TestStartTime, out QueryExecutedTime, out DeletedIDs);
+            Assert.IsTrue(structuresForSection.Length >= 0);
+            
+
             StructureLink[] reportedLinks = target.GetLinkedStructures();
-            Assert.IsTrue(reportedLinks.Length == 1);
+            Assert.IsTrue(reportedLinks.Length >= 1);
 
             StructureLink[] LinkedToSource = target.GetLinkedStructuresByID(link.SourceID);
             Assert.IsTrue(LinkedToSource.Length == 1);
@@ -468,12 +474,25 @@ namespace ServiceTest
             target.UpdateStructureTypes(new StructureType[] { t });
         }
 
+        private Dictionary<long, Location> LocationsToDict(IList<Location> locations)
+        {
+            Dictionary<long, Location > dictLocations = new Dictionary<long, Location>();
+            foreach (Location loc in locations)
+            {
+                dictLocations[loc.ID] = loc;
+            }
+
+            return dictLocations;
+        }
+
+
         /// <summary>
         ///A test that creates a structure and a location for that structure, then deletes them
         ///</summary>
         [TestMethod()]
         public void LocationLinkTest()
         {
+            long TestStartTime = DateTime.UtcNow.Ticks; 
             AddPrincipalToThread();
 
             AnnotateService target = new AnnotateService(); // TODO: Initialize to an appropriate value
@@ -488,21 +507,19 @@ namespace ServiceTest
             Structure newStruct = new Structure();
             newStruct.TypeID = StructureTypeID;
 
-            Location newPos = new Location();
-            newPos.ParentID = newStruct.ID;
-            AnnotationPoint P = new AnnotationPoint();
-            P.X = 0;
-            P.Y = 0;
-            P.Z = 0;
-            newPos.Position = P;
+            Location A = new Location();
+            PopulateLocation(A, newStruct.ID);
 
-            CreateStructureRetval retval = target.CreateStructure(newStruct, newPos);
+            AnnotationPoint P = new AnnotationPoint(); 
+            A.Position = P;
+
+            CreateStructureRetval retval = target.CreateStructure(newStruct, A);
             long StructureID = retval.structure.ID;
             long LocationAID = retval.location.ID;
 
             //Create a second location for the structure, linked to the first
             Location B = new Location();
-            B.ParentID = StructureID;
+            PopulateLocation(B, StructureID); 
             P.Z = 1;
             B.Position = P;
             B.DBAction = DBACTION.INSERT; 
@@ -511,6 +528,23 @@ namespace ServiceTest
             long LocationBID = IDs[0]; 
 
             target.CreateLocationLink(LocationAID, LocationBID);
+
+            long QueryExecutedTime;
+            long[] DeletedIDs = null;
+            Location[] locations = target.GetLocationChanges(0, TestStartTime, out QueryExecutedTime, out DeletedIDs);
+
+            Assert.IsTrue(locations.Length >= 0);
+            Dictionary<long, Location> dictLocations = LocationsToDict(locations);
+
+            Location BTest = dictLocations[LocationBID];
+            Location ATest = dictLocations[LocationAID];
+
+            Assert.IsTrue(ATest.Links.Length == 1);
+            Assert.IsTrue(BTest.Links.Length == 1);
+
+            Assert.IsTrue(ATest.Links[0] == BTest.ID);
+            Assert.IsTrue(BTest.Links[0] == ATest.ID);
+
 
             target.DeleteLocationLink(LocationBID, LocationAID);
 
@@ -560,11 +594,8 @@ namespace ServiceTest
             newStruct.TypeID = StructureTypeID;
 
             Location newPos = new Location();
-            newPos.ParentID = newStruct.ID;
-            AnnotationPoint P = new AnnotationPoint();
-            P.X = 0;
-            P.Y = 0;
-            P.Z = 0;
+            PopulateLocation(newPos, newStruct.ID);
+            AnnotationPoint P = new AnnotationPoint(); 
             newPos.Position = P;
 
             CreateStructureRetval retval = target.CreateStructure(newStruct, newPos);
@@ -573,7 +604,7 @@ namespace ServiceTest
 
             //Create a second location for the structure
             Location B = new Location();
-            B.ParentID = StructureID;
+            PopulateLocation(B, StructureID);
             P.Z = 0;
             B.Position = P;
             B.DBAction = DBACTION.INSERT;
@@ -589,7 +620,7 @@ namespace ServiceTest
 
             //Create a third location for the structure
             Location C = new Location();
-            C.ParentID = StructureID;
+            PopulateLocation(C, StructureID);
             P.Z = 0;
             C.Position = P;
             C.DBAction = DBACTION.INSERT;

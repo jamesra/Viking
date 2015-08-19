@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.ServiceModel;
 using System.Runtime.Serialization;
-using Annotation.Database;
+using ConnectomeDataModel;
 
 namespace Annotation
 {
@@ -44,6 +44,7 @@ namespace Annotation
             _Y = y;
             _Z = z; 
         }
+         
     }
 
     [DataContract]
@@ -67,20 +68,22 @@ namespace Annotation
             set { _Radius = value; }
         }
 
-        public LocationPositionOnly(Annotation.Database.SelectUnfinishedStructureBranchesWithPositionResult db)
+        public LocationPositionOnly(ConnectomeDataModel.SelectUnfinishedStructureBranchesWithPosition_Result db)
         {
             this.ID = db.ID;
             this.Position = new AnnotationPoint(db.X, db.Y, db.Z);
             this.Radius = db.Radius;
         }
 
-        public LocationPositionOnly(Annotation.Database.DBLocation db)
+        public LocationPositionOnly(ConnectomeDataModel.Location db)
         {
             this.ID = db.ID;
             this.Position = new AnnotationPoint(db.X, db.Y, db.Z);
             this.Radius = db.Radius;
         } 
     }
+
+
 
     [DataContract]
     public class Location : DataObjectWithKey<long>
@@ -99,6 +102,8 @@ namespace Annotation
         protected long _LastModified;
         protected string _Username;
         protected string _Xml;
+        protected System.Data.Entity.Spatial.DbGeometry _MosaicShape;
+        protected System.Data.Entity.Spatial.DbGeometry _VolumeShape;
 
         static System.Runtime.Serialization.Formatters.Binary.BinaryFormatter serializer = new System.Runtime.Serialization.Formatters.Binary.BinaryFormatter(); 
             
@@ -131,6 +136,18 @@ namespace Annotation
         {
             get { return _VolumePosition; }
             set { _VolumePosition = value; }
+        }
+    
+        public System.Data.Entity.Spatial.DbGeometry MosaicShape
+        {
+            get { return _MosaicShape; }
+            set { _MosaicShape = value; }
+        }
+
+        public System.Data.Entity.Spatial.DbGeometry VolumeShape
+        {
+            get { return _VolumeShape; }
+            set { _VolumeShape = value; }
         }
 
         [DataMember]
@@ -216,7 +233,7 @@ namespace Annotation
 
         }
 
-        private static long[] PopulateLinks(DBLocation db)
+        private static long[] PopulateLinks(ConnectomeDataModel.Location loc)
         {
             if (! (db.IsLinkedTo.Any() || db.IsLinkedFrom.Any()))
                 return null; 
@@ -225,22 +242,22 @@ namespace Annotation
             //    this._Links = new long[0]; 
 
             int i = 0;
-            foreach (DBLocationLink link in db.IsLinkedTo)
+            foreach (ConnectomeDataModel.LocationLink link in loc.LocationLinksA)
             {
-                _Links[i] = link.LinkedTo;
+                _Links[i] = link.B;
                 i++;
             }
 
-            foreach (DBLocationLink link in db.IsLinkedFrom)
+            foreach (ConnectomeDataModel.LocationLink link in loc.LocationLinksB)
             {
-                _Links[i] = link.LinkedFrom;
+                _Links[i] = link.A;
                 i++;
             }
 
             return _Links; 
         }
 
-        protected static AnnotationPoint[] LoadVerticies(System.Data.Linq.Binary db_verticies)
+        protected static AnnotationPoint[] LoadVerticies(byte[] db_verticies)
         {
             System.IO.MemoryStream vertStream = null;
             AnnotationPoint[] verticies = null;
@@ -248,14 +265,14 @@ namespace Annotation
             {
                 if (db_verticies.Length > 0)
                 {
-                    using (vertStream = new System.IO.MemoryStream(db_verticies.ToArray()))
+                    using (vertStream = new System.IO.MemoryStream(db_verticies))
                     {
 
                         try
                         {
                             verticies = serializer.Deserialize(vertStream) as AnnotationPoint[];
                         }
-                        catch (Exception e)
+                        catch (Exception )
                         {
                             verticies = null;
                         }
@@ -266,15 +283,17 @@ namespace Annotation
             return verticies;
         }
 
-        public Location(DBLocation db)
+        public Location(ConnectomeDataModel.Location db)
         {
             this.ID = db.ID;
 
             this.ParentID = db.ParentID;
-
-            this.Section = (long)db.Z;
+             
+            this.Section = (long)db.Z;  
             this.Position = new AnnotationPoint(db.X, db.Y, db.Z);
-            this.VolumePosition = new AnnotationPoint(db.VolumeX, db.VolumeY, db.Z);  
+            this.VolumePosition = new AnnotationPoint(db.VolumeX, db.VolumeY, db.Z);
+            this.MosaicShape = db.MosaicShape;
+            this.VolumeShape = db.VolumeShape;
             this._Closed = db.Closed;
             this._Links = PopulateLinks(db);
 
@@ -299,7 +318,7 @@ namespace Annotation
             this._Username = db.Username;
         }
 
-        public void Sync(DBLocation db)
+        public void Sync(ConnectomeDataModel.Location db)
         {
             //This is a hack.  I want to update VolumeX and VolumeY with the viking client, but I don't want to 
             //write all the code for a server utility to update it manually.  So if the only column changing is 
@@ -311,13 +330,19 @@ namespace Annotation
             db.ParentID = this.ParentID;
 
             UpdateUserName |= db.X != this.Position.X; 
-            db.X = this.Position.X;
+            //db.X = this.Position.X;
 
             UpdateUserName |= db.Y != this.Position.Y; 
-            db.Y = this.Position.Y;
+            //db.Y = this.Position.Y;
 
             UpdateUserName |= db.Z != this.Position.Z; 
-            db.Z = this.Position.Z;
+            //db.Z = this.Position.Z;
+
+            UpdateUserName |= db.MosaicShape != this.MosaicShape; 
+            db.MosaicShape = this.MosaicShape;
+
+            UpdateUserName |= db.VolumeShape != this.VolumeShape;
+            db.VolumeShape = this.VolumeShape;
 
             //See above comment before adding UpdateUserName test...
             db.VolumeX = this.VolumePosition.X;
@@ -337,7 +362,7 @@ namespace Annotation
                 using (System.IO.MemoryStream stream = new System.IO.MemoryStream(sizeof(double) * 3 * this.Verticies.Length))
                 {
                     serializer.Serialize(stream, this.Verticies);
-                    db.Verticies = new System.Data.Linq.Binary(stream.ToArray());
+                    db.Verticies = stream.ToArray();
                 }
             }
 
@@ -399,20 +424,44 @@ namespace Annotation
                 long LinkID = _Links[i];
                 if (LinkID < this.ID)
                 {
-                    DBLocationLink newLink = new DBLocationLink();
+                    ConnectomeDataModel.LocationLink newLink = new ConnectomeDataModel.LocationLink();
                     newLink.LinkedFrom = LinkID;
                     newLink.LinkedTo = this.ID;
                     db.LinkedFrom.Add(newLink);
                 }
                 else
                 {
-                    DBLocationLink newLink = new DBLocationLink();
+                    ConnectomeDataModel.LocationLink newLink = new ConnectomeDataModel.LocationLink();
                     newLink.LinkedFrom = this.ID;
                     newLink.LinkedTo = LinkID;
                     db.LinkedTo.Add(newLink);
                 }
             }
              */
+        }
+
+
+        /// <summary>
+        /// Add the links to the locations in the dictionary
+        /// </summary>
+        /// <param name="Locations"></param>
+        /// <param name="LocationLinks"></param>
+        public static void AppendLinksToLocations(IDictionary<long, Location> Locations, IList<LocationLink> LocationLinks)
+        {
+            Location A;
+            Location B;
+            foreach (LocationLink link in LocationLinks)
+            {
+                if (Locations.TryGetValue(link.SourceID, out A))
+                {
+                    A.Links.Add(link.TargetID);
+                }
+
+                if (Locations.TryGetValue(link.TargetID, out B))
+                {
+                    B.LocationLinksB.Add(link);
+                }
+            }
         }
     }
 
@@ -436,14 +485,30 @@ namespace Annotation
         }
 
 
-        public LocationHistory(SelectStructureLocationChangeLogResult db)
+        public LocationHistory(SelectStructureLocationChangeLog_Result db)
         {
             this.ID = db.ID.Value; 
             this.ParentID = db.ParentID.Value;
 
             this.Section = (long)db.Z;
-            this.Position = new AnnotationPoint(db.X.Value, db.Y.Value, db.Z.Value);
-            this.VolumePosition = new AnnotationPoint(db.VolumeX.Value, db.VolumeY.Value, db.Z.Value);
+            if (db.X != null && db.Y != null)
+            {
+                this.Position = new AnnotationPoint(db.X.Value, db.Y.Value, db.Z.Value);
+            }
+            else
+            {
+                this.Position = new AnnotationPoint(double.NaN, double.NaN, db.Z.Value);
+            }
+
+            if (db.VolumeX != null && db.VolumeY != null)
+            {
+                this.VolumePosition = new AnnotationPoint(db.VolumeX.Value, db.VolumeY.Value, db.Z.Value);
+            }
+            else
+            {
+                this.VolumePosition = new AnnotationPoint(double.NaN, double.NaN, db.Z.Value);
+            }
+             
             this._Verticies = Location.LoadVerticies(db.Verticies); 
             this._Closed = db.Closed.Value;
             this._Links = null; 
@@ -461,8 +526,7 @@ namespace Annotation
             }
             else
             {
-                //    _Tags = db.Tags.Split(';');
-                _Xml = db.Tags.Value;
+                _Xml = db.Tags;
             } 
 
             this._LastModified = db.LastModified.Value.Ticks;

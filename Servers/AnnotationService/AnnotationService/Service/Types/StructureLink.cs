@@ -5,7 +5,7 @@ using System.Text;
 using System.ServiceModel;
 using System.Runtime.Serialization;
 
-using Annotation.Database;
+using ConnectomeDataModel;
 
 namespace Annotation
 {
@@ -63,9 +63,9 @@ namespace Annotation
         {
         }
 
-        public StructureLink(DBStructureLink obj)
+        public StructureLink(ConnectomeDataModel.StructureLink obj)
         {
-            DBStructureLink db = obj;
+            ConnectomeDataModel.StructureLink db = obj;
 
             this.SourceID = db.SourceID;
             this.TargetID = db.TargetID;
@@ -74,7 +74,7 @@ namespace Annotation
             this.Username = db.Username; 
         }
 
-        public void Sync(DBStructureLink db)
+        public void Sync(ConnectomeDataModel.StructureLink db)
         {
             db.SourceID = this.SourceID;
             db.TargetID = this.TargetID;

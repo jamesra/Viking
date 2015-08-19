@@ -88,7 +88,7 @@ namespace Annotation
      //       DBAction = DBACTION.INSERT; 
         }
 
-        public StructureType(Annotation.Database.DBStructureType type)
+        public StructureType(ConnectomeDataModel.StructureType type)
         {
             _ID = type.ID;
             _ParentID = type.ParentID;
@@ -112,10 +112,10 @@ namespace Annotation
             _Abstract = type.Abstract;
             _Color = type.Color;
             _Code = type.Code;
-            _HotKey = type.HotKey;
+            _HotKey = type.HotKey.Length > 0 ? type.HotKey[0] : '\0';
         }
 
-        public void Sync(Annotation.Database.DBStructureType type)
+        public void Sync(ConnectomeDataModel.StructureType type)
         {
             
             type.ParentID = _ParentID;
@@ -142,8 +142,8 @@ namespace Annotation
             type.Abstract = _Abstract; 
             type.Color = _Color;
             type.Code = _Code;
-            type.HotKey = _HotKey;
-            type.Username = ServiceModelUtil.GetUserForCall();
+            type.HotKey = _HotKey.ToString();
+            type.Username = ServiceModelUtil.GetUserForCall(); 
         }
     }
 }

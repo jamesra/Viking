@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.ServiceModel;
 using System.Runtime.Serialization; 
-using Annotation.Database;
+using ConnectomeDataModel;
 
 namespace Annotation
 {
@@ -39,10 +39,10 @@ namespace Annotation
         }
         */
 
-        public LocationLink(DBLocationLink link)
+        public LocationLink(ConnectomeDataModel.LocationLink link)
         {
-            _SourceID = link.LinkedFrom;
-            _TargetID = link.LinkedTo;
+            _SourceID = link.A;
+            _TargetID = link.B;
             _Username = link.Username;
         }
     }
