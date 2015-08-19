@@ -305,7 +305,7 @@ namespace AnnotationVizLib
                     ColorMapImageData colormapimagedata = ParseConfigLine(line, ImageDir);
                     mapping.AddColorMapImage(colormapimagedata.SectionNumber, colormapimagedata);
                 }
-                catch(System.FormatException e)
+                catch(System.FormatException)
                 {
                     System.Diagnostics.Trace.WriteLine("Unable to parse Color Map Config line: " + line);
                 } 
@@ -431,7 +431,7 @@ namespace AnnotationVizLib
                         mapping.Add(Key, color);
                     
                 }
-                catch (System.FormatException e)
+                catch (System.FormatException)
                 {
                     System.Diagnostics.Trace.WriteLine("Unable to parse Color Map Config line: " + line);
                 }

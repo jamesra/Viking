@@ -75,7 +75,7 @@ namespace AnnotationVizLib
             {
                 tlpedge = this.addEdge(edge.SourceNodeKey, edge.TargetNodeKey);
             }
-            catch(KeyNotFoundException e)
+            catch(KeyNotFoundException)
             {
                 Trace.WriteLine(string.Format("Nodes missing for edge {0}", edge.ToString()));
                 return null;

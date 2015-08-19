@@ -157,11 +157,11 @@ namespace AnnotationVizLib
             return ((int)type).ToString();
         }
                 
-        public static new SortedList<string, string> UnknownTLPNodeAttributes = new SortedList<string,string> {
+        public static SortedList<string, string> UnknownTLPNodeAttributes = new SortedList<string,string> {
             {"viewColor", ColorMap["grey"]}
         };
 
-        public static new SortedList<string, string> UnknownTLPEdgeAttributes = new SortedList<string, string> {
+        public static SortedList<string, string> UnknownTLPEdgeAttributes = new SortedList<string, string> {
             {"viewColor", ColorMap["grey"]}
         };
 

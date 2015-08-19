@@ -141,7 +141,7 @@ namespace AnnotationVizLib
             {
                 tlpedge = this.addEdge(edge.SourceNodeKey, edge.TargetNodeKey);
             }
-            catch (KeyNotFoundException e)
+            catch (KeyNotFoundException)
             {
                 Trace.WriteLine(string.Format("Nodes missing for edge {0}", edge.ToString()));
                 return null;
@@ -165,7 +165,7 @@ namespace AnnotationVizLib
                 MorphologyEdgeToTulipID.Add(edge, tlpedge.tulip_id); 
 
             }
-            catch(KeyNotFoundException e)
+            catch(KeyNotFoundException)
             {
                 Trace.WriteLine(string.Format("Nodes missing for edge {0}", edge.ToString()));
                 return null;

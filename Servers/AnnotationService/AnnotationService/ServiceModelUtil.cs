@@ -55,7 +55,7 @@ namespace Annotation
 
                 return endpointProperty.Address;
             }
-            catch (NullReferenceException except)
+            catch (NullReferenceException)
             {
                 return "localhost";
             }
