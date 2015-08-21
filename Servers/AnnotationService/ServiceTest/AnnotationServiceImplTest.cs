@@ -300,6 +300,31 @@ namespace ServiceTest
         }
 
         /// <summary>
+        ///A test for GetStructureTypes
+        ///</summary>
+        [TestMethod()]
+        public void GetAnnotationsForSectionTest()
+        {
+            AddPrincipalToThread();
+            
+            AnnotateService target = new AnnotateService(); // TODO: Initialize to an appropriate value
+            /*
+            Structure[] structures;
+            long[] deletedStructures;
+            long StructureQueryTime; 
+            structures = target.GetStructuresForSection(250, 0, out StructureQueryTime, out deletedStructures);
+
+            Assert.IsTrue(structures.Length > 0);
+            */
+            Location[] locations;
+            long LocationQueryTime;
+            long[] deletedLocations;
+            locations = target.GetLocationChanges(250, 0, out LocationQueryTime, out deletedLocations);
+
+            Assert.IsTrue(locations.Length > 0);
+        }
+
+        /// <summary>
         ///A test that creates a structure and a location for that structure, then deletes them
         ///</summary>
         [TestMethod()]

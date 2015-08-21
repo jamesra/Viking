@@ -291,5 +291,53 @@ namespace ConnectomeDataModel
     
             return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction<SelectUnfinishedStructureBranchesWithPosition_Result>("SelectUnfinishedStructureBranchesWithPosition", structureIDParameter);
         }
+    
+        [DbFunction("ConnectomeEntities", "SectionLocations")]
+        public virtual IQueryable<Location> SectionLocations(Nullable<double> z)
+        {
+            var zParameter = z.HasValue ?
+                new ObjectParameter("Z", z) :
+                new ObjectParameter("Z", typeof(double));
+    
+            return ((IObjectContextAdapter)this).ObjectContext.CreateQuery<Location>("[ConnectomeEntities].[SectionLocations](@Z)", zParameter);
+        }
+    
+        [DbFunction("ConnectomeEntities", "SectionLocationsModifiedAfterDate")]
+        public virtual IQueryable<Location> SectionLocationsModifiedAfterDate(Nullable<double> z, Nullable<System.DateTime> queryDate)
+        {
+            var zParameter = z.HasValue ?
+                new ObjectParameter("Z", z) :
+                new ObjectParameter("Z", typeof(double));
+    
+            var queryDateParameter = queryDate.HasValue ?
+                new ObjectParameter("QueryDate", queryDate) :
+                new ObjectParameter("QueryDate", typeof(System.DateTime));
+    
+            return ((IObjectContextAdapter)this).ObjectContext.CreateQuery<Location>("[ConnectomeEntities].[SectionLocationsModifiedAfterDate](@Z, @QueryDate)", zParameter, queryDateParameter);
+        }
+    
+        [DbFunction("ConnectomeEntities", "SectionLocationLinks")]
+        public virtual IQueryable<LocationLink> SectionLocationLinks(Nullable<double> z)
+        {
+            var zParameter = z.HasValue ?
+                new ObjectParameter("Z", z) :
+                new ObjectParameter("Z", typeof(double));
+    
+            return ((IObjectContextAdapter)this).ObjectContext.CreateQuery<LocationLink>("[ConnectomeEntities].[SectionLocationLinks](@Z)", zParameter);
+        }
+    
+        [DbFunction("ConnectomeEntities", "SectionLocationLinksModifiedAfterDate")]
+        public virtual IQueryable<LocationLink> SectionLocationLinksModifiedAfterDate(Nullable<double> z, Nullable<System.DateTime> queryDate)
+        {
+            var zParameter = z.HasValue ?
+                new ObjectParameter("Z", z) :
+                new ObjectParameter("Z", typeof(double));
+    
+            var queryDateParameter = queryDate.HasValue ?
+                new ObjectParameter("QueryDate", queryDate) :
+                new ObjectParameter("QueryDate", typeof(System.DateTime));
+    
+            return ((IObjectContextAdapter)this).ObjectContext.CreateQuery<LocationLink>("[ConnectomeEntities].[SectionLocationLinksModifiedAfterDate](@Z, @QueryDate)", zParameter, queryDateParameter);
+        }
     }
 }

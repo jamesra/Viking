@@ -94,7 +94,7 @@ namespace Annotation
         protected AnnotationPoint _VolumePosition;
         protected AnnotationPoint[] _Verticies = new AnnotationPoint[0];
         protected bool _Closed;
-        protected long[] _Links = new long[0];
+        protected List<long> _Links = new List<long>();
         protected bool _Terminal;
         protected bool _OffEdge;
         protected double _Radius;
@@ -176,8 +176,25 @@ namespace Annotation
         [Column("Links")]
         public long[] Links
         {
-            get { return _Links; }
-            set { _Links = value; }
+            get {
+                if (_Links == null)
+                    return null;  
+                if(_Links.Count == 0)
+                    return null;
+                else 
+                    return _Links.ToArray();
+            }
+            set
+            {
+                if(value == null)
+                {
+                    _Links = new List<long>();
+                }
+                else
+                {
+                    _Links = new List<long>(value);
+                } 
+            }
         }
 
         [DataMember]
@@ -233,28 +250,18 @@ namespace Annotation
 
         }
 
-        private static long[] PopulateLinks(ConnectomeDataModel.Location loc)
+        private static List<long> PopulateLinks(ConnectomeDataModel.Location loc)
         {
-            if (! (db.IsLinkedTo.Any() || db.IsLinkedFrom.Any()))
-                return null; 
+            if (!(loc.LocationLinksA.Any() || loc.LocationLinksB.Any()))
+                return null;
 
-            long[] _Links = new long[db.IsLinkedTo.Count + db.IsLinkedFrom.Count];
-            //    this._Links = new long[0]; 
+            //long[] _Links = new long[loc.LocationLinksA.Count + loc.LocationLinksB.Count];
+            List<long> retlist = new List<long>(loc.LocationLinksA.Count + loc.LocationLinksB.Count);
 
-            int i = 0;
-            foreach (ConnectomeDataModel.LocationLink link in loc.LocationLinksA)
-            {
-                _Links[i] = link.B;
-                i++;
-            }
-
-            foreach (ConnectomeDataModel.LocationLink link in loc.LocationLinksB)
-            {
-                _Links[i] = link.A;
-                i++;
-            }
-
-            return _Links; 
+            retlist.AddRange(loc.LocationLinksA.Select(l => l.B).ToList());
+            retlist.AddRange(loc.LocationLinksB.Select(l => l.A).ToList());
+             
+            return retlist; 
         }
 
         protected static AnnotationPoint[] LoadVerticies(byte[] db_verticies)
@@ -283,7 +290,7 @@ namespace Annotation
             return verticies;
         }
 
-        public Location(ConnectomeDataModel.Location db)
+        public Location(ConnectomeDataModel.Location db, bool LoadLinks=false)
         {
             this.ID = db.ID;
 
@@ -295,7 +302,8 @@ namespace Annotation
             this.MosaicShape = db.MosaicShape;
             this.VolumeShape = db.VolumeShape;
             this._Closed = db.Closed;
-            this._Links = PopulateLinks(db);
+            if(LoadLinks)
+                this._Links = PopulateLinks(db);
 
             this._Terminal = db.Terminal;
             this._OffEdge = db.OffEdge;
@@ -440,29 +448,29 @@ namespace Annotation
              */
         }
 
-
         /// <summary>
         /// Add the links to the locations in the dictionary
         /// </summary>
         /// <param name="Locations"></param>
         /// <param name="LocationLinks"></param>
-        public static void AppendLinksToLocations(IDictionary<long, Location> Locations, IList<LocationLink> LocationLinks)
+        public static void AppendLinksToLocations(IDictionary<long, Location> Locations, IEnumerable<ConnectomeDataModel.LocationLink> LocationLinks)
         {
             Location A;
             Location B;
-            foreach (LocationLink link in LocationLinks)
+            foreach (ConnectomeDataModel.LocationLink link in LocationLinks)
             {
-                if (Locations.TryGetValue(link.SourceID, out A))
+                if (Locations.TryGetValue(link.A, out A))
                 {
-                    A.Links.Add(link.TargetID);
+                    A._Links.Add(link.B);
                 }
 
-                if (Locations.TryGetValue(link.TargetID, out B))
+                if (Locations.TryGetValue(link.B, out B))
                 {
-                    B.LocationLinksB.Add(link);
+                    B._Links.Add(link.A);
                 }
             }
         }
+        
     }
 
     [DataContract]

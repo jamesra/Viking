@@ -5,8 +5,6 @@
     <!-- SSDL content -->
     <edmx:StorageModels>
     <Schema Namespace="ConnectomeModel.Store" Provider="System.Data.SqlClient" ProviderManifestToken="2012" Alias="Self" xmlns:store="http://schemas.microsoft.com/ado/2007/12/edm/EntityStoreSchemaGenerator" xmlns:customannotation="http://schemas.microsoft.com/ado/2013/11/edm/customannotation" xmlns="http://schemas.microsoft.com/ado/2009/11/edm/ssdl">
-        <!--Errors Found During Generation:
-warning 6002: The table/view 'Test.dbo.DBVersion' does not have a primary key defined. The key has been inferred and the definition was created as a read-only table/view.-->
         <EntityType Name="DeletedLocations">
           <Key>
             <PropertyRef Name="ID" />
@@ -35,10 +33,10 @@ warning 6002: The table/view 'Test.dbo.DBVersion' does not have a primary key de
           <Property Name="Username" Type="nchar" MaxLength="16" Nullable="false" />
           <Property Name="MosaicShape" Type="geometry" Nullable="false" />
           <Property Name="VolumeShape" Type="geometry" Nullable="false" />
-          <Property Name="X" Type="float" StoreGeneratedPattern="Computed" />
-          <Property Name="Y" Type="float" StoreGeneratedPattern="Computed" />
-          <Property Name="VolumeX" Type="float" StoreGeneratedPattern="Computed" />
-          <Property Name="VolumeY" Type="float" StoreGeneratedPattern="Computed" />
+          <Property Name="X" Type="float" StoreGeneratedPattern="Computed" Nullable="false" />
+          <Property Name="Y" Type="float" StoreGeneratedPattern="Computed" Nullable="false" />
+          <Property Name="VolumeX" Type="float" StoreGeneratedPattern="Computed" Nullable="false" />
+          <Property Name="VolumeY" Type="float" StoreGeneratedPattern="Computed" Nullable="false" />
         </EntityType>
         <EntityType Name="LocationLink">
           <Key>
@@ -67,10 +65,16 @@ warning 6002: The table/view 'Test.dbo.DBVersion' does not have a primary key de
           <Property Name="Username" Type="nchar" MaxLength="16" Nullable="false" />
           <Property Name="LastModified" Type="datetime" Nullable="false" StoreGeneratedPattern="Computed" />
         </EntityType>
+        <!--Errors Found During Generation:
+warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary key defined. The key has been inferred and the definition was created as a read-only table/view.-->
         <EntityType Name="StructureLink">
           <Key>
             <PropertyRef Name="SourceID" />
             <PropertyRef Name="TargetID" />
+            
+            
+            
+            
           </Key>
           <Property Name="SourceID" Type="bigint" Nullable="false" />
           <Property Name="TargetID" Type="bigint" Nullable="false" />
@@ -209,6 +213,94 @@ warning 6002: The table/view 'Test.dbo.DBVersion' does not have a primary key de
           <Parameter Name="KeepStructureID" Type="bigint" Mode="In" />
           <Parameter Name="MergeStructureID" Type="bigint" Mode="In" />
         </Function>
+        <Function Name="SectionLocationLinks" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="true" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo">
+          <Parameter Name="Z" Type="float" Mode="In" />
+          <ReturnType>
+            <CollectionType>
+              <RowType>
+                <Property Name="A" Type="bigint" Nullable="false" />
+                <Property Name="B" Type="bigint" Nullable="false" />
+                <Property Name="Username" Type="nchar" MaxLength="16" Nullable="false" />
+                <Property Name="Created" Type="datetime" Nullable="false" />
+              </RowType>
+            </CollectionType>
+          </ReturnType>
+        </Function>
+        <Function Name="SectionLocationLinksModifiedAfterDate" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="true" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo">
+          <Parameter Name="Z" Type="float" Mode="In" />
+          <Parameter Name="QueryDate" Type="datetime" Mode="In" />
+          <ReturnType>
+            <CollectionType>
+              <RowType>
+                <Property Name="A" Type="bigint" Nullable="false" />
+                <Property Name="B" Type="bigint" Nullable="false" />
+                <Property Name="Username" Type="nchar" MaxLength="16" Nullable="false" />
+                <Property Name="Created" Type="datetime" Nullable="false" />
+              </RowType>
+            </CollectionType>
+          </ReturnType>
+        </Function>
+        <Function Name="SectionLocations" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="true" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo">
+          <Parameter Name="Z" Type="float" Mode="In" />
+          <ReturnType>
+            <CollectionType>
+              <RowType>
+                <Property Name="ID" Type="bigint" Nullable="false" />
+                <Property Name="ParentID" Type="bigint" Nullable="false" />
+                <Property Name="Z" Type="float" Nullable="false" />
+                <Property Name="Verticies" Type="varbinary(max)" />
+                <Property Name="Closed" Type="bit" Nullable="false" />
+                <Property Name="Version" Type="timestamp" Nullable="false" />
+                <Property Name="Overlay" Type="varbinary(max)" />
+                <Property Name="Tags" Type="xml" />
+                <Property Name="Terminal" Type="bit" Nullable="false" />
+                <Property Name="OffEdge" Type="bit" Nullable="false" />
+                <Property Name="Radius" Type="float" Nullable="false" />
+                <Property Name="TypeCode" Type="smallint" Nullable="false" />
+                <Property Name="LastModified" Type="datetime" Nullable="false" />
+                <Property Name="Created" Type="datetime" Nullable="false" />
+                <Property Name="Username" Type="nchar" MaxLength="16" Nullable="false" />
+                <Property Name="MosaicShape" Type="geometry" Nullable="false" />
+                <Property Name="VolumeShape" Type="geometry" Nullable="false" />
+                <Property Name="X" Type="float" Nullable="false" />
+                <Property Name="Y" Type="float" Nullable="false" />
+                <Property Name="VolumeX" Type="float" Nullable="false" />
+                <Property Name="VolumeY" Type="float" Nullable="false" />
+              </RowType>
+            </CollectionType>
+          </ReturnType>
+        </Function>
+        <Function Name="SectionLocationsModifiedAfterDate" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="true" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo">
+          <Parameter Name="Z" Type="float" Mode="In" />
+          <Parameter Name="QueryDate" Type="datetime" Mode="In" />
+          <ReturnType>
+            <CollectionType>
+              <RowType>
+                <Property Name="ID" Type="bigint" Nullable="false" />
+                <Property Name="ParentID" Type="bigint" Nullable="false" />
+                <Property Name="Z" Type="float" Nullable="false" />
+                <Property Name="Verticies" Type="varbinary(max)" />
+                <Property Name="Closed" Type="bit" Nullable="false" />
+                <Property Name="Version" Type="timestamp" Nullable="false" />
+                <Property Name="Overlay" Type="varbinary(max)" />
+                <Property Name="Tags" Type="xml" />
+                <Property Name="Terminal" Type="bit" Nullable="false" />
+                <Property Name="OffEdge" Type="bit" Nullable="false" />
+                <Property Name="Radius" Type="float" Nullable="false" />
+                <Property Name="TypeCode" Type="smallint" Nullable="false" />
+                <Property Name="LastModified" Type="datetime" Nullable="false" />
+                <Property Name="Created" Type="datetime" Nullable="false" />
+                <Property Name="Username" Type="nchar" MaxLength="16" Nullable="false" />
+                <Property Name="MosaicShape" Type="geometry" Nullable="false" />
+                <Property Name="VolumeShape" Type="geometry" Nullable="false" />
+                <Property Name="X" Type="float" Nullable="false" />
+                <Property Name="Y" Type="float" Nullable="false" />
+                <Property Name="VolumeX" Type="float" Nullable="false" />
+                <Property Name="VolumeY" Type="float" Nullable="false" />
+              </RowType>
+            </CollectionType>
+          </ReturnType>
+        </Function>
         <Function Name="SelectAllStructureLocationLinks" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="false" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo" />
         <Function Name="SelectAllStructureLocations" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="false" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo" />
         <Function Name="SelectAllStructures" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="false" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo" />
@@ -265,8 +357,18 @@ warning 6002: The table/view 'Test.dbo.DBVersion' does not have a primary key de
           <EntitySet Name="Location" EntityType="Self.Location" Schema="dbo" store:Type="Tables" />
           <EntitySet Name="LocationLink" EntityType="Self.LocationLink" Schema="dbo" store:Type="Tables" />
           <EntitySet Name="Structure" EntityType="Self.Structure" Schema="dbo" store:Type="Tables" />
-          <EntitySet Name="StructureLink" EntityType="Self.StructureLink" Schema="dbo" store:Type="Tables" />
           <EntitySet Name="StructureType" EntityType="Self.StructureType" Schema="dbo" store:Type="Tables" />
+          <EntitySet Name="StructureLink" EntityType="Self.StructureLink" store:Type="Tables" store:Schema="dbo">
+            <DefiningQuery>SELECT 
+    [StructureLink].[SourceID] AS [SourceID], 
+    [StructureLink].[TargetID] AS [TargetID], 
+    [StructureLink].[Bidirectional] AS [Bidirectional], 
+    [StructureLink].[Tags] AS [Tags], 
+    [StructureLink].[Username] AS [Username], 
+    [StructureLink].[Created] AS [Created], 
+    [StructureLink].[LastModified] AS [LastModified]
+    FROM [dbo].[StructureLink] AS [StructureLink]</DefiningQuery>
+          </EntitySet>
           <AssociationSet Name="FK_Location_StructureBase1" Association="Self.FK_Location_StructureBase1">
             <End Role="Structure" EntitySet="Structure" />
             <End Role="Location" EntitySet="Location" />
@@ -614,6 +716,20 @@ warning 6002: The table/view 'Test.dbo.DBVersion' does not have a primary key de
           <FunctionImport Name="SelectUnfinishedStructureBranchesWithPosition" ReturnType="Collection(ConnectomeModel.SelectUnfinishedStructureBranchesWithPosition_Result)">
           <Parameter Name="StructureID" Mode="In" Type="Int64" />
           </FunctionImport>
+          <FunctionImport Name="SectionLocations" IsComposable="true" EntitySet="Locations" ReturnType="Collection(ConnectomeModel.Location)">
+          <Parameter Name="Z" Mode="In" Type="Double" />
+          </FunctionImport>
+          <FunctionImport Name="SectionLocationsModifiedAfterDate" IsComposable="true" EntitySet="Locations" ReturnType="Collection(ConnectomeModel.Location)">
+            <Parameter Name="Z" Mode="In" Type="Double" />
+            <Parameter Name="QueryDate" Mode="In" Type="DateTime" />
+          </FunctionImport>
+          <FunctionImport Name="SectionLocationLinks" IsComposable="true" EntitySet="LocationLinks" ReturnType="Collection(ConnectomeModel.LocationLink)">
+            <Parameter Name="Z" Mode="In" Type="Double" />
+          </FunctionImport>
+          <FunctionImport Name="SectionLocationLinksModifiedAfterDate" IsComposable="true" EntitySet="LocationLinks" ReturnType="Collection(ConnectomeModel.LocationLink)">
+            <Parameter Name="Z" Mode="In" Type="Double" />
+            <Parameter Name="QueryDate" Mode="In" Type="DateTime" />
+          </FunctionImport>
         </EntityContainer>
         <ComplexType Name="ApproximateStructureLocation_Result">
           <Property Type="Double" Name="X" Nullable="true" />
@@ -841,6 +957,64 @@ warning 6002: The table/view 'Test.dbo.DBVersion' does not have a primary key de
           <Property Type="Double" Name="Y" Nullable="false" />
           <Property Type="Double" Name="Z" Nullable="false" />
           <Property Type="Double" Name="Radius" Nullable="false" />
+        </ComplexType>
+        <ComplexType Name="SectionLocations_Result">
+          <Property Type="Int64" Name="ID" Nullable="false" />
+          <Property Type="Int64" Name="ParentID" Nullable="false" />
+          <Property Type="Double" Name="X" Nullable="false" />
+          <Property Type="Double" Name="Y" Nullable="false" />
+          <Property Type="Double" Name="Z" Nullable="false" />
+          <Property Type="Binary" Name="Verticies" Nullable="true" />
+          <Property Type="Boolean" Name="Closed" Nullable="false" />
+          <Property Type="Binary" Name="Version" Nullable="false" MaxLength="8" />
+          <Property Type="Binary" Name="Overlay" Nullable="true" />
+          <Property Type="String" Name="Tags" Nullable="true" />
+          <Property Type="Double" Name="VolumeX" Nullable="false" />
+          <Property Type="Double" Name="VolumeY" Nullable="false" />
+          <Property Type="Boolean" Name="Terminal" Nullable="false" />
+          <Property Type="Boolean" Name="OffEdge" Nullable="false" />
+          <Property Type="Double" Name="Radius" Nullable="false" />
+          <Property Type="Int16" Name="TypeCode" Nullable="false" />
+          <Property Type="DateTime" Name="LastModified" Nullable="false" Precision="23" />
+          <Property Type="DateTime" Name="Created" Nullable="false" Precision="23" />
+          <Property Type="String" Name="Username" Nullable="false" MaxLength="16" />
+          <Property Type="Geometry" Name="MosaicShape" Nullable="false" />
+          <Property Type="Geometry" Name="VolumeShape" Nullable="false" />
+        </ComplexType>
+        <ComplexType Name="SectionLocationsModifiedAfterDate_Result">
+          <Property Type="Int64" Name="ID" Nullable="false" />
+          <Property Type="Int64" Name="ParentID" Nullable="false" />
+          <Property Type="Double" Name="X" Nullable="false" />
+          <Property Type="Double" Name="Y" Nullable="false" />
+          <Property Type="Double" Name="Z" Nullable="false" />
+          <Property Type="Binary" Name="Verticies" Nullable="true" />
+          <Property Type="Boolean" Name="Closed" Nullable="false" />
+          <Property Type="Binary" Name="Version" Nullable="false" MaxLength="8" />
+          <Property Type="Binary" Name="Overlay" Nullable="true" />
+          <Property Type="String" Name="Tags" Nullable="true" />
+          <Property Type="Double" Name="VolumeX" Nullable="false" />
+          <Property Type="Double" Name="VolumeY" Nullable="false" />
+          <Property Type="Boolean" Name="Terminal" Nullable="false" />
+          <Property Type="Boolean" Name="OffEdge" Nullable="false" />
+          <Property Type="Double" Name="Radius" Nullable="false" />
+          <Property Type="Int16" Name="TypeCode" Nullable="false" />
+          <Property Type="DateTime" Name="LastModified" Nullable="false" Precision="23" />
+          <Property Type="DateTime" Name="Created" Nullable="false" Precision="23" />
+          <Property Type="String" Name="Username" Nullable="false" MaxLength="16" />
+          <Property Type="Geometry" Name="MosaicShape" Nullable="false" />
+          <Property Type="Geometry" Name="VolumeShape" Nullable="false" />
+        </ComplexType>
+        <ComplexType Name="SectionLocationLinks_Result">
+          <Property Type="Int64" Name="A" Nullable="false" />
+          <Property Type="Int64" Name="B" Nullable="false" />
+          <Property Type="String" Name="Username" Nullable="false" MaxLength="16" />
+          <Property Type="DateTime" Name="Created" Nullable="false" Precision="23" />
+        </ComplexType>
+        <ComplexType Name="SectionLocationLinksModifiedAfterDate_Result">
+          <Property Type="Int64" Name="A" Nullable="false" />
+          <Property Type="Int64" Name="B" Nullable="false" />
+          <Property Type="String" Name="Username" Nullable="false" MaxLength="16" />
+          <Property Type="DateTime" Name="Created" Nullable="false" Precision="23" />
         </ComplexType>
       </Schema>
     </edmx:ConceptualModels>
@@ -1183,6 +1357,64 @@ warning 6002: The table/view 'Test.dbo.DBVersion' does not have a primary key de
                 <ScalarProperty Name="Radius" ColumnName="Radius" />
               </ComplexTypeMapping>
             </ResultMapping>
+          </FunctionImportMapping>
+          <FunctionImportMapping FunctionImportName="SectionLocations" FunctionName="ConnectomeModel.Store.SectionLocations">
+            <ResultMapping>
+              <EntityTypeMapping TypeName="ConnectomeModel.Location">
+                  <ScalarProperty Name="VolumeShape" ColumnName="VolumeShape" />
+                  <ScalarProperty Name="MosaicShape" ColumnName="MosaicShape" />
+                  <ScalarProperty Name="ID" ColumnName="ID" />
+                  <ScalarProperty Name="ParentID" ColumnName="ParentID" />
+                  <ScalarProperty Name="X" ColumnName="X" />
+                  <ScalarProperty Name="Y" ColumnName="Y" />
+                  <ScalarProperty Name="Z" ColumnName="Z" />
+                  <ScalarProperty Name="Verticies" ColumnName="Verticies" />
+                  <ScalarProperty Name="Closed" ColumnName="Closed" />
+                  <ScalarProperty Name="Version" ColumnName="Version" />
+                  <ScalarProperty Name="Overlay" ColumnName="Overlay" />
+                  <ScalarProperty Name="Tags" ColumnName="Tags" />
+                  <ScalarProperty Name="VolumeX" ColumnName="VolumeX" />
+                  <ScalarProperty Name="VolumeY" ColumnName="VolumeY" />
+                  <ScalarProperty Name="Terminal" ColumnName="Terminal" />
+                  <ScalarProperty Name="OffEdge" ColumnName="OffEdge" />
+                  <ScalarProperty Name="Radius" ColumnName="Radius" />
+                  <ScalarProperty Name="TypeCode" ColumnName="TypeCode" />
+                  <ScalarProperty Name="LastModified" ColumnName="LastModified" />
+                  <ScalarProperty Name="Created" ColumnName="Created" />
+                  <ScalarProperty Name="Username" ColumnName="Username" />
+              </EntityTypeMapping>
+            </ResultMapping>
+          </FunctionImportMapping>
+          <FunctionImportMapping FunctionImportName="SectionLocationsModifiedAfterDate" FunctionName="ConnectomeModel.Store.SectionLocationsModifiedAfterDate">
+            <ResultMapping>
+              <EntityTypeMapping TypeName="ConnectomeModel.Location">
+                  <ScalarProperty Name="VolumeShape" ColumnName="VolumeShape" />
+                  <ScalarProperty Name="MosaicShape" ColumnName="MosaicShape" />
+                  <ScalarProperty Name="ID" ColumnName="ID" />
+                  <ScalarProperty Name="ParentID" ColumnName="ParentID" />
+                  <ScalarProperty Name="X" ColumnName="X" />
+                  <ScalarProperty Name="Y" ColumnName="Y" />
+                  <ScalarProperty Name="Z" ColumnName="Z" />
+                  <ScalarProperty Name="Verticies" ColumnName="Verticies" />
+                  <ScalarProperty Name="Closed" ColumnName="Closed" />
+                  <ScalarProperty Name="Version" ColumnName="Version" />
+                  <ScalarProperty Name="Overlay" ColumnName="Overlay" />
+                  <ScalarProperty Name="Tags" ColumnName="Tags" />
+                  <ScalarProperty Name="VolumeX" ColumnName="VolumeX" />
+                  <ScalarProperty Name="VolumeY" ColumnName="VolumeY" />
+                  <ScalarProperty Name="Terminal" ColumnName="Terminal" />
+                  <ScalarProperty Name="OffEdge" ColumnName="OffEdge" />
+                  <ScalarProperty Name="Radius" ColumnName="Radius" />
+                  <ScalarProperty Name="TypeCode" ColumnName="TypeCode" />
+                  <ScalarProperty Name="LastModified" ColumnName="LastModified" />
+                  <ScalarProperty Name="Created" ColumnName="Created" />
+                  <ScalarProperty Name="Username" ColumnName="Username" />
+              </EntityTypeMapping>
+            </ResultMapping>
+          </FunctionImportMapping>
+          <FunctionImportMapping FunctionImportName="SectionLocationLinks" FunctionName="ConnectomeModel.Store.SectionLocationLinks">
+          </FunctionImportMapping>
+          <FunctionImportMapping FunctionImportName="SectionLocationLinksModifiedAfterDate" FunctionName="ConnectomeModel.Store.SectionLocationLinksModifiedAfterDate">
           </FunctionImportMapping>
         </EntityContainerMapping>
       </Mapping>

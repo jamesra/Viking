@@ -120,10 +120,10 @@ namespace Annotation
 
         private static StructureLink[] PopulateLinks(ConnectomeDataModel.Structure structObj)
         {
-            if (!(db.IsSourceOf.Any() || db.IsTargetOf.Any()))
+            if (!(structObj.SourceOfLinks.Any() || structObj.TargetOfLinks.Any()))
                 return null;
 
-            StructureLink[] _Links = new StructureLink[db.IsSourceOf.Count + db.IsTargetOf.Count];
+            StructureLink[] _Links = new StructureLink[structObj.SourceOfLinks.Count + structObj.TargetOfLinks.Count];
 
             int i = 0;
             foreach (ConnectomeDataModel.StructureLink link in structObj.SourceOfLinks)
