@@ -83,18 +83,6 @@
     </Compile>
     <Compile Include="Model\ConnectomeEntities.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="SectionLocationLinksModifiedAfterDate_Result.cs">
-      <DependentUpon>DataModel.tt</DependentUpon>
-    </Compile>
-    <Compile Include="SectionLocationLinks_Result.cs">
-      <DependentUpon>DataModel.tt</DependentUpon>
-    </Compile>
-    <Compile Include="SectionLocationsModifiedAfterDate_Result.cs">
-      <DependentUpon>DataModel.tt</DependentUpon>
-    </Compile>
-    <Compile Include="SectionLocations_Result.cs">
-      <DependentUpon>DataModel.tt</DependentUpon>
-    </Compile>
     <Compile Include="SelectAllStructureLocationLinks_Result.cs">
       <DependentUpon>DataModel.tt</DependentUpon>
     </Compile>
