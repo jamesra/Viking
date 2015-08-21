@@ -511,6 +511,24 @@ namespace ServiceTest
         }
 
 
+        private void TestSetLocationPosition(AnnotateService target, Location loc, double X, double Y, double Z)
+        { 
+            loc.Position = new AnnotationPoint(X, Y, Z);
+            loc.DBAction = DBACTION.UPDATE;
+            long[] newLocationIDs = target.Update(new Location[] { loc });
+            
+            Assert.IsTrue(newLocationIDs.Length == 1);
+            Assert.IsTrue(newLocationIDs[0] == loc.ID);
+
+            Location updatedLocation = target.GetLocationByID(loc.ID);
+            Assert.AreEqual(loc.Position.X, X);
+            Assert.AreEqual(loc.Position.Y, Y);
+            Assert.AreEqual(loc.Position.Z, Z);
+
+            return;
+        }
+
+
         /// <summary>
         ///A test that creates a structure and a location for that structure, then deletes them
         ///</summary>
@@ -570,6 +588,7 @@ namespace ServiceTest
             Assert.IsTrue(ATest.Links[0] == BTest.ID);
             Assert.IsTrue(BTest.Links[0] == ATest.ID);
 
+            TestSetLocationPosition(target, ATest, 5, 5, 5);
 
             target.DeleteLocationLink(LocationBID, LocationAID);
 

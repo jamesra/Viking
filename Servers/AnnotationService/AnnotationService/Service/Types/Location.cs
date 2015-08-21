@@ -326,6 +326,28 @@ namespace Annotation
             this._Username = db.Username;
         }
 
+        private static System.Data.Entity.Spatial.DbGeometry SetPointShape(double X, double Y, double Z)
+        {
+            string point_template = "POINT ({0} {1} {2})";
+            string point_shape_string = string.Format(point_template, new object[] { X, Y, Z });
+            return System.Data.Entity.Spatial.DbGeometry.FromText(point_shape_string);
+        }
+
+        private static System.Data.Entity.Spatial.DbGeometry SetCircleShape(double X, double Y, double Z, double Radius)
+        {
+            if (Radius == 0)
+                throw new ArgumentException("Cannot create circle with a radius of zero");
+
+            string circle_template = "CURVEPOLYGON(CIRCULARSTRING ({1} {3} {6}, " +
+                                                                  "{0} {5} {6}, " +
+                                                                  "{2} {3} {6}, " +
+                                                                  "{0} {4} {6}, " +
+                                                                  "{1} {3} {6}))";
+            string circle_shape_string = string.Format(circle_template, new object[] {X,  X - Radius, X + Radius, Y, Y - Radius, Y + Radius, Z });
+            return System.Data.Entity.Spatial.DbGeometry.FromText(circle_shape_string);
+        }
+
+
         public void Sync(ConnectomeDataModel.Location db)
         {
             //This is a hack.  I want to update VolumeX and VolumeY with the viking client, but I don't want to 
@@ -344,17 +366,17 @@ namespace Annotation
             //db.Y = this.Position.Y;
 
             UpdateUserName |= db.Z != this.Position.Z; 
-            //db.Z = this.Position.Z;
+            db.Z = this.Position.Z;            
 
-            UpdateUserName |= db.MosaicShape != this.MosaicShape; 
-            db.MosaicShape = this.MosaicShape;
+            UpdateUserName |= db.MosaicShape != this.MosaicShape;
+            db.MosaicShape = this.Radius > 0 ? SetCircleShape(this.Position.X, this.Position.Y, this.Position.Z, this.Radius) : SetPointShape(this.Position.X, this.Position.Y, this.Position.Z);
 
             UpdateUserName |= db.VolumeShape != this.VolumeShape;
-            db.VolumeShape = this.VolumeShape;
+            db.VolumeShape = this.Radius > 0 ? SetCircleShape(this.VolumePosition.X, this.VolumePosition.Y, this.VolumePosition.Z, this.Radius) : SetPointShape(this.VolumePosition.X, this.VolumePosition.Y, this.VolumePosition.Z); ; 
 
             //See above comment before adding UpdateUserName test...
-            db.VolumeX = this.VolumePosition.X;
-            db.VolumeY = this.VolumePosition.Y;
+            //db.VolumeX = this.VolumePosition.X;
+            //db.VolumeY = this.VolumePosition.Y;
 
             //Save the verticies as a binary stream.  A zero length array takes 142 bytes, so just store null instead.
             if (this.Verticies == null)
