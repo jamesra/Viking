@@ -26,31 +26,49 @@ namespace Annotation
             
         }
 
-        ConnectomeDataModel.ConnectomeEntities _db;
-        ConnectomeDataModel.ConnectomeEntities db
+        ConnectomeDataModel.ConnectomeEntities GetOrCreateDatabaseContext()
         {
-            get
+            return new ConnectomeEntities(); 
+
+            if (_db != null)
             {
-                if(_db != null)
+                switch (_db.Database.Connection.State)
                 {
-                    if(_db.Database.Connection.State != System.Data.ConnectionState.Open &&
-                       _db.Database.Connection.State != System.Data.ConnectionState.Connecting)
-                    {
-                        _db.Database.Connection.Open();
-                    }
-                }
-                
-                if (_db == null)
-                {
-                    // string FormattedConnString = ConnectomeEntities();
-
-                    _db = new ConnectomeEntities();
-                }
-
-
-                return _db;
+                    case System.Data.ConnectionState.Open:
+                        return _db;
+                    case System.Data.ConnectionState.Closed:
+                        try
+                        {
+                            _db.Database.Connection.Open();
+                            return _db;
+                        }
+                        catch (InvalidOperationException e)
+                        {
+                            _db = null;
+                        }
+                        break;
+                    case System.Data.ConnectionState.Broken:
+                        _db = null;
+                        break;
+                    case System.Data.ConnectionState.Connecting: 
+                    case System.Data.ConnectionState.Executing: 
+                    case System.Data.ConnectionState.Fetching:
+                        break; 
+                    default:
+                        _db = null;
+                        break; 
+                } 
             }
+
+            if (_db == null)
+            { 
+                _db = new ConnectomeEntities();
+            } 
+
+            return _db;
         }
+
+        ConnectomeDataModel.ConnectomeEntities _db; 
 
         protected string ConnectomeEntities()
         {
@@ -62,7 +80,7 @@ namespace Annotation
         [PrincipalPermission(SecurityAction.Demand, Role = "Modify")]
         public StructureType CreateStructureType(Annotation.StructureType new_structureType)
         {
-            using (ConnectomeEntities db = new ConnectomeEntities())
+            using (ConnectomeEntities db = GetOrCreateDatabaseContext())
             {
                 ConnectomeDataModel.StructureType db_obj = new ConnectomeDataModel.StructureType();
                 //Create the object to get the ID
@@ -81,7 +99,7 @@ namespace Annotation
         [PrincipalPermission(SecurityAction.Demand, Role = "Read")]
         public StructureType[] GetStructureTypes()
         {
-            using (ConnectomeEntities db = new ConnectomeEntities())
+            using (ConnectomeEntities db = GetOrCreateDatabaseContext())
             {
                 IQueryable<ConnectomeDataModel.StructureType> queryResults = from t in db.StructureTypes select t;
                 List<StructureType> retList = new List<StructureType>(queryResults.Count());
@@ -120,7 +138,7 @@ namespace Annotation
         [PrincipalPermission(SecurityAction.Demand, Role = "Read")]
         public StructureType GetStructureTypeByID(long ID)
         {
-            using (var db = new ConnectomeEntities())
+            using (var db = GetOrCreateDatabaseContext())
             {
                 try
                 {
@@ -156,7 +174,7 @@ namespace Annotation
         [PrincipalPermission(SecurityAction.Demand, Role = "Read")]
         public Structure[] GetStructuresOfType(long TypeID)
         {
-            using (ConnectomeEntities db = new ConnectomeEntities())
+            using (ConnectomeEntities db = GetOrCreateDatabaseContext())
             {
                 try
                 {
@@ -198,7 +216,7 @@ namespace Annotation
 
             int QueryChunkSize = 2000;
 
-            using (var db = new ConnectomeEntities())
+            using (var db = GetOrCreateDatabaseContext())
             {
 
                 while (ListIDs.Count > 0)
@@ -298,7 +316,7 @@ namespace Annotation
             //Stores the ID of each object manipulated for the return value
             long[] listID = new long[structTypes.Length];
 
-            using (var db = new ConnectomeEntities())
+            using (var db = GetOrCreateDatabaseContext())
             { 
                 try
                 {
@@ -401,27 +419,30 @@ namespace Annotation
         [PrincipalPermission(SecurityAction.Demand, Role = "Read")]
         public Structure[] GetStructures()
         {
-            try
+            using (ConnectomeEntities db = GetOrCreateDatabaseContext())
             {
-                //IQueryable<ConnectomeDataModel.Structure> queryStructures = from s in db.ConnectomeDataModel.Structures select s;
-                List<ConnectomeDataModel.Structure> listStructs = db.Structures.ToList();
-
-                Structure[] retList = new Structure[listStructs.Count()];
-
-                for(int iStruct = 0; iStruct < listStructs.Count(); iStruct++)
+                try
                 {
-                    //Get structures does not include children because 
-                    //if you have all the structures you can create the
-                    //graph yourself by looking at ParentIDs without 
-                    //sending duplicate information over the wire
-                    retList[iStruct] = new Structure(listStructs[iStruct], false);
-                }
+                    //IQueryable<ConnectomeDataModel.Structure> queryStructures = from s in db.ConnectomeDataModel.Structures select s;
+                    List<ConnectomeDataModel.Structure> listStructs = db.Structures.ToList();
 
-                return retList;
-            }
-            catch (Exception e)
-            {
-                Debug.WriteLine(e.ToString());
+                    Structure[] retList = new Structure[listStructs.Count()];
+
+                    for (int iStruct = 0; iStruct < listStructs.Count(); iStruct++)
+                    {
+                        //Get structures does not include children because 
+                        //if you have all the structures you can create the
+                        //graph yourself by looking at ParentIDs without 
+                        //sending duplicate information over the wire
+                        retList[iStruct] = new Structure(listStructs[iStruct], false);
+                    }
+
+                    return retList;
+                }
+                catch (Exception e)
+                {
+                    Debug.WriteLine(e.ToString());
+                }
             }
 
             return new Structure[0];
@@ -434,7 +455,7 @@ namespace Annotation
 
             QueryExecutedTime = DateTime.Now.ToUniversalTime().Ticks;
 
-            using (var db = new ConnectomeEntities())
+            using (var db = GetOrCreateDatabaseContext())
             {
                 db.Configuration.LazyLoadingEnabled = false;
                 db.Configuration.AutoDetectChangesEnabled = false;
@@ -476,7 +497,7 @@ namespace Annotation
         [PrincipalPermission(SecurityAction.Demand, Role = "Read")]
         public Structure GetStructureByID(long ID, bool IncludeChildren)
         {
-            using (var db = new ConnectomeEntities())
+            using (var db = GetOrCreateDatabaseContext())
             {
                 try
                 {
@@ -515,7 +536,7 @@ namespace Annotation
 
             int QueryChunkSize = 2000;
 
-            using (var db = new ConnectomeEntities())
+            using (var db = GetOrCreateDatabaseContext())
             {
 
                 while (ListIDs.Count > 0)
@@ -574,7 +595,10 @@ namespace Annotation
         [PrincipalPermission(SecurityAction.Demand, Role = "Read")]
         public void ApproximateStructureLocation(long ID)
         {
-            db.ApproximateStructureLocation(new int?((int)ID));  
+            using (ConnectomeEntities db = GetOrCreateDatabaseContext())
+            {
+                db.ApproximateStructureLocation(new int?((int)ID));
+            }
         }
 
         [PrincipalPermission(SecurityAction.Demand, Role = "Modify")]
@@ -582,8 +606,11 @@ namespace Annotation
         {
             ConnectomeDataModel.StructureLink newRow = new ConnectomeDataModel.StructureLink();
             link.Sync(newRow);
-            db.StructureLinks.Add(newRow);
-            db.SaveChanges();
+            using (ConnectomeEntities db = GetOrCreateDatabaseContext())
+            {
+                db.StructureLinks.Add(newRow);
+                db.SaveChanges();
+            }
 
             StructureLink newLink = new StructureLink(newRow);
             return newLink; 
@@ -593,79 +620,81 @@ namespace Annotation
         public void UpdateStructureLinks(StructureLink[] links)
         {
             //Stores the ID of each object manipulated for the return value
-            try
+            using (ConnectomeEntities db = GetOrCreateDatabaseContext())
             {
-                for (int iObj = 0; iObj < links.Length; iObj++)
+                try
                 {
-                    StructureLink obj = links[iObj];
-                    ConnectomeDataModel.StructureLink DBObj = null;
-
-                    switch (obj.DBAction)
+                    for (int iObj = 0; iObj < links.Length; iObj++)
                     {
-                        case DBACTION.INSERT:
+                        StructureLink obj = links[iObj];
+                        ConnectomeDataModel.StructureLink DBObj = null;
 
-                            DBObj = new ConnectomeDataModel.StructureLink();
-                            obj.Sync(DBObj);
-                            db.StructureLinks.Add(DBObj);
-                            break;
-                        case DBACTION.UPDATE:
+                        switch (obj.DBAction)
+                        {
+                            case DBACTION.INSERT:
 
-                            try
-                            {
-                                DBObj = (from u in db.StructureLinks
-                                         where u.SourceID == obj.SourceID &&
-                                               u.TargetID == obj.TargetID
-                                         select u).Single();
-                            }
-                            catch (System.ArgumentNullException)
-                            {
-                                Debug.WriteLine("Could not find structuretype to update: " + obj.ToString());
+                                DBObj = new ConnectomeDataModel.StructureLink();
+                                obj.Sync(DBObj);
+                                db.StructureLinks.Add(DBObj);
                                 break;
-                            }
-                            catch (System.InvalidOperationException)
-                            {
-                                Debug.WriteLine("Could not find structuretype to update: " + obj.ToString());
-                                break;
-                            }
+                            case DBACTION.UPDATE:
 
-                            obj.Sync(DBObj);
-                            //  db.ConnectomeDataModel.StructureTypes.(updateType);
-                            break;
-                        case DBACTION.DELETE:
-                            try
-                            {
-                                DBObj = (from u in db.StructureLinks
-                                         where u.SourceID == obj.SourceID &&
-                                               u.TargetID == obj.TargetID
-                                         select u).Single();
-                            }
-                            catch (System.ArgumentNullException)
-                            {
-                                Debug.WriteLine("Could not find structuretype to delete: " + obj.ToString());
-                                break;
-                            }
-                            catch (System.InvalidOperationException)
-                            {
-                                Debug.WriteLine("Could not find structuretype to update: " + obj.ToString());
-                                break;
-                            }
+                                try
+                                {
+                                    DBObj = (from u in db.StructureLinks
+                                             where u.SourceID == obj.SourceID &&
+                                                   u.TargetID == obj.TargetID
+                                             select u).Single();
+                                }
+                                catch (System.ArgumentNullException)
+                                {
+                                    Debug.WriteLine("Could not find structuretype to update: " + obj.ToString());
+                                    break;
+                                }
+                                catch (System.InvalidOperationException)
+                                {
+                                    Debug.WriteLine("Could not find structuretype to update: " + obj.ToString());
+                                    break;
+                                }
 
-                            db.StructureLinks.Remove(DBObj);
+                                obj.Sync(DBObj);
+                                //  db.ConnectomeDataModel.StructureTypes.(updateType);
+                                break;
+                            case DBACTION.DELETE:
+                                try
+                                {
+                                    DBObj = (from u in db.StructureLinks
+                                             where u.SourceID == obj.SourceID &&
+                                                   u.TargetID == obj.TargetID
+                                             select u).Single();
+                                }
+                                catch (System.ArgumentNullException)
+                                {
+                                    Debug.WriteLine("Could not find structuretype to delete: " + obj.ToString());
+                                    break;
+                                }
+                                catch (System.InvalidOperationException)
+                                {
+                                    Debug.WriteLine("Could not find structuretype to update: " + obj.ToString());
+                                    break;
+                                }
 
-                            break;
+                                db.StructureLinks.Remove(DBObj);
+
+                                break;
+                        }
+
+                        db.SaveChanges();
                     }
 
-                    db.SaveChanges();
+
                 }
-
-                
+                catch (Exception e)
+                {
+                    Debug.WriteLine(e.ToString());
+                    throw e;
+                }
             }
-            catch (Exception e)
-            {
-                Debug.WriteLine(e.ToString());
-                throw e;
-            }
-
 
             //Recover the ID's for new objects
             return;
@@ -674,27 +703,33 @@ namespace Annotation
         [PrincipalPermission(SecurityAction.Demand, Role = "Read")]
         public long[] GetUnfinishedLocations(long structureID)
         {
-            return (from id in db.SelectUnfinishedStructureBranches(structureID) select id.Value).ToArray<long>();
+            using (ConnectomeEntities db = GetOrCreateDatabaseContext())
+            {
+                return (from id in db.SelectUnfinishedStructureBranches(structureID) select id.Value).ToArray<long>();
+            }
         }
 
         [PrincipalPermission(SecurityAction.Demand, Role = "Read")]
         public LocationPositionOnly[] GetUnfinishedLocationsWithPosition(long structureID)
         {
-            List<LocationPositionOnly> listLocs = new List<LocationPositionOnly>();
-
-            foreach (SelectUnfinishedStructureBranchesWithPosition_Result row in db.SelectUnfinishedStructureBranchesWithPosition(structureID))
+            using (ConnectomeEntities db = GetOrCreateDatabaseContext())
             {
-                listLocs.Add(new LocationPositionOnly(row));
+                List<LocationPositionOnly> listLocs = new List<LocationPositionOnly>();
 
+                foreach (SelectUnfinishedStructureBranchesWithPosition_Result row in db.SelectUnfinishedStructureBranchesWithPosition(structureID))
+                {
+                    listLocs.Add(new LocationPositionOnly(row));
+
+                }
+
+                return listLocs.ToArray<LocationPositionOnly>();
             }
-
-            return listLocs.ToArray<LocationPositionOnly>();
         }
 
         [PrincipalPermission(SecurityAction.Demand, Role = "Read")]
         public StructureLink[] GetLinkedStructures()
         {
-            using (var db = new ConnectomeEntities())
+            using (var db = GetOrCreateDatabaseContext())
             {
                 try
                 {
@@ -724,35 +759,38 @@ namespace Annotation
         [PrincipalPermission(SecurityAction.Demand, Role = "Read")]
         public StructureLink[] GetLinkedStructuresByID(long ID)
         {
-            try
+            using (ConnectomeEntities db = GetOrCreateDatabaseContext())
             {
-                IQueryable<ConnectomeDataModel.StructureLink> queryResults = from l in db.StructureLinks where (l.SourceID == ID || l.TargetID == ID) select l;
-                List<StructureLink> retList = new List<StructureLink>(queryResults.Count());
-                foreach (ConnectomeDataModel.StructureLink dbl in queryResults)
+                try
                 {
-                    StructureLink link = new StructureLink(dbl);
-                    retList.Add(link);
+                    IQueryable<ConnectomeDataModel.StructureLink> queryResults = from l in db.StructureLinks where (l.SourceID == ID || l.TargetID == ID) select l;
+                    List<StructureLink> retList = new List<StructureLink>(queryResults.Count());
+                    foreach (ConnectomeDataModel.StructureLink dbl in queryResults)
+                    {
+                        StructureLink link = new StructureLink(dbl);
+                        retList.Add(link);
+                    }
+                    return retList.ToArray();
                 }
-                return retList.ToArray();
-            }
-            catch (System.ArgumentNullException)
-            {
-                //This means there was no row with that ID; 
-                Debug.WriteLine("Could not find StructureLinks for ID: " + ID.ToString());
-            }
-            catch (System.InvalidOperationException)
-            {
-                //This means there was no row with that ID; 
-                Debug.WriteLine("Could not find StructureLinks for ID: " + ID.ToString());
-            }
+                catch (System.ArgumentNullException)
+                {
+                    //This means there was no row with that ID; 
+                    Debug.WriteLine("Could not find StructureLinks for ID: " + ID.ToString());
+                }
+                catch (System.InvalidOperationException)
+                {
+                    //This means there was no row with that ID; 
+                    Debug.WriteLine("Could not find StructureLinks for ID: " + ID.ToString());
+                }
 
-            return new StructureLink[0];
+                return new StructureLink[0];
+            }
         }
 
         [PrincipalPermission(SecurityAction.Demand, Role = "Read")]
         public Location[] GetLocationsForStructure(long structureID)
         {
-            using (var db = new ConnectomeEntities())
+            using (var db = GetOrCreateDatabaseContext())
             {
                 try
                 {
@@ -784,20 +822,23 @@ namespace Annotation
         [PrincipalPermission(SecurityAction.Demand, Role = "Read")]
         public long NumberOfLocationsForStructure(long structureID)
         {
-            try
+            using (ConnectomeEntities db = GetOrCreateDatabaseContext())
             {
-                IQueryable<ConnectomeDataModel.Location> queryResults = from l in db.Locations where (l.ParentID == structureID) select l;
-                return queryResults.Count();
-            }
-            catch (System.ArgumentNullException)
-            {
-                //This means there was no row with that ID; 
-                Debug.WriteLine("Could not find locations for ID: " + structureID.ToString());
-            }
-            catch (System.InvalidOperationException)
-            {
-                //This means there was no row with that ID; 
-                Debug.WriteLine("Could not find locations for ID: " + structureID.ToString());
+                try
+                {
+                    IQueryable<ConnectomeDataModel.Location> queryResults = from l in db.Locations where (l.ParentID == structureID) select l;
+                    return queryResults.Count();
+                }
+                catch (System.ArgumentNullException)
+                {
+                    //This means there was no row with that ID; 
+                    Debug.WriteLine("Could not find locations for ID: " + structureID.ToString());
+                }
+                catch (System.InvalidOperationException)
+                {
+                    //This means there was no row with that ID; 
+                    Debug.WriteLine("Could not find locations for ID: " + structureID.ToString());
+                }
             }
 
             return 0;
@@ -814,101 +855,104 @@ namespace Annotation
         [PrincipalPermission(SecurityAction.Demand, Role = "Modify")]
         public long[] Update(Structure[] structures)
         {
-            Dictionary<ConnectomeDataModel.Structure, int> mapNewObjToIndex = new Dictionary<ConnectomeDataModel.Structure, int>(structures.Length);
-
-            //Stores the ID of each object manipulated for the return value
-            long[] listID = new long[structures.Length];
-            try
+            using (ConnectomeEntities db = GetOrCreateDatabaseContext())
             {
+                Dictionary<ConnectomeDataModel.Structure, int> mapNewObjToIndex = new Dictionary<ConnectomeDataModel.Structure, int>(structures.Length);
 
-                for (int iObj = 0; iObj < structures.Length; iObj++)
+                //Stores the ID of each object manipulated for the return value
+                long[] listID = new long[structures.Length];
+                try
                 {
-                    Structure t = structures[iObj];
 
-                    switch (t.DBAction)
+                    for (int iObj = 0; iObj < structures.Length; iObj++)
                     {
-                        case DBACTION.INSERT:
-                            ConnectomeDataModel.Structure newRow = new ConnectomeDataModel.Structure();
-                            t.Sync(newRow);
-                            db.Structures.Add(newRow);
-                            mapNewObjToIndex.Add(newRow, iObj);
-                            break;
-                        case DBACTION.UPDATE:
+                        Structure t = structures[iObj];
 
-                            ConnectomeDataModel.Structure updateRow;
-                            try
-                            {
-                                updateRow = db.Structures.Find(t.ID);
-                            }
-                            catch (System.ArgumentNullException )
-                            {
-                                Debug.WriteLine("Could not find structuretype to update: " + t.ID.ToString());
+                        switch (t.DBAction)
+                        {
+                            case DBACTION.INSERT:
+                                ConnectomeDataModel.Structure newRow = new ConnectomeDataModel.Structure();
+                                t.Sync(newRow);
+                                db.Structures.Add(newRow);
+                                mapNewObjToIndex.Add(newRow, iObj);
                                 break;
-                            }
-                            catch (System.InvalidOperationException)
-                            {
-                                Debug.WriteLine("Could not find structuretype to update: " + t.ID.ToString());
+                            case DBACTION.UPDATE:
+
+                                ConnectomeDataModel.Structure updateRow;
+                                try
+                                {
+                                    updateRow = db.Structures.Find(t.ID);
+                                }
+                                catch (System.ArgumentNullException)
+                                {
+                                    Debug.WriteLine("Could not find structuretype to update: " + t.ID.ToString());
+                                    break;
+                                }
+                                catch (System.InvalidOperationException)
+                                {
+                                    Debug.WriteLine("Could not find structuretype to update: " + t.ID.ToString());
+                                    break;
+                                }
+
+                                t.Sync(updateRow);
+                                listID[iObj] = updateRow.ID;
+                                //  db.ConnectomeDataModel.StructureTypes.(updateType);
                                 break;
-                            }
+                            case DBACTION.DELETE:
+                                ConnectomeDataModel.Structure deleteRow = new ConnectomeDataModel.Structure();
+                                try
+                                {
+                                    deleteRow = db.Structures.Find(t.ID);
+                                }
+                                catch (System.ArgumentNullException)
+                                {
+                                    Debug.WriteLine("Could not find structuretype to update: " + t.ID.ToString());
+                                    break;
+                                }
+                                catch (System.InvalidOperationException)
+                                {
+                                    Debug.WriteLine("Could not find structuretype to update: " + t.ID.ToString());
+                                    break;
+                                }
 
-                            t.Sync(updateRow);
-                            listID[iObj] = updateRow.ID;
-                            //  db.ConnectomeDataModel.StructureTypes.(updateType);
-                            break;
-                        case DBACTION.DELETE:
-                            ConnectomeDataModel.Structure deleteRow = new ConnectomeDataModel.Structure();
-                            try
-                            {
-                                deleteRow = db.Structures.Find(t.ID);
-                            }
-                            catch (System.ArgumentNullException)
-                            {
-                                Debug.WriteLine("Could not find structuretype to update: " + t.ID.ToString());
+
+                                t.Sync(deleteRow);
+                                deleteRow.ID = t.ID;
+                                listID[iObj] = deleteRow.ID;
+
+                                db.Structures.Remove(deleteRow);
+
+                                //Remove any links that exist before calling delete
+                                db.StructureLinks.RemoveRange(deleteRow.SourceOfLinks);
+                                db.StructureLinks.RemoveRange(deleteRow.TargetOfLinks);
                                 break;
-                            }
-                            catch (System.InvalidOperationException)
-                            {
-                                Debug.WriteLine("Could not find structuretype to update: " + t.ID.ToString());
-                                break;
-                            }
-
-
-                            t.Sync(deleteRow);
-                            deleteRow.ID = t.ID;
-                            listID[iObj] = deleteRow.ID;
-
-                            db.Structures.Remove(deleteRow);
-
-                            //Remove any links that exist before calling delete
-                            db.StructureLinks.RemoveRange(deleteRow.SourceOfLinks);
-                            db.StructureLinks.RemoveRange(deleteRow.TargetOfLinks);
-                            break;
+                        }
                     }
                 }
+                catch (Exception e)
+                {
+                    Debug.WriteLine(e.ToString());
+                    throw e;
+
+                }
+
+                db.SaveChanges();
+
+                //Recover the ID's for new objects
+                foreach (ConnectomeDataModel.Structure newObj in mapNewObjToIndex.Keys)
+                {
+                    int iIndex = mapNewObjToIndex[newObj];
+                    listID[iIndex] = newObj.ID;
+                }
+
+                return listID;
             }
-            catch (Exception e)
-            {
-                Debug.WriteLine(e.ToString());
-                throw e;
-
-            }
-
-            db.SaveChanges();
-
-            //Recover the ID's for new objects
-            foreach (ConnectomeDataModel.Structure newObj in mapNewObjToIndex.Keys)
-            {
-                int iIndex = mapNewObjToIndex[newObj];
-                listID[iIndex] = newObj.ID;
-            }
-
-            return listID;
         }
 
         [PrincipalPermission(SecurityAction.Demand, Role = "Modify")]
         public CreateStructureRetval CreateStructure(Structure structure, Location location)
         {
-            using(var db = new ConnectomeEntities())
+            using(var db = GetOrCreateDatabaseContext())
             {
 
                 try
@@ -922,8 +966,7 @@ namespace Annotation
                     location.Sync(DBLoc);
                     db.Locations.Add(DBLoc);
                     DBLoc.Structure = DBStruct;
-
-
+                    
                     db.SaveChanges();
 
                     //Return new ID's to the caller
@@ -973,7 +1016,11 @@ namespace Annotation
         [PrincipalPermission(SecurityAction.Demand, Role = "Admin")]
         public long Merge(long KeepID, long MergeID)
         {
-            return db.MergeStructures(KeepID, MergeID); 
+            using (ConnectomeEntities db = GetOrCreateDatabaseContext())
+            {
+                return db.MergeStructures(KeepID, MergeID);
+            }
+            
         }
 
         /// <summary>
@@ -1053,7 +1100,7 @@ namespace Annotation
 
             int QueryChunkSize = 2000;
 
-            using (var db = new ConnectomeEntities())
+            using (var db = GetOrCreateDatabaseContext())
             {
 
                 while (ListIDs.Count > 0)
@@ -1107,7 +1154,7 @@ namespace Annotation
         [PrincipalPermission(SecurityAction.Demand, Role = "Read")]
         public Location GetLastModifiedLocation()
         {
-            using (var db = new ConnectomeEntities())
+            using (var db = GetOrCreateDatabaseContext())
             {
                 try
                 {
@@ -1128,7 +1175,7 @@ namespace Annotation
         {
             QueryExecutedTime = DateTime.Now.ToUniversalTime().Ticks;
             
-            using (var db = new ConnectomeEntities())
+            using (var db = GetOrCreateDatabaseContext())
             {
                 DateTime start = DateTime.Now;
 
@@ -1182,7 +1229,7 @@ namespace Annotation
         [PrincipalPermission(SecurityAction.Demand, Role = "Read")]
         public Location[] GetLocationChanges(long section, long ModifiedAfterThisUtcTime,  out long QueryExecutedTime, out long[] DeletedIDs)
         {
-            using (var db = new ConnectomeEntities())
+            using (var db = GetOrCreateDatabaseContext())
             {
                 db.Database.CommandTimeout = 90;
                 db.Configuration.LazyLoadingEnabled = false;
@@ -1274,7 +1321,8 @@ namespace Annotation
                 return new long[0];
             }
 
-           
+            using (ConnectomeEntities db = GetOrCreateDatabaseContext())
+            {
                 try
                 {
                     //// Find all the IDs that still exist
@@ -1309,7 +1357,8 @@ namespace Annotation
                 {
                     //This means there was no row with that ID; 
                     Debug.WriteLine("Could not find deleted locations after " + DeletedAfterThisTime.ToString());
-                } 
+                }
+            }
              
             return new long[0]; 
         }
@@ -1318,7 +1367,7 @@ namespace Annotation
         public Location CreateLocation(Location new_location, long[] links)
         {
 
-            using (var db = new ConnectomeEntities())
+            using (var db = GetOrCreateDatabaseContext())
             {
 
                 ConnectomeDataModel.Location db_obj = db.Locations.Create();
@@ -1367,79 +1416,82 @@ namespace Annotation
             //Stores the ID of each object manipulated for the return value
             long[] listID = new long[locations.Length];
 
-            try
+            using (ConnectomeEntities db = GetOrCreateDatabaseContext())
             {
-                for (int iObj = 0; iObj < locations.Length; iObj++)
+                try
                 {
-                    Location t = locations[iObj];
-
-                    switch (t.DBAction)
+                    for (int iObj = 0; iObj < locations.Length; iObj++)
                     {
-                        case DBACTION.INSERT:
+                        Location t = locations[iObj];
 
-                            ConnectomeDataModel.Location newObj = new ConnectomeDataModel.Location();
-                            t.Sync(newObj);
-                            db.Locations.Add(newObj);
-                            mapNewTypeToIndex.Add(newObj, iObj);
-                            break;
-                        case DBACTION.UPDATE:
-                            ConnectomeDataModel.Location updateRow;
-                            try
-                            {
-                                updateRow = db.Locations.Find(t.ID);
-                            }
-                            catch (System.ArgumentNullException)
-                            {
-                                Debug.WriteLine("Could not find structuretype to update: " + t.ID.ToString());
+                        switch (t.DBAction)
+                        {
+                            case DBACTION.INSERT:
+
+                                ConnectomeDataModel.Location newObj = new ConnectomeDataModel.Location();
+                                t.Sync(newObj);
+                                db.Locations.Add(newObj);
+                                mapNewTypeToIndex.Add(newObj, iObj);
                                 break;
-                            }
-                            catch (System.InvalidOperationException)
-                            {
-                                Debug.WriteLine("Could not find structuretype to update: " + t.ID.ToString());
+                            case DBACTION.UPDATE:
+                                ConnectomeDataModel.Location updateRow;
+                                try
+                                {
+                                    updateRow = db.Locations.Find(t.ID);
+                                }
+                                catch (System.ArgumentNullException)
+                                {
+                                    Debug.WriteLine("Could not find structuretype to update: " + t.ID.ToString());
+                                    break;
+                                }
+                                catch (System.InvalidOperationException)
+                                {
+                                    Debug.WriteLine("Could not find structuretype to update: " + t.ID.ToString());
+                                    break;
+                                }
+
+                                t.Sync(updateRow);
+                                listID[iObj] = updateRow.ID;
+                                //  db.ConnectomeDataModel.StructureTypes.(updateType);
                                 break;
-                            }
+                            case DBACTION.DELETE:
+                                ConnectomeDataModel.Location deleteRow;
+                                try
+                                {
+                                    deleteRow = db.Locations.Find(t.ID);
+                                }
+                                catch (System.ArgumentNullException)
+                                {
+                                    Debug.WriteLine("Could not find structuretype to update: " + t.ID.ToString());
+                                    break;
+                                }
+                                catch (System.InvalidOperationException)
+                                {
+                                    Debug.WriteLine("Could not find structuretype to update: " + t.ID.ToString());
+                                    break;
+                                }
 
-                            t.Sync(updateRow);
-                            listID[iObj] = updateRow.ID;
-                            //  db.ConnectomeDataModel.StructureTypes.(updateType);
-                            break;
-                        case DBACTION.DELETE:
-                            ConnectomeDataModel.Location deleteRow;
-                            try
-                            {
-                                deleteRow = db.Locations.Find(t.ID);
-                            }
-                            catch (System.ArgumentNullException)
-                            {
-                                Debug.WriteLine("Could not find structuretype to update: " + t.ID.ToString());
+                                //Remove any links that exist before calling delete
+                                db.LocationLinks.RemoveRange(deleteRow.LocationLinksA);
+                                db.LocationLinks.RemoveRange(deleteRow.LocationLinksB);
+
+                                t.Sync(deleteRow);
+                                deleteRow.ID = t.ID;
+                                listID[iObj] = deleteRow.ID;
+                                db.Locations.Remove(deleteRow);
+
                                 break;
-                            }
-                            catch (System.InvalidOperationException)
-                            {
-                                Debug.WriteLine("Could not find structuretype to update: " + t.ID.ToString());
-                                break;
-                            }
-
-                            //Remove any links that exist before calling delete
-                            db.LocationLinks.RemoveRange(deleteRow.LocationLinksA);
-                            db.LocationLinks.RemoveRange(deleteRow.LocationLinksB);
-
-                            t.Sync(deleteRow);
-                            deleteRow.ID = t.ID;
-                            listID[iObj] = deleteRow.ID;
-                            db.Locations.Remove(deleteRow);
-
-                            break;
+                        }
                     }
-                }
 
-                db.SaveChanges();
-            }
-            catch(System.Data.Entity.Validation.DbEntityValidationException e)
-            {
-                foreach(var error in e.EntityValidationErrors)
+                    db.SaveChanges();
+                }
+                catch (System.Data.Entity.Validation.DbEntityValidationException e)
                 {
-                    Console.WriteLine(error.ToString());
+                    foreach (var error in e.EntityValidationErrors)
+                    {
+                        Console.WriteLine(error.ToString());
+                    }
                 }
             }
 
@@ -1517,92 +1569,98 @@ namespace Annotation
         [PrincipalPermission(SecurityAction.Demand, Role = "Modify")]
         public void DeleteLocationLink(long SourceID, long TargetID)
         {
-            ConnectomeDataModel.LocationLink link;
-            bool LinkFound = false;
-            try
+            using (ConnectomeEntities db = GetOrCreateDatabaseContext())
             {
-                link = (from u in db.LocationLinks where u.A == SourceID && u.B == TargetID select u).Single();
-            }
-            catch (InvalidOperationException)
-            {
-                //No link found
-                link = null;
-            }
+                ConnectomeDataModel.LocationLink link;
+                bool LinkFound = false;
+                try
+                {
+                    link = (from u in db.LocationLinks where u.A == SourceID && u.B == TargetID select u).Single();
+                }
+                catch (InvalidOperationException)
+                {
+                    //No link found
+                    link = null;
+                }
 
-            if (link != null)
-            {
-                db.LocationLinks.Remove(link);
-                LinkFound = true;
-            }
+                if (link != null)
+                {
+                    db.LocationLinks.Remove(link);
+                    LinkFound = true;
+                }
 
-            try
-            {
-                link = (from u in db.LocationLinks where u.A == TargetID && u.B == SourceID select u).Single();
-            }
-            catch (InvalidOperationException)
-            {
-                link = null;
-            }
+                try
+                {
+                    link = (from u in db.LocationLinks where u.A == TargetID && u.B == SourceID select u).Single();
+                }
+                catch (InvalidOperationException)
+                {
+                    link = null;
+                }
 
-            if (link != null)
-            {
-                db.LocationLinks.Remove(link);
-                LinkFound = true;
-            }
+                if (link != null)
+                {
+                    db.LocationLinks.Remove(link);
+                    LinkFound = true;
+                }
 
-            if (!LinkFound)
-            {
-                throw new ArgumentException("DeleteLocationLink: The specified source or target does not exist");
-            }
+                if (!LinkFound)
+                {
+                    throw new ArgumentException("DeleteLocationLink: The specified source or target does not exist");
+                }
 
-            db.SaveChanges();
+                db.SaveChanges();
+            }
         }
 
         [PrincipalPermission(SecurityAction.Demand, Role = "Read")]
         public LocationLink[] LocationLinksForSection(long section, long ModifiedAfterThisUtcTime, out long QueryExecutedTime, out LocationLink[] DeletedLinks)
         {
-            //TODO: This needs a real assignment, but I haven't created the table yet
-            DeletedLinks = new LocationLink[0]; 
-            DateTime start = DateTime.Now;
-            DateTime? ModifiedAfter;
-            if (ModifiedAfterThisUtcTime == 0)
+            using (ConnectomeEntities db = GetOrCreateDatabaseContext())
             {
-                ModifiedAfter = new DateTime?(); 
-            }
-            else
-            {
-                ModifiedAfter = new DateTime?(new DateTime(ModifiedAfterThisUtcTime, DateTimeKind.Unspecified));
-            }
-            QueryExecutedTime = DateTime.Now.ToUniversalTime().Ticks;
-            try
-            {
-                //IQueryable<ConnectomeDataModel.Location> queryResults = from l in db.ConnectomeDataModel.Locations where ((double)section) == l.Z select l;
-                List<ConnectomeDataModel.LocationLink> locationLinks;
-                locationLinks = db.ReadSectionLocationLinks(section, ModifiedAfter).ToList();
-
-                Debug.WriteLine(section.ToString() + ": Query: " + new TimeSpan(DateTime.Now.Ticks - start.Ticks).TotalMilliseconds);
-
-                LocationLink[] retList = new LocationLink[locationLinks.Count];
-
-                Debug.WriteLine(section.ToString() + ": To list: " + new TimeSpan(DateTime.Now.Ticks - start.Ticks).TotalMilliseconds);
-                for (int i = 0; i < locationLinks.Count; i++)
+                //TODO: This needs a real assignment, but I haven't created the table yet
+                DeletedLinks = new LocationLink[0];
+                DateTime start = DateTime.Now;
+                DateTime? ModifiedAfter;
+                if (ModifiedAfterThisUtcTime == 0)
                 {
-                    retList[i] = new LocationLink(locationLinks[i]);
+                    ModifiedAfter = new DateTime?();
                 }
+                else
+                {
+                    ModifiedAfter = new DateTime?(new DateTime(ModifiedAfterThisUtcTime, DateTimeKind.Unspecified));
+                }
+                QueryExecutedTime = DateTime.Now.ToUniversalTime().Ticks;
+                try
+                {
+                    //IQueryable<ConnectomeDataModel.Location> queryResults = from l in db.ConnectomeDataModel.Locations where ((double)section) == l.Z select l;
+                    List<ConnectomeDataModel.LocationLink> locationLinks;
+                    locationLinks = db.ReadSectionLocationLinks(section, ModifiedAfter).ToList();
 
-                Debug.WriteLine(section.ToString() + ": Loop: " + new TimeSpan(DateTime.Now.Ticks - start.Ticks).TotalMilliseconds);
+                    Debug.WriteLine(section.ToString() + ": Query: " + new TimeSpan(DateTime.Now.Ticks - start.Ticks).TotalMilliseconds);
 
-                return retList;
-            }
-            catch (System.ArgumentNullException)
-            {
-                //This means there was no row with that ID; 
-                Debug.WriteLine("Could not find locatioWat>cns for section: " + section.ToString());
-            }
-            catch (System.InvalidOperationException)
-            {
-                //This means there was no row with that ID; 
-                Debug.WriteLine("Could not find locations for section: " + section.ToString());
+                    LocationLink[] retList = new LocationLink[locationLinks.Count];
+
+                    Debug.WriteLine(section.ToString() + ": To list: " + new TimeSpan(DateTime.Now.Ticks - start.Ticks).TotalMilliseconds);
+                    for (int i = 0; i < locationLinks.Count; i++)
+                    {
+                        retList[i] = new LocationLink(locationLinks[i]);
+                    }
+
+                    Debug.WriteLine(section.ToString() + ": Loop: " + new TimeSpan(DateTime.Now.Ticks - start.Ticks).TotalMilliseconds);
+
+                    return retList;
+                }
+                catch (System.ArgumentNullException)
+                {
+                    //This means there was no row with that ID; 
+                    Debug.WriteLine("Could not find locatioWat>cns for section: " + section.ToString());
+                }
+                catch (System.InvalidOperationException)
+                {
+                    //This means there was no row with that ID; 
+                    Debug.WriteLine("Could not find locations for section: " + section.ToString());
+                }
             }
 
             return new LocationLink[0];
@@ -1611,22 +1669,28 @@ namespace Annotation
         [PrincipalPermission(SecurityAction.Demand, Role = "Read")]
         public long[] GetLinkedLocations(long ID)
         {
-            var links = (from u in db.LocationLinks where u.A == ID select u.B).Union(from u in db.LocationLinks where u.B == ID select u.A);
-            return links.ToArray();
+            using (ConnectomeEntities db = GetOrCreateDatabaseContext())
+            {
+                var links = (from u in db.LocationLinks where u.A == ID select u.B).Union(from u in db.LocationLinks where u.B == ID select u.A);
+                return links.ToArray();
+            }
         }
 
         [PrincipalPermission(SecurityAction.Demand, Role = "Read")]
         public LocationHistory[] GetLocationChangeLog(long? structure_id, DateTime? begin_time, DateTime? end_time)
         {
-            var result = db.SelectStructureLocationChangeLog(structure_id, begin_time, end_time);
-            List<SelectStructureLocationChangeLog_Result> listChanges = result.ToList();
-            List<LocationHistory> locations = new List<LocationHistory>(listChanges.Count);
-            foreach (SelectStructureLocationChangeLog_Result row in listChanges)
+            using (ConnectomeEntities db = GetOrCreateDatabaseContext())
             {
-                locations.Add(new LocationHistory(row));
-            }
+                var result = db.SelectStructureLocationChangeLog(structure_id, begin_time, end_time);
+                List<SelectStructureLocationChangeLog_Result> listChanges = result.ToList();
+                List<LocationHistory> locations = new List<LocationHistory>(listChanges.Count);
+                foreach (SelectStructureLocationChangeLog_Result row in listChanges)
+                {
+                    locations.Add(new LocationHistory(row));
+                }
 
-            return locations.ToArray();
+                return locations.ToArray();
+            }
         }
 
 
@@ -1653,48 +1717,52 @@ namespace Annotation
         [PrincipalPermission(SecurityAction.Demand, Role = "Read")]
         public Graphx getGraph(int cellID, int numHops)
         {
-            // Create a new graph
-            Graphx graph = new Graphx();
-
-            // Get all the missing nodes
-            List<long> MissingNodes = new List<long>(new long[] { cellID });
-
-            // Get the nodes and build graph for numHops
-            for (int i = 0; i < numHops; i++)
+            using (ConnectomeEntities db = GetOrCreateDatabaseContext())
             {
-                MissingNodes = webService_GetHop(graph, MissingNodes.ToArray());
-            }
+                // Create a new graph
+                Graphx graph = new Graphx();
 
-            //Tell the graph which cells are not fully populated
-            graph.FrontierNodes = MissingNodes;
+                // Get all the missing nodes
+                List<long> MissingNodes = new List<long>(new long[] { cellID });
 
-            var structLocations = db.ApproximateStructureLocations();
-
-            foreach (var result in structLocations)
-            {
-                if (result == null)
-                    continue;
-
-                if (graph.NodeList.ContainsKey(result.ParentID))
+                // Get the nodes and build graph for numHops
+                for (int i = 0; i < numHops; i++)
                 {
-                    Structure structure = graph.NodeList[result.ParentID];
+                    MissingNodes = webService_GetHop(graph, MissingNodes.ToArray());
+                }
 
-                    if (structure.ParentID.HasValue)
-                        graph.zLocationForSynapses.Add(result.ParentID, (long)Math.Round((double)result.Z));
-                    else
+                //Tell the graph which cells are not fully populated
+                graph.FrontierNodes = MissingNodes;
+
+
+                var structLocations = db.ApproximateStructureLocations();
+           
+                foreach (var result in structLocations)
+                {
+                    if (result == null)
+                        continue;
+
+                    if (graph.NodeList.ContainsKey(result.ParentID))
+                    {
+                        Structure structure = graph.NodeList[result.ParentID];
+
+                        if (structure.ParentID.HasValue)
+                            graph.zLocationForSynapses.Add(result.ParentID, (long)Math.Round((double)result.Z));
+                        else
+                        {
+                            graph.locationInfo.Add(result.ParentID, new LocationInfo((double)result.X, (double)result.Y, (double)result.Z, (double)result.Radius));
+                            graph.InvolvedCells.Add(result.ParentID);
+                        }
+                    }
+
+                    if (graph.FrontierNodes.Contains(result.ParentID))
                     {
                         graph.locationInfo.Add(result.ParentID, new LocationInfo((double)result.X, (double)result.Y, (double)result.Z, (double)result.Radius));
-                        graph.InvolvedCells.Add(result.ParentID);
                     }
                 }
-
-                if (graph.FrontierNodes.Contains(result.ParentID))
-                {
-                    graph.locationInfo.Add(result.ParentID, new LocationInfo((double)result.X, (double)result.Y, (double)result.Z, (double)result.Radius));
-                }
+                 
+                return graph;
             }
-           
-            return graph;
         }
 
         
@@ -1850,9 +1918,13 @@ namespace Annotation
         {
             long[] structuresList;
 
-            IQueryable<long> res = from a in db.Structures where a.TypeID == typeID select a.ID;
+            using (ConnectomeEntities db = GetOrCreateDatabaseContext())
+            {
 
-            structuresList = res.ToArray();
+                IQueryable<long> res = from a in db.Structures where a.TypeID == typeID select a.ID;
+
+                structuresList = res.ToArray();
+            }
 
             return structuresList;
         }
@@ -1862,57 +1934,57 @@ namespace Annotation
         [PrincipalPermission(SecurityAction.Demand, Role = "Read")]
         public string[] getTopConnectedStructures(int num)
         {
-
-            SortedDictionary<long, long> topConnections = new SortedDictionary<long, long>();
-            
-            List<String> answer = new List<string>();
-
-            if (num == 1)
+            using (ConnectomeEntities db = GetOrCreateDatabaseContext())
             {
-                var results = db.SelectNumConnectionsPerStructure();                
+                SortedDictionary<long, long> topConnections = new SortedDictionary<long, long>();
 
-                foreach (var row in results)
+                List<String> answer = new List<string>();
+
+                if (num == 1)
                 {
-                    string type = (row.Label == null || String.IsNullOrEmpty(row.Label)) ? "[None]" : "[" + row.Label + "]";
-                    answer.Add(type + "~" + row.StructureID + "~" + row.NumConnections);
-                } 
-            }
+                    var results = db.SelectNumConnectionsPerStructure();
 
-
-            else
-            {
-                var res = from t0 in db.Locations
-                          from t1 in db.Structures
-                          where
-                            t1.ID == t0.ParentID &&
-                            t1.ParentID == null
-                          group t0 by new
-                          {
-                              t0.ParentID,
-                              t1.Label
-                          } into g
-                          orderby
-                             g.Count() descending
-                          select new
-                          {
-                              id = g.Key.ParentID,
-                              label = g.Key.Label,
-                              count = g.Count()
-                          };
-
-
-                foreach (var row in res)
-                {
-                    string type = (row.label == null || String.IsNullOrEmpty(row.label)) ? "[None]" : "[" + row.label + "]";
-                    answer.Add(row.id + "~" + type + "~" + row.count);
+                    foreach (var row in results)
+                    {
+                        string type = (row.Label == null || String.IsNullOrEmpty(row.Label)) ? "[None]" : "[" + row.Label + "]";
+                        answer.Add(type + "~" + row.StructureID + "~" + row.NumConnections);
+                    }
                 }
 
-                
 
+                else
+                {
+                    var res = from t0 in db.Locations
+                              from t1 in db.Structures
+                              where
+                                t1.ID == t0.ParentID &&
+                                t1.ParentID == null
+                              group t0 by new
+                              {
+                                  t0.ParentID,
+                                  t1.Label
+                              } into g
+                              orderby
+                                 g.Count() descending
+                              select new
+                              {
+                                  id = g.Key.ParentID,
+                                  label = g.Key.Label,
+                                  count = g.Count()
+                              };
+
+
+                    foreach (var row in res)
+                    {
+                        string type = (row.label == null || String.IsNullOrEmpty(row.label)) ? "[None]" : "[" + row.label + "]";
+                        answer.Add(row.id + "~" + type + "~" + row.count);
+                    }
+
+
+
+                }
+                return answer.ToArray();
             }
-             
-            return answer.ToArray();
-
         }
 
         [PrincipalPermission(SecurityAction.Demand, Role = "Read")]
@@ -1920,17 +1992,21 @@ namespace Annotation
         {
             List<string> result = new List<string>();
 
-            Dictionary<long, string> dictStructureLabels = _CreateStructureIDToLabelDict();
-
-            foreach(ConnectomeDataModel.Structure s in db.SelectRootStructures())
+            using (ConnectomeEntities db = GetOrCreateDatabaseContext())
             {
-                if(dictStructureLabels.ContainsKey(s.ID))
+
+                Dictionary<long, string> dictStructureLabels = _CreateStructureIDToLabelDict();
+
+                foreach (ConnectomeDataModel.Structure s in db.SelectRootStructures())
                 {
-                    result.Add(dictStructureLabels[s.ID] + "-" + s.ID.ToString());
-                }
-                else
-                {
-                    result.Add("Unlabeled-" + s.ID.ToString());
+                    if (dictStructureLabels.ContainsKey(s.ID))
+                    {
+                        result.Add(dictStructureLabels[s.ID] + "-" + s.ID.ToString());
+                    }
+                    else
+                    {
+                        result.Add("Unlabeled-" + s.ID.ToString());
+                    }
                 }
             }
 
@@ -1955,10 +2031,14 @@ namespace Annotation
         {
             Dictionary<long, string> structureTypes = new Dictionary<long, string>();
 
-            var res = (from k in db.StructureTypes select new { id = k.ID, name = k.Name });
+            using (ConnectomeEntities db = GetOrCreateDatabaseContext())
+            {
 
-            foreach (var row in res)
-                structureTypes[row.id] = row.name;
+                var res = (from k in db.StructureTypes select new { id = k.ID, name = k.Name });
+
+                foreach (var row in res)
+                    structureTypes[row.id] = row.name;
+            }
 
             return structureTypes;
         }
@@ -1967,9 +2047,12 @@ namespace Annotation
         {
             Dictionary<long, string> labelDictionary = new Dictionary<long, string>();
 
-            foreach (var row in db.SelectStructureLabels())
+            using (ConnectomeEntities db = GetOrCreateDatabaseContext())
             {
-                labelDictionary[row.ID] = row.Label; 
+                foreach (var row in db.SelectStructureLabels())
+                {
+                    labelDictionary[row.ID] = row.Label;
+                }
             }
 
             return labelDictionary; 
@@ -1980,54 +2063,56 @@ namespace Annotation
         {
             SortedDictionary<long, long> topConnections = new SortedDictionary<long, long>();
 
-            List<long> structureIDs = (from s in db.Structures where s.ParentID == null select s.ID).ToList<long>();
-
-            Dictionary<long, string[]> result = new Dictionary<long, string[]>();
-
-            Dictionary<long, string> structureTypeName = _CreateStructureTypeIDToNameDict();
-
-            foreach (int id in structureIDs)
+            using (ConnectomeEntities db = GetOrCreateDatabaseContext())
             {
-                List<string> childCountList = new List<string>();
-                int total_children = 0;
 
-                foreach (var type_count_row in db.CountChildStructuresByType(id))
+                List<long> structureIDs = (from s in db.Structures where s.ParentID == null select s.ID).ToList<long>();
+
+                Dictionary<long, string[]> result = new Dictionary<long, string[]>();
+
+                Dictionary<long, string> structureTypeName = _CreateStructureTypeIDToNameDict();
+
+                foreach (int id in structureIDs)
                 {
-                    total_children += type_count_row.Count.Value;
-                    string output_val = structureTypeName[type_count_row.TypeID].Trim() + "," + type_count_row.Count.ToString();
-                    childCountList.Add(output_val);
+                    List<string> childCountList = new List<string>();
+                    int total_children = 0;
+
+                    foreach (var type_count_row in db.CountChildStructuresByType(id))
+                    {
+                        total_children += type_count_row.Count.Value;
+                        string output_val = structureTypeName[type_count_row.TypeID].Trim() + "," + type_count_row.Count.ToString();
+                        childCountList.Add(output_val);
+                    }
+
+                    if (total_children == 0)
+                        continue;
+
+                    childCountList.Insert(0, "Total," + total_children.ToString());
+                    result[id] = childCountList.ToArray();
                 }
 
-                if(total_children == 0)
-                    continue;
+                SynapseObject retObj = new SynapseObject();
+                Dictionary<long, string> labelDictionary = _CreateStructureIDToLabelDict();
 
-                childCountList.Insert(0, "Total," + total_children.ToString());
-                result[id] = childCountList.ToArray();
+                foreach (var row in result)
+                {
+                    SynapseStats temp = new SynapseStats();
+                    temp.id = row.Key.ToString();
+                    if (labelDictionary.ContainsKey(row.Key))
+                    {
+                        temp.id += "[" + labelDictionary[row.Key] + "]";
+                    }
+                    else
+                    {
+                        temp.id += "[]";
+                    }
+                    temp.synapses = row.Value;
+                    retObj.objList.Add(temp);
+
+                }
+
+                return retObj;
             }
-
-            SynapseObject retObj = new SynapseObject();
-            Dictionary<long, string> labelDictionary = _CreateStructureIDToLabelDict();
-            
-            foreach (var row in result)
-            {
-                SynapseStats temp = new SynapseStats();
-                temp.id = row.Key.ToString();
-                if (labelDictionary.ContainsKey(row.Key))
-                {
-                   temp.id += "[" + labelDictionary[row.Key] + "]";
-                }
-                else
-                {
-                    temp.id += "[]";
-                }
-                temp.synapses = row.Value;
-                retObj.objList.Add(temp);
-
-            }
-
-
-            return retObj;
-
         }
 
         [PrincipalPermission(SecurityAction.Demand, Role = "Read")]
