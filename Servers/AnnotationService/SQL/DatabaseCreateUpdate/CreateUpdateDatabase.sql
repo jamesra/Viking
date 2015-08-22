@@ -1,9 +1,9 @@
 /**** You need to replace the following templates to use this script ****/
-/**** EMPTY = Name of the database  */
+/**** TEST = Name of the database  */
 /**** {DATABASE_DIRECTORY} = Directory Datbase lives in if it needs to be created, with the trailing slash i.e. C:\Database\
 */
 DECLARE @DATABASE_NAME VARCHAR(50)
-SET @DATABASE_NAME = 'EMPTY'
+SET @DATABASE_NAME = 'TEST'
 DECLARE @DATABASE_DIRECTORY VARCHAR(50)
 SET @DATABASE_DIRECTORY = 'C:\Database\'
 
@@ -29,7 +29,7 @@ BEGIN
 END
 	
 CREATE TABLE #UpdateVars ([Version] VARCHAR(100));
-INSERT INTO #UpdateVars Values (N'EMPTY');
+INSERT INTO #UpdateVars Values (N'TEST');
 
 DECLARE @db_id VARCHAR(100);
 SET @db_id = db_id(@DATABASE_NAME)
@@ -42,50 +42,50 @@ BEGIN
 	print N'Database does not exist, creating...' 
 	
 	declare @Path varchar(100)
-	set @Path = N'C:\Database\EMPTY\'
+	set @Path = N'C:\Database\TEST\'
 	EXEC master.dbo.xp_create_subdir @Path
 	
-	/****** Object:  Database [EMPTY]    Script Date: 06/14/2011 13:13:50 ******/
-	CREATE DATABASE [EMPTY] ON  PRIMARY 
-		( NAME = N'EMPTY', FILENAME = N'C:\Database\EMPTY\EMPTY.mdf' , SIZE = 4096KB , MAXSIZE = UNLIMITED, FILEGROWTH = 1024KB )
+	/****** Object:  Database [TEST]    Script Date: 06/14/2011 13:13:50 ******/
+	CREATE DATABASE [TEST] ON  PRIMARY 
+		( NAME = N'TEST', FILENAME = N'C:\Database\TEST\TEST.mdf' , SIZE = 4096KB , MAXSIZE = UNLIMITED, FILEGROWTH = 1024KB )
 		 LOG ON 
-		( NAME = N'EMPTY_log', FILENAME = N'C:\Database\EMPTY\EMPTY_log.ldf' , SIZE = 4096KB , MAXSIZE = 2048GB , FILEGROWTH = 10%)
+		( NAME = N'TEST_log', FILENAME = N'C:\Database\TEST\TEST_log.ldf' , SIZE = 4096KB , MAXSIZE = 2048GB , FILEGROWTH = 10%)
 		
-	ALTER DATABASE [EMPTY] SET COMPATIBILITY_LEVEL = 100
+	ALTER DATABASE [TEST] SET COMPATIBILITY_LEVEL = 100
 	
 	IF (1 = FULLTEXTSERVICEPROPERTY('IsFullTextInstalled'))
 	begin
-		EXEC [EMPTY].[dbo].[sp_fulltext_database] @action = 'enable'
+		EXEC [TEST].[dbo].[sp_fulltext_database] @action = 'enable'
 	end
 	
-	ALTER DATABASE [EMPTY] SET ANSI_NULL_DEFAULT OFF
-	ALTER DATABASE [EMPTY] SET ANSI_NULLS OFF
-	ALTER DATABASE [EMPTY] SET ANSI_PADDING OFF
-	ALTER DATABASE [EMPTY] SET ANSI_WARNINGS OFF
-	ALTER DATABASE [EMPTY] SET ARITHABORT OFF
-	ALTER DATABASE [EMPTY] SET AUTO_CLOSE OFF
-	ALTER DATABASE [EMPTY] SET AUTO_CREATE_STATISTICS ON
-	ALTER DATABASE [EMPTY] SET AUTO_SHRINK OFF
-	ALTER DATABASE [EMPTY] SET AUTO_UPDATE_STATISTICS ON
-	ALTER DATABASE [EMPTY] SET CURSOR_CLOSE_ON_COMMIT OFF
-	ALTER DATABASE [EMPTY] SET CURSOR_DEFAULT  GLOBAL
-	ALTER DATABASE [EMPTY] SET CONCAT_NULL_YIELDS_NULL OFF
-	ALTER DATABASE [EMPTY] SET NUMERIC_ROUNDABORT OFF
-	ALTER DATABASE [EMPTY] SET QUOTED_IDENTIFIER OFF
-	ALTER DATABASE [EMPTY] SET RECURSIVE_TRIGGERS OFF
-	ALTER DATABASE [EMPTY] SET  DISABLE_BROKER
-	ALTER DATABASE [EMPTY] SET AUTO_UPDATE_STATISTICS_ASYNC OFF
-	ALTER DATABASE [EMPTY] SET DATE_CORRELATION_OPTIMIZATION OFF
-	ALTER DATABASE [EMPTY] SET TRUSTWORTHY OFF
-	ALTER DATABASE [EMPTY] SET ALLOW_SNAPSHOT_ISOLATION OFF
-	ALTER DATABASE [EMPTY] SET PARAMETERIZATION SIMPLE
-	ALTER DATABASE [EMPTY] SET READ_COMMITTED_SNAPSHOT OFF
-	ALTER DATABASE [EMPTY] SET HONOR_BROKER_PRIORITY OFF
-	ALTER DATABASE [EMPTY] SET  READ_WRITE
-	ALTER DATABASE [EMPTY] SET RECOVERY SIMPLE
-	ALTER DATABASE [EMPTY] SET  MULTI_USER
-	ALTER DATABASE [EMPTY] SET PAGE_VERIFY CHECKSUM
-	ALTER DATABASE [EMPTY] SET DB_CHAINING OFF
+	ALTER DATABASE [TEST] SET ANSI_NULL_DEFAULT OFF
+	ALTER DATABASE [TEST] SET ANSI_NULLS OFF
+	ALTER DATABASE [TEST] SET ANSI_PADDING OFF
+	ALTER DATABASE [TEST] SET ANSI_WARNINGS OFF
+	ALTER DATABASE [TEST] SET ARITHABORT OFF
+	ALTER DATABASE [TEST] SET AUTO_CLOSE OFF
+	ALTER DATABASE [TEST] SET AUTO_CREATE_STATISTICS ON
+	ALTER DATABASE [TEST] SET AUTO_SHRINK OFF
+	ALTER DATABASE [TEST] SET AUTO_UPDATE_STATISTICS ON
+	ALTER DATABASE [TEST] SET CURSOR_CLOSE_ON_COMMIT OFF
+	ALTER DATABASE [TEST] SET CURSOR_DEFAULT  GLOBAL
+	ALTER DATABASE [TEST] SET CONCAT_NULL_YIELDS_NULL OFF
+	ALTER DATABASE [TEST] SET NUMERIC_ROUNDABORT OFF
+	ALTER DATABASE [TEST] SET QUOTED_IDENTIFIER OFF
+	ALTER DATABASE [TEST] SET RECURSIVE_TRIGGERS OFF
+	ALTER DATABASE [TEST] SET  DISABLE_BROKER
+	ALTER DATABASE [TEST] SET AUTO_UPDATE_STATISTICS_ASYNC OFF
+	ALTER DATABASE [TEST] SET DATE_CORRELATION_OPTIMIZATION OFF
+	ALTER DATABASE [TEST] SET TRUSTWORTHY OFF
+	ALTER DATABASE [TEST] SET ALLOW_SNAPSHOT_ISOLATION OFF
+	ALTER DATABASE [TEST] SET PARAMETERIZATION SIMPLE
+	ALTER DATABASE [TEST] SET READ_COMMITTED_SNAPSHOT OFF
+	ALTER DATABASE [TEST] SET HONOR_BROKER_PRIORITY OFF
+	ALTER DATABASE [TEST] SET  READ_WRITE
+	ALTER DATABASE [TEST] SET RECOVERY SIMPLE
+	ALTER DATABASE [TEST] SET  MULTI_USER
+	ALTER DATABASE [TEST] SET PAGE_VERIFY CHECKSUM
+	ALTER DATABASE [TEST] SET DB_CHAINING OFF
 	
 	print N'Created Database...' 
 	INSERT INTO #UpdateVars Values (DB_ID(N'CreateTables'));
@@ -93,7 +93,7 @@ END
 
 GO
 
-USE [EMPTY]
+USE [TEST]
 GO
 
 --Need to specify database owner before enabling change tracking
@@ -553,8 +553,8 @@ DECLARE @db_id VARCHAR(100);
 SET @db_id = (select * from #UpdateVars where Version='CreateTables')
 IF @db_id IS NOT NULL	
 	EXEC('
-	/****** Object:  StoredProcedure [dbo].[ApproximaTESTructureLocation]    Script Date: 06/14/2011 13:13:53 ******/
-	CREATE PROCEDURE [dbo].[ApproximaTESTructureLocation]
+	/****** Object:  StoredProcedure [dbo].[ApproximatestructureLocation]    Script Date: 06/14/2011 13:13:53 ******/
+	CREATE PROCEDURE [dbo].[ApproximatestructureLocation]
 	@StructureID int
 	AS
 		select SUM(VolumeX*Radius*Radius)/SUM(Radius*Radius) as X,SUM(VolumeY*Radius*Radius)/SUM(Radius*Radius) as Y,SUM(Z*Radius*Radius)/SUM(Radius*Radius) as Z, AVG(Radius) as Radius
@@ -1106,8 +1106,19 @@ END
 */  
 GO
 
-Use [EMPTY]
+Use [TEST]
 GO
+  
+DECLARE @compat_level int
+SET @compat_level = (SELECT compatibility_level FROM sys.databases WHERE name = 'TEST')
+IF(@compat_level < 120)
+BEGIN
+	print N'Setting the database compatability level to SQL 2014'
+	ALTER DATABASE [TEST] SET COMPATIBILITY_LEVEL = 120  
+END
+GO
+
+
 
 BEGIN TRANSACTION main
 		
@@ -1307,13 +1318,13 @@ end
      print N'Adding SP to calculate average locations for all structures'
      BEGIN TRANSACTION three
 		
-	    IF EXISTS(select * from sys.procedures where name = 'ApproximaTESTructureLocations')
+	    IF EXISTS(select * from sys.procedures where name = 'ApproximatestructureLocations')
 		BEGIN
-			EXEC('DROP PROCEDURE [dbo].[ApproximaTESTructureLocations]');
+			EXEC('DROP PROCEDURE [dbo].[ApproximatestructureLocations]');
 		END
 		
 		 EXEC('
-		 CREATE PROCEDURE [dbo].[ApproximaTESTructureLocations]
+		 CREATE PROCEDURE [dbo].[ApproximatestructureLocations]
          AS
          BEGIN
 			-- SET NOCOUNT ON added to prevent extra result sets from
@@ -1352,13 +1363,13 @@ end
      print N'Adding SP to calculate average locations for one structure'
      BEGIN TRANSACTION four
      
-		 IF EXISTS(select * from sys.procedures where name = 'ApproximaTESTructureLocation')
+		 IF EXISTS(select * from sys.procedures where name = 'ApproximatestructureLocation')
 		 BEGIN
-			EXEC('DROP PROCEDURE [dbo].[ApproximaTESTructureLocation]');
+			EXEC('DROP PROCEDURE [dbo].[ApproximatestructureLocation]');
 		 END
 	
 		 EXEC('
-		 CREATE PROCEDURE [dbo].[ApproximaTESTructureLocation]
+		 CREATE PROCEDURE [dbo].[ApproximatestructureLocation]
 		 @StructureID int
          AS
          BEGIN
@@ -1426,7 +1437,7 @@ end
 	
 	if(not(exists(select (1) from DBVersion where DBVersionID = 6)))
 	begin
-     print N'Adding SP for laTEST modification by user'
+     print N'Adding SP for latest modification by user'
      BEGIN TRANSACTION six
      
 		IF EXISTS(select * from sys.procedures where name = 'SelectLastModifiedLocationByUsers')
@@ -1448,7 +1459,7 @@ end
 
 			select L.* from
 				(
-				select MAX(LastModifiedByUser.ID) as LaTESTID, LastModifiedByUser.Username
+				select MAX(LastModifiedByUser.ID) as LatestID, LastModifiedByUser.Username
 					from (
 						select  Username, MAX(LastModified) as lm
 							from Location
@@ -1460,7 +1471,7 @@ end
 					group by LastModifiedByUser.Username
 					)
 					as IDList
-				inner join Location as L on IDList.LaTESTID = ID
+				inner join Location as L on IDList.LatestID = ID
 			order by L.Username
 		END');
 		
@@ -1473,7 +1484,7 @@ end
 
 		  --insert the second version marker
 		 INSERT INTO DBVersion values (6, 
-		   'SP to calculate laTEST modification by user',getDate(),User_ID())
+		   'SP to calculate latest modification by user',getDate(),User_ID())
 
 	COMMIT TRANSACTION six
 	
@@ -1943,7 +1954,7 @@ end
 		  
 
 		EXEC('
-			 CREATE PROCEDURE UpdaTESTructureType
+			 CREATE PROCEDURE UpdatestructureType
 				@StructureID bigint,
 				@TypeID bigint
 			 AS
@@ -2304,12 +2315,13 @@ end
 
 	 COMMIT TRANSACTION twentythree
 	end
+	go
 
 	if(not(exists(select (1) from DBVersion where DBVersionID = 24)))
 	begin
      print N'Convert to spatial data types, create columns and populate'
 	 BEGIN TRANSACTION twentyfour
-		
+		 
 		ALTER TABLE Location ADD MosaicShape geometry
 		ALTER TABLE Location ADD VolumeShape geometry
 
@@ -2320,30 +2332,49 @@ end
 		   ROLLBACK TRANSACTION 
 		   RETURN
 		 end
+      INSERT INTO DBVersion values (24, 
+		    N'Convert to spatial data types, create columns and populate',getDate(),User_ID())
 
 	  COMMIT TRANSACTION twentyfour
-	end
-    
+	 end
+    go
+
 	if(not(exists(select (1) from DBVersion where DBVersionID = 25)))
 	begin
      print N'Convert to spatial data types, remove old columns'
-	 BEGIN TRANSACTION twentyfive 
+	 BEGIN TRANSACTION twentyfive
 		
-		Update Location SET MosaicShape='POINT (' + STR(Location.X,16,2) + ' ' + STR(Y,16,2)  +' ' + STR(Z)  + ')' FROM Location
-		Update Location SET VolumeShape='POINT (' + STR(VolumeX,16,2) + ' ' + STR(VolumeY,16,2)  +' ' + STR(Z)  + ')' FROM Location
+		Update Location SET MosaicShape='CURVEPOLYGON(CIRCULARSTRING (' + STR(X-Radius,16,2) + ' ' + STR(Y,16,2) + ' ' + STR(Z) + ', '
+																		+ STR(X,16,2) + ' '		   + STR(Y+Radius,16,2) + ' ' + STR(Z) + ', '
+																		+ STR(X+Radius,16,2) + ' ' + STR(Y,16,2) + ' ' + STR(Z) + ', '
+																		+ STR(X,16,2) + ' '		   + STR(Y-Radius,16,2) + ' ' + STR(Z) + ', '
+																		+ STR(X-Radius,16,2) + ' ' + STR(Y,16,2) + ' ' + STR(Z) + ' ))' FROM Location WHERE Radius >= 0.1
+
+		Update Location SET VolumeShape='CURVEPOLYGON(CIRCULARSTRING (' + STR(VolumeX-Radius,16,2) + ' ' + STR(VolumeY,16,2) + ' ' + STR(Z) + ', '
+																		+ STR(VolumeX,16,2) + ' '		 + STR(VolumeY+Radius,16,2) + ' ' + STR(Z) + ', '
+																		+ STR(VolumeX+Radius,16,2) + ' ' + STR(VolumeY,16,2) + ' ' + STR(Z) + ', '
+																		+ STR(VolumeX,16,2) + ' '		 + STR(VolumeY-Radius,16,2) + ' ' + STR(Z) + ', '
+																		+ STR(VolumeX-Radius,16,2) + ' ' + STR(VolumeY,16,2) + ' ' + STR(Z) + ' ))' FROM Location WHERE Radius >= 0.1
+
+		Update Location SET MosaicShape='POINT (' + STR(X,16,2) + ' ' + STR(Y,16,2)  +' ' + STR(Z)  + ')' FROM Location WHERE Radius < 0.1
+
+		Update Location SET VolumeShape='POINT (' + STR(VolumeX,16,2) + ' ' + STR(VolumeY,16,2)  +' ' + STR(Z)  + ')' FROM Location WHERE Radius < 0.1
 		  
 		ALTER TABLE Location ALTER COLUMN [MosaicShape] geometry NOT NULL
 		ALTER TABLE Location ALTER COLUMN [VolumeShape] geometry NOT NULL
 		   
 		ALTER TABLE Location DROP COLUMN X 
-		ALTER TABLE Location ADD X as ISNULL(MosaicShape.STCentroid().STX, ISNULL(MosaicShape.STX,0))
+		ALTER TABLE Location ADD X as ISNULL(MosaicShape.STCentroid().STX, ISNULL(MosaicShape.STX,0)) PERSISTED
 		ALTER TABLE Location DROP COLUMN Y
-		ALTER TABLE Location ADD Y as ISNULL(MosaicShape.STCentroid().STY, ISNULL(MosaicShape.STY,0))
+		ALTER TABLE Location ADD Y as ISNULL(MosaicShape.STCentroid().STY, ISNULL(MosaicShape.STY,0)) PERSISTED
 
 		ALTER TABLE Location DROP COLUMN VolumeX 
-		ALTER TABLE Location ADD VolumeX as ISNULL(VolumeShape.STCentroid().STX, ISNULL(VolumeShape.STX,0))
+		ALTER TABLE Location ADD VolumeX as ISNULL(VolumeShape.STCentroid().STX, ISNULL(VolumeShape.STX,0)) PERSISTED
 		ALTER TABLE Location DROP COLUMN VolumeY
-		ALTER TABLE Location ADD VolumeY as ISNULL(VolumeShape.STCentroid().STY, ISNULL(VolumeShape.STY,0))
+		ALTER TABLE Location ADD VolumeY as ISNULL(VolumeShape.STCentroid().STY, ISNULL(VolumeShape.STY,0)) PERSISTED
+
+		--ALTER TABLE Location DROP COLUMN Radius
+		--ALTER TABLE Location ADD Radius as ISNULL(VolumeShape.STEnvelope().STX, ISNULL(VolumeShape.STX,0)) PERSISTED
 		 			
 		--any potential errors get reported, and the script is rolled back and terminated
 		 if(@@error <> 0)
@@ -2357,7 +2388,102 @@ end
 		    N'Convert to spatial data types, remove old columns',getDate(),User_ID())
 
 	 COMMIT TRANSACTION twentyfive
+	end 
+
+	if(not(exists(select (1) from DBVersion where DBVersionID = 26)))
+	begin
+     print N'Add stored procedure to fetch locations for section' 
+	 BEGIN TRANSACTION twentysix
+	   EXEC('
+			CREATE FUNCTION SectionLocations(@Z float)
+			RETURNS TABLE 
+			AS
+			RETURN(
+ 					Select * from Location where Z = @Z
+				);
+			')
+
+		if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
+		EXEC('
+			CREATE FUNCTION SectionLocationsModifiedAfterDate(@Z float, @QueryDate datetime)
+			RETURNS TABLE 
+			AS
+			RETURN(
+ 					Select * from Location 
+					where Z = @Z AND LastModified >= @QueryDate
+				);
+			')
+
+		 if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
+		 EXEC('
+			CREATE FUNCTION SectionLocationLinks(@Z float)
+			RETURNS TABLE 
+			AS
+			RETURN(
+ 					Select * from LocationLink where A in (select ID from SectionLocations(@Z)) or B in (select ID from SectionLocations(@Z))
+				);
+			')
+
+		if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
+		 EXEC('
+			CREATE FUNCTION SectionLocationLinksModifiedAfterDate(@Z float, @QueryDate datetime)
+			RETURNS TABLE 
+			AS
+			RETURN(
+ 					Select * from LocationLink where A in (select ID from SectionLocationsModifiedAfterDate(@Z, @QueryDate)) or B in (select ID from SectionLocationsModifiedAfterDate(@Z, @QueryDate))
+				);
+			')
+
+		if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
+	   INSERT INTO DBVersion values (26, 
+		    N'Add stored procedure to fetch locations for section',getDate(),User_ID())
+	 COMMIT TRANSACTION twentysix
 	end
+	go
+
+	if(not(exists(select (1) from DBVersion where DBVersionID = 27)))
+	begin
+     print N'Reset change data tracking for locations table to reflect schema change' 
+	 BEGIN TRANSACTION twentyseven
+	   
+		EXEC sys.sp_cdc_disable_table
+			@source_schema = N'dbo',
+			@source_name   = N'Location',
+			@capture_instance = N'Location'
+		GO
+
+		EXEC sys.sp_cdc_enable_table
+			@source_schema = N'dbo',
+			@source_name = N'Location',
+			@capture_instance = N'Location',
+			@role_name = N'ChangeTracker',
+			@supports_net_changes = 1
+
+	   INSERT INTO DBVersion values (27, 
+		    N'Reset change data tracking for locations table to reflect schema change' ,getDate(),User_ID())
+	 COMMIT TRANSACTION twentyseven
+	end
+	go
 
 
 --from here on, continually add steps in the previous manner as needed.
