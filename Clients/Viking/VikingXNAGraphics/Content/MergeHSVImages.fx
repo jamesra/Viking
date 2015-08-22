@@ -21,8 +21,7 @@ uniform const texture Texture1;
 uniform const texture Texture2;
 uniform const texture Texture3;
 uniform const texture Texture4;
-uniform const texture Texture5;
-uniform const texture Texture6; 
+uniform const texture Texture5; 
 
 
 
