@@ -19,6 +19,7 @@
     <IISExpressAnonymousAuthentication />
     <IISExpressWindowsAuthentication />
     <IISExpressUseClassicPipelineMode />
+    <UseGlobalApplicationHostFile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -128,12 +129,6 @@
     <Compile Include="Models\ApproximateStructureLocation_Result.cs">
       <DependentUpon>ConnectomeDataModel.tt</DependentUpon>
     </Compile>
-    <Compile Include="Models\captured_columns.cs">
-      <DependentUpon>ConnectomeDataModel.tt</DependentUpon>
-    </Compile>
-    <Compile Include="Models\change_tables.cs">
-      <DependentUpon>ConnectomeDataModel.tt</DependentUpon>
-    </Compile>
     <Compile Include="Models\ConnectomeDataModel.Context.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
@@ -152,16 +147,7 @@
     <Compile Include="Models\CountChildStructuresByType_Result.cs">
       <DependentUpon>ConnectomeDataModel.tt</DependentUpon>
     </Compile>
-    <Compile Include="Models\DBVersion.cs">
-      <DependentUpon>ConnectomeDataModel.tt</DependentUpon>
-    </Compile>
-    <Compile Include="Models\ddl_history.cs">
-      <DependentUpon>ConnectomeDataModel.tt</DependentUpon>
-    </Compile>
     <Compile Include="Models\DeletedLocation.cs">
-      <DependentUpon>ConnectomeDataModel.tt</DependentUpon>
-    </Compile>
-    <Compile Include="Models\index_columns.cs">
       <DependentUpon>ConnectomeDataModel.tt</DependentUpon>
     </Compile>
     <Compile Include="Models\Location.cs">
@@ -170,13 +156,16 @@
     <Compile Include="Models\LocationLink.cs">
       <DependentUpon>ConnectomeDataModel.tt</DependentUpon>
     </Compile>
-    <Compile Include="Models\LocationLink_CT.cs">
+    <Compile Include="Models\SectionLocationLinksModifiedAfterDate_Result.cs">
       <DependentUpon>ConnectomeDataModel.tt</DependentUpon>
     </Compile>
-    <Compile Include="Models\Location_CT.cs">
+    <Compile Include="Models\SectionLocationLinks_Result.cs">
       <DependentUpon>ConnectomeDataModel.tt</DependentUpon>
     </Compile>
-    <Compile Include="Models\lsn_time_mapping.cs">
+    <Compile Include="Models\SectionLocationsModifiedAfterDate_Result.cs">
+      <DependentUpon>ConnectomeDataModel.tt</DependentUpon>
+    </Compile>
+    <Compile Include="Models\SectionLocations_Result.cs">
       <DependentUpon>ConnectomeDataModel.tt</DependentUpon>
     </Compile>
     <Compile Include="Models\SelectAllStructureLocationLinks_Result.cs">
@@ -242,16 +231,7 @@
     <Compile Include="Models\StructureLink.cs">
       <DependentUpon>ConnectomeDataModel.tt</DependentUpon>
     </Compile>
-    <Compile Include="Models\StructureLink_CT.cs">
-      <DependentUpon>ConnectomeDataModel.tt</DependentUpon>
-    </Compile>
     <Compile Include="Models\StructureType.cs">
-      <DependentUpon>ConnectomeDataModel.tt</DependentUpon>
-    </Compile>
-    <Compile Include="Models\StructureType_CT.cs">
-      <DependentUpon>ConnectomeDataModel.tt</DependentUpon>
-    </Compile>
-    <Compile Include="Models\Structure_CT.cs">
       <DependentUpon>ConnectomeDataModel.tt</DependentUpon>
     </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />

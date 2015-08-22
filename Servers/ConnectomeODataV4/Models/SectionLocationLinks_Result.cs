@@ -10,13 +10,12 @@
 namespace ConnectomeODataV4.Models
 {
     using System;
-    using System.Collections.Generic;
     
-    public partial class index_columns
+    public partial class SectionLocationLinks_Result
     {
-        public int object_id { get; set; }
-        public string column_name { get; set; }
-        public byte index_ordinal { get; set; }
-        public Nullable<int> column_id { get; set; }
+        public long A { get; set; }
+        public long B { get; set; }
+        public string Username { get; set; }
+        public System.DateTime Created { get; set; }
     }
 }

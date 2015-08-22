@@ -10,16 +10,9 @@
 namespace ConnectomeODataV4.Models
 {
     using System;
-    using System.Collections.Generic;
     
-    public partial class Location
+    public partial class SectionLocations_Result
     {
-        public Location()
-        {
-            this.LocationLinksA = new HashSet<LocationLink>();
-            this.LocationLinksB = new HashSet<LocationLink>();
-        }
-    
         public long ID { get; set; }
         public long ParentID { get; set; }
         public double Z { get; set; }
@@ -41,9 +34,5 @@ namespace ConnectomeODataV4.Models
         public double Y { get; set; }
         public double VolumeX { get; set; }
         public double VolumeY { get; set; }
-    
-        public virtual Structure Structure { get; set; }
-        public virtual ICollection<LocationLink> LocationLinksA { get; set; }
-        public virtual ICollection<LocationLink> LocationLinksB { get; set; }
     }
 }

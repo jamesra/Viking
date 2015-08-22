@@ -27,22 +27,11 @@ namespace ConnectomeODataV4.Models
             throw new UnintentionalCodeFirstException();
         }
     
-        public virtual DbSet<captured_columns> captured_columns { get; set; }
-        public virtual DbSet<change_tables> change_tables { get; set; }
-        public virtual DbSet<ddl_history> ddl_history { get; set; }
-        public virtual DbSet<index_columns> index_columns { get; set; }
-        public virtual DbSet<lsn_time_mapping> lsn_time_mapping { get; set; }
         public virtual DbSet<DeletedLocation> DeletedLocations { get; set; }
         public virtual DbSet<Location> Locations { get; set; }
         public virtual DbSet<LocationLink> LocationLinks { get; set; }
         public virtual DbSet<Structure> Structures { get; set; }
         public virtual DbSet<StructureType> StructureTypes { get; set; }
-        public virtual DbSet<Location_CT> Location_CT { get; set; }
-        public virtual DbSet<LocationLink_CT> LocationLink_CT { get; set; }
-        public virtual DbSet<Structure_CT> Structure_CT { get; set; }
-        public virtual DbSet<StructureLink_CT> StructureLink_CT { get; set; }
-        public virtual DbSet<StructureType_CT> StructureType_CT { get; set; }
-        public virtual DbSet<DBVersion> DBVersions { get; set; }
         public virtual DbSet<StructureLink> StructureLinks { get; set; }
     
         public virtual ObjectResult<ApproximateStructureLocation_Result> ApproximateStructureLocation(Nullable<int> structureID)
@@ -102,12 +91,17 @@ namespace ConnectomeODataV4.Models
             return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction<SelectNumConnectionsPerStructure_Result>("SelectNumConnectionsPerStructure");
         }
     
-        public virtual ObjectResult<SelectRootStructures_Result> SelectRootStructures()
+        public virtual ObjectResult<Structure> SelectRootStructures()
         {
-            return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction<SelectRootStructures_Result>("SelectRootStructures");
+            return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction<Structure>("SelectRootStructures");
         }
     
-        public virtual ObjectResult<SelectSectionLocationLinks_Result> SelectSectionLocationLinks(Nullable<double> z, Nullable<System.DateTime> queryDate)
+        public virtual ObjectResult<Structure> SelectRootStructures(MergeOption mergeOption)
+        {
+            return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction<Structure>("SelectRootStructures", mergeOption);
+        }
+    
+        public virtual ObjectResult<LocationLink> SelectSectionLocationLinks(Nullable<double> z, Nullable<System.DateTime> queryDate)
         {
             var zParameter = z.HasValue ?
                 new ObjectParameter("Z", z) :
@@ -117,7 +111,20 @@ namespace ConnectomeODataV4.Models
                 new ObjectParameter("QueryDate", queryDate) :
                 new ObjectParameter("QueryDate", typeof(System.DateTime));
     
-            return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction<SelectSectionLocationLinks_Result>("SelectSectionLocationLinks", zParameter, queryDateParameter);
+            return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction<LocationLink>("SelectSectionLocationLinks", zParameter, queryDateParameter);
+        }
+    
+        public virtual ObjectResult<LocationLink> SelectSectionLocationLinks(Nullable<double> z, Nullable<System.DateTime> queryDate, MergeOption mergeOption)
+        {
+            var zParameter = z.HasValue ?
+                new ObjectParameter("Z", z) :
+                new ObjectParameter("Z", typeof(double));
+    
+            var queryDateParameter = queryDate.HasValue ?
+                new ObjectParameter("QueryDate", queryDate) :
+                new ObjectParameter("QueryDate", typeof(System.DateTime));
+    
+            return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction<LocationLink>("SelectSectionLocationLinks", mergeOption, zParameter, queryDateParameter);
         }
     
         public virtual ObjectResult<SelectSectionLocationsAndLinks_Result> SelectSectionLocationsAndLinks(Nullable<double> z, Nullable<System.DateTime> queryDate)
@@ -133,13 +140,22 @@ namespace ConnectomeODataV4.Models
             return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction<SelectSectionLocationsAndLinks_Result>("SelectSectionLocationsAndLinks", zParameter, queryDateParameter);
         }
     
-        public virtual ObjectResult<SelectStructure_Result> SelectStructure(Nullable<long> structureID)
+        public virtual ObjectResult<Structure> SelectStructure(Nullable<long> structureID)
         {
             var structureIDParameter = structureID.HasValue ?
                 new ObjectParameter("StructureID", structureID) :
                 new ObjectParameter("StructureID", typeof(long));
     
-            return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction<SelectStructure_Result>("SelectStructure", structureIDParameter);
+            return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction<Structure>("SelectStructure", structureIDParameter);
+        }
+    
+        public virtual ObjectResult<Structure> SelectStructure(Nullable<long> structureID, MergeOption mergeOption)
+        {
+            var structureIDParameter = structureID.HasValue ?
+                new ObjectParameter("StructureID", structureID) :
+                new ObjectParameter("StructureID", typeof(long));
+    
+            return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction<Structure>("SelectStructure", mergeOption, structureIDParameter);
         }
     
         public virtual ObjectResult<SelectStructureChangeLog_Result> SelectStructureChangeLog(Nullable<long> structure_ID, Nullable<System.DateTime> begin_time, Nullable<System.DateTime> end_time)
@@ -242,6 +258,54 @@ namespace ConnectomeODataV4.Models
                 new ObjectParameter("StructureID", typeof(long));
     
             return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction<SelectUnfinishedStructureBranchesWithPosition_Result>("SelectUnfinishedStructureBranchesWithPosition", structureIDParameter);
+        }
+    
+        [DbFunction("ConnectomeEntities", "SectionLocationLinks")]
+        public virtual IQueryable<LocationLink> SectionLocationLinks(Nullable<double> z)
+        {
+            var zParameter = z.HasValue ?
+                new ObjectParameter("Z", z) :
+                new ObjectParameter("Z", typeof(double));
+    
+            return ((IObjectContextAdapter)this).ObjectContext.CreateQuery<LocationLink>("[ConnectomeEntities].[SectionLocationLinks](@Z)", zParameter);
+        }
+    
+        [DbFunction("ConnectomeEntities", "SectionLocationLinksModifiedAfterDate")]
+        public virtual IQueryable<LocationLink> SectionLocationLinksModifiedAfterDate(Nullable<double> z, Nullable<System.DateTime> queryDate)
+        {
+            var zParameter = z.HasValue ?
+                new ObjectParameter("Z", z) :
+                new ObjectParameter("Z", typeof(double));
+    
+            var queryDateParameter = queryDate.HasValue ?
+                new ObjectParameter("QueryDate", queryDate) :
+                new ObjectParameter("QueryDate", typeof(System.DateTime));
+    
+            return ((IObjectContextAdapter)this).ObjectContext.CreateQuery<LocationLink>("[ConnectomeEntities].[SectionLocationLinksModifiedAfterDate](@Z, @QueryDate)", zParameter, queryDateParameter);
+        }
+    
+        [DbFunction("ConnectomeEntities", "SectionLocations")]
+        public virtual IQueryable<Location> SectionLocations(Nullable<double> z)
+        {
+            var zParameter = z.HasValue ?
+                new ObjectParameter("Z", z) :
+                new ObjectParameter("Z", typeof(double));
+    
+            return ((IObjectContextAdapter)this).ObjectContext.CreateQuery<Location>("[ConnectomeEntities].[SectionLocations](@Z)", zParameter);
+        }
+    
+        [DbFunction("ConnectomeEntities", "SectionLocationsModifiedAfterDate")]
+        public virtual IQueryable<Location> SectionLocationsModifiedAfterDate(Nullable<double> z, Nullable<System.DateTime> queryDate)
+        {
+            var zParameter = z.HasValue ?
+                new ObjectParameter("Z", z) :
+                new ObjectParameter("Z", typeof(double));
+    
+            var queryDateParameter = queryDate.HasValue ?
+                new ObjectParameter("QueryDate", queryDate) :
+                new ObjectParameter("QueryDate", typeof(System.DateTime));
+    
+            return ((IObjectContextAdapter)this).ObjectContext.CreateQuery<Location>("[ConnectomeEntities].[SectionLocationsModifiedAfterDate](@Z, @QueryDate)", zParameter, queryDateParameter);
         }
     }
 }

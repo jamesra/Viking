@@ -4,23 +4,12 @@
   <edmx:Designer xmlns="http://schemas.microsoft.com/ado/2009/11/edmx">
     <!-- Diagram content (shape and connector positions) -->
     <edmx:Diagrams>
-      <Diagram DiagramId="3ff5879509274cb68e5ca90499c12d10" Name="Diagram1">
-        <EntityTypeShape EntityType="ConnectomeData.captured_columns" Width="1.5" PointX="7.75" PointY="6.75" IsExpanded="true" />
-        <EntityTypeShape EntityType="ConnectomeData.change_tables" Width="1.5" PointX="9.75" PointY="0.75" IsExpanded="true" />
-        <EntityTypeShape EntityType="ConnectomeData.ddl_history" Width="1.5" PointX="0.75" PointY="9.75" IsExpanded="true" />
-        <EntityTypeShape EntityType="ConnectomeData.index_columns" Width="1.5" PointX="0.75" PointY="0.75" IsExpanded="true" />
-        <EntityTypeShape EntityType="ConnectomeData.lsn_time_mapping" Width="1.5" PointX="9.75" PointY="5.75" IsExpanded="true" />
+      <Diagram DiagramId="3ff5879509274cb68e5ca90499c12d10" Name="Diagram1" ZoomLevel="95">
         <EntityTypeShape EntityType="ConnectomeData.DeletedLocation" Width="1.5" PointX="7.75" PointY="9.75" IsExpanded="true" />
         <EntityTypeShape EntityType="ConnectomeData.Location" Width="1.5" PointX="5.25" PointY="1.25" IsExpanded="true" />
         <EntityTypeShape EntityType="ConnectomeData.LocationLink" Width="1.5" PointX="7.5" PointY="3" IsExpanded="true" />
         <EntityTypeShape EntityType="ConnectomeData.Structure" Width="1.5" PointX="3" PointY="3.625" IsExpanded="true" />
         <EntityTypeShape EntityType="ConnectomeData.StructureType" Width="1.5" PointX="0.75" PointY="3.625" IsExpanded="true" />
-        <EntityTypeShape EntityType="ConnectomeData.Location_CT" Width="1.5" PointX="9.75" PointY="8.75" IsExpanded="true" />
-        <EntityTypeShape EntityType="ConnectomeData.LocationLink_CT" Width="1.5" PointX="11.75" PointY="0.75" IsExpanded="true" />
-        <EntityTypeShape EntityType="ConnectomeData.Structure_CT" Width="1.5" PointX="2.75" PointY="11.75" IsExpanded="true" />
-        <EntityTypeShape EntityType="ConnectomeData.StructureLink_CT" Width="1.5" PointX="11.75" PointY="4.75" IsExpanded="true" />
-        <EntityTypeShape EntityType="ConnectomeData.StructureType_CT" Width="1.5" PointX="4.75" PointY="11.75" IsExpanded="true" />
-        <EntityTypeShape EntityType="ConnectomeData.DBVersion" Width="1.5" PointX="11.75" PointY="9.75" IsExpanded="true" />
         <EntityTypeShape EntityType="ConnectomeData.StructureLink" Width="1.5" PointX="5.25" PointY="7.625" IsExpanded="true" />
         <AssociationConnector Association="ConnectomeData.FK_Location_StructureBase1" ManuallyRouted="false" />
         <AssociationConnector Association="ConnectomeData.FK_LocationLink_Location" ManuallyRouted="false" />

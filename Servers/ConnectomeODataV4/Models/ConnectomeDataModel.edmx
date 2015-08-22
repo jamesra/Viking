@@ -4,210 +4,19 @@
   <edmx:Runtime>
     <!-- SSDL content -->
     <edmx:StorageModels>
-      <Schema Namespace="ConnectomeData.Store" Provider="System.Data.SqlClient" ProviderManifestToken="2012" Alias="Self" xmlns:store="http://schemas.microsoft.com/ado/2007/12/edm/EntityStoreSchemaGenerator" xmlns:customannotation="http://schemas.microsoft.com/ado/2013/11/edm/customannotation" xmlns="http://schemas.microsoft.com/ado/2009/11/edm/ssdl">
-        <EntityType Name="captured_columns">
-          <Key>
-            <PropertyRef Name="object_id" />
-            <PropertyRef Name="column_ordinal" />
-          </Key>
-          <Property Name="object_id" Type="int" Nullable="false" />
-          <Property Name="column_name" Type="nvarchar" MaxLength="128" Nullable="false" />
-          <Property Name="column_id" Type="int" />
-          <Property Name="column_type" Type="nvarchar" MaxLength="128" Nullable="false" />
-          <Property Name="column_ordinal" Type="int" Nullable="false" />
-          <Property Name="is_computed" Type="bit" />
-        </EntityType>
-        <EntityType Name="change_tables">
-          <Key>
-            <PropertyRef Name="object_id" />
-          </Key>
-          <Property Name="object_id" Type="int" Nullable="false" />
-          <Property Name="version" Type="int" />
-          <Property Name="source_object_id" Type="int" />
-          <Property Name="capture_instance" Type="nvarchar" MaxLength="128" Nullable="false" />
-          <Property Name="start_lsn" Type="binary" MaxLength="10" />
-          <Property Name="end_lsn" Type="binary" MaxLength="10" />
-          <Property Name="supports_net_changes" Type="bit" />
-          <Property Name="has_drop_pending" Type="bit" />
-          <Property Name="role_name" Type="nvarchar" MaxLength="128" />
-          <Property Name="index_name" Type="nvarchar" MaxLength="128" />
-          <Property Name="filegroup_name" Type="nvarchar" MaxLength="128" />
-          <Property Name="create_date" Type="datetime" />
-          <Property Name="partition_switch" Type="bit" Nullable="false" />
-        </EntityType>
-        <EntityType Name="ddl_history">
-          <Key>
-            <PropertyRef Name="object_id" />
-            <PropertyRef Name="ddl_lsn" />
-          </Key>
-          <Property Name="source_object_id" Type="int" />
-          <Property Name="object_id" Type="int" Nullable="false" />
-          <Property Name="required_column_update" Type="bit" />
-          <Property Name="ddl_command" Type="nvarchar(max)" />
-          <Property Name="ddl_lsn" Type="binary" MaxLength="10" Nullable="false" />
-          <Property Name="ddl_time" Type="datetime" />
-        </EntityType>
-        <EntityType Name="index_columns">
-          <Key>
-            <PropertyRef Name="object_id" />
-            <PropertyRef Name="index_ordinal" />
-          </Key>
-          <Property Name="object_id" Type="int" Nullable="false" />
-          <Property Name="column_name" Type="nvarchar" MaxLength="128" Nullable="false" />
-          <Property Name="index_ordinal" Type="tinyint" Nullable="false" />
-          <Property Name="column_id" Type="int" />
-        </EntityType>
+    <Schema Namespace="ConnectomeData.Store" Provider="System.Data.SqlClient" ProviderManifestToken="2012" Alias="Self" xmlns:store="http://schemas.microsoft.com/ado/2007/12/edm/EntityStoreSchemaGenerator" xmlns:customannotation="http://schemas.microsoft.com/ado/2013/11/edm/customannotation" xmlns="http://schemas.microsoft.com/ado/2009/11/edm/ssdl">
         <!--Errors Found During Generation:
 warning 6002: The table/view 'Test.cdc.Location_CT' does not have a primary key defined. The key has been inferred and the definition was created as a read-only table/view.-->
-        <EntityType Name="Location_CT">
-          <Key>
-            <PropertyRef Name="__$start_lsn" />
-            <PropertyRef Name="__$seqval" />
-            <PropertyRef Name="__$operation" />
-          </Key>
-          <Property Name="__$start_lsn" Type="binary" MaxLength="10" Nullable="false" />
-          <Property Name="__$end_lsn" Type="binary" MaxLength="10" />
-          <Property Name="__$seqval" Type="binary" MaxLength="10" Nullable="false" />
-          <Property Name="__$operation" Type="int" Nullable="false" />
-          <Property Name="__$update_mask" Type="varbinary" MaxLength="128" />
-          <Property Name="ID" Type="bigint" />
-          <Property Name="ParentID" Type="bigint" />
-          <Property Name="X" Type="float" />
-          <Property Name="Y" Type="float" />
-          <Property Name="Z" Type="float" />
-          <Property Name="Verticies" Type="varbinary(max)" />
-          <Property Name="Closed" Type="bit" />
-          <Property Name="Version" Type="binary" MaxLength="8" />
-          <Property Name="Overlay" Type="varbinary(max)" />
-          <Property Name="Tags" Type="xml" />
-          <Property Name="VolumeX" Type="float" />
-          <Property Name="VolumeY" Type="float" />
-          <Property Name="Terminal" Type="bit" />
-          <Property Name="OffEdge" Type="bit" />
-          <Property Name="Radius" Type="float" />
-          <Property Name="TypeCode" Type="smallint" />
-          <Property Name="LastModified" Type="datetime" />
-          <Property Name="Created" Type="datetime" />
-          <Property Name="Username" Type="nchar" MaxLength="16" />
-        </EntityType>
         <!--Errors Found During Generation:
 warning 6002: The table/view 'Test.cdc.LocationLink_CT' does not have a primary key defined. The key has been inferred and the definition was created as a read-only table/view.-->
-        <EntityType Name="LocationLink_CT">
-          <Key>
-            <PropertyRef Name="__$start_lsn" />
-            <PropertyRef Name="__$seqval" />
-            <PropertyRef Name="__$operation" />
-          </Key>
-          <Property Name="__$start_lsn" Type="binary" MaxLength="10" Nullable="false" />
-          <Property Name="__$end_lsn" Type="binary" MaxLength="10" />
-          <Property Name="__$seqval" Type="binary" MaxLength="10" Nullable="false" />
-          <Property Name="__$operation" Type="int" Nullable="false" />
-          <Property Name="__$update_mask" Type="varbinary" MaxLength="128" />
-          <Property Name="A" Type="bigint" />
-          <Property Name="B" Type="bigint" />
-          <Property Name="Username" Type="nchar" MaxLength="16" />
-          <Property Name="Created" Type="datetime" />
-        </EntityType>
-        <EntityType Name="lsn_time_mapping">
-          <Key>
-            <PropertyRef Name="start_lsn" />
-          </Key>
-          <Property Name="start_lsn" Type="binary" MaxLength="10" Nullable="false" />
-          <Property Name="tran_begin_time" Type="datetime" />
-          <Property Name="tran_end_time" Type="datetime" />
-          <Property Name="tran_id" Type="varbinary" MaxLength="10" />
-          <Property Name="tran_begin_lsn" Type="binary" MaxLength="10" />
-        </EntityType>
         <!--Errors Found During Generation:
 warning 6002: The table/view 'Test.cdc.Structure_CT' does not have a primary key defined. The key has been inferred and the definition was created as a read-only table/view.-->
-        <EntityType Name="Structure_CT">
-          <Key>
-            <PropertyRef Name="__$start_lsn" />
-            <PropertyRef Name="__$seqval" />
-            <PropertyRef Name="__$operation" />
-          </Key>
-          <Property Name="__$start_lsn" Type="binary" MaxLength="10" Nullable="false" />
-          <Property Name="__$end_lsn" Type="binary" MaxLength="10" />
-          <Property Name="__$seqval" Type="binary" MaxLength="10" Nullable="false" />
-          <Property Name="__$operation" Type="int" Nullable="false" />
-          <Property Name="__$update_mask" Type="varbinary" MaxLength="128" />
-          <Property Name="ID" Type="bigint" />
-          <Property Name="TypeID" Type="bigint" />
-          <Property Name="Notes" Type="nvarchar(max)" />
-          <Property Name="Verified" Type="bit" />
-          <Property Name="Tags" Type="xml" />
-          <Property Name="Confidence" Type="float" />
-          <Property Name="Version" Type="binary" MaxLength="8" />
-          <Property Name="ParentID" Type="bigint" />
-          <Property Name="Created" Type="datetime" />
-          <Property Name="Label" Type="varchar" MaxLength="64" />
-          <Property Name="Username" Type="nchar" MaxLength="16" />
-          <Property Name="LastModified" Type="datetime" />
-        </EntityType>
         <!--Errors Found During Generation:
 warning 6002: The table/view 'Test.cdc.StructureLink_CT' does not have a primary key defined. The key has been inferred and the definition was created as a read-only table/view.-->
-        <EntityType Name="StructureLink_CT">
-          <Key>
-            <PropertyRef Name="__$start_lsn" />
-            <PropertyRef Name="__$seqval" />
-            <PropertyRef Name="__$operation" />
-          </Key>
-          <Property Name="__$start_lsn" Type="binary" MaxLength="10" Nullable="false" />
-          <Property Name="__$end_lsn" Type="binary" MaxLength="10" />
-          <Property Name="__$seqval" Type="binary" MaxLength="10" Nullable="false" />
-          <Property Name="__$operation" Type="int" Nullable="false" />
-          <Property Name="__$update_mask" Type="varbinary" MaxLength="128" />
-          <Property Name="SourceID" Type="bigint" />
-          <Property Name="TargetID" Type="bigint" />
-          <Property Name="Bidirectional" Type="bit" />
-          <Property Name="Tags" Type="xml" />
-          <Property Name="Username" Type="nchar" MaxLength="16" />
-          <Property Name="Created" Type="datetime" />
-          <Property Name="LastModified" Type="datetime" />
-        </EntityType>
         <!--Errors Found During Generation:
 warning 6002: The table/view 'Test.cdc.StructureType_CT' does not have a primary key defined. The key has been inferred and the definition was created as a read-only table/view.-->
-        <EntityType Name="StructureType_CT">
-          <Key>
-            <PropertyRef Name="__$start_lsn" />
-            <PropertyRef Name="__$seqval" />
-            <PropertyRef Name="__$operation" />
-          </Key>
-          <Property Name="__$start_lsn" Type="binary" MaxLength="10" Nullable="false" />
-          <Property Name="__$end_lsn" Type="binary" MaxLength="10" />
-          <Property Name="__$seqval" Type="binary" MaxLength="10" Nullable="false" />
-          <Property Name="__$operation" Type="int" Nullable="false" />
-          <Property Name="__$update_mask" Type="varbinary" MaxLength="128" />
-          <Property Name="ID" Type="bigint" />
-          <Property Name="ParentID" Type="bigint" />
-          <Property Name="Name" Type="nchar" MaxLength="128" />
-          <Property Name="Notes" Type="nvarchar(max)" />
-          <Property Name="MarkupType" Type="nchar" MaxLength="16" />
-          <Property Name="Tags" Type="xml" />
-          <Property Name="StructureTags" Type="xml" />
-          <Property Name="Abstract" Type="bit" />
-          <Property Name="Color" Type="int" />
-          <Property Name="Version" Type="binary" MaxLength="8" />
-          <Property Name="Code" Type="nchar" MaxLength="16" />
-          <Property Name="HotKey" Type="char" MaxLength="1" />
-          <Property Name="Username" Type="nchar" MaxLength="16" />
-          <Property Name="LastModified" Type="datetime" />
-          <Property Name="Created" Type="datetime" />
-        </EntityType>
         <!--Errors Found During Generation:
 warning 6002: The table/view 'Test.dbo.DBVersion' does not have a primary key defined. The key has been inferred and the definition was created as a read-only table/view.-->
-        <EntityType Name="DBVersion">
-          <Key>
-            <PropertyRef Name="DBVersionID" />
-            <PropertyRef Name="Description" />
-            <PropertyRef Name="ExecutionDate" />
-            <PropertyRef Name="UserID" />
-          </Key>
-          <Property Name="DBVersionID" Type="int" Nullable="false" />
-          <Property Name="Description" Type="varchar" MaxLength="255" Nullable="false" />
-          <Property Name="ExecutionDate" Type="datetime" Nullable="false" />
-          <Property Name="UserID" Type="int" Nullable="false" />
-        </EntityType>
         <EntityType Name="DeletedLocations">
           <Key>
             <PropertyRef Name="ID" />
@@ -234,12 +43,12 @@ warning 6002: The table/view 'Test.dbo.DBVersion' does not have a primary key de
           <Property Name="LastModified" Type="datetime" Nullable="false" />
           <Property Name="Created" Type="datetime" Nullable="false" />
           <Property Name="Username" Type="nchar" MaxLength="16" Nullable="false" />
-          <Property Name="MosaicShape" Type="geometry" />
-          <Property Name="VolumeShape" Type="geometry" />
-          <Property Name="X" Type="float" StoreGeneratedPattern="Computed" />
-          <Property Name="Y" Type="float" StoreGeneratedPattern="Computed" />
-          <Property Name="VolumeX" Type="float" StoreGeneratedPattern="Computed" />
-          <Property Name="VolumeY" Type="float" StoreGeneratedPattern="Computed" />
+          <Property Name="MosaicShape" Type="geometry" Nullable="false" />
+          <Property Name="VolumeShape" Type="geometry" Nullable="false" />
+          <Property Name="X" Type="float" StoreGeneratedPattern="Computed" Nullable="false" />
+          <Property Name="Y" Type="float" StoreGeneratedPattern="Computed" Nullable="false" />
+          <Property Name="VolumeX" Type="float" StoreGeneratedPattern="Computed" Nullable="false" />
+          <Property Name="VolumeY" Type="float" StoreGeneratedPattern="Computed" Nullable="false" />
         </EntityType>
         <EntityType Name="LocationLink">
           <Key>
@@ -419,6 +228,94 @@ warning 6013: The table/view 'Test.dbo.UserActivity' does not have a primary key
         <Function Name="CountChildStructuresByType" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="false" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo">
           <Parameter Name="StructureID" Type="bigint" Mode="In" />
         </Function>
+        <Function Name="SectionLocationLinks" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="true" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo">
+          <Parameter Name="Z" Type="float" Mode="In" />
+          <ReturnType>
+            <CollectionType>
+              <RowType>
+                <Property Name="A" Type="bigint" Nullable="false" />
+                <Property Name="B" Type="bigint" Nullable="false" />
+                <Property Name="Username" Type="nchar" MaxLength="16" Nullable="false" />
+                <Property Name="Created" Type="datetime" Nullable="false" />
+              </RowType>
+            </CollectionType>
+          </ReturnType>
+        </Function>
+        <Function Name="SectionLocationLinksModifiedAfterDate" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="true" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo">
+          <Parameter Name="Z" Type="float" Mode="In" />
+          <Parameter Name="QueryDate" Type="datetime" Mode="In" />
+          <ReturnType>
+            <CollectionType>
+              <RowType>
+                <Property Name="A" Type="bigint" Nullable="false" />
+                <Property Name="B" Type="bigint" Nullable="false" />
+                <Property Name="Username" Type="nchar" MaxLength="16" Nullable="false" />
+                <Property Name="Created" Type="datetime" Nullable="false" />
+              </RowType>
+            </CollectionType>
+          </ReturnType>
+        </Function>
+        <Function Name="SectionLocations" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="true" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo">
+          <Parameter Name="Z" Type="float" Mode="In" />
+          <ReturnType>
+            <CollectionType>
+              <RowType>
+                <Property Name="ID" Type="bigint" Nullable="false" />
+                <Property Name="ParentID" Type="bigint" Nullable="false" />
+                <Property Name="Z" Type="float" Nullable="false" />
+                <Property Name="Verticies" Type="varbinary(max)" />
+                <Property Name="Closed" Type="bit" Nullable="false" />
+                <Property Name="Version" Type="timestamp" Nullable="false" />
+                <Property Name="Overlay" Type="varbinary(max)" />
+                <Property Name="Tags" Type="xml" />
+                <Property Name="Terminal" Type="bit" Nullable="false" />
+                <Property Name="OffEdge" Type="bit" Nullable="false" />
+                <Property Name="Radius" Type="float" Nullable="false" />
+                <Property Name="TypeCode" Type="smallint" Nullable="false" />
+                <Property Name="LastModified" Type="datetime" Nullable="false" />
+                <Property Name="Created" Type="datetime" Nullable="false" />
+                <Property Name="Username" Type="nchar" MaxLength="16" Nullable="false" />
+                <Property Name="MosaicShape" Type="geometry" Nullable="false" />
+                <Property Name="VolumeShape" Type="geometry" Nullable="false" />
+                <Property Name="X" Type="float" Nullable="false" />
+                <Property Name="Y" Type="float" Nullable="false" />
+                <Property Name="VolumeX" Type="float" Nullable="false" />
+                <Property Name="VolumeY" Type="float" Nullable="false" />
+              </RowType>
+            </CollectionType>
+          </ReturnType>
+        </Function>
+        <Function Name="SectionLocationsModifiedAfterDate" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="true" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo">
+          <Parameter Name="Z" Type="float" Mode="In" />
+          <Parameter Name="QueryDate" Type="datetime" Mode="In" />
+          <ReturnType>
+            <CollectionType>
+              <RowType>
+                <Property Name="ID" Type="bigint" Nullable="false" />
+                <Property Name="ParentID" Type="bigint" Nullable="false" />
+                <Property Name="Z" Type="float" Nullable="false" />
+                <Property Name="Verticies" Type="varbinary(max)" />
+                <Property Name="Closed" Type="bit" Nullable="false" />
+                <Property Name="Version" Type="timestamp" Nullable="false" />
+                <Property Name="Overlay" Type="varbinary(max)" />
+                <Property Name="Tags" Type="xml" />
+                <Property Name="Terminal" Type="bit" Nullable="false" />
+                <Property Name="OffEdge" Type="bit" Nullable="false" />
+                <Property Name="Radius" Type="float" Nullable="false" />
+                <Property Name="TypeCode" Type="smallint" Nullable="false" />
+                <Property Name="LastModified" Type="datetime" Nullable="false" />
+                <Property Name="Created" Type="datetime" Nullable="false" />
+                <Property Name="Username" Type="nchar" MaxLength="16" Nullable="false" />
+                <Property Name="MosaicShape" Type="geometry" Nullable="false" />
+                <Property Name="VolumeShape" Type="geometry" Nullable="false" />
+                <Property Name="X" Type="float" Nullable="false" />
+                <Property Name="Y" Type="float" Nullable="false" />
+                <Property Name="VolumeX" Type="float" Nullable="false" />
+                <Property Name="VolumeY" Type="float" Nullable="false" />
+              </RowType>
+            </CollectionType>
+          </ReturnType>
+        </Function>
         <Function Name="SelectAllStructureLocationLinks" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="false" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo" />
         <Function Name="SelectAllStructureLocations" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="false" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo" />
         <Function Name="SelectAllStructures" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="false" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo" />
@@ -471,126 +368,11 @@ warning 6013: The table/view 'Test.dbo.UserActivity' does not have a primary key
           <Parameter Name="StructureID" Type="bigint" Mode="In" />
         </Function>
         <EntityContainer Name="ConnectomeDataStoreContainer">
-          <EntitySet Name="captured_columns" EntityType="Self.captured_columns" Schema="cdc" store:Type="Tables" />
-          <EntitySet Name="change_tables" EntityType="Self.change_tables" Schema="cdc" store:Type="Tables" />
-          <EntitySet Name="ddl_history" EntityType="Self.ddl_history" Schema="cdc" store:Type="Tables" />
-          <EntitySet Name="index_columns" EntityType="Self.index_columns" Schema="cdc" store:Type="Tables" />
-          <EntitySet Name="lsn_time_mapping" EntityType="Self.lsn_time_mapping" Schema="cdc" store:Type="Tables" />
           <EntitySet Name="DeletedLocations" EntityType="Self.DeletedLocations" Schema="dbo" store:Type="Tables" />
           <EntitySet Name="Location" EntityType="Self.Location" Schema="dbo" store:Type="Tables" />
           <EntitySet Name="LocationLink" EntityType="Self.LocationLink" Schema="dbo" store:Type="Tables" />
           <EntitySet Name="Structure" EntityType="Self.Structure" Schema="dbo" store:Type="Tables" />
           <EntitySet Name="StructureType" EntityType="Self.StructureType" Schema="dbo" store:Type="Tables" />
-          <EntitySet Name="Location_CT" EntityType="Self.Location_CT" store:Type="Tables" store:Schema="cdc">
-            <DefiningQuery>SELECT 
-    [Location_CT].[__$start_lsn] AS [__$start_lsn], 
-    [Location_CT].[__$end_lsn] AS [__$end_lsn], 
-    [Location_CT].[__$seqval] AS [__$seqval], 
-    [Location_CT].[__$operation] AS [__$operation], 
-    [Location_CT].[__$update_mask] AS [__$update_mask], 
-    [Location_CT].[ID] AS [ID], 
-    [Location_CT].[ParentID] AS [ParentID], 
-    [Location_CT].[X] AS [X], 
-    [Location_CT].[Y] AS [Y], 
-    [Location_CT].[Z] AS [Z], 
-    [Location_CT].[Verticies] AS [Verticies], 
-    [Location_CT].[Closed] AS [Closed], 
-    [Location_CT].[Version] AS [Version], 
-    [Location_CT].[Overlay] AS [Overlay], 
-    [Location_CT].[Tags] AS [Tags], 
-    [Location_CT].[VolumeX] AS [VolumeX], 
-    [Location_CT].[VolumeY] AS [VolumeY], 
-    [Location_CT].[Terminal] AS [Terminal], 
-    [Location_CT].[OffEdge] AS [OffEdge], 
-    [Location_CT].[Radius] AS [Radius], 
-    [Location_CT].[TypeCode] AS [TypeCode], 
-    [Location_CT].[LastModified] AS [LastModified], 
-    [Location_CT].[Created] AS [Created], 
-    [Location_CT].[Username] AS [Username]
-    FROM [cdc].[Location_CT] AS [Location_CT]</DefiningQuery>
-          </EntitySet>
-          <EntitySet Name="LocationLink_CT" EntityType="Self.LocationLink_CT" store:Type="Tables" store:Schema="cdc">
-            <DefiningQuery>SELECT 
-    [LocationLink_CT].[__$start_lsn] AS [__$start_lsn], 
-    [LocationLink_CT].[__$end_lsn] AS [__$end_lsn], 
-    [LocationLink_CT].[__$seqval] AS [__$seqval], 
-    [LocationLink_CT].[__$operation] AS [__$operation], 
-    [LocationLink_CT].[__$update_mask] AS [__$update_mask], 
-    [LocationLink_CT].[A] AS [A], 
-    [LocationLink_CT].[B] AS [B], 
-    [LocationLink_CT].[Username] AS [Username], 
-    [LocationLink_CT].[Created] AS [Created]
-    FROM [cdc].[LocationLink_CT] AS [LocationLink_CT]</DefiningQuery>
-          </EntitySet>
-          <EntitySet Name="Structure_CT" EntityType="Self.Structure_CT" store:Type="Tables" store:Schema="cdc">
-            <DefiningQuery>SELECT 
-    [Structure_CT].[__$start_lsn] AS [__$start_lsn], 
-    [Structure_CT].[__$end_lsn] AS [__$end_lsn], 
-    [Structure_CT].[__$seqval] AS [__$seqval], 
-    [Structure_CT].[__$operation] AS [__$operation], 
-    [Structure_CT].[__$update_mask] AS [__$update_mask], 
-    [Structure_CT].[ID] AS [ID], 
-    [Structure_CT].[TypeID] AS [TypeID], 
-    [Structure_CT].[Notes] AS [Notes], 
-    [Structure_CT].[Verified] AS [Verified], 
-    [Structure_CT].[Tags] AS [Tags], 
-    [Structure_CT].[Confidence] AS [Confidence], 
-    [Structure_CT].[Version] AS [Version], 
-    [Structure_CT].[ParentID] AS [ParentID], 
-    [Structure_CT].[Created] AS [Created], 
-    [Structure_CT].[Label] AS [Label], 
-    [Structure_CT].[Username] AS [Username], 
-    [Structure_CT].[LastModified] AS [LastModified]
-    FROM [cdc].[Structure_CT] AS [Structure_CT]</DefiningQuery>
-          </EntitySet>
-          <EntitySet Name="StructureLink_CT" EntityType="Self.StructureLink_CT" store:Type="Tables" store:Schema="cdc">
-            <DefiningQuery>SELECT 
-    [StructureLink_CT].[__$start_lsn] AS [__$start_lsn], 
-    [StructureLink_CT].[__$end_lsn] AS [__$end_lsn], 
-    [StructureLink_CT].[__$seqval] AS [__$seqval], 
-    [StructureLink_CT].[__$operation] AS [__$operation], 
-    [StructureLink_CT].[__$update_mask] AS [__$update_mask], 
-    [StructureLink_CT].[SourceID] AS [SourceID], 
-    [StructureLink_CT].[TargetID] AS [TargetID], 
-    [StructureLink_CT].[Bidirectional] AS [Bidirectional], 
-    [StructureLink_CT].[Tags] AS [Tags], 
-    [StructureLink_CT].[Username] AS [Username], 
-    [StructureLink_CT].[Created] AS [Created], 
-    [StructureLink_CT].[LastModified] AS [LastModified]
-    FROM [cdc].[StructureLink_CT] AS [StructureLink_CT]</DefiningQuery>
-          </EntitySet>
-          <EntitySet Name="StructureType_CT" EntityType="Self.StructureType_CT" store:Type="Tables" store:Schema="cdc">
-            <DefiningQuery>SELECT 
-    [StructureType_CT].[__$start_lsn] AS [__$start_lsn], 
-    [StructureType_CT].[__$end_lsn] AS [__$end_lsn], 
-    [StructureType_CT].[__$seqval] AS [__$seqval], 
-    [StructureType_CT].[__$operation] AS [__$operation], 
-    [StructureType_CT].[__$update_mask] AS [__$update_mask], 
-    [StructureType_CT].[ID] AS [ID], 
-    [StructureType_CT].[ParentID] AS [ParentID], 
-    [StructureType_CT].[Name] AS [Name], 
-    [StructureType_CT].[Notes] AS [Notes], 
-    [StructureType_CT].[MarkupType] AS [MarkupType], 
-    [StructureType_CT].[Tags] AS [Tags], 
-    [StructureType_CT].[StructureTags] AS [StructureTags], 
-    [StructureType_CT].[Abstract] AS [Abstract], 
-    [StructureType_CT].[Color] AS [Color], 
-    [StructureType_CT].[Version] AS [Version], 
-    [StructureType_CT].[Code] AS [Code], 
-    [StructureType_CT].[HotKey] AS [HotKey], 
-    [StructureType_CT].[Username] AS [Username], 
-    [StructureType_CT].[LastModified] AS [LastModified], 
-    [StructureType_CT].[Created] AS [Created]
-    FROM [cdc].[StructureType_CT] AS [StructureType_CT]</DefiningQuery>
-          </EntitySet>
-          <EntitySet Name="DBVersion" EntityType="Self.DBVersion" store:Type="Tables" store:Schema="dbo">
-            <DefiningQuery>SELECT 
-    [DBVersion].[DBVersionID] AS [DBVersionID], 
-    [DBVersion].[Description] AS [Description], 
-    [DBVersion].[ExecutionDate] AS [ExecutionDate], 
-    [DBVersion].[UserID] AS [UserID]
-    FROM [dbo].[DBVersion] AS [DBVersion]</DefiningQuery>
-          </EntitySet>
           <EntitySet Name="StructureLink" EntityType="Self.StructureLink" store:Type="Tables" store:Schema="dbo">
             <DefiningQuery>SELECT 
     [StructureLink].[SourceID] AS [SourceID], 
@@ -635,73 +417,10 @@ warning 6013: The table/view 'Test.dbo.UserActivity' does not have a primary key
             <End Role="StructureType1" EntitySet="StructureType" />
           </AssociationSet>
         </EntityContainer>
-      </Schema>
-    </edmx:StorageModels>
+      </Schema></edmx:StorageModels>
     <!-- CSDL content -->
     <edmx:ConceptualModels>
       <Schema Namespace="ConnectomeData" Alias="Self" annotation:UseStrongSpatialTypes="false" xmlns:annotation="http://schemas.microsoft.com/ado/2009/02/edm/annotation" xmlns:customannotation="http://schemas.microsoft.com/ado/2013/11/edm/customannotation" xmlns="http://schemas.microsoft.com/ado/2009/11/edm">
-        <EntityType Name="captured_columns">
-          <Key>
-            <PropertyRef Name="object_id" />
-            <PropertyRef Name="column_ordinal" />
-          </Key>
-          <Property Name="object_id" Type="Int32" Nullable="false" />
-          <Property Name="column_name" Type="String" MaxLength="128" FixedLength="false" Unicode="true" Nullable="false" />
-          <Property Name="column_id" Type="Int32" />
-          <Property Name="column_type" Type="String" MaxLength="128" FixedLength="false" Unicode="true" Nullable="false" />
-          <Property Name="column_ordinal" Type="Int32" Nullable="false" />
-          <Property Name="is_computed" Type="Boolean" />
-        </EntityType>
-        <EntityType Name="change_tables">
-          <Key>
-            <PropertyRef Name="object_id" />
-          </Key>
-          <Property Name="object_id" Type="Int32" Nullable="false" />
-          <Property Name="version" Type="Int32" />
-          <Property Name="source_object_id" Type="Int32" />
-          <Property Name="capture_instance" Type="String" MaxLength="128" FixedLength="false" Unicode="true" Nullable="false" />
-          <Property Name="start_lsn" Type="Binary" MaxLength="10" FixedLength="true" />
-          <Property Name="end_lsn" Type="Binary" MaxLength="10" FixedLength="true" />
-          <Property Name="supports_net_changes" Type="Boolean" />
-          <Property Name="has_drop_pending" Type="Boolean" />
-          <Property Name="role_name" Type="String" MaxLength="128" FixedLength="false" Unicode="true" />
-          <Property Name="index_name" Type="String" MaxLength="128" FixedLength="false" Unicode="true" />
-          <Property Name="filegroup_name" Type="String" MaxLength="128" FixedLength="false" Unicode="true" />
-          <Property Name="create_date" Type="DateTime" Precision="3" />
-          <Property Name="partition_switch" Type="Boolean" Nullable="false" />
-        </EntityType>
-        <EntityType Name="ddl_history">
-          <Key>
-            <PropertyRef Name="object_id" />
-            <PropertyRef Name="ddl_lsn" />
-          </Key>
-          <Property Name="source_object_id" Type="Int32" />
-          <Property Name="object_id" Type="Int32" Nullable="false" />
-          <Property Name="required_column_update" Type="Boolean" />
-          <Property Name="ddl_command" Type="String" MaxLength="Max" FixedLength="false" Unicode="true" />
-          <Property Name="ddl_lsn" Type="Binary" MaxLength="10" FixedLength="true" Nullable="false" />
-          <Property Name="ddl_time" Type="DateTime" Precision="3" />
-        </EntityType>
-        <EntityType Name="index_columns">
-          <Key>
-            <PropertyRef Name="object_id" />
-            <PropertyRef Name="index_ordinal" />
-          </Key>
-          <Property Name="object_id" Type="Int32" Nullable="false" />
-          <Property Name="column_name" Type="String" MaxLength="128" FixedLength="false" Unicode="true" Nullable="false" />
-          <Property Name="index_ordinal" Type="Byte" Nullable="false" />
-          <Property Name="column_id" Type="Int32" />
-        </EntityType>
-        <EntityType Name="lsn_time_mapping">
-          <Key>
-            <PropertyRef Name="start_lsn" />
-          </Key>
-          <Property Name="start_lsn" Type="Binary" MaxLength="10" FixedLength="true" Nullable="false" />
-          <Property Name="tran_begin_time" Type="DateTime" Precision="3" />
-          <Property Name="tran_end_time" Type="DateTime" Precision="3" />
-          <Property Name="tran_id" Type="Binary" MaxLength="10" FixedLength="false" />
-          <Property Name="tran_begin_lsn" Type="Binary" MaxLength="10" FixedLength="true" />
-        </EntityType>
         <EntityType Name="DeletedLocation">
           <Key>
             <PropertyRef Name="ID" />
@@ -728,12 +447,12 @@ warning 6013: The table/view 'Test.dbo.UserActivity' does not have a primary key
           <Property Name="LastModified" Type="DateTime" Nullable="false" Precision="3" />
           <Property Name="Created" Type="DateTime" Nullable="false" Precision="3" />
           <Property Name="Username" Type="String" MaxLength="16" FixedLength="true" Unicode="true" Nullable="false" />
-          <Property Name="MosaicShape" Type="Geometry" a:GetterAccess="Public" xmlns:a="http://schemas.microsoft.com/ado/2006/04/codegeneration" />
-          <Property Name="VolumeShape" Type="Geometry" />
-          <Property Name="X" Type="Double" annotation:StoreGeneratedPattern="Computed" />
-          <Property Name="Y" Type="Double" annotation:StoreGeneratedPattern="Computed" />
-          <Property Name="VolumeX" Type="Double" annotation:StoreGeneratedPattern="Computed" />
-          <Property Name="VolumeY" Type="Double" annotation:StoreGeneratedPattern="Computed" />
+          <Property Name="MosaicShape" Type="Geometry" a:GetterAccess="Public" xmlns:a="http://schemas.microsoft.com/ado/2006/04/codegeneration" Nullable="false" />
+          <Property Name="VolumeShape" Type="Geometry" Nullable="false" />
+          <Property Name="X" Type="Double" annotation:StoreGeneratedPattern="Computed" Nullable="false" />
+          <Property Name="Y" Type="Double" annotation:StoreGeneratedPattern="Computed" Nullable="false" />
+          <Property Name="VolumeX" Type="Double" annotation:StoreGeneratedPattern="Computed" Nullable="false" />
+          <Property Name="VolumeY" Type="Double" annotation:StoreGeneratedPattern="Computed" Nullable="false" />
           <NavigationProperty Name="Structure" Relationship="Self.FK_Location_StructureBase1" FromRole="Location" ToRole="Structure" />
           <NavigationProperty Name="LocationLinksA" Relationship="Self.FK_LocationLink_Location" FromRole="Location" ToRole="LocationLink" />
           <NavigationProperty Name="LocationLinksB" Relationship="Self.FK_LocationLink_Location1" FromRole="Location" ToRole="LocationLink" />
@@ -795,135 +514,6 @@ warning 6013: The table/view 'Test.dbo.UserActivity' does not have a primary key
           <NavigationProperty Name="Structures" Relationship="Self.FK_StructureBase_StructureType" FromRole="StructureType" ToRole="Structure" />
           <NavigationProperty Name="Children" Relationship="Self.FK_StructureType_StructureType" FromRole="StructureType" ToRole="StructureType1" />
           <NavigationProperty Name="Parent" Relationship="Self.FK_StructureType_StructureType" FromRole="StructureType1" ToRole="StructureType" />
-        </EntityType>
-        <EntityType Name="Location_CT">
-          <Key>
-            <PropertyRef Name="C___start_lsn" />
-            <PropertyRef Name="C___seqval" />
-            <PropertyRef Name="C___operation" />
-          </Key>
-          <Property Name="C___start_lsn" Type="Binary" MaxLength="10" FixedLength="true" Nullable="false" />
-          <Property Name="C___end_lsn" Type="Binary" MaxLength="10" FixedLength="true" />
-          <Property Name="C___seqval" Type="Binary" MaxLength="10" FixedLength="true" Nullable="false" />
-          <Property Name="C___operation" Type="Int32" Nullable="false" />
-          <Property Name="C___update_mask" Type="Binary" MaxLength="128" FixedLength="false" />
-          <Property Name="ID" Type="Int64" />
-          <Property Name="ParentID" Type="Int64" />
-          <Property Name="X" Type="Double" />
-          <Property Name="Y" Type="Double" />
-          <Property Name="Z" Type="Double" />
-          <Property Name="Verticies" Type="Binary" MaxLength="Max" FixedLength="false" />
-          <Property Name="Closed" Type="Boolean" />
-          <Property Name="Version" Type="Binary" MaxLength="8" FixedLength="true" />
-          <Property Name="Overlay" Type="Binary" MaxLength="Max" FixedLength="false" />
-          <Property Name="Tags" Type="String" MaxLength="Max" FixedLength="false" Unicode="true" />
-          <Property Name="VolumeX" Type="Double" />
-          <Property Name="VolumeY" Type="Double" />
-          <Property Name="Terminal" Type="Boolean" />
-          <Property Name="OffEdge" Type="Boolean" />
-          <Property Name="Radius" Type="Double" />
-          <Property Name="TypeCode" Type="Int16" />
-          <Property Name="LastModified" Type="DateTime" Precision="3" />
-          <Property Name="Created" Type="DateTime" Precision="3" />
-          <Property Name="Username" Type="String" MaxLength="16" FixedLength="true" Unicode="true" />
-        </EntityType>
-        <EntityType Name="LocationLink_CT">
-          <Key>
-            <PropertyRef Name="C___start_lsn" />
-            <PropertyRef Name="C___seqval" />
-            <PropertyRef Name="C___operation" />
-          </Key>
-          <Property Name="C___start_lsn" Type="Binary" MaxLength="10" FixedLength="true" Nullable="false" />
-          <Property Name="C___end_lsn" Type="Binary" MaxLength="10" FixedLength="true" />
-          <Property Name="C___seqval" Type="Binary" MaxLength="10" FixedLength="true" Nullable="false" />
-          <Property Name="C___operation" Type="Int32" Nullable="false" />
-          <Property Name="C___update_mask" Type="Binary" MaxLength="128" FixedLength="false" />
-          <Property Name="A" Type="Int64" />
-          <Property Name="B" Type="Int64" />
-          <Property Name="Username" Type="String" MaxLength="16" FixedLength="true" Unicode="true" />
-          <Property Name="Created" Type="DateTime" Precision="3" />
-        </EntityType>
-        <EntityType Name="Structure_CT">
-          <Key>
-            <PropertyRef Name="C___start_lsn" />
-            <PropertyRef Name="C___seqval" />
-            <PropertyRef Name="C___operation" />
-          </Key>
-          <Property Name="C___start_lsn" Type="Binary" MaxLength="10" FixedLength="true" Nullable="false" />
-          <Property Name="C___end_lsn" Type="Binary" MaxLength="10" FixedLength="true" />
-          <Property Name="C___seqval" Type="Binary" MaxLength="10" FixedLength="true" Nullable="false" />
-          <Property Name="C___operation" Type="Int32" Nullable="false" />
-          <Property Name="C___update_mask" Type="Binary" MaxLength="128" FixedLength="false" />
-          <Property Name="ID" Type="Int64" />
-          <Property Name="TypeID" Type="Int64" />
-          <Property Name="Notes" Type="String" MaxLength="Max" FixedLength="false" Unicode="true" />
-          <Property Name="Verified" Type="Boolean" />
-          <Property Name="Tags" Type="String" MaxLength="Max" FixedLength="false" Unicode="true" />
-          <Property Name="Confidence" Type="Double" />
-          <Property Name="Version" Type="Binary" MaxLength="8" FixedLength="true" />
-          <Property Name="ParentID" Type="Int64" />
-          <Property Name="Created" Type="DateTime" Precision="3" />
-          <Property Name="Label" Type="String" MaxLength="64" FixedLength="false" Unicode="false" />
-          <Property Name="Username" Type="String" MaxLength="16" FixedLength="true" Unicode="true" />
-          <Property Name="LastModified" Type="DateTime" Precision="3" />
-        </EntityType>
-        <EntityType Name="StructureLink_CT">
-          <Key>
-            <PropertyRef Name="C___start_lsn" />
-            <PropertyRef Name="C___seqval" />
-            <PropertyRef Name="C___operation" />
-          </Key>
-          <Property Name="C___start_lsn" Type="Binary" MaxLength="10" FixedLength="true" Nullable="false" />
-          <Property Name="C___end_lsn" Type="Binary" MaxLength="10" FixedLength="true" />
-          <Property Name="C___seqval" Type="Binary" MaxLength="10" FixedLength="true" Nullable="false" />
-          <Property Name="C___operation" Type="Int32" Nullable="false" />
-          <Property Name="C___update_mask" Type="Binary" MaxLength="128" FixedLength="false" />
-          <Property Name="SourceID" Type="Int64" />
-          <Property Name="TargetID" Type="Int64" />
-          <Property Name="Bidirectional" Type="Boolean" />
-          <Property Name="Tags" Type="String" MaxLength="Max" FixedLength="false" Unicode="true" />
-          <Property Name="Username" Type="String" MaxLength="16" FixedLength="true" Unicode="true" />
-          <Property Name="Created" Type="DateTime" Precision="3" />
-          <Property Name="LastModified" Type="DateTime" Precision="3" />
-        </EntityType>
-        <EntityType Name="StructureType_CT">
-          <Key>
-            <PropertyRef Name="C___start_lsn" />
-            <PropertyRef Name="C___seqval" />
-            <PropertyRef Name="C___operation" />
-          </Key>
-          <Property Name="C___start_lsn" Type="Binary" MaxLength="10" FixedLength="true" Nullable="false" />
-          <Property Name="C___end_lsn" Type="Binary" MaxLength="10" FixedLength="true" />
-          <Property Name="C___seqval" Type="Binary" MaxLength="10" FixedLength="true" Nullable="false" />
-          <Property Name="C___operation" Type="Int32" Nullable="false" />
-          <Property Name="C___update_mask" Type="Binary" MaxLength="128" FixedLength="false" />
-          <Property Name="ID" Type="Int64" />
-          <Property Name="ParentID" Type="Int64" />
-          <Property Name="Name" Type="String" MaxLength="128" FixedLength="true" Unicode="true" />
-          <Property Name="Notes" Type="String" MaxLength="Max" FixedLength="false" Unicode="true" />
-          <Property Name="MarkupType" Type="String" MaxLength="16" FixedLength="true" Unicode="true" />
-          <Property Name="Tags" Type="String" MaxLength="Max" FixedLength="false" Unicode="true" />
-          <Property Name="StructureTags" Type="String" MaxLength="Max" FixedLength="false" Unicode="true" />
-          <Property Name="Abstract" Type="Boolean" />
-          <Property Name="Color" Type="Int32" />
-          <Property Name="Version" Type="Binary" MaxLength="8" FixedLength="true" />
-          <Property Name="Code" Type="String" MaxLength="16" FixedLength="true" Unicode="true" />
-          <Property Name="HotKey" Type="String" MaxLength="1" FixedLength="true" Unicode="false" />
-          <Property Name="Username" Type="String" MaxLength="16" FixedLength="true" Unicode="true" />
-          <Property Name="LastModified" Type="DateTime" Precision="3" />
-          <Property Name="Created" Type="DateTime" Precision="3" />
-        </EntityType>
-        <EntityType Name="DBVersion">
-          <Key>
-            <PropertyRef Name="DBVersionID" />
-            <PropertyRef Name="Description" />
-            <PropertyRef Name="ExecutionDate" />
-            <PropertyRef Name="UserID" />
-          </Key>
-          <Property Name="DBVersionID" Type="Int32" Nullable="false" />
-          <Property Name="Description" Type="String" MaxLength="255" FixedLength="false" Unicode="false" Nullable="false" />
-          <Property Name="ExecutionDate" Type="DateTime" Nullable="false" Precision="3" />
-          <Property Name="UserID" Type="Int32" Nullable="false" />
         </EntityType>
         <EntityType Name="StructureLink">
           <Key>
@@ -1043,22 +633,11 @@ warning 6013: The table/view 'Test.dbo.UserActivity' does not have a primary key
           </ReferentialConstraint>
         </Association>
         <EntityContainer Name="ConnectomeEntities" annotation:LazyLoadingEnabled="true">
-          <EntitySet Name="captured_columns" EntityType="Self.captured_columns" />
-          <EntitySet Name="change_tables" EntityType="Self.change_tables" />
-          <EntitySet Name="ddl_history" EntityType="Self.ddl_history" />
-          <EntitySet Name="index_columns" EntityType="Self.index_columns" />
-          <EntitySet Name="lsn_time_mapping" EntityType="Self.lsn_time_mapping" />
           <EntitySet Name="DeletedLocations" EntityType="Self.DeletedLocation" />
           <EntitySet Name="Locations" EntityType="Self.Location" />
           <EntitySet Name="LocationLinks" EntityType="Self.LocationLink" />
           <EntitySet Name="Structures" EntityType="Self.Structure" />
           <EntitySet Name="StructureTypes" EntityType="Self.StructureType" />
-          <EntitySet Name="Location_CT" EntityType="Self.Location_CT" />
-          <EntitySet Name="LocationLink_CT" EntityType="Self.LocationLink_CT" />
-          <EntitySet Name="Structure_CT" EntityType="Self.Structure_CT" />
-          <EntitySet Name="StructureLink_CT" EntityType="Self.StructureLink_CT" />
-          <EntitySet Name="StructureType_CT" EntityType="Self.StructureType_CT" />
-          <EntitySet Name="DBVersions" EntityType="Self.DBVersion" />
           <EntitySet Name="StructureLinks" EntityType="Self.StructureLink" />
           <AssociationSet Name="FK_Location_StructureBase1" Association="Self.FK_Location_StructureBase1">
             <End Role="Structure" EntitySet="Structures" />
@@ -1093,22 +672,22 @@ warning 6013: The table/view 'Test.dbo.UserActivity' does not have a primary key
             <End Role="StructureType1" EntitySet="StructureTypes" />
           </AssociationSet>
           <FunctionImport Name="ApproximateStructureLocation" ReturnType="Collection(ConnectomeData.ApproximateStructureLocation_Result)">
-            <Parameter Name="StructureID" Mode="In" Type="Int32" />
+          <Parameter Name="StructureID" Mode="In" Type="Int32" />
           </FunctionImport>
           <FunctionImport Name="ApproximateStructureLocations" ReturnType="Collection(ConnectomeData.ApproximateStructureLocations_Result)" />
           <FunctionImport Name="CountChildStructuresByType" ReturnType="Collection(ConnectomeData.CountChildStructuresByType_Result)">
-            <Parameter Name="StructureID" Mode="In" Type="Int64" />
+          <Parameter Name="StructureID" Mode="In" Type="Int64" />
           </FunctionImport>
           <FunctionImport Name="SelectAllStructureLocationLinks" ReturnType="Collection(ConnectomeData.SelectAllStructureLocationLinks_Result)" />
           <FunctionImport Name="SelectAllStructureLocations" ReturnType="Collection(ConnectomeData.SelectAllStructureLocations_Result)" />
           <FunctionImport Name="SelectAllStructures" ReturnType="Collection(ConnectomeData.SelectAllStructures_Result)" />
           <FunctionImport Name="SelectChildrenStructureLinks" ReturnType="Collection(ConnectomeData.SelectChildrenStructureLinks_Result)">
-            <Parameter Name="StructureID" Mode="In" Type="Int64" />
+          <Parameter Name="StructureID" Mode="In" Type="Int64" />
           </FunctionImport>
           <FunctionImport Name="SelectLastModifiedLocationByUsers" ReturnType="Collection(ConnectomeData.SelectLastModifiedLocationByUsers_Result)" />
           <FunctionImport Name="SelectNumConnectionsPerStructure" ReturnType="Collection(ConnectomeData.SelectNumConnectionsPerStructure_Result)" />
-          <FunctionImport Name="SelectRootStructures" ReturnType="Collection(ConnectomeData.SelectRootStructures_Result)" />
-          <FunctionImport Name="SelectSectionLocationLinks" ReturnType="Collection(ConnectomeData.SelectSectionLocationLinks_Result)">
+          <FunctionImport Name="SelectRootStructures" EntitySet="Structures" ReturnType="Collection(ConnectomeData.Structure)" />
+          <FunctionImport Name="SelectSectionLocationLinks" EntitySet="LocationLinks" ReturnType="Collection(ConnectomeData.LocationLink)">
             <Parameter Name="Z" Mode="In" Type="Double" />
             <Parameter Name="QueryDate" Mode="In" Type="DateTime" />
           </FunctionImport>
@@ -1116,8 +695,8 @@ warning 6013: The table/view 'Test.dbo.UserActivity' does not have a primary key
             <Parameter Name="Z" Mode="In" Type="Double" />
             <Parameter Name="QueryDate" Mode="In" Type="DateTime" />
           </FunctionImport>
-          <FunctionImport Name="SelectStructure" ReturnType="Collection(ConnectomeData.SelectStructure_Result)">
-            <Parameter Name="StructureID" Mode="In" Type="Int64" />
+          <FunctionImport Name="SelectStructure" EntitySet="Structures" ReturnType="Collection(ConnectomeData.Structure)">
+          <Parameter Name="StructureID" Mode="In" Type="Int64" />
           </FunctionImport>
           <FunctionImport Name="SelectStructureChangeLog" ReturnType="Collection(ConnectomeData.SelectStructureChangeLog_Result)">
             <Parameter Name="structure_ID" Mode="In" Type="Int64" />
@@ -1131,13 +710,13 @@ warning 6013: The table/view 'Test.dbo.UserActivity' does not have a primary key
             <Parameter Name="end_time" Mode="In" Type="DateTime" />
           </FunctionImport>
           <FunctionImport Name="SelectStructureLocationLinks" ReturnType="Collection(ConnectomeData.SelectStructureLocationLinks_Result)">
-            <Parameter Name="StructureID" Mode="In" Type="Int64" />
+          <Parameter Name="StructureID" Mode="In" Type="Int64" />
           </FunctionImport>
           <FunctionImport Name="SelectStructureLocationLinksNoChildren" ReturnType="Collection(ConnectomeData.SelectStructureLocationLinksNoChildren_Result)">
-            <Parameter Name="StructureID" Mode="In" Type="Int64" />
+          <Parameter Name="StructureID" Mode="In" Type="Int64" />
           </FunctionImport>
           <FunctionImport Name="SelectStructureLocations" ReturnType="Collection(ConnectomeData.SelectStructureLocations_Result)">
-            <Parameter Name="StructureID" Mode="In" Type="Int64" />
+          <Parameter Name="StructureID" Mode="In" Type="Int64" />
           </FunctionImport>
           <FunctionImport Name="SelectStructuresAndLinks" ReturnType="Collection(ConnectomeData.SelectStructuresAndLinks_Result)" />
           <FunctionImport Name="SelectStructuresForSection" ReturnType="Collection(ConnectomeData.SelectStructuresForSection_Result)">
@@ -1145,12 +724,26 @@ warning 6013: The table/view 'Test.dbo.UserActivity' does not have a primary key
             <Parameter Name="QueryDate" Mode="In" Type="DateTime" />
           </FunctionImport>
           <FunctionImport Name="SelectUnfinishedStructureBranches" ReturnType="Collection(Int64)">
-            <Parameter Name="StructureID" Mode="In" Type="Int64" />
+          <Parameter Name="StructureID" Mode="In" Type="Int64" />
           </FunctionImport>
           <FunctionImport Name="SelectUnfinishedStructureBranchesWithPosition" ReturnType="Collection(ConnectomeData.SelectUnfinishedStructureBranchesWithPosition_Result)">
-            <Parameter Name="StructureID" Mode="In" Type="Int64" />
+          <Parameter Name="StructureID" Mode="In" Type="Int64" />
           </FunctionImport>
-        </EntityContainer>
+          <FunctionImport Name="SectionLocationLinks" IsComposable="true" EntitySet="LocationLinks" ReturnType="Collection(ConnectomeData.LocationLink)">
+          <Parameter Name="Z" Mode="In" Type="Double" />
+          </FunctionImport>
+          <FunctionImport Name="SectionLocationLinksModifiedAfterDate" IsComposable="true" EntitySet="LocationLinks" ReturnType="Collection(ConnectomeData.LocationLink)">
+            <Parameter Name="Z" Mode="In" Type="Double" />
+            <Parameter Name="QueryDate" Mode="In" Type="DateTime" />
+          </FunctionImport>
+          <FunctionImport Name="SectionLocations" IsComposable="true" EntitySet="Locations" ReturnType="Collection(ConnectomeData.Location)">
+          <Parameter Name="Z" Mode="In" Type="Double" />
+          </FunctionImport>
+          <FunctionImport Name="SectionLocationsModifiedAfterDate" IsComposable="true" EntitySet="Locations" ReturnType="Collection(ConnectomeData.Location)">
+            <Parameter Name="Z" Mode="In" Type="Double" />
+            <Parameter Name="QueryDate" Mode="In" Type="DateTime" />
+          </FunctionImport>
+          </EntityContainer>
         <ComplexType Name="ApproximateStructureLocation_Result">
           <Property Type="Double" Name="X" Nullable="true" />
           <Property Type="Double" Name="Y" Nullable="true" />
@@ -1378,76 +971,70 @@ warning 6013: The table/view 'Test.dbo.UserActivity' does not have a primary key
           <Property Type="Double" Name="Z" Nullable="false" />
           <Property Type="Double" Name="Radius" Nullable="false" />
         </ComplexType>
-      </Schema>
+        <ComplexType Name="SectionLocationLinks_Result">
+          <Property Type="Int64" Name="A" Nullable="false" />
+          <Property Type="Int64" Name="B" Nullable="false" />
+          <Property Type="String" Name="Username" Nullable="false" MaxLength="16" />
+          <Property Type="DateTime" Name="Created" Nullable="false" Precision="23" />
+        </ComplexType>
+        <ComplexType Name="SectionLocationLinksModifiedAfterDate_Result">
+          <Property Type="Int64" Name="A" Nullable="false" />
+          <Property Type="Int64" Name="B" Nullable="false" />
+          <Property Type="String" Name="Username" Nullable="false" MaxLength="16" />
+          <Property Type="DateTime" Name="Created" Nullable="false" Precision="23" />
+        </ComplexType>
+        <ComplexType Name="SectionLocations_Result">
+          <Property Type="Int64" Name="ID" Nullable="false" />
+          <Property Type="Int64" Name="ParentID" Nullable="false" />
+          <Property Type="Double" Name="Z" Nullable="false" />
+          <Property Type="Binary" Name="Verticies" Nullable="true" />
+          <Property Type="Boolean" Name="Closed" Nullable="false" />
+          <Property Type="Binary" Name="Version" Nullable="false" MaxLength="8" />
+          <Property Type="Binary" Name="Overlay" Nullable="true" />
+          <Property Type="String" Name="Tags" Nullable="true" />
+          <Property Type="Boolean" Name="Terminal" Nullable="false" />
+          <Property Type="Boolean" Name="OffEdge" Nullable="false" />
+          <Property Type="Double" Name="Radius" Nullable="false" />
+          <Property Type="Int16" Name="TypeCode" Nullable="false" />
+          <Property Type="DateTime" Name="LastModified" Nullable="false" Precision="23" />
+          <Property Type="DateTime" Name="Created" Nullable="false" Precision="23" />
+          <Property Type="String" Name="Username" Nullable="false" MaxLength="16" />
+          <Property Type="Geometry" Name="MosaicShape" Nullable="false" />
+          <Property Type="Geometry" Name="VolumeShape" Nullable="false" />
+          <Property Type="Double" Name="X" Nullable="false" />
+          <Property Type="Double" Name="Y" Nullable="false" />
+          <Property Type="Double" Name="VolumeX" Nullable="false" />
+          <Property Type="Double" Name="VolumeY" Nullable="false" />
+        </ComplexType>
+        <ComplexType Name="SectionLocationsModifiedAfterDate_Result">
+          <Property Type="Int64" Name="ID" Nullable="false" />
+          <Property Type="Int64" Name="ParentID" Nullable="false" />
+          <Property Type="Double" Name="Z" Nullable="false" />
+          <Property Type="Binary" Name="Verticies" Nullable="true" />
+          <Property Type="Boolean" Name="Closed" Nullable="false" />
+          <Property Type="Binary" Name="Version" Nullable="false" MaxLength="8" />
+          <Property Type="Binary" Name="Overlay" Nullable="true" />
+          <Property Type="String" Name="Tags" Nullable="true" />
+          <Property Type="Boolean" Name="Terminal" Nullable="false" />
+          <Property Type="Boolean" Name="OffEdge" Nullable="false" />
+          <Property Type="Double" Name="Radius" Nullable="false" />
+          <Property Type="Int16" Name="TypeCode" Nullable="false" />
+          <Property Type="DateTime" Name="LastModified" Nullable="false" Precision="23" />
+          <Property Type="DateTime" Name="Created" Nullable="false" Precision="23" />
+          <Property Type="String" Name="Username" Nullable="false" MaxLength="16" />
+          <Property Type="Geometry" Name="MosaicShape" Nullable="false" />
+          <Property Type="Geometry" Name="VolumeShape" Nullable="false" />
+          <Property Type="Double" Name="X" Nullable="false" />
+          <Property Type="Double" Name="Y" Nullable="false" />
+          <Property Type="Double" Name="VolumeX" Nullable="false" />
+          <Property Type="Double" Name="VolumeY" Nullable="false" />
+        </ComplexType>
+        </Schema>
     </edmx:ConceptualModels>
     <!-- C-S mapping content -->
     <edmx:Mappings>
       <Mapping Space="C-S" xmlns="http://schemas.microsoft.com/ado/2009/11/mapping/cs">
         <EntityContainerMapping StorageEntityContainer="ConnectomeDataStoreContainer" CdmEntityContainer="ConnectomeEntities">
-          <EntitySetMapping Name="captured_columns">
-            <EntityTypeMapping TypeName="ConnectomeData.captured_columns">
-              <MappingFragment StoreEntitySet="captured_columns">
-                <ScalarProperty Name="object_id" ColumnName="object_id" />
-                <ScalarProperty Name="column_name" ColumnName="column_name" />
-                <ScalarProperty Name="column_id" ColumnName="column_id" />
-                <ScalarProperty Name="column_type" ColumnName="column_type" />
-                <ScalarProperty Name="column_ordinal" ColumnName="column_ordinal" />
-                <ScalarProperty Name="is_computed" ColumnName="is_computed" />
-              </MappingFragment>
-            </EntityTypeMapping>
-          </EntitySetMapping>
-          <EntitySetMapping Name="change_tables">
-            <EntityTypeMapping TypeName="ConnectomeData.change_tables">
-              <MappingFragment StoreEntitySet="change_tables">
-                <ScalarProperty Name="object_id" ColumnName="object_id" />
-                <ScalarProperty Name="version" ColumnName="version" />
-                <ScalarProperty Name="source_object_id" ColumnName="source_object_id" />
-                <ScalarProperty Name="capture_instance" ColumnName="capture_instance" />
-                <ScalarProperty Name="start_lsn" ColumnName="start_lsn" />
-                <ScalarProperty Name="end_lsn" ColumnName="end_lsn" />
-                <ScalarProperty Name="supports_net_changes" ColumnName="supports_net_changes" />
-                <ScalarProperty Name="has_drop_pending" ColumnName="has_drop_pending" />
-                <ScalarProperty Name="role_name" ColumnName="role_name" />
-                <ScalarProperty Name="index_name" ColumnName="index_name" />
-                <ScalarProperty Name="filegroup_name" ColumnName="filegroup_name" />
-                <ScalarProperty Name="create_date" ColumnName="create_date" />
-                <ScalarProperty Name="partition_switch" ColumnName="partition_switch" />
-              </MappingFragment>
-            </EntityTypeMapping>
-          </EntitySetMapping>
-          <EntitySetMapping Name="ddl_history">
-            <EntityTypeMapping TypeName="ConnectomeData.ddl_history">
-              <MappingFragment StoreEntitySet="ddl_history">
-                <ScalarProperty Name="source_object_id" ColumnName="source_object_id" />
-                <ScalarProperty Name="object_id" ColumnName="object_id" />
-                <ScalarProperty Name="required_column_update" ColumnName="required_column_update" />
-                <ScalarProperty Name="ddl_command" ColumnName="ddl_command" />
-                <ScalarProperty Name="ddl_lsn" ColumnName="ddl_lsn" />
-                <ScalarProperty Name="ddl_time" ColumnName="ddl_time" />
-              </MappingFragment>
-            </EntityTypeMapping>
-          </EntitySetMapping>
-          <EntitySetMapping Name="index_columns">
-            <EntityTypeMapping TypeName="ConnectomeData.index_columns">
-              <MappingFragment StoreEntitySet="index_columns">
-                <ScalarProperty Name="object_id" ColumnName="object_id" />
-                <ScalarProperty Name="column_name" ColumnName="column_name" />
-                <ScalarProperty Name="index_ordinal" ColumnName="index_ordinal" />
-                <ScalarProperty Name="column_id" ColumnName="column_id" />
-              </MappingFragment>
-            </EntityTypeMapping>
-          </EntitySetMapping>
-          <EntitySetMapping Name="lsn_time_mapping">
-            <EntityTypeMapping TypeName="ConnectomeData.lsn_time_mapping">
-              <MappingFragment StoreEntitySet="lsn_time_mapping">
-                <ScalarProperty Name="start_lsn" ColumnName="start_lsn" />
-                <ScalarProperty Name="tran_begin_time" ColumnName="tran_begin_time" />
-                <ScalarProperty Name="tran_end_time" ColumnName="tran_end_time" />
-                <ScalarProperty Name="tran_id" ColumnName="tran_id" />
-                <ScalarProperty Name="tran_begin_lsn" ColumnName="tran_begin_lsn" />
-              </MappingFragment>
-            </EntityTypeMapping>
-          </EntitySetMapping>
           <EntitySetMapping Name="DeletedLocations">
             <EntityTypeMapping TypeName="ConnectomeData.DeletedLocation">
               <MappingFragment StoreEntitySet="DeletedLocations">
@@ -1529,128 +1116,6 @@ warning 6013: The table/view 'Test.dbo.UserActivity' does not have a primary key
                 <ScalarProperty Name="Username" ColumnName="Username" />
                 <ScalarProperty Name="LastModified" ColumnName="LastModified" />
                 <ScalarProperty Name="Created" ColumnName="Created" />
-              </MappingFragment>
-            </EntityTypeMapping>
-          </EntitySetMapping>
-          <EntitySetMapping Name="Location_CT">
-            <EntityTypeMapping TypeName="ConnectomeData.Location_CT">
-              <MappingFragment StoreEntitySet="Location_CT">
-                <ScalarProperty Name="C___start_lsn" ColumnName="__$start_lsn" />
-                <ScalarProperty Name="C___end_lsn" ColumnName="__$end_lsn" />
-                <ScalarProperty Name="C___seqval" ColumnName="__$seqval" />
-                <ScalarProperty Name="C___operation" ColumnName="__$operation" />
-                <ScalarProperty Name="C___update_mask" ColumnName="__$update_mask" />
-                <ScalarProperty Name="ID" ColumnName="ID" />
-                <ScalarProperty Name="ParentID" ColumnName="ParentID" />
-                <ScalarProperty Name="X" ColumnName="X" />
-                <ScalarProperty Name="Y" ColumnName="Y" />
-                <ScalarProperty Name="Z" ColumnName="Z" />
-                <ScalarProperty Name="Verticies" ColumnName="Verticies" />
-                <ScalarProperty Name="Closed" ColumnName="Closed" />
-                <ScalarProperty Name="Version" ColumnName="Version" />
-                <ScalarProperty Name="Overlay" ColumnName="Overlay" />
-                <ScalarProperty Name="Tags" ColumnName="Tags" />
-                <ScalarProperty Name="VolumeX" ColumnName="VolumeX" />
-                <ScalarProperty Name="VolumeY" ColumnName="VolumeY" />
-                <ScalarProperty Name="Terminal" ColumnName="Terminal" />
-                <ScalarProperty Name="OffEdge" ColumnName="OffEdge" />
-                <ScalarProperty Name="Radius" ColumnName="Radius" />
-                <ScalarProperty Name="TypeCode" ColumnName="TypeCode" />
-                <ScalarProperty Name="LastModified" ColumnName="LastModified" />
-                <ScalarProperty Name="Created" ColumnName="Created" />
-                <ScalarProperty Name="Username" ColumnName="Username" />
-              </MappingFragment>
-            </EntityTypeMapping>
-          </EntitySetMapping>
-          <EntitySetMapping Name="LocationLink_CT">
-            <EntityTypeMapping TypeName="ConnectomeData.LocationLink_CT">
-              <MappingFragment StoreEntitySet="LocationLink_CT">
-                <ScalarProperty Name="C___start_lsn" ColumnName="__$start_lsn" />
-                <ScalarProperty Name="C___end_lsn" ColumnName="__$end_lsn" />
-                <ScalarProperty Name="C___seqval" ColumnName="__$seqval" />
-                <ScalarProperty Name="C___operation" ColumnName="__$operation" />
-                <ScalarProperty Name="C___update_mask" ColumnName="__$update_mask" />
-                <ScalarProperty Name="A" ColumnName="A" />
-                <ScalarProperty Name="B" ColumnName="B" />
-                <ScalarProperty Name="Username" ColumnName="Username" />
-                <ScalarProperty Name="Created" ColumnName="Created" />
-              </MappingFragment>
-            </EntityTypeMapping>
-          </EntitySetMapping>
-          <EntitySetMapping Name="Structure_CT">
-            <EntityTypeMapping TypeName="ConnectomeData.Structure_CT">
-              <MappingFragment StoreEntitySet="Structure_CT">
-                <ScalarProperty Name="C___start_lsn" ColumnName="__$start_lsn" />
-                <ScalarProperty Name="C___end_lsn" ColumnName="__$end_lsn" />
-                <ScalarProperty Name="C___seqval" ColumnName="__$seqval" />
-                <ScalarProperty Name="C___operation" ColumnName="__$operation" />
-                <ScalarProperty Name="C___update_mask" ColumnName="__$update_mask" />
-                <ScalarProperty Name="ID" ColumnName="ID" />
-                <ScalarProperty Name="TypeID" ColumnName="TypeID" />
-                <ScalarProperty Name="Notes" ColumnName="Notes" />
-                <ScalarProperty Name="Verified" ColumnName="Verified" />
-                <ScalarProperty Name="Tags" ColumnName="Tags" />
-                <ScalarProperty Name="Confidence" ColumnName="Confidence" />
-                <ScalarProperty Name="Version" ColumnName="Version" />
-                <ScalarProperty Name="ParentID" ColumnName="ParentID" />
-                <ScalarProperty Name="Created" ColumnName="Created" />
-                <ScalarProperty Name="Label" ColumnName="Label" />
-                <ScalarProperty Name="Username" ColumnName="Username" />
-                <ScalarProperty Name="LastModified" ColumnName="LastModified" />
-              </MappingFragment>
-            </EntityTypeMapping>
-          </EntitySetMapping>
-          <EntitySetMapping Name="StructureLink_CT">
-            <EntityTypeMapping TypeName="ConnectomeData.StructureLink_CT">
-              <MappingFragment StoreEntitySet="StructureLink_CT">
-                <ScalarProperty Name="C___start_lsn" ColumnName="__$start_lsn" />
-                <ScalarProperty Name="C___end_lsn" ColumnName="__$end_lsn" />
-                <ScalarProperty Name="C___seqval" ColumnName="__$seqval" />
-                <ScalarProperty Name="C___operation" ColumnName="__$operation" />
-                <ScalarProperty Name="C___update_mask" ColumnName="__$update_mask" />
-                <ScalarProperty Name="SourceID" ColumnName="SourceID" />
-                <ScalarProperty Name="TargetID" ColumnName="TargetID" />
-                <ScalarProperty Name="Bidirectional" ColumnName="Bidirectional" />
-                <ScalarProperty Name="Tags" ColumnName="Tags" />
-                <ScalarProperty Name="Username" ColumnName="Username" />
-                <ScalarProperty Name="Created" ColumnName="Created" />
-                <ScalarProperty Name="LastModified" ColumnName="LastModified" />
-              </MappingFragment>
-            </EntityTypeMapping>
-          </EntitySetMapping>
-          <EntitySetMapping Name="StructureType_CT">
-            <EntityTypeMapping TypeName="ConnectomeData.StructureType_CT">
-              <MappingFragment StoreEntitySet="StructureType_CT">
-                <ScalarProperty Name="C___start_lsn" ColumnName="__$start_lsn" />
-                <ScalarProperty Name="C___end_lsn" ColumnName="__$end_lsn" />
-                <ScalarProperty Name="C___seqval" ColumnName="__$seqval" />
-                <ScalarProperty Name="C___operation" ColumnName="__$operation" />
-                <ScalarProperty Name="C___update_mask" ColumnName="__$update_mask" />
-                <ScalarProperty Name="ID" ColumnName="ID" />
-                <ScalarProperty Name="ParentID" ColumnName="ParentID" />
-                <ScalarProperty Name="Name" ColumnName="Name" />
-                <ScalarProperty Name="Notes" ColumnName="Notes" />
-                <ScalarProperty Name="MarkupType" ColumnName="MarkupType" />
-                <ScalarProperty Name="Tags" ColumnName="Tags" />
-                <ScalarProperty Name="StructureTags" ColumnName="StructureTags" />
-                <ScalarProperty Name="Abstract" ColumnName="Abstract" />
-                <ScalarProperty Name="Color" ColumnName="Color" />
-                <ScalarProperty Name="Version" ColumnName="Version" />
-                <ScalarProperty Name="Code" ColumnName="Code" />
-                <ScalarProperty Name="HotKey" ColumnName="HotKey" />
-                <ScalarProperty Name="Username" ColumnName="Username" />
-                <ScalarProperty Name="LastModified" ColumnName="LastModified" />
-                <ScalarProperty Name="Created" ColumnName="Created" />
-              </MappingFragment>
-            </EntityTypeMapping>
-          </EntitySetMapping>
-          <EntitySetMapping Name="DBVersions">
-            <EntityTypeMapping TypeName="ConnectomeData.DBVersion">
-              <MappingFragment StoreEntitySet="DBVersion">
-                <ScalarProperty Name="DBVersionID" ColumnName="DBVersionID" />
-                <ScalarProperty Name="Description" ColumnName="Description" />
-                <ScalarProperty Name="ExecutionDate" ColumnName="ExecutionDate" />
-                <ScalarProperty Name="UserID" ColumnName="UserID" />
               </MappingFragment>
             </EntityTypeMapping>
           </EntitySetMapping>
@@ -1779,32 +1244,8 @@ warning 6013: The table/view 'Test.dbo.UserActivity' does not have a primary key
             </ResultMapping>
           </FunctionImportMapping>
           <FunctionImportMapping FunctionImportName="SelectRootStructures" FunctionName="ConnectomeData.Store.SelectRootStructures">
-            <ResultMapping>
-              <ComplexTypeMapping TypeName="ConnectomeData.SelectRootStructures_Result">
-                <ScalarProperty Name="ID" ColumnName="ID" />
-                <ScalarProperty Name="TypeID" ColumnName="TypeID" />
-                <ScalarProperty Name="Notes" ColumnName="Notes" />
-                <ScalarProperty Name="Verified" ColumnName="Verified" />
-                <ScalarProperty Name="Tags" ColumnName="Tags" />
-                <ScalarProperty Name="Confidence" ColumnName="Confidence" />
-                <ScalarProperty Name="Version" ColumnName="Version" />
-                <ScalarProperty Name="ParentID" ColumnName="ParentID" />
-                <ScalarProperty Name="Created" ColumnName="Created" />
-                <ScalarProperty Name="Label" ColumnName="Label" />
-                <ScalarProperty Name="Username" ColumnName="Username" />
-                <ScalarProperty Name="LastModified" ColumnName="LastModified" />
-              </ComplexTypeMapping>
-            </ResultMapping>
           </FunctionImportMapping>
           <FunctionImportMapping FunctionImportName="SelectSectionLocationLinks" FunctionName="ConnectomeData.Store.SelectSectionLocationLinks">
-            <ResultMapping>
-              <ComplexTypeMapping TypeName="ConnectomeData.SelectSectionLocationLinks_Result">
-                <ScalarProperty Name="A" ColumnName="A" />
-                <ScalarProperty Name="B" ColumnName="B" />
-                <ScalarProperty Name="Username" ColumnName="Username" />
-                <ScalarProperty Name="Created" ColumnName="Created" />
-              </ComplexTypeMapping>
-            </ResultMapping>
           </FunctionImportMapping>
           <FunctionImportMapping FunctionImportName="SelectSectionLocationsAndLinks" FunctionName="ConnectomeData.Store.SelectSectionLocationsAndLinks">
             <ResultMapping>
@@ -1832,15 +1273,6 @@ warning 6013: The table/view 'Test.dbo.UserActivity' does not have a primary key
             </ResultMapping>
           </FunctionImportMapping>
           <FunctionImportMapping FunctionImportName="SelectStructure" FunctionName="ConnectomeData.Store.SelectStructure">
-            <ResultMapping>
-              <ComplexTypeMapping TypeName="ConnectomeData.SelectStructure_Result">
-                <ScalarProperty Name="ID" ColumnName="ID" />
-                <ScalarProperty Name="ParentID" ColumnName="ParentID" />
-                <ScalarProperty Name="TypeID" ColumnName="TypeID" />
-                <ScalarProperty Name="Label" ColumnName="Label" />
-                <ScalarProperty Name="LastModified" ColumnName="LastModified" />
-              </ComplexTypeMapping>
-            </ResultMapping>
           </FunctionImportMapping>
           <FunctionImportMapping FunctionImportName="SelectStructureChangeLog" FunctionName="ConnectomeData.Store.SelectStructureChangeLog">
             <ResultMapping>
@@ -1983,7 +1415,15 @@ warning 6013: The table/view 'Test.dbo.UserActivity' does not have a primary key
               </ComplexTypeMapping>
             </ResultMapping>
           </FunctionImportMapping>
-        </EntityContainerMapping>
+          <FunctionImportMapping FunctionImportName="SectionLocationLinks" FunctionName="ConnectomeData.Store.SectionLocationLinks">
+          </FunctionImportMapping>
+          <FunctionImportMapping FunctionImportName="SectionLocationLinksModifiedAfterDate" FunctionName="ConnectomeData.Store.SectionLocationLinksModifiedAfterDate">
+          </FunctionImportMapping>
+          <FunctionImportMapping FunctionImportName="SectionLocations" FunctionName="ConnectomeData.Store.SectionLocations">
+          </FunctionImportMapping>
+          <FunctionImportMapping FunctionImportName="SectionLocationsModifiedAfterDate" FunctionName="ConnectomeData.Store.SectionLocationsModifiedAfterDate">
+          </FunctionImportMapping>
+          </EntityContainerMapping>
       </Mapping>
     </edmx:Mappings>
   </edmx:Runtime>

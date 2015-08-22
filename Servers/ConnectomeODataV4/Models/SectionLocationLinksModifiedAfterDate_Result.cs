@@ -10,15 +10,12 @@
 namespace ConnectomeODataV4.Models
 {
     using System;
-    using System.Collections.Generic;
     
-    public partial class captured_columns
+    public partial class SectionLocationLinksModifiedAfterDate_Result
     {
-        public int object_id { get; set; }
-        public string column_name { get; set; }
-        public Nullable<int> column_id { get; set; }
-        public string column_type { get; set; }
-        public int column_ordinal { get; set; }
-        public Nullable<bool> is_computed { get; set; }
+        public long A { get; set; }
+        public long B { get; set; }
+        public string Username { get; set; }
+        public System.DateTime Created { get; set; }
     }
 }
