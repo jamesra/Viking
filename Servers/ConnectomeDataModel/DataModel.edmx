@@ -19,7 +19,6 @@
           <Property Name="ID" Type="bigint" StoreGeneratedPattern="Identity" Nullable="false" />
           <Property Name="ParentID" Type="bigint" Nullable="false" />
           <Property Name="Z" Type="float" Nullable="false" />
-          <Property Name="Verticies" Type="varbinary(max)" />
           <Property Name="Closed" Type="bit" Nullable="false" />
           <Property Name="Version" Type="timestamp" StoreGeneratedPattern="Computed" Nullable="false" />
           <Property Name="Overlay" Type="varbinary(max)" />
@@ -248,7 +247,6 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
                 <Property Name="ID" Type="bigint" Nullable="false" />
                 <Property Name="ParentID" Type="bigint" Nullable="false" />
                 <Property Name="Z" Type="float" Nullable="false" />
-                <Property Name="Verticies" Type="varbinary(max)" />
                 <Property Name="Closed" Type="bit" Nullable="false" />
                 <Property Name="Version" Type="timestamp" Nullable="false" />
                 <Property Name="Overlay" Type="varbinary(max)" />
@@ -279,7 +277,6 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
                 <Property Name="ID" Type="bigint" Nullable="false" />
                 <Property Name="ParentID" Type="bigint" Nullable="false" />
                 <Property Name="Z" Type="float" Nullable="false" />
-                <Property Name="Verticies" Type="varbinary(max)" />
                 <Property Name="Closed" Type="bit" Nullable="false" />
                 <Property Name="Version" Type="timestamp" Nullable="false" />
                 <Property Name="Overlay" Type="varbinary(max)" />
@@ -422,7 +419,6 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
           <Property Name="X" Type="Double" a:SetterAccess="Public" xmlns:a="http://schemas.microsoft.com/ado/2006/04/codegeneration" annotation:StoreGeneratedPattern="Computed" Nullable="false" />
           <Property Name="Y" Type="Double" a:SetterAccess="Public" xmlns:a="http://schemas.microsoft.com/ado/2006/04/codegeneration" annotation:StoreGeneratedPattern="Computed" Nullable="false" />
           <Property Name="Z" Type="Double" Nullable="false" a:SetterAccess="Public" xmlns:a="http://schemas.microsoft.com/ado/2006/04/codegeneration" />
-          <Property Name="Verticies" Type="Binary" MaxLength="Max" FixedLength="false" />
           <Property Name="Closed" Type="Boolean" Nullable="false" />
           <Property Name="Version" Type="Binary" MaxLength="8" FixedLength="true" Nullable="false" annotation:StoreGeneratedPattern="Computed" />
           <Property Name="Overlay" Type="Binary" MaxLength="Max" FixedLength="false" />
@@ -682,7 +678,7 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
             <Parameter Name="Z" Mode="In" Type="Double" />
             <Parameter Name="QueryDate" Mode="In" Type="DateTime" />
           </FunctionImport>
-          <FunctionImport Name="SelectStructure" ReturnType="Collection(ConnectomeModel.SelectStructure_Result)">
+          <FunctionImport Name="SelectStructure" EntitySet="Structures" ReturnType="Collection(ConnectomeModel.Structure)">
           <Parameter Name="StructureID" Mode="In" Type="Int64" />
           </FunctionImport>
           <FunctionImport Name="SelectStructureChangeLog" ReturnType="Collection(ConnectomeModel.SelectStructureChangeLog_Result)">
@@ -696,17 +692,17 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
             <Parameter Name="begin_time" Mode="In" Type="DateTime" />
             <Parameter Name="end_time" Mode="In" Type="DateTime" />
           </FunctionImport>
-          <FunctionImport Name="SelectStructureLocationLinks" ReturnType="Collection(ConnectomeModel.SelectStructureLocationLinks_Result)">
+          <FunctionImport Name="SelectStructureLocationLinks" EntitySet="LocationLinks" ReturnType="Collection(ConnectomeModel.LocationLink)">
           <Parameter Name="StructureID" Mode="In" Type="Int64" />
           </FunctionImport>
-          <FunctionImport Name="SelectStructureLocationLinksNoChildren" ReturnType="Collection(ConnectomeModel.SelectStructureLocationLinksNoChildren_Result)">
+          <FunctionImport Name="SelectStructureLocationLinksNoChildren" EntitySet="LocationLinks" ReturnType="Collection(ConnectomeModel.LocationLink)">
           <Parameter Name="StructureID" Mode="In" Type="Int64" />
           </FunctionImport>
           <FunctionImport Name="SelectStructureLocations" ReturnType="Collection(ConnectomeModel.SelectStructureLocations_Result)">
           <Parameter Name="StructureID" Mode="In" Type="Int64" />
           </FunctionImport>
           <FunctionImport Name="SelectStructuresAndLinks" ReturnType="Collection(ConnectomeModel.SelectStructuresAndLinks_Result)" />
-          <FunctionImport Name="SelectStructuresForSection" ReturnType="Collection(ConnectomeModel.SelectStructuresForSection_Result)">
+          <FunctionImport Name="SelectStructuresForSection" EntitySet="Structures" ReturnType="Collection(ConnectomeModel.Structure)">
             <Parameter Name="Z" Mode="In" Type="Double" />
             <Parameter Name="QueryDate" Mode="In" Type="DateTime" />
           </FunctionImport>
@@ -724,7 +720,7 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
             <Parameter Name="QueryDate" Mode="In" Type="DateTime" />
           </FunctionImport>
           <FunctionImport Name="SectionLocationLinks" IsComposable="true" EntitySet="LocationLinks" ReturnType="Collection(ConnectomeModel.LocationLink)">
-            <Parameter Name="Z" Mode="In" Type="Double" />
+          <Parameter Name="Z" Mode="In" Type="Double" />
           </FunctionImport>
           <FunctionImport Name="SectionLocationLinksModifiedAfterDate" IsComposable="true" EntitySet="LocationLinks" ReturnType="Collection(ConnectomeModel.LocationLink)">
             <Parameter Name="Z" Mode="In" Type="Double" />
@@ -1040,7 +1036,6 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
                 <ScalarProperty Name="X" ColumnName="X" />
                 <ScalarProperty Name="Y" ColumnName="Y" />
                 <ScalarProperty Name="Z" ColumnName="Z" />
-                <ScalarProperty Name="Verticies" ColumnName="Verticies" />
                 <ScalarProperty Name="Closed" ColumnName="Closed" />
                 <ScalarProperty Name="Version" ColumnName="Version" />
                 <ScalarProperty Name="Overlay" ColumnName="Overlay" />
@@ -1207,15 +1202,6 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
           <FunctionImportMapping FunctionImportName="SelectSectionLocationsAndLinks" FunctionName="ConnectomeModel.Store.SelectSectionLocationsAndLinks">
           </FunctionImportMapping>
           <FunctionImportMapping FunctionImportName="SelectStructure" FunctionName="ConnectomeModel.Store.SelectStructure">
-            <ResultMapping>
-              <ComplexTypeMapping TypeName="ConnectomeModel.SelectStructure_Result">
-                <ScalarProperty Name="ID" ColumnName="ID" />
-                <ScalarProperty Name="ParentID" ColumnName="ParentID" />
-                <ScalarProperty Name="TypeID" ColumnName="TypeID" />
-                <ScalarProperty Name="Label" ColumnName="Label" />
-                <ScalarProperty Name="LastModified" ColumnName="LastModified" />
-              </ComplexTypeMapping>
-            </ResultMapping>
           </FunctionImportMapping>
           <FunctionImportMapping FunctionImportName="SelectStructureChangeLog" FunctionName="ConnectomeModel.Store.SelectStructureChangeLog">
             <ResultMapping>
@@ -1277,24 +1263,8 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
             </ResultMapping>
           </FunctionImportMapping>
           <FunctionImportMapping FunctionImportName="SelectStructureLocationLinks" FunctionName="ConnectomeModel.Store.SelectStructureLocationLinks">
-            <ResultMapping>
-              <ComplexTypeMapping TypeName="ConnectomeModel.SelectStructureLocationLinks_Result">
-                <ScalarProperty Name="A" ColumnName="A" />
-                <ScalarProperty Name="B" ColumnName="B" />
-                <ScalarProperty Name="Username" ColumnName="Username" />
-                <ScalarProperty Name="Created" ColumnName="Created" />
-              </ComplexTypeMapping>
-            </ResultMapping>
           </FunctionImportMapping>
           <FunctionImportMapping FunctionImportName="SelectStructureLocationLinksNoChildren" FunctionName="ConnectomeModel.Store.SelectStructureLocationLinksNoChildren">
-            <ResultMapping>
-              <ComplexTypeMapping TypeName="ConnectomeModel.SelectStructureLocationLinksNoChildren_Result">
-                <ScalarProperty Name="A" ColumnName="A" />
-                <ScalarProperty Name="B" ColumnName="B" />
-                <ScalarProperty Name="Username" ColumnName="Username" />
-                <ScalarProperty Name="Created" ColumnName="Created" />
-              </ComplexTypeMapping>
-            </ResultMapping>
           </FunctionImportMapping>
           <FunctionImportMapping FunctionImportName="SelectStructureLocations" FunctionName="ConnectomeModel.Store.SelectStructureLocations">
             <ResultMapping>
@@ -1329,22 +1299,6 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
             </ResultMapping>
           </FunctionImportMapping>
           <FunctionImportMapping FunctionImportName="SelectStructuresForSection" FunctionName="ConnectomeModel.Store.SelectStructuresForSection">
-            <ResultMapping>
-              <ComplexTypeMapping TypeName="ConnectomeModel.SelectStructuresForSection_Result">
-                <ScalarProperty Name="ID" ColumnName="ID" />
-                <ScalarProperty Name="TypeID" ColumnName="TypeID" />
-                <ScalarProperty Name="Notes" ColumnName="Notes" />
-                <ScalarProperty Name="Verified" ColumnName="Verified" />
-                <ScalarProperty Name="Tags" ColumnName="Tags" />
-                <ScalarProperty Name="Confidence" ColumnName="Confidence" />
-                <ScalarProperty Name="Version" ColumnName="Version" />
-                <ScalarProperty Name="ParentID" ColumnName="ParentID" />
-                <ScalarProperty Name="Created" ColumnName="Created" />
-                <ScalarProperty Name="Label" ColumnName="Label" />
-                <ScalarProperty Name="Username" ColumnName="Username" />
-                <ScalarProperty Name="LastModified" ColumnName="LastModified" />
-              </ComplexTypeMapping>
-            </ResultMapping>
           </FunctionImportMapping>
           <FunctionImportMapping FunctionImportName="SelectUnfinishedStructureBranches" FunctionName="ConnectomeModel.Store.SelectUnfinishedStructureBranches" />
           <FunctionImportMapping FunctionImportName="SelectUnfinishedStructureBranchesWithPosition" FunctionName="ConnectomeModel.Store.SelectUnfinishedStructureBranchesWithPosition">
@@ -1368,7 +1322,6 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
                   <ScalarProperty Name="X" ColumnName="X" />
                   <ScalarProperty Name="Y" ColumnName="Y" />
                   <ScalarProperty Name="Z" ColumnName="Z" />
-                  <ScalarProperty Name="Verticies" ColumnName="Verticies" />
                   <ScalarProperty Name="Closed" ColumnName="Closed" />
                   <ScalarProperty Name="Version" ColumnName="Version" />
                   <ScalarProperty Name="Overlay" ColumnName="Overlay" />
@@ -1395,7 +1348,6 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
                   <ScalarProperty Name="X" ColumnName="X" />
                   <ScalarProperty Name="Y" ColumnName="Y" />
                   <ScalarProperty Name="Z" ColumnName="Z" />
-                  <ScalarProperty Name="Verticies" ColumnName="Verticies" />
                   <ScalarProperty Name="Closed" ColumnName="Closed" />
                   <ScalarProperty Name="Version" ColumnName="Version" />
                   <ScalarProperty Name="Overlay" ColumnName="Overlay" />

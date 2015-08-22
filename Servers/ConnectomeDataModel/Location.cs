@@ -25,7 +25,6 @@ namespace ConnectomeDataModel
         public double X { get; set; }
         public double Y { get; set; }
         public double Z { get; set; }
-        public byte[] Verticies { get; set; }
         public bool Closed { get; set; }
         public byte[] Version { get; set; }
         public byte[] Overlay { get; set; }

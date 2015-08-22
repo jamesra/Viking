@@ -5,18 +5,6 @@
     <!-- SSDL content -->
     <edmx:StorageModels>
     <Schema Namespace="ConnectomeData.Store" Provider="System.Data.SqlClient" ProviderManifestToken="2012" Alias="Self" xmlns:store="http://schemas.microsoft.com/ado/2007/12/edm/EntityStoreSchemaGenerator" xmlns:customannotation="http://schemas.microsoft.com/ado/2013/11/edm/customannotation" xmlns="http://schemas.microsoft.com/ado/2009/11/edm/ssdl">
-        <!--Errors Found During Generation:
-warning 6002: The table/view 'Test.cdc.Location_CT' does not have a primary key defined. The key has been inferred and the definition was created as a read-only table/view.-->
-        <!--Errors Found During Generation:
-warning 6002: The table/view 'Test.cdc.LocationLink_CT' does not have a primary key defined. The key has been inferred and the definition was created as a read-only table/view.-->
-        <!--Errors Found During Generation:
-warning 6002: The table/view 'Test.cdc.Structure_CT' does not have a primary key defined. The key has been inferred and the definition was created as a read-only table/view.-->
-        <!--Errors Found During Generation:
-warning 6002: The table/view 'Test.cdc.StructureLink_CT' does not have a primary key defined. The key has been inferred and the definition was created as a read-only table/view.-->
-        <!--Errors Found During Generation:
-warning 6002: The table/view 'Test.cdc.StructureType_CT' does not have a primary key defined. The key has been inferred and the definition was created as a read-only table/view.-->
-        <!--Errors Found During Generation:
-warning 6002: The table/view 'Test.dbo.DBVersion' does not have a primary key defined. The key has been inferred and the definition was created as a read-only table/view.-->
         <EntityType Name="DeletedLocations">
           <Key>
             <PropertyRef Name="ID" />
@@ -31,7 +19,6 @@ warning 6002: The table/view 'Test.dbo.DBVersion' does not have a primary key de
           <Property Name="ID" Type="bigint" StoreGeneratedPattern="Identity" Nullable="false" />
           <Property Name="ParentID" Type="bigint" Nullable="false" />
           <Property Name="Z" Type="float" Nullable="false" />
-          <Property Name="Verticies" Type="varbinary(max)" />
           <Property Name="Closed" Type="bit" Nullable="false" />
           <Property Name="Version" Type="timestamp" StoreGeneratedPattern="Computed" Nullable="false" />
           <Property Name="Overlay" Type="varbinary(max)" />
@@ -116,13 +103,6 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
           <Property Name="LastModified" Type="datetime" Nullable="false" />
           <Property Name="Created" Type="datetime" Nullable="false" />
         </EntityType>
-        <!--Errors Found During Generation:
-warning 6013: The table/view 'Test.dbo.UserActivity' does not have a primary key defined and no valid primary key could be inferred. This table/view has been excluded. To use the entity, you will need to review your schema, add the correct keys, and uncomment it.
-        <EntityType Name="UserActivity">
-          <Property Name="Username" Type="nvarchar" MaxLength="16" />
-          <Property Name="TotalModifications" Type="int" />
-          <Property Name="LastActiveDate" Type="datetime" />
-        </EntityType>-->
         <Association Name="FK_Location_StructureBase1">
           <End Role="Structure" Type="Self.Structure" Multiplicity="1">
             <OnDelete Action="Cascade" />
@@ -435,7 +415,6 @@ warning 6013: The table/view 'Test.dbo.UserActivity' does not have a primary key
           <Property Name="ID" Type="Int64" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
           <Property Name="ParentID" Type="Int64" Nullable="false" />
           <Property Name="Z" Type="Double" Nullable="false" />
-          <Property Name="Verticies" Type="Binary" MaxLength="Max" FixedLength="false" />
           <Property Name="Closed" Type="Boolean" Nullable="false" />
           <Property Name="Version" Type="Binary" MaxLength="8" FixedLength="true" Nullable="false" annotation:StoreGeneratedPattern="Computed" />
           <Property Name="Overlay" Type="Binary" MaxLength="Max" FixedLength="false" />
@@ -1049,7 +1028,6 @@ warning 6013: The table/view 'Test.dbo.UserActivity' does not have a primary key
                 <ScalarProperty Name="ID" ColumnName="ID" />
                 <ScalarProperty Name="ParentID" ColumnName="ParentID" />
                 <ScalarProperty Name="Z" ColumnName="Z" />
-                <ScalarProperty Name="Verticies" ColumnName="Verticies" />
                 <ScalarProperty Name="Closed" ColumnName="Closed" />
                 <ScalarProperty Name="Version" ColumnName="Version" />
                 <ScalarProperty Name="Overlay" ColumnName="Overlay" />

@@ -181,13 +181,22 @@ namespace ConnectomeDataModel
             return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction<Location>("SelectSectionLocationsAndLinks", mergeOption, zParameter, queryDateParameter);
         }
     
-        public virtual ObjectResult<SelectStructure_Result> SelectStructure(Nullable<long> structureID)
+        public virtual ObjectResult<Structure> SelectStructure(Nullable<long> structureID)
         {
             var structureIDParameter = structureID.HasValue ?
                 new ObjectParameter("StructureID", structureID) :
                 new ObjectParameter("StructureID", typeof(long));
     
-            return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction<SelectStructure_Result>("SelectStructure", structureIDParameter);
+            return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction<Structure>("SelectStructure", structureIDParameter);
+        }
+    
+        public virtual ObjectResult<Structure> SelectStructure(Nullable<long> structureID, MergeOption mergeOption)
+        {
+            var structureIDParameter = structureID.HasValue ?
+                new ObjectParameter("StructureID", structureID) :
+                new ObjectParameter("StructureID", typeof(long));
+    
+            return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction<Structure>("SelectStructure", mergeOption, structureIDParameter);
         }
     
         public virtual ObjectResult<SelectStructureChangeLog_Result> SelectStructureChangeLog(Nullable<long> structure_ID, Nullable<System.DateTime> begin_time, Nullable<System.DateTime> end_time)
@@ -229,22 +238,40 @@ namespace ConnectomeDataModel
             return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction<SelectStructureLocationChangeLog_Result>("SelectStructureLocationChangeLog", structure_IDParameter, begin_timeParameter, end_timeParameter);
         }
     
-        public virtual ObjectResult<SelectStructureLocationLinks_Result> SelectStructureLocationLinks(Nullable<long> structureID)
+        public virtual ObjectResult<LocationLink> SelectStructureLocationLinks(Nullable<long> structureID)
         {
             var structureIDParameter = structureID.HasValue ?
                 new ObjectParameter("StructureID", structureID) :
                 new ObjectParameter("StructureID", typeof(long));
     
-            return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction<SelectStructureLocationLinks_Result>("SelectStructureLocationLinks", structureIDParameter);
+            return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction<LocationLink>("SelectStructureLocationLinks", structureIDParameter);
         }
     
-        public virtual ObjectResult<SelectStructureLocationLinksNoChildren_Result> SelectStructureLocationLinksNoChildren(Nullable<long> structureID)
+        public virtual ObjectResult<LocationLink> SelectStructureLocationLinks(Nullable<long> structureID, MergeOption mergeOption)
         {
             var structureIDParameter = structureID.HasValue ?
                 new ObjectParameter("StructureID", structureID) :
                 new ObjectParameter("StructureID", typeof(long));
     
-            return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction<SelectStructureLocationLinksNoChildren_Result>("SelectStructureLocationLinksNoChildren", structureIDParameter);
+            return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction<LocationLink>("SelectStructureLocationLinks", mergeOption, structureIDParameter);
+        }
+    
+        public virtual ObjectResult<LocationLink> SelectStructureLocationLinksNoChildren(Nullable<long> structureID)
+        {
+            var structureIDParameter = structureID.HasValue ?
+                new ObjectParameter("StructureID", structureID) :
+                new ObjectParameter("StructureID", typeof(long));
+    
+            return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction<LocationLink>("SelectStructureLocationLinksNoChildren", structureIDParameter);
+        }
+    
+        public virtual ObjectResult<LocationLink> SelectStructureLocationLinksNoChildren(Nullable<long> structureID, MergeOption mergeOption)
+        {
+            var structureIDParameter = structureID.HasValue ?
+                new ObjectParameter("StructureID", structureID) :
+                new ObjectParameter("StructureID", typeof(long));
+    
+            return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction<LocationLink>("SelectStructureLocationLinksNoChildren", mergeOption, structureIDParameter);
         }
     
         public virtual ObjectResult<SelectStructureLocations_Result> SelectStructureLocations(Nullable<long> structureID)
@@ -261,7 +288,7 @@ namespace ConnectomeDataModel
             return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction<SelectStructuresAndLinks_Result>("SelectStructuresAndLinks");
         }
     
-        public virtual ObjectResult<SelectStructuresForSection_Result> SelectStructuresForSection(Nullable<double> z, Nullable<System.DateTime> queryDate)
+        public virtual ObjectResult<Structure> SelectStructuresForSection(Nullable<double> z, Nullable<System.DateTime> queryDate)
         {
             var zParameter = z.HasValue ?
                 new ObjectParameter("Z", z) :
@@ -271,7 +298,20 @@ namespace ConnectomeDataModel
                 new ObjectParameter("QueryDate", queryDate) :
                 new ObjectParameter("QueryDate", typeof(System.DateTime));
     
-            return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction<SelectStructuresForSection_Result>("SelectStructuresForSection", zParameter, queryDateParameter);
+            return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction<Structure>("SelectStructuresForSection", zParameter, queryDateParameter);
+        }
+    
+        public virtual ObjectResult<Structure> SelectStructuresForSection(Nullable<double> z, Nullable<System.DateTime> queryDate, MergeOption mergeOption)
+        {
+            var zParameter = z.HasValue ?
+                new ObjectParameter("Z", z) :
+                new ObjectParameter("Z", typeof(double));
+    
+            var queryDateParameter = queryDate.HasValue ?
+                new ObjectParameter("QueryDate", queryDate) :
+                new ObjectParameter("QueryDate", typeof(System.DateTime));
+    
+            return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction<Structure>("SelectStructuresForSection", mergeOption, zParameter, queryDateParameter);
         }
     
         public virtual ObjectResult<Nullable<long>> SelectUnfinishedStructureBranches(Nullable<long> structureID)

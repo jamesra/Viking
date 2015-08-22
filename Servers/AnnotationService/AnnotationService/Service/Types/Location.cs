@@ -309,7 +309,7 @@ namespace Annotation
             this._OffEdge = db.OffEdge;
             this._TypeCode = db.TypeCode;
             this._Radius = db.Radius;
-            this._Verticies = LoadVerticies(db.Verticies);
+            this._Verticies = null;
              
             if (db.Tags == null)
             {
@@ -377,24 +377,7 @@ namespace Annotation
             //See above comment before adding UpdateUserName test...
             //db.VolumeX = this.VolumePosition.X;
             //db.VolumeY = this.VolumePosition.Y;
-
-            //Save the verticies as a binary stream.  A zero length array takes 142 bytes, so just store null instead.
-            if (this.Verticies == null)
-            {
-                db.Verticies = null;
-            }
-            else if (this.Verticies.Length == 0)
-            {
-                db.Verticies = null;
-            }
-            else
-            {
-                using (System.IO.MemoryStream stream = new System.IO.MemoryStream(sizeof(double) * 3 * this.Verticies.Length))
-                {
-                    serializer.Serialize(stream, this.Verticies);
-                    db.Verticies = stream.ToArray();
-                }
-            }
+             
 
             UpdateUserName |= db.Closed != this.Closed; 
             db.Closed = this.Closed;

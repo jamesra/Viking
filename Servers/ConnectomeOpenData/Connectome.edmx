@@ -5,8 +5,6 @@
     <!-- SSDL content -->
     <edmx:StorageModels>
     <Schema Namespace="ConnectomeModel.Store" Provider="System.Data.SqlClient" ProviderManifestToken="2008" Alias="Self" xmlns:store="http://schemas.microsoft.com/ado/2007/12/edm/EntityStoreSchemaGenerator" xmlns:customannotation="http://schemas.microsoft.com/ado/2013/11/edm/customannotation" xmlns="http://schemas.microsoft.com/ado/2009/11/edm/ssdl">
-        <!--Errors Found During Generation:
-warning 6002: The table/view 'Test.dbo.DBVersion' does not have a primary key defined. The key has been inferred and the definition was created as a read-only table/view.-->
         <EntityType Name="DeletedLocations">
           <Key>
             <PropertyRef Name="ID" />
@@ -21,7 +19,6 @@ warning 6002: The table/view 'Test.dbo.DBVersion' does not have a primary key de
           <Property Name="ID" Type="bigint" StoreGeneratedPattern="Identity" Nullable="false" />
           <Property Name="ParentID" Type="bigint" Nullable="false" />
           <Property Name="Z" Type="float" Nullable="false" />
-          <Property Name="Verticies" Type="varbinary(max)" />
           <Property Name="Closed" Type="bit" Nullable="false" />
           <Property Name="Version" Type="timestamp" StoreGeneratedPattern="Computed" Nullable="false" />
           <Property Name="Overlay" Type="varbinary(max)" />
@@ -553,14 +550,14 @@ FROM [dbo].[StructureLink] AS [StructureLink]</DefiningQuery>
           <Parameter Name="ID" Mode="In" Type="Int64" />
           </FunctionImport>
           <FunctionImport Name="SectionLocationLinks" IsComposable="true" ReturnType="Collection(ConnectomeModel.SectionLocationLinks_Result)">
-            <Parameter Name="Z" Mode="In" Type="Double" />
+          <Parameter Name="Z" Mode="In" Type="Double" />
           </FunctionImport>
           <FunctionImport Name="SectionLocationLinksModifiedAfterDate" IsComposable="true" ReturnType="Collection(ConnectomeModel.SectionLocationLinksModifiedAfterDate_Result)">
             <Parameter Name="Z" Mode="In" Type="Double" />
             <Parameter Name="QueryDate" Mode="In" Type="DateTime" />
           </FunctionImport>
           <FunctionImport Name="SectionLocations" IsComposable="true" ReturnType="Collection(ConnectomeModel.SectionLocations_Result)">
-            <Parameter Name="Z" Mode="In" Type="Double" />
+          <Parameter Name="Z" Mode="In" Type="Double" />
           </FunctionImport>
           <FunctionImport Name="SectionLocationsModifiedAfterDate" IsComposable="true" ReturnType="Collection(ConnectomeModel.SectionLocationsModifiedAfterDate_Result)">
             <Parameter Name="Z" Mode="In" Type="Double" />
@@ -583,7 +580,6 @@ FROM [dbo].[StructureLink] AS [StructureLink]</DefiningQuery>
           <Property Name="X" Type="Double" Nullable="false" annotation:StoreGeneratedPattern="Computed" />
           <Property Name="Y" Type="Double" Nullable="false" annotation:StoreGeneratedPattern="Computed" />
           <Property Name="Z" Type="Double" Nullable="false" />
-          <Property Name="Verticies" Type="Binary" MaxLength="Max" FixedLength="false" />
           <Property Name="Closed" Type="Boolean" Nullable="false" />
           <Property Name="Version" Type="Binary" Nullable="false" MaxLength="8" FixedLength="true" annotation:StoreGeneratedPattern="Computed" xmlns:annotation="http://schemas.microsoft.com/ado/2009/02/edm/annotation" />
           <Property Name="Overlay" Type="Binary" MaxLength="Max" FixedLength="false" />
@@ -1111,7 +1107,6 @@ FROM [dbo].[StructureLink] AS [StructureLink]</DefiningQuery>
             <ScalarProperty Name="X" ColumnName="X" />
             <ScalarProperty Name="Y" ColumnName="Y" />
             <ScalarProperty Name="Z" ColumnName="Z" />
-            <ScalarProperty Name="Verticies" ColumnName="Verticies" />
             <ScalarProperty Name="Closed" ColumnName="Closed" />
             <ScalarProperty Name="Version" ColumnName="Version" />
             <ScalarProperty Name="Overlay" ColumnName="Overlay" />

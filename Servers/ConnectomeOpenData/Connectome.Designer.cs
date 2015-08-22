@@ -1503,30 +1503,6 @@ namespace ConnectomeOpenData
         /// <summary>
         /// No Metadata Documentation available.
         /// </summary>
-        [EdmScalarPropertyAttribute(EntityKeyProperty=false, IsNullable=true)]
-        [DataMemberAttribute()]
-        public global::System.Byte[] Verticies
-        {
-            get
-            {
-                return StructuralObject.GetValidValue(_Verticies);
-            }
-            set
-            {
-                OnVerticiesChanging(value);
-                ReportPropertyChanging("Verticies");
-                _Verticies = StructuralObject.SetValidValue(value, true, "Verticies");
-                ReportPropertyChanged("Verticies");
-                OnVerticiesChanged();
-            }
-        }
-        private global::System.Byte[] _Verticies;
-        partial void OnVerticiesChanging(global::System.Byte[] value);
-        partial void OnVerticiesChanged();
-    
-        /// <summary>
-        /// No Metadata Documentation available.
-        /// </summary>
         [EdmScalarPropertyAttribute(EntityKeyProperty=false, IsNullable=false)]
         [DataMemberAttribute()]
         public global::System.Boolean Closed
