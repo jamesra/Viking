@@ -34,7 +34,7 @@ namespace Viking.UI.Controls
                 if (_CurrentCommand != value && _CurrentCommand != null)
                 {
                     _CurrentCommand.OnCommandCompleteHandler -= this.OnCommandCompleteHandler;
-                    _CurrentCommand.Deactivated = true;
+                    _CurrentCommand.UnsubscribeToInterfaceEvents();
                 }
 
                 _CurrentCommand = value;
@@ -42,7 +42,7 @@ namespace Viking.UI.Controls
                 if (_CurrentCommand != null)
                 {
                     _CurrentCommand.OnCommandCompleteHandler += OnCommandCompleteHandler;
-
+                    _CurrentCommand.SubscribeToInterfaceEvents();
                     Trace.WriteLine("Set current command: " + _CurrentCommand.GetType().ToString(), "Command");
                 }
                 else

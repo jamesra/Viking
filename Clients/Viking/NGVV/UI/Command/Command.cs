@@ -9,15 +9,28 @@ using Viking.Common;
 
 namespace Viking.UI.Commands
 {
-    public struct CommandQueueEntry
+    /// <summary>
+    /// An entry either contains an existing command object or the type and constructor parameters to create a new command
+    /// </summary>
+    public struct CommandQueueEntry 
     {
-        public readonly System.Type Command;
-        public readonly Object[] Args; 
+        public readonly System.Type CommandType;
+        public readonly Object[] Args;
+        public readonly Command commandObj;
 
         public CommandQueueEntry(System.Type type, Object[] args)
         {
-            this.Command = type; 
-            this.Args = args; 
+            this.CommandType = type; 
+            this.Args = args;
+            this.commandObj = null; 
+        }
+
+        public CommandQueueEntry(Command command)
+        {
+            this.CommandType = null; 
+            this.Args = null;
+            this.commandObj = command;
+            
         }
     }
 
@@ -56,8 +69,11 @@ namespace Viking.UI.Commands
 
         public Command(Viking.UI.Controls.SectionViewerControl parent)
         {
-            this.Parent = parent;
+            this.Parent = parent; 
+        }
 
+        public void SubscribeToInterfaceEvents()
+        {
             MyMouseClick = new MouseEventHandler(this.OnMouseClick);
             MyMouseDoubleClick = new MouseEventHandler(this.OnMouseDoubleClick);
             MyMouseDown = new MouseEventHandler(this.OnMouseDown);
@@ -84,8 +100,23 @@ namespace Viking.UI.Commands
             Parent.MouseEnter += MyMouseEnter; 
             Parent.KeyPress += MyKeyPress;
             Parent.KeyDown += MyKeyDown;
+        }
 
+        public void UnsubscribeToInterfaceEvents()
+        {
+            Parent.MouseClick -= MyMouseClick;
+            Parent.MouseDoubleClick -= MyMouseDoubleClick;
+            Parent.MouseDown -= MyMouseDown;
+            Parent.MouseUp -= MyMouseUp;
+            Parent.MouseWheel -= MyMouseWheel; 
+            Parent.MouseMove -= MyMouseMove;
 
+            Parent.MouseHover -= MyMouseHover;
+            Parent.MouseLeave -= MyMouseLeave;
+            Parent.MouseEnter -= MyMouseEnter; 
+
+            Parent.KeyPress -= MyKeyPress;
+            Parent.KeyDown -= MyKeyDown; 
         }
 
         /// <summary>
@@ -139,20 +170,7 @@ namespace Viking.UI.Commands
                     if (value == true)
                     {
                         _CommandActive = false;
-                        Parent.MouseClick -= MyMouseClick;
-                        Parent.MouseDoubleClick -= MyMouseDoubleClick;
-                        Parent.MouseDown -= MyMouseDown;
-                        Parent.MouseUp -= MyMouseUp;
-                        Parent.MouseWheel -= MyMouseWheel; 
-                        Parent.MouseMove -= MyMouseMove;
-
-                        Parent.MouseHover -= MyMouseHover;
-                        Parent.MouseLeave -= MyMouseLeave;
-                        Parent.MouseEnter -= MyMouseEnter; 
-
-                        Parent.KeyPress -= MyKeyPress;
-                        Parent.KeyDown -= MyKeyDown; 
-                        
+                        UnsubscribeToInterfaceEvents();
                         OnDeactivate();
 
                         if (OnCommandCompleteHandler != null)
@@ -247,19 +265,6 @@ namespace Viking.UI.Commands
 
             this.Parent.Invalidate();
         }
-
-        /*
-        protected void StepCameraDistance(float multiplier)
-        {
-            float StartDistance = Parent.CameraDistance;
-            if (multiplier > 0)
-                Parent.CameraDistance = Parent.CameraDistance * 0.86956521739130434782608695652174f;
-            else
-                Parent.CameraDistance = Parent.CameraDistance * 1.15f;
-
-            this.Parent.Invalidate();
-        }
-        */
 
         protected virtual void OnMouseMove(object sender, MouseEventArgs e)
         {
@@ -488,7 +493,8 @@ namespace Viking.UI.Commands
         }
 
         /// <summary>
-        /// If the default command is active, then set the passed command as the current command, otherwise add to queue
+        /// We enqueue commands that we want to run immediately after completing the current command
+        /// If the default command is active, then set the passed command as the current command, otherwise add to queue.
         /// </summary>
         /// <param name="CommandType"></param>
         /// <param name="Args"></param>
@@ -498,6 +504,28 @@ namespace Viking.UI.Commands
                 Viking.UI.State.ViewerControl.CurrentCommand = Activator.CreateInstance(CommandType, Args) as Command;
             else
                 _CommandQueue.Enqueue(new CommandQueueEntry(CommandType, Args));
+        }
+
+        /// <summary>
+        /// Replace our current command with a new one.  By default the existing command will return to being the current command when the new command executes.
+        /// </summary>
+        /// <param name="replacementCommand"></param>
+        /// <param name="SaveCurrentCommand"></param>
+        public static void InjectCommand(Command replacementCommand, bool SaveCurrentCommand=true)
+        {
+            if (QueueDepth == 0 && Viking.UI.State.ViewerControl.CurrentCommand.GetType() == typeof(DefaultCommand))
+                Viking.UI.State.ViewerControl.CurrentCommand = replacementCommand;
+            else
+            {
+                List<CommandQueueEntry> existingQueue = new List<CommandQueueEntry>(_CommandQueue.ToArray());
+                existingQueue.Insert(0, new CommandQueueEntry(Viking.UI.State.ViewerControl.CurrentCommand));
+                Viking.UI.State.ViewerControl.CurrentCommand = replacementCommand;
+                _CommandQueue.Clear(); 
+                foreach(CommandQueueEntry e in existingQueue)
+                {
+                    _CommandQueue.Enqueue(e);
+                }
+            }
         }
 
         public static void ClearQueue()
@@ -528,13 +556,11 @@ namespace Viking.UI.Commands
             if (_CommandQueue.Count != 0)
             {
                 CommandQueueEntry nextCommand = _CommandQueue.Dequeue();
-                
-                //Some commands execute in thier constructor, so check if we should return this command or the default
-                newCommand =  Activator.CreateInstance(nextCommand.Command, nextCommand.Args) as Command;
-                //if (true == newCommand.Deactivated)
-                //    newCommand = new DefaultCommand(Parent);
-                //else
-//                    return newCommand; 
+
+                if (nextCommand.commandObj != null)
+                    newCommand = nextCommand.commandObj;
+                else
+                    newCommand =  Activator.CreateInstance(nextCommand.CommandType, nextCommand.Args) as Command;
             }
 
             if (Obj != null && newCommand == null)
