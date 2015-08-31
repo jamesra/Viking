@@ -62,9 +62,9 @@ namespace ConnectomeODataV4.Models
             return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction<SelectAllStructureLocationLinks_Result>("SelectAllStructureLocationLinks");
         }
     
-        public virtual ObjectResult<SelectAllStructureLocations_Result> SelectAllStructureLocations()
+        public virtual ObjectResult<SelectStructureLocations_Result> SelectAllStructureLocations()
         {
-            return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction<SelectAllStructureLocations_Result>("SelectAllStructureLocations");
+            return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction<SelectStructureLocations_Result>("SelectAllStructureLocations");
         }
     
         public virtual ObjectResult<SelectAllStructures_Result> SelectAllStructures()

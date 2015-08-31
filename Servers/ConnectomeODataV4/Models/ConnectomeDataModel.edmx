@@ -353,17 +353,7 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
           <EntitySet Name="LocationLink" EntityType="Self.LocationLink" Schema="dbo" store:Type="Tables" />
           <EntitySet Name="Structure" EntityType="Self.Structure" Schema="dbo" store:Type="Tables" />
           <EntitySet Name="StructureType" EntityType="Self.StructureType" Schema="dbo" store:Type="Tables" />
-          <EntitySet Name="StructureLink" EntityType="Self.StructureLink" store:Type="Tables" store:Schema="dbo">
-            <DefiningQuery>SELECT 
-    [StructureLink].[SourceID] AS [SourceID], 
-    [StructureLink].[TargetID] AS [TargetID], 
-    [StructureLink].[Bidirectional] AS [Bidirectional], 
-    [StructureLink].[Tags] AS [Tags], 
-    [StructureLink].[Username] AS [Username], 
-    [StructureLink].[Created] AS [Created], 
-    [StructureLink].[LastModified] AS [LastModified]
-    FROM [dbo].[StructureLink] AS [StructureLink]</DefiningQuery>
-          </EntitySet>
+          <EntitySet Name="StructureLink" EntityType="Self.StructureLink" store:Type="Tables" Schema="dbo"/>
           <AssociationSet Name="FK_Location_StructureBase1" Association="Self.FK_Location_StructureBase1">
             <End Role="Structure" EntitySet="Structure" />
             <End Role="Location" EntitySet="Location" />
@@ -400,7 +390,7 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
       </Schema></edmx:StorageModels>
     <!-- CSDL content -->
     <edmx:ConceptualModels>
-      <Schema Namespace="ConnectomeData" Alias="Self" annotation:UseStrongSpatialTypes="false" xmlns:annotation="http://schemas.microsoft.com/ado/2009/02/edm/annotation" xmlns:customannotation="http://schemas.microsoft.com/ado/2013/11/edm/customannotation" xmlns="http://schemas.microsoft.com/ado/2009/11/edm">
+      <Schema Namespace="ConnectomeModel" Alias="Self" annotation:UseStrongSpatialTypes="false" xmlns:annotation="http://schemas.microsoft.com/ado/2009/02/edm/annotation" xmlns:customannotation="http://schemas.microsoft.com/ado/2013/11/edm/customannotation" xmlns="http://schemas.microsoft.com/ado/2009/11/edm">
         <EntityType Name="DeletedLocation">
           <Key>
             <PropertyRef Name="ID" />
@@ -650,75 +640,75 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
             <End Role="StructureType" EntitySet="StructureTypes" />
             <End Role="StructureType1" EntitySet="StructureTypes" />
           </AssociationSet>
-          <FunctionImport Name="ApproximateStructureLocation" ReturnType="Collection(ConnectomeData.ApproximateStructureLocation_Result)">
+          <FunctionImport Name="ApproximateStructureLocation" ReturnType="Collection(ConnectomeModel.ApproximateStructureLocation_Result)">
           <Parameter Name="StructureID" Mode="In" Type="Int32" />
           </FunctionImport>
-          <FunctionImport Name="ApproximateStructureLocations" ReturnType="Collection(ConnectomeData.ApproximateStructureLocations_Result)" />
-          <FunctionImport Name="CountChildStructuresByType" ReturnType="Collection(ConnectomeData.CountChildStructuresByType_Result)">
+          <FunctionImport Name="ApproximateStructureLocations" ReturnType="Collection(ConnectomeModel.ApproximateStructureLocations_Result)" />
+          <FunctionImport Name="CountChildStructuresByType" ReturnType="Collection(ConnectomeModel.CountChildStructuresByType_Result)">
           <Parameter Name="StructureID" Mode="In" Type="Int64" />
           </FunctionImport>
-          <FunctionImport Name="SelectAllStructureLocationLinks" ReturnType="Collection(ConnectomeData.SelectAllStructureLocationLinks_Result)" />
-          <FunctionImport Name="SelectAllStructureLocations" ReturnType="Collection(ConnectomeData.SelectAllStructureLocations_Result)" />
-          <FunctionImport Name="SelectAllStructures" ReturnType="Collection(ConnectomeData.SelectAllStructures_Result)" />
-          <FunctionImport Name="SelectChildrenStructureLinks" ReturnType="Collection(ConnectomeData.SelectChildrenStructureLinks_Result)">
+          <FunctionImport Name="SelectAllStructureLocationLinks" ReturnType="Collection(ConnectomeModel.SelectAllStructureLocationLinks_Result)" />
+          <FunctionImport Name="SelectAllStructureLocations" ReturnType="Collection(ConnectomeModel.SelectStructureLocations_Result)" />
+          <FunctionImport Name="SelectAllStructures" ReturnType="Collection(ConnectomeModel.SelectAllStructures_Result)" />
+          <FunctionImport Name="SelectChildrenStructureLinks" ReturnType="Collection(ConnectomeModel.SelectChildrenStructureLinks_Result)">
           <Parameter Name="StructureID" Mode="In" Type="Int64" />
           </FunctionImport>
-          <FunctionImport Name="SelectLastModifiedLocationByUsers" ReturnType="Collection(ConnectomeData.SelectLastModifiedLocationByUsers_Result)" />
-          <FunctionImport Name="SelectNumConnectionsPerStructure" ReturnType="Collection(ConnectomeData.SelectNumConnectionsPerStructure_Result)" />
-          <FunctionImport Name="SelectRootStructures" EntitySet="Structures" ReturnType="Collection(ConnectomeData.Structure)" />
-          <FunctionImport Name="SelectSectionLocationLinks" EntitySet="LocationLinks" ReturnType="Collection(ConnectomeData.LocationLink)">
+          <FunctionImport Name="SelectLastModifiedLocationByUsers" ReturnType="Collection(ConnectomeModel.SelectLastModifiedLocationByUsers_Result)" />
+          <FunctionImport Name="SelectNumConnectionsPerStructure" ReturnType="Collection(ConnectomeModel.SelectNumConnectionsPerStructure_Result)" />
+          <FunctionImport Name="SelectRootStructures" EntitySet="Structures" ReturnType="Collection(ConnectomeModel.Structure)" />
+          <FunctionImport Name="SelectSectionLocationLinks" EntitySet="LocationLinks" ReturnType="Collection(ConnectomeModel.LocationLink)">
             <Parameter Name="Z" Mode="In" Type="Double" />
             <Parameter Name="QueryDate" Mode="In" Type="DateTime" />
           </FunctionImport>
-          <FunctionImport Name="SelectSectionLocationsAndLinks" ReturnType="Collection(ConnectomeData.SelectSectionLocationsAndLinks_Result)">
+          <FunctionImport Name="SelectSectionLocationsAndLinks" ReturnType="Collection(ConnectomeModel.SelectSectionLocationsAndLinks_Result)">
             <Parameter Name="Z" Mode="In" Type="Double" />
             <Parameter Name="QueryDate" Mode="In" Type="DateTime" />
           </FunctionImport>
-          <FunctionImport Name="SelectStructure" EntitySet="Structures" ReturnType="Collection(ConnectomeData.Structure)">
+          <FunctionImport Name="SelectStructure" EntitySet="Structures" ReturnType="Collection(ConnectomeModel.Structure)">
           <Parameter Name="StructureID" Mode="In" Type="Int64" />
           </FunctionImport>
-          <FunctionImport Name="SelectStructureChangeLog" ReturnType="Collection(ConnectomeData.SelectStructureChangeLog_Result)">
+          <FunctionImport Name="SelectStructureChangeLog" ReturnType="Collection(ConnectomeModel.SelectStructureChangeLog_Result)">
             <Parameter Name="structure_ID" Mode="In" Type="Int64" />
             <Parameter Name="begin_time" Mode="In" Type="DateTime" />
             <Parameter Name="end_time" Mode="In" Type="DateTime" />
           </FunctionImport>
-          <FunctionImport Name="SelectStructureLabels" ReturnType="Collection(ConnectomeData.SelectStructureLabels_Result)" />
-          <FunctionImport Name="SelectStructureLocationChangeLog" ReturnType="Collection(ConnectomeData.SelectStructureLocationChangeLog_Result)">
+          <FunctionImport Name="SelectStructureLabels" ReturnType="Collection(ConnectomeModel.SelectStructureLabels_Result)" />
+          <FunctionImport Name="SelectStructureLocationChangeLog" ReturnType="Collection(ConnectomeModel.SelectStructureLocationChangeLog_Result)">
             <Parameter Name="structure_ID" Mode="In" Type="Int64" />
             <Parameter Name="begin_time" Mode="In" Type="DateTime" />
             <Parameter Name="end_time" Mode="In" Type="DateTime" />
           </FunctionImport>
-          <FunctionImport Name="SelectStructureLocationLinks" ReturnType="Collection(ConnectomeData.SelectStructureLocationLinks_Result)">
+          <FunctionImport Name="SelectStructureLocationLinks" ReturnType="Collection(ConnectomeModel.SelectStructureLocationLinks_Result)">
           <Parameter Name="StructureID" Mode="In" Type="Int64" />
           </FunctionImport>
-          <FunctionImport Name="SelectStructureLocationLinksNoChildren" ReturnType="Collection(ConnectomeData.SelectStructureLocationLinksNoChildren_Result)">
+          <FunctionImport Name="SelectStructureLocationLinksNoChildren" ReturnType="Collection(ConnectomeModel.SelectStructureLocationLinksNoChildren_Result)">
           <Parameter Name="StructureID" Mode="In" Type="Int64" />
           </FunctionImport>
-          <FunctionImport Name="SelectStructureLocations" ReturnType="Collection(ConnectomeData.SelectStructureLocations_Result)">
+          <FunctionImport Name="SelectStructureLocations" ReturnType="Collection(ConnectomeModel.SelectStructureLocations_Result)">
           <Parameter Name="StructureID" Mode="In" Type="Int64" />
           </FunctionImport>
-          <FunctionImport Name="SelectStructuresAndLinks" ReturnType="Collection(ConnectomeData.SelectStructuresAndLinks_Result)" />
-          <FunctionImport Name="SelectStructuresForSection" ReturnType="Collection(ConnectomeData.SelectStructuresForSection_Result)">
+          <FunctionImport Name="SelectStructuresAndLinks" ReturnType="Collection(ConnectomeModel.SelectStructuresAndLinks_Result)" />
+          <FunctionImport Name="SelectStructuresForSection" ReturnType="Collection(ConnectomeModel.SelectStructuresForSection_Result)">
             <Parameter Name="Z" Mode="In" Type="Double" />
             <Parameter Name="QueryDate" Mode="In" Type="DateTime" />
           </FunctionImport>
           <FunctionImport Name="SelectUnfinishedStructureBranches" ReturnType="Collection(Int64)">
           <Parameter Name="StructureID" Mode="In" Type="Int64" />
           </FunctionImport>
-          <FunctionImport Name="SelectUnfinishedStructureBranchesWithPosition" ReturnType="Collection(ConnectomeData.SelectUnfinishedStructureBranchesWithPosition_Result)">
+          <FunctionImport Name="SelectUnfinishedStructureBranchesWithPosition" ReturnType="Collection(ConnectomeModel.SelectUnfinishedStructureBranchesWithPosition_Result)">
           <Parameter Name="StructureID" Mode="In" Type="Int64" />
           </FunctionImport>
-          <FunctionImport Name="SectionLocationLinks" IsComposable="true" EntitySet="LocationLinks" ReturnType="Collection(ConnectomeData.LocationLink)">
+          <FunctionImport Name="SectionLocationLinks" IsComposable="true" EntitySet="LocationLinks" ReturnType="Collection(ConnectomeModel.LocationLink)">
           <Parameter Name="Z" Mode="In" Type="Double" />
           </FunctionImport>
-          <FunctionImport Name="SectionLocationLinksModifiedAfterDate" IsComposable="true" EntitySet="LocationLinks" ReturnType="Collection(ConnectomeData.LocationLink)">
+          <FunctionImport Name="SectionLocationLinksModifiedAfterDate" IsComposable="true" EntitySet="LocationLinks" ReturnType="Collection(ConnectomeModel.LocationLink)">
             <Parameter Name="Z" Mode="In" Type="Double" />
             <Parameter Name="QueryDate" Mode="In" Type="DateTime" />
           </FunctionImport>
-          <FunctionImport Name="SectionLocations" IsComposable="true" EntitySet="Locations" ReturnType="Collection(ConnectomeData.Location)">
+          <FunctionImport Name="SectionLocations" IsComposable="true" EntitySet="Locations" ReturnType="Collection(ConnectomeModel.Location)">
           <Parameter Name="Z" Mode="In" Type="Double" />
           </FunctionImport>
-          <FunctionImport Name="SectionLocationsModifiedAfterDate" IsComposable="true" EntitySet="Locations" ReturnType="Collection(ConnectomeData.Location)">
+          <FunctionImport Name="SectionLocationsModifiedAfterDate" IsComposable="true" EntitySet="Locations" ReturnType="Collection(ConnectomeModel.Location)">
             <Parameter Name="Z" Mode="In" Type="Double" />
             <Parameter Name="QueryDate" Mode="In" Type="DateTime" />
           </FunctionImport>
@@ -1015,7 +1005,7 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
       <Mapping Space="C-S" xmlns="http://schemas.microsoft.com/ado/2009/11/mapping/cs">
         <EntityContainerMapping StorageEntityContainer="ConnectomeDataStoreContainer" CdmEntityContainer="ConnectomeEntities">
           <EntitySetMapping Name="DeletedLocations">
-            <EntityTypeMapping TypeName="ConnectomeData.DeletedLocation">
+            <EntityTypeMapping TypeName="ConnectomeModel.DeletedLocation">
               <MappingFragment StoreEntitySet="DeletedLocations">
                 <ScalarProperty Name="ID" ColumnName="ID" />
                 <ScalarProperty Name="DeletedOn" ColumnName="DeletedOn" />
@@ -1023,7 +1013,7 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
             </EntityTypeMapping>
           </EntitySetMapping>
           <EntitySetMapping Name="Locations">
-            <EntityTypeMapping TypeName="ConnectomeData.Location">
+            <EntityTypeMapping TypeName="ConnectomeModel.Location">
               <MappingFragment StoreEntitySet="Location">
                 <ScalarProperty Name="ID" ColumnName="ID" />
                 <ScalarProperty Name="ParentID" ColumnName="ParentID" />
@@ -1049,7 +1039,7 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
             </EntityTypeMapping>
           </EntitySetMapping>
           <EntitySetMapping Name="LocationLinks">
-            <EntityTypeMapping TypeName="ConnectomeData.LocationLink">
+            <EntityTypeMapping TypeName="ConnectomeModel.LocationLink">
               <MappingFragment StoreEntitySet="LocationLink">
                 <ScalarProperty Name="A" ColumnName="A" />
                 <ScalarProperty Name="B" ColumnName="B" />
@@ -1059,7 +1049,7 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
             </EntityTypeMapping>
           </EntitySetMapping>
           <EntitySetMapping Name="Structures">
-            <EntityTypeMapping TypeName="ConnectomeData.Structure">
+            <EntityTypeMapping TypeName="ConnectomeModel.Structure">
               <MappingFragment StoreEntitySet="Structure">
                 <ScalarProperty Name="ID" ColumnName="ID" />
                 <ScalarProperty Name="TypeID" ColumnName="TypeID" />
@@ -1077,7 +1067,7 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
             </EntityTypeMapping>
           </EntitySetMapping>
           <EntitySetMapping Name="StructureTypes">
-            <EntityTypeMapping TypeName="ConnectomeData.StructureType">
+            <EntityTypeMapping TypeName="ConnectomeModel.StructureType">
               <MappingFragment StoreEntitySet="StructureType">
                 <ScalarProperty Name="ID" ColumnName="ID" />
                 <ScalarProperty Name="ParentID" ColumnName="ParentID" />
@@ -1098,7 +1088,7 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
             </EntityTypeMapping>
           </EntitySetMapping>
           <EntitySetMapping Name="StructureLinks">
-            <EntityTypeMapping TypeName="ConnectomeData.StructureLink">
+            <EntityTypeMapping TypeName="ConnectomeModel.StructureLink">
               <MappingFragment StoreEntitySet="StructureLink">
                 <ScalarProperty Name="SourceID" ColumnName="SourceID" />
                 <ScalarProperty Name="TargetID" ColumnName="TargetID" />
@@ -1112,7 +1102,7 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
           </EntitySetMapping>
           <FunctionImportMapping FunctionImportName="ApproximateStructureLocation" FunctionName="ConnectomeData.Store.ApproximateStructureLocation">
             <ResultMapping>
-              <ComplexTypeMapping TypeName="ConnectomeData.ApproximateStructureLocation_Result">
+              <ComplexTypeMapping TypeName="ConnectomeModel.ApproximateStructureLocation_Result">
                 <ScalarProperty Name="X" ColumnName="X" />
                 <ScalarProperty Name="Y" ColumnName="Y" />
                 <ScalarProperty Name="Z" ColumnName="Z" />
@@ -1122,7 +1112,7 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
           </FunctionImportMapping>
           <FunctionImportMapping FunctionImportName="ApproximateStructureLocations" FunctionName="ConnectomeData.Store.ApproximateStructureLocations">
             <ResultMapping>
-              <ComplexTypeMapping TypeName="ConnectomeData.ApproximateStructureLocations_Result">
+              <ComplexTypeMapping TypeName="ConnectomeModel.ApproximateStructureLocations_Result">
                 <ScalarProperty Name="ParentID" ColumnName="ParentID" />
                 <ScalarProperty Name="X" ColumnName="X" />
                 <ScalarProperty Name="Y" ColumnName="Y" />
@@ -1133,7 +1123,7 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
           </FunctionImportMapping>
           <FunctionImportMapping FunctionImportName="CountChildStructuresByType" FunctionName="ConnectomeData.Store.CountChildStructuresByType">
             <ResultMapping>
-              <ComplexTypeMapping TypeName="ConnectomeData.CountChildStructuresByType_Result">
+              <ComplexTypeMapping TypeName="ConnectomeModel.CountChildStructuresByType_Result">
                 <ScalarProperty Name="TypeID" ColumnName="TypeID" />
                 <ScalarProperty Name="Count" ColumnName="Count" />
               </ComplexTypeMapping>
@@ -1141,7 +1131,7 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
           </FunctionImportMapping>
           <FunctionImportMapping FunctionImportName="SelectAllStructureLocationLinks" FunctionName="ConnectomeData.Store.SelectAllStructureLocationLinks">
             <ResultMapping>
-              <ComplexTypeMapping TypeName="ConnectomeData.SelectAllStructureLocationLinks_Result">
+              <ComplexTypeMapping TypeName="ConnectomeModel.SelectAllStructureLocationLinks_Result">
                 <ScalarProperty Name="A" ColumnName="A" />
                 <ScalarProperty Name="B" ColumnName="B" />
                 <ScalarProperty Name="Username" ColumnName="Username" />
@@ -1150,8 +1140,8 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
             </ResultMapping>
           </FunctionImportMapping>
           <FunctionImportMapping FunctionImportName="SelectAllStructureLocations" FunctionName="ConnectomeData.Store.SelectAllStructureLocations">
-            <ResultMapping>
-              <ComplexTypeMapping TypeName="ConnectomeData.SelectAllStructureLocations_Result">
+          <ResultMapping>
+              <ComplexTypeMapping TypeName="ConnectomeModel.SelectStructureLocations_Result">
                 <ScalarProperty Name="ID" ColumnName="ID" />
                 <ScalarProperty Name="ParentID" ColumnName="ParentID" />
                 <ScalarProperty Name="VolumeX" ColumnName="VolumeX" />
@@ -1165,7 +1155,7 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
           </FunctionImportMapping>
           <FunctionImportMapping FunctionImportName="SelectAllStructures" FunctionName="ConnectomeData.Store.SelectAllStructures">
             <ResultMapping>
-              <ComplexTypeMapping TypeName="ConnectomeData.SelectAllStructures_Result">
+              <ComplexTypeMapping TypeName="ConnectomeModel.SelectAllStructures_Result">
                 <ScalarProperty Name="ID" ColumnName="ID" />
                 <ScalarProperty Name="ParentID" ColumnName="ParentID" />
                 <ScalarProperty Name="TypeID" ColumnName="TypeID" />
@@ -1176,7 +1166,7 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
           </FunctionImportMapping>
           <FunctionImportMapping FunctionImportName="SelectChildrenStructureLinks" FunctionName="ConnectomeData.Store.SelectChildrenStructureLinks">
             <ResultMapping>
-              <ComplexTypeMapping TypeName="ConnectomeData.SelectChildrenStructureLinks_Result">
+              <ComplexTypeMapping TypeName="ConnectomeModel.SelectChildrenStructureLinks_Result">
                 <ScalarProperty Name="SourceID" ColumnName="SourceID" />
                 <ScalarProperty Name="TargetID" ColumnName="TargetID" />
                 <ScalarProperty Name="Bidirectional" ColumnName="Bidirectional" />
@@ -1189,7 +1179,7 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
           </FunctionImportMapping>
           <FunctionImportMapping FunctionImportName="SelectLastModifiedLocationByUsers" FunctionName="ConnectomeData.Store.SelectLastModifiedLocationByUsers">
             <ResultMapping>
-              <ComplexTypeMapping TypeName="ConnectomeData.SelectLastModifiedLocationByUsers_Result">
+              <ComplexTypeMapping TypeName="ConnectomeModel.SelectLastModifiedLocationByUsers_Result">
                 <ScalarProperty Name="ID" ColumnName="ID" />
                 <ScalarProperty Name="ParentID" ColumnName="ParentID" />
                 <ScalarProperty Name="Z" ColumnName="Z" />
@@ -1214,7 +1204,7 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
           </FunctionImportMapping>
           <FunctionImportMapping FunctionImportName="SelectNumConnectionsPerStructure" FunctionName="ConnectomeData.Store.SelectNumConnectionsPerStructure">
             <ResultMapping>
-              <ComplexTypeMapping TypeName="ConnectomeData.SelectNumConnectionsPerStructure_Result">
+              <ComplexTypeMapping TypeName="ConnectomeModel.SelectNumConnectionsPerStructure_Result">
                 <ScalarProperty Name="StructureID" ColumnName="StructureID" />
                 <ScalarProperty Name="Label" ColumnName="Label" />
                 <ScalarProperty Name="NumConnections" ColumnName="NumConnections" />
@@ -1227,7 +1217,7 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
           </FunctionImportMapping>
           <FunctionImportMapping FunctionImportName="SelectSectionLocationsAndLinks" FunctionName="ConnectomeData.Store.SelectSectionLocationsAndLinks">
             <ResultMapping>
-              <ComplexTypeMapping TypeName="ConnectomeData.SelectSectionLocationsAndLinks_Result">
+              <ComplexTypeMapping TypeName="ConnectomeModel.SelectSectionLocationsAndLinks_Result">
                 <ScalarProperty Name="ID" ColumnName="ID" />
                 <ScalarProperty Name="ParentID" ColumnName="ParentID" />
                 <ScalarProperty Name="Z" ColumnName="Z" />
@@ -1254,7 +1244,7 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
           </FunctionImportMapping>
           <FunctionImportMapping FunctionImportName="SelectStructureChangeLog" FunctionName="ConnectomeData.Store.SelectStructureChangeLog">
             <ResultMapping>
-              <ComplexTypeMapping TypeName="ConnectomeData.SelectStructureChangeLog_Result">
+              <ComplexTypeMapping TypeName="ConnectomeModel.SelectStructureChangeLog_Result">
                 <ScalarProperty Name="C___start_lsn" ColumnName="__$start_lsn" />
                 <ScalarProperty Name="C___seqval" ColumnName="__$seqval" />
                 <ScalarProperty Name="C___operation" ColumnName="__$operation" />
@@ -1276,7 +1266,7 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
           </FunctionImportMapping>
           <FunctionImportMapping FunctionImportName="SelectStructureLabels" FunctionName="ConnectomeData.Store.SelectStructureLabels">
             <ResultMapping>
-              <ComplexTypeMapping TypeName="ConnectomeData.SelectStructureLabels_Result">
+              <ComplexTypeMapping TypeName="ConnectomeModel.SelectStructureLabels_Result">
                 <ScalarProperty Name="ID" ColumnName="ID" />
                 <ScalarProperty Name="Label" ColumnName="Label" />
               </ComplexTypeMapping>
@@ -1284,7 +1274,7 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
           </FunctionImportMapping>
           <FunctionImportMapping FunctionImportName="SelectStructureLocationChangeLog" FunctionName="ConnectomeData.Store.SelectStructureLocationChangeLog">
             <ResultMapping>
-              <ComplexTypeMapping TypeName="ConnectomeData.SelectStructureLocationChangeLog_Result">
+              <ComplexTypeMapping TypeName="ConnectomeModel.SelectStructureLocationChangeLog_Result">
                 <ScalarProperty Name="C___start_lsn" ColumnName="__$start_lsn" />
                 <ScalarProperty Name="C___seqval" ColumnName="__$seqval" />
                 <ScalarProperty Name="C___operation" ColumnName="__$operation" />
@@ -1313,7 +1303,7 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
           </FunctionImportMapping>
           <FunctionImportMapping FunctionImportName="SelectStructureLocationLinks" FunctionName="ConnectomeData.Store.SelectStructureLocationLinks">
             <ResultMapping>
-              <ComplexTypeMapping TypeName="ConnectomeData.SelectStructureLocationLinks_Result">
+              <ComplexTypeMapping TypeName="ConnectomeModel.SelectStructureLocationLinks_Result">
                 <ScalarProperty Name="A" ColumnName="A" />
                 <ScalarProperty Name="B" ColumnName="B" />
                 <ScalarProperty Name="Username" ColumnName="Username" />
@@ -1323,7 +1313,7 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
           </FunctionImportMapping>
           <FunctionImportMapping FunctionImportName="SelectStructureLocationLinksNoChildren" FunctionName="ConnectomeData.Store.SelectStructureLocationLinksNoChildren">
             <ResultMapping>
-              <ComplexTypeMapping TypeName="ConnectomeData.SelectStructureLocationLinksNoChildren_Result">
+              <ComplexTypeMapping TypeName="ConnectomeModel.SelectStructureLocationLinksNoChildren_Result">
                 <ScalarProperty Name="A" ColumnName="A" />
                 <ScalarProperty Name="B" ColumnName="B" />
                 <ScalarProperty Name="Username" ColumnName="Username" />
@@ -1333,7 +1323,7 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
           </FunctionImportMapping>
           <FunctionImportMapping FunctionImportName="SelectStructureLocations" FunctionName="ConnectomeData.Store.SelectStructureLocations">
             <ResultMapping>
-              <ComplexTypeMapping TypeName="ConnectomeData.SelectStructureLocations_Result">
+              <ComplexTypeMapping TypeName="ConnectomeModel.SelectStructureLocations_Result">
                 <ScalarProperty Name="ID" ColumnName="ID" />
                 <ScalarProperty Name="ParentID" ColumnName="ParentID" />
                 <ScalarProperty Name="VolumeX" ColumnName="VolumeX" />
@@ -1347,7 +1337,7 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
           </FunctionImportMapping>
           <FunctionImportMapping FunctionImportName="SelectStructuresAndLinks" FunctionName="ConnectomeData.Store.SelectStructuresAndLinks">
             <ResultMapping>
-              <ComplexTypeMapping TypeName="ConnectomeData.SelectStructuresAndLinks_Result">
+              <ComplexTypeMapping TypeName="ConnectomeModel.SelectStructuresAndLinks_Result">
                 <ScalarProperty Name="ID" ColumnName="ID" />
                 <ScalarProperty Name="TypeID" ColumnName="TypeID" />
                 <ScalarProperty Name="Notes" ColumnName="Notes" />
@@ -1365,7 +1355,7 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
           </FunctionImportMapping>
           <FunctionImportMapping FunctionImportName="SelectStructuresForSection" FunctionName="ConnectomeData.Store.SelectStructuresForSection">
             <ResultMapping>
-              <ComplexTypeMapping TypeName="ConnectomeData.SelectStructuresForSection_Result">
+              <ComplexTypeMapping TypeName="ConnectomeModel.SelectStructuresForSection_Result">
                 <ScalarProperty Name="ID" ColumnName="ID" />
                 <ScalarProperty Name="TypeID" ColumnName="TypeID" />
                 <ScalarProperty Name="Notes" ColumnName="Notes" />
@@ -1384,7 +1374,7 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
           <FunctionImportMapping FunctionImportName="SelectUnfinishedStructureBranches" FunctionName="ConnectomeData.Store.SelectUnfinishedStructureBranches" />
           <FunctionImportMapping FunctionImportName="SelectUnfinishedStructureBranchesWithPosition" FunctionName="ConnectomeData.Store.SelectUnfinishedStructureBranchesWithPosition">
             <ResultMapping>
-              <ComplexTypeMapping TypeName="ConnectomeData.SelectUnfinishedStructureBranchesWithPosition_Result">
+              <ComplexTypeMapping TypeName="ConnectomeModel.SelectUnfinishedStructureBranchesWithPosition_Result">
                 <ScalarProperty Name="ID" ColumnName="ID" />
                 <ScalarProperty Name="X" ColumnName="X" />
                 <ScalarProperty Name="Y" ColumnName="Y" />

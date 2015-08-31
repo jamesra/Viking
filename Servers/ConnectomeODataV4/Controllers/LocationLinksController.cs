@@ -1,16 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Data;
-using System.Data.Entity;
-using System.Data.Entity.Infrastructure;
+﻿using System.Data;
 using System.Linq;
-using System.Net;
-using System.Net.Http;
-using System.Threading.Tasks;
 using System.Web.Http;
-using System.Web.ModelBinding;
 using System.Web.OData;
-using System.Web.OData.Routing;
 using ConnectomeODataV4.Models;
 
 namespace ConnectomeODataV4.Controllers
@@ -31,7 +22,7 @@ namespace ConnectomeODataV4.Controllers
         private ConnectomeEntities db = new ConnectomeEntities();
 
         // GET: odata/LocationLinks
-        [EnableQuery(PageSize = 2048)]
+        [EnableQuery(PageSize = WebApiConfig.PageSize)]
         public IQueryable<LocationLink> GetLocationLinks()
         {
             return db.LocationLinks;
@@ -43,6 +34,8 @@ namespace ConnectomeODataV4.Controllers
         {
             return SingleResult.Create(db.LocationLinks.Where(locationLink => locationLink.A == key));
         }
+
+        /*
 
         // PUT: odata/LocationLinks(5)
         public async Task<IHttpActionResult> Put([FromODataUri] long key, Delta<LocationLink> patch)
@@ -162,6 +155,7 @@ namespace ConnectomeODataV4.Controllers
 
             return StatusCode(HttpStatusCode.NoContent);
         }
+        */
 
         // GET: odata/LocationLinks(5)/LocationA
         [EnableQuery]

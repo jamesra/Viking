@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Web.Configuration;
-using System.Web.Http;
+﻿using System.Web.Http;
 using System.Web.OData.Builder;
 using System.Web.OData.Extensions;
 
@@ -12,15 +8,20 @@ namespace ConnectomeODataV4
 {
     public static class WebApiConfig
     {
+        public const int PageSize = 16384;
+
         public static void Register(HttpConfiguration config)
         {
             // Web API configuration and services
             var json = GlobalConfiguration.Configuration.Formatters.JsonFormatter;
             json.UseDataContractJsonSerializer = true;
             //json.SerializerSettings.PreserveReferencesHandling = Newtonsoft.Json.PreserveReferencesHandling.All;
-             
+
+            //var cors = new System.Web.Http.Cors.EnableCorsAttribute("*", "*", "*");
+            //config.EnableCors(cors);
 
             // Web API routes
+            config.EnableQuerySupport();
             config.MapHttpAttributeRoutes();
 
             ODataConventionModelBuilder builder = GetModel();
@@ -42,6 +43,9 @@ namespace ConnectomeODataV4
             builder.EntitySet<StructureType>("StructureTypes");
             builder.EntitySet<Structure>("Structures");
             builder.EntitySet<Location>("Locations");
+
+            builder.EntitySet<SelectStructureLocations_Result>("SelectStructureLocations");
+
             AddStructureLinks(builder);
             AddLocationLinks(builder);
           
@@ -62,7 +66,6 @@ namespace ConnectomeODataV4
             type.HasKey(sl => sl.A);
             type.HasKey(sl => sl.B);
             builder.EntitySet<LocationLink>("LocationLinks");
-
         }
     }
 }

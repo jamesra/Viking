@@ -1,16 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Data;
-using System.Data.Entity;
-using System.Data.Entity.Infrastructure;
+﻿using System.Data;
 using System.Linq;
-using System.Net;
-using System.Net.Http;
-using System.Threading.Tasks;
 using System.Web.Http;
-using System.Web.ModelBinding;
 using System.Web.OData;
-using System.Web.OData.Routing;
 using ConnectomeODataV4.Models;
 
 namespace ConnectomeODataV4.Controllers
@@ -46,6 +37,7 @@ namespace ConnectomeODataV4.Controllers
             return SingleResult.Create(db.Structures.Where(structure => structure.ID == key));
         }
 
+        /*
         // PUT: odata/Structures(5)
         public async Task<IHttpActionResult> Put([FromODataUri] long key, Delta<Structure> patch)
         {
@@ -149,6 +141,7 @@ namespace ConnectomeODataV4.Controllers
 
             return StatusCode(HttpStatusCode.NoContent);
         }
+        */
 
         // GET: odata/Structures(5)/Locations
         [EnableQuery]

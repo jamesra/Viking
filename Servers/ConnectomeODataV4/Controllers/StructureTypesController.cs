@@ -1,16 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Data;
-using System.Data.Entity;
+﻿using System.Data;
 using System.Data.Entity.Infrastructure;
 using System.Linq;
-using System.Net;
-using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
-using System.Web.ModelBinding;
 using System.Web.OData;
-using System.Web.OData.Routing;
 using ConnectomeODataV4.Models;
 
 namespace ConnectomeODataV4.Controllers
@@ -31,7 +24,7 @@ namespace ConnectomeODataV4.Controllers
         private ConnectomeEntities db = new ConnectomeEntities();
 
         // GET: odata/StructureTypes
-        [EnableQuery]
+        [EnableQuery(PageSize = WebApiConfig.PageSize)]
         public IQueryable<StructureType> GetStructureTypes()
         {
             return db.StructureTypes;
@@ -81,6 +74,7 @@ namespace ConnectomeODataV4.Controllers
             return Updated(structureType);
         }
 
+        /*
         // POST: odata/StructureTypes
         public async Task<IHttpActionResult> Post(StructureType structureType)
         {
@@ -94,7 +88,9 @@ namespace ConnectomeODataV4.Controllers
 
             return Created(structureType);
         }
+        
 
+           
         // PATCH: odata/StructureTypes(5)
         [AcceptVerbs("PATCH", "MERGE")]
         public async Task<IHttpActionResult> Patch([FromODataUri] long key, Delta<StructureType> patch)
@@ -147,6 +143,8 @@ namespace ConnectomeODataV4.Controllers
 
             return StatusCode(HttpStatusCode.NoContent);
         }
+
+    */
 
         // GET: odata/StructureTypes(5)/Structures
         [EnableQuery]
