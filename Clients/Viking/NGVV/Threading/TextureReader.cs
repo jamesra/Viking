@@ -294,7 +294,7 @@ namespace Viking
             headerRequest.CachePolicy = TextureReader.HeaderCachePolicy;
             using (HttpWebResponse headerResponse = headerRequest.GetResponse() as HttpWebResponse)
             {
-                bool valid = headerResponse.LastModified.ToUniversalTime() <= System.IO.File.GetCreationTimeUtc(CacheFilename);
+                bool valid = headerResponse.LastModified.ToUniversalTime() <= System.IO.File.GetLastWriteTimeUtc(CacheFilename);
                 return valid;
             }
         }

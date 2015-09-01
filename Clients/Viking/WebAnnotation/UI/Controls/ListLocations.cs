@@ -44,9 +44,6 @@ namespace WebAnnotation.UI.Controls
             Debug.Assert(loc != null);
 
             AnnotationOverlay.GoToLocation(loc.modelObj); 
-            
-
-            
         }
 
         public void OnLocationCreate(object sender, EventArgs e)

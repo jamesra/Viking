@@ -579,9 +579,7 @@ namespace Viking.UI.Commands
                 newCommand = new DefaultCommand(Parent); 
             }
 
-            //TODO: Make these consistent with the extension commands. 
-            if(newCommand != null)
-                newCommand.OnActivate();
+            
 
             return newCommand; 
         }

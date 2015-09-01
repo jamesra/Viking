@@ -180,9 +180,11 @@ namespace WebAnnotationModel
 
         public static bool operator ==(ObjAttribute A, ObjAttribute B)
         {
-            if (A == null && B == null)
+            bool ANull = object.ReferenceEquals(null, A);
+            bool BNull = object.ReferenceEquals(null, B);
+            if (ANull && BNull)
                 return true;
-            if (A == null || B == null)
+            if (ANull == null || BNull == null)
                 return false;
 
             return String.Compare(A.Name, B.Name) == 0; 
@@ -190,12 +192,23 @@ namespace WebAnnotationModel
 
         public static bool operator !=(ObjAttribute A, ObjAttribute B)
         {
-            if (A == null && B == null)
+            bool ANull = object.ReferenceEquals(null, A);
+            bool BNull = object.ReferenceEquals(null, B);
+            if (ANull && BNull)
                 return false;
-            if (A == null || B == null)
+            if (ANull || BNull)
                 return true;
 
             return String.Compare(A.Name, B.Name) != 0; 
+        }
+
+        public override bool Equals(object obj)
+        {
+            ObjAttribute Other = obj as ObjAttribute;
+            if (object.ReferenceEquals(null, Other))
+                return false;
+
+            return Other.Name == this.Name;
         }
 
     }

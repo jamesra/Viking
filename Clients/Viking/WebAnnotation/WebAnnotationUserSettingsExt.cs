@@ -21,8 +21,6 @@ namespace connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd
                     KeysConverter conv = new KeysConverter();
                     return (Keys)conv.ConvertFrom(this.KeyName);
 
-//                    int keyCode = System.Convert.ToInt32(this.KeyName);
-//                    return (System.Windows.Forms.Keys)keyCode;
             }
         } 
     }
@@ -71,9 +69,4 @@ namespace connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd
             return; 
         }
     }
-
-
-
-
-
 }

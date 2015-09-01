@@ -44,6 +44,8 @@ namespace Viking.UI.Controls
                     _CurrentCommand.OnCommandCompleteHandler += OnCommandCompleteHandler;
                     _CurrentCommand.SubscribeToInterfaceEvents();
                     Trace.WriteLine("Set current command: " + _CurrentCommand.GetType().ToString(), "Command");
+                    //TODO: Make these consistent with the extension commands. 
+                    _CurrentCommand.OnActivate();
                 }
                 else
                 {

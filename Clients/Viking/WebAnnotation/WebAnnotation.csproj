@@ -129,6 +129,7 @@
     <Compile Include="UI\Commands\ResizeCircleCommand.cs" />
     <Compile Include="UI\Commands\ResizeLocationCommand.cs" />
     <Compile Include="UI\Commands\StaticExtensionCommands.cs" />
+    <Compile Include="UI\Commands\ToggleTagCommand.cs" />
     <Compile Include="UI\Controls\ListLocations.cs">
       <SubType>UserControl</SubType>
     </Compile>

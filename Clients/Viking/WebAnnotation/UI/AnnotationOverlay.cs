@@ -554,14 +554,12 @@ namespace WebAnnotation
                 //Search the list of hotkeys for a match
                 if (Global.UserSettings != null)
                 {
-                    IEnumerable<Hotkey> matchingKeys = Global.UserSettings.Shortcuts.Hotkey.Where(h => h.KeyCode == e.KeyCode);
+                    IEnumerable<Hotkey> matchingKeys = Global.UserSettings.Shortcuts.Hotkey.Where(h => h.KeyCode == e.KeyCode &&
+                                                                                                       h.Shift == e.Shift && 
+                                                                                                       h.Ctrl == e.Control &&
+                                                                                                       h.Alt == e.Alt);
                     foreach (Hotkey h in matchingKeys)
                     {
-                        if (!(h.Shift == e.Shift &&
-                               h.Ctrl == e.Control &&
-                               h.Alt == e.Alt))
-                            continue;
-
                         //OK, we have a match, invoke the command
                         //Check if there is a non-default command. we don't want to mess with another active command
                         if (_Parent.CurrentCommand.GetType() != typeof(Viking.UI.Commands.DefaultCommand) ||
@@ -579,13 +577,29 @@ namespace WebAnnotation
                             {
                                 Viking.UI.Commands.Command.EnqueueCommand(commandType, parameters);
                             }
+
+                            return;
                         }
 
                         CreateStructureCommandAction comAction = Global.UserSettings.Actions.CreateStructureCommandAction.Where(action => action.Name == h.Action).SingleOrDefault();
                         if (comAction != null)
                         {
                             OnCreateStructure(System.Convert.ToInt64(comAction.TypeID));
+
+                            return;
                         }
+
+                        ToggleStructureTagCommandAction tagAction = Global.UserSettings.Actions.ToggleStructureTagCommandAction.Where(action => action.Name == h.Action).SingleOrDefault();
+                        if (tagAction != null)
+                        {
+                            OnToggleStructureTag(tagAction.Tag);
+
+                            return;
+                        }
+
+
+
+
 
 
 
@@ -676,7 +690,28 @@ namespace WebAnnotation
             }
             else
                 Trace.WriteLine("Could not find hotkey ID for type: " + TypeID.ToString()); 
+        }
 
+        protected void OnToggleStructureTag(string tag)
+        {
+            if(LastMouseOverObject == null)
+            {
+                Trace.WriteLine("No mouse over object to toggle tag");
+                return;
+            }
+
+            Location_CanvasViewModel loc = LastMouseOverObject as Location_CanvasViewModel; // GetNearestLocation(WorldPosition, out distance);
+            if(loc == null)
+            {
+                Trace.WriteLine("No mouse over location to toggle tag");
+                return;
+            }
+
+            ToggleTagCommand command = new ToggleTagCommand(this.Parent, loc.Parent, tag);
+
+            Viking.UI.Commands.Command.EnqueueCommand(typeof(ToggleTagCommand), new object[] { this.Parent, loc.Parent, tag});
+
+            return; 
         }
 
         protected void OnContinueLastTrace()

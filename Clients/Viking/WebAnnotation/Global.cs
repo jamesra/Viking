@@ -74,6 +74,23 @@ namespace WebAnnotation
 
         static XElement UserSettingsElement = null;
 
+        static Uri UserSettingsUri
+        {
+            get
+            {
+                if (UserSettingsElement != null)
+                {
+                    XAttribute UriAttrib = UserSettingsElement.Attribute("Uri");
+                    if (UriAttrib != null)
+                    {
+                        return new Uri(UriAttrib.Value);
+                    }
+                }
+
+                return null;
+            }
+        }
+
         /// <summary>6
         /// The home of the user settings XSD file
         /// </summary>
@@ -275,11 +292,11 @@ namespace WebAnnotation
                     LoadServerUserSettings();
                 }
 
-                if (false == System.IO.File.Exists(UserSettingsFilePath))
+                if (!CachedResourceIsValid(UserSettingsFilePath, UserSettingsUri))
                 {
-                    LoadServerUserSettings(); 
+                    LoadServerUserSettings();  
                 }
-
+ 
                 UserSettingsDoc = XRoot.Load(UserSettingsFilePath);
             }
             catch (Xml.Schema.Linq.LinqToXsdException )
@@ -302,58 +319,91 @@ namespace WebAnnotation
             }
         }
 
+        /// <summary>
+        /// Validates the provide file against the last modified date of the web resource
+        /// </summary>
+        /// <param name="CacheFilename"></param>
+        /// <param name="textureUri"></param>
+        /// <returns></returns>
+        private static bool CachedResourceIsValid(string CacheFilename, Uri uri)
+        {
+            if (uri == null)
+                return true;
+
+            if (!System.IO.File.Exists(CacheFilename))
+                return false;
+
+            HttpWebRequest headerRequest = HttpWebRequest.Create(uri) as HttpWebRequest;
+            headerRequest.Method = "HEAD";
+            headerRequest.CachePolicy = new System.Net.Cache.RequestCachePolicy(System.Net.Cache.RequestCacheLevel.NoCacheNoStore); 
+            using (HttpWebResponse headerResponse = headerRequest.GetResponse() as HttpWebResponse)
+            {
+                bool valid = headerResponse.LastModified.ToUniversalTime() <= System.IO.File.GetLastWriteTimeUtc(CacheFilename);
+                return valid;
+            }
+        }
+
         private static bool LoadServerUserSettings()
         {
             //Try to download the default user settings file
-            if (UserSettingsElement != null)
+            Uri uri = UserSettingsUri;
+            if(uri != null)
             {
-                XAttribute UriAttrib = UserSettingsElement.Attribute("Uri");
-                if (UriAttrib != null)
+                System.Net.WebRequest request = null;
+                WebResponse response = null;
+                Stream stream = null;
+                FileStream file = null;
+
+                try
                 {
-                    Uri uri = new Uri(UriAttrib.Value);
-                    System.Net.WebRequest request = null;
-                    WebResponse response = null;
-                    Stream stream = null;
-                    FileStream file = null;
+                    request = HttpWebRequest.Create(uri);
+                    response = request.GetResponse();
+                    stream = response.GetResponseStream();
+                    byte[] data = new Byte[response.ContentLength];
+                    DateTime loopStart = DateTime.UtcNow; 
+                    TimeSpan elapsed;
+                    long BytesRead = 0;
+
+                    do
+                    {
+                        BytesRead += stream.Read(data, (int)BytesRead, (int)data.Length - (int)BytesRead);
+                        elapsed = new TimeSpan(DateTime.UtcNow.Ticks - loopStart.Ticks);
+                    }
+                    while (BytesRead < response.ContentLength && elapsed.TotalSeconds < 60);
 
                     try
                     {
-                        request = HttpWebRequest.Create(uri);
-                        response = request.GetResponse();
-                        stream = response.GetResponseStream();
-                        byte[] data = new Byte[response.ContentLength];
-                        DateTime loopStart = DateTime.UtcNow; 
-                        TimeSpan elapsed;
-                        long BytesRead = 0;
-
-                        do
+                        if(System.IO.File.Exists(UserSettingsFilePath))
                         {
-                            BytesRead += stream.Read(data, (int)BytesRead, (int)data.Length - (int)BytesRead);
-                            elapsed = new TimeSpan(DateTime.UtcNow.Ticks - loopStart.Ticks);
+                            System.IO.File.Delete(UserSettingsFilePath);
                         }
-                        while (BytesRead < response.ContentLength && elapsed.TotalSeconds < 60);
-
-                        file = File.Open(UserSettingsFilePath, FileMode.OpenOrCreate, FileAccess.ReadWrite);
-                        file.Write(data, 0, data.Length);
                     }
-                    catch (Exception)
+                    catch(System.IO.IOException)
                     {
-                        Trace.WriteLine("Could not load server user settings: " + uri.ToString());
-                        return false; 
-                    }
-                    finally
-                    {
-                        if (response != null)
-                            response.Close();
 
-                        if (file != null)
-                            file.Close();
                     }
 
-                    return true; 
-
+                    file = File.Open(UserSettingsFilePath, FileMode.OpenOrCreate, FileAccess.ReadWrite);
+                    file.Write(data, 0, data.Length);
                 }
+                catch (Exception)
+                {
+                    Trace.WriteLine("Could not load server user settings: " + uri.ToString());
+                    return false; 
+                }
+                finally
+                {
+                    if (response != null)
+                        response.Close();
+
+                    if (file != null)
+                        file.Close();
+                }
+
+                return true; 
+
             }
+            
 
             return false; 
         }
