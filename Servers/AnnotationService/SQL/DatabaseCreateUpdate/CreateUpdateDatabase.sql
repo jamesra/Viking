@@ -2341,7 +2341,7 @@ end
 	begin
      print N'Convert to spatial data types, remove old columns'
 	 BEGIN TRANSACTION twentyfive
-		
+
 		ALTER TABLE Location DROP COLUMN Verticies
 
 		Update Location SET MosaicShape='CURVEPOLYGON(CIRCULARSTRING (' + STR(X-Radius,16,2) + ' ' + STR(Y,16,2) + ' ' + STR(Z) + ', '
