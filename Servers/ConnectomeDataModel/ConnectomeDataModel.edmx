@@ -355,17 +355,8 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
           <EntitySet Name="LocationLink" EntityType="Self.LocationLink" Schema="dbo" store:Type="Tables" />
           <EntitySet Name="Structure" EntityType="Self.Structure" Schema="dbo" store:Type="Tables" />
           <EntitySet Name="StructureType" EntityType="Self.StructureType" Schema="dbo" store:Type="Tables" />
-          <EntitySet Name="StructureLink" EntityType="Self.StructureLink" store:Type="Tables" store:Schema="dbo">
-            <DefiningQuery>SELECT 
-    [StructureLink].[SourceID] AS [SourceID], 
-    [StructureLink].[TargetID] AS [TargetID], 
-    [StructureLink].[Bidirectional] AS [Bidirectional], 
-    [StructureLink].[Tags] AS [Tags], 
-    [StructureLink].[Username] AS [Username], 
-    [StructureLink].[Created] AS [Created], 
-    [StructureLink].[LastModified] AS [LastModified]
-    FROM [dbo].[StructureLink] AS [StructureLink]</DefiningQuery>
-          </EntitySet>
+          <EntitySet Name="StructureLink" EntityType="Self.StructureLink" store:Type="Tables" Schema="dbo"/>
+          
           <AssociationSet Name="FK_Location_StructureBase1" Association="Self.FK_Location_StructureBase1">
             <End Role="Structure" EntitySet="Structure" />
             <End Role="Location" EntitySet="Location" />
