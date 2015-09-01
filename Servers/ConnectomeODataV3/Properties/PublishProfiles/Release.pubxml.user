@@ -6,20 +6,17 @@ by editing this MSBuild file. In order to learn more about this please visit htt
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <TimeStampOfAssociatedLegacyPublishXmlFile />
-    <_PublishTargetUrl>C:\Src\Git\Viking\Servers\Deployment\Release\OData</_PublishTargetUrl>
+    <_PublishTargetUrl>C:\Src\Git\Viking\Servers\Deployment\Release\ODataV3</_PublishTargetUrl>
   </PropertyGroup>
   <ItemGroup>
-    <File Include="bin/App_global.asax.compiled">
-      <publishTime>08/31/2015 16:17:31</publishTime>
-    </File>
-    <File Include="bin/App_global.asax.dll">
-      <publishTime>08/31/2015 16:17:31</publishTime>
-    </File>
     <File Include="bin/ConnectomeDataModel.dll">
       <publishTime>08/31/2015 15:20:12</publishTime>
     </File>
+    <File Include="bin/ConnectomeODataV3.dll">
+      <publishTime>08/31/2015 16:16:12</publishTime>
+    </File>
     <File Include="bin/ConnectomeODataV4.dll">
-      <publishTime>08/31/2015 16:17:16</publishTime>
+      <publishTime>08/11/2015 15:21:01</publishTime>
     </File>
     <File Include="bin/de/Microsoft.Data.Edm.resources.dll">
       <publishTime>06/24/2015 15:15:52</publishTime>
@@ -28,13 +25,13 @@ by editing this MSBuild file. In order to learn more about this please visit htt
       <publishTime>06/24/2015 15:15:52</publishTime>
     </File>
     <File Include="bin/de/Microsoft.OData.Core.resources.dll">
-      <publishTime>08/25/2015 13:25:13</publishTime>
+      <publishTime>06/26/2015 13:20:23</publishTime>
     </File>
     <File Include="bin/de/Microsoft.OData.Edm.resources.dll">
-      <publishTime>08/25/2015 13:25:06</publishTime>
+      <publishTime>06/26/2015 13:20:22</publishTime>
     </File>
     <File Include="bin/de/Microsoft.Spatial.resources.dll">
-      <publishTime>08/25/2015 13:25:09</publishTime>
+      <publishTime>06/26/2015 13:20:22</publishTime>
     </File>
     <File Include="bin/de/System.Spatial.resources.dll">
       <publishTime>06/24/2015 15:15:50</publishTime>
@@ -52,13 +49,13 @@ by editing this MSBuild file. In order to learn more about this please visit htt
       <publishTime>06/24/2015 15:15:52</publishTime>
     </File>
     <File Include="bin/es/Microsoft.OData.Core.resources.dll">
-      <publishTime>08/25/2015 13:25:13</publishTime>
+      <publishTime>06/26/2015 13:20:23</publishTime>
     </File>
     <File Include="bin/es/Microsoft.OData.Edm.resources.dll">
-      <publishTime>08/25/2015 13:25:06</publishTime>
+      <publishTime>06/26/2015 13:20:22</publishTime>
     </File>
     <File Include="bin/es/Microsoft.Spatial.resources.dll">
-      <publishTime>08/25/2015 13:25:09</publishTime>
+      <publishTime>06/26/2015 13:20:22</publishTime>
     </File>
     <File Include="bin/es/System.Spatial.resources.dll">
       <publishTime>06/24/2015 15:15:50</publishTime>
@@ -70,13 +67,13 @@ by editing this MSBuild file. In order to learn more about this please visit htt
       <publishTime>06/24/2015 15:15:52</publishTime>
     </File>
     <File Include="bin/fr/Microsoft.OData.Core.resources.dll">
-      <publishTime>08/25/2015 13:25:13</publishTime>
+      <publishTime>06/26/2015 13:20:23</publishTime>
     </File>
     <File Include="bin/fr/Microsoft.OData.Edm.resources.dll">
-      <publishTime>08/25/2015 13:25:06</publishTime>
+      <publishTime>06/26/2015 13:20:22</publishTime>
     </File>
     <File Include="bin/fr/Microsoft.Spatial.resources.dll">
-      <publishTime>08/25/2015 13:25:09</publishTime>
+      <publishTime>06/26/2015 13:20:22</publishTime>
     </File>
     <File Include="bin/fr/System.Spatial.resources.dll">
       <publishTime>06/24/2015 15:15:50</publishTime>
@@ -88,13 +85,13 @@ by editing this MSBuild file. In order to learn more about this please visit htt
       <publishTime>06/24/2015 15:15:52</publishTime>
     </File>
     <File Include="bin/it/Microsoft.OData.Core.resources.dll">
-      <publishTime>08/25/2015 13:25:13</publishTime>
+      <publishTime>06/26/2015 13:20:23</publishTime>
     </File>
     <File Include="bin/it/Microsoft.OData.Edm.resources.dll">
-      <publishTime>08/25/2015 13:25:06</publishTime>
+      <publishTime>06/26/2015 13:20:22</publishTime>
     </File>
     <File Include="bin/it/Microsoft.Spatial.resources.dll">
-      <publishTime>08/25/2015 13:25:09</publishTime>
+      <publishTime>06/26/2015 13:20:22</publishTime>
     </File>
     <File Include="bin/it/System.Spatial.resources.dll">
       <publishTime>06/24/2015 15:15:50</publishTime>
@@ -106,13 +103,13 @@ by editing this MSBuild file. In order to learn more about this please visit htt
       <publishTime>06/24/2015 15:15:52</publishTime>
     </File>
     <File Include="bin/ja/Microsoft.OData.Core.resources.dll">
-      <publishTime>08/25/2015 13:25:13</publishTime>
+      <publishTime>06/26/2015 13:20:23</publishTime>
     </File>
     <File Include="bin/ja/Microsoft.OData.Edm.resources.dll">
-      <publishTime>08/25/2015 13:25:06</publishTime>
+      <publishTime>06/26/2015 13:20:22</publishTime>
     </File>
     <File Include="bin/ja/Microsoft.Spatial.resources.dll">
-      <publishTime>08/25/2015 13:25:09</publishTime>
+      <publishTime>06/26/2015 13:20:22</publishTime>
     </File>
     <File Include="bin/ja/System.Spatial.resources.dll">
       <publishTime>06/24/2015 15:15:50</publishTime>
@@ -124,13 +121,13 @@ by editing this MSBuild file. In order to learn more about this please visit htt
       <publishTime>06/24/2015 15:15:52</publishTime>
     </File>
     <File Include="bin/ko/Microsoft.OData.Core.resources.dll">
-      <publishTime>08/25/2015 13:25:13</publishTime>
+      <publishTime>06/26/2015 13:20:23</publishTime>
     </File>
     <File Include="bin/ko/Microsoft.OData.Edm.resources.dll">
-      <publishTime>08/25/2015 13:25:06</publishTime>
+      <publishTime>06/26/2015 13:20:22</publishTime>
     </File>
     <File Include="bin/ko/Microsoft.Spatial.resources.dll">
-      <publishTime>08/25/2015 13:25:09</publishTime>
+      <publishTime>06/26/2015 13:20:22</publishTime>
     </File>
     <File Include="bin/ko/System.Spatial.resources.dll">
       <publishTime>06/24/2015 15:15:50</publishTime>
@@ -142,13 +139,13 @@ by editing this MSBuild file. In order to learn more about this please visit htt
       <publishTime>06/24/2015 15:15:52</publishTime>
     </File>
     <File Include="bin/Microsoft.OData.Core.dll">
-      <publishTime>08/25/2015 13:25:13</publishTime>
+      <publishTime>06/26/2015 13:20:23</publishTime>
     </File>
     <File Include="bin/Microsoft.OData.Edm.dll">
-      <publishTime>08/25/2015 13:25:06</publishTime>
+      <publishTime>06/26/2015 13:20:22</publishTime>
     </File>
     <File Include="bin/Microsoft.Spatial.dll">
-      <publishTime>08/25/2015 13:25:09</publishTime>
+      <publishTime>06/26/2015 13:20:22</publishTime>
     </File>
     <File Include="bin/Newtonsoft.Json.dll">
       <publishTime>06/25/2015 15:08:14</publishTime>
@@ -160,13 +157,13 @@ by editing this MSBuild file. In order to learn more about this please visit htt
       <publishTime>06/24/2015 15:15:52</publishTime>
     </File>
     <File Include="bin/ru/Microsoft.OData.Core.resources.dll">
-      <publishTime>08/25/2015 13:25:13</publishTime>
+      <publishTime>06/26/2015 13:20:23</publishTime>
     </File>
     <File Include="bin/ru/Microsoft.OData.Edm.resources.dll">
-      <publishTime>08/25/2015 13:25:06</publishTime>
+      <publishTime>06/26/2015 13:20:22</publishTime>
     </File>
     <File Include="bin/ru/Microsoft.Spatial.resources.dll">
-      <publishTime>08/25/2015 13:25:09</publishTime>
+      <publishTime>06/26/2015 13:20:22</publishTime>
     </File>
     <File Include="bin/ru/System.Spatial.resources.dll">
       <publishTime>06/24/2015 15:15:50</publishTime>
@@ -193,7 +190,7 @@ by editing this MSBuild file. In order to learn more about this please visit htt
       <publishTime>06/25/2015 15:08:14</publishTime>
     </File>
     <File Include="bin/System.Web.OData.dll">
-      <publishTime>08/25/2015 13:25:15</publishTime>
+      <publishTime>06/26/2015 13:20:23</publishTime>
     </File>
     <File Include="bin/zh-Hans/Microsoft.Data.Edm.resources.dll">
       <publishTime>06/24/2015 15:15:52</publishTime>
@@ -202,13 +199,13 @@ by editing this MSBuild file. In order to learn more about this please visit htt
       <publishTime>06/24/2015 15:15:52</publishTime>
     </File>
     <File Include="bin/zh-Hans/Microsoft.OData.Core.resources.dll">
-      <publishTime>08/25/2015 13:25:13</publishTime>
+      <publishTime>06/26/2015 13:20:23</publishTime>
     </File>
     <File Include="bin/zh-Hans/Microsoft.OData.Edm.resources.dll">
-      <publishTime>08/25/2015 13:25:06</publishTime>
+      <publishTime>06/26/2015 13:20:23</publishTime>
     </File>
     <File Include="bin/zh-Hans/Microsoft.Spatial.resources.dll">
-      <publishTime>08/25/2015 13:25:09</publishTime>
+      <publishTime>06/26/2015 13:20:22</publishTime>
     </File>
     <File Include="bin/zh-Hans/System.Spatial.resources.dll">
       <publishTime>06/24/2015 15:15:50</publishTime>
@@ -220,31 +217,28 @@ by editing this MSBuild file. In order to learn more about this please visit htt
       <publishTime>06/24/2015 15:15:52</publishTime>
     </File>
     <File Include="bin/zh-Hant/Microsoft.OData.Core.resources.dll">
-      <publishTime>08/25/2015 13:25:13</publishTime>
+      <publishTime>06/26/2015 13:20:23</publishTime>
     </File>
     <File Include="bin/zh-Hant/Microsoft.OData.Edm.resources.dll">
-      <publishTime>08/25/2015 13:25:06</publishTime>
+      <publishTime>06/26/2015 13:20:23</publishTime>
     </File>
     <File Include="bin/zh-Hant/Microsoft.Spatial.resources.dll">
-      <publishTime>08/25/2015 13:25:09</publishTime>
+      <publishTime>06/26/2015 13:20:22</publishTime>
     </File>
     <File Include="bin/zh-Hant/System.Spatial.resources.dll">
       <publishTime>06/24/2015 15:15:50</publishTime>
     </File>
     <File Include="Global.asax">
-      <publishTime>08/26/2015 17:13:00</publishTime>
+      <publishTime>08/27/2015 20:31:26</publishTime>
     </File>
     <File Include="Models/ConnectomeDataModel.edmx.diagram">
       <publishTime>08/21/2015 23:01:23</publishTime>
     </File>
     <File Include="packages.config">
-      <publishTime>08/31/2015 14:19:39</publishTime>
-    </File>
-    <File Include="PrecompiledApp.config">
-      <publishTime>08/31/2015 16:17:28</publishTime>
+      <publishTime>08/28/2015 14:03:56</publishTime>
     </File>
     <File Include="Web.config">
-      <publishTime>08/31/2015 15:44:10</publishTime>
+      <publishTime>08/31/2015 15:44:02</publishTime>
     </File>
   </ItemGroup>
 </Project>

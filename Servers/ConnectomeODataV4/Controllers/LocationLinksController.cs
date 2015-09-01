@@ -2,7 +2,7 @@
 using System.Linq;
 using System.Web.Http;
 using System.Web.OData;
-using ConnectomeODataV4.Models;
+using ConnectomeDataModel;
 
 namespace ConnectomeODataV4.Controllers
 {

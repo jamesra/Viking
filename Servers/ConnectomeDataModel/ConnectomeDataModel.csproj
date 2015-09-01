@@ -67,10 +67,10 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>DataModel.tt</DependentUpon>
     </Compile>
-    <Compile Include="DataModel.Designer.cs">
+    <Compile Include="ConnectomeDataModel.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
-      <DependentUpon>DataModel.edmx</DependentUpon>
+      <DependentUpon>ConnectomeDataModel.edmx</DependentUpon>
     </Compile>
     <Compile Include="DeletedLocation.cs">
       <DependentUpon>DataModel.tt</DependentUpon>
@@ -164,21 +164,21 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
-    <EntityDeploy Include="DataModel.edmx">
+    <EntityDeploy Include="ConnectomeDataModel.edmx">
       <Generator>EntityModelCodeGenerator</Generator>
-      <LastGenOutput>DataModel.Designer.cs</LastGenOutput>
+      <LastGenOutput>ConnectomeDataModel.Designer.cs</LastGenOutput>
     </EntityDeploy>
     <None Include="DataModel.Context.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
-      <DependentUpon>DataModel.edmx</DependentUpon>
+      <DependentUpon>ConnectomeDataModel.edmx</DependentUpon>
       <LastGenOutput>DataModel.Context.cs</LastGenOutput>
     </None>
-    <None Include="DataModel.edmx.diagram">
-      <DependentUpon>DataModel.edmx</DependentUpon>
+    <None Include="ConnectomeDataModel.edmx.diagram">
+      <DependentUpon>ConnectomeDataModel.edmx</DependentUpon>
     </None>
     <None Include="DataModel.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
-      <DependentUpon>DataModel.edmx</DependentUpon>
+      <DependentUpon>ConnectomeDataModel.edmx</DependentUpon>
       <LastGenOutput>DataModel.cs</LastGenOutput>
     </None>
     <None Include="packages.config" />

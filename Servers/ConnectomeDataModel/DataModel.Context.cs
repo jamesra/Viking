@@ -85,9 +85,9 @@ namespace ConnectomeDataModel
             return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction<LocationLink>("SelectAllStructureLocationLinks", mergeOption);
         }
     
-        public virtual ObjectResult<SelectAllStructureLocations_Result> SelectAllStructureLocations()
+        public virtual ObjectResult<SelectStructureLocations_Result> SelectAllStructureLocations()
         {
-            return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction<SelectAllStructureLocations_Result>("SelectAllStructureLocations");
+            return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction<SelectStructureLocations_Result>("SelectAllStructureLocations");
         }
     
         public virtual ObjectResult<SelectAllStructures_Result> SelectAllStructures()

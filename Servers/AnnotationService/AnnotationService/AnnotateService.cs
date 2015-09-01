@@ -799,7 +799,7 @@ namespace Annotation
                     foreach (ConnectomeDataModel.Location dbl in queryResults)
                     {
                         
-                        Location loc = new Location(dbl);
+                        Location loc = new Location(dbl, LoadLinks: true);
                         retList.Add(loc);
                     }
                     return retList.ToArray();

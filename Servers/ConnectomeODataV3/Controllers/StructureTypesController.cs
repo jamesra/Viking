@@ -1,19 +1,26 @@
-﻿using System.Data;
+﻿using System;
+using System.Collections.Generic;
+using System.Data;
+using System.Data.Entity;
 using System.Data.Entity.Infrastructure;
 using System.Linq;
+using System.Net;
+using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
-using System.Web.OData;
+using System.Web.Http.ModelBinding;
+using System.Web.Http.OData;
+using System.Web.Http.OData.Routing;
 using ConnectomeDataModel;
 
-namespace ConnectomeODataV4.Controllers
+namespace ConnectomeODataV3.Controllers
 {
     /*
     The WebApiConfig class may require additional changes to add a route for this controller. Merge these statements into the Register method of the WebApiConfig class as applicable. Note that OData URLs are case sensitive.
 
     using System.Web.Http.OData.Builder;
     using System.Web.Http.OData.Extensions;
-    using ConnectomeODataV4.Models;
+    using ConnectomeODataV3.Models;
     ODataConventionModelBuilder builder = new ODataConventionModelBuilder();
     builder.EntitySet<StructureType>("StructureTypes");
     builder.EntitySet<Structure>("Structures"); 
@@ -24,7 +31,7 @@ namespace ConnectomeODataV4.Controllers
         private ConnectomeEntities db = new ConnectomeEntities();
 
         // GET: odata/StructureTypes
-        [EnableQuery(PageSize = WebApiConfig.PageSize)]
+        [EnableQuery]
         public IQueryable<StructureType> GetStructureTypes()
         {
             return db.StructureTypes;
@@ -37,6 +44,7 @@ namespace ConnectomeODataV4.Controllers
             return SingleResult.Create(db.StructureTypes.Where(structureType => structureType.ID == key));
         }
 
+        /*
         // PUT: odata/StructureTypes(5)
         public async Task<IHttpActionResult> Put([FromODataUri] long key, Delta<StructureType> patch)
         {
@@ -74,7 +82,6 @@ namespace ConnectomeODataV4.Controllers
             return Updated(structureType);
         }
 
-        /*
         // POST: odata/StructureTypes
         public async Task<IHttpActionResult> Post(StructureType structureType)
         {
@@ -88,9 +95,7 @@ namespace ConnectomeODataV4.Controllers
 
             return Created(structureType);
         }
-        
 
-           
         // PATCH: odata/StructureTypes(5)
         [AcceptVerbs("PATCH", "MERGE")]
         public async Task<IHttpActionResult> Patch([FromODataUri] long key, Delta<StructureType> patch)
@@ -143,8 +148,7 @@ namespace ConnectomeODataV4.Controllers
 
             return StatusCode(HttpStatusCode.NoContent);
         }
-
-    */
+        */
 
         // GET: odata/StructureTypes(5)/Structures
         [EnableQuery]

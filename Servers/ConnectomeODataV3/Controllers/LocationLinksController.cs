@@ -1,44 +1,52 @@
-﻿using System.Data;
+﻿using System;
+using System.Collections.Generic;
+using System.Data;
+using System.Data.Entity;
+using System.Data.Entity.Infrastructure;
 using System.Linq;
+using System.Net;
+using System.Net.Http;
+using System.Threading.Tasks;
 using System.Web.Http;
-using System.Web.OData;
+using System.Web.Http.ModelBinding;
+using System.Web.Http.OData;
+using System.Web.Http.OData.Routing;
 using ConnectomeDataModel;
 
-namespace ConnectomeODataV4.Controllers
+namespace ConnectomeODataV3.Controllers
 {
     /*
     The WebApiConfig class may require additional changes to add a route for this controller. Merge these statements into the Register method of the WebApiConfig class as applicable. Note that OData URLs are case sensitive.
 
     using System.Web.Http.OData.Builder;
     using System.Web.Http.OData.Extensions;
-    using ConnectomeODataV4.Models;
+    using ConnectomeODataV3.Models;
     ODataConventionModelBuilder builder = new ODataConventionModelBuilder();
-    builder.EntitySet<StructureLink>("StructureLinks");
-    builder.EntitySet<Structure>("Structures"); 
+    builder.EntitySet<LocationLink>("LocationLinks");
+    builder.EntitySet<Location>("Locations"); 
     config.Routes.MapODataServiceRoute("odata", "odata", builder.GetEdmModel());
     */
-    public class StructureLinksController : ODataController
+    public class LocationLinksController : ODataController
     {
         private ConnectomeEntities db = new ConnectomeEntities();
 
-        // GET: odata/StructureLinks
-        [EnableQuery(PageSize = WebApiConfig.PageSize)]
-        public IQueryable<StructureLink> GetStructureLinks()
+        // GET: odata/LocationLinks
+        [EnableQuery]
+        public IQueryable<LocationLink> GetLocationLinks()
         {
-            StructureLink[] sl = db.StructureLinks.ToArray();
-            return db.StructureLinks;
+            return db.LocationLinks;
         }
 
-        // GET: odata/StructureLinks(5)
+        // GET: odata/LocationLinks(5)
         [EnableQuery]
-        public SingleResult<StructureLink> GetStructureLink([FromODataUri] long key)
+        public SingleResult<LocationLink> GetLocationLink([FromODataUri] long key)
         {
-            return SingleResult.Create(db.StructureLinks.Where(structureLink => structureLink.SourceID == key));
+            return SingleResult.Create(db.LocationLinks.Where(locationLink => locationLink.A == key));
         }
 
         /*
-        // PUT: odata/StructureLinks(5)
-        public async Task<IHttpActionResult> Put([FromODataUri] long key, Delta<StructureLink> patch)
+        // PUT: odata/LocationLinks(5)
+        public async Task<IHttpActionResult> Put([FromODataUri] long key, Delta<LocationLink> patch)
         {
             Validate(patch.GetEntity());
 
@@ -47,13 +55,13 @@ namespace ConnectomeODataV4.Controllers
                 return BadRequest(ModelState);
             }
 
-            StructureLink structureLink = await db.StructureLinks.FindAsync(key);
-            if (structureLink == null)
+            LocationLink locationLink = await db.LocationLinks.FindAsync(key);
+            if (locationLink == null)
             {
                 return NotFound();
             }
 
-            patch.Put(structureLink);
+            patch.Put(locationLink);
 
             try
             {
@@ -61,7 +69,7 @@ namespace ConnectomeODataV4.Controllers
             }
             catch (DbUpdateConcurrencyException)
             {
-                if (!StructureLinkExists(key))
+                if (!LocationLinkExists(key))
                 {
                     return NotFound();
                 }
@@ -71,18 +79,18 @@ namespace ConnectomeODataV4.Controllers
                 }
             }
 
-            return Updated(structureLink);
+            return Updated(locationLink);
         }
 
-        // POST: odata/StructureLinks
-        public async Task<IHttpActionResult> Post(StructureLink structureLink)
+        // POST: odata/LocationLinks
+        public async Task<IHttpActionResult> Post(LocationLink locationLink)
         {
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
             }
 
-            db.StructureLinks.Add(structureLink);
+            db.LocationLinks.Add(locationLink);
 
             try
             {
@@ -90,7 +98,7 @@ namespace ConnectomeODataV4.Controllers
             }
             catch (DbUpdateException)
             {
-                if (StructureLinkExists(structureLink.SourceID))
+                if (LocationLinkExists(locationLink.A))
                 {
                     return Conflict();
                 }
@@ -100,12 +108,12 @@ namespace ConnectomeODataV4.Controllers
                 }
             }
 
-            return Created(structureLink);
+            return Created(locationLink);
         }
 
-        // PATCH: odata/StructureLinks(5)
+        // PATCH: odata/LocationLinks(5)
         [AcceptVerbs("PATCH", "MERGE")]
-        public async Task<IHttpActionResult> Patch([FromODataUri] long key, Delta<StructureLink> patch)
+        public async Task<IHttpActionResult> Patch([FromODataUri] long key, Delta<LocationLink> patch)
         {
             Validate(patch.GetEntity());
 
@@ -114,13 +122,13 @@ namespace ConnectomeODataV4.Controllers
                 return BadRequest(ModelState);
             }
 
-            StructureLink structureLink = await db.StructureLinks.FindAsync(key);
-            if (structureLink == null)
+            LocationLink locationLink = await db.LocationLinks.FindAsync(key);
+            if (locationLink == null)
             {
                 return NotFound();
             }
 
-            patch.Patch(structureLink);
+            patch.Patch(locationLink);
 
             try
             {
@@ -128,7 +136,7 @@ namespace ConnectomeODataV4.Controllers
             }
             catch (DbUpdateConcurrencyException)
             {
-                if (!StructureLinkExists(key))
+                if (!LocationLinkExists(key))
                 {
                     return NotFound();
                 }
@@ -138,37 +146,37 @@ namespace ConnectomeODataV4.Controllers
                 }
             }
 
-            return Updated(structureLink);
+            return Updated(locationLink);
         }
 
-        // DELETE: odata/StructureLinks(5)
+        // DELETE: odata/LocationLinks(5)
         public async Task<IHttpActionResult> Delete([FromODataUri] long key)
         {
-            StructureLink structureLink = await db.StructureLinks.FindAsync(key);
-            if (structureLink == null)
+            LocationLink locationLink = await db.LocationLinks.FindAsync(key);
+            if (locationLink == null)
             {
                 return NotFound();
             }
 
-            db.StructureLinks.Remove(structureLink);
+            db.LocationLinks.Remove(locationLink);
             await db.SaveChangesAsync();
 
             return StatusCode(HttpStatusCode.NoContent);
         }
         */
 
-        // GET: odata/StructureLinks(5)/Source
+        // GET: odata/LocationLinks(5)/LocationA
         [EnableQuery]
-        public SingleResult<Structure> GetSource([FromODataUri] long key)
+        public SingleResult<Location> GetLocationA([FromODataUri] long key)
         {
-            return SingleResult.Create(db.StructureLinks.Where(m => m.SourceID == key).Select(m => m.Source));
+            return SingleResult.Create(db.LocationLinks.Where(m => m.A == key).Select(m => m.LocationA));
         }
 
-        // GET: odata/StructureLinks(5)/Target
+        // GET: odata/LocationLinks(5)/LocationB
         [EnableQuery]
-        public SingleResult<Structure> GetTarget([FromODataUri] long key)
+        public SingleResult<Location> GetLocationB([FromODataUri] long key)
         {
-            return SingleResult.Create(db.StructureLinks.Where(m => m.SourceID == key).Select(m => m.Target));
+            return SingleResult.Create(db.LocationLinks.Where(m => m.A == key).Select(m => m.LocationB));
         }
 
         protected override void Dispose(bool disposing)
@@ -180,9 +188,9 @@ namespace ConnectomeODataV4.Controllers
             base.Dispose(disposing);
         }
 
-        private bool StructureLinkExists(long key)
+        private bool LocationLinkExists(long key)
         {
-            return db.StructureLinks.Count(e => e.SourceID == key) > 0;
+            return db.LocationLinks.Count(e => e.A == key) > 0;
         }
     }
 }

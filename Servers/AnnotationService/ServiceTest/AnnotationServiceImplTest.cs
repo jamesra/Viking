@@ -184,9 +184,42 @@ namespace ServiceTest
             Assert.AreEqual(1, LinkedLocations.Length);
             Assert.AreEqual(linkedLocation.ID, LinkedLocations[0]);
 
+            Location[] struct_locations = target.GetLocationsForStructure(linkedLocation.ParentID);
+            Assert.AreEqual(2, struct_locations.Length);
+
+            bool FoundLinkedLocation = false;
+            bool FoundCreatedLocation = false; 
+            foreach (Location loc in struct_locations)
+            {
+                if (loc.ID == linkedLocation.ID)
+                {
+                    FoundLinkedLocation = true;
+                    Assert.IsTrue(HasLink(loc.Links, created_location.ID));
+                }
+
+                if (loc.ID == created_location.ID)
+                {
+                    FoundCreatedLocation = true;
+                    Assert.IsTrue(HasLink(loc.Links, linkedLocation.ID));
+                }
+            }
+
+            Assert.IsTrue(FoundLinkedLocation);
+            Assert.IsTrue(FoundCreatedLocation);
+
             return created_location; 
         }
-         
+
+        public bool HasLink(long[] links, long ID)
+        {
+            foreach(long linkedID in links)
+            {
+                if (linkedID == ID)
+                    return true;
+            }
+
+            return false; 
+        }
 
         [TestMethod()]
         public void CreateTest()

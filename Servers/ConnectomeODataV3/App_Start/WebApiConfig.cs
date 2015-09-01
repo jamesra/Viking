@@ -1,10 +1,14 @@
-﻿using System.Web.Http;
-using System.Web.OData.Builder;
-using System.Web.OData.Extensions;
-using ConnectomeDataModel;
- 
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web.Configuration;
+using System.Web.Http;
+using System.Web.Http.OData.Builder;
+using System.Web.Http.OData.Extensions;
 
-namespace ConnectomeODataV4
+using ConnectomeDataModel;
+
+namespace ConnectomeODataV3
 {
     public static class WebApiConfig
     {
@@ -16,16 +20,13 @@ namespace ConnectomeODataV4
             var json = GlobalConfiguration.Configuration.Formatters.JsonFormatter;
             json.UseDataContractJsonSerializer = true;
             //json.SerializerSettings.PreserveReferencesHandling = Newtonsoft.Json.PreserveReferencesHandling.All;
-
-            //var cors = new System.Web.Http.Cors.EnableCorsAttribute("*", "*", "*");
-            //config.EnableCors(cors);
-
+            
             // Web API routes 
-            config.MapHttpAttributeRoutes();
+            config.MapHttpAttributeRoutes(); 
 
             ODataConventionModelBuilder builder = GetModel();
 
-            config.MapODataServiceRoute(routeName: "odata",
+            config.Routes.MapODataServiceRoute(routeName: "odata",
                 routePrefix: null,
                 model: builder.GetEdmModel());
             
@@ -42,18 +43,17 @@ namespace ConnectomeODataV4
             builder.EntitySet<StructureType>("StructureTypes");
             builder.EntitySet<Structure>("Structures");
             builder.EntitySet<Location>("Locations");
+            AddStructureLinks(builder);
+            AddLocationLinks(builder);
 
             builder.EntitySet<SelectStructureLocations_Result>("SelectStructureLocations");
 
-            AddStructureLinks(builder);
-            AddLocationLinks(builder);
-          
             return builder;
         }
 
         public static void AddStructureLinks(ODataModelBuilder builder)
         {
-            var type = builder.EntityType<StructureLink>();
+            var type = builder.Entity<StructureLink>();
             type.HasKey(sl => sl.SourceID);
             type.HasKey(sl => sl.TargetID);
             builder.EntitySet<StructureLink>("StructureLinks");
@@ -61,7 +61,7 @@ namespace ConnectomeODataV4
 
         public static void AddLocationLinks(ODataModelBuilder builder)
         {
-            var type = builder.EntityType<LocationLink>();
+            var type = builder.Entity<LocationLink>();
             type.HasKey(sl => sl.A);
             type.HasKey(sl => sl.B);
             builder.EntitySet<LocationLink>("LocationLinks");
