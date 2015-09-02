@@ -471,6 +471,24 @@ namespace connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd {
             }
         }
         
+        /// <summary>
+        /// <para>
+        /// Semicolon delimited list of tags to add to new structure
+        /// </para>
+        /// <para>
+        /// Occurrence: optional
+        /// </para>
+        /// </summary>
+        public string Tags {
+            get {
+                XAttribute x = this.Attribute(XName.Get("Tags", ""));
+                return XTypedServices.ParseValue<string>(x, XmlSchemaType.GetBuiltInSimpleType(XmlTypeCode.String).Datatype);
+            }
+            set {
+                this.SetAttribute(XName.Get("Tags", ""), value, XmlSchemaType.GetBuiltInSimpleType(XmlTypeCode.String).Datatype);
+            }
+        }
+        
         [DebuggerBrowsable(DebuggerBrowsableState.Never)]
         XName IXMetaData.SchemaName {
             get {

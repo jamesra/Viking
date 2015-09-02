@@ -584,7 +584,7 @@ namespace WebAnnotation
                         CreateStructureCommandAction comAction = Global.UserSettings.Actions.CreateStructureCommandAction.Where(action => action.Name == h.Action).SingleOrDefault();
                         if (comAction != null)
                         {
-                            OnCreateStructure(System.Convert.ToInt64(comAction.TypeID));
+                            OnCreateStructure(System.Convert.ToInt64(comAction.TypeID), comAction.AttributeList);
 
                             return;
                         }
@@ -654,7 +654,7 @@ namespace WebAnnotation
             }
         }
 
-        protected void OnCreateStructure(long TypeID)
+        protected void OnCreateStructure(long TypeID, IEnumerable<string> attributes)
         {
             StructureTypeObj typeObj = Store.StructureTypes.GetObjectByID(TypeID);
             if (typeObj != null)
@@ -679,6 +679,14 @@ namespace WebAnnotation
                 Structure newStructView = new Structure(newStruct);
                 Location_CanvasViewModel newLocationView = new Location_CanvasViewModel(newLocation);
 
+                if (attributes != null)
+                {
+                    foreach (string attrib in attributes)
+                    {
+                        newStructView.ToggleAttribute(attrib);
+                    }
+                }
+
                 Viking.UI.Commands.Command.EnqueueCommand(typeof(ResizeCircleCommand), new object[] { Parent, type.Color, WorldPos, new ResizeCircleCommand.OnCommandSuccess((double radius) => { newLocationView.Radius = radius; }) });
                 if (type.Parent != null)
                 {
@@ -686,7 +694,7 @@ namespace WebAnnotation
                     Viking.UI.Commands.Command.EnqueueCommand(typeof(LinkStructureToParentCommand), new object[] { Parent, newStructView, newLocationView });
                 }
 
-                Viking.UI.Commands.Command.EnqueueCommand(typeof(CreateNewStructureCommand), new object[] { Parent, newStructView, newLocationView });
+                Viking.UI.Commands.Command.EnqueueCommand(typeof(CreateNewStructureCommand), new object[] { Parent, newStructView, newLocationView});
             }
             else
                 Trace.WriteLine("Could not find hotkey ID for type: " + TypeID.ToString()); 

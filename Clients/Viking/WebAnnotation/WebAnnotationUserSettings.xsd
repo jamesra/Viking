@@ -50,6 +50,11 @@
     <xs:complexType>
       <xs:attribute name="TypeID" type="xs:integer" use="required"/>
       <xs:attribute name="Name" type="xs:string" use="required"/>
+      <xs:attribute name="Tags" type="xs:string" use="optional">
+        <xs:annotation>
+          <xs:documentation>Semicolon delimited list of tags to add to new structure</xs:documentation>
+        </xs:annotation>
+      </xs:attribute>
     </xs:complexType>
   </xs:element>
 

@@ -28,21 +28,8 @@ namespace WebAnnotation.UI.Commands
 
         protected override void Execute()
         {
-            ObjAttribute attrib = new ObjAttribute(this.tag, null);
-            List<ObjAttribute> listAttributes = target.Attributes.ToList();
-            if(listAttributes.Contains(attrib))
-            {
-                listAttributes.Remove(attrib);
-            }
-            else
-            {
-                listAttributes.Add(attrib);
-            }
-
-            target.Attributes = listAttributes;
-
+            target.ToggleAttribute(this.tag);
             Store.Structures.Save();
-
             base.Execute();
         }
     }

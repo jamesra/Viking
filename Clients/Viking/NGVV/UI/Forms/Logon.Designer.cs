@@ -34,210 +34,36 @@ namespace Viking.UI.Forms
         private void InitializeComponent()
         {
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Logon));
-            this.groupUserInfo = new System.Windows.Forms.GroupBox();
-            this.update_label = new System.Windows.Forms.Label();
-            this.label8 = new System.Windows.Forms.Label();
+            this.pictureBox1 = new System.Windows.Forms.PictureBox();
+            this.marclabLink = new System.Windows.Forms.LinkLabel();
+            this.annotationsLink = new System.Windows.Forms.LinkLabel();
+            this.linkDocumentation = new System.Windows.Forms.LinkLabel();
+            this.labelVolume = new System.Windows.Forms.Label();
+            this.comboVolumeURL = new System.Windows.Forms.ComboBox();
+            this.linkVersionHistory = new System.Windows.Forms.LinkLabel();
+            this.btnAnonymous = new System.Windows.Forms.Button();
             this.groupCredentials = new System.Windows.Forms.GroupBox();
+            this.update_label = new System.Windows.Forms.Label();
             this.linkLabel2 = new System.Windows.Forms.LinkLabel();
-            this.label5 = new System.Windows.Forms.Label();
-            this.linkLabel1 = new System.Windows.Forms.LinkLabel();
-            this.label4 = new System.Windows.Forms.Label();
+            this.linkRegister = new System.Windows.Forms.LinkLabel();
             this.btnLogin = new System.Windows.Forms.Button();
             this.remember_me_check_box = new System.Windows.Forms.CheckBox();
             this.textPassword = new System.Windows.Forms.TextBox();
             this.label3 = new System.Windows.Forms.Label();
             this.label2 = new System.Windows.Forms.Label();
             this.textUsername = new System.Windows.Forms.TextBox();
-            this.btnAnonymous = new System.Windows.Forms.Button();
-            this.pictureBox1 = new System.Windows.Forms.PictureBox();
-            this.marclabLink = new System.Windows.Forms.LinkLabel();
-            this.annotationsLink = new System.Windows.Forms.LinkLabel();
-            this.vikingLink = new System.Windows.Forms.LinkLabel();
-            this.labelVolume = new System.Windows.Forms.Label();
-            this.comboVolumeURL = new System.Windows.Forms.ComboBox();
-            this.groupUserInfo.SuspendLayout();
-            this.groupCredentials.SuspendLayout();
+            this.groupBox1 = new System.Windows.Forms.GroupBox();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
+            this.groupCredentials.SuspendLayout();
+            this.groupBox1.SuspendLayout();
             this.SuspendLayout();
-            // 
-            // groupUserInfo
-            // 
-            this.groupUserInfo.Controls.Add(this.update_label);
-            this.groupUserInfo.Controls.Add(this.label8);
-            this.groupUserInfo.Controls.Add(this.groupCredentials);
-            this.groupUserInfo.Controls.Add(this.btnAnonymous);
-            this.groupUserInfo.Location = new System.Drawing.Point(403, 32);
-            this.groupUserInfo.Name = "groupUserInfo";
-            this.groupUserInfo.Size = new System.Drawing.Size(385, 352);
-            this.groupUserInfo.TabIndex = 0;
-            this.groupUserInfo.TabStop = false;
-            this.groupUserInfo.Text = "User Info";
-            // 
-            // update_label
-            // 
-            this.update_label.AutoSize = true;
-            this.update_label.Location = new System.Drawing.Point(120, 323);
-            this.update_label.Name = "update_label";
-            this.update_label.Size = new System.Drawing.Size(0, 13);
-            this.update_label.TabIndex = 10;
-            this.update_label.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
-            // 
-            // label8
-            // 
-            this.label8.AutoSize = true;
-            this.label8.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label8.Location = new System.Drawing.Point(56, 81);
-            this.label8.Name = "label8";
-            this.label8.Size = new System.Drawing.Size(287, 15);
-            this.label8.TabIndex = 3;
-            this.label8.Text = "Info: Click \"Anonymous Login\" (or) Enter Credentials";
-            this.label8.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
-            // 
-            // groupCredentials
-            // 
-            this.groupCredentials.Controls.Add(this.linkLabel2);
-            this.groupCredentials.Controls.Add(this.label5);
-            this.groupCredentials.Controls.Add(this.linkLabel1);
-            this.groupCredentials.Controls.Add(this.label4);
-            this.groupCredentials.Controls.Add(this.btnLogin);
-            this.groupCredentials.Controls.Add(this.remember_me_check_box);
-            this.groupCredentials.Controls.Add(this.textPassword);
-            this.groupCredentials.Controls.Add(this.label3);
-            this.groupCredentials.Controls.Add(this.label2);
-            this.groupCredentials.Controls.Add(this.textUsername);
-            this.groupCredentials.Location = new System.Drawing.Point(18, 109);
-            this.groupCredentials.Name = "groupCredentials";
-            this.groupCredentials.Size = new System.Drawing.Size(351, 201);
-            this.groupCredentials.TabIndex = 2;
-            this.groupCredentials.TabStop = false;
-            this.groupCredentials.Text = "Credentials";
-            // 
-            // linkLabel2
-            // 
-            this.linkLabel2.AutoSize = true;
-            this.linkLabel2.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.linkLabel2.Location = new System.Drawing.Point(275, 135);
-            this.linkLabel2.Name = "linkLabel2";
-            this.linkLabel2.Size = new System.Drawing.Size(52, 15);
-            this.linkLabel2.TabIndex = 9;
-            this.linkLabel2.TabStop = true;
-            this.linkLabel2.Text = "Retrieve";
-            // 
-            // label5
-            // 
-            this.label5.AutoSize = true;
-            this.label5.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label5.Location = new System.Drawing.Point(174, 135);
-            this.label5.Name = "label5";
-            this.label5.Size = new System.Drawing.Size(106, 15);
-            this.label5.TabIndex = 8;
-            this.label5.Text = "Forgot Password?";
-            // 
-            // linkLabel1
-            // 
-            this.linkLabel1.AutoSize = true;
-            this.linkLabel1.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.linkLabel1.Location = new System.Drawing.Point(187, 26);
-            this.linkLabel1.Name = "linkLabel1";
-            this.linkLabel1.Size = new System.Drawing.Size(53, 15);
-            this.linkLabel1.TabIndex = 7;
-            this.linkLabel1.TabStop = true;
-            this.linkLabel1.Text = "Register";
-            this.linkLabel1.Click += new System.EventHandler(this.linkLabel1_Click);
-            // 
-            // label4
-            // 
-            this.label4.AutoSize = true;
-            this.label4.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label4.Location = new System.Drawing.Point(102, 26);
-            this.label4.Name = "label4";
-            this.label4.Size = new System.Drawing.Size(88, 15);
-            this.label4.TabIndex = 6;
-            this.label4.Text = "New to Viking?";
-            // 
-            // btnLogin
-            // 
-            this.btnLogin.Enabled = false;
-            this.btnLogin.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.btnLogin.Location = new System.Drawing.Point(135, 159);
-            this.btnLogin.Name = "btnLogin";
-            this.btnLogin.Size = new System.Drawing.Size(88, 31);
-            this.btnLogin.TabIndex = 5;
-            this.btnLogin.Text = "Login";
-            this.btnLogin.UseVisualStyleBackColor = true;
-            this.btnLogin.Click += new System.EventHandler(this.login_handle);
-            // 
-            // remember_me_check_box
-            // 
-            this.remember_me_check_box.AutoSize = true;
-            this.remember_me_check_box.Checked = true;
-            this.remember_me_check_box.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.remember_me_check_box.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.remember_me_check_box.Location = new System.Drawing.Point(58, 134);
-            this.remember_me_check_box.Name = "remember_me_check_box";
-            this.remember_me_check_box.Size = new System.Drawing.Size(110, 19);
-            this.remember_me_check_box.TabIndex = 4;
-            this.remember_me_check_box.Text = "Remember me";
-            this.remember_me_check_box.UseVisualStyleBackColor = true;
-            // 
-            // textPassword
-            // 
-            this.textPassword.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.textPassword.Location = new System.Drawing.Point(135, 95);
-            this.textPassword.Name = "textPassword";
-            this.textPassword.PasswordChar = '*';
-            this.textPassword.Size = new System.Drawing.Size(121, 21);
-            this.textPassword.TabIndex = 3;
-            this.textPassword.GotFocus += new System.EventHandler(this.password_GotFocus);
-            this.textPassword.KeyUp += new System.Windows.Forms.KeyEventHandler(this.password_KeyUp);
-            // 
-            // label3
-            // 
-            this.label3.AutoSize = true;
-            this.label3.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label3.Location = new System.Drawing.Point(65, 98);
-            this.label3.Name = "label3";
-            this.label3.Size = new System.Drawing.Size(64, 15);
-            this.label3.TabIndex = 2;
-            this.label3.Text = "Password:";
-            // 
-            // label2
-            // 
-            this.label2.AutoSize = true;
-            this.label2.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label2.Location = new System.Drawing.Point(61, 63);
-            this.label2.Name = "label2";
-            this.label2.Size = new System.Drawing.Size(68, 15);
-            this.label2.TabIndex = 1;
-            this.label2.Text = "Username:";
-            // 
-            // textUsername
-            // 
-            this.textUsername.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.textUsername.Location = new System.Drawing.Point(135, 60);
-            this.textUsername.Name = "textUsername";
-            this.textUsername.Size = new System.Drawing.Size(121, 21);
-            this.textUsername.TabIndex = 0;
-            this.textUsername.GotFocus += new System.EventHandler(this.username_GotFocus);
-            this.textUsername.KeyUp += new System.Windows.Forms.KeyEventHandler(this.username_KeyUp);
-            // 
-            // btnAnonymous
-            // 
-            this.btnAnonymous.Font = new System.Drawing.Font("Microsoft Sans Serif", 14.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.btnAnonymous.Location = new System.Drawing.Point(103, 28);
-            this.btnAnonymous.Name = "btnAnonymous";
-            this.btnAnonymous.Size = new System.Drawing.Size(183, 40);
-            this.btnAnonymous.TabIndex = 0;
-            this.btnAnonymous.Text = "Anonymous Login";
-            this.btnAnonymous.UseVisualStyleBackColor = true;
-            this.btnAnonymous.Click += new System.EventHandler(this.Handle_Anonymmous);
             // 
             // pictureBox1
             // 
             this.pictureBox1.Image = global::Viking.Properties.Resources.marclab;
-            this.pictureBox1.Location = new System.Drawing.Point(12, 48);
+            this.pictureBox1.Location = new System.Drawing.Point(15, 33);
             this.pictureBox1.Name = "pictureBox1";
-            this.pictureBox1.Size = new System.Drawing.Size(385, 269);
+            this.pictureBox1.Size = new System.Drawing.Size(385, 243);
             this.pictureBox1.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom;
             this.pictureBox1.TabIndex = 1;
             this.pictureBox1.TabStop = false;
@@ -247,37 +73,37 @@ namespace Viking.UI.Forms
             // 
             this.marclabLink.AutoSize = true;
             this.marclabLink.Font = new System.Drawing.Font("Microsoft Sans Serif", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.marclabLink.Location = new System.Drawing.Point(23, 334);
+            this.marclabLink.Location = new System.Drawing.Point(12, 282);
             this.marclabLink.Name = "marclabLink";
             this.marclabLink.Size = new System.Drawing.Size(70, 18);
             this.marclabLink.TabIndex = 3;
             this.marclabLink.TabStop = true;
             this.marclabLink.Text = "Marc Lab";
-            this.marclabLink.Click += new System.EventHandler(this.linkLabel3_Click);
+            this.marclabLink.LinkClicked += new System.Windows.Forms.LinkLabelLinkClickedEventHandler(this.marclabLink_LinkClicked);
             // 
             // annotationsLink
             // 
             this.annotationsLink.AutoSize = true;
             this.annotationsLink.Font = new System.Drawing.Font("Microsoft Sans Serif", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.annotationsLink.Location = new System.Drawing.Point(247, 334);
+            this.annotationsLink.Location = new System.Drawing.Point(267, 282);
             this.annotationsLink.Name = "annotationsLink";
-            this.annotationsLink.Size = new System.Drawing.Size(121, 18);
+            this.annotationsLink.Size = new System.Drawing.Size(133, 18);
             this.annotationsLink.TabIndex = 4;
             this.annotationsLink.TabStop = true;
-            this.annotationsLink.Text = "Web Annotations";
+            this.annotationsLink.Text = "Web Visualizations";
             this.annotationsLink.LinkClicked += new System.Windows.Forms.LinkLabelLinkClickedEventHandler(this.annotationsLink_LinkClicked);
             // 
-            // vikingLink
+            // linkDocumentation
             // 
-            this.vikingLink.AutoSize = true;
-            this.vikingLink.Font = new System.Drawing.Font("Microsoft Sans Serif", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.vikingLink.Location = new System.Drawing.Point(117, 334);
-            this.vikingLink.Name = "vikingLink";
-            this.vikingLink.Size = new System.Drawing.Size(114, 18);
-            this.vikingLink.TabIndex = 5;
-            this.vikingLink.TabStop = true;
-            this.vikingLink.Text = "Viking Webpage";
-            this.vikingLink.LinkClicked += new System.Windows.Forms.LinkLabelLinkClickedEventHandler(this.vikingLink_LinkClicked);
+            this.linkDocumentation.AutoSize = true;
+            this.linkDocumentation.Font = new System.Drawing.Font("Microsoft Sans Serif", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.linkDocumentation.Location = new System.Drawing.Point(129, 282);
+            this.linkDocumentation.Name = "linkDocumentation";
+            this.linkDocumentation.Size = new System.Drawing.Size(109, 18);
+            this.linkDocumentation.TabIndex = 5;
+            this.linkDocumentation.TabStop = true;
+            this.linkDocumentation.Text = "Documentation";
+            this.linkDocumentation.LinkClicked += new System.Windows.Forms.LinkLabelLinkClickedEventHandler(this.vikingLink_LinkClicked);
             // 
             // labelVolume
             // 
@@ -295,10 +121,167 @@ namespace Viking.UI.Forms
             this.comboVolumeURL.FormattingEnabled = true;
             this.comboVolumeURL.Location = new System.Drawing.Point(103, 6);
             this.comboVolumeURL.Name = "comboVolumeURL";
-            this.comboVolumeURL.Size = new System.Drawing.Size(685, 21);
+            this.comboVolumeURL.Size = new System.Drawing.Size(618, 21);
             this.comboVolumeURL.TabIndex = 7;
             this.comboVolumeURL.SelectedIndexChanged += new System.EventHandler(this.comboVolumeURL_SelectedIndexChanged);
             this.comboVolumeURL.Validating += new System.ComponentModel.CancelEventHandler(this.comboVolumeURL_Validating);
+            // 
+            // linkVersionHistory
+            // 
+            this.linkVersionHistory.AutoSize = true;
+            this.linkVersionHistory.Font = new System.Drawing.Font("Microsoft Sans Serif", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.linkVersionHistory.Location = new System.Drawing.Point(129, 315);
+            this.linkVersionHistory.Name = "linkVersionHistory";
+            this.linkVersionHistory.Size = new System.Drawing.Size(109, 18);
+            this.linkVersionHistory.TabIndex = 8;
+            this.linkVersionHistory.TabStop = true;
+            this.linkVersionHistory.Text = "Version History";
+            this.linkVersionHistory.LinkClicked += new System.Windows.Forms.LinkLabelLinkClickedEventHandler(this.linkVersionHistory_LinkClicked);
+            // 
+            // btnAnonymous
+            // 
+            this.btnAnonymous.Font = new System.Drawing.Font("Microsoft Sans Serif", 14.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.btnAnonymous.Location = new System.Drawing.Point(28, 19);
+            this.btnAnonymous.Name = "btnAnonymous";
+            this.btnAnonymous.Size = new System.Drawing.Size(237, 40);
+            this.btnAnonymous.TabIndex = 0;
+            this.btnAnonymous.Text = "Read only access";
+            this.btnAnonymous.UseVisualStyleBackColor = true;
+            this.btnAnonymous.Click += new System.EventHandler(this.Handle_Anonymmous);
+            // 
+            // groupCredentials
+            // 
+            this.groupCredentials.Controls.Add(this.update_label);
+            this.groupCredentials.Controls.Add(this.linkLabel2);
+            this.groupCredentials.Controls.Add(this.linkRegister);
+            this.groupCredentials.Controls.Add(this.btnLogin);
+            this.groupCredentials.Controls.Add(this.remember_me_check_box);
+            this.groupCredentials.Controls.Add(this.textPassword);
+            this.groupCredentials.Controls.Add(this.label3);
+            this.groupCredentials.Controls.Add(this.label2);
+            this.groupCredentials.Controls.Add(this.textUsername);
+            this.groupCredentials.Location = new System.Drawing.Point(429, 105);
+            this.groupCredentials.Name = "groupCredentials";
+            this.groupCredentials.Size = new System.Drawing.Size(293, 228);
+            this.groupCredentials.TabIndex = 2;
+            this.groupCredentials.TabStop = false;
+            this.groupCredentials.Text = "Annotating";
+            // 
+            // update_label
+            // 
+            this.update_label.AutoSize = true;
+            this.update_label.Location = new System.Drawing.Point(25, 193);
+            this.update_label.Name = "update_label";
+            this.update_label.Size = new System.Drawing.Size(47, 13);
+            this.update_label.TabIndex = 10;
+            this.update_label.Text = "Updates";
+            this.update_label.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            // 
+            // linkLabel2
+            // 
+            this.linkLabel2.AutoSize = true;
+            this.linkLabel2.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.linkLabel2.Location = new System.Drawing.Point(156, 27);
+            this.linkLabel2.Name = "linkLabel2";
+            this.linkLabel2.Size = new System.Drawing.Size(109, 15);
+            this.linkLabel2.TabIndex = 9;
+            this.linkLabel2.TabStop = true;
+            this.linkLabel2.Text = "Retrieve Password";
+            this.linkLabel2.LinkClicked += new System.Windows.Forms.LinkLabelLinkClickedEventHandler(this.linkLabel2_LinkClicked);
+            // 
+            // linkRegister
+            // 
+            this.linkRegister.AutoSize = true;
+            this.linkRegister.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.linkRegister.Location = new System.Drawing.Point(25, 27);
+            this.linkRegister.Name = "linkRegister";
+            this.linkRegister.Size = new System.Drawing.Size(125, 15);
+            this.linkRegister.TabIndex = 7;
+            this.linkRegister.TabStop = true;
+            this.linkRegister.Text = "Register new account";
+            this.linkRegister.LinkClicked += new System.Windows.Forms.LinkLabelLinkClickedEventHandler(this.linkLabel1_LinkClicked);
+            this.linkRegister.Click += new System.EventHandler(this.linkLabel1_Click);
+            // 
+            // btnLogin
+            // 
+            this.btnLogin.Enabled = false;
+            this.btnLogin.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.btnLogin.Location = new System.Drawing.Point(28, 149);
+            this.btnLogin.Name = "btnLogin";
+            this.btnLogin.Size = new System.Drawing.Size(237, 31);
+            this.btnLogin.TabIndex = 5;
+            this.btnLogin.Text = "Login";
+            this.btnLogin.UseVisualStyleBackColor = true;
+            this.btnLogin.Click += new System.EventHandler(this.login_handle);
+            // 
+            // remember_me_check_box
+            // 
+            this.remember_me_check_box.AutoSize = true;
+            this.remember_me_check_box.Checked = true;
+            this.remember_me_check_box.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.remember_me_check_box.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.remember_me_check_box.Location = new System.Drawing.Point(95, 124);
+            this.remember_me_check_box.Name = "remember_me_check_box";
+            this.remember_me_check_box.Size = new System.Drawing.Size(110, 19);
+            this.remember_me_check_box.TabIndex = 4;
+            this.remember_me_check_box.Text = "Remember me";
+            this.remember_me_check_box.UseVisualStyleBackColor = true;
+            this.remember_me_check_box.CheckedChanged += new System.EventHandler(this.remember_me_check_box_CheckedChanged);
+            // 
+            // textPassword
+            // 
+            this.textPassword.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.textPassword.Location = new System.Drawing.Point(95, 90);
+            this.textPassword.Name = "textPassword";
+            this.textPassword.PasswordChar = '*';
+            this.textPassword.Size = new System.Drawing.Size(170, 21);
+            this.textPassword.TabIndex = 3;
+            this.textPassword.TextChanged += new System.EventHandler(this.textPassword_TextChanged);
+            this.textPassword.GotFocus += new System.EventHandler(this.password_GotFocus);
+            this.textPassword.KeyUp += new System.Windows.Forms.KeyEventHandler(this.password_KeyUp);
+            // 
+            // label3
+            // 
+            this.label3.AutoSize = true;
+            this.label3.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label3.Location = new System.Drawing.Point(25, 93);
+            this.label3.Name = "label3";
+            this.label3.Size = new System.Drawing.Size(64, 15);
+            this.label3.TabIndex = 2;
+            this.label3.Text = "Password:";
+            this.label3.Click += new System.EventHandler(this.label3_Click);
+            // 
+            // label2
+            // 
+            this.label2.AutoSize = true;
+            this.label2.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label2.Location = new System.Drawing.Point(25, 58);
+            this.label2.Name = "label2";
+            this.label2.Size = new System.Drawing.Size(68, 15);
+            this.label2.TabIndex = 1;
+            this.label2.Text = "Username:";
+            this.label2.Click += new System.EventHandler(this.label2_Click);
+            // 
+            // textUsername
+            // 
+            this.textUsername.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.textUsername.Location = new System.Drawing.Point(95, 55);
+            this.textUsername.Name = "textUsername";
+            this.textUsername.Size = new System.Drawing.Size(170, 21);
+            this.textUsername.TabIndex = 0;
+            this.textUsername.TextChanged += new System.EventHandler(this.textUsername_TextChanged);
+            this.textUsername.GotFocus += new System.EventHandler(this.username_GotFocus);
+            this.textUsername.KeyUp += new System.Windows.Forms.KeyEventHandler(this.username_KeyUp);
+            // 
+            // groupBox1
+            // 
+            this.groupBox1.Controls.Add(this.btnAnonymous);
+            this.groupBox1.Location = new System.Drawing.Point(429, 33);
+            this.groupBox1.Name = "groupBox1";
+            this.groupBox1.Size = new System.Drawing.Size(292, 76);
+            this.groupBox1.TabIndex = 9;
+            this.groupBox1.TabStop = false;
+            this.groupBox1.Text = "Viewing";
             // 
             // Logon
             // 
@@ -306,14 +289,16 @@ namespace Viking.UI.Forms
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.SystemColors.InactiveCaption;
-            this.ClientSize = new System.Drawing.Size(800, 386);
+            this.ClientSize = new System.Drawing.Size(734, 341);
+            this.Controls.Add(this.groupCredentials);
+            this.Controls.Add(this.linkVersionHistory);
             this.Controls.Add(this.comboVolumeURL);
             this.Controls.Add(this.labelVolume);
-            this.Controls.Add(this.vikingLink);
+            this.Controls.Add(this.linkDocumentation);
             this.Controls.Add(this.annotationsLink);
             this.Controls.Add(this.marclabLink);
             this.Controls.Add(this.pictureBox1);
-            this.Controls.Add(this.groupUserInfo);
+            this.Controls.Add(this.groupBox1);
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.MaximizeBox = false;
             this.Name = "Logon";
@@ -324,11 +309,10 @@ namespace Viking.UI.Forms
             this.FormClosed += new System.Windows.Forms.FormClosedEventHandler(this.Logon_FormClosed);
             this.Load += new System.EventHandler(this.Logon_Load);
             this.KeyDown += new System.Windows.Forms.KeyEventHandler(this.Logon_KeyDown);
-            this.groupUserInfo.ResumeLayout(false);
-            this.groupUserInfo.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).EndInit();
             this.groupCredentials.ResumeLayout(false);
             this.groupCredentials.PerformLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).EndInit();
+            this.groupBox1.ResumeLayout(false);
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -358,27 +342,25 @@ namespace Viking.UI.Forms
 
         #endregion
 
-        private System.Windows.Forms.GroupBox groupUserInfo;
-        private System.Windows.Forms.GroupBox groupCredentials;
+        private System.Windows.Forms.PictureBox pictureBox1;
+        private System.Windows.Forms.LinkLabel marclabLink;
+        private System.Windows.Forms.LinkLabel annotationsLink;
+        private System.Windows.Forms.LinkLabel linkDocumentation;
+        private System.Windows.Forms.Label labelVolume;
+        private System.Windows.Forms.ComboBox comboVolumeURL;
+        private System.Windows.Forms.LinkLabel linkVersionHistory;
         private System.Windows.Forms.Button btnAnonymous;
+        private System.Windows.Forms.GroupBox groupCredentials;
+        private System.Windows.Forms.Label update_label;
+        private System.Windows.Forms.LinkLabel linkLabel2;
+        private System.Windows.Forms.LinkLabel linkRegister;
         private System.Windows.Forms.Button btnLogin;
         private System.Windows.Forms.CheckBox remember_me_check_box;
         private System.Windows.Forms.TextBox textPassword;
         private System.Windows.Forms.Label label3;
         private System.Windows.Forms.Label label2;
         private System.Windows.Forms.TextBox textUsername;
-        private System.Windows.Forms.Label label8;
-        private System.Windows.Forms.Label label4;
-        private System.Windows.Forms.LinkLabel linkLabel1;
-        private System.Windows.Forms.LinkLabel linkLabel2;
-        private System.Windows.Forms.Label label5;
-        private System.Windows.Forms.PictureBox pictureBox1;
-        private System.Windows.Forms.LinkLabel marclabLink;
-        private System.Windows.Forms.LinkLabel annotationsLink;
-        private System.Windows.Forms.Label update_label;
-        private System.Windows.Forms.LinkLabel vikingLink;
-        private System.Windows.Forms.Label labelVolume;
-        private System.Windows.Forms.ComboBox comboVolumeURL;
+        private System.Windows.Forms.GroupBox groupBox1;
 
         
         

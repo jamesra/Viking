@@ -38,6 +38,20 @@ namespace connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd
         }
     }
 
+    public partial class CreateStructureCommandAction
+    {
+        public string[] AttributeList
+        {
+            get
+            {
+                if (this.Tags == null)
+                    return new string[0];
+
+                return this.Tags.Split(';');
+            }
+        }
+    }
+
     public partial class Action
     {
         public void ExecuteAction(out System.Type type, out object[] parameters)

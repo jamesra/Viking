@@ -336,15 +336,19 @@ namespace Viking.UI.Forms
         }
 
 
-        void linkLabel3_Click(object sender, System.EventArgs e)
+        private void marclabLink_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
         {
-            System.Diagnostics.Process.Start("http://prometheus.med.utah.edu/~marclab/");
+            System.Diagnostics.Process.Start("http://marclab.org/");
         }
-
-
+         
         private void vikingLink_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
         {
             System.Diagnostics.Process.Start("http://connectomes.utah.edu");
+        }
+
+        private void linkVersionHistory_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
+        {
+            System.Diagnostics.Process.Start("http://connectomes.utah.edu/client/versionhistory.html");
         }
 
         private void annotationsLink_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
@@ -352,9 +356,14 @@ namespace Viking.UI.Forms
             System.Diagnostics.Process.Start("http://connectomes.utah.edu/Viz");
         }
 
+        private void linkLabel1_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
+        {
+            System.Diagnostics.Process.Start("http://connectomes.utah.edu/Viz");
+        }
+
         private void pictureBox1_Click(object sender, EventArgs e)
         {
-            System.Diagnostics.Process.Start("http://prometheus.med.utah.edu/~marclab/");
+            System.Diagnostics.Process.Start("http://marclab.org/");
         }
 
         void Logon_KeyDown(object sender, System.Windows.Forms.KeyEventArgs e)
@@ -576,6 +585,52 @@ namespace Viking.UI.Forms
         {
             Settings.Default.Save();
         }
+
+        private void textUsername_TextChanged(object sender, EventArgs e)
+        {
+
+        }
+
+        private void label4_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void textPassword_TextChanged(object sender, EventArgs e)
+        {
+
+        }
+
+        private void label3_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void label2_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void remember_me_check_box_CheckedChanged(object sender, EventArgs e)
+        {
+
+        }
+
+        private void label5_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void linkLabel2_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
+        {
+
+        }
+
+        
+
+       
+
+        
 
     }
 }

@@ -24,7 +24,7 @@ namespace WebAnnotation.UI.Commands
             : base(parent)
         {
             this.newStruct = structure;
-            this.newLoc = location;
+            this.newLoc = location;  
         }
 
         public override void OnActivate()
@@ -33,7 +33,7 @@ namespace WebAnnotation.UI.Commands
         }
 
         protected override void Execute()
-        {
+        { 
            //Create the new structure
             LocationObj unused;
             Store.Structures.Create(newStruct.modelObj, newLoc.modelObj, out unused);
