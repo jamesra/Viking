@@ -101,23 +101,26 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />
-    <None Include="Service References\Service\Annotation.Service.GraphClasses.xsd">
+    <None Include="Service References\Service\Annotation.Service.GraphClasses11.xsd">
       <SubType>Designer</SubType>
     </None>
-    <None Include="Service References\Service\Annotation.xsd">
+    <None Include="Service References\Service\Annotation11.xsd">
       <SubType>Designer</SubType>
     </None>
-    <None Include="Service References\Service\Arrays.xsd">
-      <SubType>Designer</SubType>
-    </None>
-    <None Include="Service References\Service\service.xsd">
-      <SubType>Designer</SubType>
-    </None>
-    <None Include="Service References\Service\service1.xsd">
+    <None Include="Service References\Service\Arrays11.xsd">
       <SubType>Designer</SubType>
     </None>
     <None Include="Service References\Service\service2.wsdl" />
-    <None Include="Service References\Service\service2.xsd">
+    <None Include="Service References\Service\service31.xsd">
+      <SubType>Designer</SubType>
+    </None>
+    <None Include="Service References\Service\service32.xsd">
+      <SubType>Designer</SubType>
+    </None>
+    <None Include="Service References\Service\service33.xsd">
+      <SubType>Designer</SubType>
+    </None>
+    <None Include="Service References\Service\System.Data.Entity.Spatial.xsd">
       <SubType>Designer</SubType>
     </None>
     <None Include="Service References\Service\WebAnnotationModel.Service.CreateStructureRetval.datasource">

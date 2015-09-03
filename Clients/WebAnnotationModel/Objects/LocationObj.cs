@@ -119,6 +119,40 @@ namespace WebAnnotationModel
             get {return Data.Position.Z; }
         }
 
+        public DbGeometry VolumeShape
+        {
+            get
+            {
+                return Data.VolumeShape;
+            }
+            set
+            {
+                if (Data.VolumeShape.Geometry.WellKnownText == value.Geometry.WellKnownText)
+                    return;
+
+                OnPropertyChanging("VolumeShape");
+                Data.VolumeShape = value;
+                OnPropertyChanged("VolumeShape");
+            }
+        }
+
+        public DbGeometry MosaicShape
+        {
+            get
+            {
+                return Data.MosaicShape;
+            }
+            set
+            {
+                if (Data.MosaicShape.Geometry.WellKnownText == value.Geometry.WellKnownText)
+                    return;
+
+                OnPropertyChanging("MosaicShape");
+                Data.MosaicShape = value;
+                OnPropertyChanged("MosaicShape");
+            }
+        }
+
         private GridVector2? _VolumePosition;
         /// <summary>
         /// VolumeX is the x position in volume space. It only exists to inform the database of an estimate of the locations position in volume space.
@@ -443,7 +477,6 @@ namespace WebAnnotationModel
             this.Data = new Location();
             this.Data.DBAction = DBACTION.INSERT;
             this.Data.ID = Store.Locations.GetTempKey(); 
-            this.Data.Verticies = new AnnotationPoint[0];
             this.Data.TypeCode = 1;
             this.Data.Radius = 16;
             this.Data.Links = null; 
@@ -488,10 +521,11 @@ namespace WebAnnotationModel
             this.Data.Terminal = newdata.Terminal;
             this.Data.OffEdge = newdata.OffEdge;
             this.Data.ParentID = newdata.ParentID;
-            this.Data.Verticies = newdata.Verticies;
             this.Data.Username = newdata.Username;
             this.Data.LastModified = newdata.LastModified;
-            this.Data.Links = newdata.Links;  
+            this.Data.Links = newdata.Links;
+            this.Data.VolumeShape = newdata.VolumeShape;
+            this.Data.MosaicShape = newdata.MosaicShape;
         }
         
 

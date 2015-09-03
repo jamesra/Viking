@@ -187,38 +187,7 @@ namespace WebAnnotation.ViewModel
             _OverlappingLinkedLocationVerts = null;
             _OverlappingLinkedLocationIndicies = null;
         }
-
-        /// <summary>
-        /// Return true if the passed point falls within our location
-        /// </summary>
-        /// <param name="position"></param>
-        /// <returns></returns>
-        public bool Contains(WebAnnotation.ViewModel.SectionLocationsViewModel sectionAnnotations, GridVector2 pos)
-        {
-            GridVector2 locPosition = this.VolumePosition;
-
-            switch (modelObj.TypeCode)
-            {
-                case LocationType.POINT: //A point
-                    //HACK, assume label size is 256 pixels across
-                    Vector2 offset = GetLabelSize();
-                    offset.X *= AnnotationOverlay.LocationTextScaleFactor;
-                    offset.Y *= AnnotationOverlay.LocationTextScaleFactor;
-
-                    GridRectangle _Bounds = new GridRectangle(new GridVector2(locPosition.X - (offset.X / 2), locPosition.Y - (offset.Y / 2)),
-                                                        offset.X,
-                                                        offset.Y);
-                    return _Bounds.Contains(pos);
-                case LocationType.CIRCLE: //A circle
-                    double distance = GridVector2.Distance(locPosition, pos);
-                    return distance <= Radius;
-
-                default:
-                    Trace.WriteLine("Calling LocationObj::Contains on an unknown type of location", "WebAnnotation");
-                    return false;
-            }
-        }
-
+        
         /// <summary>
         /// How large is a locations radius on the panel when we are viewing an adjacent section 
         /// </summary>

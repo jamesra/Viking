@@ -148,6 +148,9 @@ namespace WebAnnotation
             //Find the server hosting the volume.  Look for an XML file mapping the volume to an endpoint.
             //return true; 
 
+            //Load SqlServer.Types assembly
+            SqlServerTypes.Utilities.LoadNativeAssemblies(AppDomain.CurrentDomain.BaseDirectory + "\\Modules\\WebAnnotation");
+
             Scale = new Geometry.GridVector3(2.18, 2.18, 90.0); 
 
             Viking.ViewModels.VolumeViewModel volume = Viking.UI.State.volume;

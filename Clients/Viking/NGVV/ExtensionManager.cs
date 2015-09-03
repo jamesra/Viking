@@ -225,16 +225,24 @@ namespace Viking.Common
                     continue;
 
                 //Check the module attributes and see if it is an extension module.
-                Assembly A = Assembly.LoadFrom(FileName);
+                try
+                {
+                    Assembly A = Assembly.LoadFrom(FileName);
 
-                VikingExtensionAttribute Extension = GetAssemblyExtensionAttribute(A);
-                if (Extension == null)
+                    VikingExtensionAttribute Extension = GetAssemblyExtensionAttribute(A);
+                    if (Extension == null)
+                        continue;
+
+                    Trace.WriteLine("Found extension: " + Extension.Name, "ExtMan");
+                    Debug.Assert(ExtensionToAssemblyTable.ContainsKey(Extension) == false, Extension.Name + ":" + FileName + " Extension loaded twice!");
+
+                    ExtensionToAssemblyTable.Add(Extension, A);
+                }
+                catch(System.BadImageFormatException e)
+                {
+                    Trace.WriteLine("Could not load assembly " + FileName + ". This can be OK if it is a support assembly and not an extension module.");
                     continue;
-
-                Trace.WriteLine("Found extension: " + Extension.Name, "ExtMan");
-                Debug.Assert(ExtensionToAssemblyTable.ContainsKey(Extension) == false, Extension.Name + ":" + FileName + " Extension loaded twice!");
-
-                ExtensionToAssemblyTable.Add(Extension, A);
+                }
                 
             }
         }

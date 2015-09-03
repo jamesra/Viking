@@ -520,6 +520,22 @@ namespace WebAnnotation.ViewModel
             }
         }
 
+        private Microsoft.SqlServer.Types.SqlGeometry _VolumeShape = null; 
+
+        public Microsoft.SqlServer.Types.SqlGeometry VolumeShape
+        {
+            get {
+                if (_VolumeShape == null) 
+                {
+                    _VolumeShape = Microsoft.SqlServer.Types.SqlGeometry.STGeomFromText(new System.Data.SqlTypes.SqlChars(
+                                                                                        modelObj.VolumeShape.Geometry.WellKnownText), 
+                                                                                        0);
+                }
+
+                return _VolumeShape;
+            }
+        }
+
         [Column("TypeCode")]
         public LocationType TypeCode
         {

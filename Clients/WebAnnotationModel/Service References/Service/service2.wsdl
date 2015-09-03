@@ -194,6 +194,7 @@
       <xsd:import namespace="http://schemas.microsoft.com/2003/10/Serialization/" />
       <xsd:import namespace="http://schemas.datacontract.org/2004/07/Annotation" />
       <xsd:import namespace="http://schemas.microsoft.com/2003/10/Serialization/Arrays" />
+      <xsd:import namespace="http://schemas.datacontract.org/2004/07/System.Data.Entity.Spatial" />
       <xsd:import namespace="http://schemas.datacontract.org/2004/07/" />
       <xsd:import namespace="http://schemas.datacontract.org/2004/07/Annotation.Service.GraphClasses" />
     </xsd:schema>
@@ -281,12 +282,6 @@
   </wsdl:message>
   <wsdl:message name="IAnnotateStructures_GetLinkedStructuresByID_OutputMessage">
     <wsdl:part name="parameters" element="tns:GetLinkedStructuresByIDResponse" />
-  </wsdl:message>
-  <wsdl:message name="IAnnotateStructures_GetLinkedChildStructures_InputMessage">
-    <wsdl:part name="parameters" element="tns:GetLinkedChildStructures" />
-  </wsdl:message>
-  <wsdl:message name="IAnnotateStructures_GetLinkedChildStructures_OutputMessage">
-    <wsdl:part name="parameters" element="tns:GetLinkedChildStructuresResponse" />
   </wsdl:message>
   <wsdl:message name="IAnnotateStructures_NumberOfLocationsForStructure_InputMessage">
     <wsdl:part name="parameters" element="tns:NumberOfLocationsForStructure" />
@@ -514,10 +509,6 @@
     <wsdl:operation name="GetLinkedStructuresByID">
       <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateStructures/GetLinkedStructuresByID" message="tns:IAnnotateStructures_GetLinkedStructuresByID_InputMessage" />
       <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateStructures/GetLinkedStructuresByIDResponse" message="tns:IAnnotateStructures_GetLinkedStructuresByID_OutputMessage" />
-    </wsdl:operation>
-    <wsdl:operation name="GetLinkedChildStructures">
-      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateStructures/GetLinkedChildStructures" message="tns:IAnnotateStructures_GetLinkedChildStructures_InputMessage" />
-      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateStructures/GetLinkedChildStructuresResponse" message="tns:IAnnotateStructures_GetLinkedChildStructures_OutputMessage" />
     </wsdl:operation>
     <wsdl:operation name="NumberOfLocationsForStructure">
       <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateStructures/NumberOfLocationsForStructure" message="tns:IAnnotateStructures_NumberOfLocationsForStructure_InputMessage" />
@@ -762,15 +753,6 @@
     </wsdl:operation>
     <wsdl:operation name="GetLinkedStructuresByID">
       <soap12:operation soapAction="http://tempuri.org/IAnnotateStructures/GetLinkedStructuresByID" style="document" />
-      <wsdl:input>
-        <soap12:body use="literal" />
-      </wsdl:input>
-      <wsdl:output>
-        <soap12:body use="literal" />
-      </wsdl:output>
-    </wsdl:operation>
-    <wsdl:operation name="GetLinkedChildStructures">
-      <soap12:operation soapAction="http://tempuri.org/IAnnotateStructures/GetLinkedChildStructures" style="document" />
       <wsdl:input>
         <soap12:body use="literal" />
       </wsdl:input>
@@ -1041,27 +1023,27 @@
   </wsdl:binding>
   <wsdl:service name="AnnotateService">
     <wsdl:port name="Annotation.Service.Interfaces.IAnnotateStructureTypes-Binary" binding="tns:Annotation.Service.Interfaces.IAnnotateStructureTypes-Binary">
-      <soap12:address location="https://opr-marc-websvc1.ad.utah.edu/RPC1/Annotation/Service.svc" />
+      <soap12:address location="https://webdev.connectomes.utah.edu/RC1Test/Annotation/service.svc" />
       <wsa10:EndpointReference>
-        <wsa10:Address>https://opr-marc-websvc1.ad.utah.edu/RPC1/Annotation/Service.svc</wsa10:Address>
+        <wsa10:Address>https://webdev.connectomes.utah.edu/RC1Test/Annotation/service.svc</wsa10:Address>
       </wsa10:EndpointReference>
     </wsdl:port>
     <wsdl:port name="Annotation.Service.Interfaces.IAnnotateStructures-Binary" binding="tns:Annotation.Service.Interfaces.IAnnotateStructures-Binary">
-      <soap12:address location="https://opr-marc-websvc1.ad.utah.edu/RPC1/Annotation/Service.svc" />
+      <soap12:address location="https://webdev.connectomes.utah.edu/RC1Test/Annotation/service.svc" />
       <wsa10:EndpointReference>
-        <wsa10:Address>https://opr-marc-websvc1.ad.utah.edu/RPC1/Annotation/Service.svc</wsa10:Address>
+        <wsa10:Address>https://webdev.connectomes.utah.edu/RC1Test/Annotation/service.svc</wsa10:Address>
       </wsa10:EndpointReference>
     </wsdl:port>
     <wsdl:port name="Annotation.Service.Interfaces.IAnnotateLocations-Binary" binding="tns:Annotation.Service.Interfaces.IAnnotateLocations-Binary">
-      <soap12:address location="https://opr-marc-websvc1.ad.utah.edu/RPC1/Annotation/Service.svc" />
+      <soap12:address location="https://webdev.connectomes.utah.edu/RC1Test/Annotation/service.svc" />
       <wsa10:EndpointReference>
-        <wsa10:Address>https://opr-marc-websvc1.ad.utah.edu/RPC1/Annotation/Service.svc</wsa10:Address>
+        <wsa10:Address>https://webdev.connectomes.utah.edu/RC1Test/Annotation/service.svc</wsa10:Address>
       </wsa10:EndpointReference>
     </wsdl:port>
     <wsdl:port name="Annotation.Service.Interfaces.ICircuit-Binary" binding="tns:Annotation.Service.Interfaces.ICircuit-Binary">
-      <soap12:address location="https://opr-marc-websvc1.ad.utah.edu/RPC1/Annotation/Service.svc" />
+      <soap12:address location="https://webdev.connectomes.utah.edu/RC1Test/Annotation/service.svc" />
       <wsa10:EndpointReference>
-        <wsa10:Address>https://opr-marc-websvc1.ad.utah.edu/RPC1/Annotation/Service.svc</wsa10:Address>
+        <wsa10:Address>https://webdev.connectomes.utah.edu/RC1Test/Annotation/service.svc</wsa10:Address>
       </wsa10:EndpointReference>
     </wsdl:port>
   </wsdl:service>

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<SavedWcfConfigurationInformation xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" Version="9.1" CheckSum="CAbWiHVNyIWUux0fTgdHq+ZrabU=">
+<SavedWcfConfigurationInformation xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" Version="9.1" CheckSum="/Lv7L3eSwjVp7048PA9NXX7ny54=">
   <bindingConfigurations>
     <bindingConfiguration bindingType="customBinding" name="Annotation.Service.Interfaces.IAnnotateStructureTypes-Binary">
       <properties>
@@ -2867,10 +2867,10 @@
     </bindingConfiguration>
   </bindingConfigurations>
   <endpoints>
-    <endpoint name="Annotation.Service.Interfaces.IAnnotateStructureTypes-Binary" contract="Service.IAnnotateStructureTypes" bindingType="customBinding" address="https://opr-marc-websvc1.ad.utah.edu/RPC1/Annotation/Service.svc" bindingConfiguration="Annotation.Service.Interfaces.IAnnotateStructureTypes-Binary">
+    <endpoint name="Annotation.Service.Interfaces.IAnnotateStructureTypes-Binary" contract="Service.IAnnotateStructureTypes" bindingType="customBinding" address="https://webdev.connectomes.utah.edu/RC1Test/Annotation/service.svc" bindingConfiguration="Annotation.Service.Interfaces.IAnnotateStructureTypes-Binary">
       <properties>
         <property path="/address" isComplexType="false" isExplicitlyDefined="true" clrType="System.Uri, System, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089">
-          <serializedValue>https://opr-marc-websvc1.ad.utah.edu/RPC1/Annotation/Service.svc</serializedValue>
+          <serializedValue>https://webdev.connectomes.utah.edu/RC1Test/Annotation/service.svc</serializedValue>
         </property>
         <property path="/behaviorConfiguration" isComplexType="false" isExplicitlyDefined="false" clrType="System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089">
           <serializedValue />
@@ -2952,10 +2952,10 @@
         </property>
       </properties>
     </endpoint>
-    <endpoint name="Annotation.Service.Interfaces.IAnnotateStructures-Binary" contract="Service.IAnnotateStructures" bindingType="customBinding" address="https://opr-marc-websvc1.ad.utah.edu/RPC1/Annotation/Service.svc" bindingConfiguration="Annotation.Service.Interfaces.IAnnotateStructures-Binary">
+    <endpoint name="Annotation.Service.Interfaces.IAnnotateStructures-Binary" contract="Service.IAnnotateStructures" bindingType="customBinding" address="https://webdev.connectomes.utah.edu/RC1Test/Annotation/service.svc" bindingConfiguration="Annotation.Service.Interfaces.IAnnotateStructures-Binary">
       <properties>
         <property path="/address" isComplexType="false" isExplicitlyDefined="true" clrType="System.Uri, System, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089">
-          <serializedValue>https://opr-marc-websvc1.ad.utah.edu/RPC1/Annotation/Service.svc</serializedValue>
+          <serializedValue>https://webdev.connectomes.utah.edu/RC1Test/Annotation/service.svc</serializedValue>
         </property>
         <property path="/behaviorConfiguration" isComplexType="false" isExplicitlyDefined="false" clrType="System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089">
           <serializedValue />
@@ -3037,10 +3037,10 @@
         </property>
       </properties>
     </endpoint>
-    <endpoint name="Annotation.Service.Interfaces.IAnnotateLocations-Binary" contract="Service.IAnnotateLocations" bindingType="customBinding" address="https://opr-marc-websvc1.ad.utah.edu/RPC1/Annotation/Service.svc" bindingConfiguration="Annotation.Service.Interfaces.IAnnotateLocations-Binary">
+    <endpoint name="Annotation.Service.Interfaces.IAnnotateLocations-Binary" contract="Service.IAnnotateLocations" bindingType="customBinding" address="https://webdev.connectomes.utah.edu/RC1Test/Annotation/service.svc" bindingConfiguration="Annotation.Service.Interfaces.IAnnotateLocations-Binary">
       <properties>
         <property path="/address" isComplexType="false" isExplicitlyDefined="true" clrType="System.Uri, System, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089">
-          <serializedValue>https://opr-marc-websvc1.ad.utah.edu/RPC1/Annotation/Service.svc</serializedValue>
+          <serializedValue>https://webdev.connectomes.utah.edu/RC1Test/Annotation/service.svc</serializedValue>
         </property>
         <property path="/behaviorConfiguration" isComplexType="false" isExplicitlyDefined="false" clrType="System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089">
           <serializedValue />
@@ -3122,10 +3122,10 @@
         </property>
       </properties>
     </endpoint>
-    <endpoint name="Annotation.Service.Interfaces.ICircuit-Binary" contract="Service.ICircuit" bindingType="customBinding" address="https://opr-marc-websvc1.ad.utah.edu/RPC1/Annotation/Service.svc" bindingConfiguration="Annotation.Service.Interfaces.ICircuit-Binary">
+    <endpoint name="Annotation.Service.Interfaces.ICircuit-Binary" contract="Service.ICircuit" bindingType="customBinding" address="https://webdev.connectomes.utah.edu/RC1Test/Annotation/service.svc" bindingConfiguration="Annotation.Service.Interfaces.ICircuit-Binary">
       <properties>
         <property path="/address" isComplexType="false" isExplicitlyDefined="true" clrType="System.Uri, System, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089">
-          <serializedValue>https://opr-marc-websvc1.ad.utah.edu/RPC1/Annotation/Service.svc</serializedValue>
+          <serializedValue>https://webdev.connectomes.utah.edu/RC1Test/Annotation/service.svc</serializedValue>
         </property>
         <property path="/behaviorConfiguration" isComplexType="false" isExplicitlyDefined="false" clrType="System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089">
           <serializedValue />

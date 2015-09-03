@@ -244,6 +244,9 @@ namespace WebAnnotationModel.Service {
         private long[] LinksField;
         
         [System.Runtime.Serialization.OptionalFieldAttribute()]
+        private WebAnnotationModel.Service.DbGeometry MosaicShapeField;
+        
+        [System.Runtime.Serialization.OptionalFieldAttribute()]
         private bool OffEdgeField;
         
         [System.Runtime.Serialization.OptionalFieldAttribute()]
@@ -268,10 +271,10 @@ namespace WebAnnotationModel.Service {
         private string UsernameField;
         
         [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private WebAnnotationModel.Service.AnnotationPoint[] VerticiesField;
+        private WebAnnotationModel.Service.AnnotationPoint VolumePositionField;
         
         [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private WebAnnotationModel.Service.AnnotationPoint VolumePositionField;
+        private WebAnnotationModel.Service.DbGeometry VolumeShapeField;
         
         [System.Runtime.Serialization.DataMemberAttribute()]
         public string AttributesXml {
@@ -321,6 +324,19 @@ namespace WebAnnotationModel.Service {
                 if ((object.ReferenceEquals(this.LinksField, value) != true)) {
                     this.LinksField = value;
                     this.RaisePropertyChanged("Links");
+                }
+            }
+        }
+        
+        [System.Runtime.Serialization.DataMemberAttribute()]
+        public WebAnnotationModel.Service.DbGeometry MosaicShape {
+            get {
+                return this.MosaicShapeField;
+            }
+            set {
+                if ((object.ReferenceEquals(this.MosaicShapeField, value) != true)) {
+                    this.MosaicShapeField = value;
+                    this.RaisePropertyChanged("MosaicShape");
                 }
             }
         }
@@ -430,19 +446,6 @@ namespace WebAnnotationModel.Service {
         }
         
         [System.Runtime.Serialization.DataMemberAttribute()]
-        public WebAnnotationModel.Service.AnnotationPoint[] Verticies {
-            get {
-                return this.VerticiesField;
-            }
-            set {
-                if ((object.ReferenceEquals(this.VerticiesField, value) != true)) {
-                    this.VerticiesField = value;
-                    this.RaisePropertyChanged("Verticies");
-                }
-            }
-        }
-        
-        [System.Runtime.Serialization.DataMemberAttribute()]
         public WebAnnotationModel.Service.AnnotationPoint VolumePosition {
             get {
                 return this.VolumePositionField;
@@ -451,6 +454,19 @@ namespace WebAnnotationModel.Service {
                 if ((this.VolumePositionField.Equals(value) != true)) {
                     this.VolumePositionField = value;
                     this.RaisePropertyChanged("VolumePosition");
+                }
+            }
+        }
+        
+        [System.Runtime.Serialization.DataMemberAttribute()]
+        public WebAnnotationModel.Service.DbGeometry VolumeShape {
+            get {
+                return this.VolumeShapeField;
+            }
+            set {
+                if ((object.ReferenceEquals(this.VolumeShapeField, value) != true)) {
+                    this.VolumeShapeField = value;
+                    this.RaisePropertyChanged("VolumeShape");
                 }
             }
         }
@@ -873,6 +889,51 @@ namespace WebAnnotationModel.Service {
     
     [System.Diagnostics.DebuggerStepThroughAttribute()]
     [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Runtime.Serialization", "4.0.0.0")]
+    [System.Runtime.Serialization.DataContractAttribute(Name="DbGeometry", Namespace="http://schemas.datacontract.org/2004/07/System.Data.Entity.Spatial")]
+    [System.SerializableAttribute()]
+    public partial class DbGeometry : object, System.Runtime.Serialization.IExtensibleDataObject, System.ComponentModel.INotifyPropertyChanged {
+        
+        [System.NonSerializedAttribute()]
+        private System.Runtime.Serialization.ExtensionDataObject extensionDataField;
+        
+        [System.Runtime.Serialization.OptionalFieldAttribute()]
+        private WebAnnotationModel.Service.DbGeometryWellKnownValue GeometryField;
+        
+        [global::System.ComponentModel.BrowsableAttribute(false)]
+        public System.Runtime.Serialization.ExtensionDataObject ExtensionData {
+            get {
+                return this.extensionDataField;
+            }
+            set {
+                this.extensionDataField = value;
+            }
+        }
+        
+        [System.Runtime.Serialization.DataMemberAttribute()]
+        public WebAnnotationModel.Service.DbGeometryWellKnownValue Geometry {
+            get {
+                return this.GeometryField;
+            }
+            set {
+                if ((object.ReferenceEquals(this.GeometryField, value) != true)) {
+                    this.GeometryField = value;
+                    this.RaisePropertyChanged("Geometry");
+                }
+            }
+        }
+        
+        public event System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
+        
+        protected void RaisePropertyChanged(string propertyName) {
+            System.ComponentModel.PropertyChangedEventHandler propertyChanged = this.PropertyChanged;
+            if ((propertyChanged != null)) {
+                propertyChanged(this, new System.ComponentModel.PropertyChangedEventArgs(propertyName));
+            }
+        }
+    }
+    
+    [System.Diagnostics.DebuggerStepThroughAttribute()]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Runtime.Serialization", "4.0.0.0")]
     [System.Runtime.Serialization.DataContractAttribute(Name="AnnotationPoint", Namespace="http://schemas.datacontract.org/2004/07/Annotation")]
     [System.SerializableAttribute()]
     public partial struct AnnotationPoint : System.Runtime.Serialization.IExtensibleDataObject, System.ComponentModel.INotifyPropertyChanged {
@@ -940,6 +1001,83 @@ namespace WebAnnotationModel.Service {
         public event System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
         
         void RaisePropertyChanged(string propertyName) {
+            System.ComponentModel.PropertyChangedEventHandler propertyChanged = this.PropertyChanged;
+            if ((propertyChanged != null)) {
+                propertyChanged(this, new System.ComponentModel.PropertyChangedEventArgs(propertyName));
+            }
+        }
+    }
+    
+    [System.Diagnostics.DebuggerStepThroughAttribute()]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Runtime.Serialization", "4.0.0.0")]
+    [System.Runtime.Serialization.DataContractAttribute(Name="DbGeometryWellKnownValue", Namespace="http://schemas.datacontract.org/2004/07/System.Data.Entity.Spatial")]
+    [System.SerializableAttribute()]
+    public partial class DbGeometryWellKnownValue : object, System.Runtime.Serialization.IExtensibleDataObject, System.ComponentModel.INotifyPropertyChanged {
+        
+        [System.NonSerializedAttribute()]
+        private System.Runtime.Serialization.ExtensionDataObject extensionDataField;
+        
+        [System.Runtime.Serialization.OptionalFieldAttribute()]
+        private int CoordinateSystemIdField;
+        
+        [System.Runtime.Serialization.OptionalFieldAttribute()]
+        private string WellKnownTextField;
+        
+        [System.Runtime.Serialization.OptionalFieldAttribute()]
+        private byte[] WellKnownBinaryField;
+        
+        [global::System.ComponentModel.BrowsableAttribute(false)]
+        public System.Runtime.Serialization.ExtensionDataObject ExtensionData {
+            get {
+                return this.extensionDataField;
+            }
+            set {
+                this.extensionDataField = value;
+            }
+        }
+        
+        [System.Runtime.Serialization.DataMemberAttribute(EmitDefaultValue=false)]
+        public int CoordinateSystemId {
+            get {
+                return this.CoordinateSystemIdField;
+            }
+            set {
+                if ((this.CoordinateSystemIdField.Equals(value) != true)) {
+                    this.CoordinateSystemIdField = value;
+                    this.RaisePropertyChanged("CoordinateSystemId");
+                }
+            }
+        }
+        
+        [System.Runtime.Serialization.DataMemberAttribute(EmitDefaultValue=false)]
+        public string WellKnownText {
+            get {
+                return this.WellKnownTextField;
+            }
+            set {
+                if ((object.ReferenceEquals(this.WellKnownTextField, value) != true)) {
+                    this.WellKnownTextField = value;
+                    this.RaisePropertyChanged("WellKnownText");
+                }
+            }
+        }
+        
+        [System.Runtime.Serialization.DataMemberAttribute(EmitDefaultValue=false, Order=2)]
+        public byte[] WellKnownBinary {
+            get {
+                return this.WellKnownBinaryField;
+            }
+            set {
+                if ((object.ReferenceEquals(this.WellKnownBinaryField, value) != true)) {
+                    this.WellKnownBinaryField = value;
+                    this.RaisePropertyChanged("WellKnownBinary");
+                }
+            }
+        }
+        
+        public event System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
+        
+        protected void RaisePropertyChanged(string propertyName) {
             System.ComponentModel.PropertyChangedEventHandler propertyChanged = this.PropertyChanged;
             if ((propertyChanged != null)) {
                 propertyChanged(this, new System.ComponentModel.PropertyChangedEventArgs(propertyName));
@@ -2096,14 +2234,6 @@ namespace WebAnnotationModel.Service {
         
         WebAnnotationModel.Service.StructureLink[] EndGetLinkedStructuresByID(System.IAsyncResult result);
         
-        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/GetLinkedChildStructures", ReplyAction="http://tempuri.org/IAnnotateStructures/GetLinkedChildStructuresResponse")]
-        WebAnnotationModel.Service.StructureLink[] GetLinkedChildStructures(long ID);
-        
-        [System.ServiceModel.OperationContractAttribute(AsyncPattern=true, Action="http://tempuri.org/IAnnotateStructures/GetLinkedChildStructures", ReplyAction="http://tempuri.org/IAnnotateStructures/GetLinkedChildStructuresResponse")]
-        System.IAsyncResult BeginGetLinkedChildStructures(long ID, System.AsyncCallback callback, object asyncState);
-        
-        WebAnnotationModel.Service.StructureLink[] EndGetLinkedChildStructures(System.IAsyncResult result);
-        
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/NumberOfLocationsForStructure", ReplyAction="http://tempuri.org/IAnnotateStructures/NumberOfLocationsForStructureResponse")]
         long NumberOfLocationsForStructure(long structureID);
         
@@ -2351,25 +2481,6 @@ namespace WebAnnotationModel.Service {
     
     [System.Diagnostics.DebuggerStepThroughAttribute()]
     [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
-    public partial class GetLinkedChildStructuresCompletedEventArgs : System.ComponentModel.AsyncCompletedEventArgs {
-        
-        private object[] results;
-        
-        public GetLinkedChildStructuresCompletedEventArgs(object[] results, System.Exception exception, bool cancelled, object userState) : 
-                base(exception, cancelled, userState) {
-            this.results = results;
-        }
-        
-        public WebAnnotationModel.Service.StructureLink[] Result {
-            get {
-                base.RaiseExceptionIfNecessary();
-                return ((WebAnnotationModel.Service.StructureLink[])(this.results[0]));
-            }
-        }
-    }
-    
-    [System.Diagnostics.DebuggerStepThroughAttribute()]
-    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
     public partial class NumberOfLocationsForStructureCompletedEventArgs : System.ComponentModel.AsyncCompletedEventArgs {
         
         private object[] results;
@@ -2572,12 +2683,6 @@ namespace WebAnnotationModel.Service {
         
         private System.Threading.SendOrPostCallback onGetLinkedStructuresByIDCompletedDelegate;
         
-        private BeginOperationDelegate onBeginGetLinkedChildStructuresDelegate;
-        
-        private EndOperationDelegate onEndGetLinkedChildStructuresDelegate;
-        
-        private System.Threading.SendOrPostCallback onGetLinkedChildStructuresCompletedDelegate;
-        
         private BeginOperationDelegate onBeginNumberOfLocationsForStructureDelegate;
         
         private EndOperationDelegate onEndNumberOfLocationsForStructureDelegate;
@@ -2666,8 +2771,6 @@ namespace WebAnnotationModel.Service {
         public event System.EventHandler<GetLinkedStructuresCompletedEventArgs> GetLinkedStructuresCompleted;
         
         public event System.EventHandler<GetLinkedStructuresByIDCompletedEventArgs> GetLinkedStructuresByIDCompleted;
-        
-        public event System.EventHandler<GetLinkedChildStructuresCompletedEventArgs> GetLinkedChildStructuresCompleted;
         
         public event System.EventHandler<NumberOfLocationsForStructureCompletedEventArgs> NumberOfLocationsForStructureCompleted;
         
@@ -3093,56 +3196,6 @@ namespace WebAnnotationModel.Service {
             }
             base.InvokeAsync(this.onBeginGetLinkedStructuresByIDDelegate, new object[] {
                         ID}, this.onEndGetLinkedStructuresByIDDelegate, this.onGetLinkedStructuresByIDCompletedDelegate, userState);
-        }
-        
-        public WebAnnotationModel.Service.StructureLink[] GetLinkedChildStructures(long ID) {
-            return base.Channel.GetLinkedChildStructures(ID);
-        }
-        
-        [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
-        public System.IAsyncResult BeginGetLinkedChildStructures(long ID, System.AsyncCallback callback, object asyncState) {
-            return base.Channel.BeginGetLinkedChildStructures(ID, callback, asyncState);
-        }
-        
-        [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
-        public WebAnnotationModel.Service.StructureLink[] EndGetLinkedChildStructures(System.IAsyncResult result) {
-            return base.Channel.EndGetLinkedChildStructures(result);
-        }
-        
-        private System.IAsyncResult OnBeginGetLinkedChildStructures(object[] inValues, System.AsyncCallback callback, object asyncState) {
-            long ID = ((long)(inValues[0]));
-            return this.BeginGetLinkedChildStructures(ID, callback, asyncState);
-        }
-        
-        private object[] OnEndGetLinkedChildStructures(System.IAsyncResult result) {
-            WebAnnotationModel.Service.StructureLink[] retVal = this.EndGetLinkedChildStructures(result);
-            return new object[] {
-                    retVal};
-        }
-        
-        private void OnGetLinkedChildStructuresCompleted(object state) {
-            if ((this.GetLinkedChildStructuresCompleted != null)) {
-                InvokeAsyncCompletedEventArgs e = ((InvokeAsyncCompletedEventArgs)(state));
-                this.GetLinkedChildStructuresCompleted(this, new GetLinkedChildStructuresCompletedEventArgs(e.Results, e.Error, e.Cancelled, e.UserState));
-            }
-        }
-        
-        public void GetLinkedChildStructuresAsync(long ID) {
-            this.GetLinkedChildStructuresAsync(ID, null);
-        }
-        
-        public void GetLinkedChildStructuresAsync(long ID, object userState) {
-            if ((this.onBeginGetLinkedChildStructuresDelegate == null)) {
-                this.onBeginGetLinkedChildStructuresDelegate = new BeginOperationDelegate(this.OnBeginGetLinkedChildStructures);
-            }
-            if ((this.onEndGetLinkedChildStructuresDelegate == null)) {
-                this.onEndGetLinkedChildStructuresDelegate = new EndOperationDelegate(this.OnEndGetLinkedChildStructures);
-            }
-            if ((this.onGetLinkedChildStructuresCompletedDelegate == null)) {
-                this.onGetLinkedChildStructuresCompletedDelegate = new System.Threading.SendOrPostCallback(this.OnGetLinkedChildStructuresCompleted);
-            }
-            base.InvokeAsync(this.onBeginGetLinkedChildStructuresDelegate, new object[] {
-                        ID}, this.onEndGetLinkedChildStructuresDelegate, this.onGetLinkedChildStructuresCompletedDelegate, userState);
         }
         
         public long NumberOfLocationsForStructure(long structureID) {

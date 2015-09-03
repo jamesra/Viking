@@ -2,6 +2,7 @@
 <xs:schema xmlns:ser="http://schemas.microsoft.com/2003/10/Serialization/" xmlns:tns="http://schemas.datacontract.org/2004/07/Annotation" elementFormDefault="qualified" targetNamespace="http://schemas.datacontract.org/2004/07/Annotation" xmlns:xs="http://www.w3.org/2001/XMLSchema">
   <xs:import namespace="http://schemas.microsoft.com/2003/10/Serialization/" />
   <xs:import namespace="http://schemas.microsoft.com/2003/10/Serialization/Arrays" />
+  <xs:import namespace="http://schemas.datacontract.org/2004/07/System.Data.Entity.Spatial" />
   <xs:complexType name="StructureType">
     <xs:complexContent mixed="false">
       <xs:extension base="tns:DataObjectWithParentOflong">
@@ -121,6 +122,7 @@
           <xs:element minOccurs="0" name="Closed" type="xs:boolean" />
           <xs:element minOccurs="0" name="LastModified" type="xs:long" />
           <xs:element xmlns:q4="http://schemas.microsoft.com/2003/10/Serialization/Arrays" minOccurs="0" name="Links" nillable="true" type="q4:ArrayOflong" />
+          <xs:element xmlns:q5="http://schemas.datacontract.org/2004/07/System.Data.Entity.Spatial" minOccurs="0" name="MosaicShape" nillable="true" type="q5:DbGeometry" />
           <xs:element minOccurs="0" name="OffEdge" type="xs:boolean" />
           <xs:element minOccurs="0" name="ParentID" type="xs:long" />
           <xs:element minOccurs="0" name="Position" type="tns:AnnotationPoint" />
@@ -129,8 +131,8 @@
           <xs:element minOccurs="0" name="Terminal" type="xs:boolean" />
           <xs:element minOccurs="0" name="TypeCode" type="xs:short" />
           <xs:element minOccurs="0" name="Username" nillable="true" type="xs:string" />
-          <xs:element minOccurs="0" name="Verticies" nillable="true" type="tns:ArrayOfAnnotationPoint" />
           <xs:element minOccurs="0" name="VolumePosition" type="tns:AnnotationPoint" />
+          <xs:element xmlns:q6="http://schemas.datacontract.org/2004/07/System.Data.Entity.Spatial" minOccurs="0" name="VolumeShape" nillable="true" type="q6:DbGeometry" />
         </xs:sequence>
       </xs:extension>
     </xs:complexContent>
@@ -149,12 +151,6 @@
     </xs:sequence>
   </xs:complexType>
   <xs:element name="AnnotationPoint" nillable="true" type="tns:AnnotationPoint" />
-  <xs:complexType name="ArrayOfAnnotationPoint">
-    <xs:sequence>
-      <xs:element minOccurs="0" maxOccurs="unbounded" name="AnnotationPoint" type="tns:AnnotationPoint" />
-    </xs:sequence>
-  </xs:complexType>
-  <xs:element name="ArrayOfAnnotationPoint" nillable="true" type="tns:ArrayOfAnnotationPoint" />
   <xs:complexType name="CreateStructureRetval">
     <xs:sequence>
       <xs:element minOccurs="0" name="location" nillable="true" type="tns:Location" />
