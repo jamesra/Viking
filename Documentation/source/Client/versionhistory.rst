@@ -3,6 +3,11 @@
 Version History
 ###############
 
+1.1.129
+-------
+
+   Fixed a bug where the resize command was launching the move command (the default) for the selected location after exit.
+
 1.1.128
 -------
 
