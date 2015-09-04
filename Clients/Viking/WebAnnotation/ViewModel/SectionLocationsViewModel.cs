@@ -488,12 +488,11 @@ namespace WebAnnotation.ViewModel
         }
 
         public ICollection<Location_CanvasViewModel> GetLocations(GridRectangle bounds)
-        {
-            List<GridVector2> foundPoints; 
-            List<Location_CanvasViewModel> foundLocations;
-
+        {  
             return Locations.Intersects(bounds.ToRTreeRect((float)this.Section.Number));
         }
+
+
 
         /*
         public LocationObj[] GetReferenceLocations()
@@ -613,7 +612,6 @@ namespace WebAnnotation.ViewModel
             }
 
             return nearest;
-
         }
         
                 /*Check to see if we clicked a location on a reference section*/

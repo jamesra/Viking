@@ -945,6 +945,18 @@ namespace WebAnnotation.ViewModel
         static double InvisibleCutoff = 1f;
         static float LabelVisibleCutoff = 7f;
 
+        public bool IsVisible(double maxScreenDimension)
+        {
+            double LocToScreenRatio = Radius * 2 / maxScreenDimension;
+            if (LocToScreenRatio > InvisibleCutoff)
+                return false;
+
+            if (LocToScreenRatio < 0.001)
+                return false;
+
+            return true;
+        }
+         
         public VertexPositionColorTexture[] GetCircleBackgroundVerts(GridRectangle VisibleBounds, double Downsample, int DirectionToVisiblePlane, out int[] indicies)
         {
             StructureType type = this.Parent.Type;
@@ -973,12 +985,8 @@ namespace WebAnnotation.ViewModel
             double maxDimension = Math.Max(VisibleBounds.Width, VisibleBounds.Height);
             
             double LocToScreenRatio = Radius * 2 / maxDimension;
-
-            if (LocToScreenRatio > BeginFadeCutoff)
-            {
-                SatScalar *= Viking.Common.Util.GetFadeFactor(LocToScreenRatio, BeginFadeCutoff, InvisibleCutoff); 
-            }
-
+            SatScalar *= Viking.Common.Util.GetFadeFactor(LocToScreenRatio, BeginFadeCutoff, InvisibleCutoff); 
+            
             HSLColor.A = alpha;
             HSLColor.G = (Byte)((float)HSLColor.G * SatScalar);
             //HSLColor.B = (Byte)((float)HSLColor.B * SatScalar);

@@ -596,15 +596,7 @@ namespace WebAnnotation
 
                             return;
                         }
-
-
-
-
-
-
-
-
-
+                         
                         /*
                         System.Type t = System.Type.GetType(Param.Type);
                         if(t == null)
@@ -1022,7 +1014,7 @@ namespace WebAnnotation
             //graphicsDevice.Clear(ClearOptions.DepthBuffer, Color.Black, float.MaxValue, 0); 
             //IncrementDepthStencilValue(graphicsDevice, ref nextStencilValue);
 
-            ICollection<Location_CanvasViewModel> Locations = currentSectionAnnotations.GetLocations();
+            ICollection<Location_CanvasViewModel> Locations = currentSectionAnnotations.GetLocations(Bounds);
             List<Location_CanvasViewModel> listLocationsToDraw = FindVisibleLocations(Locations, Bounds);
             
             //Find a circle that encloses the visible bounds
@@ -1033,7 +1025,7 @@ namespace WebAnnotation
             {
                 SectionLocationsViewModel sectionLocations = GetAnnotationsForSection(_Parent.Section.ReferenceSectionBelow.Number);
                 if (sectionLocations != null)
-                    RefLocations.AddRange(sectionLocations.GetLocations());//(Bounds)); 
+                    RefLocations.AddRange(sectionLocations.GetLocations(Bounds).Where(l => l.modelObj.Terminal==false));//(Bounds)); 
             }
 
             if(_Parent.Section.ReferenceSectionAbove != null)
@@ -1041,7 +1033,7 @@ namespace WebAnnotation
                 SectionLocationsViewModel sectionLocations = GetAnnotationsForSection(_Parent.Section.ReferenceSectionAbove.Number);
                 if (sectionLocations != null)
                 {
-                    RefLocations.AddRange(sectionLocations.GetLocations());
+                    RefLocations.AddRange(sectionLocations.GetLocations(Bounds).Where(l => l.modelObj.Terminal==false));
                 }
             }
             
@@ -1159,46 +1151,9 @@ namespace WebAnnotation
             return false; 
         }
 
-        private static List<Location_CanvasViewModel> FindVisibleLocations(ICollection<Location_CanvasViewModel> locations,  GridRectangle VisibleBounds)
+        private static List<Location_CanvasViewModel> FindVisibleLocations(IEnumerable<Location_CanvasViewModel> locations,  GridRectangle VisibleBounds)
         {
-            GridCircle VisibleCircle = new GridCircle(VisibleBounds.Center, GridVector2.Distance(VisibleBounds.Center, new GridVector2(VisibleBounds.Left, VisibleBounds.Top)));
-            List<Location_CanvasViewModel> listLocationsToDraw = new List<Location_CanvasViewModel>(locations.Count);
-
-            foreach (Location_CanvasViewModel loc in locations)
-            {
-                if (loc == null)
-                    continue;
-
-                if (!loc.VolumePositionHasBeenCalculated)
-                    continue;
-                
-                //Find out if we should draw the location
-                if (loc.TypeCode == LocationType.CIRCLE)
-                {
-                    if (VisibleCircle.Intersects(loc.VolumePosition, loc.Radius) == false)
-                        continue;
-                }
-                else if (loc.TypeCode == LocationType.POINT)
-                {
-                    if (VisibleBounds.Contains(loc.VolumePosition) == false)
-                        continue;
-                }
-                else
-                {
-                    Debug.Fail("Unknown location type");
-                }
-
-                Structure ParentStructure = loc.Parent;
-                if (ParentStructure == null)
-                    continue;
-
-                if (ParentStructure.Type == null)
-                    continue;
-
-                listLocationsToDraw.Add(loc);
-            }
-
-            return listLocationsToDraw; 
+            return locations.Where(l => l != null && l.VolumePositionHasBeenCalculated && l.Parent != null && l.Parent.Type != null).ToList();
         }
 
 

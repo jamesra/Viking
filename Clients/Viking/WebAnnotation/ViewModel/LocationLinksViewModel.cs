@@ -373,7 +373,7 @@ namespace WebAnnotation.ViewModel
             {
 //                Trace.WriteLine("Linked Location property changed: " + loc.ToString() + " property: " + e.PropertyName);
 
-                foreach (long linkID in loc.Links)
+                foreach (long linkID in loc.LinksCopy)
                 {
                     LocationLinkKey key = new LocationLinkKey(loc.ID, linkID);
                     RemoveLocationLinks(key);
