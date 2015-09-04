@@ -113,6 +113,8 @@ namespace RTree
         //the recursion methods require a delegate to retrieve data
         private delegate void intproc(int x);
 
+        System.Threading.ReaderWriterLockSlim rwLock = new System.Threading.ReaderWriterLockSlim(); 
+
         /// <summary>
         /// Initialize implementation dependent properties of the RTree.
         /// </summary>
@@ -139,7 +141,7 @@ namespace RTree
         }
 
         private void init()
-        {
+        {  
             //initialize logs
             log = LogManager.GetLogger(typeof(RTree<T>).FullName);
             deleteLog = LogManager.GetLogger(typeof(RTree<T>).FullName + "-delete");
@@ -181,13 +183,64 @@ namespace RTree
         /// <param name="item"></param>
         public void Add(Rectangle r, T item)
         {
-            idcounter++;
-            int id = idcounter;
+            try
+            {
+                rwLock.EnterWriteLock();
+            
+                idcounter++;
+                int id = idcounter;
 
-            IdsToItems.Add(id, item);
-            ItemsToIds.Add(item, id);
+                IdsToItems.Add(id, item);
+                ItemsToIds.Add(item, id);
 
-            add(r, id);
+                add(r, id);
+            }
+            finally
+            {
+                rwLock.ExitWriteLock();
+            }
+        }
+
+        /// <summary>
+        /// Adds an item to the spatial index
+        /// </summary>
+        /// <param name="r"></param>
+        /// <param name="item"></param>
+        public bool TryAdd(Rectangle r, T item)
+        {
+            try
+            {
+                rwLock.EnterUpgradeableReadLock();
+                 
+                if (this.Contains(item))
+                    return false; 
+
+                try
+                {                
+                    rwLock.EnterWriteLock();
+                     
+                    idcounter++;
+                    int id = idcounter;
+
+                    IdsToItems.Add(id, item);
+                    ItemsToIds.Add(item, id);
+
+                    add(r, id);
+
+                    return true;
+                }
+                finally
+                {
+                    rwLock.ExitWriteLock();
+                }
+            }
+            finally
+            {
+                rwLock.ExitUpgradeableReadLock();
+            } 
+            
+
+                
         }
 
         private void add(Rectangle r, int id)
@@ -243,7 +296,8 @@ namespace RTree
                 Node<T> root = new Node<T>(rootNodeId, treeHeight, maxNodeEntries);
                 root.addEntry(newNode.mbr, newNode.nodeId);
                 root.addEntry(oldRoot.mbr, oldRoot.nodeId);
-                nodeMap.Add(rootNodeId, root);
+                nodeMap[rootNodeId] = root; 
+                //nodeMap.Add(rootNodeId, root);
             }
 
             if (INTERNAL_CONSISTENCY_CHECKING)
@@ -257,19 +311,46 @@ namespace RTree
         /// </summary>
         /// <param name="r"></param>
         /// <param name="item"></param>
+        /// <param name="removedItem">The item which we pointed to, which may be a seperate object instance from the remove request</param>
         /// <returns></returns>
-        public bool Delete(Rectangle r, T item)
+        public bool Delete(Rectangle r, T item, out T removedItem)
         {
-            int id = ItemsToIds[item];
-
-            bool success = delete(r, id);
-            if (success == true)
+            try
             {
-                IdsToItems.Remove(id);
-                ItemsToIds.Remove(item);
+                removedItem = default(T);
+
+                rwLock.EnterUpgradeableReadLock();
+
+                if (!this.Contains(item))
+                    return false;
+
+                try
+                {
+                    rwLock.EnterWriteLock();
+
+                    int id = ItemsToIds[item];
+                    removedItem = default(T);
+
+                    bool success = delete(r, id);
+                    if (success == true)
+                    {
+                        removedItem = IdsToItems[id];
+                        IdsToItems.Remove(id);
+                        ItemsToIds.Remove(item);
+                    }
+                    return success;
+                }
+                finally
+                {
+                    rwLock.ExitWriteLock();
+                }
             }
-            return success;
+            finally
+            {
+                rwLock.ExitUpgradeableReadLock();
+            }
         }
+
 
         private bool delete(Rectangle r, int id)
         {
@@ -356,12 +437,21 @@ namespace RTree
         /// <returns>List of items</returns>
         public List<T> Nearest(Point p, float furthestDistance)
         {
-            List<T> retval = new List<T>();
-            nearest(p, delegate(int id)
+            try
             {
-                retval.Add(IdsToItems[id]);
-            }, furthestDistance);
-            return retval;
+                rwLock.EnterReadLock();
+
+                List<T> retval = new List<T>();
+                nearest(p, delegate(int id)
+                {
+                    retval.Add(IdsToItems[id]);
+                }, furthestDistance);
+                return retval;
+            }
+            finally
+            {
+                rwLock.ExitReadLock();
+            }
         }
 
 
@@ -383,12 +473,20 @@ namespace RTree
         /// <returns></returns>
         public List<T> Intersects(Rectangle r)
         {
-            List<T> retval = new List<T>();
-            intersects(r, delegate(int id)
+            try
             {
-                retval.Add(IdsToItems[id]);
-            });
-            return retval;
+                rwLock.EnterReadLock();
+                List<T> retval = new List<T>();
+                intersects(r, delegate(int id)
+                {
+                    retval.Add(IdsToItems[id]);
+                });
+                return retval;
+            }
+            finally
+            {
+                rwLock.ExitReadLock();
+            }
         }
 
 
@@ -398,6 +496,22 @@ namespace RTree
             intersects(r, v, rootNode);
         }
 
+        public IList<T> Items
+        {
+            get
+            {
+                try
+                {
+                    rwLock.EnterReadLock();
+                    return new List<T>(this.ItemsToIds.Keys);
+                }
+                finally
+                {
+                    rwLock.ExitReadLock();
+                }
+            }
+        }
+
         /// <summary>
         /// find all rectangles in the tree that are contained by the passed rectangle
         /// written to be non-recursive (should model other searches on this?)</summary>
@@ -405,13 +519,40 @@ namespace RTree
         /// <returns></returns>
         public List<T> Contains(Rectangle r)
         {
-            List<T> retval = new List<T>();
-            contains(r, delegate(int id)
+            try
             {
-                retval.Add(IdsToItems[id]);
-            });
+                rwLock.EnterReadLock();
+                List<T> retval = new List<T>();
+                contains(r, delegate(int id)
+                {
+                    retval.Add(IdsToItems[id]);
+                });
 
-            return retval;
+                return retval;
+            }
+            finally
+            {
+                rwLock.ExitReadLock();
+            }
+           
+        }
+
+        /// <summary>
+        /// Has the object been inserted into the RTree?</summary>
+        /// <param name="r"></param>
+        /// <returns></returns>
+        public bool Contains(T obj)
+        {
+            try
+            {
+                rwLock.EnterReadLock();
+                return ItemsToIds.ContainsKey(obj); 
+            }
+            finally
+            {
+                rwLock.ExitReadLock();
+            }
+            
         }
 
         private void contains(Rectangle r, intproc v)
@@ -478,14 +619,23 @@ namespace RTree
         */
         public Rectangle getBounds()
         {
-            Rectangle bounds = null;
-
-            Node<T> n = getNode(getRootNodeId());
-            if (n != null && n.getMBR() != null)
+            try
             {
-                bounds = n.getMBR().copy();
+                rwLock.EnterReadLock();
+
+                Rectangle bounds = null;
+
+                Node<T> n = getNode(getRootNodeId());
+                if (n != null && n.getMBR() != null)
+                {
+                    bounds = n.getMBR().copy();
+                }
+                return bounds;
             }
-            return bounds;
+            finally
+            {
+                rwLock.ExitReadLock();
+            }
         }
 
         /**
@@ -546,7 +696,16 @@ namespace RTree
         /// <returns></returns>
         public int getRootNodeId()
         {
-            return rootNodeId;
+            try
+            {
+                rwLock.EnterReadLock();
+                return rootNodeId;
+            }
+            finally
+            {
+                rwLock.ExitReadLock();
+            }
+            
         }
 
         /// <summary>
@@ -575,7 +734,8 @@ namespace RTree
 
             Node<T> newNode = null;
             newNode = new Node<T>(getNextNodeId(), n.level, maxNodeEntries);
-            nodeMap.Add(newNode.nodeId, newNode);
+            nodeMap[newNode.nodeId] = newNode;
+            //nodeMap.Add(newNode.nodeId, newNode);
 
             pickSeeds(n, newRect, newId, newNode); // this also sets the entryCount to 1
 
@@ -955,6 +1115,7 @@ namespace RTree
                 {
                     parent.deleteEntry(parentEntry, minNodeEntries);
                     eliminatedNodeIds.Push(n.nodeId);
+                    
                 }
                 else
                 {
@@ -1175,7 +1336,15 @@ namespace RTree
         {
             get
             {
-                return this.msize;
+                try
+                {
+                    rwLock.EnterReadLock();
+                    return this.msize;
+                }
+                finally
+                {
+                    rwLock.ExitReadLock();
+                }
             }
         }
 
