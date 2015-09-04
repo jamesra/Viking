@@ -770,7 +770,6 @@ namespace WebAnnotation
             //Don't load annotations when flipping sections if the user is holding down space bar to hide them
             if (_Parent.ShowOverlays)
             { 
-                
                 LoadSectionAnnotations();
             }
         }

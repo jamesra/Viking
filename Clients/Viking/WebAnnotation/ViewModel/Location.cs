@@ -153,6 +153,13 @@ namespace WebAnnotation.ViewModel
             }
         }
 
+        public GridRectangle BoundingBox
+        {
+            get
+            {
+                return new GridRectangle(this.VolumePosition, this.Radius);
+            }
+        }
         
 
         public Location_CanvasViewModel(LocationObj location) : base(location)

@@ -40,8 +40,10 @@ namespace WebAnnotation.ViewModel
         /// Locations on the section we are providing an overlay for
         /// implemented as a quad tree which can map a point to the nearest Location
         /// </summary>
-        private QuadTree<Location_CanvasViewModel> Locations = null;
-       
+        //private QuadTree<Location_CanvasViewModel> Locations = null;
+
+        private RTree.RTree<Location_CanvasViewModel> Locations = null;
+               
         /// <summary>
         /// Maps a structureID to all the locations for that structure on the visible section
         /// </summary>
@@ -65,6 +67,8 @@ namespace WebAnnotation.ViewModel
         /// </summary>
         public readonly Viking.UI.Controls.SectionViewerControl parent;
 
+        private int SectionNumber { get {return this.Section.Number; }}
+
 
         /// <summary>
         /// 
@@ -82,7 +86,7 @@ namespace WebAnnotation.ViewModel
             GridRectangle bounds = AnnotationOverlay.SectionBounds(parent, parent.Section.Number);
 
             if (Locations == null)
-                Locations = new QuadTree<Location_CanvasViewModel>(bounds);
+                Locations = new RTree.RTree<Location_CanvasViewModel>(); //new QuadTree<Location_CanvasViewModel>(bounds)
 
             this.SubmitUpdatedVolumePositions = section.VolumeViewModel.UpdateServerVolumePositions;
 
@@ -368,10 +372,12 @@ namespace WebAnnotation.ViewModel
 
             //Add location if it hasn't been seen before
             Location_CanvasViewModel locView = new Location_CanvasViewModel(loc);
-            bool Added = Locations.TryAdd(locView.VolumePosition, locView);
 
-            if (Added)
-            {            
+            RTree.Rectangle bbox = locView.BoundingBox.ToRTreeRect((float)locView.Z);
+
+            if (this.Locations.TryAdd(bbox, locView))
+            {
+
                 if (Subscribe)
                 {
                     locView.RegisterForLocationEvents();
@@ -382,6 +388,7 @@ namespace WebAnnotation.ViewModel
                 KnownLocationsForStructure = LocationsForStructure.GetOrAdd(loc.ParentID.Value, (key) => { return new ConcurrentDictionary<long, Location_CanvasViewModel>(); });
                 KnownLocationsForStructure.TryAdd(locView.ID, locView);
             }
+            
 
             return UpdatedVolumeLocation;
         }
@@ -417,9 +424,9 @@ namespace WebAnnotation.ViewModel
                 if (loc.Section == Section.Number)
                 {
                     Location_CanvasViewModel locView = new Location_CanvasViewModel(loc);
-                    Location_CanvasViewModel RemovedValue; 
+                    Location_CanvasViewModel RemovedValue = null;
 
-                    bool RemoveSuccess = Locations.TryRemove(locView, out RemovedValue);
+                    bool RemoveSuccess = Locations.Delete(locView.BoundingBox.ToRTreeRect((float)locView.Z), locView, out RemovedValue);
                     if (RemoveSuccess)
                     {
                         RemovedValue.DeregisterForLocationEvents();
@@ -477,16 +484,15 @@ namespace WebAnnotation.ViewModel
 
         public ICollection<Location_CanvasViewModel> GetLocations()
         {
-            return Locations.Values;
+            return Locations.Items; 
         }
 
         public ICollection<Location_CanvasViewModel> GetLocations(GridRectangle bounds)
         {
             List<GridVector2> foundPoints; 
             List<Location_CanvasViewModel> foundLocations;
-            Locations.Intersect(bounds, out foundPoints, out foundLocations);
 
-            return foundLocations; 
+            return Locations.Intersects(bounds.ToRTreeRect((float)this.Section.Number));
         }
 
         /*
@@ -515,7 +521,9 @@ namespace WebAnnotation.ViewModel
         /// <returns></returns>
         public bool TryGetPositionForLocation(Location_CanvasViewModel loc, out GridVector2 position)
         {
-            return Locations.TryGetPosition(loc, out position);
+            position = loc.VolumePosition;
+
+            return true;
             //return Locations.TryGetPosition(loc); 
 
             /*
@@ -532,16 +540,20 @@ namespace WebAnnotation.ViewModel
 
         public GridVector2 GetPositionForLocation(Location_CanvasViewModel loc)
         {
+            return loc.VolumePosition;
+            /*
             GridVector2 pos;
             bool Success = Locations.TryGetPosition(loc, out pos);
             if(!Success)
                 throw new ArgumentException("Could not map location: " + loc.ToString());
 
             return pos; 
+             */
         }
 
         public IUIObjectBasic GetNearestAnnotation(GridVector2 WorldPosition, out double distance)
         {
+
             distance = double.MaxValue;
             IUIObjectBasic FoundObject = null;
             double locDistance = double.MaxValue;
@@ -588,20 +600,20 @@ namespace WebAnnotation.ViewModel
 
             /*Check to see if we clicked a location*/
 
-            Location_CanvasViewModel bestLoc = Locations.FindNearest(WorldPosition, out distance);
-            if (bestLoc != null)
-            {       
-                if (distance < bestLoc.Radius)
-                {
-                    //minDistance = distance;
-                }
-                else
-                {
-                    bestLoc = null;
-                }
+            List<Location_CanvasViewModel> candidates = Locations.Intersects(WorldPosition.ToRTreeRect(this.SectionNumber));
+
+            //TODO: Put the SQL intersection test 
+            List<Location_CanvasViewModel> intersecting_candidates = candidates.Where(c => GridVector2.Distance(c.VolumePosition, WorldPosition) <= c.Radius).ToList();
+            Location_CanvasViewModel nearest = intersecting_candidates.OrderBy(c => GridVector2.Distance(c.VolumePosition, WorldPosition) / c.Radius).FirstOrDefault();
+            if(nearest == null)
+                return null;
+            else
+            {
+                distance = GridVector2.Distance(nearest.VolumePosition, WorldPosition);
             }
-            
-            return bestLoc; 
+
+            return nearest;
+
         }
         
                 /*Check to see if we clicked a location on a reference section*/
@@ -882,7 +894,7 @@ namespace WebAnnotation.ViewModel
 
                 if (this.Locations != null)
                 {
-                    this.Locations.Dispose();
+                    //this.Locations.Dispose();
                     this.Locations = null;
                 }
             }
