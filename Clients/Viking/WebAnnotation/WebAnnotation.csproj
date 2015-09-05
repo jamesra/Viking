@@ -83,10 +83,6 @@
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Microsoft.SqlServer.Types, Version=11.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91, processorArchitecture=MSIL">
-      <Private>True</Private>
-      <HintPath>..\..\packages\Microsoft.SqlServer.Types.11.0.2\lib\net20\Microsoft.SqlServer.Types.dll</HintPath>
-    </Reference>
     <Reference Include="Microsoft.Xna.Framework, Version=4.0.0.0, Culture=neutral, PublicKeyToken=842cf8be1de50553, processorArchitecture=x86" />
     <Reference Include="Microsoft.Xna.Framework.Graphics, Version=4.0.0.0, Culture=neutral, PublicKeyToken=842cf8be1de50553, processorArchitecture=x86" />
     <Reference Include="System" />
@@ -323,6 +319,7 @@
     <ProjectReference Include="..\..\..\RTree\RTree.csproj">
       <Project>{4085ba67-60d7-4679-886e-457aaf37ec7b}</Project>
       <Name>RTree</Name>
+      <Private>True</Private>
     </ProjectReference>
     <ProjectReference Include="..\..\Common\Common.csproj">
       <Project>{B35B0C61-EC9C-425A-846D-F160D5B12158}</Project>

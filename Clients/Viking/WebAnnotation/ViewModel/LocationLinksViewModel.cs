@@ -30,7 +30,7 @@ namespace WebAnnotation.ViewModel
         /// <summary>
         /// Allows us to describe all the locationlinks visible on a screen
         /// </summary>
-        private ConcurrentDictionary<int, LineSearchGrid<LocationLink>> SectionLocationLinksSearch = new ConcurrentDictionary<int, LineSearchGrid<LocationLink>>();
+        private ConcurrentDictionary<int, RTree.RTree<LocationLink>> SectionLocationLinksSearch = new ConcurrentDictionary<int, RTree.RTree<LocationLink>>();
 
         /// <summary>
         /// Keeps only one instance of a LocationLink for each LocationLinkKey value
@@ -42,9 +42,7 @@ namespace WebAnnotation.ViewModel
         /// This structure records how many subscriptions we have
         /// </summary>
         private ConcurrentDictionary<long, long> LocationSubscriptionRefCounts = new ConcurrentDictionary<long, long>(); 
-        
-
-
+          
         public LocationLinksViewModel(Viking.UI.Controls.SectionViewerControl Parent)
         {
             this.parent = Parent;
@@ -64,22 +62,20 @@ namespace WebAnnotation.ViewModel
         /// </summary>
         /// <param name="bounds"></param>
         /// <returns></returns>
-        public LocationLink[] VisibleLocationLinks(int sectionNumber, GridRectangle bounds)
+        public IEnumerable<LocationLink> VisibleLocationLinks(int sectionNumber, GridRectangle bounds)
         {
-            LineSearchGrid<LocationLink> searchGrid = GetSearchGrid(sectionNumber);
+            RTree.RTree<LocationLink> searchGrid = GetSearchGrid(sectionNumber);
 
             if (null == searchGrid)
-                return new LocationLink[0]; 
-            
-            LocationLink[] LinkList = searchGrid.GetValues(bounds);
+                return new LocationLink[0];
 
-            return LinkList.ToArray();
+            return searchGrid.Intersects(bounds.ToRTreeRect(sectionNumber));
         }
 
 
-        public LineSearchGrid<LocationLink> GetSearchGrid(int SectionNumber)
+        public RTree.RTree<LocationLink> GetSearchGrid(int SectionNumber)
         {
-            LineSearchGrid<LocationLink> searchGrid; 
+            RTree.RTree<LocationLink> searchGrid; 
             bool success = SectionLocationLinksSearch.TryGetValue(SectionNumber, out searchGrid); 
             if(success)
                 return searchGrid;
@@ -87,65 +83,43 @@ namespace WebAnnotation.ViewModel
             return null; 
         }
 
-        public LineSearchGrid<LocationLink> GetOrAddSearchGrid(int SectionNumber, int EstimatedLinks)
+        public RTree.RTree<LocationLink> GetOrAddSearchGrid(int SectionNumber, int EstimatedLinks)
         {
-            LineSearchGrid<LocationLink> searchGrid; 
+            RTree.RTree<LocationLink> searchGrid; 
             bool success = SectionLocationLinksSearch.TryGetValue(SectionNumber, out searchGrid); 
             if(success)
                 return searchGrid;
 
-            searchGrid = new LineSearchGrid<LocationLink>(AnnotationOverlay.SectionBounds(parent, SectionNumber), EstimatedLinks);
+            searchGrid = new RTree.RTree<LocationLink>();
             searchGrid = SectionLocationLinksSearch.GetOrAdd(SectionNumber, searchGrid);
             return searchGrid;
         }
 
         public bool TryRemoveSearchGrid(int SectionNumber)
         {
-            LineSearchGrid<LocationLink> searchGrid;
+            RTree.RTree<LocationLink> searchGrid;
             bool success = SectionLocationLinksSearch.TryRemove(SectionNumber, out searchGrid);
             return success; 
         }
 
         public IUIObjectBasic GetNearestLink(int SectionNumber, GridVector2 WorldPosition, out double distance)
         {
-//            double minDistance = double.MaxValue;
             distance = double.MaxValue; 
-            GridVector2 NearestIntersection;
-//            IUIObjectBasic FoundLink = null;
-            LineSearchGrid<LocationLink> searchGrid = GetSearchGrid(SectionNumber);
+            RTree.RTree<LocationLink> searchGrid = GetSearchGrid(SectionNumber);
 
             if (searchGrid == null)
                 return null; 
 
-            LocationLink locLinkObj = searchGrid.GetNearest(WorldPosition, out NearestIntersection, out distance);
-            if (locLinkObj != null)
+//            IEnumerable<LocationLink> intersectingObjs = searchGrid.Intersects(WorldPosition.ToRTreeRect(SectionNumber)).Where(l => l.LineSegment.DistanceToPoint(WorldPosition) <= l.Radius).ToList();
+            List<LocationLink> intersecting_candidates = searchGrid.Intersects(WorldPosition.ToRTreeRect(SectionNumber)).Where(l => l.LineSegment.DistanceToPoint(WorldPosition) <= l.Radius).ToList();
+            LocationLink nearest = intersecting_candidates.OrderBy(l => l.LineSegment.DistanceToPoint(WorldPosition) / l.Radius).FirstOrDefault();
+            if (nearest != null)
             {
-                if (distance > locLinkObj.Radius)
-                {
-                    locLinkObj = null;
-                }
-                else
-                {
-                    //minDistance = distance;
-                    //FoundLink = locLinkObj as IUIObjectBasic;
-                }
+                distance = nearest.LineSegment.DistanceToPoint(WorldPosition);
+                return nearest;
             }
 
-            return locLinkObj; 
-
-            /*
-            StructureLink structLinkObj = StructureLinksSearch.GetNearest(WorldPosition, out NearestIntersection, out distance);
-            if (structLinkObj != null && distance < minDistance)
-            {
-                if (distance <= structLinkObj.Radius && distance < minDistance)
-                {
-                    FoundLink = structLinkObj as IUIObjectBasic;
-                    minDistance = distance;
-                }
-            }
-            distance = minDistance;
-            return FoundLink;
-             */
+            return null;
         }
 
 #region Add/Remove Location Links
@@ -244,11 +218,11 @@ namespace WebAnnotation.ViewModel
                 //if (EstimatedLinks < 2000)
                 int EstimatedLinks = 2500;
 
-                LineSearchGrid<LocationLink> searchGrid = GetOrAddSearchGrid(iSection, EstimatedLinks);
+                RTree.RTree<LocationLink> searchGrid = GetOrAddSearchGrid(iSection, EstimatedLinks);
                 //           Debug.WriteLine(iSection.ToString() + " add    : " + linkView.ToString() + " " + searchGrid.Count.ToString());
 
                 //Debug.Assert(false == searchGrid.Contains(linkView));
-                bool sectionSuccess = searchGrid.TryAdd(lineSegment, linkView);
+                bool sectionSuccess = searchGrid.TryAdd(linkView.BoundingBox.ToRTreeRect(iSection), linkView);
                 success = success || sectionSuccess;  //I had this on one line, but short-circuit logic had me beating my head against the wall for too long
                 //Debug.Assert(success); 
             }
@@ -312,13 +286,13 @@ namespace WebAnnotation.ViewModel
                     continue;
 
                 //        Debug.WriteLine(iSection.ToString() + " remove : " + linkView.ToString());
-                LineSearchGrid<LocationLink> searchGrid = GetSearchGrid(iSection);
+                RTree.RTree<LocationLink> searchGrid = GetSearchGrid(iSection);
 
                 if (searchGrid == null)
                     continue;
 
-                GridLineSegment line;
-                bool sectionSuccess = searchGrid.TryRemove(linkView, out line);
+                LocationLink line; 
+                bool sectionSuccess = searchGrid.Delete(linkView, out line);
                 Debug.Assert(sectionSuccess);
                 success = success || sectionSuccess;
 

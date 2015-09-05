@@ -81,7 +81,15 @@ namespace WebAnnotation.ViewModel
             get
             {
              //   return SourceLocation.Radius / 8.0f;
-                return SourceLocation.Radius;
+                return ((SourceLocation.Radius + TargetLocation.Radius) / 2.0) / 2.0;
+            }
+        }
+
+        public Geometry.GridRectangle BoundingBox
+        {
+            get
+            {
+                return lineSegment.BoundingBox.Pad(this.Radius);
             }
         }
 

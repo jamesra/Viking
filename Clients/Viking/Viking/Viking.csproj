@@ -43,7 +43,7 @@
     <CreateWebPageOnPublish>true</CreateWebPageOnPublish>
     <WebPage>Viking.html</WebPage>
     <TrustUrlParameters>true</TrustUrlParameters>
-    <ApplicationRevision>131</ApplicationRevision>
+    <ApplicationRevision>138</ApplicationRevision>
     <ApplicationVersion>1.1.0.%2a</ApplicationVersion>
     <UseApplicationTrust>false</UseApplicationTrust>
     <CreateDesktopShortcut>true</CreateDesktopShortcut>
@@ -203,8 +203,15 @@
     <Content Include="Modules\LocalBookmarks\LocalBookmarks.dll" />
     <Content Include="Modules\LocalBookmarks\Xml.Schema.Linq.dll" />
     <Content Include="Modules\Measurement\Measurement.dll" />
+    <Content Include="Modules\WebAnnotation\log4net.dll" />
+    <Content Include="Modules\WebAnnotation\RTree.dll" />
+    <Content Include="Modules\WebAnnotation\SqlServerTypes\x64\msvcr100.dll" />
+    <Content Include="Modules\WebAnnotation\SqlServerTypes\x64\SqlServerSpatial110.dll" />
+    <Content Include="Modules\WebAnnotation\SqlServerTypes\x86\msvcr100.dll" />
+    <Content Include="Modules\WebAnnotation\SqlServerTypes\x86\SqlServerSpatial110.dll" />
     <Content Include="Modules\WebAnnotation\WebAnnotation.dll" />
     <Content Include="Modules\WebAnnotation\WebAnnotationModel.dll" />
+    <Content Include="Modules\WebAnnotation\Xml.Schema.Linq.dll" />
     <Content Include="Viking.ico" />
   </ItemGroup>
   <ItemGroup />

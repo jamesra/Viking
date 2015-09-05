@@ -24,8 +24,9 @@ namespace WebAnnotation.ViewModel
     /// This class manages LocationViewModels used on a canvas.  
     /// It handles hit detection, search, and positioning using canvas transforms
     /// </summary>
-    public class SectionLocationsViewModel : System.Windows.IWeakEventListener, IDisposable
+    public class SectionLocationsViewModel : System.Windows.IWeakEventListener
     {
+    
         /// <summary>
         /// The section we store annotations for
         /// <summary>
@@ -59,7 +60,7 @@ namespace WebAnnotation.ViewModel
         /// <summary>
         /// Allows us to describe all the StructureLinks visible on a screen
         /// </summary>
-        private LineSearchGrid<StructureLink> StructureLinksSearch = null;
+        private RTree.RTree<StructureLink> StructureLinksSearch = null;
 
         /// <summary>
         /// This is a symptom of being halfway to the Jotunn architecture.  This is a pointer to the 
@@ -91,8 +92,8 @@ namespace WebAnnotation.ViewModel
             this.SubmitUpdatedVolumePositions = section.VolumeViewModel.UpdateServerVolumePositions;
 
             LocationsForStructure = new ConcurrentDictionary<long, ConcurrentDictionary<long, Location_CanvasViewModel>>();
-            
-            StructureLinksSearch = new LineSearchGrid<StructureLink>(bounds, 10000);
+
+            StructureLinksSearch = new RTree.RTree<StructureLink>();
             
             CollectionChangedEventManager.AddListener(Store.Structures, this);
             CollectionChangedEventManager.AddListener(Store.StructureLinks, this);
@@ -426,7 +427,7 @@ namespace WebAnnotation.ViewModel
                     Location_CanvasViewModel locView = new Location_CanvasViewModel(loc);
                     Location_CanvasViewModel RemovedValue = null;
 
-                    bool RemoveSuccess = Locations.Delete(locView.BoundingBox.ToRTreeRect((float)locView.Z), locView, out RemovedValue);
+                    bool RemoveSuccess = Locations.Delete(locView, out RemovedValue);
                     if (RemoveSuccess)
                     {
                         RemovedValue.DeregisterForLocationEvents();
@@ -553,30 +554,52 @@ namespace WebAnnotation.ViewModel
         public IUIObjectBasic GetNearestAnnotation(GridVector2 WorldPosition, out double distance)
         {
 
+            double linkDistance = double.MaxValue;
             distance = double.MaxValue;
+            StructureLink NearestLink = null;
+            List<StructureLink> intersecting_candidates = StructureLinksSearch.Intersects(WorldPosition.ToRTreeRect(this.SectionNumber)).Where(l => l.lineSegment.DistanceToPoint(WorldPosition) <= l.Radius).ToList();
+            NearestLink = intersecting_candidates.OrderBy(l => l.lineSegment.DistanceToPoint(WorldPosition) / l.Radius).FirstOrDefault();
+            if (NearestLink != null)
+            {
+                linkDistance = NearestLink.lineSegment.DistanceToPoint(WorldPosition);
+            }
+
+            
             IUIObjectBasic FoundObject = null;
             double locDistance = double.MaxValue;
             Location_CanvasViewModel NearestLocationObj = GetNearestLocation(WorldPosition, out locDistance);
             if (NearestLocationObj != null)
             {
                 FoundObject = NearestLocationObj as IUIObjectBasic;
-                distance = locDistance;
             }
 
-            
-            double linkDistance;
-            GridVector2 linkPosition; 
-            StructureLink FoundLink = StructureLinksSearch.GetNearest(WorldPosition, out linkPosition, out linkDistance);
-            if (FoundLink != null && linkDistance < locDistance)
+            //Figure out which object we are closer to the center of, the location or the link
+            if (NearestLink != null && NearestLocationObj != null)
             {
-                if (linkDistance < FoundLink.Radius)
+                if(linkDistance / NearestLink.Radius <= locDistance / NearestLocationObj.Radius)
                 {
-                    FoundObject = FoundLink;
-                    distance = linkDistance;
+                    NearestLocationObj = null;
                 }
+                else
+                {
+                    NearestLink = null; 
+                }
+
             }
             
-            return FoundObject;
+            if(NearestLink != null)
+            {
+                distance = NearestLink.lineSegment.DistanceToPoint(WorldPosition);
+                return NearestLink;
+            }
+            else if (NearestLocationObj != null)
+            {
+                distance = locDistance;
+                return NearestLocationObj;
+            }
+
+            return null; 
+             
         }
 
         
@@ -701,10 +724,9 @@ namespace WebAnnotation.ViewModel
         /// </summary>
         /// <param name="bounds"></param>
         /// <returns></returns>
-        public StructureLink[] VisibleStructureLinks(GridRectangle bounds)
+        public List<StructureLink> VisibleStructureLinks(GridRectangle bounds)
         {
-            StructureLink[] LinkList = StructureLinksSearch.GetValues(bounds);
-            return LinkList;
+            return StructureLinksSearch.Intersects(bounds.ToRTreeRect(this.SectionNumber)).ToList(); 
         }
 
         internal void AddStructureLinks(IEnumerable<LocationObj> locations)
@@ -742,53 +764,14 @@ namespace WebAnnotation.ViewModel
             foreach(StructureLinkObj structLinkObj in structureLinks)
             {
                 if (structLinkObj == null)
-                    continue; 
-                
-                if (structLinkObj.SourceID == structLinkObj.TargetID)
-                {
-                    Trace.WriteLine("Something is wrong on the server, struct ID links to itself: " + structLinkObj.SourceID.ToString());
-                    Store.StructureLinks.Remove(structLinkObj);
-                    Store.StructureLinks.Save();
-                    continue; //Something is wrong in the database
-                }
-                //The link may have been created to a structure on an adjacent section
-                ConcurrentDictionary<long, Location_CanvasViewModel> SourceLocations = null;
-                bool Success = LocationsForStructure.TryGetValue(structLinkObj.SourceID, out SourceLocations);
-                if (Success == false)
                     continue;
 
-                ConcurrentDictionary<long, Location_CanvasViewModel> TargetLocations = null;
-                Success = LocationsForStructure.TryGetValue(structLinkObj.TargetID, out TargetLocations);
-                if (Success == false)
-                    continue;
-
-                if(SourceLocations.Count == 0 || TargetLocations.Count == 0)
+                StructureLink StructLink = CreateStructureLinkWithLocations(structLinkObj);
+                if (StructLink == null)
                     continue; 
-                
-                //Brute force a search for the shortest distance between the two structures.
-                double MinDistance = double.MaxValue;
-                Location_CanvasViewModel BestSourceLoc = null; 
-                Location_CanvasViewModel BestTargetLoc = null;
-
-                foreach (Location_CanvasViewModel SourceLoc in SourceLocations.Values)
-                {
-                    foreach (Location_CanvasViewModel TargetLoc in TargetLocations.Values)
-                    {
-                        double dist = GridVector2.Distance(SourceLoc.VolumePosition, TargetLoc.VolumePosition);
-                        if (dist < MinDistance)
-                        {
-                            BestSourceLoc = SourceLoc;
-                            BestTargetLoc = TargetLoc;
-                            MinDistance = dist;
-                        }
-                    }
-                }
-
-                //OK, create a StructureLink between the locations
-                StructureLink StructLink = new StructureLink(structLinkObj, BestSourceLoc, BestTargetLoc);
-
+                 
                 //An error can occur if two structures are linked to each other twicea, once as a source and once as a destination.
-                StructureLinksSearch.TryAdd(StructLink.lineSegment, StructLink);
+                StructureLinksSearch.TryAdd(StructLink.BoundingBox.ToRTreeRect(this.SectionNumber), StructLink);
             }
         }
 
@@ -814,6 +797,53 @@ namespace WebAnnotation.ViewModel
             }
         }
 
+        internal StructureLink CreateStructureLinkWithLocations(StructureLinkObj structLinkObj)
+        {
+            if (structLinkObj.SourceID == structLinkObj.TargetID)
+            {
+                Trace.WriteLine("Something is wrong on the server, struct ID links to itself: " + structLinkObj.SourceID.ToString());
+                Store.StructureLinks.Remove(structLinkObj);
+                Store.StructureLinks.Save();
+                return null; 
+            }
+
+            //The link may have been created to a structure on an adjacent section
+            ConcurrentDictionary<long, Location_CanvasViewModel> SourceLocations = null;
+            bool Success = LocationsForStructure.TryGetValue(structLinkObj.SourceID, out SourceLocations);
+            if (Success == false)
+                return null;
+
+            ConcurrentDictionary<long, Location_CanvasViewModel> TargetLocations = null;
+            Success = LocationsForStructure.TryGetValue(structLinkObj.TargetID, out TargetLocations);
+            if (Success == false)
+                return null;
+
+            if (SourceLocations.Count == 0 || TargetLocations.Count == 0)
+                return null;
+
+            //Brute force a search for the shortest distance between the two structures.
+            double MinDistance = double.MaxValue;
+            Location_CanvasViewModel BestSourceLoc = null;
+            Location_CanvasViewModel BestTargetLoc = null;
+
+            foreach (Location_CanvasViewModel SourceLoc in SourceLocations.Values)
+            {
+                foreach (Location_CanvasViewModel TargetLoc in TargetLocations.Values)
+                {
+                    double dist = GridVector2.Distance(SourceLoc.VolumePosition, TargetLoc.VolumePosition);
+                    if (dist < MinDistance)
+                    {
+                        BestSourceLoc = SourceLoc;
+                        BestTargetLoc = TargetLoc;
+                        MinDistance = dist;
+                    }
+                }
+            }
+
+            //OK, create a StructureLink between the locations
+            return new StructureLink(structLinkObj, BestSourceLoc, BestTargetLoc);
+        }
+
         /// <summary>
         /// All locations which are linked get a line between them
         /// </summary>
@@ -827,10 +857,13 @@ namespace WebAnnotation.ViewModel
                 if (structLinkObj == null)
                     continue;
 
-                StructureLink link = new StructureLink(structLinkObj); 
-                GridLineSegment line; 
-                if(StructureLinksSearch != null)
-                    StructureLinksSearch.TryRemove(link, out line); 
+                if (StructureLinksSearch != null)
+                {
+                    StructureLink link = CreateStructureLinkWithLocations(structLinkObj);
+                    if (link == null)
+                        continue; 
+                    StructureLinksSearch.Delete(link, out link);
+                }
 
             }
         }
@@ -878,31 +911,6 @@ namespace WebAnnotation.ViewModel
 
             Debug.Fail("Weak Event not handled");
             return false;
-        }
-
-        protected void Dispose(bool freeManagedObjectsAlso)
-        {
-            if (freeManagedObjectsAlso)
-            {
-                if (StructureLinksSearch != null)
-                {
-                    this.StructureLinksSearch.Dispose();
-                    this.StructureLinksSearch = null;
-                }
-
-                if (this.Locations != null)
-                {
-                    //this.Locations.Dispose();
-                    this.Locations = null;
-                }
-            }
-            
-        }
-
-        public void Dispose()
-        {
-            Dispose(true);
-            GC.SuppressFinalize(this); 
         }
     }
 }

@@ -100,6 +100,23 @@ namespace WebAnnotation.ViewModel
             }
         }
 
+        public GridRectangle BoundingBox
+        {
+            get
+            {
+                return new Geometry.GridLineSegment(A.VolumePosition, B.VolumePosition).BoundingBox.Pad(Radius);
+            }
+        }
+
+        public Geometry.GridLineSegment LineSegment
+        {
+            get
+            {
+                return new Geometry.GridLineSegment(A.VolumePosition, B.VolumePosition);
+            }
+        }
+         
+
         public LocationLink(LocationObj LocOne, LocationObj LocTwo)
         {
             if (LocOne == null)
@@ -113,7 +130,7 @@ namespace WebAnnotation.ViewModel
             this.B = LocOne.ID > LocTwo.ID ? LocOne : LocTwo; 
 
             
-           // lineSegment = new Geometry.GridLineSegment(A.VolumePosition, B.VolumePosition); 
+           //lineSegment = new Geometry.GridLineSegment(A.VolumePosition, B.VolumePosition); 
         }
 
         /// <summary>

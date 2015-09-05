@@ -139,8 +139,7 @@ namespace WebAnnotation
                 }
                 else
                 {
-                    //Otherwise make the duplicate SectionLocationsViewModel go away
-                    SectionAnnotations.Dispose();
+                    //Otherwise make the duplicate SectionLocationsViewModel go away 
                     SectionAnnotations = null;
                 }
 
@@ -312,11 +311,8 @@ namespace WebAnnotation
                 bestLink = linksView.GetNearestLink(CurrentSectionNumber, position, out distance);
                 if (bestLink != null)
                 {
-                    if (distance < BestDistance)
-                    {
-                        BestDistance = distance;
-                        bestObj = bestLink;
-                    }
+                    BestDistance = distance;
+                    return bestLink;
                 }
             }
 
@@ -1002,7 +998,7 @@ namespace WebAnnotation
             IncrementDepthStencilValue(graphicsDevice, ref nextStencilValue);
 
             //Get all the lines to draw first so the text and geometric shapes are over top of them
-            LocationLink[] VisibleLinks = linksView.VisibleLocationLinks(_Parent.Section.Number, Bounds);
+            IEnumerable<LocationLink> VisibleLinks = linksView.VisibleLocationLinks(_Parent.Section.Number, Bounds);
             foreach (LocationLink link in VisibleLinks)
             {
                 DrawLocationLink(link, ViewProjMatrix);
@@ -1070,7 +1066,7 @@ namespace WebAnnotation
             graphicsDevice.BlendState = defaultBlendState;
 
             //Get all the lines to draw
-            StructureLink[] VisibleStructureLinks = currentSectionAnnotations.VisibleStructureLinks(Bounds); 
+            List<StructureLink> VisibleStructureLinks = currentSectionAnnotations.VisibleStructureLinks(Bounds); 
             foreach (StructureLink link in VisibleStructureLinks)
             {
                 DrawStructureLink(link, ViewProjMatrix, Time);
