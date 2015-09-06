@@ -493,6 +493,11 @@ namespace WebAnnotation.ViewModel
             return Locations.Intersects(bounds.ToRTreeRect((float)this.Section.Number));
         }
 
+        public ICollection<Location_CanvasViewModel> GetLocations(GridVector2 point)
+        {
+            return Locations.Intersects(point.ToRTreeRect((float)this.Section.Number));
+        }
+
 
 
         /*
@@ -625,7 +630,7 @@ namespace WebAnnotation.ViewModel
             List<Location_CanvasViewModel> candidates = Locations.Intersects(WorldPosition.ToRTreeRect(this.SectionNumber));
 
             //TODO: Put the SQL intersection test 
-            List<Location_CanvasViewModel> intersecting_candidates = candidates.Where(c => GridVector2.Distance(c.VolumePosition, WorldPosition) <= c.Radius).ToList();
+            List<Location_CanvasViewModel> intersecting_candidates = candidates.Where(c => c.Intersects(WorldPosition)).ToList();
             Location_CanvasViewModel nearest = intersecting_candidates.OrderBy(c => GridVector2.Distance(c.VolumePosition, WorldPosition) / c.Radius).FirstOrDefault();
             if(nearest == null)
                 return null;

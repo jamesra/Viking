@@ -160,7 +160,21 @@ namespace WebAnnotation.ViewModel
                 return new GridRectangle(this.VolumePosition, this.Radius);
             }
         }
-        
+
+        public bool Intersects(GridVector2 Position)
+        {
+            return GridVector2.Distance(this.VolumePosition, Position) <= this.Radius;
+        }
+
+        /// <summary>
+        /// Returns true if the locations rendering on an adjacent section, different graphic and size, would intersect
+        /// </summary>
+        /// <param name="Position"></param>
+        /// <returns></returns>
+        public bool IntersectsOnAdjacent(GridVector2 Position)
+        {
+            return GridVector2.Distance(this.VolumePosition, Position) <= this.OffSectionRadius;
+        }
 
         public Location_CanvasViewModel(LocationObj location) : base(location)
         {

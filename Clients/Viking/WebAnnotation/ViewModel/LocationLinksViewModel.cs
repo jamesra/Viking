@@ -149,7 +149,7 @@ namespace WebAnnotation.ViewModel
                    loc.VolumePosition.Y < 0)
                     continue; 
 
-                foreach (long linkID in loc.Links)
+                foreach (long linkID in loc.LinksCopy)
                 {
                     AddLocationLink(new LocationLinkKey(loc.ID, linkID));
                 }

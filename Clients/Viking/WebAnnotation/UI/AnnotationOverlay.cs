@@ -262,16 +262,22 @@ namespace WebAnnotation
 
             if (bestObj == null)
             {
-                Location_CanvasViewModel adjacentObj;
+                double bestRatio = double.MaxValue;
+                double distanceRatio = double.MaxValue;
+                List<Location_CanvasViewModel> adjacentObjs = new List<Location_CanvasViewModel>();
                 if (_Parent.Section.ReferenceSectionAbove != null)
                 {
                     locView = GetAnnotationsForSection(_Parent.Section.ReferenceSectionAbove.Number);
                     if (locView != null)
                     {
+                        adjacentObjs.AddRange(locView.GetLocations(position));
+                        /*
+                        //TODO: Combine adjancent section results and then filter out terminal locations
                         adjacentObj = locView.GetNearestLocation(position, out distance);
                         if (adjacentObj != null)
                         {
-                            if (distance < BestDistance)
+                            distanceRatio = distance / adjacentObj.OffSectionRadius;
+                            if (distanceRatio < bestRatio)
                             {
                                 if (distance < adjacentObj.OffSectionRadius)
                                 {
@@ -280,28 +286,29 @@ namespace WebAnnotation
                                 }
                             }
                         }
+                        */
                     }
                 }
+
 
                 if (_Parent.Section.ReferenceSectionBelow != null)
                 {
                     locView = GetAnnotationsForSection(_Parent.Section.ReferenceSectionBelow.Number);
                     if (locView != null)
                     {
-                        adjacentObj = locView.GetNearestLocation(position, out distance);
-                        if (adjacentObj != null)
-                        {
-                            if (distance < BestDistance)
-                            {
-                                if (distance < adjacentObj.OffSectionRadius)
-                                {
-                                    bestObj = adjacentObj;
-                                    BestDistance = distance;
-                                }
-                            }
-                        }
+                        adjacentObjs.AddRange(locView.GetLocations(position));
+                        
                     }
                 }
+
+                List<Location_CanvasViewModel> intersecting_candidates = adjacentObjs.Where(l => l.IntersectsOnAdjacent(position) && l.IsTerminal == false).ToList();
+                Location_CanvasViewModel nearest = intersecting_candidates.OrderBy(c => GridVector2.Distance(c.VolumePosition, position) / c.Radius).FirstOrDefault();
+                bestObj = nearest;
+                if (bestObj != null)
+                {
+                    distance = GridVector2.Distance(position, nearest.VolumePosition);
+                }
+
             }
 
             //Only check for links if there are no annotations in range
@@ -592,7 +599,15 @@ namespace WebAnnotation
 
                             return;
                         }
-                         
+
+                        ToggleLocationTerminalCommandAction tagToggleTerminalAction = Global.UserSettings.Actions.ToggleLocationTerminalCommandAction.Where(action => action.Name == h.Action).SingleOrDefault();
+                        if (tagToggleTerminalAction != null)
+                        {
+                            OnToggleLocationTerminalTag();
+
+                            return;
+                        }
+
                         /*
                         System.Type t = System.Type.GetType(Param.Type);
                         if(t == null)
@@ -702,12 +717,32 @@ namespace WebAnnotation
                 Trace.WriteLine("No mouse over location to toggle tag");
                 return;
             }
-
-            ToggleTagCommand command = new ToggleTagCommand(this.Parent, loc.Parent, tag);
-
+               
             Viking.UI.Commands.Command.EnqueueCommand(typeof(ToggleTagCommand), new object[] { this.Parent, loc.Parent, tag});
 
             return; 
+        }
+
+        protected void OnToggleLocationTerminalTag()
+        {
+            if (LastMouseOverObject == null)
+            {
+                Trace.WriteLine("No mouse over object to toggle terminal");
+                return;
+            }
+
+            Location_CanvasViewModel loc = LastMouseOverObject as Location_CanvasViewModel; // GetNearestLocation(WorldPosition, out distance);
+            if (loc == null)
+            {
+                Trace.WriteLine("No mouse over location to toggle terminal");
+                return;
+            }
+
+            //ToggleLocationIsTerminalCommand command = new ToggleLocationIsTerminalCommand(this.Parent, loc.modelObj);
+
+            Viking.UI.Commands.Command.EnqueueCommand(typeof(ToggleLocationIsTerminalCommand), new object[] { this.Parent, loc.modelObj });
+
+            return;
         }
 
         protected void OnContinueLastTrace()

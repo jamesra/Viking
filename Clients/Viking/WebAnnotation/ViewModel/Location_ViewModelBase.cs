@@ -520,6 +520,7 @@ namespace WebAnnotation.ViewModel
             }
         }
 
+        /*
         private Microsoft.SqlServer.Types.SqlGeometry _VolumeShape = null; 
 
         public Microsoft.SqlServer.Types.SqlGeometry VolumeShape
@@ -535,11 +536,20 @@ namespace WebAnnotation.ViewModel
                 return _VolumeShape;
             }
         }
+        */
 
         [Column("TypeCode")]
         public LocationType TypeCode
         {
             get { return (LocationType)modelObj.TypeCode; }
+        }
+
+        public bool IsTerminal
+        {
+            get
+            {
+                return modelObj.Terminal;
+            }
         }
 
         /// <summary>
