@@ -254,8 +254,11 @@ namespace Geometry
                 //We are removing the root node.  State that it has no value and return
                 ValueToNodeTable.Remove(node.Value);
                 node.HasValue = false;
-                node.Value = default(T); 
             }
+
+            node.Parent = null;
+            node.Value = default(T);
+            node.Tree = null; 
 
             return retVal;
         }

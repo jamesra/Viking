@@ -9,8 +9,8 @@ namespace Geometry
 {
         internal class QuadTreeNode<T>
         {
-            readonly QuadTree<T> Tree;
-            internal readonly QuadTreeNode<T> Parent = null;
+            internal QuadTree<T> Tree;
+            internal QuadTreeNode<T> Parent = null;
 
             /// <summary>
             /// It is assumed the "up" has a larger Y value than "down"
