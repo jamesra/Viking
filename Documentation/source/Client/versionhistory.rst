@@ -3,6 +3,42 @@
 Version History
 ###############
 
+1.1.140
+-------
+
+   * Detect changes to files in stos.zip and correctly update viking
+
+1.1.139
+-------
+
+   * Free memory more aggressively when changing sections
+
+1.1.138
+-------
+
+   * Shift+X now toggles the "Terminal" flag on the location under the mouse
+   * Locations marked Terminal do not render on adjacent sections
+   * Cleanup up the selection of locations on adjacent sections
+
+1.1.137
+-------
+
+   * Fixed problem with missing DLL's in deployment
+   * Optimized drawing code for annotations to take advantage of RTree
+   * Increased maximum downloadable graph size to fix sections, RC1 #240, with too many annotations
+   
+
+1.1.130
+-------
+
+   * Fixed (hopefully) bugs involved with commands not exiting correctly
+   * Switched to RTree, for more accurate selection of structures in the UI.
+   
+   Known-issue:
+   
+   * Viewing annotations with the volume transform disabled shows them in the incorrect position
+   
+
 1.1.129
 -------
 
