@@ -235,7 +235,6 @@ namespace WebAnnotation
 
                         Global.PopulateEndpointStateFromVolumeToEndpointElement(MappingElements.First());
 
-                        
                         break;
                     default:
                         break;

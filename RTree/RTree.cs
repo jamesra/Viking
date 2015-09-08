@@ -110,6 +110,11 @@ namespace RTree
         private Dictionary<T,int> ItemsToIds = new Dictionary<T,int>();
         private volatile int idcounter = int.MinValue;
 
+        /// <summary>
+        /// Map of object to rectangles stored for that object in the database
+        /// </summary>
+        private Dictionary<T, Rectangle> ItemsToRects = new Dictionary<T, Rectangle>();
+
         //the recursion methods require a delegate to retrieve data
         private delegate void intproc(int x);
 
@@ -192,6 +197,7 @@ namespace RTree
 
                 IdsToItems.Add(id, item);
                 ItemsToIds.Add(item, id);
+                ItemsToRects.Add(item, r);
 
                 add(r, id);
             }
@@ -215,24 +221,8 @@ namespace RTree
                 if (this.Contains(item))
                     return false; 
 
-                try
-                {                
-                    rwLock.EnterWriteLock();
-                     
-                    idcounter++;
-                    int id = idcounter;
-
-                    IdsToItems.Add(id, item);
-                    ItemsToIds.Add(item, id);
-
-                    add(r, id);
-
-                    return true;
-                }
-                finally
-                {
-                    rwLock.ExitWriteLock();
-                }
+                this.Add(r, item);
+                return true; 
             }
             finally
             {
@@ -313,6 +303,55 @@ namespace RTree
         /// <param name="item"></param>
         /// <param name="removedItem">The item which we pointed to, which may be a seperate object instance from the remove request</param>
         /// <returns></returns>
+        public bool Delete(T item, out T removedItem)
+        {
+            try
+            {
+                removedItem = default(T);
+
+                rwLock.EnterUpgradeableReadLock();
+
+                if (!this.Contains(item))
+                    return false;
+
+                Rectangle r = ItemsToRects[item];
+
+                try
+                {
+                    rwLock.EnterWriteLock();
+
+                    int id = ItemsToIds[item];
+                    removedItem = default(T);
+
+                    bool success = delete(r, id);
+                    if (success == true)
+                    {
+                        removedItem = IdsToItems[id];
+                        IdsToItems.Remove(id);
+                        ItemsToIds.Remove(item);
+                        ItemsToRects.Remove(item);
+                    }
+                    return success;
+                }
+                finally
+                {
+                    rwLock.ExitWriteLock();
+                }
+            }
+            finally
+            {
+                rwLock.ExitUpgradeableReadLock();
+            }
+        }
+
+
+        /// <summary>
+        /// Deletes an item from the spatial index
+        /// </summary>
+        /// <param name="r"></param>
+        /// <param name="item"></param>
+        /// <param name="removedItem">The item which we pointed to, which may be a seperate object instance from the remove request</param>
+        /// <returns></returns>
         public bool Delete(Rectangle r, T item, out T removedItem)
         {
             try
@@ -337,6 +376,7 @@ namespace RTree
                         removedItem = IdsToItems[id];
                         IdsToItems.Remove(id);
                         ItemsToIds.Remove(item);
+                        ItemsToRects.Remove(item);
                     }
                     return success;
                 }
@@ -350,7 +390,7 @@ namespace RTree
                 rwLock.ExitUpgradeableReadLock();
             }
         }
-
+           
 
         private bool delete(Rectangle r, int id)
         {

@@ -370,6 +370,11 @@ namespace RTree
         public override bool Equals(object obj)
         {
             bool equals = false;
+            if(object.ReferenceEquals(this,obj))
+            {
+                return true; 
+            }
+
             if (obj.GetType() == typeof(Rectangle))
             {
                 Rectangle r = (Rectangle)obj;
