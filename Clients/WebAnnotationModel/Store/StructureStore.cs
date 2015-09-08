@@ -331,11 +331,12 @@ namespace WebAnnotationModel
                 proxy.Open();
 
                 KeepID = proxy.Merge(KeepID, MergeID);
-                return KeepID;
+                return 0;
             }
             catch (Exception e)
             {
                 ShowStandardExceptionMessage(e);
+                throw e;
             }
             finally
             {

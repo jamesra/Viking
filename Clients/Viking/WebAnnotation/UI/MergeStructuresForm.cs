@@ -166,13 +166,14 @@ namespace WebAnnotation.UI
                 return; 
             }
 
-            long result = Store.Structures.Merge(KeepID, MergeID);
-            if (result != 0)
+            try
             {
-                MessageBox.Show("Merge error", "Code: " + result.ToString());
+                Store.Structures.Merge(KeepID, MergeID);
             }
-                
-
+            catch (Exception except)
+            {
+                MessageBox.Show("Merge error", except.Message.ToString());
+            }
             this.Close();
         }
 
