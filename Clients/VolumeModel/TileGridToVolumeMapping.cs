@@ -83,7 +83,13 @@ namespace Viking.VolumeModel
         {
             return this.VolumeTransform.TryInverseTransform(P, out transformedP);
         }
-        
+
+        public override void FreeMemory()
+        {
+            VolumeTransform.MinimizeMemory();
+            base.FreeMemory();
+        }
+
 
         public override TilePyramid VisibleTiles(GridRectangle VisibleBounds, double DownSample)
         {

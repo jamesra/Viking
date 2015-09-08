@@ -819,6 +819,7 @@ namespace Geometry.Transforms
 
                 _mapTriangles = null;
                 _controlTriangles = null;
+                _TriangleList = null; 
             }
             finally
             {

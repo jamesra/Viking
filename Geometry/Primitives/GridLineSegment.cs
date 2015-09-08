@@ -248,6 +248,12 @@ namespace Geometry
             }
         }
 
+        public double DistanceToPoint(GridVector2 point)
+        {
+            GridVector2 temp;
+            return DistanceToPoint(point, out temp);
+        }
+
         /// <summary>
         /// Returns the distance of the line to the specified point
         /// </summary>

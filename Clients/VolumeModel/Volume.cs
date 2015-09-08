@@ -998,11 +998,11 @@ namespace Viking.VolumeModel
                                     if (System.IO.File.Exists(CacheStosPath))
                                     {
                                         DateTime CacheLastModifiedUtc = System.IO.File.GetLastWriteTimeUtc(CacheStosPath);
-                                        if (ControlTrans.Info.LastModified < CacheLastModifiedUtc)
+                                        if (ControlTrans.Info.LastModified < CacheLastModifiedUtc && trans.Info.LastModified < CacheLastModifiedUtc)
                                         {
 
                                             string outString = "Loading from cache: " + trans.ToString() + " to " + ControlTrans.ToString();
-
+                                            Trace.WriteLine(outString); 
                                             stostext = System.IO.File.OpenRead(CacheStosPath) as Stream;
                                             TList[childSection] = TransformFactory.ParseStos(stostext,
                                                                                             new StosTransformInfo(ControlInfo.ControlSection, info.MappedSection, CacheLastModifiedUtc),

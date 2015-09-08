@@ -216,6 +216,16 @@ namespace Geometry
         }
 
         /// <summary>
+        /// Pad the requested amount onto the bounding box
+        /// </summary>
+        /// <param name="Radius"></param>
+        /// <returns></returns>
+        public GridRectangle Pad(double Radius)
+        {
+            return new GridRectangle(this.Left - Radius, this.Right + Radius, this.Bottom - Radius, this.Top + Radius);
+        }
+
+        /// <summary>
         /// Returns true if the passed rectangle in inside or overlaps this rectangle
         /// </summary>
         /// <param name="rect"></param>

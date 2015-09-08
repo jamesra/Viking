@@ -26,7 +26,7 @@ namespace Viking.VolumeModel
 
         public SectionTransformsCache()
         {
-            this.NumSectionsToKeepInMemory = 5; //Total number of sections we will keep loaded by default
+            this.NumSectionsToKeepInMemory = 10; //Total number of sections we will keep loaded by default
         }
 
         protected override SectionTransformsDictionary Fetch(SectionMappingsCacheEntry entry)
@@ -38,7 +38,17 @@ namespace Viking.VolumeModel
         {
             SectionMappingsCacheEntry cacheEntry = new SectionMappingsCacheEntry(key, entry);
             return cacheEntry;
-        } 
+        }
+
+        protected override bool OnRemoveEntry(SectionMappingsCacheEntry entry)
+        {
+            foreach(MappingBase mapping in entry.TransformsForSection.Values)
+            {
+                mapping.FreeMemory();
+            }
+
+            return base.OnRemoveEntry(entry);
+        }
     }
 
     public class SectionMappingsCacheEntry : Common.DataStructures.CacheEntry< int >
