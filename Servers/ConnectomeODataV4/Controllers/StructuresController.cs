@@ -150,6 +150,12 @@ namespace ConnectomeODataV4.Controllers
             return db.Structures.Where(m => m.ID == key).SelectMany(m => m.Locations);
         }
 
+        [EnableQuery]
+        public IQueryable<LocationLink> GetLocationLinks([FromODataUri] long key)
+        {
+            return db.StructureLocationLinks(key);
+        }
+
         // GET: odata/Structures(5)/Children
         [EnableQuery]
         public IQueryable<Structure> GetChildren([FromODataUri] long key)
