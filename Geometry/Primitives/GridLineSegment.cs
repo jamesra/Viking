@@ -253,6 +253,40 @@ namespace Geometry
             GridVector2 temp;
             return DistanceToPoint(point, out temp);
         }
+          
+        internal static bool NearlyZero(double value)
+        {
+            return (value < Global.Epsilon && value > -Global.Epsilon);
+        }
+
+        /// <summary>
+        /// To find the nearest point to a line we project the point onto the infinite line along the line segment.  This function indicates if the point falls beyond the boundaries of the line segment.
+        /// </summary>
+        /// <param name="point"></param>
+        /// <returns>True if proejected point lands within line segment</returns>
+        public bool IsNearestPointWithinLineSegment(GridVector2 point)
+        {
+            double DX = B.X - A.X;
+            double DY = B.Y - A.Y;
+
+            /*Special case for horizontal or vertical lines*/
+            if (NearlyZero(DX))
+            {
+                //Point is between line segment
+                return point.Y <= MaxY && point.Y >= MinY;
+            }
+            else if (NearlyZero(DY))
+            {
+                //Point is between line segment
+                return point.X <= MaxX && point.X >= MinX;
+            }
+
+            //Line is at an angle.  Find the intersection
+            double t = ((point.X - A.X) * DX + (point.Y - A.Y) * DY) / (DX * DX + DY * DY);
+
+            //Make sure t value is on the line 
+            return t >= 0 && t <= 1.0;                
+        }
 
         /// <summary>
         /// Returns the distance of the line to the specified point
@@ -265,7 +299,8 @@ namespace Geometry
             double DX = B.X - A.X;
             double DY = B.Y - A.Y;
 
-            if (DX < Global.Epsilon && DX > -Global.Epsilon)
+            /*Special case for horizontal or vertical lines*/
+            if (NearlyZero(DX))
             {
                 //Point is between line segment
                 if (point.Y <= MaxY &&
@@ -285,7 +320,7 @@ namespace Geometry
                     return GridVector2.Distance(point, Intersection);
                 }
             }
-            else if (DY < Global.Epsilon && DY > -Global.Epsilon)
+            else if (NearlyZero(DY))
             {
                 //Point is between line segment
                 if (point.X <= MaxX &&
@@ -299,7 +334,7 @@ namespace Geometry
                     Intersection = new GridVector2(MaxX, A.Y);
                     return GridVector2.Distance(point, new GridVector2(MaxX, A.Y));
                 }
-                else //(Point.X < MinX) //Point is below line segment, calculate distance
+                else //(Point.X < MinX) //Point is to left of line segment, calculate distance
                 {
                     Intersection = new GridVector2(MinX, A.Y);
                     return GridVector2.Distance(point, new GridVector2(MinX, A.Y));

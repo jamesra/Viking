@@ -680,19 +680,8 @@ namespace Viking.VolumeModel
                             String StosFileCacheFullPath = System.IO.Path.Combine(this.VolumeStosZipCachePath, StosFileName);
                             if (System.IO.File.Exists(StosFileCacheFullPath))
                             {
-                                /*
-                                Trace.WriteLine("Loading " + StosFileName + " from Zip", "VolumeModel");
-                                ZipEntry entry = StosZipFile[StosFileName];
-                                DateTime lastModified = entry.LastModified.ToUniversalTime();
-                                Byte[] buffer = new Byte[entry.UncompressedSize];
-
-                                MemoryStream memStream = new MemoryStream(buffer);
-                                entry.Extract(memStream);
-                                */
                                 //stosTransform = new StosGridTransform(memStream, elem);
                                 CreateStosThreadObj = new CreateStosTransformThreadingObj(StosFileCacheFullPath, elem);
-                                
-                                //memStream.Close(); 
                             }
                         }
 
@@ -1071,44 +1060,6 @@ namespace Viking.VolumeModel
                     }
                 }
                 
-                /*
-                foreach (int iSection in TList.Keys)
-                {
-                    StosGridTransform trans = TList[iSection];
-                    if (false == SectionsTable.ContainsKey(trans.MappedSection))
-                        continue; 
-
-                    Section S = SectionsTable[trans.MappedSection];
- //                   S.AddVolumeTransform(trans, "slice-to-slice " + TransformKey.ToString());
-
-                    if (trans.ControlSection == 1)
-                        continue;
-
-                    if(false == TList.ContainsKey(trans.ControlSection))
-                        continue;
-
-                    //Find the section that can map our transform
-                    StosGridTransform addTrans = TList[trans.ControlSection];
-
-                    //Add this mapping to our dictionary:
-                    if (SectionToReferenceSectionBelow.ContainsKey(trans.MappedSection) == false)
-                    {
-                        SectionToReferenceSectionBelow.Add(trans.MappedSection, trans.ControlSection);
-                    }
-
-                    //NOTE: Assumes volumes use the same mappings across all downsamplings
-                    //Sections should register to section 1, but if a volume hasn't finished registration or was done in parts we may register to a section other than 1
-                    //Debug.Assert(addTrans.ControlSection == 1);
-                    string outString = "Adding transforms: " + trans.ToString() + " to " + addTrans.ToString();
-                 //   Trace.WriteLine(outString, "VolumeModel");
-                    workerThread.ReportProgress((iSection * 100) / TList.Keys[TList.Count - 1], outString);
-                    trans.Add(addTrans);
-
-                    //Let windows process some events
-                    //PORT, can't do this without referencing System.Windows
-                    //System.Windows.Forms.Application.DoEvents();
-                }
-                */
             }
         }
     }

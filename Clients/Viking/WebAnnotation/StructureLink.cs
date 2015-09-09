@@ -81,7 +81,7 @@ namespace WebAnnotation.ViewModel
             get
             {
              //   return SourceLocation.Radius / 8.0f;
-                return ((SourceLocation.Radius + TargetLocation.Radius) / 2.0) / 2.0;
+                return ((SourceLocation.Radius + TargetLocation.Radius) / 2.0);
             }
         }
 

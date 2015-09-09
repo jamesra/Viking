@@ -562,8 +562,9 @@ namespace WebAnnotation.ViewModel
             double linkDistance = double.MaxValue;
             distance = double.MaxValue;
             StructureLink NearestLink = null;
-            List<StructureLink> intersecting_candidates = StructureLinksSearch.Intersects(WorldPosition.ToRTreeRect(this.SectionNumber)).Where(l => l.lineSegment.DistanceToPoint(WorldPosition) <= l.Radius).ToList();
+            List<StructureLink> intersecting_candidates = StructureLinksSearch.Intersects(WorldPosition.ToRTreeRect(this.SectionNumber)).Where(l => l.lineSegment.IsNearestPointWithinLineSegment(WorldPosition) && l.lineSegment.DistanceToPoint(WorldPosition) <= l.Radius).ToList();            
             NearestLink = intersecting_candidates.OrderBy(l => l.lineSegment.DistanceToPoint(WorldPosition) / l.Radius).FirstOrDefault();
+            
             if (NearestLink != null)
             {
                 linkDistance = NearestLink.lineSegment.DistanceToPoint(WorldPosition);
