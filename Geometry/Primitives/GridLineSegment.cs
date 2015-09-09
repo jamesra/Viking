@@ -285,7 +285,7 @@ namespace Geometry
                     return GridVector2.Distance(point, Intersection);
                 }
             }
-            else if (DY < Global.Epsilon && DY > Global.Epsilon)
+            else if (DY < Global.Epsilon && DY > -Global.Epsilon)
             {
                 //Point is between line segment
                 if (point.X <= MaxX &&
