@@ -332,6 +332,9 @@ namespace WebAnnotationModel
             List<LocationLinkKey> links = new List<LocationLinkKey>();
             foreach (LocationObj obj in delObjs)
             {
+                if (obj == null)
+                    continue; 
+
                 foreach (long linkID in obj.LinksCopy)
                 {
                     links.Add(new LocationLinkKey(obj.ID, linkID));
