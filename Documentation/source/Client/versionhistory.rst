@@ -3,6 +3,16 @@
 Version History
 ###############
 
+1.1.145
+-------
+
+   * Changed the selection of structure links to require the point fall within the line segment between the linked locations.
+
+1.1.141
+-------
+
+   * Fixed merge structures returning an error 
+
 1.1.140
 -------
 
