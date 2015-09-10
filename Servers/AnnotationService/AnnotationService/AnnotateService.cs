@@ -1309,38 +1309,11 @@ namespace Annotation
                 //try
                 {
                     db.Configuration.AutoDetectChangesEnabled = false;
-                    //IQueryable<ConnectomeDataModel.Location> listLocations = db.ReadSectionLocations(section, ModifiedAfterThisTime);
-                    List<ConnectomeDataModel.Location> listLocations = db.ReadSectionLocations(section, ModifiedAfterThisTime).ToList();
-                    //List<ConnectomeDataModel.LocationLink> listLocationLinks = db.SelectSectionLocationLinks((double)section, ModifiedAfterThisTime).ToList();
-                    List<ConnectomeDataModel.LocationLink> listLocationLinks = db.ReadSectionLocationLinks(section, ModifiedAfterThisTime).ToList();
-                    //List<ConnectomeDataModel.LocationLink> listLocationLinks = new List<ConnectomeDataModel.LocationLink>();
-                    //var listLocationLinks = db.SelectSectionLocationLinks((double)section, ModifiedAfterThisTime);
-
+                 
+                    retList = db.ReadSectionLocationsAndLinks(section, ModifiedAfterThisTime).Select(l => new Location(l, true)).ToArray();
+                     
                     elapsed = new TimeSpan(DateTime.Now.Ticks - start.Ticks);
-                    Debug.WriteLine(section.ToString() + ": Query: " + elapsed.TotalMilliseconds);
-
-                    //List<ConnectomeDataModel.Location> listLocations = queryResults.ToList<ConnectomeDataModel.Location>();
-
-                    Dictionary<long, Location> dictLocations = new Dictionary<long, Location>(listLocations.Count());
-
-
-
-                    //               elapsed = new TimeSpan(DateTime.Now.Ticks - start.Ticks);
-                    //               Debug.WriteLine(section.ToString() + ": To list: " + elapsed.TotalMilliseconds);
-
-                    //dictLocations = listLocations.Select(l => new Location(l, false)).ToDictionary(l => l.ID);
-                    foreach(ConnectomeDataModel.Location loc in listLocations)
-                    {
-                        dictLocations[loc.ID] = new Location(loc, false);
-                        //retList[i] = new Location(listLocations[i]);
-                    }
-
-                    Location.AppendLinksToLocations(dictLocations, listLocationLinks);
-
-                    retList = dictLocations.Values.ToArray(); 
-
-                    elapsed = new TimeSpan(DateTime.Now.Ticks - start.Ticks);
-                    Debug.WriteLine(section.ToString() + ": Loop: " + elapsed.TotalMilliseconds);
+                    Debug.WriteLine(section.ToString() + ": Query: " + elapsed.TotalMilliseconds); 
                 }
                 /*
                 catch (System.ArgumentNullException)
