@@ -467,21 +467,8 @@ namespace Annotation
                         ModifiedAfter = new DateTime?(new DateTime(ModifiedAfterThisUtcTime, DateTimeKind.Unspecified));
 
                     ModifiedAfter = ConnectomeDataModel.ConnectomeEntities.ValidateDate(ModifiedAfter);
-
-                    //listStructs = db.SelectStructuresForSection(SectionNumber, ModifiedAfter);
-                   
-                    //List<ConnectomeDataModel.Structure> listStructs = db.Structures.Include("SourceOfLinks").Include("TargetOfLinks").ToList();
-                    IList<ConnectomeDataModel.Structure> listStructs = db.ReadSectionStructuresAndLinks(SectionNumber, ModifiedAfter);
-                    Annotation.Structure[] retList = new Annotation.Structure[listStructs.Count];
-
-                    for (int iStruct = 0; iStruct < listStructs.Count(); iStruct++)
-                    {
-                        //Get structures does not include children because 
-                        //if you have all the structures you can create the
-                        //graph yourself by looking at ParentIDs without 
-                        //sending duplicate information over the wire
-                        retList[iStruct] = new Annotation.Structure(listStructs[iStruct], false);
-                    }
+                    
+                    Annotation.Structure[] retList = db.ReadSectionStructuresAndLinks(SectionNumber, ModifiedAfter).Select(s => new Annotation.Structure(s, false)).ToArray();
 
                     return retList;
                 }
@@ -491,6 +478,40 @@ namespace Annotation
                 }
             }
               
+            return new Structure[0];
+        }
+
+        [PrincipalPermission(SecurityAction.Demand, Role = "Read")]
+        public Annotation.Structure[] GetStructuresForSectionRegion(long SectionNumber, AnnotationBoundingBox bbox, long ModifiedAfterThisUtcTime, out long QueryExecutedTime, out long[] DeletedIDs)
+        {
+            DeletedIDs = new long[0];
+
+            QueryExecutedTime = DateTime.Now.ToUniversalTime().Ticks;
+
+            using (var db = GetOrCreateDatabaseContext())
+            {
+                db.Configuration.LazyLoadingEnabled = false;
+                db.Configuration.AutoDetectChangesEnabled = false;
+
+                try
+                {
+                    DateTime? ModifiedAfter = new DateTime?();
+                    if (ModifiedAfterThisUtcTime > 0)
+                        ModifiedAfter = new DateTime?(new DateTime(ModifiedAfterThisUtcTime, DateTimeKind.Unspecified));
+
+                    ModifiedAfter = ConnectomeDataModel.ConnectomeEntities.ValidateDate(ModifiedAfter);
+                    
+                    Annotation.Structure[] retList = db.BoundedStructures(bbox.ToGeometry()).Where(s => s.LastModified > ModifiedAfter).Select(s => new Annotation.Structure(s, true)).ToArray();
+                    
+                    return retList;
+                    
+                }
+                catch (Exception e)
+                {
+                    Debug.WriteLine(e.ToString());
+                }
+            }
+
             return new Structure[0];
         }
 
@@ -1186,21 +1207,11 @@ namespace Annotation
                 try
                 {
                     //IList<ConnectomeDataModel.Location> locations = (from l in db.Locations where ((double)section) == l.Z select l).ToList();
-                    IList<ConnectomeDataModel.Location> locations = db.ReadSectionLocationsAndLinks(section, new DateTime?());
+                    Location[] retList = db.ReadSectionLocationsAndLinks(section, new DateTime?()).Select(l => new Location(l)).ToArray();
                     //List<ConnectomeDataModel.Location> locations = queryResults.ToList<ConnectomeDataModel.Location>();
 
                     Debug.WriteLine(section.ToString() + ": Query: " + new TimeSpan(DateTime.Now.Ticks - start.Ticks).TotalMilliseconds);
-
-                    Location[] retList = new Location[locations.Count];
-
-                    Debug.WriteLine(section.ToString() + ": To list: " + new TimeSpan(DateTime.Now.Ticks - start.Ticks).TotalMilliseconds);
-                    for (int i = 0; i < locations.Count; i++)
-                    {
-                        retList[i] = new Location(locations[i]);
-                    }
-
-                    Debug.WriteLine(section.ToString() + ": Loop: " + new TimeSpan(DateTime.Now.Ticks - start.Ticks).TotalMilliseconds);
-
+                    
                     return retList;
                 }
                 catch (System.ArgumentNullException)
@@ -1231,9 +1242,8 @@ namespace Annotation
                 db.Database.CommandTimeout = 30;
 
                 try
-                {
-                    System.Data.Entity.Spatial.DbGeometry bboxgeom = new System.Data.Entity.Spatial.DbGeometry();
-                    IList<ConnectomeDataModel.Location> locations = db.ReadSectionLocationsAndLinksInBounds(section, bboxgeom, new DateTime ?());
+                { 
+                    IList<ConnectomeDataModel.Location> locations = db.ReadSectionLocationsAndLinksInBounds(section, bbox.ToGeometry(), new DateTime ?());
                     
                     Debug.WriteLine(section.ToString() + ": Query: " + new TimeSpan(DateTime.Now.Ticks - start.Ticks).TotalMilliseconds);
 
@@ -1261,8 +1271,7 @@ namespace Annotation
                 }
             }
 
-            return new Location[0];
-
+            return new Location[0]; 
         }
 
         /// <summary>

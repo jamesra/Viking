@@ -107,6 +107,10 @@ namespace Annotation
             _XMax = xmax;
             _YMax = ymax;
             _ZMax = zmax;
+        } 
+        public System.Data.Entity.Spatial.DbGeometry ToGeometry()
+        {
+            return System.Data.Entity.Spatial.DbGeometry.FromText(string.Format("POLYGON (( {0} {2}, {0} {3}, {1} {3}, {1} {2}, {0} {2}))", XMin, XMax, YMin, YMax));
         }
     }
 

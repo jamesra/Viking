@@ -128,8 +128,7 @@ namespace ConnectomeDataModel
                 Locations = (from l in this.BoundedLocations(bbox) where l.Z == (double)section select l).Include("LocationLinksA,LocationLinksB");
             }
 
-            Dictionary<long, Location> dictLocations = Locations.ToDictionary(l => l.ID);
-            
+            return Locations.ToList();
         }
 
 
