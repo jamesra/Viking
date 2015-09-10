@@ -130,7 +130,7 @@ namespace ConnectomeDataModel
 
             Dictionary<long, Location> dictLocations = Locations.ToDictionary(l => l.ID);
 
-            AppendLinksToLocations(dictLocations, LocationLinks.ToList()); 
+            AppendLinksToLocations(dictLocations, this.SectionLocationLinks(section).ToList()); 
 
             return dictLocations.Values.ToList();
         }
