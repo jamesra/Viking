@@ -49,57 +49,7 @@ namespace ConnectomeDataModel
             return param;
         }
 
-
-        public IList<Location> spSectionLocationsAndLinks(long section, DateTime? LastModified)
-        {
-            DbCommand sp = this.Database.Connection.CreateCommand();
-            sp.CommandText = "[dbo].[SelectSectionLocationsAndLinks] @Z, @QueryDate";
-            sp.Parameters.Add(CreateSectionNumberParameter(section));
-            sp.Parameters.Add(CreateDateTimeParameter(LastModified));
-
-            this.Database.Connection.Open();
-
-            DbDataReader reader = sp.ExecuteReader(); 
-            Dictionary<long, Location> dictLocations = ((IObjectContextAdapter)this).ObjectContext.Translate<Location>(reader, "Locations", MergeOption.NoTracking).ToDictionary(l => l.ID);
-
-            reader.NextResult();
-
-            var LocationLinks = ((IObjectContextAdapter)this).ObjectContext.Translate<LocationLink>(reader, "LocationLinks", MergeOption.NoTracking);
-
-            AppendLinksToLocations(dictLocations, LocationLinks.ToList());
-
-            return dictLocations.Values.ToList();
-        }
-
-
-        public IQueryable<Location> ReadSectionLocations(long section, DateTime? LastModified)
-        {
-            if(LastModified.HasValue)
-            {
-                return this.SectionLocationsModifiedAfterDate((double)section, LastModified);
-            }
-            else
-            {
-                return this.SectionLocations((double)section);
-            }
-            
-            /*
-            IQueryable<Location> Locations = null;
-
-            
-            if (LastModified.HasValue)
-            {
-                Locations = from l in this.Locations where l.Z == (double)section && l.LastModified >= LastModified.Value select l; //this.Locations.Where(l => l.Z == (double)section && l.LastModified >= LastModified.Value);
-            }
-            else
-            {
-                Locations = from l in this.Locations where l.Z == (double)section select l;
-            }
-
-            return Locations;
-            */
-        }
-
+        
         public IQueryable<LocationLink> ReadSectionLocationLinks(long section, DateTime? LastModified)
         {
             if (LastModified.HasValue)
@@ -120,19 +70,15 @@ namespace ConnectomeDataModel
 
             if (LastModified.HasValue)
             {
-                Locations = from l in this.Locations where l.Z == (double)section && l.LastModified >= LastModified.Value select l; //this.Locations.Where(l => l.Z == (double)section && l.LastModified >= LastModified.Value);
+                Locations = (from l in this.SectionLocations((double)section) where l.LastModified > LastModified select l).Include("LocationLinksA,LocationLinksB");
                 
             }
             else
             {
-                Locations = from l in this.Locations where l.Z == (double)section select l;
+                Locations = (from l in this.SectionLocations((double)section) select l).Include("LocationLinksA,LocationLinksB");
             }
 
-            Dictionary<long, Location> dictLocations = Locations.ToDictionary(l => l.ID);
-
-            AppendLinksToLocations(dictLocations, this.SectionLocationLinks(section).ToList()); 
-
-            return dictLocations.Values.ToList();
+            return Locations.ToList(); 
         }
 
         /// <summary>

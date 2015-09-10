@@ -471,19 +471,7 @@ namespace Annotation
                     //listStructs = db.SelectStructuresForSection(SectionNumber, ModifiedAfter);
                    
                     //List<ConnectomeDataModel.Structure> listStructs = db.Structures.Include("SourceOfLinks").Include("TargetOfLinks").ToList();
-                    IList<ConnectomeDataModel.Structure> listStructs = db.ReadSectionStructuresAndLinks(SectionNumber, ModifiedAfter);
-                    Annotation.Structure[] retList = new Annotation.Structure[listStructs.Count];
-
-                    for (int iStruct = 0; iStruct < listStructs.Count(); iStruct++)
-                    {
-                        //Get structures does not include children because 
-                        //if you have all the structures you can create the
-                        //graph yourself by looking at ParentIDs without 
-                        //sending duplicate information over the wire
-                        retList[iStruct] = new Annotation.Structure(listStructs[iStruct], false);
-                    }
-
-                    return retList;
+                    return db.ReadSectionStructuresAndLinks(SectionNumber, ModifiedAfter).Select(s => new Annotation.Structure(s, false)).ToArray();
                 }
                 catch (Exception e)
                 {
@@ -1184,21 +1172,11 @@ namespace Annotation
                 try
                 {
                     //IList<ConnectomeDataModel.Location> locations = (from l in db.Locations where ((double)section) == l.Z select l).ToList();
-                    IList<ConnectomeDataModel.Location> locations = db.ReadSectionLocationsAndLinks(section, new DateTime?());
+                    Location[] retList = db.ReadSectionLocationsAndLinks(section, new DateTime?()).Select(l => new Location(l)).ToArray();
                     //List<ConnectomeDataModel.Location> locations = queryResults.ToList<ConnectomeDataModel.Location>();
 
                     Debug.WriteLine(section.ToString() + ": Query: " + new TimeSpan(DateTime.Now.Ticks - start.Ticks).TotalMilliseconds);
-
-                    Location[] retList = new Location[locations.Count];
-
-                    Debug.WriteLine(section.ToString() + ": To list: " + new TimeSpan(DateTime.Now.Ticks - start.Ticks).TotalMilliseconds);
-                    for (int i = 0; i < locations.Count; i++)
-                    {
-                        retList[i] = new Location(locations[i]);
-                    }
-
-                    Debug.WriteLine(section.ToString() + ": Loop: " + new TimeSpan(DateTime.Now.Ticks - start.Ticks).TotalMilliseconds);
-
+                    
                     return retList;
                 }
                 catch (System.ArgumentNullException)
@@ -1252,38 +1230,11 @@ namespace Annotation
                 //try
                 {
                     db.Configuration.AutoDetectChangesEnabled = false;
-                    //IQueryable<ConnectomeDataModel.Location> listLocations = db.ReadSectionLocations(section, ModifiedAfterThisTime);
-                    List<ConnectomeDataModel.Location> listLocations = db.ReadSectionLocations(section, ModifiedAfterThisTime).ToList();
-                    //List<ConnectomeDataModel.LocationLink> listLocationLinks = db.SelectSectionLocationLinks((double)section, ModifiedAfterThisTime).ToList();
-                    List<ConnectomeDataModel.LocationLink> listLocationLinks = db.ReadSectionLocationLinks(section, ModifiedAfterThisTime).ToList();
-                    //List<ConnectomeDataModel.LocationLink> listLocationLinks = new List<ConnectomeDataModel.LocationLink>();
-                    //var listLocationLinks = db.SelectSectionLocationLinks((double)section, ModifiedAfterThisTime);
-
+                 
+                    retList = db.ReadSectionLocationsAndLinks(section, ModifiedAfterThisTime).Select(l => new Location(l, true)).ToArray();
+                     
                     elapsed = new TimeSpan(DateTime.Now.Ticks - start.Ticks);
-                    Debug.WriteLine(section.ToString() + ": Query: " + elapsed.TotalMilliseconds);
-
-                    //List<ConnectomeDataModel.Location> listLocations = queryResults.ToList<ConnectomeDataModel.Location>();
-
-                    Dictionary<long, Location> dictLocations = new Dictionary<long, Location>(listLocations.Count());
-
-
-
-                    //               elapsed = new TimeSpan(DateTime.Now.Ticks - start.Ticks);
-                    //               Debug.WriteLine(section.ToString() + ": To list: " + elapsed.TotalMilliseconds);
-
-                    //dictLocations = listLocations.Select(l => new Location(l, false)).ToDictionary(l => l.ID);
-                    foreach(ConnectomeDataModel.Location loc in listLocations)
-                    {
-                        dictLocations[loc.ID] = new Location(loc, false);
-                        //retList[i] = new Location(listLocations[i]);
-                    }
-
-                    Location.AppendLinksToLocations(dictLocations, listLocationLinks);
-
-                    retList = dictLocations.Values.ToArray(); 
-
-                    elapsed = new TimeSpan(DateTime.Now.Ticks - start.Ticks);
-                    Debug.WriteLine(section.ToString() + ": Loop: " + elapsed.TotalMilliseconds);
+                    Debug.WriteLine(section.ToString() + ": Query: " + elapsed.TotalMilliseconds); 
                 }
                 /*
                 catch (System.ArgumentNullException)
