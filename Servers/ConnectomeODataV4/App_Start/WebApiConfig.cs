@@ -49,33 +49,23 @@ namespace ConnectomeODataV4
 
         public static Microsoft.OData.Edm.IEdmModel GetModel()
         {
-            //    ODataModelBuilder builder = new ODataModelBuilder();
-            //    var edmModel = builder.GetEdmModel();
             ODataConventionModelBuilder builder = new ODataConventionModelBuilder();
             builder.EntitySet<StructureType>("StructureTypes");
-            var struct_config = builder.EntitySet<Structure>("Structures");
+            builder.EntitySet<Structure>("Structures");
             builder.EntitySet<Location>("Locations");
-
 
             AddStructureLinks(builder);
             AddLocationLinks(builder);
-
-            return AddStructure(builder);
-            //builder.EntitySet<SelectStructureLocations_Result>("SelectStructureLocations");
-
-            // var collection = struct_config.EntityType.CollectionProperty(s => WebApiConfig.StructureLocationLinks(s.ID));
-            // collection.Name = "LocationLinks";
-            //collection.AddedExplicitly = true;
-
-             
-            //return builder;
-        }
-
-        private static Microsoft.OData.Edm.IEdmModel AddStructure(ODataConventionModelBuilder builder)
-        {
-            
             
             var edmModel = builder.GetEdmModel();
+            AddStructureLocationLinks(edmModel);
+            AddLocation(edmModel);
+            return edmModel;
+        }
+
+        private static Microsoft.OData.Edm.IEdmModel AddStructureLocationLinks(IEdmModel edmModel)
+        { 
+            
             var structures = edmModel.EntityContainer.FindEntitySet("Structures") as EdmEntitySet;
             var locationLinks = edmModel.EntityContainer.FindEntitySet("LocationLinks") as EdmEntitySet;
             var structType = structures.EntityType() as EdmEntityType;
@@ -91,10 +81,28 @@ namespace ConnectomeODataV4
             var navigationProperty = structType.AddUnidirectionalNavigation(structLocLinksProperty);
             structures.AddNavigationTarget(navigationProperty, locationLinks);
 
-            return edmModel;
-
+            return edmModel; 
         }
 
+        private static Microsoft.OData.Edm.IEdmModel AddLocation(IEdmModel edmModel)
+        { 
+            var locations = edmModel.EntityContainer.FindEntitySet("Locations") as EdmEntitySet;
+            var locationLinks = edmModel.EntityContainer.FindEntitySet("LocationLinks") as EdmEntitySet;
+            var locationType = locations.EntityType() as EdmEntityType;
+            var locLinksType = locationLinks.EntityType() as EdmEntityType;
+
+            var LocLinksProperty = new EdmNavigationPropertyInfo();
+            LocLinksProperty.TargetMultiplicity = Microsoft.OData.Edm.EdmMultiplicity.Many;
+            LocLinksProperty.Target = locLinksType;
+            LocLinksProperty.ContainsTarget = true;
+            LocLinksProperty.OnDelete = Microsoft.OData.Edm.EdmOnDeleteAction.None;
+            LocLinksProperty.Name = "LocationLinks";
+
+            var navigationProperty = locationType.AddUnidirectionalNavigation(LocLinksProperty);
+            locations.AddNavigationTarget(navigationProperty, locationLinks);
+
+            return edmModel;
+        }
 
         public static void AddStructureLinks(ODataModelBuilder builder)
         {
