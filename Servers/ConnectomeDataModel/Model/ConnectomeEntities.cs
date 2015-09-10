@@ -83,21 +83,6 @@ namespace ConnectomeDataModel
                 return this.SectionLocations((double)section);
             }
             
-            /*
-            IQueryable<Location> Locations = null;
-
-            
-            if (LastModified.HasValue)
-            {
-                Locations = from l in this.Locations where l.Z == (double)section && l.LastModified >= LastModified.Value select l; //this.Locations.Where(l => l.Z == (double)section && l.LastModified >= LastModified.Value);
-            }
-            else
-            {
-                Locations = from l in this.Locations where l.Z == (double)section select l;
-            }
-
-            return Locations;
-            */
         }
 
         public IQueryable<LocationLink> ReadSectionLocationLinks(long section, DateTime? LastModified)
@@ -145,8 +130,8 @@ namespace ConnectomeDataModel
 
             Dictionary<long, Location> dictLocations = Locations.ToDictionary(l => l.ID);
             
-            return dictLocations.Values.ToList();
         }
+
 
         /// <summary>
         /// Add the links to the locations in the dictionary
