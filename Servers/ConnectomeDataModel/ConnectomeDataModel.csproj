@@ -119,6 +119,9 @@
     <Compile Include="SelectSectionLocationLinks_Result.cs">
       <DependentUpon>DataModel.tt</DependentUpon>
     </Compile>
+    <Compile Include="SelectSectionLocationsAndLinksInBounds_Result.cs">
+      <DependentUpon>DataModel.tt</DependentUpon>
+    </Compile>
     <Compile Include="SelectSectionLocationsAndLinks_Result.cs">
       <DependentUpon>DataModel.tt</DependentUpon>
     </Compile>
@@ -132,9 +135,6 @@
       <DependentUpon>DataModel.tt</DependentUpon>
     </Compile>
     <Compile Include="SelectStructureLocationLinksNoChildren_Result.cs">
-      <DependentUpon>DataModel.tt</DependentUpon>
-    </Compile>
-    <Compile Include="SelectStructureLocationLinks_Result.cs">
       <DependentUpon>DataModel.tt</DependentUpon>
     </Compile>
     <Compile Include="SelectStructureLocations_Result.cs">

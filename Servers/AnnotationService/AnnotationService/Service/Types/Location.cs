@@ -43,8 +43,71 @@ namespace Annotation
             _X = x;
             _Y = y;
             _Z = z; 
+        } 
+    }
+
+    [DataContract]
+    [Serializable]
+    public struct AnnotationBoundingBox
+    {
+        private double _XMin;
+        private double _YMin;
+        private double _ZMin;
+        private double _XMax;
+        private double _YMax;
+        private double _ZMax;
+
+        [DataMember]
+        public double XMin
+        {
+            get { return _XMin; }
+            set { _XMin = value; }
         }
-         
+
+        [DataMember]
+        public double YMin
+        {
+            get { return _YMin; }
+            set { _YMin = value; }
+        }
+
+        [DataMember]
+        public double ZMin
+        {
+            get { return _ZMin; }
+            set { _ZMin = value; }
+        }
+
+        [DataMember]
+        public double XMax
+        {
+            get { return _XMax; }
+            set { _XMax = value; }
+        }
+
+        [DataMember]
+        public double YMax
+        {
+            get { return _YMax; }
+            set { _YMax = value; }
+        }
+
+        [DataMember]
+        public double ZMax
+        {
+            get { return _ZMax; }
+            set { _ZMax = value; }
+        }
+
+        public AnnotationBoundingBox(double xmin, double ymin, double zmin, double xmax, double ymax, double zmax)
+        {
+            _XMin = xmin;
+            _YMin = ymin;
+            _ZMin = zmin;
+            _XMax = xmax;
+            _YMax = ymax;
+            _ZMax = zmax;
+        }
     }
 
     [DataContract]
@@ -92,7 +155,6 @@ namespace Annotation
         protected long _Section;
         protected AnnotationPoint _Position;
         protected AnnotationPoint _VolumePosition;
-        protected AnnotationPoint[] _Verticies = new AnnotationPoint[0];
         protected bool _Closed;
         protected List<long> _Links = new List<long>();
         protected bool _Terminal;
@@ -149,14 +211,6 @@ namespace Annotation
             get { return _VolumeShape; }
             set { _VolumeShape = value; }
         }
-
-        [DataMember]
-        public AnnotationPoint[] Verticies
-        {
-            get { return _Verticies; }
-            set { _Verticies = value; }
-        }
-
         [DataMember]
         [Column("Closed")]
         public bool Closed
@@ -309,7 +363,6 @@ namespace Annotation
             this._OffEdge = db.OffEdge;
             this._TypeCode = db.TypeCode;
             this._Radius = db.Radius;
-            this._Verticies = null;
              
             if (db.Tags == null)
             {
@@ -522,7 +575,6 @@ namespace Annotation
                 this.VolumePosition = new AnnotationPoint(double.NaN, double.NaN, db.Z.Value);
             }
              
-            this._Verticies = Location.LoadVerticies(db.Verticies); 
             this._Closed = db.Closed.Value;
             this._Links = null; 
             this._Terminal = db.Terminal.Value;

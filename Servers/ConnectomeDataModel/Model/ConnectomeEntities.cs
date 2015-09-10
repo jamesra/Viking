@@ -120,17 +120,36 @@ namespace ConnectomeDataModel
 
             if (LastModified.HasValue)
             {
-                Locations = from l in this.Locations where l.Z == (double)section && l.LastModified >= LastModified.Value select l; //this.Locations.Where(l => l.Z == (double)section && l.LastModified >= LastModified.Value);
-                
+                Locations = (from l in this.Locations where l.Z == (double)section && l.LastModified >= LastModified.Value select l).Include("LocationLinksA,LocationLinksB"); //this.Locations.Where(l => l.Z == (double)section && l.LastModified >= LastModified.Value);
             }
             else
             {
-                Locations = from l in this.Locations where l.Z == (double)section select l;
+                Locations = (from l in this.Locations where l.Z == (double)section select l).Include("LocationLinksA,LocationLinksB");
             }
 
             Dictionary<long, Location> dictLocations = Locations.ToDictionary(l => l.ID);
 
-            AppendLinksToLocations(dictLocations, LocationLinks.ToList()); 
+            AppendLinksToLocations(dictLocations, this.SectionLocationLinks((double)section).ToList()); 
+
+            return dictLocations.Values.ToList();
+        }
+
+        public IList<Location> ReadSectionLocationsAndLinksInBounds(long section, System.Data.Entity.Spatial.DbGeometry bbox, DateTime? LastModified)
+        {
+            IQueryable<Location> Locations = null;
+            
+            if (LastModified.HasValue)
+            {
+                Locations = (from l in this.BoundedLocations(bbox) where l.Z == (double)section && l.LastModified >= LastModified.Value select l).Include("LocationLinksA,LocationLinksB"); //this.Locations.Where(l => l.Z == (double)section && l.LastModified >= LastModified.Value);
+            }
+            else
+            {
+                Locations = (from l in this.BoundedLocations(bbox) where l.Z == (double)section select l).Include("LocationLinksA,LocationLinksB");
+            }
+
+            Dictionary<long, Location> dictLocations = Locations.ToDictionary(l => l.ID);
+
+            //AppendLinksToLocations(dictLocations, this.BoundedLocationLinks(bb
 
             return dictLocations.Values.ToList();
         }

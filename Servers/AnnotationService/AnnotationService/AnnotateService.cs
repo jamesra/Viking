@@ -920,11 +920,13 @@ namespace Annotation
                                 deleteRow.ID = t.ID;
                                 listID[iObj] = deleteRow.ID;
 
-                                db.Structures.Remove(deleteRow);
 
                                 //Remove any links that exist before calling delete
-                                db.StructureLinks.RemoveRange(deleteRow.SourceOfLinks);
-                                db.StructureLinks.RemoveRange(deleteRow.TargetOfLinks);
+                                db.StructureLinks.RemoveRange(deleteRow.SourceOfLinks.ToList());
+                                db.StructureLinks.RemoveRange(deleteRow.TargetOfLinks.ToList());
+
+
+                                db.Structures.Remove(deleteRow);
                                 break;
                         }
                     }
@@ -1215,6 +1217,52 @@ namespace Annotation
 
             return new Location[0];
              
+        }
+
+        [PrincipalPermission(SecurityAction.Demand, Role = "Read")]
+        public Location[] GetLocationsForSectionRegion(long section, AnnotationBoundingBox bbox, out long QueryExecutedTime)
+        {
+            QueryExecutedTime = DateTime.Now.ToUniversalTime().Ticks;
+
+            using (var db = GetOrCreateDatabaseContext())
+            {
+                DateTime start = DateTime.Now;
+
+                db.Database.CommandTimeout = 30;
+
+                try
+                {
+                    System.Data.Entity.Spatial.DbGeometry bboxgeom = new System.Data.Entity.Spatial.DbGeometry();
+                    IList<ConnectomeDataModel.Location> locations = db.ReadSectionLocationsAndLinksInBounds(section, bboxgeom, new DateTime ?());
+                    
+                    Debug.WriteLine(section.ToString() + ": Query: " + new TimeSpan(DateTime.Now.Ticks - start.Ticks).TotalMilliseconds);
+
+                    Location[] retList = new Location[locations.Count];
+
+                    Debug.WriteLine(section.ToString() + ": To list: " + new TimeSpan(DateTime.Now.Ticks - start.Ticks).TotalMilliseconds);
+                    for (int i = 0; i < locations.Count; i++)
+                    {
+                        retList[i] = new Location(locations[i]);
+                    }
+
+                    Debug.WriteLine(section.ToString() + ": Loop: " + new TimeSpan(DateTime.Now.Ticks - start.Ticks).TotalMilliseconds);
+
+                    return retList;
+                }
+                catch (System.ArgumentNullException)
+                {
+                    //This means there was no row with that ID; 
+                    Debug.WriteLine("Could not find locations for section: " + section.ToString());
+                }
+                catch (System.InvalidOperationException)
+                {
+                    //This means there was no row with that ID; 
+                    Debug.WriteLine("Could not find locations for section: " + section.ToString());
+                }
+            }
+
+            return new Location[0];
+
         }
 
         /// <summary>

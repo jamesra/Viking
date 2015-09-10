@@ -379,5 +379,79 @@ namespace ConnectomeDataModel
     
             return ((IObjectContextAdapter)this).ObjectContext.CreateQuery<LocationLink>("[ConnectomeEntities].[SectionLocationLinksModifiedAfterDate](@Z, @QueryDate)", zParameter, queryDateParameter);
         }
+    
+        [DbFunction("ConnectomeEntities", "StructureLocationLinks")]
+        public virtual IQueryable<LocationLink> StructureLocationLinks(Nullable<long> structureID)
+        {
+            var structureIDParameter = structureID.HasValue ?
+                new ObjectParameter("StructureID", structureID) :
+                new ObjectParameter("StructureID", typeof(long));
+    
+            return ((IObjectContextAdapter)this).ObjectContext.CreateQuery<LocationLink>("[ConnectomeEntities].[StructureLocationLinks](@StructureID)", structureIDParameter);
+        }
+    
+        [DbFunction("ConnectomeEntities", "BoundedLocations")]
+        public virtual IQueryable<Location> BoundedLocations(System.Data.Entity.Spatial.DbGeometry bBox)
+        {
+            var bBoxParameter = bBox != null ?
+                new ObjectParameter("BBox", bBox) :
+                new ObjectParameter("BBox", typeof(System.Data.Entity.Spatial.DbGeometry));
+    
+            return ((IObjectContextAdapter)this).ObjectContext.CreateQuery<Location>("[ConnectomeEntities].[BoundedLocations](@BBox)", bBoxParameter);
+        }
+    
+        [DbFunction("ConnectomeEntities", "BoundedLocationLinks")]
+        public virtual IQueryable<LocationLink> BoundedLocationLinks(System.Data.Entity.Spatial.DbGeometry bBox)
+        {
+            var bBoxParameter = bBox != null ?
+                new ObjectParameter("BBox", bBox) :
+                new ObjectParameter("BBox", typeof(System.Data.Entity.Spatial.DbGeometry));
+    
+            return ((IObjectContextAdapter)this).ObjectContext.CreateQuery<LocationLink>("[ConnectomeEntities].[BoundedLocationLinks](@BBox)", bBoxParameter);
+        }
+    
+        [DbFunction("ConnectomeEntities", "BoundedStructures")]
+        public virtual IQueryable<Structure> BoundedStructures(System.Data.Entity.Spatial.DbGeometry bBox)
+        {
+            var bBoxParameter = bBox != null ?
+                new ObjectParameter("BBox", bBox) :
+                new ObjectParameter("BBox", typeof(System.Data.Entity.Spatial.DbGeometry));
+    
+            return ((IObjectContextAdapter)this).ObjectContext.CreateQuery<Structure>("[ConnectomeEntities].[BoundedStructures](@BBox)", bBoxParameter);
+        }
+    
+        public virtual ObjectResult<Location> SelectSectionLocationsAndLinksInBounds(Nullable<double> z, System.Data.Entity.Spatial.DbGeometry bBox, Nullable<System.DateTime> queryDate)
+        {
+            var zParameter = z.HasValue ?
+                new ObjectParameter("Z", z) :
+                new ObjectParameter("Z", typeof(double));
+    
+            var bBoxParameter = bBox != null ?
+                new ObjectParameter("BBox", bBox) :
+                new ObjectParameter("BBox", typeof(System.Data.Entity.Spatial.DbGeometry));
+    
+            var queryDateParameter = queryDate.HasValue ?
+                new ObjectParameter("QueryDate", queryDate) :
+                new ObjectParameter("QueryDate", typeof(System.DateTime));
+    
+            return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction<Location>("SelectSectionLocationsAndLinksInBounds", zParameter, bBoxParameter, queryDateParameter);
+        }
+    
+        public virtual ObjectResult<Location> SelectSectionLocationsAndLinksInBounds(Nullable<double> z, System.Data.Entity.Spatial.DbGeometry bBox, Nullable<System.DateTime> queryDate, MergeOption mergeOption)
+        {
+            var zParameter = z.HasValue ?
+                new ObjectParameter("Z", z) :
+                new ObjectParameter("Z", typeof(double));
+    
+            var bBoxParameter = bBox != null ?
+                new ObjectParameter("BBox", bBox) :
+                new ObjectParameter("BBox", typeof(System.Data.Entity.Spatial.DbGeometry));
+    
+            var queryDateParameter = queryDate.HasValue ?
+                new ObjectParameter("QueryDate", queryDate) :
+                new ObjectParameter("QueryDate", typeof(System.DateTime));
+    
+            return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction<Location>("SelectSectionLocationsAndLinksInBounds", mergeOption, zParameter, bBoxParameter, queryDateParameter);
+        }
     }
 }
