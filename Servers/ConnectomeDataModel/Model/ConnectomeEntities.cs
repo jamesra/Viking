@@ -105,11 +105,11 @@ namespace ConnectomeDataModel
 
             if (LastModified.HasValue)
             {
-                Locations = (from l in this.Locations where l.Z == (double)section && l.LastModified >= LastModified.Value select l).Include("LocationLinksA,LocationLinksB"); //this.Locations.Where(l => l.Z == (double)section && l.LastModified >= LastModified.Value);
+                Locations = (from l in this.SectionLocations((double)section) where l.LastModified >= LastModified.Value select l).Include("LocationLinksA,LocationLinksB"); //this.Locations.Where(l => l.Z == (double)section && l.LastModified >= LastModified.Value);
             }
             else
             {
-                Locations = (from l in this.Locations where l.Z == (double)section select l).Include("LocationLinksA,LocationLinksB");
+                Locations = (from l in this.SectionLocations((double)section) select l).Include("LocationLinksA,LocationLinksB");
             }
             
             return Locations.ToList();
