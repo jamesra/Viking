@@ -471,19 +471,13 @@ namespace ServiceTest
             Assert.IsTrue(dbStructB != null && dbStructB.ID == retvalB.structure.ID);
             Assert.IsTrue(dbPosB != null && dbPosB.ID == retvalB.location.ID);
 
-            //Link the structures
-            StructureLink link = new StructureLink();
-            link.SourceID = retvalA.structure.ID;
-            link.TargetID = retvalB.structure.ID;
-            
-            target.CreateStructureLink(link);
+            StructureLink link = CreateStructureLink(retvalA.structure, retvalB.structure);
 
             long QueryExecutedTime;
             long[] DeletedIDs;
             Structure[] structuresForSection = target.GetStructuresForSection((long)newPosA.Position.Z, TestStartTime, out QueryExecutedTime, out DeletedIDs);
             Assert.IsTrue(structuresForSection.Length >= 0);
-            
-
+             
             StructureLink[] reportedLinks = target.GetLinkedStructures();
             Assert.IsTrue(reportedLinks.Length >= 1);
 
@@ -498,9 +492,11 @@ namespace ServiceTest
             Assert.IsTrue(LinkedToTarget[0].TargetID == link.TargetID);
 
             //Delete the link
-            link.DBAction = DBACTION.DELETE;
+            link.DBAction = DBACTION.DELETE; 
+            target.UpdateStructureLinks(new StructureLink[] { link });
 
-            target.UpdateStructureLinks(new StructureLink[] { link }); 
+            //Recreate, so we can check if deleting the structure will cascade
+            link = CreateStructureLink(retvalA.structure, retvalB.structure);
 
             dbPosA.DBAction = DBACTION.DELETE;
             dbPosB.DBAction = DBACTION.DELETE;
@@ -531,6 +527,21 @@ namespace ServiceTest
             t.DBAction = DBACTION.DELETE;
             target.UpdateStructureTypes(new StructureType[] { t });
         }
+
+        private StructureLink CreateStructureLink(Structure Source, Structure Target)
+        {
+            AnnotateService target = new AnnotateService(); // TODO: Initialize to an appropriate value
+
+            //Link the structures
+            StructureLink link = new StructureLink();
+            link.SourceID = Source.ID;
+            link.TargetID = Target.ID;
+
+            target.CreateStructureLink(link);
+
+            return link;
+        }
+
 
         private Dictionary<long, Location> LocationsToDict(IList<Location> locations)
         {

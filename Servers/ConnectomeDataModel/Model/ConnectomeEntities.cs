@@ -126,12 +126,8 @@ namespace ConnectomeDataModel
             {
                 Locations = (from l in this.Locations where l.Z == (double)section select l).Include("LocationLinksA,LocationLinksB");
             }
-
-            Dictionary<long, Location> dictLocations = Locations.ToDictionary(l => l.ID);
-
-            AppendLinksToLocations(dictLocations, this.SectionLocationLinks((double)section).ToList()); 
-
-            return dictLocations.Values.ToList();
+            
+            return Locations.ToList();
         }
 
         public IList<Location> ReadSectionLocationsAndLinksInBounds(long section, System.Data.Entity.Spatial.DbGeometry bbox, DateTime? LastModified)
@@ -148,9 +144,7 @@ namespace ConnectomeDataModel
             }
 
             Dictionary<long, Location> dictLocations = Locations.ToDictionary(l => l.ID);
-
-            //AppendLinksToLocations(dictLocations, this.BoundedLocationLinks(bb
-
+            
             return dictLocations.Values.ToList();
         }
 

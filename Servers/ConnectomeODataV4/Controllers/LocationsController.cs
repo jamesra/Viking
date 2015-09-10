@@ -155,14 +155,21 @@ namespace ConnectomeODataV4.Controllers
         [EnableQuery]
         public IQueryable<LocationLink> GetLocationLinksA([FromODataUri] long key)
         {
-            return db.Locations.Where(m => m.ID == key).SelectMany(m => m.LocationLinksA);
+            return db.LocationLinks.Where(m => m.B == key);
         }
 
         // GET: odata/Locations(5)/LocationLinksB
         [EnableQuery]
         public IQueryable<LocationLink> GetLocationLinksB([FromODataUri] long key)
         {
-            return db.Locations.Where(m => m.ID == key).SelectMany(m => m.LocationLinksB);
+            return db.LocationLinks.Where(m => m.A == key);
+        }
+
+        // GET: odata/Locations(5)/LocationLinks
+        [EnableQuery]
+        public IQueryable<LocationLink> GetLocationLinks([FromODataUri] long key)
+        {
+            return db.LocationLinks.Where(link => link.A == key || link.B == key);
         }
 
         protected override void Dispose(bool disposing)
