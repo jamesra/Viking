@@ -166,11 +166,7 @@ namespace WebAnnotationModel
             }
             else 
             {
-                DeletedLinkKeys = new LocationLinkKey[deleted_links.Length];
-                for(int i = 0; i < deleted_links.Length; i++)
-                {
-                    DeletedLinkKeys[i] = new LocationLinkKey(deleted_links[i].SourceID, deleted_links[i].TargetID);
-                }
+                DeletedLinkKeys = deleted_links.Select(link => new LocationLinkKey(link.SourceID, link.TargetID)).ToArray();
             }
 
             return links; 
@@ -186,19 +182,14 @@ namespace WebAnnotationModel
         }
 
         protected override LocationLink[] ProxyGetBySectionCallback(out long TicksAtQueryExecute,
-                                                                    out LocationLinkKey[] DeletedKeys,
+                                                                    out LocationLinkKey[] DeletedLinkKeys,
                                                                     GetObjectBySectionCallbackState state,
                                                                     IAsyncResult result)
-        {
-            LocationLink[] links;
-            LocationLink[] DeletedLinks;
-            links = state.Proxy.EndLocationLinksForSection(out TicksAtQueryExecute, out DeletedLinks, result);
+        { 
+            LocationLink[] deleted_links;
+            LocationLink[] links = state.Proxy.EndLocationLinksForSection(out TicksAtQueryExecute, out deleted_links, result);
 
-            DeletedKeys = new LocationLinkKey[DeletedLinks.Length];
-            for(int iLink = 0; iLink < DeletedLinks.Length; iLink++)
-            {
-                DeletedKeys[iLink] = new LocationLinkKey(DeletedLinks[iLink].SourceID, DeletedLinks[iLink].TargetID); 
-            }
+            DeletedLinkKeys = deleted_links.Select(link => new LocationLinkKey(link.SourceID, link.TargetID)).ToArray();
 
             return links;
         }
