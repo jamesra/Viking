@@ -110,6 +110,16 @@ namespace WebAnnotationModel
         protected override Structure[] ProxyGetBySectionRegion(AnnotateStructuresClient proxy, long SectionNumber, BoundingRectangle BBox, double MinRadius, DateTime LastQuery, out long TicksAtQueryExecute, out long[] DeletedLocations)
         {
             return proxy.GetStructuresForSectionInRegion(out TicksAtQueryExecute, out DeletedLocations, SectionNumber, BBox, MinRadius, LastQuery.Ticks);
+        } 
+
+        protected override IAsyncResult ProxyBeginGetBySectionRegion(AnnotateStructuresClient proxy, long SectionNumber, BoundingRectangle BBox, double MinRadius, DateTime LastQuery, AsyncCallback callback, object asynchState)
+        {
+            return proxy.BeginGetStructuresForSectionInRegion(SectionNumber, BBox, MinRadius, LastQuery.Ticks, callback, asynchState);
+        }
+         
+        protected override Structure[] ProxyGetBySectionRegionCallback(out long TicksAtQueryExecute, out long[] DeletedObjects, GetObjectBySectionCallbackState state, IAsyncResult result)
+        {
+            return state.Proxy.EndGetStructuresForSectionInRegion(out TicksAtQueryExecute, out DeletedObjects, result);
         }
 
         /// <summary>
@@ -391,5 +401,6 @@ namespace WebAnnotationModel
             CallOnCollectionChanged(output);
             return output.ObjectsInStore;
         }
+
     }
 }

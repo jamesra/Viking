@@ -84,7 +84,17 @@ namespace WebAnnotationModel
         {
             return proxy.GetLocationChangesInRegion(out TicksAtQueryExecute, out deleted_objs, SectionNumber, BBox, MinRadius, LastQuery.Ticks);
         }
-        
+
+        protected override IAsyncResult ProxyBeginGetBySectionRegion(AnnotateLocationsClient proxy, long SectionNumber, BoundingRectangle BBox, double MinRadius, DateTime LastQuery, AsyncCallback callback, object asynchState)
+        {
+            return proxy.BeginGetLocationChangesInRegion(SectionNumber, BBox, MinRadius, LastQuery.Ticks, callback, asynchState);
+        }
+
+        protected override Location[] ProxyGetBySectionRegionCallback(out long TicksAtQueryExecute, out long[] DeletedLocations, GetObjectBySectionCallbackState state, IAsyncResult result)
+        {
+            return state.Proxy.EndGetLocationChangesInRegion(out TicksAtQueryExecute, out DeletedLocations, result);
+        }
+
         protected override Location[] ProxyGetBySectionCallback(out long TicksAtQueryExecute,
                                                           out long[] DeletedLocations,
                                                           GetObjectBySectionCallbackState state,
@@ -333,7 +343,9 @@ namespace WebAnnotationModel
 
             return listLocations;
         }
-         
+
+       
+
 
         #region Callbacks
 

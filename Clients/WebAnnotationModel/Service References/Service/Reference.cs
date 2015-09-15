@@ -3811,6 +3811,14 @@ namespace WebAnnotationModel.Service {
         
         WebAnnotationModel.Service.LocationLink[] EndLocationLinksForSection(out long QueryExecutedTime, out WebAnnotationModel.Service.LocationLink[] DeletedLinks, System.IAsyncResult result);
         
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateLocations/LocationLinksForSectionRegion", ReplyAction="http://tempuri.org/IAnnotateLocations/LocationLinksForSectionRegionResponse")]
+        WebAnnotationModel.Service.LocationLink[] LocationLinksForSectionRegion(out long QueryExecutedTime, out WebAnnotationModel.Service.LocationLink[] DeletedLinks, long section, WebAnnotationModel.Service.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisUtcTime);
+        
+        [System.ServiceModel.OperationContractAttribute(AsyncPattern=true, Action="http://tempuri.org/IAnnotateLocations/LocationLinksForSectionRegion", ReplyAction="http://tempuri.org/IAnnotateLocations/LocationLinksForSectionRegionResponse")]
+        System.IAsyncResult BeginLocationLinksForSectionRegion(long section, WebAnnotationModel.Service.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisUtcTime, System.AsyncCallback callback, object asyncState);
+        
+        WebAnnotationModel.Service.LocationLink[] EndLocationLinksForSectionRegion(out long QueryExecutedTime, out WebAnnotationModel.Service.LocationLink[] DeletedLinks, System.IAsyncResult result);
+        
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateLocations/GetLocationChangeLog", ReplyAction="http://tempuri.org/IAnnotateLocations/GetLocationChangeLogResponse")]
         WebAnnotationModel.Service.LocationHistory[] GetLocationChangeLog(System.Nullable<long> structure_id, System.Nullable<System.DateTime> begin_time, System.Nullable<System.DateTime> end_time);
         
@@ -4084,6 +4092,39 @@ namespace WebAnnotationModel.Service {
     
     [System.Diagnostics.DebuggerStepThroughAttribute()]
     [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
+    public partial class LocationLinksForSectionRegionCompletedEventArgs : System.ComponentModel.AsyncCompletedEventArgs {
+        
+        private object[] results;
+        
+        public LocationLinksForSectionRegionCompletedEventArgs(object[] results, System.Exception exception, bool cancelled, object userState) : 
+                base(exception, cancelled, userState) {
+            this.results = results;
+        }
+        
+        public long QueryExecutedTime {
+            get {
+                base.RaiseExceptionIfNecessary();
+                return ((long)(this.results[0]));
+            }
+        }
+        
+        public WebAnnotationModel.Service.LocationLink[] DeletedLinks {
+            get {
+                base.RaiseExceptionIfNecessary();
+                return ((WebAnnotationModel.Service.LocationLink[])(this.results[1]));
+            }
+        }
+        
+        public WebAnnotationModel.Service.LocationLink[] Result {
+            get {
+                base.RaiseExceptionIfNecessary();
+                return ((WebAnnotationModel.Service.LocationLink[])(this.results[2]));
+            }
+        }
+    }
+    
+    [System.Diagnostics.DebuggerStepThroughAttribute()]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
     public partial class GetLocationChangeLogCompletedEventArgs : System.ComponentModel.AsyncCompletedEventArgs {
         
         private object[] results;
@@ -4183,6 +4224,12 @@ namespace WebAnnotationModel.Service {
         
         private System.Threading.SendOrPostCallback onLocationLinksForSectionCompletedDelegate;
         
+        private BeginOperationDelegate onBeginLocationLinksForSectionRegionDelegate;
+        
+        private EndOperationDelegate onEndLocationLinksForSectionRegionDelegate;
+        
+        private System.Threading.SendOrPostCallback onLocationLinksForSectionRegionCompletedDelegate;
+        
         private BeginOperationDelegate onBeginGetLocationChangeLogDelegate;
         
         private EndOperationDelegate onEndGetLocationChangeLogDelegate;
@@ -4233,6 +4280,8 @@ namespace WebAnnotationModel.Service {
         public event System.EventHandler<System.ComponentModel.AsyncCompletedEventArgs> DeleteLocationLinkCompleted;
         
         public event System.EventHandler<LocationLinksForSectionCompletedEventArgs> LocationLinksForSectionCompleted;
+        
+        public event System.EventHandler<LocationLinksForSectionRegionCompletedEventArgs> LocationLinksForSectionRegionCompleted;
         
         public event System.EventHandler<GetLocationChangeLogCompletedEventArgs> GetLocationChangeLogCompleted;
         
@@ -4910,6 +4959,66 @@ namespace WebAnnotationModel.Service {
             base.InvokeAsync(this.onBeginLocationLinksForSectionDelegate, new object[] {
                         section,
                         ModifiedAfterThisTime}, this.onEndLocationLinksForSectionDelegate, this.onLocationLinksForSectionCompletedDelegate, userState);
+        }
+        
+        public WebAnnotationModel.Service.LocationLink[] LocationLinksForSectionRegion(out long QueryExecutedTime, out WebAnnotationModel.Service.LocationLink[] DeletedLinks, long section, WebAnnotationModel.Service.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisUtcTime) {
+            return base.Channel.LocationLinksForSectionRegion(out QueryExecutedTime, out DeletedLinks, section, bbox, MinRadius, ModifiedAfterThisUtcTime);
+        }
+        
+        [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
+        public System.IAsyncResult BeginLocationLinksForSectionRegion(long section, WebAnnotationModel.Service.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisUtcTime, System.AsyncCallback callback, object asyncState) {
+            return base.Channel.BeginLocationLinksForSectionRegion(section, bbox, MinRadius, ModifiedAfterThisUtcTime, callback, asyncState);
+        }
+        
+        [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
+        public WebAnnotationModel.Service.LocationLink[] EndLocationLinksForSectionRegion(out long QueryExecutedTime, out WebAnnotationModel.Service.LocationLink[] DeletedLinks, System.IAsyncResult result) {
+            return base.Channel.EndLocationLinksForSectionRegion(out QueryExecutedTime, out DeletedLinks, result);
+        }
+        
+        private System.IAsyncResult OnBeginLocationLinksForSectionRegion(object[] inValues, System.AsyncCallback callback, object asyncState) {
+            long section = ((long)(inValues[0]));
+            WebAnnotationModel.Service.BoundingRectangle bbox = ((WebAnnotationModel.Service.BoundingRectangle)(inValues[1]));
+            double MinRadius = ((double)(inValues[2]));
+            long ModifiedAfterThisUtcTime = ((long)(inValues[3]));
+            return this.BeginLocationLinksForSectionRegion(section, bbox, MinRadius, ModifiedAfterThisUtcTime, callback, asyncState);
+        }
+        
+        private object[] OnEndLocationLinksForSectionRegion(System.IAsyncResult result) {
+            long QueryExecutedTime = this.GetDefaultValueForInitialization<long>();
+            WebAnnotationModel.Service.LocationLink[] DeletedLinks = this.GetDefaultValueForInitialization<WebAnnotationModel.Service.LocationLink[]>();
+            WebAnnotationModel.Service.LocationLink[] retVal = this.EndLocationLinksForSectionRegion(out QueryExecutedTime, out DeletedLinks, result);
+            return new object[] {
+                    QueryExecutedTime,
+                    DeletedLinks,
+                    retVal};
+        }
+        
+        private void OnLocationLinksForSectionRegionCompleted(object state) {
+            if ((this.LocationLinksForSectionRegionCompleted != null)) {
+                InvokeAsyncCompletedEventArgs e = ((InvokeAsyncCompletedEventArgs)(state));
+                this.LocationLinksForSectionRegionCompleted(this, new LocationLinksForSectionRegionCompletedEventArgs(e.Results, e.Error, e.Cancelled, e.UserState));
+            }
+        }
+        
+        public void LocationLinksForSectionRegionAsync(long section, WebAnnotationModel.Service.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisUtcTime) {
+            this.LocationLinksForSectionRegionAsync(section, bbox, MinRadius, ModifiedAfterThisUtcTime, null);
+        }
+        
+        public void LocationLinksForSectionRegionAsync(long section, WebAnnotationModel.Service.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisUtcTime, object userState) {
+            if ((this.onBeginLocationLinksForSectionRegionDelegate == null)) {
+                this.onBeginLocationLinksForSectionRegionDelegate = new BeginOperationDelegate(this.OnBeginLocationLinksForSectionRegion);
+            }
+            if ((this.onEndLocationLinksForSectionRegionDelegate == null)) {
+                this.onEndLocationLinksForSectionRegionDelegate = new EndOperationDelegate(this.OnEndLocationLinksForSectionRegion);
+            }
+            if ((this.onLocationLinksForSectionRegionCompletedDelegate == null)) {
+                this.onLocationLinksForSectionRegionCompletedDelegate = new System.Threading.SendOrPostCallback(this.OnLocationLinksForSectionRegionCompleted);
+            }
+            base.InvokeAsync(this.onBeginLocationLinksForSectionRegionDelegate, new object[] {
+                        section,
+                        bbox,
+                        MinRadius,
+                        ModifiedAfterThisUtcTime}, this.onEndLocationLinksForSectionRegionDelegate, this.onLocationLinksForSectionRegionCompletedDelegate, userState);
         }
         
         public WebAnnotationModel.Service.LocationHistory[] GetLocationChangeLog(System.Nullable<long> structure_id, System.Nullable<System.DateTime> begin_time, System.Nullable<System.DateTime> end_time) {

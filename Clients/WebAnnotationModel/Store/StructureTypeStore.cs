@@ -136,6 +136,11 @@ namespace WebAnnotationModel
             throw new NotImplementedException();
         }
 
+        protected override IAsyncResult ProxyBeginGetBySectionRegion(AnnotateStructureTypesClient proxy, long SectionNumber, BoundingRectangle BBox, double MinRadius, DateTime LastQuery, AsyncCallback callback, object asynchState)
+        {
+            throw new NotImplementedException();
+        }
+
         public override ConcurrentDictionary<long, StructureTypeObj> GetLocalObjectsForSection(long SectionNumber)
         {
             throw new NotImplementedException();
@@ -222,5 +227,9 @@ namespace WebAnnotationModel
              */
         }
 
+        protected override StructureType[] ProxyGetBySectionRegionCallback(out long TicksAtQueryExecute, out long[] DeletedLocations, GetObjectBySectionCallbackState state, IAsyncResult result)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

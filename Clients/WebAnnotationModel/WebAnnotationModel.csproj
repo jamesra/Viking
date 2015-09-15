@@ -180,6 +180,10 @@
       <Project>{EACB87E8-A5E3-417E-A9EF-B80C2A68C020}</Project>
       <Name>Geometry</Name>
     </ProjectReference>
+    <ProjectReference Include="..\..\RTree\RTree.csproj">
+      <Project>{4085ba67-60d7-4679-886e-457aaf37ec7b}</Project>
+      <Name>RTree</Name>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />

@@ -161,7 +161,7 @@ namespace WebAnnotationModel
         protected override LocationLink[] ProxyGetBySectionRegion(AnnotateLocationsClient proxy, long SectionNumber, BoundingRectangle BBox, double MinRadius, DateTime LastQuery, out long TicksAtQueryExecute, out LocationLinkKey[] DeletedLinkKeys)
         {
             LocationLink[] deleted_links = null;
-            LocationLink[] links = proxy.LocationLinksForSection(out TicksAtQueryExecute, out deleted_links, SectionNumber, LastQuery.Ticks);
+            LocationLink[] links = proxy.LocationLinksForSectionRegion(out TicksAtQueryExecute, out deleted_links, SectionNumber, BBox, MinRadius, LastQuery.Ticks);
 
             if (deleted_links == null)
             {
@@ -175,15 +175,19 @@ namespace WebAnnotationModel
             return links;
         }
 
-        protected override IAsyncResult ProxyBeginGetBySection(AnnotateLocationsClient proxy, long SectionNumber, DateTime LastQuery, AsyncCallback callback, object asynchState)
+        protected override IAsyncResult ProxyBeginGetBySectionRegion(AnnotateLocationsClient proxy, long SectionNumber, BoundingRectangle BBox, double MinRadius, DateTime LastQuery, AsyncCallback callback, object asynchState)
         {
-            
-            return proxy.BeginLocationLinksForSection(SectionNumber,
+            return proxy.BeginLocationLinksForSectionRegion(SectionNumber, BBox, MinRadius, LastQuery.Ticks, callback, asynchState);
+        }
+
+        protected override IAsyncResult ProxyBeginGetBySection(AnnotateLocationsClient proxy, long SectionNumber, DateTime LastQuery, AsyncCallback callback, object asynchState)
+        {   
+            return proxy.BeginGetLocationChanges(SectionNumber,
                                                  LastQuery.Ticks,
                                                  GetObjectsBySectionCallback,
                                                  new GetObjectBySectionCallbackState(proxy, SectionNumber, LastQuery));
         }
-
+        
         protected override LocationLink[] ProxyGetBySectionCallback(out long TicksAtQueryExecute,
                                                                     out LocationLinkKey[] DeletedLinkKeys,
                                                                     GetObjectBySectionCallbackState state,
@@ -376,6 +380,11 @@ namespace WebAnnotationModel
                     Debug.Assert(false, "Unexpected change action in OnStoreAddRemoveKey");
                     break;
             }
+        }
+
+        protected override LocationLink[] ProxyGetBySectionRegionCallback(out long TicksAtQueryExecute, out LocationLinkKey[] DeletedLocations, GetObjectBySectionCallbackState state, IAsyncResult result)
+        {
+            throw new NotImplementedException();
         }
     }
 }
