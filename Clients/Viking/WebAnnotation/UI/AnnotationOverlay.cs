@@ -15,7 +15,7 @@ using WebAnnotation.UI.Commands;
 using WebAnnotation.ViewModel;
 using WebAnnotationModel;
 using connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd;
-using System.Threading.Tasks;
+using System.Threading.Tasks; 
 
 namespace WebAnnotation
 {
@@ -51,7 +51,7 @@ namespace WebAnnotation
 
         static AnnotationOverlay()
         {
-            cacheSectionAnnotations.MaxCacheSize = Global.NumSectionsInMemory; 
+            cacheSectionAnnotations.MaxCacheSize = Global.NumSectionsInMemory;
         }
 
         public AnnotationOverlay()
@@ -68,7 +68,7 @@ namespace WebAnnotation
 
         string Viking.Common.ISectionOverlayExtension.Name()
         {
-            return Global.EndpointName;
+            return Global.EndpointName; 
         }
 
         static public void  GoToLocation(LocationObj loc)
@@ -112,14 +112,13 @@ namespace WebAnnotation
             return null; 
             */
         }
-
+        
         /// <summary>
         /// Returns annotations for section if they exist or creates new SectionLocationsViewModel if they do not
         /// </summary>
         /// <param name="SectionNumber"></param>
         public static SectionLocationsViewModel GetOrCreateAnnotationsForSection(int SectionNumber, 
-                                                                                 Viking.UI.Controls.SectionViewerControl parent,
-                                                                                 EventHandler AnnotationChangedEventHandler)
+                                                                                 Viking.UI.Controls.SectionViewerControl parent)
         {
             if (parent.Section.VolumeViewModel.SectionViewModels.ContainsKey(SectionNumber))
             {
@@ -155,7 +154,7 @@ namespace WebAnnotation
         {
             get
             {
-                return GetOrCreateAnnotationsForSection(_Parent.Section.Number, Parent, AnnotationChangedEventHandler);
+                return GetOrCreateAnnotationsForSection(_Parent.Section.Number, Parent);
             }
         }
 
@@ -888,30 +887,33 @@ namespace WebAnnotation
 
         protected void LoadSectionAnnotations()
         {
+            if (Parent.Scene == null)
+                return;
+
             int StartingSectionNumber = _Parent.Section.Number; 
             SectionLocationsViewModel SectionAnnotations;
             SectionLocationsViewModel SectionAnnotationsAbove;
             SectionLocationsViewModel SectionAnnotationsBelow;
-            SectionAnnotations = GetOrCreateAnnotationsForSection(_Parent.Section.Number, _Parent, AnnotationChangedEventHandler);
-            //SectionAnnotations.LoadSectionAnnotations();
-            Task.Factory.StartNew(() => SectionAnnotations.LoadSectionAnnotations());
-
+            SectionAnnotations = GetOrCreateAnnotationsForSection(_Parent.Section.Number, _Parent);
+            //SectionAnnotations.LoadSectionAnnotationsInRegion(Parent.Scene.VisibleWorldBounds, Parent.Scene.DevicePixelWidth);
+            Task.Factory.StartNew(() => SectionAnnotations.LoadSectionAnnotationsInRegion(Parent.Scene.VisibleWorldBounds, Parent.Scene.DevicePixelWidth));
+            
             int refSectionNumberAbove=0;
             int refSectionNumberBelow=-1;
             if (_Parent.Section.ReferenceSectionAbove != null)
             {
                 refSectionNumberAbove = _Parent.Section.ReferenceSectionAbove.Number;
-                SectionAnnotationsAbove = GetOrCreateAnnotationsForSection(refSectionNumberAbove, _Parent, AnnotationChangedEventHandler);
+                SectionAnnotationsAbove = GetOrCreateAnnotationsForSection(refSectionNumberAbove, _Parent);
                 //SectionAnnotationsAbove.LoadSectionAnnotations();
-                Task.Factory.StartNew(() => SectionAnnotationsAbove.LoadSectionAnnotations());
+                Task.Factory.StartNew(() => SectionAnnotationsAbove.LoadSectionAnnotationsInRegion(Parent.Scene.VisibleWorldBounds, Parent.Scene.DevicePixelWidth));
             }
 
             if (_Parent.Section.ReferenceSectionBelow != null)
             {
                 refSectionNumberBelow = _Parent.Section.ReferenceSectionBelow.Number;
-                SectionAnnotationsBelow = GetOrCreateAnnotationsForSection(refSectionNumberBelow, _Parent, AnnotationChangedEventHandler);
+                SectionAnnotationsBelow = GetOrCreateAnnotationsForSection(refSectionNumberBelow, _Parent);
                 //SectionAnnotationsBelow.LoadSectionAnnotations();
-                Task.Factory.StartNew(() => SectionAnnotationsBelow.LoadSectionAnnotations());
+                Task.Factory.StartNew(() => SectionAnnotationsBelow.LoadSectionAnnotationsInRegion(Parent.Scene.VisibleWorldBounds, Parent.Scene.DevicePixelWidth));
             }
 
             int EndingSectionNumber = _Parent.Section.Number; 
@@ -924,7 +926,7 @@ namespace WebAnnotation
             
             #if DEBUG
                 //            Store.Structures.FreeExcessSections(40, 5);
-                Task.Factory.StartNew(() => Store.Locations.FreeExcessSections(4, 3));
+                Task.Factory.StartNew(() => Store.Locations.FreeExcessSections(8, 3));
                 //Task.Factory.StartNew(() => Store.Locations.FreeExcessSections(Global.NumSectionsInMemory, 5));
             #else
                 Task.Factory.StartNew(() => Store.Locations.FreeExcessSections(Global.NumSectionsInMemory, 5));

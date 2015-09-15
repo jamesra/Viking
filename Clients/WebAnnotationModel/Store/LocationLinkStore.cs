@@ -17,20 +17,6 @@ namespace WebAnnotationModel
     {
         ConcurrentDictionary<long, ConcurrentDictionary<LocationLinkKey, LocationLinkObj>> SectionToLocationLinks = new ConcurrentDictionary<long, ConcurrentDictionary<LocationLinkKey, LocationLinkObj>>();
 
-//        ConcurrentDictionary<long, ConcurrentDictionary<long,long>> LocIDtoLinks = new ConcurrentDictionary<long, ConcurrentDictionary<long, long>>();
-
-        /// <summary>
-        /// When we query the database for locations on a section we store the query time for the section
-        /// That way on the next query we only need to store the updates.
-        /// </summary>
-//        private ConcurrentDictionary<long, DateTime> LastQueryForSection = new ConcurrentDictionary<long, DateTime>();
-
-        /// <summary>
-        /// A collection of values indicating which sections have an outstanding query. 
-        /// The existence of a key indicates a query is in progress
-        /// </summary>
-//        private ConcurrentDictionary<long, bool> OutstandingSectionQueries = new ConcurrentDictionary<long, bool>();
-
         public LocationLinkStore()
         {
             
@@ -170,6 +156,23 @@ namespace WebAnnotationModel
             }
 
             return links; 
+        }
+
+        protected override LocationLink[] ProxyGetBySectionRegion(AnnotateLocationsClient proxy, long SectionNumber, BoundingRectangle BBox, double MinRadius, DateTime LastQuery, out long TicksAtQueryExecute, out LocationLinkKey[] DeletedLinkKeys)
+        {
+            LocationLink[] deleted_links = null;
+            LocationLink[] links = proxy.LocationLinksForSection(out TicksAtQueryExecute, out deleted_links, SectionNumber, LastQuery.Ticks);
+
+            if (deleted_links == null)
+            {
+                DeletedLinkKeys = new LocationLinkKey[0];
+            }
+            else
+            {
+                DeletedLinkKeys = deleted_links.Select(link => new LocationLinkKey(link.SourceID, link.TargetID)).ToArray();
+            }
+
+            return links;
         }
 
         protected override IAsyncResult ProxyBeginGetBySection(AnnotateLocationsClient proxy, long SectionNumber, DateTime LastQuery, AsyncCallback callback, object asynchState)

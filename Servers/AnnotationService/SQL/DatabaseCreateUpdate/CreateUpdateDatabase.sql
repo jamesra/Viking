@@ -2530,7 +2530,7 @@ end
 						  INNER JOIN 
 						   (SELECT ID, TYPEID
 							FROM Structure
-							WHERE ID = @StructureID OR ParentID = @StructureID ) J
+							WHERE ID = @StructureID) J
 						  ON L.ParentID = J.ID))
 						  OR
 						  (B in 
@@ -2539,7 +2539,7 @@ end
 						  INNER JOIN 
 						   (SELECT ID, TYPEID
 							FROM Structure
-							WHERE ID = @StructureID OR ParentID = @StructureID ) J
+							WHERE ID = @StructureID) J
 						  ON L.ParentID = J.ID)))
 			')
 
@@ -2552,6 +2552,161 @@ end
 
 	   INSERT INTO DBVersion values (29, 
 		    N'Create Function for SelectStructureLinks for easy OData use'  ,getDate(),User_ID())
+	 COMMIT TRANSACTION twentynine
+	end
+	go
+
+	if(not(exists(select (1) from DBVersion where DBVersionID = 30)))
+	begin
+     print N'Create Functions for spatial queries' 
+	 BEGIN TRANSACTION thirty
+	   
+		EXEC('
+			CREATE FUNCTION [dbo].[BoundedLocations](@BBox Geometry)
+			RETURNS TABLE 
+			AS
+			RETURN(
+				 select * from Location
+				 where @BBox.STIntersects(VolumeShape) = 1)
+			')
+
+		if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
+		 EXEC('
+			CREATE FUNCTION [dbo].[BoundedSectionLocations](@BBox Geometry, @Z float)
+			RETURNS TABLE 
+			AS
+			RETURN(
+				 select * from Location
+				 where @BBox.STIntersects(VolumeShape) = 1 AND Z = @Z)
+			')
+
+		if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
+		EXEC('
+			CREATE FUNCTION [dbo].[BoundedStructures](@BBox Geometry)
+			RETURNS TABLE 
+			AS
+			RETURN(
+				 select * from Structure where ID in (
+					select distinct ParentID from BoundedLocations(@BBox)
+					))
+			')
+
+		if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
+		 EXEC('
+			CREATE FUNCTION [dbo].[BoundedSectionStructures](@BBox Geometry, @Z float)
+			RETURNS TABLE 
+			AS
+			RETURN(
+				 select * from Structure where ID in (
+					select distinct ParentID from BoundedSectionLocations(@BBox, @Z)
+					))
+			')
+
+		if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
+		 EXEC('
+			CREATE FUNCTION [dbo].[BoundedLocationLinks](@BBox Geometry)
+			RETURNS TABLE 
+			AS
+			RETURN(
+				 select * from LocationLink
+				 where A in (select ID from BoundedLocations(@BBox)) or
+				       B in (select ID from BoundedLocations(@BBox))
+					   )
+			')
+
+		if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
+		 EXEC('
+			CREATE FUNCTION [dbo].[BoundedSectionLocationLinks](@BBox Geometry, @Z float)
+			RETURNS TABLE 
+			AS
+			RETURN(
+				 select * from LocationLink
+				 where A in (select ID from BoundedSectionLocations(@BBox, @Z)) or
+				       B in (select ID from BoundedSectionLocations(@BBox, @Z))
+					   )
+			')
+
+		if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
+		 EXEC('
+			CREATE PROCEDURE [dbo].[SelectSectionLocationsAndLinksInBounds]
+				-- Add the parameters for the stored procedure here
+				@Z float,
+				@BBox geometry,
+				@QueryDate datetime
+			AS
+			BEGIN
+				-- SET NOCOUNT ON added to prevent extra result sets from
+				-- interfering with SELECT statements.
+				SET NOCOUNT ON;
+
+				IF OBJECT_ID(''tempdb..#LocationsInBounds'') IS NOT NULL DROP TABLE #LocationsInBounds
+
+				select ID into #LocationsInBounds FROM Location where Z = @Z
+	 
+				IF @QueryDate IS NOT NULL
+					Select * from BoundedLocations(@BBox) where Z = @Z AND LastModified >= @QueryDate
+				ELSE
+					Select * from BoundedLocations(@BBox) where Z = @Z
+		
+				IF @QueryDate IS NOT NULL
+					-- Insert statements for procedure here
+					Select * from LocationLink
+					 WHERE ((A in 
+					(select ID from #LocationsInBounds))
+					  OR
+					  (B in 
+					(select ID from #LocationsInBounds)))
+					 AND Created >= @QueryDate
+				ELSE
+					-- Insert statements for procedure here
+					Select * from LocationLink
+					 WHERE ((A in (select ID from #LocationsInBounds))
+							OR	
+							(B in (select ID from #LocationsInBounds)))
+	
+	 
+			END
+			')
+
+		if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
+
+	   INSERT INTO DBVersion values (30, 
+		    N'Create Functions for spatial queries'  ,getDate(),User_ID())
 	 COMMIT TRANSACTION twentynine
 	end
 	go

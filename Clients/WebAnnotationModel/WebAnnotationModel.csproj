@@ -10,7 +10,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>WebAnnotationModel</RootNamespace>
     <AssemblyName>WebAnnotationModel</AssemblyName>
-    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.6</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile />
   </PropertyGroup>
@@ -54,6 +54,10 @@
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Microsoft.Spatial, Version=6.13.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.Spatial.6.13.0\lib\portable-net40+sl5+wp8+win8+wpa\Microsoft.Spatial.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Runtime.Serialization" />
@@ -66,6 +70,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="EventArgs.cs" />
+    <Compile Include="Extensions.cs" />
     <Compile Include="Objects\Attribute.cs" />
     <Compile Include="Objects\LocationLinkObj.cs" />
     <Compile Include="Store\LocationLinkStore.cs" />
@@ -101,6 +106,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />
+    <None Include="packages.config" />
     <None Include="Service References\Service\Annotation.Service.GraphClasses11.xsd">
       <SubType>Designer</SubType>
     </None>
@@ -118,9 +124,6 @@
       <SubType>Designer</SubType>
     </None>
     <None Include="Service References\Service\service33.xsd">
-      <SubType>Designer</SubType>
-    </None>
-    <None Include="Service References\Service\System.Data.Entity.Spatial.xsd">
       <SubType>Designer</SubType>
     </None>
     <None Include="Service References\Service\WebAnnotationModel.Service.CreateStructureRetval.datasource">
@@ -177,6 +180,9 @@
       <Project>{EACB87E8-A5E3-417E-A9EF-B80C2A68C020}</Project>
       <Name>Geometry</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>

@@ -118,7 +118,7 @@ namespace WebAnnotationModel
         {
             get {return Data.Position.Z; }
         }
-
+        /*
         public DbGeometry VolumeShape
         {
             get
@@ -152,7 +152,7 @@ namespace WebAnnotationModel
                 OnPropertyChanged("MosaicShape");
             }
         }
-
+        */
         private GridVector2? _VolumePosition;
         /// <summary>
         /// VolumeX is the x position in volume space. It only exists to inform the database of an estimate of the locations position in volume space.
@@ -524,8 +524,8 @@ namespace WebAnnotationModel
             this.Data.Username = newdata.Username;
             this.Data.LastModified = newdata.LastModified;
             this.Data.Links = newdata.Links;
-            this.Data.VolumeShape = newdata.VolumeShape;
-            this.Data.MosaicShape = newdata.MosaicShape;
+            //this.Data.VolumeShape = newdata.VolumeShape;
+            //this.Data.MosaicShape = newdata.MosaicShape;
         }
         
 

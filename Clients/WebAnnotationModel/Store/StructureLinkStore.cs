@@ -60,6 +60,18 @@ namespace WebAnnotationModel
             throw new NotImplementedException();
         }
 
+        protected override StructureLink[] ProxyGetBySectionRegion(AnnotateStructuresClient proxy,
+                                                             long SectionNumber,
+                                                             BoundingRectangle BBox,
+                                                             double MinRadius,
+                                                             DateTime LastQuery,
+                                                             out long TicksAtQueryExecute,
+                                                             out StructureLinkKey[] DeletedLocations)
+        {
+            throw new NotImplementedException();
+        }
+
+
         protected override IAsyncResult ProxyBeginGetBySection(AnnotateStructuresClient proxy, long SectionNumber, DateTime LastQuery, AsyncCallback callback, object asynchState)
         {
             throw new NotImplementedException();

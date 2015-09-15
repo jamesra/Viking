@@ -39,10 +39,7 @@ namespace WebAnnotation.ViewModel
 
         /// <summary>
         /// Locations on the section we are providing an overlay for
-        /// implemented as a quad tree which can map a point to the nearest Location
         /// </summary>
-        //private QuadTree<Location_CanvasViewModel> Locations = null;
-
         private RTree.RTree<Location_CanvasViewModel> Locations = null;
                
         /// <summary>
@@ -50,13 +47,6 @@ namespace WebAnnotation.ViewModel
         /// </summary>
         private ConcurrentDictionary<long, ConcurrentDictionary<long, Location_CanvasViewModel>> LocationsForStructure = new ConcurrentDictionary<long, ConcurrentDictionary<long, Location_CanvasViewModel>>();
         
-        //        public static SortedDictionary<long, SortedList<long, RoundLineCode.RoundLine> > LocationLinesDict = null;
-
-        /// <summary>
-        /// Allows us to describe all the locationlinks visible on a screen
-        /// </summary>
-        //private LineSearchGrid<LocationLink> LocationLinksSearch = null;
-
         /// <summary>
         /// Allows us to describe all the StructureLinks visible on a screen
         /// </summary>
@@ -721,9 +711,53 @@ namespace WebAnnotation.ViewModel
             HaveLoadedSectionAnnotations = true;
         }
 
-        
-        
-        
+        internal void LoadSectionAnnotationsInRegion(GridRectangle bounds, double MinRadius)
+        {
+            Trace.WriteLine("LoadSectionAnnotations: " + Section.Number.ToString(), "WebAnnotation");
+
+
+            //            Task.Factory.StartNew(() => { 
+            //Store.Structures.GetObjectsForSection(Section.Number); 
+            //Store.Locations.GetObjectsForSectionAsynch(Section.Number); 
+            //});
+
+            //
+            ConcurrentDictionary<long, StructureObj> structure_results = Store.Structures.GetObjectsInRegion(Section.Number, bounds, MinRadius);
+            //Store.Structures.GetObjectsForSection(Section.Number);
+#if DEBUG
+
+            //structure_results.ServerRequestResult.AsyncWaitHandle.WaitOne();
+            //Store.Structures.GetObjectsForSection(Section.Number); 
+#else
+            
+#endif
+            //        
+
+            //Have to let the Lock go before we call the location store or we can get a deadlock.  Don't modify 
+            //data structures after this point. 
+
+            //if (!HaveLoadedSectionAnnotations)
+            //    AddLocations(Store.Locations.GetLocationsForSection(Section.Number).Values);
+
+            ConcurrentDictionary<long, LocationObj> locations = Store.Locations.GetObjectsInRegion(Section.Number, bounds, MinRadius);
+            //ConcurrentDictionary<long,LocationObj> locations = Store.Locations.GetObjectsForSection(Section.Number);
+            //this.AddLocations(locations.Values);
+
+            //Store.LocationLinks.GetObjectsForSection(Section.Number);
+
+            //ConcurrentDictionary<long, LocationObj> KnownObjects = Store.Locations.GetLocalObjectsForSection(Section.Number);
+
+
+            //System.Threading.Tasks.Task.Factory.StartNew(() => this.AddLocations(results.KnownObjects.Values));
+            //System.Windows.Threading.Dispatcher.CurrentDispatcher.BeginInvoke(new Action(() => this.AddLocations(results.KnownObjects.Values)));
+            this.AddLocations(locations.Values);
+
+            HaveLoadedSectionAnnotations = true;
+        }
+
+
+
+
 
         /// <summary>
         /// Return all the line segments visible in the passed bounds

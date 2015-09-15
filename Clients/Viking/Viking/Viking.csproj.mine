@@ -38,6 +38,7 @@
     <InstallUrl>http://connectomes.utah.edu/Software/Viking4/</InstallUrl>
     <SupportUrl>http://connectomes.utah.edu/</SupportUrl>
     <TargetCulture>en</TargetCulture>
+    
     <ProductName>Viking</ProductName>
     <PublisherName>Marc Lab</PublisherName>
     <CreateWebPageOnPublish>true</CreateWebPageOnPublish>

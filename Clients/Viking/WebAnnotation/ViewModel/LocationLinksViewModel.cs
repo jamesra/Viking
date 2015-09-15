@@ -293,7 +293,7 @@ namespace WebAnnotation.ViewModel
 
                 LocationLink line; 
                 bool sectionSuccess = searchGrid.Delete(linkView, out line);
-                Debug.Assert(sectionSuccess);
+                //Debug.Assert(sectionSuccess);
                 success = success || sectionSuccess;
 
                 //Free all the memory for the search grid if this was the last location link

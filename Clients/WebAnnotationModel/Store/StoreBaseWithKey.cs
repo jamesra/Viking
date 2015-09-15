@@ -8,6 +8,7 @@ using WebAnnotationModel.Objects;
 using System.Diagnostics;
 using System.Collections.Concurrent;
 using System.Collections.Specialized;
+using WebAnnotationModel;
 
 namespace WebAnnotationModel
 {
@@ -99,6 +100,24 @@ namespace WebAnnotationModel
                                                              DateTime LastQuery,
                                                              AsyncCallback callback,
                                                              object asynchState);
+
+
+        /// <summary>
+        /// Synchronous query for objects on the section
+        /// </summary>
+        /// <param name="proxy"></param>
+        /// <param name="SectionNumber"></param>
+        /// <param name="LastQuery"></param>
+        /// <returns></returns>
+        protected abstract WCFOBJECT[] ProxyGetBySectionRegion(PROXY proxy,
+                                                             long SectionNumber,
+                                                             BoundingRectangle BBox,
+                                                             double MinRadius,
+                                                             DateTime LastQuery,
+                                                             out long TicksAtQueryExecute,
+                                                             out KEY[] DeletedLocations);
+        
+
         protected abstract WCFOBJECT[] ProxyGetBySectionCallback(out long TicksAtQueryExecute,
                                                                 out KEY[] DeletedLocations,
                                                                 GetObjectBySectionCallbackState state, 
@@ -490,6 +509,62 @@ namespace WebAnnotationModel
             }
 
             DateTime TraceQueryEnd = DateTime.UtcNow;            
+
+            ChangeInventory<OBJECT> inventory = ParseQuery(objects, deleted_objects, state);
+
+            DateTime TraceParseEnd = DateTime.UtcNow;
+
+            Trace.WriteLine("Sxn " + state.SectionNumber.ToString() + " finished " + typeof(OBJECT).ToString() + " query.  " + inventory.ObjectsInStore.Count + " returned");
+            Trace.WriteLine("\tQuery Time: " + new TimeSpan(TraceQueryEnd.Ticks - StartTime.Ticks).TotalSeconds.ToString() + " (sec) elapsed");
+            Trace.WriteLine("\tParse Time: " + new TimeSpan(TraceParseEnd.Ticks - TraceQueryEnd.Ticks).TotalSeconds.ToString() + " (sec) elapsed");
+
+            CallOnCollectionChanged(inventory);
+
+            return GetLocalObjectsForSection(SectionNumber);
+        }
+
+        public virtual ConcurrentDictionary<KEY, OBJECT> GetObjectsInRegion(long SectionNumber, Geometry.GridRectangle bounds, double MinRadius)
+        {
+            GetObjectBySectionCallbackState state = new GetObjectBySectionCallbackState(null, SectionNumber, GetLastQueryTimeForSection(SectionNumber));
+
+            WCFOBJECT[] objects = new WCFOBJECT[0];
+            long QueryExecutedTime;
+            KEY[] deleted_objects = new KEY[0];
+            PROXY proxy = null;
+            DateTime StartTime = DateTime.UtcNow;
+
+            try
+            {
+
+                proxy = CreateProxy();
+                proxy.Open();
+
+                objects = ProxyGetBySectionRegion(proxy,
+                                                        SectionNumber,
+                                                        bounds.ToBoundingRectangle(),
+                                                        MinRadius,
+                                                        DateTime.MinValue,
+                                                        out QueryExecutedTime,
+                                                        out deleted_objects);
+            }
+            catch (EndpointNotFoundException e)
+            {
+                Trace.WriteLine("Could not connect to annotation database: " + e.ToString());
+            }
+            catch (Exception e)
+            {
+                ShowStandardExceptionMessage(e);
+            }
+            finally
+            {
+                if (proxy != null)
+                {
+                    proxy.Close();
+                    proxy = null;
+                }
+            }
+
+            DateTime TraceQueryEnd = DateTime.UtcNow;
 
             ChangeInventory<OBJECT> inventory = ParseQuery(objects, deleted_objects, state);
 

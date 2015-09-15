@@ -58,7 +58,7 @@ namespace VikingXNA
         /// <summary>
         /// Combination of the viewport and a camera used to draw this control
         /// </summary>
-        protected Scene Scene;
+        public Scene Scene;
 
         private Matrix worldMatrix
         {
@@ -166,31 +166,8 @@ namespace VikingXNA
                 this.LineManager.Init(Device, Content);
             }
         }
-
-        /// <summary>
-        /// Unused legacy function from when we supported screen rotation
-        /// </summary>
-        /// <returns></returns>
-        public GridQuad VisibleQuad()
-        {
-            if (Device == null)
-                return new GridQuad(new GridVector2(0, 0), 10, 10); 
-
-            //For debugging
-            const int offset = 0;
-
-            GridVector2 TopLeft = Scene.ScreenToWorld(offset,offset);
-            GridVector2 BottomRight = Scene.ScreenToWorld(Device.Viewport.Width - offset, Device.Viewport.Height - offset);
-            GridVector2 BottomLeft = Scene.ScreenToWorld(offset, Device.Viewport.Height - offset);
-
-            GridVector2 TopRight = Scene.ScreenToWorld(Device.Viewport.Width - offset, offset);
-
-            return new GridQuad(BottomLeft, BottomRight, TopLeft, TopRight); 
-        }
-
         
-
-        public GridRectangle RenderTargetBounds()
+        public Geometry.GridRectangle RenderTargetBounds()
         {
             if (Device == null)
                 return new GridRectangle(0, 0, 10, 10);
@@ -223,7 +200,7 @@ namespace VikingXNA
         /// <summary>
         /// Takes a capture and sends it to the clipboard
         /// </summary>
-        protected Microsoft.Xna.Framework.Graphics.PackedVector.Byte4[] CaptureArea(GridRectangle Rect, float Downsample)
+        protected Microsoft.Xna.Framework.Graphics.PackedVector.Byte4[] CaptureArea(Geometry.GridRectangle Rect, float Downsample)
         {
             Debug.Assert((Rect.Width / Downsample) < 4096 && (Rect.Height / Downsample) < 4096);
             Debug.Assert(this.PaintCallRefCount == 0);
@@ -449,12 +426,12 @@ namespace VikingXNA
 
         }
 
-        public GridVector2 ScreenToWorld(double X, double Y)
+        public Geometry.GridVector2 ScreenToWorld(double X, double Y)
         {
             return Scene.ScreenToWorld(X, Y); 
         }
 
-        public GridVector2 WorldToScreen(double X, double Y)
+        public Geometry.GridVector2 WorldToScreen(double X, double Y)
         {
             return Scene.WorldToScreen(X, Y);
         }
