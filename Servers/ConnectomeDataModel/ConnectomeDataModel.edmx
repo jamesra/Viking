@@ -205,161 +205,12 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
           <Parameter Name="StructureID" Type="int" Mode="In" />
         </Function>
         <Function Name="ApproximateStructureLocations" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="false" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo" />
-        <Function Name="BoundedLocationLinks" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="true" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo">
-          <Parameter Name="BBox" Type="geometry" Mode="In" />
-          <ReturnType>
-            <CollectionType>
-              <RowType>
-                <Property Name="A" Type="bigint" Nullable="false" />
-                <Property Name="B" Type="bigint" Nullable="false" />
-                <Property Name="Username" Type="nchar" MaxLength="16" Nullable="false" />
-                <Property Name="Created" Type="datetime" Nullable="false" />
-              </RowType>
-            </CollectionType>
-          </ReturnType>
-        </Function>
-        <Function Name="BoundedLocations" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="true" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo">
-          <Parameter Name="BBox" Type="geometry" Mode="In" />
-          <ReturnType>
-            <CollectionType>
-              <RowType>
-                <Property Name="ID" Type="bigint" Nullable="false" />
-                <Property Name="ParentID" Type="bigint" Nullable="false" />
-                <Property Name="Z" Type="float" Nullable="false" />
-                <Property Name="Closed" Type="bit" Nullable="false" />
-                <Property Name="Version" Type="timestamp" Nullable="false" />
-                <Property Name="Overlay" Type="varbinary(max)" />
-                <Property Name="Tags" Type="xml" />
-                <Property Name="Terminal" Type="bit" Nullable="false" />
-                <Property Name="OffEdge" Type="bit" Nullable="false" />
-                <Property Name="Radius" Type="float" Nullable="false" />
-                <Property Name="TypeCode" Type="smallint" Nullable="false" />
-                <Property Name="LastModified" Type="datetime" Nullable="false" />
-                <Property Name="Created" Type="datetime" Nullable="false" />
-                <Property Name="Username" Type="nchar" MaxLength="16" Nullable="false" />
-                <Property Name="MosaicShape" Type="geometry" Nullable="false" />
-                <Property Name="VolumeShape" Type="geometry" Nullable="false" />
-                <Property Name="X" Type="float" Nullable="false" />
-                <Property Name="Y" Type="float" Nullable="false" />
-                <Property Name="VolumeX" Type="float" Nullable="false" />
-                <Property Name="VolumeY" Type="float" Nullable="false" />
-              </RowType>
-            </CollectionType>
-          </ReturnType>
-        </Function>
-        <Function Name="BoundedStructures" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="true" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo">
-          <Parameter Name="BBox" Type="geometry" Mode="In" />
-          <ReturnType>
-            <CollectionType>
-              <RowType>
-                <Property Name="ID" Type="bigint" Nullable="false" />
-                <Property Name="TypeID" Type="bigint" Nullable="false" />
-                <Property Name="Notes" Type="nvarchar(max)" />
-                <Property Name="Verified" Type="bit" Nullable="false" />
-                <Property Name="Tags" Type="xml" />
-                <Property Name="Confidence" Type="float" Nullable="false" />
-                <Property Name="Version" Type="timestamp" Nullable="false" />
-                <Property Name="ParentID" Type="bigint" />
-                <Property Name="Created" Type="datetime" Nullable="false" />
-                <Property Name="Label" Type="varchar" MaxLength="64" />
-                <Property Name="Username" Type="nchar" MaxLength="16" Nullable="false" />
-                <Property Name="LastModified" Type="datetime" Nullable="false" />
-              </RowType>
-            </CollectionType>
-          </ReturnType>
-        </Function>
         <Function Name="CountChildStructuresByType" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="false" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo">
           <Parameter Name="StructureID" Type="bigint" Mode="In" />
         </Function>
         <Function Name="MergeStructures" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="false" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo">
           <Parameter Name="KeepStructureID" Type="bigint" Mode="In" />
           <Parameter Name="MergeStructureID" Type="bigint" Mode="In" />
-        </Function>
-        <Function Name="SectionLocationLinks" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="true" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo">
-          <Parameter Name="Z" Type="float" Mode="In" />
-          <ReturnType>
-            <CollectionType>
-              <RowType>
-                <Property Name="A" Type="bigint" Nullable="false" />
-                <Property Name="B" Type="bigint" Nullable="false" />
-                <Property Name="Username" Type="nchar" MaxLength="16" Nullable="false" />
-                <Property Name="Created" Type="datetime" Nullable="false" />
-              </RowType>
-            </CollectionType>
-          </ReturnType>
-        </Function>
-        <Function Name="SectionLocationLinksModifiedAfterDate" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="true" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo">
-          <Parameter Name="Z" Type="float" Mode="In" />
-          <Parameter Name="QueryDate" Type="datetime" Mode="In" />
-          <ReturnType>
-            <CollectionType>
-              <RowType>
-                <Property Name="A" Type="bigint" Nullable="false" />
-                <Property Name="B" Type="bigint" Nullable="false" />
-                <Property Name="Username" Type="nchar" MaxLength="16" Nullable="false" />
-                <Property Name="Created" Type="datetime" Nullable="false" />
-              </RowType>
-            </CollectionType>
-          </ReturnType>
-        </Function>
-        <Function Name="SectionLocations" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="true" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo">
-          <Parameter Name="Z" Type="float" Mode="In" />
-          <ReturnType>
-            <CollectionType>
-              <RowType>
-                <Property Name="ID" Type="bigint" Nullable="false" />
-                <Property Name="ParentID" Type="bigint" Nullable="false" />
-                <Property Name="Z" Type="float" Nullable="false" />
-                <Property Name="Closed" Type="bit" Nullable="false" />
-                <Property Name="Version" Type="timestamp" Nullable="false" />
-                <Property Name="Overlay" Type="varbinary(max)" />
-                <Property Name="Tags" Type="xml" />
-                <Property Name="Terminal" Type="bit" Nullable="false" />
-                <Property Name="OffEdge" Type="bit" Nullable="false" />
-                <Property Name="Radius" Type="float" Nullable="false" />
-                <Property Name="TypeCode" Type="smallint" Nullable="false" />
-                <Property Name="LastModified" Type="datetime" Nullable="false" />
-                <Property Name="Created" Type="datetime" Nullable="false" />
-                <Property Name="Username" Type="nchar" MaxLength="16" Nullable="false" />
-                <Property Name="MosaicShape" Type="geometry" Nullable="false" />
-                <Property Name="VolumeShape" Type="geometry" Nullable="false" />
-                <Property Name="X" Type="float" Nullable="false" />
-                <Property Name="Y" Type="float" Nullable="false" />
-                <Property Name="VolumeX" Type="float" Nullable="false" />
-                <Property Name="VolumeY" Type="float" Nullable="false" />
-              </RowType>
-            </CollectionType>
-          </ReturnType>
-        </Function>
-        <Function Name="SectionLocationsModifiedAfterDate" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="true" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo">
-          <Parameter Name="Z" Type="float" Mode="In" />
-          <Parameter Name="QueryDate" Type="datetime" Mode="In" />
-          <ReturnType>
-            <CollectionType>
-              <RowType>
-                <Property Name="ID" Type="bigint" Nullable="false" />
-                <Property Name="ParentID" Type="bigint" Nullable="false" />
-                <Property Name="Z" Type="float" Nullable="false" />
-                <Property Name="Closed" Type="bit" Nullable="false" />
-                <Property Name="Version" Type="timestamp" Nullable="false" />
-                <Property Name="Overlay" Type="varbinary(max)" />
-                <Property Name="Tags" Type="xml" />
-                <Property Name="Terminal" Type="bit" Nullable="false" />
-                <Property Name="OffEdge" Type="bit" Nullable="false" />
-                <Property Name="Radius" Type="float" Nullable="false" />
-                <Property Name="TypeCode" Type="smallint" Nullable="false" />
-                <Property Name="LastModified" Type="datetime" Nullable="false" />
-                <Property Name="Created" Type="datetime" Nullable="false" />
-                <Property Name="Username" Type="nchar" MaxLength="16" Nullable="false" />
-                <Property Name="MosaicShape" Type="geometry" Nullable="false" />
-                <Property Name="VolumeShape" Type="geometry" Nullable="false" />
-                <Property Name="X" Type="float" Nullable="false" />
-                <Property Name="Y" Type="float" Nullable="false" />
-                <Property Name="VolumeX" Type="float" Nullable="false" />
-                <Property Name="VolumeY" Type="float" Nullable="false" />
-              </RowType>
-            </CollectionType>
-          </ReturnType>
         </Function>
         <Function Name="SelectAllStructureLocationLinks" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="false" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo" />
         <Function Name="SelectAllStructureLocations" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="false" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo" />
@@ -374,6 +225,12 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
           <Parameter Name="Z" Type="float" Mode="In" />
           <Parameter Name="QueryDate" Type="datetime" Mode="In" />
         </Function>
+        <Function Name="SelectSectionLocationLinksInBounds" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="false" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo">
+          <Parameter Name="Z" Type="float" Mode="In" />
+          <Parameter Name="bbox" Type="geometry" Mode="In" />
+          <Parameter Name="MinRadius" Type="float" Mode="In" />
+          <Parameter Name="QueryDate" Type="datetime" Mode="In" />
+        </Function>
         <Function Name="SelectSectionLocationsAndLinks" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="false" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo">
           <Parameter Name="Z" Type="float" Mode="In" />
           <Parameter Name="QueryDate" Type="datetime" Mode="In" />
@@ -381,6 +238,27 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
         <Function Name="SelectSectionLocationsAndLinksInBounds" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="false" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo">
           <Parameter Name="Z" Type="float" Mode="In" />
           <Parameter Name="BBox" Type="geometry" Mode="In" />
+          <Parameter Name="Radius" Type="float" Mode="In" />
+          <Parameter Name="QueryDate" Type="datetime" Mode="In" />
+        </Function>
+        <Function Name="SelectSectionStructures" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="false" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo">
+          <Parameter Name="Z" Type="float" Mode="In" />
+          <Parameter Name="QueryDate" Type="datetime" Mode="In" />
+        </Function>
+        <Function Name="SelectSectionStructuresAndLinks" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="false" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo">
+          <Parameter Name="Z" Type="float" Mode="In" />
+          <Parameter Name="QueryDate" Type="datetime" Mode="In" />
+        </Function>
+        <Function Name="SelectSectionStructuresAndLinksInBounds" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="false" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo">
+          <Parameter Name="Z" Type="float" Mode="In" />
+          <Parameter Name="BBox" Type="geometry" Mode="In" />
+          <Parameter Name="MinRadius" Type="float" Mode="In" />
+          <Parameter Name="QueryDate" Type="datetime" Mode="In" />
+        </Function>
+        <Function Name="SelectSectionStructuresInBounds" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="false" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo">
+          <Parameter Name="Z" Type="float" Mode="In" />
+          <Parameter Name="BBox" Type="geometry" Mode="In" />
+          <Parameter Name="MinRadius" Type="float" Mode="In" />
           <Parameter Name="QueryDate" Type="datetime" Mode="In" />
         </Function>
         <Function Name="SelectStructure" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="false" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo">
@@ -407,9 +285,8 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
           <Parameter Name="StructureID" Type="bigint" Mode="In" />
         </Function>
         <Function Name="SelectStructuresAndLinks" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="false" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo" />
-        <Function Name="SelectStructuresForSection" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="false" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo">
-          <Parameter Name="Z" Type="float" Mode="In" />
-          <Parameter Name="QueryDate" Type="datetime" Mode="In" />
+        <Function Name="SelectStructuresLinkedViaChildren" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="false" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo">
+          <Parameter Name="ID" Type="bigint" Mode="In" />
         </Function>
         <Function Name="SelectUnfinishedStructureBranches" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="false" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo">
           <Parameter Name="StructureID" Type="bigint" Mode="In" />
@@ -733,7 +610,6 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
           <FunctionImport Name="ApproximateStructureLocation" ReturnType="Collection(ConnectomeModel.ApproximateStructureLocation_Result)">
           <Parameter Name="StructureID" Mode="In" Type="Int32" />
           </FunctionImport>
-          <FunctionImport Name="ApproximateStructureLocations" ReturnType="Collection(ConnectomeModel.ApproximateStructureLocations_Result)" />
           <FunctionImport Name="CountChildStructuresByType" ReturnType="Collection(ConnectomeModel.CountChildStructuresByType_Result)">
           <Parameter Name="StructureID" Mode="In" Type="Int64" />
           </FunctionImport>
@@ -754,9 +630,11 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
             <Parameter Name="Z" Mode="In" Type="Double" />
             <Parameter Name="QueryDate" Mode="In" Type="DateTime" />
           </FunctionImport>
-          <FunctionImport Name="SelectSectionLocationsAndLinks" EntitySet="Locations" ReturnType="Collection(ConnectomeModel.Location)">
+          <FunctionImport Name="SelectSectionLocationsAndLinks">
             <Parameter Name="Z" Mode="In" Type="Double" />
             <Parameter Name="QueryDate" Mode="In" Type="DateTime" />
+            <ReturnType EntitySet="Locations" Type="Collection(ConnectomeModel.Location)"/>
+            <ReturnType EntitySet="LocationLinks" Type="Collection(ConnectomeModel.LocationLink)"/>
           </FunctionImport>
           <FunctionImport Name="SelectStructure" EntitySet="Structures" ReturnType="Collection(ConnectomeModel.Structure)">
           <Parameter Name="StructureID" Mode="In" Type="Int64" />
@@ -809,18 +687,43 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
           <FunctionImport Name="StructureLocationLinks" IsComposable="true" EntitySet="LocationLinks" ReturnType="Collection(ConnectomeModel.LocationLink)">
           <Parameter Name="StructureID" Mode="In" Type="Int64" />
           </FunctionImport>
-          <FunctionImport Name="BoundedLocations" IsComposable="true" EntitySet="Locations" ReturnType="Collection(ConnectomeModel.Location)">
-          <Parameter Name="BBox" Mode="In" Type="Geometry" />
-          </FunctionImport>
-          <FunctionImport Name="BoundedLocationLinks" IsComposable="true" EntitySet="LocationLinks" ReturnType="Collection(ConnectomeModel.LocationLink)">
-            <Parameter Name="BBox" Mode="In" Type="Geometry" />
-          </FunctionImport>
-          <FunctionImport Name="BoundedStructures" IsComposable="true" EntitySet="Structures" ReturnType="Collection(ConnectomeModel.Structure)">
-            <Parameter Name="BBox" Mode="In" Type="Geometry" />
-          </FunctionImport>
           <FunctionImport Name="SelectSectionLocationsAndLinksInBounds" EntitySet="Locations" ReturnType="Collection(ConnectomeModel.Location)">
             <Parameter Name="Z" Mode="In" Type="Double" />
             <Parameter Name="BBox" Mode="In" Type="Geometry" />
+            <Parameter Name="Radius" Mode="In" Type="Double" />
+            <Parameter Name="QueryDate" Mode="In" Type="DateTime" />
+          </FunctionImport>
+          <FunctionImport Name="SelectStructuresLinkedViaChildren" ReturnType="Collection(Int64)">
+          <Parameter Name="ID" Mode="In" Type="Int64" />
+          </FunctionImport>
+          <FunctionImport Name="SelectSectionStructures" EntitySet="Structures" ReturnType="Collection(ConnectomeModel.Structure)">
+            <Parameter Name="Z" Mode="In" Type="Double" />
+            <Parameter Name="QueryDate" Mode="In" Type="DateTime" />
+          </FunctionImport>
+          <FunctionImport Name="SelectSectionStructuresInBounds" EntitySet="Structures" ReturnType="Collection(ConnectomeModel.Structure)">
+            <Parameter Name="Z" Mode="In" Type="Double" />
+            <Parameter Name="BBox" Mode="In" Type="Geometry" />
+            <Parameter Name="MinRadius" Mode="In" Type="Double" />
+            <Parameter Name="QueryDate" Mode="In" Type="DateTime" />
+          </FunctionImport>
+          <FunctionImport Name="StructureLocationLinks1" IsComposable="true" ReturnType="Collection(ConnectomeModel.StructureLocationLinks1_Result)">
+          <Parameter Name="StructureID" Mode="In" Type="Int64" />
+          </FunctionImport>
+          <FunctionImport Name="SelectSectionStructuresAndLinks" EntitySet="Structures" ReturnType="Collection(ConnectomeModel.Structure)">
+            <Parameter Name="Z" Mode="In" Type="Double" />
+            <Parameter Name="QueryDate" Mode="In" Type="DateTime" />
+          </FunctionImport>
+          <FunctionImport Name="ApproximateStructureLocations" ReturnType="Collection(ConnectomeModel.ApproximateStructureLocations_Result)" />
+          <FunctionImport Name="SelectSectionLocationLinksInBounds" EntitySet="LocationLinks" ReturnType="Collection(ConnectomeModel.LocationLink)">
+            <Parameter Name="Z" Mode="In" Type="Double" />
+            <Parameter Name="bbox" Mode="In" Type="Geometry" />
+            <Parameter Name="MinRadius" Mode="In" Type="Double" />
+            <Parameter Name="QueryDate" Mode="In" Type="DateTime" />
+          </FunctionImport>
+          <FunctionImport Name="SelectSectionStructuresAndLinksInBounds">
+            <Parameter Name="Z" Mode="In" Type="Double" />
+            <Parameter Name="BBox" Mode="In" Type="Geometry" />
+            <Parameter Name="MinRadius" Mode="In" Type="Double" />
             <Parameter Name="QueryDate" Mode="In" Type="DateTime" />
           </FunctionImport>
         </EntityContainer>
@@ -1165,6 +1068,54 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
           <Property Type="Double" Name="VolumeX" Nullable="false" />
           <Property Type="Double" Name="VolumeY" Nullable="false" />
         </ComplexType>
+        <ComplexType Name="BoundedSectionLocationLinks_Result">
+          <Property Type="Int64" Name="A" Nullable="false" />
+          <Property Type="Int64" Name="B" Nullable="false" />
+          <Property Type="String" Name="Username" Nullable="false" MaxLength="16" />
+          <Property Type="DateTime" Name="Created" Nullable="false" Precision="23" />
+        </ComplexType>
+        <ComplexType Name="BoundedSectionLocations_Result">
+          <Property Type="Int64" Name="ID" Nullable="false" />
+          <Property Type="Int64" Name="ParentID" Nullable="false" />
+          <Property Type="Double" Name="Z" Nullable="false" />
+          <Property Type="Boolean" Name="Closed" Nullable="false" />
+          <Property Type="Binary" Name="Version" Nullable="false" MaxLength="8" />
+          <Property Type="Binary" Name="Overlay" Nullable="true" />
+          <Property Type="String" Name="Tags" Nullable="true" />
+          <Property Type="Boolean" Name="Terminal" Nullable="false" />
+          <Property Type="Boolean" Name="OffEdge" Nullable="false" />
+          <Property Type="Double" Name="Radius" Nullable="false" />
+          <Property Type="Int16" Name="TypeCode" Nullable="false" />
+          <Property Type="DateTime" Name="LastModified" Nullable="false" Precision="23" />
+          <Property Type="DateTime" Name="Created" Nullable="false" Precision="23" />
+          <Property Type="String" Name="Username" Nullable="false" MaxLength="16" />
+          <Property Type="Geometry" Name="MosaicShape" Nullable="false" />
+          <Property Type="Geometry" Name="VolumeShape" Nullable="false" />
+          <Property Type="Double" Name="X" Nullable="false" />
+          <Property Type="Double" Name="Y" Nullable="false" />
+          <Property Type="Double" Name="VolumeX" Nullable="false" />
+          <Property Type="Double" Name="VolumeY" Nullable="false" />
+        </ComplexType>
+        <ComplexType Name="BoundedSectionStructures_Result">
+          <Property Type="Int64" Name="ID" Nullable="false" />
+          <Property Type="Int64" Name="TypeID" Nullable="false" />
+          <Property Type="String" Name="Notes" Nullable="true" />
+          <Property Type="Boolean" Name="Verified" Nullable="false" />
+          <Property Type="String" Name="Tags" Nullable="true" />
+          <Property Type="Double" Name="Confidence" Nullable="false" />
+          <Property Type="Binary" Name="Version" Nullable="false" MaxLength="8" />
+          <Property Type="Int64" Name="ParentID" Nullable="true" />
+          <Property Type="DateTime" Name="Created" Nullable="false" Precision="23" />
+          <Property Type="String" Name="Label" Nullable="true" MaxLength="64" />
+          <Property Type="String" Name="Username" Nullable="false" MaxLength="16" />
+          <Property Type="DateTime" Name="LastModified" Nullable="false" Precision="23" />
+        </ComplexType>
+        <ComplexType Name="StructureLocationLinks1_Result">
+          <Property Type="Int64" Name="A" Nullable="false" />
+          <Property Type="Int64" Name="B" Nullable="false" />
+          <Property Type="String" Name="Username" Nullable="false" MaxLength="16" />
+          <Property Type="DateTime" Name="Created" Nullable="false" Precision="23" />
+        </ComplexType>
       </Schema>
     </edmx:ConceptualModels>
     <!-- C-S mapping content -->
@@ -1277,17 +1228,6 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
               </ComplexTypeMapping>
             </ResultMapping>
           </FunctionImportMapping>
-          <FunctionImportMapping FunctionImportName="ApproximateStructureLocations" FunctionName="ConnectomeModel.Store.ApproximateStructureLocations">
-            <ResultMapping>
-              <ComplexTypeMapping TypeName="ConnectomeModel.ApproximateStructureLocations_Result">
-                <ScalarProperty Name="ParentID" ColumnName="ParentID" />
-                <ScalarProperty Name="X" ColumnName="X" />
-                <ScalarProperty Name="Y" ColumnName="Y" />
-                <ScalarProperty Name="Z" ColumnName="Z" />
-                <ScalarProperty Name="Radius" ColumnName="Radius" />
-              </ComplexTypeMapping>
-            </ResultMapping>
-          </FunctionImportMapping>
           <FunctionImportMapping FunctionImportName="CountChildStructuresByType" FunctionName="ConnectomeModel.Store.CountChildStructuresByType">
             <ResultMapping>
               <ComplexTypeMapping TypeName="ConnectomeModel.CountChildStructuresByType_Result">
@@ -1353,6 +1293,38 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
           <FunctionImportMapping FunctionImportName="SelectSectionLocationLinks" FunctionName="ConnectomeModel.Store.SelectSectionLocationLinks">
           </FunctionImportMapping>
           <FunctionImportMapping FunctionImportName="SelectSectionLocationsAndLinks" FunctionName="ConnectomeModel.Store.SelectSectionLocationsAndLinks">
+            <ResultMapping>
+              <EntityTypeMapping TypeName="ConnectomeModel.Location">
+                  <ScalarProperty Name="VolumeShape" ColumnName="VolumeShape" />
+                  <ScalarProperty Name="MosaicShape" ColumnName="MosaicShape" />
+                  <ScalarProperty Name="ID" ColumnName="ID" />
+                  <ScalarProperty Name="ParentID" ColumnName="ParentID" />
+                  <ScalarProperty Name="X" ColumnName="X" />
+                  <ScalarProperty Name="Y" ColumnName="Y" />
+                  <ScalarProperty Name="Z" ColumnName="Z" />
+                  <ScalarProperty Name="Closed" ColumnName="Closed" />
+                  <ScalarProperty Name="Version" ColumnName="Version" />
+                  <ScalarProperty Name="Overlay" ColumnName="Overlay" />
+                  <ScalarProperty Name="Tags" ColumnName="Tags" />
+                  <ScalarProperty Name="VolumeX" ColumnName="VolumeX" />
+                  <ScalarProperty Name="VolumeY" ColumnName="VolumeY" />
+                  <ScalarProperty Name="Terminal" ColumnName="Terminal" />
+                  <ScalarProperty Name="OffEdge" ColumnName="OffEdge" />
+                  <ScalarProperty Name="Radius" ColumnName="Radius" />
+                  <ScalarProperty Name="TypeCode" ColumnName="TypeCode" />
+                  <ScalarProperty Name="LastModified" ColumnName="LastModified" />
+                  <ScalarProperty Name="Created" ColumnName="Created" />
+                  <ScalarProperty Name="Username" ColumnName="Username" />
+              </EntityTypeMapping>
+            </ResultMapping>
+            <ResultMapping>
+              <EntityTypeMapping TypeName="ConnectomeModel.LocationLink">
+                  <ScalarProperty Name="A" ColumnName="A" />
+                  <ScalarProperty Name="B" ColumnName="B" />
+                  <ScalarProperty Name="Username" ColumnName="Username" />
+                  <ScalarProperty Name="Created" ColumnName="Created" />
+              </EntityTypeMapping>
+            </ResultMapping>
           </FunctionImportMapping>
           <FunctionImportMapping FunctionImportName="SelectStructure" FunctionName="ConnectomeModel.Store.SelectStructure">
           </FunctionImportMapping>
@@ -1451,8 +1423,6 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
               </ComplexTypeMapping>
             </ResultMapping>
           </FunctionImportMapping>
-          <FunctionImportMapping FunctionImportName="SelectStructuresForSection" FunctionName="ConnectomeModel.Store.SelectStructuresForSection">
-          </FunctionImportMapping>
           <FunctionImportMapping FunctionImportName="SelectUnfinishedStructureBranches" FunctionName="ConnectomeModel.Store.SelectUnfinishedStructureBranches" />
           <FunctionImportMapping FunctionImportName="SelectUnfinishedStructureBranchesWithPosition" FunctionName="ConnectomeModel.Store.SelectUnfinishedStructureBranchesWithPosition">
             <ResultMapping>
@@ -1465,72 +1435,35 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
               </ComplexTypeMapping>
             </ResultMapping>
           </FunctionImportMapping>
-          <FunctionImportMapping FunctionImportName="SectionLocations" FunctionName="ConnectomeModel.Store.SectionLocations">
-            <ResultMapping>
-              <EntityTypeMapping TypeName="ConnectomeModel.Location">
-                  <ScalarProperty Name="VolumeShape" ColumnName="VolumeShape" />
-                  <ScalarProperty Name="MosaicShape" ColumnName="MosaicShape" />
-                  <ScalarProperty Name="ID" ColumnName="ID" />
-                  <ScalarProperty Name="ParentID" ColumnName="ParentID" />
-                  <ScalarProperty Name="X" ColumnName="X" />
-                  <ScalarProperty Name="Y" ColumnName="Y" />
-                  <ScalarProperty Name="Z" ColumnName="Z" />
-                  <ScalarProperty Name="Closed" ColumnName="Closed" />
-                  <ScalarProperty Name="Version" ColumnName="Version" />
-                  <ScalarProperty Name="Overlay" ColumnName="Overlay" />
-                  <ScalarProperty Name="Tags" ColumnName="Tags" />
-                  <ScalarProperty Name="VolumeX" ColumnName="VolumeX" />
-                  <ScalarProperty Name="VolumeY" ColumnName="VolumeY" />
-                  <ScalarProperty Name="Terminal" ColumnName="Terminal" />
-                  <ScalarProperty Name="OffEdge" ColumnName="OffEdge" />
-                  <ScalarProperty Name="Radius" ColumnName="Radius" />
-                  <ScalarProperty Name="TypeCode" ColumnName="TypeCode" />
-                  <ScalarProperty Name="LastModified" ColumnName="LastModified" />
-                  <ScalarProperty Name="Created" ColumnName="Created" />
-                  <ScalarProperty Name="Username" ColumnName="Username" />
-              </EntityTypeMapping>
-            </ResultMapping>
-          </FunctionImportMapping>
-          <FunctionImportMapping FunctionImportName="SectionLocationsModifiedAfterDate" FunctionName="ConnectomeModel.Store.SectionLocationsModifiedAfterDate">
-            <ResultMapping>
-              <EntityTypeMapping TypeName="ConnectomeModel.Location">
-                  <ScalarProperty Name="VolumeShape" ColumnName="VolumeShape" />
-                  <ScalarProperty Name="MosaicShape" ColumnName="MosaicShape" />
-                  <ScalarProperty Name="ID" ColumnName="ID" />
-                  <ScalarProperty Name="ParentID" ColumnName="ParentID" />
-                  <ScalarProperty Name="X" ColumnName="X" />
-                  <ScalarProperty Name="Y" ColumnName="Y" />
-                  <ScalarProperty Name="Z" ColumnName="Z" />
-                  <ScalarProperty Name="Closed" ColumnName="Closed" />
-                  <ScalarProperty Name="Version" ColumnName="Version" />
-                  <ScalarProperty Name="Overlay" ColumnName="Overlay" />
-                  <ScalarProperty Name="Tags" ColumnName="Tags" />
-                  <ScalarProperty Name="VolumeX" ColumnName="VolumeX" />
-                  <ScalarProperty Name="VolumeY" ColumnName="VolumeY" />
-                  <ScalarProperty Name="Terminal" ColumnName="Terminal" />
-                  <ScalarProperty Name="OffEdge" ColumnName="OffEdge" />
-                  <ScalarProperty Name="Radius" ColumnName="Radius" />
-                  <ScalarProperty Name="TypeCode" ColumnName="TypeCode" />
-                  <ScalarProperty Name="LastModified" ColumnName="LastModified" />
-                  <ScalarProperty Name="Created" ColumnName="Created" />
-                  <ScalarProperty Name="Username" ColumnName="Username" />
-              </EntityTypeMapping>
-            </ResultMapping>
-          </FunctionImportMapping>
-          <FunctionImportMapping FunctionImportName="SectionLocationLinks" FunctionName="ConnectomeModel.Store.SectionLocationLinks">
-          </FunctionImportMapping>
-          <FunctionImportMapping FunctionImportName="SectionLocationLinksModifiedAfterDate" FunctionName="ConnectomeModel.Store.SectionLocationLinksModifiedAfterDate">
-          </FunctionImportMapping>
-          <FunctionImportMapping FunctionImportName="StructureLocationLinks" FunctionName="ConnectomeModel.Store.StructureLocationLinks">
-          </FunctionImportMapping>
-          <FunctionImportMapping FunctionImportName="BoundedLocations" FunctionName="ConnectomeModel.Store.BoundedLocations">
-          </FunctionImportMapping>
-          <FunctionImportMapping FunctionImportName="BoundedLocationLinks" FunctionName="ConnectomeModel.Store.BoundedLocationLinks">
-          </FunctionImportMapping>
-          <FunctionImportMapping FunctionImportName="BoundedStructures" FunctionName="ConnectomeModel.Store.BoundedStructures">
-          </FunctionImportMapping>
           <FunctionImportMapping FunctionImportName="SelectSectionLocationsAndLinksInBounds" FunctionName="ConnectomeModel.Store.SelectSectionLocationsAndLinksInBounds">
           </FunctionImportMapping>
+          <FunctionImportMapping FunctionImportName="SelectStructuresLinkedViaChildren" FunctionName="ConnectomeModel.Store.SelectStructuresLinkedViaChildren" />
+          <FunctionImportMapping FunctionImportName="SelectSectionStructures" FunctionName="ConnectomeModel.Store.SelectSectionStructures" />
+          <FunctionImportMapping FunctionImportName="SelectSectionStructuresInBounds" FunctionName="ConnectomeModel.Store.SelectSectionStructuresInBounds" />
+          <FunctionImportMapping FunctionImportName="StructureLocationLinks1" FunctionName="ConnectomeModel.Store.StructureLocationLinks">
+            <ResultMapping>
+              <ComplexTypeMapping TypeName="ConnectomeModel.StructureLocationLinks1_Result">
+                <ScalarProperty Name="A" ColumnName="A" />
+                <ScalarProperty Name="B" ColumnName="B" />
+                <ScalarProperty Name="Username" ColumnName="Username" />
+                <ScalarProperty Name="Created" ColumnName="Created" />
+              </ComplexTypeMapping>
+            </ResultMapping>
+          </FunctionImportMapping>
+          <FunctionImportMapping FunctionImportName="SelectSectionStructuresAndLinks" FunctionName="ConnectomeModel.Store.SelectSectionStructuresAndLinks" />
+          <FunctionImportMapping FunctionImportName="ApproximateStructureLocations" FunctionName="ConnectomeModel.Store.ApproximateStructureLocations">
+            <ResultMapping>
+              <ComplexTypeMapping TypeName="ConnectomeModel.ApproximateStructureLocations_Result">
+                <ScalarProperty Name="ParentID" ColumnName="ParentID" />
+                <ScalarProperty Name="X" ColumnName="X" />
+                <ScalarProperty Name="Y" ColumnName="Y" />
+                <ScalarProperty Name="Z" ColumnName="Z" />
+                <ScalarProperty Name="Radius" ColumnName="Radius" />
+              </ComplexTypeMapping>
+            </ResultMapping>
+          </FunctionImportMapping>
+          <FunctionImportMapping FunctionImportName="SelectSectionLocationLinksInBounds" FunctionName="ConnectomeModel.Store.SelectSectionLocationLinksInBounds" />
+          <FunctionImportMapping FunctionImportName="SelectSectionStructuresAndLinksInBounds" FunctionName="ConnectomeModel.Store.SelectSectionStructuresAndLinksInBounds" />
         </EntityContainerMapping>
       </Mapping>
     </edmx:Mappings>
