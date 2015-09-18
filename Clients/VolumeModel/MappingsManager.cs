@@ -26,7 +26,7 @@ namespace Viking.VolumeModel
 
         public SectionTransformsCache()
         {
-            this.NumSectionsToKeepInMemory = 10; //Total number of sections we will keep loaded by default
+            this.NumSectionsToKeepInMemory = 6; //Total number of sections we will keep loaded by default
         }
 
         protected override SectionTransformsDictionary Fetch(SectionMappingsCacheEntry entry)
