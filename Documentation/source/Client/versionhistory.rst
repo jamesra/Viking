@@ -3,6 +3,12 @@
 Version History
 ###############
 
+1.1.148
+-------
+
+   * Tweaks to reduce memory footprint
+   * Updated installer to install the .NET 4.6 framework
+
 1.1.145
 -------
 
