@@ -887,8 +887,8 @@ namespace WebAnnotation
 
         protected void LoadSectionAnnotations()
         {
-            if (Parent.Scene == null)
-                return;
+            //if (Parent.Scene == null)
+            //    return;
 
             int StartingSectionNumber = _Parent.Section.Number; 
             SectionLocationsViewModel SectionAnnotations;
@@ -896,8 +896,9 @@ namespace WebAnnotation
             SectionLocationsViewModel SectionAnnotationsBelow;
             SectionAnnotations = GetOrCreateAnnotationsForSection(_Parent.Section.Number, _Parent);
             //SectionAnnotations.LoadSectionAnnotationsInRegion(Parent.Scene.VisibleWorldBounds, Parent.Scene.DevicePixelWidth);
-            Task.Factory.StartNew(() => SectionAnnotations.LoadSectionAnnotationsInRegion(Parent.Scene.VisibleWorldBounds, Parent.Scene.DevicePixelWidth));
-            
+            //Task.Factory.StartNew(() => SectionAnnotations.LoadSectionAnnotationsInRegion(Parent.Scene.VisibleWorldBounds, Parent.Scene.DevicePixelWidth));
+            Task.Factory.StartNew(() => SectionAnnotations.LoadSectionAnnotations());
+
             int refSectionNumberAbove=0;
             int refSectionNumberBelow=-1;
             if (_Parent.Section.ReferenceSectionAbove != null)
@@ -905,7 +906,7 @@ namespace WebAnnotation
                 refSectionNumberAbove = _Parent.Section.ReferenceSectionAbove.Number;
                 SectionAnnotationsAbove = GetOrCreateAnnotationsForSection(refSectionNumberAbove, _Parent);
                 //SectionAnnotationsAbove.LoadSectionAnnotations();
-                Task.Factory.StartNew(() => SectionAnnotationsAbove.LoadSectionAnnotationsInRegion(Parent.Scene.VisibleWorldBounds, Parent.Scene.DevicePixelWidth));
+                Task.Factory.StartNew(() => SectionAnnotationsAbove.LoadSectionAnnotations());
             }
 
             if (_Parent.Section.ReferenceSectionBelow != null)
@@ -913,7 +914,7 @@ namespace WebAnnotation
                 refSectionNumberBelow = _Parent.Section.ReferenceSectionBelow.Number;
                 SectionAnnotationsBelow = GetOrCreateAnnotationsForSection(refSectionNumberBelow, _Parent);
                 //SectionAnnotationsBelow.LoadSectionAnnotations();
-                Task.Factory.StartNew(() => SectionAnnotationsBelow.LoadSectionAnnotationsInRegion(Parent.Scene.VisibleWorldBounds, Parent.Scene.DevicePixelWidth));
+                Task.Factory.StartNew(() => SectionAnnotationsBelow.LoadSectionAnnotations());
             }
 
             int EndingSectionNumber = _Parent.Section.Number; 
