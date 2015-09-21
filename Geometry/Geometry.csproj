@@ -99,6 +99,8 @@
     <Compile Include="Common.cs" />
     <Compile Include="Algorithms\ConvexHull.cs" />
     <Compile Include="Comparable\GridVector2CompareByAngle.cs" />
+    <Compile Include="CurveFitting\CatmullRom.cs" />
+    <Compile Include="CurveFitting\Lagrange.cs" />
     <Compile Include="DataStructures\Coord.cs" />
     <Compile Include="DataStructures\IndexedGridVector2.cs" />
     <Compile Include="DataStructures\LineSearchGrid.cs" />
