@@ -37,6 +37,27 @@ namespace ConnectomeDataModel
             return param;
         }
 
+        private static SqlParameter CreateMinRadiusParameter(double MinRadius)
+        {
+            SqlParameter param = new SqlParameter("MinRadius", System.Data.SqlDbType.Float);
+            param.Direction = System.Data.ParameterDirection.Input;
+            param.SqlValue = new System.Data.SqlTypes.SqlDouble((double)MinRadius);
+
+            return param;
+        }
+
+        private static SqlParameter CreateBoundingBoxParameter(System.Data.Entity.Spatial.DbGeometry bbox)
+        {
+            
+            System.Data.SqlDbType dbGeoType = System.Data.SqlDbType.Udt;
+            SqlParameter param = new SqlParameter("BBox", dbGeoType);
+            param.UdtTypeName = "geometry";
+            param.Direction = System.Data.ParameterDirection.Input;
+            param.SqlValue = bbox;
+
+            return param;
+        }
+
         private static SqlParameter CreateDateTimeParameter(DateTime? time)
         {
             SqlParameter param = new SqlParameter("QueryDate", System.Data.SqlDbType.DateTime);
@@ -49,94 +70,67 @@ namespace ConnectomeDataModel
             return param;
         }
 
-        
-        public IQueryable<LocationLink> ReadSectionLocationLinks(long section, DateTime? LastModified)
+
+        public IQueryable<Location> ReadSectionLocations(long section, DateTime? LastModified)
         {
             if (LastModified.HasValue)
             {
-                return this.SectionLocationLinksModifiedAfterDate((double)section, LastModified);
+                return this.SectionLocations((double)section).Where(l=> l.LastModified >= LastModified.Value);
             }
             else
             {
-                return this.SectionLocationLinks((double)section);
+                return this.SectionLocations((double)section);
             }
-        }
-
+        } 
 
         public IList<Location> ReadSectionLocationsAndLinks(long section, DateTime? LastModified)
         {
-            IQueryable<Location> Locations = null;
-            ObjectResult<LocationLink> LocationLinks = this.SelectSectionLocationLinks((double)section, LastModified);
+            var results = this.SelectSectionLocationsAndLinks((double)section, LastModified, MergeOption.NoTracking);
 
-            if (LastModified.HasValue)
-            {
-                Locations = (from l in this.SectionLocations((double)section) where l.LastModified >= LastModified.Value select l).Include("LocationLinksA,LocationLinksB"); //this.Locations.Where(l => l.Z == (double)section && l.LastModified >= LastModified.Value);
-            }
-            else
-            {
-                Locations = (from l in this.SectionLocations((double)section) select l).Include("LocationLinksA,LocationLinksB");
-            }
+            var dictLocations = results.ToDictionary(l => l.ID);
+
+            var LocationLinks = results.GetNextResult<LocationLink>().ToList();
             
-            return Locations.ToList();
+            AppendLinksToLocations(dictLocations, LocationLinks);
+
+            return dictLocations.Values.ToList();
         }
 
-        public IList<Location> ReadSectionLocationsAndLinksInBounds(long section, System.Data.Entity.Spatial.DbGeometry bbox, DateTime? LastModified)
+        public IList<Location> ReadSectionLocationsAndLinksInRegion(long section, System.Data.Entity.Spatial.DbGeometry bbox, double MinRadius, DateTime? LastModified)
         {
-            IQueryable<Location> Locations = null;
-            
-            if (LastModified.HasValue)
-            {
-                Locations = (from l in this.BoundedLocations(bbox) where l.Z == (double)section && l.LastModified >= LastModified.Value select l).Include("LocationLinksA,LocationLinksB"); //this.Locations.Where(l => l.Z == (double)section && l.LastModified >= LastModified.Value);
-            }
-            else
-            {
-                Locations = (from l in this.BoundedLocations(bbox) where l.Z == (double)section select l).Include("LocationLinksA,LocationLinksB");
-            }
+            var results = this.SelectSectionLocationsAndLinksInBounds((double)section, bbox, MinRadius, LastModified, MergeOption.NoTracking);
 
-            return Locations.ToList();
-        }
+            var dictLocations = results.ToDictionary(l => l.ID);
 
+            var LocationLinks = results.GetNextResult<LocationLink>().ToList();
 
-        /// <summary>
-        /// Add the links to the locations in the dictionary
-        /// </summary>
-        /// <param name="Locations"></param>
-        /// <param name="LocationLinks"></param>
-        public void AppendLinksToLocations(IDictionary<long, Location> Locations, IList<LocationLink> LocationLinks)
-        {
-            Location A;
-            Location B;
-            foreach (LocationLink link in LocationLinks)
-            {
-                if (Locations.TryGetValue(link.A, out A))
-                {
-                    A.LocationLinksA.Add(link);
-                }
+            AppendLinksToLocations(dictLocations, LocationLinks);
 
-                if (Locations.TryGetValue(link.B, out B))
-                {
-                    B.LocationLinksB.Add(link);
-                }
-            } 
+            return dictLocations.Values.ToList();
         }
 
         public IList<Structure> ReadSectionStructuresAndLinks(long section, DateTime? LastModified)
         {
-            DbCommand sp = this.Database.Connection.CreateCommand();
-            sp.CommandText = "[dbo].[SelectStructuresForSection] @Z, @QueryDate";
-            sp.Parameters.Add(CreateSectionNumberParameter(section));
-            sp.Parameters.Add(CreateDateTimeParameter(LastModified));
+            var results = this.SelectSectionStructuresAndLinks((double)section, LastModified, MergeOption.NoTracking);
 
-            this.Database.Connection.Open();
+            Dictionary<long, Structure> dictStructures = results.ToDictionary(s => s.ID);
 
-            DbDataReader reader = sp.ExecuteReader();
-            Dictionary<long, Structure> dictStructures = ((IObjectContextAdapter)this).ObjectContext.Translate<Structure>(reader, "Structures", MergeOption.NoTracking).ToDictionary(s => s.ID);
+            var StructureLinks = results.GetNextResult<StructureLink>().ToList();
+             
+            AppendLinksToStructures(dictStructures, StructureLinks);
 
-            reader.NextResult();
+            return dictStructures.Values.ToList();
+        }
 
-            var StructureLinks = ((IObjectContextAdapter)this).ObjectContext.Translate<StructureLink>(reader, "StructureLinks", MergeOption.NoTracking);
+        public IList<Structure> ReadSectionStructuresAndLinksInRegion(long section, System.Data.Entity.Spatial.DbGeometry bbox, double MinRadius, DateTime? LastModified)
+        {
+            var results = this.SelectSectionStructuresAndLinksInBounds((double)section, bbox, MinRadius, LastModified, MergeOption.NoTracking);
 
-            AppendLinksToStructures(dictStructures, StructureLinks.ToList());
+            Dictionary<long, Structure> dictStructures = results.ToDictionary(s => s.ID);
+
+            var StructureLinks = results.GetNextResult<StructureLink>().ToList();
+
+            AppendLinksToStructures(dictStructures, StructureLinks);
 
             return dictStructures.Values.ToList();
         }
@@ -163,6 +157,29 @@ namespace ConnectomeDataModel
                     Target.TargetOfLinks.Add(link);
                 }
             }
+        }
+
+        /// <summary>
+        /// Add the links to the locations in the dictionary
+        /// </summary>
+        /// <param name="Locations"></param>
+        /// <param name="LocationLinks"></param>
+        public void AppendLinksToLocations(IDictionary<long, Location> Locations, IList<LocationLink> LocationLinks)
+        {
+            Location A;
+            Location B;
+            foreach (LocationLink link in LocationLinks)
+            {
+                if (Locations.TryGetValue(link.A, out A))
+                {
+                    A.LocationLinksA.Add(link);
+                }
+
+                if (Locations.TryGetValue(link.B, out B))
+                {
+                    B.LocationLinksB.Add(link);
+                }
+            } 
         }
     }
 }
