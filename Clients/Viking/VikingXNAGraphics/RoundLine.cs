@@ -203,7 +203,7 @@ namespace RoundLineCode
             const int primsPerCore = 4;
             const int verticesPerCore = 8;
 
-            numInstances = 200;
+            numVertices = verticesPerCore * MaxInstancesPerBatch;
             numVertices = (verticesPerCore + verticesPerCap + verticesPerCap) * numInstances;
             numPrimitivesPerInstance = primsPerCore + primsPerCap + primsPerCap;
             numPrimitives = numPrimitivesPerInstance * numInstances;

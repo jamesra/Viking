@@ -14,7 +14,8 @@ namespace Geometry
             if(closed)
             {
                 //We need to add a the 
-                cp.AddRange(cp.GetRange(0, 3));
+                cp.Insert(0, ControlPoints.Last());
+                cp.AddRange(cp.GetRange(1, 2));
             }
             /*
             List<GridVector2> output = new List<GridVector2>(cp.Count * NumInterpolations);

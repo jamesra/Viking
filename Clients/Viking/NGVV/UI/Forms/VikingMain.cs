@@ -78,6 +78,7 @@ namespace Viking
             ThreadPool.QueueUserWorkItem(Global.TextureCache.ReduceCacheFootprint, null);
             ThreadPool.QueueUserWorkItem(Global.TileViewModelCache.ReduceCacheFootprint, null);
             ThreadPool.QueueUserWorkItem(Viking.VolumeModel.Global.TileCache.ReduceCacheFootprint, null);
+            ThreadPool.QueueUserWorkItem(MappingManager.SectionMappingCache.ReduceCacheFootprint, null);
 
             /*
             if (DiskCleanupThread == null)
@@ -126,7 +127,7 @@ namespace Viking
                 }
             }
              */
-            
+
         }
 
 

@@ -16,7 +16,7 @@ namespace Geometry
         /// Return points along a curve described by three points
         /// </summary>
         /// <param name="points"></param>
-        public static GridVector2[] FitCurve(GridVector2[] cp, uint NumInterpolations)
+        public static GridVector2[] FitCurve(GridVector2[] cp, int NumInterpolations)
         {
             int nPoints = cp.Length;
             Debug.Assert(nPoints >= 3);

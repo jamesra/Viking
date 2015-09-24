@@ -922,7 +922,6 @@ namespace WebAnnotation
             Debug.Assert(StartingSectionNumber == EndingSectionNumber);
             Debug.Assert(SectionAnnotations.Section.Number == StartingSectionNumber); 
             
-
             linksView.LoadSection(_Parent.Section.Number); 
             
             #if DEBUG

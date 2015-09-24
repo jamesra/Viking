@@ -3,6 +3,11 @@
 Version History
 ###############
 
+1.1.150
+-------
+
+   * Fixed crash when paging sections very fast
+   
 1.1.148
 -------
 
