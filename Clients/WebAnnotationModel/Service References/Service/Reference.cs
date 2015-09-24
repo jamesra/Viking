@@ -244,6 +244,9 @@ namespace WebAnnotationModel.Service {
         private long[] LinksField;
         
         [System.Runtime.Serialization.OptionalFieldAttribute()]
+        private WebAnnotationModel.Service.DbGeometry MosaicShapeField;
+        
+        [System.Runtime.Serialization.OptionalFieldAttribute()]
         private bool OffEdgeField;
         
         [System.Runtime.Serialization.OptionalFieldAttribute()]
@@ -269,6 +272,9 @@ namespace WebAnnotationModel.Service {
         
         [System.Runtime.Serialization.OptionalFieldAttribute()]
         private WebAnnotationModel.Service.AnnotationPoint VolumePositionField;
+        
+        [System.Runtime.Serialization.OptionalFieldAttribute()]
+        private WebAnnotationModel.Service.DbGeometry VolumeShapeField;
         
         [System.Runtime.Serialization.DataMemberAttribute()]
         public string AttributesXml {
@@ -318,6 +324,19 @@ namespace WebAnnotationModel.Service {
                 if ((object.ReferenceEquals(this.LinksField, value) != true)) {
                     this.LinksField = value;
                     this.RaisePropertyChanged("Links");
+                }
+            }
+        }
+        
+        [System.Runtime.Serialization.DataMemberAttribute()]
+        public WebAnnotationModel.Service.DbGeometry MosaicShape {
+            get {
+                return this.MosaicShapeField;
+            }
+            set {
+                if ((object.ReferenceEquals(this.MosaicShapeField, value) != true)) {
+                    this.MosaicShapeField = value;
+                    this.RaisePropertyChanged("MosaicShape");
                 }
             }
         }
@@ -435,6 +454,19 @@ namespace WebAnnotationModel.Service {
                 if ((this.VolumePositionField.Equals(value) != true)) {
                     this.VolumePositionField = value;
                     this.RaisePropertyChanged("VolumePosition");
+                }
+            }
+        }
+        
+        [System.Runtime.Serialization.DataMemberAttribute()]
+        public WebAnnotationModel.Service.DbGeometry VolumeShape {
+            get {
+                return this.VolumeShapeField;
+            }
+            set {
+                if ((object.ReferenceEquals(this.VolumeShapeField, value) != true)) {
+                    this.VolumeShapeField = value;
+                    this.RaisePropertyChanged("VolumeShape");
                 }
             }
         }
@@ -857,6 +889,51 @@ namespace WebAnnotationModel.Service {
     
     [System.Diagnostics.DebuggerStepThroughAttribute()]
     [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Runtime.Serialization", "4.0.0.0")]
+    [System.Runtime.Serialization.DataContractAttribute(Name="DbGeometry", Namespace="http://schemas.datacontract.org/2004/07/System.Data.Entity.Spatial")]
+    [System.SerializableAttribute()]
+    public partial class DbGeometry : object, System.Runtime.Serialization.IExtensibleDataObject, System.ComponentModel.INotifyPropertyChanged {
+        
+        [System.NonSerializedAttribute()]
+        private System.Runtime.Serialization.ExtensionDataObject extensionDataField;
+        
+        [System.Runtime.Serialization.OptionalFieldAttribute()]
+        private WebAnnotationModel.Service.DbGeometryWellKnownValue GeometryField;
+        
+        [global::System.ComponentModel.BrowsableAttribute(false)]
+        public System.Runtime.Serialization.ExtensionDataObject ExtensionData {
+            get {
+                return this.extensionDataField;
+            }
+            set {
+                this.extensionDataField = value;
+            }
+        }
+        
+        [System.Runtime.Serialization.DataMemberAttribute()]
+        public WebAnnotationModel.Service.DbGeometryWellKnownValue Geometry {
+            get {
+                return this.GeometryField;
+            }
+            set {
+                if ((object.ReferenceEquals(this.GeometryField, value) != true)) {
+                    this.GeometryField = value;
+                    this.RaisePropertyChanged("Geometry");
+                }
+            }
+        }
+        
+        public event System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
+        
+        protected void RaisePropertyChanged(string propertyName) {
+            System.ComponentModel.PropertyChangedEventHandler propertyChanged = this.PropertyChanged;
+            if ((propertyChanged != null)) {
+                propertyChanged(this, new System.ComponentModel.PropertyChangedEventArgs(propertyName));
+            }
+        }
+    }
+    
+    [System.Diagnostics.DebuggerStepThroughAttribute()]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Runtime.Serialization", "4.0.0.0")]
     [System.Runtime.Serialization.DataContractAttribute(Name="AnnotationPoint", Namespace="http://schemas.datacontract.org/2004/07/Annotation")]
     [System.SerializableAttribute()]
     public partial struct AnnotationPoint : System.Runtime.Serialization.IExtensibleDataObject, System.ComponentModel.INotifyPropertyChanged {
@@ -924,6 +1001,83 @@ namespace WebAnnotationModel.Service {
         public event System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
         
         void RaisePropertyChanged(string propertyName) {
+            System.ComponentModel.PropertyChangedEventHandler propertyChanged = this.PropertyChanged;
+            if ((propertyChanged != null)) {
+                propertyChanged(this, new System.ComponentModel.PropertyChangedEventArgs(propertyName));
+            }
+        }
+    }
+    
+    [System.Diagnostics.DebuggerStepThroughAttribute()]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Runtime.Serialization", "4.0.0.0")]
+    [System.Runtime.Serialization.DataContractAttribute(Name="DbGeometryWellKnownValue", Namespace="http://schemas.datacontract.org/2004/07/System.Data.Entity.Spatial")]
+    [System.SerializableAttribute()]
+    public partial class DbGeometryWellKnownValue : object, System.Runtime.Serialization.IExtensibleDataObject, System.ComponentModel.INotifyPropertyChanged {
+        
+        [System.NonSerializedAttribute()]
+        private System.Runtime.Serialization.ExtensionDataObject extensionDataField;
+        
+        [System.Runtime.Serialization.OptionalFieldAttribute()]
+        private int CoordinateSystemIdField;
+        
+        [System.Runtime.Serialization.OptionalFieldAttribute()]
+        private string WellKnownTextField;
+        
+        [System.Runtime.Serialization.OptionalFieldAttribute()]
+        private byte[] WellKnownBinaryField;
+        
+        [global::System.ComponentModel.BrowsableAttribute(false)]
+        public System.Runtime.Serialization.ExtensionDataObject ExtensionData {
+            get {
+                return this.extensionDataField;
+            }
+            set {
+                this.extensionDataField = value;
+            }
+        }
+        
+        [System.Runtime.Serialization.DataMemberAttribute(EmitDefaultValue=false)]
+        public int CoordinateSystemId {
+            get {
+                return this.CoordinateSystemIdField;
+            }
+            set {
+                if ((this.CoordinateSystemIdField.Equals(value) != true)) {
+                    this.CoordinateSystemIdField = value;
+                    this.RaisePropertyChanged("CoordinateSystemId");
+                }
+            }
+        }
+        
+        [System.Runtime.Serialization.DataMemberAttribute(EmitDefaultValue=false)]
+        public string WellKnownText {
+            get {
+                return this.WellKnownTextField;
+            }
+            set {
+                if ((object.ReferenceEquals(this.WellKnownTextField, value) != true)) {
+                    this.WellKnownTextField = value;
+                    this.RaisePropertyChanged("WellKnownText");
+                }
+            }
+        }
+        
+        [System.Runtime.Serialization.DataMemberAttribute(EmitDefaultValue=false, Order=2)]
+        public byte[] WellKnownBinary {
+            get {
+                return this.WellKnownBinaryField;
+            }
+            set {
+                if ((object.ReferenceEquals(this.WellKnownBinaryField, value) != true)) {
+                    this.WellKnownBinaryField = value;
+                    this.RaisePropertyChanged("WellKnownBinary");
+                }
+            }
+        }
+        
+        public event System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
+        
+        protected void RaisePropertyChanged(string propertyName) {
             System.ComponentModel.PropertyChangedEventHandler propertyChanged = this.PropertyChanged;
             if ((propertyChanged != null)) {
                 propertyChanged(this, new System.ComponentModel.PropertyChangedEventArgs(propertyName));
@@ -3803,21 +3957,21 @@ namespace WebAnnotationModel.Service {
         
         void EndDeleteLocationLink(System.IAsyncResult result);
         
-        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateLocations/LocationLinksForSection", ReplyAction="http://tempuri.org/IAnnotateLocations/LocationLinksForSectionResponse")]
-        WebAnnotationModel.Service.LocationLink[] LocationLinksForSection(out long QueryExecutedTime, out WebAnnotationModel.Service.LocationLink[] DeletedLinks, long section, long ModifiedAfterThisTime);
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateLocations/GetLocationLinksForSection", ReplyAction="http://tempuri.org/IAnnotateLocations/GetLocationLinksForSectionResponse")]
+        WebAnnotationModel.Service.LocationLink[] GetLocationLinksForSection(out long QueryExecutedTime, out WebAnnotationModel.Service.LocationLink[] DeletedLinks, long section, long ModifiedAfterThisTime);
         
-        [System.ServiceModel.OperationContractAttribute(AsyncPattern=true, Action="http://tempuri.org/IAnnotateLocations/LocationLinksForSection", ReplyAction="http://tempuri.org/IAnnotateLocations/LocationLinksForSectionResponse")]
-        System.IAsyncResult BeginLocationLinksForSection(long section, long ModifiedAfterThisTime, System.AsyncCallback callback, object asyncState);
+        [System.ServiceModel.OperationContractAttribute(AsyncPattern=true, Action="http://tempuri.org/IAnnotateLocations/GetLocationLinksForSection", ReplyAction="http://tempuri.org/IAnnotateLocations/GetLocationLinksForSectionResponse")]
+        System.IAsyncResult BeginGetLocationLinksForSection(long section, long ModifiedAfterThisTime, System.AsyncCallback callback, object asyncState);
         
-        WebAnnotationModel.Service.LocationLink[] EndLocationLinksForSection(out long QueryExecutedTime, out WebAnnotationModel.Service.LocationLink[] DeletedLinks, System.IAsyncResult result);
+        WebAnnotationModel.Service.LocationLink[] EndGetLocationLinksForSection(out long QueryExecutedTime, out WebAnnotationModel.Service.LocationLink[] DeletedLinks, System.IAsyncResult result);
         
-        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateLocations/LocationLinksForSectionRegion", ReplyAction="http://tempuri.org/IAnnotateLocations/LocationLinksForSectionRegionResponse")]
-        WebAnnotationModel.Service.LocationLink[] LocationLinksForSectionRegion(out long QueryExecutedTime, out WebAnnotationModel.Service.LocationLink[] DeletedLinks, long section, WebAnnotationModel.Service.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisUtcTime);
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateLocations/GetLocationLinksForSectionInRegion", ReplyAction="http://tempuri.org/IAnnotateLocations/GetLocationLinksForSectionInRegionResponse")]
+        WebAnnotationModel.Service.LocationLink[] GetLocationLinksForSectionInRegion(out long QueryExecutedTime, out WebAnnotationModel.Service.LocationLink[] DeletedLinks, long section, WebAnnotationModel.Service.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisUtcTime);
         
-        [System.ServiceModel.OperationContractAttribute(AsyncPattern=true, Action="http://tempuri.org/IAnnotateLocations/LocationLinksForSectionRegion", ReplyAction="http://tempuri.org/IAnnotateLocations/LocationLinksForSectionRegionResponse")]
-        System.IAsyncResult BeginLocationLinksForSectionRegion(long section, WebAnnotationModel.Service.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisUtcTime, System.AsyncCallback callback, object asyncState);
+        [System.ServiceModel.OperationContractAttribute(AsyncPattern=true, Action="http://tempuri.org/IAnnotateLocations/GetLocationLinksForSectionInRegion", ReplyAction="http://tempuri.org/IAnnotateLocations/GetLocationLinksForSectionInRegionResponse")]
+        System.IAsyncResult BeginGetLocationLinksForSectionInRegion(long section, WebAnnotationModel.Service.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisUtcTime, System.AsyncCallback callback, object asyncState);
         
-        WebAnnotationModel.Service.LocationLink[] EndLocationLinksForSectionRegion(out long QueryExecutedTime, out WebAnnotationModel.Service.LocationLink[] DeletedLinks, System.IAsyncResult result);
+        WebAnnotationModel.Service.LocationLink[] EndGetLocationLinksForSectionInRegion(out long QueryExecutedTime, out WebAnnotationModel.Service.LocationLink[] DeletedLinks, System.IAsyncResult result);
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateLocations/GetLocationChangeLog", ReplyAction="http://tempuri.org/IAnnotateLocations/GetLocationChangeLogResponse")]
         WebAnnotationModel.Service.LocationHistory[] GetLocationChangeLog(System.Nullable<long> structure_id, System.Nullable<System.DateTime> begin_time, System.Nullable<System.DateTime> end_time);
@@ -4059,11 +4213,11 @@ namespace WebAnnotationModel.Service {
     
     [System.Diagnostics.DebuggerStepThroughAttribute()]
     [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
-    public partial class LocationLinksForSectionCompletedEventArgs : System.ComponentModel.AsyncCompletedEventArgs {
+    public partial class GetLocationLinksForSectionCompletedEventArgs : System.ComponentModel.AsyncCompletedEventArgs {
         
         private object[] results;
         
-        public LocationLinksForSectionCompletedEventArgs(object[] results, System.Exception exception, bool cancelled, object userState) : 
+        public GetLocationLinksForSectionCompletedEventArgs(object[] results, System.Exception exception, bool cancelled, object userState) : 
                 base(exception, cancelled, userState) {
             this.results = results;
         }
@@ -4092,11 +4246,11 @@ namespace WebAnnotationModel.Service {
     
     [System.Diagnostics.DebuggerStepThroughAttribute()]
     [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
-    public partial class LocationLinksForSectionRegionCompletedEventArgs : System.ComponentModel.AsyncCompletedEventArgs {
+    public partial class GetLocationLinksForSectionInRegionCompletedEventArgs : System.ComponentModel.AsyncCompletedEventArgs {
         
         private object[] results;
         
-        public LocationLinksForSectionRegionCompletedEventArgs(object[] results, System.Exception exception, bool cancelled, object userState) : 
+        public GetLocationLinksForSectionInRegionCompletedEventArgs(object[] results, System.Exception exception, bool cancelled, object userState) : 
                 base(exception, cancelled, userState) {
             this.results = results;
         }
@@ -4218,17 +4372,17 @@ namespace WebAnnotationModel.Service {
         
         private System.Threading.SendOrPostCallback onDeleteLocationLinkCompletedDelegate;
         
-        private BeginOperationDelegate onBeginLocationLinksForSectionDelegate;
+        private BeginOperationDelegate onBeginGetLocationLinksForSectionDelegate;
         
-        private EndOperationDelegate onEndLocationLinksForSectionDelegate;
+        private EndOperationDelegate onEndGetLocationLinksForSectionDelegate;
         
-        private System.Threading.SendOrPostCallback onLocationLinksForSectionCompletedDelegate;
+        private System.Threading.SendOrPostCallback onGetLocationLinksForSectionCompletedDelegate;
         
-        private BeginOperationDelegate onBeginLocationLinksForSectionRegionDelegate;
+        private BeginOperationDelegate onBeginGetLocationLinksForSectionInRegionDelegate;
         
-        private EndOperationDelegate onEndLocationLinksForSectionRegionDelegate;
+        private EndOperationDelegate onEndGetLocationLinksForSectionInRegionDelegate;
         
-        private System.Threading.SendOrPostCallback onLocationLinksForSectionRegionCompletedDelegate;
+        private System.Threading.SendOrPostCallback onGetLocationLinksForSectionInRegionCompletedDelegate;
         
         private BeginOperationDelegate onBeginGetLocationChangeLogDelegate;
         
@@ -4279,9 +4433,9 @@ namespace WebAnnotationModel.Service {
         
         public event System.EventHandler<System.ComponentModel.AsyncCompletedEventArgs> DeleteLocationLinkCompleted;
         
-        public event System.EventHandler<LocationLinksForSectionCompletedEventArgs> LocationLinksForSectionCompleted;
+        public event System.EventHandler<GetLocationLinksForSectionCompletedEventArgs> GetLocationLinksForSectionCompleted;
         
-        public event System.EventHandler<LocationLinksForSectionRegionCompletedEventArgs> LocationLinksForSectionRegionCompleted;
+        public event System.EventHandler<GetLocationLinksForSectionInRegionCompletedEventArgs> GetLocationLinksForSectionInRegionCompleted;
         
         public event System.EventHandler<GetLocationChangeLogCompletedEventArgs> GetLocationChangeLogCompleted;
         
@@ -4905,120 +5059,120 @@ namespace WebAnnotationModel.Service {
                         TargetID}, this.onEndDeleteLocationLinkDelegate, this.onDeleteLocationLinkCompletedDelegate, userState);
         }
         
-        public WebAnnotationModel.Service.LocationLink[] LocationLinksForSection(out long QueryExecutedTime, out WebAnnotationModel.Service.LocationLink[] DeletedLinks, long section, long ModifiedAfterThisTime) {
-            return base.Channel.LocationLinksForSection(out QueryExecutedTime, out DeletedLinks, section, ModifiedAfterThisTime);
+        public WebAnnotationModel.Service.LocationLink[] GetLocationLinksForSection(out long QueryExecutedTime, out WebAnnotationModel.Service.LocationLink[] DeletedLinks, long section, long ModifiedAfterThisTime) {
+            return base.Channel.GetLocationLinksForSection(out QueryExecutedTime, out DeletedLinks, section, ModifiedAfterThisTime);
         }
         
         [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
-        public System.IAsyncResult BeginLocationLinksForSection(long section, long ModifiedAfterThisTime, System.AsyncCallback callback, object asyncState) {
-            return base.Channel.BeginLocationLinksForSection(section, ModifiedAfterThisTime, callback, asyncState);
+        public System.IAsyncResult BeginGetLocationLinksForSection(long section, long ModifiedAfterThisTime, System.AsyncCallback callback, object asyncState) {
+            return base.Channel.BeginGetLocationLinksForSection(section, ModifiedAfterThisTime, callback, asyncState);
         }
         
         [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
-        public WebAnnotationModel.Service.LocationLink[] EndLocationLinksForSection(out long QueryExecutedTime, out WebAnnotationModel.Service.LocationLink[] DeletedLinks, System.IAsyncResult result) {
-            return base.Channel.EndLocationLinksForSection(out QueryExecutedTime, out DeletedLinks, result);
+        public WebAnnotationModel.Service.LocationLink[] EndGetLocationLinksForSection(out long QueryExecutedTime, out WebAnnotationModel.Service.LocationLink[] DeletedLinks, System.IAsyncResult result) {
+            return base.Channel.EndGetLocationLinksForSection(out QueryExecutedTime, out DeletedLinks, result);
         }
         
-        private System.IAsyncResult OnBeginLocationLinksForSection(object[] inValues, System.AsyncCallback callback, object asyncState) {
+        private System.IAsyncResult OnBeginGetLocationLinksForSection(object[] inValues, System.AsyncCallback callback, object asyncState) {
             long section = ((long)(inValues[0]));
             long ModifiedAfterThisTime = ((long)(inValues[1]));
-            return this.BeginLocationLinksForSection(section, ModifiedAfterThisTime, callback, asyncState);
+            return this.BeginGetLocationLinksForSection(section, ModifiedAfterThisTime, callback, asyncState);
         }
         
-        private object[] OnEndLocationLinksForSection(System.IAsyncResult result) {
+        private object[] OnEndGetLocationLinksForSection(System.IAsyncResult result) {
             long QueryExecutedTime = this.GetDefaultValueForInitialization<long>();
             WebAnnotationModel.Service.LocationLink[] DeletedLinks = this.GetDefaultValueForInitialization<WebAnnotationModel.Service.LocationLink[]>();
-            WebAnnotationModel.Service.LocationLink[] retVal = this.EndLocationLinksForSection(out QueryExecutedTime, out DeletedLinks, result);
+            WebAnnotationModel.Service.LocationLink[] retVal = this.EndGetLocationLinksForSection(out QueryExecutedTime, out DeletedLinks, result);
             return new object[] {
                     QueryExecutedTime,
                     DeletedLinks,
                     retVal};
         }
         
-        private void OnLocationLinksForSectionCompleted(object state) {
-            if ((this.LocationLinksForSectionCompleted != null)) {
+        private void OnGetLocationLinksForSectionCompleted(object state) {
+            if ((this.GetLocationLinksForSectionCompleted != null)) {
                 InvokeAsyncCompletedEventArgs e = ((InvokeAsyncCompletedEventArgs)(state));
-                this.LocationLinksForSectionCompleted(this, new LocationLinksForSectionCompletedEventArgs(e.Results, e.Error, e.Cancelled, e.UserState));
+                this.GetLocationLinksForSectionCompleted(this, new GetLocationLinksForSectionCompletedEventArgs(e.Results, e.Error, e.Cancelled, e.UserState));
             }
         }
         
-        public void LocationLinksForSectionAsync(long section, long ModifiedAfterThisTime) {
-            this.LocationLinksForSectionAsync(section, ModifiedAfterThisTime, null);
+        public void GetLocationLinksForSectionAsync(long section, long ModifiedAfterThisTime) {
+            this.GetLocationLinksForSectionAsync(section, ModifiedAfterThisTime, null);
         }
         
-        public void LocationLinksForSectionAsync(long section, long ModifiedAfterThisTime, object userState) {
-            if ((this.onBeginLocationLinksForSectionDelegate == null)) {
-                this.onBeginLocationLinksForSectionDelegate = new BeginOperationDelegate(this.OnBeginLocationLinksForSection);
+        public void GetLocationLinksForSectionAsync(long section, long ModifiedAfterThisTime, object userState) {
+            if ((this.onBeginGetLocationLinksForSectionDelegate == null)) {
+                this.onBeginGetLocationLinksForSectionDelegate = new BeginOperationDelegate(this.OnBeginGetLocationLinksForSection);
             }
-            if ((this.onEndLocationLinksForSectionDelegate == null)) {
-                this.onEndLocationLinksForSectionDelegate = new EndOperationDelegate(this.OnEndLocationLinksForSection);
+            if ((this.onEndGetLocationLinksForSectionDelegate == null)) {
+                this.onEndGetLocationLinksForSectionDelegate = new EndOperationDelegate(this.OnEndGetLocationLinksForSection);
             }
-            if ((this.onLocationLinksForSectionCompletedDelegate == null)) {
-                this.onLocationLinksForSectionCompletedDelegate = new System.Threading.SendOrPostCallback(this.OnLocationLinksForSectionCompleted);
+            if ((this.onGetLocationLinksForSectionCompletedDelegate == null)) {
+                this.onGetLocationLinksForSectionCompletedDelegate = new System.Threading.SendOrPostCallback(this.OnGetLocationLinksForSectionCompleted);
             }
-            base.InvokeAsync(this.onBeginLocationLinksForSectionDelegate, new object[] {
+            base.InvokeAsync(this.onBeginGetLocationLinksForSectionDelegate, new object[] {
                         section,
-                        ModifiedAfterThisTime}, this.onEndLocationLinksForSectionDelegate, this.onLocationLinksForSectionCompletedDelegate, userState);
+                        ModifiedAfterThisTime}, this.onEndGetLocationLinksForSectionDelegate, this.onGetLocationLinksForSectionCompletedDelegate, userState);
         }
         
-        public WebAnnotationModel.Service.LocationLink[] LocationLinksForSectionRegion(out long QueryExecutedTime, out WebAnnotationModel.Service.LocationLink[] DeletedLinks, long section, WebAnnotationModel.Service.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisUtcTime) {
-            return base.Channel.LocationLinksForSectionRegion(out QueryExecutedTime, out DeletedLinks, section, bbox, MinRadius, ModifiedAfterThisUtcTime);
-        }
-        
-        [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
-        public System.IAsyncResult BeginLocationLinksForSectionRegion(long section, WebAnnotationModel.Service.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisUtcTime, System.AsyncCallback callback, object asyncState) {
-            return base.Channel.BeginLocationLinksForSectionRegion(section, bbox, MinRadius, ModifiedAfterThisUtcTime, callback, asyncState);
+        public WebAnnotationModel.Service.LocationLink[] GetLocationLinksForSectionInRegion(out long QueryExecutedTime, out WebAnnotationModel.Service.LocationLink[] DeletedLinks, long section, WebAnnotationModel.Service.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisUtcTime) {
+            return base.Channel.GetLocationLinksForSectionInRegion(out QueryExecutedTime, out DeletedLinks, section, bbox, MinRadius, ModifiedAfterThisUtcTime);
         }
         
         [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
-        public WebAnnotationModel.Service.LocationLink[] EndLocationLinksForSectionRegion(out long QueryExecutedTime, out WebAnnotationModel.Service.LocationLink[] DeletedLinks, System.IAsyncResult result) {
-            return base.Channel.EndLocationLinksForSectionRegion(out QueryExecutedTime, out DeletedLinks, result);
+        public System.IAsyncResult BeginGetLocationLinksForSectionInRegion(long section, WebAnnotationModel.Service.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisUtcTime, System.AsyncCallback callback, object asyncState) {
+            return base.Channel.BeginGetLocationLinksForSectionInRegion(section, bbox, MinRadius, ModifiedAfterThisUtcTime, callback, asyncState);
         }
         
-        private System.IAsyncResult OnBeginLocationLinksForSectionRegion(object[] inValues, System.AsyncCallback callback, object asyncState) {
+        [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
+        public WebAnnotationModel.Service.LocationLink[] EndGetLocationLinksForSectionInRegion(out long QueryExecutedTime, out WebAnnotationModel.Service.LocationLink[] DeletedLinks, System.IAsyncResult result) {
+            return base.Channel.EndGetLocationLinksForSectionInRegion(out QueryExecutedTime, out DeletedLinks, result);
+        }
+        
+        private System.IAsyncResult OnBeginGetLocationLinksForSectionInRegion(object[] inValues, System.AsyncCallback callback, object asyncState) {
             long section = ((long)(inValues[0]));
             WebAnnotationModel.Service.BoundingRectangle bbox = ((WebAnnotationModel.Service.BoundingRectangle)(inValues[1]));
             double MinRadius = ((double)(inValues[2]));
             long ModifiedAfterThisUtcTime = ((long)(inValues[3]));
-            return this.BeginLocationLinksForSectionRegion(section, bbox, MinRadius, ModifiedAfterThisUtcTime, callback, asyncState);
+            return this.BeginGetLocationLinksForSectionInRegion(section, bbox, MinRadius, ModifiedAfterThisUtcTime, callback, asyncState);
         }
         
-        private object[] OnEndLocationLinksForSectionRegion(System.IAsyncResult result) {
+        private object[] OnEndGetLocationLinksForSectionInRegion(System.IAsyncResult result) {
             long QueryExecutedTime = this.GetDefaultValueForInitialization<long>();
             WebAnnotationModel.Service.LocationLink[] DeletedLinks = this.GetDefaultValueForInitialization<WebAnnotationModel.Service.LocationLink[]>();
-            WebAnnotationModel.Service.LocationLink[] retVal = this.EndLocationLinksForSectionRegion(out QueryExecutedTime, out DeletedLinks, result);
+            WebAnnotationModel.Service.LocationLink[] retVal = this.EndGetLocationLinksForSectionInRegion(out QueryExecutedTime, out DeletedLinks, result);
             return new object[] {
                     QueryExecutedTime,
                     DeletedLinks,
                     retVal};
         }
         
-        private void OnLocationLinksForSectionRegionCompleted(object state) {
-            if ((this.LocationLinksForSectionRegionCompleted != null)) {
+        private void OnGetLocationLinksForSectionInRegionCompleted(object state) {
+            if ((this.GetLocationLinksForSectionInRegionCompleted != null)) {
                 InvokeAsyncCompletedEventArgs e = ((InvokeAsyncCompletedEventArgs)(state));
-                this.LocationLinksForSectionRegionCompleted(this, new LocationLinksForSectionRegionCompletedEventArgs(e.Results, e.Error, e.Cancelled, e.UserState));
+                this.GetLocationLinksForSectionInRegionCompleted(this, new GetLocationLinksForSectionInRegionCompletedEventArgs(e.Results, e.Error, e.Cancelled, e.UserState));
             }
         }
         
-        public void LocationLinksForSectionRegionAsync(long section, WebAnnotationModel.Service.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisUtcTime) {
-            this.LocationLinksForSectionRegionAsync(section, bbox, MinRadius, ModifiedAfterThisUtcTime, null);
+        public void GetLocationLinksForSectionInRegionAsync(long section, WebAnnotationModel.Service.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisUtcTime) {
+            this.GetLocationLinksForSectionInRegionAsync(section, bbox, MinRadius, ModifiedAfterThisUtcTime, null);
         }
         
-        public void LocationLinksForSectionRegionAsync(long section, WebAnnotationModel.Service.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisUtcTime, object userState) {
-            if ((this.onBeginLocationLinksForSectionRegionDelegate == null)) {
-                this.onBeginLocationLinksForSectionRegionDelegate = new BeginOperationDelegate(this.OnBeginLocationLinksForSectionRegion);
+        public void GetLocationLinksForSectionInRegionAsync(long section, WebAnnotationModel.Service.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisUtcTime, object userState) {
+            if ((this.onBeginGetLocationLinksForSectionInRegionDelegate == null)) {
+                this.onBeginGetLocationLinksForSectionInRegionDelegate = new BeginOperationDelegate(this.OnBeginGetLocationLinksForSectionInRegion);
             }
-            if ((this.onEndLocationLinksForSectionRegionDelegate == null)) {
-                this.onEndLocationLinksForSectionRegionDelegate = new EndOperationDelegate(this.OnEndLocationLinksForSectionRegion);
+            if ((this.onEndGetLocationLinksForSectionInRegionDelegate == null)) {
+                this.onEndGetLocationLinksForSectionInRegionDelegate = new EndOperationDelegate(this.OnEndGetLocationLinksForSectionInRegion);
             }
-            if ((this.onLocationLinksForSectionRegionCompletedDelegate == null)) {
-                this.onLocationLinksForSectionRegionCompletedDelegate = new System.Threading.SendOrPostCallback(this.OnLocationLinksForSectionRegionCompleted);
+            if ((this.onGetLocationLinksForSectionInRegionCompletedDelegate == null)) {
+                this.onGetLocationLinksForSectionInRegionCompletedDelegate = new System.Threading.SendOrPostCallback(this.OnGetLocationLinksForSectionInRegionCompleted);
             }
-            base.InvokeAsync(this.onBeginLocationLinksForSectionRegionDelegate, new object[] {
+            base.InvokeAsync(this.onBeginGetLocationLinksForSectionInRegionDelegate, new object[] {
                         section,
                         bbox,
                         MinRadius,
-                        ModifiedAfterThisUtcTime}, this.onEndLocationLinksForSectionRegionDelegate, this.onLocationLinksForSectionRegionCompletedDelegate, userState);
+                        ModifiedAfterThisUtcTime}, this.onEndGetLocationLinksForSectionInRegionDelegate, this.onGetLocationLinksForSectionInRegionCompletedDelegate, userState);
         }
         
         public WebAnnotationModel.Service.LocationHistory[] GetLocationChangeLog(System.Nullable<long> structure_id, System.Nullable<System.DateTime> begin_time, System.Nullable<System.DateTime> end_time) {

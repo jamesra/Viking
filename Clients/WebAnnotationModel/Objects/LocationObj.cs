@@ -7,8 +7,8 @@ using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using WebAnnotationModel;
 using WebAnnotationModel.Objects; 
-
 using WebAnnotationModel.Service;
+
 
 using Geometry; 
 
@@ -118,7 +118,7 @@ namespace WebAnnotationModel
         {
             get {return Data.Position.Z; }
         }
-        /*
+        
         public DbGeometry VolumeShape
         {
             get
@@ -152,7 +152,7 @@ namespace WebAnnotationModel
                 OnPropertyChanged("MosaicShape");
             }
         }
-        */
+        
         private GridVector2? _VolumePosition;
         /// <summary>
         /// VolumeX is the x position in volume space. It only exists to inform the database of an estimate of the locations position in volume space.

@@ -126,6 +126,9 @@
     <None Include="Service References\Service\service33.xsd">
       <SubType>Designer</SubType>
     </None>
+    <None Include="Service References\Service\System.Data.Entity.Spatial.xsd">
+      <SubType>Designer</SubType>
+    </None>
     <None Include="Service References\Service\WebAnnotationModel.Service.CreateStructureRetval.datasource">
       <DependentUpon>Reference.svcmap</DependentUpon>
     </None>

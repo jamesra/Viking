@@ -519,7 +519,7 @@
       <xs:sequence />
     </xs:complexType>
   </xs:element>
-  <xs:element name="LocationLinksForSection">
+  <xs:element name="GetLocationLinksForSection">
     <xs:complexType>
       <xs:sequence>
         <xs:element minOccurs="0" name="section" type="xs:long" />
@@ -527,16 +527,16 @@
       </xs:sequence>
     </xs:complexType>
   </xs:element>
-  <xs:element name="LocationLinksForSectionResponse">
+  <xs:element name="GetLocationLinksForSectionResponse">
     <xs:complexType>
       <xs:sequence>
-        <xs:element xmlns:q50="http://schemas.datacontract.org/2004/07/Annotation" minOccurs="0" name="LocationLinksForSectionResult" nillable="true" type="q50:ArrayOfLocationLink" />
+        <xs:element xmlns:q50="http://schemas.datacontract.org/2004/07/Annotation" minOccurs="0" name="GetLocationLinksForSectionResult" nillable="true" type="q50:ArrayOfLocationLink" />
         <xs:element minOccurs="0" name="QueryExecutedTime" type="xs:long" />
         <xs:element xmlns:q51="http://schemas.datacontract.org/2004/07/Annotation" minOccurs="0" name="DeletedLinks" nillable="true" type="q51:ArrayOfLocationLink" />
       </xs:sequence>
     </xs:complexType>
   </xs:element>
-  <xs:element name="LocationLinksForSectionRegion">
+  <xs:element name="GetLocationLinksForSectionInRegion">
     <xs:complexType>
       <xs:sequence>
         <xs:element minOccurs="0" name="section" type="xs:long" />
@@ -546,10 +546,10 @@
       </xs:sequence>
     </xs:complexType>
   </xs:element>
-  <xs:element name="LocationLinksForSectionRegionResponse">
+  <xs:element name="GetLocationLinksForSectionInRegionResponse">
     <xs:complexType>
       <xs:sequence>
-        <xs:element xmlns:q53="http://schemas.datacontract.org/2004/07/Annotation" minOccurs="0" name="LocationLinksForSectionRegionResult" nillable="true" type="q53:ArrayOfLocationLink" />
+        <xs:element xmlns:q53="http://schemas.datacontract.org/2004/07/Annotation" minOccurs="0" name="GetLocationLinksForSectionInRegionResult" nillable="true" type="q53:ArrayOfLocationLink" />
         <xs:element minOccurs="0" name="QueryExecutedTime" type="xs:long" />
         <xs:element xmlns:q54="http://schemas.datacontract.org/2004/07/Annotation" minOccurs="0" name="DeletedLinks" nillable="true" type="q54:ArrayOfLocationLink" />
       </xs:sequence>

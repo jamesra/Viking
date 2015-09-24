@@ -144,7 +144,7 @@ namespace WebAnnotationModel
         protected override LocationLink[] ProxyGetBySection(AnnotateLocationsClient proxy, long SectionNumber, DateTime LastQuery, out long TicksAtQueryExecute, out LocationLinkKey[] DeletedLinkKeys)
         {
             LocationLink[] deleted_links = null; 
-            LocationLink[] links = proxy.LocationLinksForSection(out TicksAtQueryExecute, out deleted_links, SectionNumber, LastQuery.Ticks);
+            LocationLink[] links = proxy.GetLocationLinksForSection(out TicksAtQueryExecute, out deleted_links, SectionNumber, LastQuery.Ticks);
 
             if( deleted_links == null)
             {
@@ -161,7 +161,7 @@ namespace WebAnnotationModel
         protected override LocationLink[] ProxyGetBySectionRegion(AnnotateLocationsClient proxy, long SectionNumber, BoundingRectangle BBox, double MinRadius, DateTime LastQuery, out long TicksAtQueryExecute, out LocationLinkKey[] DeletedLinkKeys)
         {
             LocationLink[] deleted_links = null;
-            LocationLink[] links = proxy.LocationLinksForSectionRegion(out TicksAtQueryExecute, out deleted_links, SectionNumber, BBox, MinRadius, LastQuery.Ticks);
+            LocationLink[] links = proxy.GetLocationLinksForSectionInRegion(out TicksAtQueryExecute, out deleted_links, SectionNumber, BBox, MinRadius, LastQuery.Ticks);
 
             if (deleted_links == null)
             {
@@ -177,7 +177,7 @@ namespace WebAnnotationModel
 
         protected override IAsyncResult ProxyBeginGetBySectionRegion(AnnotateLocationsClient proxy, long SectionNumber, BoundingRectangle BBox, double MinRadius, DateTime LastQuery, AsyncCallback callback, object asynchState)
         {
-            return proxy.BeginLocationLinksForSectionRegion(SectionNumber, BBox, MinRadius, LastQuery.Ticks, callback, asynchState);
+            return proxy.BeginGetLocationLinksForSectionInRegion(SectionNumber, BBox, MinRadius, LastQuery.Ticks, callback, asynchState);
         }
 
         protected override IAsyncResult ProxyBeginGetBySection(AnnotateLocationsClient proxy, long SectionNumber, DateTime LastQuery, AsyncCallback callback, object asynchState)
@@ -194,7 +194,7 @@ namespace WebAnnotationModel
                                                                     IAsyncResult result)
         { 
             LocationLink[] deleted_links;
-            LocationLink[] links = state.Proxy.EndLocationLinksForSection(out TicksAtQueryExecute, out deleted_links, result);
+            LocationLink[] links = state.Proxy.EndGetLocationLinksForSection(out TicksAtQueryExecute, out deleted_links, result);
 
             DeletedLinkKeys = deleted_links.Select(link => new LocationLinkKey(link.SourceID, link.TargetID)).ToArray();
 

@@ -194,6 +194,7 @@
       <xsd:import namespace="http://schemas.microsoft.com/2003/10/Serialization/" />
       <xsd:import namespace="http://schemas.datacontract.org/2004/07/Annotation" />
       <xsd:import namespace="http://schemas.microsoft.com/2003/10/Serialization/Arrays" />
+      <xsd:import namespace="http://schemas.datacontract.org/2004/07/System.Data.Entity.Spatial" />
       <xsd:import namespace="http://schemas.datacontract.org/2004/07/" />
       <xsd:import namespace="http://schemas.datacontract.org/2004/07/Annotation.Service.GraphClasses" />
     </xsd:schema>
@@ -414,17 +415,17 @@
   <wsdl:message name="IAnnotateLocations_DeleteLocationLink_OutputMessage">
     <wsdl:part name="parameters" element="tns:DeleteLocationLinkResponse" />
   </wsdl:message>
-  <wsdl:message name="IAnnotateLocations_LocationLinksForSection_InputMessage">
-    <wsdl:part name="parameters" element="tns:LocationLinksForSection" />
+  <wsdl:message name="IAnnotateLocations_GetLocationLinksForSection_InputMessage">
+    <wsdl:part name="parameters" element="tns:GetLocationLinksForSection" />
   </wsdl:message>
-  <wsdl:message name="IAnnotateLocations_LocationLinksForSection_OutputMessage">
-    <wsdl:part name="parameters" element="tns:LocationLinksForSectionResponse" />
+  <wsdl:message name="IAnnotateLocations_GetLocationLinksForSection_OutputMessage">
+    <wsdl:part name="parameters" element="tns:GetLocationLinksForSectionResponse" />
   </wsdl:message>
-  <wsdl:message name="IAnnotateLocations_LocationLinksForSectionRegion_InputMessage">
-    <wsdl:part name="parameters" element="tns:LocationLinksForSectionRegion" />
+  <wsdl:message name="IAnnotateLocations_GetLocationLinksForSectionInRegion_InputMessage">
+    <wsdl:part name="parameters" element="tns:GetLocationLinksForSectionInRegion" />
   </wsdl:message>
-  <wsdl:message name="IAnnotateLocations_LocationLinksForSectionRegion_OutputMessage">
-    <wsdl:part name="parameters" element="tns:LocationLinksForSectionRegionResponse" />
+  <wsdl:message name="IAnnotateLocations_GetLocationLinksForSectionInRegion_OutputMessage">
+    <wsdl:part name="parameters" element="tns:GetLocationLinksForSectionInRegionResponse" />
   </wsdl:message>
   <wsdl:message name="IAnnotateLocations_GetLocationChangeLog_InputMessage">
     <wsdl:part name="parameters" element="tns:GetLocationChangeLog" />
@@ -617,13 +618,13 @@
       <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateLocations/DeleteLocationLink" message="tns:IAnnotateLocations_DeleteLocationLink_InputMessage" />
       <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateLocations/DeleteLocationLinkResponse" message="tns:IAnnotateLocations_DeleteLocationLink_OutputMessage" />
     </wsdl:operation>
-    <wsdl:operation name="LocationLinksForSection">
-      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateLocations/LocationLinksForSection" message="tns:IAnnotateLocations_LocationLinksForSection_InputMessage" />
-      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateLocations/LocationLinksForSectionResponse" message="tns:IAnnotateLocations_LocationLinksForSection_OutputMessage" />
+    <wsdl:operation name="GetLocationLinksForSection">
+      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateLocations/GetLocationLinksForSection" message="tns:IAnnotateLocations_GetLocationLinksForSection_InputMessage" />
+      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateLocations/GetLocationLinksForSectionResponse" message="tns:IAnnotateLocations_GetLocationLinksForSection_OutputMessage" />
     </wsdl:operation>
-    <wsdl:operation name="LocationLinksForSectionRegion">
-      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateLocations/LocationLinksForSectionRegion" message="tns:IAnnotateLocations_LocationLinksForSectionRegion_InputMessage" />
-      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateLocations/LocationLinksForSectionRegionResponse" message="tns:IAnnotateLocations_LocationLinksForSectionRegion_OutputMessage" />
+    <wsdl:operation name="GetLocationLinksForSectionInRegion">
+      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateLocations/GetLocationLinksForSectionInRegion" message="tns:IAnnotateLocations_GetLocationLinksForSectionInRegion_InputMessage" />
+      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateLocations/GetLocationLinksForSectionInRegionResponse" message="tns:IAnnotateLocations_GetLocationLinksForSectionInRegion_OutputMessage" />
     </wsdl:operation>
     <wsdl:operation name="GetLocationChangeLog">
       <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateLocations/GetLocationChangeLog" message="tns:IAnnotateLocations_GetLocationChangeLog_InputMessage" />
@@ -991,8 +992,8 @@
         <soap12:body use="literal" />
       </wsdl:output>
     </wsdl:operation>
-    <wsdl:operation name="LocationLinksForSection">
-      <soap12:operation soapAction="http://tempuri.org/IAnnotateLocations/LocationLinksForSection" style="document" />
+    <wsdl:operation name="GetLocationLinksForSection">
+      <soap12:operation soapAction="http://tempuri.org/IAnnotateLocations/GetLocationLinksForSection" style="document" />
       <wsdl:input>
         <soap12:body use="literal" />
       </wsdl:input>
@@ -1000,8 +1001,8 @@
         <soap12:body use="literal" />
       </wsdl:output>
     </wsdl:operation>
-    <wsdl:operation name="LocationLinksForSectionRegion">
-      <soap12:operation soapAction="http://tempuri.org/IAnnotateLocations/LocationLinksForSectionRegion" style="document" />
+    <wsdl:operation name="GetLocationLinksForSectionInRegion">
+      <soap12:operation soapAction="http://tempuri.org/IAnnotateLocations/GetLocationLinksForSectionInRegion" style="document" />
       <wsdl:input>
         <soap12:body use="literal" />
       </wsdl:input>

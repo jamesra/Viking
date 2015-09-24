@@ -141,18 +141,20 @@ namespace WebAnnotationModel
         {
             foreach (StructureLinkKey key in linkKeys)
             {
+                /*
                 StructureLinkObj link = Store.StructureLinks.GetObjectByID(key, false);
                 if (link == null)
                     continue; 
+                */
 
-                StructureObj SourceObj = Store.Structures.GetObjectByID(link.SourceID, false);
-                StructureObj TargetObj = Store.Structures.GetObjectByID(link.TargetID, false);
+                StructureObj SourceObj = Store.Structures.GetObjectByID(key.SourceID, false);
+                StructureObj TargetObj = Store.Structures.GetObjectByID(key.TargetID, false);
 
                 if (SourceObj != null)
-                    SourceObj.RemoveLink(link);
+                    SourceObj.RemoveLink(key);
 
                 if (TargetObj != null)
-                    TargetObj.RemoveLink(link);
+                    TargetObj.RemoveLink(key);
             }
 
             return base.InternalDelete(linkKeys);

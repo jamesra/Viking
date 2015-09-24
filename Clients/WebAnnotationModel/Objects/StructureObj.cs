@@ -158,11 +158,11 @@ namespace WebAnnotationModel
 
                                 Debug.Assert(linkObj != null);
                                 //Add it if it doesn't exist, otherwise get the official version
-                                linkObj = Store.StructureLinks.Add(linkObj);
+                                linkObj = Store.StructureLinks.Add(linkObj); //This call will fire events that add the link to this.Links if it is new to the local store
                                 Debug.Assert(linkObj != null, "If structureObj has the value the store should have the value.   Does it link to itself?");
                                 if (linkObj != null)
                                 {
-                                    _Links.Add(linkObj);
+                                    AddLink(linkObj);
                                 }
                             }
                         }
@@ -211,13 +211,7 @@ namespace WebAnnotationModel
             lock (LinksLock)
             {
                 //Update the underlying object we will send to the server]
-                StructureLink[] newLinks = new StructureLink[_Links.Count];
-                for (int i = 0; i < _Links.Count; i++)
-                {
-                    newLinks[i] = _Links[i].GetData();
-                }
-
-                Data.Links = newLinks;
+                Data.Links = _Links.Select(l => l.GetData()).ToArray();
             }
 
             SetDBActionForChange();
@@ -234,16 +228,7 @@ namespace WebAnnotationModel
             {
                 if (Links.Contains(ID))
                     return;
-
-                /*
-                List<StructureLink> listLinks = Data.Links.ToList<StructureLink>();
-                listLinks.Add(ID.GetData());
-
-                Data.Links = listLinks.ToArray();
-
-                if (!Links.Contains(ID))
-                */
-
+                
                 Links.Add(ID);
             }
         }
@@ -253,24 +238,28 @@ namespace WebAnnotationModel
         /// Because Links is an observable collection all modifications must be syncronized
         /// </summary>
         /// <param name="ID"></param>
-        internal void RemoveLink(StructureLinkObj ID)
+        internal void RemoveLink(StructureLinkObj link)
+        {
+            RemoveLink(link.ID); 
+        }
+
+        /// <summary>
+        /// Adjust the client after a link is removed
+        /// Because Links is an observable collection all modifications must be syncronized
+        /// </summary>
+        /// <param name="ID"></param>
+        internal void RemoveLink(StructureLinkKey key)
         {
             lock (LinksLock)
             {
-                if (!Links.Contains(ID))
+                StructureLinkObj LinkToRemove = Links.FirstOrDefault(link => link.SourceID == key.SourceID && link.TargetID == key.TargetID);
+                if (LinkToRemove == null)
                     return;
-
-                /*
-                List<StructureLink> listLinks = Data.Links.ToList<StructureLink>();
-                listLinks.Remove(ID.GetData());
-
-                Data.Links = listLinks.ToArray();
-                */
-
-                Links.Remove(ID);
+                
+                Links.Remove(LinkToRemove);
             }
         }
-        
+
         /*
         public StructureLink[] Links
         {
