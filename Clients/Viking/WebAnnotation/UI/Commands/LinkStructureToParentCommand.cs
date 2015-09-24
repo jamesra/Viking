@@ -139,7 +139,7 @@ namespace WebAnnotation.UI.Commands
 
             RoundLine lineToParent = new RoundLine((float)transformedPos.X, (float)transformedPos.Y, (float)target.X, (float)target.Y);
 
-            Parent.LineManager.Draw(lineToParent, (float)(putativeLoc.Radius / 6.0), linecolor, basicEffect.View * basicEffect.Projection, 1, null); 
+            Parent.LumaOverlayLineManager.Draw(lineToParent, (float)(putativeLoc.Radius / 6.0), linecolor.ConvertToHSL(), basicEffect.View * basicEffect.Projection, 1, null); 
 
             base.OnDraw(graphicsDevice, scene, basicEffect);
         }

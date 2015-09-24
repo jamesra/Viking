@@ -190,6 +190,7 @@ PS_Output MyPSAnimatedBidirectional(PS_Input input)
 	
 //	float modulation = sin( ( posModelSpace.x * 0.1 + time * 0.05 ) * 80 * 3.14159) * 0.5 + 0.5;
 //	float modulation = sin( ( posModelSpace.x * 100 + (time) ) * 80 * 3.14159) * 0.5 + 0.5;
+	
 	float modulation = sin( offset * 3.14159 ) / 2;   
 	finalColor.rgb = lineColor.rgb;
 	finalColor.a = lineColor.a * BlurEdge( input.polar.x ) * modulation + 0.5;
@@ -225,6 +226,7 @@ PS_Output MyPSAnimatedLinear(PS_Input input)
 	float Hz = 2;
 	float offset = (time * Hz);
 	 
+	offset -= (abs(input.posModelSpace.y) / lineRadius) / 1.75; //Adds chevron arrow effect
 	float modulation = sin( ( (-input.posModelSpace.x  / bandWidth) + offset) * 3.14159 );
 	clip(modulation <= 0 ? -1 : 1);
 
@@ -333,8 +335,8 @@ technique AlphaGradient
 		SrcBlend = SrcAlpha;
 		DestBlend = InvSrcAlpha;
 		BlendOp = Add;
-		vertexShader = compile vs_1_1 MyVS();
-		pixelShader = compile ps_2_0 MyPSAlphaGradient();
+		vertexShader = compile vs_3_0 MyVS();
+		pixelShader = compile ps_3_0 MyPSAlphaGradient();
 	}
 }
 
@@ -348,8 +350,8 @@ technique NoBlur
 		SrcBlend = SrcAlpha;
 		DestBlend = InvSrcAlpha;
 		BlendOp = Add;
-		vertexShader = compile vs_1_1 MyVS();
-		pixelShader = compile ps_2_0 MyPSNoBlur();
+		vertexShader = compile vs_3_0 MyVS();
+		pixelShader = compile ps_3_0 MyPSNoBlur();
 	}
 }
 
@@ -392,8 +394,8 @@ technique AnimatedRadial
 		SrcBlend = SrcAlpha;
 		DestBlend = InvSrcAlpha;
 		BlendOp = Add;
-		vertexShader = compile vs_1_1 MyVS();
-		pixelShader = compile ps_2_0 MyPSAnimatedRadial();
+		vertexShader = compile vs_3_0 MyVS();
+		pixelShader = compile ps_3_0 MyPSAnimatedRadial();
 	}
 }
 
@@ -407,8 +409,8 @@ technique Modern
 		SrcBlend = SrcAlpha;
 		DestBlend = InvSrcAlpha;
 		BlendOp = Add;
-		vertexShader = compile vs_1_1 MyVS();
-		pixelShader = compile ps_2_0 MyPSModern();
+		vertexShader = compile vs_3_0 MyVS();
+		pixelShader = compile ps_3_0 MyPSModern();
 	}
 }
 
@@ -422,8 +424,8 @@ technique Tubular
 		SrcBlend = SrcAlpha;
 		DestBlend = InvSrcAlpha;
 		BlendOp = Add;
-		vertexShader = compile vs_1_1 MyVS();
-		pixelShader = compile ps_2_0 MyPSTubular();
+		vertexShader = compile vs_3_0 MyVS();
+		pixelShader = compile ps_3_0 MyPSTubular();
 	}
 }
 
@@ -437,7 +439,7 @@ technique Glow
 		SrcBlend = SrcAlpha;
 		DestBlend = InvSrcAlpha;
 		BlendOp = Add;
-		vertexShader = compile vs_1_1 MyVS();
-		pixelShader = compile ps_2_0 MyPSGlow();
+		vertexShader = compile vs_3_0 MyVS();
+		pixelShader = compile ps_3_0 MyPSGlow();
 	}
 }

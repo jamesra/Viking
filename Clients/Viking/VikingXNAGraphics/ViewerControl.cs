@@ -15,7 +15,8 @@ namespace VikingXNA
     {
         
 
-        public RoundLineCode.RoundLineManager LineManager = new RoundLineCode.RoundLineManager();  
+        public RoundLineCode.RoundLineManager LineManager = new RoundLineCode.RoundLineManager();
+        public RoundLineCode.LumaOverlayRoundLineManager LumaOverlayLineManager = new RoundLineCode.LumaOverlayRoundLineManager();
 
         public BasicEffect basicEffect;
 
@@ -164,6 +165,7 @@ namespace VikingXNA
 
 
                 this.LineManager.Init(Device, Content);
+                this.LumaOverlayLineManager.Init(Device, Content);
             }
         }
         
@@ -285,7 +287,8 @@ namespace VikingXNA
             }
 
 
-            annotationOverlayEffect.RenderTargetSize = drawnScene.Viewport; 
+            annotationOverlayEffect.RenderTargetSize = drawnScene.Viewport;
+            this.LumaOverlayLineManager.RenderTargetSize = drawnScene.Viewport;
 
 #if DEBUG
             if (renderTarget != null)

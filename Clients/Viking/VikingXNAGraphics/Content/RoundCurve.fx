@@ -1,6 +1,8 @@
-// RoundLine.fx
-// By Michael D. Anderson
-// Version 3.00, Mar 12 2009
+// RoundCurve.fx
+// By James R. Anderson
+// Version 1.00, Sep 18 2015
+//
+// Based on RoundLine by Michael Anderson
 //
 // Note that there is a (rho, theta) pair, used in the VS, that tells how to 
 // scale and rotate the entire line.  There is also a different (rho, theta) 
@@ -39,7 +41,6 @@ struct PS_Output
 {
 	float4 Color : COLOR; 
 	float Depth : DEPTH;
-
 };
 
 
@@ -174,10 +175,10 @@ PS_Output MyPSAnimatedLinear( float3 polar : TEXCOORD0, float2 posModelSpace: TE
 	float Hz = 2;
 	float offset = (time * Hz);
 
-	//offset += cos(abs(posModelSpace.y) / lineRadius) * 1.5; //Adds chevron arrow effect
-	offset -= (abs(posModelSpace.y) / lineRadius) / 1.75; //Adds chevron arrow effect
-	float modulation = sin(((-posModelSpace.x / bandWidth) + offset) * 3.14159); 
-	clip(modulation <= 0 ? -1 : 1); //Adds sharp boundary to arrows
+	
+	
+	float modulation = sin( ( (-posModelSpace.x  / bandWidth) + offset) * 3.14159 );   
+	clip(modulation <= 0 ? -1 : 1);
 
 	finalColor.rgb = lineColor.rgb;
 	finalColor.a = lineColor.a * BlurEdge( polar.x ) * modulation;
@@ -185,9 +186,7 @@ PS_Output MyPSAnimatedLinear( float3 polar : TEXCOORD0, float2 posModelSpace: TE
 	output.Color = finalColor; 
 	float depth = (polar.z * 2) > 1 ? 1-((1-polar.z)*2) : 1-(polar.z * 2);
 	output.Depth = 0; //depth;
-
-	//output.Color.a = lineColor.a * (1-depth) * modulation * (1-polar.x);  //This version stops animation at line origin
-	output.Color.a = lineColor.a * modulation *(1 - polar.x);
+	output.Color.a = lineColor.a * (1-depth) * modulation * (1-polar.x); 
 	return output;
 }
 
@@ -210,17 +209,17 @@ float4 MyPSModern( float3 polar : TEXCOORD0 ) : COLOR0
 	float rho = polar.x;
 
 	float a;
-	float blurThreshold = 0.15;
-	/*
+	float blurThreshold = 0.25;
+	
 	if( rho < blurThreshold )
 	{
 		a = 1.0f;
 	}
 	else
-	{*/
-	float normrho = (rho - blurThreshold) * 1 / (1 - blurThreshold);
-	a = normrho;
-	//}
+	{
+		float normrho = (rho - blurThreshold) * 1 / (1 - blurThreshold);
+		a = normrho;
+	}
 	
 	finalColor.a = lineColor.a * a;
 

@@ -300,7 +300,8 @@ namespace WebAnnotation
                     }
                 }
 
-                List<Location_CanvasViewModel> intersecting_candidates = adjacentObjs.Where(l => l.IntersectsOnAdjacent(position) && l.IsTerminal == false).ToList();
+                IEnumerable<Location_CanvasViewModel> intersecting_candidates = RemoveOverlappingLocations(adjacentObjs, this.CurrentSectionNumber);
+                intersecting_candidates = adjacentObjs.Where(l => l.IntersectsOnAdjacent(position) && l.IsTerminal == false);
                 Location_CanvasViewModel nearest = intersecting_candidates.OrderBy(c => GridVector2.Distance(c.VolumePosition, position) / c.Radius).FirstOrDefault();
                 bestObj = nearest;
                 if (bestObj != null)
@@ -548,7 +549,11 @@ namespace WebAnnotation
                                             (double)((CreateNewLinkedLocationCommand.LastEditedLocation.Radius * 2) / Parent.Width) * 2); 
 
                     }
-                    return; 
+                    return;
+
+                case Keys.L:
+                    Viking.UI.Commands.Command.EnqueueCommand(typeof(PlacePolylineCommand), new object[] { Parent, new Microsoft.Xna.Framework.Color(1.0f,0f,0f,0.5f), this.LastMouseDownCoords, 16, null});
+                    break;
             }
 
             try
@@ -1018,8 +1023,10 @@ namespace WebAnnotation
             VikingXNA.AnnotationOverBackgroundLumaEffect overlayEffect = Parent.annotationOverlayEffect;
 
             overlayEffect.LumaTexture = BackgroundLuma;
+            Parent.LumaOverlayLineManager.LumaTexture = BackgroundLuma; 
 
             overlayEffect.RenderTargetSize = graphicsDevice.Viewport;
+            Parent.LumaOverlayLineManager.RenderTargetSize = graphicsDevice.Viewport;
             
             basicEffect.Alpha = 1;
             
@@ -1175,7 +1182,7 @@ namespace WebAnnotation
                     (byte)(blue),
                     (byte)(alpha));
 
-                lineManager.Draw(SelectedLink.lineGraphic, (float)SelectedLink.Radius, color,
+                lineManager.Draw(SelectedLink.lineGraphic, (float)SelectedLink.Radius, color.ConvertToHSL(),
                                              basicEffect.View * basicEffect.Projection, time_offset, null);
 
                 return true; 
@@ -1238,11 +1245,14 @@ namespace WebAnnotation
             int red = (int)((float)(structure_type_color.R * .5) + (128 * direction));
             red = 255 - (red / section_span_distance);
             red = red > 255 ? 255 : red;
-            int blue = (int)((float)(structure_type_color.B * .5) + (128 * (1 - direction)));
+            red = red < 0 ? 0 : red;
+            int blue = (int)((float)(structure_type_color.B * .5) + (128 * -direction));
             blue = 255 - (blue / section_span_distance);
             blue = blue > 255 ? 255 : blue;
+            blue = blue < 0 ? 0 : blue;
             int green = (int)((float)structure_type_color.G);
             green = 255 - (green / section_span_distance);
+            green = green < 0 ? 0 : green;
 
             int alpha = 64;
             if (IsMouseOver)
@@ -1291,7 +1301,7 @@ namespace WebAnnotation
 
             Microsoft.Xna.Framework.Color color = GetLocationLinkColor(type.Color, distanceFactor, directionFactor, LastMouseOverObject == link);
               
-            _Parent.LineManager.Draw(link.lineGraphic, (float)link.Radius, color,
+            _Parent.LumaOverlayLineManager.Draw(link.lineGraphic, (float)link.Radius, color.ConvertToHSL(),
                                          ViewProjMatrix, 0, null);
         }
 

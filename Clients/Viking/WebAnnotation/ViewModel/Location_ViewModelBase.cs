@@ -520,23 +520,39 @@ namespace WebAnnotation.ViewModel
             }
         }
 
-        /*
+        private Microsoft.SqlServer.Types.SqlGeometry _MosaicShape = null;
+
+        public Microsoft.SqlServer.Types.SqlGeometry MosaicShape
+        {
+            get
+            {
+                if (MosaicShape == null)
+                {
+                    _MosaicShape = Microsoft.SqlServer.Types.SqlGeometry.STGeomFromText(new System.Data.SqlTypes.SqlChars(
+                                                                                        modelObj.MosaicShape.Geometry.WellKnownText),
+                                                                                        0);
+                }
+
+                return _MosaicShape;
+            }
+        }
+
+
         private Microsoft.SqlServer.Types.SqlGeometry _VolumeShape = null; 
 
         public Microsoft.SqlServer.Types.SqlGeometry VolumeShape
         {
             get {
-                if (_VolumeShape == null) 
+                if (_VolumeShape == null)
                 {
                     _VolumeShape = Microsoft.SqlServer.Types.SqlGeometry.STGeomFromText(new System.Data.SqlTypes.SqlChars(
-                                                                                        modelObj.VolumeShape.Geometry.WellKnownText), 
+                                                                                        modelObj.VolumeShape.Geometry.WellKnownText),
                                                                                         0);
                 }
 
                 return _VolumeShape;
             }
         }
-        */
 
         [Column("TypeCode")]
         public LocationType TypeCode

@@ -3,6 +3,24 @@
 Version History
 ###############
 
+1.1.159
+-------
+   
+   * Reverted changes that used Microsoft.SqlServer.Types due to deployment error which I cannot investigate fully at this time
+   * Added chevron arrow to animated structure links
+   * Changed lines colors used when creating structure links. 
+   * Fixed issue where invisbile adjacent section locations which were overlapped by locations on the current section could still be selected.
+   * Improved logic to determine if a proposed LocationLink or StructureLink is valid.  This prevents linking child structures to their parents.
+   * Fixed issue where two structure links were created for each structure link.
+   
+1.1.152
+-------
+
+   * Lines and Adjacent location indicators now use HSL blending to make details under the line more visible
+   * Animated Structure Links are now longer to make the direction more apparent.
+   * Preview feature, Hitting "L" enables one to add a curve which will not be saved.  Hit Esc to exit the command. 
+   
+
 1.1.150
 -------
 

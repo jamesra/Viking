@@ -43,7 +43,7 @@
     <CreateWebPageOnPublish>true</CreateWebPageOnPublish>
     <WebPage>Viking.html</WebPage>
     <TrustUrlParameters>true</TrustUrlParameters>
-    <ApplicationRevision>148</ApplicationRevision>
+    <ApplicationRevision>160</ApplicationRevision>
     <ApplicationVersion>1.1.0.%2a</ApplicationVersion>
     <UseApplicationTrust>false</UseApplicationTrust>
     <CreateDesktopShortcut>true</CreateDesktopShortcut>
@@ -145,6 +145,7 @@
     <Content Include="Content\UpArrowMask.xnb" />
     <Content Include="Content\UpArrowV2.xnb" />
     <Content Include="Content\CircleMask.xnb" />
+    <Content Include="Content\RoundLineHSV.xnb" />
     <None Include="Properties\app.manifest" />
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>

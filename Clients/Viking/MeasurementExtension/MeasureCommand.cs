@@ -7,6 +7,7 @@ using System.Windows.Forms;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Geometry;
+using Viking.Common;
 
 namespace MeasurementExtension
 {
@@ -151,9 +152,9 @@ namespace MeasurementExtension
                                                    (float)target.X,
                                                    (float)target.Y);
 
-            Parent.LineManager.Draw(lineToParent,
+            Parent.LumaOverlayLineManager.Draw(lineToParent,
                                     (float)(1 * Parent.Downsample),
-                                    lineColor,
+                                    lineColor.ConvertToHSL(),
                                     scene.Camera.View * scene.Projection,
                                     1,
                                     "Glow");

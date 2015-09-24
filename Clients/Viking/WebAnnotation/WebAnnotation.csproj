@@ -87,6 +87,10 @@
       <HintPath>..\..\packages\Microsoft.Spatial.6.13.0\lib\portable-net40+sl5+wp8+win8+wpa\Microsoft.Spatial.dll</HintPath>
       <Private>True</Private>
     </Reference>
+    <Reference Include="Microsoft.SqlServer.Types, Version=11.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\Microsoft.SqlServer.Types.11.0.2\lib\net20\Microsoft.SqlServer.Types.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="Microsoft.Xna.Framework, Version=4.0.0.0, Culture=neutral, PublicKeyToken=842cf8be1de50553, processorArchitecture=x86" />
     <Reference Include="Microsoft.Xna.Framework.Graphics, Version=4.0.0.0, Culture=neutral, PublicKeyToken=842cf8be1de50553, processorArchitecture=x86" />
     <Reference Include="System" />
@@ -120,9 +124,9 @@
     <Compile Include="Extensions.cs" />
     <Compile Include="Global.cs" />
     <Compile Include="GlobalPrimitives.cs" />
-    <Compile Include="LocationObjRenderer.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SqlServerTypes\Loader.cs" />
+    <Compile Include="View\LocationObjRenderer.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="UI\AnnotationMenu.cs" />
     <Compile Include="UI\AnnotationOverlay.cs" />
     <Compile Include="UI\Commands\AnnotationCommandBase.cs" />
@@ -225,6 +229,7 @@
     <Compile Include="ViewModel\LocationViewBase.cs" />
     <Compile Include="ViewModel\Location_ViewModelBase.cs" />
     <Compile Include="ViewModel\SectionStructureLinksViewModel.cs" />
+    <Compile Include="View\ClosedCurveView.cs" />
     <Compile Include="WeakEvents\NotifyCollectionChangedEventManager.cs" />
     <Compile Include="WeakEvents\NotifyPropertyChangingEventManager.cs" />
     <Compile Include="WeakEvents\NotifyPropertyChangedEventManager.cs" />
@@ -240,7 +245,7 @@
     <Compile Include="ViewModel\Structure.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="StructureLink.cs">
+    <Compile Include="ViewModel\StructureLink.cs">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="ViewModel\StructureType.cs">
@@ -357,9 +362,7 @@
       <Name>WebAnnotationModel</Name>
     </ProjectReference>
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="View\" />
-  </ItemGroup>
+  <ItemGroup />
   <ItemGroup>
     <Content Include="..\..\packages\Microsoft.SqlServer.Types.11.0.2\nativeBinaries\x64\msvcr100.dll">
       <Link>SqlServerTypes\x64\msvcr100.dll</Link>

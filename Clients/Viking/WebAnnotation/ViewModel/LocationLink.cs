@@ -208,5 +208,23 @@ namespace WebAnnotation.ViewModel
             CallAfterDelete();
         }
 
+        public static bool IsValidLocationLinkTarget(LocationObj target, LocationObj OriginObj)
+        {
+            if (target == null || OriginObj == null)
+                return false;
+
+            //Check to make sure it isn't the same structure on the same section
+            if (target.ParentID != OriginObj.ParentID)
+                return false;
+
+            if (target.Z == OriginObj.Z)
+                return false;
+
+            if (OriginObj.LinksCopy.Contains(target.ID))
+                return false;
+
+            return true; 
+        }
+
     }
 }

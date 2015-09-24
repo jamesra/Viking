@@ -185,5 +185,75 @@ namespace WebAnnotation.ViewModel
         {
             Store.StructureLinks.Save();
         }
+
+
+        /// <summary>
+        /// Return true if two annotations can be joined with a structure link
+        /// </summary>
+        /// <param name="TargetObj"></param>
+        /// <param name="OriginObj"></param>
+        /// <returns></returns>
+        public static bool IsValidStructureLinkTarget(LocationObj TargetObj, LocationObj OriginObj)
+        {
+            if (TargetObj == null || OriginObj == null)
+                return false;
+
+            //Cannot link a location object to itself
+            if (TargetObj.ID == OriginObj.ID)
+                return false;
+
+            return IsValidStructureLinkTarget(TargetObj.Parent, OriginObj.Parent);
+        }
+
+        private static bool IsExistingLink(StructureObj TargetObj, StructureObj OriginObj)
+        {
+            //Do not recreate existing link
+            if (TargetObj.LinksCopy.Any(link => (link.SourceID == TargetObj.ID && link.TargetID == OriginObj.ID) ||
+                                                (link.SourceID == OriginObj.ID && link.TargetID == TargetObj.ID)))
+                return true;
+
+            //Do not recreate existing link
+            if (OriginObj.LinksCopy.Any(link => (link.SourceID == TargetObj.ID && link.TargetID == OriginObj.ID) ||
+                                                (link.SourceID == OriginObj.ID && link.TargetID == TargetObj.ID)))
+                return true;
+
+            return false; 
+        }
+        
+        /// <summary>
+        /// Return true if two annotations can be joined with a structure link
+        /// </summary>
+        /// <param name="TargetObj"></param>
+        /// <param name="OriginObj"></param>
+        /// <returns></returns>
+        public static bool IsValidStructureLinkTarget(StructureObj TargetObj, StructureObj OriginObj)
+        {
+            if (TargetObj == null || OriginObj == null)
+                return false; 
+
+            //Cannot link a structure to itself
+            if (TargetObj.ID == OriginObj.ID)
+                return false;
+
+            if (IsExistingLink(TargetObj, OriginObj))
+                return false;
+
+            //Can link synapses with the same parent
+            if (TargetObj.ParentID == OriginObj.ParentID)
+                return true;
+
+            //Cannot link to higher levels in our parent heirarchy
+            if (OriginObj.ParentID.HasValue && !IsValidStructureLinkTarget(TargetObj, OriginObj.Parent))
+            {
+                return false;
+            }
+
+            if (TargetObj.ParentID.HasValue && !IsValidStructureLinkTarget(TargetObj.Parent, OriginObj))
+            {
+                return false;
+            }
+
+            return true;
+        }
     }
 }

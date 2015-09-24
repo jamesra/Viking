@@ -917,7 +917,7 @@ namespace Viking.UI.Controls
                 _OverlayDepthState.DepthBufferFunction = CompareFunction.LessEqual;
 
                 _OverlayDepthState.StencilEnable = true;
-                _OverlayDepthState.StencilFunction = CompareFunction.GreaterEqual;
+                _OverlayDepthState.StencilFunction = CompareFunction.Greater;
                 _OverlayDepthState.ReferenceStencil = StencilValue;
                 _OverlayDepthState.StencilPass = StencilOperation.Replace;
             }

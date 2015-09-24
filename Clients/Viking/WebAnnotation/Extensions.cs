@@ -30,5 +30,10 @@ namespace WebAnnotation
             return new RTree.Rectangle((float)p.X, (float)p.Y, (float)p.X, (float)p.Y, (float)Z, (float)Z);
         }
 
+        public static Microsoft.SqlServer.Types.SqlGeometry ToGeometryPoint(this GridVector2 p)
+        {
+            return Microsoft.SqlServer.Types.SqlGeometry.Point(p.X, p.Y, 0);
+        }
+
     }
 }

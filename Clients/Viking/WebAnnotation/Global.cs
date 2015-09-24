@@ -149,7 +149,7 @@ namespace WebAnnotation
             //return true; 
 
             //Load SqlServer.Types assembly
-            //SqlServerTypes.Utilities.LoadNativeAssemblies(AppDomain.CurrentDomain.BaseDirectory + "\\Modules\\WebAnnotation");
+            SqlServerTypes.Utilities.LoadNativeAssemblies(AppDomain.CurrentDomain.BaseDirectory + "\\Modules\\WebAnnotation");
 
             Scale = new Geometry.GridVector3(2.18, 2.18, 90.0); 
 
