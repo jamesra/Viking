@@ -145,26 +145,30 @@ namespace WebAnnotationModel
                 lock (LinksLock)
                 { 
                     if (_Links == null)
-                    {
-                        _Links = new ObservableCollection<StructureLinkObj>();
-
+                    { 
                         if (Data.Links != null)
                         {
+                            StructureLinkKey[] keys = Data.Links.Select(l => new StructureLinkKey(l)).ToArray();
+
+                            List<StructureLinkObj> linkArray = new List<StructureLinkObj>(Data.Links.Length);
                             //Initialize from the Data object
                             foreach (StructureLink link in Data.Links)
                             {
                                 Debug.Assert(link != null);
-                                StructureLinkObj linkObj = new StructureLinkObj(link);
-
-                                Debug.Assert(linkObj != null);
+                                bool added;
                                 //Add it if it doesn't exist, otherwise get the official version
-                                linkObj = Store.StructureLinks.Add(linkObj); //This call will fire events that add the link to this.Links if it is new to the local store
+                                StructureLinkObj linkObj = Store.StructureLinks.GetOrAdd(new StructureLinkKey(link),
+                                                                                         new Func<StructureLinkKey, StructureLinkObj>( key => { return new StructureLinkObj(link); }),
+                                                                                         out added); //This call will fire events that add the link to this.Links if it is new to the local store
                                 Debug.Assert(linkObj != null, "If structureObj has the value the store should have the value.   Does it link to itself?");
-                                if (linkObj != null)
-                                {
-                                    AddLink(linkObj);
-                                }
+                                linkArray.Add(linkObj);
                             }
+
+                            _Links = new ObservableCollection<StructureLinkObj>(linkArray); 
+                        }
+                        else
+                        {
+                            _Links = new ObservableCollection<StructureLinkObj>(); 
                         }
                          
                         _Links.CollectionChanged += this.OnLinksChanged;
@@ -310,6 +314,17 @@ namespace WebAnnotationModel
         public StructureObj(Structure data)
         {
             this.Data = data;
+            bool added;
+
+            if (data.Links != null)
+            {
+                foreach (StructureLink link in data.Links)
+                {
+                    Store.StructureLinks.GetOrAdd(new StructureLinkKey(link),
+                                                  new Func<StructureLinkKey, StructureLinkObj>(l => { return new StructureLinkObj(link); }),
+                                                  out added);
+                }
+            }
         }
 
         

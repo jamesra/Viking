@@ -178,6 +178,11 @@ namespace WebAnnotationModel
             return null;
         }
 
+        public OBJECT GetOrAdd(KEY key, Func<KEY, OBJECT> createFunc, out bool added)
+        {
+            return this.InternalGetOrAdd(key, createFunc, out added);
+        }
+
         /// <summary>
         /// Add an item to the store and send notification events
         /// The item should already exist on the server
@@ -1213,6 +1218,21 @@ namespace WebAnnotationModel
             return changeInventory;
         }
 
+        protected virtual OBJECT InternalGetOrAdd(KEY key, Func<KEY, OBJECT> createFunc, out bool added)
+        {
+            bool func_called = false;
+            OBJECT value = IDToObject.GetOrAdd(key, obj => 
+                {
+                    func_called = true;
+                    OBJECT new_obj = createFunc(key);
+                    new_obj.PropertyChanged += this.OnOBJECTPropertyChangedEventHandler;
+                    return new_obj;
+                });
+
+            added = func_called;
+            return value;
+        }
+
         protected virtual OBJECT[] InternalUpdate(OBJECT[] updateObjs)
         {
             List<OBJECT> listUpdatedObjs = new List<OBJECT>(updateObjs.Length);
@@ -1333,6 +1353,8 @@ namespace WebAnnotationModel
 
             return added; 
         }
+
+        
 
         /// <summary>
         /// Remove an object from IDToObject.  Delete event subscriptions on the object.
