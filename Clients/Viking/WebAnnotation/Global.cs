@@ -18,27 +18,6 @@ namespace WebAnnotation
 {
     public class Global : IInitExtensions
     {
-        /*
-        static private EndpointAddress _EndpointAddress = null;
-        static public EndpointAddress EndpointAddress
-        {
-            get
-            {
-                return _EndpointAddress;
-            }
-        }
-         */
-        /*
-        static private EndpointAddress _AuthenticationAddress = null;
-        static public EndpointAddress AuthenticationAddress
-        {
-            get
-            {
-                return _AuthenticationAddress;
-            }
-        }
-         */
-
         internal static double DefaultLocationJumpDownsample = 4; //Jumping to a location causes it's diameter to occupy 1/8 the width of the screen
 
         /// <summary>
@@ -147,10 +126,7 @@ namespace WebAnnotation
 #endif
             //Find the server hosting the volume.  Look for an XML file mapping the volume to an endpoint.
             //return true; 
-
-            //Load SqlServer.Types assembly
-            SqlServerTypes.Utilities.LoadNativeAssemblies(AppDomain.CurrentDomain.BaseDirectory + "\\Modules\\WebAnnotation");
-
+            
             Scale = new Geometry.GridVector3(2.18, 2.18, 90.0); 
 
             Viking.ViewModels.VolumeViewModel volume = Viking.UI.State.volume;

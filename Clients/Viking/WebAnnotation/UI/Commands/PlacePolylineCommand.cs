@@ -23,7 +23,7 @@ namespace WebAnnotation.UI.Commands
             protected set;
         }
 
-        public delegate void OnCommandSuccess(GridVector2[] verts, double LineWidth);
+        public delegate void OnCommandSuccess(GridVector2[] control_points);
         protected OnCommandSuccess success_callback;
 
         public PolylineCommandBase(Viking.UI.Controls.SectionViewerControl parent, 
@@ -54,7 +54,7 @@ namespace WebAnnotation.UI.Commands
         protected override void Execute()
         {
             if (this.success_callback != null)
-                this.success_callback(this.LineVerticies, this.LineWidth);
+                this.success_callback(this.LineVerticies);
 
             base.Execute();
         }
@@ -190,9 +190,8 @@ namespace WebAnnotation.UI.Commands
                                                                                        this.LineVerticies,
                                                                                        this.LineWidth,
                                                                                        iOverlapped.Value,
-                                                                                       new OnCommandSuccess((line_verticies, line_width) => 
+                                                                                       new OnCommandSuccess((line_verticies) => 
                                                                                         {this.LineVerticies = line_verticies;
-                                                                                         this.LineWidth = line_width;
                                                                                          //Update oldWorldPosition to keep the line we draw to our cursor from jumping on the first draw when we are reactivated and user hasn't used the mouse yet
                                                                                          this.oldWorldPosition = line_verticies[iOverlapped.Value];
                                                                                         })));
@@ -263,7 +262,7 @@ namespace WebAnnotation.UI.Commands
 
                 vert_stack.Push(this.oldWorldPosition);
 
-                ClosedCurveView.Draw(graphicsDevice, Parent.LumaOverlayLineManager, basicEffect, vert_stack.ToList(), 5, this.LineColor.ConvertToHSL(), this.LineWidth); 
+                CurveView.Draw(graphicsDevice, Parent.LumaOverlayLineManager, basicEffect, vert_stack.ToList(), 5, false, this.LineColor.ConvertToHSL(), this.LineWidth); 
                 //GlobalPrimitives.DrawPolyline(Parent.LineManager, basicEffect, DrawnLineVerticies, this.LineWidth, this.LineColor);
 
                 this.vert_stack.Pop();
@@ -378,7 +377,7 @@ namespace WebAnnotation.UI.Commands
 
         public override void OnDraw(Microsoft.Xna.Framework.Graphics.GraphicsDevice graphicsDevice, VikingXNA.Scene scene, Microsoft.Xna.Framework.Graphics.BasicEffect basicEffect)
         {
-            ClosedCurveView.Draw(graphicsDevice, Parent.LumaOverlayLineManager, basicEffect, this.LineVerticies.ToList(), 5, this.LineColor, this.LineWidth);
+            CurveView.Draw(graphicsDevice, Parent.LumaOverlayLineManager, basicEffect, this.LineVerticies.ToList(), 5, false, this.LineColor, this.LineWidth);
            
             base.OnDraw(graphicsDevice, scene, basicEffect);
         }

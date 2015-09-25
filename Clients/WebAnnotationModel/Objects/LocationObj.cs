@@ -8,7 +8,7 @@ using System.Collections.Specialized;
 using WebAnnotationModel;
 using WebAnnotationModel.Objects; 
 using WebAnnotationModel.Service;
-
+using System.Data.Entity.Spatial;
 
 using Geometry; 
 
@@ -21,7 +21,9 @@ namespace WebAnnotationModel
         CIRCLE = 1,
         ELLIPSE = 2,
         POLYLINE = 3,
-        POLYGON = 4
+        POLYGON = 4,
+        OPENCURVE = 5,
+        CLOSEDCURVE = 6
     };
 
     public class LocationObj : WCFObjBaseWithKey<long, Location>
@@ -118,7 +120,7 @@ namespace WebAnnotationModel
         {
             get {return Data.Position.Z; }
         }
-        
+       
         public DbGeometry VolumeShape
         {
             get
@@ -126,9 +128,8 @@ namespace WebAnnotationModel
                 return Data.VolumeShape;
             }
             set
-            {
-                if (Data.VolumeShape.Geometry.WellKnownText == value.Geometry.WellKnownText)
-                    return;
+            { 
+                if (Data.VolumeShape.SpatialEquals(value)) return;
 
                 OnPropertyChanging("VolumeShape");
                 Data.VolumeShape = value;
@@ -144,8 +145,7 @@ namespace WebAnnotationModel
             }
             set
             {
-                if (Data.MosaicShape.Geometry.WellKnownText == value.Geometry.WellKnownText)
-                    return;
+                if (Data.VolumeShape.SpatialEquals(value)) return;
 
                 OnPropertyChanging("MosaicShape");
                 Data.MosaicShape = value;

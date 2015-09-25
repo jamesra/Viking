@@ -16,6 +16,7 @@ using System.Drawing;
 using Common.UI;
 using WebAnnotation.UI.Commands;
 using System.Collections.Concurrent;
+using System.Data.Entity.Spatial;
 
 namespace WebAnnotation.ViewModel
 {
@@ -519,41 +520,46 @@ namespace WebAnnotation.ViewModel
                 modelObj.Radius = value;
             }
         }
-
-        private Microsoft.SqlServer.Types.SqlGeometry _MosaicShape = null;
-
-        public Microsoft.SqlServer.Types.SqlGeometry MosaicShape
+        
+        public System.Data.Entity.Spatial.DbGeometry MosaicShape
         {
             get
             {
-                if (MosaicShape == null)
-                {
-                    _MosaicShape = Microsoft.SqlServer.Types.SqlGeometry.STGeomFromText(new System.Data.SqlTypes.SqlChars(
-                                                                                        modelObj.MosaicShape.Geometry.WellKnownText),
-                                                                                        0);
-                }
-
-                return _MosaicShape;
+                return modelObj.MosaicShape;
+            }
+            set
+            {
+                modelObj.MosaicShape = value;
             }
         }
-
-
-        private Microsoft.SqlServer.Types.SqlGeometry _VolumeShape = null; 
-
-        public Microsoft.SqlServer.Types.SqlGeometry VolumeShape
+        
+        public System.Data.Entity.Spatial.DbGeometry VolumeShape
         {
-            get {
-                if (_VolumeShape == null)
-                {
-                    _VolumeShape = Microsoft.SqlServer.Types.SqlGeometry.STGeomFromText(new System.Data.SqlTypes.SqlChars(
-                                                                                        modelObj.VolumeShape.Geometry.WellKnownText),
-                                                                                        0);
-                }
-
-                return _VolumeShape;
+            get
+            {
+                return modelObj.VolumeShape;
+            }
+            set
+            {
+                modelObj.VolumeShape = value;
             }
         }
+        public DbGeometry PointsToGeometry(GridVector2[] points, LocationType type)
+        {
+            switch(type)
+            {
+                case LocationType.CIRCLE:
+                    if (points.Length == 4)
+                        return points.ToCurvePolygon();
+                    else
+                        return Extensions.ToCurvePolygon(points[0].X, points[1].Y, this.Z, this.Radius);
+                case LocationType.OPENCURVE:
+                    return points.ToPolyLine();
+            }
 
+            throw new ArgumentException(string.Format("Unknown location type {0}", type));
+        }
+        
         [Column("TypeCode")]
         public LocationType TypeCode
         {
