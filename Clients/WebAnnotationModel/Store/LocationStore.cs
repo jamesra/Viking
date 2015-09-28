@@ -186,7 +186,21 @@ namespace WebAnnotationModel
         }
 
         #region Add/Update/Remove
-        
+
+        /// <summary>
+        /// Send a request to load all structure parents in one batch before adding locations
+        /// </summary>
+        /// <param name="newObjs"></param>
+        /// <returns></returns>
+        protected override ChangeInventory<LocationObj> InternalAdd(LocationObj[] newObjs)
+        {
+            long[] MissingParentIDs = newObjs.Where(loc => loc.ParentID.HasValue && Store.Structures.Contains(loc.ParentID.Value) == false).Select(loc => loc.ParentID.Value).Distinct().ToArray();
+            if(MissingParentIDs.Length > 0)
+                Store.Structures.GetObjectsByIDs(MissingParentIDs, true);
+
+            return base.InternalAdd(newObjs);
+        }
+
         protected ICollection<LocationObj> InternalDelete(LocationObj[] objs)
         {
             long[] IDs = new long[objs.Length];

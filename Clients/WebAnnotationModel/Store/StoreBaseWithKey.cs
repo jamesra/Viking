@@ -198,6 +198,11 @@ namespace WebAnnotationModel
             CallOnCollectionChanged(inventory);
             return inventory.ObjectsInStore;
         }
+
+        public virtual bool Contains(KEY key)
+        {
+            return this.IDToObject.ContainsKey(key);
+        }
          
 
         /// <summary>
@@ -1245,33 +1250,9 @@ namespace WebAnnotationModel
                 bool Success = IDToObject.TryGetValue(updateObj.ID, out existingObj);
                 if (Success)
                 {
-
-                    //OBJECT oldObj = existingObj.Clone() as OBJECT;
-                    //Debug.Assert(oldObj != null);
-
-                    //listOldObjs.Add(oldObj);
-
                     existingObj.Update(updateObj.GetData());
 
-                    listUpdatedObjs.Add(existingObj);
-
-                    //if (oldObj != null)
-                   // {
-                    //    oldObj.Dispose();
-                    //    oldObj = null;
-                   // }
-                    /*
-                    if (existingObj != null)
-                    {
-                        existingObj.Dispose();
-                        existingObj = null; 
-                    }
-
-                    if (updateObj != null)
-                    {
-                        updateObj.Dispose();
-                        updateObj = null;
-                    }*/
+                    listUpdatedObjs.Add(existingObj);   
                 }
             }
 
