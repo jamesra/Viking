@@ -180,7 +180,6 @@ namespace Viking.VolumeModel
         /// <returns></returns>
         public abstract TilePyramid VisibleTiles(GridRectangle VisibleBounds,
                                                  double DownSample
-                                                 //PORT: bool AsynchTextureLoad
                                                  );
 
 
