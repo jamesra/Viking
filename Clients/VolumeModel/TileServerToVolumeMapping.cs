@@ -84,8 +84,7 @@ namespace Viking.VolumeModel
             int level = AvailableLevels[iLevel];
             do
             {
-                List<Tile> newTiles = RecursiveVisibleTiles(VisibleBounds,
-                                                            SectionBorder,
+                List<Tile> newTiles = RecursiveVisibleTiles(SectionBorder,
                                                             VisibleQuad, 
                                                             level
                                                             //PORT: AsynchTextureLoad
@@ -106,17 +105,15 @@ namespace Viking.VolumeModel
         }
 
 
-        private List<Tile> RecursiveVisibleTiles(
-                                                 GridRectangle VolumeVisibleBounds,
-                                                 GridRectangle SectionVisibleBounds,
+        private List<Tile> RecursiveVisibleTiles(GridRectangle SectionVisibleBounds,
                                                  GridQuad VisibleQuad, 
                                                  int roundedDownsample)
         {
             GridInfo gridInfo = LevelToGridInfo[roundedDownsample];
 
             
-            int ScaledTileSizeX = this.TileSizeX * roundedDownsample;
-            int ScaledTileSizeY = this.TileSizeX * roundedDownsample;
+            long ScaledTileSizeX = this.TileSizeX * roundedDownsample;
+            long ScaledTileSizeY = this.TileSizeY * roundedDownsample;
 
             //Figure out which grid locations are visible
             int iMinX = (int)Math.Floor(SectionVisibleBounds.Left / ScaledTileSizeX);
@@ -127,7 +124,7 @@ namespace Viking.VolumeModel
             iMinX = iMinX < 0 ? 0 : iMinX;
             iMinY = iMinY < 0 ? 0 : iMinY;
             iMaxX = iMaxX > gridInfo.GridXDim ? gridInfo.GridXDim : iMaxX;
-            iMaxY = iMaxY > gridInfo.GridYDim ? gridInfo.GridYDim : iMaxY; 
+            iMaxY = iMaxY > gridInfo.GridYDim ? gridInfo.GridYDim : iMaxY;
 
             int ExpectedTileCount = (iMaxX - iMinX) * (iMaxY - iMinY);
             List<Tile> TilesToDraw = new List<Tile>(ExpectedTileCount);

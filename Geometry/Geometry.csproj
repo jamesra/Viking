@@ -107,6 +107,7 @@
     <Compile Include="DataStructures\PairedLineSearchGrid.cs" />
     <Compile Include="DataStructures\QuadTree.cs" />
     <Compile Include="DataStructures\QuadTreeNode.cs" />
+    <Compile Include="DataStructures\RegionPyramid.cs" />
     <Compile Include="GlobalSuppressions.cs" />
     <Compile Include="Primitives\GridQuad.cs" />
     <Compile Include="DataStructures\QuadTreeNodeTemplatePoint.cs" />

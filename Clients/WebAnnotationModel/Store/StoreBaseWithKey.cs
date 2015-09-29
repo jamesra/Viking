@@ -554,7 +554,7 @@ namespace WebAnnotationModel
             return GetLocalObjectsForSection(SectionNumber);
         }
 
-        public virtual ConcurrentDictionary<KEY, OBJECT> GetObjectsInRegion(long SectionNumber, Geometry.GridRectangle bounds, double MinRadius)
+        public virtual ConcurrentDictionary<KEY, OBJECT> GetObjectsInRegion(long SectionNumber, Geometry.GridRectangle bounds, double MinRadius, DateTime? LastQueryUtc)
         {
             GetObjectBySectionCallbackState state = new GetObjectBySectionCallbackState(null, SectionNumber, GetLastQueryTimeForSection(SectionNumber));
 
@@ -574,7 +574,7 @@ namespace WebAnnotationModel
                                                         SectionNumber,
                                                         bounds.ToBoundingRectangle(),
                                                         MinRadius,
-                                                        DateTime.MinValue,
+                                                        LastQueryUtc.HasValue ? LastQueryUtc.Value : DateTime.MinValue,
                                                         out QueryExecutedTime,
                                                         out deleted_objects);
             }
@@ -677,7 +677,7 @@ namespace WebAnnotationModel
             return new RTree.Rectangle(bounds.Left, bounds.Bottom, bounds.Right, bounds.Top, SectionNumber, SectionNumber);
         }
 
-        public virtual MixedLocalAndRemoteQueryResults<KEY, OBJECT> GetObjectsInRegionAsync(long SectionNumber, Geometry.GridRectangle bounds, double MinRadius)
+        public virtual MixedLocalAndRemoteQueryResults<KEY, OBJECT> GetObjectsInRegionAsync(long SectionNumber, Geometry.GridRectangle bounds, double MinRadius, DateTime? LastQueryUtc)
         {
             GetObjectBySectionCallbackState requestState;
             ConcurrentDictionary<KEY, OBJECT> knownObjects = GetLocalObjectsForSection(SectionNumber);
@@ -699,7 +699,7 @@ namespace WebAnnotationModel
                 proxy.Open();
 
                 //                WCFOBJECT[] locations = new WCFOBJECT[0];
-                GetObjectBySectionCallbackState newState = new GetObjectBySectionCallbackState(proxy, SectionNumber, DateTime.MinValue);
+                GetObjectBySectionCallbackState newState = new GetObjectBySectionCallbackState(proxy, SectionNumber, LastQueryUtc.HasValue ? LastQueryUtc.Value : DateTime.MinValue);
                 bool NoOutstandingRequest = OutstandingSectionQueries.TryAdd(SectionNumber, newState);
                 if (NoOutstandingRequest)
                 {
@@ -710,7 +710,7 @@ namespace WebAnnotationModel
                                             bounds.ToBoundingRectangle(),
                                             MinRadius,
                                             newState.LastQueryExecutedTime,
-                                            new AsyncCallback(GetObjectsBySectionCallback),
+                                            new AsyncCallback(GetObjectsBySectionRegionCallback),
                                             newState);
                 }
             }

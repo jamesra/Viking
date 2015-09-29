@@ -21,6 +21,37 @@ using System.Threading.Tasks;
 namespace WebAnnotation.ViewModel
 {
     /// <summary>
+    /// Stores information about location queries for this region in the volume
+    /// </summary>
+    public class RegionRequestData
+    {
+        public DateTime LastQuery = DateTime.MinValue;
+
+        /// <summary>
+        /// True if a query has been sent to the server but has not returned
+        /// </summary>
+        public bool OutstandingQuery = false;
+
+        public RegionRequestData(DateTime query, bool queryInFlight)
+        {
+            OutstandingQuery = queryInFlight;
+            query = LastQuery;
+        }
+    }
+
+    public class AnnotationRegions : RegionPyramid<RegionRequestData>
+    {
+        /// <summary>
+        /// If set to true any threads using this objects should cancel loading operations
+        /// </summary>
+        public bool CancelRunningOperations = false; 
+
+        public AnnotationRegions(GridRectangle Boundaries, GridCellDimensions cellDimensions)
+            : base (Boundaries, cellDimensions)
+        { }
+    }
+
+    /// <summary>
     /// This class manages LocationViewModels used on a canvas.  
     /// It handles hit detection, search, and positioning using canvas transforms
     /// </summary>
@@ -60,6 +91,9 @@ namespace WebAnnotation.ViewModel
 
         private int SectionNumber { get {return this.Section.Number; }}
 
+        private AnnotationRegions RegionQueries;
+        private Microsoft.Xna.Framework.Rectangle LastSceneViewport;
+
 
         /// <summary>
         /// 
@@ -75,6 +109,8 @@ namespace WebAnnotation.ViewModel
             this.Section = section;
 
             GridRectangle bounds = AnnotationOverlay.SectionBounds(parent, parent.Section.Number);
+
+            RegionQueries = new AnnotationRegions(bounds, new GridCellDimensions(bounds.Width / 2.0, bounds.Height / 2.0));
 
             if (Locations == null)
                 Locations = new RTree.RTree<Location_CanvasViewModel>(); //new QuadTree<Location_CanvasViewModel>(bounds)
@@ -667,18 +703,21 @@ namespace WebAnnotation.ViewModel
         /// Load the annotations for the passed section and its reference sections
         /// </summary>
         /// <param name="section"></param>
-        internal void LoadSectionAnnotations()
+        internal void LoadSectionAnnotations(bool LoadStructures)
         {
             Trace.WriteLine("LoadSectionAnnotations: " + Section.Number.ToString(), "WebAnnotation");
 
 
-//            Task.Factory.StartNew(() => { 
-                                            //Store.Structures.GetObjectsForSection(Section.Number); 
-                                            //Store.Locations.GetObjectsForSectionAsynch(Section.Number); 
-                                            //});
+            //            Task.Factory.StartNew(() => { 
+            //Store.Structures.GetObjectsForSection(Section.Number); 
+            //Store.Locations.GetObjectsForSectionAsynch(Section.Number); 
+            //});
 
             //
-            MixedLocalAndRemoteQueryResults<long, StructureObj> structure_results = Store.Structures.GetObjectsForSectionAsynch(Section.Number);
+            if (LoadStructures)
+            {
+                MixedLocalAndRemoteQueryResults<long, StructureObj> structure_results = Store.Structures.GetObjectsForSectionAsynch(Section.Number);
+            }
             //Store.Structures.GetObjectsForSection(Section.Number);
 #if DEBUG
             
@@ -711,53 +750,93 @@ namespace WebAnnotation.ViewModel
             HaveLoadedSectionAnnotations = true;
         }
 
-        internal void LoadSectionAnnotationsInRegion(GridRectangle bounds, double MinRadius)
+        /// <summary>
+        /// Return true if we should stop loading regions
+        /// </summary>
+        /// <returns></returns>
+        private bool ShouldCancelLoadingRegions(AnnotationRegions regions, double DevicePixelWidth, double DevicePixelHeight)
         {
-            Trace.WriteLine("LoadSectionAnnotations: " + Section.Number.ToString(), "WebAnnotation");
+            if (regions.CancelRunningOperations)
+                return true;
 
+            if (DevicePixelHeight != parent.Scene.DevicePixelHeight ||
+               DevicePixelWidth != parent.Scene.DevicePixelWidth)
+                return true;
 
-            //            Task.Factory.StartNew(() => { 
-            //Store.Structures.GetObjectsForSection(Section.Number); 
-            //Store.Locations.GetObjectsForSectionAsynch(Section.Number); 
-            //});
-
-            //
-            ConcurrentDictionary<long, StructureObj> structure_results = Store.Structures.GetObjectsInRegion(Section.Number, bounds, MinRadius);
-            //Store.Structures.GetObjectsForSection(Section.Number);
-#if DEBUG
-
-            //structure_results.ServerRequestResult.AsyncWaitHandle.WaitOne();
-            //Store.Structures.GetObjectsForSection(Section.Number); 
-#else
-            
-#endif
-            //        
-
-            //Have to let the Lock go before we call the location store or we can get a deadlock.  Don't modify 
-            //data structures after this point. 
-
-            //if (!HaveLoadedSectionAnnotations)
-            //    AddLocations(Store.Locations.GetLocationsForSection(Section.Number).Values);
-
-            ConcurrentDictionary<long, LocationObj> locations = Store.Locations.GetObjectsInRegion(Section.Number, bounds, MinRadius);
-            //ConcurrentDictionary<long,LocationObj> locations = Store.Locations.GetObjectsForSection(Section.Number);
-            //this.AddLocations(locations.Values);
-
-            //Store.LocationLinks.GetObjectsForSection(Section.Number);
-
-            //ConcurrentDictionary<long, LocationObj> KnownObjects = Store.Locations.GetLocalObjectsForSection(Section.Number);
-
-
-            //System.Threading.Tasks.Task.Factory.StartNew(() => this.AddLocations(results.KnownObjects.Values));
-            //System.Windows.Threading.Dispatcher.CurrentDispatcher.BeginInvoke(new Action(() => this.AddLocations(results.KnownObjects.Values)));
-            this.AddLocations(locations.Values);
-
-            HaveLoadedSectionAnnotations = true;
+            return false; 
         }
 
+        internal void LoadSectionAnnotationsInRegion(VikingXNA.Scene scene)
+        {
+            if (LastSceneViewport.Height != scene.Viewport.Bounds.Height ||
+            LastSceneViewport.Width != scene.Viewport.Bounds.Width)
+            {
+                ResetRegionPyramid();
+                LastSceneViewport = scene.Viewport.Bounds;
+                string TraceString = string.Format("LoadSectionAnnotations, Reset Region Pyramid: {0}", Section.Number);
+                Trace.WriteLine(TraceString, "WebAnnotation");
+            }
 
+            var RegionPyramid = this.RegionQueries;
+            //If we change the magnification factor we should stop loading regions
+            double StartingDevicePixelWidth = parent.Scene.DevicePixelWidth;
+            double StartingDevicePixelHeight = parent.Scene.DevicePixelHeight;
 
+            var level = RegionPyramid.GetLevelForVolumeBounds(scene.VisibleWorldBounds, scene.DevicePixelWidth);
+            GridRange<RegionRequestData> gridRange = level.SubGridForRegion(scene.VisibleWorldBounds);
 
+            DateTime currentTime = DateTime.UtcNow;
+
+            for (int iY = gridRange.Indicies.iMinY; iY < gridRange.Indicies.iMaxY; iY++)
+            {
+                for (int iX = gridRange.Indicies.iMinX; iX < gridRange.Indicies.iMaxX; iX++)
+                {
+                    RegionRequestData cell = level.Cells[iX, iY];
+                    GridRectangle cellBounds = level.CellBounds(iX, iY);
+
+                    if (ShouldCancelLoadingRegions(RegionPyramid,StartingDevicePixelWidth, StartingDevicePixelHeight))
+                        return; 
+
+                    //Check with the server every 120 seconds if we've already loaded the annotations and there is no outstanding query
+                    if (cell == null ||
+                        (!cell.OutstandingQuery && System.TimeSpan.FromTicks(DateTime.UtcNow.Ticks - cell.LastQuery.Ticks).Seconds > 120))
+                    {
+                        level.Cells[iX, iY] = new RegionRequestData(currentTime, true);
+                        string TraceString = string.Format("LoadSectionAnnotations: {0} ({1},{2}) Level:{3} MinRadius:{4}", Section.Number, iX, iY, level.Level, level.MinRadius);
+                        Trace.WriteLine(TraceString, "WebAnnotation");
+
+                        DateTime? LastQueryUtc = cell == null ? new DateTime?() : level.Cells[iX, iY].LastQuery;
+                        
+                        ConcurrentDictionary<long, LocationObj> locations = Store.Locations.GetObjectsInRegion(Section.Number, cellBounds, level.MinRadius, LastQueryUtc);
+                        
+                        if (locations.Values.Count > 0)
+                            Task.Factory.StartNew(() => this.AddLocations(locations.Values));
+                        
+                        /*
+                        MixedLocalAndRemoteQueryResults<long, LocationObj> locations = Store.Locations.GetObjectsInRegionAsync(Section.Number, cellBounds, level.MinRadius, LastQueryUtc);
+
+                        if (locations.KnownObjects.Values.Count > 0)
+                            Task.Factory.StartNew(() => this.AddLocations(locations.KnownObjects.Values));
+                        */
+
+                        level.Cells[iX, iY].OutstandingQuery = false;
+                    }
+                }
+            } 
+        }
+
+        /// <summary>
+        /// Call this when the viewport size changes, which means the MinRadius value has changed for the GetObjectsInRegion style calls
+        /// </summary>
+        public void ResetRegionPyramid()
+        {
+            lock(this.RegionQueries)
+            {
+                this.RegionQueries.CancelRunningOperations = true; 
+                this.RegionQueries = new AnnotationRegions(this.RegionQueries.RegionBounds,
+                                                                          new GridCellDimensions(this.RegionQueries.RegionBounds.Width / 2.0, this.RegionQueries.RegionBounds.Height / 2.0));
+            }
+        }
 
         /// <summary>
         /// Return all the line segments visible in the passed bounds

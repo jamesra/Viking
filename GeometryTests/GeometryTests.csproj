@@ -91,6 +91,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="QuadTreeTest.cs" />
     <Compile Include="RBFTransformTest.cs" />
+    <Compile Include="RegionPyramidTest.cs" />
     <Compile Include="Scractch.cs" />
     <Compile Include="TransformAdditionTest.cs" />
     <Compile Include="TransformTest.cs" />

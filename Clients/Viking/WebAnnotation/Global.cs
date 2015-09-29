@@ -28,10 +28,9 @@ namespace WebAnnotation
         internal static Export Export = null; 
 
 #if DEBUG
-        internal static int NumSectionsInMemory = 25;
-        
+        internal static int NumSectionsInMemory = 10;
 #else
-        internal static int NumSectionsInMemory = 20;
+        internal static int NumSectionsInMemory = 10;
 #endif
 
         /// <summary>
