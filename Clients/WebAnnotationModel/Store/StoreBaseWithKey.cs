@@ -680,7 +680,7 @@ namespace WebAnnotationModel
         public virtual MixedLocalAndRemoteQueryResults<KEY, OBJECT> GetObjectsInRegionAsync(long SectionNumber, Geometry.GridRectangle bounds, double MinRadius, DateTime? LastQueryUtc)
         {
             GetObjectBySectionCallbackState requestState;
-            ConcurrentDictionary<KEY, OBJECT> knownObjects = GetLocalObjectsForSection(SectionNumber);
+            ConcurrentDictionary<KEY, OBJECT> knownObjects = new ConcurrentDictionary<KEY, OBJECT>();
 
             /*
             RTree.Rectangle QueryBounds = BuildRTreeRectangle(SectionNumber, bounds);
@@ -700,19 +700,16 @@ namespace WebAnnotationModel
 
                 //                WCFOBJECT[] locations = new WCFOBJECT[0];
                 GetObjectBySectionCallbackState newState = new GetObjectBySectionCallbackState(proxy, SectionNumber, LastQueryUtc.HasValue ? LastQueryUtc.Value : DateTime.MinValue);
-                bool NoOutstandingRequest = OutstandingSectionQueries.TryAdd(SectionNumber, newState);
-                if (NoOutstandingRequest)
-                {
-
-                    //Build list of Locations to check
-                    result = ProxyBeginGetBySectionRegion(proxy,
-                                            SectionNumber,
-                                            bounds.ToBoundingRectangle(),
-                                            MinRadius,
-                                            newState.LastQueryExecutedTime,
-                                            new AsyncCallback(GetObjectsBySectionRegionCallback),
-                                            newState);
-                }
+                
+                //Build list of Locations to check
+                result = ProxyBeginGetBySectionRegion(proxy,
+                                        SectionNumber,
+                                        bounds.ToBoundingRectangle(),
+                                        MinRadius,
+                                        newState.LastQueryExecutedTime,
+                                        new AsyncCallback(GetObjectsBySectionRegionCallback),
+                                        newState);
+                
             }
 
             catch (EndpointNotFoundException e)
@@ -765,9 +762,11 @@ namespace WebAnnotationModel
 
         private void TraceQueryDetails(long SectionNumber, long numObjects, DateTime StartTime, DateTime QueryEndTime, DateTime ParseEndTime)
         {
+#if DEBUG
             Trace.WriteLine("Sxn " + SectionNumber.ToString() + " finished " + typeof(OBJECT).ToString() + " query.  " + numObjects.ToString() + " returned");
             Trace.WriteLine("\tQuery Time: " + new TimeSpan(QueryEndTime.Ticks - StartTime.Ticks).TotalSeconds.ToString() + " (sec) elapsed");
             Trace.WriteLine("\tParse Time: " + new TimeSpan(ParseEndTime.Ticks - QueryEndTime.Ticks).TotalSeconds.ToString() + " (sec) elapsed");
+#endif
         }
 
         protected void GetObjectsBySectionCallback(IAsyncResult result)
@@ -841,9 +840,6 @@ namespace WebAnnotationModel
             GetObjectBySectionCallbackState state = result.AsyncState as GetObjectBySectionCallbackState;
 
             GetObjectBySectionCallbackState unused;
-            if (!OutstandingSectionQueries.TryRemove(state.SectionNumber, out unused))
-                //We aren't in the outstanding queries collection.  Currently the only reason would be we are about to be aborted
-                return;
 
             PROXY proxy = state.Proxy;
 

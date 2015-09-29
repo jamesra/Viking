@@ -30,11 +30,22 @@ namespace WebAnnotation.ViewModel
         /// <summary>
         /// True if a query has been sent to the server but has not returned
         /// </summary>
-        public bool OutstandingQuery = false;
-
-        public RegionRequestData(DateTime query, bool queryInFlight)
+        public bool OutstandingQuery
         {
-            OutstandingQuery = queryInFlight;
+            get
+            {
+                if (this.AsyncResult == null)
+                    return false;
+
+                return AsyncResult.IsCompleted;
+            }
+        }
+
+        public IAsyncResult AsyncResult;
+
+        public RegionRequestData(DateTime query, IAsyncResult result)
+        {
+            AsyncResult = result;
             query = LastQuery;
         }
     }
@@ -777,6 +788,16 @@ namespace WebAnnotation.ViewModel
                 Trace.WriteLine(TraceString, "WebAnnotation");
             }
 
+            if(!HaveLoadedSectionAnnotations)
+            {
+                var localLocations = Store.Locations.GetLocalObjectsForSection(Section.Number);
+                if (localLocations.Count > 0)
+                {
+                    Task.Factory.StartNew(() => this.AddLocations(localLocations.Values));
+                }
+                HaveLoadedSectionAnnotations = true;
+            }
+
             var RegionPyramid = this.RegionQueries;
             //If we change the magnification factor we should stop loading regions
             double StartingDevicePixelWidth = parent.Scene.DevicePixelWidth;
@@ -801,25 +822,24 @@ namespace WebAnnotation.ViewModel
                     if (cell == null ||
                         (!cell.OutstandingQuery && System.TimeSpan.FromTicks(DateTime.UtcNow.Ticks - cell.LastQuery.Ticks).Seconds > 120))
                     {
-                        level.Cells[iX, iY] = new RegionRequestData(currentTime, true);
+                        DateTime? LastQueryUtc = cell == null ? new DateTime?() : level.Cells[iX, iY].LastQuery;
+                        MixedLocalAndRemoteQueryResults<long, LocationObj> locations = Store.Locations.GetObjectsInRegionAsync(Section.Number, cellBounds, level.MinRadius, LastQueryUtc);
+                        if (locations.KnownObjects.Values.Count > 0)
+                            Task.Factory.StartNew(() => this.AddLocations(locations.KnownObjects.Values));
+
+                        level.Cells[iX, iY] = new RegionRequestData(currentTime, locations.ServerRequestResult);
+
                         string TraceString = string.Format("LoadSectionAnnotations: {0} ({1},{2}) Level:{3} MinRadius:{4}", Section.Number, iX, iY, level.Level, level.MinRadius);
                         Trace.WriteLine(TraceString, "WebAnnotation");
 
-                        DateTime? LastQueryUtc = cell == null ? new DateTime?() : level.Cells[iX, iY].LastQuery;
-                        
+                        /*
                         ConcurrentDictionary<long, LocationObj> locations = Store.Locations.GetObjectsInRegion(Section.Number, cellBounds, level.MinRadius, LastQueryUtc);
                         
                         if (locations.Values.Count > 0)
                             Task.Factory.StartNew(() => this.AddLocations(locations.Values));
-                        
-                        /*
-                        MixedLocalAndRemoteQueryResults<long, LocationObj> locations = Store.Locations.GetObjectsInRegionAsync(Section.Number, cellBounds, level.MinRadius, LastQueryUtc);
-
-                        if (locations.KnownObjects.Values.Count > 0)
-                            Task.Factory.StartNew(() => this.AddLocations(locations.KnownObjects.Values));
-                        */
 
                         level.Cells[iX, iY].OutstandingQuery = false;
+                        */
                     }
                 }
             } 

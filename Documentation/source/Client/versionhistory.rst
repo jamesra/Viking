@@ -3,6 +3,11 @@
 Version History
 ###############
 
+1.1.162
+-------
+
+   * Only visible annotations are loaded from the server
+
 1.1.159
 -------
    

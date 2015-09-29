@@ -43,7 +43,7 @@
     <CreateWebPageOnPublish>true</CreateWebPageOnPublish>
     <WebPage>Viking.html</WebPage>
     <TrustUrlParameters>true</TrustUrlParameters>
-    <ApplicationRevision>160</ApplicationRevision>
+    <ApplicationRevision>164</ApplicationRevision>
     <ApplicationVersion>1.1.0.%2a</ApplicationVersion>
     <UseApplicationTrust>false</UseApplicationTrust>
     <CreateDesktopShortcut>true</CreateDesktopShortcut>
@@ -99,6 +99,10 @@
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Microsoft.SqlServer.Types, Version=11.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\Microsoft.SqlServer.Types.11.0.2\lib\net20\Microsoft.SqlServer.Types.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core">
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
@@ -119,6 +123,7 @@
   <ItemGroup>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="SqlServerTypes\Loader.cs" />
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>PublicResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
@@ -132,6 +137,22 @@
     <None Include="app.config">
       <SubType>Designer</SubType>
     </None>
+    <Content Include="..\..\packages\Microsoft.SqlServer.Types.11.0.2\nativeBinaries\x64\msvcr100.dll">
+      <Link>SqlServerTypes\x64\msvcr100.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\packages\Microsoft.SqlServer.Types.11.0.2\nativeBinaries\x64\SqlServerSpatial110.dll">
+      <Link>SqlServerTypes\x64\SqlServerSpatial110.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\packages\Microsoft.SqlServer.Types.11.0.2\nativeBinaries\x86\msvcr100.dll">
+      <Link>SqlServerTypes\x86\msvcr100.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\packages\Microsoft.SqlServer.Types.11.0.2\nativeBinaries\x86\SqlServerSpatial110.dll">
+      <Link>SqlServerTypes\x86\SqlServerSpatial110.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="Content\Arial.spritefont" />
     <Content Include="Content\Arial.xnb" />
     <Content Include="Content\Circle.xnb" />
@@ -146,6 +167,7 @@
     <Content Include="Content\UpArrowV2.xnb" />
     <Content Include="Content\CircleMask.xnb" />
     <Content Include="Content\RoundLineHSV.xnb" />
+    <None Include="packages.config" />
     <None Include="Properties\app.manifest" />
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
@@ -204,18 +226,30 @@
     <Content Include="Modules\LocalBookmarks\LocalBookmarks.dll" />
     <Content Include="Modules\LocalBookmarks\Xml.Schema.Linq.dll" />
     <Content Include="Modules\Measurement\Measurement.dll" />
+    <Content Include="Modules\WebAnnotation\EntityFramework.dll" />
+    <Content Include="Modules\WebAnnotation\EntityFramework.SqlServer.dll" />
+    <Content Include="Modules\WebAnnotation\EntityFramework.SqlServer.xml" />
+    <Content Include="Modules\WebAnnotation\EntityFramework.xml" />
     <Content Include="Modules\WebAnnotation\log4net.dll" />
     <Content Include="Modules\WebAnnotation\RTree.dll" />
-    <Content Include="Modules\WebAnnotation\SqlServerTypes\x64\msvcr100.dll" />
-    <Content Include="Modules\WebAnnotation\SqlServerTypes\x64\SqlServerSpatial110.dll" />
-    <Content Include="Modules\WebAnnotation\SqlServerTypes\x86\msvcr100.dll" />
-    <Content Include="Modules\WebAnnotation\SqlServerTypes\x86\SqlServerSpatial110.dll" />
     <Content Include="Modules\WebAnnotation\WebAnnotation.dll" />
     <Content Include="Modules\WebAnnotation\WebAnnotationModel.dll" />
     <Content Include="Modules\WebAnnotation\Xml.Schema.Linq.dll" />
+    <Content Include="SqlServerTypes\readme.htm" />
     <Content Include="Viking.ico" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <PublishFile Include="SqlServerTypes\readme.htm">
+      <Visible>False</Visible>
+      <Group>
+      </Group>
+      <TargetPath>
+      </TargetPath>
+      <PublishState>Exclude</PublishState>
+      <IncludeHash>True</IncludeHash>
+      <FileType>File</FileType>
+    </PublishFile>
+  </ItemGroup>
   <ItemGroup>
     <FileAssociation Include=".VikingXML">
       <Visible>False</Visible>
