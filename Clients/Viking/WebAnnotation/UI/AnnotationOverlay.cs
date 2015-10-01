@@ -594,7 +594,7 @@ namespace WebAnnotation
                         CreateStructureCommandAction comAction = Global.UserSettings.Actions.CreateStructureCommandAction.Where(action => action.Name == h.Action).SingleOrDefault();
                         if (comAction != null)
                         {
-                            OnCreateStructure(System.Convert.ToInt64(comAction.TypeID), comAction.AttributeList, LocationType.CIRCLE);
+                            OnCreateStructure(System.Convert.ToInt64(comAction.TypeID), comAction.AttributeList, comAction.GetLocationType());
 
                             return;
                         }

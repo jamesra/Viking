@@ -24,7 +24,7 @@ namespace WebAnnotationModelTest
         [TestInitialize]
         public void Init()
         {
-            WebAnnotationModel.State.EndpointAddress = new EndpointAddress("https://connectomes.utah.edu/Services/EmptyBinaryDebug/Annotate.svc");
+            WebAnnotationModel.State.EndpointAddress = new EndpointAddress("https://webdev.connectomes.utah.edu/RC1Test/Annotation/Service.svc");
             WebAnnotationModel.State.UserCredentials = TestCredentials;
 
             System.Net.ServicePointManager.ServerCertificateValidationCallback =

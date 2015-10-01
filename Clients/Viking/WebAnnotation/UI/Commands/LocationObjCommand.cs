@@ -143,7 +143,7 @@ namespace WebAnnotation.UI.Commands
                 throw new ArgumentNullException("basicEffect");
 
             if (scene == null)
-                throw new ArgumentNullException("scene"); 
+                throw new ArgumentNullException("scene");
 
             //Draw a line from the selected location to the new location if we are holding left button down
             if (this.oldMouse.Button == MouseButtons.Left)

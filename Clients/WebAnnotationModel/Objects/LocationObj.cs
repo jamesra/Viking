@@ -91,8 +91,10 @@ namespace WebAnnotationModel
         {
             get
             {
-                return new GridVector2(Data.Position.X, Data.Position.Y);
+                return this.Data.MosaicShape.ToCentroid();
+                //return new GridVector2(Data.Position.X, Data.Position.Y);
             }
+            /*
             set
             {
                 if (GridVector2.Equals(this.Position, value))
@@ -109,6 +111,7 @@ namespace WebAnnotationModel
 
                 SetDBActionForChange();
             }
+            */
 
         }
 
@@ -121,34 +124,36 @@ namespace WebAnnotationModel
             get {return Data.Position.Z; }
         }
        
-        public DbGeometry VolumeShape
+        public Microsoft.SqlServer.Types.SqlGeometry VolumeShape
         {
             get
             {
-                return Data.VolumeShape;
+                return Data.VolumeShape.ToSqlGeometry();
             }
             set
-            { 
-                if (Data.VolumeShape.SpatialEquals(value)) return;
+            {
+                DbGeometry newValue = value.ToDbGeometry();
+                if (Data.VolumeShape.SpatialEquals(newValue)) return;
 
                 OnPropertyChanging("VolumeShape");
-                Data.VolumeShape = value;
+                Data.VolumeShape = newValue;
                 OnPropertyChanged("VolumeShape");
             }
         }
 
-        public DbGeometry MosaicShape
+        public Microsoft.SqlServer.Types.SqlGeometry MosaicShape
         {
             get
             {
-                return Data.MosaicShape;
+                return Data.MosaicShape.ToSqlGeometry(); ;
             }
             set
             {
-                if (Data.VolumeShape.SpatialEquals(value)) return;
+                DbGeometry newValue = value.ToDbGeometry();
+                if (Data.MosaicShape.SpatialEquals(newValue)) return;
 
                 OnPropertyChanging("MosaicShape");
-                Data.MosaicShape = value;
+                Data.MosaicShape = newValue;
                 OnPropertyChanged("MosaicShape");
             }
         }
@@ -163,11 +168,14 @@ namespace WebAnnotationModel
         {
             get
             {
-                if(!_VolumePosition.HasValue)
-                    _VolumePosition = new GridVector2(Data.VolumePosition.X, Data.VolumePosition.Y);
+                if (!_VolumePosition.HasValue)
+                {
+                    _VolumePosition = this.Data.VolumeShape.ToCentroid();
+                }
 
                 return _VolumePosition.Value; 
             }
+            /*
             set
             {
                 if (GridVector2.Equals(this.VolumePosition, value))
@@ -185,6 +193,7 @@ namespace WebAnnotationModel
 
 //                SetDBActionForChange();
             }
+            */
         }
 
         /// <summary>

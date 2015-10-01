@@ -16,7 +16,7 @@ using System.Drawing;
 using Common.UI;
 using WebAnnotation.UI.Commands;
 using System.Collections.Concurrent;
-using System.Data.Entity.Spatial;
+using Microsoft.SqlServer.Types;
 
 namespace WebAnnotation.ViewModel
 {
@@ -266,6 +266,14 @@ namespace WebAnnotation.ViewModel
             return menu;
         }
 
+        protected ContextMenu _AddCopyLocationIDMenu(ContextMenu menu)
+        {
+            MenuItem menuCopyLocationID = new MenuItem("Copy LocationID {0}", ContextMenu_CopyLocationID);
+            menu.MenuItems.Add(menuCopyLocationID);
+
+            return menu;
+        }
+
         public override ContextMenu ContextMenu
         {
             get
@@ -314,6 +322,11 @@ namespace WebAnnotation.ViewModel
 
         }
 
+        protected void ContextMenu_CopyLocationID(object sender, EventArgs e)
+        {
+            System.Windows.Forms.Clipboard.SetText(this.ID.ToString());
+        }
+
         protected void ContextMenu_ExportMorphology(object sender, EventArgs e)
         {
             Global.Export.OpenMorphology(this.ParentID.Value); 
@@ -329,17 +342,6 @@ namespace WebAnnotation.ViewModel
 
         protected void ContextMenu_OnOffEdge(object sender, EventArgs e)
         {
-            /*
-            DBACTION originalDBAction = this.DBAction;
-            this.Data.OffEdge = !this.Data.OffEdge;
-            this.Data.DBAction = DBACTION.UPDATE;
-            bool success = Store.Locations.Save();
-            if (!success)
-            {
-                this.Data.OffEdge = !this.Data.OffEdge;
-                this.DBAction = originalDBAction;
-            }
-             */
             this.modelObj.OffEdge = !this.modelObj.OffEdge;
             Store.Locations.Save();
         }
@@ -521,7 +523,7 @@ namespace WebAnnotation.ViewModel
             }
         }
         
-        public System.Data.Entity.Spatial.DbGeometry MosaicShape
+        public SqlGeometry MosaicShape
         {
             get
             {
@@ -533,7 +535,7 @@ namespace WebAnnotation.ViewModel
             }
         }
         
-        public System.Data.Entity.Spatial.DbGeometry VolumeShape
+        public SqlGeometry VolumeShape
         {
             get
             {
@@ -544,21 +546,7 @@ namespace WebAnnotation.ViewModel
                 modelObj.VolumeShape = value;
             }
         }
-        public DbGeometry PointsToGeometry(GridVector2[] points, LocationType type)
-        {
-            switch(type)
-            {
-                case LocationType.CIRCLE:
-                    if (points.Length == 4)
-                        return points.ToCurvePolygon();
-                    else
-                        return Extensions.ToCurvePolygon(points[0].X, points[1].Y, this.Z, this.Radius);
-                case LocationType.OPENCURVE:
-                    return points.ToPolyLine();
-            }
-
-            throw new ArgumentException(string.Format("Unknown location type {0}", type));
-        }
+        
         
         [Column("TypeCode")]
         public LocationType TypeCode

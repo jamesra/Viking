@@ -314,8 +314,10 @@ namespace WebAnnotation.ViewModel
             GridVector2 VolumePosition = new GridVector2(-1, -1);
             //Don't bother mapping if the location was already mapped
             if (loc.VolumeTransformID == parent.CurrentTransformUniqueID)
-                return true; 
+                return true;
+            
 
+            
             bool mappedPosition = parent.TrySectionToVolume(loc.Position, this.Section.section, out VolumePosition);
             if (!mappedPosition) //Remove locations we can't map
             {

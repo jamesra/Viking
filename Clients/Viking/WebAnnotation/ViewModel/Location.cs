@@ -134,11 +134,11 @@ namespace WebAnnotation.ViewModel
             get
             {
                 return modelObj.Position;
-            }
+            }/*
             set
             {
                 modelObj.Position = value;
-            }
+            }*/
         }
 
         public GridVector2 VolumePosition
@@ -147,10 +147,11 @@ namespace WebAnnotation.ViewModel
             {
                 return modelObj.VolumePosition;
             }
+            /*
             set
             {
                 modelObj.VolumePosition = value; 
-            }
+            }*/
         }
 
         public GridRectangle BoundingBox

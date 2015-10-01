@@ -3,6 +3,11 @@
 Version History
 ###############
 
+1.1.165
+-------
+
+   * Added context menu for locations to copy the ID into the clipboard.  This is useful to use to navigate to location in Tulip when rendering morphology.
+
 1.1.162
 -------
 

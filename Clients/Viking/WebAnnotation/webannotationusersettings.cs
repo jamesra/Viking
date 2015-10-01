@@ -489,6 +489,21 @@ namespace connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd {
             }
         }
         
+        /// <summary>
+        /// <para>
+        /// Occurrence: optional
+        /// </para>
+        /// </summary>
+        public string AnnotationType {
+            get {
+                XAttribute x = this.Attribute(XName.Get("AnnotationType", ""));
+                return XTypedServices.ParseValue<string>(x, XmlSchemaType.GetBuiltInSimpleType(XmlTypeCode.String).Datatype);
+            }
+            set {
+                this.SetAttribute(XName.Get("AnnotationType", ""), value, XmlSchemaType.GetBuiltInSimpleType(XmlTypeCode.String).Datatype);
+            }
+        }
+        
         [DebuggerBrowsable(DebuggerBrowsableState.Never)]
         XName IXMetaData.SchemaName {
             get {
@@ -1474,6 +1489,22 @@ namespace connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd {
             ContentModelEntity IXMetaData.GetContentModel() {
                 return contentModel;
             }
+        }
+    }
+    
+    public sealed class AnnotationType {
+        
+        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
+        public static Xml.Schema.Linq.SimpleTypeValidator TypeDefinition = new Xml.Schema.Linq.AtomicSimpleTypeValidator(XmlSchemaType.GetBuiltInSimpleType(XmlTypeCode.String), new Xml.Schema.Linq.RestrictionFacets(((Xml.Schema.Linq.RestrictionFlags)(16)), new object[] {
+                        "Circle",
+                        "OpenCurve",
+                        "ClosedCurve",
+                        "Polygon",
+                        "Polyline",
+                        "Point",
+                        "Ellipse"}, 0, 0, null, null, 0, null, null, 0, null, 0, XmlSchemaWhiteSpace.Preserve));
+        
+        private AnnotationType() {
         }
     }
     
