@@ -3,12 +3,21 @@
 Network Visualization
 #####################
 
-The Viking web services can export files for use in external tools.  While a nicer interface is planned, currently the export is performed with URL's.
+The Viking web services can export files for use in external tools.  
+
+
+
+For more technical users exporting directly using URL's is documented below 
 
 Prerequisites
 =============
 
 For graph visualization we recommend using `Tulip`_ and the TLP file format.  We also provide .dot files for use with `Graphviz`_.
+
+Export from the web page
+========================
+
+This user friendlier `website`_ exports files for Marc lab hosted databases.  
 
 Export directly from a URL
 ==========================
@@ -101,3 +110,4 @@ Morphology
   
 .. _Tulip: http://tulip.labri.fr/
 .. _Graphviz: http://www.graphviz.org/
+.. _website: http://websvc1.connectomes.utah.edu/Export
