@@ -17,6 +17,18 @@
     </xs:complexType>
   </xs:element>
 
+  <xs:simpleType name="AnnotationType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="Circle"/>
+      <xs:enumeration value="OpenCurve"/>
+      <xs:enumeration value="ClosedCurve"/>
+      <xs:enumeration value="Polygon"/>
+      <xs:enumeration value="Polyline"/>
+      <xs:enumeration value="Point"/>
+      <xs:enumeration value="Ellipse"/>
+    </xs:restriction>
+  </xs:simpleType>
+  
   <xs:element name="Value">
     <xs:complexType>
       <xs:attribute name ="Type"  type="xs:string" default="System.String" use="optional">
@@ -55,6 +67,9 @@
           <xs:documentation>Semicolon delimited list of tags to add to new structure</xs:documentation>
         </xs:annotation>
       </xs:attribute>
+      <xs:attribute name="AnnotationType" type="AnnotationType">
+      </xs:attribute>
+
     </xs:complexType>
   </xs:element>
 
