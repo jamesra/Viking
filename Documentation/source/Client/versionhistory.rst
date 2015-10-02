@@ -7,6 +7,7 @@ Version History
 -------
 
    * Added context menu for locations to copy the ID into the clipboard.  This is useful to use to navigate to location in Tulip when rendering morphology.
+   * Made exception catches when loading textures more specific in hopes of obtaining more informative bug reports for rare Acccess Violation.
 
 1.1.162
 -------

@@ -107,7 +107,21 @@ Morphology
          http://websvc1.connectomes.utah.edu/RC1/export/morphology/tlp?id=180,476
          
       .. figure:: Morphology_Export1.png
-  
+      
+Navigation between Viking and Tulip
+-----------------------------------
+
+    * Tulip to Viking: Morphology nodes in Tulip contain a **LocationInViking** column.  The contents of that column can be copied into the clip board.  Then in Viking use CTRL+G and paste the coordinates to jump to that location
+    * Viking to Tulip: The context menus for annotations in Viking contain a **Copy Location ID** column.  Selecting that option puts the ID into the clipboard.  Then switch to Tulip and use the ID value to search the **LocationID** column of all nodes.  The resulting node matches the annotation in Viking.
+         
+         Viking **Copy Location ID** context menu
+         
+         .. figure:: TulipLocationIDSearch0.png
+            
+         Tulip search UI
+         
+         .. figure:: TulipLocationIDSearch.png
+         
 .. _Tulip: http://tulip.labri.fr/
 .. _Graphviz: http://www.graphviz.org/
 .. _website: http://websvc1.connectomes.utah.edu/Export
