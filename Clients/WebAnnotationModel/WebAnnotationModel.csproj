@@ -82,7 +82,6 @@
     <Compile Include="Extensions.cs" />
     <Compile Include="Objects\Attribute.cs" />
     <Compile Include="Objects\LocationLinkObj.cs" />
-    <Compile Include="SqlServerTypes\Loader.cs" />
     <Compile Include="Store\LocationLinkStore.cs" />
     <Compile Include="Store\LocationStore.cs" />
     <Compile Include="Objects\LocationObj.cs" />
@@ -197,28 +196,13 @@
       <Project>{4085ba67-60d7-4679-886e-457aaf37ec7b}</Project>
       <Name>RTree</Name>
     </ProjectReference>
+    <ProjectReference Include="..\SqlGeometryUtils\SqlGeometryUtils.csproj">
+      <Project>{6702adda-3f8f-43d0-9c7e-1e7fdbbe983f}</Project>
+      <Name>SqlGeometryUtils</Name>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />
-  </ItemGroup>
-  <ItemGroup>
-    <Content Include="..\packages\Microsoft.SqlServer.Types.11.0.2\nativeBinaries\x64\msvcr100.dll">
-      <Link>SqlServerTypes\x64\msvcr100.dll</Link>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="..\packages\Microsoft.SqlServer.Types.11.0.2\nativeBinaries\x64\SqlServerSpatial110.dll">
-      <Link>SqlServerTypes\x64\SqlServerSpatial110.dll</Link>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="..\packages\Microsoft.SqlServer.Types.11.0.2\nativeBinaries\x86\msvcr100.dll">
-      <Link>SqlServerTypes\x86\msvcr100.dll</Link>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="..\packages\Microsoft.SqlServer.Types.11.0.2\nativeBinaries\x86\SqlServerSpatial110.dll">
-      <Link>SqlServerTypes\x86\SqlServerSpatial110.dll</Link>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="SqlServerTypes\readme.htm" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>

@@ -363,7 +363,7 @@ namespace Viking
             catch (Exception e)
             {
                 HandleCachedFileException(e, CacheFilename);
-                return null;
+                throw e;
             }
 
             return TileStream; 
@@ -443,6 +443,7 @@ namespace Viking
                     //Trace.WriteLine(e.Message, "TextureUse");
 
                     this.SetTexture(null);
+                    throw e; 
                 }
             } 
         }
@@ -549,6 +550,7 @@ namespace Viking
                     //Trace.WriteLine(e.Message, "TextureUse");
 
                     this.SetTexture(null);
+                    throw e; 
                 }
             }
         }
@@ -783,6 +785,16 @@ namespace Viking
 
                         SetTexture(tex);
                     }
+                    catch (IOException e)
+                    {
+                        //Print out the first error, but don't flood the output in case we simply have a section where we are
+                        //missing some tiles. 
+                        if (!TextureErrorReported)
+                        {
+                            //Trace.WriteLine("Error loading texture: " + e.ToString(), "TextureUse");
+                            TextureErrorReported = true;
+                        } 
+                    }
                     catch (Exception e)
                     {
                         //Print out the first error, but don't flood the output in case we simply have a section where we are
@@ -792,6 +804,8 @@ namespace Viking
                             //Trace.WriteLine("Error loading texture: " + e.ToString(), "TextureUse");
                             TextureErrorReported = true;
                         }
+
+                        throw e;
                     }
                 }
 
@@ -1050,7 +1064,6 @@ namespace Viking
                 {
                     tex = new Texture2D(graphicsDevice, texdata.width, texdata.height, mipmap, SurfaceFormat.Color);
                     tex.SetData<int>(Array.ConvertAll<byte, int>(texdata.pixelBytes, new Converter<byte, int>((x) => (int)x << 24)));
-                    //return Texture2D.FromStream(graphicsDevice, stream);
                 }
                 else
                 {       
@@ -1058,13 +1071,14 @@ namespace Viking
                     tex.SetData<Byte>(texdata.pixelBytes);
                 }
             }
-            catch
+            catch(Exception e)
             {
                 if (tex != null)
                 {
                     tex.Dispose();
                     tex = null;
                 }
+                throw e;
             }
 
             return tex;

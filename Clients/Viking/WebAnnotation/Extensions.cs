@@ -29,6 +29,8 @@ namespace WebAnnotation
                     return WebAnnotationModel.LocationType.POINT;
                 case "Ellipse":
                     return WebAnnotationModel.LocationType.ELLIPSE;
+                default:
+                    return WebAnnotationModel.LocationType.CIRCLE;
             }
 
             throw new ArgumentException("Unknown annotation type " + command.AnnotationType.ToString());
@@ -57,9 +59,6 @@ namespace WebAnnotation
             return new RTree.Rectangle((float)p.X, (float)p.Y, (float)p.X, (float)p.Y, (float)Z, (float)Z);
         }
 
-        public static Microsoft.SqlServer.Types.SqlGeometry ToGeometryPoint(this GridVector2 p)
-        {
-            return Microsoft.SqlServer.Types.SqlGeometry.Point(p.X, p.Y, 0);
-        } 
+       
     }
 }

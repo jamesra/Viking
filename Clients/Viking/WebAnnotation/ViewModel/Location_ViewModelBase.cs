@@ -268,7 +268,7 @@ namespace WebAnnotation.ViewModel
 
         protected ContextMenu _AddCopyLocationIDMenu(ContextMenu menu)
         {
-            MenuItem menuCopyLocationID = new MenuItem("Copy LocationID {0}", ContextMenu_CopyLocationID);
+            MenuItem menuCopyLocationID = new MenuItem(string.Format("Copy Location ID: {0}",this.ID), ContextMenu_CopyLocationID);
             menu.MenuItems.Add(menuCopyLocationID);
 
             return menu;
@@ -281,7 +281,9 @@ namespace WebAnnotation.ViewModel
                 ContextMenu menu = new ContextMenu();
                 menu.MenuItems.Add("Properties", ContextMenu_OnProperties);
 
+                this._AddCopyLocationIDMenu(menu);
                 this._AddTerminalOffEdgeMenus(menu);
+
                 this._AddDeleteMenu(menu);
 
                 return menu;

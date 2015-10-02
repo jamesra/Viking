@@ -131,7 +131,6 @@
     <Compile Include="Extensions.cs" />
     <Compile Include="Global.cs" />
     <Compile Include="GlobalPrimitives.cs" />
-    <Compile Include="SqlServerTypes\Loader.cs" />
     <Compile Include="UI\Commands\PlaceOpenCurveCommand.cs" />
     <Compile Include="View\LocationObjRenderer.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -349,6 +348,10 @@
       <Name>Geometry</Name>
       <Private>False</Private>
     </ProjectReference>
+    <ProjectReference Include="..\..\SqlGeometryUtils\SqlGeometryUtils.csproj">
+      <Project>{6702adda-3f8f-43d0-9c7e-1e7fdbbe983f}</Project>
+      <Name>SqlGeometryUtils</Name>
+    </ProjectReference>
     <ProjectReference Include="..\NGVV\VikingCore.csproj">
       <Project>{AEB1B24B-C968-40F9-B9F5-5C1FCE2EFD6D}</Project>
       <Name>VikingCore</Name>
@@ -371,25 +374,6 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="DataStructure\" />
-  </ItemGroup>
-  <ItemGroup>
-    <Content Include="..\..\packages\Microsoft.SqlServer.Types.11.0.2\nativeBinaries\x64\msvcr100.dll">
-      <Link>SqlServerTypes\x64\msvcr100.dll</Link>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="..\..\packages\Microsoft.SqlServer.Types.11.0.2\nativeBinaries\x64\SqlServerSpatial110.dll">
-      <Link>SqlServerTypes\x64\SqlServerSpatial110.dll</Link>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="..\..\packages\Microsoft.SqlServer.Types.11.0.2\nativeBinaries\x86\msvcr100.dll">
-      <Link>SqlServerTypes\x86\msvcr100.dll</Link>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="..\..\packages\Microsoft.SqlServer.Types.11.0.2\nativeBinaries\x86\SqlServerSpatial110.dll">
-      <Link>SqlServerTypes\x86\SqlServerSpatial110.dll</Link>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="SqlServerTypes\readme.htm" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

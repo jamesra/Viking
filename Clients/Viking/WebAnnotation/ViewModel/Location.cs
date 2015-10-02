@@ -40,6 +40,7 @@ namespace WebAnnotation.ViewModel
                 menu.MenuItems.Add("Properties", ContextMenu_OnProperties);
 
                 this._AddExportMenus(menu);
+                this._AddCopyLocationIDMenu(menu);
                 this._AddTerminalOffEdgeMenus(menu);
                 this.Parent.ContextMenu_AddUnverifiedBranchTerminals(menu); 
                 this._AddDeleteMenu(menu);
@@ -134,11 +135,13 @@ namespace WebAnnotation.ViewModel
             get
             {
                 return modelObj.Position;
-            }/*
+            }
+            /*
             set
             {
                 modelObj.Position = value;
-            }*/
+            }
+            */
         }
 
         public GridVector2 VolumePosition
@@ -151,7 +154,8 @@ namespace WebAnnotation.ViewModel
             set
             {
                 modelObj.VolumePosition = value; 
-            }*/
+            }
+            */
         }
 
         public GridRectangle BoundingBox

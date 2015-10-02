@@ -8,7 +8,8 @@ using System.Linq;
 using System.Text;
 using WebAnnotationModel; 
 using Geometry;
-using WebAnnotation.ViewModel; 
+using WebAnnotation.ViewModel;
+using SqlGeometryUtils;
 
 namespace WebAnnotation.UI.Commands
 {
@@ -113,7 +114,7 @@ namespace WebAnnotation.UI.Commands
                         return;
                     }
 
-                    selected.SectionPosition = SectionPos;
+                    selected.MosaicShape = selected.MosaicShape.MoveTo(SectionPos);
                     
                     //Send changes to DB
                     Store.Locations.Save();

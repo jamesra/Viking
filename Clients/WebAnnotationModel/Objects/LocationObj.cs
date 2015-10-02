@@ -9,6 +9,7 @@ using WebAnnotationModel;
 using WebAnnotationModel.Objects; 
 using WebAnnotationModel.Service;
 using System.Data.Entity.Spatial;
+using SqlGeometryUtils;
 
 using Geometry; 
 
@@ -87,12 +88,24 @@ namespace WebAnnotationModel
             }
         }
 
+        
+        private GridVector2? _MosaicPosition;
+
         public GridVector2 Position
         {
             get
             {
-                return this.Data.MosaicShape.ToCentroid();
-                //return new GridVector2(Data.Position.X, Data.Position.Y);
+                /*
+                if (!_MosaicPosition.HasValue)
+                    _MosaicPosition = new GridVector2(Data.Position.X, Data.Position.Y);
+                */
+
+                if (!_MosaicPosition.HasValue)
+                    _MosaicPosition = this.MosaicShape.Centroid();
+
+                return _MosaicPosition.Value;
+
+                //return this.Data.MosaicShape.ToCentroid(); 
             }
             /*
             set
@@ -107,12 +120,54 @@ namespace WebAnnotationModel
                 point.Y = value.Y;
                 point.Z = Data.Position.Z;
                 Data.Position = point;
+                _MosaicPosition = value; 
                 OnPropertyChanged("Position");
 
                 SetDBActionForChange();
             }
             */
 
+        }
+
+
+        private GridVector2? _VolumePosition;
+        /// <summary>
+        /// VolumeX is the x position in volume space. It only exists to inform the database of an estimate of the locations position in volume space.
+        /// We want the database to have this value so data processing tools don't need to implement the transforms
+        /// It should not be used by the viewer since the viewer can calculate the value.*/
+        /// </summary>
+        public GridVector2 VolumePosition
+        {
+            get
+            {
+                /*
+                if (!_VolumePosition.HasValue)
+                    _VolumePosition = new GridVector2(Data.VolumePosition.X, Data.VolumePosition.Y);
+                    */
+                if (!_VolumePosition.HasValue)
+                    _VolumePosition = this.VolumeShape.Centroid();
+
+                return _VolumePosition.Value;
+            }
+            /*
+            set
+            {
+                if (GridVector2.Equals(this.VolumePosition, value))
+                    return;
+
+                OnPropertyChanging("VolumePosition");
+
+                AnnotationPoint point = new AnnotationPoint();
+                point.X = value.X;
+                point.Y = value.Y;
+                point.Z = Data.Position.Z;
+                Data.VolumePosition = point;
+                _VolumePosition = value;
+                OnPropertyChanged("VolumePosition");
+
+                //                SetDBActionForChange();
+            }
+            */
         }
 
         /// <summary>
@@ -138,6 +193,12 @@ namespace WebAnnotationModel
                 OnPropertyChanging("VolumeShape");
                 Data.VolumeShape = newValue;
                 OnPropertyChanged("VolumeShape");
+
+                OnPropertyChanging("VolumePosition");
+                _VolumePosition = value.Centroid();
+                OnPropertyChanged("VolumePosition");
+
+                SetDBActionForChange();
             }
         }
 
@@ -155,46 +216,15 @@ namespace WebAnnotationModel
                 OnPropertyChanging("MosaicShape");
                 Data.MosaicShape = newValue;
                 OnPropertyChanged("MosaicShape");
+
+                OnPropertyChanging("Position");
+                _VolumePosition = value.Centroid();
+                OnPropertyChanged("Position");
+
+                SetDBActionForChange();
             }
         }
         
-        private GridVector2? _VolumePosition;
-        /// <summary>
-        /// VolumeX is the x position in volume space. It only exists to inform the database of an estimate of the locations position in volume space.
-        /// We want the database to have this value so data processing tools don't need to implement the transforms
-        /// It should not be used by the viewer since the viewer can calculate the value.*/
-        /// </summary>
-        public GridVector2 VolumePosition
-        {
-            get
-            {
-                if (!_VolumePosition.HasValue)
-                {
-                    _VolumePosition = this.Data.VolumeShape.ToCentroid();
-                }
-
-                return _VolumePosition.Value; 
-            }
-            /*
-            set
-            {
-                if (GridVector2.Equals(this.VolumePosition, value))
-                    return;
-
-                OnPropertyChanging("VolumePosition");
-
-                AnnotationPoint point = new AnnotationPoint();
-                point.X = value.X;
-                point.Y = value.Y;
-                point.Z = Data.Position.Z;
-                Data.VolumePosition = point;
-                _VolumePosition = value; 
-                OnPropertyChanged("VolumePosition");
-
-//                SetDBActionForChange();
-            }
-            */
-        }
 
         /// <summary>
         /// Record the hashcode of the volume transform used to map the location. 

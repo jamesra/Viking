@@ -16,6 +16,7 @@ using Viking.ViewModels;
 using WebAnnotationModel;
 using System.ComponentModel; 
 using System.Threading.Tasks;
+using SqlGeometryUtils;
 
 
 namespace WebAnnotation.ViewModel
@@ -315,9 +316,7 @@ namespace WebAnnotation.ViewModel
             //Don't bother mapping if the location was already mapped
             if (loc.VolumeTransformID == parent.CurrentTransformUniqueID)
                 return true;
-            
-
-            
+                        
             bool mappedPosition = parent.TrySectionToVolume(loc.Position, this.Section.section, out VolumePosition);
             if (!mappedPosition) //Remove locations we can't map
             {
@@ -326,7 +325,8 @@ namespace WebAnnotation.ViewModel
             }
 
             loc.VolumeTransformID = parent.CurrentTransformUniqueID;
-            loc.VolumePosition = VolumePosition;
+            //loc.VolumePosition = VolumePosition;
+            loc.VolumeShape = loc.VolumeShape.MoveTo(VolumePosition);
             
             return true;
         }
