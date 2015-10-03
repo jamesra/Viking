@@ -226,6 +226,20 @@ namespace Viking.VolumeModel
         /// <param name="P"></param>
         /// <returns></returns>
         public abstract bool TryVolumeToSection(GridVector2 P, out GridVector2 transformedP);
-        
+
+        /// <summary>
+        /// Maps the point from the volume to the section if this is overriden by a volume mapping class
+        /// </summary>
+        /// <param name="P"></param>
+        /// <returns></returns>
+        public abstract bool TrySectionToVolume(GridVector2[] Points, out GridVector2[] transformedP);
+
+        /// <summary>
+        /// Maps the point from the volume to the section if this is overriden by a volume mapping class
+        /// </summary>
+        /// <param name="P"></param>
+        /// <returns></returns>
+        public abstract bool TryVolumeToSection(GridVector2[] Points, out GridVector2[] transformedP);
+
     }
 }

@@ -155,21 +155,22 @@ namespace Geometry.Transforms
         public override GridVector2 Transform(GridVector2 Point)
         {
             return RBFTransform.Transform(Point, MappedToControlSpaceWeights, MappingGridVector2.MappedPoints(this.MapPoints), this.BasisFunction); 
-            //QuadTree<MappingGridVector2> tree = new QuadTree<MappingGridVector2>(MappingGridVector2.MappedPoints(this.MapPoints), this.MapPoints); 
-            /*
-            SortedList<double, MappingGridVector2> listPoints = this.quadMappingPoints.FindNearestPoints(Point, 12); 
+        }
 
-            MappingGridVector2[] NearestPoints = listPoints.Values.ToArray<MappingGridVector2>();
-
-            double[] Weights = RBFTransform.CalculateRBFWeights(MappingGridVector2.MappedPoints(NearestPoints), MappingGridVector2.ControlPoints(NearestPoints), this.BasisFunction);
-
-            return RBFTransform.Transform(Point, Weights, MappingGridVector2.MappedPoints(NearestPoints), this.BasisFunction); 
-             */
+        public override GridVector2[] Transform(GridVector2[] Points)
+        {
+            var Output = from Point in Points.AsParallel().AsOrdered() select RBFTransform.Transform(Point, MappedToControlSpaceWeights, MappingGridVector2.MappedPoints(this.MapPoints), this.BasisFunction);
+            return Output.ToArray();
         }
 
         public override bool TryTransform(GridVector2 Point, out GridVector2 v)
         {
             v = Transform(Point);
+            return true;
+        }
+        public override bool TryTransform(GridVector2[] Points, out GridVector2[] Output)
+        {
+            Output = this.Transform(Points);
             return true;
         }
 
@@ -181,21 +182,23 @@ namespace Geometry.Transforms
         public override GridVector2 InverseTransform(GridVector2 Point)
         {
             return RBFTransform.Transform(Point, ControlToMappedSpaceWeights, MappingGridVector2.ControlPoints(this.MapPoints), this.BasisFunction); 
+        }
 
-            /*
-            SortedList<double, MappingGridVector2> listPoints = this.quadControlPoints.FindNearestPoints(Point, 12);
-
-            MappingGridVector2[] NearestPoints = listPoints.Values.ToArray<MappingGridVector2>();
-
-            double[] Weights = RBFTransform.CalculateRBFWeights(MappingGridVector2.ControlPoints(NearestPoints), MappingGridVector2.MappedPoints(NearestPoints), this.BasisFunction);
-
-            return RBFTransform.Transform(Point, Weights, MappingGridVector2.ControlPoints(NearestPoints), this.BasisFunction); 
-             */
+        public override GridVector2[] InverseTransform(GridVector2[] Points)
+        {
+            var Output = from Point in Points.AsParallel().AsOrdered() select RBFTransform.Transform(Point, ControlToMappedSpaceWeights, MappingGridVector2.ControlPoints(this.MapPoints), this.BasisFunction);
+            return Output.ToArray();
         }
 
         public override bool TryInverseTransform(GridVector2 Point, out GridVector2 v)
         {
             v = InverseTransform(Point);
+            return true;
+        }
+
+        public override bool TryInverseTransform(GridVector2[] Point, out GridVector2[] Output)
+        {
+            Output = this.InverseTransform(Point);
             return true;
         }
 

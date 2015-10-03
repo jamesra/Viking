@@ -478,6 +478,23 @@ namespace Viking.UI.Controls
         }
 
         /// <summary>
+        /// Maps a point from section space into volume space for the currently selected transform
+        /// </summary>
+        /// <param name="?"></param>
+        /// <returns></returns>
+        public bool TrySectionToVolume(GridVector2[] P, Section section, out GridVector2[] transformedP)
+        {
+            transformedP = new GridVector2[P.Length];
+            MappingBase map = MappingManager.GetMapping(this.CurrentVolumeTransform, section, this.CurrentChannel, this.CurrentTransform);
+            if (map != null)
+            {
+                return map.TrySectionToVolume(P, out transformedP);
+            }
+
+            return false;
+        }
+
+        /// <summary>
         /// Get the boundaries for a section given the current transforms
         /// </summary>
         /// <param name="section"></param>

@@ -312,12 +312,62 @@ namespace WebAnnotation.ViewModel
 
         private bool MapLocation(LocationObj loc)
         {
-            GridVector2 VolumePosition = new GridVector2(-1, -1);
             //Don't bother mapping if the location was already mapped
             if (loc.VolumeTransformID == parent.CurrentTransformUniqueID)
                 return true;
-                        
+            
+            switch(loc.TypeCode)
+            {
+                case LocationType.POINT:
+                    return MapLocationByCentroid(loc);
+                case LocationType.CIRCLE:
+                    return MapLocationByCentroid(loc);
+                default:
+                    return MapLocationByControlPoints(loc); 
+            }
+        }
+        
+        /// <summary>
+        /// A faster mapping technique for geometries that do not use control points such as circles and points.
+        /// </summary>
+        /// <param name="loc"></param>
+        /// <returns></returns>
+        private bool MapLocationByCentroid(LocationObj loc)
+        {
+             //Don't bother mapping if the location was already mapped
+            if (loc.VolumeTransformID == parent.CurrentTransformUniqueID)
+                return true;
+
+            GridVector2 VolumePosition = new GridVector2(-1, -1);
+
             bool mappedPosition = parent.TrySectionToVolume(loc.Position, this.Section.section, out VolumePosition);
+            if (!mappedPosition) //Remove locations we can't map
+            {
+                Trace.WriteLine("AddLocation: Location #" + loc.ID.ToString() + " was unmappable.", "WebAnnotation");
+                return false;
+            }
+
+            loc.VolumeTransformID = parent.CurrentTransformUniqueID; 
+            loc.VolumeShape = loc.VolumeShape.MoveTo(VolumePosition);
+
+            return true;
+        }
+
+        /// <summary>
+        /// Map all of the control points for the geometry individually
+        /// </summary>
+        /// <param name="loc"></param>
+        /// <returns></returns>
+        private bool MapLocationByControlPoints(LocationObj loc)
+        {
+            //Don't bother mapping if the location was already mapped
+            if (loc.VolumeTransformID == parent.CurrentTransformUniqueID)
+                return true;
+
+            GridVector2[] VolumePositions;
+            GridVector2[] points = loc.MosaicShape.ToPoints();
+
+            bool mappedPosition = parent.TrySectionToVolume(loc.MosaicShape.ToPoints(), this.Section.section, out VolumePositions);
             if (!mappedPosition) //Remove locations we can't map
             {
                 Trace.WriteLine("AddLocation: Location #" + loc.ID.ToString() + " was unmappable.", "WebAnnotation");
@@ -326,8 +376,8 @@ namespace WebAnnotation.ViewModel
 
             loc.VolumeTransformID = parent.CurrentTransformUniqueID;
             //loc.VolumePosition = VolumePosition;
-            loc.VolumeShape = loc.VolumeShape.MoveTo(VolumePosition);
-            
+            loc.VolumeShape = SqlGeometryUtils.GeometryExtensions.ToGeometry(loc.MosaicShape.STGeometryType(), VolumePositions);
+
             return true;
         }
 
