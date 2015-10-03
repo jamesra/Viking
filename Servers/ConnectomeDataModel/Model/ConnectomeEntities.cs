@@ -109,6 +109,19 @@ namespace ConnectomeDataModel
             return dictLocations.Values.ToList();
         }
 
+        public IList<Location> ReadStructureLocationsAndLinks(long StructureID)
+        {
+            var results = this.Locations.Where(l => l.ParentID == StructureID);
+
+            var dictLocations = results.ToDictionary(l => l.ID);
+
+            var LocationLinks = this.SelectStructureLocationLinks(StructureID).ToList();
+
+            AppendLinksToLocations(dictLocations, LocationLinks);
+
+            return dictLocations.Values.ToList();
+        }
+
         public IList<Structure> ReadSectionStructuresAndLinks(long section, DateTime? LastModified)
         {
             var results = this.SelectSectionStructuresAndLinks((double)section, LastModified, MergeOption.NoTracking);
@@ -136,6 +149,9 @@ namespace ConnectomeDataModel
         }
 
 
+     
+
+
         /// <summary>
         /// Add the links to the locations in the dictionary
         /// </summary>
@@ -158,6 +174,7 @@ namespace ConnectomeDataModel
                 }
             }
         }
+        
 
         /// <summary>
         /// Add the links to the locations in the dictionary

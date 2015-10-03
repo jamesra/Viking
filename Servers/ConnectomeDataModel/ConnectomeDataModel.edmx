@@ -614,9 +614,9 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
             <Parameter Name="MergeStructureID" Mode="In" Type="Int64" />
           </FunctionImport>
           <FunctionImport Name="SelectAllStructureLocationLinks" EntitySet="LocationLinks" ReturnType="Collection(ConnectomeModel.LocationLink)" />
-          <FunctionImport Name="SelectAllStructureLocations" ReturnType="Collection(ConnectomeModel.SelectStructureLocations_Result)" />
-          <FunctionImport Name="SelectAllStructures" ReturnType="Collection(ConnectomeModel.SelectAllStructures_Result)" />
-          <FunctionImport Name="SelectChildrenStructureLinks" ReturnType="Collection(ConnectomeModel.SelectChildrenStructureLinks_Result)">
+          <FunctionImport Name="SelectAllStructureLocations" EntitySet="Locations" ReturnType="Collection(ConnectomeModel.Location)" />
+          <FunctionImport Name="SelectAllStructures" EntitySet="Structures" ReturnType="Collection(ConnectomeModel.Structure)" />
+          <FunctionImport Name="SelectChildrenStructureLinks" EntitySet="StructureLinks" ReturnType="Collection(ConnectomeModel.StructureLink)">
           <Parameter Name="StructureID" Mode="In" Type="Int64" />
           </FunctionImport>
           <FunctionImport Name="SelectLastModifiedLocationByUsers" EntitySet="Locations" ReturnType="Collection(ConnectomeModel.Location)" />
@@ -652,7 +652,7 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
           <FunctionImport Name="SelectStructureLocationLinksNoChildren" EntitySet="LocationLinks" ReturnType="Collection(ConnectomeModel.LocationLink)">
           <Parameter Name="StructureID" Mode="In" Type="Int64" />
           </FunctionImport>
-          <FunctionImport Name="SelectStructureLocations" ReturnType="Collection(ConnectomeModel.SelectStructureLocations_Result)">
+          <FunctionImport Name="SelectStructureLocations" EntitySet="Locations" ReturnType="Collection(ConnectomeModel.Location)">
           <Parameter Name="StructureID" Mode="In" Type="Int64" />
           </FunctionImport>
           <FunctionImport Name="SelectStructuresAndLinks">
@@ -1243,42 +1243,10 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
           <FunctionImportMapping FunctionImportName="SelectAllStructureLocationLinks" FunctionName="ConnectomeModel.Store.SelectAllStructureLocationLinks">
           </FunctionImportMapping>
           <FunctionImportMapping FunctionImportName="SelectAllStructureLocations" FunctionName="ConnectomeModel.Store.SelectAllStructureLocations">
-          <ResultMapping>
-              <ComplexTypeMapping TypeName="ConnectomeModel.SelectStructureLocations_Result">
-                <ScalarProperty Name="ID" ColumnName="ID" />
-                <ScalarProperty Name="ParentID" ColumnName="ParentID" />
-                <ScalarProperty Name="VolumeX" ColumnName="VolumeX" />
-                <ScalarProperty Name="VolumeY" ColumnName="VolumeY" />
-                <ScalarProperty Name="Z" ColumnName="Z" />
-                <ScalarProperty Name="Radius" ColumnName="Radius" />
-                <ScalarProperty Name="X" ColumnName="X" />
-                <ScalarProperty Name="Y" ColumnName="Y" />
-              </ComplexTypeMapping>
-            </ResultMapping>
           </FunctionImportMapping>
           <FunctionImportMapping FunctionImportName="SelectAllStructures" FunctionName="ConnectomeModel.Store.SelectAllStructures">
-            <ResultMapping>
-              <ComplexTypeMapping TypeName="ConnectomeModel.SelectAllStructures_Result">
-                <ScalarProperty Name="ID" ColumnName="ID" />
-                <ScalarProperty Name="ParentID" ColumnName="ParentID" />
-                <ScalarProperty Name="TypeID" ColumnName="TypeID" />
-                <ScalarProperty Name="Label" ColumnName="Label" />
-                <ScalarProperty Name="LastModified" ColumnName="LastModified" />
-              </ComplexTypeMapping>
-            </ResultMapping>
           </FunctionImportMapping>
           <FunctionImportMapping FunctionImportName="SelectChildrenStructureLinks" FunctionName="ConnectomeModel.Store.SelectChildrenStructureLinks">
-            <ResultMapping>
-              <ComplexTypeMapping TypeName="ConnectomeModel.SelectChildrenStructureLinks_Result">
-                <ScalarProperty Name="SourceID" ColumnName="SourceID" />
-                <ScalarProperty Name="TargetID" ColumnName="TargetID" />
-                <ScalarProperty Name="Bidirectional" ColumnName="Bidirectional" />
-                <ScalarProperty Name="Tags" ColumnName="Tags" />
-                <ScalarProperty Name="Username" ColumnName="Username" />
-                <ScalarProperty Name="Created" ColumnName="Created" />
-                <ScalarProperty Name="LastModified" ColumnName="LastModified" />
-              </ComplexTypeMapping>
-            </ResultMapping>
           </FunctionImportMapping>
           <FunctionImportMapping FunctionImportName="SelectLastModifiedLocationByUsers" FunctionName="ConnectomeModel.Store.SelectLastModifiedLocationByUsers">
           </FunctionImportMapping>
@@ -1395,18 +1363,6 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
           <FunctionImportMapping FunctionImportName="SelectStructureLocationLinksNoChildren" FunctionName="ConnectomeModel.Store.SelectStructureLocationLinksNoChildren">
           </FunctionImportMapping>
           <FunctionImportMapping FunctionImportName="SelectStructureLocations" FunctionName="ConnectomeModel.Store.SelectStructureLocations">
-            <ResultMapping>
-              <ComplexTypeMapping TypeName="ConnectomeModel.SelectStructureLocations_Result">
-                <ScalarProperty Name="ID" ColumnName="ID" />
-                <ScalarProperty Name="ParentID" ColumnName="ParentID" />
-                <ScalarProperty Name="VolumeX" ColumnName="VolumeX" />
-                <ScalarProperty Name="VolumeY" ColumnName="VolumeY" />
-                <ScalarProperty Name="Z" ColumnName="Z" />
-                <ScalarProperty Name="Radius" ColumnName="Radius" />
-                <ScalarProperty Name="X" ColumnName="X" />
-                <ScalarProperty Name="Y" ColumnName="Y" />
-              </ComplexTypeMapping>
-            </ResultMapping>
           </FunctionImportMapping>
           <FunctionImportMapping FunctionImportName="SelectStructuresAndLinks" FunctionName="ConnectomeModel.Store.SelectStructuresAndLinks">
             <ResultMapping>
@@ -1556,6 +1512,7 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
               </EntityTypeMapping>
             </ResultMapping>
           </FunctionImportMapping>
+          <FunctionImportMapping FunctionImportName="StructureLocationLinks" FunctionName="ConnectomeModel.Store.StructureLocationLinks" />
         </EntityContainerMapping>
       </Mapping>
     </edmx:Mappings>

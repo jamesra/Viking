@@ -36,7 +36,7 @@ namespace ConnectomeODataV4.Controllers
                 return BadRequest(ex.Message);
             }
 
-            return Ok<IList<SelectStructureLocations_Result>>(db.SelectAllStructureLocations().ToList());
+            return Ok<IList<Location>>(db.SelectAllStructureLocations().ToList());
         }
 
         // GET: odata/SelectStructureLocations(5)
@@ -51,7 +51,7 @@ namespace ConnectomeODataV4.Controllers
             {
                 return BadRequest(ex.Message);
             }
-            return Ok<IList<SelectStructureLocations_Result>>(db.SelectStructureLocations(new long?(key)).ToList());
+            return Ok<IList<Location>>(db.SelectStructureLocations(new long?(key)).ToList());
         }
     }
 }
