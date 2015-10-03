@@ -218,7 +218,7 @@ namespace WebAnnotationModel
                 OnPropertyChanged("MosaicShape");
 
                 OnPropertyChanging("Position");
-                _VolumePosition = value.Centroid();
+                _MosaicPosition = value.Centroid();
                 OnPropertyChanged("Position");
 
                 SetDBActionForChange();
