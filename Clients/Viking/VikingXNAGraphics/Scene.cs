@@ -121,7 +121,7 @@ namespace VikingXNA
             }
         }
 
-        public GridRectangle VisibleWorldBounds
+        public Geometry.GridRectangle VisibleWorldBounds
         {
             get
             {
@@ -135,7 +135,30 @@ namespace VikingXNA
             }
         }
 
-        public GridVector2 ScreenToWorld(double X, double Y)
+        /// <summary>
+        /// Returns how large a single pixel is on the device in world coordinates
+        /// </summary>
+        public double DevicePixelWidth
+        {
+            get
+            {
+                return this.VisibleWorldBounds.Width / (double)this.Viewport.Width;
+            }
+        }
+
+        /// <summary>
+        /// Returns how large a single pixel is on the device in world coordinates
+        /// </summary>
+        public double DevicePixelHeight
+        {
+            get
+            {
+                return this.VisibleWorldBounds.Height / (double)this.Viewport.Height;
+            }
+        }
+
+
+        public Geometry.GridVector2 ScreenToWorld(double X, double Y)
         {
             //The screen coordinates used by Windows and XNA put the Y origin at the top and bottom of the screen
             double XPos = ((X - ((double)_Viewport.Width / 2)) * Camera.Downsample) + Camera.LookAt.X;
@@ -144,7 +167,7 @@ namespace VikingXNA
             return new GridVector2(XPos, YPos);
         }
 
-        public GridVector2 WorldToScreen(double X, double Y)
+        public Geometry.GridVector2 WorldToScreen(double X, double Y)
         {
             Vector3 p = _Viewport.Project(new Vector3((float)X, (float)Y, 0), _Projection, Camera.View, World);
             return new GridVector2(p.X, p.Y);

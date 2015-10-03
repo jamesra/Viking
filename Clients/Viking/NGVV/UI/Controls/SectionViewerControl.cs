@@ -386,7 +386,12 @@ namespace Viking.UI.Controls
         /// <returns></returns>
         public GridVector2 VolumeToSection(GridVector2 P)
         {
-            return VolumeToSection(P, this.Section);
+            return VolumeToSection(P, this.Section.section);
+        }
+
+        public GridVector2[] VolumeToSection(GridVector2[] P)
+        {
+            return P.Select(p => VolumeToSection(p, this.Section.section)).ToArray();
         }
 
         /// <summary>
@@ -394,9 +399,9 @@ namespace Viking.UI.Controls
         /// </summary>
         /// <param name="?"></param>
         /// <returns></returns>
-        public GridVector2 VolumeToSection(GridVector2 P, SectionViewModel section)
+        public GridVector2 VolumeToSection(GridVector2 P, Section section)
         {
-            MappingBase map = MappingManager.GetMapping(this.CurrentVolumeTransform, section.section, this.CurrentChannel, this.CurrentTransform);
+            MappingBase map = MappingManager.GetMapping(this.CurrentVolumeTransform, section, this.CurrentChannel, this.CurrentTransform);
             if (map != null)
             {
                 GridVector2 TransformedPoint = map.VolumeToSection(new GridVector2(P.X, P.Y));
@@ -431,6 +436,11 @@ namespace Viking.UI.Controls
             return SectionToVolume(P, this.Section.section);
         }
 
+        public GridVector2[] SectionToVolume(GridVector2[] P)
+        {
+            return P.Select(sp => SectionToVolume(sp, this.Section.section)).ToArray();
+        }
+
         /// <summary>
         /// Maps a point from section space into volume space for the currently selected transform
         /// </summary>
@@ -462,6 +472,23 @@ namespace Viking.UI.Controls
             if (map != null)
             {
                 return map.TrySectionToVolume(new GridVector2(P.X, P.Y), out  transformedP);
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Maps a point from section space into volume space for the currently selected transform
+        /// </summary>
+        /// <param name="?"></param>
+        /// <returns></returns>
+        public bool TrySectionToVolume(GridVector2[] P, Section section, out GridVector2[] transformedP)
+        {
+            transformedP = new GridVector2[P.Length];
+            MappingBase map = MappingManager.GetMapping(this.CurrentVolumeTransform, section, this.CurrentChannel, this.CurrentTransform);
+            if (map != null)
+            {
+                return map.TrySectionToVolume(P, out transformedP);
             }
 
             return false;
@@ -917,7 +944,7 @@ namespace Viking.UI.Controls
                 _OverlayDepthState.DepthBufferFunction = CompareFunction.LessEqual;
 
                 _OverlayDepthState.StencilEnable = true;
-                _OverlayDepthState.StencilFunction = CompareFunction.GreaterEqual;
+                _OverlayDepthState.StencilFunction = CompareFunction.Greater;
                 _OverlayDepthState.ReferenceStencil = StencilValue;
                 _OverlayDepthState.StencilPass = StencilOperation.Replace;
             }

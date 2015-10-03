@@ -17,20 +17,6 @@ namespace WebAnnotationModel
     {
         ConcurrentDictionary<long, ConcurrentDictionary<LocationLinkKey, LocationLinkObj>> SectionToLocationLinks = new ConcurrentDictionary<long, ConcurrentDictionary<LocationLinkKey, LocationLinkObj>>();
 
-//        ConcurrentDictionary<long, ConcurrentDictionary<long,long>> LocIDtoLinks = new ConcurrentDictionary<long, ConcurrentDictionary<long, long>>();
-
-        /// <summary>
-        /// When we query the database for locations on a section we store the query time for the section
-        /// That way on the next query we only need to store the updates.
-        /// </summary>
-//        private ConcurrentDictionary<long, DateTime> LastQueryForSection = new ConcurrentDictionary<long, DateTime>();
-
-        /// <summary>
-        /// A collection of values indicating which sections have an outstanding query. 
-        /// The existence of a key indicates a query is in progress
-        /// </summary>
-//        private ConcurrentDictionary<long, bool> OutstandingSectionQueries = new ConcurrentDictionary<long, bool>();
-
         public LocationLinkStore()
         {
             
@@ -158,7 +144,7 @@ namespace WebAnnotationModel
         protected override LocationLink[] ProxyGetBySection(AnnotateLocationsClient proxy, long SectionNumber, DateTime LastQuery, out long TicksAtQueryExecute, out LocationLinkKey[] DeletedLinkKeys)
         {
             LocationLink[] deleted_links = null; 
-            LocationLink[] links = proxy.LocationLinksForSection(out TicksAtQueryExecute, out deleted_links, SectionNumber, LastQuery.Ticks);
+            LocationLink[] links = proxy.GetLocationLinksForSection(out TicksAtQueryExecute, out deleted_links, SectionNumber, LastQuery.Ticks);
 
             if( deleted_links == null)
             {
@@ -166,39 +152,51 @@ namespace WebAnnotationModel
             }
             else 
             {
-                DeletedLinkKeys = new LocationLinkKey[deleted_links.Length];
-                for(int i = 0; i < deleted_links.Length; i++)
-                {
-                    DeletedLinkKeys[i] = new LocationLinkKey(deleted_links[i].SourceID, deleted_links[i].TargetID);
-                }
+                DeletedLinkKeys = deleted_links.Select(link => new LocationLinkKey(link.SourceID, link.TargetID)).ToArray();
             }
 
             return links; 
         }
 
-        protected override IAsyncResult ProxyBeginGetBySection(AnnotateLocationsClient proxy, long SectionNumber, DateTime LastQuery, AsyncCallback callback, object asynchState)
+        protected override LocationLink[] ProxyGetBySectionRegion(AnnotateLocationsClient proxy, long SectionNumber, BoundingRectangle BBox, double MinRadius, DateTime LastQuery, out long TicksAtQueryExecute, out LocationLinkKey[] DeletedLinkKeys)
         {
-            
-            return proxy.BeginLocationLinksForSection(SectionNumber,
+            LocationLink[] deleted_links = null;
+            LocationLink[] links = proxy.GetLocationLinksForSectionInRegion(out TicksAtQueryExecute, out deleted_links, SectionNumber, BBox, MinRadius, LastQuery.Ticks);
+
+            if (deleted_links == null)
+            {
+                DeletedLinkKeys = new LocationLinkKey[0];
+            }
+            else
+            {
+                DeletedLinkKeys = deleted_links.Select(link => new LocationLinkKey(link.SourceID, link.TargetID)).ToArray();
+            }
+
+            return links;
+        }
+
+        protected override IAsyncResult ProxyBeginGetBySectionRegion(AnnotateLocationsClient proxy, long SectionNumber, BoundingRectangle BBox, double MinRadius, DateTime LastQuery, AsyncCallback callback, object asynchState)
+        {
+            return proxy.BeginGetLocationLinksForSectionInRegion(SectionNumber, BBox, MinRadius, LastQuery.Ticks, callback, asynchState);
+        }
+
+        protected override IAsyncResult ProxyBeginGetBySection(AnnotateLocationsClient proxy, long SectionNumber, DateTime LastQuery, AsyncCallback callback, object asynchState)
+        {   
+            return proxy.BeginGetLocationChanges(SectionNumber,
                                                  LastQuery.Ticks,
                                                  GetObjectsBySectionCallback,
                                                  new GetObjectBySectionCallbackState(proxy, SectionNumber, LastQuery));
         }
-
+        
         protected override LocationLink[] ProxyGetBySectionCallback(out long TicksAtQueryExecute,
-                                                                    out LocationLinkKey[] DeletedKeys,
+                                                                    out LocationLinkKey[] DeletedLinkKeys,
                                                                     GetObjectBySectionCallbackState state,
                                                                     IAsyncResult result)
-        {
-            LocationLink[] links;
-            LocationLink[] DeletedLinks;
-            links = state.Proxy.EndLocationLinksForSection(out TicksAtQueryExecute, out DeletedLinks, result);
+        { 
+            LocationLink[] deleted_links;
+            LocationLink[] links = state.Proxy.EndGetLocationLinksForSection(out TicksAtQueryExecute, out deleted_links, result);
 
-            DeletedKeys = new LocationLinkKey[DeletedLinks.Length];
-            for(int iLink = 0; iLink < DeletedLinks.Length; iLink++)
-            {
-                DeletedKeys[iLink] = new LocationLinkKey(DeletedLinks[iLink].SourceID, DeletedLinks[iLink].TargetID); 
-            }
+            DeletedLinkKeys = deleted_links.Select(link => new LocationLinkKey(link.SourceID, link.TargetID)).ToArray();
 
             return links;
         }
@@ -382,6 +380,11 @@ namespace WebAnnotationModel
                     Debug.Assert(false, "Unexpected change action in OnStoreAddRemoveKey");
                     break;
             }
+        }
+
+        protected override LocationLink[] ProxyGetBySectionRegionCallback(out long TicksAtQueryExecute, out LocationLinkKey[] DeletedLocations, GetObjectBySectionCallbackState state, IAsyncResult result)
+        {
+            throw new NotImplementedException();
         }
     }
 }

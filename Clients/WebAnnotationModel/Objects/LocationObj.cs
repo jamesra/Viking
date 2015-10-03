@@ -7,8 +7,9 @@ using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using WebAnnotationModel;
 using WebAnnotationModel.Objects; 
-
 using WebAnnotationModel.Service;
+using System.Data.Entity.Spatial;
+using SqlGeometryUtils;
 
 using Geometry; 
 
@@ -21,7 +22,9 @@ namespace WebAnnotationModel
         CIRCLE = 1,
         ELLIPSE = 2,
         POLYLINE = 3,
-        POLYGON = 4
+        POLYGON = 4,
+        OPENCURVE = 5,
+        CLOSEDCURVE = 6
     };
 
     public class LocationObj : WCFObjBaseWithKey<long, Location>
@@ -85,12 +88,26 @@ namespace WebAnnotationModel
             }
         }
 
+        
+        private GridVector2? _MosaicPosition;
+
         public GridVector2 Position
         {
             get
             {
-                return new GridVector2(Data.Position.X, Data.Position.Y);
+                /*
+                if (!_MosaicPosition.HasValue)
+                    _MosaicPosition = new GridVector2(Data.Position.X, Data.Position.Y);
+                */
+
+                if (!_MosaicPosition.HasValue)
+                    _MosaicPosition = this.MosaicShape.Centroid();
+
+                return _MosaicPosition.Value;
+
+                //return this.Data.MosaicShape.ToCentroid(); 
             }
+            /*
             set
             {
                 if (GridVector2.Equals(this.Position, value))
@@ -103,55 +120,15 @@ namespace WebAnnotationModel
                 point.Y = value.Y;
                 point.Z = Data.Position.Z;
                 Data.Position = point;
+                _MosaicPosition = value; 
                 OnPropertyChanged("Position");
 
                 SetDBActionForChange();
             }
+            */
 
         }
 
-        /// <summary>
-        /// This is readonly because changing it would break a datastructure in location store
-        /// and also would require update of X,Y to the section space of the different section
-        /// </summary>
-        public double Z
-        {
-            get {return Data.Position.Z; }
-        }
-
-        public DbGeometry VolumeShape
-        {
-            get
-            {
-                return Data.VolumeShape;
-            }
-            set
-            {
-                if (Data.VolumeShape.Geometry.WellKnownText == value.Geometry.WellKnownText)
-                    return;
-
-                OnPropertyChanging("VolumeShape");
-                Data.VolumeShape = value;
-                OnPropertyChanged("VolumeShape");
-            }
-        }
-
-        public DbGeometry MosaicShape
-        {
-            get
-            {
-                return Data.MosaicShape;
-            }
-            set
-            {
-                if (Data.MosaicShape.Geometry.WellKnownText == value.Geometry.WellKnownText)
-                    return;
-
-                OnPropertyChanging("MosaicShape");
-                Data.MosaicShape = value;
-                OnPropertyChanged("MosaicShape");
-            }
-        }
 
         private GridVector2? _VolumePosition;
         /// <summary>
@@ -163,11 +140,16 @@ namespace WebAnnotationModel
         {
             get
             {
-                if(!_VolumePosition.HasValue)
+                /*
+                if (!_VolumePosition.HasValue)
                     _VolumePosition = new GridVector2(Data.VolumePosition.X, Data.VolumePosition.Y);
+                    */
+                if (!_VolumePosition.HasValue)
+                    _VolumePosition = this.VolumeShape.Centroid();
 
-                return _VolumePosition.Value; 
+                return _VolumePosition.Value;
             }
+            /*
             set
             {
                 if (GridVector2.Equals(this.VolumePosition, value))
@@ -180,12 +162,69 @@ namespace WebAnnotationModel
                 point.Y = value.Y;
                 point.Z = Data.Position.Z;
                 Data.VolumePosition = point;
-                _VolumePosition = value; 
+                _VolumePosition = value;
                 OnPropertyChanged("VolumePosition");
 
-//                SetDBActionForChange();
+                //                SetDBActionForChange();
+            }
+            */
+        }
+
+        /// <summary>
+        /// This is readonly because changing it would break a datastructure in location store
+        /// and also would require update of X,Y to the section space of the different section
+        /// </summary>
+        public double Z
+        {
+            get {return Data.Position.Z; }
+        }
+       
+        public Microsoft.SqlServer.Types.SqlGeometry VolumeShape
+        {
+            get
+            {
+                return Data.VolumeShape.ToSqlGeometry();
+            }
+            set
+            {
+                DbGeometry newValue = value.ToDbGeometry();
+                if (Data.VolumeShape.SpatialEquals(newValue)) return;
+
+                OnPropertyChanging("VolumeShape");
+                Data.VolumeShape = newValue;
+                OnPropertyChanged("VolumeShape");
+
+                OnPropertyChanging("VolumePosition");
+                _VolumePosition = value.Centroid();
+                OnPropertyChanged("VolumePosition");
+
+                SetDBActionForChange();
             }
         }
+
+        public Microsoft.SqlServer.Types.SqlGeometry MosaicShape
+        {
+            get
+            {
+                return Data.MosaicShape.ToSqlGeometry(); ;
+            }
+            set
+            {
+                DbGeometry newValue = value.ToDbGeometry();
+                if (Data.MosaicShape.SpatialEquals(newValue)) return;
+
+                OnPropertyChanging("MosaicShape");
+                Data.MosaicShape = newValue;
+                OnPropertyChanged("MosaicShape");
+
+                OnPropertyChanging("Position");
+                _MosaicPosition = value.Centroid();
+                OnPropertyChanged("Position");
+
+                SetDBActionForChange();
+            }
+        }
+        
 
         /// <summary>
         /// Record the hashcode of the volume transform used to map the location. 
@@ -524,8 +563,8 @@ namespace WebAnnotationModel
             this.Data.Username = newdata.Username;
             this.Data.LastModified = newdata.LastModified;
             this.Data.Links = newdata.Links;
-            this.Data.VolumeShape = newdata.VolumeShape;
-            this.Data.MosaicShape = newdata.MosaicShape;
+            //this.Data.VolumeShape = newdata.VolumeShape;
+            //this.Data.MosaicShape = newdata.MosaicShape;
         }
         
 

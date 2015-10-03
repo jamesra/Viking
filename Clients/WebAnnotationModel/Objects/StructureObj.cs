@@ -145,26 +145,30 @@ namespace WebAnnotationModel
                 lock (LinksLock)
                 { 
                     if (_Links == null)
-                    {
-                        _Links = new ObservableCollection<StructureLinkObj>();
-
+                    { 
                         if (Data.Links != null)
                         {
+                            StructureLinkKey[] keys = Data.Links.Select(l => new StructureLinkKey(l)).ToArray();
+
+                            List<StructureLinkObj> linkArray = new List<StructureLinkObj>(Data.Links.Length);
                             //Initialize from the Data object
                             foreach (StructureLink link in Data.Links)
                             {
                                 Debug.Assert(link != null);
-                                StructureLinkObj linkObj = new StructureLinkObj(link);
-
-                                Debug.Assert(linkObj != null);
+                                bool added;
                                 //Add it if it doesn't exist, otherwise get the official version
-                                linkObj = Store.StructureLinks.Add(linkObj);
+                                StructureLinkObj linkObj = Store.StructureLinks.GetOrAdd(new StructureLinkKey(link),
+                                                                                         new Func<StructureLinkKey, StructureLinkObj>( key => { return new StructureLinkObj(link); }),
+                                                                                         out added); //This call will fire events that add the link to this.Links if it is new to the local store
                                 Debug.Assert(linkObj != null, "If structureObj has the value the store should have the value.   Does it link to itself?");
-                                if (linkObj != null)
-                                {
-                                    _Links.Add(linkObj);
-                                }
+                                linkArray.Add(linkObj);
                             }
+
+                            _Links = new ObservableCollection<StructureLinkObj>(linkArray); 
+                        }
+                        else
+                        {
+                            _Links = new ObservableCollection<StructureLinkObj>(); 
                         }
                          
                         _Links.CollectionChanged += this.OnLinksChanged;
@@ -211,13 +215,7 @@ namespace WebAnnotationModel
             lock (LinksLock)
             {
                 //Update the underlying object we will send to the server]
-                StructureLink[] newLinks = new StructureLink[_Links.Count];
-                for (int i = 0; i < _Links.Count; i++)
-                {
-                    newLinks[i] = _Links[i].GetData();
-                }
-
-                Data.Links = newLinks;
+                Data.Links = _Links.Select(l => l.GetData()).ToArray();
             }
 
             SetDBActionForChange();
@@ -234,16 +232,7 @@ namespace WebAnnotationModel
             {
                 if (Links.Contains(ID))
                     return;
-
-                /*
-                List<StructureLink> listLinks = Data.Links.ToList<StructureLink>();
-                listLinks.Add(ID.GetData());
-
-                Data.Links = listLinks.ToArray();
-
-                if (!Links.Contains(ID))
-                */
-
+                
                 Links.Add(ID);
             }
         }
@@ -253,24 +242,28 @@ namespace WebAnnotationModel
         /// Because Links is an observable collection all modifications must be syncronized
         /// </summary>
         /// <param name="ID"></param>
-        internal void RemoveLink(StructureLinkObj ID)
+        internal void RemoveLink(StructureLinkObj link)
+        {
+            RemoveLink(link.ID); 
+        }
+
+        /// <summary>
+        /// Adjust the client after a link is removed
+        /// Because Links is an observable collection all modifications must be syncronized
+        /// </summary>
+        /// <param name="ID"></param>
+        internal void RemoveLink(StructureLinkKey key)
         {
             lock (LinksLock)
             {
-                if (!Links.Contains(ID))
+                StructureLinkObj LinkToRemove = Links.FirstOrDefault(link => link.SourceID == key.SourceID && link.TargetID == key.TargetID);
+                if (LinkToRemove == null)
                     return;
-
-                /*
-                List<StructureLink> listLinks = Data.Links.ToList<StructureLink>();
-                listLinks.Remove(ID.GetData());
-
-                Data.Links = listLinks.ToArray();
-                */
-
-                Links.Remove(ID);
+                
+                Links.Remove(LinkToRemove);
             }
         }
-        
+
         /*
         public StructureLink[] Links
         {
@@ -321,6 +314,17 @@ namespace WebAnnotationModel
         public StructureObj(Structure data)
         {
             this.Data = data;
+            bool added;
+
+            if (data.Links != null)
+            {
+                foreach (StructureLink link in data.Links)
+                {
+                    Store.StructureLinks.GetOrAdd(new StructureLinkKey(link),
+                                                  new Func<StructureLinkKey, StructureLinkObj>(l => { return new StructureLinkObj(link); }),
+                                                  out added);
+                }
+            }
         }
 
         

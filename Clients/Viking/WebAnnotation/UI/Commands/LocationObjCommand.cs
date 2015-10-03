@@ -8,7 +8,8 @@ using System.Linq;
 using System.Text;
 using WebAnnotationModel; 
 using Geometry;
-using WebAnnotation.ViewModel; 
+using WebAnnotation.ViewModel;
+using SqlGeometryUtils;
 
 namespace WebAnnotation.UI.Commands
 {
@@ -113,7 +114,7 @@ namespace WebAnnotation.UI.Commands
                         return;
                     }
 
-                    selected.SectionPosition = SectionPos;
+                    selected.MosaicShape = selected.MosaicShape.MoveTo(SectionPos);
                     
                     //Send changes to DB
                     Store.Locations.Save();
@@ -143,7 +144,7 @@ namespace WebAnnotation.UI.Commands
                 throw new ArgumentNullException("basicEffect");
 
             if (scene == null)
-                throw new ArgumentNullException("scene"); 
+                throw new ArgumentNullException("scene");
 
             //Draw a line from the selected location to the new location if we are holding left button down
             if (this.oldMouse.Button == MouseButtons.Left)

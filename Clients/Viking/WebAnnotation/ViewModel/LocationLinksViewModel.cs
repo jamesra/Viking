@@ -49,7 +49,6 @@ namespace WebAnnotation.ViewModel
     
             NotifyCollectionChangedEventManager.AddListener(Store.LocationLinks, this);
             NotifyCollectionChangedEventManager.AddListener(Store.Locations, this); 
-
         }
 
         public void LoadSection(int sectionNumber)
@@ -83,7 +82,7 @@ namespace WebAnnotation.ViewModel
             return null; 
         }
 
-        public RTree.RTree<LocationLink> GetOrAddSearchGrid(int SectionNumber, int EstimatedLinks)
+        public RTree.RTree<LocationLink> GetOrAddSearchGrid(int SectionNumber)
         {
             RTree.RTree<LocationLink> searchGrid; 
             bool success = SectionLocationLinksSearch.TryGetValue(SectionNumber, out searchGrid); 
@@ -173,7 +172,7 @@ namespace WebAnnotation.ViewModel
                 return false;
 
             if (BObj == null)
-                return false;
+                return false;            
             
             if (AObj.VolumePosition.X < 0 && AObj.VolumePosition.Y < 0)
                 return false;
@@ -185,17 +184,15 @@ namespace WebAnnotation.ViewModel
                 return false;
              
             //LocationLinkKey key = new LocationLinkKey(link); 
-            //LocationLink linkView = new LocationLink(AView, BView);
-            LocationLink linkView;  
-            linkView = LinkKeyToLinkView.GetOrAdd(key, (newLink) => { return new LocationLink(AObj, BObj); });
-            bool success = AddLocationLinkToSectionSearchGrids(AObj, BObj, linkView); 
-
-            if (success)
-            {
+            //LocationLink linkView = new LocationLink(AView, BView); 
+            LocationLink linkView = LinkKeyToLinkView.GetOrAdd(key, link => {
                 AddRefLocation(AObj);
                 AddRefLocation(BObj);
-            }
+                return new LocationLink(AObj, BObj);
+            });
 
+            AddLocationLinkToSectionSearchGrids(AObj, BObj, linkView); 
+            
             return true; 
         }
 
@@ -214,17 +211,18 @@ namespace WebAnnotation.ViewModel
                 if (parent.Section.VolumeViewModel.SectionViewModels.ContainsKey(iSection) == false)
                     continue;
 
-                //int EstimatedLinks = Store.Locations.GetObjectsForSection(iSection).Count;
-                //if (EstimatedLinks < 2000)
-                int EstimatedLinks = 2500;
+                //Do not bother mapping location links which are covered by overlapping locations
+                if (!linkView.LinksOverlap(iSection))
+                {
+                    RTree.RTree<LocationLink> searchGrid = GetOrAddSearchGrid(iSection);
+                    //           Debug.WriteLine(iSection.ToString() + " add    : " + linkView.ToString() + " " + searchGrid.Count.ToString());
 
-                RTree.RTree<LocationLink> searchGrid = GetOrAddSearchGrid(iSection, EstimatedLinks);
-                //           Debug.WriteLine(iSection.ToString() + " add    : " + linkView.ToString() + " " + searchGrid.Count.ToString());
+                    //Debug.Assert(false == searchGrid.Contains(linkView));
 
-                //Debug.Assert(false == searchGrid.Contains(linkView));
-                bool sectionSuccess = searchGrid.TryAdd(linkView.BoundingBox.ToRTreeRect(iSection), linkView);
-                success = success || sectionSuccess;  //I had this on one line, but short-circuit logic had me beating my head against the wall for too long
-                //Debug.Assert(success); 
+                    bool sectionSuccess = searchGrid.TryAdd(linkView.BoundingBox.ToRTreeRect(iSection), linkView);
+                    success |= sectionSuccess;  //I had this on one line, but short-circuit logic had me beating my head against the wall for too long
+                                                          //Debug.Assert(success); 
+                }
             }
 
             return success; 
@@ -265,16 +263,12 @@ namespace WebAnnotation.ViewModel
                 return; 
             
             success = RemoveLocationLinkFromSectionSearchGrids(linkView);
+            
+            LocationObj AObj = linkView.A;
+            LocationObj BObj = linkView.B;
 
-            if (success)
-            {
-
-                LocationObj AObj = linkView.A;
-                LocationObj BObj = linkView.B;
-
-                ReleaseRefLocation(AObj);
-                ReleaseRefLocation(BObj);
-            }
+            ReleaseRefLocation(AObj);
+            ReleaseRefLocation(BObj);
         }
 
         private bool RemoveLocationLinkFromSectionSearchGrids(LocationLink linkView)
@@ -293,7 +287,7 @@ namespace WebAnnotation.ViewModel
 
                 LocationLink line; 
                 bool sectionSuccess = searchGrid.Delete(linkView, out line);
-                Debug.Assert(sectionSuccess);
+                //Debug.Assert(sectionSuccess);
                 success = success || sectionSuccess;
 
                 //Free all the memory for the search grid if this was the last location link
@@ -323,11 +317,13 @@ namespace WebAnnotation.ViewModel
 
         private long ReleaseRefLocation(LocationObj loc)
         {
-            long refCount = LocationSubscriptionRefCounts.AddOrUpdate(loc.ID, 1, (id, oldValue) => oldValue - 1);
+            long refCount = LocationSubscriptionRefCounts.AddOrUpdate(loc.ID, 0, (id, oldValue) => oldValue - 1);
             if (refCount == 0)
             {
                 NotifyPropertyChangedEventManager.RemoveListener(loc, this);
                 NotifyCollectionChangedEventManager.RemoveListener(loc.Links, this);
+                long temp;
+                LocationSubscriptionRefCounts.TryRemove(loc.ID, out temp);
             }
 
             return refCount;

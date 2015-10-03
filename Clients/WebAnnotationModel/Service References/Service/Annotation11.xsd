@@ -164,6 +164,20 @@
     </xs:sequence>
   </xs:complexType>
   <xs:element name="ArrayOfStructure" nillable="true" type="tns:ArrayOfStructure" />
+  <xs:complexType name="BoundingRectangle">
+    <xs:annotation>
+      <xs:appinfo>
+        <IsValueType xmlns="http://schemas.microsoft.com/2003/10/Serialization/">true</IsValueType>
+      </xs:appinfo>
+    </xs:annotation>
+    <xs:sequence>
+      <xs:element minOccurs="0" name="XMax" type="xs:double" />
+      <xs:element minOccurs="0" name="XMin" type="xs:double" />
+      <xs:element minOccurs="0" name="YMax" type="xs:double" />
+      <xs:element minOccurs="0" name="YMin" type="xs:double" />
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="BoundingRectangle" nillable="true" type="tns:BoundingRectangle" />
   <xs:complexType name="ArrayOfLocationPositionOnly">
     <xs:sequence>
       <xs:element minOccurs="0" maxOccurs="unbounded" name="LocationPositionOnly" nillable="true" type="tns:LocationPositionOnly" />

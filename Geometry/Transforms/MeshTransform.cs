@@ -216,7 +216,6 @@ namespace Geometry.Transforms
 
                     if (t.IntersectsMapped(Point))
                         return t;
-
                 }
 
                 //You can't just accept that these triangles are the closest triangles.  It's possible there is a point

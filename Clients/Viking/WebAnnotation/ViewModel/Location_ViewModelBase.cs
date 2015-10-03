@@ -16,6 +16,7 @@ using System.Drawing;
 using Common.UI;
 using WebAnnotation.UI.Commands;
 using System.Collections.Concurrent;
+using Microsoft.SqlServer.Types;
 
 namespace WebAnnotation.ViewModel
 {
@@ -265,6 +266,14 @@ namespace WebAnnotation.ViewModel
             return menu;
         }
 
+        protected ContextMenu _AddCopyLocationIDMenu(ContextMenu menu)
+        {
+            MenuItem menuCopyLocationID = new MenuItem(string.Format("Copy Location ID: {0}",this.ID), ContextMenu_CopyLocationID);
+            menu.MenuItems.Add(menuCopyLocationID);
+
+            return menu;
+        }
+
         public override ContextMenu ContextMenu
         {
             get
@@ -272,7 +281,9 @@ namespace WebAnnotation.ViewModel
                 ContextMenu menu = new ContextMenu();
                 menu.MenuItems.Add("Properties", ContextMenu_OnProperties);
 
+                this._AddCopyLocationIDMenu(menu);
                 this._AddTerminalOffEdgeMenus(menu);
+
                 this._AddDeleteMenu(menu);
 
                 return menu;
@@ -313,6 +324,11 @@ namespace WebAnnotation.ViewModel
 
         }
 
+        protected void ContextMenu_CopyLocationID(object sender, EventArgs e)
+        {
+            System.Windows.Forms.Clipboard.SetText(this.ID.ToString());
+        }
+
         protected void ContextMenu_ExportMorphology(object sender, EventArgs e)
         {
             Global.Export.OpenMorphology(this.ParentID.Value); 
@@ -328,17 +344,6 @@ namespace WebAnnotation.ViewModel
 
         protected void ContextMenu_OnOffEdge(object sender, EventArgs e)
         {
-            /*
-            DBACTION originalDBAction = this.DBAction;
-            this.Data.OffEdge = !this.Data.OffEdge;
-            this.Data.DBAction = DBACTION.UPDATE;
-            bool success = Store.Locations.Save();
-            if (!success)
-            {
-                this.Data.OffEdge = !this.Data.OffEdge;
-                this.DBAction = originalDBAction;
-            }
-             */
             this.modelObj.OffEdge = !this.modelObj.OffEdge;
             Store.Locations.Save();
         }
@@ -519,25 +524,32 @@ namespace WebAnnotation.ViewModel
                 modelObj.Radius = value;
             }
         }
-
-        /*
-        private Microsoft.SqlServer.Types.SqlGeometry _VolumeShape = null; 
-
-        public Microsoft.SqlServer.Types.SqlGeometry VolumeShape
+        
+        public SqlGeometry MosaicShape
         {
-            get {
-                if (_VolumeShape == null) 
-                {
-                    _VolumeShape = Microsoft.SqlServer.Types.SqlGeometry.STGeomFromText(new System.Data.SqlTypes.SqlChars(
-                                                                                        modelObj.VolumeShape.Geometry.WellKnownText), 
-                                                                                        0);
-                }
-
-                return _VolumeShape;
+            get
+            {
+                return modelObj.MosaicShape;
+            }
+            set
+            {
+                modelObj.MosaicShape = value;
             }
         }
-        */
-
+        
+        public SqlGeometry VolumeShape
+        {
+            get
+            {
+                return modelObj.VolumeShape;
+            }
+            set
+            {
+                modelObj.VolumeShape = value;
+            }
+        }
+        
+        
         [Column("TypeCode")]
         public LocationType TypeCode
         {

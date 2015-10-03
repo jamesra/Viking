@@ -5,6 +5,7 @@ using System.Xml;
 using System.Xml.Linq;
 using System.Diagnostics;
 using Utils;
+using System.Linq;
 
 using Geometry;
 
@@ -92,6 +93,30 @@ namespace Viking.VolumeModel
         {
             transformedP = P;
             return true; 
+        }
+
+        /// <summary>
+        /// Maps a point from volume space into the section space
+        /// </summary>
+        /// <param name="?"></param>
+        /// <returns></returns>
+        public override bool TryVolumeToSection(GridVector2[] P, out GridVector2[] transformedP)
+        {
+            transformedP = new GridVector2[P.Length];
+            P.CopyTo(transformedP, 0);
+            return true;
+        }
+
+        /// <summary>
+        /// Maps a point from section space into the volume space
+        /// </summary>
+        /// <param name="?"></param>
+        /// <returns></returns>
+        public override bool TrySectionToVolume(GridVector2[] P, out GridVector2[] transformedP)
+        {
+            transformedP = new GridVector2[P.Length];
+            P.CopyTo(transformedP, 0);
+            return true;
         }
 
         #region TextureFileNames

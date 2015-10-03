@@ -10,7 +10,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Geometry</RootNamespace>
     <AssemblyName>Geometry</AssemblyName>
-    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.6</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <FileUpgradeFlags>
     </FileUpgradeFlags>
@@ -76,6 +76,12 @@
     <DebugSymbols>true</DebugSymbols>
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
+  <PropertyGroup>
+    <SignAssembly>false</SignAssembly>
+  </PropertyGroup>
+  <PropertyGroup>
+    <AssemblyOriginatorKeyFile>Viking_TemporaryKey.pfx</AssemblyOriginatorKeyFile>
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Core">
@@ -93,12 +99,15 @@
     <Compile Include="Common.cs" />
     <Compile Include="Algorithms\ConvexHull.cs" />
     <Compile Include="Comparable\GridVector2CompareByAngle.cs" />
+    <Compile Include="CurveFitting\CatmullRom.cs" />
+    <Compile Include="CurveFitting\Lagrange.cs" />
     <Compile Include="DataStructures\Coord.cs" />
     <Compile Include="DataStructures\IndexedGridVector2.cs" />
     <Compile Include="DataStructures\LineSearchGrid.cs" />
     <Compile Include="DataStructures\PairedLineSearchGrid.cs" />
     <Compile Include="DataStructures\QuadTree.cs" />
     <Compile Include="DataStructures\QuadTreeNode.cs" />
+    <Compile Include="DataStructures\RegionPyramid.cs" />
     <Compile Include="GlobalSuppressions.cs" />
     <Compile Include="Primitives\GridQuad.cs" />
     <Compile Include="DataStructures\QuadTreeNodeTemplatePoint.cs" />
@@ -150,6 +159,9 @@
       <Project>{49F7DDA5-1634-49ED-99FA-74962E43F2D2}</Project>
       <Name>Utils</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Viking_TemporaryKey.pfx" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

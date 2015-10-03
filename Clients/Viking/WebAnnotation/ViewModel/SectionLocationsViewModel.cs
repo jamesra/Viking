@@ -16,10 +16,53 @@ using Viking.ViewModels;
 using WebAnnotationModel;
 using System.ComponentModel; 
 using System.Threading.Tasks;
+using SqlGeometryUtils;
 
 
 namespace WebAnnotation.ViewModel
 {
+    /// <summary>
+    /// Stores information about location queries for this region in the volume
+    /// </summary>
+    public class RegionRequestData
+    {
+        public DateTime LastQuery = DateTime.MinValue;
+
+        /// <summary>
+        /// True if a query has been sent to the server but has not returned
+        /// </summary>
+        public bool OutstandingQuery
+        {
+            get
+            {
+                if (this.AsyncResult == null)
+                    return false;
+
+                return AsyncResult.IsCompleted;
+            }
+        }
+
+        public IAsyncResult AsyncResult;
+
+        public RegionRequestData(DateTime query, IAsyncResult result)
+        {
+            AsyncResult = result;
+            query = LastQuery;
+        }
+    }
+
+    public class AnnotationRegions : RegionPyramid<RegionRequestData>
+    {
+        /// <summary>
+        /// If set to true any threads using this objects should cancel loading operations
+        /// </summary>
+        public bool CancelRunningOperations = false; 
+
+        public AnnotationRegions(GridRectangle Boundaries, GridCellDimensions cellDimensions)
+            : base (Boundaries, cellDimensions)
+        { }
+    }
+
     /// <summary>
     /// This class manages LocationViewModels used on a canvas.  
     /// It handles hit detection, search, and positioning using canvas transforms
@@ -39,10 +82,7 @@ namespace WebAnnotation.ViewModel
 
         /// <summary>
         /// Locations on the section we are providing an overlay for
-        /// implemented as a quad tree which can map a point to the nearest Location
         /// </summary>
-        //private QuadTree<Location_CanvasViewModel> Locations = null;
-
         private RTree.RTree<Location_CanvasViewModel> Locations = null;
                
         /// <summary>
@@ -50,13 +90,6 @@ namespace WebAnnotation.ViewModel
         /// </summary>
         private ConcurrentDictionary<long, ConcurrentDictionary<long, Location_CanvasViewModel>> LocationsForStructure = new ConcurrentDictionary<long, ConcurrentDictionary<long, Location_CanvasViewModel>>();
         
-        //        public static SortedDictionary<long, SortedList<long, RoundLineCode.RoundLine> > LocationLinesDict = null;
-
-        /// <summary>
-        /// Allows us to describe all the locationlinks visible on a screen
-        /// </summary>
-        //private LineSearchGrid<LocationLink> LocationLinksSearch = null;
-
         /// <summary>
         /// Allows us to describe all the StructureLinks visible on a screen
         /// </summary>
@@ -69,6 +102,9 @@ namespace WebAnnotation.ViewModel
         public readonly Viking.UI.Controls.SectionViewerControl parent;
 
         private int SectionNumber { get {return this.Section.Number; }}
+
+        private AnnotationRegions RegionQueries;
+        private Microsoft.Xna.Framework.Rectangle LastSceneViewport;
 
 
         /// <summary>
@@ -85,6 +121,8 @@ namespace WebAnnotation.ViewModel
             this.Section = section;
 
             GridRectangle bounds = AnnotationOverlay.SectionBounds(parent, parent.Section.Number);
+
+            RegionQueries = new AnnotationRegions(bounds, new GridCellDimensions(bounds.Width / 2.0, bounds.Height / 2.0));
 
             if (Locations == null)
                 Locations = new RTree.RTree<Location_CanvasViewModel>(); //new QuadTree<Location_CanvasViewModel>(bounds)
@@ -274,10 +312,33 @@ namespace WebAnnotation.ViewModel
 
         private bool MapLocation(LocationObj loc)
         {
-            GridVector2 VolumePosition = new GridVector2(-1, -1);
             //Don't bother mapping if the location was already mapped
             if (loc.VolumeTransformID == parent.CurrentTransformUniqueID)
-                return true; 
+                return true;
+            
+            switch(loc.TypeCode)
+            {
+                case LocationType.POINT:
+                    return MapLocationByCentroid(loc);
+                case LocationType.CIRCLE:
+                    return MapLocationByCentroid(loc);
+                default:
+                    return MapLocationByControlPoints(loc); 
+            }
+        }
+        
+        /// <summary>
+        /// A faster mapping technique for geometries that do not use control points such as circles and points.
+        /// </summary>
+        /// <param name="loc"></param>
+        /// <returns></returns>
+        private bool MapLocationByCentroid(LocationObj loc)
+        {
+             //Don't bother mapping if the location was already mapped
+            if (loc.VolumeTransformID == parent.CurrentTransformUniqueID)
+                return true;
+
+            GridVector2 VolumePosition = new GridVector2(-1, -1);
 
             bool mappedPosition = parent.TrySectionToVolume(loc.Position, this.Section.section, out VolumePosition);
             if (!mappedPosition) //Remove locations we can't map
@@ -286,9 +347,37 @@ namespace WebAnnotation.ViewModel
                 return false;
             }
 
+            loc.VolumeTransformID = parent.CurrentTransformUniqueID; 
+            loc.VolumeShape = loc.VolumeShape.MoveTo(VolumePosition);
+
+            return true;
+        }
+
+        /// <summary>
+        /// Map all of the control points for the geometry individually
+        /// </summary>
+        /// <param name="loc"></param>
+        /// <returns></returns>
+        private bool MapLocationByControlPoints(LocationObj loc)
+        {
+            //Don't bother mapping if the location was already mapped
+            if (loc.VolumeTransformID == parent.CurrentTransformUniqueID)
+                return true;
+
+            GridVector2[] VolumePositions;
+            GridVector2[] points = loc.MosaicShape.ToPoints();
+
+            bool mappedPosition = parent.TrySectionToVolume(loc.MosaicShape.ToPoints(), this.Section.section, out VolumePositions);
+            if (!mappedPosition) //Remove locations we can't map
+            {
+                Trace.WriteLine("AddLocation: Location #" + loc.ID.ToString() + " was unmappable.", "WebAnnotation");
+                return false;
+            }
+
             loc.VolumeTransformID = parent.CurrentTransformUniqueID;
-            loc.VolumePosition = VolumePosition;
-            
+            //loc.VolumePosition = VolumePosition;
+            loc.VolumeShape = SqlGeometryUtils.GeometryExtensions.ToGeometry(loc.MosaicShape.STGeometryType(), VolumePositions);
+
             return true;
         }
 
@@ -677,18 +766,21 @@ namespace WebAnnotation.ViewModel
         /// Load the annotations for the passed section and its reference sections
         /// </summary>
         /// <param name="section"></param>
-        internal void LoadSectionAnnotations()
+        internal void LoadSectionAnnotations(bool LoadStructures)
         {
             Trace.WriteLine("LoadSectionAnnotations: " + Section.Number.ToString(), "WebAnnotation");
 
 
-//            Task.Factory.StartNew(() => { 
-                                            //Store.Structures.GetObjectsForSection(Section.Number); 
-                                            //Store.Locations.GetObjectsForSectionAsynch(Section.Number); 
-                                            //});
+            //            Task.Factory.StartNew(() => { 
+            //Store.Structures.GetObjectsForSection(Section.Number); 
+            //Store.Locations.GetObjectsForSectionAsynch(Section.Number); 
+            //});
 
             //
-            MixedLocalAndRemoteQueryResults<long, StructureObj> structure_results = Store.Structures.GetObjectsForSectionAsynch(Section.Number);
+            if (LoadStructures)
+            {
+                MixedLocalAndRemoteQueryResults<long, StructureObj> structure_results = Store.Structures.GetObjectsForSectionAsynch(Section.Number);
+            }
             //Store.Structures.GetObjectsForSection(Section.Number);
 #if DEBUG
             
@@ -721,9 +813,102 @@ namespace WebAnnotation.ViewModel
             HaveLoadedSectionAnnotations = true;
         }
 
-        
-        
-        
+        /// <summary>
+        /// Return true if we should stop loading regions
+        /// </summary>
+        /// <returns></returns>
+        private bool ShouldCancelLoadingRegions(AnnotationRegions regions, double DevicePixelWidth, double DevicePixelHeight)
+        {
+            if (regions.CancelRunningOperations)
+                return true;
+
+            if (DevicePixelHeight != parent.Scene.DevicePixelHeight ||
+               DevicePixelWidth != parent.Scene.DevicePixelWidth)
+                return true;
+
+            return false; 
+        }
+
+        internal void LoadSectionAnnotationsInRegion(VikingXNA.Scene scene)
+        {
+            if (LastSceneViewport.Height != scene.Viewport.Bounds.Height ||
+            LastSceneViewport.Width != scene.Viewport.Bounds.Width)
+            {
+                ResetRegionPyramid();
+                LastSceneViewport = scene.Viewport.Bounds;
+                string TraceString = string.Format("LoadSectionAnnotations, Reset Region Pyramid: {0}", Section.Number);
+                Trace.WriteLine(TraceString, "WebAnnotation");
+            }
+
+            if(!HaveLoadedSectionAnnotations)
+            {
+                var localLocations = Store.Locations.GetLocalObjectsForSection(Section.Number);
+                if (localLocations.Count > 0)
+                {
+                    Task.Factory.StartNew(() => this.AddLocations(localLocations.Values));
+                }
+                HaveLoadedSectionAnnotations = true;
+            }
+
+            var RegionPyramid = this.RegionQueries;
+            //If we change the magnification factor we should stop loading regions
+            double StartingDevicePixelWidth = parent.Scene.DevicePixelWidth;
+            double StartingDevicePixelHeight = parent.Scene.DevicePixelHeight;
+
+            var level = RegionPyramid.GetLevelForVolumeBounds(scene.VisibleWorldBounds, scene.DevicePixelWidth);
+            GridRange<RegionRequestData> gridRange = level.SubGridForRegion(scene.VisibleWorldBounds);
+
+            DateTime currentTime = DateTime.UtcNow;
+
+            for (int iY = gridRange.Indicies.iMinY; iY < gridRange.Indicies.iMaxY; iY++)
+            {
+                for (int iX = gridRange.Indicies.iMinX; iX < gridRange.Indicies.iMaxX; iX++)
+                {
+                    RegionRequestData cell = level.Cells[iX, iY];
+                    GridRectangle cellBounds = level.CellBounds(iX, iY);
+
+                    if (ShouldCancelLoadingRegions(RegionPyramid,StartingDevicePixelWidth, StartingDevicePixelHeight))
+                        return; 
+
+                    //Check with the server every 120 seconds if we've already loaded the annotations and there is no outstanding query
+                    if (cell == null ||
+                        (!cell.OutstandingQuery && System.TimeSpan.FromTicks(DateTime.UtcNow.Ticks - cell.LastQuery.Ticks).Seconds > 120))
+                    {
+                        DateTime? LastQueryUtc = cell == null ? new DateTime?() : level.Cells[iX, iY].LastQuery;
+                        MixedLocalAndRemoteQueryResults<long, LocationObj> locations = Store.Locations.GetObjectsInRegionAsync(Section.Number, cellBounds, level.MinRadius, LastQueryUtc);
+                        if (locations.KnownObjects.Values.Count > 0)
+                            Task.Factory.StartNew(() => this.AddLocations(locations.KnownObjects.Values));
+
+                        level.Cells[iX, iY] = new RegionRequestData(currentTime, locations.ServerRequestResult);
+
+                        string TraceString = string.Format("LoadSectionAnnotations: {0} ({1},{2}) Level:{3} MinRadius:{4}", Section.Number, iX, iY, level.Level, level.MinRadius);
+                        Trace.WriteLine(TraceString, "WebAnnotation");
+
+                        /*
+                        ConcurrentDictionary<long, LocationObj> locations = Store.Locations.GetObjectsInRegion(Section.Number, cellBounds, level.MinRadius, LastQueryUtc);
+                        
+                        if (locations.Values.Count > 0)
+                            Task.Factory.StartNew(() => this.AddLocations(locations.Values));
+
+                        level.Cells[iX, iY].OutstandingQuery = false;
+                        */
+                    }
+                }
+            } 
+        }
+
+        /// <summary>
+        /// Call this when the viewport size changes, which means the MinRadius value has changed for the GetObjectsInRegion style calls
+        /// </summary>
+        public void ResetRegionPyramid()
+        {
+            lock(this.RegionQueries)
+            {
+                this.RegionQueries.CancelRunningOperations = true; 
+                this.RegionQueries = new AnnotationRegions(this.RegionQueries.RegionBounds,
+                                                                          new GridCellDimensions(this.RegionQueries.RegionBounds.Width / 2.0, this.RegionQueries.RegionBounds.Height / 2.0));
+            }
+        }
 
         /// <summary>
         /// Return all the line segments visible in the passed bounds

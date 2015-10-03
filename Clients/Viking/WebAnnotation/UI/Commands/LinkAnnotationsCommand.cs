@@ -12,6 +12,7 @@ using Microsoft.Xna.Framework.Graphics;
 using RoundLineCode;
 using WebAnnotation.ViewModel;
 using WebAnnotationModel;
+using Viking.Common;
 
 namespace WebAnnotation.UI.Commands
 {
@@ -39,7 +40,7 @@ namespace WebAnnotation.UI.Commands
             //Find if we are close enough to a location to "snap" the line to the target
             double distance;
             NearestTarget = Overlay.GetNearestLocation(WorldPos, out distance);
-            NearestTarget = ValidateTarget(NearestTarget); 
+            NearestTarget = TrySetTarget(NearestTarget); 
 
             base.OnMouseMove(sender, e);
 
@@ -52,33 +53,16 @@ namespace WebAnnotation.UI.Commands
         /// </summary>
         /// <param name="NearestTarget"></param>
         /// <returns></returns>
-        protected Location_CanvasViewModel ValidateTarget(Location_CanvasViewModel nearest_target)
+        protected Location_CanvasViewModel TrySetTarget(Location_CanvasViewModel nearest_target)
         {
-            if (nearest_target != null)
-            {
-                //Check to make sure it isn't the same structure on the same section
-                if (nearest_target.ParentID == OriginObj.ParentID)
-                {
-                    if (nearest_target.Z == OriginObj.Z)
-                    {
-                        //Not a valid target for a link
-                        nearest_target = null;
-                    }
-                    else
-                    {
-                        //Make sure the locations aren't already linked
-                        foreach (long linkID in OriginObj.Links)
-                        {
-                            if (linkID == nearest_target.ID)
-                            {
-                                //They are already linked, so not a valid target
-                                nearest_target = null;
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
+            if (nearest_target == null)
+                return null; 
+
+            if (LocationLink.IsValidLocationLinkTarget(nearest_target.modelObj, OriginObj.modelObj))
+                return nearest_target;
+
+            if (StructureLink.IsValidStructureLinkTarget(nearest_target.modelObj, OriginObj.modelObj))
+                return nearest_target;
 
             return nearest_target; 
         }
@@ -97,7 +81,7 @@ namespace WebAnnotation.UI.Commands
                 //Find if we are close enough to a location to "snap" the line to the target
                 double distance;
                 NearestTarget = Overlay.GetNearestLocation(WorldPos, out distance);
-                NearestTarget = ValidateTarget(NearestTarget); 
+                NearestTarget = TrySetTarget(NearestTarget); 
 
                 if(NearestTarget == null)
                 {
@@ -105,7 +89,7 @@ namespace WebAnnotation.UI.Commands
                     return; 
                 }
 
-                if(NearestTarget.ParentID == OriginObj.ParentID)
+                if(LocationLink.IsValidLocationLinkTarget(NearestTarget.modelObj, OriginObj.modelObj))
                 {
                     try
                     {
@@ -120,7 +104,7 @@ namespace WebAnnotation.UI.Commands
                         this.Deactivated = true;
                     }
                 }
-                else
+                else if(StructureLink.IsValidStructureLinkTarget(NearestTarget.modelObj, OriginObj.modelObj))
                 {
                     try
                     {
@@ -160,6 +144,34 @@ namespace WebAnnotation.UI.Commands
             base.Execute();
         }
 
+        static readonly Color invalidTarget = new Color((byte)255,
+                                            (byte)0,
+                                            (byte)64,
+                                            0.5f);
+
+        static readonly Color validTarget = new Microsoft.Xna.Framework.Color((byte)0,
+                                (byte)255,
+                                (byte)0,
+                                (byte)128);
+
+        static readonly Color noTarget = new Color(Color.White.R,
+                                    Color.White.G,
+                                    Color.White.B,
+                                    0.5f);
+
+        static readonly string InvalidTargetStyle = null;
+        static readonly string LocationLinkStyle = null;
+        static readonly string StructureLinkStyle = "AnimatedLinear";
+
+        private double LineRadiusForLocationLink() { return OriginObj.Radius / 6.0; }
+        private double LineRadiusForStructureLink()
+        {
+            if (NearestTarget == null)
+                return OriginObj.Radius;
+
+            return Math.Min(OriginObj.Radius, NearestTarget.Radius);
+        }
+
         public override void OnDraw(GraphicsDevice graphicsDevice, VikingXNA.Scene scene, BasicEffect basicEffect)
         {
             if (this.oldMouse == null)
@@ -190,50 +202,33 @@ namespace WebAnnotation.UI.Commands
                 target = new Vector3((float)this.oldWorldPosition.X, (float)oldWorldPosition.Y, 0f);
             }
 
-            Color lineColor = new Color(Color.Black.R,
-                                        Color.Black.G,
-                                        Color.Black.B, 
-                                        0.5f);
-            
+            Color lineColor = noTarget;
+            String lineStyle = null;
+            double lineRadius = LineRadiusForLocationLink();
+            bool UseLumaLineManager = false;
+
             if (NearestTarget != null)
             {
-                Structure TargetStruct = NearestTarget.Parent;
-                if (TargetStruct != null)
+                if(LocationLink.IsValidLocationLinkTarget(NearestTarget.modelObj, OriginObj.modelObj))
                 {
-                    //If they are the same structure on different sections use the color for a location link, otherwise white
-                    if (TargetStruct == OriginObj.Parent)
-                    {
-                        if (NearestTarget.Z != OriginObj.Z)
-                        {
-                            //Make sure the locations aren't already linked
-                            bool ValidTarget = true;
-                            foreach (long linkID in OriginObj.Links)
-                            {
-                                if (linkID == NearestTarget.ID)
-                                {
-                                    ValidTarget = false;
-                                    break; 
-                                }
-                            }
-
-                            if (ValidTarget)
-                            {
-                                StructureType type = OriginObj.Parent.Type;
-                                //If you don't cast to byte the wrong constructor is used and the alpha value is wrong
-                                lineColor = new Microsoft.Xna.Framework.Color((byte)(255 - type.Color.R),
-                                    (byte)(255 - type.Color.G),
-                                    (byte)(255 - type.Color.B),
-                                    (byte)128);
-                            }
-                        }
-                    }
-                    else
-                    {
-                        lineColor = new Color(Color.White.R,
-                                              Color.White.G,
-                                              Color.White.B, 
-                                              0.5f);
-                    }
+                    lineColor = validTarget;
+                    lineStyle = LocationLinkStyle;
+                    lineRadius = LineRadiusForLocationLink();
+                    UseLumaLineManager = true;
+                }
+                else if(StructureLink.IsValidStructureLinkTarget(NearestTarget.modelObj, OriginObj.modelObj))
+                {
+                    lineColor = validTarget;
+                    lineStyle = StructureLinkStyle;
+                    lineRadius = LineRadiusForStructureLink();
+                    UseLumaLineManager = false;
+                } 
+                else
+                {
+                    lineColor = invalidTarget;
+                    lineStyle = InvalidTargetStyle;
+                    lineRadius = LineRadiusForLocationLink();
+                    UseLumaLineManager = true;
                 }
             }
 
@@ -241,14 +236,17 @@ namespace WebAnnotation.UI.Commands
                                                    (float)OriginPosition.Y,
                                                    (float)target.X,
                                                    (float)target.Y);
-
-            Parent.LineManager.Draw(lineToParent,
-                                    (float)(OriginObj.Radius / 6.0),
+               
+            float Time = (float)TimeSpan.FromTicks(DateTime.Now.Ticks - DateTime.Today.Ticks).TotalSeconds;
+            RoundLineManager lineManager = UseLumaLineManager ? Parent.LumaOverlayLineManager : Parent.LineManager;
+            lineColor = UseLumaLineManager ? lineColor.ConvertToHSL() : lineColor;
+            lineManager.Draw(lineToParent,
+                                    (float)(lineRadius),
                                     lineColor,
                                     basicEffect.View * basicEffect.Projection,
-                                    1,
-                                    null);
-        
+                                    Time,
+                                    lineStyle);
+
 
             base.OnDraw(graphicsDevice, scene, basicEffect);
         }

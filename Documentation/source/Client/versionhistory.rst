@@ -3,6 +3,46 @@
 Version History
 ###############
 
+1.1.165
+-------
+
+   * Added context menu for locations to copy the ID into the clipboard.  This is useful to use to navigate to location in Tulip when rendering morphology.
+   * Made exception catches when loading textures more specific in hopes of obtaining more informative bug reports for rare Acccess Violation.
+
+1.1.162
+-------
+
+   * Only visible annotations are loaded from the server
+
+1.1.159
+-------
+   
+   * Reverted changes that used Microsoft.SqlServer.Types due to deployment error which I cannot investigate fully at this time
+   * Added chevron arrow to animated structure links
+   * Changed lines colors used when creating structure links. 
+   * Fixed issue where invisbile adjacent section locations which were overlapped by locations on the current section could still be selected.
+   * Improved logic to determine if a proposed LocationLink or StructureLink is valid.  This prevents linking child structures to their parents.
+   * Fixed issue where two structure links were created for each structure link.
+   
+1.1.152
+-------
+
+   * Lines and Adjacent location indicators now use HSL blending to make details under the line more visible
+   * Animated Structure Links are now longer to make the direction more apparent.
+   * Preview feature, Hitting "L" enables one to add a curve which will not be saved.  Hit Esc to exit the command. 
+   
+
+1.1.150
+-------
+
+   * Fixed crash when paging sections very fast
+   
+1.1.148
+-------
+
+   * Tweaks to reduce memory footprint
+   * Updated installer to install the .NET 4.6 framework
+
 1.1.145
 -------
 
@@ -61,12 +101,13 @@ Version History
 
 * Added ability for hotkey commands to automatically add tags to new structures via WebAnnotationUserSettings.xml file
    
-   * Alt+R : Create new ribbon post-synapse with “Bipolar”, “Ribbon”, “Glutamate” tags.
-   * Alt+S : Create new conventional post-synapse with “Conventional” tag.
-   * Alt+B : Create new conventional glutamatergic post-synapse with “Bipolar”, “Conventional”, “Glutamate” tags.
+   * Ctrl+R : Create new ribbon post-synapse with “Bipolar”, “Ribbon”, “Glutamate” tags.
+   * Ctrl+S : Create new conventional post-synapse with “Conventional” tag.
+   * Ctrl+B : Create new conventional glutamatergic post-synapse with “Bipolar”, “Conventional”, “Glutamate” tags.
     
 * Added support for hotkey commands to toggle structure attributes on/off.  Users can place the mouse over a structure and hit the hotkey to toggle one the following tags:  
-        
+   
+   * Shift+C - Conventional     
    * Shift+E - Glutamate
    * Shift+G - Glycine
    * Shift+P - Peptide

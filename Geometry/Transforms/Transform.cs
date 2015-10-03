@@ -21,11 +21,15 @@ namespace Geometry.Transforms
 
         abstract public bool CanTransform(GridVector2 Point);
         abstract public GridVector2 Transform(GridVector2 Point);
+        abstract public GridVector2[] Transform(GridVector2[] Points);
         abstract public bool TryTransform(GridVector2 Point, out GridVector2 v);
+        abstract public bool TryTransform(GridVector2[] Points, out GridVector2[] v);
 
         abstract public bool CanInverseTransform(GridVector2 Point);
         abstract public GridVector2 InverseTransform(GridVector2 Point);
+        abstract public GridVector2[] InverseTransform(GridVector2[] Points);
         abstract public bool TryInverseTransform(GridVector2 Point, out GridVector2 v);
+        abstract public bool TryInverseTransform(GridVector2[] Points, out GridVector2[] v);
 
         /// <summary>
         /// Adjust the output of the transform by the following vector

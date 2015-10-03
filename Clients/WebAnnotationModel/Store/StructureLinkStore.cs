@@ -60,6 +60,28 @@ namespace WebAnnotationModel
             throw new NotImplementedException();
         }
 
+        protected override IAsyncResult ProxyBeginGetBySectionRegion(AnnotateStructuresClient proxy, long SectionNumber, BoundingRectangle BBox, double MinRadius, DateTime LastQuery, AsyncCallback callback, object asynchState)
+        {
+            throw new NotImplementedException();
+        } 
+
+        protected override StructureLink[] ProxyGetBySectionRegionCallback(out long TicksAtQueryExecute, out StructureLinkKey[] DeletedLocations, GetObjectBySectionCallbackState state, IAsyncResult result)
+        {
+            throw new NotImplementedException();
+        }
+
+        protected override StructureLink[] ProxyGetBySectionRegion(AnnotateStructuresClient proxy,
+                                                             long SectionNumber,
+                                                             BoundingRectangle BBox,
+                                                             double MinRadius,
+                                                             DateTime LastQuery,
+                                                             out long TicksAtQueryExecute,
+                                                             out StructureLinkKey[] DeletedLocations)
+        {
+            throw new NotImplementedException();
+        }
+
+
         protected override IAsyncResult ProxyBeginGetBySection(AnnotateStructuresClient proxy, long SectionNumber, DateTime LastQuery, AsyncCallback callback, object asynchState)
         {
             throw new NotImplementedException();
@@ -119,21 +141,24 @@ namespace WebAnnotationModel
         {
             foreach (StructureLinkKey key in linkKeys)
             {
+                /*
                 StructureLinkObj link = Store.StructureLinks.GetObjectByID(key, false);
                 if (link == null)
                     continue; 
+                */
 
-                StructureObj SourceObj = Store.Structures.GetObjectByID(link.SourceID, false);
-                StructureObj TargetObj = Store.Structures.GetObjectByID(link.TargetID, false);
+                StructureObj SourceObj = Store.Structures.GetObjectByID(key.SourceID, false);
+                StructureObj TargetObj = Store.Structures.GetObjectByID(key.TargetID, false);
 
                 if (SourceObj != null)
-                    SourceObj.RemoveLink(link);
+                    SourceObj.RemoveLink(key);
 
                 if (TargetObj != null)
-                    TargetObj.RemoveLink(link);
+                    TargetObj.RemoveLink(key);
             }
 
             return base.InternalDelete(linkKeys);
         }
+
     }
 }

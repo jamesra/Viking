@@ -26,7 +26,7 @@ namespace Viking.VolumeModel
 
         public SectionTransformsCache()
         {
-            this.NumSectionsToKeepInMemory = 10; //Total number of sections we will keep loaded by default
+            this.NumSectionsToKeepInMemory = 6; //Total number of sections we will keep loaded by default
         }
 
         protected override SectionTransformsDictionary Fetch(SectionMappingsCacheEntry entry)
@@ -38,17 +38,7 @@ namespace Viking.VolumeModel
         {
             SectionMappingsCacheEntry cacheEntry = new SectionMappingsCacheEntry(key, entry);
             return cacheEntry;
-        }
-
-        protected override bool OnRemoveEntry(SectionMappingsCacheEntry entry)
-        {
-            foreach(MappingBase mapping in entry.TransformsForSection.Values)
-            {
-                mapping.FreeMemory();
-            }
-
-            return base.OnRemoveEntry(entry);
-        }
+        } 
     }
 
     public class SectionMappingsCacheEntry : Common.DataStructures.CacheEntry< int >
@@ -63,16 +53,14 @@ namespace Viking.VolumeModel
         }
 
         public override sealed void Dispose()
-        {
-            /*
-            foreach (MappingBase mapping in this.TransformsForSection)
-            {
-                mapping
-            }
-             */
-
+        {  
             if (TransformsForSection != null)
             {
+                foreach (MappingBase mapping in this.TransformsForSection.Values)
+                {
+                    mapping.FreeMemory();
+                }
+
                 TransformsForSection.Clear();
                 this.TransformsForSection = null;
             }
@@ -116,7 +104,6 @@ namespace Viking.VolumeModel
             }
 
             MappingBase transform = GetMappingForSection(dict, VolumeTransformName, section, ChannelName, SectionTransformName);
-            SectionMappingCache.ReduceCacheFootprint(null);
             return transform;
         }
 

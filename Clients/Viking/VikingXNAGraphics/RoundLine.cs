@@ -26,11 +26,11 @@ namespace RoundLineCode
         private float rho; // Length of the line
         private float theta; // Angle of the line
 
-        public Vector2 P0 
-        { 
-            get 
-            { 
-                return p0; 
+        public Vector2 P0
+        {
+            get
+            {
+                return p0;
             }
             set
             {
@@ -38,11 +38,11 @@ namespace RoundLineCode
                 RecalcRhoTheta();
             }
         }
-        public Vector2 P1 
+        public Vector2 P1
         {
-            get 
-            { 
-                return p1; 
+            get
+            {
+                return p1;
             }
             set
             {
@@ -84,11 +84,11 @@ namespace RoundLineCode
     {
         public Disc(Vector2 p) : base(p, p) { }
         public Disc(float x, float y) : base(x, y, x, y) { }
-        public Vector2 Pos 
+        public Vector2 Pos
         {
-            get 
+            get
             {
-                return P0; 
+                return P0;
             }
             set
             {
@@ -118,7 +118,7 @@ namespace RoundLineCode
 
         public static int SizeInBytes = 8 * sizeof(float);
 
-        public static VertexElement[] VertexElements = new VertexElement[] 
+        public static VertexElement[] VertexElements = new VertexElement[]
             {
                 new VertexElement(0, VertexElementFormat.Vector3, VertexElementUsage.Position, 0),
                 new VertexElement(12, VertexElementFormat.Vector2, VertexElementUsage.Normal, 0),
@@ -134,41 +134,58 @@ namespace RoundLineCode
     /// </summary>
     public class RoundLineManager
     {
-        private GraphicsDevice device;
-        private Effect effect;
-        private EffectParameter viewProjMatrixParameter;
-        private EffectParameter instanceDataParameter;
-        private EffectParameter timeParameter;
-        private EffectParameter lineRadiusParameter;
-        private EffectParameter lineColorParameter;
-        private EffectParameter blurThresholdParameter;
-        private VertexBuffer vb;
-        private IndexBuffer ib;
-        private VertexDeclaration vdecl;
-        private int numInstances;
-        private int numVertices;
-        private int numIndices;
-        private int numPrimitivesPerInstance;
-        private int numPrimitives;
-        private int bytesPerVertex;
-        float[] translationData;
+        protected GraphicsDevice device;
+        protected Effect effect;
+        protected EffectParameter viewProjMatrixParameter;
+        protected EffectParameter instanceDataParameter;
+        protected EffectParameter timeParameter;
+        protected EffectParameter lineRadiusParameter;
+        protected EffectParameter lineColorParameter;
+        protected EffectParameter blurThresholdParameter;
+        protected VertexBuffer vb;
+        protected IndexBuffer ib;
+        protected VertexDeclaration vdecl;
+        protected int MaxInstancesPerBatch = 200;
+        protected int numVertices;
+        protected int numIndices;
+        protected int numPrimitivesPerInstance;
+        protected int numPrimitives;
+        protected int bytesPerVertex;
+        protected float[] translationData;
 
         public int NumLinesDrawn;
         public float BlurThreshold = 0.97f;
 
 
-        public void Init(GraphicsDevice device, ContentManager content)
+        public virtual void Init(GraphicsDevice device, ContentManager content)
         {
             this.device = device;
             effect = content.Load<Effect>("RoundLine");
-            viewProjMatrixParameter = effect.Parameters["viewProj"];
-            instanceDataParameter = effect.Parameters["instanceData"];
-            timeParameter = effect.Parameters["time"];
-            lineRadiusParameter = effect.Parameters["lineRadius"];
-            lineColorParameter = effect.Parameters["lineColor"];
-            blurThresholdParameter = effect.Parameters["blurThreshold"];
-
+            LoadParameters(effect);
             CreateRoundLineMesh();
+        }
+
+        /// <summary>
+        /// Initialize to use HSV overlay onto a background texture
+        /// </summary>
+        /// <param name="device"></param>
+        /// <param name="content"></param>
+        public void InitHSV(GraphicsDevice device, ContentManager content)
+        {
+            this.device = device;
+            effect = content.Load<Effect>("RoundLineHSV");
+            LoadParameters(effect);
+            CreateRoundLineMesh();
+        }
+
+        protected void LoadParameters(Effect e)
+        {
+            viewProjMatrixParameter = e.Parameters["viewProj"];
+            instanceDataParameter = e.Parameters["instanceData"];
+            timeParameter = e.Parameters["time"];
+            lineRadiusParameter = e.Parameters["lineRadius"];
+            lineColorParameter = e.Parameters["lineColor"];
+            blurThresholdParameter = e.Parameters["blurThreshold"];
         }
 
         public string[] TechniqueNames
@@ -196,28 +213,28 @@ namespace RoundLineCode
         /// The X and Y coordinates of the "normal" encode the rho and theta of each vertex
         /// The "texture" encodes whether to scale and translate the vertex horizontally by length and radius
         /// </remarks>
-        private void CreateRoundLineMesh()
+        protected void CreateRoundLineMesh()
         {
-            const int primsPerCap = 12; // A higher primsPerCap produces rounder endcaps at the cost of more vertices
+            const int primsPerCap = 9; // A higher primsPerCap produces rounder endcaps at the cost of more vertices
             const int verticesPerCap = primsPerCap * 2 + 2;
             const int primsPerCore = 4;
             const int verticesPerCore = 8;
 
-            numInstances = 200;
-            numVertices = (verticesPerCore + verticesPerCap + verticesPerCap) * numInstances;
+            numVertices = verticesPerCore * MaxInstancesPerBatch;
+            numVertices = (verticesPerCore + verticesPerCap + verticesPerCap) * MaxInstancesPerBatch;
             numPrimitivesPerInstance = primsPerCore + primsPerCap + primsPerCap;
-            numPrimitives = numPrimitivesPerInstance * numInstances;
+            numPrimitives = numPrimitivesPerInstance * MaxInstancesPerBatch;
             numIndices = 3 * numPrimitives;
             short[] indices = new short[numIndices];
             bytesPerVertex = RoundLineVertex.SizeInBytes;
             RoundLineVertex[] tri = new RoundLineVertex[numVertices];
-            translationData = new float[numInstances * 4]; // Used in Draw()
+            translationData = new float[MaxInstancesPerBatch * 4]; // Used in Draw()
 
             int iv = 0;
             int ii = 0;
             int iVertex;
             int iIndex;
-            for (int instance = 0; instance < numInstances; instance++)
+            for (int instance = 0; instance < MaxInstancesPerBatch; instance++)
             {
                 // core vertices
                 const float pi2 = MathHelper.PiOver2;
@@ -282,7 +299,7 @@ namespace RoundLineCode
                     float deltaTheta = MathHelper.Pi / primsPerCap;
                     float theta0 = 3 * MathHelper.PiOver2 + i * deltaTheta;
                     float theta1 = theta0 + deltaTheta / 2;
-//                    float theta2 = theta0 + deltaTheta;
+                    //                    float theta2 = theta0 + deltaTheta;
                     // even-numbered indices are at the center of the halfdisc
                     tri[iVertex + 0] = new RoundLineVertex(new Vector3(0, 0, 0), new Vector2(0, theta1), new Vector2(0, 1), instance);
 
@@ -305,12 +322,12 @@ namespace RoundLineCode
                 }
             }
 
-            
+
             vdecl = new VertexDeclaration(RoundLineVertex.VertexElements);
             vb = new VertexBuffer(device, vdecl, numVertices * bytesPerVertex, BufferUsage.None);
             vb.SetData<RoundLineVertex>(tri);
 
-            ib = new IndexBuffer(device, IndexElementSize.SixteenBits, numIndices * 2, BufferUsage.None );
+            ib = new IndexBuffer(device, IndexElementSize.SixteenBits, numIndices * 2, BufferUsage.None);
             ib.SetData<short>(indices);
         }
 
@@ -348,11 +365,11 @@ namespace RoundLineCode
 
             viewProjMatrixParameter.SetValue(viewProjMatrix);
             timeParameter.SetValue(time);
-            
+
             lineColorParameter.SetValue(lineColor.ToVector4());
             lineRadiusParameter.SetValue(lineRadius);
             blurThresholdParameter.SetValue(BlurThreshold);
-            
+
             int iData = 0;
             translationData[iData++] = roundLine.P0.X;
             translationData[iData++] = roundLine.P0.Y;
@@ -367,7 +384,7 @@ namespace RoundLineCode
 
             EffectPass pass = effect.CurrentTechnique.Passes[0];
 
-            pass.Apply(); 
+            pass.Apply();
 
             int numInstancesThisDraw = 1;
             device.DrawIndexedPrimitives(PrimitiveType.TriangleList, 0, 0, numVertices, 0, numPrimitivesPerInstance * numInstancesThisDraw);
@@ -379,12 +396,12 @@ namespace RoundLineCode
 
 
         /// <summary>
-        /// Draw a list of Lines.
+        /// Draw a list of Lines in batches, up to the maximum number of instances for the shader.
         /// </summary>
-        public void Draw(IEnumerable<RoundLine> roundLines, float lineRadius, Color lineColor, Matrix viewProjMatrix, 
+        public void Draw(IEnumerable<RoundLine> roundLines, float lineRadius, Color lineColor, Matrix viewProjMatrix,
             float time, string techniqueName)
         {
-            device.SetVertexBuffer(vb); 
+            device.SetVertexBuffer(vb);
             device.Indices = ib;
 
             viewProjMatrixParameter.SetValue(viewProjMatrix);
@@ -392,7 +409,7 @@ namespace RoundLineCode
             lineColorParameter.SetValue(lineColor.ToVector4());
             lineRadiusParameter.SetValue(lineRadius);
             blurThresholdParameter.SetValue(BlurThreshold);
-            
+
             if (techniqueName == null)
                 effect.CurrentTechnique = effect.Techniques["Standard"];
             else
@@ -400,8 +417,8 @@ namespace RoundLineCode
 
             EffectPass pass = effect.CurrentTechnique.Passes[0];
 
-            pass.Apply(); 
-            
+            pass.Apply();
+
             int iData = 0;
             int numInstancesThisDraw = 0;
             foreach (RoundLine roundLine in roundLines)
@@ -412,7 +429,7 @@ namespace RoundLineCode
                 translationData[iData++] = roundLine.Theta;
                 numInstancesThisDraw++;
 
-                if (numInstancesThisDraw == numInstances)
+                if (numInstancesThisDraw == MaxInstancesPerBatch)
                 {
                     instanceDataParameter.SetValue(translationData);
                     device.DrawIndexedPrimitives(PrimitiveType.TriangleList, 0, 0, numVertices, 0, numPrimitivesPerInstance * numInstancesThisDraw);
@@ -428,5 +445,40 @@ namespace RoundLineCode
                 NumLinesDrawn += numInstancesThisDraw;
             }
         }
+    }
+
+    public class LumaOverlayRoundLineManager : RoundLineManager
+    { 
+        private EffectParameter _BackgroundTexture;
+        private EffectParameter _RenderTargetSize;
+
+        public Texture LumaTexture
+        {
+            set
+            {
+                _BackgroundTexture.SetValue(value);
+            }
+        }
+
+        public Viewport RenderTargetSize
+        {
+            set
+            {
+                _RenderTargetSize.SetValue(new Vector2(value.Width, value.Height));
+            }
+
+        }
+
+        public override void Init(GraphicsDevice device, ContentManager content)
+        {
+            this.device = device;
+            effect = content.Load<Effect>("RoundLineHSV");
+            _BackgroundTexture = effect.Parameters["BackgroundTexture"];
+            _RenderTargetSize = effect.Parameters["RenderTargetSize"];
+            LoadParameters(effect);
+            CreateRoundLineMesh();
+        }
+
+
     }
 }

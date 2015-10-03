@@ -4,6 +4,8 @@ using System.Linq;
 using System.Text;
 using Geometry;
 using System.Windows.Forms;
+using WebAnnotation.View;
+using Viking.Common;
 
 namespace WebAnnotation.UI.Commands
 {
@@ -21,7 +23,7 @@ namespace WebAnnotation.UI.Commands
             protected set;
         }
 
-        public delegate void OnCommandSuccess(GridVector2[] verts, double LineWidth);
+        public delegate void OnCommandSuccess(GridVector2[] control_points);
         protected OnCommandSuccess success_callback;
 
         public PolylineCommandBase(Viking.UI.Controls.SectionViewerControl parent, 
@@ -52,7 +54,7 @@ namespace WebAnnotation.UI.Commands
         protected override void Execute()
         {
             if (this.success_callback != null)
-                this.success_callback(this.LineVerticies, this.LineWidth);
+                this.success_callback(this.LineVerticies);
 
             base.Execute();
         }
@@ -188,9 +190,8 @@ namespace WebAnnotation.UI.Commands
                                                                                        this.LineVerticies,
                                                                                        this.LineWidth,
                                                                                        iOverlapped.Value,
-                                                                                       new OnCommandSuccess((line_verticies, line_width) => 
+                                                                                       new OnCommandSuccess((line_verticies) => 
                                                                                         {this.LineVerticies = line_verticies;
-                                                                                         this.LineWidth = line_width;
                                                                                          //Update oldWorldPosition to keep the line we draw to our cursor from jumping on the first draw when we are reactivated and user hasn't used the mouse yet
                                                                                          this.oldWorldPosition = line_verticies[iOverlapped.Value];
                                                                                         })));
@@ -218,11 +219,10 @@ namespace WebAnnotation.UI.Commands
                 {
 
                     GridVector2? SelfIntersection = IntersectsSelf(new GridLineSegment(WorldPos, LineVerticies.Last()));
-                    if(!SelfIntersection.HasValue)
-                    {
-                        vert_stack.Push(WorldPos);
-                        Parent.Invalidate(); 
-                    }
+                     
+                    vert_stack.Push(WorldPos);
+                    Parent.Invalidate(); 
+                     
                 }
             }
 
@@ -254,34 +254,16 @@ namespace WebAnnotation.UI.Commands
             base.OnMouseDown(sender, e);
         }
 
-        protected override void OnMouseWheel(object sender, MouseEventArgs e)
-        {
-            float multiplier = (float)(e.Delta > 0 ? 1.25 : .75);
-
-            this.LineWidth *= multiplier;
-            if(this.LineWidth < 1.0)
-                this.LineWidth = 1.0;
-
-            Parent.Invalidate(); 
-
-            //Do not call base.OnMouseWheel or we will zoom while adjusting line size
-        }
-
         public override void OnDraw(Microsoft.Xna.Framework.Graphics.GraphicsDevice graphicsDevice, VikingXNA.Scene scene, Microsoft.Xna.Framework.Graphics.BasicEffect basicEffect)
         {
             if (this.oldWorldPosition != LineVerticies.Last())
             {
                 GridVector2? SelfIntersection = IntersectsSelf(new GridLineSegment(this.oldWorldPosition, LineVerticies.Last()));
-                if (!SelfIntersection.HasValue)
-                {
-                    vert_stack.Push(this.oldWorldPosition);
-                }
-                else
-                {
-                    vert_stack.Push(SelfIntersection.Value);
-                }
 
-                GlobalPrimitives.DrawPolyline(Parent.LineManager, basicEffect, this.LineVerticies.ToList(), this.LineWidth, this.LineColor);
+                vert_stack.Push(this.oldWorldPosition);
+
+                CurveView.Draw(graphicsDevice, Parent.LumaOverlayLineManager, basicEffect, vert_stack.ToList(), 5, false, this.LineColor.ConvertToHSL(), this.LineWidth); 
+                //GlobalPrimitives.DrawPolyline(Parent.LineManager, basicEffect, DrawnLineVerticies, this.LineWidth, this.LineColor);
 
                 this.vert_stack.Pop();
 
@@ -289,7 +271,7 @@ namespace WebAnnotation.UI.Commands
             }
             else
             {
-                GlobalPrimitives.DrawPolyline(Parent.LineManager, basicEffect, this.LineVerticies.ToList(), this.LineWidth, this.LineColor);
+                GlobalPrimitives.DrawPolyline(Parent.LumaOverlayLineManager, basicEffect, this.LineVerticies.ToList(), this.LineWidth, this.LineColor);
             }
         }
     }
@@ -392,23 +374,11 @@ namespace WebAnnotation.UI.Commands
             base.OnMouseDown(sender, e);
         }
          
-        protected override void OnMouseWheel(object sender, MouseEventArgs e)
-        {
-            float multiplier = (float)(e.Delta > 0 ? 1.25 : .75);
-
-            this.LineWidth *= multiplier;
-            if (this.LineWidth < 1.0)
-                this.LineWidth = 1.0;
-
-            Parent.Invalidate();
-
-            //Do not call base.OnMouseWheel or we will zoom while adjusting line size
-        }
 
         public override void OnDraw(Microsoft.Xna.Framework.Graphics.GraphicsDevice graphicsDevice, VikingXNA.Scene scene, Microsoft.Xna.Framework.Graphics.BasicEffect basicEffect)
         {
-            GlobalPrimitives.DrawPolyline(Parent.LineManager, basicEffect, this.LineVerticies.ToList(), this.LineWidth, this.LineColor);
-
+            CurveView.Draw(graphicsDevice, Parent.LumaOverlayLineManager, basicEffect, this.LineVerticies.ToList(), 5, false, this.LineColor, this.LineWidth);
+           
             base.OnDraw(graphicsDevice, scene, basicEffect);
         }
     }

@@ -150,28 +150,26 @@ PixelShaderOutput RGBCircleTextureOverBackgroundLumaPixelShaderFunction(PixelSha
 	float YDist = input.CenterDistance.y;
 	
 	float CenterDistSquared = (XDist * XDist) + (YDist * YDist); 
+	output.Depth = CenterDistSquared;
 
 	float4 RGBColor = tex2D(AnnotationTextureSampler, input.TexCoord) ;
-
 	clip(RGBColor.a <= 0 ? -1 : 1);
-	
-	output.Depth = CenterDistSquared;
 	
 	float AlphaBlend = RGBColor.r * input.HSLColor.a;
 
 	//This is a greyscale+Alpha image.  Greyscale indicates the degree of color, alpha indicates degree to which we use Overlay Luma or Background Luma
 
-	float4 LumaColor = tex2D(BackgroundTextureSampler, ((input.ScreenTexCoord.xy) / (RenderTargetSize.xy-1)));
+	float4 LumaColor = tex2D(BackgroundTextureSampler, ((input.ScreenTexCoord.xy) / (RenderTargetSize.xy)));
 
 	float Hue = input.HSLColor.r;
-	float Saturation = input.HSLColor.g * RGBColor.r;
+	float Saturation = input.HSLColor.g;
 	float BackgroundLuma = mul(LumaColor, LumaWeights);
 
 	float Luma = (BackgroundLuma * (1-AlphaBlend)) + ((AlphaBlend * input.HSLColor.b));  //This should be a greyscale image, so any component will match the value
 
-	float4 hsv = {Hue, Saturation, Luma, RGBColor.a};
+	float4 hsv = {Hue, Saturation, Luma, AlphaBlend };
 	output.Color = HCLToRGB(hsv);
-	output.Color.a = 1; 
+	output.Color.a = RGBColor.r;
 	
     return output;
 }

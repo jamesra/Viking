@@ -40,6 +40,7 @@ namespace WebAnnotation.ViewModel
                 menu.MenuItems.Add("Properties", ContextMenu_OnProperties);
 
                 this._AddExportMenus(menu);
+                this._AddCopyLocationIDMenu(menu);
                 this._AddTerminalOffEdgeMenus(menu);
                 this.Parent.ContextMenu_AddUnverifiedBranchTerminals(menu); 
                 this._AddDeleteMenu(menu);
@@ -135,10 +136,12 @@ namespace WebAnnotation.ViewModel
             {
                 return modelObj.Position;
             }
+            /*
             set
             {
                 modelObj.Position = value;
             }
+            */
         }
 
         public GridVector2 VolumePosition
@@ -147,10 +150,12 @@ namespace WebAnnotation.ViewModel
             {
                 return modelObj.VolumePosition;
             }
+            /*
             set
             {
                 modelObj.VolumePosition = value; 
             }
+            */
         }
 
         public GridRectangle BoundingBox
@@ -979,7 +984,7 @@ namespace WebAnnotation.ViewModel
                 type.Color.B,
                 (byte)(255));
 
-            Microsoft.Xna.Framework.Color HSLColor = Viking.Common.Util.ConvertToHSL(color);
+            Microsoft.Xna.Framework.Color HSLColor = color.ConvertToHSL();
             
             //Alpha modifies how much the value of the overlay texture is mixed with the background texture.
             //Saturation can be used to make the annotation not change the background
@@ -992,7 +997,7 @@ namespace WebAnnotation.ViewModel
             }
             else if (DirectionToVisiblePlane != 0)
             {
-                alpha = 128; 
+                alpha = 64; 
                 SatScalar = 0.5f;
             }
 
@@ -1069,8 +1074,8 @@ namespace WebAnnotation.ViewModel
                 type.Color.B,
                 (byte)(32));
 
-            Microsoft.Xna.Framework.Color selectedHSLColor = Viking.Common.Util.ConvertToHSL(selectedColor);
-            Microsoft.Xna.Framework.Color unselectedHSLColor = Viking.Common.Util.ConvertToHSL(unselectedColor);
+            Microsoft.Xna.Framework.Color selectedHSLColor = selectedColor.ConvertToHSL();
+            Microsoft.Xna.Framework.Color unselectedHSLColor = unselectedColor.ConvertToHSL();
 
             selectedHSLColor.G = (byte)((float)selectedHSLColor.G * SatScalar);
             unselectedHSLColor.G = (byte)((float)unselectedHSLColor.G * SatScalar);

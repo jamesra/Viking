@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <StartArguments>http://connectomes.utah.edu/Rabbit/WebDevFullTest.VikingXML</StartArguments>
+    <StartArguments>http://connectomes.utah.edu/Rabbit/webdev.vikingxml</StartArguments>
     <EnableUnmanagedDebugging>true</EnableUnmanagedDebugging>
     <EnableSQLServerDebugging>false</EnableSQLServerDebugging>
     <StartAction>Project</StartAction>

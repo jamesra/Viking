@@ -1,0 +1,44 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<xs:schema xmlns:tns="http://schemas.datacontract.org/2004/07/" elementFormDefault="qualified" targetNamespace="http://schemas.datacontract.org/2004/07/" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:import namespace="http://schemas.microsoft.com/2003/10/Serialization/Arrays" />
+  <xs:import namespace="http://schemas.datacontract.org/2004/07/Annotation" />
+  <xs:complexType name="Graphx">
+    <xs:sequence>
+      <xs:element minOccurs="0" name="EdgeList" nillable="true" type="tns:ArrayOfEdgex" />
+      <xs:element xmlns:q1="http://schemas.microsoft.com/2003/10/Serialization/Arrays" minOccurs="0" name="FrontierNodes" nillable="true" type="q1:ArrayOflong" />
+      <xs:element xmlns:q2="http://schemas.microsoft.com/2003/10/Serialization/Arrays" minOccurs="0" name="InvolvedCells" nillable="true" type="q2:ArrayOflong" />
+      <xs:element xmlns:q3="http://schemas.microsoft.com/2003/10/Serialization/Arrays" minOccurs="0" name="NodeList" nillable="true" type="q3:ArrayOfKeyValueOflongStructuredeM9q2VH" />
+      <xs:element xmlns:q4="http://schemas.microsoft.com/2003/10/Serialization/Arrays" minOccurs="0" name="ReducedEdges" nillable="true" type="q4:ArrayOflong" />
+      <xs:element xmlns:q5="http://schemas.microsoft.com/2003/10/Serialization/Arrays" minOccurs="0" name="_FrontierNodes" nillable="true" type="q5:ArrayOflong" />
+      <xs:element xmlns:q6="http://schemas.microsoft.com/2003/10/Serialization/Arrays" minOccurs="0" name="locationInfo" nillable="true" type="q6:ArrayOfKeyValueOflongLocationInfolLTIrbuF" />
+      <xs:element xmlns:q7="http://schemas.microsoft.com/2003/10/Serialization/Arrays" minOccurs="0" name="zLocationForSynapses" nillable="true" type="q7:ArrayOfKeyValueOflonglong" />
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="Graphx" nillable="true" type="tns:Graphx" />
+  <xs:complexType name="ArrayOfEdgex">
+    <xs:sequence>
+      <xs:element minOccurs="0" maxOccurs="unbounded" name="Edgex" nillable="true" type="tns:Edgex" />
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="ArrayOfEdgex" nillable="true" type="tns:ArrayOfEdgex" />
+  <xs:complexType name="Edgex">
+    <xs:sequence>
+      <xs:element xmlns:q8="http://schemas.datacontract.org/2004/07/Annotation" minOccurs="0" name="Link" nillable="true" type="q8:StructureLink" />
+      <xs:element minOccurs="0" name="SourceID" type="xs:long" />
+      <xs:element minOccurs="0" name="SourceParentID" type="xs:long" />
+      <xs:element minOccurs="0" name="SourceTypeName" nillable="true" type="xs:string" />
+      <xs:element minOccurs="0" name="TargetID" type="xs:long" />
+      <xs:element minOccurs="0" name="TargetParentID" type="xs:long" />
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="Edgex" nillable="true" type="tns:Edgex" />
+  <xs:complexType name="LocationInfo">
+    <xs:sequence>
+      <xs:element minOccurs="0" name="Radius" type="xs:double" />
+      <xs:element minOccurs="0" name="X" type="xs:double" />
+      <xs:element minOccurs="0" name="Y" type="xs:double" />
+      <xs:element minOccurs="0" name="Z" type="xs:double" />
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="LocationInfo" nillable="true" type="tns:LocationInfo" />
+</xs:schema>

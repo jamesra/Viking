@@ -114,7 +114,27 @@ namespace WebAnnotation
                 return _CircleVerts;
             }
         }
-                
+
+        static private VertexPositionColorTexture[] CircleVerticies(GridVector2 Pos, float Radius, Microsoft.Xna.Framework.Color color)
+        {
+            VertexPositionColorTexture[] verts = new VertexPositionColorTexture[GlobalPrimitives.SquareVerts.Length];
+            GlobalPrimitives.SquareVerts.CopyTo(verts, 0); 
+
+            //Scale and color the verticies
+            for (int i = 0; i < verts.Length; i++)
+            {
+                verts[i].Position.X *= Radius;
+                verts[i].Position.Y *= Radius;
+
+                verts[i].Position.X += (float)Pos.X;
+                verts[i].Position.Y += (float)Pos.Y;
+                verts[i].Color = color;
+            }
+
+            return verts;
+        }
+
+
         static public void DrawCircle(GraphicsDevice graphicsDevice,
                 BasicEffect basicEffect, 
                 GridVector2 Pos,
@@ -127,24 +147,11 @@ namespace WebAnnotation
 
             //Can't populate until we've referenced CircleVerts
             int[] indicies;
-            float radius = (float)Radius; 
+            float radius = (float)Radius;
 
             //Figure out if we should draw triangles instead
-            verts = new VertexPositionColorTexture[GlobalPrimitives.SquareVerts.Length];
-            GlobalPrimitives.SquareVerts.CopyTo(verts, 0);
-
+            verts = CircleVerticies(Pos, (float)Radius, color);
             indicies = GlobalPrimitives.SquareIndicies;
-
-            //Scale and color the verticies
-            for (int i = 0; i < verts.Length; i++)
-            {
-                verts[i].Position.X *= radius;
-                verts[i].Position.Y *= radius;
-
-                verts[i].Position.X += (float)Pos.X;
-                verts[i].Position.Y += (float)Pos.Y;
-                verts[i].Color = color;
-            }
 
             basicEffect.Texture = GlobalPrimitives.CircleTexture;
             basicEffect.TextureEnabled = true;
@@ -167,6 +174,7 @@ namespace WebAnnotation
              basicEffect.TextureEnabled = false;
              basicEffect.VertexColorEnabled = false;
         }
+         
 
         static public void DrawPolyline(RoundLineCode.RoundLineManager LineManager,
                                    BasicEffect basicEffect,
@@ -182,6 +190,23 @@ namespace WebAnnotation
                                                              new Microsoft.Xna.Framework.Vector2((float)verts[i + 1].X, (float)verts[i + 1].Y));
             }
             LineManager.Draw(drawn_lines, (float)LineWidth, color, basicEffect.View * basicEffect.Projection, 0, null);
+        }
+
+
+        static public void DrawPoints(RoundLineCode.RoundLineManager LineManager,
+                                   BasicEffect basicEffect,
+                                   IList<GridVector2> Verticies,
+                                   double Radius,
+                                   Microsoft.Xna.Framework.Color color)
+        {
+            RoundLineCode.Disc[] points = new RoundLineCode.Disc[Verticies.Count - 1];
+
+            GridVector2[] verts = Verticies.ToArray();
+            for (int i = 0; i < Verticies.Count - 1; i++)
+            {
+                points[i] = new RoundLineCode.Disc((float)verts[i].X, (float)verts[i].Y);
+            }
+            LineManager.Draw(points, (float)Radius, color, basicEffect.View * basicEffect.Projection, 0, null);
         }
     }
 }

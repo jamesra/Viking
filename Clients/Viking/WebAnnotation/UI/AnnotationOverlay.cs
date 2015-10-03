@@ -15,7 +15,7 @@ using WebAnnotation.UI.Commands;
 using WebAnnotation.ViewModel;
 using WebAnnotationModel;
 using connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd;
-using System.Threading.Tasks;
+using System.Threading.Tasks; 
 
 namespace WebAnnotation
 {
@@ -51,7 +51,7 @@ namespace WebAnnotation
 
         static AnnotationOverlay()
         {
-            cacheSectionAnnotations.MaxCacheSize = Global.NumSectionsInMemory; 
+            cacheSectionAnnotations.MaxCacheSize = Global.NumSectionsInMemory;
         }
 
         public AnnotationOverlay()
@@ -68,7 +68,7 @@ namespace WebAnnotation
 
         string Viking.Common.ISectionOverlayExtension.Name()
         {
-            return Global.EndpointName;
+            return Global.EndpointName; 
         }
 
         static public void  GoToLocation(LocationObj loc)
@@ -112,14 +112,13 @@ namespace WebAnnotation
             return null; 
             */
         }
-
+        
         /// <summary>
         /// Returns annotations for section if they exist or creates new SectionLocationsViewModel if they do not
         /// </summary>
         /// <param name="SectionNumber"></param>
         public static SectionLocationsViewModel GetOrCreateAnnotationsForSection(int SectionNumber, 
-                                                                                 Viking.UI.Controls.SectionViewerControl parent,
-                                                                                 EventHandler AnnotationChangedEventHandler)
+                                                                                 Viking.UI.Controls.SectionViewerControl parent)
         {
             if (parent.Section.VolumeViewModel.SectionViewModels.ContainsKey(SectionNumber))
             {
@@ -155,7 +154,7 @@ namespace WebAnnotation
         {
             get
             {
-                return GetOrCreateAnnotationsForSection(_Parent.Section.Number, Parent, AnnotationChangedEventHandler);
+                return GetOrCreateAnnotationsForSection(_Parent.Section.Number, Parent);
             }
         }
 
@@ -301,7 +300,8 @@ namespace WebAnnotation
                     }
                 }
 
-                List<Location_CanvasViewModel> intersecting_candidates = adjacentObjs.Where(l => l.IntersectsOnAdjacent(position) && l.IsTerminal == false).ToList();
+                IEnumerable<Location_CanvasViewModel> intersecting_candidates = RemoveOverlappingLocations(adjacentObjs, this.CurrentSectionNumber);
+                intersecting_candidates = adjacentObjs.Where(l => l.IntersectsOnAdjacent(position) && l.IsTerminal == false);
                 Location_CanvasViewModel nearest = intersecting_candidates.OrderBy(c => GridVector2.Distance(c.VolumePosition, position) / c.Radius).FirstOrDefault();
                 bestObj = nearest;
                 if (bestObj != null)
@@ -549,7 +549,14 @@ namespace WebAnnotation
                                             (double)((CreateNewLinkedLocationCommand.LastEditedLocation.Radius * 2) / Parent.Width) * 2); 
 
                     }
-                    return; 
+                    return;
+
+                case Keys.L:
+                    Viking.UI.Commands.Command.EnqueueCommand(typeof(PlacePolylineCommand), new object[] { Parent, new Microsoft.Xna.Framework.Color(1.0f,0f,0f,0.5f), this.LastMouseDownCoords, 16, null});
+                    break;
+                case Keys.Q:
+                    OnCreateStructure(28, new string[0], LocationType.OPENCURVE);
+                    break;
             }
 
             try
@@ -587,7 +594,7 @@ namespace WebAnnotation
                         CreateStructureCommandAction comAction = Global.UserSettings.Actions.CreateStructureCommandAction.Where(action => action.Name == h.Action).SingleOrDefault();
                         if (comAction != null)
                         {
-                            OnCreateStructure(System.Convert.ToInt64(comAction.TypeID), comAction.AttributeList);
+                            OnCreateStructure(System.Convert.ToInt64(comAction.TypeID), comAction.AttributeList, comAction.GetLocationType());
 
                             return;
                         }
@@ -657,13 +664,15 @@ namespace WebAnnotation
             }
         }
 
-        protected void OnCreateStructure(long TypeID, IEnumerable<string> attributes)
+       
+
+        protected void OnCreateStructure(long TypeID, IEnumerable<string> attributes, LocationType AnnotationType)
         {
             StructureTypeObj typeObj = Store.StructureTypes.GetObjectByID(TypeID);
             if (typeObj != null)
             {
                 StructureType type = new StructureType(typeObj);
-
+                bool StructureNeedsParent = type.ParentID.HasValue;
                 System.Drawing.Point ClientPoint = _Parent.PointToClient(System.Windows.Forms.Control.MousePosition);
                 GridVector2 WorldPos = _Parent.ScreenToWorld(ClientPoint.X, ClientPoint.Y);
                 GridVector2 SectionPos;
@@ -690,17 +699,54 @@ namespace WebAnnotation
                     }
                 }
 
-                Viking.UI.Commands.Command.EnqueueCommand(typeof(ResizeCircleCommand), new object[] { Parent, type.Color, WorldPos, new ResizeCircleCommand.OnCommandSuccess((double radius) => { newLocationView.Radius = radius; }) });
-                if (type.Parent != null)
+                switch (AnnotationType)
+                {
+                    case LocationType.CIRCLE:
+                        QueueCommandForCircleStructure(newLocationView, WorldPos, type.Color);
+                        break;
+                    case LocationType.OPENCURVE:
+                        QueueCommandForOpenCurveStructure(newLocationView, WorldPos, type.Color);
+                        break;
+                    default:
+                        Trace.WriteLine("Could not find commands for annotation type: " + AnnotationType.ToString());
+                        return;
+                }
+
+                if (StructureNeedsParent)
                 {
                     //Enqueue extra command to select a parent
                     Viking.UI.Commands.Command.EnqueueCommand(typeof(LinkStructureToParentCommand), new object[] { Parent, newStructView, newLocationView });
                 }
 
-                Viking.UI.Commands.Command.EnqueueCommand(typeof(CreateNewStructureCommand), new object[] { Parent, newStructView, newLocationView});
+                Viking.UI.Commands.Command.EnqueueCommand(typeof(CreateNewStructureCommand), new object[] { Parent, newStructView, newLocationView });
             }
             else
                 Trace.WriteLine("Could not find hotkey ID for type: " + TypeID.ToString()); 
+        }
+
+        protected void QueueCommandForCircleStructure(Location_CanvasViewModel newLocationView, GridVector2 origin, System.Drawing.Color typecolor)
+        {
+            Viking.UI.Commands.Command.EnqueueCommand(typeof(ResizeCircleCommand), new object[] { Parent, typecolor, origin, new ResizeCircleCommand.OnCommandSuccess((double radius) => { newLocationView.Radius = radius; }) });
+        }
+
+        protected void QueueCommandForOpenCurveStructure(Location_CanvasViewModel newLocationView, GridVector2 origin, System.Drawing.Color typecolor)
+        {
+            /*
+            public PlaceOpenCurveCommand(Viking.UI.Controls.SectionViewerControl parent,
+                                        Microsoft.Xna.Framework.Color color,
+                                        GridVector2 origin,
+                                        double LineWidth,
+                                        OnCommandSuccess success_callback)
+                                        */
+
+            Viking.UI.Commands.Command.EnqueueCommand(typeof(ResizeCircleCommand), new object[] { Parent, typecolor, origin, 16.0, new PlaceOpenCurveCommand.OnCommandSuccess((GridVector2[] points) => { SetLocationShapeFromPointsInVolume(newLocationView, points); }) });
+        }
+
+        protected void SetLocationShapeFromPointsInVolume(Location_CanvasViewModel location, GridVector2[] points)
+        {
+            GridVector2[] mosaic_points = Parent.VolumeToSection(points);
+            
+
         }
 
         protected void OnToggleStructureTag(string tag)
@@ -794,6 +840,7 @@ namespace WebAnnotation
             if (_Parent.ShowOverlays)
             { 
                 LoadSectionAnnotations();
+                Task.Factory.StartNew(() => Store.Locations.FreeExcessSections(Global.NumSectionsInMemory, Global.NumSectionsLoading));
             }
         }
 
@@ -886,32 +933,61 @@ namespace WebAnnotation
             LoadSectionAnnotations();
         }
 
+        private GridRectangle LastVisibleWorldBounds;
+        private double LastCameraDownsample;
+
+        /// <summary>
+        /// Return true if we should reload our annotations for a scene movement
+        /// </summary>
+        /// <param name="scene"></param>
+        /// <returns></returns>
+        private bool ShouldLoadAnnotationsForSceneMovement(VikingXNA.Scene scene)
+        {
+            return (LastVisibleWorldBounds != scene.VisibleWorldBounds);// &&
+                   //(LastCameraDownsample == scene.Camera.Downsample);
+        }
+
+        /// <summary>
+        /// Record the last scene we rendered so we know if we've moved the camera and need to load new annotations
+        /// </summary>
+        private void UpdateSceneHistory(VikingXNA.Scene scene)
+        {
+            LastCameraDownsample = scene.Camera.Downsample;
+            LastVisibleWorldBounds = scene.VisibleWorldBounds;
+        }
+
         protected void LoadSectionAnnotations()
         {
+            if (Parent.Scene == null)
+               return;
+            
             int StartingSectionNumber = _Parent.Section.Number; 
             SectionLocationsViewModel SectionAnnotations;
             SectionLocationsViewModel SectionAnnotationsAbove;
             SectionLocationsViewModel SectionAnnotationsBelow;
-            SectionAnnotations = GetOrCreateAnnotationsForSection(_Parent.Section.Number, _Parent, AnnotationChangedEventHandler);
-            //SectionAnnotations.LoadSectionAnnotations();
-            Task.Factory.StartNew(() => SectionAnnotations.LoadSectionAnnotations());
+            SectionAnnotations = GetOrCreateAnnotationsForSection(_Parent.Section.Number, _Parent);
+            //SectionAnnotations.LoadSectionAnnotationsInRegion(Parent.Scene.VisibleWorldBounds, Parent.Scene.DevicePixelWidth);
+            Task.Factory.StartNew(() => SectionAnnotations.LoadSectionAnnotationsInRegion(Parent.Scene));
+//            Task.Factory.StartNew(() => SectionAnnotations.LoadSectionAnnotations(false));
 
             int refSectionNumberAbove=0;
             int refSectionNumberBelow=-1;
             if (_Parent.Section.ReferenceSectionAbove != null)
             {
                 refSectionNumberAbove = _Parent.Section.ReferenceSectionAbove.Number;
-                SectionAnnotationsAbove = GetOrCreateAnnotationsForSection(refSectionNumberAbove, _Parent, AnnotationChangedEventHandler);
+                SectionAnnotationsAbove = GetOrCreateAnnotationsForSection(refSectionNumberAbove, _Parent);
                 //SectionAnnotationsAbove.LoadSectionAnnotations();
-                Task.Factory.StartNew(() => SectionAnnotationsAbove.LoadSectionAnnotations());
+            //    Task.Factory.StartNew(() => SectionAnnotationsAbove.LoadSectionAnnotations(false));
+                Task.Factory.StartNew(() => SectionAnnotationsAbove.LoadSectionAnnotationsInRegion(Parent.Scene));
             }
 
             if (_Parent.Section.ReferenceSectionBelow != null)
             {
                 refSectionNumberBelow = _Parent.Section.ReferenceSectionBelow.Number;
-                SectionAnnotationsBelow = GetOrCreateAnnotationsForSection(refSectionNumberBelow, _Parent, AnnotationChangedEventHandler);
+                SectionAnnotationsBelow = GetOrCreateAnnotationsForSection(refSectionNumberBelow, _Parent);
                 //SectionAnnotationsBelow.LoadSectionAnnotations();
-                Task.Factory.StartNew(() => SectionAnnotationsBelow.LoadSectionAnnotations());
+                //Task.Factory.StartNew(() => SectionAnnotationsBelow.LoadSectionAnnotations(false));
+                Task.Factory.StartNew(() => SectionAnnotationsBelow.LoadSectionAnnotationsInRegion(Parent.Scene));
             }
 
             int EndingSectionNumber = _Parent.Section.Number; 
@@ -919,16 +995,10 @@ namespace WebAnnotation
             Debug.Assert(StartingSectionNumber == EndingSectionNumber);
             Debug.Assert(SectionAnnotations.Section.Number == StartingSectionNumber); 
             
+            linksView.LoadSection(_Parent.Section.Number);
 
-            linksView.LoadSection(_Parent.Section.Number); 
-            
-            #if DEBUG
-                //            Store.Structures.FreeExcessSections(40, 5);
-                Task.Factory.StartNew(() => Store.Locations.FreeExcessSections(4, 3));
-                //Task.Factory.StartNew(() => Store.Locations.FreeExcessSections(Global.NumSectionsInMemory, 5));
-            #else
-                Task.Factory.StartNew(() => Store.Locations.FreeExcessSections(Global.NumSectionsInMemory, 5));
-            #endif
+            //Task.Factory.StartNew(() => Store.Locations.FreeExcessSections(Global.NumSectionsInMemory, Global.NumSectionsLoading));
+
             //AnnotationCache.LoadSectionAnnotations(_Parent.Section); 
         }
 
@@ -973,8 +1043,9 @@ namespace WebAnnotation
 
         static private BasicEffect basicEffect = null;
         static private BlendState defaultBlendState = null; 
-
         
+      
+
         public void Draw(Microsoft.Xna.Framework.Graphics.GraphicsDevice graphicsDevice,
                          VikingXNA.Scene scene, 
                          Microsoft.Xna.Framework.Graphics.Texture BackgroundLuma,
@@ -1002,6 +1073,12 @@ namespace WebAnnotation
             if (_Parent.spriteBatch.GraphicsDevice.IsDisposed)
                 return;
 
+
+            if (ShouldLoadAnnotationsForSceneMovement(scene))
+                LoadSectionAnnotations();
+
+            UpdateSceneHistory(Parent.Scene);
+
             Matrix ViewProjMatrix = scene.Camera.View * scene.Projection;
 
             GridRectangle Bounds = scene.VisibleWorldBounds;
@@ -1016,8 +1093,10 @@ namespace WebAnnotation
             VikingXNA.AnnotationOverBackgroundLumaEffect overlayEffect = Parent.annotationOverlayEffect;
 
             overlayEffect.LumaTexture = BackgroundLuma;
+            Parent.LumaOverlayLineManager.LumaTexture = BackgroundLuma; 
 
             overlayEffect.RenderTargetSize = graphicsDevice.Viewport;
+            Parent.LumaOverlayLineManager.RenderTargetSize = graphicsDevice.Viewport;
             
             basicEffect.Alpha = 1;
             
@@ -1173,7 +1252,7 @@ namespace WebAnnotation
                     (byte)(blue),
                     (byte)(alpha));
 
-                lineManager.Draw(SelectedLink.lineGraphic, (float)SelectedLink.Radius, color,
+                lineManager.Draw(SelectedLink.lineGraphic, (float)SelectedLink.Radius, color.ConvertToHSL(),
                                              basicEffect.View * basicEffect.Projection, time_offset, null);
 
                 return true; 
@@ -1236,11 +1315,14 @@ namespace WebAnnotation
             int red = (int)((float)(structure_type_color.R * .5) + (128 * direction));
             red = 255 - (red / section_span_distance);
             red = red > 255 ? 255 : red;
-            int blue = (int)((float)(structure_type_color.B * .5) + (128 * (1 - direction)));
+            red = red < 0 ? 0 : red;
+            int blue = (int)((float)(structure_type_color.B * .5) + (128 * -direction));
             blue = 255 - (blue / section_span_distance);
             blue = blue > 255 ? 255 : blue;
+            blue = blue < 0 ? 0 : blue;
             int green = (int)((float)structure_type_color.G);
             green = 255 - (green / section_span_distance);
+            green = green < 0 ? 0 : green;
 
             int alpha = 64;
             if (IsMouseOver)
@@ -1289,7 +1371,7 @@ namespace WebAnnotation
 
             Microsoft.Xna.Framework.Color color = GetLocationLinkColor(type.Color, distanceFactor, directionFactor, LastMouseOverObject == link);
               
-            _Parent.LineManager.Draw(link.lineGraphic, (float)link.Radius, color,
+            _Parent.LumaOverlayLineManager.Draw(link.lineGraphic, (float)link.Radius, color.ConvertToHSL(),
                                          ViewProjMatrix, 0, null);
         }
 

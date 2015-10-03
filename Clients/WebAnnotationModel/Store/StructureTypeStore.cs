@@ -118,11 +118,25 @@ namespace WebAnnotationModel
             return proxy.GetStructureTypes();
         }
 
+        protected override StructureType[] ProxyGetBySectionRegion(AnnotateStructureTypesClient proxy, long SectionNumber, BoundingRectangle BBox, double MinRadius, DateTime LastQuery,
+                                                                out long TicksAtQueryExecute,
+                                                                out long[] deleted_objects)
+        {
+            deleted_objects = new long[0];
+            TicksAtQueryExecute = 0;
+            return proxy.GetStructureTypes();
+        }
+
         protected override IAsyncResult ProxyBeginGetBySection(AnnotateStructureTypesClient proxy,
                                                              long SectionNumber,
                                                              DateTime LastQuery,
                                                              AsyncCallback callback,
                                                              object asynchState)
+        {
+            throw new NotImplementedException();
+        }
+
+        protected override IAsyncResult ProxyBeginGetBySectionRegion(AnnotateStructureTypesClient proxy, long SectionNumber, BoundingRectangle BBox, double MinRadius, DateTime LastQuery, AsyncCallback callback, object asynchState)
         {
             throw new NotImplementedException();
         }
@@ -213,5 +227,9 @@ namespace WebAnnotationModel
              */
         }
 
+        protected override StructureType[] ProxyGetBySectionRegionCallback(out long TicksAtQueryExecute, out long[] DeletedLocations, GetObjectBySectionCallbackState state, IAsyncResult result)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

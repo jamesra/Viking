@@ -9,6 +9,8 @@ Content\TileLayout.xnb
 Content\ChannelOverlayShader.xnb
 Content\AnnotationOverlayShader.xnb
 Content\MergeHSVImages.xnb
+Content\RoundCurve.xnb
+Content\RoundLineHSV.xnb
 Content\Arial.spritefont
 Content\RoundLine.fx
 Content\RGBToHSV.fx
@@ -16,3 +18,5 @@ Content\TileLayout.fx
 Content\ChannelOverlayShader.fx
 Content\AnnotationOverlayShader.fx
 Content\MergeHSVImages.fx
+Content\RoundCurve.fx
+Content\RoundLineHSV.fx

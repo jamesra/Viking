@@ -225,6 +225,26 @@ namespace Viking.VolumeModel
             return this.VolumeTransform.TryTransform(P, out transformedP); 
         }
 
+        /// <summary>
+        /// Maps a point from volume space into the section space
+        /// </summary>
+        /// <param name="?"></param>
+        /// <returns></returns>
+        public override bool TryVolumeToSection(GridVector2[] P, out GridVector2[] transformedP)
+        {
+            return this.VolumeTransform.TryInverseTransform(P, out transformedP);
+        }
+
+        /// <summary>
+        /// Maps a point from section space into the volume space
+        /// </summary>
+        /// <param name="?"></param>
+        /// <returns></returns>
+        public override bool TrySectionToVolume(GridVector2[] P, out GridVector2[] transformedP)
+        {
+            return this.VolumeTransform.TryTransform(P, out transformedP);
+        }
+
         public override TilePyramid VisibleTiles(GridRectangle VisibleBounds, double DownSample)
         {
             if (VolumeTransform != null)

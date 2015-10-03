@@ -73,6 +73,28 @@ namespace WebAnnotationModel
             return proxy.BeginGetLocationChanges(SectionNumber, LastQuery.Ticks, callback, asynchState);
         }
 
+
+        protected override Location[] ProxyGetBySectionRegion(AnnotateLocationsClient proxy,
+                                                             long SectionNumber,
+                                                             BoundingRectangle BBox,
+                                                             double MinRadius,
+                                                             DateTime LastQuery,
+                                                             out long TicksAtQueryExecute,
+                                                             out long[] deleted_objs)
+        {
+            return proxy.GetLocationChangesInRegion(out TicksAtQueryExecute, out deleted_objs, SectionNumber, BBox, MinRadius, LastQuery.Ticks);
+        }
+
+        protected override IAsyncResult ProxyBeginGetBySectionRegion(AnnotateLocationsClient proxy, long SectionNumber, BoundingRectangle BBox, double MinRadius, DateTime LastQuery, AsyncCallback callback, object asynchState)
+        {
+            return proxy.BeginGetLocationChangesInRegion(SectionNumber, BBox, MinRadius, LastQuery.Ticks, callback, asynchState);
+        }
+
+        protected override Location[] ProxyGetBySectionRegionCallback(out long TicksAtQueryExecute, out long[] DeletedLocations, GetObjectBySectionCallbackState state, IAsyncResult result)
+        {
+            return state.Proxy.EndGetLocationChangesInRegion(out TicksAtQueryExecute, out DeletedLocations, result);
+        }
+
         protected override Location[] ProxyGetBySectionCallback(out long TicksAtQueryExecute,
                                                           out long[] DeletedLocations,
                                                           GetObjectBySectionCallbackState state,
@@ -80,11 +102,11 @@ namespace WebAnnotationModel
         {
             return state.Proxy.EndGetLocationChanges(out TicksAtQueryExecute, out DeletedLocations, result);
         }
-        
+
 
         #endregion
-        
-        
+
+
 
         public LocationStore()
         {
@@ -165,44 +187,20 @@ namespace WebAnnotationModel
 
         #region Add/Update/Remove
 
-        /*
-        internal override LocationObj[] InternalUpdate(LocationObj[] updateObjs)
+        /// <summary>
+        /// Send a request to load all structure parents in one batch before adding locations
+        /// </summary>
+        /// <param name="newObjs"></param>
+        /// <returns></returns>
+        protected override ChangeInventory<LocationObj> InternalAdd(LocationObj[] newObjs)
         {
-            List<LocationObj> updatedObjs = new List<LocationObj>(updateObjs.Length);
-            List<LocationObj> oldObjs = new List<LocationObj>(updateObjs.Length);
+            long[] MissingParentIDs = newObjs.Where(loc => loc.ParentID.HasValue && Store.Structures.Contains(loc.ParentID.Value) == false).Select(loc => loc.ParentID.Value).Distinct().ToArray();
+            if(MissingParentIDs.Length > 0)
+                Store.Structures.GetObjectsByIDs(MissingParentIDs, true);
 
-            for (int iObj = 0; iObj < updateObjs.Length; iObj++)
-            {
-                LocationObj updateObj = updateObjs[iObj]; 
-                LocationObj existingObj; 
-                bool success =  IDToObject.TryGetValue(updateObj.ID, out existingObj);
-
-                //Update if the new DB object has a later modified date. 
-                if (success)
-                {
-                    if (updateObj.GetData().LastModified >= existingObj.GetData().LastModified)
-                    {
-
-                        LocationObj oldLoc = new LocationObj(existingObj.GetData());
-                        existingObj.Synch(updateObj.GetData());
-
-                        //Record which objects have changed
-                        updatedObjs.Add(existingObj);
-                        oldObjs.Add(oldLoc); 
-                    }
-                }
-            }
-
-            if (updatedObjs.Count > 0)
-            {
-                NotifyCollectionChangedEventArgs args = new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Replace, updatedObjs, oldObjs);
-                CallOnCollectionChanged(args);
-            }
-
-            return updatedObjs.ToArray(); 
+            return base.InternalAdd(newObjs);
         }
-        */
-         
+
         protected ICollection<LocationObj> InternalDelete(LocationObj[] objs)
         {
             long[] IDs = new long[objs.Length];
@@ -274,10 +272,8 @@ namespace WebAnnotationModel
                 return listSectionLocations.TryRemove(removed_loc.ID, out listSectionLocationsObj);
             }
 
-            return false;
-            
-        }
-
+            return false; 
+        } 
 
         public ICollection<LocationObj> GetLocationsForStructure(long StructureID)
         {
@@ -361,7 +357,9 @@ namespace WebAnnotationModel
 
             return listLocations;
         }
-         
+
+       
+
 
         #region Callbacks
 

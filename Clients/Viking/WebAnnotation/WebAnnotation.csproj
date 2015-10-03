@@ -10,7 +10,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>WebAnnotation</RootNamespace>
     <AssemblyName>WebAnnotation</AssemblyName>
-    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.6</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <FileUpgradeFlags>
     </FileUpgradeFlags>
@@ -36,6 +36,8 @@
     </TargetFrameworkProfile>
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\..\</SolutionDir>
     <RestorePackages>true</RestorePackages>
+    <NuGetPackageImportStamp>
+    </NuGetPackageImportStamp>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -83,9 +85,22 @@
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="EntityFramework, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\EntityFramework.6.1.3\lib\net45\EntityFramework.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="EntityFramework.SqlServer, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\EntityFramework.6.1.3\lib\net45\EntityFramework.SqlServer.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Microsoft.SqlServer.Types, Version=11.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\Microsoft.SqlServer.Types.11.0.2\lib\net20\Microsoft.SqlServer.Types.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="Microsoft.Xna.Framework, Version=4.0.0.0, Culture=neutral, PublicKeyToken=842cf8be1de50553, processorArchitecture=x86" />
     <Reference Include="Microsoft.Xna.Framework.Graphics, Version=4.0.0.0, Culture=neutral, PublicKeyToken=842cf8be1de50553, processorArchitecture=x86" />
     <Reference Include="System" />
+    <Reference Include="System.ComponentModel.DataAnnotations" />
     <Reference Include="System.Core">
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
     </Reference>
@@ -116,9 +131,9 @@
     <Compile Include="Extensions.cs" />
     <Compile Include="Global.cs" />
     <Compile Include="GlobalPrimitives.cs" />
-    <Compile Include="LocationObjRenderer.cs" />
+    <Compile Include="UI\Commands\PlaceOpenCurveCommand.cs" />
+    <Compile Include="View\LocationObjRenderer.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="SqlServerTypes\Loader.cs" />
     <Compile Include="UI\AnnotationMenu.cs" />
     <Compile Include="UI\AnnotationOverlay.cs" />
     <Compile Include="UI\Commands\AnnotationCommandBase.cs" />
@@ -221,6 +236,7 @@
     <Compile Include="ViewModel\LocationViewBase.cs" />
     <Compile Include="ViewModel\Location_ViewModelBase.cs" />
     <Compile Include="ViewModel\SectionStructureLinksViewModel.cs" />
+    <Compile Include="View\ClosedCurveView.cs" />
     <Compile Include="WeakEvents\NotifyCollectionChangedEventManager.cs" />
     <Compile Include="WeakEvents\NotifyPropertyChangingEventManager.cs" />
     <Compile Include="WeakEvents\NotifyPropertyChangedEventManager.cs" />
@@ -236,7 +252,7 @@
     <Compile Include="ViewModel\Structure.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="StructureLink.cs">
+    <Compile Include="ViewModel\StructureLink.cs">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="ViewModel\StructureType.cs">
@@ -332,6 +348,10 @@
       <Name>Geometry</Name>
       <Private>False</Private>
     </ProjectReference>
+    <ProjectReference Include="..\..\SqlGeometryUtils\SqlGeometryUtils.csproj">
+      <Project>{6702adda-3f8f-43d0-9c7e-1e7fdbbe983f}</Project>
+      <Name>SqlGeometryUtils</Name>
+    </ProjectReference>
     <ProjectReference Include="..\NGVV\VikingCore.csproj">
       <Project>{AEB1B24B-C968-40F9-B9F5-5C1FCE2EFD6D}</Project>
       <Name>VikingCore</Name>
@@ -353,26 +373,7 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="View\" />
-  </ItemGroup>
-  <ItemGroup>
-    <Content Include="..\..\packages\Microsoft.SqlServer.Types.11.0.2\nativeBinaries\x64\msvcr100.dll">
-      <Link>SqlServerTypes\x64\msvcr100.dll</Link>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="..\..\packages\Microsoft.SqlServer.Types.11.0.2\nativeBinaries\x64\SqlServerSpatial110.dll">
-      <Link>SqlServerTypes\x64\SqlServerSpatial110.dll</Link>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="..\..\packages\Microsoft.SqlServer.Types.11.0.2\nativeBinaries\x86\msvcr100.dll">
-      <Link>SqlServerTypes\x86\msvcr100.dll</Link>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="..\..\packages\Microsoft.SqlServer.Types.11.0.2\nativeBinaries\x86\SqlServerSpatial110.dll">
-      <Link>SqlServerTypes\x86\SqlServerSpatial110.dll</Link>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="SqlServerTypes\readme.htm" />
+    <Folder Include="DataStructure\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
