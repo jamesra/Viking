@@ -1,0 +1,30 @@
+(tlp "2.0"
+(nodes )
+
+
+(property 0 color "viewBorderColor"
+(default "(255,255,255,0)" "(255,255,255,0)" )
+)
+
+(property 0 color "viewColor"
+(default "(127,127,127,127)" "(127,127,127,127)" )
+)
+
+(property 0 string "viewLabel"
+(default  "" "" )
+)
+
+(property 0 bool "viewSelection"
+(default  "false" "false" )
+)
+
+(property 0 int "viewShape"
+(default  "0" "4" )
+)
+
+(property 0 size "viewSize"
+(default  "(1,1,1)" "(0.5,0.5,0.5)" )
+)
+
+
+)
