@@ -133,46 +133,24 @@ namespace AnnotationVizLib
                 return new List<long>();
 
             //Remove nodes we have already mapped
-            for (int i = CellIDs.Count - 1; i >= 0; i--)
-            {
-                long id = CellIDs[i];
-                // Test to see if the ID is already in the nodelist            
-                if (this.Nodes.ContainsKey(id))
-                    CellIDs.RemoveAt(i);
-            }
-
+            CellIDs = CellIDs.Where(id => !this.Nodes.ContainsKey(id)).ToList();
+           
             Structure[] MissingStructures = proxy.GetStructuresByIDs(CellIDs.ToArray(), true);
 
             Structure[] ChildStructures = FindMissingChildStructures(proxy, MissingStructures);
 
             Structure[] LinkedStructurePartners = FindMissingLinkedStructures(proxy, ChildStructures);
 
-            foreach(Structure s in LinkedStructurePartners)
+            foreach(Structure s in LinkedStructurePartners.Where(s => !IDToStructure.ContainsKey(s.ID)))
             {
-                if(!IDToStructure.ContainsKey(s.ID))
-                {
-                    IDToStructure.Add(s.ID, s); 
-                }
+                IDToStructure.Add(s.ID, s); 
             }
 
             //Create edges
-            foreach (Structure child in ChildStructures)
+            foreach (Structure child in ChildStructures.Where(child => child.Links != null && child.Links.Length > 0))
             {
-                if (child.Links == null || child.Links.Length == 0)
-                    continue; 
-
-                foreach (StructureLink link in child.Links)
+                foreach (StructureLink link in child.Links.Where(link => IDToStructure.ContainsKey(link.SourceID) && IDToStructure.ContainsKey(link.TargetID)))
                 {
-                    if (!IDToStructure.ContainsKey(link.SourceID))
-                    {
-                        continue;
-                    }
-
-                    if (!IDToStructure.ContainsKey(link.TargetID))
-                    {
-                        continue;
-                    }
-
                     //After this point both nodes are already in the graph and we can create an edge
                     Structure LinkSource = IDToStructure[link.SourceID];
                     Structure LinkTarget = IDToStructure[link.TargetID];
@@ -241,12 +219,9 @@ namespace AnnotationVizLib
                     continue; 
 
                 //Find all of the details on child synapses, which we probably do not have
-                foreach (long childID in s.ChildIDs)
-                {
-                    if (IDToStructure.ContainsKey(childID) == false)
-                    {
-                        ListMissingChildrenIDs.Add(childID);
-                    }
+                foreach (long childID in s.ChildIDs.Where(childID => !IDToStructure.ContainsKey(childID)))
+                { 
+                    ListMissingChildrenIDs.Add(childID);
                 }
             }
 
@@ -274,7 +249,6 @@ namespace AnnotationVizLib
 
                 foreach (StructureLink link in child.Links)
                 {
-
                     if (!IDToStructure.ContainsKey(link.SourceID))
                     {
                         ListAbsentLinkPartners.Add(link.SourceID);

@@ -109,10 +109,22 @@
     <None Include="Service References\AnnotationService\AnnotationVizLib.AnnotationService.CreateStructureRetval.datasource">
       <DependentUpon>Reference.svcmap</DependentUpon>
     </None>
+    <None Include="Service References\AnnotationService\AnnotationVizLib.AnnotationService.GetLocationChangesInRegionResponse.datasource">
+      <DependentUpon>Reference.svcmap</DependentUpon>
+    </None>
     <None Include="Service References\AnnotationService\AnnotationVizLib.AnnotationService.GetLocationChangesResponse.datasource">
       <DependentUpon>Reference.svcmap</DependentUpon>
     </None>
+    <None Include="Service References\AnnotationService\AnnotationVizLib.AnnotationService.GetLocationLinksForSectionInRegionResponse.datasource">
+      <DependentUpon>Reference.svcmap</DependentUpon>
+    </None>
+    <None Include="Service References\AnnotationService\AnnotationVizLib.AnnotationService.GetLocationLinksForSectionResponse.datasource">
+      <DependentUpon>Reference.svcmap</DependentUpon>
+    </None>
     <None Include="Service References\AnnotationService\AnnotationVizLib.AnnotationService.GetLocationsForSectionResponse.datasource">
+      <DependentUpon>Reference.svcmap</DependentUpon>
+    </None>
+    <None Include="Service References\AnnotationService\AnnotationVizLib.AnnotationService.GetStructuresForSectionInRegionResponse.datasource">
       <DependentUpon>Reference.svcmap</DependentUpon>
     </None>
     <None Include="Service References\AnnotationService\AnnotationVizLib.AnnotationService.GetStructuresForSectionResponse.datasource">
@@ -128,9 +140,6 @@
       <DependentUpon>Reference.svcmap</DependentUpon>
     </None>
     <None Include="Service References\AnnotationService\AnnotationVizLib.AnnotationService.LocationLink.datasource">
-      <DependentUpon>Reference.svcmap</DependentUpon>
-    </None>
-    <None Include="Service References\AnnotationService\AnnotationVizLib.AnnotationService.LocationLinksForSectionResponse.datasource">
       <DependentUpon>Reference.svcmap</DependentUpon>
     </None>
     <None Include="Service References\AnnotationService\AnnotationVizLib.AnnotationService.LocationPositionOnly.datasource">
@@ -158,10 +167,13 @@
     <None Include="Service References\AnnotationService\service1.xsd">
       <SubType>Designer</SubType>
     </None>
-    <None Include="Service References\AnnotationService\service11.xsd">
+    <None Include="Service References\AnnotationService\service4.xsd">
       <SubType>Designer</SubType>
     </None>
-    <None Include="Service References\AnnotationService\service12.xsd">
+    <None Include="Service References\AnnotationService\service5.xsd">
+      <SubType>Designer</SubType>
+    </None>
+    <None Include="Service References\AnnotationService\System.Data.Entity.Spatial1.xsd">
       <SubType>Designer</SubType>
     </None>
   </ItemGroup>

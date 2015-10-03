@@ -340,6 +340,11 @@ namespace AnnotationVizLib
             return edge; 
         }
 
+        protected bool HaveNodesForEdge(VIEWED_KEY source, VIEWED_KEY target)
+        {
+            return KeyToIndex.ContainsKey(source) && KeyToIndex.ContainsKey(target);
+        }
+
         protected void AddSubGraph(ulong id, TLPViewSubgraph subgraph)
         {
             Subgraphs.Add(id, subgraph);

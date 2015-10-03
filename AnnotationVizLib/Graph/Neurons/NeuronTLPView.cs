@@ -32,6 +32,7 @@ namespace AnnotationVizLib
                 NodeAttribs.Add("viewLabel", LabelForNode(node));
 
             NodeAttribs.Add("StructureURL", string.Format("{0}/OData/ConnectomeData.svc/Structures({1}L)", this.VolumeURL, node.Key));
+            NodeAttribs.Add("ID", string.Format("{0}", node.Key));
 
             tlpnode.AddAttributes(NodeAttribs);
 
@@ -121,7 +122,7 @@ namespace AnnotationVizLib
                 view.CreateTLPNode(node);
             }
 
-            foreach (NeuronEdge edge in graph.Edges.Values)
+            foreach (NeuronEdge edge in graph.Edges.Values.Where(e => view.HaveNodesForEdge(e.SourceNodeKey, e.TargetNodeKey)))
             {
                 view.CreateTLPEdge(edge);
             }

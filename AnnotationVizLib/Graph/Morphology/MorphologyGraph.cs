@@ -110,6 +110,9 @@ namespace AnnotationVizLib
         /// <param name="StructureIDs"></param>
         private static void MorphologyForStructures(MorphologyGraph rootGraph, ICollection<long> StructureIDs, bool include_children)
         {
+            if (StructureIDs == null)
+                return;
+
             Structure[] structures = Queries.GetStructuresByIDs(StructureIDs.ToArray(), include_children);
 
             Queries.PopulateStructureTypes();
