@@ -146,6 +146,11 @@ namespace SqlGeometryUtils
             return geometry.STEnvelope().Centroid();
         }
 
+        public static SqlGeometry ToGeometry(SqlString GeometryType, GridVector2[] points)
+        {
+            return SqlGeometry.STGeomFromText(ToGeometryString(GeometryType, points).ToSqlChars(),0);
+        }
+
         public static string ToGeometryString(SqlString GeometryType, GridVector2[] points )
         {
             string TypeString = GeometryType.Value; 
