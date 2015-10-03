@@ -36,6 +36,18 @@ namespace Annotation.Service.Interfaces
         Structure[] GetStructuresForSection(long Section, long ModifiedAfterThisTime, out long QueryExecutedTime, out long[] DeletedIDs);
 
         /// <summary>
+        /// Returns all locations modified after a set date within the requested region
+        /// The passed tick count needs to be in the same timezone as the server
+        /// </summary>
+        /// <param name="section"></param>
+        /// <param name="ModifiedAfterThisTime">A Datetime converted to a long. Clients should use server time</param>
+        /// <param name="IDs"></param>
+        /// <returns></returns>
+        [OperationContract]
+        Structure[] GetStructuresForSectionInRegion(long section, BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisTime, out long QueryExecutedTime, out long[] DeletedIDs);
+
+
+        /// <summary>
         /// Return a single structure from the Database
         /// </summary>
         /// <returns></returns>

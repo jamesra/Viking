@@ -1,5 +1,6 @@
 ﻿using Annotation;
-using System; 
+using System;
+using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Security;
 using System.Security.Principal;
@@ -98,8 +99,8 @@ namespace ServiceTest
             P.Z = 0;
             newPos.Position = P;
 
-            newPos.MosaicShape = System.Data.Entity.Spatial.DbGeometry.FromText("POINT(0 0 0)");
-            newPos.VolumeShape = System.Data.Entity.Spatial.DbGeometry.FromText("POINT(0 0 0)");
+            //newPos.MosaicShape = System.Data.Entity.Spatial.DbGeometry.FromText("POINT(0 0 0)");
+            //newPos.VolumeShape = System.Data.Entity.Spatial.DbGeometry.FromText("POINT(0 0 0)");
         }
 
         
@@ -246,6 +247,51 @@ namespace ServiceTest
             Delete(retval.structure);
             Delete(stype); 
         }
+        /*
+        [TestMethod()]
+        public void TestLocationVolumeShapes()
+        {
+            AddPrincipalToThread();
+
+            string StructureTypeName = "PolyLineLocation";
+
+            string Point = "POINT (30 10)";
+            string LineString = "LINESTRING (30 10, 10 30, 40 40)";
+            string Polygon = "POLYGON ((30 10, 40 40, 20 40, 10 20, 30 10))";
+            string CircularString = "CIRCULARSTRING(1 5, 6 2, 7 3)";
+            string CurvePoly      = "CURVEPOLYGON(CIRCULARSTRING(-2 0,-1 -1,0 0,1 -1,2 0,0 2,-2 0),(-1 0,0 0.5,1 0,0 1,-1 0))";
+            string Triangle = "TRIANGLE((0 0 0,0 1 0,1 1 0,0 0 0))";
+
+            StructureType stype;
+            Structure newStruct;
+            Location newPos;
+            CreateStructureRetval retval;
+            try
+            {
+                stype = CreatePopulatedStructureType(StructureTypeName);
+                stype = CreateStructureType(stype);
+
+                newStruct = new Structure();
+                newStruct.TypeID = stype.ID;
+
+                newPos = new Location();
+                PopulateLocation(newPos, newStruct.ID);
+
+                retval = CreateStructure(newStruct, newPos);
+
+                //Create a new location and link it to the first structure location
+                Location location = new Location();
+                PopulateLocation(newPos, newStruct.ID);
+                  
+            }
+            finally
+            { 
+                Delete(retval.location);
+                Delete(created_location);
+                Delete(retval.structure);
+                Delete(stype);
+            }
+        }*/
 
         /// <summary>
         ///A test for UpdateStructureTypes
@@ -336,19 +382,94 @@ namespace ServiceTest
         ///A test for GetStructureTypes
         ///</summary>
         [TestMethod()]
-        public void GetAnnotationsForSectionTest()
+        public void GetStructuresForSectionTest()
         {
             AddPrincipalToThread();
-            
+
             AnnotateService target = new AnnotateService(); // TODO: Initialize to an appropriate value
-            /*
+
             Structure[] structures;
             long[] deletedStructures;
-            long StructureQueryTime; 
+            long StructureQueryTime;
             structures = target.GetStructuresForSection(250, 0, out StructureQueryTime, out deletedStructures);
 
             Assert.IsTrue(structures.Length > 0);
-            */
+            
+        }
+
+        /// <summary>
+        ///A test for GetStructureTypes
+        ///</summary>
+        [TestMethod()]
+        public void GetLocationsForSectionTest()
+        {
+            AddPrincipalToThread();
+            AnnotateService target = new AnnotateService(); // TODO: Initialize to an appropriate value
+
+
+            Location[] locations;
+            long LocationQueryTime;
+            long[] deletedLocations;
+            locations = target.GetLocationsForSection(250, out LocationQueryTime);
+
+            Assert.IsTrue(locations.Length > 0);
+        }
+
+        [TestMethod()]
+        public void GetStructureByIDTest()
+        {
+            AddPrincipalToThread();
+            AnnotateService target = new AnnotateService(); // TODO: Initialize to an appropriate value
+
+
+            Structure structure;
+            structure = target.GetStructureByID(476, true);
+
+            Assert.IsTrue(structure.ID == 476);
+        }
+
+        [TestMethod()]
+        public void GetStructureLocationsTest()
+        {
+            AddPrincipalToThread();
+            AnnotateService target = new AnnotateService(); // TODO: Initialize to an appropriate value
+
+
+            Location[] locations;
+            locations = target.GetLocationsForStructure(476);
+
+            Assert.IsTrue(locations.Length > 0);
+            Assert.IsTrue(locations[0].ParentID == 476);
+        }
+
+        /// <summary>
+        ///A test for GetStructureTypes
+        ///</summary>
+        [TestMethod()]
+        public void GetLocationLinksForSectionTest()
+        {
+            AddPrincipalToThread();
+            AnnotateService target = new AnnotateService(); // TODO: Initialize to an appropriate value
+
+
+            LocationLink[] locationLinks;
+            long LocationQueryTime;
+            LocationLink[] deletedLinks;
+            locationLinks = target.GetLocationLinksForSection(250, 0, out LocationQueryTime, out deletedLinks);
+
+            Assert.IsTrue(locationLinks.Length > 0);
+        }
+
+        /// <summary>
+        ///A test for GetStructureTypes
+        ///</summary>
+        [TestMethod()]
+        public void GetLocationChangesTest()
+        {
+            AddPrincipalToThread();
+            AnnotateService target = new AnnotateService(); // TODO: Initialize to an appropriate value
+
+
             Location[] locations;
             long LocationQueryTime;
             long[] deletedLocations;
@@ -356,6 +477,67 @@ namespace ServiceTest
 
             Assert.IsTrue(locations.Length > 0);
         }
+
+        /// <summary>
+        ///A test for GetStructureTypes
+        ///</summary>
+        [TestMethod()]
+        public void GetStructuresForSectionRegionTest()
+        {
+            AddPrincipalToThread();
+
+            AnnotateService target = new AnnotateService(); // TODO: Initialize to an appropriate value
+
+            BoundingRectangle bbox = new BoundingRectangle(32000, 32000, 64000, 64000);
+
+            Structure[] structures;
+            long[] deletedStructures;
+            long StructureQueryTime;
+            structures = target.GetStructuresForSectionInRegion(250, bbox, 0, 0, out StructureQueryTime, out deletedStructures);
+
+            Assert.IsTrue(structures.Length > 0);
+
+        }
+
+        /// <summary>
+        ///A test for GetStructureTypes
+        ///</summary>
+        [TestMethod()]
+        public void GetLocationsForSectionRegionTest()
+        {
+            AddPrincipalToThread();
+            AnnotateService target = new AnnotateService(); // TODO: Initialize to an appropriate value
+
+            BoundingRectangle bbox = new BoundingRectangle(32000, 32000, 64000, 64000);
+
+
+            Location[] locations;
+            long LocationQueryTime;
+            long[] deletedLocations;
+            locations = target.GetLocationChangesInRegion(250, bbox,0,0, out LocationQueryTime, out deletedLocations);
+
+            Assert.IsTrue(locations.Length > 0);
+        }
+
+        /// <summary>
+        ///A test for GetStructureTypes
+        ///</summary>
+        [TestMethod()]
+        public void GetLocationLinksForSectionRegionTest()
+        {
+            AddPrincipalToThread();
+            AnnotateService target = new AnnotateService(); // TODO: Initialize to an appropriate value
+
+            BoundingRectangle bbox = new BoundingRectangle(32000, 32000, 64000, 64000);
+
+            LocationLink[] locationLinks;
+            long LocationQueryTime;
+            LocationLink[] deletedLinks;
+            locationLinks = target.GetLocationLinksForSectionInRegion(250, bbox, 0, 0, out LocationQueryTime, out deletedLinks);
+
+            Assert.IsTrue(locationLinks.Length > 0);
+        }
+        
 
         /// <summary>
         ///A test that creates a structure and a location for that structure, then deletes them
@@ -541,19 +723,7 @@ namespace ServiceTest
 
             return link;
         }
-
-
-        private Dictionary<long, Location> LocationsToDict(IList<Location> locations)
-        {
-            Dictionary<long, Location > dictLocations = new Dictionary<long, Location>();
-            foreach (Location loc in locations)
-            {
-                dictLocations[loc.ID] = loc;
-            }
-
-            return dictLocations;
-        }
-
+        
 
         private void TestSetLocationPosition(AnnotateService target, Location loc, double X, double Y, double Z)
         { 
@@ -579,7 +749,8 @@ namespace ServiceTest
         [TestMethod()]
         public void LocationLinkTest()
         {
-            long TestStartTime = DateTime.UtcNow.Ticks; 
+            long TestStartTime = DateTime.UtcNow.Ticks;
+            System.Threading.Thread.Sleep(500);
             AddPrincipalToThread();
 
             AnnotateService target = new AnnotateService(); // TODO: Initialize to an appropriate value
@@ -606,8 +777,10 @@ namespace ServiceTest
 
             //Create a second location for the structure, linked to the first
             Location B = new Location();
-            PopulateLocation(B, StructureID); 
-            P.Z = 1;
+            PopulateLocation(B, StructureID);
+            P.X = 100;
+            P.Y = 100; 
+            P.Z = 0;
             B.Position = P;
             B.DBAction = DBACTION.INSERT; 
 
@@ -621,7 +794,7 @@ namespace ServiceTest
             Location[] locations = target.GetLocationChanges(0, TestStartTime, out QueryExecutedTime, out DeletedIDs);
 
             Assert.IsTrue(locations.Length >= 0);
-            Dictionary<long, Location> dictLocations = LocationsToDict(locations);
+            Dictionary<long, Location> dictLocations = locations.ToDictionary(l => l.ID);
 
             Location BTest = dictLocations[LocationBID];
             Location ATest = dictLocations[LocationAID];

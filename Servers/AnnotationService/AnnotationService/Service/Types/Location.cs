@@ -46,9 +46,61 @@ namespace Annotation
         } 
     }
 
+
     [DataContract]
     [Serializable]
-    public struct AnnotationBoundingBox
+    public struct BoundingRectangle
+    {
+        private double _XMin;
+        private double _YMin;
+        private double _XMax;
+        private double _YMax;
+
+        [DataMember]
+        public double XMin
+        {
+            get { return _XMin; }
+            set { _XMin = value; }
+        }
+
+        [DataMember]
+        public double YMin
+        {
+            get { return _YMin; }
+            set { _YMin = value; }
+        }
+        
+        [DataMember]
+        public double XMax
+        {
+            get { return _XMax; }
+            set { _XMax = value; }
+        }
+
+        [DataMember]
+        public double YMax
+        {
+            get { return _YMax; }
+            set { _YMax = value; }
+        }
+        
+
+        public BoundingRectangle(double xmin, double ymin, double xmax, double ymax)
+        {
+            _XMin = xmin;
+            _YMin = ymin;
+            _XMax = xmax;
+            _YMax = ymax;
+        }
+        public System.Data.Entity.Spatial.DbGeometry ToGeometry()
+        {
+            return System.Data.Entity.Spatial.DbGeometry.FromText(string.Format("POLYGON (( {0} {2}, {0} {3}, {1} {3}, {1} {2}, {0} {2}))", XMin, XMax, YMin, YMax));
+        }
+    }
+
+    [DataContract]
+    [Serializable]
+    public struct BoundingBox
     {
         private double _XMin;
         private double _YMin;
@@ -99,7 +151,7 @@ namespace Annotation
             set { _ZMax = value; }
         }
 
-        public AnnotationBoundingBox(double xmin, double ymin, double zmin, double xmax, double ymax, double zmax)
+        public BoundingBox(double xmin, double ymin, double zmin, double xmax, double ymax, double zmax)
         {
             _XMin = xmin;
             _YMin = ymin;
@@ -171,9 +223,6 @@ namespace Annotation
         protected System.Data.Entity.Spatial.DbGeometry _MosaicShape;
         protected System.Data.Entity.Spatial.DbGeometry _VolumeShape;
 
-        static System.Runtime.Serialization.Formatters.Binary.BinaryFormatter serializer = new System.Runtime.Serialization.Formatters.Binary.BinaryFormatter(); 
-            
-
         [DataMember]
         public long ParentID
         {
@@ -203,13 +252,15 @@ namespace Annotation
             get { return _VolumePosition; }
             set { _VolumePosition = value; }
         }
-    
+
+        [DataMember]
         public System.Data.Entity.Spatial.DbGeometry MosaicShape
         {
             get { return _MosaicShape; }
             set { _MosaicShape = value; }
         }
 
+        [DataMember]
         public System.Data.Entity.Spatial.DbGeometry VolumeShape
         {
             get { return _VolumeShape; }
@@ -308,6 +359,11 @@ namespace Annotation
 
         }
 
+        /// <summary>
+        /// Populates the links array using relations from the database
+        /// </summary>
+        /// <param name="loc"></param>
+        /// <returns></returns>
         private static List<long> PopulateLinks(ConnectomeDataModel.Location loc)
         {
             if (!(loc.LocationLinksA.Any() || loc.LocationLinksB.Any()))
@@ -322,30 +378,34 @@ namespace Annotation
             return retlist; 
         }
 
-        protected static AnnotationPoint[] LoadVerticies(byte[] db_verticies)
+        public static void PopulateLinks(Dictionary<long, Location> Locations, IList<ConnectomeDataModel.LocationLink> links)
         {
-            System.IO.MemoryStream vertStream = null;
-            AnnotationPoint[] verticies = null;
-            if (db_verticies != null)
+            Location A;
+            Location B;
+            foreach (ConnectomeDataModel.LocationLink link in links)
             {
-                if (db_verticies.Length > 0)
+                if (Locations.TryGetValue(link.A, out A))
                 {
-                    using (vertStream = new System.IO.MemoryStream(db_verticies))
-                    {
-
-                        try
-                        {
-                            verticies = serializer.Deserialize(vertStream) as AnnotationPoint[];
-                        }
-                        catch (Exception )
-                        {
-                            verticies = null;
-                        }
-                    }
+                    A.AddLink(link);
                 }
-            }
 
-            return verticies;
+                if (Locations.TryGetValue(link.B, out B))
+                {
+                    B.AddLink(link);
+                }
+            } 
+        } 
+
+        /// <summary>
+        /// Populate the Links array using links loaded seperately from the relations in the database
+        /// </summary>
+        /// <param name="link"></param>
+        public void AddLink(ConnectomeDataModel.LocationLink link)
+        {
+            if(this._Links == null)
+                _Links = new List<long>();
+
+            this._Links.Add(link.A == this.ID ? link.B : link.A);
         }
 
         public Location(ConnectomeDataModel.Location db, bool LoadLinks=false)
@@ -385,7 +445,7 @@ namespace Annotation
 
         private static System.Data.Entity.Spatial.DbGeometry SetPointShape(double X, double Y, double Z)
         {
-            string point_template = "POINT ({0} {1} {2})";
+            string point_template = "POINT ({0,F2} {1,F2} {2})";
             string point_shape_string = string.Format(point_template, new object[] { X, Y, Z });
             return System.Data.Entity.Spatial.DbGeometry.FromText(point_shape_string);
         }
@@ -395,11 +455,11 @@ namespace Annotation
             if (Radius == 0)
                 throw new ArgumentException("Cannot create circle with a radius of zero");
 
-            string circle_template = "CURVEPOLYGON(CIRCULARSTRING ({1} {3} {6}, " +
-                                                                  "{0} {5} {6}, " +
-                                                                  "{2} {3} {6}, " +
-                                                                  "{0} {4} {6}, " +
-                                                                  "{1} {3} {6}))";
+            string circle_template = "CURVEPOLYGON(CIRCULARSTRING ({1,F2} {3,F2} {6}, " +
+                                                                  "{0,F2} {5,F2} {6}, " +
+                                                                  "{2,F2} {3,F2} {6}, " +
+                                                                  "{0,F2} {4,F2} {6}, " +
+                                                                  "{1,F2} {3,F2} {6}))";
             string circle_shape_string = string.Format(circle_template, new object[] {X,  X - Radius, X + Radius, Y, Y - Radius, Y + Radius, Z });
             return System.Data.Entity.Spatial.DbGeometry.FromText(circle_shape_string);
         }
@@ -425,16 +485,30 @@ namespace Annotation
             UpdateUserName |= db.Z != this.Position.Z; 
             db.Z = this.Position.Z;            
 
-            UpdateUserName |= db.MosaicShape != this.MosaicShape;
-            db.MosaicShape = this.Radius > 0 ? SetCircleShape(this.Position.X, this.Position.Y, this.Position.Z, this.Radius) : SetPointShape(this.Position.X, this.Position.Y, this.Position.Z);
-
-            UpdateUserName |= db.VolumeShape != this.VolumeShape;
-            db.VolumeShape = this.Radius > 0 ? SetCircleShape(this.VolumePosition.X, this.VolumePosition.Y, this.VolumePosition.Z, this.Radius) : SetPointShape(this.VolumePosition.X, this.VolumePosition.Y, this.VolumePosition.Z); ; 
+            UpdateUserName |= !db.MosaicShape.SpatialEquals(this.MosaicShape);
+            if (this.MosaicShape == null)
+            {
+                System.Data.Entity.Spatial.DbGeometry new_geom = this.Radius > 0 ? SetCircleShape(this.Position.X, this.Position.Y, this.Position.Z, this.Radius) : SetPointShape(this.Position.X, this.Position.Y, this.Position.Z);
+                UpdateUserName |= !db.MosaicShape.SpatialEquals(this.MosaicShape);
+                db.MosaicShape = new_geom;
+            }
+            else
+            {
+                UpdateUserName |= !db.MosaicShape.SpatialEquals(this.MosaicShape);
+                db.MosaicShape = this.MosaicShape;
+            }
+                
+            //See above comment before adding UpdateUserName test...
+            //UpdateUserName |= db.VolumeShape != this.VolumeShape;
+            if (this.VolumeShape == null)
+                db.VolumeShape = this.Radius > 0 ? SetCircleShape(this.VolumePosition.X, this.VolumePosition.Y, this.VolumePosition.Z, this.Radius) : SetPointShape(this.VolumePosition.X, this.VolumePosition.Y, this.VolumePosition.Z);
+            else
+                db.VolumeShape = this.VolumeShape;
 
             //See above comment before adding UpdateUserName test...
             //db.VolumeX = this.VolumePosition.X;
             //db.VolumeY = this.VolumePosition.Y;
-             
+
 
             UpdateUserName |= db.Closed != this.Closed; 
             db.Closed = this.Closed;

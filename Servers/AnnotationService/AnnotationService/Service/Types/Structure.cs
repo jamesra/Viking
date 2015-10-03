@@ -138,6 +138,8 @@ namespace Annotation
                 i++;
             }
 
+            
+
             return _Links;
         }
 
@@ -179,12 +181,7 @@ namespace Annotation
 
             if (IncludeChildren)
             {
-                List<long> childIDs = new List<long>(dbStructObj.Children.Count);
-                foreach (ConnectomeDataModel.Structure Child in dbStructObj.Children)
-                {
-                    childIDs.Add(Child.ID);
-                }
-                this._ChildIDs = childIDs.ToArray();
+                this._ChildIDs = dbStructObj.Children.Select(child => child.ID).ToArray();
             }
             else
             {

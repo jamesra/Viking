@@ -61,13 +61,24 @@ namespace Annotation.Service.Interfaces
         /// <returns></returns>
         [OperationContract]
         Location[] GetLocationsForSection(long section, out long QueryExecutedTime);
-
+          
         /// <summary>
         /// Return all locations for this structure
         /// </summary>
         /// <returns></returns>
         [OperationContract]
         Location[] GetLocationsForStructure(long structureID);
+
+        /// <summary>
+        /// Returns all locations modified after a set date within the requested region
+        /// The passed tick count needs to be in the same timezone as the server
+        /// </summary>
+        /// <param name="section"></param>
+        /// <param name="ModifiedAfterThisTime">A Datetime converted to a long. Clients should use server time</param>
+        /// <param name="IDs"></param>
+        /// <returns></returns>
+        [OperationContract]
+        Location[] GetLocationChangesInRegion(long section, BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisUtcTime, out long QueryExecutedTime, out long[] DeletedIDs);
 
         /// <summary>
         /// Returns all locations modified after a set date.  
@@ -78,7 +89,7 @@ namespace Annotation.Service.Interfaces
         /// <param name="IDs"></param>
         /// <returns></returns>
         [OperationContract]
-        Location[] GetLocationChanges(long section, long ModifiedAfterThisTime, out long QueryExecutedTime, out long[] DeletedIDs);
+        Location[] GetLocationChanges(long section, long ModifiedAfterThisUtcTime, out long QueryExecutedTime, out long[] DeletedIDs);
         
         /// <summary>
         /// Updates or creates a new structure
@@ -113,8 +124,10 @@ namespace Annotation.Service.Interfaces
         /// <param name="To"></param>
         /// <returns></returns>
         [OperationContract]
-        LocationLink[] LocationLinksForSection(long section, long ModifiedAfterThisTime, out long QueryExecutedTime, out LocationLink[] DeletedLinks);
+        LocationLink[] GetLocationLinksForSection(long section, long ModifiedAfterThisTime, out long QueryExecutedTime, out LocationLink[] DeletedLinks);
 
+        [OperationContract]
+        LocationLink[] GetLocationLinksForSectionInRegion(long section, BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisUtcTime, out long QueryExecutedTime, out LocationLink[] DeletedLinks);
 
         /// <summary>
         /// Return a list of location objects that have changed in the time interval
