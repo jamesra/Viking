@@ -281,25 +281,6 @@ namespace Viking.VolumeModel
                 return new PositionNormalTextureVertex[0];
             }
 
-/*            if (TileCornerMappedPoints.Count < 3)
-            {
-                TriangleEdges = new int[0];
-                return new VertexPositionNormalTexture[0];
-            }
-            */
-
-            
-            /*
-            for (int iPoint = 1; iPoint < MappedPoints.Count; iPoint++)
-            {
-                if (MappedPoints[iPoint].MappedPoint == MappedPoints[iPoint - 1].MappedPoint)
-                {
-                    iPoint--;
-                    MappedPoints.RemoveAt(iPoint);
-                }
-            }
-             */
-
             //Eliminate duplicates in case tile coordinate landed exactly on transform grid (Common for 0,0)
             for(int iPoint = 0; iPoint < MappedPoints.Count; iPoint++)
             {

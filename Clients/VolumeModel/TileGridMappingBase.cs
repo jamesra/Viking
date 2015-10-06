@@ -1,11 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
-using System.Xml; 
-using System.Xml.Linq;
-using System.Diagnostics;
-using Utils;
-using System.Linq;
 
 using Geometry;
 
@@ -136,25 +130,9 @@ namespace Viking.VolumeModel
         /// <returns></returns>
         protected virtual string TileTextureFileName(int iX, int iY)
         {
-            string filename = this.TilePrefix + "X" + iX.ToString("D3") + "_Y" + iY.ToString("D3") + this.TilePostfix;
-
-            return filename;
+            return this.TilePrefix + "X" + iX.ToString("D3") + "_Y" + iY.ToString("D3") + this.TilePostfix;
         }
-
-        /*PORT:
-        protected string TileCacheName(int iX, int iY, int DownsampleLevel)
-        {
-            string filename = this.TilePrefix + "X" + iX.ToString("D3") + "_Y" + iY.ToString("D3") + this.TilePostfix;
-            string cachePath = State.CachePath +
-                                System.IO.Path.DirectorySeparatorChar + Section.volume.Name +
-                                System.IO.Path.DirectorySeparatorChar + Section.SectionSubPath +
-                                System.IO.Path.DirectorySeparatorChar + TileGridPath +
-                                System.IO.Path.DirectorySeparatorChar + DownsampleLevel.ToString("D3") +
-                                System.IO.Path.DirectorySeparatorChar + filename;
-            return cachePath;
-        }
-         */
-
+        
         #endregion
         
         /// <summary>
