@@ -470,6 +470,11 @@ namespace Viking
                     this.SetTexture(null);
                     return;
                 }
+                else if (response.ContentLength < 0)
+                {
+                    this.SetTexture(null);
+                    return;
+                }
                 
 
                 if (Aborted || IsDisposed)
@@ -580,8 +585,9 @@ namespace Viking
                         {
                             this.TextureNotFound = true;
                         }
-                        else
+                        else if(ErrorResponse.StatusCode == HttpStatusCode.InternalServerError)
                         {
+                            this.TextureNotFound = true;
                             //Trace.WriteLine("WebException: " + state.request.Address.ToString());
                             //Trace.WriteLine(ErrorResponse.StatusCode + " : " + ErrorResponse.StatusDescription, "TextureUse");
                         }
