@@ -344,7 +344,7 @@ namespace Viking.VolumeModel
                                                               info.TileXDim, info.TileYDim,
                                                               info.Host, info.CoordSpaceName, info.Path);
 
-            mapping.PopulateLevels(info.MaxDownsample, info.GridXDim, info.GridYDim);
+            mapping.PopulateLevels(info.MaxLevel, info.GridXDim, info.GridYDim);
             
             WarpedTo.Add(mapping.Name, mapping);
             TilesetNames.Add(mapping.Name);

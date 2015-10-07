@@ -69,11 +69,10 @@ namespace Viking.VolumeModel
 
         public void PopulateLevels(int MaxLevel, int GridDimX, int GridDimY)
         {
-            int CurrentLevel = 1;
-            while(CurrentLevel < MaxLevel)
+            for(int CurrentLevel = 0; CurrentLevel <= MaxLevel; CurrentLevel++)
             {
-                this.AddLevel(CurrentLevel, (int)Math.Ceiling((double)GridDimX / CurrentLevel), (int)Math.Ceiling((double)GridDimY / CurrentLevel), CurrentLevel.ToString("D3"));
-                CurrentLevel *= 2;
+                int downsample = (int)Math.Pow(2, CurrentLevel);
+                this.AddLevel(downsample, (int)Math.Ceiling((double)GridDimX / downsample), (int)Math.Ceiling((double)GridDimY / downsample), CurrentLevel.ToString("D3"));
             }
         }
     }

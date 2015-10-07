@@ -23,7 +23,7 @@ namespace Viking.VolumeModel
         public int TileYDim { get; private set; }
         public int GridXDim { get; private set; }
         public int GridYDim { get; private set; }
-        public int MaxDownsample { get; private set; }
+        public int MaxLevel { get; private set; }
         public string Name { get; private set; }
         public string Path { get; private set; }
         public string FilePrefix { get; private set; }
@@ -39,7 +39,7 @@ namespace Viking.VolumeModel
             info.TileYDim = System.Convert.ToInt32(IO.GetAttributeCaseInsensitive(node, "TileYDim").Value);
             info.GridXDim = System.Convert.ToInt32(IO.GetAttributeCaseInsensitive(node, "GridXDim").Value);
             info.GridYDim = System.Convert.ToInt32(IO.GetAttributeCaseInsensitive(node, "GridYDim").Value);
-            info.MaxDownsample = System.Convert.ToInt32(IO.GetAttributeCaseInsensitive(node, "MaxDownsample").Value);
+            info.MaxLevel = System.Convert.ToInt32(IO.GetAttributeCaseInsensitive(node, "MaxLevel").Value);
             info.FilePrefix = IO.GetAttributeCaseInsensitive(node, "FilePrefix").Value;
             info.FilePostfix = IO.GetAttributeCaseInsensitive(node, "FilePostfix").Value;
             info.Host = IO.GetAttributeCaseInsensitive(node, "host").Value;
@@ -732,7 +732,7 @@ namespace Viking.VolumeModel
                         //                        this.sections.Add(s.Number, s);
 
                         break;
-                    case "tileserver":
+                    case "ocptileserver":
                         TileServerInfo info = TileServerInfo.CreateFromElement(elem);
                         this.TileServerList[info.Name] = info;
                         break;
