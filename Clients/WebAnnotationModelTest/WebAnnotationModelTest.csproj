@@ -52,17 +52,13 @@
     <Compile Include="UnitTest1.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\Geometry\Geometry.csproj">
-      <Project>{EACB87E8-A5E3-417E-A9EF-B80C2A68C020}</Project>
-      <Name>Geometry</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\WebAnnotationModel\WebAnnotationModel.csproj">
-      <Project>{709A3C16-7218-4FF0-9A2D-6BF015C243BF}</Project>
-      <Name>WebAnnotationModel</Name>
-    </ProjectReference>
+    <None Include="app.config" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="app.config" />
+    <ProjectReference Include="..\WebAnnotationModel\WebAnnotationModel.csproj">
+      <Project>{709a3c16-7218-4ff0-9a2d-6bf015c243bf}</Project>
+      <Name>WebAnnotationModel</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

@@ -507,6 +507,8 @@ namespace Viking
                     //state.responseStream.BeginRead(state.databuffer, 0, (int)state.ReadRequestSize(), new AsyncCallback(this.EndReadResponseStream), state);
 
                     //Byte[] data = state.databuffer;
+
+
                     Byte[] data = new byte[response.ContentLength];
 
                     using (Stream stream = response.GetResponseStream())
@@ -519,18 +521,19 @@ namespace Viking
                         }
 
                         int BytesRead = 0;
+                        stream.ReadTimeout = 30000; //30 seconds to read a ~4Kx4K tile should be plenty of time.  The default was 300 seconds.
                         while (BytesRead < response.ContentLength)
                         {
                             BytesRead += stream.Read(data, BytesRead, (data.Length - BytesRead));
                         }
-                    }
 
-                    if (CacheFilename != null)
-                    {
-                        Action<String, byte[]> AddToCache = Global.TextureCache.AddAsync;
-                        AddToCache.BeginInvoke(CacheFilename, data, null, null);
+                        if (CacheFilename != null)
+                        {
+                            Action<String, byte[]> AddToCache = Global.TextureCache.AddAsync;
+                            AddToCache.BeginInvoke(CacheFilename, data, null, null);
+                        }
                     }
-
+                     
                     //state.Dispose();
 
                     TextureFromStreamAsync(graphicsDevice, data);

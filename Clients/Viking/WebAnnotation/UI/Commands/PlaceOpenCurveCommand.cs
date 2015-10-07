@@ -16,11 +16,11 @@ namespace WebAnnotation.UI.Commands
     /// Double left-click to complete polyline creation
     /// Right-click to remove the last polyline vertex
     /// </summary> 
-    class PlaceOpenCurveCommand : PolylineCommandBase
+    class PlaceCurveCommand : PolylineCommandBase
     {
         Stack<GridVector2> vert_stack = new Stack<GridVector2>();
-         
 
+        bool IsOpen = true; //False if the curves last point is connected to its first
         /// <summary>
         /// Returns the stack with the bottomost entry first in the array
         /// </summary>
@@ -38,22 +38,25 @@ namespace WebAnnotation.UI.Commands
         }
 
         
-        public PlaceOpenCurveCommand(Viking.UI.Controls.SectionViewerControl parent,
+        public PlaceCurveCommand(Viking.UI.Controls.SectionViewerControl parent,
                                         Microsoft.Xna.Framework.Color color,
                                         GridVector2 origin,
                                         double LineWidth,
+                                        bool IsOpen,
                                         OnCommandSuccess success_callback)
             : base(parent, color, LineWidth, success_callback)
         {
             parent.Cursor = Cursors.Cross;
             vert_stack.Push(origin);
             this.success_callback = success_callback;
+            this.IsOpen = IsOpen;
         }
 
-        public PlaceOpenCurveCommand(Viking.UI.Controls.SectionViewerControl parent,
+        public PlaceCurveCommand(Viking.UI.Controls.SectionViewerControl parent,
                                         System.Drawing.Color color,
                                         GridVector2 origin,
                                         double LineWidth,
+                                        bool IsOpen,
                                         OnCommandSuccess success_callback)
             : this(parent,
                     new Microsoft.Xna.Framework.Color((int)color.R,
@@ -62,6 +65,7 @@ namespace WebAnnotation.UI.Commands
                                                     0.5f),
                     origin,
                     LineWidth,
+                    IsOpen,
                     success_callback)
         {
         }
@@ -166,7 +170,7 @@ namespace WebAnnotation.UI.Commands
 
                 vert_stack.Push(this.oldWorldPosition);
 
-                CurveView.Draw(graphicsDevice, Parent.LumaOverlayLineManager, basicEffect, vert_stack.ToList(), 5, false, this.LineColor.ConvertToHSL(), this.LineWidth);
+                CurveView.Draw(graphicsDevice, Parent.LumaOverlayLineManager, basicEffect, vert_stack.ToList(), 5, this.IsOpen, this.LineColor.ConvertToHSL(), this.LineWidth);
                 //GlobalPrimitives.DrawPolyline(Parent.LineManager, basicEffect, DrawnLineVerticies, this.LineWidth, this.LineColor);
 
                 this.vert_stack.Pop();

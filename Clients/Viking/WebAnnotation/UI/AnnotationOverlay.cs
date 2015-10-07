@@ -554,8 +554,11 @@ namespace WebAnnotation
                 case Keys.L:
                     Viking.UI.Commands.Command.EnqueueCommand(typeof(PlacePolylineCommand), new object[] { Parent, new Microsoft.Xna.Framework.Color(1.0f,0f,0f,0.5f), this.LastMouseDownCoords, 16, null});
                     break;
-                case Keys.Q:
-                    OnCreateStructure(28, new string[0], LocationType.OPENCURVE);
+                case Keys.U:
+                    OnCreateStructure(34, new string[0], LocationType.OPENCURVE);
+                    break;
+                case Keys.O:
+                    OnCreateStructure(34, new string[0], LocationType.CLOSEDCURVE);
                     break;
             }
 
@@ -707,6 +710,9 @@ namespace WebAnnotation
                     case LocationType.OPENCURVE:
                         QueueCommandForOpenCurveStructure(newLocationView, WorldPos, type.Color);
                         break;
+                    case LocationType.CLOSEDCURVE:
+                        QueueCommandForClosedCurveStructure(newLocationView, WorldPos, type.Color);
+                        break;
                     default:
                         Trace.WriteLine("Could not find commands for annotation type: " + AnnotationType.ToString());
                         return;
@@ -739,7 +745,20 @@ namespace WebAnnotation
                                         OnCommandSuccess success_callback)
                                         */
 
-            Viking.UI.Commands.Command.EnqueueCommand(typeof(ResizeCircleCommand), new object[] { Parent, typecolor, origin, 16.0, new PlaceOpenCurveCommand.OnCommandSuccess((GridVector2[] points) => { SetLocationShapeFromPointsInVolume(newLocationView, points); }) });
+            Viking.UI.Commands.Command.EnqueueCommand(typeof(PlaceCurveCommand), new object[] { Parent, typecolor, origin, 16.0, false, new PlaceCurveCommand.OnCommandSuccess((GridVector2[] points) => { SetLocationShapeFromPointsInVolume(newLocationView, points); }) });
+        }
+
+        protected void QueueCommandForClosedCurveStructure(Location_CanvasViewModel newLocationView, GridVector2 origin, System.Drawing.Color typecolor)
+        {
+            /*
+            public PlaceOpenCurveCommand(Viking.UI.Controls.SectionViewerControl parent,
+                                        Microsoft.Xna.Framework.Color color,
+                                        GridVector2 origin,
+                                        double LineWidth,
+                                        OnCommandSuccess success_callback)
+                                        */
+
+            Viking.UI.Commands.Command.EnqueueCommand(typeof(PlaceCurveCommand), new object[] { Parent, typecolor, origin, 16.0, true, new PlaceCurveCommand.OnCommandSuccess((GridVector2[] points) => { SetLocationShapeFromPointsInVolume(newLocationView, points); }) });
         }
 
         protected void SetLocationShapeFromPointsInVolume(Location_CanvasViewModel location, GridVector2[] points)

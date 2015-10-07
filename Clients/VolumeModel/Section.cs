@@ -72,111 +72,7 @@ namespace Viking.VolumeModel
         /// The volume this section belongs to
         /// </summary>
         public Volume volume;
-
-        /* PORT
-        #region Reference Sections
-
-        /// <summary>
-        /// Fires when one of the reference sections has been changed
-        /// </summary>
-        public event EventHandler OnReferenceSectionChanged;
-
-        public bool ReferenceSectionsWereSet = false;
-        /// <summary>
-        /// Pointer to a section above this one, user configurable to point to a properly registered section suitable as a reference
-        /// </summary>
-        private Section _ReferenceSectionAbove;
-
-        public Section ReferenceSectionAbove
-        {
-            get
-            {
-                //We want the user to be able to set the reference section to null, so only update the reference sections if we haven't initialized them
-                if (false == ReferenceSectionsWereSet)
-                {
-                    this._ReferenceSectionAbove = volume.GetReferenceSectionAbove(this);
-                    this._ReferenceSectionBelow = volume.GetReferenceSectionBelow(this);
-                    ReferenceSectionsWereSet = true;
-                }
-
-                return _ReferenceSectionAbove;
-            }
-
-            set
-            {
-                bool SendEvent = false;
-                Debug.Assert(this != value);
-                if (this == value)
-                    return;
-
-                //See if the new section is really above us
-                if (value != null)
-                {
-                    Debug.Assert(this.Number < value.Number);
-                }
-
-                if (this._ReferenceSectionBelow != value)
-                    SendEvent = true;
-
-                this._ReferenceSectionAbove = value;
-                ReferenceSectionsWereSet = true;
-
-                if (SendEvent && OnReferenceSectionChanged != null)
-                {
-                    OnReferenceSectionChanged(this, new EventArgs());
-                }
-            }
-        }
-
-        /// <summary>
-        /// Pointer to a section below this one, user configurable to point to a properly registered section suitable as a reference
-        /// </summary>
-        private Section _ReferenceSectionBelow = null;
-
-        public Section ReferenceSectionBelow
-        {
-            get
-            {
-                //We want the user to be able to set the reference section to null, so only update the reference sections if we haven't initialized them
-                if (false == ReferenceSectionsWereSet)
-                {
-                    this._ReferenceSectionAbove = volume.GetReferenceSectionAbove(this);
-                    this._ReferenceSectionBelow = volume.GetReferenceSectionBelow(this);
-                    ReferenceSectionsWereSet = true;
-                }
-
-                return _ReferenceSectionBelow;
-            }
-
-            set
-            {
-                bool SendEvent = false;
-                Debug.Assert(this != value);
-                if (this == value)
-                    return;
-
-                //See if the new section is really below us
-                if (value != null)
-                {
-                    Debug.Assert(this.Number > value.Number);
-                }
-
-                if (this._ReferenceSectionBelow != value)
-                    SendEvent = true;
-
-                this._ReferenceSectionBelow = value;
-                ReferenceSectionsWereSet = true;
-
-                if (SendEvent && OnReferenceSectionChanged != null)
-                {
-                    OnReferenceSectionChanged(this, new EventArgs());
-                }
-            }
-        }
-
-        #endregion
-        */
-
+        
         #region Channel & Transform Inventory & State
 
         /// <summary>
@@ -441,28 +337,24 @@ namespace Viking.VolumeModel
             ChannelNames.Add(mapping.Name); 
         }
 
-        public void AddTileserver(TileServerInfo info)
+        public void AddOCPTileserver(TileServerInfo info)
         {
-            TileServerMapping mapping = new TileServerMapping(this, info.Name,
+            OCPTileServerMapping mapping = new OCPTileServerMapping(this, info.Name,
                                                               info.FilePrefix, info.FilePostfix,
                                                               info.TileXDim, info.TileYDim,
                                                               info.Host, info.CoordSpaceName, info.Path);
 
-            mapping.AddLevel(1, 1024, 1024, "001");
-            mapping.AddLevel(2, 512, 512, "002");
-            mapping.AddLevel(4, 256, 256, "004");
-            mapping.AddLevel(8, 128, 128, "008");
-            mapping.AddLevel(16, 32, 32, "016");
-            mapping.AddLevel(32, 16, 16, "032");
-            mapping.AddLevel(64, 8, 8, "064");
-            mapping.AddLevel(128, 4, 4, "128");
+            mapping.PopulateLevels(info.MaxDownsample, info.GridXDim, info.GridYDim);
+            
             WarpedTo.Add(mapping.Name, mapping);
             TilesetNames.Add(mapping.Name);
             VolumeTransformList.Add(mapping.Name);
             ChannelNames.Add(mapping.Name);
-
-
+            DefaultTileset = mapping.Name;
         }
+
+        
+        
     
         protected void LoadLocal(string path)
         {
@@ -556,9 +448,9 @@ namespace Viking.VolumeModel
                     (TileGridMapping)mapBase,
                     transform);
             }
-            else if (mapBase is TileServerMapping)
+            else if (mapBase is OCPTileServerMapping)
             {
-                SectionToVolumeMap = new TileServerToVolumeMapping(this, UniqueName, (TileServerMapping)mapBase, transform);
+                SectionToVolumeMap = new OCPTileServerToVolumeMapping(this, UniqueName, (OCPTileServerMapping)mapBase, transform);
             }
             else
             {

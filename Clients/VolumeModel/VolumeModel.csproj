@@ -102,6 +102,8 @@
     <Compile Include="Global.cs" />
     <Compile Include="MappingBase.cs" />
     <Compile Include="MappingsManager.cs" />
+    <Compile Include="OCPTileServerMapping.cs" />
+    <Compile Include="OCPTileServerToVolumeMapping.cs" />
     <Compile Include="Pyramid.cs" />
     <Compile Include="RegistrationTree.cs" />
     <Compile Include="Section.cs" />
@@ -109,8 +111,6 @@
     <Compile Include="Tile.cs" />
     <Compile Include="TileCache.cs" />
     <Compile Include="TileGridMappingBase.cs" />
-    <Compile Include="TileServerToVolumeMapping.cs" />
-    <Compile Include="TileServerMapping.cs" />
     <Compile Include="TileGridMapping.cs" />
     <Compile Include="TileGridToVolumeMapping.cs" />
     <Compile Include="TilePyramid.cs" />
@@ -158,11 +158,8 @@
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PostBuildEvent>copy $(TargetDir)*.dll  "$(SolutionDir)Jotunn\Jotunn\Modules\VolumeModel"
-copy $(TargetDir)*.pdb  "$(SolutionDir)Jotunn\Jotunn\Modules\VolumeModel"
-
-copy $(TargetDir)*.dll "$(SolutionDir)Jotunn\Jotunn\bin\Release\Modules\VolumeModel"
-copy $(TargetDir)*.pdb "$(SolutionDir)Jotunn\Jotunn\bin\Release\Modules\VolumeModel"</PostBuildEvent>
+    <PostBuildEvent>
+    </PostBuildEvent>
   </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

@@ -14,9 +14,8 @@ namespace Viking.VolumeModel
     /// For this mapping the tiles are registered into the volume and we can use simple math to figure out which tiles to load.  However our transform mapping 
     /// needs to be able to map points to mosaic space for annotations
     /// </summary>
-    public class TileServerToVolumeMapping : TileServerMapping
-    {
-        
+    public class OCPTileServerToVolumeMapping : OCPTileServerMapping
+    { 
 
         /// <summary>
         /// The transformation which will/has converted the tiles from section space into volume space.
@@ -24,7 +23,7 @@ namespace Viking.VolumeModel
         /// </summary>
         public readonly TriangulationTransform VolumeTransform;
 
-        public TileServerToVolumeMapping(Section section, string name, TileServerMapping ToWarp, TriangulationTransform Transform)
+        public OCPTileServerToVolumeMapping(Section section, string name, OCPTileServerMapping ToWarp, TriangulationTransform Transform)
             : base(ToWarp, section, name)
         {
             this.VolumeTransform = Transform;
