@@ -66,5 +66,15 @@ namespace Viking.VolumeModel
             this.Host = TileServerHost;
             this.CoordSpaceName = CoordSpaceName;
         } 
+
+        public void PopulateLevels(int MaxLevel, int GridDimX, int GridDimY)
+        {
+            int CurrentLevel = 1;
+            while(CurrentLevel < MaxLevel)
+            {
+                this.AddLevel(CurrentLevel, (int)Math.Ceiling((double)GridDimX / CurrentLevel), (int)Math.Ceiling((double)GridDimY / CurrentLevel), CurrentLevel.ToString("D3"));
+                CurrentLevel *= 2;
+            }
+        }
     }
 }
