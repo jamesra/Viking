@@ -231,6 +231,9 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
           <Parameter Name="Z" Type="float" Mode="In" />
           <Parameter Name="QueryDate" Type="datetime" Mode="In" />
         </Function>
+        <Function Name="SelectStructureLocationsAndLinks" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="false" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo">
+          <Parameter Name="StructureID" Type="bigint" Mode="In" />
+        </Function>
         <Function Name="SelectSectionLocationsAndLinksInBounds" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="false" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo">
           <Parameter Name="Z" Type="float" Mode="In" />
           <Parameter Name="BBox" Type="geometry" Mode="In" />
@@ -694,6 +697,11 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
             <ReturnType EntitySet="Locations" Type="Collection(ConnectomeModel.Location)"/>
             <ReturnType EntitySet="LocationLinks" Type="Collection(ConnectomeModel.LocationLink)"/>
           </FunctionImport>
+          <FunctionImport Name="SelectStructureLocationsAndLinks">
+            <Parameter Name="StructureID" Mode="In" Type="Int64" />
+            <ReturnType EntitySet="Locations" Type="Collection(ConnectomeModel.Location)"/>
+            <ReturnType EntitySet="LocationLinks" Type="Collection(ConnectomeModel.LocationLink)"/>
+          </FunctionImport>
           <FunctionImport Name="SelectStructuresLinkedViaChildren" ReturnType="Collection(Int64)">
           <Parameter Name="ID" Mode="In" Type="Int64" />
           </FunctionImport>
@@ -823,27 +831,6 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
           <Property Type="Int64" Name="B" Nullable="false" />
           <Property Type="String" Name="Username" Nullable="false" MaxLength="16" />
           <Property Type="DateTime" Name="Created" Nullable="false" Precision="23" />
-        </ComplexType>
-        <ComplexType Name="SelectSectionLocationsAndLinks_Result">
-          <Property Type="Int64" Name="ID" Nullable="false" />
-          <Property Type="Int64" Name="ParentID" Nullable="false" />
-          <Property Type="Double" Name="X" Nullable="false" />
-          <Property Type="Double" Name="Y" Nullable="false" />
-          <Property Type="Double" Name="Z" Nullable="false" />
-          <Property Type="Binary" Name="Verticies" Nullable="true" />
-          <Property Type="Boolean" Name="Closed" Nullable="false" />
-          <Property Type="Binary" Name="Version" Nullable="false" MaxLength="8" />
-          <Property Type="Binary" Name="Overlay" Nullable="true" />
-          <Property Type="String" Name="Tags" Nullable="true" MaxLength="Max" />
-          <Property Type="Double" Name="VolumeX" Nullable="false" />
-          <Property Type="Double" Name="VolumeY" Nullable="false" />
-          <Property Type="Boolean" Name="Terminal" Nullable="false" />
-          <Property Type="Boolean" Name="OffEdge" Nullable="false" />
-          <Property Type="Double" Name="Radius" Nullable="false" />
-          <Property Type="Int16" Name="TypeCode" Nullable="false" />
-          <Property Type="DateTime" Name="LastModified" Nullable="false" Precision="23" />
-          <Property Type="DateTime" Name="Created" Nullable="false" Precision="23" />
-          <Property Type="String" Name="Username" Nullable="false" MaxLength="16" />
         </ComplexType>
         <ComplexType Name="SelectStructure_Result">
           <Property Type="Int64" Name="ID" Nullable="false" />
@@ -1049,26 +1036,6 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
           <Property Type="String" Name="Label" Nullable="true" MaxLength="64" />
           <Property Type="String" Name="Username" Nullable="false" MaxLength="16" />
           <Property Type="DateTime" Name="LastModified" Nullable="false" Precision="23" />
-        </ComplexType>
-        <ComplexType Name="SelectSectionLocationsAndLinksInBounds_Result">
-          <Property Type="Int64" Name="ID" Nullable="false" />
-          <Property Type="Int64" Name="ParentID" Nullable="false" />
-          <Property Type="Double" Name="Z" Nullable="false" />
-          <Property Type="Boolean" Name="Closed" Nullable="false" />
-          <Property Type="Binary" Name="Version" Nullable="false" MaxLength="8" />
-          <Property Type="Binary" Name="Overlay" Nullable="true" />
-          <Property Type="String" Name="Tags" Nullable="true" MaxLength="Max" />
-          <Property Type="Boolean" Name="Terminal" Nullable="false" />
-          <Property Type="Boolean" Name="OffEdge" Nullable="false" />
-          <Property Type="Double" Name="Radius" Nullable="false" />
-          <Property Type="Int16" Name="TypeCode" Nullable="false" />
-          <Property Type="DateTime" Name="LastModified" Nullable="false" Precision="23" />
-          <Property Type="DateTime" Name="Created" Nullable="false" Precision="23" />
-          <Property Type="String" Name="Username" Nullable="false" MaxLength="16" />
-          <Property Type="Double" Name="X" Nullable="false" />
-          <Property Type="Double" Name="Y" Nullable="false" />
-          <Property Type="Double" Name="VolumeX" Nullable="false" />
-          <Property Type="Double" Name="VolumeY" Nullable="false" />
         </ComplexType>
         <ComplexType Name="BoundedSectionLocationLinks_Result">
           <Property Type="Int64" Name="A" Nullable="false" />
@@ -1294,6 +1261,40 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
                   <ScalarProperty Name="B" ColumnName="B" />
                   <ScalarProperty Name="Username" ColumnName="Username" />
                   <ScalarProperty Name="Created" ColumnName="Created" />
+              </EntityTypeMapping>
+            </ResultMapping>
+          </FunctionImportMapping>
+          <FunctionImportMapping FunctionImportName="SelectStructureLocationsAndLinks" FunctionName="ConnectomeModel.Store.SelectStructureLocationsAndLinks">
+            <ResultMapping>
+              <EntityTypeMapping TypeName="ConnectomeModel.Location">
+                <ScalarProperty Name="VolumeShape" ColumnName="VolumeShape" />
+                <ScalarProperty Name="MosaicShape" ColumnName="MosaicShape" />
+                <ScalarProperty Name="ID" ColumnName="ID" />
+                <ScalarProperty Name="ParentID" ColumnName="ParentID" />
+                <ScalarProperty Name="X" ColumnName="X" />
+                <ScalarProperty Name="Y" ColumnName="Y" />
+                <ScalarProperty Name="Z" ColumnName="Z" />
+                <ScalarProperty Name="Closed" ColumnName="Closed" />
+                <ScalarProperty Name="Version" ColumnName="Version" />
+                <ScalarProperty Name="Overlay" ColumnName="Overlay" />
+                <ScalarProperty Name="Tags" ColumnName="Tags" />
+                <ScalarProperty Name="VolumeX" ColumnName="VolumeX" />
+                <ScalarProperty Name="VolumeY" ColumnName="VolumeY" />
+                <ScalarProperty Name="Terminal" ColumnName="Terminal" />
+                <ScalarProperty Name="OffEdge" ColumnName="OffEdge" />
+                <ScalarProperty Name="Radius" ColumnName="Radius" />
+                <ScalarProperty Name="TypeCode" ColumnName="TypeCode" />
+                <ScalarProperty Name="LastModified" ColumnName="LastModified" />
+                <ScalarProperty Name="Created" ColumnName="Created" />
+                <ScalarProperty Name="Username" ColumnName="Username" />
+              </EntityTypeMapping>
+            </ResultMapping>
+            <ResultMapping>
+              <EntityTypeMapping TypeName="ConnectomeModel.LocationLink">
+                <ScalarProperty Name="A" ColumnName="A" />
+                <ScalarProperty Name="B" ColumnName="B" />
+                <ScalarProperty Name="Username" ColumnName="Username" />
+                <ScalarProperty Name="Created" ColumnName="Created" />
               </EntityTypeMapping>
             </ResultMapping>
           </FunctionImportMapping>
