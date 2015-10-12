@@ -10,15 +10,14 @@ namespace Utils
 {
     public static class IO
     {
-        public static XAttribute GetAttributeCaseInsensitive(XElement element, string AttribName)
+        public static XAttribute GetAttributeCaseInsensitive(this XElement element, string AttribName)
         {
-            foreach (XAttribute attrib in element.Attributes())
-            {
-                if (String.Compare(attrib.Name.ToString(), AttribName, true) == 0)
-                    return attrib;
-            }
+            return element.Attributes().SingleOrDefault(a => string.Compare(a.Name.ToString().ToLower(), AttribName.ToLower()) == 0);
+        }
 
-            return null;
+        public static bool HasAttributeCaseInsensitive(this XElement element, string AttribName)
+        {
+            return element.Attributes().Any(a => string.Compare(a.Name.ToString().ToLower(), AttribName.ToLower()) == 0);
         }
 
         /// <summary>
