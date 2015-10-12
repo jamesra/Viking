@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Diagnostics;
 using System.Xml.Linq;
+using System.Linq;
 using System.Xml;
 using System.IO;
 using Geometry;
@@ -175,13 +176,10 @@ namespace Viking.VolumeModel
             //XElement sectionElement = XDocument.ReadFrom(reader) as XElement;
             Debug.Assert(sectionElement != null);
 
-
-            if(IO.GetAttributeCaseInsensitive(sectionElement,"name") != null)
-                this.Name = IO.GetAttributeCaseInsensitive(sectionElement, "name").Value;
-
+            this.Name = sectionElement.HasAttributeCaseInsensitive("name") ? sectionElement.GetAttributeCaseInsensitive("name").Value : null;
             this.Number = System.Convert.ToInt32(IO.GetAttributeCaseInsensitive(sectionElement,"number").Value);
             if (this.Name == null)
-                this.Name = this.Number.ToString();
+                this.Name = this.Number.ToString("D4");
 
             foreach (XNode node in sectionElement.Nodes())
             {
@@ -339,18 +337,26 @@ namespace Viking.VolumeModel
 
         public void AddOCPTileserver(TileServerInfo info)
         {
-            OCPTileServerMapping mapping = new OCPTileServerMapping(this, info.Name,
-                                                              info.FilePrefix, info.FilePostfix,
-                                                              info.TileXDim, info.TileYDim,
-                                                              info.Host, info.CoordSpaceName, info.Path);
+            foreach(string channelName in info.Channels.Select(c => c.Name))
+            {
+                string Name = "OCP-" + channelName;
+                OCPTileServerMapping mapping = new OCPTileServerMapping(this,
+                                                                  Name,
+                                                                  channelName,
+                                                                  info.FilePrefix, info.FilePostfix,
+                                                                  info.TileXDim, info.TileYDim,
+                                                                  info.Host, info.CoordSpaceName);
 
-            mapping.PopulateLevels(info.MaxLevel, info.GridXDim, info.GridYDim);
+                mapping.PopulateLevels(info.MaxLevel, info.GridXDim, info.GridYDim);
+
+                this.ChannelNames.AddRange(info.Channels.Select(c => c.Path));
+                WarpedTo.Add(mapping.Name, mapping);
+                TilesetNames.Add(mapping.Name);
+                VolumeTransformList.Add(mapping.Name);
+                ChannelNames.Add(mapping.Name);
+                DefaultTileset = mapping.Name;
+            }
             
-            WarpedTo.Add(mapping.Name, mapping);
-            TilesetNames.Add(mapping.Name);
-            VolumeTransformList.Add(mapping.Name);
-            ChannelNames.Add(mapping.Name);
-            DefaultTileset = mapping.Name;
         }
 
         

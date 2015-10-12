@@ -16,19 +16,19 @@ namespace Viking.VolumeModel
     public class OCPTileServerMapping : TileGridMappingBase
     {
         protected readonly string Host; //Host for tile paths, Viking will set to volume host if null
-        protected readonly string CoordSpaceName; //Host for tile paths, Viking will set to volume host if null
+        protected readonly string ChannelName; //Host for tile paths, Viking will set to volume host if null
           
         #region TextureFileNames
 
         override public string TileFullPath(int iX, int iY, int DownsampleLevel)
         {
-            string tileFileName = TileGridPath +
-                                '/' + ((int)Math.Log(DownsampleLevel,2)).ToString("D3") +
+            string tileFileName = ((int)Math.Log(DownsampleLevel,2)).ToString("D3") +
                                 '/' + this.TileTextureFileName(iX, iY);
              
             tileFileName = this.Host + '/' +
                            this.Section.volume.Name + '/' +
-                           this.CoordSpaceName + '/' + 
+                           TileGridPath + '/' +
+                           this.ChannelName + '/' + 
                            tileFileName;
 
             return tileFileName;
@@ -41,7 +41,7 @@ namespace Viking.VolumeModel
 
         protected override string TileTextureCacheFileName(int downsample, int iX, int iY)
         {
-            return this.CoordSpaceName + System.IO.Path.DirectorySeparatorChar + downsample.ToString("D3") + System.IO.Path.DirectorySeparatorChar + TileTextureFileName(iX, iY);
+            return this.ChannelName + System.IO.Path.DirectorySeparatorChar + downsample.ToString("D3") + System.IO.Path.DirectorySeparatorChar + TileTextureFileName(iX, iY);
         }
 
         #endregion
@@ -50,21 +50,21 @@ namespace Viking.VolumeModel
             base(ToCopy, section, name)
         { 
             this.Host = ToCopy.Host;
-            this.CoordSpaceName = ToCopy.CoordSpaceName;
+            this.ChannelName = ToCopy.ChannelName;
         }
 
         public OCPTileServerMapping(Section section,
-                                 string name,
+                                 string Name,
+                                 string channelName,
                                  string Prefix, string Postfix,
                                  int TileSizeX, int TileSizeY,
-                                 string TileServerHost, 
-                                 string CoordSpaceName, 
+                                 string TileServerHost,
                                  string TileGridPath,
                                  string GridCoordFormat = null) :
-            base(section, name, Prefix, Postfix, TileSizeX, TileSizeY, TileGridPath, GridCoordFormat)
+            base(section, Name, Prefix, Postfix, TileSizeX, TileSizeY, TileGridPath, GridCoordFormat)
         {
             this.Host = TileServerHost;
-            this.CoordSpaceName = CoordSpaceName;
+            this.ChannelName = channelName;
         } 
 
         public void PopulateLevels(int MaxLevel, int GridDimX, int GridDimY)

@@ -11,10 +11,29 @@ using System.Xml.Linq;
 using Ionic.Zip;
 using Utils;
 using Geometry;
-using Geometry.Transforms; 
+using Geometry.Transforms;
+using Viking.VolumeModel;
 
 namespace Viking.VolumeModel 
 {
+    public class OCPChannelInfo
+    {
+        public string Name;
+        public string Path; 
+
+        public OCPChannelInfo(string Name, string Path)
+        {
+            this.Name = Name;
+            this.Path = Path;
+        }
+
+        public OCPChannelInfo(XElement elem)
+        {
+            this.Name = elem.GetAttributeCaseInsensitive("name").Value;
+            this.Path = elem.HasAttributeCaseInsensitive("path") ? elem.GetAttributeCaseInsensitive("path").Value : this.Name;
+        }
+    }
+
     public class TileServerInfo
     {
         public string Host { get; private set; }
@@ -24,17 +43,15 @@ namespace Viking.VolumeModel
         public int GridXDim { get; private set; }
         public int GridYDim { get; private set; }
         public int MaxLevel { get; private set; }
-        public string Name { get; private set; }
-        public string Path { get; private set; }
         public string FilePrefix { get; private set; }
         public string FilePostfix { get; private set; }
+
+        public List<OCPChannelInfo> Channels {get; private set;}
 
         public static TileServerInfo CreateFromElement(XElement node)
         {
             TileServerInfo info = new TileServerInfo();
-
-            info.Name = IO.GetAttributeCaseInsensitive(node, "name").Value;
-            info.Path = IO.GetAttributeCaseInsensitive(node, "path").Value;
+            
             info.TileXDim = System.Convert.ToInt32(IO.GetAttributeCaseInsensitive(node, "TileXDim").Value);
             info.TileYDim = System.Convert.ToInt32(IO.GetAttributeCaseInsensitive(node, "TileYDim").Value);
             info.GridXDim = System.Convert.ToInt32(IO.GetAttributeCaseInsensitive(node, "GridXDim").Value);
@@ -44,6 +61,8 @@ namespace Viking.VolumeModel
             info.FilePostfix = IO.GetAttributeCaseInsensitive(node, "FilePostfix").Value;
             info.Host = IO.GetAttributeCaseInsensitive(node, "host").Value;
             info.CoordSpaceName = IO.GetAttributeCaseInsensitive(node, "coordspacename").Value;
+
+            info.Channels = node.Elements().Where(e => e.Name == "Channel").Select(e => new OCPChannelInfo(e)).ToList();
 
             return info;
         }
@@ -230,7 +249,7 @@ namespace Viking.VolumeModel
             return null; 
         }
 
-        private SortedList<string, TileServerInfo> TileServerList = new SortedList<string, TileServerInfo>();
+        private List<TileServerInfo> TileServerList = new List<TileServerInfo>();
 
 
         private string VolumeCachePath
@@ -705,8 +724,7 @@ namespace Viking.VolumeModel
                         break;
                     case "section":
                         //string SectionPath = VolumePath + '/' + GetAttributeCaseInsensitive(elem,"path").Value;
-                        string SectionPath = IO.GetAttributeCaseInsensitive(elem,"path").Value;
-
+                        string SectionPath = elem.HasAttributeCaseInsensitive("path") ? IO.GetAttributeCaseInsensitive(elem, "path").Value : "";
 
                         if (NumSections > 0)
                         {
@@ -734,7 +752,7 @@ namespace Viking.VolumeModel
                         break;
                     case "ocptileserver":
                         TileServerInfo info = TileServerInfo.CreateFromElement(elem);
-                        this.TileServerList[info.Name] = info;
+                        this.TileServerList.Add(info);
                         break;
                     
                     default:
@@ -899,7 +917,7 @@ namespace Viking.VolumeModel
 
         private void AddTileServerToSectionMappings(Section section)
         {
-            foreach(TileServerInfo tileserver in this.TileServerList.Values)
+            foreach(TileServerInfo tileserver in this.TileServerList)
             {
                 section.AddOCPTileserver(tileserver);
             } 
