@@ -83,7 +83,7 @@
             this.Controls.Add(this.textInput);
             this.Controls.Add(this.labelText);
             this.Name = "InputBox";
-            this.Text = "InputBox";
+            this.Text = "Input Value";
             this.Load += new System.EventHandler(this.InputBox_Load);
             this.ResumeLayout(false);
             this.PerformLayout();

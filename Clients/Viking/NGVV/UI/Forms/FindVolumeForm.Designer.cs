@@ -85,7 +85,7 @@
             this.Controls.Add(this.volumeList);
             this.Controls.Add(this.panel1);
             this.Name = "FindVolumeForm";
-            this.Text = "FindVolumeForm";
+            this.Text = "Find Volumes";
             this.panel1.ResumeLayout(false);
             this.ResumeLayout(false);
 
