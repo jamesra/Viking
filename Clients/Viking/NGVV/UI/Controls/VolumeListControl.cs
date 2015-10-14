@@ -17,6 +17,9 @@ namespace Viking.UI.Controls
         {
             get
             {
+                if (listVolumes.SelectedItems.Count == 0)
+                    return null; 
+
                 return listVolumes.SelectedItems[0].Text;
             }
         }
@@ -25,6 +28,9 @@ namespace Viking.UI.Controls
         {
             get
             {
+                if (listServers.SelectedItem == null)
+                    return null;
+
                 return listServers.SelectedItem.ToString();
             }
         }
@@ -61,9 +67,19 @@ namespace Viking.UI.Controls
             if (input.ShowDialog() != DialogResult.OK)
                 return;
 
-            string Server = input.Value; 
+            string Server = input.Value;
 
             listServers.Items.Add(Server);
+        }
+
+        private string EnsureServerFormattingCorrect(string server)
+        {
+            Uri serverURI = new Uri(server);
+            server = serverURI.ToString();
+            if (server[server.Length - 1] != '/')
+                server += '/';
+
+            return server;
         }
 
         private void btnRemove_Click(object sender, EventArgs e)
@@ -87,7 +103,7 @@ namespace Viking.UI.Controls
 
             return true;
         }
-
+          
         private void listServers_SelectedIndexChanged(object sender, EventArgs e)
         {
             listVolumes.Clear();
@@ -111,7 +127,7 @@ namespace Viking.UI.Controls
                 listVolumes.SelectedIndices.Clear();
                 listVolumes.SelectedIndices.Add(0);
             }
-
+            
             listVolumes.Refresh();
         }
     }
