@@ -53,6 +53,7 @@ namespace Viking.UI.Forms
             this.label2 = new System.Windows.Forms.Label();
             this.textUsername = new System.Windows.Forms.TextBox();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
+            this.btnFindOCPVolume = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
             this.groupCredentials.SuspendLayout();
             this.groupBox1.SuspendLayout();
@@ -121,7 +122,7 @@ namespace Viking.UI.Forms
             this.comboVolumeURL.FormattingEnabled = true;
             this.comboVolumeURL.Location = new System.Drawing.Point(103, 6);
             this.comboVolumeURL.Name = "comboVolumeURL";
-            this.comboVolumeURL.Size = new System.Drawing.Size(618, 21);
+            this.comboVolumeURL.Size = new System.Drawing.Size(479, 21);
             this.comboVolumeURL.TabIndex = 7;
             this.comboVolumeURL.SelectedIndexChanged += new System.EventHandler(this.comboVolumeURL_SelectedIndexChanged);
             this.comboVolumeURL.Validating += new System.ComponentModel.CancelEventHandler(this.comboVolumeURL_Validating);
@@ -283,13 +284,24 @@ namespace Viking.UI.Forms
             this.groupBox1.TabStop = false;
             this.groupBox1.Text = "Viewing";
             // 
+            // btnFindOCPVolume
+            // 
+            this.btnFindOCPVolume.Location = new System.Drawing.Point(588, 6);
+            this.btnFindOCPVolume.Name = "btnFindOCPVolume";
+            this.btnFindOCPVolume.Size = new System.Drawing.Size(134, 23);
+            this.btnFindOCPVolume.TabIndex = 10;
+            this.btnFindOCPVolume.Text = "Find Volumes";
+            this.btnFindOCPVolume.UseVisualStyleBackColor = true;
+            this.btnFindOCPVolume.Click += new System.EventHandler(this.btnFindOCPVolume_Click);
+            // 
             // Logon
             // 
             this.AcceptButton = this.btnAnonymous;
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.SystemColors.InactiveCaption;
-            this.ClientSize = new System.Drawing.Size(734, 341);
+            this.ClientSize = new System.Drawing.Size(734, 335);
+            this.Controls.Add(this.btnFindOCPVolume);
             this.Controls.Add(this.groupCredentials);
             this.Controls.Add(this.linkVersionHistory);
             this.Controls.Add(this.comboVolumeURL);
@@ -361,8 +373,6 @@ namespace Viking.UI.Forms
         private System.Windows.Forms.Label label2;
         private System.Windows.Forms.TextBox textUsername;
         private System.Windows.Forms.GroupBox groupBox1;
-
-        
-        
+        private System.Windows.Forms.Button btnFindOCPVolume;
     }
 }

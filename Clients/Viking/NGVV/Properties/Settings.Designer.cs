@@ -25,6 +25,12 @@ namespace Viking.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute(@"<?xml version=""1.0"" encoding=""utf-16""?>
+<ArrayOfString xmlns:xsi=""http://www.w3.org/2001/XMLSchema-instance"" xmlns:xsd=""http://www.w3.org/2001/XMLSchema"">
+  <string>http://connectomes.utah.edu/Rabbit</string>
+  <string>http://internal.connectomes.utah.edu/RC2/SliceToVolume.VikingXML</string>
+  <string>http://internal.connectomes.utah.edu/RPC1/SliceToVolume.VikingXML</string>
+</ArrayOfString>")]
         public global::System.Collections.Specialized.StringCollection VolumeURLs {
             get {
                 return ((global::System.Collections.Specialized.StringCollection)(this["VolumeURLs"]));
@@ -240,13 +246,18 @@ namespace Viking.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("")]
-        public string Setting {
+        [global::System.Configuration.DefaultSettingValueAttribute(@"<?xml version=""1.0"" encoding=""utf-16""?>
+<ArrayOfString xmlns:xsi=""http://www.w3.org/2001/XMLSchema-instance"" xmlns:xsd=""http://www.w3.org/2001/XMLSchema"">
+  <string>http://connectomes.utah.edu/</string>
+  <string>http://internal.connectomes.utah.edu/</string>
+  <string>http://dsp063.pha.jhu.edu/ocp/ca/</string>
+</ArrayOfString>")]
+        public global::System.Collections.Specialized.StringCollection ServerURLs {
             get {
-                return ((string)(this["Setting"]));
+                return ((global::System.Collections.Specialized.StringCollection)(this["ServerURLs"]));
             }
             set {
-                this["Setting"] = value;
+                this["ServerURLs"] = value;
             }
         }
     }

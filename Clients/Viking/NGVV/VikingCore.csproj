@@ -118,6 +118,10 @@
   <ItemGroup>
     <Reference Include="Microsoft.Xna.Framework, Version=4.0.0.0, Culture=neutral, PublicKeyToken=842cf8be1de50553, processorArchitecture=x86" />
     <Reference Include="Microsoft.Xna.Framework.Graphics, Version=4.0.0.0, Culture=neutral, PublicKeyToken=842cf8be1de50553, processorArchitecture=x86" />
+    <Reference Include="Newtonsoft.Json, Version=7.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\Newtonsoft.Json.7.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core">
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
@@ -209,11 +213,23 @@
     <Compile Include="UI\Controls\ChannelSetupControl.Designer.cs">
       <DependentUpon>ChannelSetupControl.cs</DependentUpon>
     </Compile>
+    <Compile Include="UI\Controls\VolumeListControl.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="UI\Controls\VolumeListControl.Designer.cs">
+      <DependentUpon>VolumeListControl.cs</DependentUpon>
+    </Compile>
     <Compile Include="UI\Forms\AboutBox.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="UI\Forms\AboutBox.Designer.cs">
       <DependentUpon>AboutBox.cs</DependentUpon>
+    </Compile>
+    <Compile Include="UI\Forms\FindVolumeForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="UI\Forms\FindVolumeForm.Designer.cs">
+      <DependentUpon>FindVolumeForm.cs</DependentUpon>
     </Compile>
     <Compile Include="UI\Forms\FrameCapturesForm.cs">
       <SubType>Form</SubType>
@@ -276,6 +292,12 @@
     <Compile Include="UI\Forms\GoToLocationForm.Designer.cs">
       <DependentUpon>GoToLocationForm.cs</DependentUpon>
     </Compile>
+    <Compile Include="UI\Forms\InputBox.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="UI\Forms\InputBox.Designer.cs">
+      <DependentUpon>InputBox.cs</DependentUpon>
+    </Compile>
     <Compile Include="UI\Forms\Logon.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -326,6 +348,12 @@
     </Compile>
     <Compile Include="UI\Command\RectangleCommand.cs" />
     <Compile Include="UI\Command\ScreenCaptureCommand.cs" />
+    <Compile Include="UI\Forms\VolumeListForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="UI\Forms\VolumeListForm.Designer.cs">
+      <DependentUpon>VolumeListForm.cs</DependentUpon>
+    </Compile>
     <Compile Include="UI\State.cs" />
     <Compile Include="UI\Forms\VikingMain.cs">
       <SubType>Form</SubType>
@@ -376,8 +404,14 @@
     <EmbeddedResource Include="UI\Controls\ChannelSetupControl.resx">
       <DependentUpon>ChannelSetupControl.cs</DependentUpon>
     </EmbeddedResource>
+    <EmbeddedResource Include="UI\Controls\VolumeListControl.resx">
+      <DependentUpon>VolumeListControl.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="UI\Forms\AboutBox.resx">
       <DependentUpon>AboutBox.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UI\Forms\FindVolumeForm.resx">
+      <DependentUpon>FindVolumeForm.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="UI\Forms\FrameCapturesForm.resx">
       <DependentUpon>FrameCapturesForm.cs</DependentUpon>
@@ -387,6 +421,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="UI\Forms\GoToLocationForm.resx">
       <DependentUpon>GoToLocationForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UI\Forms\InputBox.resx">
+      <DependentUpon>InputBox.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="UI\Forms\Logon.resx">
       <DependentUpon>Logon.cs</DependentUpon>
@@ -424,6 +461,9 @@
     <EmbeddedResource Include="UI\Forms\VikingForm.resx">
       <DependentUpon>VikingForm.cs</DependentUpon>
     </EmbeddedResource>
+    <EmbeddedResource Include="UI\Forms\VolumeListForm.resx">
+      <DependentUpon>VolumeListForm.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="UI\VolumeControls\SectionList.resx">
       <DependentUpon>SectionList.cs</DependentUpon>
     </EmbeddedResource>
@@ -434,6 +474,7 @@
     </Compile>
     <None Include="app.config" />
     <None Include="ClassDiagram1.cd" />
+    <None Include="packages.config" />
     <None Include="Properties\CVS\app.manifest" />
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
@@ -449,6 +490,7 @@
     </Compile>
     <Compile Include="Threading\TextureReader.cs" />
     <Compile Include="Util\BmpWriter.cs" />
+    <Compile Include="Util\OpenConnectomeProject.cs" />
     <Compile Include="ViewModels\TriangulationViewModel.cs" />
     <Compile Include="ViewModels\TileViewModel.cs" />
     <Compile Include="UI\Forms\SplashForm.cs">

@@ -18,6 +18,8 @@ using Viking.Properties;
 
 namespace Viking.UI.Forms
 {
+    
+    
     public partial class Logon : Form
     {
         public string authenticationURL;
@@ -61,7 +63,7 @@ namespace Viking.UI.Forms
            keyFile = "usrcrd.vkg";
              
             State.UserCredentials = new NetworkCredential(userName, password);
-
+            
             State.userAccessLevel = "Exit";
 
             InitializeComponent();
@@ -77,8 +79,6 @@ namespace Viking.UI.Forms
             {
                 System.IO.Directory.CreateDirectory(this.KeyFileFolderPath);
             }
-
-            
              
             NetworkCredential cachedCredentials = ReadCredentialsFromEncryptedFile();
             if (cachedCredentials == null)
@@ -626,11 +626,16 @@ namespace Viking.UI.Forms
 
         }
 
-        
+        private void btnFindOCPVolume_Click(object sender, EventArgs e)
+        {             
+            FindVolumeForm findVolumeForm = new FindVolumeForm();
 
-       
-
-        
-
+            if(findVolumeForm.ShowDialog() == DialogResult.OK)
+            {
+                string ServerURL = findVolumeForm.ServerURL + "/" + findVolumeForm.VolumeURL + "/volume.vikingxml";
+                this.comboVolumeURL.Text = ServerURL;
+                this.VolumeURL = ServerURL;
+            }
+        }
     }
 }

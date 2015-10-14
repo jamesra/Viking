@@ -3,7 +3,12 @@
   <Profiles />
   <Settings>
     <Setting Name="VolumeURLs" Type="System.Collections.Specialized.StringCollection" Scope="User">
-      <Value Profile="(Default)" />
+      <Value Profile="(Default)">&lt;?xml version="1.0" encoding="utf-16"?&gt;
+&lt;ArrayOfString xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"&gt;
+  &lt;string&gt;http://connectomes.utah.edu/Rabbit&lt;/string&gt;
+  &lt;string&gt;http://internal.connectomes.utah.edu/RC2/SliceToVolume.VikingXML&lt;/string&gt;
+  &lt;string&gt;http://internal.connectomes.utah.edu/RPC1/SliceToVolume.VikingXML&lt;/string&gt;
+&lt;/ArrayOfString&gt;</Value>
     </Setting>
     <Setting Name="LastTileExportDirectory" Type="System.String" Scope="User">
       <Value Profile="(Default)" />
@@ -56,8 +61,13 @@
     <Setting Name="CachedUsername" Type="System.String" Scope="User">
       <Value Profile="(Default)" />
     </Setting>
-    <Setting Name="Setting" Type="System.String" Scope="User">
-      <Value Profile="(Default)" />
+    <Setting Name="ServerURLs" Type="System.Collections.Specialized.StringCollection" Scope="User">
+      <Value Profile="(Default)">&lt;?xml version="1.0" encoding="utf-16"?&gt;
+&lt;ArrayOfString xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"&gt;
+  &lt;string&gt;http://connectomes.utah.edu/&lt;/string&gt;
+  &lt;string&gt;http://internal.connectomes.utah.edu/&lt;/string&gt;
+  &lt;string&gt;http://dsp063.pha.jhu.edu/ocp/ca/&lt;/string&gt;
+&lt;/ArrayOfString&gt;</Value>
     </Setting>
   </Settings>
 </SettingsFile>

@@ -59,7 +59,6 @@ namespace Utils
             {
                 /*PORT: Don't have forms, throw a better exception*/
                 throw new WebException("Error connecting to volume server: \n" + path + "\n" + e.Message, e);
-
             }
 
             Stream responseStream = response.GetResponseStream();
