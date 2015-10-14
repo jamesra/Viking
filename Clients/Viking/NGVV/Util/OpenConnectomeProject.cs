@@ -25,6 +25,10 @@ namespace Viking.Common
             {
                 return new string[] { e.Message };
             } 
+            catch (Newtonsoft.Json.JsonReaderException e)
+            {
+                return new string[] { e.Message };
+            }
         }
     }
 }

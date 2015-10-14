@@ -502,6 +502,21 @@ namespace Viking.UI.Forms
                 comboVolumeURL.Text = comboVolumeURL.Items[comboVolumeURL.SelectedIndex].ToString(); 
         }
 
+        private string TryAddVikingXMLExtension(string URL)
+        {
+            string NewURL = URL;
+
+            if (!NewURL.EndsWith(".vikingxml"))
+            {
+                if (NewURL.EndsWith("/") == false)
+                    NewURL = NewURL + '/';
+
+                NewURL += "volume.vikingxml";
+            }
+
+            return NewURL;
+        }
+
         private void comboVolumeURL_Validating(object sender, CancelEventArgs e)
         {
             Cursor oldCursor = this.Cursor;
@@ -527,10 +542,7 @@ namespace Viking.UI.Forms
                 string path = volumeURI.GetComponents(UriComponents.Path, UriFormat.SafeUnescaped);
                 if (path.Contains(".") == false)
                 {
-                    if (NewURL.EndsWith("/") == false)
-                        NewURL = NewURL + '/';
-
-                    NewURL = NewURL + "volume.VikingXML";
+                    NewURL = TryAddVikingXMLExtension(NewURL);
                     volumeURI = new Uri(NewURL); 
                 }
 
@@ -632,8 +644,8 @@ namespace Viking.UI.Forms
 
             if(findVolumeForm.ShowDialog() == DialogResult.OK)
             {
-                string ServerURL = findVolumeForm.ServerURL + "/" + findVolumeForm.VolumeURL + "/volume.vikingxml";
-                this.comboVolumeURL.Text = ServerURL;
+                string ServerURL = findVolumeForm.ServerURL + "/" + findVolumeForm.VolumeURL;
+                this.comboVolumeURL.Text = TryAddVikingXMLExtension(ServerURL);
                 this.VolumeURL = ServerURL;
             }
         }

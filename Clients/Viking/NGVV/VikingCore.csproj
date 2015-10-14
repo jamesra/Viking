@@ -348,12 +348,6 @@
     </Compile>
     <Compile Include="UI\Command\RectangleCommand.cs" />
     <Compile Include="UI\Command\ScreenCaptureCommand.cs" />
-    <Compile Include="UI\Forms\VolumeListForm.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="UI\Forms\VolumeListForm.Designer.cs">
-      <DependentUpon>VolumeListForm.cs</DependentUpon>
-    </Compile>
     <Compile Include="UI\State.cs" />
     <Compile Include="UI\Forms\VikingMain.cs">
       <SubType>Form</SubType>
@@ -460,9 +454,6 @@
     </EmbeddedResource>
     <EmbeddedResource Include="UI\Forms\VikingForm.resx">
       <DependentUpon>VikingForm.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="UI\Forms\VolumeListForm.resx">
-      <DependentUpon>VolumeListForm.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="UI\VolumeControls\SectionList.resx">
       <DependentUpon>SectionList.cs</DependentUpon>
