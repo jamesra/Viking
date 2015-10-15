@@ -3129,11 +3129,11 @@ end
 
 	if(not(exists(select (1) from DBVersion where DBVersionID = 35)))
 	begin
-     print N'Add Stored procedure for Structure locations and links'
+     print N'Add optimized Stored procedure for Structure locations and links'
 	 BEGIN TRANSACTION thirtyfive
 		 
 		 EXEC('
-			Create PROCEDURE [dbo].[SelectStructureLocationsAndLinks]
+			CREATE PROCEDURE [dbo].[SelectStructureLocationsAndLinks]
 				-- Add the parameters for the stored procedure here
 				@StructureID bigint
 			AS
@@ -3142,24 +3142,15 @@ end
 				-- interfering with SELECT statements.
 				SET NOCOUNT ON;
 
-				IF OBJECT_ID(''tempdb..#SectionLocations'') IS NOT NULL DROP TABLE #SectionLocations
-				select * into #SectionLocations from Location where ParentID = @StructureID ORDER BY ID
-	
-				select * from #SectionLocations
+				select * from Location where ParentID = @StructureID 
 
-				-- Insert statements for procedure here
-				Select * from LocationLink
-					WHERE ((A in 
-				(SELECT ID
-					from #SectionLocations)
-					)
-					OR
-					(B in 
-				(SELECT ID
-					from #SectionLocations)
-					))
+				IF OBJECT_ID(''tempdb..#SectionLocations'') IS NOT NULL DROP TABLE #SectionLocations
+				select ID into #SectionLocations from Location where ParentID = @StructureID ORDER BY ID
 	
-	 
+				-- Insert statements for procedure here
+				Select ll.* from LocationLink ll JOIN #SectionLocations sl ON (sl.ID = ll.A)
+				UNION
+				Select ll.* from LocationLink ll JOIN #SectionLocations sl ON (sl.ID = ll.B)
 			END
 		')
 
@@ -3170,516 +3161,35 @@ end
 		 end
 
 	 INSERT INTO DBVersion values (35, 
-		    N'Add Stored procedure for Structure locations and links'  ,getDate(),User_ID())
+		    N'Add optimized Stored procedure for Structure locations and links'  ,getDate(),User_ID())
 	 COMMIT TRANSACTION thirtyfive
 	end
 
 	if(not(exists(select (1) from DBVersion where DBVersionID = 36)))
 	begin
-     print N'Optimize stored procedures for Links table' 
+     print N'Optimize stored procedure for SelectSectionStructuresAndLinks' 
 	 BEGIN TRANSACTION thirtysix
 	    
 		 EXEC('
-			CREATE PROCEDURE [dbo].[SelectSectionLocationsAndLinksInBounds]
-				-- Add the parameters for the stored procedure here
-				@Z float,
-				@BBox geometry,
-				@MinRadius float,
-				@QueryDate datetime
-			AS
-			BEGIN
-				SET NOCOUNT ON;
-
-				IF OBJECT_ID(''tempdb..#LocationsInBounds'') IS NOT NULL DROP TABLE #LocationsInBounds
-
-				--Selecting all columns once into LocationsInBounds and then selecting the temp table is a huge time saver.  3-4 seconds instead of 20.
-
-				select * into #LocationsInBounds FROM Location where Z = @Z AND (@BBox.STIntersects(VolumeShape) = 1) AND Radius >= @MinRadius order by ID
-	 
-				IF @QueryDate IS NOT NULL
-					Select * from #LocationsInBounds where LastModified >= @QueryDate
-				ELSE
-					Select * from #LocationsInBounds
-	 
-				IF @QueryDate IS NOT NULL
-					-- Insert statements for procedure here
-					Select * from LocationLink
-					 WHERE ((A in 
-					(select ID from #LocationsInBounds))
-					  OR
-					  (B in 
-					(select ID from #LocationsInBounds)))
-					 AND Created >= @QueryDate
-				ELSE
-					-- Insert statements for procedure here
-					Select * from LocationLink
-					 WHERE ((A in (select ID from #LocationsInBounds))
-							OR	
-							(B in (select ID from #LocationsInBounds)))
-			END
-			')
-
-		if(@@error <> 0)
-		 begin
-		   ROLLBACK TRANSACTION 
-		   RETURN
-		 end
-
-		 EXEC('
-			CREATE PROCEDURE [dbo].[SelectSectionStructuresInBounds]
-				-- Add the parameters for the stored procedure here
-				@Z float,
-				@BBox geometry,
-				@MinRadius float,
-				@QueryDate datetime
-			AS
-			BEGIN 
-					-- SET NOCOUNT ON added to prevent extra result sets from
-					-- interfering with SELECT statements.
-					SET NOCOUNT ON;
-
-					IF OBJECT_ID(''tempdb..#SectionLocationsInBounds'') IS NOT NULL DROP TABLE #SectionLocationsInBounds
-					select * into #SectionLocationsInBounds from Location where (@bbox.STIntersects(VolumeShape) = 1) and Z = @Z AND Radius >= @MinRadius order by ParentID
-
-					IF @QueryDate IS NOT NULL
-						select * from Structure where ID in (
-							select distinct ParentID from #SectionLocationsInBounds) AND LastModified >= @QueryDate
-					ELSE
-						select * from Structure where ID in (
-							select distinct ParentID from #SectionLocationsInBounds)
-			END
-			')
-
-		if(@@error <> 0)
-		 begin
-		   ROLLBACK TRANSACTION 
-		   RETURN
-		 end
-
-		 EXEC('
-			CREATE PROCEDURE [dbo].[SelectSectionStructures]
+			ALTER PROCEDURE [dbo].[SelectSectionStructuresAndLinks]
 				-- Add the parameters for the stored procedure here
 				@Z float,
 				@QueryDate datetime
 			AS
 			BEGIN 
-					-- SET NOCOUNT ON added to prevent extra result sets from
-					-- interfering with SELECT statements.
 					SET NOCOUNT ON;
 
 					IF OBJECT_ID(''tempdb..#SectionLocations'') IS NOT NULL DROP TABLE #SectionLocations
-					select * into #SectionLocationsInBounds from Location where Z = @Z order by ParentID
+					select distinct ParentID into #SectionLocations from Location where Z = @Z order by ParentID
 
 					IF @QueryDate IS NOT NULL
-						select * from Structure where ID in (
-							select distinct ParentID from #SectionLocations) AND LastModified >= @QueryDate
+						select s.* from Structure s JOIN #SectionLocations l ON (l.ParentID = s.ID) where s.LastModified >= @QueryDate
 					ELSE
-						select * from Structure where ID in (
-							select distinct ParentID from #SectionLocations)
-			END
-
-			')
-
-		if(@@error <> 0)
-		 begin
-		   ROLLBACK TRANSACTION 
-		   RETURN
-		 end
-
-		 EXEC('
-			CREATE PROCEDURE [dbo].[SelectSectionStructuresAndLinks]
-				-- Add the parameters for the stored procedure here
-				@Z float,
-				@QueryDate datetime
-			AS
-			BEGIN 
-					-- SET NOCOUNT ON added to prevent extra result sets from
-					-- interfering with SELECT statements.
-					SET NOCOUNT ON;
-
-					IF OBJECT_ID(''tempdb..#SectionLocations'') IS NOT NULL DROP TABLE #SectionLocations
-					IF OBJECT_ID(''tempdb..#SectionStructures'') IS NOT NULL DROP TABLE #SectionStructures
-					select * into #SectionLocations from Location where Z = @Z order by ParentID
-					select * into #SectionStructures from Structure where ID in (
-							select distinct ParentID from #SectionLocations)
-
-					IF @QueryDate IS NOT NULL
-						select * from #SectionStructures where LastModified >= @QueryDate
-					ELSE
-						select * from #SectionStructures
+						select s.* from Structure s JOIN #SectionLocations l ON (l.ParentID = s.ID)
 
 					Select * from StructureLink L
-					where (L.TargetID in (Select ID from #SectionStructures))
-						OR (L.SourceID in (Select ID from #SectionStructures)) 
-			END  
-			')
-
-		if(@@error <> 0)
-		 begin
-		   ROLLBACK TRANSACTION 
-		   RETURN
-		 end
-
-		 
-
-		 EXEC('
-			ALTER PROCEDURE [dbo].[SelectSectionLocationsAndLinks]
-				-- Add the parameters for the stored procedure here
-				@Z float,
-				@QueryDate datetime
-			AS
-			BEGIN
-				-- SET NOCOUNT ON added to prevent extra result sets from
-				-- interfering with SELECT statements.
-				SET NOCOUNT ON;
-
-				IF OBJECT_ID(''tempdb..#SectionLocations'') IS NOT NULL DROP TABLE #SectionLocations
-				select * into #SectionLocations from Location where Z = @Z ORDER BY ID
-	
-				IF @QueryDate IS NOT NULL
-					Select * from #SectionLocations
-					where LastModified >= @QueryDate
-				ELSE
-					Select * from #SectionLocations
-		
-				IF @QueryDate IS NOT NULL
-					-- Insert statements for procedure here
-					Select * from LocationLink
-					 WHERE ((A in 
-					(SELECT ID
-					  from #SectionLocations)
-					 )
-					  OR
-					  (B in 
-					(SELECT ID
-					  from #SectionLocations)
-					 ))
-					 AND Created >= @QueryDate
-				ELSE
-					-- Insert statements for procedure here
-					Select * from LocationLink
-					 WHERE ((A in 
-					(SELECT ID
-					  from #SectionLocations)
-					 )
-					  OR
-					  (B in 
-					(SELECT ID
-					  from #SectionLocations)
-					 )) 
-			END
-			')
-
-		if(@@error <> 0)
-		 begin
-		   ROLLBACK TRANSACTION 
-		   RETURN
-		 end
-
-		 EXEC('
-			ALTER PROCEDURE [dbo].[SelectSectionLocationLinks]
-				-- Add the parameters for the stored procedure here
-				@Z float,
-				@QueryDate datetime
-			AS
-			BEGIN
-				-- SET NOCOUNT ON added to prevent extra result sets from
-				-- interfering with SELECT statements.
-				SET NOCOUNT ON;
-
-				IF OBJECT_ID(''tempdb..#LocationsAboveZ'') IS NOT NULL DROP TABLE #LocationsAboveZ
-				IF OBJECT_ID(''tempdb..#LocationsBelowZ'') IS NOT NULL DROP TABLE #LocationsBelowZ
-
-				--Looks slow, but my tests indicate selecting a single column into the table is slower
-				select * into #LocationsAboveZ from Location where Z >= @Z order by ID
-				select * into #LocationsBelowZ from Location where Z <= @Z order by ID
-
-	
-				IF @QueryDate IS NOT NULL
-					Select * from LocationLink
-					 WHERE (((A in 
-						(SELECT ID
-						  FROM #LocationsAboveZ)
-						 )
-						  AND
-						  (B in 
-						(SELECT ID
-						  FROM #LocationsBelowZ)
-						 ))
-					 OR
-						 ((A in
-						 (SELECT ID
-						  FROM #LocationsBelowZ)
-						 )
-						  AND
-						  (B in 
-						(SELECT ID
-						  FROM #LocationsAboveZ)
-						 )))
-					 AND Created >= @QueryDate
-				ELSE
-					Select * from LocationLink
-					 WHERE (((A in 
-						(SELECT ID
-						  FROM #LocationsAboveZ)
-						 )
-						  AND
-						  (B in 
-						(SELECT ID
-						  FROM #LocationsBelowZ)
-						 ))
-					 OR
-						 ((A in
-						 (SELECT ID
-						  FROM #LocationsBelowZ)
-						 )
-						  AND
-						  (B in 
-						(SELECT ID
-						  FROM #LocationsAboveZ)
-						 ))) 
-	 
-			END
-			')
-
-		if(@@error <> 0)
-		 begin
-		   ROLLBACK TRANSACTION 
-		   RETURN
-		 end
-
-		 EXEC('
-			Create PROCEDURE [dbo].[SelectSectionLocationLinksInBounds]
-				-- Add the parameters for the stored procedure here
-				@Z float,
-				@bbox geometry,
-				@MinRadius float,
-				@QueryDate datetime
-			AS
-			BEGIN
-				-- SET NOCOUNT ON added to prevent extra result sets from
-				-- interfering with SELECT statements.
-				SET NOCOUNT ON;
-
-				--This really needs to check if a line between the two location links intersects the bounding box.
-
-				IF OBJECT_ID(''tempdb..#LocationsAboveZ'') IS NOT NULL DROP TABLE #LocationsAboveZ
-				IF OBJECT_ID(''tempdb..#LocationsBelowZ'') IS NOT NULL DROP TABLE #LocationsBelowZ
-
-				--Looks slow, but my tests indicate selecting a single column into the table is slower
-				select * into #LocationsAboveZ from Location where Z >= @Z AND (@bbox.STIntersects(VolumeShape) = 1) AND Radius >= @MinRadius order by ID 
-				select * into #LocationsBelowZ from Location where Z <= @Z AND (@bbox.STIntersects(VolumeShape) = 1) AND Radius >= @MinRadius order by ID
-
-	
-				IF @QueryDate IS NOT NULL
-					Select * from LocationLink
-					 WHERE (((A in 
-						(SELECT ID
-						  FROM #LocationsAboveZ)
-						 )
-						  AND
-						  (B in 
-						(SELECT ID
-						  FROM #LocationsBelowZ)
-						 ))
-					 OR
-						 ((A in
-						 (SELECT ID
-						  FROM #LocationsBelowZ)
-						 )
-						  AND
-						  (B in 
-						(SELECT ID
-						  FROM #LocationsAboveZ)
-						 )))
-					 AND Created >= @QueryDate
-				ELSE
-					Select * from LocationLink
-					 WHERE (((A in 
-						(SELECT ID
-						  FROM #LocationsAboveZ)
-						 )
-						  AND
-						  (B in 
-						(SELECT ID
-						  FROM #LocationsBelowZ)
-						 ))
-					 OR
-						 ((A in
-						 (SELECT ID
-						  FROM #LocationsBelowZ)
-						 )
-						  AND
-						  (B in 
-						(SELECT ID
-						  FROM #LocationsAboveZ)
-						 ))) 
-	 
-			END
-
-			')
-
-		if(@@error <> 0)
-		 begin
-		   ROLLBACK TRANSACTION 
-		   RETURN
-		 end
-		  
-		  EXEC('
-			CREATE PROCEDURE [dbo].[SelectSectionStructuresAndLinksInBounds]
-			-- Add the parameters for the stored procedure here
-			@Z float,
-			@BBox geometry,
-			@MinRadius float,
-			@QueryDate datetime
-			AS
-			BEGIN 
-					SET NOCOUNT ON;
-
-					IF OBJECT_ID(''tempdb..#SectionLocationsInBounds'') IS NOT NULL DROP TABLE #SectionLocationsInBounds
-					IF OBJECT_ID(''tempdb..#SectionStructuresInBounds'') IS NOT NULL DROP TABLE #SectionStructuresInBounds
-					select * into #SectionLocationsInBounds from Location where (@bbox.STIntersects(VolumeShape) = 1) and Z = @Z AND Radius >= @MinRadius order by ParentID
-					select * into #SectionStructuresInBounds from Structure where ID in (select distinct ParentID from #SectionLocationsInBounds)
-
-					IF @QueryDate IS NOT NULL
-						select * from #SectionStructuresInBounds where LastModified >= @QueryDate
-					ELSE
-						select * from #SectionStructuresInBounds
-			  
-					Select * from StructureLink L
-					where (L.TargetID in (Select ID from #SectionStructuresInBounds))
-						OR (L.SourceID in (Select ID from #SectionStructuresInBounds)) 
-			END 
-		')
-
-		if(@@error <> 0)
-		 begin
-		   ROLLBACK TRANSACTION 
-		   RETURN
-		 end
-
-		 EXEC('
-			DROP PROCEDURE [dbo].[SelectStructuresForSection]
-			')
-
-		if(@@error <> 0)
-		 begin
-		   ROLLBACK TRANSACTION 
-		   RETURN
-		 end
-
-		 EXEC('
-			DROP PROCEDURE [dbo].[SelectAllStructures]
-			')
-
-		if(@@error <> 0)
-		 begin
-		   ROLLBACK TRANSACTION 
-		   RETURN
-		 end
-
-	   INSERT INTO DBVersion values (31, 
-		    N'Create Functions for spatial queries'  ,getDate(),User_ID())
-	 COMMIT TRANSACTION thirtyone
-	end
-	go
-
-	if(not(exists(select (1) from DBVersion where DBVersionID = 32)))
-	begin
-     print N'Update spatial query functions'
-	 BEGIN TRANSACTION thirtytwo
-		 
-		 EXEC('
-			ALTER PROCEDURE [dbo].[SelectSectionLocationsAndLinksInBounds]
-				-- Add the parameters for the stored procedure here
-				@Z float,
-				@BBox geometry,
-				@Radius float,
-				@QueryDate datetime
-			AS
-			BEGIN
-				-- SET NOCOUNT ON added to prevent extra result sets from
-				-- interfering with SELECT statements.
-				SET NOCOUNT ON;
-
-				IF OBJECT_ID(''tempdb..#LocationsInBounds'') IS NOT NULL DROP TABLE #LocationsInBounds
-
-				--Selecting all columns once into LocationsInBounds and then selecting the temp table is a huge time saver.  3-4 seconds instead of 20.
-
-				select * into #LocationsInBounds FROM Location where Z = @Z AND (@BBox.STIntersects(VolumeShape) = 1) AND Radius >= @Radius order by ID
-	 
-				IF @QueryDate IS NOT NULL
-					Select * from #LocationsInBounds where LastModified >= @QueryDate
-				ELSE
-					Select * from #LocationsInBounds
-	 
-				IF @QueryDate IS NOT NULL
-					-- Insert statements for procedure here
-					Select * from LocationLink
-					 WHERE ((A in 
-					(select ID from #LocationsInBounds))
-					  OR
-					  (B in 
-					(select ID from #LocationsInBounds)))
-					 AND Created >= @QueryDate
-				ELSE
-					-- Insert statements for procedure here
-					Select * from LocationLink
-					 WHERE ((A in (select ID from #LocationsInBounds))
-							OR	
-							(B in (select ID from #LocationsInBounds)))
-	
-	 
-			END 
-		')
-
-		if(@@error <> 0)
-		 begin
-		   ROLLBACK TRANSACTION 
-		   RETURN
-		 end
-
-		 EXEC('
-			ALTER PROCEDURE [dbo].[SelectSectionLocationsAndLinksInBounds]
-				-- Add the parameters for the stored procedure here
-				@Z float,
-				@BBox geometry,
-				@Radius float,
-				@QueryDate datetime
-			AS
-			BEGIN
-				-- SET NOCOUNT ON added to prevent extra result sets from
-				-- interfering with SELECT statements.
-				SET NOCOUNT ON;
-
-				IF OBJECT_ID(''tempdb..#LocationsInBounds'') IS NOT NULL DROP TABLE #LocationsInBounds
-
-				--Selecting all columns once into LocationsInBounds and then selecting the temp table is a huge time saver.  3-4 seconds instead of 20.
-
-				select * into #LocationsInBounds FROM Location where Z = @Z AND (@BBox.STIntersects(VolumeShape) = 1) AND Radius >= @Radius order by ID
-	 
-				IF @QueryDate IS NOT NULL
-					Select * from #LocationsInBounds where LastModified >= @QueryDate
-				ELSE
-					Select * from #LocationsInBounds
-	 
-				IF @QueryDate IS NOT NULL
-					-- Insert statements for procedure here
-					Select * from LocationLink
-					 WHERE ((A in 
-					(select ID from #LocationsInBounds))
-					  OR
-					  (B in 
-					(select ID from #LocationsInBounds)))
-					 AND Created >= @QueryDate
-				ELSE
-					-- Insert statements for procedure here
-					Select * from LocationLink
-					 WHERE ((A in (select ID from #LocationsInBounds))
-							OR	
-							(B in (select ID from #LocationsInBounds)))
-	
-	 
+					where (L.TargetID in (Select ParentID from #SectionLocations))
+						OR (L.SourceID in (Select ParentID from #SectionLocations)) 
 			END 
 		')
 
@@ -3690,7 +3200,7 @@ end
 		 end
 
 	 INSERT INTO DBVersion values (36, 
-		     N'Optimize stored procedures for Links table'  ,getDate(),User_ID())
+		     N'Optimize stored procedure for SelectSectionStructuresAndLinks'  ,getDate(),User_ID())
 	 COMMIT TRANSACTION thirtysix
 	end
 
