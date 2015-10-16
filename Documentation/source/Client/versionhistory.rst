@@ -3,6 +3,12 @@
 Version History
 ###############
 
+1.1.168
+-------
+
+   * Added a "Find Volumes" button to the login UI.
+   * Added support for viewing Open Connectome Project volumes
+
 1.1.165
 -------
 

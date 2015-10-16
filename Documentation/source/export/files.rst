@@ -37,6 +37,8 @@ Neuron connectivity network
    **Format:**
       * *TLP* - Tulip file format
       * *DOT* - Graphviz DOT file format
+      * *GraphML* - GraphML file format
+      * *JSON* - Java script object notation
         
    :query id: ID numbers of cells to include in connectivity graph.  Commas seperate multiple IDs.
    :query hops: Degrees of seperation to include additional neurons in graph
@@ -69,6 +71,8 @@ Motif connectivity
    **Format:**
       * *TLP* - Tulip file format
       * *DOT* - Graphviz DOT file format
+      * *GraphML* - GraphML file format
+      * *JSON* - Java script object notation
      
    :resheader Content-Type: text/plain
    
@@ -93,6 +97,7 @@ Morphology
    
    **Format:**
       * *TLP* - Tulip file format
+      * *JSON* - Java script object notation
      
    :query id: ID numbers of cells to include in connectivity graph.  Commas seperate multiple IDs.
    
