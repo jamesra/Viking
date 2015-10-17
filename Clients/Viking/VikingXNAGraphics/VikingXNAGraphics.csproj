@@ -18,7 +18,7 @@
     </XnaUpgrade>
     <XnaOutputType>Library</XnaOutputType>
     <XnaProfile>HiDef</XnaProfile>
-    <TargetFrameworkProfile/>
+    <TargetFrameworkProfile />
     <FileUpgradeFlags>
     </FileUpgradeFlags>
     <OldToolsVersion>3.5</OldToolsVersion>
@@ -137,6 +137,7 @@
     <Compile Include="BitmapFile.cs" />
     <Compile Include="ChannelOverlayEffect.cs" />
     <Compile Include="Camera.cs" />
+    <Compile Include="Extensions.cs" />
     <Compile Include="MergeHSVEffect.cs" />
     <Compile Include="Scene.cs" />
     <Compile Include="TileBlendEffect.cs" />
