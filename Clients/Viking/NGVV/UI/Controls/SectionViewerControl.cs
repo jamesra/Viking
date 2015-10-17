@@ -1218,7 +1218,7 @@ namespace Viking.UI.Controls
                 int level = Mapping.AvailableLevels[DownsamplesToRender[iLevel]];
 
                 //Clear the depth buffer before we begin this level, we only want to compare to tiles in our level
-                graphicsDevice.Clear(ClearOptions.DepthBuffer, Microsoft.Xna.Framework.Color.Blue, float.MaxValue, int.MaxValue);
+                graphicsDevice.Clear(ClearOptions.DepthBuffer, Microsoft.Xna.Framework.Color.Black, float.MaxValue, int.MaxValue);
 
                 //Use a stencil buffer to prevent lower-res textures from overwriting higer-res textures
                 graphicsDevice.ReferenceStencil = iLevel;

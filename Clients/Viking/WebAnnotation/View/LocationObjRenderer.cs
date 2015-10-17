@@ -13,7 +13,9 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using WebAnnotation.UI;
 using WebAnnotationModel;
-using WebAnnotation.ViewModel; 
+using WebAnnotation.ViewModel;
+using WebAnnotation.View;
+using SqlGeometryUtils;
 
 namespace WebAnnotation
 {
@@ -101,6 +103,31 @@ namespace WebAnnotation
             switch (obj.TypeCode)
             {
                 case LocationType.POINT:
+                    overlayEffect.AnnotateWithCircle((float)0.05);
+                    basicEffect.Texture = null;
+                    basicEffect.TextureEnabled = false;
+                    basicEffect.VertexColorEnabled = true;
+                    break;
+                case LocationType.OPENCURVE:
+                    overlayEffect.AnnotateWithCircle((float)0.05);
+                    basicEffect.Texture = null;
+                    basicEffect.TextureEnabled = false;
+                    basicEffect.VertexColorEnabled = true;
+                    break;
+                case LocationType.CLOSEDCURVE:
+                    overlayEffect.AnnotateWithCircle((float)0.05);
+                    basicEffect.Texture = null;
+                    basicEffect.TextureEnabled = false;
+                    basicEffect.VertexColorEnabled = true;
+                    break;
+                case LocationType.POLYGON:
+                    overlayEffect.AnnotateWithCircle((float)0.05);
+                    basicEffect.Texture = null;
+                    basicEffect.TextureEnabled = false;
+                    basicEffect.VertexColorEnabled = true;
+                    break;
+                case LocationType.POLYLINE:
+                    overlayEffect.AnnotateWithCircle((float)0.05);
                     basicEffect.Texture = null;
                     basicEffect.TextureEnabled = false;
                     basicEffect.VertexColorEnabled = true;
@@ -155,7 +182,60 @@ namespace WebAnnotation
         /// <param name="graphicsDevice"></param>
         /// <param name="basicEffect"></param>
         /// <param name="SectionNumber"></param>
-        public static void DrawBackgrounds(List<Location_CanvasViewModel> listToDraw, GraphicsDevice graphicsDevice, BasicEffect basicEffect, VikingXNA.AnnotationOverBackgroundLumaEffect overlayEffect, VikingXNA.Scene Scene, int SectionNumber)
+        public static void DrawBackgrounds(List<Location_CanvasViewModel> listToDraw, GraphicsDevice graphicsDevice, BasicEffect basicEffect, VikingXNA.AnnotationOverBackgroundLumaEffect overlayEffect, RoundLineCode.RoundLineManager overlayLineManager, VikingXNA.Scene Scene, int SectionNumber)
+        {
+            if (listToDraw.Count == 0)
+                return;
+
+            List<Location_CanvasViewModel> OpenCurveLocations = listToDraw.Where(l => l.TypeCode == LocationType.OPENCURVE).ToList();
+            DrawOpenCurveBackgrounds(OpenCurveLocations, graphicsDevice, basicEffect, overlayEffect, overlayLineManager, Scene, SectionNumber);
+
+            List<Location_CanvasViewModel> ClosedCurveLocations = listToDraw.Where(l => l.TypeCode == LocationType.CLOSEDCURVE).ToList();
+            DrawOpenCurveBackgrounds(ClosedCurveLocations, graphicsDevice, basicEffect, overlayEffect, overlayLineManager, Scene, SectionNumber);
+
+            //TODO: Use Group by instead of select
+            List<Location_CanvasViewModel> CircleLocations = listToDraw.Where(l => l.TypeCode == LocationType.CIRCLE).ToList();
+            DrawCircleBackgrounds(CircleLocations, graphicsDevice, basicEffect, overlayEffect, Scene, SectionNumber);
+        }
+
+        public static void DrawOpenCurveBackgrounds(List<Location_CanvasViewModel> listToDraw, GraphicsDevice graphicsDevice, BasicEffect basicEffect, VikingXNA.AnnotationOverBackgroundLumaEffect overlayEffect, RoundLineCode.RoundLineManager overlayLineManager, VikingXNA.Scene Scene, int SectionNumber)
+        {
+            if (listToDraw.Count == 0)
+                return;
+
+            SetupGraphicsDevice(graphicsDevice, basicEffect, overlayEffect, listToDraw[0], SectionNumber);
+
+            foreach (Location_CanvasViewModel loc in listToDraw)
+            {
+                CurveView.Draw(graphicsDevice, overlayLineManager, basicEffect, loc.VolumeShape.ToPoints(), 3, false, loc.Parent.Type.Color.ConvertToHSL(0.5f),loc.Radius);
+            }
+
+            RestoreGraphicsDevice(graphicsDevice, basicEffect);
+        }
+
+        public static void DrawClosedCurveBackgrounds(List<Location_CanvasViewModel> listToDraw, GraphicsDevice graphicsDevice, BasicEffect basicEffect, VikingXNA.AnnotationOverBackgroundLumaEffect overlayEffect, RoundLineCode.RoundLineManager overlayLineManager, VikingXNA.Scene Scene, int SectionNumber)
+        {
+            if (listToDraw.Count == 0)
+                return;
+
+            SetupGraphicsDevice(graphicsDevice, basicEffect, overlayEffect, listToDraw[0], SectionNumber);
+
+            foreach (Location_CanvasViewModel loc in listToDraw)
+            {
+                CurveView.Draw(graphicsDevice, overlayLineManager, basicEffect, loc.VolumeShape.ToPoints(), 3, true, loc.Parent.Type.Color.ConvertToHSL(0.5f), loc.Radius);
+            }
+
+            RestoreGraphicsDevice(graphicsDevice, basicEffect);
+        }
+
+        /// <summary>
+        /// Draw the list of locations as they should appear for the given section number
+        /// </summary>
+        /// <param name="Locations"></param>
+        /// <param name="graphicsDevice"></param>
+        /// <param name="basicEffect"></param>
+        /// <param name="SectionNumber"></param>
+        public static void DrawCircleBackgrounds(List<Location_CanvasViewModel> listToDraw, GraphicsDevice graphicsDevice, BasicEffect basicEffect, VikingXNA.AnnotationOverBackgroundLumaEffect overlayEffect, VikingXNA.Scene Scene, int SectionNumber)
         {
             if (listToDraw.Count == 0)
                 return;

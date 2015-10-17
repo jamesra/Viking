@@ -15,7 +15,8 @@ using WebAnnotation.UI.Commands;
 using WebAnnotation.ViewModel;
 using WebAnnotationModel;
 using connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd;
-using System.Threading.Tasks; 
+using System.Threading.Tasks;
+using SqlGeometryUtils;
 
 namespace WebAnnotation
 {
@@ -77,7 +78,7 @@ namespace WebAnnotation
                 return; 
 
             //Adjust downsample so the location fits nicely in the view
-            double downsample = ((loc.Radius * 2) / Viking.UI.State.ViewerForm.Width) * Global.DefaultLocationJumpDownsample; 
+            double downsample = (loc.MosaicShape.Envelope().Width / Viking.UI.State.ViewerForm.Width) * Global.DefaultLocationJumpDownsample; 
 
             //SectionViewerForm.Show(section);
             Viking.UI.State.ViewerForm.GoToLocation(new Microsoft.Xna.Framework.Vector2((float)loc.Position.X, (float)loc.Position.Y), (int)loc.Z, true, downsample);
@@ -689,7 +690,8 @@ namespace WebAnnotation
                 LocationObj newLocation = new LocationObj(newStruct,
                                                 SectionPos,
                                                 WorldPos,
-                                                Parent.Section.Number);
+                                                Parent.Section.Number,
+                                                AnnotationType);
 
                 Structure newStructView = new Structure(newStruct);
                 Location_CanvasViewModel newLocationView = new Location_CanvasViewModel(newLocation);
@@ -705,7 +707,7 @@ namespace WebAnnotation
                 switch (AnnotationType)
                 {
                     case LocationType.CIRCLE:
-                        QueueCommandForCircleStructure(newLocationView, WorldPos, type.Color);
+                        QueueCommandForCircleStructure(newLocationView, WorldPos, SectionPos, type.Color);
                         break;
                     case LocationType.OPENCURVE:
                         QueueCommandForOpenCurveStructure(newLocationView, WorldPos, type.Color);
@@ -730,9 +732,20 @@ namespace WebAnnotation
                 Trace.WriteLine("Could not find hotkey ID for type: " + TypeID.ToString()); 
         }
 
-        protected void QueueCommandForCircleStructure(Location_CanvasViewModel newLocationView, GridVector2 origin, System.Drawing.Color typecolor)
+        protected void QueueCommandForCircleStructure(Location_CanvasViewModel newLocationView, GridVector2 worldPos, GridVector2 sectionPos, System.Drawing.Color typecolor)
         {
-            Viking.UI.Commands.Command.EnqueueCommand(typeof(ResizeCircleCommand), new object[] { Parent, typecolor, origin, new ResizeCircleCommand.OnCommandSuccess((double radius) => { newLocationView.Radius = radius; }) });
+            Viking.UI.Commands.Command.EnqueueCommand(typeof(ResizeCircleCommand), new object[] { Parent,
+                    typecolor,
+                    worldPos,
+                    new ResizeCircleCommand.OnCommandSuccess((double radius) => {  newLocationView.MosaicShape = SqlGeometryUtils.GeometryExtensions.ToCircle(sectionPos.X,
+                                       sectionPos.Y,
+                                       newLocationView.Section,
+                                       radius);
+                                    newLocationView.VolumeShape = SqlGeometryUtils.GeometryExtensions.ToCircle(worldPos.X,
+                                        worldPos.Y,
+                                        newLocationView.Section,
+                                        radius);
+                                    newLocationView.Radius = radius; })});
         }
 
         protected void QueueCommandForOpenCurveStructure(Location_CanvasViewModel newLocationView, GridVector2 origin, System.Drawing.Color typecolor)
@@ -764,8 +777,26 @@ namespace WebAnnotation
         protected void SetLocationShapeFromPointsInVolume(Location_CanvasViewModel location, GridVector2[] points)
         {
             GridVector2[] mosaic_points = Parent.VolumeToSection(points);
-            
 
+            switch (location.TypeCode)
+            {
+                case LocationType.OPENCURVE:
+                    location.MosaicShape = mosaic_points.ToPolyLine();
+                    location.VolumeShape = points.ToPolyLine();
+                    break;
+                case LocationType.POLYLINE:
+                    location.MosaicShape = mosaic_points.ToPolyLine();
+                    location.VolumeShape = points.ToPolyLine();
+                    break;
+                case LocationType.POLYGON:
+                    location.MosaicShape = mosaic_points.ToPolygon();
+                    location.VolumeShape = points.ToPolygon();
+                    break;
+                case LocationType.CLOSEDCURVE:
+                    location.MosaicShape = mosaic_points.ToPolygon();
+                    location.VolumeShape = points.ToPolygon();
+                    break;
+            }
         }
 
         protected void OnToggleStructureTag(string tag)
@@ -833,7 +864,8 @@ namespace WebAnnotation
                     LocationObj newLoc = new LocationObj(CreateNewLinkedLocationCommand.LastEditedLocation.Parent.modelObj,
                                         SectionPos,
                                         WorldPos,
-                                        Parent.Section.Number);
+                                        Parent.Section.Number,
+                                        template.TypeCode);
 
                     Location_CanvasViewModel newLocView = new Location_CanvasViewModel(newLoc);
 
@@ -1063,7 +1095,14 @@ namespace WebAnnotation
         static private BasicEffect basicEffect = null;
         static private BlendState defaultBlendState = null; 
         
-      
+        private static BasicEffect CreateBasicEffect(GraphicsDevice graphicsDevice, VikingXNA.Scene scene)
+        {
+            basicEffect = new BasicEffect(graphicsDevice);
+            basicEffect.Projection = scene.Projection;
+            basicEffect.View = scene.Camera.View;
+            basicEffect.World = scene.World;
+            return basicEffect;
+        }
 
         public void Draw(Microsoft.Xna.Framework.Graphics.GraphicsDevice graphicsDevice,
                          VikingXNA.Scene scene, 
@@ -1105,9 +1144,13 @@ namespace WebAnnotation
             nextStencilValue++;
 
             if (basicEffect == null)
-                basicEffect = new BasicEffect(graphicsDevice);
-            else if(basicEffect.IsDisposed)
-                basicEffect = new BasicEffect(graphicsDevice);
+                basicEffect = CreateBasicEffect(graphicsDevice, scene);
+            else if (basicEffect.IsDisposed)
+                basicEffect = CreateBasicEffect(graphicsDevice, scene);
+
+            basicEffect.Projection = scene.Projection;
+            basicEffect.View = scene.Camera.View;
+            basicEffect.World = scene.World;
 
             VikingXNA.AnnotationOverBackgroundLumaEffect overlayEffect = Parent.annotationOverlayEffect;
 
@@ -1147,8 +1190,6 @@ namespace WebAnnotation
             List<Location_CanvasViewModel> listLocationsToDraw = FindVisibleLocations(Locations, Bounds);
             
             //Find a circle that encloses the visible bounds
-            GridCircle VisibleCircle = new GridCircle(Bounds.Center, GridVector2.Distance(Bounds.Center, new GridVector2(Bounds.Left, Bounds.Top)));
-            
             List<Location_CanvasViewModel> RefLocations = new List<Location_CanvasViewModel>();
             if(_Parent.Section.ReferenceSectionBelow != null)
             {
@@ -1171,12 +1212,12 @@ namespace WebAnnotation
             List<Location_CanvasViewModel> listVisibleOverlappingLocationsOnAdjacentSections = RemoveOverlappingLocations(listVisibleNonOverlappingLocationsOnAdjacentSections, _Parent.Section.Number); 
 
             //Draw all of the locations on the current section
-            WebAnnotation.LocationObjRenderer.DrawBackgrounds(listLocationsToDraw, graphicsDevice, basicEffect, overlayEffect, scene, SectionNumber);
+            WebAnnotation.LocationObjRenderer.DrawBackgrounds(listLocationsToDraw, graphicsDevice, basicEffect, overlayEffect, Parent.LumaOverlayLineManager, scene, SectionNumber);
 
             IncrementDepthStencilValue(graphicsDevice, ref nextStencilValue);
             graphicsDevice.Clear(ClearOptions.DepthBuffer, Color.Black, float.MaxValue, 0);
 
-            WebAnnotation.LocationObjRenderer.DrawBackgrounds(listVisibleNonOverlappingLocationsOnAdjacentSections, graphicsDevice, basicEffect, overlayEffect, scene, SectionNumber);
+            WebAnnotation.LocationObjRenderer.DrawBackgrounds(listVisibleNonOverlappingLocationsOnAdjacentSections, graphicsDevice, basicEffect, overlayEffect, Parent.LumaOverlayLineManager, scene, SectionNumber);
 
             IncrementDepthStencilValue(graphicsDevice, ref nextStencilValue);
             graphicsDevice.Clear(ClearOptions.DepthBuffer, Color.Black, float.MaxValue, 0);
@@ -1297,23 +1338,20 @@ namespace WebAnnotation
             for (int i = locations.Count - 1; i >= 0; i--)
             {
                 Location_CanvasViewModel loc = locations.ElementAt(i);
-                if (loc.TypeCode == LocationType.CIRCLE)
+                //GridCircle locCircle = new GridCircle(loc.VolumePosition, loc.OffSectionRadius);
+                foreach (long linked in loc.Links)
                 {
-                    GridCircle locCircle = new GridCircle(loc.VolumePosition, loc.OffSectionRadius);
-                    foreach (long linked in loc.Links)
-                    {
-                        LocationObj LinkedObj = Store.Locations.GetObjectByID(linked, false);
-                        if (LinkedObj == null)
-                            continue;
+                    LocationObj LinkedObj = Store.Locations.GetObjectByID(linked, false);
+                    if (LinkedObj == null)
+                        continue;
 
-                        if (LinkedObj.Section == section_number)
+                    if (LinkedObj.Section == section_number)
+                    {
+                        if(loc.VolumeShape.STIntersects(LinkedObj.VolumeShape))
                         {
-                            if (locCircle.Intersects(LinkedObj.VolumePosition, LinkedObj.Radius))
-                            {
-                                listOverlappingLocations.Add(loc);
-                                locations.RemoveAt(i);
-                                break;
-                            }
+                            listOverlappingLocations.Add(loc);
+                            locations.RemoveAt(i);
+                            break;
                         }
                     }
                 }

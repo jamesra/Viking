@@ -85,7 +85,8 @@ namespace WebAnnotation.UI.Commands
                     LocationObj newLoc = new LocationObj(selected.Parent.modelObj,
                             SectionPos,
                             WorldPos,
-                            Parent.Section.Number);
+                            Parent.Section.Number,
+                            selected.TypeCode);
 
                     Location_CanvasViewModel newLocView = new Location_CanvasViewModel(newLoc);
 

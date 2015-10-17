@@ -50,11 +50,15 @@ namespace WebAnnotation.UI
         {
             Debug.Print("Open Last Modified Location");
 
-            WebAnnotationModel.LocationObj lastLocation = WebAnnotationModel.Store.Locations.GetLastModifiedLocation();
-            if (lastLocation != null)
+            var task = new System.Threading.Tasks.Task(() =>
             {
-                AnnotationOverlay.GoToLocation(lastLocation);
-            }
+                WebAnnotationModel.LocationObj lastLocation = WebAnnotationModel.Store.Locations.GetLastModifiedLocation();
+                if (lastLocation != null)
+                {
+                    Viking.UI.State.MainThreadDispatcher.Invoke(() => AnnotationOverlay.GoToLocation(lastLocation));
+                }
+            });
+            task.Start();
         }
 
         [MenuItem("Open Structure")]

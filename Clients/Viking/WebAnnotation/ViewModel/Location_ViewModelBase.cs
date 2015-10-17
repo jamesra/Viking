@@ -518,10 +518,18 @@ namespace WebAnnotation.ViewModel
             get { return modelObj.Radius; }
             set
             {
-                if (modelObj.Radius == value)
-                    return;
+                if(modelObj.TypeCode == LocationType.CIRCLE)
+                {
+                    if (modelObj.Radius == value)
+                        return;
 
-                modelObj.Radius = value;
+                   
+                    modelObj.Radius = value;
+                }
+                else
+                {
+                    throw new ArgumentException("Cannot change radius on a non-circle annotation type");
+                }
             }
         }
         
@@ -598,7 +606,7 @@ namespace WebAnnotation.ViewModel
         {
             get { return this.modelObj.VolumePositionHasBeenCalculated; }
         }
-
+        
         #endregion
 
     }

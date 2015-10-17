@@ -85,7 +85,8 @@ namespace WebAnnotation.UI.Commands
                 LocationObj newLocation = new LocationObj(newStruct,
                                                 SectionPos,
                                                 WorldPos,
-                                                Parent.Section.Number);
+                                                Parent.Section.Number,
+                                                LocationType.CIRCLE);
 
                 Structure newStructView = new Structure(newStruct); 
                 Location_CanvasViewModel newLocationView = new Location_CanvasViewModel(newLocation);

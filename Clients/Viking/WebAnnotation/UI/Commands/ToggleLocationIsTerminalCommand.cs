@@ -26,7 +26,7 @@ namespace WebAnnotation.UI.Commands
         protected override void Execute()
         {
             target.Terminal = !target.Terminal;
-            Store.Locations.Save();
+            var t = new System.Threading.Tasks.Task(() => Store.Locations.Save());
             base.Execute();
         }
     }

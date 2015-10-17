@@ -89,8 +89,8 @@ namespace WebAnnotation.View
         /// <returns></returns>
         private static Microsoft.Xna.Framework.Color ControlPointColor(Microsoft.Xna.Framework.Color color)
         {
-            //return new Microsoft.Xna.Framework.Color(255 - (int)color.A, 255 - (int)color.G, 255 - (int)color.B, (int)color.A);
-            return color;
+            return new Microsoft.Xna.Framework.Color(255 - (int)color.A, 255 - (int)color.G, 255 - (int)color.B, (int)color.A / 2f);
+            //return color;
         }
 
         public static void Draw(Microsoft.Xna.Framework.Graphics.GraphicsDevice device, RoundLineCode.RoundLineManager LineManager, Microsoft.Xna.Framework.Graphics.BasicEffect basicEffect, ICollection<GridVector2> ControlPoints, int NumInterpolations, bool IsClosed, Microsoft.Xna.Framework.Color Color, double LineWidth = 16.0)

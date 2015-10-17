@@ -187,8 +187,12 @@ namespace WebAnnotationModel
             }
             set
             {
+                Debug.Assert(value != null);
+                if (value == null)
+                    return;
+
                 DbGeometry newValue = value.ToDbGeometry();
-                if (Data.VolumeShape.SpatialEquals(newValue)) return;
+                if (Data.VolumeShape != null && Data.VolumeShape.SpatialEquals(newValue)) return;
 
                 OnPropertyChanging("VolumeShape");
                 Data.VolumeShape = newValue;
@@ -210,9 +214,13 @@ namespace WebAnnotationModel
             }
             set
             {
-                DbGeometry newValue = value.ToDbGeometry();
-                if (Data.MosaicShape.SpatialEquals(newValue)) return;
+                Debug.Assert(value != null);
+                if (value == null)
+                    return;
 
+                DbGeometry newValue = value.ToDbGeometry();
+                if (Data.MosaicShape != null && Data.MosaicShape.SpatialEquals(newValue)) return;
+                 
                 OnPropertyChanging("MosaicShape");
                 Data.MosaicShape = newValue;
                 OnPropertyChanged("MosaicShape");
@@ -511,30 +519,20 @@ namespace WebAnnotationModel
             Data = obj;    
         }
 
-        public LocationObj(StructureObj parent, GridVector2 position, GridVector2 volumePosition, int SectionNumber)
+        public LocationObj(StructureObj parent, GridVector2 position, GridVector2 volumePosition, int SectionNumber, LocationType shapeType)
         {
             this.Data = new Location();
             this.Data.DBAction = DBACTION.INSERT;
-            this.Data.ID = Store.Locations.GetTempKey(); 
-            this.Data.TypeCode = 1;
+            this.Data.ID = Store.Locations.GetTempKey();
+            this.Data.TypeCode = (short)shapeType;
             this.Data.Radius = 16;
-            this.Data.Links = null; 
+            this.Data.Links = null;
 
-            AnnotationPoint P = new AnnotationPoint();
-            P.X = position.X;
-            P.Y = position.Y;
-            P.Z = (double)SectionNumber;
-
-            AnnotationPoint VP = new AnnotationPoint();
-            VP.X = volumePosition.X;
-            VP.Y = volumePosition.Y;
-            VP.Z = (double)SectionNumber;
-
+            this.Data.MosaicShape = position.ToGeometryPoint().ToDbGeometry();
+            this.Data.VolumeShape = volumePosition.ToGeometryPoint().ToDbGeometry();
+            
             this.Data.Section = SectionNumber; 
-
-            this.Data.Position = P;
-            this.Data.VolumePosition = VP; 
-
+            
             if (parent != null)
             {
                 this.Data.ParentID = parent.ID;

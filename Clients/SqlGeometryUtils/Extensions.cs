@@ -53,13 +53,23 @@ namespace SqlGeometryUtils
         public static SqlGeometry ToPolygon(this GridVector2[] points)
         {
             StringBuilder PolyStringBuilder = new StringBuilder();
-            PolyStringBuilder.Append("POLYGON( LINESTRING");
+            PolyStringBuilder.Append("POLYGON( ");
             PolyStringBuilder.Append(points.ToSqlCoordinateList());
             PolyStringBuilder.Append(")");
-            return SqlGeometry.STLineFromText(PolyStringBuilder.ToString().ToSqlChars(), 0);
+            return SqlGeometry.STPolyFromText(PolyStringBuilder.ToString().ToSqlChars(), 0);
         }
 
-        public static string ToSqlCoordinateList(this GridVector2[] points)
+        /// <summary>
+        /// Create a closed object where the first point in the array is added again at the end
+        /// </summary>
+        /// <param name="points"></param>
+        /// <returns></returns>
+        public static string ToSqlClosedCoordinateList(this GridVector2[] points)
+        {
+            return points.ToSqlCoordinateList(true);
+        }
+
+        public static string ToSqlCoordinateList(this GridVector2[] points, bool closed = false)
         {
             StringBuilder sb = new StringBuilder();
             sb.Append("(");
@@ -68,8 +78,12 @@ namespace SqlGeometryUtils
                 if (i != 0)
                     sb.AppendFormat(", ");
 
-                sb.AppendFormat("{0} {1}", points[i].X, points[i].Y);
+                sb.AppendFormat("{0:F2} {1:F2}", points[i].X, points[i].Y);
             }
+
+            if(closed)
+                sb.AppendFormat(", {0:F2} {1:F2}", points[0].X, points[0].Y);
+
             sb.Append(")");
 
             return sb.ToString();
@@ -80,12 +94,12 @@ namespace SqlGeometryUtils
             if (Radius == 0)
                 throw new ArgumentException("Cannot create circle with a radius of zero");
 
-            string circle_template = "CURVEPOLYGON(CIRCULARSTRING ({1,F2} {3,F2} {6,D}, " +
-                                                                  "{0,F2} {5,F2} {6,D}, " +
-                                                                  "{2,F2} {3,F2} {6,D}, " +
-                                                                  "{0,F2} {4,F2} {6,D}, " +
-                                                                  "{1,F2} {3,F2} {6,D}))";
-            string circle_shape_string = string.Format(circle_template, new object[] { X, X - Radius, X + Radius, Y, Y - Radius, Y + Radius, Z });
+            string circle_template = "CURVEPOLYGON(CIRCULARSTRING ({1:F2} {3:F2} {6:D}, " +
+                                                                  "{0:F2} {5:F2} {6:D}, " +
+                                                                  "{2:F2} {3:F2} {6:D}, " +
+                                                                  "{0:F2} {4:F2} {6:D}, " +
+                                                                  "{1:F2} {3:F2} {6:D}))";
+            string circle_shape_string = string.Format(circle_template, new object[] { X, X - Radius, X + Radius, Y, Y - Radius, Y + Radius, (int)Z });
             return SqlGeometry.STGeomFromText(circle_shape_string.ToSqlChars(), 0);
         }
 
@@ -120,6 +134,11 @@ namespace SqlGeometryUtils
         public static SqlGeometry GetGeometry(this Microsoft.SqlServer.Types.SqlGeometry geometry, int i)
         {
             return geometry.STGeometryN(i + 1);
+        }
+
+        public static GridRectangle Envelope(this SqlGeometry geometry)
+        {
+            return GridRectangle.GetBoundingBox(geometry.STEnvelope().ToPoints());
         }
 
         public static GridVector2[] ToPoints(this Microsoft.SqlServer.Types.SqlGeometry geometry)

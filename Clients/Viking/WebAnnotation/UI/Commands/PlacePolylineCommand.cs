@@ -42,10 +42,7 @@ namespace WebAnnotation.UI.Commands
                                      double LineWidth,
                                      OnCommandSuccess success_callback)
             : this(parent, 
-                   new Microsoft.Xna.Framework.Color((int)color.R,
-                                                          (int)color.G,
-                                                          (int)color.B,
-                                                          0.5f),
+                  color.ToXNAColor(0.5f),
                    LineWidth,
                    success_callback)
         { 
