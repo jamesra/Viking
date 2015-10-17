@@ -43,7 +43,7 @@
     <CreateWebPageOnPublish>true</CreateWebPageOnPublish>
     <WebPage>Viking.html</WebPage>
     <TrustUrlParameters>true</TrustUrlParameters>
-    <ApplicationRevision>169</ApplicationRevision>
+    <ApplicationRevision>170</ApplicationRevision>
     <ApplicationVersion>1.1.0.%2a</ApplicationVersion>
     <UseApplicationTrust>false</UseApplicationTrust>
     <CreateDesktopShortcut>true</CreateDesktopShortcut>
@@ -167,6 +167,8 @@
     <Content Include="Content\UpArrowV2.xnb" />
     <Content Include="Content\CircleMask.xnb" />
     <Content Include="Content\RoundLineHSV.xnb" />
+    <None Include="Content\RGBToHSV.xnb" />
+    <None Include="Content\RoundCurve.xnb" />
     <None Include="packages.config" />
     <None Include="Properties\app.manifest" />
     <None Include="Properties\Settings.settings">
@@ -232,6 +234,7 @@
     <Content Include="Modules\WebAnnotation\EntityFramework.xml" />
     <Content Include="Modules\WebAnnotation\log4net.dll" />
     <Content Include="Modules\WebAnnotation\RTree.dll" />
+    <Content Include="Modules\WebAnnotation\SqlGeometryUtils.dll" />
     <Content Include="Modules\WebAnnotation\WebAnnotation.dll" />
     <Content Include="Modules\WebAnnotation\WebAnnotationModel.dll" />
     <Content Include="Modules\WebAnnotation\Xml.Schema.Linq.dll" />
