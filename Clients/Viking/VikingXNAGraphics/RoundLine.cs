@@ -153,7 +153,7 @@ namespace RoundLineCode
         protected int bytesPerVertex;
         protected float[] translationData;
 
-        public int NumLinesDrawn;
+        //public int NumLinesDrawn;
         public float BlurThreshold = 0.97f;
 
 
@@ -388,7 +388,7 @@ namespace RoundLineCode
 
             int numInstancesThisDraw = 1;
             device.DrawIndexedPrimitives(PrimitiveType.TriangleList, 0, 0, numVertices, 0, numPrimitivesPerInstance * numInstancesThisDraw);
-            NumLinesDrawn += numInstancesThisDraw;
+            //NumLinesDrawn += numInstancesThisDraw;
 
             device.SetVertexBuffer(null);
             device.Indices = null;
@@ -433,7 +433,7 @@ namespace RoundLineCode
                 {
                     instanceDataParameter.SetValue(translationData);
                     device.DrawIndexedPrimitives(PrimitiveType.TriangleList, 0, 0, numVertices, 0, numPrimitivesPerInstance * numInstancesThisDraw);
-                    NumLinesDrawn += numInstancesThisDraw;
+                    //NumLinesDrawn += numInstancesThisDraw;
                     numInstancesThisDraw = 0;
                     iData = 0;
                 }
@@ -442,7 +442,7 @@ namespace RoundLineCode
             {
                 instanceDataParameter.SetValue(translationData);
                 device.DrawIndexedPrimitives(PrimitiveType.TriangleList, 0, 0, numVertices, 0, numPrimitivesPerInstance * numInstancesThisDraw);
-                NumLinesDrawn += numInstancesThisDraw;
+                //NumLinesDrawn += numInstancesThisDraw;
             }
         }
     }
