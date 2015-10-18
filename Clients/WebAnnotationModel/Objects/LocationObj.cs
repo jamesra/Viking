@@ -178,12 +178,17 @@ namespace WebAnnotationModel
         {
             get {return Data.Position.Z; }
         }
-       
+
+        private Microsoft.SqlServer.Types.SqlGeometry _VolumeShape;
         public Microsoft.SqlServer.Types.SqlGeometry VolumeShape
         {
             get
             {
-                return Data.VolumeShape.ToSqlGeometry();
+                if (_VolumeShape == null)
+                {
+                    _VolumeShape = Data.VolumeShape.ToSqlGeometry();
+                }
+                return _VolumeShape;
             }
             set
             {
@@ -196,21 +201,28 @@ namespace WebAnnotationModel
 
                 OnPropertyChanging("VolumeShape");
                 Data.VolumeShape = newValue;
+                _VolumeShape = null;
                 OnPropertyChanged("VolumeShape");
 
                 OnPropertyChanging("VolumePosition");
                 _VolumePosition = value.Centroid();
+
                 OnPropertyChanged("VolumePosition");
 
                 SetDBActionForChange();
             }
         }
 
+        private Microsoft.SqlServer.Types.SqlGeometry _MosaicShape;
         public Microsoft.SqlServer.Types.SqlGeometry MosaicShape
         {
             get
             {
-                return Data.MosaicShape.ToSqlGeometry(); ;
+                if (_MosaicShape == null)
+                {
+                    _MosaicShape = Data.MosaicShape.ToSqlGeometry();
+                }
+                return _MosaicShape;
             }
             set
             {
@@ -223,6 +235,7 @@ namespace WebAnnotationModel
                  
                 OnPropertyChanging("MosaicShape");
                 Data.MosaicShape = newValue;
+                _MosaicShape = null;
                 OnPropertyChanged("MosaicShape");
 
                 OnPropertyChanging("Position");

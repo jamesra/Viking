@@ -16,6 +16,7 @@ using System.Drawing;
 using Common.UI;
 using WebAnnotation.UI.Commands;
 using System.Collections.Concurrent;
+using Microsoft.SqlServer.Types;
 
 namespace WebAnnotation.ViewModel
 {
@@ -1086,8 +1087,8 @@ namespace WebAnnotation.ViewModel
         /// <summary>
         /// Artificially positioned circles indicating links to adjacent sections which are overlapped by this location
         /// </summary>
-        private ConcurrentDictionary<Location_CanvasViewModel, GridCircle> _OverlappingLinkedLocationCircles = null;
-        public ConcurrentDictionary<Location_CanvasViewModel, GridCircle> OverlappingLinkedLocationCircles
+        private ConcurrentDictionary<Location_CanvasViewModel, Microsoft.SqlServer.Types.SqlGeometry> _OverlappingLinkedLocationCircles = null;
+        public ConcurrentDictionary<Location_CanvasViewModel, Microsoft.SqlServer.Types.SqlGeometry> OverlappingLinkedLocationCircles
         {
             get
             {
@@ -1116,7 +1117,7 @@ namespace WebAnnotation.ViewModel
         private VertexPositionColorTexture[] _OverlappingLinkedLocationVerts = null;
         private int[] _OverlappingLinkedLocationIndicies = null;
 
-        private ConcurrentDictionary<Location_CanvasViewModel, GridCircle> CalculateOverlappedLocationCircles()
+        private ConcurrentDictionary<Location_CanvasViewModel, Microsoft.SqlServer.Types.SqlGeometry> CalculateOverlappedLocationCircles()
         {
             ConcurrentDictionary<Location_CanvasViewModel, GridCircle> listCircles = null;
             if (_OverlappingLinkedLocationCircles == null)

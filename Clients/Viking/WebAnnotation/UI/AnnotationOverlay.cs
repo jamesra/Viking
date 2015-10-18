@@ -1338,22 +1338,10 @@ namespace WebAnnotation
             for (int i = locations.Count - 1; i >= 0; i--)
             {
                 Location_CanvasViewModel loc = locations.ElementAt(i);
-                //GridCircle locCircle = new GridCircle(loc.VolumePosition, loc.OffSectionRadius);
-                foreach (long linked in loc.Links)
+                if (loc.OverlappingLinkedLocationCircles.Keys.Any(overlappingLocation => overlappingLocation.Z == section_number))
                 {
-                    LocationObj LinkedObj = Store.Locations.GetObjectByID(linked, false);
-                    if (LinkedObj == null)
-                        continue;
-
-                    if (LinkedObj.Section == section_number)
-                    {
-                        if(loc.VolumeShape.STIntersects(LinkedObj.VolumeShape))
-                        {
-                            listOverlappingLocations.Add(loc);
-                            locations.RemoveAt(i);
-                            break;
-                        }
-                    }
+                    locations.RemoveAt(i);
+                    listOverlappingLocations.AddRange(loc.OverlappingLinkedLocationCircles.Keys.Where(overlappingLocation => overlappingLocation.Z == section_number).ToList());
                 }
             }
 
