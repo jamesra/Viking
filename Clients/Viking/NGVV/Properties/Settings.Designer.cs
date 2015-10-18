@@ -250,7 +250,7 @@ namespace Viking.Properties {
 <ArrayOfString xmlns:xsi=""http://www.w3.org/2001/XMLSchema-instance"" xmlns:xsd=""http://www.w3.org/2001/XMLSchema"">
   <string>http://connectomes.utah.edu/</string>
   <string>http://internal.connectomes.utah.edu/</string>
-  <string>http://dsp063.pha.jhu.edu/ocp/ca/</string>
+  <string>http://openconnecto.me/ocp/ca/</string>
 </ArrayOfString>")]
         public global::System.Collections.Specialized.StringCollection ServerURLs {
             get {

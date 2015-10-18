@@ -597,47 +597,7 @@ namespace Viking.UI.Forms
         {
             Settings.Default.Save();
         }
-
-        private void textUsername_TextChanged(object sender, EventArgs e)
-        {
-
-        }
-
-        private void label4_Click(object sender, EventArgs e)
-        {
-
-        }
-
-        private void textPassword_TextChanged(object sender, EventArgs e)
-        {
-
-        }
-
-        private void label3_Click(object sender, EventArgs e)
-        {
-
-        }
-
-        private void label2_Click(object sender, EventArgs e)
-        {
-
-        }
-
-        private void remember_me_check_box_CheckedChanged(object sender, EventArgs e)
-        {
-
-        }
-
-        private void label5_Click(object sender, EventArgs e)
-        {
-
-        }
-
-        private void linkLabel2_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
-        {
-
-        }
-
+        
         private void btnFindOCPVolume_Click(object sender, EventArgs e)
         {             
             FindVolumeForm findVolumeForm = new FindVolumeForm();
@@ -645,7 +605,8 @@ namespace Viking.UI.Forms
             if(findVolumeForm.ShowDialog() == DialogResult.OK)
             {
                 string ServerURL = findVolumeForm.ServerURL + "/" + findVolumeForm.VolumeURL;
-                this.comboVolumeURL.Text = TryAddVikingXMLExtension(ServerURL);
+                ServerURL = TryAddVikingXMLExtension(ServerURL);
+                this.comboVolumeURL.Text = ServerURL;
                 this.VolumeURL = ServerURL;
             }
         }

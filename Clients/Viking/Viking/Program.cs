@@ -140,7 +140,7 @@ namespace Viking
                 if (website.EndsWith("/") == false)
                     website = website + "/";
 
-                website = website + "volume.VikingXML";
+                website = website + "volume.vikingxml";
             }
 
             // --------------------------------------------------------------------------------------
