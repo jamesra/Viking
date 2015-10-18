@@ -188,7 +188,6 @@ namespace Viking.UI.Forms
             this.linkLabel2.TabIndex = 9;
             this.linkLabel2.TabStop = true;
             this.linkLabel2.Text = "Retrieve Password";
-            this.linkLabel2.LinkClicked += new System.Windows.Forms.LinkLabelLinkClickedEventHandler(this.linkLabel2_LinkClicked);
             // 
             // linkRegister
             // 
@@ -227,7 +226,6 @@ namespace Viking.UI.Forms
             this.remember_me_check_box.TabIndex = 4;
             this.remember_me_check_box.Text = "Remember me";
             this.remember_me_check_box.UseVisualStyleBackColor = true;
-            this.remember_me_check_box.CheckedChanged += new System.EventHandler(this.remember_me_check_box_CheckedChanged);
             // 
             // textPassword
             // 
@@ -237,7 +235,6 @@ namespace Viking.UI.Forms
             this.textPassword.PasswordChar = '*';
             this.textPassword.Size = new System.Drawing.Size(170, 21);
             this.textPassword.TabIndex = 3;
-            this.textPassword.TextChanged += new System.EventHandler(this.textPassword_TextChanged);
             this.textPassword.GotFocus += new System.EventHandler(this.password_GotFocus);
             this.textPassword.KeyUp += new System.Windows.Forms.KeyEventHandler(this.password_KeyUp);
             // 
@@ -250,7 +247,6 @@ namespace Viking.UI.Forms
             this.label3.Size = new System.Drawing.Size(64, 15);
             this.label3.TabIndex = 2;
             this.label3.Text = "Password:";
-            this.label3.Click += new System.EventHandler(this.label3_Click);
             // 
             // label2
             // 
@@ -261,7 +257,6 @@ namespace Viking.UI.Forms
             this.label2.Size = new System.Drawing.Size(68, 15);
             this.label2.TabIndex = 1;
             this.label2.Text = "Username:";
-            this.label2.Click += new System.EventHandler(this.label2_Click);
             // 
             // textUsername
             // 
@@ -270,7 +265,6 @@ namespace Viking.UI.Forms
             this.textUsername.Name = "textUsername";
             this.textUsername.Size = new System.Drawing.Size(170, 21);
             this.textUsername.TabIndex = 0;
-            this.textUsername.TextChanged += new System.EventHandler(this.textUsername_TextChanged);
             this.textUsername.GotFocus += new System.EventHandler(this.username_GotFocus);
             this.textUsername.KeyUp += new System.Windows.Forms.KeyEventHandler(this.username_KeyUp);
             // 
