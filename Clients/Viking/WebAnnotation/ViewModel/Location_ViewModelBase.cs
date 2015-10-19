@@ -531,10 +531,12 @@ namespace WebAnnotation.ViewModel
             {
                 return modelObj.MosaicShape;
             }
+            /*
             set
             {
                 modelObj.MosaicShape = value;
             }
+            */
         }
         
         public SqlGeometry VolumeShape
@@ -543,10 +545,12 @@ namespace WebAnnotation.ViewModel
             {
                 return modelObj.VolumeShape;
             }
+            /*
             set
             {
                 modelObj.VolumeShape = value;
             }
+            */
         }
         
         

@@ -347,8 +347,9 @@ namespace WebAnnotation.ViewModel
                 return false;
             }
 
-            loc.VolumeTransformID = parent.CurrentTransformUniqueID; 
-            loc.VolumeShape = loc.VolumeShape.MoveTo(VolumePosition);
+            loc.VolumeTransformID = parent.CurrentTransformUniqueID;
+            //loc.VolumeShape = loc.VolumeShape.MoveTo(VolumePosition);
+            loc.VolumePosition = VolumePosition;
 
             return true;
         }
@@ -376,7 +377,7 @@ namespace WebAnnotation.ViewModel
 
             loc.VolumeTransformID = parent.CurrentTransformUniqueID;
             //loc.VolumePosition = VolumePosition;
-            loc.VolumeShape = SqlGeometryUtils.GeometryExtensions.ToGeometry(loc.MosaicShape.STGeometryType(), VolumePositions);
+            //loc.VolumeShape = SqlGeometryUtils.GeometryExtensions.ToGeometry(loc.MosaicShape.STGeometryType(), VolumePositions);
 
             return true;
         }
