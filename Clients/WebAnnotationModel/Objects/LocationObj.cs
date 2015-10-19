@@ -95,19 +95,22 @@ namespace WebAnnotationModel
         {
             get
             {
-                /*
+                
                 if (!_MosaicPosition.HasValue)
                     _MosaicPosition = new GridVector2(Data.Position.X, Data.Position.Y);
-                */
+                /*
 
                 if (!_MosaicPosition.HasValue)
                     _MosaicPosition = this.MosaicShape.Centroid();
 
+                return this.Data.MosaicShape.ToCentroid(); 
+                */
+
                 return _MosaicPosition.Value;
 
-                //return this.Data.MosaicShape.ToCentroid(); 
+               
             }
-            /*
+            
             set
             {
                 if (GridVector2.Equals(this.Position, value))
@@ -125,8 +128,6 @@ namespace WebAnnotationModel
 
                 SetDBActionForChange();
             }
-            */
-
         }
 
 
@@ -140,16 +141,16 @@ namespace WebAnnotationModel
         {
             get
             {
-                /*
+                
                 if (!_VolumePosition.HasValue)
                     _VolumePosition = new GridVector2(Data.VolumePosition.X, Data.VolumePosition.Y);
-                    */
+                /*
                 if (!_VolumePosition.HasValue)
                     _VolumePosition = this.VolumeShape.Centroid();
-
+                */
                 return _VolumePosition.Value;
             }
-            /*
+            
             set
             {
                 if (GridVector2.Equals(this.VolumePosition, value))
@@ -167,7 +168,7 @@ namespace WebAnnotationModel
 
                 //                SetDBActionForChange();
             }
-            */
+            
         }
 
         /// <summary>
@@ -185,6 +186,7 @@ namespace WebAnnotationModel
             {
                 return Data.VolumeShape.ToSqlGeometry();
             }
+            /*
             set
             {
                 DbGeometry newValue = value.ToDbGeometry();
@@ -200,6 +202,7 @@ namespace WebAnnotationModel
 
                 SetDBActionForChange();
             }
+            */
         }
 
         public Microsoft.SqlServer.Types.SqlGeometry MosaicShape
@@ -208,6 +211,7 @@ namespace WebAnnotationModel
             {
                 return Data.MosaicShape.ToSqlGeometry(); ;
             }
+            /*
             set
             {
                 DbGeometry newValue = value.ToDbGeometry();
@@ -222,7 +226,7 @@ namespace WebAnnotationModel
                 OnPropertyChanged("Position");
 
                 SetDBActionForChange();
-            }
+            }*/
         }
         
 
