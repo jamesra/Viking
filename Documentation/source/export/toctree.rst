@@ -7,3 +7,4 @@ Export
    
    odata
    files
+   vikingview

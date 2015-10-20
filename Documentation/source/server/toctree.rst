@@ -12,3 +12,4 @@ Developer Documentation
    Identity Server <Identity/identity.rst>
    Webservices <IIS/webservices.rst>
    VikingXML <viking_volume_xml>
+   Troubleshooting <troubleshooting.rst>
