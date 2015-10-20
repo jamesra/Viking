@@ -389,8 +389,8 @@ namespace Geometry
         {
             double MinX = points.Min(v => v.X);
             double MinY = points.Min(v => v.Y);
-            double MaxX = points.Min(v => v.X);
-            double MaxY = points.Min(v => v.Y);
+            double MaxX = points.Max(v => v.X);
+            double MaxY = points.Max(v => v.Y);
 
             return new GridRectangle(MinX, MaxX, MinY, MaxY);
         }
