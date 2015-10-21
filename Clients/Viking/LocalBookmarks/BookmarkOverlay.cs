@@ -37,6 +37,11 @@ namespace LocalBookmarks
             return null;
         }
 
+        int Viking.Common.ISectionOverlayExtension.DrawOrder()
+        {
+            return 5;
+        }
+
         void Viking.Common.ISectionOverlayExtension.SetParent(Viking.UI.Controls.SectionViewerControl parent)
         {
             _parent = parent; 

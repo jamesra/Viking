@@ -529,7 +529,6 @@ namespace Viking.Common
               //  }
                 
                 ExtensionManager.SectionOverlayList.Add(T);
-                
             }
         }
 
@@ -588,8 +587,8 @@ namespace Viking.Common
                     i--; 
                 }
             }
-
-            _SectionOverlays = listOverlays.ToArray();
+             
+            _SectionOverlays = listOverlays.OrderBy(s => s.DrawOrder()).Reverse().ToArray();
             return _SectionOverlays; 
        }
 

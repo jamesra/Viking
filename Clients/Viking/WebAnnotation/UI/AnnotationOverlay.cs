@@ -72,6 +72,11 @@ namespace WebAnnotation
             return Global.EndpointName; 
         }
 
+        int Viking.Common.ISectionOverlayExtension.DrawOrder()
+        {
+            return 10;
+        }
+
         static public void  GoToLocation(LocationObj loc)
         {
             if(loc == null)
@@ -1338,10 +1343,10 @@ namespace WebAnnotation
             for (int i = locations.Count - 1; i >= 0; i--)
             {
                 Location_CanvasViewModel loc = locations.ElementAt(i);
-                if (loc.OverlappingLinkedLocationCircles.Keys.Any(overlappingLocation => overlappingLocation.Z == section_number))
+                if (loc.OverlappingLinks.Any(overlappingLocation => overlappingLocation.Z == section_number))
                 {
                     locations.RemoveAt(i);
-                    listOverlappingLocations.AddRange(loc.OverlappingLinkedLocationCircles.Keys.Where(overlappingLocation => overlappingLocation.Z == section_number).ToList());
+                    listOverlappingLocations.AddRange(loc.OverlappingLinks.Where(overlappingLocation => overlappingLocation.Z == section_number));
                 }
             }
 
