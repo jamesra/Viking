@@ -9,9 +9,9 @@ namespace Geometry
     [Serializable]
     public struct GridCircle
     {
-        public GridVector2 Center; 
+        public GridVector2 Center;
         public double Radius;
-        public double RadiusSquared; 
+        public double RadiusSquared;
 
         public GridCircle(GridVector2 center, double radius)
         {
@@ -20,7 +20,7 @@ namespace Geometry
             this.RadiusSquared = radius * radius;
             _HashCode = new int?();
         }
-        
+
         static public GridCircle CircleFromThreePoints(GridVector2[] points)
         {
             if (points == null)
@@ -44,7 +44,7 @@ namespace Geometry
         {
             if (One.X == Two.X && Two.X == Three.X)
             {
-                throw new ArgumentException("Circle from three points with three points on a vertical line"); 
+                throw new ArgumentException("Circle from three points with three points on a vertical line");
             }
 
             double A = Two.X - One.X;
@@ -54,12 +54,12 @@ namespace Geometry
             double E = A * (One.X + Two.X) + B * (One.Y + Two.Y);
             double F = C * (One.X + Three.X) + D * (One.Y + Three.Y);
             double G = 2 * (A * (Three.Y - Two.Y) - B * (Three.X - Two.X));
-            
+
             //Check for colinear
-   //         Debug.Assert(false == (G <= double.Epsilon && G >= -double.Epsilon));
+            //         Debug.Assert(false == (G <= double.Epsilon && G >= -double.Epsilon));
             if (G <= double.Epsilon && G >= -double.Epsilon)
             {
-                throw new ArgumentException("Circle from three points with three points on a line"); 
+                throw new ArgumentException("Circle from three points with three points on a line");
             }
 
             GridVector2 Center = new GridVector2();
@@ -82,14 +82,14 @@ namespace Geometry
             if (points == null)
             {
                 throw new ArgumentNullException("points");
- 
+
             }
 
             Debug.Assert(points.Length == 3);
             if (points.Length != 3)
                 throw new ArgumentException("GridCircle: Expected an array with three elements");
-            
-            GridCircle.CircleFromThreePoints(points[0],points[1], points[2], ref circle);
+
+            GridCircle.CircleFromThreePoints(points[0], points[1], points[2], ref circle);
         }
 
         /// <summary>
@@ -128,9 +128,17 @@ namespace Geometry
 
             circle.Center = Center;
             circle.Radius = GridVector2.Distance(Center, One);
-            circle.RadiusSquared = circle.Radius * circle.Radius; 
+            circle.RadiusSquared = circle.Radius * circle.Radius;
             //return new GridCircle(Center, GridVector2.Distance(Center, One));
         }
+
+        public GridRectangle BoundingBox
+        {
+            get
+            {
+                return new GridRectangle(this.Center, this.Radius);
+            }
+        }   
 
         public bool Contains(GridVector2 p)
         {
@@ -197,5 +205,7 @@ namespace Geometry
         {
             return !(A == B);
         }
+
+        
     }
 }
