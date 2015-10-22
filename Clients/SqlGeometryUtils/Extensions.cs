@@ -141,6 +141,16 @@ namespace SqlGeometryUtils
             return GridRectangle.GetBoundingBox(geometry.STEnvelope().ToPoints());
         }
 
+        public static bool Intersects(this SqlGeometry geometry, GridVector2 point)
+        {
+            return geometry.STIntersects(point.ToGeometryPoint()).IsTrue;
+        }
+
+        public static double Distance(this SqlGeometry geometry, GridVector2 point)
+        {
+            return geometry.STDistance(point.ToGeometryPoint()).Value;
+        }
+
         public static GridVector2[] ToPoints(this Microsoft.SqlServer.Types.SqlGeometry geometry)
         {
             GridVector2[] points = new GridVector2[geometry.STNumPoints().Value];
