@@ -3204,5 +3204,40 @@ end
 	 COMMIT TRANSACTION thirtysix
 	end
 
+	if(not(exists(select (1) from DBVersion where DBVersionID = 37)))
+	begin
+     print N'Add check constraint to prevent reciprocal structure links' 
+	 BEGIN TRANSACTION thirtyseven
+		IF EXISTS(select * from sys.triggers where name = 'StructureLink_ReciprocalCheck')
+		BEGIN
+			DROP TRIGGER [dbo].[StructureLink_ReciprocalCheck];
+		END
+		 
+		EXEC('CREATE TRIGGER [dbo].[StructureLink_ReciprocalCheck] 
+		ON  [dbo].[StructureLink]
+		AFTER INSERT, UPDATE
+		AS 
+			IF ((select count(SLA.SourceID)
+				from inserted SLA 
+				JOIN StructureLink SLB 
+				ON (SLA.SourceID = SLB.TargetID AND SLA.TargetID = SLB.SourceID)) > 0)
+				BEGIN
+					RAISERROR(''Reciprocal structure links are not allowed'',14,1);
+					ROLLBACK TRANSACTION;
+					RETURN
+				END
+				')
+
+		if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
+	 INSERT INTO DBVersion values (37, 
+		     N'Add check constraint to prevent reciprocal structure links'   ,getDate(),User_ID())
+	 COMMIT TRANSACTION thirtyseven
+	end
+
 --from here on, continually add steps in the previous manner as needed.
 	COMMIT TRANSACTION main
