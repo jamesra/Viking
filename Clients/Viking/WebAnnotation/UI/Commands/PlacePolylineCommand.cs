@@ -5,7 +5,7 @@ using System.Text;
 using Geometry;
 using System.Windows.Forms;
 using WebAnnotation.View;
-using Viking.Common;
+using VikingXNAGraphics;
 
 namespace WebAnnotation.UI.Commands
 {

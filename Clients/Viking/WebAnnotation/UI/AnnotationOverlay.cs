@@ -15,7 +15,8 @@ using WebAnnotation.UI.Commands;
 using WebAnnotation.ViewModel;
 using WebAnnotationModel;
 using connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd;
-using System.Threading.Tasks; 
+using System.Threading.Tasks;
+using VikingXNAGraphics;
 
 namespace WebAnnotation
 {
@@ -69,6 +70,11 @@ namespace WebAnnotation
         string Viking.Common.ISectionOverlayExtension.Name()
         {
             return Global.EndpointName; 
+        } 
+
+        int Viking.Common.ISectionOverlayExtension.DrawOrder()
+        {
+            return 10;
         }
 
         static public void  GoToLocation(LocationObj loc)
@@ -551,10 +557,10 @@ namespace WebAnnotation
                     }
                     return;
 
-                case Keys.L:
+                case Keys.I:
                     Viking.UI.Commands.Command.EnqueueCommand(typeof(PlacePolylineCommand), new object[] { Parent, new Microsoft.Xna.Framework.Color(1.0f,0f,0f,0.5f), this.LastMouseDownCoords, 16, null});
                     break;
-                case Keys.U:
+                case Keys.J:
                     OnCreateStructure(34, new string[0], LocationType.OPENCURVE);
                     break;
                 case Keys.O:
@@ -1446,5 +1452,6 @@ namespace WebAnnotation
             
             return bounds;
         }
+
     }
 }

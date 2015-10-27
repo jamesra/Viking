@@ -10,10 +10,8 @@ using System.Drawing;
 using System.Diagnostics;
 using RoundLineCode;
 using WebAnnotation.ViewModel;
-using WebAnnotationModel; 
-
-
-using Viking.Common; 
+using WebAnnotationModel;
+using VikingXNAGraphics;
 
 namespace WebAnnotation.UI.Commands
 {

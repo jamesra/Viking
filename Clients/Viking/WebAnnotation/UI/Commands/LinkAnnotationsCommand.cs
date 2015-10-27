@@ -12,7 +12,7 @@ using Microsoft.Xna.Framework.Graphics;
 using RoundLineCode;
 using WebAnnotation.ViewModel;
 using WebAnnotationModel;
-using Viking.Common;
+using VikingXNAGraphics;
 
 namespace WebAnnotation.UI.Commands
 {
