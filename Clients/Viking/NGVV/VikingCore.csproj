@@ -144,7 +144,6 @@
     <Compile Include="Common\EventArgs.cs" />
     <Compile Include="Common\Interfaces.cs" />
     <Compile Include="Global.cs" />
-    <Compile Include="GridDrawExtensions.cs" />
     <Compile Include="Objects\GenericTreeNode.cs" />
     <Compile Include="Objects\UIObjBase.cs" />
     <Compile Include="PropertyPages\SectionChannelsPage.cs">
