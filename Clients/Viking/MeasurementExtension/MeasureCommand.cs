@@ -7,7 +7,7 @@ using System.Windows.Forms;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Geometry;
-using Viking.Common;
+using VikingXNAGraphics;
 
 namespace MeasurementExtension
 {

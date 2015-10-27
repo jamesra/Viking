@@ -9,20 +9,10 @@ namespace Viking.Common
 {
     public static class Extensions
     {
-        public static Microsoft.Xna.Framework.Color ConvertToHSL(this Microsoft.Xna.Framework.Color color)
-        {
-            System.Drawing.Color WinColor = System.Drawing.Color.FromArgb(color.R, color.G, color.B);
-
-            Microsoft.Xna.Framework.Color HSLColor = new Microsoft.Xna.Framework.Color();
-            HSLColor.R = (byte)(255.0 * (WinColor.GetHue() / 360.0));
-            HSLColor.G = (byte)(255.0 * WinColor.GetSaturation());
-            HSLColor.B = (byte)((color.R * 0.3) + (color.G * 0.59) + (color.B * 0.11));
-            HSLColor.A = color.A;
-
-            return HSLColor;
-        }
+        
 
     }
+
     public class Util
     {
         public static string CoordinatesToURI(double X, double Y, int Z, double Downsample)
