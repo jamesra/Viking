@@ -14,7 +14,32 @@ namespace Viking
         static System.IO.StreamWriter DebugLogFile = null;
         public static TextWriter SynchronizedDebugWriter = null;
 
-        public static string AppWebsite = ""; 
+        public static string AppWebsite = "";
+
+        /// <summary>
+        /// From Stack Overflow: http://stackoverflow.com/questions/8301587/how-to-detect-xna-version-at-runtime
+        /// </summary>
+        /// <param name="ok"></param>
+        /// <returns></returns>
+        public static bool XNAFrameworkInstalled()
+        { 
+            string baseKeyName = @"SOFTWARE\Microsoft\XNA\Game Studio\v4.0";
+            Microsoft.Win32.RegistryKey FrameworkKey = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(baseKeyName);
+
+            if(FrameworkKey == null)
+            {
+                return false; 
+            }
+
+            if(FrameworkKey.GetValueKind("Installed") != Microsoft.Win32.RegistryValueKind.DWord)
+            {
+                return false; 
+            }
+
+            int installedValue = Convert.ToInt32(FrameworkKey.GetValue("Installed"));
+
+            return installedValue != 0;
+        }
 
         /// <summary>
         /// The main entry point for the application.
@@ -46,7 +71,11 @@ namespace Viking
             Application.SetCompatibleTextRenderingDefault(false);
 
             string website = null;
-            
+
+            if(!XNAFrameworkInstalled())
+            {
+                MessageBox.Show("XNA framework 4.0 does not appear to be installed.  Viking will display a blank gray screen without it.  Please check the documentation or internet for links to the XNA Framework 4.0 Redistributable.", "Missing XNA 4.0 Redistributable", MessageBoxButtons.OK);
+            }
            
             if (args.Length > 0)
             {
