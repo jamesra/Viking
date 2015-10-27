@@ -35,6 +35,12 @@ namespace Viking.Common
         string Name();
 
         /// <summary>
+        /// Used to sort all extensions to determine draw order
+        /// </summary>
+        /// <returns></returns>
+        int DrawOrder();
+
+        /// <summary>
         /// Must be called before draw
         /// </summary>
         /// <param name="parent"></param>
