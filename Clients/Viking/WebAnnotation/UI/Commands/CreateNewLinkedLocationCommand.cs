@@ -18,14 +18,14 @@ namespace WebAnnotation.UI.Commands
     /// </summary>
     class CreateNewLinkedLocationCommand : Viking.UI.Commands.Command
     {
-        Location_CanvasViewModel NewLoc;
-        Location_CanvasViewModel ExistingLoc;
+        LocationObj NewLoc;
+        LocationObj ExistingLoc;
 
-        public static Location_CanvasViewModel LastEditedLocation = null; 
+        public static LocationObj LastEditedLocation = null; 
 
         public CreateNewLinkedLocationCommand(Viking.UI.Controls.SectionViewerControl parent,
-                                               Location_CanvasViewModel existingLoc,
-                                               Location_CanvasViewModel newLoc)
+                                               LocationObj existingLoc,
+                                               LocationObj newLoc)
             : base(parent)
         {
             this.NewLoc = newLoc;
@@ -41,8 +41,8 @@ namespace WebAnnotation.UI.Commands
         {
             try
             {
-                LocationObj NewLocation = Store.Locations.Create(NewLoc.modelObj, new long[] { ExistingLoc.ID });
-                LastEditedLocation = new Location_CanvasViewModel(NewLocation); 
+                LocationObj NewLocation = Store.Locations.Create(NewLoc, new long[] { ExistingLoc.ID });
+                LastEditedLocation = NewLocation; 
             }
             catch (ArgumentOutOfRangeException )
             {

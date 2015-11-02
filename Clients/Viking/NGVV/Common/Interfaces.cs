@@ -53,7 +53,7 @@ namespace Viking.Common
         /// <param name="WorldPosition"></param>
         /// <param name="distance"></param>
         /// <returns></returns>
-        IUIObjectBasic NearestObject(GridVector2 WorldPosition, out double distance); 
+        IUIObjectBasic ObjectAtPosition(GridVector2 WorldPosition, out double distance); 
 
         /// <summary>
         /// Draw the specified overlay extension on the render target.  

@@ -14,7 +14,7 @@ namespace WebAnnotation.ViewModel
     /// This class represents a link between locations. This object is a little unique because it is
     /// not tied to the database object like the other *obj classes
     /// </summary>
-    public class LocationLink : Viking.Objects.UIObjBase
+    public class LocationLinkView : Viking.Objects.UIObjBase
     {
         public override int GetHashCode()
         {
@@ -23,14 +23,14 @@ namespace WebAnnotation.ViewModel
 
         public override bool Equals(object obj)
         {
-            LocationLink link = obj as LocationLink;
+            LocationLinkView link = obj as LocationLinkView;
             if (link == null)
                 return false;
 
             return (link.A.ID == A.ID && link.B.ID == B.ID); 
         }
 
-        public static bool operator ==(LocationLink A, object B)
+        public static bool operator ==(LocationLinkView A, object B)
         {
             if (System.Object.ReferenceEquals(A, B))
             {
@@ -43,7 +43,7 @@ namespace WebAnnotation.ViewModel
             return false;
         }
 
-        public static bool operator !=(LocationLink A, object B)
+        public static bool operator !=(LocationLinkView A, object B)
         {
             if (System.Object.ReferenceEquals(A, B))
             {
@@ -117,7 +117,7 @@ namespace WebAnnotation.ViewModel
         }
          
 
-        public LocationLink(LocationObj LocOne, LocationObj LocTwo)
+        public LocationLinkView(LocationObj LocOne, LocationObj LocTwo)
         {
             if (LocOne == null)
                 throw new ArgumentNullException("LocOne");
@@ -128,9 +128,6 @@ namespace WebAnnotation.ViewModel
             Debug.Assert(LocOne != LocTwo);
             this.A = LocOne.ID < LocTwo.ID ? LocOne : LocTwo;
             this.B = LocOne.ID > LocTwo.ID ? LocOne : LocTwo; 
-
-            
-           //lineSegment = new Geometry.GridLineSegment(A.VolumePosition, B.VolumePosition); 
         }
 
         /// <summary>
@@ -143,12 +140,14 @@ namespace WebAnnotation.ViewModel
             //Don't draw if the link falls within the radius of the location we are drawing
             if (A.Section == sectionNumber)
             {
-                return GridVector2.Distance(A.VolumePosition, B.VolumePosition) <= A.Radius + Location_CanvasViewModel.CalcOffSectionRadius((float)B.Radius);
+                return A.VolumeShape.STIntersects(B.VolumeShape).IsTrue;
+                //return GridVector2.Distance(A.VolumePosition, B.VolumePosition) <= A.Radius + LocationCanvasView.CalcOffSectionRadius((float)B.Radius);
             }
 
             if (B.Section == sectionNumber)
             {
-                return GridVector2.Distance(A.VolumePosition, B.VolumePosition) <= B.Radius + Location_CanvasViewModel.CalcOffSectionRadius((float)A.Radius);
+                return B.VolumeShape.STIntersects(A.VolumeShape).IsTrue;
+                //return GridVector2.Distance(A.VolumePosition, B.VolumePosition) <= B.Radius + LocationCanvasView.CalcOffSectionRadius((float)A.Radius);
             } 
 
             return false; 
@@ -161,7 +160,8 @@ namespace WebAnnotation.ViewModel
         /// <returns></returns>
         public bool LinksVisible(double Downsample)
         {
-            return Location_CanvasViewModel.CalcOffSectionRadius(this.Radius) / Downsample > 2.0;
+            throw new NotImplementedException();
+            //return LocationCanvasView.CalcOffSectionRadius(this.Radius) / Downsample > 2.0;
         }
 
         #region IUIObjectBasic Members

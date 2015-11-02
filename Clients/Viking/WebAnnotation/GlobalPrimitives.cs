@@ -208,5 +208,16 @@ namespace WebAnnotation
             }
             LineManager.Draw(points, (float)Radius, color, basicEffect.View * basicEffect.Projection, 0, null);
         }
+         
+        static public void AppendVertLists(IEnumerable<VertexPositionColorTexture> sourceList, List<VertexPositionColorTexture> targetList, IEnumerable<int> indicies, ref List<int> listIndicies)
+        {
+            int iStartVert = targetList.Count;
+            targetList.AddRange(sourceList);
+
+            foreach (int i in indicies)
+            {
+                listIndicies.Add(i + iStartVert);
+            }
+        }
     }
 }

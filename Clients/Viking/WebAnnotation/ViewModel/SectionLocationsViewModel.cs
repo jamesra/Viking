@@ -17,6 +17,7 @@ using WebAnnotationModel;
 using System.ComponentModel; 
 using System.Threading.Tasks;
 using SqlGeometryUtils;
+using WebAnnotation.View;
 
 
 namespace WebAnnotation.ViewModel
@@ -83,12 +84,12 @@ namespace WebAnnotation.ViewModel
         /// <summary>
         /// Locations on the section we are providing an overlay for
         /// </summary>
-        private RTree.RTree<Location_CanvasViewModel> Locations = null;
+        private RTree.RTree<LocationCanvasView> Locations = null;
                
         /// <summary>
         /// Maps a structureID to all the locations for that structure on the visible section
         /// </summary>
-        private ConcurrentDictionary<long, ConcurrentDictionary<long, Location_CanvasViewModel>> LocationsForStructure = new ConcurrentDictionary<long, ConcurrentDictionary<long, Location_CanvasViewModel>>();
+        private ConcurrentDictionary<long, ConcurrentDictionary<long, LocationCanvasView>> LocationsForStructure = new ConcurrentDictionary<long, ConcurrentDictionary<long, LocationCanvasView>>();
         
         /// <summary>
         /// Allows us to describe all the StructureLinks visible on a screen
@@ -125,11 +126,11 @@ namespace WebAnnotation.ViewModel
             RegionQueries = new AnnotationRegions(bounds, new GridCellDimensions(bounds.Width / 2.0, bounds.Height / 2.0));
 
             if (Locations == null)
-                Locations = new RTree.RTree<Location_CanvasViewModel>(); //new QuadTree<Location_CanvasViewModel>(bounds)
+                Locations = new RTree.RTree<LocationCanvasView>(); //new QuadTree<Location_CanvasViewModel>(bounds)
 
             this.SubmitUpdatedVolumePositions = section.VolumeViewModel.UpdateServerVolumePositions;
 
-            LocationsForStructure = new ConcurrentDictionary<long, ConcurrentDictionary<long, Location_CanvasViewModel>>();
+            LocationsForStructure = new ConcurrentDictionary<long, ConcurrentDictionary<long, LocationCanvasView>>();
 
             StructureLinksSearch = new RTree.RTree<StructureLink>();
             
@@ -458,12 +459,12 @@ namespace WebAnnotation.ViewModel
                     loc.SubmitOnNextUpdate();
                     UpdatedVolumeLocation = true;
                 }
-            } 
+            }
 
             //Add location if it hasn't been seen before
-            Location_CanvasViewModel locView = new Location_CanvasViewModel(loc);
+            LocationCanvasView locView = AnnotationViewFactory.Create(loc);
 
-            RTree.Rectangle bbox = locView.BoundingBox.ToRTreeRect((float)locView.Z);
+            RTree.Rectangle bbox = locView.BoundingBox.ToRTreeRect((float)loc.Z);
 
             if (this.Locations.TryAdd(bbox, locView))
             {
@@ -474,8 +475,8 @@ namespace WebAnnotation.ViewModel
                     SubscribeToLocationChangeEvents(loc);
                 }
 
-                ConcurrentDictionary<long, Location_CanvasViewModel> KnownLocationsForStructure;
-                KnownLocationsForStructure = LocationsForStructure.GetOrAdd(loc.ParentID.Value, (key) => { return new ConcurrentDictionary<long, Location_CanvasViewModel>(); });
+                ConcurrentDictionary<long, LocationCanvasView> KnownLocationsForStructure;
+                KnownLocationsForStructure = LocationsForStructure.GetOrAdd(loc.ParentID.Value, (key) => { return new ConcurrentDictionary<long, LocationCanvasView>(); });
                 KnownLocationsForStructure.TryAdd(locView.ID, locView);
             }
             
@@ -513,8 +514,8 @@ namespace WebAnnotation.ViewModel
                 //Debug.Assert(loc.Section == Section.Number); 
                 if (loc.Section == Section.Number)
                 {
-                    Location_CanvasViewModel locView = new Location_CanvasViewModel(loc);
-                    Location_CanvasViewModel RemovedValue = null;
+                    LocationCanvasView locView = AnnotationViewFactory.Create(loc);
+                    LocationCanvasView RemovedValue = null;
 
                     bool RemoveSuccess = Locations.Delete(locView, out RemovedValue);
                     if (RemoveSuccess)
@@ -530,11 +531,11 @@ namespace WebAnnotation.ViewModel
                     }
                 }
                 
-                ConcurrentDictionary<long, Location_CanvasViewModel> KnownLocationsForStructure = null;
+                ConcurrentDictionary<long, LocationCanvasView> KnownLocationsForStructure = null;
                 bool Success = LocationsForStructure.TryGetValue(loc.ParentID.Value, out  KnownLocationsForStructure);
                 if (Success)
                 {
-                    Location_CanvasViewModel removedLoc;
+                    LocationCanvasView removedLoc;
                     Success = KnownLocationsForStructure.TryRemove(loc.ID, out removedLoc);
 
                     if (Success)
@@ -572,17 +573,17 @@ namespace WebAnnotation.ViewModel
 
         #region Queries
 
-        public ICollection<Location_CanvasViewModel> GetLocations()
+        public ICollection<LocationCanvasView> GetLocations()
         {
             return Locations.Items; 
         }
 
-        public ICollection<Location_CanvasViewModel> GetLocations(GridRectangle bounds)
+        public ICollection<LocationCanvasView> GetLocations(GridRectangle bounds)
         {  
             return Locations.Intersects(bounds.ToRTreeRect((float)this.Section.Number));
         }
 
-        public ICollection<Location_CanvasViewModel> GetLocations(GridVector2 point)
+        public ICollection<LocationCanvasView> GetLocations(GridVector2 point)
         {
             return Locations.Intersects(point.ToRTreeRect((float)this.Section.Number));
         }
@@ -613,7 +614,7 @@ namespace WebAnnotation.ViewModel
         /// </summary>
         /// <param name="ID"></param>
         /// <returns></returns>
-        public bool TryGetPositionForLocation(Location_CanvasViewModel loc, out GridVector2 position)
+        public bool TryGetPositionForLocation(LocationCanvasView loc, out GridVector2 position)
         {
             position = loc.VolumePosition;
 
@@ -632,17 +633,9 @@ namespace WebAnnotation.ViewModel
              */
         }
 
-        public GridVector2 GetPositionForLocation(Location_CanvasViewModel loc)
+        public GridVector2 GetPositionForLocation(LocationCanvasView loc)
         {
             return loc.VolumePosition;
-            /*
-            GridVector2 pos;
-            bool Success = Locations.TryGetPosition(loc, out pos);
-            if(!Success)
-                throw new ArgumentException("Could not map location: " + loc.ToString());
-
-            return pos; 
-             */
         }
 
         public IUIObjectBasic GetNearestAnnotation(GridVector2 WorldPosition, out double distance)
@@ -662,7 +655,7 @@ namespace WebAnnotation.ViewModel
             
             IUIObjectBasic FoundObject = null;
             double locDistance = double.MaxValue;
-            Location_CanvasViewModel NearestLocationObj = GetNearestLocation(WorldPosition, out locDistance);
+            LocationCanvasView NearestLocationObj = GetNearestLocation(WorldPosition, out locDistance);
             if (NearestLocationObj != null)
             {
                 FoundObject = NearestLocationObj as IUIObjectBasic;
@@ -693,8 +686,7 @@ namespace WebAnnotation.ViewModel
                 return NearestLocationObj;
             }
 
-            return null; 
-             
+            return null;
         }
 
         
@@ -707,7 +699,7 @@ namespace WebAnnotation.ViewModel
         /// <param name="font"></param>
         /// <param name="locPosition"></param>
         /// <returns></returns>
-        public Location_CanvasViewModel GetNearestLocation(GridVector2 WorldPosition, out double distance)
+        public LocationCanvasView GetNearestLocation(GridVector2 WorldPosition, out double distance)
         {
             distance = double.MaxValue; 
 //            double minDistance = double.MaxValue;
@@ -717,48 +709,21 @@ namespace WebAnnotation.ViewModel
 
             /*Check to see if we clicked a location*/
 
-            List<Location_CanvasViewModel> candidates = Locations.Intersects(WorldPosition.ToRTreeRect(this.SectionNumber));
+            List<LocationCanvasView> candidates = Locations.Intersects(WorldPosition.ToRTreeRect(this.SectionNumber));
 
             //TODO: Put the SQL intersection test 
-            List<Location_CanvasViewModel> intersecting_candidates = candidates.Where(c => c.Intersects(WorldPosition)).ToList();
-            Location_CanvasViewModel nearest = intersecting_candidates.OrderBy(c => GridVector2.Distance(c.VolumePosition, WorldPosition) / c.Radius).FirstOrDefault();
+            List<LocationCanvasView> intersecting_candidates = candidates.Where(c => c.Intersects(WorldPosition)).ToList();
+            LocationCanvasView nearest = intersecting_candidates.OrderBy(c => c.Distance(WorldPosition) / c.Radius).FirstOrDefault();
             if(nearest == null)
                 return null;
             else
             {
-                distance = GridVector2.Distance(nearest.VolumePosition, WorldPosition);
+                distance = nearest.Distance(WorldPosition);
             }
 
             return nearest;
         }
-        
-                /*Check to see if we clicked a location on a reference section*/
-        /*
-                //If we're still here check locations on other sections
-                long locID = TransformedRefLocationQuadTree.FindNearest(WorldPosition, out distance);
-                if (locID != default(long))
-                {
-                    loc = Store.Locations.GetObjectByID(locID);
-                    if (loc != null)
-                    {
-                        if (distance < minDistance)
-                        {
-                            if (distance < loc.OffSectionRadius)
-                            {
-                                BestLoc = loc;
-                                minDistance = distance;
-                            }
-                        }
-                    }
-                }
-            }
-
-            return BestLoc;
-         
-        }
-         */
-        
-
+          
         #endregion
 
 
@@ -999,12 +964,12 @@ namespace WebAnnotation.ViewModel
             }
 
             //The link may have been created to a structure on an adjacent section
-            ConcurrentDictionary<long, Location_CanvasViewModel> SourceLocations = null;
+            ConcurrentDictionary<long, LocationCanvasView> SourceLocations = null;
             bool Success = LocationsForStructure.TryGetValue(structLinkObj.SourceID, out SourceLocations);
             if (Success == false)
                 return null;
 
-            ConcurrentDictionary<long, Location_CanvasViewModel> TargetLocations = null;
+            ConcurrentDictionary<long, LocationCanvasView> TargetLocations = null;
             Success = LocationsForStructure.TryGetValue(structLinkObj.TargetID, out TargetLocations);
             if (Success == false)
                 return null;
@@ -1014,12 +979,12 @@ namespace WebAnnotation.ViewModel
 
             //Brute force a search for the shortest distance between the two structures.
             double MinDistance = double.MaxValue;
-            Location_CanvasViewModel BestSourceLoc = null;
-            Location_CanvasViewModel BestTargetLoc = null;
+            LocationCanvasView BestSourceLoc = null;
+            LocationCanvasView BestTargetLoc = null;
 
-            foreach (Location_CanvasViewModel SourceLoc in SourceLocations.Values)
+            foreach (LocationCanvasView SourceLoc in SourceLocations.Values)
             {
-                foreach (Location_CanvasViewModel TargetLoc in TargetLocations.Values)
+                foreach (LocationCanvasView TargetLoc in TargetLocations.Values)
                 {
                     double dist = GridVector2.Distance(SourceLoc.VolumePosition, TargetLoc.VolumePosition);
                     if (dist < MinDistance)
@@ -1032,7 +997,7 @@ namespace WebAnnotation.ViewModel
             }
 
             //OK, create a StructureLink between the locations
-            return new StructureLink(structLinkObj, BestSourceLoc, BestTargetLoc);
+            return new StructureLink(structLinkObj, BestSourceLoc.modelObj, BestTargetLoc.modelObj);
         }
 
         /// <summary>

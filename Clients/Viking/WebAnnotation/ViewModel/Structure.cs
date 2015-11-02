@@ -163,6 +163,22 @@ namespace WebAnnotation.ViewModel
             this.Attributes = listAttributes;
         }
 
+        public static void ToggleAttribute(StructureObj structObj, string tag)
+        {
+            ObjAttribute attrib = new ObjAttribute(tag, null);
+            List<ObjAttribute> listAttributes = structObj.Attributes.ToList();
+            if (listAttributes.Contains(attrib))
+            {
+                listAttributes.Remove(attrib);
+            }
+            else
+            {
+                listAttributes.Add(attrib);
+            }
+
+            structObj.Attributes = listAttributes;
+        }
+
         public LocationObj Center
         {
             get

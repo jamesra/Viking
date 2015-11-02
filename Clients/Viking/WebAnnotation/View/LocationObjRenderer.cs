@@ -7,8 +7,7 @@ using System.Drawing;
 using System.Windows.Forms;
 
 using Geometry;
-
-using Viking.Common;
+using VikingXNAGraphics;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using WebAnnotation.UI;
@@ -22,25 +21,26 @@ namespace WebAnnotation
     /// <summary>
     /// Sort LocationObj's according to rendering requirements
     /// </summary>
-    public class LocationObjDrawOrderComparison : IComparer<LocationObj>, IComparer<Location_CanvasViewModel>
+    public class LocationObjDrawOrderComparison : IComparer<LocationObj>, IComparer<LocationCanvasView>
     {
         #region IComparer<LocationObj> Members
 
         int IComparer<LocationObj>.Compare(LocationObj x, LocationObj y)
         {
-            //First sort by type
-            if (x.TypeCode != y.TypeCode)
-            {
-                return x.TypeCode - y.TypeCode;
-            }
-
-            //if the type is the same, sort by section differential
-            return (int)(x.Section - y.Section);
+            return CompareObj(x, y);
         }
 
         #endregion
 
-        int IComparer<Location_CanvasViewModel>.Compare(Location_CanvasViewModel x, Location_CanvasViewModel y)
+        int IComparer<LocationCanvasView>.Compare(LocationCanvasView x, LocationCanvasView y)
+        {
+            LocationObj X = x.modelObj;
+            LocationObj Y = y.modelObj;
+
+            return CompareObj(X, Y);
+        }
+
+        private static int CompareObj(LocationObj x, LocationObj y)
         {
             //First sort by type
             if (x.TypeCode != y.TypeCode)
@@ -52,6 +52,7 @@ namespace WebAnnotation
             return (int)(x.Section - y.Section);
         }
     }
+
 
     /// <summary>
     /// This class draws LocationObj's
@@ -70,7 +71,7 @@ namespace WebAnnotation
         /// <param name="graphicsDevice"></param>
         /// <param name="basicEffect"></param>
         /// <param name="obj"></param>
-        public static void SetupGraphicsDevice(GraphicsDevice graphicsDevice, BasicEffect basicEffect, VikingXNA.AnnotationOverBackgroundLumaEffect overlayEffect, Location_CanvasViewModel obj, long SectionNumber)
+        public static void SetupGraphicsDevice(GraphicsDevice graphicsDevice, BasicEffect basicEffect, VikingXNA.AnnotationOverBackgroundLumaEffect overlayEffect, LocationCanvasView obj, long SectionNumber)
         {
             //oldVertexDeclaration = graphicsDevice.VertexDeclaration;
             OriginalBlendState = graphicsDevice.BlendState;
@@ -98,7 +99,7 @@ namespace WebAnnotation
 
             graphicsDevice.RasterizerState = RendererRasterizerState; 
             
-            int SectionDelta = (int)(obj.Section - SectionNumber);
+            int SectionDelta = (int)(obj.Z - SectionNumber);
 
             switch (obj.TypeCode)
             {
@@ -182,47 +183,47 @@ namespace WebAnnotation
         /// <param name="graphicsDevice"></param>
         /// <param name="basicEffect"></param>
         /// <param name="SectionNumber"></param>
-        public static void DrawBackgrounds(List<Location_CanvasViewModel> listToDraw, GraphicsDevice graphicsDevice, BasicEffect basicEffect, VikingXNA.AnnotationOverBackgroundLumaEffect overlayEffect, RoundLineCode.RoundLineManager overlayLineManager, VikingXNA.Scene Scene, int SectionNumber)
+        public static void DrawBackgrounds(List<LocationCanvasView> listToDraw, GraphicsDevice graphicsDevice, BasicEffect basicEffect, VikingXNA.AnnotationOverBackgroundLumaEffect overlayEffect, RoundLineCode.RoundLineManager overlayLineManager, VikingXNA.Scene Scene, int SectionNumber)
         {
             if (listToDraw.Count == 0)
                 return;
 
-            List<Location_CanvasViewModel> OpenCurveLocations = listToDraw.Where(l => l.TypeCode == LocationType.OPENCURVE).ToList();
+            List<LocationOpenCurveView> OpenCurveLocations = listToDraw.Where(l => l.TypeCode == LocationType.OPENCURVE).Cast<LocationOpenCurveView>().ToList();
             DrawOpenCurveBackgrounds(OpenCurveLocations, graphicsDevice, basicEffect, overlayEffect, overlayLineManager, Scene, SectionNumber);
 
-            List<Location_CanvasViewModel> ClosedCurveLocations = listToDraw.Where(l => l.TypeCode == LocationType.CLOSEDCURVE).ToList();
-            DrawOpenCurveBackgrounds(ClosedCurveLocations, graphicsDevice, basicEffect, overlayEffect, overlayLineManager, Scene, SectionNumber);
+            List<LocationClosedCurveView> ClosedCurveLocations = listToDraw.Where(l => l.TypeCode == LocationType.CLOSEDCURVE).Cast<LocationClosedCurveView>().ToList();
+            DrawClosedCurveBackgrounds(ClosedCurveLocations, graphicsDevice, basicEffect, overlayEffect, overlayLineManager, Scene, SectionNumber);
 
             //TODO: Use Group by instead of select
-            List<Location_CanvasViewModel> CircleLocations = listToDraw.Where(l => l.TypeCode == LocationType.CIRCLE).ToList();
+            List<LocationCircleView> CircleLocations = listToDraw.Where(l => l.TypeCode == LocationType.CIRCLE).Cast<LocationCircleView>().ToList();
             DrawCircleBackgrounds(CircleLocations, graphicsDevice, basicEffect, overlayEffect, Scene, SectionNumber);
         }
 
-        public static void DrawOpenCurveBackgrounds(List<Location_CanvasViewModel> listToDraw, GraphicsDevice graphicsDevice, BasicEffect basicEffect, VikingXNA.AnnotationOverBackgroundLumaEffect overlayEffect, RoundLineCode.RoundLineManager overlayLineManager, VikingXNA.Scene Scene, int SectionNumber)
+        public static void DrawOpenCurveBackgrounds(List<LocationOpenCurveView> listToDraw, GraphicsDevice graphicsDevice, BasicEffect basicEffect, VikingXNA.AnnotationOverBackgroundLumaEffect overlayEffect, RoundLineCode.RoundLineManager overlayLineManager, VikingXNA.Scene Scene, int SectionNumber)
         {
             if (listToDraw.Count == 0)
                 return;
 
             SetupGraphicsDevice(graphicsDevice, basicEffect, overlayEffect, listToDraw[0], SectionNumber);
 
-            foreach (Location_CanvasViewModel loc in listToDraw)
+            foreach (LocationOpenCurveView loc in listToDraw)
             {
-                CurveView.Draw(graphicsDevice, overlayLineManager, basicEffect, loc.VolumeShape.ToPoints(), 3, false, loc.Parent.Type.Color.ConvertToHSL(0.5f),loc.Radius);
+                CurveView.Draw(graphicsDevice, overlayLineManager, basicEffect, loc.VolumeShape.ToPoints(), 3, false, loc.Parent.Type.Color.ConvertToHSL(0.5f), loc.Width);
             }
 
             RestoreGraphicsDevice(graphicsDevice, basicEffect);
         }
 
-        public static void DrawClosedCurveBackgrounds(List<Location_CanvasViewModel> listToDraw, GraphicsDevice graphicsDevice, BasicEffect basicEffect, VikingXNA.AnnotationOverBackgroundLumaEffect overlayEffect, RoundLineCode.RoundLineManager overlayLineManager, VikingXNA.Scene Scene, int SectionNumber)
+        public static void DrawClosedCurveBackgrounds(List<LocationClosedCurveView> listToDraw, GraphicsDevice graphicsDevice, BasicEffect basicEffect, VikingXNA.AnnotationOverBackgroundLumaEffect overlayEffect, RoundLineCode.RoundLineManager overlayLineManager, VikingXNA.Scene Scene, int SectionNumber)
         {
             if (listToDraw.Count == 0)
                 return;
 
             SetupGraphicsDevice(graphicsDevice, basicEffect, overlayEffect, listToDraw[0], SectionNumber);
 
-            foreach (Location_CanvasViewModel loc in listToDraw)
+            foreach (LocationClosedCurveView loc in listToDraw)
             {
-                CurveView.Draw(graphicsDevice, overlayLineManager, basicEffect, loc.VolumeShape.ToPoints(), 3, true, loc.Parent.Type.Color.ConvertToHSL(0.5f), loc.Radius);
+                CurveView.Draw(graphicsDevice, overlayLineManager, basicEffect, loc.VolumeShape.ToPoints(), 3, true, loc.Parent.Type.Color.ConvertToHSL(0.5f), loc.Width);
             }
 
             RestoreGraphicsDevice(graphicsDevice, basicEffect);
@@ -235,12 +236,12 @@ namespace WebAnnotation
         /// <param name="graphicsDevice"></param>
         /// <param name="basicEffect"></param>
         /// <param name="SectionNumber"></param>
-        public static void DrawCircleBackgrounds(List<Location_CanvasViewModel> listToDraw, GraphicsDevice graphicsDevice, BasicEffect basicEffect, VikingXNA.AnnotationOverBackgroundLumaEffect overlayEffect, VikingXNA.Scene Scene, int SectionNumber)
+        public static void DrawCircleBackgrounds(List<LocationCircleView> listToDraw, GraphicsDevice graphicsDevice, BasicEffect basicEffect, VikingXNA.AnnotationOverBackgroundLumaEffect overlayEffect, VikingXNA.Scene Scene, int SectionNumber)
         {
             if (listToDraw.Count == 0)
                 return;
 
-            IComparer<Location_CanvasViewModel> LocComparer = new LocationObjDrawOrderComparison();
+            IComparer<LocationCircleView> LocComparer = new LocationObjDrawOrderComparison();
             int iStart = 0;
 
             //Set the graphics device state to render the appropriate type
@@ -249,8 +250,8 @@ namespace WebAnnotation
             do
             {
                 int iEnd = listToDraw.Count; //Need to initialize or loop never ends
-                
-                Location_CanvasViewModel StartingObj = listToDraw[iStart];
+
+                LocationCircleView StartingObj = listToDraw[iStart];
 
                 SetupGraphicsDevice(graphicsDevice, basicEffect, overlayEffect, StartingObj, SectionNumber);
                 VertexPositionColorTexture[] VertArray = new VertexPositionColorTexture[listToDraw.Count * 4];
@@ -260,9 +261,9 @@ namespace WebAnnotation
                 int iNextVertIndex = 0;
                 for (int iObj = iStart; iObj < listToDraw.Count; iObj++)
                 {
-                    Location_CanvasViewModel locToDraw = listToDraw[iObj];
+                    LocationCircleView locToDraw = listToDraw[iObj];
                     int[] locIndicies;
-                    VertexPositionColorTexture[] objVerts = locToDraw.GetBackgroundVerticies(Scene.VisibleWorldBounds, Scene.Camera.Downsample, (int)((long)SectionNumber - locToDraw.Section),
+                    VertexPositionColorTexture[] objVerts = locToDraw.GetBackgroundVerticies(Scene.VisibleWorldBounds, Scene.Camera.Downsample, (int)((long)SectionNumber - (long)locToDraw.Z),
                                                                                                    out locIndicies);
 
                     if(objVerts == null)
@@ -311,12 +312,12 @@ namespace WebAnnotation
         /// <param name="graphicsDevice"></param>
         /// <param name="basicEffect"></param>
         /// <param name="SectionNumber"></param>
-        public static void DrawOverlappedAdjacentLinkedLocations(List<Location_CanvasViewModel> listToDraw, VikingXNA.Scene Scene, GraphicsDevice graphicsDevice, BasicEffect basicEffect, VikingXNA.AnnotationOverBackgroundLumaEffect overlayEffect, int SectionNumber)
+        public static void DrawOverlappedAdjacentLinkedLocations(List<LocationCircleView> listToDraw, VikingXNA.Scene Scene, GraphicsDevice graphicsDevice, BasicEffect basicEffect, VikingXNA.AnnotationOverBackgroundLumaEffect overlayEffect, int SectionNumber)
         {
             if (listToDraw.Count == 0)
                 return;
 
-            IComparer<Location_CanvasViewModel> LocComparer = new LocationObjDrawOrderComparison();
+            IComparer<LocationCanvasView> LocComparer = new LocationObjDrawOrderComparison();
             int iStart = 0;
 
             //Set the graphics device state to render the appropriate type
@@ -324,7 +325,7 @@ namespace WebAnnotation
             {
                 int iEnd = listToDraw.Count; //Need to initialize or loop never ends
 
-                Location_CanvasViewModel StartingObj = listToDraw[iStart];
+                LocationCanvasView StartingObj = listToDraw[iStart];
 
                 SetupGraphicsDevice(graphicsDevice, basicEffect, overlayEffect, StartingObj, SectionNumber);
 
@@ -336,7 +337,7 @@ namespace WebAnnotation
                 int iNextVertIndex = 0;
                 for (int iObj = iStart; iObj < listToDraw.Count; iObj++)
                 {
-                    Location_CanvasViewModel locToDraw = listToDraw[iObj];
+                    LocationCircleView locToDraw = listToDraw[iObj];
                     int[] locIndicies;
 
                     if (!locToDraw.OverlappingLocationLinksCanBeSeen(Scene.Camera.Downsample))
@@ -389,5 +390,44 @@ namespace WebAnnotation
 
             RestoreGraphicsDevice(graphicsDevice, basicEffect); 
         }
+
+        /// <summary>
+        /// Divide the label into two lines
+        /// </summary>
+        /// <param name="label"></param>
+        /// <returns></returns>
+        public static string[] SplitLabel(string label)
+        {  
+            //Split the string at the first space before the midpoint
+            string topRow = "";
+            string bottomRow = "";
+            string[] labelParts = label.Split();
+
+            if (labelParts.Length <= 2)
+                return labelParts;
+
+            foreach (string word in labelParts)
+            {
+                if (topRow.Length + word.Length + 1 <= (label.Length / 2))
+                {
+                    if (topRow.Length == 0)
+                        topRow += word;
+                    else
+                        topRow += " " + word;
+                }
+                else
+                {
+                    if (bottomRow.Length == 0)
+                        bottomRow += word;
+                    else
+                        bottomRow += " " + word;
+                }
+            }
+
+            topRow = topRow.TrimEnd();
+            bottomRow = bottomRow.TrimEnd();
+
+            return new String[] { topRow, bottomRow };
+        } 
     }
 }

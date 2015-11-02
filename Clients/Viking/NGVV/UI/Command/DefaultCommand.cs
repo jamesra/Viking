@@ -35,7 +35,7 @@ namespace Viking.UI.Commands
                     {
 
                         double newDistance;
-                        IUIObjectBasic nearObj = overlay.NearestObject(WorldPosition, out newDistance);
+                        IUIObjectBasic nearObj = overlay.ObjectAtPosition(WorldPosition, out newDistance);
                         if (nearObj != null)
                         {
                             if (newDistance < distance)

@@ -10,10 +10,9 @@ using System.Drawing;
 using System.Diagnostics;
 using RoundLineCode;
 using WebAnnotation.ViewModel;
-using WebAnnotationModel; 
-
-
-using Viking.Common; 
+using WebAnnotation.View;
+using WebAnnotationModel;
+using VikingXNAGraphics;
 
 namespace WebAnnotation.UI.Commands
 {
@@ -28,29 +27,26 @@ namespace WebAnnotation.UI.Commands
         /// </summary>
         GridVector2 transformedPos; 
 
-        Structure putativeStruct; 
-        Location_CanvasViewModel putativeLoc;
+        StructureObj putativeStruct;
+        LocationObj putativeLoc;
 
-        Location_CanvasViewModel nearestParent;
+        LocationObj nearestParent;
 
         Microsoft.Xna.Framework.Color linecolor;
 
         public LinkStructureToParentCommand(Viking.UI.Controls.SectionViewerControl parent,
-                                               Structure structure, 
-                                               Location_CanvasViewModel location)
+                                               StructureObj structure,
+                                               LocationObj location)
             : base(parent)
         {
 
             this.putativeStruct = structure;
             this.putativeLoc = location;
 
-            StructureType LocType = this.putativeStruct.Type;
+            StructureTypeObj LocType = this.putativeStruct.Type;
             if (LocType != null)
             {
-                linecolor = new Microsoft.Xna.Framework.Color(LocType.Color.R,
-                    LocType.Color.G,
-                    LocType.Color.B,
-                    128);
+                linecolor = LocType.Color.ToXNAColor(0.5f);
             }
             else
             {
@@ -58,7 +54,7 @@ namespace WebAnnotation.UI.Commands
             }
 
             //Transform the location position to the correct coordinates
-            transformedPos = parent.SectionToVolume(new GridVector2(putativeLoc.X, putativeLoc.Y));
+            transformedPos = parent.SectionToVolume(new GridVector2(putativeLoc.Position.X, putativeLoc.Position.Y));
 
             parent.Cursor = Cursors.Cross; 
         }
@@ -74,7 +70,11 @@ namespace WebAnnotation.UI.Commands
 
             //Find if we are close enough to a location to "snap" the line to the target
             double distance; 
-            nearestParent = Overlay.GetNearestLocation(WorldPos, out distance);
+            LocationCanvasView nearest = Overlay.GetNearestLocation(WorldPos, out distance);
+            if (nearest != null)
+            {
+                nearestParent = nearest.modelObj;
+            }
            
             base.OnMouseMove(sender, e);
 
@@ -94,11 +94,11 @@ namespace WebAnnotation.UI.Commands
 
                 /*Check to see if we clicked a location*/
                 double distance; 
-                Location_CanvasViewModel loc = Overlay.GetNearestLocation(WorldPos, out distance);
+                LocationCanvasView loc = Overlay.GetNearestLocation(WorldPos, out distance);
                 if (loc == null)
                     return;
 
-                this.putativeStruct.modelObj.Parent = loc.Parent.modelObj; 
+                this.putativeStruct.Parent = loc.Parent.modelObj; 
 
                 this.Deactivated = true; 
             }

@@ -14,26 +14,71 @@ using System.Windows.Forms;
 using System.Diagnostics;
 using System.Drawing;
 using Common.UI;
-using WebAnnotation.UI.Commands; 
+using WebAnnotation.UI.Commands;
+using WebAnnotation.ViewModel;
 
-namespace WebAnnotation.ViewModel
+namespace WebAnnotation.View
 {
-    public class OverlappedLocation : Location_CanvasViewModel
+    /// <summary>
+    /// Represents a location on an adjacent section that is overlapped by an annotation on the visible section.
+    /// </summary>
+    public class OverlappedLocation : LocationCanvasView
     {
-        public readonly LocationLink link;
+        public readonly LocationLinkView link;
         public readonly GridCircle gridCircle;
 
-        public OverlappedLocation(LocationLink linkObj, LocationObj location, GridCircle circle) : base(location)
+        public override bool IsVisible(VikingXNA.Scene scene)
         {
-            link = linkObj; 
+            throw new NotImplementedException();
+        }
+
+        public override bool Intersects(GridVector2 Position)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override double Distance(GridVector2 Position)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override void DrawLabel(SpriteBatch spriteBatch, SpriteFont font, Vector2 LocationCenterScreenPosition, float MagnificationFactor, int DirectionToVisiblePlane)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override LocationAction GetActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber)
+        {
+            return LocationAction.CREATELINK;
+        }
+
+        public OverlappedLocation(LocationObj overlappedLocation, LocationLinkView link, GridCircle circle) : base(overlappedLocation)
+        {
+            this.link = link;
             gridCircle = circle; 
         }
 
-        public override ContextMenu ContextMenu
+        public ContextMenu ContextMenu
         {
             get
             {
-                return link.ContextMenu;
+                return new Location_CanvasContextMenuView(this.modelObj).ContextMenu;
+            }
+        }
+
+        public override GridRectangle BoundingBox
+        {
+            get
+            {
+                return gridCircle.BoundingBox;
+            }
+        }
+
+        public override IList<LocationCanvasView> OverlappingLinks
+        {
+            get
+            {
+                throw new NotImplementedException();
             }
         }
     }

@@ -87,18 +87,15 @@ namespace WebAnnotation.UI.Commands
                                                 WorldPos,
                                                 Parent.Section.Number,
                                                 LocationType.CIRCLE);
-
-                Structure newStructView = new Structure(newStruct); 
-                Location_CanvasViewModel newLocationView = new Location_CanvasViewModel(newLocation);
-
-                Viking.UI.Commands.Command.EnqueueCommand(typeof(ResizeCircleCommand), new object[] { Parent, Type.Color, WorldPos, new ResizeCircleCommand.OnCommandSuccess((double radius) => { newLocationView.Radius = radius; }) });
+                  
+                Viking.UI.Commands.Command.EnqueueCommand(typeof(ResizeCircleCommand), new object[] { Parent, Type.Color, WorldPos, new ResizeCircleCommand.OnCommandSuccess((double radius) => { newLocation.Radius = radius; }) });
                 if (Type.Parent != null)
                 {
                     //Enqueue extra command to select a parent
-                    Viking.UI.Commands.Command.EnqueueCommand(typeof(LinkStructureToParentCommand), new object[] { Parent, newStructView, newLocationView });
+                    Viking.UI.Commands.Command.EnqueueCommand(typeof(LinkStructureToParentCommand), new object[] { Parent, newStruct, newLocation });
                 }
 
-                Viking.UI.Commands.Command.EnqueueCommand(typeof(CreateNewStructureCommand), new object[] { Parent, newStructView, newLocationView });
+                Viking.UI.Commands.Command.EnqueueCommand(typeof(CreateNewStructureCommand), new object[] { Parent, newStruct, newLocation });
             
                 Execute();
             }

@@ -10,19 +10,20 @@ using Geometry;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using RoundLineCode;
+using WebAnnotation.View;
 using WebAnnotation.ViewModel;
-using WebAnnotationModel;
-using Viking.Common;
+using WebAnnotationModel; 
+using VikingXNAGraphics;
 
 namespace WebAnnotation.UI.Commands
 {
     class LinkAnnotationsCommand : AnnotationCommandBase
     {
-        Location_CanvasViewModel OriginObj;
-        Location_CanvasViewModel NearestTarget = null;
+        LocationObj OriginObj;
+        LocationObj NearestTarget = null;
 
         public LinkAnnotationsCommand(Viking.UI.Controls.SectionViewerControl parent,
-                                               Location_CanvasViewModel existingLoc)
+                                               LocationObj existingLoc)
             : base(parent)
         {
             OriginObj = existingLoc;
@@ -39,8 +40,12 @@ namespace WebAnnotation.UI.Commands
 
             //Find if we are close enough to a location to "snap" the line to the target
             double distance;
-            NearestTarget = Overlay.GetNearestLocation(WorldPos, out distance);
-            NearestTarget = TrySetTarget(NearestTarget); 
+
+            LocationCanvasView nearestVisible = Overlay.GetNearestLocation(WorldPos, out distance);
+            if (nearestVisible != null)
+            {
+                NearestTarget = TrySetTarget(nearestVisible.modelObj);
+            }
 
             base.OnMouseMove(sender, e);
 
@@ -53,15 +58,15 @@ namespace WebAnnotation.UI.Commands
         /// </summary>
         /// <param name="NearestTarget"></param>
         /// <returns></returns>
-        protected Location_CanvasViewModel TrySetTarget(Location_CanvasViewModel nearest_target)
+        protected LocationObj TrySetTarget(LocationObj nearest_target)
         {
             if (nearest_target == null)
                 return null; 
 
-            if (LocationLink.IsValidLocationLinkTarget(nearest_target.modelObj, OriginObj.modelObj))
+            if (LocationLinkView.IsValidLocationLinkTarget(nearest_target, OriginObj))
                 return nearest_target;
 
-            if (StructureLink.IsValidStructureLinkTarget(nearest_target.modelObj, OriginObj.modelObj))
+            if (StructureLink.IsValidStructureLinkTarget(nearest_target, OriginObj))
                 return nearest_target;
 
             return nearest_target; 
@@ -80,20 +85,22 @@ namespace WebAnnotation.UI.Commands
 
                 //Find if we are close enough to a location to "snap" the line to the target
                 double distance;
-                NearestTarget = Overlay.GetNearestLocation(WorldPos, out distance);
-                NearestTarget = TrySetTarget(NearestTarget); 
+                LocationCanvasView nearest = Overlay.GetNearestLocation(WorldPos, out distance);
+                NearestTarget = nearest != null ? nearest.modelObj : null;
 
-                if(NearestTarget == null)
+                TrySetTarget(NearestTarget);
+
+                if (NearestTarget == null)
                 {
                     this.Deactivated = true; 
                     return; 
                 }
 
-                if(LocationLink.IsValidLocationLinkTarget(NearestTarget.modelObj, OriginObj.modelObj))
+                if(LocationLinkView.IsValidLocationLinkTarget(NearestTarget, OriginObj))
                 {
                     try
                     {
-                        Store.LocationLinks.CreateLink(OriginObj.modelObj.ID, NearestTarget.modelObj.ID);
+                        Store.LocationLinks.CreateLink(OriginObj.ID, NearestTarget.ID);
                     }
                     catch (Exception except)
                     {
@@ -104,7 +111,7 @@ namespace WebAnnotation.UI.Commands
                         this.Deactivated = true;
                     }
                 }
-                else if(StructureLink.IsValidStructureLinkTarget(NearestTarget.modelObj, OriginObj.modelObj))
+                else if(StructureLink.IsValidStructureLinkTarget(NearestTarget, OriginObj))
                 {
                     try
                     {
@@ -209,14 +216,14 @@ namespace WebAnnotation.UI.Commands
 
             if (NearestTarget != null)
             {
-                if(LocationLink.IsValidLocationLinkTarget(NearestTarget.modelObj, OriginObj.modelObj))
+                if(LocationLinkView.IsValidLocationLinkTarget(NearestTarget, OriginObj))
                 {
                     lineColor = validTarget;
                     lineStyle = LocationLinkStyle;
                     lineRadius = LineRadiusForLocationLink();
                     UseLumaLineManager = true;
                 }
-                else if(StructureLink.IsValidStructureLinkTarget(NearestTarget.modelObj, OriginObj.modelObj))
+                else if(StructureLink.IsValidStructureLinkTarget(NearestTarget, OriginObj))
                 {
                     lineColor = validTarget;
                     lineStyle = StructureLinkStyle;

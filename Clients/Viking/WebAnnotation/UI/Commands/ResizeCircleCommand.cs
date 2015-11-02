@@ -5,6 +5,7 @@ using System.Text;
 using Geometry;
 using System.Diagnostics;
 using System.Windows.Forms;
+using System.Diagnostics;
 using Microsoft.Xna.Framework.Graphics;
 using WebAnnotation.ViewModel;
 using WebAnnotationModel; 

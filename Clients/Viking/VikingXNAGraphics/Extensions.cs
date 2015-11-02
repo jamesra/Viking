@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -68,6 +70,11 @@ namespace VikingXNAGraphics
         public static Microsoft.Xna.Framework.Color ConvertToHSL(this System.Drawing.Color WinColor)
         {
             return WinColor.ConvertToHSL((float)WinColor.A / 255f);
+        }
+
+        public static Vector2[] MeasureStrings(this SpriteFont font, string[] lines)
+        {
+            return lines.Select(line => font.MeasureString(line)).ToArray();
         }
     }
 }

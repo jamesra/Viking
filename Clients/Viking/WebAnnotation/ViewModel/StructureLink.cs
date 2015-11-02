@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Windows.Forms; 
 using WebAnnotationModel;
+using WebAnnotation.View;
 
 namespace WebAnnotation.ViewModel
 {
@@ -11,6 +12,16 @@ namespace WebAnnotation.ViewModel
     {
 
         WebAnnotationModel.StructureLinkObj modelObj;
+
+        /// <summary>
+        /// LocationOnSection is the location on the section being viewed
+        /// </summary>
+        public LocationObj SourceLocation;
+
+        /// <summary>
+        /// LocationOnSection is the location on the reference section
+        /// </summary>
+        public LocationObj TargetLocation;
 
         public override string ToString()
         {
@@ -63,15 +74,7 @@ namespace WebAnnotation.ViewModel
             }
         }
 
-        /// <summary>
-        /// LocationOnSection is the location on the section being viewed
-        /// </summary>
-        public Location_CanvasViewModel SourceLocation;
-
-        /// <summary>
-        /// LocationOnSection is the location on the reference section
-        /// </summary>
-        public Location_CanvasViewModel TargetLocation;
+        
 
         public RoundLineCode.RoundLine lineGraphic;
         public Geometry.GridLineSegment lineSegment;
@@ -79,8 +82,7 @@ namespace WebAnnotation.ViewModel
         public double Radius
         {
             get
-            {
-             //   return SourceLocation.Radius / 8.0f;
+            { 
                 return ((SourceLocation.Radius + TargetLocation.Radius) / 2.0);
             }
         }
@@ -104,8 +106,8 @@ namespace WebAnnotation.ViewModel
         }
 
         public StructureLink(StructureLinkObj linkObj, 
-                             Location_CanvasViewModel sourceLoc,
-                             Location_CanvasViewModel targetLoc) : base()
+                             LocationObj sourceLoc,
+                             LocationObj targetLoc) : base()
         {
             this.modelObj = linkObj; 
             this.SourceLocation = sourceLoc;
@@ -152,7 +154,7 @@ namespace WebAnnotation.ViewModel
                 Store.StructureLinks.Create(newLink);
 
                 this.modelObj = newLink;
-                Location_CanvasViewModel newSource = this.TargetLocation;
+                LocationObj newSource = this.TargetLocation;
                 this.TargetLocation = SourceLocation;
                 this.SourceLocation = newSource;
                 lineSegment = new Geometry.GridLineSegment(SourceLocation.VolumePosition,

@@ -15,12 +15,12 @@ namespace WebAnnotation.UI.Commands
     /// </summary>
     class CreateNewStructureCommand : AnnotationCommandBase
     {
-        Structure newStruct;
-        Location_CanvasViewModel newLoc;
+        StructureObj newStruct;
+        LocationObj newLoc;
 
         public CreateNewStructureCommand(Viking.UI.Controls.SectionViewerControl parent, 
-                                               Structure structure, 
-                                               Location_CanvasViewModel location)
+                                               StructureObj structure, 
+                                               LocationObj location)
             : base(parent)
         {
             this.newStruct = structure;
@@ -36,9 +36,9 @@ namespace WebAnnotation.UI.Commands
         { 
            //Create the new structure
             LocationObj unused;
-            Store.Structures.Create(newStruct.modelObj, newLoc.modelObj, out unused);
+            Store.Structures.Create(newStruct, newLoc, out unused);
 
-           base.Execute();
+            base.Execute();
         }
     }
 }

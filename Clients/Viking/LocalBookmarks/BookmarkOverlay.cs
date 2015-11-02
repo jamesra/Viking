@@ -48,7 +48,7 @@ namespace LocalBookmarks
             StarTexture = parent.Content.Load<Texture2D>("Star");
         }
 
-        Viking.Common.IUIObjectBasic Viking.Common.ISectionOverlayExtension.NearestObject(Geometry.GridVector2 WorldPosition, out double distance)
+        Viking.Common.IUIObjectBasic Viking.Common.ISectionOverlayExtension.ObjectAtPosition(Geometry.GridVector2 WorldPosition, out double distance)
         {
             distance = double.MaxValue;
             return RecursiveFindBookmarks(Global.FolderUIObjRoot, WorldPosition, ref distance); 

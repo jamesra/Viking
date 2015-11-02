@@ -157,7 +157,6 @@ namespace VikingXNA
             }
         }
 
-
         public Geometry.GridVector2 ScreenToWorld(double X, double Y)
         {
             //The screen coordinates used by Windows and XNA put the Y origin at the top and bottom of the screen

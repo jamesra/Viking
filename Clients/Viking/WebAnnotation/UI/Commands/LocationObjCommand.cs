@@ -8,28 +8,38 @@ using System.Linq;
 using System.Text;
 using WebAnnotationModel; 
 using Geometry;
-using WebAnnotation.ViewModel;
+using WebAnnotation.View;
 using SqlGeometryUtils;
+using VikingXNAGraphics;
 
 namespace WebAnnotation.UI.Commands
 {
-    [Viking.Common.CommandAttribute(typeof(Location_CanvasViewModel))]
+    [Viking.Common.CommandAttribute(typeof(LocationCanvasView))]
     class LocationObjCommand : AnnotationCommandBase
     {
-        Location_CanvasViewModel selected;
-        StructureType LocType;
+        LocationObj selected;
+        StructureTypeObj _LocType = null;
+
+        StructureTypeObj LocType
+        {
+            get
+            {
+                if (selected.ParentID.HasValue)
+                {
+                    StructureObj structure = Store.Structures.GetObjectByID(selected.ParentID.Value, true);
+                    _LocType = Store.StructureTypes.GetObjectByID(structure.TypeID, true);
+                }
+
+                return _LocType;
+            }
+        }
 
         public LocationObjCommand(Viking.UI.Controls.SectionViewerControl parent)
             : base(parent)
         {
-            selected = Viking.UI.State.SelectedObject as Location_CanvasViewModel;
+            selected = Viking.UI.State.SelectedObject as LocationObj;
             Debug.Assert(selected != null);
 
-            if (selected.Parent != null)
-            {
-                LocType = selected.Parent.Type;
-            }
-            
             //Figure out if we've selected a location on the same section or different
             if (selected.Section != this.Parent.Section.Number)
             {
@@ -82,15 +92,15 @@ namespace WebAnnotation.UI.Commands
                         return;
                     }
 
-                    LocationObj newLoc = new LocationObj(selected.Parent.modelObj,
+                    LocationObj newLoc = new LocationObj(selected.Parent,
                             SectionPos,
                             WorldPos,
                             Parent.Section.Number,
                             selected.TypeCode);
 
-                    Location_CanvasViewModel newLocView = new Location_CanvasViewModel(newLoc);
+                    LocationCanvasView newLocView = AnnotationViewFactory.Create(newLoc);
 
-                    Viking.UI.Commands.Command.EnqueueCommand(typeof(ResizeCircleCommand), new object[] { Parent, selected.Parent.Type.Color, WorldPos, new ResizeCircleCommand.OnCommandSuccess((double radius) => { newLocView.Radius = radius; }) });
+                    Viking.UI.Commands.Command.EnqueueCommand(typeof(ResizeCircleCommand), new object[] { Parent, selected.Parent.Type.Color, WorldPos, new ResizeCircleCommand.OnCommandSuccess((double radius) => { newLocView.modelObj.Radius = radius; }) });
                     Viking.UI.Commands.Command.EnqueueCommand(typeof(CreateNewLinkedLocationCommand), new object[] { Parent, selected, newLocView });
 
                     Viking.UI.State.SelectedObject = null;
@@ -150,7 +160,7 @@ namespace WebAnnotation.UI.Commands
             //Draw a line from the selected location to the new location if we are holding left button down
             if (this.oldMouse.Button == MouseButtons.Left)
             {
-                SectionLocationsViewModel sectionAnnotations = AnnotationOverlay.GetAnnotationsForSection(Parent.Section.Number);
+                ViewModel.SectionLocationsViewModel sectionAnnotations = AnnotationOverlay.GetAnnotationsForSection(Parent.Section.Number);
                 if (sectionAnnotations == null)
                     return;
 
@@ -177,10 +187,7 @@ namespace WebAnnotation.UI.Commands
                 //Draw the new location
                 if (LocType != null && selected.Section == Parent.Section.Number)
                 {
-                    Microsoft.Xna.Framework.Color color = new Microsoft.Xna.Framework.Color(LocType.Color.R,
-                        LocType.Color.G,
-                        LocType.Color.B,
-                        128);
+                    Microsoft.Xna.Framework.Color color = LocType.Color.ToXNAColor(0.5f);
                     
                     GlobalPrimitives.DrawCircle(graphicsDevice, basicEffect, this.oldWorldPosition, selected.Radius, color);
                 }
