@@ -1,6 +1,8 @@
 ﻿using System.Web.Http;
+using System.Web.Http.Batch;
 using System.Web.OData.Builder;
 using System.Web.OData.Extensions;
+using System.Web.OData.Batch;
 using ConnectomeDataModel;
 using Microsoft.OData.Edm.Library;
 using Microsoft.OData;
@@ -28,13 +30,20 @@ namespace ConnectomeODataV4
             config.MapHttpAttributeRoutes();
 
             Microsoft.OData.Edm.IEdmModel edmModel = GetModel();
-            
+
             config.MapODataServiceRoute(routeName: "odata",
                 routePrefix: null,
-                model: edmModel);
+                model: edmModel,
+                batchHandler: new DefaultODataBatchHandler(GlobalConfiguration.DefaultServer));
+            /*
+            config.Routes.MapHttpBatchRoute(
+                routeName: "batch",
+                routeTemplate: "api/batch",
+                batchHandler: new DefaultHttpBatchHandler(GlobalConfiguration.DefaultServer));
+                */
             
             config.Routes.MapHttpRoute(
-                name: "DefaultApi",
+                name: "api",
                 routeTemplate: "api/{controller}/{id}",
                 defaults: new { id = RouteParameter.Optional }
             );
