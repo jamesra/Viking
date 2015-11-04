@@ -460,6 +460,24 @@ namespace ConnectomeDataModel
             return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction<Location>("SelectSectionLocationsAndLinksInBounds", mergeOption, zParameter, bBoxParameter, radiusParameter, queryDateParameter);
         }
     
+        public virtual ObjectResult<Location> SelectStructureLocationsAndLinks(Nullable<long> structureID)
+        {
+            var structureIDParameter = structureID.HasValue ?
+                new ObjectParameter("StructureID", structureID) :
+                new ObjectParameter("StructureID", typeof(long));
+    
+            return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction<Location>("SelectStructureLocationsAndLinks", structureIDParameter);
+        }
+    
+        public virtual ObjectResult<Location> SelectStructureLocationsAndLinks(Nullable<long> structureID, MergeOption mergeOption)
+        {
+            var structureIDParameter = structureID.HasValue ?
+                new ObjectParameter("StructureID", structureID) :
+                new ObjectParameter("StructureID", typeof(long));
+    
+            return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction<Location>("SelectStructureLocationsAndLinks", mergeOption, structureIDParameter);
+        }
+    
         public virtual ObjectResult<Nullable<long>> SelectStructuresLinkedViaChildren(Nullable<long> iD)
         {
             var iDParameter = iD.HasValue ?

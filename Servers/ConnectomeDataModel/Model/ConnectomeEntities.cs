@@ -111,12 +111,11 @@ namespace ConnectomeDataModel
 
         public IList<Location> ReadStructureLocationsAndLinks(long StructureID)
         {
-            var results = this.Locations.Where(l => l.ParentID == StructureID);
+            var results = this.SelectStructureLocationsAndLinks(StructureID);
 
             var dictLocations = results.ToDictionary(l => l.ID);
-
-            var LocationLinks = this.SelectStructureLocationLinks(StructureID).ToList();
-
+            var LocationLinks = results.GetNextResult<LocationLink>().ToList();
+            
             AppendLinksToLocations(dictLocations, LocationLinks);
 
             return dictLocations.Values.ToList();
