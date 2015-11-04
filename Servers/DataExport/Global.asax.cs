@@ -26,6 +26,14 @@ namespace DataExport
                             new { controller = "Network", action = "GetTLP" },
                             new { controller = "Network" });
 
+            routes.MapRoute("Network_GML", "Network/GraphML",
+                            new { controller = "Network", action = "GetGML" },
+                            new { controller = "Network" });
+
+            routes.MapRoute("Network_JSON", "Network/JSON",
+                            new { controller = "Network", action = "GetJSON" },
+                            new { controller = "Network" });
+
             routes.MapRoute("Motifs_Dot", "Motifs/Dot",
                             new { controller = "Motif", action = "GetDot"},
                             new { controller = "Motif"});
@@ -33,9 +41,17 @@ namespace DataExport
             routes.MapRoute("Motifs_TLP", "Motifs/TLP",
                             new { controller = "Motif", action = "GetTLP" },
                             new { controller = "Motif" });
-             
+
+            routes.MapRoute("Motifs_JSON", "Motifs/JSON",
+                            new { controller = "Motif", action = "GetJSON" },
+                            new { controller = "Motif" });
+
             routes.MapRoute("Morphology_TLP", "Morphology/TLP",
                             new { controller = "Morphology", action = "GetTLP" },
+                            new { controller = "Morphology" });
+
+            routes.MapRoute("Morphology_JSON", "Morphology/JSON",
+                            new { controller = "Morphology", action = "GetJSON" },
                             new { controller = "Morphology" });
 
             //Ignore the root level so we can load our static index.html file

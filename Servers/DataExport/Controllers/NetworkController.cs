@@ -33,55 +33,78 @@ namespace DataExport.Controllers
         [ActionName("GetDot")]
         public ActionResult GetDot()
         {
-            
-            string EndpointURL = AppSettings.WebServiceURL; 
-            string userDotDirectory = Server.MapPath("~/Output/");
-
-            AnnotationVizLib.ConnectionFactory.SetConnection(EndpointURL, AppSettings.EndpointCredentials);
-
-            ICollection<long> requestIDs = RequestVariables.GetQueryStringIDs(Request).Cast<long>().ToArray();
-            if (requestIDs == null || requestIDs.Count == 0)
-                requestIDs = Queries.GetLinkedStructureParentIDs();
-
-            if (!System.IO.Directory.Exists(userDotDirectory))
-                System.IO.Directory.CreateDirectory(userDotDirectory);
-
             string outputFilename = GetOutputFilename("dot");
-            string userDotFileFullPath = System.IO.Path.Combine(userDotDirectory, outputFilename);
+            string outputFileFullPath = System.IO.Path.Combine(GetAndCreateOutputDirectory(), outputFilename);
 
-            NeuronGraph neuronGraph = NeuronGraph.BuildGraph(requestIDs, GetNumHops(), EndpointURL, AppSettings.EndpointCredentials);
+
+            NeuronGraph neuronGraph = GetGraph();
             NeuronDOTView DotGraph = NeuronDOTView.ToDOT(neuronGraph, false);
-            DotGraph.SaveDOT(userDotFileFullPath);
+            DotGraph.SaveDOT(outputFileFullPath);
 
-            return File(userDotFileFullPath, "text/plain", outputFilename);
+            return File(outputFileFullPath, "text/plain", outputFilename);
         }
 
         [ActionName("GetTLP")]
         public ActionResult GetTLP()
         {
-            string EndpointURL = AppSettings.WebServiceURL;
-            string VolumeURL = AppSettings.VolumeURL; 
+            string outputFilename = GetOutputFilename("tlp");
+            string outputFileFullPath = System.IO.Path.Combine(GetAndCreateOutputDirectory(), outputFilename);
+
+            NeuronGraph neuronGraph = GetGraph();
+            NeuronTLPView TlpGraph = NeuronTLPView.ToTLP(neuronGraph, AppSettings.VolumeURL);
+            TlpGraph.SaveTLP(outputFileFullPath);
+
+            return File(outputFileFullPath, "text/plain", outputFilename);
+        }
+
+        [ActionName("GetGML")]
+        public ActionResult GetGML()
+        {
+            string outputFilename = GetOutputFilename("graphml");
+            string outputFileFullPath = System.IO.Path.Combine(GetAndCreateOutputDirectory(), outputFilename);
+
+            NeuronGraph neuronGraph = GetGraph();
+            NeuronGMLView GmlGraph = NeuronGMLView.ToGML(neuronGraph, AppSettings.VolumeURL);
+            GmlGraph.SaveGML(outputFileFullPath);
+
+            return File(outputFileFullPath, "text/plain", outputFilename);
+        }
+
+        [ActionName("GetJSON")]
+        public ActionResult GetJSON()
+        {
+            string outputFilename = GetOutputFilename("json");
+            string outputFileFullPath = System.IO.Path.Combine(GetAndCreateOutputDirectory(), outputFilename);
+
+            NeuronGraph neuronGraph = GetGraph();
+            NeuronJSONView JsonGraph = NeuronJSONView.ToJSON(neuronGraph);
+            JsonGraph.SaveJSON(outputFileFullPath);
+
+            return File(outputFileFullPath, "text/plain", outputFilename);
+        }
+
+        private string GetAndCreateOutputDirectory()
+        {
             string userDotDirectory = Server.MapPath("~/Output/");
-
-            AnnotationVizLib.ConnectionFactory.SetConnection(EndpointURL, AppSettings.EndpointCredentials);
-
             if (!System.IO.Directory.Exists(userDotDirectory))
                 System.IO.Directory.CreateDirectory(userDotDirectory);
 
+            return userDotDirectory;
+        }
+
+        private NeuronGraph GetGraph()
+        {
+            string EndpointURL = AppSettings.WebServiceURL;
+            
+            AnnotationVizLib.ConnectionFactory.SetConnection(EndpointURL, AppSettings.EndpointCredentials);
+            
             ICollection<long> requestIDs = RequestVariables.GetQueryStringIDs(Request).Cast<long>().ToArray();
             if (requestIDs == null || requestIDs.Count == 0)
-                requestIDs = Queries.GetLinkedStructureParentIDs();
+                requestIDs = Queries.GetLinkedStructureParentIDs(); 
 
-            string outputFilename = GetOutputFilename("tlp");
-            string userDotFileFullPath = System.IO.Path.Combine(userDotDirectory, outputFilename);
+            return NeuronGraph.BuildGraph(requestIDs, GetNumHops(), EndpointURL, AppSettings.EndpointCredentials);
+        }
 
-            NeuronGraph neuronGraph = NeuronGraph.BuildGraph(requestIDs, GetNumHops(), EndpointURL, AppSettings.EndpointCredentials);
-            NeuronTLPView TlpGraph = NeuronTLPView.ToTLP(neuronGraph, VolumeURL);
-            TlpGraph.SaveTLP(userDotFileFullPath);
-
-            return File(userDotFileFullPath, "text/plain", outputFilename);
-        } 
-         
         private uint GetNumHops()
         {
             string hopstr = Request.RequestContext.HttpContext.Request.QueryString["hops"];

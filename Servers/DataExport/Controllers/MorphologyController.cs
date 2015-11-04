@@ -24,16 +24,16 @@ namespace DataExport.Controllers
             }
         }
 
-        public string GetOutputFilename()
+        public string GetOutputFilename(string ext)
         {
-            return string.Format("{0}{1}.tlp", DefaultOutputFile, NextFilenameID); 
+            return string.Format("{0}{1}.{2}", DefaultOutputFile, NextFilenameID, ext);
         }
 
-               
+
         [ActionName("GetTLP")]
         public ActionResult GetTLP()
         {
-            string OutputFile = GetOutputFilename();
+            string OutputFile = GetOutputFilename("tlp");
             string userOutputDirectory = GetAndCreateOutputDirectories("~/Output/");
             string userOutputFileFullPath = System.IO.Path.Combine(userOutputDirectory, OutputFile);
             Scale scale = AppSettings.GetScale();
@@ -47,6 +47,21 @@ namespace DataExport.Controllers
             TlpGraph.SaveTLP(userOutputFileFullPath);
 
             return File(userOutputFileFullPath, "text/plain", OutputFile); 
+        }
+
+        [ActionName("GetJSON")]
+        public ActionResult GetJSON()
+        {
+            string OutputFile = GetOutputFilename("json");
+            string userOutputDirectory = GetAndCreateOutputDirectories("~/Output/");
+            string userOutputFileFullPath = System.IO.Path.Combine(userOutputDirectory, OutputFile);
+            Scale scale = AppSettings.GetScale();
+
+            MorphologyGraph structure_graph = GetGraph();
+            MorphologyJSONView JSONGraph = MorphologyJSONView.ToJSON(structure_graph);
+            JSONGraph.SaveJSON(userOutputFileFullPath);
+
+            return File(userOutputFileFullPath, "text/plain", OutputFile);
         }
 
         private ColorMapWithImages GetColorMapImage()

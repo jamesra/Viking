@@ -70,6 +70,27 @@ namespace DataExport.Controllers
 
 
             return File(userDotFileFullPath, "text/plain", outputFilename);
-        } 
+        }
+
+        [ActionName("GetJSON")]
+        public ActionResult GetJSON()
+        {
+            string EndpointURL = AppSettings.WebServiceURL;
+            string VolumeURL = AppSettings.VolumeURL;
+            string userDotDirectory = Server.MapPath("~/Output/");
+
+            if (!System.IO.Directory.Exists(userDotDirectory))
+                System.IO.Directory.CreateDirectory(userDotDirectory);
+
+            string outputFilename = GetOutputFilename("json");
+            string userJSONFullPath = System.IO.Path.Combine(userDotDirectory, outputFilename);
+
+            MotifGraph motifGraph = MotifGraph.BuildGraph(EndpointURL, AppSettings.EndpointCredentials);
+            MotifJSONView JsonGraph = MotifJSONView.ToJSON(motifGraph);
+            JsonGraph.SaveJSON(userJSONFullPath);
+
+
+            return File(userJSONFullPath, "text/plain", outputFilename);
+        }
     }
 }
