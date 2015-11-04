@@ -377,14 +377,7 @@ namespace AnnotationVizLib
 
         private IList<string> EntityAttributeList()
         {
-            SortedSet<string> attribNames = new SortedSet<string>();
-            foreach (string attribName in this.DefaultAttributes.Keys)
-            {
-                if (!attribNames.Contains(attribName))
-                {
-                    attribNames.Add(attribName);
-                }
-            } 
+            SortedSet<string> attribNames = new SortedSet<string>(this.DefaultAttributes.Keys.Distinct());
 
             foreach(TLPViewEdge edge in edges)
             {

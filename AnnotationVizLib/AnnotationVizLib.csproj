@@ -64,12 +64,15 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AttributeMapping\AttributeMaps.cs" />
+    <Compile Include="AttributeMapping\GMLAttributes.cs" />
     <Compile Include="AttributeMapping\DOTAttributes.cs" />
     <Compile Include="AttributeMapping\TLPAttributes.cs" />
     <Compile Include="ColorMapping\ColorMapping.cs" />
     <Compile Include="ColorMapping\StructureColorMap.cs" />
+    <Compile Include="Graph\Morphology\MorphologyJSONView.cs" />
     <Compile Include="Graph\Motifs\MotifJSONView.cs" />
     <Compile Include="Graph\Motifs\MotifTLPView.cs" />
+    <Compile Include="Graph\Neurons\NeuronGMLView.cs" />
     <Compile Include="Graph\Neurons\NeuronJSONView.cs" />
     <Compile Include="Graph\Motifs\MotifDOTView.cs" />
     <Compile Include="Graph\Motifs\MotifGraph.cs" />
@@ -80,6 +83,7 @@
     <Compile Include="Graph\Morphology\MorphologyGraph.cs" />
     <Compile Include="Scale.cs" />
     <Compile Include="Utils.cs" />
+    <Compile Include="ViewModels\GMLView.cs" />
     <Compile Include="ViewModels\GraphViewEngine.cs" />
     <Compile Include="Queries.cs" />
     <Compile Include="ConnectionFactory.cs" />

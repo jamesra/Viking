@@ -20,7 +20,6 @@ namespace AnnotationVizLib
 
         static public MotifJSONView ToJSON(MotifGraph graph)
         {
-            
             int edgeCount = 0;
             MotifJSONView JSONView = new MotifJSONView();
 
@@ -38,8 +37,8 @@ namespace AnnotationVizLib
                 JSONView.edgesJSON.Add(new
                 {
                     id = edgeCount,
-                    node1 = SourceNode.Key.ToString(),
-                    node2 = TargetNode.Key.ToString(),
+                    source = SourceNode.Key.ToString(),
+                    target = TargetNode.Key.ToString(), 
                     label = KeyString,
                     type = edge.SynapseType
                 });

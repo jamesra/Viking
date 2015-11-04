@@ -22,7 +22,7 @@ namespace AnnotationUtilsTests
         public void GenerateNeuronGraph()
         {
            
-            AnnotationVizLib.NeuronGraph graph = NeuronGraph.BuildGraph(new long[] {476}, 2, this.Endpoint, this.userCredentials);
+            AnnotationVizLib.NeuronGraph graph = NeuronGraph.BuildGraph(new long[] {476}, 1, this.Endpoint, this.userCredentials);
 
             System.Diagnostics.Debug.Assert(graph != null);
 
@@ -30,7 +30,12 @@ namespace AnnotationUtilsTests
 
             NeuronJSONView JSONView = NeuronJSONView.ToJSON(graph);
             string JSON = JSONView.ToString(); 
-            JSONView.SaveJSON(JSONPath); 
+            JSONView.SaveJSON(JSONPath);
+
+            NeuronGMLView gmlGraph = AnnotationVizLib.NeuronGMLView.ToGML(graph, "", true);
+
+            string gmlPath = "C:\\Temp\\Neuron476.gml";
+            gmlGraph.SaveGML(gmlPath);
 
             NeuronDOTView dotGraph = AnnotationVizLib.NeuronDOTView.ToDOT(graph, true);
 

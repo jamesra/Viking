@@ -28,7 +28,7 @@ namespace AnnotationVizLib
         {
             return this.SourceNodeKey.ToString() + "-" + this.TargetNodeKey.ToString();
         }    
-}
+    }
 
     public class MorphologyNode : Node<ulong, MorphologyEdge>
     {
@@ -117,15 +117,14 @@ namespace AnnotationVizLib
 
             Queries.PopulateStructureTypes();
 
-            // Get the nodes and build graph for numHops
+            // Get the nodes and build graph for numHops            
             System.Threading.Tasks.Parallel.ForEach<Structure>(structures, s =>
+            //foreach(Structure s in structures)
             { 
                 MorphologyGraph graph = MorphologyForStructure(s);
                 if (graph == null)
                     return;
-
-                StructureType type = Queries.IDToStructureType[s.TypeID];
-
+                
                 graph.structure = s;
                 rootGraph.Subgraphs.TryAdd((ulong)s.ID, graph);
 
@@ -146,7 +145,6 @@ namespace AnnotationVizLib
                 Location[] struct_locations = proxy.GetLocationsForStructure((long)s.ID);                
 
                 root_graph = BuildGraphFromLocations(s, struct_locations);
-                 
             }
 
             return root_graph;
@@ -190,8 +188,6 @@ namespace AnnotationVizLib
 
             return;
         }
-        
     }
-
 }
 

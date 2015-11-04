@@ -11,7 +11,8 @@ namespace AnnotationVizLib
 {
     public class NeuronJSONView
     {
-        List<object> edgesJSON = null; 
+        List<object> edgesJSON = null;
+        List<object> nodesJSON = null;
 
         static NeuronJSONView()
         {
@@ -24,7 +25,19 @@ namespace AnnotationVizLib
             int edgeCount = 0;
             NeuronJSONView JSONView = new NeuronJSONView();
 
+            JSONView.nodesJSON = new List<object>(graph.Nodes.Count);
             JSONView.edgesJSON = new List<object>(graph.Edges.Count);
+
+            foreach (NeuronNode node in graph.Nodes.Values)
+            {
+                JSONView.nodesJSON.Add(new
+                {
+                    StructureID = node.Key,
+                    TypeID = node.Structure.TypeID,
+                    Label = node.Structure.Label,
+                    Tags = node.Structure.AttributesXml
+                });
+            }
 
             foreach (NeuronEdge edge in graph.Edges.Values)
             {
@@ -37,11 +50,11 @@ namespace AnnotationVizLib
 
                 JSONView.edgesJSON.Add(new
                 {
-                    id = edgeCount,
-                    node1 = SourceNode.Key,
-                    node2 = TargetNode.Key,
-                    label = KeyString,
-                    type = edge.SynapseType
+                    ID = edgeCount,
+                    SourceStructureID = SourceNode.Key,
+                    TargetStructureID = TargetNode.Key,
+                    Label = KeyString,
+                    Type = edge.SynapseType
                 });
 
                 edgeCount++; 
@@ -58,11 +71,11 @@ namespace AnnotationVizLib
             using (StringWriter fs = new StringWriter(sb))
             {
                 System.Web.Script.Serialization.JavaScriptSerializer oSerializer = new JavaScriptSerializer();
-                fs.Write(oSerializer.Serialize(new { page = "1", total = (this.edgesJSON.Count % 10 + 1), records = this.edgesJSON.Count.ToString(), rows = this.edgesJSON }));
+                fs.Write(oSerializer.Serialize(new { nodes = this.nodesJSON, edges = this.edgesJSON }));
                 fs.Close();
             }
 
-            return sb.ToString(); 
+            return sb.ToString();
         }
 
         public void SaveJSON(string JSONFileFullPath)
