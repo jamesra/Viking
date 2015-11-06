@@ -2480,6 +2480,9 @@ end
 			@role_name = N'ChangeTracker',
 			@supports_net_changes = 1
 
+		EXECUTE sys.sp_cdc_drop_job 
+			@job_type = N'cleanup'
+
 	   INSERT INTO DBVersion values (27, 
 		    N'Reset change data tracking for locations table to reflect schema change' ,getDate(),User_ID())
 	 COMMIT TRANSACTION twentyseven
