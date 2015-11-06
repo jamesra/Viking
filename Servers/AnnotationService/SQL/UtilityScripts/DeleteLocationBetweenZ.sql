@@ -1,32 +1,12 @@
 declare  @StartZ int
 declare  @EndZ int
 
-set @StartZ = 238
-set @EndZ = 239
+set @StartZ = 407
+set @EndZ = 408
 
-DELETE LocationLink WHERE
-A IN (
-		SELECT L.ID
-		  FROM Location L
-		  INNER JOIN 
-		   (SELECT A, B
-			FROM LocationLink) J
-		  ON L.ID = J.A
-		  WHERE 
-			Z >= @StartZ and
-			Z <= @EndZ
-		  
-		  )
-OR
-B IN (SELECT L.ID
-		  FROM Location L
-		  INNER JOIN 
-		   (SELECT A, B
-			FROM LocationLink) J
-		  ON L.ID = J.A
-		  WHERE
-			Z >= @StartZ and
-			Z <= @EndZ
-		  )
+delete from LocationLink where A in 
+	(select ID from Location where Z >= @StartZ and Z <= @endZ)
+	or B in
+	(select ID from Location where Z >= @StartZ and Z <= @endZ)
 
 DELETE Location WHERE Z >= @StartZ and Z <= @EndZ
