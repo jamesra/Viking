@@ -31,10 +31,14 @@ namespace ConnectomeODataV4
 
             Microsoft.OData.Edm.IEdmModel edmModel = GetModel();
 
+            ODataBatchHandler odataBatchHandler = new DefaultODataBatchHandler(GlobalConfiguration.DefaultServer);
+            odataBatchHandler.ODataRouteName = "odata";
+
             config.MapODataServiceRoute(routeName: "odata",
                 routePrefix: null,
                 model: edmModel,
-                batchHandler: new DefaultODataBatchHandler(GlobalConfiguration.DefaultServer));
+                batchHandler: odataBatchHandler);
+            
             /*
             config.Routes.MapHttpBatchRoute(
                 routeName: "batch",
