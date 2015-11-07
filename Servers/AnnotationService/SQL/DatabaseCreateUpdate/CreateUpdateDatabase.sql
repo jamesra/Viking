@@ -3456,5 +3456,56 @@ end
 	 COMMIT TRANSACTION thirtynine
 	end
 
+	if(not(exists(select (1) from DBVersion where DBVersionID = 40)))
+	begin
+     print N'Update StructureLocationLinks function' 
+	 BEGIN TRANSACTION forty
+
+		Exec('
+			ALTER FUNCTION [dbo].[StructureLocationLinks](@StructureID bigint)
+			RETURNS TABLE 
+			AS
+			RETURN(
+ 					Select LL.* from LocationLink LL
+					 join Location L ON L.ID = A
+					 where L.ParentID = @StructureID
+					 )
+		')
+
+		if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
+		 Exec('
+			ALTER PROCEDURE [dbo].[SelectStructureLocationLinks]
+				-- Add the parameters for the stored procedure here
+				@StructureID bigint
+			AS
+			BEGIN
+				-- SET NOCOUNT ON added to prevent extra result sets from
+				-- interfering with SELECT statements.
+				SET NOCOUNT ON;
+
+				-- Insert statements for procedure here
+				Select LL.* from LocationLink LL
+					 join Location L ON L.ID = A
+					 where L.ParentID = @StructureID
+	 
+			END
+		')
+
+		if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
+	 INSERT INTO DBVersion values (40, 
+		      N'Update StructureLocationLinks function' ,getDate(),User_ID())
+	 COMMIT TRANSACTION forty
+	end
+
 --from here on, continually add steps in the previous manner as needed.
 	COMMIT TRANSACTION main
