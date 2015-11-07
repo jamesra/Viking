@@ -80,6 +80,13 @@
     </xs:complexType>
   </xs:element>
 
+  <xs:element name="ToggleLocationTagCommandAction">
+    <xs:complexType>
+      <xs:attribute name="Name" type="xs:string" use="required"/>
+      <xs:attribute name="Tag" type="xs:string" use="required"/>
+    </xs:complexType>
+  </xs:element>
+
   <xs:element name="ToggleLocationTerminalCommandAction">
     <xs:complexType>
       <xs:attribute name="Name" type="xs:string" use="required"/> 
@@ -129,6 +136,7 @@
               <xs:element ref="Action"/>
               <xs:element ref="CreateStructureCommandAction"/>
               <xs:element ref="ToggleStructureTagCommandAction"/>
+              <xs:element ref="ToggleLocationTagCommandAction"/>
               <xs:element ref="ToggleLocationTerminalCommandAction"/>
             </xs:choice>
           </xs:complexType>

@@ -115,7 +115,8 @@ namespace WebAnnotation.UI.Commands
                 {
                     try
                     {
-                        StructureLinkObj linkStruct = new StructureLinkObj(OriginObj.ParentID.Value, NearestTarget.ParentID.Value, false);
+                        bool Bidirectional = NearestTarget.Parent.Type.ID == OriginObj.Parent.Type.ID;
+                        StructureLinkObj linkStruct = new StructureLinkObj(OriginObj.ParentID.Value, NearestTarget.ParentID.Value, Bidirectional);
                         linkStruct = Store.StructureLinks.Create(linkStruct);
                     }
                     catch (Exception except)

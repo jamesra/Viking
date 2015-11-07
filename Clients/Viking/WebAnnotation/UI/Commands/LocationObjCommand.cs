@@ -125,7 +125,8 @@ namespace WebAnnotation.UI.Commands
                         return;
                     }
 
-                    selected.MosaicShape = selected.MosaicShape.MoveTo(SectionPos);
+                    selected.SectionPosition = SectionPos;
+                    //selected.MosaicShape = selected.MosaicShape.MoveTo(SectionPos);
                     
                     //Send changes to DB
                     Store.Locations.Save();

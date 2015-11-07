@@ -71,6 +71,11 @@ namespace WebAnnotation
         string Viking.Common.ISectionOverlayExtension.Name()
         {
             return Global.EndpointName; 
+        } 
+
+        int Viking.Common.ISectionOverlayExtension.DrawOrder()
+        {
+            return 10;
         }
 
         int Viking.Common.ISectionOverlayExtension.DrawOrder()
@@ -227,6 +232,7 @@ namespace WebAnnotation
         /// <returns></returns>
         public IUIObjectBasic ObjectAtPosition(GridVector2 position, out double distance)
         {
+            double MaxScreenDimension = Math.Max(Parent.Scene.VisibleWorldBounds.Width, Parent.Scene.VisibleWorldBounds.Height);
             distance = double.MaxValue; 
             SectionLocationsViewModel locView = GetAnnotationsForSection(CurrentSectionNumber); 
             double BestDistance = double.MaxValue;
@@ -263,7 +269,7 @@ namespace WebAnnotation
                     locView = GetAnnotationsForSection(_Parent.Section.ReferenceSectionAbove.Number);
                     if (locView != null)
                     {
-                        adjacentObjs.AddRange(locView.GetLocations(position));
+                        adjacentObjs.AddRange(locView.GetLocations(position).Where(l => l.IsVisibleOnAdjacent(MaxScreenDimension)));
                     }
                 }
 
@@ -273,8 +279,7 @@ namespace WebAnnotation
                     locView = GetAnnotationsForSection(_Parent.Section.ReferenceSectionBelow.Number);
                     if (locView != null)
                     {
-                        adjacentObjs.AddRange(locView.GetLocations(position));
-                        
+                        adjacentObjs.AddRange(locView.GetLocations(position).Where(l => l.IsVisibleOnAdjacent(MaxScreenDimension)));
                     }
                 }
 
@@ -499,10 +504,10 @@ namespace WebAnnotation
                     }
                     return;
 
-                case Keys.L:
+                case Keys.I:
                     Viking.UI.Commands.Command.EnqueueCommand(typeof(PlacePolylineCommand), new object[] { Parent, new Microsoft.Xna.Framework.Color(1.0f,0f,0f,0.5f), this.LastMouseDownCoords, 16, null});
                     break;
-                case Keys.U:
+                case Keys.J:
                     OnCreateStructure(34, new string[0], LocationType.OPENCURVE);
                     break;
                 case Keys.O:
@@ -550,10 +555,18 @@ namespace WebAnnotation
                             return;
                         }
 
-                        ToggleStructureTagCommandAction tagAction = Global.UserSettings.Actions.ToggleStructureTagCommandAction.Where(action => action.Name == h.Action).SingleOrDefault();
-                        if (tagAction != null)
+                        ToggleStructureTagCommandAction tagStructureAction = Global.UserSettings.Actions.ToggleStructureTagCommandAction.Where(action => action.Name == h.Action).SingleOrDefault();
+                        if (tagStructureAction != null)
                         {
-                            OnToggleStructureTag(tagAction.Tag);
+                            OnToggleStructureTag(tagStructureAction.Tag);
+
+                            return;
+                        }
+
+                        ToggleLocationTagCommandAction tagLocationAction = Global.UserSettings.Actions.ToggleLocationTagCommandAction.Where(action => action.Name == h.Action).SingleOrDefault();
+                        if (tagLocationAction != null)
+                        {
+                            OnToggleLocationTag(tagLocationAction.Tag);
 
                             return;
                         }
@@ -644,7 +657,7 @@ namespace WebAnnotation
                 {
                     foreach (string attrib in attributes)
                     {
-                        Structure.ToggleAttribute(newStruct, attrib);
+                        newStruct.ToggleAttribute(attrib);
                     }
                 }
 
@@ -758,9 +771,29 @@ namespace WebAnnotation
                 return;
             }
                
-            Viking.UI.Commands.Command.EnqueueCommand(typeof(ToggleTagCommand), new object[] { this.Parent, loc.Parent, tag});
+            Viking.UI.Commands.Command.EnqueueCommand(typeof(ToggleStructureTag), new object[] { this.Parent, loc.Parent, tag});
 
             return; 
+        }
+
+        protected void OnToggleLocationTag(string tag)
+        {
+            if (LastMouseOverObject == null)
+            {
+                Trace.WriteLine("No mouse over object to toggle tag");
+                return;
+            }
+
+            Location_CanvasViewModel loc = LastMouseOverObject as Location_CanvasViewModel; // GetNearestLocation(WorldPosition, out distance);
+            if (loc == null)
+            {
+                Trace.WriteLine("No mouse over location to toggle tag");
+                return;
+            }
+
+            Viking.UI.Commands.Command.EnqueueCommand(typeof(ToggleLocationTag), new object[] { this.Parent, loc.modelObj, tag });
+
+            return;
         }
 
         protected void OnToggleLocationTerminalTag()
@@ -1144,7 +1177,7 @@ namespace WebAnnotation
             }
             
             //Draw text for locations on the reference sections
-            List<LocationCanvasView> listVisibleNonOverlappingLocationsOnAdjacentSections = FindVisibleLocations(RefLocations, Bounds); 
+            List<LocationCanvasView> listVisibleNonOverlappingLocationsOnAdjacentSections = FindVisibleAdjacentLocations(RefLocations, Bounds); 
             List<LocationCanvasView> listVisibleOverlappingLocationsOnAdjacentSections = RemoveOverlappingLocations(listVisibleNonOverlappingLocationsOnAdjacentSections, _Parent.Section.Number); 
 
             //Draw all of the locations on the current section
@@ -1262,9 +1295,15 @@ namespace WebAnnotation
 
         private static List<LocationCanvasView> FindVisibleLocations(IEnumerable<LocationCanvasView> locations,  GridRectangle VisibleBounds)
         {
-            return locations.Where(l => l != null && l.VolumePositionHasBeenCalculated && l.Parent != null && l.Parent.Type != null).ToList();
+            double MaxDimension = Math.Max(VisibleBounds.Width, VisibleBounds.Height);
+            return locations.Where(l => l != null && l.VolumePositionHasBeenCalculated && l.Parent != null && l.Parent.Type != null && l.IsVisible(MaxDimension)).ToList();
         }
 
+        private static List<Location_CanvasViewModel> FindVisibleAdjacentLocations(IEnumerable<Location_CanvasViewModel> locations, GridRectangle VisibleBounds)
+        {
+            double MaxDimension = Math.Max(VisibleBounds.Width, VisibleBounds.Height);
+            return locations.Where(l => l != null && l.VolumePositionHasBeenCalculated && l.Parent != null && l.Parent.Type != null && l.IsVisibleOnAdjacent(MaxDimension)).ToList();
+        }
 
         /// <summary>
         /// Remove all locations from the collection which overlap locations on the specified section
@@ -1411,5 +1450,6 @@ namespace WebAnnotation
             
             return bounds;
         }
+
     }
 }

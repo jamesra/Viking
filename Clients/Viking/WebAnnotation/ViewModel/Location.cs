@@ -29,6 +29,4 @@ namespace WebAnnotation.ViewModel
             
         }
     }
-    
-     
 }

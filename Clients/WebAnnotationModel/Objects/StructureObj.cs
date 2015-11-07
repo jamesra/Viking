@@ -120,6 +120,26 @@ namespace WebAnnotationModel
             }
         }
 
+        /// <summary>
+        /// Add the specified name to the attributes if it does not exists, removes it 
+        /// </summary>
+        /// <param name="tag"></param>
+        public void ToggleAttribute(string tag)
+        {
+            ObjAttribute attrib = new ObjAttribute(tag, null);
+            List<ObjAttribute> listAttributes = this.Attributes.ToList();
+            if (listAttributes.Contains(attrib))
+            {
+                listAttributes.Remove(attrib);
+            }
+            else
+            {
+                listAttributes.Add(attrib);
+            }
+
+            this.Attributes = listAttributes;
+        }
+
         public string Label
         {
             get { return Data.Label; }

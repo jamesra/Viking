@@ -649,6 +649,97 @@ namespace connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd {
         }
     }
     
+    public partial class ToggleLocationTagCommandAction : XTypedElement, IXMetaData {
+        
+         public static explicit operator ToggleLocationTagCommandAction(XElement xe) { return XTypedServices.ToXTypedElement<ToggleLocationTagCommandAction>(xe,LinqToXsdTypeManager.Instance as ILinqToXsdTypeManager); }
+        
+        public ToggleLocationTagCommandAction() {
+        }
+        
+        /// <summary>
+        /// <para>
+        /// Occurrence: required
+        /// </para>
+        /// </summary>
+        public string Name {
+            get {
+                XAttribute x = this.Attribute(XName.Get("Name", ""));
+                return XTypedServices.ParseValue<string>(x, XmlSchemaType.GetBuiltInSimpleType(XmlTypeCode.String).Datatype);
+            }
+            set {
+                this.SetAttribute(XName.Get("Name", ""), value, XmlSchemaType.GetBuiltInSimpleType(XmlTypeCode.String).Datatype);
+            }
+        }
+        
+        /// <summary>
+        /// <para>
+        /// Occurrence: required
+        /// </para>
+        /// </summary>
+        public string Tag {
+            get {
+                XAttribute x = this.Attribute(XName.Get("Tag", ""));
+                return XTypedServices.ParseValue<string>(x, XmlSchemaType.GetBuiltInSimpleType(XmlTypeCode.String).Datatype);
+            }
+            set {
+                this.SetAttribute(XName.Get("Tag", ""), value, XmlSchemaType.GetBuiltInSimpleType(XmlTypeCode.String).Datatype);
+            }
+        }
+        
+        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
+        XName IXMetaData.SchemaName {
+            get {
+                return XName.Get("ToggleLocationTagCommandAction", "http://connectomes.utah.edu/XSD/WebAnnotationUserSettings.xsd");
+            }
+        }
+        
+        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
+        SchemaOrigin IXMetaData.TypeOrigin {
+            get {
+                return SchemaOrigin.Element;
+            }
+        }
+        
+        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
+        ILinqToXsdTypeManager IXMetaData.TypeManager {
+            get {
+                return LinqToXsdTypeManager.Instance;
+            }
+        }
+        
+        public void Save(string xmlFile) {
+            XTypedServices.Save(xmlFile, Untyped);
+        }
+        
+        public void Save(System.IO.TextWriter tw) {
+            XTypedServices.Save(tw, Untyped);
+        }
+        
+        public void Save(System.Xml.XmlWriter xmlWriter) {
+            XTypedServices.Save(xmlWriter, Untyped);
+        }
+        
+        public static ToggleLocationTagCommandAction Load(string xmlFile) {
+            return XTypedServices.Load<ToggleLocationTagCommandAction>(xmlFile);
+        }
+        
+        public static ToggleLocationTagCommandAction Load(System.IO.TextReader xmlFile) {
+            return XTypedServices.Load<ToggleLocationTagCommandAction>(xmlFile);
+        }
+        
+        public static ToggleLocationTagCommandAction Parse(string xml) {
+            return XTypedServices.Parse<ToggleLocationTagCommandAction>(xml);
+        }
+        
+        public override XTypedElement Clone() {
+            return XTypedServices.CloneXTypedElement<ToggleLocationTagCommandAction>(this);
+        }
+        
+        ContentModelEntity IXMetaData.GetContentModel() {
+            return ContentModelEntity.Default;
+        }
+    }
+    
     public partial class ToggleLocationTerminalCommandAction : XTypedElement, IXMetaData {
         
          public static explicit operator ToggleLocationTerminalCommandAction(XElement xe) { return XTypedServices.ToXTypedElement<ToggleLocationTerminalCommandAction>(xe,LinqToXsdTypeManager.Instance as ILinqToXsdTypeManager); }
@@ -1191,7 +1282,7 @@ namespace connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd {
         
         /// <summary>
         /// <para>
-        /// Regular expression: (Action | CreateStructureCommandAction | ToggleStructureTagCommandAction | ToggleLocationTerminalCommandAction)+
+        /// Regular expression: (Action | CreateStructureCommandAction | ToggleStructureTagCommandAction | ToggleLocationTagCommandAction | ToggleLocationTerminalCommandAction)+
         /// </para>
         /// </summary>
         public partial class ActionsLocalType : XTypedElement, IXMetaData {
@@ -1204,6 +1295,9 @@ namespace connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd {
             
             [DebuggerBrowsable(DebuggerBrowsableState.Never)]
             private XTypedList<ToggleStructureTagCommandAction> ToggleStructureTagCommandActionField;
+            
+            [DebuggerBrowsable(DebuggerBrowsableState.Never)]
+            private XTypedList<ToggleLocationTagCommandAction> ToggleLocationTagCommandActionField;
             
             [DebuggerBrowsable(DebuggerBrowsableState.Never)]
             private XTypedList<ToggleLocationTerminalCommandAction> ToggleLocationTerminalCommandActionField;
@@ -1219,7 +1313,7 @@ namespace connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd {
             
             /// <summary>
             /// <para>
-            /// Regular expression: (Action | CreateStructureCommandAction | ToggleStructureTagCommandAction | ToggleLocationTerminalCommandAction)+
+            /// Regular expression: (Action | CreateStructureCommandAction | ToggleStructureTagCommandAction | ToggleLocationTagCommandAction | ToggleLocationTerminalCommandAction)+
             /// </para>
             /// </summary>
             public ActionsLocalType() {
@@ -1230,7 +1324,7 @@ namespace connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd {
             /// Occurrence: required, choice
             /// </para>
             /// <para>
-            /// Regular expression: (Action | CreateStructureCommandAction | ToggleStructureTagCommandAction | ToggleLocationTerminalCommandAction)+
+            /// Regular expression: (Action | CreateStructureCommandAction | ToggleStructureTagCommandAction | ToggleLocationTagCommandAction | ToggleLocationTerminalCommandAction)+
             /// </para>
             /// </summary>
             public IList<Action> Action {
@@ -1260,7 +1354,7 @@ namespace connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd {
             /// Occurrence: required, choice
             /// </para>
             /// <para>
-            /// Regular expression: (Action | CreateStructureCommandAction | ToggleStructureTagCommandAction | ToggleLocationTerminalCommandAction)+
+            /// Regular expression: (Action | CreateStructureCommandAction | ToggleStructureTagCommandAction | ToggleLocationTagCommandAction | ToggleLocationTerminalCommandAction)+
             /// </para>
             /// </summary>
             public IList<CreateStructureCommandAction> CreateStructureCommandAction {
@@ -1290,7 +1384,7 @@ namespace connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd {
             /// Occurrence: required, choice
             /// </para>
             /// <para>
-            /// Regular expression: (Action | CreateStructureCommandAction | ToggleStructureTagCommandAction | ToggleLocationTerminalCommandAction)+
+            /// Regular expression: (Action | CreateStructureCommandAction | ToggleStructureTagCommandAction | ToggleLocationTagCommandAction | ToggleLocationTerminalCommandAction)+
             /// </para>
             /// </summary>
             public IList<ToggleStructureTagCommandAction> ToggleStructureTagCommandAction {
@@ -1320,7 +1414,37 @@ namespace connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd {
             /// Occurrence: required, choice
             /// </para>
             /// <para>
-            /// Regular expression: (Action | CreateStructureCommandAction | ToggleStructureTagCommandAction | ToggleLocationTerminalCommandAction)+
+            /// Regular expression: (Action | CreateStructureCommandAction | ToggleStructureTagCommandAction | ToggleLocationTagCommandAction | ToggleLocationTerminalCommandAction)+
+            /// </para>
+            /// </summary>
+            public IList<ToggleLocationTagCommandAction> ToggleLocationTagCommandAction {
+                get {
+                    if ((this.ToggleLocationTagCommandActionField == null)) {
+                        this.ToggleLocationTagCommandActionField = new XTypedList<ToggleLocationTagCommandAction>(this, LinqToXsdTypeManager.Instance, XName.Get("ToggleLocationTagCommandAction", "http://connectomes.utah.edu/XSD/WebAnnotationUserSettings.xsd"));
+                    }
+                    return this.ToggleLocationTagCommandActionField;
+                }
+                set {
+                    if ((value == null)) {
+                        this.ToggleLocationTagCommandActionField = null;
+                    }
+                    else {
+                        if ((this.ToggleLocationTagCommandActionField == null)) {
+                            this.ToggleLocationTagCommandActionField = XTypedList<ToggleLocationTagCommandAction>.Initialize(this, LinqToXsdTypeManager.Instance, value, XName.Get("ToggleLocationTagCommandAction", "http://connectomes.utah.edu/XSD/WebAnnotationUserSettings.xsd"));
+                        }
+                        else {
+                            XTypedServices.SetList<ToggleLocationTagCommandAction>(this.ToggleLocationTagCommandActionField, value);
+                        }
+                    }
+                }
+            }
+            
+            /// <summary>
+            /// <para>
+            /// Occurrence: required, choice
+            /// </para>
+            /// <para>
+            /// Regular expression: (Action | CreateStructureCommandAction | ToggleStructureTagCommandAction | ToggleLocationTagCommandAction | ToggleLocationTerminalCommandAction)+
             /// </para>
             /// </summary>
             public IList<ToggleLocationTerminalCommandAction> ToggleLocationTerminalCommandAction {
@@ -1381,6 +1505,7 @@ namespace connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd {
                 localElementDictionary.Add(XName.Get("Action", "http://connectomes.utah.edu/XSD/WebAnnotationUserSettings.xsd"), typeof(Action));
                 localElementDictionary.Add(XName.Get("CreateStructureCommandAction", "http://connectomes.utah.edu/XSD/WebAnnotationUserSettings.xsd"), typeof(CreateStructureCommandAction));
                 localElementDictionary.Add(XName.Get("ToggleStructureTagCommandAction", "http://connectomes.utah.edu/XSD/WebAnnotationUserSettings.xsd"), typeof(ToggleStructureTagCommandAction));
+                localElementDictionary.Add(XName.Get("ToggleLocationTagCommandAction", "http://connectomes.utah.edu/XSD/WebAnnotationUserSettings.xsd"), typeof(ToggleLocationTagCommandAction));
                 localElementDictionary.Add(XName.Get("ToggleLocationTerminalCommandAction", "http://connectomes.utah.edu/XSD/WebAnnotationUserSettings.xsd"), typeof(ToggleLocationTerminalCommandAction));
             }
             
@@ -1564,6 +1689,7 @@ namespace connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd {
             elementDictionary.Add(XName.Get("Variable", "http://connectomes.utah.edu/XSD/WebAnnotationUserSettings.xsd"), typeof(global::connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd.Variable));
             elementDictionary.Add(XName.Get("CreateStructureCommandAction", "http://connectomes.utah.edu/XSD/WebAnnotationUserSettings.xsd"), typeof(global::connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd.CreateStructureCommandAction));
             elementDictionary.Add(XName.Get("ToggleStructureTagCommandAction", "http://connectomes.utah.edu/XSD/WebAnnotationUserSettings.xsd"), typeof(global::connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd.ToggleStructureTagCommandAction));
+            elementDictionary.Add(XName.Get("ToggleLocationTagCommandAction", "http://connectomes.utah.edu/XSD/WebAnnotationUserSettings.xsd"), typeof(global::connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd.ToggleLocationTagCommandAction));
             elementDictionary.Add(XName.Get("ToggleLocationTerminalCommandAction", "http://connectomes.utah.edu/XSD/WebAnnotationUserSettings.xsd"), typeof(global::connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd.ToggleLocationTerminalCommandAction));
             elementDictionary.Add(XName.Get("Action", "http://connectomes.utah.edu/XSD/WebAnnotationUserSettings.xsd"), typeof(global::connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd.Action));
             elementDictionary.Add(XName.Get("Hotkey", "http://connectomes.utah.edu/XSD/WebAnnotationUserSettings.xsd"), typeof(global::connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd.Hotkey));
@@ -1598,6 +1724,8 @@ namespace connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd {
 
     public ToggleStructureTagCommandAction ToggleStructureTagCommandAction {  get {return rootObject as ToggleStructureTagCommandAction; } }
 
+    public ToggleLocationTagCommandAction ToggleLocationTagCommandAction {  get {return rootObject as ToggleLocationTagCommandAction; } }
+
     public ToggleLocationTerminalCommandAction ToggleLocationTerminalCommandAction {  get {return rootObject as ToggleLocationTerminalCommandAction; } }
 
     public Action Action {  get {return rootObject as Action; } }
@@ -1630,6 +1758,11 @@ namespace connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd {
         }
         
         public XRootNamespace(ToggleStructureTagCommandAction root) {
+            this.doc = new XDocument(root.Untyped);
+            this.rootObject = root;
+        }
+        
+        public XRootNamespace(ToggleLocationTagCommandAction root) {
             this.doc = new XDocument(root.Untyped);
             this.rootObject = root;
         }
@@ -1777,6 +1910,8 @@ namespace connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd {
 
     public global::connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd.ToggleStructureTagCommandAction ToggleStructureTagCommandAction {  get {return rootObject as global::connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd.ToggleStructureTagCommandAction; } }
 
+    public global::connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd.ToggleLocationTagCommandAction ToggleLocationTagCommandAction {  get {return rootObject as global::connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd.ToggleLocationTagCommandAction; } }
+
     public global::connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd.ToggleLocationTerminalCommandAction ToggleLocationTerminalCommandAction {  get {return rootObject as global::connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd.ToggleLocationTerminalCommandAction; } }
 
     public global::connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd.Action Action {  get {return rootObject as global::connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd.Action; } }
@@ -1809,6 +1944,11 @@ namespace connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd {
         }
         
         public XRoot(global::connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd.ToggleStructureTagCommandAction root) {
+            this.doc = new XDocument(root.Untyped);
+            this.rootObject = root;
+        }
+        
+        public XRoot(global::connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd.ToggleLocationTagCommandAction root) {
             this.doc = new XDocument(root.Untyped);
             this.rootObject = root;
         }

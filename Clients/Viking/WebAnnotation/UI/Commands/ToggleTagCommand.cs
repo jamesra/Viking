@@ -8,12 +8,12 @@ using WebAnnotation.ViewModel;
 
 namespace WebAnnotation.UI.Commands
 {
-    class ToggleTagCommand : Viking.UI.Commands.Command
+    class ToggleStructureTag : Viking.UI.Commands.Command
     {
-        Structure target;
+        StructureObj target;
         string tag;
-        public ToggleTagCommand(Viking.UI.Controls.SectionViewerControl parent, 
-                                         Structure structure,
+        public ToggleStructureTag(Viking.UI.Controls.SectionViewerControl parent, 
+                                         StructureObj structure,
                                          string Tag)
             : base(parent)
         {
@@ -24,6 +24,32 @@ namespace WebAnnotation.UI.Commands
         public override void OnActivate()
         {
             this.Parent.BeginInvoke((Action)delegate() { this.Execute(); });
+        }
+
+        protected override void Execute()
+        {
+            target.ToggleAttribute(this.tag);
+            Store.Structures.Save();
+            base.Execute();
+        }
+    }
+
+    class ToggleLocationTag : Viking.UI.Commands.Command
+    {
+        LocationObj target;
+        string tag;
+        public ToggleLocationTag(Viking.UI.Controls.SectionViewerControl parent,
+                                         LocationObj loc,
+                                         string Tag)
+            : base(parent)
+        {
+            this.target = loc;
+            this.tag = Tag;
+        }
+
+        public override void OnActivate()
+        {
+            this.Parent.BeginInvoke((Action)delegate () { this.Execute(); });
         }
 
         protected override void Execute()

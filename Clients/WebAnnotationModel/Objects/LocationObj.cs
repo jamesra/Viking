@@ -95,19 +95,22 @@ namespace WebAnnotationModel
         {
             get
             {
-                /*
+                
                 if (!_MosaicPosition.HasValue)
                     _MosaicPosition = new GridVector2(Data.Position.X, Data.Position.Y);
-                */
+                /*
 
                 if (!_MosaicPosition.HasValue)
                     _MosaicPosition = this.MosaicShape.Centroid();
 
+                return this.Data.MosaicShape.ToCentroid(); 
+                */
+
                 return _MosaicPosition.Value;
 
-                //return this.Data.MosaicShape.ToCentroid(); 
+               
             }
-            /*
+            
             set
             {
                 if (GridVector2.Equals(this.Position, value))
@@ -125,8 +128,6 @@ namespace WebAnnotationModel
 
                 SetDBActionForChange();
             }
-            */
-
         }
 
 
@@ -140,16 +141,16 @@ namespace WebAnnotationModel
         {
             get
             {
-                /*
+                
                 if (!_VolumePosition.HasValue)
                     _VolumePosition = new GridVector2(Data.VolumePosition.X, Data.VolumePosition.Y);
-                    */
+                /*
                 if (!_VolumePosition.HasValue)
                     _VolumePosition = this.VolumeShape.Centroid();
-
+                */
                 return _VolumePosition.Value;
             }
-            /*
+            
             set
             {
                 if (GridVector2.Equals(this.VolumePosition, value))
@@ -167,7 +168,7 @@ namespace WebAnnotationModel
 
                 //                SetDBActionForChange();
             }
-            */
+            
         }
 
         /// <summary>
@@ -190,6 +191,7 @@ namespace WebAnnotationModel
                 }
                 return _VolumeShape;
             }
+            /*
             set
             {
                 Debug.Assert(value != null);
@@ -211,6 +213,7 @@ namespace WebAnnotationModel
 
                 SetDBActionForChange();
             }
+            */
         }
 
         private Microsoft.SqlServer.Types.SqlGeometry _MosaicShape;
@@ -224,6 +227,7 @@ namespace WebAnnotationModel
                 }
                 return _MosaicShape;
             }
+            /*
             set
             {
                 Debug.Assert(value != null);
@@ -243,7 +247,7 @@ namespace WebAnnotationModel
                 OnPropertyChanged("Position");
 
                 SetDBActionForChange();
-            }
+            }*/
         }
         
 
@@ -310,7 +314,7 @@ namespace WebAnnotationModel
             {
                 if (NumLinks >= 2)
                     return false; 
-                return !(Terminal || OffEdge);
+                return !(Terminal || OffEdge || VericosityCap || Untraceable );
             }
         }
 
@@ -491,14 +495,34 @@ namespace WebAnnotationModel
             }
         }
 
+        public bool VericosityCap
+        {
+            get { return Attributes.Any(a => a.Name == "Varicosity Cap"); }
+        }
+
+        public bool Untraceable
+        {
+            get { return Attributes.Any(a => a.Name == "Untraceable"); }
+        }
+
         public DateTime LastModified
         {
             get { return new DateTime(Data.LastModified, DateTimeKind.Utc); }
         }
 
+        List<ObjAttribute> _Attributes = null;
+
         public IEnumerable<ObjAttribute> Attributes
         {
-            get { return ObjAttribute.Parse(Data.AttributesXml); }
+            get {
+
+                if (_Attributes == null)
+                {
+                    _Attributes = ObjAttribute.Parse(Data.AttributesXml);
+                }
+
+                return _Attributes;
+            }
             set
             {
                 if (Data.AttributesXml == null && value == null)
@@ -514,12 +538,33 @@ namespace WebAnnotationModel
                     OnPropertyChanging("Attributes");
 
                     Data.AttributesXml = xmlstring;
+                    _Attributes = null;
 
                     //Refresh the tags
                     SetDBActionForChange();
                     OnPropertyChanged("Attributes");
                 }
             }
+        }
+
+        /// <summary>
+        /// Add the specified name to the attributes if it does not exists, removes it 
+        /// </summary>
+        /// <param name="tag"></param>
+        public void ToggleAttribute(string tag)
+        {
+            ObjAttribute attrib = new ObjAttribute(tag, null);
+            List<ObjAttribute> listAttributes = this.Attributes.ToList();
+            if (listAttributes.Contains(attrib))
+            {
+                listAttributes.Remove(attrib);
+            }
+            else
+            {
+                listAttributes.Add(attrib);
+            }
+
+            this.Attributes = listAttributes;
         }
 
         public LocationObj()
@@ -574,6 +619,8 @@ namespace WebAnnotationModel
             this.Data.Username = newdata.Username;
             this.Data.LastModified = newdata.LastModified;
             this.Data.Links = newdata.Links;
+
+            this._Attributes = null;
             //this.Data.VolumeShape = newdata.VolumeShape;
             //this.Data.MosaicShape = newdata.MosaicShape;
         }

@@ -21,9 +21,8 @@ namespace Viking
         /// </summary>
         /// <param name="ok"></param>
         /// <returns></returns>
-        public static bool XNAFrameworkInstalled()
+        public static bool XNAFrameworkInstalled(string baseKeyName)
         { 
-            string baseKeyName = @"SOFTWARE\Microsoft\XNA\Game Studio\v4.0";
             Microsoft.Win32.RegistryKey FrameworkKey = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(baseKeyName);
 
             if(FrameworkKey == null)
@@ -72,7 +71,10 @@ namespace Viking
 
             string website = null;
 
-            if(!XNAFrameworkInstalled())
+            if(!(XNAFrameworkInstalled(@"SOFTWARE\Microsoft\XNA\Game Studio\v4.0") ||
+                 XNAFrameworkInstalled(@"SOFTWARE\Wow6432Node\Microsoft\XNA\Game Studio\v4.0") ||
+                 XNAFrameworkInstalled(@"SOFTWARE\Microsoft\XNA\Framework\v4.0") ||
+                 XNAFrameworkInstalled(@"SOFTWARE\Wow6432Node\Microsoft\XNA\Framework\v4.0")))
             {
                 MessageBox.Show("XNA framework 4.0 does not appear to be installed.  Viking will display a blank gray screen without it.  Please check the documentation or internet for links to the XNA Framework 4.0 Redistributable.", "Missing XNA 4.0 Redistributable", MessageBoxButtons.OK);
             }
