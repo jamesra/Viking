@@ -3242,5 +3242,219 @@ end
 	 COMMIT TRANSACTION thirtyseven
 	end
 
+	if(not(exists(select (1) from DBVersion where DBVersionID = 38)))
+	begin
+     print N'Add User Defined Functions to help measure PSD and gap junction area' 
+	 BEGIN TRANSACTION thirtyeight
+		IF OBJECT_ID (N'dbo.ufnLineFromPoints', N'FN') IS NOT NULL
+			DROP FUNCTION ufnLineFromPoints;
+		IF OBJECT_ID (N'dbo.ufnLineFromAngleAndDistance', N'FN') IS NOT NULL
+			DROP FUNCTION ufnLineFromAngleAndDistance;
+		IF OBJECT_ID (N'dbo.ufnLineFromLinkedShapes', N'FN') IS NOT NULL
+			DROP FUNCTION ufnLineFromLinkedShapes;
+		
+		Exec('
+			CREATE FUNCTION dbo.ufnLineFromPoints(@P1 geometry, @P2 geometry)
+			RETURNS geometry 
+			AS 
+			-- Returns a line where two circles intersect.  
+			-- If they do not intersect returns a line that is perpendicular to a direct line between two shapes.  Centered on T.
+			BEGIN
+				DECLARE @ret geometry
+				if @P1.Z IS NOT NULL AND @P2.Z IS NOT NULL
+					SET @ret = geometry::STLineFromText( ''LINESTRING ( '' + STR(@P1.STX, 10,8) + '' '' +
+															   STR(@P1.STY, 10,8) + '' '' +
+															   STR(@P1.Z, 10,8) + '', '' +
+															   STR(@P2.STX, 10,8) + '' '' +
+															   STR(@P2.STY, 10,8) + '' '' +
+															   STR(@P2.Z, 10,8) + '')'',0)
+				ELSE
+					SET @ret = geometry::STLineFromText( ''LINESTRING ( '' + STR(@P1.STX, 10,8) + '' '' +
+															   STR(@P1.STY, 10,8) + '', '' +
+															   STR(@P2.STX, 10,8) + '' '' +
+															   STR(@P2.STY, 10,8) + '')'',0)
+				RETURN @ret
+			END
+			')
+
+		if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
+		Exec('
+			CREATE FUNCTION dbo.ufnLineFromAngleAndDistance(@angle float, @distance float, @offset geometry)
+			RETURNS geometry
+			AS 
+			-- Returns a line centered on offset with @angle and total length = @distance
+			BEGIN
+				DECLARE @ret geometry
+				DECLARE @P1X float
+				DECLARE @P1Y float
+				DECLARE @P2X float
+				DECLARE @P2Y float
+				DECLARE @Radius float
+				DECLARE @Tau float
+				set @Radius = @distance / 2.0 
+
+				--Need to create a line centered on 0,0 so we can translate it to the center of S
+				set @P1X = (COS(@Angle - PI()) * @Radius) + @offset.STX
+				set @P1Y = (SIN(@Angle - PI()) * @Radius) + @offset.STY
+				set @P2X = (COS(@Angle) * @Radius) + @offset.STX
+				set @P2Y = (SIN(@Angle) * @Radius) + @offset.STY
+
+				if @Offset.Z is NOT NULL
+					set @ret = geometry::STLineFromText( ''LINESTRING ( '' + STR(@P1X, 10,8)  + '' '' +
+															STR(@P1Y, 10,8) + '' '' +
+															STR(@offset.Z, 10, 8) + '', '' + 
+															STR(@P2X, 10,8) + '' '' +
+															STR(@P2Y, 10,8) + '' '' +
+															STR(@offset.Z, 10, 8) + '')'',0)
+				ELSE
+					set @ret = geometry::STLineFromText( ''LINESTRING ( '' + STR(@P1X, 10,8)  + '' '' +
+															STR(@P1Y, 10,8) + '', '' + 
+															STR(@P2X, 10,8) + '' '' +
+															STR(@P2Y, 10,8) + '')'',0)
+				  
+				RETURN @ret
+			END
+			')
+
+		if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
+		 Exec('
+			CREATE FUNCTION dbo.ufnLineFromLinkedShapes(@S geometry, @T geometry)
+			RETURNS geometry 
+			AS 
+			-- Returns a line where two circles intersect.  
+			-- If they do not intersect returns a line that is perpendicular to a direct line between two shapes.  Centered on T.
+			BEGIN
+				DECLARE @ret geometry
+	
+				IF @T.STIntersects(@S) = 1 AND @S.STContains(@T) = 0 AND @T.STContains(@S) = 0
+				BEGIN
+					DECLARE @Points geometry
+					SET @Points = @S.STBoundary().STIntersection(@T.STBoundary())
+					SET @ret = DBO.ufnLineFromPoints(@Points.STGeometryN(1), @Points.STGeometryN(2))
+				END
+				ELSE
+				BEGIN
+					DECLARE @SCenter geometry
+					DECLARE @TCenter geometry
+					DECLARE @Radius float
+					DECLARE @Angle float
+					set @SCenter = @S.STCentroid ( )
+					set @TCenter = @T.STCentroid ( )
+					set @Radius = SQRT(@T.STArea() / PI())
+					set @Angle = ATN2(@SCenter.STY - @TCenter.STY, @SCenter.STX - @TCenter.STX) + (PI() / 2.0)
+		
+					set @ret = dbo.ufnLineFromAngleAndDistance( @Angle, @Radius * 2, @TCenter)
+				END
+			 
+				RETURN @ret
+			END
+			')
+
+		if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
+	 INSERT INTO DBVersion values (38, 
+		      N'Add User Defined Functions to help measure PSD and gap junction area' ,getDate(),User_ID())
+	 COMMIT TRANSACTION thirtyeight
+	end
+
+	
+	if(not(exists(select (1) from DBVersion where DBVersionID = 39)))
+	begin
+     print N'Add User Defined Functions to define constants such as XY scale' 
+	 BEGIN TRANSACTION thirtynine
+		IF OBJECT_ID (N'dbo.XYScale', N'FN') IS NOT NULL
+			DROP FUNCTION XYScale;
+		IF OBJECT_ID (N'dbo.ZScale', N'FN') IS NOT NULL
+			DROP FUNCTION ZScale;
+		IF OBJECT_ID (N'dbo.XYScaleUnits', N'FN') IS NOT NULL
+		    DROP FUNCTION XYScaleUnits;
+		IF OBJECT_ID (N'dbo.ZScaleUnits', N'FN') IS NOT NULL
+			DROP FUNCTION ZScaleUnits;
+
+		Exec('
+			CREATE FUNCTION dbo.XYScale()
+			RETURNS float 
+			AS 
+			-- Returns the scale in the XY axis
+			BEGIN
+				RETURN 2.176
+			END
+			')
+
+		if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+		 		
+		Exec('
+			CREATE FUNCTION dbo.ZScale()
+			RETURNS float 
+			AS 
+			-- Returns the scale in the Z axis
+			BEGIN
+				RETURN 90.0
+			END
+		')
+
+		if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
+		 		
+		Exec('
+			CREATE FUNCTION dbo.XYScaleUnits()
+			RETURNS varchar 
+			AS 
+			-- Returns the scale in the Z axis
+			BEGIN
+				RETURN ''nm''
+			END
+		')
+
+		if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
+		 		
+		Exec('
+			CREATE FUNCTION dbo.ZScaleUnits()
+			RETURNS varchar 
+			AS 
+			-- Returns the scale in the Z axis
+			BEGIN
+				RETURN ''nm''
+			END
+		')
+
+		if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
+	 INSERT INTO DBVersion values (39, 
+		      N'Add User Defined Functions to define constants such as XY scale' ,getDate(),User_ID())
+	 COMMIT TRANSACTION thirtynine
+	end
+
 --from here on, continually add steps in the previous manner as needed.
 	COMMIT TRANSACTION main
