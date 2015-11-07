@@ -482,6 +482,11 @@ namespace WebAnnotation.ViewModel
                     InfoLabel += tag.ToString() + " ";
                 }
 
+                foreach (ObjAttribute tag in this.modelObj.Attributes)
+                {
+                    InfoLabel += tag.ToString() + " ";
+                }
+
                 return InfoLabel.Trim();
             } 
         }
@@ -964,7 +969,7 @@ namespace WebAnnotation.ViewModel
 
         public bool IsVisible(double maxScreenDimension)
         {
-            double LocToScreenRatio = Radius * 2 / maxScreenDimension;
+            double LocToScreenRatio = Radius * 2.0 / maxScreenDimension;
             if (LocToScreenRatio > InvisibleCutoff)
                 return false;
 
@@ -973,7 +978,22 @@ namespace WebAnnotation.ViewModel
 
             return true;
         }
-         
+
+        public bool IsVisibleOnAdjacent(double maxScreenDimension)
+        {
+            double LocToScreenRatio = Radius * 2.0 / maxScreenDimension;
+            if (LocToScreenRatio > InvisibleCutoff)
+                return false;
+
+            if (LocToScreenRatio < 0.001)
+                return false;
+
+            if (this.modelObj.Terminal || this.modelObj.OffEdge || this.modelObj.Attributes.Any(a => a.Name == "Vericosity Cap"))
+                return false;
+
+            return true;
+        }
+
         public VertexPositionColorTexture[] GetCircleBackgroundVerts(GridRectangle VisibleBounds, double Downsample, int DirectionToVisiblePlane, out int[] indicies)
         {
             StructureType type = this.Parent.Type;

@@ -232,6 +232,7 @@ namespace WebAnnotation
         /// <returns></returns>
         public IUIObjectBasic GetNearestDrawnAnnotation(GridVector2 position, out double distance)
         {
+            double MaxScreenDimension = Math.Max(Parent.Scene.VisibleWorldBounds.Width, Parent.Scene.VisibleWorldBounds.Height);
             distance = double.MaxValue; 
             SectionLocationsViewModel locView = GetAnnotationsForSection(CurrentSectionNumber); 
             double BestDistance = double.MaxValue;
@@ -246,20 +247,23 @@ namespace WebAnnotation
                     Location_CanvasViewModel loc = bestObj as Location_CanvasViewModel;
                     if (loc == null)
                         return bestObj;
-    
-                    if (loc.OverlappingLinkedLocationCircles.Count == 0)
-                        return bestObj; 
 
-                    //Check if an overlapping adjacent location is a better fit
-                    foreach (OverlappedLocation linkedLoc in loc.OverlappingLinkedLocationCircles.Keys)
+                    if (loc.IsVisible(MaxScreenDimension))
                     {
-                        GridCircle linkCircle = loc.OverlappingLinkedLocationCircles[linkedLoc];
-                        if (linkCircle.Contains(position))
+                        if (loc.OverlappingLinkedLocationCircles.Count == 0)
+                            return bestObj;
+
+                        //Check if an overlapping adjacent location is a better fit
+                        foreach (OverlappedLocation linkedLoc in loc.OverlappingLinkedLocationCircles.Keys)
                         {
-                            bestObj = linkedLoc;
-                           // bestObj = new LocationLink(loc, linkedLoc); 
-                            distance = GridVector2.Distance(position, linkCircle.Center); 
-                            return bestObj; 
+                            GridCircle linkCircle = loc.OverlappingLinkedLocationCircles[linkedLoc];
+                            if (linkCircle.Contains(position))
+                            {
+                                bestObj = linkedLoc;
+                                // bestObj = new LocationLink(loc, linkedLoc); 
+                                distance = GridVector2.Distance(position, linkCircle.Center);
+                                return bestObj;
+                            }
                         }
                     }
                 }
@@ -275,23 +279,7 @@ namespace WebAnnotation
                     locView = GetAnnotationsForSection(_Parent.Section.ReferenceSectionAbove.Number);
                     if (locView != null)
                     {
-                        adjacentObjs.AddRange(locView.GetLocations(position));
-                        /*
-                        //TODO: Combine adjancent section results and then filter out terminal locations
-                        adjacentObj = locView.GetNearestLocation(position, out distance);
-                        if (adjacentObj != null)
-                        {
-                            distanceRatio = distance / adjacentObj.OffSectionRadius;
-                            if (distanceRatio < bestRatio)
-                            {
-                                if (distance < adjacentObj.OffSectionRadius)
-                                {
-                                    bestObj = adjacentObj;
-                                    BestDistance = distance;
-                                }
-                            }
-                        }
-                        */
+                        adjacentObjs.AddRange(locView.GetLocations(position).Where(l => l.IsVisibleOnAdjacent(MaxScreenDimension)));
                     }
                 }
 
@@ -301,8 +289,7 @@ namespace WebAnnotation
                     locView = GetAnnotationsForSection(_Parent.Section.ReferenceSectionBelow.Number);
                     if (locView != null)
                     {
-                        adjacentObjs.AddRange(locView.GetLocations(position));
-                        
+                        adjacentObjs.AddRange(locView.GetLocations(position).Where(l => l.IsVisibleOnAdjacent(MaxScreenDimension)));
                     }
                 }
 
@@ -608,10 +595,18 @@ namespace WebAnnotation
                             return;
                         }
 
-                        ToggleStructureTagCommandAction tagAction = Global.UserSettings.Actions.ToggleStructureTagCommandAction.Where(action => action.Name == h.Action).SingleOrDefault();
-                        if (tagAction != null)
+                        ToggleStructureTagCommandAction tagStructureAction = Global.UserSettings.Actions.ToggleStructureTagCommandAction.Where(action => action.Name == h.Action).SingleOrDefault();
+                        if (tagStructureAction != null)
                         {
-                            OnToggleStructureTag(tagAction.Tag);
+                            OnToggleStructureTag(tagStructureAction.Tag);
+
+                            return;
+                        }
+
+                        ToggleLocationTagCommandAction tagLocationAction = Global.UserSettings.Actions.ToggleLocationTagCommandAction.Where(action => action.Name == h.Action).SingleOrDefault();
+                        if (tagLocationAction != null)
+                        {
+                            OnToggleLocationTag(tagLocationAction.Tag);
 
                             return;
                         }
@@ -704,7 +699,7 @@ namespace WebAnnotation
                 {
                     foreach (string attrib in attributes)
                     {
-                        newStructView.ToggleAttribute(attrib);
+                        newStructView.modelObj.ToggleAttribute(attrib);
                     }
                 }
 
@@ -789,9 +784,29 @@ namespace WebAnnotation
                 return;
             }
                
-            Viking.UI.Commands.Command.EnqueueCommand(typeof(ToggleTagCommand), new object[] { this.Parent, loc.Parent, tag});
+            Viking.UI.Commands.Command.EnqueueCommand(typeof(ToggleStructureTag), new object[] { this.Parent, loc.Parent, tag});
 
             return; 
+        }
+
+        protected void OnToggleLocationTag(string tag)
+        {
+            if (LastMouseOverObject == null)
+            {
+                Trace.WriteLine("No mouse over object to toggle tag");
+                return;
+            }
+
+            Location_CanvasViewModel loc = LastMouseOverObject as Location_CanvasViewModel; // GetNearestLocation(WorldPosition, out distance);
+            if (loc == null)
+            {
+                Trace.WriteLine("No mouse over location to toggle tag");
+                return;
+            }
+
+            Viking.UI.Commands.Command.EnqueueCommand(typeof(ToggleLocationTag), new object[] { this.Parent, loc.modelObj, tag });
+
+            return;
         }
 
         protected void OnToggleLocationTerminalTag()
@@ -1173,7 +1188,7 @@ namespace WebAnnotation
             }
             
             //Draw text for locations on the reference sections
-            List<Location_CanvasViewModel> listVisibleNonOverlappingLocationsOnAdjacentSections = FindVisibleLocations(RefLocations, Bounds); 
+            List<Location_CanvasViewModel> listVisibleNonOverlappingLocationsOnAdjacentSections = FindVisibleAdjacentLocations(RefLocations, Bounds); 
             List<Location_CanvasViewModel> listVisibleOverlappingLocationsOnAdjacentSections = RemoveOverlappingLocations(listVisibleNonOverlappingLocationsOnAdjacentSections, _Parent.Section.Number); 
 
             //Draw all of the locations on the current section
@@ -1288,9 +1303,15 @@ namespace WebAnnotation
 
         private static List<Location_CanvasViewModel> FindVisibleLocations(IEnumerable<Location_CanvasViewModel> locations,  GridRectangle VisibleBounds)
         {
-            return locations.Where(l => l != null && l.VolumePositionHasBeenCalculated && l.Parent != null && l.Parent.Type != null).ToList();
+            double MaxDimension = Math.Max(VisibleBounds.Width, VisibleBounds.Height);
+            return locations.Where(l => l != null && l.VolumePositionHasBeenCalculated && l.Parent != null && l.Parent.Type != null && l.IsVisible(MaxDimension)).ToList();
         }
 
+        private static List<Location_CanvasViewModel> FindVisibleAdjacentLocations(IEnumerable<Location_CanvasViewModel> locations, GridRectangle VisibleBounds)
+        {
+            double MaxDimension = Math.Max(VisibleBounds.Width, VisibleBounds.Height);
+            return locations.Where(l => l != null && l.VolumePositionHasBeenCalculated && l.Parent != null && l.Parent.Type != null && l.IsVisibleOnAdjacent(MaxDimension)).ToList();
+        }
 
         /// <summary>
         /// Remove all locations from the collection which overlap locations on the specified section
