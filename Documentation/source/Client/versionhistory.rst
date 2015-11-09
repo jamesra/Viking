@@ -9,11 +9,11 @@ Version History
    * Fixed the test for XNA installation.  A message now pops up correctly if XNA is not installed.
    * Structure Links now default to bidirectional when created between structures with the same type, i.e. Gap junctions, Adherens, etc...
    * Locations can now be tagged using Hotkeys.  These hotkeys exist for these use semantics:
-      Shift + X : Terminal.  Used at the tip of a fine process.  Typically found at the boundaries of a cells receptive field.
-      Shift + V : Vericosity cap.  Used at the top of a "Stack of coins" that marks the top or bottom of a vericosity.  Distinct from the tip of a process marking the boundaries of the cell.
-      Shift + U : Untraceable.  A process marked Untraceable may or may not continue, but the user is unable to continue with the information available. 
       
-      Note that "Off Edge" flag found in the context menu also applies when a cell exits the volume.  It does not have a hotkey yet. 
+      * Shift + X : Terminal.  Used at the tip of a fine process.  Typically found at the boundaries of a cells receptive field.
+      * Shift + V : Vericosity cap.  Used at the top of a "Stack of coins" that marks the top or bottom of a vericosity.  Distinct from the tip of a process marking the boundaries of the cell.
+      * Shift + U : Untraceable.  A process marked Untraceable may or may not continue, but the user is unable to continue with the information available. 
+      * Note that "Off Edge" flag found in the context menu also applies when a cell exits the volume.  It does not have a hotkey yet. 
 
 1.1.168
 -------
