@@ -339,8 +339,7 @@ namespace WebAnnotationModel
 
         private ObservableCollection<long> _ObservableLinks = null;
         private ReadOnlyObservableCollection<long> _ReadOnlyObservableLinks = null;
-
-
+        
         public long[] LinksCopy
         {
             get
@@ -619,10 +618,9 @@ namespace WebAnnotationModel
             this.Data.Username = newdata.Username;
             this.Data.LastModified = newdata.LastModified;
             this.Data.Links = newdata.Links;
-
             this._Attributes = null;
-            //this.Data.VolumeShape = newdata.VolumeShape;
-            //this.Data.MosaicShape = newdata.MosaicShape;
+            this.Data.VolumeShape = newdata.VolumeShape;
+            this.Data.MosaicShape = newdata.MosaicShape;
         }
         
 
