@@ -784,7 +784,7 @@ namespace WebAnnotation
                 return;
             }
                
-            Viking.UI.Commands.Command.EnqueueCommand(typeof(ToggleStructureTag), new object[] { this.Parent, loc.Parent, tag});
+            Viking.UI.Commands.Command.EnqueueCommand(typeof(ToggleStructureTag), new object[] { this.Parent, loc.Parent.modelObj, tag});
 
             return; 
         }
