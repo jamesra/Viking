@@ -80,8 +80,16 @@ into #ParentIDForChildStructure from #DistanceToEachStructure SD
 join #DistanceToNearestStructure SN ON SN.StructureID = SD.StructureID AND SN.Distance = SD.Distance
 
 select * from #ParentIDForChildStructure
+
 /*
+
 update Structure set ParentID = PCS.NewParentID 
 FROM Structure S
 	JOIN #ParentIDForChildStructure PCS ON S.ID = PCS.StructureID
-	*/
+
+update Location set ParentID = LS.ID
+FROM Location L
+	JOIN #LocationsInSplitSubGraph LS ON LS.ID = L.ID
+
+
+*/
