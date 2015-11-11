@@ -106,6 +106,7 @@ namespace VikingXNA
         {
             _Projection = Matrix.CreateOrthographic((float)(_Viewport.Width * _camera.Downsample), (float)(_Viewport.Height * _camera.Downsample), MinDrawdistance, MaxDrawDistance);
             _WorldViewProj = (World * Camera.View) * _Projection;
+            _VisibleWorldBounds = new GridRectangle?();
         }
 
         private void OnCameraPropertyChanged(object sender, PropertyChangedEventArgs e)
@@ -118,20 +119,33 @@ namespace VikingXNA
             else
             {
                 _WorldViewProj = (_World * Camera.View) * _Projection;
+                _VisibleWorldBounds = new GridRectangle?();
             }
         }
+
+        private Geometry.GridRectangle? _VisibleWorldBounds;
 
         public Geometry.GridRectangle VisibleWorldBounds
         {
             get
             {
-                //For debugging
-                const int offset = 0;
+                if(!_VisibleWorldBounds.HasValue)
+                {
+                    double offset = 0; 
+                    GridRectangle projectedArea = new GridRectangle(new GridVector2(0, 0), ((double)_Viewport.Width * Camera.Downsample), (double)_Viewport.Height * Camera.Downsample); ;
+                    GridVector2 BottomLeft = ScreenToWorld(offset, _Viewport.Height);
+                    _VisibleWorldBounds = new GridRectangle(BottomLeft, projectedArea.Width, projectedArea.Height);
+                }
 
-                GridRectangle projectedArea = new GridRectangle(new GridVector2(0, 0), ((double)_Viewport.Width * Camera.Downsample), (double)_Viewport.Height * Camera.Downsample); ;
-                GridVector2 BottomLeft = ScreenToWorld(offset, _Viewport.Height);
-                GridRectangle rect = new GridRectangle(BottomLeft, projectedArea.Width, projectedArea.Height);
-                return rect;
+                return _VisibleWorldBounds.Value;
+            }
+        }
+
+        public double MaxVisibleWorldBorderLength
+        {
+            get
+            {
+                return Math.Max(this.VisibleWorldBounds.Width, this.VisibleWorldBounds.Height);
             }
         }
 
