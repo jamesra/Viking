@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Windows;
-using System.ComponentModel; 
+using System.ComponentModel;
 using System.Collections.Specialized;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,10 +13,12 @@ using WebAnnotation.ViewModel;
 using Geometry;
 using Microsoft.SqlServer.Types;
 using VikingXNA;
+using System.Windows.Forms;
+using Viking.Common;
 
 namespace WebAnnotation.View
 {
-    abstract public class LocationCanvasView : IComparable<LocationCanvasView>, IWeakEventListener
+    abstract public class LocationCanvasView : IComparable<LocationCanvasView>, IWeakEventListener, IUIObjectBasic
     {
         public readonly LocationObj modelObj;
 
@@ -27,6 +29,11 @@ namespace WebAnnotation.View
 
         public abstract bool IsVisible(Scene scene);
 
+        public abstract bool IsVisibleOnAdjacent(Scene scene);
+
+        /// <summary>
+        /// Bounding box of the annotation
+        /// </summary>
         public abstract GridRectangle BoundingBox
         {
             get;
@@ -34,7 +41,23 @@ namespace WebAnnotation.View
 
         public abstract bool Intersects(GridVector2 Position);
 
+        public abstract bool Intersects(SqlGeometry shape);
+
+        public abstract bool IntersectsOnAdjacent(GridVector2 Position);
+        
+        /// <summary>
+        /// Returns the distance from the position to the nearest point on the annotation, or 0 if the position is inside the annotation
+        /// </summary>
+        /// <param name="Position"></param>
+        /// <returns></returns>
         public abstract double Distance(GridVector2 Position);
+
+        /// <summary>
+        /// Assumes Position is within the annotation.  Returns a number from 0 to 1 indicating how close the position is between the center and edge of the annotation.
+        /// </summary>
+        /// <param name="Position"></param>
+        /// <returns></returns>
+        public abstract double DistanceFromCenterNormalized(GridVector2 Position);
 
         public abstract void DrawLabel(Microsoft.Xna.Framework.Graphics.SpriteBatch spriteBatch,
                               Microsoft.Xna.Framework.Graphics.SpriteFont font,
@@ -43,6 +66,7 @@ namespace WebAnnotation.View
                               int DirectionToVisiblePlane);
 
         public abstract LocationAction GetActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber);
+
 
         public abstract IList<LocationCanvasView> OverlappingLinks
         {
@@ -163,6 +187,23 @@ namespace WebAnnotation.View
         public long? ParentID
         {
             get { return modelObj.ParentID; }
+        }
+
+        public ContextMenu ContextMenu
+        {
+            get
+            {
+                Location_CanvasContextMenuView contextView = new Location_CanvasContextMenuView(this.modelObj);
+                return contextView.ContextMenu;
+            }
+        }
+
+        public string ToolTip
+        {
+            get
+            {
+                return this.modelObj.Label; 
+            }
         }
 
         public bool Equals(LocationCanvasView x, LocationCanvasView y)
@@ -303,6 +344,17 @@ namespace WebAnnotation.View
         protected virtual void OnLinksChanged(object o, NotifyCollectionChangedEventArgs args)
         {
             return;
+        }
+
+        public void ShowProperties()
+        {
+            Location_CanvasContextMenuView contextView = new Location_CanvasContextMenuView(this.modelObj);
+            contextView.ShowProperties();
+        }
+
+        public void Save()
+        {
+            throw new NotImplementedException();
         }
         #endregion
     }

@@ -14,6 +14,7 @@ using WebAnnotation;
 using VikingXNAGraphics;
 using WebAnnotation.ViewModel;
 using WebAnnotation.UI.Commands;
+using Microsoft.SqlServer.Types;
 
 namespace WebAnnotation.View
 {
@@ -52,6 +53,16 @@ namespace WebAnnotation.View
             return Circle.Contains(Position);
         }
 
+        public override bool Intersects(SqlGeometry shape)
+        {
+            return this.modelObj.VolumeShape.STIntersects(shape).IsTrue;
+        }
+
+        public override bool IntersectsOnAdjacent(GridVector2 Position)
+        {
+            return Circle.Contains(Position);
+        }
+
         /// <summary>
         /// Distance to the nearest point on circle if outside, otherwise zero
         /// </summary>
@@ -61,6 +72,17 @@ namespace WebAnnotation.View
         {
             double Distance = GridVector2.Distance(Position, this.Circle.Center) - Radius;
             Distance = Distance < 0 ? 0 : Distance;
+            return Distance;
+        }
+
+        public override double DistanceFromCenterNormalized(GridVector2 Position)
+        {
+            return GridVector2.Distance(Position, this.Circle.Center) / this.Radius;
+        }
+
+        public double DistanceToCenter(GridVector2 Position)
+        {
+            double Distance = GridVector2.Distance(Position, this.Circle.Center);
             return Distance;
         }
 
@@ -79,18 +101,43 @@ namespace WebAnnotation.View
             return true;
         }
 
+        public override bool IsVisibleOnAdjacent(VikingXNA.Scene scene)
+        {
+            double maxDimension = Math.Max(scene.VisibleWorldBounds.Width, scene.VisibleWorldBounds.Height); 
+            double LocToScreenRatio = Radius * 2 / maxDimension;
+            if (LocToScreenRatio > InvisibleCutoff)
+                return false;
+
+            double maxPixelDimension = Math.Max(scene.DevicePixelWidth, scene.DevicePixelHeight);
+            if (Radius * 2 <= maxPixelDimension)
+                return false;
+
+            return true;
+        }
+
         public override LocationAction GetActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber)
         {
-            double distance = this.Distance(WorldPosition);
+            double distance = this.DistanceToCenter(WorldPosition);
+            
 
-            if (distance > this.Radius)
-                return LocationAction.NONE;
-            else if (distance >= (this.Radius * RadiusToResizeCircle))
-                return LocationAction.SCALE;
-            else if (distance >= (this.Radius * RadiusToLinkCircle))
-                return LocationAction.CREATELINK;
+            if (VisibleSectionNumber == (int)this.modelObj.Z)
+            {
+                if (distance > this.Radius)
+                    return LocationAction.NONE;
+                else if (distance >= (this.Radius * RadiusToResizeCircle))
+                    return LocationAction.SCALE;
+                else if (distance >= (this.Radius * RadiusToLinkCircle))
+                    return LocationAction.CREATELINK;
+                else
+                    return LocationAction.TRANSLATE;
+            }
             else
-                return LocationAction.TRANSLATE;
+            {
+                if (distance > this.OffSectionRadius)
+                    return LocationAction.NONE;
+
+                return LocationAction.CREATELINK;
+            }
         }
 
         #endregion
@@ -348,7 +395,7 @@ namespace WebAnnotation.View
             listLinkedLocations = listLinkedLocations.Where(loc => loc.Z != this.Z);
             IEnumerable<LocationCanvasView> listCanvasLocations = listLinkedLocations.Select(loc => AnnotationViewFactory.Create(loc));
 
-            return listCanvasLocations.Where(loc => loc.VolumeShape.STIntersects(this.VolumeShape).IsTrue).ToList();
+            return listCanvasLocations.Where(loc => loc.Intersects(this.modelObj.VolumeShape)).ToList();
         }
 
         /// <summary>
@@ -545,10 +592,10 @@ namespace WebAnnotation.View
 
                 int iVert = 0;
                 int iIndex = 0;
-                foreach (KeyValuePair<LocationObj, GridCircle> Item in this.OverlappingLinkedLocationCircles)
+                foreach (KeyValuePair<OverlappedLocation, GridCircle> Item in this.OverlappingLinkedLocationCircles)
                 {
                     GridCircle locCircle = Item.Value;
-                    LocationObj linkedLoc = Item.Key;
+                    OverlappedLocation linkedLoc = Item.Key;
 
                     //Make sure our verts and location lengths still agree, sometimes the collection size can grow.
                     if (iVert >= Verts.Length)
@@ -885,7 +932,9 @@ namespace WebAnnotation.View
             if (DirectionToVisiblePlane == 0)
             {
                 float AlphaForSectionLabels = 0;
-
+                
+                //TODO: Fix labels for overlapped location circles
+                /*
                 //Indicate the z value for each adjacent location
                 foreach (KeyValuePair<OverlappedLocation, GridCircle> adjLoc in this.OverlappingLinkedLocationCircles)
                 {
@@ -945,6 +994,7 @@ namespace WebAnnotation.View
                         yOffset += LineStep;
                     }
                 }
+                */
             }
         }
 

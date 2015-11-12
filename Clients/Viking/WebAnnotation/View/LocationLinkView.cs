@@ -6,6 +6,7 @@ using Viking.Common;
 using System.Windows.Forms;
 using WebAnnotationModel;
 using System.Diagnostics;
+using WebAnnotation.View;
 using Geometry;
 
 namespace WebAnnotation.ViewModel
@@ -159,9 +160,8 @@ namespace WebAnnotation.ViewModel
         /// <param name="Downsample"></param>
         /// <returns></returns>
         public bool LinksVisible(double Downsample)
-        {
-            throw new NotImplementedException();
-            //return LocationCanvasView.CalcOffSectionRadius(this.Radius) / Downsample > 2.0;
+        { 
+            return LocationCircleView.CalcOffSectionRadius(this.Radius) / Downsample > 2.0;
         }
 
         #region IUIObjectBasic Members

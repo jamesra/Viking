@@ -16,6 +16,7 @@ using System.Drawing;
 using Common.UI;
 using WebAnnotation.UI.Commands;
 using WebAnnotation.ViewModel;
+using Microsoft.SqlServer.Types;
 
 namespace WebAnnotation.View
 {
@@ -32,12 +33,32 @@ namespace WebAnnotation.View
             throw new NotImplementedException();
         }
 
+        public override bool IsVisibleOnAdjacent(VikingXNA.Scene scene)
+        {
+            throw new NotImplementedException();
+        }
+
         public override bool Intersects(GridVector2 Position)
         {
             throw new NotImplementedException();
         }
 
+        public override bool Intersects(SqlGeometry shape)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override bool IntersectsOnAdjacent(GridVector2 Position)
+        {
+            throw new NotImplementedException();
+        }
+
         public override double Distance(GridVector2 Position)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override double DistanceFromCenterNormalized(GridVector2 Position)
         {
             throw new NotImplementedException();
         }

@@ -11,6 +11,7 @@ using WebAnnotationModel;
 using SqlGeometryUtils;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using VikingXNA;
 
 namespace WebAnnotation.View
 {
@@ -18,9 +19,14 @@ namespace WebAnnotation.View
     {
         public override bool IsVisible(VikingXNA.Scene scene)
         {
-            throw new NotImplementedException();
+            return scene.VisibleWorldBounds.Intersects(this.BoundingBox);
         }
 
+        public override bool IsVisibleOnAdjacent(VikingXNA.Scene scene)
+        {
+            return scene.VisibleWorldBounds.Intersects(this.BoundingBox);
+        }
+        
         public override GridRectangle BoundingBox
         {
             get
@@ -34,9 +40,25 @@ namespace WebAnnotation.View
             return this.RenderedVolumeShape.Intersects(Position);
         }
 
+        public override bool Intersects(SqlGeometry shape)
+        {
+            return this.RenderedVolumeShape.STIntersects(shape).IsTrue;
+        }
+
+        public override bool IntersectsOnAdjacent(GridVector2 Position)
+        {
+            return this.RenderedVolumeShape.Intersects(Position);
+        }
+         
         public override double Distance(GridVector2 Position)
         {
             return this.RenderedVolumeShape.Distance(Position);
+        }
+
+        public override double DistanceFromCenterNormalized(GridVector2 Position)
+        {
+            //TODO: Find a more accurate measurement.  Returning 0 means the line is always on top in selection.
+            return 0;
         }
 
         protected override void OnObjPropertyChanged(object o, PropertyChangedEventArgs args)
@@ -46,14 +68,25 @@ namespace WebAnnotation.View
 
         public override void DrawLabel(SpriteBatch spriteBatch, SpriteFont font, Vector2 LocationCenterScreenPosition, float MagnificationFactor, int DirectionToVisiblePlane)
         {
-            throw new NotImplementedException();
+            return;
         }
 
         public override LocationAction GetActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber)
         {
-            throw new NotImplementedException();
+            //If we are over a control point then enable adjust mode to nudge control points
+            //Otherwise enable translate
+            double distance = this.Distance(WorldPosition);
+            if (distance > 0)
+                return LocationAction.NONE;
+
+            //Find distance to nearest control point
+            if (this.VolumeShape.ToPoints().Select(p => GridVector2.Distance(WorldPosition, p) < this.Width).Any())
+                return LocationAction.ADJUST;
+
+            return LocationAction.TRANSLATE;
         }
 
+        
         public override IList<LocationCanvasView> OverlappingLinks
         {
             get
@@ -86,7 +119,7 @@ namespace WebAnnotation.View
         
         public SqlGeometry VolumeShape
         {
-            get { return this.VolumeShape; }
+            get { return this.modelObj.VolumeShape; }
         }
     }
 }

@@ -297,7 +297,7 @@ namespace WebAnnotation.ViewModel
 
         public override string ToolTip
         {
-            get { throw new NotImplementedException(); }
+            get { return this.modelObj.Label; }
         }
 
         public override void Save()

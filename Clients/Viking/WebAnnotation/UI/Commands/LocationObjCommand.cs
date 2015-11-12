@@ -36,8 +36,9 @@ namespace WebAnnotation.UI.Commands
 
         public LocationObjCommand(Viking.UI.Controls.SectionViewerControl parent)
             : base(parent)
-        {
-            selected = Viking.UI.State.SelectedObject as LocationObj;
+        {            
+            LocationCanvasView select_ViewObj = Viking.UI.State.SelectedObject as LocationCanvasView;
+            selected = select_ViewObj.modelObj;
             Debug.Assert(selected != null);
 
             //Figure out if we've selected a location on the same section or different
@@ -125,8 +126,8 @@ namespace WebAnnotation.UI.Commands
                         return;
                     }
 
-                    selected.SectionPosition = SectionPos;
-                    //selected.MosaicShape = selected.MosaicShape.MoveTo(SectionPos);
+                    //selected.SectionPosition = SectionPos;
+                    selected.MosaicShape = selected.MosaicShape.MoveTo(SectionPos);
                     
                     //Send changes to DB
                     Store.Locations.Save();

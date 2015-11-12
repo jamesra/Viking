@@ -191,7 +191,6 @@ namespace WebAnnotationModel
                 }
                 return _VolumeShape;
             }
-            /*
             set
             {
                 Debug.Assert(value != null);
@@ -213,7 +212,7 @@ namespace WebAnnotationModel
 
                 SetDBActionForChange();
             }
-            */
+            
         }
 
         private Microsoft.SqlServer.Types.SqlGeometry _MosaicShape;
@@ -227,7 +226,6 @@ namespace WebAnnotationModel
                 }
                 return _MosaicShape;
             }
-            /*
             set
             {
                 Debug.Assert(value != null);
@@ -247,7 +245,7 @@ namespace WebAnnotationModel
                 OnPropertyChanged("Position");
 
                 SetDBActionForChange();
-            }*/
+            }
         }
         
 

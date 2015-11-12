@@ -665,7 +665,7 @@ namespace WebAnnotation.ViewModel
             //Figure out which object we are closer to the center of, the location or the link
             if (NearestLink != null && NearestLocationObj != null)
             {
-                if(linkDistance / NearestLink.Radius <= locDistance / NearestLocationObj.Radius)
+                if(linkDistance / NearestLink.Radius <= NearestLocationObj.DistanceFromCenterNormalized(WorldPosition))
                 {
                     NearestLocationObj = null;
                 }
@@ -714,7 +714,7 @@ namespace WebAnnotation.ViewModel
 
             //TODO: Put the SQL intersection test 
             List<LocationCanvasView> intersecting_candidates = candidates.Where(c => c.Intersects(WorldPosition)).ToList();
-            LocationCanvasView nearest = intersecting_candidates.OrderBy(c => c.Distance(WorldPosition) / c.Radius).FirstOrDefault();
+            LocationCanvasView nearest = intersecting_candidates.OrderBy(c => c.DistanceFromCenterNormalized(WorldPosition)).FirstOrDefault();
             if(nearest == null)
                 return null;
             else

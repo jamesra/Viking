@@ -77,12 +77,7 @@ namespace WebAnnotation
         {
             return 10;
         }
-
-        int Viking.Common.ISectionOverlayExtension.DrawOrder()
-        {
-            return 10;
-        }
-
+        
         static public void  GoToLocation(LocationObj loc)
         {
             if(loc == null)
@@ -269,7 +264,7 @@ namespace WebAnnotation
                     locView = GetAnnotationsForSection(_Parent.Section.ReferenceSectionAbove.Number);
                     if (locView != null)
                     {
-                        adjacentObjs.AddRange(locView.GetLocations(position).Where(l => l.IsVisibleOnAdjacent(MaxScreenDimension)));
+                        adjacentObjs.AddRange(locView.GetLocations(position).Where(l => l.IsVisibleOnAdjacent(Parent.Scene)));
                     }
                 }
 
@@ -279,19 +274,18 @@ namespace WebAnnotation
                     locView = GetAnnotationsForSection(_Parent.Section.ReferenceSectionBelow.Number);
                     if (locView != null)
                     {
-                        adjacentObjs.AddRange(locView.GetLocations(position).Where(l => l.IsVisibleOnAdjacent(MaxScreenDimension)));
+                        adjacentObjs.AddRange(locView.GetLocations(position).Where(l => l.IsVisibleOnAdjacent(Parent.Scene)));
                     }
                 }
 
                 IEnumerable<LocationCanvasView> intersecting_candidates = RemoveOverlappingLocations(adjacentObjs, this.CurrentSectionNumber);
                 intersecting_candidates = adjacentObjs.Where(l => l.IntersectsOnAdjacent(position) && l.IsTerminal == false);
-                LocationCanvasView nearest = intersecting_candidates.OrderBy(c => GridVector2.Distance(c.VolumePosition, position) / c.Radius).FirstOrDefault();
+                LocationCanvasView nearest = intersecting_candidates.OrderBy(c => c.DistanceFromCenterNormalized(position)).FirstOrDefault();
                 bestObj = nearest;
                 if (bestObj != null)
                 {
                     distance = GridVector2.Distance(position, nearest.VolumePosition);
                 }
-
             }
 
             //Only check for links if there are no annotations in range
@@ -396,8 +390,6 @@ namespace WebAnnotation
             {
                 _Parent.Cursor = Cursors.Default;
             }
-
-            
         }
 
         protected void OnMouseDown(object sender, MouseEventArgs e)
@@ -784,7 +776,7 @@ namespace WebAnnotation
                 return;
             }
 
-            Location_CanvasViewModel loc = LastMouseOverObject as Location_CanvasViewModel; // GetNearestLocation(WorldPosition, out distance);
+            LocationCanvasView loc = LastMouseOverObject as LocationCanvasView; // GetNearestLocation(WorldPosition, out distance);
             if (loc == null)
             {
                 Trace.WriteLine("No mouse over location to toggle tag");
@@ -1155,8 +1147,8 @@ namespace WebAnnotation
             //graphicsDevice.Clear(ClearOptions.DepthBuffer, Color.Black, float.MaxValue, 0); 
             //IncrementDepthStencilValue(graphicsDevice, ref nextStencilValue);
 
-            ICollection<LocationCanvasView> Locations = currentSectionAnnotations.GetLocations(Bounds);
-            List<LocationCanvasView> listLocationsToDraw = FindVisibleLocations(Locations, Bounds);
+            ICollection<LocationCanvasView> Locations = currentSectionAnnotations.GetLocations(scene.VisibleWorldBounds);
+            List<LocationCanvasView> listLocationsToDraw = FindVisibleLocations(Locations, scene);
             
             //Find a circle that encloses the visible bounds
             List<LocationCanvasView> RefLocations = new List<LocationCanvasView>();
@@ -1177,7 +1169,7 @@ namespace WebAnnotation
             }
             
             //Draw text for locations on the reference sections
-            List<LocationCanvasView> listVisibleNonOverlappingLocationsOnAdjacentSections = FindVisibleAdjacentLocations(RefLocations, Bounds); 
+            List<LocationCanvasView> listVisibleNonOverlappingLocationsOnAdjacentSections = FindVisibleAdjacentLocations(RefLocations, scene); 
             List<LocationCanvasView> listVisibleOverlappingLocationsOnAdjacentSections = RemoveOverlappingLocations(listVisibleNonOverlappingLocationsOnAdjacentSections, _Parent.Section.Number); 
 
             //Draw all of the locations on the current section
@@ -1293,16 +1285,14 @@ namespace WebAnnotation
             return false; 
         }
 
-        private static List<LocationCanvasView> FindVisibleLocations(IEnumerable<LocationCanvasView> locations,  GridRectangle VisibleBounds)
+        private static List<LocationCanvasView> FindVisibleLocations(IEnumerable<LocationCanvasView> locations, VikingXNA.Scene scene)
         {
-            double MaxDimension = Math.Max(VisibleBounds.Width, VisibleBounds.Height);
-            return locations.Where(l => l != null && l.VolumePositionHasBeenCalculated && l.Parent != null && l.Parent.Type != null && l.IsVisible(MaxDimension)).ToList();
+            return locations.Where(l => l != null && l.modelObj.VolumePositionHasBeenCalculated && l.Parent != null && l.Parent.Type != null && l.IsVisible(scene)).ToList();
         }
 
-        private static List<Location_CanvasViewModel> FindVisibleAdjacentLocations(IEnumerable<Location_CanvasViewModel> locations, GridRectangle VisibleBounds)
-        {
-            double MaxDimension = Math.Max(VisibleBounds.Width, VisibleBounds.Height);
-            return locations.Where(l => l != null && l.VolumePositionHasBeenCalculated && l.Parent != null && l.Parent.Type != null && l.IsVisibleOnAdjacent(MaxDimension)).ToList();
+        private static List<LocationCanvasView> FindVisibleAdjacentLocations(IEnumerable<LocationCanvasView> locations, VikingXNA.Scene scene)
+        { 
+            return locations.Where(l => l != null && l.modelObj.VolumePositionHasBeenCalculated && l.Parent != null && l.Parent.Type != null && l.IsVisibleOnAdjacent(scene)).ToList();
         }
 
         /// <summary>
