@@ -33,6 +33,7 @@ namespace AnnotationVizLib
 
             NodeAttribs.Add("StructureURL", string.Format("{0}/OData/ConnectomeData.svc/Structures({1}L)", this.VolumeURL, node.Key));
             NodeAttribs.Add("ID", string.Format("{0}", node.Key));
+            NodeAttribs.Add("Tags", node.Structure.AttributesXml);
 
             tlpnode.AddAttributes(NodeAttribs);
 

@@ -61,6 +61,11 @@ namespace AnnotationVizLib
             NodeAttribs.Add("LocationID", node.Location.ID.ToString());
             NodeAttribs.Add("ParentID", node.Location.ParentID.ToString());
             NodeAttribs.Add("LocationInViking", NodeVikingLocation(node));
+            NodeAttribs.Add("Terminal", node.Location.Terminal ? "true" : "false");
+            NodeAttribs.Add("OffEdge", node.Location.OffEdge ? "true" : "false");
+            NodeAttribs.Add("Untraceable", node.Location.IsUntraceable() ? "true" : "false");
+            NodeAttribs.Add("Vericosity Cap", node.Location.IsVericosityCap() ? "true" : "false");
+
             NodeAttribs.Add("StructureURL", string.Format("{0}/OData/ConnectomeData.svc/Locations({1}L)", this.VolumeURL, node.Location.ID));            
 
             if(node.Graph.structureType != null)

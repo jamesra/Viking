@@ -117,6 +117,11 @@ namespace AnnotationVizLib
             {"NumLinkedStructures", "int"},
             {"LocationID", "int"},
             {"ParentID", "int"},
+            {"Terminal", "bool"},
+            {"Off Edge", "bool" },
+            {"Vericosity Cap", "bool"},
+            {"Untraceable","bool" },
+            {"Tags", "string" }
 
         };
 

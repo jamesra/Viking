@@ -63,12 +63,14 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Attribute.cs" />
     <Compile Include="AttributeMapping\AttributeMaps.cs" />
     <Compile Include="AttributeMapping\GMLAttributes.cs" />
     <Compile Include="AttributeMapping\DOTAttributes.cs" />
     <Compile Include="AttributeMapping\TLPAttributes.cs" />
     <Compile Include="ColorMapping\ColorMapping.cs" />
     <Compile Include="ColorMapping\StructureColorMap.cs" />
+    <Compile Include="Extensions.cs" />
     <Compile Include="Graph\Morphology\MorphologyJSONView.cs" />
     <Compile Include="Graph\Motifs\MotifJSONView.cs" />
     <Compile Include="Graph\Motifs\MotifTLPView.cs" />
