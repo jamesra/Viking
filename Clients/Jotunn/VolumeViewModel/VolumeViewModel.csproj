@@ -127,11 +127,6 @@
       <Project>{2eba2a77-f7f0-4efc-ac06-a12fe249388f}</Project>
       <Name>VolumeModel</Name>
     </ProjectReference>
-    <ProjectReference Include="..\JotunnCommon\JotunnUICommon.csproj">
-      <Project>{A4E99A73-849C-44D3-8C1A-F0A942C569B4}</Project>
-      <Name>JotunnUICommon</Name>
-      <Private>False</Private>
-    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <WCFMetadata Include="Service References\" />

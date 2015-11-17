@@ -174,16 +174,6 @@
     <AppDesigner Include="Properties\" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\JotunnCommon\JotunnUICommon.csproj">
-      <Project>{A4E99A73-849C-44D3-8C1A-F0A942C569B4}</Project>
-      <Name>JotunnUICommon</Name>
-      <Private>False</Private>
-    </ProjectReference>
-    <ProjectReference Include="..\JotunnUIControls\JotunnUIControls.csproj">
-      <Project>{519C08C8-9A00-40F7-BA8D-7DA3EBBB4845}</Project>
-      <Name>JotunnUIControls</Name>
-      <Private>False</Private>
-    </ProjectReference>
     <ProjectReference Include="..\VolumeViewModel\VolumeViewModel.csproj">
       <Project>{9CE1E6A3-2B10-4003-AB23-7FDB642DD2D8}</Project>
       <Name>VolumeViewModel</Name>

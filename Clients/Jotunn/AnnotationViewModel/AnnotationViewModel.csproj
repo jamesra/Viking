@@ -97,11 +97,6 @@
       <Name>Geometry</Name>
       <Private>False</Private>
     </ProjectReference>
-    <ProjectReference Include="..\JotunnCommon\JotunnUICommon.csproj">
-      <Project>{a4e99a73-849c-44d3-8c1a-f0a942c569b4}</Project>
-      <Name>JotunnUICommon</Name>
-      <Private>False</Private>
-    </ProjectReference>
     <ProjectReference Include="..\VolumeViewModel\VolumeViewModel.csproj">
       <Project>{9ce1e6a3-2b10-4003-ab23-7fdb642dd2d8}</Project>
       <Name>VolumeViewModel</Name>
