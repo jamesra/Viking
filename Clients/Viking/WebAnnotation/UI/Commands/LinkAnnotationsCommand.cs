@@ -42,10 +42,7 @@ namespace WebAnnotation.UI.Commands
             double distance;
 
             LocationCanvasView nearestVisible = Overlay.GetNearestLocation(WorldPos, out distance);
-            if (nearestVisible != null)
-            {
-                NearestTarget = TrySetTarget(nearestVisible.modelObj);
-            }
+            NearestTarget = nearestVisible != null ? TrySetTarget(nearestVisible.modelObj) : null;
 
             base.OnMouseMove(sender, e);
 
