@@ -223,7 +223,7 @@ namespace SqlGeometryUtils
         }
 
         /// <summary>
-        /// Move the geometry objects centroid to the given coordinates
+        /// Move the geometry objects centroid by the provided offset
         /// </summary>
         /// <param name="geometry"></param>
         /// <param name="offset"></param>
@@ -234,8 +234,7 @@ namespace SqlGeometryUtils
         }
 
         public static string TranslateString(SqlGeometry geometry, GridVector2 offset)
-        {
-            GridVector2 delta = geometry.Centroid() - offset;
+        { 
             GridVector2[] translated_points = geometry.ToPoints().Select(p => p + offset).ToArray();
 
             StringBuilder geometryStringBuilder = new StringBuilder();
