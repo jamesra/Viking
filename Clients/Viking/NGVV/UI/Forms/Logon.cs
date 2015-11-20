@@ -135,7 +135,7 @@ namespace Viking.UI.Forms
                 
                 this.update_label.Text = "Sorry: Invalid credentials, try again " + counter + "/3" ;
             }
-            else
+            else //Login successful
             {
                 if (this.textUsername.Text != readUserName)
                     System.IO.File.Delete(this.KeyFileFullPath);
@@ -154,7 +154,6 @@ namespace Viking.UI.Forms
                             System.IO.File.Delete(this.KeyFileFullPath);
                         }
                     }
-                    
                 }
 
                 else
@@ -262,7 +261,6 @@ namespace Viking.UI.Forms
             else
 
                 this.update_label.Text = "Oops! Server Error, try again";
-
         }
        
         string createConnection()
@@ -275,7 +273,6 @@ namespace Viking.UI.Forms
             {
                 throw new ArgumentException("Logon UI, createConnection(): Expected to authenticate to an https URI scheme"); 
             }
-
             
             HttpWebRequest request = (HttpWebRequest)WebRequest.Create(authenticationURL+"?" + postdata);
             request.Method = "POST";
