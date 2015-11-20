@@ -33,6 +33,19 @@ namespace WebAnnotation
         internal static int NumSectionsInMemory = 10;
 #endif
 
+        //TODO: Choose number of points based on distance between control points
+        static public int NumCurveInterpolationPoints = 3;
+
+        /// <summary>
+        /// Number of interpolations to place between curve control points, determines distance between control points
+        /// </summary>
+        //static public double CurveInterpolationPointSpacing = 100.0;
+
+        //static public int NumCurveInterpolationPoints(double distance)
+        //{
+            //return (int)Math.Round(distance / CurveInterpolationPointSpacing);
+        //}
+
         /// <summary>
         /// This is hardcoded for now, but should be read from the VikingXML file
         /// </summary>

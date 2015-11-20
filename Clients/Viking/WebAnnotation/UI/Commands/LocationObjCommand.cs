@@ -76,6 +76,7 @@ namespace WebAnnotation.UI.Commands
             if (e.Button == MouseButtons.Left)
             {
                 //If we clicked a location from another section then create a new linked section
+                /*
                 if (selected.Section != this.Parent.Section.Number)
                 {
                     Debug.Assert(selected != null);
@@ -133,7 +134,7 @@ namespace WebAnnotation.UI.Commands
                     Store.Locations.Save();
 
                     this.Deactivated = true; 
-                }
+                }*/
             }
             else if (e.Button != MouseButtons.Right)
             {

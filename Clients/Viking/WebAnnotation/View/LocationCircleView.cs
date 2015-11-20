@@ -136,7 +136,7 @@ namespace WebAnnotation.View
                 if (distance > this.OffSectionRadius)
                     return LocationAction.NONE;
 
-                return LocationAction.CREATELINK;
+                return LocationAction.CREATELINKEDLOCATION;
             }
         }
 
@@ -374,12 +374,20 @@ namespace WebAnnotation.View
         {
             get
             {
+                //TODO: Cannot cache because the adjacent location links do not appear when the location is moved so that they no longer overlap.
+                bool AllLinksTested;
+                return CalculateOverlappingLinks(this.Links, out AllLinksTested);
+                /*
                 if (_OverlappingLinks == null)
                 {
-                    _OverlappingLinks = CalculateOverlappingLinks(this.Links);
+//                    bool AllLinksTested;
+                    List<LocationCanvasView> overlapping = CalculateOverlappingLinks(this.Links, out AllLinksTested);
+                    _OverlappingLinks = AllLinksTested ? overlapping : null;
+                    return overlapping;
                 }
 
                 return _OverlappingLinks;
+                */
             }
         }
 
@@ -387,12 +395,13 @@ namespace WebAnnotation.View
         /// Given a list of ID's, return a list of Locations which are overlapping our canvas model
         /// </summary>
         /// <param name="linkedLocations"></param>
+        /// <param name="AllLinksTested">We may not have loaded all of the linked locations locally.  Returns true if we have tested all of the links for overlap.  Otherwise false.  This helps determine if the output should be cached.</param>
         /// <returns></returns>
-        public List<LocationCanvasView> CalculateOverlappingLinks(ICollection<long> linkedIDs)
+        public List<LocationCanvasView> CalculateOverlappingLinks(ICollection<long> linkedIDs, out bool AllLinksTested)
         {
-            IEnumerable<LocationObj> listLinkedLocations = Store.Locations.GetObjectsByIDs(linkedIDs, false);
-
-            listLinkedLocations = listLinkedLocations.Where(loc => loc.Z != this.Z);
+            ICollection<LocationObj> listLinkedLocations = Store.Locations.GetObjectsByIDs(linkedIDs, false);
+            AllLinksTested = listLinkedLocations.Count == linkedIDs.Count;
+            listLinkedLocations = listLinkedLocations.Where(loc => loc.Z != this.Z).ToList();
             IEnumerable<LocationCanvasView> listCanvasLocations = listLinkedLocations.Select(loc => AnnotationViewFactory.Create(loc));
 
             return listCanvasLocations.Where(loc => loc.Intersects(this.modelObj.VolumeShape)).ToList();
@@ -1228,6 +1237,7 @@ namespace WebAnnotation.View
             _AboveSectionBackgroundVerts = null;
             _BelowSectionBackgroundVerts = null;
 
+            _OverlappingLinks = null;
             _OverlappingLinkedLocationCircles = null;
             _OverlappingLinkedLocationVerts = null;
             _OverlappingLinkedLocationIndicies = null;

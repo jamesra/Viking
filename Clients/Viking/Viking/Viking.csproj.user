@@ -2,7 +2,7 @@
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <StartArguments>http://connectomes.utah.edu/Rabbit/webdev.vikingxml</StartArguments>
-    <EnableUnmanagedDebugging>true</EnableUnmanagedDebugging>
+    <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
     <EnableSQLServerDebugging>false</EnableSQLServerDebugging>
     <StartAction>Project</StartAction>
     <StartURL>http://connectomes.utah.edu/softwaretest/viking.application?http://155.100.104.153/Cornea/Volume.VikingXML</StartURL>

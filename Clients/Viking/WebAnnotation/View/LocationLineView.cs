@@ -63,7 +63,16 @@ namespace WebAnnotation.View
 
         protected override void OnObjPropertyChanged(object o, PropertyChangedEventArgs args)
         {
-            _RenderedVolumeShape = null;
+            if (args.PropertyName == "MosaicShape")
+            {
+                _MosaicControlPoints = null;
+            }
+
+            if (args.PropertyName == "VolumeShape")
+            {
+                _RenderedVolumeShape = null;
+                _VolumeControlPoints = null;
+            } 
         }
 
         public override void DrawLabel(SpriteBatch spriteBatch, SpriteFont font, Vector2 LocationCenterScreenPosition, float MagnificationFactor, int DirectionToVisiblePlane)
@@ -80,7 +89,7 @@ namespace WebAnnotation.View
                 return LocationAction.NONE;
 
             //Find distance to nearest control point
-            if (this.VolumeShape.ToPoints().Select(p => GridVector2.Distance(WorldPosition, p) < this.Width).Any())
+            if (this.VolumeControlPoints.Select(p => GridVector2.Distance(WorldPosition, p) < this.Width).Any(b => b == true))
                 return LocationAction.ADJUST;
 
             return LocationAction.TRANSLATE;
@@ -110,7 +119,8 @@ namespace WebAnnotation.View
             {
                 if (_RenderedVolumeShape == null)
                 {
-                    _RenderedVolumeShape = this.modelObj.VolumeShape.STBuffer(this.Width);
+                    _RenderedVolumeShape = this.VolumeShape.STBuffer(this.Width);
+                    //_RenderedVolumeShape = this.modelObj.VolumeShape.STBuffer(this.Width);
                 }
 
                 return _RenderedVolumeShape;
@@ -120,6 +130,34 @@ namespace WebAnnotation.View
         public SqlGeometry VolumeShape
         {
             get { return this.modelObj.VolumeShape; }
+        }
+
+        private GridVector2[] _MosaicControlPoints;
+        public virtual GridVector2[] MosaicControlPoints
+        {
+            get
+            {
+                if (_MosaicControlPoints == null)
+                {
+                    _MosaicControlPoints = modelObj.MosaicShape.ToPoints();
+                }
+
+                return _MosaicControlPoints;
+            }
+        }
+
+        private GridVector2[] _VolumeControlPoints;
+        public virtual GridVector2[] VolumeControlPoints
+        {
+            get
+            {
+                if (_VolumeControlPoints == null)
+                {
+                    _VolumeControlPoints = modelObj.VolumeShape.ToPoints();
+                }
+
+                return _VolumeControlPoints;
+            }
         }
     }
 }

@@ -259,7 +259,7 @@ namespace WebAnnotation.UI.Commands
 
                 vert_stack.Push(this.oldWorldPosition);
 
-                CurveView.Draw(graphicsDevice, Parent.LumaOverlayLineManager, basicEffect, vert_stack.ToList(), 5, false, this.LineColor.ConvertToHSL(), this.LineWidth); 
+                CurveView.Draw(graphicsDevice, Parent.LumaOverlayLineManager, basicEffect, vert_stack.ToArray(), 5, false, this.LineColor.ConvertToHSL(), this.LineWidth); 
                 //GlobalPrimitives.DrawPolyline(Parent.LineManager, basicEffect, DrawnLineVerticies, this.LineWidth, this.LineColor);
 
                 this.vert_stack.Pop();
@@ -374,7 +374,7 @@ namespace WebAnnotation.UI.Commands
 
         public override void OnDraw(Microsoft.Xna.Framework.Graphics.GraphicsDevice graphicsDevice, VikingXNA.Scene scene, Microsoft.Xna.Framework.Graphics.BasicEffect basicEffect)
         {
-            CurveView.Draw(graphicsDevice, Parent.LumaOverlayLineManager, basicEffect, this.LineVerticies.ToList(), 5, false, this.LineColor, this.LineWidth);
+            CurveView.Draw(graphicsDevice, Parent.LumaOverlayLineManager, basicEffect, this.LineVerticies.ToArray(), 5, false, this.LineColor, this.LineWidth);
            
             base.OnDraw(graphicsDevice, scene, basicEffect);
         }

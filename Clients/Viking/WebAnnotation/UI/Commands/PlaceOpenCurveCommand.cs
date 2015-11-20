@@ -170,7 +170,7 @@ namespace WebAnnotation.UI.Commands
 
                 vert_stack.Push(this.oldWorldPosition);
 
-                CurveView.Draw(graphicsDevice, Parent.LumaOverlayLineManager, basicEffect, vert_stack.ToList(), 5, this.IsOpen, this.LineColor.ConvertToHSL(), this.LineWidth);
+                CurveView.Draw(graphicsDevice, Parent.LumaOverlayLineManager, basicEffect, vert_stack.ToArray(), 5, this.IsOpen, this.LineColor.ConvertToHSL(), this.LineWidth);
                 //GlobalPrimitives.DrawPolyline(Parent.LineManager, basicEffect, DrawnLineVerticies, this.LineWidth, this.LineColor);
 
                 this.vert_stack.Pop();

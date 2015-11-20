@@ -132,11 +132,14 @@
     <Compile Include="Global.cs" />
     <Compile Include="GlobalPrimitives.cs" />
     <Compile Include="UI\Commands\PlaceOpenCurveCommand.cs" />
+    <Compile Include="UI\Commands\TranslateLocationCommand.cs" />
+    <Compile Include="View\CircleLabelInfo.cs" />
     <Compile Include="View\LocationCircleLabelView.cs" />
     <Compile Include="View\LocationActions.cs" />
     <Compile Include="View\LocationCanvasView.cs" />
     <Compile Include="View\LocationCircleView.cs" />
     <Compile Include="View\LocationClosedCurveView.cs" />
+    <Compile Include="View\LocationCurveView.cs" />
     <Compile Include="View\LocationOpenCurveView.cs" />
     <Compile Include="View\LocationLineView.cs" />
     <Compile Include="View\LocationObjRenderer.cs" />
@@ -240,10 +243,9 @@
     <Compile Include="UI\StructureTypeStructuresPage.Designer.cs">
       <DependentUpon>StructureTypeStructuresPage.cs</DependentUpon>
     </Compile>
-    <Compile Include="ViewModel\LocationViewBase.cs" />
     <Compile Include="ViewModel\Location_ViewModelBase.cs" />
     <Compile Include="ViewModel\SectionStructureLinksViewModel.cs" />
-    <Compile Include="View\ClosedCurveView.cs" />
+    <Compile Include="View\CurveView.cs" />
     <Compile Include="View\AnnotationViewFactory.cs" />
     <Compile Include="View\Location_ContextMenuView.cs" />
     <Compile Include="WeakEvents\NotifyCollectionChangedEventManager.cs" />

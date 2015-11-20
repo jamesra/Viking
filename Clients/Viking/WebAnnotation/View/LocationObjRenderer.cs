@@ -71,7 +71,11 @@ namespace WebAnnotation
         /// <param name="graphicsDevice"></param>
         /// <param name="basicEffect"></param>
         /// <param name="obj"></param>
-        public static void SetupGraphicsDevice(GraphicsDevice graphicsDevice, BasicEffect basicEffect, VikingXNA.AnnotationOverBackgroundLumaEffect overlayEffect, LocationCanvasView obj, long SectionNumber)
+        public static void SetupGraphicsDevice(GraphicsDevice graphicsDevice,
+                                               BasicEffect basicEffect,
+                                               VikingXNA.AnnotationOverBackgroundLumaEffect overlayEffect,
+                                               LocationCanvasView obj,
+                                               long SectionNumber)
         {
             //oldVertexDeclaration = graphicsDevice.VertexDeclaration;
             OriginalBlendState = graphicsDevice.BlendState;
@@ -208,7 +212,7 @@ namespace WebAnnotation
 
             foreach (LocationOpenCurveView loc in listToDraw)
             {
-                CurveView.Draw(graphicsDevice, overlayLineManager, basicEffect, loc.VolumeShape.ToPoints(), 3, false, loc.Parent.Type.Color.ConvertToHSL(0.5f), loc.Width);
+                CurveView.Draw(graphicsDevice, overlayLineManager, basicEffect, loc.VolumeControlPoints, loc.VolumeCurveControlPoints, loc.Parent.Type.Color.ConvertToHSL(0.5f), loc.Width);
             }
 
             RestoreGraphicsDevice(graphicsDevice, basicEffect);
@@ -223,7 +227,7 @@ namespace WebAnnotation
 
             foreach (LocationClosedCurveView loc in listToDraw)
             {
-                CurveView.Draw(graphicsDevice, overlayLineManager, basicEffect, loc.VolumeShape.ToPoints(), 3, true, loc.Parent.Type.Color.ConvertToHSL(0.5f), loc.Width);
+                CurveView.Draw(graphicsDevice, overlayLineManager, basicEffect, loc.VolumeControlPoints, loc.VolumeCurveControlPoints, loc.Parent.Type.Color.ConvertToHSL(0.5f), loc.Width);
             }
 
             RestoreGraphicsDevice(graphicsDevice, basicEffect);
@@ -275,7 +279,6 @@ namespace WebAnnotation
                     for (int iVert = 0; iVert < locIndicies.Length; iVert++)
                     {
                         indicies[iNextVertIndex + iVert] = locIndicies[iVert] + iNextVert;
-                        
                     }
 
                     iNextVert += objVerts.Length;

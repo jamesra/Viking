@@ -114,15 +114,7 @@ namespace WebAnnotation.View
         {
             get { return modelObj.Links; }
         }
-
-        public GridVector2 SectionPosition
-        {
-            get
-            {
-                return modelObj.Position;
-            }
-        }
-
+        
         public GridVector2 VolumePosition
         {
             get

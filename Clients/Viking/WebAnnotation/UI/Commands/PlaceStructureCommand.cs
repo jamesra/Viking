@@ -83,8 +83,6 @@ namespace WebAnnotation.UI.Commands
                 StructureObj newStruct = new StructureObj(Type.modelObj);
 
                 LocationObj newLocation = new LocationObj(newStruct,
-                                                SectionPos,
-                                                WorldPos,
                                                 Parent.Section.Number,
                                                 LocationType.CIRCLE);
                   

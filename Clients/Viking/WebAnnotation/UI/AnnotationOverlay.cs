@@ -423,29 +423,11 @@ namespace WebAnnotation
 
                 if (loc != null)
                 {
-                    LocationAction action = loc.GetActionForPositionOnAnnotation(WorldPosition, this.CurrentSectionNumber);
-                    if(action == LocationAction.SCALE)
-                    { 
-                        LocationCanvasView selected_loc = Viking.UI.State.SelectedObject as LocationCanvasView;
-                        SectionLocationsViewModel sectionAnnotations = AnnotationOverlay.GetAnnotationsForSection(Parent.Section.Number);
-                        if (sectionAnnotations == null)
-                            return;
-
-                        if (loc.modelObj.TypeCode == LocationType.CIRCLE)
-                        {
-                            _Parent.CurrentCommand = new ResizeCircleCommand(Parent,
-                                selected_loc.Parent.Type.Color,
-                                selected_loc.VolumePosition,
-                                (radius) => { loc.modelObj.Radius = radius; Store.Locations.Save(); });
-                        }
-                    }
-                    else if (action == LocationAction.CREATELINK)
+                    LocationAction action = loc.GetActionForPositionOnAnnotation(WorldPosition, this.CurrentSectionNumber); 
+                    Viking.UI.Commands.Command command = action.CreateCommand(Parent, loc);
+                    if(command != null)
                     {
-                        _Parent.CurrentCommand = new LinkAnnotationsCommand(Parent, loc.modelObj);
-                    }
-                    else if (action == LocationAction.TRANSLATE)
-                    { 
-                        //Do nothing because default command handles this at the moment
+                        _Parent.CurrentCommand = command;
                     }
                 }
             }
@@ -640,8 +622,6 @@ namespace WebAnnotation
                 
                 StructureObj newStruct = new StructureObj(type.modelObj);
                 LocationObj newLocation = new LocationObj(newStruct,
-                                                SectionPos,
-                                                WorldPos,
                                                 Parent.Section.Number,
                                                 AnnotationType);
                 
@@ -707,7 +687,8 @@ namespace WebAnnotation
                                         OnCommandSuccess success_callback)
                                         */
 
-            Viking.UI.Commands.Command.EnqueueCommand(typeof(PlaceCurveCommand), new object[] { Parent, typecolor, origin, 16.0, false, new PlaceCurveCommand.OnCommandSuccess((GridVector2[] points) => { SetLocationShapeFromPointsInVolume(newLocation, points); }) });
+            Viking.UI.Commands.Command.EnqueueCommand(typeof(PlaceCurveCommand), new object[] { Parent, typecolor, origin, 16.0, false,
+                                                            new PlaceCurveCommand.OnCommandSuccess((GridVector2[] points) => { SetLocationShapeFromPointsInVolume(newLocation, points); }) });
         }
 
         protected void QueueCommandForClosedCurveStructure(LocationObj newLocation, GridVector2 origin, System.Drawing.Color typecolor)
@@ -720,7 +701,8 @@ namespace WebAnnotation
                                         OnCommandSuccess success_callback)
                                         */
 
-            Viking.UI.Commands.Command.EnqueueCommand(typeof(PlaceCurveCommand), new object[] { Parent, typecolor, origin, 16.0, true, new PlaceCurveCommand.OnCommandSuccess((GridVector2[] points) => { SetLocationShapeFromPointsInVolume(newLocation, points); }) });
+            Viking.UI.Commands.Command.EnqueueCommand(typeof(PlaceCurveCommand), new object[] { Parent, typecolor, origin, 16.0, true,
+                                                            new PlaceCurveCommand.OnCommandSuccess((GridVector2[] points) => { SetLocationShapeFromPointsInVolume(newLocation, points); }) });
         }
 
         protected void SetLocationShapeFromPointsInVolume(LocationObj location, GridVector2[] points)
@@ -831,8 +813,6 @@ namespace WebAnnotation
                         return;
 
                     LocationObj newLoc = new LocationObj(CreateNewLinkedLocationCommand.LastEditedLocation.Parent,
-                                        SectionPos,
-                                        WorldPos,
                                         Parent.Section.Number,
                                         template.TypeCode);
 
@@ -1156,7 +1136,7 @@ namespace WebAnnotation
             {
                 SectionLocationsViewModel sectionLocations = GetAnnotationsForSection(_Parent.Section.ReferenceSectionBelow.Number);
                 if (sectionLocations != null)
-                    RefLocations.AddRange(sectionLocations.GetLocations(Bounds).Where(l => l.modelObj.Terminal==false));//(Bounds)); 
+                    RefLocations.AddRange(sectionLocations.GetLocations(Bounds).Where(l => l.modelObj.Terminal==false && l.modelObj.OffEdge == false && l.modelObj.VericosityCap == false));//(Bounds)); 
             }
 
             if(_Parent.Section.ReferenceSectionAbove != null)
@@ -1164,13 +1144,14 @@ namespace WebAnnotation
                 SectionLocationsViewModel sectionLocations = GetAnnotationsForSection(_Parent.Section.ReferenceSectionAbove.Number);
                 if (sectionLocations != null)
                 {
-                    RefLocations.AddRange(sectionLocations.GetLocations(Bounds).Where(l => l.modelObj.Terminal==false));
+                    RefLocations.AddRange(sectionLocations.GetLocations(Bounds).Where(l => l.modelObj.Terminal == false && l.modelObj.OffEdge == false && l.modelObj.VericosityCap == false));
                 }
             }
             
             //Draw text for locations on the reference sections
             List<LocationCanvasView> listVisibleNonOverlappingLocationsOnAdjacentSections = FindVisibleAdjacentLocations(RefLocations, scene); 
-            List<LocationCanvasView> listVisibleOverlappingLocationsOnAdjacentSections = RemoveOverlappingLocations(listVisibleNonOverlappingLocationsOnAdjacentSections, _Parent.Section.Number); 
+            List<LocationCanvasView> listVisibleOverlappingLocationsOnAdjacentSections = RemoveOverlappingLocations(listVisibleNonOverlappingLocationsOnAdjacentSections,
+                                                                                                                    _Parent.Section.Number);
 
             //Draw all of the locations on the current section
             WebAnnotation.LocationObjRenderer.DrawBackgrounds(listLocationsToDraw, graphicsDevice, basicEffect, overlayEffect, Parent.LumaOverlayLineManager, scene, SectionNumber);
