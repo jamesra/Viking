@@ -95,9 +95,12 @@ namespace WebAnnotationModel
         {
             get
             {
-                
+
                 if (!_MosaicPosition.HasValue)
-                    _MosaicPosition = new GridVector2(Data.Position.X, Data.Position.Y);
+                {
+                    _MosaicPosition = this.MosaicShape.Centroid();
+                    //_MosaicPosition = new GridVector2(Data.Position.X, Data.Position.Y);
+                }
                 /*
 
                 if (!_MosaicPosition.HasValue)
@@ -110,7 +113,7 @@ namespace WebAnnotationModel
 
                
             }
-            
+            /*
             set
             {
                 if (GridVector2.Equals(this.Position, value))
@@ -127,7 +130,7 @@ namespace WebAnnotationModel
                 OnPropertyChanged("Position");
 
                 SetDBActionForChange();
-            }
+            }*/
         }
 
 
@@ -141,9 +144,12 @@ namespace WebAnnotationModel
         {
             get
             {
-                
+
                 if (!_VolumePosition.HasValue)
-                    _VolumePosition = new GridVector2(Data.VolumePosition.X, Data.VolumePosition.Y);
+                {
+                    _VolumePosition = Data.VolumeShape.Centroid();
+                    //_VolumePosition = new GridVector2(Data.VolumePosition.X, Data.VolumePosition.Y);
+                }
                 /*
                 if (!_VolumePosition.HasValue)
                     _VolumePosition = this.VolumeShape.Centroid();
@@ -151,6 +157,7 @@ namespace WebAnnotationModel
                 return _VolumePosition.Value;
             }
             
+            /*
             set
             {
                 if (GridVector2.Equals(this.VolumePosition, value))
@@ -167,7 +174,7 @@ namespace WebAnnotationModel
                 OnPropertyChanged("VolumePosition");
 
                 //                SetDBActionForChange();
-            }
+            }*/
             
         }
 
@@ -574,7 +581,8 @@ namespace WebAnnotationModel
             Data = obj;    
         }
 
-        public LocationObj(StructureObj parent, GridVector2 position, GridVector2 volumePosition, int SectionNumber, LocationType shapeType)
+        public LocationObj(StructureObj parent,
+                           int SectionNumber, LocationType shapeType)
         {
             this.Data = new Location();
             this.Data.DBAction = DBACTION.INSERT;
@@ -583,8 +591,8 @@ namespace WebAnnotationModel
             this.Data.Radius = 16;
             this.Data.Links = null;
 
-            this.Data.MosaicShape = position.ToGeometryPoint().ToDbGeometry();
-            this.Data.VolumeShape = volumePosition.ToGeometryPoint().ToDbGeometry();
+            //this.Data.MosaicShape = mosaicShape.ToDbGeometry();
+            //this.Data.VolumeShape = volumeShape.ToDbGeometry();
             
             this.Data.Section = SectionNumber; 
             
@@ -594,6 +602,14 @@ namespace WebAnnotationModel
             }
 
 //          CallOnCreate(); 
+        }
+
+        public LocationObj(StructureObj parent,
+                            Microsoft.SqlServer.Types.SqlGeometry mosaicShape, Microsoft.SqlServer.Types.SqlGeometry volumeShape,
+                           int SectionNumber, LocationType shapeType) : this(parent, SectionNumber, shapeType)
+        {
+            this.Data.MosaicShape = mosaicShape.ToDbGeometry();
+            this.Data.VolumeShape = volumeShape.ToDbGeometry();
         }
 
         /// <summary>

@@ -349,8 +349,8 @@ namespace WebAnnotation.ViewModel
             }
 
             loc.VolumeTransformID = parent.CurrentTransformUniqueID;
-            //loc.VolumeShape = loc.VolumeShape.MoveTo(VolumePosition);
-            loc.VolumePosition = VolumePosition;
+            loc.VolumeShape = loc.VolumeShape.MoveTo(VolumePosition);
+            //loc.VolumePosition = VolumePosition;
 
             return true;
         }
@@ -378,7 +378,7 @@ namespace WebAnnotation.ViewModel
 
             loc.VolumeTransformID = parent.CurrentTransformUniqueID;
             //loc.VolumePosition = VolumePosition;
-            //loc.VolumeShape = SqlGeometryUtils.GeometryExtensions.ToGeometry(loc.MosaicShape.STGeometryType(), VolumePositions);
+            loc.VolumeShape = SqlGeometryUtils.GeometryExtensions.ToGeometry(loc.MosaicShape.STGeometryType(), VolumePositions);
 
             return true;
         }
@@ -481,7 +481,6 @@ namespace WebAnnotation.ViewModel
                 KnownLocationsForStructure.TryAdd(locView.ID, locView);
             }
             
-
             return UpdatedVolumeLocation;
         }
 
@@ -617,7 +616,7 @@ namespace WebAnnotation.ViewModel
         /// <returns></returns>
         public bool TryGetPositionForLocation(LocationCanvasView loc, out GridVector2 position)
         {
-            position = loc.VolumePosition;
+            position = loc.modelObj.VolumePosition;
 
             return true;
             //return Locations.TryGetPosition(loc); 
@@ -636,7 +635,7 @@ namespace WebAnnotation.ViewModel
 
         public GridVector2 GetPositionForLocation(LocationCanvasView loc)
         {
-            return loc.VolumePosition;
+            return loc.modelObj.VolumePosition;
         }
 
         public IUIObjectBasic GetNearestAnnotation(GridVector2 WorldPosition, out double distance)
