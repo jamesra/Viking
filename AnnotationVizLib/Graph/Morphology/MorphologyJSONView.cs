@@ -80,6 +80,7 @@ namespace AnnotationVizLib
             using (StringWriter fs = new StringWriter(sb))
             {
                 System.Web.Script.Serialization.JavaScriptSerializer oSerializer = new JavaScriptSerializer();
+                oSerializer.MaxJsonLength = 268435456;
                 fs.Write(oSerializer.Serialize(new { Morphology = this.StructureMorphologies }));
                 fs.Close();
             }

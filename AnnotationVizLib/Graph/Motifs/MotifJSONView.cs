@@ -57,6 +57,7 @@ namespace AnnotationVizLib
             using (StringWriter fs = new StringWriter(sb))
             {
                 System.Web.Script.Serialization.JavaScriptSerializer oSerializer = new JavaScriptSerializer();
+                oSerializer.MaxJsonLength = 268435456;
                 fs.Write(oSerializer.Serialize(new { page = "1", total = (this.edgesJSON.Count % 10 + 1), records = this.edgesJSON.Count.ToString(), rows = this.edgesJSON }));
                 fs.Close();
             }

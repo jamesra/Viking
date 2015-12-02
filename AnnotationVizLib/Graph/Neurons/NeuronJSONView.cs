@@ -71,6 +71,7 @@ namespace AnnotationVizLib
             using (StringWriter fs = new StringWriter(sb))
             {
                 System.Web.Script.Serialization.JavaScriptSerializer oSerializer = new JavaScriptSerializer();
+                oSerializer.MaxJsonLength = 268435456;
                 fs.Write(oSerializer.Serialize(new { nodes = this.nodesJSON, edges = this.edgesJSON }));
                 fs.Close();
             }
