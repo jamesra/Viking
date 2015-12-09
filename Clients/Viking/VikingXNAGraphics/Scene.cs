@@ -171,6 +171,11 @@ namespace VikingXNA
             }
         }
 
+        public Geometry.GridVector2 ScreenToWorld(GridVector2 pos)
+        {
+            return ScreenToWorld(pos.X, pos.Y);
+        }
+
         public Geometry.GridVector2 ScreenToWorld(double X, double Y)
         {
             //The screen coordinates used by Windows and XNA put the Y origin at the top and bottom of the screen
@@ -178,6 +183,11 @@ namespace VikingXNA
             double YPos = -((Y - ((double)_Viewport.Height / 2)) * Camera.Downsample) + Camera.LookAt.Y;
 
             return new GridVector2(XPos, YPos);
+        }
+
+        public Geometry.GridVector2 WorldToScreen(GridVector2 pos)
+        {
+            return WorldToScreen(pos.X, pos.Y);
         }
 
         public Geometry.GridVector2 WorldToScreen(double X, double Y)
