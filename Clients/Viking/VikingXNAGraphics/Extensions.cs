@@ -8,6 +8,19 @@ using System.Threading.Tasks;
 
 namespace VikingXNAGraphics
 {
+    public static class VectorExtensions
+    {
+        public static Microsoft.Xna.Framework.Vector2 ToVector2(this Geometry.GridVector2 vec)
+        {
+            return new Vector2((float)vec.X, (float)vec.Y);
+        }
+
+        public static Geometry.GridVector2 ToGridVector(this Vector2 vec)
+        {
+            return new Geometry.GridVector2(vec.X, vec.Y);
+        }
+    }
+
     public static class ColorExtensions
     {
         public static Microsoft.Xna.Framework.Color ToXNAColor(this System.Drawing.Color color)
