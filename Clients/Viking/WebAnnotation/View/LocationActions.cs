@@ -57,11 +57,11 @@ namespace WebAnnotation.View
                 case LocationType.CIRCLE:
                     return CreateCommandForCircles(action, Parent, loc as LocationCircleView);
                 case LocationType.POLYLINE:
-                    return CreateCommandForlineOrCurve(action, Parent, loc as LocationLineView);
+                    return CreateCommandForlineOrCurve(action, Parent, loc.modelObj);
                 case LocationType.OPENCURVE:
-                    return CreateCommandForlineOrCurve(action, Parent, loc as LocationOpenCurveView);
+                    return CreateCommandForlineOrCurve(action, Parent, loc.modelObj);
                 case LocationType.CLOSEDCURVE:
-                    return CreateCommandForlineOrCurve(action, Parent, loc as LocationClosedCurveView);
+                    return CreateCommandForlineOrCurve(action, Parent, loc.modelObj);
                 case LocationType.POLYGON:
                     throw new NotImplementedException("No commands available for polygons");
                 case LocationType.POINT:
@@ -80,7 +80,7 @@ namespace WebAnnotation.View
                 case LocationAction.NONE:
                     return null;
                 case LocationAction.TRANSLATE:
-                    return new TranslateLocationCommand(Parent, loc, TranslateLocationCommand.DefaultSuccessCallback);
+                    return new TranslateLocationCommand(Parent, loc.modelObj, TranslateLocationCommand.DefaultSuccessCallback);
                 case LocationAction.SCALE: 
                     return new ResizeCircleCommand(Parent,
                             loc.Parent.Type.Color,
@@ -128,7 +128,7 @@ namespace WebAnnotation.View
 
         public static Viking.UI.Commands.Command CreateCommandForlineOrCurve(LocationAction action,
                                                                          Viking.UI.Controls.SectionViewerControl Parent,
-                                                                         LocationLineView loc)
+                                                                         LocationObj loc)
         {
             switch (action)
             {
@@ -141,7 +141,7 @@ namespace WebAnnotation.View
                 case LocationAction.ADJUST:
                     return null;
                 case LocationAction.CREATELINK:
-                    return new LinkAnnotationsCommand(Parent, loc.modelObj);
+                    return new LinkAnnotationsCommand(Parent, loc);
                 case LocationAction.CREATELINKEDLOCATION:
                     return null; 
                 default:

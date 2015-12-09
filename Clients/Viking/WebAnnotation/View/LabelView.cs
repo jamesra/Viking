@@ -8,7 +8,7 @@ using VikingXNAGraphics;
 
 namespace WebAnnotation.View
 {
-    class LabelView
+    public class LabelView
     {
         /// <summary>
         /// Label must be this large to render

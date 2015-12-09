@@ -15,7 +15,9 @@ namespace WebAnnotation.UI.Commands
 {
     class TranslateLocationCommand : AnnotationCommandBase
     {
-        LocationCanvasView Loc;
+        LocationObj Loc;
+
+        CircleView circleView; 
 
         public delegate void OnCommandSuccess(LocationObj loc, GridVector2 VolumePosition, GridVector2 MosaicPosition);
         OnCommandSuccess success_callback;
@@ -26,11 +28,15 @@ namespace WebAnnotation.UI.Commands
         GridVector2 TranslatedPosition;
 
         public TranslateLocationCommand(Viking.UI.Controls.SectionViewerControl parent,
-                                        LocationCanvasView selectedObj,
+                                        LocationObj selectedObj,
                                         OnCommandSuccess success_callback) : base(parent)
         {
             Loc = selectedObj;
             TranslatedPosition = selectedObj.VolumePosition;
+            circleView = new CircleView();
+            circleView.Circle = new GridCircle(Loc.VolumePosition, Loc.Radius);
+            circleView.BackgroundColor = Loc.Parent.Type.Color.ToXNAColor(192.0f);
+
             this.success_callback = success_callback;
         }
 
@@ -50,7 +56,7 @@ namespace WebAnnotation.UI.Commands
                     return;
                 }
 
-                this.success_callback(Loc.modelObj, this.TranslatedPosition, MosaicPosition);
+                this.success_callback(Loc, this.TranslatedPosition, MosaicPosition);
             }
                 
 
@@ -84,6 +90,7 @@ namespace WebAnnotation.UI.Commands
                 if (this.oldMouse.Button == MouseButtons.Left)
                 {
                     this.TranslatedPosition = Parent.ScreenToWorld(e.X, e.Y);
+                    circleView.Circle = new GridCircle(this.TranslatedPosition, circleView.Radius);
                     Parent.Invalidate();
                 }
             }
@@ -103,10 +110,8 @@ namespace WebAnnotation.UI.Commands
                                     Microsoft.Xna.Framework.Graphics.BasicEffect basicEffect)
         {
             //TODO: Translate the LocationCanvasView before it is drawn
-            List<LocationCanvasView> items = new List<LocationCanvasView>();
-
-            items.Add(Loc);
-            LocationObjRenderer.DrawBackgrounds(items, graphicsDevice, basicEffect, Parent.annotationOverlayEffect, Parent.LumaOverlayLineManager, scene, Parent.Section.Number);            
+            CircleView.Draw(graphicsDevice, scene, basicEffect, Parent.annotationOverlayEffect, new CircleView[] { this.circleView });
+            //LocationObjRenderer.DrawBackgrounds(items, graphicsDevice, basicEffect, Parent.annotationOverlayEffect, Parent.LumaOverlayLineManager, scene, Parent.Section.Number);            
         }
     }
 }

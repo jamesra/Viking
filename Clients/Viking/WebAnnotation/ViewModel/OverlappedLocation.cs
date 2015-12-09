@@ -17,30 +17,64 @@ using Common.UI;
 using WebAnnotation.UI.Commands;
 using WebAnnotation.ViewModel;
 using Microsoft.SqlServer.Types;
+using VikingXNAGraphics;
 
 namespace WebAnnotation.View
 {
     /// <summary>
     /// Represents a location on an adjacent section that is overlapped by an annotation on the visible section.
     /// </summary>
-    public class OverlappedLocation : LocationCanvasView
+    public class OverlappedLocationView : LocationCanvasView
     {
-        public readonly LocationLinkView link;
-        public readonly GridCircle gridCircle;
+        public readonly LocationLinkView link; 
+        public TextureCircleView circleView;
+        public LabelView label;
+
+        public GridCircle gridCircle
+        {
+            get { return circleView.Circle; }
+            set { circleView.Circle = value; }
+        }
+
+        public double Radius
+        {
+            get { return gridCircle.Radius; }
+            set { circleView.Circle = new GridCircle(gridCircle.Center, value);}
+        }
+
+        public GridVector2 Position
+        {
+            get { return gridCircle.Center; }
+            set { circleView.Circle = new GridCircle(value, gridCircle.Radius); }
+        }
+
+
+        public OverlappedLocationView(LocationObj obj, GridCircle gridCircle, bool Up) : base(obj)
+        {
+            label = new LabelView(LocationLabel(obj), gridCircle.Center);
+            label.Color = Microsoft.Xna.Framework.Color.Red;
+            circleView = Up ? TextureCircleView.CreateUpArrow(gridCircle) : TextureCircleView.CreateDownArrow(gridCircle);
+            circleView.BackgroundColor = obj.Parent.Type.Color.ToXNAColor(0.75f); 
+        }
+        
+        private static string LocationLabel(LocationObj obj)
+        {
+            return obj.Z.ToString();
+        }
 
         public override bool IsVisible(VikingXNA.Scene scene)
         {
-            throw new NotImplementedException();
+            return this.circleView.IsVisible(scene);
         }
 
         public override bool IsVisibleOnAdjacent(VikingXNA.Scene scene)
         {
-            throw new NotImplementedException();
+            return this.circleView.IsVisible(scene);
         }
 
         public override bool Intersects(GridVector2 Position)
         {
-            throw new NotImplementedException();
+            return gridCircle.Contains(Position);
         }
 
         public override bool Intersects(SqlGeometry shape)
@@ -50,22 +84,40 @@ namespace WebAnnotation.View
 
         public override bool IntersectsOnAdjacent(GridVector2 Position)
         {
-            throw new NotImplementedException();
+            return gridCircle.Contains(Position);
         }
 
         public override double Distance(GridVector2 Position)
         {
-            throw new NotImplementedException();
+            double Distance = GridVector2.Distance(Position, this.gridCircle.Center) - Radius;
+            Distance = Distance < 0 ? 0 : Distance;
+            return Distance;
         }
 
         public override double DistanceFromCenterNormalized(GridVector2 Position)
         {
-            throw new NotImplementedException();
+            return GridVector2.Distance(Position, this.gridCircle.Center) / this.Radius;
         }
 
-        public override void DrawLabel(SpriteBatch spriteBatch, SpriteFont font, Vector2 LocationCenterScreenPosition, float MagnificationFactor, int DirectionToVisiblePlane)
+        public static void Draw(GraphicsDevice device,
+                          VikingXNA.Scene scene,
+                          BasicEffect basicEffect,
+                          VikingXNA.AnnotationOverBackgroundLumaEffect overlayEffect,
+                          OverlappedLocationView[] listToDraw)
+        {  
+            TextureCircleView[] backgroundCircles = listToDraw.Select(l => l.circleView).ToArray(); 
+            TextureCircleView.Draw(device, scene, basicEffect, overlayEffect, backgroundCircles.ToArray()); 
+        }
+
+        public override void DrawLabel(SpriteBatch spriteBatch, SpriteFont font, VikingXNA.Scene scene, float MagnificationFactor, int DirectionToVisiblePlane)
         {
-            throw new NotImplementedException();
+            double DesiredRowsOfText = 4.0;
+            double NumUnscaledRows = (this.Radius * 2) / font.LineSpacing;
+            double DefaultFontSize = NumUnscaledRows / DesiredRowsOfText;
+            label.FontSize = DefaultFontSize;
+            label.MaxLineWidth = this.Radius * 2;
+
+            label.Draw(spriteBatch, font, scene, MagnificationFactor);
         }
 
         public override LocationAction GetActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber)
@@ -73,11 +125,7 @@ namespace WebAnnotation.View
             return LocationAction.CREATELINK;
         }
 
-        public OverlappedLocation(LocationObj overlappedLocation, LocationLinkView link, GridCircle circle) : base(overlappedLocation)
-        {
-            this.link = link;
-            gridCircle = circle; 
-        }
+        
 
         public ContextMenu ContextMenu
         {

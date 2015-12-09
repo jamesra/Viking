@@ -75,7 +75,7 @@ namespace WebAnnotation.View
             } 
         }
 
-        public override void DrawLabel(SpriteBatch spriteBatch, SpriteFont font, Vector2 LocationCenterScreenPosition, float MagnificationFactor, int DirectionToVisiblePlane)
+        public override void DrawLabel(SpriteBatch spriteBatch, SpriteFont font, Scene scene, float MagnificationFactor, int DirectionToVisiblePlane)
         {
             return;
         }

@@ -27,17 +27,13 @@ namespace WebAnnotation
     {
         static public float LocationTextScaleFactor = 5;
         static public float ReferenceLocationTextScaleFactor = 2.5f;
-        
-
+         
         Viking.UI.Controls.SectionViewerControl _Parent;
         public Viking.UI.Controls.SectionViewerControl Parent { get { return _Parent; } }
 
         protected TransformChangedEventHandler SectionChangedEventHandler;
-        private EventHandler AnnotationChangedEventHandler;
-        //private NotifyCollectionChangedEventHandler LocationsChangedEventHandler;
-        //private NotifyCollectionChangedEventHandler StructuresChangedEventHandler; 
-
-        //private static SortedDictionary<int, SectionLocationsViewModel> dictSectionAnnotations = new SortedDictionary<int, SectionLocationsViewModel>();
+        private EventHandler AnnotationChangedEventHandler; 
+         
         private static SectionLocationViewModelCache cacheSectionAnnotations = new SectionLocationViewModelCache(); 
         private static LocationLinksViewModel linksView;
 
@@ -339,7 +335,7 @@ namespace WebAnnotation
             if (location == null)
                 _Parent.Cursor = Cursors.Default;
 
-            OverlappedLocation overlapLoc = LastMouseOverObject as OverlappedLocation;
+            OverlappedLocationView overlapLoc = LastMouseOverObject as OverlappedLocationView;
             _Parent.Cursor = overlapLoc != null ? Cursors.Cross : Cursors.Default;
 
             return;
@@ -829,7 +825,6 @@ namespace WebAnnotation
                 }
             }
         }
-         
 
         /// <summary>
         /// This occurs when a new section is loaded and we need to fetch all locations from scratch
@@ -1005,33 +1000,6 @@ namespace WebAnnotation
             //AnnotationCache.LoadSectionAnnotations(_Parent.Section); 
         }
           
-        DepthStencilState depthstencilState;
-
-        //TODO: Move this to the Render code
-        public void IncrementDepthStencilValue(GraphicsDevice graphicsDevice, ref int NextStencilValue)
-        {
-            if (depthstencilState != null)
-            {
-                depthstencilState.Dispose();
-                depthstencilState = null;
-            }
-
-            if (depthstencilState == null || depthstencilState.IsDisposed)
-            {
-                depthstencilState = new DepthStencilState();
-                depthstencilState.DepthBufferEnable = true;
-                depthstencilState.DepthBufferWriteEnable = true;
-                depthstencilState.DepthBufferFunction = CompareFunction.LessEqual;
-
-                depthstencilState.StencilEnable = true;
-                depthstencilState.StencilFunction = CompareFunction.GreaterEqual;
-                NextStencilValue++;
-                depthstencilState.ReferenceStencil = NextStencilValue;
-                depthstencilState.StencilPass = StencilOperation.Replace;
-
-                graphicsDevice.DepthStencilState = depthstencilState;
-            }
-        }
 
         static private BasicEffect basicEffect = null;
         static private BlendState defaultBlendState = null; 
@@ -1081,8 +1049,9 @@ namespace WebAnnotation
             Matrix ViewProjMatrix = scene.Camera.View * scene.Projection;
 
             GridRectangle Bounds = scene.VisibleWorldBounds;
-            
-            nextStencilValue++;
+
+            nextStencilValue++; 
+            DeviceStateManager.SetDepthStencilValue(graphicsDevice, nextStencilValue);
 
             if (basicEffect == null)
                 basicEffect = CreateBasicEffect(graphicsDevice, scene);
@@ -1110,27 +1079,30 @@ namespace WebAnnotation
             int SectionNumber = _Parent.Section.Number;
 
             float Time = (float)TimeSpan.FromTicks(DateTime.Now.Ticks - DateTime.Today.Ticks).TotalSeconds;
-//            Debug.WriteLine("Time: " + Time.ToString()); 
+            //            Debug.WriteLine("Time: " + Time.ToString()); 
 
-            IncrementDepthStencilValue(graphicsDevice, ref nextStencilValue);
-
+            nextStencilValue++;
+            DeviceStateManager.SetDepthStencilValue(graphicsDevice, nextStencilValue);
+            
             //Get all the lines to draw first so the text and geometric shapes are over top of them
             IEnumerable<LocationLinkView> VisibleLinks = linksView.VisibleLocationLinks(_Parent.Section.Number, Bounds);
             foreach (LocationLinkView link in VisibleLinks)
             {
                 DrawLocationLink(link, ViewProjMatrix);
             }
-            graphicsDevice.Clear(ClearOptions.DepthBuffer, Color.Black, float.MaxValue, 0);             
 
-            IncrementDepthStencilValue(graphicsDevice, ref nextStencilValue);
+            graphicsDevice.Clear(ClearOptions.DepthBuffer, Color.Black, float.MaxValue, 0);
 
-            //graphicsDevice.Clear(ClearOptions.DepthBuffer, Color.Black, float.MaxValue, 0); 
-            //IncrementDepthStencilValue(graphicsDevice, ref nextStencilValue);
+            nextStencilValue++;
+            DeviceStateManager.SetDepthStencilValue(graphicsDevice, nextStencilValue);
 
             ICollection<LocationCanvasView> Locations = currentSectionAnnotations.GetLocations(scene.VisibleWorldBounds);
             List<LocationCanvasView> listLocationsToDraw = FindVisibleLocations(Locations, scene);
+
+            //Draw all of the locations on the current section
+            WebAnnotation.LocationObjRenderer.DrawBackgrounds(listLocationsToDraw, graphicsDevice, basicEffect, overlayEffect, Parent.LumaOverlayLineManager, scene, SectionNumber);
             
-            //Find a circle that encloses the visible bounds
+            //Find the locations on the adjacent sections
             List<LocationCanvasView> RefLocations = new List<LocationCanvasView>();
             if(_Parent.Section.ReferenceSectionBelow != null)
             {
@@ -1148,25 +1120,26 @@ namespace WebAnnotation
                 }
             }
             
-            //Draw text for locations on the reference sections
+
             List<LocationCanvasView> listVisibleNonOverlappingLocationsOnAdjacentSections = FindVisibleAdjacentLocations(RefLocations, scene); 
             List<LocationCanvasView> listVisibleOverlappingLocationsOnAdjacentSections = RemoveOverlappingLocations(listVisibleNonOverlappingLocationsOnAdjacentSections,
                                                                                                                     _Parent.Section.Number);
 
-            //Draw all of the locations on the current section
-            WebAnnotation.LocationObjRenderer.DrawBackgrounds(listLocationsToDraw, graphicsDevice, basicEffect, overlayEffect, Parent.LumaOverlayLineManager, scene, SectionNumber);
+            nextStencilValue++;
+            DeviceStateManager.SetDepthStencilValue(graphicsDevice, nextStencilValue);
 
-            IncrementDepthStencilValue(graphicsDevice, ref nextStencilValue);
             graphicsDevice.Clear(ClearOptions.DepthBuffer, Color.Black, float.MaxValue, 0);
-
+            
             WebAnnotation.LocationObjRenderer.DrawBackgrounds(listVisibleNonOverlappingLocationsOnAdjacentSections, graphicsDevice, basicEffect, overlayEffect, Parent.LumaOverlayLineManager, scene, SectionNumber);
 
-            IncrementDepthStencilValue(graphicsDevice, ref nextStencilValue);
+            nextStencilValue++;
+            DeviceStateManager.SetDepthStencilValue(graphicsDevice, nextStencilValue);
+
             graphicsDevice.Clear(ClearOptions.DepthBuffer, Color.Black, float.MaxValue, 0);
+             
+            //WebAnnotation.LocationObjRenderer.DrawOverlappedAdjacentLinkedLocations(listLocationsToDraw.OfType<LocationCircleView>().ToList(), scene, graphicsDevice, basicEffect, overlayEffect, SectionNumber);
 
-            WebAnnotation.LocationObjRenderer.DrawOverlappedAdjacentLinkedLocations(listLocationsToDraw.OfType<LocationCircleView>().ToList(), scene, graphicsDevice, basicEffect, overlayEffect, SectionNumber);
-
-            TryDrawLineFromOverlappingLocation(AnnotationOverlay.LastMouseOverObject as OverlappedLocation, _Parent.LineManager, _Parent.Section.Number, Time);
+            TryDrawLineFromOverlappingLocation(AnnotationOverlay.LastMouseOverObject as OverlappedLocationView, _Parent.LineManager, _Parent.Section.Number, Time);
                
             if (defaultBlendState == null || defaultBlendState.IsDisposed)
             {
@@ -1191,27 +1164,23 @@ namespace WebAnnotation
             graphicsDevice.BlendState = defaultBlendState;
             
             //Draw text
-            DrawLocationLabels(listLocationsToDraw);
+            DrawLocationLabels(listLocationsToDraw, scene);
 
-            DrawLocationLabels(listVisibleNonOverlappingLocationsOnAdjacentSections); 
+            DrawLocationLabels(listVisibleNonOverlappingLocationsOnAdjacentSections, scene); 
              
             graphicsDevice.RasterizerState = OriginalRasterState;
         }
 
-        private void DrawLocationLabels(ICollection<LocationCanvasView> locations)
+        private void DrawLocationLabels(ICollection<LocationCanvasView> locations, VikingXNA.Scene scene)
         {
             _Parent.spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.AlphaBlend);
             
             long section_number = _Parent.Section.Number;
             foreach (LocationCanvasView loc in locations)
             {
-                GridVector2 WorldPosition = loc.VolumePosition;
-
-                GridVector2 DrawPosition = _Parent.WorldToScreen(WorldPosition.X, WorldPosition.Y);
-
                 loc.DrawLabel(_Parent.spriteBatch,
                               _Parent.fontArial,
-                              new Vector2((float)DrawPosition.X, (float)DrawPosition.Y),
+                              scene,
                               (float)(1.0 / _Parent.StatusMagnification),
                               (int)(section_number - loc.Z));
             }
@@ -1221,11 +1190,14 @@ namespace WebAnnotation
 
         
 
-        private static bool TryDrawLineFromOverlappingLocation(OverlappedLocation OverlappingLocation, RoundLineCode.RoundLineManager lineManager, int section_number, float time_offset)
+        private static bool TryDrawLineFromOverlappingLocation(OverlappedLocationView OverlappingLocation, RoundLineCode.RoundLineManager lineManager, int section_number, float time_offset)
         { 
             if (OverlappingLocation != null)
             {
                 LocationLinkView SelectedLink = OverlappingLocation.link;
+                if (SelectedLink == null)
+                    return false; 
+
                 //Give the colors a nudge towards red or blue depending on the direction to the link
                 double directionFactor = 1;
                 StructureTypeObj type = SelectedLink.A.Parent.Type;

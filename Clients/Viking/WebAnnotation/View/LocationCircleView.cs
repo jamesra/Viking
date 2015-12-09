@@ -18,20 +18,47 @@ using Microsoft.SqlServer.Types;
 
 namespace WebAnnotation.View
 {
-    class LocationCircleView : LocationCanvasView
+    class AdjacentLocationCircleView : LocationCanvasView
     {
-        #region static
+        public CircleView circleView;
+        public LabelView StructureIDLabelView;
 
-        static double BeginFadeCutoff = 0.1;
-        static double InvisibleCutoff = 1f;
-        static float LabelVisibleCutoff = 7f;
-        static float RadiusToResizeCircle = 7.0f / 8.0f;
-        static float RadiusToLinkCircle = 1.0f / 4.0f;
+        public AdjacentLocationCircleView(LocationObj obj) : base(obj)
+        {
+            RegisterForLocationEvents();
 
-        #endregion
+            CreateViewObjects();
+            CreateLabelObjects();
+        }
 
-        public LocationCircleView(LocationObj obj) : base(obj)
-        { }
+        /// <summary>
+        /// We scale down the radius when the location is on an adjacent section
+        /// </summary>
+        public double Radius
+        {
+            get { return this.modelObj.Radius / 2.0f; }
+        }
+
+        public GridCircle Circle
+        {
+            get
+            {
+                return new GridCircle(this.VolumePosition, this.Radius);
+            }
+        }
+
+        private void CreateViewObjects()
+        {
+            circleView = new CircleView();
+            circleView.Circle = new GridCircle(modelObj.VolumePosition, modelObj.Radius);
+            circleView.BackgroundColor = modelObj.Parent.Type.Color.ToXNAColor(0.75f);
+        }
+
+        private void CreateLabelObjects()
+        {
+            StructureIDLabelView = new LabelView(this.ParentID.ToString(), modelObj.VolumePosition - new GridVector2(0, this.Radius));
+            StructureIDLabelView.MaxLineWidth = this.Radius * 2; 
+        }
 
         #region overrides
 
@@ -82,37 +109,158 @@ namespace WebAnnotation.View
 
         public double DistanceToCenter(GridVector2 Position)
         {
-            double Distance = GridVector2.Distance(Position, this.Circle.Center);
-            return Distance;
+            return GridVector2.Distance(Position, this.Circle.Center);
         }
 
 
         public override bool IsVisible(VikingXNA.Scene scene)
         {
-            double maxDimension = Math.Max(scene.VisibleWorldBounds.Width, scene.VisibleWorldBounds.Height);
-            double LocToScreenRatio = Radius * 2 / maxDimension;
-            if (LocToScreenRatio > InvisibleCutoff)
-                return false;
-
-            double maxPixelDimension = Math.Max(scene.DevicePixelWidth, scene.DevicePixelHeight);
-            if (Radius * 2 <= maxPixelDimension)
-                return false;
-
-            return true;
+            return circleView.IsVisible(scene);
         }
 
         public override bool IsVisibleOnAdjacent(VikingXNA.Scene scene)
         {
-            double maxDimension = Math.Max(scene.VisibleWorldBounds.Width, scene.VisibleWorldBounds.Height); 
-            double LocToScreenRatio = Radius * 2 / maxDimension;
-            if (LocToScreenRatio > InvisibleCutoff)
-                return false;
+            return circleView.IsVisible(scene);
+        }
 
-            double maxPixelDimension = Math.Max(scene.DevicePixelWidth, scene.DevicePixelHeight);
-            if (Radius * 2 <= maxPixelDimension)
-                return false;
+        public override IList<LocationCanvasView> OverlappingLinks
+        {
+            get { return new List<LocationCanvasView>(); }
+        }
 
-            return true;
+        public override LocationAction GetActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber)
+        {
+            double distance = this.DistanceToCenter(WorldPosition);
+            if (distance > this.Radius)
+                return LocationAction.NONE;
+
+            return LocationAction.CREATELINKEDLOCATION;
+        }
+
+        public override void DrawLabel(Microsoft.Xna.Framework.Graphics.SpriteBatch spriteBatch,
+                              Microsoft.Xna.Framework.Graphics.SpriteFont font,
+                              VikingXNA.Scene scene,
+                              float MagnificationFactor,
+                              int DirectionToVisiblePlane)
+        {
+            if (font == null)
+                throw new ArgumentNullException("font");
+
+            if (spriteBatch == null)
+                throw new ArgumentNullException("spriteBatch");
+
+            double DesiredRowsOfText = 6.0;
+            double NumUnscaledRows = (this.Radius * 2) / font.LineSpacing;
+            double DefaultFontSize = NumUnscaledRows / DesiredRowsOfText;
+            StructureIDLabelView.FontSize = DefaultFontSize;
+            StructureIDLabelView.Position = modelObj.VolumePosition - new GridVector2(0.0, this.Radius / 3.0f);
+            StructureIDLabelView.Draw(spriteBatch, font, scene, MagnificationFactor);
+
+            return; 
+        }
+
+        #endregion
+
+    }
+
+
+    class LocationCircleView : LocationCanvasView
+    {
+        public CircleView circleView;
+        public LabelView StructureIDLabelView;
+        public LabelView StructureLabelView;
+
+        static float RadiusToResizeCircle = 7.0f / 8.0f;
+        static float RadiusToLinkCircle = 1.0f / 4.0f;
+        static double BeginFadeCutoff = 0.1;
+        static double InvisibleCutoff = 1f;
+
+        public LocationCircleView(LocationObj obj) : base(obj)
+        {
+            RegisterForLocationEvents();
+
+            CreateViewObjects();
+            CreateLabelObjects();
+        }
+
+        private void CreateViewObjects()
+        {
+            circleView = new CircleView();
+            circleView.Circle = new GridCircle(modelObj.VolumePosition, modelObj.Radius);
+            circleView.BackgroundColor = modelObj.Parent.Type.Color.ToXNAColor(0.75f); 
+        }
+
+        private void CreateLabelObjects()
+        {
+            StructureIDLabelView = new LabelView(this.ParentID.ToString(), modelObj.VolumePosition - new GridVector2(0, this.Radius / 2.0f));
+            StructureIDLabelView.MaxLineWidth = this.Radius * 2;
+
+            StructureLabelView = new LabelView(this.FullLabelText(0), modelObj.VolumePosition + new GridVector2(0, this.Radius / 2.0f));
+            StructureLabelView.MaxLineWidth = this.Radius * 2;
+        }
+
+        
+        #region overrides
+
+        public override GridRectangle BoundingBox
+        {
+            get
+            {
+                return Circle.BoundingBox;
+            }
+        }
+
+        /// <summary>
+        /// True if the point is on or inside the circle
+        /// </summary>
+        /// <param name="Position"></param>
+        /// <returns></returns>
+        public override bool Intersects(GridVector2 Position)
+        {
+            return Circle.Contains(Position);
+        }
+
+        public override bool Intersects(SqlGeometry shape)
+        {
+            return this.modelObj.VolumeShape.STIntersects(shape).IsTrue;
+        }
+
+        public override bool IntersectsOnAdjacent(GridVector2 Position)
+        {
+            return Circle.Contains(Position);
+        }
+
+        /// <summary>
+        /// Distance to the nearest point on circle if outside, otherwise zero
+        /// </summary>
+        /// <param name="Position"></param>
+        /// <returns></returns>
+        public override double Distance(GridVector2 Position)
+        {
+            double Distance = GridVector2.Distance(Position, this.Circle.Center) - Radius;
+            Distance = Distance < 0 ? 0 : Distance;
+            return Distance;
+        }
+
+        public override double DistanceFromCenterNormalized(GridVector2 Position)
+        {
+            return GridVector2.Distance(Position, this.Circle.Center) / this.Radius;
+        }
+
+        public double DistanceToCenter(GridVector2 Position)
+        {
+            return GridVector2.Distance(Position, this.Circle.Center); 
+        }
+
+
+        public override bool IsVisible(VikingXNA.Scene scene)
+        {
+            return circleView.IsVisible(scene);
+        }
+
+        public override bool IsVisibleOnAdjacent(VikingXNA.Scene scene)
+        {
+            return circleView.IsVisible(scene);
         }
 
         public override LocationAction GetActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber)
@@ -157,190 +305,15 @@ namespace WebAnnotation.View
             {
                 return modelObj.Radius;
             }
-        }
-
-        #region Render Code
-        public VertexPositionColorTexture[] _BackgroundVerts = null;
-        public VertexPositionColorTexture[] BackgroundVerts
-        {
-            get
-            {
-                if (_BackgroundVerts == null)
-                {
-                    RegisterForLocationEvents();
-                    _BackgroundVerts = new VertexPositionColorTexture[GlobalPrimitives.SquareVerts.Length];
-                    GlobalPrimitives.SquareVerts.CopyTo(_BackgroundVerts, 0);
-
-                    //Size the background verts correctly
-                    for (int i = 0; i < _BackgroundVerts.Length; i++)
-                    {
-                        _BackgroundVerts[i].Position *= (float)this.Radius;
-                        _BackgroundVerts[i].Position.X += (float)VolumePosition.X;
-                        _BackgroundVerts[i].Position.Y += (float)VolumePosition.Y;
-                    }
-                }
-
-                return _BackgroundVerts;
-            }
-        }
-
-        public VertexPositionColorTexture[] _AboveSectionBackgroundVerts = null;
-        public VertexPositionColorTexture[] AboveSectionBackgroundVerts
-        {
-            get
-            {
-                if (_AboveSectionBackgroundVerts == null)
-                {
-                    RegisterForLocationEvents();
-                    _AboveSectionBackgroundVerts = new VertexPositionColorTexture[GlobalPrimitives.SquareVerts.Length];
-                    GlobalPrimitives.SquareVerts.CopyTo(_AboveSectionBackgroundVerts, 0);
-
-                    //Size the background verts correctly
-                    for (int i = 0; i < _AboveSectionBackgroundVerts.Length; i++)
-                    {
-                        _AboveSectionBackgroundVerts[i].Position *= (float)this.OffSectionRadius;
-                        _AboveSectionBackgroundVerts[i].Position.X += (float)VolumePosition.X;
-                        _AboveSectionBackgroundVerts[i].Position.Y += (float)VolumePosition.Y;
-                    }
-                }
-
-                return _AboveSectionBackgroundVerts;
-            }
-        }
-
-        public VertexPositionColorTexture[] _BelowSectionBackgroundVerts = null;
-        public VertexPositionColorTexture[] BelowSectionBackgroundVerts
-        {
-            get
-            {
-                if (_BelowSectionBackgroundVerts == null)
-                {
-                    RegisterForLocationEvents();
-                    _BelowSectionBackgroundVerts = new VertexPositionColorTexture[GlobalPrimitives.SquareVerts.Length];
-                    GlobalPrimitives.SquareVerts.CopyTo(_BelowSectionBackgroundVerts, 0);
-
-                    //Size the background verts correctly
-                    for (int i = 0; i < _BelowSectionBackgroundVerts.Length; i++)
-                    {
-                        _BelowSectionBackgroundVerts[i].Position *= (float)this.OffSectionRadius;
-                        _BelowSectionBackgroundVerts[i].Position.X += (float)VolumePosition.X;
-                        _BelowSectionBackgroundVerts[i].Position.Y += (float)VolumePosition.Y;
-
-                        _BelowSectionBackgroundVerts[i].TextureCoordinate = new Vector2(_BelowSectionBackgroundVerts[i].TextureCoordinate.X == 0 ? 1 : 0,
-                                                                                        _BelowSectionBackgroundVerts[i].TextureCoordinate.Y == 0 ? 1 : 0);
-                    }
-                }
-
-                return _BelowSectionBackgroundVerts;
-            }
-        }
-
-        /// <summary>
-        /// Get the verts we need rendered for this location so they can be batched into one draw call
-        /// </summary>
-        /// <param name="DirectionToVisiblePlane"></param>
-        /// <returns></returns>
-        public VertexPositionColorTexture[] GetBackgroundVerticies(GridRectangle VisibleBounds, double Downsample, int DirectionToVisiblePlane, out int[] indicies)
-        {
-            StructureTypeObj type = this.Parent.Type.modelObj;
-            Microsoft.Xna.Framework.Color color = type.Color.ToXNAColor(1.0f);
-            Microsoft.Xna.Framework.Color HSLColor = color.ConvertToHSL();
-
-            //Alpha modifies how much the value of the overlay texture is mixed with the background texture.
-            //Saturation can be used to make the annotation not change the background
-            byte alpha = 128;
-            float SatScalar = HSLColor.B / 255.0f;
-            if (AnnotationOverlay.LastMouseOverObject == this)
-            {
-                alpha = 32;
-                SatScalar = 0.25f;
-            }
-            else if (DirectionToVisiblePlane != 0)
-            {
-                alpha = 64;
-                SatScalar = 0.5f;
-            }
-
-            double maxDimension = Math.Max(VisibleBounds.Width, VisibleBounds.Height);
-
-            double LocToScreenRatio = Radius * 2 / maxDimension;
-            SatScalar *= Viking.Common.Util.GetFadeFactor(LocToScreenRatio, BeginFadeCutoff, InvisibleCutoff);
-
-            HSLColor.A = alpha;
-            HSLColor.G = (Byte)((float)HSLColor.G * SatScalar);
-            //HSLColor.B = (Byte)((float)HSLColor.B * SatScalar);
-
-            return GetCircleBackgroundVerts(DirectionToVisiblePlane, HSLColor, out indicies);
-        }
-
-        /// <summary>
-        /// The verticies should really be cached and handed up to LocationObjRenderer so all similiar objects can be rendered in one
-        /// call.  This method is in the middle of a change from using triangles to draw circles to using textures. 
-        /// </summary>
-        /// <param name="graphicsDevice"></param>
-        /// <param name="DirectionToVisiblePlane"></param>
-        /// <param name="color"></param>
-        public VertexPositionColorTexture[] GetCircleBackgroundVerts(int DirectionToVisiblePlane, Microsoft.Xna.Framework.Color HSLColor, out int[] indicies)
-        {
-            //            GridVector2 Pos = this.VolumePosition;
-
-            //Can't populate until we've referenced CircleVerts
-            indicies = GlobalPrimitives.SquareIndicies;
-            //            float radius = (float)this.Radius;
-
-            VertexPositionColorTexture[] verts;
-
-            if (DirectionToVisiblePlane == 0)
-                verts = BackgroundVerts;
-            else if (DirectionToVisiblePlane < 0)
-                verts = AboveSectionBackgroundVerts;
-            else
-                verts = BelowSectionBackgroundVerts;
-
-
-            //Draw an opaque border around the background
-            for (int i = 0; i < verts.Length; i++)
-            {
-                verts[i].Color = HSLColor;
-            }
-
-            return verts;
-        }
-        #endregion
-
+        } 
 
         #region Linked Locations
-
-
-        public VertexPositionColorTexture[] GetLinkedLocationBackgroundVerts(GridRectangle VisibleBounds, double downsample, out int[] indicies)
-        {
-            double maxDimension = Math.Max(VisibleBounds.Width, VisibleBounds.Height);
-            double SatScalar = 0.5;
-            double LocToScreenRatio = Radius * 2 / maxDimension;
-
-            if (LocToScreenRatio > BeginFadeCutoff)
-            {
-                SatScalar *= Viking.Common.Util.GetFadeFactor(LocToScreenRatio, BeginFadeCutoff, InvisibleCutoff);
-            }
-
-            StructureTypeObj type = this.modelObj.Parent.Type;
-            Microsoft.Xna.Framework.Color selectedColor = type.Color.ToXNAColor(0.5f);
-            Microsoft.Xna.Framework.Color unselectedColor = type.Color.ToXNAColor(0.125f);
-
-            Microsoft.Xna.Framework.Color selectedHSLColor = selectedColor.ConvertToHSL();
-            Microsoft.Xna.Framework.Color unselectedHSLColor = unselectedColor.ConvertToHSL();
-
-            selectedHSLColor.G = (byte)((float)selectedHSLColor.G * SatScalar);
-            unselectedHSLColor.G = (byte)((float)unselectedHSLColor.G * SatScalar);
-
-            return GetLinkedLocationBackgroundVerts(downsample, selectedHSLColor, unselectedHSLColor, out indicies);
-        }
 
         /// <summary>
         /// Artificially positioned circles over our annotation circle which indicate links to locations on adjacent sections overlapped by this location
         /// </summary>
-        private ConcurrentDictionary<OverlappedLocation, GridCircle> _OverlappingLinkedLocationCircles = null;
-        public ConcurrentDictionary<OverlappedLocation, GridCircle> OverlappingLinkedLocationCircles
+        private ConcurrentDictionary<OverlappedLocationView, LocationCanvasView> _OverlappingLinkedLocationCircles = null;
+        public ConcurrentDictionary<OverlappedLocationView, LocationCanvasView> OverlappingLinkedLocationCircles
         {
             get
             {
@@ -366,8 +339,6 @@ namespace WebAnnotation.View
             }
         }
 
-        private VertexPositionColorTexture[] _OverlappingLinkedLocationVerts = null;
-        private int[] _OverlappingLinkedLocationIndicies = null;
 
         private List<LocationCanvasView> _OverlappingLinks = null;
         public override IList<LocationCanvasView> OverlappingLinks
@@ -411,12 +382,12 @@ namespace WebAnnotation.View
         /// A linked location overlapping with our location is drawn as a small circle.  This function stores the position of those smaller circles along an arc
         /// </summary>
         /// <returns></returns>
-        private ConcurrentDictionary<OverlappedLocation, GridCircle> CalculateOverlappedLocationCircles()
+        private ConcurrentDictionary<OverlappedLocationView, LocationCanvasView> CalculateOverlappedLocationCircles()
         {
-            ConcurrentDictionary<OverlappedLocation, GridCircle> listCircles = null;
+            ConcurrentDictionary<OverlappedLocationView, LocationCanvasView> listCircles = null;
             if (_OverlappingLinkedLocationCircles == null)
             {
-                listCircles = new ConcurrentDictionary<OverlappedLocation, GridCircle>();
+                listCircles = new ConcurrentDictionary<OverlappedLocationView, LocationCanvasView>();
             }
             else
             {
@@ -471,8 +442,8 @@ namespace WebAnnotation.View
 
                 GridCircle circle = new GridCircle(this.VolumePosition + new GridVector2(positionOffset.X, positionOffset.Y), UpperArcLinkRadius);
 
-                OverlappedLocation overlapLocation = new OverlappedLocation(linkLoc.modelObj, new LocationLinkView(this.modelObj, linkLoc.modelObj), circle);
-                bool added = listCircles.TryAdd(overlapLocation, circle);
+                OverlappedLocationView overlapLocation = new OverlappedLocationView(linkLoc.modelObj, circle, true);
+                bool added = listCircles.TryAdd(overlapLocation, linkLoc);
                 if (!added)
                 {
                     //overlapLocation = null;
@@ -496,8 +467,8 @@ namespace WebAnnotation.View
 
                 GridCircle circle = new GridCircle(this.VolumePosition + new GridVector2(positionOffset.X, positionOffset.Y), LowerArcLinkRadius);
 
-                OverlappedLocation overlapLocation = new OverlappedLocation(linkLoc.modelObj, new LocationLinkView(this.modelObj, linkLoc.modelObj), circle);
-                bool added = listCircles.TryAdd(overlapLocation, circle);
+                OverlappedLocationView overlapLocation = new OverlappedLocationView(linkLoc.modelObj, circle, false);
+                bool added = listCircles.TryAdd(overlapLocation, linkLoc);
                 if (!added)
                 {
                     //overlapLocation = null;
@@ -508,15 +479,7 @@ namespace WebAnnotation.View
             return listCircles;
         }
 
-        /// <summary>
-        /// When locations are very small we should not bother rendering text
-        /// </summary>
-        /// <param name="Downsample"></param>
-        /// <returns></returns>
-        public bool OverlappingLocationLinksCanBeSeen(double downsample)
-        {
-            return this.Radius / downsample >= 64;
-        }
+       
 
         /// <summary>
         /// A circle location can have a number of location links embedded as smaller circles.  This function 
@@ -526,11 +489,11 @@ namespace WebAnnotation.View
         public LocationCanvasView GetLocationUnderPosition(GridVector2 position, out double distanceToCenter)
         {
             distanceToCenter = double.MaxValue;
-            foreach (KeyValuePair<OverlappedLocation, GridCircle> Item in this.OverlappingLinkedLocationCircles)
+            foreach (KeyValuePair<OverlappedLocationView, LocationCanvasView> Item in this.OverlappingLinkedLocationCircles)
             {
-                if(Item.Value.Contains(position))
+                if(Item.Key.Intersects(position))
                 {
-                    distanceToCenter = GridVector2.Distance(position, Item.Value.Center);
+                    distanceToCenter = GridVector2.Distance(position, Item.Key.gridCircle.Center);
                     return Item.Key;
                 }
             }
@@ -542,6 +505,40 @@ namespace WebAnnotation.View
             }
 
             return null; 
+        }
+
+
+        #endregion
+
+
+        #region Overlapped Locations
+
+        /*
+        private VertexPositionColorTexture[] _OverlappingLinkedLocationVerts = null;
+        private int[] _OverlappingLinkedLocationIndicies = null;
+
+        public VertexPositionColorTexture[] GetLinkedLocationBackgroundVerts(GridRectangle VisibleBounds, double downsample, out int[] indicies)
+        {
+            double maxDimension = Math.Max(VisibleBounds.Width, VisibleBounds.Height);
+            double SatScalar = 0.5;
+            double LocToScreenRatio = Radius * 2 / maxDimension;
+
+            if (LocToScreenRatio > BeginFadeCutoff)
+            {
+                SatScalar *= Viking.Common.Util.GetFadeFactor(LocToScreenRatio, BeginFadeCutoff, InvisibleCutoff);
+            }
+
+            StructureTypeObj type = this.modelObj.Parent.Type;
+            Microsoft.Xna.Framework.Color selectedColor = type.Color.ToXNAColor(0.5f);
+            Microsoft.Xna.Framework.Color unselectedColor = type.Color.ToXNAColor(0.125f);
+
+            Microsoft.Xna.Framework.Color selectedHSLColor = selectedColor.ConvertToHSL();
+            Microsoft.Xna.Framework.Color unselectedHSLColor = unselectedColor.ConvertToHSL();
+
+            selectedHSLColor.G = (byte)((float)selectedHSLColor.G * SatScalar);
+            unselectedHSLColor.G = (byte)((float)unselectedHSLColor.G * SatScalar);
+
+            return GetLinkedLocationBackgroundVerts(downsample, selectedHSLColor, unselectedHSLColor, out indicies);
         }
 
         public VertexPositionColorTexture[] GetLinkedLocationBackgroundVerts(double downsample,
@@ -571,7 +568,7 @@ namespace WebAnnotation.View
                 }
             }
 
-            OverlappedLocation overlapLocation = AnnotationOverlay.LastMouseOverObject as OverlappedLocation;
+            OverlappedLocationView overlapLocation = AnnotationOverlay.LastMouseOverObject as OverlappedLocationView;
             if (overlapLocation != null)
             {
                 //Redo our verticies if we are
@@ -601,10 +598,10 @@ namespace WebAnnotation.View
 
                 int iVert = 0;
                 int iIndex = 0;
-                foreach (KeyValuePair<OverlappedLocation, GridCircle> Item in this.OverlappingLinkedLocationCircles)
+                foreach (KeyValuePair<OverlappedLocationView, GridCircle> Item in this.OverlappingLinkedLocationCircles)
                 {
                     GridCircle locCircle = Item.Value;
-                    OverlappedLocation linkedLoc = Item.Key;
+                    OverlappedLocationView linkedLoc = Item.Key;
 
                     //Make sure our verts and location lengths still agree, sometimes the collection size can grow.
                     if (iVert >= Verts.Length)
@@ -621,7 +618,7 @@ namespace WebAnnotation.View
                     }
 
                     GlobalPrimitives.SquareVerts.CopyTo(Verts, iVert);
-                     
+
                     Microsoft.Xna.Framework.Color color = (linkedLoc == AnnotationOverlay.LastMouseOverObject as LocationObj) ? selectionColor : unselectedColor;
 
                     bool invertTexture = linkedLoc.Z - this.Z < 0;
@@ -656,11 +653,20 @@ namespace WebAnnotation.View
             }
 
             return _OverlappingLinkedLocationVerts;
-
+        }
+        */
+        /// <summary>
+        /// When locations are very small we should not bother rendering text
+        /// </summary>
+        /// <param name="Downsample"></param>
+        /// <returns></returns>
+        public bool OverlappingLocationLinksCanBeSeen(double downsample)
+        {
+            return this.Radius / downsample >= 64;
         }
 
         #endregion
-
+        /*
         #region Label
 
         private bool _LabelSizeMeasured = false;
@@ -758,8 +764,7 @@ namespace WebAnnotation.View
 
             if (modelObj.Parent.Parent == null)
                 return new Vector2(0, 0);
-
-
+            
             string label = modelObj.Parent.Parent.ToString();
             //Label can't be empty or the offset measured is zero
             if (String.IsNullOrEmpty(label))
@@ -768,8 +773,29 @@ namespace WebAnnotation.View
             _ParentLabelSize = font.MeasureString(label);
             _ParentLabelSizeMeasured = true;
             return _LabelSize;
-        }
+        }        
+        */
+        public static void Draw(GraphicsDevice device,
+                          VikingXNA.Scene scene,
+                          BasicEffect basicEffect,
+                          VikingXNA.AnnotationOverBackgroundLumaEffect overlayEffect,
+                          LocationCircleView[] listToDraw)
+        {
+            int stencilValue = DeviceStateManager.GetDepthStencilValue(device);
+            DeviceStateManager.SetDepthStencilValue(device, stencilValue + 1);
 
+            OverlappedLocationView[] overlappedLocations = listToDraw.SelectMany(l => l.OverlappingLinkedLocationCircles.Keys).ToArray();
+            OverlappedLocationView.Draw(device, scene, basicEffect, overlayEffect, overlappedLocations);
+
+            DeviceStateManager.SetDepthStencilValue(device, stencilValue);
+
+            CircleView[] backgroundCircles = listToDraw.Select(l => l.circleView).ToArray();
+            CircleView.Draw(device, scene, basicEffect, overlayEffect, backgroundCircles);
+
+            //device.Clear(ClearOptions.DepthBuffer, Color.Black, float.MaxValue, 0);
+            
+            
+        }
 
         /// <summary>
         /// Draw the text for the location at the specified screen coordinates
@@ -781,7 +807,7 @@ namespace WebAnnotation.View
         /// <param name="DirectionToVisiblePlane">The Z distance of the location to the plane viewed by user.</param>
         public override void DrawLabel(Microsoft.Xna.Framework.Graphics.SpriteBatch spriteBatch,
                               Microsoft.Xna.Framework.Graphics.SpriteFont font,
-                              Vector2 LocationCenterScreenPosition,
+                              VikingXNA.Scene scene, 
                               float MagnificationFactor,
                               int DirectionToVisiblePlane)
         {
@@ -790,6 +816,27 @@ namespace WebAnnotation.View
 
             if (spriteBatch == null)
                 throw new ArgumentNullException("spriteBatch");
+
+            double DesiredRowsOfText = 6.0;
+            double NumUnscaledRows = (this.Radius * 2) / font.LineSpacing;
+            double DefaultFontSize = NumUnscaledRows / DesiredRowsOfText; 
+            StructureIDLabelView.FontSize = DefaultFontSize;
+            StructureLabelView.FontSize = DefaultFontSize / 2.0;
+
+            StructureIDLabelView.Position = modelObj.VolumePosition - new GridVector2(0.0, this.Radius / 3.0f);
+
+            StructureIDLabelView.Draw(spriteBatch, font, scene, MagnificationFactor);
+            StructureLabelView.Draw(spriteBatch, font, scene, MagnificationFactor);
+
+
+            foreach(OverlappedLocationView ov in this.OverlappingLinkedLocationCircles.Keys)
+            {
+                ov.DrawLabel(spriteBatch, font, scene, MagnificationFactor, 0);
+            }
+
+            return;
+
+            /*
 
             const byte DefaultAlpha = 192;
             //Labels draw at the top left, so we have to offset the drawstring call so the label is centered on the annotation
@@ -943,7 +990,7 @@ namespace WebAnnotation.View
                 float AlphaForSectionLabels = 0;
                 
                 //TODO: Fix labels for overlapped location circles
-                /*
+                
                 //Indicate the z value for each adjacent location
                 foreach (KeyValuePair<OverlappedLocation, GridCircle> adjLoc in this.OverlappingLinkedLocationCircles)
                 {
@@ -1003,8 +1050,9 @@ namespace WebAnnotation.View
                         yOffset += LineStep;
                     }
                 }
-                */
+                
             }
+            */
         }
 
         /// <summary>
@@ -1023,6 +1071,40 @@ namespace WebAnnotation.View
             return fullLabel;
         }
 
+        private string StructureLabel(int DirectionToVisiblePlane)
+        {
+            if (DirectionToVisiblePlane == 0)
+            {
+                string InfoLabel = "";
+                if (Parent.InfoLabel != null)
+                    InfoLabel = Parent.InfoLabel.Trim();
+
+                return InfoLabel;
+            }
+            else
+            {
+                return "z: " + this.Z.ToString();
+            }
+        }
+
+        private string TagLabel(int DirectionToVisiblePlane)
+        {
+
+            if (DirectionToVisiblePlane != 0)
+                return "";
+            else
+            {
+                string InfoLabel = "";
+                foreach (ObjAttribute tag in Parent.Attributes)
+                {
+                    InfoLabel += tag.ToString() + " ";
+                }
+
+                return InfoLabel.Trim();
+            }
+        }
+
+        /*
         private void DrawStructAndTagLabel(Microsoft.Xna.Framework.Graphics.SpriteBatch spriteBatch,
                                             Microsoft.Xna.Framework.Graphics.SpriteFont font,
                                             Vector2 LocationCenterScreenPosition,
@@ -1087,7 +1169,8 @@ namespace WebAnnotation.View
             }
 
         }
-
+        */
+        /*
 
         private float GetAlphaForScale(float scale, float ViewingDistanceAlpha)
         {
@@ -1125,10 +1208,6 @@ namespace WebAnnotation.View
             return scaledAlpha;
         }
 
-        private static bool ScaleReducedForLowMag(float baseScale)
-        {
-            return baseScale < 1.0;
-        }
 
         private float BaseFontSizeForLocationType(LocationType typecode, int DirectionToVisiblePlane, float MagnificationFactor, Microsoft.Xna.Framework.Graphics.SpriteFont font)
         {
@@ -1155,45 +1234,11 @@ namespace WebAnnotation.View
             }
         }
 
-        private static bool LabelIsTooSmallToSee(float baseScale, float LineSpacing)
-        {
-            return LineSpacing * baseScale < LocationCircleView.LabelVisibleCutoff;
-        }
+        
 
-        private string StructureLabel(int DirectionToVisiblePlane)
-        {
-            if (DirectionToVisiblePlane == 0)
-            {
-                string InfoLabel = "";
-                if (Parent.InfoLabel != null)
-                    InfoLabel = Parent.InfoLabel.Trim();
-
-                return InfoLabel;
-            }
-            else
-            {
-                return "z: " + this.Z.ToString();
-            }
-        }
-
-        private string TagLabel(int DirectionToVisiblePlane)
-        {
-
-            if (DirectionToVisiblePlane != 0)
-                return "";
-            else
-            {
-                string InfoLabel = "";
-                foreach (ObjAttribute tag in Parent.Attributes)
-                {
-                    InfoLabel += tag.ToString() + " ";
-                }
-
-                return InfoLabel.Trim();
-            }
-        }
-
-#endregion
+        
+        */
+        //#endregion
 
 
         /// <summary>
@@ -1222,10 +1267,9 @@ namespace WebAnnotation.View
 
         protected override void OnParentPropertyChanged(object o, PropertyChangedEventArgs args)
         {
-            if (args.PropertyName == "Label")
+            if (args.PropertyName == "Label" || args.PropertyName == "Attributes")
             {
-                _LabelSizeMeasured = false;
-                _InfoLabelSizeMeasured = false;
+                CreateLabelObjects();
             }
 
             base.OnParentPropertyChanged(o, args);
@@ -1233,14 +1277,11 @@ namespace WebAnnotation.View
 
         protected override void OnObjPropertyChanged(object o, PropertyChangedEventArgs args)
         {
-            _BackgroundVerts = null;
-            _AboveSectionBackgroundVerts = null;
-            _BelowSectionBackgroundVerts = null;
+            CreateViewObjects();
+            CreateLabelObjects();
 
             _OverlappingLinks = null;
             _OverlappingLinkedLocationCircles = null;
-            _OverlappingLinkedLocationVerts = null;
-            _OverlappingLinkedLocationIndicies = null;
         }
 
         protected override void OnLinksChanged(object o, NotifyCollectionChangedEventArgs args)
@@ -1254,11 +1295,6 @@ namespace WebAnnotation.View
                 _OverlappingLinkedLocationCircles.Clear();
 
             _OverlappingLinkedLocationCircles = null;
-
-            _OverlappingLinkedLocationVerts = null;
-            _OverlappingLinkedLocationIndicies = null;
-        }
-
-        
+        }        
     }
 }

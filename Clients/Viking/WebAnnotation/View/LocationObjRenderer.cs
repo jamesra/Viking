@@ -53,6 +53,87 @@ namespace WebAnnotation
         }
     }
 
+    static class DeviceStateManager
+    {
+        static BlendState OriginalBlendState;
+        static RasterizerState OriginalRasterState;
+
+        static BlendState ShapeRendererBlendState = null;
+        static RasterizerState ShapeRendererRasterizerState = null;
+
+        static DepthStencilState depthstencilState;
+
+        public static void SaveDeviceState(GraphicsDevice graphicsDevice)
+        {
+            OriginalBlendState = graphicsDevice.BlendState;
+            OriginalRasterState = graphicsDevice.RasterizerState;
+        }
+
+        public static void RestoreDeviceState(GraphicsDevice graphicsDevice)
+        {
+            if (OriginalBlendState != null)
+                graphicsDevice.BlendState = OriginalBlendState;
+
+            if (OriginalRasterState != null)
+                graphicsDevice.RasterizerState = OriginalRasterState;
+        }
+
+        public static void SetRenderStateForShapes(GraphicsDevice graphicsDevice)
+        {
+            if (ShapeRendererBlendState == null || ShapeRendererBlendState.IsDisposed)
+            {
+                ShapeRendererBlendState = new BlendState();
+
+                ShapeRendererBlendState.AlphaSourceBlend = Blend.SourceAlpha;
+                ShapeRendererBlendState.AlphaDestinationBlend = Blend.InverseSourceAlpha;
+                ShapeRendererBlendState.ColorSourceBlend = Blend.SourceAlpha;
+                ShapeRendererBlendState.ColorDestinationBlend = Blend.InverseSourceAlpha;
+            }
+
+            graphicsDevice.BlendState = ShapeRendererBlendState;
+        }
+
+        public static void SetRasterizerStateForShapes(GraphicsDevice graphicsDevice)
+        {
+            if (ShapeRendererRasterizerState == null || ShapeRendererRasterizerState.IsDisposed)
+            {
+                ShapeRendererRasterizerState = new RasterizerState();
+                ShapeRendererRasterizerState.FillMode = FillMode.Solid;
+                ShapeRendererRasterizerState.CullMode = CullMode.None;
+            }
+
+            graphicsDevice.RasterizerState = ShapeRendererRasterizerState;
+        }
+
+        public static void SetDepthStencilValue(GraphicsDevice device, int StencilValue)
+        {
+            if (depthstencilState != null)
+            {
+                depthstencilState.Dispose();
+                depthstencilState = null;
+            }
+
+            if (depthstencilState == null || depthstencilState.IsDisposed)
+            {
+                depthstencilState = new DepthStencilState();
+                depthstencilState.DepthBufferEnable = true;
+                depthstencilState.DepthBufferWriteEnable = true;
+                depthstencilState.DepthBufferFunction = CompareFunction.LessEqual;
+
+                depthstencilState.StencilEnable = true;
+                depthstencilState.StencilFunction = CompareFunction.GreaterEqual;
+                depthstencilState.ReferenceStencil = StencilValue;
+                depthstencilState.StencilPass = StencilOperation.Replace;
+
+                device.DepthStencilState = depthstencilState;
+            }
+        }
+
+        public static int GetDepthStencilValue(GraphicsDevice device)
+        {
+            return device.DepthStencilState.ReferenceStencil; 
+        } 
+    }
 
     /// <summary>
     /// This class draws LocationObj's
@@ -78,30 +159,9 @@ namespace WebAnnotation
                                                long SectionNumber)
         {
             //oldVertexDeclaration = graphicsDevice.VertexDeclaration;
-            OriginalBlendState = graphicsDevice.BlendState;
-            OriginalRasterState = graphicsDevice.RasterizerState;
-
-            if (RendererBlendState == null || RendererBlendState.IsDisposed)
-            {
-                RendererBlendState = new BlendState();
-
-
-                RendererBlendState.AlphaSourceBlend = Blend.SourceAlpha;
-                RendererBlendState.AlphaDestinationBlend = Blend.InverseSourceAlpha;
-                RendererBlendState.ColorSourceBlend = Blend.SourceAlpha;
-                RendererBlendState.ColorDestinationBlend = Blend.InverseSourceAlpha;
-            }
-
-            graphicsDevice.BlendState = RendererBlendState;
-
-            if (RendererRasterizerState == null || RendererRasterizerState.IsDisposed)
-            {
-                RendererRasterizerState = new RasterizerState();
-                RendererRasterizerState.FillMode = FillMode.Solid;
-                RendererRasterizerState.CullMode = CullMode.None; 
-            }
-
-            graphicsDevice.RasterizerState = RendererRasterizerState; 
+            DeviceStateManager.SaveDeviceState(graphicsDevice);
+            DeviceStateManager.SetRenderStateForShapes(graphicsDevice);
+            DeviceStateManager.SetRasterizerStateForShapes(graphicsDevice); 
             
             int SectionDelta = (int)(obj.Z - SectionNumber);
 
@@ -169,15 +229,27 @@ namespace WebAnnotation
         /// <param name="basicEffect"></param>
         public static void RestoreGraphicsDevice(GraphicsDevice graphicsDevice, BasicEffect basicEffect)
         {
-            if(OriginalBlendState != null)
-                graphicsDevice.BlendState = OriginalBlendState;
+            DeviceStateManager.RestoreDeviceState(graphicsDevice);
 
-            if(OriginalRasterState != null)
-                graphicsDevice.RasterizerState = OriginalRasterState; 
-            
             basicEffect.Texture = null;
             basicEffect.TextureEnabled = false;
             basicEffect.VertexColorEnabled = false;
+        }
+
+        public static void Draw(List<LocationCanvasView> listToDraw, GraphicsDevice graphicsDevice, BasicEffect basicEffect, VikingXNA.AnnotationOverBackgroundLumaEffect overlayEffect, RoundLineCode.RoundLineManager overlayLineManager, VikingXNA.Scene Scene, int SectionNumber)
+        {
+            if (listToDraw.Count == 0)
+                return;
+
+            List<LocationOpenCurveView> OpenCurveLocations = listToDraw.Where(l => l.TypeCode == LocationType.OPENCURVE).Cast<LocationOpenCurveView>().ToList();
+            DrawOpenCurveBackgrounds(OpenCurveLocations, graphicsDevice, basicEffect, overlayEffect, overlayLineManager, Scene, SectionNumber);
+
+            List<LocationClosedCurveView> ClosedCurveLocations = listToDraw.Where(l => l.TypeCode == LocationType.CLOSEDCURVE).Cast<LocationClosedCurveView>().ToList();
+            DrawClosedCurveBackgrounds(ClosedCurveLocations, graphicsDevice, basicEffect, overlayEffect, overlayLineManager, Scene, SectionNumber);
+
+            //TODO: Use Group by instead of select
+            LocationCircleView[] CircleLocations = listToDraw.Where(l => l.TypeCode == LocationType.CIRCLE).Cast<LocationCircleView>().ToArray();
+            LocationCircleView.Draw(graphicsDevice, Scene, basicEffect, overlayEffect, CircleLocations);
         }
 
         /// <summary>
@@ -199,9 +271,10 @@ namespace WebAnnotation
             DrawClosedCurveBackgrounds(ClosedCurveLocations, graphicsDevice, basicEffect, overlayEffect, overlayLineManager, Scene, SectionNumber);
 
             //TODO: Use Group by instead of select
-            List<LocationCircleView> CircleLocations = listToDraw.Where(l => l.TypeCode == LocationType.CIRCLE).Cast<LocationCircleView>().ToList();
-            DrawCircleBackgrounds(CircleLocations, graphicsDevice, basicEffect, overlayEffect, Scene, SectionNumber);
+            LocationCircleView[] CircleLocations = listToDraw.Where(l => l.TypeCode == LocationType.CIRCLE).Cast<LocationCircleView>().ToArray();
+            LocationCircleView.Draw(graphicsDevice, Scene, basicEffect, overlayEffect, CircleLocations);
         }
+
 
         public static void DrawOpenCurveBackgrounds(List<LocationOpenCurveView> listToDraw, GraphicsDevice graphicsDevice, BasicEffect basicEffect, VikingXNA.AnnotationOverBackgroundLumaEffect overlayEffect, RoundLineCode.RoundLineManager overlayLineManager, VikingXNA.Scene Scene, int SectionNumber)
         {
@@ -233,81 +306,7 @@ namespace WebAnnotation
             RestoreGraphicsDevice(graphicsDevice, basicEffect);
         }
 
-        /// <summary>
-        /// Draw the list of locations as they should appear for the given section number
-        /// </summary>
-        /// <param name="Locations"></param>
-        /// <param name="graphicsDevice"></param>
-        /// <param name="basicEffect"></param>
-        /// <param name="SectionNumber"></param>
-        public static void DrawCircleBackgrounds(List<LocationCircleView> listToDraw, GraphicsDevice graphicsDevice, BasicEffect basicEffect, VikingXNA.AnnotationOverBackgroundLumaEffect overlayEffect, VikingXNA.Scene Scene, int SectionNumber)
-        {
-            if (listToDraw.Count == 0)
-                return;
-
-            IComparer<LocationCircleView> LocComparer = new LocationObjDrawOrderComparison();
-            int iStart = 0;
-
-            //Set the graphics device state to render the appropriate type
-            
-
-            do
-            {
-                int iEnd = listToDraw.Count; //Need to initialize or loop never ends
-
-                LocationCircleView StartingObj = listToDraw[iStart];
-
-                SetupGraphicsDevice(graphicsDevice, basicEffect, overlayEffect, StartingObj, SectionNumber);
-                VertexPositionColorTexture[] VertArray = new VertexPositionColorTexture[listToDraw.Count * 4];
-                int[] indicies = new int[listToDraw.Count * 6];
-
-                int iNextVert = 0;
-                int iNextVertIndex = 0;
-                for (int iObj = iStart; iObj < listToDraw.Count; iObj++)
-                {
-                    LocationCircleView locToDraw = listToDraw[iObj];
-                    int[] locIndicies;
-                    VertexPositionColorTexture[] objVerts = locToDraw.GetBackgroundVerticies(Scene.VisibleWorldBounds, Scene.Camera.Downsample, (int)((long)SectionNumber - (long)locToDraw.Z),
-                                                                                                   out locIndicies);
-
-                    if(objVerts == null)
-                        continue;
-
-                    Array.Copy(objVerts, 0, VertArray, iNextVert, objVerts.Length);
-                    
-
-                    for (int iVert = 0; iVert < locIndicies.Length; iVert++)
-                    {
-                        indicies[iNextVertIndex + iVert] = locIndicies[iVert] + iNextVert;
-                    }
-
-                    iNextVert += objVerts.Length;
-                    iNextVertIndex += locIndicies.Length;
-                }
-
-                foreach (EffectPass pass in overlayEffect.effect.CurrentTechnique.Passes)
-                {
-                    pass.Apply();
-
-                    graphicsDevice.DrawUserIndexedPrimitives<VertexPositionColorTexture>(PrimitiveType.TriangleList,
-                                                                                         VertArray,
-                                                                                         0,
-                                                                                         VertArray.Length,
-                                                                                         indicies,
-                                                                                         0,
-                                                                                         indicies.Length / 3); 
-
-                }
-               
-                //Remove the drawn objects from the list
-                iStart = iEnd; 
-                //listToDraw.RemoveRange(0, iEnd);
-            }
-            while (iStart < listToDraw.Count);
-
-            RestoreGraphicsDevice(graphicsDevice, basicEffect); 
-        }
-
+        /*
         /// <summary>
         /// Draw the list of locations as they should appear for the given section number
         /// </summary>
@@ -344,8 +343,8 @@ namespace WebAnnotation
                     int[] locIndicies;
 
                     if (!locToDraw.OverlappingLocationLinksCanBeSeen(Scene.Camera.Downsample))
-                        continue; 
-
+                        continue;
+                    
                     VertexPositionColorTexture[] objVerts = locToDraw.GetLinkedLocationBackgroundVerts(Scene.VisibleWorldBounds, Scene.Camera.Downsample, 
                                                                                                        out locIndicies);
 
@@ -356,7 +355,6 @@ namespace WebAnnotation
                         continue; 
 
                     VertArray.AddRange(objVerts);
-                    //Array.Copy(objVerts, 0, VertArray, iNextVert, objVerts.Length);
 
                     for (int iVert = 0; iVert < locIndicies.Length; iVert++)
                     {
@@ -393,6 +391,7 @@ namespace WebAnnotation
 
             RestoreGraphicsDevice(graphicsDevice, basicEffect); 
         }
+        */
 
         /// <summary>
         /// Divide the label into two lines

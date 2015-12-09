@@ -61,7 +61,7 @@ namespace WebAnnotation.View
 
         public abstract void DrawLabel(Microsoft.Xna.Framework.Graphics.SpriteBatch spriteBatch,
                               Microsoft.Xna.Framework.Graphics.SpriteFont font,
-                              Microsoft.Xna.Framework.Vector2 LocationCenterScreenPosition,
+                              Scene scene,
                               float MagnificationFactor,
                               int DirectionToVisiblePlane);
 
@@ -114,7 +114,7 @@ namespace WebAnnotation.View
         {
             get { return modelObj.Links; }
         }
-        
+                
         public GridVector2 VolumePosition
         {
             get
