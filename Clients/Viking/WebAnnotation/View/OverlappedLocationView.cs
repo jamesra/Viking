@@ -48,7 +48,6 @@ namespace WebAnnotation.View
             set { circleView.Circle = new GridCircle(value, gridCircle.Radius); }
         }
 
-
         public OverlappedLocationView(LocationObj obj, GridCircle gridCircle, bool Up) : base(obj)
         {
             label = new LabelView(LocationLabel(obj), gridCircle.Center);
@@ -124,8 +123,6 @@ namespace WebAnnotation.View
         {
             return LocationAction.CREATELINK;
         }
-
-        
 
         public ContextMenu ContextMenu
         {

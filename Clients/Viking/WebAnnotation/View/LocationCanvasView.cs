@@ -241,9 +241,24 @@ namespace WebAnnotation.View
             return (int)(this.ID - other.ID);
         }
 
+        /// <summary>
+        /// Return true if all of the locations are present in the local store
+        /// </summary>
+        public bool AllLinksLoaded
+        {
+            get
+            {
+                ICollection<LocationObj> listLinkedLocations = Store.Locations.GetObjectsByIDs(this.Links, false);
+                return listLinkedLocations.Count == this.Links.Count;
+            }
+        }
+
         #region Weak Events
         private object EventsLock = new object();
         private bool EventsRegistered = false;
+        private bool LinkedEventsRegistered = false;
+        private bool StructureEventsRegistered = false;
+
         internal void RegisterForLocationEvents()
         {
             if (EventsRegistered)
@@ -255,6 +270,73 @@ namespace WebAnnotation.View
                     return;
 
                 NotifyPropertyChangedEventManager.AddListener(this.modelObj, this);
+                 
+                EventsRegistered = true;
+            }
+        } 
+
+        internal void DeregisterForLocationEvents()
+        {
+            if (!EventsRegistered)
+                return;
+
+            lock (EventsLock)
+            {
+                if (!EventsRegistered)
+                    return;
+
+                NotifyPropertyChangedEventManager.RemoveListener(this.modelObj, this);
+                
+                EventsRegistered = false;
+            }
+        }
+
+        internal void RegisterForLinkedLocationChangeEvents()
+        {
+            if (AllLinksLoaded)
+            {
+                lock (EventsLock)
+                {
+                    if (LinkedEventsRegistered)
+                        return;
+
+                    ICollection<LocationObj> listLinkedLocations = Store.Locations.GetObjectsByIDs(this.Links, false);
+                    foreach (LocationObj loc in listLinkedLocations)
+                    {
+                        NotifyPropertyChangedEventManager.AddListener(loc, this);
+                    }
+
+                    LinkedEventsRegistered = true;
+                }
+            }
+        }
+
+        internal void DeregisterForLinkedLocationChangeEvents()
+        {
+            if (AllLinksLoaded)
+            {
+                lock (EventsLock)
+                {
+                    if (!LinkedEventsRegistered)
+                        return;
+
+                    ICollection<LocationObj> listLinkedLocations = Store.Locations.GetObjectsByIDs(this.Links, false);
+                    foreach (LocationObj loc in listLinkedLocations)
+                    {
+                        NotifyPropertyChangedEventManager.RemoveListener(loc, this);
+                    }
+
+                    LinkedEventsRegistered = false; 
+                }
+            }
+        }
+
+        internal void RegisterForStructureChangeEvents()
+        {
+            lock (EventsLock)
+            {
+                if (StructureEventsRegistered)
+                    return;
 
                 if (this.modelObj.Parent == null)
                 {
@@ -270,26 +352,23 @@ namespace WebAnnotation.View
                 else
                     NotifyPropertyChangedEventManager.AddListener(this.modelObj.Parent, this);
 
-                EventsRegistered = true;
+                StructureEventsRegistered = true;
             }
         }
 
-        internal void DeregisterForLocationEvents()
+        internal void DeregisterForStructureChangeEvents()
         {
-            if (!EventsRegistered)
-                return;
-
             lock (EventsLock)
             {
-                if (!EventsRegistered)
+                if (!StructureEventsRegistered)
                     return;
 
-                NotifyPropertyChangedEventManager.RemoveListener(this.modelObj, this);
                 NotifyPropertyChangedEventManager.RemoveListener(this.modelObj.Parent, this);
 
-                EventsRegistered = false;
+                StructureEventsRegistered = false;
             }
         }
+
         #endregion
 
 
@@ -305,7 +384,11 @@ namespace WebAnnotation.View
                     this.OnParentPropertyChanged(sender, PropertyChangedArgs);
                 else
                 {
-                    this.OnObjPropertyChanged(sender, PropertyChangedArgs);
+                    LocationObj locObj = sender as LocationObj;
+                    if (locObj.ID == this.ID)
+                        this.OnObjPropertyChanged(sender, PropertyChangedArgs);
+                    else
+                        this.OnLinkedObjectPropertyChanged(sender, PropertyChangedArgs);
                 }
 
                 return true;
@@ -329,6 +412,11 @@ namespace WebAnnotation.View
         }
 
         protected virtual void OnObjPropertyChanged(object o, PropertyChangedEventArgs args)
+        {
+            return;
+        }
+
+        protected virtual void OnLinkedObjectPropertyChanged(object o, PropertyChangedEventArgs args)
         {
             return;
         }

@@ -259,20 +259,23 @@ namespace WebAnnotation
         /// <param name="graphicsDevice"></param>
         /// <param name="basicEffect"></param>
         /// <param name="SectionNumber"></param>
-        public static void DrawBackgrounds(List<LocationCanvasView> listToDraw, GraphicsDevice graphicsDevice, BasicEffect basicEffect, VikingXNA.AnnotationOverBackgroundLumaEffect overlayEffect, RoundLineCode.RoundLineManager overlayLineManager, VikingXNA.Scene Scene, int SectionNumber)
+        public static void DrawBackgrounds(List<LocationCanvasView> listToDraw, GraphicsDevice graphicsDevice, BasicEffect basicEffect, VikingXNA.AnnotationOverBackgroundLumaEffect overlayEffect, RoundLineCode.RoundLineManager overlayLineManager, VikingXNA.Scene Scene, int VisibleSectionNumber)
         {
             if (listToDraw.Count == 0)
                 return;
 
             List<LocationOpenCurveView> OpenCurveLocations = listToDraw.Where(l => l.TypeCode == LocationType.OPENCURVE).Cast<LocationOpenCurveView>().ToList();
-            DrawOpenCurveBackgrounds(OpenCurveLocations, graphicsDevice, basicEffect, overlayEffect, overlayLineManager, Scene, SectionNumber);
+            DrawOpenCurveBackgrounds(OpenCurveLocations, graphicsDevice, basicEffect, overlayEffect, overlayLineManager, Scene, VisibleSectionNumber);
 
             List<LocationClosedCurveView> ClosedCurveLocations = listToDraw.Where(l => l.TypeCode == LocationType.CLOSEDCURVE).Cast<LocationClosedCurveView>().ToList();
-            DrawClosedCurveBackgrounds(ClosedCurveLocations, graphicsDevice, basicEffect, overlayEffect, overlayLineManager, Scene, SectionNumber);
+            DrawClosedCurveBackgrounds(ClosedCurveLocations, graphicsDevice, basicEffect, overlayEffect, overlayLineManager, Scene, VisibleSectionNumber);
 
             //TODO: Use Group by instead of select
-            LocationCircleView[] CircleLocations = listToDraw.Where(l => l.TypeCode == LocationType.CIRCLE).Cast<LocationCircleView>().ToArray();
+            LocationCircleView[] CircleLocations = listToDraw.Where(l => l.GetType() == typeof(LocationCircleView)).Cast<LocationCircleView>().ToArray();
             LocationCircleView.Draw(graphicsDevice, Scene, basicEffect, overlayEffect, CircleLocations);
+
+            AdjacentLocationCircleView[] AdjacentCircleLocations = listToDraw.Where(l => l.GetType() == typeof(AdjacentLocationCircleView)).Cast<AdjacentLocationCircleView>().ToArray();
+            AdjacentLocationCircleView.Draw(graphicsDevice, Scene, basicEffect, overlayEffect, AdjacentCircleLocations, VisibleSectionNumber);
         }
 
 

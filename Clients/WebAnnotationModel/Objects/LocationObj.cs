@@ -29,6 +29,44 @@ namespace WebAnnotationModel
 
     public class LocationObj : WCFObjBaseWithKey<long, Location>
     {
+        public static bool IsPositionProperty(string propertyName)
+        {
+            if (string.IsNullOrEmpty(propertyName))
+                return true;
+
+            switch (propertyName)
+            {
+                case "Position":
+                    return true;
+                case "WorldPosition":
+                    return true;
+                case "VolumePosition":
+                    return true;
+                case "VolumeShape":
+                    return true;
+                case "MosaicShape":
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        public static bool IsGeometryProperty(string propertyName)
+        {
+            if (string.IsNullOrEmpty(propertyName))
+                return true;
+
+            switch (propertyName)
+            {
+                case "VolumeShape":
+                    return true;
+                case "MosaicShape":
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
         public override long ID
         {
             get { return Data.ID; } 
@@ -208,14 +246,14 @@ namespace WebAnnotationModel
                 if (Data.VolumeShape != null && Data.VolumeShape.SpatialEquals(newValue)) return;
 
                 OnPropertyChanging("VolumeShape");
-                Data.VolumeShape = newValue;
-                _VolumeShape = null;
-                OnPropertyChanged("VolumeShape");
 
                 OnPropertyChanging("VolumePosition");
                 _VolumePosition = value.Centroid();
-
                 OnPropertyChanged("VolumePosition");
+
+                Data.VolumeShape = newValue;
+                _VolumeShape = null;
+                OnPropertyChanged("VolumeShape");
 
                 SetDBActionForChange();
             }
@@ -241,15 +279,16 @@ namespace WebAnnotationModel
 
                 DbGeometry newValue = value.ToDbGeometry();
                 if (Data.MosaicShape != null && Data.MosaicShape.SpatialEquals(newValue)) return;
-                 
+
                 OnPropertyChanging("MosaicShape");
-                Data.MosaicShape = newValue;
-                _MosaicShape = null;
-                OnPropertyChanged("MosaicShape");
 
                 OnPropertyChanging("Position");
                 _MosaicPosition = value.Centroid();
                 OnPropertyChanged("Position");
+
+                Data.MosaicShape = newValue;
+                _MosaicShape = null;
+                OnPropertyChanged("MosaicShape");
 
                 SetDBActionForChange();
             }
@@ -387,7 +426,6 @@ namespace WebAnnotationModel
                     return new ReadOnlyObservableCollection<long>(_Links); 
                     if (_Links == null)
                     {
-
                         //Initialize from the Data object
                         if (Data.Links == null)
                         {

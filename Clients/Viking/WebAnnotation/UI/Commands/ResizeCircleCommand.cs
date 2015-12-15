@@ -13,9 +13,9 @@ using WebAnnotationModel;
 namespace WebAnnotation.UI.Commands
 {
     class ResizeCircleCommand : Viking.UI.Commands.Command
-    {
-        public double radius;
-         
+    { 
+        public double Radius;
+
         public GridVector2 Origin;
         System.Drawing.Color CircleColor; 
  
@@ -27,7 +27,7 @@ namespace WebAnnotation.UI.Commands
 
         public ResizeCircleCommand(Viking.UI.Controls.SectionViewerControl parent, 
                                      System.Drawing.Color color,  
-                                     GridVector2 origin,  
+                                     GridVector2 origin,
                                      OnCommandSuccess success_callback)
             : base(parent)
         { 
@@ -37,13 +37,18 @@ namespace WebAnnotation.UI.Commands
             this.success_callback = success_callback;
         }
 
-        protected override void OnMouseMove(object sender, System.Windows.Forms.MouseEventArgs e)
+        private void UpdateRadius(MouseEventArgs e)
         {
             GridVector2 WorldPos = Parent.ScreenToWorld(e.X, e.Y);
 
-            this.radius = GridVector2.Distance(Origin, WorldPos); 
+            this.Radius = GridVector2.Distance(Origin, WorldPos);
+        }
 
-            HasMouseMoved=true;
+        protected override void OnMouseMove(object sender, System.Windows.Forms.MouseEventArgs e)
+        {
+            UpdateRadius(e);
+
+            HasMouseMoved =true;
 
             Parent.Invalidate(); 
 
@@ -62,7 +67,7 @@ namespace WebAnnotation.UI.Commands
         protected override void Execute()
         {
             if(this.success_callback != null)
-                this.success_callback(this.radius);
+                this.success_callback(this.Radius);
 
             base.Execute();
         }
@@ -71,11 +76,9 @@ namespace WebAnnotation.UI.Commands
         {
             if (e.Button == MouseButtons.Left)
             {
-            //    TimeSpan Elapsed = new TimeSpan(DateTime.Now.Ticks - CreationTime.Ticks);
-                GridVector2 WorldPos = Parent.ScreenToWorld(e.X, e.Y);
+                //    TimeSpan Elapsed = new TimeSpan(DateTime.Now.Ticks - CreationTime.Ticks);
+                UpdateRadius(e);
 
-                this.radius = GridVector2.Distance(Origin, WorldPos); 
-                
                 this.Execute(); 
             }
 
@@ -92,7 +95,7 @@ namespace WebAnnotation.UI.Commands
                 CircleColor.B,
                 128);
 
-            GlobalPrimitives.DrawCircle(graphicsDevice, basicEffect, Pos, this.radius, color); 
+            GlobalPrimitives.DrawCircle(graphicsDevice, basicEffect, Pos, this.Radius, color); 
             
             base.OnDraw(graphicsDevice, scene, basicEffect);
         }

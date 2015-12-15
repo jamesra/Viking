@@ -87,6 +87,9 @@ namespace WebAnnotation.View
                           VikingXNA.AnnotationOverBackgroundLumaEffect overlayEffect,
                           TextureCircleView[] listToDraw)
         {
+            if (listToDraw.Length == 0)
+                return;
+
             TextureCircleView.SetupGraphicsDevice(device, basicEffect, overlayEffect);
 
             var textureGroups = listToDraw.GroupBy(l => l.Texture);
@@ -376,6 +379,9 @@ namespace WebAnnotation.View
                           VikingXNA.AnnotationOverBackgroundLumaEffect overlayEffect,
                           CircleView[] listToDraw)
         {
+            if (listToDraw.Length == 0)
+                return;
+
             CircleView.SetupGraphicsDevice(device, basicEffect, overlayEffect);
             int[] indicies;
             VertexPositionColorTexture[] VertArray = AggregatePrimitives(listToDraw, out indicies);

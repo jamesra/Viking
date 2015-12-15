@@ -225,31 +225,33 @@ namespace WebAnnotation
         {
             double MaxScreenDimension = Math.Max(Parent.Scene.VisibleWorldBounds.Width, Parent.Scene.VisibleWorldBounds.Height);
             distance = double.MaxValue; 
-            SectionLocationsViewModel locView = GetAnnotationsForSection(CurrentSectionNumber); 
+            SectionLocationsViewModel locView = GetAnnotationsForSection(CurrentSectionNumber);
+            if (locView == null)
+                return null; 
+
             double BestDistance = double.MaxValue;
             IUIObjectBasic bestObj = null; 
-            if (locView != null)
+           
+            bestObj = locView.GetNearestAnnotation(position, out BestDistance);
+
+            if (bestObj != null)
             {
-                bestObj = locView.GetNearestAnnotation(position, out BestDistance);
-
-                if (bestObj != null)
-                {
-                    distance = BestDistance;
-                    LocationCanvasView loc = bestObj as LocationCanvasView;
-                    if (loc == null)
-                        return bestObj;
+                distance = BestDistance;
+                LocationCanvasView loc = bestObj as LocationCanvasView;
+                if (loc == null)
+                    return bestObj;
     
-                    if (loc.OverlappingLinks.Count == 0)
-                        return bestObj;
+                if (loc.OverlappingLinks.Count == 0)
+                    return bestObj;
 
-                    LocationCircleView locCircle = loc as LocationCircleView;
-                    if (locCircle != null)
-                    {
-                        bestObj = locCircle.GetLocationUnderPosition(position, out distance);
-                    }
+                LocationCircleView locCircle = loc as LocationCircleView;
+                if (locCircle != null)
+                {
+                    bestObj = locCircle.GetLocationUnderPosition(position, out distance);
+                    return bestObj;
                 }
             }
-
+            
             if (bestObj == null)
             {
                 double bestRatio = double.MaxValue;
@@ -260,7 +262,7 @@ namespace WebAnnotation
                     locView = GetAnnotationsForSection(_Parent.Section.ReferenceSectionAbove.Number);
                     if (locView != null)
                     {
-                        adjacentObjs.AddRange(locView.GetLocations(position).Where(l => l.IsVisibleOnAdjacent(Parent.Scene)));
+                        adjacentObjs.AddRange(locView.GetAdjacentLocations(position).Where(l => l.IsVisibleOnAdjacent(Parent.Scene)));
                     }
                 }
 
@@ -270,11 +272,11 @@ namespace WebAnnotation
                     locView = GetAnnotationsForSection(_Parent.Section.ReferenceSectionBelow.Number);
                     if (locView != null)
                     {
-                        adjacentObjs.AddRange(locView.GetLocations(position).Where(l => l.IsVisibleOnAdjacent(Parent.Scene)));
+                        adjacentObjs.AddRange(locView.GetAdjacentLocations(position).Where(l => l.IsVisibleOnAdjacent(Parent.Scene)));
                     }
                 }
 
-                IEnumerable<LocationCanvasView> intersecting_candidates = RemoveOverlappingLocations(adjacentObjs, this.CurrentSectionNumber);
+                IEnumerable<LocationCanvasView> intersecting_candidates = RemoveOverlappingLocations(locView.GetLocations().ToList(), adjacentObjs, this.CurrentSectionNumber);
                 intersecting_candidates = adjacentObjs.Where(l => l.IntersectsOnAdjacent(position) && l.IsTerminal == false);
                 LocationCanvasView nearest = intersecting_candidates.OrderBy(c => c.DistanceFromCenterNormalized(position)).FirstOrDefault();
                 bestObj = nearest;
@@ -420,7 +422,7 @@ namespace WebAnnotation
                 if (loc != null)
                 {
                     LocationAction action = loc.GetActionForPositionOnAnnotation(WorldPosition, this.CurrentSectionNumber); 
-                    Viking.UI.Commands.Command command = action.CreateCommand(Parent, loc);
+                    Viking.UI.Commands.Command command = action.CreateCommand(Parent, loc.modelObj);
                     if(command != null)
                     {
                         _Parent.CurrentCommand = command;
@@ -1108,7 +1110,7 @@ namespace WebAnnotation
             {
                 SectionLocationsViewModel sectionLocations = GetAnnotationsForSection(_Parent.Section.ReferenceSectionBelow.Number);
                 if (sectionLocations != null)
-                    RefLocations.AddRange(sectionLocations.GetLocations(Bounds).Where(l => l.modelObj.Terminal==false && l.modelObj.OffEdge == false && l.modelObj.VericosityCap == false));//(Bounds)); 
+                    RefLocations.AddRange(sectionLocations.GetAdjacentLocations(Bounds).Where(l => l.modelObj.Terminal==false && l.modelObj.OffEdge == false && l.modelObj.VericosityCap == false));//(Bounds)); 
             }
 
             if(_Parent.Section.ReferenceSectionAbove != null)
@@ -1116,13 +1118,12 @@ namespace WebAnnotation
                 SectionLocationsViewModel sectionLocations = GetAnnotationsForSection(_Parent.Section.ReferenceSectionAbove.Number);
                 if (sectionLocations != null)
                 {
-                    RefLocations.AddRange(sectionLocations.GetLocations(Bounds).Where(l => l.modelObj.Terminal == false && l.modelObj.OffEdge == false && l.modelObj.VericosityCap == false));
+                    RefLocations.AddRange(sectionLocations.GetAdjacentLocations(Bounds).Where(l => l.modelObj.Terminal == false && l.modelObj.OffEdge == false && l.modelObj.VericosityCap == false));
                 }
             }
             
-
             List<LocationCanvasView> listVisibleNonOverlappingLocationsOnAdjacentSections = FindVisibleAdjacentLocations(RefLocations, scene); 
-            List<LocationCanvasView> listVisibleOverlappingLocationsOnAdjacentSections = RemoveOverlappingLocations(listVisibleNonOverlappingLocationsOnAdjacentSections,
+            listVisibleNonOverlappingLocationsOnAdjacentSections = RemoveOverlappingLocations(listLocationsToDraw, listVisibleNonOverlappingLocationsOnAdjacentSections,
                                                                                                                     _Parent.Section.Number);
 
             nextStencilValue++;
@@ -1245,7 +1246,7 @@ namespace WebAnnotation
 
         private static List<LocationCanvasView> FindVisibleAdjacentLocations(IEnumerable<LocationCanvasView> locations, VikingXNA.Scene scene)
         { 
-            return locations.Where(l => l != null && l.modelObj.VolumePositionHasBeenCalculated && l.Parent != null && l.Parent.Type != null && l.IsVisibleOnAdjacent(scene)).ToList();
+            return locations.Where(l => l != null && l.modelObj.VolumePositionHasBeenCalculated && l.Parent != null && l.Parent.Type != null && l.IsVisible(scene)).ToList();
         }
 
         /// <summary>
@@ -1253,9 +1254,12 @@ namespace WebAnnotation
         /// </summary>
         /// <param name="locations">The collection to remove overlapping locations from</param>
         /// <returns>The removed locations which overlap</returns>
-        private static List<LocationCanvasView> RemoveOverlappingLocations(List<LocationCanvasView> locations, int section_number)
+        private static List<LocationCanvasView> RemoveOverlappingLocations(List<LocationCanvasView> locations, List<LocationCanvasView> adjacentLocations, int section_number)
         {
-            List<LocationCanvasView> listOverlappingLocations = new List<LocationCanvasView>(locations.Count);
+            List<LocationCanvasView> listOverlappingLocations = locations.SelectMany(l => l.OverlappingLinks).ToList();
+            //List<LocationCanvasView> listOverlappingLocations = new List<LocationCanvasView>(locations.Count);
+            return adjacentLocations.Where(l => !listOverlappingLocations.Contains(l)).ToList();
+            /*
             for (int i = locations.Count - 1; i >= 0; i--)
             {
                 LocationCanvasView loc = locations.ElementAt(i);
@@ -1265,7 +1269,7 @@ namespace WebAnnotation
                     listOverlappingLocations.AddRange(loc.OverlappingLinks.Where(overlappingLocation => overlappingLocation.Z == section_number));
                 }
             }
-
+            */
             return listOverlappingLocations;
         }
 

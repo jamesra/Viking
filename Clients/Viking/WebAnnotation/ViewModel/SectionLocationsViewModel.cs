@@ -69,8 +69,7 @@ namespace WebAnnotation.ViewModel
     /// It handles hit detection, search, and positioning using canvas transforms
     /// </summary>
     public class SectionLocationsViewModel : System.Windows.IWeakEventListener
-    {
-    
+    { 
         /// <summary>
         /// The section we store annotations for
         /// <summary>
@@ -84,8 +83,13 @@ namespace WebAnnotation.ViewModel
         /// <summary>
         /// Locations on the section we are providing an overlay for
         /// </summary>
-        private RTree.RTree<LocationCanvasView> Locations = null;
-               
+        private RTree.RTree<LocationCanvasView> LocationViews = null;
+
+        /// <summary>
+        /// Locations on our section as they should be viewed from adjacent sections
+        /// </summary>
+        private RTree.RTree<LocationCanvasView> AdjacentLocationViews = null;
+
         /// <summary>
         /// Maps a structureID to all the locations for that structure on the visible section
         /// </summary>
@@ -107,7 +111,6 @@ namespace WebAnnotation.ViewModel
         private AnnotationRegions RegionQueries;
         private Microsoft.Xna.Framework.Rectangle LastSceneViewport;
 
-
         /// <summary>
         /// 
         /// </summary>
@@ -125,8 +128,11 @@ namespace WebAnnotation.ViewModel
 
             RegionQueries = new AnnotationRegions(bounds, new GridCellDimensions(bounds.Width / 2.0, bounds.Height / 2.0));
 
-            if (Locations == null)
-                Locations = new RTree.RTree<LocationCanvasView>(); //new QuadTree<Location_CanvasViewModel>(bounds)
+            if (LocationViews == null)
+                LocationViews = new RTree.RTree<LocationCanvasView>(); //new QuadTree<Location_CanvasViewModel>(bounds)
+
+            if (AdjacentLocationViews == null)
+                AdjacentLocationViews = new RTree.RTree<LocationCanvasView>();
 
             this.SubmitUpdatedVolumePositions = section.VolumeViewModel.UpdateServerVolumePositions;
 
@@ -145,11 +151,9 @@ namespace WebAnnotation.ViewModel
             LocationObj loc = sender as LocationObj;
             if (loc == null)
                 return;
-
-//            Trace.WriteLine("Location property changing: " + loc.ToString() + " property: " + e.PropertyName); 
-
+             
             //Update if a position or everything has changed
-            if (e.PropertyName.Contains("Position") || e.PropertyName.Contains("WorldPosition") || string.IsNullOrEmpty(e.PropertyName))
+            if (LocationObj.IsGeometryProperty(e.PropertyName))
             {
 //                Location locView = new Location(loc);
                 RemoveStructureLinks(new LocationObj[]{loc});
@@ -164,11 +168,9 @@ namespace WebAnnotation.ViewModel
                 return;
 
 //            Trace.WriteLine("Location property changed: " + loc.ToString() + " property: " + e.PropertyName); 
-
-            
-
+ 
             //Update if a position or everything has changed
-            if (e.PropertyName.Contains("Position") || e.PropertyName.Contains("WorldPosition") || string.IsNullOrEmpty(e.PropertyName))
+            if (LocationObj.IsGeometryProperty(e.PropertyName))
             {
                /* Location locView = new Location(loc);
                 if (e.PropertyName == "")
@@ -176,8 +178,6 @@ namespace WebAnnotation.ViewModel
                     MapLocation(loc); 
                 }
                 */
-                //RemoveLocations(new LocationObj[] { loc }, true);
-                //RemoveStructureLinks(new LocationObj[] { loc }); 
                 loc.ResetVolumePositionHasBeenCalculated();
                 AddLocations(new LocationObj[] { loc }, false);
                 AddStructureLinks(new LocationObj[] { loc });
@@ -464,17 +464,19 @@ namespace WebAnnotation.ViewModel
 
             //Add location if it hasn't been seen before
             LocationCanvasView locView = AnnotationViewFactory.Create(loc);
+            LocationCanvasView locAdjacentView = AnnotationViewFactory.CreateAdjacent(loc);
 
             RTree.Rectangle bbox = locView.BoundingBox.ToRTreeRect((float)loc.Z);
 
-            if (this.Locations.TryAdd(bbox, locView))
+            if (this.LocationViews.TryAdd(bbox, locView))
             {
-
+                this.AdjacentLocationViews.TryAdd(locAdjacentView.BoundingBox.ToRTreeRect((float)loc.Z), locAdjacentView);
                 if (Subscribe)
                 {
-                    locView.RegisterForLocationEvents();
+                    //locView.RegisterForLocationEvents();
                     SubscribeToLocationChangeEvents(loc);
                 }
+
 
                 ConcurrentDictionary<long, LocationCanvasView> KnownLocationsForStructure;
                 KnownLocationsForStructure = LocationsForStructure.GetOrAdd(loc.ParentID.Value, (key) => { return new ConcurrentDictionary<long, LocationCanvasView>(); });
@@ -496,10 +498,28 @@ namespace WebAnnotation.ViewModel
            NotifyPropertyChangedEventManager.RemoveListener(loc, this); 
         }
 
+        private bool RemoveLocation(RTree.RTree<LocationCanvasView> rtree, LocationCanvasView locView, bool Unsubscribe)
+        {
+            LocationCanvasView RemovedValue = null;
+            bool RemoveSuccess = rtree.Delete(locView, out RemovedValue);
+            if (RemoveSuccess)
+            {
+                RemovedValue.DeregisterForLocationEvents();
+
+                if (Unsubscribe)
+                {
+                    UnsubscribeToLocationChangeEvents(RemovedValue.modelObj);
+                }
+            }
+
+            return RemoveSuccess;
+        }
+
         protected void RemoveLocations(IEnumerable<LocationObj> listLocations)
         {
             RemoveLocations(listLocations, true); 
         }
+
 
         /// <summary>
         /// A key is about to be removed from the location store.  Remove it from our cache as well
@@ -513,22 +533,9 @@ namespace WebAnnotation.ViewModel
                 //Trace.WriteLine("RemoveLocation: " + loc.ID.ToString(), "WebAnnotationViewModel");
                 //Debug.Assert(loc.Section == Section.Number); 
                 if (loc.Section == Section.Number)
-                {
-                    LocationCanvasView locView = AnnotationViewFactory.Create(loc);
-                    LocationCanvasView RemovedValue = null;
-
-                    bool RemoveSuccess = Locations.Delete(locView, out RemovedValue);
-                    if (RemoveSuccess)
-                    {
-                        RemovedValue.DeregisterForLocationEvents();
-
-                        if (Unsubscribe)
-                        {
-                            UnsubscribeToLocationChangeEvents(loc);
-                        }
-//                        Debug.Assert(RemoveSuccess); 
-                       // RemoveLocationLinks(obj);
-                    }
+                { 
+                    RemoveLocation(LocationViews, AnnotationViewFactory.Create(loc), Unsubscribe);
+                    RemoveLocation(AdjacentLocationViews, AnnotationViewFactory.CreateAdjacent(loc), Unsubscribe);                    
                 }
                 
                 ConcurrentDictionary<long, LocationCanvasView> KnownLocationsForStructure = null;
@@ -575,20 +582,33 @@ namespace WebAnnotation.ViewModel
 
         public ICollection<LocationCanvasView> GetLocations()
         {
-            return Locations.Items; 
+            return LocationViews.Items; 
         }
 
         public ICollection<LocationCanvasView> GetLocations(GridRectangle bounds)
         {  
-            return Locations.Intersects(bounds.ToRTreeRect((float)this.Section.Number));
+            return LocationViews.Intersects(bounds.ToRTreeRect((float)this.Section.Number));
         }
 
         public ICollection<LocationCanvasView> GetLocations(GridVector2 point)
         {
-            return Locations.Intersects(point.ToRTreeRect((float)this.Section.Number));
+            return LocationViews.Intersects(point.ToRTreeRect((float)this.Section.Number));
         }
 
+        public ICollection<LocationCanvasView> GetAdjacentLocations()
+        {
+            return AdjacentLocationViews.Items;
+        }
 
+        public ICollection<LocationCanvasView> GetAdjacentLocations(GridRectangle bounds)
+        {
+            return AdjacentLocationViews.Intersects(bounds.ToRTreeRect((float)this.Section.Number));
+        }
+
+        public ICollection<LocationCanvasView> GetAdjacentLocations(GridVector2 point)
+        {
+            return AdjacentLocationViews.Intersects(point.ToRTreeRect((float)this.Section.Number));
+        } 
 
         /*
         public LocationObj[] GetReferenceLocations()
@@ -704,12 +724,12 @@ namespace WebAnnotation.ViewModel
             distance = double.MaxValue; 
 //            double minDistance = double.MaxValue;
 
-            if (Locations == null)
+            if (LocationViews == null)
                 return null;
 
             /*Check to see if we clicked a location*/
 
-            List<LocationCanvasView> candidates = Locations.Intersects(WorldPosition.ToRTreeRect(this.SectionNumber));
+            List<LocationCanvasView> candidates = LocationViews.Intersects(WorldPosition.ToRTreeRect(this.SectionNumber));
 
             //TODO: Put the SQL intersection test 
             List<LocationCanvasView> intersecting_candidates = candidates.Where(c => c.Intersects(WorldPosition)).ToList();

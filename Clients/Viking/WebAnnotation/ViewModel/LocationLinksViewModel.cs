@@ -339,7 +339,7 @@ namespace WebAnnotation.ViewModel
                 return;
 
             //Update if a position or everything has changed
-            if (e.PropertyName.Contains("VolumePosition") || e.PropertyName.Contains("Position") || String.IsNullOrEmpty(e.PropertyName))
+            if (LocationObj.IsGeometryProperty(e.PropertyName))
             {
 //                Trace.WriteLine("Linked Location property changed: " + loc.ToString() + " property: " + e.PropertyName);
 

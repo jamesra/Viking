@@ -50,18 +50,18 @@ namespace WebAnnotation.View
 
         public static Viking.UI.Commands.Command CreateCommand(this LocationAction action, 
                                                                Viking.UI.Controls.SectionViewerControl Parent, 
-                                                               LocationCanvasView loc)
+                                                               LocationObj loc)
         { 
             switch(loc.TypeCode)
             {
                 case LocationType.CIRCLE:
-                    return CreateCommandForCircles(action, Parent, loc as LocationCircleView);
+                    return CreateCommandForCircles(action, Parent, loc);
                 case LocationType.POLYLINE:
-                    return CreateCommandForlineOrCurve(action, Parent, loc.modelObj);
+                    return CreateCommandForlineOrCurve(action, Parent, loc);
                 case LocationType.OPENCURVE:
-                    return CreateCommandForlineOrCurve(action, Parent, loc.modelObj);
+                    return CreateCommandForlineOrCurve(action, Parent, loc);
                 case LocationType.CLOSEDCURVE:
-                    return CreateCommandForlineOrCurve(action, Parent, loc.modelObj);
+                    return CreateCommandForlineOrCurve(action, Parent, loc);
                 case LocationType.POLYGON:
                     throw new NotImplementedException("No commands available for polygons");
                 case LocationType.POINT:
@@ -73,30 +73,32 @@ namespace WebAnnotation.View
 
         public static Viking.UI.Commands.Command CreateCommandForCircles(LocationAction action,
                                                                          Viking.UI.Controls.SectionViewerControl Parent,
-                                                                         LocationCircleView loc)
+                                                                         LocationObj loc)
         {
             switch (action)
             {
                 case LocationAction.NONE:
                     return null;
                 case LocationAction.TRANSLATE:
-                    return new TranslateLocationCommand(Parent, loc.modelObj, TranslateLocationCommand.DefaultSuccessCallback);
+                    return new TranslateLocationCommand(Parent, loc, TranslateLocationCommand.DefaultSuccessCallback);
                 case LocationAction.SCALE: 
                     return new ResizeCircleCommand(Parent,
-                            loc.Parent.Type.Color,
+                            System.Drawing.Color.FromArgb(loc.Parent.Type.Color),
                             loc.VolumePosition,
-                            (radius) => { loc.modelObj.Radius = radius; Store.Locations.Save(); });
+                            (radius) => { loc.Radius = radius; Store.Locations.Save(); });
                 case LocationAction.ADJUST:
                     return null;
                 case LocationAction.CREATELINK:
-                    return new LinkAnnotationsCommand(Parent, loc.modelObj);
+                    return new LinkAnnotationsCommand(Parent, loc);
                 case LocationAction.CREATELINKEDLOCATION:
-                    LocationObj newLoc = new LocationObj(loc.Parent.modelObj, 
-                                                        loc.modelObj.MosaicShape,
-                                                        loc.modelObj.VolumeShape,
+                    LocationObj newLoc = new LocationObj(loc.Parent, 
+                                                        loc.MosaicShape,
+                                                        loc.VolumeShape,
                                                         Parent.Section.Number,
                                                         loc.TypeCode);
-                     
+
+                    newLoc.Radius = loc.Radius;
+
                     LocationCanvasView newLocView = AnnotationViewFactory.Create(newLoc);
                     Viking.UI.Commands.Command.EnqueueCommand(typeof(TranslateLocationCommand), new object[] 
                                                                 {
@@ -106,14 +108,17 @@ namespace WebAnnotation.View
                                                                         {
                                                                             newLoc.VolumeShape = newLoc.VolumeShape.MoveTo(VolumePosition);
                                                                             newLoc.MosaicShape = newLoc.MosaicShape.MoveTo(MosaicPosition);
-                                                                            Viking.UI.Commands.Command.EnqueueCommand(typeof(ResizeCircleCommand), new object[] 
-                                                                                { Parent, loc.Parent.Type.Color, VolumePosition,
+                                                                            
+                                                                            /*Viking.UI.Commands.Command.EnqueueCommand(typeof(ResizeCircleCommand), new object[] 
+                                                                                { Parent, System.Drawing.Color.FromArgb(loc.Parent.Type.Color), VolumePosition,
                                                                                     new ResizeCircleCommand.OnCommandSuccess((double radius) =>
                                                                                     {
                                                                                         newLoc.Radius = radius;
-                                                                                        Viking.UI.Commands.Command.EnqueueCommand(typeof(CreateNewLinkedLocationCommand), new object[] { Parent, loc.modelObj, newLoc });
+                                                                                        */
+                                                                                        Viking.UI.Commands.Command.EnqueueCommand(typeof(CreateNewLinkedLocationCommand), new object[] { Parent, loc, newLoc });
+                                                                                        /*
                                                                                     })
-                                                                                });
+                                                                                });*/
                                                                         })
                                                                 });
                     

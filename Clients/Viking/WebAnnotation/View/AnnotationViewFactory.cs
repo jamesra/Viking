@@ -62,7 +62,7 @@ namespace WebAnnotation.View
             switch (obj.TypeCode)
             {
                 case LocationType.CIRCLE:
-                    return new LocationCircleView(obj);
+                    return new AdjacentLocationCircleView(obj);
                 case LocationType.OPENCURVE:
                     return new LocationOpenCurveView(obj);
                 case LocationType.CLOSEDCURVE:

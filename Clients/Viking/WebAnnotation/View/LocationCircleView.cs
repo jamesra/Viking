@@ -18,25 +18,14 @@ using Microsoft.SqlServer.Types;
 
 namespace WebAnnotation.View
 {
-    class AdjacentLocationCircleView : LocationCanvasView
+    abstract class LocationCircleViewBase : LocationCanvasView
     {
-        public CircleView circleView;
-        public LabelView StructureIDLabelView;
+        public LocationCircleViewBase(LocationObj obj) : base(obj)
+        { }
 
-        public AdjacentLocationCircleView(LocationObj obj) : base(obj)
+        public abstract double Radius
         {
-            RegisterForLocationEvents();
-
-            CreateViewObjects();
-            CreateLabelObjects();
-        }
-
-        /// <summary>
-        /// We scale down the radius when the location is on an adjacent section
-        /// </summary>
-        public double Radius
-        {
-            get { return this.modelObj.Radius / 2.0f; }
+            get;
         }
 
         public GridCircle Circle
@@ -46,21 +35,6 @@ namespace WebAnnotation.View
                 return new GridCircle(this.VolumePosition, this.Radius);
             }
         }
-
-        private void CreateViewObjects()
-        {
-            circleView = new CircleView();
-            circleView.Circle = new GridCircle(modelObj.VolumePosition, modelObj.Radius);
-            circleView.BackgroundColor = modelObj.Parent.Type.Color.ToXNAColor(0.75f);
-        }
-
-        private void CreateLabelObjects()
-        {
-            StructureIDLabelView = new LabelView(this.ParentID.ToString(), modelObj.VolumePosition - new GridVector2(0, this.Radius));
-            StructureIDLabelView.MaxLineWidth = this.Radius * 2; 
-        }
-
-        #region overrides
 
         public override GridRectangle BoundingBox
         {
@@ -111,16 +85,55 @@ namespace WebAnnotation.View
         {
             return GridVector2.Distance(Position, this.Circle.Center);
         }
+    }
 
+    class AdjacentLocationCircleView : LocationCircleViewBase
+    {
+        public TextureCircleView upCircleView;
+        public TextureCircleView downCircleView;
+        public LabelView StructureIDLabelView;
+
+        public AdjacentLocationCircleView(LocationObj obj) : base(obj)
+        { 
+            CreateViewObjects();
+            CreateLabelObjects();
+        }
+
+        /// <summary>
+        /// We scale down the radius when the location is on an adjacent section
+        /// </summary>
+        public override double Radius
+        {
+            get { return this.modelObj.Radius / 2.0f; }
+        }
+        
+        private void CreateViewObjects()
+        {
+            upCircleView = TextureCircleView.CreateUpArrow(new GridCircle(modelObj.VolumePosition, this.Radius));
+            upCircleView.BackgroundColor = modelObj.Parent.Type.Color.ToXNAColor(0.33f);
+
+            downCircleView = TextureCircleView.CreateDownArrow(new GridCircle(modelObj.VolumePosition, this.Radius));
+            downCircleView.BackgroundColor = modelObj.Parent.Type.Color.ToXNAColor(0.33f);
+        }
+
+        private void CreateLabelObjects()
+        {
+            this.DeregisterForStructureChangeEvents();
+            StructureIDLabelView = new LabelView(this.ParentID.ToString(), modelObj.VolumePosition - new GridVector2(0, this.Radius));
+            StructureIDLabelView.MaxLineWidth = this.Radius * 2;
+            this.RegisterForStructureChangeEvents();
+        }
+
+        #region overrides
 
         public override bool IsVisible(VikingXNA.Scene scene)
         {
-            return circleView.IsVisible(scene);
+            return upCircleView.IsVisible(scene);
         }
 
         public override bool IsVisibleOnAdjacent(VikingXNA.Scene scene)
         {
-            return circleView.IsVisible(scene);
+            return upCircleView.IsVisible(scene);
         }
 
         public override IList<LocationCanvasView> OverlappingLinks
@@ -135,6 +148,32 @@ namespace WebAnnotation.View
                 return LocationAction.NONE;
 
             return LocationAction.CREATELINKEDLOCATION;
+        }
+
+        protected override void OnObjPropertyChanged(object o, PropertyChangedEventArgs args)
+        {
+            CreateViewObjects();
+        }
+
+        protected override void OnParentPropertyChanged(object o, PropertyChangedEventArgs args)
+        {
+            if (args.PropertyName == "Label" || args.PropertyName == "Attributes")
+            {
+                CreateLabelObjects();
+            }
+
+            base.OnParentPropertyChanged(o, args);
+        }
+
+        public static void Draw(GraphicsDevice device,
+                          VikingXNA.Scene scene,
+                          BasicEffect basicEffect,
+                          VikingXNA.AnnotationOverBackgroundLumaEffect overlayEffect,
+                          AdjacentLocationCircleView[] listToDraw,
+                          int VisibleSectionNumber)
+        {
+            TextureCircleView[] backgroundCircles = listToDraw.Select(l => l.modelObj.Z < VisibleSectionNumber ? l.downCircleView : l.upCircleView).ToArray();
+            TextureCircleView.Draw(device, scene, basicEffect, overlayEffect, backgroundCircles);
         }
 
         public override void DrawLabel(Microsoft.Xna.Framework.Graphics.SpriteBatch spriteBatch,
@@ -164,7 +203,7 @@ namespace WebAnnotation.View
     }
 
 
-    class LocationCircleView : LocationCanvasView
+    class LocationCircleView : LocationCircleViewBase
     {
         public CircleView circleView;
         public LabelView StructureIDLabelView;
@@ -176,9 +215,7 @@ namespace WebAnnotation.View
         static double InvisibleCutoff = 1f;
 
         public LocationCircleView(LocationObj obj) : base(obj)
-        {
-            RegisterForLocationEvents();
-
+        { 
             CreateViewObjects();
             CreateLabelObjects();
         }
@@ -192,66 +229,17 @@ namespace WebAnnotation.View
 
         private void CreateLabelObjects()
         {
+            this.DeregisterForStructureChangeEvents();
             StructureIDLabelView = new LabelView(this.ParentID.ToString(), modelObj.VolumePosition - new GridVector2(0, this.Radius / 2.0f));
             StructureIDLabelView.MaxLineWidth = this.Radius * 2;
 
             StructureLabelView = new LabelView(this.FullLabelText(0), modelObj.VolumePosition + new GridVector2(0, this.Radius / 2.0f));
             StructureLabelView.MaxLineWidth = this.Radius * 2;
+            this.RegisterForStructureChangeEvents();
         }
 
         
         #region overrides
-
-        public override GridRectangle BoundingBox
-        {
-            get
-            {
-                return Circle.BoundingBox;
-            }
-        }
-
-        /// <summary>
-        /// True if the point is on or inside the circle
-        /// </summary>
-        /// <param name="Position"></param>
-        /// <returns></returns>
-        public override bool Intersects(GridVector2 Position)
-        {
-            return Circle.Contains(Position);
-        }
-
-        public override bool Intersects(SqlGeometry shape)
-        {
-            return this.modelObj.VolumeShape.STIntersects(shape).IsTrue;
-        }
-
-        public override bool IntersectsOnAdjacent(GridVector2 Position)
-        {
-            return Circle.Contains(Position);
-        }
-
-        /// <summary>
-        /// Distance to the nearest point on circle if outside, otherwise zero
-        /// </summary>
-        /// <param name="Position"></param>
-        /// <returns></returns>
-        public override double Distance(GridVector2 Position)
-        {
-            double Distance = GridVector2.Distance(Position, this.Circle.Center) - Radius;
-            Distance = Distance < 0 ? 0 : Distance;
-            return Distance;
-        }
-
-        public override double DistanceFromCenterNormalized(GridVector2 Position)
-        {
-            return GridVector2.Distance(Position, this.Circle.Center) / this.Radius;
-        }
-
-        public double DistanceToCenter(GridVector2 Position)
-        {
-            return GridVector2.Distance(Position, this.Circle.Center); 
-        }
-
 
         public override bool IsVisible(VikingXNA.Scene scene)
         {
@@ -289,17 +277,8 @@ namespace WebAnnotation.View
         }
 
         #endregion
-
-        public GridCircle Circle
-        {
-            get
-            {
-                return new GridCircle(this.VolumePosition, this.Radius);
-            }
-        }
-
-
-        public double Radius
+        
+        public override double Radius
         {
             get
             {
@@ -309,6 +288,33 @@ namespace WebAnnotation.View
 
         #region Linked Locations
 
+        
+        /*
+        private ConcurrentDictionary<long, GridVector2> _lastKnownLinkPositions = new ConcurrentDictionary<long, GridVector2>();
+        private void PopulateLastKnownLinkLocations()
+        {
+            ICollection<LocationObj> listLinkedLocations = Store.Locations.GetObjectsByIDs(this.Links, false);
+            _lastKnownLinkPositions = new ConcurrentDictionary<long, GridVector2>(listLinkedLocations.ToDictionary(l => l.ID, l => l.VolumePosition));
+        }
+
+        private bool LastKnownLinkLocationsMatch()
+        {
+            
+        }*/
+
+        public void ClearOverlappingLinkedLocationCache()
+        {
+            if (_OverlappingLinks != null)
+                _OverlappingLinks.Clear();
+
+            _OverlappingLinks = null;
+
+            if (_OverlappingLinkedLocationCircles != null)
+                _OverlappingLinkedLocationCircles.Clear();
+
+            _OverlappingLinkedLocationCircles = null;
+        }
+        
         /// <summary>
         /// Artificially positioned circles over our annotation circle which indicate links to locations on adjacent sections overlapped by this location
         /// </summary>
@@ -317,10 +323,12 @@ namespace WebAnnotation.View
         {
             get
             {
-                if (_OverlappingLinkedLocationCircles == null)
+                if (_OverlappingLinkedLocationCircles == null || _OverlappingLinkedLocationCircles.Count != OverlappingLinks.Count)
                 {
-                    RegisterForLocationEvents();
-                    _OverlappingLinkedLocationCircles = CalculateOverlappedLocationCircles();
+                    //RegisterForLocationEvents();
+                    bool allLinksLoaded = this.AllLinksLoaded;
+                    ConcurrentDictionary<OverlappedLocationView, LocationCanvasView> value = CalculateOverlappedLocationCircles();
+                    _OverlappingLinkedLocationCircles = allLinksLoaded ? value : new ConcurrentDictionary<OverlappedLocationView, LocationCanvasView>(); 
                     NotifyCollectionChangedEventManager.AddListener(this.modelObj.Links, this);
                 }
                 /*
@@ -338,27 +346,26 @@ namespace WebAnnotation.View
                 return _OverlappingLinkedLocationCircles;
             }
         }
-
-
+        
         private List<LocationCanvasView> _OverlappingLinks = null;
         public override IList<LocationCanvasView> OverlappingLinks
         {
             get
             {
                 //TODO: Cannot cache because the adjacent location links do not appear when the location is moved so that they no longer overlap.
-                bool AllLinksTested;
-                return CalculateOverlappingLinks(this.Links, out AllLinksTested);
-                /*
+                
+                //return CalculateOverlappingLinks(this.Links, out AllLinksTested);
+                
                 if (_OverlappingLinks == null)
                 {
-//                    bool AllLinksTested;
+                    bool AllLinksTested;
                     List<LocationCanvasView> overlapping = CalculateOverlappingLinks(this.Links, out AllLinksTested);
                     _OverlappingLinks = AllLinksTested ? overlapping : null;
+                    RegisterForLinkedLocationChangeEvents();
                     return overlapping;
                 }
 
                 return _OverlappingLinks;
-                */
             }
         }
 
@@ -792,9 +799,7 @@ namespace WebAnnotation.View
             CircleView[] backgroundCircles = listToDraw.Select(l => l.circleView).ToArray();
             CircleView.Draw(device, scene, basicEffect, overlayEffect, backgroundCircles);
 
-            //device.Clear(ClearOptions.DepthBuffer, Color.Black, float.MaxValue, 0);
-            
-            
+            //device.Clear(ClearOptions.DepthBuffer, Color.Black, float.MaxValue, 0); 
         }
 
         /// <summary>
@@ -1277,24 +1282,26 @@ namespace WebAnnotation.View
 
         protected override void OnObjPropertyChanged(object o, PropertyChangedEventArgs args)
         {
+            ClearOverlappingLinkedLocationCache();
+
             CreateViewObjects();
             CreateLabelObjects();
+        }
 
-            _OverlappingLinks = null;
-            _OverlappingLinkedLocationCircles = null;
+        protected override void OnLinkedObjectPropertyChanged(object o, PropertyChangedEventArgs args)
+        {
+            if(LocationObj.IsGeometryProperty(args.PropertyName))
+            {
+                this.ClearOverlappingLinkedLocationCache();
+            }
+
+            base.OnLinkedObjectPropertyChanged(o, args);
         }
 
         protected override void OnLinksChanged(object o, NotifyCollectionChangedEventArgs args)
         {
-            if (_OverlappingLinks != null)
-                _OverlappingLinks.Clear();
-
-            _OverlappingLinks = null;
-
-            if (_OverlappingLinkedLocationCircles != null)
-                _OverlappingLinkedLocationCircles.Clear();
-
-            _OverlappingLinkedLocationCircles = null;
+            DeregisterForLinkedLocationChangeEvents();
+            ClearOverlappingLinkedLocationCache();
         }        
     }
 }
