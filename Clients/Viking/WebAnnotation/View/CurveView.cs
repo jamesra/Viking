@@ -16,7 +16,20 @@ namespace WebAnnotation.View
     /// </summary>
     class CurveView : System.Windows.IWeakEventListener
     {
-        public ObservableCollection<GridVector2> ControlPoints;
+        private List<GridVector2> _ControlPoints;
+        public List<GridVector2> ControlPoints
+        {
+            get { return _ControlPoints; }
+            set { _ControlPoints = value;
+                CurvePoints = CalculateCurvePoints(this.ControlPoints, this.NumInterpolations, this.TryCloseCurve);
+            }
+        }
+
+        public void SetPoint(int i, GridVector2 value)
+        {
+            _ControlPoints[i] = value;
+            CurvePoints = CalculateCurvePoints(this.ControlPoints, this.NumInterpolations, this.TryCloseCurve);
+        }
 
         private List<GridVector2> CurvePoints = new List<GridVector2>();
 
@@ -28,15 +41,13 @@ namespace WebAnnotation.View
         /// </summary>
         public bool TryCloseCurve;
 
-        public CurveView(ObservableCollection<GridVector2> controlPoints, Microsoft.Xna.Framework.Color color, bool TryToClose,  double lineWidth = 16.0, int numInterpolations = 5)
+        public CurveView(List<GridVector2> controlPoints, Microsoft.Xna.Framework.Color color, bool TryToClose,  double lineWidth = 16.0, int numInterpolations = 5)
         {
-            ControlPoints = controlPoints;
             this.Color = color;
             this.LineWidth = lineWidth;
             this.NumInterpolations = numInterpolations;
             this.TryCloseCurve = TryToClose;
-
-            NotifyCollectionChangedEventManager.AddListener(this.ControlPoints, this);
+            this.ControlPoints = controlPoints;
         }
 
         public static List<GridVector2> CalculateCurvePoints(ICollection<GridVector2> ControlPoints, int NumInterpolations, bool closeCurve)

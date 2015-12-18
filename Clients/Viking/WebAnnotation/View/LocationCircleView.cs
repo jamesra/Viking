@@ -118,10 +118,8 @@ namespace WebAnnotation.View
 
         private void CreateLabelObjects()
         {
-            this.DeregisterForStructureChangeEvents();
             StructureIDLabelView = new LabelView(this.ParentID.ToString(), modelObj.VolumePosition - new GridVector2(0, this.Radius));
             StructureIDLabelView.MaxLineWidth = this.Radius * 2;
-            this.RegisterForStructureChangeEvents();
         }
 
         #region overrides
@@ -153,8 +151,10 @@ namespace WebAnnotation.View
         protected override void OnObjPropertyChanged(object o, PropertyChangedEventArgs args)
         {
             CreateViewObjects();
+            CreateLabelObjects();
         }
 
+        /*
         protected override void OnParentPropertyChanged(object o, PropertyChangedEventArgs args)
         {
             if (args.PropertyName == "Label" || args.PropertyName == "Attributes")
@@ -163,7 +163,7 @@ namespace WebAnnotation.View
             }
 
             base.OnParentPropertyChanged(o, args);
-        }
+        }*/
 
         public static void Draw(GraphicsDevice device,
                           VikingXNA.Scene scene,
@@ -208,6 +208,7 @@ namespace WebAnnotation.View
         public CircleView circleView;
         public LabelView StructureIDLabelView;
         public LabelView StructureLabelView;
+        public LabelView ParentStructureLabelView;
 
         static float RadiusToResizeCircle = 7.0f / 8.0f;
         static float RadiusToLinkCircle = 1.0f / 4.0f;
@@ -230,12 +231,24 @@ namespace WebAnnotation.View
         private void CreateLabelObjects()
         {
             this.DeregisterForStructureChangeEvents();
-            StructureIDLabelView = new LabelView(this.ParentID.ToString(), modelObj.VolumePosition - new GridVector2(0, this.Radius / 2.0f));
-            StructureIDLabelView.MaxLineWidth = this.Radius * 2;
+            StructureIDLabelView = new LabelView(this.ParentID.ToString(), modelObj.VolumePosition - new GridVector2(0, this.Radius / 3.0f));
+            StructureIDLabelView.MaxLineWidth = this.Radius;
+            StructureIDLabelView.Color = this.modelObj.IsUnverifiedTerminal ? Color.Yellow : Color.Black;
 
-            StructureLabelView = new LabelView(this.FullLabelText(0), modelObj.VolumePosition + new GridVector2(0, this.Radius / 2.0f));
+
+            StructureLabelView = new LabelView(this.FullLabelText(0), modelObj.VolumePosition + new GridVector2(0, this.Radius / 3.0f));
             StructureLabelView.MaxLineWidth = this.Radius * 2;
             this.RegisterForStructureChangeEvents();
+
+            if (this.Parent.ParentID.HasValue)
+            {
+                ParentStructureLabelView = new LabelView(this.Parent.ParentID.ToString(), modelObj.VolumePosition + new GridVector2(0, this.Radius / 2.0f));
+                ParentStructureLabelView.Color = this.Parent.Parent.Type.Color.ToXNAColor(0.75f);
+            }
+            else
+            {
+                ParentStructureLabelView = null;
+            }
         }
 
         
@@ -822,19 +835,23 @@ namespace WebAnnotation.View
             if (spriteBatch == null)
                 throw new ArgumentNullException("spriteBatch");
 
-            double DesiredRowsOfText = 6.0;
-            double NumUnscaledRows = (this.Radius * 2) / font.LineSpacing;
-            double DefaultFontSize = NumUnscaledRows / DesiredRowsOfText; 
-            StructureIDLabelView.FontSize = DefaultFontSize;
-            StructureLabelView.FontSize = DefaultFontSize / 2.0;
+            double DesiredRowsOfText = 8.0;
+            double NumUnscaledRows = this.Radius / font.LineSpacing;
+            double DefaultFontSize = NumUnscaledRows / DesiredRowsOfText;
+            StructureIDLabelView.FontSize = NumUnscaledRows / 2.0; //We only desire one line of text
+            StructureLabelView.FontSize = NumUnscaledRows / DesiredRowsOfText;
 
-            StructureIDLabelView.Position = modelObj.VolumePosition - new GridVector2(0.0, this.Radius / 3.0f);
+            //StructureIDLabelView.Position = modelObj.VolumePosition - new GridVector2(0.0, this.Radius / 3.0f);
 
             StructureIDLabelView.Draw(spriteBatch, font, scene, MagnificationFactor);
             StructureLabelView.Draw(spriteBatch, font, scene, MagnificationFactor);
+            if (ParentStructureLabelView != null)
+            {
+                ParentStructureLabelView.FontSize = StructureIDLabelView.FontSize / 2.0;
+                ParentStructureLabelView.Draw(spriteBatch, font, scene, MagnificationFactor);
+            }
 
-
-            foreach(OverlappedLocationView ov in this.OverlappingLinkedLocationCircles.Keys)
+            foreach (OverlappedLocationView ov in this.OverlappingLinkedLocationCircles.Keys)
             {
                 ov.DrawLabel(spriteBatch, font, scene, MagnificationFactor, 0);
             }

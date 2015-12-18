@@ -29,7 +29,11 @@ namespace SqlGeometryUtils
         public static GridVector2 Centroid(this System.Data.Entity.Spatial.DbGeometry geometry)
         {
             System.Data.Entity.Spatial.DbGeometry centroid = geometry.Centroid;
-            return new GridVector2(centroid.XCoordinate.Value, centroid.YCoordinate.Value);
+            if (centroid != null)
+                return new GridVector2(centroid.XCoordinate.Value, centroid.YCoordinate.Value);
+            else
+                return geometry.ToSqlGeometry().Centroid();
+                //throw new ArgumentException("Calling centroid on geometry type without centroid, dimension is " + geometry.Dimension.ToString() + " shape is " + geometry.ToString());
         }
 
         public static Microsoft.SqlServer.Types.SqlGeometry ToSqlGeometry(this System.Data.Entity.Spatial.DbGeometry geometry)
@@ -52,7 +56,20 @@ namespace SqlGeometryUtils
 
         public static SqlGeometry ToPolygon(this GridVector2[] points)
         {
+            if(points.Length < 3)
+            {
+                throw new ArgumentException("Polygon must be created with three points or more");
+            }
+
+            if(points.First() != points.Last())
+            {
+                List<GridVector2> listPoints = new List<GridVector2>(points);
+                listPoints.Add(points[0]);
+                points = listPoints.ToArray();
+            }
+
             StringBuilder PolyStringBuilder = new StringBuilder();
+            
             PolyStringBuilder.Append("POLYGON( ");
             PolyStringBuilder.Append(points.ToSqlCoordinateList());
             PolyStringBuilder.Append(")");
@@ -219,7 +236,8 @@ namespace SqlGeometryUtils
         /// <returns></returns>
         public static SqlGeometry MoveTo(this SqlGeometry geometry, GridVector2 offset)
         {
-            return SqlGeometry.STGeomFromText(TranslateString(geometry, offset - geometry.Centroid()).ToSqlChars(), 0);
+            GridVector2 center = geometry.Centroid();
+            return SqlGeometry.STGeomFromText(TranslateString(geometry, offset - center).ToSqlChars(), 0);
         }
 
         /// <summary>

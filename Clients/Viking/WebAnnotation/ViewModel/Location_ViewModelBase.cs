@@ -516,6 +516,7 @@ namespace WebAnnotation.ViewModel
         public double Radius
         {
             get { return modelObj.Radius; }
+            /*
             set
             {
                 if(modelObj.TypeCode == LocationType.CIRCLE)
@@ -531,6 +532,7 @@ namespace WebAnnotation.ViewModel
                     throw new ArgumentException("Cannot change radius on a non-circle annotation type");
                 }
             }
+            */
         }
         
         public SqlGeometry MosaicShape

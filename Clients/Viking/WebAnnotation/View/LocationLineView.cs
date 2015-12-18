@@ -81,19 +81,31 @@ namespace WebAnnotation.View
         }
 
         public override LocationAction GetActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber)
-        {
-            //If we are over a control point then enable adjust mode to nudge control points
-            //Otherwise enable translate
-            double distance = this.Distance(WorldPosition);
-            if (distance > 0)
-                return LocationAction.NONE;
+        {        
+            if (VisibleSectionNumber == (int)this.modelObj.Z)
+            {
+                //If we are over a control point then enable adjust mode to nudge control points
+                //Otherwise enable translate
+                //double distance = this.Distance(WorldPosition);
+                //if (distance > 0)
+                //return LocationAction.NONE;                
 
-            //Find distance to nearest control point
-            if (this.VolumeControlPoints.Select(p => GridVector2.Distance(WorldPosition, p) < this.Width).Any(b => b == true))
-                return LocationAction.ADJUST;
 
-            return LocationAction.TRANSLATE;
-        }
+
+                //Find distance to nearest control point
+                if (this.VolumeControlPoints.Select(p => GridVector2.Distance(WorldPosition, p) < this.Width).Any(b => b == true))
+                    if ((System.Windows.Forms.Control.ModifierKeys & System.Windows.Forms.Keys.Shift) != 0)
+                        return LocationAction.TRANSLATE;
+                    else
+                        return LocationAction.ADJUST;
+                else
+                    return LocationAction.CREATELINK;
+            }
+            else
+            {
+                return LocationAction.CREATELINKEDLOCATION;
+            }
+}
 
         
         public override IList<LocationCanvasView> OverlappingLinks

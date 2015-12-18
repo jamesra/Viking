@@ -154,7 +154,7 @@ namespace RoundLineCode
         protected float[] translationData;
 
         //public int NumLinesDrawn;
-        public float BlurThreshold = 0.97f;
+        public float DefaultBlurThreshold = 0.97f;
 
 
         public virtual void Init(GraphicsDevice device, ContentManager content)
@@ -366,9 +366,45 @@ namespace RoundLineCode
             viewProjMatrixParameter.SetValue(viewProjMatrix);
             timeParameter.SetValue(time);
 
+            if (techniqueName == null)
+                effect.CurrentTechnique = effect.Techniques["Standard"];
+            else
+                effect.CurrentTechnique = effect.Techniques[techniqueName];
+
+            DrawOnConfiguredDevice(roundLine, lineRadius, lineColor, DefaultBlurThreshold);
+            
+            device.SetVertexBuffer(null);
+            device.Indices = null;
+        }
+
+        public void Draw(RoundLine[] roundLines, float[] lineRadius, Color[] lineColor, Matrix viewProjMatrix,
+            float time, string techniqueName)
+        {
+            device.SetVertexBuffer(vb);
+            device.Indices = ib;
+
+            viewProjMatrixParameter.SetValue(viewProjMatrix);
+            timeParameter.SetValue(time);
+
+            if (techniqueName == null)
+                effect.CurrentTechnique = effect.Techniques["Standard"];
+            else
+                effect.CurrentTechnique = effect.Techniques[techniqueName];
+
+            for (int i = 0; i < roundLines.Length; i++)
+            {
+                DrawOnConfiguredDevice(roundLines[i], lineRadius[i], lineColor[i], this.DefaultBlurThreshold);
+            }
+
+            device.SetVertexBuffer(null);
+            device.Indices = null;
+        }
+
+        private void DrawOnConfiguredDevice(RoundLine roundLine, float lineRadius, Color lineColor, double BlurThreshold)
+        {
             lineColorParameter.SetValue(lineColor.ToVector4());
             lineRadiusParameter.SetValue(lineRadius);
-            blurThresholdParameter.SetValue(BlurThreshold);
+            blurThresholdParameter.SetValue(DefaultBlurThreshold);
 
             int iData = 0;
             translationData[iData++] = roundLine.P0.X;
@@ -376,12 +412,7 @@ namespace RoundLineCode
             translationData[iData++] = roundLine.Rho;
             translationData[iData++] = roundLine.Theta;
             instanceDataParameter.SetValue(translationData);
-
-            if (techniqueName == null)
-                effect.CurrentTechnique = effect.Techniques["Standard"];
-            else
-                effect.CurrentTechnique = effect.Techniques[techniqueName];
-
+            
             EffectPass pass = effect.CurrentTechnique.Passes[0];
 
             pass.Apply();
@@ -389,9 +420,6 @@ namespace RoundLineCode
             int numInstancesThisDraw = 1;
             device.DrawIndexedPrimitives(PrimitiveType.TriangleList, 0, 0, numVertices, 0, numPrimitivesPerInstance * numInstancesThisDraw);
             //NumLinesDrawn += numInstancesThisDraw;
-
-            device.SetVertexBuffer(null);
-            device.Indices = null;
         }
 
 
@@ -408,7 +436,7 @@ namespace RoundLineCode
             timeParameter.SetValue(time);
             lineColorParameter.SetValue(lineColor.ToVector4());
             lineRadiusParameter.SetValue(lineRadius);
-            blurThresholdParameter.SetValue(BlurThreshold);
+            blurThresholdParameter.SetValue(DefaultBlurThreshold);
 
             if (techniqueName == null)
                 effect.CurrentTechnique = effect.Techniques["Standard"];

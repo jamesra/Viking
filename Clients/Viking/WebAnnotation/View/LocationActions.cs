@@ -80,7 +80,7 @@ namespace WebAnnotation.View
                 case LocationAction.NONE:
                     return null;
                 case LocationAction.TRANSLATE:
-                    return new TranslateLocationCommand(Parent, loc, TranslateLocationCommand.DefaultSuccessCallback);
+                    return new TranslateCircleLocationCommand(Parent, loc, TranslateCircleLocationCommand.DefaultSuccessCallback);
                 case LocationAction.SCALE: 
                     return new ResizeCircleCommand(Parent,
                             System.Drawing.Color.FromArgb(loc.Parent.Type.Color),
@@ -100,11 +100,11 @@ namespace WebAnnotation.View
                     newLoc.Radius = loc.Radius;
 
                     LocationCanvasView newLocView = AnnotationViewFactory.Create(newLoc);
-                    Viking.UI.Commands.Command.EnqueueCommand(typeof(TranslateLocationCommand), new object[] 
+                    Viking.UI.Commands.Command.EnqueueCommand(typeof(TranslateCircleLocationCommand), new object[] 
                                                                 {
                                                                     Parent,
                                                                     loc,
-                                                                    new TranslateLocationCommand.OnCommandSuccess( (l, VolumePosition, MosaicPosition) =>
+                                                                    new TranslateCircleLocationCommand.OnCommandSuccess( (l, VolumePosition, MosaicPosition) =>
                                                                         {
                                                                             newLoc.VolumeShape = newLoc.VolumeShape.MoveTo(VolumePosition);
                                                                             newLoc.MosaicShape = newLoc.MosaicShape.MoveTo(MosaicPosition);
@@ -140,11 +140,11 @@ namespace WebAnnotation.View
                 case LocationAction.NONE:
                     return null;
                 case LocationAction.TRANSLATE:
-                    return new TranslateLocationCommand(Parent, loc, TranslateLocationCommand.DefaultSuccessCallback);
+                    return new TranslateCurveLocationCommand(Parent, loc, TranslateCurveLocationCommand.DefaultSuccessCallback);
                 case LocationAction.SCALE:
                     return null; 
                 case LocationAction.ADJUST:
-                    return null;
+                    return new AdjustCurveControlPointCommand(Parent, loc, AdjustCurveControlPointCommand.DefaultSuccessCallback);
                 case LocationAction.CREATELINK:
                     return new LinkAnnotationsCommand(Parent, loc);
                 case LocationAction.CREATELINKEDLOCATION:
