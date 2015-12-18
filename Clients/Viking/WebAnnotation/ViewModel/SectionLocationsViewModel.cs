@@ -349,7 +349,9 @@ namespace WebAnnotation.ViewModel
             }
 
             loc.VolumeTransformID = parent.CurrentTransformUniqueID;
-            loc.VolumeShape = loc.VolumeShape.MoveTo(VolumePosition);
+            if(VolumePosition != loc.VolumePosition)
+                loc.VolumeShape = loc.VolumeShape.MoveTo(VolumePosition);
+
             //loc.VolumePosition = VolumePosition;
 
             return true;

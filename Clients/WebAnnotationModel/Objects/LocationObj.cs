@@ -252,7 +252,7 @@ namespace WebAnnotationModel
                 OnPropertyChanged("VolumePosition");
 
                 Data.VolumeShape = newValue;
-                _VolumeShape = null;
+                _VolumeShape = value;
                 OnPropertyChanged("VolumeShape");
 
                 SetDBActionForChange();
@@ -323,12 +323,26 @@ namespace WebAnnotationModel
                 }
                 return Data.Radius; }
             set {
+                if (this.TypeCode != LocationType.CIRCLE)
+                    throw new ArgumentException("Cannot set radius on non-circle location type");
+
                 if (Data.Radius == value)
                     return;
 
                 OnPropertyChanging("Radius");
                 Data.Radius = value;
                 OnPropertyChanged("Radius");
+
+                this.MosaicShape = SqlGeometryUtils.GeometryExtensions.ToCircle(this.Position.X,
+                                       this.Position.Y,
+                                       this.Z,
+                                       value);
+
+                this.VolumeShape = SqlGeometryUtils.GeometryExtensions.ToCircle(this.VolumePosition.X,
+                                       this.VolumePosition.Y,
+                                       this.Z,
+                                       value);
+                 
                 SetDBActionForChange();
             }
         }
