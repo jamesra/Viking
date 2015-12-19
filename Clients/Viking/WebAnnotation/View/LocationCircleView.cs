@@ -216,7 +216,8 @@ namespace WebAnnotation.View
         static double InvisibleCutoff = 1f;
 
         public LocationCircleView(LocationObj obj) : base(obj)
-        { 
+        {
+            RegisterForLocationEvents();
             CreateViewObjects();
             CreateLabelObjects();
         }
@@ -236,7 +237,7 @@ namespace WebAnnotation.View
             StructureIDLabelView.Color = this.modelObj.IsUnverifiedTerminal ? Color.Yellow : Color.Black;
 
 
-            StructureLabelView = new LabelView(this.FullLabelText(0), modelObj.VolumePosition + new GridVector2(0, this.Radius / 3.0f));
+            StructureLabelView = new LabelView(this.FullLabelText(), modelObj.VolumePosition + new GridVector2(0, this.Radius / 3.0f));
             StructureLabelView.MaxLineWidth = this.Radius * 2;
             this.RegisterForStructureChangeEvents();
 
@@ -1081,49 +1082,41 @@ namespace WebAnnotation.View
         /// Full label and tag text
         /// </summary>
         /// <returns></returns>
-        private string FullLabelText(int DirectionToVisiblePlane)
+        private string FullLabelText()
         {
-            string fullLabel = this.StructureLabel(DirectionToVisiblePlane);
+            string fullLabel = this.StructureLabel();
 
             if (fullLabel.Length == 0)
-                fullLabel = this.TagLabel(DirectionToVisiblePlane);
+                fullLabel = this.TagLabel();
             else
-                fullLabel += '\n' + this.TagLabel(DirectionToVisiblePlane);
+                fullLabel += '\n' + this.TagLabel();
 
             return fullLabel;
         }
 
-        private string StructureLabel(int DirectionToVisiblePlane)
+        private string StructureLabel()
         {
-            if (DirectionToVisiblePlane == 0)
-            {
-                string InfoLabel = "";
-                if (Parent.InfoLabel != null)
-                    InfoLabel = Parent.InfoLabel.Trim();
+            string InfoLabel = "";
+            if (Parent.InfoLabel != null)
+                InfoLabel = Parent.InfoLabel.Trim();
 
-                return InfoLabel;
-            }
-            else
-            {
-                return "z: " + this.Z.ToString();
-            }
+            return InfoLabel;
         }
 
-        private string TagLabel(int DirectionToVisiblePlane)
+        private string TagLabel()
         {
-
-            if (DirectionToVisiblePlane != 0)
-                return "";
-            else
+            string InfoLabel = "";
+            foreach (ObjAttribute tag in Parent.Attributes)
             {
-                string InfoLabel = "";
-                foreach (ObjAttribute tag in Parent.Attributes)
-                {
-                    InfoLabel += tag.ToString() + " ";
-                }
-
-                return InfoLabel.Trim();
+                InfoLabel += tag.ToString() + " ";
             }
+
+            foreach (ObjAttribute tag in modelObj.Attributes)
+            {
+                InfoLabel += tag.ToString() + " ";
+            } 
+
+            return InfoLabel.Trim(); 
         }
 
         /*
@@ -1297,12 +1290,21 @@ namespace WebAnnotation.View
             base.OnParentPropertyChanged(o, args);
         }
 
+        protected bool IsLocationPropertyAffectingLabels(string PropertyName)
+        {
+            return string.IsNullOrEmpty(PropertyName) ||
+                PropertyName == "Terminal" ||
+                PropertyName == "OffEdge" ||
+                PropertyName == "Attributes";
+        }
+
         protected override void OnObjPropertyChanged(object o, PropertyChangedEventArgs args)
         {
-            ClearOverlappingLinkedLocationCache();
+            //ClearOverlappingLinkedLocationCache();
 
-            CreateViewObjects();
-            CreateLabelObjects();
+            //CreateViewObjects();
+            if(IsLocationPropertyAffectingLabels(args.PropertyName))
+                CreateLabelObjects();
         }
 
         protected override void OnLinkedObjectPropertyChanged(object o, PropertyChangedEventArgs args)
