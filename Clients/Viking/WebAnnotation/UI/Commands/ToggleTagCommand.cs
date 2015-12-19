@@ -55,7 +55,7 @@ namespace WebAnnotation.UI.Commands
         protected override void Execute()
         {
             target.ToggleAttribute(this.tag);
-            Store.Structures.Save();
+            Store.Locations.Save();
             base.Execute();
         }
     }
