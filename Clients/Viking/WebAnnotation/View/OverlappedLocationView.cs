@@ -65,12 +65,7 @@ namespace WebAnnotation.View
         {
             return this.circleView.IsVisible(scene);
         }
-
-        public override bool IsVisibleOnAdjacent(VikingXNA.Scene scene)
-        {
-            return this.circleView.IsVisible(scene);
-        }
-
+        
         public override bool Intersects(GridVector2 Position)
         {
             return gridCircle.Contains(Position);

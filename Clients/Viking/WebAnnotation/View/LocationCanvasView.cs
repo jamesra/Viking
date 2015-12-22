@@ -29,8 +29,6 @@ namespace WebAnnotation.View
 
         public abstract bool IsVisible(Scene scene);
 
-        public abstract bool IsVisibleOnAdjacent(Scene scene);
-
         /// <summary>
         /// Bounding box of the annotation
         /// </summary>

@@ -128,12 +128,7 @@ namespace WebAnnotation.View
         {
             return upCircleView.IsVisible(scene);
         }
-
-        public override bool IsVisibleOnAdjacent(VikingXNA.Scene scene)
-        {
-            return upCircleView.IsVisible(scene);
-        }
-
+        
         public override IList<LocationCanvasView> OverlappingLinks
         {
             get { return new List<LocationCanvasView>(); }
@@ -256,11 +251,6 @@ namespace WebAnnotation.View
         #region overrides
 
         public override bool IsVisible(VikingXNA.Scene scene)
-        {
-            return circleView.IsVisible(scene);
-        }
-
-        public override bool IsVisibleOnAdjacent(VikingXNA.Scene scene)
         {
             return circleView.IsVisible(scene);
         }

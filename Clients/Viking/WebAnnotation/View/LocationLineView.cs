@@ -21,12 +21,7 @@ namespace WebAnnotation.View
         {
             return scene.VisibleWorldBounds.Intersects(this.BoundingBox);
         }
-
-        public override bool IsVisibleOnAdjacent(VikingXNA.Scene scene)
-        {
-            return scene.VisibleWorldBounds.Intersects(this.BoundingBox);
-        }
-        
+                
         public override GridRectangle BoundingBox
         {
             get

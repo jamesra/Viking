@@ -262,7 +262,7 @@ namespace WebAnnotation
                     locView = GetAnnotationsForSection(_Parent.Section.ReferenceSectionAbove.Number);
                     if (locView != null)
                     {
-                        adjacentObjs.AddRange(locView.GetAdjacentLocations(position).Where(l => l.IsVisibleOnAdjacent(Parent.Scene)));
+                        adjacentObjs.AddRange(locView.GetAdjacentLocations(position).Where(l => l.IsVisible(Parent.Scene)));
                     }
                 }
 
@@ -272,7 +272,7 @@ namespace WebAnnotation
                     locView = GetAnnotationsForSection(_Parent.Section.ReferenceSectionBelow.Number);
                     if (locView != null)
                     {
-                        adjacentObjs.AddRange(locView.GetAdjacentLocations(position).Where(l => l.IsVisibleOnAdjacent(Parent.Scene)));
+                        adjacentObjs.AddRange(locView.GetAdjacentLocations(position).Where(l => l.IsVisible(Parent.Scene)));
                     }
                 }
 
