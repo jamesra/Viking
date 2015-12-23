@@ -11,11 +11,13 @@ using System.Diagnostics;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Content;
+using System.Linq;
 #endregion
 
 
 namespace RoundLineCode
 {
+
     /// <summary>
     /// Represents a single line segment.  Drawing is handled by the RoundLineManager class.
     /// </summary>
@@ -75,6 +77,11 @@ namespace RoundLineCode
             Vector2 delta = P1 - P0;
             rho = delta.Length();
             theta = (float)Math.Atan2(delta.Y, delta.X);
+        }
+
+        public override string ToString()
+        {
+            return string.Format("{0},{1} - {2},{3} rho:{4} theta:{5}", P0.X, P0.Y, P1.X, P1.Y, Rho, Theta);
         }
     };
 
@@ -199,6 +206,15 @@ namespace RoundLineCode
                 return names;
             }
         }
+
+        public bool IsTechnique(string name)
+        {
+            return TechniqueNames.Contains(name);
+        }
+
+        
+
+
 
 
         /// <summary>
@@ -428,7 +444,7 @@ namespace RoundLineCode
         /// </summary>
         public void Draw(IEnumerable<RoundLine> roundLines, float lineRadius, Color lineColor, Matrix viewProjMatrix,
             float time, string techniqueName)
-        {
+        {            
             device.SetVertexBuffer(vb);
             device.Indices = ib;
 
@@ -442,15 +458,11 @@ namespace RoundLineCode
                 effect.CurrentTechnique = effect.Techniques["Standard"];
             else
                 effect.CurrentTechnique = effect.Techniques[techniqueName];
-
-            EffectPass pass = effect.CurrentTechnique.Passes[0];
-
-            pass.Apply();
-
+            
             int iData = 0;
             int numInstancesThisDraw = 0;
             foreach (RoundLine roundLine in roundLines)
-            {
+            {                
                 translationData[iData++] = roundLine.P0.X;
                 translationData[iData++] = roundLine.P0.Y;
                 translationData[iData++] = roundLine.Rho;
@@ -460,19 +472,28 @@ namespace RoundLineCode
                 if (numInstancesThisDraw == MaxInstancesPerBatch)
                 {
                     instanceDataParameter.SetValue(translationData);
+                    EffectPass pass = effect.CurrentTechnique.Passes[0];
+                    pass.Apply();
+                    
                     device.DrawIndexedPrimitives(PrimitiveType.TriangleList, 0, 0, numVertices, 0, numPrimitivesPerInstance * numInstancesThisDraw);
                     //NumLinesDrawn += numInstancesThisDraw;
                     numInstancesThisDraw = 0;
                     iData = 0;
                 }
             }
+
             if (numInstancesThisDraw > 0)
             {
                 instanceDataParameter.SetValue(translationData);
+                EffectPass pass = effect.CurrentTechnique.Passes[0];
+                pass.Apply();
+                
                 device.DrawIndexedPrimitives(PrimitiveType.TriangleList, 0, 0, numVertices, 0, numPrimitivesPerInstance * numInstancesThisDraw);
                 //NumLinesDrawn += numInstancesThisDraw;
             }
+            
         }
+
     }
 
     public class LumaOverlayRoundLineManager : RoundLineManager

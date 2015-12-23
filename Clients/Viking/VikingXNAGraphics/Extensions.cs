@@ -8,6 +8,51 @@ using System.Threading.Tasks;
 
 namespace VikingXNAGraphics
 {
+
+
+    public enum LineStyle
+    {
+        Standard,
+        AlphaGradient,
+        NoBlur,
+        AnimatedLinear,
+        AnimatedBidirectional,
+        AnimatedRadial,
+        Modern,
+        Tubular,
+        Glow
+    }
+
+    public static class LineManagerExtensions
+    {
+        public static string ToString(this LineStyle style)
+        {
+            switch (style)
+            {
+                case LineStyle.Standard:
+                    return "Standard";
+                case LineStyle.AlphaGradient:
+                    return "AlphaGradient";
+                case LineStyle.NoBlur:
+                    return "NoBlur";
+                case LineStyle.AnimatedLinear:
+                    return "AnimatedLinear";
+                case LineStyle.AnimatedBidirectional:
+                    return "AnimatedBidirectional";
+                case LineStyle.AnimatedRadial:
+                    return "AnimatedRadial";
+                case LineStyle.Modern:
+                    return "Modern";
+                case LineStyle.Tubular:
+                    return "Tubular";
+                case LineStyle.Glow:
+                    return "Glow";
+                default:
+                    throw new ArgumentException("Unknown line style " + style.ToString());
+            }
+        }
+    }
+
     public static class VectorExtensions
     {
         public static Microsoft.Xna.Framework.Vector2 ToVector2(this Geometry.GridVector2 vec)
