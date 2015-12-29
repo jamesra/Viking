@@ -65,7 +65,7 @@ namespace WebAnnotation.View
         {
             return this.circleView.IsVisible(scene);
         }
-        
+
         public override bool Intersects(GridVector2 Position)
         {
             return gridCircle.Contains(Position);
@@ -75,12 +75,7 @@ namespace WebAnnotation.View
         {
             throw new NotImplementedException();
         }
-
-        public override bool IntersectsOnAdjacent(GridVector2 Position)
-        {
-            return gridCircle.Contains(Position);
-        }
-
+        
         public override double Distance(GridVector2 Position)
         {
             double Distance = GridVector2.Distance(Position, this.gridCircle.Center) - Radius;

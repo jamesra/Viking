@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using WebAnnotationModel;
+using WebAnnotation.ViewModel;
 
 namespace WebAnnotation.View
 {
@@ -71,6 +72,27 @@ namespace WebAnnotation.View
                     return new LocationLineView(obj);
                 default:
                     throw new NotImplementedException("View for type " + obj.TypeCode.ToString() + " is not implemented");
+            }
+        }
+        
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="obj"></param>
+        /// <param name="OnAdjacentSection">Indicates the location is not on the section being displayed.</param>
+        /// <returns></returns>
+        public static StructureLinkViewModelBase Create(StructureLinkObj linkObj,
+                                                LocationObj sourceLoc,
+                                                LocationObj targetLoc)
+        {
+            switch (sourceLoc.TypeCode)
+            {
+                case LocationType.CIRCLE:
+                    return new StructureLinkCirclesView(linkObj, sourceLoc, targetLoc);
+                case LocationType.OPENCURVE:
+                    return new StructureLinkCurvesView(linkObj, sourceLoc, targetLoc);
+                default:
+                    throw new NotImplementedException("StructureLink View for type " + sourceLoc.TypeCode.ToString() + " is not implemented");
             }
         }
     }

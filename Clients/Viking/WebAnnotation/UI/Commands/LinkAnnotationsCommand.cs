@@ -63,7 +63,7 @@ namespace WebAnnotation.UI.Commands
             if (LocationLinkView.IsValidLocationLinkTarget(nearest_target, OriginObj))
                 return nearest_target;
 
-            if (StructureLink.IsValidStructureLinkTarget(nearest_target, OriginObj))
+            if (StructureLinkViewModelBase.IsValidStructureLinkTarget(nearest_target, OriginObj))
                 return nearest_target;
 
             return nearest_target; 
@@ -108,7 +108,7 @@ namespace WebAnnotation.UI.Commands
                         this.Deactivated = true;
                     }
                 }
-                else if(StructureLink.IsValidStructureLinkTarget(NearestTarget, OriginObj))
+                else if(StructureLinkViewModelBase.IsValidStructureLinkTarget(NearestTarget, OriginObj))
                 {
                     try
                     {
@@ -221,7 +221,7 @@ namespace WebAnnotation.UI.Commands
                     lineRadius = LineRadiusForLocationLink();
                     UseLumaLineManager = true;
                 }
-                else if(StructureLink.IsValidStructureLinkTarget(NearestTarget, OriginObj))
+                else if(StructureLinkViewModelBase.IsValidStructureLinkTarget(NearestTarget, OriginObj))
                 {
                     lineColor = validTarget;
                     lineStyle = StructureLinkStyle;

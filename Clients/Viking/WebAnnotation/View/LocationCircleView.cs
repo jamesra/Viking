@@ -58,12 +58,7 @@ namespace WebAnnotation.View
         {
             return this.modelObj.VolumeShape.STIntersects(shape).IsTrue;
         }
-
-        public override bool IntersectsOnAdjacent(GridVector2 Position)
-        {
-            return Circle.Contains(Position);
-        }
-
+        
         /// <summary>
         /// Distance to the nearest point on circle if outside, otherwise zero
         /// </summary>

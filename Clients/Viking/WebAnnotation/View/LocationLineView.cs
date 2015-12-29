@@ -39,11 +39,6 @@ namespace WebAnnotation.View
         {
             return this.RenderedVolumeShape.STIntersects(shape).IsTrue;
         }
-
-        public override bool IntersectsOnAdjacent(GridVector2 Position)
-        {
-            return this.RenderedVolumeShape.Intersects(Position);
-        }
          
         public override double Distance(GridVector2 Position)
         {

@@ -43,8 +43,6 @@ namespace WebAnnotation.View
             }
         }
 
-        
-
         private SqlGeometry _RenderedVolumeShape;
         public override SqlGeometry RenderedVolumeShape
         {

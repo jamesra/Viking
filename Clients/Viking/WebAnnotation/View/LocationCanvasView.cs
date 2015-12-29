@@ -18,7 +18,36 @@ using Viking.Common;
 
 namespace WebAnnotation.View
 {
-    abstract public class LocationCanvasView : IComparable<LocationCanvasView>, IWeakEventListener, IUIObjectBasic
+    public interface ICanvasView
+    { 
+        bool IsVisible(Scene scene);
+
+        /// <summary>
+        /// Bounding box of the annotation
+        /// </summary>
+        GridRectangle BoundingBox
+        {
+            get;
+        } 
+
+        bool Intersects(GridVector2 Position);
+
+        /// <summary>
+        /// Returns the distance from the position to the nearest point on the annotation, or 0 if the position is inside the annotation
+        /// </summary>
+        /// <param name="Position"></param>
+        /// <returns></returns>
+        double Distance(GridVector2 Position);
+
+        /// <summary>
+        /// Assumes Position is within the annotation.  Returns a number from 0 to 1 indicating how close the position is between the center and edge of the annotation.
+        /// </summary>
+        /// <param name="Position"></param>
+        /// <returns></returns>
+        double DistanceFromCenterNormalized(GridVector2 Position);
+    }
+
+    abstract public class LocationCanvasView : IComparable<LocationCanvasView>, IWeakEventListener, IUIObjectBasic, ICanvasView
     {
         public readonly LocationObj modelObj;
 
@@ -27,35 +56,8 @@ namespace WebAnnotation.View
             this.modelObj = obj;
         }
 
-        public abstract bool IsVisible(Scene scene);
-
-        /// <summary>
-        /// Bounding box of the annotation
-        /// </summary>
-        public abstract GridRectangle BoundingBox
-        {
-            get;
-        }
-
-        public abstract bool Intersects(GridVector2 Position);
-
         public abstract bool Intersects(SqlGeometry shape);
-
-        public abstract bool IntersectsOnAdjacent(GridVector2 Position);
-        
-        /// <summary>
-        /// Returns the distance from the position to the nearest point on the annotation, or 0 if the position is inside the annotation
-        /// </summary>
-        /// <param name="Position"></param>
-        /// <returns></returns>
-        public abstract double Distance(GridVector2 Position);
-
-        /// <summary>
-        /// Assumes Position is within the annotation.  Returns a number from 0 to 1 indicating how close the position is between the center and edge of the annotation.
-        /// </summary>
-        /// <param name="Position"></param>
-        /// <returns></returns>
-        public abstract double DistanceFromCenterNormalized(GridVector2 Position);
+                 
 
         public abstract void DrawLabel(Microsoft.Xna.Framework.Graphics.SpriteBatch spriteBatch,
                               Microsoft.Xna.Framework.Graphics.SpriteFont font,
@@ -251,6 +253,8 @@ namespace WebAnnotation.View
             }
         }
 
+        public abstract GridRectangle BoundingBox { get; }
+
         #region Weak Events
         private object EventsLock = new object();
         private bool EventsRegistered = false;
@@ -434,6 +438,11 @@ namespace WebAnnotation.View
         {
             throw new NotImplementedException();
         }
+
+        public abstract bool IsVisible(Scene scene);
+        public abstract bool Intersects(GridVector2 Position);
+        public abstract double Distance(GridVector2 Position);
+        public abstract double DistanceFromCenterNormalized(GridVector2 Position);
         #endregion
     }
 }

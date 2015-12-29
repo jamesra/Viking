@@ -277,7 +277,7 @@ namespace WebAnnotation
                 }
 
                 IEnumerable<LocationCanvasView> intersecting_candidates = RemoveOverlappingLocations(locView.GetLocations().ToList(), adjacentObjs, this.CurrentSectionNumber);
-                intersecting_candidates = adjacentObjs.Where(l => l.IntersectsOnAdjacent(position) && l.IsTerminal == false);
+                intersecting_candidates = adjacentObjs.Where(l => l.Intersects(position) && l.IsTerminal == false);
                 LocationCanvasView nearest = intersecting_candidates.OrderBy(c => c.DistanceFromCenterNormalized(position)).FirstOrDefault();
                 bestObj = nearest;
                 if (bestObj != null)
@@ -1156,12 +1156,15 @@ namespace WebAnnotation
             graphicsDevice.BlendState = defaultBlendState;
 
             //Get all the lines to draw
-            List<StructureLink> VisibleStructureLinks = currentSectionAnnotations.VisibleStructureLinks(Bounds); 
-            foreach (StructureLink link in VisibleStructureLinks)
+            List<StructureLinkViewModelBase> VisibleStructureLinks = currentSectionAnnotations.VisibleStructureLinks(Bounds);
+            StructureLinkCirclesView.Draw(graphicsDevice, scene, Parent.LumaOverlayLineManager, VisibleStructureLinks.Where(l => l as StructureLinkCirclesView != null).Cast<StructureLinkCirclesView>().ToArray());
+            StructureLinkCurvesView.Draw(graphicsDevice, scene, Parent.LumaOverlayLineManager, VisibleStructureLinks.Where(l => l as StructureLinkCurvesView != null).Cast<StructureLinkCurvesView>().ToArray());
+            /*foreach (StructureLinkViewModelBase link in VisibleStructureLinks)
             {
                 DrawStructureLink(link, ViewProjMatrix, Time);
             }
-            
+            */
+
             graphicsDevice.BlendState = defaultBlendState;
             
             //Draw text
@@ -1345,7 +1348,8 @@ namespace WebAnnotation
                                          ViewProjMatrix, 0, null);
         }
 
-        private void DrawStructureLink(StructureLink link, Matrix ViewProjMatrix, float time_offset)
+        /*
+        private void DrawStructureLink(StructureLinkViewModelBase link, Matrix ViewProjMatrix, float time_offset)
         {
             int alpha = 128;
             if (LastMouseOverObject == link)
@@ -1369,7 +1373,7 @@ namespace WebAnnotation
                 _Parent.LineManager.Draw(link.lineGraphic, (float)link.Radius, color,
                                          ViewProjMatrix, time_offset, "AnimatedLinear");
             }
-        }
+        }*/
 
         #endregion
 

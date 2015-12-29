@@ -2,15 +2,20 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Windows.Forms; 
+using System.Windows.Forms;
 using WebAnnotationModel;
 using WebAnnotation.View;
+using Geometry;
+using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework;
+using VikingXNA;
+using VikingXNAGraphics;
+using SqlGeometryUtils;
 
 namespace WebAnnotation.ViewModel
 {
-    public class StructureLink : Viking.Objects.UIObjBase
+    abstract class StructureLinkViewModelBase : Viking.Objects.UIObjBase, ICanvasView
     {
-
         WebAnnotationModel.StructureLinkObj modelObj;
 
         /// <summary>
@@ -35,7 +40,7 @@ namespace WebAnnotation.ViewModel
 
         public override bool Equals(object obj)
         {
-            StructureLink Obj = obj as StructureLink;
+            StructureLinkViewModelBase Obj = obj as StructureLinkViewModelBase;
             if (Obj != null)
             {
                 return modelObj.Equals(Obj.modelObj);
@@ -76,49 +81,27 @@ namespace WebAnnotation.ViewModel
 
         
 
-        public RoundLineCode.RoundLine lineGraphic;
-        public Geometry.GridLineSegment lineSegment;
-
-        public double Radius
-        {
-            get
-            { 
-                return ((SourceLocation.Radius + TargetLocation.Radius) / 2.0);
-            }
-        }
-
-        public Geometry.GridRectangle BoundingBox
-        {
-            get
-            {
-                return lineSegment.BoundingBox.Pad(this.Radius);
-            }
-        }
-
         /// <summary>
         /// Use this version only for searches
         /// </summary>
         /// <param name="linkObj"></param>
-        public StructureLink(StructureLinkObj linkObj)
+        public StructureLinkViewModelBase(StructureLinkObj linkObj)
             : base()
         {
             this.modelObj = linkObj;
         }
 
-        public StructureLink(StructureLinkObj linkObj, 
+        public StructureLinkViewModelBase(StructureLinkObj linkObj, 
                              LocationObj sourceLoc,
                              LocationObj targetLoc) : base()
         {
             this.modelObj = linkObj; 
             this.SourceLocation = sourceLoc;
             this.TargetLocation = targetLoc;
-            lineSegment = new Geometry.GridLineSegment(sourceLoc.VolumePosition,
-                                                       targetLoc.VolumePosition);
-            lineGraphic = new RoundLineCode.RoundLine((float)lineSegment.A.X,
-                                                      (float)lineSegment.A.Y,
-                                                      (float)lineSegment.B.X,
-                                                      (float)lineSegment.B.Y);
+            CreateView(linkObj,sourceLoc, targetLoc);
         }
+
+        protected abstract void CreateView(StructureLinkObj link, LocationObj source, LocationObj target);
 
         public override System.Windows.Forms.ContextMenu ContextMenu
         {
@@ -157,12 +140,7 @@ namespace WebAnnotation.ViewModel
                 LocationObj newSource = this.TargetLocation;
                 this.TargetLocation = SourceLocation;
                 this.SourceLocation = newSource;
-                lineSegment = new Geometry.GridLineSegment(SourceLocation.VolumePosition,
-                                                           TargetLocation.VolumePosition);
-                lineGraphic = new RoundLineCode.RoundLine((float)lineSegment.A.X,
-                                                          (float)lineSegment.A.Y,
-                                                          (float)lineSegment.B.X,
-                                                          (float)lineSegment.B.Y);
+                CreateView(newLink, SourceLocation, TargetLocation);
             }
         }
 
@@ -256,6 +234,233 @@ namespace WebAnnotation.ViewModel
             }
 
             return true;
+        }
+
+        public abstract bool IsVisible(Scene scene);
+        public abstract bool Intersects(GridVector2 Position);
+        public abstract double Distance(GridVector2 Position);
+        public abstract double DistanceFromCenterNormalized(GridVector2 Position);
+
+        public abstract Geometry.GridRectangle BoundingBox
+        {
+            get;
+        } 
+    }
+
+    class StructureLinkCirclesView : StructureLinkViewModelBase
+    {
+        public LineView lineView;  
+        public Geometry.GridLineSegment lineSegment;
+
+        public double LineWidth
+        {
+            get
+            {
+                return ((SourceLocation.Radius + TargetLocation.Radius));
+            }
+        }
+
+        public double Radius
+        {
+            get
+            {
+                return this.LineWidth / 2.0;
+            }
+        }
+
+        public float alpha
+        {
+            get { return (float)color.A / 255.0f; }
+            set {
+                lineView.Color = new Microsoft.Xna.Framework.Color((int)lineView.Color.R,
+                                                                   (int)lineView.Color.G,
+                                                                   (int)lineView.Color.B,
+                                                                   (int)(value * 255.0f));
+            }
+        }
+
+        public Microsoft.Xna.Framework.Color color
+        {
+            get { return lineView.Color; }
+            set { lineView.Color = value; }
+        }
+
+
+        public static Microsoft.Xna.Framework.Color DefaultColor = new Microsoft.Xna.Framework.Color((byte)(255),
+                (byte)(255),
+                (byte)(255),
+                (byte)(128));
+
+        public StructureLinkCirclesView(StructureLinkObj linkObj,
+                             LocationObj sourceLoc,
+                             LocationObj targetLoc) : base(linkObj, sourceLoc, targetLoc)
+        {
+
+        }
+
+
+        public override double Distance(GridVector2 Position)
+        {
+            return lineSegment.DistanceToPoint(Position) - this.Radius;
+        }
+
+        public override double DistanceFromCenterNormalized(GridVector2 Position)
+        {
+            return lineSegment.DistanceToPoint(Position) / (this.LineWidth / 2.0);
+        }
+
+        public override bool Intersects(GridVector2 Position)
+        {
+            return lineSegment.DistanceToPoint(Position) < this.LineWidth;
+        }
+
+        public override bool IsVisible(Scene scene)
+        {
+            //Do not draw unless the line is at least four pixels wide
+            return this.LineWidth >= Math.Max(scene.DevicePixelWidth, scene.DevicePixelHeight) * 4;
+        }
+
+        public override Geometry.GridRectangle BoundingBox
+        {
+            get
+            {
+                return lineSegment.BoundingBox.Pad(this.LineWidth);
+            }
+        }
+
+        protected override void CreateView(StructureLinkObj link, LocationObj source, LocationObj target)
+        {
+            lineSegment = new Geometry.GridLineSegment(source.VolumePosition,
+                                                       target.VolumePosition);
+
+            lineView = new LineView(source.VolumePosition, target.VolumePosition, Math.Min(source.Radius, target.Radius), DefaultColor,
+                                    link.Bidirectional ? LineStyle.AnimatedBidirectional : LineStyle.AnimatedLinear); 
+        }
+
+        public static void Draw(GraphicsDevice device,
+                          VikingXNA.Scene scene,
+                          RoundLineCode.RoundLineManager lineManager,
+                          StructureLinkCirclesView[] listToDraw)
+        {
+            LineView[] linesToDraw = listToDraw.Select(l => l.lineView).ToArray();
+
+            LineView.Draw(device, scene, lineManager, linesToDraw);
+        }
+    }
+
+    /// <summary>
+    /// Link structures represented by curves
+    /// </summary>
+    class StructureLinkCurvesView : StructureLinkViewModelBase
+    {
+        public LinkedPolyLineSimpleView lineView; 
+        public Geometry.GridLineSegment[] lineSegments;
+        public static float DefaultLineWidth = 16.0f;
+        
+        public double LineWidth
+        {
+            get
+            {
+                return ((SourceLocation.Radius + TargetLocation.Radius));
+            }
+        }
+
+        public double Radius
+        {
+            get
+            {
+                return this.LineWidth / 2.0;
+            }
+        }
+
+        public float alpha
+        {
+            get { return (float)color.A / 255.0f; }
+            set
+            {
+                lineView.Color = new Microsoft.Xna.Framework.Color((int)lineView.Color.R,
+                                                                   (int)lineView.Color.G,
+                                                                   (int)lineView.Color.B,
+                                                                   (int)(value * 255.0f));
+            }
+        }
+
+        public Microsoft.Xna.Framework.Color color
+        {
+            get { return lineView.Color; }
+            set { lineView.Color = value; }
+        }
+
+
+        public static Microsoft.Xna.Framework.Color DefaultColor = new Microsoft.Xna.Framework.Color((byte)(255),
+                (byte)(255),
+                (byte)(255),
+                (byte)(128));
+
+        public StructureLinkCurvesView(StructureLinkObj linkObj,
+                             LocationObj sourceLoc,
+                             LocationObj targetLoc) : base(linkObj, sourceLoc, targetLoc)
+        {
+            CreateLineSegments();
+        }
+
+        private void CreateLineSegments()
+        {
+            this.lineSegments = lineView.Lines.Select(l => new GridLineSegment(l.Source, l.Destination)).ToArray();
+        }
+
+
+        public override double Distance(GridVector2 Position)
+        {
+            return lineSegments.Select(l => l.DistanceToPoint(Position) - this.Radius).Min();
+        }
+
+        public override double DistanceFromCenterNormalized(GridVector2 Position)
+        {
+            return lineSegments.Select(l => l.DistanceToPoint(Position) / (this.LineWidth / 2.0)).Min();
+        }
+
+        public override bool Intersects(GridVector2 Position)
+        {
+            return lineSegments.Any(l => l.DistanceToPoint(Position) < this.LineWidth);
+        }
+
+        public override bool IsVisible(Scene scene)
+        {
+            //Do not draw unless the line is at least four pixels wide
+            return this.LineWidth >= Math.Max(scene.DevicePixelWidth, scene.DevicePixelHeight) * 4;
+        }
+
+        public override Geometry.GridRectangle BoundingBox
+        {
+            get
+            {
+                GridRectangle bbox = lineSegments[0].BoundingBox;
+                foreach(GridLineSegment l in lineSegments)
+                {
+                    bbox.Union(l.BoundingBox);
+                }
+
+                bbox.Union(bbox.LowerLeft - new GridVector2(this.Radius, this.Radius));
+                bbox.Union(bbox.UpperRight + new GridVector2(this.Radius, this.Radius));
+
+                return bbox;
+            }
+        }
+
+        protected override void CreateView(StructureLinkObj link, LocationObj source, LocationObj target)
+        {
+            lineView = new LinkedPolyLineSimpleView(source.VolumeShape.ToPoints(), target.VolumeShape.ToPoints(), DefaultLineWidth, Color.White, link.Bidirectional ? LineStyle.AnimatedBidirectional : LineStyle.AnimatedLinear);          
+        }
+
+        public static void Draw(GraphicsDevice device,
+                          VikingXNA.Scene scene,
+                          RoundLineCode.RoundLineManager lineManager,
+                          StructureLinkCurvesView[] listToDraw)
+        {
+            LinkedPolyLineSimpleView[] linesToDraw = listToDraw.Select(l => l.lineView).ToArray();
+
+            LinkedPolyLineSimpleView.Draw(device, scene, lineManager, linesToDraw);
         }
     }
 }

@@ -18,7 +18,7 @@ namespace WebAnnotation.View
     {
         public static double time = 0;
         RoundLineCode.RoundLine line;
-        public string TechniqueName; 
+        public LineStyle Style; 
 
         public GridVector2 Source
         {
@@ -35,13 +35,13 @@ namespace WebAnnotation.View
         public float LineWidth;
 
         public Microsoft.Xna.Framework.Color Color;
-
-        public LineView(GridVector2 source, GridVector2 destination, double width, Microsoft.Xna.Framework.Color color, string techniqueName)
+        
+        public LineView(GridVector2 source, GridVector2 destination, double width, Microsoft.Xna.Framework.Color color, LineStyle lineStyle)
         {
             line = new RoundLineCode.RoundLine(source.ToVector2(), destination.ToVector2());
             this.LineWidth = (float)width;
             this.Color = color;
-            this.TechniqueName = techniqueName;
+            this.Style = lineStyle;
         }
 
         public static void Draw(GraphicsDevice device,
@@ -49,7 +49,7 @@ namespace WebAnnotation.View
                           RoundLineCode.RoundLineManager lineManager,
                           LineView[] listToDraw)
         {
-            var techniqueGroups = listToDraw.GroupBy(l => l.TechniqueName);
+            var techniqueGroups = listToDraw.GroupBy(l => l.Style);
             foreach (var group in techniqueGroups)
             {
                 lineManager.Draw(group.Select(l => l.line).ToArray(),
@@ -57,7 +57,7 @@ namespace WebAnnotation.View
                              group.Select(l => l.Color).ToArray(),
                              scene.Camera.View * scene.Projection,
                              (float)(DateTime.UtcNow.Millisecond / 1000.0),
-                             group.Key);
+                             group.Key.ToString());
             }
         }
     }

@@ -68,7 +68,7 @@ namespace WebAnnotation.ViewModel
     /// This class manages LocationViewModels used on a canvas.  
     /// It handles hit detection, search, and positioning using canvas transforms
     /// </summary>
-    public class SectionLocationsViewModel : System.Windows.IWeakEventListener
+    class SectionLocationsViewModel : System.Windows.IWeakEventListener
     { 
         /// <summary>
         /// The section we store annotations for
@@ -98,7 +98,7 @@ namespace WebAnnotation.ViewModel
         /// <summary>
         /// Allows us to describe all the StructureLinks visible on a screen
         /// </summary>
-        private RTree.RTree<StructureLink> StructureLinksSearch = null;
+        private RTree.RTree<StructureLinkViewModelBase> StructureLinksSearch = null;
 
         /// <summary>
         /// This is a symptom of being halfway to the Jotunn architecture.  This is a pointer to the 
@@ -138,7 +138,7 @@ namespace WebAnnotation.ViewModel
 
             LocationsForStructure = new ConcurrentDictionary<long, ConcurrentDictionary<long, LocationCanvasView>>();
 
-            StructureLinksSearch = new RTree.RTree<StructureLink>();
+            StructureLinksSearch = new RTree.RTree<StructureLinkViewModelBase>();
             
             CollectionChangedEventManager.AddListener(Store.Structures, this);
             CollectionChangedEventManager.AddListener(Store.StructureLinks, this);
@@ -663,15 +663,15 @@ namespace WebAnnotation.ViewModel
         public IUIObjectBasic GetNearestAnnotation(GridVector2 WorldPosition, out double distance)
         {
 
-            double linkDistance = double.MaxValue;
+            double linkDistanceNormalized = double.MaxValue;
             distance = double.MaxValue;
-            StructureLink NearestLink = null;
-            List<StructureLink> intersecting_candidates = StructureLinksSearch.Intersects(WorldPosition.ToRTreeRect(this.SectionNumber)).Where(l => l.lineSegment.IsNearestPointWithinLineSegment(WorldPosition) && l.lineSegment.DistanceToPoint(WorldPosition) <= l.Radius).ToList();            
-            NearestLink = intersecting_candidates.OrderBy(l => l.lineSegment.DistanceToPoint(WorldPosition) / l.Radius).FirstOrDefault();
+            StructureLinkViewModelBase NearestLink = null;
+            List<StructureLinkViewModelBase> intersecting_candidates = StructureLinksSearch.Intersects(WorldPosition.ToRTreeRect(this.SectionNumber)).Where(l => l.Intersects(WorldPosition)).ToList();            
+            NearestLink = intersecting_candidates.OrderBy(l => l.DistanceFromCenterNormalized(WorldPosition)).FirstOrDefault();
             
             if (NearestLink != null)
             {
-                linkDistance = NearestLink.lineSegment.DistanceToPoint(WorldPosition);
+                linkDistanceNormalized = NearestLink.DistanceFromCenterNormalized(WorldPosition);
             }
 
             
@@ -686,7 +686,7 @@ namespace WebAnnotation.ViewModel
             //Figure out which object we are closer to the center of, the location or the link
             if (NearestLink != null && NearestLocationObj != null)
             {
-                if(linkDistance / NearestLink.Radius <= NearestLocationObj.DistanceFromCenterNormalized(WorldPosition))
+                if(linkDistanceNormalized <= NearestLocationObj.DistanceFromCenterNormalized(WorldPosition))
                 {
                     NearestLocationObj = null;
                 }
@@ -699,7 +699,7 @@ namespace WebAnnotation.ViewModel
             
             if(NearestLink != null)
             {
-                distance = NearestLink.lineSegment.DistanceToPoint(WorldPosition);
+                distance = linkDistanceNormalized;
                 return NearestLink;
             }
             else if (NearestLocationObj != null)
@@ -902,7 +902,7 @@ namespace WebAnnotation.ViewModel
         /// </summary>
         /// <param name="bounds"></param>
         /// <returns></returns>
-        public List<StructureLink> VisibleStructureLinks(GridRectangle bounds)
+        public List<StructureLinkViewModelBase> VisibleStructureLinks(GridRectangle bounds)
         {
             return StructureLinksSearch.Intersects(bounds.ToRTreeRect(this.SectionNumber)).ToList(); 
         }
@@ -944,7 +944,7 @@ namespace WebAnnotation.ViewModel
                 if (structLinkObj == null)
                     continue;
 
-                StructureLink StructLink = CreateStructureLinkWithLocations(structLinkObj);
+                StructureLinkViewModelBase StructLink = CreateStructureLinkWithLocations(structLinkObj);
                 if (StructLink == null)
                     continue; 
                  
@@ -975,7 +975,7 @@ namespace WebAnnotation.ViewModel
             }
         }
 
-        internal StructureLink CreateStructureLinkWithLocations(StructureLinkObj structLinkObj)
+        internal StructureLinkViewModelBase CreateStructureLinkWithLocations(StructureLinkObj structLinkObj)
         {
             if (structLinkObj.SourceID == structLinkObj.TargetID)
             {
@@ -1019,7 +1019,7 @@ namespace WebAnnotation.ViewModel
             }
 
             //OK, create a StructureLink between the locations
-            return new StructureLink(structLinkObj, BestSourceLoc.modelObj, BestTargetLoc.modelObj);
+            return AnnotationViewFactory.Create(structLinkObj, BestSourceLoc.modelObj, BestTargetLoc.modelObj);
         }
 
         /// <summary>
@@ -1037,7 +1037,7 @@ namespace WebAnnotation.ViewModel
 
                 if (StructureLinksSearch != null)
                 {
-                    StructureLink link = CreateStructureLinkWithLocations(structLinkObj);
+                    StructureLinkViewModelBase link = CreateStructureLinkWithLocations(structLinkObj);
                     if (link == null)
                         continue; 
                     StructureLinksSearch.Delete(link, out link);
