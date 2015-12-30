@@ -214,6 +214,15 @@ namespace WebAnnotation.View
             return true;
         }
 
+        public CircleView()
+        { }
+
+        public CircleView(GridCircle circle, Color color)
+        {
+            this.Circle = circle;
+            this.BackgroundColor = color; 
+        }
+
         #region Render Code
 
         /// <summary>

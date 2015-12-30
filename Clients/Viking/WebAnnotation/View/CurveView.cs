@@ -8,6 +8,8 @@ using System.Collections.Specialized;
 using Geometry;
 using WebAnnotation.ViewModel;
 using Viking.Common;
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
 
 namespace WebAnnotation.View
 {
@@ -22,6 +24,8 @@ namespace WebAnnotation.View
             get { return _ControlPoints; }
             set { _ControlPoints = value;
                 CurvePoints = CalculateCurvePoints(this.ControlPoints, this.NumInterpolations, this.TryCloseCurve);
+                this.ControlPointViews = CreateControlPointViews(this.ControlPoints, this.LineWidth, this.Color);
+                this.CurveLineViews = CreateCurveLineViews(this.CurvePoints.ToArray(), this.LineWidth, this.Color);
             }
         }
 
@@ -29,25 +33,51 @@ namespace WebAnnotation.View
         {
             _ControlPoints[i] = value;
             CurvePoints = CalculateCurvePoints(this.ControlPoints, this.NumInterpolations, this.TryCloseCurve);
+            this.ControlPointViews = CreateControlPointViews(this.ControlPoints, this.LineWidth, this.Color);
+            this.CurveLineViews = CreateCurveLineViews(this.CurvePoints.ToArray(), this.LineWidth, this.Color);
         }
 
+        
         private List<GridVector2> CurvePoints = new List<GridVector2>();
 
+        private LineView[] CurveLineViews;
+
+        private CircleView[] ControlPointViews;
+
         public double LineWidth;
-        public Microsoft.Xna.Framework.Color Color;
+        
+        private Color _Color;
+        public Color Color
+        {
+            get { return _Color;}
+            set { _Color = value;
+                 if(ControlPointViews != null)
+                    ControlPointViews.Select(cpv => cpv.BackgroundColor = ControlPointColor(value));
+            }
+        }
+
         public int NumInterpolations = Global.NumCurveInterpolationPoints;
         /// <summary>
         /// True if we should close the curve if we have enough points
         /// </summary>
         public bool TryCloseCurve;
 
-        public CurveView(List<GridVector2> controlPoints, Microsoft.Xna.Framework.Color color, bool TryToClose,  double lineWidth = 16.0, int numInterpolations = 5)
+        public CurveView(ICollection<GridVector2> controlPoints, Microsoft.Xna.Framework.Color color, bool TryToClose,  double lineWidth = 16.0, int numInterpolations = 5)
         {
-            this.Color = color;
+            
             this.LineWidth = lineWidth;
             this.NumInterpolations = numInterpolations;
             this.TryCloseCurve = TryToClose;
-            this.ControlPoints = controlPoints;
+            this.ControlPoints = controlPoints.ToList();
+            this._Color = color;
+            this.ControlPointViews = CreateControlPointViews(this.ControlPoints, lineWidth, color);
+            this.CurveLineViews = CreateCurveLineViews(this.CurvePoints.ToArray(), lineWidth, color);
+            
+        }
+
+        private static CircleView[] CreateControlPointViews(ICollection<GridVector2> ControlPoints, double Radius, Microsoft.Xna.Framework.Color color)
+        {
+            return ControlPoints.Select(cp => new CircleView(new GridCircle(cp, Radius), color)).ToArray();   
         }
 
         public static List<GridVector2> CalculateCurvePoints(ICollection<GridVector2> ControlPoints, int NumInterpolations, bool closeCurve)
@@ -56,6 +86,17 @@ namespace WebAnnotation.View
                 return CalculateClosedCurvePoints(ControlPoints, NumInterpolations);
             else
                 return CalculateOpenCurvePoints(ControlPoints, NumInterpolations);
+        }
+
+        private static LineView[] CreateCurveLineViews(GridVector2[] CurvePoints, double LineWidth, Color color)
+        {
+            LineView[] lineViews = new LineView[CurvePoints.Length - 1];
+            for(int i= 1; i < CurvePoints.Length; i++)
+            {
+                lineViews[i - 1] = new LineView(CurvePoints[i - 1], CurvePoints[i], LineWidth, color, VikingXNAGraphics.LineStyle.Standard);
+            }
+
+            return lineViews;
         }
 
         private static List<GridVector2> CalculateClosedCurvePoints(ICollection<GridVector2> ControlPoints, int NumInterpolations)
@@ -126,6 +167,27 @@ namespace WebAnnotation.View
             }
 
             GlobalPrimitives.DrawPolyline(LineManager, basicEffect, CurvePoints, LineWidth, Color);
+        }
+
+        public static void Draw(Microsoft.Xna.Framework.Graphics.GraphicsDevice device,
+                          VikingXNA.Scene scene,
+                          RoundLineCode.RoundLineManager lineManager,
+                          Microsoft.Xna.Framework.Graphics.BasicEffect basicEffect,
+                          VikingXNA.AnnotationOverBackgroundLumaEffect overlayEffect,
+                          CurveView[] listToDraw)
+        {
+            int OriginalStencilValue = DeviceStateManager.GetDepthStencilValue(device);
+            CompareFunction originalStencilFunction = device.DepthStencilState.StencilFunction;
+
+            IEnumerable<CircleView> controlPointViews = listToDraw.SelectMany(cv => cv.ControlPointViews);            
+            CircleView.Draw(device, scene, basicEffect, overlayEffect, controlPointViews.ToArray());
+
+            DeviceStateManager.SetDepthStencilValue(device, OriginalStencilValue - 1, CompareFunction.Greater);
+
+            IEnumerable<LineView> lineViews = listToDraw.SelectMany(cv => cv.CurveLineViews);
+            LineView.Draw(device, scene, lineManager, lineViews.ToArray());
+
+            DeviceStateManager.SetDepthStencilValue(device, OriginalStencilValue, originalStencilFunction);
         }
 
         public void Draw(Microsoft.Xna.Framework.Graphics.GraphicsDevice device, RoundLineCode.RoundLineManager LineManager, VikingXNA.Scene scene, Microsoft.Xna.Framework.Graphics.BasicEffect basicEffect)

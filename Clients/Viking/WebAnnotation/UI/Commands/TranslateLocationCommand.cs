@@ -38,7 +38,7 @@ namespace WebAnnotation.UI.Commands
         {
             OriginalPosition = selectedObj.VolumeShape.Centroid();
             OriginalControlPoints = selectedObj.VolumeShape.ToPoints();
-            CreateView(OriginalControlPoints, selectedObj.Parent.Type.Color.ToXNAColor(192.0f), IsClosedCurve(selectedObj));
+            CreateView(OriginalControlPoints, selectedObj.Parent.Type.Color.ToXNAColor().ConvertToHSL(0.5f), IsClosedCurve(selectedObj));
             this.success_callback = success_callback;
         }
 
@@ -98,8 +98,7 @@ namespace WebAnnotation.UI.Commands
                                     VikingXNA.Scene scene,
                                     Microsoft.Xna.Framework.Graphics.BasicEffect basicEffect)
         {
-            curveView.Draw(graphicsDevice, Parent.LumaOverlayLineManager, scene, basicEffect);
-            //CurveView.Draw(graphicsDevice, scene, basicEffect, Parent.annotationOverlayEffect, new CircleView[] { this.circleView });
+            CurveView.Draw(graphicsDevice, scene, Parent.LumaOverlayLineManager, basicEffect, Parent.annotationOverlayEffect, new CurveView[] { this.curveView });
         }
     }
 

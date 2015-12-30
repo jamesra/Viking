@@ -14,6 +14,7 @@ using WebAnnotation.View;
 using WebAnnotation.ViewModel;
 using WebAnnotationModel; 
 using VikingXNAGraphics;
+using SqlGeometryUtils;
 
 namespace WebAnnotation.UI.Commands
 {
@@ -27,6 +28,29 @@ namespace WebAnnotation.UI.Commands
             : base(parent)
         {
             OriginObj = existingLoc;
+        }
+
+        private static GridVector2 GetOriginForLocation(LocationObj obj)
+        {
+            switch(obj.TypeCode)
+            {
+                case LocationType.CIRCLE:
+                    return obj.VolumePosition;
+                case LocationType.POLYGON:
+                    return obj.VolumePosition;
+                case LocationType.OPENCURVE:
+                    return Midpoint(obj.VolumeShape.ToPoints());
+                case LocationType.POLYLINE:
+                    return Midpoint(obj.VolumeShape.ToPoints());
+                default:
+                    return obj.VolumePosition;
+            }
+        }
+
+        private static GridVector2 Midpoint(GridVector2[] array)
+        {
+            int i = array.Length / 2;
+            return array[i];
         }
 
         protected override void OnMouseMove(object sender, MouseEventArgs e)
@@ -186,13 +210,13 @@ namespace WebAnnotation.UI.Commands
             if (sectionAnnotations == null)
                 return;
 
-            GridVector2 OriginPosition = OriginObj.VolumePosition; 
+            GridVector2 OriginPosition = GetOriginForLocation(OriginObj);
 
             Vector3 target;
             if (NearestTarget != null)
             {
                 //Snap the line to a nearby target if it exists
-                GridVector2 targetPos = NearestTarget.VolumePosition; 
+                GridVector2 targetPos = GetOriginForLocation(NearestTarget);
                 
                 /*bool success = sectionAnnotations.TryGetPositionForLocation(NearestTarget, out targetPos);
                 if (!success)

@@ -7,6 +7,7 @@ using Geometry;
 using Microsoft.SqlServer.Types;
 using SqlGeometryUtils;
 using WebAnnotationModel;
+using VikingXNAGraphics;
 
 namespace WebAnnotation.View
 {
@@ -14,7 +15,12 @@ namespace WebAnnotation.View
     {
         public static int NumInterpolationPoints = Global.NumCurveInterpolationPoints;
 
-        public LocationOpenCurveView(LocationObj obj) : base(obj) { }
+        public CurveView curveView;
+
+        public LocationOpenCurveView(LocationObj obj) : base(obj)
+        {
+            curveView = new CurveView(obj.VolumeShape.ToPoints(), obj.Parent.Type.Color.ToXNAColor().ConvertToHSL(0.5f), false);
+        }
         
         private GridVector2[] _MosaicControlPoints;
         public override GridVector2[] MosaicCurveControlPoints
@@ -56,6 +62,16 @@ namespace WebAnnotation.View
 
                 return _RenderedVolumeShape;
             }
+        }
+
+        public static void Draw(Microsoft.Xna.Framework.Graphics.GraphicsDevice device,
+                          VikingXNA.Scene scene,
+                          RoundLineCode.RoundLineManager lineManager,
+                          Microsoft.Xna.Framework.Graphics.BasicEffect basicEffect,
+                          VikingXNA.AnnotationOverBackgroundLumaEffect overlayEffect,
+                          LocationOpenCurveView[] listToDraw)
+        {
+            CurveView.Draw(device, scene, lineManager, basicEffect, overlayEffect, listToDraw.Select(l => l.curveView).ToArray());
         }
     }
 }

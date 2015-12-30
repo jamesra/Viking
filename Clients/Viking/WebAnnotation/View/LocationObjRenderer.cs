@@ -105,7 +105,7 @@ namespace WebAnnotation
             graphicsDevice.RasterizerState = ShapeRendererRasterizerState;
         }
 
-        public static void SetDepthStencilValue(GraphicsDevice device, int StencilValue)
+        public static void SetDepthStencilValue(GraphicsDevice device, int StencilValue, CompareFunction stencilFunction = CompareFunction.GreaterEqual)
         {
             if (depthstencilState != null)
             {
@@ -121,7 +121,7 @@ namespace WebAnnotation
                 depthstencilState.DepthBufferFunction = CompareFunction.LessEqual;
 
                 depthstencilState.StencilEnable = true;
-                depthstencilState.StencilFunction = CompareFunction.GreaterEqual;
+                depthstencilState.StencilFunction = stencilFunction;
                 depthstencilState.ReferenceStencil = StencilValue;
                 depthstencilState.StencilPass = StencilOperation.Replace;
 
@@ -284,14 +284,16 @@ namespace WebAnnotation
             if (listToDraw.Count == 0)
                 return;
 
-            SetupGraphicsDevice(graphicsDevice, basicEffect, overlayEffect, listToDraw[0], SectionNumber);
+            //SetupGraphicsDevice(graphicsDevice, basicEffect, overlayEffect, listToDraw[0], SectionNumber);
 
+            LocationOpenCurveView.Draw(graphicsDevice, Scene, overlayLineManager, basicEffect, overlayEffect, listToDraw.ToArray());
+            /*
             foreach (LocationOpenCurveView loc in listToDraw)
             {
                 CurveView.Draw(graphicsDevice, overlayLineManager, basicEffect, loc.VolumeControlPoints, loc.VolumeCurveControlPoints, loc.Parent.Type.Color.ConvertToHSL(0.5f), loc.Width);
             }
-
-            RestoreGraphicsDevice(graphicsDevice, basicEffect);
+            */
+            //RestoreGraphicsDevice(graphicsDevice, basicEffect);
         }
 
         public static void DrawClosedCurveBackgrounds(List<LocationClosedCurveView> listToDraw, GraphicsDevice graphicsDevice, BasicEffect basicEffect, VikingXNA.AnnotationOverBackgroundLumaEffect overlayEffect, RoundLineCode.RoundLineManager overlayLineManager, VikingXNA.Scene Scene, int SectionNumber)
