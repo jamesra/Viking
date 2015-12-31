@@ -8,15 +8,21 @@ namespace Geometry
 {
     public class CatmullRom
     {
+        private static void PrepareControlPointsForClosedCurve(List<GridVector2> cp)
+        {
+            if (cp.First() != cp.Last())
+            {
+                cp.Insert(0, cp.Last());
+            }
+
+            cp.AddRange(cp.GetRange(1, 2));
+        }
+
         public static GridVector2[] FitCurve(ICollection<GridVector2> ControlPoints, int NumInterpolations, bool closed)
         {
             List<GridVector2> cp = new List<GridVector2>(ControlPoints);
             if(closed)
-            {
-                //We need to add a the 
-                cp.Insert(0, ControlPoints.Last());
-                cp.AddRange(cp.GetRange(1, 2));
-            }
+                PrepareControlPointsForClosedCurve(cp);
             /*
             List<GridVector2> output = new List<GridVector2>(cp.Count * NumInterpolations);
             for(int i = 0; i+3 < cp.Count; i++)
