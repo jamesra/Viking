@@ -218,11 +218,6 @@ namespace WebAnnotation.UI.Commands
                 //Snap the line to a nearby target if it exists
                 GridVector2 targetPos = GetOriginForLocation(NearestTarget);
                 
-                /*bool success = sectionAnnotations.TryGetPositionForLocation(NearestTarget, out targetPos);
-                if (!success)
-                    return; 
-                */
-
                 target = new Vector3((float)targetPos.X, (float)targetPos.Y, 0f);
             }
             else

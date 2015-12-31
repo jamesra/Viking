@@ -203,10 +203,10 @@ namespace SqlGeometryUtils
             switch(TypeString.ToUpper())
             {
                 case "CURVEPOLYGON":
-                    TypeString += "( CIRCULARSTRING " + points.ToSqlCoordinateList() + ')';
+                    TypeString += "( CIRCULARSTRING " + points.ToSqlCoordinateList() + ")";
                     return TypeString;
                 case "POLYGON":
-                    TypeString += "( LINESTRING " + points.ToSqlCoordinateList() + ')';
+                    TypeString += "( " + points.ToSqlCoordinateList() + ")";
                     return TypeString;
                 default:
                     return GeometryType.Value + points.ToSqlCoordinateList();

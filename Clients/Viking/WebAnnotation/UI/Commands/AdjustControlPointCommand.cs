@@ -18,7 +18,7 @@ namespace WebAnnotation.UI.Commands
         LocationObj Loc;
         CurveView curveView;
         GridVector2[] OriginalControlPoints;
-        private int iAdjustedControlPoint = -1;
+        private int iAdjustedControlPoint = -1; 
 
         public delegate void OnCommandSuccess(LocationObj loc, GridVector2[] VolumeControlPoints, GridVector2[] MosaicControlPoints);
         OnCommandSuccess success_callback;
@@ -105,8 +105,20 @@ namespace WebAnnotation.UI.Commands
         {
             if (this.success_callback != null)
             {
-                GridVector2[] TranslatedOriginalControlPoints = curveView.ControlPoints.ToArray();
+                GridVector2[] TranslatedOriginalControlPoints;
                 GridVector2[] MosaicControlPoints = null;
+
+                if (curveView.TryCloseCurve)
+                {
+                    List<GridVector2> LoopedPointsList = new List<GridVector2>(curveView.ControlPoints);
+                    if(curveView.ControlPoints.First() != curveView.ControlPoints.Last())
+                        LoopedPointsList.Add(LoopedPointsList.First());
+                    TranslatedOriginalControlPoints = LoopedPointsList.ToArray();
+                }
+                else
+                {
+                    TranslatedOriginalControlPoints = curveView.ControlPoints.ToArray();
+                }
 
                 try
                 {
@@ -117,7 +129,7 @@ namespace WebAnnotation.UI.Commands
                     Trace.WriteLine("TranslateLocationCommand: Could not map world point on Execute: " + TranslatedOriginalControlPoints.ToString(), "Command");
                     return;
                 }
-
+                
                 this.success_callback(Loc, TranslatedOriginalControlPoints, MosaicControlPoints);
             }
 

@@ -19,10 +19,17 @@ namespace WebAnnotation.View
     class CurveView : System.Windows.IWeakEventListener
     {
         private List<GridVector2> _ControlPoints;
+        
+        /// <summary>
+        /// Even in a closed curve the control points are not looped, the first and last control points should be different
+        /// </summary>
         public List<GridVector2> ControlPoints
         {
             get { return _ControlPoints; }
-            set { _ControlPoints = value;
+            set { _ControlPoints = new List<GridVector2>(value);
+                if (_ControlPoints.First() == _ControlPoints.Last())
+                    _ControlPoints.RemoveAt(_ControlPoints.Count - 1);
+
                 CurvePoints = CalculateCurvePoints(this.ControlPoints, this.NumInterpolations, this.TryCloseCurve);
                 this.ControlPointViews = CreateControlPointViews(this.ControlPoints, this.LineWidth, this.Color);
                 this.CurveLineViews = CreateCurveLineViews(this.CurvePoints.ToArray(), this.LineWidth, this.Color);
@@ -36,8 +43,7 @@ namespace WebAnnotation.View
             this.ControlPointViews = CreateControlPointViews(this.ControlPoints, this.LineWidth, this.Color);
             this.CurveLineViews = CreateCurveLineViews(this.CurvePoints.ToArray(), this.LineWidth, this.Color);
         }
-
-        
+                
         private List<GridVector2> CurvePoints = new List<GridVector2>();
 
         private LineView[] CurveLineViews;

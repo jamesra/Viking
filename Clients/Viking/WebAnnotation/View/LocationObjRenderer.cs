@@ -284,16 +284,7 @@ namespace WebAnnotation
             if (listToDraw.Count == 0)
                 return;
 
-            //SetupGraphicsDevice(graphicsDevice, basicEffect, overlayEffect, listToDraw[0], SectionNumber);
-
             LocationOpenCurveView.Draw(graphicsDevice, Scene, overlayLineManager, basicEffect, overlayEffect, listToDraw.ToArray());
-            /*
-            foreach (LocationOpenCurveView loc in listToDraw)
-            {
-                CurveView.Draw(graphicsDevice, overlayLineManager, basicEffect, loc.VolumeControlPoints, loc.VolumeCurveControlPoints, loc.Parent.Type.Color.ConvertToHSL(0.5f), loc.Width);
-            }
-            */
-            //RestoreGraphicsDevice(graphicsDevice, basicEffect);
         }
 
         public static void DrawClosedCurveBackgrounds(List<LocationClosedCurveView> listToDraw, GraphicsDevice graphicsDevice, BasicEffect basicEffect, VikingXNA.AnnotationOverBackgroundLumaEffect overlayEffect, RoundLineCode.RoundLineManager overlayLineManager, VikingXNA.Scene Scene, int SectionNumber)
@@ -301,14 +292,7 @@ namespace WebAnnotation
             if (listToDraw.Count == 0)
                 return;
 
-            SetupGraphicsDevice(graphicsDevice, basicEffect, overlayEffect, listToDraw[0], SectionNumber);
-
-            foreach (LocationClosedCurveView loc in listToDraw)
-            {
-                CurveView.Draw(graphicsDevice, overlayLineManager, basicEffect, loc.VolumeControlPoints, loc.VolumeCurveControlPoints, loc.Parent.Type.Color.ConvertToHSL(0.5f), loc.Width);
-            }
-
-            RestoreGraphicsDevice(graphicsDevice, basicEffect);
+            LocationClosedCurveView.Draw(graphicsDevice, Scene, overlayLineManager, basicEffect, overlayEffect, listToDraw.ToArray());
         }
 
         /*
