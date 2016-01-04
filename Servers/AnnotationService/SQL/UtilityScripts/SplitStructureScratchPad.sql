@@ -9,7 +9,6 @@ IF OBJECT_ID('tempdb..#ParentIDForChildStructure') IS NOT NULL DROP TABLE #Paren
 
 DECLARE @KeepStructureID bigint, @SplitStructureID bigint
 DECLARE @FirstLocationIDOfSplitStructure bigint
-DECLARE @A bigint, @B bigint
 set @KeepStructureID = 439
 set @SplitStructureID = 0
 set @FirstLocationIDOfSplitStructure = 35539
@@ -43,8 +42,16 @@ BEGIN
 	join #LocationsInSplitSubGraph SB ON SB.ID = LLP.B
 END
 
-
 select ID into #LocationsInKeepSubGraph from Location where ParentID = @KeepStructureID AND ID not in (select ID from #LocationsInSplitSubGraph)
+
+IF ((select COUNT(ID) from #LocationsInKeepSubGraph) = 0)
+	THROW 50000, N'The split structure is connected to the entire keep cell.  Break a location link to create two subgraphs and try again', 1;
+
+--We have built the list of annotations to be used for the old and new structure.  Create a new structure for the split and capture the ID
+INSERT INTO Structure (TypeID, Notes, Verified, Tags, Confidence, ParentID, Created, Label, Username, LastModified)
+	SELECT TypeID, Notes, Verified, Tags, Confidence, ParentID, Created, Label, Username, LastModified from Structure S where
+		S.ID = @KeepStructureID
+set @SplitStructureID = SCOPE_IDENTITY()
 
 select VolumeShape, Z, KL.ID, @KeepStructureID as ParentID into  #StructureLocations
 FROM Location L 
