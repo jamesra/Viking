@@ -60,7 +60,7 @@ BEGIN
 	
 	ALTER DATABASE [TEST] SET ANSI_NULL_DEFAULT OFF
 	ALTER DATABASE [TEST] SET ANSI_NULLS OFF
-	ALTER DATABASE [TEST] SET ANSI_PADDING OFF
+	ALTER DATABASE [TEST] SET ANSI_PADDING ON
 	ALTER DATABASE [TEST] SET ANSI_WARNINGS OFF
 	ALTER DATABASE [TEST] SET ARITHABORT OFF
 	ALTER DATABASE [TEST] SET AUTO_CLOSE OFF
@@ -250,7 +250,7 @@ DECLARE @db_id VARCHAR(100);
 SET @db_id = (select * from #UpdateVars where Version='CreateTables')
 IF @db_id IS NOT NULL
 BEGIN	
-	SET ANSI_PADDING OFF
+	SET ANSI_PADDING ON
 	
 	CREATE NONCLUSTERED INDEX [DeletedOn] ON [dbo].[DeletedLocations] 
 	(
@@ -600,7 +600,7 @@ DECLARE @db_id VARCHAR(100);
 SET @db_id = (select * from #UpdateVars where Version='CreateTables')
 IF @db_id IS NOT NULL
 BEGIN	
-	SET ANSI_PADDING OFF
+	SET ANSI_PADDING ON
 	CREATE NONCLUSTERED INDEX [ParentID] ON [dbo].[StructureType] 
 	(
 		[ParentID] ASC
@@ -649,7 +649,7 @@ DECLARE @db_id VARCHAR(100);
 SET @db_id = (select * from #UpdateVars where Version='CreateTables')
 IF @db_id IS NOT NULL
 BEGIN
-	SET ANSI_PADDING OFF
+	SET ANSI_PADDING ON
 	
 	CREATE NONCLUSTERED INDEX [LastModified] ON [dbo].[Structure] 
 	(
@@ -814,7 +814,7 @@ DECLARE @db_id VARCHAR(100);
 SET @db_id = (select * from #UpdateVars where Version='CreateTables')
 IF @db_id IS NOT NULL
 BEGIN	
-	SET ANSI_PADDING OFF
+	SET ANSI_PADDING ON
 	EXEC sys.sp_addextendedproperty @name=N'MS_Description', @value=N'Name of template' , @level0type=N'SCHEMA',@level0name=N'dbo', @level1type=N'TABLE',@level1name=N'StructureTemplates', @level2type=N'COLUMN',@level2name=N'Name'
 	EXEC sys.sp_addextendedproperty @name=N'MS_Description', @value=N'The structure type which is created when using the template' , @level0type=N'SCHEMA',@level0name=N'dbo', @level1type=N'TABLE',@level1name=N'StructureTemplates', @level2type=N'COLUMN',@level2name=N'StructureTypeID'
 	EXEC sys.sp_addextendedproperty @name=N'MS_Description', @value=N'The tags to create with the new structure type' , @level0type=N'SCHEMA',@level0name=N'dbo', @level1type=N'TABLE',@level1name=N'StructureTemplates', @level2type=N'COLUMN',@level2name=N'StructureTags'
