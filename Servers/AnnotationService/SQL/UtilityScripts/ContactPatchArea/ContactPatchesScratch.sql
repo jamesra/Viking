@@ -29,7 +29,7 @@ GO
 --select * from #StructureLinks
 
 --Count the cases where we have two locations for the same structure on the same Z section that create extra fake contact patches.
---NOTE: This code breaks if the Synapse overlaps with BOTH PSD pairs.  There's no fixing it.  Just ensure the synapse only overlaps with the correct PSD and not the more distance one.
+--NOTE: This code breaks if the Synapse overlaps with BOTH PSD pairs.  There's no fixing it.  Just ensure the synapse only overlaps with the correct PSD and not the more distant one.
 select SParentID, TParentID, SZ, NumPairs into #ExtraStructureLinks from (Select SParentID, TParentID, SZ, Count(SParentID) as NumPairs from #StructureLinks group by SParentID, TParentID, SZ) as ExtraStructureLinks where NumPairs > 1 order by SParentID
 
 select SL.SID, SL.TID, SMosaicShape.STDistance(TMosaicShape) as Distance into #PairDistance from #StructureLinks SL
