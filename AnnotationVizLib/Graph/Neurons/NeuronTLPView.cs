@@ -33,11 +33,35 @@ namespace AnnotationVizLib
 
             NodeAttribs.Add("StructureURL", string.Format("{0}/OData/ConnectomeData.svc/Structures({1}L)", this.VolumeURL, node.Key));
             NodeAttribs.Add("ID", string.Format("{0}", node.Key));
-            NodeAttribs.Add("Tags", node.Structure.AttributesXml);
+            NodeAttribs.Add("Tags", AttributesToString(node.Structure.AttributesXml));
 
             tlpnode.AddAttributes(NodeAttribs);
 
             return tlpnode;
+        }
+
+        public static string AttributesToString(string xml)
+        {
+            List<ObjAttribute> listAttribs = ObjAttribute.Parse(xml).Where(a => !string.IsNullOrEmpty(a.Name)).ToList();
+
+            StringBuilder sb = new StringBuilder();
+            string row;
+            bool FirstRow = true;
+            foreach (ObjAttribute a in listAttribs)
+            {
+                if(FirstRow)
+                {
+                    FirstRow = false; 
+                }
+                else
+                {
+                    sb.Append(';');
+                }
+
+                sb.Append(a.ToString());
+            }
+
+            return sb.ToString();
         }
 
         public string LabelForNode(NeuronNode node)
