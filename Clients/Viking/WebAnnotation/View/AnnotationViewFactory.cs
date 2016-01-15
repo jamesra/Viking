@@ -10,7 +10,6 @@ namespace WebAnnotation.View
 {
     static class AnnotationViewFactory
     {
-
         /// <summary>
         /// 
         /// </summary>
@@ -60,16 +59,29 @@ namespace WebAnnotation.View
         /// <returns></returns>
         public static LocationCanvasView CreateAdjacent(LocationObj obj)
         {
+
             switch (obj.TypeCode)
             {
                 case LocationType.CIRCLE:
                     return new AdjacentLocationCircleView(obj);
                 case LocationType.OPENCURVE:
-                    return new LocationOpenCurveView(obj);
+                    {
+                        LocationOpenCurveView view = new LocationOpenCurveView(obj);
+                        view.Color = new Microsoft.Xna.Framework.Color(1, 1, 1, 0.2f);
+                        return view;
+                    }
                 case LocationType.CLOSEDCURVE:
-                    return new LocationClosedCurveView(obj);
+                    {
+                        LocationClosedCurveView view = new LocationClosedCurveView(obj);
+                        view.Color = new Microsoft.Xna.Framework.Color(1, 1, 1, 0.2f);
+                        return view;
+                    }
                 case LocationType.POLYLINE:
-                    return new LocationLineView(obj);
+                    {
+                        AdjacentLocationLineView view = new AdjacentLocationLineView(obj);
+                        view.Color = new Microsoft.Xna.Framework.Color(1, 1, 1, 0.2f);
+                        return view;
+                    }
                 default:
                     throw new NotImplementedException("View for type " + obj.TypeCode.ToString() + " is not implemented");
             }
@@ -90,6 +102,10 @@ namespace WebAnnotation.View
                 case LocationType.CIRCLE:
                     return new StructureLinkCirclesView(linkObj, sourceLoc, targetLoc);
                 case LocationType.OPENCURVE:
+                    StructureLinkCurvesView view = new StructureLinkCurvesView(linkObj, sourceLoc, targetLoc);
+                    view.color = new Microsoft.Xna.Framework.Color(1f, 1f, 1f, 0.5f);
+                    return view;
+                case LocationType.POLYLINE:
                     return new StructureLinkCurvesView(linkObj, sourceLoc, targetLoc);
                 default:
                     throw new NotImplementedException("StructureLink View for type " + sourceLoc.TypeCode.ToString() + " is not implemented");

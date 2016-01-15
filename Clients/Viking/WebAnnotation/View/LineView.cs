@@ -34,13 +34,19 @@ namespace WebAnnotation.View
 
         public float LineWidth;
 
-        public Microsoft.Xna.Framework.Color Color;
-        
+        private Microsoft.Xna.Framework.Color _Color;
+        public Microsoft.Xna.Framework.Color Color
+        {
+            get { return _Color; }
+            set { _Color = value; _HSLColor = value.ConvertToHSL(); }
+        }
+        private Microsoft.Xna.Framework.Color _HSLColor;
+
         public LineView(GridVector2 source, GridVector2 destination, double width, Microsoft.Xna.Framework.Color color, LineStyle lineStyle)
         {
             line = new RoundLineCode.RoundLine(source.ToVector2(), destination.ToVector2());
             this.LineWidth = (float)width;
-            this.Color = color;
+            this.Color = color; 
             this.Style = lineStyle;
         }
 
@@ -53,8 +59,8 @@ namespace WebAnnotation.View
             foreach (var group in techniqueGroups)
             {
                 lineManager.Draw(group.Select(l => l.line).ToArray(),
-                             group.Select(l => l.LineWidth).ToArray(),
-                             group.Select(l => l.Color).ToArray(),
+                             group.Select(l => l.LineWidth / 2.0f).ToArray(),
+                             group.Select(l => l._HSLColor).ToArray(),
                              scene.Camera.View * scene.Projection,
                              (float)(DateTime.UtcNow.Millisecond / 1000.0),
                              group.Key.ToString());

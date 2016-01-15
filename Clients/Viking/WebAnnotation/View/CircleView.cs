@@ -7,28 +7,31 @@ using Geometry;
 using VikingXNAGraphics;
 
 namespace WebAnnotation.View
-{
-      
+{  
     public class TextureCircleView : CircleView
     {
         public Texture2D Texture;
         bool FlipTexture = false;
 
-        public TextureCircleView(Texture2D texture, GridCircle circle) : base()
+        public TextureCircleView(Texture2D texture, GridCircle circle, Color color) : base(circle, color)
         {
-            this.Circle = circle;
             this.Texture = texture;
         }
 
-        public static TextureCircleView CreateUpArrow(GridCircle circle)
+        public static TextureCircleView CreateUpArrow(GridCircle circle, Color color)
         {
-            return new TextureCircleView(GlobalPrimitives.UpArrowTexture, circle);
+            return new TextureCircleView(GlobalPrimitives.UpArrowTexture, circle, color);
         }
 
-        public static TextureCircleView CreateDownArrow(GridCircle circle)
+        public static TextureCircleView CreateDownArrow(GridCircle circle, Color color)
         {
-            TextureCircleView view = new TextureCircleView(GlobalPrimitives.UpArrowTexture, circle);
-            view.FlipTexture = true; 
+            TextureCircleView view = new TextureCircleView(GlobalPrimitives.DownArrowTexture, circle, color);
+            return view;
+        }
+
+        public static TextureCircleView CreateCircle(GridCircle circle, Color color)
+        {
+            TextureCircleView view = new TextureCircleView(GlobalPrimitives.CircleTexture, circle, color);
             return view;
         }
 
@@ -39,8 +42,6 @@ namespace WebAnnotation.View
                 if (_BackgroundVerts == null)
                 {
                     _BackgroundVerts = CircleView.VerticiesForCircle(this.Circle);
-                    if(FlipTexture)
-                        this.FlipTextureY();
                 }
 
                 return _BackgroundVerts;
@@ -67,18 +68,6 @@ namespace WebAnnotation.View
             basicEffect.Texture = null;
             basicEffect.TextureEnabled = false;
             basicEffect.VertexColorEnabled = false;
-        }
-
-        private void FlipTextureY()
-        {
-            if (BackgroundVerts == null)
-                return; 
-
-            for (int i = 0; i < BackgroundVerts.Length; i++)
-            {
-                _BackgroundVerts[i].TextureCoordinate = new Vector2(_BackgroundVerts[i].TextureCoordinate.X == 0 ? 1 : 0,
-                                                                                        _BackgroundVerts[i].TextureCoordinate.Y == 0 ? 1 : 0);
-            }
         }
 
         public static void Draw(GraphicsDevice device,
@@ -213,10 +202,7 @@ namespace WebAnnotation.View
 
             return true;
         }
-
-        public CircleView()
-        { }
-
+        
         public CircleView(GridCircle circle, Color color)
         {
             this.Circle = circle;
@@ -318,10 +304,13 @@ namespace WebAnnotation.View
 
             VertexPositionColorTexture[] verts = BackgroundVerts;
 
+            float SatScalar = HSLColor.B / 255f;
+
             //Draw an opaque border around the background
             for (int i = 0; i < verts.Length; i++)
             {
                 verts[i].Color = HSLColor;
+                //verts[i].Color.G = (byte)((((float)HSLColor.G / 255f) * SatScalar) * 255); // This line restores the nice luma blending effect I had pre-curce annotations
             }
 
             return verts;
@@ -338,7 +327,7 @@ namespace WebAnnotation.View
             basicEffect.LightingEnabled = false;
 
             if(overlayEffect != null)
-                overlayEffect.AnnotateWithCircle((float)0.05);
+                overlayEffect.AnnotateWithCircle((float)0.05, 0.5f);
         }
 
         public static void RestoreGraphicsDevice(GraphicsDevice graphicsDevice, BasicEffect basicEffect)
@@ -388,6 +377,15 @@ namespace WebAnnotation.View
                           VikingXNA.AnnotationOverBackgroundLumaEffect overlayEffect,
                           CircleView[] listToDraw)
         {
+            if (listToDraw.Length == 0)
+                return;
+
+            //Draw textured circles in the array
+            TextureCircleView[] arrayTextureCircles = listToDraw.Select(c => c as TextureCircleView).Where(c => c as TextureCircleView != null).ToArray();
+            TextureCircleView.Draw(device, scene, basicEffect, overlayEffect, arrayTextureCircles);
+
+            //Draw untextured circles in the array
+            listToDraw = listToDraw.Where(c => c as TextureCircleView == null).ToArray();
             if (listToDraw.Length == 0)
                 return;
 

@@ -15,6 +15,13 @@ namespace WebAnnotation.View
     {
         public CurveView curveView;
 
+        public Microsoft.Xna.Framework.Color Color
+        {
+            get { return curveView.Color; }
+            set { curveView.Color = value; }
+        }
+
+
         public static int NumInterpolationPoints = Global.NumCurveInterpolationPoints;
         public LocationClosedCurveView(LocationObj obj) : base(obj)
         {
@@ -71,6 +78,14 @@ namespace WebAnnotation.View
                           LocationClosedCurveView[] listToDraw)
         {
             CurveView.Draw(device, scene, lineManager, basicEffect, overlayEffect, listToDraw.Select(l => l.curveView).ToArray());
+        }
+
+        public override double Width
+        {
+            get
+            {
+                return curveView.LineWidth;
+            }
         }
     }
 }

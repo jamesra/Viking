@@ -12,6 +12,7 @@ namespace WebAnnotation
     {
         static public Texture2D CircleTexture;
         static public Texture2D UpArrowTexture;
+        static public Texture2D DownArrowTexture;
 
         static readonly public VertexPositionColorTexture[] SquareVerts = new VertexPositionColorTexture[] {
             new VertexPositionColorTexture(new Vector3(-1,1,0), Color.White, Vector2.Zero), 

@@ -274,6 +274,21 @@ namespace WebAnnotation.ViewModel
             return menu;
         }
 
+        protected void _AddConvertShapeMenus(ContextMenu menu)
+        {
+            MenuItem menuShape = new MenuItem("Change Shape");
+            
+            MenuItem menuOpenCurve = new MenuItem("Curve", ContextMenu_ConvertShape);
+            menuOpenCurve.Tag = LocationType.OPENCURVE;
+            MenuItem menuCircle = new MenuItem("Circle", ContextMenu_ConvertShape);
+            menuCircle.Tag = LocationType.CIRCLE;
+
+            menuShape.MenuItems.Add(menuOpenCurve);
+            menuShape.MenuItems.Add(menuCircle);
+
+            menu.MenuItems.Add(menuShape);
+        }
+
         public override ContextMenu ContextMenu
         {
             get
@@ -283,7 +298,7 @@ namespace WebAnnotation.ViewModel
 
                 this._AddCopyLocationIDMenu(menu);
                 this._AddTerminalOffEdgeMenus(menu);
-
+                this._AddConvertShapeMenus(menu);
                 this._AddDeleteMenu(menu);
 
                 return menu;
@@ -340,6 +355,20 @@ namespace WebAnnotation.ViewModel
             long? hops = item.Tag as long?;
 
             Global.Export.OpenNetwork(this.ParentID.Value, hops);
+        }
+
+        protected void ContextMenu_ConvertShape(object sender, EventArgs e)
+        {
+            MenuItem item = sender as MenuItem;
+            LocationType targetShape = (LocationType)item.Tag;
+            
+            switch(targetShape)
+            {
+                case LocationType.CIRCLE:
+                    break;
+                case LocationType.OPENCURVE:
+                    break; 
+            }
         }
 
         protected void ContextMenu_OnOffEdge(object sender, EventArgs e)

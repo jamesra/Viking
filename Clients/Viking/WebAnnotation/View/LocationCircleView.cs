@@ -104,11 +104,8 @@ namespace WebAnnotation.View
         
         private void CreateViewObjects()
         {
-            upCircleView = TextureCircleView.CreateUpArrow(new GridCircle(modelObj.VolumePosition, this.Radius));
-            upCircleView.BackgroundColor = modelObj.Parent.Type.Color.ToXNAColor(0.33f);
-
-            downCircleView = TextureCircleView.CreateDownArrow(new GridCircle(modelObj.VolumePosition, this.Radius));
-            downCircleView.BackgroundColor = modelObj.Parent.Type.Color.ToXNAColor(0.33f);
+            upCircleView = TextureCircleView.CreateUpArrow(new GridCircle(modelObj.VolumePosition, this.Radius), modelObj.Parent.Type.Color.ToXNAColor(0.33f));
+            downCircleView = TextureCircleView.CreateDownArrow(new GridCircle(modelObj.VolumePosition, this.Radius), modelObj.Parent.Type.Color.ToXNAColor(0.33f));
         }
 
         private void CreateLabelObjects()
@@ -214,9 +211,7 @@ namespace WebAnnotation.View
 
         private void CreateViewObjects()
         {
-            circleView = new CircleView();
-            circleView.Circle = new GridCircle(modelObj.VolumePosition, modelObj.Radius);
-            circleView.BackgroundColor = modelObj.Parent.Type.Color.ToXNAColor(0.75f); 
+            circleView = new CircleView(new GridCircle(modelObj.VolumePosition, modelObj.Radius), modelObj.Parent.Type.Color.ToXNAColor(1f) );
         }
 
         private void CreateLabelObjects()
@@ -225,8 +220,7 @@ namespace WebAnnotation.View
             StructureIDLabelView = new LabelView(this.ParentID.ToString(), modelObj.VolumePosition - new GridVector2(0, this.Radius / 3.0f));
             StructureIDLabelView.MaxLineWidth = this.Radius;
             StructureIDLabelView.Color = this.modelObj.IsUnverifiedTerminal ? Color.Yellow : Color.Black;
-
-
+            
             StructureLabelView = new LabelView(this.FullLabelText(), modelObj.VolumePosition + new GridVector2(0, this.Radius / 3.0f));
             StructureLabelView.MaxLineWidth = this.Radius * 2;
             this.RegisterForStructureChangeEvents();
@@ -345,6 +339,9 @@ namespace WebAnnotation.View
                 return _OverlappingLinkedLocationCircles;
             }
         }
+
+        public uint AllLinksTestedFailures = 0;
+        public bool LinkedLocationsRequestQueued = false;
         
         private List<LocationCanvasView> _OverlappingLinks = null;
         public override IList<LocationCanvasView> OverlappingLinks
@@ -360,6 +357,14 @@ namespace WebAnnotation.View
                     bool AllLinksTested;
                     List<LocationCanvasView> overlapping = CalculateOverlappingLinks(this.Links, out AllLinksTested);
                     _OverlappingLinks = AllLinksTested ? overlapping : null;
+                    if(!AllLinksTested)
+                    {
+                        AllLinksTestedFailures++;
+                        if(AllLinksTestedFailures == 3)
+                        {
+                            QueueLinkedLocationRequest();
+                        }
+                    }
                     RegisterForLinkedLocationChangeEvents();
                     return overlapping;
                 }
@@ -382,6 +387,16 @@ namespace WebAnnotation.View
             IEnumerable<LocationCanvasView> listCanvasLocations = listLinkedLocations.Select(loc => AnnotationViewFactory.Create(loc));
 
             return listCanvasLocations.Where(loc => loc.Intersects(this.modelObj.VolumeShape)).ToList();
+        }
+
+        public void QueueLinkedLocationRequest()
+        {
+            if (!LinkedLocationsRequestQueued)
+            {
+                LinkedLocationsRequestQueued = true;
+                Task t = new Task(() => { Store.Locations.GetObjectsByIDs(this.Links, true); LinkedLocationsRequestQueued = false; });
+                t.Start();
+            }
         }
 
         /// <summary>

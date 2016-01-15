@@ -52,8 +52,8 @@ namespace WebAnnotation.View
         {
             label = new LabelView(LocationLabel(obj), gridCircle.Center);
             label.Color = Microsoft.Xna.Framework.Color.Red;
-            circleView = Up ? TextureCircleView.CreateUpArrow(gridCircle) : TextureCircleView.CreateDownArrow(gridCircle);
-            circleView.BackgroundColor = obj.Parent.Type.Color.ToXNAColor(0.75f); 
+            Microsoft.Xna.Framework.Color color = obj.Parent.Type.Color.ToXNAColor(0.75f);
+            circleView = Up ? TextureCircleView.CreateUpArrow(gridCircle, color) : TextureCircleView.CreateDownArrow(gridCircle, color); 
         }
         
         private static string LocationLabel(LocationObj obj)

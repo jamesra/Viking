@@ -19,6 +19,14 @@ namespace WebAnnotation.View
     class CurveView : System.Windows.IWeakEventListener
     {
         private List<GridVector2> _ControlPoints;
+
+        private Texture2D _ControlPointTexture;
+        public Texture2D ControlPointTexture
+        {
+            get { return _ControlPointTexture; }
+            set { _ControlPointTexture = value;
+                  }
+        }
         
         /// <summary>
         /// Even in a closed curve the control points are not looped, the first and last control points should be different
@@ -31,7 +39,7 @@ namespace WebAnnotation.View
                     _ControlPoints.RemoveAt(_ControlPoints.Count - 1);
 
                 CurvePoints = CalculateCurvePoints(this.ControlPoints, this.NumInterpolations, this.TryCloseCurve);
-                this.ControlPointViews = CreateControlPointViews(this.ControlPoints, this.LineWidth, this.Color);
+                this.ControlPointViews = CreateControlPointViews(this.ControlPoints, this.LineWidth, this.Color, null);
                 this.CurveLineViews = CreateCurveLineViews(this.CurvePoints.ToArray(), this.LineWidth, this.Color);
             }
         }
@@ -40,7 +48,7 @@ namespace WebAnnotation.View
         {
             _ControlPoints[i] = value;
             CurvePoints = CalculateCurvePoints(this.ControlPoints, this.NumInterpolations, this.TryCloseCurve);
-            this.ControlPointViews = CreateControlPointViews(this.ControlPoints, this.LineWidth, this.Color);
+            this.ControlPointViews = CreateControlPointViews(this.ControlPoints, this.LineWidth, this.Color, null);
             this.CurveLineViews = CreateCurveLineViews(this.CurvePoints.ToArray(), this.LineWidth, this.Color);
         }
                 
@@ -55,10 +63,19 @@ namespace WebAnnotation.View
         private Color _Color;
         public Color Color
         {
-            get { return _Color;}
-            set { _Color = value;
-                 if(ControlPointViews != null)
-                    ControlPointViews.Select(cpv => cpv.BackgroundColor = ControlPointColor(value));
+            get { return _Color; }
+            set
+            {
+                _Color = value;
+                foreach (CircleView cpv in ControlPointViews)
+                {
+                    cpv.BackgroundColor = value;
+                }
+
+                foreach (LineView lv in CurveLineViews)
+                {
+                    lv.Color = value;
+                }
             }
         }
 
@@ -68,23 +85,26 @@ namespace WebAnnotation.View
         /// </summary>
         public bool TryCloseCurve;
 
-        public CurveView(ICollection<GridVector2> controlPoints, Microsoft.Xna.Framework.Color color, bool TryToClose,  double lineWidth = 16.0, int numInterpolations = 5)
+        public CurveView(ICollection<GridVector2> controlPoints, Microsoft.Xna.Framework.Color color, bool TryToClose,  Texture2D texture = null, double lineWidth = 16.0, int numInterpolations = 5)
         {
-            
+            this._Color = color;
+            this._ControlPointTexture = texture;
             this.LineWidth = lineWidth;
             this.NumInterpolations = numInterpolations;
             this.TryCloseCurve = TryToClose;
             this.ControlPoints = controlPoints.ToList();
-            this._Color = color;
-            this.ControlPointViews = CreateControlPointViews(this.ControlPoints, lineWidth, color);
+            this.ControlPointViews = CreateControlPointViews(this.ControlPoints, lineWidth / 2.0f, color, null);
             this.CurveLineViews = CreateCurveLineViews(this.CurvePoints.ToArray(), lineWidth, color);
-            
         }
 
-        private static CircleView[] CreateControlPointViews(ICollection<GridVector2> ControlPoints, double Radius, Microsoft.Xna.Framework.Color color)
+        private static CircleView[] CreateControlPointViews(ICollection<GridVector2> ControlPoints, double Radius, Microsoft.Xna.Framework.Color color, Texture2D texture)
         {
-            return ControlPoints.Select(cp => new CircleView(new GridCircle(cp, Radius), color)).ToArray();   
+            if(texture != null)
+                return ControlPoints.Select(cp => new TextureCircleView(texture, new GridCircle(cp, Radius), color)).ToArray();
+            else
+                return ControlPoints.Select(cp => new CircleView(new GridCircle(cp, Radius), color)).ToArray();   
         }
+
 
         public static List<GridVector2> CalculateCurvePoints(ICollection<GridVector2> ControlPoints, int NumInterpolations, bool closeCurve)
         {
@@ -147,7 +167,7 @@ namespace WebAnnotation.View
         /// <returns></returns>
         private static Microsoft.Xna.Framework.Color ControlPointColor(Microsoft.Xna.Framework.Color color)
         {
-            return new Microsoft.Xna.Framework.Color(255 - (int)color.A, 255 - (int)color.G, 255 - (int)color.B, (int)color.A / 2f);
+            return new Microsoft.Xna.Framework.Color(255 - (int)color.R, 255 - (int)color.G, 255 - (int)color.B, (int)color.A / 2f);
             //return color;
         }
 

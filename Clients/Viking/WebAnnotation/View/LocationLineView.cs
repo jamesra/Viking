@@ -12,11 +12,80 @@ using SqlGeometryUtils;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using VikingXNA;
+using VikingXNAGraphics;
 
 namespace WebAnnotation.View
 {
-    class LocationLineView : LocationCanvasView
+    class AdjacentLocationLineView : LocationLineViewBase
     {
+        protected PolyLineView upPolyLineView;
+        protected PolyLineView downPolyLineView;
+
+        public Color Color
+        {
+            get { return upPolyLineView.Color; }
+            set { upPolyLineView.Color = value;
+                downPolyLineView.Color = value;
+            }
+        }
+
+        public override double Width
+        {
+            get { return upPolyLineView.LineWidth; }
+        }
+
+        public AdjacentLocationLineView(LocationObj obj) : base(obj)
+        {
+            upPolyLineView = new PolyLineView(obj.VolumeShape.ToPoints(), obj.Parent.Type.Color.ToXNAColor().ConvertToHSL(0.5f), GlobalPrimitives.UpArrowTexture);
+            downPolyLineView = new PolyLineView(obj.VolumeShape.ToPoints(), obj.Parent.Type.Color.ToXNAColor().ConvertToHSL(0.5f), GlobalPrimitives.DownArrowTexture);
+        }
+
+        public static void Draw(Microsoft.Xna.Framework.Graphics.GraphicsDevice device,
+                          VikingXNA.Scene scene,
+                          RoundLineCode.RoundLineManager lineManager,
+                          Microsoft.Xna.Framework.Graphics.BasicEffect basicEffect,
+                          VikingXNA.AnnotationOverBackgroundLumaEffect overlayEffect,
+                          AdjacentLocationLineView[] listToDraw,
+                          int VisibleSectionNumber)
+        {
+            PolyLineView[] linesToDraw = listToDraw.Select(l => l.modelObj.Z < VisibleSectionNumber ? l.downPolyLineView : l.upPolyLineView).ToArray();
+            PolyLineView.Draw(device, scene, lineManager, basicEffect, overlayEffect, linesToDraw);
+        }
+    }
+
+    class LocationLineView : LocationLineViewBase
+    {
+        protected PolyLineView polyLineView;
+
+        public Color Color
+        {
+            get { return polyLineView.Color; }
+            set { polyLineView.Color = value; }
+        }
+
+        public override double Width
+        {
+            get { return polyLineView.LineWidth; }
+        }
+
+        public LocationLineView(LocationObj obj, Texture2D texture = null) : base(obj)
+        {
+            polyLineView = new PolyLineView(obj.VolumeShape.ToPoints(), obj.Parent.Type.Color.ToXNAColor(0.5f), texture);
+        }
+
+        public static void Draw(Microsoft.Xna.Framework.Graphics.GraphicsDevice device,
+                          VikingXNA.Scene scene,
+                          RoundLineCode.RoundLineManager lineManager,
+                          Microsoft.Xna.Framework.Graphics.BasicEffect basicEffect,
+                          VikingXNA.AnnotationOverBackgroundLumaEffect overlayEffect,
+                          LocationLineView[] listToDraw)
+        {
+            PolyLineView.Draw(device, scene, lineManager, basicEffect, overlayEffect, listToDraw.Select(l => l.polyLineView).ToArray());
+        }
+    }
+    
+    abstract class LocationLineViewBase : LocationCanvasView
+    { 
         public override bool IsVisible(VikingXNA.Scene scene)
         {
             return scene.VisibleWorldBounds.Intersects(this.BoundingBox);
@@ -95,7 +164,7 @@ namespace WebAnnotation.View
             {
                 return LocationAction.CREATELINKEDLOCATION;
             }
-}
+        }
 
         
         public override IList<LocationCanvasView> OverlappingLinks
@@ -106,13 +175,11 @@ namespace WebAnnotation.View
             }
         }
 
-        public virtual double Width
-        {
-            get { return modelObj.Radius; }
-        }
+        public abstract double Width { get; }
 
-        public LocationLineView(LocationObj obj) : base(obj)
-        { }
+        public LocationLineViewBase(LocationObj obj) : base(obj)
+        {
+        }
 
         private SqlGeometry _RenderedVolumeShape;
         public virtual SqlGeometry RenderedVolumeShape
@@ -161,5 +228,7 @@ namespace WebAnnotation.View
                 return _VolumeControlPoints;
             }
         }
+         
+        
     }
 }

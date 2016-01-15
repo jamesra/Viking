@@ -17,9 +17,15 @@ namespace WebAnnotation.View
 
         public CurveView curveView;
 
+        public Microsoft.Xna.Framework.Color Color
+        {
+            get { return curveView.Color; }
+            set { curveView.Color = value; }
+        }
+
         public LocationOpenCurveView(LocationObj obj) : base(obj)
         {
-            curveView = new CurveView(obj.VolumeShape.ToPoints(), obj.Parent.Type.Color.ToXNAColor().ConvertToHSL(0.5f), false);
+            curveView = new CurveView(obj.VolumeShape.ToPoints(), obj.Parent.Type.Color.ToXNAColor(0.5f), false);
         }
         
         private GridVector2[] _MosaicControlPoints;
@@ -72,6 +78,14 @@ namespace WebAnnotation.View
                           LocationOpenCurveView[] listToDraw)
         {
             CurveView.Draw(device, scene, lineManager, basicEffect, overlayEffect, listToDraw.Select(l => l.curveView).ToArray());
+        }
+
+        public override double Width
+        {
+            get
+            {
+                return curveView.LineWidth;
+            }
         }
     }
 }

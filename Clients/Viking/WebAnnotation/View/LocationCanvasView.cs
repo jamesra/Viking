@@ -18,6 +18,11 @@ using Viking.Common;
 
 namespace WebAnnotation.View
 {
+    public interface ISelectable
+    {
+        bool Selected { get; set; }
+    }
+
     public interface ICanvasView
     { 
         bool IsVisible(Scene scene);
@@ -54,6 +59,31 @@ namespace WebAnnotation.View
         public LocationCanvasView(LocationObj obj)
         {
             this.modelObj = obj;
+        }
+
+        /// <summary>
+        /// The number of parent structures until we hit a root structure
+        /// </summary>
+        private int? _ParentDepth = new int?();
+        public int ParentDepth
+        {
+            get
+            {
+                if(!_ParentDepth.HasValue)
+                {
+                    _ParentDepth = CalculateParentDepth(modelObj.Parent);
+                }
+
+                return _ParentDepth.Value;
+            }
+        }
+
+        private int CalculateParentDepth(StructureObj obj)
+        {
+            if (obj == null)
+                return 0;
+
+            return CalculateParentDepth(obj.Parent) + 1; 
         }
 
         public abstract bool Intersects(SqlGeometry shape);

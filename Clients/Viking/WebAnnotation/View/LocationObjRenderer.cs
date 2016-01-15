@@ -168,31 +168,31 @@ namespace WebAnnotation
             switch (obj.TypeCode)
             {
                 case LocationType.POINT:
-                    overlayEffect.AnnotateWithCircle((float)0.05);
+                    overlayEffect.AnnotateWithCircle((float)0.05, 0.5f);
                     basicEffect.Texture = null;
                     basicEffect.TextureEnabled = false;
                     basicEffect.VertexColorEnabled = true;
                     break;
                 case LocationType.OPENCURVE:
-                    overlayEffect.AnnotateWithCircle((float)0.05);
+                    overlayEffect.AnnotateWithCircle((float)0.05, 0.5f);
                     basicEffect.Texture = null;
                     basicEffect.TextureEnabled = false;
                     basicEffect.VertexColorEnabled = true;
                     break;
                 case LocationType.CLOSEDCURVE:
-                    overlayEffect.AnnotateWithCircle((float)0.05);
+                    overlayEffect.AnnotateWithCircle((float)0.05, 0.5f);
                     basicEffect.Texture = null;
                     basicEffect.TextureEnabled = false;
                     basicEffect.VertexColorEnabled = true;
                     break;
                 case LocationType.POLYGON:
-                    overlayEffect.AnnotateWithCircle((float)0.05);
+                    overlayEffect.AnnotateWithCircle((float)0.05, 0.5f);
                     basicEffect.Texture = null;
                     basicEffect.TextureEnabled = false;
                     basicEffect.VertexColorEnabled = true;
                     break;
                 case LocationType.POLYLINE:
-                    overlayEffect.AnnotateWithCircle((float)0.05);
+                    overlayEffect.AnnotateWithCircle((float)0.05, 0.5f);
                     basicEffect.Texture = null;
                     basicEffect.TextureEnabled = false;
                     basicEffect.VertexColorEnabled = true;
@@ -205,7 +205,7 @@ namespace WebAnnotation
                     }
                     else if (SectionDelta == 0)
                     {
-                        overlayEffect.AnnotateWithCircle((float)0.05);
+                        overlayEffect.AnnotateWithCircle((float)0.05, 0.5f);
                     }
                     else
                     {
@@ -236,22 +236,6 @@ namespace WebAnnotation
             basicEffect.VertexColorEnabled = false;
         }
 
-        public static void Draw(List<LocationCanvasView> listToDraw, GraphicsDevice graphicsDevice, BasicEffect basicEffect, VikingXNA.AnnotationOverBackgroundLumaEffect overlayEffect, RoundLineCode.RoundLineManager overlayLineManager, VikingXNA.Scene Scene, int SectionNumber)
-        {
-            if (listToDraw.Count == 0)
-                return;
-
-            List<LocationOpenCurveView> OpenCurveLocations = listToDraw.Where(l => l.TypeCode == LocationType.OPENCURVE).Cast<LocationOpenCurveView>().ToList();
-            DrawOpenCurveBackgrounds(OpenCurveLocations, graphicsDevice, basicEffect, overlayEffect, overlayLineManager, Scene, SectionNumber);
-
-            List<LocationClosedCurveView> ClosedCurveLocations = listToDraw.Where(l => l.TypeCode == LocationType.CLOSEDCURVE).Cast<LocationClosedCurveView>().ToList();
-            DrawClosedCurveBackgrounds(ClosedCurveLocations, graphicsDevice, basicEffect, overlayEffect, overlayLineManager, Scene, SectionNumber);
-
-            //TODO: Use Group by instead of select
-            LocationCircleView[] CircleLocations = listToDraw.Where(l => l.TypeCode == LocationType.CIRCLE).Cast<LocationCircleView>().ToArray();
-            LocationCircleView.Draw(graphicsDevice, Scene, basicEffect, overlayEffect, CircleLocations);
-        }
-
         /// <summary>
         /// Draw the list of locations as they should appear for the given section number
         /// </summary>
@@ -264,35 +248,59 @@ namespace WebAnnotation
             if (listToDraw.Count == 0)
                 return;
 
-            List<LocationOpenCurveView> OpenCurveLocations = listToDraw.Where(l => l.TypeCode == LocationType.OPENCURVE).Cast<LocationOpenCurveView>().ToList();
-            DrawOpenCurveBackgrounds(OpenCurveLocations, graphicsDevice, basicEffect, overlayEffect, overlayLineManager, Scene, VisibleSectionNumber);
+            int DepthStencilValue = DeviceStateManager.GetDepthStencilValue(graphicsDevice);
 
-            List<LocationClosedCurveView> ClosedCurveLocations = listToDraw.Where(l => l.TypeCode == LocationType.CLOSEDCURVE).Cast<LocationClosedCurveView>().ToList();
-            DrawClosedCurveBackgrounds(ClosedCurveLocations, graphicsDevice, basicEffect, overlayEffect, overlayLineManager, Scene, VisibleSectionNumber);
+            var depthGroups = listToDraw.GroupBy(l => l.ParentDepth); 
+            foreach(var depthGroup in depthGroups)
+            {
+                var typeGroups = depthGroup.GroupBy(l => l.GetType());
+                foreach (var typeGroup in typeGroups)
+                {
+                    if (typeGroup.Key == typeof(LocationOpenCurveView))
+                    {
+                        LocationOpenCurveView.Draw(graphicsDevice, Scene, overlayLineManager, basicEffect, overlayEffect, typeGroup.Cast<LocationOpenCurveView>().ToArray());
+                    }
+                    else if (typeGroup.Key == typeof(LocationClosedCurveView))
+                    {
+                        LocationClosedCurveView.Draw(graphicsDevice, Scene, overlayLineManager, basicEffect, overlayEffect, typeGroup.Cast<LocationClosedCurveView>().ToArray());
+                    }
+                    else if (typeGroup.Key == typeof(LocationLineView))
+                    {
+                        LocationLineView.Draw(graphicsDevice, Scene, overlayLineManager, basicEffect, overlayEffect, typeGroup.Cast<LocationLineView>().ToArray());
+                    }
+                    else if (typeGroup.Key == typeof(LocationCircleView))
+                    {
+                        LocationCircleView.Draw(graphicsDevice, Scene, basicEffect, overlayEffect, typeGroup.Cast<LocationCircleView>().ToArray());
+                    }
+                    else if (typeGroup.Key == typeof(AdjacentLocationCircleView))
+                    {
+                        AdjacentLocationCircleView.Draw(graphicsDevice, Scene, basicEffect, overlayEffect, typeGroup.Cast<AdjacentLocationCircleView>().ToArray(), VisibleSectionNumber);
+                    }
+                    else if (typeGroup.Key == typeof(AdjacentLocationLineView))
+                    {
+                        AdjacentLocationLineView.Draw(graphicsDevice, Scene, overlayLineManager, basicEffect, overlayEffect, typeGroup.Cast<AdjacentLocationLineView>().ToArray(), VisibleSectionNumber);
+                    }
+                    else
+                    {
+                        throw new ArgumentException("Cannot draw background for unknown type" + typeGroup.Key.FullName);
+                    }
+                }
 
-            //TODO: Use Group by instead of select
-            LocationCircleView[] CircleLocations = listToDraw.Where(l => l.GetType() == typeof(LocationCircleView)).Cast<LocationCircleView>().ToArray();
-            LocationCircleView.Draw(graphicsDevice, Scene, basicEffect, overlayEffect, CircleLocations);
+                DepthStencilValue += 5;
 
-            AdjacentLocationCircleView[] AdjacentCircleLocations = listToDraw.Where(l => l.GetType() == typeof(AdjacentLocationCircleView)).Cast<AdjacentLocationCircleView>().ToArray();
-            AdjacentLocationCircleView.Draw(graphicsDevice, Scene, basicEffect, overlayEffect, AdjacentCircleLocations, VisibleSectionNumber);
+                graphicsDevice.Clear(ClearOptions.DepthBuffer, Microsoft.Xna.Framework.Color.Black, float.MaxValue, 0);
+
+                DeviceStateManager.SetDepthStencilValue(graphicsDevice, DepthStencilValue);
+            }  
         }
+        
 
-
-        public static void DrawOpenCurveBackgrounds(List<LocationOpenCurveView> listToDraw, GraphicsDevice graphicsDevice, BasicEffect basicEffect, VikingXNA.AnnotationOverBackgroundLumaEffect overlayEffect, RoundLineCode.RoundLineManager overlayLineManager, VikingXNA.Scene Scene, int SectionNumber)
+        public static void DrawPolyLineBackgrounds(List<LocationLineView> listToDraw, GraphicsDevice graphicsDevice, BasicEffect basicEffect, VikingXNA.AnnotationOverBackgroundLumaEffect overlayEffect, RoundLineCode.RoundLineManager overlayLineManager, VikingXNA.Scene Scene, int SectionNumber)
         {
             if (listToDraw.Count == 0)
                 return;
 
-            LocationOpenCurveView.Draw(graphicsDevice, Scene, overlayLineManager, basicEffect, overlayEffect, listToDraw.ToArray());
-        }
-
-        public static void DrawClosedCurveBackgrounds(List<LocationClosedCurveView> listToDraw, GraphicsDevice graphicsDevice, BasicEffect basicEffect, VikingXNA.AnnotationOverBackgroundLumaEffect overlayEffect, RoundLineCode.RoundLineManager overlayLineManager, VikingXNA.Scene Scene, int SectionNumber)
-        {
-            if (listToDraw.Count == 0)
-                return;
-
-            LocationClosedCurveView.Draw(graphicsDevice, Scene, overlayLineManager, basicEffect, overlayEffect, listToDraw.ToArray());
+            LocationLineView.Draw(graphicsDevice, Scene, overlayLineManager, basicEffect, overlayEffect, listToDraw.ToArray());
         }
 
         /*

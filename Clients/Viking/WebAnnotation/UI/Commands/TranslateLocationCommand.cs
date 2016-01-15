@@ -130,9 +130,7 @@ namespace WebAnnotation.UI.Commands
 
         private void CreateView(GridVector2 Position, double Radius, Microsoft.Xna.Framework.Color color)
         {
-            circleView = new CircleView();
-            circleView.Circle = new GridCircle(Position, Radius);
-            circleView.BackgroundColor = color;
+            circleView = new CircleView(new GridCircle(Position, Radius), color);
         }
 
         protected override void Execute()

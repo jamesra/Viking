@@ -902,9 +902,9 @@ namespace WebAnnotation.ViewModel
         /// </summary>
         /// <param name="bounds"></param>
         /// <returns></returns>
-        public List<StructureLinkViewModelBase> VisibleStructureLinks(GridRectangle bounds)
+        public List<StructureLinkViewModelBase> VisibleStructureLinks(VikingXNA.Scene scene)
         {
-            return StructureLinksSearch.Intersects(bounds.ToRTreeRect(this.SectionNumber)).ToList(); 
+            return StructureLinksSearch.Intersects(scene.VisibleWorldBounds.ToRTreeRect(this.SectionNumber)).Where(l => l.IsVisible(scene)).ToList();
         }
 
         internal void AddStructureLinks(IEnumerable<LocationObj> locations)

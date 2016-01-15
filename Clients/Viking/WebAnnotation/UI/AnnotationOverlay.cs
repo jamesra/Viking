@@ -45,7 +45,7 @@ namespace WebAnnotation
         /// <summary>
         /// The last object the mouse was over, if any
         /// </summary>
-        internal static IUIObjectBasic LastMouseOverObject = null;
+        internal static ICanvasView LastMouseOverObject = null;
 
         static AnnotationOverlay()
         {
@@ -326,6 +326,7 @@ namespace WebAnnotation
            // AnnotationCache.parent = parent;
             GlobalPrimitives.CircleTexture = parent.LoadTextureWithAlpha("Circle", "CircleMask"); //parent.Content.Load<Texture2D>("Circle");
             GlobalPrimitives.UpArrowTexture = parent.LoadTextureWithAlpha("UpArrowV2", "UpArrowMask"); //parent.Content.Load<Texture2D>("Circle");
+            GlobalPrimitives.DownArrowTexture = parent.LoadTextureWithAlpha("DownArrowV2", "UpArrowMask"); //parent.Content.Load<Texture2D>("Circle");
 
             linksView = new LocationLinksViewModel(parent); 
 
@@ -367,7 +368,7 @@ namespace WebAnnotation
             double distance;
             GridVector2 WorldPosition = _Parent.ScreenToWorld(e.X, e.Y);
 
-            IUIObjectBasic NextMouseOverObject = ObjectAtPosition(WorldPosition, out distance);
+            ICanvasView NextMouseOverObject = ObjectAtPosition(WorldPosition, out distance) as ICanvasView;
             if (NextMouseOverObject != LastMouseOverObject)
                 Parent.Invalidate();
 
@@ -634,13 +635,13 @@ namespace WebAnnotation
                 switch (AnnotationType)
                 {
                     case LocationType.CIRCLE:
-                        QueueCommandForCircleStructure(newLocation, WorldPos, SectionPos, type.Color);
+                        QueueCommandForCircleStructure(this.Parent,newLocation, WorldPos, SectionPos, type.Color);
                         break;
                     case LocationType.OPENCURVE:
-                        QueueCommandForOpenCurveStructure(newLocation, WorldPos, type.Color);
+                        QueueCommandForOpenCurveStructure(this.Parent, newLocation, WorldPos, type.Color);
                         break;
                     case LocationType.CLOSEDCURVE:
-                        QueueCommandForClosedCurveStructure(newLocation, WorldPos, type.Color);
+                        QueueCommandForClosedCurveStructure(this.Parent, newLocation, WorldPos, type.Color);
                         break;
                     default:
                         Trace.WriteLine("Could not find commands for annotation type: " + AnnotationType.ToString());
@@ -659,7 +660,7 @@ namespace WebAnnotation
                 Trace.WriteLine("Could not find hotkey ID for type: " + TypeID.ToString()); 
         }
 
-        protected void QueueCommandForCircleStructure(LocationObj newLocation, GridVector2 worldPos, GridVector2 sectionPos, System.Drawing.Color typecolor)
+        public static void QueueCommandForCircleStructure(Viking.UI.Controls.SectionViewerControl Parent, LocationObj newLocation, GridVector2 worldPos, GridVector2 sectionPos, System.Drawing.Color typecolor)
         {
             Viking.UI.Commands.Command.EnqueueCommand(typeof(ResizeCircleCommand), new object[] { Parent,
                     typecolor,
@@ -675,7 +676,7 @@ namespace WebAnnotation
                                     newLocation.Radius = radius; })});
         }
 
-        protected void QueueCommandForOpenCurveStructure(LocationObj newLocation, GridVector2 origin, System.Drawing.Color typecolor)
+        public static void QueueCommandForOpenCurveStructure(Viking.UI.Controls.SectionViewerControl Parent, LocationObj newLocation, GridVector2 origin, System.Drawing.Color typecolor)
         {
             /*
             public PlaceOpenCurveCommand(Viking.UI.Controls.SectionViewerControl parent,
@@ -686,10 +687,10 @@ namespace WebAnnotation
                                         */
 
             Viking.UI.Commands.Command.EnqueueCommand(typeof(PlaceCurveCommand), new object[] { Parent, typecolor, origin, 16.0, false,
-                                                            new PlaceCurveCommand.OnCommandSuccess((GridVector2[] points) => { SetLocationShapeFromPointsInVolume(newLocation, points); }) });
+                                                            new PlaceCurveCommand.OnCommandSuccess((GridVector2[] points) => { SetLocationShapeFromPointsInVolume(Parent, newLocation, points); }) });
         }
 
-        protected void QueueCommandForClosedCurveStructure(LocationObj newLocation, GridVector2 origin, System.Drawing.Color typecolor)
+        public static void QueueCommandForClosedCurveStructure(Viking.UI.Controls.SectionViewerControl Parent, LocationObj newLocation, GridVector2 origin, System.Drawing.Color typecolor)
         {
             /*
             public PlaceOpenCurveCommand(Viking.UI.Controls.SectionViewerControl parent,
@@ -700,10 +701,10 @@ namespace WebAnnotation
                                         */
 
             Viking.UI.Commands.Command.EnqueueCommand(typeof(PlaceCurveCommand), new object[] { Parent, typecolor, origin, 16.0, true,
-                                                            new PlaceCurveCommand.OnCommandSuccess((GridVector2[] points) => { SetLocationShapeFromPointsInVolume(newLocation, points); }) });
+                                                            new PlaceCurveCommand.OnCommandSuccess((GridVector2[] points) => { SetLocationShapeFromPointsInVolume(Parent, newLocation, points); }) });
         }
 
-        protected void SetLocationShapeFromPointsInVolume(LocationObj location, GridVector2[] points)
+        public static void SetLocationShapeFromPointsInVolume(Viking.UI.Controls.SectionViewerControl Parent, LocationObj location, GridVector2[] points)
         {
             GridVector2[] mosaic_points = Parent.VolumeToSection(points);
 
@@ -1002,7 +1003,6 @@ namespace WebAnnotation
             //AnnotationCache.LoadSectionAnnotations(_Parent.Section); 
         }
           
-
         static private BasicEffect basicEffect = null;
         static private BlendState defaultBlendState = null; 
         
@@ -1103,7 +1103,9 @@ namespace WebAnnotation
 
             //Draw all of the locations on the current section
             WebAnnotation.LocationObjRenderer.DrawBackgrounds(listLocationsToDraw, graphicsDevice, basicEffect, overlayEffect, Parent.LumaOverlayLineManager, scene, SectionNumber);
-            
+
+            nextStencilValue++;
+
             //Find the locations on the adjacent sections
             List<LocationCanvasView> RefLocations = new List<LocationCanvasView>();
             if(_Parent.Section.ReferenceSectionBelow != null)
@@ -1156,15 +1158,10 @@ namespace WebAnnotation
             graphicsDevice.BlendState = defaultBlendState;
 
             //Get all the lines to draw
-            List<StructureLinkViewModelBase> VisibleStructureLinks = currentSectionAnnotations.VisibleStructureLinks(Bounds);
+            List<StructureLinkViewModelBase> VisibleStructureLinks = currentSectionAnnotations.VisibleStructureLinks(scene);
             StructureLinkCirclesView.Draw(graphicsDevice, scene, Parent.LumaOverlayLineManager, VisibleStructureLinks.Where(l => l as StructureLinkCirclesView != null).Cast<StructureLinkCirclesView>().ToArray());
             StructureLinkCurvesView.Draw(graphicsDevice, scene, Parent.LumaOverlayLineManager, VisibleStructureLinks.Where(l => l as StructureLinkCurvesView != null).Cast<StructureLinkCurvesView>().ToArray());
-            /*foreach (StructureLinkViewModelBase link in VisibleStructureLinks)
-            {
-                DrawStructureLink(link, ViewProjMatrix, Time);
-            }
-            */
-
+            
             graphicsDevice.BlendState = defaultBlendState;
             
             //Draw text

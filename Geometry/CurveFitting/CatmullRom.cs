@@ -23,16 +23,7 @@ namespace Geometry
             List<GridVector2> cp = new List<GridVector2>(ControlPoints);
             if(closed)
                 PrepareControlPointsForClosedCurve(cp);
-            /*
-            List<GridVector2> output = new List<GridVector2>(cp.Count * NumInterpolations);
-            for(int i = 0; i+3 < cp.Count; i++)
-            {
-                GridVector2[] values = FitCurveSegment(cp[i], cp[i + 1], cp[i + 2], cp[i + 3], NumInterpolations);
-                output.AddRange(values);
-            }
 
-            return output.ToArray();
-            */
             return cp.Where((p, i) => i + 3 < cp.Count).SelectMany((p, i) => FitCurveSegment(cp[i], cp[i + 1], cp[i + 2], cp[i + 3], NumInterpolations)).ToArray();
         }
 

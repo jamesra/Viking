@@ -131,11 +131,13 @@
     <Compile Include="Extensions.cs" />
     <Compile Include="Global.cs" />
     <Compile Include="GlobalPrimitives.cs" />
+    <Compile Include="UI\Commands\AdjustControlPointCommand.cs" />
     <Compile Include="UI\Commands\PlaceOpenCurveCommand.cs" />
     <Compile Include="UI\Commands\TranslateLocationCommand.cs" />
-    <Compile Include="View\CircleLabelInfo.cs" />
     <Compile Include="View\CircleView.cs" />
     <Compile Include="View\LabelView.cs" />
+    <Compile Include="View\LineView.cs" />
+    <Compile Include="View\LinkedLineView.cs" />
     <Compile Include="View\LocationCircleLabelView.cs" />
     <Compile Include="View\LocationActions.cs" />
     <Compile Include="View\LocationCanvasView.cs" />
@@ -250,10 +252,12 @@
     <Compile Include="View\CurveView.cs" />
     <Compile Include="View\AnnotationViewFactory.cs" />
     <Compile Include="View\Location_ContextMenuView.cs" />
+    <Compile Include="View\PolygonView.cs" />
+    <Compile Include="View\PolyLineView.cs" />
     <Compile Include="WeakEvents\NotifyCollectionChangedEventManager.cs" />
     <Compile Include="WeakEvents\NotifyPropertyChangingEventManager.cs" />
     <Compile Include="WeakEvents\NotifyPropertyChangedEventManager.cs" />
-    <Compile Include="ViewModel\OverlappedLocation.cs" />
+    <Compile Include="View\OverlappedLocationView.cs" />
     <Compile Include="ViewModel\Location.cs">
       <SubType>Code</SubType>
     </Compile>
