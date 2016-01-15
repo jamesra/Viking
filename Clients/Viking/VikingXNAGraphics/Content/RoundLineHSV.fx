@@ -131,10 +131,9 @@ float4 MyPSStandard(PS_Input input) : COLOR0
 	float4 LumaColor = tex2D(BackgroundTextureSampler, ((input.ScreenTexCoord.xy) / (RenderTargetSize.xy - 1)));
 
 	float Hue = lineColor.r;
-	float Saturation = lineColor.g;
 	float BackgroundLuma = mul(LumaColor, LumaWeights);
-
-	float Luma = (BackgroundLuma * (1 - AlphaBlend)) + ((AlphaBlend * lineColor.b));  //This should be a greyscale image, so any component will match the value
+	float Saturation = lineColor.g;
+	float Luma = BlendLumaWithBackground(BackgroundLuma, lineColor.b, AlphaBlend);
 
 	float4 hsv = { Hue, Saturation, Luma, lineColor.a };
 	finalColor.rgb = HCLToRGB(hsv);
@@ -206,10 +205,9 @@ PS_Output MyPSAnimatedBidirectional(PS_Input input)
 	float4 LumaColor = tex2D(BackgroundTextureSampler, ((input.ScreenTexCoord.xy) / (RenderTargetSize.xy - 1)));
 
 	float Hue = lineColor.r;
-	float Saturation = lineColor.g;
 	float BackgroundLuma = mul(LumaColor, LumaWeights);
-
-	float Luma = (BackgroundLuma * (1 - AlphaBlend)) + ((AlphaBlend * lineColor.b));  //This should be a greyscale image, so any component will match the value
+	float Saturation = lineColor.g;
+	float Luma = BlendLumaWithBackground(BackgroundLuma, lineColor.b, AlphaBlend);
 
 	float4 hsv = { Hue, Saturation, Luma, lineColor.a };
 	output.Color.rgb = HCLToRGB(hsv);
@@ -246,10 +244,9 @@ PS_Output MyPSAnimatedLinear(PS_Input input)
 	float4 LumaColor = tex2D(BackgroundTextureSampler, ((input.ScreenTexCoord.xy) / (RenderTargetSize.xy - 1)));
 
 	float Hue = lineColor.r;
-	float Saturation = lineColor.g;
 	float BackgroundLuma = mul(LumaColor, LumaWeights);
-
-	float Luma = (BackgroundLuma * (1 - AlphaBlend)) + ((AlphaBlend * lineColor.b));  //This should be a greyscale image, so any component will match the value
+	float Saturation = lineColor.g;
+	float Luma = BlendLumaWithBackground(BackgroundLuma, lineColor.b, AlphaBlend);
 
 	float4 hsv = { Hue, Saturation, Luma, lineColorHSV.a };
 	output.Color.rgb = HCLToRGB(hsv);

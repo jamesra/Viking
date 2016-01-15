@@ -25,6 +25,11 @@ const static float4 InverseComponentLumaWeightsMap[] = {{1/0.30, 1/0.59, 1/0.11,
 												 {1/0.11, 1/0.30, 1/0.59, 1/0.89},
 												 {1/0.30, 1/0.11, 1/0.59, 1/0.70}};
 
+float BlendLumaWithBackground(float BackgroundLuma, float ForegroundLuma, float Alpha)
+{
+	return (BackgroundLuma * (1 - Alpha)) + ((ForegroundLuma * Alpha));
+}
+
 //Convert RGB value to Hue, Chroma, Luma, slope
 float4 RGBToHCL(float4 RGB)
 {
@@ -166,6 +171,6 @@ float4 HCLToRGB(float4 hcls)
 
 	int3 RGBIndex = RGBIndexMap[Hextant]; 
 	
-	float4	output = {Components[RGBIndex[0]], Components[RGBIndex[1]], Components[RGBIndex[2]], 1};
+	float4	output = {Components[RGBIndex[0]], Components[RGBIndex[1]], Components[RGBIndex[2]], hcls [3]};
 	return output;
 }

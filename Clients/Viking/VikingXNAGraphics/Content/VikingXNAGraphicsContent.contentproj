@@ -192,6 +192,13 @@
       <ProcessorParameters_DebugMode>Debug</ProcessorParameters_DebugMode>
     </Compile>
   </ItemGroup>
+  <ItemGroup>
+    <Compile Include="DownArrowV2.png">
+      <Name>DownArrowV2</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+  </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath)\Microsoft\XNA Game Studio\$(XnaFrameworkVersion)\Microsoft.Xna.GameStudio.ContentPipeline.targets" />
   <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
