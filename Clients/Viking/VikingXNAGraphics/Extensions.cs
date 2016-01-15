@@ -81,7 +81,7 @@ namespace VikingXNAGraphics
             return new Microsoft.Xna.Framework.Color((int)color.R,
                                                     (int)color.G,
                                                     (int)color.B,
-                                                    alpha);
+                                                    (int)(alpha * 255.0f));
         }
 
         public static Microsoft.Xna.Framework.Color ToXNAColor(this int color, float alpha)
