@@ -49,6 +49,8 @@ namespace VikingXNA
         private EffectParameter _BorderBlendStartRadius;
         private EffectParameter _BorderBlendStartSquared;
 
+        private EffectParameter _InputLumaAlpha;
+
         public Viewport RenderTargetSize
         {
             set
@@ -78,9 +80,9 @@ namespace VikingXNA
             effect.CurrentTechnique = effect.Techniques["RGBOverBackgroundValueOverlayEffect"];
         }
 
-        public void AnnotateWithCircle(float BorderRatio)
+        public void AnnotateWithCircle(float BorderRatio, float InputLumaAlphaValue)
         {
-          //  _RadiusSquared.SetValue(Radius * Radius);
+            //  _RadiusSquared.SetValue(Radius * Radius);
             /*
             float BorderStartRadiusSquared = (float)0.5 * (1 - BorderRatio);
             BorderStartRadiusSquared *= BorderStartRadiusSquared;
@@ -94,6 +96,7 @@ namespace VikingXNA
             _BorderBlendStartSquared.SetValue(BorderBlendStartRadiusSquared); 
 
             */
+            _InputLumaAlpha.SetValue(InputLumaAlphaValue);
             effect.CurrentTechnique = effect.Techniques["RGBCircleOverBackgroundValueOverlayEffect"]; 
         }
 
@@ -114,6 +117,8 @@ namespace VikingXNA
             _BorderStartSquared = effect.Parameters["borderStartSquared"];
             _BorderBlendStartRadius = effect.Parameters["borderBlendStartRadius"];
             _BorderBlendStartSquared = effect.Parameters["borderBlendStartSquared"];
+
+            _InputLumaAlpha = effect.Parameters["InputLumaAlpha"];
 
             effect.CurrentTechnique = effect.Techniques["RGBOverBackgroundValueOverlayEffect"];
         }
