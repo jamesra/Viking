@@ -28,6 +28,30 @@
 USE TEST
 GO
 
+
+IF OBJECT_ID('vUnlinkedLocations') IS NOT NULL DROP VIEW vUnlinkedLocations
+GO
+IF OBJECT_ID('vLinkedStructures', 'view') IS NOT NULL DROP VIEW vLinkedStructures
+GO
+
+CREATE VIEW vLinkedStructures WITH SCHEMABINDING
+AS
+	select SourceID as ID from dbo.StructureLink
+	 UNION
+	Select TargetID as ID from dbo.StructureLink
+GO
+
+CREATE VIEW vUnlinkedLocations WITH SCHEMABINDING
+AS 
+	-- Locations that are part of a child structure which is not part of a structure link
+	select L.ID as ID, L.ParentID as StructureID, L.MosaicShape as MosaicShape, S.ParentID as StructuresParentID, S.TypeID as TypeID
+			 
+	from dbo.Location L
+		JOIN dbo.Structure S on S.ID = L.ParentID
+		LEFT JOIN dbo.vLinkedStructures vLS ON vLS.ID = S.ID
+		where S.ParentID IS NOT NULL AND vLS.ID IS NULL
+GO
+
 IF OBJECT_ID('vLinkedStructureLocations', 'view') IS NOT NULL DROP VIEW vLinkedStructureLocations
 GO
 
@@ -45,19 +69,6 @@ as
 	join Structure TargetStruct ON TargetStruct.ID = TLoc.ParentID
 GO
 
-IF OBJECT_ID('vUnlinkedLocations') IS NOT NULL DROP VIEW vUnlinkedLocations
-GO
-
-CREATE VIEW vUnlinkedLocations WITH SCHEMABINDING
-AS 
-	-- Locations that are part of a child structure which is not part of a structure link
-	select L.ID, L.ParentID as StructureID, L.MosaicShape as MosaicShape, S.ParentID as StructuresParentID, S.TypeID as TypeID
-			 
-	from Location L
-		JOIN Structure S on S.ID = L.ParentID
-		where S.ParentID IS NOT NULL AND S.ID not in ((select SourceID from StructureLink) UNION (Select TargetID from StructureLink))
-
-GO
 
 IF OBJECT_ID ('dbo.vNearestParentStructureLocation', 'view') IS NOT NULL
 	DROP VIEW vNearestParentStructureLocation
@@ -77,9 +88,6 @@ AS
 	WHERE L.MosaicShape.STDistance(PL.MosaicShape) = D.MinDistance 
 
 GO
-
-CREATE UNIQUE CLUSTERED INDEX IDX_vNearestParentStructureLocation_ChildLocationID 
-	ON vNearestParentStructureLocation (ChildLocationID)
 
 IF OBJECT_ID('vLinkedLocationWithoutSectionPartner', 'view') IS NOT NULL DROP VIEW vLinkedLocationWithoutSectionPartner
 GO
@@ -122,32 +130,31 @@ as
 GO
 
 --Create a temp table to store all of the new shapes for affected locations
-IF OBJECT_ID('tempdb..#LinkedStructureLocationsLines') IS NOT NULL DROP TABLE #LinkedStructureLocationsLines
+IF OBJECT_ID('tempdb..#LocationLines') IS NOT NULL DROP TABLE #LocationLines
 
-CREATE TABLE #LocationLines(x INT PRIMARY KEY, TypeCode INT, MosaicShape geometry)
-
+CREATE TABLE #LocationLines(ID INT PRIMARY KEY, TypeCode INT, UpdatedShape geometry)
 
 
 --------------------------- Perpendicular lines for unlinked locations (RIBBON) update -----------------------------
 
-update L SET TypeCode = 5, 
-					MosaicShape = dbo.ufnLineFromAngleAndDistance(dbo.ufnAngleBetweenShapes(Ribbon.MosaicShape, Parent.MosaicShape),
-									   Ribbon.Radius * 2,
-									   Ribbon.MosaicShape.STCentroid())
+INSERT into #LocationLines (ID, UpdatedShape, TypeCode) 
+Select L.ID,
+	   dbo.ufnParallelLineThroughCircle(Ribbon.MosaicShape, Parent.MosaicShape) as UpdatedShape,
+	   5 as TypeCode
 	FROM Location L
 		JOIN vUnlinkedLocations UL ON UL.ID = L.ID
-		JOIN vNearestParentStructureLocation NP ON UL.ID = NP.ChildLocationID
+		JOIN vNearestParentStructureLocation NP ON L.ID = NP.ChildLocationID
 		JOIN Location Ribbon ON Ribbon.ID = NP.ChildLocationID
 		JOIN Location Parent ON Parent.ID = NP.ParentLocationID
-	 where UL.TypeID = 73 AND L.TypeCode = 1 AND Ribbon.MosaicShape.STDimension() > 1 and Parent.MosaicShape.STDimension() > 1
+	 where UL.TypeID = 73 AND L.TypeCode = 1 -- AND Ribbon.MosaicShape.STDimension() > 1 and Parent.MosaicShape.STDimension() > 1
 
 GO
 --------------------------- Parallel lines for unlinked locations (Gap Junction & PSD) update -----------------------------
 
-update L SET TypeCode = 5, 
-					MosaicShape = dbo.ufnLineFromAngleAndDistance(dbo.ufnAngleBetweenShapes(Ribbon.MosaicShape, Parent.MosaicShape) + PI() / 2.0,
-									   Ribbon.Radius * 2,
-									   Ribbon.MosaicShape.STCentroid())
+INSERT into #LocationLines (ID, UpdatedShape, TypeCode) 
+Select L.ID, 
+	   dbo.ufnPerpendicularLineThroughCircle(Ribbon.MosaicShape, Parent.MosaicShape) as UpdatedShape,
+	   5 as TypeCode
 	FROM Location L
 		JOIN vUnlinkedLocations UL ON UL.ID = L.ID
 		JOIN vNearestParentStructureLocation NP ON UL.ID = NP.ChildLocationID
@@ -159,7 +166,7 @@ update L SET TypeCode = 5,
 				 UL.TypeID = 240 OR -- Plaque-like Pre
 				 UL.TypeID = 241 OR -- Plaque-line Post
 				 UL.TypeID = 85 ) --Adherens
-			AND L.TypeCode = 1 AND Ribbon.MosaicShape.STDimension() > 1 and Parent.MosaicShape.STDimension() > 1
+			AND L.TypeCode = 1 --AND Ribbon.MosaicShape.STDimension() > 1 and Parent.MosaicShape.STDimension() > 1
 
 GO
 
@@ -169,10 +176,10 @@ GO
 
 ---------------------------  Perpendicular lines for linked locations without a partner on the section (RIBBON) update -----------------------------
 
-update L SET TypeCode = 5, 
-					MosaicShape = dbo.ufnLineFromAngleAndDistance(dbo.ufnAngleBetweenShapes(Ribbon.MosaicShape, Parent.MosaicShape),
-									   Ribbon.Radius * 2,
-									   Ribbon.MosaicShape.STCentroid())
+INSERT into #LocationLines (ID, UpdatedShape, TypeCode) 
+Select L.ID, 
+	   dbo.ufnParallelLineThroughCircle(Ribbon.MosaicShape, Parent.MosaicShape) as UpdatedShape,
+	   5 as TypeCode
 	FROM Location L
 		JOIN vLinkedLocationWithoutSectionPartner UL ON UL.ID = L.ID
 		JOIN vNearestParentStructureLocation NP ON UL.ID = NP.ChildLocationID
@@ -183,10 +190,10 @@ update L SET TypeCode = 5,
 GO
 ---------------------------  Perpendicular lines for linked locations without a partner on the section (Gap Junction & PSD) update -----------------------------
 
-update L SET TypeCode = 5, 
-					MosaicShape = dbo.ufnLineFromAngleAndDistance(dbo.ufnAngleBetweenShapes(Ribbon.MosaicShape, Parent.MosaicShape) + PI() / 2.0,
-									   Ribbon.Radius * 2,
-									   Ribbon.MosaicShape.STCentroid())
+INSERT into #LocationLines (ID, UpdatedShape, TypeCode) 
+Select L.ID, 
+	   dbo.ufnPerpendicularLineThroughCircle(Ribbon.MosaicShape, Parent.MosaicShape) as UpdatedShape,
+	   5 as TypeCode
 	FROM Location L
 		JOIN vLinkedLocationWithoutSectionPartner UL ON UL.ID = L.ID
 		JOIN vNearestParentStructureLocation NP ON UL.ID = NP.ChildLocationID
@@ -199,5 +206,64 @@ update L SET TypeCode = 5,
 				 UL.TypeID = 241 OR -- Plaque-line Post
 				 UL.TypeID = 85 ) --Adherens
 			AND L.TypeCode = 1 AND Ribbon.MosaicShape.STDimension() > 1 and Parent.MosaicShape.STDimension() > 1
+
+GO
+
+----------------------
+--Map linked locations
+----------------------
+
+INSERT into #LocationLines (ID, UpdatedShape, TypeCode) 
+Select vLSL.SourceLocID as ID, 
+	   case 
+		when vLSL.SourceTypeID = 73 then
+			--Ribbon 
+			dbo.ufnPerpendicularLineForLinkedShapes(SL.MosaicShape, TL.MosaicShape)
+		ELSE 			
+			dbo.ufnParallelLineForLinkedShapes(SL.MosaicShape, TL.MosaicShape)
+		END as UpdatedShape,
+		5 as TypeCode 
+from vLinkedStructureLocations vLSL
+INNER JOIN (select SourceLocID, count(TargetLocID) as NumPairs
+			from vLinkedStructureLocations
+			group by SourceLocID
+			) SPairCount ON SPairCount.SourceLocID = vLSL.SourceLocID
+INNER JOIN (select TargetLocID, count(SourceLocID) as NumPairs
+			from vLinkedStructureLocations
+			group by TargetLocID
+			) TPairCount ON TPairCount.TargetLocID = vLSL.TargetLocID
+INNER JOIN Location SL ON SL.ID = SPairCount.SourceLocID
+INNER JOIN Location TL ON TL.ID = TPairCount.TargetLocID
+WHERE TPairCount.NumPairs = 1 AND SPairCount.NumPairs = 1 AND SL.TypeCode = 1
+		
+GO
+
+--Collect all cases of targets that get input from a single source, even if that source inputs to multiple targets
+INSERT into #LocationLines (ID, UpdatedShape, TypeCode) 
+Select vLSL.TargetLocID as ID, 
+	dbo.ufnParallelLineForLinkedShapes(TL.MosaicShape, SL.MosaicShape) as UpdatedShape,
+	5 as TypeCode 
+from vLinkedStructureLocations vLSL
+INNER JOIN (select SourceLocID, count(TargetLocID) as NumPairs
+			from vLinkedStructureLocations
+			group by SourceLocID
+			) SPairCount ON SPairCount.SourceLocID = vLSL.SourceLocID
+INNER JOIN (select TargetLocID, count(SourceLocID) as NumPairs
+			from vLinkedStructureLocations
+			group by TargetLocID
+			) TPairCount ON TPairCount.TargetLocID = vLSL.TargetLocID
+INNER JOIN Location SL ON SL.ID = SPairCount.SourceLocID
+INNER JOIN Location TL ON TL.ID = TPairCount.TargetLocID
+WHERE TPairCount.NumPairs = 1 AND SL.TypeCode = 1
+
+GO
+		
+select * from #LocationLines
+
+/*
+UPDATE L SET MosaicShape = LSLL.UpdatedShape, TypeCode = LSLL.TypeCode
+from Location L
+INNER JOIN #LocationLines LSLL ON LSLL.ID = L.ID
+ */
 
 GO
