@@ -5,8 +5,8 @@ IF OBJECT_ID('tempdb..#PairDistance') IS NOT NULL DROP TABLE #PairDistance
 IF OBJECT_ID('tempdb..#NearestPartner') IS NOT NULL DROP TABLE #NearestPartner
 IF OBJECT_ID('tempdb..#PairsToDelete') IS NOT NULL DROP TABLE #PairsToDelete
 
-select S.ID as SID, S.ParentID as SParentID, S.Radius as SRadius, S.MosaicShape as SMosaicShape, S.Z as SZ,
-	   T.ID as TID, T.ParentID as TParentID, T.Radius as TRadius, T.MosaicShape as TMosaicShape, T.Z as TZ ,
+select S.ID as SID, S.ParentID as SParentID, S.MosaicShape as SMosaicShape, S.Z as Z,
+	   T.ID as TID, T.ParentID as TParentID, T.MosaicShape as TMosaicShape,
 	   S.MosaicShape.STDimension() as Dimension,
 	    case 
 			when S.MosaicShape.STDimension() = 2 then
@@ -18,7 +18,7 @@ select S.ID as SID, S.ParentID as SParentID, S.Radius as SRadius, S.MosaicShape 
 			end
 		as Line
 INTO #StructureLinks
-from Location S 
+from Location S
 join StructureLink L ON L.SourceID = S.ParentID
 join Location T      ON L.TargetID = T.ParentID AND T.Z = S.Z
 --where S.ParentID = 1452 OR S.ParentID = 1468 OR S.ParentID = 1746 OR S.ParentID = 1338 OR S.ParentID = 862
@@ -30,9 +30,16 @@ GO
 
 --Count the cases where we have two locations for the same structure on the same Z section that create extra fake contact patches.
 --NOTE: This code breaks if the Synapse overlaps with BOTH PSD pairs.  There's no fixing it.  Just ensure the synapse only overlaps with the correct PSD and not the more distant one.
-select SParentID, TParentID, SZ, NumPairs into #ExtraStructureLinks from (Select SParentID, TParentID, SZ, Count(SParentID) as NumPairs from #StructureLinks group by SParentID, TParentID, SZ) as ExtraStructureLinks where NumPairs > 1 order by SParentID
+select SParentID, TParentID, Z, NumPairs
+into #ExtraStructureLinks
+from (Select SParentID, TParentID, Z, Count(SParentID) as NumPairs
+	  from #StructureLinks
+	  group by SParentID, TParentID, Z) as ExtraStructureLinks
+where NumPairs > 1 order by SParentID
 
-select SL.SID, SL.TID, SMosaicShape.STDistance(TMosaicShape) as Distance into #PairDistance from #StructureLinks SL
+select SL.SID, SL.TID, SMosaicShape.STDistance(TMosaicShape) as Distance
+into #PairDistance
+from #StructureLinks SL
 inner join #ExtraStructureLinks EL ON SL.SParentID = EL.SParentID AND SL.TParentID = EL.TParentID AND SL.SZ = EL.SZ
 
 select SL.SID, MIN(PD.Distance) as NearestPartnerDistance into #NearestPartner from #StructureLinks SL

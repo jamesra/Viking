@@ -43,3 +43,7 @@ ELSE
 	Select ll.* from LocationLink ll JOIN #LocationsInBounds sl ON (sl.ID = ll.A)
 	UNION
 	Select ll.* from LocationLink ll JOIN #LocationsInBounds sl ON (sl.ID = ll.B)
+
+	
+
+--------------------------------------------
