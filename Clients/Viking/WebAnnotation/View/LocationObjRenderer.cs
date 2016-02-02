@@ -248,11 +248,18 @@ namespace WebAnnotation
             if (listToDraw.Count == 0)
                 return;
 
-            int DepthStencilValue = DeviceStateManager.GetDepthStencilValue(graphicsDevice);
+            int NumDepths = listToDraw.Max(l => l.ParentDepth);
+            int DepthStencilStepSize = 10;
 
-            var depthGroups = listToDraw.GroupBy(l => l.ParentDepth); 
+            int StartingDepthStencilValue = DeviceStateManager.GetDepthStencilValue(graphicsDevice);
+            int EndingDepthStencilValue = StartingDepthStencilValue + (DepthStencilStepSize * NumDepths);
+            int DepthStencilValue = EndingDepthStencilValue;
+            
+            DeviceStateManager.SetDepthStencilValue(graphicsDevice, DepthStencilValue);
+
+            var depthGroups = listToDraw.GroupBy(l => l.ParentDepth).OrderBy(l => l.Key).Reverse(); 
             foreach(var depthGroup in depthGroups)
-            {
+            { 
                 var typeGroups = depthGroup.GroupBy(l => l.GetType());
                 foreach (var typeGroup in typeGroups)
                 {
@@ -286,12 +293,14 @@ namespace WebAnnotation
                     }
                 }
 
-                DepthStencilValue += 5;
+                DepthStencilValue -= DepthStencilStepSize;
 
                 graphicsDevice.Clear(ClearOptions.DepthBuffer, Microsoft.Xna.Framework.Color.Black, float.MaxValue, 0);
 
                 DeviceStateManager.SetDepthStencilValue(graphicsDevice, DepthStencilValue);
-            }  
+            }
+
+            DeviceStateManager.SetDepthStencilValue(graphicsDevice, EndingDepthStencilValue + 1);
         }
         
 

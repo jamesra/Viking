@@ -1083,7 +1083,7 @@ namespace WebAnnotation
             float Time = (float)TimeSpan.FromTicks(DateTime.Now.Ticks - DateTime.Today.Ticks).TotalSeconds;
             //            Debug.WriteLine("Time: " + Time.ToString()); 
 
-            nextStencilValue++;
+            nextStencilValue = DeviceStateManager.GetDepthStencilValue(graphicsDevice) + 1;
             DeviceStateManager.SetDepthStencilValue(graphicsDevice, nextStencilValue);
             
             //Get all the lines to draw first so the text and geometric shapes are over top of them
@@ -1095,7 +1095,7 @@ namespace WebAnnotation
 
             graphicsDevice.Clear(ClearOptions.DepthBuffer, Color.Black, float.MaxValue, 0);
 
-            nextStencilValue++;
+            nextStencilValue = DeviceStateManager.GetDepthStencilValue(graphicsDevice) + 1;
             DeviceStateManager.SetDepthStencilValue(graphicsDevice, nextStencilValue);
 
             ICollection<LocationCanvasView> Locations = currentSectionAnnotations.GetLocations(scene.VisibleWorldBounds);
@@ -1104,7 +1104,7 @@ namespace WebAnnotation
             //Draw all of the locations on the current section
             WebAnnotation.LocationObjRenderer.DrawBackgrounds(listLocationsToDraw, graphicsDevice, basicEffect, overlayEffect, Parent.LumaOverlayLineManager, scene, SectionNumber);
 
-            nextStencilValue++;
+            nextStencilValue = DeviceStateManager.GetDepthStencilValue(graphicsDevice) + 1;
 
             //Find the locations on the adjacent sections
             List<LocationCanvasView> RefLocations = new List<LocationCanvasView>();
@@ -1128,14 +1128,14 @@ namespace WebAnnotation
             listVisibleNonOverlappingLocationsOnAdjacentSections = RemoveOverlappingLocations(listLocationsToDraw, listVisibleNonOverlappingLocationsOnAdjacentSections,
                                                                                                                     _Parent.Section.Number);
 
-            nextStencilValue++;
+            nextStencilValue = DeviceStateManager.GetDepthStencilValue(graphicsDevice) + 1;
             DeviceStateManager.SetDepthStencilValue(graphicsDevice, nextStencilValue);
 
             graphicsDevice.Clear(ClearOptions.DepthBuffer, Color.Black, float.MaxValue, 0);
             
             WebAnnotation.LocationObjRenderer.DrawBackgrounds(listVisibleNonOverlappingLocationsOnAdjacentSections, graphicsDevice, basicEffect, overlayEffect, Parent.LumaOverlayLineManager, scene, SectionNumber);
 
-            nextStencilValue++;
+            nextStencilValue = DeviceStateManager.GetDepthStencilValue(graphicsDevice) + 1;
             DeviceStateManager.SetDepthStencilValue(graphicsDevice, nextStencilValue);
 
             graphicsDevice.Clear(ClearOptions.DepthBuffer, Color.Black, float.MaxValue, 0);
@@ -1319,6 +1319,10 @@ namespace WebAnnotation
                 return;
             if (!locB.VolumePositionHasBeenCalculated)
                 return;
+
+            //Don't draw links for line style locations.
+            if (!(locA.TypeCode == LocationType.CIRCLE && locB.TypeCode == LocationType.CIRCLE))
+                return; 
 
             //Don't draw if the link falls within the radius of the location we are drawing
             if (link.LinksOverlap(Parent.Section.Number))

@@ -103,7 +103,6 @@ namespace WebAnnotation.View
                     return new StructureLinkCirclesView(linkObj, sourceLoc, targetLoc);
                 case LocationType.OPENCURVE:
                     StructureLinkCurvesView view = new StructureLinkCurvesView(linkObj, sourceLoc, targetLoc);
-                    view.color = new Microsoft.Xna.Framework.Color(1f, 1f, 1f, 0.5f);
                     return view;
                 case LocationType.POLYLINE:
                     return new StructureLinkCurvesView(linkObj, sourceLoc, targetLoc);

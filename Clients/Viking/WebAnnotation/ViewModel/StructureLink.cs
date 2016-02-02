@@ -395,7 +395,7 @@ namespace WebAnnotation.ViewModel
         public static Microsoft.Xna.Framework.Color DefaultColor = new Microsoft.Xna.Framework.Color((byte)(255),
                 (byte)(255),
                 (byte)(255),
-                (byte)(128));
+                (byte)(192));
 
         public StructureLinkCurvesView(StructureLinkObj linkObj,
                              LocationObj sourceLoc,
@@ -450,7 +450,7 @@ namespace WebAnnotation.ViewModel
 
         protected override void CreateView(StructureLinkObj link, LocationObj source, LocationObj target)
         {
-            lineView = new LinkedPolyLineSimpleView(source.VolumeShape.ToPoints(), target.VolumeShape.ToPoints(), DefaultLineWidth, Color.White, link.Bidirectional ? LineStyle.AnimatedBidirectional : LineStyle.AnimatedLinear);          
+            lineView = new LinkedPolyLineSimpleView(source.VolumeShape.ToPoints(), target.VolumeShape.ToPoints(), DefaultLineWidth, DefaultColor, link.Bidirectional ? LineStyle.AnimatedBidirectional : LineStyle.AnimatedLinear);          
         }
 
         public static void Draw(GraphicsDevice device,

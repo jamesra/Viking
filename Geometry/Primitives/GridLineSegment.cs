@@ -28,6 +28,25 @@ namespace Geometry
             }
         }
 
+        /// <summary>
+        /// Create an array of grid line segments connecting the array of points in order
+        /// </summary>
+        /// <param name="points"></param>
+        /// <returns></returns>
+        public static GridLineSegment[] SegmentsFromPoints(GridVector2[] points)
+        {
+            if (points.Length < 2)
+                throw new ArgumentException("Not enough points to create GridLineSegment array");
+             
+            GridLineSegment[] segs = new GridLineSegment[points.Length - 1];
+            for (int i = 0; i < points.Length - 1; i++)
+            {
+                segs[i] = new GridLineSegment(points[i], points[i + 1]);
+            }
+
+            return segs;
+        }
+
         public override string ToString()
         {
             if(MinX == A.X)

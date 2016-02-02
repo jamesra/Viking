@@ -39,7 +39,7 @@ namespace WebAnnotation.View
                     _ControlPoints.RemoveAt(_ControlPoints.Count - 1);
 
                 CurvePoints = CalculateCurvePoints(this.ControlPoints, this.NumInterpolations, this.TryCloseCurve);
-                this.ControlPointViews = CreateControlPointViews(this.ControlPoints, this.LineWidth, this.Color, null);
+                this.ControlPointViews = CreateControlPointViews(this.ControlPoints, this.LineWidth / 2.0, this.Color, null);
                 this.CurveLineViews = CreateCurveLineViews(this.CurvePoints.ToArray(), this.LineWidth, this.Color);
             }
         }
@@ -48,7 +48,7 @@ namespace WebAnnotation.View
         {
             _ControlPoints[i] = value;
             CurvePoints = CalculateCurvePoints(this.ControlPoints, this.NumInterpolations, this.TryCloseCurve);
-            this.ControlPointViews = CreateControlPointViews(this.ControlPoints, this.LineWidth, this.Color, null);
+            this.ControlPointViews = CreateControlPointViews(this.ControlPoints, this.LineWidth / 2.0, this.Color, null);
             this.CurveLineViews = CreateCurveLineViews(this.CurvePoints.ToArray(), this.LineWidth, this.Color);
         }
                 

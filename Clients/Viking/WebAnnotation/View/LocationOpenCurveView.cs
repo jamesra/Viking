@@ -25,7 +25,7 @@ namespace WebAnnotation.View
 
         public LocationOpenCurveView(LocationObj obj) : base(obj)
         {
-            curveView = new CurveView(obj.VolumeShape.ToPoints(), obj.Parent.Type.Color.ToXNAColor(0.5f), false);
+            curveView = new CurveView(obj.VolumeShape.ToPoints(), obj.Parent.Type.Color.ToXNAColor(0.5f), false, lineWidth: obj.Radius * 2.0);
         }
         
         private GridVector2[] _MosaicControlPoints;
@@ -63,7 +63,7 @@ namespace WebAnnotation.View
             {
                 if (_RenderedVolumeShape == null)
                 {
-                    _RenderedVolumeShape = this.VolumeCurveControlPoints.ToPolyLine().STBuffer(this.Width);
+                    _RenderedVolumeShape = this.VolumeCurveControlPoints.ToPolyLine().STBuffer(this.Width / 2.0);
                 }
 
                 return _RenderedVolumeShape;

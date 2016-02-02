@@ -29,7 +29,7 @@ namespace WebAnnotation.UI.Commands
         {
             Loc = selectedObj;
             OriginalControlPoints = selectedObj.VolumeShape.ToPoints();
-            CreateView(OriginalControlPoints, selectedObj.Parent.Type.Color.ToXNAColor().ConvertToHSL(0.5f), IsClosedCurve(selectedObj));
+            CreateView(OriginalControlPoints, selectedObj.Parent.Type.Color.ToXNAColor().ConvertToHSL(0.5f), Loc.Radius * 2.0, IsClosedCurve(selectedObj));
             this.success_callback = success_callback;
         }
         
@@ -38,9 +38,9 @@ namespace WebAnnotation.UI.Commands
             return loc.TypeCode == LocationType.CLOSEDCURVE;
         }
 
-        private void CreateView(GridVector2[] ControlPoints, Microsoft.Xna.Framework.Color color, bool IsClosed)
+        private void CreateView(GridVector2[] ControlPoints, Microsoft.Xna.Framework.Color color, double LineWidth, bool IsClosed)
         {
-            curveView = new CurveView(ControlPoints.ToList(), color, false);
+            curveView = new CurveView(ControlPoints.ToList(), color, false, lineWidth: LineWidth);
             curveView.TryCloseCurve = IsClosed;
         }
 

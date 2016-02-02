@@ -63,7 +63,7 @@ namespace WebAnnotation.View
             {
                 if (_RenderedVolumeShape == null)
                 {
-                    _RenderedVolumeShape = this.VolumeCurveControlPoints.ToPolyLine().STBuffer(this.Width);                    
+                    _RenderedVolumeShape = this.VolumeCurveControlPoints.ToPolyLine().STBuffer(this.Width / 2.0);                    
                 }
 
                 return _RenderedVolumeShape;

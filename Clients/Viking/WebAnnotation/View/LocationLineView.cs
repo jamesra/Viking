@@ -112,12 +112,14 @@ namespace WebAnnotation.View
         public override double Distance(GridVector2 Position)
         {
             return this.RenderedVolumeShape.Distance(Position);
-        }
+        } 
 
         public override double DistanceFromCenterNormalized(GridVector2 Position)
         {
             //TODO: Find a more accurate measurement.  Returning 0 means the line is always on top in selection.
-            return 0;
+            GridLineSegment[] segs = GridLineSegment.SegmentsFromPoints(this.VolumeControlPoints);
+            double MinDistance = segs.Min(l => l.DistanceToPoint(Position));
+            return (MinDistance - (this.Width / 2.0));
         }
 
         protected override void OnObjPropertyChanged(object o, PropertyChangedEventArgs args)
@@ -152,7 +154,7 @@ namespace WebAnnotation.View
 
 
                 //Find distance to nearest control point
-                if (this.VolumeControlPoints.Select(p => GridVector2.Distance(WorldPosition, p) < this.Width).Any(b => b == true))
+                if (this.VolumeControlPoints.Select(p => GridVector2.Distance(WorldPosition, p) < this.Width / 2.0).Any(b => b == true))
                     if ((System.Windows.Forms.Control.ModifierKeys & System.Windows.Forms.Keys.Shift) != 0)
                         return LocationAction.TRANSLATE;
                     else
@@ -188,7 +190,7 @@ namespace WebAnnotation.View
             {
                 if (_RenderedVolumeShape == null)
                 {
-                    _RenderedVolumeShape = this.VolumeShape.STBuffer(this.Width);
+                    _RenderedVolumeShape = this.VolumeShape.STBuffer(this.Width / 2.0);
                     //_RenderedVolumeShape = this.modelObj.VolumeShape.STBuffer(this.Width);
                 }
 
