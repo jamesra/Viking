@@ -29,9 +29,9 @@ namespace WebAnnotation
 
     public static class AnnotationExtensions
     {
-        public static WebAnnotationModel.LocationType GetLocationType(this connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd.CreateStructureCommandAction command)
+        private static WebAnnotationModel.LocationType StringToLocationType(string annotationType)
         {
-            switch(command.AnnotationType)
+            switch (annotationType)
             {
                 case "Circle":
                     return WebAnnotationModel.LocationType.CIRCLE;
@@ -51,7 +51,17 @@ namespace WebAnnotation
                     return WebAnnotationModel.LocationType.CIRCLE;
             }
 
-            throw new ArgumentException("Unknown annotation type " + command.AnnotationType.ToString());
+            throw new ArgumentException("Unknown annotation type " + annotationType);
+        }
+
+        public static WebAnnotationModel.LocationType GetLocationType(this connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd.CreateStructureCommandAction command)
+        {
+            return StringToLocationType(command.AnnotationType);
+        }
+
+        public static WebAnnotationModel.LocationType GetLocationType(this connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd.ChangeLocationAnnotationTypeAction command)
+        {
+            return StringToLocationType(command.AnnotationType);
         }
     }
 
@@ -75,8 +85,6 @@ namespace WebAnnotation
         public static RTree.Rectangle ToRTreeRect(this GridVector2 p, int Z)
         {
             return new RTree.Rectangle((float)p.X, (float)p.Y, (float)p.X, (float)p.Y, (float)Z, (float)Z);
-        }
-
-       
-    }
+        } 
+    } 
 }

@@ -189,7 +189,7 @@ namespace WebAnnotation.View
 
             foreach (GridVector2 cp in ControlPoints)
             {
-                GlobalPrimitives.DrawCircle(device, basicEffect, cp, LineWidth, pointColor);
+                GlobalPrimitives.DrawCircle(device, basicEffect, cp, LineWidth / 2.0, pointColor);
             }
 
             GlobalPrimitives.DrawPolyline(LineManager, basicEffect, CurvePoints, LineWidth, Color);

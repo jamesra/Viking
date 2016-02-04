@@ -15,13 +15,12 @@ namespace WebAnnotation.UI.Commands
 {
     class TranslateCurveLocationCommand : TranslateLocationCommand
     {
-
         CurveView curveView;
         GridVector2[] OriginalControlPoints;
         GridVector2 OriginalPosition;
         GridVector2 DeltaSum = new GridVector2(0, 0);
 
-        public delegate void OnCommandSuccess(LocationObj loc, GridVector2[] VolumeControlPoints, GridVector2[] MosaicControlPoints);
+        public delegate void OnCommandSuccess(GridVector2[] VolumeControlPoints, GridVector2[] MosaicControlPoints);
         OnCommandSuccess success_callback;
 
         protected override GridVector2 TranslatedPosition
@@ -33,18 +32,17 @@ namespace WebAnnotation.UI.Commands
         }
 
         public TranslateCurveLocationCommand(Viking.UI.Controls.SectionViewerControl parent,
-                                        LocationObj selectedObj,
-                                        OnCommandSuccess success_callback) : base(parent, selectedObj)
+                                        GridVector2 OriginalPosition, 
+                                        GridVector2[] OriginalControlPoints,
+                                        Microsoft.Xna.Framework.Color color,
+                                        double LineWidth,
+                                        bool IsClosedCurve,
+                                        OnCommandSuccess success_callback) : base(parent)
         {
-            OriginalPosition = selectedObj.VolumeShape.Centroid();
-            OriginalControlPoints = selectedObj.VolumeShape.ToPoints();
-            CreateView(OriginalControlPoints, selectedObj.Parent.Type.Color.ToXNAColor().ConvertToHSL(0.5f), selectedObj.Radius * 2.0, IsClosedCurve(selectedObj));
+            this.OriginalPosition = OriginalPosition;
+            this.OriginalControlPoints = OriginalControlPoints;
+            CreateView(OriginalControlPoints, color.ConvertToHSL(0.5f), LineWidth, IsClosedCurve);
             this.success_callback = success_callback;
-        }
-
-        private static bool IsClosedCurve(LocationObj loc)
-        {
-            return loc.TypeCode == LocationType.CLOSEDCURVE;
         }
 
         private void CreateView(GridVector2[] ControlPoints, Microsoft.Xna.Framework.Color color, double LineWidth, bool IsClosed)
@@ -76,23 +74,12 @@ namespace WebAnnotation.UI.Commands
                     return;
                 }
 
-                this.success_callback(Loc, TranslatedOriginalControlPoints, MosaicControlPoints);
+                this.success_callback(TranslatedOriginalControlPoints, MosaicControlPoints);
             }
 
             base.Execute();
         }
 
-        public static void DefaultSuccessCallback(LocationObj loc, GridVector2[] VolumeControlPoints, GridVector2[] MosaicControlPoints)
-        {
-            DefaultSuccessNoSaveCallback(loc, VolumeControlPoints, MosaicControlPoints);
-            Store.Locations.Save();
-        }
-
-        public static void DefaultSuccessNoSaveCallback(LocationObj loc, GridVector2[] VolumeControlPoints, GridVector2[] MosaicControlPoints)
-        {
-            loc.MosaicShape = SqlGeometryUtils.GeometryExtensions.ToGeometry(loc.MosaicShape.STGeometryType(), MosaicControlPoints);
-            loc.VolumeShape = SqlGeometryUtils.GeometryExtensions.ToGeometry(loc.VolumeShape.STGeometryType(), VolumeControlPoints);
-        }
 
         public override void OnDraw(Microsoft.Xna.Framework.Graphics.GraphicsDevice graphicsDevice,
                                     VikingXNA.Scene scene,
@@ -105,10 +92,9 @@ namespace WebAnnotation.UI.Commands
     class TranslateCircleLocationCommand : TranslateLocationCommand
     {
         CircleView circleView;
-        Microsoft.Xna.Framework.Color color;
-        GridVector2 OriginalPosition;
+        GridCircle OriginalCircle;
 
-        public delegate void OnCommandSuccess(LocationObj loc, GridVector2 VolumePosition, GridVector2 MosaicPosition);
+        public delegate void OnCommandSuccess(GridVector2 VolumePosition, GridVector2 MosaicPosition);
         OnCommandSuccess success_callback;
 
         protected override GridVector2 TranslatedPosition
@@ -120,11 +106,12 @@ namespace WebAnnotation.UI.Commands
         }
 
         public TranslateCircleLocationCommand(Viking.UI.Controls.SectionViewerControl parent,
-                                        LocationObj selectedObj,
-                                        OnCommandSuccess success_callback) : base(parent, selectedObj)
+                                        GridCircle circle,
+                                        Microsoft.Xna.Framework.Color color,
+                                        OnCommandSuccess success_callback) : base(parent)
         {
-            CreateView(selectedObj.VolumePosition, selectedObj.Radius, selectedObj.Parent.Type.Color.ToXNAColor(192.0f));
-            OriginalPosition = selectedObj.VolumePosition;
+            CreateView(circle.Center, circle.Radius, color);
+            OriginalCircle = circle;
             this.success_callback = success_callback;
         }
 
@@ -149,7 +136,7 @@ namespace WebAnnotation.UI.Commands
                     return;
                 }
 
-                this.success_callback(Loc, this.TranslatedPosition, MosaicPosition);
+                this.success_callback(this.TranslatedPosition, MosaicPosition);
             } 
 
             base.Execute();
@@ -182,9 +169,7 @@ namespace WebAnnotation.UI.Commands
     }
 
     abstract class TranslateLocationCommand : AnnotationCommandBase
-    {
-        protected LocationObj Loc; 
-         
+    {         
         /// <summary>
         /// Translated position in volume space
         /// </summary>
@@ -193,10 +178,8 @@ namespace WebAnnotation.UI.Commands
              get;
         }
 
-        public TranslateLocationCommand(Viking.UI.Controls.SectionViewerControl parent,
-                                        LocationObj selectedObj) : base(parent)
+        public TranslateLocationCommand(Viking.UI.Controls.SectionViewerControl parent) : base(parent)
         {
-            Loc = selectedObj; 
         }
 
         protected abstract void UpdateViewPosition(GridVector2 PositionDelta);

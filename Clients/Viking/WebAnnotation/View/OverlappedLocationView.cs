@@ -109,9 +109,19 @@ namespace WebAnnotation.View
             label.Draw(spriteBatch, font, scene, MagnificationFactor);
         }
 
-        public override LocationAction GetActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber)
+        public override LocationAction GetMouseClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber)
         {
             return LocationAction.CREATELINK;
+        }
+
+        public override LocationAction GetMouseShiftClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber)
+        {
+            return LocationAction.NONE;
+        }
+
+        public override LocationAction GetMouseControlClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber)
+        {
+            return LocationAction.NONE;
         }
 
         public ContextMenu ContextMenu

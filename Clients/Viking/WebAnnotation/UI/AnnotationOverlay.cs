@@ -41,6 +41,7 @@ namespace WebAnnotation
         public static AnnotationOverlay CurrentOverlay { get { return _CurrentOverlay;}}
 
         GridVector2 LastMouseDownCoords;
+        GridVector2 LastMouseMoveVolumeCoords;
 
         /// <summary>
         /// The last object the mouse was over, if any
@@ -333,17 +334,28 @@ namespace WebAnnotation
             LoadSectionAnnotations();
         }
 
-        protected void SetCursorForMouseOverObject(Location_ViewModelBase location)
+        protected void UpdateMouseCursor()
         {
-            if (location == null)
+            LocationCanvasView loc = LastMouseOverObject as LocationCanvasView; // GetNearestLocation(WorldPosition, out distance);
+            if (loc != null)
+            {
+                LocationAction action;
+                GridVector2 WorldPosition = this.LastMouseMoveVolumeCoords;
+                if (Control.ModifierKeys == Keys.Shift)
+                    action = loc.GetMouseShiftClickActionForPositionOnAnnotation(WorldPosition, this.CurrentSectionNumber);
+                else if (Control.ModifierKeys == Keys.Control)
+                    action = loc.GetMouseControlClickActionForPositionOnAnnotation(WorldPosition, this.CurrentSectionNumber);
+                else
+                    action = loc.GetMouseClickActionForPositionOnAnnotation(WorldPosition, this.CurrentSectionNumber);
+
+                _Parent.Cursor = action.GetCursor();
+            }
+            else
+            {
                 _Parent.Cursor = Cursors.Default;
-
-            OverlappedLocationView overlapLoc = LastMouseOverObject as OverlappedLocationView;
-            _Parent.Cursor = overlapLoc != null ? Cursors.Cross : Cursors.Default;
-
-            return;
+            }
         }
-         
+                 
         protected void OnMouseMove(object sender, MouseEventArgs e)
         {
             if (_Parent.CurrentCommand == null)
@@ -367,28 +379,15 @@ namespace WebAnnotation
 
             double distance;
             GridVector2 WorldPosition = _Parent.ScreenToWorld(e.X, e.Y);
+            this.LastMouseMoveVolumeCoords = WorldPosition;
 
             ICanvasView NextMouseOverObject = ObjectAtPosition(WorldPosition, out distance) as ICanvasView;
             if (NextMouseOverObject != LastMouseOverObject)
                 Parent.Invalidate();
 
-            LastMouseOverObject = NextMouseOverObject; 
-            
-            /*Check to see if we are over a location*/
-            
-            LocationCanvasView loc = LastMouseOverObject as LocationCanvasView; // GetNearestLocation(WorldPosition, out distance);
-            //SetCursorForMouseOverObject(loc);
+            LastMouseOverObject = NextMouseOverObject;
 
-            if (loc != null)
-            {
-                //If the loc is on this section we check if we are close to the edge and we are resizing.  Everyone else gets move cursor
-                LocationAction action = loc.GetActionForPositionOnAnnotation(WorldPosition, this.CurrentSectionNumber);
-                _Parent.Cursor = action.GetCursor();
-            }
-            else
-            {
-                _Parent.Cursor = Cursors.Default;
-            }
+            UpdateMouseCursor();
         }
 
         protected void OnMouseDown(object sender, MouseEventArgs e)
@@ -410,7 +409,7 @@ namespace WebAnnotation
 
             //Left mouse button selects objects
             if (e.Button == MouseButtons.Left)
-            {
+            { 
                 double distance;
                 IUIObjectBasic obj = ObjectAtPosition(WorldPosition, out distance);
                 //Figure out if it is resizing a location circle
@@ -422,7 +421,14 @@ namespace WebAnnotation
 
                 if (loc != null)
                 {
-                    LocationAction action = loc.GetActionForPositionOnAnnotation(WorldPosition, this.CurrentSectionNumber); 
+                    LocationAction action;
+                    if (Control.ModifierKeys == Keys.Shift)
+                        action = loc.GetMouseShiftClickActionForPositionOnAnnotation(WorldPosition, this.CurrentSectionNumber);
+                    else if (Control.ModifierKeys == Keys.Control)
+                        action = loc.GetMouseControlClickActionForPositionOnAnnotation(WorldPosition, this.CurrentSectionNumber);
+                    else
+                        action = loc.GetMouseClickActionForPositionOnAnnotation(WorldPosition, this.CurrentSectionNumber);
+
                     Viking.UI.Commands.Command command = action.CreateCommand(Parent, loc.modelObj);
                     if(command != null)
                     {
@@ -431,7 +437,7 @@ namespace WebAnnotation
                 }
             }
         }
-
+        
         protected void OnMouseUp(object sender, MouseEventArgs e)
         {
             if (_Parent.CurrentCommand == null)
@@ -485,6 +491,12 @@ namespace WebAnnotation
                     break;
                 case Keys.O:
                     OnCreateStructure(34, new string[0], LocationType.CLOSEDCURVE);
+                    break;
+                case Keys.ShiftKey:
+                    UpdateMouseCursor();
+                    break;
+                case Keys.ControlKey:
+                    UpdateMouseCursor();
                     break;
             }
 
@@ -552,6 +564,14 @@ namespace WebAnnotation
                             return;
                         }
 
+                        ChangeLocationAnnotationTypeAction tagChangeLocationAnnotationTypeAction = Global.UserSettings.Actions.ChangeLocationAnnotationTypeAction.Where(action => action.Name == h.Action).SingleOrDefault();
+                        if (tagChangeLocationAnnotationTypeAction != null)
+                        {
+                            OnChangeLocationAnnotationType(tagChangeLocationAnnotationTypeAction.GetLocationType());
+
+                            return;
+                        }
+
                         /*
                         System.Type t = System.Type.GetType(Param.Type);
                         if(t == null)
@@ -598,6 +618,12 @@ namespace WebAnnotation
                     this._Parent.Invalidate();
 
                     break;
+                case Keys.ControlKey:
+                    UpdateMouseCursor();
+                    break;
+                case Keys.ShiftKey:
+                    UpdateMouseCursor();
+                    break;
             }
         }
 
@@ -623,6 +649,7 @@ namespace WebAnnotation
                 LocationObj newLocation = new LocationObj(newStruct,
                                                 Parent.Section.Number,
                                                 AnnotationType);
+                 
                 
                 if (attributes != null)
                 {
@@ -635,13 +662,15 @@ namespace WebAnnotation
                 switch (AnnotationType)
                 {
                     case LocationType.CIRCLE:
-                        QueueCommandForCircleStructure(this.Parent,newLocation, WorldPos, SectionPos, type.Color);
+                        QueuePlacementCommandForCircleStructure(this.Parent,newLocation, WorldPos, SectionPos, type.Color, false);
                         break;
                     case LocationType.OPENCURVE:
-                        QueueCommandForOpenCurveStructure(this.Parent, newLocation, WorldPos, type.Color);
+                        newLocation.Radius = 8.0;
+                        QueuePlacementCommandForOpenCurveStructure(this.Parent, newLocation, WorldPos, type.Color, false);
                         break;
                     case LocationType.CLOSEDCURVE:
-                        QueueCommandForClosedCurveStructure(this.Parent, newLocation, WorldPos, type.Color);
+                        newLocation.Radius = 8.0;
+                        QueuePlacementCommandForClosedCurveStructure(this.Parent, newLocation, WorldPos, type.Color, false);
                         break;
                     default:
                         Trace.WriteLine("Could not find commands for annotation type: " + AnnotationType.ToString());
@@ -659,13 +688,16 @@ namespace WebAnnotation
             else
                 Trace.WriteLine("Could not find hotkey ID for type: " + TypeID.ToString()); 
         }
-
-        public static void QueueCommandForCircleStructure(Viking.UI.Controls.SectionViewerControl Parent, LocationObj newLocation, GridVector2 worldPos, GridVector2 sectionPos, System.Drawing.Color typecolor)
+        
+        public static void QueuePlacementCommandForCircleStructure(Viking.UI.Controls.SectionViewerControl Parent, LocationObj newLocation, GridVector2 worldPos, GridVector2 sectionPos, System.Drawing.Color typecolor, bool SaveToStore)
         {
             Viking.UI.Commands.Command.EnqueueCommand(typeof(ResizeCircleCommand), new object[] { Parent,
                     typecolor,
                     worldPos,
-                    new ResizeCircleCommand.OnCommandSuccess((double radius) => {  newLocation.MosaicShape = SqlGeometryUtils.GeometryExtensions.ToCircle(sectionPos.X,
+                    new ResizeCircleCommand.OnCommandSuccess((double radius) => {
+                                    newLocation.Radius = radius;
+                                    newLocation.TypeCode = LocationType.CIRCLE;
+                                    newLocation.MosaicShape = SqlGeometryUtils.GeometryExtensions.ToCircle(sectionPos.X,
                                        sectionPos.Y,
                                        newLocation.Section,
                                        radius);
@@ -673,10 +705,13 @@ namespace WebAnnotation
                                         worldPos.Y,
                                         newLocation.Section,
                                         radius);
-                                    newLocation.Radius = radius; })});
+                                    
+                                    if(SaveToStore)
+                                        Store.Locations.Save();
+                                     })});
         }
 
-        public static void QueueCommandForOpenCurveStructure(Viking.UI.Controls.SectionViewerControl Parent, LocationObj newLocation, GridVector2 origin, System.Drawing.Color typecolor)
+        public static void QueuePlacementCommandForOpenCurveStructure(Viking.UI.Controls.SectionViewerControl Parent, LocationObj newLocation, GridVector2 origin, System.Drawing.Color typecolor, bool SaveToStore)
         {
             /*
             public PlaceOpenCurveCommand(Viking.UI.Controls.SectionViewerControl parent,
@@ -685,12 +720,18 @@ namespace WebAnnotation
                                         double LineWidth,
                                         OnCommandSuccess success_callback)
                                         */
-
-            Viking.UI.Commands.Command.EnqueueCommand(typeof(PlaceCurveCommand), new object[] { Parent, typecolor, origin, 16.0, false,
-                                                            new PlaceCurveCommand.OnCommandSuccess((GridVector2[] points) => { SetLocationShapeFromPointsInVolume(Parent, newLocation, points); }) });
+            double LineWidth = 16.0;
+            Viking.UI.Commands.Command.EnqueueCommand(typeof(PlaceCurveCommand), new object[] { Parent, typecolor, origin,  LineWidth, false,
+                                                            new PlaceCurveCommand.OnCommandSuccess((GridVector2[] points) => {
+                                                                    newLocation.TypeCode = LocationType.OPENCURVE;
+                                                                    newLocation.Radius = LineWidth / 2.0;
+                                                                    SetLocationShapeFromPointsInVolume(Parent, newLocation, points);
+                                                                    if(SaveToStore)
+                                                                        Store.Locations.Save();
+                                                            }) });
         }
 
-        public static void QueueCommandForClosedCurveStructure(Viking.UI.Controls.SectionViewerControl Parent, LocationObj newLocation, GridVector2 origin, System.Drawing.Color typecolor)
+        public static void QueuePlacementCommandForClosedCurveStructure(Viking.UI.Controls.SectionViewerControl Parent, LocationObj newLocation, GridVector2 origin, System.Drawing.Color typecolor, bool SaveToStore)
         {
             /*
             public PlaceOpenCurveCommand(Viking.UI.Controls.SectionViewerControl parent,
@@ -699,9 +740,15 @@ namespace WebAnnotation
                                         double LineWidth,
                                         OnCommandSuccess success_callback)
                                         */
-
-            Viking.UI.Commands.Command.EnqueueCommand(typeof(PlaceCurveCommand), new object[] { Parent, typecolor, origin, 16.0, true,
-                                                            new PlaceCurveCommand.OnCommandSuccess((GridVector2[] points) => { SetLocationShapeFromPointsInVolume(Parent, newLocation, points); }) });
+            double LineWidth = 16.0;
+            Viking.UI.Commands.Command.EnqueueCommand(typeof(PlaceCurveCommand), new object[] { Parent, typecolor, origin, LineWidth, true,
+                                                            new PlaceCurveCommand.OnCommandSuccess((GridVector2[] points) => {
+                                                                    newLocation.TypeCode = LocationType.CLOSEDCURVE;
+                                                                    newLocation.Radius = LineWidth / 2.0;
+                                                                    SetLocationShapeFromPointsInVolume(Parent, newLocation, points);
+                                                                    if(SaveToStore)
+                                                                        Store.Locations.Save();
+                                                            }) });
         }
 
         public static void SetLocationShapeFromPointsInVolume(Viking.UI.Controls.SectionViewerControl Parent, LocationObj location, GridVector2[] points)
@@ -789,6 +836,41 @@ namespace WebAnnotation
             Viking.UI.Commands.Command.EnqueueCommand(typeof(ToggleLocationIsTerminalCommand), new object[] { this.Parent, loc.modelObj });
 
             return;
+        }
+
+        protected void OnChangeLocationAnnotationType(LocationType newLocType)
+        {
+            if (LastMouseOverObject == null)
+            {
+                Trace.WriteLine("No mouse over object to change location annotation type");
+                return;
+            }
+
+            LocationCanvasView loc = LastMouseOverObject as LocationCanvasView; // GetNearestLocation(WorldPosition, out distance);
+            if (loc == null)
+            {
+                Trace.WriteLine("No mouse over object to change location annotation type");
+                return;
+            }
+
+            GridVector2 SectionPos;
+            bool success = _Parent.TryVolumeToSection(LastMouseMoveVolumeCoords, _Parent.Section, out SectionPos);
+            Debug.Assert(success);
+            if (!success)
+                return;
+
+            switch (newLocType)
+            {
+                case LocationType.CIRCLE:
+                    QueuePlacementCommandForCircleStructure(Parent, loc.modelObj, LastMouseMoveVolumeCoords, SectionPos, loc.Parent.Type.Color, true);
+                    break;
+                case LocationType.OPENCURVE: 
+                    QueuePlacementCommandForOpenCurveStructure(Parent, loc.modelObj, LastMouseMoveVolumeCoords, loc.Parent.Type.Color, true);
+                    break;
+                case LocationType.CLOSEDCURVE: 
+                    QueuePlacementCommandForClosedCurveStructure(Parent, loc.modelObj, LastMouseMoveVolumeCoords, loc.Parent.Type.Color, true);
+                    break; 
+            }
         }
 
         protected void OnContinueLastTrace()

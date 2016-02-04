@@ -92,6 +92,14 @@
       <xs:attribute name="Name" type="xs:string" use="required"/> 
     </xs:complexType>
   </xs:element>
+  
+  <xs:element name="ChangeLocationAnnotationTypeAction">
+    <xs:complexType>
+      <xs:attribute name="Name" type="xs:string" use="required"/> 
+      <xs:attribute name="AnnotationType" type="AnnotationType">
+      </xs:attribute>
+    </xs:complexType>
+  </xs:element>
 
   <xs:element name="Action">
     <xs:complexType>
@@ -138,6 +146,7 @@
               <xs:element ref="ToggleStructureTagCommandAction"/>
               <xs:element ref="ToggleLocationTagCommandAction"/>
               <xs:element ref="ToggleLocationTerminalCommandAction"/>
+              <xs:element ref="ChangeLocationAnnotationTypeAction"/>
             </xs:choice>
           </xs:complexType>
         </xs:element >

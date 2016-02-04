@@ -95,7 +95,11 @@ namespace WebAnnotation.View
                               float MagnificationFactor,
                               int DirectionToVisiblePlane);
 
-        public abstract LocationAction GetActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber);
+        public abstract LocationAction GetMouseClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber);
+
+        public abstract LocationAction GetMouseShiftClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber);
+
+        public abstract LocationAction GetMouseControlClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber);
 
 
         public abstract IList<LocationCanvasView> OverlappingLinks

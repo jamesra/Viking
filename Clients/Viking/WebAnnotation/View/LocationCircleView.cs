@@ -126,13 +126,23 @@ namespace WebAnnotation.View
             get { return new List<LocationCanvasView>(); }
         }
 
-        public override LocationAction GetActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber)
+        public override LocationAction GetMouseClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber)
         {
             double distance = this.DistanceToCenter(WorldPosition);
             if (distance > this.Radius)
                 return LocationAction.NONE;
 
             return LocationAction.CREATELINKEDLOCATION;
+        }
+
+        public override LocationAction GetMouseShiftClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber)
+        {
+            return LocationAction.NONE;
+        }
+
+        public override LocationAction GetMouseControlClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber)
+        {
+            return LocationAction.NONE;
         }
 
         protected override void OnObjPropertyChanged(object o, PropertyChangedEventArgs args)
@@ -244,7 +254,7 @@ namespace WebAnnotation.View
             return circleView.IsVisible(scene);
         }
 
-        public override LocationAction GetActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber)
+        public override LocationAction GetMouseClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber)
         {
             double distance = this.DistanceToCenter(WorldPosition);
             
@@ -269,8 +279,18 @@ namespace WebAnnotation.View
             }
         }
 
+        public override LocationAction GetMouseShiftClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber)
+        {
+            return LocationAction.NONE;
+        }
+
+        public override LocationAction GetMouseControlClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber)
+        {
+            return LocationAction.NONE;
+        }
+
         #endregion
-        
+
         public override double Radius
         {
             get

@@ -15,28 +15,27 @@ namespace WebAnnotation.UI.Commands
 {
     class AdjustCurveControlPointCommand : AnnotationCommandBase
     {
-        LocationObj Loc;
+        //LocationObj Loc;
         CurveView curveView;
         GridVector2[] OriginalControlPoints;
         private int iAdjustedControlPoint = -1; 
 
-        public delegate void OnCommandSuccess(LocationObj loc, GridVector2[] VolumeControlPoints, GridVector2[] MosaicControlPoints);
+        public delegate void OnCommandSuccess(GridVector2[] VolumeControlPoints, GridVector2[] MosaicControlPoints);
         OnCommandSuccess success_callback;
 
         public AdjustCurveControlPointCommand(Viking.UI.Controls.SectionViewerControl parent,
-                                        LocationObj selectedObj,
+                                        GridVector2[] OriginalControlPoints,
+                                        Microsoft.Xna.Framework.Color color,
+                                        double LineWidth,
+                                        bool IsClosedCurve,
                                         OnCommandSuccess success_callback) : base(parent)
         {
-            Loc = selectedObj;
-            OriginalControlPoints = selectedObj.VolumeShape.ToPoints();
-            CreateView(OriginalControlPoints, selectedObj.Parent.Type.Color.ToXNAColor().ConvertToHSL(0.5f), Loc.Radius * 2.0, IsClosedCurve(selectedObj));
+            //Loc = selectedObj;
+            this.OriginalControlPoints = OriginalControlPoints;
+            CreateView(OriginalControlPoints, color.ConvertToHSL(0.5f), LineWidth, IsClosedCurve);
             this.success_callback = success_callback;
         }
         
-        private static bool IsClosedCurve(LocationObj loc)
-        {
-            return loc.TypeCode == LocationType.CLOSEDCURVE;
-        }
 
         private void CreateView(GridVector2[] ControlPoints, Microsoft.Xna.Framework.Color color, double LineWidth, bool IsClosed)
         {
@@ -130,23 +129,11 @@ namespace WebAnnotation.UI.Commands
                     return;
                 }
                 
-                this.success_callback(Loc, TranslatedOriginalControlPoints, MosaicControlPoints);
+                this.success_callback(TranslatedOriginalControlPoints, MosaicControlPoints);
             }
 
             base.Execute();
         }
-
-
-        public static void DefaultSuccessCallback(LocationObj loc, GridVector2[] VolumeControlPoints, GridVector2[] MosaicControlPoints)
-        {
-            DefaultSuccessNoSaveCallback(loc, VolumeControlPoints, MosaicControlPoints);
-            Store.Locations.Save();
-        }
-
-        public static void DefaultSuccessNoSaveCallback(LocationObj loc, GridVector2[] VolumeControlPoints, GridVector2[] MosaicControlPoints)
-        {
-            loc.MosaicShape = SqlGeometryUtils.GeometryExtensions.ToGeometry(loc.MosaicShape.STGeometryType(), MosaicControlPoints);
-            loc.VolumeShape = SqlGeometryUtils.GeometryExtensions.ToGeometry(loc.VolumeShape.STGeometryType(), VolumeControlPoints);
-        }
+        
     }
 }

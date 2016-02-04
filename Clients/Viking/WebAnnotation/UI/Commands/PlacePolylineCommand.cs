@@ -42,7 +42,7 @@ namespace WebAnnotation.UI.Commands
                                      double LineWidth,
                                      OnCommandSuccess success_callback)
             : this(parent, 
-                  color.ToXNAColor(0.5f),
+                  color.ToXNAColor(),
                    LineWidth,
                    success_callback)
         { 
@@ -259,7 +259,9 @@ namespace WebAnnotation.UI.Commands
 
                 vert_stack.Push(this.oldWorldPosition);
 
-                CurveView.Draw(graphicsDevice, Parent.LumaOverlayLineManager, basicEffect, vert_stack.ToArray(), 5, false, this.LineColor.ConvertToHSL(), this.LineWidth); 
+                CurveView curveView = new CurveView(vert_stack.ToArray(), this.LineColor, false, lineWidth: this.LineWidth);
+
+                CurveView.Draw(graphicsDevice, scene, Parent.LumaOverlayLineManager, basicEffect, Parent.annotationOverlayEffect, new CurveView[] { curveView });
                 //GlobalPrimitives.DrawPolyline(Parent.LineManager, basicEffect, DrawnLineVerticies, this.LineWidth, this.LineColor);
 
                 this.vert_stack.Pop();

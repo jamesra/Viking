@@ -19,7 +19,7 @@ namespace WebAnnotation.UI.Commands
     class PlaceCurveCommand : PolylineCommandBase
     {
         Stack<GridVector2> vert_stack = new Stack<GridVector2>();
-
+        
         bool IsOpen = true; //False if the curves last point is connected to its first
         /// <summary>
         /// Returns the stack with the bottomost entry first in the array
@@ -59,10 +59,7 @@ namespace WebAnnotation.UI.Commands
                                         bool IsOpen,
                                         OnCommandSuccess success_callback)
             : this(parent,
-                    new Microsoft.Xna.Framework.Color((int)color.R,
-                                                    (int)color.G,
-                                                    (int)color.B,
-                                                    0.5f),
+                    color.ToXNAColor(),
                     origin,
                     LineWidth,
                     IsOpen,
@@ -164,13 +161,16 @@ namespace WebAnnotation.UI.Commands
 
         public override void OnDraw(Microsoft.Xna.Framework.Graphics.GraphicsDevice graphicsDevice, VikingXNA.Scene scene, Microsoft.Xna.Framework.Graphics.BasicEffect basicEffect)
         {
+            
             if (this.oldWorldPosition != LineVerticies.Last())
             {
                 GridVector2? SelfIntersection = IntersectsSelf(new GridLineSegment(this.oldWorldPosition, LineVerticies.Last()));
 
                 vert_stack.Push(this.oldWorldPosition);
 
-                CurveView.Draw(graphicsDevice, Parent.LumaOverlayLineManager, basicEffect, vert_stack.ToArray(), 5, this.IsOpen, this.LineColor.ConvertToHSL(), this.LineWidth);
+                CurveView curveView = new CurveView(vert_stack.ToArray(), this.LineColor, this.IsOpen, lineWidth: this.LineWidth);
+
+                CurveView.Draw(graphicsDevice, scene, Parent.LumaOverlayLineManager, basicEffect, Parent.annotationOverlayEffect, new CurveView[] { curveView } );
                 //GlobalPrimitives.DrawPolyline(Parent.LineManager, basicEffect, DrawnLineVerticies, this.LineWidth, this.LineColor);
 
                 this.vert_stack.Pop();

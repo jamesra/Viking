@@ -123,21 +123,21 @@ float4 MyPSStandard(PS_Input input) : COLOR0
 	float4 finalColor;
 	finalColor.rgb = lineColor.rgb;
 	finalColor.a = lineColor.a * BlurEdge( input.polar.x );
+	clip(finalColor.a);
 
-	float AlphaBlend = lineColor.a * lineColor.r;
+	float AlphaBlend = lineColor.a;// *lineColor.r;
 
 	//This is a greyscale+Alpha image.  Greyscale indicates the degree of color, alpha indicates degree to which we use Overlay Luma or Background Luma
 
-	float4 LumaColor = tex2D(BackgroundTextureSampler, ((input.ScreenTexCoord.xy) / (RenderTargetSize.xy - 1)));
+	float4 BackgroundColor = tex2D(BackgroundTextureSampler, ((input.ScreenTexCoord.xy) / (RenderTargetSize.xy - 1)));
 
 	float Hue = lineColor.r;
-	float BackgroundLuma = mul(LumaColor, LumaWeights);
+	float BackgroundLuma = mul(BackgroundColor, LumaWeights);
 	float Saturation = lineColor.g;
 	float Luma = BlendLumaWithBackground(BackgroundLuma, lineColor.b, AlphaBlend);
 
 	float4 hsv = { Hue, Saturation, Luma, lineColor.a };
-	finalColor.rgb = HCLToRGB(hsv);
-	finalColor.a = lineColor.a;
+	finalColor = lineColor.b > 0 ? HCLToRGB(hsv) : BackgroundColor;
 
 	return finalColor;
 }
@@ -193,6 +193,8 @@ PS_Output MyPSAnimatedBidirectional(PS_Input input)
 	float modulation = sin( offset * 3.14159 ) / 2;   
 	finalColor.rgb = lineColor.rgb;
 	finalColor.a = lineColor.a * BlurEdge( input.polar.x ) * modulation + 0.5;
+	clip(finalColor.a);
+
 	output.Color = finalColor; 
 	float depth = (input.polar.z * 2) > 1 ? 1-((1- input.polar.z)*2) : 1-(input.polar.z * 2);
 	output.Depth = 0;//(polar.z * 2) > 1 ? 1-((1-polar.z)*2) : 1-(polar.z * 2);
@@ -202,16 +204,15 @@ PS_Output MyPSAnimatedBidirectional(PS_Input input)
 
 	//This is a greyscale+Alpha image.  Greyscale indicates the degree of color, alpha indicates degree to which we use Overlay Luma or Background Luma
 
-	float4 LumaColor = tex2D(BackgroundTextureSampler, ((input.ScreenTexCoord.xy) / (RenderTargetSize.xy - 1)));
+	float4 BackgroundColor = tex2D(BackgroundTextureSampler, ((input.ScreenTexCoord.xy) / (RenderTargetSize.xy - 1)));
 
 	float Hue = lineColor.r;
-	float BackgroundLuma = mul(LumaColor, LumaWeights);
+	float BackgroundLuma = mul(BackgroundColor, LumaWeights);
 	float Saturation = lineColor.g;
 	float Luma = BlendLumaWithBackground(BackgroundLuma, lineColor.b, AlphaBlend);
 
-	float4 hsv = { Hue, Saturation, Luma, lineColor.a };
-	output.Color.rgb = HCLToRGB(hsv);
-	output.Color.a = 1 - depth;
+	float4 hsv = { Hue, Saturation, Luma, 1 - depth};
+	output.Color = lineColor.b > 0 ? HCLToRGB(hsv) : BackgroundColor;
 
 	return output;
 }
@@ -230,26 +231,28 @@ PS_Output MyPSAnimatedLinear(PS_Input input)
 
 	lineColorHSV.rgb = lineColor.rgb;
 	lineColorHSV.a = lineColor.a * BlurEdge(input.polar.x ) * modulation;
+	clip(lineColorHSV.a);
 	
 	output.Color.rgb = lineColorHSV;
 	float depth = (input.polar.z * 2) > 1 ? 1-((1- input.polar.z)*2) : 1-(input.polar.z * 2);
 	output.Depth = 0; //depth;
 	//output.Color.a = lineColorHSV.a * (1 - depth) * modulation *(1 - input.polar.x);
 	output.Color.a = lineColorHSV.a * modulation *(1 - input.polar.x);
+	clip(output.Color.a);
 
-	float AlphaBlend = lineColorHSV.a * lineColorHSV.r;
+	float AlphaBlend = lineColorHSV.a;
 
 	//This is a greyscale+Alpha image.  Greyscale indicates the degree of color, alpha indicates degree to which we use Overlay Luma or Background Luma
 
-	float4 LumaColor = tex2D(BackgroundTextureSampler, ((input.ScreenTexCoord.xy) / (RenderTargetSize.xy - 1)));
+	float4 BackgroundColor = tex2D(BackgroundTextureSampler, ((input.ScreenTexCoord.xy) / (RenderTargetSize.xy - 1)));
 
 	float Hue = lineColor.r;
-	float BackgroundLuma = mul(LumaColor, LumaWeights);
+	float BackgroundLuma = mul(BackgroundColor, LumaWeights);
 	float Saturation = lineColor.g;
-	float Luma = BlendLumaWithBackground(BackgroundLuma, lineColor.b, AlphaBlend);
+	float Luma = BlendLumaWithBackground(BackgroundColor, lineColor.b, AlphaBlend);
 
 	float4 hsv = { Hue, Saturation, Luma, lineColorHSV.a };
-	output.Color.rgb = HCLToRGB(hsv);
+	output.Color = lineColor.b > 0 ? HCLToRGB(hsv) : BackgroundColor;
 	//output.Color.a = 1;
 
 	return output;
@@ -262,6 +265,7 @@ float4 MyPSAnimatedRadial( float3 polar : TEXCOORD0 ) : COLOR0
 	float modulation = sin( ( -polar.x * 0.1 + time * 0.05 ) * 20 * 3.14159) * 0.5 + 0.5;
 	finalColor.rgb = lineColor.rgb * modulation;
 	finalColor.a = lineColor.a * BlurEdge( polar.x );
+	clip(finalColor.a);
 	return finalColor;
 }
 

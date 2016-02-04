@@ -15,7 +15,6 @@ namespace WebAnnotation.View
 {
     class PolyLineView
     {
-
         private Texture2D _ControlPointTexture;
         public Texture2D ControlPointTexture
         {

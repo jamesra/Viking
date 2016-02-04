@@ -51,6 +51,21 @@ namespace WebAnnotation.View
             PolyLineView[] linesToDraw = listToDraw.Select(l => l.modelObj.Z < VisibleSectionNumber ? l.downPolyLineView : l.upPolyLineView).ToArray();
             PolyLineView.Draw(device, scene, lineManager, basicEffect, overlayEffect, linesToDraw);
         }
+
+        public override LocationAction GetMouseClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber)
+        {
+            return LocationAction.CREATELINKEDLOCATION;
+        }
+
+        public override LocationAction GetMouseShiftClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber)
+        {
+            return LocationAction.NONE;
+        }
+
+        public override LocationAction GetMouseControlClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber)
+        {
+            return LocationAction.NONE;
+        }
     }
 
     class LocationLineView : LocationLineViewBase
@@ -81,6 +96,15 @@ namespace WebAnnotation.View
                           LocationLineView[] listToDraw)
         {
             PolyLineView.Draw(device, scene, lineManager, basicEffect, overlayEffect, listToDraw.Select(l => l.polyLineView).ToArray());
+        }
+
+        public override LocationAction GetMouseShiftClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber)
+        {
+            //Allow user to add a control point if the mouse is not over an existing control point
+            if(!polyLineView.ControlPoints.Select(p => new GridCircle(p, Width / 2.0)).Any(c => c.Contains(WorldPosition)))
+                return LocationAction.ADDCONTROLPOINT;
+
+            return LocationAction.NONE;
         }
     }
     
@@ -141,24 +165,18 @@ namespace WebAnnotation.View
             return;
         }
 
-        public override LocationAction GetActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber)
+        public bool PointIntersectsAnyControlPoint(GridVector2 WorldPosition)
+        {
+            return VolumeControlPoints.Select(p => new GridCircle(p, Width / 2.0)).Any(c => c.Contains(WorldPosition));
+        }
+
+        public override LocationAction GetMouseClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber)
         {        
             if (VisibleSectionNumber == (int)this.modelObj.Z)
             {
-                //If we are over a control point then enable adjust mode to nudge control points
-                //Otherwise enable translate
-                //double distance = this.Distance(WorldPosition);
-                //if (distance > 0)
-                //return LocationAction.NONE;                
-
-
-
                 //Find distance to nearest control point
-                if (this.VolumeControlPoints.Select(p => GridVector2.Distance(WorldPosition, p) < this.Width / 2.0).Any(b => b == true))
-                    if ((System.Windows.Forms.Control.ModifierKeys & System.Windows.Forms.Keys.Shift) != 0)
-                        return LocationAction.TRANSLATE;
-                    else
-                        return LocationAction.ADJUST;
+                if (PointIntersectsAnyControlPoint(WorldPosition))
+                    return LocationAction.ADJUST;
                 else
                     return LocationAction.CREATELINK;
             }
@@ -168,7 +186,32 @@ namespace WebAnnotation.View
             }
         }
 
-        
+        public override LocationAction GetMouseShiftClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber)
+        {
+            //Allow user to add a control point if the mouse is not over an existing control point
+            if (PointIntersectsAnyControlPoint(WorldPosition))
+                return LocationAction.TRANSLATE;
+            
+            return LocationAction.NONE;
+        }
+
+        public override LocationAction GetMouseControlClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber)
+        {
+            //Allow user to add a control point if the mouse is not over an existing control point
+            if (PointIntersectsAnyControlPoint(WorldPosition))
+            {
+                if (VolumeControlPoints.Length > 2)
+                    return LocationAction.REMOVECONTROLPOINT;
+                else
+                    return LocationAction.NONE;
+            }
+            else
+                return LocationAction.ADDCONTROLPOINT;
+
+            //return LocationAction.NONE;
+        }
+
+
         public override IList<LocationCanvasView> OverlappingLinks
         {
             get
