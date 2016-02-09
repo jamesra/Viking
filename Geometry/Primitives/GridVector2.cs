@@ -206,21 +206,34 @@ namespace Geometry
             return (AX * BX) + (AY * BY); 
         }
 
-        static public double Angle(GridVector2 Origin, GridVector2 A, GridVector2 B)
+        /// <summary>
+        /// Angle of arc between A & B with Origin
+        /// </summary>
+        /// <param name="Origin"></param>
+        /// <param name="A"></param>
+        /// <param name="B"></param>
+        /// <returns></returns>
+        static public double ArcAngle(GridVector2 Origin, GridVector2 A, GridVector2 B)
         {
             A = A - Origin;
             B = B - Origin;
-            return Angle(A, B); 
-        }
-
-        static public double Angle(GridVector2 A, GridVector2 B)
-        {
             double AngleA = Math.Atan2(A.Y, A.X);
             double AngleB = Math.Atan2(B.Y, B.X);
-
             return AngleB - AngleA; 
         }
 
+        /// <summary>
+        /// Angle to B from A
+        /// </summary>
+        /// <param name="A"></param>
+        /// <param name="B"></param>
+        /// <returns></returns>
+        static public double Angle(GridVector2 A, GridVector2 B)
+        {
+            GridVector2 delta = B - A;
+            return Math.Atan2(delta.Y, delta.X); 
+        }
+        
         static public GridVector2 operator -(GridVector2 A)
         {
             return new GridVector2(-A.X, -A.Y); 
