@@ -9,24 +9,46 @@
 // pair, used within the PS, that indicates what part of the line each pixel 
 // is on.
 
+// This shader draws one polyline at a time.
+// Each control point occupies an entry in the control point array
+
 
 // Data shared by all lines:
 matrix viewProj;
 float time;
-float lineRadius;
+float lineRadius = 16.0;
 float4 lineColor;
 float blurThreshold = 0.95;
 
-// Per-line instance data:
-float4 instanceData[200]; // (x0, y0, rho, theta)
+float texture_x_min = 0;
+float texture_x_max = 1;
 
+struct CurveSegment
+{
+	float2 pos;
+	float distance_to_origin;
+	float distance_to_origin_normalized;
+	float tangent_to_curve;
+};
+
+// Per-curve instance data:
+CurveSegment CurveSegmentData[200]; // (x0, y0, distance_to_origin, theta (tangent to curve))
+
+uniform const texture LineTexture;
+
+uniform const sampler LineTextureSampler : register(s1) = sampler_state
+{
+	Texture = (LineTexture);
+	MipFilter = LINEAR;
+	MinFilter = LINEAR;
+	MagFilter = LINEAR;
+};
 
 struct VS_INPUT
 {
 	float4 pos : POSITION;
 	float2 vertRhoTheta : NORMAL;
-	float2 vertScaleTrans : TEXCOORD0;
-	float instanceIndex : TEXCOORD1;
+	float curvesegmentIndex : TEXCOORD0;
 };
 
 
@@ -34,7 +56,8 @@ struct VS_OUTPUT
 {
 	float4 position : POSITION;
 	float3 polar : TEXCOORD0;
-	float2 posModelSpace : TEXCOORD1;	
+	float2 posModelSpace : TEXCOORD1;
+	float2 tex   : TEXCOORD2;
 };
 
 struct PS_Output
@@ -43,44 +66,47 @@ struct PS_Output
 	float Depth : DEPTH;
 };
 
+//Use linear interpolation to convert a value from zero to one to fall within min-max
+float ClampToRange(float scalar, float min, float max)
+{
+	return (scalar * (max - min)) + min;
+}
 
 VS_OUTPUT MyVS( VS_INPUT In )
 {
 	VS_OUTPUT Out = (VS_OUTPUT)0;
-	float4 pos = In.pos;
-
-	float x0 = instanceData[In.instanceIndex].x;
-	float y0 = instanceData[In.instanceIndex].y;
-	float rho = instanceData[In.instanceIndex].z;
-	float theta = instanceData[In.instanceIndex].w;
-
+	float4 pos = In.pos; //Position on the line, either along the center or the edge
+	
+	float x0 = CurveSegmentData[In.curvesegmentIndex].pos.x; //Position of the control point in world space
+	float y0 = CurveSegmentData[In.curvesegmentIndex].y;
+	float distanceToOrigin = CurveSegmentData[In.curvesegmentIndex].z; //Distance to the origin of the polyline in world space
+	float tangent_theta = CurveSegmentData[In.curvesegmentIndex].w; //Tangent to the polyline at this control point
+	float theta = tangent_theta;// +(3.14159 / 2.0); //Adjust the tangent 90 degrees so we rotate our verticies a lineradius distance away from the control point
+	float vert_distance_to_edge = In.vertRhoTheta.x;
 	// Scale X by lineRadius, and translate X by rho, in worldspace
 	// based on what part of the line we're on
-	float vertScale = In.vertScaleTrans.x;
-	float vertTrans = In.vertScaleTrans.y;
-	pos.x *= (vertScale * lineRadius);
-	pos.x += (vertTrans * rho);
-
-	// Always scale Y by lineRadius regardless of what part of the line we're on
-	pos.y *= lineRadius;
 	
-	// Now the vertex is adjusted for the line length and radius, and is 
-	// ready for the usual world/view/projection transformation.
+	// Always scale Y by lineRadius regardless of what part of the line we're on
+
+	pos.y *= lineRadius;
 
 	// World matrix is rotate(theta) * translate(p0)
-	matrix worldMatrix = 
+	matrix worldMatrix =
 	{
 		cos(theta), sin(theta), 0, 0,
 		-sin(theta), cos(theta), 0, 0,
 		0, 0, 1, 0,
-		x0, y0, 0, 1 
+		x0, y0, 0, 1
 	};
-	
-	Out.position = mul(mul(pos, worldMatrix), viewProj);
-	
-	Out.polar = float3(In.vertRhoTheta, vertTrans);
 
-	Out.posModelSpace.xy = pos.xy;
+	Out.position = mul(mul(pos, worldMatrix), viewProj);
+		 
+	Out.polar = float3(In.vertRhoTheta, distanceToOrigin);
+
+	Out.posModelSpace.xy = float2(distanceToOrigin, pos.y);
+
+	Out.tex = float2(ClampToRange(distanceToOrigin, texture_x_min, texture_x_max),
+				    (-vert_distance_to_edge + 1) / 2.0);
 
 	return Out;
 }
@@ -104,7 +130,7 @@ float BlurEdge( float rho )
 float4 MyPSStandard( float3 polar : TEXCOORD0 ) : COLOR0
 {
 	float4 finalColor;
-	finalColor.rgb = lineColor.rgb;
+	finalColor = lineColor;
 	finalColor.a = lineColor.a * BlurEdge( polar.x );
 	return finalColor;
 }
@@ -169,24 +195,26 @@ PS_Output MyPSAnimatedBidirectional( float3 polar : TEXCOORD0, float2 posModelSp
 
 PS_Output MyPSAnimatedLinear( float3 polar : TEXCOORD0, float2 posModelSpace: TEXCOORD1 )
 {
-	PS_Output output; 
+	PS_Output output;
 	float4 finalColor;
-	float bandWidth = 100; 
+	float bandWidth = 100;
 	float Hz = 2;
 	float offset = (time * Hz);
 
-	
-	
-	float modulation = sin( ( (-posModelSpace.x  / bandWidth) + offset) * 3.14159 );   
-	clip(modulation <= 0 ? -1 : 1);
+	//offset += cos(abs(posModelSpace.y) / lineRadius) * 1.5; //Adds chevron arrow effect
+	offset -= (abs(posModelSpace.y) / lineRadius) / 1.75; //Adds chevron arrow effect
+	float modulation = sin(((-posModelSpace.x / bandWidth) + offset) * 3.14159);
+	clip(modulation <= 0 ? -1 : 1); //Adds sharp boundary to arrows
 
 	finalColor.rgb = lineColor.rgb;
-	finalColor.a = lineColor.a * BlurEdge( polar.x ) * modulation;
-	
-	output.Color = finalColor; 
-	float depth = (polar.z * 2) > 1 ? 1-((1-polar.z)*2) : 1-(polar.z * 2);
+	finalColor.a = lineColor.a * BlurEdge(polar.x) * modulation;
+
+	output.Color = finalColor;
+	float depth = (polar.z * 2) > 1 ? 1 - ((1 - polar.z) * 2) : 1 - (polar.z * 2);
 	output.Depth = 0; //depth;
-	output.Color.a = lineColor.a * (1-depth) * modulation * (1-polar.x); 
+
+					  //output.Color.a = lineColor.a * (1-depth) * modulation * (1-polar.x);  //This version stops animation at line origin
+	output.Color.a = lineColor.a * modulation *(1 - polar.x);
 	return output;
 }
 
@@ -242,6 +270,13 @@ float4 MyPSGlow( float3 polar : TEXCOORD0 ) : COLOR0
 	finalColor.a *= 1 - polar.x;
 	return finalColor;
 }
+
+
+float4 MyPSTextured(float3 tex : TEXCOORD2) : COLOR0
+{
+	return tex2D(LineTextureSampler, tex);
+}
+
 
 
 technique Standard
@@ -373,5 +408,20 @@ technique Glow
 		BlendOp = Add;
 		vertexShader = compile vs_1_1 MyVS();
 		pixelShader = compile ps_2_0 MyPSGlow();
+	}
+}
+
+
+technique Textured
+{
+	pass P0
+	{
+		CullMode = CW;
+		AlphaBlendEnable = true;
+		SrcBlend = SrcAlpha;
+		DestBlend = InvSrcAlpha;
+		BlendOp = Add;
+		vertexShader = compile vs_1_1 MyVS();
+		pixelShader = compile ps_2_0 MyPSTextured();
 	}
 }
