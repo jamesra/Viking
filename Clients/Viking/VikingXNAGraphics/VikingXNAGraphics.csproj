@@ -139,6 +139,7 @@
     <Compile Include="Camera.cs" />
     <Compile Include="Extensions.cs" />
     <Compile Include="MergeHSVEffect.cs" />
+    <Compile Include="RoundCurve.cs" />
     <Compile Include="Scene.cs" />
     <Compile Include="TileBlendEffect.cs" />
     <Compile Include="DrawExtensions.cs" />

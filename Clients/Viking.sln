@@ -83,6 +83,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SqlGeometryUtils", "SqlGeom
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SqlGeometryUtilsTest", "SqlGeometryUtilsTest\SqlGeometryUtilsTest.csproj", "{E4C80E39-8E55-4528-AE09-1558CCBD846B}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "XNATestbed", "XNATestbed\XNATestbed\XNATestbed.csproj", "{6C72334D-F6C9-4BA5-AEB4-143B7BAB32CE}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "XNATestbedContent", "XNATestbed\XNATestbedContent\XNATestbedContent.contentproj", "{789EB871-5FD3-4174-896B-162B2AAAB9B2}"
+EndProject
 Global
 	GlobalSection(Performance) = preSolution
 		HasPerformanceSessions = true
@@ -531,9 +535,38 @@ Global
 		{E4C80E39-8E55-4528-AE09-1558CCBD846B}.ReleaseWithSymbols|Mixed Platforms.Build.0 = Release|Any CPU
 		{E4C80E39-8E55-4528-AE09-1558CCBD846B}.ReleaseWithSymbols|x86.ActiveCfg = Release|Any CPU
 		{E4C80E39-8E55-4528-AE09-1558CCBD846B}.ReleaseWithSymbols|x86.Build.0 = Release|Any CPU
+		{6C72334D-F6C9-4BA5-AEB4-143B7BAB32CE}.Debug|Any CPU.ActiveCfg = Debug|x86
+		{6C72334D-F6C9-4BA5-AEB4-143B7BAB32CE}.Debug|Mixed Platforms.ActiveCfg = Debug|x86
+		{6C72334D-F6C9-4BA5-AEB4-143B7BAB32CE}.Debug|Mixed Platforms.Build.0 = Debug|x86
+		{6C72334D-F6C9-4BA5-AEB4-143B7BAB32CE}.Debug|x86.ActiveCfg = Debug|x86
+		{6C72334D-F6C9-4BA5-AEB4-143B7BAB32CE}.Debug|x86.Build.0 = Debug|x86
+		{6C72334D-F6C9-4BA5-AEB4-143B7BAB32CE}.Release|Any CPU.ActiveCfg = Release|x86
+		{6C72334D-F6C9-4BA5-AEB4-143B7BAB32CE}.Release|Mixed Platforms.ActiveCfg = Release|x86
+		{6C72334D-F6C9-4BA5-AEB4-143B7BAB32CE}.Release|Mixed Platforms.Build.0 = Release|x86
+		{6C72334D-F6C9-4BA5-AEB4-143B7BAB32CE}.Release|x86.ActiveCfg = Release|x86
+		{6C72334D-F6C9-4BA5-AEB4-143B7BAB32CE}.Release|x86.Build.0 = Release|x86
+		{6C72334D-F6C9-4BA5-AEB4-143B7BAB32CE}.ReleaseWithSymbols|Any CPU.ActiveCfg = Release|x86
+		{6C72334D-F6C9-4BA5-AEB4-143B7BAB32CE}.ReleaseWithSymbols|Any CPU.Build.0 = Release|x86
+		{6C72334D-F6C9-4BA5-AEB4-143B7BAB32CE}.ReleaseWithSymbols|Mixed Platforms.ActiveCfg = Release|x86
+		{6C72334D-F6C9-4BA5-AEB4-143B7BAB32CE}.ReleaseWithSymbols|Mixed Platforms.Build.0 = Release|x86
+		{6C72334D-F6C9-4BA5-AEB4-143B7BAB32CE}.ReleaseWithSymbols|x86.ActiveCfg = Release|x86
+		{6C72334D-F6C9-4BA5-AEB4-143B7BAB32CE}.ReleaseWithSymbols|x86.Build.0 = Release|x86
+		{789EB871-5FD3-4174-896B-162B2AAAB9B2}.Debug|Any CPU.ActiveCfg = Debug|x86
+		{789EB871-5FD3-4174-896B-162B2AAAB9B2}.Debug|Mixed Platforms.ActiveCfg = Debug|x86
+		{789EB871-5FD3-4174-896B-162B2AAAB9B2}.Debug|x86.ActiveCfg = Debug|x86
+		{789EB871-5FD3-4174-896B-162B2AAAB9B2}.Release|Any CPU.ActiveCfg = Release|x86
+		{789EB871-5FD3-4174-896B-162B2AAAB9B2}.Release|Mixed Platforms.ActiveCfg = Release|x86
+		{789EB871-5FD3-4174-896B-162B2AAAB9B2}.Release|x86.ActiveCfg = Release|x86
+		{789EB871-5FD3-4174-896B-162B2AAAB9B2}.ReleaseWithSymbols|Any CPU.ActiveCfg = Release|x86
+		{789EB871-5FD3-4174-896B-162B2AAAB9B2}.ReleaseWithSymbols|Mixed Platforms.ActiveCfg = Release|x86
+		{789EB871-5FD3-4174-896B-162B2AAAB9B2}.ReleaseWithSymbols|x86.ActiveCfg = Release|x86
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{6C72334D-F6C9-4BA5-AEB4-143B7BAB32CE} = {137D9922-6FFD-4872-AA8A-D0B26B83BCA0}
+		{789EB871-5FD3-4174-896B-162B2AAAB9B2} = {137D9922-6FFD-4872-AA8A-D0B26B83BCA0}
 	EndGlobalSection
 	GlobalSection(TestCaseManagementSettings) = postSolution
 		CategoryFile = NGVV.vsmdi
