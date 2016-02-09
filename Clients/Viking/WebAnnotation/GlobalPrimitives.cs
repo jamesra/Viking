@@ -190,7 +190,7 @@ namespace WebAnnotation
                 drawn_lines[i] = new RoundLineCode.RoundLine(new Microsoft.Xna.Framework.Vector2((float)verts[i].X, (float)verts[i].Y),
                                                              new Microsoft.Xna.Framework.Vector2((float)verts[i + 1].X, (float)verts[i + 1].Y));
             }
-            LineManager.Draw(drawn_lines, (float)LineWidth, color, basicEffect.View * basicEffect.Projection, 0, null);
+            LineManager.Draw(drawn_lines, (float)LineWidth /2.0f, color, basicEffect.View * basicEffect.Projection, 0, "Standard");
         }
 
 
@@ -207,7 +207,7 @@ namespace WebAnnotation
             {
                 points[i] = new RoundLineCode.Disc((float)verts[i].X, (float)verts[i].Y);
             }
-            LineManager.Draw(points, (float)Radius, color, basicEffect.View * basicEffect.Projection, 0, null);
+            LineManager.Draw(points, (float)Radius, color, basicEffect.View * basicEffect.Projection, 0, "Standard");
         }
          
         static public void AppendVertLists(IEnumerable<VertexPositionColorTexture> sourceList, List<VertexPositionColorTexture> targetList, IEnumerable<int> indicies, ref List<int> listIndicies)

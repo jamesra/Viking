@@ -149,6 +149,9 @@ namespace RoundLineCode
         protected EffectParameter lineRadiusParameter;
         protected EffectParameter lineColorParameter;
         protected EffectParameter blurThresholdParameter;
+        protected EffectParameter textureParameter;
+        protected EffectParameter minTextureCoordinateParameter; //The texture coordinate at the start of the curve
+        protected EffectParameter maxTextureCoordinateParameter; //The texture coordinate at the end of the curve
         protected VertexBuffer vb;
         protected IndexBuffer ib;
         protected VertexDeclaration vdecl;
@@ -193,6 +196,9 @@ namespace RoundLineCode
             lineRadiusParameter = e.Parameters["lineRadius"];
             lineColorParameter = e.Parameters["lineColor"];
             blurThresholdParameter = e.Parameters["blurThreshold"];
+            textureParameter = e.Parameters["LineTexture"];
+            minTextureCoordinateParameter = e.Parameters["texture_x_min"];
+            maxTextureCoordinateParameter = e.Parameters["texture_x_max"];
         }
 
         public string[] TechniqueNames
@@ -235,6 +241,8 @@ namespace RoundLineCode
             const int verticesPerCap = primsPerCap * 2 + 2;
             const int primsPerCore = 4;
             const int verticesPerCore = 8;
+            const float pi2 = MathHelper.PiOver2;
+            const float threePi2 = 3 * pi2;
 
             numVertices = verticesPerCore * MaxInstancesPerBatch;
             numVertices = (verticesPerCore + verticesPerCap + verticesPerCap) * MaxInstancesPerBatch;
@@ -253,8 +261,6 @@ namespace RoundLineCode
             for (int instance = 0; instance < MaxInstancesPerBatch; instance++)
             {
                 // core vertices
-                const float pi2 = MathHelper.PiOver2;
-                const float threePi2 = 3 * pi2;
                 iVertex = iv;
                 tri[iv++] = new RoundLineVertex(new Vector3(0.0f, -1.0f, 0), new Vector2(1, threePi2), new Vector2(0, 0), instance);
                 tri[iv++] = new RoundLineVertex(new Vector3(0.0f, -1.0f, 0), new Vector2(1, threePi2), new Vector2(0, 1), instance);
@@ -280,12 +286,14 @@ namespace RoundLineCode
                 indices[ii++] = (short)(iVertex + 7);
                 indices[ii++] = (short)(iVertex + 5);
 
+                //Create discs that cap the line
+                float deltaTheta = MathHelper.Pi / primsPerCap;
+
                 // left halfdisc
                 iVertex = iv;
                 iIndex = ii;
                 for (int i = 0; i < primsPerCap + 1; i++)
                 {
-                    float deltaTheta = MathHelper.Pi / primsPerCap;
                     float theta0 = MathHelper.PiOver2 + i * deltaTheta;
                     float theta1 = theta0 + deltaTheta / 2;
                     // even-numbered indices are at the center of the halfdisc
@@ -312,7 +320,6 @@ namespace RoundLineCode
                 // right halfdisc
                 for (int i = 0; i < primsPerCap + 1; i++)
                 {
-                    float deltaTheta = MathHelper.Pi / primsPerCap;
                     float theta0 = 3 * MathHelper.PiOver2 + i * deltaTheta;
                     float theta1 = theta0 + deltaTheta / 2;
                     //                    float theta2 = theta0 + deltaTheta;
@@ -438,6 +445,16 @@ namespace RoundLineCode
             //NumLinesDrawn += numInstancesThisDraw;
         }
 
+
+        /// <summary>
+        /// Draw a list of Lines in batches, up to the maximum number of instances for the shader.
+        /// </summary>
+        public void Draw(IEnumerable<RoundLine> roundLines, float lineRadius, Color lineColor, Matrix viewProjMatrix,
+            float time, Texture2D texture)
+        {
+            textureParameter.SetValue(texture);
+            Draw(roundLines, lineRadius, lineColor, viewProjMatrix, time, "Textured");
+        }
 
         /// <summary>
         /// Draw a list of Lines in batches, up to the maximum number of instances for the shader.

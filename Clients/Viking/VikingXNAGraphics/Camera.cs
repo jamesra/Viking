@@ -107,6 +107,8 @@ namespace VikingXNA
                 Debug.Assert(!double.IsInfinity(value));
                 Debug.Assert(!double.IsNegativeInfinity(value));
                 Debug.Assert(!double.IsNaN(value));
+                if (value < 0)
+                    return;
                 _Downsample = value;
                 CallOnPropertyChanged(new PropertyChangedEventArgs("Downsample"));
             }
