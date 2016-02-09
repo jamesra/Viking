@@ -44,6 +44,7 @@
     <WarningLevel>4</WarningLevel>
     <CodeAnalysisRuleSet>..\Viking\Main.ruleset</CodeAnalysisRuleSet>
     <Prefer32Bit>false</Prefer32Bit>
+    <UseVSHostingProcess>false</UseVSHostingProcess>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -86,13 +87,14 @@
     <Compile Include="CircleFromPoints.cs" />
     <Compile Include="GridRectangle.cs" />
     <Compile Include="CurveFitting.cs" />
+    <Compile Include="GridVector2Test.cs" />
     <Compile Include="LineSearchGridTest.cs" />
     <Compile Include="LineTest.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="QuadTreeTest.cs" />
     <Compile Include="RBFTransformTest.cs" />
     <Compile Include="RegionPyramidTest.cs" />
-    <Compile Include="Scractch.cs" />
+    <Compile Include="Scratch.cs" />
     <Compile Include="TransformAdditionTest.cs" />
     <Compile Include="TransformTest.cs" />
     <Compile Include="TriangleTest.cs" />

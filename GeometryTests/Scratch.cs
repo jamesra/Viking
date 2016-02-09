@@ -26,9 +26,9 @@ namespace GeometryTests
     /// Summary description for Scractch
     /// </summary>
     [TestClass]
-    public class Scractch
+    public class Scratch
     {
-        public Scractch()
+        public Scratch()
         {
             //
             // TODO: Add constructor logic here
