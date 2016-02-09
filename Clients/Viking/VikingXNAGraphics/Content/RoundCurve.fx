@@ -54,7 +54,7 @@ VS_OUTPUT MyVS( VS_INPUT In )
 	Out.posModelSpace.xy = float2(curveTotalLength * distanceToOriginNormalized, pos.y);
 
 	Out.tex = float2(ClampToRange(distanceToOriginNormalized, texture_x_min, texture_x_max),
-				    (-vert_distance_from_center_normalized + 1) / 2.0);
+				    (-In.pos.y + 1) / 2.0);
 
 	return Out;
 }
