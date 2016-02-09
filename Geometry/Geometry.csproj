@@ -46,6 +46,7 @@
     <CodeAnalysisRuleSet>..\Clients\Viking\Viking\Main.ruleset</CodeAnalysisRuleSet>
     <RunCodeAnalysis>true</RunCodeAnalysis>
     <Prefer32Bit>false</Prefer32Bit>
+    <UseVSHostingProcess>false</UseVSHostingProcess>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -97,8 +98,8 @@
     <Compile Include="AddTransformThreadObj.cs" />
     <Compile Include="Color.cs" />
     <Compile Include="Common.cs" />
-    <Compile Include="Algorithms\ConvexHull.cs" />
-    <Compile Include="Comparable\GridVector2CompareByAngle.cs" />
+    <Compile Include="CurveFitting\Algorithms\ConvexHull.cs" />
+    <Compile Include="CurveFitting\Comparable\GridVector2CompareByAngle.cs" />
     <Compile Include="CurveFitting\CatmullRom.cs" />
     <Compile Include="CurveFitting\Lagrange.cs" />
     <Compile Include="DataStructures\Coord.cs" />
@@ -111,7 +112,7 @@
     <Compile Include="GlobalSuppressions.cs" />
     <Compile Include="Primitives\GridQuad.cs" />
     <Compile Include="DataStructures\QuadTreeNodeTemplatePoint.cs" />
-    <Compile Include="Algorithms\Delaunay.cs" />
+    <Compile Include="CurveFitting\Algorithms\Delaunay.cs" />
     <Compile Include="Global.cs" />
     <Compile Include="Primitives\GridCircle.cs" />
     <Compile Include="Primitives\GridIndexTriangle.cs" />
