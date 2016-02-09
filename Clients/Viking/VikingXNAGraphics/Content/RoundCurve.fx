@@ -20,20 +20,14 @@ float lineRadius = 16.0;
 float4 lineColor;
 float blurThreshold = 0.95;
 
+float curveTotalLength = 1.0;
+
 float texture_x_min = 0;
 float texture_x_max = 1;
 
-struct CurveSegment
-{
-	float2 pos;
-	float distance_to_origin;
-	float distance_to_origin_normalized;
-	float tangent_to_curve;
-};
-
 // Per-curve instance data:
-CurveSegment CurveSegmentData[200]; // (x0, y0, distance_to_origin, theta (tangent to curve))
-
+float4 CurveSegmentData[200]; // (x0, y0, normalized_distance_to_origin, theta (tangent to curve))
+ 
 uniform const texture LineTexture;
 
 uniform const sampler LineTextureSampler : register(s1) = sampler_state
@@ -77,17 +71,16 @@ VS_OUTPUT MyVS( VS_INPUT In )
 	VS_OUTPUT Out = (VS_OUTPUT)0;
 	float4 pos = In.pos; //Position on the line, either along the center or the edge
 	
-	float x0 = CurveSegmentData[In.curvesegmentIndex].pos.x; //Position of the control point in world space
+	float x0 = CurveSegmentData[In.curvesegmentIndex].x; //Position of the control point in world space
 	float y0 = CurveSegmentData[In.curvesegmentIndex].y;
-	float distanceToOrigin = CurveSegmentData[In.curvesegmentIndex].z; //Distance to the origin of the polyline in world space
+	float distanceToOriginNormalized = CurveSegmentData[In.curvesegmentIndex].z; //Distance to the origin of the polyline in world space
 	float tangent_theta = CurveSegmentData[In.curvesegmentIndex].w; //Tangent to the polyline at this control point
 	float theta = tangent_theta;// +(3.14159 / 2.0); //Adjust the tangent 90 degrees so we rotate our verticies a lineradius distance away from the control point
-	float vert_distance_to_edge = In.vertRhoTheta.x;
+	float vert_distance_from_center_normalized = In.vertRhoTheta.x;
 	// Scale X by lineRadius, and translate X by rho, in worldspace
 	// based on what part of the line we're on
 	
 	// Always scale Y by lineRadius regardless of what part of the line we're on
-
 	pos.y *= lineRadius;
 
 	// World matrix is rotate(theta) * translate(p0)
@@ -101,12 +94,12 @@ VS_OUTPUT MyVS( VS_INPUT In )
 
 	Out.position = mul(mul(pos, worldMatrix), viewProj);
 		 
-	Out.polar = float3(In.vertRhoTheta, distanceToOrigin);
+	Out.polar = float3(In.vertRhoTheta, distanceToOriginNormalized);
 
-	Out.posModelSpace.xy = float2(distanceToOrigin, pos.y);
+	Out.posModelSpace.xy = float2(curveTotalLength * distanceToOriginNormalized, pos.y);
 
-	Out.tex = float2(ClampToRange(distanceToOrigin, texture_x_min, texture_x_max),
-				    (-vert_distance_to_edge + 1) / 2.0);
+	Out.tex = float2(ClampToRange(distanceToOriginNormalized, texture_x_min, texture_x_max),
+				    (-vert_distance_from_center_normalized + 1) / 2.0);
 
 	return Out;
 }
