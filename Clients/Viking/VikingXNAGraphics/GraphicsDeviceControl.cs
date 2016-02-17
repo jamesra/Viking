@@ -17,7 +17,7 @@ using Microsoft.Xna.Framework.Graphics;
 namespace VikingXNA
 {
     // System.Drawing and the XNA Framework both define Color and Rectangle
-    // types. To avoid conflicts, we specify exactly which ones to use.
+    // types. To avoid conflicts, we specify which ones to use.
     using Color = System.Drawing.Color;
     using Rectangle = Microsoft.Xna.Framework.Rectangle;
 
@@ -366,47 +366,7 @@ namespace VikingXNA
 
 
         #endregion
-
-        /// <summary>
-        /// Load a texture using one texture as the color channel and the other as the alpha
-        /// </summary>
-        /// <param name="TextureName"></param>
-        /// <param name="AlphaName"></param>
-        /// <returns></returns>
-        public Texture2D LoadTextureWithAlpha(string TextureName, string AlphaName)
-        {
-            Texture2D ColorTexture = Content.Load<Texture2D>(TextureName); 
-            Texture2D AlphaTexture = Content.Load<Texture2D>(AlphaName);
-
-//            Texture2D CompositeTexture = new Texture2D(this.graphicsDeviceService.GraphicsDevice, ColorTexture.Width, ColorTexture.Height, false, SurfaceFormat.Color);
-
-            int ArraySize = ColorTexture.Width * ColorTexture.Height;
-            Microsoft.Xna.Framework.Color[] ColorTextureData = new Microsoft.Xna.Framework.Color[ArraySize];
-            Microsoft.Xna.Framework.Color[] AlphaTextureData = new Microsoft.Xna.Framework.Color[ArraySize];
-
-            ColorTexture.GetData<Microsoft.Xna.Framework.Color>(ColorTextureData);
-            AlphaTexture.GetData<Microsoft.Xna.Framework.Color>(AlphaTextureData);
-
-            for (int i = 0; i < ArraySize; i++)
-            {
-                ColorTextureData[i] = new Microsoft.Xna.Framework.Color(ColorTextureData[i].R,
-                                                                        ColorTextureData[i].G,
-                                                                        ColorTextureData[i].B,
-                                                                        AlphaTextureData[i].R);
-            }
-
-            ColorTexture.SetData<Microsoft.Xna.Framework.Color>(ColorTextureData);
-
-            //if (AlphaTexture != null)
-            //{
-             //   Content.Unload(); 
-                //AlphaTexture.Dispose();
-                //AlphaTexture = null;
-            //}
-
-            return ColorTexture;
-        }
-
+        
         private void InitializeComponent()
         {
             this.SuspendLayout();

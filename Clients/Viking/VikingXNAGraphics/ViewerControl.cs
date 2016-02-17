@@ -10,13 +10,13 @@ using System.Drawing.Imaging;
 
 namespace VikingXNA
 {
-
     public class ViewerControl : GraphicsDeviceControl
-    {
-        
-
+    { 
         public RoundLineCode.RoundLineManager LineManager = new RoundLineCode.RoundLineManager();
         public RoundLineCode.LumaOverlayRoundLineManager LumaOverlayLineManager = new RoundLineCode.LumaOverlayRoundLineManager();
+
+        public RoundCurve.CurveManager CurveManager = new RoundCurve.CurveManager();
+        public RoundCurve.CurveManagerHSV LumaOverlayCurveManager = new RoundCurve.CurveManagerHSV();
 
         public BasicEffect basicEffect;
 
@@ -166,6 +166,9 @@ namespace VikingXNA
 
                 this.LineManager.Init(Device, Content);
                 this.LumaOverlayLineManager.Init(Device, Content);
+
+                this.CurveManager.Init(Device, Content);
+                this.LumaOverlayCurveManager.Init(Device, Content);
             }
         }
         
@@ -271,6 +274,21 @@ namespace VikingXNA
         private DepthStencilState DefaultDepthState = null;
         private BlendState DefaultBlendState = null; 
 
+        private void UpdateEffectMatricies(Scene drawnScene)
+        {
+            Matrix worldViewProj = drawnScene.WorldViewProj;
+
+            //Enables some basic effect characteristics, such as vertex coloring and default lighting.
+            basicEffect.Projection = drawnScene.Projection;
+            basicEffect.View = drawnScene.Camera.View;
+            basicEffect.World = drawnScene.World;
+
+            tileLayoutEffect.WorldViewProjMatrix = worldViewProj;
+            this.channelOverlayEffect.WorldViewProjMatrix = worldViewProj;
+            this.mergeHSVImagesEffect.WorldViewProjMatrix = worldViewProj;
+            this.annotationOverlayEffect.WorldViewProjMatrix = worldViewProj;
+        }
+
         protected void Draw(Scene drawnScene, RenderTarget2D renderTarget)
         {
 
@@ -367,17 +385,7 @@ namespace VikingXNA
                 }
             }
 
-            Matrix worldViewProj = drawnScene.WorldViewProj;
-            
-            //Enables some basic effect characteristics, such as vertex coloring and default lighting.
-            basicEffect.Projection = drawnScene.Projection;
-            basicEffect.View = drawnScene.Camera.View;
-            basicEffect.World = drawnScene.World;
-
-            tileLayoutEffect.WorldViewProjMatrix = worldViewProj;
-            this.channelOverlayEffect.WorldViewProjMatrix = worldViewProj;
-            this.mergeHSVImagesEffect.WorldViewProjMatrix = worldViewProj;
-            this.annotationOverlayEffect.WorldViewProjMatrix = worldViewProj;
+            UpdateEffectMatricies(this.Scene);
 
             if (this.spriteBatch == null || this.spriteBatch.GraphicsDevice.IsDisposed)
             {

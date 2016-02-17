@@ -1,19 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Collections.ObjectModel;
-using System.Collections.Specialized;
 using Geometry;
-using WebAnnotation.ViewModel;
-using Viking.Common;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
-namespace WebAnnotation.View
+namespace VikingXNAGraphics
 {
-    class PolyLineView
+    public class PolyLineView
     {
         private Texture2D _ControlPointTexture;
         public Texture2D ControlPointTexture

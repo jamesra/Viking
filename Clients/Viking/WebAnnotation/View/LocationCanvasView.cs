@@ -92,7 +92,6 @@ namespace WebAnnotation.View
         public abstract void DrawLabel(Microsoft.Xna.Framework.Graphics.SpriteBatch spriteBatch,
                               Microsoft.Xna.Framework.Graphics.SpriteFont font,
                               Scene scene,
-                              float MagnificationFactor,
                               int DirectionToVisiblePlane);
 
         public abstract LocationAction GetMouseClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber);
@@ -160,6 +159,47 @@ namespace WebAnnotation.View
         public override string ToString()
         {
             return modelObj.ToString();
+        }
+
+        /// <summary>
+        /// Full label and tag text
+        /// </summary>
+        /// <returns></returns>
+        protected string FullLabelText()
+        {
+            string fullLabel = this.StructureLabel();
+
+            if (fullLabel.Length == 0)
+                fullLabel = this.TagLabel();
+            else
+                fullLabel += '\n' + this.TagLabel();
+
+            return fullLabel;
+        }
+
+        protected string StructureLabel()
+        {
+            string InfoLabel = "";
+            if (Parent.InfoLabel != null)
+                InfoLabel = Parent.InfoLabel.Trim();
+
+            return InfoLabel;
+        }
+
+        protected string TagLabel()
+        {
+            string InfoLabel = "";
+            foreach (ObjAttribute tag in Parent.Attributes)
+            {
+                InfoLabel += tag.ToString() + " ";
+            }
+
+            foreach (ObjAttribute tag in modelObj.Attributes)
+            {
+                InfoLabel += tag.ToString() + " ";
+            }
+
+            return InfoLabel.Trim();
         }
 
         public override int GetHashCode()
@@ -474,6 +514,8 @@ namespace WebAnnotation.View
         }
 
         public abstract bool IsVisible(Scene scene);
+        public abstract bool IsLabelVisible(Scene scene);
+
         public abstract bool Intersects(GridVector2 Position);
         public abstract double Distance(GridVector2 Position);
         public abstract double DistanceFromCenterNormalized(GridVector2 Position);

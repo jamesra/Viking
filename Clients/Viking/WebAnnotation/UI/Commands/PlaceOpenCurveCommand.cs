@@ -170,7 +170,7 @@ namespace WebAnnotation.UI.Commands
 
                 CurveView curveView = new CurveView(vert_stack.ToArray(), this.LineColor, this.IsOpen, lineWidth: this.LineWidth);
 
-                CurveView.Draw(graphicsDevice, scene, Parent.LumaOverlayLineManager, basicEffect, Parent.annotationOverlayEffect, new CurveView[] { curveView } );
+                CurveView.Draw(graphicsDevice, scene, Parent.LumaOverlayCurveManager, basicEffect, Parent.annotationOverlayEffect, 0, new CurveView[] { curveView } );
                 //GlobalPrimitives.DrawPolyline(Parent.LineManager, basicEffect, DrawnLineVerticies, this.LineWidth, this.LineColor);
 
                 this.vert_stack.Pop();

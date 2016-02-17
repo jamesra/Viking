@@ -1,17 +1,17 @@
-// RoundLine.fx
-// By Michael D. Anderson
-// Version 3.00, Mar 12 2009
+// RoundCurve.fx
+// By James R. Anderson
+// Version 1.00, Sep 18 2015
 //
-// Note that there is a (rho, theta) pair, used in the VS, that tells how to 
-// scale and rotate the entire line.  There is also a different (rho, theta) 
-// pair, used within the PS, that indicates what part of the line each pixel 
-// is on.
+// Based on RoundLine by Michael Anderson
+//
 
+// This shader draws one polyline at a time.
+// Each control point occupies an entry in the control point array
 
 #include "LineCurveCommon.fx"
-#include "LineVertexShader.fx"
-#include "LineCurvePixelShaders.fx"
- 
+#include "CurveVertexShader.fx"
+#include "LineCurveHSVPixelShaders.fx"
+
 technique Standard
 {
 	pass P0
@@ -21,8 +21,8 @@ technique Standard
 		SrcBlend = SrcAlpha;
 		DestBlend = InvSrcAlpha;
 		BlendOp = Add;
-		vertexShader = compile vs_1_1 LineVertexShader();
-		pixelShader = compile ps_2_0 MyPSStandard();
+		vertexShader = compile vs_3_0 CurveVertexShader();
+		pixelShader = compile ps_3_0 MyPSStandardHSV();
 	}
 }
 
@@ -35,8 +35,8 @@ technique AlphaGradient
 		SrcBlend = SrcAlpha;
 		DestBlend = InvSrcAlpha;
 		BlendOp = Add;
-		vertexShader = compile vs_1_1 LineVertexShader();
-		pixelShader = compile ps_2_0 MyPSAlphaGradient();
+		vertexShader = compile vs_3_0 CurveVertexShader();
+		pixelShader = compile ps_3_0 MyPSAlphaGradientHSV();
 	}
 }
 
@@ -50,8 +50,8 @@ technique NoBlur
 		SrcBlend = SrcAlpha;
 		DestBlend = InvSrcAlpha;
 		BlendOp = Add;
-		vertexShader = compile vs_1_1 LineVertexShader();
-		pixelShader = compile ps_2_0 MyPSNoBlur();
+		vertexShader = compile vs_3_0 CurveVertexShader();
+		pixelShader = compile ps_3_0 MyPSNoBlurHSV();
 	}
 }
 
@@ -65,8 +65,8 @@ technique AnimatedLinear
 		SrcBlend = SrcAlpha;
 		DestBlend = InvSrcAlpha;
 		BlendOp = Add;
-		vertexShader = compile vs_1_1 LineVertexShader();
-		pixelShader = compile ps_2_0 MyPSAnimatedLinear();
+		vertexShader = compile vs_3_0 CurveVertexShader();
+		pixelShader = compile ps_3_0 MyPSAnimatedLinearHSV();
 	}
 }
 
@@ -79,8 +79,8 @@ technique AnimatedBidirectional
 		SrcBlend = SrcAlpha;
 		DestBlend = InvSrcAlpha;
 		BlendOp = Add;
-		vertexShader = compile vs_1_1 LineVertexShader();
-		pixelShader = compile ps_2_0 MyPSAnimatedBidirectional();
+		vertexShader = compile vs_3_0 CurveVertexShader();
+		pixelShader = compile ps_3_0 MyPSAnimatedBidirectionalHSV();
 	}
 }
 
@@ -94,8 +94,8 @@ technique AnimatedRadial
 		SrcBlend = SrcAlpha;
 		DestBlend = InvSrcAlpha;
 		BlendOp = Add;
-		vertexShader = compile vs_1_1 LineVertexShader();
-		pixelShader = compile ps_2_0 MyPSAnimatedRadial();
+		vertexShader = compile vs_3_0 CurveVertexShader();
+		pixelShader = compile ps_3_0 MyPSAnimatedRadialHSV();
 	}
 }
 
@@ -109,8 +109,8 @@ technique Modern
 		SrcBlend = SrcAlpha;
 		DestBlend = InvSrcAlpha;
 		BlendOp = Add;
-		vertexShader = compile vs_1_1 LineVertexShader();
-		pixelShader = compile ps_2_0 MyPSModern();
+		vertexShader = compile vs_3_0 CurveVertexShader();
+		pixelShader = compile ps_3_0 MyPSModernHSV();
 	}
 }
 
@@ -124,8 +124,8 @@ technique Tubular
 		SrcBlend = SrcAlpha;
 		DestBlend = InvSrcAlpha;
 		BlendOp = Add;
-		vertexShader = compile vs_1_1 LineVertexShader();
-		pixelShader = compile ps_2_0 MyPSTubular();
+		vertexShader = compile vs_3_0 CurveVertexShader();
+		pixelShader = compile ps_3_0 MyPSTubularHSV();
 	}
 }
 
@@ -139,8 +139,8 @@ technique Glow
 		SrcBlend = SrcAlpha;
 		DestBlend = InvSrcAlpha;
 		BlendOp = Add;
-		vertexShader = compile vs_1_1 LineVertexShader();
-		pixelShader = compile ps_2_0 MyPSGlow();
+		vertexShader = compile vs_3_0 CurveVertexShader();
+		pixelShader = compile ps_3_0 MyPSGlowHSV();
 	}
 }
 
@@ -154,7 +154,7 @@ technique Textured
 		SrcBlend = SrcAlpha;
 		DestBlend = InvSrcAlpha;
 		BlendOp = Add;
-		vertexShader = compile vs_1_1 LineVertexShader();
-		pixelShader = compile ps_2_0 MyPSTextured();
+		vertexShader = compile vs_3_0 CurveVertexShader();
+		pixelShader = compile ps_3_0 MyPSTexturedHSV();
 	}
 }

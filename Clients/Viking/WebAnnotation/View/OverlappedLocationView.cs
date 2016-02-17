@@ -66,6 +66,11 @@ namespace WebAnnotation.View
             return this.circleView.IsVisible(scene);
         }
 
+        public override bool IsLabelVisible(VikingXNA.Scene scene)
+        {
+            return label.IsVisible(scene);
+        }
+
         public override bool Intersects(GridVector2 Position)
         {
             return gridCircle.Contains(Position);
@@ -98,7 +103,7 @@ namespace WebAnnotation.View
             TextureCircleView.Draw(device, scene, basicEffect, overlayEffect, backgroundCircles.ToArray()); 
         }
 
-        public override void DrawLabel(SpriteBatch spriteBatch, SpriteFont font, VikingXNA.Scene scene, float MagnificationFactor, int DirectionToVisiblePlane)
+        public override void DrawLabel(SpriteBatch spriteBatch, SpriteFont font, VikingXNA.Scene scene, int DirectionToVisiblePlane)
         {
             double DesiredRowsOfText = 4.0;
             double NumUnscaledRows = (this.Radius * 2) / font.LineSpacing;
@@ -106,7 +111,7 @@ namespace WebAnnotation.View
             label.FontSize = DefaultFontSize;
             label.MaxLineWidth = this.Radius * 2;
 
-            label.Draw(spriteBatch, font, scene, MagnificationFactor);
+            label.Draw(spriteBatch, font, scene);
         }
 
         public override LocationAction GetMouseClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber)

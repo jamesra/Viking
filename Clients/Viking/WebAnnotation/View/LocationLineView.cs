@@ -112,9 +112,17 @@ namespace WebAnnotation.View
     { 
         public override bool IsVisible(VikingXNA.Scene scene)
         {
+            if (this.Width / scene.DevicePixelWidth < 2.0)
+                return false;
+
             return scene.VisibleWorldBounds.Intersects(this.BoundingBox);
         }
-                
+
+        public override bool IsLabelVisible(Scene scene)
+        {
+            return IsVisible(scene);
+        }
+
         public override GridRectangle BoundingBox
         {
             get
@@ -160,7 +168,7 @@ namespace WebAnnotation.View
             } 
         }
 
-        public override void DrawLabel(SpriteBatch spriteBatch, SpriteFont font, Scene scene, float MagnificationFactor, int DirectionToVisiblePlane)
+        public override void DrawLabel(SpriteBatch spriteBatch, SpriteFont font, Scene scene, int DirectionToVisiblePlane)
         {
             return;
         }

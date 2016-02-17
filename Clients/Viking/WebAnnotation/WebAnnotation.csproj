@@ -131,15 +131,10 @@
     <Compile Include="Export.cs" />
     <Compile Include="Extensions.cs" />
     <Compile Include="Global.cs" />
-    <Compile Include="GlobalPrimitives.cs" />
     <Compile Include="UI\Commands\AddRemoveLineControlPointCommand.cs" />
     <Compile Include="UI\Commands\AdjustControlPointCommand.cs" />
     <Compile Include="UI\Commands\PlaceOpenCurveCommand.cs" />
     <Compile Include="UI\Commands\TranslateLocationCommand.cs" />
-    <Compile Include="View\CircleView.cs" />
-    <Compile Include="View\LabelView.cs" />
-    <Compile Include="View\LineView.cs" />
-    <Compile Include="View\LinkedLineView.cs" />
     <Compile Include="View\LocationCircleLabelView.cs" />
     <Compile Include="View\LocationActions.cs" />
     <Compile Include="View\LocationCanvasView.cs" />
@@ -251,11 +246,8 @@
     </Compile>
     <Compile Include="ViewModel\Location_ViewModelBase.cs" />
     <Compile Include="ViewModel\SectionStructureLinksViewModel.cs" />
-    <Compile Include="View\CurveView.cs" />
     <Compile Include="View\AnnotationViewFactory.cs" />
     <Compile Include="View\Location_ContextMenuView.cs" />
-    <Compile Include="View\PolygonView.cs" />
-    <Compile Include="View\PolyLineView.cs" />
     <Compile Include="WeakEvents\NotifyCollectionChangedEventManager.cs" />
     <Compile Include="WeakEvents\NotifyPropertyChangingEventManager.cs" />
     <Compile Include="WeakEvents\NotifyPropertyChangedEventManager.cs" />
@@ -327,7 +319,7 @@
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
-    <None Include="app.config" />
+    <None Include="WeakEvents\app.config" />
     <None Include="packages.config" />
     <None Include="Properties\DataSources\WebAnnotation.UI.Tag.datasource" />
     <None Include="WebAnnotationUserSettings.xsd">

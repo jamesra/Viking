@@ -34,7 +34,7 @@ namespace WebAnnotation
 #endif
 
         //TODO: Choose number of points based on distance between control points
-        static public int NumCurveInterpolationPoints = 3;
+        static public uint NumCurveInterpolationPoints = 3;
 
         /// <summary>
         /// Number of interpolations to place between curve control points, determines distance between control points

@@ -20,7 +20,8 @@ namespace VikingXNAGraphics
         AnimatedRadial,
         Modern,
         Tubular,
-        Glow
+        Glow,
+        Texture
     }
 
     public static class LineManagerExtensions
@@ -47,6 +48,8 @@ namespace VikingXNAGraphics
                     return "Tubular";
                 case LineStyle.Glow:
                     return "Glow";
+                case LineStyle.Texture:
+                    return "Texture";
                 default:
                     throw new ArgumentException("Unknown line style " + style.ToString());
             }

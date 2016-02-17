@@ -12,6 +12,7 @@ Content\MergeHSVImages.xnb
 Content\RoundLineHSV.xnb
 Content\DownArrowV2.xnb
 Content\RoundCurve.xnb
+Content\RoundCurveHSV.xnb
 Content\Arial.spritefont
 Content\RoundLine.fx
 Content\RGBToHSV.fx
@@ -21,3 +22,4 @@ Content\AnnotationOverlayShader.fx
 Content\MergeHSVImages.fx
 Content\RoundCurve.fx
 Content\RoundLineHSV.fx
+Content\RoundCurveHSV.fx

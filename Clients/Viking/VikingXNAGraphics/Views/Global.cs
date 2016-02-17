@@ -6,9 +6,14 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Geometry; 
 
-namespace WebAnnotation
+namespace VikingXNAGraphics
 {
-    static class GlobalPrimitives
+    public static class Global
+    {
+        public static int NumCurveInterpolationsDefault = 14;
+    }
+
+    public static class GlobalPrimitives
     {
         static public Texture2D CircleTexture;
         static public Texture2D UpArrowTexture;

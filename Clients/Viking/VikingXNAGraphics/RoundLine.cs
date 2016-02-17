@@ -544,7 +544,5 @@ namespace RoundLineCode
             LoadParameters(effect);
             CreateRoundLineMesh();
         }
-
-
     }
 }

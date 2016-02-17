@@ -30,6 +30,8 @@ float BlendLumaWithBackground(float BackgroundLuma, float ForegroundLuma, float 
 	return (BackgroundLuma * (1 - Alpha)) + ((ForegroundLuma * Alpha));
 }
 
+
+
 //Convert RGB value to Hue, Chroma, Luma, slope
 float4 RGBToHCL(float4 RGB)
 {
@@ -73,48 +75,6 @@ float4 RGBToHCL(float4 RGB)
 
 	return HCL;
 }
-
-/*
-float3 CorrectLuma(int Hextant, float3 Components, float Luma)
-{
-	float4 ComponentLumaWeights = ComponentLumaWeightsMap[Hextant]; 
-	float4 InverseComponentLumaWeights = InverseComponentLumaWeightsMap[Hextant];
-
-	float OverlayLuma = mul(ComponentLumaWeights, Components); 
-	//float3 m = (Luma - OverlayLuma) * InverseComponentLumaWeights;
-	float m = (Luma - OverlayLuma);
-	//Components.rgb += m.rgb;
-	Components += m; 
-
-	if(Components.r <= 1 && Components.r >= 0)
-		return Components;
-
-	Components = saturate(Components); 
-	
-	//Figure out how much to spill over
-	OverlayLuma = mul(ComponentLumaWeights, Components); 
-	//m =  (Luma - OverlayLuma) * InverseComponentLumaWeights;
-	m = (Luma - OverlayLuma);
-	//Components.gb += m.gb;
-	Components.gb += m; 
-
-	if(Components.g <= 1 && Components.g >= 0)
-		return Components;
-	
-	Components = saturate(Components);
-	OverlayLuma = mul(ComponentLumaWeights, Components);
-	//m =  (Luma - OverlayLuma) * InverseComponentLumaWeights;
-	m = (Luma - OverlayLuma);
-	Components.b += m;
-	//Components += m; 
-
-	//Components[2] += m;
-	//Components = saturate(Components); 
-
-	return Components;
-}
-*/
-
 
 float3 CorrectLuma(int Hextant, float3 Components, float Luma)
 {
@@ -173,4 +133,19 @@ float4 HCLToRGB(float4 hcls)
 	
 	float4	output = {Components[RGBIndex[0]], Components[RGBIndex[1]], Components[RGBIndex[2]], hcls [3]};
 	return output;
+}
+
+float4 BlendHSLColorOverBackground(float4 HSLForegroundColor, float4 RGBBackgroundColor, float ForegroundLumaAlpha)
+{
+	float Hue = HSLForegroundColor.r;
+	float Saturation = HSLForegroundColor.g;
+	float ForegroundLuma = HSLForegroundColor.b;
+	float BackgroundLuma = mul(RGBBackgroundColor, LumaWeights);
+
+	float Luma = BlendLumaWithBackground(BackgroundLuma, ForegroundLuma, ForegroundLumaAlpha);
+
+	float4 hsv = { Hue, Saturation, Luma, HSLForegroundColor.a };
+	float4 finalColor = ForegroundLuma > 0 ? HCLToRGB(hsv) : RGBBackgroundColor;
+
+	return finalColor;
 }

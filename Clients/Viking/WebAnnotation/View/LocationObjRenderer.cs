@@ -53,87 +53,6 @@ namespace WebAnnotation
         }
     }
 
-    static class DeviceStateManager
-    {
-        static BlendState OriginalBlendState;
-        static RasterizerState OriginalRasterState;
-
-        static BlendState ShapeRendererBlendState = null;
-        static RasterizerState ShapeRendererRasterizerState = null;
-
-        static DepthStencilState depthstencilState;
-
-        public static void SaveDeviceState(GraphicsDevice graphicsDevice)
-        {
-            OriginalBlendState = graphicsDevice.BlendState;
-            OriginalRasterState = graphicsDevice.RasterizerState;
-        }
-
-        public static void RestoreDeviceState(GraphicsDevice graphicsDevice)
-        {
-            if (OriginalBlendState != null)
-                graphicsDevice.BlendState = OriginalBlendState;
-
-            if (OriginalRasterState != null)
-                graphicsDevice.RasterizerState = OriginalRasterState;
-        }
-
-        public static void SetRenderStateForShapes(GraphicsDevice graphicsDevice)
-        {
-            if (ShapeRendererBlendState == null || ShapeRendererBlendState.IsDisposed)
-            {
-                ShapeRendererBlendState = new BlendState();
-
-                ShapeRendererBlendState.AlphaSourceBlend = Blend.SourceAlpha;
-                ShapeRendererBlendState.AlphaDestinationBlend = Blend.InverseSourceAlpha;
-                ShapeRendererBlendState.ColorSourceBlend = Blend.SourceAlpha;
-                ShapeRendererBlendState.ColorDestinationBlend = Blend.InverseSourceAlpha;
-            }
-
-            graphicsDevice.BlendState = ShapeRendererBlendState;
-        }
-
-        public static void SetRasterizerStateForShapes(GraphicsDevice graphicsDevice)
-        {
-            if (ShapeRendererRasterizerState == null || ShapeRendererRasterizerState.IsDisposed)
-            {
-                ShapeRendererRasterizerState = new RasterizerState();
-                ShapeRendererRasterizerState.FillMode = FillMode.Solid;
-                ShapeRendererRasterizerState.CullMode = CullMode.None;
-            }
-
-            graphicsDevice.RasterizerState = ShapeRendererRasterizerState;
-        }
-
-        public static void SetDepthStencilValue(GraphicsDevice device, int StencilValue, CompareFunction stencilFunction = CompareFunction.GreaterEqual)
-        {
-            if (depthstencilState != null)
-            {
-                depthstencilState.Dispose();
-                depthstencilState = null;
-            }
-
-            if (depthstencilState == null || depthstencilState.IsDisposed)
-            {
-                depthstencilState = new DepthStencilState();
-                depthstencilState.DepthBufferEnable = true;
-                depthstencilState.DepthBufferWriteEnable = true;
-                depthstencilState.DepthBufferFunction = CompareFunction.LessEqual;
-
-                depthstencilState.StencilEnable = true;
-                depthstencilState.StencilFunction = stencilFunction;
-                depthstencilState.ReferenceStencil = StencilValue;
-                depthstencilState.StencilPass = StencilOperation.Replace;
-
-                device.DepthStencilState = depthstencilState;
-            }
-        }
-
-        public static int GetDepthStencilValue(GraphicsDevice device)
-        {
-            return device.DepthStencilState.ReferenceStencil; 
-        } 
-    }
 
     /// <summary>
     /// This class draws LocationObj's
@@ -243,7 +162,10 @@ namespace WebAnnotation
         /// <param name="graphicsDevice"></param>
         /// <param name="basicEffect"></param>
         /// <param name="SectionNumber"></param>
-        public static void DrawBackgrounds(List<LocationCanvasView> listToDraw, GraphicsDevice graphicsDevice, BasicEffect basicEffect, VikingXNA.AnnotationOverBackgroundLumaEffect overlayEffect, RoundLineCode.RoundLineManager overlayLineManager, VikingXNA.Scene Scene, int VisibleSectionNumber)
+        public static void DrawBackgrounds(List<LocationCanvasView> listToDraw, GraphicsDevice graphicsDevice, BasicEffect basicEffect, 
+                                           VikingXNA.AnnotationOverBackgroundLumaEffect overlayEffect, RoundLineCode.RoundLineManager overlayLineManager,
+                                           RoundCurve.CurveManager overlayCurveManager,
+                                           VikingXNA.Scene Scene, int VisibleSectionNumber)
         {
             if (listToDraw.Count == 0)
                 return;
@@ -265,11 +187,11 @@ namespace WebAnnotation
                 {
                     if (typeGroup.Key == typeof(LocationOpenCurveView))
                     {
-                        LocationOpenCurveView.Draw(graphicsDevice, Scene, overlayLineManager, basicEffect, overlayEffect, typeGroup.Cast<LocationOpenCurveView>().ToArray());
+                        LocationOpenCurveView.Draw(graphicsDevice, Scene, overlayCurveManager, basicEffect, overlayEffect, typeGroup.Cast<LocationOpenCurveView>().ToArray());
                     }
                     else if (typeGroup.Key == typeof(LocationClosedCurveView))
                     {
-                        LocationClosedCurveView.Draw(graphicsDevice, Scene, overlayLineManager, basicEffect, overlayEffect, typeGroup.Cast<LocationClosedCurveView>().ToArray());
+                        LocationClosedCurveView.Draw(graphicsDevice, Scene, overlayCurveManager, basicEffect, overlayEffect, typeGroup.Cast<LocationClosedCurveView>().ToArray());
                     }
                     else if (typeGroup.Key == typeof(LocationLineView))
                     {

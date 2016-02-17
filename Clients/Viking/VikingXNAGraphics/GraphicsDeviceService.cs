@@ -11,6 +11,7 @@
 using System;
 using System.Threading;
 using Microsoft.Xna.Framework.Graphics;
+using VikingXNAGraphics;
 #endregion
 
 // The IGraphicsDeviceService interface requires a DeviceCreated event, but we
@@ -43,6 +44,8 @@ namespace VikingXNA
 
 
         #endregion
+
+
 
 
         /// <summary>
@@ -148,7 +151,13 @@ namespace VikingXNA
 
             if (DeviceReset != null)
                 DeviceReset(this, EventArgs.Empty);
+
+            // AnnotationCache.parent = parent;
+            GlobalPrimitives.CircleTexture = Content.LoadTextureWithAlpha("Circle", "CircleMask"); //parent.Content.Load<Texture2D>("Circle");
+            GlobalPrimitives.UpArrowTexture = Content.LoadTextureWithAlpha("UpArrowV2", "UpArrowMask"); //parent.Content.Load<Texture2D>("Circle");
+            GlobalPrimitives.DownArrowTexture = Content.LoadTextureWithAlpha("DownArrowV2", "UpArrowMask"); //parent.Content.Load<Texture2D>("Circle");
         }
+
 
 
         /// <summary>
@@ -160,6 +169,24 @@ namespace VikingXNA
         }
 
         GraphicsDevice graphicsDevice;
+
+        //Gets the content
+        public Microsoft.Xna.Framework.Content.ContentManager _Content;
+        public Microsoft.Xna.Framework.Content.ContentManager Content
+        {
+            get
+            {
+                if (_Content == null)
+                {
+                    ServiceContainer tempContainer = new ServiceContainer();
+                    tempContainer.AddService<IGraphicsDeviceService>(this);
+                    _Content = new Microsoft.Xna.Framework.Content.ContentManager(tempContainer, "Content");
+                }
+
+                return _Content;
+            }
+        }
+        
 
 
         // Store the current device settings.

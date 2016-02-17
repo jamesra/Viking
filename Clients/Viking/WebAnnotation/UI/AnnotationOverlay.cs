@@ -276,8 +276,8 @@ namespace WebAnnotation
                         adjacentObjs.AddRange(locView.GetAdjacentLocations(position).Where(l => l.IsVisible(Parent.Scene)));
                     }
                 }
-
-                IEnumerable<LocationCanvasView> intersecting_candidates = RemoveOverlappingLocations(locView.GetLocations().ToList(), adjacentObjs, this.CurrentSectionNumber);
+                 
+                IEnumerable<LocationCanvasView> intersecting_candidates = FindNonOverlappedAdjacentLocations(locView.GetLocations().ToList(), adjacentObjs, this.CurrentSectionNumber);
                 intersecting_candidates = adjacentObjs.Where(l => l.Intersects(position) && l.IsTerminal == false);
                 LocationCanvasView nearest = intersecting_candidates.OrderBy(c => c.DistanceFromCenterNormalized(position)).FirstOrDefault();
                 bestObj = nearest;
@@ -324,11 +324,7 @@ namespace WebAnnotation
             this._Parent.KeyDown += new KeyEventHandler(this.OnKeyDown);
             this._Parent.KeyUp += new KeyEventHandler(this.OnKeyUp);
 
-           // AnnotationCache.parent = parent;
-            GlobalPrimitives.CircleTexture = parent.LoadTextureWithAlpha("Circle", "CircleMask"); //parent.Content.Load<Texture2D>("Circle");
-            GlobalPrimitives.UpArrowTexture = parent.LoadTextureWithAlpha("UpArrowV2", "UpArrowMask"); //parent.Content.Load<Texture2D>("Circle");
-            GlobalPrimitives.DownArrowTexture = parent.LoadTextureWithAlpha("DownArrowV2", "UpArrowMask"); //parent.Content.Load<Texture2D>("Circle");
-
+           
             linksView = new LocationLinksViewModel(parent); 
 
             LoadSectionAnnotations();
@@ -1184,7 +1180,7 @@ namespace WebAnnotation
             List<LocationCanvasView> listLocationsToDraw = FindVisibleLocations(Locations, scene);
 
             //Draw all of the locations on the current section
-            WebAnnotation.LocationObjRenderer.DrawBackgrounds(listLocationsToDraw, graphicsDevice, basicEffect, overlayEffect, Parent.LumaOverlayLineManager, scene, SectionNumber);
+            WebAnnotation.LocationObjRenderer.DrawBackgrounds(listLocationsToDraw, graphicsDevice, basicEffect, overlayEffect, Parent.LumaOverlayLineManager, Parent.LumaOverlayCurveManager, scene, SectionNumber);
 
             nextStencilValue = DeviceStateManager.GetDepthStencilValue(graphicsDevice) + 1;
 
@@ -1207,7 +1203,7 @@ namespace WebAnnotation
             }
             
             List<LocationCanvasView> listVisibleNonOverlappingLocationsOnAdjacentSections = FindVisibleAdjacentLocations(RefLocations, scene); 
-            listVisibleNonOverlappingLocationsOnAdjacentSections = RemoveOverlappingLocations(listLocationsToDraw, listVisibleNonOverlappingLocationsOnAdjacentSections,
+            listVisibleNonOverlappingLocationsOnAdjacentSections = FindNonOverlappedAdjacentLocations(listLocationsToDraw, listVisibleNonOverlappingLocationsOnAdjacentSections,
                                                                                                                     _Parent.Section.Number);
 
             nextStencilValue = DeviceStateManager.GetDepthStencilValue(graphicsDevice) + 1;
@@ -1215,7 +1211,7 @@ namespace WebAnnotation
 
             graphicsDevice.Clear(ClearOptions.DepthBuffer, Color.Black, float.MaxValue, 0);
             
-            WebAnnotation.LocationObjRenderer.DrawBackgrounds(listVisibleNonOverlappingLocationsOnAdjacentSections, graphicsDevice, basicEffect, overlayEffect, Parent.LumaOverlayLineManager, scene, SectionNumber);
+            WebAnnotation.LocationObjRenderer.DrawBackgrounds(listVisibleNonOverlappingLocationsOnAdjacentSections, graphicsDevice, basicEffect, overlayEffect, Parent.LumaOverlayLineManager, Parent.LumaOverlayCurveManager, scene, SectionNumber);
 
             nextStencilValue = DeviceStateManager.GetDepthStencilValue(graphicsDevice) + 1;
             DeviceStateManager.SetDepthStencilValue(graphicsDevice, nextStencilValue);
@@ -1256,19 +1252,24 @@ namespace WebAnnotation
 
         private void DrawLocationLabels(ICollection<LocationCanvasView> locations, VikingXNA.Scene scene)
         {
+            var listLocationsWithVisibleLabels = locations.Where(l => l.IsLabelVisible(scene));
             _Parent.spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.AlphaBlend);
             
             long section_number = _Parent.Section.Number;
-            foreach (LocationCanvasView loc in locations)
+            foreach (LocationCanvasView loc in listLocationsWithVisibleLabels)
             {
                 loc.DrawLabel(_Parent.spriteBatch,
                               _Parent.fontArial,
                               scene,
-                              (float)(1.0 / _Parent.StatusMagnification),
                               (int)(section_number - loc.Z));
             }
-
             _Parent.spriteBatch.End();
+
+            foreach (LocationOpenCurveView curve in listLocationsWithVisibleLabels.Where(l => l.GetType() == typeof(LocationOpenCurveView)).Cast<LocationOpenCurveView>())
+            {
+                curve.DrawLabel(Parent.Device, scene, Parent.spriteBatch, Parent.fontArial, Parent.CurveManager, Parent.basicEffect);
+            }
+
         }
 
         
@@ -1332,27 +1333,58 @@ namespace WebAnnotation
         }
 
         /// <summary>
+        /// Return all locations which overlap the passed locations
+        /// </summary>
+        /// <param name="locations"></param>
+        /// <returns></returns>
+        private static List<LocationCanvasView> FindOverlappedAdjacentLocations(List<LocationCanvasView> locations)
+        {
+            return locations.SelectMany(l => l.OverlappingLinks).OrderBy(l => l.ID).ToList();
+        }
+
+        /// <summary>
         /// Remove all locations from the collection which overlap locations on the specified section
         /// </summary>
         /// <param name="locations">The collection to remove overlapping locations from</param>
         /// <returns>The removed locations which overlap</returns>
-        private static List<LocationCanvasView> RemoveOverlappingLocations(List<LocationCanvasView> locations, List<LocationCanvasView> adjacentLocations, int section_number)
+        private static List<LocationCanvasView> FindNonOverlappedAdjacentLocations(List<LocationCanvasView> locations, List<LocationCanvasView> adjacentLocations, int section_number)
         {
-            List<LocationCanvasView> listOverlappingLocations = locations.SelectMany(l => l.OverlappingLinks).ToList();
-            //List<LocationCanvasView> listOverlappingLocations = new List<LocationCanvasView>(locations.Count);
-            return adjacentLocations.Where(l => !listOverlappingLocations.Contains(l)).ToList();
-            /*
-            for (int i = locations.Count - 1; i >= 0; i--)
+            List<LocationCanvasView> listOverlappingLocations = FindOverlappedAdjacentLocations(locations);
+
+            adjacentLocations = adjacentLocations.OrderBy(l => l.ID).ToList();
+
+            locations = locations.OrderBy(l => l.ID).ToList();
+
+            int iOverlapping = listOverlappingLocations.Count - 1;
+            for (int i = adjacentLocations.Count - 1; i >= 0; i--)
             {
-                LocationCanvasView loc = locations.ElementAt(i);
-                if (loc.OverlappingLinks.Any(overlappingLocation => overlappingLocation.Z == section_number))
+                LocationCanvasView loc = adjacentLocations.ElementAt(i);
+                while (iOverlapping >= 0)
                 {
-                    locations.RemoveAt(i);
-                    listOverlappingLocations.AddRange(loc.OverlappingLinks.Where(overlappingLocation => overlappingLocation.Z == section_number));
+                    LocationCanvasView overlappingLoc = listOverlappingLocations[iOverlapping];
+                    if (overlappingLoc.ID < loc.ID)
+                    {
+                        break;
+                    }
+                    else if (overlappingLoc.ID == loc.ID)
+                    {
+                        adjacentLocations.RemoveAt(i);
+                        break;
+                    }
+                    else
+                    {
+                        iOverlapping--;
+                    }
                 }
+
+                if (iOverlapping < 0)
+                    break;
             }
-            */
-            return listOverlappingLocations;
+
+            //List<LocationCanvasView> listOverlappingLocations = new List<LocationCanvasView>(locations.Count);
+            //return adjacentLocations.Where(l => !listOverlappingLocations.Contains(l)).ToList();
+            
+            return adjacentLocations;
         }
 
         /// <summary>

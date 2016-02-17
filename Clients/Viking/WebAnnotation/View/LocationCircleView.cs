@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Collections.Concurrent;
 using System.ComponentModel;
-using System.Collections.Specialized; 
+using System.Collections.Specialized;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -15,6 +15,7 @@ using VikingXNAGraphics;
 using WebAnnotation.ViewModel;
 using WebAnnotation.UI.Commands;
 using Microsoft.SqlServer.Types;
+using VikingXNA;
 
 namespace WebAnnotation.View
 {
@@ -120,7 +121,12 @@ namespace WebAnnotation.View
         {
             return upCircleView.IsVisible(scene);
         }
-        
+
+        public override bool IsLabelVisible(VikingXNA.Scene scene)
+        {
+            return StructureIDLabelView.IsVisible(scene);
+        }
+
         public override IList<LocationCanvasView> OverlappingLinks
         {
             get { return new List<LocationCanvasView>(); }
@@ -175,22 +181,24 @@ namespace WebAnnotation.View
 
         public override void DrawLabel(Microsoft.Xna.Framework.Graphics.SpriteBatch spriteBatch,
                               Microsoft.Xna.Framework.Graphics.SpriteFont font,
-                              VikingXNA.Scene scene,
-                              float MagnificationFactor,
+                              VikingXNA.Scene scene, 
                               int DirectionToVisiblePlane)
         {
+            
+
             if (font == null)
                 throw new ArgumentNullException("font");
 
             if (spriteBatch == null)
                 throw new ArgumentNullException("spriteBatch");
 
+            float MagnificationFactor = (float)(1.0 / scene.Camera.Downsample);
             double DesiredRowsOfText = 6.0;
             double NumUnscaledRows = (this.Radius * 2) / font.LineSpacing;
             double DefaultFontSize = NumUnscaledRows / DesiredRowsOfText;
             StructureIDLabelView.FontSize = DefaultFontSize;
             StructureIDLabelView.Position = modelObj.VolumePosition - new GridVector2(0.0, this.Radius / 3.0f);
-            StructureIDLabelView.Draw(spriteBatch, font, scene, MagnificationFactor);
+            StructureIDLabelView.Draw(spriteBatch, font, scene);
 
             return; 
         }
@@ -215,6 +223,7 @@ namespace WebAnnotation.View
         public LocationCircleView(LocationObj obj) : base(obj)
         {
             RegisterForLocationEvents();
+            RegisterForStructureChangeEvents();
             CreateViewObjects();
             CreateLabelObjects();
         }
@@ -233,7 +242,7 @@ namespace WebAnnotation.View
             
             StructureLabelView = new LabelView(this.FullLabelText(), modelObj.VolumePosition + new GridVector2(0, this.Radius / 3.0f));
             StructureLabelView.MaxLineWidth = this.Radius * 2;
-            this.RegisterForStructureChangeEvents();
+            
 
             if (this.Parent.ParentID.HasValue)
             {
@@ -252,6 +261,11 @@ namespace WebAnnotation.View
         public override bool IsVisible(VikingXNA.Scene scene)
         {
             return circleView.IsVisible(scene);
+        }
+
+        public override bool IsLabelVisible(VikingXNA.Scene scene)
+        {
+            return StructureIDLabelView.IsVisible(scene);
         }
 
         public override LocationAction GetMouseClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber)
@@ -377,15 +391,18 @@ namespace WebAnnotation.View
                     bool AllLinksTested;
                     List<LocationCanvasView> overlapping = CalculateOverlappingLinks(this.Links, out AllLinksTested);
                     _OverlappingLinks = AllLinksTested ? overlapping : null;
-                    if(!AllLinksTested)
+                    if (!AllLinksTested)
                     {
                         AllLinksTestedFailures++;
-                        if(AllLinksTestedFailures == 3)
+                        if (AllLinksTestedFailures == 3)
                         {
                             QueueLinkedLocationRequest();
                         }
                     }
-                    RegisterForLinkedLocationChangeEvents();
+                    else
+                    {
+                        RegisterForLinkedLocationChangeEvents();
+                    }
                     return overlapping;
                 }
 
@@ -847,7 +864,6 @@ namespace WebAnnotation.View
         public override void DrawLabel(Microsoft.Xna.Framework.Graphics.SpriteBatch spriteBatch,
                               Microsoft.Xna.Framework.Graphics.SpriteFont font,
                               VikingXNA.Scene scene, 
-                              float MagnificationFactor,
                               int DirectionToVisiblePlane)
         {
             if (font == null)
@@ -855,7 +871,7 @@ namespace WebAnnotation.View
 
             if (spriteBatch == null)
                 throw new ArgumentNullException("spriteBatch");
-
+             
             double DesiredRowsOfText = 8.0;
             double NumUnscaledRows = this.Radius / font.LineSpacing;
             double DefaultFontSize = NumUnscaledRows / DesiredRowsOfText;
@@ -864,17 +880,17 @@ namespace WebAnnotation.View
 
             //StructureIDLabelView.Position = modelObj.VolumePosition - new GridVector2(0.0, this.Radius / 3.0f);
 
-            StructureIDLabelView.Draw(spriteBatch, font, scene, MagnificationFactor);
-            StructureLabelView.Draw(spriteBatch, font, scene, MagnificationFactor);
+            StructureIDLabelView.Draw(spriteBatch, font, scene);
+            StructureLabelView.Draw(spriteBatch, font, scene);
             if (ParentStructureLabelView != null)
             {
                 ParentStructureLabelView.FontSize = StructureIDLabelView.FontSize / 2.0;
-                ParentStructureLabelView.Draw(spriteBatch, font, scene, MagnificationFactor);
+                ParentStructureLabelView.Draw(spriteBatch, font, scene);
             }
 
             foreach (OverlappedLocationView ov in this.OverlappingLinkedLocationCircles.Keys)
             {
-                ov.DrawLabel(spriteBatch, font, scene, MagnificationFactor, 0);
+                ov.DrawLabel(spriteBatch, font, scene, 0);
             }
 
             return;
@@ -1098,46 +1114,7 @@ namespace WebAnnotation.View
             */
         }
 
-        /// <summary>
-        /// Full label and tag text
-        /// </summary>
-        /// <returns></returns>
-        private string FullLabelText()
-        {
-            string fullLabel = this.StructureLabel();
-
-            if (fullLabel.Length == 0)
-                fullLabel = this.TagLabel();
-            else
-                fullLabel += '\n' + this.TagLabel();
-
-            return fullLabel;
-        }
-
-        private string StructureLabel()
-        {
-            string InfoLabel = "";
-            if (Parent.InfoLabel != null)
-                InfoLabel = Parent.InfoLabel.Trim();
-
-            return InfoLabel;
-        }
-
-        private string TagLabel()
-        {
-            string InfoLabel = "";
-            foreach (ObjAttribute tag in Parent.Attributes)
-            {
-                InfoLabel += tag.ToString() + " ";
-            }
-
-            foreach (ObjAttribute tag in modelObj.Attributes)
-            {
-                InfoLabel += tag.ToString() + " ";
-            } 
-
-            return InfoLabel.Trim(); 
-        }
+        
 
         /*
         private void DrawStructAndTagLabel(Microsoft.Xna.Framework.Graphics.SpriteBatch spriteBatch,

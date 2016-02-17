@@ -201,11 +201,47 @@
     </Compile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="LinePixelShaders.fx">
-      <Name>LinePixelShaders</Name>
+    <None Include="LineCurvePixelShaders.fx">
+      <Name>LineCurvePixelShaders</Name>
       <Importer>EffectImporter</Importer>
       <Processor>EffectProcessor</Processor>
     </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="LineCurveHSVPixelShaders.fx">
+      <Name>LineCurveHSVPixelShaders</Name>
+      <Importer>EffectImporter</Importer>
+      <Processor>EffectProcessor</Processor>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="CurveVertexShader.fx">
+      <Name>CurveVertexShader</Name>
+      <Importer>EffectImporter</Importer>
+      <Processor>EffectProcessor</Processor>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="LineVertexShader.fx">
+      <Name>LineVertexShader</Name>
+      <Importer>EffectImporter</Importer>
+      <Processor>EffectProcessor</Processor>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="LineCurveCommon.fx">
+      <Name>LineCurveCommon</Name>
+      <Importer>EffectImporter</Importer>
+      <Processor>EffectProcessor</Processor>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="RoundCurveHSV.fx">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Name>RoundCurveHSV</Name>
+      <Importer>EffectImporter</Importer>
+      <Processor>EffectProcessor</Processor>
+    </Compile>
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath)\Microsoft\XNA Game Studio\$(XnaFrameworkVersion)\Microsoft.Xna.GameStudio.ContentPipeline.targets" />
   <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />

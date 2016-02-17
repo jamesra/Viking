@@ -38,6 +38,12 @@ namespace VikingXNA
             get { return _WorldViewProj;}
         }
 
+        public Matrix ViewProj
+        {
+            get { return this.Camera.View * this.Projection; }
+        }
+        
+
         private PropertyChangedEventHandler cameraPropertyChangedEventHandler = null;
 
         private Camera _camera;

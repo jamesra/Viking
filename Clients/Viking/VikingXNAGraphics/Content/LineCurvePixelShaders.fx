@@ -1,19 +1,8 @@
 // Data shared by all line and curves:
-matrix viewProj;
+
 float time;
-float lineRadius;
 float4 lineColor;
 float blurThreshold = 0.95;
-float texture_x_min = 0;
-float texture_x_max = 1;
-
-struct VS_OUTPUT
-{
-	float4 position : POSITION;
-	float3 polar : TEXCOORD0;
-	float2 posModelSpace : TEXCOORD1;
-	float2 tex   : TEXCOORD2;
-};
 
 struct PS_Output
 {
@@ -29,49 +18,29 @@ uniform const sampler TextureSampler : register(s1) = sampler_state
 	MipFilter = LINEAR;
 	MinFilter = LINEAR;
 	MagFilter = POINT;
-};
-
-//Use linear interpolation to convert a value from zero to one to fall within min-max
-float ClampToRange(float scalar, float min, float max)
-{
-	return (scalar * (max - min)) + min;
-}
-
-// Helper function used by several pixel shaders to blur the line edges
-//rho in this context is not line length, it is distance from the line center
-float BlurEdge(float rho)
-{
-	if (rho < blurThreshold)
-	{
-		return 1.0f;
-	}
-	else
-	{
-		float normrho = (rho - blurThreshold) * 1 / (1 - blurThreshold);
-		return 1 - normrho;
-	}
-}
-
+	AddressU = CLAMP;
+	AddressV = CLAMP;
+	AddressW = CLAMP;
+}; 
 
 float4 MyPSStandard(float3 polar : TEXCOORD0) : COLOR0
 {
 	float4 finalColor;
-finalColor.rgb = lineColor.rgb;
-finalColor.a = lineColor.a * BlurEdge(polar.x);
-return finalColor;
+	finalColor.rgb = lineColor.rgb;
+	finalColor.a = lineColor.a * BlurEdge(polar.x, blurThreshold);
+	return finalColor;
 }
 
 float4 MyPSAlphaGradient(float3 polar : TEXCOORD0) : COLOR0
 {
 	float4 finalColor;
-finalColor.r = polar.x;
-finalColor.rgb = lineColor.rgb;
-//finalColor.a = lineColor.a * polar.z * BlurEdge( polar.x );
+	finalColor.r = polar.x;
+	finalColor.rgb = lineColor.rgb;
+	//finalColor.a = lineColor.a * polar.z * BlurEdge( polar.x );
 
-finalColor.a = lineColor.a *  ((polar.z * 2) > 1 ? ((1 - polar.z) * 2) : (polar.z * 2)) * BlurEdge(polar.x);
+	finalColor.a = lineColor.a *  ((polar.z * 2) > 1 ? ((1 - polar.z) * 2) : (polar.z * 2)) * BlurEdge(polar.x, blurThreshold);
 
-return finalColor;
-
+	return finalColor;
 }
 
 PS_Output MyPSAlphaDepthGradient(float3 polar : TEXCOORD0)
@@ -110,7 +79,7 @@ PS_Output MyPSAnimatedBidirectional(float3 polar : TEXCOORD0, float2 posModelSpa
 	//	float modulation = sin( ( posModelSpace.x * 100 + (time) ) * 80 * 3.14159) * 0.5 + 0.5;
 	float modulation = sin(offset * 3.14159) / 2;
 	finalColor.rgb = lineColor.rgb;
-	finalColor.a = lineColor.a * BlurEdge(polar.x) * modulation + 0.5;
+	finalColor.a = lineColor.a * BlurEdge(polar.x, blurThreshold) * modulation + 0.5;
 	output.Color = finalColor;
 	float depth = (polar.z * 2) > 1 ? 1 - ((1 - polar.z) * 2) : 1 - (polar.z * 2);
 	output.Depth = 0;//(polar.z * 2) > 1 ? 1-((1-polar.z)*2) : 1-(polar.z * 2);
@@ -133,7 +102,7 @@ PS_Output MyPSAnimatedLinear(float3 polar : TEXCOORD0, float2 posModelSpace : TE
 	clip(modulation <= 0 ? -1 : 1); //Adds sharp boundary to arrows
 
 	finalColor.rgb = lineColor.rgb;
-	finalColor.a = lineColor.a * BlurEdge(polar.x) * modulation;
+	finalColor.a = lineColor.a * BlurEdge(polar.x, blurThreshold) * modulation;
 
 	output.Color = finalColor;
 	float depth = (polar.z * 2) > 1 ? 1 - ((1 - polar.z) * 2) : 1 - (polar.z * 2);
@@ -148,36 +117,36 @@ PS_Output MyPSAnimatedLinear(float3 polar : TEXCOORD0, float2 posModelSpace : TE
 float4 MyPSAnimatedRadial(float3 polar : TEXCOORD0) : COLOR0
 {
 	float4 finalColor;
-float modulation = sin((-polar.x * 0.1 + time * 0.05) * 20 * 3.14159) * 0.5 + 0.5;
-finalColor.rgb = lineColor.rgb * modulation;
-finalColor.a = lineColor.a * BlurEdge(polar.x);
-return finalColor;
+	float modulation = sin((-polar.x * 0.1 + time * 0.05) * 20 * 3.14159) * 0.5 + 0.5;
+	finalColor.rgb = lineColor.rgb * modulation;
+	finalColor.a = lineColor.a * BlurEdge(polar.x, blurThreshold);
+	return finalColor;
 }
 
 
 float4 MyPSModern(float3 polar : TEXCOORD0) : COLOR0
 {
 	float4 finalColor;
-finalColor.rgb = lineColor.rgb;
+	finalColor.rgb = lineColor.rgb;
 
-float rho = polar.x;
+	float rho = polar.x;
 
-float a;
-float blurThreshold = 0.15;
-/*
-if( rho < blurThreshold )
-{
-a = 1.0f;
-}
-else
-{*/
-float normrho = (rho - blurThreshold) * 1 / (1 - blurThreshold);
-a = normrho;
-//}
+	float a;
+	float blurThreshold = 0.15;
+	/*
+	if( rho < blurThreshold )
+	{
+	a = 1.0f;
+	}
+	else
+	{*/
+		float normrho = (rho - blurThreshold) * 1 / (1 - blurThreshold);
+		a = normrho;
+	//}
 
-finalColor.a = lineColor.a * a;
+	finalColor.a = lineColor.a * a;
 
-return finalColor;
+	return finalColor;
 }
 
 
@@ -185,7 +154,7 @@ float4 MyPSTubular(float3 polar : TEXCOORD0) : COLOR0
 {
 	float4 finalColor = lineColor;
 	finalColor.a *= polar.x;
-	finalColor.a = finalColor.a * BlurEdge(polar.x);
+	finalColor.a = finalColor.a * BlurEdge(polar.x, blurThreshold);
 	return finalColor;
 }
 
@@ -199,5 +168,7 @@ float4 MyPSGlow(float3 polar : TEXCOORD0) : COLOR0
 
 float4 MyPSTextured(float3 tex : TEXCOORD2) : COLOR0
 {
-	return tex2D(TextureSampler, tex);
+	float4 foregroundColor = tex2D(TextureSampler, tex);
+	clip(foregroundColor.a);
+	return foregroundColor;
 }

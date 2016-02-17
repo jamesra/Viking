@@ -93,11 +93,10 @@ namespace WebAnnotation.UI.Commands
             this.Execute();
         }
 
-        public override void OnDraw(Microsoft.Xna.Framework.Graphics.GraphicsDevice graphicsDevice,
-                                    VikingXNA.Scene scene,
+        public override void OnDraw(Microsoft.Xna.Framework.Graphics.GraphicsDevice graphicsDevice, VikingXNA.Scene scene,
                                     Microsoft.Xna.Framework.Graphics.BasicEffect basicEffect)
         {
-            CurveView.Draw(graphicsDevice, scene, Parent.LumaOverlayLineManager, basicEffect, Parent.annotationOverlayEffect, new CurveView[] { this.curveView });
+            CurveView.Draw(graphicsDevice, scene, Parent.LumaOverlayCurveManager, basicEffect, Parent.annotationOverlayEffect, 0, new CurveView[] { this.curveView });
         }
 
         protected override void Execute()

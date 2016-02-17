@@ -22,7 +22,7 @@ namespace WebAnnotation.View
         }
 
 
-        public static int NumInterpolationPoints = Global.NumCurveInterpolationPoints;
+        public static uint NumInterpolationPoints = Global.NumCurveInterpolationPoints;
         public LocationClosedCurveView(LocationObj obj) : base(obj)
         {
             curveView = new CurveView(modelObj.VolumeShape.ToPoints(), obj.Parent.Type.Color.ToXNAColor().ConvertToHSL(0.5f), true);
@@ -35,7 +35,7 @@ namespace WebAnnotation.View
             {
                 if (_MosaicCurveControlPoints == null)
                 {
-                    _MosaicCurveControlPoints = CurveView.CalculateCurvePoints(modelObj.MosaicShape.ToPoints(), LocationOpenCurveView.NumInterpolationPoints, true).ToArray();
+                    _MosaicCurveControlPoints = CurveViewControlPoints.CalculateCurvePoints(modelObj.MosaicShape.ToPoints(), LocationOpenCurveView.NumInterpolationPoints, true).ToArray();
                 }
 
                 return _MosaicCurveControlPoints;
@@ -49,7 +49,7 @@ namespace WebAnnotation.View
             {
                 if (_VolumeCurveControlPoints == null)
                 {
-                    _VolumeCurveControlPoints = CurveView.CalculateCurvePoints(modelObj.VolumeShape.ToPoints(), LocationOpenCurveView.NumInterpolationPoints, true).ToArray();
+                    _VolumeCurveControlPoints = CurveViewControlPoints.CalculateCurvePoints(modelObj.VolumeShape.ToPoints(), LocationOpenCurveView.NumInterpolationPoints, true).ToArray();
                 }
 
                 return _VolumeCurveControlPoints;
@@ -72,12 +72,12 @@ namespace WebAnnotation.View
 
         public static void Draw(Microsoft.Xna.Framework.Graphics.GraphicsDevice device,
                           VikingXNA.Scene scene,
-                          RoundLineCode.RoundLineManager lineManager,
+                          RoundCurve.CurveManager lineManager,
                           Microsoft.Xna.Framework.Graphics.BasicEffect basicEffect,
                           VikingXNA.AnnotationOverBackgroundLumaEffect overlayEffect,
                           LocationClosedCurveView[] listToDraw)
         {
-            CurveView.Draw(device, scene, lineManager, basicEffect, overlayEffect, listToDraw.Select(l => l.curveView).ToArray());
+            CurveView.Draw(device, scene, lineManager, basicEffect, overlayEffect, 0, listToDraw.Select(l => l.curveView).ToArray());
         }
 
         public override double Width

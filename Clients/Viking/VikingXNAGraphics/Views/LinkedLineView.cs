@@ -9,12 +9,12 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework;
 using VikingXNAGraphics;
 
-namespace WebAnnotation.View
+namespace VikingXNAGraphics
 {
     /// <summary>
     /// Links two poly lines by drawing a lines between the first pair and last pair of verticies of each polyline.
     /// </summary>
-    class LinkedPolyLineSimpleView
+    public class LinkedPolyLineSimpleView
     {
         GridVector2[] Source;
         GridVector2[] Target;

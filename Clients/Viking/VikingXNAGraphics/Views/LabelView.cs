@@ -6,7 +6,7 @@ using Microsoft.Xna.Framework;
 using Geometry;
 using VikingXNAGraphics;
 
-namespace WebAnnotation.View
+namespace VikingXNAGraphics
 {
     public class LabelView
     {
@@ -112,6 +112,19 @@ namespace WebAnnotation.View
         private static bool IsLabelTooSmallToSee(float fontScale, float LineSpacing)
         {
             return LineSpacing * fontScale < LabelView.LabelVisibleCutoff;
+        }
+
+        public bool IsVisible(VikingXNA.Scene scene)
+        {
+            if (font == null) //The first time draw is called font is initialized.  So allow us to draw if we haven't initialized font yet.
+                return true;
+
+            float MagnificationFactor = (float)(1.0 / scene.Camera.Downsample);
+            float fontScale = GetFontSizeAdjustedForMagnification((float)this.FontSize, MagnificationFactor);
+            bool LowMagScale = ScaleReducedForLowMag(fontScale);
+
+            //Don't draw labels if no human could read them
+            return !IsLabelTooSmallToSee(fontScale, font.LineSpacing);
         }
 
         private static bool ScaleReducedForLowMag(float baseScale)
@@ -222,8 +235,7 @@ namespace WebAnnotation.View
 
         public void Draw(Microsoft.Xna.Framework.Graphics.SpriteBatch spriteBatch,
                               Microsoft.Xna.Framework.Graphics.SpriteFont font,
-                              VikingXNA.Scene scene,
-                              float MagnificationFactor)
+                              VikingXNA.Scene scene)
         {
             Vector2 LocationCenterScreenPosition = scene.WorldToScreen(this.Position).ToVector2();
             if (font == null)
@@ -231,10 +243,10 @@ namespace WebAnnotation.View
 
             if (spriteBatch == null)
                 throw new ArgumentNullException("spriteBatch");
-
+            
             //Update our font, will clear the measurements if the font has changed.
             this.font = font;
-
+            float MagnificationFactor = (float)(1.0 / scene.Camera.Downsample);
             //Scale is used to adjust for the magnification factor of the viewer.  Otherwise text would remain at constant size regardless of mag factor.
             //offsets must be multiplied by scale before use
             float fontScale = GetFontSizeAdjustedForMagnification((float)this.FontSize, MagnificationFactor);

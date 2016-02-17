@@ -1,14 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using Geometry;
-using System.Diagnostics;
+﻿using Geometry;
 using System.Windows.Forms;
-using System.Diagnostics;
-using Microsoft.Xna.Framework.Graphics;
-using WebAnnotation.ViewModel;
-using WebAnnotationModel; 
+using VikingXNAGraphics;
 
 namespace WebAnnotation.UI.Commands
 {
@@ -19,9 +11,6 @@ namespace WebAnnotation.UI.Commands
         public GridVector2 Origin;
         System.Drawing.Color CircleColor; 
  
-        //DateTime CreationTime; 
-        private bool HasMouseMoved = false;
-
         public delegate void OnCommandSuccess(double radius);
         OnCommandSuccess success_callback;
 
@@ -47,8 +36,6 @@ namespace WebAnnotation.UI.Commands
         protected override void OnMouseMove(object sender, System.Windows.Forms.MouseEventArgs e)
         {
             UpdateRadius(e);
-
-            HasMouseMoved =true;
 
             Parent.Invalidate(); 
 

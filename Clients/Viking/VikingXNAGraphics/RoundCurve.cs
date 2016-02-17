@@ -18,6 +18,12 @@ using Geometry;
 
 namespace RoundCurve
 {
+    public enum HorizontalAlignment
+    {
+        Center,
+        Left,
+        Right
+    }
 
     /// <summary>
     /// Represents a single line segment.  Drawing is handled by the RoundLineManager class.
@@ -199,8 +205,8 @@ namespace RoundCurve
             segmentDataParamter = e.Parameters["CurveSegmentData"];
             textureParameter = e.Parameters["Texture"];
             lineTotalLengthParameter = e.Parameters["curveTotalLength"];
-            minTextureCoordinateParameter = e.Parameters["texture_x_min"];
-            maxTextureCoordinateParameter = e.Parameters["texture_x_max"];
+            minTextureCoordinateParameter = e.Parameters["texture_x_start"];
+            maxTextureCoordinateParameter = e.Parameters["texture_x_end"];
         }
 
         public string[] TechniqueNames
@@ -500,10 +506,37 @@ namespace RoundCurve
                     length_of_curve_to_use_for_texture = 1.0;
                 maxTextureCoordinateParameter.SetValue((float)length_of_curve_to_use_for_texture);
 
-                Draw(new RoundCurve[] { c }, lineRadius, lineColor, viewProjMatrix, time, "Textured");
+                Draw(c, lineRadius, lineColor, viewProjMatrix, time, "Textured");
             }
         }
 
+        /// <summary>
+        /// Draw a label along the curve.
+        /// </summary>
+        /// <param name="roundCurve"></param>
+        /// <param name="lineRadius"></param>
+        /// <param name="lineColor"></param>
+        /// <param name="viewProjMatrix"></param>
+        /// <param name="time"></param>
+        /// <param name="texture">Texture containing the label text</param>
+        /// <param name="alignment">Where along the curve to render the label</param>
+        /// <param name="max_curve_length_to_allocate">Maximum length of the curve to allocate to the label.  Useful if there are multiple labels to render</param>
+        public void DrawLabel(RoundCurve roundCurve, float lineRadius, Color lineColor, Matrix viewProjMatrix,
+            float time, Texture2D texture, HorizontalAlignment alignment, float max_curve_length_percentage_to_render_onto = 1.0f)
+        {
+            textureParameter.SetValue(texture);
+
+            float length_of_curve_to_use_for_texture = LengthOfCurveRequiredToPreserveTextureAspectRatio(texture, (float)roundCurve.TotalDistance * max_curve_length_percentage_to_render_onto, lineRadius * 2);
+
+            Vector2 texture_min_max = TextureStartStopForAlignment(alignment, length_of_curve_to_use_for_texture * max_curve_length_percentage_to_render_onto);
+
+            //double length_of_curve_to_use_for_texture = roundCurve.TotalDistance / (double)texture.Width;
+            minTextureCoordinateParameter.SetValue(texture_min_max.X);
+            maxTextureCoordinateParameter.SetValue(texture_min_max.Y);
+
+            Draw(roundCurve, lineRadius, lineColor, viewProjMatrix, time, "Textured");
+        }
+         
         /// <summary>
         /// Draw a list of Lines in batches, up to the maximum number of instances for the shader.
         /// </summary>
@@ -531,9 +564,41 @@ namespace RoundCurve
             }
         }
 
+        /// <summary>
+        /// Return a normalized fraction of the curve to fill with the texture to preserve the input textures aspect ratio
+        /// </summary>
+        /// <param name="texture"></param>
+        /// <param name="roundCurve"></param>
+        /// <param name="lineWidth"></param>
+        /// <returns></returns>
+        private float LengthOfCurveRequiredToPreserveTextureAspectRatio(Texture2D texture, float TotalDistance, float lineWidth)
+        {
+            double textureAspectRatio = (double)texture.Width / (double)texture.Height;
+            double curveAspectRatio = TotalDistance / lineWidth;
+            double length_of_curve_to_use_for_texture = (textureAspectRatio * lineWidth) / TotalDistance;
+
+            return length_of_curve_to_use_for_texture > 1.0 ? 1.0f : (float)length_of_curve_to_use_for_texture;
+        }
+
+        private Vector2 TextureStartStopForAlignment(HorizontalAlignment alignment, float NormalizedLengthOfCurveToFillWithTexture)
+        {
+            switch (alignment)
+            {
+                case HorizontalAlignment.Left:
+                    return new Vector2(0, NormalizedLengthOfCurveToFillWithTexture);
+                case HorizontalAlignment.Center:
+                    float padding = (1.0f - NormalizedLengthOfCurveToFillWithTexture) / 2.0f;
+                    return new Vector2(padding, NormalizedLengthOfCurveToFillWithTexture + padding);
+                case HorizontalAlignment.Right:
+                    float left_padding = (1.0f - NormalizedLengthOfCurveToFillWithTexture);
+                    return new Vector2(left_padding, 1.0f);
+                default:
+                    throw new ArgumentException("Unknown alignment type " + alignment.ToString());
+            }
+        }
     }
 
-    public class LumaOverlayRoundCurveManager : CurveManager
+    public class CurveManagerHSV : CurveManager
     { 
         private EffectParameter _BackgroundTexture;
         private EffectParameter _RenderTargetSize;
@@ -558,7 +623,7 @@ namespace RoundCurve
         public override void Init(GraphicsDevice device, ContentManager content)
         {
             this.device = device;
-            effect = content.Load<Effect>("RoundLineHSV");
+            effect = content.Load<Effect>("RoundCurveHSV");
             _BackgroundTexture = effect.Parameters["BackgroundTexture"];
             _RenderTargetSize = effect.Parameters["RenderTargetSize"];
             LoadParameters(effect);

@@ -54,7 +54,7 @@ namespace WebAnnotation.UI.Commands
         protected override void UpdateViewPosition(GridVector2 PositionDelta)
         {
             DeltaSum += PositionDelta;
-            curveView.ControlPoints = curveView.ControlPoints.Select(p => p + PositionDelta).ToList();
+            curveView.ControlPoints = curveView.ControlPoints.Select(p => p + PositionDelta).ToArray();
         }
 
         protected override void Execute()
@@ -85,7 +85,7 @@ namespace WebAnnotation.UI.Commands
                                     VikingXNA.Scene scene,
                                     Microsoft.Xna.Framework.Graphics.BasicEffect basicEffect)
         {
-            CurveView.Draw(graphicsDevice, scene, Parent.LumaOverlayLineManager, basicEffect, Parent.annotationOverlayEffect, new CurveView[] { this.curveView });
+            CurveView.Draw(graphicsDevice, scene, Parent.LumaOverlayCurveManager, basicEffect, Parent.annotationOverlayEffect, 0, new CurveView[] { this.curveView });
         }
     }
 

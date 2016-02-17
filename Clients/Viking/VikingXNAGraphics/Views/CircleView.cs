@@ -6,7 +6,7 @@ using Microsoft.Xna.Framework;
 using Geometry;
 using VikingXNAGraphics;
 
-namespace WebAnnotation.View
+namespace VikingXNAGraphics
 {  
     public class TextureCircleView : CircleView
     {
@@ -280,7 +280,7 @@ namespace WebAnnotation.View
             float SatScalar = BaseSaturationScalar(MouseOver, OnVisibleSection);//HSLColor.B / 255.0f;
             double maxDimension = Math.Max(VisibleBounds.Width, VisibleBounds.Height);
             double LocToScreenRatio = Radius * 2 / maxDimension;
-            SatScalar *= Viking.Common.Util.GetFadeFactor(LocToScreenRatio, BeginFadeCutoff, InvisibleCutoff);
+            SatScalar *= SharedEffectFunctions.GetFadeFactor(LocToScreenRatio, BeginFadeCutoff, InvisibleCutoff);
 
             HSLColor.A = (Byte)((float)BaseAlpha(MouseOver, OnVisibleSection));
             HSLColor.G = (Byte)((float)HSLColor.G * SatScalar);
