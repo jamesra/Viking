@@ -1,32 +1,33 @@
+
+IF OBJECT_ID('tempdb..#UnlocatedStructures') IS NOT NULL DROP TABLE #UnlocatedStructures
+
+--Delete structures linked to themselves
 delete from StructureLink where TargetID = SourceID
 go
 
-delete from StructureLink  where TargetID IN
- 
-	(select ID from Structure where ID not in 
-	(select ParentID from Location group by ParentID)
-	)
+
+select ID as ID into #UnlocatedStructures FROM Structure where 
+	ID not in (select distinct ParentID from Location)
+
+select * from #UnlocatedStructures order by ID
+
+--Delete structure links to structures with no locations
+delete SL from StructureLink SL
+	inner join #UnlocatedStructures US ON US.ID = SL.TargetID 
 go
 	
-delete from StructureLink  where SourceID IN
- 
-	(select ID from Structure where ID not in 
-	(select ParentID from Location group by ParentID)
-	)
+delete SL from StructureLink SL
+	inner join #UnlocatedStructures US ON US.ID = SL.SourceID 
 go
 
-delete from Structure 
-	where ID not in 
-		(select ParentID from Location group by ParentID)
-
+--Print the child structures of the structure we want to delete
 select ID from Structure
-where ParentID in (
-select ID from Structure 
-	where ID not in 
-		(select ParentID from Location group by ParentID))
+	where ParentID in ((select ID from #UnlocatedStructures))
 
-/*select * from Structure as S where S.ParentID in
-(select ID from Structure where ID not in 
-	(select ParentID from Location group by ParentID)
-	)
-*/
+--Try to delete the structures
+delete S from Structure S
+	inner join #UnlocatedStructures US ON US.ID = S.ID
+
+
+
+IF OBJECT_ID('tempdb..#UnlocatedStructures') IS NOT NULL DROP TABLE #UnlocatedStructures
