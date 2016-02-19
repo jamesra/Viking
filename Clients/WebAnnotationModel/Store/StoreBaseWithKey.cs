@@ -763,9 +763,11 @@ namespace WebAnnotationModel
         private void TraceQueryDetails(long SectionNumber, long numObjects, DateTime StartTime, DateTime QueryEndTime, DateTime ParseEndTime)
         {
 #if DEBUG
-            Trace.WriteLine("Sxn " + SectionNumber.ToString() + " finished " + typeof(OBJECT).ToString() + " query.  " + numObjects.ToString() + " returned");
-            Trace.WriteLine("\tQuery Time: " + new TimeSpan(QueryEndTime.Ticks - StartTime.Ticks).TotalSeconds.ToString() + " (sec) elapsed");
-            Trace.WriteLine("\tParse Time: " + new TimeSpan(ParseEndTime.Ticks - QueryEndTime.Ticks).TotalSeconds.ToString() + " (sec) elapsed");
+            StringBuilder sb = new StringBuilder();
+            sb.AppendLine("Sxn " + SectionNumber.ToString() + " finished " + typeof(OBJECT).ToString() + " query.  " + numObjects.ToString() + " returned");
+            sb.AppendLine("\tQuery Time: " + new TimeSpan(QueryEndTime.Ticks - StartTime.Ticks).TotalSeconds.ToString() + " (sec) elapsed");
+            sb.AppendLine("\tParse Time: " + new TimeSpan(ParseEndTime.Ticks - QueryEndTime.Ticks).TotalSeconds.ToString() + " (sec) elapsed");
+            Trace.WriteLine(sb.ToString());
 #endif
         }
 
