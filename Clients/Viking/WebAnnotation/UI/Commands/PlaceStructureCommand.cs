@@ -71,7 +71,7 @@ namespace WebAnnotation.UI.Commands
 
                 //Transform from volume space to section space if we need to
                 GridVector2 SectionPos;
-                bool Transformed= Parent.TryVolumeToSection(WorldPos, Parent.Section, out SectionPos);
+                bool Transformed= Parent.TryVolumeToSection(WorldPos, out SectionPos);
 
                 if (!Transformed)
                 {

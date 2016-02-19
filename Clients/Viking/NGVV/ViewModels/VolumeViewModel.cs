@@ -10,6 +10,7 @@ namespace Viking.ViewModels
     public class VolumeViewModel
     {
         private Volume _Volume;
+        private MappingManager _MappingManager;
 
         public SortedList<int, SectionViewModel> SectionViewModels;
 
@@ -21,15 +22,15 @@ namespace Viking.ViewModels
         {
             get
             {
-                if(_Volume.DefaultSectionNumber.HasValue)
-                { 
-                    if(SectionViewModels.ContainsKey(_Volume.DefaultSectionNumber.Value))
+                if (_Volume.DefaultSectionNumber.HasValue)
+                {
+                    if (SectionViewModels.ContainsKey(_Volume.DefaultSectionNumber.Value))
                     {
-                        return _Volume.DefaultSectionNumber.Value; 
+                        return _Volume.DefaultSectionNumber.Value;
                     }
                 }
 
-                return SectionViewModels.Keys[0]; 
+                return SectionViewModels.Keys[0];
             }
         }
 
@@ -45,22 +46,31 @@ namespace Viking.ViewModels
 
         public bool UpdateServerVolumePositions { get { return _Volume.UpdateServerVolumePositions; } }
 
-        public VolumeViewModel(string path, string localCachePath, System.ComponentModel.BackgroundWorker workerThread)
+        public VolumeViewModel(Volume volume)
         {
-            _Volume = new Volume(path, localCachePath, workerThread);
+            this._Volume = volume;
+            _MappingManager = new MappingManager(volume);
 
             SectionViewModels = new SortedList<int, SectionViewModel>(_Volume.Sections.Length);
 
             foreach (Section s in _Volume.Sections)
             {
                 SectionViewModel sectionViewModel = new SectionViewModel(this, s);
-                SectionViewModels.Add(s.Number, sectionViewModel); 
+                SectionViewModels.Add(s.Number, sectionViewModel);
             }
-
         }
 
         public string Host { get { return _Volume.Host; } }
 
-        
+        public MappingBase GetMapping(string VolumeTransformName, int SectionNumber, string ChannelName, string SectionTransformName)
+        {
+            return _MappingManager.GetMapping(VolumeTransformName, SectionNumber, ChannelName, SectionTransformName);
+        }
+
+        public void ReduceCacheFootprint(object state)
+        {
+            _MappingManager.ReduceCacheFootprint();
+        }
+
     }
 }

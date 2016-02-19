@@ -10,10 +10,52 @@ using System.Runtime.Serialization.Formatters.Binary;
 
 namespace Viking.VolumeModel
 {
+    public interface IVolumeToSectionTransformer
+    {
+        /// <summary>
+        /// A unique ID for the transforming object
+        /// </summary>
+        /// <returns></returns>
+        long ID
+        {
+            get;
+        }
+
+        /// <summary>
+        /// Maps the point from the volume to the section if this is overriden by a volume mapping class
+        /// </summary>
+        /// <param name="P"></param>
+        /// <returns></returns>
+        bool TrySectionToVolume(GridVector2 P, out GridVector2 transformedP);
+
+        /// <summary>
+        /// Maps the point from the volume to the section if this is overriden by a volume mapping class
+        /// </summary>
+        /// <param name="P"></param>
+        /// <returns></returns>
+        bool TryVolumeToSection(GridVector2 P, out GridVector2 transformedP);
+
+        /// <summary>
+        /// Maps the point from the volume to the section if this is overriden by a volume mapping class
+        /// </summary>
+        /// <param name="P"></param>
+        /// <returns></returns>
+        bool TrySectionToVolume(GridVector2[] Points, out GridVector2[] transformedP);
+
+        /// <summary>
+        /// Maps the point from the volume to the section if this is overriden by a volume mapping class
+        /// </summary>
+        /// <param name="P"></param>
+        /// <returns></returns>
+        bool TryVolumeToSection(GridVector2[] Points, out GridVector2[] transformedP);
+
+        
+    }
+
     /// <summary>
     /// Mapping base encapsulates the transforms required to map all tiles in a section to mosaic or volume space
     /// </summary>
-    public abstract class MappingBase
+    public abstract class MappingBase : IVolumeToSectionTransformer
     {
         /// <summary>
         /// This records the modified date of the file the transform was loaded from
@@ -211,6 +253,23 @@ namespace Viking.VolumeModel
                 throw new ArgumentException("Could not map volume point to section");
 
             return transformedP;
+        }
+
+        private long? _ID = new int?();
+        /// <summary>
+        /// Return an unique ID for the current transform being used so we can quickly check if we need to recalculate positions
+        /// </summary>
+        public long ID
+        {
+            get
+            {
+                if (!_ID.HasValue)
+                {
+                    this._ID = (long)this.GetHashCode();
+                }
+
+                return _ID.Value;
+            }
         }
 
         /// <summary>

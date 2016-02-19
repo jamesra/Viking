@@ -337,8 +337,7 @@ namespace Viking.UI.Controls
                 {
 
                     string OldTransform = _CurrentVolumeTransform;
-                    _CurrentVolumeTransform = value;
-                    _CurrentTransformID = new int?();
+                    _CurrentVolumeTransform = value; 
 
                     if (OnVolumeTransformChanged != null)
                     {
@@ -350,22 +349,7 @@ namespace Viking.UI.Controls
             }
         }
 
-        private int? _CurrentTransformID= new int?(); 
-        /// <summary>
-        /// Return an unique ID for the current transform being used so we can quickly check if we need to recalculate positions
-        /// </summary>
-        public int CurrentTransformUniqueID
-        {
-            get
-            {
-                if (!_CurrentTransformID.HasValue) 
-                {
-                    this._CurrentTransformID = this.CurrentVolumeTransform.GetHashCode();
-                }
-
-                return this._CurrentTransformID.Value;
-            }
-        }
+        
 
         /// <summary>
         /// Fires when the transform used to render the section changes
@@ -378,7 +362,7 @@ namespace Viking.UI.Controls
         public event TransformChangedEventHandler OnVolumeTransformChanged;
 
         #region Section/Volume mapping
-
+         
         /// <summary>
         /// Maps a point from volume space into the section space for the currently selected section and transform
         /// </summary>
@@ -391,7 +375,16 @@ namespace Viking.UI.Controls
 
         public GridVector2[] VolumeToSection(GridVector2[] P)
         {
-            return P.Select(p => VolumeToSection(p, this.Section.section)).ToArray();
+            MappingBase map = this.Section.VolumeViewModel.GetMapping(this.CurrentVolumeTransform, this.Section.Number, this.CurrentChannel, this.CurrentTransform);
+            GridVector2[] SectionPoints;
+            if (map != null)
+            {
+                map.TryVolumeToSection(P, out SectionPoints);
+                if (map != null)
+                    return SectionPoints;
+            }
+
+            throw new System.ArgumentException("Cannot map requested point from Volume to Section");
         }
 
         /// <summary>
@@ -401,7 +394,7 @@ namespace Viking.UI.Controls
         /// <returns></returns>
         public GridVector2 VolumeToSection(GridVector2 P, Section section)
         {
-            MappingBase map = MappingManager.GetMapping(this.CurrentVolumeTransform, section, this.CurrentChannel, this.CurrentTransform);
+            MappingBase map = this.Section.VolumeViewModel.GetMapping(this.CurrentVolumeTransform, this.Section.Number, this.CurrentChannel, this.CurrentTransform);
             if (map != null)
             {
                 GridVector2 TransformedPoint = map.VolumeToSection(new GridVector2(P.X, P.Y));
@@ -413,11 +406,11 @@ namespace Viking.UI.Controls
             }
         }
 
-        public bool TryVolumeToSection(GridVector2 P, SectionViewModel section, out GridVector2 transformedP)
+        public bool TryVolumeToSection(GridVector2 P, out GridVector2 transformedP)
         {
             transformedP = new GridVector2();
 
-            MappingBase map = MappingManager.GetMapping(this.CurrentVolumeTransform, section.section, this.CurrentChannel, this.CurrentTransform);
+            MappingBase map = this.Section.VolumeViewModel.GetMapping(this.CurrentVolumeTransform, this.Section.Number, this.CurrentChannel, this.CurrentTransform);
             if (map != null)
             {
                 return map.TryVolumeToSection(new GridVector2(P.X, P.Y), out transformedP);
@@ -433,22 +426,7 @@ namespace Viking.UI.Controls
         /// <returns></returns>
         public GridVector2 SectionToVolume(GridVector2 P)
         {
-            return SectionToVolume(P, this.Section.section);
-        }
-
-        public GridVector2[] SectionToVolume(GridVector2[] P)
-        {
-            return P.Select(sp => SectionToVolume(sp, this.Section.section)).ToArray();
-        }
-
-        /// <summary>
-        /// Maps a point from section space into volume space for the currently selected transform
-        /// </summary>
-        /// <param name="?"></param>
-        /// <returns></returns>
-        public GridVector2 SectionToVolume(GridVector2 P, Section section)
-        {
-            MappingBase map = MappingManager.GetMapping(this.CurrentVolumeTransform, section, this.CurrentChannel, this.CurrentTransform);
+            MappingBase map = this.Section.VolumeViewModel.GetMapping(this.CurrentVolumeTransform, this.Section.Number, this.CurrentChannel, this.CurrentTransform);
             if (map != null)
             {
                 GridVector2 TransformedPoint = map.SectionToVolume(new GridVector2(P.X, P.Y));
@@ -460,15 +438,29 @@ namespace Viking.UI.Controls
             }
         }
 
+        public GridVector2[] SectionToVolume(GridVector2[] P)
+        {
+            MappingBase map = this.Section.VolumeViewModel.GetMapping(this.CurrentVolumeTransform, this.Section.Number, this.CurrentChannel, this.CurrentTransform);
+            GridVector2[] VolumePoints;
+            if (map != null)
+            {
+                map.TrySectionToVolume(P, out VolumePoints);
+                if (map != null)
+                    return VolumePoints;
+            }
+
+            throw new System.ArgumentException("Cannot map requested points from Section to Volume");
+        }
+
         /// <summary>
         /// Maps a point from section space into volume space for the currently selected transform
         /// </summary>
         /// <param name="?"></param>
         /// <returns></returns>
-        public bool TrySectionToVolume(GridVector2 P, Section section, out GridVector2 transformedP)
+        public bool TrySectionToVolume(GridVector2 P,out GridVector2 transformedP)
         {
             transformedP = new GridVector2();
-            MappingBase map = MappingManager.GetMapping(this.CurrentVolumeTransform, section, this.CurrentChannel, this.CurrentTransform);
+            MappingBase map = this.Section.VolumeViewModel.GetMapping(this.CurrentVolumeTransform, this.Section.Number, this.CurrentChannel, this.CurrentTransform);
             if (map != null)
             {
                 return map.TrySectionToVolume(new GridVector2(P.X, P.Y), out  transformedP);
@@ -482,10 +474,10 @@ namespace Viking.UI.Controls
         /// </summary>
         /// <param name="?"></param>
         /// <returns></returns>
-        public bool TrySectionToVolume(GridVector2[] P, Section section, out GridVector2[] transformedP)
+        public bool TrySectionToVolume(GridVector2[] P, out GridVector2[] transformedP)
         {
             transformedP = new GridVector2[P.Length];
-            MappingBase map = MappingManager.GetMapping(this.CurrentVolumeTransform, section, this.CurrentChannel, this.CurrentTransform);
+            MappingBase map = this.Section.VolumeViewModel.GetMapping(this.CurrentVolumeTransform, this.Section.Number, this.CurrentChannel, this.CurrentTransform);
             if (map != null)
             {
                 return map.TrySectionToVolume(P, out transformedP);
@@ -501,13 +493,18 @@ namespace Viking.UI.Controls
         /// <returns></returns>
         public GridRectangle SectionBounds(Section section)
         {
-            MappingBase map = MappingManager.GetMapping(this.CurrentVolumeTransform, section, this.CurrentChannel, this.CurrentTransform);
+            MappingBase map = this.Section.VolumeViewModel.GetMapping(this.CurrentVolumeTransform, section.Number, this.CurrentChannel, this.CurrentTransform);
             if (map != null)
             {
                 return map.Bounds;
             }
 
             throw new System.ArgumentException("Cannot find boundaries for section");
+        }
+
+        public MappingBase GetMapper(int sectionNumber)
+        {
+            return this.Section.VolumeViewModel.GetMapping(this.CurrentVolumeTransform, sectionNumber, this.CurrentChannel, this.CurrentTransform);
         }
 
         #endregion
@@ -1150,8 +1147,7 @@ namespace Viking.UI.Controls
             //                                             new Microsoft.Xna.Framework.Color(0,1f,0),
             //                                          new Microsoft.Xna.Framework.Color(0,0,1f)};
 
-            MappingBase Mapping = MappingManager.GetMapping(this.CurrentVolumeTransform,
-                                                               section,
+            MappingBase Mapping = this.Section.VolumeViewModel.GetMapping(this.CurrentVolumeTransform, section.Number,
                                                                channel,
                                                                this.CurrentTransform);
 
@@ -1425,8 +1421,8 @@ namespace Viking.UI.Controls
                 }
 
                 //Find the mapping to use
-                MappingBase mapping = MappingManager.GetMapping(this.CurrentVolumeTransform,
-                                                                sectionToDraw,
+                MappingBase mapping = this.Section.VolumeViewModel.GetMapping(this.CurrentVolumeTransform,
+                                                                sectionToDraw.Number,
                                                                 ChannelName,
                                                                 Section.DefaultPyramidTransform);
 
@@ -1930,7 +1926,7 @@ namespace Viking.UI.Controls
                 //                GC.Collect();
 
                 //Get the boundaries of the section
-                MappingBase mapping = MappingManager.GetMapping(this.CurrentVolumeTransform, this.Section.section, this.CurrentChannel, this.CurrentTransform);
+                MappingBase mapping = this.Section.VolumeViewModel.GetMapping(this.CurrentVolumeTransform, this.Section.Number, this.CurrentChannel, this.CurrentTransform);
 
                 //Figure out how much we need to capture
                 Size TileImageSize = new Size(256, 256);
@@ -2159,7 +2155,7 @@ namespace Viking.UI.Controls
 
             if (InputInSectionSpace)
             {
-                MappingBase map = MappingManager.GetMapping(this.CurrentVolumeTransform, this.Section.section, this.CurrentChannel, this.CurrentTransform);
+                MappingBase map = this.Section.VolumeViewModel.GetMapping(this.CurrentVolumeTransform, this.Section.Number, this.CurrentChannel, this.CurrentTransform);
                 if (map != null)
                 {
                     GridVector2 TransformedPoint;

@@ -126,11 +126,8 @@ namespace WebAnnotation.UI.Commands
             {
                 GridVector2 MosaicPosition;
 
-                try
-                {
-                    MosaicPosition = Parent.VolumeToSection(TranslatedPosition);
-                }
-                catch (ArgumentOutOfRangeException)
+                bool mappedToMosaic = Parent.TryVolumeToSection(TranslatedPosition, out MosaicPosition);
+                if(!mappedToMosaic)
                 {
                     Trace.WriteLine("TranslateLocationCommand: Could not map world point on Execute: " + TranslatedPosition.ToString(), "Command");
                     return;

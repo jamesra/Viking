@@ -298,7 +298,7 @@ namespace WebAnnotationModel
         /// <summary>
         /// Record the hashcode of the volume transform used to map the location. 
         /// </summary>
-        public int? VolumeTransformID = new int?();
+        public long? VolumeTransformID = new int?();
 
         /// <summary>
         /// Return true if the location's volume position has not yet been mapped by this Viking client

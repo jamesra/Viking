@@ -2,19 +2,16 @@
 #define SUBMITVOLUMEPOSITION
 
 using System;
-using System.Diagnostics; 
+using System.Diagnostics;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
 using System.Collections.Specialized;
 using System.Linq;
-using System.Text;
-using Viking;
 using Viking.Common;
 using Geometry;
-using WebAnnotation.UI;
 using Viking.ViewModels;
 using WebAnnotationModel;
-using System.ComponentModel; 
+using System.ComponentModel;
 using System.Threading.Tasks;
 using SqlGeometryUtils;
 using WebAnnotation.View;
@@ -101,10 +98,9 @@ namespace WebAnnotation.ViewModel
         private RTree.RTree<StructureLinkViewModelBase> StructureLinksSearch = null;
 
         /// <summary>
-        /// This is a symptom of being halfway to the Jotunn architecture.  This is a pointer to the 
-        /// parent section viewer control which can perform transforms
+        /// Mapping interface for moving geometry between volume and section space
         /// </summary>
-        public readonly Viking.UI.Controls.SectionViewerControl parent;
+        public readonly Viking.VolumeModel.IVolumeToSectionTransformer mapper;
 
         private int SectionNumber { get {return this.Section.Number; }}
 
@@ -120,12 +116,12 @@ namespace WebAnnotation.ViewModel
 
         public SectionLocationsViewModel(SectionViewModel section,  Viking.UI.Controls.SectionViewerControl Parent)
         {
-            this.parent = Parent;
+            this.mapper = Parent.GetMapper(section.Number);
             Trace.WriteLine("Create SectionLocationsViewModel for " + section.Number.ToString());
             this.Section = section;
 
-            GridRectangle bounds = AnnotationOverlay.SectionBounds(parent, parent.Section.Number);
-
+            GridRectangle bounds = AnnotationOverlay.SectionBounds(Parent, Parent.Section.Number);
+            
             RegionQueries = new AnnotationRegions(bounds, new GridCellDimensions(bounds.Width / 2.0, bounds.Height / 2.0));
 
             if (LocationViews == null)
@@ -314,7 +310,7 @@ namespace WebAnnotation.ViewModel
         private bool MapLocation(LocationObj loc)
         {
             //Don't bother mapping if the location was already mapped
-            if (loc.VolumeTransformID == parent.CurrentTransformUniqueID)
+            if (loc.VolumeTransformID == mapper.ID)
                 return true;
             
             switch(loc.TypeCode)
@@ -336,19 +332,19 @@ namespace WebAnnotation.ViewModel
         private bool MapLocationByCentroid(LocationObj loc)
         {
              //Don't bother mapping if the location was already mapped
-            if (loc.VolumeTransformID == parent.CurrentTransformUniqueID)
+            if (loc.VolumeTransformID == mapper.ID)
                 return true;
 
             GridVector2 VolumePosition = new GridVector2(-1, -1);
 
-            bool mappedPosition = parent.TrySectionToVolume(loc.Position, this.Section.section, out VolumePosition);
+            bool mappedPosition = mapper.TrySectionToVolume(loc.Position, out VolumePosition);
             if (!mappedPosition) //Remove locations we can't map
             {
                 Trace.WriteLine("AddLocation: Location #" + loc.ID.ToString() + " was unmappable.", "WebAnnotation");
                 return false;
             }
 
-            loc.VolumeTransformID = parent.CurrentTransformUniqueID;
+            loc.VolumeTransformID = mapper.ID;
             if(VolumePosition != loc.VolumePosition)
                 loc.VolumeShape = loc.VolumeShape.MoveTo(VolumePosition);
 
@@ -365,20 +361,20 @@ namespace WebAnnotation.ViewModel
         private bool MapLocationByControlPoints(LocationObj loc)
         {
             //Don't bother mapping if the location was already mapped
-            if (loc.VolumeTransformID == parent.CurrentTransformUniqueID)
+            if (loc.VolumeTransformID == mapper.ID)
                 return true;
 
             GridVector2[] VolumePositions;
             GridVector2[] points = loc.MosaicShape.ToPoints();
 
-            bool mappedPosition = parent.TrySectionToVolume(loc.MosaicShape.ToPoints(), this.Section.section, out VolumePositions);
+            bool mappedPosition = mapper.TrySectionToVolume(loc.MosaicShape.ToPoints(), out VolumePositions);
             if (!mappedPosition) //Remove locations we can't map
             {
                 Trace.WriteLine("AddLocation: Location #" + loc.ID.ToString() + " was unmappable.", "WebAnnotation");
                 return false;
             }
 
-            loc.VolumeTransformID = parent.CurrentTransformUniqueID;
+            loc.VolumeTransformID = mapper.ID;
             //loc.VolumePosition = VolumePosition;
             loc.VolumeShape = SqlGeometryUtils.GeometryExtensions.ToGeometry(loc.MosaicShape.STGeometryType(), VolumePositions);
 
@@ -402,7 +398,7 @@ namespace WebAnnotation.ViewModel
             long VolumePositionUpdatedCount = 0;
 
 
-            if (this.SubmitUpdatedVolumePositions && this.parent.CurrentVolumeTransform == this.Section.VolumeViewModel.DefaultVolumeTransform)
+            if (this.SubmitUpdatedVolumePositions)// && this.mapper.ID == this.Section.VolumeViewModel.DefaultVolumeTransform) TODO: Add the line back in to prevent saving transforms when the mosaic transform has been changed
             {
                 UpdateVolumeLocations = true;
             }  
@@ -478,7 +474,6 @@ namespace WebAnnotation.ViewModel
                     //locView.RegisterForLocationEvents();
                     SubscribeToLocationChangeEvents(loc);
                 }
-
 
                 ConcurrentDictionary<long, LocationCanvasView> KnownLocationsForStructure;
                 KnownLocationsForStructure = LocationsForStructure.GetOrAdd(loc.ParentID.Value, (key) => { return new ConcurrentDictionary<long, LocationCanvasView>(); });
@@ -804,13 +799,13 @@ namespace WebAnnotation.ViewModel
         /// Return true if we should stop loading regions
         /// </summary>
         /// <returns></returns>
-        private bool ShouldCancelLoadingRegions(AnnotationRegions regions, double DevicePixelWidth, double DevicePixelHeight)
+        private static bool ShouldCancelLoadingRegions(VikingXNA.Scene scene, AnnotationRegions regions, double DevicePixelWidth, double DevicePixelHeight)
         {
             if (regions.CancelRunningOperations)
                 return true;
 
-            if (DevicePixelHeight != parent.Scene.DevicePixelHeight ||
-               DevicePixelWidth != parent.Scene.DevicePixelWidth)
+            if (DevicePixelHeight != scene.DevicePixelHeight ||
+               DevicePixelWidth != scene.DevicePixelWidth)
                 return true;
 
             return false; 
@@ -839,8 +834,8 @@ namespace WebAnnotation.ViewModel
 
             var RegionPyramid = this.RegionQueries;
             //If we change the magnification factor we should stop loading regions
-            double StartingDevicePixelWidth = parent.Scene.DevicePixelWidth;
-            double StartingDevicePixelHeight = parent.Scene.DevicePixelHeight;
+            double StartingDevicePixelWidth = scene.DevicePixelWidth;
+            double StartingDevicePixelHeight = scene.DevicePixelHeight;
 
             var level = RegionPyramid.GetLevelForVolumeBounds(scene.VisibleWorldBounds, scene.DevicePixelWidth);
             GridRange<RegionRequestData> gridRange = level.SubGridForRegion(scene.VisibleWorldBounds);
@@ -854,7 +849,7 @@ namespace WebAnnotation.ViewModel
                     RegionRequestData cell = level.Cells[iX, iY];
                     GridRectangle cellBounds = level.CellBounds(iX, iY);
 
-                    if (ShouldCancelLoadingRegions(RegionPyramid,StartingDevicePixelWidth, StartingDevicePixelHeight))
+                    if (ShouldCancelLoadingRegions(scene, RegionPyramid,StartingDevicePixelWidth, StartingDevicePixelHeight))
                         return; 
 
                     //Check with the server every 120 seconds if we've already loaded the annotations and there is no outstanding query
@@ -1080,12 +1075,9 @@ namespace WebAnnotation.ViewModel
                 if (sender.GetType() == typeof(LocationObj))
                 {
                     OnLocationPropertyChanging(sender, PropertyChangingArgs);
-                    return true; 
+                    return true;
                 }
             }
-
-
-
 
             Debug.Fail("Weak Event not handled");
             return false;

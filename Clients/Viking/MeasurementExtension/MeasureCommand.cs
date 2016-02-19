@@ -107,8 +107,8 @@ namespace MeasurementExtension
         {
             GridVector2 mosaic_origin;
             GridVector2 mosaic_target;
-            bool transformed_origin = this.Parent.TryVolumeToSection(Origin, this.Parent.Section, out mosaic_origin);
-            bool transformed_current = this.Parent.TryVolumeToSection(this.oldWorldPosition, this.Parent.Section, out mosaic_target);
+            bool transformed_origin = this.Parent.TryVolumeToSection(Origin, out mosaic_origin);
+            bool transformed_current = this.Parent.TryVolumeToSection(this.oldWorldPosition, out mosaic_target);
                      
             if (transformed_origin && transformed_current)
             {

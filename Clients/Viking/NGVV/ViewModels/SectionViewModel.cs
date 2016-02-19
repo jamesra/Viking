@@ -6,6 +6,7 @@ using Viking.VolumeModel;
 using System.Diagnostics;
 using Viking.Common;
 using Common.UI;
+using Geometry;
 
 namespace Viking.ViewModels
 {
@@ -287,6 +288,21 @@ namespace Viking.ViewModels
         {
             this.section.PrepareTransform(transform); 
         }
-         
+
+        /// <summary>
+        /// Get the boundaries for a section given the current transforms
+        /// </summary>
+        /// <param name="section"></param>
+        /// <returns></returns>
+        public GridRectangle SectionBounds(string CurrentVolumeTransform, string CurrentChannel, string CurrentTransform)
+        {
+            MappingBase map = this._VolumeViewModel.GetMapping(CurrentVolumeTransform, this.Number, CurrentChannel, CurrentTransform);
+            if (map != null)
+            {
+                return map.Bounds;
+            }
+
+            throw new System.ArgumentException("Cannot find boundaries for section");
+        }
     }
 }

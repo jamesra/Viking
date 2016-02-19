@@ -74,11 +74,23 @@ namespace Viking.VolumeModel
     /// </summary>
     public class MappingManager
     {
-        static public SectionTransformsCache SectionMappingCache = new SectionTransformsCache();
+        private VolumeModel.Volume volume; 
+
+        public SectionTransformsCache SectionMappingCache = new SectionTransformsCache();
+
+        public MappingManager(Volume Volume)
+        {
+            this.volume = Volume;
+        }
+
+        public void ReduceCacheFootprint()
+        {
+            SectionMappingCache.ReduceCacheFootprint(null);
+        }
          
         //static private ConcurrentDictionary<string, MappingBase> mapTable = new ConcurrentDictionary<string, MappingBase>();
 
-        public static string BuildKey(string VolumeTransformName, Section section, string SectionTransformName)
+        protected static string BuildKey(string VolumeTransformName, Section section, string SectionTransformName)
         {
             string key = VolumeTransformName + '-' + section.Number.ToString("D4") + '-' + SectionTransformName;
             return key;
@@ -92,23 +104,26 @@ namespace Viking.VolumeModel
         /// <param name="SectionNumber"></param>
         /// <param name="SectionTransformName"></param>
         /// <returns></returns>
-        public static MappingBase GetMapping(string VolumeTransformName, Section section, string ChannelName, string SectionTransformName)
+        public MappingBase GetMapping(string VolumeTransformName, int SectionNumber, string ChannelName, string SectionTransformName)
         {
-            if (section == null)
-                return null;
-
-            SectionTransformsDictionary dict = SectionMappingCache.Fetch(section.Number);
-            if(dict == null)
+            if(!volume.SectionsTable.ContainsKey(SectionNumber))
             {
-                dict = SectionMappingCache.GetOrAdd(section.Number, new SectionTransformsDictionary());
+                return null;
             }
 
-            MappingBase transform = GetMappingForSection(dict, VolumeTransformName, section, ChannelName, SectionTransformName);
+            SectionTransformsDictionary dict = SectionMappingCache.Fetch(SectionNumber);
+            if(dict == null)
+            {
+                dict = SectionMappingCache.GetOrAdd(SectionNumber, new SectionTransformsDictionary());
+            }
+
+            MappingBase transform = GetMappingForSection(dict, VolumeTransformName, SectionNumber, ChannelName, SectionTransformName);
             return transform;
         }
 
-        private static MappingBase GetMappingForSection(SectionTransformsDictionary transformsForSection, string VolumeTransformName, Section section, string ChannelName, string SectionTransformName)
+        private MappingBase GetMappingForSection(SectionTransformsDictionary transformsForSection, string VolumeTransformName, int SectionNumber, string ChannelName, string SectionTransformName)
         {
+            Section section = volume.SectionsTable[SectionNumber];
 
             if (VolumeTransformName == null)
                 VolumeTransformName = "None"; 
@@ -159,7 +174,7 @@ namespace Viking.VolumeModel
             {
                 //Hmm... Try loading the default
                 if (section.DefaultChannel != ChannelName)
-                    return GetMapping(VolumeTransformName, section, section.DefaultChannel, section.DefaultPyramidTransform);
+                    return GetMapping(VolumeTransformName, SectionNumber, section.DefaultChannel, section.DefaultPyramidTransform);
                 else
                     return null; 
             }
@@ -192,8 +207,7 @@ namespace Viking.VolumeModel
             }
             else
             {
-                //We have to create a volume transform for the requested map
-                Volume volume = section.volume; 
+                //We have to create a volume transform for the requested map 
                 if(false == volume.Transforms.ContainsKey(VolumeTransformName))
                     return null;
 
@@ -202,13 +216,13 @@ namespace Viking.VolumeModel
                 {
                     //Maybe we are the reference section, check if there is a mapping for no transform.  This at least prevents displaying
                     //a blank screen
-                    return GetMapping("None", section, ChannelName, SectionTransformName); 
+                    return GetMapping("None", SectionNumber, ChannelName, SectionTransformName); 
                 }
 
                 if (stosTransforms[section.Number] == null)
                 {
                     //A transform was unable to be generated placing the section in the transform.  Use a mosaic instead
-                    return GetMapping("None", section, ChannelName, SectionTransformName); 
+                    return GetMapping("None", SectionNumber, ChannelName, SectionTransformName); 
                 }
 
                 map = section.CreateSectionToVolumeMapping(stosTransforms[section.Number], SectionMapKey, key);

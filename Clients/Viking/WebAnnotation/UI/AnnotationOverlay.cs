@@ -276,7 +276,11 @@ namespace WebAnnotation
                         adjacentObjs.AddRange(locView.GetAdjacentLocations(position).Where(l => l.IsVisible(Parent.Scene)));
                     }
                 }
-                 
+
+                //locView.GetLocations(Store.Locations.GetObjectsByIDs(adjacentObjs.SelectMany(a => a.Links));
+
+
+                
                 IEnumerable<LocationCanvasView> intersecting_candidates = FindNonOverlappedAdjacentLocations(locView.GetLocations().ToList(), adjacentObjs, this.CurrentSectionNumber);
                 intersecting_candidates = adjacentObjs.Where(l => l.Intersects(position) && l.IsTerminal == false);
                 LocationCanvasView nearest = intersecting_candidates.OrderBy(c => c.DistanceFromCenterNormalized(position)).FirstOrDefault();
@@ -635,7 +639,7 @@ namespace WebAnnotation
                 System.Drawing.Point ClientPoint = _Parent.PointToClient(System.Windows.Forms.Control.MousePosition);
                 GridVector2 WorldPos = _Parent.ScreenToWorld(ClientPoint.X, ClientPoint.Y);
                 GridVector2 SectionPos;
-                bool success = _Parent.TryVolumeToSection(WorldPos, _Parent.Section, out SectionPos);
+                bool success = _Parent.TryVolumeToSection(WorldPos, out SectionPos);
                 Debug.Assert(success);
                 if (!success)
                     return;
@@ -850,7 +854,7 @@ namespace WebAnnotation
             }
 
             GridVector2 SectionPos;
-            bool success = _Parent.TryVolumeToSection(LastMouseMoveVolumeCoords, _Parent.Section, out SectionPos);
+            bool success = _Parent.TryVolumeToSection(LastMouseMoveVolumeCoords, out SectionPos);
             Debug.Assert(success);
             if (!success)
                 return;
@@ -884,7 +888,7 @@ namespace WebAnnotation
                 if (template.Z != this.Parent.Section.Number)
                 {
                     GridVector2 SectionPos;
-                    bool success = _Parent.TryVolumeToSection(WorldPos, _Parent.Section, out SectionPos);
+                    bool success = _Parent.TryVolumeToSection(WorldPos, out SectionPos);
                     Debug.Assert(success);
                     if (!success)
                         return;

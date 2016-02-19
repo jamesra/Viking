@@ -78,7 +78,7 @@ namespace Viking
             ThreadPool.QueueUserWorkItem(Global.TextureCache.ReduceCacheFootprint, null);
             ThreadPool.QueueUserWorkItem(Global.TileViewModelCache.ReduceCacheFootprint, null);
             ThreadPool.QueueUserWorkItem(Viking.VolumeModel.Global.TileCache.ReduceCacheFootprint, null);
-            ThreadPool.QueueUserWorkItem(MappingManager.SectionMappingCache.ReduceCacheFootprint, null);
+            ThreadPool.QueueUserWorkItem(Viking.UI.State.volume.ReduceCacheFootprint, null);
 
             /*
             if (DiskCleanupThread == null)
@@ -201,8 +201,8 @@ namespace Viking
 
             if (UseDefaultPosition)
             {
-                //default to centering the viewer on startup
-                MappingBase map = MappingManager.GetMapping(null, DefaultSection.section, null, null);
+                //default to centering the viewer on startup 
+                MappingBase map = Viking.UI.State.volume.GetMapping(null, DefaultSection.Number, null, null);
                 if (map != null)
                 {
                     Geometry.GridVector2 Center = map.Bounds.Center;

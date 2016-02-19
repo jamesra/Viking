@@ -78,8 +78,9 @@ namespace Viking.UI.Forms
         }
 
         private void backgroundWorker_DoWork(object sender, DoWorkEventArgs e)
-        {   
-            State.volume = new VolumeViewModel(this.VolumePath, UI.State.CachePath, this.LoadVolumeWorker);
+        {
+            Viking.VolumeModel.Volume _Volume = new Viking.VolumeModel.Volume(this.VolumePath, UI.State.CachePath, this.LoadVolumeWorker);
+            State.volume = new VolumeViewModel(_Volume); 
         }   
 
         private void backgroundWorker_ProgressChanged(object sender, ProgressChangedEventArgs e)
