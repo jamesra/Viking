@@ -79,7 +79,12 @@ namespace VikingXNA
                 System.Windows.Forms.MessageBox.Show("Default graphics adapter does not support XNA");
                 throw new System.InvalidOperationException("Default graphics adapter does not support XNA");
             }
-   
+
+            // AnnotationCache.parent = parent;
+            GlobalPrimitives.CircleTexture = Content.LoadTextureWithAlpha("Circle", "CircleMask"); //parent.Content.Load<Texture2D>("Circle");
+            GlobalPrimitives.UpArrowTexture = Content.LoadTextureWithAlpha("UpArrowV2", "UpArrowMask"); //parent.Content.Load<Texture2D>("Circle");
+            GlobalPrimitives.DownArrowTexture = Content.LoadTextureWithAlpha("DownArrowV2", "UpArrowMask"); //parent.Content.Load<Texture2D>("Circle");
+
         }
 
 
@@ -152,10 +157,7 @@ namespace VikingXNA
             if (DeviceReset != null)
                 DeviceReset(this, EventArgs.Empty);
 
-            // AnnotationCache.parent = parent;
-            GlobalPrimitives.CircleTexture = Content.LoadTextureWithAlpha("Circle", "CircleMask"); //parent.Content.Load<Texture2D>("Circle");
-            GlobalPrimitives.UpArrowTexture = Content.LoadTextureWithAlpha("UpArrowV2", "UpArrowMask"); //parent.Content.Load<Texture2D>("Circle");
-            GlobalPrimitives.DownArrowTexture = Content.LoadTextureWithAlpha("DownArrowV2", "UpArrowMask"); //parent.Content.Load<Texture2D>("Circle");
+            
         }
 
 
