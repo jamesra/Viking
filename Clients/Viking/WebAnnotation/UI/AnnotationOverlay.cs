@@ -318,8 +318,7 @@ namespace WebAnnotation
               
             //Load the locations for the current sections
             this._Parent.OnSectionChanged += new SectionChangedEventHandler(this.OnSectionChanged);
-            this._Parent.OnSectionTransformChanged += new TransformChangedEventHandler(this.OnSectionTransformChanged);
-            this._Parent.OnVolumeTransformChanged += new TransformChangedEventHandler(this.OnVolumeTransformChanged); 
+            Viking.UI.State.volume.TransformChanged  += new TransformChangedEventHandler(this.OnVolumeTransformChanged); 
             this._Parent.OnReferenceSectionChanged += new EventHandler(this.OnReferenceSectionChanged);
 
             this._Parent.MouseDown += new MouseEventHandler(this.OnMouseDown);
@@ -639,7 +638,7 @@ namespace WebAnnotation
                 System.Drawing.Point ClientPoint = _Parent.PointToClient(System.Windows.Forms.Control.MousePosition);
                 GridVector2 WorldPos = _Parent.ScreenToWorld(ClientPoint.X, ClientPoint.Y);
                 GridVector2 SectionPos;
-                bool success = _Parent.TryVolumeToSection(WorldPos, out SectionPos);
+                bool success = Parent.Section.ActiveMapping.TryVolumeToSection(WorldPos, out SectionPos);
                 Debug.Assert(success);
                 if (!success)
                     return;
@@ -695,7 +694,7 @@ namespace WebAnnotation
                     typecolor,
                     worldPos,
                     new ResizeCircleCommand.OnCommandSuccess((double radius) => {
-                                    newLocation.Radius = radius;
+                                    
                                     newLocation.TypeCode = LocationType.CIRCLE;
                                     newLocation.MosaicShape = SqlGeometryUtils.GeometryExtensions.ToCircle(sectionPos.X,
                                        sectionPos.Y,
@@ -705,7 +704,8 @@ namespace WebAnnotation
                                         worldPos.Y,
                                         newLocation.Section,
                                         radius);
-                                    
+                                    newLocation.Radius = radius;
+
                                     if(SaveToStore)
                                         Store.Locations.Save();
                                      })});
@@ -725,7 +725,7 @@ namespace WebAnnotation
                                                             new PlaceCurveCommand.OnCommandSuccess((GridVector2[] points) => {
                                                                     newLocation.TypeCode = LocationType.OPENCURVE;
                                                                     newLocation.Radius = LineWidth / 2.0;
-                                                                    SetLocationShapeFromPointsInVolume(Parent, newLocation, points);
+                                                                    SetLocationShapeFromPointsInVolume(Parent.Section, newLocation, points);
                                                                     if(SaveToStore)
                                                                         Store.Locations.Save();
                                                             }) });
@@ -745,15 +745,15 @@ namespace WebAnnotation
                                                             new PlaceCurveCommand.OnCommandSuccess((GridVector2[] points) => {
                                                                     newLocation.TypeCode = LocationType.CLOSEDCURVE;
                                                                     newLocation.Radius = LineWidth / 2.0;
-                                                                    SetLocationShapeFromPointsInVolume(Parent, newLocation, points);
+                                                                    SetLocationShapeFromPointsInVolume(Parent.Section, newLocation, points);
                                                                     if(SaveToStore)
                                                                         Store.Locations.Save();
                                                             }) });
         }
 
-        public static void SetLocationShapeFromPointsInVolume(Viking.UI.Controls.SectionViewerControl Parent, LocationObj location, GridVector2[] points)
+        public static void SetLocationShapeFromPointsInVolume(SectionViewModel Section, LocationObj location, GridVector2[] points)
         {
-            GridVector2[] mosaic_points = Parent.VolumeToSection(points);
+            GridVector2[] mosaic_points = Section.ActiveMapping.VolumeToSection(points);
 
             switch (location.TypeCode)
             {
@@ -854,7 +854,7 @@ namespace WebAnnotation
             }
 
             GridVector2 SectionPos;
-            bool success = _Parent.TryVolumeToSection(LastMouseMoveVolumeCoords, out SectionPos);
+            bool success = Parent.Section.ActiveMapping.TryVolumeToSection(LastMouseMoveVolumeCoords, out SectionPos);
             Debug.Assert(success);
             if (!success)
                 return;
@@ -888,7 +888,7 @@ namespace WebAnnotation
                 if (template.Z != this.Parent.Section.Number)
                 {
                     GridVector2 SectionPos;
-                    bool success = _Parent.TryVolumeToSection(WorldPos, out SectionPos);
+                    bool success = Parent.Section.ActiveMapping.TryVolumeToSection(WorldPos, out SectionPos);
                     Debug.Assert(success);
                     if (!success)
                         return;
@@ -918,7 +918,9 @@ namespace WebAnnotation
         /// <param name="e"></param>
         protected void OnSectionChanged(object sender, SectionChangedEventArgs e)
         {
-            
+            e.OldSection.TransformChanged -= this.OnSectionTransformChanged;
+            e.NewSection.TransformChanged += this.OnSectionTransformChanged;
+
             //Don't load annotations when flipping sections if the user is holding down space bar to hide them
             if (_Parent.ShowOverlays)
             { 
@@ -1508,14 +1510,14 @@ namespace WebAnnotation
                 return new GridRectangle();
 
             SectionViewModel SectionView = Parent.Section.VolumeViewModel.SectionViewModels[SectionNumber];
-            bounds = Parent.SectionBounds(SectionView.section);
+            bounds = Viking.UI.State.volume.SectionBounds(SectionNumber, Parent.CurrentChannel, Parent.CurrentTransform);
             if (SectionView.ReferenceSectionAbove != null)
             {
-                bounds = GridRectangle.Union(bounds, Parent.SectionBounds(SectionView.ReferenceSectionAbove));
+                bounds = GridRectangle.Union(bounds, Viking.UI.State.volume.SectionBounds(SectionView.ReferenceSectionAbove.Number, Parent.CurrentChannel, Parent.CurrentTransform));
             }
             if (SectionView.ReferenceSectionBelow != null)
             {
-                bounds = GridRectangle.Union(bounds, Parent.SectionBounds(SectionView.ReferenceSectionBelow));
+                bounds = GridRectangle.Union(bounds, Viking.UI.State.volume.SectionBounds(SectionView.ReferenceSectionBelow.Number, Parent.CurrentChannel, Parent.CurrentTransform));
             }
             
             return bounds;

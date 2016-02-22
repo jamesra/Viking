@@ -107,8 +107,8 @@ namespace MeasurementExtension
         {
             GridVector2 mosaic_origin;
             GridVector2 mosaic_target;
-            bool transformed_origin = this.Parent.TryVolumeToSection(Origin, out mosaic_origin);
-            bool transformed_current = this.Parent.TryVolumeToSection(this.oldWorldPosition, out mosaic_target);
+            bool transformed_origin = Parent.Section.ActiveMapping.TryVolumeToSection(Origin, out mosaic_origin);
+            bool transformed_current = Parent.Section.ActiveMapping.TryVolumeToSection(this.oldWorldPosition, out mosaic_target);
                      
             if (transformed_origin && transformed_current)
             {
@@ -132,7 +132,7 @@ namespace MeasurementExtension
 
             string mosaic_space_string =  "No mosaic transform";
 
-            if (this.Parent.UsingVolumeTransform)
+            if (Viking.UI.State.volume.UsingVolumeTransform)
             {
                 double? mosaicDistance = GetMosaicDistance();
                 if (mosaicDistance.HasValue)

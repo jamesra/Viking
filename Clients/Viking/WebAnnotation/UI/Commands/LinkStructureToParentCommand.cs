@@ -54,7 +54,7 @@ namespace WebAnnotation.UI.Commands
             }
 
             //Transform the location position to the correct coordinates
-            transformedPos = parent.SectionToVolume(new GridVector2(putativeLoc.Position.X, putativeLoc.Position.Y));
+            transformedPos = parent.Section.ActiveMapping.SectionToVolume(new GridVector2(putativeLoc.Position.X, putativeLoc.Position.Y));
 
             parent.Cursor = Cursors.Cross; 
         }

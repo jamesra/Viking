@@ -28,9 +28,11 @@ namespace WebAnnotationModel
 
         public override bool Equals(object obj)
         {
-            if (obj == null)
+            if (System.Object.ReferenceEquals(this, obj))
+                return true;
+            if ((object)obj == null)
                 return false;
-            if (!this.GetType().IsInstanceOfType(obj))
+            if (!typeof(LocationLinkKey).IsInstanceOfType(obj))
                 return false;
 
             LocationLinkKey other = (LocationLinkKey)obj;
@@ -50,26 +52,28 @@ namespace WebAnnotationModel
 
         public static bool operator ==(LocationLinkKey A, LocationLinkKey B)
         {
-            return object.Equals(A, B);
-
-            if (object.Equals(A, B))
+            if (System.Object.ReferenceEquals(A, B))
+            {
                 return true;
-            if (object.Equals(A, null) || object.Equals(B, null))
-                return false; 
+            }
 
-            return (A.A == B.A) && (A.B == B.B);
+            if ((object)A != null)
+                return A.Equals(B);
+
+            return false;
         }
 
         public static bool operator !=(LocationLinkKey A, LocationLinkKey B)
         {
-            return !object.Equals(A, B);
-
-            if (object.Equals(A, B))
+            if (System.Object.ReferenceEquals(A, B))
+            {
                 return false;
-            if (object.Equals(A, null) || object.Equals(B, null))
-                return true; 
+            }
 
-            return !((A.A == B.A) && (A.B == B.B));
+            if ((object)A != null)
+                return !A.Equals(B);
+
+            return true;
         }
 
         public int CompareTo(LocationLinkKey other)

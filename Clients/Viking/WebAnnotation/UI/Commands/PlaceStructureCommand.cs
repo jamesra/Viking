@@ -24,13 +24,15 @@ namespace WebAnnotation.UI.Commands
     [Viking.Common.CommandAttribute(typeof(WebAnnotation.ViewModel.StructureType))]
     class PlaceStructureCommand : AnnotationCommandBase
     {
-        StructureType Type = Viking.UI.State.SelectedObject as StructureType; 
+        StructureType Type = Viking.UI.State.SelectedObject as StructureType;
+        Viking.VolumeModel.IVolumeToSectionMapper mapping;
 
         public PlaceStructureCommand(Viking.UI.Controls.SectionViewerControl parent)
             : base(parent)
         {
             this.Type = Viking.UI.State.SelectedObject as StructureType; 
             parent.Cursor = Cursors.Cross;
+            mapping = parent.Section.ActiveMapping;
         }
 
         public PlaceStructureCommand(Viking.UI.Controls.SectionViewerControl parent, StructureType type)
@@ -38,6 +40,7 @@ namespace WebAnnotation.UI.Commands
         {
             this.Type = type;
             parent.Cursor = Cursors.Cross;
+            mapping = parent.Section.ActiveMapping;
         }
 
         public override void OnDeactivate()
@@ -71,7 +74,8 @@ namespace WebAnnotation.UI.Commands
 
                 //Transform from volume space to section space if we need to
                 GridVector2 SectionPos;
-                bool Transformed= Parent.TryVolumeToSection(WorldPos, out SectionPos);
+
+                bool Transformed= mapping.TryVolumeToSection(WorldPos, out SectionPos);
 
                 if (!Transformed)
                 {

@@ -124,9 +124,7 @@ namespace Viking.VolumeModel
         private MappingBase GetMappingForSection(SectionTransformsDictionary transformsForSection, string VolumeTransformName, int SectionNumber, string ChannelName, string SectionTransformName)
         {
             Section section = volume.SectionsTable[SectionNumber];
-
-            if (VolumeTransformName == null)
-                VolumeTransformName = "None"; 
+             
             if (SectionTransformName == null)
                 SectionTransformName = section.DefaultPyramidTransform;
             if (ChannelName == null)
@@ -191,7 +189,7 @@ namespace Viking.VolumeModel
             }
 
             MappingBase map = null; 
-            if (VolumeTransformName == "None")
+            if (VolumeTransformName == null)
             {
                 map = section.WarpedTo[SectionMapKey];
                 map = transformsForSection.GetOrAdd(key, map);
@@ -216,13 +214,13 @@ namespace Viking.VolumeModel
                 {
                     //Maybe we are the reference section, check if there is a mapping for no transform.  This at least prevents displaying
                     //a blank screen
-                    return GetMapping("None", SectionNumber, ChannelName, SectionTransformName); 
+                    return GetMapping(null, SectionNumber, ChannelName, SectionTransformName); 
                 }
 
                 if (stosTransforms[section.Number] == null)
                 {
                     //A transform was unable to be generated placing the section in the transform.  Use a mosaic instead
-                    return GetMapping("None", SectionNumber, ChannelName, SectionTransformName); 
+                    return GetMapping(null, SectionNumber, ChannelName, SectionTransformName); 
                 }
 
                 map = section.CreateSectionToVolumeMapping(stosTransforms[section.Number], SectionMapKey, key);

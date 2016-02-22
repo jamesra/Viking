@@ -128,6 +128,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Cache\SectionLocationViewModelCache.cs" />
+    <Compile Include="DataStructure\RegionRequestData.cs" />
     <Compile Include="Export.cs" />
     <Compile Include="Extensions.cs" />
     <Compile Include="Global.cs" />
@@ -135,6 +136,7 @@
     <Compile Include="UI\Commands\AdjustControlPointCommand.cs" />
     <Compile Include="UI\Commands\PlaceOpenCurveCommand.cs" />
     <Compile Include="UI\Commands\TranslateLocationCommand.cs" />
+    <Compile Include="View\SectionAnnotationsView.cs" />
     <Compile Include="View\LocationCircleLabelView.cs" />
     <Compile Include="View\LocationActions.cs" />
     <Compile Include="View\LocationCanvasView.cs" />
@@ -382,9 +384,7 @@
       <Name>WebAnnotationModel</Name>
     </ProjectReference>
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="DataStructure\" />
-  </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

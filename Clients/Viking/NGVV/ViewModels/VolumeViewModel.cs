@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Xml.Linq; 
 using Viking.VolumeModel;
+using Geometry;
 
 namespace Viking.ViewModels
 {
@@ -67,10 +68,69 @@ namespace Viking.ViewModels
             return _MappingManager.GetMapping(VolumeTransformName, SectionNumber, ChannelName, SectionTransformName);
         }
 
+        public MappingBase GetMapping(int SectionNumber, string ChannelName, string SectionTransformName)
+        {
+            return _MappingManager.GetMapping(this.ActiveVolumeTransform, SectionNumber, ChannelName, SectionTransformName);
+        }
+
         public void ReduceCacheFootprint(object state)
         {
             _MappingManager.ReduceCacheFootprint();
         }
 
+        #region Events
+
+
+        /// <summary>
+        /// Fires when the transform used to place the section into the volume changes
+        /// </summary>
+        public event Viking.Common.TransformChangedEventHandler TransformChanged;
+
+        #endregion
+
+        protected string _ActiveVolumeTransform;
+        public string ActiveVolumeTransform
+        {
+            get { return _ActiveVolumeTransform; }
+            set
+            {
+                bool NewValue = value != _ActiveVolumeTransform;
+
+                if (NewValue)
+                {
+                    string OldTransform = _ActiveVolumeTransform;
+                    _ActiveVolumeTransform = value;
+
+                    if (TransformChanged != null)
+                    {
+                        TransformChanged(this, new Viking.Common.TransformChangedEventArgs(_ActiveVolumeTransform, OldTransform));
+                    }
+                }
+            }
+        }
+         
+        public bool UsingVolumeTransform
+        {
+            get
+            {
+                return ActiveVolumeTransform != null; 
+            }
+        }
+
+        /// <summary>
+        /// Get the boundaries for a section given the current transforms
+        /// </summary>
+        /// <param name="section"></param>
+        /// <returns></returns>
+        public GridRectangle SectionBounds(int SectionNumber, string ActiveChannel, string ActiveTransform)
+        {
+            MappingBase map = this.GetMapping(this.ActiveVolumeTransform, SectionNumber, ActiveChannel, ActiveTransform);
+            if (map != null)
+            {
+                return map.Bounds;
+            }
+
+            throw new System.ArgumentException("Cannot find boundaries for section");
+        }
     }
 }

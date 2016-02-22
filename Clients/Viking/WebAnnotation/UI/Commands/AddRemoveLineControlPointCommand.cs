@@ -22,6 +22,8 @@ namespace WebAnnotation.UI.Commands
         public delegate void OnCommandSuccess(GridVector2[] VolumeControlPoints, GridVector2[] MosaicControlPoints);
         OnCommandSuccess success_callback;
 
+        Viking.VolumeModel.IVolumeToSectionMapper mapping;
+
         public AddLineControlPointCommand(Viking.UI.Controls.SectionViewerControl parent,
                                         GridVector2[] OriginalControlPoints,
                                         OnCommandSuccess success_callback) : base(parent)
@@ -29,6 +31,8 @@ namespace WebAnnotation.UI.Commands
             this.OriginalControlPoints = OriginalControlPoints;
             
             this.success_callback = success_callback;
+
+            mapping = parent.Section.ActiveMapping;
         }
 
         public static GridVector2[] AddControlPoint(GridVector2[] OriginalControlPoints, GridVector2 NewControlPointPosition, out int iNewControlPoint)
@@ -77,7 +81,7 @@ namespace WebAnnotation.UI.Commands
             GridVector2[] MosaicControlPoints;
             try
             {
-                MosaicControlPoints = Parent.VolumeToSection(NewControlPoints);
+                MosaicControlPoints = mapping.VolumeToSection(NewControlPoints);
             }
             catch (ArgumentOutOfRangeException)
             {
@@ -99,6 +103,8 @@ namespace WebAnnotation.UI.Commands
         public delegate void OnCommandSuccess(GridVector2[] VolumeControlPoints, GridVector2[] MosaicControlPoints);
         OnCommandSuccess success_callback;
 
+        Viking.VolumeModel.IVolumeToSectionMapper mapping;
+
         public RemoveLineControlPointCommand(Viking.UI.Controls.SectionViewerControl parent,
                                         GridVector2[] OriginalControlPoints,
                                         OnCommandSuccess success_callback) : base(parent)
@@ -106,6 +112,8 @@ namespace WebAnnotation.UI.Commands
             this.OriginalControlPoints = OriginalControlPoints;
 
             this.success_callback = success_callback;
+
+            mapping = parent.Section.ActiveMapping;
         }
 
         public static GridVector2[] RemoveControlPoint(GridVector2[] OriginalControlPoints, GridVector2 NewControlPointPosition)
@@ -141,7 +149,7 @@ namespace WebAnnotation.UI.Commands
             GridVector2[] MosaicControlPoints;
             try
             {
-                MosaicControlPoints = Parent.VolumeToSection(NewControlPoints);
+                MosaicControlPoints = mapping.VolumeToSection(NewControlPoints);
             }
             catch (ArgumentOutOfRangeException)
             {

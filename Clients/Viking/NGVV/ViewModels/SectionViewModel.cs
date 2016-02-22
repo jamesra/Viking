@@ -7,15 +7,24 @@ using System.Diagnostics;
 using Viking.Common;
 using Common.UI;
 using Geometry;
+using System.ComponentModel;
 
 namespace Viking.ViewModels
 {
     /// <summary>
     /// Encapsulates a section within the UI
     /// </summary>
-    public class SectionViewModel : IUIObject
+    public class SectionViewModel : IUIObject, INotifyPropertyChanged
     {
         public readonly Section section;
+
+        /// <summary>
+        /// Fires when the transform used to render the section changes
+        /// </summary>
+        public event Viking.Common.TransformChangedEventHandler TransformChanged;
+
+        public event PropertyChangedEventHandler PropertyChanged;
+         
 
         [Column("Name")]
         public string Name { get { return section.Name; } }
@@ -34,8 +43,7 @@ namespace Viking.ViewModels
         {
             return section.ToString(); 
         }
-
-
+        
         public string DefaultChannel { get { return section.DefaultChannel; } }
         public IList<string> Channels { get { return section.Channels; } }
 
@@ -243,7 +251,20 @@ namespace Viking.ViewModels
             add { OnChildChanged += value; }
             remove { OnChildChanged -= value; }
         }
-        
+
+        event PropertyChangedEventHandler INotifyPropertyChanged.PropertyChanged
+        {
+            add
+            {
+                throw new NotImplementedException();
+            }
+
+            remove
+            {
+                throw new NotImplementedException();
+            }
+        }
+
         System.Drawing.Image IUIObject.SmallThumbnail
         {
             get { throw new NotImplementedException(); }
@@ -289,20 +310,63 @@ namespace Viking.ViewModels
             this.section.PrepareTransform(transform); 
         }
 
-        /// <summary>
-        /// Get the boundaries for a section given the current transforms
-        /// </summary>
-        /// <param name="section"></param>
-        /// <returns></returns>
-        public GridRectangle SectionBounds(string CurrentVolumeTransform, string CurrentChannel, string CurrentTransform)
+        public IVolumeToSectionMapper ActiveMapping
         {
-            MappingBase map = this._VolumeViewModel.GetMapping(CurrentVolumeTransform, this.Number, CurrentChannel, CurrentTransform);
-            if (map != null)
+            get
             {
-                return map.Bounds;
+                return this._VolumeViewModel.GetMapping(this.VolumeViewModel.ActiveVolumeTransform, this.Number, this.ActiveChannel, this.ActiveTransform) as IVolumeToSectionMapper;
             }
-
-            throw new System.ArgumentException("Cannot find boundaries for section");
         }
+
+        
+
+        /// <summary>
+        /// Determines which transform should be used when rendering the section
+        /// </summary>
+        protected string _ActiveTransform;
+        public string ActiveTransform
+        {
+            get { return _ActiveTransform; }
+            set
+            {
+                bool NewValue = _ActiveTransform != value;
+                if (NewValue)
+                {
+                    string OldTransform = _ActiveTransform;
+                    _ActiveTransform = value;
+                    if (TransformChanged != null && NewValue)
+                    {
+                        TransformChanged(this, new TransformChangedEventArgs(_ActiveTransform, OldTransform));
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Currently selected tileset 
+        /// </summary>
+        protected string _ActiveChannel;
+        public string ActiveChannel
+        {
+            get { return _ActiveChannel; }
+            set
+            {
+                bool NewValue = value != _ActiveChannel;
+                if (NewValue)
+                {
+                    _ActiveChannel = value;
+                    RaisePropertyChanged();
+                }
+            }
+        }
+
+        private void RaisePropertyChanged([System.Runtime.CompilerServices.CallerMemberName] string propertyName = null)
+        {
+            if (PropertyChanged != null)
+            {
+                PropertyChanged(this, new PropertyChangedEventArgs(propertyName));
+            }
+        }
+
     }
 }

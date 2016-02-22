@@ -20,48 +20,6 @@ using WebAnnotation.View;
 namespace WebAnnotation.ViewModel
 {
     /// <summary>
-    /// Stores information about location queries for this region in the volume
-    /// </summary>
-    public class RegionRequestData
-    {
-        public DateTime LastQuery = DateTime.MinValue;
-
-        /// <summary>
-        /// True if a query has been sent to the server but has not returned
-        /// </summary>
-        public bool OutstandingQuery
-        {
-            get
-            {
-                if (this.AsyncResult == null)
-                    return false;
-
-                return AsyncResult.IsCompleted;
-            }
-        }
-
-        public IAsyncResult AsyncResult;
-
-        public RegionRequestData(DateTime query, IAsyncResult result)
-        {
-            AsyncResult = result;
-            query = LastQuery;
-        }
-    }
-
-    public class AnnotationRegions : RegionPyramid<RegionRequestData>
-    {
-        /// <summary>
-        /// If set to true any threads using this objects should cancel loading operations
-        /// </summary>
-        public bool CancelRunningOperations = false; 
-
-        public AnnotationRegions(GridRectangle Boundaries, GridCellDimensions cellDimensions)
-            : base (Boundaries, cellDimensions)
-        { }
-    }
-
-    /// <summary>
     /// This class manages LocationViewModels used on a canvas.  
     /// It handles hit detection, search, and positioning using canvas transforms
     /// </summary>
@@ -100,7 +58,7 @@ namespace WebAnnotation.ViewModel
         /// <summary>
         /// Mapping interface for moving geometry between volume and section space
         /// </summary>
-        public readonly Viking.VolumeModel.IVolumeToSectionTransformer mapper;
+        public readonly Viking.VolumeModel.IVolumeToSectionMapper mapper;
 
         private int SectionNumber { get {return this.Section.Number; }}
 
@@ -116,12 +74,12 @@ namespace WebAnnotation.ViewModel
 
         public SectionLocationsViewModel(SectionViewModel section,  Viking.UI.Controls.SectionViewerControl Parent)
         {
-            this.mapper = Parent.GetMapper(section.Number);
+            this.mapper = section.ActiveMapping;
             Trace.WriteLine("Create SectionLocationsViewModel for " + section.Number.ToString());
             this.Section = section;
 
             GridRectangle bounds = AnnotationOverlay.SectionBounds(Parent, Parent.Section.Number);
-            
+              
             RegionQueries = new AnnotationRegions(bounds, new GridCellDimensions(bounds.Width / 2.0, bounds.Height / 2.0));
 
             if (LocationViews == null)
@@ -307,80 +265,6 @@ namespace WebAnnotation.ViewModel
             }
         }
 
-        private bool MapLocation(LocationObj loc)
-        {
-            //Don't bother mapping if the location was already mapped
-            if (loc.VolumeTransformID == mapper.ID)
-                return true;
-            
-            switch(loc.TypeCode)
-            {
-                case LocationType.POINT:
-                    return MapLocationByCentroid(loc);
-                case LocationType.CIRCLE:
-                    return MapLocationByCentroid(loc);
-                default:
-                    return MapLocationByControlPoints(loc); 
-            }
-        }
-        
-        /// <summary>
-        /// A faster mapping technique for geometries that do not use control points such as circles and points.
-        /// </summary>
-        /// <param name="loc"></param>
-        /// <returns></returns>
-        private bool MapLocationByCentroid(LocationObj loc)
-        {
-             //Don't bother mapping if the location was already mapped
-            if (loc.VolumeTransformID == mapper.ID)
-                return true;
-
-            GridVector2 VolumePosition = new GridVector2(-1, -1);
-
-            bool mappedPosition = mapper.TrySectionToVolume(loc.Position, out VolumePosition);
-            if (!mappedPosition) //Remove locations we can't map
-            {
-                Trace.WriteLine("AddLocation: Location #" + loc.ID.ToString() + " was unmappable.", "WebAnnotation");
-                return false;
-            }
-
-            loc.VolumeTransformID = mapper.ID;
-            if(VolumePosition != loc.VolumePosition)
-                loc.VolumeShape = loc.VolumeShape.MoveTo(VolumePosition);
-
-            //loc.VolumePosition = VolumePosition;
-
-            return true;
-        }
-
-        /// <summary>
-        /// Map all of the control points for the geometry individually
-        /// </summary>
-        /// <param name="loc"></param>
-        /// <returns></returns>
-        private bool MapLocationByControlPoints(LocationObj loc)
-        {
-            //Don't bother mapping if the location was already mapped
-            if (loc.VolumeTransformID == mapper.ID)
-                return true;
-
-            GridVector2[] VolumePositions;
-            GridVector2[] points = loc.MosaicShape.ToPoints();
-
-            bool mappedPosition = mapper.TrySectionToVolume(loc.MosaicShape.ToPoints(), out VolumePositions);
-            if (!mappedPosition) //Remove locations we can't map
-            {
-                Trace.WriteLine("AddLocation: Location #" + loc.ID.ToString() + " was unmappable.", "WebAnnotation");
-                return false;
-            }
-
-            loc.VolumeTransformID = mapper.ID;
-            //loc.VolumePosition = VolumePosition;
-            loc.VolumeShape = SqlGeometryUtils.GeometryExtensions.ToGeometry(loc.MosaicShape.STGeometryType(), VolumePositions);
-
-            return true;
-        }
-
         protected void AddLocations(IEnumerable<LocationObj> listLocations)
         {
             AddLocations(listLocations, true); 
@@ -447,7 +331,7 @@ namespace WebAnnotation.ViewModel
             bool FirstMapping = !loc.VolumePositionHasBeenCalculated;
             bool UpdatedVolumeLocation = false;
             GridVector2 original = loc.VolumePosition;
-            bool mapped = MapLocation(loc);
+            bool mapped = this.mapper.MapLocation(loc);
             if (!mapped)
                 return false;
              

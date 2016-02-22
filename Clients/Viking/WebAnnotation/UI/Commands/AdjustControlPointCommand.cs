@@ -23,6 +23,8 @@ namespace WebAnnotation.UI.Commands
         public delegate void OnCommandSuccess(GridVector2[] VolumeControlPoints, GridVector2[] MosaicControlPoints);
         OnCommandSuccess success_callback;
 
+        Viking.VolumeModel.IVolumeToSectionMapper mapping;
+
         public AdjustCurveControlPointCommand(Viking.UI.Controls.SectionViewerControl parent,
                                         GridVector2[] OriginalControlPoints,
                                         Microsoft.Xna.Framework.Color color,
@@ -34,6 +36,7 @@ namespace WebAnnotation.UI.Commands
             this.OriginalControlPoints = OriginalControlPoints;
             CreateView(OriginalControlPoints, color.ConvertToHSL(0.5f), LineWidth, IsClosedCurve);
             this.success_callback = success_callback;
+            mapping = parent.Section.ActiveMapping;
         }
         
 
@@ -120,7 +123,7 @@ namespace WebAnnotation.UI.Commands
 
                 try
                 {
-                    MosaicControlPoints = Parent.VolumeToSection(TranslatedOriginalControlPoints);
+                    MosaicControlPoints = mapping.VolumeToSection(TranslatedOriginalControlPoints);
                 }
                 catch (ArgumentOutOfRangeException)
                 {

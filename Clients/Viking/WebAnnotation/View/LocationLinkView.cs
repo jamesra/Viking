@@ -17,18 +17,29 @@ namespace WebAnnotation.ViewModel
     /// </summary>
     public class LocationLinkView : Viking.Objects.UIObjBase
     {
+        public readonly LocationLinkKey Key;
+
         public override int GetHashCode()
         {
-            return A.GetHashCode();
+            return Key.GetHashCode();
         }
 
         public override bool Equals(object obj)
         {
-            LocationLinkView link = obj as LocationLinkView;
-            if (link == null)
-                return false;
+            if (System.Object.ReferenceEquals(this, obj))
+                return true;
+            
+            LocationLinkView obj_link = obj as LocationLinkView;
+            if ((object)obj_link != null)
+                return this.Key.Equals(obj_link.Key);
 
-            return (link.A.ID == A.ID && link.B.ID == B.ID); 
+            if (typeof(LocationLinkKey).IsInstanceOfType(obj))
+            {
+                LocationLinkKey obj_key = (LocationLinkKey)obj;
+                    return this.Key.Equals(obj_key);
+            }
+
+            return false;
         }
 
         public static bool operator ==(LocationLinkView A, object B)
@@ -128,7 +139,8 @@ namespace WebAnnotation.ViewModel
 
             Debug.Assert(LocOne != LocTwo);
             this.A = LocOne.ID < LocTwo.ID ? LocOne : LocTwo;
-            this.B = LocOne.ID > LocTwo.ID ? LocOne : LocTwo; 
+            this.B = LocOne.ID > LocTwo.ID ? LocOne : LocTwo;
+            this.Key = new LocationLinkKey(A.ID, B.ID);
         }
 
         /// <summary>

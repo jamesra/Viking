@@ -204,6 +204,11 @@ namespace Viking.UI.Controls
 
         #endregion
 
+        public VolumeViewModel Volume
+        {
+            get { return _Section.VolumeViewModel; }
+        }
+
         private SectionViewModel _Section;
 
         /// <summary>
@@ -224,7 +229,6 @@ namespace Viking.UI.Controls
 
                 if (value != null)
                 {
-
                     Trace.WriteLine("Open Section: " + value.Number.ToString(), "UI");
                     StatusSection = value.Number;
                 }
@@ -232,8 +236,11 @@ namespace Viking.UI.Controls
                 if (OldSection != null)
                 {
                     OldSection.OnReferenceSectionChanged -= this.InternalReferenceSectionChanged;
+                    OldSection.VolumeViewModel.TransformChanged -= this.OnVolumeTransformChanged;
+                    OldSection.TransformChanged -= this.OnSectionTransformChanged;
+                    OldSection.PropertyChanged -= this.OnSectionPropertyChanged;
                 }
-
+                
                 _Section = value;
                 if (_Section != null)
                 {
@@ -244,6 +251,9 @@ namespace Viking.UI.Controls
                     this.StatusSection = _Section.Number;
 
                     this._Section.OnReferenceSectionChanged += this.InternalReferenceSectionChanged;
+                    this._Section.VolumeViewModel.TransformChanged += this.OnVolumeTransformChanged;
+                    this._Section.TransformChanged += this.OnSectionTransformChanged;
+                    this._Section.PropertyChanged += this.OnSectionPropertyChanged;
 
                     //Figure out if the new section supports the current channel
                     if (_Section.Channels.Contains(this.CurrentChannel) == false)
@@ -269,8 +279,6 @@ namespace Viking.UI.Controls
                     }
                 }
 
-
-
                 this.Invalidate();
 
                 //Let listeners know if we changed sections
@@ -282,232 +290,17 @@ namespace Viking.UI.Controls
         /// <summary>
         /// Currently selected tileset 
         /// </summary>
-        protected string _CurrentChannel;
         public string CurrentChannel
         {
-            get { return _CurrentChannel; }
-            set
-            {
-                bool Invalidate = value != _CurrentChannel;
-
-                _CurrentChannel = value;
-                if (Invalidate)
-                    this.Invalidate();
-            }
+            get { return Section.ActiveChannel; }
+            set { Section.ActiveChannel = value; }
         }
-
-        /// <summary>
-        /// Determines which transform should be used when rendering the section
-        /// </summary>
-        protected string _CurrentTransform;
+         
         public string CurrentTransform
         {
-            get { return _CurrentTransform; }
-            set
-            {
-                bool NewValue = _CurrentVolumeTransform != value;
-                string OldTransform = _CurrentVolumeTransform;
-                _CurrentTransform = value;
-                if (OnSectionTransformChanged != null && NewValue)
-                {
-                    OnSectionTransformChanged(this, new TransformChangedEventArgs(_CurrentTransform, OldTransform));
-                }
-            }
-        }
-
-        public bool UsingVolumeTransform
-        {
-            get
-            {
-                return this.CurrentVolumeTransform.ToLower() != "none";
-            }
-        }
-
-
-        protected string _CurrentVolumeTransform;
-        public string CurrentVolumeTransform
-        {
-            get { return _CurrentVolumeTransform; }
-            set
-            {
-
-                bool NewValue = value != _CurrentChannel;
-
-                if (NewValue)
-                {
-
-                    string OldTransform = _CurrentVolumeTransform;
-                    _CurrentVolumeTransform = value; 
-
-                    if (OnVolumeTransformChanged != null)
-                    {
-                        OnVolumeTransformChanged(this, new TransformChangedEventArgs(_CurrentTransform, OldTransform));
-                    }
-
-                    this.Invalidate();
-                }
-            }
-        }
-
-        
-
-        /// <summary>
-        /// Fires when the transform used to render the section changes
-        /// </summary>
-        public event TransformChangedEventHandler OnSectionTransformChanged;
-
-        /// <summary>
-        /// Fires when the transform used to place the section into the volume changes
-        /// </summary>
-        public event TransformChangedEventHandler OnVolumeTransformChanged;
-
-        #region Section/Volume mapping
-         
-        /// <summary>
-        /// Maps a point from volume space into the section space for the currently selected section and transform
-        /// </summary>
-        /// <param name="?"></param>
-        /// <returns></returns>
-        public GridVector2 VolumeToSection(GridVector2 P)
-        {
-            return VolumeToSection(P, this.Section.section);
-        }
-
-        public GridVector2[] VolumeToSection(GridVector2[] P)
-        {
-            MappingBase map = this.Section.VolumeViewModel.GetMapping(this.CurrentVolumeTransform, this.Section.Number, this.CurrentChannel, this.CurrentTransform);
-            GridVector2[] SectionPoints;
-            if (map != null)
-            {
-                map.TryVolumeToSection(P, out SectionPoints);
-                if (map != null)
-                    return SectionPoints;
-            }
-
-            throw new System.ArgumentException("Cannot map requested point from Volume to Section");
-        }
-
-        /// <summary>
-        /// Maps a point from volume space into the section space for the currently selected transform
-        /// </summary>
-        /// <param name="?"></param>
-        /// <returns></returns>
-        public GridVector2 VolumeToSection(GridVector2 P, Section section)
-        {
-            MappingBase map = this.Section.VolumeViewModel.GetMapping(this.CurrentVolumeTransform, this.Section.Number, this.CurrentChannel, this.CurrentTransform);
-            if (map != null)
-            {
-                GridVector2 TransformedPoint = map.VolumeToSection(new GridVector2(P.X, P.Y));
-                return TransformedPoint;
-            }
-            else
-            {
-                throw new System.ArgumentException("Cannot map requested point from Volume to Section");
-            }
-        }
-
-        public bool TryVolumeToSection(GridVector2 P, out GridVector2 transformedP)
-        {
-            transformedP = new GridVector2();
-
-            MappingBase map = this.Section.VolumeViewModel.GetMapping(this.CurrentVolumeTransform, this.Section.Number, this.CurrentChannel, this.CurrentTransform);
-            if (map != null)
-            {
-                return map.TryVolumeToSection(new GridVector2(P.X, P.Y), out transformedP);
-            }
-
-            return false;
-        }
-
-        /// <summary>
-        /// Maps a point from section space into volume space for the currently selected section and transform
-        /// </summary>
-        /// <param name="?"></param>
-        /// <returns></returns>
-        public GridVector2 SectionToVolume(GridVector2 P)
-        {
-            MappingBase map = this.Section.VolumeViewModel.GetMapping(this.CurrentVolumeTransform, this.Section.Number, this.CurrentChannel, this.CurrentTransform);
-            if (map != null)
-            {
-                GridVector2 TransformedPoint = map.SectionToVolume(new GridVector2(P.X, P.Y));
-                return TransformedPoint;
-            }
-            else
-            {
-                throw new System.ArgumentException("Cannot map requested point from Volume to Section");
-            }
-        }
-
-        public GridVector2[] SectionToVolume(GridVector2[] P)
-        {
-            MappingBase map = this.Section.VolumeViewModel.GetMapping(this.CurrentVolumeTransform, this.Section.Number, this.CurrentChannel, this.CurrentTransform);
-            GridVector2[] VolumePoints;
-            if (map != null)
-            {
-                map.TrySectionToVolume(P, out VolumePoints);
-                if (map != null)
-                    return VolumePoints;
-            }
-
-            throw new System.ArgumentException("Cannot map requested points from Section to Volume");
-        }
-
-        /// <summary>
-        /// Maps a point from section space into volume space for the currently selected transform
-        /// </summary>
-        /// <param name="?"></param>
-        /// <returns></returns>
-        public bool TrySectionToVolume(GridVector2 P,out GridVector2 transformedP)
-        {
-            transformedP = new GridVector2();
-            MappingBase map = this.Section.VolumeViewModel.GetMapping(this.CurrentVolumeTransform, this.Section.Number, this.CurrentChannel, this.CurrentTransform);
-            if (map != null)
-            {
-                return map.TrySectionToVolume(new GridVector2(P.X, P.Y), out  transformedP);
-            }
-
-            return false;
-        }
-
-        /// <summary>
-        /// Maps a point from section space into volume space for the currently selected transform
-        /// </summary>
-        /// <param name="?"></param>
-        /// <returns></returns>
-        public bool TrySectionToVolume(GridVector2[] P, out GridVector2[] transformedP)
-        {
-            transformedP = new GridVector2[P.Length];
-            MappingBase map = this.Section.VolumeViewModel.GetMapping(this.CurrentVolumeTransform, this.Section.Number, this.CurrentChannel, this.CurrentTransform);
-            if (map != null)
-            {
-                return map.TrySectionToVolume(P, out transformedP);
-            }
-
-            return false;
-        }
-
-        /// <summary>
-        /// Get the boundaries for a section given the current transforms
-        /// </summary>
-        /// <param name="section"></param>
-        /// <returns></returns>
-        public GridRectangle SectionBounds(Section section)
-        {
-            MappingBase map = this.Section.VolumeViewModel.GetMapping(this.CurrentVolumeTransform, section.Number, this.CurrentChannel, this.CurrentTransform);
-            if (map != null)
-            {
-                return map.Bounds;
-            }
-
-            throw new System.ArgumentException("Cannot find boundaries for section");
-        }
-
-        public MappingBase GetMapper(int sectionNumber)
-        {
-            return this.Section.VolumeViewModel.GetMapping(this.CurrentVolumeTransform, sectionNumber, this.CurrentChannel, this.CurrentTransform);
-        }
-
-        #endregion
+            get { return Section.ActiveTransform; }
+            set { Section.ActiveTransform = value; }
+        } 
 
         public SectionViewerControl()
         {
@@ -551,7 +344,7 @@ namespace Viking.UI.Controls
                     CurrentCommand = Command.CreateFor(this, null);
                 }
 
-                this.CurrentVolumeTransform = UI.State.volume.DefaultVolumeTransform;
+                Volume.ActiveVolumeTransform = UI.State.volume.DefaultVolumeTransform;
                 this.CurrentChannel = Section.DefaultChannel;
 
                 this.listOverlays = ExtensionManager.CreateSectionOverlays(this);
@@ -1147,9 +940,7 @@ namespace Viking.UI.Controls
             //                                             new Microsoft.Xna.Framework.Color(0,1f,0),
             //                                          new Microsoft.Xna.Framework.Color(0,0,1f)};
 
-            MappingBase Mapping = this.Section.VolumeViewModel.GetMapping(this.CurrentVolumeTransform, section.Number,
-                                                               channel,
-                                                               this.CurrentTransform);
+            MappingBase Mapping = Viking.UI.State.volume.GetMapping(section.Number, channel, this.CurrentTransform);
 
             if (Mapping == null)
                 return null;
@@ -1421,7 +1212,7 @@ namespace Viking.UI.Controls
                 }
 
                 //Find the mapping to use
-                MappingBase mapping = this.Section.VolumeViewModel.GetMapping(this.CurrentVolumeTransform,
+                MappingBase mapping = this.Section.VolumeViewModel.GetMapping(Volume.ActiveVolumeTransform,
                                                                 sectionToDraw.Number,
                                                                 ChannelName,
                                                                 Section.DefaultPyramidTransform);
@@ -1781,6 +1572,7 @@ namespace Viking.UI.Controls
             }
         }
 
+
         /// <summary>
         /// Sets the Section's channel without changing the transform
         /// </summary>
@@ -1926,7 +1718,7 @@ namespace Viking.UI.Controls
                 //                GC.Collect();
 
                 //Get the boundaries of the section
-                MappingBase mapping = this.Section.VolumeViewModel.GetMapping(this.CurrentVolumeTransform, this.Section.Number, this.CurrentChannel, this.CurrentTransform);
+                MappingBase mapping = this.Section.VolumeViewModel.GetMapping(Volume.ActiveVolumeTransform, this.Section.Number, this.CurrentChannel, this.CurrentTransform);
 
                 //Figure out how much we need to capture
                 Size TileImageSize = new Size(256, 256);
@@ -2155,7 +1947,7 @@ namespace Viking.UI.Controls
 
             if (InputInSectionSpace)
             {
-                MappingBase map = this.Section.VolumeViewModel.GetMapping(this.CurrentVolumeTransform, this.Section.Number, this.CurrentChannel, this.CurrentTransform);
+                MappingBase map = this.Section.VolumeViewModel.GetMapping(Volume.ActiveVolumeTransform, this.Section.Number, this.CurrentChannel, this.CurrentTransform);
                 if (map != null)
                 {
                     GridVector2 TransformedPoint;
@@ -2214,7 +2006,28 @@ namespace Viking.UI.Controls
         private void OnVolumeTransformClicked(object sender, EventArgs e)
         {
             ToolStripMenuItem menuItem = sender as ToolStripMenuItem;
-            CurrentVolumeTransform = menuItem.Text;
+            if (menuItem.Text.ToLower() == "none")
+                Volume.ActiveVolumeTransform = null;
+            else
+                Volume.ActiveVolumeTransform = menuItem.Text;
+        }
+
+        private void OnVolumeTransformChanged(object sender, TransformChangedEventArgs e)
+        {
+            //TODO: Cancel the active command
+            this.Invalidate();
+        }
+
+        private void OnSectionTransformChanged(object sender, TransformChangedEventArgs e)
+        {
+            //TODO: Cancel the active command
+            this.Invalidate();
+        }
+         
+        private void OnSectionPropertyChanged(object sender, PropertyChangedEventArgs e)
+        {
+            //TODO: Cancel the active command
+            this.Invalidate();
         }
 
         private void menuVolume_DropDownOpening(object sender, EventArgs e)
@@ -2227,7 +2040,7 @@ namespace Viking.UI.Controls
             foreach (string VolumeTransform in Viking.UI.State.volume.TransformNames)
             {
                 ToolStripMenuItem menuItem = new ToolStripMenuItem(VolumeTransform, null, OnVolumeTransformClicked);
-                menuItem.Checked = CurrentVolumeTransform == VolumeTransform;
+                menuItem.Checked = Volume.ActiveVolumeTransform == VolumeTransform;
                 menuVolumeTransforms.DropDownItems.Add(menuItem);
             }
         }

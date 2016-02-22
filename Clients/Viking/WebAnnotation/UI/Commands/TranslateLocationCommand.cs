@@ -23,6 +23,8 @@ namespace WebAnnotation.UI.Commands
         public delegate void OnCommandSuccess(GridVector2[] VolumeControlPoints, GridVector2[] MosaicControlPoints);
         OnCommandSuccess success_callback;
 
+        Viking.VolumeModel.IVolumeToSectionMapper mapping;
+
         protected override GridVector2 TranslatedPosition
         {
             get
@@ -43,6 +45,7 @@ namespace WebAnnotation.UI.Commands
             this.OriginalControlPoints = OriginalControlPoints;
             CreateView(OriginalControlPoints, color.ConvertToHSL(0.5f), LineWidth, IsClosedCurve);
             this.success_callback = success_callback;
+            mapping = parent.Section.ActiveMapping;
         }
 
         private void CreateView(GridVector2[] ControlPoints, Microsoft.Xna.Framework.Color color, double LineWidth, bool IsClosed)
@@ -66,7 +69,7 @@ namespace WebAnnotation.UI.Commands
 
                 try
                 {
-                    MosaicControlPoints = Parent.VolumeToSection(TranslatedOriginalControlPoints);
+                    MosaicControlPoints = mapping.VolumeToSection(TranslatedOriginalControlPoints);
                 }
                 catch (ArgumentOutOfRangeException)
                 {
@@ -97,6 +100,8 @@ namespace WebAnnotation.UI.Commands
         public delegate void OnCommandSuccess(GridVector2 VolumePosition, GridVector2 MosaicPosition);
         OnCommandSuccess success_callback;
 
+        Viking.VolumeModel.IVolumeToSectionMapper mapping;
+
         protected override GridVector2 TranslatedPosition
         {
             get
@@ -113,6 +118,7 @@ namespace WebAnnotation.UI.Commands
             CreateView(circle.Center, circle.Radius, color);
             OriginalCircle = circle;
             this.success_callback = success_callback;
+            mapping = parent.Section.ActiveMapping;
         }
 
         private void CreateView(GridVector2 Position, double Radius, Microsoft.Xna.Framework.Color color)
@@ -126,7 +132,7 @@ namespace WebAnnotation.UI.Commands
             {
                 GridVector2 MosaicPosition;
 
-                bool mappedToMosaic = Parent.TryVolumeToSection(TranslatedPosition, out MosaicPosition);
+                bool mappedToMosaic = mapping.TryVolumeToSection(TranslatedPosition, out MosaicPosition);
                 if(!mappedToMosaic)
                 {
                     Trace.WriteLine("TranslateLocationCommand: Could not map world point on Execute: " + TranslatedPosition.ToString(), "Command");

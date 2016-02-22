@@ -144,6 +144,11 @@
       <Name>Geometry</Name>
       <Private>False</Private>
     </ProjectReference>
+    <ProjectReference Include="..\..\VolumeModel\VolumeModel.csproj">
+      <Project>{2eba2a77-f7f0-4efc-ac06-a12fe249388f}</Project>
+      <Name>VolumeModel</Name>
+      <Private>False</Private>
+    </ProjectReference>
     <ProjectReference Include="..\NGVV\VikingCore.csproj">
       <Project>{AEB1B24B-C968-40F9-B9F5-5C1FCE2EFD6D}</Project>
       <Name>VikingCore</Name>
