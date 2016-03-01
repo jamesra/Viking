@@ -1701,8 +1701,10 @@ namespace Viking.UI.Controls
                 Action TileViewModelCacheCheckpointAction = Global.TileViewModelCache.Checkpoint;
                 Action TileCacheCheckpointAction = Viking.VolumeModel.Global.TileCache.Checkpoint;
 
-                TileViewModelCacheCheckpointAction.BeginInvoke(null, null);
-                TileCacheCheckpointAction.BeginInvoke(null, null);
+                System.Threading.Tasks.Task.Run(TileViewModelCacheCheckpointAction);
+                System.Threading.Tasks.Task.Run(TileCacheCheckpointAction);
+                //TileViewModelCacheCheckpointAction.BeginInvoke(null, null);
+                //TileCacheCheckpointAction.BeginInvoke(null, null);
                 
                 //Global.TileViewModelCache.Checkpoint();
                 //Viking.VolumeModel.Global.TileCache.Checkpoint();

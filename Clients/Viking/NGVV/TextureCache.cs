@@ -45,8 +45,8 @@ namespace Viking
 
         public void PopulateCache(string Path)
         {
-            Action<string> checkAction = new Action<string>(_PopulateCacheThreadStart);
-            checkAction.BeginInvoke(Path, null, null); 
+            //Action<string> checkAction = new Action<string>(_PopulateCacheThreadStart);
+            System.Threading.Tasks.Task.Run(() => _PopulateCacheThreadStart(Path));
         }
 
         /// <summary>

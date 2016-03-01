@@ -529,8 +529,9 @@ namespace Viking
 
                         if (CacheFilename != null)
                         {
-                            Action<String, byte[]> AddToCache = Global.TextureCache.AddAsync;
-                            AddToCache.BeginInvoke(CacheFilename, data, null, null);
+                            System.Threading.Tasks.Task.Run(() => Global.TextureCache.AddAsync(CacheFilename, data));
+                            //Action<String, byte[]> AddToCache = Global.TextureCache.AddAsync;
+                            //AddToCache.BeginInvoke(CacheFilename, data, null, null);
                         }
                     }
                      
@@ -870,7 +871,7 @@ namespace Viking
 
         protected void TextureFromStream(GraphicsDevice device, Byte[] streamdata)
         {
-            TextureData data = TextureReader.TextureDataFromStream(device, streamdata);
+            TextureData data = TextureReader.TextureDataFromStream(streamdata);
             if(data == null)
             {
                 this.SetTexture(null);
@@ -888,10 +889,19 @@ namespace Viking
             if (this.Aborted || this.IsDisposed)
                 return;
 
-            Func<GraphicsDevice, byte[], TextureData> func = TextureReader.TextureDataFromStream;
+            System.Threading.Tasks.Task.Run(() => {
+                TextureData data = TextureReader.TextureDataFromStream(streamdata);
+                Texture2D texture = TextureReader.TextureFromData(device, data, this.MipMapLevels > 0);
+                //Func<GraphicsDevice, TextureData, bool, Texture2D> TextureFromDataFunc = TextureReader.TextureFromData;
+                //IAsyncResult result = TextureFromDataFunc.BeginInvoke(device, data, this.MipMapLevels > 0, null, null);
+                //Texture2D texture = TextureFromDataFunc.EndInvoke(result);
+                this.SetTexture(texture);
+            });
 
-            IAsyncResult result = func.BeginInvoke(device, streamdata, EndTextureDataFromStream, func);
+            //Func<GraphicsDevice, byte[], TextureData> func = TextureReader.TextureDataFromStream;
+            //IAsyncResult result = func.BeginInvoke(device, streamdata, EndTextureDataFromStream, func);
         }
+         
 
         protected void EndTextureDataFromStream(IAsyncResult result)
         {
@@ -925,19 +935,17 @@ namespace Viking
                 }
             }
         }
-
         
 
-
-        public static TextureData TextureDataFromStream(GraphicsDevice graphicsDevice, byte[] streamdata)
+        public static TextureData TextureDataFromStream(byte[] streamdata)
         { 
             using (MemoryStream stream = new MemoryStream(streamdata))
             {
-                return TextureDataFromStream(graphicsDevice, stream);
+                return TextureDataFromStream(stream);
             } 
         }
 
-        public static TextureData TextureDataFromStream(GraphicsDevice graphicsDevice, Stream stream)
+        public static TextureData TextureDataFromStream(Stream stream)
         {
             //We load greyscale images, XNA doesn't support loading greyscale by default, so run it through Bitmap instead
             int Width;
@@ -1016,12 +1024,6 @@ namespace Viking
                     pixelBytes[iDestByte++] = rgbValues[iSourceByte];
                 }
 
-                if (graphicsDevice == null)
-                    return null;
-
-                if (graphicsDevice.IsDisposed)
-                    return null;
-
                 return new TextureData(pixelBytes, Width, Height);
     /*
                 Texture2D tex = null;
@@ -1058,7 +1060,7 @@ namespace Viking
 
         public static Texture2D TextureFromStream(GraphicsDevice graphicsDevice, Stream texStream, bool mipmap)
         {
-            TextureData texData = TextureDataFromStream(graphicsDevice, texStream);
+            TextureData texData = TextureDataFromStream(texStream);
             return TextureFromData(graphicsDevice, texData, mipmap);
         }
 

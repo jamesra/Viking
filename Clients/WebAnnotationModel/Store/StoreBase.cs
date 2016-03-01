@@ -173,7 +173,7 @@ namespace WebAnnotationModel
         {
             if(State.UseAsynchEvents)
             {
-                a.BeginInvoke(null, null);
+                System.Threading.Tasks.Task.Run(a);
             }
             else
             {
