@@ -4,10 +4,10 @@ using System.Linq;
 using System.Text;
 using Viking.VolumeModel;
 using System.Diagnostics;
-using Viking.Common;
-using Common.UI;
+using Viking.Common.UI;
 using Geometry;
 using System.ComponentModel;
+using Viking.Common;
 
 namespace Viking.ViewModels
 {

@@ -8,11 +8,12 @@ using LocalBookmarks;
 using connectomes.utah.edu.XSD.BookmarkSchema.xsd;
 using Viking.UI.Controls;
 using System.Windows.Forms;
+using Viking.Common.UI;
 
 
 namespace LocalBookmarks
 {
-    [Common.UI.TreeViewVisible()]
+    [Viking.Common.UI.TreeViewVisible()]
     partial class FolderUIObj : UIObjTemplate<Folder>
     {
         public FolderUIObj(FolderUIObj parent)
@@ -45,7 +46,7 @@ namespace LocalBookmarks
 
 
         private List<FolderUIObj> _Folders = null;
-        [Common.UI.ThisToManyRelationAttribute()]
+        [Viking.Common.UI.ThisToManyRelationAttribute()]
         public FolderUIObj[] Folders
         {
             get
@@ -65,7 +66,7 @@ namespace LocalBookmarks
         }
 
         private List<BookmarkUIObj> _Bookmarks = null;
-        [Common.UI.ThisToManyRelationAttribute()]
+        [Viking.Common.UI.ThisToManyRelationAttribute()]
         public BookmarkUIObj[] Bookmarks
         {
             get

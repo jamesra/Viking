@@ -7,7 +7,7 @@ using System.Reflection;
 using System.Windows.Forms; 
 
 using Viking.Common;
-using Common.UI;
+using Viking.Common.UI;
 using System.Runtime.Serialization;
 
 namespace Viking.UI.Controls

@@ -62,12 +62,7 @@ namespace WebAnnotation.UI.Commands
         protected override void OnMouseMove(object sender, MouseEventArgs e)
         {
             GridVector2 WorldPos = Parent.ScreenToWorld(e.X, e.Y);
-    //        GridVector2 locPosition;
-
-            SectionLocationsViewModel sectionAnnotations = AnnotationOverlay.GetAnnotationsForSection(Parent.Section.Number);
-            if (sectionAnnotations == null)
-                return;
-
+    
             //Find if we are close enough to a location to "snap" the line to the target
             double distance; 
             LocationCanvasView nearest = Overlay.GetNearestLocation(WorldPos, out distance);
@@ -86,10 +81,6 @@ namespace WebAnnotation.UI.Commands
             //Figure out if we've clicked another structure and create the structure
             if (e.Button == MouseButtons.Left)
             {
-                SectionLocationsViewModel sectionAnnotations = AnnotationOverlay.GetAnnotationsForSection(Parent.Section.Number);
-                if (sectionAnnotations == null)
-                    return;
-
                 GridVector2 WorldPos = Parent.ScreenToWorld(e.X, e.Y);
 
                 /*Check to see if we clicked a location*/
@@ -116,19 +107,9 @@ namespace WebAnnotation.UI.Commands
             Vector3 target;
             if (nearestParent != null)
             {
-                SectionLocationsViewModel sectionAnnotations = AnnotationOverlay.GetAnnotationsForSection(Parent.Section.Number);
-                if (sectionAnnotations == null)
-                    return;
-
                 //Snap the line to a nearby target if it exists
                 GridVector2 targetPos = nearestParent.VolumePosition; 
-
-                /*
-                bool success = sectionAnnotations.TryGetPositionForLocation(nearestParent, out targetPos);
-                if (!success)
-                    return; 
-                */
-
+                
                 target = new Vector3((float)targetPos.X, (float)targetPos.Y, 0f);
             }
             else

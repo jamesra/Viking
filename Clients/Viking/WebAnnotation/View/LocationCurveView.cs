@@ -21,7 +21,5 @@ namespace WebAnnotation.View
             double MinDistance = segs.Min(l => l.DistanceToPoint(Position));
             return (MinDistance - (this.Width / 2.0));
         }
-
-        
     }
 }

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Viking.ViewModels;
-using Common.DataStructures;
+using Viking.Common;
 using Viking.VolumeModel; 
 
 namespace Viking

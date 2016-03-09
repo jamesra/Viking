@@ -3,7 +3,7 @@ using System.ComponentModel;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Common.UI; 
+using Viking.Common.UI;
 using Viking.Common;
 using System.Windows.Forms;
 using System.Drawing;

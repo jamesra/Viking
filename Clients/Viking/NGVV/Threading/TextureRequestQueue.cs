@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Collections.Concurrent;
 using System.Threading;
-using Common.DataStructures;
+using Viking.Common;
 using Microsoft.Xna.Framework.Graphics;
 
 namespace Viking.Threading

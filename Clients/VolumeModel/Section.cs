@@ -8,6 +8,7 @@ using System.Xml;
 using System.IO;
 using Geometry;
 using Utils;
+using Viking.Common.UI;
 
 namespace Viking.VolumeModel
 {
@@ -16,19 +17,19 @@ namespace Viking.VolumeModel
         /// <summary>
         /// Friendly name of the section
         /// </summary>
-        [Common.UI.Column("Name")]
+        [Column("Name")]
         public string Name;
 
         /// <summary>
         /// The number of this section in the sequence
         /// </summary>
-        [Common.UI.Column("Number")]
+        [Column("Number")]
         public int Number;
 
         /// <summary>
         /// Notes embedded in the VikingXML describing this section
         /// </summary>
-        [Common.UI.Column("Notes")]
+        [Column("Notes")]
         public string Notes = "";
 
         /// <summary>

@@ -19,42 +19,6 @@ using SqlGeometryUtils;
 namespace WebAnnotation
 {
     /// <summary>
-    /// Sort LocationObj's according to rendering requirements
-    /// </summary>
-    public class LocationObjDrawOrderComparison : IComparer<LocationObj>, IComparer<LocationCanvasView>
-    {
-        #region IComparer<LocationObj> Members
-
-        int IComparer<LocationObj>.Compare(LocationObj x, LocationObj y)
-        {
-            return CompareObj(x, y);
-        }
-
-        #endregion
-
-        int IComparer<LocationCanvasView>.Compare(LocationCanvasView x, LocationCanvasView y)
-        {
-            LocationObj X = x.modelObj;
-            LocationObj Y = y.modelObj;
-
-            return CompareObj(X, Y);
-        }
-
-        private static int CompareObj(LocationObj x, LocationObj y)
-        {
-            //First sort by type
-            if (x.TypeCode != y.TypeCode)
-            {
-                return x.TypeCode - y.TypeCode;
-            }
-
-            //if the type is the same, sort by section differential
-            return (int)(x.Section - y.Section);
-        }
-    }
-
-
-    /// <summary>
     /// This class draws LocationObj's
     /// </summary>
     static class LocationObjRenderer

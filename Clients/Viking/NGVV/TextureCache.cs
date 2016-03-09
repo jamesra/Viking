@@ -5,7 +5,7 @@ using System.Text;
 using System.IO;
 using System.Diagnostics;
 using Viking.UI;
-using Common.DataStructures; 
+using Viking.Common;
 
 namespace Viking
 {
@@ -45,8 +45,9 @@ namespace Viking
 
         public void PopulateCache(string Path)
         {
-            Action<string> checkAction = new Action<string>(_PopulateCacheThreadStart);
-            checkAction.BeginInvoke(Path, null, null); 
+            System.Threading.Tasks.Task.Run(() => _PopulateCacheThreadStart(Path));
+            //Action<string> checkAction = new Action<string>(_PopulateCacheThreadStart);
+            //checkAction.BeginInvoke(Path, null, null); 
         }
 
         /// <summary>

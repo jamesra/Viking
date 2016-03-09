@@ -34,11 +34,7 @@ namespace WebAnnotation.ViewModel
             System.Diagnostics.Debug.Assert(INotify != null, "Attempt to create weak subscription to object that does not support it");
             if (INotify == null)
                 return;
-
-           
-            //eventHandler = ObjectToHandler.GetOrAdd(source, eventHandler);
-
-
+            
             INotify.PropertyChanged += eventHandler;
 
             if (CleanupCountdown == 0)

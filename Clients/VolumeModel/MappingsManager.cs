@@ -6,7 +6,7 @@ using System.Xml;
 using System.Xml.Linq;
 using Geometry;
 using System.Collections.Concurrent;
-using Common;
+using Viking.Common;
 
 namespace Viking.VolumeModel
 {
@@ -15,7 +15,7 @@ namespace Viking.VolumeModel
 
     }
 
-    public class SectionTransformsCache : Common.DataStructures.TimeQueueCache<int, SectionMappingsCacheEntry, SectionTransformsDictionary, SectionTransformsDictionary>
+    public class SectionTransformsCache : TimeQueueCache<int, SectionMappingsCacheEntry, SectionTransformsDictionary, SectionTransformsDictionary>
     {
         public long NumSectionsToKeepInMemory
         {
@@ -41,7 +41,7 @@ namespace Viking.VolumeModel
         } 
     }
 
-    public class SectionMappingsCacheEntry : Common.DataStructures.CacheEntry< int >
+    public class SectionMappingsCacheEntry : CacheEntry< int >
     {
         public SectionTransformsDictionary TransformsForSection = new SectionTransformsDictionary();
 

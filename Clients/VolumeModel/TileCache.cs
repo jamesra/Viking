@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 using System.Diagnostics;
-using Common.DataStructures;
+using Viking.Common;
 
 namespace Viking.VolumeModel
 {

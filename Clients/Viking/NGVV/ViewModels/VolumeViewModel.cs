@@ -73,6 +73,12 @@ namespace Viking.ViewModels
             return _MappingManager.GetMapping(this.ActiveVolumeTransform, SectionNumber, ChannelName, SectionTransformName);
         }
 
+        public IVolumeToSectionMapper GetMapping(int SectionNumber)
+        {
+            SectionViewModel svm = this.SectionViewModels[SectionNumber];
+            return _MappingManager.GetMapping(this.ActiveVolumeTransform, SectionNumber, svm.ActiveChannel, svm.ActiveTransform);
+        }
+
         public void ReduceCacheFootprint(object state)
         {
             _MappingManager.ReduceCacheFootprint();

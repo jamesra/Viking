@@ -25,7 +25,7 @@ using System.Linq;
 using System.Text;
 using System.Diagnostics; 
 
-namespace Common.DataStructures
+namespace Viking.Common
 {
     /// <summary>
     /// A cache which prioritizes entries based upon last access time. 

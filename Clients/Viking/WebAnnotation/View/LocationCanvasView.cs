@@ -18,43 +18,9 @@ using Viking.Common;
 
 namespace WebAnnotation.View
 {
-    public interface ISelectable
-    {
-        bool Selected { get; set; }
-    }
-
-    public interface ICanvasView
-    { 
-        bool IsVisible(Scene scene);
-
-        /// <summary>
-        /// Bounding box of the annotation
-        /// </summary>
-        GridRectangle BoundingBox
-        {
-            get;
-        } 
-
-        bool Intersects(GridVector2 Position);
-
-        /// <summary>
-        /// Returns the distance from the position to the nearest point on the annotation, or 0 if the position is inside the annotation
-        /// </summary>
-        /// <param name="Position"></param>
-        /// <returns></returns>
-        double Distance(GridVector2 Position);
-
-        /// <summary>
-        /// Assumes Position is within the annotation.  Returns a number from 0 to 1 indicating how close the position is between the center and edge of the annotation.
-        /// </summary>
-        /// <param name="Position"></param>
-        /// <returns></returns>
-        double DistanceFromCenterNormalized(GridVector2 Position);
-    }
-
     abstract public class LocationCanvasView : IComparable<LocationCanvasView>, IWeakEventListener, IUIObjectBasic, ICanvasView
     {
-        public readonly LocationObj modelObj;
+        protected readonly LocationObj modelObj;
 
         public LocationCanvasView(LocationObj obj)
         {
@@ -423,7 +389,8 @@ namespace WebAnnotation.View
                             NotifyPropertyChangedEventManager.AddListener(this.modelObj.Parent, this);
                     };
 
-                    AnnotationOverlay.CurrentOverlay.Parent.BeginInvoke(GetParent, new object[] { this.modelObj.ParentID.Value });
+                    System.Threading.Tasks.Task.Run(() => GetParent(this.modelObj.ParentID.Value));
+                    //AnnotationOverlay.CurrentOverlay.Parent.BeginInvoke(GetParent, new object[] { this.modelObj.ParentID.Value });
                 }
                 else
                     NotifyPropertyChangedEventManager.AddListener(this.modelObj.Parent, this);

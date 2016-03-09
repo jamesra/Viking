@@ -6,11 +6,12 @@ using Viking.Common;
 using connectomes.utah.edu.XSD.BookmarkSchema.xsd;
 using LocalBookmarks;
 using Geometry;
-using Viking.UI.Controls; 
+using Viking.UI.Controls;
+using Viking.Common.UI;
 
 namespace LocalBookmarks
 {
-    [Common.UI.TreeViewVisible()]
+    [TreeViewVisible()]
     partial class BookmarkUIObj : UIObjTemplate<Bookmark>
     {
         internal static float LabelScaleFactor = 2.25f; 

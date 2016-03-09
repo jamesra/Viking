@@ -13,7 +13,7 @@ using WebAnnotationModel;
 using System.Windows.Forms;
 using System.Diagnostics;
 using System.Drawing;
-using Common.UI;
+using Viking.Common;
 using WebAnnotation.UI.Commands;
 using WebAnnotation.ViewModel;
 using Microsoft.SqlServer.Types;
@@ -142,14 +142,6 @@ namespace WebAnnotation.View
             get
             {
                 return gridCircle.BoundingBox;
-            }
-        }
-
-        public override IList<LocationCanvasView> OverlappingLinks
-        {
-            get
-            {
-                throw new NotImplementedException();
             }
         }
     }

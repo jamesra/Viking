@@ -177,6 +177,14 @@ namespace VikingXNA
             }
         }
 
+        public double ScreenPixelSizeInVolume
+        {
+            get
+            {
+                return Math.Min(this.DevicePixelHeight, this.DevicePixelWidth);
+            }
+        }
+
         public Geometry.GridVector2 ScreenToWorld(GridVector2 pos)
         {
             return ScreenToWorld(pos.X, pos.Y);

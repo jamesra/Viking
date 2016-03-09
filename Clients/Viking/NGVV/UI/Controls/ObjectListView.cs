@@ -9,7 +9,8 @@ using System.Windows.Forms;
 using System.Reflection;
 using System.Diagnostics;
 using Viking.Common;
-using Common.UI;
+using Viking.Common.UI;
+
 
 namespace Viking.UI.BaseClasses
 {

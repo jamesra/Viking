@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using connectomes.utah.edu.XSD.BookmarkSchema.xsd;
 using Viking.Common;
+using Viking.Common.UI;
 using System.Windows.Forms; 
 
 namespace LocalBookmarks
@@ -18,7 +19,7 @@ namespace LocalBookmarks
         /// <summary>
         /// Everyone can use this method to adjust which parent the object has
         /// </summary>
-        [Common.UI.ThisToOneRelationAttribute()]
+        [Viking.Common.UI.ThisToOneRelationAttribute()]
         public FolderUIObj Parent
         {
             get

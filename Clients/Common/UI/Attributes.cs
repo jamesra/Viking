@@ -23,7 +23,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace Common.UI
+namespace Viking.Common.UI
 {
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property)]
     public sealed class ColumnAttribute : System.Attribute

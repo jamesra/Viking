@@ -95,6 +95,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="DataStructures\CacheEntry.cs" />
+    <Compile Include="DataStructures\KeyTracker.cs" />
     <Compile Include="DataStructures\TimeQueueCache.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="UI\Attributes.cs" />

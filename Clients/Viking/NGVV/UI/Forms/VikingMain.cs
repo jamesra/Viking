@@ -14,7 +14,6 @@ using Viking.UI.Forms;
 using Viking.UI;
 using Viking.Common;
 using System.Reflection;
-using Common.DataStructures;
 using Viking.VolumeModel;
 using Viking.ViewModels; 
 

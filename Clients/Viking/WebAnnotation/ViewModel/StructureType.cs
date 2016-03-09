@@ -4,14 +4,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Viking.Common;
-using Common.UI; 
+using Viking.Common.UI;
 using System.Windows; 
 using System.Windows.Forms;
 using WebAnnotationModel;
 
 namespace WebAnnotation.ViewModel
 {
-    [Common.UI.TreeViewVisible]
+    [Viking.Common.UI.TreeViewVisible]
     public class StructureType : Viking.Objects.UIObjBase
     {
         public StructureTypeObj modelObj;
@@ -54,7 +54,7 @@ namespace WebAnnotation.ViewModel
             }
         }
 
-        [Common.UI.ThisToManyRelationAttribute()]
+        [Viking.Common.UI.ThisToManyRelationAttribute()]
         public StructureType[] Children
         {
             get

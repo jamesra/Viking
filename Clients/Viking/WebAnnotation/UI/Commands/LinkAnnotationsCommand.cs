@@ -56,12 +56,7 @@ namespace WebAnnotation.UI.Commands
         protected override void OnMouseMove(object sender, MouseEventArgs e)
         {
             GridVector2 WorldPos = Parent.ScreenToWorld(e.X, e.Y);
-    //        GridVector2 locPosition;
-
-            SectionLocationsViewModel sectionAnnotations = AnnotationOverlay.GetAnnotationsForSection(Parent.Section.Number);
-            if (sectionAnnotations == null)
-                return; 
-
+    
             //Find if we are close enough to a location to "snap" the line to the target
             double distance;
 
@@ -99,11 +94,7 @@ namespace WebAnnotation.UI.Commands
             if (e.Button == MouseButtons.Left)
             {
                 GridVector2 WorldPos = Parent.ScreenToWorld(e.X, e.Y);
-
-                SectionLocationsViewModel sectionAnnotations = AnnotationOverlay.GetAnnotationsForSection(Parent.Section.Number);
-                if (sectionAnnotations == null)
-                    return; 
-
+                
                 //Find if we are close enough to a location to "snap" the line to the target
                 double distance;
                 LocationCanvasView nearest = Overlay.GetNearestLocation(WorldPos, out distance);
@@ -205,11 +196,7 @@ namespace WebAnnotation.UI.Commands
         {
             if (this.oldMouse == null)
                 return;
-
-            WebAnnotation.ViewModel.SectionLocationsViewModel sectionAnnotations = AnnotationOverlay.GetAnnotationsForSection(OriginObj.Section);
-            if (sectionAnnotations == null)
-                return;
-
+            
             GridVector2 OriginPosition = GetOriginForLocation(OriginObj);
 
             Vector3 target;

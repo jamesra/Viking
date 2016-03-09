@@ -24,7 +24,7 @@ using System.Linq;
 using System.Text;
 using System.Diagnostics; 
 
-namespace Common.DataStructures
+namespace Viking.Common
 {
     public abstract class CacheEntry<KEY> : IComparer<CacheEntry<KEY>>, IComparable, IEquatable<CacheEntry<KEY>>, IDisposable 
     {

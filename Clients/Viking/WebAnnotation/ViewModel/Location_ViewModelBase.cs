@@ -13,7 +13,7 @@ using WebAnnotationModel;
 using System.Windows.Forms;
 using System.Diagnostics;
 using System.Drawing;
-using Common.UI;
+using Viking.Common.UI;
 using WebAnnotation.UI.Commands;
 using System.Collections.Concurrent;
 using Microsoft.SqlServer.Types;
@@ -151,7 +151,8 @@ namespace WebAnnotation.ViewModel
                             NotifyPropertyChangedEventManager.AddListener(this.modelObj.Parent, this);
                     };
 
-                    AnnotationOverlay.CurrentOverlay.Parent.BeginInvoke(GetParent, new object[] { this.modelObj.ParentID.Value });
+                    System.Threading.Tasks.Task.Run(() => GetParent(this.modelObj.ParentID.Value));
+                    //AnnotationOverlay.CurrentOverlay.Parent.BeginInvoke(GetParent, new object[] { this.modelObj.ParentID.Value });
                 }
                 else
                     NotifyPropertyChangedEventManager.AddListener(this.modelObj.Parent, this);
