@@ -24,6 +24,7 @@ using log4net.Repository.Hierarchy;
 using log4net;
 using System.Collections.Generic;
 using System;
+using System.Diagnostics;
 using System.Collections;
 
 
@@ -195,6 +196,10 @@ namespace RTree
                 idcounter++;
                 int id = idcounter;
 
+                Debug.Assert(IdsToItems.ContainsKey(id) == false);
+                Debug.Assert(ItemsToIds.ContainsKey(item) == false);
+                Debug.Assert(ItemsToRects.ContainsKey(item) == false);
+
                 IdsToItems.Add(id, item);
                 ItemsToIds.Add(item, id);
                 ItemsToRects.Add(item, r);
@@ -227,10 +232,7 @@ namespace RTree
             finally
             {
                 rwLock.ExitUpgradeableReadLock();
-            } 
-            
-
-                
+            }
         }
 
         private void add(Rectangle r, int id)
@@ -327,9 +329,17 @@ namespace RTree
                     if (success == true)
                     {
                         removedItem = IdsToItems[id];
-                        IdsToItems.Remove(id);
-                        ItemsToIds.Remove(item);
-                        ItemsToRects.Remove(item);
+#if DEBUG
+                        Debug.Assert(IdsToItems.Remove(id));
+                        Debug.Assert(ItemsToIds.Remove(item));
+                        Debug.Assert(ItemsToRects.Remove(item));
+#else
+                        bool AllRemoved = true;
+                        AllRemoved = AllRemoved && IdsToItems.Remove(id);
+                        AllRemoved = AllRemoved && ItemsToIds.Remove(item);
+                        AllRemoved = AllRemoved && ItemsToRects.Remove(item);
+#endif
+
                     }
                     return success;
                 }
