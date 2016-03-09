@@ -11,6 +11,8 @@ namespace SqlGeometryUtils
 {
     public static class GeometryExtensions
     {
+        private static readonly int RoundingDigits = 2;
+
         public static System.Data.SqlTypes.SqlString ToSqlString(this string str)
         {
             return new System.Data.SqlTypes.SqlString(str);
@@ -23,7 +25,8 @@ namespace SqlGeometryUtils
 
         public static Microsoft.SqlServer.Types.SqlGeometry ToGeometryPoint(this GridVector2 p)
         {
-            return Microsoft.SqlServer.Types.SqlGeometry.Point(p.X, p.Y, 0);
+            return Microsoft.SqlServer.Types.SqlGeometry.Point(Math.Round(p.X, RoundingDigits),
+                                                               Math.Round(p.Y, RoundingDigits), 0);
         }
 
         public static GridVector2 Centroid(this System.Data.Entity.Spatial.DbGeometry geometry)
@@ -184,10 +187,12 @@ namespace SqlGeometryUtils
         {
             SqlGeometry center = geometry.STCentroid();
             if(!center.IsNull)
-                return new GridVector2(center.STX.Value, center.STY.Value);
+                return new GridVector2(System.Math.Round(center.STX.Value, RoundingDigits),
+                                       System.Math.Round(center.STY.Value, RoundingDigits));
 
             if (center.STNumPoints() == 1)
-                return new GridVector2(geometry.STX.Value, geometry.STY.Value);
+                return new GridVector2(System.Math.Round(geometry.STX.Value, RoundingDigits),
+                                       System.Math.Round(geometry.STY.Value, RoundingDigits));
 
             return geometry.STEnvelope().Centroid();
         }
