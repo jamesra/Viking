@@ -104,7 +104,7 @@ namespace WebAnnotationModel
 
         
 
-        protected override StructureType[] ProxyGetBySectionCallback(out long TicksAtQueryExecute, out long[] DeletedLocations, StoreBaseWithKey<AnnotateStructureTypesClient, IAnnotateStructureTypes, long, StructureTypeObj, StructureType>.GetObjectBySectionCallbackState state, IAsyncResult result)
+        protected override StructureType[] ProxyGetBySectionCallback(out long TicksAtQueryExecute, out long[] DeletedLocations, StoreBaseWithKey<AnnotateStructureTypesClient, IAnnotateStructureTypes, long, StructureTypeObj, StructureType>.GetObjectBySectionCallbackState<StructureTypeObj> state, IAsyncResult result)
         {
             throw new NotImplementedException();
         }
@@ -227,7 +227,7 @@ namespace WebAnnotationModel
              */
         }
 
-        protected override StructureType[] ProxyGetBySectionRegionCallback(out long TicksAtQueryExecute, out long[] DeletedLocations, GetObjectBySectionCallbackState state, IAsyncResult result)
+        protected override StructureType[] ProxyGetBySectionRegionCallback(out long TicksAtQueryExecute, out long[] DeletedLocations, GetObjectBySectionCallbackState<StructureTypeObj> state, IAsyncResult result)
         {
             throw new NotImplementedException();
         }

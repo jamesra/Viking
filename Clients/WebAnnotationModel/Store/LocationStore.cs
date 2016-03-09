@@ -90,14 +90,14 @@ namespace WebAnnotationModel
             return proxy.BeginGetLocationChangesInRegion(SectionNumber, BBox, MinRadius, LastQuery.Ticks, callback, asynchState);
         }
 
-        protected override Location[] ProxyGetBySectionRegionCallback(out long TicksAtQueryExecute, out long[] DeletedLocations, GetObjectBySectionCallbackState state, IAsyncResult result)
+        protected override Location[] ProxyGetBySectionRegionCallback(out long TicksAtQueryExecute, out long[] DeletedLocations, GetObjectBySectionCallbackState<LocationObj> state, IAsyncResult result)
         {
             return state.Proxy.EndGetLocationChangesInRegion(out TicksAtQueryExecute, out DeletedLocations, result);
         }
 
         protected override Location[] ProxyGetBySectionCallback(out long TicksAtQueryExecute,
                                                           out long[] DeletedLocations,
-                                                          GetObjectBySectionCallbackState state,
+                                                          GetObjectBySectionCallbackState<LocationObj> state,
                                                           IAsyncResult result)
         {
             return state.Proxy.EndGetLocationChanges(out TicksAtQueryExecute, out DeletedLocations, result);

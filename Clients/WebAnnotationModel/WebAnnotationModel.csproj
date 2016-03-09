@@ -83,6 +83,8 @@
     <Compile Include="Extensions.cs" />
     <Compile Include="Objects\Attribute.cs" />
     <Compile Include="Objects\LocationLinkObj.cs" />
+    <Compile Include="RegionLoader\RegionLoader.cs" />
+    <Compile Include="Store\Interfaces.cs" />
     <Compile Include="Store\LocationLinkStore.cs" />
     <Compile Include="Store\LocationStore.cs" />
     <Compile Include="Objects\LocationObj.cs" />

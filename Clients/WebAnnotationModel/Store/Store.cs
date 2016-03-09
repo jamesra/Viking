@@ -35,6 +35,16 @@ namespace WebAnnotationModel
             get { return Nested.LocationLinks; }
         }
 
+        public static RegionLoader<long, LocationObj> LocationsByRegion
+        {
+            get { return Nested.RegionLocationsLoader; }
+        }
+
+        public static RegionLoader<long, StructureObj> StructuresByRegion
+        {
+            get { return Nested.RegionStructuresLoader; }
+        }
+
         class Nested
         {
             static Nested()
@@ -43,7 +53,10 @@ namespace WebAnnotationModel
                 Structures.Init(); 
                 Locations.Init();
                 StructureLinks.Init();
-                LocationLinks.Init(); 
+                LocationLinks.Init();
+
+                RegionLocationsLoader = new RegionLoader<long, LocationObj>(Store.Locations);
+                RegionStructuresLoader = new RegionLoader<long, StructureObj>(Store.Structures);
             }
 
             internal readonly static StructureTypeStore StructureTypes = new StructureTypeStore();
@@ -51,6 +64,9 @@ namespace WebAnnotationModel
             internal readonly static LocationStore Locations = new LocationStore();
             internal readonly static StructureLinkStore StructureLinks = new StructureLinkStore();
             internal readonly static LocationLinkStore LocationLinks = new LocationLinkStore();
+
+            internal readonly static RegionLoader<long, LocationObj> RegionLocationsLoader;
+            internal readonly static RegionLoader<long, StructureObj> RegionStructuresLoader;
         }
     }
 }

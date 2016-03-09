@@ -169,11 +169,11 @@ namespace WebAnnotationModel
 
         #region Events
 
-        private void InvokeEventAction(Action a)
+        protected void InvokeEventAction(Action a)
         {
             if(State.UseAsynchEvents)
             {
-                a.BeginInvoke(null, null);
+                System.Threading.Tasks.Task.Run(a);
             }
             else
             {

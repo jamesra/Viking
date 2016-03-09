@@ -25,6 +25,7 @@ namespace WebAnnotationModel
             location = l;
         }
     }
+
     public class StructureStore : StoreBaseWithIndexKeyAndParent<AnnotateStructuresClient, IAnnotateStructures, long, LongIndexGenerator, StructureObj, Structure>
     {
         #region Proxy
@@ -117,7 +118,7 @@ namespace WebAnnotationModel
             return proxy.BeginGetStructuresForSectionInRegion(SectionNumber, BBox, MinRadius, LastQuery.Ticks, callback, asynchState);
         }
          
-        protected override Structure[] ProxyGetBySectionRegionCallback(out long TicksAtQueryExecute, out long[] DeletedObjects, GetObjectBySectionCallbackState state, IAsyncResult result)
+        protected override Structure[] ProxyGetBySectionRegionCallback(out long TicksAtQueryExecute, out long[] DeletedObjects, GetObjectBySectionCallbackState<StructureObj> state, IAsyncResult result)
         {
             return state.Proxy.EndGetStructuresForSectionInRegion(out TicksAtQueryExecute, out DeletedObjects, result);
         }
@@ -142,7 +143,7 @@ namespace WebAnnotationModel
             return proxy.BeginGetStructuresForSection(SectionNumber, LastQuery.Ticks, callback, asynchState);
         }
 
-        protected override Structure[] ProxyGetBySectionCallback(out long TicksAtQueryExecute, out long[] DeletedIDs, GetObjectBySectionCallbackState state, IAsyncResult result)
+        protected override Structure[] ProxyGetBySectionCallback(out long TicksAtQueryExecute, out long[] DeletedIDs, GetObjectBySectionCallbackState<StructureObj> state, IAsyncResult result)
         {
             return state.Proxy.EndGetStructuresForSection(out TicksAtQueryExecute, out DeletedIDs, result); 
         }

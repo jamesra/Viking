@@ -121,7 +121,7 @@ namespace WebAnnotationModel
             SectionLocationLinks = SectionToLocationLinks.GetOrAdd(SectionNumber, SectionLocationLinks);
             
             //Request updates after fetching the list so we don't update the list mid-query
-            GetObjectsForSectionAsynch(SectionNumber);
+            GetObjectsForSectionAsynch(SectionNumber, null);
 
             return SectionLocationLinks;
         } 
@@ -185,12 +185,12 @@ namespace WebAnnotationModel
             return proxy.BeginGetLocationChanges(SectionNumber,
                                                  LastQuery.Ticks,
                                                  GetObjectsBySectionCallback,
-                                                 new GetObjectBySectionCallbackState(proxy, SectionNumber, LastQuery));
+                                                 asynchState);
         }
         
         protected override LocationLink[] ProxyGetBySectionCallback(out long TicksAtQueryExecute,
                                                                     out LocationLinkKey[] DeletedLinkKeys,
-                                                                    GetObjectBySectionCallbackState state,
+                                                                    GetObjectBySectionCallbackState<LocationLinkObj> state,
                                                                     IAsyncResult result)
         { 
             LocationLink[] deleted_links;
@@ -209,7 +209,7 @@ namespace WebAnnotationModel
         /// <param name="DeletedLocations"></param>
         protected override ChangeInventory<LocationLinkObj> ParseQuery(LocationLink[] newLinks,                                            
                                            LocationLinkKey[] DeletedLocations,
-                                           GetObjectBySectionCallbackState state)
+                                           GetObjectBySectionCallbackState<LocationLinkObj> state)
         {
             ConcurrentDictionary<LocationLinkKey, LocationLinkObj> SectionLocationLinks = new ConcurrentDictionary<LocationLinkKey, LocationLinkObj>(); 
             SectionLocationLinks = SectionToLocationLinks.GetOrAdd(state.SectionNumber, SectionLocationLinks);
@@ -382,7 +382,7 @@ namespace WebAnnotationModel
             }
         }
 
-        protected override LocationLink[] ProxyGetBySectionRegionCallback(out long TicksAtQueryExecute, out LocationLinkKey[] DeletedLocations, GetObjectBySectionCallbackState state, IAsyncResult result)
+        protected override LocationLink[] ProxyGetBySectionRegionCallback(out long TicksAtQueryExecute, out LocationLinkKey[] DeletedLocations, GetObjectBySectionCallbackState<LocationLinkObj> state, IAsyncResult result)
         {
             throw new NotImplementedException();
         }
