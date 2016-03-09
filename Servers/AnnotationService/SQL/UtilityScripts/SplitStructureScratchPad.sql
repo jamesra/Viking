@@ -9,9 +9,9 @@ IF OBJECT_ID('tempdb..#ParentIDForChildStructure') IS NOT NULL DROP TABLE #Paren
 
 DECLARE @KeepStructureID bigint, @SplitStructureID bigint
 DECLARE @FirstLocationIDOfSplitStructure bigint
-set @KeepStructureID = 439
+set @KeepStructureID = 13525
 set @SplitStructureID = 0
-set @FirstLocationIDOfSplitStructure = 35539
+set @FirstLocationIDOfSplitStructure = 989617
 
 SELECT A,B into #LocationLinkPool from dbo.StructureLocationLinks(@KeepStructureID) order by A
 
@@ -65,7 +65,7 @@ select ParentID as StructureID, geometry::ConvexHullAggregate(VolumeShape) as Sh
 	where ParentID in (select ID from Structure where ParentID = @KeepStructureID)
 	group by ParentID
 
---select * from #StructureLocations
+select * from #StructureLocations
 --select * from #ChildStructureLocations
 
 --Find the nearest location in either the keep or split structure
@@ -79,6 +79,8 @@ select SL.StructureID as StructureID, MIN(SL.Distance) as Distance
 INTO #DistanceToNearestStructure from #DistanceToEachStructure SL
 group by SL.StructureID
 
+PRINT 'New Structure ID: ' + STR(@SplitStructureID)
+
 select * from #DistanceToEachStructure order by StructureID
 --select * from #DistanceToNearestStructure
 
@@ -87,16 +89,12 @@ into #ParentIDForChildStructure from #DistanceToEachStructure SD
 join #DistanceToNearestStructure SN ON SN.StructureID = SD.StructureID AND SN.Distance = SD.Distance
 
 select * from #ParentIDForChildStructure
-
-/*
+ 
+update Location set ParentID = @SplitStructureID
+FROM Location L
+	INNER JOIN #LocationsInSplitSubGraph LS ON LS.ID = L.ID
 
 update Structure set ParentID = PCS.NewParentID 
 FROM Structure S
 	JOIN #ParentIDForChildStructure PCS ON S.ID = PCS.StructureID
 
-update Location set ParentID = LS.ID
-FROM Location L
-	JOIN #LocationsInSplitSubGraph LS ON LS.ID = L.ID
-
-
-*/
