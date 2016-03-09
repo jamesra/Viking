@@ -48,26 +48,5 @@ namespace Viking.Common
 
             return null;
         }
-
-        
-
-
-        /// <summary>
-        /// Rounds the provided downsample level to nearest power of 2
-        /// </summary>
-        /// <returns></returns>
-        public static int NearestPowerOfTwoDownsample(double DownSample)
-        {
-            DownSample = Math.Log(DownSample, 2);
-            DownSample = Math.Floor(DownSample);
-            DownSample = Math.Pow(2, DownSample);
-
-            if (DownSample < 1)
-                DownSample = 1;
-            else if (DownSample > 64)
-                DownSample = 64;
-
-            return (int)DownSample;
-        }
     }
 }

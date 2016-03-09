@@ -24,7 +24,7 @@ namespace Geometry
 
         public override string ToString()
         {
-            return Center.ToString() + " W: " + Width.ToString() + " H: " + Height.ToString();
+            return string.Format("{0},{1} W: {2} H: {3} Center: {4}", Left, Bottom, Width, Height, Center.ToString());
         }
 
         public double Width

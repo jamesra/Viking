@@ -93,7 +93,7 @@ namespace WebAnnotation
 
     internal static class MappingExtensions
     { 
-        public static bool MapLocation(this Viking.VolumeModel.IVolumeToSectionMapper mapper, WebAnnotationModel.LocationObj loc)
+        public static bool MapLocationToVolume(this Viking.VolumeModel.IVolumeToSectionMapper mapper, WebAnnotationModel.LocationObj loc)
         {
             //Don't bother mapping if the location was already mapped
             if (loc.VolumeTransformID == mapper.ID)
@@ -102,11 +102,11 @@ namespace WebAnnotation
             switch (loc.TypeCode)
             {
                 case WebAnnotationModel.LocationType.POINT:
-                    return mapper.MapLocationByCentroid(loc);
+                    return mapper.MapLocationCentroidToVolume(loc);
                 case WebAnnotationModel.LocationType.CIRCLE:
-                    return mapper.MapLocationByCentroid(loc);
+                    return mapper.MapLocationCentroidToVolume(loc);
                 default:
-                    return mapper.MapLocationByControlPoints(loc);
+                    return mapper.MapLocationShapeToVolume(loc);
             }
         }
 
@@ -115,7 +115,7 @@ namespace WebAnnotation
         /// </summary>
         /// <param name="loc"></param>
         /// <returns></returns>
-        public static bool MapLocationByCentroid(this Viking.VolumeModel.IVolumeToSectionMapper mapper, WebAnnotationModel.LocationObj loc)
+        private static bool MapLocationCentroidToVolume(this Viking.VolumeModel.IVolumeToSectionMapper mapper, WebAnnotationModel.LocationObj loc)
         {
             //Don't bother mapping if the location was already mapped
             if (loc.VolumeTransformID == mapper.ID)
@@ -126,7 +126,7 @@ namespace WebAnnotation
             bool mappedPosition = mapper.TrySectionToVolume(loc.Position, out VolumePosition);
             if (!mappedPosition) //Remove locations we can't map
             {
-                Trace.WriteLine("AddLocation: Location #" + loc.ID.ToString() + " was unmappable.", "WebAnnotation");
+                Trace.WriteLine("MapLocationToVolumeByCentroid: Location #" + loc.ID.ToString() + " was unmappable.", "WebAnnotation");
                 return false;
             }
 
@@ -139,30 +139,56 @@ namespace WebAnnotation
             return true;
         }
 
+        public static Microsoft.SqlServer.Types.SqlGeometry TryMapShapeSectionToVolume(this Viking.VolumeModel.IVolumeToSectionMapper mapper, Microsoft.SqlServer.Types.SqlGeometry shape)
+        {
+            GridVector2[] VolumePositions;
+            GridVector2[] points = shape.ToPoints();
+
+            bool mappedPosition = mapper.TrySectionToVolume(points, out VolumePositions);
+            if (!mappedPosition) //Remove locations we can't map
+            {
+                Trace.WriteLine("MapShapeSectionToVolume: Shape #" + shape.ToString() + " was unmappable.", "WebAnnotation");
+                return null;
+            }
+
+            return SqlGeometryUtils.GeometryExtensions.ToGeometry(shape.STGeometryType(), VolumePositions);
+        }
+
+        public static Microsoft.SqlServer.Types.SqlGeometry TryMapShapeVolumeToSection(this Viking.VolumeModel.IVolumeToSectionMapper mapper, Microsoft.SqlServer.Types.SqlGeometry shape)
+        {
+            GridVector2[] SectionPositions;
+            GridVector2[] points = shape.ToPoints();
+
+            bool mappedPosition = mapper.TryVolumeToSection(points, out SectionPositions);
+            if (!mappedPosition) //Remove locations we can't map
+            {
+                Trace.WriteLine("MapShapeSectionToVolume: Shape #" + shape.ToString() + " was unmappable.", "WebAnnotation");
+                return null;
+            }
+
+            return SqlGeometryUtils.GeometryExtensions.ToGeometry(shape.STGeometryType(), SectionPositions);
+        }
+
         /// <summary>
         /// Map all of the control points for the geometry individually
         /// </summary>
         /// <param name="loc"></param>
         /// <returns></returns>
-        public static bool MapLocationByControlPoints(this Viking.VolumeModel.IVolumeToSectionMapper mapper, WebAnnotationModel.LocationObj loc)
+        private static bool MapLocationShapeToVolume(this Viking.VolumeModel.IVolumeToSectionMapper mapper, WebAnnotationModel.LocationObj loc)
         {
             //Don't bother mapping if the location was already mapped
             if (loc.VolumeTransformID == mapper.ID)
                 return true;
 
-            GridVector2[] VolumePositions;
-            GridVector2[] points = loc.MosaicShape.ToPoints();
-
-            bool mappedPosition = mapper.TrySectionToVolume(loc.MosaicShape.ToPoints(), out VolumePositions);
-            if (!mappedPosition) //Remove locations we can't map
+            Microsoft.SqlServer.Types.SqlGeometry mappedshape = mapper.TryMapShapeSectionToVolume(loc.MosaicShape);
+            if (mappedshape == null)
             {
-                Trace.WriteLine("AddLocation: Location #" + loc.ID.ToString() + " was unmappable.", "WebAnnotation");
+                Trace.WriteLine("MapLocationToVolume: Location #" + loc.ID.ToString() + " was unmappable.", "WebAnnotation");
                 return false;
             }
 
+            loc.VolumeShape = mappedshape;
             loc.VolumeTransformID = mapper.ID;
-            //loc.VolumePosition = VolumePosition;
-            loc.VolumeShape = SqlGeometryUtils.GeometryExtensions.ToGeometry(loc.MosaicShape.STGeometryType(), VolumePositions);
 
             return true;
         }
