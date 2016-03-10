@@ -163,29 +163,15 @@ namespace WebAnnotation.UI.Commands
             //Draw a line from the selected location to the new location if we are holding left button down
             if (this.oldMouse.Button == MouseButtons.Left)
             {
-                ViewModel.SectionLocationsViewModel sectionAnnotations = AnnotationOverlay.GetAnnotationsForSection(Parent.Section.Number);
-                if (sectionAnnotations == null)
-                    return;
-
                 GridVector2 selectedPos = selected.VolumePosition; 
                 /*bool found = sectionAnnotations.TryGetPositionForLocation(selected, out selectedPos);
                 if (found == false)
                     return; 
                 */
-
-                //PORT XNA 4
-                /*
-                VertexDeclaration oldVertexDeclaration = graphicsDevice.VertexDeclaration;
-                graphicsDevice.VertexDeclaration = Parent.VertexPositionColorDeclaration; 
-                graphicsDevice.RenderState.PointSize = 5.0f;
-                */
-
+                
                 basicEffect.Texture = null;
                 basicEffect.TextureEnabled = false;
                 basicEffect.VertexColorEnabled = true;
-
-                //PORT XNA 4
-                //basicEffect.CommitChanges();
 
                 //Draw the new location
                 if (LocType != null && selected.Section == Parent.Section.Number)
@@ -202,35 +188,19 @@ namespace WebAnnotation.UI.Commands
                                                         new VertexPositionColor(new Vector3((float)this.oldWorldPosition.X, (float)oldWorldPosition.Y, 0f), Color.Gold)};
 
                     int[] indicies = new int[] { 0, 1 };
-
-
-                    //PORT XNA 4
-                    //basicEffect.Begin();
-
+                    
                     foreach (EffectPass pass in basicEffect.CurrentTechnique.Passes)
                     {
-                        //PORT XNA 4
-                        //pass.Begin();
                         pass.Apply();
 
                         if (verts != null && verts.Length > 0)
                             graphicsDevice.DrawUserIndexedPrimitives<VertexPositionColor>(PrimitiveType.LineList, verts, 0, verts.Length, indicies, 0, indicies.Length / 2);
-
-                        //PORT XNA 4
-                        //pass.End();
+                        
                     }
-
-                    //PORT XNA 4
-                    //basicEffect.End();
                 }
-
-                //PORT XNA 4
-                //graphicsDevice.VertexDeclaration = oldVertexDeclaration; 
             }
 
             basicEffect.VertexColorEnabled = false;
-            //PORT XNA 4
-            //basicEffect.CommitChanges();
 
             base.OnDraw(graphicsDevice, scene, basicEffect);
         }
