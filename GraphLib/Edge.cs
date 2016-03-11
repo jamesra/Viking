@@ -6,13 +6,15 @@ using System.Diagnostics;
 
 namespace GraphLib
 { 
-    public class Edge<NODEKEY> : IComparer<Edge<NODEKEY>>, IComparable<Edge<NODEKEY>>
-        where NODEKEY : IComparable<NODEKEY>
+    public class Edge<NODEKEY> : IComparer<Edge<NODEKEY>>, IComparable<Edge<NODEKEY>>, IEquatable<Edge<NODEKEY>>
+        where NODEKEY : IComparable<NODEKEY>, IEquatable<NODEKEY>
     {
         public NODEKEY SourceNodeKey { get; private set; }
         public NODEKEY TargetNodeKey { get; private set; }
 
-        public float Weight = 1;
+        public virtual float Weight  { get { return 1.0f; } }
+
+        public bool IsLoop {  get { return SourceNodeKey.Equals(TargetNodeKey); } }
 
         public Edge(NODEKEY SourceNode, NODEKEY TargetNode)
         {
@@ -22,19 +24,22 @@ namespace GraphLib
             this.TargetNodeKey = TargetNode;
         }
 
-        public int Compare(Edge<NODEKEY> x, Edge<NODEKEY> y)
+        public virtual int Compare(Edge<NODEKEY> x, Edge<NODEKEY> y)
         {
-            if (x == null && y == null)
+            if (object.ReferenceEquals(x, y))
                 return 0;
-            if (x == null)
+
+            if ((object)x == null && (object)y == null)
+                return 0;
+            if ((object)x == null)
                 return -1;
-            if (y == null)
+            if ((object)y == null)
                 return 1;
 
             return x.CompareTo(y);
         }
 
-        public int CompareTo(Edge<NODEKEY> other)
+        public virtual int CompareTo(Edge<NODEKEY> other)
         {
             int SourceComparison = this.SourceNodeKey.CompareTo(other.SourceNodeKey);
             int TargetComparison = this.TargetNodeKey.CompareTo(other.TargetNodeKey);
@@ -46,6 +51,17 @@ namespace GraphLib
                 return SourceComparison;
 
             return TargetComparison;
+        }
+
+        public bool Equals(Edge<NODEKEY> other)
+        {
+            if (object.ReferenceEquals(this, other))
+                return true;
+
+            if ((object)other == null)
+                return false;
+
+            return this.SourceNodeKey.Equals(other.SourceNodeKey) && this.TargetNodeKey.Equals(other.TargetNodeKey);
         }
     }
 }

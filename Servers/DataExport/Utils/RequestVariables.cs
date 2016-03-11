@@ -23,7 +23,7 @@ namespace DataExport.Controllers
                      idListstr = Request.RequestContext.HttpContext.Request.QueryString["ids"];
                      if (idListstr == null)
                      {
-                         return null;
+                         return new long[0];
                      }            
                 }
 
@@ -42,6 +42,7 @@ namespace DataExport.Controllers
                     }
                 }
 
+                ids.Sort();
                 return ids;
             }
 

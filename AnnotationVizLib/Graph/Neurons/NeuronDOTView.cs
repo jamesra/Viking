@@ -22,38 +22,8 @@ namespace AnnotationVizLib
 
             DotGraph.Attributes.Add("nslimit", Math.Ceiling(Math.Sqrt(graph.Nodes.Count)).ToString());
             DotGraph.Attributes.Add("mclimit", Math.Ceiling(Math.Sqrt(graph.Nodes.Count)).ToString());
-
-            List<NeuronEdge> UniqueEdges = new List<NeuronEdge>();
+            
             foreach (NeuronEdge edge in graph.Edges.Values)
-            {
-                bool AddEdge = true;
-                if (!ShowFreeEdges)
-                {
-                    if (!graph.Nodes.ContainsKey(edge.SourceNodeKey) || !graph.Nodes.ContainsKey(edge.TargetNodeKey))
-                    {
-                        AddEdge = false;
-                        continue;
-                    }
-                }
-
-                foreach (NeuronEdge existingEdge in UniqueEdges)
-                {
-                    if (existingEdge.SourceNodeKey == edge.SourceNodeKey &&
-                       existingEdge.TargetNodeKey == edge.TargetNodeKey &&
-                       existingEdge.SynapseType == edge.SynapseType)
-                    {
-                        AddEdge = false;
-                        existingEdge.Weight = existingEdge.Weight + 1;
-                    }   
-                }
-
-                if (AddEdge)
-                {
-                    UniqueEdges.Add(edge);
-                }
-            }
-
-            foreach (NeuronEdge edge in UniqueEdges)
             {
                 GraphViewEdge<long> DOTEdge = GraphVizEdgeFromNeuronEdge(DotGraph, edge);
             }

@@ -18,12 +18,30 @@ namespace Annotation
 {
     [ServiceBehavior(InstanceContextMode = InstanceContextMode.PerCall)]
     [AspNetCompatibilityRequirements(RequirementsMode= AspNetCompatibilityRequirementsMode.Required)]
-    public class AnnotateService : IAnnotateStructureTypes, IAnnotateStructures, IAnnotateLocations, IDisposable, ICircuit
+    public class AnnotateService : IAnnotateStructureTypes, IAnnotateStructures, IAnnotateLocations, IDisposable, ICircuit, ICredentials
     {
  
         public AnnotateService()
         {
             
+        }
+
+        [PrincipalPermission(SecurityAction.Demand, Role = "Read")]
+        bool ICredentials.CanRead()
+        {
+            return true;
+        }
+
+        [PrincipalPermission(SecurityAction.Demand, Role = "Modify")]
+        bool ICredentials.CanWrite()
+        {
+            return true;
+        }
+
+        [PrincipalPermission(SecurityAction.Demand, Role = "Admin")]
+        bool ICredentials.CanAdmin()
+        {
+            return true;
         }
 
         public static void ConfigureContextAsReadOnly(ConnectomeEntities db)
@@ -610,8 +628,7 @@ namespace Annotation
                     long maxIDValue = ShorterIDArray[ShorterIDArray.Length - 1];
 
                     List<long> ShorterListIDs = new List<long>(ShorterIDArray);
-
-                   
+ 
                     try
                     {
                         IQueryable<ConnectomeDataModel.Structure> structObjs = from s in db.Structures
@@ -2369,6 +2386,7 @@ namespace Annotation
 
         }
 
+        
         #endregion
 
 

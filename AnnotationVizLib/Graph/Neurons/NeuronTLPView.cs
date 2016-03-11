@@ -33,35 +33,11 @@ namespace AnnotationVizLib
 
             NodeAttribs.Add("StructureURL", string.Format("{0}/OData/ConnectomeData.svc/Structures({1}L)", this.VolumeURL, node.Key));
             NodeAttribs.Add("ID", string.Format("{0}", node.Key));
-            NodeAttribs.Add("Tags", AttributesToString(node.Structure.AttributesXml));
+            NodeAttribs.Add("Tags", ObjAttribute.AttributesToString(node.Structure.AttributesXml));
 
             tlpnode.AddAttributes(NodeAttribs);
 
             return tlpnode;
-        }
-
-        public static string AttributesToString(string xml)
-        {
-            List<ObjAttribute> listAttribs = ObjAttribute.Parse(xml).Where(a => !string.IsNullOrEmpty(a.Name)).ToList();
-
-            StringBuilder sb = new StringBuilder();
-            string row;
-            bool FirstRow = true;
-            foreach (ObjAttribute a in listAttribs)
-            {
-                if(FirstRow)
-                {
-                    FirstRow = false; 
-                }
-                else
-                {
-                    sb.Append(';');
-                }
-
-                sb.Append(a.ToString());
-            }
-
-            return sb.ToString();
         }
 
         public string LabelForNode(NeuronNode node)
@@ -75,10 +51,11 @@ namespace AnnotationVizLib
         public static string LinkedStructures(NeuronEdge edge)
         {
             StringBuilder sb = new StringBuilder();
+
             //sb.Append(edge.SynapseType);
             foreach (AnnotationService.StructureLink link in edge.Links)
             {
-                sb.Append("\t" + LinkString(link));
+                sb.AppendLine("\t" + LinkString(link));
             }
 
             return sb.ToString();
@@ -94,30 +71,24 @@ namespace AnnotationVizLib
         /// </summary>
         /// <param name="edge"></param>
         /// <returns></returns>
-        public TLPViewEdge CreateTLPEdge(NeuronEdge edge)
+        public void CreateTLPEdge(NeuronEdge edge)
         {
             TLPViewEdge tlpedge = null;
+            TLPViewEdge tlp_reverse_edge = null;
             try
             {
                 tlpedge = this.addEdge(edge.SourceNodeKey, edge.TargetNodeKey);
+                if(edge.Bidirectional && !edge.IsLoop)
+                {
+                    tlp_reverse_edge = this.addEdge(edge.TargetNodeKey, edge.SourceNodeKey);
+                }
             }
             catch(KeyNotFoundException)
             {
                 Trace.WriteLine(string.Format("Nodes missing for edge {0}", edge.ToString()));
-                return null;
-            }
-            
-            IDictionary<string, string> EdgeAttribs = AttributeMapper.AttribsForLabel(edge.SynapseType, TLPAttributes.StandardEdgeSourceLabelToTLPAppearance);
-
-            if (EdgeAttribs.Count == 0)
-            {
-                //Add default node properties 
-                AttributeMapper.CopyAttributes(TLPAttributes.UnknownTLPEdgeAttributes, EdgeAttribs);
+                return;
             }
 
-            EdgeAttribs.Add("viewLabel", edge.SynapseType);
-            EdgeAttribs.Add("edgeType", edge.SynapseType);
-            EdgeAttribs.Add("LinkedStructures", LinkedStructures(edge));
 
             /*
             foreach(long sourceID in edge.SourceStructIDs)
@@ -133,9 +104,36 @@ namespace AnnotationVizLib
             }
             */
 
-            tlpedge.AddAttributes(EdgeAttribs);
+            IDictionary<string, string> EdgeAttribs = AttributesForEdge(edge);
 
-            return tlpedge;
+            tlpedge.AddAttributes(EdgeAttribs);
+            if (tlp_reverse_edge != null)
+            {
+                EdgeAttribs["Source"] = edge.TargetNodeKey.ToString();
+                EdgeAttribs["Target"] = edge.SourceNodeKey.ToString();
+                tlp_reverse_edge.AddAttributes(EdgeAttribs);
+            }
+        }
+
+        private static IDictionary<string, string> AttributesForEdge(NeuronEdge edge)
+        {
+            IDictionary<string, string> EdgeAttribs = AttributeMapper.AttribsForLabel(edge.SynapseType, TLPAttributes.StandardEdgeSourceLabelToTLPAppearance);
+
+            if (EdgeAttribs.Count == 0)
+            {
+                //Add default node properties 
+                AttributeMapper.CopyAttributes(TLPAttributes.UnknownTLPEdgeAttributes, EdgeAttribs);
+            }
+
+            EdgeAttribs.Add("Source", edge.SourceNodeKey.ToString());
+            EdgeAttribs.Add("Target", edge.TargetNodeKey.ToString());
+            EdgeAttribs.Add("viewLabel", edge.SynapseType);
+            EdgeAttribs.Add("edgeType", edge.SynapseType);
+            EdgeAttribs.Add("LinkedStructures", LinkedStructures(edge));
+            EdgeAttribs.Add("IsLoop", edge.IsLoop.ToString());
+            EdgeAttribs.Add("Bidirectional", edge.Bidirectional.ToString());
+
+            return EdgeAttribs;
         }
 
         public static NeuronTLPView ToTLP(NeuronGraph graph, string VolumeURL, bool IncludeUnlabeled = false)

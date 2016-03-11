@@ -56,27 +56,39 @@ namespace AnnotationVizLib
         /// </summary>
         /// <param name="edge"></param>
         /// <returns></returns>
-        public GMLViewEdge CreateGMLEdge(NeuronEdge edge)
+        public void CreateGMLEdge(NeuronEdge edge)
         {
             GMLViewEdge GMLedge = null;
+            GMLViewEdge GMLReverseEdge = null;
             try
             {
                 GMLedge = this.addEdge(edge.SourceNodeKey, edge.TargetNodeKey);
+                if(edge.Bidirectional && !edge.IsLoop)
+                {
+                    GMLReverseEdge = this.addEdge(edge.TargetNodeKey, edge.SourceNodeKey);
+                }                
             }
             catch (KeyNotFoundException)
             {
                 Trace.WriteLine(string.Format("Nodes missing for edge {0}", edge.ToString()));
-                return null;
+                return;
             }
 
-            IDictionary<string, string> EdgeAttribs = new Dictionary<string, string>();
-            
-            
-            EdgeAttribs.Add("edgeType", edge.SynapseType);
-            
+            IDictionary<string, string> EdgeAttribs = AttributesForEdge(edge);
             GMLedge.AddAttributes(EdgeAttribs);
 
-            return GMLedge;
+            if (GMLReverseEdge != null)
+                GMLReverseEdge.AddAttributes(EdgeAttribs);
+
+            return;
+        }
+
+        protected static IDictionary<string, string> AttributesForEdge(NeuronEdge edge)
+        {
+            Dictionary<string, string> EdgeAttribs = new Dictionary<string, string>();
+            EdgeAttribs.Add("edgeType", edge.SynapseType);
+            EdgeAttribs.Add("Bidirectional", edge.Bidirectional.ToString());
+            return EdgeAttribs;
         }
 
         public static NeuronGMLView ToGML(NeuronGraph graph, string VolumeURL, bool IncludeUnlabeled = false)

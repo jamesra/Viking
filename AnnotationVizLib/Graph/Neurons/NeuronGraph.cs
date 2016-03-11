@@ -8,26 +8,63 @@ using System.Diagnostics;
 
 namespace AnnotationVizLib
 {
-    public class NeuronEdge : Edge<long>
+    public class StructureLinkComparer : Comparer<StructureLink>
+    {
+        public override int Compare(StructureLink x, StructureLink y)
+        {
+            if (object.ReferenceEquals(x, y))
+                return 0;
+
+            bool XIsNull = (object)x == null;
+            bool YIsNull = (object)y == null;
+
+            if (XIsNull)
+                return -1;
+            else if (YIsNull)
+                return 1;
+
+            int SourceCompare = x.SourceID.CompareTo(y.SourceID);
+            if (SourceCompare != 0)
+                return SourceCompare;
+            else
+            {
+                int TargetCompare = x.TargetID.CompareTo(y.TargetID);
+                return TargetCompare;
+            }
+        }         
+    }
+
+    public class NeuronEdge : Edge<long>, IComparer<NeuronEdge>, IComparable<NeuronEdge>, IEquatable<NeuronEdge>
     {
         public string SynapseType;
+
+        public bool Bidirectional;
 
         /// <summary>
         /// List of child structures involved in the link
         /// </summary>
-        public List<StructureLink> Links = new List<StructureLink>();
+        public SortedSet<StructureLink> Links = new SortedSet<StructureLink>(new StructureLinkComparer());
 
+        public override float Weight
+        {
+            get
+            {
+                return (float)Links.Count();
+            }
+        }
 
         public NeuronEdge(long SourceKey, long TargetKey, StructureLink Link, string SynapseType)
             : base(SourceKey, TargetKey)
         {
             this.Links.Add(Link);
             this.SynapseType = SynapseType;
-        }
+            this.Bidirectional = Link.Bidirectional;
+        } 
 
         public void AddLink(StructureLink link)
         {
             Debug.Assert(!Links.Contains(link));
+            Debug.Assert(this.Bidirectional == link.Bidirectional);
 
             Links.Add(link);
         }
@@ -54,8 +91,58 @@ namespace AnnotationVizLib
         public override string ToString()
         {
             return this.SourceNodeKey.ToString() + "-" + this.TargetNodeKey.ToString() + " via " + this.SynapseType + " " + PrintChildLinks();
-        }    
-}
+        }
+
+        public int Compare(NeuronEdge x, NeuronEdge y)
+        {
+            int comparison = base.Compare(x, y);
+            if (comparison != 0)
+                return comparison;
+
+            if((object)x != null && (object)y != null)
+            {
+                comparison = x.Bidirectional.CompareTo(y.Bidirectional);
+                if (comparison != 0)
+                    return comparison;
+
+                return string.Compare(x.SynapseType, y.SynapseType);
+            }
+            else
+                return comparison;
+        }
+
+        public int CompareTo(NeuronEdge other)
+        {
+            int comparison = base.CompareTo(other);
+            if (comparison != 0)
+                return comparison;
+
+            if((object)other != null)
+            {
+                comparison = this.Bidirectional.CompareTo(other.Bidirectional);
+                if (comparison != 0)
+                    return comparison;
+                 
+                return this.SynapseType.CompareTo(other.SynapseType);
+            }
+            else
+                return comparison;
+        }
+
+        public bool Equals(NeuronEdge other)
+        {
+            bool baseEquals = this.Equals(other);
+            if(baseEquals && ((object)other != null))
+            {
+                if (this.Bidirectional != other.Bidirectional)
+                    return false;
+
+                return this.SynapseType.Equals(other.SynapseType);
+            }
+
+            return false;
+        }
+    }
 
     public class NeuronNode : Node<long, NeuronEdge>
     {
@@ -178,8 +265,6 @@ namespace AnnotationVizLib
                         {
                             this.Edges.Add(E, E);
                         }
-
-                        
                     }
                 }
             }
@@ -234,7 +319,7 @@ namespace AnnotationVizLib
 
         private Structure[] FindMissingLinkedStructures(AnnotateStructuresClient proxy, Structure[] ChildStructures)
         { 
-            List<long> ListAbsentLinkPartners = new List<long>(ChildStructures.Length);
+            SortedSet<long> ListAbsentLinkPartners = new SortedSet<long>();
 
             //Find missing structures and populate the list
             foreach (Structure child in ChildStructures)
@@ -252,7 +337,6 @@ namespace AnnotationVizLib
                     if (!IDToStructure.ContainsKey(link.SourceID))
                     {
                         ListAbsentLinkPartners.Add(link.SourceID);
-
                     }
 
                     if (!IDToStructure.ContainsKey(link.TargetID))
@@ -262,7 +346,7 @@ namespace AnnotationVizLib
                 }
             }
 
-            Structure[] LinkedStructurePartners = proxy.GetStructuresByIDs(ListAbsentLinkPartners.ToArray(), false);
+            Structure[] LinkedStructurePartners = proxy.GetStructuresByIDs(ListAbsentLinkPartners.Distinct().ToArray(), false);
             return LinkedStructurePartners;
         } 
         

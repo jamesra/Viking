@@ -55,8 +55,6 @@ namespace AnnotationVizLib
         }
     }
 
-
-
     public class MorphologyGraph : Graph<ulong, MorphologyNode, MorphologyEdge>
     {
         /// <summary>
@@ -79,6 +77,19 @@ namespace AnnotationVizLib
 
                 return Queries.IDToStructureType[this.structure.TypeID];
             }
+        }
+
+        private string _AttributesAsString = null; 
+        /// <summary>
+        /// Converts attributes to a string and caches the results.  Not caching the results was causing performance issues.
+        /// </summary>
+        /// <returns></returns>
+        public string AttributesToString()
+        {
+            if (_AttributesAsString == null)
+                _AttributesAsString = ObjAttribute.AttributesToString(structure.AttributesXml);
+
+             return _AttributesAsString;
         }
 
         public MorphologyGraph(ulong subgraph_id)

@@ -43,7 +43,7 @@ namespace AnnotationVizLib
             {
                 if (!graph.Nodes.ContainsKey(edge.SourceNodeKey) || !graph.Nodes.ContainsKey(edge.TargetNodeKey))
                     continue; 
-
+                 
                 NeuronNode SourceNode = graph.Nodes[edge.SourceNodeKey];
                 NeuronNode TargetNode = graph.Nodes[edge.TargetNodeKey];
                 string KeyString = SourceNode.Structure.ID.ToString() + "-" + TargetNode.Structure.ID.ToString() + " via " + edge.SynapseType + " from " + edge.PrintChildLinks() ;
@@ -54,7 +54,8 @@ namespace AnnotationVizLib
                     SourceStructureID = SourceNode.Key,
                     TargetStructureID = TargetNode.Key,
                     Label = KeyString,
-                    Type = edge.SynapseType
+                    Type = edge.SynapseType,
+                    Bidirectional = edge.Bidirectional
                 });
 
                 edgeCount++; 

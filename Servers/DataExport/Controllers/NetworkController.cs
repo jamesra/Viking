@@ -11,21 +11,34 @@ namespace DataExport.Controllers
 {
     public class NetworkController : Controller
     {
-        public string DefaultOutputFile = "network";
-
-        private static long _next_id = 0;
-
-        public static long NextFilenameID
-        {
-            get
-            {
-                return _next_id++;
-            }
-        }
-
         public string GetOutputFilename(string ext)
         {
-            return string.Format("{0}{1}.{2}", DefaultOutputFile, NextFilenameID, ext);
+            ICollection<long> requestIDs = RequestVariables.GetQueryStringIDs(Request).Cast<long>().ToArray();
+            string ID_List = "";
+            bool first = true;
+            if (requestIDs.Count == 0)
+                ID_List = "ALL";
+
+            foreach (long ID in requestIDs)
+            {
+                if(first)
+                {
+                    first = false;
+                }
+                else
+                {
+                    ID_List += "_";
+                }
+
+                ID_List += ID.ToString();
+                if (ID_List.Length > 200)
+                {
+                    ID_List += "etc";
+                    break;
+                }
+            }
+
+            return string.Format("nw-{0}_hops_{1}.{2}", ID_List, GetNumHops(), ext);
         }
 
         //
@@ -35,7 +48,6 @@ namespace DataExport.Controllers
         {
             string outputFilename = GetOutputFilename("dot");
             string outputFileFullPath = System.IO.Path.Combine(GetAndCreateOutputDirectory(), outputFilename);
-
 
             NeuronGraph neuronGraph = GetGraph();
             NeuronDOTView DotGraph = NeuronDOTView.ToDOT(neuronGraph, false);

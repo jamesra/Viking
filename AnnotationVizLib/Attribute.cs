@@ -104,8 +104,36 @@ namespace AnnotationVizLib
             if (structureElem == null)
                 return new List<ObjAttribute>();
 
-            return ObjAttribute.ElementToAttribs(structureElem);
-             
+            return ObjAttribute.ElementToAttribs(structureElem);    
+        }
+
+        /// <summary>
+        /// Convert XML attributes to a semicolon delimited string
+        /// </summary>
+        /// <param name="xml"></param>
+        /// <returns></returns>
+        public static string AttributesToString(string xml)
+        {
+            List<ObjAttribute> listAttribs = ObjAttribute.Parse(xml).Where(a => !string.IsNullOrEmpty(a.Name)).ToList();
+
+            StringBuilder sb = new StringBuilder();
+            string row;
+            bool FirstRow = true;
+            foreach (ObjAttribute a in listAttribs)
+            {
+                if (FirstRow)
+                {
+                    FirstRow = false;
+                }
+                else
+                {
+                    sb.Append(';');
+                }
+
+                sb.Append(a.ToString());
+            }
+
+            return sb.ToString();
         }
 
         private static List<ObjAttribute> ElementToAttribs(XElement structureElem)

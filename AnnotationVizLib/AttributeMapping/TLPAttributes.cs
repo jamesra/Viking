@@ -114,14 +114,19 @@ namespace AnnotationVizLib
             {"viewShape", "int"},
             {"viewSrcAnchorShape", "int"},
             {"viewTgtAnchorShape", "int"},
+            {"Bidirectional", "bool" },
             {"NumLinkedStructures", "int"},
             {"LocationID", "int"},
+            {"IsLoop", "bool"},
             {"ParentID", "int"},
+            {"Source", "int"},
+            {"Target", "int"},
             {"Terminal", "bool"},
             {"Off Edge", "bool" },
             {"Vericosity Cap", "bool"},
             {"Untraceable","bool" },
-            {"Tags", "string" }
+            {"Tags", "string" },
+            {"StructureTags", "string" }
 
         };
 
