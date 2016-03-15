@@ -889,17 +889,15 @@ namespace Viking
             if (this.Aborted || this.IsDisposed)
                 return;
 
-            System.Threading.Tasks.Task.Run(() => {
-                TextureData data = TextureReader.TextureDataFromStream(streamdata);
-                Texture2D texture = TextureReader.TextureFromData(device, data, this.MipMapLevels > 0);
-                //Func<GraphicsDevice, TextureData, bool, Texture2D> TextureFromDataFunc = TextureReader.TextureFromData;
-                //IAsyncResult result = TextureFromDataFunc.BeginInvoke(device, data, this.MipMapLevels > 0, null, null);
-                //Texture2D texture = TextureFromDataFunc.EndInvoke(result);
+            //System.Threading.Tasks.Task.Run(() => {
+            TextureData data = TextureReader.TextureDataFromStream(streamdata);
+            Action a = new Action(() =>
+            {
+                Texture2D texture = TextureReader.TextureFromData(device, data, this.MipMapLevels > 0);                
                 this.SetTexture(texture);
             });
 
-            //Func<GraphicsDevice, byte[], TextureData> func = TextureReader.TextureDataFromStream;
-            //IAsyncResult result = func.BeginInvoke(device, streamdata, EndTextureDataFromStream, func);
+            Viking.UI.State.MainThreadDispatcher.BeginInvoke(a);
         }
          
 
@@ -1066,6 +1064,9 @@ namespace Viking
 
         public static Texture2D TextureFromData(GraphicsDevice graphicsDevice, TextureData texdata, bool mipmap)
         {
+            if (graphicsDevice.IsDisposed)
+                return null;
+
             //Trace.WriteLine("TextureFromData: " + this.Filename.ToString()); 
             Texture2D tex = null;
             try
