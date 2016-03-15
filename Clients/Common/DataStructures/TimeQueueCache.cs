@@ -95,12 +95,24 @@ namespace Common.DataStructures
         /// <param name="textureStream"></param>
         public virtual bool Add(KEY key, ADDTYPE value)
         {
-
             CACHEENTRY entry = CreateEntry(key, value);
             if (entry == null)
                 return false;
 
             return AddEntry(entry);
+        }
+
+        /// <summary>
+        /// Creates a file for the texture passed.
+        /// </summary>
+        /// <param name="filename"></param>
+        /// <param name="textureStream"></param>
+        public virtual void AddAsync(KEY key, ADDTYPE value)
+        {
+           System.Threading.Tasks.Task.Run(() =>
+           {
+               this.Add(key, value);
+           });
         }
 
         /// <summary>

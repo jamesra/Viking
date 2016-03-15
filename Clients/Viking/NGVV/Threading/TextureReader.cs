@@ -529,7 +529,7 @@ namespace Viking
 
                         if (CacheFilename != null)
                         {
-                            System.Threading.Tasks.Task.Run(() => Global.TextureCache.AddAsync(CacheFilename, data));
+                            Global.TextureCache.AddAsync(CacheFilename, data);
                             //Action<String, byte[]> AddToCache = Global.TextureCache.AddAsync;
                             //AddToCache.BeginInvoke(CacheFilename, data, null, null);
                         }
@@ -603,59 +603,6 @@ namespace Viking
         }
 
 
-        private void EndReadResponseStream(IAsyncResult asyncResult)
-        {
-            AsyncState requestState = (AsyncState)asyncResult.AsyncState;
-             
-            lock (this)
-            {
-                try
-                {
-                    //Trace.WriteLine("EndReadResponseStream: " + requestState.TextureURI); 
-                    int read = requestState.responseStream.EndRead(asyncResult);
-                    requestState.TotalRead += read;
-
-                    if (Aborted || IsDisposed)
-                    {
-                        //Trace.WriteLine("Ignoring EndReadResponseStream response for: " + this.Filename.ToString());
-                        requestState.Dispose();
-                        requestState = null;
-                        return;
-                    }
-
-                    if (requestState.TotalRead < requestState.response.ContentLength)
-                    {
-                        Debug.Assert(requestState.ReadRequestSize() + requestState.TotalRead <= requestState.response.ContentLength);
-                        requestState.responseStream.BeginRead(requestState.databuffer, requestState.TotalRead, requestState.ReadRequestSize(), new AsyncCallback(this.EndReadResponseStream), requestState);
-                    }
-                    else
-                    {
-                        if (CacheFilename != null)
-                        {
-                            Global.TextureCache.AddAsync(CacheFilename, requestState.databuffer);
-                        }
-                         
-//                        Texture2D tex = TextureFromStream(graphicsDevice, requestState.databuffer, this.MipMapLevels > 0);
- //                       this.SetTexture(tex); 
-
-                        //Trace.WriteLine("TextureFromStream: " + requestState.TextureURI); 
-                        TextureFromStreamAsync(graphicsDevice, requestState.databuffer);
-                    }
-                }
-                catch (System.OutOfMemoryException e)
-                {
-                    //Trace.WriteLine("Out of memory loading texture: " + requestState.request.RequestUri.ToString(), "TextureUse");
-                    //Trace.WriteLine(e.Message, "TextureUse");
-                    //                        System.GC.Collect();
-
-                    this.SetTexture(null);
-                }
-                catch (WebException e)
-                {
-                    ProcessTextureWebException(e, requestState);
-                }
-            }
-        }
 
         private void TryDeleteFile(string filepath)
         {
@@ -1065,6 +1012,9 @@ namespace Viking
         public static Texture2D TextureFromData(GraphicsDevice graphicsDevice, TextureData texdata, bool mipmap)
         {
             if (graphicsDevice.IsDisposed)
+                return null;
+
+            if (texdata == null)
                 return null;
 
             //Trace.WriteLine("TextureFromData: " + this.Filename.ToString()); 
