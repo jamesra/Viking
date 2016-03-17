@@ -113,19 +113,14 @@ namespace Viking
 
             return stream; 
         }
-
-
-        public void AddAsync(string key, byte[] textureBuffer)
-        {
-            CreateEntry(key, textureBuffer, true);
-        }
+        
           
         /// <summary>
         /// Creates a file for the texture passed.
         /// </summary>
         /// <param name="filename"></param>
         /// <param name="textureStream"></param>
-        protected LocalTextureCacheEntry CreateEntry(string filename, byte[] textureBuffer, bool async)
+        protected override LocalTextureCacheEntry CreateEntry(string filename, byte[] textureBuffer)
         {
             System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(filename));
             FileStream stream = null; 
@@ -133,20 +128,13 @@ namespace Viking
             {
                 stream = new FileStream(filename, FileMode.Create, FileAccess.Write);
                 if (stream != null)
-                {
-                    if (async)
-                    {
-                        stream.BeginWrite(textureBuffer, 0, textureBuffer.Length, this.AsynchWriteCompleted, new object[] { stream, filename });
-                    }
-                    else
-                    { 
-                        stream.Write(textureBuffer, 0, textureBuffer.Length);
-                        stream.Dispose(); 
-                        stream = null; 
+                { 
+                    stream.Write(textureBuffer, 0, textureBuffer.Length);
+                    stream.Dispose(); 
+                    stream = null; 
 
-                        LocalTextureCacheEntry entry = new LocalTextureCacheEntry(filename);
-                        return entry; 
-                    }
+                    LocalTextureCacheEntry entry = new LocalTextureCacheEntry(filename);
+                    return entry; 
                 }
             }
             catch (System.IO.IOException ioexception)
@@ -161,17 +149,6 @@ namespace Viking
             //An entry is created if the asynch write succeeds
             return null; 
         }
-
-        /// <summary>
-        /// Creates a file for the texture passed.
-        /// </summary>
-        /// <param name="filename"></param>
-        /// <param name="textureStream"></param>
-        protected override LocalTextureCacheEntry CreateEntry(string filename, byte[] textureBuffer)
-        {
-            return CreateEntry(filename, textureBuffer, false);
-        }
-
 
         /// <summary>
         /// The entry is being removed from the cache, so delete the file from the cache
@@ -197,29 +174,6 @@ namespace Viking
             }
 
             return true;
-        }
-
-        protected void AsynchWriteCompleted(IAsyncResult result)
-        {             
-            if (result.IsCompleted)
-            {
-                object[] state = (object[])result.AsyncState;
-                FileStream stream = (FileStream)state[0]; 
-                if (stream != null)
-                {
-                    stream.Close();
-                    stream = null; 
-                }
-
-                string key = (string)state[1];
-                LocalTextureCacheEntry entry = new LocalTextureCacheEntry(key);
-                bool Added = base.AddEntry(entry); 
-                if (!Added)
-                {
-                    entry.Dispose();
-                    entry = null;
-                }
-            }
         }
     }
 }

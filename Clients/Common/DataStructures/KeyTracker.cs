@@ -16,12 +16,39 @@ namespace Viking.Common
         private System.Threading.ReaderWriterLockSlim rwKnownLocationsLock = new System.Threading.ReaderWriterLockSlim();
 
         private SortedSet<T> TrackedKeys = new SortedSet<T>();
+
+        public IEnumerable<T> ValuesCopy()
+        {
+            try
+            {
+                rwKnownLocationsLock.EnterReadLock();
+                return new SortedSet<T>(TrackedKeys);
+            }
+            finally
+            {
+                rwKnownLocationsLock.ExitReadLock();
+            }
+        }
+
         public bool Contains(T ID)
         {
             try
             {
                 rwKnownLocationsLock.EnterReadLock();
                 return TrackedKeys.Contains(ID);
+            }
+            finally
+            {
+                rwKnownLocationsLock.ExitReadLock();
+            }
+        }
+
+        public int Count()
+        {
+            try
+            {
+                rwKnownLocationsLock.EnterReadLock();
+                return TrackedKeys.Count();
             }
             finally
             {

@@ -7,12 +7,11 @@ using WebAnnotationModel.Objects;
 
 namespace WebAnnotationModel
 {
-    public struct StructureLinkKey
+    public struct StructureLinkKey : IEquatable<StructureLinkKey>, IComparable<StructureLinkKey>
     {
-        StructureLinkObj link;
-
-        long _SourceID;
-        long _TargetID; 
+        readonly long _SourceID;
+        readonly long _TargetID;
+        readonly bool _Bidirectional;
 
         //public long SourceID { get { return link != null ? link.SourceID : _SourceID;  } }
         //public long TargetID { get { return link != null ? link.TargetID : _TargetID; } }
@@ -20,18 +19,28 @@ namespace WebAnnotationModel
         public long SourceID { get { return _SourceID;  } }
         public long TargetID { get { return _TargetID; } }
 
+        public bool Bidirectional { get { return _Bidirectional; } }
+
         public StructureLinkKey(StructureLink obj)
         {
             _SourceID = obj.SourceID;
             _TargetID = obj.TargetID;
-            link = null;
+            _Bidirectional = obj.Bidirectional;
+            
         }
 
         public StructureLinkKey(StructureLinkObj obj)
         {
-            link = obj;
-            _SourceID = link.SourceID;
-            _TargetID = link.TargetID; 
+            _SourceID = obj.SourceID;
+            _TargetID = obj.TargetID;
+            _Bidirectional = obj.Bidirectional;
+        }
+
+        public StructureLinkKey(long SourceID, long TargetID, bool Bidirectional)
+        {
+            _SourceID = SourceID;
+            _TargetID = TargetID;
+            _Bidirectional = Bidirectional;
         }
 
         public override bool Equals(object obj)
@@ -42,8 +51,8 @@ namespace WebAnnotationModel
                 return false; 
 
             StructureLinkKey other = (StructureLinkKey)obj;
-            
-            return this == other;           
+
+            return this.SourceID == other.SourceID && this.TargetID == other.TargetID && this.Bidirectional == other.Bidirectional;
         }
 
         public override int GetHashCode()
@@ -51,14 +60,38 @@ namespace WebAnnotationModel
             return (int)(SourceID % int.MaxValue); 
         }
 
+        public bool Equals(StructureLinkKey other)
+        {
+            if ((object)other == null)
+                return false;
+
+            return this.SourceID == other.SourceID && this.TargetID == other.TargetID && this.Bidirectional == other.Bidirectional;
+        }
+
+        public int CompareTo(StructureLinkKey other)
+        {
+            if ((object)other == null)
+                return -1;
+
+            int SourceCompare = this.SourceID.CompareTo(other.SourceID);
+            if (SourceCompare != 0)
+                return SourceCompare;
+
+            int TargetCompare = this.TargetID.CompareTo(other.TargetID);
+            if (TargetCompare != 0)
+                return TargetCompare;
+
+            return this.Bidirectional.CompareTo(other.TargetID);
+        }
+
         public static bool operator ==(StructureLinkKey A, StructureLinkKey B)
         {
-            return (A.SourceID == B.SourceID) && (A.TargetID == B.TargetID);
+            return (A.SourceID == B.SourceID) && (A.TargetID == B.TargetID) && (A.Bidirectional == B.Bidirectional);
         }
 
         public static bool operator !=(StructureLinkKey A, StructureLinkKey B)
         {
-            return !((A.SourceID == B.SourceID) && (A.TargetID == B.TargetID));
+            return !((A.SourceID == B.SourceID) && (A.TargetID == B.TargetID) && (A.Bidirectional == B.Bidirectional));
         }
     }
 

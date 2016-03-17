@@ -51,6 +51,7 @@ namespace RTree
     /// </summary>
     /// <typeparam name="T"></typeparam>
     public class RTree<T>
+        where T : IEquatable<T>
     {
         private ILog log = null;
         private ILog deleteLog = null;

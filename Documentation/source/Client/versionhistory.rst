@@ -3,6 +3,11 @@
 Version History
 ###############
 
+1.1.186
+-------
+
+   * Moved many async tasks to use the Task.Run() semantics.  Some of the old calls were made using BeginInvoke on the main thread so a performance increase was seen.
+
 1.1.181
 -------
 

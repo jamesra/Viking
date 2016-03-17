@@ -528,7 +528,7 @@ namespace Viking
 
                         if (CacheFilename != null)
                         {
-                            System.Threading.Tasks.Task.Run(() => Global.TextureCache.Add(CacheFilename, data));
+                            Global.TextureCache.AddAsync(CacheFilename, data);
                         }
                     }
                      

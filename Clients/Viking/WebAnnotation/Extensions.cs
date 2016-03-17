@@ -66,6 +66,18 @@ namespace WebAnnotation
         {
             return StringToLocationType(command.AnnotationType);
         }
+
+        public static void SubscribeToPropertyChangeEvents(this WebAnnotationModel.LocationObj loc, System.Windows.IWeakEventListener listener)
+        {
+            WebAnnotation.ViewModel.NotifyPropertyChangingEventManager.AddListener(loc, listener);
+            WebAnnotation.ViewModel.NotifyPropertyChangedEventManager.AddListener(loc, listener);
+        }
+
+        public static void UnsubscribeToPropertyChangeEvents(this WebAnnotationModel.LocationObj loc, System.Windows.IWeakEventListener listener)
+        {
+            WebAnnotation.ViewModel.NotifyPropertyChangingEventManager.RemoveListener(loc, listener);
+            WebAnnotation.ViewModel.NotifyPropertyChangedEventManager.RemoveListener(loc, listener);
+        }
     }
 
     public static class GeometryExtensions

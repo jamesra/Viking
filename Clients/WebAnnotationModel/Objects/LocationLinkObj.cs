@@ -8,7 +8,7 @@ using System.Diagnostics;
 
 namespace WebAnnotationModel
 {
-    public struct LocationLinkKey : IComparable<LocationLinkKey>
+    public struct LocationLinkKey : IComparable<LocationLinkKey>, IEquatable<LocationLinkKey>
     {
         public readonly long A;
         public readonly long B;
@@ -82,7 +82,15 @@ namespace WebAnnotationModel
                 return (int)(other.A - A);
             else
                 return (int)(other.B - B);
-        }   
+        }
+
+        public bool Equals(LocationLinkKey other)
+        {
+            if ((object)other == null)
+                return false;
+
+            return (this.A == other.A && this.B == other.B);
+        }
     }
 
     public class LocationLinkObj : WCFObjBaseWithKey<LocationLinkKey, LocationLink>

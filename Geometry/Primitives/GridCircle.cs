@@ -21,6 +21,11 @@ namespace Geometry
             _HashCode = new int?();
         }
 
+        public override string ToString()
+        {
+            return Center.ToString() + " Radius: " + Radius.ToString("F2");
+        }
+
         static public GridCircle CircleFromThreePoints(GridVector2[] points)
         {
             if (points == null)

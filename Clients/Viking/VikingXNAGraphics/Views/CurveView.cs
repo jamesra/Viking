@@ -167,6 +167,8 @@ namespace VikingXNAGraphics
 
         RoundCurve.RoundCurve Curve;
 
+        bool TextureGenerating = false;
+
 
         public RoundCurve.HorizontalAlignment Alignment
         {
@@ -231,15 +233,34 @@ namespace VikingXNAGraphics
             return this.LineWidth / scene.DevicePixelWidth > 2.0;
         }
 
+        private void BeginInvokeGenerateTexture(GraphicsDevice device, SpriteBatch spritebatch, SpriteFont font)
+        {
+            if (TextureGenerating)
+                return;
+            else
+            {
+                this.TextureGenerating = true;
+                //Func<String, GraphicsDevice, SpriteBatch, SpriteFont, Color, float, RenderTarget2D> CreateTextureFunc = CreateTextureForLabel;
+                //CreateTextureFunc.BeginInvoke(Label, device, spritebatch, font, this.Color, 2.0f, EndInvokeGenerateTexture, CreateTextureFunc);
+                Action a = new Action(() =>
+                {
+                        this._LabelTexture = CreateTextureForLabel(this.Label, device, spritebatch, font, Color);
+                        this.TextureGenerating = false;
+                });
+                System.Windows.Threading.Dispatcher.CurrentDispatcher.BeginInvoke(a, System.Windows.Threading.DispatcherPriority.Background, null);    
+            }
+        }
+
         protected Texture2D GetOrCreateLabelTexture(GraphicsDevice device, SpriteBatch spritebatch, SpriteFont font)
         {
-            if(_LabelTexture == null)
+            if (_LabelTexture == null)
             {
-                _LabelTexture = CreateTextureForLabel(Label, device, spritebatch, font, this.Color);
+                BeginInvokeGenerateTexture(device, spritebatch, font);
             }
             else if(_LabelTexture.IsDisposed || _LabelTexture.IsContentLost)
             {
-                _LabelTexture = CreateTextureForLabel(Label, device, spritebatch, font, this.Color);
+                _LabelTexture = null; 
+                BeginInvokeGenerateTexture(device, spritebatch, font);
             }
 
             return _LabelTexture;
@@ -274,7 +295,8 @@ namespace VikingXNAGraphics
             labelDimensions *= scale; 
             RenderTarget2D target = new RenderTarget2D(device, (int)labelDimensions.X, (int)labelDimensions.Y);
 
-            RenderTargetBinding[] oldRenderTargets = device.GetRenderTargets();
+            //RenderTargetBinding[] oldRenderTargets = device.GetRenderTargets();
+            //TODO: Setting the render target when the scene is being drawn causes flickering
             device.SetRenderTarget(target);
 
             device.Clear(Color.Transparent);
@@ -283,7 +305,7 @@ namespace VikingXNAGraphics
             spriteBatch.DrawString(font, label, new Vector2(0, 0), color, 0, new Vector2(0,0), scale, SpriteEffects.None, 0);
             spriteBatch.End();
 
-            device.SetRenderTargets(oldRenderTargets);
+            device.SetRenderTargets(null);
 
             return target;
         }
@@ -291,7 +313,7 @@ namespace VikingXNAGraphics
         public void Draw(GraphicsDevice device, VikingXNA.Scene scene,
                                 SpriteBatch spriteBatch, SpriteFont font,
                                 RoundCurve.CurveManager CurveManager, BasicEffect basicEffect)
-        {
+        { 
             Matrix ViewProj = scene.Camera.View * scene.Projection;
             this.Draw(device, ViewProj, spriteBatch, font, CurveManager, basicEffect);
         }
@@ -407,7 +429,8 @@ namespace VikingXNAGraphics
             }
         }
 
-        public CurveView(ICollection<GridVector2> controlPoints, Microsoft.Xna.Framework.Color color, bool TryToClose,  Texture2D texture = null, double lineWidth = 16.0, LineStyle lineStyle = LineStyle.Standard, uint numInterpolations = 5)
+        public CurveView(ICollection<GridVector2> controlPoints, Microsoft.Xna.Framework.Color color, bool TryToClose, 
+                         Texture2D texture = null, double lineWidth = 16.0, LineStyle lineStyle = LineStyle.Standard, uint numInterpolations = 5)
         {
             this._CurveControlPoints = new CurveViewControlPoints(controlPoints, numInterpolations, TryToClose);
             this._Color = color;

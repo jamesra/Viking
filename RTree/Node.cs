@@ -29,6 +29,7 @@ namespace RTree
      * @version 1.0b2p1
      */
     public class Node<T>
+        where T : System.IEquatable<T>
     {
         internal int nodeId = 0;
         internal Rectangle mbr = null;
@@ -138,15 +139,6 @@ namespace RTree
                 return entries[index];
             }
             return null;
-        }
-
-        public int getId(int index)
-        {
-            if (index < entryCount)
-            {
-                return ids[index];
-            }
-            return -1;
         }
 
         /**

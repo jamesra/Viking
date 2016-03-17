@@ -38,8 +38,6 @@ namespace WebAnnotationModel
         /// The existence of a key indicates a query is in progress
         /// </summary>
         private ConcurrentDictionary<long, GetObjectBySectionCallbackState<OBJECT>> OutstandingSectionQueries = new ConcurrentDictionary<long, GetObjectBySectionCallbackState<OBJECT>>();
-
-        private RTree.RTree<GetObjectBySectionCallbackState<OBJECT>> OutstandingRegionQueries = new RTree.RTree<GetObjectBySectionCallbackState<OBJECT>>();
         
         protected ConcurrentDictionary<KEY, OBJECT> ChangedObjects = new ConcurrentDictionary<KEY, OBJECT>();
 
@@ -392,7 +390,6 @@ namespace WebAnnotationModel
                     newObj = new OBJECT();
                     newObj.Synch(data);
                     newObj = Add(newObj);
-                     
                 }
 
                 return newObj;
@@ -736,7 +733,7 @@ namespace WebAnnotationModel
             return new MixedLocalAndRemoteQueryResults<KEY, OBJECT>(result, knownObjects);
         }
 
-        protected class GetObjectBySectionCallbackState<T>
+        protected class GetObjectBySectionCallbackState<T> : IEquatable<GetObjectBySectionCallbackState<T>>
         {
             public readonly PROXY Proxy;
             public readonly long SectionNumber;
@@ -747,6 +744,14 @@ namespace WebAnnotationModel
             public override string ToString()
             {
                 return SectionNumber.ToString() + " : " + StartTime.TimeOfDay.ToString(); 
+            }
+
+            public bool Equals(GetObjectBySectionCallbackState<T> other)
+            {
+                if ((object)other == null)
+                    return false;
+
+                return SectionNumber == other.SectionNumber;
             }
 
             public GetObjectBySectionCallbackState(PROXY proxy, long number, DateTime lastQueryExecutedTime, Action<ICollection<T>> LoadCompletedCallback)

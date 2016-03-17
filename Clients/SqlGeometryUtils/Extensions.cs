@@ -49,6 +49,19 @@ namespace SqlGeometryUtils
             return System.Data.Entity.Spatial.DbGeometry.FromBinary(geometry.STAsBinary().Buffer);
         }
 
+        public static SqlGeometry ToSqlGeometry(this GridCircle circle, double Z)
+        {
+            return ToCircle(circle.Center.X,
+                            circle.Center.Y,
+                            Z,
+                            circle.Radius);
+        }
+
+        public static SqlGeometry ToPolyLine(this GridLineSegment line)
+        {
+            return new GridVector2[] { line.A, line.B }.ToPolyLine();
+        }
+
         public static SqlGeometry ToPolyLine(this GridVector2[] points)
         {
             StringBuilder PolyStringBuilder = new StringBuilder();
