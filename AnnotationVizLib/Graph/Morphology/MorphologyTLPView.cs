@@ -65,6 +65,8 @@ namespace AnnotationVizLib
             NodeAttribs.Add("OffEdge", node.Location.OffEdge ? "true" : "false");
             NodeAttribs.Add("Untraceable", node.Location.IsUntraceable() ? "true" : "false");
             NodeAttribs.Add("Vericosity Cap", node.Location.IsVericosityCap() ? "true" : "false");
+            NodeAttribs.Add("StructureTags", node.Graph.AttributesToString());
+            NodeAttribs.Add("Tags", ObjAttribute.AttributesToString(node.Location.AttributesXml));
 
             NodeAttribs.Add("StructureURL", string.Format("{0}/OData/ConnectomeData.svc/Locations({1}L)", this.VolumeURL, node.Location.ID));            
 
@@ -109,7 +111,8 @@ namespace AnnotationVizLib
 
         public static string NodeSize(MorphologyNode node, Scale scale)
         {
-            return string.Format("({0},{1},{2})", node.Location.Radius * scale.X.Value, node.Location.Radius * scale.Y.Value, 1 * scale.Z.Value);
+            //OK, tulip treats the location property as the center of the shape.  The size is centered on the origin.  So if a cell is centered on 0, and the radius is 50.  We need to use the diamater to ensure the size is correct.
+            return string.Format("({0},{1},{2})", node.Location.Radius * 2.0 * scale.X.Value, node.Location.Radius * 2.0 * scale.Y.Value, 1 * scale.Z.Value);
         }
 
         public string LabelForNode(MorphologyNode node)
