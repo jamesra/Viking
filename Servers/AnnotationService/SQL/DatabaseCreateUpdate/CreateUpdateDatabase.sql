@@ -3727,6 +3727,244 @@ end
 		   RETURN
 		 end
 
+
+		 IF OBJECT_ID('[SelectSectionLocationLinksInBounds]') IS NOT NULL DROP PROCEDURE dbo.[SelectSectionLocationLinksInBounds]
+		 
+		 IF OBJECT_ID('[SelectSectionLocationLinksInMosaicBounds]') IS NOT NULL DROP PROCEDURE dbo.[SelectSectionLocationLinksInMosaicBounds]
+		 
+		 Exec('
+				CREATE PROCEDURE [dbo].[SelectSectionLocationLinksInMosaicBounds]
+				-- Add the parameters for the stored procedure here
+				@Z float,
+				@bbox geometry,
+				@MinRadius float,
+				@QueryDate datetime
+			AS
+			BEGIN
+				-- SET NOCOUNT ON added to prevent extra result sets from
+				-- interfering with SELECT statements.
+				SET NOCOUNT ON;
+
+				--This really needs to check if a line between the two location links intersects the bounding box.
+
+				IF OBJECT_ID(''tempdb..#LocationsAboveZ'') IS NOT NULL DROP TABLE #LocationsAboveZ
+				IF OBJECT_ID(''tempdb..#LocationsBelowZ'') IS NOT NULL DROP TABLE #LocationsBelowZ
+
+				--Looks slow, but my tests indicate selecting a single column into the table is slower
+				select * into #LocationsAboveZ from Location where Z >= @Z AND (@bbox.STIntersects(MosaicShape) = 1) AND Radius >= @MinRadius order by ID 
+				select * into #LocationsBelowZ from Location where Z <= @Z AND (@bbox.STIntersects(MosaicShape) = 1) AND Radius >= @MinRadius order by ID
+
+	
+				IF @QueryDate IS NOT NULL
+					Select * from LocationLink
+					 WHERE (((A in 
+						(SELECT ID
+						  FROM #LocationsAboveZ)
+						 )
+						  AND
+						  (B in 
+						(SELECT ID
+						  FROM #LocationsBelowZ)
+						 ))
+					 OR
+						 ((A in
+						 (SELECT ID
+						  FROM #LocationsBelowZ)
+						 )
+						  AND
+						  (B in 
+						(SELECT ID
+						  FROM #LocationsAboveZ)
+						 )))
+					 AND Created >= @QueryDate
+				ELSE
+					Select * from LocationLink
+					 WHERE (((A in 
+						(SELECT ID
+						  FROM #LocationsAboveZ)
+						 )
+						  AND
+						  (B in 
+						(SELECT ID
+						  FROM #LocationsBelowZ)
+						 ))
+					 OR
+						 ((A in
+						 (SELECT ID
+						  FROM #LocationsBelowZ)
+						 )
+						  AND
+						  (B in 
+						(SELECT ID
+						  FROM #LocationsAboveZ)
+						 ))) 
+
+				DROP TABLE #LocationsAboveZ
+				DROP TABLE #LocationsBelowZ
+	 
+			END
+			')
+
+		if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
+		 IF OBJECT_ID('[SelectSectionLocationLinksInVolumeBounds]') IS NOT NULL DROP PROCEDURE dbo.[SelectSectionLocationLinksInVolumeBounds]
+		 
+		 Exec('
+				CREATE PROCEDURE [dbo].[SelectSectionLocationLinksInVolumeBounds]
+				-- Add the parameters for the stored procedure here
+				@Z float,
+				@bbox geometry,
+				@MinRadius float,
+				@QueryDate datetime
+			AS
+			BEGIN
+				-- SET NOCOUNT ON added to prevent extra result sets from
+				-- interfering with SELECT statements.
+				SET NOCOUNT ON;
+
+				--This really needs to check if a line between the two location links intersects the bounding box.
+
+				IF OBJECT_ID(''tempdb..#LocationsAboveZ'') IS NOT NULL DROP TABLE #LocationsAboveZ
+				IF OBJECT_ID(''tempdb..#LocationsBelowZ'') IS NOT NULL DROP TABLE #LocationsBelowZ
+
+				--Looks slow, but my tests indicate selecting a single column into the table is slower
+				select * into #LocationsAboveZ from Location where Z >= @Z AND (@bbox.STIntersects(VolumeShape) = 1) AND Radius >= @MinRadius order by ID 
+				select * into #LocationsBelowZ from Location where Z <= @Z AND (@bbox.STIntersects(VolumeShape) = 1) AND Radius >= @MinRadius order by ID
+
+	
+				IF @QueryDate IS NOT NULL
+					Select * from LocationLink
+					 WHERE (((A in 
+						(SELECT ID
+						  FROM #LocationsAboveZ)
+						 )
+						  AND
+						  (B in 
+						(SELECT ID
+						  FROM #LocationsBelowZ)
+						 ))
+					 OR
+						 ((A in
+						 (SELECT ID
+						  FROM #LocationsBelowZ)
+						 )
+						  AND
+						  (B in 
+						(SELECT ID
+						  FROM #LocationsAboveZ)
+						 )))
+					 AND Created >= @QueryDate
+				ELSE
+					Select * from LocationLink
+					 WHERE (((A in 
+						(SELECT ID
+						  FROM #LocationsAboveZ)
+						 )
+						  AND
+						  (B in 
+						(SELECT ID
+						  FROM #LocationsBelowZ)
+						 ))
+					 OR
+						 ((A in
+						 (SELECT ID
+						  FROM #LocationsBelowZ)
+						 )
+						  AND
+						  (B in 
+						(SELECT ID
+						  FROM #LocationsAboveZ)
+						 ))) 
+
+				DROP TABLE #LocationsAboveZ
+				DROP TABLE #LocationsBelowZ
+	 
+			END
+			')
+
+		if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
+		 
+		 IF OBJECT_ID('[SelectSectionStructuresInBounds]') IS NOT NULL DROP PROCEDURE dbo.[SelectSectionStructuresInBounds]
+		 
+		 IF OBJECT_ID('[SelectSectionStructuresInMosaicBounds]') IS NOT NULL DROP PROCEDURE dbo.[SelectSectionStructuresInMosaicBounds]
+		 
+		 Exec('
+				CREATE PROCEDURE [dbo].[SelectSectionStructuresInMosaicBounds]
+					-- Add the parameters for the stored procedure here
+					@Z float,
+					@BBox geometry,
+					@MinRadius float,
+					@QueryDate datetime
+				AS
+				BEGIN 
+						-- SET NOCOUNT ON added to prevent extra result sets from
+						-- interfering with SELECT statements.
+						SET NOCOUNT ON;
+
+						IF @QueryDate IS NOT NULL
+							select S.* from Structure S
+								inner join (Select distinct ParentID from Location 
+									where (@bbox.STIntersects(MosaicShape) = 1) and Z = @Z AND Radius >= @MinRadius) L 
+										ON L.ParentID = S.ID
+							WHERE S.LastModified >= @QueryDate
+						ELSE
+							select S.* from Structure S
+								inner join (Select distinct ParentID from Location 
+									where (@bbox.STIntersects(MosaicShape) = 1) and Z = @Z AND Radius >= @MinRadius) L 
+										ON L.ParentID = S.ID
+				END
+			')
+
+		if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
+		 IF OBJECT_ID('[SelectSectionStructuresInVolumeBounds]') IS NOT NULL DROP PROCEDURE dbo.[SelectSectionStructuresInVolumeBounds]
+		 
+		 Exec('
+				CREATE PROCEDURE [dbo].[SelectSectionStructuresInVolumeBounds]
+					-- Add the parameters for the stored procedure here
+					@Z float,
+					@BBox geometry,
+					@MinRadius float,
+					@QueryDate datetime
+				AS
+				BEGIN 
+						-- SET NOCOUNT ON added to prevent extra result sets from
+						-- interfering with SELECT statements.
+						SET NOCOUNT ON;
+
+						IF @QueryDate IS NOT NULL
+							select S.* from Structure S
+								inner join (Select distinct ParentID from Location 
+									where (@bbox.STIntersects(VolumeShape) = 1) and Z = @Z AND Radius >= @MinRadius) L 
+										ON L.ParentID = S.ID
+							WHERE S.LastModified >= @QueryDate
+						ELSE
+							select S.* from Structure S
+								inner join (Select distinct ParentID from Location 
+									where (@bbox.STIntersects(VolumeShape) = 1) and Z = @Z AND Radius >= @MinRadius) L 
+										ON L.ParentID = S.ID
+				END
+			')
+
+		if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
 	 INSERT INTO DBVersion values (41, 
 		      N'Update spatial queries to use mosaic or volume coordinates',getDate(),User_ID())
 	 COMMIT TRANSACTION fortyone
