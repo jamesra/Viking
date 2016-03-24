@@ -1,7 +1,7 @@
 IF OBJECT_ID (N'dbo.ufnLineFromAngleAndDistance', N'FN') IS NOT NULL
     DROP FUNCTION ufnLineFromAngleAndDistance;
 GO
-CREATE FUNCTION dbo.ufnLineFromAngleAndDistance(@angle float, @distance float, @offset geometry)
+CREATE FUNCTION dbo.ufnLineFromAngleAndDistance(@Angle float, @distance float, @offset geometry)
 RETURNS geometry
 AS 
 -- Returns a line centered on offset with @angle and total length = @distance
