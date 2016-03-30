@@ -316,32 +316,6 @@ namespace ConnectomeDataModel
             return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction<Structure>("SelectStructuresAndLinks", mergeOption);
         }
     
-        public virtual ObjectResult<Structure> SelectStructuresForSection(Nullable<double> z, Nullable<System.DateTime> queryDate)
-        {
-            var zParameter = z.HasValue ?
-                new ObjectParameter("Z", z) :
-                new ObjectParameter("Z", typeof(double));
-    
-            var queryDateParameter = queryDate.HasValue ?
-                new ObjectParameter("QueryDate", queryDate) :
-                new ObjectParameter("QueryDate", typeof(System.DateTime));
-    
-            return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction<Structure>("SelectStructuresForSection", zParameter, queryDateParameter);
-        }
-    
-        public virtual ObjectResult<Structure> SelectStructuresForSection(Nullable<double> z, Nullable<System.DateTime> queryDate, MergeOption mergeOption)
-        {
-            var zParameter = z.HasValue ?
-                new ObjectParameter("Z", z) :
-                new ObjectParameter("Z", typeof(double));
-    
-            var queryDateParameter = queryDate.HasValue ?
-                new ObjectParameter("QueryDate", queryDate) :
-                new ObjectParameter("QueryDate", typeof(System.DateTime));
-    
-            return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction<Structure>("SelectStructuresForSection", mergeOption, zParameter, queryDateParameter);
-        }
-    
         public virtual ObjectResult<Nullable<long>> SelectUnfinishedStructureBranches(Nullable<long> structureID)
         {
             var structureIDParameter = structureID.HasValue ?
@@ -360,54 +334,6 @@ namespace ConnectomeDataModel
             return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction<SelectUnfinishedStructureBranchesWithPosition_Result>("SelectUnfinishedStructureBranchesWithPosition", structureIDParameter);
         }
     
-        [DbFunction("ConnectomeEntities", "SectionLocations")]
-        public virtual IQueryable<Location> SectionLocations(Nullable<double> z)
-        {
-            var zParameter = z.HasValue ?
-                new ObjectParameter("Z", z) :
-                new ObjectParameter("Z", typeof(double));
-    
-            return ((IObjectContextAdapter)this).ObjectContext.CreateQuery<Location>("[ConnectomeEntities].[SectionLocations](@Z)", zParameter);
-        }
-    
-        [DbFunction("ConnectomeEntities", "SectionLocationsModifiedAfterDate")]
-        public virtual IQueryable<Location> SectionLocationsModifiedAfterDate(Nullable<double> z, Nullable<System.DateTime> queryDate)
-        {
-            var zParameter = z.HasValue ?
-                new ObjectParameter("Z", z) :
-                new ObjectParameter("Z", typeof(double));
-    
-            var queryDateParameter = queryDate.HasValue ?
-                new ObjectParameter("QueryDate", queryDate) :
-                new ObjectParameter("QueryDate", typeof(System.DateTime));
-    
-            return ((IObjectContextAdapter)this).ObjectContext.CreateQuery<Location>("[ConnectomeEntities].[SectionLocationsModifiedAfterDate](@Z, @QueryDate)", zParameter, queryDateParameter);
-        }
-    
-        [DbFunction("ConnectomeEntities", "SectionLocationLinks")]
-        public virtual IQueryable<LocationLink> SectionLocationLinks(Nullable<double> z)
-        {
-            var zParameter = z.HasValue ?
-                new ObjectParameter("Z", z) :
-                new ObjectParameter("Z", typeof(double));
-    
-            return ((IObjectContextAdapter)this).ObjectContext.CreateQuery<LocationLink>("[ConnectomeEntities].[SectionLocationLinks](@Z)", zParameter);
-        }
-    
-        [DbFunction("ConnectomeEntities", "SectionLocationLinksModifiedAfterDate")]
-        public virtual IQueryable<LocationLink> SectionLocationLinksModifiedAfterDate(Nullable<double> z, Nullable<System.DateTime> queryDate)
-        {
-            var zParameter = z.HasValue ?
-                new ObjectParameter("Z", z) :
-                new ObjectParameter("Z", typeof(double));
-    
-            var queryDateParameter = queryDate.HasValue ?
-                new ObjectParameter("QueryDate", queryDate) :
-                new ObjectParameter("QueryDate", typeof(System.DateTime));
-    
-            return ((IObjectContextAdapter)this).ObjectContext.CreateQuery<LocationLink>("[ConnectomeEntities].[SectionLocationLinksModifiedAfterDate](@Z, @QueryDate)", zParameter, queryDateParameter);
-        }
-    
         [DbFunction("ConnectomeEntities", "StructureLocationLinks")]
         public virtual IQueryable<LocationLink> StructureLocationLinks(Nullable<long> structureID)
         {
@@ -416,48 +342,6 @@ namespace ConnectomeDataModel
                 new ObjectParameter("StructureID", typeof(long));
     
             return ((IObjectContextAdapter)this).ObjectContext.CreateQuery<LocationLink>("[ConnectomeEntities].[StructureLocationLinks](@StructureID)", structureIDParameter);
-        }
-    
-        public virtual ObjectResult<Location> SelectSectionLocationsAndLinksInBounds(Nullable<double> z, System.Data.Entity.Spatial.DbGeometry bBox, Nullable<double> radius, Nullable<System.DateTime> queryDate)
-        {
-            var zParameter = z.HasValue ?
-                new ObjectParameter("Z", z) :
-                new ObjectParameter("Z", typeof(double));
-    
-            var bBoxParameter = bBox != null ?
-                new ObjectParameter("BBox", bBox) :
-                new ObjectParameter("BBox", typeof(System.Data.Entity.Spatial.DbGeometry));
-    
-            var radiusParameter = radius.HasValue ?
-                new ObjectParameter("Radius", radius) :
-                new ObjectParameter("Radius", typeof(double));
-    
-            var queryDateParameter = queryDate.HasValue ?
-                new ObjectParameter("QueryDate", queryDate) :
-                new ObjectParameter("QueryDate", typeof(System.DateTime));
-    
-            return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction<Location>("SelectSectionLocationsAndLinksInBounds", zParameter, bBoxParameter, radiusParameter, queryDateParameter);
-        }
-    
-        public virtual ObjectResult<Location> SelectSectionLocationsAndLinksInBounds(Nullable<double> z, System.Data.Entity.Spatial.DbGeometry bBox, Nullable<double> radius, Nullable<System.DateTime> queryDate, MergeOption mergeOption)
-        {
-            var zParameter = z.HasValue ?
-                new ObjectParameter("Z", z) :
-                new ObjectParameter("Z", typeof(double));
-    
-            var bBoxParameter = bBox != null ?
-                new ObjectParameter("BBox", bBox) :
-                new ObjectParameter("BBox", typeof(System.Data.Entity.Spatial.DbGeometry));
-    
-            var radiusParameter = radius.HasValue ?
-                new ObjectParameter("Radius", radius) :
-                new ObjectParameter("Radius", typeof(double));
-    
-            var queryDateParameter = queryDate.HasValue ?
-                new ObjectParameter("QueryDate", queryDate) :
-                new ObjectParameter("QueryDate", typeof(System.DateTime));
-    
-            return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction<Location>("SelectSectionLocationsAndLinksInBounds", mergeOption, zParameter, bBoxParameter, radiusParameter, queryDateParameter);
         }
     
         public virtual ObjectResult<Location> SelectStructureLocationsAndLinks(Nullable<long> structureID)
@@ -513,48 +397,6 @@ namespace ConnectomeDataModel
             return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction<Structure>("SelectSectionStructures", mergeOption, zParameter, queryDateParameter);
         }
     
-        public virtual ObjectResult<Structure> SelectSectionStructuresInBounds(Nullable<double> z, System.Data.Entity.Spatial.DbGeometry bBox, Nullable<double> minRadius, Nullable<System.DateTime> queryDate)
-        {
-            var zParameter = z.HasValue ?
-                new ObjectParameter("Z", z) :
-                new ObjectParameter("Z", typeof(double));
-    
-            var bBoxParameter = bBox != null ?
-                new ObjectParameter("BBox", bBox) :
-                new ObjectParameter("BBox", typeof(System.Data.Entity.Spatial.DbGeometry));
-    
-            var minRadiusParameter = minRadius.HasValue ?
-                new ObjectParameter("MinRadius", minRadius) :
-                new ObjectParameter("MinRadius", typeof(double));
-    
-            var queryDateParameter = queryDate.HasValue ?
-                new ObjectParameter("QueryDate", queryDate) :
-                new ObjectParameter("QueryDate", typeof(System.DateTime));
-    
-            return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction<Structure>("SelectSectionStructuresInBounds", zParameter, bBoxParameter, minRadiusParameter, queryDateParameter);
-        }
-    
-        public virtual ObjectResult<Structure> SelectSectionStructuresInBounds(Nullable<double> z, System.Data.Entity.Spatial.DbGeometry bBox, Nullable<double> minRadius, Nullable<System.DateTime> queryDate, MergeOption mergeOption)
-        {
-            var zParameter = z.HasValue ?
-                new ObjectParameter("Z", z) :
-                new ObjectParameter("Z", typeof(double));
-    
-            var bBoxParameter = bBox != null ?
-                new ObjectParameter("BBox", bBox) :
-                new ObjectParameter("BBox", typeof(System.Data.Entity.Spatial.DbGeometry));
-    
-            var minRadiusParameter = minRadius.HasValue ?
-                new ObjectParameter("MinRadius", minRadius) :
-                new ObjectParameter("MinRadius", typeof(double));
-    
-            var queryDateParameter = queryDate.HasValue ?
-                new ObjectParameter("QueryDate", queryDate) :
-                new ObjectParameter("QueryDate", typeof(System.DateTime));
-    
-            return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction<Structure>("SelectSectionStructuresInBounds", mergeOption, zParameter, bBoxParameter, minRadiusParameter, queryDateParameter);
-        }
-    
         public virtual ObjectResult<Structure> SelectSectionStructuresAndLinks(Nullable<double> z, Nullable<System.DateTime> queryDate)
         {
             var zParameter = z.HasValue ?
@@ -586,49 +428,139 @@ namespace ConnectomeDataModel
             return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction<ApproximateStructureLocations_Result>("ApproximateStructureLocations");
         }
     
-        public virtual ObjectResult<LocationLink> SelectSectionLocationLinksInBounds(Nullable<double> z, System.Data.Entity.Spatial.DbGeometry bbox, Nullable<double> minRadius, Nullable<System.DateTime> queryDate)
+        [DbFunction("ConnectomeEntities", "SectionLocationLinks")]
+        public virtual IQueryable<LocationLink> SectionLocationLinks(Nullable<double> z)
         {
             var zParameter = z.HasValue ?
                 new ObjectParameter("Z", z) :
                 new ObjectParameter("Z", typeof(double));
     
-            var bboxParameter = bbox != null ?
-                new ObjectParameter("bbox", bbox) :
-                new ObjectParameter("bbox", typeof(System.Data.Entity.Spatial.DbGeometry));
-    
-            var minRadiusParameter = minRadius.HasValue ?
-                new ObjectParameter("MinRadius", minRadius) :
-                new ObjectParameter("MinRadius", typeof(double));
-    
-            var queryDateParameter = queryDate.HasValue ?
-                new ObjectParameter("QueryDate", queryDate) :
-                new ObjectParameter("QueryDate", typeof(System.DateTime));
-    
-            return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction<LocationLink>("SelectSectionLocationLinksInBounds", zParameter, bboxParameter, minRadiusParameter, queryDateParameter);
+            return ((IObjectContextAdapter)this).ObjectContext.CreateQuery<LocationLink>("[ConnectomeEntities].[SectionLocationLinks](@Z)", zParameter);
         }
     
-        public virtual ObjectResult<LocationLink> SelectSectionLocationLinksInBounds(Nullable<double> z, System.Data.Entity.Spatial.DbGeometry bbox, Nullable<double> minRadius, Nullable<System.DateTime> queryDate, MergeOption mergeOption)
+        [DbFunction("ConnectomeEntities", "SectionLocationLinksModifiedAfterDate")]
+        public virtual IQueryable<LocationLink> SectionLocationLinksModifiedAfterDate(Nullable<double> z, Nullable<System.DateTime> queryDate)
         {
             var zParameter = z.HasValue ?
                 new ObjectParameter("Z", z) :
                 new ObjectParameter("Z", typeof(double));
     
-            var bboxParameter = bbox != null ?
-                new ObjectParameter("bbox", bbox) :
-                new ObjectParameter("bbox", typeof(System.Data.Entity.Spatial.DbGeometry));
+            var queryDateParameter = queryDate.HasValue ?
+                new ObjectParameter("QueryDate", queryDate) :
+                new ObjectParameter("QueryDate", typeof(System.DateTime));
     
-            var minRadiusParameter = minRadius.HasValue ?
-                new ObjectParameter("MinRadius", minRadius) :
-                new ObjectParameter("MinRadius", typeof(double));
+            return ((IObjectContextAdapter)this).ObjectContext.CreateQuery<LocationLink>("[ConnectomeEntities].[SectionLocationLinksModifiedAfterDate](@Z, @QueryDate)", zParameter, queryDateParameter);
+        }
+    
+        [DbFunction("ConnectomeEntities", "SectionLocations")]
+        public virtual IQueryable<Location> SectionLocations(Nullable<double> z)
+        {
+            var zParameter = z.HasValue ?
+                new ObjectParameter("Z", z) :
+                new ObjectParameter("Z", typeof(double));
+    
+            return ((IObjectContextAdapter)this).ObjectContext.CreateQuery<Location>("[ConnectomeEntities].[SectionLocations](@Z)", zParameter);
+        }
+    
+        [DbFunction("ConnectomeEntities", "SectionLocationsModifiedAfterDate")]
+        public virtual IQueryable<Location> SectionLocationsModifiedAfterDate(Nullable<double> z, Nullable<System.DateTime> queryDate)
+        {
+            var zParameter = z.HasValue ?
+                new ObjectParameter("Z", z) :
+                new ObjectParameter("Z", typeof(double));
     
             var queryDateParameter = queryDate.HasValue ?
                 new ObjectParameter("QueryDate", queryDate) :
                 new ObjectParameter("QueryDate", typeof(System.DateTime));
     
-            return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction<LocationLink>("SelectSectionLocationLinksInBounds", mergeOption, zParameter, bboxParameter, minRadiusParameter, queryDateParameter);
+            return ((IObjectContextAdapter)this).ObjectContext.CreateQuery<Location>("[ConnectomeEntities].[SectionLocationsModifiedAfterDate](@Z, @QueryDate)", zParameter, queryDateParameter);
         }
     
-        public virtual ObjectResult<Structure> SelectSectionStructuresAndLinksInBounds(Nullable<double> z, System.Data.Entity.Spatial.DbGeometry bBox, Nullable<double> minRadius, Nullable<System.DateTime> queryDate)
+        public virtual ObjectResult<Location> SelectSectionLocationsAndLinksInMosaicBounds(Nullable<double> z, System.Data.Entity.Spatial.DbGeometry bBox, Nullable<double> radius, Nullable<System.DateTime> queryDate)
+        {
+            var zParameter = z.HasValue ?
+                new ObjectParameter("Z", z) :
+                new ObjectParameter("Z", typeof(double));
+    
+            var bBoxParameter = bBox != null ?
+                new ObjectParameter("BBox", bBox) :
+                new ObjectParameter("BBox", typeof(System.Data.Entity.Spatial.DbGeometry));
+    
+            var radiusParameter = radius.HasValue ?
+                new ObjectParameter("Radius", radius) :
+                new ObjectParameter("Radius", typeof(double));
+    
+            var queryDateParameter = queryDate.HasValue ?
+                new ObjectParameter("QueryDate", queryDate) :
+                new ObjectParameter("QueryDate", typeof(System.DateTime));
+    
+            return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction<Location>("SelectSectionLocationsAndLinksInMosaicBounds", zParameter, bBoxParameter, radiusParameter, queryDateParameter);
+        }
+    
+        public virtual ObjectResult<Location> SelectSectionLocationsAndLinksInMosaicBounds(Nullable<double> z, System.Data.Entity.Spatial.DbGeometry bBox, Nullable<double> radius, Nullable<System.DateTime> queryDate, MergeOption mergeOption)
+        {
+            var zParameter = z.HasValue ?
+                new ObjectParameter("Z", z) :
+                new ObjectParameter("Z", typeof(double));
+    
+            var bBoxParameter = bBox != null ?
+                new ObjectParameter("BBox", bBox) :
+                new ObjectParameter("BBox", typeof(System.Data.Entity.Spatial.DbGeometry));
+    
+            var radiusParameter = radius.HasValue ?
+                new ObjectParameter("Radius", radius) :
+                new ObjectParameter("Radius", typeof(double));
+    
+            var queryDateParameter = queryDate.HasValue ?
+                new ObjectParameter("QueryDate", queryDate) :
+                new ObjectParameter("QueryDate", typeof(System.DateTime));
+    
+            return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction<Location>("SelectSectionLocationsAndLinksInMosaicBounds", mergeOption, zParameter, bBoxParameter, radiusParameter, queryDateParameter);
+        }
+    
+        public virtual ObjectResult<Location> SelectSectionLocationsAndLinksInVolumeBounds(Nullable<double> z, System.Data.Entity.Spatial.DbGeometry bBox, Nullable<double> radius, Nullable<System.DateTime> queryDate)
+        {
+            var zParameter = z.HasValue ?
+                new ObjectParameter("Z", z) :
+                new ObjectParameter("Z", typeof(double));
+    
+            var bBoxParameter = bBox != null ?
+                new ObjectParameter("BBox", bBox) :
+                new ObjectParameter("BBox", typeof(System.Data.Entity.Spatial.DbGeometry));
+    
+            var radiusParameter = radius.HasValue ?
+                new ObjectParameter("Radius", radius) :
+                new ObjectParameter("Radius", typeof(double));
+    
+            var queryDateParameter = queryDate.HasValue ?
+                new ObjectParameter("QueryDate", queryDate) :
+                new ObjectParameter("QueryDate", typeof(System.DateTime));
+    
+            return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction<Location>("SelectSectionLocationsAndLinksInVolumeBounds", zParameter, bBoxParameter, radiusParameter, queryDateParameter);
+        }
+    
+        public virtual ObjectResult<Location> SelectSectionLocationsAndLinksInVolumeBounds(Nullable<double> z, System.Data.Entity.Spatial.DbGeometry bBox, Nullable<double> radius, Nullable<System.DateTime> queryDate, MergeOption mergeOption)
+        {
+            var zParameter = z.HasValue ?
+                new ObjectParameter("Z", z) :
+                new ObjectParameter("Z", typeof(double));
+    
+            var bBoxParameter = bBox != null ?
+                new ObjectParameter("BBox", bBox) :
+                new ObjectParameter("BBox", typeof(System.Data.Entity.Spatial.DbGeometry));
+    
+            var radiusParameter = radius.HasValue ?
+                new ObjectParameter("Radius", radius) :
+                new ObjectParameter("Radius", typeof(double));
+    
+            var queryDateParameter = queryDate.HasValue ?
+                new ObjectParameter("QueryDate", queryDate) :
+                new ObjectParameter("QueryDate", typeof(System.DateTime));
+    
+            return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction<Location>("SelectSectionLocationsAndLinksInVolumeBounds", mergeOption, zParameter, bBoxParameter, radiusParameter, queryDateParameter);
+        }
+    
+        public virtual ObjectResult<Structure> SelectSectionStructuresAndLinksInMosaicBounds(Nullable<double> z, System.Data.Entity.Spatial.DbGeometry bBox, Nullable<double> minRadius, Nullable<System.DateTime> queryDate)
         {
             var zParameter = z.HasValue ?
                 new ObjectParameter("Z", z) :
@@ -646,10 +578,10 @@ namespace ConnectomeDataModel
                 new ObjectParameter("QueryDate", queryDate) :
                 new ObjectParameter("QueryDate", typeof(System.DateTime));
     
-            return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction<Structure>("SelectSectionStructuresAndLinksInBounds", zParameter, bBoxParameter, minRadiusParameter, queryDateParameter);
+            return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction<Structure>("SelectSectionStructuresAndLinksInMosaicBounds", zParameter, bBoxParameter, minRadiusParameter, queryDateParameter);
         }
     
-        public virtual ObjectResult<Structure> SelectSectionStructuresAndLinksInBounds(Nullable<double> z, System.Data.Entity.Spatial.DbGeometry bBox, Nullable<double> minRadius, Nullable<System.DateTime> queryDate, MergeOption mergeOption)
+        public virtual ObjectResult<Structure> SelectSectionStructuresAndLinksInMosaicBounds(Nullable<double> z, System.Data.Entity.Spatial.DbGeometry bBox, Nullable<double> minRadius, Nullable<System.DateTime> queryDate, MergeOption mergeOption)
         {
             var zParameter = z.HasValue ?
                 new ObjectParameter("Z", z) :
@@ -667,7 +599,230 @@ namespace ConnectomeDataModel
                 new ObjectParameter("QueryDate", queryDate) :
                 new ObjectParameter("QueryDate", typeof(System.DateTime));
     
-            return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction<Structure>("SelectSectionStructuresAndLinksInBounds", mergeOption, zParameter, bBoxParameter, minRadiusParameter, queryDateParameter);
+            return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction<Structure>("SelectSectionStructuresAndLinksInMosaicBounds", mergeOption, zParameter, bBoxParameter, minRadiusParameter, queryDateParameter);
+        }
+    
+        public virtual ObjectResult<Structure> SelectSectionStructuresAndLinksInVolumeBounds(Nullable<double> z, System.Data.Entity.Spatial.DbGeometry bBox, Nullable<double> minRadius, Nullable<System.DateTime> queryDate)
+        {
+            var zParameter = z.HasValue ?
+                new ObjectParameter("Z", z) :
+                new ObjectParameter("Z", typeof(double));
+    
+            var bBoxParameter = bBox != null ?
+                new ObjectParameter("BBox", bBox) :
+                new ObjectParameter("BBox", typeof(System.Data.Entity.Spatial.DbGeometry));
+    
+            var minRadiusParameter = minRadius.HasValue ?
+                new ObjectParameter("MinRadius", minRadius) :
+                new ObjectParameter("MinRadius", typeof(double));
+    
+            var queryDateParameter = queryDate.HasValue ?
+                new ObjectParameter("QueryDate", queryDate) :
+                new ObjectParameter("QueryDate", typeof(System.DateTime));
+    
+            return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction<Structure>("SelectSectionStructuresAndLinksInVolumeBounds", zParameter, bBoxParameter, minRadiusParameter, queryDateParameter);
+        }
+    
+        public virtual ObjectResult<Structure> SelectSectionStructuresAndLinksInVolumeBounds(Nullable<double> z, System.Data.Entity.Spatial.DbGeometry bBox, Nullable<double> minRadius, Nullable<System.DateTime> queryDate, MergeOption mergeOption)
+        {
+            var zParameter = z.HasValue ?
+                new ObjectParameter("Z", z) :
+                new ObjectParameter("Z", typeof(double));
+    
+            var bBoxParameter = bBox != null ?
+                new ObjectParameter("BBox", bBox) :
+                new ObjectParameter("BBox", typeof(System.Data.Entity.Spatial.DbGeometry));
+    
+            var minRadiusParameter = minRadius.HasValue ?
+                new ObjectParameter("MinRadius", minRadius) :
+                new ObjectParameter("MinRadius", typeof(double));
+    
+            var queryDateParameter = queryDate.HasValue ?
+                new ObjectParameter("QueryDate", queryDate) :
+                new ObjectParameter("QueryDate", typeof(System.DateTime));
+    
+            return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction<Structure>("SelectSectionStructuresAndLinksInVolumeBounds", mergeOption, zParameter, bBoxParameter, minRadiusParameter, queryDateParameter);
+        }
+    
+        public virtual ObjectResult<LocationLink> SelectSectionLocationLinksInMosaicBounds(Nullable<double> z, System.Data.Entity.Spatial.DbGeometry bbox, Nullable<double> minRadius, Nullable<System.DateTime> queryDate)
+        {
+            var zParameter = z.HasValue ?
+                new ObjectParameter("Z", z) :
+                new ObjectParameter("Z", typeof(double));
+    
+            var bboxParameter = bbox != null ?
+                new ObjectParameter("bbox", bbox) :
+                new ObjectParameter("bbox", typeof(System.Data.Entity.Spatial.DbGeometry));
+    
+            var minRadiusParameter = minRadius.HasValue ?
+                new ObjectParameter("MinRadius", minRadius) :
+                new ObjectParameter("MinRadius", typeof(double));
+    
+            var queryDateParameter = queryDate.HasValue ?
+                new ObjectParameter("QueryDate", queryDate) :
+                new ObjectParameter("QueryDate", typeof(System.DateTime));
+    
+            return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction<LocationLink>("SelectSectionLocationLinksInMosaicBounds", zParameter, bboxParameter, minRadiusParameter, queryDateParameter);
+        }
+    
+        public virtual ObjectResult<LocationLink> SelectSectionLocationLinksInMosaicBounds(Nullable<double> z, System.Data.Entity.Spatial.DbGeometry bbox, Nullable<double> minRadius, Nullable<System.DateTime> queryDate, MergeOption mergeOption)
+        {
+            var zParameter = z.HasValue ?
+                new ObjectParameter("Z", z) :
+                new ObjectParameter("Z", typeof(double));
+    
+            var bboxParameter = bbox != null ?
+                new ObjectParameter("bbox", bbox) :
+                new ObjectParameter("bbox", typeof(System.Data.Entity.Spatial.DbGeometry));
+    
+            var minRadiusParameter = minRadius.HasValue ?
+                new ObjectParameter("MinRadius", minRadius) :
+                new ObjectParameter("MinRadius", typeof(double));
+    
+            var queryDateParameter = queryDate.HasValue ?
+                new ObjectParameter("QueryDate", queryDate) :
+                new ObjectParameter("QueryDate", typeof(System.DateTime));
+    
+            return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction<LocationLink>("SelectSectionLocationLinksInMosaicBounds", mergeOption, zParameter, bboxParameter, minRadiusParameter, queryDateParameter);
+        }
+    
+        public virtual ObjectResult<LocationLink> SelectSectionLocationLinksInVolumeBounds(Nullable<double> z, System.Data.Entity.Spatial.DbGeometry bbox, Nullable<double> minRadius, Nullable<System.DateTime> queryDate)
+        {
+            var zParameter = z.HasValue ?
+                new ObjectParameter("Z", z) :
+                new ObjectParameter("Z", typeof(double));
+    
+            var bboxParameter = bbox != null ?
+                new ObjectParameter("bbox", bbox) :
+                new ObjectParameter("bbox", typeof(System.Data.Entity.Spatial.DbGeometry));
+    
+            var minRadiusParameter = minRadius.HasValue ?
+                new ObjectParameter("MinRadius", minRadius) :
+                new ObjectParameter("MinRadius", typeof(double));
+    
+            var queryDateParameter = queryDate.HasValue ?
+                new ObjectParameter("QueryDate", queryDate) :
+                new ObjectParameter("QueryDate", typeof(System.DateTime));
+    
+            return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction<LocationLink>("SelectSectionLocationLinksInVolumeBounds", zParameter, bboxParameter, minRadiusParameter, queryDateParameter);
+        }
+    
+        public virtual ObjectResult<LocationLink> SelectSectionLocationLinksInVolumeBounds(Nullable<double> z, System.Data.Entity.Spatial.DbGeometry bbox, Nullable<double> minRadius, Nullable<System.DateTime> queryDate, MergeOption mergeOption)
+        {
+            var zParameter = z.HasValue ?
+                new ObjectParameter("Z", z) :
+                new ObjectParameter("Z", typeof(double));
+    
+            var bboxParameter = bbox != null ?
+                new ObjectParameter("bbox", bbox) :
+                new ObjectParameter("bbox", typeof(System.Data.Entity.Spatial.DbGeometry));
+    
+            var minRadiusParameter = minRadius.HasValue ?
+                new ObjectParameter("MinRadius", minRadius) :
+                new ObjectParameter("MinRadius", typeof(double));
+    
+            var queryDateParameter = queryDate.HasValue ?
+                new ObjectParameter("QueryDate", queryDate) :
+                new ObjectParameter("QueryDate", typeof(System.DateTime));
+    
+            return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction<LocationLink>("SelectSectionLocationLinksInVolumeBounds", mergeOption, zParameter, bboxParameter, minRadiusParameter, queryDateParameter);
+        }
+    
+        public virtual ObjectResult<Structure> SelectSectionStructuresInMosaicBounds(Nullable<double> z, System.Data.Entity.Spatial.DbGeometry bBox, Nullable<double> minRadius, Nullable<System.DateTime> queryDate)
+        {
+            var zParameter = z.HasValue ?
+                new ObjectParameter("Z", z) :
+                new ObjectParameter("Z", typeof(double));
+    
+            var bBoxParameter = bBox != null ?
+                new ObjectParameter("BBox", bBox) :
+                new ObjectParameter("BBox", typeof(System.Data.Entity.Spatial.DbGeometry));
+    
+            var minRadiusParameter = minRadius.HasValue ?
+                new ObjectParameter("MinRadius", minRadius) :
+                new ObjectParameter("MinRadius", typeof(double));
+    
+            var queryDateParameter = queryDate.HasValue ?
+                new ObjectParameter("QueryDate", queryDate) :
+                new ObjectParameter("QueryDate", typeof(System.DateTime));
+    
+            return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction<Structure>("SelectSectionStructuresInMosaicBounds", zParameter, bBoxParameter, minRadiusParameter, queryDateParameter);
+        }
+    
+        public virtual ObjectResult<Structure> SelectSectionStructuresInMosaicBounds(Nullable<double> z, System.Data.Entity.Spatial.DbGeometry bBox, Nullable<double> minRadius, Nullable<System.DateTime> queryDate, MergeOption mergeOption)
+        {
+            var zParameter = z.HasValue ?
+                new ObjectParameter("Z", z) :
+                new ObjectParameter("Z", typeof(double));
+    
+            var bBoxParameter = bBox != null ?
+                new ObjectParameter("BBox", bBox) :
+                new ObjectParameter("BBox", typeof(System.Data.Entity.Spatial.DbGeometry));
+    
+            var minRadiusParameter = minRadius.HasValue ?
+                new ObjectParameter("MinRadius", minRadius) :
+                new ObjectParameter("MinRadius", typeof(double));
+    
+            var queryDateParameter = queryDate.HasValue ?
+                new ObjectParameter("QueryDate", queryDate) :
+                new ObjectParameter("QueryDate", typeof(System.DateTime));
+    
+            return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction<Structure>("SelectSectionStructuresInMosaicBounds", mergeOption, zParameter, bBoxParameter, minRadiusParameter, queryDateParameter);
+        }
+    
+        public virtual ObjectResult<Structure> SelectSectionStructuresInVolumeBounds(Nullable<double> z, System.Data.Entity.Spatial.DbGeometry bBox, Nullable<double> minRadius, Nullable<System.DateTime> queryDate)
+        {
+            var zParameter = z.HasValue ?
+                new ObjectParameter("Z", z) :
+                new ObjectParameter("Z", typeof(double));
+    
+            var bBoxParameter = bBox != null ?
+                new ObjectParameter("BBox", bBox) :
+                new ObjectParameter("BBox", typeof(System.Data.Entity.Spatial.DbGeometry));
+    
+            var minRadiusParameter = minRadius.HasValue ?
+                new ObjectParameter("MinRadius", minRadius) :
+                new ObjectParameter("MinRadius", typeof(double));
+    
+            var queryDateParameter = queryDate.HasValue ?
+                new ObjectParameter("QueryDate", queryDate) :
+                new ObjectParameter("QueryDate", typeof(System.DateTime));
+    
+            return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction<Structure>("SelectSectionStructuresInVolumeBounds", zParameter, bBoxParameter, minRadiusParameter, queryDateParameter);
+        }
+    
+        public virtual ObjectResult<Structure> SelectSectionStructuresInVolumeBounds(Nullable<double> z, System.Data.Entity.Spatial.DbGeometry bBox, Nullable<double> minRadius, Nullable<System.DateTime> queryDate, MergeOption mergeOption)
+        {
+            var zParameter = z.HasValue ?
+                new ObjectParameter("Z", z) :
+                new ObjectParameter("Z", typeof(double));
+    
+            var bBoxParameter = bBox != null ?
+                new ObjectParameter("BBox", bBox) :
+                new ObjectParameter("BBox", typeof(System.Data.Entity.Spatial.DbGeometry));
+    
+            var minRadiusParameter = minRadius.HasValue ?
+                new ObjectParameter("MinRadius", minRadius) :
+                new ObjectParameter("MinRadius", typeof(double));
+    
+            var queryDateParameter = queryDate.HasValue ?
+                new ObjectParameter("QueryDate", queryDate) :
+                new ObjectParameter("QueryDate", typeof(System.DateTime));
+    
+            return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction<Structure>("SelectSectionStructuresInVolumeBounds", mergeOption, zParameter, bBoxParameter, minRadiusParameter, queryDateParameter);
+        }
+    
+        public virtual int UpdateStructureType(Nullable<long> structureID, Nullable<long> typeID)
+        {
+            var structureIDParameter = structureID.HasValue ?
+                new ObjectParameter("StructureID", structureID) :
+                new ObjectParameter("StructureID", typeof(long));
+    
+            var typeIDParameter = typeID.HasValue ?
+                new ObjectParameter("TypeID", typeID) :
+                new ObjectParameter("TypeID", typeof(long));
+    
+            return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction("UpdateStructureType", structureIDParameter, typeIDParameter);
         }
     }
 }

@@ -96,9 +96,22 @@ namespace ConnectomeDataModel
             return dictLocations.Values.ToList();
         }
 
-        public IList<Location> ReadSectionLocationsAndLinksInRegion(long section, System.Data.Entity.Spatial.DbGeometry bbox, double MinRadius, DateTime? LastModified)
+        public IList<Location> ReadSectionLocationsAndLinksInMosaicRegion(long section, System.Data.Entity.Spatial.DbGeometry bbox, double MinRadius, DateTime? LastModified)
         {
-            var results = this.SelectSectionLocationsAndLinksInBounds((double)section, bbox, MinRadius, LastModified, MergeOption.NoTracking);
+            var results = this.SelectSectionLocationsAndLinksInMosaicBounds((double)section, bbox, MinRadius, LastModified, MergeOption.NoTracking);
+
+            var dictLocations = results.ToDictionary(l => l.ID);
+
+            var LocationLinks = results.GetNextResult<LocationLink>().ToList();
+
+            AppendLinksToLocations(dictLocations, LocationLinks);
+
+            return dictLocations.Values.ToList();
+        }
+
+        public IList<Location> ReadSectionLocationsAndLinksInVolumeRegion(long section, System.Data.Entity.Spatial.DbGeometry bbox, double MinRadius, DateTime? LastModified)
+        {
+            var results = this.SelectSectionLocationsAndLinksInVolumeBounds((double)section, bbox, MinRadius, LastModified, MergeOption.NoTracking);
 
             var dictLocations = results.ToDictionary(l => l.ID);
 
@@ -134,9 +147,22 @@ namespace ConnectomeDataModel
             return dictStructures.Values.ToList();
         }
 
-        public IList<Structure> ReadSectionStructuresAndLinksInRegion(long section, System.Data.Entity.Spatial.DbGeometry bbox, double MinRadius, DateTime? LastModified)
+        public IList<Structure> ReadSectionStructuresAndLinksInMosaicRegion(long section, System.Data.Entity.Spatial.DbGeometry bbox, double MinRadius, DateTime? LastModified)
         {
-            var results = this.SelectSectionStructuresAndLinksInBounds((double)section, bbox, MinRadius, LastModified, MergeOption.NoTracking);
+            var results = this.SelectSectionStructuresAndLinksInMosaicBounds((double)section, bbox, MinRadius, LastModified, MergeOption.NoTracking);
+
+            Dictionary<long, Structure> dictStructures = results.ToDictionary(s => s.ID);
+
+            var StructureLinks = results.GetNextResult<StructureLink>().ToList();
+
+            AppendLinksToStructures(dictStructures, StructureLinks);
+
+            return dictStructures.Values.ToList();
+        }
+
+        public IList<Structure> ReadSectionStructuresAndLinksInVolumeRegion(long section, System.Data.Entity.Spatial.DbGeometry bbox, double MinRadius, DateTime? LastModified)
+        {
+            var results = this.SelectSectionStructuresAndLinksInVolumeBounds((double)section, bbox, MinRadius, LastModified, MergeOption.NoTracking);
 
             Dictionary<long, Structure> dictStructures = results.ToDictionary(s => s.ID);
 
@@ -148,7 +174,7 @@ namespace ConnectomeDataModel
         }
 
 
-     
+
 
 
         /// <summary>
