@@ -26,6 +26,10 @@ namespace ConnectomeODataV4
             //var cors = new System.Web.Http.Cors.EnableCorsAttribute("*", "*", "*");
             //config.EnableCors(cors);
 
+            //config.EnableSystemDiagnosticsTracing();
+
+            //config.IncludeErrorDetailPolicy = IncludeErrorDetailPolicy.Always;
+
             // Web API routes 
             config.MapHttpAttributeRoutes();
 
@@ -38,14 +42,7 @@ namespace ConnectomeODataV4
                 routePrefix: null,
                 model: edmModel,
                 batchHandler: odataBatchHandler);
-            
-            /*
-            config.Routes.MapHttpBatchRoute(
-                routeName: "batch",
-                routeTemplate: "api/batch",
-                batchHandler: new DefaultHttpBatchHandler(GlobalConfiguration.DefaultServer));
-                */
-            
+                         
             config.Routes.MapHttpRoute(
                 name: "api",
                 routeTemplate: "api/{controller}/{id}",
