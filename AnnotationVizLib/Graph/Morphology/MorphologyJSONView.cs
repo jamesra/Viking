@@ -30,7 +30,6 @@ namespace AnnotationVizLib
 
         static public MorphologyJSONView ToJSON(MorphologyGraph graph)
         {
-            int edgeCount = 0;
             MorphologyJSONView JSONView = new MorphologyJSONView();
 
             foreach(MorphologyGraph g in graph.Subgraphs.Values)

@@ -11,12 +11,17 @@ namespace AnnotationVizLib
     
     public class ObjAttribute : Object, IComparable<ObjAttribute>
     {
-        public string Name { get; set; }
+        public readonly string Name;
         public string Value { get; set; }
 
-        public ObjAttribute()
+        public override int GetHashCode()
         {
-            this.Name = "";
+            return Name.GetHashCode();
+        }
+
+        public ObjAttribute(string Name)
+        {
+            this.Name = Name;
             this.Value = "";
         }
 
@@ -117,7 +122,6 @@ namespace AnnotationVizLib
             List<ObjAttribute> listAttribs = ObjAttribute.Parse(xml).Where(a => !string.IsNullOrEmpty(a.Name)).ToList();
 
             StringBuilder sb = new StringBuilder();
-            string row;
             bool FirstRow = true;
             foreach (ObjAttribute a in listAttribs)
             {
@@ -141,8 +145,7 @@ namespace AnnotationVizLib
             List<ObjAttribute> listAttrib = new List<ObjAttribute>();
             foreach (XElement attribElem in structureElem.Elements("Attrib"))
             {
-                ObjAttribute a = new ObjAttribute();
-                a.Name = attribElem.Attribute("Name").Value;
+                ObjAttribute a = new ObjAttribute(attribElem.Attribute("Name").Value);
                 if (attribElem.Attribute("Value") != null)
                 {
                     a.Value = attribElem.Attribute("Value").Value;
@@ -165,7 +168,7 @@ namespace AnnotationVizLib
 
             foreach (string tagString in tags)
             {
-                ObjAttribute tag = new ObjAttribute();
+                ObjAttribute tag;
                 string trimmedTag = tagString.Trim();
                 string key = trimmedTag;
 
@@ -180,13 +183,11 @@ namespace AnnotationVizLib
                     key = trimmedTag.Substring(0, iEquals);
                     value = trimmedTag.Substring(iEquals + 1);
 
-                    tag.Name = key.Trim();
-                    tag.Value = value.Trim();
+                    tag = new ObjAttribute(key.Trim(), value.Trim());
                 }
                 else
                 {
-                    tag.Name = key;
-                    tag.Value = value;
+                    tag = new ObjAttribute(key.Trim(), value.Trim());
                 }
 
                 listTags.Add(tag);
@@ -212,7 +213,7 @@ namespace AnnotationVizLib
             bool BNull = object.ReferenceEquals(null, B);
             if (ANull && BNull)
                 return true;
-            if (ANull == null || BNull == null)
+            if (ANull || BNull)
                 return false;
 
             return String.Compare(A.Name, B.Name) == 0; 
