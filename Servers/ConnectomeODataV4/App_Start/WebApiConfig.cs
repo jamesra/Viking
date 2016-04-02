@@ -60,16 +60,22 @@ namespace ConnectomeODataV4
         public static Microsoft.OData.Edm.IEdmModel GetModel()
         {
             ODataConventionModelBuilder builder = new ODataConventionModelBuilder();
+
+            builder.Namespace = "ConnectomeODataV4";
+
             builder.EntitySet<StructureType>("StructureTypes");
             builder.EntitySet<Structure>("Structures");
             builder.EntitySet<Location>("Locations");
 
             AddStructureLinks(builder);
             AddLocationLinks(builder);
-            
+            AddFunctions(builder);
+
             var edmModel = builder.GetEdmModel();
             AddStructureLocationLinks(edmModel);
             AddLocation(edmModel);
+
+            
             return edmModel;
         }
 
@@ -128,6 +134,21 @@ namespace ConnectomeODataV4
             type.HasKey(sl => sl.A);
             type.HasKey(sl => sl.B);
             builder.EntitySet<LocationLink>("LocationLinks");
+        }
+        
+        public static void AddFunctions(ODataModelBuilder builder)
+        {
+            builder.EntitySet<Structure>("Structures");
+
+            var NetworkIDsFuncConfig = builder.Function("Network");
+            NetworkIDsFuncConfig.CollectionParameter<long>("IDs");
+            NetworkIDsFuncConfig.Parameter<int>("Hops");
+            NetworkIDsFuncConfig.ReturnsCollection<long>();
+
+            var NetworkCellsFuncConfig = builder.Function("NetworkCells");
+            NetworkCellsFuncConfig.CollectionParameter<long>("IDs");
+            NetworkCellsFuncConfig.Parameter<int>("Hops");
+            NetworkCellsFuncConfig.ReturnsCollectionFromEntitySet<Structure>("Structures");
         }
     }
 }

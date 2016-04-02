@@ -2,7 +2,12 @@
 using System.Linq;
 using System.Web.Http;
 using System.Web.OData;
+using System.Web.OData.Extensions;
+using Microsoft.OData.Edm;
+using System.Web.OData.Routing;
 using ConnectomeDataModel;
+using System.Collections;
+using System.Collections.Generic;
 
 namespace ConnectomeODataV4.Controllers
 {
@@ -189,6 +194,30 @@ namespace ConnectomeODataV4.Controllers
         public IQueryable<StructureLink> GetTargetOfLinks([FromODataUri] long key)
         {
             return db.Structures.Where(m => m.ID == key).SelectMany(m => m.TargetOfLinks);
+        }
+
+        [HttpGet]
+        [ODataRoute("Network(IDs={IDs},Hops={Hops})")]
+        public IHttpActionResult GetNetwork([FromODataUri] long[] IDs, [FromODataUri] int Hops)
+        {
+            return Ok(db.SelectNetworkStructureIDs(IDs, Hops));
+        }
+
+        [EnableQuery(PageSize = 2048)]
+        [ODataRoute("NetworkCells(IDs={IDs},Hops={Hops})")]
+        public IQueryable<Structure> GetNetworkCells([FromODataUri] long[] IDs, [FromODataUri] int Hops)
+        {
+            SortedSet<long> CellIDs = new SortedSet<long>(db.SelectNetworkStructureIDs(IDs, Hops));
+
+            /* https://github.com/OData/WebApi/issues/255 */
+
+            IEdmModel model = Request.ODataProperties().Model;
+
+            ODataPath path = new DefaultODataPathHandler().Parse(model, System.Web.HttpContext.Current.Request.Url.GetLeftPart(System.UriPartial.Path), "Structures");
+
+            Request.ODataProperties().Path = path;
+
+            return db.Structures.Where(s => CellIDs.Contains(s.ID));
         }
 
         protected override void Dispose(bool disposing)
