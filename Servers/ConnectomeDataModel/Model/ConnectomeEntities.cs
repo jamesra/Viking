@@ -7,11 +7,45 @@ using System.Data.Entity.Core.Objects;
 using System.Linq;
 using System.Collections.Generic;
 using System.Data.SqlClient;
+using EntityFrameworkExtras;
 
 namespace ConnectomeDataModel
 {
+    public class NetworkDetails
+    {
+        public readonly Structure[] Nodes;
+        public readonly Structure[] ChildNodes;
+        public readonly StructureLink[] Edges;
+
+        public NetworkDetails(Structure[] nodes, Structure[] childNodes, StructureLink[] edges)
+        {
+            this.Nodes = nodes;
+            this.ChildNodes = childNodes;
+            this.Edges = edges;
+        } 
+    }
+
     public partial class ConnectomeEntities
     {
+
+        public void ConfigureAsReadOnly()
+        {
+            //Note, disabling LazyLoading breaks loading of children and links unless they have been populated previously.
+            this.Database.CommandTimeout = 90;
+            this.Configuration.LazyLoadingEnabled = false;
+            this.Configuration.UseDatabaseNullSemantics = true;
+            this.Configuration.AutoDetectChangesEnabled = false;
+        }
+
+        public void ConfigureAsReadOnlyWithLazyLoading()
+        {
+            //Note, disabling LazyLoading breaks loading of children and links unless they have been populated previously.
+            this.Database.CommandTimeout = 90;
+            this.Configuration.LazyLoadingEnabled = true;
+            this.Configuration.UseDatabaseNullSemantics = true;
+            this.Configuration.AutoDetectChangesEnabled = false;
+        }
+
         /// <summary>
         /// Our server didn't exist before 2007 and if we pass a date earlier than 1753 the SQL query fails
         /// </summary>
@@ -36,6 +70,8 @@ namespace ConnectomeDataModel
 
             return param;
         }
+
+
 
         private static SqlParameter CreateMinRadiusParameter(double MinRadius)
         {
@@ -175,6 +211,81 @@ namespace ConnectomeDataModel
 
 
 
+        public SortedSet<long> SelectNetworkStructureIDs(IEnumerable<long> IDs, int numHops)
+        {
+            var proc = new SelectNetworkStructureIDsStoredProcedure()
+            {
+                Hops = numHops,
+                IDs = udt_integer_list.Create(IDs)
+            };
+
+            SortedSet<long> StructureIDs = new SortedSet<long>(EntityFrameworkExtras.EF6.DatabaseExtensions.ExecuteStoredProcedure<long>(this.Database, proc));
+            return StructureIDs;
+        }
+
+        public NetworkDetails SelectNetworkDetails(IEnumerable<long> IDs, int numHops)
+        { 
+            var proc = new SelectNetworkDetailsStoredProcedure()
+            {
+                Hops = numHops,
+                IDs = udt_integer_list.Create(IDs)
+            };
+
+            NetworkDetails retval = null;
+
+            if(this.Database.Connection.State != System.Data.ConnectionState.Open)
+                this.Database.Connection.Open();
+
+            using (System.Data.Common.DbDataReader reader = EntityFrameworkExtras.EF6.DatabaseExtensions.ExecuteReader(this.Database, proc))
+            {
+                Structure[] NodeObjects = ((IObjectContextAdapter)this).ObjectContext.Translate<Structure>(reader, "Structures", MergeOption.NoTracking).ToArray();
+                reader.NextResult();
+                Structure[] ChildObjects = ((IObjectContextAdapter)this).ObjectContext.Translate<Structure>(reader, "Structures", MergeOption.NoTracking).ToArray();
+                reader.NextResult();
+                StructureLink[] Edges = ((IObjectContextAdapter)this).ObjectContext.Translate<StructureLink>(reader, "StructureLinks", MergeOption.NoTracking).ToArray();
+
+                retval = new NetworkDetails(NodeObjects, ChildObjects, Edges);
+            }
+
+            this.Database.Connection.Close();
+
+            return retval;
+        }
+
+        public IQueryable<Structure> SelectNetworkStructures(IEnumerable<long> IDs, int numHops)
+        {
+            SortedSet<long> NodeIDs = SelectNetworkStructureIDs(IDs, numHops);
+
+            return from s in this.Structures
+                   where NodeIDs.Contains(s.ID)
+                   select s; 
+        }
+
+        public IQueryable<Structure> SelectNetworkChildStructures(IEnumerable<long> IDs, int numHops)
+        {
+            var proc = new SelectNetworkChildStructureIDsProcedure()
+            {
+                Hops = numHops,
+                IDs = udt_integer_list.Create(IDs)
+            };
+
+            SortedSet<long> ChildStructureIDs = new SortedSet<long>(EntityFrameworkExtras.EF6.DatabaseExtensions.ExecuteStoredProcedure<long>(this.Database, proc));
+            
+            return from s in this.Structures
+                   where ChildStructureIDs.Contains(s.ID)
+                   select s;
+        }
+
+        public IQueryable<StructureLink> SelectNetworkStructureLinks(IEnumerable<long> IDs, int numHops)
+        {
+            SortedSet<long> NodeIDs = SelectNetworkStructureIDs(IDs, numHops);
+            
+            var ChildStructures = from S in Structures where S.ParentID.HasValue && NodeIDs.Contains(S.ParentID.Value) select S;
+            return from SL in this.StructureLinks
+                    join CSource in ChildStructures on SL.SourceID equals CSource.ID
+                    join CTarget in ChildStructures on SL.TargetID equals CTarget.ID
+                    select SL;
+        }
 
 
         /// <summary>
@@ -223,5 +334,6 @@ namespace ConnectomeDataModel
                 }
             } 
         }
+
     }
 }

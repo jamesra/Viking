@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ConnectomeDataModel;
 using System.Collections.Generic;
@@ -14,9 +15,42 @@ namespace ConnectomeDataModelTests
             ConnectomeDataModel.ConnectomeEntities context = new ConnectomeEntities();
 
             List<long> IDs = new List<long>(new long[] { 476, 514 });
-            IList<long> networkStructureIDs = context.SelectNetworkStructureIDs(IDs, 3);
-            System.Diagnostics.Trace.Write(networkStructureIDs.Count.ToString());
+            SortedSet<long> networkStructureIDs = context.SelectNetworkStructureIDs(IDs, 3);
+            System.Diagnostics.Trace.Write(networkStructureIDs.Count().ToString());
 
+        }
+
+        [TestMethod]
+        public void TestSelectNetworkStructures()
+        {
+            ConnectomeDataModel.ConnectomeEntities context = new ConnectomeEntities();
+
+            List<long> IDs = new List<long>(new long[] { 476, 514 });
+            IQueryable<Structure> networkStructureIDs = context.SelectNetworkStructures(IDs, 3);
+            System.Diagnostics.Trace.Write(networkStructureIDs.Count().ToString()); 
+        }
+
+        [TestMethod]
+        public void TestSelectNetworkChildStructures()
+        {
+            ConnectomeDataModel.ConnectomeEntities context = new ConnectomeEntities();
+            context.ConfigureAsReadOnly();
+
+            context.Database.CommandTimeout = 120;
+
+            List<long> IDs = new List<long>(new long[] { 476, 514 });
+            IQueryable<Structure> networkStructureIDs = context.SelectNetworkChildStructures(IDs, 3);
+            System.Diagnostics.Trace.Write(networkStructureIDs.Count().ToString());
+        }
+
+        [TestMethod]
+        public void TestSelectNetworkStructureLinks()
+        {
+            ConnectomeDataModel.ConnectomeEntities context = new ConnectomeEntities();
+
+            List<long> IDs = new List<long>(new long[] { 476, 514 });
+            IQueryable<StructureLink> networkStructureLinks = context.SelectNetworkStructureLinks(IDs, 3);
+            System.Diagnostics.Trace.Write(networkStructureLinks.Count().ToString());
         }
 
         [TestMethod]
