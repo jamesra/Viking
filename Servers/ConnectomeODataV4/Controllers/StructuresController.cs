@@ -207,6 +207,8 @@ namespace ConnectomeODataV4.Controllers
         [ODataRoute("NetworkCells(IDs={IDs},Hops={Hops})")]
         public IQueryable<Structure> GetNetworkCells([FromODataUri] long[] IDs, [FromODataUri] int Hops)
         {
+           // db.ConfigureAsReadOnly();
+
             SortedSet<long> CellIDs = new SortedSet<long>(db.SelectNetworkStructureIDs(IDs, Hops));
 
             /* https://github.com/OData/WebApi/issues/255 */
@@ -218,6 +220,46 @@ namespace ConnectomeODataV4.Controllers
             Request.ODataProperties().Path = path;
 
             return db.Structures.Where(s => CellIDs.Contains(s.ID));
+        }
+
+        [HttpGet]
+        [EnableQuery(PageSize = 2048)]
+        [ODataRoute("Structures/Network(IDs={IDs},Hops={Hops})")]
+        public IQueryable<Structure> Network([FromODataUri] long[] IDs, [FromODataUri] int Hops)
+        {
+            //db.ConfigureAsReadOnly();
+
+            IQueryable<Structure> Structures = db.SelectNetworkStructures(IDs, Hops);
+
+            /* https://github.com/OData/WebApi/issues/255 */
+
+            IEdmModel model = Request.ODataProperties().Model;
+
+            ODataPath path = new DefaultODataPathHandler().Parse(model, System.Web.HttpContext.Current.Request.Url.GetLeftPart(System.UriPartial.Path), "Structures");
+
+            Request.ODataProperties().Path = path;
+
+            return Structures;
+        }
+
+        [HttpGet]
+        [EnableQuery(PageSize = 2048)]
+        [ODataRoute("Structures/NetworkChildStructures(IDs={IDs},Hops={Hops})")]
+        public IQueryable<Structure> GetNetworkChildren([FromODataUri] long[] IDs, [FromODataUri] int Hops)
+        {
+            //db.ConfigureAsReadOnly();
+
+            IQueryable<Structure> Structures = db.SelectNetworkChildStructures(IDs, Hops);
+
+            /* https://github.com/OData/WebApi/issues/255 */
+
+            IEdmModel model = Request.ODataProperties().Model;
+
+            ODataPath path = new DefaultODataPathHandler().Parse(model, System.Web.HttpContext.Current.Request.Url.GetLeftPart(System.UriPartial.Path), "Structures");
+
+            Request.ODataProperties().Path = path;
+
+            return Structures;
         }
 
         protected override void Dispose(bool disposing)

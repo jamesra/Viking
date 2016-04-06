@@ -2,6 +2,9 @@
 using System.Linq;
 using System.Web.Http;
 using System.Web.OData;
+using System.Web.OData.Extensions;
+using Microsoft.OData.Edm;
+using System.Web.OData.Routing;
 using ConnectomeDataModel;
 
 namespace ConnectomeODataV4.Controllers
@@ -169,6 +172,26 @@ namespace ConnectomeODataV4.Controllers
         public SingleResult<Structure> GetTarget([FromODataUri] long key)
         {
             return SingleResult.Create(db.StructureLinks.Where(m => m.SourceID == key).Select(m => m.Target));
+        }
+
+        [HttpGet]
+        [EnableQuery(PageSize = 2048)]
+        [ODataRoute("StructureLinks/Network(IDs={IDs},Hops={Hops})")]
+        public IQueryable<StructureLink> Network([FromODataUri] long[] IDs, [FromODataUri] int Hops)
+        {
+            //db.ConfigureAsReadOnly();
+
+            IQueryable<StructureLink> StructureLinks = db.SelectNetworkStructureLinks(IDs, Hops);
+
+            /* https://github.com/OData/WebApi/issues/255 */
+
+            IEdmModel model = Request.ODataProperties().Model;
+
+            ODataPath path = new DefaultODataPathHandler().Parse(model, System.Web.HttpContext.Current.Request.Url.GetLeftPart(System.UriPartial.Path), "StructureLinks");
+
+            Request.ODataProperties().Path = path;
+
+            return StructureLinks;
         }
 
         protected override void Dispose(bool disposing)

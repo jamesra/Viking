@@ -31,6 +31,8 @@ namespace ConnectomeODataV4
             //config.IncludeErrorDetailPolicy = IncludeErrorDetailPolicy.Always;
 
             // Web API routes 
+            config.EnableUnqualifiedNameCall(true);
+
             config.MapHttpAttributeRoutes();
 
             Microsoft.OData.Edm.IEdmModel edmModel = GetModel();
@@ -48,6 +50,8 @@ namespace ConnectomeODataV4
                 routeTemplate: "api/{controller}/{id}",
                 defaults: new { id = RouteParameter.Optional }
             );
+
+            
         }
 
         public static System.Linq.IQueryable<LocationLink> StructureLocationLinks(long ID)
@@ -139,16 +143,31 @@ namespace ConnectomeODataV4
         public static void AddFunctions(ODataModelBuilder builder)
         {
             builder.EntitySet<Structure>("Structures");
-
+            
             var NetworkIDsFuncConfig = builder.Function("Network");
             NetworkIDsFuncConfig.CollectionParameter<long>("IDs");
             NetworkIDsFuncConfig.Parameter<int>("Hops");
             NetworkIDsFuncConfig.ReturnsCollection<long>();
-
+            
             var NetworkCellsFuncConfig = builder.Function("NetworkCells");
             NetworkCellsFuncConfig.CollectionParameter<long>("IDs");
             NetworkCellsFuncConfig.Parameter<int>("Hops");
             NetworkCellsFuncConfig.ReturnsCollectionFromEntitySet<Structure>("Structures");
+
+            var StructuresNetworkFuncConfig = builder.EntityType<Structure>().Collection.Function("Network");
+            StructuresNetworkFuncConfig.CollectionParameter<long>("IDs");
+            StructuresNetworkFuncConfig.Parameter<int>("Hops");
+            StructuresNetworkFuncConfig.ReturnsCollectionFromEntitySet<Structure>("Structures");
+
+            var NetworkChildStructuresFuncConfig = builder.EntityType<Structure>().Collection.Function("NetworkChildStructures");
+            NetworkChildStructuresFuncConfig.CollectionParameter<long>("IDs");
+            NetworkChildStructuresFuncConfig.Parameter<int>("Hops");
+            NetworkChildStructuresFuncConfig.ReturnsCollectionFromEntitySet<Structure>("Structures");
+
+            var StructureLinksNetworkFuncConfig = builder.EntityType<StructureLink>().Collection.Function("Network");
+            StructureLinksNetworkFuncConfig.CollectionParameter<long>("IDs");
+            StructureLinksNetworkFuncConfig.Parameter<int>("Hops");
+            StructureLinksNetworkFuncConfig.ReturnsCollectionFromEntitySet<StructureLink>("StructureLinks");
         }
     }
 }
