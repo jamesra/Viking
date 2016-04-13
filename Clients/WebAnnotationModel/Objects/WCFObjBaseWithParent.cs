@@ -9,7 +9,7 @@ using WebAnnotationModel.Service;
 namespace WebAnnotationModel.Objects
 {
     abstract public class WCFObjBaseWithParent<KEY, T, THISTYPE> : WCFObjBaseWithKey<KEY, T>
-        where KEY : struct
+        where KEY : struct, IEquatable<KEY>
         where T : DataObjectWithParentOflong, new()
         where THISTYPE : WCFObjBaseWithParent<KEY, T, THISTYPE>, new() 
     {

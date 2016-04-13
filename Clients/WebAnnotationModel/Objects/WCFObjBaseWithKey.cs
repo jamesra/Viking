@@ -7,8 +7,8 @@ using System.Diagnostics;
 
 namespace WebAnnotationModel.Objects
 {
-    abstract public class WCFObjBaseWithKey<KEY, T> : WCFObjBase<T>
-        where KEY : struct
+    abstract public class WCFObjBaseWithKey<KEY, T> : WCFObjBase<T>, IEquatable<WCFObjBaseWithKey<KEY, T>>
+        where KEY : struct, IEquatable<KEY>
         where T : DataObject, new()
     {
         public abstract KEY ID { get; }
@@ -27,7 +27,7 @@ namespace WebAnnotationModel.Objects
             WCFObjBaseWithKey<KEY, T> locObj = obj as WCFObjBaseWithKey<KEY, T>;
             if (locObj != null)
             {
-                return this.ID.Equals(locObj.ID);
+                return this.Equals(locObj);
             }
             else
                 return base.Equals(obj);
@@ -78,6 +78,13 @@ namespace WebAnnotationModel.Objects
                 return _HashCode.Value;
             }
         }
- 
+
+        public bool Equals(WCFObjBaseWithKey<KEY, T> other)
+        {
+            if ((object)other == null)
+                return false;
+
+            return this.ID.Equals(other.ID);
+        }
     }
 }
