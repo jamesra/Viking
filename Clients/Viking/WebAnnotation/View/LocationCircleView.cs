@@ -134,12 +134,12 @@ namespace WebAnnotation.View
             }
         }
 
-        public AdjacentLocationCircleView(LocationObj obj, IVolumeToSectionMapper mapper) : base(obj)
+        public AdjacentLocationCircleView(LocationObj obj, IVolumeToSectionTransform mapper) : base(obj)
         {
             _MosaicCircle = new GridCircle(obj.Position, obj.Radius / 2.0 );
             _VolumeCircle = new GridCircle(mapper.SectionToVolume(_MosaicCircle.Center), _MosaicCircle.Radius / 2.0);
 
-            CreateViewObjects(this.VolumeCircle, mapper);
+            CreateViewObjects(this.MosaicCircle, mapper);
             CreateLabelObjects();  
         }
 
@@ -151,7 +151,7 @@ namespace WebAnnotation.View
             get { return this.VolumeCircle.Radius; }
         }
         
-        private void CreateViewObjects(GridCircle MosaicCircle, IVolumeToSectionMapper mapper)
+        private void CreateViewObjects(GridCircle MosaicCircle, IVolumeToSectionTransform mapper)
         {
             GridVector2 VolumePosition = mapper.SectionToVolume(MosaicCircle.Center);
             upCircleView = TextureCircleView.CreateUpArrow(new GridCircle(VolumePosition, this.Radius), modelObj.Parent.Type.Color.ToXNAColor(0.33f));
@@ -284,7 +284,7 @@ namespace WebAnnotation.View
         static double BeginFadeCutoff = 0.1;
         static double InvisibleCutoff = 1f;
 
-        public LocationCircleView(LocationObj obj, Viking.VolumeModel.IVolumeToSectionMapper mapper) : base(obj)
+        public LocationCircleView(LocationObj obj, Viking.VolumeModel.IVolumeToSectionTransform mapper) : base(obj)
         {
             _MosaicCircle = new GridCircle(obj.Position, obj.Radius);
             _VolumeCircle = new GridCircle(mapper.SectionToVolume(_MosaicCircle.Center), _MosaicCircle.Radius);
@@ -295,7 +295,7 @@ namespace WebAnnotation.View
             CreateLabelObjects();
         }
 
-        private void CreateViewObjects(GridCircle MosaicCircle, IVolumeToSectionMapper mapper)
+        private void CreateViewObjects(GridCircle MosaicCircle, IVolumeToSectionTransform mapper)
         {
             GridVector2 VolumePosition = mapper.SectionToVolume(MosaicCircle.Center);
             circleView = new CircleView(new GridCircle(VolumePosition, modelObj.Radius), modelObj.Parent.Type.Color.ToXNAColor(1f) );

@@ -298,8 +298,8 @@ namespace Viking.UI.Controls
          
         public string CurrentTransform
         {
-            get { return Section.ActiveTransform; }
-            set { Section.ActiveTransform = value; }
+            get { return Section.ActiveTileTransform; }
+            set { Section.ActiveTileTransform = value; }
         } 
 
         public SectionViewerControl()
@@ -940,7 +940,7 @@ namespace Viking.UI.Controls
             //                                             new Microsoft.Xna.Framework.Color(0,1f,0),
             //                                          new Microsoft.Xna.Framework.Color(0,0,1f)};
 
-            MappingBase Mapping = Viking.UI.State.volume.GetMapping(section.Number, channel, this.CurrentTransform);
+            MappingBase Mapping = Viking.UI.State.volume.GetTileMapping(section.Number, channel, this.CurrentTransform);
 
             if (Mapping == null)
                 return null;
@@ -1212,7 +1212,7 @@ namespace Viking.UI.Controls
                 }
 
                 //Find the mapping to use
-                MappingBase mapping = this.Section.VolumeViewModel.GetMapping(Volume.ActiveVolumeTransform,
+                MappingBase mapping = this.Section.VolumeViewModel.GetTileMapping(Volume.ActiveVolumeTransform,
                                                                 sectionToDraw.Number,
                                                                 ChannelName,
                                                                 Section.DefaultPyramidTransform);
@@ -1721,7 +1721,7 @@ namespace Viking.UI.Controls
                 //                GC.Collect();
 
                 //Get the boundaries of the section
-                MappingBase mapping = this.Section.VolumeViewModel.GetMapping(Volume.ActiveVolumeTransform, this.Section.Number, this.CurrentChannel, this.CurrentTransform);
+                MappingBase mapping = this.Section.VolumeViewModel.GetTileMapping(Volume.ActiveVolumeTransform, this.Section.Number, this.CurrentChannel, this.CurrentTransform);
 
                 //Figure out how much we need to capture
                 Size TileImageSize = new Size(256, 256);
@@ -1950,7 +1950,7 @@ namespace Viking.UI.Controls
 
             if (InputInSectionSpace)
             {
-                MappingBase map = this.Section.VolumeViewModel.GetMapping(Volume.ActiveVolumeTransform, this.Section.Number, this.CurrentChannel, this.CurrentTransform);
+                MappingBase map = this.Section.VolumeViewModel.GetTileMapping(Volume.ActiveVolumeTransform, this.Section.Number, this.CurrentChannel, this.CurrentTransform);
                 if (map != null)
                 {
                     GridVector2 TransformedPoint;

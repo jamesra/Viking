@@ -93,10 +93,11 @@ namespace WebAnnotation.UI.Commands
         protected GridVector2? IntersectsSelf(GridLineSegment lineSeg)
         {
             GridVector2 intersection;
-            for(int i=1; i < this.LineVerticies.Length; i++)
+
+            GridLineSegment[] segments = GridLineSegment.SegmentsFromPoints(this.LineVerticies);
+            foreach(GridLineSegment existingLine in segments)
             {
-                GridLineSegment existingLine = new GridLineSegment(this.LineVerticies[i - 1], this.LineVerticies[i]);
-                if(existingLine.Intersects(lineSeg, out intersection))
+                if (existingLine.Intersects(lineSeg, out intersection))
                 {
                     return new GridVector2?(intersection);
                 }

@@ -23,9 +23,9 @@ namespace WebAnnotation.View
 
 
         public static uint NumInterpolationPoints = Global.NumCurveInterpolationPoints;
-        public LocationClosedCurveView(LocationObj obj, Viking.VolumeModel.IVolumeToSectionMapper mapper) : base(obj, mapper)
+        public LocationClosedCurveView(LocationObj obj, Viking.VolumeModel.IVolumeToSectionTransform mapper) : base(obj, mapper)
         {
-            curveView = new CurveView(this.VolumeCurveControlPoints, obj.Parent.Type.Color.ToXNAColor().ConvertToHSL(0.5f), true);
+            curveView = new CurveView(this.VolumeControlPoints, obj.Parent.Type.Color.ToXNAColor().ConvertToHSL(0.5f), true);
         }
 
         private GridVector2[] _MosaicCurveControlPoints;

@@ -27,7 +27,7 @@ namespace WebAnnotation.View
             set { curveView.Color = value; }
         }
          
-        public LocationOpenCurveView(LocationObj obj, Viking.VolumeModel.IVolumeToSectionMapper mapper) : base(obj, mapper)
+        public LocationOpenCurveView(LocationObj obj, Viking.VolumeModel.IVolumeToSectionTransform mapper) : base(obj, mapper)
         {
             RegisterForLocationEvents();
             RegisterForStructureChangeEvents();
@@ -41,9 +41,9 @@ namespace WebAnnotation.View
             string LabelText = this.ParentID.ToString() + " " + this.FullLabelText();
 
             string ParentStructureLabelText = "";
-            if (ParentID.HasValue)
+            if (this.Parent.ParentID.HasValue)
             {
-                ParentStructureLabelText = ParentID.ToString();
+                ParentStructureLabelText = this.Parent.ParentID.ToString();
                 LabelText = this.Parent.Type.Code + " " + LabelText;
             }
 
@@ -58,7 +58,9 @@ namespace WebAnnotation.View
 
             float TotalLabelLength = (float)(curveLabel.Label.Length + 1 + curveParentLabel.Label.Length);
             curveLabel.Max_Curve_Length_To_Use_Normalized = (float)curveLabel.Label.Length / TotalLabelLength;
+
             curveParentLabel.Max_Curve_Length_To_Use_Normalized = (float)curveParentLabel.Label.Length / TotalLabelLength;
+            curveParentLabel.LabelEndDistance = 0.90f;
         }
         
         private GridVector2[] _MosaicCurveControlPoints;

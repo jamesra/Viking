@@ -349,6 +349,7 @@
     <ProjectReference Include="..\..\..\RTree\RTree.csproj">
       <Project>{4085ba67-60d7-4679-886e-457aaf37ec7b}</Project>
       <Name>RTree</Name>
+      <Private>False</Private>
     </ProjectReference>
     <ProjectReference Include="..\..\Common\Common.csproj">
       <Project>{B35B0C61-EC9C-425A-846D-F160D5B12158}</Project>
@@ -363,6 +364,7 @@
     <ProjectReference Include="..\..\SqlGeometryUtils\SqlGeometryUtils.csproj">
       <Project>{6702adda-3f8f-43d0-9c7e-1e7fdbbe983f}</Project>
       <Name>SqlGeometryUtils</Name>
+      <Private>True</Private>
     </ProjectReference>
     <ProjectReference Include="..\NGVV\VikingCore.csproj">
       <Project>{AEB1B24B-C968-40F9-B9F5-5C1FCE2EFD6D}</Project>

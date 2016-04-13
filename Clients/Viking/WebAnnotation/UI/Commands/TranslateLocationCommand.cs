@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using WebAnnotationModel;
 using Geometry;
 using WebAnnotation.View;
+using Viking.VolumeModel;
 using SqlGeometryUtils;
 using VikingXNAGraphics;
 using System.Windows.Forms;
@@ -23,7 +24,7 @@ namespace WebAnnotation.UI.Commands
         public delegate void OnCommandSuccess(GridVector2[] VolumeControlPoints, GridVector2[] MosaicControlPoints);
         OnCommandSuccess success_callback;
 
-        Viking.VolumeModel.IVolumeToSectionMapper mapping;
+        Viking.VolumeModel.IVolumeToSectionTransform mapping;
 
         protected override GridVector2 TranslatedPosition
         {
@@ -41,11 +42,11 @@ namespace WebAnnotation.UI.Commands
                                         bool IsClosedCurve,
                                         OnCommandSuccess success_callback) : base(parent)
         {
-            this.OriginalPosition = parent.Section.ActiveMapping.SectionToVolume(MosaicPosition);
-            this.OriginalControlPoints = parent.Section.ActiveMapping.SectionToVolume(OriginalMosaicControlPoints);
+            mapping = parent.Section.ActiveSectionToVolumeTransform;
+            this.OriginalPosition = mapping.SectionToVolume(MosaicPosition);
+            this.OriginalControlPoints = mapping.SectionToVolume(OriginalMosaicControlPoints);
             CreateView(OriginalControlPoints, color.ConvertToHSL(0.5f), LineWidth, IsClosedCurve);
             this.success_callback = success_callback;
-            mapping = parent.Section.ActiveMapping;
         }
 
         private void CreateView(GridVector2[] ControlPoints, Microsoft.Xna.Framework.Color color, double LineWidth, bool IsClosed)
@@ -100,7 +101,7 @@ namespace WebAnnotation.UI.Commands
         public delegate void OnCommandSuccess(GridVector2 VolumePosition, GridVector2 MosaicPosition);
         OnCommandSuccess success_callback;
 
-        Viking.VolumeModel.IVolumeToSectionMapper mapping;
+        Viking.VolumeModel.IVolumeToSectionTransform mapping;
 
         protected override GridVector2 TranslatedPosition
         {
@@ -111,14 +112,15 @@ namespace WebAnnotation.UI.Commands
         }
 
         public TranslateCircleLocationCommand(Viking.UI.Controls.SectionViewerControl parent,
-                                        GridCircle circle,
+                                        GridCircle mosaic_circle,
                                         Microsoft.Xna.Framework.Color color,
                                         OnCommandSuccess success_callback) : base(parent)
         {
-            CreateView(circle.Center, circle.Radius, color);
-            OriginalCircle = circle;
+            mapping = parent.Section.ActiveSectionToVolumeTransform;
+            GridVector2 volumePosition = mapping.SectionToVolume(mosaic_circle.Center);
+            CreateView(volumePosition, mosaic_circle.Radius, color);
+            OriginalCircle = new GridCircle(volumePosition, mosaic_circle.Radius);
             this.success_callback = success_callback;
-            mapping = parent.Section.ActiveMapping;
         }
 
         private void CreateView(GridVector2 Position, double Radius, Microsoft.Xna.Framework.Color color)

@@ -32,7 +32,7 @@ namespace WebAnnotation
 
     public static class GridRectangleExtensions
     {
-        public static GridRectangle ToMosaicSpace(this GridRectangle VolumeRect, Viking.VolumeModel.IVolumeToSectionMapper mapper)
+        public static GridRectangle ToMosaicSpace(this GridRectangle VolumeRect, Viking.VolumeModel.IVolumeToSectionTransform mapper)
         {
             GridVector2[] MosaicCorners = mapper.VolumeToSection(new GridVector2[] { VolumeRect.LowerLeft, VolumeRect.LowerRight, VolumeRect.UpperLeft, VolumeRect.UpperRight });
 
@@ -95,32 +95,9 @@ namespace WebAnnotation
         }
     }
 
-    public static class GeometryExtensions
-    {
-        public static RTree.Rectangle ToRTreeRect(this GridRectangle rect, float Z)
-        {
-            return new RTree.Rectangle((float)rect.Left, (float)rect.Bottom, (float)rect.Right, (float)rect.Top, Z, Z);
-        }
-
-        public static RTree.Rectangle ToRTreeRect(this GridRectangle rect, int Z)
-        {
-            return new RTree.Rectangle((float)rect.Left, (float)rect.Bottom, (float)rect.Right, (float)rect.Top, (float)Z, (float)Z);
-        }
-
-        public static RTree.Rectangle ToRTreeRect(this GridVector2 p, float Z)
-        {
-            return new RTree.Rectangle((float)p.X, (float)p.Y, (float)p.X, (float)p.Y, Z, Z);
-        }
-
-        public static RTree.Rectangle ToRTreeRect(this GridVector2 p, int Z)
-        {
-            return new RTree.Rectangle((float)p.X, (float)p.Y, (float)p.X, (float)p.Y, (float)Z, (float)Z);
-        } 
-    } 
-
     internal static class MappingExtensions
     { 
-        public static bool MapLocationToVolume(this Viking.VolumeModel.IVolumeToSectionMapper mapper, WebAnnotationModel.LocationObj loc)
+        public static bool MapLocationToVolume(this Viking.VolumeModel.IVolumeToSectionTransform mapper, WebAnnotationModel.LocationObj loc)
         {
             //Don't bother mapping if the location was already mapped
             if (loc.VolumeTransformID == mapper.ID)
@@ -142,7 +119,7 @@ namespace WebAnnotation
         /// </summary>
         /// <param name="loc"></param>
         /// <returns></returns>
-        private static bool MapLocationCentroidToVolume(this Viking.VolumeModel.IVolumeToSectionMapper mapper, WebAnnotationModel.LocationObj loc)
+        private static bool MapLocationCentroidToVolume(this Viking.VolumeModel.IVolumeToSectionTransform mapper, WebAnnotationModel.LocationObj loc)
         {
             //Don't bother mapping if the location was already mapped
             if (loc.VolumeTransformID == mapper.ID)
@@ -166,13 +143,13 @@ namespace WebAnnotation
             return true;
         }
 
-        public static Microsoft.SqlServer.Types.SqlGeometry TryMapShapeSectionToVolume(this Viking.VolumeModel.IVolumeToSectionMapper mapper, Microsoft.SqlServer.Types.SqlGeometry shape)
+        public static Microsoft.SqlServer.Types.SqlGeometry TryMapShapeSectionToVolume(this Viking.VolumeModel.IVolumeToSectionTransform mapper, Microsoft.SqlServer.Types.SqlGeometry shape)
         {
             GridVector2[] VolumePositions;
             GridVector2[] points = shape.ToPoints();
 
-            bool mappedPosition = mapper.TrySectionToVolume(points, out VolumePositions);
-            if (!mappedPosition) //Remove locations we can't map
+            bool[] mappedPosition = mapper.TrySectionToVolume(points, out VolumePositions);
+            if (mappedPosition.Any(success => success == false)) //Remove locations we can't map
             {
                 Trace.WriteLine("MapShapeSectionToVolume: Shape #" + shape.ToString() + " was unmappable.", "WebAnnotation");
                 return null;
@@ -181,13 +158,13 @@ namespace WebAnnotation
             return SqlGeometryUtils.GeometryExtensions.ToGeometry(shape.STGeometryType(), VolumePositions);
         }
 
-        public static Microsoft.SqlServer.Types.SqlGeometry TryMapShapeVolumeToSection(this Viking.VolumeModel.IVolumeToSectionMapper mapper, Microsoft.SqlServer.Types.SqlGeometry shape)
+        public static Microsoft.SqlServer.Types.SqlGeometry TryMapShapeVolumeToSection(this Viking.VolumeModel.IVolumeToSectionTransform mapper, Microsoft.SqlServer.Types.SqlGeometry shape)
         {
             GridVector2[] SectionPositions;
             GridVector2[] points = shape.ToPoints();
 
-            bool mappedPosition = mapper.TryVolumeToSection(points, out SectionPositions);
-            if (!mappedPosition) //Remove locations we can't map
+            bool[] mappedPosition = mapper.TryVolumeToSection(points, out SectionPositions);
+            if (mappedPosition.Any(success => success == false)) //Remove locations we can't map
             {
                 Trace.WriteLine("MapShapeSectionToVolume: Shape #" + shape.ToString() + " was unmappable.", "WebAnnotation");
                 return null;
@@ -201,7 +178,7 @@ namespace WebAnnotation
         /// </summary>
         /// <param name="loc"></param>
         /// <returns></returns>
-        private static bool MapLocationShapeToVolume(this Viking.VolumeModel.IVolumeToSectionMapper mapper, WebAnnotationModel.LocationObj loc)
+        private static bool MapLocationShapeToVolume(this Viking.VolumeModel.IVolumeToSectionTransform mapper, WebAnnotationModel.LocationObj loc)
         {
             //Don't bother mapping if the location was already mapped
             if (loc.VolumeTransformID == mapper.ID)
@@ -218,6 +195,20 @@ namespace WebAnnotation
             loc.VolumeTransformID = mapper.ID;
 
             return true;
+        }
+    }
+
+    public static class LINQLikeExtensions
+    {
+        public static void ForEach<T>(this IEnumerable<T> source, Action<T> action)
+        {
+            if (source == null) throw new ArgumentNullException("source");
+            if (action == null) throw new ArgumentNullException("action");
+
+            foreach (T item in source)
+            {
+                action(item);
+            }
         }
     }
 }

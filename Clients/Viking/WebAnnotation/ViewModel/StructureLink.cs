@@ -142,7 +142,7 @@ namespace WebAnnotation.ViewModel
         /// Use this version only for searches
         /// </summary>
         /// <param name="linkObj"></param>
-        public StructureLinkViewModelBase(SectionStructureLinkViewKey linkKey, Viking.VolumeModel.IVolumeToSectionMapper mapper)
+        public StructureLinkViewModelBase(SectionStructureLinkViewKey linkKey, Viking.VolumeModel.IVolumeToSectionTransform mapper)
             : this(linkKey)
         {
             CreateView(linkKey, mapper);
@@ -294,7 +294,7 @@ namespace WebAnnotation.ViewModel
             get;
         }
 
-        protected abstract void CreateView(SectionStructureLinkViewKey key, Viking.VolumeModel.IVolumeToSectionMapper mapper);
+        protected abstract void CreateView(SectionStructureLinkViewKey key, Viking.VolumeModel.IVolumeToSectionTransform mapper);
 
         public abstract double Distance(SqlGeometry Position);
     }
@@ -343,7 +343,7 @@ namespace WebAnnotation.ViewModel
                 (byte)(255),
                 (byte)(128));
 
-        public StructureLinkCirclesView(SectionStructureLinkViewKey key, Viking.VolumeModel.IVolumeToSectionMapper mapper) : base(key, mapper)
+        public StructureLinkCirclesView(SectionStructureLinkViewKey key, Viking.VolumeModel.IVolumeToSectionTransform mapper) : base(key, mapper)
         {
 
         }
@@ -383,7 +383,7 @@ namespace WebAnnotation.ViewModel
             }
         }
 
-        protected override void CreateView(SectionStructureLinkViewKey key, Viking.VolumeModel.IVolumeToSectionMapper mapper)
+        protected override void CreateView(SectionStructureLinkViewKey key, Viking.VolumeModel.IVolumeToSectionTransform mapper)
         {
             StructureLinkObj link = Store.StructureLinks[key.LinkID];
             LocationObj source = Store.Locations[key.SourceLocID];
@@ -457,7 +457,7 @@ namespace WebAnnotation.ViewModel
                 (byte)(255),
                 (byte)(192));
 
-        public StructureLinkCurvesView(SectionStructureLinkViewKey key, Viking.VolumeModel.IVolumeToSectionMapper mapper) : base(key, mapper)
+        public StructureLinkCurvesView(SectionStructureLinkViewKey key, Viking.VolumeModel.IVolumeToSectionTransform mapper) : base(key, mapper)
         {
             CreateLineSegments();
         }
@@ -511,7 +511,7 @@ namespace WebAnnotation.ViewModel
             }
         }
 
-        protected override void CreateView(SectionStructureLinkViewKey key, Viking.VolumeModel.IVolumeToSectionMapper mapper)
+        protected override void CreateView(SectionStructureLinkViewKey key, Viking.VolumeModel.IVolumeToSectionTransform mapper)
         {
             StructureLinkObj link = Store.StructureLinks[key.LinkID];
             LocationObj source = Store.Locations[key.SourceLocID];

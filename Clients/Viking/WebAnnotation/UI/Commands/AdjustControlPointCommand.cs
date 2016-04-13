@@ -23,7 +23,7 @@ namespace WebAnnotation.UI.Commands
         public delegate void OnCommandSuccess(GridVector2[] VolumeControlPoints, GridVector2[] MosaicControlPoints);
         OnCommandSuccess success_callback;
 
-        Viking.VolumeModel.IVolumeToSectionMapper mapping;
+        Viking.VolumeModel.IVolumeToSectionTransform mapping;
 
         public AdjustCurveControlPointCommand(Viking.UI.Controls.SectionViewerControl parent,
                                         GridVector2[] OriginalMosaicControlPoints,
@@ -32,10 +32,10 @@ namespace WebAnnotation.UI.Commands
                                         bool IsClosedCurve,
                                         OnCommandSuccess success_callback) : base(parent)
         {
-            this.OriginalControlPoints = parent.Section.ActiveMapping.SectionToVolume(OriginalMosaicControlPoints);
+            this.OriginalControlPoints = parent.Section.ActiveSectionToVolumeTransform.SectionToVolume(OriginalMosaicControlPoints);
             CreateView(OriginalControlPoints, color.ConvertToHSL(0.5f), LineWidth, IsClosedCurve);
             this.success_callback = success_callback;
-            mapping = parent.Section.ActiveMapping;
+            mapping = parent.Section.ActiveSectionToVolumeTransform;
         }
         
 

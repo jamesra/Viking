@@ -117,7 +117,7 @@ namespace WebAnnotation.ViewModel
             }
         }
 
-        public LocationLinkView(LocationLinkKey key, int Z, IVolumeMapProvider mapProvider)
+        public LocationLinkView(LocationLinkKey key, int Z, IVolumeTransformProvider mapProvider)
         {
             this.Key = key;
             this.Z = Z;
@@ -127,7 +127,7 @@ namespace WebAnnotation.ViewModel
 
         } 
 
-        public LocationLinkView(LocationObj LocOne, LocationObj LocTwo, int Z, IVolumeMapProvider mapProvider) : this(new LocationLinkKey(LocOne.ID, LocTwo.ID), Z, mapProvider)
+        public LocationLinkView(LocationObj LocOne, LocationObj LocTwo, int Z, IVolumeTransformProvider mapProvider) : this(new LocationLinkKey(LocOne.ID, LocTwo.ID), Z, mapProvider)
         {
             if (LocOne == null)
                 throw new ArgumentNullException("LocOne");
@@ -140,12 +140,12 @@ namespace WebAnnotation.ViewModel
             this.lineView = CreateView();
         }
 
-        private void UpdatePropertiesFromLocations(IVolumeMapProvider mapProvider)
+        private void UpdatePropertiesFromLocations(IVolumeTransformProvider mapProvider)
         {
             LocationObj A = Store.Locations[this.Key.A];
             LocationObj B = Store.Locations[this.Key.B];
-            IVolumeToSectionMapper sourceMapper = mapProvider.GetMapping((int)Math.Round(A.Z));
-            IVolumeToSectionMapper targetMapper = mapProvider.GetMapping((int)Math.Round(B.Z));
+            IVolumeToSectionTransform sourceMapper = mapProvider.GetSectionToVolumeTransform((int)Math.Round(A.Z));
+            IVolumeToSectionTransform targetMapper = mapProvider.GetSectionToVolumeTransform((int)Math.Round(B.Z));
             GridVector2 AVolumePosition = sourceMapper.SectionToVolume(A.Position);
             GridVector2 BVolumePosition = targetMapper.SectionToVolume(B.Position);
 
@@ -347,7 +347,7 @@ namespace WebAnnotation.ViewModel
             if ((object)other == null)
                 return false;
 
-            return this.Key.Equals(other.Key);
+            return this.Key.Equals(other.Key) && this.Z == other.Z;
         }
     }
 }

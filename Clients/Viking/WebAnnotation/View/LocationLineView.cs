@@ -34,7 +34,7 @@ namespace WebAnnotation.View
             get { return upPolyLineView.LineWidth; }
         }
 
-        public AdjacentLocationLineView(LocationObj obj, Viking.VolumeModel.IVolumeToSectionMapper mapper) : base(obj, mapper)
+        public AdjacentLocationLineView(LocationObj obj, Viking.VolumeModel.IVolumeToSectionTransform mapper) : base(obj, mapper)
         {
             upPolyLineView = new PolyLineView(VolumeControlPoints, obj.Parent.Type.Color.ToXNAColor().ConvertToHSL(0.5f), GlobalPrimitives.UpArrowTexture);
             downPolyLineView = new PolyLineView(VolumeControlPoints, obj.Parent.Type.Color.ToXNAColor().ConvertToHSL(0.5f), GlobalPrimitives.DownArrowTexture);
@@ -85,7 +85,7 @@ namespace WebAnnotation.View
             get { return polyLineView.LineWidth; }
         }
 
-        public LocationLineView(LocationObj obj, Viking.VolumeModel.IVolumeToSectionMapper mapper, Texture2D texture = null) : base(obj, mapper)
+        public LocationLineView(LocationObj obj, Viking.VolumeModel.IVolumeToSectionTransform mapper, Texture2D texture = null) : base(obj, mapper)
         {
             polyLineView = new PolyLineView(obj.VolumeShape.ToPoints(), obj.Parent.Type.Color.ToXNAColor(0.5f), texture);
         }
@@ -112,7 +112,7 @@ namespace WebAnnotation.View
     
     abstract class LocationLineViewBase : MultipleControlPointLocationCanvasViewBase
     {
-        public LocationLineViewBase(LocationObj obj, Viking.VolumeModel.IVolumeToSectionMapper mapper) : base(obj, mapper)
+        public LocationLineViewBase(LocationObj obj, Viking.VolumeModel.IVolumeToSectionTransform mapper) : base(obj, mapper)
         { }
 
         public override bool IsVisible(VikingXNA.Scene scene)
@@ -146,7 +146,7 @@ namespace WebAnnotation.View
 
             set
             {
-                throw new NotImplementedException();
+                _OverlappedLinks = value;
             }
         }
 
@@ -257,7 +257,7 @@ namespace WebAnnotation.View
         /// </summary>
         protected readonly GridVector2[] VolumeControlPoints;
 
-        public MultipleControlPointLocationCanvasViewBase(LocationObj obj, Viking.VolumeModel.IVolumeToSectionMapper mapper) : base(obj)
+        public MultipleControlPointLocationCanvasViewBase(LocationObj obj, Viking.VolumeModel.IVolumeToSectionTransform mapper) : base(obj)
         {
             MosaicControlPoints = obj.MosaicShape.ToPoints();
             VolumeControlPoints = mapper.SectionToVolume(MosaicControlPoints);

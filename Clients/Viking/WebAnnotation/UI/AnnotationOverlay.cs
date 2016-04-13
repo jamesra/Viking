@@ -61,6 +61,7 @@ namespace WebAnnotation
             AnnotationChangedEventHandler = new EventHandler(OnAnnotationChanged);
 
             Store.Locations.OnCollectionChanged += new NotifyCollectionChangedEventHandler(OnLocationCollectionChanged);
+            Store.LocationLinks.OnCollectionChanged += new NotifyCollectionChangedEventHandler(OnLocationLinksCollectionChanged);
 
             //    AnnotationCache.AnnotationChanged += AnnotationChangedEventHandler;      
             _CurrentOverlay = this;
@@ -429,17 +430,23 @@ namespace WebAnnotation
                     else
                         action = loc.GetMouseClickActionForPositionOnAnnotation(WorldPosition, this.CurrentSectionNumber);
 
-                    Viking.UI.Commands.Command command = action.CreateCommand(Parent, Store.Locations.GetObjectByID(loc.ID));
+                    Viking.UI.Commands.Command command = action.CreateCommand(Parent, Store.Locations.GetObjectByID(loc.ID), WorldPosition);
                     if(command != null)
                     {
                         _Parent.CurrentCommand = command;
                     }
+                }
+                else
+                {
+                    //Check if we can continue another annotation
+                    OnContinueLastTrace(LastMouseDownCoords);
                 }
             }
         }
         
         protected void OnMouseUp(object sender, MouseEventArgs e)
         {
+            /*
             if (_Parent.CurrentCommand == null)
                 return;
 
@@ -455,6 +462,7 @@ namespace WebAnnotation
                     OnContinueLastTrace(LastMouseDownCoords); 
                 }
             }
+            */
         }
 
         protected void OnKeyDown(object sender, KeyEventArgs e)
@@ -635,7 +643,7 @@ namespace WebAnnotation
                 System.Drawing.Point ClientPoint = _Parent.PointToClient(System.Windows.Forms.Control.MousePosition);
                 GridVector2 WorldPos = _Parent.ScreenToWorld(ClientPoint.X, ClientPoint.Y);
                 GridVector2 SectionPos;
-                bool success = Parent.Section.ActiveMapping.TryVolumeToSection(WorldPos, out SectionPos);
+                bool success = Parent.Section.ActiveSectionToVolumeTransform.TryVolumeToSection(WorldPos, out SectionPos);
                 Debug.Assert(success);
                 if (!success)
                     return;
@@ -750,7 +758,7 @@ namespace WebAnnotation
 
         public static void SetLocationShapeFromPointsInVolume(SectionViewModel Section, LocationObj location, GridVector2[] points)
         {
-            GridVector2[] mosaic_points = Section.ActiveMapping.VolumeToSection(points);
+            GridVector2[] mosaic_points = Section.ActiveSectionToVolumeTransform.VolumeToSection(points);
 
             switch (location.TypeCode)
             {
@@ -851,7 +859,7 @@ namespace WebAnnotation
             }
 
             GridVector2 SectionPos;
-            bool success = Parent.Section.ActiveMapping.TryVolumeToSection(LastMouseMoveVolumeCoords, out SectionPos);
+            bool success = Parent.Section.ActiveSectionToVolumeTransform.TryVolumeToSection(LastMouseMoveVolumeCoords, out SectionPos);
             Debug.Assert(success);
             if (!success)
                 return;
@@ -881,11 +889,20 @@ namespace WebAnnotation
         {
             if (CreateNewLinkedLocationCommand.LastEditedLocation != null)
             {
+                if (CreateNewLinkedLocationCommand.LastEditedLocation.Z != this.CurrentSectionNumber)
+                {
+                    Viking.UI.Commands.Command command = LocationAction.CREATELINKEDLOCATION.CreateCommand(this.Parent, CreateNewLinkedLocationCommand.LastEditedLocation, WorldPos);
+                    if (command != null)
+                    {
+                        _Parent.CurrentCommand = command;
+                    }
+                }
+                /*
                 LocationObj template = CreateNewLinkedLocationCommand.LastEditedLocation;
                 if (template.Z != this.Parent.Section.Number)
                 {
                     GridVector2 SectionPos;
-                    bool success = Parent.Section.ActiveMapping.TryVolumeToSection(WorldPos, out SectionPos);
+                    bool success = Parent.Section.ActiveSectionToVolumeTransform.TryVolumeToSection(WorldPos, out SectionPos);
                     Debug.Assert(success);
                     if (!success)
                         return;
@@ -896,7 +913,7 @@ namespace WebAnnotation
 
                     if (template.TypeCode == LocationType.CIRCLE)
                     {
-                        LocationCircleView newLocView = new LocationCircleView(newLoc, Parent.Section.ActiveMapping);
+                        LocationCircleView newLocView = new LocationCircleView(newLoc, Parent.Section.ActiveSectionToVolumeTransform);
 
                         Viking.UI.Commands.Command.EnqueueCommand(typeof(ResizeCircleCommand), new object[] { Parent, template.Parent.Type.Color, WorldPos, new ResizeCircleCommand.OnCommandSuccess((double radius) => { newLoc.Radius = radius; }) });
                         Viking.UI.Commands.Command.EnqueueCommand(typeof(CreateNewLinkedLocationCommand), new object[] { Parent, template, newLocView });
@@ -905,6 +922,7 @@ namespace WebAnnotation
                     Viking.UI.State.SelectedObject = null;
                     CreateNewLinkedLocationCommand.LastEditedLocation = null; 
                 }
+                */
             }
         }
 
@@ -917,7 +935,7 @@ namespace WebAnnotation
         {
             e.OldSection.TransformChanged -= this.OnSectionTransformChanged;
             e.NewSection.TransformChanged += this.OnSectionTransformChanged;
-
+            
             //Don't load annotations when flipping sections if the user is holding down space bar to hide them
             if (_Parent.ShowOverlays)
             { 
@@ -932,6 +950,94 @@ namespace WebAnnotation
             _Parent.Invalidate(); 
         }
 
+        private static SortedSet<int> ChangedSectionsInLocationCollection(NotifyCollectionChangedEventArgs e)
+        {
+            SortedSet<int> changedSections = new SortedSet<int>();
+
+            if (e.NewItems != null)
+            {
+                changedSections = GetDistinctLocationSections(e.NewItems);
+            }
+
+            if (e.OldItems != null)
+            {
+                if (changedSections == null)
+                    changedSections = GetDistinctLocationSections(e.OldItems);
+                else
+                    changedSections = new SortedSet<int>(changedSections.Union(GetDistinctLocationSections(e.OldItems)));
+            }
+
+            return changedSections;
+        }
+
+        /// <summary>
+        /// Return the distinct set of sections the locationObjs exist on
+        /// </summary>
+        /// <returns></returns>
+        private static SortedSet<int> GetDistinctLocationSections(System.Collections.IList listLocations)
+        {
+            SortedSet<int> changedSections = new SortedSet<int>();
+
+            if (listLocations != null)
+            {
+                for (int iObj = 0; iObj < listLocations.Count; iObj++)
+                {
+                    LocationObj locNewObj = listLocations[iObj] as LocationObj;
+                    if (!changedSections.Contains(locNewObj.Section))
+                        changedSections.Add(locNewObj.Section);
+                }
+            }
+
+            return changedSections;
+        }
+
+        private static SortedSet<int> ChangedSectionsInLocationLinkCollection(NotifyCollectionChangedEventArgs e)
+        {
+            SortedSet<int> changedSections = new SortedSet<int>();
+
+            if (e.NewItems != null)
+            {
+                changedSections = GetDistinctLocationLinkSections(e.NewItems);
+            }
+
+            if (e.OldItems != null)
+            {
+                if (changedSections == null)
+                    changedSections = GetDistinctLocationLinkSections(e.OldItems);
+                else
+                    changedSections = new SortedSet<int>(changedSections.Union(GetDistinctLocationLinkSections(e.OldItems)));
+            }
+
+            return changedSections;
+        }
+
+        /// <summary>
+        /// Return the distinct set of sections the locationObjs exist on
+        /// </summary>
+        /// <returns></returns>
+        private static SortedSet<int> GetDistinctLocationLinkSections(System.Collections.IList listObjs)
+        {
+            SortedSet<int> changedSections = new SortedSet<int>();
+
+            if (listObjs != null)
+            {
+                for (int iObj = 0; iObj < listObjs.Count; iObj++)
+                {
+                    LocationLinkObj locLink = listObjs[iObj] as LocationLinkObj;
+                    LocationObj locA = Store.Locations.GetObjectByID(locLink.A, false);
+                    LocationObj locB = Store.Locations.GetObjectByID(locLink.B, false);
+
+                    if (locA != null && !changedSections.Contains(locA.Section))
+                        changedSections.Add(locA.Section);
+
+                    if (locB != null && !changedSections.Contains(locB.Section))
+                        changedSections.Add(locB.Section);
+                }
+            }
+
+            return changedSections;
+        }
+
         /// <summary>
         /// Organize the changes so we only call the SectionAnnotationViewModel objects that we have to.
         /// Can be called from any thread
@@ -940,65 +1046,67 @@ namespace WebAnnotation
         /// <param name="e"></param>
         protected void OnLocationCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
         {
-            SortedSet<int> changedSections = new SortedSet<int>();
-
-  //          if (e.Action == NotifyCollectionChangedAction.Replace)
-  //          {
-                //SortedList<int, List<LocationObj>> changedSectionsNewObjects = new SortedList<int, List<LocationObj>>(e.NewItems.Count);
-//                SortedList<int, List<LocationObj>> changedSectionsOldObjects = new SortedList<int, List<LocationObj>>(e.NewItems.Count);
-
-            if (e.NewItems != null)
-            {
-                for (int iObj = 0; iObj < e.NewItems.Count; iObj++)
-                {
-                    LocationObj locNewObj = e.NewItems[iObj] as LocationObj;
-                    if(!changedSections.Contains(locNewObj.Section))
-                        changedSections.Add(locNewObj.Section);
-                }
-            }
-
-            if (e.OldItems != null)
-            {
-                for (int iObj = 0; iObj < e.OldItems.Count; iObj++)
-                {
-                    LocationObj locOldObj = e.OldItems[iObj] as LocationObj;
-                    if (!changedSections.Contains(locOldObj.Section))
-                        changedSections.Add(locOldObj.Section); 
-                } 
-            }
+            SortedSet<int> changedSections = ChangedSectionsInLocationCollection(e);
 
             SortedSet<int> AdjacentSections = new SortedSet<int>();
             foreach (SectionViewModel svm in Viking.UI.State.volume.SectionViewModels.Values)
             {
                 if(svm.ReferenceSectionAbove != null)
                 {
-                    AdjacentSections.Add(svm.ReferenceSectionAbove.Number);
+                    if(changedSections.Contains(svm.ReferenceSectionAbove.Number))
+                        AdjacentSections.Add(svm.Number);
                 }
 
                 if (svm.ReferenceSectionBelow != null)
                 {
-                    AdjacentSections.Add(svm.ReferenceSectionBelow.Number);
+                    if(changedSections.Contains(svm.ReferenceSectionBelow.Number))
+                        AdjacentSections.Add(svm.Number);
                 }
             }
-
-            foreach(int sectionNumber in AdjacentSections)
-            {
-                if (!changedSections.Contains(sectionNumber))
-                    changedSections.Add(sectionNumber);
-            }
             
-
             foreach (int section in changedSections)
             {
-                SectionAnnotationsView SLVModel = cacheSectionAnnotations.Fetch(section);
+                SectionAnnotationsView SLVModel = GetOrCreateAnnotationsForSection(section, this.Parent);
                 if (SLVModel != null)
                 {
                     SLVModel.OnLocationsStoreChanged(sender, e);
                 }
             }
 
+            foreach (int section in AdjacentSections)
+            {
+                if (!changedSections.Contains(section))
+                {
+                    SectionAnnotationsView SLVModel = GetOrCreateAnnotationsForSection(section, this.Parent);
+                    if (SLVModel != null)
+                    {
+                        SLVModel.OnLocationsStoreChanged(sender, e);
+                    }
+                }
+            }
+            
             //Invalidate can always be called from any thread
-            Parent.Invalidate();
+            Parent.BeginInvoke(new System.Action( () => Parent.Invalidate()));
+        }
+
+        /// <summary>
+        /// Organize the changes so we only call the SectionAnnotationViewModel objects that we have to.
+        /// Can be called from any thread
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        protected void OnLocationLinksCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
+        {
+            SortedSet<int> changedSections = ChangedSectionsInLocationLinkCollection(e);
+
+            foreach (int section in changedSections)
+            {
+                SectionAnnotationsView SLVModel = GetOrCreateAnnotationsForSection(section, this.Parent);
+                if (SLVModel != null)
+                {
+                    SLVModel.OnLocationLinksStoreChanged(sender, e);
+                }
+            }
         }
 
         /// <summary>
@@ -1525,31 +1633,6 @@ namespace WebAnnotation
         }*/
 
         #endregion
-
-        /// <summary>
-        /// Allocates a new quad tree based on the current section parameters
-        /// </summary>
-        public static GridRectangle SectionBounds(Viking.UI.Controls.SectionViewerControl Parent, int SectionNumber)
-        {
-            GridRectangle bounds = new GridRectangle(); 
             
-            //Figure out the new boundaries for our quad-tree
-            if(!Parent.Section.VolumeViewModel.SectionViewModels.ContainsKey(SectionNumber))
-                return new GridRectangle();
-
-            SectionViewModel SectionView = Parent.Section.VolumeViewModel.SectionViewModels[SectionNumber];
-            bounds = Viking.UI.State.volume.SectionBounds(SectionNumber, Parent.CurrentChannel, Parent.CurrentTransform);
-            if (SectionView.ReferenceSectionAbove != null)
-            {
-                bounds = GridRectangle.Union(bounds, Viking.UI.State.volume.SectionBounds(SectionView.ReferenceSectionAbove.Number, Parent.CurrentChannel, Parent.CurrentTransform));
-            }
-            if (SectionView.ReferenceSectionBelow != null)
-            {
-                bounds = GridRectangle.Union(bounds, Viking.UI.State.volume.SectionBounds(SectionView.ReferenceSectionBelow.Number, Parent.CurrentChannel, Parent.CurrentTransform));
-            }
-            
-            return bounds;
-        }
-
     }
 }

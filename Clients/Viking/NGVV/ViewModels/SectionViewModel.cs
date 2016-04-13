@@ -310,11 +310,11 @@ namespace Viking.ViewModels
             this.section.PrepareTransform(transform); 
         }
 
-        public IVolumeToSectionMapper ActiveMapping
+        public IVolumeToSectionTransform ActiveSectionToVolumeTransform
         {
             get
             {
-                return this._VolumeViewModel.GetMapping(this.VolumeViewModel.ActiveVolumeTransform, this.Number, this.ActiveChannel, this.ActiveTransform) as IVolumeToSectionMapper;
+                return this._VolumeViewModel.GetSectionToVolumeTransform(this.section.Number);
             }
         }
 
@@ -323,20 +323,20 @@ namespace Viking.ViewModels
         /// <summary>
         /// Determines which transform should be used when rendering the section
         /// </summary>
-        protected string _ActiveTransform;
-        public string ActiveTransform
+        protected string _ActiveTileTransform;
+        public string ActiveTileTransform
         {
-            get { return _ActiveTransform; }
+            get { return _ActiveTileTransform; }
             set
             {
-                bool NewValue = _ActiveTransform != value;
+                bool NewValue = _ActiveTileTransform != value;
                 if (NewValue)
                 {
-                    string OldTransform = _ActiveTransform;
-                    _ActiveTransform = value;
+                    string OldTransform = _ActiveTileTransform;
+                    _ActiveTileTransform = value;
                     if (TransformChanged != null && NewValue)
                     {
-                        TransformChanged(this, new TransformChangedEventArgs(_ActiveTransform, OldTransform));
+                        TransformChanged(this, new TransformChangedEventArgs(_ActiveTileTransform, OldTransform));
                     }
                 }
             }

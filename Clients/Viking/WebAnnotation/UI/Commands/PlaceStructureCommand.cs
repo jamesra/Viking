@@ -25,14 +25,14 @@ namespace WebAnnotation.UI.Commands
     class PlaceStructureCommand : AnnotationCommandBase
     {
         StructureType Type = Viking.UI.State.SelectedObject as StructureType;
-        Viking.VolumeModel.IVolumeToSectionMapper mapping;
+        Viking.VolumeModel.IVolumeToSectionTransform mapping;
 
         public PlaceStructureCommand(Viking.UI.Controls.SectionViewerControl parent)
             : base(parent)
         {
             this.Type = Viking.UI.State.SelectedObject as StructureType; 
             parent.Cursor = Cursors.Cross;
-            mapping = parent.Section.ActiveMapping;
+            mapping = parent.Section.ActiveSectionToVolumeTransform;
         }
 
         public PlaceStructureCommand(Viking.UI.Controls.SectionViewerControl parent, StructureType type)
@@ -40,7 +40,7 @@ namespace WebAnnotation.UI.Commands
         {
             this.Type = type;
             parent.Cursor = Cursors.Cross;
-            mapping = parent.Section.ActiveMapping;
+            mapping = parent.Section.ActiveSectionToVolumeTransform;
         }
 
         public override void OnDeactivate()

@@ -19,7 +19,7 @@ namespace WebAnnotation.UI.Commands
     class PlaceCurveCommand : PolylineCommandBase
     {
         Stack<GridVector2> vert_stack = new Stack<GridVector2>();
-        
+
         bool IsOpen = true; //False if the curves last point is connected to its first
         /// <summary>
         /// Returns the stack with the bottomost entry first in the array
@@ -35,6 +35,11 @@ namespace WebAnnotation.UI.Commands
                     vert_stack.Push(v);
                 }
             }
+        }
+
+        public int NumVerticies
+        {
+           get { return this.vert_stack.Count; }
         }
 
         
@@ -67,6 +72,57 @@ namespace WebAnnotation.UI.Commands
         {
         }
 
+        /// <summary>
+        /// Return true if a line to the world position from the last vertex will intersect our curve
+        /// </summary>
+        /// <param name="worldPos"></param>
+        /// <returns></returns>
+        protected bool ProposedSegmentSelfIntersects(GridVector2 worldPos)
+        {
+            if (NumVerticies < 3)
+                return false;
+
+            GridLineSegment newSegment = new GridLineSegment(worldPos, vert_stack.Peek());
+            GridLineSegment[] existingSegments = GridLineSegment.SegmentsFromPoints(this.LineVerticies.TakeWhile((p, i) => i < NumVerticies - 1).ToArray());
+            foreach(GridLineSegment existingSegment in existingSegments)
+            {
+                GridVector2 intersection;
+                if(newSegment.Intersects(existingSegment, out intersection))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Return true if a line to the world position from the last vertex will intersect our curve
+        /// </summary>
+        /// <param name="worldPos"></param>
+        /// <returns></returns>
+        protected GridVector2? ProposedSegmentSelfIntersection(GridVector2 worldPos)
+        {
+            GridVector2? retval = new GridVector2?();
+
+            if (NumVerticies < 3)
+                return retval;
+
+            GridLineSegment newSegment = new GridLineSegment(worldPos, vert_stack.Peek());
+            GridLineSegment[] existingSegments = GridLineSegment.SegmentsFromPoints(this.LineVerticies.TakeWhile((p, i) => i < NumVerticies - 1).ToArray());
+            foreach (GridLineSegment existingSegment in existingSegments)
+            {
+                GridVector2 intersection;
+                if (newSegment.Intersects(existingSegment, out intersection))
+                {
+                    retval = intersection;
+                    return intersection;
+                }
+            }
+
+            return retval;
+        }
+
 
         protected override void OnMouseMove(object sender, MouseEventArgs e)
         {
@@ -76,11 +132,21 @@ namespace WebAnnotation.UI.Commands
             {
                 if (OverlapsAnyVertex(WorldPos))
                 {
-                    Parent.Cursor = Cursors.Hand;
+                    if (OverlapsLastVertex(WorldPos))
+                    {
+                        if (this.NumVerticies < 2)
+                            Parent.Cursor = Cursors.No;   //Not allowed to create single vertex line/curve curve
+                        else
+                            Parent.Cursor = Cursors.Hand; //Completion cursor
+                    }
+                    else
+                    {
+                        Parent.Cursor = Cursors.No;
+                    }
                 }
                 else
                 {
-                    Parent.Cursor = Cursors.Cross;
+                    Parent.Cursor = ProposedSegmentSelfIntersects(WorldPos) ? Cursors.No : Cursors.Cross;
                 }
             }
             else if (e.Button == MouseButtons.Left)
@@ -122,12 +188,11 @@ namespace WebAnnotation.UI.Commands
                 }
                 else
                 {
-
-                    GridVector2? SelfIntersection = IntersectsSelf(new GridLineSegment(WorldPos, LineVerticies.Last()));
-
-                    vert_stack.Push(WorldPos);
-                    Parent.Invalidate();
-
+                    if (!ProposedSegmentSelfIntersects(WorldPos))
+                    {
+                        vert_stack.Push(WorldPos);
+                        Parent.Invalidate();
+                    }
                 }
             }
 
@@ -160,13 +225,15 @@ namespace WebAnnotation.UI.Commands
         }
 
         public override void OnDraw(Microsoft.Xna.Framework.Graphics.GraphicsDevice graphicsDevice, VikingXNA.Scene scene, Microsoft.Xna.Framework.Graphics.BasicEffect basicEffect)
-        {
-            
-            if (this.oldWorldPosition != LineVerticies.Last())
+        {  
+            if (!this.OverlapsLastVertex(this.oldWorldPosition))
             {
-                GridVector2? SelfIntersection = IntersectsSelf(new GridLineSegment(this.oldWorldPosition, LineVerticies.Last()));
+                GridVector2? SelfIntersection = ProposedSegmentSelfIntersection(this.oldWorldPosition);
 
-                vert_stack.Push(this.oldWorldPosition);
+                if (SelfIntersection.HasValue)
+                    vert_stack.Push(SelfIntersection.Value);
+                else
+                    vert_stack.Push(this.oldWorldPosition);
 
                 CurveView curveView = new CurveView(vert_stack.ToArray(), this.LineColor, this.IsOpen, lineWidth: this.LineWidth);
 
@@ -179,8 +246,20 @@ namespace WebAnnotation.UI.Commands
             }
             else
             {
-                GlobalPrimitives.DrawPolyline(Parent.LumaOverlayLineManager, basicEffect, this.LineVerticies.ToList(), this.LineWidth, this.LineColor);
+                if (this.LineVerticies.Length > 1)
+                {
+                    CurveView curveView = new CurveView(this.LineVerticies.ToArray(), this.LineColor, this.IsOpen, lineWidth: this.LineWidth);
+                    CurveView.Draw(graphicsDevice, scene, Parent.LumaOverlayCurveManager, basicEffect, Parent.annotationOverlayEffect, 0, new CurveView[] { curveView });
+                }
+                else
+                {
+                    CircleView view = new CircleView(new GridCircle(this.LineVerticies.First(), this.LineWidth / 2.0), this.LineColor);
+                    CircleView.Draw(graphicsDevice, scene, basicEffect, this.Parent.annotationOverlayEffect, new CircleView[] { view });
+                }
+
             }
+
+            
         }
     }
 }

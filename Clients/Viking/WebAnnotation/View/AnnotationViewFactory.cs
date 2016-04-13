@@ -35,7 +35,7 @@ namespace WebAnnotation.View
         /// <param name="obj"></param>
         /// <param name="OnAdjacentSection">Indicates the location is not on the section being displayed.</param>
         /// <returns></returns>
-        public static LocationCanvasView Create(LocationObj obj, Viking.VolumeModel.IVolumeToSectionMapper mapping)
+        public static LocationCanvasView Create(LocationObj obj, Viking.VolumeModel.IVolumeToSectionTransform mapping)
         {
             switch (obj.TypeCode)
             {
@@ -60,7 +60,7 @@ namespace WebAnnotation.View
         /// <param name="obj"></param>
         /// <param name="OnAdjacentSection">Indicates the location is not on the section being displayed.</param>
         /// <returns></returns>
-        public static LocationCanvasView CreateAdjacent(LocationObj obj, Viking.VolumeModel.IVolumeToSectionMapper mapping)
+        public static LocationCanvasView CreateAdjacent(LocationObj obj, Viking.VolumeModel.IVolumeToSectionTransform mapping)
         {
 
             switch (obj.TypeCode)
@@ -98,7 +98,7 @@ namespace WebAnnotation.View
         /// <param name="obj"></param>
         /// <param name="OnAdjacentSection">Indicates the location is not on the section being displayed.</param>
         /// <returns></returns>
-        public static StructureLinkViewModelBase Create(SectionStructureLinkViewKey key, Viking.VolumeModel.IVolumeToSectionMapper mapper)
+        public static StructureLinkViewModelBase Create(SectionStructureLinkViewKey key, Viking.VolumeModel.IVolumeToSectionTransform mapper)
         {
             LocationObj sourceLocation = Store.Locations[key.SourceLocID];
             switch (sourceLocation.TypeCode)

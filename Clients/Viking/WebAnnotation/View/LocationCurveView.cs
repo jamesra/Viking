@@ -14,7 +14,7 @@ namespace WebAnnotation.View
         public abstract GridVector2[] MosaicCurveControlPoints { get; }
         public abstract GridVector2[] VolumeCurveControlPoints { get; }
 
-        public LocationCurveView(LocationObj obj, Viking.VolumeModel.IVolumeToSectionMapper mapper) : base(obj, mapper)
+        public LocationCurveView(LocationObj obj, Viking.VolumeModel.IVolumeToSectionTransform mapper) : base(obj, mapper)
         { 
         }
 
