@@ -80,7 +80,7 @@ namespace Viking.UI.Forms
                 System.IO.Directory.CreateDirectory(this.KeyFileFolderPath);
             }
              
-            NetworkCredential cachedCredentials = ReadCredentialsFromEncryptedFile();
+            NetworkCredential cachedCredentials = ReadCredentialsFromFile();
             if (cachedCredentials == null)
             {
                 this.btnLogin.Enabled = false;
@@ -144,7 +144,7 @@ namespace Viking.UI.Forms
                 {
                     try
                     {
-                        WriteCredentialsInEncryptedFile(new NetworkCredential(userName, password));
+                        WriteCredentialsInFile(new NetworkCredential(userName, password));
                     }
                     catch(IOException except)
                     {
@@ -175,8 +175,43 @@ namespace Viking.UI.Forms
 
         }
 
+
+        private bool WriteCredentialsInFile(NetworkCredential credentials)
+        {
+            if (System.IO.File.Exists(this.KeyFileFullPath))
+            {
+                System.IO.File.Delete(this.KeyFileFullPath);
+            }
+
+            if (!System.IO.File.Exists(this.KeyFileFullPath))
+            {
+                using (System.IO.FileStream f = System.IO.File.Create(this.KeyFileFullPath))
+                {
+                    using (StreamWriter sw = new StreamWriter(f))
+                    {
+                        string content = credentials.UserName + "," + credentials.Password;
+
+                        sw.Write(EncryptString(content, this.passkey));
+
+                        sw.Flush();
+                    }
+                }
+
+                //File.Encrypt(this.KeyFileFullPath);
+
+                return true;
+            }
+
+            return false;
+        }
+
         private bool WriteCredentialsInEncryptedFile(NetworkCredential credentials)
-        { 
+        {
+            if (System.IO.File.Exists(this.KeyFileFullPath))
+            {
+                System.IO.File.Delete(this.KeyFileFullPath);
+            }
+
             if (!System.IO.File.Exists(this.KeyFileFullPath))
             {
                 using (System.IO.FileStream f = System.IO.File.Create(this.KeyFileFullPath))
@@ -197,6 +232,39 @@ namespace Viking.UI.Forms
             } 
 
             return false; 
+        }
+
+        private NetworkCredential ReadCredentialsFromFile()
+        {
+            string keyFileFullPath = this.KeyFileFullPath;
+            NetworkCredential credentials = null;
+            if (System.IO.File.Exists(KeyFileFullPath))
+            {
+
+                try
+                {
+                    //File.Decrypt(KeyFileFullPath);
+
+                    using (System.IO.FileStream f = new FileStream(KeyFileFullPath, FileMode.Open, FileAccess.Read))
+                    {
+                        using (StreamReader sr = new StreamReader(f))
+                        {
+
+                            string[] data = DecryptString(sr.ReadToEnd(), passkey).Split(',');
+
+                            credentials = new NetworkCredential(data[0], data[1]);
+
+                            return credentials;
+                        }
+                    }
+                }
+                catch (System.Exception e)
+                {
+                    System.IO.File.Delete(KeyFileFullPath);
+                }
+            }
+
+            return null;
         }
 
         private NetworkCredential ReadCredentialsFromEncryptedFile()

@@ -104,13 +104,13 @@ namespace WebAnnotation.View
                 case LocationAction.CREATELINKEDLOCATION:
                     LocationObj newLoc = new LocationObj(loc.Parent, 
                                                         loc.MosaicShape,
-                                                        loc.VolumeShape,
+                                                        Parent.Volume.GetMapping(loc.Section).TryMapShapeSectionToVolume(loc.MosaicShape),
                                                         Parent.Section.Number,
                                                         loc.TypeCode);
 
                     newLoc.Radius = loc.Radius;
 
-                    LocationCanvasView newLocView = AnnotationViewFactory.Create(newLoc);
+                    LocationCanvasView newLocView = AnnotationViewFactory.Create(newLoc, Parent.Section.ActiveMapping);
                     Viking.UI.Commands.Command.EnqueueCommand(typeof(TranslateCircleLocationCommand), new object[] 
                                                                 {
                                                                     Parent,
@@ -152,8 +152,8 @@ namespace WebAnnotation.View
                     return null;
                 case LocationAction.TRANSLATE:
                     return new TranslateCurveLocationCommand(Parent,
-                                                             loc.VolumeShape.Centroid(),
-                                                             loc.VolumeShape.ToPoints(),
+                                                             loc.MosaicShape.Centroid(),
+                                                             loc.MosaicShape.ToPoints(),
                                                              loc.Parent.Type.Color.ToXNAColor(),
                                                              loc.Radius * 2.0,
                                                              IsClosedCurve(loc),
@@ -161,7 +161,7 @@ namespace WebAnnotation.View
                 case LocationAction.SCALE:
                     return null; 
                 case LocationAction.ADJUST:
-                    return new AdjustCurveControlPointCommand(Parent, loc.VolumeShape.ToPoints(),
+                    return new AdjustCurveControlPointCommand(Parent, loc.MosaicShape.ToPoints(),
                                                                       loc.Parent.Type.Color.ToXNAColor(), 
                                                                       loc.Radius * 2.0,
                                                                       IsClosedCurve(loc),
@@ -170,25 +170,25 @@ namespace WebAnnotation.View
                     return new LinkAnnotationsCommand(Parent, loc);
                 case LocationAction.ADDCONTROLPOINT:
                     return new AddLineControlPointCommand(Parent, 
-                                                      loc.VolumeShape.ToPoints(),
+                                                      loc.MosaicShape.ToPoints(),
                                                       (VolumeControlPoints, MosaicControlPoints) => UpdateLineLocationCallback(loc, VolumeControlPoints, MosaicControlPoints));
                 case LocationAction.REMOVECONTROLPOINT:
                     return new RemoveLineControlPointCommand(Parent,
-                                                      loc.VolumeShape.ToPoints(),
+                                                      loc.MosaicShape.ToPoints(),
                                                       (VolumeControlPoints, MosaicControlPoints) => UpdateLineLocationCallback(loc, VolumeControlPoints, MosaicControlPoints));
                 case LocationAction.CREATELINKEDLOCATION:
                     LocationObj newLoc = new LocationObj(loc.Parent,
                                                         loc.MosaicShape,
-                                                        loc.VolumeShape,
+                                                        Parent.Section.ActiveMapping.TryMapShapeSectionToVolume(loc.MosaicShape),
                                                         Parent.Section.Number,
                                                         loc.TypeCode);
 
                     newLoc.Radius = loc.Radius;
 
-                    LocationCanvasView newLocView = AnnotationViewFactory.Create(newLoc);
+                    LocationCanvasView newLocView = AnnotationViewFactory.Create(newLoc, Parent.Section.ActiveMapping);
                     return new TranslateCurveLocationCommand(Parent,
-                                                             newLoc.VolumeShape.Centroid(),
-                                                             newLoc.VolumeShape.ToPoints(),
+                                                             newLoc.MosaicShape.Centroid(),
+                                                             newLoc.MosaicShape.ToPoints(),
                                                              newLoc.Parent.Type.Color.ToXNAColor(),
                                                              newLoc.Radius * 2.0,
                                                              IsClosedCurve(newLoc),

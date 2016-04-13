@@ -57,11 +57,9 @@ namespace UserRegistration
             // Default UserStore constructor uses the default connection string named: DefaultConnection
             var userStore = new IdentityManager.Host.CustomUserStore(new IdentityManager.Host.CustomContext("IdentityDB"));
             IdentityManager.Host.CustomUserManager manager = new IdentityManager.Host.CustomUserManager(userStore);
-            manager.UserTokenProvider = 
-
+            
             string EmailConfirmationCode = manager.GenerateEmailConfirmationToken(Userid);
             
-
             CustomUser user = manager.Users.Single(u => u.Id == Userid);
 
             IdentityResult EmailResult = await manager.ConfirmEmailAsync(user.Id, EmailConfirmationCode);

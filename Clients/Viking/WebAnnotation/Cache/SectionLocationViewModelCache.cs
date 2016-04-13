@@ -2,19 +2,20 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Common.DataStructures;
+using Viking.Common;
 using WebAnnotation.ViewModel;
 
 namespace WebAnnotation
 {
-    class SectionLocationViewModelCacheEntry : CacheEntry<int>
-    {
-        public readonly SectionLocationsViewModel SLVModel = null;
 
-        public SectionLocationViewModelCacheEntry(int key, SectionLocationsViewModel model) : base(key)
+    class SectionAnnotationsViewCacheEntry : CacheEntry<int>
+    {
+        public readonly SectionAnnotationsView SLVModel = null;
+
+        public SectionAnnotationsViewCacheEntry(int key, SectionAnnotationsView model) : base(key)
         {
             this.SLVModel = model;
-            this.Size = 1; 
+            this.Size = 1;
         }
 
         public override void Dispose()
@@ -22,28 +23,28 @@ namespace WebAnnotation
         }
     }
 
-    class SectionLocationViewModelCache : TimeQueueCache<int, SectionLocationViewModelCacheEntry, SectionLocationsViewModel, SectionLocationsViewModel>
+    class SectionAnnotationsViewModelCache : TimeQueueCache<int, SectionAnnotationsViewCacheEntry, SectionAnnotationsView, SectionAnnotationsView>
     {
-        protected override SectionLocationsViewModel Fetch(SectionLocationViewModelCacheEntry key)
+        protected override SectionAnnotationsView Fetch(SectionAnnotationsViewCacheEntry key)
         {
-            SectionLocationViewModelCacheEntry entry = null;
-            bool found = dictEntries.TryGetValue(key.Key, out entry);
+            SectionAnnotationsViewCacheEntry entry = null;
+            bool found = dictEntries.TryGetValue(key.SLVModel.SectionNumber, out entry);
             if (found)
             {
                 key.WasUsedSinceLastCheckpoint = true;
 
                 entry.LastAccessed = DateTime.UtcNow;
-                return entry.SLVModel; 
+                return entry.SLVModel;
             }
 
             return null;
         }
 
-        
 
-        protected override SectionLocationViewModelCacheEntry CreateEntry(int key, SectionLocationsViewModel value)
+
+        protected override SectionAnnotationsViewCacheEntry CreateEntry(int key, SectionAnnotationsView value)
         {
-            return new SectionLocationViewModelCacheEntry(key, value); 
+            return new SectionAnnotationsViewCacheEntry(key, value);
         }
     }
 }

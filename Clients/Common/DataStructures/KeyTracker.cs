@@ -149,6 +149,19 @@ namespace Viking.Common
             }
         }
 
+        public int Count()
+        {
+            try
+            {
+                rwKnownLocationsLock.EnterReadLock();
+                return TrackedKeys.Count();
+            }
+            finally
+            {
+                rwKnownLocationsLock.ExitReadLock();
+            }
+        }
+
         protected int RefCount(T ID)
         {
             try

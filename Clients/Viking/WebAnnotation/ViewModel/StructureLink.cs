@@ -11,9 +11,68 @@ using Microsoft.Xna.Framework;
 using VikingXNA;
 using VikingXNAGraphics;
 using SqlGeometryUtils;
+using Viking.VolumeModel;
+using Microsoft.SqlServer.Types;
 
 namespace WebAnnotation.ViewModel
 {
+    /// <summary>
+    /// A StructureLink and the two locations that should be connected visually in a view
+    /// </summary>
+    public class SectionStructureLinkViewKey : IEquatable<SectionStructureLinkViewKey>
+    {
+        public readonly StructureLinkKey LinkID;
+        public readonly long SourceLocID;
+        public readonly long TargetLocID;
+
+        public SectionStructureLinkViewKey(StructureLinkKey link, long Source, long Target)
+        {
+            this.LinkID = link;
+            this.SourceLocID = Source;
+            this.TargetLocID = Target;
+        }
+         
+        public static SectionStructureLinkViewKey CreateForNearestLocations(StructureLinkKey linkKey, IEnumerable<LocationCanvasView> SourceLocations, IEnumerable<LocationCanvasView> TargetLocations)
+        {
+            //Brute force a search for the shortest distance between the two structures.
+            double MinDistance = double.MaxValue;
+            LocationCanvasView BestSourceLoc = null;
+            LocationCanvasView BestTargetLoc = null;
+
+            foreach (LocationCanvasView SourceLoc in SourceLocations)
+            {
+                foreach (LocationCanvasView TargetLoc in TargetLocations)
+                {
+                    double dist = SourceLoc.Distance(TargetLoc.VolumeShapeAsRendered);
+                    if (dist < MinDistance)
+                    {
+                        BestSourceLoc = SourceLoc;
+                        BestTargetLoc = TargetLoc;
+                        MinDistance = dist;
+                    }
+                }
+            }
+
+            if(BestSourceLoc != null)
+            {
+                return new SectionStructureLinkViewKey(linkKey, BestSourceLoc.ID, BestTargetLoc.ID);
+            }
+
+            return null;
+        }
+
+        public bool Equals(SectionStructureLinkViewKey other)
+        {
+            if ((other) == null)
+                return false;
+
+            if (!this.LinkID.Equals(other.LinkID))
+                return false;
+
+            return this.SourceLocID == other.SourceLocID && this.TargetLocID == other.TargetLocID;
+        }
+    }
+
     abstract class StructureLinkViewModelBase : Viking.Objects.UIObjBase, ICanvasView
     {
         WebAnnotationModel.StructureLinkObj modelObj;
@@ -79,30 +138,23 @@ namespace WebAnnotation.ViewModel
             }
         }
 
-        
-
         /// <summary>
         /// Use this version only for searches
         /// </summary>
         /// <param name="linkObj"></param>
-        public StructureLinkViewModelBase(StructureLinkObj linkObj)
-            : base()
+        public StructureLinkViewModelBase(SectionStructureLinkViewKey linkKey, Viking.VolumeModel.IVolumeToSectionMapper mapper)
+            : this(linkKey)
         {
-            this.modelObj = linkObj;
+            CreateView(linkKey, mapper);
         }
 
-        public StructureLinkViewModelBase(StructureLinkObj linkObj, 
-                             LocationObj sourceLoc,
-                             LocationObj targetLoc) : base()
+        private StructureLinkViewModelBase(SectionStructureLinkViewKey linkKey) : base()
         {
-            this.modelObj = linkObj; 
-            this.SourceLocation = sourceLoc;
-            this.TargetLocation = targetLoc;
-            CreateView(linkObj,sourceLoc, targetLoc);
+            this.modelObj = Store.StructureLinks[linkKey.LinkID];
+            this.SourceLocation = Store.Locations[linkKey.SourceLocID];
+            this.TargetLocation = Store.Locations[linkKey.TargetLocID];
         }
-
-        protected abstract void CreateView(StructureLinkObj link, LocationObj source, LocationObj target);
-
+        
         public override System.Windows.Forms.ContextMenu ContextMenu
         {
             get
@@ -135,12 +187,8 @@ namespace WebAnnotation.ViewModel
             {
                 StructureLinkObj newLink = new StructureLinkObj(this.TargetID, this.SourceID, this.Bidirectional);
                 Store.StructureLinks.Create(newLink);
-
                 this.modelObj = newLink;
-                LocationObj newSource = this.TargetLocation;
-                this.TargetLocation = SourceLocation;
-                this.SourceLocation = newSource;
-                CreateView(newLink, SourceLocation, TargetLocation);
+                //CreateView(newLink);
             }
         }
 
@@ -240,11 +288,15 @@ namespace WebAnnotation.ViewModel
         public abstract bool Intersects(GridVector2 Position);
         public abstract double Distance(GridVector2 Position);
         public abstract double DistanceFromCenterNormalized(GridVector2 Position);
-
+        
         public abstract Geometry.GridRectangle BoundingBox
         {
             get;
-        } 
+        }
+
+        protected abstract void CreateView(SectionStructureLinkViewKey key, Viking.VolumeModel.IVolumeToSectionMapper mapper);
+
+        public abstract double Distance(SqlGeometry Position);
     }
 
     class StructureLinkCirclesView : StructureLinkViewModelBase
@@ -291,9 +343,7 @@ namespace WebAnnotation.ViewModel
                 (byte)(255),
                 (byte)(128));
 
-        public StructureLinkCirclesView(StructureLinkObj linkObj,
-                             LocationObj sourceLoc,
-                             LocationObj targetLoc) : base(linkObj, sourceLoc, targetLoc)
+        public StructureLinkCirclesView(SectionStructureLinkViewKey key, Viking.VolumeModel.IVolumeToSectionMapper mapper) : base(key, mapper)
         {
 
         }
@@ -302,6 +352,11 @@ namespace WebAnnotation.ViewModel
         public override double Distance(GridVector2 Position)
         {
             return lineSegment.DistanceToPoint(Position) - this.Radius;
+        }
+         
+        public override double Distance(SqlGeometry shape)
+        {
+            return lineSegment.ToPolyLine().STDistance(shape).Value;
         }
 
         public override double DistanceFromCenterNormalized(GridVector2 Position)
@@ -328,12 +383,16 @@ namespace WebAnnotation.ViewModel
             }
         }
 
-        protected override void CreateView(StructureLinkObj link, LocationObj source, LocationObj target)
+        protected override void CreateView(SectionStructureLinkViewKey key, Viking.VolumeModel.IVolumeToSectionMapper mapper)
         {
-            lineSegment = new Geometry.GridLineSegment(source.VolumePosition,
-                                                       target.VolumePosition);
+            StructureLinkObj link = Store.StructureLinks[key.LinkID];
+            LocationObj source = Store.Locations[key.SourceLocID];
+            LocationObj target = Store.Locations[key.TargetLocID];
 
-            lineView = new LineView(source.VolumePosition, target.VolumePosition, Math.Min(source.Radius, target.Radius), DefaultColor,
+            GridVector2 sourceVolumePosition = mapper.SectionToVolume(source.Position);
+            GridVector2 targetVolumePosition = mapper.SectionToVolume(target.Position);
+        
+            lineView = new LineView(sourceVolumePosition, targetVolumePosition, Math.Min(source.Radius, target.Radius), DefaultColor,
                                     link.Bidirectional ? LineStyle.AnimatedBidirectional : LineStyle.AnimatedLinear); 
         }
 
@@ -346,6 +405,7 @@ namespace WebAnnotation.ViewModel
 
             LineView.Draw(device, scene, lineManager, linesToDraw);
         }
+
     }
 
     /// <summary>
@@ -397,9 +457,7 @@ namespace WebAnnotation.ViewModel
                 (byte)(255),
                 (byte)(192));
 
-        public StructureLinkCurvesView(StructureLinkObj linkObj,
-                             LocationObj sourceLoc,
-                             LocationObj targetLoc) : base(linkObj, sourceLoc, targetLoc)
+        public StructureLinkCurvesView(SectionStructureLinkViewKey key, Viking.VolumeModel.IVolumeToSectionMapper mapper) : base(key, mapper)
         {
             CreateLineSegments();
         }
@@ -413,6 +471,11 @@ namespace WebAnnotation.ViewModel
         public override double Distance(GridVector2 Position)
         {
             return lineSegments.Select(l => l.DistanceToPoint(Position) - this.Radius).Min();
+        }
+
+        public override double Distance(SqlGeometry shape)
+        {
+            return lineSegments.Select(l => l.ToPolyLine().STDistance(shape).Value).Min();
         }
 
         public override double DistanceFromCenterNormalized(GridVector2 Position)
@@ -448,9 +511,16 @@ namespace WebAnnotation.ViewModel
             }
         }
 
-        protected override void CreateView(StructureLinkObj link, LocationObj source, LocationObj target)
+        protected override void CreateView(SectionStructureLinkViewKey key, Viking.VolumeModel.IVolumeToSectionMapper mapper)
         {
-            lineView = new LinkedPolyLineSimpleView(source.VolumeShape.ToPoints(), target.VolumeShape.ToPoints(), DefaultLineWidth, DefaultColor, link.Bidirectional ? LineStyle.AnimatedBidirectional : LineStyle.AnimatedLinear);          
+            StructureLinkObj link = Store.StructureLinks[key.LinkID];
+            LocationObj source = Store.Locations[key.SourceLocID];
+            LocationObj target = Store.Locations[key.TargetLocID];
+
+            SqlGeometry sourceShape = mapper.TryMapShapeSectionToVolume(source.MosaicShape);
+            SqlGeometry targetShape = mapper.TryMapShapeSectionToVolume(target.MosaicShape);
+
+            lineView = new LinkedPolyLineSimpleView(sourceShape.ToPoints(), targetShape.ToPoints(), DefaultLineWidth, DefaultColor, link.Bidirectional ? LineStyle.AnimatedBidirectional : LineStyle.AnimatedLinear);          
         }
 
         public static void Draw(GraphicsDevice device,

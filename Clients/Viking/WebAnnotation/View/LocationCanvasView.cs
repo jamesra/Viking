@@ -15,18 +15,22 @@ using Microsoft.SqlServer.Types;
 using VikingXNA;
 using System.Windows.Forms;
 using Viking.Common;
+using Viking.VolumeModel;
+using SqlGeometryUtils;
 
 namespace WebAnnotation.View
 {
-    abstract public class LocationCanvasView : IComparable<LocationCanvasView>, IWeakEventListener, IUIObjectBasic, ICanvasView
+    abstract public class LocationCanvasView : IComparable<LocationCanvasView>, IWeakEventListener, IUIObjectBasic, ICanvasView, IEquatable<LocationCanvasView>
     {
         protected readonly LocationObj modelObj;
+         
+        public abstract SqlGeometry VolumeShapeAsRendered { get; }
 
         public LocationCanvasView(LocationObj obj)
         {
-            this.modelObj = obj;
+            this.modelObj = obj; 
         }
-
+        
         /// <summary>
         /// The number of parent structures until we hit a root structure
         /// </summary>
@@ -52,9 +56,6 @@ namespace WebAnnotation.View
             return CalculateParentDepth(obj.Parent) + 1; 
         }
 
-        public abstract bool Intersects(SqlGeometry shape);
-                 
-
         public abstract void DrawLabel(Microsoft.Xna.Framework.Graphics.SpriteBatch spriteBatch,
                               Microsoft.Xna.Framework.Graphics.SpriteFont font,
                               Scene scene,
@@ -65,12 +66,6 @@ namespace WebAnnotation.View
         public abstract LocationAction GetMouseShiftClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber);
 
         public abstract LocationAction GetMouseControlClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber);
-
-
-        public abstract IList<LocationCanvasView> OverlappingLinks
-        {
-            get;
-        }
 
         public long ID
         {
@@ -91,7 +86,17 @@ namespace WebAnnotation.View
         {
             get { return modelObj.Terminal; }
         }
-        
+
+        public bool OffEdge
+        {
+            get { return modelObj.OffEdge; }
+        }
+
+        public bool IsVericosityCap
+        {
+            get { return modelObj.VericosityCap; }
+        }
+
         private Structure _Parent = null; 
         private void ResetParentCache() { _Parent = null; }
 
@@ -113,15 +118,13 @@ namespace WebAnnotation.View
         {
             get { return modelObj.Links; }
         }
-                
-        public GridVector2 VolumePosition
+        
+        public abstract ICollection<long> OverlappedLinks
         {
-            get
-            {
-                return modelObj.VolumePosition;
-            }
-        }
-
+            protected get;
+            set;
+        }   
+                   
         public override string ToString()
         {
             return modelObj.ToString();
@@ -410,12 +413,7 @@ namespace WebAnnotation.View
 
                 StructureEventsRegistered = false;
             }
-        }
-
-        #endregion
-
-
-        #region WeakEvents
+        } 
 
         public bool ReceiveWeakEvent(Type managerType, object sender, EventArgs e)
         {
@@ -447,6 +445,8 @@ namespace WebAnnotation.View
             Debug.Fail("Weak Event not handled");
             return false;
         }
+
+        #endregion
 
         protected virtual void OnParentPropertyChanged(object o, PropertyChangedEventArgs args)
         {
@@ -480,12 +480,36 @@ namespace WebAnnotation.View
             throw new NotImplementedException();
         }
 
-        public abstract bool IsVisible(Scene scene);
-        public abstract bool IsLabelVisible(Scene scene);
+        public virtual bool Intersects(GridVector2 Position)
+        {
+            return this.VolumeShapeAsRendered.Intersects(Position);
+        }
 
-        public abstract bool Intersects(GridVector2 Position);
-        public abstract double Distance(GridVector2 Position);
+        public virtual bool Intersects(SqlGeometry shape)
+        {
+            return this.VolumeShapeAsRendered.STIntersects(shape).IsTrue;
+        }
+
+        public virtual double Distance(GridVector2 Position)
+        {
+            return this.VolumeShapeAsRendered.Distance(Position);
+        }
+
+        public virtual double Distance(SqlGeometry Shape)
+        {
+            return this.VolumeShapeAsRendered.STDistance(Shape).Value;
+        }
+
+        public abstract bool IsVisible(Scene scene);
+        public abstract bool IsLabelVisible(Scene scene); 
         public abstract double DistanceFromCenterNormalized(GridVector2 Position);
-        #endregion
+        
+        public bool Equals(LocationCanvasView other)
+        {
+            if ((object)other == null)
+                return false;
+
+            return other.ID == this.ID;
+        }
     }
 }

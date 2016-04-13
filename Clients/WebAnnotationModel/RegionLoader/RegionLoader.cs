@@ -46,6 +46,14 @@ namespace WebAnnotationModel
 
                 return null;
             }
+
+            internal set
+            {
+                if (value != null)
+                {
+                    this.RegionObjects = new RegionLocalObjects<OBJECT>(value);
+                }
+            }
         }
 
         /// <summary>
@@ -178,7 +186,10 @@ namespace WebAnnotationModel
                 {
                     if (cell.HasObjects && OnObjectsLoadedCallback != null)
                     {
-                        Task.Run(() => { OnObjectsLoadedCallback(cell.Objects); }); 
+                        GridRectangle cellBounds = level.CellBounds(iCell.X, iCell.Y);
+                        ICollection<OBJECT> filteredObjects = RemoveDeletedAndMovedObjects(cell.Objects, cellBounds);
+                        //cell.Objects = filteredObjects;
+                        Task.Run(() => { OnObjectsLoadedCallback(filteredObjects); }); 
                     }
 
                     //If we are waiting on results, add our callback to the list of functions to call when the request is complete
@@ -192,6 +203,12 @@ namespace WebAnnotationModel
                     }
                 }
             }
+        }
+
+        private ICollection<OBJECT> RemoveDeletedAndMovedObjects(ICollection<OBJECT> objects, GridRectangle volumeBounds)
+        {
+            return objects;
+            //return objects.Where(o => objectStore.Contains(o, volumeBounds)).ToList();
         }
 
         private BoundlessRegionPyramid<RegionRequestData<OBJECT>> GetOrAddRegionPyramidForSection(int SectionNumber)
@@ -227,5 +244,10 @@ namespace WebAnnotationModel
             string TraceString = string.Format("CreateRegionRequest: {0} ({1},{2}) Level:{3} MinRadius:{4}", SectionNumber, iCell.X, iCell.Y, level.Level, level.MinRadius);
             Trace.WriteLine(TraceString, "WebAnnotation");
         }
+
+        //How do we handle the CRUD of locations?
+        //Right now we simply check that each location still belongs in the location store.
+
+        
     }
 }

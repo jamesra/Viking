@@ -34,15 +34,15 @@ namespace WebAnnotation.UI.Commands
         }
 
         public TranslateCurveLocationCommand(Viking.UI.Controls.SectionViewerControl parent,
-                                        GridVector2 OriginalPosition, 
-                                        GridVector2[] OriginalControlPoints,
+                                        GridVector2 MosaicPosition, 
+                                        GridVector2[] OriginalMosaicControlPoints,
                                         Microsoft.Xna.Framework.Color color,
                                         double LineWidth,
                                         bool IsClosedCurve,
                                         OnCommandSuccess success_callback) : base(parent)
         {
-            this.OriginalPosition = OriginalPosition;
-            this.OriginalControlPoints = OriginalControlPoints;
+            this.OriginalPosition = parent.Section.ActiveMapping.SectionToVolume(MosaicPosition);
+            this.OriginalControlPoints = parent.Section.ActiveMapping.SectionToVolume(OriginalMosaicControlPoints);
             CreateView(OriginalControlPoints, color.ConvertToHSL(0.5f), LineWidth, IsClosedCurve);
             this.success_callback = success_callback;
             mapping = parent.Section.ActiveMapping;

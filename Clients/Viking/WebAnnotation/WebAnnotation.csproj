@@ -128,14 +128,15 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Cache\SectionLocationViewModelCache.cs" />
-    <Compile Include="DataStructure\RegionRequestData.cs" />
     <Compile Include="Export.cs" />
     <Compile Include="Extensions.cs" />
     <Compile Include="Global.cs" />
+    <Compile Include="Interfaces\CanvasInterfaces.cs" />
     <Compile Include="UI\Commands\AddRemoveLineControlPointCommand.cs" />
     <Compile Include="UI\Commands\AdjustControlPointCommand.cs" />
     <Compile Include="UI\Commands\PlaceOpenCurveCommand.cs" />
     <Compile Include="UI\Commands\TranslateLocationCommand.cs" />
+    <Compile Include="View\OverlappedLinkCircleView.cs" />
     <Compile Include="View\SectionAnnotationsView.cs" />
     <Compile Include="View\LocationCircleLabelView.cs" />
     <Compile Include="View\LocationActions.cs" />
@@ -261,7 +262,6 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="ViewModel\LocationLinksViewModel.cs" />
-    <Compile Include="ViewModel\SectionLocationsViewModel.cs" />
     <Compile Include="ViewModel\Structure.cs">
       <SubType>Code</SubType>
     </Compile>

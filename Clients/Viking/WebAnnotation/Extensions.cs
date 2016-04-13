@@ -30,6 +30,21 @@ namespace WebAnnotation
         }
     }
 
+    public static class GridRectangleExtensions
+    {
+        public static GridRectangle ToMosaicSpace(this GridRectangle VolumeRect, Viking.VolumeModel.IVolumeToSectionMapper mapper)
+        {
+            GridVector2[] MosaicCorners = mapper.VolumeToSection(new GridVector2[] { VolumeRect.LowerLeft, VolumeRect.LowerRight, VolumeRect.UpperLeft, VolumeRect.UpperRight });
+
+            double MinX = MosaicCorners.Min(p => p.X);
+            double MaxX = MosaicCorners.Max(p => p.X);
+            double MinY = MosaicCorners.Min(p => p.Y);
+            double MaxY = MosaicCorners.Max(p => p.Y);
+
+            return new GridRectangle(MinX, MaxX, MinY, MaxY);
+        }
+    }
+
     public static class AnnotationExtensions
     {
         private static WebAnnotationModel.LocationType StringToLocationType(string annotationType)

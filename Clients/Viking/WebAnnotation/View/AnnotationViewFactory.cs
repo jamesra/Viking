@@ -10,13 +10,14 @@ namespace WebAnnotation.View
 {
     static class AnnotationViewFactory
     {
+        /*
         /// <summary>
         /// 
         /// </summary>
         /// <param name="obj"></param>
         /// <param name="OnAdjacentSection">Indicates the location is not on the section being displayed.</param>
         /// <returns></returns>
-        public static LocationCanvasView Create(LocationObj obj, bool OnAdjacentSection)
+        public static LocationCanvasView Create(LocationObj obj, Viking.VolumeModel.IVolumeToSectionMapper mapper, bool OnAdjacentSection)
         {
             if (!OnAdjacentSection)
             {
@@ -27,25 +28,27 @@ namespace WebAnnotation.View
                 return CreateAdjacent(obj);
             }
         }
-
+        */
         /// <summary>
         /// 
         /// </summary>
         /// <param name="obj"></param>
         /// <param name="OnAdjacentSection">Indicates the location is not on the section being displayed.</param>
         /// <returns></returns>
-        public static LocationCanvasView Create(LocationObj obj)
+        public static LocationCanvasView Create(LocationObj obj, Viking.VolumeModel.IVolumeToSectionMapper mapping)
         {
             switch (obj.TypeCode)
             {
                 case LocationType.CIRCLE:
-                    return new LocationCircleView(obj);
+                    return new LocationCircleView(obj, mapping);
                 case LocationType.OPENCURVE:
-                    return new LocationOpenCurveView(obj);
+                    return new LocationOpenCurveView(obj, mapping);
                 case LocationType.CLOSEDCURVE:
-                    return new LocationClosedCurveView(obj);
+                    return new LocationClosedCurveView(obj, mapping);
                 case LocationType.POLYLINE:
-                    return new LocationLineView(obj);
+                    return new LocationLineView(obj, mapping);
+                case LocationType.POINT:
+                    return new LocationCircleView(obj, mapping);
                 default:
                     throw new NotImplementedException("View for type " + obj.TypeCode.ToString() + " is not implemented");
             }
@@ -57,28 +60,30 @@ namespace WebAnnotation.View
         /// <param name="obj"></param>
         /// <param name="OnAdjacentSection">Indicates the location is not on the section being displayed.</param>
         /// <returns></returns>
-        public static LocationCanvasView CreateAdjacent(LocationObj obj)
+        public static LocationCanvasView CreateAdjacent(LocationObj obj, Viking.VolumeModel.IVolumeToSectionMapper mapping)
         {
 
             switch (obj.TypeCode)
             {
                 case LocationType.CIRCLE:
-                    return new AdjacentLocationCircleView(obj);
+                    return new AdjacentLocationCircleView(obj, mapping);
+                case LocationType.POINT:
+                    return new AdjacentLocationCircleView(obj, mapping);
                 case LocationType.OPENCURVE:
                     {
-                        LocationOpenCurveView view = new LocationOpenCurveView(obj);
+                        LocationOpenCurveView view = new LocationOpenCurveView(obj, mapping);
                         view.Color = new Microsoft.Xna.Framework.Color(1, 1, 1, 0.2f);
                         return view;
                     }
                 case LocationType.CLOSEDCURVE:
                     {
-                        LocationClosedCurveView view = new LocationClosedCurveView(obj);
+                        LocationClosedCurveView view = new LocationClosedCurveView(obj, mapping);
                         view.Color = new Microsoft.Xna.Framework.Color(1, 1, 1, 0.2f);
                         return view;
                     }
                 case LocationType.POLYLINE:
                     {
-                        AdjacentLocationLineView view = new AdjacentLocationLineView(obj);
+                        AdjacentLocationLineView view = new AdjacentLocationLineView(obj, mapping);
                         view.Color = new Microsoft.Xna.Framework.Color(1, 1, 1, 0.2f);
                         return view;
                     }
@@ -93,21 +98,20 @@ namespace WebAnnotation.View
         /// <param name="obj"></param>
         /// <param name="OnAdjacentSection">Indicates the location is not on the section being displayed.</param>
         /// <returns></returns>
-        public static StructureLinkViewModelBase Create(StructureLinkObj linkObj,
-                                                LocationObj sourceLoc,
-                                                LocationObj targetLoc)
+        public static StructureLinkViewModelBase Create(SectionStructureLinkViewKey key, Viking.VolumeModel.IVolumeToSectionMapper mapper)
         {
-            switch (sourceLoc.TypeCode)
+            LocationObj sourceLocation = Store.Locations[key.SourceLocID];
+            switch (sourceLocation.TypeCode)
             {
                 case LocationType.CIRCLE:
-                    return new StructureLinkCirclesView(linkObj, sourceLoc, targetLoc);
+                    return new StructureLinkCirclesView(key, mapper);
                 case LocationType.OPENCURVE:
-                    StructureLinkCurvesView view = new StructureLinkCurvesView(linkObj, sourceLoc, targetLoc);
+                    StructureLinkCurvesView view = new StructureLinkCurvesView(key, mapper);
                     return view;
                 case LocationType.POLYLINE:
-                    return new StructureLinkCurvesView(linkObj, sourceLoc, targetLoc);
+                    return new StructureLinkCurvesView(key, mapper);
                 default:
-                    throw new NotImplementedException("StructureLink View for type " + sourceLoc.TypeCode.ToString() + " is not implemented");
+                    throw new NotImplementedException("StructureLink View for type " + sourceLocation.TypeCode.ToString() + " is not implemented");
             }
         }
     }

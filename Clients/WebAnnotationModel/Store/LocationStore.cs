@@ -82,17 +82,17 @@ namespace WebAnnotationModel
                                                              out long TicksAtQueryExecute,
                                                              out long[] deleted_objs)
         {
-            return proxy.GetLocationChangesInRegion(out TicksAtQueryExecute, out deleted_objs, SectionNumber, BBox, MinRadius, LastQuery.Ticks);
+            return proxy.GetLocationChangesInMosaicRegion(out TicksAtQueryExecute, out deleted_objs, SectionNumber, BBox, MinRadius, LastQuery.Ticks);
         }
 
         protected override IAsyncResult ProxyBeginGetBySectionRegion(AnnotateLocationsClient proxy, long SectionNumber, BoundingRectangle BBox, double MinRadius, DateTime LastQuery, AsyncCallback callback, object asynchState)
         {
-            return proxy.BeginGetLocationChangesInRegion(SectionNumber, BBox, MinRadius, LastQuery.Ticks, callback, asynchState);
+            return proxy.BeginGetLocationChangesInMosaicRegion(SectionNumber, BBox, MinRadius, LastQuery.Ticks, callback, asynchState);
         }
 
         protected override Location[] ProxyGetBySectionRegionCallback(out long TicksAtQueryExecute, out long[] DeletedLocations, GetObjectBySectionCallbackState<LocationObj> state, IAsyncResult result)
         {
-            return state.Proxy.EndGetLocationChangesInRegion(out TicksAtQueryExecute, out DeletedLocations, result);
+            return state.Proxy.EndGetLocationChangesInMosaicRegion(out TicksAtQueryExecute, out DeletedLocations, result);
         }
 
         protected override Location[] ProxyGetBySectionCallback(out long TicksAtQueryExecute,
@@ -358,7 +358,10 @@ namespace WebAnnotationModel
             return listLocations;
         }
 
-       
+        public bool Contains(LocationObj o, Geometry.GridRectangle bounds)
+        {
+            return bounds.Contains(o.Position);
+        }
 
 
         #region Callbacks

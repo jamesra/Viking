@@ -68,7 +68,7 @@ namespace WebAnnotation.UI.Commands
             LocationCanvasView nearest = Overlay.GetNearestLocation(WorldPos, out distance);
             if (nearest != null)
             {
-                nearestParent = nearest.modelObj;
+                nearestParent = Store.Locations[nearest.ID];
             }
            
             base.OnMouseMove(sender, e);

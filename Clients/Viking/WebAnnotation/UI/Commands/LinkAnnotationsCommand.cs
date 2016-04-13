@@ -61,7 +61,7 @@ namespace WebAnnotation.UI.Commands
             double distance;
 
             LocationCanvasView nearestVisible = Overlay.GetNearestLocation(WorldPos, out distance);
-            NearestTarget = nearestVisible != null ? TrySetTarget(nearestVisible.modelObj) : null;
+            NearestTarget = nearestVisible != null ? TrySetTarget(Store.Locations[nearestVisible.ID]) : null;
 
             base.OnMouseMove(sender, e);
 
@@ -98,7 +98,7 @@ namespace WebAnnotation.UI.Commands
                 //Find if we are close enough to a location to "snap" the line to the target
                 double distance;
                 LocationCanvasView nearest = Overlay.GetNearestLocation(WorldPos, out distance);
-                NearestTarget = nearest != null ? nearest.modelObj : null;
+                NearestTarget = nearest != null ? Store.Locations[nearest.ID] : null;
 
                 TrySetTarget(NearestTarget);
 

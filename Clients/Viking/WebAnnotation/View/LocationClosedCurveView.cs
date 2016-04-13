@@ -23,9 +23,9 @@ namespace WebAnnotation.View
 
 
         public static uint NumInterpolationPoints = Global.NumCurveInterpolationPoints;
-        public LocationClosedCurveView(LocationObj obj) : base(obj)
+        public LocationClosedCurveView(LocationObj obj, Viking.VolumeModel.IVolumeToSectionMapper mapper) : base(obj, mapper)
         {
-            curveView = new CurveView(modelObj.VolumeShape.ToPoints(), obj.Parent.Type.Color.ToXNAColor().ConvertToHSL(0.5f), true);
+            curveView = new CurveView(this.VolumeCurveControlPoints, obj.Parent.Type.Color.ToXNAColor().ConvertToHSL(0.5f), true);
         }
 
         private GridVector2[] _MosaicCurveControlPoints;
@@ -35,7 +35,7 @@ namespace WebAnnotation.View
             {
                 if (_MosaicCurveControlPoints == null)
                 {
-                    _MosaicCurveControlPoints = CurveViewControlPoints.CalculateCurvePoints(modelObj.MosaicShape.ToPoints(), LocationOpenCurveView.NumInterpolationPoints, true).ToArray();
+                    _MosaicCurveControlPoints = CurveViewControlPoints.CalculateCurvePoints(this.MosaicControlPoints, LocationOpenCurveView.NumInterpolationPoints, true).ToArray();
                 }
 
                 return _MosaicCurveControlPoints;
@@ -49,7 +49,7 @@ namespace WebAnnotation.View
             {
                 if (_VolumeCurveControlPoints == null)
                 {
-                    _VolumeCurveControlPoints = CurveViewControlPoints.CalculateCurvePoints(modelObj.VolumeShape.ToPoints(), LocationOpenCurveView.NumInterpolationPoints, true).ToArray();
+                    _VolumeCurveControlPoints = CurveViewControlPoints.CalculateCurvePoints(this.VolumeControlPoints, LocationOpenCurveView.NumInterpolationPoints, true).ToArray();
                 }
 
                 return _VolumeCurveControlPoints;
@@ -57,7 +57,7 @@ namespace WebAnnotation.View
         }
 
         private SqlGeometry _RenderedVolumeShape;
-        public override SqlGeometry RenderedVolumeShape
+        public override SqlGeometry VolumeShapeAsRendered
         {
             get
             {

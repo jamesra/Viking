@@ -5,14 +5,18 @@ using System.Text;
 using System.Threading.Tasks;
 using Geometry;
 using WebAnnotationModel;
+using SqlGeometryUtils;
 
 namespace WebAnnotation.View
 {
     abstract class LocationCurveView : LocationLineViewBase
     {
-        public LocationCurveView(LocationObj obj) : base(obj) { }
         public abstract GridVector2[] MosaicCurveControlPoints { get; }
         public abstract GridVector2[] VolumeCurveControlPoints { get; }
+
+        public LocationCurveView(LocationObj obj, Viking.VolumeModel.IVolumeToSectionMapper mapper) : base(obj, mapper)
+        { 
+        }
 
         public override double DistanceFromCenterNormalized(GridVector2 Position)
         {

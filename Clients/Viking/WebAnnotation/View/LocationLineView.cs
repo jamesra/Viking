@@ -34,10 +34,10 @@ namespace WebAnnotation.View
             get { return upPolyLineView.LineWidth; }
         }
 
-        public AdjacentLocationLineView(LocationObj obj) : base(obj)
+        public AdjacentLocationLineView(LocationObj obj, Viking.VolumeModel.IVolumeToSectionMapper mapper) : base(obj, mapper)
         {
-            upPolyLineView = new PolyLineView(obj.VolumeShape.ToPoints(), obj.Parent.Type.Color.ToXNAColor().ConvertToHSL(0.5f), GlobalPrimitives.UpArrowTexture);
-            downPolyLineView = new PolyLineView(obj.VolumeShape.ToPoints(), obj.Parent.Type.Color.ToXNAColor().ConvertToHSL(0.5f), GlobalPrimitives.DownArrowTexture);
+            upPolyLineView = new PolyLineView(VolumeControlPoints, obj.Parent.Type.Color.ToXNAColor().ConvertToHSL(0.5f), GlobalPrimitives.UpArrowTexture);
+            downPolyLineView = new PolyLineView(VolumeControlPoints, obj.Parent.Type.Color.ToXNAColor().ConvertToHSL(0.5f), GlobalPrimitives.DownArrowTexture);
         }
 
         public static void Draw(Microsoft.Xna.Framework.Graphics.GraphicsDevice device,
@@ -72,6 +72,8 @@ namespace WebAnnotation.View
     {
         protected PolyLineView polyLineView;
 
+        
+
         public Color Color
         {
             get { return polyLineView.Color; }
@@ -83,7 +85,7 @@ namespace WebAnnotation.View
             get { return polyLineView.LineWidth; }
         }
 
-        public LocationLineView(LocationObj obj, Texture2D texture = null) : base(obj)
+        public LocationLineView(LocationObj obj, Viking.VolumeModel.IVolumeToSectionMapper mapper, Texture2D texture = null) : base(obj, mapper)
         {
             polyLineView = new PolyLineView(obj.VolumeShape.ToPoints(), obj.Parent.Type.Color.ToXNAColor(0.5f), texture);
         }
@@ -108,8 +110,11 @@ namespace WebAnnotation.View
         }
     }
     
-    abstract class LocationLineViewBase : LocationCanvasView
-    { 
+    abstract class LocationLineViewBase : MultipleControlPointLocationCanvasViewBase
+    {
+        public LocationLineViewBase(LocationObj obj, Viking.VolumeModel.IVolumeToSectionMapper mapper) : base(obj, mapper)
+        { }
+
         public override bool IsVisible(VikingXNA.Scene scene)
         {
             if (this.Width / scene.DevicePixelWidth < 2.0)
@@ -127,24 +132,25 @@ namespace WebAnnotation.View
         {
             get
             {
-                return this.RenderedVolumeShape.Envelope();
+                return this.VolumeShapeAsRendered.Envelope();
             }
         }
 
-        public override bool Intersects(GridVector2 Position)
+        private ICollection<long> _OverlappedLinks;
+        public override ICollection<long> OverlappedLinks
         {
-            return this.RenderedVolumeShape.Intersects(Position);
+            protected get
+            {
+                return _OverlappedLinks;
+            }
+
+            set
+            {
+                throw new NotImplementedException();
+            }
         }
 
-        public override bool Intersects(SqlGeometry shape)
-        {
-            return this.RenderedVolumeShape.STIntersects(shape).IsTrue;
-        }
-         
-        public override double Distance(GridVector2 Position)
-        {
-            return this.RenderedVolumeShape.Distance(Position);
-        } 
+
 
         public override double DistanceFromCenterNormalized(GridVector2 Position)
         {
@@ -156,9 +162,11 @@ namespace WebAnnotation.View
 
         protected override void OnObjPropertyChanged(object o, PropertyChangedEventArgs args)
         {
+            /*
             if (args.PropertyName == "MosaicShape")
             {
-                _MosaicControlPoints = null;
+                MosaicControlPoints = obj.MosaicShape.ToPoints();
+                VolumeControlPoints = mapper.SectionToVolume(MosaicControlPoints);
             }
 
             if (args.PropertyName == "VolumeShape")
@@ -166,6 +174,7 @@ namespace WebAnnotation.View
                 _RenderedVolumeShape = null;
                 _VolumeControlPoints = null;
             } 
+            */
         }
 
         public override void DrawLabel(SpriteBatch spriteBatch, SpriteFont font, Scene scene, int DirectionToVisiblePlane)
@@ -219,69 +228,39 @@ namespace WebAnnotation.View
             //return LocationAction.NONE;
         }
 
-
-        public override IList<LocationCanvasView> OverlappingLinks
-        {
-            get
-            {
-                return new List<LocationCanvasView>();
-            }
-        }
-
         public abstract double Width { get; }
 
-        public LocationLineViewBase(LocationObj obj) : base(obj)
-        {
-        }
-
-        private SqlGeometry _RenderedVolumeShape;
-        public virtual SqlGeometry RenderedVolumeShape
+        private SqlGeometry _VolumeShape;
+        public override SqlGeometry VolumeShapeAsRendered
         {
             get
             {
-                if (_RenderedVolumeShape == null)
+                if (_VolumeShape == null)
                 {
-                    _RenderedVolumeShape = this.VolumeShape.STBuffer(this.Width / 2.0);
-                    //_RenderedVolumeShape = this.modelObj.VolumeShape.STBuffer(this.Width);
+                    _VolumeShape = this.VolumeControlPoints.ToPolyLine().STBuffer(Width);                 
                 }
 
-                return _RenderedVolumeShape;
+                return _VolumeShape;
             }
         }
-        
-        public SqlGeometry VolumeShape
+    }
+
+    public abstract class MultipleControlPointLocationCanvasViewBase : LocationCanvasView
+    {
+        /// <summary>
+        /// Mosaic points composing the polyline, without added points to create a curve
+        /// </summary>
+        protected readonly GridVector2[] MosaicControlPoints;
+
+        /// <summary>
+        /// Mosaic points composing the polyline, without added points to create a curve
+        /// </summary>
+        protected readonly GridVector2[] VolumeControlPoints;
+
+        public MultipleControlPointLocationCanvasViewBase(LocationObj obj, Viking.VolumeModel.IVolumeToSectionMapper mapper) : base(obj)
         {
-            get { return this.modelObj.VolumeShape; }
+            MosaicControlPoints = obj.MosaicShape.ToPoints();
+            VolumeControlPoints = mapper.SectionToVolume(MosaicControlPoints);
         }
-
-        private GridVector2[] _MosaicControlPoints;
-        public virtual GridVector2[] MosaicControlPoints
-        {
-            get
-            {
-                if (_MosaicControlPoints == null)
-                {
-                    _MosaicControlPoints = modelObj.MosaicShape.ToPoints();
-                }
-
-                return _MosaicControlPoints;
-            }
-        }
-
-        private GridVector2[] _VolumeControlPoints;
-        public virtual GridVector2[] VolumeControlPoints
-        {
-            get
-            {
-                if (_VolumeControlPoints == null)
-                {
-                    _VolumeControlPoints = modelObj.VolumeShape.ToPoints();
-                }
-
-                return _VolumeControlPoints;
-            }
-        }
-         
-        
     }
 }

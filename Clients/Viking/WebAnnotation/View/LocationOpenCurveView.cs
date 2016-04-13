@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Geometry;
 using Microsoft.SqlServer.Types;
+using Microsoft.Xna.Framework;
 using SqlGeometryUtils;
 using WebAnnotationModel;
 using VikingXNAGraphics;
@@ -15,7 +16,7 @@ namespace WebAnnotation.View
     class LocationOpenCurveView : LocationCurveView
     {
         public static uint NumInterpolationPoints = Global.NumCurveInterpolationPoints;
-
+        
         public CurveView curveView;
         public CurveLabel curveLabel;
         public CurveLabel curveParentLabel;
@@ -26,29 +27,31 @@ namespace WebAnnotation.View
             set { curveView.Color = value; }
         }
          
-        public LocationOpenCurveView(LocationObj obj) : base(obj)
+        public LocationOpenCurveView(LocationObj obj, Viking.VolumeModel.IVolumeToSectionMapper mapper) : base(obj, mapper)
         {
             RegisterForLocationEvents();
             RegisterForStructureChangeEvents();
-            GridVector2[] controlPoints = obj.VolumeShape.ToPoints();
-            curveView = new CurveView(controlPoints, obj.Parent.Type.Color.ToXNAColor(0.5f), false, lineWidth: obj.Radius * 2.0);
-            CreateLabelViews(obj);
+            
+            curveView = new CurveView(VolumeControlPoints, obj.Parent.Type.Color.ToXNAColor(0.5f), false, lineWidth: obj.Radius * 2.0);
+            CreateLabelViews(VolumeControlPoints, obj.ParentID);
         }
 
-        private void CreateLabelViews(LocationObj obj)
+        private void CreateLabelViews(GridVector2[] controlPoints, long? ParentID)
         {
             string LabelText = this.ParentID.ToString() + " " + this.FullLabelText();
-            GridVector2[] controlPoints = obj.VolumeShape.ToPoints();
-            
+
             string ParentStructureLabelText = "";
-            if (obj.Parent.ParentID.HasValue)
+            if (ParentID.HasValue)
             {
-                ParentStructureLabelText = obj.Parent.ParentID.ToString();
+                ParentStructureLabelText = ParentID.ToString();
                 LabelText = this.Parent.Type.Code + " " + LabelText;
             }
 
-            curveLabel = new CurveLabel(LabelText, controlPoints, Microsoft.Xna.Framework.Color.Black, false);
-            curveParentLabel = new CurveLabel(ParentStructureLabelText, controlPoints, Microsoft.Xna.Framework.Color.Red, false);
+            Color LabelColor = new Color(0, 0, 0, 0.5f);
+            Color ParentLabelColor = new Color(1.0f, 0, 0, 0.5f);
+
+            curveLabel = new CurveLabel(LabelText, controlPoints, LabelColor, false);
+            curveParentLabel = new CurveLabel(ParentStructureLabelText, controlPoints, ParentLabelColor, false);
 
             curveLabel.Alignment = RoundCurve.HorizontalAlignment.Left;
             curveParentLabel.Alignment = RoundCurve.HorizontalAlignment.Right;
@@ -58,17 +61,17 @@ namespace WebAnnotation.View
             curveParentLabel.Max_Curve_Length_To_Use_Normalized = (float)curveParentLabel.Label.Length / TotalLabelLength;
         }
         
-        private GridVector2[] _MosaicControlPoints;
+        private GridVector2[] _MosaicCurveControlPoints;
         public override GridVector2[] MosaicCurveControlPoints
         {
             get
             {
-                if (_MosaicControlPoints == null)
+                if (_MosaicCurveControlPoints == null)
                 {
-                    _MosaicControlPoints = CurveViewControlPoints.CalculateCurvePoints(modelObj.MosaicShape.ToPoints(), LocationOpenCurveView.NumInterpolationPoints, false).ToArray();
+                    _MosaicCurveControlPoints = CurveViewControlPoints.CalculateCurvePoints(MosaicControlPoints, LocationOpenCurveView.NumInterpolationPoints, false).ToArray();
                 }
 
-                return _MosaicControlPoints;
+                return _MosaicCurveControlPoints;
             }
         }
 
@@ -79,7 +82,7 @@ namespace WebAnnotation.View
             {
                 if (_VolumeCurveControlPoints == null)
                 {
-                    _VolumeCurveControlPoints = CurveViewControlPoints.CalculateCurvePoints(modelObj.VolumeShape.ToPoints(), LocationOpenCurveView.NumInterpolationPoints, false).ToArray();
+                    _VolumeCurveControlPoints = CurveViewControlPoints.CalculateCurvePoints(VolumeControlPoints, LocationOpenCurveView.NumInterpolationPoints, false).ToArray();
                 }
 
                 return _VolumeCurveControlPoints;
@@ -87,7 +90,7 @@ namespace WebAnnotation.View
         }
 
         private SqlGeometry _RenderedVolumeShape;
-        public override SqlGeometry RenderedVolumeShape
+        public override SqlGeometry VolumeShapeAsRendered
         {
             get
             {
@@ -158,18 +161,21 @@ namespace WebAnnotation.View
             //ClearOverlappingLinkedLocationCache();
 
             //CreateViewObjects();
-            if (IsLocationPropertyAffectingLabels(args.PropertyName))
-                CreateLabelViews(this.modelObj);
+            //if (IsLocationPropertyAffectingLabels(args.PropertyName))
+            //    CreateLabelViews(this.modelObj);
+            base.OnObjPropertyChanged(o, args);
         }
 
         protected override void OnParentPropertyChanged(object o, PropertyChangedEventArgs args)
         {
+            /*
             if (args.PropertyName == "Label" || args.PropertyName == "Attributes")
             {
                 CreateLabelViews(this.modelObj);
             }
-
+            */
             base.OnParentPropertyChanged(o, args);
+            
         }
 
     }

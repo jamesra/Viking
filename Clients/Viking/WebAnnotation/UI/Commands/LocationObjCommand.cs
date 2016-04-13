@@ -38,7 +38,7 @@ namespace WebAnnotation.UI.Commands
             : base(parent)
         {            
             LocationCanvasView select_ViewObj = Viking.UI.State.SelectedObject as LocationCanvasView;
-            selected = select_ViewObj.modelObj;
+            selected = Store.Locations[select_ViewObj.ID];
             Debug.Assert(selected != null);
 
             //Figure out if we've selected a location on the same section or different

@@ -8,7 +8,7 @@ using Geometry;
 
 namespace Viking.ViewModels
 {
-    public class VolumeViewModel
+    public class VolumeViewModel : IVolumeMapProvider
     {
         private Volume _Volume;
         private MappingManager _MappingManager;

@@ -1070,6 +1070,9 @@ namespace Viking
             if (graphicsDevice.IsDisposed)
                 return null;
 
+            if (texdata == null)
+                return null;
+
             //Trace.WriteLine("TextureFromData: " + this.Filename.ToString()); 
             Texture2D tex = null;
             try

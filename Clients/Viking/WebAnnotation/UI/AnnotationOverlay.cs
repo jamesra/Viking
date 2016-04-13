@@ -32,10 +32,11 @@ namespace WebAnnotation
         public Viking.UI.Controls.SectionViewerControl Parent { get { return _Parent; } }
 
         protected TransformChangedEventHandler SectionChangedEventHandler;
-        private EventHandler AnnotationChangedEventHandler; 
-         
-        private static SectionLocationViewModelCache cacheSectionAnnotations = new SectionLocationViewModelCache(); 
-        private static LocationLinksViewModel linksView;
+        private EventHandler AnnotationChangedEventHandler;
+
+        //private static SectionLocationViewModelCache cacheSectionAnnotations = new SectionLocationViewModelCache(); 
+        private static SectionAnnotationsViewModelCache cacheSectionAnnotations = new SectionAnnotationsViewModelCache();
+        //private static LocationLinksViewModel linksView;
 
         private static AnnotationOverlay _CurrentOverlay = null; 
         public static AnnotationOverlay CurrentOverlay { get { return _CurrentOverlay;}}
@@ -103,7 +104,7 @@ namespace WebAnnotation
         /// Returns annotations for section if they exist or null if they do not
         /// </summary>
         /// <param name="SectionNumber"></param>
-        public static SectionLocationsViewModel GetAnnotationsForSection(int SectionNumber)
+        public static SectionAnnotationsView GetAnnotationsForSection(int SectionNumber)
         {
             return cacheSectionAnnotations.Fetch(SectionNumber); 
 
@@ -121,19 +122,18 @@ namespace WebAnnotation
         /// Returns annotations for section if they exist or creates new SectionLocationsViewModel if they do not
         /// </summary>
         /// <param name="SectionNumber"></param>
-        public static SectionLocationsViewModel GetOrCreateAnnotationsForSection(int SectionNumber, 
+        public static SectionAnnotationsView GetOrCreateAnnotationsForSection(int SectionNumber, 
                                                                                  Viking.UI.Controls.SectionViewerControl parent)
         {
             if (parent.Section.VolumeViewModel.SectionViewModels.ContainsKey(SectionNumber))
             {
-                SectionLocationsViewModel SectionAnnotations = cacheSectionAnnotations.Fetch(SectionNumber);
+                SectionAnnotationsView SectionAnnotations = cacheSectionAnnotations.Fetch(SectionNumber);
                 if (SectionAnnotations != null)
                     return SectionAnnotations; 
                                 
-                SectionAnnotations = new SectionLocationsViewModel(parent.Section.VolumeViewModel.SectionViewModels[SectionNumber],
-                                                                                        parent);
+                SectionAnnotations = new SectionAnnotationsView(parent.Section.VolumeViewModel.SectionViewModels[SectionNumber]);
 
-                SectionLocationsViewModel retVal = cacheSectionAnnotations.GetOrAdd(SectionNumber, SectionAnnotations);
+                SectionAnnotationsView retVal = cacheSectionAnnotations.GetOrAdd(SectionNumber, SectionAnnotations);
 
                 //If we did add a new view model to the cache, then subscribe to events and reduce cache footprint if needed
                 if (object.ReferenceEquals(retVal, SectionAnnotations))
@@ -154,7 +154,7 @@ namespace WebAnnotation
         
         
 
-        public SectionLocationsViewModel CurrentSectionAnnotations
+        public SectionAnnotationsView CurrentSectionAnnotations
         {
             get
             {
@@ -170,7 +170,7 @@ namespace WebAnnotation
         public LocationCanvasView GetNearestLocation(GridVector2 position, out double BestDistance)
         {
             BestDistance = double.MaxValue;
-            SectionLocationsViewModel locView = GetAnnotationsForSection(CurrentSectionNumber);
+            SectionAnnotationsView locView = GetAnnotationsForSection(CurrentSectionNumber);
             if (locView == null)
                 return null;
 
@@ -225,34 +225,35 @@ namespace WebAnnotation
         public IUIObjectBasic ObjectAtPosition(GridVector2 position, out double distance)
         {
             double MaxScreenDimension = Math.Max(Parent.Scene.VisibleWorldBounds.Width, Parent.Scene.VisibleWorldBounds.Height);
-            distance = double.MaxValue; 
-            SectionLocationsViewModel locView = GetAnnotationsForSection(CurrentSectionNumber);
+            distance = double.MaxValue;
+            SectionAnnotationsView locView = GetAnnotationsForSection(CurrentSectionNumber);
             if (locView == null)
                 return null; 
 
             double BestDistance = double.MaxValue;
-            IUIObjectBasic bestObj = null; 
+            ICanvasView bestObj = null; 
            
-            bestObj = locView.GetNearestAnnotation(position, out BestDistance);
+            bestObj = locView.GetAnnotationAtPosition(position, out BestDistance);
 
             if (bestObj != null)
             {
                 distance = BestDistance;
                 LocationCanvasView loc = bestObj as LocationCanvasView;
                 if (loc == null)
-                    return bestObj;
+                    return bestObj as IUIObjectBasic;
     
-                if (loc.OverlappingLinks.Count == 0)
-                    return bestObj;
+                //if (loc.OverlappingLinks.Count == 0)
+                //    return bestObj;
 
-                LocationCircleView locCircle = loc as LocationCircleView;
-                if (locCircle != null)
+                ICanvasViewContainer container = loc as ICanvasViewContainer;
+                if (container != null)
                 {
-                    bestObj = locCircle.GetLocationUnderPosition(position, out distance);
-                    return bestObj;
+                    bestObj = container.GetAnnotationAtPosition(position, out distance);
+                    return bestObj as IUIObjectBasic;
                 }
             }
-            
+
+            /*
             if (bestObj == null)
             {
                 double bestRatio = double.MaxValue;
@@ -304,8 +305,8 @@ namespace WebAnnotation
             }
 
             distance = BestDistance; 
-
-            return bestObj; 
+            */
+            return bestObj as IUIObjectBasic;
         }
 
         #region ISectionOverlayExtension Members
@@ -328,7 +329,7 @@ namespace WebAnnotation
             this._Parent.KeyUp += new KeyEventHandler(this.OnKeyUp);
 
            
-            linksView = new LocationLinksViewModel(parent); 
+            //linksView = new LocationLinksViewModel(parent); 
 
             LoadSectionAnnotations();
         }
@@ -428,7 +429,7 @@ namespace WebAnnotation
                     else
                         action = loc.GetMouseClickActionForPositionOnAnnotation(WorldPosition, this.CurrentSectionNumber);
 
-                    Viking.UI.Commands.Command command = action.CreateCommand(Parent, loc.modelObj);
+                    Viking.UI.Commands.Command command = action.CreateCommand(Parent, Store.Locations.GetObjectByID(loc.ID));
                     if(command != null)
                     {
                         _Parent.CurrentCommand = command;
@@ -609,11 +610,7 @@ namespace WebAnnotation
                 case Keys.Space:
 
                     //Only load the annotations for any section once so we can't fire multiple requests by pounding the spacebar
-                    if (CurrentSectionAnnotations.HaveLoadedSectionAnnotations == false)
-                    {
-                        LoadSectionAnnotations();
-                    }
-
+                    LoadSectionAnnotations();
                     this._Parent.Invalidate();
 
                     break;
@@ -791,7 +788,7 @@ namespace WebAnnotation
                 return;
             }
                
-            Viking.UI.Commands.Command.EnqueueCommand(typeof(ToggleStructureTag), new object[] { this.Parent, loc.Parent.modelObj, tag});
+            Viking.UI.Commands.Command.EnqueueCommand(typeof(ToggleStructureTag), new object[] { this.Parent, Store.Structures[loc.ParentID.Value], tag});
 
             return; 
         }
@@ -811,7 +808,7 @@ namespace WebAnnotation
                 return;
             }
 
-            Viking.UI.Commands.Command.EnqueueCommand(typeof(ToggleLocationTag), new object[] { this.Parent, loc.modelObj, tag });
+            Viking.UI.Commands.Command.EnqueueCommand(typeof(ToggleLocationTag), new object[] { this.Parent, Store.Locations[loc.ID], tag });
 
             return;
         }
@@ -833,7 +830,7 @@ namespace WebAnnotation
 
             //ToggleLocationIsTerminalCommand command = new ToggleLocationIsTerminalCommand(this.Parent, loc.modelObj);
 
-            Viking.UI.Commands.Command.EnqueueCommand(typeof(ToggleLocationIsTerminalCommand), new object[] { this.Parent, loc.modelObj });
+            Viking.UI.Commands.Command.EnqueueCommand(typeof(ToggleLocationIsTerminalCommand), new object[] { this.Parent, Store.Locations[loc.ID] });
 
             return;
         }
@@ -862,13 +859,13 @@ namespace WebAnnotation
             switch (newLocType)
             {
                 case LocationType.CIRCLE:
-                    QueuePlacementCommandForCircleStructure(Parent, loc.modelObj, LastMouseMoveVolumeCoords, SectionPos, loc.Parent.Type.Color, true);
+                    QueuePlacementCommandForCircleStructure(Parent, Store.Locations[loc.ID], LastMouseMoveVolumeCoords, SectionPos, loc.Parent.Type.Color, true);
                     break;
                 case LocationType.OPENCURVE: 
-                    QueuePlacementCommandForOpenCurveStructure(Parent, loc.modelObj, LastMouseMoveVolumeCoords, loc.Parent.Type.Color, true);
+                    QueuePlacementCommandForOpenCurveStructure(Parent, Store.Locations[loc.ID], LastMouseMoveVolumeCoords, loc.Parent.Type.Color, true);
                     break;
                 case LocationType.CLOSEDCURVE: 
-                    QueuePlacementCommandForClosedCurveStructure(Parent, loc.modelObj, LastMouseMoveVolumeCoords, loc.Parent.Type.Color, true);
+                    QueuePlacementCommandForClosedCurveStructure(Parent, Store.Locations[loc.ID], LastMouseMoveVolumeCoords, loc.Parent.Type.Color, true);
                     break; 
             }
         }
@@ -899,7 +896,7 @@ namespace WebAnnotation
 
                     if (template.TypeCode == LocationType.CIRCLE)
                     {
-                        LocationCircleView newLocView = new LocationCircleView(newLoc);
+                        LocationCircleView newLocView = new LocationCircleView(newLoc, Parent.Section.ActiveMapping);
 
                         Viking.UI.Commands.Command.EnqueueCommand(typeof(ResizeCircleCommand), new object[] { Parent, template.Parent.Type.Color, WorldPos, new ResizeCircleCommand.OnCommandSuccess((double radius) => { newLoc.Radius = radius; }) });
                         Viking.UI.Commands.Command.EnqueueCommand(typeof(CreateNewLinkedLocationCommand), new object[] { Parent, template, newLocView });
@@ -970,9 +967,30 @@ namespace WebAnnotation
                 } 
             }
 
+            SortedSet<int> AdjacentSections = new SortedSet<int>();
+            foreach (SectionViewModel svm in Viking.UI.State.volume.SectionViewModels.Values)
+            {
+                if(svm.ReferenceSectionAbove != null)
+                {
+                    AdjacentSections.Add(svm.ReferenceSectionAbove.Number);
+                }
+
+                if (svm.ReferenceSectionBelow != null)
+                {
+                    AdjacentSections.Add(svm.ReferenceSectionBelow.Number);
+                }
+            }
+
+            foreach(int sectionNumber in AdjacentSections)
+            {
+                if (!changedSections.Contains(sectionNumber))
+                    changedSections.Add(sectionNumber);
+            }
+            
+
             foreach (int section in changedSections)
             {
-                SectionLocationsViewModel SLVModel = cacheSectionAnnotations.Fetch(section);
+                SectionAnnotationsView SLVModel = cacheSectionAnnotations.Fetch(section);
                 if (SLVModel != null)
                 {
                     SLVModel.OnLocationsStoreChanged(sender, e);
@@ -1044,16 +1062,29 @@ namespace WebAnnotation
         protected void LoadSectionAnnotations()
         {
             if (Parent.Scene == null)
+                return;
+
+            int StartingSectionNumber = _Parent.Section.Number;
+            SectionAnnotationsView SectionAnnotations;
+
+            SectionAnnotations = GetOrCreateAnnotationsForSection(_Parent.Section.Number, _Parent);
+            SectionAnnotations.LoadAnnotationsInRegion(Parent.Scene);
+            //SectionAnnotationsView.LoadSectionAnnotations(SectionAnnotations, false);
+        }
+
+        /*
+        protected void LoadSectionAnnotations()
+        {
+            if (Parent.Scene == null)
                return;
             
-            int StartingSectionNumber = _Parent.Section.Number; 
-            SectionLocationsViewModel SectionAnnotations;
-            SectionLocationsViewModel SectionAnnotationsAbove;
-            SectionLocationsViewModel SectionAnnotationsBelow;
+            int StartingSectionNumber = _Parent.Section.Number;
+            SectionAnnotationsView SectionAnnotations;
+            SectionAnnotationsView SectionAnnotationsAbove;
+            SectionAnnotationsView SectionAnnotationsBelow;
             SectionAnnotations = GetOrCreateAnnotationsForSection(_Parent.Section.Number, _Parent);
-            //SectionAnnotations.LoadSectionAnnotationsInRegion(Parent.Scene.VisibleWorldBounds, Parent.Scene.DevicePixelWidth);
-            Task.Factory.StartNew(() => SectionAnnotations.LoadSectionAnnotationsInRegion(Parent.Scene));
-//            Task.Factory.StartNew(() => SectionAnnotations.LoadSectionAnnotations(false));
+            SectionAnnotations.LoadSectionAnnotationsInRegion(Parent.Scene);
+            //Task.Factory.StartNew(() => SectionAnnotations.LoadSectionAnnotationsInRegion(Parent.Scene));
 
             int refSectionNumberAbove=0;
             int refSectionNumberBelow=-1;
@@ -1061,18 +1092,18 @@ namespace WebAnnotation
             {
                 refSectionNumberAbove = _Parent.Section.ReferenceSectionAbove.Number;
                 SectionAnnotationsAbove = GetOrCreateAnnotationsForSection(refSectionNumberAbove, _Parent);
-                //SectionAnnotationsAbove.LoadSectionAnnotations();
+                SectionAnnotationsAbove.LoadSectionAnnotationsInRegion(Parent.Scene);
             //    Task.Factory.StartNew(() => SectionAnnotationsAbove.LoadSectionAnnotations(false));
-                Task.Factory.StartNew(() => SectionAnnotationsAbove.LoadSectionAnnotationsInRegion(Parent.Scene));
+                //Task.Factory.StartNew(() => SectionAnnotationsAbove.LoadSectionAnnotationsInRegion(Parent.Scene));
             }
 
             if (_Parent.Section.ReferenceSectionBelow != null)
             {
                 refSectionNumberBelow = _Parent.Section.ReferenceSectionBelow.Number;
                 SectionAnnotationsBelow = GetOrCreateAnnotationsForSection(refSectionNumberBelow, _Parent);
-                //SectionAnnotationsBelow.LoadSectionAnnotations();
+                SectionAnnotationsBelow.LoadSectionAnnotationsInRegion(Parent.Scene);
                 //Task.Factory.StartNew(() => SectionAnnotationsBelow.LoadSectionAnnotations(false));
-                Task.Factory.StartNew(() => SectionAnnotationsBelow.LoadSectionAnnotationsInRegion(Parent.Scene));
+                //Task.Factory.StartNew(() => SectionAnnotationsBelow.LoadSectionAnnotationsInRegion(Parent.Scene));
             }
 
             int EndingSectionNumber = _Parent.Section.Number; 
@@ -1086,6 +1117,7 @@ namespace WebAnnotation
 
             //AnnotationCache.LoadSectionAnnotations(_Parent.Section); 
         }
+        */
           
         static private BasicEffect basicEffect = null;
         static private BlendState defaultBlendState = null; 
@@ -1128,7 +1160,7 @@ namespace WebAnnotation
 
 
             if (ShouldLoadAnnotationsForSceneMovement(scene))
-                LoadSectionAnnotations();
+                System.Threading.Tasks.Task.Run(() => LoadSectionAnnotations());
 
             UpdateSceneHistory(Parent.Scene);
 
@@ -1159,7 +1191,7 @@ namespace WebAnnotation
             basicEffect.Alpha = 1;
             
             RasterizerState OriginalRasterState = graphicsDevice.RasterizerState;
-            SectionLocationsViewModel currentSectionAnnotations = CurrentSectionAnnotations;
+            SectionAnnotationsView currentSectionAnnotations = CurrentSectionAnnotations;
             Debug.Assert(currentSectionAnnotations != null);
 
             int SectionNumber = _Parent.Section.Number;
@@ -1171,11 +1203,8 @@ namespace WebAnnotation
             DeviceStateManager.SetDepthStencilValue(graphicsDevice, nextStencilValue);
             
             //Get all the lines to draw first so the text and geometric shapes are over top of them
-            IEnumerable<LocationLinkView> VisibleLinks = linksView.VisibleLocationLinks(_Parent.Section.Number, Bounds);
-            foreach (LocationLinkView link in VisibleLinks)
-            {
-                DrawLocationLink(link, ViewProjMatrix);
-            }
+            //IEnumerable<LocationLinkView> VisibleLinks = current.VisibleLocationLinks(_Parent.Section.Number, Bounds);
+            LocationLinkView.Draw(graphicsDevice, scene, Parent.LumaOverlayLineManager, basicEffect, overlayEffect, currentSectionAnnotations.NonOverlappedLocationLinks);
 
             graphicsDevice.Clear(ClearOptions.DepthBuffer, Color.Black, float.MaxValue, 0);
 
@@ -1191,26 +1220,23 @@ namespace WebAnnotation
             nextStencilValue = DeviceStateManager.GetDepthStencilValue(graphicsDevice) + 1;
 
             //Find the locations on the adjacent sections
-            List<LocationCanvasView> RefLocations = new List<LocationCanvasView>();
-            if(_Parent.Section.ReferenceSectionBelow != null)
+
+            ICollection<LocationCanvasView> RefLocations;
+            /*
+            if(currentSectionAnnotations.SectionAbove != null)
             {
-                SectionLocationsViewModel sectionLocations = GetAnnotationsForSection(_Parent.Section.ReferenceSectionBelow.Number);
-                if (sectionLocations != null)
-                    RefLocations.AddRange(sectionLocations.GetAdjacentLocations(Bounds).Where(l => l.modelObj.Terminal==false && l.modelObj.OffEdge == false && l.modelObj.VericosityCap == false));//(Bounds)); 
+                RefLocations.AddRange(currentSectionAnnotations.SectionAbove.NonOverlappedAnnotationsInRegion(Bounds).Where(l => l.IsTerminal==false && l.OffEdge == false && l.IsVericosityCap == false));//(Bounds)); 
             }
 
-            if(_Parent.Section.ReferenceSectionAbove != null)
+            if(currentSectionAnnotations.SectionBelow != null)
             {
-                SectionLocationsViewModel sectionLocations = GetAnnotationsForSection(_Parent.Section.ReferenceSectionAbove.Number);
-                if (sectionLocations != null)
-                {
-                    RefLocations.AddRange(sectionLocations.GetAdjacentLocations(Bounds).Where(l => l.modelObj.Terminal == false && l.modelObj.OffEdge == false && l.modelObj.VericosityCap == false));
-                }
+                RefLocations.AddRange(currentSectionAnnotations.SectionBelow.NonOverlappedAnnotationsInRegion(Bounds).Where(l => l.IsTerminal == false && l.OffEdge == false && l.IsVericosityCap == false));                
             }
+            */
+            RefLocations = currentSectionAnnotations.AdjacentLocationsNotOverlappedInRegion(Bounds);
             
             List<LocationCanvasView> listVisibleNonOverlappingLocationsOnAdjacentSections = FindVisibleAdjacentLocations(RefLocations, scene); 
-            listVisibleNonOverlappingLocationsOnAdjacentSections = FindNonOverlappedAdjacentLocations(listLocationsToDraw, listVisibleNonOverlappingLocationsOnAdjacentSections,
-                                                                                                                    _Parent.Section.Number);
+            //listVisibleNonOverlappingLocationsOnAdjacentSections = FindNonOverlappedAdjacentLocations(listLocationsToDraw, listVisibleNonOverlappingLocationsOnAdjacentSections, _Parent.Section.Number);
 
             nextStencilValue = DeviceStateManager.GetDepthStencilValue(graphicsDevice) + 1;
             DeviceStateManager.SetDepthStencilValue(graphicsDevice, nextStencilValue);
@@ -1282,6 +1308,7 @@ namespace WebAnnotation
 
         private static bool TryDrawLineFromOverlappingLocation(OverlappedLocationView OverlappingLocation, RoundLineCode.RoundLineManager lineManager, int section_number, float time_offset)
         { 
+            /*
             if (OverlappingLocation != null)
             {
                 LocationLinkView SelectedLink = OverlappingLocation.link;
@@ -1319,25 +1346,25 @@ namespace WebAnnotation
                     (byte)(blue),
                     (byte)(alpha));
 
-                lineManager.Draw(SelectedLink.lineGraphic, (float)SelectedLink.Radius, xnacolor.ConvertToHSL(),
+                lineManager.Draw(SelectedLink.lineGraphic, (float)SelectedLink.LineWidth, xnacolor.ConvertToHSL(),
                                              basicEffect.View * basicEffect.Projection, time_offset, null);
 
                 return true; 
             }
-
+            */
             return false; 
         }
 
         private static List<LocationCanvasView> FindVisibleLocations(IEnumerable<LocationCanvasView> locations, VikingXNA.Scene scene)
         {
-            return locations.Where(l => l != null && l.modelObj.VolumePositionHasBeenCalculated && l.Parent != null && l.Parent.Type != null && l.IsVisible(scene)).ToList();
+            return locations.Where(l => l != null && l.Parent != null && l.Parent.Type != null && l.IsVisible(scene)).ToList();
         }
 
         private static List<LocationCanvasView> FindVisibleAdjacentLocations(IEnumerable<LocationCanvasView> locations, VikingXNA.Scene scene)
         { 
-            return locations.Where(l => l != null && l.modelObj.VolumePositionHasBeenCalculated && l.Parent != null && l.Parent.Type != null && l.IsVisible(scene)).ToList();
+            return locations.Where(l => l != null && l.Parent != null && l.Parent.Type != null && l.IsVisible(scene)).ToList();
         }
-
+        /*
         /// <summary>
         /// Return all locations which overlap the passed locations
         /// </summary>
@@ -1392,7 +1419,7 @@ namespace WebAnnotation
             
             return adjacentLocations;
         }
-
+        */
         /// <summary>
         /// 
         /// </summary>
@@ -1427,12 +1454,13 @@ namespace WebAnnotation
                 (byte)(alpha));
         }
 
+        /*
         private void DrawLocationLink(LocationLinkView link, Matrix ViewProjMatrix)
         {
             LocationObj locA = link.A;
             LocationObj locB = link.B;
 
-            if (!link.LinksVisible(_Parent.Downsample))
+            if (!link.IsVisible(Parent.Scene))
                 return;
 
             if (!locA.VolumePositionHasBeenCalculated)
@@ -1465,9 +1493,9 @@ namespace WebAnnotation
 
             Microsoft.Xna.Framework.Color color = GetLocationLinkColor(type.Color, distanceFactor, directionFactor, LastMouseOverObject == link);
               
-            _Parent.LumaOverlayLineManager.Draw(link.lineGraphic, (float)link.Radius, color.ConvertToHSL(),
+            _Parent.LumaOverlayLineManager.Draw(link.lineGraphic, (float)link.LineWidth, color.ConvertToHSL(),
                                          ViewProjMatrix, 0, null);
-        }
+        }*/
 
         /*
         private void DrawStructureLink(StructureLinkViewModelBase link, Matrix ViewProjMatrix, float time_offset)

@@ -3509,8 +3509,186 @@ end
 
 	if(not(exists(select (1) from DBVersion where DBVersionID = 41)))
 	begin
-     print  N'Update spatial queries to use mosaic or volume coordinates'
+     print  N'Added integer_list type'
 	 BEGIN TRANSACTION fortyone
+		CREATE TYPE integer_list AS TABLE (ID bigint NOT NULL PRIMARY KEY)
+		if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
+	 INSERT INTO DBVersion values (41, 
+		      N'Add procedure for selecting network structure IDs',getDate(),User_ID())
+	 COMMIT TRANSACTION fortyone
+	end
+
+	if(not(exists(select (1) from DBVersion where DBVersionID = 42)))
+	begin
+     print  N'Added integer_list type'
+	 BEGIN TRANSACTION fortytwo
+		
+		Exec('
+			CREATE PROCEDURE [dbo].[SelectNetworkStructureIDs]
+						-- Add the parameters for the stored procedure here
+						@IDs integer_list READONLY,
+						@Hops int
+			AS
+			BEGIN 
+
+				DECLARE @HopSeedCells integer_list
+				DECLARE @CellsInNetwork integer_list 
+
+				insert into @HopSeedCells select ID from @IDs 
+				insert into @CellsInNetwork select ID from @IDs 
+
+				while @Hops > 0
+				BEGIN
+					DECLARE @HopSeedCellsChildStructures integer_list
+					DECLARE @ChildStructurePartners integer_list
+					DECLARE @HopCellsFound integer_list
+		
+					insert into @HopSeedCellsChildStructures
+						select distinct Child.ID from Structure Parent
+							inner join Structure Child ON Child.ParentID = Parent.ID
+							inner join @HopSeedCells Cells ON Cells.ID = Parent.ID
+		
+					insert into @ChildStructurePartners
+						select distinct SL.TargetID from StructureLink SL
+							inner join @HopSeedCellsChildStructures C ON C.ID = SL.SourceID
+						UNION
+						select distinct SL.SourceID from StructureLink SL
+							inner join @HopSeedCellsChildStructures C ON C.ID = SL.TargetID
+				 
+					insert into @HopCellsFound 
+						select distinct Parent.ID from Structure Parent
+							inner join Structure Child ON Child.ParentID = Parent.ID
+							inner join @ChildStructurePartners Partners ON Partners.ID = Child.ID
+						where Parent.ID not in (Select ID from @CellsInNetwork union select ID from @HopSeedCells)
+		
+					delete S from @HopSeedCells S
+		
+					insert into @HopSeedCells 
+						select ID from @HopCellsFound 
+						where ID not in (Select ID from @CellsInNetwork)
+
+					insert into @CellsInNetwork select ID from @HopCellsFound 
+						where ID not in (Select ID from @CellsInNetwork)
+			 
+
+					delete from @ChildStructurePartners
+					delete from @HopCellsFound
+			 
+					set @Hops = @Hops - 1
+				END
+
+				select ID from @CellsInNetwork
+			END
+			')
+
+
+		if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
+		 Exec('
+			CREATE PROCEDURE [dbo].[SelectNetworkDetails]
+						-- Add the parameters for the stored procedure here
+						@IDs integer_list READONLY,
+						@Hops int
+			AS
+			BEGIN
+				DECLARE @CellsInNetwork integer_list 
+				DECLARE @ChildrenInNetwork integer_list 
+
+				insert into @CellsInNetwork exec SelectNetworkStructureIDs @IDs, @Hops
+
+				select S.* from Structure S
+					inner join @CellsInNetwork N ON N.ID = S.ID
+
+				select C.* from Structure C
+					inner join @CellsInNetwork N ON N.ID = C.ParentID
+		
+				insert into @ChildrenInNetwork 
+					select ChildStruct.ID from Structure S
+					inner join @CellsInNetwork N ON S.ID = N.ID
+					inner join Structure ChildStruct ON ChildStruct.ParentID = N.ID
+
+				select SL.* from StructureLink SL
+					where SL.SourceID in (Select ID from @ChildrenInNetwork) OR
+						  SL.TargetID in (Select ID from @ChildrenInNetwork)
+			END
+			')
+
+		if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
+		 Exec('
+			CREATE PROCEDURE [dbo].[SelectNetworkStructureLinks]
+						-- Add the parameters for the stored procedure here
+						@IDs integer_list READONLY,
+						@Hops int
+			AS
+			BEGIN
+				DECLARE @CellsInNetwork integer_list 
+				DECLARE @ChildrenInNetwork integer_list 
+
+				insert into @CellsInNetwork exec SelectNetworkStructureIDs @IDs, @Hops
+
+				insert into @ChildrenInNetwork 
+					select ChildStruct.ID from Structure S
+					inner join @CellsInNetwork N ON S.ID = N.ID
+					inner join Structure ChildStruct ON ChildStruct.ParentID = N.ID
+
+				select SL.* from StructureLink SL
+					where SL.SourceID in (Select ID from @ChildrenInNetwork) OR
+						  SL.TargetID in (Select ID from @ChildrenInNetwork)
+			END
+			')
+
+		if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
+		 Exec('
+			CREATE PROCEDURE [dbo].[SelectNetworkStructures]
+						-- Add the parameters for the stored procedure here
+						@IDs integer_list READONLY,
+						@Hops int
+			AS
+			BEGIN
+				DECLARE @CellsInNetwork integer_list 
+				DECLARE @ChildrenInNetwork integer_list 
+
+				insert into @CellsInNetwork exec SelectNetworkStructureIDs @IDs, @Hops
+
+				select S.* from Structure S 
+					inner join @CellsInNetwork N ON N.ID = S.ID
+			END
+			')
+
+		if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
+	 INSERT INTO DBVersion values (42, 
+		      N'Add procedure for selecting network structure IDs',getDate(),User_ID())
+	 COMMIT TRANSACTION fortytwo
+	end
+
+	if(not(exists(select (1) from DBVersion where DBVersionID = 43)))
+	begin
+     print  N'Update spatial queries to use mosaic or volume coordinates'
+	 BEGIN TRANSACTION fortythree
 		
 		 IF OBJECT_ID('SelectSectionStructuresAndLinks') IS NOT NULL DROP PROCEDURE dbo.[SelectSectionStructuresAndLinks]
 		 
@@ -3965,10 +4143,11 @@ end
 		   RETURN
 		 end
 
-	 INSERT INTO DBVersion values (41, 
-		      N'Update spatial queries to use mosaic or volume coordinates',getDate(),User_ID())
-	 COMMIT TRANSACTION fortyone
-	end
 
+	 INSERT INTO DBVersion values (43, 
+		      N'Update spatial queries to use mosaic or volume coordinates',getDate(),User_ID())
+	 COMMIT TRANSACTION fortythree
+	end
+	 
 --from here on, continually add steps in the previous manner as needed.
 	COMMIT TRANSACTION main

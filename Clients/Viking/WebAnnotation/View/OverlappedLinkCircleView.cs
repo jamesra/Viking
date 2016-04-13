@@ -9,6 +9,7 @@ using VikingXNA;
 using WebAnnotationModel;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Viking.VolumeModel;
 
 namespace WebAnnotation.View
 {
@@ -19,43 +20,51 @@ namespace WebAnnotation.View
     {
         ICollection<OverlappedLocationView> linkViews = new List<OverlappedLocationView>();
 
-        public ICollection<LocationObj> OverlappingLinks
-        {
-            protected get
-            {
-                if (linkViews == null)
-                    return new List<LocationObj>();
+        private SortedSet<long> _OverlappedLinks = new SortedSet<long>();
 
-                return linkViews.Select(lv => lv.modelObj).ToList();
+        public ICollection<long> OverlappedLinks
+        {
+            get
+            {
+                return _OverlappedLinks;
             }
             set
             {
-                this.linkViews = CalculateOverlappedLocationCircles(this.OuterCircle, value, this.Z);
+                _OverlappedLinks.Clear();
+                _OverlappedLinks = new SortedSet<long>(value);
+                CreateViews();
             }
         }
 
-        GridCircle OuterCircle;
+        GridCircle OuterCircle_MosaicSpace;
+        GridCircle OuterCircle_VolumeSpace;
 
         int Z;
 
-        public OverlappedLinkCircleView(GridCircle outerCircle, int ZCut, ICollection<LocationObj> OverlappedLinks)
+        public OverlappedLinkCircleView(GridCircle outerCircle_MosaicSpace, int ZCut, ICollection<long> OverlappedLinks)
         {
-            this.OuterCircle = outerCircle;
+            this.OuterCircle_MosaicSpace = outerCircle_MosaicSpace;
+            this.OuterCircle_VolumeSpace = outerCircle_MosaicSpace;
             this.Z = ZCut;
-            this.OverlappingLinks = OverlappedLinks;
+            this.OverlappedLinks = OverlappedLinks;
         }
 
         public GridRectangle BoundingBox
         {
             get
             {
-                throw new NotImplementedException();
+                return OuterCircle_VolumeSpace.BoundingBox;
             }
         }
 
         public double Distance(GridVector2 Position)
         {
             return linkViews.Min(c => c.Distance(Position));
+        }
+
+        public double Distance(Microsoft.SqlServer.Types.SqlGeometry shape)
+        {
+            return linkViews.Min(c => c.Distance(shape));
         }
 
         public double DistanceFromCenterNormalized(GridVector2 Position)
@@ -84,6 +93,11 @@ namespace WebAnnotation.View
             distancetocenternormalized = annotation.DistanceFromCenterNormalized(position);
             return annotation;
         } 
+
+        private void CreateViews()
+        {
+            this.linkViews = CalculateOverlappedLocationCircles(this.OuterCircle_VolumeSpace, Store.Locations.GetObjectsByIDs(_OverlappedLinks, false), this.Z);
+        }
 
         /// <summary>
         /// A linked location overlapping with our location is drawn as a small circle.  This function stores the position of those smaller circles along an arc
@@ -192,5 +206,6 @@ namespace WebAnnotation.View
 
             return;
         }
+        
     }
 }

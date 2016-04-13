@@ -200,6 +200,17 @@ namespace Geometry.Transforms
             return true; 
         }
 
+        private GridVector2[] TransformWithRBFFallback(GridVector2[] Points, MappingGridTriangle[] triangles)
+        {
+            return triangles.Select((t, i) =>
+            {
+                if (t == null)
+                    return FallBackTransform.Transform(Points[i]);
+
+                return t.Transform(Points[i]);
+            }).ToArray(); 
+        }
+
         #endregion
 
         #region InverseTransform
@@ -288,6 +299,17 @@ namespace Geometry.Transforms
 
             output = triangles.Select((tri, i) => tri.InverseTransform(Points[i])).ToArray();
             return true;
+        }
+
+        private GridVector2[] InverseTransformWithRBFFallback(GridVector2[] Points, MappingGridTriangle[] triangles)
+        {
+            return triangles.Select((t, i) =>
+            {
+                if (t == null)
+                    return FallBackTransform.InverseTransform(Points[i]);
+
+                return t.Transform(Points[i]);
+            }).ToArray();
         }
 
         /// <summary>

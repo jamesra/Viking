@@ -25,10 +25,10 @@ namespace WebAnnotation.UI.Commands
         Viking.VolumeModel.IVolumeToSectionMapper mapping;
 
         public AddLineControlPointCommand(Viking.UI.Controls.SectionViewerControl parent,
-                                        GridVector2[] OriginalControlPoints,
+                                        GridVector2[] OriginalMosaicControlPoints,
                                         OnCommandSuccess success_callback) : base(parent)
         {
-            this.OriginalControlPoints = OriginalControlPoints;
+            this.OriginalControlPoints = parent.Section.ActiveMapping.SectionToVolume(OriginalControlPoints);
             
             this.success_callback = success_callback;
 
@@ -106,10 +106,10 @@ namespace WebAnnotation.UI.Commands
         Viking.VolumeModel.IVolumeToSectionMapper mapping;
 
         public RemoveLineControlPointCommand(Viking.UI.Controls.SectionViewerControl parent,
-                                        GridVector2[] OriginalControlPoints,
+                                        GridVector2[] OriginalMosaicControlPoints,
                                         OnCommandSuccess success_callback) : base(parent)
         {
-            this.OriginalControlPoints = OriginalControlPoints;
+            this.OriginalControlPoints = parent.Section.ActiveMapping.SectionToVolume(OriginalControlPoints);
 
             this.success_callback = success_callback;
 

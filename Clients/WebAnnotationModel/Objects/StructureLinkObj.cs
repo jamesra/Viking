@@ -81,7 +81,7 @@ namespace WebAnnotationModel
             if (TargetCompare != 0)
                 return TargetCompare;
 
-            return this.Bidirectional.CompareTo(other.TargetID);
+            return this.Bidirectional.CompareTo(other.Bidirectional);
         }
 
         public static bool operator ==(StructureLinkKey A, StructureLinkKey B)
@@ -136,7 +136,15 @@ namespace WebAnnotationModel
                 }
             }
         }
-                
+
+        public override string ToString()
+        {
+            if (Bidirectional)
+                return string.Format("{0} <-> {1}", SourceID, TargetID);
+            else
+                return string.Format("{0} -> {1}", SourceID, TargetID);
+        }
+
         public StructureLinkObj(long sourceID, long targetID, 
                                 bool Bidirectional) : base()
         {

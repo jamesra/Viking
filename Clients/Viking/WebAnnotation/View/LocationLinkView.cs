@@ -8,6 +8,12 @@ using WebAnnotationModel;
 using System.Diagnostics;
 using WebAnnotation.View;
 using Geometry;
+using VikingXNA;
+using VikingXNAGraphics;
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using Viking.VolumeModel;
+using SqlGeometryUtils;
 
 namespace WebAnnotation.ViewModel
 {
@@ -15,7 +21,7 @@ namespace WebAnnotation.ViewModel
     /// This class represents a link between locations. This object is a little unique because it is
     /// not tied to the database object like the other *obj classes
     /// </summary>
-    public class LocationLinkView : Viking.Objects.UIObjBase
+    public class LocationLinkView : Viking.Objects.UIObjBase, ICanvasView, IEquatable<LocationLinkView>
     {
         public readonly LocationLinkKey Key;
 
@@ -70,53 +76,36 @@ namespace WebAnnotation.ViewModel
 
         public override string ToString()
         {
-            return A.ID.ToString() + " <-> " + B.ID.ToString() + " Sections: " + minSection.ToString() + "-" + maxSection.ToString();
+            return Key.ToString() + " Sections: " + MinSection.ToString() + "-" + MaxSection.ToString();
         }
         
         /// <summary>
         /// LocationOnSection is the location on the section being viewed
         /// </summary>
-        public LocationObj A; 
+        public GridCircle A; 
 
         /// <summary>
         /// LocationOnSection is the location on the section being viewed
         /// </summary>
-        public LocationObj B;
+        public GridCircle B;
 
-        public int minSection { get { return A.Section < B.Section ? A.Section : B.Section; } }
-        public int maxSection { get { return A.Section > B.Section ? A.Section : B.Section; } }
+        /// <summary>
+        /// Section number we are displaying the location link on
+        /// </summary>
+        public int Z;
 
-        private RoundLineCode.RoundLine _lineGraphic = null;
-        public RoundLineCode.RoundLine lineGraphic
-        {
-            get
-            {
-                if (_lineGraphic == null)
-                {
-                    _lineGraphic = new RoundLineCode.RoundLine((float)A.VolumePosition.X,
-                                                      (float)A.VolumePosition.Y,
-                                                      (float)B.VolumePosition.X,
-                                                      (float)B.VolumePosition.Y);
-                }
+        public LineView lineView = null;
 
-                return _lineGraphic;
-            }
-
-        }
+        public  Color Color { get; private set; }
         
-        public double Radius
-        {
-            get
-            {
-                return Math.Min(A.Radius,B.Radius)/2f;
-            }
-        }
+        public int MinSection { get; private set; }
+        public int MaxSection { get; private set; }
 
         public GridRectangle BoundingBox
         {
             get
             {
-                return new Geometry.GridLineSegment(A.VolumePosition, B.VolumePosition).BoundingBox.Pad(Radius);
+                return LineSegment.BoundingBox.Pad(this.LineRadius);
             }
         }
 
@@ -124,32 +113,115 @@ namespace WebAnnotation.ViewModel
         {
             get
             {
-                return new Geometry.GridLineSegment(A.VolumePosition, B.VolumePosition);
+                return new Geometry.GridLineSegment(A.Center, B.Center);
             }
         }
-         
 
-        public LocationLinkView(LocationObj LocOne, LocationObj LocTwo)
+        public LocationLinkView(LocationLinkKey key, int Z, IVolumeMapProvider mapProvider)
+        {
+            this.Key = key;
+            this.Z = Z;
+            UpdatePropertiesFromLocations(mapProvider);
+
+            this.lineView = CreateView();
+
+        } 
+
+        public LocationLinkView(LocationObj LocOne, LocationObj LocTwo, int Z, IVolumeMapProvider mapProvider) : this(new LocationLinkKey(LocOne.ID, LocTwo.ID), Z, mapProvider)
         {
             if (LocOne == null)
                 throw new ArgumentNullException("LocOne");
 
             if (LocTwo == null)
                 throw new ArgumentNullException("LocTwo"); 
-
-            Debug.Assert(LocOne != LocTwo);
-            this.A = LocOne.ID < LocTwo.ID ? LocOne : LocTwo;
-            this.B = LocOne.ID > LocTwo.ID ? LocOne : LocTwo;
-            this.Key = new LocationLinkKey(A.ID, B.ID);
+            
+            UpdatePropertiesFromLocations(mapProvider);
+            
+            this.lineView = CreateView();
         }
+
+        private void UpdatePropertiesFromLocations(IVolumeMapProvider mapProvider)
+        {
+            LocationObj A = Store.Locations[this.Key.A];
+            LocationObj B = Store.Locations[this.Key.B];
+            IVolumeToSectionMapper sourceMapper = mapProvider.GetMapping((int)Math.Round(A.Z));
+            IVolumeToSectionMapper targetMapper = mapProvider.GetMapping((int)Math.Round(B.Z));
+            GridVector2 AVolumePosition = sourceMapper.SectionToVolume(A.Position);
+            GridVector2 BVolumePosition = targetMapper.SectionToVolume(B.Position);
+
+            this.A = new GridCircle(AVolumePosition, A.Radius);
+            this.B = new GridCircle(BVolumePosition, B.Radius);
+
+            this.MinSection = (int)Math.Round(A.Z < B.Z ? A.Z : B.Z);
+            this.MaxSection = (int)Math.Round(A.Z < B.Z ? B.Z : A.Z);
+
+            this.Color = GetLocationLinkColor(A.Parent.Type.Color.ToXNAColor(), this.MaxSection - this.MinSection, this.MinSection < Z ? -1 : 1, false);
+        }
+
+        public double LineWidth
+        {
+            get
+            {
+                return (A.Radius + B.Radius) / 2.0;
+            }
+        }
+         
+        public double LineRadius
+        {
+            get { return LineWidth / 2.0; }
+        }
+
+        private LineView CreateView()
+        {
+            //IVolumeToSectionMapper sourceMapper = mapProvider.GetMapping((int)Math.Round(A.Z));
+            //IVolumeToSectionMapper targetMapper = mapProvider.GetMapping((int)Math.Round(B.Z));
+            //GridVector2 sourceVolumePosition = sourceMapper.SectionToVolume(A.Position);
+            //GridVector2 targetVolumePosition = targetMapper.SectionToVolume(B.Position); 
+
+            LineView line = new LineView(A.Center, B.Center, this.LineWidth, this.Color, LineStyle.Standard);
+            return line;
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="StructureTypeColor"></param>
+        /// <param name="section_span_distance">Number of sections the location link crosses</param>
+        /// <param name="direction">Direction the link is in from the current section</param>
+        /// <returns></returns>
+        private Microsoft.Xna.Framework.Color GetLocationLinkColor(Color structure_type_color, int section_span_distance, double direction, bool IsMouseOver)
+        {
+            int red = (int)((float)((float)structure_type_color.R * .5f) + (128 * direction));
+            red = 255 - (red / section_span_distance);
+            red = red > 255 ? 255 : red;
+            red = red < 0 ? 0 : red;
+            int blue = (int)((float)((float)structure_type_color.B * .5f) + (128 * -direction));
+            blue = 255 - (blue / section_span_distance);
+            blue = blue > 255 ? 255 : blue;
+            blue = blue < 0 ? 0 : blue;
+            int green = (int)((float)structure_type_color.G);
+            green = 255 - (green / section_span_distance);
+            green = green < 0 ? 0 : green;
+
+            int alpha = 64;  
+
+            //If you don't cast to byte the wrong constructor is used and the alpha value is wrong
+            return new Microsoft.Xna.Framework.Color((byte)(red),
+                (byte)(green),
+                (byte)(blue),
+                (byte)(alpha));
+        } 
 
         /// <summary>
         /// Return true if the locations overlap when viewed from the passed section
         /// </summary>
         /// <param name="sectionNumber"></param>
         /// <returns></returns>
-        public bool LinksOverlap(int sectionNumber)
-        { 
+        public bool LinksOverlap()
+        {
+            int sectionNumber = Z; 
+            return A.Intersects(B);
+            /*
             //Don't draw if the link falls within the radius of the location we are drawing
             if (A.Section == sectionNumber)
             {
@@ -162,18 +234,9 @@ namespace WebAnnotation.ViewModel
                 return B.VolumeShape.STIntersects(A.VolumeShape).IsTrue;
                 //return GridVector2.Distance(A.VolumePosition, B.VolumePosition) <= B.Radius + LocationCanvasView.CalcOffSectionRadius((float)A.Radius);
             } 
-
+            
             return false; 
-        }
-
-        /// <summary>
-        /// Return true if the link can be seen at the given downsample level
-        /// </summary>
-        /// <param name="Downsample"></param>
-        /// <returns></returns>
-        public bool LinksVisible(double Downsample)
-        { 
-            return LocationCircleView.CalcOffSectionRadius(this.Radius) / Downsample > 2.0;
+            */
         }
 
         #region IUIObjectBasic Members
@@ -196,7 +259,7 @@ namespace WebAnnotation.ViewModel
 
         public override string ToolTip
         {
-            get { return A.ID.ToString() + " -> " + B.ID.ToString(); }
+            get { return Key.A.ToString() + " -> " + Key.B.ToString(); }
         }
 
         public override void Save()
@@ -215,7 +278,7 @@ namespace WebAnnotation.ViewModel
         {
             CallBeforeDelete(); 
 
-            Store.LocationLinks.DeleteLink(this.A.ID, this.B.ID);
+            Store.LocationLinks.DeleteLink(Key.A, Key.B);
 
             CallAfterDelete();
         }
@@ -238,5 +301,53 @@ namespace WebAnnotation.ViewModel
             return true; 
         }
 
+        public bool IsVisible(Scene scene)
+        {
+            return Math.Min(LineSegment.Length, this.LineWidth) / scene.Camera.Downsample > 2.0;
+        }
+
+        public bool Intersects(GridVector2 Position)
+        {
+            double d = LineSegment.DistanceToPoint(Position);
+            return (d - this.LineRadius) <= 0;
+        }
+
+        public double Distance(GridVector2 Position)
+        {
+            double d = LineSegment.DistanceToPoint(Position) - this.LineRadius;
+            if (d < 0)
+                d = 0;
+            return d;
+        }
+
+        public double Distance(Microsoft.SqlServer.Types.SqlGeometry shape)
+        {
+            return this.LineSegment.ToPolyLine().STDistance(shape).Value;
+        }
+
+        public double DistanceFromCenterNormalized(GridVector2 Position)
+        {
+            return LineSegment.DistanceToPoint(Position) / this.LineRadius;
+        }
+
+        public static void Draw(Microsoft.Xna.Framework.Graphics.GraphicsDevice device,
+                          VikingXNA.Scene scene,
+                          RoundLineCode.LumaOverlayRoundLineManager lineManager,
+                          Microsoft.Xna.Framework.Graphics.BasicEffect basicEffect,
+                          VikingXNA.AnnotationOverBackgroundLumaEffect overlayEffect,
+                          IEnumerable<LocationLinkView> listToDraw)
+        {
+            LineView[] linesToDraw = listToDraw.Select(l => l.lineView).ToArray();
+
+            LineView.Draw(device, scene, lineManager, linesToDraw);
+        }
+
+        public bool Equals(LocationLinkView other)
+        {
+            if ((object)other == null)
+                return false;
+
+            return this.Key.Equals(other.Key);
+        }
     }
 }

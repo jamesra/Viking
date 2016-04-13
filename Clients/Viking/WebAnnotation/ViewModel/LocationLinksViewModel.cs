@@ -16,21 +16,21 @@ using WebAnnotationModel;
 
 namespace WebAnnotation.ViewModel
 {
+    /*
     /// <summary>
     /// 
     /// </summary>
     class LocationLinksViewModel : System.Windows.IWeakEventListener
     {
         /// <summary>
-        /// This is a symptom of being halfway to the Jotunn architecture.  This is a pointer to the 
-        /// parent section viewer control which can perform transforms
+        /// Allows us to describe all the locationlinks visible on a screen
         /// </summary>
-        public Viking.UI.Controls.SectionViewerControl parent;
+        private ConcurrentDictionary<int, RTree.RTree<LocationLinkView>> SectionLocationLinksSearch = new ConcurrentDictionary<int, RTree.RTree<LocationLinkView>>();
 
         /// <summary>
         /// Allows us to describe all the locationlinks visible on a screen
         /// </summary>
-        private ConcurrentDictionary<int, RTree.RTree<LocationLinkView>> SectionLocationLinksSearch = new ConcurrentDictionary<int, RTree.RTree<LocationLinkView>>();
+        private ConcurrentDictionary<int, KeyTracker<LocationLinkKey>> SectionOverlappedLinksSearch = new ConcurrentDictionary<int, KeyTracker<LocationLinkKey>>();
 
         /// <summary>
         /// Keeps only one instance of a LocationLink for each LocationLinkKey value
@@ -41,21 +41,14 @@ namespace WebAnnotation.ViewModel
         /// We don't want to subscribe to LocationObjs multiple times or unsubscribe if they have other links.
         /// This structure records how many subscriptions we have
         /// </summary>
-        private ConcurrentDictionary<long, long> LocationSubscriptionRefCounts = new ConcurrentDictionary<long, long>(); 
+        private RefCountingKeyTracker<long> LocationSubscriptions = new RefCountingKeyTracker<long>(); 
           
-        public LocationLinksViewModel(Viking.UI.Controls.SectionViewerControl Parent)
+        public LocationLinksViewModel()
         {
-            this.parent = Parent;
-    
             NotifyCollectionChangedEventManager.AddListener(Store.LocationLinks, this);
             NotifyCollectionChangedEventManager.AddListener(Store.Locations, this); 
         }
-
-        public void LoadSection(int sectionNumber)
-        {
-    //        Store.LocationLinks.GetLinksCrossingSection(sectionNumber);
-        }
-
+        
         /// <summary>
         /// Return all the line segments visible in the passed bounds
         /// </summary>
@@ -84,14 +77,7 @@ namespace WebAnnotation.ViewModel
 
         public RTree.RTree<LocationLinkView> GetOrAddSearchGrid(int SectionNumber)
         {
-            RTree.RTree<LocationLinkView> searchGrid; 
-            bool success = SectionLocationLinksSearch.TryGetValue(SectionNumber, out searchGrid); 
-            if(success)
-                return searchGrid;
-
-            searchGrid = new RTree.RTree<LocationLinkView>();
-            searchGrid = SectionLocationLinksSearch.GetOrAdd(SectionNumber, searchGrid);
-            return searchGrid;
+            return SectionLocationLinksSearch.GetOrAdd(SectionNumber, (sn) => { return new RTree.RTree<LocationLinkView>(); });
         }
 
         public bool TryRemoveSearchGrid(int SectionNumber)
@@ -110,8 +96,8 @@ namespace WebAnnotation.ViewModel
                 return null; 
 
 //            IEnumerable<LocationLink> intersectingObjs = searchGrid.Intersects(WorldPosition.ToRTreeRect(SectionNumber)).Where(l => l.LineSegment.DistanceToPoint(WorldPosition) <= l.Radius).ToList();
-            List<LocationLinkView> intersecting_candidates = searchGrid.Intersects(WorldPosition.ToRTreeRect(SectionNumber)).Where(l => l.LineSegment.DistanceToPoint(WorldPosition) <= l.Radius).ToList();
-            LocationLinkView nearest = intersecting_candidates.OrderBy(l => l.LineSegment.DistanceToPoint(WorldPosition) / l.Radius).FirstOrDefault();
+            List<LocationLinkView> intersecting_candidates = searchGrid.Intersects(WorldPosition.ToRTreeRect(SectionNumber)).Where(l => l.Intersects(WorldPosition)).ToList();
+            LocationLinkView nearest = intersecting_candidates.OrderBy(l => l.DistanceFromCenterNormalized(WorldPosition)).FirstOrDefault();
             if (nearest != null)
             {
                 distance = nearest.LineSegment.DistanceToPoint(WorldPosition);
@@ -127,8 +113,7 @@ namespace WebAnnotation.ViewModel
         /// All locations which are linked get a line between them
         /// </summary>
         internal void AddLocationLinks(IEnumerable<LocationLinkObj> links)
-        {
-            
+        { 
             // Add links to each section they intersect
             foreach (LocationLinkObj link in links)
             { 
@@ -174,21 +159,16 @@ namespace WebAnnotation.ViewModel
             if (BObj == null)
                 return false;            
             
-            if (AObj.VolumePosition.X < 0 && AObj.VolumePosition.Y < 0)
-                return false;
-
-            if (BObj.VolumePosition.X < 0 && BObj.VolumePosition.Y < 0)
+            if (!(AObj.VolumePositionHasBeenCalculated && BObj.VolumePositionHasBeenCalculated))
                 return false;
 
             if (AObj.VolumePosition == BObj.VolumePosition)
                 return false;
              
-            //LocationLinkKey key = new LocationLinkKey(link); 
-            //LocationLink linkView = new LocationLink(AView, BView); 
             LocationLinkView linkView = LinkKeyToLinkView.GetOrAdd(key, link => {
                 AddRefLocation(AObj);
                 AddRefLocation(BObj);
-                return new LocationLinkView(AObj, BObj);
+                return new LocationLinkView(AObj, BObj, Viking.UI.State.volume);
             });
 
             AddLocationLinkToSectionSearchGrids(AObj, BObj, linkView); 
@@ -198,8 +178,8 @@ namespace WebAnnotation.ViewModel
 
         private bool AddLocationLinkToSectionSearchGrids(LocationObj AObj, LocationObj BObj, LocationLinkView linkView)
         {
-            int minSection = AObj.Section < BObj.Section ? AObj.Section : BObj.Section;
-            int maxSection = AObj.Section < BObj.Section ? BObj.Section : AObj.Section;
+            int minSection = linkView.MinSection;
+            int maxSection = linkView.MaxSection;
 
             GridLineSegment lineSegment = new GridLineSegment(AObj.VolumePosition, BObj.VolumePosition);
 
@@ -208,7 +188,7 @@ namespace WebAnnotation.ViewModel
             for (int iSection = minSection; iSection <= maxSection; iSection++)
             {
                 //TODO: Check for missing sections!
-                if (parent.Section.VolumeViewModel.SectionViewModels.ContainsKey(iSection) == false)
+                if (Viking.UI.State.volume.SectionViewModels.ContainsKey(iSection) == false)
                     continue;
 
                 //Do not bother mapping location links which are covered by overlapping locations
@@ -222,6 +202,11 @@ namespace WebAnnotation.ViewModel
                     bool sectionSuccess = searchGrid.TryAdd(linkView.BoundingBox.ToRTreeRect(iSection), linkView);
                     success |= sectionSuccess;  //I had this on one line, but short-circuit logic had me beating my head against the wall for too long
                                                           //Debug.Assert(success); 
+                }
+                else
+                {
+                    KeyTracker<LocationLinkKey> OverlappedSet = SectionOverlappedLinksSearch.GetOrAdd(iSection, (sn) => { return new KeyTracker<LocationLinkKey>(); });
+                    OverlappedSet.TryAdd(linkView.Key);
                 }
             }
 
@@ -263,9 +248,9 @@ namespace WebAnnotation.ViewModel
                 return; 
             
             success = RemoveLocationLinkFromSectionSearchGrids(linkView);
-            
-            LocationObj AObj = linkView.A;
-            LocationObj BObj = linkView.B;
+
+            LocationObj AObj = Store.Locations[linkView.Key.A];
+            LocationObj BObj = Store.Locations[linkView.Key.B];
 
             ReleaseRefLocation(AObj);
             ReleaseRefLocation(BObj);
@@ -274,60 +259,70 @@ namespace WebAnnotation.ViewModel
         private bool RemoveLocationLinkFromSectionSearchGrids(LocationLinkView linkView)
         {
             bool success = false;
-            for (int iSection = linkView.minSection; iSection <= linkView.maxSection; iSection++)
+            for (int iSection = linkView.MinSection; iSection <= linkView.MaxSection; iSection++)
             {
-                if (parent.Section.VolumeViewModel.SectionViewModels.ContainsKey(iSection) == false)
-                    continue;
-
                 //        Debug.WriteLine(iSection.ToString() + " remove : " + linkView.ToString());
-                RTree.RTree<LocationLinkView> searchGrid = GetSearchGrid(iSection);
-
-                if (searchGrid == null)
-                    continue;
-
-                LocationLinkView line; 
-                bool sectionSuccess = searchGrid.Delete(linkView, out line);
-                //Debug.Assert(sectionSuccess);
+                bool sectionSuccess = RemoveNonOverlappedLocationLinkFromSection(iSection, linkView) || RemoveOverlappedLocationLinkFromSection(iSection, linkView.Key);
                 success = success || sectionSuccess;
-
-                //Free all the memory for the search grid if this was the last location link
-                if (searchGrid.Count == 0)
-                {
-                    TryRemoveSearchGrid(iSection);
-                }
             }
 
             return success; 
         }
 
+        private bool RemoveNonOverlappedLocationLinkFromSection(int SectionNumber, LocationLinkView linkView)
+        {
+            RTree.RTree<LocationLinkView> searchGrid = GetSearchGrid(SectionNumber);
+
+            if (searchGrid == null)
+                return false;
+
+            LocationLinkView line;
+            bool nonOverlappedRemoved = searchGrid.Delete(linkView, out line);
+            if (nonOverlappedRemoved && searchGrid.Count == 0)
+            {
+                TryRemoveSearchGrid(SectionNumber);
+            }
+            
+            return nonOverlappedRemoved;            
+        }
+
+        private bool RemoveOverlappedLocationLinkFromSection(int SectionNumber, LocationLinkKey key)
+        {
+            KeyTracker<LocationLinkKey> OverlappedLinks;
+            if (this.SectionOverlappedLinksSearch.TryGetValue(SectionNumber, out OverlappedLinks))
+            {
+                bool Removed = OverlappedLinks.TryRemove(key);
+            }
+
+            return false;
+        }
+
 #endregion
 
         #region ref counting locations
-        private long AddRefLocation(LocationObj loc)
-        {
-            long refCount = LocationSubscriptionRefCounts.AddOrUpdate(loc.ID, 1, (id, oldValue) => oldValue + 1);
-            if (refCount == 1)
-            {
-                NotifyPropertyChangedEventManager.AddListener(loc, this);
-                NotifyCollectionChangedEventManager.AddListener(loc.Links, this); 
-            }
 
-            return refCount; 
+        private static void SubscribeToLocationChangeEvents(LocationObj loc, System.Windows.IWeakEventListener listener)
+        {
+            NotifyPropertyChangedEventManager.AddListener(loc, listener);
+            NotifyCollectionChangedEventManager.AddListener(loc.Links, listener);
         }
 
-        private long ReleaseRefLocation(LocationObj loc)
+        private static void UnsubscribeToLocationChangeEvents(LocationObj loc, System.Windows.IWeakEventListener listener)
         {
-            long refCount = LocationSubscriptionRefCounts.AddOrUpdate(loc.ID, 0, (id, oldValue) => oldValue - 1);
-            if (refCount == 0)
-            {
-                NotifyPropertyChangedEventManager.RemoveListener(loc, this);
-                NotifyCollectionChangedEventManager.RemoveListener(loc.Links, this);
-                long temp;
-                LocationSubscriptionRefCounts.TryRemove(loc.ID, out temp);
-            }
-
-            return refCount;
+            NotifyPropertyChangedEventManager.RemoveListener(loc, listener);
+            NotifyCollectionChangedEventManager.RemoveListener(loc.Links, listener);
         }
+
+        private void AddRefLocation(LocationObj loc)
+        {
+            LocationSubscriptions.AddRef(loc.ID, l => SubscribeToLocationChangeEvents(loc, this));
+        }
+
+        private void ReleaseRefLocation(LocationObj loc)
+        {
+            LocationSubscriptions.ReleaseRef(loc.ID, l => UnsubscribeToLocationChangeEvents(loc, this));
+        }
+
         #endregion
 
         #region Events
@@ -377,8 +372,6 @@ namespace WebAnnotation.ViewModel
                     Debug.Assert(false, "Unexpected change action in OnStoreAddRemoveKey");
                     break;
             }
-
-            parent.Invalidate(); 
         }
         
         
@@ -405,8 +398,6 @@ namespace WebAnnotation.ViewModel
                     Debug.Assert(false, "Unexpected change action in OnStoreAddRemoveKey");
                     break;
             }
-
-            parent.Invalidate(); 
         }
         
 
@@ -473,5 +464,5 @@ namespace WebAnnotation.ViewModel
             return false;
         }
     }
-     
+     */
 }

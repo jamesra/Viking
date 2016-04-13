@@ -161,7 +161,7 @@ namespace WebAnnotationModel
         protected override LocationLink[] ProxyGetBySectionRegion(AnnotateLocationsClient proxy, long SectionNumber, BoundingRectangle BBox, double MinRadius, DateTime LastQuery, out long TicksAtQueryExecute, out LocationLinkKey[] DeletedLinkKeys)
         {
             LocationLink[] deleted_links = null;
-            LocationLink[] links = proxy.GetLocationLinksForSectionInRegion(out TicksAtQueryExecute, out deleted_links, SectionNumber, BBox, MinRadius, LastQuery.Ticks);
+            LocationLink[] links = proxy.GetLocationLinksForSectionInMosaicRegion(out TicksAtQueryExecute, out deleted_links, SectionNumber, BBox, MinRadius, LastQuery.Ticks);
 
             if (deleted_links == null)
             {
@@ -177,7 +177,7 @@ namespace WebAnnotationModel
 
         protected override IAsyncResult ProxyBeginGetBySectionRegion(AnnotateLocationsClient proxy, long SectionNumber, BoundingRectangle BBox, double MinRadius, DateTime LastQuery, AsyncCallback callback, object asynchState)
         {
-            return proxy.BeginGetLocationLinksForSectionInRegion(SectionNumber, BBox, MinRadius, LastQuery.Ticks, callback, asynchState);
+            return proxy.BeginGetLocationLinksForSectionInMosaicRegion(SectionNumber, BBox, MinRadius, LastQuery.Ticks, callback, asynchState);
         }
 
         protected override IAsyncResult ProxyBeginGetBySection(AnnotateLocationsClient proxy, long SectionNumber, DateTime LastQuery, AsyncCallback callback, object asynchState)

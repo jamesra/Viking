@@ -10,6 +10,11 @@ using System.Runtime.Serialization.Formatters.Binary;
 
 namespace Viking.VolumeModel
 {
+    public interface IVolumeMapProvider
+    {
+        IVolumeToSectionMapper GetMapping(int SectionNumber);
+    }
+
     public interface IVolumeToSectionMapper
     {
         /// <summary>

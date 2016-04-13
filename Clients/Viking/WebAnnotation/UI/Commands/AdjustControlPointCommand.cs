@@ -26,14 +26,13 @@ namespace WebAnnotation.UI.Commands
         Viking.VolumeModel.IVolumeToSectionMapper mapping;
 
         public AdjustCurveControlPointCommand(Viking.UI.Controls.SectionViewerControl parent,
-                                        GridVector2[] OriginalControlPoints,
+                                        GridVector2[] OriginalMosaicControlPoints,
                                         Microsoft.Xna.Framework.Color color,
                                         double LineWidth,
                                         bool IsClosedCurve,
                                         OnCommandSuccess success_callback) : base(parent)
         {
-            //Loc = selectedObj;
-            this.OriginalControlPoints = OriginalControlPoints;
+            this.OriginalControlPoints = parent.Section.ActiveMapping.SectionToVolume(OriginalMosaicControlPoints);
             CreateView(OriginalControlPoints, color.ConvertToHSL(0.5f), LineWidth, IsClosedCurve);
             this.success_callback = success_callback;
             mapping = parent.Section.ActiveMapping;

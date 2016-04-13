@@ -128,7 +128,7 @@
       </xs:sequence>
     </xs:complexType>
   </xs:element>
-  <xs:element name="GetStructuresForSectionInRegion">
+  <xs:element name="GetStructuresForSectionInMosaicRegion">
     <xs:complexType>
       <xs:sequence>
         <xs:element minOccurs="0" name="section" type="xs:long" />
@@ -138,10 +138,10 @@
       </xs:sequence>
     </xs:complexType>
   </xs:element>
-  <xs:element name="GetStructuresForSectionInRegionResponse">
+  <xs:element name="GetStructuresForSectionInMosaicRegionResponse">
     <xs:complexType>
       <xs:sequence>
-        <xs:element xmlns:q16="http://schemas.datacontract.org/2004/07/Annotation" minOccurs="0" name="GetStructuresForSectionInRegionResult" nillable="true" type="q16:ArrayOfStructure" />
+        <xs:element xmlns:q16="http://schemas.datacontract.org/2004/07/Annotation" minOccurs="0" name="GetStructuresForSectionInMosaicRegionResult" nillable="true" type="q16:ArrayOfStructure" />
         <xs:element minOccurs="0" name="QueryExecutedTime" type="xs:long" />
         <xs:element xmlns:q17="http://schemas.microsoft.com/2003/10/Serialization/Arrays" minOccurs="0" name="DeletedIDs" nillable="true" type="q17:ArrayOflong" />
       </xs:sequence>
@@ -443,7 +443,7 @@
       </xs:sequence>
     </xs:complexType>
   </xs:element>
-  <xs:element name="GetLocationChangesInRegion">
+  <xs:element name="GetLocationChangesInMosaicRegion">
     <xs:complexType>
       <xs:sequence>
         <xs:element minOccurs="0" name="section" type="xs:long" />
@@ -453,10 +453,10 @@
       </xs:sequence>
     </xs:complexType>
   </xs:element>
-  <xs:element name="GetLocationChangesInRegionResponse">
+  <xs:element name="GetLocationChangesInMosaicRegionResponse">
     <xs:complexType>
       <xs:sequence>
-        <xs:element xmlns:q44="http://schemas.datacontract.org/2004/07/Annotation" minOccurs="0" name="GetLocationChangesInRegionResult" nillable="true" type="q44:ArrayOfLocation" />
+        <xs:element xmlns:q44="http://schemas.datacontract.org/2004/07/Annotation" minOccurs="0" name="GetLocationChangesInMosaicRegionResult" nillable="true" type="q44:ArrayOfLocation" />
         <xs:element minOccurs="0" name="QueryExecutedTime" type="xs:long" />
         <xs:element xmlns:q45="http://schemas.microsoft.com/2003/10/Serialization/Arrays" minOccurs="0" name="DeletedIDs" nillable="true" type="q45:ArrayOflong" />
       </xs:sequence>
@@ -536,7 +536,7 @@
       </xs:sequence>
     </xs:complexType>
   </xs:element>
-  <xs:element name="GetLocationLinksForSectionInRegion">
+  <xs:element name="GetLocationLinksForSectionInMosaicRegion">
     <xs:complexType>
       <xs:sequence>
         <xs:element minOccurs="0" name="section" type="xs:long" />
@@ -546,10 +546,10 @@
       </xs:sequence>
     </xs:complexType>
   </xs:element>
-  <xs:element name="GetLocationLinksForSectionInRegionResponse">
+  <xs:element name="GetLocationLinksForSectionInMosaicRegionResponse">
     <xs:complexType>
       <xs:sequence>
-        <xs:element xmlns:q53="http://schemas.datacontract.org/2004/07/Annotation" minOccurs="0" name="GetLocationLinksForSectionInRegionResult" nillable="true" type="q53:ArrayOfLocationLink" />
+        <xs:element xmlns:q53="http://schemas.datacontract.org/2004/07/Annotation" minOccurs="0" name="GetLocationLinksForSectionInMosaicRegionResult" nillable="true" type="q53:ArrayOfLocationLink" />
         <xs:element minOccurs="0" name="QueryExecutedTime" type="xs:long" />
         <xs:element xmlns:q54="http://schemas.datacontract.org/2004/07/Annotation" minOccurs="0" name="DeletedLinks" nillable="true" type="q54:ArrayOfLocationLink" />
       </xs:sequence>

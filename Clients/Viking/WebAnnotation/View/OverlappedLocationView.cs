@@ -18,6 +18,7 @@ using WebAnnotation.UI.Commands;
 using WebAnnotation.ViewModel;
 using Microsoft.SqlServer.Types;
 using VikingXNAGraphics;
+using SqlGeometryUtils;
 
 namespace WebAnnotation.View
 {
@@ -30,7 +31,15 @@ namespace WebAnnotation.View
         public TextureCircleView circleView;
         public LabelView label;
 
-        public GridCircle gridCircle
+        public override SqlGeometry VolumeShapeAsRendered
+        {
+            get
+            {
+                return Circle.ToSqlGeometry(this.Z);
+            }
+        }
+
+        public GridCircle Circle
         {
             get { return circleView.Circle; }
             set { circleView.Circle = value; }
@@ -38,14 +47,28 @@ namespace WebAnnotation.View
 
         public double Radius
         {
-            get { return gridCircle.Radius; }
-            set { circleView.Circle = new GridCircle(gridCircle.Center, value);}
+            get { return Circle.Radius; }
+            set { circleView.Circle = new GridCircle(Circle.Center, value);}
         }
 
         public GridVector2 Position
         {
-            get { return gridCircle.Center; }
-            set { circleView.Circle = new GridCircle(value, gridCircle.Radius); }
+            get { return Circle.Center; }
+            set { circleView.Circle = new GridCircle(value, Circle.Radius); }
+        }
+
+        private ICollection<long> _OverlappedLinks;
+        public override ICollection<long> OverlappedLinks
+        {
+            protected get
+            {
+                return _OverlappedLinks;
+            }
+
+            set
+            {
+                throw new NotImplementedException();
+            }
         }
 
         public OverlappedLocationView(LocationObj obj, GridCircle gridCircle, bool Up) : base(obj)
@@ -73,7 +96,7 @@ namespace WebAnnotation.View
 
         public override bool Intersects(GridVector2 Position)
         {
-            return gridCircle.Contains(Position);
+            return Circle.Contains(Position);
         }
 
         public override bool Intersects(SqlGeometry shape)
@@ -83,14 +106,14 @@ namespace WebAnnotation.View
         
         public override double Distance(GridVector2 Position)
         {
-            double Distance = GridVector2.Distance(Position, this.gridCircle.Center) - Radius;
+            double Distance = GridVector2.Distance(Position, this.Circle.Center) - Radius;
             Distance = Distance < 0 ? 0 : Distance;
             return Distance;
         }
 
         public override double DistanceFromCenterNormalized(GridVector2 Position)
         {
-            return GridVector2.Distance(Position, this.gridCircle.Center) / this.Radius;
+            return GridVector2.Distance(Position, this.Circle.Center) / this.Radius;
         }
 
         public static void Draw(GraphicsDevice device,
@@ -116,7 +139,7 @@ namespace WebAnnotation.View
 
         public override LocationAction GetMouseClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber)
         {
-            return LocationAction.CREATELINK;
+            return LocationAction.CREATELINKEDLOCATION;
         }
 
         public override LocationAction GetMouseShiftClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber)
@@ -141,7 +164,7 @@ namespace WebAnnotation.View
         {
             get
             {
-                return gridCircle.BoundingBox;
+                return Circle.BoundingBox;
             }
         }
     }

@@ -5,8 +5,8 @@ IF OBJECT_ID('tempdb..#PairDistance') IS NOT NULL DROP TABLE #PairDistance
 IF OBJECT_ID('tempdb..#NearestPartner') IS NOT NULL DROP TABLE #NearestPartner
 IF OBJECT_ID('tempdb..#PairsToDelete') IS NOT NULL DROP TABLE #PairsToDelete
 
-select S.ID as SID, S.ParentID as SParentID, S.MosaicShape as SMosaicShape, S.Z as Z,
-	   T.ID as TID, T.ParentID as TParentID, T.MosaicShape as TMosaicShape,
+select S.ID as SID, S.ParentID as SParentID, S.Radius as SRadius, S.MosaicShape as SMosaicShape, S.Z as SZ,
+	   T.ID as TID, T.ParentID as TParentID, T.Radius as TRadius, T.MosaicShape as TMosaicShape, T.Z as TZ ,
 	   S.MosaicShape.STDimension() as Dimension,
 	    case 
 			when S.MosaicShape.STDimension() = 2 then

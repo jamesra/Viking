@@ -2164,13 +2164,15 @@ namespace WebAnnotationModel.Service {
         
         WebAnnotationModel.Service.Structure[] EndGetStructuresForSection(out long QueryExecutedTime, out long[] DeletedIDs, System.IAsyncResult result);
         
-        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/GetStructuresForSectionInRegion", ReplyAction="http://tempuri.org/IAnnotateStructures/GetStructuresForSectionInRegionResponse")]
-        WebAnnotationModel.Service.Structure[] GetStructuresForSectionInRegion(out long QueryExecutedTime, out long[] DeletedIDs, long section, WebAnnotationModel.Service.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisTime);
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/GetStructuresForSectionInMosaicRegion", ReplyAction="http://tempuri.org/IAnnotateStructures/GetStructuresForSectionInMosaicRegionRespo" +
+            "nse")]
+        WebAnnotationModel.Service.Structure[] GetStructuresForSectionInMosaicRegion(out long QueryExecutedTime, out long[] DeletedIDs, long section, WebAnnotationModel.Service.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisTime);
         
-        [System.ServiceModel.OperationContractAttribute(AsyncPattern=true, Action="http://tempuri.org/IAnnotateStructures/GetStructuresForSectionInRegion", ReplyAction="http://tempuri.org/IAnnotateStructures/GetStructuresForSectionInRegionResponse")]
-        System.IAsyncResult BeginGetStructuresForSectionInRegion(long section, WebAnnotationModel.Service.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisTime, System.AsyncCallback callback, object asyncState);
+        [System.ServiceModel.OperationContractAttribute(AsyncPattern=true, Action="http://tempuri.org/IAnnotateStructures/GetStructuresForSectionInMosaicRegion", ReplyAction="http://tempuri.org/IAnnotateStructures/GetStructuresForSectionInMosaicRegionRespo" +
+            "nse")]
+        System.IAsyncResult BeginGetStructuresForSectionInMosaicRegion(long section, WebAnnotationModel.Service.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisTime, System.AsyncCallback callback, object asyncState);
         
-        WebAnnotationModel.Service.Structure[] EndGetStructuresForSectionInRegion(out long QueryExecutedTime, out long[] DeletedIDs, System.IAsyncResult result);
+        WebAnnotationModel.Service.Structure[] EndGetStructuresForSectionInMosaicRegion(out long QueryExecutedTime, out long[] DeletedIDs, System.IAsyncResult result);
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/GetStructureByID", ReplyAction="http://tempuri.org/IAnnotateStructures/GetStructureByIDResponse")]
         WebAnnotationModel.Service.Structure GetStructureByID(long ID, bool IncludeChildren);
@@ -2364,11 +2366,11 @@ namespace WebAnnotationModel.Service {
     
     [System.Diagnostics.DebuggerStepThroughAttribute()]
     [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
-    public partial class GetStructuresForSectionInRegionCompletedEventArgs : System.ComponentModel.AsyncCompletedEventArgs {
+    public partial class GetStructuresForSectionInMosaicRegionCompletedEventArgs : System.ComponentModel.AsyncCompletedEventArgs {
         
         private object[] results;
         
-        public GetStructuresForSectionInRegionCompletedEventArgs(object[] results, System.Exception exception, bool cancelled, object userState) : 
+        public GetStructuresForSectionInMosaicRegionCompletedEventArgs(object[] results, System.Exception exception, bool cancelled, object userState) : 
                 base(exception, cancelled, userState) {
             this.results = results;
         }
@@ -2664,11 +2666,11 @@ namespace WebAnnotationModel.Service {
         
         private System.Threading.SendOrPostCallback onGetStructuresForSectionCompletedDelegate;
         
-        private BeginOperationDelegate onBeginGetStructuresForSectionInRegionDelegate;
+        private BeginOperationDelegate onBeginGetStructuresForSectionInMosaicRegionDelegate;
         
-        private EndOperationDelegate onEndGetStructuresForSectionInRegionDelegate;
+        private EndOperationDelegate onEndGetStructuresForSectionInMosaicRegionDelegate;
         
-        private System.Threading.SendOrPostCallback onGetStructuresForSectionInRegionCompletedDelegate;
+        private System.Threading.SendOrPostCallback onGetStructuresForSectionInMosaicRegionCompletedDelegate;
         
         private BeginOperationDelegate onBeginGetStructureByIDDelegate;
         
@@ -2779,7 +2781,7 @@ namespace WebAnnotationModel.Service {
         
         public event System.EventHandler<GetStructuresForSectionCompletedEventArgs> GetStructuresForSectionCompleted;
         
-        public event System.EventHandler<GetStructuresForSectionInRegionCompletedEventArgs> GetStructuresForSectionInRegionCompleted;
+        public event System.EventHandler<GetStructuresForSectionInMosaicRegionCompletedEventArgs> GetStructuresForSectionInMosaicRegionCompleted;
         
         public event System.EventHandler<GetStructureByIDCompletedEventArgs> GetStructureByIDCompleted;
         
@@ -2965,64 +2967,64 @@ namespace WebAnnotationModel.Service {
                         ModifiedAfterThisTime}, this.onEndGetStructuresForSectionDelegate, this.onGetStructuresForSectionCompletedDelegate, userState);
         }
         
-        public WebAnnotationModel.Service.Structure[] GetStructuresForSectionInRegion(out long QueryExecutedTime, out long[] DeletedIDs, long section, WebAnnotationModel.Service.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisTime) {
-            return base.Channel.GetStructuresForSectionInRegion(out QueryExecutedTime, out DeletedIDs, section, bbox, MinRadius, ModifiedAfterThisTime);
+        public WebAnnotationModel.Service.Structure[] GetStructuresForSectionInMosaicRegion(out long QueryExecutedTime, out long[] DeletedIDs, long section, WebAnnotationModel.Service.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisTime) {
+            return base.Channel.GetStructuresForSectionInMosaicRegion(out QueryExecutedTime, out DeletedIDs, section, bbox, MinRadius, ModifiedAfterThisTime);
         }
         
         [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
-        public System.IAsyncResult BeginGetStructuresForSectionInRegion(long section, WebAnnotationModel.Service.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisTime, System.AsyncCallback callback, object asyncState) {
-            return base.Channel.BeginGetStructuresForSectionInRegion(section, bbox, MinRadius, ModifiedAfterThisTime, callback, asyncState);
+        public System.IAsyncResult BeginGetStructuresForSectionInMosaicRegion(long section, WebAnnotationModel.Service.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisTime, System.AsyncCallback callback, object asyncState) {
+            return base.Channel.BeginGetStructuresForSectionInMosaicRegion(section, bbox, MinRadius, ModifiedAfterThisTime, callback, asyncState);
         }
         
         [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
-        public WebAnnotationModel.Service.Structure[] EndGetStructuresForSectionInRegion(out long QueryExecutedTime, out long[] DeletedIDs, System.IAsyncResult result) {
-            return base.Channel.EndGetStructuresForSectionInRegion(out QueryExecutedTime, out DeletedIDs, result);
+        public WebAnnotationModel.Service.Structure[] EndGetStructuresForSectionInMosaicRegion(out long QueryExecutedTime, out long[] DeletedIDs, System.IAsyncResult result) {
+            return base.Channel.EndGetStructuresForSectionInMosaicRegion(out QueryExecutedTime, out DeletedIDs, result);
         }
         
-        private System.IAsyncResult OnBeginGetStructuresForSectionInRegion(object[] inValues, System.AsyncCallback callback, object asyncState) {
+        private System.IAsyncResult OnBeginGetStructuresForSectionInMosaicRegion(object[] inValues, System.AsyncCallback callback, object asyncState) {
             long section = ((long)(inValues[0]));
             WebAnnotationModel.Service.BoundingRectangle bbox = ((WebAnnotationModel.Service.BoundingRectangle)(inValues[1]));
             double MinRadius = ((double)(inValues[2]));
             long ModifiedAfterThisTime = ((long)(inValues[3]));
-            return this.BeginGetStructuresForSectionInRegion(section, bbox, MinRadius, ModifiedAfterThisTime, callback, asyncState);
+            return this.BeginGetStructuresForSectionInMosaicRegion(section, bbox, MinRadius, ModifiedAfterThisTime, callback, asyncState);
         }
         
-        private object[] OnEndGetStructuresForSectionInRegion(System.IAsyncResult result) {
+        private object[] OnEndGetStructuresForSectionInMosaicRegion(System.IAsyncResult result) {
             long QueryExecutedTime = this.GetDefaultValueForInitialization<long>();
             long[] DeletedIDs = this.GetDefaultValueForInitialization<long[]>();
-            WebAnnotationModel.Service.Structure[] retVal = this.EndGetStructuresForSectionInRegion(out QueryExecutedTime, out DeletedIDs, result);
+            WebAnnotationModel.Service.Structure[] retVal = this.EndGetStructuresForSectionInMosaicRegion(out QueryExecutedTime, out DeletedIDs, result);
             return new object[] {
                     QueryExecutedTime,
                     DeletedIDs,
                     retVal};
         }
         
-        private void OnGetStructuresForSectionInRegionCompleted(object state) {
-            if ((this.GetStructuresForSectionInRegionCompleted != null)) {
+        private void OnGetStructuresForSectionInMosaicRegionCompleted(object state) {
+            if ((this.GetStructuresForSectionInMosaicRegionCompleted != null)) {
                 InvokeAsyncCompletedEventArgs e = ((InvokeAsyncCompletedEventArgs)(state));
-                this.GetStructuresForSectionInRegionCompleted(this, new GetStructuresForSectionInRegionCompletedEventArgs(e.Results, e.Error, e.Cancelled, e.UserState));
+                this.GetStructuresForSectionInMosaicRegionCompleted(this, new GetStructuresForSectionInMosaicRegionCompletedEventArgs(e.Results, e.Error, e.Cancelled, e.UserState));
             }
         }
         
-        public void GetStructuresForSectionInRegionAsync(long section, WebAnnotationModel.Service.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisTime) {
-            this.GetStructuresForSectionInRegionAsync(section, bbox, MinRadius, ModifiedAfterThisTime, null);
+        public void GetStructuresForSectionInMosaicRegionAsync(long section, WebAnnotationModel.Service.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisTime) {
+            this.GetStructuresForSectionInMosaicRegionAsync(section, bbox, MinRadius, ModifiedAfterThisTime, null);
         }
         
-        public void GetStructuresForSectionInRegionAsync(long section, WebAnnotationModel.Service.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisTime, object userState) {
-            if ((this.onBeginGetStructuresForSectionInRegionDelegate == null)) {
-                this.onBeginGetStructuresForSectionInRegionDelegate = new BeginOperationDelegate(this.OnBeginGetStructuresForSectionInRegion);
+        public void GetStructuresForSectionInMosaicRegionAsync(long section, WebAnnotationModel.Service.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisTime, object userState) {
+            if ((this.onBeginGetStructuresForSectionInMosaicRegionDelegate == null)) {
+                this.onBeginGetStructuresForSectionInMosaicRegionDelegate = new BeginOperationDelegate(this.OnBeginGetStructuresForSectionInMosaicRegion);
             }
-            if ((this.onEndGetStructuresForSectionInRegionDelegate == null)) {
-                this.onEndGetStructuresForSectionInRegionDelegate = new EndOperationDelegate(this.OnEndGetStructuresForSectionInRegion);
+            if ((this.onEndGetStructuresForSectionInMosaicRegionDelegate == null)) {
+                this.onEndGetStructuresForSectionInMosaicRegionDelegate = new EndOperationDelegate(this.OnEndGetStructuresForSectionInMosaicRegion);
             }
-            if ((this.onGetStructuresForSectionInRegionCompletedDelegate == null)) {
-                this.onGetStructuresForSectionInRegionCompletedDelegate = new System.Threading.SendOrPostCallback(this.OnGetStructuresForSectionInRegionCompleted);
+            if ((this.onGetStructuresForSectionInMosaicRegionCompletedDelegate == null)) {
+                this.onGetStructuresForSectionInMosaicRegionCompletedDelegate = new System.Threading.SendOrPostCallback(this.OnGetStructuresForSectionInMosaicRegionCompleted);
             }
-            base.InvokeAsync(this.onBeginGetStructuresForSectionInRegionDelegate, new object[] {
+            base.InvokeAsync(this.onBeginGetStructuresForSectionInMosaicRegionDelegate, new object[] {
                         section,
                         bbox,
                         MinRadius,
-                        ModifiedAfterThisTime}, this.onEndGetStructuresForSectionInRegionDelegate, this.onGetStructuresForSectionInRegionCompletedDelegate, userState);
+                        ModifiedAfterThisTime}, this.onEndGetStructuresForSectionInMosaicRegionDelegate, this.onGetStructuresForSectionInMosaicRegionCompletedDelegate, userState);
         }
         
         public WebAnnotationModel.Service.Structure GetStructureByID(long ID, bool IncludeChildren) {
@@ -3795,13 +3797,13 @@ namespace WebAnnotationModel.Service {
         
         WebAnnotationModel.Service.Location[] EndGetLocationsForStructure(System.IAsyncResult result);
         
-        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateLocations/GetLocationChangesInRegion", ReplyAction="http://tempuri.org/IAnnotateLocations/GetLocationChangesInRegionResponse")]
-        WebAnnotationModel.Service.Location[] GetLocationChangesInRegion(out long QueryExecutedTime, out long[] DeletedIDs, long section, WebAnnotationModel.Service.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisUtcTime);
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateLocations/GetLocationChangesInMosaicRegion", ReplyAction="http://tempuri.org/IAnnotateLocations/GetLocationChangesInMosaicRegionResponse")]
+        WebAnnotationModel.Service.Location[] GetLocationChangesInMosaicRegion(out long QueryExecutedTime, out long[] DeletedIDs, long section, WebAnnotationModel.Service.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisUtcTime);
         
-        [System.ServiceModel.OperationContractAttribute(AsyncPattern=true, Action="http://tempuri.org/IAnnotateLocations/GetLocationChangesInRegion", ReplyAction="http://tempuri.org/IAnnotateLocations/GetLocationChangesInRegionResponse")]
-        System.IAsyncResult BeginGetLocationChangesInRegion(long section, WebAnnotationModel.Service.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisUtcTime, System.AsyncCallback callback, object asyncState);
+        [System.ServiceModel.OperationContractAttribute(AsyncPattern=true, Action="http://tempuri.org/IAnnotateLocations/GetLocationChangesInMosaicRegion", ReplyAction="http://tempuri.org/IAnnotateLocations/GetLocationChangesInMosaicRegionResponse")]
+        System.IAsyncResult BeginGetLocationChangesInMosaicRegion(long section, WebAnnotationModel.Service.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisUtcTime, System.AsyncCallback callback, object asyncState);
         
-        WebAnnotationModel.Service.Location[] EndGetLocationChangesInRegion(out long QueryExecutedTime, out long[] DeletedIDs, System.IAsyncResult result);
+        WebAnnotationModel.Service.Location[] EndGetLocationChangesInMosaicRegion(out long QueryExecutedTime, out long[] DeletedIDs, System.IAsyncResult result);
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateLocations/GetLocationChanges", ReplyAction="http://tempuri.org/IAnnotateLocations/GetLocationChangesResponse")]
         WebAnnotationModel.Service.Location[] GetLocationChanges(out long QueryExecutedTime, out long[] DeletedIDs, long section, long ModifiedAfterThisUtcTime);
@@ -3843,13 +3845,15 @@ namespace WebAnnotationModel.Service {
         
         WebAnnotationModel.Service.LocationLink[] EndGetLocationLinksForSection(out long QueryExecutedTime, out WebAnnotationModel.Service.LocationLink[] DeletedLinks, System.IAsyncResult result);
         
-        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateLocations/GetLocationLinksForSectionInRegion", ReplyAction="http://tempuri.org/IAnnotateLocations/GetLocationLinksForSectionInRegionResponse")]
-        WebAnnotationModel.Service.LocationLink[] GetLocationLinksForSectionInRegion(out long QueryExecutedTime, out WebAnnotationModel.Service.LocationLink[] DeletedLinks, long section, WebAnnotationModel.Service.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisUtcTime);
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateLocations/GetLocationLinksForSectionInMosaicRegion", ReplyAction="http://tempuri.org/IAnnotateLocations/GetLocationLinksForSectionInMosaicRegionRes" +
+            "ponse")]
+        WebAnnotationModel.Service.LocationLink[] GetLocationLinksForSectionInMosaicRegion(out long QueryExecutedTime, out WebAnnotationModel.Service.LocationLink[] DeletedLinks, long section, WebAnnotationModel.Service.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisUtcTime);
         
-        [System.ServiceModel.OperationContractAttribute(AsyncPattern=true, Action="http://tempuri.org/IAnnotateLocations/GetLocationLinksForSectionInRegion", ReplyAction="http://tempuri.org/IAnnotateLocations/GetLocationLinksForSectionInRegionResponse")]
-        System.IAsyncResult BeginGetLocationLinksForSectionInRegion(long section, WebAnnotationModel.Service.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisUtcTime, System.AsyncCallback callback, object asyncState);
+        [System.ServiceModel.OperationContractAttribute(AsyncPattern=true, Action="http://tempuri.org/IAnnotateLocations/GetLocationLinksForSectionInMosaicRegion", ReplyAction="http://tempuri.org/IAnnotateLocations/GetLocationLinksForSectionInMosaicRegionRes" +
+            "ponse")]
+        System.IAsyncResult BeginGetLocationLinksForSectionInMosaicRegion(long section, WebAnnotationModel.Service.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisUtcTime, System.AsyncCallback callback, object asyncState);
         
-        WebAnnotationModel.Service.LocationLink[] EndGetLocationLinksForSectionInRegion(out long QueryExecutedTime, out WebAnnotationModel.Service.LocationLink[] DeletedLinks, System.IAsyncResult result);
+        WebAnnotationModel.Service.LocationLink[] EndGetLocationLinksForSectionInMosaicRegion(out long QueryExecutedTime, out WebAnnotationModel.Service.LocationLink[] DeletedLinks, System.IAsyncResult result);
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateLocations/GetLocationChangeLog", ReplyAction="http://tempuri.org/IAnnotateLocations/GetLocationChangeLogResponse")]
         WebAnnotationModel.Service.LocationHistory[] GetLocationChangeLog(System.Nullable<long> structure_id, System.Nullable<System.DateTime> begin_time, System.Nullable<System.DateTime> end_time);
@@ -4006,11 +4010,11 @@ namespace WebAnnotationModel.Service {
     
     [System.Diagnostics.DebuggerStepThroughAttribute()]
     [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
-    public partial class GetLocationChangesInRegionCompletedEventArgs : System.ComponentModel.AsyncCompletedEventArgs {
+    public partial class GetLocationChangesInMosaicRegionCompletedEventArgs : System.ComponentModel.AsyncCompletedEventArgs {
         
         private object[] results;
         
-        public GetLocationChangesInRegionCompletedEventArgs(object[] results, System.Exception exception, bool cancelled, object userState) : 
+        public GetLocationChangesInMosaicRegionCompletedEventArgs(object[] results, System.Exception exception, bool cancelled, object userState) : 
                 base(exception, cancelled, userState) {
             this.results = results;
         }
@@ -4124,11 +4128,11 @@ namespace WebAnnotationModel.Service {
     
     [System.Diagnostics.DebuggerStepThroughAttribute()]
     [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
-    public partial class GetLocationLinksForSectionInRegionCompletedEventArgs : System.ComponentModel.AsyncCompletedEventArgs {
+    public partial class GetLocationLinksForSectionInMosaicRegionCompletedEventArgs : System.ComponentModel.AsyncCompletedEventArgs {
         
         private object[] results;
         
-        public GetLocationLinksForSectionInRegionCompletedEventArgs(object[] results, System.Exception exception, bool cancelled, object userState) : 
+        public GetLocationLinksForSectionInMosaicRegionCompletedEventArgs(object[] results, System.Exception exception, bool cancelled, object userState) : 
                 base(exception, cancelled, userState) {
             this.results = results;
         }
@@ -4220,11 +4224,11 @@ namespace WebAnnotationModel.Service {
         
         private System.Threading.SendOrPostCallback onGetLocationsForStructureCompletedDelegate;
         
-        private BeginOperationDelegate onBeginGetLocationChangesInRegionDelegate;
+        private BeginOperationDelegate onBeginGetLocationChangesInMosaicRegionDelegate;
         
-        private EndOperationDelegate onEndGetLocationChangesInRegionDelegate;
+        private EndOperationDelegate onEndGetLocationChangesInMosaicRegionDelegate;
         
-        private System.Threading.SendOrPostCallback onGetLocationChangesInRegionCompletedDelegate;
+        private System.Threading.SendOrPostCallback onGetLocationChangesInMosaicRegionCompletedDelegate;
         
         private BeginOperationDelegate onBeginGetLocationChangesDelegate;
         
@@ -4256,11 +4260,11 @@ namespace WebAnnotationModel.Service {
         
         private System.Threading.SendOrPostCallback onGetLocationLinksForSectionCompletedDelegate;
         
-        private BeginOperationDelegate onBeginGetLocationLinksForSectionInRegionDelegate;
+        private BeginOperationDelegate onBeginGetLocationLinksForSectionInMosaicRegionDelegate;
         
-        private EndOperationDelegate onEndGetLocationLinksForSectionInRegionDelegate;
+        private EndOperationDelegate onEndGetLocationLinksForSectionInMosaicRegionDelegate;
         
-        private System.Threading.SendOrPostCallback onGetLocationLinksForSectionInRegionCompletedDelegate;
+        private System.Threading.SendOrPostCallback onGetLocationLinksForSectionInMosaicRegionCompletedDelegate;
         
         private BeginOperationDelegate onBeginGetLocationChangeLogDelegate;
         
@@ -4301,7 +4305,7 @@ namespace WebAnnotationModel.Service {
         
         public event System.EventHandler<GetLocationsForStructureCompletedEventArgs> GetLocationsForStructureCompleted;
         
-        public event System.EventHandler<GetLocationChangesInRegionCompletedEventArgs> GetLocationChangesInRegionCompleted;
+        public event System.EventHandler<GetLocationChangesInMosaicRegionCompletedEventArgs> GetLocationChangesInMosaicRegionCompleted;
         
         public event System.EventHandler<GetLocationChangesCompletedEventArgs> GetLocationChangesCompleted;
         
@@ -4313,7 +4317,7 @@ namespace WebAnnotationModel.Service {
         
         public event System.EventHandler<GetLocationLinksForSectionCompletedEventArgs> GetLocationLinksForSectionCompleted;
         
-        public event System.EventHandler<GetLocationLinksForSectionInRegionCompletedEventArgs> GetLocationLinksForSectionInRegionCompleted;
+        public event System.EventHandler<GetLocationLinksForSectionInMosaicRegionCompletedEventArgs> GetLocationLinksForSectionInMosaicRegionCompleted;
         
         public event System.EventHandler<GetLocationChangeLogCompletedEventArgs> GetLocationChangeLogCompleted;
         
@@ -4669,64 +4673,64 @@ namespace WebAnnotationModel.Service {
                         structureID}, this.onEndGetLocationsForStructureDelegate, this.onGetLocationsForStructureCompletedDelegate, userState);
         }
         
-        public WebAnnotationModel.Service.Location[] GetLocationChangesInRegion(out long QueryExecutedTime, out long[] DeletedIDs, long section, WebAnnotationModel.Service.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisUtcTime) {
-            return base.Channel.GetLocationChangesInRegion(out QueryExecutedTime, out DeletedIDs, section, bbox, MinRadius, ModifiedAfterThisUtcTime);
+        public WebAnnotationModel.Service.Location[] GetLocationChangesInMosaicRegion(out long QueryExecutedTime, out long[] DeletedIDs, long section, WebAnnotationModel.Service.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisUtcTime) {
+            return base.Channel.GetLocationChangesInMosaicRegion(out QueryExecutedTime, out DeletedIDs, section, bbox, MinRadius, ModifiedAfterThisUtcTime);
         }
         
         [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
-        public System.IAsyncResult BeginGetLocationChangesInRegion(long section, WebAnnotationModel.Service.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisUtcTime, System.AsyncCallback callback, object asyncState) {
-            return base.Channel.BeginGetLocationChangesInRegion(section, bbox, MinRadius, ModifiedAfterThisUtcTime, callback, asyncState);
+        public System.IAsyncResult BeginGetLocationChangesInMosaicRegion(long section, WebAnnotationModel.Service.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisUtcTime, System.AsyncCallback callback, object asyncState) {
+            return base.Channel.BeginGetLocationChangesInMosaicRegion(section, bbox, MinRadius, ModifiedAfterThisUtcTime, callback, asyncState);
         }
         
         [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
-        public WebAnnotationModel.Service.Location[] EndGetLocationChangesInRegion(out long QueryExecutedTime, out long[] DeletedIDs, System.IAsyncResult result) {
-            return base.Channel.EndGetLocationChangesInRegion(out QueryExecutedTime, out DeletedIDs, result);
+        public WebAnnotationModel.Service.Location[] EndGetLocationChangesInMosaicRegion(out long QueryExecutedTime, out long[] DeletedIDs, System.IAsyncResult result) {
+            return base.Channel.EndGetLocationChangesInMosaicRegion(out QueryExecutedTime, out DeletedIDs, result);
         }
         
-        private System.IAsyncResult OnBeginGetLocationChangesInRegion(object[] inValues, System.AsyncCallback callback, object asyncState) {
+        private System.IAsyncResult OnBeginGetLocationChangesInMosaicRegion(object[] inValues, System.AsyncCallback callback, object asyncState) {
             long section = ((long)(inValues[0]));
             WebAnnotationModel.Service.BoundingRectangle bbox = ((WebAnnotationModel.Service.BoundingRectangle)(inValues[1]));
             double MinRadius = ((double)(inValues[2]));
             long ModifiedAfterThisUtcTime = ((long)(inValues[3]));
-            return this.BeginGetLocationChangesInRegion(section, bbox, MinRadius, ModifiedAfterThisUtcTime, callback, asyncState);
+            return this.BeginGetLocationChangesInMosaicRegion(section, bbox, MinRadius, ModifiedAfterThisUtcTime, callback, asyncState);
         }
         
-        private object[] OnEndGetLocationChangesInRegion(System.IAsyncResult result) {
+        private object[] OnEndGetLocationChangesInMosaicRegion(System.IAsyncResult result) {
             long QueryExecutedTime = this.GetDefaultValueForInitialization<long>();
             long[] DeletedIDs = this.GetDefaultValueForInitialization<long[]>();
-            WebAnnotationModel.Service.Location[] retVal = this.EndGetLocationChangesInRegion(out QueryExecutedTime, out DeletedIDs, result);
+            WebAnnotationModel.Service.Location[] retVal = this.EndGetLocationChangesInMosaicRegion(out QueryExecutedTime, out DeletedIDs, result);
             return new object[] {
                     QueryExecutedTime,
                     DeletedIDs,
                     retVal};
         }
         
-        private void OnGetLocationChangesInRegionCompleted(object state) {
-            if ((this.GetLocationChangesInRegionCompleted != null)) {
+        private void OnGetLocationChangesInMosaicRegionCompleted(object state) {
+            if ((this.GetLocationChangesInMosaicRegionCompleted != null)) {
                 InvokeAsyncCompletedEventArgs e = ((InvokeAsyncCompletedEventArgs)(state));
-                this.GetLocationChangesInRegionCompleted(this, new GetLocationChangesInRegionCompletedEventArgs(e.Results, e.Error, e.Cancelled, e.UserState));
+                this.GetLocationChangesInMosaicRegionCompleted(this, new GetLocationChangesInMosaicRegionCompletedEventArgs(e.Results, e.Error, e.Cancelled, e.UserState));
             }
         }
         
-        public void GetLocationChangesInRegionAsync(long section, WebAnnotationModel.Service.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisUtcTime) {
-            this.GetLocationChangesInRegionAsync(section, bbox, MinRadius, ModifiedAfterThisUtcTime, null);
+        public void GetLocationChangesInMosaicRegionAsync(long section, WebAnnotationModel.Service.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisUtcTime) {
+            this.GetLocationChangesInMosaicRegionAsync(section, bbox, MinRadius, ModifiedAfterThisUtcTime, null);
         }
         
-        public void GetLocationChangesInRegionAsync(long section, WebAnnotationModel.Service.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisUtcTime, object userState) {
-            if ((this.onBeginGetLocationChangesInRegionDelegate == null)) {
-                this.onBeginGetLocationChangesInRegionDelegate = new BeginOperationDelegate(this.OnBeginGetLocationChangesInRegion);
+        public void GetLocationChangesInMosaicRegionAsync(long section, WebAnnotationModel.Service.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisUtcTime, object userState) {
+            if ((this.onBeginGetLocationChangesInMosaicRegionDelegate == null)) {
+                this.onBeginGetLocationChangesInMosaicRegionDelegate = new BeginOperationDelegate(this.OnBeginGetLocationChangesInMosaicRegion);
             }
-            if ((this.onEndGetLocationChangesInRegionDelegate == null)) {
-                this.onEndGetLocationChangesInRegionDelegate = new EndOperationDelegate(this.OnEndGetLocationChangesInRegion);
+            if ((this.onEndGetLocationChangesInMosaicRegionDelegate == null)) {
+                this.onEndGetLocationChangesInMosaicRegionDelegate = new EndOperationDelegate(this.OnEndGetLocationChangesInMosaicRegion);
             }
-            if ((this.onGetLocationChangesInRegionCompletedDelegate == null)) {
-                this.onGetLocationChangesInRegionCompletedDelegate = new System.Threading.SendOrPostCallback(this.OnGetLocationChangesInRegionCompleted);
+            if ((this.onGetLocationChangesInMosaicRegionCompletedDelegate == null)) {
+                this.onGetLocationChangesInMosaicRegionCompletedDelegate = new System.Threading.SendOrPostCallback(this.OnGetLocationChangesInMosaicRegionCompleted);
             }
-            base.InvokeAsync(this.onBeginGetLocationChangesInRegionDelegate, new object[] {
+            base.InvokeAsync(this.onBeginGetLocationChangesInMosaicRegionDelegate, new object[] {
                         section,
                         bbox,
                         MinRadius,
-                        ModifiedAfterThisUtcTime}, this.onEndGetLocationChangesInRegionDelegate, this.onGetLocationChangesInRegionCompletedDelegate, userState);
+                        ModifiedAfterThisUtcTime}, this.onEndGetLocationChangesInMosaicRegionDelegate, this.onGetLocationChangesInMosaicRegionCompletedDelegate, userState);
         }
         
         public WebAnnotationModel.Service.Location[] GetLocationChanges(out long QueryExecutedTime, out long[] DeletedIDs, long section, long ModifiedAfterThisUtcTime) {
@@ -4993,64 +4997,64 @@ namespace WebAnnotationModel.Service {
                         ModifiedAfterThisTime}, this.onEndGetLocationLinksForSectionDelegate, this.onGetLocationLinksForSectionCompletedDelegate, userState);
         }
         
-        public WebAnnotationModel.Service.LocationLink[] GetLocationLinksForSectionInRegion(out long QueryExecutedTime, out WebAnnotationModel.Service.LocationLink[] DeletedLinks, long section, WebAnnotationModel.Service.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisUtcTime) {
-            return base.Channel.GetLocationLinksForSectionInRegion(out QueryExecutedTime, out DeletedLinks, section, bbox, MinRadius, ModifiedAfterThisUtcTime);
+        public WebAnnotationModel.Service.LocationLink[] GetLocationLinksForSectionInMosaicRegion(out long QueryExecutedTime, out WebAnnotationModel.Service.LocationLink[] DeletedLinks, long section, WebAnnotationModel.Service.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisUtcTime) {
+            return base.Channel.GetLocationLinksForSectionInMosaicRegion(out QueryExecutedTime, out DeletedLinks, section, bbox, MinRadius, ModifiedAfterThisUtcTime);
         }
         
         [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
-        public System.IAsyncResult BeginGetLocationLinksForSectionInRegion(long section, WebAnnotationModel.Service.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisUtcTime, System.AsyncCallback callback, object asyncState) {
-            return base.Channel.BeginGetLocationLinksForSectionInRegion(section, bbox, MinRadius, ModifiedAfterThisUtcTime, callback, asyncState);
+        public System.IAsyncResult BeginGetLocationLinksForSectionInMosaicRegion(long section, WebAnnotationModel.Service.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisUtcTime, System.AsyncCallback callback, object asyncState) {
+            return base.Channel.BeginGetLocationLinksForSectionInMosaicRegion(section, bbox, MinRadius, ModifiedAfterThisUtcTime, callback, asyncState);
         }
         
         [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
-        public WebAnnotationModel.Service.LocationLink[] EndGetLocationLinksForSectionInRegion(out long QueryExecutedTime, out WebAnnotationModel.Service.LocationLink[] DeletedLinks, System.IAsyncResult result) {
-            return base.Channel.EndGetLocationLinksForSectionInRegion(out QueryExecutedTime, out DeletedLinks, result);
+        public WebAnnotationModel.Service.LocationLink[] EndGetLocationLinksForSectionInMosaicRegion(out long QueryExecutedTime, out WebAnnotationModel.Service.LocationLink[] DeletedLinks, System.IAsyncResult result) {
+            return base.Channel.EndGetLocationLinksForSectionInMosaicRegion(out QueryExecutedTime, out DeletedLinks, result);
         }
         
-        private System.IAsyncResult OnBeginGetLocationLinksForSectionInRegion(object[] inValues, System.AsyncCallback callback, object asyncState) {
+        private System.IAsyncResult OnBeginGetLocationLinksForSectionInMosaicRegion(object[] inValues, System.AsyncCallback callback, object asyncState) {
             long section = ((long)(inValues[0]));
             WebAnnotationModel.Service.BoundingRectangle bbox = ((WebAnnotationModel.Service.BoundingRectangle)(inValues[1]));
             double MinRadius = ((double)(inValues[2]));
             long ModifiedAfterThisUtcTime = ((long)(inValues[3]));
-            return this.BeginGetLocationLinksForSectionInRegion(section, bbox, MinRadius, ModifiedAfterThisUtcTime, callback, asyncState);
+            return this.BeginGetLocationLinksForSectionInMosaicRegion(section, bbox, MinRadius, ModifiedAfterThisUtcTime, callback, asyncState);
         }
         
-        private object[] OnEndGetLocationLinksForSectionInRegion(System.IAsyncResult result) {
+        private object[] OnEndGetLocationLinksForSectionInMosaicRegion(System.IAsyncResult result) {
             long QueryExecutedTime = this.GetDefaultValueForInitialization<long>();
             WebAnnotationModel.Service.LocationLink[] DeletedLinks = this.GetDefaultValueForInitialization<WebAnnotationModel.Service.LocationLink[]>();
-            WebAnnotationModel.Service.LocationLink[] retVal = this.EndGetLocationLinksForSectionInRegion(out QueryExecutedTime, out DeletedLinks, result);
+            WebAnnotationModel.Service.LocationLink[] retVal = this.EndGetLocationLinksForSectionInMosaicRegion(out QueryExecutedTime, out DeletedLinks, result);
             return new object[] {
                     QueryExecutedTime,
                     DeletedLinks,
                     retVal};
         }
         
-        private void OnGetLocationLinksForSectionInRegionCompleted(object state) {
-            if ((this.GetLocationLinksForSectionInRegionCompleted != null)) {
+        private void OnGetLocationLinksForSectionInMosaicRegionCompleted(object state) {
+            if ((this.GetLocationLinksForSectionInMosaicRegionCompleted != null)) {
                 InvokeAsyncCompletedEventArgs e = ((InvokeAsyncCompletedEventArgs)(state));
-                this.GetLocationLinksForSectionInRegionCompleted(this, new GetLocationLinksForSectionInRegionCompletedEventArgs(e.Results, e.Error, e.Cancelled, e.UserState));
+                this.GetLocationLinksForSectionInMosaicRegionCompleted(this, new GetLocationLinksForSectionInMosaicRegionCompletedEventArgs(e.Results, e.Error, e.Cancelled, e.UserState));
             }
         }
         
-        public void GetLocationLinksForSectionInRegionAsync(long section, WebAnnotationModel.Service.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisUtcTime) {
-            this.GetLocationLinksForSectionInRegionAsync(section, bbox, MinRadius, ModifiedAfterThisUtcTime, null);
+        public void GetLocationLinksForSectionInMosaicRegionAsync(long section, WebAnnotationModel.Service.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisUtcTime) {
+            this.GetLocationLinksForSectionInMosaicRegionAsync(section, bbox, MinRadius, ModifiedAfterThisUtcTime, null);
         }
         
-        public void GetLocationLinksForSectionInRegionAsync(long section, WebAnnotationModel.Service.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisUtcTime, object userState) {
-            if ((this.onBeginGetLocationLinksForSectionInRegionDelegate == null)) {
-                this.onBeginGetLocationLinksForSectionInRegionDelegate = new BeginOperationDelegate(this.OnBeginGetLocationLinksForSectionInRegion);
+        public void GetLocationLinksForSectionInMosaicRegionAsync(long section, WebAnnotationModel.Service.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisUtcTime, object userState) {
+            if ((this.onBeginGetLocationLinksForSectionInMosaicRegionDelegate == null)) {
+                this.onBeginGetLocationLinksForSectionInMosaicRegionDelegate = new BeginOperationDelegate(this.OnBeginGetLocationLinksForSectionInMosaicRegion);
             }
-            if ((this.onEndGetLocationLinksForSectionInRegionDelegate == null)) {
-                this.onEndGetLocationLinksForSectionInRegionDelegate = new EndOperationDelegate(this.OnEndGetLocationLinksForSectionInRegion);
+            if ((this.onEndGetLocationLinksForSectionInMosaicRegionDelegate == null)) {
+                this.onEndGetLocationLinksForSectionInMosaicRegionDelegate = new EndOperationDelegate(this.OnEndGetLocationLinksForSectionInMosaicRegion);
             }
-            if ((this.onGetLocationLinksForSectionInRegionCompletedDelegate == null)) {
-                this.onGetLocationLinksForSectionInRegionCompletedDelegate = new System.Threading.SendOrPostCallback(this.OnGetLocationLinksForSectionInRegionCompleted);
+            if ((this.onGetLocationLinksForSectionInMosaicRegionCompletedDelegate == null)) {
+                this.onGetLocationLinksForSectionInMosaicRegionCompletedDelegate = new System.Threading.SendOrPostCallback(this.OnGetLocationLinksForSectionInMosaicRegionCompleted);
             }
-            base.InvokeAsync(this.onBeginGetLocationLinksForSectionInRegionDelegate, new object[] {
+            base.InvokeAsync(this.onBeginGetLocationLinksForSectionInMosaicRegionDelegate, new object[] {
                         section,
                         bbox,
                         MinRadius,
-                        ModifiedAfterThisUtcTime}, this.onEndGetLocationLinksForSectionInRegionDelegate, this.onGetLocationLinksForSectionInRegionCompletedDelegate, userState);
+                        ModifiedAfterThisUtcTime}, this.onEndGetLocationLinksForSectionInMosaicRegionDelegate, this.onGetLocationLinksForSectionInMosaicRegionCompletedDelegate, userState);
         }
         
         public WebAnnotationModel.Service.LocationHistory[] GetLocationChangeLog(System.Nullable<long> structure_id, System.Nullable<System.DateTime> begin_time, System.Nullable<System.DateTime> end_time) {

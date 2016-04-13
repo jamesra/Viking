@@ -15,6 +15,12 @@ namespace WebAnnotationModel
         ConcurrentDictionary<KEY, OBJECT> GetObjectsInRegion(long SectionNumber, Geometry.GridRectangle bounds, double MinRadius, DateTime? LastQueryUtc);
 
         MixedLocalAndRemoteQueryResults<KEY, OBJECT> GetObjectsInRegionAsync(long SectionNumber, Geometry.GridRectangle bounds, double MinRadius, DateTime? LastQueryUtc, Action<ICollection<OBJECT>> OnLoadedCallback);
+
+        /// <summary>
+        /// Used to check whether a cached object still exists in the specified bounds
+        /// </summary>
+        /// <returns></returns>
+        //bool Contains(OBJECT o, Geometry.GridRectangle bounds);
     }
 
     public interface ISectionQuery<KEY, OBJECT>
