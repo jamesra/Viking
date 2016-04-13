@@ -464,25 +464,53 @@ namespace RoundCurve
             blurThresholdParameter.SetValue(DefaultBlurThreshold);
             lineTotalLengthParameter.SetValue((float)roundLine.TotalDistance);
 
-            int iData = 0;
+           
+            int SegmentsAlreadyDrawn = 0;
             int numSegmentsThisDraw = 0;
-            for (int iSegment = 0; iSegment < roundLine.ControlPoints.Length; iSegment++)
+            int numSegmentsToDraw = roundLine.ControlPoints.Count();
+
+            while (SegmentsAlreadyDrawn < numSegmentsToDraw)
             {
-                translationData[iData++] = (float)roundLine.ControlPoints[iSegment].X;
-                translationData[iData++] = (float)roundLine.ControlPoints[iSegment].Y;
-                translationData[iData++] = (float)roundLine.DistanceNormalized[iSegment];
-                translationData[iData++] = (float)roundLine.Theta[iSegment];
+                int iData = 0;
+                int FirstSegmentToRender = SegmentsAlreadyDrawn;
+
+                //If we draw more than one batch we need to redraw the last point from the former batch
+                if (SegmentsAlreadyDrawn > 0)
+                    FirstSegmentToRender -= 1;
+
+                int iSegment = 0;
+                int iSegmentToDraw = 0;
+                //Draw as many segments as we can 
+                for (iSegment = 0; iSegment < MaxInstancesPerBatch; iSegment++)
+                {
+                    iSegmentToDraw = iSegment + FirstSegmentToRender;
+
+                    if (iSegmentToDraw >= numSegmentsToDraw)
+                    {
+                        iSegment -= 1;
+                        break;
+                    }
+                        
+
+                    translationData[iData++] = (float)roundLine.ControlPoints[iSegmentToDraw].X;
+                    translationData[iData++] = (float)roundLine.ControlPoints[iSegmentToDraw].Y;
+                    translationData[iData++] = (float)roundLine.DistanceNormalized[iSegmentToDraw];
+                    translationData[iData++] = (float)roundLine.Theta[iSegmentToDraw];
+                }
+
+                numSegmentsThisDraw = iSegment;
+
+                segmentDataParamter.SetValue(translationData);
+
+                EffectPass pass = effect.CurrentTechnique.Passes[0];
+
+                pass.Apply();
+
+                device.DrawIndexedPrimitives(PrimitiveType.TriangleList, 0, 0, numVertices, 0, numPrimitivesPerInstance * numSegmentsThisDraw);
+
+                SegmentsAlreadyDrawn += numSegmentsThisDraw;
+                         
             }
-
-            numSegmentsThisDraw = roundLine.ControlPoints.Length - 1;
-
-            segmentDataParamter.SetValue(translationData);
-
-            EffectPass pass = effect.CurrentTechnique.Passes[0];
-
-            pass.Apply();
-
-            device.DrawIndexedPrimitives(PrimitiveType.TriangleList, 0, 0, numVertices, 0, numPrimitivesPerInstance * numSegmentsThisDraw);
             //NumLinesDrawn += numInstancesThisDraw;
         }
 
