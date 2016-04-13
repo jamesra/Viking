@@ -93,6 +93,43 @@ namespace Viking.Common
         }
 
         /// <summary>
+        /// Add the ID if it is not in the set and the function returns true
+        /// </summary>
+        /// <param name="ID"></param>
+        /// <param name="a"></param>
+        /// <returns></returns>
+        public bool TryAdd(T ID, Func<bool> CanAdd)
+        {
+            try
+            {
+                rwKnownLocationsLock.EnterUpgradeableReadLock();
+                if (TrackedKeys.Contains(ID))
+                    return false;
+
+                try
+                {
+                    rwKnownLocationsLock.EnterWriteLock();
+                    if (TrackedKeys.Contains(ID))
+                        return false;
+                    
+                    if (CanAdd())
+                    {
+                        TrackedKeys.Add(ID);
+                    } 
+                }
+                finally
+                {
+                    rwKnownLocationsLock.ExitWriteLock();
+                }
+                return TrackedKeys.Contains(ID);
+            }
+            finally
+            {
+                rwKnownLocationsLock.ExitUpgradeableReadLock();
+            }
+        }
+
+        /// <summary>
         /// Try to remove the ID.  If the ID is removed execute the action
         /// </summary>
         /// <param name="ID"></param>
