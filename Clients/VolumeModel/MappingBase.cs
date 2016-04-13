@@ -10,12 +10,12 @@ using System.Runtime.Serialization.Formatters.Binary;
 
 namespace Viking.VolumeModel
 {
-    public interface IVolumeMapProvider
+    public interface IVolumeTransformProvider
     {
-        IVolumeToSectionMapper GetMapping(int SectionNumber);
+        IVolumeToSectionTransform GetSectionToVolumeTransform(int SectionNumber);
     }
 
-    public interface IVolumeToSectionMapper
+    public interface IVolumeToSectionTransform
     {
         /// <summary>
         /// A unique ID for the transforming object
@@ -45,14 +45,14 @@ namespace Viking.VolumeModel
         /// </summary>
         /// <param name="P"></param>
         /// <returns></returns>
-        bool TrySectionToVolume(GridVector2[] Points, out GridVector2[] transformedP);
+        bool[] TrySectionToVolume(GridVector2[] Points, out GridVector2[] transformedP);
 
         /// <summary>
         /// Maps the point from the volume to the section if this is overriden by a volume mapping class
         /// </summary>
         /// <param name="P"></param>
         /// <returns></returns>
-        bool TryVolumeToSection(GridVector2[] Points, out GridVector2[] transformedP);
+        bool[] TryVolumeToSection(GridVector2[] Points, out GridVector2[] transformedP);
 
         /// <summary>
         /// Maps the point from the volume to the section if this is overriden by a volume mapping class
@@ -88,7 +88,7 @@ namespace Viking.VolumeModel
     /// <summary>
     /// Mapping base encapsulates the transforms required to map all tiles in a section to mosaic or volume space
     /// </summary>
-    public abstract class MappingBase : IVolumeToSectionMapper
+    public abstract class MappingBase : IVolumeToSectionTransform
     {
         /// <summary>
         /// This records the modified date of the file the transform was loaded from
@@ -294,6 +294,9 @@ namespace Viking.VolumeModel
         /// </summary>
         /// <param name="P"></param>
         /// <returns></returns>
+        /// 
+        public abstract GridVector2[] SectionToVolume(GridVector2[] P);
+        /*
         public GridVector2[] SectionToVolume(GridVector2[] P)
         {
             GridVector2[] transformedP;
@@ -303,12 +306,18 @@ namespace Viking.VolumeModel
 
             return transformedP;
         }
-
+        */
         /// <summary>
         /// Maps the point from the volume to the section if this is overriden by a volume mapping class
         /// </summary>
         /// <param name="P"></param>
         /// <returns></returns>
+        /// 
+
+        public abstract GridVector2[] VolumeToSection(GridVector2[] P);
+
+        /*
+
         public GridVector2[] VolumeToSection(GridVector2[] P)
         {
             GridVector2[] transformedP;
@@ -318,6 +327,7 @@ namespace Viking.VolumeModel
 
             return transformedP;
         }
+        */
 
         private long? _ID = new int?();
         /// <summary>
@@ -355,7 +365,7 @@ namespace Viking.VolumeModel
         /// </summary>
         /// <param name="P"></param>
         /// <returns></returns>
-        public abstract bool TrySectionToVolume(GridVector2[] Points, out GridVector2[] transformedP);
+        public abstract bool[] TrySectionToVolume(GridVector2[] Points, out GridVector2[] transformedP);
 
 
         /// <summary>
@@ -363,6 +373,6 @@ namespace Viking.VolumeModel
         /// </summary>
         /// <param name="P"></param>
         /// <returns></returns>
-        public abstract bool TryVolumeToSection(GridVector2[] Points, out GridVector2[] transformedP);
+        public abstract bool[] TryVolumeToSection(GridVector2[] Points, out GridVector2[] transformedP);
     }
 }

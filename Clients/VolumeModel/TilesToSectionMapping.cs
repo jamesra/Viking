@@ -77,16 +77,30 @@ namespace Viking.VolumeModel
             return true; 
         }
 
+        public override GridVector2[] VolumeToSection(GridVector2[] P)
+        {
+            GridVector2[] transformedP = new GridVector2[P.Length];
+            P.CopyTo(transformedP, 0);
+            return transformedP;
+        }
+
         /// <summary>
         /// Maps a point from volume space into the section space
         /// </summary>
         /// <param name="?"></param>
         /// <returns></returns>
-        public override bool TryVolumeToSection(GridVector2[] P, out GridVector2[] transformedP)
+        public override bool[] TryVolumeToSection(GridVector2[] P, out GridVector2[] transformedP)
         {
             transformedP = new GridVector2[P.Length];
             P.CopyTo(transformedP, 0);
-            return true;
+            return P.Select(p => { return true; }).ToArray();
+        }
+
+        public override GridVector2[] SectionToVolume(GridVector2[] P)
+        {
+            GridVector2[] transformedP = new GridVector2[P.Length];
+            P.CopyTo(transformedP, 0);
+            return transformedP;
         }
 
         /// <summary>
@@ -94,11 +108,11 @@ namespace Viking.VolumeModel
         /// </summary>
         /// <param name="?"></param>
         /// <returns></returns>
-        public override bool TrySectionToVolume(GridVector2[] P, out GridVector2[] transformedP)
+        public override bool[] TrySectionToVolume(GridVector2[] P, out GridVector2[] transformedP)
         {
             transformedP = new GridVector2[P.Length];
             P.CopyTo(transformedP, 0);
-            return true;
+            return P.Select(p => { return true; }).ToArray();
         }
 
 

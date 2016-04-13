@@ -205,6 +205,9 @@ namespace Viking.VolumeModel
             }
         }
 
+        
+
+
         /// <summary>
         /// Maps a point from volume space into the section space
         /// </summary>
@@ -225,12 +228,22 @@ namespace Viking.VolumeModel
             return this.VolumeTransform.TryTransform(P, out transformedP); 
         }
 
+        public override GridVector2[] SectionToVolume(GridVector2[] P)
+        {
+            return this.VolumeTransform.Transform(P);
+        }
+
+        public override GridVector2[] VolumeToSection(GridVector2[] P)
+        {
+            return this.VolumeTransform.InverseTransform(P);
+        }
+
         /// <summary>
         /// Maps a point from volume space into the section space
         /// </summary>
         /// <param name="?"></param>
         /// <returns></returns>
-        public override bool TryVolumeToSection(GridVector2[] P, out GridVector2[] transformedP)
+        public override bool[] TryVolumeToSection(GridVector2[] P, out GridVector2[] transformedP)
         {
             return this.VolumeTransform.TryInverseTransform(P, out transformedP);
         }
@@ -240,7 +253,7 @@ namespace Viking.VolumeModel
         /// </summary>
         /// <param name="?"></param>
         /// <returns></returns>
-        public override bool TrySectionToVolume(GridVector2[] P, out GridVector2[] transformedP)
+        public override bool[] TrySectionToVolume(GridVector2[] P, out GridVector2[] transformedP)
         {
             return this.VolumeTransform.TryTransform(P, out transformedP);
         }
