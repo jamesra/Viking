@@ -3680,6 +3680,37 @@ end
 		   RETURN
 		 end
 
+		 Exec('
+			CREATE PROCEDURE [dbo].[SelectNetworkChildStructureIDs]
+						-- Add the parameters for the stored procedure here
+						@IDs integer_list READONLY,
+						@Hops int
+			AS
+			BEGIN
+				DECLARE @CellsInNetwork integer_list 
+				DECLARE @ChildrenInNetwork integer_list 
+
+				insert into @CellsInNetwork exec SelectNetworkStructureIDs @IDs, @Hops
+				
+				insert into @ChildrenInNetwork 
+					select ChildStruct.ID from Structure S
+					inner join @CellsInNetwork N ON S.ID = N.ID
+					inner join Structure ChildStruct ON ChildStruct.ParentID = N.ID
+
+				select SL.SourceID from StructureLink SL
+					where SL.SourceID in (Select ID from @ChildrenInNetwork)
+					union
+				select SL.TargetID from StructureLink SL
+					where SL.TargetID in (Select ID from @ChildrenInNetwork)
+			END
+			')
+
+		if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
 	 INSERT INTO DBVersion values (42, 
 		      N'Add procedure for selecting network structure IDs',getDate(),User_ID())
 	 COMMIT TRANSACTION fortytwo
@@ -4143,10 +4174,254 @@ end
 		   RETURN
 		 end
 
+		 IF OBJECT_ID('[SelectSectionAnnotationsInVolumeBounds]') IS NOT NULL DROP PROCEDURE dbo.[SelectSectionAnnotationsInVolumeBounds]
+		 
+		 Exec('
+
+			 --Return all Structures, StructureLinks, Locations, and LocationLinks in a region
+			--If a structure link is modified the host structures in the volume will also be returned
+			--If a location link is created the host locations in the bounds will also be returned
+			CREATE PROCEDURE [dbo].[SelectSectionAnnotationsInVolumeBounds]
+				-- Add the parameters for the stored procedure here
+				@Z float,
+				@BBox geometry,
+				@MinRadius float,
+				@QueryDate datetime
+			AS
+			BEGIN
+				-- SET NOCOUNT ON added to prevent extra result sets from
+				-- interfering with SELECT statements.
+				SET NOCOUNT ON;
+
+				IF OBJECT_ID(''tempdb..#LocationsInBounds'') IS NOT NULL DROP TABLE #LocationsInBounds
+				IF OBJECT_ID(''tempdb..#SectionStructureIDsInBounds'') IS NOT NULL DROP TABLE #SectionStructureIDsInBounds
+				IF OBJECT_ID(''tempdb..#ModifiedStructuresInBounds'') IS NOT NULL DROP TABLE #ModifiedStructuresInBounds
+				IF OBJECT_ID(''tempdb..#ModifiedLocationsInBounds'') IS NOT NULL DROP TABLE #ModifiedLocationsInBounds
+
+				--Selecting all columns once into LocationsInBounds and then selecting the temp table is a huge time saver.  3-4 seconds instead of 20.
+
+				select * into #LocationsInBounds FROM Location 
+					WHERE Z = @Z AND (@BBox.STIntersects(VolumeShape) = 1) AND Radius >= @MinRadius order by ID
+
+				select distinct L.ParentID as ID into #SectionStructureIDsInBounds from #LocationsInBounds L
+								 
+				IF @QueryDate IS NOT NULL
+					BEGIN
+						--Grab all structures who have had a link or location in the region updated. 
+						--This ensures each location in the region has a structure
+						select SIB.ID into #ModifiedStructuresInBounds from (
+							select S.ID as ID from Structure S
+								inner join #SectionStructureIDsInBounds SIB ON SIB.ID  = S.ID
+									where S.LastModified >= @QueryDate
+							union
+							select S.ID as ID from #SectionStructureIDsInBounds S
+								inner join StructureLink SLS ON SLS.SourceID = S.ID
+								where SLS.LastModified >= @QueryDate
+							union 
+							select S.ID as ID from #SectionStructureIDsInBounds S
+								inner join StructureLink SLT ON SLT.TargetID = S.ID
+								where SLT.LastModified >= @QueryDate ) SIB
+
+
+						select * from Structure S
+							inner join #ModifiedStructuresInBounds Modified ON Modified.ID = S.ID
+
+						Select * from StructureLink L
+							where (L.TargetID in (Select ID from #ModifiedStructuresInBounds))
+								OR (L.SourceID in (Select ID from #ModifiedStructuresInBounds)) 
+
+						select ML.ID into #ModifiedLocationsInBounds from (
+							select L.ID from #LocationsInBounds L
+								where L.LastModified >= @QueryDate
+							UNION
+							select L.ID from #LocationsInBounds L
+								inner join LocationLink LL ON LL.A = L.ID
+									where LL.Created >= @QueryDate
+							UNION
+							select L.ID from #LocationsInBounds L
+								inner join LocationLink LL ON LL.B = L.ID
+									where LL.Created >= @QueryDate
+						) ML
+
+						Select * from Location L	
+							inner join #ModifiedLocationsInBounds MLIB ON MLIB.ID = L.ID 
+
+						Select * from LocationLink
+							WHERE ((A in (select ID from #ModifiedLocationsInBounds))
+								OR	
+								   (B in (select ID from #ModifiedLocationsInBounds)))
+
+						DROP TABLE #ModifiedStructuresInBounds
+						DROP TABLE #ModifiedLocationsInBounds
+					END
+				ELSE
+					BEGIN
+						select S.* from Structure S
+							inner join #SectionStructureIDsInBounds SIB ON SIB.ID = S.ID
+
+						Select * from StructureLink L
+							where (L.TargetID in (Select ID from #SectionStructureIDsInBounds))
+								OR (L.SourceID in (Select ID from #SectionStructureIDsInBounds)) 
+
+						Select * from Location L 
+							inner join #LocationsInBounds LIB ON LIB.ID = L.ID
+
+						Select * from LocationLink
+							WHERE ((A in (select ID from #LocationsInBounds))
+								OR	
+								   (B in (select ID from #LocationsInBounds)))
+					END
+	
+				DROP TABLE #LocationsInBounds
+				DROP TABLE #SectionStructureIDsInBounds
+			END 
+		')
+
+		if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
+		 IF OBJECT_ID('[SelectSectionAnnotationsInMosaicBounds]') IS NOT NULL DROP PROCEDURE dbo.[SelectSectionAnnotationsInMosaicBounds]
+		 
+		 Exec('
+
+			 --Return all Structures, StructureLinks, Locations, and LocationLinks in a region
+			--If a structure link is modified the host structures in the volume will also be returned
+			--If a location link is created the host locations in the bounds will also be returned
+			CREATE PROCEDURE [dbo].[SelectSectionAnnotationsInMosaicBounds]
+				-- Add the parameters for the stored procedure here
+				@Z float,
+				@BBox geometry,
+				@MinRadius float,
+				@QueryDate datetime
+			AS
+			BEGIN
+				-- SET NOCOUNT ON added to prevent extra result sets from
+				-- interfering with SELECT statements.
+				SET NOCOUNT ON;
+
+				IF OBJECT_ID(''tempdb..#LocationsInBounds'') IS NOT NULL DROP TABLE #LocationsInBounds
+				IF OBJECT_ID(''tempdb..#SectionStructureIDsInBounds'') IS NOT NULL DROP TABLE #SectionStructureIDsInBounds
+				IF OBJECT_ID(''tempdb..#ModifiedStructuresInBounds'') IS NOT NULL DROP TABLE #ModifiedStructuresInBounds
+				IF OBJECT_ID(''tempdb..#ModifiedLocationsInBounds'') IS NOT NULL DROP TABLE #ModifiedLocationsInBounds
+
+				--Selecting all columns once into LocationsInBounds and then selecting the temp table is a huge time saver.  3-4 seconds instead of 20.
+
+				select * into #LocationsInBounds FROM Location 
+					WHERE Z = @Z AND (@BBox.STIntersects(MosaicShape) = 1) AND Radius >= @MinRadius order by ID
+
+				select distinct L.ParentID as ID into #SectionStructureIDsInBounds from #LocationsInBounds L
+								 
+				IF @QueryDate IS NOT NULL
+					BEGIN
+						--Grab all structures who have had a link or location in the region updated. 
+						--This ensures each location in the region has a structure
+						select SIB.ID into #ModifiedStructuresInBounds from (
+							select S.ID as ID from Structure S
+								inner join #SectionStructureIDsInBounds SIB ON SIB.ID  = S.ID
+									where S.LastModified >= @QueryDate
+							union
+							select S.ID as ID from #SectionStructureIDsInBounds S
+								inner join StructureLink SLS ON SLS.SourceID = S.ID
+								where SLS.LastModified >= @QueryDate
+							union 
+							select S.ID as ID from #SectionStructureIDsInBounds S
+								inner join StructureLink SLT ON SLT.TargetID = S.ID
+								where SLT.LastModified >= @QueryDate ) SIB
+
+
+						select * from Structure S
+							inner join #ModifiedStructuresInBounds Modified ON Modified.ID = S.ID
+
+						Select * from StructureLink L
+							where (L.TargetID in (Select ID from #ModifiedStructuresInBounds))
+								OR (L.SourceID in (Select ID from #ModifiedStructuresInBounds)) 
+
+						select ML.ID into #ModifiedLocationsInBounds from (
+							select L.ID from #LocationsInBounds L
+								where L.LastModified >= @QueryDate
+							UNION
+							select L.ID from #LocationsInBounds L
+								inner join LocationLink LL ON LL.A = L.ID
+									where LL.Created >= @QueryDate
+							UNION
+							select L.ID from #LocationsInBounds L
+								inner join LocationLink LL ON LL.B = L.ID
+									where LL.Created >= @QueryDate
+						) ML
+
+						Select * from Location L	
+							inner join #ModifiedLocationsInBounds MLIB ON MLIB.ID = L.ID 
+
+						Select * from LocationLink
+							WHERE ((A in (select ID from #ModifiedLocationsInBounds))
+								OR	
+								   (B in (select ID from #ModifiedLocationsInBounds)))
+
+						DROP TABLE #ModifiedStructuresInBounds
+						DROP TABLE #ModifiedLocationsInBounds
+					END
+				ELSE
+					BEGIN
+						select S.* from Structure S
+							inner join #SectionStructureIDsInBounds SIB ON SIB.ID = S.ID
+
+						Select * from StructureLink L
+							where (L.TargetID in (Select ID from #SectionStructureIDsInBounds))
+								OR (L.SourceID in (Select ID from #SectionStructureIDsInBounds)) 
+
+						Select * from Location L 
+							inner join #LocationsInBounds LIB ON LIB.ID = L.ID
+
+						Select * from LocationLink
+							WHERE ((A in (select ID from #LocationsInBounds))
+								OR	
+								   (B in (select ID from #LocationsInBounds)))
+					END
+	
+				DROP TABLE #LocationsInBounds
+				DROP TABLE #SectionStructureIDsInBounds
+			END 
+		')
+
+		if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
 
 	 INSERT INTO DBVersion values (43, 
 		      N'Update spatial queries to use mosaic or volume coordinates',getDate(),User_ID())
 	 COMMIT TRANSACTION fortythree
+	end
+
+	if(not(exists(select (1) from DBVersion where DBVersionID = 44)))
+	begin
+     print N'Create role for annotation power user'
+     BEGIN TRANSACTION fortyfour
+
+		IF DATABASE_PRINCIPAL_ID('role') IS NULL
+		begin
+			CREATE ROLE [AnnotationPowerUser]
+		end
+
+		GRANT EXECUTE ON UpdateStructureType TO [AnnotationPowerUser]
+		GRANT VIEW DEFINITION ON UpdateStructureType TO [AnnotationPowerUser]
+
+		if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
+		  --insert the second version marker
+		 INSERT INTO DBVersion values (44, 
+		   N'Create role for annotation power user',getDate(),User_ID())
+
+	 COMMIT TRANSACTION fortyfour
 	end
 	 
 --from here on, continually add steps in the previous manner as needed.
