@@ -110,7 +110,9 @@
     <Compile Include="DataStructures\QuadTree.cs" />
     <Compile Include="DataStructures\QuadTreeNode.cs" />
     <Compile Include="DataStructures\RegionPyramid.cs" />
+    <Compile Include="Extensions.cs" />
     <Compile Include="GlobalSuppressions.cs" />
+    <Compile Include="Interfaces.cs" />
     <Compile Include="Primitives\GridQuad.cs" />
     <Compile Include="DataStructures\QuadTreeNodeTemplatePoint.cs" />
     <Compile Include="CurveFitting\Algorithms\Delaunay.cs" />
@@ -157,6 +159,10 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\RTree\RTree.csproj">
+      <Project>{4085ba67-60d7-4679-886e-457aaf37ec7b}</Project>
+      <Name>RTree</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Utils\Utils.csproj">
       <Project>{49F7DDA5-1634-49ED-99FA-74962E43F2D2}</Project>
       <Name>Utils</Name>

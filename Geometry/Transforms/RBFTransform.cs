@@ -168,10 +168,10 @@ namespace Geometry.Transforms
             v = Transform(Point);
             return true;
         }
-        public override bool TryTransform(GridVector2[] Points, out GridVector2[] Output)
+        public override bool[] TryTransform(GridVector2[] Points, out GridVector2[] Output)
         {
             Output = this.Transform(Points);
-            return true;
+            return Points.Select(p => true).ToArray();
         }
 
         public override bool CanInverseTransform(GridVector2 Point)
@@ -196,10 +196,10 @@ namespace Geometry.Transforms
             return true;
         }
 
-        public override bool TryInverseTransform(GridVector2[] Point, out GridVector2[] Output)
+        public override bool[] TryInverseTransform(GridVector2[] Points, out GridVector2[] Output)
         {
-            Output = this.InverseTransform(Point);
-            return true;
+            Output = this.InverseTransform(Points);
+            return Points.Select(p => true).ToArray();
         }
 
         public static double[] CreateSolutionMatrixWithLinear(GridVector2[] ControlPoints)

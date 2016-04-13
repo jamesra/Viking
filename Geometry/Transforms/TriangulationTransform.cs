@@ -187,17 +187,21 @@ namespace Geometry.Transforms
         /// </summary>
         /// <param name="Point"></param>
         /// <returns></returns>
-        public override bool TryTransform(GridVector2[] Points, out GridVector2[] output)
+        public override bool[] TryTransform(GridVector2[] Points, out GridVector2[] output)
         {
             MappingGridTriangle[] triangles = Points.Select(Point => GetTransform(Point)).ToArray();
-            if (triangles.Any(t => t == null))
-            {
-                output = new GridVector2[0]; 
-                return false;
-            }
+            bool[] IsTransformed = triangles.Select(t => t != null).ToArray();
 
-            output = triangles.Select((tri, i) => tri.Transform(Points[i])).ToArray();
-            return true; 
+            output = triangles.Select((tri, i) =>
+            {
+                if (tri != null)
+                    return tri.Transform(Points[i]);
+                else
+                    return new GridVector2();
+            }
+            ).ToArray();
+               
+            return IsTransformed; 
         }
 
         private GridVector2[] TransformWithRBFFallback(GridVector2[] Points, MappingGridTriangle[] triangles)
@@ -288,17 +292,21 @@ namespace Geometry.Transforms
         /// </summary>
         /// <param name="Point"></param>
         /// <returns></returns>
-        public override bool TryInverseTransform(GridVector2[] Points, out GridVector2[] output)
+        public override bool[] TryInverseTransform(GridVector2[] Points, out GridVector2[] output)
         {
             MappingGridTriangle[] triangles = Points.Select(Point => GetInverseTransform(Point)).ToArray();
-            if (triangles.Any(t => t == null))
-            {
-                output = new GridVector2[0];
-                return false;
-            }
+            bool[] IsTransformed = triangles.Select(t => t != null).ToArray();
 
-            output = triangles.Select((tri, i) => tri.InverseTransform(Points[i])).ToArray();
-            return true;
+            output = triangles.Select((tri, i) =>
+            {
+                if (tri != null)
+                    return tri.InverseTransform(Points[i]);
+                else
+                    return new GridVector2();
+            }
+            ).ToArray();
+
+            return IsTransformed;
         }
 
         private GridVector2[] InverseTransformWithRBFFallback(GridVector2[] Points, MappingGridTriangle[] triangles)
