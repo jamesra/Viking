@@ -114,7 +114,7 @@ namespace SqlGeometryUtils
                 sb.AppendFormat("{0:F2} {1:F2}", points[i].X, points[i].Y);
             }
 
-            if(closed)
+            if(closed && points[0] != points.Last())
                 sb.AppendFormat(", {0:F2} {1:F2}", points[0].X, points[0].Y);
 
             sb.Append(")");
@@ -224,7 +224,7 @@ namespace SqlGeometryUtils
                     TypeString += "( CIRCULARSTRING " + points.ToSqlCoordinateList() + ")";
                     return TypeString;
                 case "POLYGON":
-                    TypeString += "( " + points.ToSqlCoordinateList() + ")";
+                    TypeString += "( " + points.ToSqlCoordinateList(true) + ")";
                     return TypeString;
                 default:
                     return GeometryType.Value + points.ToSqlCoordinateList();
