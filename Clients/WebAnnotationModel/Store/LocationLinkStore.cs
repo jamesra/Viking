@@ -190,7 +190,7 @@ namespace WebAnnotationModel
         
         protected override LocationLink[] ProxyGetBySectionCallback(out long TicksAtQueryExecute,
                                                                     out LocationLinkKey[] DeletedLinkKeys,
-                                                                    GetObjectBySectionCallbackState<LocationLinkObj> state,
+                                                                    GetObjectBySectionCallbackState<AnnotateLocationsClient, LocationLinkObj> state,
                                                                     IAsyncResult result)
         { 
             LocationLink[] deleted_links;
@@ -207,9 +207,9 @@ namespace WebAnnotationModel
         /// <param name="locations"></param>
         /// <param name="state"></param>
         /// <param name="DeletedLocations"></param>
-        protected override ChangeInventory<LocationLinkObj> ParseQuery(LocationLink[] newLinks,                                            
+        public override ChangeInventory<LocationLinkObj> ParseQuery(LocationLink[] newLinks,                                            
                                            LocationLinkKey[] DeletedLocations,
-                                           GetObjectBySectionCallbackState<LocationLinkObj> state)
+                                           GetObjectBySectionCallbackState<AnnotateLocationsClient, LocationLinkObj> state)
         {
             ConcurrentDictionary<LocationLinkKey, LocationLinkObj> SectionLocationLinks = new ConcurrentDictionary<LocationLinkKey, LocationLinkObj>(); 
             SectionLocationLinks = SectionToLocationLinks.GetOrAdd(state.SectionNumber, SectionLocationLinks);
@@ -382,7 +382,7 @@ namespace WebAnnotationModel
             }
         }
 
-        protected override LocationLink[] ProxyGetBySectionRegionCallback(out long TicksAtQueryExecute, out LocationLinkKey[] DeletedLocations, GetObjectBySectionCallbackState<LocationLinkObj> state, IAsyncResult result)
+        protected override LocationLink[] ProxyGetBySectionRegionCallback(out long TicksAtQueryExecute, out LocationLinkKey[] DeletedLocations, GetObjectBySectionCallbackState<AnnotateLocationsClient, LocationLinkObj> state, IAsyncResult result)
         {
             throw new NotImplementedException();
         }

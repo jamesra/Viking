@@ -10,17 +10,55 @@ using System.ServiceModel;
 
 using WebAnnotationModel.Service; 
 using WebAnnotationModel.Objects;
+using SqlGeometryUtils;
+using Geometry;
 
 namespace WebAnnotationModel
 {
-    public class LocationStore : StoreBaseWithIndexKey<AnnotateLocationsClient, IAnnotateLocations, long, LongIndexGenerator, LocationObj, Location>
+    public class LocationRTree
+    {
+        public RTree.RTree<long> SpatialSearch = new RTree.RTree<long>();
+
+        LocationStore Store = null;
+
+        public LocationRTree(LocationStore store)
+        {
+            this.Store = store;
+        }
+
+        public void AddObject(LocationObj obj)
+        {
+            RTree.Rectangle bbox = obj.MosaicShape.Envelope().ToRTreeRect((float)obj.Z);
+
+            Debug.Assert(!SpatialSearch.Contains(obj.ID));
+            SpatialSearch.Add(bbox, obj.ID);
+        }
+
+        public void RemoveObject(long key)
+        {
+            long removedID;
+            SpatialSearch.Delete(key, out removedID);
+            return;
+        }
+
+        public ICollection<LocationObj> Intersects(GridRectangle bbox, float SectionNumber)
+        {
+            List<long> objIDs = SpatialSearch.Intersects(bbox.ToRTreeRect(SectionNumber));
+
+            return Store.GetObjectsByIDs(objIDs, false);
+        }
+    }
+
+    public class LocationStore : StoreBaseWithIndexKey<AnnotateLocationsClient, IAnnotateLocations, long, LongIndexGenerator, LocationObj, Location>, IRegionQuery<long, LocationObj>
     {
         /// <summary>
         /// Maps sections to a sorted list of locations on that section.
         /// This collection is not guaranteed to match the ObjectToID collection.  Adding spin-locks to the Add/Remove functions could solve this if it becomes an issue.
         /// </summary>
         System.Collections.Concurrent.ConcurrentDictionary<long, ConcurrentDictionary<long, LocationObj>> SectionToLocations = new ConcurrentDictionary<long, ConcurrentDictionary<long, LocationObj>>();
-        
+
+        public LocationRTree SpatialSearch;
+
         #region Proxy
 
         protected override AnnotateLocationsClient CreateProxy()
@@ -90,15 +128,18 @@ namespace WebAnnotationModel
             return proxy.BeginGetLocationChangesInMosaicRegion(SectionNumber, BBox, MinRadius, LastQuery.Ticks, callback, asynchState);
         }
 
-        protected override Location[] ProxyGetBySectionRegionCallback(out long TicksAtQueryExecute, out long[] DeletedLocations, GetObjectBySectionCallbackState<LocationObj> state, IAsyncResult result)
+        protected override Location[] ProxyGetBySectionRegionCallback(out long TicksAtQueryExecute,
+                                                                      out long[] DeletedLocations,
+                                                                      GetObjectBySectionCallbackState<AnnotateLocationsClient, LocationObj> state,
+                                                                      IAsyncResult result)
         {
             return state.Proxy.EndGetLocationChangesInMosaicRegion(out TicksAtQueryExecute, out DeletedLocations, result);
         }
 
         protected override Location[] ProxyGetBySectionCallback(out long TicksAtQueryExecute,
-                                                          out long[] DeletedLocations,
-                                                          GetObjectBySectionCallbackState<LocationObj> state,
-                                                          IAsyncResult result)
+                                                              out long[] DeletedLocations,
+                                                              GetObjectBySectionCallbackState<AnnotateLocationsClient, LocationObj> state,
+                                                              IAsyncResult result)
         {
             return state.Proxy.EndGetLocationChanges(out TicksAtQueryExecute, out DeletedLocations, result);
         }
@@ -110,6 +151,7 @@ namespace WebAnnotationModel
 
         public LocationStore()
         {
+            SpatialSearch = new LocationRTree(this);
         }
 
         public override void Init()
@@ -220,6 +262,7 @@ namespace WebAnnotationModel
             {
                 newObj.PropertyChanged += this.OnOBJECTPropertyChangedEventHandler; 
                 TryAddLocationToSection(newObj);
+                SpatialSearch.AddObject(newObj);
             }
 
             return added;
@@ -235,6 +278,7 @@ namespace WebAnnotationModel
                 //existingObj.Dispose(); 
 
                 TryRemoveLocationFromSection(existingObj);
+                SpatialSearch.RemoveObject(key);
             }
             else
             {
@@ -450,5 +494,179 @@ namespace WebAnnotationModel
         */
 
         #endregion
+
+        public virtual ICollection<LocationObj> GetObjectsInRegion(long SectionNumber, Geometry.GridRectangle bounds, double MinRadius, DateTime? LastQueryUtc)
+        {
+            GetObjectBySectionCallbackState<AnnotateLocationsClient, LocationObj> state = new GetObjectBySectionCallbackState<AnnotateLocationsClient, LocationObj>(null, SectionNumber, GetLastQueryTimeForSection(SectionNumber), null);
+
+            Location[] objects = new Location[0];
+            long QueryExecutedTime;
+            long[] deleted_objects = new long[0];
+            AnnotateLocationsClient proxy = null;
+            DateTime StartTime = DateTime.UtcNow;
+            AnnotationSet serverAnnotations = null;
+            try
+            {
+                proxy = CreateProxy();
+                proxy.Open();
+
+                serverAnnotations = proxy.GetAnnotationsInMosaicRegion(out QueryExecutedTime, 
+                                                                       out deleted_objects,
+                                                                       SectionNumber,
+                                                                       bounds.ToBoundingRectangle(),
+                                                                       MinRadius,
+                                                                       LastQueryUtc.HasValue ? LastQueryUtc.Value.Ticks : DateTime.MinValue.Ticks);
+            }
+            catch (EndpointNotFoundException e)
+            {
+                Trace.WriteLine("Could not connect to annotation database: " + e.ToString());
+            }
+            catch (Exception e)
+            {
+                ShowStandardExceptionMessage(e);
+            }
+            finally
+            {
+                if (proxy != null)
+                {
+                    proxy.Close();
+                    proxy = null;
+                }
+            }
+
+            ProcessAnnotationSet(serverAnnotations, deleted_objects, StartTime, SectionNumber);
+            
+            return SpatialSearch.Intersects(bounds, SectionNumber);
+        }
+
+        private ChangeInventory<LocationObj> ProcessAnnotationSet(AnnotationSet serverAnnotations, long[] deleted_objects, DateTime? StartTime, long SectionNumber)
+        {
+            DateTime TraceQueryEnd = DateTime.UtcNow;
+
+            ChangeInventory<StructureObj> structure_inventory = Store.Structures.ParseQuery(serverAnnotations.Structures, new long[] { }, null);
+            ChangeInventory<LocationObj> location_inventory = ParseQuery(serverAnnotations.Locations, deleted_objects, null);
+
+            DateTime TraceParseEnd = DateTime.UtcNow;
+
+            Store.Structures.CallOnCollectionChanged(structure_inventory);
+            CallOnCollectionChanged(location_inventory);
+
+            if(StartTime.HasValue)
+                TraceQueryDetails(SectionNumber, location_inventory.ObjectsInStore.Count, StartTime.Value, TraceQueryEnd, TraceParseEnd, DateTime.UtcNow);
+
+            return location_inventory;
+        }
+
+        public virtual MixedLocalAndRemoteQueryResults<long, LocationObj> GetObjectsInRegionAsync(long SectionNumber,
+                                                                                           Geometry.GridRectangle bounds,
+                                                                                           double MinRadius,
+                                                                                           DateTime? LastQueryUtc,
+                                                                                           Action<ICollection<LocationObj>> OnLoadCompletedCallBack)
+        {
+            AnnotateLocationsClient proxy = null;
+
+            IAsyncResult result = null;
+            try
+            {
+                proxy = CreateProxy();
+                proxy.Open();
+
+                //                WCFOBJECT[] locations = new WCFOBJECT[0];
+                GetObjectBySectionCallbackState<AnnotateLocationsClient, LocationObj> newState = new GetObjectBySectionCallbackState<AnnotateLocationsClient, LocationObj>(proxy, SectionNumber, LastQueryUtc.HasValue ? LastQueryUtc.Value : DateTime.MinValue, OnLoadCompletedCallBack);
+
+                //Build list of Locations to check
+                proxy.BeginGetAnnotationsInMosaicRegion(SectionNumber,
+                                        bounds.ToBoundingRectangle(),
+                                        MinRadius,
+                                        newState.LastQueryExecutedTime.Ticks,
+                                        new AsyncCallback(GetObjectsBySectionRegionCallback),
+                                        newState);
+
+            }
+
+            catch (EndpointNotFoundException e)
+            {
+                Trace.WriteLine("Could not connect to annotation database: " + e.ToString());
+            }
+            catch (Exception e)
+            {
+                ShowStandardExceptionMessage(e);
+                if (proxy != null)
+                {
+                    proxy.Close();
+                    proxy = null;
+                }
+            }
+            finally
+            {
+                //Do not free the proxy.  The callback function handles that
+            }
+
+            return new MixedLocalAndRemoteQueryResults<long, LocationObj>(result, SpatialSearch.Intersects(bounds, SectionNumber));
+        }
+
+        protected void GetObjectsBySectionRegionCallback(IAsyncResult result)
+        {
+            //Remove the entry from outstanding queries so we can query again.  It also prevents the proxy from being aborted if too many 
+            //queries are in-flight
+            GetObjectBySectionCallbackState<AnnotateLocationsClient, LocationObj> state = result.AsyncState as GetObjectBySectionCallbackState<AnnotateLocationsClient, LocationObj>;
+
+            AnnotateLocationsClient proxy = state.Proxy;
+
+            //This happens if we called abort
+            if (IsProxyBroken(state.Proxy))
+                return;
+
+            Debug.Assert(proxy != null);
+
+            long[] DeletedLocations = new long[0];
+            long TicksAtQueryExecute = 0;
+
+            AnnotationSet serverAnnotations = null;
+            try
+            {
+                serverAnnotations = proxy.EndGetAnnotationsInMosaicRegion(out TicksAtQueryExecute, out DeletedLocations, result);
+            }
+            catch (TimeoutException)
+            {
+                Debug.Write("Timeout waiting for server results");
+                return;
+            }
+            catch (EndpointNotFoundException)
+            {
+                Debug.Write("GetLocationChangesCallback - Endpoint not found exception");
+                return;
+            }
+            catch (Exception e)
+            {
+                ShowStandardExceptionMessage(e);
+                return;
+            }
+            finally
+            {
+                if (proxy != null)
+                    proxy.Close();
+            }
+
+            ChangeInventory<LocationObj> location_inventory = ProcessAnnotationSet(serverAnnotations, DeletedLocations, state.StartTime, state.SectionNumber);
+
+            if (state.OnLoadCompletedCallBack != null)
+            {
+                if (State.UseAsynchEvents)
+                {
+                    System.Threading.Tasks.Task.Run(() => state.OnLoadCompletedCallBack(location_inventory.ObjectsInStore));
+                    //state.OnLoadCompletedCallBack.BeginInvoke(inventory.ObjectsInStore, null, null);
+                }
+                else
+                {
+                    state.OnLoadCompletedCallBack.Invoke(location_inventory.ObjectsInStore);
+                }
+            }
+        }
+
+        public ICollection<LocationObj> GetLocalObjectsInRegion(long SectionNumber, GridRectangle bounds, double MinRadius)
+        {
+            return SpatialSearch.Intersects(bounds, SectionNumber).Where(l => l.Radius >= MinRadius).ToList();
+        }
     }
 }

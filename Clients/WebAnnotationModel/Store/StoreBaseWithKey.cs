@@ -13,12 +13,43 @@ using Geometry;
 
 namespace WebAnnotationModel
 {
+
+    public class GetObjectBySectionCallbackState<PROXY, T> : IEquatable<GetObjectBySectionCallbackState<PROXY, T>>
+    {
+        public readonly PROXY Proxy;
+        public readonly long SectionNumber;
+        public readonly DateTime LastQueryExecutedTime;
+        public readonly DateTime StartTime = DateTime.UtcNow;
+        public readonly Action<ICollection<T>> OnLoadCompletedCallBack;
+
+        public override string ToString()
+        {
+            return SectionNumber.ToString() + " : " + StartTime.TimeOfDay.ToString();
+        }
+
+        public bool Equals(GetObjectBySectionCallbackState<PROXY, T> other)
+        {
+            if ((object)other == null)
+                return false;
+
+            return SectionNumber == other.SectionNumber;
+        }
+
+        public GetObjectBySectionCallbackState(PROXY proxy, long number, DateTime lastQueryExecutedTime, Action<ICollection<T>> LoadCompletedCallback)
+        {
+            this.Proxy = proxy;
+            SectionNumber = number;
+            this.LastQueryExecutedTime = lastQueryExecutedTime;
+            this.OnLoadCompletedCallBack = LoadCompletedCallback;
+        }
+    }
+
     /// <summary>
     /// This base class implements the basic functionality to talk to a WCF Service
     /// </summary>
-    public abstract class StoreBaseWithKey<PROXY, INTERFACE, KEY, OBJECT, WCFOBJECT> : StoreBase<PROXY, INTERFACE, OBJECT, WCFOBJECT>, IRegionQuery<KEY, OBJECT>, ISectionQuery<KEY, OBJECT>
+    public abstract class StoreBaseWithKey<PROXY, INTERFACE, KEY, OBJECT, WCFOBJECT> : StoreBase<PROXY, INTERFACE, OBJECT, WCFOBJECT>, ISectionQuery<KEY, OBJECT>
         where INTERFACE : class
-        where KEY : struct
+        where KEY : struct, IEquatable<KEY>
         where PROXY : System.ServiceModel.ClientBase<INTERFACE>
         where WCFOBJECT : DataObject, new()
         where OBJECT : WCFObjBaseWithKey<KEY, WCFOBJECT>, new()
@@ -38,7 +69,7 @@ namespace WebAnnotationModel
         /// A collection of values indicating which sections have an outstanding query. 
         /// The existence of a key indicates a query is in progress
         /// </summary>
-        private ConcurrentDictionary<long, GetObjectBySectionCallbackState<OBJECT>> OutstandingSectionQueries = new ConcurrentDictionary<long, GetObjectBySectionCallbackState<OBJECT>>();
+        private ConcurrentDictionary<long, GetObjectBySectionCallbackState<PROXY, OBJECT>> OutstandingSectionQueries = new ConcurrentDictionary<long, GetObjectBySectionCallbackState<PROXY, OBJECT>>();
         
         protected ConcurrentDictionary<KEY, OBJECT> ChangedObjects = new ConcurrentDictionary<KEY, OBJECT>();
 
@@ -135,12 +166,12 @@ namespace WebAnnotationModel
 
         protected abstract WCFOBJECT[] ProxyGetBySectionCallback(out long TicksAtQueryExecute,
                                                                 out KEY[] DeletedLocations,
-                                                                GetObjectBySectionCallbackState<OBJECT> state, 
+                                                                GetObjectBySectionCallbackState<PROXY, OBJECT> state, 
                                                                 IAsyncResult result);
 
         protected abstract WCFOBJECT[] ProxyGetBySectionRegionCallback(out long TicksAtQueryExecute,
                                                                 out KEY[] DeletedLocations,
-                                                                GetObjectBySectionCallbackState<OBJECT> state,
+                                                                GetObjectBySectionCallbackState<PROXY, OBJECT> state,
                                                                 IAsyncResult result);
 
 
@@ -500,7 +531,7 @@ namespace WebAnnotationModel
          
         public virtual ConcurrentDictionary<KEY, OBJECT> GetObjectsForSection(long SectionNumber)
         {
-            GetObjectBySectionCallbackState<OBJECT> state = new GetObjectBySectionCallbackState<OBJECT>(null, SectionNumber, GetLastQueryTimeForSection(SectionNumber), null);
+            GetObjectBySectionCallbackState<PROXY, OBJECT> state = new GetObjectBySectionCallbackState<PROXY, OBJECT>(null, SectionNumber, GetLastQueryTimeForSection(SectionNumber), null);
 
             WCFOBJECT[] objects = new WCFOBJECT[0];
             long QueryExecutedTime;
@@ -552,60 +583,7 @@ namespace WebAnnotationModel
             return GetLocalObjectsForSection(SectionNumber);
         }
 
-        public virtual ConcurrentDictionary<KEY, OBJECT> GetObjectsInRegion(long SectionNumber, Geometry.GridRectangle bounds, double MinRadius, DateTime? LastQueryUtc)
-        {
-            GetObjectBySectionCallbackState<OBJECT> state = new GetObjectBySectionCallbackState<OBJECT>(null, SectionNumber, GetLastQueryTimeForSection(SectionNumber), null);
-
-            WCFOBJECT[] objects = new WCFOBJECT[0];
-            long QueryExecutedTime;
-            KEY[] deleted_objects = new KEY[0];
-            PROXY proxy = null;
-            DateTime StartTime = DateTime.UtcNow;
-
-            try
-            {
-
-                proxy = CreateProxy();
-                proxy.Open();
-
-                objects = ProxyGetBySectionRegion(proxy,
-                                                        SectionNumber,
-                                                        bounds.ToBoundingRectangle(),
-                                                        MinRadius,
-                                                        LastQueryUtc.HasValue ? LastQueryUtc.Value : DateTime.MinValue,
-                                                        out QueryExecutedTime,
-                                                        out deleted_objects);
-            }
-            catch (EndpointNotFoundException e)
-            {
-                Trace.WriteLine("Could not connect to annotation database: " + e.ToString());
-            }
-            catch (Exception e)
-            {
-                ShowStandardExceptionMessage(e);
-            }
-            finally
-            {
-                if (proxy != null)
-                {
-                    proxy.Close();
-                    proxy = null;
-                }
-            }
-
-            DateTime TraceQueryEnd = DateTime.UtcNow;
-
-            ChangeInventory<OBJECT> inventory = ParseQuery(objects, deleted_objects, state);
-
-            DateTime TraceParseEnd = DateTime.UtcNow;
-
-            CallOnCollectionChanged(inventory);
-
-            TraceQueryDetails(state.SectionNumber, inventory.ObjectsInStore.Count, StartTime, TraceQueryEnd, DateTime.UtcNow);
-             
-            return GetLocalObjectsForSection(SectionNumber);
-        }
-
+        
 
 
 
@@ -617,13 +595,13 @@ namespace WebAnnotationModel
         /// <returns></returns>
         public virtual MixedLocalAndRemoteQueryResults<KEY, OBJECT> GetObjectsForSectionAsynch(long SectionNumber, Action<ICollection<OBJECT>> OnLoadCompletedCallBack)
         {
-            GetObjectBySectionCallbackState<OBJECT> requestState;
+            GetObjectBySectionCallbackState<PROXY, OBJECT> requestState;
             ConcurrentDictionary<KEY, OBJECT> knownObjects = GetLocalObjectsForSection(SectionNumber);
             
             bool OutstandingRequest = OutstandingSectionQueries.TryGetValue(SectionNumber, out requestState);                
             if(OutstandingRequest)
             {
-                return new MixedLocalAndRemoteQueryResults<KEY, OBJECT>(null, knownObjects);
+                return new MixedLocalAndRemoteQueryResults<KEY, OBJECT>(null, knownObjects.Values);
             }
             
             PROXY proxy = null;
@@ -635,7 +613,7 @@ namespace WebAnnotationModel
                 proxy.Open();
 
 //                WCFOBJECT[] locations = new WCFOBJECT[0];
-                GetObjectBySectionCallbackState<OBJECT> newState = new GetObjectBySectionCallbackState<OBJECT>(proxy, SectionNumber, GetLastQueryTimeForSection(SectionNumber), OnLoadCompletedCallBack);
+                GetObjectBySectionCallbackState<PROXY, OBJECT> newState = new GetObjectBySectionCallbackState<PROXY, OBJECT>(proxy, SectionNumber, GetLastQueryTimeForSection(SectionNumber), OnLoadCompletedCallBack);
                 bool NoOutstandingRequest = OutstandingSectionQueries.TryAdd(SectionNumber, newState);
                 if (NoOutstandingRequest)
                 { 
@@ -667,118 +645,50 @@ namespace WebAnnotationModel
                 //Do not free the proxy.  The callback function handles that
             }
 
-            return new MixedLocalAndRemoteQueryResults<KEY, OBJECT>(result, knownObjects);
+            return new MixedLocalAndRemoteQueryResults<KEY, OBJECT>(result, knownObjects.Values);
         }
 
         private RTree.Rectangle BuildRTreeRectangle(long SectionNumber, Geometry.GridRectangle bounds)
         {
             return new RTree.Rectangle(bounds.Left, bounds.Bottom, bounds.Right, bounds.Top, SectionNumber, SectionNumber);
         }
+         
+        
 
-        public virtual MixedLocalAndRemoteQueryResults<KEY, OBJECT> GetObjectsInRegionAsync(long SectionNumber,
-                                                                                            Geometry.GridRectangle bounds,
-                                                                                            double MinRadius,
-                                                                                            DateTime? LastQueryUtc,
-                                                                                            Action<ICollection<OBJECT>> OnLoadCompletedCallBack)
-        {
-            ConcurrentDictionary<KEY, OBJECT> knownObjects = new ConcurrentDictionary<KEY, OBJECT>();
-
-            /*
-            RTree.Rectangle QueryBounds = BuildRTreeRectangle(SectionNumber, bounds);
-            bool OutstandingRequest = OutstandingRegionQueries.Contains(QueryBounds);
-            if (OutstandingRequest)
-            {
-                return new MixedLocalAndRemoteQueryResults<KEY, OBJECT>(null, knownObjects);
-            }*/
-
-            PROXY proxy = null;
-
-            IAsyncResult result = null;
-            try
-            {
-                proxy = CreateProxy();
-                proxy.Open();
-
-                //                WCFOBJECT[] locations = new WCFOBJECT[0];
-                GetObjectBySectionCallbackState<OBJECT> newState = new GetObjectBySectionCallbackState<OBJECT>(proxy, SectionNumber, LastQueryUtc.HasValue ? LastQueryUtc.Value : DateTime.MinValue, OnLoadCompletedCallBack);
-                
-                //Build list of Locations to check
-                result = ProxyBeginGetBySectionRegion(proxy,
-                                        SectionNumber,
-                                        bounds.ToBoundingRectangle(),
-                                        MinRadius,
-                                        newState.LastQueryExecutedTime,
-                                        new AsyncCallback(GetObjectsBySectionRegionCallback),
-                                        newState);
-                
-            }
-
-            catch (EndpointNotFoundException e)
-            {
-                Trace.WriteLine("Could not connect to annotation database: " + e.ToString());
-            }
-            catch (Exception e)
-            {
-                ShowStandardExceptionMessage(e);
-                if (proxy != null)
-                {
-                    proxy.Close();
-                    proxy = null;
-                }
-            }
-            finally
-            {
-                //Do not free the proxy.  The callback function handles that
-            }
-
-            return new MixedLocalAndRemoteQueryResults<KEY, OBJECT>(result, knownObjects);
-        }
-
-        protected class GetObjectBySectionCallbackState<T> : IEquatable<GetObjectBySectionCallbackState<T>>
-        {
-            public readonly PROXY Proxy;
-            public readonly long SectionNumber;
-            public readonly DateTime LastQueryExecutedTime;
-            public readonly DateTime StartTime = DateTime.Now;
-            public readonly Action<ICollection<T>> OnLoadCompletedCallBack;
-
-            public override string ToString()
-            {
-                return SectionNumber.ToString() + " : " + StartTime.TimeOfDay.ToString(); 
-            }
-
-            public bool Equals(GetObjectBySectionCallbackState<T> other)
-            {
-                if ((object)other == null)
-                    return false;
-
-                return SectionNumber == other.SectionNumber;
-            }
-
-            public GetObjectBySectionCallbackState(PROXY proxy, long number, DateTime lastQueryExecutedTime, Action<ICollection<T>> LoadCompletedCallback)
-            {
-                this.Proxy = proxy;
-                SectionNumber = number;
-                this.LastQueryExecutedTime = lastQueryExecutedTime;
-                this.OnLoadCompletedCallBack = LoadCompletedCallback;
-            }
-        }
-
-        private bool IsProxyBroken(PROXY proxy)
+        protected bool IsProxyBroken(PROXY proxy)
         {
             return proxy.State == CommunicationState.Closed ||
                    proxy.State == CommunicationState.Closing ||
                    proxy.State == CommunicationState.Faulted;
         }
 
-        private void TraceQueryDetails(long SectionNumber, long numObjects, DateTime StartTime, DateTime QueryEndTime, DateTime ParseEndTime)
+        private string PrepareQueryDetails(long SectionNumber, long numObjects, DateTime StartTime, DateTime QueryEndTime, DateTime ParseEndTime)
         {
-#if DEBUG
             StringBuilder sb = new StringBuilder();
             sb.AppendLine("Sxn " + SectionNumber.ToString() + " finished " + typeof(OBJECT).ToString() + " query.  " + numObjects.ToString() + " returned");
             sb.AppendLine("\tQuery Time: " + new TimeSpan(QueryEndTime.Ticks - StartTime.Ticks).TotalSeconds.ToString() + " (sec) elapsed");
             sb.AppendLine("\tParse Time: " + new TimeSpan(ParseEndTime.Ticks - QueryEndTime.Ticks).TotalSeconds.ToString() + " (sec) elapsed");
-            Trace.WriteLine(sb.ToString());
+            return sb.ToString();
+        }
+
+        private string PrepareQueryDetails(long SectionNumber, long numObjects, DateTime StartTime, DateTime QueryEndTime, DateTime ParseEndTime, DateTime EventsEndTime)
+        {
+            StringBuilder sb = new StringBuilder(PrepareQueryDetails(SectionNumber, numObjects, StartTime, QueryEndTime, ParseEndTime));
+            sb.AppendLine("\tEvents Time: " + new TimeSpan(EventsEndTime.Ticks - ParseEndTime.Ticks).TotalSeconds.ToString() + " (sec) elapsed");
+            return sb.ToString();
+        }
+
+        protected void TraceQueryDetails(long SectionNumber, long numObjects, DateTime StartTime, DateTime QueryEndTime, DateTime ParseEndTime)
+        {
+#if DEBUG
+            Trace.WriteLine(PrepareQueryDetails(SectionNumber, numObjects, StartTime, QueryEndTime, ParseEndTime));
+#endif
+        }
+
+        protected void TraceQueryDetails(long SectionNumber, long numObjects, DateTime StartTime, DateTime QueryEndTime, DateTime ParseEndTime, DateTime EventsEndTime)
+        {
+#if DEBUG
+            Trace.WriteLine(PrepareQueryDetails(SectionNumber, numObjects, StartTime, QueryEndTime, ParseEndTime, EventsEndTime));
 #endif
         }
 
@@ -786,9 +696,9 @@ namespace WebAnnotationModel
         {
             //Remove the entry from outstanding queries so we can query again.  It also prevents the proxy from being aborted if too many 
             //queries are in-flight
-            GetObjectBySectionCallbackState<OBJECT> state = result.AsyncState as GetObjectBySectionCallbackState<OBJECT>;
+            GetObjectBySectionCallbackState<PROXY, OBJECT> state = result.AsyncState as GetObjectBySectionCallbackState<PROXY, OBJECT>;
 
-            GetObjectBySectionCallbackState<OBJECT> unused;
+            GetObjectBySectionCallbackState<PROXY, OBJECT> unused;
             if (!OutstandingSectionQueries.TryRemove(state.SectionNumber, out unused))
                 //We aren't in the outstanding queries collection.  Currently the only reason would be we are about to be aborted
                 return;
@@ -859,11 +769,12 @@ namespace WebAnnotationModel
                 Trace.WriteLine(this.GetType().ToString() + " ignoring stale query results for section: " + state.SectionNumber.ToString(), "WebAnnotation");
         }
 
+        /*
         protected void GetObjectsBySectionRegionCallback(IAsyncResult result)
         {
             //Remove the entry from outstanding queries so we can query again.  It also prevents the proxy from being aborted if too many 
             //queries are in-flight
-            GetObjectBySectionCallbackState<OBJECT> state = result.AsyncState as GetObjectBySectionCallbackState<OBJECT>;
+            GetObjectBySectionCallbackState<PROXY, OBJECT> state = result.AsyncState as GetObjectBySectionCallbackState<PROXY, OBJECT>;
             
             PROXY proxy = state.Proxy;
 
@@ -925,27 +836,27 @@ namespace WebAnnotationModel
                 }
             }
         }
+        */
 
         /// <summary>
-        /// This function is called when a query returns from a asynch method.  You can override it to produce different behaviors
+        /// This function is called on objects returned from a server call that we wish to add to our local store
         /// </summary>
-        /// <param name="locations">Objects which have been added or modified since the last query</param>
-        /// <param name="DeletedLocations">Objects which have been deleted since the last query</param>
-        /// <param name="state">Reports section number of query, Nullable</param>
-        protected virtual ChangeInventory<OBJECT> ParseQuery(WCFOBJECT[] locations, KEY[] DeletedLocations, GetObjectBySectionCallbackState<OBJECT> state)
+        /// <param name="serverObjects">Objects which have been added or modified since the last query</param>
+        /// <param name="serverDeletedObjects">Objects which have been deleted since the last query</param>
+        public virtual ChangeInventory<OBJECT> ParseQuery(WCFOBJECT[] serverObjects, KEY[] serverDeletedObjects, GetObjectBySectionCallbackState<PROXY, OBJECT> state)
         {
             OBJECT[] listObj = new OBJECT[0];
-            List<OBJECT> deleted = new List<OBJECT>(DeletedLocations.Length);
-            if (DeletedLocations != null)
+            List<OBJECT> deleted = new List<OBJECT>(serverDeletedObjects.Length);
+            if (serverDeletedObjects != null)
             {
-                deleted = InternalDelete(DeletedLocations);
+                deleted = InternalDelete(serverDeletedObjects);
             }
 
-            OBJECT[] listNewObj = new OBJECT[locations.Length];
-            System.Threading.Tasks.Parallel.For(0, locations.Length, (i) =>
+            OBJECT[] listNewObj = new OBJECT[serverObjects.Length];
+            System.Threading.Tasks.Parallel.For(0, serverObjects.Length, (i) =>
             {
                 OBJECT newObj = new OBJECT();
-                newObj.Synch(locations[i]);
+                newObj.Synch(serverObjects[i]);
                 listNewObj[i] = newObj;
             });
 
@@ -956,7 +867,7 @@ namespace WebAnnotationModel
 
         #endregion
 
-        private DateTime GetLastQueryTimeForSection(long SectionNumber)
+        public DateTime GetLastQueryTimeForSection(long SectionNumber)
         {
             DateTime LastQuery = DateTime.MinValue;
             if (LastQueryForSection.ContainsKey(SectionNumber))
@@ -976,7 +887,7 @@ namespace WebAnnotationModel
 
         }
 
-        private static int CompareCallbacksByTime(GetObjectBySectionCallbackState<OBJECT> x, GetObjectBySectionCallbackState<OBJECT> y)
+        private static int CompareCallbacksByTime(GetObjectBySectionCallbackState<PROXY, OBJECT> x, GetObjectBySectionCallbackState<PROXY, OBJECT> y)
         {
             if (x == null)
             {
@@ -1007,7 +918,7 @@ namespace WebAnnotationModel
             if (OutstandingSectionQueries.Count > LoadingSectionLimit)
             {
                 //Sort the outstanding queries and kill the oldest
-                List<GetObjectBySectionCallbackState<OBJECT>> stateList = OutstandingSectionQueries.Values.ToList<GetObjectBySectionCallbackState<OBJECT>>();
+                List<GetObjectBySectionCallbackState<PROXY, OBJECT>> stateList = OutstandingSectionQueries.Values.ToList<GetObjectBySectionCallbackState<PROXY, OBJECT>>();
                 stateList.Sort(CompareCallbacksByTime);
 
                 int indexOfCutoff = stateList.Count - (LoadingSectionLimit+1);
@@ -1015,7 +926,7 @@ namespace WebAnnotationModel
                 {
                     for (int iCut = 0; iCut <= indexOfCutoff; iCut++)
                     {
-                        GetObjectBySectionCallbackState<OBJECT> state = stateList[iCut];
+                        GetObjectBySectionCallbackState<PROXY, OBJECT> state = stateList[iCut];
                         bool success = OutstandingSectionQueries.TryRemove(state.SectionNumber, out state);
                         if (success == false)
                             continue; 

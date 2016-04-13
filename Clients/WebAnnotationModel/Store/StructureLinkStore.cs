@@ -65,7 +65,7 @@ namespace WebAnnotationModel
             throw new NotImplementedException();
         } 
 
-        protected override StructureLink[] ProxyGetBySectionRegionCallback(out long TicksAtQueryExecute, out StructureLinkKey[] DeletedLocations, GetObjectBySectionCallbackState<StructureLinkObj> state, IAsyncResult result)
+        protected override StructureLink[] ProxyGetBySectionRegionCallback(out long TicksAtQueryExecute, out StructureLinkKey[] DeletedLocations, GetObjectBySectionCallbackState<AnnotateStructuresClient, StructureLinkObj> state, IAsyncResult result)
         {
             throw new NotImplementedException();
         }
@@ -87,7 +87,7 @@ namespace WebAnnotationModel
             throw new NotImplementedException();
         }
 
-        protected override StructureLink[] ProxyGetBySectionCallback(out long TicksAtQueryExecute, out StructureLinkKey[] DeletedLocations, GetObjectBySectionCallbackState<StructureLinkObj> state, IAsyncResult result)
+        protected override StructureLink[] ProxyGetBySectionCallback(out long TicksAtQueryExecute, out StructureLinkKey[] DeletedLocations, GetObjectBySectionCallbackState<AnnotateStructuresClient, StructureLinkObj> state, IAsyncResult result)
         {
             throw new NotImplementedException();
         }

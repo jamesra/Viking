@@ -16,7 +16,7 @@ namespace WebAnnotationModel
     /// </summary>
     public abstract class StoreBaseWithIndexKeyAndParent<PROXY, INTERFACE, KEY, KEYGEN, OBJECT, WCFOBJECT> : StoreBaseWithIndexKey<PROXY, INTERFACE, KEY, KEYGEN, OBJECT, WCFOBJECT>
         where INTERFACE : class
-        where KEY : struct
+        where KEY : struct, IEquatable<KEY>
         where KEYGEN : IKeyGenerator<KEY>, new()
         where PROXY : System.ServiceModel.ClientBase<INTERFACE>
         where OBJECT : WCFObjBaseWithParent<KEY, WCFOBJECT, OBJECT>, new()

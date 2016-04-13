@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
-using System.Collections.Concurrent; 
+using System.Collections.Concurrent;
 using System.Linq;
 using System.Text;
 
@@ -11,6 +11,7 @@ using System.ServiceModel;
 
 using WebAnnotationModel.Service;
 using WebAnnotationModel.Objects;
+using Geometry;
 
 namespace WebAnnotationModel
 {
@@ -26,7 +27,7 @@ namespace WebAnnotationModel
         }
     }
 
-    public class StructureStore : StoreBaseWithIndexKeyAndParent<AnnotateStructuresClient, IAnnotateStructures, long, LongIndexGenerator, StructureObj, Structure>
+    public class StructureStore : StoreBaseWithIndexKeyAndParent<AnnotateStructuresClient, IAnnotateStructures, long, LongIndexGenerator, StructureObj, Structure>, IRegionQuery<long, StructureObj>
     {
         #region Proxy
 
@@ -118,7 +119,7 @@ namespace WebAnnotationModel
             return proxy.BeginGetStructuresForSectionInMosaicRegion(SectionNumber, BBox, MinRadius, LastQuery.Ticks, callback, asynchState);
         }
          
-        protected override Structure[] ProxyGetBySectionRegionCallback(out long TicksAtQueryExecute, out long[] DeletedObjects, GetObjectBySectionCallbackState<StructureObj> state, IAsyncResult result)
+        protected override Structure[] ProxyGetBySectionRegionCallback(out long TicksAtQueryExecute, out long[] DeletedObjects, GetObjectBySectionCallbackState<AnnotateStructuresClient, StructureObj> state, IAsyncResult result)
         {
             return state.Proxy.EndGetStructuresForSectionInMosaicRegion(out TicksAtQueryExecute, out DeletedObjects, result);
         }
@@ -143,7 +144,7 @@ namespace WebAnnotationModel
             return proxy.BeginGetStructuresForSection(SectionNumber, LastQuery.Ticks, callback, asynchState);
         }
 
-        protected override Structure[] ProxyGetBySectionCallback(out long TicksAtQueryExecute, out long[] DeletedIDs, GetObjectBySectionCallbackState<StructureObj> state, IAsyncResult result)
+        protected override Structure[] ProxyGetBySectionCallback(out long TicksAtQueryExecute, out long[] DeletedIDs, GetObjectBySectionCallbackState<AnnotateStructuresClient, StructureObj> state, IAsyncResult result)
         {
             return state.Proxy.EndGetStructuresForSection(out TicksAtQueryExecute, out DeletedIDs, result); 
         }
@@ -403,5 +404,32 @@ namespace WebAnnotationModel
             return output.ObjectsInStore;
         }
 
+        public ICollection<StructureObj> GetObjectsInRegion(long SectionNumber, GridRectangle bounds, double MinRadius, DateTime? LastQueryUtc)
+        {
+            ICollection<LocationObj> known_locations= Store.Locations.GetObjectsInRegion(SectionNumber, bounds, MinRadius, LastQueryUtc);
+
+            return known_locations.Select(l => l.Parent).Distinct().ToList(); 
+        }
+
+        public MixedLocalAndRemoteQueryResults<long, StructureObj> GetObjectsInRegionAsync(long SectionNumber, GridRectangle bounds, double MinRadius, DateTime? LastQueryUtc, Action<ICollection<StructureObj>> OnLoadedCallback)
+        {
+            MixedLocalAndRemoteQueryResults<long, StructureObj> results;
+
+            MixedLocalAndRemoteQueryResults<long, LocationObj> locResults = Store.Locations.GetObjectsInRegionAsync(SectionNumber, 
+                                                                                                                    bounds,
+                                                                                                                    MinRadius, 
+                                                                                                                    LastQueryUtc,
+                                                                                                                    (locs) => OnLoadedCallback(locs.Select(l => l.Parent).ToList()));
+            ICollection<LocationObj> known_locations = Store.Locations.GetObjectsInRegion(SectionNumber, bounds, MinRadius, LastQueryUtc);
+
+            ICollection<StructureObj> known_structs = known_locations.Select(l => l.Parent).ToList();
+
+            return new MixedLocalAndRemoteQueryResults<long, StructureObj>(locResults.ServerRequestResult, known_structs);
+        }
+
+        public ICollection<StructureObj> GetLocalObjectsInRegion(long SectionNumber, GridRectangle bounds, double MinRadius)
+        {
+            return Store.Locations.GetLocalObjectsInRegion(SectionNumber, bounds, MinRadius).Select(l => l.Parent).Distinct().ToList();
+        }
     }
 }

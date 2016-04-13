@@ -9,16 +9,6 @@ using Geometry;
 
 namespace WebAnnotationModel
 {
-    public class RegionLocalObjects<OBJECT>
-    {
-        public readonly OBJECT[] Objects;
-
-        public RegionLocalObjects(ICollection<OBJECT> RegionObjects)
-        {
-            Debug.Assert(RegionObjects != null);
-            Objects = RegionObjects.ToArray();
-        }
-    }
 
     /// <summary>
     /// Stores information about location queries for this region in the volume
@@ -27,33 +17,10 @@ namespace WebAnnotationModel
         where OBJECT : class
     {
         public DateTime? LastQuery = new DateTime?();
-
-        private RegionLocalObjects<OBJECT> RegionObjects = null;
-
-        public bool HasObjects
+        
+        public bool HasBeenQueried
         {
-            get { return RegionObjects != null && RegionObjects.Objects != null && RegionObjects.Objects.Length > 0; }
-        }
-
-        public OBJECT[] Objects
-        {
-            get
-            {
-                if (this.HasObjects)
-                {
-                    return RegionObjects.Objects;
-                }
-
-                return null;
-            }
-
-            internal set
-            {
-                if (value != null)
-                {
-                    this.RegionObjects = new RegionLocalObjects<OBJECT>(value);
-                }
-            }
+            get { return LastQuery.HasValue; }
         }
 
         /// <summary>
@@ -102,8 +69,6 @@ namespace WebAnnotationModel
         {
             lock(this)
             {
-                this.RegionObjects = new RegionLocalObjects<OBJECT>(objects);
-
                 foreach (Action<ICollection<OBJECT>> a in this.OnCompletionCallbacks)
                 {
                     Task.Run(() => { a(objects); });  
@@ -136,13 +101,12 @@ namespace WebAnnotationModel
         where KEY : struct
         where OBJECT : class
     {
-        static GridCellDimensions CellDimensions = new GridCellDimensions(1000, 1000);
+        static GridCellDimensions CellDimensions = new GridCellDimensions(2000, 2000);
         static double RegionUpdateInterval = 120;
         IRegionQuery<KEY, OBJECT> objectStore;
 
         ConcurrentDictionary<int, BoundlessRegionPyramid<RegionRequestData<OBJECT>>> sectionPyramids = new ConcurrentDictionary<int, Geometry.BoundlessRegionPyramid<RegionRequestData<OBJECT>>>();
-        ConcurrentDictionary<int, BoundlessRegionPyramid<RegionLocalObjects<OBJECT>>> localObjectsPyramids = new ConcurrentDictionary<int, Geometry.BoundlessRegionPyramid<RegionLocalObjects<OBJECT>>>();
-
+        
         public RegionLoader(IRegionQuery<KEY, OBJECT> store)
         {
             this.objectStore = store;
@@ -184,33 +148,33 @@ namespace WebAnnotationModel
                 RegionRequestData<OBJECT> cell = level.GetOrAddCell(iCell, (key) => { return CreateRegionRequest(level, key, SectionNumber, OnObjectsLoadedCallback); });
                 lock(cell)
                 {
-                    if (cell.HasObjects && OnObjectsLoadedCallback != null)
-                    {
-                        GridRectangle cellBounds = level.CellBounds(iCell.X, iCell.Y);
-                        ICollection<OBJECT> filteredObjects = RemoveDeletedAndMovedObjects(cell.Objects, cellBounds);
-                        //cell.Objects = filteredObjects;
-                        Task.Run(() => { OnObjectsLoadedCallback(filteredObjects); }); 
-                    }
-
                     //If we are waiting on results, add our callback to the list of functions to call when the request is complete
-                    if (cell.OutstandingQuery)
-                    {
-                        cell.AddCallback(OnObjectsLoadedCallback);
-                    }
-                    else if (RegionIsDueForRefresh(cell))
+                    if (RegionIsDueForRefresh(cell))
                     {
                         AttachRequestForRegion(cell, level, iCell, SectionNumber, OnObjectsLoadedCallback);
+                    }
+                    else
+                    {
+                        //Add our callback to the list, and return any known local objects
+                        if (cell.OutstandingQuery)
+                        {
+                            if (OnObjectsLoadedCallback != null)
+                                cell.AddCallback(OnObjectsLoadedCallback);
+                        }
+
+                        //Use the callback for the known local objects
+                        Task.Run(() =>
+                        {
+                            GridRectangle cellBounds = level.CellBounds(iCell.X, iCell.Y);
+                            ICollection<OBJECT> local_objects_in_region = this.objectStore.GetLocalObjectsInRegion(SectionNumber, cellBounds, level.MinRadius);
+                            if (OnObjectsLoadedCallback != null)
+                                OnObjectsLoadedCallback(local_objects_in_region);
+                        });
                     }
                 }
             }
         }
-
-        private ICollection<OBJECT> RemoveDeletedAndMovedObjects(ICollection<OBJECT> objects, GridRectangle volumeBounds)
-        {
-            return objects;
-            //return objects.Where(o => objectStore.Contains(o, volumeBounds)).ToList();
-        }
-
+                
         private BoundlessRegionPyramid<RegionRequestData<OBJECT>> GetOrAddRegionPyramidForSection(int SectionNumber)
         {
             return this.sectionPyramids.GetOrAdd(SectionNumber, (Number) => new BoundlessRegionPyramid<RegionRequestData<OBJECT>>(CellDimensions));
@@ -232,14 +196,14 @@ namespace WebAnnotationModel
             GridRectangle cellBounds = level.CellBounds(iCell.X, iCell.Y);
             DateTime? LastQueryUtc = cell.LastQuery;
 
-            cell.AddCallback(OnLoadCompletedCallback);
-
-            //2/25/2016: There are no local objects for region requests in the current implementation
+            if (OnLoadCompletedCallback != null)
+                cell.AddCallback(OnLoadCompletedCallback);
+            
             MixedLocalAndRemoteQueryResults<KEY, OBJECT> localObjects = objectStore.GetObjectsInRegionAsync(SectionNumber, cellBounds, level.MinRadius, LastQueryUtc, cell.OnLoadCompleted);
             cell.SetQuery(localObjects.ServerRequestResult);
 
-            if (localObjects.KnownObjects.Values.Count > 0)
-                OnLoadCompletedCallback(localObjects.KnownObjects.Values);
+            if (localObjects.KnownObjects.Count > 0 && OnLoadCompletedCallback != null)
+                OnLoadCompletedCallback(localObjects.KnownObjects);
 
             string TraceString = string.Format("CreateRegionRequest: {0} ({1},{2}) Level:{3} MinRadius:{4}", SectionNumber, iCell.X, iCell.Y, level.Level, level.MinRadius);
             Trace.WriteLine(TraceString, "WebAnnotation");
@@ -247,7 +211,5 @@ namespace WebAnnotationModel
 
         //How do we handle the CRUD of locations?
         //Right now we simply check that each location still belongs in the location store.
-
-        
     }
 }
