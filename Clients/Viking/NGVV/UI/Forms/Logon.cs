@@ -79,8 +79,11 @@ namespace Viking.UI.Forms
             {
                 System.IO.Directory.CreateDirectory(this.KeyFileFolderPath);
             }
-             
+#if DEBUG             
             NetworkCredential cachedCredentials = ReadCredentialsFromFile();
+#else
+            NetworkCredential cachedCredentials = ReadCredentialsFromEncryptedFile();
+#endif
             if (cachedCredentials == null)
             {
                 this.btnLogin.Enabled = false;
@@ -144,7 +147,11 @@ namespace Viking.UI.Forms
                 {
                     try
                     {
+#if DEBUG
                         WriteCredentialsInFile(new NetworkCredential(userName, password));
+#else
+                        WriteCredentialsInEncryptedFile(new NetworkCredential(userName, password));
+#endif
                     }
                     catch(IOException except)
                     {
