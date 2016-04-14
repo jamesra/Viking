@@ -6,7 +6,7 @@ using Microsoft.Xna.Framework.Graphics;
 
 namespace VikingXNAGraphics
 {
-    public class PolyLineView
+    public class PolyLineView : IColorView
     {
         private Texture2D _ControlPointTexture;
         public Texture2D ControlPointTexture
@@ -57,16 +57,21 @@ namespace VikingXNAGraphics
                 _Color = value;
                 foreach (CircleView cpv in ControlPointViews)
                 {
-                    cpv.BackgroundColor = value; 
+                    cpv.Color = value; 
                 }
 
                 foreach(LineView lv in LineViews)
                 {
-                        lv.Color = value;
+                    lv.Color = value;
                 }
             }
         }
 
+        public float Alpha
+        {
+            get { return _Color.GetAlpha(); }
+            set { Color = _Color.SetAlpha(value); }
+        }
 
         public PolyLineView(ICollection<GridVector2> controlPoints, Microsoft.Xna.Framework.Color color, Texture2D texture = null, double lineWidth = 16.0)
         {

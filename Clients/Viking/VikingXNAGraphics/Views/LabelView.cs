@@ -8,7 +8,7 @@ using VikingXNAGraphics;
 
 namespace VikingXNAGraphics
 {
-    public class LabelView
+    public class LabelView : IText, IColorView
     {
         /// <summary>
         /// Label must be this large to render
@@ -17,10 +17,27 @@ namespace VikingXNAGraphics
 
         static byte DefaultAlpha = 192;
 
-        public Microsoft.Xna.Framework.Color Color = new Microsoft.Xna.Framework.Color((byte)(0),
+        public Microsoft.Xna.Framework.Color _Color = new Microsoft.Xna.Framework.Color((byte)(0),
                                                                                     (byte)(0),
                                                                                     (byte)(0),
                                                                                     DefaultAlpha);
+        public Color Color
+        {
+            get { return _Color; }
+            set { _Color = value; }
+        }
+
+        public float Alpha
+        {
+            get
+            {
+                return this._Color.GetAlpha();
+            }
+            set
+            {
+                _Color = this._Color.SetAlpha(value);
+            }
+        }
 
         private double _MaxLineWidth = double.MaxValue;
 
@@ -49,30 +66,31 @@ namespace VikingXNAGraphics
             }
         }
 
-        private double _FontSize = 16.0;
+        private double _FontSize = 16.0f;
 
+        /// <summary>
+        /// Font size should be the size of the font in volume space pixels
+        /// </summary>
         public double FontSize
         {
             get { return _FontSize; }
             set
             {
+                
                 _IsMeasured = _IsMeasured && _FontSize == value;
                 _FontSize = value;
             }
         }
 
-        public float Alpha
+        private static double ScaleFontSizeToVolume(SpriteFont font, double fontsize)
         {
-            get
-            {
-                return (float)this.Color.A / 255.0f;
-            }
-            set
-            {
-                Color = new Microsoft.Xna.Framework.Color(Color.R, Color.G, Color.B, (byte)(value * 255.0f));
-            }
+            return fontsize / font.LineSpacing;
         }
 
+        /// <summary>
+        /// We have to scale the font to match the scale we need to use for the label sprites.
+        /// </summary>
+        private double _FontSizeScaledToVolume;
 
         private bool _IsMeasured = false;
         private string[] _Rows = null; //The label text divided across rows
@@ -109,9 +127,9 @@ namespace VikingXNAGraphics
             }
         }
 
-        private static bool IsLabelTooSmallToSee(float fontScale, float LineSpacing)
+        private static bool IsLabelTooSmallToSee(double fontScale, VikingXNA.Scene scene)
         {
-            return LineSpacing * fontScale < LabelView.LabelVisibleCutoff;
+            return fontScale <= scene.DevicePixelHeight * 2;
         }
 
         public bool IsVisible(VikingXNA.Scene scene)
@@ -124,7 +142,7 @@ namespace VikingXNAGraphics
             bool LowMagScale = ScaleReducedForLowMag(fontScale);
 
             //Don't draw labels if no human could read them
-            return !IsLabelTooSmallToSee(fontScale, font.LineSpacing);
+            return !IsLabelTooSmallToSee(fontScale, scene);
         }
 
         private static bool ScaleReducedForLowMag(float baseScale)
@@ -249,23 +267,25 @@ namespace VikingXNAGraphics
             float MagnificationFactor = (float)(1.0 / scene.Camera.Downsample);
             //Scale is used to adjust for the magnification factor of the viewer.  Otherwise text would remain at constant size regardless of mag factor.
             //offsets must be multiplied by scale before use
-            float fontScale = GetFontSizeAdjustedForMagnification((float)this.FontSize, MagnificationFactor);
+            double FontSizeScaledToVolume = ScaleFontSizeToVolume(font, this.FontSize);
+            if (IsLabelTooSmallToSee(this.FontSize, scene))
+                return;
+
+            float fontScale = GetFontSizeAdjustedForMagnification((float)FontSizeScaledToVolume, MagnificationFactor);
             bool LowMagScale = ScaleReducedForLowMag(fontScale);
 
             //Don't draw labels if no human could read them
-            if (IsLabelTooSmallToSee(fontScale, font.LineSpacing))
-                return;
+            
 
             if (true)////!_IsMeasured)
             {
-                this._Rows = WrapText(this.Text, this.font, this.FontSize, this.MaxLineWidth, out this._RowMeasurements);
+                this._Rows = WrapText(this.Text, this.font, FontSizeScaledToVolume, this.MaxLineWidth, out this._RowMeasurements);
                 _IsMeasured = true;
             }
 
             float LineStep = font.LineSpacing * fontScale;  //How much do we increment Y to move down a line?
             float yOffset = -(font.LineSpacing) * fontScale;  //What is the offset to draw the line at the correct position?  We have to draw below label if it exists
                                                               //However we only need to drop half a line since the label straddles the center
-
 
             for (int iRow = 0; iRow < _Rows.Length; iRow++)
             {
@@ -275,7 +295,7 @@ namespace VikingXNAGraphics
                 spriteBatch.DrawString(font,
                     _Rows[iRow],
                     DrawPosition,
-                    this.Color,
+                    this._Color,
                     0,
                     _RowMeasurements[iRow] / 2.0f, //The string is centered on the drawing position, instead of starting at the top left
                     fontScale,

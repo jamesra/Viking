@@ -84,6 +84,28 @@ namespace VikingXNAGraphics
 
     public static class ColorExtensions
     {
+        /// <summary>
+        /// Return alpha 0 to 1
+        /// </summary>
+        /// <param name="color"></param>
+        /// <param name="alpha"></param>
+        /// <returns></returns>
+        public static float GetAlpha(this Microsoft.Xna.Framework.Color color)
+        {
+            return (float)color.A / 255.0f;
+        }
+
+        public static Microsoft.Xna.Framework.Color SetAlpha(this Microsoft.Xna.Framework.Color color, float alpha)
+        {
+            if(alpha > 1.0f || alpha < 0f)
+            {
+                throw new ArgumentOutOfRangeException("Alpha value must be between 0 to 1.0");
+            }
+
+            Vector3 colorVector = color.ToVector3();
+            return new Microsoft.Xna.Framework.Color(colorVector.X, colorVector.Y, colorVector.Z, alpha);
+        }
+
         public static Microsoft.Xna.Framework.Color ToXNAColor(this System.Drawing.Color color)
         {
             return new Microsoft.Xna.Framework.Color((int)color.R,

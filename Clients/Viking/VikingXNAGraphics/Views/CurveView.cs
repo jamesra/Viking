@@ -147,20 +147,33 @@ namespace VikingXNAGraphics
         }
     }
 
-    public class CurveLabel
+    public class CurveLabel : IText, IColorView
     {
-        private string _Label; 
-        public string Label
+        private string _Text; 
+        public string Text
         {
-            get { return _Label; }
+            get { return _Text; }
             set
             {
-                _Label = value;
+                _Text = value;
                 _LabelTexture = null;
             }
         }
 
-        public Color Color;
+        public double FontSize
+        {
+            get { return (float)LineWidth; }
+            set { LineWidth = value; }
+        }
+
+
+        public Color Color { get; set; }
+        public float Alpha
+        {
+            get { return Color.GetAlpha(); }
+            set { Color = Color.SetAlpha(value); }
+        }
+
         public double LineWidth;
         
         RenderTarget2D _LabelTexture;
@@ -186,12 +199,12 @@ namespace VikingXNAGraphics
         /// <summary>
         /// How far down the length of the curve should the label start, normalized from 0 to 1
         /// </summary>
-        public float LabelStartDistance;
+        public float LabelStartDistance = 0f;
 
         /// <summary>
         /// How far down the length of the curve should the label end, normalized from 0 to 1
         /// </summary>
-        public float LabelEndDistance;
+        public float LabelEndDistance = 1.0f;
 
         public GridVector2[] ControlPoints
         {
@@ -244,7 +257,7 @@ namespace VikingXNAGraphics
                 //CreateTextureFunc.BeginInvoke(Label, device, spritebatch, font, this.Color, 2.0f, EndInvokeGenerateTexture, CreateTextureFunc);
                 Action a = new Action(() =>
                 {
-                        this._LabelTexture = CreateTextureForLabel(this.Label, device, spritebatch, font, Color);
+                        this._LabelTexture = CreateTextureForLabel(this.Text, device, spritebatch, font, Color);
                         this.TextureGenerating = false;
                 });
                 System.Windows.Threading.Dispatcher.CurrentDispatcher.BeginInvoke(a, System.Windows.Threading.DispatcherPriority.Background, null);    
@@ -270,7 +283,7 @@ namespace VikingXNAGraphics
         public CurveLabel(string label, ICollection<GridVector2> controlPoints, Microsoft.Xna.Framework.Color color,
                             bool TryToClose, Texture2D texture = null, double lineWidth = 16.0, uint numInterpolations = 5)
         {
-            this.Label = label;
+            this.Text = label;
             this.Color = color;
             this.LineWidth = lineWidth;
             _CurveControlPoints = new CurveViewControlPoints(controlPoints, numInterpolations, TryToClose);
@@ -345,7 +358,7 @@ namespace VikingXNAGraphics
     /// <summary>
     /// Draws a closed curve through the control points using Catmull-rom
     /// </summary>
-    public class CurveView
+    public class CurveView : IColorView
     {
         public LineStyle Style;
 
@@ -396,10 +409,16 @@ namespace VikingXNAGraphics
                 _Color = value;
                 foreach (CircleView cpv in ControlPointViews)
                 {
-                    cpv.BackgroundColor = value;
+                    cpv.Color = value;
                 } 
             }
         } 
+
+        public float Alpha
+        {
+            get { return _Color.GetAlpha(); }
+            set { _Color = _Color.SetAlpha(value); }
+        }
 
         public uint NumInterpolations
         {

@@ -159,6 +159,9 @@
     <Compile Include="Views\DeviceStateManager.cs" />
     <Compile Include="Views\Extensions.cs" />
     <Compile Include="Views\Global.cs" />
+    <Compile Include="Views\Interfaces\IColorView.cs" />
+    <Compile Include="Views\Interfaces\IScale.cs" />
+    <Compile Include="Views\Interfaces\IText.cs" />
     <Compile Include="Views\LabelView.cs" />
     <Compile Include="Views\LineView.cs" />
     <Compile Include="Views\LinkedLineView.cs" />

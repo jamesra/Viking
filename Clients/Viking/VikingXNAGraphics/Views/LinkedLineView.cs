@@ -14,7 +14,7 @@ namespace VikingXNAGraphics
     /// <summary>
     /// Links two poly lines by drawing a lines between the first pair and last pair of verticies of each polyline.
     /// </summary>
-    public class LinkedPolyLineSimpleView
+    public class LinkedPolyLineSimpleView : IColorView
     {
         GridVector2[] Source;
         GridVector2[] Target;
@@ -37,6 +37,12 @@ namespace VikingXNAGraphics
         {
             get { return Lines.First().Color; }
             set { foreach (LineView l in Lines) { l.Color = value; } }
+        }
+
+        public float Alpha
+        {
+            get { return Color.GetAlpha(); }
+            set { Color = Color.SetAlpha(value); }
         }
 
         public LinkedPolyLineSimpleView(GridVector2[] source, GridVector2[] target, float linewidth, Color color, LineStyle style)

@@ -33,6 +33,7 @@ namespace XNATestbed
 
         CurveTest curveTest = new CurveTest();
         CurveViewTest curveViewTest = new CurveViewTest();
+        LabelViewsTest labelTest = new LabelViewsTest();
 
 
         public XNATestBedMain()
@@ -86,6 +87,7 @@ namespace XNATestbed
 
             curveTest.Init(this);
             curveViewTest.Init(this);
+            labelTest.Init(this);
         }
 
         /// <summary>
@@ -177,9 +179,14 @@ namespace XNATestbed
             Matrix ViewProjMatrix = Scene.ViewProj;
             GraphicsDevice.Clear(Color.CornflowerBlue);
 
+            spriteBatch.Begin();
+
             //curveTest.Draw(this);
-            curveViewTest.Draw(this);
-            
+            //curveViewTest.Draw(this);
+            labelTest.Draw(this);
+
+            spriteBatch.End();
+
             // TODO: Add your drawing code here
 
             base.Draw(gameTime);
@@ -285,12 +292,11 @@ namespace XNATestbed
             string TechniqueName = "AnimatedLinear";
             float time = DateTime.Now.Millisecond / 1000.0f;
 
-            double totalLabelLength = (double)(leftCurveLabel.Label.Length + rightCurveLabel.Label.Length);
+            double totalLabelLength = (double)(leftCurveLabel.Text.Length + rightCurveLabel.Text.Length);
             leftCurveLabel.Alignment = HorizontalAlignment.Left;
             rightCurveLabel.Alignment = HorizontalAlignment.Right;
-            leftCurveLabel.Max_Curve_Length_To_Use_Normalized = (float)(leftCurveLabel.Label.Length / totalLabelLength);
-            rightCurveLabel.Max_Curve_Length_To_Use_Normalized = (float)(rightCurveLabel.Label.Length / totalLabelLength);
-
+            leftCurveLabel.Max_Curve_Length_To_Use_Normalized = (float)(leftCurveLabel.Text.Length / totalLabelLength);
+            rightCurveLabel.Max_Curve_Length_To_Use_Normalized = (float)(rightCurveLabel.Text.Length / totalLabelLength);
 
             CurveView.Draw(window.GraphicsDevice, scene, window.curveManager, window.basicEffect, window.overlayEffect, time, new CurveView[] { curveView });
             CurveLabel.Draw(window.GraphicsDevice, scene, window.spriteBatch, window.fontArial, window.curveManager, window.basicEffect, new CurveLabel[] { leftCurveLabel, rightCurveLabel });
@@ -320,6 +326,65 @@ namespace XNATestbed
             GridVector2[] cps = new GridVector2[] {new GridVector2(-100,100),
                                                    new GridVector2(-50, 0),
                                                    new GridVector2(0,100),
+                                                   new GridVector2(100,0) };
+            return cps;
+        }
+    }
+
+    public class LabelViewsTest
+    { 
+        CurveLabel curveLabel;
+        LabelView labelView;
+
+        public void Init(XNATestBedMain window)
+        {
+            GridVector2[] cps = CreateTestCurve3(0, 100);
+            curveLabel = new CurveLabel("CurveLabel", cps, Color.Black, false);
+            labelView = new LabelView("LabelView", new GridVector2(0,0)); 
+        }
+
+        public void ProcessGamepad()
+        {
+        }
+
+        public void Draw(XNATestBedMain window)
+        {
+            VikingXNA.Scene scene = window.Scene;
+            Matrix ViewProjMatrix = scene.ViewProj;
+            string TechniqueName = "AnimatedLinear";
+            float time = DateTime.Now.Millisecond / 1000.0f;
+            
+            curveLabel.Alignment = HorizontalAlignment.Left;
+            
+            CurveLabel.Draw(window.GraphicsDevice, scene, window.spriteBatch, window.fontArial, window.curveManager, window.basicEffect, new CurveLabel[] { curveLabel});
+            labelView.Draw(window.spriteBatch, window.fontArial, window.Scene);
+             
+            curveLabel.FontSize = (time * 8f) + 8f;
+            labelView.FontSize = (time * 8f) + 8f;
+        }
+
+        private static GridVector2[] CreateTestCurve(double angle, double width)
+        {
+            GridVector2[] cps = new GridVector2[] {new GridVector2(-width,width),
+                                                   new GridVector2(-width * Math.Cos(angle), -width * Math.Sin(angle)),
+                                                   new GridVector2(0,0),
+                                                   new GridVector2(width,0) };
+            return cps;
+        }
+
+        private static GridVector2[] CreateTestCurve2(double angle, double width)
+        {
+            GridVector2[] cps = new GridVector2[] {new GridVector2(width,width),
+                                                   new GridVector2(0, width),
+                                                   new GridVector2(0,0),
+                                                   new GridVector2(width,0) };
+            return cps;
+        }
+
+        private static GridVector2[] CreateTestCurve3(double angle, double width)
+        {
+            GridVector2[] cps = new GridVector2[] {new GridVector2(-50, 0),
+                                                   new GridVector2(0,0),
                                                    new GridVector2(100,0) };
             return cps;
         }

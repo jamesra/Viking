@@ -110,7 +110,7 @@ namespace VikingXNAGraphics
     }
      
 
-    public class CircleView
+    public class CircleView : IColorView
     {
         #region static
 
@@ -152,27 +152,40 @@ namespace VikingXNAGraphics
             get { return this.Radius / 2.0; }
         }
 
-        private Microsoft.Xna.Framework.Color _BackgroundColor;
-        public Microsoft.Xna.Framework.Color BackgroundColor
+        public float Alpha
         {
             get
             {
-                return _BackgroundColor;
+                return _Color.GetAlpha();
             }
             set
             {
-                _BackgroundColor = value;
-                _BackgroundHSLColor = value.ConvertToHSL();
+                Color = this._Color.SetAlpha(value);
+            }
+        }
+
+
+        private Microsoft.Xna.Framework.Color _Color;
+        public Microsoft.Xna.Framework.Color Color
+        {
+            get
+            {
+                return _Color;
+            }
+            set
+            {
+                _Color = value;
+                _HSLColor = value.ConvertToHSL();
                 ClearCachedData();
             }
         }
 
-        private Microsoft.Xna.Framework.Color _BackgroundHSLColor;
-        public Microsoft.Xna.Framework.Color BackgroundHSLColor
+        private Microsoft.Xna.Framework.Color _HSLColor;
+        public Microsoft.Xna.Framework.Color HSLColor
         {
             get
             {
-                return _BackgroundHSLColor;
+                return _HSLColor;
             }
         }
 
@@ -206,7 +219,7 @@ namespace VikingXNAGraphics
         public CircleView(GridCircle circle, Color color)
         {
             this.Circle = circle;
-            this.BackgroundColor = color; 
+            this.Color = color; 
         }
 
         #region Render Code
@@ -351,7 +364,7 @@ namespace VikingXNAGraphics
             {
                 CircleView locToDraw = listToDraw[iObj];
                 int[] locIndicies;
-                VertexPositionColorTexture[] objVerts = locToDraw.GetCircleBackgroundVerts(locToDraw.BackgroundHSLColor, out locIndicies);
+                VertexPositionColorTexture[] objVerts = locToDraw.GetCircleBackgroundVerts(locToDraw.HSLColor, out locIndicies);
 
                 if (objVerts == null)
                     continue;

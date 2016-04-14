@@ -6,7 +6,7 @@ using VikingXNAGraphics;
 
 namespace VikingXNAGraphics
 {
-    public class LineView
+    public class LineView : IColorView
     {
         public static double time = 0;
         RoundLineCode.RoundLine line;
@@ -32,6 +32,13 @@ namespace VikingXNAGraphics
             get { return _Color; }
             set { _Color = value; _HSLColor = value.ConvertToHSL(); }
         }
+
+        public float Alpha
+        {
+            get { return _Color.GetAlpha(); }
+            set { _Color = _Color.SetAlpha(value); }
+        }
+
         private Microsoft.Xna.Framework.Color _HSLColor;
 
         public LineView(GridVector2 source, GridVector2 destination, double width, Microsoft.Xna.Framework.Color color, LineStyle lineStyle)
