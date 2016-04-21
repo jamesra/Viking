@@ -210,5 +210,29 @@ namespace WebAnnotation
                 action(item);
             }
         }
+
+        public static void ForEach<T>(this IEnumerable<T> source, Action<T, int> action)
+        {
+            if (source == null) throw new ArgumentNullException("source");
+            if (action == null) throw new ArgumentNullException("action");
+
+            int i = 0;
+            foreach(T item in source)
+            { 
+                action(item, i);
+                i++;
+            }
+        }
+
+        public static void ForEach<T>(this T[] source, Action<T,int> action)
+        {
+            if (source == null) throw new ArgumentNullException("source");
+            if (action == null) throw new ArgumentNullException("action");
+
+            for(int i = 0; i < source.Length; i++)
+            {
+                action(source[i], i);
+            }
+        }
     }
 }
