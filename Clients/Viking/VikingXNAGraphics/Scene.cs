@@ -147,6 +147,14 @@ namespace VikingXNA
             }
         }
 
+        public double MinVisibleWorldBorderLength
+        {
+            get
+            {
+                return Math.Min(this.VisibleWorldBounds.Width, this.VisibleWorldBounds.Height);
+            }
+        }
+
         public double MaxVisibleWorldBorderLength
         {
             get
