@@ -66,6 +66,24 @@ namespace WebAnnotationModel
                     return false;
             }
         }
+        
+        public static bool IsTerminalProperty(string propertyName)
+        {
+            if (string.IsNullOrEmpty(propertyName))
+                return true;
+
+            switch (propertyName)
+            {
+                case "Terminal":
+                    return true;
+                case "OffEdge":
+                    return true;
+                case "Attributes":
+                    return true;
+                default:
+                    return false;
+            }
+        }
 
         public override long ID
         {
