@@ -169,8 +169,9 @@ namespace WebAnnotationModel
 
         #region Events
 
-        protected void InvokeEventAction(Action a)
+        protected void InvokeEventAction(Action a, [System.Runtime.CompilerServices.CallerMemberName] string memberName = "")
         {
+            System.Diagnostics.Trace.WriteLine(string.Format("{0}.{1} Invoking Event Action", this.GetType().FullName, memberName));
             if(State.UseAsynchEvents)
             {
                 System.Threading.Tasks.Task.Run(a);
@@ -183,13 +184,13 @@ namespace WebAnnotationModel
 
         internal void CallOnCollectionChanged(ChangeInventory<OBJECT> inventory)
         {
-            Action a = new Action(() =>
-                {
+            //Action a = new Action(() =>
+            //    {
                     CallOnCollectionChangedForDelete(inventory.DeletedObjects);
                     CallOnCollectionChangedForReplace(inventory.OldObjectsReplaced, inventory.NewObjectReplacements);
                     CallOnCollectionChangedForAdd(inventory.AddedObjects);
-                });
-            InvokeEventAction(a); 
+            //    });
+            //InvokeEventAction(a); 
             
         }
 
