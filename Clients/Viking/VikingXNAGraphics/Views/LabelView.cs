@@ -127,27 +127,20 @@ namespace VikingXNAGraphics
             }
         }
 
-        private static bool IsLabelTooSmallToSee(double fontScale, VikingXNA.Scene scene)
+        private static bool IsLabelTooSmallToSee(double fontSizeInScreenPixels)
         {
-            return fontScale <= scene.DevicePixelHeight * 2;
+            return fontSizeInScreenPixels < 6.0;
         }
 
         public bool IsVisible(VikingXNA.Scene scene)
         {
             if (font == null) //The first time draw is called font is initialized.  So allow us to draw if we haven't initialized font yet.
                 return true;
-
-            float MagnificationFactor = (float)(1.0 / scene.Camera.Downsample);
-            float fontScale = GetFontSizeAdjustedForMagnification((float)this.FontSize, MagnificationFactor);
-            bool LowMagScale = ScaleReducedForLowMag(fontScale);
+             
+            double fontSizeInScreenPixels = ScaleFontSizeForMagnification(this.FontSize, scene);
 
             //Don't draw labels if no human could read them
-            return !IsLabelTooSmallToSee(fontScale, scene);
-        }
-
-        private static bool ScaleReducedForLowMag(float baseScale)
-        {
-            return baseScale < 1.0;
+            return !IsLabelTooSmallToSee(fontSizeInScreenPixels);
         }
 
         /// <summary>
@@ -155,9 +148,9 @@ namespace VikingXNAGraphics
         /// </summary>
         /// <param name="MagnificationFactor"></param>
         /// <returns></returns>
-        private static float GetFontSizeAdjustedForMagnification(float FontSize, float MagnificationFactor)
+        private static double ScaleFontSizeForMagnification(double FontSize, VikingXNA.Scene scene)
         {
-            return ((float)FontSize * MagnificationFactor);
+            return FontSize / scene.Camera.Downsample;
         }
 
         private static int NumberOfNewlines(string label)
@@ -255,6 +248,11 @@ namespace VikingXNAGraphics
                               Microsoft.Xna.Framework.Graphics.SpriteFont font,
                               VikingXNA.Scene scene)
         {
+            double fontSizeInScreenPixels = ScaleFontSizeForMagnification(this.FontSize, scene);
+
+            if (IsLabelTooSmallToSee(fontSizeInScreenPixels))
+                return;
+
             Vector2 LocationCenterScreenPosition = scene.WorldToScreen(this.Position).ToVector2();
             if (font == null)
                 throw new ArgumentNullException("font");
@@ -264,27 +262,20 @@ namespace VikingXNAGraphics
             
             //Update our font, will clear the measurements if the font has changed.
             this.font = font;
-            float MagnificationFactor = (float)(1.0 / scene.Camera.Downsample);
             //Scale is used to adjust for the magnification factor of the viewer.  Otherwise text would remain at constant size regardless of mag factor.
             //offsets must be multiplied by scale before use
-            double FontSizeScaledToVolume = ScaleFontSizeToVolume(font, this.FontSize);
-            if (IsLabelTooSmallToSee(this.FontSize, scene))
-                return;
-
-            float fontScale = GetFontSizeAdjustedForMagnification((float)FontSizeScaledToVolume, MagnificationFactor);
-            bool LowMagScale = ScaleReducedForLowMag(fontScale);
-
-            //Don't draw labels if no human could read them
-            
-
+            double FontScaleForVolume = ScaleFontSizeToVolume(font, this.FontSize);
+             
             if (true)////!_IsMeasured)
             {
-                this._Rows = WrapText(this.Text, this.font, FontSizeScaledToVolume, this.MaxLineWidth, out this._RowMeasurements);
+                this._Rows = WrapText(this.Text, this.font, FontScaleForVolume, this.MaxLineWidth, out this._RowMeasurements);
                 _IsMeasured = true;
             }
 
-            float LineStep = font.LineSpacing * fontScale;  //How much do we increment Y to move down a line?
-            float yOffset = -(font.LineSpacing) * fontScale;  //What is the offset to draw the line at the correct position?  We have to draw below label if it exists
+            float fontScale = (float)ScaleFontSizeForMagnification(FontScaleForVolume, scene);
+
+            float LineStep = (float)font.LineSpacing * fontScale;  //How much do we increment Y to move down a line?
+            float yOffset = -((float)font.LineSpacing) * fontScale;  //What is the offset to draw the line at the correct position?  We have to draw below label if it exists
                                                               //However we only need to drop half a line since the label straddles the center
 
             for (int iRow = 0; iRow < _Rows.Length; iRow++)

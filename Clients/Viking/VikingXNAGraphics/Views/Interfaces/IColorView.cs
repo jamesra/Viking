@@ -10,7 +10,7 @@ namespace VikingXNAGraphics
     /// <summary>
     /// An interface for views that have a color which can be adjusted
     /// </summary>
-    interface IColorView
+    public interface IColorView
     {
         Color Color { get; set; }
         float Alpha { get; set; }

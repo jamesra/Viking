@@ -243,7 +243,7 @@ namespace VikingXNAGraphics
 
         public bool IsVisible(VikingXNA.Scene scene)
         {
-            return this.LineWidth / scene.DevicePixelWidth > 2.0;
+            return this.LineWidth / scene.DevicePixelWidth > 3;
         }
 
         private void BeginInvokeGenerateTexture(GraphicsDevice device, SpriteBatch spritebatch, SpriteFont font)

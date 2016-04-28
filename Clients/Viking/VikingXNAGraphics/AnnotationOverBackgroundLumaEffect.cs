@@ -75,12 +75,18 @@ namespace VikingXNA
         }
 
         public void AnnotateWithTexture(Texture2D AnnotationTexture)
-        {
+        {            
             _AnnotationTexture.SetValue(AnnotationTexture);
             effect.CurrentTechnique = effect.Techniques["RGBOverBackgroundValueOverlayEffect"];
         }
 
-        public void AnnotateWithCircle(float BorderRatio, float InputLumaAlphaValue)
+        public float InputLumaAlphaValue
+        {
+            get { return _InputLumaAlpha.GetValueSingle(); }
+            set { _InputLumaAlpha.SetValue(value); }
+        }
+
+        public void AnnotateWithCircle(float BorderRatio, float inputLumaAlphaValue)
         {
             //  _RadiusSquared.SetValue(Radius * Radius);
             /*
@@ -94,9 +100,9 @@ namespace VikingXNA
             _BorderStartSquared.SetValue(BorderStartRadiusSquared);
             _BorderBlendStartRadius.SetValue((float)Math.Sqrt(BorderBlendStartRadiusSquared));
             _BorderBlendStartSquared.SetValue(BorderBlendStartRadiusSquared); 
-
             */
-            _InputLumaAlpha.SetValue(InputLumaAlphaValue);
+
+            _InputLumaAlpha.SetValue(inputLumaAlphaValue);
             effect.CurrentTechnique = effect.Techniques["RGBCircleOverBackgroundValueOverlayEffect"]; 
         }
 

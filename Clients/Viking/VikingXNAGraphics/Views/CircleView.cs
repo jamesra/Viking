@@ -52,18 +52,19 @@ namespace VikingXNAGraphics
         public static void SetupGraphicsDevice(GraphicsDevice device, BasicEffect basicEffect, VikingXNA.AnnotationOverBackgroundLumaEffect overlayEffect)
         {
             //Note one still needs to set the texture for the effect before rendering after calling this method
-            DeviceStateManager.SaveDeviceState(device);
-            DeviceStateManager.SetRenderStateForShapes(device);
-            DeviceStateManager.SetRasterizerStateForShapes(device);
+            //DeviceStateManager.SaveDeviceState(device);
+            //DeviceStateManager.SetRenderStateForShapes(device);
+            //DeviceStateManager.SetRasterizerStateForShapes(device);
 
             basicEffect.TextureEnabled = true;
             basicEffect.VertexColorEnabled = true;
             basicEffect.LightingEnabled = false;
+            
         }
 
         public static void RestoreGraphicsDevice(GraphicsDevice graphicsDevice, BasicEffect basicEffect)
         {
-            DeviceStateManager.RestoreDeviceState(graphicsDevice);
+            //DeviceStateManager.RestoreDeviceState(graphicsDevice);
 
             basicEffect.Texture = null;
             basicEffect.TextureEnabled = false;
@@ -105,7 +106,7 @@ namespace VikingXNAGraphics
                 }
             }
 
-            TextureCircleView.RestoreGraphicsDevice(device, basicEffect);
+            //TextureCircleView.RestoreGraphicsDevice(device, basicEffect);
         }
     }
      
@@ -331,9 +332,10 @@ namespace VikingXNAGraphics
 
         public static void SetupGraphicsDevice(GraphicsDevice device, BasicEffect basicEffect, VikingXNA.AnnotationOverBackgroundLumaEffect overlayEffect)
         {
-            DeviceStateManager.SaveDeviceState(device);
+            /*DeviceStateManager.SaveDeviceState(device);
             DeviceStateManager.SetRenderStateForShapes(device);
             DeviceStateManager.SetRasterizerStateForShapes(device);
+            */
 
             basicEffect.TextureEnabled = false;
             basicEffect.VertexColorEnabled = true;

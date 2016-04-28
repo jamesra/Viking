@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace VikingXNAGraphics
 {
-    interface IText
+    public interface IText
     {
         string Text { get; set; }
         double FontSize { get; set; }
