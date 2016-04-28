@@ -25,7 +25,7 @@ namespace WebAnnotation.View
     /// <summary>
     /// Represents a location on an adjacent section that is overlapped by an annotation on the visible section.
     /// </summary>
-    public class OverlappedLocationView : LocationCanvasView
+    public class OverlappedLocationView : LocationCanvasView, IColorView
     {
         public readonly LocationLinkView link; 
         public TextureCircleView circleView;
@@ -74,7 +74,7 @@ namespace WebAnnotation.View
         public OverlappedLocationView(LocationObj obj, GridCircle gridCircle, bool Up) : base(obj)
         {
             label = new LabelView(LocationLabel(obj), gridCircle.Center);
-            label.Color = Microsoft.Xna.Framework.Color.Red;
+            label._Color = Microsoft.Xna.Framework.Color.Red;
             Microsoft.Xna.Framework.Color color = obj.Parent.Type.Color.ToXNAColor(0.75f);
             circleView = Up ? TextureCircleView.CreateUpArrow(gridCircle, color) : TextureCircleView.CreateDownArrow(gridCircle, color); 
         }
@@ -128,9 +128,8 @@ namespace WebAnnotation.View
 
         public override void DrawLabel(SpriteBatch spriteBatch, SpriteFont font, VikingXNA.Scene scene, int DirectionToVisiblePlane)
         {
-            double DesiredRowsOfText = 4.0;
-            double NumUnscaledRows = (this.Radius * 2) / font.LineSpacing;
-            double DefaultFontSize = NumUnscaledRows / DesiredRowsOfText;
+            double DesiredRowsOfText = 4.0; 
+            double DefaultFontSize = (this.Radius * 2) / DesiredRowsOfText;
             label.FontSize = DefaultFontSize;
             label.MaxLineWidth = this.Radius * 2;
 
@@ -165,6 +164,32 @@ namespace WebAnnotation.View
             get
             {
                 return Circle.BoundingBox;
+            }
+        }
+
+        public Microsoft.Xna.Framework.Color Color
+        {
+            get
+            {
+                return circleView.Color;
+            }
+
+            set
+            {
+                circleView.Color = value;
+            }
+        }
+
+        public float Alpha
+        {
+            get
+            {
+                return circleView.Alpha;
+            }
+
+            set
+            {
+                circleView.Alpha = value;
             }
         }
     }

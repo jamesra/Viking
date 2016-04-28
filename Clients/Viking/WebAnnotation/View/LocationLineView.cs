@@ -160,7 +160,7 @@ namespace WebAnnotation.View
             return (MinDistance - (this.Width / 2.0));
         }
 
-        protected override void OnObjPropertyChanged(object o, PropertyChangedEventArgs args)
+        internal override void OnObjPropertyChanged(object o, PropertyChangedEventArgs args)
         {
             /*
             if (args.PropertyName == "MosaicShape")

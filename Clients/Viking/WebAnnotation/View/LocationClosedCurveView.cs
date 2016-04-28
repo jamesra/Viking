@@ -15,17 +15,23 @@ namespace WebAnnotation.View
     {
         public CurveView curveView;
 
-        public Microsoft.Xna.Framework.Color Color
+        public override Microsoft.Xna.Framework.Color Color
         {
             get { return curveView.Color; }
             set { curveView.Color = value; }
+        }
+
+        public override float Alpha
+        {
+            get { return curveView.Alpha; }
+            set { curveView.Alpha = value; }
         }
 
 
         public static uint NumInterpolationPoints = Global.NumCurveInterpolationPoints;
         public LocationClosedCurveView(LocationObj obj, Viking.VolumeModel.IVolumeToSectionTransform mapper) : base(obj, mapper)
         {
-            curveView = new CurveView(this.VolumeControlPoints, obj.Parent.Type.Color.ToXNAColor().ConvertToHSL(0.5f), true);
+            curveView = new CurveView(this.VolumeControlPoints, obj.Parent.Type.Color.ToXNAColor(0.5f), true);
         }
 
         private GridVector2[] _MosaicCurveControlPoints;

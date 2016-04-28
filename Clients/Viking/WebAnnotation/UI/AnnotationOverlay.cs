@@ -384,7 +384,19 @@ namespace WebAnnotation
 
             ICanvasView NextMouseOverObject = ObjectAtPosition(WorldPosition, out distance) as ICanvasView;
             if (NextMouseOverObject != LastMouseOverObject)
+            {
+                if (LastMouseOverObject as ISelectable != null)
+                {
+                    ((ISelectable)LastMouseOverObject).Selected = false;
+                }
+
+                if (NextMouseOverObject as ISelectable != null)
+                {
+                    ((ISelectable)NextMouseOverObject).Selected = true;
+                }
+
                 Parent.Invalidate();
+            }   
 
             LastMouseOverObject = NextMouseOverObject;
 
@@ -1310,15 +1322,6 @@ namespace WebAnnotation
             nextStencilValue = DeviceStateManager.GetDepthStencilValue(graphicsDevice) + 1;
             DeviceStateManager.SetDepthStencilValue(graphicsDevice, nextStencilValue);
             
-            //Get all the lines to draw first so the text and geometric shapes are over top of them
-            //IEnumerable<LocationLinkView> VisibleLinks = current.VisibleLocationLinks(_Parent.Section.Number, Bounds);
-            LocationLinkView.Draw(graphicsDevice, scene, Parent.LumaOverlayLineManager, basicEffect, overlayEffect, currentSectionAnnotations.NonOverlappedLocationLinks);
-
-            graphicsDevice.Clear(ClearOptions.DepthBuffer, Color.Black, float.MaxValue, 0);
-
-            nextStencilValue = DeviceStateManager.GetDepthStencilValue(graphicsDevice) + 1;
-            DeviceStateManager.SetDepthStencilValue(graphicsDevice, nextStencilValue);
-
             ICollection<LocationCanvasView> Locations = currentSectionAnnotations.GetLocations(scene.VisibleWorldBounds);
             List<LocationCanvasView> listLocationsToDraw = FindVisibleLocations(Locations, scene);
 
@@ -1326,6 +1329,16 @@ namespace WebAnnotation
             WebAnnotation.LocationObjRenderer.DrawBackgrounds(listLocationsToDraw, graphicsDevice, basicEffect, overlayEffect, Parent.LumaOverlayLineManager, Parent.LumaOverlayCurveManager, scene, SectionNumber);
 
             nextStencilValue = DeviceStateManager.GetDepthStencilValue(graphicsDevice) + 1;
+            DeviceStateManager.SetDepthStencilValue(graphicsDevice, nextStencilValue);
+
+            //Get all the lines to draw first so the text and geometric shapes are over top of them
+            //IEnumerable<LocationLinkView> VisibleLinks = current.VisibleLocationLinks(_Parent.Section.Number, Bounds);
+            LocationLinkView.Draw(graphicsDevice, scene, Parent.LumaOverlayLineManager, basicEffect, overlayEffect, currentSectionAnnotations.NonOverlappedLocationLinks);
+
+            // graphicsDevice.Clear(ClearOptions.DepthBuffer, Color.Black, float.MaxValue, 0);
+
+            nextStencilValue = DeviceStateManager.GetDepthStencilValue(graphicsDevice) + 1;
+            DeviceStateManager.SetDepthStencilValue(graphicsDevice, nextStencilValue);
 
             //Find the locations on the adjacent sections
 

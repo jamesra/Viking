@@ -99,6 +99,7 @@
     <Compile Include="ChannelInfo.cs" />
     <Compile Include="CreateStosGridTransformThreadingObj.cs" />
     <Compile Include="CreateSectionThreadingObj.cs" />
+    <Compile Include="Extensions.cs" />
     <Compile Include="FixedTileCountMapping.cs" />
     <Compile Include="Global.cs" />
     <Compile Include="MappingBase.cs" />

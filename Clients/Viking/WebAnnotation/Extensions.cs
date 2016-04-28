@@ -93,6 +93,18 @@ namespace WebAnnotation
             WebAnnotation.ViewModel.NotifyPropertyChangingEventManager.RemoveListener(loc, listener);
             WebAnnotation.ViewModel.NotifyPropertyChangedEventManager.RemoveListener(loc, listener);
         }
+
+        public static void SubscribeToPropertyChangeEvents(this WebAnnotationModel.StructureObj s, System.Windows.IWeakEventListener listener)
+        {
+            WebAnnotation.ViewModel.NotifyPropertyChangingEventManager.AddListener(s, listener);
+            WebAnnotation.ViewModel.NotifyPropertyChangedEventManager.AddListener(s, listener);
+        }
+
+        public static void UnsubscribeToPropertyChangeEvents(this WebAnnotationModel.StructureObj s, System.Windows.IWeakEventListener listener)
+        {
+            WebAnnotation.ViewModel.NotifyPropertyChangingEventManager.RemoveListener(s, listener);
+            WebAnnotation.ViewModel.NotifyPropertyChangedEventManager.RemoveListener(s, listener);
+        }
     }
 
     internal static class MappingExtensions

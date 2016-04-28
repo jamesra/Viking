@@ -10,13 +10,14 @@ using WebAnnotationModel;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Viking.VolumeModel;
+using VikingXNAGraphics;
 
 namespace WebAnnotation.View
 {
     /// <summary>
     /// Draw overlapped links as a set of circles inscribed in a larger circle
     /// </summary>
-    class OverlappedLinkCircleView : ICanvasView, ICanvasViewContainer
+    class OverlappedLinkCircleView : ICanvasView, ICanvasViewContainer, IColorView
     {
         ICollection<OverlappedLocationView> linkViews = new List<OverlappedLocationView>();
 
@@ -54,6 +55,42 @@ namespace WebAnnotation.View
             get
             {
                 return OuterCircle_VolumeSpace.BoundingBox;
+            }
+        }
+
+        private Color _Color;
+
+        public Color Color
+        {
+            get
+            {
+                return _Color;
+            }
+
+            set
+            {
+                _Color = value;
+                foreach(OverlappedLocationView view in linkViews)
+                {
+                    view.Color = value;
+                }
+            }
+        }
+
+        public float Alpha
+        {
+            get
+            {
+                return _Color.GetAlpha();
+            }
+
+            set
+            {
+                _Color.SetAlpha(value);
+                foreach (OverlappedLocationView view in linkViews)
+                {
+                    view.Alpha = value;
+                }
             }
         }
 

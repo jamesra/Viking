@@ -18,6 +18,7 @@ using WebAnnotation.View;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using WebAnnotation;
+using Viking.VolumeModel;
 
 namespace WebAnnotation.ViewModel
 { 
@@ -52,36 +53,12 @@ namespace WebAnnotation.ViewModel
             //We should fallback by mapping as many points as possible, and then using those to make an equivalent sized rectangle.
             //If we cannot map any points we shouldn't bother with the request.
 
-            GridRectangle? VisibleMosaicBounds = ApproximateVisibleMosaicBounds(scene.VisibleWorldBounds);
+            GridRectangle? VisibleMosaicBounds = scene.VisibleWorldBounds.ApproximateVisibleMosaicBounds(this.mapper);
 
             if (VisibleMosaicBounds.HasValue)
                 Store.LocationsByRegion.LoadSectionAnnotationsInRegion(VisibleMosaicBounds.Value, scene.ScreenPixelSizeInVolume, this.SectionNumber, null);// this.AddLocations);
         }
         
-        protected GridRectangle? ApproximateVisibleMosaicBounds(GridRectangle VisibleWorldBounds)
-        {
-            GridVector2[] VolumeRectCorners = new GridVector2[] { VisibleWorldBounds.LowerLeft, VisibleWorldBounds.LowerRight, VisibleWorldBounds.UpperLeft, VisibleWorldBounds.UpperRight };
-            GridVector2[] MosaicRectCorners; 
-            bool[] mapped = mapper.TryVolumeToSection(VolumeRectCorners, out MosaicRectCorners);
-
-            GridVector2[] MappedMosaicCorners = MosaicRectCorners.Where((p, i) => mapped[i]).ToArray();
-
-            if (MappedMosaicCorners.Length > 0)
-            {
-                double MinX = MappedMosaicCorners.Min(p => p.X);
-                double MaxX = MappedMosaicCorners.Max(p => p.X);
-                double MinY = MappedMosaicCorners.Min(p => p.Y);
-                double MaxY = MappedMosaicCorners.Max(p => p.Y);
-
-                return new GridRectangle(MinX, MaxX, MinY, MaxY);
-            }
-            else
-            {
-                return new GridRectangle(double.MinValue, double.MaxValue, double.MinValue, double.MaxValue);
-            }
-
-            return new GridRectangle?();
-        }
 
         public abstract void AddLocations(IEnumerable<LocationObj> locations);
 
@@ -90,6 +67,8 @@ namespace WebAnnotation.ViewModel
         public abstract ICanvasView GetAnnotationAtPosition(GridVector2 WorldPosition, out double distance);
 
         private KeyTracker<long> SubscribedLocations = new KeyTracker<long>();
+
+        private RefCountingKeyTracker<long> SubscribedStructures = new RefCountingKeyTracker<long>();
 
         protected bool IsSubscribed(LocationObj loc)
         {
@@ -104,6 +83,16 @@ namespace WebAnnotation.ViewModel
         protected bool UnsubscribeToLocationChangeEvents(LocationObj loc)
         {
             return SubscribedLocations.TryRemove(loc.ID, () => loc.UnsubscribeToPropertyChangeEvents(this));
+        }
+
+        protected void SubscribeToStructureChangeEvents(LocationObj loc)
+        {
+            SubscribedStructures.AddRef(loc.ParentID.Value, (StructureID) => loc.Parent.SubscribeToPropertyChangeEvents(this));
+        }
+
+        protected bool UnsubscribeToStructureChangeEvents(LocationObj loc)
+        {
+            return SubscribedStructures.ReleaseRef(loc.ParentID.Value, (StructureID) => loc.Parent.UnsubscribeToPropertyChangeEvents(this));
         }
 
         public abstract bool ReceiveWeakEvent(Type managerType, object sender, EventArgs e);
@@ -761,14 +750,50 @@ namespace WebAnnotation.ViewModel
             Init();
         }
 
+        #region Structure Property Changes
+
+        
+        protected void OnStructurePropertyChanging(object sender, PropertyChangingEventArgs e)
+        {
+            StructureObj s = sender as StructureObj;
+            if (s == null)
+                return;
+        }
+
+        protected void OnStructurePropertyChanged(object sender, PropertyChangedEventArgs e)
+        {
+            StructureObj s = sender as StructureObj;
+            if (s == null)
+                return;
+
+            if (StructureObj.IsTextProperty(e.PropertyName))
+            {
+                KeyTracker<long> locIDs = this.LocationsForStructure[s.ID];
+
+                foreach (long locID in locIDs.ValuesCopy())
+                {
+                    LocationCanvasView locView;
+                    if (this.LocationViews.TryGetValue(locID, out locView))
+                    {
+                        locView.OnParentPropertyChanged(sender, e);
+                    }
+                }
+
+                //AddLocationBatch(locs);
+            }
+        }
+
+        #endregion
+
         #region Location Property Changes
+
 
         protected void OnLocationPropertyChanging(object sender, PropertyChangingEventArgs e)
         {
             LocationObj loc = sender as LocationObj;
             if (loc == null)
                 return;
-             
+            
             //Update if a position or everything has changed
             if (LocationObj.IsGeometryProperty(e.PropertyName))
             {
@@ -781,6 +806,14 @@ namespace WebAnnotation.ViewModel
                 SectionLocationLinks.RemoveLocationLinks(locs);
                 RemoveLocations(new LocationObj[] { loc }, false);
             }
+            else
+            {
+                LocationCanvasView locView;
+                if (this.LocationViews.TryGetValue(loc.ID, out locView))
+                {
+                    locView.OnObjPropertyChanging(sender, e);
+                }
+            }
         }
 
         protected void OnLocationPropertyChanged(object sender, PropertyChangedEventArgs e)
@@ -789,8 +822,9 @@ namespace WebAnnotation.ViewModel
             if (loc == null)
                 return;
 
-//            Trace.WriteLine("Location property changed: " + loc.ToString() + " property: " + e.PropertyName); 
- 
+            
+            //            Trace.WriteLine("Location property changed: " + loc.ToString() + " property: " + e.PropertyName); 
+
             //Update if a position or everything has changed
             if (LocationObj.IsGeometryProperty(e.PropertyName))
             {
@@ -800,6 +834,14 @@ namespace WebAnnotation.ViewModel
 
                 SectionAbove?.AddLocations(Store.Locations.GetObjectsByIDs(loc.LinksCopy, false).Where(l => l.Z == SectionAbove.SectionNumber));
                 SectionBelow?.AddLocations(Store.Locations.GetObjectsByIDs(loc.LinksCopy, false).Where(l => l.Z == SectionBelow.SectionNumber));
+            }
+            else
+            {
+                LocationCanvasView locView;
+                if (this.LocationViews.TryGetValue(loc.ID, out locView))
+                {
+                    locView.OnObjPropertyChanged(sender, e);
+                }
             }
         }
 
@@ -916,17 +958,21 @@ namespace WebAnnotation.ViewModel
                 case NotifyCollectionChangedAction.Add:
                     IEnumerable<LocationLinkObj> listNewObjs = e.NewItems.Cast<LocationLinkObj>();
                     SectionLocationLinks.AddLocationLinks(listNewObjs.Select(link => link.ID));
+                    AddOverlappedLocations(listNewObjs.Select(link => link.ID));
                     break;
                 case NotifyCollectionChangedAction.Replace:
                     IEnumerable<LocationLinkObj> OldItems = e.OldItems.Cast<LocationLinkObj>();
                     IEnumerable<LocationLinkObj> NewItems = e.NewItems.Cast<LocationLinkObj>();
+                    RemoveOverlappedLocations(OldItems.Select(link => link.ID));
                     SectionLocationLinks.RemoveLocationLinks(OldItems.Select(link => link.ID));
                     SectionLocationLinks.AddLocationLinks(NewItems.Select(link => link.ID));
+                    AddOverlappedLocations(NewItems.Select(link => link.ID));
                     break;
 
                 case NotifyCollectionChangedAction.Remove:
                     OldItems = e.OldItems.Cast<LocationLinkObj>();
                     SectionLocationLinks.RemoveLocationLinks(OldItems.Select(link => link.ID));
+                    RemoveOverlappedLocations(OldItems.Select(link => link.ID));
                     break;
 
                 default:
@@ -1005,8 +1051,7 @@ namespace WebAnnotation.ViewModel
             bool UpdateVolumeLocations = false;
             bool HaveUpdatedVolumePositionsToSubmit = false;
             long VolumePositionUpdatedCount = 0;
-
-
+            
             if (this.SubmitUpdatedVolumePositions)// && this.mapper.ID == this.Section.VolumeViewModel.DefaultVolumeTransform) TODO: Add the line back in to prevent saving transforms when the mosaic transform has been changed
             {
                 UpdateVolumeLocations = true;
@@ -1075,6 +1120,7 @@ namespace WebAnnotation.ViewModel
                 if(Subscribe)
                 {
                     SubscribeToLocationChangeEvents(loc);
+                    SubscribeToStructureChangeEvents(loc);
                 }
 
                 AddLocationsForStructure(loc.ParentID.Value, locView);
@@ -1142,10 +1188,42 @@ namespace WebAnnotation.ViewModel
                 if(Unsubscribe)
                 {
                     UnsubscribeToLocationChangeEvents(loc);
+                    UnsubscribeToStructureChangeEvents(loc);
                 }
 
                 RemoveLocationsForStructure(loc.ParentID.Value, loc.ID);
             });
+        }
+
+        private static LocationObj GetLocationFromLinkOnThisSection(LocationLinkKey link, int SectionNumber)
+        {
+            LocationObj AOBj = Store.Locations.Contains(link.A) ? Store.Locations[link.A] : null;
+            LocationObj BOBj = Store.Locations.Contains(link.B) ? Store.Locations[link.B] : null;
+
+            if (AOBj == null || BOBj == null)
+                return null;
+
+            Debug.Assert(AOBj.Z != BOBj.Z);
+
+            if (AOBj.Z == SectionNumber)
+                return AOBj;
+
+            if (BOBj.Z == SectionNumber)
+                return BOBj;
+
+            return null;
+        }
+
+        private void AddOverlappedLocations(IEnumerable<LocationLinkKey> keys)
+        {
+            IEnumerable<LocationObj> locs = keys.Select(k => GetLocationFromLinkOnThisSection(k, this.SectionNumber)).Where(k => k != null);
+            AddOverlappedLocations(locs);
+        }
+
+        private void RemoveOverlappedLocations(IEnumerable<LocationLinkKey> keys)
+        {
+            IEnumerable<LocationObj> locs = keys.Select(k => GetLocationFromLinkOnThisSection(k, this.SectionNumber)).Where(k => k != null);
+            RemoveOverlappedLocations(locs);
         }
 
         private void AddOverlappedLocations(IEnumerable<LocationObj> locs)
@@ -1353,7 +1431,7 @@ namespace WebAnnotation.ViewModel
         public override void LoadAnnotationsInRegion(VikingXNA.Scene scene)
         {
             //Store.LocationsByRegion.LoadSectionAnnotationsInRegion(scene.VisibleWorldBounds, scene.ScreenPixelSizeInVolume, this.SectionNumber, this.AddLocationsInRegionCallback);
-            GridRectangle? VisibleMosaicBounds = ApproximateVisibleMosaicBounds(scene.VisibleWorldBounds);
+            GridRectangle? VisibleMosaicBounds = scene.VisibleWorldBounds.ApproximateVisibleMosaicBounds(this.mapper);
 
             if (VisibleMosaicBounds.HasValue)
                 Store.LocationsByRegion.LoadSectionAnnotationsInRegion(VisibleMosaicBounds.Value, scene.ScreenPixelSizeInVolume, this.SectionNumber, null);//this.AddLocationsInRegionCallback);
@@ -1542,6 +1620,11 @@ namespace WebAnnotation.ViewModel
                     OnLocationPropertyChanged(sender, PropertyChangedArgs);
                     return true;
                 }
+                else if (sender.GetType() == typeof(StructureObj))
+                {
+                    OnStructurePropertyChanged(sender, PropertyChangedArgs);
+                    return true;
+                }
             }
 
             PropertyChangingEventArgs PropertyChangingArgs = e as PropertyChangingEventArgs;
@@ -1550,6 +1633,11 @@ namespace WebAnnotation.ViewModel
                 if (sender.GetType() == typeof(LocationObj))
                 {
                     OnLocationPropertyChanging(sender, PropertyChangingArgs);
+                    return true;
+                }
+                else if (sender.GetType() == typeof(StructureObj))
+                {
+                    OnStructurePropertyChanging(sender, PropertyChangingArgs);
                     return true;
                 }
             }

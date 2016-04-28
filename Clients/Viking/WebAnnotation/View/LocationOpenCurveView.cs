@@ -13,7 +13,7 @@ using VikingXNAGraphics;
 
 namespace WebAnnotation.View
 {
-    class LocationOpenCurveView : LocationCurveView
+    class LocationOpenCurveView : LocationCurveView, IColorView
     {
         public static uint NumInterpolationPoints = Global.NumCurveInterpolationPoints;
         
@@ -21,16 +21,22 @@ namespace WebAnnotation.View
         public CurveLabel curveLabel;
         public CurveLabel curveParentLabel;
 
-        public Microsoft.Xna.Framework.Color Color
+        public override Microsoft.Xna.Framework.Color Color
         {
             get { return curveView.Color; }
             set { curveView.Color = value; }
         }
-         
+
+        public override float Alpha
+        {
+            get { return curveView.Alpha; }
+            set { curveView.Alpha = value; }
+        }
+
         public LocationOpenCurveView(LocationObj obj, Viking.VolumeModel.IVolumeToSectionTransform mapper) : base(obj, mapper)
         {
-            RegisterForLocationEvents();
-            RegisterForStructureChangeEvents();
+            //RegisterForLocationEvents();
+            //RegisterForStructureChangeEvents();
             
             curveView = new CurveView(VolumeControlPoints, obj.Parent.Type.Color.ToXNAColor(0.5f), false, lineWidth: obj.Radius * 2.0);
             CreateLabelViews(VolumeControlPoints, obj.ParentID);
@@ -56,10 +62,10 @@ namespace WebAnnotation.View
             curveLabel.Alignment = RoundCurve.HorizontalAlignment.Left;
             curveParentLabel.Alignment = RoundCurve.HorizontalAlignment.Right;
 
-            float TotalLabelLength = (float)(curveLabel.Label.Length + 1 + curveParentLabel.Label.Length);
-            curveLabel.Max_Curve_Length_To_Use_Normalized = (float)curveLabel.Label.Length / TotalLabelLength;
+            float TotalLabelLength = (float)(curveLabel.Text.Length + 1 + curveParentLabel.Text.Length);
+            curveLabel.Max_Curve_Length_To_Use_Normalized = (float)curveLabel.Text.Length / TotalLabelLength;
 
-            curveParentLabel.Max_Curve_Length_To_Use_Normalized = (float)curveParentLabel.Label.Length / TotalLabelLength;
+            curveParentLabel.Max_Curve_Length_To_Use_Normalized = (float)curveParentLabel.Text.Length / TotalLabelLength;
             curveParentLabel.LabelEndDistance = 0.90f;
         }
         
@@ -158,7 +164,7 @@ namespace WebAnnotation.View
                 PropertyName == "Attributes";
         }
 
-        protected override void OnObjPropertyChanged(object o, PropertyChangedEventArgs args)
+        internal override void OnObjPropertyChanged(object o, PropertyChangedEventArgs args)
         {
             //ClearOverlappingLinkedLocationCache();
 
@@ -168,14 +174,13 @@ namespace WebAnnotation.View
             base.OnObjPropertyChanged(o, args);
         }
 
-        protected override void OnParentPropertyChanged(object o, PropertyChangedEventArgs args)
+        internal override void OnParentPropertyChanged(object o, PropertyChangedEventArgs args)
         {
-            /*
             if (args.PropertyName == "Label" || args.PropertyName == "Attributes")
             {
-                CreateLabelViews(this.modelObj);
+                CreateLabelViews(VolumeControlPoints, this.ParentID);
             }
-            */
+            
             base.OnParentPropertyChanged(o, args);
             
         }

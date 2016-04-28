@@ -28,83 +28,7 @@ namespace WebAnnotation
 
         static BlendState RendererBlendState = null;
         static RasterizerState RendererRasterizerState = null; 
-
-        /// <summary>
-        /// Setup the graphicsDevice and effect to render the type of obj passed
-        /// </summary>
-        /// <param name="graphicsDevice"></param>
-        /// <param name="basicEffect"></param>
-        /// <param name="obj"></param>
-        public static void SetupGraphicsDevice(GraphicsDevice graphicsDevice,
-                                               BasicEffect basicEffect,
-                                               VikingXNA.AnnotationOverBackgroundLumaEffect overlayEffect,
-                                               LocationCanvasView obj,
-                                               long SectionNumber)
-        {
-            //oldVertexDeclaration = graphicsDevice.VertexDeclaration;
-            DeviceStateManager.SaveDeviceState(graphicsDevice);
-            DeviceStateManager.SetRenderStateForShapes(graphicsDevice);
-            DeviceStateManager.SetRasterizerStateForShapes(graphicsDevice); 
-            
-            int SectionDelta = (int)(obj.Z - SectionNumber);
-
-            switch (obj.TypeCode)
-            {
-                case LocationType.POINT:
-                    overlayEffect.AnnotateWithCircle((float)0.05, 0.5f);
-                    basicEffect.Texture = null;
-                    basicEffect.TextureEnabled = false;
-                    basicEffect.VertexColorEnabled = true;
-                    break;
-                case LocationType.OPENCURVE:
-                    overlayEffect.AnnotateWithCircle((float)0.05, 0.5f);
-                    basicEffect.Texture = null;
-                    basicEffect.TextureEnabled = false;
-                    basicEffect.VertexColorEnabled = true;
-                    break;
-                case LocationType.CLOSEDCURVE:
-                    overlayEffect.AnnotateWithCircle((float)0.05, 0.5f);
-                    basicEffect.Texture = null;
-                    basicEffect.TextureEnabled = false;
-                    basicEffect.VertexColorEnabled = true;
-                    break;
-                case LocationType.POLYGON:
-                    overlayEffect.AnnotateWithCircle((float)0.05, 0.5f);
-                    basicEffect.Texture = null;
-                    basicEffect.TextureEnabled = false;
-                    basicEffect.VertexColorEnabled = true;
-                    break;
-                case LocationType.POLYLINE:
-                    overlayEffect.AnnotateWithCircle((float)0.05, 0.5f);
-                    basicEffect.Texture = null;
-                    basicEffect.TextureEnabled = false;
-                    basicEffect.VertexColorEnabled = true;
-                    break;
-                case LocationType.CIRCLE:
-                    //Are we rendering on the same section or above/below?
-                    if (SectionDelta < 0)
-                    {
-                        overlayEffect.AnnotateWithTexture(GlobalPrimitives.UpArrowTexture);
-                    }
-                    else if (SectionDelta == 0)
-                    {
-                        overlayEffect.AnnotateWithCircle((float)0.05, 0.5f);
-                    }
-                    else
-                    {
-                        overlayEffect.AnnotateWithTexture(GlobalPrimitives.UpArrowTexture);
-                    }
-
-                    basicEffect.TextureEnabled = true;
-                    basicEffect.VertexColorEnabled = true;
-                    basicEffect.LightingEnabled = false; 
-
-                    break;
-                default:
-                    break; 
-            }
-        }
-
+        
         /// <summary>
         /// Put the graphics device state back where we found it
         /// </summary>
@@ -120,7 +44,11 @@ namespace WebAnnotation
         }
 
         /// <summary>
-        /// Draw the list of locations as they should appear for the given section number
+        /// Draw the list of locations as they should appear for the given section number.
+        /// 
+        /// When we draw backgrounds we want to treat them as opaque even if they have some alpha in the color.
+        /// The alpha indicates how much of the background texture shows through.  We do not want to blend with 
+        /// other annotation backgrounds.
         /// </summary>
         /// <param name="Locations"></param>
         /// <param name="graphicsDevice"></param>
@@ -134,59 +62,89 @@ namespace WebAnnotation
             if (listToDraw.Count == 0)
                 return;
 
-            int NumDepths = listToDraw.Max(l => l.ParentDepth);
-            int DepthStencilStepSize = 10;
-
+            int MaxCanvasViewDepth = listToDraw.Max(l => l.ParentDepth);
+             
             int StartingDepthStencilValue = DeviceStateManager.GetDepthStencilValue(graphicsDevice);
-            int EndingDepthStencilValue = StartingDepthStencilValue + (DepthStencilStepSize * NumDepths);
+            const int DepthStencilStepSize = 10;
+            int EndingDepthStencilValue = StartingDepthStencilValue + (DepthStencilStepSize * MaxCanvasViewDepth);
             int DepthStencilValue = EndingDepthStencilValue;
+
+            var depthGroups = listToDraw.GroupBy(l => l.ParentDepth).OrderBy(l => l.Key).Reverse();
+
+            DeviceStateManager.SaveDeviceState(graphicsDevice);
             
-            DeviceStateManager.SetDepthStencilValue(graphicsDevice, DepthStencilValue);
+            DeviceStateManager.SetRasterizerStateForShapes(graphicsDevice);
 
-            var depthGroups = listToDraw.GroupBy(l => l.ParentDepth).OrderBy(l => l.Key).Reverse(); 
-            foreach(var depthGroup in depthGroups)
-            { 
-                var typeGroups = depthGroup.GroupBy(l => l.GetType());
-                foreach (var typeGroup in typeGroups)
-                {
-                    if (typeGroup.Key == typeof(LocationOpenCurveView))
-                    {
-                        LocationOpenCurveView.Draw(graphicsDevice, Scene, overlayCurveManager, basicEffect, overlayEffect, typeGroup.Cast<LocationOpenCurveView>().ToArray());
-                    }
-                    else if (typeGroup.Key == typeof(LocationClosedCurveView))
-                    {
-                        LocationClosedCurveView.Draw(graphicsDevice, Scene, overlayCurveManager, basicEffect, overlayEffect, typeGroup.Cast<LocationClosedCurveView>().ToArray());
-                    }
-                    else if (typeGroup.Key == typeof(LocationLineView))
-                    {
-                        LocationLineView.Draw(graphicsDevice, Scene, overlayLineManager, basicEffect, overlayEffect, typeGroup.Cast<LocationLineView>().ToArray());
-                    }
-                    else if (typeGroup.Key == typeof(LocationCircleView))
-                    {
-                        LocationCircleView.Draw(graphicsDevice, Scene, basicEffect, overlayEffect, typeGroup.Cast<LocationCircleView>().ToArray());
-                    }
-                    else if (typeGroup.Key == typeof(AdjacentLocationCircleView))
-                    {
-                        AdjacentLocationCircleView.Draw(graphicsDevice, Scene, basicEffect, overlayEffect, typeGroup.Cast<AdjacentLocationCircleView>().ToArray(), VisibleSectionNumber);
-                    }
-                    else if (typeGroup.Key == typeof(AdjacentLocationLineView))
-                    {
-                        AdjacentLocationLineView.Draw(graphicsDevice, Scene, overlayLineManager, basicEffect, overlayEffect, typeGroup.Cast<AdjacentLocationLineView>().ToArray(), VisibleSectionNumber);
-                    }
-                    else
-                    {
-                        throw new ArgumentException("Cannot draw background for unknown type" + typeGroup.Key.FullName);
-                    }
-                }
+            foreach (var depthGroup in depthGroups)
+            {
+                //We render twice.  The first time we only update the Z-buffer. 
+                //The second time we write colors, but only when the Z-buffer is equal to the objects Z-value.
+                //This ensures that overlapping locations are not rendered overlapping which obscures the TEM textures underneath.
+                DeviceStateManager.SetDepthStencilValue(graphicsDevice, DepthStencilValue);
+                DeviceStateManager.SetDepthBuffer(graphicsDevice, CompareFunction.LessEqual);
+                DeviceStateManager.SetRenderStateForShapes(graphicsDevice, ColorWriteChannels.None);
+                
+                // graphicsDevice.BlendState.ColorWriteChannels = ColorWriteChannels.None;
 
-                DepthStencilValue -= DepthStencilStepSize;
+                //Draw backgrounds once to populate the Z-buffer and stencil buffer but do not write colors
+                DrawBackgroundsAtDepth(depthGroup, graphicsDevice, basicEffect, overlayEffect, overlayLineManager, overlayCurveManager, Scene, VisibleSectionNumber);
 
+              //  graphicsDevice.BlendState.ColorWriteChannels = ColorWriteChannels.All;
+                DeviceStateManager.SetDepthStencilValue(graphicsDevice, DepthStencilValue, stencilFunction: CompareFunction.Equal);
+                DeviceStateManager.SetDepthBuffer(graphicsDevice, CompareFunction.Equal);
+                DeviceStateManager.SetRenderStateForShapes(graphicsDevice, ColorWriteChannels.All);
+
+                //Draw backgrounds again and only update colors where the depth and stencil values match
+                DrawBackgroundsAtDepth(depthGroup, graphicsDevice, basicEffect, overlayEffect, overlayLineManager, overlayCurveManager, Scene, VisibleSectionNumber);
+                
                 graphicsDevice.Clear(ClearOptions.DepthBuffer, Microsoft.Xna.Framework.Color.Black, float.MaxValue, 0);
 
-                DeviceStateManager.SetDepthStencilValue(graphicsDevice, DepthStencilValue);
+                DepthStencilValue -= DepthStencilStepSize;
             }
 
             DeviceStateManager.SetDepthStencilValue(graphicsDevice, EndingDepthStencilValue + 1);
+            DeviceStateManager.RestoreDeviceState(graphicsDevice);
+        }
+
+        private static void DrawBackgroundsAtDepth(IGrouping<int, LocationCanvasView> depthGroup, GraphicsDevice graphicsDevice, BasicEffect basicEffect,
+                                           VikingXNA.AnnotationOverBackgroundLumaEffect overlayEffect, RoundLineCode.RoundLineManager overlayLineManager,
+                                           RoundCurve.CurveManager overlayCurveManager,
+                                           VikingXNA.Scene Scene, int VisibleSectionNumber)
+        {
+            IEnumerable<IGrouping<Type, LocationCanvasView>> typeGroups = depthGroup.GroupBy(l => l.GetType());
+
+            foreach (var typeGroup in typeGroups)
+            {
+                if (typeGroup.Key == typeof(LocationOpenCurveView))
+                {
+                    LocationOpenCurveView.Draw(graphicsDevice, Scene, overlayCurveManager, basicEffect, overlayEffect, typeGroup.Cast<LocationOpenCurveView>().ToArray());
+                }
+                else if (typeGroup.Key == typeof(LocationClosedCurveView))
+                {
+                    LocationClosedCurveView.Draw(graphicsDevice, Scene, overlayCurveManager, basicEffect, overlayEffect, typeGroup.Cast<LocationClosedCurveView>().ToArray());
+                }
+                else if (typeGroup.Key == typeof(LocationLineView))
+                {
+                    LocationLineView.Draw(graphicsDevice, Scene, overlayLineManager, basicEffect, overlayEffect, typeGroup.Cast<LocationLineView>().ToArray());
+                }
+                else if (typeGroup.Key == typeof(LocationCircleView))
+                {
+                    LocationCircleView.Draw(graphicsDevice, Scene, basicEffect, overlayEffect, typeGroup.Cast<LocationCircleView>().ToArray());
+                }
+                else if (typeGroup.Key == typeof(AdjacentLocationCircleView))
+                {
+                    AdjacentLocationCircleView.Draw(graphicsDevice, Scene, basicEffect, overlayEffect, typeGroup.Cast<AdjacentLocationCircleView>().ToArray(), VisibleSectionNumber);
+                }
+                else if (typeGroup.Key == typeof(AdjacentLocationLineView))
+                {
+                    AdjacentLocationLineView.Draw(graphicsDevice, Scene, overlayLineManager, basicEffect, overlayEffect, typeGroup.Cast<AdjacentLocationLineView>().ToArray(), VisibleSectionNumber);
+                }
+                else
+                {
+                    throw new ArgumentException("Cannot draw background for unknown type" + typeGroup.Key.FullName);
+                }
+            } 
+
         }
         
 

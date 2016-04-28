@@ -137,7 +137,7 @@ namespace WebAnnotation.View
         public AdjacentLocationCircleView(LocationObj obj, IVolumeToSectionTransform mapper) : base(obj)
         {
             _MosaicCircle = new GridCircle(obj.Position, obj.Radius / 2.0 );
-            _VolumeCircle = new GridCircle(mapper.SectionToVolume(_MosaicCircle.Center), _MosaicCircle.Radius / 2.0);
+            _VolumeCircle = new GridCircle(mapper.SectionToVolume(_MosaicCircle.Center), _MosaicCircle.Radius);
 
             CreateViewObjects(this.MosaicCircle, mapper);
             CreateLabelObjects();  
@@ -160,7 +160,7 @@ namespace WebAnnotation.View
 
         private void CreateLabelObjects()
         {
-            StructureIDLabelView = new LabelView(this.ParentID.ToString(), modelObj.VolumePosition - new GridVector2(0, this.Radius));
+            StructureIDLabelView = new LabelView(StructureIDLabelWithTypeCode(), modelObj.VolumePosition - new GridVector2(0, this.Radius));
             StructureIDLabelView.MaxLineWidth = this.Radius * 2;
         }
 
@@ -195,12 +195,13 @@ namespace WebAnnotation.View
             return LocationAction.NONE;
         }
 
-        protected override void OnObjPropertyChanged(object o, PropertyChangedEventArgs args)
+        /*
+        internal override void OnObjPropertyChanged(object o, PropertyChangedEventArgs args)
         {
-            //CreateViewObjects();
-            //CreateLabelObjects();
+            CreateViewObjects();
+            CreateLabelObjects();
         }
-
+        */
         /*
         protected override void OnParentPropertyChanged(object o, PropertyChangedEventArgs args)
         {
@@ -238,8 +239,7 @@ namespace WebAnnotation.View
 
             float MagnificationFactor = (float)(1.0 / scene.Camera.Downsample);
             double DesiredRowsOfText = 6.0;
-            double NumUnscaledRows = (this.Radius * 2) / font.LineSpacing;
-            double DefaultFontSize = NumUnscaledRows / DesiredRowsOfText;
+            double DefaultFontSize = (this.Radius * 2) / DesiredRowsOfText;
             StructureIDLabelView.FontSize = DefaultFontSize;
             StructureIDLabelView.Position = modelObj.VolumePosition - new GridVector2(0.0, this.Radius / 3.0f);
             StructureIDLabelView.Draw(spriteBatch, font, scene);
@@ -252,7 +252,7 @@ namespace WebAnnotation.View
     }
 
 
-    class LocationCircleView : LocationCircleViewBase, ICanvasViewContainer
+    class LocationCircleView : LocationCircleViewBase, ICanvasViewContainer, ISelectable, IColorView
     {
         protected readonly GridCircle _VolumeCircle;
         protected readonly GridCircle _MosaicCircle;
@@ -272,6 +272,36 @@ namespace WebAnnotation.View
                 return _VolumeCircle;
             }
         }
+        
+        public Color Color
+        {
+            get
+            {
+                return circleView.Color;
+            }
+
+            set
+            {
+                circleView.Color = value;
+                if(OverlappedLinkView != null)
+                    OverlappedLinkView.Color = value;
+            }
+        }
+
+        public float Alpha
+        {
+            get
+            {
+                return circleView.Alpha;
+            }
+
+            set
+            {
+                circleView.Alpha = value;
+                if(OverlappedLinkView != null)
+                    OverlappedLinkView.Alpha = value;                
+            }
+        }
 
         public CircleView circleView;
         public LabelView StructureIDLabelView;
@@ -289,8 +319,8 @@ namespace WebAnnotation.View
             _MosaicCircle = new GridCircle(obj.Position, obj.Radius);
             _VolumeCircle = new GridCircle(mapper.SectionToVolume(_MosaicCircle.Center), _MosaicCircle.Radius);
 
-            RegisterForLocationEvents();
-            RegisterForStructureChangeEvents();
+            //RegisterForLocationEvents();
+            //RegisterForStructureChangeEvents();
             CreateViewObjects(_MosaicCircle, mapper);
             CreateLabelObjects();
         }
@@ -303,10 +333,9 @@ namespace WebAnnotation.View
 
         private void CreateLabelObjects()
         {
-            this.DeregisterForStructureChangeEvents();
-            StructureIDLabelView = new LabelView(this.ParentID.ToString(), this.VolumeCircle.Center - new GridVector2(0, this.Radius / 3.0f));
-            StructureIDLabelView.MaxLineWidth = this.Radius;
-            StructureIDLabelView.Color = this.modelObj.IsUnverifiedTerminal ? Color.Yellow : Color.Black;
+            StructureIDLabelView = new LabelView(StructureIDLabelWithTypeCode(), this.VolumeCircle.Center - new GridVector2(0, this.Radius / 3.0f));
+            StructureIDLabelView.MaxLineWidth = this.Radius * 2.0;
+            StructureIDLabelView._Color = this.modelObj.IsUnverifiedTerminal ? Color.Yellow : Color.Black;
             
             StructureLabelView = new LabelView(this.FullLabelText(), this.VolumeCircle.Center + new GridVector2(0, this.Radius / 3.0f));
             StructureLabelView.MaxLineWidth = this.Radius * 2;
@@ -315,7 +344,7 @@ namespace WebAnnotation.View
             if (this.Parent.ParentID.HasValue)
             {
                 ParentStructureLabelView = new LabelView(this.Parent.ParentID.ToString(), this.VolumeCircle.Center + new GridVector2(0, this.Radius / 2.0f));
-                ParentStructureLabelView.Color = this.Parent.Parent.Type.Color.ToXNAColor(0.75f);
+                ParentStructureLabelView._Color = this.Parent.Parent.Type.Color.ToXNAColor(0.75f);
             }
             else
             {
@@ -342,6 +371,9 @@ namespace WebAnnotation.View
                 }
 
                 this.OverlappedLinkView = new OverlappedLinkCircleView(this.circleView.Circle, (int)this.Z, value);
+                this.OverlappedLinkView.Color = this.Color;
+
+                this.CreateLabelObjects();
             }
         }
 
@@ -361,17 +393,14 @@ namespace WebAnnotation.View
         public override LocationAction GetMouseClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber)
         {
             double distance = this.DistanceToCenter(WorldPosition);
-
-            /*
+            
             if(OverlappedLinkView != null)
             {
                 if(OverlappedLinkView.Intersects(WorldPosition))
                 {
-                    
+                    return LocationAction.CREATELINKEDLOCATION;
                 }
             }
-            */
-            
 
             if (VisibleSectionNumber == (int)this.modelObj.Z)
             {
@@ -408,238 +437,31 @@ namespace WebAnnotation.View
             }
         }
 
+        private bool _Selected = false;
+        public bool Selected
+        {
+            get
+            {
+                return _Selected;
+            }
+
+            set
+            {
+                if(value)
+                {
+                    this.circleView.Alpha = 0.25f;
+                }
+                else
+                {
+                    this.circleView.Alpha = 0.5f;
+                }
+
+                _Selected = value;
+            }
+        }
+
         #region Linked Locations
 
-
-        /*
-        private ConcurrentDictionary<long, GridVector2> _lastKnownLinkPositions = new ConcurrentDictionary<long, GridVector2>();
-        private void PopulateLastKnownLinkLocations()
-        {
-            ICollection<LocationObj> listLinkedLocations = Store.Locations.GetObjectsByIDs(this.Links, false);
-            _lastKnownLinkPositions = new ConcurrentDictionary<long, GridVector2>(listLinkedLocations.ToDictionary(l => l.ID, l => l.VolumePosition));
-        }
-
-        private bool LastKnownLinkLocationsMatch()
-        {
-            
-        }*/
-
-        //    /*
-        //public void ClearOverlappingLinkedLocationCache()
-        //{
-        //    if (_OverlappingLinks != null)
-        //        _OverlappingLinks.Clear();
-
-        //    _OverlappingLinks = null;
-
-        //    if (_OverlappingLinkedLocationCircles != null)
-        //        _OverlappingLinkedLocationCircles.Clear();
-
-        //    _OverlappingLinkedLocationCircles = null;
-        //}
-        //*/
-
-        ///// <summary>
-        ///// Artificially positioned circles over our annotation circle which indicate links to locations on adjacent sections overlapped by this location
-        ///// </summary>
-        ///// 
-        //private ConcurrentDictionary<OverlappedLocationView, LocationCanvasView> _OverlappingLinkedLocationCircles = null;
-        //public ConcurrentDictionary<OverlappedLocationView, LocationCanvasView> OverlappingLinkedLocationCircles
-        //{
-        //    get
-        //    {
-        //        if (_OverlappingLinkedLocationCircles == null || _OverlappingLinkedLocationCircles.Count != OverlappingLinks.Count)
-        //        {
-        //            //RegisterForLocationEvents();
-        //            bool allLinksLoaded = this.AllLinksLoaded;
-        //            ConcurrentDictionary<OverlappedLocationView, LocationCanvasView> value = CalculateOverlappedLocationCircles();
-        //            _OverlappingLinkedLocationCircles = allLinksLoaded ? value : new ConcurrentDictionary<OverlappedLocationView, LocationCanvasView>(); 
-        //            NotifyCollectionChangedEventManager.AddListener(this.modelObj.Links, this);
-        //        }
-        //        /*
-        //    else
-        //    {
-        //        if (Links != null)
-        //        { 
-        //            _OverlappingLinkedLocationCircles = CalculateOverlappedLocationCircles();
-        //            _OverlappingLinkedLocationVerts = null;
-        //            _OverlappingLinkedLocationIndicies = null; 
-        //        }
-        //    }
-        //    */
-
-        //        return _OverlappingLinkedLocationCircles;
-        //    }
-        //}
-
-        //public uint AllLinksTestedFailures = 0;
-        //public bool LinkedLocationsRequestQueued = false;
-
-        //private List<LocationCanvasView> _OverlappingLinks = null;
-        //public override IList<LocationCanvasView> OverlappingLinks
-        //{
-        //    get
-        //    {
-        //        //TODO: Cannot cache because the adjacent location links do not appear when the location is moved so that they no longer overlap.
-
-        //        //return CalculateOverlappingLinks(this.Links, out AllLinksTested);
-
-        //        if (_OverlappingLinks == null)
-        //        {
-        //            bool AllLinksTested;
-        //            List<LocationCanvasView> overlapping = CalculateOverlappingLinks(this.Links, out AllLinksTested);
-        //            _OverlappingLinks = AllLinksTested ? overlapping : null;
-        //            if (!AllLinksTested)
-        //            {
-        //                AllLinksTestedFailures++;
-        //                if (AllLinksTestedFailures == 3)
-        //                {
-        //                    QueueLinkedLocationRequest();
-        //                }
-        //            }
-        //            else
-        //            {
-        //                RegisterForLinkedLocationChangeEvents();
-        //            }
-        //            return overlapping;
-        //        }
-
-        //        return _OverlappingLinks;
-        //    }
-        //}
-
-            /*
-        /// <summary>
-        /// Given a list of ID's, return a list of Locations which are overlapping our canvas model
-        /// </summary>
-        /// <param name="linkedLocations"></param>
-        /// <param name="AllLinksTested">We may not have loaded all of the linked locations locally.  Returns true if we have tested all of the links for overlap.  Otherwise false.  This helps determine if the output should be cached.</param>
-        /// <returns></returns>
-        public static List<LocationCanvasView> CalculateOverlappingLinks(ICollection<long> linkedIDs, out bool AllLinksTested)
-        {
-            ICollection<LocationObj> listLinkedLocations = Store.Locations.GetObjectsByIDs(linkedIDs, false);
-            AllLinksTested = listLinkedLocations.Count == linkedIDs.Count;
-            listLinkedLocations = listLinkedLocations.Where(loc => loc.Z != this.Z).ToList();
-            IEnumerable<LocationCanvasView> listCanvasLocations = listLinkedLocations.Select(loc => AnnotationViewFactory.Create(loc));
-
-            return listCanvasLocations.Where(loc => loc.Intersects(this.modelObj.VolumeShape)).ToList();
-        }
-        */
-
-        /*
-    public void QueueLinkedLocationRequest()
-    {
-        if (!LinkedLocationsRequestQueued)
-        {
-            LinkedLocationsRequestQueued = true;
-            Task t = new Task(() => { Store.Locations.GetObjectsByIDs(this.Links, true); LinkedLocationsRequestQueued = false; });
-            t.Start();
-        }
-    }
-    */
-
-        /*
-        /// <summary>
-        /// A linked location overlapping with our location is drawn as a small circle.  This function stores the position of those smaller circles along an arc
-        /// </summary>
-        /// <returns></returns>
-        private ConcurrentDictionary<OverlappedLocationView, LocationCanvasView> CalculateOverlappedLocationCircles()
-        {
-            ConcurrentDictionary<OverlappedLocationView, LocationCanvasView> listCircles = null;
-            if (_OverlappingLinkedLocationCircles == null)
-            {
-                listCircles = new ConcurrentDictionary<OverlappedLocationView, LocationCanvasView>();
-            }
-            else
-            {
-                listCircles = _OverlappingLinkedLocationCircles;
-                listCircles.Clear();
-            }
-
-            List<LocationCanvasView> listLinksAbove = this.OverlappingLinks.Where(loc => loc.Z > this.Z).ToList();
-            List<LocationCanvasView> listLinksBelow = this.OverlappingLinks.Where(loc => loc.Z < this.Z).ToList();
-
-            listLinksAbove = listLinksAbove.OrderBy(L => -L.VolumePosition.X).ThenBy(L => L.VolumePosition.Y).ToList();
-            listLinksBelow = listLinksBelow.OrderBy(L => L.VolumePosition.X).ThenBy(L => L.VolumePosition.Y).ToList();
-
-            //Figure out how large link images would be
-            double linkRadius = this.Radius / 6;
-
-            double linkArcNormalizedDistanceFromCenter = 0.75;
-            double linkArcDistanceFromCenter = linkArcNormalizedDistanceFromCenter * this.Radius;
-            double circumferenceOfLinkArc = linkArcDistanceFromCenter * Math.PI; //Don't multiply by two since we only use top half of circle
-
-            double UpperArcLinkRadius = linkRadius;
-            double LowerArcLinkRadius = linkRadius;
-
-            //See if we will run out of room for links
-            if (linkRadius * listLinksAbove.Count > circumferenceOfLinkArc)
-            {
-                UpperArcLinkRadius = circumferenceOfLinkArc / listLinksAbove.Count;
-            }
-
-            if (linkRadius * listLinksBelow.Count > circumferenceOfLinkArc)
-            {
-                LowerArcLinkRadius = circumferenceOfLinkArc / listLinksBelow.Count;
-            }
-
-            double UpperArcStepSize = UpperArcLinkRadius / (circumferenceOfLinkArc / 2);
-            double LowerArcStepSize = LowerArcLinkRadius / (circumferenceOfLinkArc / 2);
-
-            //double angleOffset =((listLinksAbove.Count / 2) / (double)listLinksAbove.Count) * Math.PI;
-            double halfNumLinksAbove = listLinksAbove.Count / 2;
-            double angleOffset = ((double)(1 - listLinksAbove.Count) % 2) * (UpperArcStepSize / 2);
-            for (int iLocAbove = 0; iLocAbove < listLinksAbove.Count; iLocAbove++)
-            {
-                LocationCanvasView linkLoc = listLinksAbove[iLocAbove];
-
-                //Figure out where the link should be drawn. 
-                //Allocate the top 180 degree arc for links above, the bottom 180 for links below
-
-                double angle = (((((double)iLocAbove - halfNumLinksAbove) * UpperArcStepSize) - angleOffset) * Math.PI); //- angleOffset;
-
-                Vector3 positionOffset = new Vector3((float)Math.Sin(angle), (float)Math.Cos(angle), (float)0);
-                positionOffset *= (float)linkArcDistanceFromCenter;
-
-                GridCircle circle = new GridCircle(this.VolumePosition + new GridVector2(positionOffset.X, positionOffset.Y), UpperArcLinkRadius);
-
-                OverlappedLocationView overlapLocation = new OverlappedLocationView(linkLoc.modelObj, circle, true);
-                bool added = listCircles.TryAdd(overlapLocation, linkLoc);
-                if (!added)
-                {
-                    //overlapLocation = null;
-                    linkLoc = null;
-                }
-            }
-
-            double halfNumLinksBelow = listLinksBelow.Count / 2;
-            angleOffset = ((double)(1 - listLinksBelow.Count) % 2) * (LowerArcStepSize / 2);
-            for (int iLocBelow = 0; iLocBelow < listLinksBelow.Count; iLocBelow++)
-            {
-                LocationCanvasView linkLoc = listLinksBelow[iLocBelow];
-
-                //Figure out where the link should be drawn. 
-                //Allocate the top 180 degree arc for links above, the bottom 180 for links below
-
-                double angle = (((((double)iLocBelow - halfNumLinksBelow) * LowerArcStepSize) - angleOffset) * Math.PI) + Math.PI;
-
-                Vector3 positionOffset = new Vector3((float)Math.Sin(angle), (float)Math.Cos(angle), (float)0);
-                positionOffset *= (float)linkArcDistanceFromCenter;
-
-                GridCircle circle = new GridCircle(this.VolumePosition + new GridVector2(positionOffset.X, positionOffset.Y), LowerArcLinkRadius);
-
-                OverlappedLocationView overlapLocation = new OverlappedLocationView(linkLoc.modelObj, circle, false);
-                bool added = listCircles.TryAdd(overlapLocation, linkLoc);
-                if (!added)
-                {
-                    //overlapLocation = null;
-                    linkLoc = null;
-                }
-            }
-
-            return listCircles;
-        }
-        */
 
         public ICanvasView GetAnnotationAtPosition(GridVector2 position, out double distanceToCenterNormalized)
         {
@@ -665,271 +487,7 @@ namespace WebAnnotation.View
         }
         
         #endregion
-
-
-        #region Overlapped Locations
-
-        /*
-        protected void CreateOverlappedLocationView()
-        {
-            this.OverlappedLinkView = new OverlappedLinkCircleView(this.Circle, this.Z, );
-        }
-        */
-
-
-        /*
-        private VertexPositionColorTexture[] _OverlappingLinkedLocationVerts = null;
-        private int[] _OverlappingLinkedLocationIndicies = null;
-
-        public VertexPositionColorTexture[] GetLinkedLocationBackgroundVerts(GridRectangle VisibleBounds, double downsample, out int[] indicies)
-        {
-            double maxDimension = Math.Max(VisibleBounds.Width, VisibleBounds.Height);
-            double SatScalar = 0.5;
-            double LocToScreenRatio = Radius * 2 / maxDimension;
-
-            if (LocToScreenRatio > BeginFadeCutoff)
-            {
-                SatScalar *= Viking.Common.Util.GetFadeFactor(LocToScreenRatio, BeginFadeCutoff, InvisibleCutoff);
-            }
-
-            StructureTypeObj type = this.modelObj.Parent.Type;
-            Microsoft.Xna.Framework.Color selectedColor = type.Color.ToXNAColor(0.5f);
-            Microsoft.Xna.Framework.Color unselectedColor = type.Color.ToXNAColor(0.125f);
-
-            Microsoft.Xna.Framework.Color selectedHSLColor = selectedColor.ConvertToHSL();
-            Microsoft.Xna.Framework.Color unselectedHSLColor = unselectedColor.ConvertToHSL();
-
-            selectedHSLColor.G = (byte)((float)selectedHSLColor.G * SatScalar);
-            unselectedHSLColor.G = (byte)((float)unselectedHSLColor.G * SatScalar);
-
-            return GetLinkedLocationBackgroundVerts(downsample, selectedHSLColor, unselectedHSLColor, out indicies);
-        }
-
-        public VertexPositionColorTexture[] GetLinkedLocationBackgroundVerts(double downsample,
-                                                                             Microsoft.Xna.Framework.Color unselectedColor,
-                                                                             Microsoft.Xna.Framework.Color selectionColor,
-                                                                             out int[] indicies)
-        {
-            indicies = _OverlappingLinkedLocationIndicies;
-
-            //Figure out if we are too small to display location link icons
-            if (!OverlappingLocationLinksCanBeSeen(downsample))
-            {
-                //Free the memory just in case
-                _OverlappingLinkedLocationVerts = null;
-                _OverlappingLinkedLocationIndicies = null;
-
-                return new VertexPositionColorTexture[0];
-            }
-
-            if (_OverlappingLinkedLocationCircles != null)
-            {
-                if (_OverlappingLinkedLocationCircles.Count != Links.Count)
-                {
-                    _OverlappingLinkedLocationCircles = CalculateOverlappedLocationCircles();
-                    _OverlappingLinkedLocationVerts = null;
-                    _OverlappingLinkedLocationIndicies = null;
-                }
-            }
-
-            OverlappedLocationView overlapLocation = AnnotationOverlay.LastMouseOverObject as OverlappedLocationView;
-            if (overlapLocation != null)
-            {
-                //Redo our verticies if we are
-                if (overlapLocation.link.A.ID == this.ID || overlapLocation.link.B.ID == this.ID)
-                {
-                    _OverlappingLinkedLocationCircles = CalculateOverlappedLocationCircles();
-                    _OverlappingLinkedLocationVerts = null;
-                    _OverlappingLinkedLocationIndicies = null;
-                }
-            }
-
-            if (_OverlappingLinkedLocationVerts != null)
-            {
-                for (int i = 0; i < _OverlappingLinkedLocationVerts.Length; i++)
-                {
-                    _OverlappingLinkedLocationVerts[i].Color = unselectedColor;
-                }
-
-                return _OverlappingLinkedLocationVerts;
-            }
-
-            //If we've already calculated the verticies use those
-            if (_OverlappingLinkedLocationVerts == null)
-            {
-                VertexPositionColorTexture[] Verts = new VertexPositionColorTexture[OverlappingLinkedLocationCircles.Count * GlobalPrimitives.SquareVerts.Length];
-                indicies = new int[OverlappingLinkedLocationCircles.Count * GlobalPrimitives.SquareIndicies.Length];
-
-                int iVert = 0;
-                int iIndex = 0;
-                foreach (KeyValuePair<OverlappedLocationView, GridCircle> Item in this.OverlappingLinkedLocationCircles)
-                {
-                    GridCircle locCircle = Item.Value;
-                    OverlappedLocationView linkedLoc = Item.Key;
-
-                    //Make sure our verts and location lengths still agree, sometimes the collection size can grow.
-                    if (iVert >= Verts.Length)
-                    {
-                        VertexPositionColorTexture[] VertsTemp = new VertexPositionColorTexture[OverlappingLinkedLocationCircles.Count * GlobalPrimitives.SquareVerts.Length];
-                        Verts.CopyTo(VertsTemp, 0);
-                        Verts = VertsTemp;
-                        VertsTemp = null;
-
-                        int[] indiciesTemp = new int[OverlappingLinkedLocationCircles.Count * GlobalPrimitives.SquareIndicies.Length];
-                        indicies.CopyTo(indiciesTemp, 0);
-                        indicies = indiciesTemp;
-                        indiciesTemp = null;
-                    }
-
-                    GlobalPrimitives.SquareVerts.CopyTo(Verts, iVert);
-
-                    Microsoft.Xna.Framework.Color color = (linkedLoc == AnnotationOverlay.LastMouseOverObject as LocationObj) ? selectionColor : unselectedColor;
-
-                    bool invertTexture = linkedLoc.Z - this.Z < 0;
-
-                    //Scale, translate, and color the background verts correctly
-                    for (int i = 0; i < GlobalPrimitives.SquareVerts.Length; i++)
-                    {
-                        Verts[i + iVert].Position *= (float)locCircle.Radius;
-                        Verts[i + iVert].Position.X += (float)locCircle.Center.X;
-                        Verts[i + iVert].Position.Y += (float)locCircle.Center.Y;
-                        Verts[i + iVert].Color = color;
-
-                        if (invertTexture)
-                        {
-                            Verts[i + iVert].TextureCoordinate.Y = 1 - Verts[i + iVert].TextureCoordinate.Y;
-                        }
-                    }
-
-                    for (int i = 0; i < GlobalPrimitives.SquareIndicies.Length; i++)
-                    {
-                        indicies[iIndex + i] = GlobalPrimitives.SquareIndicies[i] + iVert;
-                    }
-
-                    iVert += GlobalPrimitives.SquareVerts.Length;
-                    iIndex += GlobalPrimitives.SquareIndicies.Length;
-
-                    //                    Location.AppendVertLists(linkVerts, listVerts, GlobalPrimitives.SquareIndicies, ref listIndicies);
-                }
-
-                _OverlappingLinkedLocationVerts = Verts;
-                _OverlappingLinkedLocationIndicies = indicies;
-            }
-
-            return _OverlappingLinkedLocationVerts;
-        }
-        */
-
-        #endregion
-        /*
-        #region Label
-
-        private bool _LabelSizeMeasured = false;
-        private Vector2 _LabelSize;
-
-        private string _InfoLabelMeasured = "";
-        private bool _InfoLabelSizeMeasured = false;
-        private string[] _InfoLabelAfterSplit = new string[0];
-        private Vector2[] _InfoLabelSize = new Vector2[0];
-
-        private bool _ParentLabelSizeMeasured = false;
-        private Vector2 _ParentLabelSize;
-
-        public Vector2 GetLabelSize()
-        {
-            if (_LabelSizeMeasured)
-                return _LabelSize;
-
-            //Otherwise we aren't really sure about the label size, so just guess
-            return new Vector2(256f, 128f);
-        }
-
-        public Vector2 GetLabelSize(SpriteFont font)
-        {
-            if (font == null)
-                throw new ArgumentNullException("font");
-
-            if (_LabelSizeMeasured)
-                return _LabelSize;
-
-            string label = modelObj.Label;
-            //Label can't be empty or the offset measured is zero
-            if (String.IsNullOrEmpty(label))
-                label = " ";
-
-            _LabelSize = font.MeasureString(label);
-            _LabelSizeMeasured = true;
-            return _LabelSize;
-        }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="font"></param>
-        /// <param name="nLinesAllowed"></param>
-        /// <param name="LabelY">The y elevation of the first line of the label on a unit circle.  Using this we calculate how much room we have in X</param>
-        /// <param name="LineSpacing">The y distance used for each line on a unit circle</param>
-        /// <returns></returns>
-        public Vector2[] GetInfoLabelSizeOnCircle(string NewInfoLabel, SpriteFont font, float Scale)
-        {
-            if (font == null)
-                throw new ArgumentNullException("font");
-
-            if (_InfoLabelSizeMeasured && _InfoLabelMeasured == NewInfoLabel)
-                return _InfoLabelSize;
-
-            _InfoLabelMeasured = NewInfoLabel;
-
-            if (modelObj.Parent == null)
-                return new Vector2[] { new Vector2(0, 0) };
-
-            string text = NewInfoLabel;
-            //Label can't be empty or the offset measured is zero
-            if (String.IsNullOrEmpty(text))
-                text = " ";
-
-            Vector2 FullLabelSize = font.MeasureString(text);
-            //FullLabelSize *= InfoLabelToLabelSizeRatio; 
-
-            if (FullLabelSize.X > this.Radius * 0.5f)
-            {
-                this._InfoLabelAfterSplit = LocationObjRenderer.SplitLabel(text);
-            }
-            else
-            {
-                _InfoLabelAfterSplit = new string[] { text };
-            }
-
-            this._InfoLabelSize = font.MeasureStrings(_InfoLabelAfterSplit);
-
-            _InfoLabelSizeMeasured = true;
-            return _InfoLabelSize;
-        }
-
-        public Vector2 GetParentLabelSize(SpriteFont font)
-        {
-            if (font == null)
-                throw new ArgumentNullException("font");
-
-            if (_ParentLabelSizeMeasured)
-                return _ParentLabelSize;
-
-            if (modelObj.Parent == null)
-                return new Vector2(0, 0);
-
-            if (modelObj.Parent.Parent == null)
-                return new Vector2(0, 0);
-            
-            string label = modelObj.Parent.Parent.ToString();
-            //Label can't be empty or the offset measured is zero
-            if (String.IsNullOrEmpty(label))
-                label = " ";
-
-            _ParentLabelSize = font.MeasureString(label);
-            _ParentLabelSizeMeasured = true;
-            return _LabelSize;
-        }        
-        */
+        
         public static void Draw(GraphicsDevice device,
                           VikingXNA.Scene scene,
                           BasicEffect basicEffect,
@@ -939,18 +497,21 @@ namespace WebAnnotation.View
             int stencilValue = DeviceStateManager.GetDepthStencilValue(device);
             DeviceStateManager.SetDepthStencilValue(device, stencilValue + 1);
 
+            float[] originalAlpha = listToDraw.Select(loc => loc.Alpha).ToArray();
+            float[] fadeFactor = listToDraw.Select(loc => loc.GetAlphaFadeScalarForScene(scene)).ToArray();
+
+            listToDraw.ForEach((view, i) => view.Alpha = originalAlpha[i] * fadeFactor[i]);
+
             OverlappedLinkCircleView[] overlappedLocations = listToDraw.Select(l => l.OverlappedLinkView).Where(l => l != null && l.IsVisible(scene)).ToArray();
             OverlappedLinkCircleView.Draw(device, scene, basicEffect, overlayEffect, overlappedLocations);
              
-            //OverlappedLocationView[] overlappedLocations = listToDraw.SelectMany(l => l.OverlappingLinkedLocationCircles.Keys).ToArray();
-            //OverlappedLocationView.Draw(device, scene, basicEffect, overlayEffect, overlappedLocations);
-
             DeviceStateManager.SetDepthStencilValue(device, stencilValue);
-
+            
             CircleView[] backgroundCircles = listToDraw.Select(l => l.circleView).ToArray();
+            
             CircleView.Draw(device, scene, basicEffect, overlayEffect, backgroundCircles);
 
-            //device.Clear(ClearOptions.DepthBuffer, Color.Black, float.MaxValue, 0); 
+            listToDraw.ForEach((view, i) => view.Alpha = originalAlpha[i]);
         }
 
         /// <summary>
@@ -972,11 +533,12 @@ namespace WebAnnotation.View
             if (spriteBatch == null)
                 throw new ArgumentNullException("spriteBatch");
              
-            double DesiredRowsOfText = 8.0;
-            double NumUnscaledRows = this.Radius / font.LineSpacing;
-            double DefaultFontSize = NumUnscaledRows / DesiredRowsOfText;
-            StructureIDLabelView.FontSize = NumUnscaledRows / 2.0; //We only desire one line of text
-            StructureLabelView.FontSize = NumUnscaledRows / DesiredRowsOfText;
+            //Scale the label alpha based on the zoom factor 
+
+            double DesiredRowsOfText = 4.0;
+            double DefaultFontSize = (this.Radius * 2.0) / DesiredRowsOfText;
+            StructureIDLabelView.FontSize = DefaultFontSize; //We only desire one line of text
+            StructureLabelView.FontSize = DefaultFontSize / 3.0f;
 
             //StructureIDLabelView.Position = modelObj.VolumePosition - new GridVector2(0.0, this.Radius / 3.0f);
 
@@ -984,19 +546,13 @@ namespace WebAnnotation.View
             StructureLabelView.Draw(spriteBatch, font, scene);
             if (ParentStructureLabelView != null)
             {
-                ParentStructureLabelView.FontSize = StructureIDLabelView.FontSize / 2.0;
+                ParentStructureLabelView.FontSize = StructureIDLabelView.FontSize / 4.0;
                 ParentStructureLabelView.Draw(spriteBatch, font, scene);
             }
 
             if(this.OverlappedLinkView != null)
                 this.OverlappedLinkView.DrawLabel(spriteBatch, font, scene);
-            /*
-            foreach (OverlappedLocationView ov in this.OverlappingLinkedLocationCircles.Keys)
-            {
-                ov.DrawLabel(spriteBatch, font, scene, 0);
-            }
-            */
-
+        
             return;
 
             /*
@@ -1286,8 +842,33 @@ namespace WebAnnotation.View
 
         }
         */
-        /*
-
+        
+        /// <summary>
+        /// Returns an alpha value that fades if the circle fills the screen.
+        /// </summary>
+        /// <param name="scene"></param>
+        /// <param name=""></param>
+        /// <returns></returns>
+        private float GetAlphaFadeScalarForScene(VikingXNA.Scene scene)
+        {
+            double ScreenFraction = (this.Radius * 2.0) / scene.MinVisibleWorldBorderLength;
+            double MinScreenFraction = 0.25;
+            double MaxScreenFraction = 1.5;
+            if (ScreenFraction < MinScreenFraction)
+            {
+                return 1.0f;
+            }
+            else if (ScreenFraction > MaxScreenFraction)
+            {
+                return 0f;
+            }
+            else
+            {
+                double scalar = (ScreenFraction - MaxScreenFraction) / (MinScreenFraction - MaxScreenFraction);
+                return (float)scalar.Interpolate(0, 1);
+            }
+        }
+            
         private float GetAlphaForScale(float scale, float ViewingDistanceAlpha)
         {
             return GetAlphaForScale(scale, ViewingDistanceAlpha, 1f, 0f, 0.05f, 2f, 0.6f);
@@ -1323,7 +904,8 @@ namespace WebAnnotation.View
 
             return scaledAlpha;
         }
-
+      
+        /*
 
         private float BaseFontSizeForLocationType(LocationType typecode, int DirectionToVisiblePlane, float MagnificationFactor, Microsoft.Xna.Framework.Graphics.SpriteFont font)
         {
@@ -1356,7 +938,7 @@ namespace WebAnnotation.View
         */
         //#endregion
 
-        protected override void OnParentPropertyChanged(object o, PropertyChangedEventArgs args)
+        internal override void OnParentPropertyChanged(object o, PropertyChangedEventArgs args)
         {
             if (args.PropertyName == "Label" || args.PropertyName == "Attributes")
             {
@@ -1374,7 +956,7 @@ namespace WebAnnotation.View
                 PropertyName == "Attributes";
         }
 
-        protected override void OnObjPropertyChanged(object o, PropertyChangedEventArgs args)
+        internal override void OnObjPropertyChanged(object o, PropertyChangedEventArgs args)
         {
             //ClearOverlappingLinkedLocationCache();
 

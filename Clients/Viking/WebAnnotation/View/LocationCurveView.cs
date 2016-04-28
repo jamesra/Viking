@@ -6,13 +6,16 @@ using System.Threading.Tasks;
 using Geometry;
 using WebAnnotationModel;
 using SqlGeometryUtils;
+using Microsoft.Xna.Framework;
 
 namespace WebAnnotation.View
 {
-    abstract class LocationCurveView : LocationLineViewBase
+    abstract class LocationCurveView : LocationLineViewBase, VikingXNAGraphics.IColorView
     {
         public abstract GridVector2[] MosaicCurveControlPoints { get; }
         public abstract GridVector2[] VolumeCurveControlPoints { get; }
+        public abstract Color Color { get; set; }
+        public abstract float Alpha { get; set; }
 
         public LocationCurveView(LocationObj obj, Viking.VolumeModel.IVolumeToSectionTransform mapper) : base(obj, mapper)
         { 
