@@ -21,7 +21,7 @@ namespace WebAnnotation.ViewModel
     /// This class represents a link between locations. This object is a little unique because it is
     /// not tied to the database object like the other *obj classes
     /// </summary>
-    public class LocationLinkView : Viking.Objects.UIObjBase, ICanvasView, IEquatable<LocationLinkView>
+    public class LocationLinkView : Viking.Objects.UIObjBase, ICanvasView, IEquatable<LocationLinkView>, IColorView
     {
         public readonly LocationLinkKey Key;
 
@@ -96,8 +96,40 @@ namespace WebAnnotation.ViewModel
 
         public LineView lineView = null;
 
-        public  Color Color { get; private set; }
-        
+        private Color _Color;
+
+        public Color Color
+        {
+            get
+            {
+                return _Color;
+            }
+
+            set
+            {
+                _Color = value;
+                if(lineView != null)
+                    lineView.Color = value;
+            }
+        }
+
+        public float Alpha
+        {
+            get
+            {
+                return _Color.GetAlpha();
+            }
+
+            set
+            {
+                _Color.SetAlpha(value);
+                if (lineView != null)
+                {
+                    lineView.Color = lineView.Color.SetAlpha(value);
+                }
+            }
+        }
+
         public int MinSection { get; private set; }
         public int MaxSection { get; private set; }
 
@@ -149,8 +181,8 @@ namespace WebAnnotation.ViewModel
             GridVector2 AVolumePosition = sourceMapper.SectionToVolume(A.Position);
             GridVector2 BVolumePosition = targetMapper.SectionToVolume(B.Position);
 
-            this.A = new GridCircle(AVolumePosition, A.Radius);
-            this.B = new GridCircle(BVolumePosition, B.Radius);
+            this.A = new GridCircle(AVolumePosition, A.Radius * (Z == A.Z ? 1.0 : Global.AdjacentLocationRadiusScalar));
+            this.B = new GridCircle(BVolumePosition, B.Radius * (Z == B.Z ? 1.0 : Global.AdjacentLocationRadiusScalar));
 
             this.MinSection = (int)Math.Round(A.Z < B.Z ? A.Z : B.Z);
             this.MaxSection = (int)Math.Round(A.Z < B.Z ? B.Z : A.Z);
@@ -161,14 +193,14 @@ namespace WebAnnotation.ViewModel
         public double LineWidth
         {
             get
-            {
-                return (A.Radius + B.Radius) / 2.0;
+            { 
+                return LineRadius * 2.0;
             }
         }
          
         public double LineRadius
         {
-            get { return LineWidth / 2.0; }
+            get { return Math.Min(A.Radius, B.Radius); }
         }
 
         private LineView CreateView()
@@ -261,6 +293,7 @@ namespace WebAnnotation.ViewModel
         {
             get { return Key.A.ToString() + " -> " + Key.B.ToString(); }
         }
+
 
         public override void Save()
         {
