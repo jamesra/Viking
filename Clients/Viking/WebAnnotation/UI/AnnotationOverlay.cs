@@ -1241,6 +1241,7 @@ namespace WebAnnotation
             ///     Filter out invisible locations
             ///     Draw the backgrounds
             ///     Draw the overlapping linked locations over the backgrounds
+            ///     Draw the location links
             ///     Draw the structure links 
             ///     Draw the labels
             /// </summary>
@@ -1255,8 +1256,7 @@ namespace WebAnnotation
 
             if (_Parent.spriteBatch.GraphicsDevice.IsDisposed)
                 return;
-
-
+            
             if (ShouldLoadAnnotationsForSceneMovement(scene))
                 System.Threading.Tasks.Task.Run(() => LoadSectionAnnotations());
 
@@ -1266,17 +1266,16 @@ namespace WebAnnotation
 
             GridRectangle Bounds = scene.VisibleWorldBounds;
 
-            nextStencilValue++; 
             DeviceStateManager.SetDepthStencilValue(graphicsDevice, nextStencilValue);
 
-            if (basicEffect == null)
-                basicEffect = CreateBasicEffect(graphicsDevice, scene);
-            else if (basicEffect.IsDisposed)
-                basicEffect = CreateBasicEffect(graphicsDevice, scene);
+            int StartingStencilValue = nextStencilValue;
 
-            basicEffect.Projection = scene.Projection;
-            basicEffect.View = scene.Camera.View;
-            basicEffect.World = scene.World;
+            if (basicEffect == null || basicEffect.IsDisposed)
+            {
+                basicEffect = new BasicEffect(graphicsDevice);
+            }
+
+            basicEffect.SetScene(scene);
 
             VikingXNA.AnnotationOverBackgroundLumaEffect overlayEffect = Parent.annotationOverlayEffect;
 
@@ -1297,46 +1296,30 @@ namespace WebAnnotation
             float Time = (float)TimeSpan.FromTicks(DateTime.Now.Ticks - DateTime.Today.Ticks).TotalSeconds;
             //            Debug.WriteLine("Time: " + Time.ToString()); 
 
-            nextStencilValue = DeviceStateManager.GetDepthStencilValue(graphicsDevice) + 1;
-            DeviceStateManager.SetDepthStencilValue(graphicsDevice, nextStencilValue);
+            DeviceStateManager.SetDepthStencilValue(graphicsDevice, StartingStencilValue);
             
             ICollection<LocationCanvasView> Locations = currentSectionAnnotations.GetLocations(scene.VisibleWorldBounds);
             List<LocationCanvasView> listLocationsToDraw = FindVisibleLocations(Locations, scene);
+            ICollection<LocationCanvasView> RefLocations = currentSectionAnnotations.AdjacentLocationsNotOverlappedInRegion(Bounds);
+            List<LocationCanvasView> listVisibleNonOverlappingLocationsOnAdjacentSections = FindVisibleAdjacentLocations(RefLocations, scene); //Find the locations on the adjacent sections
 
             //Draw all of the locations on the current section
             WebAnnotation.LocationObjRenderer.DrawBackgrounds(listLocationsToDraw, graphicsDevice, basicEffect, overlayEffect, Parent.LumaOverlayLineManager, Parent.LumaOverlayCurveManager, scene, SectionNumber);
 
-            nextStencilValue = DeviceStateManager.GetDepthStencilValue(graphicsDevice) + 1;
+            nextStencilValue = DeviceStateManager.GetDepthStencilValue(graphicsDevice) + 1; //Record the next open stencil value for later draw calls that can overwrite the backgrounds
             DeviceStateManager.SetDepthStencilValue(graphicsDevice, nextStencilValue);
 
-            //Get all the lines to draw first so the text and geometric shapes are over top of them
-            //IEnumerable<LocationLinkView> VisibleLinks = current.VisibleLocationLinks(_Parent.Section.Number, Bounds);
-            LocationLinkView.Draw(graphicsDevice, scene, Parent.LumaOverlayLineManager, basicEffect, overlayEffect, currentSectionAnnotations.NonOverlappedLocationLinks);
-
-            // graphicsDevice.Clear(ClearOptions.DepthBuffer, Color.Black, float.MaxValue, 0);
-
-            nextStencilValue = DeviceStateManager.GetDepthStencilValue(graphicsDevice) + 1;
-            DeviceStateManager.SetDepthStencilValue(graphicsDevice, nextStencilValue);
-
-            //Find the locations on the adjacent sections
-
-            ICollection<LocationCanvasView> RefLocations = currentSectionAnnotations.AdjacentLocationsNotOverlappedInRegion(Bounds);
-            
-            List<LocationCanvasView> listVisibleNonOverlappingLocationsOnAdjacentSections = FindVisibleAdjacentLocations(RefLocations, scene); 
-            //listVisibleNonOverlappingLocationsOnAdjacentSections = FindNonOverlappedAdjacentLocations(listLocationsToDraw, listVisibleNonOverlappingLocationsOnAdjacentSections, _Parent.Section.Number);
-
-            nextStencilValue = DeviceStateManager.GetDepthStencilValue(graphicsDevice) + 1;
-            DeviceStateManager.SetDepthStencilValue(graphicsDevice, nextStencilValue);
-
-            graphicsDevice.Clear(ClearOptions.DepthBuffer, Color.Black, float.MaxValue, 0);
-            
             WebAnnotation.LocationObjRenderer.DrawBackgrounds(listVisibleNonOverlappingLocationsOnAdjacentSections, graphicsDevice, basicEffect, overlayEffect, Parent.LumaOverlayLineManager, Parent.LumaOverlayCurveManager, scene, SectionNumber);
 
-            nextStencilValue = DeviceStateManager.GetDepthStencilValue(graphicsDevice) + 1;
-            DeviceStateManager.SetDepthStencilValue(graphicsDevice, nextStencilValue);
+            //Draw the LocationLinks, but use the starting stencil value so we don't overwrite any backgrounds
+            nextStencilValue = DeviceStateManager.GetDepthStencilValue(graphicsDevice) + 1; //Record the next open stencil value for later draw calls that can overwrite the backgrounds
+            DeviceStateManager.SetDepthStencilValue(graphicsDevice, StartingStencilValue);
+
+            //Get all the lines to draw first so the text and geometric shapes are over top of them
+            LocationLinkView.Draw(graphicsDevice, scene, Parent.LumaOverlayLineManager, basicEffect, overlayEffect, currentSectionAnnotations.NonOverlappedLocationLinks);
 
             graphicsDevice.Clear(ClearOptions.DepthBuffer, Color.Black, float.MaxValue, 0);
-            
+                        
             if (defaultBlendState == null || defaultBlendState.IsDisposed)
             {
                 defaultBlendState = new BlendState();
@@ -1353,7 +1336,9 @@ namespace WebAnnotation
             DeviceStateManager.SetRasterizerStateForShapes(graphicsDevice);
             DeviceStateManager.SetRenderStateForShapes(graphicsDevice);
 
-            //Get all the lines to draw
+            //Draw structure links over any annotations
+            DeviceStateManager.SetDepthStencilValue(graphicsDevice, nextStencilValue);
+
             List<StructureLinkViewModelBase> VisibleStructureLinks = currentSectionAnnotations.VisibleStructureLinks(scene);
             StructureLinkCirclesView.Draw(graphicsDevice, scene, Parent.LumaOverlayLineManager, VisibleStructureLinks.Where(l => l as StructureLinkCirclesView != null).Cast<StructureLinkCirclesView>().ToArray());
             StructureLinkCurvesView.Draw(graphicsDevice, scene, Parent.LumaOverlayLineManager, VisibleStructureLinks.Where(l => l as StructureLinkCurvesView != null).Cast<StructureLinkCurvesView>().ToArray());
@@ -1365,7 +1350,11 @@ namespace WebAnnotation
 
             DrawLocationLabels(listVisibleNonOverlappingLocationsOnAdjacentSections, scene); 
              
-            graphicsDevice.RasterizerState = OriginalRasterState;
+            if(OriginalRasterState != null && !OriginalRasterState.IsDisposed)
+                graphicsDevice.RasterizerState = OriginalRasterState;
+
+            //Make sure we update the nextStencilValue for the calling function ref parameter
+            nextStencilValue++;// DeviceStateManager.GetDepthStencilValue(graphicsDevice) + 1;
         }
 
         private void DrawLocationLabels(ICollection<LocationCanvasView> locations, VikingXNA.Scene scene)

@@ -65,7 +65,7 @@ namespace WebAnnotation
             int MaxCanvasViewDepth = listToDraw.Max(l => l.ParentDepth);
              
             int StartingDepthStencilValue = DeviceStateManager.GetDepthStencilValue(graphicsDevice);
-            const int DepthStencilStepSize = 10;
+            const int DepthStencilStepSize = 5;
             int EndingDepthStencilValue = StartingDepthStencilValue + (DepthStencilStepSize * MaxCanvasViewDepth);
             int DepthStencilValue = EndingDepthStencilValue;
 

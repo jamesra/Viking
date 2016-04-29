@@ -32,6 +32,7 @@ namespace WebAnnotation
 #else
         internal static int NumSectionsInMemory = 10;
 #endif
+        public static readonly double AdjacentLocationRadiusScalar = 0.5; //Make radius of annotations on adjacent sections half of the normal value
 
         //TODO: Choose number of points based on distance between control points
         static public uint NumCurveInterpolationPoints = 3;

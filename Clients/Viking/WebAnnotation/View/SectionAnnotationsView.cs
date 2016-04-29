@@ -276,6 +276,11 @@ namespace WebAnnotation.ViewModel
             get { return AdjacentSection.Number; }
         }
 
+        public override string ToString()
+        {
+            return string.Format("Annotations on {0} seen from {1}", this.AdjacentSection.Number, this.SectionNumber);
+        }
+
         protected KeyTracker<long> KnownLocations = new KeyTracker<long>();
         protected RTree.RTree<long> LocationsSearch = new RTree.RTree<long>();
         protected ConcurrentDictionary<long, LocationCanvasView> LocationViews = new ConcurrentDictionary<long, LocationCanvasView>();
@@ -722,6 +727,11 @@ namespace WebAnnotation.ViewModel
         }
 
         public override int SectionNumber { get {return this.Section.Number; }}
+
+        public override string ToString()
+        {
+            return string.Format("Section {0} annotations", this.SectionNumber);
+        }
 
         /// <summary>
         /// 
@@ -1315,16 +1325,23 @@ namespace WebAnnotation.ViewModel
                 dictNormDistanceToIntersectingObjects.Add(NearestLocationObj.DistanceFromCenterNormalized(WorldPosition), NearestLocationObj);
             }
 
+            //Select links and annotations on this section first
+            /*
+            
+            */
+
+            //OK, check adjacent
+            ICanvasView adjacentView = GetAdjacentAnnotationAtPosition(WorldPosition, out distance);
+            if (adjacentView != null)
+            {
+                dictNormDistanceToIntersectingObjects.Add(adjacentView.DistanceFromCenterNormalized(WorldPosition), adjacentView);
+            }
+
             if (dictNormDistanceToIntersectingObjects.Count > 0)
             {
                 distance = dictNormDistanceToIntersectingObjects.First().Key;
                 return dictNormDistanceToIntersectingObjects.First().Value;
             }
-
-            //OK, check adjacent
-            ICanvasView adjacentView = GetAdjacentAnnotationAtPosition(WorldPosition, out distance);
-            if (adjacentView != null)
-                return adjacentView;
 
             ICollection<LocationLinkView> listLocLinks = this.SectionLocationLinks.GetLocationLinks(WorldPosition);
             NearestLink = listLocLinks.OrderBy(ll => ll.DistanceFromCenterNormalized(WorldPosition)).FirstOrDefault();
@@ -1333,6 +1350,7 @@ namespace WebAnnotation.ViewModel
                 distance = NearestLink.DistanceFromCenterNormalized(WorldPosition);
                 return NearestLink;
             }
+
 
             return null;
         }
@@ -1343,8 +1361,10 @@ namespace WebAnnotation.ViewModel
             if (SectionAbove!= null)
             {
                 ICanvasView obj = SectionAbove.GetAnnotationAtPosition(WorldPosition, out distance);
-                if(obj != null)
+                if (obj != null)
+                {
                     dictNormDistanceToIntersectingObjects.Add(obj.DistanceFromCenterNormalized(WorldPosition), obj);
+                }
             }
             
             if(SectionBelow != null)

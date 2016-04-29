@@ -136,7 +136,7 @@ namespace WebAnnotation.View
 
         public AdjacentLocationCircleView(LocationObj obj, IVolumeToSectionTransform mapper) : base(obj)
         {
-            _MosaicCircle = new GridCircle(obj.Position, obj.Radius / 2.0 );
+            _MosaicCircle = new GridCircle(obj.Position, obj.Radius * Global.AdjacentLocationRadiusScalar);
             _VolumeCircle = new GridCircle(mapper.SectionToVolume(_MosaicCircle.Center), _MosaicCircle.Radius);
 
             CreateViewObjects(this.MosaicCircle, mapper);
@@ -180,10 +180,9 @@ namespace WebAnnotation.View
         }
 
         private void CreateViewObjects(GridCircle MosaicCircle, IVolumeToSectionTransform mapper)
-        {
-            GridVector2 VolumePosition = mapper.SectionToVolume(MosaicCircle.Center);
-            upCircleView = TextureCircleView.CreateUpArrow(new GridCircle(VolumePosition, this.Radius), modelObj.Parent.Type.Color.ToXNAColor(0.33f));
-            downCircleView = TextureCircleView.CreateDownArrow(new GridCircle(VolumePosition, this.Radius), modelObj.Parent.Type.Color.ToXNAColor(0.33f));
+        { 
+            upCircleView = TextureCircleView.CreateUpArrow(_VolumeCircle, modelObj.Parent.Type.Color.ToXNAColor(0.5f));
+            downCircleView = TextureCircleView.CreateDownArrow(_VolumeCircle, modelObj.Parent.Type.Color.ToXNAColor(0.5f));
         }
 
         private void CreateLabelObjects()
