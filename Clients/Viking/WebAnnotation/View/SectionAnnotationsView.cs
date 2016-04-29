@@ -766,7 +766,7 @@ namespace WebAnnotation.ViewModel
             if (s == null)
                 return;
 
-            if (StructureObj.IsTextProperty(e.PropertyName))
+            if (LocationsForStructure.ContainsKey(s.ID))
             {
                 KeyTracker<long> locIDs = this.LocationsForStructure[s.ID];
 
@@ -778,8 +778,6 @@ namespace WebAnnotation.ViewModel
                         locView.OnParentPropertyChanged(sender, e);
                     }
                 }
-
-                //AddLocationBatch(locs);
             }
         }
 
