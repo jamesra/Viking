@@ -101,9 +101,10 @@ namespace WebAnnotation
 
                 DepthStencilValue -= DepthStencilStepSize;
             }
-
-            DeviceStateManager.SetDepthStencilValue(graphicsDevice, EndingDepthStencilValue + 1);
+             
+            DeviceStateManager.SetDepthBuffer(graphicsDevice, CompareFunction.LessEqual);
             DeviceStateManager.RestoreDeviceState(graphicsDevice);
+            DeviceStateManager.SetDepthStencilValue(graphicsDevice, EndingDepthStencilValue + 1); 
         }
 
         private static void DrawBackgroundsAtDepth(IGrouping<int, LocationCanvasView> depthGroup, GraphicsDevice graphicsDevice, BasicEffect basicEffect,

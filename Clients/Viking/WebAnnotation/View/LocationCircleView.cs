@@ -95,7 +95,7 @@ namespace WebAnnotation.View
         }
     }
 
-    class AdjacentLocationCircleView : LocationCircleViewBase
+    class AdjacentLocationCircleView : LocationCircleViewBase, IColorView
     {
         public TextureCircleView upCircleView;
         public TextureCircleView downCircleView;
@@ -150,7 +150,35 @@ namespace WebAnnotation.View
         {
             get { return this.VolumeCircle.Radius; }
         }
-        
+
+        public Color Color
+        {
+            get
+            {
+                return this.upCircleView.Color;
+            }
+
+            set
+            {
+                this.upCircleView.Color = value;
+                this.downCircleView.Color = value;
+            }
+        }
+
+        public float Alpha
+        {
+            get
+            {
+                return this.upCircleView.Alpha;
+            }
+
+            set
+            {
+                this.upCircleView.Alpha = value;
+                this.downCircleView.Alpha = value;
+            }
+        }
+
         private void CreateViewObjects(GridCircle MosaicCircle, IVolumeToSectionTransform mapper)
         {
             GridVector2 VolumePosition = mapper.SectionToVolume(MosaicCircle.Center);
@@ -272,7 +300,7 @@ namespace WebAnnotation.View
                 return _VolumeCircle;
             }
         }
-        
+
         public Color Color
         {
             get
@@ -283,7 +311,7 @@ namespace WebAnnotation.View
             set
             {
                 circleView.Color = value;
-                if(OverlappedLinkView != null)
+                if (OverlappedLinkView != null)
                     OverlappedLinkView.Color = value;
             }
         }
@@ -297,9 +325,12 @@ namespace WebAnnotation.View
 
             set
             {
-                circleView.Alpha = value;
-                if(OverlappedLinkView != null)
-                    OverlappedLinkView.Alpha = value;                
+                if (circleView.Alpha != value)
+                {
+                    circleView.Alpha = value;
+                    if (OverlappedLinkView != null)
+                        OverlappedLinkView.Alpha = value;
+                }
             }
         }
 
@@ -328,7 +359,7 @@ namespace WebAnnotation.View
         private void CreateViewObjects(GridCircle MosaicCircle, IVolumeToSectionTransform mapper)
         {
             GridVector2 VolumePosition = mapper.SectionToVolume(MosaicCircle.Center);
-            circleView = new CircleView(new GridCircle(VolumePosition, modelObj.Radius), modelObj.Parent.Type.Color.ToXNAColor(1f) );
+            circleView = new CircleView(new GridCircle(VolumePosition, modelObj.Radius), modelObj.Parent.Type.Color.ToXNAColor(1f));
         }
 
         private void CreateLabelObjects()
@@ -336,10 +367,10 @@ namespace WebAnnotation.View
             StructureIDLabelView = new LabelView(StructureIDLabelWithTypeCode(), this.VolumeCircle.Center - new GridVector2(0, this.Radius / 3.0f));
             StructureIDLabelView.MaxLineWidth = this.Radius * 2.0;
             StructureIDLabelView._Color = this.modelObj.IsUnverifiedTerminal ? Color.Yellow : Color.Black;
-            
+
             StructureLabelView = new LabelView(this.FullLabelText(), this.VolumeCircle.Center + new GridVector2(0, this.Radius / 3.0f));
             StructureLabelView.MaxLineWidth = this.Radius * 2;
-            
+
 
             if (this.Parent.ParentID.HasValue)
             {
@@ -352,7 +383,7 @@ namespace WebAnnotation.View
             }
         }
 
-        
+
         public override ICollection<long> OverlappedLinks
         {
             protected get
@@ -365,7 +396,7 @@ namespace WebAnnotation.View
 
             set
             {
-                if(value == null || value.Count == 0)
+                if (value == null || value.Count == 0)
                 {
                     this.OverlappedLinkView = null;
                 }
@@ -393,10 +424,10 @@ namespace WebAnnotation.View
         public override LocationAction GetMouseClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber)
         {
             double distance = this.DistanceToCenter(WorldPosition);
-            
-            if(OverlappedLinkView != null)
+
+            if (OverlappedLinkView != null)
             {
-                if(OverlappedLinkView.Intersects(WorldPosition))
+                if (OverlappedLinkView.Intersects(WorldPosition))
                 {
                     return LocationAction.CREATELINKEDLOCATION;
                 }
@@ -447,7 +478,7 @@ namespace WebAnnotation.View
 
             set
             {
-                if(value)
+                if (value)
                 {
                     this.circleView.Alpha = 0.25f;
                 }
@@ -473,7 +504,7 @@ namespace WebAnnotation.View
                 if (this.OverlappedLinkView != null)
                 {
                     annotation = this.OverlappedLinkView.GetAnnotationAtPosition(position, out distanceToCenterNormalized);
-                    if(annotation != null)
+                    if (annotation != null)
                     {
                         return annotation;
                     }
@@ -483,11 +514,11 @@ namespace WebAnnotation.View
                 return this;
             }
 
-            return null; 
+            return null;
         }
-        
+
         #endregion
-        
+
         public static void Draw(GraphicsDevice device,
                           VikingXNA.Scene scene,
                           BasicEffect basicEffect,
@@ -500,7 +531,13 @@ namespace WebAnnotation.View
             float[] originalAlpha = listToDraw.Select(loc => loc.Alpha).ToArray();
             float[] fadeFactor = listToDraw.Select(loc => loc.GetAlphaFadeScalarForScene(scene)).ToArray();
 
-            listToDraw.ForEach((view, i) => view.Alpha = originalAlpha[i] * fadeFactor[i]);
+            listToDraw.ForEach((view, i) =>
+                {
+                    if (fadeFactor[i] < 1.0f)
+                    {
+                        view.Alpha = originalAlpha[i] * fadeFactor[i];
+                    }
+                });
 
             OverlappedLinkCircleView[] overlappedLocations = listToDraw.Select(l => l.OverlappedLinkView).Where(l => l != null && l.IsVisible(scene)).ToArray();
             OverlappedLinkCircleView.Draw(device, scene, basicEffect, overlayEffect, overlappedLocations);

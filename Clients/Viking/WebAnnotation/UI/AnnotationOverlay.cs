@@ -19,6 +19,7 @@ using connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd;
 using System.Threading.Tasks;
 using SqlGeometryUtils;
 using VikingXNAGraphics;
+using WebAnnotation.Actions;
 
 namespace WebAnnotation
 {
@@ -48,6 +49,8 @@ namespace WebAnnotation
         /// The last object the mouse was over, if any
         /// </summary>
         internal static ICanvasView LastMouseOverObject = null;
+
+        private MouseOverLocationCanvasViewEffect mouseOverEffect = new MouseOverLocationCanvasViewEffect();
 
         static AnnotationOverlay()
         {
@@ -385,16 +388,8 @@ namespace WebAnnotation
             ICanvasView NextMouseOverObject = ObjectAtPosition(WorldPosition, out distance) as ICanvasView;
             if (NextMouseOverObject != LastMouseOverObject)
             {
-                if (LastMouseOverObject as ISelectable != null)
-                {
-                    ((ISelectable)LastMouseOverObject).Selected = false;
-                }
-
-                if (NextMouseOverObject as ISelectable != null)
-                {
-                    ((ISelectable)NextMouseOverObject).Selected = true;
-                }
-
+                mouseOverEffect.viewObj = NextMouseOverObject;
+                
                 Parent.Invalidate();
             }   
 
@@ -458,23 +453,6 @@ namespace WebAnnotation
         
         protected void OnMouseUp(object sender, MouseEventArgs e)
         {
-            /*
-            if (_Parent.CurrentCommand == null)
-                return;
-
-            //Check if there is a non-default command. we don't want to mess with another active command
-            if (_Parent.CurrentCommand.GetType() != typeof(Viking.UI.Commands.DefaultCommand) ||
-                Viking.UI.Commands.Command.QueueDepth > 0)
-                return; 
-
-            if (e.Button == MouseButtons.Left)
-            {
-                if (LastMouseOverObject == null)
-                {
-                    OnContinueLastTrace(LastMouseDownCoords); 
-                }
-            }
-            */
         }
 
         protected void OnKeyDown(object sender, KeyEventArgs e)
@@ -1342,19 +1320,7 @@ namespace WebAnnotation
 
             //Find the locations on the adjacent sections
 
-            ICollection<LocationCanvasView> RefLocations;
-            /*
-            if(currentSectionAnnotations.SectionAbove != null)
-            {
-                RefLocations.AddRange(currentSectionAnnotations.SectionAbove.NonOverlappedAnnotationsInRegion(Bounds).Where(l => l.IsTerminal==false && l.OffEdge == false && l.IsVericosityCap == false));//(Bounds)); 
-            }
-
-            if(currentSectionAnnotations.SectionBelow != null)
-            {
-                RefLocations.AddRange(currentSectionAnnotations.SectionBelow.NonOverlappedAnnotationsInRegion(Bounds).Where(l => l.IsTerminal == false && l.OffEdge == false && l.IsVericosityCap == false));                
-            }
-            */
-            RefLocations = currentSectionAnnotations.AdjacentLocationsNotOverlappedInRegion(Bounds);
+            ICollection<LocationCanvasView> RefLocations = currentSectionAnnotations.AdjacentLocationsNotOverlappedInRegion(Bounds);
             
             List<LocationCanvasView> listVisibleNonOverlappingLocationsOnAdjacentSections = FindVisibleAdjacentLocations(RefLocations, scene); 
             //listVisibleNonOverlappingLocationsOnAdjacentSections = FindNonOverlappedAdjacentLocations(listLocationsToDraw, listVisibleNonOverlappingLocationsOnAdjacentSections, _Parent.Section.Number);
@@ -1370,11 +1336,7 @@ namespace WebAnnotation
             DeviceStateManager.SetDepthStencilValue(graphicsDevice, nextStencilValue);
 
             graphicsDevice.Clear(ClearOptions.DepthBuffer, Color.Black, float.MaxValue, 0);
-             
-            //WebAnnotation.LocationObjRenderer.DrawOverlappedAdjacentLinkedLocations(listLocationsToDraw.OfType<LocationCircleView>().ToList(), scene, graphicsDevice, basicEffect, overlayEffect, SectionNumber);
-
-            TryDrawLineFromOverlappingLocation(AnnotationOverlay.LastMouseOverObject as OverlappedLocationView, _Parent.LineManager, _Parent.Section.Number, Time);
-               
+            
             if (defaultBlendState == null || defaultBlendState.IsDisposed)
             {
                 defaultBlendState = new BlendState();
@@ -1387,6 +1349,9 @@ namespace WebAnnotation
             }
 
             graphicsDevice.BlendState = defaultBlendState;
+
+            DeviceStateManager.SetRasterizerStateForShapes(graphicsDevice);
+            DeviceStateManager.SetRenderStateForShapes(graphicsDevice);
 
             //Get all the lines to draw
             List<StructureLinkViewModelBase> VisibleStructureLinks = currentSectionAnnotations.VisibleStructureLinks(scene);
@@ -1423,57 +1388,6 @@ namespace WebAnnotation
                 curve.DrawLabel(Parent.Device, scene, Parent.spriteBatch, Parent.fontArial, Parent.CurveManager, Parent.basicEffect);
             }
 
-        }
-
-        
-
-        private static bool TryDrawLineFromOverlappingLocation(OverlappedLocationView OverlappingLocation, RoundLineCode.RoundLineManager lineManager, int section_number, float time_offset)
-        { 
-            /*
-            if (OverlappingLocation != null)
-            {
-                LocationLinkView SelectedLink = OverlappingLocation.link;
-                if (SelectedLink == null)
-                    return false; 
-
-                //Give the colors a nudge towards red or blue depending on the direction to the link
-                double directionFactor = 1;
-                StructureTypeObj type = SelectedLink.A.Parent.Type;
-                System.Drawing.Color color = System.Drawing.Color.FromArgb(type.Color);
-                int distanceFactor = SelectedLink.maxSection - SelectedLink.minSection;
-                if (distanceFactor == 0)
-                    distanceFactor = 1;
-
-                directionFactor = SelectedLink.maxSection == section_number ? 1 : -1;
-
-                int red = (int)((float)(color.R * .5) + (128 * directionFactor));
-                red = 255 - (red / distanceFactor);
-                red = red > 255 ? 255 : red;
-                int blue = (int)((float)(color.B * .5) + (128 * (1 - directionFactor)));
-                blue = 255 - (blue / distanceFactor);
-                blue = blue > 255 ? 255 : blue;
-                int green = (int)((float)color.G);
-                green = 255 - (green / distanceFactor);
-
-                int alpha = 85;
-                if (LastMouseOverObject == SelectedLink)
-                {
-                    alpha = 192;
-                }
-
-                //If you don't cast to byte the wrong constructor is used and the alpha value is wrong
-                Microsoft.Xna.Framework.Color xnacolor = new Microsoft.Xna.Framework.Color((byte)(red),
-                    (byte)(green),
-                    (byte)(blue),
-                    (byte)(alpha));
-
-                lineManager.Draw(SelectedLink.lineGraphic, (float)SelectedLink.LineWidth, xnacolor.ConvertToHSL(),
-                                             basicEffect.View * basicEffect.Projection, time_offset, null);
-
-                return true; 
-            }
-            */
-            return false; 
         }
 
         private static List<LocationCanvasView> FindVisibleLocations(IEnumerable<LocationCanvasView> locations, VikingXNA.Scene scene)

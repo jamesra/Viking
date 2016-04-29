@@ -132,6 +132,7 @@
     <Compile Include="Extensions.cs" />
     <Compile Include="Global.cs" />
     <Compile Include="Interfaces\CanvasInterfaces.cs" />
+    <Compile Include="UI\Actions\MouseOverLocationCanvasViewEffect.cs" />
     <Compile Include="UI\Commands\AddRemoveLineControlPointCommand.cs" />
     <Compile Include="UI\Commands\AdjustControlPointCommand.cs" />
     <Compile Include="UI\Commands\PlaceOpenCurveCommand.cs" />
@@ -386,7 +387,9 @@
       <Name>WebAnnotationModel</Name>
     </ProjectReference>
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Folder Include="UI\ViewEffects\" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
