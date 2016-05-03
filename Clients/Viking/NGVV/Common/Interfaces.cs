@@ -53,7 +53,7 @@ namespace Viking.Common
         /// <param name="WorldPosition"></param>
         /// <param name="distance"></param>
         /// <returns></returns>
-        IUIObjectBasic ObjectAtPosition(GridVector2 WorldPosition, out double distance); 
+        object ObjectAtPosition(GridVector2 WorldPosition, out double distance); 
 
         /// <summary>
         /// Draw the specified overlay extension on the render target.  
@@ -96,7 +96,7 @@ namespace Viking.Common
         /// <summary>
         /// GetMenuFor returns a context menu for the passed DataObject or null
         /// </summary>
-        System.Windows.Forms.ContextMenu BuildMenuFor(IUIObjectBasic Obj, System.Windows.Forms.ContextMenu Menu);
+        System.Windows.Forms.ContextMenu BuildMenuFor(IContextMenu Obj, System.Windows.Forms.ContextMenu Menu);
 
         /// <summary>
         /// GetMenuFor returns a context menu for the passed System.Type or null
@@ -161,11 +161,14 @@ namespace Viking.Common
         void OnCancelChanges();
     }
 
-    public interface IUIObjectBasic
+    public interface IContextMenu
+    {
+        System.Windows.Forms.ContextMenu ContextMenu { get; }
+    }
+
+    public interface IUIObjectBasic : IContextMenu
     {
         void ShowProperties();
-
-        System.Windows.Forms.ContextMenu ContextMenu { get; }
 
         string ToolTip { get; }
 

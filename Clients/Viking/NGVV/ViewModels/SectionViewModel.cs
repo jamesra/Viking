@@ -185,7 +185,7 @@ namespace Viking.ViewModels
             Viking.UI.Forms.PropertySheetForm.Show(this);
         }
 
-        System.Windows.Forms.ContextMenu IUIObjectBasic.ContextMenu
+        public System.Windows.Forms.ContextMenu ContextMenu
         {
             get 
             {

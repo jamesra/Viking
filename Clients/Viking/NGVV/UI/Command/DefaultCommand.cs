@@ -27,7 +27,7 @@ namespace Viking.UI.Commands
             {
                 GridVector2 WorldPosition = Parent.ScreenToWorld(e.X, e.Y);
                 double distance = double.MaxValue;
-                IUIObjectBasic obj = null;
+                IContextMenu context_obj = null;
 
                 if (Parent.ShowOverlays)
                 {
@@ -35,12 +35,12 @@ namespace Viking.UI.Commands
                     {
 
                         double newDistance;
-                        IUIObjectBasic nearObj = overlay.ObjectAtPosition(WorldPosition, out newDistance);
+                        object nearObj = overlay.ObjectAtPosition(WorldPosition, out newDistance);
                         if (nearObj != null)
                         {
                             if (newDistance < distance)
                             {
-                                obj = nearObj;
+                                context_obj = nearObj as IContextMenu;
                                 distance = newDistance;
                             }
                         }
@@ -49,11 +49,9 @@ namespace Viking.UI.Commands
 
                 //Create a context menu and show it where the mouse clicked
                 //Right mouse button calls up context menu
-                
-                
                 ContextMenu menu = null; 
-                if (obj != null)
-                    menu = obj.ContextMenu;
+                if (context_obj != null)
+                    menu = context_obj.ContextMenu;
                 else
                     menu = new ContextMenu();
                 
@@ -61,7 +59,7 @@ namespace Viking.UI.Commands
                 IProvideContextMenus[] ContextMenuProviders = ExtensionManager.CreateContextMenuProviders();
                 foreach (IProvideContextMenus provider in ContextMenuProviders)
                 {
-                    menu = provider.BuildMenuFor(obj, menu);
+                    menu = provider.BuildMenuFor(context_obj, menu);
                 }
 
                 if (menu != null)
@@ -74,6 +72,5 @@ namespace Viking.UI.Commands
                 base.OnMouseDoubleClick(sender, e);
             }
         }
-        
     }
 }

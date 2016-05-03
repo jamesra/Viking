@@ -223,6 +223,12 @@ namespace WebAnnotation.ViewModel
         /// <returns></returns>
         private Microsoft.Xna.Framework.Color GetLocationLinkColor(Color structure_type_color, int section_span_distance, double direction, bool IsMouseOver)
         {
+            if(section_span_distance == 0)
+            {
+                //This is an error state, we shouldn't have a link between annotations on the same section
+                return Color.White;
+            }
+
             int red = (int)((float)((float)structure_type_color.R * .5f) + (128 * direction));
             red = 255 - (red / section_span_distance);
             red = red > 255 ? 255 : red;

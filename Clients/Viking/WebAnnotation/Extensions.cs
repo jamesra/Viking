@@ -10,6 +10,24 @@ using SqlGeometryUtils;
 
 namespace WebAnnotation
 {
+    public static class KeysExtensions
+    {
+        public static bool ShiftOrCtrlPressed(this System.Windows.Forms.Keys ModifierKeys)
+        {
+            return ModifierKeys == System.Windows.Forms.Keys.Control ||
+               ModifierKeys == System.Windows.Forms.Keys.Shift;
+        }
+
+        public static bool ShiftPressed(this System.Windows.Forms.Keys ModifierKeys)
+        {
+            return ModifierKeys == System.Windows.Forms.Keys.Shift;
+        }
+
+        public static bool CtrlPressed(this System.Windows.Forms.Keys ModifierKeys)
+        {
+            return ModifierKeys == System.Windows.Forms.Keys.Control;
+        }
+    }
 
     public static class ColorExtensions
     {
