@@ -16,6 +16,13 @@ using VikingXNA;
 
 namespace XNATestbed
 {
+    enum TestMode
+    {
+        TEXT,
+        CURVE_LABEL,
+        CURVE
+    };
+
     /// <summary>
     /// This is the main type for your game
     /// </summary>
@@ -35,6 +42,7 @@ namespace XNATestbed
         CurveViewTest curveViewTest = new CurveViewTest();
         LabelViewsTest labelTest = new LabelViewsTest();
 
+        TestMode Mode = TestMode.CURVE;
 
         public XNATestBedMain()
         {
@@ -140,10 +148,21 @@ namespace XNATestbed
                 this.Exit();
 
             ProcessGamepad();
+            ProcessKeyboard();
 
             // TODO: Add your update logic here
 
             base.Update(gameTime);
+        }
+
+        private void ProcessKeyboard()
+        {
+            if (Keyboard.GetState().IsKeyDown(Keys.F1))
+                this.Mode = TestMode.CURVE;
+            if (Keyboard.GetState().IsKeyDown(Keys.F2))
+                this.Mode = TestMode.CURVE_LABEL;
+            if (Keyboard.GetState().IsKeyDown(Keys.F3))
+                this.Mode = TestMode.TEXT;
         }
 
         private void ProcessGamepad()
@@ -181,10 +200,19 @@ namespace XNATestbed
 
             spriteBatch.Begin();
 
-            //curveTest.Draw(this);
-            //curveViewTest.Draw(this);
-            labelTest.Draw(this);
-
+            switch(Mode)
+            {
+                case TestMode.CURVE:
+                    curveTest.Draw(this);
+                    break;
+                case TestMode.CURVE_LABEL:
+                    curveViewTest.Draw(this);
+                    break;
+                case TestMode.TEXT:
+                    labelTest.Draw(this);
+                    break;
+            }
+            
             spriteBatch.End();
 
             // TODO: Add your drawing code here
@@ -299,7 +327,7 @@ namespace XNATestbed
             rightCurveLabel.Max_Curve_Length_To_Use_Normalized = (float)(rightCurveLabel.Text.Length / totalLabelLength);
 
             CurveView.Draw(window.GraphicsDevice, scene, window.curveManager, window.basicEffect, window.overlayEffect, time, new CurveView[] { curveView });
-            CurveLabel.Draw(window.GraphicsDevice, scene, window.spriteBatch, window.fontArial, window.curveManager, window.basicEffect, new CurveLabel[] { leftCurveLabel, rightCurveLabel });
+            CurveLabel.Draw(window.GraphicsDevice, scene, window.spriteBatch, window.fontArial, window.curveManager, new CurveLabel[] { leftCurveLabel, rightCurveLabel });
 
         } 
 
@@ -356,7 +384,7 @@ namespace XNATestbed
             
             curveLabel.Alignment = HorizontalAlignment.Left;
             
-            CurveLabel.Draw(window.GraphicsDevice, scene, window.spriteBatch, window.fontArial, window.curveManager, window.basicEffect, new CurveLabel[] { curveLabel});
+            CurveLabel.Draw(window.GraphicsDevice, scene, window.spriteBatch, window.fontArial, window.curveManager, new CurveLabel[] { curveLabel});
             labelView.Draw(window.spriteBatch, window.fontArial, window.Scene);
              
             curveLabel.FontSize = (time * 8f) + 8f;
