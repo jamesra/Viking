@@ -97,13 +97,24 @@ namespace WebAnnotationModel
             }
         }
 
+        private IEnumerable<ObjAttribute> _AttributesCache = null;
+
         public IEnumerable<ObjAttribute> Attributes
         {
-            get { return ObjAttribute.Parse(Data.AttributesXml); }
+            get
+            {
+                if (_AttributesCache == null)
+                {
+                    _AttributesCache = ObjAttribute.Parse(Data.AttributesXml).ToList();
+                }
+                return _AttributesCache;
+            }
             set
             { 
                 if (Data.AttributesXml == null && value == null)
                     return;
+
+                _AttributesCache = value;
 
                 string xmlstring = ObjAttribute.ToXml(value);
 
