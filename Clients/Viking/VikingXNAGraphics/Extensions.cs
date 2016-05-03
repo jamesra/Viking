@@ -8,8 +8,6 @@ using System.Threading.Tasks;
 
 namespace VikingXNAGraphics
 {
-
-
     public enum LineStyle
     {
         Standard,
@@ -97,7 +95,7 @@ namespace VikingXNAGraphics
 
         public static Microsoft.Xna.Framework.Color SetAlpha(this Microsoft.Xna.Framework.Color color, float alpha)
         {
-            if(alpha > 1.0f || alpha < 0f)
+            if (alpha > 1.0f || alpha < 0f)
             {
                 throw new ArgumentOutOfRangeException("Alpha value must be between 0 to 1.0");
             }
@@ -171,6 +169,16 @@ namespace VikingXNAGraphics
         public static Vector2[] MeasureStrings(this SpriteFont font, string[] lines)
         {
             return lines.Select(line => font.MeasureString(line)).ToArray();
+        }
+    }
+
+    public static class BasicEffectExtensions
+    { 
+        public static void SetScene(this BasicEffect basicEffect, VikingXNA.Scene scene)
+        {
+            basicEffect.Projection = scene.Projection;
+            basicEffect.View = scene.Camera.View;
+            basicEffect.World = scene.World;
         }
     }
 }

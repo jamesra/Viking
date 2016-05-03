@@ -137,7 +137,9 @@
     <Compile Include="UI\Commands\AdjustControlPointCommand.cs" />
     <Compile Include="UI\Commands\PlaceOpenCurveCommand.cs" />
     <Compile Include="UI\Commands\TranslateLocationCommand.cs" />
+    <Compile Include="View\LocationLink_ContextMenuView.cs" />
     <Compile Include="View\OverlappedLinkCircleView.cs" />
+    <Compile Include="View\OverlappedLocationLinkView.cs" />
     <Compile Include="View\SectionAnnotationsView.cs" />
     <Compile Include="View\LocationCircleLabelView.cs" />
     <Compile Include="View\LocationActions.cs" />

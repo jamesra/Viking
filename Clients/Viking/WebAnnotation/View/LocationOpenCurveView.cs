@@ -10,10 +10,12 @@ using Microsoft.Xna.Framework;
 using SqlGeometryUtils;
 using WebAnnotationModel;
 using VikingXNAGraphics;
+using Microsoft.Xna.Framework.Graphics;
+using VikingXNA;
 
 namespace WebAnnotation.View
 {
-    class LocationOpenCurveView : LocationCurveView, IColorView
+    class LocationOpenCurveView : LocationCurveView, IColorView, IRenderedLabelView
     {
         public static uint NumInterpolationPoints = Global.NumCurveInterpolationPoints;
         
@@ -129,13 +131,7 @@ namespace WebAnnotation.View
         /// <param name="ScreenDrawPosition">Center of the annotation in screen space, which is the coordinate system used for text</param>
         /// <param name="MagnificationFactor"></param>
         /// <param name="DirectionToVisiblePlane">The Z distance of the location to the plane viewed by user.</param>
-        public void DrawLabel(
-                                Microsoft.Xna.Framework.Graphics.GraphicsDevice device,
-                                VikingXNA.Scene scene,
-                                Microsoft.Xna.Framework.Graphics.SpriteBatch spriteBatch,
-                                Microsoft.Xna.Framework.Graphics.SpriteFont font,
-                                RoundCurve.CurveManager curveManager,
-                                Microsoft.Xna.Framework.Graphics.BasicEffect basicEffect)
+        public void DrawLabel(GraphicsDevice device, SpriteBatch spriteBatch, SpriteFont font, Scene scene)
         {
             if (font == null)
                 throw new ArgumentNullException("font");
@@ -143,9 +139,11 @@ namespace WebAnnotation.View
             if (spriteBatch == null)
                 throw new ArgumentNullException("spriteBatch");
 
+            RoundCurve.CurveManager curveManager = VikingXNA.DeviceEffectsStore<RoundCurve.CurveManager>.TryGet(device);
+            if (curveManager == null)
+                return;
             
-
-            CurveLabel.Draw(device, scene, spriteBatch, font, curveManager, basicEffect, new CurveLabel[] { curveLabel, curveParentLabel });
+            CurveLabel.Draw(device, scene, spriteBatch, font, curveManager, new CurveLabel[] { curveLabel, curveParentLabel });
         }
 
         public override double Width
@@ -184,6 +182,6 @@ namespace WebAnnotation.View
             base.OnParentPropertyChanged(o, args);
             
         }
-
+        
     }
 }

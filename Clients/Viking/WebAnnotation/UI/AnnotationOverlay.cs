@@ -177,10 +177,10 @@ namespace WebAnnotation
             SectionAnnotationsView locView = GetAnnotationsForSection(CurrentSectionNumber);
             if (locView == null)
                 return null;
-
+            
             LocationCanvasView bestObj;
             bestObj = locView.GetNearestLocation(position, out BestDistance);
-
+            /*
             LocationCanvasView adjacentObj;
             double distance;
 
@@ -217,7 +217,7 @@ namespace WebAnnotation
                     }
                 }
             }
-
+            */
             return bestObj; 
         }
 
@@ -226,7 +226,7 @@ namespace WebAnnotation
         /// </summary>
         /// <param name="position"></param>
         /// <returns></returns>
-        public IUIObjectBasic ObjectAtPosition(GridVector2 position, out double distance)
+        public object ObjectAtPosition(GridVector2 position, out double distance)
         {
             double MaxScreenDimension = Math.Max(Parent.Scene.VisibleWorldBounds.Width, Parent.Scene.VisibleWorldBounds.Height);
             distance = double.MaxValue;
@@ -244,7 +244,7 @@ namespace WebAnnotation
                 distance = BestDistance;
                 LocationCanvasView loc = bestObj as LocationCanvasView;
                 if (loc == null)
-                    return bestObj as IUIObjectBasic;
+                    return bestObj;
     
                 //if (loc.OverlappingLinks.Count == 0)
                 //    return bestObj;
@@ -253,7 +253,7 @@ namespace WebAnnotation
                 if (container != null)
                 {
                     bestObj = container.GetAnnotationAtPosition(position, out distance);
-                    return bestObj as IUIObjectBasic;
+                    return bestObj;
                 }
             }
 
@@ -340,18 +340,12 @@ namespace WebAnnotation
 
         protected void UpdateMouseCursor()
         {
-            LocationCanvasView loc = LastMouseOverObject as LocationCanvasView; // GetNearestLocation(WorldPosition, out distance);
+            IMouseActionSupport loc = LastMouseOverObject as IMouseActionSupport; // GetNearestLocation(WorldPosition, out distance);
             if (loc != null)
             {
-                LocationAction action;
+                long locID; 
                 GridVector2 WorldPosition = this.LastMouseMoveVolumeCoords;
-                if (Control.ModifierKeys == Keys.Shift)
-                    action = loc.GetMouseShiftClickActionForPositionOnAnnotation(WorldPosition, this.CurrentSectionNumber);
-                else if (Control.ModifierKeys == Keys.Control)
-                    action = loc.GetMouseControlClickActionForPositionOnAnnotation(WorldPosition, this.CurrentSectionNumber);
-                else
-                    action = loc.GetMouseClickActionForPositionOnAnnotation(WorldPosition, this.CurrentSectionNumber);
-
+                LocationAction action = loc.GetMouseClickActionForPositionOnAnnotation(WorldPosition, this.CurrentSectionNumber, Control.ModifierKeys, out locID);
                 _Parent.Cursor = action.GetCursor();
             }
             else
@@ -419,25 +413,20 @@ namespace WebAnnotation
             if (e.Button == MouseButtons.Left)
             { 
                 double distance;
-                IUIObjectBasic obj = ObjectAtPosition(WorldPosition, out distance);
+                object obj = ObjectAtPosition(WorldPosition, out distance);
                 //Figure out if it is resizing a location circle
                 //If the loc is on this section we check if we are close to the edge and we are resizing.  Everyone else gets standard location command
                 Viking.UI.State.SelectedObject = obj as IUIObjectBasic;
 
                 /*If we select a link, find the location off the section and assume we have selected that*/
-                LocationCanvasView loc = obj as LocationCanvasView;
+                IMouseActionSupport actionSupportedObj = obj as IMouseActionSupport;
 
-                if (loc != null)
+                if (actionSupportedObj != null)
                 {
-                    LocationAction action;
-                    if (Control.ModifierKeys == Keys.Shift)
-                        action = loc.GetMouseShiftClickActionForPositionOnAnnotation(WorldPosition, this.CurrentSectionNumber);
-                    else if (Control.ModifierKeys == Keys.Control)
-                        action = loc.GetMouseControlClickActionForPositionOnAnnotation(WorldPosition, this.CurrentSectionNumber);
-                    else
-                        action = loc.GetMouseClickActionForPositionOnAnnotation(WorldPosition, this.CurrentSectionNumber);
-
-                    Viking.UI.Commands.Command command = action.CreateCommand(Parent, Store.Locations.GetObjectByID(loc.ID), WorldPosition);
+                    long LocationID;
+                    LocationAction action = actionSupportedObj.GetMouseClickActionForPositionOnAnnotation(WorldPosition, this.CurrentSectionNumber, Control.ModifierKeys, out LocationID);
+                   
+                    Viking.UI.Commands.Command command = action.CreateCommand(Parent, Store.Locations.GetObjectByID(LocationID), WorldPosition);
                     if(command != null)
                     {
                         _Parent.CurrentCommand = command;
@@ -1359,24 +1348,43 @@ namespace WebAnnotation
 
         private void DrawLocationLabels(ICollection<LocationCanvasView> locations, VikingXNA.Scene scene)
         {
-            var listLocationsWithVisibleLabels = locations.Where(l => l.IsLabelVisible(scene));
+            IEnumerable<ILabelView> listLocationsWithVisibleLabels = locations.Where(l =>
+            {
+                ILabelView iView = l as ILabelView;
+                if (iView != null)
+                {
+                    return iView.IsLabelVisible(scene);
+                }
+                return false;
+            }).Cast<ILabelView>();
+             
             _Parent.spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.AlphaBlend);
             
-            long section_number = _Parent.Section.Number;
-            foreach (LocationCanvasView loc in listLocationsWithVisibleLabels)
+            foreach (ILabelView loc in listLocationsWithVisibleLabels)
             {
                 loc.DrawLabel(_Parent.spriteBatch,
                               _Parent.fontArial,
-                              scene,
-                              (int)(section_number - loc.Z));
+                              scene);
             }
             _Parent.spriteBatch.End();
 
-            foreach (LocationOpenCurveView curve in listLocationsWithVisibleLabels.Where(l => l.GetType() == typeof(LocationOpenCurveView)).Cast<LocationOpenCurveView>())
+            IEnumerable<IRenderedLabelView> listLocationsWithVisibleRenderedLabels = locations.Where(l =>
             {
-                curve.DrawLabel(Parent.Device, scene, Parent.spriteBatch, Parent.fontArial, Parent.CurveManager, Parent.basicEffect);
-            }
+                IRenderedLabelView iView = l as IRenderedLabelView;
+                if (iView != null)
+                {
+                    return iView.IsLabelVisible(scene);
+                }
+                return false;
+            }).Cast<IRenderedLabelView>();
 
+            foreach(IRenderedLabelView loc in listLocationsWithVisibleRenderedLabels)
+            {
+                loc.DrawLabel(Parent.Device,
+                              _Parent.spriteBatch,
+                              _Parent.fontArial,
+                              scene);
+            }
         }
 
         private static List<LocationCanvasView> FindVisibleLocations(IEnumerable<LocationCanvasView> locations, VikingXNA.Scene scene)

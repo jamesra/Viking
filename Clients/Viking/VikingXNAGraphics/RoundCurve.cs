@@ -137,13 +137,12 @@ namespace RoundCurve
                 new VertexElement(5*sizeof(float), VertexElementFormat.Single, VertexElementUsage.TextureCoordinate, 0),
             };
     }
-
-
+    
 
     /// <summary>
     /// Class to handle drawing a list of RoundLines.
     /// </summary>
-    public class CurveManager
+    public class CurveManager : VikingXNAGraphics.IInitRoundManager
     {
         protected GraphicsDevice device;
         protected Effect effect;
@@ -170,7 +169,7 @@ namespace RoundCurve
 
         //public int NumLinesDrawn;
         public float DefaultBlurThreshold = 0.97f;
-
+         
 
         public virtual void Init(GraphicsDevice device, ContentManager content)
         {
@@ -179,21 +178,7 @@ namespace RoundCurve
             LoadParameters(effect);
             CreateRoundLineMesh();
         }
-
-        /// <summary>
-        /// Initialize to use HSV overlay onto a background texture
-        /// </summary>
-        /// <param name="device"></param>
-        /// <param name="content"></param>
-        public void InitHSV(GraphicsDevice device, ContentManager content)
-        {
-            throw new NotImplementedException();
-            this.device = device;
-            effect = content.Load<Effect>("RoundCurve");
-            LoadParameters(effect);
-            CreateRoundLineMesh();
-        }
-
+        
         protected void LoadParameters(Effect e)
         {
             viewProjMatrixParameter = e.Parameters["viewProj"];

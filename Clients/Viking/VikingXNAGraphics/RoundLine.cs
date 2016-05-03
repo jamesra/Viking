@@ -139,7 +139,7 @@ namespace RoundLineCode
     /// <summary>
     /// Class to handle drawing a list of RoundLines.
     /// </summary>
-    public class RoundLineManager
+    public class RoundLineManager : VikingXNAGraphics.IInitRoundManager
     {
         protected GraphicsDevice device;
         protected Effect effect;

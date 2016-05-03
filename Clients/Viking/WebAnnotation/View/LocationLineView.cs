@@ -52,19 +52,13 @@ namespace WebAnnotation.View
             PolyLineView.Draw(device, scene, lineManager, basicEffect, overlayEffect, linesToDraw);
         }
 
-        public override LocationAction GetMouseClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber)
+        public override LocationAction GetMouseClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID)
         {
+            LocationID = this.ID;
+            if (ModifierKeys.ShiftOrCtrlPressed())
+                return LocationAction.NONE;
+
             return LocationAction.CREATELINKEDLOCATION;
-        }
-
-        public override LocationAction GetMouseShiftClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber)
-        {
-            return LocationAction.NONE;
-        }
-
-        public override LocationAction GetMouseControlClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber)
-        {
-            return LocationAction.NONE;
         }
     }
 
@@ -100,13 +94,21 @@ namespace WebAnnotation.View
             PolyLineView.Draw(device, scene, lineManager, basicEffect, overlayEffect, listToDraw.Select(l => l.polyLineView).ToArray());
         }
 
-        public override LocationAction GetMouseShiftClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber)
+        public override LocationAction GetMouseClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID)
         {
-            //Allow user to add a control point if the mouse is not over an existing control point
-            if(!polyLineView.ControlPoints.Select(p => new GridCircle(p, Width / 2.0)).Any(c => c.Contains(WorldPosition)))
-                return LocationAction.ADDCONTROLPOINT;
+            LocationID = this.ID;
+            if (ModifierKeys.ShiftPressed())
+                return LocationAction.NONE;
+            else if(ModifierKeys.CtrlPressed())
+            {
+                //Allow user to add a control point if the mouse is not over an existing control point
+                if (!polyLineView.ControlPoints.Select(p => new GridCircle(p, Width / 2.0)).Any(c => c.Contains(WorldPosition)))
+                    return LocationAction.ADDCONTROLPOINT;
 
-            return LocationAction.NONE;
+                return LocationAction.NONE;
+            }
+
+            return LocationAction.CREATELINKEDLOCATION;
         }
     }
     
@@ -123,7 +125,7 @@ namespace WebAnnotation.View
             return scene.VisibleWorldBounds.Intersects(this.BoundingBox);
         }
 
-        public override bool IsLabelVisible(Scene scene)
+        public virtual bool IsLabelVisible(Scene scene)
         {
             return IsVisible(scene);
         }
@@ -176,56 +178,54 @@ namespace WebAnnotation.View
             } 
             */
         }
-
-        public override void DrawLabel(SpriteBatch spriteBatch, SpriteFont font, Scene scene, int DirectionToVisiblePlane)
-        {
-            return;
-        }
-
+        
         public bool PointIntersectsAnyControlPoint(GridVector2 WorldPosition)
         {
             return VolumeControlPoints.Select(p => new GridCircle(p, Width / 2.0)).Any(c => c.Contains(WorldPosition));
         }
 
-        public override LocationAction GetMouseClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber)
-        {        
-            if (VisibleSectionNumber == (int)this.modelObj.Z)
+        public override LocationAction GetMouseClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID)
+        {
+            LocationID = this.ID;
+
+            if (ModifierKeys.ShiftPressed())
             {
-                //Find distance to nearest control point
+                //Allow user to add a control point if the mouse is not over an existing control point
                 if (PointIntersectsAnyControlPoint(WorldPosition))
-                    return LocationAction.ADJUST;
+                    return LocationAction.TRANSLATE;
+
+                return LocationAction.NONE;
+            }
+            else if (ModifierKeys.CtrlPressed())
+            {
+                //Allow user to add a control point if the mouse is not over an existing control point
+                if (PointIntersectsAnyControlPoint(WorldPosition))
+                {
+                    if (VolumeControlPoints.Length > 2)
+                        return LocationAction.REMOVECONTROLPOINT;
+                    else
+                        return LocationAction.NONE;
+                }
                 else
-                    return LocationAction.CREATELINK;
+                    return LocationAction.ADDCONTROLPOINT;
+
+                //return LocationAction.NONE;
             }
             else
             {
-                return LocationAction.CREATELINKEDLOCATION;
-            }
-        }
-
-        public override LocationAction GetMouseShiftClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber)
-        {
-            //Allow user to add a control point if the mouse is not over an existing control point
-            if (PointIntersectsAnyControlPoint(WorldPosition))
-                return LocationAction.TRANSLATE;
-            
-            return LocationAction.NONE;
-        }
-
-        public override LocationAction GetMouseControlClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber)
-        {
-            //Allow user to add a control point if the mouse is not over an existing control point
-            if (PointIntersectsAnyControlPoint(WorldPosition))
-            {
-                if (VolumeControlPoints.Length > 2)
-                    return LocationAction.REMOVECONTROLPOINT;
+                if (VisibleSectionNumber == (int)this.modelObj.Z)
+                {
+                    //Find distance to nearest control point
+                    if (PointIntersectsAnyControlPoint(WorldPosition))
+                        return LocationAction.ADJUST;
+                    else
+                        return LocationAction.CREATELINK;
+                }
                 else
-                    return LocationAction.NONE;
+                {
+                    return LocationAction.CREATELINKEDLOCATION;
+                }
             }
-            else
-                return LocationAction.ADDCONTROLPOINT;
-
-            //return LocationAction.NONE;
         }
 
         public abstract double Width { get; }

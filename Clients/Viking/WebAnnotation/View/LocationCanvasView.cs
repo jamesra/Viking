@@ -20,7 +20,7 @@ using SqlGeometryUtils;
 
 namespace WebAnnotation.View
 {
-    abstract public class LocationCanvasView : IComparable<LocationCanvasView>,  IUIObjectBasic, ICanvasView, IEquatable<LocationCanvasView>
+    abstract public class LocationCanvasView : IComparable<LocationCanvasView>,  IUIObjectBasic, ICanvasView, IEquatable<LocationCanvasView>, IMouseActionSupport
     {
         protected readonly LocationObj modelObj;
          
@@ -56,17 +56,9 @@ namespace WebAnnotation.View
             return CalculateParentDepth(obj.Parent) + 1; 
         }
 
-        public abstract void DrawLabel(Microsoft.Xna.Framework.Graphics.SpriteBatch spriteBatch,
-                              Microsoft.Xna.Framework.Graphics.SpriteFont font,
-                              Scene scene,
-                              int DirectionToVisiblePlane);
 
-        public abstract LocationAction GetMouseClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber);
-
-        public abstract LocationAction GetMouseShiftClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber);
-
-        public abstract LocationAction GetMouseControlClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber);
-
+        public abstract LocationAction GetMouseClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID);
+        
         public long ID
         {
             get { return modelObj.ID; }
@@ -362,7 +354,6 @@ namespace WebAnnotation.View
         }
 
         public abstract bool IsVisible(Scene scene);
-        public abstract bool IsLabelVisible(Scene scene); 
         public abstract double DistanceFromCenterNormalized(GridVector2 Position);
         
         public bool Equals(LocationCanvasView other)

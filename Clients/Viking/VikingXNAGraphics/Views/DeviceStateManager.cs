@@ -30,10 +30,10 @@ namespace VikingXNAGraphics
 
         public static void RestoreDeviceState(GraphicsDevice graphicsDevice)
         {
-            if (OriginalBlendState != null)
+            if (OriginalBlendState != null && !OriginalBlendState.IsDisposed)
                 graphicsDevice.BlendState = OriginalBlendState;
 
-            if (OriginalRasterState != null)
+            if (OriginalRasterState != null && !OriginalRasterState.IsDisposed)
                 graphicsDevice.RasterizerState = OriginalRasterState;
         }
 

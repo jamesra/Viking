@@ -325,15 +325,15 @@ namespace VikingXNAGraphics
 
         public void Draw(GraphicsDevice device, VikingXNA.Scene scene,
                                 SpriteBatch spriteBatch, SpriteFont font,
-                                RoundCurve.CurveManager CurveManager, BasicEffect basicEffect)
+                                RoundCurve.CurveManager CurveManager)
         { 
             Matrix ViewProj = scene.Camera.View * scene.Projection;
-            this.Draw(device, ViewProj, spriteBatch, font, CurveManager, basicEffect);
+            this.Draw(device, ViewProj, spriteBatch, font, CurveManager);
         }
 
         public void Draw(GraphicsDevice device, Matrix ViewProj,
                                 SpriteBatch spriteBatch, SpriteFont font,
-                                RoundCurve.CurveManager CurveManager, BasicEffect basicEffect)
+                                RoundCurve.CurveManager CurveManager)
         {
             Texture2D labelTexture = GetOrCreateLabelTexture(device, spriteBatch, font);
             if (labelTexture == null) //Happens when the label text is null or empty
@@ -344,13 +344,13 @@ namespace VikingXNAGraphics
 
         public static void Draw(GraphicsDevice device, VikingXNA.Scene scene,
                                 SpriteBatch spriteBatch, SpriteFont font,
-                                RoundCurve.CurveManager CurveManager, BasicEffect basicEffect,
+                                RoundCurve.CurveManager CurveManager,
                                 CurveLabel[] labels)
         {
             Matrix ViewProj = scene.Camera.View * scene.Projection;
             foreach (CurveLabel label in labels)
             {
-                label.Draw(device, ViewProj, spriteBatch, font, CurveManager, basicEffect);
+                label.Draw(device, ViewProj, spriteBatch, font, CurveManager);
             }
         }
     }

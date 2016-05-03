@@ -6,17 +6,45 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using VikingXNA; 
 using Geometry;
+using RoundCurve;
 using System.Drawing.Imaging; 
 
 namespace VikingXNA
 {
     public class ViewerControl : GraphicsDeviceControl
-    { 
-        public RoundLineCode.RoundLineManager LineManager = new RoundLineCode.RoundLineManager();
-        public RoundLineCode.LumaOverlayRoundLineManager LumaOverlayLineManager = new RoundLineCode.LumaOverlayRoundLineManager();
+    {
+        public RoundLineCode.RoundLineManager LineManager
+        {
+            get
+            {
+                return DeviceEffectsStore<RoundLineCode.RoundLineManager>.GetOrCreateForDevice(this.Device, this.Content);
+            }
+            
+        }
+        
+        public RoundLineCode.LumaOverlayRoundLineManager LumaOverlayLineManager
+        {
+            get
+            {
+                return DeviceEffectsStore<RoundLineCode.LumaOverlayRoundLineManager>.GetOrCreateForDevice(this.Device, this.Content);
+            }
+        }
 
-        public RoundCurve.CurveManager CurveManager = new RoundCurve.CurveManager();
-        public RoundCurve.CurveManagerHSV LumaOverlayCurveManager = new RoundCurve.CurveManagerHSV();
+        public RoundCurve.CurveManager CurveManager
+        {
+            get
+            {
+                return DeviceEffectsStore<CurveManager>.GetOrCreateForDevice(this.Device, this.Content);
+            }
+        }
+
+        public RoundCurve.CurveManagerHSV LumaOverlayCurveManager
+        {
+            get
+            {
+                return DeviceEffectsStore<CurveManagerHSV>.GetOrCreateForDevice(this.Device, this.Content);
+            }
+        }
 
         public BasicEffect basicEffect;
 
@@ -114,13 +142,7 @@ namespace VikingXNA
          //   basicEffect.SpecularColor = new Vector3(0.25f, 0.25f, 0.25f);
          //   basicEffect.SpecularPower = 5.0f;
             basicEffect.AmbientLightColor = new Vector3(1f, 1f, 1f);
-            /*
-            basicEffect.Projection = projectionMatrix;
-            basicEffect.World = worldMatrix;
-            basicEffect.View = camera.View;
-            basicEffect.Projection = projectionMatrix;
-            */
-
+            
             Matrix WorldViewProj = Scene.WorldViewProj; 
 
             Effect effectTileLayout = Content.Load<Effect>("TileLayout");
@@ -138,10 +160,6 @@ namespace VikingXNA
             Effect annotationOverlayEffect = Content.Load<Effect>("AnnotationOverlayShader");
             this.annotationOverlayEffect = new AnnotationOverBackgroundLumaEffect(annotationOverlayEffect);
             this.annotationOverlayEffect.WorldViewProjMatrix = WorldViewProj; 
-
-            //this.channelEffect.WorldMatrix = worldMatrix;
-            //this.channelEffect.ProjectionMatrix = projectionMatrix;
-            //this.channelEffect.ViewMatrix = viewMatrix;
         }
         
         public ViewerControl() : base()
@@ -164,11 +182,11 @@ namespace VikingXNA
                 InitializeEffect();
 
 
-                this.LineManager.Init(Device, Content);
-                this.LumaOverlayLineManager.Init(Device, Content);
-
-                this.CurveManager.Init(Device, Content);
-                this.LumaOverlayCurveManager.Init(Device, Content);
+                DeviceEffectsStore<RoundLineCode.RoundLineManager>.GetOrCreateForDevice(this.Device, this.Content);
+                DeviceEffectsStore<RoundLineCode.LumaOverlayRoundLineManager>.GetOrCreateForDevice(this.Device, this.Content);
+                DeviceEffectsStore<RoundCurve.CurveManager>.GetOrCreateForDevice(this.Device, this.Content);
+                DeviceEffectsStore<RoundCurve.CurveManagerHSV>.GetOrCreateForDevice(this.Device, this.Content);
+                 
             }
         }
         

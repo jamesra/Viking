@@ -1,20 +1,11 @@
 ﻿using System;
-using System.ComponentModel; 
 using System.Collections.Generic;
-using System.Collections.Specialized; 
 using System.Linq;
-using System.Text;
 using Geometry;
-using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Graphics; 
-using Viking.Common;
+using Microsoft.Xna.Framework.Graphics;
 using WebAnnotation;
 using WebAnnotationModel;
 using System.Windows.Forms;
-using System.Diagnostics;
-using System.Drawing;
-using Viking.Common;
-using WebAnnotation.UI.Commands;
 using WebAnnotation.ViewModel;
 using Microsoft.SqlServer.Types;
 using VikingXNAGraphics;
@@ -25,9 +16,8 @@ namespace WebAnnotation.View
     /// <summary>
     /// Represents a location on an adjacent section that is overlapped by an annotation on the visible section.
     /// </summary>
-    public class OverlappedLocationView : LocationCanvasView, IColorView
+    public class OverlappedLocationView : LocationCanvasView, IColorView, ILabelView
     {
-        public readonly LocationLinkView link; 
         public TextureCircleView circleView;
         public LabelView label;
 
@@ -89,7 +79,7 @@ namespace WebAnnotation.View
             return this.circleView.IsVisible(scene);
         }
 
-        public override bool IsLabelVisible(VikingXNA.Scene scene)
+        public bool IsLabelVisible(VikingXNA.Scene scene)
         {
             return label.IsVisible(scene);
         }
@@ -126,7 +116,7 @@ namespace WebAnnotation.View
             TextureCircleView.Draw(device, scene, basicEffect, overlayEffect, backgroundCircles.ToArray()); 
         }
 
-        public override void DrawLabel(SpriteBatch spriteBatch, SpriteFont font, VikingXNA.Scene scene, int DirectionToVisiblePlane)
+        public void DrawLabel(SpriteBatch spriteBatch, SpriteFont font, VikingXNA.Scene scene)
         {
             double DesiredRowsOfText = 4.0; 
             double DefaultFontSize = (this.Radius * 2) / DesiredRowsOfText;
@@ -136,21 +126,16 @@ namespace WebAnnotation.View
             label.Draw(spriteBatch, font, scene);
         }
 
-        public override LocationAction GetMouseClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber)
+        public override LocationAction GetMouseClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID)
         {
+            LocationID = this.ID;
+
+            if (ModifierKeys.ShiftOrCtrlPressed())
+                return LocationAction.NONE;
+
             return LocationAction.CREATELINKEDLOCATION;
         }
-
-        public override LocationAction GetMouseShiftClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber)
-        {
-            return LocationAction.NONE;
-        }
-
-        public override LocationAction GetMouseControlClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber)
-        {
-            return LocationAction.NONE;
-        }
-
+        
         public ContextMenu ContextMenu
         {
             get

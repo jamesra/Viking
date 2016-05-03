@@ -17,9 +17,9 @@ namespace WebAnnotation.View
     /// <summary>
     /// Draw overlapped links as a set of circles inscribed in a larger circle
     /// </summary>
-    class OverlappedLinkCircleView : ICanvasView, ICanvasViewContainer, IColorView
+    class OverlappedLinkCircleView : ICanvasView, ICanvasViewContainer, IColorView, ILabelView
     {
-        ICollection<OverlappedLocationView> linkViews = new List<OverlappedLocationView>();
+        ICollection<OverlappedLocationLinkView> linkViews = new List<OverlappedLocationLinkView>();
 
         private SortedSet<long> _OverlappedLinks = new SortedSet<long>();
 
@@ -40,13 +40,15 @@ namespace WebAnnotation.View
         GridCircle OuterCircle_MosaicSpace;
         GridCircle OuterCircle_VolumeSpace;
 
+        long ID;
         int Z;
 
-        public OverlappedLinkCircleView(GridCircle outerCircle_MosaicSpace, int ZCut, ICollection<long> OverlappedLinks)
+        public OverlappedLinkCircleView(GridCircle outerCircle_MosaicSpace, long LocationID, int ZCut, ICollection<long> OverlappedLinks)
         {
             this.OuterCircle_MosaicSpace = outerCircle_MosaicSpace;
             this.OuterCircle_VolumeSpace = outerCircle_MosaicSpace;
             this.Z = ZCut;
+            this.ID = LocationID;
             this.OverlappedLinks = OverlappedLinks;
         }
 
@@ -70,7 +72,7 @@ namespace WebAnnotation.View
             set
             {
                 _Color = value;
-                foreach(OverlappedLocationView view in linkViews)
+                foreach(IColorView view in linkViews.Cast<IColorView>())
                 {
                     view.Color = value;
                 }
@@ -87,7 +89,7 @@ namespace WebAnnotation.View
             set
             {
                 _Color.SetAlpha(value);
-                foreach (OverlappedLocationView view in linkViews)
+                foreach (IColorView view in linkViews.Cast<IColorView>())
                 {
                     view.Alpha = value;
                 }
@@ -119,11 +121,16 @@ namespace WebAnnotation.View
             return linkViews.Any(c => c.IsVisible(scene));
         }
 
+        public bool IsLabelVisible(Scene scene)
+        {
+            return linkViews.Any(l => l.IsLabelVisible(scene));
+        }
+
         public ICanvasView GetAnnotationAtPosition(GridVector2 position, out double distancetocenternormalized)
         {
             distancetocenternormalized = double.MaxValue;
 
-            OverlappedLocationView annotation = linkViews.Where(l => l.Intersects(position) == true).FirstOrDefault();
+            ICanvasView annotation = linkViews.Where(l => l.Intersects(position) == true).FirstOrDefault() as ICanvasView;
             if (annotation == null)
                 return null;
 
@@ -133,17 +140,17 @@ namespace WebAnnotation.View
 
         private void CreateViews()
         {
-            this.linkViews = CalculateOverlappedLocationCircles(this.OuterCircle_VolumeSpace, Store.Locations.GetObjectsByIDs(_OverlappedLinks, false), this.Z);
+            this.linkViews = CalculateOverlappedLocationCircles(this.OuterCircle_VolumeSpace, ID, Store.Locations.GetObjectsByIDs(_OverlappedLinks, false), this.Z);
         }
 
         /// <summary>
         /// A linked location overlapping with our location is drawn as a small circle.  This function stores the position of those smaller circles along an arc
         /// </summary>
         /// <returns></returns>
-        private static ICollection<OverlappedLocationView> CalculateOverlappedLocationCircles(GridCircle OuterCircle, ICollection<LocationObj> OverlappingLinks, int ZCut)
+        private static ICollection<OverlappedLocationLinkView> CalculateOverlappedLocationCircles(GridCircle OuterCircle, long locationID, ICollection<LocationObj> OverlappingLinks, int ZCut)
         {
             //SortedDictionary<OverlappedLocationView, LocationObj> listCircles = new SortedDictionary<OverlappedLocationView, LocationObj>();
-            List<OverlappedLocationView> listCircles = new List<OverlappedLocationView>(OverlappingLinks.Count);
+            List<OverlappedLocationLinkView> listCircles = new List<OverlappedLocationLinkView>(OverlappingLinks.Count);
 
             List<LocationObj> listLinksAbove = OverlappingLinks.Where(loc => loc.Z > ZCut).ToList();
             List<LocationObj> listLinksBelow = OverlappingLinks.Where(loc => loc.Z < ZCut).ToList();
@@ -191,7 +198,7 @@ namespace WebAnnotation.View
 
                 GridCircle circle = new GridCircle(OuterCircle.Center + new GridVector2(positionOffset.X, positionOffset.Y), UpperArcLinkRadius);
 
-                OverlappedLocationView overlapLocation = new OverlappedLocationView(linkLoc, circle, true);
+                OverlappedLocationLinkView overlapLocation = new OverlappedLocationLinkView(locationID, linkLoc, circle, true);
                 listCircles.Add(overlapLocation);
             }
 
@@ -211,7 +218,7 @@ namespace WebAnnotation.View
 
                 GridCircle circle = new GridCircle(OuterCircle.Center + new GridVector2(positionOffset.X, positionOffset.Y), LowerArcLinkRadius);
 
-                OverlappedLocationView overlapLocation = new OverlappedLocationView(linkLoc, circle, false);
+                OverlappedLocationLinkView overlapLocation = new OverlappedLocationLinkView(locationID, linkLoc, circle, false);
                 listCircles.Add(overlapLocation);
             }
 
@@ -224,8 +231,8 @@ namespace WebAnnotation.View
                           VikingXNA.AnnotationOverBackgroundLumaEffect overlayEffect,
                           OverlappedLinkCircleView[] listToDraw)
         {
-            OverlappedLocationView[] linkViewArray = listToDraw.SelectMany(l => l.linkViews).ToArray();
-            OverlappedLocationView.Draw(device, scene, basicEffect, overlayEffect, linkViewArray);
+            OverlappedLocationLinkView[] linkViewArray = listToDraw.SelectMany(l => l.linkViews).ToArray();
+            OverlappedLocationLinkView.Draw(device, scene, basicEffect, overlayEffect, linkViewArray);
         }
 
         public void DrawLabel(Microsoft.Xna.Framework.Graphics.SpriteBatch spriteBatch,
@@ -233,12 +240,9 @@ namespace WebAnnotation.View
                               VikingXNA.Scene scene)
         {
 
-            foreach (OverlappedLocationView ov in this.linkViews)
+            foreach (ILabelView ov in this.linkViews.Cast<ILabelView>().Where(ov => ov.IsLabelVisible(scene)))
             {
-                if (!ov.IsVisible(scene))
-                    return;
-
-                ov.DrawLabel(spriteBatch, font, scene, 0);
+                ov.DrawLabel(spriteBatch, font, scene);
             }
 
             return;

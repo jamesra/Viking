@@ -5,7 +5,9 @@ using System.Text;
 using System.Threading.Tasks;
 using VikingXNA;
 using VikingXNAGraphics;
+using Microsoft.Xna.Framework.Graphics;
 using Geometry;
+using WebAnnotation.View;
 
 namespace WebAnnotation
 {
@@ -14,6 +16,40 @@ namespace WebAnnotation
         bool Selected { get; set; }
     }
 
+    public interface ILabelView
+    {
+        void DrawLabel(SpriteBatch spriteBatch, SpriteFont font, VikingXNA.Scene scene);
+
+        bool IsLabelVisible(Scene scene);
+    }
+
+    public interface IRenderedLabelView
+    {
+        void DrawLabel(GraphicsDevice device, SpriteBatch spriteBatch, SpriteFont font, VikingXNA.Scene scene);
+
+        bool IsLabelVisible(Scene scene);
+    }
+
+    public interface IMouseActionSupport
+    {
+        /// <summary>
+        /// Return the action and LocationID for a mouse click at a given position
+        /// </summary>
+        /// <param name="WorldPosition">Where the mouse is</param>
+        /// <param name="VisibleSectionNumber">Which section is being viewed</param>
+        /// <param name="LocationID">The location ID the action applies to</param>
+        /// <returns></returns>
+        LocationAction GetMouseClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID);
+
+        /*
+        LocationAction GetMouseShiftClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber);
+
+        LocationAction GetMouseControlClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber);
+        */
+    }
+
+    //public interface IActionCommandFactory
+        
     public interface ICanvasView
     {
         bool IsVisible(Scene scene);

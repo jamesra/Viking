@@ -21,7 +21,7 @@ using SqlGeometryUtils;
 
 namespace WebAnnotation.View
 {
-    abstract class LocationCircleViewBase : LocationCanvasView
+    abstract class LocationCircleViewBase : LocationCanvasView, ILabelView
     {
         public LocationCircleViewBase(LocationObj obj) : base(obj)
         {
@@ -93,6 +93,13 @@ namespace WebAnnotation.View
         {
             return GridVector2.Distance(Position, this.VolumeCircle.Center);
         }
+
+
+        public abstract void DrawLabel(Microsoft.Xna.Framework.Graphics.SpriteBatch spriteBatch,
+                              Microsoft.Xna.Framework.Graphics.SpriteFont font,
+                              Scene scene);
+
+        public abstract bool IsLabelVisible(Scene scene);
     }
 
     class AdjacentLocationCircleView : LocationCircleViewBase, IColorView
@@ -203,23 +210,20 @@ namespace WebAnnotation.View
             return StructureIDLabelView.IsVisible(scene);
         }
         
-        public override LocationAction GetMouseClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber)
+        public override LocationAction GetMouseClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID)
         {
+            LocationID = this.ID;
+
+            if (ModifierKeys.ShiftOrCtrlPressed())
+            {    
+                return LocationAction.NONE;
+            }
+
             double distance = this.DistanceToCenter(WorldPosition);
             if (distance > this.Radius)
                 return LocationAction.NONE;
 
             return LocationAction.CREATELINKEDLOCATION;
-        }
-
-        public override LocationAction GetMouseShiftClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber)
-        {
-            return LocationAction.NONE;
-        }
-
-        public override LocationAction GetMouseControlClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber)
-        {
-            return LocationAction.NONE;
         }
 
         /*
@@ -253,8 +257,7 @@ namespace WebAnnotation.View
 
         public override void DrawLabel(Microsoft.Xna.Framework.Graphics.SpriteBatch spriteBatch,
                               Microsoft.Xna.Framework.Graphics.SpriteFont font,
-                              VikingXNA.Scene scene, 
-                              int DirectionToVisiblePlane)
+                              VikingXNA.Scene scene)
         {
             
 
@@ -279,7 +282,7 @@ namespace WebAnnotation.View
     }
 
 
-    class LocationCircleView : LocationCircleViewBase, ICanvasViewContainer, ISelectable, IColorView
+    class LocationCircleView : LocationCircleViewBase, ICanvasViewContainer, ISelectable, IColorView, ILabelView
     {
         protected readonly GridCircle _VolumeCircle;
         protected readonly GridCircle _MosaicCircle;
@@ -400,7 +403,7 @@ namespace WebAnnotation.View
                     this.OverlappedLinkView = null;
                 }
 
-                this.OverlappedLinkView = new OverlappedLinkCircleView(this.circleView.Circle, (int)this.Z, value);
+                this.OverlappedLinkView = new OverlappedLinkCircleView(this.circleView.Circle, this.ID, (int)this.Z, value);
                 this.OverlappedLinkView.Color = this.Color;
 
                 this.CreateLabelObjects();
@@ -420,8 +423,13 @@ namespace WebAnnotation.View
             return StructureIDLabelView.IsVisible(scene);
         }
 
-        public override LocationAction GetMouseClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber)
+        public override LocationAction GetMouseClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID)
         {
+            LocationID = this.ID;
+
+            if (ModifierKeys.ShiftOrCtrlPressed())
+                return LocationAction.NONE;
+
             double distance = this.DistanceToCenter(WorldPosition);
 
             if (OverlappedLinkView != null)
@@ -446,16 +454,7 @@ namespace WebAnnotation.View
 
             throw new ArgumentException("Wrong section for location");
         }
-
-        public override LocationAction GetMouseShiftClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber)
-        {
-            return LocationAction.NONE;
-        }
-
-        public override LocationAction GetMouseControlClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber)
-        {
-            return LocationAction.NONE;
-        }
+        
 
         #endregion
 
@@ -560,8 +559,7 @@ namespace WebAnnotation.View
         /// <param name="DirectionToVisiblePlane">The Z distance of the location to the plane viewed by user.</param>
         public override void DrawLabel(Microsoft.Xna.Framework.Graphics.SpriteBatch spriteBatch,
                               Microsoft.Xna.Framework.Graphics.SpriteFont font,
-                              VikingXNA.Scene scene, 
-                              int DirectionToVisiblePlane)
+                              VikingXNA.Scene scene)
         {
             if (font == null)
                 throw new ArgumentNullException("font");
@@ -590,295 +588,8 @@ namespace WebAnnotation.View
                 this.OverlappedLinkView.DrawLabel(spriteBatch, font, scene);
         
             return;
-
-            /*
-
-            const byte DefaultAlpha = 192;
-            //Labels draw at the top left, so we have to offset the drawstring call so the label is centered on the annotation
-            Vector2 offset = GetLabelSize(font);
-            offset.X /= 2;
-            offset.Y /= 2;
-            //Offset.x is now the amount to subtract from the label to center it on the annotation
-
-
-            bool UsingArtificialRadiusForLowMag = false;
-
-            //Scale is used to adjust for the magnification factor of the viewer.  Otherwise text would remain at constant size regardless of mag factor.
-            //offsets must be multiplied by scale before use
-            float baseScale = BaseFontSizeForLocationType(modelObj.TypeCode, DirectionToVisiblePlane, MagnificationFactor, font);  //The base scale used for Label text, adjusted for additional info text
-            bool LowMagScale = ScaleReducedForLowMag(baseScale);
-
-            //Don't draw labels if no human could read them
-            if (LabelIsTooSmallToSee(baseScale, font.LineSpacing))
-                return;
-
-            StructureType type = this.Parent.Type;
-
-            Microsoft.Xna.Framework.Color color = new Microsoft.Xna.Framework.Color((byte)(0),
-                                                                                    (byte)(0),
-                                                                                    (byte)(0),
-                                                                                    DefaultAlpha);
-
-            float labelScale = baseScale;
-            if (this.modelObj.Equals(CreateNewLinkedLocationCommand.LastEditedLocation))
-            {
-                double alpha = (DateTime.UtcNow.Millisecond / 1000.0) * Math.PI;
-                alpha = Math.Sin(alpha);
-                color = new Microsoft.Xna.Framework.Color((byte)(type.Color.R / 4),
-                                                          (byte)(type.Color.G / 4),
-                                                          (byte)(type.Color.B / 4),
-                                                          (byte)(alpha * 255));
-
-                labelScale = baseScale + (baseScale * (float)alpha * .25f);
-            }
-            else if (modelObj.OffEdge)
-            {
-                color = new Microsoft.Xna.Framework.Color(255, 255, 255, 128);
-            }
-            else if (modelObj.IsUnverifiedTerminal)
-            {
-                color = new Microsoft.Xna.Framework.Color((byte)((255 - type.Color.R) / 1),
-                                                          (byte)((255 - type.Color.G) / 1),
-                                                          (byte)((255 - type.Color.B) / 1),
-                                                          (byte)128);
-            }
-
-
-            byte scaledAlpha = color.A;
-            if (!UsingArtificialRadiusForLowMag && !LowMagScale)
-            {
-                scaledAlpha = (byte)(GetAlphaForScale(baseScale, (float)color.A / 255) * 255.0);
-                color.A = scaledAlpha;
-            }
-
-            //If we have a parent of our parent (Child of a structure, such as a synapse) then include thier ID in small font
-            if (this.Parent.Parent != null)
-            {
-                StructureType ParentType = this.Parent.Parent.Type;
-                Vector2 ParentOffset = this.GetParentLabelSize(font);
-                ParentOffset.X /= 2f;
-                ParentOffset.Y /= 2f;
-
-                //                string ParentLabel = this.Parent.Parent.ToString();
-                float ParentScale = baseScale / 1.75f;
-
-                if (LabelIsTooSmallToSee(ParentScale, font.LineSpacing))
-                    return;
-
-                Microsoft.Xna.Framework.Color ParentColor = new Microsoft.Xna.Framework.Color(ParentType.Color.R,
-                                                                                              ParentType.Color.G,
-                                                                                              ParentType.Color.B,
-                                                                                              GetAlphaForScale(ParentScale, 0.5f));
-
-                Microsoft.Xna.Framework.Color LabelColor = new Microsoft.Xna.Framework.Color(0f,
-                                                                                              0f,
-                                                                                              0f,
-                                                                                              GetAlphaForScale(ParentScale, 0.5f));
-
-                if (LabelColor.A > 0)
-                {
-                    Vector2 LabelScreenDrawPosition = LocationCenterScreenPosition;
-
-
-
-                    //Position label below the label for the location
-                    LabelScreenDrawPosition.Y += ((offset.Y * 3f) * ParentScale);
-                    LabelScreenDrawPosition.X -= (offset.X / 2) * ParentScale;
-
-
-                    spriteBatch.DrawString(font,
-                                            this.modelObj.Label,
-                                            LabelScreenDrawPosition,
-                                            LabelColor,
-                                            0,
-                                            ParentOffset,
-                                            ParentScale,
-                                            SpriteEffects.None,
-                                            0);
-                }
-
-                if (ParentColor.A > 0)
-                {
-                    Vector2 ParentScreenDrawPosition = LocationCenterScreenPosition;
-
-                    //Position parent label above the label for the location
-                    ParentScreenDrawPosition.Y -= ((ParentOffset.Y * 3f) * ParentScale);
-                    ParentScreenDrawPosition.X -= 0;// (ParentOffset.X) * ParentScale;
-
-                    spriteBatch.DrawString(font,
-                                            Parent.Parent.ToString(),
-                                            ParentScreenDrawPosition,
-                                            ParentColor,
-                                            0,
-                                            ParentOffset,
-                                            ParentScale,
-                                            SpriteEffects.None,
-                                            0);
-                }
-            }
-            else
-            {
-                if (color.A > 0)
-                {
-                    Vector2 LabelDrawPosition = LocationCenterScreenPosition;
-                    LabelDrawPosition.Y += (font.LineSpacing * 0.66f) * baseScale;
-                    //       LabelDrawPosition.X -= offset.X * baseScale;
-
-                    spriteBatch.DrawString(font,
-                                            this.modelObj.Label,
-                                            LabelDrawPosition,
-                                            color,
-                                            0,
-                                            offset,
-                                            labelScale,
-                                            SpriteEffects.None,
-                                            0);
-                }
-
-            }
-
-
-            DrawStructAndTagLabel(spriteBatch, font, LocationCenterScreenPosition, color, baseScale, DirectionToVisiblePlane);
-
-            if (DirectionToVisiblePlane == 0)
-            {
-                float AlphaForSectionLabels = 0;
-                
-                //TODO: Fix labels for overlapped location circles
-                
-                //Indicate the z value for each adjacent location
-                foreach (KeyValuePair<OverlappedLocation, GridCircle> adjLoc in this.OverlappingLinkedLocationCircles)
-                {
-                    string infoLabel = adjLoc.Key.Z.ToString();
-                    float scale = (float)((adjLoc.Value.Radius / font.LineSpacing) / 2) * MagnificationFactor;
-                    float LineStep = font.LineSpacing * scale;
-                    //Info labels are smaller than main labels, so make sure they can be seen
-                    if (LineStep < LabelVisibleCutoff)
-                    {
-                        break;
-                    }
-
-                    if (AlphaForSectionLabels == 0)
-                    {
-                        AlphaForSectionLabels = GetAlphaForScale(scale, DefaultAlpha);
-                        if (AlphaForSectionLabels <= 0)
-                        {
-                            break;
-                        }
-                    }
-
-                    Microsoft.Xna.Framework.Color InfoLabelColor = new Microsoft.Xna.Framework.Color(1.0f, 0, 0, AlphaForSectionLabels / 255f);
-
-                    Vector2[] labelSizeArray = adjLoc.Key.GetInfoLabelSizeOnCircle(infoLabel, font, scale);
-
-                    float yOffset = (LineStep / 3) * 2;
-                    //float yOffset = 0; 
-
-                    for (int iLine = 0; iLine < labelSizeArray.Length; iLine++)
-                    {
-                        //Get label string and offset for this line
-                        string AdditionalLabel = adjLoc.Key._InfoLabelAfterSplit[iLine];
-                        Vector2 labelOffset = labelSizeArray[iLine];
-
-                        labelOffset.X /= 2; //Center the label on the annotation
-
-                        //Position label below the label for the location
-                        GridVector2 ScreenPosition = AnnotationOverlay.CurrentOverlay.Parent.WorldToScreen(adjLoc.Value.Center.X,
-                                                                                                     adjLoc.Value.Center.Y);
-
-                        Vector2 DrawPosition = new Vector2((float)ScreenPosition.X, (float)ScreenPosition.Y);
-
-                        //DrawPosition.Y += labelOffset.Y/4 * scale;
-                        DrawPosition.Y += yOffset;
-                        DrawPosition.X += (labelOffset.X * scale);
-
-                        spriteBatch.DrawString(font,
-                            AdditionalLabel,
-                            DrawPosition,
-                            InfoLabelColor,
-                            0,
-                            labelSizeArray[iLine],
-                            scale,
-                            SpriteEffects.None,
-                            0);
-
-                        yOffset += LineStep;
-                    }
-                }
-                
-            }
-            */
         }
-
-        
-
-        /*
-        private void DrawStructAndTagLabel(Microsoft.Xna.Framework.Graphics.SpriteBatch spriteBatch,
-                                            Microsoft.Xna.Framework.Graphics.SpriteFont font,
-                                            Vector2 LocationCenterScreenPosition,
-                                            Microsoft.Xna.Framework.Color color,
-                                            float baseScale,
-                                            int DirectionToVisiblePlane)
-        {
-            //Draw the info label. If we are drawing an off-section location, then indicate section number.  Otherwise use the parent label
-            if (color.A <= 0)
-                return;
-
-            string fullLabelText = this.FullLabelText(DirectionToVisiblePlane);
-
-            if (fullLabelText.Length > 0)
-            {
-                float InfoToLabelRatio = 1 / 2.5f;
-                float InfoLabelScale = baseScale * InfoToLabelRatio;
-
-                Vector2[] LabelOffsetArray = GetInfoLabelSizeOnCircle(fullLabelText, font, InfoLabelScale);
-
-                if (!LabelIsTooSmallToSee(InfoLabelScale, font.LineSpacing))
-                {
-                    float LineStep = font.LineSpacing * InfoLabelScale;  //How much do we increment Y to move down a line?
-                    float yOffset = -(font.LineSpacing * 0.66f) * InfoLabelScale;  //What is the offset to draw the line at the correct position?  We have to draw below label if it exists
-                    //However we only need to drop half a line since the label straddles the center
-
-                    Microsoft.Xna.Framework.Color InfoLabelColor = color;
-
-                    if (DirectionToVisiblePlane != 0)
-                    {
-                        InfoLabelColor = new Microsoft.Xna.Framework.Color(255, 0, 0, color.A);
-                    }
-                    // InfoLabelColor.A = (byte)(GetAlphaForScale(InfoScale, 0.5f) * 255);
-
-                    for (int iLine = 0; iLine < LabelOffsetArray.Length; iLine++)
-                    {
-                        //Get label string and offset for this line
-                        string AdditionalLabel = _InfoLabelAfterSplit[iLine];
-                        Vector2 labelOffset = LabelOffsetArray[iLine];
-
-                        labelOffset.X /= 2; //Center the label on the annotation
-
-                        //Position label below the label for the location
-                        Vector2 DrawPosition = LocationCenterScreenPosition;
-                        //DrawPosition.Y += labelOffset.Y/4 * scale;
-                        DrawPosition.Y += yOffset;
-                        DrawPosition.X += (labelOffset.X * InfoLabelScale);
-
-                        spriteBatch.DrawString(font,
-                            AdditionalLabel,
-                            DrawPosition,
-                            InfoLabelColor,
-                            0,
-                            LabelOffsetArray[iLine],
-                            InfoLabelScale,
-                            SpriteEffects.None,
-                            0);
-
-                        yOffset += LineStep;
-                    }
-                }
-            }
-
-        }
-        */
-        
+                
         /// <summary>
         /// Returns an alpha value that fades if the circle fills the screen.
         /// </summary>

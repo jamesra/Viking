@@ -101,26 +101,28 @@ namespace WebAnnotation.UI.Commands
         {
             if (this.oldMouse == null)
                 return;
+            
+            GlobalPrimitives.DrawCircle(graphicsDevice, basicEffect, transformedPos, putativeLoc.Radius, linecolor);
 
-            GlobalPrimitives.DrawCircle(graphicsDevice, basicEffect, transformedPos, putativeLoc.Radius, linecolor); 
-
-            Vector3 target;
+            GridVector2 target;
             if (nearestParent != null)
             {
                 //Snap the line to a nearby target if it exists
-                GridVector2 targetPos = nearestParent.VolumePosition; 
-                
-                target = new Vector3((float)targetPos.X, (float)targetPos.Y, 0f);
+                target = nearestParent.VolumePosition;
             }
             else
             {
                 //Otherwise use the old mouse position
-                target = new Vector3((float)this.oldWorldPosition.X, (float)oldWorldPosition.Y, 0f);
+                target = this.oldWorldPosition;
             }
 
-            RoundLine lineToParent = new RoundLine((float)transformedPos.X, (float)transformedPos.Y, (float)target.X, (float)target.Y);
+            LineView line = new LineView(transformedPos, target, 16.0, linecolor, LineStyle.Standard);
+            
+            RoundLineManager lineManager = VikingXNA.DeviceEffectsStore<LumaOverlayRoundLineManager>.TryGet(graphicsDevice);
+            if (lineManager == null)
+                return;
 
-            Parent.LumaOverlayLineManager.Draw(lineToParent, (float)(putativeLoc.Radius / 6.0), linecolor.ConvertToHSL(), basicEffect.View * basicEffect.Projection, 1, null); 
+            LineView.Draw(graphicsDevice, scene, lineManager, new LineView[] { line });
 
             base.OnDraw(graphicsDevice, scene, basicEffect);
         }

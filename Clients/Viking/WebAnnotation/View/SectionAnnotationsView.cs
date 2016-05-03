@@ -207,13 +207,14 @@ namespace WebAnnotation.ViewModel
                 bool removed = LocationLinks.TryRemove(key, out lv);
                 Debug.Assert(removed);
 
-                if (lv.LinksOverlap())
+                if (OverlappedLinkKeys.Contains(key))
                 {
                     OverlappedLinkKeys.Remove(key);
                     OverlappedAdjacentLocationIDs.ReleaseRef(key.A);
                     OverlappedAdjacentLocationIDs.ReleaseRef(key.B);
                 }
-                else
+
+                if(NonOverlappedLinksSearch.Contains(key))
                 {
                     LocationLinkKey removedKey;
                     NonOverlappedLinksSearch.Delete(key, out removedKey);
@@ -245,7 +246,18 @@ namespace WebAnnotation.ViewModel
         {
             get
             {
-                return NonOverlappedLinksSearch.Items.Select(id => this.LocationLinks[id]).Where(l => l != null).ToList();
+                List<LocationLinkView> listLocLinkView = new List<LocationLinkView>(NonOverlappedLinksSearch.Count);
+
+                foreach(LocationLinkKey linkKey in NonOverlappedLinksSearch.Items)
+                {
+                    LocationLinkView locLinkView = null;
+                    if(this.LocationLinks.TryGetValue(linkKey, out locLinkView))
+                    {
+                        listLocLinkView.Add(locLinkView);
+                    }
+                }
+
+                return listLocLinkView;
             }
         }
 
@@ -1212,6 +1224,8 @@ namespace WebAnnotation.ViewModel
                 return null;
 
             Debug.Assert(AOBj.Z != BOBj.Z);
+            if (AOBj.Z == BOBj.Z)
+                return null; 
 
             if (AOBj.Z == SectionNumber)
                 return AOBj;
@@ -1239,13 +1253,15 @@ namespace WebAnnotation.ViewModel
 
             foreach(LocationObj loc in locs)
             {
-                long[] overlapped_links = loc.LinksCopy.Where(id => SectionLocationLinks.OverlappedAdjacentLocationIDs.Contains(id)).ToArray();
-                if (overlapped_links.Length > 0)
+                ICollection<LocationLinkKey> overlapped_links = loc.Links.Select(l => new LocationLinkKey(l, loc.ID)).Where(linkKey => SectionLocationLinks.OverlappedLinkKeys.Contains(linkKey)).ToList();
+                                
+                //long[] overlapped_links = loc.LinksCopy.Where(id => SectionLocationLinks.OverlappedAdjacentLocationIDs.Contains(id)).ToArray();
+                if (overlapped_links.Count > 0)
                 {
                     if (LocationViews.ContainsKey(loc.ID))
                     { 
                         LocationCanvasView locView = LocationViews[loc.ID];
-                        locView.OverlappedLinks = overlapped_links;
+                        locView.OverlappedLinks = overlapped_links.Select(linkKey => linkKey.A == loc.ID ? linkKey.B : linkKey.A).ToList();
                     }
                     else
                     {
@@ -1355,6 +1371,8 @@ namespace WebAnnotation.ViewModel
             return null;
         }
 
+        
+
         public ICanvasView GetAdjacentAnnotationAtPosition(GridVector2 WorldPosition, out double distance)
         {
             SortedDictionary<double, ICanvasView> dictNormDistanceToIntersectingObjects = new SortedDictionary<double, ICanvasView>();
@@ -1395,6 +1413,8 @@ namespace WebAnnotation.ViewModel
         /// <returns></returns>
         public LocationCanvasView GetNearestLocation(GridVector2 WorldPosition, out double distance)
         {
+            SortedDictionary<double, LocationCanvasView> dictNormDistanceToIntersectingObjects = new SortedDictionary<double, LocationCanvasView>();
+
             distance = double.MaxValue; 
 //            double minDistance = double.MaxValue;
 
@@ -1402,18 +1422,27 @@ namespace WebAnnotation.ViewModel
                 return null;
 
             /*Check to see if we clicked a location*/
-
-
             ICollection<LocationCanvasView> intersecting_candidates = GetLocations(WorldPosition);
             LocationCanvasView nearest = intersecting_candidates.OrderBy(c => c.DistanceFromCenterNormalized(WorldPosition)).FirstOrDefault();
-            if(nearest == null)
-                return null;
-            else
+            if (nearest != null)
             {
-                distance = nearest.Distance(WorldPosition);
+                dictNormDistanceToIntersectingObjects.Add(nearest.DistanceFromCenterNormalized(WorldPosition), nearest);
+            }
+            
+            //OK, check adjacent
+            ICanvasView adjacentView = GetAdjacentAnnotationAtPosition(WorldPosition, out distance);
+            if (adjacentView as LocationCanvasView != null)
+            { 
+                dictNormDistanceToIntersectingObjects.Add(adjacentView.DistanceFromCenterNormalized(WorldPosition), adjacentView as LocationCanvasView);
             }
 
-            return nearest;
+            if (dictNormDistanceToIntersectingObjects.Count > 0)
+            {
+                distance = dictNormDistanceToIntersectingObjects.First().Key;
+                return dictNormDistanceToIntersectingObjects.First().Value;
+            }
+
+            return null;
         }
 
 

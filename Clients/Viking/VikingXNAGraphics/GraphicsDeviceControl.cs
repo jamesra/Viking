@@ -43,6 +43,18 @@ namespace VikingXNA
         /// </summary>
         protected uint PaintCallRefCount = 0;
 
+        /// <summary>
+        /// Gets an IServiceProvider containing our IGraphicsDeviceService.
+        /// This can be used with components such as the ContentManager,
+        /// which use this service to look up the GraphicsDevice.
+        /// </summary>
+        public ServiceContainer Services
+        {
+            get { return services; }
+        }
+
+        ServiceContainer services = new ServiceContainer();
+
         private Microsoft.Xna.Framework.Content.ContentManager _Content;
         public Microsoft.Xna.Framework.Content.ContentManager Content
         {
@@ -77,17 +89,7 @@ namespace VikingXNA
         }
 
 
-        /// <summary>
-        /// Gets an IServiceProvider containing our IGraphicsDeviceService.
-        /// This can be used with components such as the ContentManager,
-        /// which use this service to look up the GraphicsDevice.
-        /// </summary>
-        public ServiceContainer Services
-        {
-            get { return services; }
-        }
-
-        ServiceContainer services = new ServiceContainer();
+        
 
 
         #endregion

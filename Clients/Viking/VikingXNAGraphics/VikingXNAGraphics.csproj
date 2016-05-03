@@ -141,6 +141,8 @@
     <Compile Include="Extensions.cs" />
     <Compile Include="MergeHSVEffect.cs" />
     <Compile Include="RoundCurve.cs" />
+    <Compile Include="RoundEffectStore.cs" />
+    <Compile Include="RoundInterfaces.cs" />
     <Compile Include="Scene.cs" />
     <Compile Include="TileBlendEffect.cs" />
     <Compile Include="DrawExtensions.cs" />

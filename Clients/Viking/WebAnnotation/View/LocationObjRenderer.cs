@@ -23,26 +23,6 @@ namespace WebAnnotation
     /// </summary>
     static class LocationObjRenderer
     {
-        static BlendState OriginalBlendState;
-        static RasterizerState OriginalRasterState;
-
-        static BlendState RendererBlendState = null;
-        static RasterizerState RendererRasterizerState = null; 
-        
-        /// <summary>
-        /// Put the graphics device state back where we found it
-        /// </summary>
-        /// <param name="graphicsDevice"></param>
-        /// <param name="basicEffect"></param>
-        public static void RestoreGraphicsDevice(GraphicsDevice graphicsDevice, BasicEffect basicEffect)
-        {
-            DeviceStateManager.RestoreDeviceState(graphicsDevice);
-
-            basicEffect.Texture = null;
-            basicEffect.TextureEnabled = false;
-            basicEffect.VertexColorEnabled = false;
-        }
-
         /// <summary>
         /// Draw the list of locations as they should appear for the given section number.
         /// 
@@ -148,102 +128,6 @@ namespace WebAnnotation
 
         }
         
-
-        public static void DrawPolyLineBackgrounds(List<LocationLineView> listToDraw, GraphicsDevice graphicsDevice, BasicEffect basicEffect, VikingXNA.AnnotationOverBackgroundLumaEffect overlayEffect, RoundLineCode.RoundLineManager overlayLineManager, VikingXNA.Scene Scene, int SectionNumber)
-        {
-            if (listToDraw.Count == 0)
-                return;
-
-            LocationLineView.Draw(graphicsDevice, Scene, overlayLineManager, basicEffect, overlayEffect, listToDraw.ToArray());
-        }
-
-        /*
-        /// <summary>
-        /// Draw the list of locations as they should appear for the given section number
-        /// </summary>
-        /// <param name="Locations"></param>
-        /// <param name="graphicsDevice"></param>
-        /// <param name="basicEffect"></param>
-        /// <param name="SectionNumber"></param>
-        public static void DrawOverlappedAdjacentLinkedLocations(List<LocationCircleView> listToDraw, VikingXNA.Scene Scene, GraphicsDevice graphicsDevice, BasicEffect basicEffect, VikingXNA.AnnotationOverBackgroundLumaEffect overlayEffect, int SectionNumber)
-        {
-            if (listToDraw.Count == 0)
-                return;
-
-            IComparer<LocationCanvasView> LocComparer = new LocationObjDrawOrderComparison();
-            int iStart = 0;
-
-            //Set the graphics device state to render the appropriate type
-            do
-            {
-                int iEnd = listToDraw.Count; //Need to initialize or loop never ends
-
-                LocationCanvasView StartingObj = listToDraw[iStart];
-
-                SetupGraphicsDevice(graphicsDevice, basicEffect, overlayEffect, StartingObj, SectionNumber);
-
-                overlayEffect.AnnotateWithTexture(GlobalPrimitives.UpArrowTexture);
-                List<VertexPositionColorTexture> VertArray = new List<VertexPositionColorTexture>(listToDraw.Count * 4 * 2);
-                List<int> indicies = new List<int>(listToDraw.Count * 6 * 2);
-
-                int iNextVert = 0;
-                int iNextVertIndex = 0;
-                for (int iObj = iStart; iObj < listToDraw.Count; iObj++)
-                {
-                    LocationCircleView locToDraw = listToDraw[iObj];
-                    int[] locIndicies;
-
-                    if (!locToDraw.OverlappingLocationLinksCanBeSeen(Scene.Camera.Downsample))
-                        continue;
-                    
-                    VertexPositionColorTexture[] objVerts = locToDraw.GetLinkedLocationBackgroundVerts(Scene.VisibleWorldBounds, Scene.Camera.Downsample, 
-                                                                                                       out locIndicies);
-
-                    if (objVerts == null)
-                        continue;
-
-                    if (objVerts.Length == 0)
-                        continue; 
-
-                    VertArray.AddRange(objVerts);
-
-                    for (int iVert = 0; iVert < locIndicies.Length; iVert++)
-                    {
-                        indicies.Add( locIndicies[iVert] + iNextVert);
-                    }
-
-                    iNextVert += objVerts.Length;
-                    iNextVertIndex += locIndicies.Length;
-                }
-
-                if (VertArray.Count > 0 && indicies.Count > 0)
-                {
-                    foreach (EffectPass pass in overlayEffect.effect.CurrentTechnique.Passes)
-                    {
-                        pass.Apply();
-
-                        graphicsDevice.DrawUserIndexedPrimitives<VertexPositionColorTexture>(PrimitiveType.TriangleList,
-                                                                                             VertArray.ToArray(),
-                                                                                             0,
-                                                                                             VertArray.Count,
-                                                                                             indicies.ToArray(),
-                                                                                             0,
-                                                                                             indicies.Count / 3);
-
-
-                    }
-                }
-
-                //Remove the drawn objects from the list
-                iStart = iEnd;
-                //listToDraw.RemoveRange(0, iEnd);
-            }
-            while (iStart < listToDraw.Count);
-
-            RestoreGraphicsDevice(graphicsDevice, basicEffect); 
-        }
-        */
-
         /// <summary>
         /// Divide the label into two lines
         /// </summary>
