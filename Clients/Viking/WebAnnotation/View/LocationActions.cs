@@ -103,7 +103,7 @@ namespace WebAnnotation.View
                     return new TranslateCircleLocationCommand(Parent,
                                                               new GridCircle(loc.Position, loc.Radius),
                                                               loc.Parent.Type.Color.ToXNAColor(),
-                                                              (NewVolumePosition, NewMosaicPosition) => UpdateCircleLocationCallback(loc, NewVolumePosition, NewMosaicPosition));
+                                                              (NewVolumePosition, NewMosaicPosition, NewRadius) => UpdateCircleLocationCallback(loc, NewVolumePosition, NewMosaicPosition, NewRadius));
                 case LocationAction.SCALE: 
                     return new ResizeCircleCommand(Parent,
                             System.Drawing.Color.FromArgb(loc.Parent.Type.Color),
@@ -133,9 +133,9 @@ namespace WebAnnotation.View
                     return new TranslateCircleLocationCommand(Parent,
                                                                 new GridCircle(MosaicShape.Centroid(), loc.Radius),
                                                                 newLoc.Parent.Type.Color.ToXNAColor(),
-                                                                new TranslateCircleLocationCommand.OnCommandSuccess((NewVolumePosition, NewMosaicPosition) =>
+                                                                new TranslateCircleLocationCommand.OnCommandSuccess((NewVolumePosition, NewMosaicPosition, NewRadius) =>
                                                                    {
-                                                                       UpdateCircleLocationNoSaveCallback(newLoc, NewVolumePosition, NewMosaicPosition);
+                                                                       UpdateCircleLocationNoSaveCallback(newLoc, NewVolumePosition, NewMosaicPosition, NewRadius);
 
                                                                        /*Viking.UI.Commands.Command.EnqueueCommand(typeof(ResizeCircleCommand), new object[] 
                                                                            { Parent, System.Drawing.Color.FromArgb(loc.Parent.Type.Color), VolumePosition,
@@ -268,6 +268,12 @@ namespace WebAnnotation.View
             loc.VolumeShape = SqlGeometryUtils.GeometryExtensions.ToGeometry(loc.MosaicShape.STGeometryType(), VolumeControlPoints);
         }
 
+        public static void UpdateCircleLocationCallback(LocationObj loc, GridVector2 WorldPosition, GridVector2 MosaicPosition, double NewRadius)
+        {
+            UpdateCircleLocationNoSaveCallback(loc, WorldPosition, MosaicPosition, NewRadius);
+            Store.Locations.Save();
+        }
+
         public static void UpdateCircleLocationCallback(LocationObj loc, GridVector2 WorldPosition, GridVector2 MosaicPosition)
         {
             UpdateCircleLocationNoSaveCallback(loc, WorldPosition, MosaicPosition);
@@ -278,6 +284,12 @@ namespace WebAnnotation.View
         {
             loc.MosaicShape = loc.MosaicShape.MoveTo(MosaicPosition);
             loc.VolumeShape = loc.VolumeShape.MoveTo(WorldPosition);
+        }
+
+        public static void UpdateCircleLocationNoSaveCallback(LocationObj loc, GridVector2 WorldPosition, GridVector2 MosaicPosition, double NewRadius)
+        {
+            loc.Radius = NewRadius;
+            UpdateCircleLocationNoSaveCallback(loc, WorldPosition, MosaicPosition);
         }
     }
 }

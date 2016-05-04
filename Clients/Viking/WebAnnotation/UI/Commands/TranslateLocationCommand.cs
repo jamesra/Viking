@@ -98,10 +98,24 @@ namespace WebAnnotation.UI.Commands
         CircleView circleView;
         GridCircle OriginalCircle;
 
-        public delegate void OnCommandSuccess(GridVector2 VolumePosition, GridVector2 MosaicPosition);
+        public delegate void OnCommandSuccess(GridVector2 VolumePosition, GridVector2 MosaicPosition, double NewRadius);
         OnCommandSuccess success_callback;
 
         Viking.VolumeModel.IVolumeToSectionTransform mapping;
+
+        private double _sizeScale = 1.0;
+        protected double SizeScale
+        {
+            get
+            {
+                return _sizeScale;
+            }
+            set
+            {
+                _sizeScale = value;
+                CreateView(circleView.VolumePosition, OriginalCircle.Radius * _sizeScale, circleView.Color);
+            }
+        }
 
         protected override GridVector2 TranslatedPosition
         {
@@ -125,7 +139,29 @@ namespace WebAnnotation.UI.Commands
 
         private void CreateView(GridVector2 Position, double Radius, Microsoft.Xna.Framework.Color color)
         {
-            circleView = new CircleView(new GridCircle(Position, Radius), color);
+            circleView = new CircleView(new GridCircle(Position, Radius * this._sizeScale), color);
+        }
+        
+        protected override void OnMouseDown(object sender, MouseEventArgs e)
+        {
+            //Reset size scale if the middle mouse button is pushed
+            if (e.Button == MouseButtons.Middle)
+            {
+                this.SizeScale = 1.0;
+                return;
+            }
+
+            base.OnMouseDown(sender, e);
+        }
+
+        protected override void OnMouseWheel(object sender, MouseEventArgs e)
+        {
+            float multiplier = ((float)e.Delta / 120.0f);
+
+            if (multiplier < 0)
+                SizeScale *= 0.9900990099009901;
+            else if(multiplier > 0)
+                SizeScale *= 1.01f;
         }
 
         protected override void Execute()
@@ -141,7 +177,7 @@ namespace WebAnnotation.UI.Commands
                     return;
                 }
 
-                this.success_callback(this.TranslatedPosition, MosaicPosition);
+                this.success_callback(this.TranslatedPosition, MosaicPosition, this.circleView.Radius);
             } 
 
             base.Execute();
@@ -174,7 +210,9 @@ namespace WebAnnotation.UI.Commands
     }
 
     abstract class TranslateLocationCommand : AnnotationCommandBase
-    {         
+    {        
+        
+        
         /// <summary>
         /// Translated position in volume space
         /// </summary>
@@ -200,6 +238,7 @@ namespace WebAnnotation.UI.Commands
             base.OnDeactivate();
         }
 
+
         protected override void OnMouseMove(object sender, MouseEventArgs e)
         {
             //Redraw if we are dragging a location
@@ -217,6 +256,7 @@ namespace WebAnnotation.UI.Commands
 
             base.OnMouseMove(sender, e);
         }
+
 
         protected override void OnMouseUp(object sender, MouseEventArgs e)
         {

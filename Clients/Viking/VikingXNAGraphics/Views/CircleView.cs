@@ -349,7 +349,6 @@ namespace VikingXNAGraphics
         {
             DeviceStateManager.RestoreDeviceState(graphicsDevice);
 
-            basicEffect.Texture = null;
             basicEffect.TextureEnabled = false;
             basicEffect.VertexColorEnabled = false;
         }

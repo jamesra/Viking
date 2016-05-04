@@ -40,12 +40,8 @@ namespace WebAnnotation.ViewModel
         public abstract Viking.VolumeModel.IVolumeToSectionTransform mapper {
             get;
         }
-        
-        public virtual void Init()
-        {
-            ConcurrentDictionary<long, LocationObj> local = Store.Locations.GetLocalObjectsForSection(this.SectionNumber);
-            AddLocations(local.Values);
-        }
+
+        public abstract void Init();
 
         public virtual void LoadAnnotationsInRegion(VikingXNA.Scene scene)
         {
@@ -124,6 +120,9 @@ namespace WebAnnotation.ViewModel
         {
             this.Section = section;
         }
+
+       
+
 
         public void AddLocationLinks(IEnumerable<LocationObj> locations)
         {
@@ -321,7 +320,13 @@ namespace WebAnnotation.ViewModel
             this.AdjacentSection = AdjacentSection;
             Init();
         }
-        
+
+        public override void Init()
+        {
+            ConcurrentDictionary<long, LocationObj> local = Store.Locations.GetLocalObjectsForSection(this.SectionNumber);
+            AddLocations(local.Values);
+        }
+
         private IEnumerable<LocationObj> LinkedLocationsOnPrimary(ICollection<long> LinkedIDs)
         {
             return Store.Locations.GetObjectsByIDs(LinkedIDs, false).Where(l => (int)l.Z == this.PrimarySection.Section.Number);
@@ -772,9 +777,15 @@ namespace WebAnnotation.ViewModel
             Init();
         }
 
+        public override void Init()
+        {
+            ConcurrentDictionary<long, LocationObj> local = Store.Locations.GetLocalObjectsForSection(this.SectionNumber);
+            AddLocationBatch(local.Values);
+        }
+
         #region Structure Property Changes
 
-        
+
         protected void OnStructurePropertyChanging(object sender, PropertyChangingEventArgs e)
         {
             StructureObj s = sender as StructureObj;
@@ -932,13 +943,16 @@ namespace WebAnnotation.ViewModel
         private void RemoveLocationBatch(IEnumerable<LocationObj> locations)
         {
             IEnumerable<LocationObj> locsOnOurSection = locations.Where(l => l.Z == this.SectionNumber);
-            IEnumerable<LocationObj> locsOnOurSectionOrLinkedByInputLocations = locsOnOurSection.Union(LocationsOnOurSectionLinkedFromSet(locations));
+            IEnumerable<LocationObj> locsLinkedByInputLocations = LocationsOnOurSectionLinkedFromSet(locations);
+            IEnumerable<LocationObj> locsOnOurSectionOrLinkedByInputLocations = locsOnOurSection.Union(locsLinkedByInputLocations);
              
             RemoveOverlappedLocations(locsOnOurSectionOrLinkedByInputLocations);
-            SectionLocationLinks.RemoveLocationLinks(locsOnOurSectionOrLinkedByInputLocations);
+            SectionLocationLinks.RemoveLocationLinks(locsOnOurSection);
 
             RemoveStructureLinks(locsOnOurSection);
             RemoveLocations(locations);
+
+            AddOverlappedLocations(locsOnOurSectionOrLinkedByInputLocations);
         }
         
         //Called when a key is added or removed from the store
@@ -991,8 +1005,9 @@ namespace WebAnnotation.ViewModel
 
                 case NotifyCollectionChangedAction.Remove:
                     OldItems = e.OldItems.Cast<LocationLinkObj>();
-                    SectionLocationLinks.RemoveLocationLinks(OldItems.Select(link => link.ID));
                     RemoveOverlappedLocations(OldItems.Select(link => link.ID));
+                    SectionLocationLinks.RemoveLocationLinks(OldItems.Select(link => link.ID));
+                    AddOverlappedLocations(OldItems.Select(link => link.ID));
                     break;
 
                 default:
