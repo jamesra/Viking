@@ -20,7 +20,8 @@ namespace XNATestbed
     {
         TEXT,
         CURVE_LABEL,
-        CURVE
+        CURVE,
+        LINES
     };
 
     /// <summary>
@@ -41,6 +42,7 @@ namespace XNATestbed
         CurveTest curveTest = new CurveTest();
         CurveViewTest curveViewTest = new CurveViewTest();
         LabelViewsTest labelTest = new LabelViewsTest();
+        LineViewsTest lineStyleTest = new LineViewsTest();
 
         TestMode Mode = TestMode.CURVE;
 
@@ -96,6 +98,7 @@ namespace XNATestbed
             curveTest.Init(this);
             curveViewTest.Init(this);
             labelTest.Init(this);
+            lineStyleTest.Init(this);
         }
 
         /// <summary>
@@ -163,6 +166,8 @@ namespace XNATestbed
                 this.Mode = TestMode.CURVE_LABEL;
             if (Keyboard.GetState().IsKeyDown(Keys.F3))
                 this.Mode = TestMode.TEXT;
+            if (Keyboard.GetState().IsKeyDown(Keys.F4))
+                this.Mode = TestMode.LINES;
         }
 
         private void ProcessGamepad()
@@ -210,6 +215,9 @@ namespace XNATestbed
                     break;
                 case TestMode.TEXT:
                     labelTest.Draw(this);
+                    break;
+                case TestMode.LINES:
+                    lineStyleTest.Draw(this);
                     break;
             }
             
@@ -415,6 +423,51 @@ namespace XNATestbed
                                                    new GridVector2(0,0),
                                                    new GridVector2(100,0) };
             return cps;
+        }
+    }
+
+    public class LineViewsTest
+    {
+        List<LineView> listLineViews = new List<LineView>();
+        List<LabelView> listLabelViews = new List<LabelView>();
+
+        public void Init(XNATestBedMain window)
+        {
+            double MinX = -100;
+            double MaxX = 100;
+
+            double MinY = -100;
+            double MaxY = 100;
+            double NumLineTypes = (double)Enum.GetValues(typeof(LineStyle)).Length;
+            double YStep = (MaxY - MinY) / NumLineTypes;
+
+            double Y = MinY;
+
+            foreach(LineStyle style in Enum.GetValues(typeof(LineStyle)))
+            {
+                GridVector2 source = new GridVector2(MinX, Y);
+                GridVector2 dest = new GridVector2(MaxX, Y);
+                listLineViews.Add(new LineView(source, dest, YStep / 1.5, Color.Blue, style));
+
+                Y += YStep;
+
+                listLabelViews.Add(new LabelView(style.ToString(), source));
+            }
+        }
+
+        public void ProcessGamepad()
+        {
+        }
+
+        public void Draw(XNATestBedMain window)
+        {
+            VikingXNA.Scene scene = window.Scene;
+            Matrix ViewProjMatrix = scene.ViewProj;
+            float time = DateTime.Now.Millisecond / 1000.0f;
+
+            LineView.Draw(window.GraphicsDevice, scene, window.lineManager, listLineViews.ToArray());
+
+            listLabelViews.ForEach(lv => { lv.Draw(window.spriteBatch, window.fontArial, scene); });
         }
     }
 }

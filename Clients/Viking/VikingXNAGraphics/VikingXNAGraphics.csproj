@@ -226,7 +226,7 @@
     </ProjectReference>
     <ProjectReference Include="Content\VikingXNAGraphicsContent.contentproj">
       <Project>{3B195345-13D5-4E0A-95EC-FC95501FD066}</Project>
-      <Name>VikingXNAGraphicsContent %28Content%29</Name>
+      <Name>VikingXNAGraphicsContent</Name>
       <XnaReferenceType>Content</XnaReferenceType>
     </ProjectReference>
   </ItemGroup>

@@ -80,10 +80,13 @@ PS_Output MyPSAnimatedBidirectional(float3 polar : TEXCOORD0, float2 posModelSpa
 	float modulation = sin(offset * 3.14159) / 2;
 	finalColor.rgb = lineColor.rgb;
 	finalColor.a = lineColor.a * BlurEdge(polar.x, blurThreshold) * modulation + 0.5;
+	clip(finalColor.a);
+
 	output.Color = finalColor;
 	float depth = (polar.z * 2) > 1 ? 1 - ((1 - polar.z) * 2) : 1 - (polar.z * 2);
 	output.Depth = 0;//(polar.z * 2) > 1 ? 1-((1-polar.z)*2) : 1-(polar.z * 2);
-	output.Color.a = 1 - depth;
+	output.Color.a = (1 - depth) * finalColor.a;
+	clip(output.Color.a);
 
 	return output;
 }
@@ -123,6 +126,21 @@ float4 MyPSAnimatedRadial(float3 polar : TEXCOORD0) : COLOR0
 	return finalColor;
 }
 
+float4 MyPSLadder(float3 polar : TEXCOORD0, float2 posModelSpace : TEXCOORD1) : COLOR0
+{
+	float bandWidth = 1.5;
+	float4 finalColor;
+	finalColor.rgb = lineColor.rgb;
+
+	float rho = polar.x;
+
+	float modulation = sin(((-posModelSpace.x / bandWidth)) * 3.14159);
+	clip(modulation <= 0 ? -1 : 1); //Adds sharp boundary to arrows
+	  
+	finalColor.a = lineColor.a * modulation;
+
+	return finalColor;
+}
 
 float4 MyPSModern(float3 polar : TEXCOORD0) : COLOR0
 {

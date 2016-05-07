@@ -16,10 +16,10 @@ namespace VikingXNAGraphics
         AnimatedLinear,
         AnimatedBidirectional,
         AnimatedRadial,
-        Modern,
+        Ladder,
         Tubular,
         Glow,
-        Texture
+        Textured
     }
 
     public static class FloatExtensions
@@ -53,14 +53,14 @@ namespace VikingXNAGraphics
                     return "AnimatedBidirectional";
                 case LineStyle.AnimatedRadial:
                     return "AnimatedRadial";
-                case LineStyle.Modern:
-                    return "Modern";
+                case LineStyle.Ladder:
+                    return "Ladder";
                 case LineStyle.Tubular:
                     return "Tubular";
                 case LineStyle.Glow:
                     return "Glow";
-                case LineStyle.Texture:
-                    return "Texture";
+                case LineStyle.Textured:
+                    return "Textured";
                 default:
                     throw new ArgumentException("Unknown line style " + style.ToString());
             }

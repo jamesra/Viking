@@ -125,14 +125,15 @@ PS_Output MyPSAnimatedBidirectionalHSV(PS_Input input)
 	output.Color = finalColor;
 	float depth = (input.polar.z * 2) > 1 ? 1 - ((1 - input.polar.z) * 2) : 1 - (input.polar.z * 2);
 	output.Depth = 0;//(polar.z * 2) > 1 ? 1-((1-polar.z)*2) : 1-(polar.z * 2);
-
+	finalColor.a = (1 - depth) * finalColor.a;
 
 	float AlphaBlend = lineColor.a * lineColor.r;
 
 	//This is a greyscale+Alpha image.  Greyscale indicates the degree of color, alpha indicates degree to which we use Overlay Luma or Background Luma
 
 	float4 RGBBackgroundColor = tex2D(BackgroundTextureSampler, ((input.ScreenTexCoord.xy) / (RenderTargetSize.xy - 1)));
-	output.Color = BlendHSLColorOverBackground(finalColor, RGBBackgroundColor, AlphaBlend);
+	output.Color = BlendHSLColorOverBackground(finalColor, RGBBackgroundColor, 1);
+	output.Color.a = (1 - depth) * finalColor.a;
 
 	return output;
 }
@@ -205,6 +206,26 @@ float4 MyPSModernHSV(PS_Input input) : COLOR0
 	//}
 
 	finalColor.a = lineColor.a * a;
+
+	float4 RGBBackgroundColor = tex2D(BackgroundTextureSampler, ((input.ScreenTexCoord.xy) / (RenderTargetSize.xy - 1)));
+	return BlendHSLColorOverBackground(finalColor, RGBBackgroundColor, finalColor.a);
+}
+
+float4 MyPSLadderHSV(PS_Input input) : COLOR0
+{
+	float3 polar = input.polar;
+
+	float bandWidth = 1.5;
+	float4 finalColor;
+	float4 output;
+	finalColor.rgb = lineColor.rgb;
+
+	float rho = polar.x;
+
+	float modulation = sin(((-input.posModelSpace.x / bandWidth)) * 3.14159);
+	clip(modulation <= 0 ? -1 : 1); //Adds sharp boundary to arrows
+
+	finalColor.a = lineColor.a * modulation;
 
 	float4 RGBBackgroundColor = tex2D(BackgroundTextureSampler, ((input.ScreenTexCoord.xy) / (RenderTargetSize.xy - 1)));
 	return BlendHSLColorOverBackground(finalColor, RGBBackgroundColor, finalColor.a);

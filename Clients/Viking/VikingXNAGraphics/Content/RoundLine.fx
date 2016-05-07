@@ -100,7 +100,7 @@ technique AnimatedRadial
 }
 
 
-technique Modern
+technique Ladder
 {
 	pass P0
 	{
@@ -110,7 +110,7 @@ technique Modern
 		DestBlend = InvSrcAlpha;
 		BlendOp = Add;
 		vertexShader = compile vs_1_1 LineVertexShader();
-		pixelShader = compile ps_2_0 MyPSModern();
+		pixelShader = compile ps_2_0 MyPSLadder();
 	}
 }
 
