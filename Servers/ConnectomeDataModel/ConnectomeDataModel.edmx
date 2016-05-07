@@ -4,7 +4,7 @@
   <edmx:Runtime>
     <!-- SSDL content -->
     <edmx:StorageModels>
-      <Schema Namespace="ConnectomeModel.Store" Provider="System.Data.SqlClient" ProviderManifestToken="2012" Alias="Self" xmlns:store="http://schemas.microsoft.com/ado/2007/12/edm/EntityStoreSchemaGenerator" xmlns:customannotation="http://schemas.microsoft.com/ado/2013/11/edm/customannotation" xmlns="http://schemas.microsoft.com/ado/2009/11/edm/ssdl">
+    <Schema Namespace="ConnectomeModel.Store" Provider="System.Data.SqlClient" ProviderManifestToken="2012" Alias="Self" xmlns:store="http://schemas.microsoft.com/ado/2007/12/edm/EntityStoreSchemaGenerator" xmlns:customannotation="http://schemas.microsoft.com/ado/2013/11/edm/customannotation" xmlns="http://schemas.microsoft.com/ado/2009/11/edm/ssdl">
         <EntityType Name="DeletedLocations">
           <Key>
             <PropertyRef Name="ID" />
@@ -18,7 +18,7 @@
           </Key>
           <Property Name="ID" Type="bigint" StoreGeneratedPattern="Identity" Nullable="false" />
           <Property Name="ParentID" Type="bigint" Nullable="false" />
-          <Property Name="Z" Type="int" />
+          <Property Name="Z" Type="int" Nullable="false"/>
           <Property Name="Closed" Type="bit" Nullable="false" />
           <Property Name="Version" Type="timestamp" StoreGeneratedPattern="Computed" Nullable="false" />
           <Property Name="Overlay" Type="varbinary(max)" />
@@ -303,6 +303,18 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
         <Function Name="SelectLastModifiedLocationByUsers" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="false" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo" />
         <Function Name="SelectNumConnectionsPerStructure" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="false" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo" />
         <Function Name="SelectRootStructures" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="false" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo" />
+        <Function Name="SelectSectionAnnotationsInMosaicBounds" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="false" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo">
+          <Parameter Name="Z" Type="float" Mode="In" />
+          <Parameter Name="BBox" Type="geometry" Mode="In" />
+          <Parameter Name="MinRadius" Type="float" Mode="In" />
+          <Parameter Name="QueryDate" Type="datetime" Mode="In" />
+        </Function>
+        <Function Name="SelectSectionAnnotationsInVolumeBounds" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="false" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo">
+          <Parameter Name="Z" Type="float" Mode="In" />
+          <Parameter Name="BBox" Type="geometry" Mode="In" />
+          <Parameter Name="MinRadius" Type="float" Mode="In" />
+          <Parameter Name="QueryDate" Type="datetime" Mode="In" />
+        </Function>
         <Function Name="SelectSectionLocationLinks" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="false" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo">
           <Parameter Name="Z" Type="float" Mode="In" />
           <Parameter Name="QueryDate" Type="datetime" Mode="In" />
@@ -451,8 +463,7 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
             <End Role="StructureType1" EntitySet="StructureType" />
           </AssociationSet>
         </EntityContainer>
-      </Schema>
-    </edmx:StorageModels>
+      </Schema></edmx:StorageModels>
     <!-- CSDL content -->
     <edmx:ConceptualModels>
       <Schema Namespace="ConnectomeModel" Alias="Self" annotation:UseStrongSpatialTypes="false" xmlns:annotation="http://schemas.microsoft.com/ado/2009/02/edm/annotation" xmlns:customannotation="http://schemas.microsoft.com/ado/2013/11/edm/customannotation" xmlns="http://schemas.microsoft.com/ado/2009/11/edm">
@@ -841,7 +852,7 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
             <Parameter Name="BBox" Mode="In" Type="Geometry" />
             <Parameter Name="MinRadius" Mode="In" Type="Double" />
             <Parameter Name="QueryDate" Mode="In" Type="DateTime" />
-          </FunctionImport>
+            </FunctionImport>
           <FunctionImport Name="SelectSectionLocationLinksInMosaicBounds" EntitySet="LocationLinks" ReturnType="Collection(ConnectomeModel.LocationLink)">
             <Parameter Name="Z" Mode="In" Type="Double" />
             <Parameter Name="bbox" Mode="In" Type="Geometry" />
@@ -869,6 +880,26 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
           <FunctionImport Name="UpdateStructureType">
             <Parameter Name="StructureID" Mode="In" Type="Int64" />
             <Parameter Name="TypeID" Mode="In" Type="Int64" />
+          </FunctionImport>
+          <FunctionImport Name="SelectSectionAnnotationsInMosaicBounds">
+            <ReturnType EntitySet="Structures" Type="Collection(ConnectomeModel.Structure)"/>
+            <ReturnType EntitySet="StructureLinks" Type="Collection(ConnectomeModel.StructureLink)"/>
+            <ReturnType EntitySet="Locations" Type="Collection(ConnectomeModel.Location)"/>
+            <ReturnType EntitySet="LocationLinks" Type="Collection(ConnectomeModel.LocationLink)"/>
+            <Parameter Name="Z" Mode="In" Type="Double" />
+            <Parameter Name="BBox" Mode="In" Type="Geometry" />
+            <Parameter Name="MinRadius" Mode="In" Type="Double" />
+            <Parameter Name="QueryDate" Mode="In" Type="DateTime" />
+          </FunctionImport>
+          <FunctionImport Name="SelectSectionAnnotationsInVolumeBounds">
+            <ReturnType EntitySet="Structures" Type="Collection(ConnectomeModel.Structure)"/>
+            <ReturnType EntitySet="StructureLinks" Type="Collection(ConnectomeModel.StructureLink)"/>
+            <ReturnType EntitySet="Locations" Type="Collection(ConnectomeModel.Location)"/>
+            <ReturnType EntitySet="LocationLinks" Type="Collection(ConnectomeModel.LocationLink)"/>
+            <Parameter Name="Z" Mode="In" Type="Double" />
+            <Parameter Name="BBox" Mode="In" Type="Geometry" />
+            <Parameter Name="MinRadius" Mode="In" Type="Double" />
+            <Parameter Name="QueryDate" Mode="In" Type="DateTime" />
           </FunctionImport>
         </EntityContainer>
         <ComplexType Name="ApproximateStructureLocation_Result">
@@ -1708,13 +1739,135 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
               </EntityTypeMapping>
             </ResultMapping>
           </FunctionImportMapping>
-          <FunctionImportMapping FunctionImportName="SelectSectionLocationLinksInMosaicBounds" FunctionName="ConnectomeModel.Store.SelectSectionLocationLinksInMosaicBounds" />
+          <FunctionImportMapping FunctionImportName="SelectSectionLocationLinksInMosaicBounds" FunctionName="ConnectomeModel.Store.SelectSectionLocationLinksInMosaicBounds"/>
           <FunctionImportMapping FunctionImportName="SelectSectionLocationLinksInVolumeBounds" FunctionName="ConnectomeModel.Store.SelectSectionLocationLinksInVolumeBounds" />
           <FunctionImportMapping FunctionImportName="SelectSectionStructuresInMosaicBounds" FunctionName="ConnectomeModel.Store.SelectSectionStructuresInMosaicBounds">
           </FunctionImportMapping>
           <FunctionImportMapping FunctionImportName="SelectSectionStructuresInVolumeBounds" FunctionName="ConnectomeModel.Store.SelectSectionStructuresInVolumeBounds">
           </FunctionImportMapping>
           <FunctionImportMapping FunctionImportName="UpdateStructureType" FunctionName="ConnectomeModel.Store.UpdateStructureType" />
+          <FunctionImportMapping FunctionImportName="SelectSectionAnnotationsInMosaicBounds" FunctionName="ConnectomeModel.Store.SelectSectionAnnotationsInMosaicBounds">
+            <ResultMapping>
+              <EntityTypeMapping TypeName="ConnectomeModel.Structure">
+                <ScalarProperty Name="ID" ColumnName="ID" />
+                <ScalarProperty Name="TypeID" ColumnName="TypeID" />
+                <ScalarProperty Name="Notes" ColumnName="Notes" />
+                <ScalarProperty Name="Verified" ColumnName="Verified" />
+                <ScalarProperty Name="Tags" ColumnName="Tags" />
+                <ScalarProperty Name="Confidence" ColumnName="Confidence" />
+                <ScalarProperty Name="Version" ColumnName="Version" />
+                <ScalarProperty Name="ParentID" ColumnName="ParentID" />
+                <ScalarProperty Name="Created" ColumnName="Created" />
+                <ScalarProperty Name="Label" ColumnName="Label" />
+                <ScalarProperty Name="Username" ColumnName="Username" />
+                <ScalarProperty Name="LastModified" ColumnName="LastModified" />
+              </EntityTypeMapping>
+            </ResultMapping>
+            <ResultMapping>
+              <EntityTypeMapping TypeName="ConnectomeModel.StructureLink">
+                <ScalarProperty Name="SourceID" ColumnName="SourceID" />
+                <ScalarProperty Name="TargetID" ColumnName="TargetID" />
+                <ScalarProperty Name="Bidirectional" ColumnName="Bidirectional" />
+                <ScalarProperty Name="Tags" ColumnName="Tags" />
+                <ScalarProperty Name="Username" ColumnName="Username" />
+                <ScalarProperty Name="Created" ColumnName="Created" />
+                <ScalarProperty Name="LastModified" ColumnName="LastModified" />
+              </EntityTypeMapping>
+            </ResultMapping>
+            <ResultMapping>
+              <EntityTypeMapping TypeName="ConnectomeModel.Location">
+                <ScalarProperty Name="VolumeShape" ColumnName="VolumeShape" />
+                <ScalarProperty Name="MosaicShape" ColumnName="MosaicShape" />
+                <ScalarProperty Name="ID" ColumnName="ID" />
+                <ScalarProperty Name="ParentID" ColumnName="ParentID" />
+                <ScalarProperty Name="X" ColumnName="X" />
+                <ScalarProperty Name="Y" ColumnName="Y" />
+                <ScalarProperty Name="Z" ColumnName="Z" />
+                <ScalarProperty Name="Closed" ColumnName="Closed" />
+                <ScalarProperty Name="Version" ColumnName="Version" />
+                <ScalarProperty Name="Overlay" ColumnName="Overlay" />
+                <ScalarProperty Name="Tags" ColumnName="Tags" />
+                <ScalarProperty Name="VolumeX" ColumnName="VolumeX" />
+                <ScalarProperty Name="VolumeY" ColumnName="VolumeY" />
+                <ScalarProperty Name="Terminal" ColumnName="Terminal" />
+                <ScalarProperty Name="OffEdge" ColumnName="OffEdge" />
+                <ScalarProperty Name="Radius" ColumnName="Radius" />
+                <ScalarProperty Name="TypeCode" ColumnName="TypeCode" />
+                <ScalarProperty Name="LastModified" ColumnName="LastModified" />
+                <ScalarProperty Name="Created" ColumnName="Created" />
+                <ScalarProperty Name="Username" ColumnName="Username" />
+              </EntityTypeMapping>
+            </ResultMapping>
+            <ResultMapping>
+              <EntityTypeMapping TypeName="ConnectomeModel.LocationLink">
+                <ScalarProperty Name="A" ColumnName="A" />
+                <ScalarProperty Name="B" ColumnName="B" />
+                <ScalarProperty Name="Username" ColumnName="Username" />
+                <ScalarProperty Name="Created" ColumnName="Created" />
+              </EntityTypeMapping>
+            </ResultMapping>
+          </FunctionImportMapping>
+          <FunctionImportMapping FunctionImportName="SelectSectionAnnotationsInVolumeBounds" FunctionName="ConnectomeModel.Store.SelectSectionAnnotationsInVolumeBounds">
+            <ResultMapping>
+              <EntityTypeMapping TypeName="ConnectomeModel.Structure">
+                <ScalarProperty Name="ID" ColumnName="ID" />
+                <ScalarProperty Name="TypeID" ColumnName="TypeID" />
+                <ScalarProperty Name="Notes" ColumnName="Notes" />
+                <ScalarProperty Name="Verified" ColumnName="Verified" />
+                <ScalarProperty Name="Tags" ColumnName="Tags" />
+                <ScalarProperty Name="Confidence" ColumnName="Confidence" />
+                <ScalarProperty Name="Version" ColumnName="Version" />
+                <ScalarProperty Name="ParentID" ColumnName="ParentID" />
+                <ScalarProperty Name="Created" ColumnName="Created" />
+                <ScalarProperty Name="Label" ColumnName="Label" />
+                <ScalarProperty Name="Username" ColumnName="Username" />
+                <ScalarProperty Name="LastModified" ColumnName="LastModified" />
+              </EntityTypeMapping>
+            </ResultMapping>
+            <ResultMapping>
+              <EntityTypeMapping TypeName="ConnectomeModel.StructureLink">
+                <ScalarProperty Name="SourceID" ColumnName="SourceID" />
+                <ScalarProperty Name="TargetID" ColumnName="TargetID" />
+                <ScalarProperty Name="Bidirectional" ColumnName="Bidirectional" />
+                <ScalarProperty Name="Tags" ColumnName="Tags" />
+                <ScalarProperty Name="Username" ColumnName="Username" />
+                <ScalarProperty Name="Created" ColumnName="Created" />
+                <ScalarProperty Name="LastModified" ColumnName="LastModified" />
+              </EntityTypeMapping>
+            </ResultMapping>
+            <ResultMapping>
+              <EntityTypeMapping TypeName="ConnectomeModel.Location">
+                <ScalarProperty Name="VolumeShape" ColumnName="VolumeShape" />
+                <ScalarProperty Name="MosaicShape" ColumnName="MosaicShape" />
+                <ScalarProperty Name="ID" ColumnName="ID" />
+                <ScalarProperty Name="ParentID" ColumnName="ParentID" />
+                <ScalarProperty Name="X" ColumnName="X" />
+                <ScalarProperty Name="Y" ColumnName="Y" />
+                <ScalarProperty Name="Z" ColumnName="Z" />
+                <ScalarProperty Name="Closed" ColumnName="Closed" />
+                <ScalarProperty Name="Version" ColumnName="Version" />
+                <ScalarProperty Name="Overlay" ColumnName="Overlay" />
+                <ScalarProperty Name="Tags" ColumnName="Tags" />
+                <ScalarProperty Name="VolumeX" ColumnName="VolumeX" />
+                <ScalarProperty Name="VolumeY" ColumnName="VolumeY" />
+                <ScalarProperty Name="Terminal" ColumnName="Terminal" />
+                <ScalarProperty Name="OffEdge" ColumnName="OffEdge" />
+                <ScalarProperty Name="Radius" ColumnName="Radius" />
+                <ScalarProperty Name="TypeCode" ColumnName="TypeCode" />
+                <ScalarProperty Name="LastModified" ColumnName="LastModified" />
+                <ScalarProperty Name="Created" ColumnName="Created" />
+                <ScalarProperty Name="Username" ColumnName="Username" />
+              </EntityTypeMapping>
+            </ResultMapping>
+            <ResultMapping>
+              <EntityTypeMapping TypeName="ConnectomeModel.LocationLink">
+                <ScalarProperty Name="A" ColumnName="A" />
+                <ScalarProperty Name="B" ColumnName="B" />
+                <ScalarProperty Name="Username" ColumnName="Username" />
+                <ScalarProperty Name="Created" ColumnName="Created" />
+              </EntityTypeMapping>
+            </ResultMapping>
+          </FunctionImportMapping>
         </EntityContainerMapping>
       </Mapping>
     </edmx:Mappings>

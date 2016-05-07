@@ -197,7 +197,7 @@ namespace Annotation
         public LocationPositionOnly(ConnectomeDataModel.Location db)
         {
             this.ID = db.ID;
-            this.Position = new AnnotationPoint(db.X, db.Y, db.Z);
+            this.Position = new AnnotationPoint(db.X, db.Y, (int)db.Z);
             this.Radius = db.Radius;
         } 
     }
@@ -415,8 +415,8 @@ namespace Annotation
             this.ParentID = db.ParentID;
              
             this.Section = (long)db.Z;  
-            this.Position = new AnnotationPoint(db.X, db.Y, db.Z);
-            this.VolumePosition = new AnnotationPoint(db.VolumeX, db.VolumeY, db.Z);
+            this.Position = new AnnotationPoint(db.X, db.Y, (int)db.Z);
+            this.VolumePosition = new AnnotationPoint(db.VolumeX, db.VolumeY, (int)db.Z);
             this.MosaicShape = db.MosaicShape;
             this.VolumeShape = db.VolumeShape;
             this._Closed = db.Closed;
@@ -445,7 +445,7 @@ namespace Annotation
 
         private static System.Data.Entity.Spatial.DbGeometry SetPointShape(double X, double Y, double Z)
         {
-            string point_template = "POINT ({0,F2} {1,F2} {2})";
+            string point_template = "POINT ({0:F2} {1:F2} {2})";
             string point_shape_string = string.Format(point_template, new object[] { X, Y, Z });
             return System.Data.Entity.Spatial.DbGeometry.FromText(point_shape_string);
         }
@@ -483,18 +483,18 @@ namespace Annotation
             //db.Y = this.Position.Y;
 
             UpdateUserName |= db.Z != this.Position.Z; 
-            db.Z = this.Position.Z;            
-
-            UpdateUserName |= !db.MosaicShape.SpatialEquals(this.MosaicShape);
+            db.Z = (int)this.Position.Z;            
+                        
             if (this.MosaicShape == null)
             {
                 System.Data.Entity.Spatial.DbGeometry new_geom = this.Radius > 0 ? SetCircleShape(this.Position.X, this.Position.Y, this.Position.Z, this.Radius) : SetPointShape(this.Position.X, this.Position.Y, this.Position.Z);
-                UpdateUserName |= !db.MosaicShape.SpatialEquals(this.MosaicShape);
+
+                UpdateUserName |= db.MosaicShape == null ? true : !db.MosaicShape.SpatialEquals(this.MosaicShape);
                 db.MosaicShape = new_geom;
             }
             else
             {
-                UpdateUserName |= !db.MosaicShape.SpatialEquals(this.MosaicShape);
+                UpdateUserName |= db.MosaicShape == null ? true : !db.MosaicShape.SpatialEquals(this.MosaicShape);
                 db.MosaicShape = this.MosaicShape;
             }
                 

@@ -118,6 +118,8 @@
     <Compile Include="Service\Interfaces\IAnnotateStructures.cs" />
     <Compile Include="Service\Interfaces\IAnnotateStructureTypes.cs" />
     <Compile Include="Service\Interfaces\ICircuit.cs" />
+    <Compile Include="Service\Interfaces\ICredentials.cs" />
+    <Compile Include="Service\Types\AnnotationSet.cs" />
     <Compile Include="Service\Types\DataObject.cs" />
     <Compile Include="Service\Types\Enums.cs" />
     <Compile Include="Service\Types\Location.cs" />

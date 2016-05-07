@@ -73,8 +73,19 @@ namespace Annotation.Service.Interfaces
         /// <param name="IDs"></param>
         /// <returns></returns>
         [OperationContract]
-        Location[] GetLocationChangesInRegion(long section, BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisUtcTime, out long QueryExecutedTime, out long[] DeletedIDs);
+        Location[] GetLocationChangesInMosaicRegion(long section, BoundingRectangle bbox, double MinRadius, long? ModifiedAfterThisUtcTime, out long QueryExecutedTime, out long[] DeletedIDs);
 
+        /// <summary>
+        /// Returns all Structures, StructureLinks, Locations, and LocationLinks in a region. 
+        /// The passed tick count needs to be in the same timezone as the server
+        /// </summary>
+        /// <param name="section"></param>
+        /// <param name="ModifiedAfterThisTime">A Datetime converted to a long. Clients should use server time</param>
+        /// <param name="IDs"></param>
+        /// <returns></returns>
+        [OperationContract]
+        AnnotationSet GetAnnotationsInMosaicRegion(long section, BoundingRectangle bbox, double MinRadius, long? ModifiedAfterThisUtcTime, out long QueryExecutedTime, out long[] DeletedIDs);
+        
         /// <summary>
         /// Returns all locations modified after a set date.  
         /// The passed tick count needs to be in the same timezone as the server
@@ -122,7 +133,7 @@ namespace Annotation.Service.Interfaces
         LocationLink[] GetLocationLinksForSection(long section, long ModifiedAfterThisTime, out long QueryExecutedTime, out LocationLink[] DeletedLinks);
 
         [OperationContract]
-        LocationLink[] GetLocationLinksForSectionInRegion(long section, BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisUtcTime, out long QueryExecutedTime, out LocationLink[] DeletedLinks);
+        LocationLink[] GetLocationLinksForSectionInMosaicRegion(long section, BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisUtcTime, out long QueryExecutedTime, out LocationLink[] DeletedLinks);
 
         /// <summary>
         /// Return a list of location objects that have changed in the time interval

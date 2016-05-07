@@ -824,5 +824,47 @@ namespace ConnectomeDataModel
     
             return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction("UpdateStructureType", structureIDParameter, typeIDParameter);
         }
+    
+        public virtual ObjectResult<Structure> SelectSectionAnnotationsInMosaicBounds(Nullable<double> z, System.Data.Entity.Spatial.DbGeometry bBox, Nullable<double> minRadius, Nullable<System.DateTime> queryDate, MergeOption mergeOption)
+        {
+            var zParameter = z.HasValue ?
+                new ObjectParameter("Z", z) :
+                new ObjectParameter("Z", typeof(double));
+    
+            var bBoxParameter = bBox != null ?
+                new ObjectParameter("BBox", bBox) :
+                new ObjectParameter("BBox", typeof(System.Data.Entity.Spatial.DbGeometry));
+    
+            var minRadiusParameter = minRadius.HasValue ?
+                new ObjectParameter("MinRadius", minRadius) :
+                new ObjectParameter("MinRadius", typeof(double));
+    
+            var queryDateParameter = queryDate.HasValue ?
+                new ObjectParameter("QueryDate", queryDate) :
+                new ObjectParameter("QueryDate", typeof(System.DateTime));
+    
+            return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction<Structure>("SelectSectionAnnotationsInMosaicBounds", mergeOption, zParameter, bBoxParameter, minRadiusParameter, queryDateParameter);
+        }
+    
+        public virtual ObjectResult<Structure> SelectSectionAnnotationsInVolumeBounds(Nullable<double> z, System.Data.Entity.Spatial.DbGeometry bBox, Nullable<double> minRadius, Nullable<System.DateTime> queryDate, MergeOption mergeOption)
+        {
+            var zParameter = z.HasValue ?
+                new ObjectParameter("Z", z) :
+                new ObjectParameter("Z", typeof(double));
+    
+            var bBoxParameter = bBox != null ?
+                new ObjectParameter("BBox", bBox) :
+                new ObjectParameter("BBox", typeof(System.Data.Entity.Spatial.DbGeometry));
+    
+            var minRadiusParameter = minRadius.HasValue ?
+                new ObjectParameter("MinRadius", minRadius) :
+                new ObjectParameter("MinRadius", typeof(double));
+    
+            var queryDateParameter = queryDate.HasValue ?
+                new ObjectParameter("QueryDate", queryDate) :
+                new ObjectParameter("QueryDate", typeof(System.DateTime));
+    
+            return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction<Structure>("SelectSectionAnnotationsInVolumeBounds", mergeOption, zParameter, bBoxParameter, minRadiusParameter, queryDateParameter);
+        }
     }
 }

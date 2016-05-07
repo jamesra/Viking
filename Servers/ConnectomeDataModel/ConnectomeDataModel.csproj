@@ -54,6 +54,24 @@
     <Compile Include="ApproximateStructureLocation_Result.cs">
       <DependentUpon>DataModel.tt</DependentUpon>
     </Compile>
+    <Compile Include="BoundedLocationLinks_Result.cs">
+      <DependentUpon>DataModel.tt</DependentUpon>
+    </Compile>
+    <Compile Include="BoundedLocations_Result.cs">
+      <DependentUpon>DataModel.tt</DependentUpon>
+    </Compile>
+    <Compile Include="BoundedSectionLocationLinks_Result.cs">
+      <DependentUpon>DataModel.tt</DependentUpon>
+    </Compile>
+    <Compile Include="BoundedSectionLocations_Result.cs">
+      <DependentUpon>DataModel.tt</DependentUpon>
+    </Compile>
+    <Compile Include="BoundedSectionStructures_Result.cs">
+      <DependentUpon>DataModel.tt</DependentUpon>
+    </Compile>
+    <Compile Include="BoundedStructures_Result.cs">
+      <DependentUpon>DataModel.tt</DependentUpon>
+    </Compile>
     <Compile Include="CountChildStructuresByType_Result.cs">
       <DependentUpon>DataModel.tt</DependentUpon>
     </Compile>
@@ -62,15 +80,15 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>DataModel.Context.tt</DependentUpon>
     </Compile>
-    <Compile Include="DataModel.cs">
-      <AutoGen>True</AutoGen>
-      <DesignTime>True</DesignTime>
-      <DependentUpon>DataModel.tt</DependentUpon>
-    </Compile>
     <Compile Include="ConnectomeDataModel.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
       <DependentUpon>ConnectomeDataModel.edmx</DependentUpon>
+    </Compile>
+    <Compile Include="DataModel.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>DataModel.tt</DependentUpon>
     </Compile>
     <Compile Include="DeletedLocation.cs">
       <DependentUpon>DataModel.tt</DependentUpon>
@@ -84,6 +102,30 @@
     <Compile Include="Model\ConnectomeEntities.cs" />
     <Compile Include="Model\NetworkProcedures.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="SectionLocationLinksModifiedAfterDate_Result.cs">
+      <DependentUpon>DataModel.tt</DependentUpon>
+    </Compile>
+    <Compile Include="SectionLocationLinks_Result.cs">
+      <DependentUpon>DataModel.tt</DependentUpon>
+    </Compile>
+    <Compile Include="SectionLocationsModifiedAfterDate_Result.cs">
+      <DependentUpon>DataModel.tt</DependentUpon>
+    </Compile>
+    <Compile Include="SectionLocations_Result.cs">
+      <DependentUpon>DataModel.tt</DependentUpon>
+    </Compile>
+    <Compile Include="SelectAllStructureLocationLinks_Result.cs">
+      <DependentUpon>DataModel.tt</DependentUpon>
+    </Compile>
+    <Compile Include="SelectAllStructureLocations_Result.cs">
+      <DependentUpon>DataModel.tt</DependentUpon>
+    </Compile>
+    <Compile Include="SelectAllStructures_Result.cs">
+      <DependentUpon>DataModel.tt</DependentUpon>
+    </Compile>
+    <Compile Include="SelectChildrenStructureLinks_Result.cs">
+      <DependentUpon>DataModel.tt</DependentUpon>
+    </Compile>
     <Compile Include="SelectLastModifiedLocationByUsers_Result.cs">
       <DependentUpon>DataModel.tt</DependentUpon>
     </Compile>
@@ -91,6 +133,9 @@
       <DependentUpon>DataModel.tt</DependentUpon>
     </Compile>
     <Compile Include="SelectRootStructures_Result.cs">
+      <DependentUpon>DataModel.tt</DependentUpon>
+    </Compile>
+    <Compile Include="SelectSectionLocationLinks_Result.cs">
       <DependentUpon>DataModel.tt</DependentUpon>
     </Compile>
     <Compile Include="SelectStructureChangeLog_Result.cs">
@@ -106,6 +151,15 @@
       <DependentUpon>DataModel.tt</DependentUpon>
     </Compile>
     <Compile Include="SelectStructureLocations_Result.cs">
+      <DependentUpon>DataModel.tt</DependentUpon>
+    </Compile>
+    <Compile Include="SelectStructuresAndLinks_Result.cs">
+      <DependentUpon>DataModel.tt</DependentUpon>
+    </Compile>
+    <Compile Include="SelectStructuresForSection_Result.cs">
+      <DependentUpon>DataModel.tt</DependentUpon>
+    </Compile>
+    <Compile Include="SelectStructure_Result.cs">
       <DependentUpon>DataModel.tt</DependentUpon>
     </Compile>
     <Compile Include="SelectUnfinishedStructureBranchesWithPosition_Result.cs">

@@ -25,6 +25,18 @@ namespace ConnectomeDataModel
         } 
     }
 
+    public struct AnnotationCollection
+    {
+        public readonly IDictionary<long, Structure> Structures;
+        public readonly IDictionary<long, Location> Locations;
+
+        public AnnotationCollection(IDictionary<long, Structure> structs, IDictionary<long, Location>  locs)
+        {
+            this.Structures = structs;
+            this.Locations = locs;
+        }
+    }
+
     public partial class ConnectomeEntities
     {
 
@@ -56,8 +68,8 @@ namespace ConnectomeDataModel
             if (input.HasValue == false)
                 return input;
 
-            if (input < new DateTime(2007, 1, 1))
-                return new DateTime(2007, 1, 1);
+            if (input < new DateTime(2000, 1, 1))
+                return new DateTime(2000, 1, 1);
             else
                 return input;
         }
@@ -210,6 +222,48 @@ namespace ConnectomeDataModel
         }
 
 
+        public AnnotationCollection ReadSectionAnnotationsInMosaicRegion(long section, System.Data.Entity.Spatial.DbGeometry bbox, double MinRadius, DateTime? LastModified)
+        {
+            var results = this.SelectSectionAnnotationsInMosaicBounds((double)section, bbox, MinRadius, LastModified, MergeOption.NoTracking);
+
+            Dictionary<long, Structure> dictStructures = results.ToDictionary(s => s.ID);
+
+            var StructureLinks = results.GetNextResult<StructureLink>();
+
+            AppendLinksToStructures(dictStructures, StructureLinks.ToList());
+
+            var Locations = StructureLinks.GetNextResult<Location>();
+
+            Dictionary<long, Location> dictLocations = Locations.ToDictionary(l => l.ID);
+
+            var LocationLinks = Locations.GetNextResult<LocationLink>();
+
+            AppendLinksToLocations(dictLocations, LocationLinks.ToList());
+
+            return new AnnotationCollection(dictStructures, dictLocations);
+        }
+
+        public AnnotationCollection ReadSectionAnnotationsInVolumeRegion(long section, System.Data.Entity.Spatial.DbGeometry bbox, double MinRadius, DateTime? LastModified)
+        {
+            var results = this.SelectSectionAnnotationsInVolumeBounds((double)section, bbox, MinRadius, LastModified, MergeOption.NoTracking);
+
+            Dictionary<long, Structure> dictStructures = results.ToDictionary(s => s.ID);
+
+            var StructureLinks = results.GetNextResult<StructureLink>();
+
+            AppendLinksToStructures(dictStructures, StructureLinks.ToList());
+
+            var Locations = StructureLinks.GetNextResult<Location>();
+
+            Dictionary<long, Location> dictLocations = Locations.ToDictionary(l => l.ID);
+
+            var LocationLinks = Locations.GetNextResult<LocationLink>();
+
+            AppendLinksToLocations(dictLocations, LocationLinks.ToList());
+
+            return new AnnotationCollection(dictStructures, dictLocations);
+        }
+        
 
         public SortedSet<long> SelectNetworkStructureIDs(IEnumerable<long> IDs, int numHops)
         {

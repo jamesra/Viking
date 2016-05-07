@@ -10,6 +10,7 @@ using System.Web.Configuration;
 using System.Transactions;
 using System.Security.Permissions;
 using System.Security;
+using System.Threading.Tasks;
 
 using Annotation.Service.Interfaces;
 using Annotation.Service.GraphClasses;
@@ -46,20 +47,13 @@ namespace Annotation
 
         public static void ConfigureContextAsReadOnly(ConnectomeEntities db)
         {
-            //Note, disabling LazyLoading breaks loading of children and links unless they have been populated previously.
-            db.Database.CommandTimeout = 90;
-            db.Configuration.LazyLoadingEnabled = false;
-            db.Configuration.UseDatabaseNullSemantics = true;
-            db.Configuration.AutoDetectChangesEnabled = false;
+            db.ConfigureAsReadOnly();
         }
 
         public static void ConfigureContextAsReadOnlyWithLazyLoading(ConnectomeEntities db)
         {
             //Note, disabling LazyLoading breaks loading of children and links unless they have been populated previously.
-            db.Database.CommandTimeout = 90;
-            db.Configuration.LazyLoadingEnabled = true;
-            db.Configuration.UseDatabaseNullSemantics = true;
-            db.Configuration.AutoDetectChangesEnabled = false;
+            db.ConfigureAsReadOnlyWithLazyLoading();
         }
 
         ConnectomeDataModel.ConnectomeEntities GetOrCreateDatabaseContext()
@@ -515,7 +509,7 @@ namespace Annotation
         }
 
         [PrincipalPermission(SecurityAction.Demand, Role = "Read")]
-        public Annotation.Structure[] GetStructuresForSectionInRegion(long section, BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisUtcTime, out long QueryExecutedTime, out long[] DeletedIDs)
+        public Annotation.Structure[] GetStructuresForSectionInMosaicRegion(long section, BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisUtcTime, out long QueryExecutedTime, out long[] DeletedIDs)
         {
             DateTime start = DateTime.UtcNow;
             TimeSpan elapsed;
@@ -539,7 +533,7 @@ namespace Annotation
 
                     //Annotation.Structure[] retList = db.BoundedSectionStructures(bbox.ToGeometry(), (double)section).ToList().Select(s => new Annotation.Structure(s, false)).ToArray();
 
-                    Annotation.Structure[] retList = db.ReadSectionStructuresAndLinksInRegion(section, bbox.ToGeometry(), MinRadius, ModifiedAfter).Select(s => new Annotation.Structure(s, false)).ToArray();
+                    Annotation.Structure[] retList = db.ReadSectionStructuresAndLinksInMosaicRegion(section, bbox.ToGeometry(), MinRadius, ModifiedAfter).Select(s => new Annotation.Structure(s, false)).ToArray();
 
                     elapsed = new TimeSpan(DateTime.UtcNow.Ticks - start.Ticks);
                     Debug.WriteLine(section.ToString() + ": Query Structures: " + elapsed.TotalMilliseconds);
@@ -557,7 +551,51 @@ namespace Annotation
 
             return new Structure[0];
         }
-        
+
+        [PrincipalPermission(SecurityAction.Demand, Role = "Read")]
+        public Annotation.Structure[] GetStructuresForSectionInVolumeRegion(long section, BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisUtcTime, out long QueryExecutedTime, out long[] DeletedIDs)
+        {
+            DateTime start = DateTime.UtcNow;
+            TimeSpan elapsed;
+
+            DeletedIDs = new long[0];
+
+            QueryExecutedTime = DateTime.Now.ToUniversalTime().Ticks;
+
+            using (var db = GetOrCreateReadOnlyContext())
+            {
+                db.Configuration.LazyLoadingEnabled = false;
+                db.Configuration.AutoDetectChangesEnabled = false;
+
+                try
+                {
+                    DateTime? ModifiedAfter = new DateTime?();
+                    if (ModifiedAfterThisUtcTime > 0)
+                        ModifiedAfter = new DateTime?(new DateTime(ModifiedAfterThisUtcTime, DateTimeKind.Unspecified));
+
+                    ModifiedAfter = ConnectomeDataModel.ConnectomeEntities.ValidateDate(ModifiedAfter);
+
+                    //Annotation.Structure[] retList = db.BoundedSectionStructures(bbox.ToGeometry(), (double)section).ToList().Select(s => new Annotation.Structure(s, false)).ToArray();
+
+                    Annotation.Structure[] retList = db.ReadSectionStructuresAndLinksInVolumeRegion(section, bbox.ToGeometry(), MinRadius, ModifiedAfter).Select(s => new Annotation.Structure(s, false)).ToArray();
+
+                    elapsed = new TimeSpan(DateTime.UtcNow.Ticks - start.Ticks);
+                    Debug.WriteLine(section.ToString() + ": Query Structures: " + elapsed.TotalMilliseconds);
+
+
+                    //Annotation.Structure[] retList = db.ReadSectionStructuresAndLinks(SectionNumber, ModifiedAfter).Select(s => new Annotation.Structure(s, false)).ToArray();
+
+                    return retList;
+                }
+                catch (Exception e)
+                {
+                    Debug.WriteLine(e.ToString());
+                }
+            }
+
+            return new Structure[0];
+        }
+
         [PrincipalPermission(SecurityAction.Demand, Role = "Read")]
         public Structure GetStructureByID(long ID, bool IncludeChildren)
         {
@@ -1305,7 +1343,7 @@ namespace Annotation
         }
 
         [PrincipalPermission(SecurityAction.Demand, Role = "Read")]
-        public Location[] GetLocationsForSectionRegion(long section, BoundingRectangle bbox, double MinRadius, out long QueryExecutedTime)
+        public Location[] GetLocationsForSectionMosaicRegion(long section, BoundingRectangle bbox, double MinRadius, out long QueryExecutedTime)
         {
             QueryExecutedTime = DateTime.Now.ToUniversalTime().Ticks;
 
@@ -1316,7 +1354,7 @@ namespace Annotation
 
                 try
                 { 
-                    IList<ConnectomeDataModel.Location> locations = db.ReadSectionLocationsAndLinksInRegion(section, bbox.ToGeometry(), MinRadius, new DateTime ?());
+                    IList<ConnectomeDataModel.Location> locations = db.ReadSectionLocationsAndLinksInMosaicRegion(section, bbox.ToGeometry(), MinRadius, new DateTime ?());
                     
                     Debug.WriteLine(section.ToString() + ": Query: " + new TimeSpan(DateTime.Now.Ticks - start.Ticks).TotalMilliseconds);
 
@@ -1341,6 +1379,43 @@ namespace Annotation
             return new Location[0]; 
         }
 
+        [PrincipalPermission(SecurityAction.Demand, Role = "Read")]
+        public Location[] GetLocationsForSectionVolumeRegion(long section, BoundingRectangle bbox, double MinRadius, out long QueryExecutedTime)
+        {
+            QueryExecutedTime = DateTime.Now.ToUniversalTime().Ticks;
+
+            using (var db = GetOrCreateReadOnlyContext())
+            {
+                DateTime start = DateTime.Now;
+
+
+                try
+                {
+                    IList<ConnectomeDataModel.Location> locations = db.ReadSectionLocationsAndLinksInVolumeRegion(section, bbox.ToGeometry(), MinRadius, new DateTime?());
+
+                    Debug.WriteLine(section.ToString() + ": Query: " + new TimeSpan(DateTime.Now.Ticks - start.Ticks).TotalMilliseconds);
+
+                    Location[] retList = locations.Select(l => new Location(l, true)).ToArray();
+
+                    Debug.WriteLine(section.ToString() + ": To list: " + new TimeSpan(DateTime.Now.Ticks - start.Ticks).TotalMilliseconds);
+
+                    return retList;
+                }
+                catch (System.ArgumentNullException)
+                {
+                    //This means there was no row with that ID; 
+                    Debug.WriteLine("Could not find locations for section: " + section.ToString());
+                }
+                catch (System.InvalidOperationException)
+                {
+                    //This means there was no row with that ID; 
+                    Debug.WriteLine("Could not find locations for section: " + section.ToString());
+                }
+            }
+
+            return new Location[0];
+        }
+
         /// <summary>
         /// Return all locations that have changed and an int array of deleted sections.
         /// The passed time has to be in UTC.  
@@ -1351,7 +1426,123 @@ namespace Annotation
         /// <param name="?"></param>
         /// <returns></returns>
         [PrincipalPermission(SecurityAction.Demand, Role = "Read")]
-        public Location[] GetLocationChangesInRegion(long section, BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisUtcTime, out long QueryExecutedTime, out long[] DeletedIDs)
+        public Location[] GetLocationChangesInMosaicRegion(long section, BoundingRectangle bbox, double MinRadius, long? ModifiedAfterThisUtcTime, out long QueryExecutedTime, out long[] DeletedIDs)
+        {
+            using (var db = GetOrCreateReadOnlyContext())
+            {
+                DateTime start = DateTime.UtcNow;
+                TimeSpan elapsed;
+
+                DateTime? ModifiedAfterThisTime = new DateTime?();
+
+                if(ModifiedAfterThisUtcTime.HasValue)
+                    ModifiedAfterThisTime = new DateTime?(new DateTime(ModifiedAfterThisUtcTime.Value, DateTimeKind.Utc));
+
+                ModifiedAfterThisTime = ConnectomeDataModel.ConnectomeEntities.ValidateDate(ModifiedAfterThisTime);
+
+                DeletedIDs = new long[0];
+
+                Location[] retList = new Location[0];
+
+                QueryExecutedTime = start.Ticks;
+                //try
+                {
+
+                    //var dbLocLinks = db.ReadSectionLocationsAndLinksInBounds(section, bbox.ToGeometry(), ModifiedAfterThisTime).ToList();
+                    /*
+                    elapsed = new TimeSpan(DateTime.UtcNow.Ticks - start.Ticks);
+                    Debug.WriteLine(section.ToString() + ": Query Locations: " + elapsed.TotalMilliseconds);
+
+                    var dbLocs = db.ReadSectionLocations(section, ModifiedAfterThisTime).ToList();
+                    elapsed = new TimeSpan(DateTime.UtcNow.Ticks - start.Ticks);
+                    Debug.WriteLine(section.ToString() + ": Query Locations: " + elapsed.TotalMilliseconds);
+                    */
+                    var dbLocs = db.ReadSectionLocationsAndLinksInMosaicRegion(section, bbox.ToGeometry(), MinRadius, ModifiedAfterThisTime);
+                    elapsed = new TimeSpan(DateTime.UtcNow.Ticks - start.Ticks);
+                    Debug.WriteLine(section.ToString() + ": Query Locations: " + elapsed.TotalMilliseconds);
+
+                    var Locations = dbLocs.Select(l => new Location(l, true));
+
+                    elapsed = new TimeSpan(DateTime.UtcNow.Ticks - start.Ticks);
+                    Debug.WriteLine(section.ToString() + ": Convert to Objects: " + elapsed.TotalMilliseconds);
+
+                    //Dictionary<long, Location> dictLocations = Locations.ToDictionary(l => l.ID);
+
+                    //Location.PopulateLinks(dictLocations, dbLocLinks.ToList());
+
+                    //elapsed = new TimeSpan(DateTime.UtcNow.Ticks - start.Ticks);
+                    //Debug.WriteLine(section.ToString() + ": Add Links: " + elapsed.TotalMilliseconds);
+                    retList = Locations.ToArray();
+                }
+                //TODO: Optimize this function to only return locations from the section we specify.  It currently returns all sections
+                DeletedIDs = GetDeletedLocations(ModifiedAfterThisTime);
+
+                return retList;
+            }
+        }
+
+        [PrincipalPermission(SecurityAction.Demand, Role = "Read")]
+        public AnnotationSet GetAnnotationsInMosaicRegion(long section, BoundingRectangle bbox, double MinRadius, long? ModifiedAfterThisUtcTime, out long QueryExecutedTime, out long[] DeletedIDs)
+        {
+            using (var db = GetOrCreateReadOnlyContext())
+            {
+                DateTime start = DateTime.UtcNow;
+                TimeSpan elapsed;
+
+                DateTime? ModifiedAfterThisTime = new DateTime?();
+
+                if (ModifiedAfterThisUtcTime.HasValue)
+                    ModifiedAfterThisTime = new DateTime?(new DateTime(ModifiedAfterThisUtcTime.Value, DateTimeKind.Utc));
+
+                ModifiedAfterThisTime = ConnectomeDataModel.ConnectomeEntities.ValidateDate(ModifiedAfterThisTime);
+
+                DeletedIDs = new long[0];
+
+                AnnotationSet results = null;
+
+                QueryExecutedTime = start.Ticks;
+                //try
+                {
+                    AnnotationCollection dbAnnotations = db.ReadSectionAnnotationsInMosaicRegion(section, bbox.ToGeometry(), MinRadius, ModifiedAfterThisTime);
+                    elapsed = new TimeSpan(DateTime.UtcNow.Ticks - start.Ticks);
+                    Debug.WriteLine(section.ToString() + ": Query Section Annotations: " + elapsed.TotalMilliseconds);
+
+                    Task<Structure[]> structConvTask = Task<Structure[]>.Run(() => { return dbAnnotations.Structures.Values.Select(s => new Structure(s, false)).ToArray(); });
+                    Task<Location[]> locConvTask = Task<Location[]>.Run(() => { return dbAnnotations.Locations.Values.Select(l => new Location(l, true)).ToArray(); });
+
+                    Task.WaitAll(structConvTask, locConvTask);
+
+                    Structure[] structs = structConvTask.Result;
+                    Location[] locs = locConvTask.Result;
+
+                    results = new AnnotationSet(structs, locs);
+
+                    elapsed = new TimeSpan(DateTime.UtcNow.Ticks - start.Ticks);
+                    Debug.WriteLine(section.ToString() + ": Convert to Objects: " + elapsed.TotalMilliseconds);
+                    
+                    //elapsed = new TimeSpan(DateTime.UtcNow.Ticks - start.Ticks);
+                    //Debug.WriteLine(section.ToString() + ": Add Links: " + elapsed.TotalMilliseconds);
+                    
+                }
+
+                //TODO: Optimize this function to only return locations from the region we specify.  It currently returns all sections
+                DeletedIDs = GetDeletedLocations(ModifiedAfterThisTime);
+
+                return results;
+            }
+        }
+
+        /// <summary>
+        /// Return all locations that have changed and an int array of deleted sections.
+        /// The passed time has to be in UTC.  
+        /// 
+        /// in the UTC timezone
+        /// </summary>
+        /// <param name="time">UTC Datetime object passed using "ticks"</param>
+        /// <param name="?"></param>
+        /// <returns></returns>
+        [PrincipalPermission(SecurityAction.Demand, Role = "Read")]
+        public Location[] GetLocationChangesInVolumeRegion(long section, BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisUtcTime, out long QueryExecutedTime, out long[] DeletedIDs)
         {
             using (var db = GetOrCreateReadOnlyContext())
             {
@@ -1369,7 +1560,7 @@ namespace Annotation
 
                 QueryExecutedTime = start.Ticks;
                 //try
-                { 
+                {
 
                     //var dbLocLinks = db.ReadSectionLocationsAndLinksInBounds(section, bbox.ToGeometry(), ModifiedAfterThisTime).ToList();
                     /*
@@ -1380,7 +1571,7 @@ namespace Annotation
                     elapsed = new TimeSpan(DateTime.UtcNow.Ticks - start.Ticks);
                     Debug.WriteLine(section.ToString() + ": Query Locations: " + elapsed.TotalMilliseconds);
                     */
-                    var dbLocs = db.ReadSectionLocationsAndLinksInRegion(section, bbox.ToGeometry(), MinRadius, ModifiedAfterThisTime).Where(l => l.Radius > MinRadius);
+                    var dbLocs = db.ReadSectionLocationsAndLinksInVolumeRegion(section, bbox.ToGeometry(), MinRadius, ModifiedAfterThisTime).Where(l => l.Radius > MinRadius);
                     elapsed = new TimeSpan(DateTime.UtcNow.Ticks - start.Ticks);
                     Debug.WriteLine(section.ToString() + ": Query Locations: " + elapsed.TotalMilliseconds);
 
@@ -1397,18 +1588,6 @@ namespace Annotation
                     //Debug.WriteLine(section.ToString() + ": Add Links: " + elapsed.TotalMilliseconds);
                     retList = Locations.ToArray();
                 }
-                /*
-                catch (System.ArgumentNullException)
-                {
-                    //This means there was no row with that ID; 
-                    Debug.WriteLine("Could not find locations for section: " + section.ToString());
-                }
-                catch (System.InvalidOperationException e)
-                {
-                    //This means there was no row with that ID; 
-                    Debug.WriteLine("Could not find locations for section: " + section.ToString());
-                }
-                */
                 //TODO: Optimize this function to only return locations from the section we specify.  It currently returns all sections
                 DeletedIDs = GetDeletedLocations(ModifiedAfterThisTime);
 
@@ -1855,7 +2034,7 @@ namespace Annotation
         }
 
         [PrincipalPermission(SecurityAction.Demand, Role = "Read")]
-        public LocationLink[] GetLocationLinksForSectionInRegion(long section, BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisUtcTime, out long QueryExecutedTime, out LocationLink[] DeletedLinks)
+        public LocationLink[] GetLocationLinksForSectionInMosaicRegion(long section, BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisUtcTime, out long QueryExecutedTime, out LocationLink[] DeletedLinks)
         {
             using (ConnectomeEntities db = GetOrCreateReadOnlyContext())
             {
@@ -1875,10 +2054,55 @@ namespace Annotation
                 try
                 {
                     //IQueryable<ConnectomeDataModel.Location> queryResults = from l in db.ConnectomeDataModel.Locations where ((double)section) == l.Z select l;
-                    var locationLinks = db.SelectSectionLocationLinksInBounds((double)section, bbox.ToGeometry(), MinRadius, ModifiedAfter);// (section, ModifiedAfter).ToList();
+                    var locationLinks = db.SelectSectionLocationLinksInMosaicBounds((double)section, bbox.ToGeometry(), MinRadius, ModifiedAfter);// (section, ModifiedAfter).ToList();
 
                     Debug.WriteLine(section.ToString() + ": Query: " + new TimeSpan(DateTime.Now.Ticks - start.Ticks).TotalMilliseconds);
                     
+                    LocationLink[] retList = locationLinks.Select(link => new LocationLink(link)).ToArray();
+                    Debug.WriteLine(section.ToString() + ": Loop: " + new TimeSpan(DateTime.Now.Ticks - start.Ticks).TotalMilliseconds);
+
+                    return retList;
+                }
+                catch (System.ArgumentNullException)
+                {
+                    //This means there was no row with that ID; 
+                    Debug.WriteLine("Could not find locatioWat>cns for section: " + section.ToString());
+                }
+                catch (System.InvalidOperationException)
+                {
+                    //This means there was no row with that ID; 
+                    Debug.WriteLine("Could not find locations for section: " + section.ToString());
+                }
+            }
+
+            return new LocationLink[0];
+        }
+
+        [PrincipalPermission(SecurityAction.Demand, Role = "Read")]
+        public LocationLink[] GetLocationLinksForSectionInVolumeRegion(long section, BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisUtcTime, out long QueryExecutedTime, out LocationLink[] DeletedLinks)
+        {
+            using (ConnectomeEntities db = GetOrCreateReadOnlyContext())
+            {
+                //TODO: This needs a real assignment, but I haven't created the table yet
+                DeletedLinks = new LocationLink[0];
+                DateTime start = DateTime.Now;
+                DateTime? ModifiedAfter;
+                if (ModifiedAfterThisUtcTime == 0)
+                {
+                    ModifiedAfter = new DateTime?();
+                }
+                else
+                {
+                    ModifiedAfter = new DateTime?(new DateTime(ModifiedAfterThisUtcTime, DateTimeKind.Unspecified));
+                }
+                QueryExecutedTime = DateTime.Now.ToUniversalTime().Ticks;
+                try
+                {
+                    //IQueryable<ConnectomeDataModel.Location> queryResults = from l in db.ConnectomeDataModel.Locations where ((double)section) == l.Z select l;
+                    var locationLinks = db.SelectSectionLocationLinksInVolumeBounds((double)section, bbox.ToGeometry(), MinRadius, ModifiedAfter);// (section, ModifiedAfter).ToList();
+
+                    Debug.WriteLine(section.ToString() + ": Query: " + new TimeSpan(DateTime.Now.Ticks - start.Ticks).TotalMilliseconds);
+
                     LocationLink[] retList = locationLinks.Select(link => new LocationLink(link)).ToArray();
                     Debug.WriteLine(section.ToString() + ": Loop: " + new TimeSpan(DateTime.Now.Ticks - start.Ticks).TotalMilliseconds);
 

@@ -409,7 +409,6 @@ namespace ServiceTest
 
             Location[] locations;
             long LocationQueryTime;
-            long[] deletedLocations;
             locations = target.GetLocationsForSection(250, out LocationQueryTime);
 
             Assert.IsTrue(locations.Length > 0);
@@ -482,7 +481,7 @@ namespace ServiceTest
         ///A test for GetStructureTypes
         ///</summary>
         [TestMethod()]
-        public void GetStructuresForSectionRegionTest()
+        public void GetStructuresForSectionMosaicRegionTest()
         {
             AddPrincipalToThread();
 
@@ -493,7 +492,28 @@ namespace ServiceTest
             Structure[] structures;
             long[] deletedStructures;
             long StructureQueryTime;
-            structures = target.GetStructuresForSectionInRegion(250, bbox, 0, 0, out StructureQueryTime, out deletedStructures);
+            structures = target.GetStructuresForSectionInMosaicRegion(250, bbox, 0, 0, out StructureQueryTime, out deletedStructures);
+
+            Assert.IsTrue(structures.Length > 0);
+
+        }
+
+        /// <summary>
+        ///A test for GetStructureTypes
+        ///</summary>
+        [TestMethod()]
+        public void GetStructuresForSectionVolumeRegionTest()
+        {
+            AddPrincipalToThread();
+
+            AnnotateService target = new AnnotateService(); // TODO: Initialize to an appropriate value
+
+            BoundingRectangle bbox = new BoundingRectangle(32000, 32000, 64000, 64000);
+
+            Structure[] structures;
+            long[] deletedStructures;
+            long StructureQueryTime;
+            structures = target.GetStructuresForSectionInVolumeRegion(250, bbox, 0, 0, out StructureQueryTime, out deletedStructures);
 
             Assert.IsTrue(structures.Length > 0);
 
@@ -514,7 +534,7 @@ namespace ServiceTest
             Location[] locations;
             long LocationQueryTime;
             long[] deletedLocations;
-            locations = target.GetLocationChangesInRegion(250, bbox,0,0, out LocationQueryTime, out deletedLocations);
+            locations = target.GetLocationChangesInMosaicRegion(250, bbox,0,0, out LocationQueryTime, out deletedLocations);
 
             Assert.IsTrue(locations.Length > 0);
         }
@@ -533,11 +553,29 @@ namespace ServiceTest
             LocationLink[] locationLinks;
             long LocationQueryTime;
             LocationLink[] deletedLinks;
-            locationLinks = target.GetLocationLinksForSectionInRegion(250, bbox, 0, 0, out LocationQueryTime, out deletedLinks);
+            locationLinks = target.GetLocationLinksForSectionInMosaicRegion(250, bbox, 0, 0, out LocationQueryTime, out deletedLinks);
 
             Assert.IsTrue(locationLinks.Length > 0);
         }
-        
+
+        [TestMethod()]
+        public void GetAnnotationsForSectionRegionTest()
+        {
+            AddPrincipalToThread();
+            AnnotateService target = new AnnotateService(); // TODO: Initialize to an appropriate value
+
+            BoundingRectangle bbox = new BoundingRectangle(32000, 32000, 64000, 64000);
+
+
+            AnnotationSet Annotations;
+            long LocationQueryTime;
+            long[] deletedLocations;
+            Annotations = target.GetAnnotationsInMosaicRegion(250, bbox, 0, 0, out LocationQueryTime, out deletedLocations);
+
+            Assert.IsTrue(Annotations.Locations.Length > 0);
+            Assert.IsTrue(Annotations.Structures.Length > 0);
+        }
+
 
         /// <summary>
         ///A test that creates a structure and a location for that structure, then deletes them
