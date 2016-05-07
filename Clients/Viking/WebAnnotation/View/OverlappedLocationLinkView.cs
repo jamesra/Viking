@@ -17,7 +17,7 @@ namespace WebAnnotation.View
     /// <summary>
     /// Renders arrows for location links that are overlapped by an annotation on the section
     /// </summary>
-    class OverlappedLocationLinkView : ICanvasView, IColorView, ILabelView, Viking.Common.IContextMenu, IMouseActionSupport
+    class OverlappedLocationLinkView : ICanvasView, IColorView, ILabelView, Viking.Common.IContextMenu, IMouseActionSupport, IViewLocationLink, IViewLocation
     {
         public TextureCircleView circleView;
         public LabelView label;
@@ -121,6 +121,25 @@ namespace WebAnnotation.View
         public long OffSectionLocationID
         {
             get { return linkKey.A == this.LocationID ? linkKey.B : linkKey.A; }
+        }
+
+        LocationLinkKey IViewLocationLink.Key
+        {
+            get
+            {
+                return this.linkKey;
+            }
+        }
+
+        /// <summary>
+        /// Return the ID of the location we are representing with the view.
+        /// </summary>
+        long IViewLocation.ID
+        {
+            get
+            {
+                return this.OffSectionLocationID;
+            }
         }
 
         public OverlappedLocationLinkView(long locationID, LocationObj linkedObj, GridCircle gridCircle, bool Up)

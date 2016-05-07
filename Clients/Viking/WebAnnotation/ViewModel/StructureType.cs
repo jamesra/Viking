@@ -12,7 +12,7 @@ using WebAnnotationModel;
 namespace WebAnnotation.ViewModel
 {
     [Viking.Common.UI.TreeViewVisible]
-    public class StructureType : Viking.Objects.UIObjBase
+    public class StructureType : Viking.Objects.UIObjBase, IViewStructureType
     {
         public StructureTypeObj modelObj;
 

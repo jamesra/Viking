@@ -73,7 +73,7 @@ namespace WebAnnotation.ViewModel
         }
     }
 
-    abstract class StructureLinkViewModelBase : Viking.Objects.UIObjBase, ICanvasView
+    abstract class StructureLinkViewModelBase : Viking.Objects.UIObjBase, ICanvasView, IViewStructureLink
     {
         WebAnnotationModel.StructureLinkObj modelObj;
 
@@ -133,9 +133,6 @@ namespace WebAnnotation.ViewModel
         public bool Bidirectional
         {
             get { return modelObj.Bidirectional; }
-            set {
-                modelObj.Bidirectional = value; 
-            }
         }
 
         /// <summary>
@@ -159,50 +156,11 @@ namespace WebAnnotation.ViewModel
         {
             get
             {
-                ContextMenu menu = new ContextMenu();
-                MenuItem menuFlip = new MenuItem("Flip Direction", ContextMenu_OnFlip);
-
-                MenuItem menuBidirectional = new MenuItem("Bidirectional", ContextMenu_OnBidirectional);
-                menuBidirectional.Checked = this.modelObj.Bidirectional; 
-
-                MenuItem menuSeperator = new MenuItem();
-                MenuItem menuDelete = new MenuItem("Delete", ContextMenu_OnDelete);
-
-                if(!Bidirectional)
-                    menu.MenuItems.Add(menuFlip);
-
-                menu.MenuItems.Add(menuBidirectional);
-                menu.MenuItems.Add(menuSeperator);
-                menu.MenuItems.Add(menuDelete);
-
-                return menu;
+                StructureLink_CanvasContextMenuView viewMenu = new StructureLink_CanvasContextMenuView(this.Key);
+                return viewMenu.ContextMenu;
             }
         }
-
-        protected void ContextMenu_OnFlip(object sender, EventArgs e)
-        {
-            Store.StructureLinks.Remove(this.modelObj); 
-            bool Success = Store.StructureLinks.Save();
-            if (Success)
-            {
-                StructureLinkObj newLink = new StructureLinkObj(this.TargetID, this.SourceID, this.Bidirectional);
-                Store.StructureLinks.Create(newLink);
-                this.modelObj = newLink;
-                //CreateView(newLink);
-            }
-        }
-
-        protected void ContextMenu_OnBidirectional(object sender, EventArgs e)
-        {
-            this.modelObj.Bidirectional = !this.modelObj.Bidirectional;
-            Store.StructureLinks.Save(); 
-        }
-
-        protected void ContextMenu_OnDelete(object sender, EventArgs e)
-        {
-            Delete();
-        }
-
+        
         public override void Delete()
         {
             Store.StructureLinks.Remove(this.modelObj);
@@ -292,6 +250,14 @@ namespace WebAnnotation.ViewModel
         public abstract Geometry.GridRectangle BoundingBox
         {
             get;
+        }
+
+        public StructureLinkKey Key
+        {
+            get
+            {
+                return this.modelObj.ID;
+            }
         }
 
         protected abstract void CreateView(SectionStructureLinkViewKey key, Viking.VolumeModel.IVolumeToSectionTransform mapper);
@@ -393,7 +359,8 @@ namespace WebAnnotation.ViewModel
             GridVector2 targetVolumePosition = mapper.SectionToVolume(target.Position);
         
             lineView = new LineView(sourceVolumePosition, targetVolumePosition, Math.Min(source.Radius, target.Radius), DefaultColor,
-                                    link.Bidirectional ? LineStyle.AnimatedBidirectional : LineStyle.AnimatedLinear); 
+                                    link.Bidirectional ? LineStyle.AnimatedBidirectional : LineStyle.AnimatedLinear);
+            lineSegment = new GridLineSegment(sourceVolumePosition, targetVolumePosition);
         }
 
         public static void Draw(GraphicsDevice device,

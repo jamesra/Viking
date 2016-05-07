@@ -216,7 +216,7 @@
     </ProjectReference>
     <ProjectReference Include="Content\LocalBookmarksContent.contentproj">
       <Project>{C8DE97A9-C4F2-4B6C-B794-BF1B8D025DD3}</Project>
-      <Name>LocalBookmarksContent %28Content%29</Name>
+      <Name>LocalBookmarksContent</Name>
       <XnaReferenceType>Content</XnaReferenceType>
     </ProjectReference>
   </ItemGroup>

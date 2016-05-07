@@ -16,7 +16,7 @@ namespace WebAnnotation.View
     /// <summary>
     /// Represents a location on an adjacent section that is overlapped by an annotation on the visible section.
     /// </summary>
-    public class OverlappedLocationView : LocationCanvasView, IColorView, ILabelView
+    public class OverlappedLocationView : LocationCanvasView, IColorView, ILabelView, IViewLocation
     {
         public TextureCircleView circleView;
         public LabelView label;

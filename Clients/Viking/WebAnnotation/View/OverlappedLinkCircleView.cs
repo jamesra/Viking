@@ -126,15 +126,12 @@ namespace WebAnnotation.View
             return linkViews.Any(l => l.IsLabelVisible(scene));
         }
 
-        public ICanvasView GetAnnotationAtPosition(GridVector2 position, out double distancetocenternormalized)
+        public ICanvasView GetAnnotationAtPosition(GridVector2 position)
         {
-            distancetocenternormalized = double.MaxValue;
-
             ICanvasView annotation = linkViews.Where(l => l.Intersects(position) == true).FirstOrDefault() as ICanvasView;
             if (annotation == null)
                 return null;
-
-            distancetocenternormalized = annotation.DistanceFromCenterNormalized(position);
+            
             return annotation;
         } 
 

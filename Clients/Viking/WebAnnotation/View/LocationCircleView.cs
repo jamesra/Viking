@@ -492,23 +492,21 @@ namespace WebAnnotation.View
         #region Linked Locations
 
 
-        public ICanvasView GetAnnotationAtPosition(GridVector2 position, out double distanceToCenterNormalized)
+        public ICanvasView GetAnnotationAtPosition(GridVector2 position)
         {
             ICanvasView annotation = null;
-            distanceToCenterNormalized = double.MaxValue;
 
             if (this.Intersects(position))
             {
                 if (this.OverlappedLinkView != null)
                 {
-                    annotation = this.OverlappedLinkView.GetAnnotationAtPosition(position, out distanceToCenterNormalized);
+                    annotation = this.OverlappedLinkView.GetAnnotationAtPosition(position);
                     if (annotation != null)
                     {
                         return annotation;
                     }
                 }
-
-                distanceToCenterNormalized = this.DistanceFromCenterNormalized(position);
+                
                 return this;
             }
 

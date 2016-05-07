@@ -137,6 +137,8 @@
     <Compile Include="UI\Commands\AdjustControlPointCommand.cs" />
     <Compile Include="UI\Commands\PlaceOpenCurveCommand.cs" />
     <Compile Include="UI\Commands\TranslateLocationCommand.cs" />
+    <Compile Include="ViewModel\SectionLocationLinksAnnotationsViewModel.cs" />
+    <Compile Include="View\StructureLink_ContextMenuView.cs" />
     <Compile Include="View\LocationLink_ContextMenuView.cs" />
     <Compile Include="View\OverlappedLinkCircleView.cs" />
     <Compile Include="View\OverlappedLocationLinkView.cs" />
@@ -251,7 +253,7 @@
       <DependentUpon>StructureTypeStructuresPage.cs</DependentUpon>
     </Compile>
     <Compile Include="ViewModel\Location_ViewModelBase.cs" />
-    <Compile Include="ViewModel\SectionStructureLinksViewModel.cs" />
+    <Compile Include="ViewModel\SectionStructureLinksAnnotationsViewModel.cs" />
     <Compile Include="View\AnnotationViewFactory.cs" />
     <Compile Include="View\Location_ContextMenuView.cs" />
     <Compile Include="WeakEvents\NotifyCollectionChangedEventManager.cs" />

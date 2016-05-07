@@ -59,13 +59,37 @@ namespace WebAnnotation.UI.Commands
             parent.Cursor = Cursors.Cross; 
         }
 
+        protected LocationCanvasView NearestLocationToMouse(GridVector2 WorldPos)
+        {
+            List<HitTestResult> listHitTestResults = Overlay.GetAnnotationsAtPosition(WorldPos);
+
+            //Find locations that are not equal to our origin location
+            listHitTestResults = listHitTestResults.Where(hr =>
+            {
+                LocationCanvasView loc = hr.obj as LocationCanvasView;
+                if (loc == null)
+                    return false;
+
+                return loc.ID != putativeLoc.ID && loc.ParentID != putativeStruct.ID;
+            }).ToList();
+
+            LocationCanvasView nearestVisible = null;
+            HitTestResult BestMatch = listHitTestResults.NearestObjectOnCurrentSectionThenAdjacent((int)putativeLoc.Z);
+            if (BestMatch != null)
+            {
+                nearestVisible = BestMatch.obj as LocationCanvasView;
+            }
+
+            return nearestVisible;
+        }
+
         protected override void OnMouseMove(object sender, MouseEventArgs e)
         {
             GridVector2 WorldPos = Parent.ScreenToWorld(e.X, e.Y);
     
             //Find if we are close enough to a location to "snap" the line to the target
-            double distance; 
-            LocationCanvasView nearest = Overlay.GetNearestLocation(WorldPos, out distance);
+            double distance;
+            LocationCanvasView nearest = NearestLocationToMouse(WorldPos);
             if (nearest != null)
             {
                 nearestParent = Store.Locations[nearest.ID];
@@ -85,7 +109,7 @@ namespace WebAnnotation.UI.Commands
 
                 /*Check to see if we clicked a location*/
                 double distance; 
-                LocationCanvasView loc = Overlay.GetNearestLocation(WorldPos, out distance);
+                LocationCanvasView loc = NearestLocationToMouse(WorldPos);
                 if (loc == null)
                     return;
 

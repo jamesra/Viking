@@ -22,6 +22,32 @@ using Viking.VolumeModel;
 
 namespace WebAnnotation.ViewModel
 { 
+    public class HitTestResult
+    {
+        public readonly double Distance;
+        public readonly int Z;
+        public readonly ICanvasView obj;
+
+        public HitTestResult(ICanvasView o, int z, double dist)
+        {
+            this.obj = o;
+            this.Z = z;
+            this.Distance = dist;
+        }
+    }
+
+    public class HitTest_Z_Distance_Sorter : IComparer<HitTestResult>
+    {
+        public int Compare(HitTestResult x, HitTestResult y)
+        {
+            int compareVal = x.Z.CompareTo(y.Z);
+            if (compareVal != 0)
+                return compareVal;
+
+            return x.Distance.CompareTo(y.Distance);
+        }
+    }
+    
     public interface ISectionAnnotationsView
     {
         void AddLocations(ICollection<LocationObj> locations);
@@ -30,7 +56,7 @@ namespace WebAnnotation.ViewModel
         bool RemoveLocations(ICollection<LocationObj> locations);
         bool RemoveLocation(LocationObj loc);
 
-        ICanvasView GetAnnotationAtPosition(GridVector2 WorldPosition, out double distance);
+        List<HitTestResult> GetAnnotationsAtPosition(GridVector2 WorldPosition);
     }
     
     abstract class SectionAnnotationsViewBase : System.Windows.IWeakEventListener
@@ -60,7 +86,7 @@ namespace WebAnnotation.ViewModel
 
         public abstract void RemoveLocations(IEnumerable<LocationObj> locations);
 
-        public abstract ICanvasView GetAnnotationAtPosition(GridVector2 WorldPosition, out double distance);
+        public abstract List<HitTestResult> GetAnnotationsAtPosition(GridVector2 WorldPosition);
 
         private KeyTracker<long> SubscribedLocations = new KeyTracker<long>();
 
@@ -93,180 +119,7 @@ namespace WebAnnotation.ViewModel
 
         public abstract bool ReceiveWeakEvent(Type managerType, object sender, EventArgs e);
     }
-
-    /// <summary>
-    /// Track location links for a section
-    /// </summary>
-    class SectionLocationLinkAnnotationsViewModel
-    {
-        protected KeyTracker<LocationLinkKey> KnownLinks = new KeyTracker<LocationLinkKey>();
-
-        /// <summary>
-        /// The ID's of locations on the adjacent section which we know are linked and overlapped.
-        /// </summary>
-        public RefCountingKeyTracker<long> OverlappedAdjacentLocationIDs = new RefCountingKeyTracker<long>();
-
-        protected ConcurrentDictionary<LocationLinkKey, LocationLinkView> LocationLinks = new ConcurrentDictionary<LocationLinkKey, LocationLinkView>();
-
-        public SortedSet<LocationLinkKey> OverlappedLinkKeys = new SortedSet<LocationLinkKey>();
-        public RTree.RTree<LocationLinkKey> NonOverlappedLinksSearch = new RTree.RTree<LocationLinkKey>();
-
-        /// <summary>
-        /// The section that we represent links on the canvas for
-        /// </summary>
-        public SectionViewModel Section;
-
-        public SectionLocationLinkAnnotationsViewModel(SectionViewModel section)
-        {
-            this.Section = section;
-        }
-
-       
-
-
-        public void AddLocationLinks(IEnumerable<LocationObj> locations)
-        {
-            locations.ForEach(loc => AddLocationLinks(loc, true));
-        }
-
-        public void RemoveLocationLinks(IEnumerable<LocationObj> locations)
-        {
-            locations.ForEach(loc => RemoveLocationLinks(loc, true));
-        }
-
-        public void AddLocationLinks(IEnumerable<LocationLinkKey> links)
-        {
-            links.ForEach(link => AddLocationLink(link, true));
-        }
-
-        public void RemoveLocationLinks(IEnumerable<LocationLinkKey> links)
-        {
-            links.ForEach(link => RemoveLocationLink(link, true));
-        }
-
-        protected void AddLocationLinks(LocationObj loc, bool subscribe)
-        {
-            foreach (long linkedID in loc.LinksCopy)
-            {
-                LocationLinkKey linkKey = new LocationLinkKey(loc.ID, linkedID);
-                AddLocationLink(linkKey, subscribe);
-            }
-        }
-
-        protected void RemoveLocationLinks(LocationObj loc, bool unsubscribe)
-        {
-            foreach (long linkedID in loc.LinksCopy)
-            {
-                LocationLinkKey linkKey = new LocationLinkKey(loc.ID, linkedID);
-                RemoveLocationLink(linkKey, unsubscribe);
-            }
-        }
-
-        protected void AddLocationLink(LocationLinkKey key, bool subscribe)
-        {
-            if (!(Store.Locations.Contains(key.A) && Store.Locations.Contains(key.B)))
-                return;
-
-            LocationObj AOBj = Store.Locations.Contains(key.A) ? Store.Locations[key.A] : null;
-            LocationObj BOBj = Store.Locations.Contains(key.B) ? Store.Locations[key.B] : null;
-
-            if (AOBj == null || BOBj == null)
-                return;
-
-            if(! (AOBj.Z == this.Section.Number || BOBj.Z == this.Section.Number))
-            {
-                return;
-            }
-
-            KnownLinks.TryAdd(key, () =>
-            {  
-                LocationLinkView lv = new LocationLinkView(key, this.Section.Number, this.Section.VolumeViewModel);
-                bool added = LocationLinks.TryAdd(key, lv);
-                Debug.Assert(added);
-
-                if(lv.LinksOverlap())
-                {
-                    OverlappedLinkKeys.Add(key);
-                    OverlappedAdjacentLocationIDs.AddRef(key.A);
-                    OverlappedAdjacentLocationIDs.AddRef(key.B);
-                }
-                else
-                {
-                    NonOverlappedLinksSearch.Add(lv.BoundingBox.ToRTreeRect(lv.Z), key);
-                }
-            });
-        }
-
-        protected void RemoveLocationLink(LocationLinkKey key, bool unsubscribe)
-        {
-            KnownLinks.TryRemove(key, () =>
-            {
-                LocationLinkView lv;
-                Debug.Assert(LocationLinks.ContainsKey(key));
-                bool removed = LocationLinks.TryRemove(key, out lv);
-                Debug.Assert(removed);
-
-                if (OverlappedLinkKeys.Contains(key))
-                {
-                    OverlappedLinkKeys.Remove(key);
-                    OverlappedAdjacentLocationIDs.ReleaseRef(key.A);
-                    OverlappedAdjacentLocationIDs.ReleaseRef(key.B);
-                }
-
-                if(NonOverlappedLinksSearch.Contains(key))
-                {
-                    LocationLinkKey removedKey;
-                    NonOverlappedLinksSearch.Delete(key, out removedKey);
-                }
-            });
-        }
-
-        public ICanvasView GetAnnotationAtPosition(GridVector2 WorldPosition, out double distance)
-        {
-            IEnumerable<LocationLinkKey> intersecting_IDs = NonOverlappedLinksSearch.Intersects(WorldPosition.ToRTreeRect(this.Section.Number));
-            IEnumerable<LocationLinkView> intersecting_objs = intersecting_IDs.Select(id => LocationLinks[id]).Where(l => l.Intersects(WorldPosition));
-
-            distance = double.MaxValue;
-
-            LocationLinkView NearestLocation = intersecting_objs.OrderBy(l => l.DistanceFromCenterNormalized(WorldPosition)).FirstOrDefault();
-            if (NearestLocation != null)
-            {
-                double DistanceNormalized = NearestLocation.DistanceFromCenterNormalized(WorldPosition);
-                //dictNormDistanceToIntersectingObjects.Add(DistanceNormalized, NearestLocation);
-                distance = DistanceNormalized;
-                return NearestLocation;
-            }
-            
-            distance = double.MaxValue;
-            return null;
-        }
-
-        public ICollection<LocationLinkView> NonOverlappedLinks
-        {
-            get
-            {
-                List<LocationLinkView> listLocLinkView = new List<LocationLinkView>(NonOverlappedLinksSearch.Count);
-
-                foreach(LocationLinkKey linkKey in NonOverlappedLinksSearch.Items)
-                {
-                    LocationLinkView locLinkView = null;
-                    if(this.LocationLinks.TryGetValue(linkKey, out locLinkView))
-                    {
-                        listLocLinkView.Add(locLinkView);
-                    }
-                }
-
-                return listLocLinkView;
-            }
-        }
-
-        public ICollection<LocationLinkView> GetLocationLinks(GridVector2 point)
-        {
-            List<LocationLinkKey> intersectingIDs = NonOverlappedLinksSearch.Intersects(point.ToRTreeRect((float)this.Section.Number));
-            return intersectingIDs.Select(id => LocationLinks[id]).Where(l => l.Intersects(point)).ToList();
-        }
-    }
-
+    
     /// <summary>
     /// This class manages Annotations on an adjacent section used on a canvas
     /// </summary>
@@ -295,14 +148,7 @@ namespace WebAnnotation.ViewModel
         protected KeyTracker<long> KnownLocations = new KeyTracker<long>();
         protected RTree.RTree<long> LocationsSearch = new RTree.RTree<long>();
         protected ConcurrentDictionary<long, LocationCanvasView> LocationViews = new ConcurrentDictionary<long, LocationCanvasView>();
-        //protected KeyTracker<long> KnownPrimaryLocations = new KeyTracker<long>();
-        //protected KeyTracker<LocationLinkKey> KnownLocationLinks = new KeyTracker<LocationLinkKey>();
-        //protected RefCountingKeyTracker<long> SubscribedPrimaryLocations = new RefCountingKeyTracker<long>();
-         
-        //public RTree.RTree<long> OverlappedAnnotationsSearch = new RTree.RTree<long>(); //A.K.A. Linked+Overlapped locatations.  Unlinked overlapped locations are still displayed
-        //public RTree.RTree<long> NonOverlappedAnnotationsSearch = new RTree.RTree<long>();
-
-
+        
         /// <summary>
         /// Mapping interface for moving geometry between volume and section space
         /// </summary>
@@ -336,29 +182,7 @@ namespace WebAnnotation.ViewModel
         {
             return Store.Locations.GetObjectsByIDs(LinkedIDs, false).Where(l => (int)l.Z == this.AdjacentSection.Number);
         }
-
-        /*
-        public ICollection<LocationCanvasView> NonOverlappedAnnotationsInRegion(GridRectangle bounds)
-        {
-            return this.NonOverlappedAnnotationsSearch.Intersects(bounds.ToRTreeRect(this.SectionNumber));
-        }
-
-        public ICollection<LocationCanvasView> OverlappedAnnotationsInRegion(GridRectangle bounds)
-        {
-            return this.OverlappedAnnotationsSearch.Intersects(bounds.ToRTreeRect(this.SectionNumber));
-        }
-
-        public ICollection<LocationLinkView> NonOverlappedLocationLinksInRegion(GridRectangle bounds)
-        {
-            return this.NonOverlappedLinks.Intersects(bounds.ToRTreeRect(this.SectionNumber));
-        }
-
-        public ICollection<LocationLinkView> OverlappedLocationLinksInRegion(GridRectangle bounds)
-        {
-            return OverlappedLinks;
-        }
-        */
-
+        
         public override void AddLocations(IEnumerable<LocationObj> locations)
         {
             foreach(LocationObj loc in locations)
@@ -402,27 +226,7 @@ namespace WebAnnotation.ViewModel
                 }
             });
         }
-
-        /*
-        protected void AddLocationOnPrimary(LocationObj primaryLoc, bool subscribe)
-        {
-            KnownPrimaryLocations.TryAdd(primaryLoc.ID, () =>
-            {
-                if (!PrimarySection.mapper.MapLocationToVolume(primaryLoc))
-                    return;
-
-                foreach (LocationObj adjacentLoc in LinkedLocationsOnAdjacent(primaryLoc.Links))
-                {
-                    LocationLinkView linkView = new LocationLinkView(adjacentLoc, primaryLoc, Viking.UI.State.volume);
-                    bool overlappedLink; //True if the link is overlapped by the annotation on the primary section
-                    AddLocationLinkView(linkView, out overlappedLink);
-                    if (!overlappedLink)
-                        AddNonOverlappedOrUnlinkedLocation(adjacentLoc);
-                }
-            });
-        }
-        */
-        
+                
         public override void RemoveLocations(IEnumerable<LocationObj> locations)
         {
             foreach (LocationObj loc in locations)
@@ -477,31 +281,6 @@ namespace WebAnnotation.ViewModel
             });
         }
 
-        /*
-        protected bool RemoveLocationOnPrimary(LocationObj primaryLoc, bool unsubscribe)
-        {
-            if (primaryLoc.Z != this.PrimarySection.SectionNumber)
-            {
-                throw new ArgumentException("Location does not belong to primary section");
-            }
-
-            return KnownPrimaryLocations.TryRemove(primaryLoc.ID, () =>
-            {
-                //The bug is we do not subscribe to the other half of the location link
-                foreach (LocationObj adjacentLoc in LinkedLocationsOnAdjacent(primaryLoc.Links))
-                {
-                    LocationLinkView linkView = new LocationLinkView(adjacentLoc, primaryLoc, Viking.UI.State.volume);
-                    bool overlappedLink; //True if the link is overlapped by the annotation on the primary section
-                    RemoveLocationLinkView(linkView, out overlappedLink);
-                    if(overlappedLink)
-                    {
-                        RemoveNonOverlappedOrUnlinkedLocation(adjacentLoc);
-                    }
-                }
-            });
-        }
-        */
-
         private bool AddNonOverlappedOrUnlinkedLocation(LocationObj loc)
         {
             LocationCanvasView locView = null;
@@ -531,83 +310,15 @@ namespace WebAnnotation.ViewModel
             LocationViews.TryRemove(loc.ID, out locView); 
             return LocationsSearch.Delete(loc.ID, out RemovedID);
         }
-
-        /*
-        private void AddLocationLinkView(LocationLinkView linkView, out bool overlapped)
-        {
-            overlapped = linkView.LinksOverlap(PrimarySection.Section.Number);
-            if (overlapped)
-            {
-                OverlappedLinks.Add(linkView.Key);
-                Debug.Assert(OverlappedLinks.Contains(linkView.Key));
-            }
-            else
-            {
-                NonOverlappedLinks.Add(linkView.BoundingBox.ToRTreeRect((float)this.AdjacentSection.Number), linkView.Key);
-                Debug.Assert(NonOverlappedLinks.Contains(linkView,Key));
-                Debug.Assert(NonOverlappedLinks.Items.Contains(linkView.Key));
-            }
-        }
-
-        private bool RemoveLocationLinkView(LocationLinkKey linkKey, out bool overlapped)
-        {
-            overlapped = false;
-            if (OverlappedLinks.Contains(linkKey))
-            {
-                overlapped = true;
-                return OverlappedLinks.Remove(linkKey);
-            }
-
-            if (NonOverlappedLinks.Contains(linkKey))
-            {
-                overlapped = false;
-                LocationLinkKey removedItem;
-                bool removed = NonOverlappedLinks.Delete(linkKey, out removedItem);
-                return removed;
-            }
-
-            Trace.WriteLine(string.Format("Location link should exist, but was missing from our view {0}, {1}", linkView.A, linkView.B));
-
-            return false;
-        }
-        */
-
-        public override ICanvasView GetAnnotationAtPosition(GridVector2 WorldPosition, out double distance)
-        {
-            SortedDictionary<double, ICanvasView> dictNormDistanceToIntersectingObjects = new SortedDictionary<double, ICanvasView>();
-
+        
+        public override List<HitTestResult> GetAnnotationsAtPosition(GridVector2 WorldPosition)
+        { 
             IEnumerable<long> intersecting_IDs = LocationsSearch.Intersects(WorldPosition.ToRTreeRect(this.SectionNumber));
             IEnumerable<LocationCanvasView> intersecting_locations = intersecting_IDs.Select(id => LocationViews[id]).Where(l => l.Intersects(WorldPosition));
 
-            distance = double.MaxValue;
-             
-            LocationCanvasView NearestLocation = intersecting_locations.OrderBy(l => l.DistanceFromCenterNormalized(WorldPosition)).FirstOrDefault();
-            if(NearestLocation != null)
-            {
-                double DistanceNormalized = NearestLocation.DistanceFromCenterNormalized(WorldPosition);
-                dictNormDistanceToIntersectingObjects.Add(DistanceNormalized, NearestLocation);
-                distance = DistanceNormalized;
-                return NearestLocation;
-            }
-            
-            /*
-            List<LocationLinkView> intersecting_links = NonOverlappedLinks.Intersects(WorldPosition.ToRTreeRect(this.SectionNumber)).Where(l => l.Intersects(WorldPosition)).ToList();
-            LocationLinkView NearestLink = intersecting_links.OrderBy(l => l.DistanceFromCenterNormalized(WorldPosition)).FirstOrDefault();
-            if(NearestLink != null)
-            {
-                double DistanceNormalized = NearestLink.DistanceFromCenterNormalized(WorldPosition);
-                dictNormDistanceToIntersectingObjects.Add(DistanceNormalized, NearestLink);
-            }
-
-            if (dictNormDistanceToIntersectingObjects.Count > 0)
-            {
-                distance = dictNormDistanceToIntersectingObjects.First().Key;
-                return dictNormDistanceToIntersectingObjects.First().Value;
-            }
-            */
-
-            distance = double.MaxValue;
-            return null;
+            List<HitTestResult> listHitResults = intersecting_locations.Select(l => new HitTestResult(l, (int)l.Z, l.DistanceFromCenterNormalized(WorldPosition))).ToList();
+            return listHitResults;
+         
         }
 
         public ICollection<LocationCanvasView> AnnotationsInRegion(GridRectangle worldRect)
@@ -705,24 +416,20 @@ namespace WebAnnotation.ViewModel
 
         public readonly SectionLocationLinkAnnotationsViewModel SectionLocationLinks;
 
+        public readonly SectionStructureLinkAnnotationsViewModel SectionStructureLinks;
+
         protected KeyTracker<long> KnownLocations = new KeyTracker<long>();
         /// <summary>
         /// Locations on the section we are providing an overlay for
         /// </summary>
         private RTree.RTree<long> LocationViewSearch = new RTree.RTree<long>();
-        private ConcurrentDictionary<long, LocationCanvasView> LocationViews = new ConcurrentDictionary<long, LocationCanvasView>();
+        protected ConcurrentDictionary<long, LocationCanvasView> LocationViews = new ConcurrentDictionary<long, LocationCanvasView>();
           
         /// <summary>
         /// Maps a structureID to all the locations for that structure on the visible section
         /// </summary>
         private ConcurrentDictionary<long, KeyTracker<long>> LocationsForStructure = new ConcurrentDictionary<long, KeyTracker<long>>();
 
-        private KeyTracker<StructureLinkKey> KnownStructureLinks = new KeyTracker<StructureLinkKey>();
-        /// <summary>
-        /// Allows us to describe all the StructureLinks visible on a screen
-        /// </summary>
-        private RTree.RTree<StructureLinkKey> StructureLinksSearch = new RTree.RTree<StructureLinkKey>();
-        private ConcurrentDictionary<StructureLinkKey, StructureLinkViewModelBase> StructureLinks = new ConcurrentDictionary<StructureLinkKey, StructureLinkViewModelBase>();
         
         public ICollection<LocationLinkView> NonOverlappedLocationLinks
         {
@@ -763,7 +470,8 @@ namespace WebAnnotation.ViewModel
             this.Section = section;
 
             SectionLocationLinks = new SectionLocationLinkAnnotationsViewModel(section);
-                                       
+            SectionStructureLinks = new SectionStructureLinkAnnotationsViewModel(this);
+
             this.SubmitUpdatedVolumePositions = section.VolumeViewModel.UpdateServerVolumePositions;
               
             if(this.Section.ReferenceSectionAbove != null)
@@ -833,7 +541,7 @@ namespace WebAnnotation.ViewModel
                 //                Location locView = new Location(loc);
                 LocationObj[] locs = new LocationObj[] { loc };
                 RemoveOverlappedLocations(locs);
-                RemoveStructureLinks(locs);
+                SectionStructureLinks.RemoveStructureLinks(locs);
                 SectionLocationLinks.RemoveLocationLinks(locs);
                 RemoveLocations(new LocationObj[] { loc }, false);
             }
@@ -875,49 +583,7 @@ namespace WebAnnotation.ViewModel
                 }
             }
         }
-
-        protected void OnLinkedLocationPropertyChanging(object sender, PropertyChangingEventArgs e)
-        {
-            LocationObj loc = sender as LocationObj;
-            if (loc == null)
-                return;
-
-//            Trace.WriteLine("Linked Location property changing: " + loc.ToString() + " property: " + e.PropertyName);
-
-            //Update if a position or everything has changed
-            if (e.PropertyName.Contains('X') || e.PropertyName.Contains('Y') || string.IsNullOrEmpty(e.PropertyName))
-            {
-                /*
-                Location locView = new Location(loc);
-                foreach (long linkedID in loc.Links)
-                {
-
-                }
-                bool Success = Locations.TryRemove(locView);
-                //      Debug.Assert(Success); 
-                */
-            }
-        }
-
-        /*
-        protected void OnLinkedLocationPropertyChanged(object sender, PropertyChangedEventArgs e)
-        {
-            LocationObj loc = sender as LocationObj;
-            if (loc == null)
-                return;
-
-            Trace.WriteLine("Linked Location property changed: " + loc.ToString() + " property: " + e.PropertyName);
-
-            //Update if a position or everything has changed
-            if (e.PropertyName.Contains('X') || e.PropertyName.Contains('Y') || e.PropertyName == "")
-            { 
-                List<LocationObj> listLocs = new List<LocationObj>();
-                listLocs.Add(loc);
-                RemoveLocationLinks(listLocs);
-                AddLocationLinks(listLocs); 
-            }
-        }
-        */
+        
 
         #endregion 
 
@@ -933,7 +599,7 @@ namespace WebAnnotation.ViewModel
         {
             AddLocations(locations);
             IEnumerable<LocationObj> locsOnOurSection = locations.Where(l => l.Z == this.SectionNumber);
-            AddStructureLinks(locsOnOurSection);
+            SectionStructureLinks.AddStructureLinks(locsOnOurSection);
 
             IEnumerable<LocationObj> locsOnOurSectionOrLinkedByInputLocations = locsOnOurSection.Union(LocationsOnOurSectionLinkedFromSet(locations));
             SectionLocationLinks.AddLocationLinks(locsOnOurSectionOrLinkedByInputLocations);
@@ -949,7 +615,7 @@ namespace WebAnnotation.ViewModel
             RemoveOverlappedLocations(locsOnOurSectionOrLinkedByInputLocations);
             SectionLocationLinks.RemoveLocationLinks(locsOnOurSection);
 
-            RemoveStructureLinks(locsOnOurSection);
+            SectionStructureLinks.RemoveStructureLinks(locsOnOurSection);
             RemoveLocations(locations);
 
             AddOverlappedLocations(locsOnOurSectionOrLinkedByInputLocations);
@@ -1022,16 +688,16 @@ namespace WebAnnotation.ViewModel
             switch (e.Action)
             {
                 case NotifyCollectionChangedAction.Add:
-                    AddStructureLinks(e.NewItems.Cast<StructureObj>());
+                    SectionStructureLinks.AddStructureLinks(e.NewItems.Cast<StructureObj>());
                     break;
 
                 case NotifyCollectionChangedAction.Replace:
-                    RemoveStructureLinks(e.OldItems.Cast<StructureObj>());
-                    AddStructureLinks(e.NewItems.Cast<StructureObj>());
+                    SectionStructureLinks.RemoveStructureLinks(e.OldItems.Cast<StructureObj>());
+                    SectionStructureLinks.AddStructureLinks(e.NewItems.Cast<StructureObj>());
                     break;
 
                 case NotifyCollectionChangedAction.Remove:
-                    RemoveStructureLinks(e.OldItems.Cast<StructureObj>());
+                    SectionStructureLinks.RemoveStructureLinks(e.OldItems.Cast<StructureObj>());
                     break;
 
                 default:
@@ -1046,16 +712,16 @@ namespace WebAnnotation.ViewModel
             switch (e.Action)
             {
                 case NotifyCollectionChangedAction.Add:
-                    AddStructureLinks(e.NewItems.Cast<StructureLinkObj>());
+                    SectionStructureLinks.AddStructureLinks(e.NewItems.Cast<StructureLinkObj>());
                     break;
 
                 case NotifyCollectionChangedAction.Replace:
-                    RemoveStructureLinks(e.OldItems.Cast<StructureLinkObj>());
-                    AddStructureLinks(e.NewItems.Cast<StructureLinkObj>());
+                    SectionStructureLinks.RemoveStructureLinks(e.OldItems.Cast<StructureLinkObj>());
+                    SectionStructureLinks.AddStructureLinks(e.NewItems.Cast<StructureLinkObj>());
                     break;
 
                 case NotifyCollectionChangedAction.Remove:
-                    RemoveStructureLinks(e.OldItems.Cast<StructureLinkObj>());
+                    SectionStructureLinks.RemoveStructureLinks(e.OldItems.Cast<StructureLinkObj>());
                     break;
 
                 default:
@@ -1307,6 +973,30 @@ namespace WebAnnotation.ViewModel
             return LocationViews.Values;
         }
 
+        public bool TryGetLocation(long ID, out LocationCanvasView outVal)
+        {
+            return this.LocationViews.TryGetValue(ID, out outVal);            
+        }
+
+        public LocationCanvasView GetLocation(long ID)
+        {
+            LocationCanvasView outVal = null;
+            if (this.LocationViews.TryGetValue(ID, out outVal))
+                return outVal;
+            return null;
+        }
+
+        public bool ContainsLocation(long ID)
+        {
+            return this.LocationViews.ContainsKey(ID);
+        }
+
+        public bool GetLocationsForStructure(long ID, out KeyTracker<long> child_locations)
+        {
+            child_locations = null;
+            return LocationsForStructure.TryGetValue(ID, out child_locations);
+        }
+
         public ICollection<LocationCanvasView> GetLocations(GridRectangle bounds)
         {
             List<long> intersectingIDs = LocationViewSearch.Intersects(bounds.ToRTreeRect((float)this.Section.Number));
@@ -1321,146 +1011,66 @@ namespace WebAnnotation.ViewModel
 
         public ICollection<StructureLinkViewModelBase> GetStructureLinks()
         {
-            return StructureLinks.Values;
+            return SectionStructureLinks.GetStructureLinks();
         }
 
         public ICollection<StructureLinkViewModelBase> GetStructureLinks(GridRectangle bounds)
         {
-            List<StructureLinkKey> intersectingIDs = StructureLinksSearch.Intersects(bounds.ToRTreeRect((float)this.Section.Number));
-            return intersectingIDs.Select(id => StructureLinks[id]).ToList();
+            return SectionStructureLinks.GetStructureLinks(bounds);
         }
 
         public ICollection<StructureLinkViewModelBase> GetStructureLinks(GridVector2 point)
         {
-            List<StructureLinkKey> intersectingIDs = StructureLinksSearch.Intersects(point.ToRTreeRect((float)this.Section.Number));
-            return intersectingIDs.Select(id => StructureLinks[id]).Where(sl => sl != null && sl.Intersects(point)).ToList();
+            return SectionStructureLinks.GetStructureLinks(point);
         }
 
-        public override ICanvasView GetAnnotationAtPosition(GridVector2 WorldPosition, out double distance)
+        /// <summary>
+        /// Return all the line segments visible in the passed bounds
+        /// </summary>
+        /// <param name="bounds"></param>
+        /// <returns></returns>
+        public List<StructureLinkViewModelBase> VisibleStructureLinks(VikingXNA.Scene scene)
         {
-            SortedDictionary<double, ICanvasView> dictNormDistanceToIntersectingObjects = new SortedDictionary<double, ICanvasView>();
-            double linkDistanceNormalized = double.MaxValue;
-            distance = double.MaxValue;
-            ICanvasView NearestLink = null;
-            List<StructureLinkViewModelBase> intersecting_candidates = GetStructureLinks(WorldPosition).ToList();
-            NearestLink = intersecting_candidates.OrderBy(l => l.DistanceFromCenterNormalized(WorldPosition)).FirstOrDefault();
-            if (NearestLink != null)
-            {
-                linkDistanceNormalized = NearestLink.DistanceFromCenterNormalized(WorldPosition);
-                dictNormDistanceToIntersectingObjects.Add(linkDistanceNormalized, NearestLink);
-            } 
-             
-            LocationCanvasView NearestLocationObj = GetLocations(WorldPosition).OrderBy(l => l.DistanceFromCenterNormalized(WorldPosition)).FirstOrDefault();
-            if (NearestLocationObj != null)
-            { 
-                dictNormDistanceToIntersectingObjects.Add(NearestLocationObj.DistanceFromCenterNormalized(WorldPosition), NearestLocationObj);
-            }
+            return SectionStructureLinks.VisibleStructureLinks(scene);
+        }
 
-            //Select links and annotations on this section first
-            /*
-            
-            */
-
-            //OK, check adjacent
-            ICanvasView adjacentView = GetAdjacentAnnotationAtPosition(WorldPosition, out distance);
-            if (adjacentView != null)
-            {
-                dictNormDistanceToIntersectingObjects.Add(adjacentView.DistanceFromCenterNormalized(WorldPosition), adjacentView);
-            }
-
-            if (dictNormDistanceToIntersectingObjects.Count > 0)
-            {
-                distance = dictNormDistanceToIntersectingObjects.First().Key;
-                return dictNormDistanceToIntersectingObjects.First().Value;
-            }
-
+        public override List<HitTestResult> GetAnnotationsAtPosition(GridVector2 WorldPosition)
+        {
+            List<HitTestResult> listIntersectingObjects = new List<HitTestResult>();
+            listIntersectingObjects.AddRange(GetStructureLinks(WorldPosition).Select(o => new HitTestResult(o, this.SectionNumber, o.DistanceFromCenterNormalized(WorldPosition))));
+            listIntersectingObjects.AddRange(GetLocations(WorldPosition).Select(o => new HitTestResult(o, (int)o.Z, o.DistanceFromCenterNormalized(WorldPosition))));
+            listIntersectingObjects.AddRange(GetAdjacentAnnotationsAtPosition(WorldPosition));
+                        
             ICollection<LocationLinkView> listLocLinks = this.SectionLocationLinks.GetLocationLinks(WorldPosition);
-            NearestLink = listLocLinks.OrderBy(ll => ll.DistanceFromCenterNormalized(WorldPosition)).FirstOrDefault();
-            if (NearestLink != null)
-            {
-                distance = NearestLink.DistanceFromCenterNormalized(WorldPosition);
-                return NearestLink;
-            }
+
+            listIntersectingObjects.AddRange(listLocLinks.Select(ll => new HitTestResult(ll, this.SectionNumber, ll.DistanceFromCenterNormalized(WorldPosition))));
+
+            //Replace any container objects with the nested objects if the mouse is over a nested object
 
 
-            return null;
+            return listIntersectingObjects;
         }
 
         
 
-        public ICanvasView GetAdjacentAnnotationAtPosition(GridVector2 WorldPosition, out double distance)
+        public List<HitTestResult> GetAdjacentAnnotationsAtPosition(GridVector2 WorldPosition)
         {
-            SortedDictionary<double, ICanvasView> dictNormDistanceToIntersectingObjects = new SortedDictionary<double, ICanvasView>();
+            List<HitTestResult> listAnnotations = new List<HitTestResult>();
+
+//            SortedDictionary<double, ICanvasView> dictNormDistanceToIntersectingObjects = new SortedDictionary<double, ICanvasView>();
             if (SectionAbove!= null)
             {
-                ICanvasView obj = SectionAbove.GetAnnotationAtPosition(WorldPosition, out distance);
-                if (obj != null)
-                {
-                    dictNormDistanceToIntersectingObjects.Add(obj.DistanceFromCenterNormalized(WorldPosition), obj);
-                }
+                listAnnotations.AddRange(SectionAbove.GetAnnotationsAtPosition(WorldPosition));
             }
             
             if(SectionBelow != null)
             {
-                ICanvasView obj = SectionBelow.GetAnnotationAtPosition(WorldPosition, out distance);
-                if (obj != null)
-                    dictNormDistanceToIntersectingObjects.Add(obj.DistanceFromCenterNormalized(WorldPosition), obj);
+                listAnnotations.AddRange(SectionBelow.GetAnnotationsAtPosition(WorldPosition));
             }
 
-            if (dictNormDistanceToIntersectingObjects.Count > 0)
-            {
-                distance = dictNormDistanceToIntersectingObjects.First().Key;
-                return dictNormDistanceToIntersectingObjects.First().Value;
-            }
-
-            distance = double.MaxValue;
-            return null;
+            return listAnnotations;
         }
                
-
-        /// <summary>
-        /// Gets the nearest location, preferring locations on the same section, then checking other sections
-        /// </summary>
-        /// <param name="WorldPosition"></param>
-        /// <param name="SectionNumber"></param>
-        /// <param name="font"></param>
-        /// <param name="locPosition"></param>
-        /// <returns></returns>
-        public LocationCanvasView GetNearestLocation(GridVector2 WorldPosition, out double distance)
-        {
-            SortedDictionary<double, LocationCanvasView> dictNormDistanceToIntersectingObjects = new SortedDictionary<double, LocationCanvasView>();
-
-            distance = double.MaxValue; 
-//            double minDistance = double.MaxValue;
-
-            if (LocationViews == null)
-                return null;
-
-            /*Check to see if we clicked a location*/
-            ICollection<LocationCanvasView> intersecting_candidates = GetLocations(WorldPosition);
-            LocationCanvasView nearest = intersecting_candidates.OrderBy(c => c.DistanceFromCenterNormalized(WorldPosition)).FirstOrDefault();
-            if (nearest != null)
-            {
-                dictNormDistanceToIntersectingObjects.Add(nearest.DistanceFromCenterNormalized(WorldPosition), nearest);
-            }
-            
-            //OK, check adjacent
-            ICanvasView adjacentView = GetAdjacentAnnotationAtPosition(WorldPosition, out distance);
-            if (adjacentView as LocationCanvasView != null)
-            { 
-                dictNormDistanceToIntersectingObjects.Add(adjacentView.DistanceFromCenterNormalized(WorldPosition), adjacentView as LocationCanvasView);
-            }
-
-            if (dictNormDistanceToIntersectingObjects.Count > 0)
-            {
-                distance = dictNormDistanceToIntersectingObjects.First().Key;
-                return dictNormDistanceToIntersectingObjects.First().Value;
-            }
-
-            return null;
-        }
-
-
         public ICollection<LocationCanvasView> AdjacentLocationsNotOverlappedInRegion(GridRectangle worldRect)
         {
             SortedSet<LocationLinkKey> overlappedKeys = this.SectionLocationLinks.OverlappedLinkKeys;
@@ -1514,147 +1124,6 @@ namespace WebAnnotation.ViewModel
             AddLocationBatch(locationObjs);
         }
         
-        /// <summary>
-        /// Return all the line segments visible in the passed bounds
-        /// </summary>
-        /// <param name="bounds"></param>
-        /// <returns></returns>
-        public List<StructureLinkViewModelBase> VisibleStructureLinks(VikingXNA.Scene scene)
-        {
-            return StructureLinksSearch.Intersects(scene.VisibleWorldBounds.ToRTreeRect(this.SectionNumber)).Select((sl_key) => this.StructureLinks[sl_key]).Where(sl => sl != null && sl.IsVisible(scene)).ToList();
-        }
-
-        internal void AddStructureLinks(IEnumerable<LocationObj> locations)
-        {
-            foreach (LocationObj locObj in locations)
-            {
-                if (!locObj.ParentID.HasValue)
-                    continue; 
-
-                StructureObj parent = Store.Structures.GetObjectByID(locObj.ParentID.Value, true);//locObj.Parent;
-                if (parent == null)
-                    continue;
-
-                if (parent.NumLinks > 0)
-                {
-                    AddStructureLinks(parent.LinksCopy);
-                }
-            }
-        }
-
-        internal void AddStructureLinks(IEnumerable<StructureObj> structures)
-        {
-            foreach (StructureObj structObj in structures)
-            {
-                if (structObj.NumLinks > 0)
-                    AddStructureLinks(structObj.LinksCopy);
-            }
-        }
-          
-        /// <summary>
-        /// All locations which are linked get a line between them
-        /// </summary>
-        internal void AddStructureLinks(IEnumerable<StructureLinkObj> structureLinks)
-        {
-            foreach(StructureLinkObj structLinkObj in structureLinks)
-            {
-                if (structLinkObj == null)
-                    continue;
-
-                StructureLinkViewModelBase StructLink = CreateStructureLinkWithLocations(structLinkObj);
-                if (StructLink == null)
-                {
-                    //Trace.WriteLine("Cannot find locations for " + structLinkObj.ToString());
-                    continue;
-                }
-                    
-
-                KnownStructureLinks.TryAdd(structLinkObj.ID, () =>
-                {
-                    //An error can occur if two structures are linked to each other twicea, once as a source and once as a destination.
-                    StructureLinks.TryAdd(structLinkObj.ID, StructLink);
-                    StructureLinksSearch.TryAdd(StructLink.BoundingBox.ToRTreeRect(this.SectionNumber), structLinkObj.ID);
-                });
-            }
-        }
-
-        internal void RemoveStructureLinks(IEnumerable<LocationObj> locations)
-        {
-            foreach (LocationObj locObj in locations)
-            {
-                StructureObj parent = locObj.Parent;
-                if (parent == null)
-                    continue;
-
-                if (parent.NumLinks > 0)
-                    RemoveStructureLinks(parent.LinksCopy);
-            }
-        }
-
-        internal void RemoveStructureLinks(IEnumerable<StructureObj> structures)
-        {
-            foreach(StructureObj structObj in structures)
-            {
-                if (structObj.NumLinks > 0)
-                    RemoveStructureLinks(structObj.LinksCopy);
-            }
-        }
-        
-        /// <summary>
-        /// All locations which are linked get a line between them
-        /// </summary>
-        internal void RemoveStructureLinks(IEnumerable<StructureLinkObj> structureLinks)
-        {
-            if (structureLinks == null)
-                return; 
-
-            foreach(StructureLinkObj structLinkObj in structureLinks)
-            {
-                if (structLinkObj == null)
-                    continue;
-
-                KnownStructureLinks.TryRemove(structLinkObj.ID, () =>
-                {
-                    StructureLinkViewModelBase removedLinkView;
-                    StructureLinks.TryRemove(structLinkObj.ID, out removedLinkView);
-                    //An error can occur if two structures are linked to each other twicea, once as a source and once as a destination.
-                    StructureLinkKey removedID;
-                    StructureLinksSearch.Delete(structLinkObj.ID, out removedID);
-                });
-            }
-        }
-
-        internal StructureLinkViewModelBase CreateStructureLinkWithLocations(StructureLinkObj structLinkObj)
-        {
-            if (structLinkObj.SourceID == structLinkObj.TargetID)
-            {
-                Trace.WriteLine("Something is wrong on the server, struct ID links to itself: " + structLinkObj.SourceID.ToString());
-                Store.StructureLinks.Remove(structLinkObj);
-                Store.StructureLinks.Save();
-                return null;
-            }
-
-            //The link may have been created to a structure on an adjacent section
-            KeyTracker<long> SourceLocationIDs = null;
-            bool Success = LocationsForStructure.TryGetValue(structLinkObj.SourceID, out SourceLocationIDs);
-            if (Success == false) 
-                return null;
-
-            KeyTracker<long> TargetLocationIDs = null;
-            Success = LocationsForStructure.TryGetValue(structLinkObj.TargetID, out TargetLocationIDs);
-            if (Success == false)
-                return null;
-
-            IEnumerable<LocationCanvasView> SourceLocations = SourceLocationIDs.ValuesCopy().Select((l_id) => this.LocationViews[l_id]).Where(l => l != null);
-            IEnumerable<LocationCanvasView> TargetLocations = TargetLocationIDs.ValuesCopy().Select((l_id) => this.LocationViews[l_id]).Where(l => l != null);
-
-            SectionStructureLinkViewKey linkViewKey = SectionStructureLinkViewKey.CreateForNearestLocations(structLinkObj.ID, SourceLocations, TargetLocations);
-            if (linkViewKey == null)
-                return null;
-
-            //OK, create a StructureLink between the locations
-            return AnnotationViewFactory.Create(linkViewKey, mapper);
-        }
 
         public override bool ReceiveWeakEvent(Type managerType, object sender, EventArgs e)
         {

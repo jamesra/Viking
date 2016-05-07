@@ -21,7 +21,7 @@ namespace WebAnnotation.ViewModel
     /// This class represents a link between locations. This object is a little unique because it is
     /// not tied to the database object like the other *obj classes
     /// </summary>
-    public class LocationLinkView : Viking.Objects.UIObjBase, ICanvasView, IEquatable<LocationLinkView>, IColorView
+    public class LocationLinkView : Viking.Objects.UIObjBase, ICanvasView, IEquatable<LocationLinkView>, IColorView, IViewLocationLink
     {
         public readonly LocationLinkKey Key;
 
@@ -300,6 +300,13 @@ namespace WebAnnotation.ViewModel
             get { return Key.A.ToString() + " -> " + Key.B.ToString(); }
         }
 
+        LocationLinkKey IViewLocationLink.Key
+        {
+            get
+            {
+                return this.Key;
+            }
+        }
 
         public override void Save()
         {

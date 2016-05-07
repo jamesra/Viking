@@ -53,6 +53,32 @@ namespace WebAnnotation.UI.Commands
             return array[i];
         }
 
+        protected IViewLocation NearestLocationToMouse(GridVector2 WorldPos)
+        {
+            List<HitTestResult> listHitTestResults = Overlay.GetAnnotationsAtPosition(WorldPos);
+
+            listHitTestResults = listHitTestResults.ExpandICanvasViewContainers(WorldPos);
+
+            //Find locations that are not equal to our origin location
+            listHitTestResults = listHitTestResults.Where(hr =>
+            {
+                IViewLocation loc = hr.obj as IViewLocation;
+                if (loc == null)
+                    return false;
+                 
+                return loc.ID != OriginObj.ID && !OriginObj.Links.Contains(loc.ID);
+            }).ToList();
+
+            IViewLocation nearestVisible = null;
+            HitTestResult BestMatch = listHitTestResults.NearestObjectOnCurrentSectionThenAdjacent((int)OriginObj.Z);
+            if (BestMatch != null)
+            {
+                nearestVisible = BestMatch.obj as IViewLocation;
+            }
+
+            return nearestVisible;
+        }
+
         protected override void OnMouseMove(object sender, MouseEventArgs e)
         {
             GridVector2 WorldPos = Parent.ScreenToWorld(e.X, e.Y);
@@ -60,7 +86,7 @@ namespace WebAnnotation.UI.Commands
             //Find if we are close enough to a location to "snap" the line to the target
             double distance;
 
-            LocationCanvasView nearestVisible = Overlay.GetNearestLocation(WorldPos, out distance);
+            IViewLocation nearestVisible = NearestLocationToMouse(WorldPos);
             NearestTarget = nearestVisible != null ? TrySetTarget(Store.Locations[nearestVisible.ID]) : null;
 
             base.OnMouseMove(sender, e);
@@ -96,8 +122,7 @@ namespace WebAnnotation.UI.Commands
                 GridVector2 WorldPos = Parent.ScreenToWorld(e.X, e.Y);
                 
                 //Find if we are close enough to a location to "snap" the line to the target
-                double distance;
-                LocationCanvasView nearest = Overlay.GetNearestLocation(WorldPos, out distance);
+                IViewLocation nearest = NearestLocationToMouse(WorldPos);
                 NearestTarget = nearest != null ? Store.Locations[nearest.ID] : null;
 
                 TrySetTarget(NearestTarget);

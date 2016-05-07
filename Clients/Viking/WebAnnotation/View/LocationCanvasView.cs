@@ -20,7 +20,7 @@ using SqlGeometryUtils;
 
 namespace WebAnnotation.View
 {
-    abstract public class LocationCanvasView : IComparable<LocationCanvasView>,  IUIObjectBasic, ICanvasView, IEquatable<LocationCanvasView>, IMouseActionSupport
+    abstract public class LocationCanvasView : IComparable<LocationCanvasView>,  IUIObjectBasic, ICanvasView, IEquatable<LocationCanvasView>, IMouseActionSupport, IViewLocation
     {
         protected readonly LocationObj modelObj;
          

@@ -171,54 +171,14 @@ namespace WebAnnotation
         /// </summary>
         /// <param name="position"></param>
         /// <returns></returns>
-        public LocationCanvasView GetNearestLocation(GridVector2 position, out double BestDistance)
-        {
-            BestDistance = double.MaxValue;
+        public List<HitTestResult> GetAnnotationsAtPosition(GridVector2 position)
+        { 
             SectionAnnotationsView locView = GetAnnotationsForSection(CurrentSectionNumber);
             if (locView == null)
                 return null;
-            
-            LocationCanvasView bestObj;
-            bestObj = locView.GetNearestLocation(position, out BestDistance);
-            /*
-            LocationCanvasView adjacentObj;
-            double distance;
 
-            if (_Parent.Section.ReferenceSectionAbove != null)
-            {
-                locView = GetAnnotationsForSection(_Parent.Section.ReferenceSectionAbove.Number);
-                if (locView != null)
-                {
-                    adjacentObj = locView.GetNearestLocation(position, out distance);
-                    if (adjacentObj != null)
-                    {
-                        if (distance < BestDistance)
-                        {
-                            bestObj = adjacentObj;
-                            BestDistance = distance;
-                        }
-                    }
-                }
-            }
-
-            if (_Parent.Section.ReferenceSectionBelow != null)
-            {
-                locView = GetAnnotationsForSection(_Parent.Section.ReferenceSectionBelow.Number);
-                if (locView != null)
-                {
-                    adjacentObj = locView.GetNearestLocation(position, out distance);
-                    if (adjacentObj != null)
-                    {
-                        if (distance < BestDistance)
-                        {
-                           bestObj = adjacentObj;
-                           BestDistance = distance;
-                        }
-                    }
-                }
-            }
-            */
-            return bestObj; 
+            //Get the overlapping locations, filter out non-location annotations
+            return locView.GetAnnotationsAtPosition(position).Where(hr => hr.obj as LocationCanvasView != null).ToList();
         }
 
         /// <summary>
@@ -233,15 +193,22 @@ namespace WebAnnotation
             SectionAnnotationsView locView = GetAnnotationsForSection(CurrentSectionNumber);
             if (locView == null)
                 return null; 
-
-            double BestDistance = double.MaxValue;
+            
             ICanvasView bestObj = null; 
            
-            bestObj = locView.GetAnnotationAtPosition(position, out BestDistance);
+            List<HitTestResult> listObjects = locView.GetAnnotationsAtPosition(position);
 
-            if (bestObj != null)
+            HitTestResult bestHit = listObjects.NearestObjectOnCurrentSectionThenAdjacent(this.CurrentSectionNumber);
+
+            //Use objects on our section, then other sections
+            
+            
+            if (bestHit != null)
             {
-                distance = BestDistance;
+                distance = bestHit.Distance;
+                bestObj = bestHit.obj;
+
+                /*Hit testing for containers should probably be cleaned up and incorporated into the GetAnnotationsAtPositions calls*/
                 LocationCanvasView loc = bestObj as LocationCanvasView;
                 if (loc == null)
                     return bestObj;
@@ -252,66 +219,16 @@ namespace WebAnnotation
                 ICanvasViewContainer container = loc as ICanvasViewContainer;
                 if (container != null)
                 {
-                    bestObj = container.GetAnnotationAtPosition(position, out distance);
+                    bestObj = container.GetAnnotationAtPosition(position);
+                    distance = bestObj.DistanceFromCenterNormalized(position);
                     return bestObj;
                 }
             }
 
-            /*
-            if (bestObj == null)
-            {
-                double bestRatio = double.MaxValue;
-                double distanceRatio = double.MaxValue;
-                List<LocationCanvasView> adjacentObjs = new List<LocationCanvasView>();
-                if (_Parent.Section.ReferenceSectionAbove != null)
-                {
-                    locView = GetAnnotationsForSection(_Parent.Section.ReferenceSectionAbove.Number);
-                    if (locView != null)
-                    {
-                        adjacentObjs.AddRange(locView.GetAdjacentLocations(position).Where(l => l.IsVisible(Parent.Scene)));
-                    }
-                }
-
-
-                if (_Parent.Section.ReferenceSectionBelow != null)
-                {
-                    locView = GetAnnotationsForSection(_Parent.Section.ReferenceSectionBelow.Number);
-                    if (locView != null)
-                    {
-                        adjacentObjs.AddRange(locView.GetAdjacentLocations(position).Where(l => l.IsVisible(Parent.Scene)));
-                    }
-                }
-
-                //locView.GetLocations(Store.Locations.GetObjectsByIDs(adjacentObjs.SelectMany(a => a.Links));
-
-
-                
-                IEnumerable<LocationCanvasView> intersecting_candidates = FindNonOverlappedAdjacentLocations(locView.GetLocations().ToList(), adjacentObjs, this.CurrentSectionNumber);
-                intersecting_candidates = adjacentObjs.Where(l => l.Intersects(position) && l.IsTerminal == false);
-                LocationCanvasView nearest = intersecting_candidates.OrderBy(c => c.DistanceFromCenterNormalized(position)).FirstOrDefault();
-                bestObj = nearest;
-                if (bestObj != null)
-                {
-                    distance = GridVector2.Distance(position, nearest.VolumePosition);
-                }
-            }
-
-            //Only check for links if there are no annotations in range
-            if (bestObj == null)
-            {
-                IUIObjectBasic bestLink;
-                bestLink = linksView.GetNearestLink(CurrentSectionNumber, position, out distance);
-                if (bestLink != null)
-                {
-                    BestDistance = distance;
-                    return bestLink;
-                }
-            }
-
-            distance = BestDistance; 
-            */
-            return bestObj as IUIObjectBasic;
+            return bestObj;
         }
+
+        
 
         #region ISectionOverlayExtension Members
 

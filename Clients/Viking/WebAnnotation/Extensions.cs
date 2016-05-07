@@ -7,6 +7,7 @@ using System.Data.Entity.Spatial;
 using RTree;
 using Geometry;
 using SqlGeometryUtils;
+using WebAnnotation.ViewModel;
 
 namespace WebAnnotation
 {
@@ -45,6 +46,56 @@ namespace WebAnnotation
                                                     (int)color.G,
                                                     (int)color.B,
                                                     (int)(255f * alpha));
+        }
+    }
+
+    public static class HitTestResultExtensions
+    {
+        public static HitTestResult NearestObjectOnCurrentSectionThenAdjacent(this ICollection<HitTestResult> listHitTestObjects, int SectionNumber)
+        {
+            List<HitTestResult> listObjectsOnOurSection = listHitTestObjects.Where(l => l.Z == SectionNumber).ToList();
+            if (listObjectsOnOurSection.Count > 0)
+            {
+                listObjectsOnOurSection.Sort(new HitTest_Z_Distance_Sorter());
+                return listObjectsOnOurSection.First();
+            }
+            else if (listHitTestObjects.Count > 0)
+            {
+                List<HitTestResult> listObjectsOnAdjacentSection = listHitTestObjects.ToList();
+                listObjectsOnAdjacentSection.Sort(new HitTest_Z_Distance_Sorter());
+                return listHitTestObjects.First();
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Replace container canvas views with the nested object under the mouse if applicable.
+        /// </summary>
+        /// <param name="listHitTestObjects"></param>
+        /// <param name="WorldPos"></param>
+        /// <returns></returns>
+        public static List<HitTestResult> ExpandICanvasViewContainers(this ICollection<HitTestResult> listHitTestObjects, GridVector2 WorldPos)
+        {
+           List<HitTestResult> nestedContainers = listHitTestObjects.Select(lc =>
+                {
+                    ICanvasViewContainer container = lc.obj as ICanvasViewContainer;
+                    if (container == null)
+                        return lc; 
+
+                    ICanvasView nestedObj = container.GetAnnotationAtPosition(WorldPos);
+                    if (nestedObj != lc.obj)
+                    {
+                        return new HitTestResult(nestedObj, lc.Z, nestedObj.DistanceFromCenterNormalized(WorldPos));
+                    }
+                    else
+                    {
+                        return lc;
+                    }
+
+                }).ToList();
+
+            return nestedContainers.ToList();
         }
     }
 

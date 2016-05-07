@@ -49,7 +49,33 @@ namespace WebAnnotation
     }
 
     //public interface IActionCommandFactory
-        
+
+    
+    public interface IViewLocation
+    {
+        long ID { get; }
+    }
+
+    public interface IViewLocationLink
+    {
+        WebAnnotationModel.LocationLinkKey Key { get; }
+    }
+
+    public interface IViewStructure
+    {
+        long ID { get; }
+    }
+
+    public interface IViewStructureLink
+    {
+        WebAnnotationModel.StructureLinkKey Key { get; }
+    }
+
+    public interface IViewStructureType
+    {
+        long ID { get; }
+    }
+
     public interface ICanvasView
     {
         bool IsVisible(Scene scene);
@@ -87,6 +113,13 @@ namespace WebAnnotation
     /// </summary>
     public interface ICanvasViewContainer
     {
-        ICanvasView GetAnnotationAtPosition(GridVector2 position, out double distanceToCenterNormalized);
+        /// <summary>
+        /// Some annotations can nest annotations inside, such as the stylized mini-circles for overlapped locations that are embedded in circle annotations.
+        /// This function returns which annotation the mouse is over, or the parent if the mouse is not over a nested annotation.
+        /// </summary>
+        /// <param name="position"></param>
+        /// <param name="distanceToCenterNormalized"></param>
+        /// <returns></returns>
+        ICanvasView GetAnnotationAtPosition(GridVector2 position);
     }
 }
