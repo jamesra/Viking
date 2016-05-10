@@ -20,6 +20,8 @@ using SqlGeometryUtils;
 
 namespace WebAnnotation.View
 {
+    public delegate ContextMenu ContextMenuGeneratorDelegate(IViewLocation locationID);
+
     abstract public class LocationCanvasView : IComparable<LocationCanvasView>,  IUIObjectBasic, ICanvasView, IEquatable<LocationCanvasView>, IMouseActionSupport, IViewLocation
     {
         protected readonly LocationObj modelObj;
@@ -28,8 +30,12 @@ namespace WebAnnotation.View
 
         public LocationCanvasView(LocationObj obj)
         {
-            this.modelObj = obj; 
+            this.modelObj = obj;
+
+            ContextMenuGenerator = Location_CanvasContextMenuView.ContextMenuGenerator;
         }
+         
+        public ContextMenuGeneratorDelegate ContextMenuGenerator = null;
         
         /// <summary>
         /// The number of parent structures until we hit a root structure
@@ -225,8 +231,12 @@ namespace WebAnnotation.View
         {
             get
             {
-                Location_CanvasContextMenuView contextView = new Location_CanvasContextMenuView(this.modelObj);
-                return contextView.ContextMenu;
+                if(this.ContextMenuGenerator != null)
+                {
+                    return ContextMenuGenerator(this);
+                }
+
+                return null;
             }
         }
 
@@ -324,7 +334,7 @@ namespace WebAnnotation.View
 
         public void ShowProperties()
         {
-            Location_CanvasContextMenuView contextView = new Location_CanvasContextMenuView(this.modelObj);
+            Location_CanvasContextMenuView contextView = new Location_CanvasContextMenuView(this.ID);
             contextView.ShowProperties();
         }
 

@@ -126,15 +126,6 @@ namespace WebAnnotationModel
         public bool Bidirectional
         {
             get { return Data.Bidirectional; }
-            set {
-                if (Data.Bidirectional != value)
-                {
-                    OnPropertyChanging("Bidirectional");
-                    Data.Bidirectional = value;
-                    OnPropertyChanged("Bidirectional");
-                    SetDBActionForChange();
-                }
-            }
         }
 
         public override string ToString()
@@ -163,14 +154,5 @@ namespace WebAnnotationModel
         public StructureLinkObj()
         {
         }
-
-        /*
-        public override void Delete()
-        {
-            this.DBAction = DBACTION.DELETE;
-
-            Store.Structures.SaveLinks(new StructureLinkObj[] {this});
-        }
-        */
     }
 }

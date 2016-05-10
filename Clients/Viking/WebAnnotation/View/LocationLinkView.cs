@@ -17,6 +17,9 @@ using SqlGeometryUtils;
 
 namespace WebAnnotation.ViewModel
 {
+
+    public delegate ContextMenu LocationLinkContextMenuGeneratorDelegate(IViewLocationLink key);
+
     /// <summary>
     /// This class represents a link between locations. This object is a little unique because it is
     /// not tied to the database object like the other *obj classes
@@ -149,11 +152,15 @@ namespace WebAnnotation.ViewModel
             }
         }
 
+        public LocationLinkContextMenuGeneratorDelegate ContextMenuGenerator = null;
+
         public LocationLinkView(LocationLinkKey key, int Z, IVolumeTransformProvider mapProvider)
         {
             this.Key = key;
             this.Z = Z;
             UpdatePropertiesFromLocations(mapProvider);
+
+            ContextMenuGenerator = LocationLink_CanvasContextMenuView.ContextMenuGenerator;
 
             this.lineView = CreateView();
 
@@ -283,15 +290,12 @@ namespace WebAnnotation.ViewModel
         {
             get
             {
-                ContextMenu menu = new ContextMenu();
+                if(this.ContextMenuGenerator != null)
+                {
+                    return ContextMenuGenerator(this);
+                }
 
-                MenuItem menuSeperator = new MenuItem(); 
-                MenuItem menuDelete = new MenuItem("Delete Link", ContextMenu_OnDelete);
-
-                menu.MenuItems.Add(menuSeperator); 
-                menu.MenuItems.Add(menuDelete); 
-
-                return menu; 
+                return null;
             }
         }
 
@@ -314,12 +318,7 @@ namespace WebAnnotation.ViewModel
         }
 
         #endregion
-
-        protected void ContextMenu_OnDelete(object sender, EventArgs e)
-        {
-            Delete();
-        }
-
+        
         public override void Delete()
         {
             CallBeforeDelete(); 

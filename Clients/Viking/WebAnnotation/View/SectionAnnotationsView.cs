@@ -439,6 +439,11 @@ namespace WebAnnotation.ViewModel
             }
         }
 
+        public ICollection<LocationLinkView> NonOverlappedLocationLinksInRegion(GridRectangle bounds)
+        {  
+            return SectionLocationLinks.NonOverlappedLinksInRegion(bounds);
+        }
+
         /// <summary>
         /// Mapping interface for moving geometry between volume and section space
         /// </summary>

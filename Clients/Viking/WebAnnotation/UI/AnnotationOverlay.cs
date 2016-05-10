@@ -1222,7 +1222,7 @@ namespace WebAnnotation
             DeviceStateManager.SetDepthStencilValue(graphicsDevice, StartingStencilValue);
 
             //Get all the lines to draw first so the text and geometric shapes are over top of them
-            LocationLinkView.Draw(graphicsDevice, scene, Parent.LumaOverlayLineManager, basicEffect, overlayEffect, currentSectionAnnotations.NonOverlappedLocationLinks);
+            LocationLinkView.Draw(graphicsDevice, scene, Parent.LumaOverlayLineManager, basicEffect, overlayEffect, currentSectionAnnotations.NonOverlappedLocationLinksInRegion(scene.VisibleWorldBounds));
 
             graphicsDevice.Clear(ClearOptions.DepthBuffer, Color.Black, float.MaxValue, 0);
                         

@@ -140,7 +140,7 @@ namespace WebAnnotation.View
         {
             get
             {
-                return new Location_CanvasContextMenuView(this.modelObj).ContextMenu;
+                return new Location_CanvasContextMenuView(this.ID).ContextMenu;
             }
         }
 

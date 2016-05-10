@@ -19,6 +19,12 @@ namespace WebAnnotation.View
             this.linkKey = link;
         }
 
+        public static ContextMenu ContextMenuGenerator(IViewLocationLink link)
+        {
+            LocationLink_CanvasContextMenuView contextMenuView = new LocationLink_CanvasContextMenuView(link.Key);
+            return contextMenuView.ContextMenu;
+        }
+
         public System.Windows.Forms.ContextMenu ContextMenu
         {
             get

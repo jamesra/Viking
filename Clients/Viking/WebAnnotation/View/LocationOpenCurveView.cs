@@ -35,12 +35,30 @@ namespace WebAnnotation.View
             set { curveView.Alpha = value; }
         }
 
+        public Color LabelTextColor
+        {
+            get { return curveLabel.Color; }
+            set { curveLabel.Color = value; }
+        }
+
+        public float LabelTextAlpha
+        {
+            get { return curveLabel.Alpha; }
+            set { curveLabel.Alpha = value; }
+        }
+
+        public float ParentLabelTextAlpha
+        {
+            get { return curveParentLabel.Alpha; }
+            set { curveParentLabel.Alpha = value; }
+        }
+
         public LocationOpenCurveView(LocationObj obj, Viking.VolumeModel.IVolumeToSectionTransform mapper) : base(obj, mapper)
         {
             //RegisterForLocationEvents();
             //RegisterForStructureChangeEvents();
             
-            curveView = new CurveView(VolumeControlPoints, obj.Parent.Type.Color.ToXNAColor(0.5f), false, lineWidth: obj.Radius * 2.0);
+            curveView = new CurveView(VolumeControlPoints, obj.Parent.Type.Color.ToXNAColor(0.5f), false, lineWidth: obj.Radius * 2.0, lineStyle: LineStyle.Tubular);
             CreateLabelViews(VolumeControlPoints, obj.ParentID);
         }
 
@@ -55,7 +73,7 @@ namespace WebAnnotation.View
                 LabelText = this.Parent.Type.Code + " " + LabelText;
             }
 
-            Color LabelColor = new Color(0, 0, 0, 0.5f);
+            Color LabelColor = new Color(1.0f, 1.0f, 1.0f, 0.5f);
             Color ParentLabelColor = new Color(1.0f, 0, 0, 0.5f);
 
             curveLabel = new CurveLabel(LabelText, controlPoints, LabelColor, false);
@@ -153,25 +171,8 @@ namespace WebAnnotation.View
                 return curveView.LineWidth;
             }
         }
-
-        protected bool IsLocationPropertyAffectingLabels(string PropertyName)
-        {
-            return string.IsNullOrEmpty(PropertyName) ||
-                PropertyName == "Terminal" ||
-                PropertyName == "OffEdge" ||
-                PropertyName == "Attributes";
-        }
-
-        internal override void OnObjPropertyChanged(object o, PropertyChangedEventArgs args)
-        {
-            //ClearOverlappingLinkedLocationCache();
-
-            //CreateViewObjects();
-            //if (IsLocationPropertyAffectingLabels(args.PropertyName))
-            //    CreateLabelViews(this.modelObj);
-            base.OnObjPropertyChanged(o, args);
-        }
-
+        
+        /*
         internal override void OnParentPropertyChanged(object o, PropertyChangedEventArgs args)
         {
             if (args.PropertyName == "Label" || args.PropertyName == "Attributes")
@@ -181,7 +182,7 @@ namespace WebAnnotation.View
             
             base.OnParentPropertyChanged(o, args);
             
-        }
+        }*/
         
     }
 }

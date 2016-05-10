@@ -73,6 +73,8 @@ namespace WebAnnotation.View
                     {
                         LocationOpenCurveView view = new LocationOpenCurveView(obj, mapping);
                         view.Color = new Microsoft.Xna.Framework.Color(1, 1, 1, 0.2f);
+                        view.LabelTextColor = new Microsoft.Xna.Framework.Color(1, 1, 1, 0.5f);
+                        view.ParentLabelTextAlpha = 0.5f;
                         return view;
                     }
                 case LocationType.CLOSEDCURVE:

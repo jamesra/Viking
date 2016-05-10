@@ -36,8 +36,8 @@ namespace WebAnnotation.View
 
         public AdjacentLocationLineView(LocationObj obj, Viking.VolumeModel.IVolumeToSectionTransform mapper) : base(obj, mapper)
         {
-            upPolyLineView = new PolyLineView(VolumeControlPoints, obj.Parent.Type.Color.ToXNAColor().ConvertToHSL(0.5f), GlobalPrimitives.UpArrowTexture);
-            downPolyLineView = new PolyLineView(VolumeControlPoints, obj.Parent.Type.Color.ToXNAColor().ConvertToHSL(0.5f), GlobalPrimitives.DownArrowTexture);
+            upPolyLineView = new PolyLineView(VolumeControlPoints, obj.Parent.Type.Color.ToXNAColor().ConvertToHSL(0.5f), GlobalPrimitives.UpArrowTexture, lineStyle: LineStyle.Tubular);
+            downPolyLineView = new PolyLineView(VolumeControlPoints, obj.Parent.Type.Color.ToXNAColor().ConvertToHSL(0.5f), GlobalPrimitives.DownArrowTexture, lineStyle: LineStyle.Tubular);
         }
 
         public static void Draw(Microsoft.Xna.Framework.Graphics.GraphicsDevice device,
@@ -161,24 +161,7 @@ namespace WebAnnotation.View
             double MinDistance = segs.Min(l => l.DistanceToPoint(Position));
             return (MinDistance - (this.Width / 2.0));
         }
-
-        internal override void OnObjPropertyChanged(object o, PropertyChangedEventArgs args)
-        {
-            /*
-            if (args.PropertyName == "MosaicShape")
-            {
-                MosaicControlPoints = obj.MosaicShape.ToPoints();
-                VolumeControlPoints = mapper.SectionToVolume(MosaicControlPoints);
-            }
-
-            if (args.PropertyName == "VolumeShape")
-            {
-                _RenderedVolumeShape = null;
-                _VolumeControlPoints = null;
-            } 
-            */
-        }
-        
+                
         public bool PointIntersectsAnyControlPoint(GridVector2 WorldPosition)
         {
             return VolumeControlPoints.Select(p => new GridCircle(p, Width / 2.0)).Any(c => c.Contains(WorldPosition));

@@ -17,7 +17,7 @@ uniform const sampler TextureSampler : register(s1) = sampler_state
 	Texture = (Texture);
 	MipFilter = LINEAR;
 	MinFilter = LINEAR;
-	MagFilter = POINT;
+	MagFilter = LINEAR;
 	AddressU = CLAMP;
 	AddressV = CLAMP;
 	AddressW = CLAMP;
@@ -187,6 +187,6 @@ float4 MyPSGlow(float3 polar : TEXCOORD0) : COLOR0
 float4 MyPSTextured(float3 tex : TEXCOORD2) : COLOR0
 {
 	float4 foregroundColor = tex2D(TextureSampler, tex);
-	clip(foregroundColor.a);
+	clip(foregroundColor.a <= 0 ? -1 : 1);
 	return foregroundColor;
 }

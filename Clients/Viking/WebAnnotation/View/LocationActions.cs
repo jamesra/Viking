@@ -217,7 +217,7 @@ namespace WebAnnotation.View
                     return new TranslateCurveLocationCommand(Parent,
                                                              newLoc.MosaicShape.Centroid(),
                                                              newLoc.MosaicShape.ToPoints(),
-                                                             newLoc.Parent.Type.Color.ToXNAColor(),
+                                                             newLoc.Parent.Type.Color.ToXNAColor(0.5f),
                                                              newLoc.Radius * 2.0,
                                                              IsClosedCurve(newLoc),
                                                              (NewVolumeControlPoints, NewMosaicControlPoints) =>

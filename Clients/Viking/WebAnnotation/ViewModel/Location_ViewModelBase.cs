@@ -24,11 +24,9 @@ namespace WebAnnotation.ViewModel
     {
         public readonly LocationObj modelObj;
 
-        public Location_ViewModelBase(LocationObj location)
-        {
-            Debug.Assert(location != null);
-
-            this.modelObj = location;
+        public Location_ViewModelBase(long LocationID)
+        { 
+            this.modelObj = Store.Locations.GetObjectByID(LocationID);
         }
 
         [Column("ID")]

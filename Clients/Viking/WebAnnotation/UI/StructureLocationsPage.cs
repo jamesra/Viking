@@ -51,7 +51,7 @@ namespace WebAnnotation.UI
 
                 foreach (LocationObj loc in locations)
                 {
-                    listLocationViews.Add(new Location_PropertyPageViewModel(loc));
+                    listLocationViews.Add(new Location_PropertyPageViewModel(loc.ID));
                 }
 
                 listLocations.SetLocations(listLocationViews.ToArray());

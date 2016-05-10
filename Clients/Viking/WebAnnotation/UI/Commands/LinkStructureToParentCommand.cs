@@ -34,6 +34,8 @@ namespace WebAnnotation.UI.Commands
 
         Microsoft.Xna.Framework.Color linecolor;
 
+        CurveLabel labelView = null;
+
         public LinkStructureToParentCommand(Viking.UI.Controls.SectionViewerControl parent,
                                                StructureObj structure,
                                                LocationObj location)
@@ -56,7 +58,10 @@ namespace WebAnnotation.UI.Commands
             //Transform the location position to the correct coordinates
             transformedPos = parent.Section.ActiveSectionToVolumeTransform.SectionToVolume(new GridVector2(putativeLoc.Position.X, putativeLoc.Position.Y));
 
-            parent.Cursor = Cursors.Cross; 
+            parent.Cursor = Cursors.Cross;
+
+            double textHeight = location.Radius * 2;
+            
         }
 
         protected LocationCanvasView NearestLocationToMouse(GridVector2 WorldPos)
@@ -139,13 +144,24 @@ namespace WebAnnotation.UI.Commands
                 //Otherwise use the old mouse position
                 target = this.oldWorldPosition;
             }
-
-            LineView line = new LineView(transformedPos, target, 16.0, linecolor, LineStyle.Standard);
+            
+            LineView line = new LineView(transformedPos, target, 16.0, Microsoft.Xna.Framework.Color.White, LineStyle.Tubular);
             
             RoundLineManager lineManager = VikingXNA.DeviceEffectsStore<LumaOverlayRoundLineManager>.TryGet(graphicsDevice);
             if (lineManager == null)
                 return;
 
+            if(labelView == null)
+            {
+                labelView = new CurveLabel("Select Parent Structure", new GridVector2[] { transformedPos, target }, Microsoft.Xna.Framework.Color.Black, false, lineWidth: putativeLoc.Radius * 2, numInterpolations: 0);
+            }
+            else
+            {
+                labelView.ControlPoints = transformedPos.X < target.X ? new GridVector2[] { transformedPos, target } : new GridVector2[] { target, transformedPos };
+            }
+
+            labelView.Draw(graphicsDevice, scene.ViewProj, Parent.spriteBatch, Parent.fontArial, Parent.CurveManager);
+            
             LineView.Draw(graphicsDevice, scene, lineManager, new LineView[] { line });
 
             base.OnDraw(graphicsDevice, scene, basicEffect);

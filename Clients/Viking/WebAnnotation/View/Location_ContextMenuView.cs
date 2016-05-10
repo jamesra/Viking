@@ -11,7 +11,13 @@ namespace WebAnnotation.View
 {
     class Location_CanvasContextMenuView : Location_ViewModelBase
     {
-        public Location_CanvasContextMenuView(LocationObj obj) : base(obj) { }
+        public Location_CanvasContextMenuView(long LocationID) : base(LocationID) { }
+
+        public static ContextMenu ContextMenuGenerator(IViewLocation loc)
+        {
+            Location_CanvasContextMenuView contextMenuView = new Location_CanvasContextMenuView(loc.ID);
+            return contextMenuView.ContextMenu;
+        }
 
         public override ContextMenu ContextMenu
         {

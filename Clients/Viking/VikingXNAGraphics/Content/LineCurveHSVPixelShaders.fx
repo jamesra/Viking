@@ -27,7 +27,10 @@ uniform const sampler ForegroundTextureSampler : register(s1) = sampler_state
 	Texture = (Texture);
 	MipFilter = LINEAR;
 	MinFilter = LINEAR;
-	MagFilter = POINT;
+	MagFilter = LINEAR;
+	AddressU = CLAMP;
+	AddressV = CLAMP;
+	AddressW = CLAMP;
 };
 
 
@@ -258,7 +261,9 @@ float4 MyPSGlowHSV(PS_Input input) : COLOR0
 float4 MyPSTexturedHSV(PS_Input input) : COLOR0
 { 
 	float4 foregroundColor = tex2D(ForegroundTextureSampler, input.tex);
-	clip(foregroundColor.a);
+	clip(foregroundColor.a <= 0 ? -1 : 1);
 	float4 RGBBackgroundColor = tex2D(BackgroundTextureSampler, ((input.ScreenTexCoord.xy) / (RenderTargetSize.xy - 1)));
-	return BlendHSLColorOverBackground(foregroundColor, RGBBackgroundColor, foregroundColor.a);
+	float4 outColor = BlendHSLColorOverBackground(foregroundColor, RGBBackgroundColor, 0);
+	outColor = foregroundColor.a;
+	return outColor;
 }

@@ -45,13 +45,13 @@ namespace WebAnnotation.UI.Commands
             mapping = parent.Section.ActiveSectionToVolumeTransform;
             this.OriginalPosition = mapping.SectionToVolume(MosaicPosition);
             this.OriginalControlPoints = mapping.SectionToVolume(OriginalMosaicControlPoints);
-            CreateView(OriginalControlPoints, color.ConvertToHSL(0.5f), LineWidth, IsClosedCurve);
+            CreateView(OriginalControlPoints, color, LineWidth, IsClosedCurve);
             this.success_callback = success_callback;
         }
 
         private void CreateView(GridVector2[] ControlPoints, Microsoft.Xna.Framework.Color color, double LineWidth, bool IsClosed)
         {
-            curveView = new CurveView(ControlPoints.ToList(), color, false, lineWidth: LineWidth);
+            curveView = new CurveView(ControlPoints.ToList(), color, false, lineWidth: LineWidth, lineStyle: LineStyle.Tubular);
             curveView.TryCloseCurve = IsClosed;
         }
 

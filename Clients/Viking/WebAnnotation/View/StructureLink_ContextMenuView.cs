@@ -10,10 +10,12 @@ using Viking.Common;
 
 namespace WebAnnotation.View
 {
+  
     class StructureLink_CanvasContextMenuView : IContextMenu
     {
         public StructureLinkKey linkKey;
         public StructureLinkObj modelObj;
+
 
         public long SourceID
         {
@@ -47,7 +49,13 @@ namespace WebAnnotation.View
             this.linkKey = link;
             this.modelObj = Store.StructureLinks[link];
         }
-         
+
+        public static ContextMenu ContextMenuGenerator(IViewStructureLink link)
+        {
+            StructureLink_CanvasContextMenuView contextMenuView = new StructureLink_CanvasContextMenuView(link.Key);
+            return contextMenuView.ContextMenu;
+        }
+
         public System.Windows.Forms.ContextMenu ContextMenu
         {
             get

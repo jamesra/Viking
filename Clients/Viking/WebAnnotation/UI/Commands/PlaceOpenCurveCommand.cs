@@ -235,7 +235,7 @@ namespace WebAnnotation.UI.Commands
                 else
                     vert_stack.Push(this.oldWorldPosition);
 
-                CurveView curveView = new CurveView(vert_stack.ToArray(), this.LineColor, this.IsOpen, lineWidth: this.LineWidth);
+                CurveView curveView = new CurveView(vert_stack.ToArray(), this.LineColor, this.IsOpen, lineWidth: this.LineWidth, lineStyle: LineStyle.Tubular);
 
                 CurveView.Draw(graphicsDevice, scene, Parent.LumaOverlayCurveManager, basicEffect, Parent.annotationOverlayEffect, 0, new CurveView[] { curveView } );
                 //GlobalPrimitives.DrawPolyline(Parent.LineManager, basicEffect, DrawnLineVerticies, this.LineWidth, this.LineColor);
@@ -248,18 +248,15 @@ namespace WebAnnotation.UI.Commands
             {
                 if (this.LineVerticies.Length > 1)
                 {
-                    CurveView curveView = new CurveView(this.LineVerticies.ToArray(), this.LineColor, this.IsOpen, lineWidth: this.LineWidth);
+                    CurveView curveView = new CurveView(this.LineVerticies.ToArray(), this.LineColor, this.IsOpen, lineWidth: this.LineWidth, lineStyle: LineStyle.Tubular);
                     CurveView.Draw(graphicsDevice, scene, Parent.LumaOverlayCurveManager, basicEffect, Parent.annotationOverlayEffect, 0, new CurveView[] { curveView });
                 }
                 else
                 {
                     CircleView view = new CircleView(new GridCircle(this.LineVerticies.First(), this.LineWidth / 2.0), this.LineColor);
                     CircleView.Draw(graphicsDevice, scene, basicEffect, this.Parent.annotationOverlayEffect, new CircleView[] { view });
-                }
-
-            }
-
-            
+                } 
+            } 
         }
     }
 }

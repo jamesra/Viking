@@ -73,6 +73,8 @@ namespace WebAnnotation.ViewModel
         }
     }
 
+    public delegate ContextMenu StructureLinkContextMenuGeneratorDelegate(IViewStructureLink key);
+    
     abstract class StructureLinkViewModelBase : Viking.Objects.UIObjBase, ICanvasView, IViewStructureLink
     {
         WebAnnotationModel.StructureLinkObj modelObj;
@@ -86,6 +88,8 @@ namespace WebAnnotation.ViewModel
         /// LocationOnSection is the location on the reference section
         /// </summary>
         public LocationObj TargetLocation;
+
+        StructureLinkContextMenuGeneratorDelegate ContextMenuGenerator = null;
 
         public override string ToString()
         {
@@ -150,14 +154,19 @@ namespace WebAnnotation.ViewModel
             this.modelObj = Store.StructureLinks[linkKey.LinkID];
             this.SourceLocation = Store.Locations[linkKey.SourceLocID];
             this.TargetLocation = Store.Locations[linkKey.TargetLocID];
+
+            this.ContextMenuGenerator = StructureLink_CanvasContextMenuView.ContextMenuGenerator;
         }
         
         public override System.Windows.Forms.ContextMenu ContextMenu
         {
             get
             {
-                StructureLink_CanvasContextMenuView viewMenu = new StructureLink_CanvasContextMenuView(this.Key);
-                return viewMenu.ContextMenu;
+                if (ContextMenuGenerator != null)
+                    return ContextMenuGenerator(this);
+
+                return null;
+                
             }
         }
         

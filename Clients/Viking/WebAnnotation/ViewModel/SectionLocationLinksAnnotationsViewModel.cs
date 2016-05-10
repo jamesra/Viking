@@ -145,23 +145,33 @@ namespace WebAnnotation.ViewModel
             return new List<HitTestResult>(intersecting_objs.Select(l => new HitTestResult(l, this.Section.Number, l.DistanceFromCenterNormalized(WorldPosition)))).ToList();
         }
 
+        private List<LocationLinkView> KeysToViews(ICollection<LocationLinkKey> listKeys)
+        {
+            List<LocationLinkView> listLocLinkView = new List<LocationLinkView>(listKeys.Count);
+            foreach (LocationLinkKey linkKey in listKeys)
+            {
+                LocationLinkView locLinkView = null;
+                if (this.LocationLinks.TryGetValue(linkKey, out locLinkView))
+                {
+                    listLocLinkView.Add(locLinkView);
+                }
+            }
+
+            return listLocLinkView;
+        }
+
         public ICollection<LocationLinkView> NonOverlappedLinks
         {
             get
             {
-                List<LocationLinkView> listLocLinkView = new List<LocationLinkView>(NonOverlappedLinksSearch.Count);
-
-                foreach (LocationLinkKey linkKey in NonOverlappedLinksSearch.Items)
-                {
-                    LocationLinkView locLinkView = null;
-                    if (this.LocationLinks.TryGetValue(linkKey, out locLinkView))
-                    {
-                        listLocLinkView.Add(locLinkView);
-                    }
-                }
-
-                return listLocLinkView;
+                return KeysToViews(NonOverlappedLinksSearch.Items);
             }
+        }
+
+        public ICollection<LocationLinkView> NonOverlappedLinksInRegion(GridRectangle region)
+        {
+            List<LocationLinkKey> listKeys = NonOverlappedLinksSearch.Intersects(region.ToRTreeRect(this.Section.Number));
+            return KeysToViews(listKeys); 
         }
 
         public ICollection<LocationLinkView> GetLocationLinks(GridVector2 point)
