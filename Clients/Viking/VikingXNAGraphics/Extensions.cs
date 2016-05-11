@@ -35,6 +35,39 @@ namespace VikingXNAGraphics
         }
     }
 
+    public static class MouseButtonExtensions
+    {
+        public static bool Left(this System.Windows.Forms.MouseButtons buttons)
+        {
+            return (int)(buttons & System.Windows.Forms.MouseButtons.Left) == (int)System.Windows.Forms.MouseButtons.Left;
+        }
+
+        public static bool Right(this System.Windows.Forms.MouseButtons buttons)
+        {
+            return (int)(buttons & System.Windows.Forms.MouseButtons.Right) == (int)System.Windows.Forms.MouseButtons.Right;
+        }
+
+        public static bool Middle(this System.Windows.Forms.MouseButtons buttons)
+        {
+            return (int)(buttons & System.Windows.Forms.MouseButtons.Middle) == (int)System.Windows.Forms.MouseButtons.Middle;
+        }
+
+        public static bool X1(this System.Windows.Forms.MouseButtons buttons)
+        {
+            return (int)(buttons & System.Windows.Forms.MouseButtons.XButton1) == (int)System.Windows.Forms.MouseButtons.XButton1;
+        }
+
+        public static bool X2(this System.Windows.Forms.MouseButtons buttons)
+        {
+            return (int)(buttons & System.Windows.Forms.MouseButtons.XButton2) == (int)System.Windows.Forms.MouseButtons.XButton2;
+        }
+
+        public static bool None(this System.Windows.Forms.MouseButtons buttons)
+        {
+            return buttons == System.Windows.Forms.MouseButtons.None;
+        }
+    }
+
     public static class LineManagerExtensions
     {
         public static string ToString(this LineStyle style)

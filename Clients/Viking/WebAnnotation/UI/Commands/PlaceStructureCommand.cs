@@ -11,6 +11,7 @@ using System.Diagnostics;
 using Viking.UI.Commands;
 using WebAnnotation.ViewModel;
 using WebAnnotationModel;
+using VikingXNAGraphics;
 
 using Viking.Common; 
 
@@ -64,7 +65,7 @@ namespace WebAnnotation.UI.Commands
         protected override void OnMouseDown(object sender, System.Windows.Forms.MouseEventArgs e)
         {
             //Create a new structure on left click
-            if (e.Button == MouseButtons.Left)
+            if (e.Button.Left())
             {
             //  Debug.Assert(obj == null, "This command should be inactive if Selected Object isn't a StructureTypeObj"); 
                 if (Type == null)
@@ -104,7 +105,7 @@ namespace WebAnnotation.UI.Commands
             
                 Execute();
             }
-            else if (e.Button == MouseButtons.Right)
+            else if (e.Button.Right())
             {
                 this.Deactivated = true; 
             }

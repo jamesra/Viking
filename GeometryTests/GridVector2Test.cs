@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting; 
 using Geometry;
-using System.Diagnostics; 
+using MathNet.Numerics.LinearAlgebra;
 
 namespace UtilitiesTests
 {
@@ -70,14 +70,14 @@ namespace UtilitiesTests
             double PI4 = Math.PI / 4;
 
             double angle = GridVector2.Angle(A,B);
-            Debug.Assert(angle - Global.Epsilon < (3.0 * PI4) &&
+            Assert.IsTrue(angle - Global.Epsilon < (3.0 * PI4) &&
                          angle + Global.Epsilon > (3.0 * PI4)); 
 
             A = new GridVector2(5, 0);
             B = new GridVector2(2.5, -2.5); 
 
             angle = GridVector2.Angle(A,B);
-            Debug.Assert(angle - Global.Epsilon < (-3.0 * PI4) &&
+            Assert.IsTrue(angle - Global.Epsilon < (-3.0 * PI4) &&
                          angle + Global.Epsilon > (-3.0 * PI4)); 
             
             //
@@ -97,19 +97,19 @@ namespace UtilitiesTests
             GridVector2 C = new GridVector2(-1, 0);
 
             double Degree90 = GridVector2.ArcAngle(Origin, A, B);
-            Debug.Assert(Degree90 == Pi2);
+            Assert.AreEqual(Degree90, Pi2);
 
             Degree90 = GridVector2.ArcAngle(Origin, B, A);
-            Debug.Assert(Degree90 == -Pi2);
+            Assert.AreEqual(Degree90, -Pi2);
              
             double Degree180 = GridVector2.ArcAngle(Origin, A, C);
-            Debug.Assert(Degree180 == Math.PI);
+            Assert.AreEqual(Degree180, Math.PI);
              
-            double Degree0 = GridVector2.Angle(Origin, A); 
-            Debug.Assert(Degree0 == 0); 
+            double Degree0 = GridVector2.Angle(Origin, A);
+            Assert.AreEqual(Degree0, 0); 
 
-            Degree90 = GridVector2.Angle(Origin, B); 
-            Debug.Assert(Degree90 == Pi2); 
+            Degree90 = GridVector2.Angle(Origin, B);
+            Assert.AreEqual(Degree90, Pi2); 
         }
 
         [TestMethod]
@@ -126,8 +126,76 @@ namespace UtilitiesTests
 
             double degree45 = GridVector2.ArcAngle(Origin, A, D);
             double result = GridVector2.Angle(Origin, D);
-            Debug.Assert(degree45 == Pi4);
-            Debug.Assert(result == Pi4);
+            Assert.AreEqual(degree45, Pi4);
+            Assert.AreEqual(result,  Pi4);
+        }
+
+        [TestMethod]
+        public void TestTranslate()
+        {
+            GridVector2 A = new GridVector2(0, 0);
+
+            Vector<double> v = Vector<double>.Build.Dense(new double[] { A.X, A.Y, 0, 1 });
+
+            GridVector2 Offset = new GridVector2(1, 2);
+
+             Matrix<double> translationMatrix = GeometryMathNetNumerics.CreateTranslationMatrix(Offset);
+            Vector<double> translated = translationMatrix * v;
+
+            GridVector2 translatedPoint = translated.ToGridVector2();
+            Assert.AreEqual(translatedPoint, A + Offset);
+
+            Matrix<double> p = A.ToMatrix();
+            Matrix<double> translatedMatrix = translationMatrix * p;
+
+            ICollection<GridVector2> translatedPoints = translatedMatrix.ToGridVector2();
+            Assert.AreEqual(translatedPoints.First(), A + Offset);
+        }
+
+        [TestMethod]
+        public void TestRotate()
+        {
+            GridVector2 N = new GridVector2(1, 2);
+            GridVector2 S = new GridVector2(1, 0);
+            GridVector2 E = new GridVector2(2, 1);
+            GridVector2 W = new GridVector2(0, 1);
+
+            GridVector2 Centroid = new GridVector2(1, 1);
+
+            GridVector2[] points = new GridVector2[] { N, S, E, W };
+
+            GridVector2 calculatedCentroid = points.Centroid();
+
+            Assert.AreEqual(Centroid ,  calculatedCentroid);
+
+            GridVector2[] pointsToRotate = new GridVector2[] { N, W, S, E };
+            GridVector2[] rotatedPoints = pointsToRotate.Rotate(Math.PI / 2, Centroid).ToArray();
+
+            Assert.AreEqual(rotatedPoints[0], W);
+            Assert.AreEqual(rotatedPoints[1], S);
+            Assert.AreEqual(rotatedPoints[2], E);
+            Assert.AreEqual(rotatedPoints[3], N);
+        }
+
+        [TestMethod]
+        public void ToFromMatrix()
+        {
+            GridVector2 A = new GridVector2(1, 2);
+            GridVector2 B = new GridVector2(1, 0);
+            GridVector2 C = new GridVector2(2, 1);
+            GridVector2 D = new GridVector2(0, 1);
+              
+            GridVector2[] points = new GridVector2[] { A, B, C, D };
+
+            Matrix<double> m = points.ToMatrix();
+            GridVector2[] convertedPoints = m.ToGridVector2().ToArray();
+
+            Assert.AreEqual(points.Length, convertedPoints.Length);
+
+            for(int i = 0; i < points.Length; i++)
+            {
+                Assert.AreEqual(points[i], convertedPoints[i]);
+            }
         }
     }
 }

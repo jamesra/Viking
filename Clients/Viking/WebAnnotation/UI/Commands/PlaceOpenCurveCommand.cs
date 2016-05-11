@@ -149,7 +149,7 @@ namespace WebAnnotation.UI.Commands
                     Parent.Cursor = ProposedSegmentSelfIntersects(WorldPos) ? Cursors.No : Cursors.Cross;
                 }
             }
-            else if (e.Button == MouseButtons.Left)
+            else if (e.Button.Left())
             {
                 //Drag the vertex under the cursor
                 int? iOverlapped = IndexOfOverlappedVertex(WorldPos);
@@ -175,7 +175,7 @@ namespace WebAnnotation.UI.Commands
 
         protected override void OnMouseUp(object sender, MouseEventArgs e)
         {
-            if (e.Button == MouseButtons.Left)
+            if (e.Button.Left())
             {
                 //    TimeSpan Elapsed = new TimeSpan(DateTime.Now.Ticks - CreationTime.Ticks);
                 GridVector2 WorldPos = Parent.ScreenToWorld(e.X, e.Y);
@@ -201,7 +201,7 @@ namespace WebAnnotation.UI.Commands
 
         protected override void OnMouseDoubleClick(object sender, MouseEventArgs e)
         {
-            if (e.Button == MouseButtons.Right)
+            if (e.Button.Right())
             {
                 if (vert_stack.Count > 1)
                 {
@@ -210,7 +210,7 @@ namespace WebAnnotation.UI.Commands
                     return;
                 }
             }
-            else if (e.Button == MouseButtons.Left)
+            else if (e.Button.Left())
             {
                 GridVector2 WorldPos = Parent.ScreenToWorld(e.X, e.Y);
                 if (!OverlapsLastVertex(WorldPos))

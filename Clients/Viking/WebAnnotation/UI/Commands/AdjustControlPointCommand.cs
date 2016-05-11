@@ -74,7 +74,7 @@ namespace WebAnnotation.UI.Commands
             //Redraw if we are dragging a location
             if (this.oldMouse != null)
             {
-                if (this.oldMouse.Button == MouseButtons.Left)
+                if (oldMouse.Button.Left())
                 {
                     GridVector2 LastWorldPosition = Parent.ScreenToWorld(oldMouse.X, oldMouse.Y);
                     UpdatePosition(NewPosition - LastWorldPosition);
@@ -88,11 +88,15 @@ namespace WebAnnotation.UI.Commands
 
         protected override void OnMouseUp(object sender, MouseEventArgs e)
         {
-            GridVector2 NewPosition = Parent.ScreenToWorld(e.X, e.Y);
-            PopulateControlPointIndexIfNeeded(NewPosition);
+            if (e.Button.Left())
+            {
+                GridVector2 NewPosition = Parent.ScreenToWorld(e.X, e.Y);
+                PopulateControlPointIndexIfNeeded(NewPosition);
 
-            base.OnMouseUp(sender, e);
-            this.Execute();
+                this.Execute();
+            }
+
+            base.OnMouseUp(sender,e);
         }
 
         public override void OnDraw(Microsoft.Xna.Framework.Graphics.GraphicsDevice graphicsDevice, VikingXNA.Scene scene,

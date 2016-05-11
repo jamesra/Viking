@@ -57,7 +57,7 @@ namespace WebAnnotation.UI.Commands
             //Redraw if we are dragging a location
             if (this.oldMouse != null)
             {
-                if (this.oldMouse.Button == MouseButtons.Left)
+                if (this.oldMouse.Button.Left())
                     Parent.Invalidate();
             }
 

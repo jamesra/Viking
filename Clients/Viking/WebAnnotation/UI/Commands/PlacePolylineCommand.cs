@@ -166,7 +166,7 @@ namespace WebAnnotation.UI.Commands
         {
             GridVector2 WorldPos = Parent.ScreenToWorld(e.X, e.Y);
 
-            if (e.Button == MouseButtons.None)
+            if (e.Button.None())
             {
                 if (OverlapsAnyVertex(WorldPos))
                 {
@@ -177,7 +177,7 @@ namespace WebAnnotation.UI.Commands
                     Parent.Cursor = Cursors.Cross;
                 }
             }
-           else if (e.Button == MouseButtons.Left)
+           else if (e.Button.Left())
             {
                 //Drag the vertex under the cursor
                 int? iOverlapped = IndexOfOverlappedVertex(WorldPos);
@@ -338,7 +338,7 @@ namespace WebAnnotation.UI.Commands
         {
             GridVector2 WorldPos = Parent.ScreenToWorld(e.X, e.Y);
              
-            if (e.Button == MouseButtons.None)
+            if (e.Button.None())
             {
                 if (OverlapsAnyVertex(WorldPos))
                 {
@@ -349,7 +349,7 @@ namespace WebAnnotation.UI.Commands
                     Parent.Cursor = Cursors.Cross;
                 }
             }
-            else if(e.Button == MouseButtons.Left)
+            else if(e.Button.Left())
             {
                 this.vert_list[this.DraggedVertexIndex] = WorldPos;
                 Parent.Invalidate(); 
@@ -360,7 +360,7 @@ namespace WebAnnotation.UI.Commands
 
         protected override void OnMouseUp(object sender, MouseEventArgs e)
         {
-            if (e.Button == MouseButtons.Left)
+            if (e.Button.Left())
             {
                 GridVector2 WorldPos = Parent.ScreenToWorld(e.X, e.Y);
 

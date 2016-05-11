@@ -11,6 +11,7 @@ using SqlGeometryUtils;
 using VikingXNAGraphics;
 using System.Windows.Forms;
 using System.Diagnostics;
+using WebAnnotation;
 
 namespace WebAnnotation.UI.Commands
 {
@@ -25,6 +26,8 @@ namespace WebAnnotation.UI.Commands
         OnCommandSuccess success_callback;
 
         Viking.VolumeModel.IVolumeToSectionTransform mapping;
+
+        double Angle = 0;
 
         protected override GridVector2 TranslatedPosition
         {
@@ -61,11 +64,77 @@ namespace WebAnnotation.UI.Commands
             curveView.ControlPoints = curveView.ControlPoints.Select(p => p + PositionDelta).ToArray();
         }
 
+
+        protected override void OnKeyDown(object sender, KeyEventArgs e)
+        {
+            if(e.Control)
+            {
+                GridVector2 WorldPosition = this.oldWorldPosition;
+                List<ViewModel.HitTestResult> listHitResults = Overlay.GetAnnotationsAtPosition(WorldPosition);
+                List<ViewModel.HitTestResult> listCurves = listHitResults.Where(h => h.Z == Parent.Section.Number && h.obj as LocationOpenCurveView != null).ToList();
+
+                if (listCurves.Count == 0)
+                    return;
+
+                listCurves.OrderBy(c => c.Distance);
+
+                LocationOpenCurveView curveToCopy = listCurves.First().obj as LocationOpenCurveView;
+                this.OriginalControlPoints = curveToCopy.VolumeControlPoints;
+                GridVector2 translatedPosition = this.TranslatedPosition;
+                this.OriginalPosition = OriginalControlPoints.Centroid();
+                this.DeltaSum = new GridVector2(0, 0);
+                CreateView(OriginalControlPoints, curveView.Color, curveView.LineWidth, curveView.TryCloseCurve);
+            }
+            else
+            {
+                base.OnKeyDown(sender, e);
+            }
+        }
+
+        protected override void OnMouseWheel(object sender, MouseEventArgs e)
+        {
+            const double maxRotation = Math.PI / 24.0;
+            const double Tau = Math.PI * 2.0;
+
+            double multiplier = ((double)e.Delta / 60.0);
+
+            //Square delta to allow user rapid rotations
+            multiplier *= multiplier;
+
+            //Restore sign of square
+            multiplier *= e.Delta < 0 ? -1 : 1;
+
+            multiplier /= Tau; //multiplier is in degrees now.
+
+            //Limit rotation to 30 degress
+            multiplier = multiplier > maxRotation ? maxRotation : multiplier;
+            multiplier = multiplier < -maxRotation ? -maxRotation : multiplier;
+             
+            Angle += multiplier;
+
+            ICollection<GridVector2> rotatedPoints = OriginalControlPoints.Rotate(this.Angle, OriginalControlPoints.Centroid());
+            this.curveView.ControlPoints = rotatedPoints.Translate(this.DeltaSum).ToArray();
+        }
+
+        /*
+        protected override void OnMouseWheel(object sender, MouseEventArgs e)
+        {
+            float multiplier = ((float)e.Delta / 120.0f);
+            double SizeScale = 1.0;
+            if (multiplier < 0)
+                SizeScale *= 0.9900990099009901;
+            else if (multiplier > 0)
+                SizeScale *= 1.01f;
+
+            this.curveView.LineWidth *= SizeScale; 
+        }
+        */
+
         protected override void Execute()
         {
             if (this.success_callback != null)
             {
-                GridVector2[] TranslatedOriginalControlPoints = OriginalControlPoints.Select(p => p + DeltaSum).ToArray();
+                GridVector2[] TranslatedOriginalControlPoints = OriginalControlPoints.Rotate(this.Angle, OriginalControlPoints.Centroid()).Translate(DeltaSum).ToArray();
                 GridVector2[] MosaicControlPoints = null;
 
                 try
@@ -145,7 +214,7 @@ namespace WebAnnotation.UI.Commands
         protected override void OnMouseDown(object sender, MouseEventArgs e)
         {
             //Reset size scale if the middle mouse button is pushed
-            if (e.Button == MouseButtons.Middle)
+            if (e.Button.Middle())
             {
                 this.SizeScale = 1.0;
                 return;
@@ -244,7 +313,7 @@ namespace WebAnnotation.UI.Commands
             //Redraw if we are dragging a location
             if (this.oldMouse != null)
             {
-                if (this.oldMouse.Button == MouseButtons.Left)
+                if (e.Button.Left())
                 {
                     GridVector2 LastWorldPosition = Parent.ScreenToWorld(oldMouse.X, oldMouse.Y);
                     GridVector2 NewPosition = Parent.ScreenToWorld(e.X, e.Y);
@@ -261,7 +330,8 @@ namespace WebAnnotation.UI.Commands
         protected override void OnMouseUp(object sender, MouseEventArgs e)
         {
             base.OnMouseUp(sender, e);
-            this.Execute();            
+            if (e.Button.Left())
+                this.Execute();            
         }
 
         

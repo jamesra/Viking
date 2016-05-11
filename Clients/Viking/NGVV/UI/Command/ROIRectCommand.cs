@@ -5,8 +5,9 @@ using System.Diagnostics;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System.Windows.Forms;
-using VikingXNA;
+using VikingXNAGraphics;
 using Geometry;
+
 
 namespace Viking.UI.Commands
 {
@@ -25,11 +26,11 @@ namespace Viking.UI.Commands
             GridVector2 WorldPosition = Parent.ScreenToWorld(e.X, e.Y);
 
             //Check if we should start a rectangle
-            if (e.Button == MouseButtons.Left && oldMouse.Button != MouseButtons.Left)
+            if (e.Button.Left() && !oldMouse.Button.Left())
             {
                 this.rectangle = new GridRectangle(WorldPosition, 0, 0); 
             }
-            else if (e.Button == MouseButtons.Left)
+            else if (e.Button.Left())
             {
                 if (WorldPosition.Y < this.rectangle.Bottom)
                     this.rectangle.Bottom = WorldPosition.Y;
@@ -42,7 +43,7 @@ namespace Viking.UI.Commands
                     this.rectangle.Right = WorldPosition.X; 
             }
             //If the mouse was released we stop drawing rectangle
-            else if (e.Button != MouseButtons.Left && oldMouse.Button == MouseButtons.Left)
+            else if (!e.Button.Left() && oldMouse.Button.Left())
             {
                 this.CommandActive = false; 
             }

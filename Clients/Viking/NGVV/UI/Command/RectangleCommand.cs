@@ -7,6 +7,7 @@ using System.Windows.Forms;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics; 
 using Geometry;
+using VikingXNAGraphics;
 
 namespace Viking.UI.Commands
 {
@@ -27,7 +28,7 @@ namespace Viking.UI.Commands
             GridVector2 NewPosition = Parent.ScreenToWorld(e.X, e.Y);
 
             //Figure out if we are starting a rectangle
-            if (e.Button == MouseButtons.Left && false == this.CommandActive)
+            if (e.Button.Left() && false == this.CommandActive)
             {
                 Origin = NewPosition;
  //               MyRect = new Quad(Origin, 0, 0); 
@@ -41,7 +42,7 @@ namespace Viking.UI.Commands
         protected override void OnMouseMove(object sender, MouseEventArgs e)
         {
             //Figure out if we are starting a rectangle
-            if (e.Button == MouseButtons.Left && this.CommandActive)
+            if (e.Button.Left() && this.CommandActive)
             {
                 GridVector2 NewPosition = Parent.ScreenToWorld(e.X, e.Y);
 
@@ -63,7 +64,7 @@ namespace Viking.UI.Commands
         {
             if (oldMouse != null)
             {
-                if (oldMouse.Button == MouseButtons.Left && this.CommandActive)
+                if (oldMouse.Button.Left() && this.CommandActive)
                 {
                     GridVector2 NewPosition = Parent.ScreenToWorld(e.X, e.Y);
 

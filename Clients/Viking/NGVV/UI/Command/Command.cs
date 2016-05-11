@@ -5,7 +5,8 @@ using System.Diagnostics;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Geometry;
-using Viking.Common; 
+using Viking.Common;
+using VikingXNAGraphics;
 
 namespace Viking.UI.Commands
 {
@@ -295,7 +296,7 @@ namespace Viking.UI.Commands
                 return;
             }
 
-            if (e.Button == MouseButtons.Right)
+            if (e.Button.Right())
             {
                 GridVector2 OldPosition = Parent.ScreenToWorld(oldMouse.X, oldMouse.Y);
 
@@ -310,7 +311,7 @@ namespace Viking.UI.Commands
 
                 this.Parent.Invalidate();
             }
-            else if (e.Button == MouseButtons.Middle)
+            else if (e.Button.Middle())
             {
                 //Figure out if the mouse went clockwise or counterclockwise relative to the center of the screen
                 System.Drawing.Rectangle rect = Parent.ClientRectangle;
@@ -362,7 +363,7 @@ namespace Viking.UI.Commands
         #endregion
 
         #region Key Event Handlers
-        protected void OnKeyPress(object sender, KeyPressEventArgs e)
+        protected virtual void OnKeyPress(object sender, KeyPressEventArgs e)
         {
 
             //Escape cancels the current command and sets the selected item to null
@@ -413,7 +414,7 @@ namespace Viking.UI.Commands
             Parent.Invalidate();
         }
 
-        protected void OnKeyDown(object sender, KeyEventArgs e)
+        protected virtual void OnKeyDown(object sender, KeyEventArgs e)
         {
 
             switch (e.KeyCode)

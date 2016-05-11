@@ -233,12 +233,12 @@ namespace WebAnnotation.View
         /// <summary>
         /// Mosaic points composing the polyline, without added points to create a curve
         /// </summary>
-        protected readonly GridVector2[] MosaicControlPoints;
+        internal readonly GridVector2[] MosaicControlPoints;
 
         /// <summary>
         /// Mosaic points composing the polyline, without added points to create a curve
         /// </summary>
-        protected readonly GridVector2[] VolumeControlPoints;
+        internal readonly GridVector2[] VolumeControlPoints;
 
         public MultipleControlPointLocationCanvasViewBase(LocationObj obj, Viking.VolumeModel.IVolumeToSectionTransform mapper) : base(obj)
         {

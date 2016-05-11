@@ -422,10 +422,6 @@ Global
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
-	GlobalSection(NestedProjects) = preSolution
-		{6C72334D-F6C9-4BA5-AEB4-143B7BAB32CE} = {137D9922-6FFD-4872-AA8A-D0B26B83BCA0}
-		{789EB871-5FD3-4174-896B-162B2AAAB9B2} = {137D9922-6FFD-4872-AA8A-D0B26B83BCA0}
-	EndGlobalSection
 	GlobalSection(TestCaseManagementSettings) = postSolution
 		CategoryFile = NGVV.vsmdi
 	EndGlobalSection

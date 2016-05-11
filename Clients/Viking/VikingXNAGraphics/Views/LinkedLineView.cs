@@ -54,10 +54,18 @@ namespace VikingXNAGraphics
 
         protected static bool SourceAndTargetLinesCanBothUseAscendingIndexWithoutCrossingLines(GridVector2[] source, GridVector2[] target)
         {
-            GridLineSegment LineA = new GridLineSegment(source[0], target[0]);
-            GridLineSegment LineB = new GridLineSegment(source.Last(), target.Last());
-            GridVector2 intersectionPoint;
-            return !LineA.Intersects(LineB, out intersectionPoint);
+            try
+            {
+                GridLineSegment LineA = new GridLineSegment(source[0], target[0]);
+                GridLineSegment LineB = new GridLineSegment(source.Last(), target.Last());
+                GridVector2 intersectionPoint;
+                return !LineA.Intersects(LineB, out intersectionPoint);
+            }
+            catch(ArgumentException e)
+            {
+                //This occurs when the source and target points are identical
+                return false; 
+            }
         }
 
         protected static LineView[] CreateViewData(GridVector2[] source, GridVector2[] target, double linewidth, Color color, LineStyle style)

@@ -108,7 +108,7 @@ namespace WebAnnotation.UI.Commands
         protected override void OnMouseDown(object sender, MouseEventArgs e)
         {
             //Figure out if we've clicked another structure and create the structure
-            if (e.Button == MouseButtons.Left)
+            if (e.Button.Left())
             {
                 GridVector2 WorldPos = Parent.ScreenToWorld(e.X, e.Y);
 
