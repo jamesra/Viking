@@ -344,8 +344,14 @@ namespace Viking.UI.Commands
                 this.Parent.Invalidate();
             }
 
+            SaveAsOldMousePosition(e);            
+        }
+
+        protected void SaveAsOldMousePosition(MouseEventArgs e)
+        { 
             this.oldMouse = e;
-            this.oldWorldPosition = NewPosition; 
+            this.oldWorldPosition = Parent.ScreenToWorld(e.X, e.Y);
+
         }
 
         protected virtual void OnMouseHover(object sender, EventArgs e)

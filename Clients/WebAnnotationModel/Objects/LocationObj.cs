@@ -62,6 +62,8 @@ namespace WebAnnotationModel
                     return true;
                 case "MosaicShape":
                     return true;
+                case "Radius":
+                    return true;
                 default:
                     return false;
             }

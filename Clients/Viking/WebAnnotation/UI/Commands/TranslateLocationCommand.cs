@@ -21,20 +21,46 @@ namespace WebAnnotation.UI.Commands
         GridVector2[] OriginalControlPoints;
         GridVector2 OriginalPosition;
         GridVector2 DeltaSum = new GridVector2(0, 0);
+        double OriginalLineWidth;
 
-        public delegate void OnCommandSuccess(GridVector2[] VolumeControlPoints, GridVector2[] MosaicControlPoints);
+        public delegate void OnCommandSuccess(GridVector2[] VolumeControlPoints, GridVector2[] MosaicControlPoints, double LineWidth);
         OnCommandSuccess success_callback;
 
         Viking.VolumeModel.IVolumeToSectionTransform mapping;
 
-        double Angle = 0;
+        private double _sizeScale = 1.0;
+        protected double SizeScale
+        {
+            get
+            {
+                return _sizeScale;
+            }
+            set
+            {
+                _sizeScale = value * curveView.LineWidth < 1.0 ? 1.0 / curveView.LineWidth : value;
+                curveView.LineWidth = OriginalLineWidth * _sizeScale;
+            }
+        }
+
+        private double _Angle = 0;
+
+        protected double Angle
+        {
+            get { return _Angle; }
+            set {
+                _Angle = value;
+                ICollection<GridVector2> rotatedPoints = OriginalControlPoints.Rotate(this.Angle, OriginalControlPoints.Centroid());
+                this.curveView.ControlPoints = rotatedPoints.Translate(this.DeltaSum).ToArray();
+            }
+        }
+            
 
         protected override GridVector2 TranslatedPosition
         {
             get
             {
                 return OriginalPosition + (DeltaSum);
-            } 
+            }
         }
 
         public TranslateCurveLocationCommand(Viking.UI.Controls.SectionViewerControl parent,
@@ -47,14 +73,15 @@ namespace WebAnnotation.UI.Commands
         {
             mapping = parent.Section.ActiveSectionToVolumeTransform;
             this.OriginalPosition = mapping.SectionToVolume(MosaicPosition);
+            this.OriginalLineWidth = LineWidth;
             this.OriginalControlPoints = mapping.SectionToVolume(OriginalMosaicControlPoints);
-            CreateView(OriginalControlPoints, color, LineWidth, IsClosedCurve);
+            CreateView(OriginalControlPoints, color, IsClosedCurve);
             this.success_callback = success_callback;
         }
 
-        private void CreateView(GridVector2[] ControlPoints, Microsoft.Xna.Framework.Color color, double LineWidth, bool IsClosed)
+        private void CreateView(GridVector2[] ControlPoints, Microsoft.Xna.Framework.Color color, bool IsClosed)
         {
-            curveView = new CurveView(ControlPoints.ToList(), color, false, lineWidth: LineWidth, lineStyle: LineStyle.Tubular);
+            curveView = new CurveView(ControlPoints.ToList(), color, false, lineWidth: OriginalLineWidth * this.SizeScale, lineStyle: LineStyle.Tubular);
             curveView.TryCloseCurve = IsClosed;
         }
 
@@ -63,8 +90,7 @@ namespace WebAnnotation.UI.Commands
             DeltaSum += PositionDelta;
             curveView.ControlPoints = curveView.ControlPoints.Select(p => p + PositionDelta).ToArray();
         }
-
-
+        
         protected override void OnKeyDown(object sender, KeyEventArgs e)
         {
             if(e.Control)
@@ -83,7 +109,7 @@ namespace WebAnnotation.UI.Commands
                 GridVector2 translatedPosition = this.TranslatedPosition;
                 this.OriginalPosition = OriginalControlPoints.Centroid();
                 this.DeltaSum = new GridVector2(0, 0);
-                CreateView(OriginalControlPoints, curveView.Color, curveView.LineWidth, curveView.TryCloseCurve);
+                CreateView(OriginalControlPoints, curveView.Color, curveView.TryCloseCurve);
             }
             else
             {
@@ -91,29 +117,45 @@ namespace WebAnnotation.UI.Commands
             }
         }
 
+        protected override void OnMouseDown(object sender, MouseEventArgs e)
+        {
+            //Reset size scale if the middle mouse button is pushed
+            if (e.Button.Middle())
+            {
+                this.SizeScale = 1.0;
+                return;
+            }
+            else
+            {
+                base.OnMouseDown(sender, e);
+            }
+        }
+
+        protected override void OnMouseMove(object sender, MouseEventArgs e)
+        { 
+            if (e.Button.Right())
+            {
+                GridVector2 worldPosition = Parent.ScreenToWorld(e.X, e.Y);
+                GridVector2 origin = this.TranslatedPosition;
+                this.Angle = GridVector2.Angle(origin, worldPosition);
+
+                //Save as old mouse position so location doesn't jump when we release the right mouse button
+                SaveAsOldMousePosition(e);
+            }
+            else
+            {
+                base.OnMouseMove(sender, e);
+            }
+        }
+
         protected override void OnMouseWheel(object sender, MouseEventArgs e)
         {
-            const double maxRotation = Math.PI / 24.0;
-            const double Tau = Math.PI * 2.0;
+            float multiplier = ((float)e.Delta / 60.0f);
 
-            double multiplier = ((double)e.Delta / 60.0);
-
-            //Square delta to allow user rapid rotations
-            multiplier *= multiplier;
-
-            //Restore sign of square
-            multiplier *= e.Delta < 0 ? -1 : 1;
-
-            multiplier /= Tau; //multiplier is in degrees now.
-
-            //Limit rotation to 30 degress
-            multiplier = multiplier > maxRotation ? maxRotation : multiplier;
-            multiplier = multiplier < -maxRotation ? -maxRotation : multiplier;
-             
-            Angle += multiplier;
-
-            ICollection<GridVector2> rotatedPoints = OriginalControlPoints.Rotate(this.Angle, OriginalControlPoints.Centroid());
-            this.curveView.ControlPoints = rotatedPoints.Translate(this.DeltaSum).ToArray();
+            if (multiplier < 0)
+                SizeScale *= 0.9900990099009901;
+            else if (multiplier > 0)
+                SizeScale *= 1.01f;
         }
 
         /*
@@ -147,7 +189,7 @@ namespace WebAnnotation.UI.Commands
                     return;
                 }
 
-                this.success_callback(TranslatedOriginalControlPoints, MosaicControlPoints);
+                this.success_callback(TranslatedOriginalControlPoints, MosaicControlPoints, this.SizeScale * this.OriginalLineWidth);
             }
 
             base.Execute();
@@ -219,8 +261,10 @@ namespace WebAnnotation.UI.Commands
                 this.SizeScale = 1.0;
                 return;
             }
-
-            base.OnMouseDown(sender, e);
+            else
+            {
+                base.OnMouseDown(sender, e);
+            }
         }
 
         protected override void OnMouseWheel(object sender, MouseEventArgs e)
@@ -313,7 +357,7 @@ namespace WebAnnotation.UI.Commands
             //Redraw if we are dragging a location
             if (this.oldMouse != null)
             {
-                if (e.Button.Left())
+                if (e.Button.LeftOnly())
                 {
                     GridVector2 LastWorldPosition = Parent.ScreenToWorld(oldMouse.X, oldMouse.Y);
                     GridVector2 NewPosition = Parent.ScreenToWorld(e.X, e.Y);

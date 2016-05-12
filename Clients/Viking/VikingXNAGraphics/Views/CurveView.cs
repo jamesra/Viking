@@ -398,7 +398,20 @@ namespace VikingXNAGraphics
 
         private CircleView[] ControlPointViews;
 
-        public double LineWidth;
+        private double _LineWidth;
+
+        public double LineWidth
+        {
+            get { return _LineWidth; }
+            set {
+                if (_LineWidth != value)
+                {
+                    _LineWidth = value;
+                    UpdateViews();
+                }
+            }
+        }
+
         
         private Color _Color;
         public Color Color
@@ -455,7 +468,7 @@ namespace VikingXNAGraphics
             this._Color = color;
             this.Style = lineStyle;
             this._ControlPointTexture = texture;
-            this.LineWidth = lineWidth;
+            this._LineWidth = lineWidth;
             UpdateViews();
         }
 

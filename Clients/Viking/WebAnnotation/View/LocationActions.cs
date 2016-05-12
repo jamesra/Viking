@@ -172,7 +172,7 @@ namespace WebAnnotation.View
                                                              loc.Parent.Type.Color.ToXNAColor(),
                                                              loc.Radius * 2.0,
                                                              IsClosedCurve(loc),
-                                                             (VolumeControlPoints, MosaicControlPoints) => UpdateLineLocationCallback(loc, VolumeControlPoints, MosaicControlPoints));
+                                                             (VolumeControlPoints, MosaicControlPoints, LineWidth) => UpdateLineLocationCallback(loc, VolumeControlPoints, MosaicControlPoints, LineWidth));
                 case LocationAction.SCALE:
                     return null; 
                 case LocationAction.ADJUST:
@@ -220,9 +220,9 @@ namespace WebAnnotation.View
                                                              newLoc.Parent.Type.Color.ToXNAColor(0.5f),
                                                              newLoc.Radius * 2.0,
                                                              IsClosedCurve(newLoc),
-                                                             (NewVolumeControlPoints, NewMosaicControlPoints) =>
+                                                             (NewVolumeControlPoints, NewMosaicControlPoints, NewWidth) =>
                                                                 {
-                                                                    UpdateLineLocationNoSaveCallback(newLoc, NewVolumeControlPoints, NewMosaicControlPoints);
+                                                                    UpdateLineLocationNoSaveCallback(newLoc, NewVolumeControlPoints, NewMosaicControlPoints, NewWidth);
 
                                                                     Viking.UI.Commands.Command.EnqueueCommand(typeof(CreateNewLinkedLocationCommand), new object[] { Parent, loc, newLoc });
                                                                 }
@@ -266,6 +266,18 @@ namespace WebAnnotation.View
         {
             loc.MosaicShape = SqlGeometryUtils.GeometryExtensions.ToGeometry(loc.MosaicShape.STGeometryType(), MosaicControlPoints);
             loc.VolumeShape = SqlGeometryUtils.GeometryExtensions.ToGeometry(loc.MosaicShape.STGeometryType(), VolumeControlPoints);
+        }
+
+        static void UpdateLineLocationCallback(LocationObj loc, GridVector2[] VolumeControlPoints, GridVector2[] MosaicControlPoints, double NewWidth)
+        {
+            UpdateLineLocationNoSaveCallback(loc, VolumeControlPoints, MosaicControlPoints, NewWidth); 
+            Store.Locations.Save();
+        }
+
+        static void UpdateLineLocationNoSaveCallback(LocationObj loc, GridVector2[] VolumeControlPoints, GridVector2[] MosaicControlPoints, double NewWidth)
+        {
+            UpdateLineLocationNoSaveCallback(loc, VolumeControlPoints, MosaicControlPoints);
+            loc.Radius = NewWidth / 2.0;
         }
 
         public static void UpdateCircleLocationCallback(LocationObj loc, GridVector2 WorldPosition, GridVector2 MosaicPosition, double NewRadius)
