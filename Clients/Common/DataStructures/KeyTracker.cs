@@ -78,7 +78,18 @@ namespace Viking.Common
 
                     TrackedKeys.Add(ID);
                     if (a != null)
-                        a();
+                    {
+                        try
+                        {
+                            a();
+                        }
+                        catch
+                        {
+                            TrackedKeys.Remove(ID);
+                            throw;
+                        }
+                    }
+                        
                 }
                 finally
                 {
@@ -243,7 +254,18 @@ namespace Viking.Common
                 }
 
                 if (RefCount == 0 && OnFirstReferenceAction != null)
-                    OnFirstReferenceAction(ID);
+                {
+                    try
+                    {
+                        OnFirstReferenceAction(ID);
+                    }
+                    catch
+                    {
+                        TrackedKeys.Remove(ID);
+                        throw;
+                    }
+                }
+                    
 
                 RefCount++;
 
