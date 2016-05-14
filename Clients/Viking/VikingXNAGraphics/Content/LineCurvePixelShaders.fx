@@ -176,6 +176,45 @@ float4 MyPSTubular(float3 polar : TEXCOORD0) : COLOR0
 	return finalColor;
 }
 
+PS_Output MyPSHalfTubular(float3 polar : TEXCOORD0)
+{
+	PS_Output output;
+	float4 finalColor = lineColor;
+	//finalColor.a *= polar.x;
+
+	//We need a signed distance from the midline, where one side is positive and the other is negative, so we use
+	//the angle
+	int NumRotations = polar.y / TAU; //Number of times we have rotated around the circle
+	polar.y += -NumRotations * TAU;
+	float line_side = polar.y > PI ? 1 : -1; //Draw the concave side of the line if the points are placed counter-clockwise
+	clip(line_side > 0 ? -1 : 1);
+
+	//float polarized_distance = 
+	
+
+	finalColor.a *= 1.0 - polar.x;
+	/*
+
+	int NumRotations = polar.y / TAU; //Number of times we have rotated around the circle
+	polar.y += -NumRotations * TAU;
+
+	clip((polar.y >= 0  && polar.y < HALF_PI * 3.0f) ||
+		 (polar.y > HALF_PI * 3.0f) ? 1 : -1);
+
+
+			
+	float blurAngle = abs(polar.y - (HALF_PI * 3.0f)); //Remove the half of the circle we render normally
+	float AngleAlpha = blurAngle >= HALF_PI ? 1.0f : blurAngle / HALF_PI;
+	AngleAlpha = AngleAlpha < 0 ? 0 : AngleAlpha;
+	AngleAlpha *= AngleAlpha;
+
+	finalColor.a = finalColor.a * AngleAlpha; // * BlurEdge(polar.x, blurThreshold)
+	*/
+	output.Color = finalColor;
+	output.Depth = polar.x;
+	return output;
+}
+
 
 float4 MyPSGlow(float3 polar : TEXCOORD0) : COLOR0
 {

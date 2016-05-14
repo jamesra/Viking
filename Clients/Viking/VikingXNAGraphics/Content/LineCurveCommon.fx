@@ -1,5 +1,7 @@
 
-
+static const float PI = 3.14159265f;
+static const float HALF_PI = 3.14159265f / 2.0f;
+static const float TAU = 3.14159265f * 2.0f;
 
 //Use linear interpolation to convert a value from zero to one to fall within min-max
 float ClampToRange(float scalar, float min, float max)

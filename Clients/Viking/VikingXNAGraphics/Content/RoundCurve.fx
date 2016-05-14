@@ -100,6 +100,22 @@ technique AnimatedRadial
 }
 
 
+technique Ladder
+{
+	pass P0
+	{
+		CullMode = CW;
+		AlphaBlendEnable = true;
+		SrcBlend = SrcAlpha;
+		DestBlend = InvSrcAlpha;
+		BlendOp = Add;
+		vertexShader = compile vs_1_1 CurveVertexShader();
+		pixelShader = compile ps_2_0 MyPSLadder();
+	}
+}
+
+
+
 technique Modern
 {
 	pass P0
@@ -126,6 +142,21 @@ technique Tubular
 		BlendOp = Add;
 		vertexShader = compile vs_1_1 CurveVertexShader();
 		pixelShader = compile ps_2_0 MyPSTubular();
+	}
+}
+
+
+technique HalfTube
+{
+	pass P0
+	{
+		CullMode = CW;
+		AlphaBlendEnable = true;
+		SrcBlend = SrcAlpha;
+		DestBlend = InvSrcAlpha;
+		BlendOp = Add;
+		vertexShader = compile vs_3_0 CurveVertexShader();
+		pixelShader = compile ps_3_0 MyPSHalfTubular();
 	}
 }
 

@@ -21,7 +21,8 @@ namespace XNATestbed
         TEXT,
         CURVE_LABEL,
         CURVE,
-        LINES
+        LINESTYLES,
+        CURVESTYLES
     };
 
     /// <summary>
@@ -42,9 +43,10 @@ namespace XNATestbed
         CurveTest curveTest = new CurveTest();
         CurveViewTest curveViewTest = new CurveViewTest();
         LabelViewsTest labelTest = new LabelViewsTest();
-        LineViewsTest lineStyleTest = new LineViewsTest();
+        LineViewStylesTest lineStyleTest = new LineViewStylesTest();
+        CurveViewStylesTest curveStyleTest = new CurveViewStylesTest();
 
-        TestMode Mode = TestMode.CURVE;
+        TestMode Mode = TestMode.CURVESTYLES;
 
         public XNATestBedMain()
         {
@@ -99,6 +101,7 @@ namespace XNATestbed
             curveViewTest.Init(this);
             labelTest.Init(this);
             lineStyleTest.Init(this);
+            curveStyleTest.Init(this);
         }
 
         /// <summary>
@@ -167,7 +170,9 @@ namespace XNATestbed
             if (Keyboard.GetState().IsKeyDown(Keys.F3))
                 this.Mode = TestMode.TEXT;
             if (Keyboard.GetState().IsKeyDown(Keys.F4))
-                this.Mode = TestMode.LINES;
+                this.Mode = TestMode.LINESTYLES;
+            if (Keyboard.GetState().IsKeyDown(Keys.F5))
+                this.Mode = TestMode.CURVESTYLES;
         }
 
         private void ProcessGamepad()
@@ -216,8 +221,11 @@ namespace XNATestbed
                 case TestMode.TEXT:
                     labelTest.Draw(this);
                     break;
-                case TestMode.LINES:
+                case TestMode.LINESTYLES:
                     lineStyleTest.Draw(this);
+                    break;
+                case TestMode.CURVESTYLES:
+                    curveStyleTest.Draw(this);
                     break;
             }
             
@@ -426,7 +434,7 @@ namespace XNATestbed
         }
     }
 
-    public class LineViewsTest
+    public class LineViewStylesTest
     {
         List<LineView> listLineViews = new List<LineView>();
         List<LabelView> listLabelViews = new List<LabelView>();
@@ -451,7 +459,7 @@ namespace XNATestbed
 
                 Y += YStep;
 
-                listLabelViews.Add(new LabelView(style.ToString(), source));
+                listLabelViews.Add(new LabelView(style.ToString(), source + new GridVector2(-25,10)));
             }
         }
 
@@ -466,6 +474,54 @@ namespace XNATestbed
             float time = DateTime.Now.Millisecond / 1000.0f;
 
             LineView.Draw(window.GraphicsDevice, scene, window.lineManager, listLineViews.ToArray());
+
+            listLabelViews.ForEach(lv => { lv.Draw(window.spriteBatch, window.fontArial, scene); });
+        }
+    }
+
+
+    public class CurveViewStylesTest
+    {
+        List<CurveView> listLineViews = new List<CurveView>();
+        List<LabelView> listLabelViews = new List<LabelView>();
+
+        public void Init(XNATestBedMain window)
+        {
+            double MinX = -100;
+            double MaxX = 100;
+
+            double MinY = -100;
+            double MaxY = 100;
+            double NumLineTypes = (double)Enum.GetValues(typeof(LineStyle)).Length;
+            double YStep = (MaxY - MinY) / NumLineTypes;
+
+            double Y = MinY;
+
+            foreach (LineStyle style in Enum.GetValues(typeof(LineStyle)))
+            {
+                GridVector2 source = new GridVector2(MinX, Y);
+                GridVector2 mid = new GridVector2(MinX + (MaxX - MinX / 2.0), Y - 30);
+                GridVector2 dest = new GridVector2(MaxX, Y);
+
+                listLineViews.Add(new CurveView(new GridVector2[] { source, mid, dest }, Color.Blue, false, lineWidth: YStep / 1.5, lineStyle: style));
+
+                Y += YStep;
+
+                listLabelViews.Add(new LabelView(style.ToString(), source + new GridVector2(-25,10))); 
+            }
+        }
+
+        public void ProcessGamepad()
+        {
+        }
+
+        public void Draw(XNATestBedMain window)
+        {
+            VikingXNA.Scene scene = window.Scene;
+            Matrix ViewProjMatrix = scene.ViewProj;
+            float time = DateTime.Now.Millisecond / 1000.0f;
+
+            CurveView.Draw(window.GraphicsDevice, scene, window.curveManager, window.basicEffect, window.overlayEffect, time, this.listLineViews.ToArray());
 
             listLabelViews.ForEach(lv => { lv.Draw(window.spriteBatch, window.fontArial, scene); });
         }

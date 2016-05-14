@@ -248,6 +248,50 @@ float4 MyPSTubularHSV(PS_Input input) : COLOR0
 }
 
 
+PS_Output MyPSHalfTubularHSV(PS_Input input)
+{
+	PS_Output output;
+	float4 finalColor = lineColor;
+	float3 polar = input.polar;
+
+	int NumRotations = polar.y / TAU; //Number of times we have rotated around the circle
+	polar.y += -NumRotations * TAU;
+	float line_side = polar.y > PI ? 1 : -1; //Draw the concave side of the line if the points are placed counter-clockwise
+	clip(line_side > 0 ? -1 : 1);
+
+	//float polarized_distance = 
+
+
+	finalColor.a *= 1.0 - polar.x;
+
+	/*
+	float line_side = polar.y > PI ? -1 : 1;
+	float polarized_distance = polar.x * line_side;
+
+	finalColor.a *= (polarized_distance + 1) / 2;
+	*/
+	/*
+	 
+	finalColor.a *= polar.x;
+	int NumRotations = polar.y / TAU; //Number of times we have rotated around the circle
+	polar.y += -NumRotations * TAU;
+	clip((polar.y >= 0 && polar.y < HALF_PI * 3.0f) ||
+		(polar.y > HALF_PI * 3.0f) ? 1 : -1);
+
+	float blurAngle = (polar.y - HALF_PI * 3.0f); //Remove the half of the circle we render normally
+	float AngleAlpha = abs(blurAngle) > HALF_PI ? 1.0f : abs(blurAngle) / HALF_PI;
+	AngleAlpha *= AngleAlpha;
+
+	*/
+
+	//finalColor.a = finalColor.a * BlurEdge(polar.x, blurThreshold) * AngleAlpha;
+	float4 RGBBackgroundColor = tex2D(BackgroundTextureSampler, ((input.ScreenTexCoord.xy) / (RenderTargetSize.xy - 1)));
+	output.Color = BlendHSLColorOverBackground(finalColor, RGBBackgroundColor, finalColor.a);
+	output.Depth = polar.x;
+	return output;
+}
+
+
 float4 MyPSGlowHSV(PS_Input input) : COLOR0
 {
 	float4 finalColor = lineColor;

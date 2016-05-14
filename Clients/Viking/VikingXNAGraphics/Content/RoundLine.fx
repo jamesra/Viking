@@ -130,6 +130,21 @@ technique Tubular
 }
 
 
+technique HalfTube
+{
+	pass P0
+	{
+		CullMode = CW;
+		AlphaBlendEnable = true;
+		SrcBlend = SrcAlpha;
+		DestBlend = InvSrcAlpha;
+		BlendOp = Add;
+		vertexShader = compile vs_3_0 LineVertexShader();
+		pixelShader = compile ps_3_0 MyPSHalfTubular();
+	}
+}
+
+
 technique Glow
 {
 	pass P0

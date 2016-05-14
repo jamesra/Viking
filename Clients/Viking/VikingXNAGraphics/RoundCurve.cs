@@ -251,7 +251,7 @@ namespace RoundCurve
                 //Each control point has three verticies, one centered on the line, and two more a lineradius distance away from the center on opposite sides.
                 iVertex = iv;
                 tri[iv++] = new RoundCurveVertex(new Vector3(0.0f, -1.0f, 0), new Vector2(1, threePi2), instance);
-                tri[iv++] = new RoundCurveVertex(new Vector3(0.0f, 0.0f, 0), new Vector2(0, 0), instance);
+                tri[iv++] = new RoundCurveVertex(new Vector3(0.0f, 0.0f, 0), new Vector2(0, (float)Math.PI), instance);
                 tri[iv++] = new RoundCurveVertex(new Vector3(0.0f, 1.0f, 0), new Vector2(1, pi2), instance);
 
                 // core indices

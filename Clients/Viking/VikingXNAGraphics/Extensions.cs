@@ -18,6 +18,7 @@ namespace VikingXNAGraphics
         AnimatedRadial,
         Ladder,
         Tubular,
+        HalfTube,
         Glow,
         Textured
     }
@@ -115,6 +116,8 @@ namespace VikingXNAGraphics
                     return "Ladder";
                 case LineStyle.Tubular:
                     return "Tubular";
+                case LineStyle.HalfTube:
+                    return "HalfTube";
                 case LineStyle.Glow:
                     return "Glow";
                 case LineStyle.Textured:

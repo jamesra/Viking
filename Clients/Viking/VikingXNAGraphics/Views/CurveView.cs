@@ -412,7 +412,21 @@ namespace VikingXNAGraphics
             }
         }
 
-        
+        private double _ControlPointRadius;
+
+        public double ControlPointRadius
+        {
+            get { return _ControlPointRadius; }
+            set
+            {
+                if (_ControlPointRadius != value)
+                {
+                    _ControlPointRadius = value;
+                    UpdateViews();
+                }
+            }
+        }
+
         private Color _Color;
         public Color Color
         {
@@ -462,19 +476,24 @@ namespace VikingXNAGraphics
         }
 
         public CurveView(ICollection<GridVector2> controlPoints, Microsoft.Xna.Framework.Color color, bool TryToClose, 
-                         Texture2D texture = null, double lineWidth = 16.0, LineStyle lineStyle = LineStyle.Standard, uint numInterpolations = 5)
+                         Texture2D texture = null, double lineWidth = 16.0, double? controlPointRadius = null,  LineStyle lineStyle = LineStyle.Standard, uint numInterpolations = 5)
         {
             this._CurveControlPoints = new CurveViewControlPoints(controlPoints, numInterpolations, TryToClose);
             this._Color = color;
             this.Style = lineStyle;
             this._ControlPointTexture = texture;
             this._LineWidth = lineWidth;
+            if (!controlPointRadius.HasValue)
+                this.ControlPointRadius = lineWidth / 2.0;
+            else
+                this.ControlPointRadius = controlPointRadius.Value;
+
             UpdateViews();
         }
 
         private void UpdateViews()
         {
-            this.ControlPointViews = CreateControlPointViews(this.ControlPoints, this.LineWidth / 2.0, this.Color, null);
+            this.ControlPointViews = CreateControlPointViews(this.ControlPoints, this.ControlPointRadius, this.Color, null);
             this.Curve = CreateCurveView(this.CurvePoints.ToArray(), this.LineWidth, this.Color);
         }
 
@@ -542,14 +561,15 @@ namespace VikingXNAGraphics
                           float time,
                           CurveView[] listToDraw)
         {
-            int OriginalStencilValue = DeviceStateManager.GetDepthStencilValue(device);
-            CompareFunction originalStencilFunction = device.DepthStencilState.StencilFunction;
 
             IEnumerable<CircleView> controlPointViews = listToDraw.SelectMany(cv => cv.ControlPointViews);            
             CircleView.Draw(device, scene, basicEffect, overlayEffect, controlPointViews.ToArray());
+           
+            int OriginalStencilValue = DeviceStateManager.GetDepthStencilValue(device);
+            CompareFunction originalStencilFunction = device.DepthStencilState.StencilFunction;
 
             DeviceStateManager.SetDepthStencilValue(device, OriginalStencilValue - 1, CompareFunction.Greater);
-
+            
             Matrix ViewProj = scene.Camera.View * scene.Projection;
             foreach (CurveView curve in listToDraw)
             {
