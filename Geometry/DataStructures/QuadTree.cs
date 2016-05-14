@@ -38,7 +38,7 @@ namespace Geometry
 
         public QuadTree(GridVector2[] points, T[] values)
         {
-            CreateTree(points, values, GridVector2.Border(points));
+            CreateTree(points, values, points.BoundingBox());
         }
 
         public QuadTree(GridVector2[] keys, T[] values, GridRectangle border)

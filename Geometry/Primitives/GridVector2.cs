@@ -289,26 +289,7 @@ namespace Geometry
 
         public static GridRectangle Border(GridVector2[] points)
         {
-            if(points == null)
-                throw new ArgumentNullException("points");
-
-            if (points.Length == 0)
-                throw new ArgumentException("GridRectangle Border is empty", "points"); 
-
-            double minX = double.MaxValue;
-            double minY = double.MaxValue;
-            double maxX = double.MinValue;
-            double maxY = double.MinValue;
-
-            for (int i = 0; i < points.Length; i++)
-            {
-                minX = Math.Min(minX, points[i].X);
-                maxX = Math.Max(maxX, points[i].X);
-                minY = Math.Min(minY, points[i].Y);
-                maxY = Math.Max(maxY, points[i].Y);
-            }
-
-            return new GridRectangle(minX, maxX, minY, maxY); 
+            return points.BoundingBox();
         }
 
         public static GridRectangle Border(IPoint[] points)

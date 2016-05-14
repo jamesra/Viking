@@ -38,6 +38,11 @@ namespace Geometry
             return (new GridVector2[] { point }).ToMatrix();
         }
 
+        public static Vector<double> ToVector(this GridVector2 point)
+        {
+            return Vector<double>.Build.Dense(new double[] { point.X, point.Y, 0 });
+        }
+
         public static Matrix<double> ToMatrix(this ICollection<GridVector2> points)
         { 
             return Matrix<double>.Build.DenseOfColumns(points.Select(p => new double[] { p.X, p.Y, 0, 1 }));
@@ -78,7 +83,31 @@ namespace Geometry
             Matrix<double> rotationMatrix = Matrix<double>.Build.DenseOfArray(rotation);
             return rotationMatrix;
         }
-         
+
+        public static Matrix<double> CreateScaleMatrix(double X, double Y, double Z)
+        {
+            Vector<double> v = Vector<double>.Build.Dense(new double[] { X, Y, Z });
+            return CreateScaleMatrix(v);
+        }
+
+        public static Matrix<double> CreateScaleMatrix(this Vector<double> scalars)
+        {
+            if(scalars.Count == 2)
+            {
+                scalars = Vector<double>.Build.Dense(new double[] { scalars[0], scalars[1], 1.0 });
+            }
+
+            if (scalars.Count != 3)
+                throw new ArgumentException("Expected 3D vector of scalar values");
+
+            double[,] m = {{ scalars[0], 0,          0,          0 },
+                                  { 0,          scalars[1], 0,          0 },
+                                  {0,           0,          scalars[2], 0},
+                                  {0,           0,          0,          1} };
+            Matrix<double> scaleMatrix = Matrix<double>.Build.DenseOfArray(m);
+            return scaleMatrix;
+        }
+
 
         public static ICollection<GridVector2> Rotate(this ICollection<GridVector2> points, double angle, GridVector2 centerOfRotation)
         {
@@ -91,6 +120,30 @@ namespace Geometry
 
             Matrix<double> translatedPoints = translationMatrix * pointMatrix;
             Matrix<double> rotatedPoints = rotationMatrix * translatedPoints;
+            Matrix<double> finalPoints = inverseTranslationMatrix * rotatedPoints;
+
+            ICollection<GridVector2> results = finalPoints.ToGridVector2();
+            return results;
+        }
+
+        /// <summary>
+        /// Scale distance of points from a centerpoint by a scalar value
+        /// </summary>
+        /// <param name="points"></param>
+        /// <param name="scale"></param>
+        /// <param name="centerOfScale"></param>
+        /// <returns></returns>
+        public static ICollection<GridVector2> Scale(this ICollection<GridVector2> points, double scale, GridVector2 origin)
+        {
+            Matrix<double> pointMatrix = points.ToMatrix();
+
+            Matrix<double> scaleMatrix = CreateScaleMatrix(scale,scale,1);
+
+            Matrix<double> translationMatrix = (-origin).CreateTranslationMatrix();
+            Matrix<double> inverseTranslationMatrix = (origin).CreateTranslationMatrix();
+
+            Matrix<double> translatedPoints = translationMatrix * pointMatrix;
+            Matrix<double> rotatedPoints = scaleMatrix * translatedPoints;
             Matrix<double> finalPoints = inverseTranslationMatrix * rotatedPoints;
 
             ICollection<GridVector2> results = finalPoints.ToGridVector2();
@@ -123,6 +176,103 @@ namespace Geometry
 
             return new GridVector2(mX / (double)points.Count, mY / (double)points.Count);
         }
+
+        /// <summary>
+        /// Return the index of a point in the array we know is on the convex hull
+        /// </summary>
+        /// <param name="points"></param>
+        /// <returns></returns>
+        public static int FindPointOnConvexHull(this GridVector2[] points)
+        {
+            double minX = points.Min(p => p.X);
+            double minY = points.Where(p => p.X == minX).Min(p => p.Y);
+
+            for(int i = 0; i < points.Length; i++)
+            {
+                if(points[i].X == minX && points[i].Y == minY)
+                {
+                    return i;
+                }
+            }
+
+            throw new ArgumentException("Could not find point on convex hull!");
+        }
+
+        /// <summary>
+        /// Return true if the points are placed in clockwise order.  Assumes points do not cross over themselves
+        /// </summary>
+        /// <param name="points"></param>
+        /// <returns></returns>
+        public static bool AreClockwise(this GridVector2[] points)
+        {
+            if (points.Length < 3)
+                throw new ArgumentException("Insufficient points to determine AreClockwise()");
+
+            //We need to make sure our center vertex is on the convex hull
+
+            int iConvexHullPoint = FindPointOnConvexHull(points);
+            int iBefore = iConvexHullPoint - 1 > 0 ? iConvexHullPoint - 1 : points.Length - 1;
+            int iAfter = iConvexHullPoint + 1 < points.Length ? iConvexHullPoint + 1 : 0;
+
+            GridVector2 A = points[iBefore];
+            GridVector2 B = points[iConvexHullPoint];
+            GridVector2 C = points[iAfter]; 
+
+            /*
+            Matrix<double> m = Matrix<double>.Build.DenseOfArray(new double[,] { { 1, 1, 1},
+                                                                                { U.X, U.Y, 0 },
+                                                                                { V.X, V.Y, 0 } });
+            */
+
+            Matrix<double> m = Matrix<double>.Build.DenseOfArray(new double[,] { { 1, A.X, A.Y },
+                                                                                { 1, B.X, B.Y},
+                                                                                { 1, C.X, C.Y} });
+
+
+            double det = m.Determinant();
+
+            return det < 0;
+        }
+
+        public static GridRectangle BoundingBox(this GridVector2[] points)
+        {
+            if(points == null)
+                throw new ArgumentNullException("points");
+
+            if (points.Length == 0)
+                throw new ArgumentException("GridRectangle Border is empty", "points"); 
+
+            double minX = double.MaxValue;
+            double minY = double.MaxValue;
+            double maxX = double.MinValue;
+            double maxY = double.MinValue;
+
+            for (int i = 0; i < points.Length; i++)
+            {
+                minX = Math.Min(minX, points[i].X);
+                maxX = Math.Max(maxX, points[i].X);
+                minY = Math.Min(minY, points[i].Y);
+                maxY = Math.Max(maxY, points[i].Y);
+            }
+
+            return new GridRectangle(minX, maxX, minY, maxY); 
+        }
+
+        public static double MinDistanceBetweenPoints(this GridVector2[] points)
+        {
+            double minVal = double.MaxValue;
+            for (int i = 0; i < points.Length; i++)
+            {
+                for (int j = i + 1; j < points.Length; j++)
+                {
+                    if(points[i] != points[j])
+                        minVal = Math.Min(minVal, GridVector2.Distance(points[i], points[j]));
+                }
+            }
+
+            return minVal;
+        }
+
     }
 
     public static class MathHelpers

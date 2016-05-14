@@ -77,7 +77,10 @@ namespace SqlGeometryUtils
                 throw new ArgumentException("Polygon must be created with three points or more");
             }
 
-            if(points.First() != points.Last())
+            if (points.AreClockwise())
+                points = points.Reverse().ToArray();
+
+            if (points.First() != points.Last())
             {
                 List<GridVector2> listPoints = new List<GridVector2>(points);
                 listPoints.Add(points[0]);
@@ -176,7 +179,10 @@ namespace SqlGeometryUtils
 
         public static bool Intersects(this SqlGeometry geometry, GridVector2 point)
         {
-            return geometry.STIntersects(point.ToGeometryPoint()).IsTrue;
+            SqlGeometry p = point.ToGeometryPoint();
+            bool intersects = geometry.STIntersects(p).IsTrue;
+            return intersects;
+            //return geometry.STIntersects(point.ToGeometryPoint()).IsTrue;
         }
 
         public static double Distance(this SqlGeometry geometry, GridVector2 point)
@@ -212,11 +218,18 @@ namespace SqlGeometryUtils
 
         public static SqlGeometry ToGeometry(SqlString GeometryType, GridVector2[] points)
         {
-            return SqlGeometry.STGeomFromText(ToGeometryString(GeometryType, points).ToSqlChars(),0);
+            SqlGeometry obj = SqlGeometry.STGeomFromText(ToGeometryString(GeometryType, points).ToSqlChars(),0);
+            if (obj.STIsValid().IsFalse)
+            {
+                throw new ArgumentException(obj.IsValidDetailed());
+            }
+            return obj;
         }
 
         public static string ToGeometryString(SqlString GeometryType, GridVector2[] points )
         {
+           
+
             string TypeString = GeometryType.Value; 
             switch(TypeString.ToUpper())
             {
@@ -224,6 +237,8 @@ namespace SqlGeometryUtils
                     TypeString += "( CIRCULARSTRING " + points.ToSqlCoordinateList() + ")";
                     return TypeString;
                 case "POLYGON":
+                    if (points.AreClockwise())
+                        points = points.Reverse().ToArray();
                     TypeString += "( " + points.ToSqlCoordinateList(true) + ")";
                     return TypeString;
                 default:
@@ -297,6 +312,14 @@ namespace SqlGeometryUtils
             }*/
 
             return geometryStringBuilder.ToString();
+        }
+
+        public static GridCircle CalculateInscribedCircle(this SqlGeometry shape)
+        {
+            GridVector2[] ControlPoints = shape.ToPoints();
+            GridVector2 center = shape.Centroid();
+            double Radius = ControlPoints.Select(p => GridVector2.Distance(center, p)).Min();
+            return new GridCircle(center, Radius);
         }
     }
 }
