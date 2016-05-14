@@ -35,7 +35,10 @@ namespace WebAnnotation
         public static readonly double AdjacentLocationRadiusScalar = 0.5; //Make radius of annotations on adjacent sections half of the normal value
 
         //TODO: Choose number of points based on distance between control points
-        static public uint NumCurveInterpolationPoints = 3;
+        static public uint NumOpenCurveInterpolationPoints = 3;
+        static public uint NumClosedCurveInterpolationPoints = 10;
+
+        static public double DefaultClosedLineWidth = 16.0;
 
         /// <summary>
         /// Number of interpolations to place between curve control points, determines distance between control points
@@ -44,7 +47,7 @@ namespace WebAnnotation
 
         //static public int NumCurveInterpolationPoints(double distance)
         //{
-            //return (int)Math.Round(distance / CurveInterpolationPointSpacing);
+        //return (int)Math.Round(distance / CurveInterpolationPointSpacing);
         //}
 
         /// <summary>

@@ -80,15 +80,16 @@ namespace WebAnnotation.View
                 case LocationType.OPENCURVE:
                     return CreateCommandForlineOrCurve(action, Parent, loc, volumePosition);
                 case LocationType.CLOSEDCURVE:
-                    return CreateCommandForlineOrCurve(action, Parent, loc, volumePosition);
+                    return CreateCommandForShape(action, Parent, loc, volumePosition);
                 case LocationType.POLYGON:
-                    throw new NotImplementedException("No commands available for polygons");
+                    return CreateCommandForShape(action, Parent, loc, volumePosition);
                 case LocationType.POINT:
                     throw new NotImplementedException("No commands available for polygons");
                 default:
                     throw new NotImplementedException("Unexpected location type");
             }
         }
+
 
         public static Viking.UI.Commands.Command CreateCommandForCircles(LocationAction action,
                                                                          Viking.UI.Controls.SectionViewerControl Parent,
@@ -156,6 +157,14 @@ namespace WebAnnotation.View
             }
         }
 
+        /// <summary>
+        /// Commands for lines or open curves
+        /// </summary>
+        /// <param name="action"></param>
+        /// <param name="Parent"></param>
+        /// <param name="loc"></param>
+        /// <param name="volumePosition"></param>
+        /// <returns></returns>
         public static Viking.UI.Commands.Command CreateCommandForlineOrCurve(LocationAction action,
                                                                          Viking.UI.Controls.SectionViewerControl Parent,
                                                                          LocationObj loc,
@@ -166,12 +175,11 @@ namespace WebAnnotation.View
                 case LocationAction.NONE:
                     return null;
                 case LocationAction.TRANSLATE:
-                    return new TranslateCurveLocationCommand(Parent,
+                    return new TranslateOpenCurveCommand(Parent,
                                                              loc.MosaicShape.Centroid(),
                                                              loc.MosaicShape.ToPoints(),
                                                              loc.Parent.Type.Color.ToXNAColor(),
                                                              loc.Radius * 2.0,
-                                                             IsClosedCurve(loc),
                                                              (VolumeControlPoints, MosaicControlPoints, LineWidth) => UpdateLineLocationCallback(loc, VolumeControlPoints, MosaicControlPoints, LineWidth));
                 case LocationAction.SCALE:
                     return null; 
@@ -214,18 +222,99 @@ namespace WebAnnotation.View
                     newLoc.Radius = loc.Radius;
 
                     LocationCanvasView newLocView = AnnotationViewFactory.Create(newLoc, Parent.Section.ActiveSectionToVolumeTransform);
-                    return new TranslateCurveLocationCommand(Parent,
+                    return new TranslateOpenCurveCommand(Parent,
                                                              newLoc.MosaicShape.Centroid(),
                                                              newLoc.MosaicShape.ToPoints(),
                                                              newLoc.Parent.Type.Color.ToXNAColor(0.5f),
-                                                             newLoc.Radius * 2.0,
-                                                             IsClosedCurve(newLoc),
+                                                             newLoc.Radius * 2.0, 
                                                              (NewVolumeControlPoints, NewMosaicControlPoints, NewWidth) =>
                                                                 {
                                                                     UpdateLineLocationNoSaveCallback(newLoc, NewVolumeControlPoints, NewMosaicControlPoints, NewWidth);
 
                                                                     Viking.UI.Commands.Command.EnqueueCommand(typeof(CreateNewLinkedLocationCommand), new object[] { Parent, loc, newLoc });
                                                                 }
+                                                             );
+                default:
+                    return null;
+            }
+        }
+
+        /// <summary>
+        /// Commands for Polygons or closed curves
+        /// </summary>
+        /// <param name="action"></param>
+        /// <param name="Parent"></param>
+        /// <param name="loc"></param>
+        /// <param name="volumePosition"></param>
+        /// <returns></returns>
+        public static Viking.UI.Commands.Command CreateCommandForShape(LocationAction action,
+                                                                         Viking.UI.Controls.SectionViewerControl Parent,
+                                                                         LocationObj loc,
+                                                                         GridVector2 volumePosition)
+        {
+            switch (action)
+            {
+                case LocationAction.NONE:
+                    return null;
+                case LocationAction.TRANSLATE:
+                    return new TranslateClosedCurveCommand(Parent,
+                                                             loc.MosaicShape.Centroid(),
+                                                             loc.MosaicShape.ToPoints(),
+                                                             loc.Parent.Type.Color.ToXNAColor(),
+                                                             loc.Radius * 2.0, 
+                                                             (VolumeControlPoints, MosaicControlPoints, LineWidth) => UpdateLineLocationCallback(loc, VolumeControlPoints, MosaicControlPoints, LineWidth));
+                case LocationAction.SCALE:
+                    return null;
+                case LocationAction.ADJUST:
+                    return new AdjustCurveControlPointCommand(Parent, loc.MosaicShape.ToPoints(),
+                                                                      loc.Parent.Type.Color.ToXNAColor(),
+                                                                      loc.Radius * 2.0,
+                                                                      IsClosedCurve(loc),
+                                                                      (VolumeControlPoints, MosaicControlPoints) => UpdateLineLocationCallback(loc, VolumeControlPoints, MosaicControlPoints));
+                case LocationAction.CREATELINK:
+                    return new LinkAnnotationsCommand(Parent, loc);
+                case LocationAction.ADDCONTROLPOINT:
+                    return new AddLineControlPointCommand(Parent,
+                                                      loc.MosaicShape.ToPoints(),
+                                                      (VolumeControlPoints, MosaicControlPoints) => UpdateLineLocationCallback(loc, VolumeControlPoints, MosaicControlPoints));
+                case LocationAction.REMOVECONTROLPOINT:
+                    return new RemoveLineControlPointCommand(Parent,
+                                                      loc.MosaicShape.ToPoints(),
+                                                      IsClosedCurve(loc),
+                                                      (VolumeControlPoints, MosaicControlPoints) => UpdateLineLocationCallback(loc, VolumeControlPoints, MosaicControlPoints));
+                case LocationAction.CREATELINKEDLOCATION:
+
+                    //The section we are linking from is on another section, so we have to:
+                    // 0. Position the mosaic shape where we want the command to begin
+                    // 1. Warp the mosaic using the correct transform for the source section
+                    // 2. Warp the volume shape back to our section using the current transform
+
+                    IVolumeToSectionTransform mapper = Parent.Volume.GetSectionToVolumeTransform((int)loc.Z);
+                    GridVector2 MosaicPosition = mapper.VolumeToSection(volumePosition);
+
+                    SqlGeometry VolumeShape;
+                    SqlGeometry MosaicShape = TransformMosaicShapeToSection(Parent.Volume, loc.MosaicShape.MoveTo(MosaicPosition), (int)loc.Z, Parent.Section.Number, out VolumeShape);
+
+                    LocationObj newLoc = new LocationObj(loc.Parent,
+                                                        MosaicShape,
+                                                        VolumeShape,
+                                                        Parent.Section.Number,
+                                                        loc.TypeCode);
+
+                    newLoc.Radius = loc.Radius;
+
+                    LocationCanvasView newLocView = AnnotationViewFactory.Create(newLoc, Parent.Section.ActiveSectionToVolumeTransform);
+                    return new TranslateClosedCurveCommand(Parent,
+                                                             newLoc.MosaicShape.Centroid(),
+                                                             newLoc.MosaicShape.ToPoints(),
+                                                             newLoc.Parent.Type.Color.ToXNAColor(0.5f),
+                                                             newLoc.Radius * 2.0, 
+                                                             (NewVolumeControlPoints, NewMosaicControlPoints, NewWidth) =>
+                                                             {
+                                                                 UpdateLineLocationNoSaveCallback(newLoc, NewVolumeControlPoints, NewMosaicControlPoints, NewWidth);
+
+                                                                 Viking.UI.Commands.Command.EnqueueCommand(typeof(CreateNewLinkedLocationCommand), new object[] { Parent, loc, newLoc });
+                                                             }
                                                              );
                 default:
                     return null;

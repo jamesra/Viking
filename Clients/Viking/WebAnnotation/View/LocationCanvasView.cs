@@ -174,6 +174,14 @@ namespace WebAnnotation.View
             return InfoLabel.Trim();
         }
 
+        protected bool IsLocationPropertyAffectingLabels(string PropertyName)
+        {
+            return string.IsNullOrEmpty(PropertyName) ||
+                PropertyName == "Terminal" ||
+                PropertyName == "OffEdge" ||
+                PropertyName == "Attributes";
+        }
+
         public override int GetHashCode()
         {
             return modelObj.GetHashCode();

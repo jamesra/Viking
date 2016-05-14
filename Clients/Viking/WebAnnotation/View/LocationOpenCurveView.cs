@@ -17,7 +17,7 @@ namespace WebAnnotation.View
 {
     class LocationOpenCurveView : LocationCurveView, IColorView, IRenderedLabelView
     {
-        public static uint NumInterpolationPoints = Global.NumCurveInterpolationPoints;
+        public static uint NumInterpolationPoints = Global.NumOpenCurveInterpolationPoints;
         
         public CurveView curveView;
         public CurveLabel curveLabel;
@@ -124,7 +124,7 @@ namespace WebAnnotation.View
             {
                 if (_RenderedVolumeShape == null)
                 {
-                    _RenderedVolumeShape = this.VolumeCurveControlPoints.ToPolyLine().STBuffer(this.Width / 2.0);
+                    _RenderedVolumeShape = this.VolumeCurveControlPoints.ToPolyLine().STBuffer(this.LineWidth / 2.0);
                 }
 
                 return _RenderedVolumeShape;
@@ -164,14 +164,22 @@ namespace WebAnnotation.View
             CurveLabel.Draw(device, scene, spriteBatch, font, curveManager, new CurveLabel[] { curveLabel, curveParentLabel });
         }
 
-        public override double Width
+        public override double LineWidth
         {
             get
             {
                 return curveView.LineWidth;
             }
         }
-        
+
+        public override double ControlPointRadius
+        {
+            get
+            {
+                return LineWidth / 2.0;
+            }
+        }
+
         /*
         internal override void OnParentPropertyChanged(object o, PropertyChangedEventArgs args)
         {
@@ -183,6 +191,6 @@ namespace WebAnnotation.View
             base.OnParentPropertyChanged(o, args);
             
         }*/
-        
+
     }
 }

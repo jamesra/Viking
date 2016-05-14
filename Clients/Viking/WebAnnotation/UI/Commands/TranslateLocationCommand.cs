@@ -15,21 +15,10 @@ using WebAnnotation;
 
 namespace WebAnnotation.UI.Commands
 {
-    class TranslateCurveLocationCommand : TranslateLocationCommand
+    class TranslateClosedCurveCommand : TranslateCurveLocationCommand
     {
-        CurveView curveView;
-        GridVector2[] OriginalControlPoints;
-        GridVector2 OriginalPosition;
-        GridVector2 DeltaSum = new GridVector2(0, 0);
-        double OriginalLineWidth;
-
-        public delegate void OnCommandSuccess(GridVector2[] VolumeControlPoints, GridVector2[] MosaicControlPoints, double LineWidth);
-        OnCommandSuccess success_callback;
-
-        Viking.VolumeModel.IVolumeToSectionTransform mapping;
-
         private double _sizeScale = 1.0;
-        protected double SizeScale
+        protected override double SizeScale
         {
             get
             {
@@ -37,20 +26,123 @@ namespace WebAnnotation.UI.Commands
             }
             set
             {
-                _sizeScale = value * curveView.LineWidth < 1.0 ? 1.0 / curveView.LineWidth : value;
-                curveView.LineWidth = OriginalLineWidth * _sizeScale;
+                _sizeScale = value; 
             }
         }
 
+        protected override void UpdateScale(double input)
+        {
+            SizeScale = input;
+            curveView = CreateView(CalculateTranslatedMosaicControlPoints(),
+                                          curveView.Color); 
+        }
+        
+
+        protected override double CalculateFinalLineWidth()
+        {
+            return Global.DefaultClosedLineWidth;
+        }
+
+        public TranslateClosedCurveCommand(Viking.UI.Controls.SectionViewerControl parent,
+                                        GridVector2 MosaicPosition,
+                                        GridVector2[] OriginalMosaicControlPoints,
+                                        Microsoft.Xna.Framework.Color color,
+                                        double LineWidth,
+                                        OnCommandSuccess success_callback) : base(parent, MosaicPosition, OriginalMosaicControlPoints, color, LineWidth, success_callback)
+        { }
+         
+
+        protected override CurveView CreateView(GridVector2[] ControlPoints, Microsoft.Xna.Framework.Color color)
+        {
+            return new CurveView(ControlPoints.ToList(), color, true, lineWidth: this.OriginalControlPoints.MinDistanceBetweenPoints() * this.SizeScale, controlPointRadius:  Global.DefaultClosedLineWidth / 2.0,  lineStyle: LineStyle.HalfTube, numInterpolations: Global.NumClosedCurveInterpolationPoints);
+        }
+
+        protected override GridVector2[] CalculateTranslatedMosaicControlPoints()
+        {
+            GridVector2 centroid = OriginalControlPoints.Centroid();
+            ICollection<GridVector2> rotatedPoints = OriginalControlPoints.Rotate(this.Angle, centroid);
+            ICollection<GridVector2> scaledPoints = rotatedPoints.Scale(this.SizeScale, centroid);
+            ICollection<GridVector2> translatedPoints = scaledPoints.Translate(this.DeltaSum);
+            return translatedPoints.ToArray();
+        }
+
+    }
+
+    class TranslateOpenCurveCommand : TranslateCurveLocationCommand
+    {
+        private double _sizeScale = 1.0;
+        protected override double SizeScale
+        {
+            get
+            {
+                return _sizeScale;
+            }
+            set
+            {
+                _sizeScale = value;
+                _sizeScale = _sizeScale * OriginalLineWidth < 1.0 ? 1.0 / OriginalLineWidth : value; 
+            }
+        }
+
+        protected override void UpdateScale(double input)
+        {
+            SizeScale = input;
+            curveView = CreateView(CalculateTranslatedMosaicControlPoints(),
+                                          curveView.Color);
+        }
+
+        protected override double CalculateFinalLineWidth()
+        {
+            return OriginalLineWidth * _sizeScale;
+        }
+
+        public TranslateOpenCurveCommand(Viking.UI.Controls.SectionViewerControl parent,
+                                        GridVector2 MosaicPosition,
+                                        GridVector2[] OriginalMosaicControlPoints,
+                                        Microsoft.Xna.Framework.Color color,
+                                        double LineWidth,
+                                        OnCommandSuccess success_callback) : base(parent, MosaicPosition, OriginalMosaicControlPoints, color, LineWidth, success_callback)
+        { }
+
+        protected override CurveView CreateView(GridVector2[] ControlPoints, Microsoft.Xna.Framework.Color color)
+        {
+            return new CurveView(ControlPoints.ToList(), color, false, lineWidth: CalculateFinalLineWidth(), lineStyle: LineStyle.Tubular);
+        }
+
+        protected override GridVector2[] CalculateTranslatedMosaicControlPoints()
+        {
+            GridVector2 centroid = OriginalControlPoints.Centroid();
+            ICollection<GridVector2> rotatedPoints = OriginalControlPoints.Rotate(this.Angle, centroid);
+            ICollection<GridVector2> translatedPoints = rotatedPoints.Translate(this.DeltaSum);
+            return translatedPoints.ToArray();
+        }
+    }
+
+
+    abstract class TranslateCurveLocationCommand : TranslateLocationCommand
+    {
+        protected CurveView curveView;
+        protected GridVector2[] OriginalControlPoints;
+        protected GridVector2 OriginalPosition;
+        protected GridVector2 DeltaSum = new GridVector2(0, 0);
+        protected double OriginalLineWidth;
+
+       
+        public delegate void OnCommandSuccess(GridVector2[] VolumeControlPoints, GridVector2[] MosaicControlPoints, double LineWidth);
+        OnCommandSuccess success_callback;
+
+        Viking.VolumeModel.IVolumeToSectionTransform mapping;
+         
         private double _Angle = 0;
+
+        private double _sizeScale = 1.0;
 
         protected double Angle
         {
             get { return _Angle; }
             set {
                 _Angle = value;
-                ICollection<GridVector2> rotatedPoints = OriginalControlPoints.Rotate(this.Angle, OriginalControlPoints.Centroid());
-                this.curveView.ControlPoints = rotatedPoints.Translate(this.DeltaSum).ToArray();
+                this.curveView = CreateView(CalculateTranslatedMosaicControlPoints(), curveView.Color);
             }
         }
             
@@ -67,30 +159,27 @@ namespace WebAnnotation.UI.Commands
                                         GridVector2 MosaicPosition, 
                                         GridVector2[] OriginalMosaicControlPoints,
                                         Microsoft.Xna.Framework.Color color,
-                                        double LineWidth,
-                                        bool IsClosedCurve,
+                                        double LineWidth, 
                                         OnCommandSuccess success_callback) : base(parent)
         {
             mapping = parent.Section.ActiveSectionToVolumeTransform;
             this.OriginalPosition = mapping.SectionToVolume(MosaicPosition);
             this.OriginalLineWidth = LineWidth;
             this.OriginalControlPoints = mapping.SectionToVolume(OriginalMosaicControlPoints);
-            CreateView(OriginalControlPoints, color, IsClosedCurve);
+            this.curveView = CreateView(OriginalControlPoints, color);
             this.success_callback = success_callback;
         }
 
-        private void CreateView(GridVector2[] ControlPoints, Microsoft.Xna.Framework.Color color, bool IsClosed)
-        {
-            curveView = new CurveView(ControlPoints.ToList(), color, false, lineWidth: OriginalLineWidth * this.SizeScale, lineStyle: LineStyle.Tubular);
-            curveView.TryCloseCurve = IsClosed;
-        }
+        protected abstract CurveView CreateView(GridVector2[] ControlPoints, Microsoft.Xna.Framework.Color color);
 
         protected override void UpdateViewPosition(GridVector2 PositionDelta)
         {
             DeltaSum += PositionDelta;
-            curveView.ControlPoints = curveView.ControlPoints.Select(p => p + PositionDelta).ToArray();
+            this.curveView = CreateView(CalculateTranslatedMosaicControlPoints(), curveView.Color);
         }
-        
+
+        protected double _RotationOrigin;
+         
         protected override void OnKeyDown(object sender, KeyEventArgs e)
         {
             if(e.Control)
@@ -109,7 +198,7 @@ namespace WebAnnotation.UI.Commands
                 GridVector2 translatedPosition = this.TranslatedPosition;
                 this.OriginalPosition = OriginalControlPoints.Centroid();
                 this.DeltaSum = new GridVector2(0, 0);
-                CreateView(OriginalControlPoints, curveView.Color, curveView.TryCloseCurve);
+                CreateView(OriginalControlPoints, curveView.Color);
             }
             else
             {
@@ -125,6 +214,12 @@ namespace WebAnnotation.UI.Commands
                 this.SizeScale = 1.0;
                 return;
             }
+            else if(e.Button.Right())
+            {
+                GridVector2 WorldPosition = Parent.ScreenToWorld(e.X, e.Y);
+                GridVector2 Center = this.TranslatedPosition;
+                this._RotationOrigin = GridVector2.Angle(Center, WorldPosition);
+            }
             else
             {
                 base.OnMouseDown(sender, e);
@@ -137,7 +232,14 @@ namespace WebAnnotation.UI.Commands
             {
                 GridVector2 worldPosition = Parent.ScreenToWorld(e.X, e.Y);
                 GridVector2 origin = this.TranslatedPosition;
-                this.Angle = GridVector2.Angle(origin, worldPosition);
+                GridVector2 centroid = this.OriginalControlPoints.Centroid();
+
+                if (origin == worldPosition)
+                    return;
+
+
+                //double AngleToCommandStart = GridVector2.Angle(centroid, origin);
+                this.Angle = GridVector2.Angle(origin, worldPosition) - _RotationOrigin;
 
                 //Save as old mouse position so location doesn't jump when we release the right mouse button
                 SaveAsOldMousePosition(e);
@@ -147,36 +249,16 @@ namespace WebAnnotation.UI.Commands
                 base.OnMouseMove(sender, e);
             }
         }
+        
+        protected abstract GridVector2[] CalculateTranslatedMosaicControlPoints();
 
-        protected override void OnMouseWheel(object sender, MouseEventArgs e)
-        {
-            float multiplier = ((float)e.Delta / 60.0f);
-
-            if (multiplier < 0)
-                SizeScale *= 0.9900990099009901;
-            else if (multiplier > 0)
-                SizeScale *= 1.01f;
-        }
-
-        /*
-        protected override void OnMouseWheel(object sender, MouseEventArgs e)
-        {
-            float multiplier = ((float)e.Delta / 120.0f);
-            double SizeScale = 1.0;
-            if (multiplier < 0)
-                SizeScale *= 0.9900990099009901;
-            else if (multiplier > 0)
-                SizeScale *= 1.01f;
-
-            this.curveView.LineWidth *= SizeScale; 
-        }
-        */
+        protected abstract double CalculateFinalLineWidth();
 
         protected override void Execute()
         {
             if (this.success_callback != null)
             {
-                GridVector2[] TranslatedOriginalControlPoints = OriginalControlPoints.Rotate(this.Angle, OriginalControlPoints.Centroid()).Translate(DeltaSum).ToArray();
+                GridVector2[] TranslatedOriginalControlPoints = CalculateTranslatedMosaicControlPoints();
                 GridVector2[] MosaicControlPoints = null;
 
                 try
@@ -215,7 +297,7 @@ namespace WebAnnotation.UI.Commands
         Viking.VolumeModel.IVolumeToSectionTransform mapping;
 
         private double _sizeScale = 1.0;
-        protected double SizeScale
+        protected override double SizeScale
         {
             get
             {
@@ -223,8 +305,7 @@ namespace WebAnnotation.UI.Commands
             }
             set
             {
-                _sizeScale = value;
-                CreateView(circleView.VolumePosition, OriginalCircle.Radius * _sizeScale, circleView.Color);
+                _sizeScale = value * OriginalCircle.Radius < 1.0f ? 1 / OriginalCircle.Radius : value;                
             }
         }
 
@@ -265,17 +346,7 @@ namespace WebAnnotation.UI.Commands
             {
                 base.OnMouseDown(sender, e);
             }
-        }
-
-        protected override void OnMouseWheel(object sender, MouseEventArgs e)
-        {
-            float multiplier = ((float)e.Delta / 120.0f);
-
-            if (multiplier < 0)
-                SizeScale *= 0.9900990099009901;
-            else if(multiplier > 0)
-                SizeScale *= 1.01f;
-        }
+        } 
 
         protected override void Execute()
         {
@@ -294,6 +365,12 @@ namespace WebAnnotation.UI.Commands
             } 
 
             base.Execute();
+        }
+
+        protected override void UpdateScale(double input)
+        {
+            this.SizeScale = input;
+            CreateView(circleView.VolumePosition, OriginalCircle.Radius * _sizeScale, circleView.Color);
         }
 
         protected override void UpdateViewPosition(GridVector2 PositionDelta)
@@ -323,8 +400,12 @@ namespace WebAnnotation.UI.Commands
     }
 
     abstract class TranslateLocationCommand : AnnotationCommandBase
-    {        
-        
+    {
+        protected virtual double SizeScale
+        {
+            get;
+            set;
+        }
         
         /// <summary>
         /// Translated position in volume space
@@ -338,17 +419,42 @@ namespace WebAnnotation.UI.Commands
         {
         }
 
+        protected abstract void UpdateScale(double input);
+
         protected abstract void UpdateViewPosition(GridVector2 PositionDelta);
-
-       
-
         
-
         public override void OnDeactivate()
         {
             Viking.UI.State.SelectedObject = null;
 
             base.OnDeactivate();
+        }
+
+        private int scroll_delta_sum = 0;
+        protected override void OnMouseWheel(object sender, MouseEventArgs e)
+        {
+           // Trace.WriteLine(e.Delta.ToString());
+
+            scroll_delta_sum += e.Delta;
+
+            if (Math.Abs(scroll_delta_sum) < 120)
+                return;
+
+            int adjusted_scroll_distance = Math.Abs(scroll_delta_sum) - 120;
+
+            //OK, so lets figure out how far we need to scrool 
+            const double Scroll_distance_to_double_size = 900.0;
+
+            double num_doublings = adjusted_scroll_distance / Scroll_distance_to_double_size;
+
+            double scalar = Math.Pow(2, num_doublings);
+
+            if (scroll_delta_sum < 0)
+                scalar = 1 / scalar; 
+
+            //Trace.WriteLine(scalar.ToString());
+            UpdateScale(scalar);
+            Parent.Invalidate();
         }
 
 

@@ -29,9 +29,17 @@ namespace WebAnnotation.View
             }
         }
 
-        public override double Width
+        public override double LineWidth
         {
             get { return upPolyLineView.LineWidth; }
+        }
+
+        public override double ControlPointRadius
+        {
+            get
+            {
+                return LineWidth / 2.0;
+            }
         }
 
         public AdjacentLocationLineView(LocationObj obj, Viking.VolumeModel.IVolumeToSectionTransform mapper) : base(obj, mapper)
@@ -67,16 +75,23 @@ namespace WebAnnotation.View
         protected PolyLineView polyLineView;
 
         
-
         public Color Color
         {
             get { return polyLineView.Color; }
             set { polyLineView.Color = value; }
         }
 
-        public override double Width
+        public override double LineWidth
         {
             get { return polyLineView.LineWidth; }
+        }
+
+        public override double ControlPointRadius
+        {
+            get
+            {
+                return LineWidth / 2.0;
+            }
         }
 
         public LocationLineView(LocationObj obj, Viking.VolumeModel.IVolumeToSectionTransform mapper, Texture2D texture = null) : base(obj, mapper)
@@ -102,7 +117,7 @@ namespace WebAnnotation.View
             else if(ModifierKeys.CtrlPressed())
             {
                 //Allow user to add a control point if the mouse is not over an existing control point
-                if (!polyLineView.ControlPoints.Select(p => new GridCircle(p, Width / 2.0)).Any(c => c.Contains(WorldPosition)))
+                if (!polyLineView.ControlPoints.Select(p => new GridCircle(p, LineWidth / 2.0)).Any(c => c.Contains(WorldPosition)))
                     return LocationAction.ADDCONTROLPOINT;
 
                 return LocationAction.NONE;
@@ -119,7 +134,7 @@ namespace WebAnnotation.View
 
         public override bool IsVisible(VikingXNA.Scene scene)
         {
-            if (this.Width / scene.DevicePixelWidth < 2.0)
+            if (Math.Min(this.BoundingBox.Width, this.BoundingBox.Height) / scene.DevicePixelWidth < 2.0)
                 return false;
 
             return scene.VisibleWorldBounds.Intersects(this.BoundingBox);
@@ -130,11 +145,17 @@ namespace WebAnnotation.View
             return IsVisible(scene);
         }
 
+        private GridRectangle? _bbox;
         public override GridRectangle BoundingBox
         {
             get
             {
-                return this.VolumeShapeAsRendered.Envelope();
+                if(!_bbox.HasValue)
+                {
+                    _bbox = this.VolumeShapeAsRendered.Envelope();
+                }
+
+                return _bbox.Value;
             }
         }
 
@@ -156,15 +177,22 @@ namespace WebAnnotation.View
 
         public override double DistanceFromCenterNormalized(GridVector2 Position)
         {
-            //TODO: Find a more accurate measurement.  Returning 0 means the line is always on top in selection.
-            GridLineSegment[] segs = GridLineSegment.SegmentsFromPoints(this.VolumeControlPoints);
-            double MinDistance = segs.Min(l => l.DistanceToPoint(Position));
-            return (MinDistance - (this.Width / 2.0));
+            if (PointIntersectsAnyControlPoint(Position))
+            {
+                return VolumeControlPoints.Select(p => GridVector2.Distance(p, Position) / ControlPointRadius).Min();
+            }
+            else
+            {
+                //TODO: Find a more accurate measurement.  Returning 0 means the line is always on top in selection.
+                GridLineSegment[] segs = GridLineSegment.SegmentsFromPoints(this.VolumeControlPoints);
+                double MinDistance = segs.Min(l => l.DistanceToPoint(Position));
+                return (this.LineWidth / 2.0) - MinDistance;
+            }
         }
                 
         public bool PointIntersectsAnyControlPoint(GridVector2 WorldPosition)
         {
-            return VolumeControlPoints.Select(p => new GridCircle(p, Width / 2.0)).Any(c => c.Contains(WorldPosition));
+            return VolumeControlPoints.Select(p => new GridCircle(p, ControlPointRadius)).Any(c => c.Contains(WorldPosition));
         }
 
         public override LocationAction GetMouseClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID)
@@ -211,7 +239,9 @@ namespace WebAnnotation.View
             }
         }
 
-        public abstract double Width { get; }
+        public abstract double LineWidth { get; }
+
+        public abstract double ControlPointRadius { get; }
 
         private SqlGeometry _VolumeShape;
         public override SqlGeometry VolumeShapeAsRendered
@@ -220,7 +250,7 @@ namespace WebAnnotation.View
             {
                 if (_VolumeShape == null)
                 {
-                    _VolumeShape = this.VolumeControlPoints.ToPolyLine().STBuffer(Width);                 
+                    _VolumeShape = this.VolumeControlPoints.ToPolyLine().STBuffer(Math.Max(LineWidth, ControlPointRadius));                 
                 }
 
                 return _VolumeShape;

@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using WebAnnotationModel;
 using WebAnnotation.ViewModel;
+using SqlGeometryUtils;
 
 namespace WebAnnotation.View
 {
@@ -79,8 +80,7 @@ namespace WebAnnotation.View
                     }
                 case LocationType.CLOSEDCURVE:
                     {
-                        LocationClosedCurveView view = new LocationClosedCurveView(obj, mapping);
-                        view.Color = new Microsoft.Xna.Framework.Color(1, 1, 1, 0.2f);
+                        AdjacentLocationCircleView view = new AdjacentLocationCircleView(obj, obj.MosaicShape.CalculateInscribedCircle(), mapping);
                         return view;
                     }
                 case LocationType.POLYLINE:

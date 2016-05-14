@@ -143,6 +143,7 @@
     <Compile Include="UI\Commands\PlaceOpenCurveCommand.cs" />
     <Compile Include="UI\Commands\TranslateLocationCommand.cs" />
     <Compile Include="ViewModel\SectionLocationLinksAnnotationsViewModel.cs" />
+    <Compile Include="View\StructureCircleLabels.cs" />
     <Compile Include="View\StructureLink_ContextMenuView.cs" />
     <Compile Include="View\LocationLink_ContextMenuView.cs" />
     <Compile Include="View\OverlappedLinkCircleView.cs" />

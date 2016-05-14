@@ -150,6 +150,15 @@ namespace WebAnnotation.View
             CreateLabelObjects();  
         }
 
+        public AdjacentLocationCircleView(LocationObj obj, GridCircle mosaicCircle, IVolumeToSectionTransform mapper) : base(obj)
+        {
+            _MosaicCircle = mosaicCircle;
+            _VolumeCircle = new GridCircle(mapper.SectionToVolume(_MosaicCircle.Center), _MosaicCircle.Radius);
+
+            CreateViewObjects(this.MosaicCircle, mapper);
+            CreateLabelObjects();
+        }
+
         /// <summary>
         /// We scale down the radius when the location is on an adjacent section
         /// </summary>
@@ -337,10 +346,9 @@ namespace WebAnnotation.View
         }
 
         public CircleView circleView;
-        public LabelView StructureIDLabelView;
-        public LabelView StructureLabelView;
-        public LabelView ParentStructureLabelView;
+        
         public OverlappedLinkCircleView OverlappedLinkView;
+        public StructureCircleLabels structureLabels;
 
         static float RadiusToResizeCircle = 7.0f / 8.0f;
         static float RadiusToLinkCircle = 1.0f / 4.0f;
@@ -366,23 +374,7 @@ namespace WebAnnotation.View
 
         private void CreateLabelObjects()
         {
-            StructureIDLabelView = new LabelView(StructureIDLabelWithTypeCode(), this.VolumeCircle.Center - new GridVector2(0, this.Radius / 3.0f));
-            StructureIDLabelView.MaxLineWidth = this.Radius * 2.0;
-            StructureIDLabelView._Color = this.modelObj.IsUnverifiedTerminal ? Color.Yellow : Color.Black;
-
-            StructureLabelView = new LabelView(this.FullLabelText(), this.VolumeCircle.Center + new GridVector2(0, this.Radius / 3.0f));
-            StructureLabelView.MaxLineWidth = this.Radius * 2;
-
-
-            if (this.Parent.ParentID.HasValue)
-            {
-                ParentStructureLabelView = new LabelView(this.Parent.ParentID.ToString(), this.VolumeCircle.Center + new GridVector2(0, this.Radius / 2.0f));
-                ParentStructureLabelView._Color = this.Parent.Parent.Type.Color.ToXNAColor(0.75f);
-            }
-            else
-            {
-                ParentStructureLabelView = null;
-            }
+            this.structureLabels = new StructureCircleLabels(this.modelObj, this.VolumeCircle);
         }
 
 
@@ -415,12 +407,12 @@ namespace WebAnnotation.View
 
         public override bool IsVisible(VikingXNA.Scene scene)
         {
-            return circleView.IsVisible(scene);
+            return circleView.IsVisible(scene) && GetAlphaFadeScalarForScene(scene) > 0;
         }
 
         public override bool IsLabelVisible(VikingXNA.Scene scene)
         {
-            return StructureIDLabelView.IsVisible(scene);
+            return structureLabels.IsLabelVisible(scene);
         }
 
         public override LocationAction GetMouseClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID)
@@ -526,7 +518,7 @@ namespace WebAnnotation.View
 
             float[] originalAlpha = listToDraw.Select(loc => loc.Alpha).ToArray();
             float[] fadeFactor = listToDraw.Select(loc => loc.GetAlphaFadeScalarForScene(scene)).ToArray();
-
+             
             listToDraw.ForEach((view, i) =>
                 {
                     if (fadeFactor[i] < 1.0f)
@@ -559,30 +551,9 @@ namespace WebAnnotation.View
                               Microsoft.Xna.Framework.Graphics.SpriteFont font,
                               VikingXNA.Scene scene)
         {
-            if (font == null)
-                throw new ArgumentNullException("font");
+            structureLabels.DrawLabel(spriteBatch, font, scene);
 
-            if (spriteBatch == null)
-                throw new ArgumentNullException("spriteBatch");
-             
-            //Scale the label alpha based on the zoom factor 
-
-            double DesiredRowsOfText = 4.0;
-            double DefaultFontSize = (this.Radius * 2.0) / DesiredRowsOfText;
-            StructureIDLabelView.FontSize = DefaultFontSize; //We only desire one line of text
-            StructureLabelView.FontSize = DefaultFontSize / 3.0f;
-
-            //StructureIDLabelView.Position = modelObj.VolumePosition - new GridVector2(0.0, this.Radius / 3.0f);
-
-            StructureIDLabelView.Draw(spriteBatch, font, scene);
-            StructureLabelView.Draw(spriteBatch, font, scene);
-            if (ParentStructureLabelView != null)
-            {
-                ParentStructureLabelView.FontSize = StructureIDLabelView.FontSize / 4.0;
-                ParentStructureLabelView.Draw(spriteBatch, font, scene);
-            }
-
-            if(this.OverlappedLinkView != null)
+            if (this.OverlappedLinkView != null)
                 this.OverlappedLinkView.DrawLabel(spriteBatch, font, scene);
         
             return;
@@ -693,13 +664,7 @@ namespace WebAnnotation.View
             base.OnParentPropertyChanged(o, args);
         }
 
-        protected bool IsLocationPropertyAffectingLabels(string PropertyName)
-        {
-            return string.IsNullOrEmpty(PropertyName) ||
-                PropertyName == "Terminal" ||
-                PropertyName == "OffEdge" ||
-                PropertyName == "Attributes";
-        }
+        
 
         internal override void OnObjPropertyChanged(object o, PropertyChangedEventArgs args)
         {

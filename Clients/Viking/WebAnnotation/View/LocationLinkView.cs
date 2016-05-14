@@ -154,10 +154,13 @@ namespace WebAnnotation.ViewModel
 
         public LocationLinkContextMenuGeneratorDelegate ContextMenuGenerator = null;
 
+        protected IVolumeTransformProvider mapProvider;
+
         public LocationLinkView(LocationLinkKey key, int Z, IVolumeTransformProvider mapProvider)
         {
             this.Key = key;
             this.Z = Z;
+            this.mapProvider = mapProvider;
             UpdatePropertiesFromLocations(mapProvider);
 
             ContextMenuGenerator = LocationLink_CanvasContextMenuView.ContextMenuGenerator;
@@ -179,6 +182,8 @@ namespace WebAnnotation.ViewModel
             this.lineView = CreateView();
         }
 
+        private bool _LocationsOverlapped;
+        
         private void UpdatePropertiesFromLocations(IVolumeTransformProvider mapProvider)
         {
             LocationObj A = Store.Locations[this.Key.A];
@@ -195,6 +200,17 @@ namespace WebAnnotation.ViewModel
             this.MaxSection = (int)Math.Round(A.Z < B.Z ? B.Z : A.Z);
 
             this.Color = GetLocationLinkColor(A.Parent.Type.Color.ToXNAColor(), this.MaxSection - this.MinSection, this.MinSection < Z ? -1 : 1, false);
+        }
+        
+        public void GetCanvasViews(LocationLinkKey key, IVolumeTransformProvider mapProvider, out LocationCanvasView AView, out LocationCanvasView BView)
+        {
+            LocationObj A = Store.Locations[this.Key.A];
+            LocationObj B = Store.Locations[this.Key.B];
+            IVolumeToSectionTransform MapperA = mapProvider.GetSectionToVolumeTransform((int)Math.Round(A.Z));
+            IVolumeToSectionTransform MapperB = mapProvider.GetSectionToVolumeTransform((int)Math.Round(B.Z));
+
+            AView = AnnotationViewFactory.Create(A, MapperA);
+            BView = AnnotationViewFactory.Create(B, MapperB);
         }
 
         public double LineWidth
@@ -264,8 +280,16 @@ namespace WebAnnotation.ViewModel
         /// <returns></returns>
         public bool LinksOverlap()
         {
+            LocationCanvasView AView;
+            LocationCanvasView BView;
+            GetCanvasViews(this.Key, this.mapProvider, out AView, out BView);
+
+            return AView.Intersects(BView.VolumeShapeAsRendered);
+            /*
+            this.Key.A 
             int sectionNumber = Z; 
             return A.Intersects(B);
+            */
             /*
             //Don't draw if the link falls within the radius of the location we are drawing
             if (A.Section == sectionNumber)

@@ -23,10 +23,17 @@ namespace WebAnnotation.View
 
         public override double DistanceFromCenterNormalized(GridVector2 Position)
         {
-            //TODO: Find a more accurate measurement.  Returning 0 means the line is always on top in selection.
-            GridLineSegment[] segs = GridLineSegment.SegmentsFromPoints(this.VolumeCurveControlPoints);
-            double MinDistance = segs.Min(l => l.DistanceToPoint(Position));
-            return (MinDistance - (this.Width / 2.0));
+            if (PointIntersectsAnyControlPoint(Position))
+            {
+                return VolumeControlPoints.Select(p => GridVector2.Distance(p, Position) / ControlPointRadius).Min();
+            }
+            else
+            {
+                //TODO: Find a more accurate measurement.  Returning 0 means the line is always on top in selection.
+                GridLineSegment[] segs = GridLineSegment.SegmentsFromPoints(this.VolumeCurveControlPoints);
+                double MinDistance = segs.Min(l => l.DistanceToPoint(Position));
+                return (this.LineWidth / 2.0) - MinDistance;
+            }
         }
     }
 }
