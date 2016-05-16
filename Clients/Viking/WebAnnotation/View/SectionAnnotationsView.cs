@@ -318,7 +318,6 @@ namespace WebAnnotation.ViewModel
 
             List<HitTestResult> listHitResults = intersecting_locations.Select(l => new HitTestResult(l, (int)l.Z, l.DistanceFromCenterNormalized(WorldPosition))).ToList();
             return listHitResults;
-         
         }
 
         public ICollection<LocationCanvasView> AnnotationsInRegion(GridRectangle worldRect)
@@ -328,6 +327,7 @@ namespace WebAnnotation.ViewModel
             ICollection<LocationCanvasView> locations = loc_IDs.Select(id => this.LocationViews[id]).ToList();
             return locations;
         }
+
         public ICollection<long> LocationIdsInRegion(GridRectangle worldRect)
         {
             return this.LocationsSearch.Intersects(worldRect.ToRTreeRect(this.SectionNumber));
@@ -1052,7 +1052,6 @@ namespace WebAnnotation.ViewModel
 
             //Replace any container objects with the nested objects if the mouse is over a nested object
 
-
             return listIntersectingObjects;
         }
 
@@ -1062,7 +1061,7 @@ namespace WebAnnotation.ViewModel
         {
             List<HitTestResult> listAnnotations = new List<HitTestResult>();
 
-//            SortedDictionary<double, ICanvasView> dictNormDistanceToIntersectingObjects = new SortedDictionary<double, ICanvasView>();
+            //            SortedDictionary<double, ICanvasView> dictNormDistanceToIntersectingObjects = new SortedDictionary<double, ICanvasView>();
             if (SectionAbove!= null)
             {
                 listAnnotations.AddRange(SectionAbove.GetAnnotationsAtPosition(WorldPosition));
@@ -1073,12 +1072,19 @@ namespace WebAnnotation.ViewModel
                 listAnnotations.AddRange(SectionBelow.GetAnnotationsAtPosition(WorldPosition));
             }
 
-            return listAnnotations;
+            //Remove any Locations that we know are overlapped.
+            return listAnnotations.Where(o =>
+            {
+                LocationCanvasView loc = o.obj as LocationCanvasView;
+                if (loc == null)
+                    return true;
+
+                return !SectionLocationLinks.OverlappedAdjacentLocationIDs.Contains(loc.ID);
+            }).ToList();
         }
                
         public ICollection<LocationCanvasView> AdjacentLocationsNotOverlappedInRegion(GridRectangle worldRect)
-        {
-            SortedSet<LocationLinkKey> overlappedKeys = this.SectionLocationLinks.OverlappedLinkKeys;
+        { 
             SortedSet<LocationCanvasView> adjacentLocations = new SortedSet<LocationCanvasView>();
             if (SectionAbove != null)
             {
