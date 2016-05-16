@@ -493,7 +493,10 @@ namespace WebAnnotation.ViewModel
         public override void Init()
         {
             ConcurrentDictionary<long, LocationObj> local = Store.Locations.GetLocalObjectsForSection(this.SectionNumber);
-            AddLocationBatch(local.Values);
+            if (local.Count > 0)
+            {
+                Task.Run(() => AddLocationBatch(local.Values));
+            }
         }
 
         #region Structure Property Changes
