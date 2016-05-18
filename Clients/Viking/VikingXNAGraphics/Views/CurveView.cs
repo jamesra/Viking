@@ -70,6 +70,31 @@ namespace VikingXNAGraphics
             get { return _CurvePoints; }
         }
 
+        /// <summary>
+        /// Return the interpolated points between the two control point indicies
+        /// </summary>
+        /// <param name="iStart"></param>
+        /// <param name="iEnd"></param>
+        /// <returns></returns>
+        public GridVector2[] CurvePointsBetweenControlPoints(int? iStart, int? iEnd)
+        {
+            if (!iStart.HasValue)
+                iStart = 0;
+            if (!iEnd.HasValue)
+                iEnd = ControlPoints.Length - 1;
+
+            int iCurveStart = iStart.Value * (int)_NumInterpolations;
+            int iCurveEnd = iEnd.Value * (int)_NumInterpolations;
+
+            if (iCurveStart > iCurveEnd)
+                throw new ArgumentException("Start index greater than end index");
+
+            GridVector2[] destArray = new GridVector2[iCurveEnd - iCurveStart];
+
+            Array.Copy(_CurvePoints, iCurveStart, destArray, 0, destArray.Length);
+            return destArray;
+        }
+
         private uint _NumInterpolations = 1;
         public uint NumInterpolations
         {
@@ -118,11 +143,7 @@ namespace VikingXNAGraphics
             {
                 CurvePoints = new List<GridVector2>(ControlPoints);
             }
-            if (ControlPoints.Count == 3)
-            {
-                CurvePoints = Geometry.Lagrange.FitCurve(ControlPoints.ToArray(), (int)NumInterpolations * ControlPoints.Count).ToList();
-            }
-            else if (ControlPoints.Count > 3)
+            else if (ControlPoints.Count >= 3)
             {
                 CurvePoints = Geometry.CatmullRom.FitCurve(ControlPoints.ToArray(), (int)NumInterpolations, true).ToList();
                 CurvePoints.Add(CurvePoints.First());

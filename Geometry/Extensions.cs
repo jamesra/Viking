@@ -273,6 +273,40 @@ namespace Geometry
             return minVal;
         }
 
+        /// <summary>
+        /// Return the intersection point with a value if the provided line intersects any segment of our polyline.
+        /// </summary>
+        /// <param name="position"></param>
+        /// <returns></returns>
+        static public GridVector2? IntersectionPoint(this ICollection<GridVector2> Verticies, GridLineSegment testSeg)
+        { 
+            GridLineSegment[] segments = GridLineSegment.SegmentsFromPoints(Verticies.ToArray());
+            return segments.IntersectionPoint(testSeg);
+        }
+    }
+
+    public static class GridLineSegmentExtensions
+    {
+
+        /// <summary>
+        /// Return the intersection point with a value if the provided line intersects any segment of our polyline.
+        /// </summary>
+        /// <param name="position"></param>
+        /// <returns></returns>
+        static public GridVector2? IntersectionPoint(this ICollection<GridLineSegment> segments, GridLineSegment testSeg)
+        {
+            GridVector2 intersection;
+             
+            foreach (GridLineSegment existingLine in segments)
+            {
+                if (existingLine.Intersects(testSeg, out intersection))
+                {
+                    return new GridVector2?(intersection);
+                }
+            }
+
+            return new GridVector2?();
+        }
     }
 
     public static class MathHelpers

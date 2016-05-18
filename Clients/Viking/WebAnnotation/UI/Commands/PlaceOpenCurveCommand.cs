@@ -7,24 +7,262 @@ using Geometry;
 using System.Windows.Forms;
 using WebAnnotation.View;
 using VikingXNAGraphics;
+using SqlGeometryUtils;
 
 namespace WebAnnotation.UI.Commands
 {
+    class PlaceClosedCurveCommand : PlaceCurveCommand
+    {
+        public override LineStyle Style
+        {
+            get
+            {
+                return LineStyle.HalfTube;
+            }
+        }
+
+        public override uint NumCurveInterpolations
+        {
+            get
+            {
+                return Global.NumClosedCurveInterpolationPoints;
+            }
+        }
+
+        public PlaceClosedCurveCommand(Viking.UI.Controls.SectionViewerControl parent,
+                                        Microsoft.Xna.Framework.Color color,
+                                        GridVector2 origin,
+                                        double LineWidth, 
+                                        OnCommandSuccess success_callback)
+            : base(parent, color, origin, LineWidth, false, success_callback)
+        {
+        }
+
+        public PlaceClosedCurveCommand(Viking.UI.Controls.SectionViewerControl parent,
+                                        System.Drawing.Color color,
+                                        GridVector2 origin,
+                                        double LineWidth,
+                                        OnCommandSuccess success_callback)
+            : base(parent, color, origin, LineWidth, false, success_callback)
+        {
+        }
+
+        /// <summary>
+        /// Can a control point be placed or the command completed by clicking the mouse at this position?
+        /// </summary>
+        /// <param name="WorldPos"></param>
+        /// <returns></returns>
+        protected override bool CanControlPointBePlaced(GridVector2 WorldPos)
+        {
+            return (!OverlapsAnyVertex(WorldPos) );
+        }        
+
+        /// <summary>
+        /// Can the command be completed by clicking this point?
+        /// </summary>
+        /// <param name="WorldPos"></param>
+        /// <returns></returns>
+        protected override bool CanCommandComplete(GridVector2 WorldPos)
+        {
+            return (OverlapsLastVertex(WorldPos) || OverlapsFirstVertex(WorldPos)) && ShapeIsValid();
+        }
+
+        protected override bool ShapeIsValid()
+        {
+            if (this.Verticies.Length < 3 || curve_verticies == null || this.curve_verticies.ControlPoints.Length < 3)
+                return false;
+
+            return this.curve_verticies.ControlPoints.ToPolygon().STIsValid().IsTrue;
+        }
+
+        /// <summary>
+        /// Return true if a line to the world position from the last vertex will intersect our curve
+        /// </summary>
+        /// <param name="worldPos"></param>
+        /// <returns></returns>
+        protected override GridVector2? ProposedControlPointSelfIntersection(GridVector2 worldPos)
+        {
+            GridVector2? retval = new GridVector2?();   
+
+            if (NumVerticies < 3)
+                return retval;
+
+            if (worldPos != vert_stack.Peek())
+            {
+                CurveViewControlPoints curveVerticies = AppendControlPointToCurve(worldPos);
+                GridLineSegment[] proposed_back_curve_segments = GridLineSegment.SegmentsFromPoints(curveVerticies.CurvePointsBetweenControlPoints(NumVerticies , NumVerticies+1));
+                GridLineSegment[] proposed_front_curve_segments = GridLineSegment.SegmentsFromPoints(curveVerticies.CurvePointsBetweenControlPoints(0,1));
+                GridLineSegment[] existing_curve_segments = GridLineSegment.SegmentsFromPoints(curveVerticies.CurvePointsBetweenControlPoints(1, NumVerticies));
+
+                GridVector2[] intersections = proposed_front_curve_segments.Select(pcs => existing_curve_segments.IntersectionPoint(pcs)).Where(p => p.HasValue).Select(p => p.Value).ToArray();
+                if (intersections.Length > 0)
+                {
+                    retval = intersections.First();
+                    return retval;
+                }
+
+                intersections = proposed_back_curve_segments.Select(pcs => existing_curve_segments.IntersectionPoint(pcs)).Where(p => p.HasValue).Select(p => p.Value).ToArray();
+                if (intersections.Length > 0)
+                {
+                    retval = intersections.First();
+                    return retval;
+                }
+            }
+
+            return retval;
+        } 
+    }
+
+    class PlaceOpenCurveCommand : PlaceCurveCommand
+    {
+        public override LineStyle Style
+        {
+            get
+            {
+                return LineStyle.Tubular;
+            }
+        }
+
+        public override uint NumCurveInterpolations
+        {
+            get
+            {
+                return Global.NumOpenCurveInterpolationPoints;
+            }
+        }
+
+        public PlaceOpenCurveCommand(Viking.UI.Controls.SectionViewerControl parent,
+                                        Microsoft.Xna.Framework.Color color,
+                                        GridVector2 origin,
+                                        double LineWidth,
+                                        OnCommandSuccess success_callback)
+            : base(parent, color, origin, LineWidth, true, success_callback)
+        {
+        }
+
+        public PlaceOpenCurveCommand(Viking.UI.Controls.SectionViewerControl parent,
+                                        System.Drawing.Color color,
+                                        GridVector2 origin,
+                                        double LineWidth,
+                                        OnCommandSuccess success_callback)
+            : base(parent, color, origin, LineWidth, true, success_callback)
+        {
+        }
+
+        /// <summary>
+        /// Can a control point be placed or the command completed by clicking the mouse at this position?
+        /// </summary>
+        /// <param name="WorldPos"></param>
+        /// <returns></returns>
+        protected override bool CanControlPointBePlaced(GridVector2 WorldPos)
+        {
+            return !OverlapsAnyVertex(WorldPos) && !ProposedSegmentSelfIntersects(WorldPos);
+        }
+         
+        /// <summary>
+        /// Can the command be completed by clicking this point?
+        /// </summary>
+        /// <param name="WorldPos"></param>
+        /// <returns></returns>
+        protected override bool CanCommandComplete(GridVector2 WorldPos)
+        {
+            return OverlapsLastVertex(WorldPos) && this.NumVerticies >= 2 && !ProposedSegmentSelfIntersects(WorldPos);
+        }
+
+        protected override bool ShapeIsValid()
+        {
+            if (NumVerticies < 2 || curve_verticies == null)
+                return false;
+
+            return this.curve_verticies.ControlPoints.ToPolyLine().STIsValid().IsTrue;
+        }
+
+        /// <summary>
+        /// Return true if a line to the world position from the last vertex will intersect our curve
+        /// </summary>
+        /// <param name="worldPos"></param>
+        /// <returns></returns>
+        protected static bool ProposedSegmentSelfIntersects(CurveViewControlPoints curve_verticies, GridLineSegment newSegment)
+        {
+            if (curve_verticies.ControlPoints.Length < 4)
+                return false;
+
+            GridLineSegment[] existingSegments = GridLineSegment.SegmentsFromPoints(
+                    curve_verticies.CurvePoints.Where((p, i) => i < curve_verticies.CurvePoints.Length - 2)
+                    .ToArray());
+
+            return newSegment.Intersects(existingSegments);
+        }
+
+        /// <summary>
+        /// Return true if a line to the world position from the last vertex will intersect our curve
+        /// </summary>
+        /// <param name="worldPos"></param>
+        /// <returns></returns>
+        protected override GridVector2? ProposedControlPointSelfIntersection(GridVector2 worldPos)
+        {
+            GridVector2? retval = new GridVector2?();
+
+            if (NumVerticies < 3)
+                return retval;
+
+            if (worldPos != vert_stack.Peek())
+            {
+                CurveViewControlPoints curveVerticies = AppendControlPointToCurve(worldPos);
+                GridLineSegment[] proposed_curve_segments = GridLineSegment.SegmentsFromPoints(curveVerticies.CurvePointsBetweenControlPoints(NumVerticies, NumVerticies+1));
+                GridLineSegment[] existing_curve_segments = GridLineSegment.SegmentsFromPoints(curveVerticies.CurvePointsBetweenControlPoints(0, NumVerticies - 1));
+
+                GridVector2[] intersections = proposed_curve_segments.Select(pcs => existing_curve_segments.IntersectionPoint(pcs)).Where(p => p.HasValue).Select(p => p.Value).ToArray();
+                if (intersections.Length > 0)
+                    retval = intersections.First();
+            }
+
+            return retval;
+        }
+    }
+
+    
+
     /// <summary>
     /// Left-click once to create a new vertex in the poly line
     /// Left-click an existing vertex to complete polyline creation
     /// Double left-click to complete polyline creation
     /// Right-click to remove the last polyline vertex
     /// </summary> 
-    class PlaceCurveCommand : PolylineCommandBase
-    {
-        Stack<GridVector2> vert_stack = new Stack<GridVector2>();
+    abstract class PlaceCurveCommand : ControlPointCommandBase
+    { 
+        public abstract uint NumCurveInterpolations
+        {
+            get;
+        }
+
+        protected Stack<GridVector2> vert_stack = new Stack<GridVector2>();
+
+        protected void PushVertex(GridVector2 p)
+        {
+            vert_stack.Push(p);
+            curve_verticies = new CurveViewControlPoints(Verticies, NumCurveInterpolations, !this.IsOpen);
+        }
+
+        protected GridVector2 PopVertex(GridVector2 p)
+        {
+            GridVector2 output = vert_stack.Pop();
+            curve_verticies = new CurveViewControlPoints(Verticies, NumCurveInterpolations, !this.IsOpen);
+            return output;
+        }
+
+        
+
+        /// <summary>
+        /// Verticies placed along the curve
+        /// </summary>
+        protected CurveViewControlPoints curve_verticies;
 
         bool IsOpen = true; //False if the curves last point is connected to its first
         /// <summary>
         /// Returns the stack with the bottomost entry first in the array
         /// </summary>
-        public override GridVector2[] LineVerticies
+        public override GridVector2[] Verticies
         {
             get { return vert_stack.ToArray().Reverse().ToArray(); }
             protected set
@@ -72,6 +310,14 @@ namespace WebAnnotation.UI.Commands
         {
         }
 
+
+        protected CurveViewControlPoints AppendControlPointToCurve(GridVector2 worldPos)
+        {
+            List<GridVector2> listControlPoints = new List<GridVector2>(this.Verticies);
+            listControlPoints.Add(worldPos);
+            return new CurveViewControlPoints(listControlPoints, this.NumCurveInterpolations, !IsOpen);
+        } 
+
         /// <summary>
         /// Return true if a line to the world position from the last vertex will intersect our curve
         /// </summary>
@@ -79,50 +325,22 @@ namespace WebAnnotation.UI.Commands
         /// <returns></returns>
         protected bool ProposedSegmentSelfIntersects(GridVector2 worldPos)
         {
-            if (NumVerticies < 3)
-                return false;
-
-            GridLineSegment newSegment = new GridLineSegment(worldPos, vert_stack.Peek());
-            GridLineSegment[] existingSegments = GridLineSegment.SegmentsFromPoints(this.LineVerticies.TakeWhile((p, i) => i < NumVerticies - 1).ToArray());
-            foreach(GridLineSegment existingSegment in existingSegments)
-            {
-                GridVector2 intersection;
-                if(newSegment.Intersects(existingSegment, out intersection))
-                {
-                    return true;
-                }
-            }
-
-            return false;
+            GridVector2? intersection = ProposedControlPointSelfIntersection(worldPos);
+            return intersection.HasValue;
         }
-
-        /// <summary>
-        /// Return true if a line to the world position from the last vertex will intersect our curve
-        /// </summary>
-        /// <param name="worldPos"></param>
-        /// <returns></returns>
-        protected GridVector2? ProposedSegmentSelfIntersection(GridVector2 worldPos)
+         
+        protected override GridVector2? IntersectsSelf(GridLineSegment lineSeg)
         {
-            GridVector2? retval = new GridVector2?();
-
-            if (NumVerticies < 3)
-                return retval;
-
-            GridLineSegment newSegment = new GridLineSegment(worldPos, vert_stack.Peek());
-            GridLineSegment[] existingSegments = GridLineSegment.SegmentsFromPoints(this.LineVerticies.TakeWhile((p, i) => i < NumVerticies - 1).ToArray());
-            foreach (GridLineSegment existingSegment in existingSegments)
-            {
-                GridVector2 intersection;
-                if (newSegment.Intersects(existingSegment, out intersection))
-                {
-                    retval = intersection;
-                    return intersection;
-                }
-            }
-
-            return retval;
+            return this.curve_verticies.CurvePoints.IntersectionPoint(lineSeg);
         }
 
+
+        protected override bool CanControlPointBeGrabbed(GridVector2 WorldPos)
+        {
+            return OverlapsAnyVertex(WorldPos);
+        }
+
+        
 
         protected override void OnMouseMove(object sender, MouseEventArgs e)
         {
@@ -130,75 +348,55 @@ namespace WebAnnotation.UI.Commands
 
             if (e.Button == MouseButtons.None)
             {
-                if (OverlapsAnyVertex(WorldPos))
-                {
-                    if (OverlapsLastVertex(WorldPos))
-                    {
-                        if (this.NumVerticies < 2)
-                            Parent.Cursor = Cursors.No;   //Not allowed to create single vertex line/curve curve
-                        else
-                            Parent.Cursor = Cursors.Hand; //Completion cursor
-                    }
-                    else
-                    {
-                        Parent.Cursor = Cursors.No;
-                    }
-                }
-                else
-                {
-                    Parent.Cursor = ProposedSegmentSelfIntersects(WorldPos) ? Cursors.No : Cursors.Cross;
-                }
-            }
-            else if (e.Button.Left())
-            {
-                //Drag the vertex under the cursor
-                int? iOverlapped = IndexOfOverlappedVertex(WorldPos);
-                if (iOverlapped.HasValue)
-                {
-                    Viking.UI.Commands.Command.InjectCommand(new AdjustPolylineCommand(this.Parent,
-                                                                                        this.LineColor,
-                                                                                        this.LineVerticies,
-                                                                                        this.LineWidth,
-                                                                                        iOverlapped.Value,
-                                                                                        new OnCommandSuccess((line_verticies) =>
-                                                                                        {
-                                                                                            this.LineVerticies = line_verticies;
-                                                                                            //Update oldWorldPosition to keep the line we draw to our cursor from jumping on the first draw when we are reactivated and user hasn't used the mouse yet
-                                                                                            this.oldWorldPosition = line_verticies[iOverlapped.Value];
-                                                                                        })));
-                    return;
-                }
+                Parent.Cursor = CanControlPointBePlaced(WorldPos) ? Cursors.Hand : Cursors.No;
+
+                Parent.Cursor = CanCommandComplete(WorldPos) ? Cursors.Arrow : Parent.Cursor; 
             }
 
             base.OnMouseMove(sender, e);
         }
 
-        protected override void OnMouseUp(object sender, MouseEventArgs e)
+        protected override void OnMouseDown(object sender, MouseEventArgs e)
         {
-            if (e.Button.Left())
+            if(e.Button.Left())
             {
-                //    TimeSpan Elapsed = new TimeSpan(DateTime.Now.Ticks - CreationTime.Ticks);
                 GridVector2 WorldPos = Parent.ScreenToWorld(e.X, e.Y);
-
-                if (OverlapsLastVertex(WorldPos))
+                if (CanCommandComplete(WorldPos))
                 {
-                    //If we click a point twice the command is completed.
                     this.Execute();
                     return;
                 }
-                else
+                else if(CanControlPointBePlaced(WorldPos))
                 {
-                    if (!ProposedSegmentSelfIntersects(WorldPos))
+                    PushVertex(WorldPos);
+                    Parent.Invalidate();
+                    return;
+                }
+                else if (OverlapsAnyVertex(WorldPos))
+                {
+                    //Drag the vertex under the cursor
+                    int? iOverlapped = IndexOfOverlappedVertex(WorldPos);
+                    if (iOverlapped.HasValue)
                     {
-                        vert_stack.Push(WorldPos);
-                        Parent.Invalidate();
+                        Viking.UI.Commands.Command.InjectCommand(new AdjustPolylineCommand(this.Parent,
+                                                                                            this.LineColor,
+                                                                                            this.Verticies,
+                                                                                            this.LineWidth,
+                                                                                            iOverlapped.Value,
+                                                                                            !this.IsOpen,
+                                                                                            new OnCommandSuccess((line_verticies) =>
+                                                                                            {
+                                                                                                this.Verticies = line_verticies;
+                                                                                            //Update oldWorldPosition to keep the line we draw to our cursor from jumping on the first draw when we are reactivated and user hasn't used the mouse yet
+                                                                                            this.oldWorldPosition = line_verticies[iOverlapped.Value];
+                                                                                            })));
+                        return;
                     }
                 }
             }
-
             base.OnMouseDown(sender, e);
         }
-
+        
         protected override void OnMouseDoubleClick(object sender, MouseEventArgs e)
         {
             if (e.Button.Right())
@@ -215,7 +413,7 @@ namespace WebAnnotation.UI.Commands
                 GridVector2 WorldPos = Parent.ScreenToWorld(e.X, e.Y);
                 if (!OverlapsLastVertex(WorldPos))
                 {
-                    vert_stack.Push(WorldPos);
+                    PushVertex(WorldPos);
                     this.Execute();
                     return;
                 }
@@ -224,36 +422,46 @@ namespace WebAnnotation.UI.Commands
             base.OnMouseDown(sender, e);
         }
 
+        protected abstract GridVector2? ProposedControlPointSelfIntersection(GridVector2 worldPos);
+
+        protected abstract bool ShapeIsValid();
+
         public override void OnDraw(Microsoft.Xna.Framework.Graphics.GraphicsDevice graphicsDevice, VikingXNA.Scene scene, Microsoft.Xna.Framework.Graphics.BasicEffect basicEffect)
-        {  
-            if (!this.OverlapsLastVertex(this.oldWorldPosition))
+        {
+            GridVector2? SelfIntersection = ProposedControlPointSelfIntersection(this.oldWorldPosition);
+
+            if(SelfIntersection.HasValue || CanControlPointBePlaced(this.oldWorldPosition))
             {
-                GridVector2? SelfIntersection = ProposedSegmentSelfIntersection(this.oldWorldPosition);
+                bool pushed_point = true;
 
                 if (SelfIntersection.HasValue)
                     vert_stack.Push(SelfIntersection.Value);
-                else
+                else if (!OverlapsLastVertex(this.oldWorldPosition))
                     vert_stack.Push(this.oldWorldPosition);
+                else
+                    pushed_point = false;
 
-                CurveView curveView = new CurveView(vert_stack.ToArray(), this.LineColor, this.IsOpen, lineWidth: this.LineWidth, lineStyle: LineStyle.Tubular);
-
+                CurveView curveView = new CurveView(vert_stack.ToArray(), this.LineColor, !this.IsOpen, lineWidth: this.LineWidth, lineStyle: Style);
+                curveView.Color.SetAlpha(this.ShapeIsValid() ? 1 : 0.25f);
                 CurveView.Draw(graphicsDevice, scene, Parent.LumaOverlayCurveManager, basicEffect, Parent.annotationOverlayEffect, 0, new CurveView[] { curveView } );
                 //GlobalPrimitives.DrawPolyline(Parent.LineManager, basicEffect, DrawnLineVerticies, this.LineWidth, this.LineColor);
 
-                this.vert_stack.Pop();
+                if(pushed_point)
+                    this.vert_stack.Pop();
 
                 base.OnDraw(graphicsDevice, scene, basicEffect);
             }
             else
             {
-                if (this.LineVerticies.Length > 1)
+                if (this.Verticies.Length > 1)
                 {
-                    CurveView curveView = new CurveView(this.LineVerticies.ToArray(), this.LineColor, this.IsOpen, lineWidth: this.LineWidth, lineStyle: LineStyle.Tubular);
+                    CurveView curveView = new CurveView(this.Verticies.ToArray(), this.LineColor, !this.IsOpen, lineWidth: this.LineWidth, lineStyle: Style);
+                    curveView.Color.SetAlpha(this.ShapeIsValid() ? 1 : 0.25f);
                     CurveView.Draw(graphicsDevice, scene, Parent.LumaOverlayCurveManager, basicEffect, Parent.annotationOverlayEffect, 0, new CurveView[] { curveView });
                 }
                 else
                 {
-                    CircleView view = new CircleView(new GridCircle(this.LineVerticies.First(), this.LineWidth / 2.0), this.LineColor);
+                    CircleView view = new CircleView(new GridCircle(this.Verticies.First(), this.LineWidth / 2.0), this.LineColor);
                     CircleView.Draw(graphicsDevice, scene, basicEffect, this.Parent.annotationOverlayEffect, new CircleView[] { view });
                 } 
             } 

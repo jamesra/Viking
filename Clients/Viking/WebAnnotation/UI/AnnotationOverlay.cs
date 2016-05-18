@@ -622,8 +622,8 @@ namespace WebAnnotation
                                         OnCommandSuccess success_callback)
                                         */
             double LineWidth = 16.0;
-            Viking.UI.Commands.Command.EnqueueCommand(typeof(PlaceCurveCommand), new object[] { Parent, typecolor, origin,  LineWidth, false,
-                                                            new PlaceCurveCommand.OnCommandSuccess((GridVector2[] points) => {
+            Viking.UI.Commands.Command.EnqueueCommand(typeof(PlaceOpenCurveCommand), new object[] { Parent, typecolor, origin,  LineWidth,
+                                                            new ControlPointCommandBase.OnCommandSuccess((GridVector2[] points) => {
                                                                     newLocation.TypeCode = LocationType.OPENCURVE;
                                                                     newLocation.Radius = LineWidth / 2.0;
                                                                     SetLocationShapeFromPointsInVolume(Parent.Section, newLocation, points);
@@ -642,8 +642,8 @@ namespace WebAnnotation
                                         OnCommandSuccess success_callback)
                                         */
             double LineWidth = 16.0;
-            Viking.UI.Commands.Command.EnqueueCommand(typeof(PlaceCurveCommand), new object[] { Parent, typecolor, origin, LineWidth, true,
-                                                            new PlaceCurveCommand.OnCommandSuccess((GridVector2[] points) => {
+            Viking.UI.Commands.Command.EnqueueCommand(typeof(PlaceClosedCurveCommand), new object[] { Parent, typecolor, origin, LineWidth,
+                                                            new ControlPointCommandBase.OnCommandSuccess((GridVector2[] points) => {
                                                                     newLocation.TypeCode = LocationType.CLOSEDCURVE;
                                                                     newLocation.Radius = LineWidth / 2.0;
                                                                     SetLocationShapeFromPointsInVolume(Parent.Section, newLocation, points);
@@ -671,7 +671,7 @@ namespace WebAnnotation
                     location.VolumeShape = points.ToPolygon();
                     break;
                 case LocationType.CLOSEDCURVE:
-                    location.MosaicShape = mosaic_points.ToPolygon();
+                    location.MosaicShape = mosaic_points.ToPolygon(); 
                     location.VolumeShape = points.ToPolygon();
                     break;
             }

@@ -380,6 +380,12 @@ namespace Geometry
             }
         }
 
+        public bool Intersects(GridLineSegment seg)
+        {
+            GridVector2 intersection;
+            return this.Intersects(seg, out intersection);
+        }
+
         public bool Intersects(GridLineSegment seg, out GridVector2 Intersection)
         {
             //Function for each line
@@ -434,6 +440,12 @@ namespace Geometry
 
                 return true;
             }
+        }
+
+        public bool Intersects(GridLineSegment[] seg)
+        {
+            GridLineSegment line = this;
+            return seg.Any(ls => line.Intersects(ls));
         }
 
         public double MinX
