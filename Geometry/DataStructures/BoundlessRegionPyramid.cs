@@ -17,6 +17,8 @@ namespace Geometry
 
         private readonly int _Level;
 
+        public delegate double DimensionsForLevelDelegate(int level);
+        
         public int Level
         {
             get
@@ -60,16 +62,20 @@ namespace Geometry
             return Cells.TryUpdate(key, value, comparisonValue);
         }
 
-        public BoundlessRegionPyramidLevel(int Level, GridCellDimensions UnscaledCellDim)
+        private static double TwoToTheLevel(int Level)
+        {
+            return Math.Pow(2.0, (double)Level);
+        }
+
+        public BoundlessRegionPyramidLevel(int Level, GridCellDimensions UnscaledCellDim, double pixelDimensionsOfLevel)
         {
             this._Level = Level;
-
-            double TwoToTheLevel = Math.Pow(2.0, (double)Level);
-            this._MinRadius = TwoToTheLevel;
+             
+            this._MinRadius = pixelDimensionsOfLevel;
 
             this.UnscaledCellDimensions = UnscaledCellDim;
-            this.ScaledCellDimensions = new GridCellDimensions(TwoToTheLevel * UnscaledCellDim.Width,
-                                                               TwoToTheLevel * UnscaledCellDim.Height);
+            this.ScaledCellDimensions = new GridCellDimensions(pixelDimensionsOfLevel * UnscaledCellDim.Width,
+                                                               pixelDimensionsOfLevel * UnscaledCellDim.Height);
         }
 
         public T[] ArrayForRegion(GridRectangle volumeBounds)
@@ -150,12 +156,7 @@ namespace Geometry
         public GridCellDimensions CellDimensions;
 
         ConcurrentDictionary<int, BoundlessRegionPyramidLevel<T>> Levels = new ConcurrentDictionary<int, BoundlessRegionPyramidLevel<T>>();
-
-        public static double FloorToPowerOfTwo(double value)
-        {
-            return Math.Pow(Math.Floor(Math.Log(value, 2)), 2);
-        }
-
+         
         public BoundlessRegionPyramid(GridCellDimensions cellDimensions)
         {  
             //Level 0 cell dimensions match the boundary dimensions
@@ -164,25 +165,30 @@ namespace Geometry
 
         protected BoundlessRegionPyramidLevel<T> GetOrAddLevel(int Level)
         {
-            return this.Levels.GetOrAdd(Level, new BoundlessRegionPyramidLevel<T>(Level, this.CellDimensions));
+            return this.Levels.GetOrAdd(Level, new BoundlessRegionPyramidLevel<T>(Level, this.CellDimensions, LevelToPixelDimension(Level)));
         }
 
-        private double MinRadiusForLevel(GridRectangle screenBounds, int Level)
-        {
-            return Math.Pow(2.0, Level);
-        }
-
-        private int LevelForPixelSizeInVolumeSpace(double SinglePixelRadius)
+        protected virtual int PixelDimensionToLevel(double SinglePixelRadius)
         {
             int Level = (int)Math.Floor(Math.Log(SinglePixelRadius, 2));
             if (Level < 0)
                 Level = 0;
-            return Level; 
+            return Level;
         }
 
+        protected virtual double LevelToPixelDimension(int Level)
+        {
+            return Math.Pow(2.0, Level);
+        }
+
+        protected virtual double MinRadiusForLevel(GridRectangle screenBounds, int Level)
+        {
+            return Math.Pow(2.0, Level);
+        }
+         
         public IRegionPyramidLevel<T> GetLevel(double SinglePixelRadius)
         {
-            int Level = LevelForPixelSizeInVolumeSpace(SinglePixelRadius);
+            int Level = PixelDimensionToLevel(SinglePixelRadius);
 
             return GetOrAddLevel(Level);
         } 

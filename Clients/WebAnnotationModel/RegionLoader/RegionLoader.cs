@@ -17,7 +17,7 @@ namespace WebAnnotationModel
         where OBJECT : class
     {
         public DateTime? LastQuery = new DateTime?();
-        
+
         public bool HasBeenQueried
         {
             get { return LastQuery.HasValue; }
@@ -59,7 +59,7 @@ namespace WebAnnotationModel
             if (callback == null)
                 return;
 
-            lock(this)
+            lock (this)
             {
                 OnCompletionCallbacks.Add(callback);
             }
@@ -67,16 +67,16 @@ namespace WebAnnotationModel
 
         public void OnLoadCompleted(ICollection<OBJECT> objects)
         {
-            lock(this)
+            lock (this)
             {
                 foreach (Action<ICollection<OBJECT>> a in this.OnCompletionCallbacks)
                 {
-                    Task.Run(() => { a(objects); });  
-                } 
+                    Task.Run(() => { a(objects); });
+                }
 
                 this.OnCompletionCallbacks.Clear();
 
-                AsyncResult = null; 
+                AsyncResult = null;
             }
         }
     }
@@ -94,6 +94,39 @@ namespace WebAnnotationModel
         { }
     }
 
+
+    /// <summary>
+    /// Return a flatter pyramid instead of a new level for every power of 2
+    /// </summary>
+    /// <typeparam name="OBJECT"></typeparam>
+    public class RegionPyramid<OBJECT>: BoundlessRegionPyramid<RegionRequestData<OBJECT>>
+        where OBJECT : class
+    {
+        public RegionPyramid(GridCellDimensions cellDimensions) : base(cellDimensions)
+        {
+
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="SinglePixelRadius"></param>
+        /// <returns></returns>
+        protected override int PixelDimensionToLevel(double SinglePixelRadius)
+        {
+            int Level = (int)Math.Floor(Math.Log(SinglePixelRadius, 6));
+            if (Level < 0)
+                Level = 0;
+            return Level;
+        }
+
+        protected override double LevelToPixelDimension(int Level)
+        {
+            return Math.Pow(6.0, Level);
+        }
+
+    }
+
     /// <summary>
     /// Loads objects from a section based on region queries
     /// </summary>
@@ -101,11 +134,11 @@ namespace WebAnnotationModel
         where KEY : struct
         where OBJECT : class
     {
-        static GridCellDimensions CellDimensions = new GridCellDimensions(2000, 2000);
+        static GridCellDimensions CellDimensions = new GridCellDimensions(10000, 10000);
         static double RegionUpdateInterval = 120;
         IRegionQuery<KEY, OBJECT> objectStore;
 
-        ConcurrentDictionary<int, BoundlessRegionPyramid<RegionRequestData<OBJECT>>> sectionPyramids = new ConcurrentDictionary<int, Geometry.BoundlessRegionPyramid<RegionRequestData<OBJECT>>>();
+        ConcurrentDictionary<int, RegionPyramid<OBJECT>> sectionPyramids = new ConcurrentDictionary<int, RegionPyramid<OBJECT>>();
         
         public RegionLoader(IRegionQuery<KEY, OBJECT> store)
         {
@@ -132,7 +165,7 @@ namespace WebAnnotationModel
                                                     int SectionNumber, 
                                                     Action<ICollection<OBJECT>> OnObjectsLoadedCallback)
         {
-            BoundlessRegionPyramid<RegionRequestData<OBJECT>> RegionPyramid = GetOrAddRegionPyramidForSection(SectionNumber);
+            RegionPyramid<OBJECT> RegionPyramid = GetOrAddRegionPyramidForSection(SectionNumber);
             //If we change the magnification factor we should stop loading regions
 
             IRegionPyramidLevel<RegionRequestData<OBJECT>> level = RegionPyramid.GetLevel(ScreenPixelSizeInVolume);
@@ -174,10 +207,10 @@ namespace WebAnnotationModel
                 }
             }
         }
-                
-        private BoundlessRegionPyramid<RegionRequestData<OBJECT>> GetOrAddRegionPyramidForSection(int SectionNumber)
+
+        private RegionPyramid<OBJECT> GetOrAddRegionPyramidForSection(int SectionNumber)
         {
-            return this.sectionPyramids.GetOrAdd(SectionNumber, (Number) => new BoundlessRegionPyramid<RegionRequestData<OBJECT>>(CellDimensions));
+            return this.sectionPyramids.GetOrAdd(SectionNumber, (Number) => new RegionPyramid<OBJECT>(CellDimensions));
         }
 
 
