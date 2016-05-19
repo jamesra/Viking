@@ -123,6 +123,8 @@
       <HintPath>..\..\packages\Newtonsoft.Json.7.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
       <Private>True</Private>
     </Reference>
+    <Reference Include="PresentationCore" />
+    <Reference Include="PresentationFramework" />
     <Reference Include="System" />
     <Reference Include="System.Core">
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
@@ -138,6 +140,7 @@
     <Reference Include="WindowsBase">
       <RequiredTargetFramework>3.0</RequiredTargetFramework>
     </Reference>
+    <Reference Include="WindowsFormsIntegration" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Common\Attributes.cs" />
@@ -543,6 +546,10 @@
     <ProjectReference Include="..\..\..\Geometry\Geometry.csproj">
       <Project>{EACB87E8-A5E3-417E-A9EF-B80C2A68C020}</Project>
       <Name>Geometry</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\VikingWPFUserControls\VikingWPFUserControls.csproj">
+      <Project>{4f62fce1-3fcf-431b-9526-80b859131513}</Project>
+      <Name>VikingWPFUserControls</Name>
     </ProjectReference>
     <ProjectReference Include="..\VikingXNAGraphics\VikingXNAGraphics.csproj">
       <Project>{7EDE0B00-89F9-4EF5-A629-2ED66CEE273B}</Project>

@@ -70,6 +70,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "XNATestbed", "XNATestbed\XN
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "XNATestbedContent", "XNATestbed\XNATestbedContent\XNATestbedContent.contentproj", "{789EB871-5FD3-4174-896B-162B2AAAB9B2}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VikingWPFUserControls", "VikingWPFUserControls\VikingWPFUserControls.csproj", "{4F62FCE1-3FCF-431B-9526-80B859131513}"
+EndProject
 Global
 	GlobalSection(Performance) = preSolution
 		HasPerformanceSessions = true
@@ -418,6 +420,24 @@ Global
 		{789EB871-5FD3-4174-896B-162B2AAAB9B2}.ReleaseWithSymbols|Any CPU.ActiveCfg = Release|x86
 		{789EB871-5FD3-4174-896B-162B2AAAB9B2}.ReleaseWithSymbols|Mixed Platforms.ActiveCfg = Release|x86
 		{789EB871-5FD3-4174-896B-162B2AAAB9B2}.ReleaseWithSymbols|x86.ActiveCfg = Release|x86
+		{4F62FCE1-3FCF-431B-9526-80B859131513}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4F62FCE1-3FCF-431B-9526-80B859131513}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4F62FCE1-3FCF-431B-9526-80B859131513}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{4F62FCE1-3FCF-431B-9526-80B859131513}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{4F62FCE1-3FCF-431B-9526-80B859131513}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{4F62FCE1-3FCF-431B-9526-80B859131513}.Debug|x86.Build.0 = Debug|Any CPU
+		{4F62FCE1-3FCF-431B-9526-80B859131513}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4F62FCE1-3FCF-431B-9526-80B859131513}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4F62FCE1-3FCF-431B-9526-80B859131513}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{4F62FCE1-3FCF-431B-9526-80B859131513}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{4F62FCE1-3FCF-431B-9526-80B859131513}.Release|x86.ActiveCfg = Release|Any CPU
+		{4F62FCE1-3FCF-431B-9526-80B859131513}.Release|x86.Build.0 = Release|Any CPU
+		{4F62FCE1-3FCF-431B-9526-80B859131513}.ReleaseWithSymbols|Any CPU.ActiveCfg = Release|Any CPU
+		{4F62FCE1-3FCF-431B-9526-80B859131513}.ReleaseWithSymbols|Any CPU.Build.0 = Release|Any CPU
+		{4F62FCE1-3FCF-431B-9526-80B859131513}.ReleaseWithSymbols|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{4F62FCE1-3FCF-431B-9526-80B859131513}.ReleaseWithSymbols|Mixed Platforms.Build.0 = Release|Any CPU
+		{4F62FCE1-3FCF-431B-9526-80B859131513}.ReleaseWithSymbols|x86.ActiveCfg = Release|Any CPU
+		{4F62FCE1-3FCF-431B-9526-80B859131513}.ReleaseWithSymbols|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

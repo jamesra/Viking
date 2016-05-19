@@ -7,6 +7,7 @@ using System.Data;
 using System.Linq;
 using System.Text;
 using System.Windows.Forms;
+using System.Windows.Forms.Integration;
 using System.Windows.Threading;
 using Geometry;
 using Microsoft.Xna.Framework;
@@ -38,6 +39,13 @@ namespace Viking.UI.Controls
                 }
 
                 _CurrentCommand = value;
+                if (_CurrentCommand as IHelpStrings != null && commandHelpText != null)
+                {
+                    commandHelpText.DataContext = _CurrentCommand as IHelpStrings;
+                    //IHelpStrings obj = _CurrentCommand as IHelpStrings;
+                    //commandHelpText.TextArray = obj.HelpStrings;
+                    //    commandHelpText.DataContext = _CurrentCommand as IHelpStrings;
+                }
 
                 if (_CurrentCommand != null)
                 {
@@ -300,11 +308,16 @@ namespace Viking.UI.Controls
         {
             get { return Section.ActiveTileTransform; }
             set { Section.ActiveTileTransform = value; }
-        } 
+        }
+
+        private ElementHost commandHelpTextScrollerHost;
+        private Viking.WPF.StringArrayAutoScroller commandHelpText;
 
         public SectionViewerControl()
         {
             InitializeComponent();
+
+            CreateWPFControls();
 
             StatusBar = new System.Windows.Forms.StatusStrip();
             StatusBar.Parent = this;
@@ -324,7 +337,24 @@ namespace Viking.UI.Controls
             InternalReferenceSectionChanged = new EventHandler(this.OnInternalReferenceSectionChanged);
             State.ItemSelected += ObjectSelectedHandler;
 
+            
+             
             ExtensionManager.AddMenuItems(this.menuStrip);
+        }
+
+        private void CreateWPFControls()
+        { 
+            commandHelpTextScrollerHost = new ElementHost();
+            commandHelpTextScrollerHost.Dock = DockStyle.Bottom;
+            commandHelpTextScrollerHost.Height = 24;
+
+            this.Controls.Add(commandHelpTextScrollerHost);
+
+            commandHelpText = new Viking.WPF.StringArrayAutoScroller();
+            commandHelpText.DataContext = this.CurrentCommand as IHelpStrings;
+            //commandHelpText.TextArray = new String[] { "Hello", "world" };
+            commandHelpText.InitializeComponent();
+            commandHelpTextScrollerHost.Child = commandHelpText;
         }
 
         protected override void Initialize()

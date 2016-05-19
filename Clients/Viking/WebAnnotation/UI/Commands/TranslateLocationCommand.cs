@@ -291,6 +291,17 @@ namespace WebAnnotation.UI.Commands
         CircleView circleView;
         GridCircle OriginalCircle;
 
+        public override string[] HelpStrings
+        {
+            get
+            {
+                return new string[] {
+                    "Left+Click Drag to move",
+                    "Release Left button to place",
+                    "Escape to cancel command" };
+            }
+        }
+
         public delegate void OnCommandSuccess(GridVector2 VolumePosition, GridVector2 MosaicPosition, double NewRadius);
         OnCommandSuccess success_callback;
 

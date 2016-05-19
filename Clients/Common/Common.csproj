@@ -99,6 +99,7 @@
     <Compile Include="DataStructures\TimeQueueCache.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="UI\Attributes.cs" />
+    <Compile Include="UI\Interfaces.cs" />
   </ItemGroup>
   <ItemGroup>
     <BootstrapperPackage Include="Microsoft.Net.Client.3.5">
