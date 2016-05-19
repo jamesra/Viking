@@ -67,6 +67,7 @@
   &lt;string&gt;http://connectomes.utah.edu/&lt;/string&gt;
   &lt;string&gt;http://internal.connectomes.utah.edu/&lt;/string&gt;
   &lt;string&gt;http://openconnecto.me/ocp/ca/&lt;/string&gt;
+  &lt;string&gt;http://v0152.host.s.uw.edu/&lt;/string&gt;
 &lt;/ArrayOfString&gt;</Value>
     </Setting>
   </Settings>

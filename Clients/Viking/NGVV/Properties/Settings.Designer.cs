@@ -251,6 +251,7 @@ namespace Viking.Properties {
   <string>http://connectomes.utah.edu/</string>
   <string>http://internal.connectomes.utah.edu/</string>
   <string>http://openconnecto.me/ocp/ca/</string>
+  <string>http://v0152.host.s.uw.edu/</string>
 </ArrayOfString>")]
         public global::System.Collections.Specialized.StringCollection ServerURLs {
             get {
