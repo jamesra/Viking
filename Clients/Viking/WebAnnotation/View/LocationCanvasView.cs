@@ -22,7 +22,7 @@ namespace WebAnnotation.View
 {
     public delegate ContextMenu ContextMenuGeneratorDelegate(IViewLocation locationID);
 
-    abstract public class LocationCanvasView : IComparable<LocationCanvasView>,  IUIObjectBasic, ICanvasView, IEquatable<LocationCanvasView>, IMouseActionSupport, IViewLocation
+    abstract public class LocationCanvasView : IComparable<LocationCanvasView>,  IUIObjectBasic, ICanvasView, IEquatable<LocationCanvasView>, IMouseActionSupport, IViewLocation, IHelpStrings
     {
         protected readonly LocationObj modelObj;
          
@@ -312,7 +312,7 @@ namespace WebAnnotation.View
         }
 
         public abstract GridRectangle BoundingBox { get; }
-        
+        public abstract string[] HelpStrings { get; }
 
         internal virtual void OnParentPropertyChanged(object o, PropertyChangedEventArgs args)
         {

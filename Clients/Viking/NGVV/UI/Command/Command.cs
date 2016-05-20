@@ -5,6 +5,7 @@ using System.Diagnostics;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Geometry;
+using System.Windows; 
 using Viking.Common;
 using VikingXNAGraphics;
 
@@ -35,11 +36,54 @@ namespace Viking.UI.Commands
         }
     }
 
-    public class Command
+    public abstract class Command : DependencyObject
     {
         protected Viking.UI.Controls.SectionViewerControl Parent; //Control the command is listening to
 
         protected MouseEventArgs oldMouse = null;
+
+        /*
+        public static readonly DependencyProperty HelpStringsProperty;
+
+        public string[] HelpStrings
+        {
+            get { return (string[])GetValue(Command.HelpStringsProperty); }
+            set { SetValue(Command.HelpStringsProperty, value); }
+        }
+
+        static Command()
+        {
+            Command.HelpStringsProperty = DependencyProperty.Register("HelpStringsProperty",
+                typeof(string[]),
+                typeof(Command),
+                new FrameworkPropertyMetadata(Command.AllDefaultHelpStrings));
+        }
+        */
+
+        public static string[] DefaultMouseHelpStrings = new String[] {
+            "Hold Right click + Drag: Move view",
+            "Scroll wheel: Zoom"
+            };
+
+        public static string[] DefaultKeyHelpStrings = new String[] {
+            "F1: Expand full list of commands",
+            "Escape Key: Cancel command",
+            "+/- key: Step up/down a section",
+            "Shift +/- key: Step up/down ten sections",
+            "Page up/down key: Change Magnification",
+            "Arrow key: Move view",
+            "Home key: Round magnification to whole number"
+            };
+
+        public static string[] AllDefaultHelpStrings
+        {
+            get
+            {
+                List<string> s = new List<string>(DefaultMouseHelpStrings);
+                s.AddRange(DefaultKeyHelpStrings);
+                return s.ToArray();
+            }
+        }
 
         /// <summary>
         /// If the base Command class' OnMouseMove is called this variable contains the mouse position at the last mouse move
@@ -195,16 +239,6 @@ namespace Viking.UI.Commands
 
         protected virtual void OnMouseClick(object sender, MouseEventArgs e)
         {
-            //If the back button was pressed kill the command
-            /*
-            if (e.Button == MouseButtons.XButton2)
-            {
-                UI.State.SelectedObject = null;
-
-                //This will probably already be set by adjusting the selected object, but to be safe...
-                this.Deactivated = true;
-            }
-             * */
         }
 
         protected virtual void OnMouseDoubleClick(object sender, MouseEventArgs e)
@@ -544,6 +578,8 @@ namespace Viking.UI.Commands
         {
             get { return _CommandQueue.Count; }
         }
+
+        
 
         /// <summary>
         /// OK, the normal state of the UI is that the default command is active.  When the current command dies we 

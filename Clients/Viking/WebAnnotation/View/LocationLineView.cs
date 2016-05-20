@@ -239,6 +239,19 @@ namespace WebAnnotation.View
             }
         }
 
+        public override string[] HelpStrings
+        {
+            get
+            {
+                return new string[] {
+                    "Hold left click + SHIFT on control point: Move all control points",
+                    "Hold left click off control point: Create/Link annotation",
+                    "Left click + CTRL on control point: Remove control point",
+                    "Left click + CTRL off control point: Add a control point",
+                };
+            }
+        }
+
         public abstract double LineWidth { get; }
 
         public abstract double ControlPointRadius { get; }

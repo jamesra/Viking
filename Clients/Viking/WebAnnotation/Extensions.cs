@@ -8,9 +8,30 @@ using RTree;
 using Geometry;
 using SqlGeometryUtils;
 using WebAnnotation.ViewModel;
+using connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd;
 
 namespace WebAnnotation
 {
+
+    public static class HotkeyExtensions
+    {
+        public static string BuildModifierString(this Hotkey hkey)
+        {
+            string keystr = "";
+            if (hkey.Ctrl)
+            {
+                keystr += "CTRL + ";
+            }
+
+            if (hkey.Shift)
+            {
+                keystr += "SHIFT + ";
+            }
+
+            return keystr;
+        }
+    }
+
     public static class KeysExtensions
     {
         public static bool ShiftOrCtrlPressed(this System.Windows.Forms.Keys ModifierKeys)

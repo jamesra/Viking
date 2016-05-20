@@ -24,7 +24,7 @@ using WebAnnotation.Actions;
 namespace WebAnnotation
 {
     [Viking.Common.SectionOverlay("Annotation")]
-    class AnnotationOverlay : Viking.Common.ISectionOverlayExtension
+    class AnnotationOverlay : Viking.Common.ISectionOverlayExtension, Viking.Common.IHelpStrings
     {
         static public float LocationTextScaleFactor = 5;
         static public float ReferenceLocationTextScaleFactor = 2.5f;
@@ -166,6 +166,26 @@ namespace WebAnnotation
             }
         }
 
+        public string[] HelpStrings
+        {
+            get
+            {
+                List<string> helpstrings = new List<string>();
+                if (IsCommandDefault())
+                {
+                    helpstrings.AddRange(BuildHotkeyHelpStrings());
+                }
+
+                helpstrings.AddRange(DefaultKeyHelpStrings());
+
+                return helpstrings.ToArray();
+            }
+        }
+
+        
+
+        protected string[] LastMouseOverHelpStrings = new string[] { };
+
         /// <summary>
         /// Returns the location nearest to the mouse, prefers the locations on the current section
         /// </summary>
@@ -270,16 +290,23 @@ namespace WebAnnotation
                 _Parent.Cursor = Cursors.Default;
             }
         }
+
+        protected bool IsCommandDefault()
+        {
+            //Check if there is a non-default command. we don't want to mess with another active command
+            return _Parent.CurrentCommand.GetType() == typeof(Viking.UI.Commands.DefaultCommand) &&
+             Viking.UI.Commands.Command.QueueDepth == 0;
+        }
                  
         protected void OnMouseMove(object sender, MouseEventArgs e)
         {
             if (_Parent.CurrentCommand == null)
-                return; 
+                return;
 
             //Check if there is a non-default command. we don't want to mess with another active command
-            if (_Parent.CurrentCommand.GetType() != typeof(Viking.UI.Commands.DefaultCommand) ||
-             Viking.UI.Commands.Command.QueueDepth > 0)
+            if (!IsCommandDefault())
                 return;
+            
 
             //Buttons being pushed means we are in the middle of a default command, probably scrolling, which won't affect the selection
             if (e.Button != MouseButtons.None)
@@ -315,10 +342,9 @@ namespace WebAnnotation
                 return;
 
             //Check if there is a non-default command. we don't want to mess with another active command
-            if (_Parent.CurrentCommand.GetType() != typeof(Viking.UI.Commands.DefaultCommand) ||
-                Viking.UI.Commands.Command.QueueDepth > 0)
-                return; 
-            
+            if (!IsCommandDefault())
+                return;
+
             //If locations aren't visible they can't be selected
             if (!_Parent.ShowOverlays)
                 return;
@@ -361,6 +387,30 @@ namespace WebAnnotation
         {
         }
 
+        
+
+        private static string[] DefaultKeyHelpStrings()
+        {
+            return new string[]
+            {
+                "F3 or Enter Key: Create new annotation linked to the last placed annotation",
+                "F5 Key: Reload section annotations",
+                "Back Key: Return to last edited location"
+            };
+        }
+         
+        private string[] BuildHotkeyHelpStrings()
+        {
+            List<string> hotkeyStrings = new List<string>(Global.UserSettings.Shortcuts.Hotkey.Count);
+            foreach(Hotkey hkey in Global.UserSettings.Shortcuts.Hotkey)
+            {
+                string keystr = hkey.BuildModifierString() + hkey.KeyName + ": " + hkey.Action;
+                hotkeyStrings.Add(keystr);
+            }
+
+            return hotkeyStrings.ToArray();
+        }
+
         protected void OnKeyDown(object sender, KeyEventArgs e)
         {
             switch (e.KeyCode)
@@ -386,16 +436,6 @@ namespace WebAnnotation
 
                     }
                     return;
-
-                case Keys.I:
-                    Viking.UI.Commands.Command.EnqueueCommand(typeof(PlacePolylineCommand), new object[] { Parent, new Microsoft.Xna.Framework.Color(1.0f,0f,0f,0.5f), this.LastMouseDownCoords, 16, null});
-                    break;
-                case Keys.J:
-                    OnCreateStructure(34, new string[0], LocationType.OPENCURVE);
-                    break;
-                case Keys.O:
-                    OnCreateStructure(34, new string[0], LocationType.CLOSEDCURVE);
-                    break;
                 case Keys.ShiftKey:
                     UpdateMouseCursor();
                     break;
@@ -417,8 +457,7 @@ namespace WebAnnotation
                     {
                         //OK, we have a match, invoke the command
                         //Check if there is a non-default command. we don't want to mess with another active command
-                        if (_Parent.CurrentCommand.GetType() != typeof(Viking.UI.Commands.DefaultCommand) ||
-                            Viking.UI.Commands.Command.QueueDepth > 0)
+                        if (!IsCommandDefault())
                             return;
 
                         connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd.Action a = Global.UserSettings.Actions.Action.Where(action => action.Name == h.Action).SingleOrDefault();

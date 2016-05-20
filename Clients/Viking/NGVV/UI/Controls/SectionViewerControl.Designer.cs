@@ -45,6 +45,8 @@
             this.menuStrip = new System.Windows.Forms.MenuStrip();
             this.menuVolume = new System.Windows.Forms.ToolStripMenuItem();
             this.menuVolumeTransforms = new System.Windows.Forms.ToolStripMenuItem();
+            this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
+            this.menuClearCache = new System.Windows.Forms.ToolStripMenuItem();
             this.menuSection = new System.Windows.Forms.ToolStripMenuItem();
             this.menuSectionChannel = new System.Windows.Forms.ToolStripMenuItem();
             this.menuSectionUseSpecific = new System.Windows.Forms.ToolStripMenuItem();
@@ -57,8 +59,8 @@
             this.menuCaptureScreen = new System.Windows.Forms.ToolStripMenuItem();
             this.menuExportFrames = new System.Windows.Forms.ToolStripMenuItem();
             this.menuExportTiles = new System.Windows.Forms.ToolStripMenuItem();
-            this.menuClearCache = new System.Windows.Forms.ToolStripMenuItem();
-            this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
+            this.timerHelpTextChange = new System.Windows.Forms.Timer(this.components);
+            this.menuShowCommandHelp = new System.Windows.Forms.ToolStripMenuItem();
             this.menuStrip.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -100,8 +102,20 @@
             // menuVolumeTransforms
             // 
             this.menuVolumeTransforms.Name = "menuVolumeTransforms";
-            this.menuVolumeTransforms.Size = new System.Drawing.Size(168, 22);
+            this.menuVolumeTransforms.Size = new System.Drawing.Size(173, 22);
             this.menuVolumeTransforms.Text = "Transform";
+            // 
+            // toolStripSeparator1
+            // 
+            this.toolStripSeparator1.Name = "toolStripSeparator1";
+            this.toolStripSeparator1.Size = new System.Drawing.Size(170, 6);
+            // 
+            // menuClearCache
+            // 
+            this.menuClearCache.Name = "menuClearCache";
+            this.menuClearCache.Size = new System.Drawing.Size(173, 22);
+            this.menuClearCache.Text = "Clear Image Cache";
+            this.menuClearCache.Click += new System.EventHandler(this.menuClearTextureCache_Click);
             // 
             // menuSection
             // 
@@ -164,7 +178,8 @@
             this.menuGoToLocation,
             this.menuCaptureScreen,
             this.menuExportFrames,
-            this.menuExportTiles});
+            this.menuExportTiles,
+            this.menuShowCommandHelp});
             this.menuCommands.Name = "menuCommands";
             this.menuCommands.Size = new System.Drawing.Size(81, 20);
             this.menuCommands.Text = "Commands";
@@ -172,21 +187,21 @@
             // menuGoToLocation
             // 
             this.menuGoToLocation.Name = "menuGoToLocation";
-            this.menuGoToLocation.Size = new System.Drawing.Size(155, 22);
+            this.menuGoToLocation.Size = new System.Drawing.Size(191, 22);
             this.menuGoToLocation.Text = "Go To Location";
             this.menuGoToLocation.Click += new System.EventHandler(this.menuGoToLocation_Click);
             // 
             // menuCaptureScreen
             // 
             this.menuCaptureScreen.Name = "menuCaptureScreen";
-            this.menuCaptureScreen.Size = new System.Drawing.Size(155, 22);
+            this.menuCaptureScreen.Size = new System.Drawing.Size(191, 22);
             this.menuCaptureScreen.Text = "Capture Screen";
             this.menuCaptureScreen.Click += new System.EventHandler(this.menuCaptureScreen_Click);
             // 
             // menuExportFrames
             // 
             this.menuExportFrames.Name = "menuExportFrames";
-            this.menuExportFrames.Size = new System.Drawing.Size(155, 22);
+            this.menuExportFrames.Size = new System.Drawing.Size(191, 22);
             this.menuExportFrames.Text = "Export Frames";
             this.menuExportFrames.Click += new System.EventHandler(this.menuExportFrames_Click);
             // 
@@ -194,21 +209,24 @@
             // 
             this.menuExportTiles.AccessibleDescription = "Export Tiles";
             this.menuExportTiles.Name = "menuExportTiles";
-            this.menuExportTiles.Size = new System.Drawing.Size(155, 22);
+            this.menuExportTiles.Size = new System.Drawing.Size(191, 22);
             this.menuExportTiles.Text = "Export Tiles";
             this.menuExportTiles.Click += new System.EventHandler(this.menuExportTiles_Click);
             // 
-            // menuClearCache
+            // timerHelpTextChange
             // 
-            this.menuClearCache.Name = "menuClearTextureCache";
-            this.menuClearCache.Size = new System.Drawing.Size(168, 22);
-            this.menuClearCache.Text = "Clear Image Cache";
-            this.menuClearCache.Click += new System.EventHandler(this.menuClearTextureCache_Click);
+            this.timerHelpTextChange.Enabled = true;
+            this.timerHelpTextChange.Interval = 5000;
+            this.timerHelpTextChange.Tick += new System.EventHandler(this.timerHelpTextChange_Tick);
             // 
-            // toolStripSeparator1
+            // menuShowCommandHelp
             // 
-            this.toolStripSeparator1.Name = "toolStripSeparator1";
-            this.toolStripSeparator1.Size = new System.Drawing.Size(6, 6);
+            this.menuShowCommandHelp.Checked = true;
+            this.menuShowCommandHelp.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.menuShowCommandHelp.Name = "menuShowCommandHelp";
+            this.menuShowCommandHelp.Size = new System.Drawing.Size(191, 22);
+            this.menuShowCommandHelp.Text = "Show Command Help";
+            this.menuShowCommandHelp.Click += new System.EventHandler(this.menuShowCommandHelp_Click);
             // 
             // SectionViewerControl
             // 
@@ -241,5 +259,7 @@
         private System.Windows.Forms.ToolStripMenuItem menuSectionShowTileMesh;
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator1;
         private System.Windows.Forms.ToolStripMenuItem menuClearCache;
+        private System.Windows.Forms.Timer timerHelpTextChange;
+        private System.Windows.Forms.ToolStripMenuItem menuShowCommandHelp;
     }
 }

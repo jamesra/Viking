@@ -15,12 +15,23 @@ using System.ComponentModel;
 
 namespace WebAnnotation.View
 {
-    class LocationClosedCurveView : LocationCurveView, ILabelView, ICanvasViewContainer
+    class LocationClosedCurveView : LocationCurveView, ILabelView, ICanvasViewContainer, Viking.Common.IHelpStrings
     {
         public CurveView curveView;
 
         public StructureCircleLabels curveLabels;
         public OverlappedLinkCircleView OverlappedLinkView;
+
+        public override string[] HelpStrings
+        {
+            get
+            {
+                List<string> listStrings = new List<string>(base.HelpStrings);
+                listStrings.Add("Hold Left Click and drag near label: Move all control points");
+                listStrings.Add("Hold Left Click and drag near edge: Create link");
+                return listStrings.ToArray();
+            }
+        }
 
         public override Microsoft.Xna.Framework.Color Color
         {

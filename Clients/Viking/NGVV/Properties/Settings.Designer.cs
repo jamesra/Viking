@@ -261,5 +261,17 @@ namespace Viking.Properties {
                 this["ServerURLs"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool ShowCommandHelp {
+            get {
+                return ((bool)(this["ShowCommandHelp"]));
+            }
+            set {
+                this["ShowCommandHelp"] = value;
+            }
+        }
     }
 }

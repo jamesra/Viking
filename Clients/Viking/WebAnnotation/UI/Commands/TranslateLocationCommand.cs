@@ -119,7 +119,7 @@ namespace WebAnnotation.UI.Commands
     }
 
 
-    abstract class TranslateCurveLocationCommand : TranslateLocationCommand
+    abstract class TranslateCurveLocationCommand : TranslateLocationCommand, Viking.Common.IHelpStrings
     {
         protected CurveView curveView;
         protected GridVector2[] OriginalControlPoints;
@@ -154,6 +154,24 @@ namespace WebAnnotation.UI.Commands
                 return OriginalPosition + (DeltaSum);
             }
         }
+
+        public string[] HelpStrings
+        {
+            get
+            { 
+                List<string> s = new List<string>(TranslateCurveLocationCommand.DefaultMouseHelpStrings);
+                s.AddRange(TranslateLocationCommand.DefaultMouseHelpStrings);
+                s.AddRange(Viking.UI.Commands.Command.DefaultKeyHelpStrings);
+                return s.ToArray();
+            }
+        }
+
+        public new static string[] DefaultMouseHelpStrings = new string[]
+        {
+            "CTRL+Click another curve: Copy control points",
+            "Middle Button click: Reset to original size",
+            "Hold Right click and drag: Rotate"
+        };
 
         public TranslateCurveLocationCommand(Viking.UI.Controls.SectionViewerControl parent,
                                         GridVector2 MosaicPosition, 
@@ -286,19 +304,18 @@ namespace WebAnnotation.UI.Commands
         }
     }
 
-    class TranslateCircleLocationCommand : TranslateLocationCommand
+    class TranslateCircleLocationCommand : TranslateLocationCommand, Viking.Common.IHelpStrings
     {
         CircleView circleView;
         GridCircle OriginalCircle;
 
-        public override string[] HelpStrings
+        public  string[] HelpStrings
         {
             get
-            {
-                return new string[] {
-                    "Left+Click Drag to move",
-                    "Release Left button to place",
-                    "Escape to cancel command" };
+            { 
+                List<string> s = new List<string>(TranslateLocationCommand.DefaultMouseHelpStrings);
+                s.AddRange(Viking.UI.Commands.Command.DefaultKeyHelpStrings);
+                return s.ToArray();
             }
         }
 
@@ -412,6 +429,13 @@ namespace WebAnnotation.UI.Commands
 
     abstract class TranslateLocationCommand : AnnotationCommandBase
     {
+        public new static string[] DefaultMouseHelpStrings = new String[] {
+           "Hold Left+Click Drag to move",
+           "Release Left button to place",
+           "Scroll wheel: Scale annotation size"
+        };
+         
+
         protected virtual double SizeScale
         {
             get;

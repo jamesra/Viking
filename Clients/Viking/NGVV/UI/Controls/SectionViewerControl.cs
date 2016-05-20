@@ -39,9 +39,11 @@ namespace Viking.UI.Controls
                 }
 
                 _CurrentCommand = value;
-                if (_CurrentCommand as IHelpStrings != null && commandHelpText != null)
+                if (_CurrentCommand as IObservableHelpStrings != null && commandHelpText != null)
                 {
-                    commandHelpText.DataContext = _CurrentCommand as IHelpStrings;
+                    commandHelpText.DataContext = _CurrentCommand as IObservableHelpStrings;
+                    commandHelpText.TextArray = ((IObservableHelpStrings)_CurrentCommand).ObservableHelpStrings;
+                    //commandHelpText.TextArrayIndex = 0;
                     //IHelpStrings obj = _CurrentCommand as IHelpStrings;
                     //commandHelpText.TextArray = obj.HelpStrings;
                     //    commandHelpText.DataContext = _CurrentCommand as IHelpStrings;
@@ -343,10 +345,14 @@ namespace Viking.UI.Controls
         }
 
         private void CreateWPFControls()
-        { 
+        {
             commandHelpTextScrollerHost = new ElementHost();
+            commandHelpTextScrollerHost.TabStop = false;
             commandHelpTextScrollerHost.Dock = DockStyle.Bottom;
             commandHelpTextScrollerHost.Height = 24;
+            commandHelpTextScrollerHost.Visible = Viking.Properties.Settings.Default.ShowCommandHelp;
+            menuShowCommandHelp.Checked = Viking.Properties.Settings.Default.ShowCommandHelp;
+            timerHelpTextChange.Enabled = Viking.Properties.Settings.Default.ShowCommandHelp;
 
             this.Controls.Add(commandHelpTextScrollerHost);
 
@@ -355,6 +361,8 @@ namespace Viking.UI.Controls
             //commandHelpText.TextArray = new String[] { "Hello", "world" };
             commandHelpText.InitializeComponent();
             commandHelpTextScrollerHost.Child = commandHelpText;
+
+            
         }
 
         protected override void Initialize()
@@ -1469,6 +1477,9 @@ namespace Viking.UI.Controls
                     this.ShowOverlays = false;
                     this.Invalidate();
                     break;
+                case Keys.F1:
+                    this.commandHelpText.IsDropDownOpen = !this.commandHelpText.IsDropDownOpen;
+                    break;
             }
 
             base.OnKeyDown(e);
@@ -2136,8 +2147,19 @@ namespace Viking.UI.Controls
             
         }
 
+        private void timerHelpTextChange_Tick(object sender, EventArgs e)
+        {
+            this.commandHelpText.TextArrayIndex++;            
+        }
 
+        private void menuShowCommandHelp_Click(object sender, EventArgs e)
+        {
+            this.commandHelpTextScrollerHost.Visible = !this.commandHelpTextScrollerHost.Visible;
+            menuShowCommandHelp.Checked = this.commandHelpTextScrollerHost.Visible;
+            timerHelpTextChange.Enabled = this.commandHelpTextScrollerHost.Visible;
 
-
+            Viking.Properties.Settings.Default.ShowCommandHelp = this.commandHelpTextScrollerHost.Visible;
+            Viking.Properties.Settings.Default.Save();
+        }
     }
 }

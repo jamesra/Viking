@@ -6,6 +6,8 @@
              xmlns:local="clr-namespace:Viking.WPF"
              mc:Ignorable="d" 
              d:DesignHeight="24" d:DesignWidth="300"
-             Height="24">
-    <ComboBox ItemsSource="{Binding Path=HelpStrings}" Text="Default"></ComboBox>
+             IsTabStop="False"
+             Focusable="False">
+    <ComboBox Name="comboHelpText" Text="Default" ItemsSource="{Binding Path=ObservableHelpStrings}" IsSynchronizedWithCurrentItem="True" FontSize="14" IsTabStop="False" Focusable="False">
+    </ComboBox>
 </UserControl>

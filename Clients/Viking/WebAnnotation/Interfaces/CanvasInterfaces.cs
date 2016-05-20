@@ -40,12 +40,6 @@ namespace WebAnnotation
         /// <param name="LocationID">The location ID the action applies to</param>
         /// <returns></returns>
         LocationAction GetMouseClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID);
-
-        /*
-        LocationAction GetMouseShiftClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber);
-
-        LocationAction GetMouseControlClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber);
-        */
     }
 
     //public interface IActionCommandFactory

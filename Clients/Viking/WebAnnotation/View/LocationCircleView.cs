@@ -235,23 +235,15 @@ namespace WebAnnotation.View
             return LocationAction.CREATELINKEDLOCATION;
         }
 
-        /*
-        internal override void OnObjPropertyChanged(object o, PropertyChangedEventArgs args)
+        public override string[] HelpStrings
         {
-            CreateViewObjects();
-            CreateLabelObjects();
-        }
-        */
-        /*
-        protected override void OnParentPropertyChanged(object o, PropertyChangedEventArgs args)
-        {
-            if (args.PropertyName == "Label" || args.PropertyName == "Attributes")
+            get
             {
-                CreateLabelObjects();
+                return new string[] {
+                    "Hold left click + drag on inscribed arrow: Create additional annotation for this structure linked to the annotation on the adjacent section."
+                };
             }
-
-            base.OnParentPropertyChanged(o, args);
-        }*/
+        }
 
         public static void Draw(GraphicsDevice device,
                           VikingXNA.Scene scene,
@@ -446,7 +438,19 @@ namespace WebAnnotation.View
 
             throw new ArgumentException("Wrong section for location");
         }
-        
+         
+        public override string[] HelpStrings
+        {
+            get
+            {
+                return new string[] {
+                    "Hold left click on circle edge: Resize",
+                    "Hold left click + drag on inscribed arrow: Create additional annotation for this structure linked to the annotation on the adjacent section.",
+                    "Hold left click on circle center: Move annotation"
+                };
+            }
+        }
+
 
         #endregion
 

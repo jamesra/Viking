@@ -135,7 +135,17 @@ namespace WebAnnotation.View
 
             return LocationAction.CREATELINKEDLOCATION;
         }
-        
+
+        public override string[] HelpStrings
+        {
+            get
+            {
+                return new string[] {
+                    "Hold left click + drag on inscribed arrow: Create additional annotation for this structure linked to the annotation on the adjacent section."
+                };
+            }
+        }
+
         public ContextMenu ContextMenu
         {
             get
