@@ -18,12 +18,12 @@ using Viking.Common;
 using System.Diagnostics;
 using Viking.VolumeModel;
 using Viking.ViewModels;
-using VikingXNA;
+using VikingXNA; 
 
 
 namespace Viking.UI.Controls
 {
-    public partial class SectionViewerControl : VikingXNA.ViewerControl
+    public partial class SectionViewerControl : VikingXNA.ViewerControl, IHelpStrings
     {
         Viking.UI.Commands.Command _CurrentCommand;
         public Viking.UI.Commands.Command CurrentCommand
@@ -83,6 +83,7 @@ namespace Viking.UI.Controls
         /// When set to true Commands and ISectionOverlayExtension draw methods are called
         /// </summary>
         public bool ShowOverlays = true;
+        public bool ShowOnlyOverlays = false;        
 
         public bool ColorizeTiles
         {
@@ -349,7 +350,7 @@ namespace Viking.UI.Controls
             commandHelpTextScrollerHost = new ElementHost();
             commandHelpTextScrollerHost.TabStop = false;
             commandHelpTextScrollerHost.Dock = DockStyle.Bottom;
-            commandHelpTextScrollerHost.Height = 24;
+            commandHelpTextScrollerHost.Height = 26;
             commandHelpTextScrollerHost.Visible = Viking.Properties.Settings.Default.ShowCommandHelp;
             menuShowCommandHelp.Checked = Viking.Properties.Settings.Default.ShowCommandHelp;
             timerHelpTextChange.Enabled = Viking.Properties.Settings.Default.ShowCommandHelp;
@@ -455,6 +456,30 @@ namespace Viking.UI.Controls
         }
 
         #endregion
+
+        /// <summary>
+        /// Need to enable arrow keys as input keys
+        /// </summary>
+        /// <param name="keyData"></param>
+        /// <returns></returns>
+        protected override bool IsInputKey(Keys keyData)
+        {
+            switch(keyData)
+            {
+                case Keys.Right:
+                case Keys.Left:
+                case Keys.Up:
+                case Keys.Down:
+                    return true;
+                case Keys.Shift | Keys.Right:
+                case Keys.Shift | Keys.Left:
+                case Keys.Shift | Keys.Up:
+                case Keys.Shift | Keys.Down:
+                    return true;
+            }
+
+            return base.IsInputKey(keyData);
+        }
 
         public string[] ExtensionOverlayTitles()
         {
@@ -818,6 +843,27 @@ namespace Viking.UI.Controls
                 return _DepthDisabledState;
             }
         }
+
+
+        public static string[] DefaultMouseHelpStrings = new String[] {
+            };
+
+        public static string[] DefaultKeyHelpStrings = new String[] {
+            "F1: Expand full list of commands",
+            "Space bar: Hide annotations",
+            "Space bar + SHIFT: Show only annotations"
+            };
+
+        public string[] HelpStrings
+        {
+            get
+            {
+                List<string> listHelp = new List<string>(DefaultKeyHelpStrings);
+                listHelp.AddRange(DefaultMouseHelpStrings);
+                return listHelp.ToArray();
+            }
+        }
+
         protected override void Draw(Scene scene)
         {
             //graphicsDevice.Clear(Microsoft.Xna.Framework.Color.Black);
@@ -893,15 +939,18 @@ namespace Viking.UI.Controls
             graphicsDevice.ReferenceStencil = 1;
 
 
-            //OK, blend the overlay with the underlying greyscale image
-            foreach (EffectPass pass in channelOverlayEffect.effect.CurrentTechnique.Passes)
+            if (!ShowOnlyOverlays)
             {
-                pass.Apply();
-                graphicsDevice.DrawUserIndexedPrimitives<VertexPositionNormalTexture>(PrimitiveType.TriangleList,
-                                                                                  visibleAreaMesh, 0, visibleAreaMesh.Length,
-                                                                                  indicies, 0, indicies.Length / 3);
+                //OK, blend the overlay with the underlying greyscale image
+                foreach (EffectPass pass in channelOverlayEffect.effect.CurrentTechnique.Passes)
+                {
+                    pass.Apply();
+                    graphicsDevice.DrawUserIndexedPrimitives<VertexPositionNormalTexture>(PrimitiveType.TriangleList,
+                                                                                      visibleAreaMesh, 0, visibleAreaMesh.Length,
+                                                                                      indicies, 0, indicies.Length / 3);
+                }
             }
-
+            
             //Draw the tiles without annotations, allow them to overwrite existing data
             //            List<RenderTarget2D> OverlayList = new List<RenderTarget2D>(listOverlays.Length);
             if (ShowOverlays)
@@ -1456,6 +1505,20 @@ namespace Viking.UI.Controls
             this.Invalidate();
         }
 
+        protected void SetOverlayVisiblity(bool ShiftDown, bool SpaceDown)
+        {
+            if(SpaceDown)
+            {
+                ShowOnlyOverlays = ShiftDown;
+                ShowOverlays = ShiftDown;
+            }
+            else
+            {
+                ShowOnlyOverlays = false;
+                ShowOverlays = true;
+            }
+        }
+
         protected override void OnKeyDown(KeyEventArgs e)
         {
             switch (e.KeyCode)
@@ -1474,7 +1537,11 @@ namespace Viking.UI.Controls
                     }
                     break;
                 case Keys.Space:
-                    this.ShowOverlays = false;
+                    SetOverlayVisiblity(e.Shift, true);
+                    this.Invalidate();
+                    break;
+                case Keys.Shift:
+                    SetOverlayVisiblity(true, System.Windows.Input.Keyboard.IsKeyDown(System.Windows.Input.Key.Space));
                     this.Invalidate();
                     break;
                 case Keys.F1:
@@ -1485,13 +1552,17 @@ namespace Viking.UI.Controls
             base.OnKeyDown(e);
         }
 
+
         protected override void OnKeyUp(KeyEventArgs e)
         {
             switch (e.KeyCode)
             {
+                case Keys.Shift:
+                    SetOverlayVisiblity(true, System.Windows.Input.Keyboard.IsKeyDown(System.Windows.Input.Key.Space));
+                    this.Invalidate();
+                    break;
                 case Keys.Space:
-                    ShowOverlays = true;
-
+                    SetOverlayVisiblity(e.Shift, false);
                     this.Invalidate();
                     break;
             }
@@ -1510,6 +1581,7 @@ namespace Viking.UI.Controls
                 e.Handled = true;
             }
         }
+
 
         private void SectionViewerControl_MouseDown(object sender, MouseEventArgs e)
         {

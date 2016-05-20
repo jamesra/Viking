@@ -42,6 +42,12 @@ namespace Viking.UI.Commands
 
             if (LastNearestObject == null)
             {
+                IHelpStrings parentHelp = Parent as IHelpStrings;
+                if(parentHelp != null)
+                {
+                    s.AddRange(parentHelp.HelpStrings);
+                }
+
                 s.AddRange(Command.DefaultKeyHelpStrings);
                 s.AddRange(Command.DefaultMouseHelpStrings);
                 s.Add("Double Right Click: Open context menu for annotation");
@@ -59,8 +65,8 @@ namespace Viking.UI.Commands
                 s.AddRange(GetHelpStringsFromObject(LastNearestObject));
             }
 
-            
-             
+            s.Sort();
+
             return s.ToArray();
         }
 

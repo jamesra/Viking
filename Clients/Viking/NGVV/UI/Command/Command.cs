@@ -62,11 +62,11 @@ namespace Viking.UI.Commands
 
         public static string[] DefaultMouseHelpStrings = new String[] {
             "Hold Right click + Drag: Move view",
-            "Scroll wheel: Zoom"
+            "Scroll wheel: Zoom",
+            "Forward/Backward button click: Change sections",
             };
 
         public static string[] DefaultKeyHelpStrings = new String[] {
-            "F1: Expand full list of commands",
             "Escape Key: Cancel command",
             "+/- key: Step up/down a section",
             "Shift +/- key: Step up/down ten sections",
@@ -128,9 +128,9 @@ namespace Viking.UI.Commands
 
             MyMouseHover = new EventHandler(this.OnMouseHover);
             MyMouseLeave = new EventHandler(this.OnMouseLeave);
-            MyMouseEnter = new EventHandler(this.OnMouseEnter); 
+            MyMouseEnter = new EventHandler(this.OnMouseEnter);
 
-            MyKeyPress  = new KeyPressEventHandler(this.OnKeyPress);
+            MyKeyPress = new KeyPressEventHandler(this.OnKeyPress);
 
             MyKeyDown = new KeyEventHandler(this.OnKeyDown);
 
@@ -142,7 +142,7 @@ namespace Viking.UI.Commands
             Parent.MouseMove += MyMouseMove;
             Parent.MouseHover += MyMouseHover;
             Parent.MouseLeave += MyMouseLeave;
-            Parent.MouseEnter += MyMouseEnter; 
+            Parent.MouseEnter += MyMouseEnter;
             Parent.KeyPress += MyKeyPress;
             Parent.KeyDown += MyKeyDown;
         }
