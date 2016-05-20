@@ -73,7 +73,8 @@ namespace WebAnnotation.View
                 LabelText = this.Parent.Type.Code + " " + LabelText;
             }
 
-            Color LabelColor = new Color(1.0f, 1.0f, 1.0f, 0.5f);
+            Color LabelColor = this.modelObj.IsUnverifiedTerminal ? Color.Yellow : Color.Black;
+            LabelColor = LabelColor.SetAlpha(0.5f);
             Color ParentLabelColor = new Color(1.0f, 0, 0, 0.5f);
 
             curveLabel = new CurveLabel(LabelText, controlPoints, LabelColor, false);
@@ -193,7 +194,7 @@ namespace WebAnnotation.View
 
         internal override void OnObjPropertyChanged(object o, PropertyChangedEventArgs args)
         {
-            if(args.PropertyName == "Attributes")
+            if(IsLocationPropertyAffectingLabels(args.PropertyName))
             {
                 CreateLabelViews(VolumeControlPoints, this.ParentID);
             }
