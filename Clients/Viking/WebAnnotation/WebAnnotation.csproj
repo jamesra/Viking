@@ -169,7 +169,6 @@
     <Compile Include="UI\Commands\LocationObjCommand.cs" />
     <Compile Include="UI\Commands\PlacePolylineCommand.cs" />
     <Compile Include="UI\Commands\ResizeCircleCommand.cs" />
-    <Compile Include="UI\Commands\ResizeLocationCommand.cs" />
     <Compile Include="UI\Commands\StaticExtensionCommands.cs" />
     <Compile Include="UI\Commands\ToggleLocationIsTerminalCommand.cs" />
     <Compile Include="UI\Commands\ToggleTagCommand.cs" />

@@ -73,70 +73,7 @@ namespace WebAnnotation.UI.Commands
         
         protected override void OnMouseUp(object sender, MouseEventArgs e)
         {
-            if (e.Button == MouseButtons.Left)
-            {
-                //If we clicked a location from another section then create a new linked section
-                /*
-                if (selected.Section != this.Parent.Section.Number)
-                {
-                    Debug.Assert(selected != null);
-                    GridVector2 WorldPos = Parent.ScreenToWorld(e.X, e.Y);
-
-                    //Transform from volume space to section space if we can
-                    GridVector2 SectionPos;
-                    try
-                    {
-                        SectionPos = Parent.VolumeToSection(WorldPos);
-                    }
-                    catch (ArgumentOutOfRangeException )
-                    {
-                        Trace.WriteLine("Could not map world point OnMouseUp: " + WorldPos.ToString(), "Command");
-                        return;
-                    }
-
-                    LocationObj newLoc = new LocationObj(selected.Parent,
-                            SectionPos,
-                            WorldPos,
-                            Parent.Section.Number,
-                            selected.TypeCode);
-
-                    LocationCanvasView newLocView = AnnotationViewFactory.Create(newLoc);
-
-                    Viking.UI.Commands.Command.EnqueueCommand(typeof(ResizeCircleCommand), new object[] { Parent, selected.Parent.Type.Color, WorldPos, new ResizeCircleCommand.OnCommandSuccess((double radius) => { newLocView.modelObj.Radius = radius; }) });
-                    Viking.UI.Commands.Command.EnqueueCommand(typeof(CreateNewLinkedLocationCommand), new object[] { Parent, selected, newLocView });
-
-                    Viking.UI.State.SelectedObject = null;
-                    this.Execute(); 
-
-
-                }
-                else
-                {
-                    //If we've been dragging a location on the same section then relocate the section
-                    GridVector2 WorldPos = Parent.ScreenToWorld(e.X, e.Y);
-                    //Transform from volume space to section space if we need to
-                    GridVector2 SectionPos;
-
-                    try
-                    {
-                        SectionPos = Parent.VolumeToSection(WorldPos);
-                    }
-                    catch (ArgumentOutOfRangeException )
-                    {
-                        Trace.WriteLine("Could not map world point OnMouseUp: " + WorldPos.ToString(), "Command");
-                        return;
-                    }
-
-                    //selected.SectionPosition = SectionPos;
-                    selected.MosaicShape = selected.MosaicShape.MoveTo(SectionPos);
-                    
-                    //Send changes to DB
-                    Store.Locations.Save();
-
-                    this.Deactivated = true; 
-                }*/
-            }
-            else if (e.Button != MouseButtons.Right)
+            if (e.Button != MouseButtons.Right)
             {
                 //Any other button other than the right button cancels the command
                 this.Deactivated = true;
