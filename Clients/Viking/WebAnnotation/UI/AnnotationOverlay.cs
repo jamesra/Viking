@@ -186,6 +186,21 @@ namespace WebAnnotation
 
         protected string[] LastMouseOverHelpStrings = new string[] { };
 
+        public static void GotoLastModifiedLocation()
+        { 
+            Debug.Print("Open Last Modified Location");
+
+            var task = new System.Threading.Tasks.Task(() =>
+            {
+                WebAnnotationModel.LocationObj lastLocation = WebAnnotationModel.Store.Locations.GetLastModifiedLocation();
+                if (lastLocation != null)
+                {
+                    Viking.UI.State.MainThreadDispatcher.Invoke(() => AnnotationOverlay.GoToLocation(lastLocation));
+                }
+            });
+            task.Start();
+        }
+
         /// <summary>
         /// Returns the location nearest to the mouse, prefers the locations on the current section
         /// </summary>
@@ -434,6 +449,10 @@ namespace WebAnnotation
                                             true,
                                             (double)((CreateNewLinkedLocationCommand.LastEditedLocation.Radius * 2) / Parent.Width) * 2); 
 
+                    }
+                    else
+                    {
+                        GotoLastModifiedLocation();
                     }
                     return;
                 case Keys.ShiftKey:

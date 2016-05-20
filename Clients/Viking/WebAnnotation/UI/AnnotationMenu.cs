@@ -48,17 +48,7 @@ namespace WebAnnotation.UI
         [MenuItem("Open Last Modified Location")]
         static public void GoToLastModifiedLocation(object sender, EventArgs e)
         {
-            Debug.Print("Open Last Modified Location");
-
-            var task = new System.Threading.Tasks.Task(() =>
-            {
-                WebAnnotationModel.LocationObj lastLocation = WebAnnotationModel.Store.Locations.GetLastModifiedLocation();
-                if (lastLocation != null)
-                {
-                    Viking.UI.State.MainThreadDispatcher.Invoke(() => AnnotationOverlay.GoToLocation(lastLocation));
-                }
-            });
-            task.Start();
+            AnnotationOverlay.GotoLastModifiedLocation();
         }
 
         [MenuItem("Open Structure")]
