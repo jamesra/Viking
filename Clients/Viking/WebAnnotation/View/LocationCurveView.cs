@@ -32,7 +32,7 @@ namespace WebAnnotation.View
                 //TODO: Find a more accurate measurement.  Returning 0 means the line is always on top in selection.
                 GridLineSegment[] segs = GridLineSegment.SegmentsFromPoints(this.VolumeCurveControlPoints);
                 double MinDistance = segs.Min(l => l.DistanceToPoint(Position));
-                return (this.LineWidth / 2.0) - MinDistance;
+                return MinDistance / (this.LineWidth / 2.0);
             }
         }
     }

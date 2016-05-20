@@ -38,7 +38,7 @@ namespace WebAnnotation
         static public uint NumOpenCurveInterpolationPoints = 3;
         static public uint NumClosedCurveInterpolationPoints = 10;
 
-        static public double DefaultClosedLineWidth = 16.0;
+        static public double DefaultClosedLineWidth = 24.0;
 
         /// <summary>
         /// Number of interpolations to place between curve control points, determines distance between control points
