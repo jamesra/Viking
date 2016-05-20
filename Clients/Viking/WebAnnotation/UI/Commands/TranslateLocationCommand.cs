@@ -12,6 +12,7 @@ using VikingXNAGraphics;
 using System.Windows.Forms;
 using System.Diagnostics;
 using WebAnnotation;
+using System.Collections.ObjectModel;
 
 namespace WebAnnotation.UI.Commands
 {
@@ -119,7 +120,7 @@ namespace WebAnnotation.UI.Commands
     }
 
 
-    abstract class TranslateCurveLocationCommand : TranslateLocationCommand, Viking.Common.IHelpStrings
+    abstract class TranslateCurveLocationCommand : TranslateLocationCommand, Viking.Common.IHelpStrings, Viking.Common.IObservableHelpStrings
     {
         protected CurveView curveView;
         protected GridVector2[] OriginalControlPoints;
@@ -163,6 +164,14 @@ namespace WebAnnotation.UI.Commands
                 s.AddRange(TranslateLocationCommand.DefaultMouseHelpStrings);
                 s.AddRange(Viking.UI.Commands.Command.DefaultKeyHelpStrings);
                 return s.ToArray();
+            }
+        }
+
+        public ObservableCollection<string> ObservableHelpStrings
+        {
+            get
+            {
+                return new ObservableCollection<string>(this.HelpStrings);
             }
         }
 
