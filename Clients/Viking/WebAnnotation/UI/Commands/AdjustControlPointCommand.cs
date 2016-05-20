@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -13,7 +14,7 @@ using System.Diagnostics;
 
 namespace WebAnnotation.UI.Commands 
 {
-    class AdjustCurveControlPointCommand : AnnotationCommandBase
+    class AdjustCurveControlPointCommand : AnnotationCommandBase, Viking.Common.IHelpStrings, Viking.Common.IObservableHelpStrings
     {
         //LocationObj Loc;
         CurveView curveView;
@@ -24,6 +25,22 @@ namespace WebAnnotation.UI.Commands
         OnCommandSuccess success_callback;
 
         Viking.VolumeModel.IVolumeToSectionTransform mapping;
+
+        public string[] HelpStrings
+        {
+            get
+            {
+                return new string[] { "Release Left Mouse Button to place control point" };
+            }
+        }
+
+        public ObservableCollection<string> ObservableHelpStrings
+        {
+            get
+            {
+                return new ObservableCollection<string>(this.HelpStrings);
+            }
+        }
 
         public AdjustCurveControlPointCommand(Viking.UI.Controls.SectionViewerControl parent,
                                         GridVector2[] OriginalMosaicControlPoints,
