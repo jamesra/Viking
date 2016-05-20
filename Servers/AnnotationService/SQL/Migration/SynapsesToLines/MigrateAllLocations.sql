@@ -25,7 +25,7 @@
 --	i.  Ribbons (Parallel line to structure's parent)
 --  ii. Non-Ribbons (Perpendicular line to structure's parent)
 
-USE TEST
+USE RC2Test
 GO
 
 
@@ -325,4 +325,27 @@ WHERE LSLL.UpdatedShape IS NOT NULL
 
  */
 
+
+ --Remove all views
+
+
+GO
+IF OBJECT_ID('vUnlinkedLocations') IS NOT NULL DROP VIEW vUnlinkedLocations
+GO
+IF OBJECT_ID('vLinkedStructures', 'view') IS NOT NULL DROP VIEW vLinkedStructures
+GO
+IF OBJECT_ID('vLinkedStructureLocations', 'view') IS NOT NULL DROP VIEW vLinkedStructureLocations
+GO
+IF OBJECT_ID ('dbo.vNearestParentStructureLocation', 'view') IS NOT NULL
+	DROP VIEW vNearestParentStructureLocation
+GO
+IF OBJECT_ID ('dbo.vParentStructureLocationDistance', 'view') IS NOT NULL
+	DROP VIEW vParentStructureLocationDistance
+GO
+IF OBJECT_ID('vLinkedLocationWithoutSectionPartner', 'view') IS NOT NULL DROP VIEW vLinkedLocationWithoutSectionPartner
+GO
+IF OBJECT_ID('vStructureLinkLocationPairs', 'view') IS NOT NULL DROP VIEW vStructureLinkLocationPairs
+GO
+--Create a temp table to store all of the new shapes for affected locations
+IF OBJECT_ID('tempdb..#LocationLines') IS NOT NULL DROP TABLE #LocationLines
 GO
