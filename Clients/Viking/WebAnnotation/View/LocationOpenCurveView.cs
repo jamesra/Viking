@@ -180,7 +180,7 @@ namespace WebAnnotation.View
             }
         }
 
-        /*
+        
         internal override void OnParentPropertyChanged(object o, PropertyChangedEventArgs args)
         {
             if (args.PropertyName == "Label" || args.PropertyName == "Attributes")
@@ -189,8 +189,16 @@ namespace WebAnnotation.View
             }
             
             base.OnParentPropertyChanged(o, args);
-            
-        }*/
+        }
+
+        internal override void OnObjPropertyChanged(object o, PropertyChangedEventArgs args)
+        {
+            if(args.PropertyName == "Attributes")
+            {
+                CreateLabelViews(VolumeControlPoints, this.ParentID);
+            }
+            base.OnObjPropertyChanged(o, args);
+        }
 
     }
 }
