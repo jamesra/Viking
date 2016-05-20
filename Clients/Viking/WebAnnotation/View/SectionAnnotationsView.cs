@@ -170,7 +170,10 @@ namespace WebAnnotation.ViewModel
         public override void Init()
         {
             ConcurrentDictionary<long, LocationObj> local = Store.Locations.GetLocalObjectsForSection(this.SectionNumber);
-            AddLocations(local.Values);
+            if (local.Count > 0)
+            {
+                Task.Run(() => AddLocations(local.Values));
+            }
         }
 
         private IEnumerable<LocationObj> LinkedLocationsOnPrimary(ICollection<long> LinkedIDs)
