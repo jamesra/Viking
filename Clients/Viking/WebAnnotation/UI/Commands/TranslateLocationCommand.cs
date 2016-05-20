@@ -69,8 +69,22 @@ namespace WebAnnotation.UI.Commands
 
     }
 
-    class TranslateOpenCurveCommand : TranslateCurveLocationCommand
+    class TranslateOpenCurveCommand : TranslateCurveLocationCommand, Viking.Common.IHelpStrings
     {
+        private double _lineWidthScale = 1.0;
+        protected double LineWidthScale
+        {
+            get
+            {
+                return _lineWidthScale;
+            }
+            set
+            {
+                _lineWidthScale = value;
+                _lineWidthScale = _lineWidthScale * OriginalLineWidth < 1.0 ? 1.0 / OriginalLineWidth : value;
+            }
+        }
+
         private double _sizeScale = 1.0;
         protected override double SizeScale
         {
@@ -80,8 +94,7 @@ namespace WebAnnotation.UI.Commands
             }
             set
             {
-                _sizeScale = value;
-                _sizeScale = _sizeScale * OriginalLineWidth < 1.0 ? 1.0 / OriginalLineWidth : value; 
+                _sizeScale = value; 
             }
         }
 
@@ -94,8 +107,24 @@ namespace WebAnnotation.UI.Commands
 
         protected override double CalculateFinalLineWidth()
         {
-            return OriginalLineWidth * _sizeScale;
+            return OriginalLineWidth * _lineWidthScale;
         }
+
+        public override string[] HelpStrings
+        {
+            get
+            {
+                List<string> s = new List<string>(base.HelpStrings);
+                s.AddRange(TranslateOpenCurveCommand.DefaultMouseHelpStrings);
+                s.Sort();
+                return s.ToArray();
+            }
+        }
+
+        public new static string[] DefaultMouseHelpStrings = new string[]
+        {
+            "Mouse Wheel + SHIFT: Change line width",
+        };
 
         public TranslateOpenCurveCommand(Viking.UI.Controls.SectionViewerControl parent,
                                         GridVector2 MosaicPosition,
@@ -104,6 +133,22 @@ namespace WebAnnotation.UI.Commands
                                         double LineWidth,
                                         OnCommandSuccess success_callback) : base(parent, MosaicPosition, OriginalMosaicControlPoints, color, LineWidth, success_callback)
         { }
+
+        private int scroll_wheel_delta = 0;
+        protected override void OnMouseWheel(object sender, MouseEventArgs e)
+        { 
+            if (System.Windows.Input.Keyboard.IsKeyDown(System.Windows.Input.Key.LeftShift) ||
+                System.Windows.Input.Keyboard.IsKeyDown(System.Windows.Input.Key.RightShift))
+            {
+                scroll_wheel_delta += e.Delta;
+                LineWidthScale = GetScalarForScrollWheelDelta(scroll_wheel_delta);
+                Parent.Invalidate();
+            }
+            else
+            {
+                base.OnMouseWheel(sender, e);
+            }
+        }
 
         protected override CurveView CreateView(GridVector2[] ControlPoints, Microsoft.Xna.Framework.Color color)
         {
@@ -114,7 +159,8 @@ namespace WebAnnotation.UI.Commands
         {
             GridVector2 centroid = OriginalControlPoints.Centroid();
             ICollection<GridVector2> rotatedPoints = OriginalControlPoints.Rotate(this.Angle, centroid);
-            ICollection<GridVector2> translatedPoints = rotatedPoints.Translate(this.DeltaSum);
+            ICollection<GridVector2> scaledPoints = rotatedPoints.Scale(this.SizeScale, centroid);
+            ICollection<GridVector2> translatedPoints = scaledPoints.Translate(this.DeltaSum);
             return translatedPoints.ToArray();
         }
     }
@@ -156,13 +202,14 @@ namespace WebAnnotation.UI.Commands
             }
         }
 
-        public string[] HelpStrings
+        public virtual string[] HelpStrings
         {
             get
             { 
                 List<string> s = new List<string>(TranslateCurveLocationCommand.DefaultMouseHelpStrings);
                 s.AddRange(TranslateLocationCommand.DefaultMouseHelpStrings);
                 s.AddRange(Viking.UI.Commands.Command.DefaultKeyHelpStrings);
+                s.Sort();
                 return s.ToArray();
             }
         }
@@ -179,7 +226,8 @@ namespace WebAnnotation.UI.Commands
         {
             "CTRL+Click another curve: Copy control points",
             "Middle Button click: Reset to original size",
-            "Hold Right click and drag: Rotate"
+            "Hold Right click and drag: Rotate",
+            "Mouse Wheel: Change annotation size"
         };
 
         public TranslateCurveLocationCommand(Viking.UI.Controls.SectionViewerControl parent,
@@ -474,15 +522,10 @@ namespace WebAnnotation.UI.Commands
             base.OnDeactivate();
         }
 
-        private int scroll_delta_sum = 0;
-        protected override void OnMouseWheel(object sender, MouseEventArgs e)
+        protected double GetScalarForScrollWheelDelta(int scroll_delta_sum)
         {
-           // Trace.WriteLine(e.Delta.ToString());
-
-            scroll_delta_sum += e.Delta;
-
             if (Math.Abs(scroll_delta_sum) < 120)
-                return;
+                return 1.0;
 
             int adjusted_scroll_distance = Math.Abs(scroll_delta_sum) - 120;
 
@@ -494,7 +537,19 @@ namespace WebAnnotation.UI.Commands
             double scalar = Math.Pow(2, num_doublings);
 
             if (scroll_delta_sum < 0)
-                scalar = 1 / scalar; 
+                scalar = 1 / scalar;
+
+            return scalar;
+        }
+
+        private int scroll_delta_sum = 0;
+        protected override void OnMouseWheel(object sender, MouseEventArgs e)
+        {
+           // Trace.WriteLine(e.Delta.ToString());
+
+            scroll_delta_sum += e.Delta;
+
+            double scalar = GetScalarForScrollWheelDelta(scroll_delta_sum); 
 
             //Trace.WriteLine(scalar.ToString());
             UpdateScale(scalar);
