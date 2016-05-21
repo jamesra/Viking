@@ -96,7 +96,16 @@ namespace WebAnnotation.View
 
         public LocationLineView(LocationObj obj, Viking.VolumeModel.IVolumeToSectionTransform mapper, Texture2D texture = null) : base(obj, mapper)
         {
-            polyLineView = new PolyLineView(obj.VolumeShape.ToPoints(), obj.Parent.Type.Color.ToXNAColor(0.5f), texture);
+            GridVector2[] volumePoints;
+            bool[] success = mapper.TrySectionToVolume(obj.MosaicShape.ToPoints(), out volumePoints);
+            if (success.All(s => s == true))
+            {
+                polyLineView = new PolyLineView(volumePoints, obj.Parent.Type.Color.ToXNAColor(0.5f), texture);
+            }
+            else
+            {
+                throw new ArgumentException(string.Format("Could not map location {0} to volume", obj.ID));
+            }
         }
 
         public static void Draw(Microsoft.Xna.Framework.Graphics.GraphicsDevice device,

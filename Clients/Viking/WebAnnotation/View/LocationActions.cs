@@ -354,7 +354,31 @@ namespace WebAnnotation.View
         static void UpdateLineLocationNoSaveCallback(LocationObj loc, GridVector2[] VolumeControlPoints, GridVector2[] MosaicControlPoints)
         {
             loc.MosaicShape = SqlGeometryUtils.GeometryExtensions.ToGeometry(loc.MosaicShape.STGeometryType(), MosaicControlPoints);
-            loc.VolumeShape = SqlGeometryUtils.GeometryExtensions.ToGeometry(loc.MosaicShape.STGeometryType(), VolumeControlPoints);
+
+            //Volume control points with additional points for roundness inserted
+            GridVector2[] EnrichedVolumeControlPoints;
+            switch(loc.TypeCode)
+            {
+                case LocationType.POINT:
+                case LocationType.CIRCLE:
+                case LocationType.POLYGON:
+                case LocationType.POLYLINE:
+                    EnrichedVolumeControlPoints = VolumeControlPoints;
+                    break;
+
+                case LocationType.OPENCURVE:
+                    EnrichedVolumeControlPoints = CurveViewControlPoints.CalculateCurvePoints(VolumeControlPoints, Global.NumOpenCurveInterpolationPoints, false).ToArray();
+                    break;
+
+                case LocationType.CLOSEDCURVE:
+                    EnrichedVolumeControlPoints = CurveViewControlPoints.CalculateCurvePoints(VolumeControlPoints, Global.NumClosedCurveInterpolationPoints, true).ToArray();
+                    break;
+                default:
+                    EnrichedVolumeControlPoints = VolumeControlPoints;
+                    break;
+            }
+
+            loc.VolumeShape = SqlGeometryUtils.GeometryExtensions.ToGeometry(loc.MosaicShape.STGeometryType(), EnrichedVolumeControlPoints);
         }
 
         static void UpdateLineLocationCallback(LocationObj loc, GridVector2[] VolumeControlPoints, GridVector2[] MosaicControlPoints, double NewWidth)
