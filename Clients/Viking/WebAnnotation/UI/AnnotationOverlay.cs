@@ -718,7 +718,7 @@ namespace WebAnnotation
             {
                 case LocationType.OPENCURVE:
                     location.MosaicShape = mosaic_points.ToPolyLine();
-                    location.VolumeShape = points.ToPolyLine();
+                    location.VolumeShape = CurveViewControlPoints.CalculateCurvePoints(points, Global.NumOpenCurveInterpolationPoints, false).ToArray().ToPolyLine();
                     break;
                 case LocationType.POLYLINE:
                     location.MosaicShape = mosaic_points.ToPolyLine();
@@ -730,7 +730,7 @@ namespace WebAnnotation
                     break;
                 case LocationType.CLOSEDCURVE:
                     location.MosaicShape = mosaic_points.ToPolygon(); 
-                    location.VolumeShape = points.ToPolygon();
+                    location.VolumeShape = CurveViewControlPoints.CalculateCurvePoints(points, Global.NumClosedCurveInterpolationPoints, true).ToArray().ToPolyLine();
                     break;
             }
         }
@@ -843,13 +843,16 @@ namespace WebAnnotation
         {
             if (CreateNewLinkedLocationCommand.LastEditedLocation != null)
             {
-                if (CreateNewLinkedLocationCommand.LastEditedLocation.Z != this.CurrentSectionNumber)
+                if (CreateNewLinkedLocationCommand.LastEditedLocation.Z != this.CurrentSectionNumber && IsCommandDefault())
                 {
                     Viking.UI.Commands.Command command = LocationAction.CREATELINKEDLOCATION.CreateCommand(this.Parent, CreateNewLinkedLocationCommand.LastEditedLocation, WorldPos);
                     if (command != null)
                     {
                         _Parent.CurrentCommand = command;
                     }
+
+                    Viking.UI.State.SelectedObject = null;
+                    CreateNewLinkedLocationCommand.LastEditedLocation = null;
                 }
                 /*
                 LocationObj template = CreateNewLinkedLocationCommand.LastEditedLocation;
