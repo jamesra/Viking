@@ -199,23 +199,6 @@ namespace WebAnnotation
 
     internal static class MappingExtensions
     { 
-        public static bool MapLocationToVolume(this Viking.VolumeModel.IVolumeToSectionTransform mapper, WebAnnotationModel.LocationObj loc)
-        {
-            //Don't bother mapping if the location was already mapped
-            if (loc.VolumeTransformID == mapper.ID)
-                return true;
-
-            switch (loc.TypeCode)
-            {
-                case WebAnnotationModel.LocationType.POINT:
-                    return mapper.MapLocationCentroidToVolume(loc);
-                case WebAnnotationModel.LocationType.CIRCLE:
-                    return mapper.MapLocationCentroidToVolume(loc);
-                default:
-                    return mapper.MapLocationShapeToVolume(loc);
-            }
-        }
-
         /// <summary>
         /// A faster mapping technique for geometries that do not use control points such as circles and points.
         /// </summary>
@@ -273,30 +256,6 @@ namespace WebAnnotation
             }
 
             return SqlGeometryUtils.GeometryExtensions.ToGeometry(shape.STGeometryType(), SectionPositions);
-        }
-
-        /// <summary>
-        /// Map all of the control points for the geometry individually
-        /// </summary>
-        /// <param name="loc"></param>
-        /// <returns></returns>
-        private static bool MapLocationShapeToVolume(this Viking.VolumeModel.IVolumeToSectionTransform mapper, WebAnnotationModel.LocationObj loc)
-        {
-            //Don't bother mapping if the location was already mapped
-            if (loc.VolumeTransformID == mapper.ID)
-                return true;
-
-            Microsoft.SqlServer.Types.SqlGeometry mappedshape = mapper.TryMapShapeSectionToVolume(loc.MosaicShape);
-            if (mappedshape == null)
-            {
-                Trace.WriteLine("MapLocationToVolume: Location #" + loc.ID.ToString() + " was unmappable.", "WebAnnotation");
-                return false;
-            }
-
-            loc.VolumeShape = mappedshape;
-            loc.VolumeTransformID = mapper.ID;
-
-            return true;
         }
     }
 

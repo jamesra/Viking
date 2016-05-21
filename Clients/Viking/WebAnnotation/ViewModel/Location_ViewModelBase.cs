@@ -562,35 +562,7 @@ namespace WebAnnotation.ViewModel
             }
             */
         }
-        
-        public SqlGeometry MosaicShape
-        {
-            get
-            {
-                return modelObj.MosaicShape;
-            }
-            /*
-            set
-            {
-                modelObj.MosaicShape = value;
-            }
-            */
-        }
-        
-        public SqlGeometry VolumeShape
-        {
-            get
-            {
-                return modelObj.VolumeShape;
-            }
-            /*
-            set
-            {
-                modelObj.VolumeShape = value;
-            }
-            */
-        }
-        
+                
         
         [Column("TypeCode")]
         public LocationType TypeCode
