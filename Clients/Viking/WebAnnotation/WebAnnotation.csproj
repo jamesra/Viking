@@ -143,6 +143,12 @@
     <Compile Include="UI\Commands\AdjustControlPointCommand.cs" />
     <Compile Include="UI\Commands\PlaceOpenCurveCommand.cs" />
     <Compile Include="UI\Commands\TranslateLocationCommand.cs" />
+    <Compile Include="UI\Controls\ListStructures.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="UI\Controls\ListStructures.Designer.cs">
+      <DependentUpon>ListStructures.cs</DependentUpon>
+    </Compile>
     <Compile Include="ViewModel\SectionLocationLinksAnnotationsViewModel.cs" />
     <Compile Include="View\StructureCircleLabels.cs" />
     <Compile Include="View\StructureLink_ContextMenuView.cs" />
@@ -178,12 +184,6 @@
     </Compile>
     <Compile Include="UI\Controls\ListLocations.Designer.cs">
       <DependentUpon>ListLocations.cs</DependentUpon>
-    </Compile>
-    <Compile Include="UI\ViewEffects\ListStructures.cs">
-      <SubType>UserControl</SubType>
-    </Compile>
-    <Compile Include="UI\ViewEffects\ListStructures.Designer.cs">
-      <DependentUpon>ListStructures.cs</DependentUpon>
     </Compile>
     <Compile Include="UI\FindStructureNumberForm.cs">
       <SubType>Form</SubType>
@@ -291,7 +291,7 @@
     <EmbeddedResource Include="UI\Controls\ListLocations.resx">
       <DependentUpon>ListLocations.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="UI\ViewEffects\ListStructures.resx">
+    <EmbeddedResource Include="UI\Controls\ListStructures.resx">
       <DependentUpon>ListStructures.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="UI\FindStructureNumberForm.resx">
@@ -397,7 +397,9 @@
       <Name>WebAnnotationModel</Name>
     </ProjectReference>
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Folder Include="UI\ViewEffects\" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
