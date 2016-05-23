@@ -185,6 +185,12 @@
     <Compile Include="UI\Controls\ListLocations.Designer.cs">
       <DependentUpon>ListLocations.cs</DependentUpon>
     </Compile>
+    <Compile Include="UI\Controls\ListStructures.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="UI\Controls\ListStructures.Designer.cs">
+      <DependentUpon>ListStructures.cs</DependentUpon>
+    </Compile>
     <Compile Include="UI\FindStructureNumberForm.cs">
       <SubType>Form</SubType>
     </Compile>

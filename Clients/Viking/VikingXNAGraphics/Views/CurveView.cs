@@ -313,7 +313,7 @@ namespace VikingXNAGraphics
 
         private void UpdateView()
         { 
-            this.Curve = new RoundCurve.RoundCurve(_CurveControlPoints.CurvePoints);
+            this.Curve = new RoundCurve.RoundCurve(_CurveControlPoints.CurvePoints, _CurveControlPoints.TryCloseCurve);
         }
 
         public static RenderTarget2D CreateTextureForLabel(string label, Microsoft.Xna.Framework.Graphics.GraphicsDevice device,
@@ -515,7 +515,7 @@ namespace VikingXNAGraphics
         private void UpdateViews()
         {
             this.ControlPointViews = CreateControlPointViews(this.ControlPoints, this.ControlPointRadius, this.Color, null);
-            this.Curve = CreateCurveView(this.CurvePoints.ToArray(), this.LineWidth, this.Color);
+            this.Curve = CreateCurveView(this.CurvePoints.ToArray(), this.LineWidth, this.Color, _CurveControlPoints.TryCloseCurve);
         }
 
         private static CircleView[] CreateControlPointViews(ICollection<GridVector2> ControlPoints, double Radius, Microsoft.Xna.Framework.Color color, Texture2D texture)
@@ -529,9 +529,9 @@ namespace VikingXNAGraphics
 
         
 
-        private static RoundCurve.RoundCurve CreateCurveView(GridVector2[] CurvePoints, double LineWidth, Color color)
+        private static RoundCurve.RoundCurve CreateCurveView(GridVector2[] CurvePoints, double LineWidth, Color color, bool Closed)
         {
-            return new RoundCurve.RoundCurve(CurvePoints);
+            return new RoundCurve.RoundCurve(CurvePoints, Closed);
         }
 
 
@@ -554,12 +554,12 @@ namespace VikingXNAGraphics
                                 double LineWidth = 16.0)
         {
             CurveViewControlPoints curvePoints = new CurveViewControlPoints(ControlPoints, NumInterpolations, IsClosed);
-            Draw(device, scene, CurveManager, basicEffect, ControlPoints, curvePoints.CurvePoints, Color, LineWidth);
+            Draw(device, scene, CurveManager, basicEffect, ControlPoints, curvePoints.CurvePoints, IsClosed, Color, LineWidth);
         }
 
         public static void Draw(GraphicsDevice device, VikingXNA.Scene scene, RoundCurve.CurveManager CurveManager, 
                                 BasicEffect basicEffect, 
-                                GridVector2[] ControlPoints, GridVector2[] CurvePoints, 
+                                GridVector2[] ControlPoints, GridVector2[] CurvePoints, bool Closed,
                                 Microsoft.Xna.Framework.Color Color, double LineWidth = 16.0)
         {
             Microsoft.Xna.Framework.Color pointColor = ControlPointColor(Color);
@@ -570,7 +570,7 @@ namespace VikingXNAGraphics
                 GlobalPrimitives.DrawCircle(device, basicEffect, cp, LineWidth / 2.0, pointColor);
             }
 
-            RoundCurve.RoundCurve curve = new RoundCurve.RoundCurve(CurvePoints);
+            RoundCurve.RoundCurve curve = new RoundCurve.RoundCurve(CurvePoints, Closed);
             CurveManager.Draw(curve, (float)LineWidth / 2.0f, Color, scene.ViewProj, 0, "Standard");
         }
 

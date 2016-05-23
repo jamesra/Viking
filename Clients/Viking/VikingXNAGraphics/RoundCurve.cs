@@ -34,6 +34,7 @@ namespace RoundCurve
         private double[] _tangent_thetas; // Length of the line
         private double[] _distance_to_origin; //Distance of each control point to the origin of the line
         private double[] _distance_to_origin_normalized; //Distance of each control point to the origin of the line
+        private bool _Closed;
 
         public GridVector2[] ControlPoints
         {
@@ -48,6 +49,8 @@ namespace RoundCurve
             }
         } 
 
+       public bool Closed { get { return _Closed; } }
+
         public double[] Distance { get { return _distance_to_origin; } }
         public double[] DistanceNormalized { get { return _distance_to_origin_normalized; } }
         public double[] Theta { get { return _tangent_thetas; } }
@@ -55,9 +58,11 @@ namespace RoundCurve
         public double TotalDistance { get { return _distance_to_origin.Last(); } }
 
 
-        public RoundCurve(GridVector2[] ControlPoints)
+        public RoundCurve(GridVector2[] ControlPoints, bool Closed)
         {
+            this._Closed = Closed;
             this.ControlPoints = ControlPoints;
+            
         } 
 
         private static double[] CalcLineDistances(GridVector2[] points)
@@ -76,26 +81,28 @@ namespace RoundCurve
             return point_distances;
         }
 
-        private static double[] CalcLineTangents(GridVector2[] points)
+        private static double[] CalcLineTangents(GridVector2[] points, bool Closed)
         {
-            double[] tangents = new double[points.Length]; 
-            tangents[0] = (float)GridVector2.Angle(points[0], points[1]);
-            tangents[points.Length - 1] = GridVector2.Angle(points[points.Length - 2], points[points.Length - 1]);
-             
-            for(int i = 1; i < points.Length-1; i++)
+            double[] tangents = new double[points.Length];
+
+            int numPoints = points.Length;
+            
+            for (int i = 1; i < numPoints - 1; i++)
             {
                 tangents[i] = GridVector2.Angle(points[i - 1], points[i + 1]);
             }
-            /*
-            double[] tangents0 = new double[points.Length];
-            tangents0[0] = (float)GridVector2.Angle(points[0], points[1]);
-            tangents0[points.Length - 1] = GridVector2.Angle(points[points.Length - 2], points[points.Length - 1]);
 
-            for (int i = 1; i < points.Length - 1; i++)
+            if (Closed)
             {
-                tangents0[i] = GridVector2.Angle(points[i - 1], points[i + 1]);
+                tangents[0] = GridVector2.Angle(points[numPoints - 2], points[1]);
+                tangents[numPoints-1] = GridVector2.Angle(points[numPoints - 2], points[1]);
             }
-            */
+            else
+            {
+                tangents[0] = (float)GridVector2.Angle(points[0], points[1]);
+                tangents[numPoints - 1] = GridVector2.Angle(points[numPoints - 2], points[numPoints - 1]);
+            }
+            
             return tangents;
         }
 
@@ -104,7 +111,7 @@ namespace RoundCurve
             this._distance_to_origin = CalcLineDistances(this._controlPoints);
             double TotalDistance = _distance_to_origin.Last();
             this._distance_to_origin_normalized = _distance_to_origin.Select(d => d / TotalDistance).ToArray();
-            this._tangent_thetas = CalcLineTangents(this._controlPoints);
+            this._tangent_thetas = CalcLineTangents(this._controlPoints, this._Closed);
         }
 
         public override string ToString()

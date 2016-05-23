@@ -22,7 +22,8 @@ namespace XNATestbed
         CURVE_LABEL,
         CURVE,
         LINESTYLES,
-        CURVESTYLES
+        CURVESTYLES,
+        CLOSEDCURVE
     };
 
     /// <summary>
@@ -45,8 +46,9 @@ namespace XNATestbed
         LabelViewsTest labelTest = new LabelViewsTest();
         LineViewStylesTest lineStyleTest = new LineViewStylesTest();
         CurveViewStylesTest curveStyleTest = new CurveViewStylesTest();
+        ClosedCurveViewTest closedCurveTest = new ClosedCurveViewTest();
 
-        TestMode Mode = TestMode.CURVESTYLES;
+        TestMode Mode = TestMode.CLOSEDCURVE;
 
         public XNATestBedMain()
         {
@@ -97,11 +99,12 @@ namespace XNATestbed
 
             InitializeEffects();
 
-            curveTest.Init(this);
-            curveViewTest.Init(this);
-            labelTest.Init(this);
-            lineStyleTest.Init(this);
-            curveStyleTest.Init(this);
+            //curveTest.Init(this);
+            //curveViewTest.Init(this);
+            //labelTest.Init(this);
+            //lineStyleTest.Init(this);
+            //curveStyleTest.Init(this);
+            closedCurveTest.Init(this);
         }
 
         /// <summary>
@@ -173,6 +176,8 @@ namespace XNATestbed
                 this.Mode = TestMode.LINESTYLES;
             if (Keyboard.GetState().IsKeyDown(Keys.F5))
                 this.Mode = TestMode.CURVESTYLES;
+            if (Keyboard.GetState().IsKeyDown(Keys.F6))
+                this.Mode = TestMode.CLOSEDCURVE;
         }
 
         private void ProcessGamepad()
@@ -227,6 +232,9 @@ namespace XNATestbed
                 case TestMode.CURVESTYLES:
                     curveStyleTest.Draw(this);
                     break;
+                case TestMode.CLOSEDCURVE:
+                    closedCurveTest.Draw(this);
+                    break;
             }
             
             spriteBatch.End();
@@ -266,7 +274,7 @@ namespace XNATestbed
             window.lineManager.Draw(new RoundLine[] { line }, 16, Color.Red, ViewProjMatrix, time, labelTexture);
 
             GridVector2[] cps = CreateTestCurve2(CurveAngle, 100);
-            RoundCurve.RoundCurve curve = new RoundCurve.RoundCurve(cps);
+            RoundCurve.RoundCurve curve = new RoundCurve.RoundCurve(cps, false);
             window.curveManager.Draw(new RoundCurve.RoundCurve[] { curve }, 16, Color.Blue, ViewProjMatrix, time, labelTexture);
             window.curveManager.Draw(new RoundCurve.RoundCurve[] { curve }, 16, Color.Blue, ViewProjMatrix, time, TechniqueName);
         }
@@ -524,6 +532,47 @@ namespace XNATestbed
             CurveView.Draw(window.GraphicsDevice, scene, window.curveManager, window.basicEffect, window.overlayEffect, time, this.listLineViews.ToArray());
 
             listLabelViews.ForEach(lv => { lv.Draw(window.spriteBatch, window.fontArial, scene); });
+        }
+    }
+
+    public class ClosedCurveViewTest
+    {
+        CurveView curveView;
+        CurveLabel curveLabel; 
+
+        public void Init(XNATestBedMain window)
+        {
+            GridVector2[] cps = CreateTestCurve(90, 190);
+            curveView = new CurveView(cps, Color.Red, true, null, lineStyle: LineStyle.HalfTube);
+            curveLabel = new CurveLabel("The quick brown fox jumps over the lazy dog", cps, Color.Black, true); 
+        }
+
+        public void ProcessGamepad()
+        {
+        }
+
+        public void Draw(XNATestBedMain window)
+        {
+            VikingXNA.Scene scene = window.Scene;
+            Matrix ViewProjMatrix = scene.ViewProj;
+            float time = DateTime.Now.Millisecond / 1000.0f;
+            
+            curveLabel.Alignment = HorizontalAlignment.Left;
+
+            CurveView.Draw(window.GraphicsDevice, scene, window.curveManager, window.basicEffect, window.overlayEffect, time, new CurveView[] { curveView });
+            //CurveLabel.Draw(window.GraphicsDevice, scene, window.spriteBatch, window.fontArial, window.curveManager, new CurveLabel[] { curveLabel });
+
+        }
+
+        private static GridVector2[] CreateTestCurve(double height, double width)
+        {
+            GridVector2[] cps = new GridVector2[] {new GridVector2(-width,0),
+                                                   new GridVector2(-width / 2.0, height),
+                                                   new GridVector2(0,0),
+                                                   new GridVector2(width / 2.0, height),
+                                                   new GridVector2(width,0),
+                                                   new GridVector2(0,-height)};
+            return cps;
         }
     }
 }
