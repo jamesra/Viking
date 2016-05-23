@@ -1541,6 +1541,7 @@ namespace Viking.UI.Controls
                     this.Invalidate();
                     break;
                 case Keys.Shift:
+                case Keys.ShiftKey:
                     SetOverlayVisiblity(true, System.Windows.Input.Keyboard.IsKeyDown(System.Windows.Input.Key.Space));
                     this.Invalidate();
                     break;
@@ -1558,7 +1559,8 @@ namespace Viking.UI.Controls
             switch (e.KeyCode)
             {
                 case Keys.Shift:
-                    SetOverlayVisiblity(true, System.Windows.Input.Keyboard.IsKeyDown(System.Windows.Input.Key.Space));
+                case Keys.ShiftKey:
+                    SetOverlayVisiblity(false, System.Windows.Input.Keyboard.IsKeyDown(System.Windows.Input.Key.Space));
                     this.Invalidate();
                     break;
                 case Keys.Space:
