@@ -72,22 +72,40 @@ namespace WebAnnotation
 
     public static class HitTestResultExtensions
     {
+        
+        /// <summary>
+        /// Select annotations in this order
+        /// 1. Locations on our section or Structure Links, whichever is closer
+        /// 2. Locations on adjacent section
+        /// 3. Location Links
+        /// </summary>
+        /// <param name="listHitTestObjects"></param>
+        /// <param name="SectionNumber"></param>
+        /// <returns></returns>
         public static HitTestResult NearestObjectOnCurrentSectionThenAdjacent(this ICollection<HitTestResult> listHitTestObjects, int SectionNumber)
         {
-            List<HitTestResult> listObjectsOnOurSection = listHitTestObjects.Where(l => l.Z == SectionNumber).ToList();
-            if (listObjectsOnOurSection.Count > 0)
+            if (listHitTestObjects.Count == 0)
+                return null;
+
+            List<HitTestResult> listLocationsAndStructureLinks = listHitTestObjects.Where(l => l.obj as IViewLocation != null || l.obj as IViewStructureLink != null).ToList();
+            List<HitTestResult> listLocationsOrStructureLinksOnSection = listLocationsAndStructureLinks.Where(l => l.Z == SectionNumber).ToList();
+
+            if (listLocationsOrStructureLinksOnSection.Count > 0)
             {
-                listObjectsOnOurSection.Sort(new HitTest_Z_Distance_Sorter());
-                return listObjectsOnOurSection.First();
-            }
-            else if (listHitTestObjects.Count > 0)
+                listLocationsOrStructureLinksOnSection.Sort(new HitTest_Z_Distance_Sorter());
+                return listLocationsOrStructureLinksOnSection.First();
+            } 
+            else if (listLocationsAndStructureLinks.Count > 0)
             {
-                List<HitTestResult> listObjectsOnAdjacentSection = listHitTestObjects.ToList();
+                List<HitTestResult> listObjectsOnAdjacentSection = listLocationsAndStructureLinks.ToList();
                 listObjectsOnAdjacentSection.Sort(new HitTest_Z_Distance_Sorter());
                 return listHitTestObjects.First();
             }
 
-            return null;
+            //OK, no locations or structure links, return what is left by distance
+            List<HitTestResult> remaining = new List<HitTestResult>(listHitTestObjects);
+            remaining.Sort(new HitTest_Z_Distance_Sorter());
+            return remaining.First();
         }
 
         /// <summary>
