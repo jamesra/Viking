@@ -1546,6 +1546,7 @@ namespace Viking.UI.Controls
                     break;
                 case Keys.F1:
                     this.commandHelpText.IsDropDownOpen = !this.commandHelpText.IsDropDownOpen;
+                    this.timerHelpTextChange.Enabled = !this.commandHelpText.IsDropDownOpen;
                     break;
             }
 
