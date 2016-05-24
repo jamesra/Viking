@@ -1099,7 +1099,7 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
           <Property Type="Int64" Name="ID" Nullable="false" />
           <Property Type="Double" Name="X" Nullable="false" />
           <Property Type="Double" Name="Y" Nullable="false" />
-          <Property Type="Double" Name="Z" Nullable="false" />
+          <Property Type="Int32" Name="Z" Nullable="false" />
           <Property Type="Double" Name="Radius" Nullable="false" />
         </ComplexType>
         <ComplexType Name="SectionLocations_Result">
