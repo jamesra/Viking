@@ -134,8 +134,8 @@ namespace WebAnnotationModel
         where KEY : struct
         where OBJECT : class
     {
-        static GridCellDimensions CellDimensions = new GridCellDimensions(10000, 10000);
-        static double RegionUpdateInterval = 120;
+        static GridCellDimensions CellDimensions = new GridCellDimensions(7500, 7500);
+        static double RegionUpdateInterval = 180;
         IRegionQuery<KEY, OBJECT> objectStore;
 
         ConcurrentDictionary<int, RegionPyramid<OBJECT>> sectionPyramids = new ConcurrentDictionary<int, RegionPyramid<OBJECT>>();

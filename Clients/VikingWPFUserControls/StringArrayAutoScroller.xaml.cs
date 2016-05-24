@@ -31,7 +31,7 @@ namespace Viking.WPF
             StringArrayAutoScroller.TextArrayProperty = DependencyProperty.Register("TextArray",
                 typeof(ObservableCollection<string>),
                 typeof(StringArrayAutoScroller),
-                new FrameworkPropertyMetadata(new ObservableCollection<string>(),
+                new FrameworkPropertyMetadata(new ObservableCollection<string>(new string[] { "Default" }),
                     new PropertyChangedCallback(OnTextArrayChanged)));
 
             StringArrayAutoScroller.TextArrayIndexProperty = DependencyProperty.Register("TextArrayIndex",

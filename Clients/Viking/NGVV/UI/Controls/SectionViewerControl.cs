@@ -350,7 +350,6 @@ namespace Viking.UI.Controls
             commandHelpTextScrollerHost = new ElementHost();
             commandHelpTextScrollerHost.TabStop = false;
             commandHelpTextScrollerHost.Dock = DockStyle.Bottom;
-            commandHelpTextScrollerHost.Height = 26;
             commandHelpTextScrollerHost.Visible = Viking.Properties.Settings.Default.ShowCommandHelp;
             menuShowCommandHelp.Checked = Viking.Properties.Settings.Default.ShowCommandHelp;
             timerHelpTextChange.Enabled = Viking.Properties.Settings.Default.ShowCommandHelp;
@@ -363,7 +362,7 @@ namespace Viking.UI.Controls
             commandHelpText.InitializeComponent();
             commandHelpTextScrollerHost.Child = commandHelpText;
 
-            
+            commandHelpTextScrollerHost.Height /= 2;
         }
 
         protected override void Initialize()
