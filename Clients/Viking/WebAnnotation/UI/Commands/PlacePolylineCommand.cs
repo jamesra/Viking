@@ -455,15 +455,24 @@ namespace WebAnnotation.UI.Commands
 
         public override void OnDraw(Microsoft.Xna.Framework.Graphics.GraphicsDevice graphicsDevice, VikingXNA.Scene scene, Microsoft.Xna.Framework.Graphics.BasicEffect basicEffect)
         {
-            CurveView curveView = new CurveView(Verticies, this.LineColor,
-                                                this.IsClosed, null, LineWidth,
-                                                ControlPointRadius, this.Style,
-                                                this.IsClosed ? Global.NumClosedCurveInterpolationPoints : Global.NumOpenCurveInterpolationPoints);
+            if (Verticies.Length > 1)
+            {
 
-            CurveView.Draw(graphicsDevice, scene, 
-                           Parent.LumaOverlayCurveManager, basicEffect, 
-                           Parent.annotationOverlayEffect, (float)DateTime.UtcNow.Millisecond / 1000.0f,
-                           new CurveView[] { curveView });
+                CurveView curveView = new CurveView(Verticies, this.LineColor,
+                                                    this.IsClosed, null, LineWidth,
+                                                    ControlPointRadius, this.Style,
+                                                    this.IsClosed ? Global.NumClosedCurveInterpolationPoints : Global.NumOpenCurveInterpolationPoints);
+
+                CurveView.Draw(graphicsDevice, scene,
+                               Parent.LumaOverlayCurveManager, basicEffect,
+                               Parent.annotationOverlayEffect, (float)DateTime.UtcNow.Millisecond / 1000.0f,
+                               new CurveView[] { curveView });
+            }
+            else
+            {
+                CircleView circleView = new CircleView(new GridCircle(Verticies[0], this.LineWidth / 2.0), this.LineColor);
+                CircleView.Draw(graphicsDevice, scene, basicEffect, Parent.annotationOverlayEffect, new CircleView[] { circleView });
+            }
            
             base.OnDraw(graphicsDevice, scene, basicEffect);
         }

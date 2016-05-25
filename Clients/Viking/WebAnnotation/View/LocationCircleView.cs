@@ -106,7 +106,7 @@ namespace WebAnnotation.View
     {
         public TextureCircleView upCircleView;
         public TextureCircleView downCircleView;
-        public LabelView StructureIDLabelView;
+        public StructureCircleLabels structureLabels;
 
         protected readonly GridCircle _VolumeCircle;
         protected readonly GridCircle _MosaicCircle;
@@ -139,6 +139,15 @@ namespace WebAnnotation.View
             {
                 throw new NotImplementedException();
             }
+        }
+
+        public AdjacentLocationCircleView(LocationObj obj, IVolumeToSectionTransform mapper, double Radius) : base(obj)
+        {
+            _MosaicCircle = new GridCircle(obj.Position, Radius);
+            _VolumeCircle = new GridCircle(mapper.SectionToVolume(_MosaicCircle.Center), _MosaicCircle.Radius);
+
+            CreateViewObjects(this.MosaicCircle, mapper);
+            CreateLabelObjects();
         }
 
         public AdjacentLocationCircleView(LocationObj obj, IVolumeToSectionTransform mapper) : base(obj)
@@ -203,20 +212,19 @@ namespace WebAnnotation.View
 
         private void CreateLabelObjects()
         {
-            StructureIDLabelView = new LabelView(StructureIDLabelWithTypeCode(), modelObj.VolumePosition - new GridVector2(0, this.Radius));
-            StructureIDLabelView.MaxLineWidth = this.Radius * 2;
+            this.structureLabels = new StructureCircleLabels(this.modelObj, this.VolumeCircle, false); 
         }
 
         #region overrides
 
         public override bool IsVisible(VikingXNA.Scene scene)
         {
-            return upCircleView.IsVisible(scene);
+            return this.modelObj.IsUnverifiedTerminal && upCircleView.IsVisible(scene);
         }
 
         public override bool IsLabelVisible(VikingXNA.Scene scene)
         {
-            return StructureIDLabelView.IsVisible(scene);
+            return structureLabels.IsLabelVisible(scene);
         }
         
         public override LocationAction GetMouseClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID)
@@ -260,8 +268,9 @@ namespace WebAnnotation.View
                               Microsoft.Xna.Framework.Graphics.SpriteFont font,
                               VikingXNA.Scene scene)
         {
-            
 
+            structureLabels.DrawLabel(spriteBatch, font, scene);
+            /*
             if (font == null)
                 throw new ArgumentNullException("font");
 
@@ -276,6 +285,7 @@ namespace WebAnnotation.View
             StructureIDLabelView.Draw(spriteBatch, font, scene);
 
             return; 
+            */
         }
 
         #endregion

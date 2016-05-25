@@ -532,12 +532,14 @@ namespace WebAnnotation.UI.Commands
             //OK, so lets figure out how far we need to scrool 
             const double Scroll_distance_to_double_size = 900.0;
 
-            double num_doublings = adjusted_scroll_distance / Scroll_distance_to_double_size;
+            double num_doublings = (double)adjusted_scroll_distance / (double)Scroll_distance_to_double_size;
 
-            double scalar = Math.Pow(2, num_doublings);
+            double scalar = Math.Pow(1.25, num_doublings);
 
             if (scroll_delta_sum < 0)
                 scalar = 1 / scalar;
+
+            Trace.WriteLine(string.Format("{0} {1} {2}", adjusted_scroll_distance, num_doublings, scalar));
 
             return scalar;
         }
@@ -545,7 +547,7 @@ namespace WebAnnotation.UI.Commands
         private int scroll_delta_sum = 0;
         protected override void OnMouseWheel(object sender, MouseEventArgs e)
         {
-           // Trace.WriteLine(e.Delta.ToString());
+            Trace.WriteLine(e.Delta.ToString());
 
             scroll_delta_sum += e.Delta;
 

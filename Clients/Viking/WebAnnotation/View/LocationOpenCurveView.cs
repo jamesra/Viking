@@ -53,6 +53,15 @@ namespace WebAnnotation.View
             set { curveParentLabel.Alpha = value; }
         }
 
+        public LocationOpenCurveView(LocationObj obj, Viking.VolumeModel.IVolumeToSectionTransform mapper, double lineWidth) : base(obj, mapper)
+        {
+            //RegisterForLocationEvents();
+            //RegisterForStructureChangeEvents();
+
+            curveView = new CurveView(VolumeControlPoints, obj.Parent.Type.Color.ToXNAColor(0.5f), false, lineWidth: lineWidth, lineStyle: LineStyle.Tubular);
+            CreateLabelViews(VolumeControlPoints, obj.ParentID);
+        }
+
         public LocationOpenCurveView(LocationObj obj, Viking.VolumeModel.IVolumeToSectionTransform mapper) : base(obj, mapper)
         {
             //RegisterForLocationEvents();
@@ -77,8 +86,8 @@ namespace WebAnnotation.View
             LabelColor = LabelColor.SetAlpha(0.5f);
             Color ParentLabelColor = new Color(1.0f, 0, 0, 0.5f);
 
-            curveLabel = new CurveLabel(LabelText, controlPoints, LabelColor, false);
-            curveParentLabel = new CurveLabel(ParentStructureLabelText, controlPoints, ParentLabelColor, false);
+            curveLabel = new CurveLabel(LabelText, controlPoints, LabelColor, false, lineWidth: this.LineWidth);
+            curveParentLabel = new CurveLabel(ParentStructureLabelText, controlPoints, ParentLabelColor, false, lineWidth: this.LineWidth);
 
             curveLabel.Alignment = RoundCurve.HorizontalAlignment.Left;
             curveParentLabel.Alignment = RoundCurve.HorizontalAlignment.Right;

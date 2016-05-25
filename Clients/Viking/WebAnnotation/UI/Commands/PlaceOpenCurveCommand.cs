@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -8,6 +9,7 @@ using System.Windows.Forms;
 using WebAnnotation.View;
 using VikingXNAGraphics;
 using SqlGeometryUtils;
+using System.Collections.ObjectModel;
 
 namespace WebAnnotation.UI.Commands
 {
@@ -229,12 +231,51 @@ namespace WebAnnotation.UI.Commands
     /// Double left-click to complete polyline creation
     /// Right-click to remove the last polyline vertex
     /// </summary> 
-    abstract class PlaceCurveCommand : ControlPointCommandBase
+    abstract class PlaceCurveCommand : ControlPointCommandBase, Viking.Common.IHelpStrings, Viking.Common.IObservableHelpStrings
     { 
         public abstract uint NumCurveInterpolations
         {
             get;
         }
+
+        public ObservableCollection<string> ObservableHelpStrings
+        {
+            get
+            {
+                return new ObservableCollection<string>(this.HelpStrings);
+            }
+        }
+
+
+        public string[] HelpStrings
+        {
+            get
+            {
+                List<string> s = new List<string>();
+
+                s.AddRange(PlaceCurveCommand.DefaultMouseHelpStrings);
+                s.AddRange(PlaceCurveCommand.DefaultKeyHelpStrings);
+
+                return s.ToArray();
+            }
+                
+        }
+
+
+        public new static string[] DefaultMouseHelpStrings = new String[] {
+            "Double Left Click: Place final control point, save and exit command",
+            "Double Right Click: Pop last control point",
+            "Left Click and Drag Control Point: Move existing control point",
+            "Left Click last control point: Save and exit command",
+            "No cursor: Command cannot be completed at this location due to invalid geometry. Typically crossed lines."
+            };
+
+        public new static string[] DefaultKeyHelpStrings = new String[] {
+            "Escape Key: Cancel command",
+            "Page up/down key: Change Magnification",
+            "Arrow key: Move view",
+            "Home key: Round magnification to whole number"
+            };
 
         protected Stack<GridVector2> vert_stack = new Stack<GridVector2>();
 
@@ -281,6 +322,7 @@ namespace WebAnnotation.UI.Commands
         }
 
         
+
         public PlaceCurveCommand(Viking.UI.Controls.SectionViewerControl parent,
                                         Microsoft.Xna.Framework.Color color,
                                         GridVector2 origin,
@@ -411,11 +453,14 @@ namespace WebAnnotation.UI.Commands
             else if (e.Button.Left())
             {
                 GridVector2 WorldPos = Parent.ScreenToWorld(e.X, e.Y);
-                if (!OverlapsLastVertex(WorldPos))
+                if (CanControlPointBePlaced(WorldPos))
                 {
                     PushVertex(WorldPos);
-                    this.Execute();
-                    return;
+                    if (CanCommandComplete(WorldPos))
+                    {
+                        this.Execute();
+                        return;
+                    }
                 }
             }
 

@@ -87,19 +87,26 @@ namespace WebAnnotation
             if (listHitTestObjects.Count == 0)
                 return null;
 
-            List<HitTestResult> listLocationsAndStructureLinks = listHitTestObjects.Where(l => l.obj as IViewLocation != null || l.obj as IViewStructureLink != null).ToList();
-            List<HitTestResult> listLocationsOrStructureLinksOnSection = listLocationsAndStructureLinks.Where(l => l.Z == SectionNumber).ToList();
+            List<HitTestResult> listLocations = listHitTestObjects.Where(l => l.obj as IViewLocation != null).ToList();
+            List<HitTestResult> listLocationsOnSection = listLocations.Where(l => l.Z == SectionNumber).ToList();
 
-            if (listLocationsOrStructureLinksOnSection.Count > 0)
+            if (listLocationsOnSection.Count > 0)
             {
-                listLocationsOrStructureLinksOnSection.Sort(new HitTest_Z_Distance_Sorter());
-                return listLocationsOrStructureLinksOnSection.First();
+                listLocationsOnSection.Sort(new HitTest_Z_Distance_Sorter());
+                return listLocationsOnSection.First();
             } 
-            else if (listLocationsAndStructureLinks.Count > 0)
+            else if (listLocations.Count > 0)
             {
-                List<HitTestResult> listObjectsOnAdjacentSection = listLocationsAndStructureLinks.ToList();
+                List<HitTestResult> listObjectsOnAdjacentSection = listLocations.ToList();
                 listObjectsOnAdjacentSection.Sort(new HitTest_Z_Distance_Sorter());
                 return listHitTestObjects.First();
+            }
+
+            List<HitTestResult> listStructureLinks = listHitTestObjects.Where(h => h.obj as IViewStructureLink != null).ToList();
+            if(listStructureLinks.Count > 0)
+            {
+                listStructureLinks.Sort(new HitTest_Z_Distance_Sorter());
+                return listStructureLinks.First();
             }
 
             //OK, no locations or structure links, return what is left by distance
@@ -236,7 +243,7 @@ namespace WebAnnotation
                 Trace.WriteLine("MapLocationToVolumeByCentroid: Location #" + loc.ID.ToString() + " was unmappable.", "WebAnnotation");
                 return false;
             }
-
+            
             loc.VolumeTransformID = mapper.ID;
             if (VolumePosition != loc.VolumePosition)
                 loc.VolumeShape = loc.VolumeShape.MoveTo(VolumePosition);

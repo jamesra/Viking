@@ -186,9 +186,9 @@ namespace VikingXNAGraphics
         {
             //Split the string at the first space before the midpoint
             Vector2 FullLabelMeasurement = font.MeasureString(label);
-            int MaxRows = (int)Math.Ceiling((double)FullLabelMeasurement.X / LineWidth) + NumberOfNewlines(label);
+            int MaxRows = (int)Math.Ceiling((double)(FullLabelMeasurement.X * fontScale) / LineWidth) + NumberOfNewlines(label);
             //string[] labelParts = label.Split();
-            Stack<string> labelStack = new Stack<string>(label.Split(' ').Reverse());
+            Stack<string> labelStack = new Stack<string>(label.Split().Reverse());
 
             //Shortcut the case where the label fits on one line
             if (FullLabelMeasurement.X * fontScale <= LineWidth && !label.Contains('\n'))
@@ -217,6 +217,8 @@ namespace VikingXNAGraphics
                     if (concatenatedRowMeasurement.X * fontScale > LineWidth)  // The word makes the row too long
                     {
                         RequireNewRow = true;
+                        //rows[iRow + 1] = word;
+                        //rowMeasurements[iRow + 1] = font.MeasureString(word);
                         // rowMeasurement[iRow] = font.MeasureString(rows[iRow]); //Measured the last time we added a word to this row
                     }
                     else //The word fits on the row
@@ -229,6 +231,7 @@ namespace VikingXNAGraphics
                 if (RequireNewRow)
                 {
                     iRow++;
+                    labelStack.Push(word);
                 }
             }
 

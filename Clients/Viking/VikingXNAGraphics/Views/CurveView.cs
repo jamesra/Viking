@@ -12,6 +12,10 @@ namespace VikingXNAGraphics
     {
         public CurveViewControlPoints(ICollection<GridVector2> cps, uint NumInterpolations, bool TryToClose)
         {
+            if(cps.Count < 2)
+            {
+                throw new ArgumentException("Cannot create a curve with fewer than two control points");
+            }
             this._NumInterpolations = NumInterpolations;
             this._TryCloseCurve = TryToClose;
             this.ControlPoints = ReverseControlPointsIfTextUpsideDown(cps);

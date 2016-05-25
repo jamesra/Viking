@@ -250,7 +250,7 @@ namespace WebAnnotationModel
         {
             get
             {
-                if (_VolumeShape == null)
+                if (_VolumeShape == null && Data.VolumeShape != null)
                 {
                     _VolumeShape = Data.VolumeShape.ToSqlGeometry();
                 }

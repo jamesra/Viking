@@ -25,6 +25,8 @@ namespace WebAnnotation.View
 
         GridCircle VolumeCircle;
 
+        readonly bool ShowAttributeLabels = true;
+
         public double Radius
         {
             get { return VolumeCircle.Radius; }
@@ -34,10 +36,11 @@ namespace WebAnnotation.View
             }
         }
 
-        public StructureCircleLabels(LocationObj obj, GridCircle circle)
+        public StructureCircleLabels(LocationObj obj, GridCircle circle, bool ShowAttributeLabels = true)
         {
             VolumeCircle = circle;
             locationObj = obj;
+            this.ShowAttributeLabels = ShowAttributeLabels;
             CreateLabelObjects();
         }
 
@@ -93,14 +96,17 @@ namespace WebAnnotation.View
             StructureIDLabelView.MaxLineWidth = this.Radius * 2.0;
             StructureIDLabelView._Color = this.locationObj.IsUnverifiedTerminal ? Color.Yellow : Color.Black;
 
-            StructureLabelView = new LabelView(this.FullLabelText(), this.VolumeCircle.Center + new GridVector2(0, this.Radius / 3.0f));
-            StructureLabelView.MaxLineWidth = this.Radius * 2;
-
-
+            if (ShowAttributeLabels)
+            {
+                StructureLabelView = new LabelView(this.FullLabelText(), this.VolumeCircle.Center + new GridVector2(0, this.Radius / 3.0f));
+                StructureLabelView.MaxLineWidth = this.Radius * 2;
+            }
+            
             if (locationObj.Parent.ParentID.HasValue)
             {
                 ParentStructureLabelView = new LabelView(locationObj.Parent.ParentID.ToString(), this.VolumeCircle.Center + new GridVector2(0, this.Radius / 2.0f));
-                ParentStructureLabelView._Color = locationObj.Parent.Parent.Type.Color.ToXNAColor(0.75f);
+                ParentStructureLabelView._Color = Color.Red; //locationObj.Parent.Parent.Type.Color.ToXNAColor(0.75f);
+                ParentStructureLabelView.MaxLineWidth = this.Radius * 2.0;
             }
             else
             {
@@ -136,15 +142,21 @@ namespace WebAnnotation.View
             double DesiredRowsOfText = 4.0;
             double DefaultFontSize = (this.Radius * 2.0) / DesiredRowsOfText;
             StructureIDLabelView.FontSize = DefaultFontSize; //We only desire one line of text
-            StructureLabelView.FontSize = DefaultFontSize / 3.0f;
-
-            //StructureIDLabelView.Position = modelObj.VolumePosition - new GridVector2(0.0, this.Radius / 3.0f);
 
             StructureIDLabelView.Draw(spriteBatch, font, scene);
-            StructureLabelView.Draw(spriteBatch, font, scene);
+
+            if (ShowAttributeLabels)
+            {
+                StructureLabelView.FontSize = DefaultFontSize / 2.0f;
+
+                //StructureIDLabelView.Position = modelObj.VolumePosition - new GridVector2(0.0, this.Radius / 3.0f);
+
+                StructureLabelView.Draw(spriteBatch, font, scene);
+            }
+
             if (ParentStructureLabelView != null)
             {
-                ParentStructureLabelView.FontSize = StructureIDLabelView.FontSize / 4.0;
+                ParentStructureLabelView.FontSize = DefaultFontSize / 2.0f;
                 ParentStructureLabelView.Draw(spriteBatch, font, scene);
             }
              
