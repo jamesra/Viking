@@ -31,6 +31,23 @@ namespace WebAnnotation.UI.Commands
             }
         }
 
+        public override double LineWidth
+        {
+            get
+            {
+                return this.curve_verticies == null ? Global.DefaultClosedLineWidth : this.curve_verticies.ControlPoints.MinDistanceBetweenPoints();
+            }
+        }
+
+        public override double ControlPointRadius
+        {
+            get
+            {
+               return Global.DefaultClosedLineWidth / 2.0;
+            }
+        }
+
+
         public PlaceClosedCurveCommand(Viking.UI.Controls.SectionViewerControl parent,
                                         Microsoft.Xna.Framework.Color color,
                                         GridVector2 origin,
@@ -486,7 +503,7 @@ namespace WebAnnotation.UI.Commands
                 else
                     pushed_point = false;
 
-                CurveView curveView = new CurveView(vert_stack.ToArray(), this.LineColor, !this.IsOpen, lineWidth: this.LineWidth, lineStyle: Style);
+                CurveView curveView = new CurveView(vert_stack.ToArray(), this.LineColor, !this.IsOpen, lineWidth: this.LineWidth, lineStyle: Style, controlPointRadius: this.ControlPointRadius);
                 curveView.Color.SetAlpha(this.ShapeIsValid() ? 1 : 0.25f);
                 CurveView.Draw(graphicsDevice, scene, Parent.LumaOverlayCurveManager, basicEffect, Parent.annotationOverlayEffect, 0, new CurveView[] { curveView } );
                 //GlobalPrimitives.DrawPolyline(Parent.LineManager, basicEffect, DrawnLineVerticies, this.LineWidth, this.LineColor);
@@ -500,7 +517,7 @@ namespace WebAnnotation.UI.Commands
             {
                 if (this.Verticies.Length > 1)
                 {
-                    CurveView curveView = new CurveView(this.Verticies.ToArray(), this.LineColor, !this.IsOpen, lineWidth: this.LineWidth, lineStyle: Style);
+                    CurveView curveView = new CurveView(this.Verticies.ToArray(), this.LineColor, !this.IsOpen, lineWidth: this.LineWidth, lineStyle: Style, controlPointRadius: this.ControlPointRadius);
                     curveView.Color.SetAlpha(this.ShapeIsValid() ? 1 : 0.25f);
                     CurveView.Draw(graphicsDevice, scene, Parent.LumaOverlayCurveManager, basicEffect, Parent.annotationOverlayEffect, 0, new CurveView[] { curveView });
                 }

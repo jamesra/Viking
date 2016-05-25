@@ -70,8 +70,11 @@ namespace WebAnnotation.View
                                                                Viking.UI.Controls.SectionViewerControl Parent, 
                                                                LocationObj loc, 
                                                                GridVector2 volumePosition)
-        { 
-            switch(loc.TypeCode)
+        {
+            Viking.UI.State.SelectedObject = null;
+            CreateNewLinkedLocationCommand.LastEditedLocation = null; 
+
+            switch (loc.TypeCode)
             {
                 case LocationType.CIRCLE:
                     return CreateCommandForCircles(action, Parent, loc, volumePosition);
@@ -103,11 +106,11 @@ namespace WebAnnotation.View
                 case LocationAction.TRANSLATE:
                     return new TranslateCircleLocationCommand(Parent,
                                                               new GridCircle(loc.Position, loc.Radius),
-                                                              loc.Parent.Type.Color.ToXNAColor(),
+                                                              loc.Parent.Type.Color.ToXNAColor(0.5f),
                                                               (NewVolumePosition, NewMosaicPosition, NewRadius) => UpdateCircleLocationCallback(loc, NewVolumePosition, NewMosaicPosition, NewRadius));
                 case LocationAction.SCALE: 
                     return new ResizeCircleCommand(Parent,
-                            System.Drawing.Color.FromArgb(loc.Parent.Type.Color),
+                            System.Drawing.Color.FromArgb(loc.Parent.Type.Color).SetAlpha(0.5f),
                             loc.VolumePosition,
                             (radius) => { loc.Radius = radius; Store.Locations.Save(); });
                 case LocationAction.ADJUST:
@@ -133,7 +136,7 @@ namespace WebAnnotation.View
                     LocationCanvasView newLocView = AnnotationViewFactory.Create(newLoc, Parent.Section.ActiveSectionToVolumeTransform);
                     return new TranslateCircleLocationCommand(Parent,
                                                                 new GridCircle(MosaicShape.Centroid(), loc.Radius),
-                                                                newLoc.Parent.Type.Color.ToXNAColor(),
+                                                                newLoc.Parent.Type.Color.ToXNAColor(0.5f),
                                                                 new TranslateCircleLocationCommand.OnCommandSuccess((NewVolumePosition, NewMosaicPosition, NewRadius) =>
                                                                    {
                                                                        UpdateCircleLocationNoSaveCallback(newLoc, NewVolumePosition, NewMosaicPosition, NewRadius);
@@ -150,7 +153,7 @@ namespace WebAnnotation.View
                                                                });*/
                                                                    }));
                     
-                    Viking.UI.State.SelectedObject = null;
+                    
                     return null; 
                 default:
                     return null;
@@ -178,14 +181,14 @@ namespace WebAnnotation.View
                     return new TranslateOpenCurveCommand(Parent,
                                                              loc.MosaicShape.Centroid(),
                                                              loc.MosaicShape.ToPoints(),
-                                                             loc.Parent.Type.Color.ToXNAColor(),
+                                                             loc.Parent.Type.Color.ToXNAColor(0.5f),
                                                              loc.Radius * 2.0,
                                                              (VolumeControlPoints, MosaicControlPoints, LineWidth) => UpdateLineLocationCallback(loc, VolumeControlPoints, MosaicControlPoints, LineWidth));
                 case LocationAction.SCALE:
                     return null; 
                 case LocationAction.ADJUST:
                     return new AdjustCurveControlPointCommand(Parent, loc.MosaicShape.ToPoints(),
-                                                                      loc.Parent.Type.Color.ToXNAColor(), 
+                                                                      loc.Parent.Type.Color.ToXNAColor(0.5f), 
                                                                       loc.Radius * 2.0,
                                                                       IsClosedCurve(loc),
                                                                       (VolumeControlPoints, MosaicControlPoints) => UpdateLineLocationCallback(loc, VolumeControlPoints, MosaicControlPoints));
@@ -260,15 +263,15 @@ namespace WebAnnotation.View
                     return new TranslateClosedCurveCommand(Parent,
                                                              loc.MosaicShape.Centroid(),
                                                              loc.MosaicShape.ToPoints(),
-                                                             loc.Parent.Type.Color.ToXNAColor(),
+                                                             loc.Parent.Type.Color.ToXNAColor().SetAlpha(0.5f),
                                                              loc.Radius * 2.0, 
                                                              (VolumeControlPoints, MosaicControlPoints, LineWidth) => UpdateLineLocationCallback(loc, VolumeControlPoints, MosaicControlPoints, LineWidth));
                 case LocationAction.SCALE:
                     return null;
                 case LocationAction.ADJUST:
                     return new AdjustCurveControlPointCommand(Parent, loc.MosaicShape.ToPoints(),
-                                                                      loc.Parent.Type.Color.ToXNAColor(),
-                                                                      loc.Radius * 2.0,
+                                                                      loc.Parent.Type.Color.ToXNAColor(0.5f),
+                                                                      Global.DefaultClosedLineWidth,
                                                                       IsClosedCurve(loc),
                                                                       (VolumeControlPoints, MosaicControlPoints) => UpdateLineLocationCallback(loc, VolumeControlPoints, MosaicControlPoints));
                 case LocationAction.CREATELINK:

@@ -31,6 +31,14 @@ namespace WebAnnotation.UI.Commands
             }
         }
 
+        protected double LineWidth
+        {
+            get
+            {
+                return curveView.ControlPoints.ToPolygon().CalculateInscribedCircle(curveView.ControlPoints).Radius;
+            }
+        }
+
         protected override void UpdateScale(double input)
         {
             SizeScale = input;
@@ -85,7 +93,7 @@ namespace WebAnnotation.UI.Commands
                 }
 
                 GridCircle circle = TranslatedOriginalControlPoints.ToPolygon().CalculateInscribedCircle(TranslatedOriginalControlPoints);
-                this.success_callback(TranslatedOriginalControlPoints, MosaicControlPoints, circle.Radius);
+                this.success_callback(TranslatedOriginalControlPoints, MosaicControlPoints, circle.Radius * 2);
             }
 
             base.Execute();

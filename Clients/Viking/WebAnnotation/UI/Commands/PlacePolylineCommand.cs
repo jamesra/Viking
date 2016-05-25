@@ -14,7 +14,11 @@ namespace WebAnnotation.UI.Commands
     /// </summary>
     abstract class ControlPointCommandBase : Viking.UI.Commands.Command
     {
-        public double LineWidth = 1;
+        public virtual double LineWidth
+        {
+            get;
+        } 
+
         protected Microsoft.Xna.Framework.Color LineColor;
 
         public virtual double ControlPointRadius

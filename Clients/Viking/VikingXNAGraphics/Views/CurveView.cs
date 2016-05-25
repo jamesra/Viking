@@ -18,7 +18,11 @@ namespace VikingXNAGraphics
             }
             this._NumInterpolations = NumInterpolations;
             this._TryCloseCurve = TryToClose;
-            this.ControlPoints = ReverseControlPointsIfTextUpsideDown(cps);
+
+            if (TryCloseCurve && cps.Count > 2)
+                this.ControlPoints = cps.ToArray().AreClockwise() ? cps.Reverse().ToArray() : cps.ToArray();
+            else
+               this.ControlPoints = ReverseControlPointsIfTextUpsideDown(cps);
         }
 
         private static GridVector2[] ReverseControlPointsIfTextUpsideDown(ICollection<GridVector2> cps)

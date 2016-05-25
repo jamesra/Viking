@@ -620,15 +620,15 @@ namespace WebAnnotation
                 switch (AnnotationType)
                 {
                     case LocationType.CIRCLE:
-                        QueuePlacementCommandForCircleStructure(this.Parent,newLocation, WorldPos, SectionPos, type.Color, false);
+                        QueuePlacementCommandForCircleStructure(this.Parent,newLocation, WorldPos, SectionPos, type.Color.SetAlpha(0.5f), false);
                         break;
                     case LocationType.OPENCURVE:
                         newLocation.Radius = 8.0;
-                        QueuePlacementCommandForOpenCurveStructure(this.Parent, newLocation, WorldPos, type.Color, false);
+                        QueuePlacementCommandForOpenCurveStructure(this.Parent, newLocation, WorldPos, type.Color.SetAlpha(0.5f), false);
                         break;
                     case LocationType.CLOSEDCURVE:
                         newLocation.Radius = 8.0;
-                        QueuePlacementCommandForClosedCurveStructure(this.Parent, newLocation, WorldPos, type.Color, false);
+                        QueuePlacementCommandForClosedCurveStructure(this.Parent, newLocation, WorldPos, type.Color.SetAlpha(0.5f), false);
                         break;
                     default:
                         Trace.WriteLine("Could not find commands for annotation type: " + AnnotationType.ToString());
@@ -699,7 +699,7 @@ namespace WebAnnotation
                                         double LineWidth,
                                         OnCommandSuccess success_callback)
                                         */
-            double LineWidth = 16.0;
+            double LineWidth = 16.0; 
             Viking.UI.Commands.Command.EnqueueCommand(typeof(PlaceClosedCurveCommand), new object[] { Parent, typecolor, origin, LineWidth,
                                                             new ControlPointCommandBase.OnCommandSuccess((GridVector2[] points) => {
                                                                     newLocation.TypeCode = LocationType.CLOSEDCURVE;

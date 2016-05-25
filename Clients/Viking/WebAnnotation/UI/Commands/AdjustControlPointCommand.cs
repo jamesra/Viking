@@ -55,7 +55,6 @@ namespace WebAnnotation.UI.Commands
             mapping = parent.Section.ActiveSectionToVolumeTransform;
         }
         
-
         private void CreateView(GridVector2[] ControlPoints, Microsoft.Xna.Framework.Color color, double LineWidth, bool IsClosed)
         {
             curveView = new CurveView(ControlPoints.ToList(), color, false, lineWidth: LineWidth);
