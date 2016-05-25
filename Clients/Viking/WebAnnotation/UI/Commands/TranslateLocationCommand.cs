@@ -65,6 +65,30 @@ namespace WebAnnotation.UI.Commands
             ICollection<GridVector2> scaledPoints = rotatedPoints.Scale(this.SizeScale, centroid);
             ICollection<GridVector2> translatedPoints = scaledPoints.Translate(this.DeltaSum);
             return translatedPoints.ToArray();
+        } 
+
+        protected override void Execute()
+        {
+            if (this.success_callback != null)
+            {
+                GridVector2[] TranslatedOriginalControlPoints = CalculateTranslatedMosaicControlPoints();
+                GridVector2[] MosaicControlPoints = null;
+
+                try
+                {
+                    MosaicControlPoints = mapping.VolumeToSection(TranslatedOriginalControlPoints);
+                }
+                catch (ArgumentOutOfRangeException)
+                {
+                    Trace.WriteLine("TranslateLocationCommand: Could not map world point on Execute: " + TranslatedPosition.ToString(), "Command");
+                    return;
+                }
+
+                GridCircle circle = TranslatedOriginalControlPoints.ToPolygon().CalculateInscribedCircle(TranslatedOriginalControlPoints);
+                this.success_callback(TranslatedOriginalControlPoints, MosaicControlPoints, circle.Radius);
+            }
+
+            base.Execute();
         }
 
     }
@@ -163,6 +187,31 @@ namespace WebAnnotation.UI.Commands
             ICollection<GridVector2> translatedPoints = scaledPoints.Translate(this.DeltaSum);
             return translatedPoints.ToArray();
         }
+
+
+        protected override void Execute()
+        {
+            if (this.success_callback != null)
+            {
+                GridVector2[] TranslatedOriginalControlPoints = CalculateTranslatedMosaicControlPoints();
+                GridVector2[] MosaicControlPoints = null;
+
+                try
+                {
+                    MosaicControlPoints = mapping.VolumeToSection(TranslatedOriginalControlPoints);
+                }
+                catch (ArgumentOutOfRangeException)
+                {
+                    Trace.WriteLine("TranslateLocationCommand: Could not map world point on Execute: " + TranslatedPosition.ToString(), "Command");
+                    return;
+                }
+
+                this.success_callback(TranslatedOriginalControlPoints, MosaicControlPoints, this.LineWidthScale * this.OriginalLineWidth);
+            }
+
+            base.Execute();
+        }
+
     }
 
 
@@ -176,9 +225,9 @@ namespace WebAnnotation.UI.Commands
 
        
         public delegate void OnCommandSuccess(GridVector2[] VolumeControlPoints, GridVector2[] MosaicControlPoints, double LineWidth);
-        OnCommandSuccess success_callback;
+        protected OnCommandSuccess success_callback;
 
-        Viking.VolumeModel.IVolumeToSectionTransform mapping;
+        protected Viking.VolumeModel.IVolumeToSectionTransform mapping;
          
         private double _Angle = 0;
 
@@ -328,29 +377,6 @@ namespace WebAnnotation.UI.Commands
         protected abstract GridVector2[] CalculateTranslatedMosaicControlPoints();
 
         protected abstract double CalculateFinalLineWidth();
-
-        protected override void Execute()
-        {
-            if (this.success_callback != null)
-            {
-                GridVector2[] TranslatedOriginalControlPoints = CalculateTranslatedMosaicControlPoints();
-                GridVector2[] MosaicControlPoints = null;
-
-                try
-                {
-                    MosaicControlPoints = mapping.VolumeToSection(TranslatedOriginalControlPoints);
-                }
-                catch (ArgumentOutOfRangeException)
-                {
-                    Trace.WriteLine("TranslateLocationCommand: Could not map world point on Execute: " + TranslatedPosition.ToString(), "Command");
-                    return;
-                }
-
-                this.success_callback(TranslatedOriginalControlPoints, MosaicControlPoints, this.SizeScale * this.OriginalLineWidth);
-            }
-
-            base.Execute();
-        }
 
 
         public override void OnDraw(Microsoft.Xna.Framework.Graphics.GraphicsDevice graphicsDevice,

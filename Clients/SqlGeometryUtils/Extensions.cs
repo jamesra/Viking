@@ -95,6 +95,26 @@ namespace SqlGeometryUtils
             return SqlGeometry.STPolyFromText(PolyStringBuilder.ToString().ToSqlChars(), 0);
         }
 
+        public static SqlGeometry ToCircle(this GridVector2[] points)
+        {
+            if (points.Length < 3)
+            {
+                throw new ArgumentException("Polygon must be created with three points or more");
+            }
+
+            if (points.AreClockwise())
+                points = points.Reverse().ToArray();
+
+            if (points.First() != points.Last())
+            {
+                List<GridVector2> listPoints = new List<GridVector2>(points);
+                listPoints.Add(points[0]);
+                points = listPoints.ToArray();
+            }
+
+            return points.ToPolygon().CalculateInscribedCircle(points).ToSqlGeometry(0);
+        }
+
         /// <summary>
         /// Create a closed object where the first point in the array is added again at the end
         /// </summary>
@@ -317,6 +337,11 @@ namespace SqlGeometryUtils
         public static GridCircle CalculateInscribedCircle(this SqlGeometry shape)
         {
             GridVector2[] ControlPoints = shape.ToPoints();
+            return shape.CalculateInscribedCircle(ControlPoints);
+        }
+
+        public static GridCircle CalculateInscribedCircle(this SqlGeometry shape, ICollection<GridVector2> ControlPoints)
+        { 
             GridVector2 center = shape.Centroid();
             double Radius = ControlPoints.Select(p => GridVector2.Distance(center, p)).Min();
             return new GridCircle(center, Radius);

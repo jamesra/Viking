@@ -13,6 +13,7 @@ using WebAnnotation.ViewModel;
 using WebAnnotation.View;
 using WebAnnotationModel;
 using VikingXNAGraphics;
+using System.Collections.ObjectModel;
 
 namespace WebAnnotation.UI.Commands
 {
@@ -20,7 +21,7 @@ namespace WebAnnotation.UI.Commands
     /// Created after a location for a new structure has been determined, but we
     /// have to choose a parent for the new structure. 
     /// </summary>
-    class LinkStructureToParentCommand : AnnotationCommandBase
+    class LinkStructureToParentCommand : AnnotationCommandBase, Viking.Common.IObservableHelpStrings, Viking.Common.IHelpStrings
     {
         /// <summary>
         /// New Locations position in world space
@@ -35,6 +36,23 @@ namespace WebAnnotation.UI.Commands
         Microsoft.Xna.Framework.Color linecolor;
 
         CurveLabel labelView = null;
+
+        public string[] HelpStrings
+        {
+            get
+            {
+                return new string[] { "Left Mouse Button Release over parent structure annotation: Set annotation's parent structure",
+                                      "Escape: Cancel command"};
+            }
+        }
+
+        public ObservableCollection<string> ObservableHelpStrings
+        {
+            get
+            {
+                return new ObservableCollection<string>(this.HelpStrings);
+            }
+        }
 
         public LinkStructureToParentCommand(Viking.UI.Controls.SectionViewerControl parent,
                                                StructureObj structure,

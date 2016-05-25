@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text;
 using System.Windows.Forms;
@@ -18,10 +19,28 @@ using SqlGeometryUtils;
 
 namespace WebAnnotation.UI.Commands
 {
-    class LinkAnnotationsCommand : AnnotationCommandBase
+    class LinkAnnotationsCommand : AnnotationCommandBase, Viking.Common.IHelpStrings, Viking.Common.IObservableHelpStrings
     {
         LocationObj OriginObj;
         LocationObj NearestTarget = null;
+
+        public string[] HelpStrings
+        {
+            get
+            {
+                return new string[] { "Left Mouse Button Release over annotation from the same structure: Link locations to indicate morphological connection",
+                                      "Left Mouse Button Release over annotation from different structure: Link structures to indicate relationship connection, for example Pre- & Post- Synaptic densities",
+                                      "Escape: Cancel command"};
+            }
+        }
+
+        public ObservableCollection<string> ObservableHelpStrings
+        {
+            get
+            {
+                return new ObservableCollection<string>(this.HelpStrings);
+            }
+        }
 
         public LinkAnnotationsCommand(Viking.UI.Controls.SectionViewerControl parent,
                                                LocationObj existingLoc)

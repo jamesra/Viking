@@ -73,19 +73,14 @@ namespace WebAnnotation.View
             {
                 if(!_InscribedCircle.HasValue)
                 {
-                    _InscribedCircle = CalculateInscribedCircle();
+                    _InscribedCircle = this.VolumeShapeAsRendered.CalculateInscribedCircle(VolumeControlPoints);
                 }
 
                 return _InscribedCircle.Value;
             }
         }
 
-        private GridCircle CalculateInscribedCircle()
-        {
-            GridVector2 center = this.VolumeShapeAsRendered.Centroid();
-            double Radius = this.VolumeCurveControlPoints.Select(p => GridVector2.Distance(center, p)).Min();
-            return new GridCircle(center, Radius);
-        }
+        
 
         public void CreateLabelObjects()
         {

@@ -716,6 +716,10 @@ namespace WebAnnotation
 
             switch (location.TypeCode)
             {
+                case LocationType.CIRCLE:
+                    location.MosaicShape = mosaic_points.ToCircle();
+                    location.VolumeShape = points.ToCircle();
+                    break;
                 case LocationType.OPENCURVE:
                     location.MosaicShape = mosaic_points.ToPolyLine();
                     location.VolumeShape = CurveViewControlPoints.CalculateCurvePoints(points, Global.NumOpenCurveInterpolationPoints, false).ToArray().ToPolyLine();
