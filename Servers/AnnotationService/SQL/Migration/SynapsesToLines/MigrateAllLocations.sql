@@ -25,27 +25,7 @@
 --	i.  Ribbons (Parallel line to structure's parent)
 --  ii. Non-Ribbons (Perpendicular line to structure's parent)
 
-USE RC2Test
-GO
-
-
------------------------------- Alter Z to an integer column --------------------------------------------------------
-
-DROP STATISTICS [Location].[_dta_stat_Location_ParentID_ID_Z], [Location].[_dta_stat_Location_Z_ID]
-DROP INDEX Z on dbo.Location
-
-ALTER TABLE dbo.Location ALTER COLUMN Z bigint 
-GO
-
-CREATE NONCLUSTERED INDEX [Z] ON [dbo].[Location] 
-	(
-		[Z] ASC
-	)WITH (PAD_INDEX  = OFF, STATISTICS_NORECOMPUTE  = OFF, SORT_IN_TEMPDB = OFF, IGNORE_DUP_KEY = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS  = ON, ALLOW_PAGE_LOCKS  = ON) ON [PRIMARY]
-GO
-
-CREATE STATISTICS [_dta_stat_Location_ParentID_ID_Z] ON [dbo].[Location]([ParentID], [ID], [Z])
-CREATE STATISTICS [_dta_stat_Location_Z_ID] ON [dbo].[Location]([Z], [ID])
-
+USE Rabbit
 GO
 
 
@@ -186,7 +166,7 @@ Select L.ID, -- count(L.ID) as CountID,
 		JOIN vNearestParentStructureLocation NP ON L.ID = NP.ChildLocationID
 		JOIN Location Ribbon ON Ribbon.ID = NP.ChildLocationID
 		JOIN Location Parent ON Parent.ID = NP.ParentLocationID
-	 where UL.TypeID = 73 AND L.TypeCode = 1 AND L.ID = 571835-- AND Ribbon.MosaicShape.STDimension() > 1 and Parent.MosaicShape.STDimension() > 1
+	 where UL.TypeID = 73 AND L.TypeCode = 1-- AND L.ID = 571835-- AND Ribbon.MosaicShape.STDimension() > 1 and Parent.MosaicShape.STDimension() > 1
 --	 group by L.ID
 	 --order by CountID
 GO
@@ -208,10 +188,15 @@ Select L.ID,
 	 where (	 UL.TypeID = 28 OR -- Gap Junction
 				 UL.TypeID = 34 OR -- Conventional Synapse
 				 UL.TypeID = 35 OR -- PSD
+				 UL.TypeID = 85 OR -- Adherens
+				 UL.TypeID = 181 OR -- Cistern Pre
+				 UL.TypeID = 182 OR -- Cistern Post
 				 UL.TypeID = 189 OR -- BC Conventional Synapse
+				 UL.TypeID = 229 OR -- Touch
 				 UL.TypeID = 240 OR -- Plaque-like Pre
 				 UL.TypeID = 241 OR -- Plaque-line Post
-				 UL.TypeID = 85 ) --Adherens
+				 UL.TypeID = 243 OR -- Neuroglial Adherens
+				 UL.TypeID = 244) --Adherens
 			AND L.TypeCode = 1 --AND Ribbon.MosaicShape.STDimension() > 1 and Parent.MosaicShape.STDimension() > 1
 
 GO
@@ -248,12 +233,17 @@ Select L.ID,
 		JOIN Location Ribbon ON Ribbon.ID = NP.ChildLocationID
 		JOIN Location Parent ON Parent.ID = NP.ParentLocationID
 	 where (	 UL.TypeID = 28 OR -- Gap Junction
-			     UL.TypeID = 34 OR -- Conventional Synapse
+				 UL.TypeID = 34 OR -- Conventional Synapse
 				 UL.TypeID = 35 OR -- PSD
+				 UL.TypeID = 85 OR -- Adherens
+				 UL.TypeID = 181 OR -- Cistern Pre
+				 UL.TypeID = 182 OR -- Cistern Post
 				 UL.TypeID = 189 OR -- BC Conventional Synapse
+				 UL.TypeID = 229 OR -- Touch
 				 UL.TypeID = 240 OR -- Plaque-like Pre
 				 UL.TypeID = 241 OR -- Plaque-line Post
-				 UL.TypeID = 85 ) --Adherens
+				 UL.TypeID = 243 OR -- Neuroglial Adherens
+				 UL.TypeID = 244) --Adherens
 			AND L.TypeCode = 1 AND Ribbon.MosaicShape.STDimension() > 1 and Parent.MosaicShape.STDimension() > 1
 
 GO
@@ -311,20 +301,16 @@ WHERE TPairCount.NumPairs = 1 AND SL.TypeCode = 1
 
 GO
 		
-select * from #LocationLines
-where ID = 861838
+--select * from #LocationLines
+--where ID = 861838
 
 select * from #LocationLines 
 where UpdatedShape IS NULL
 
-/*
 UPDATE L SET MosaicShape = LSLL.UpdatedShape, TypeCode = LSLL.TypeCode, Radius = 8
 from Location L
 INNER JOIN #LocationLines LSLL ON LSLL.ID = L.ID
-WHERE LSLL.UpdatedShape IS NOT NULL
-
- */
-
+WHERE LSLL.UpdatedShape IS NOT NULL  
 
  --Remove all views
 
@@ -347,5 +333,5 @@ GO
 IF OBJECT_ID('vStructureLinkLocationPairs', 'view') IS NOT NULL DROP VIEW vStructureLinkLocationPairs
 GO
 --Create a temp table to store all of the new shapes for affected locations
-IF OBJECT_ID('tempdb..#LocationLines') IS NOT NULL DROP TABLE #LocationLines
-GO
+--IF OBJECT_ID('tempdb..#LocationLines') IS NOT NULL DROP TABLE #LocationLines
+--GO
