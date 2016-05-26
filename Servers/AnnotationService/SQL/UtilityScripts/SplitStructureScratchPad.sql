@@ -9,9 +9,9 @@ IF OBJECT_ID('tempdb..#ParentIDForChildStructure') IS NOT NULL DROP TABLE #Paren
 
 DECLARE @KeepStructureID bigint, @SplitStructureID bigint
 DECLARE @FirstLocationIDOfSplitStructure bigint
-set @KeepStructureID = 13525
+set @KeepStructureID = 5107
 set @SplitStructureID = 0
-set @FirstLocationIDOfSplitStructure = 989617
+set @FirstLocationIDOfSplitStructure = 645523
 
 SELECT A,B into #LocationLinkPool from dbo.StructureLocationLinks(@KeepStructureID) order by A
 
@@ -60,7 +60,7 @@ UNION ALL
 select VolumeShape, Z, SL.ID, @SplitStructureID as ParentID FROM Location L 
 JOIN #LocationsInSplitSubGraph SL ON SL.ID = L.ID
 
-select ParentID as StructureID, geometry::ConvexHullAggregate(VolumeShape) as Shape, MAX(Z) as Z 
+select ParentID as StructureID, geometry::ConvexHullAggregate(VolumeShape) as Shape, AVG(Z) as Z 
     into #ChildStructureLocations from Location
 	where ParentID in (select ID from Structure where ParentID = @KeepStructureID)
 	group by ParentID
@@ -81,14 +81,14 @@ group by SL.StructureID
 
 PRINT 'New Structure ID: ' + STR(@SplitStructureID)
 
-select * from #DistanceToEachStructure order by StructureID
+--select * from #DistanceToEachStructure order by StructureID
 --select * from #DistanceToNearestStructure
 
 select SD.StructureID as StructureID, SD.NewParentID as NewParentID, SD.Distance as Distance
 into #ParentIDForChildStructure from #DistanceToEachStructure SD
 join #DistanceToNearestStructure SN ON SN.StructureID = SD.StructureID AND SN.Distance = SD.Distance
 
-select * from #ParentIDForChildStructure
+--select * from #ParentIDForChildStructure order by StructureID
  
 update Location set ParentID = @SplitStructureID
 FROM Location L
@@ -98,3 +98,11 @@ update Structure set ParentID = PCS.NewParentID
 FROM Structure S
 	JOIN #ParentIDForChildStructure PCS ON S.ID = PCS.StructureID
 
+IF OBJECT_ID('tempdb..#LocationLinkPool') IS NOT NULL DROP TABLE #LocationLinkPool
+IF OBJECT_ID('tempdb..#LocationsInKeepSubGraph') IS NOT NULL DROP TABLE #LocationsInKeepSubGraph
+IF OBJECT_ID('tempdb..#LocationsInSplitSubGraph') IS NOT NULL DROP TABLE #LocationsInSplitSubGraph
+IF OBJECT_ID('tempdb..#ChildStructureLocations') IS NOT NULL DROP TABLE #ChildStructureLocations
+IF OBJECT_ID('tempdb..#StructureLocations') IS NOT NULL DROP TABLE #StructureLocations
+IF OBJECT_ID('tempdb..#DistanceToEachStructure') IS NOT NULL DROP TABLE #DistanceToEachStructure
+IF OBJECT_ID('tempdb..#DistanceToNearestStructure') IS NOT NULL DROP TABLE #DistanceToNearestStructure
+IF OBJECT_ID('tempdb..#ParentIDForChildStructure') IS NOT NULL DROP TABLE #ParentIDForChildStructure 
