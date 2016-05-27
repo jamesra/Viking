@@ -4,9 +4,10 @@ using System.Linq;
 using System.Text;
 using Viking.Common;
 using System.Diagnostics;
-using System.Windows.Forms; 
+using System.Windows.Forms;
+using WebAnnotation.UI;
 
-namespace WebAnnotation.UI
+namespace WebAnnotation
 {
     [MenuAttribute("Annotation")]
     class AnnotationMenu : Viking.Common.IMenuFactory
@@ -67,6 +68,22 @@ namespace WebAnnotation.UI
 
             _FindStructureNumberForm.Show();
             _FindStructureNumberForm.Focus(); 
+        }
+
+        [MenuItem("Goto Structure")]
+        static public void GotoStructure(object sender, EventArgs e)
+        {
+            Debug.Print("Goto Structure");
+
+            WebAnnotation.AnnotationOverlay.CurrentOverlay.OpenGotoStructureForm();
+        }
+
+        [MenuItem("Goto Location")]
+        static public void GotoLocation(object sender, EventArgs e)
+        {
+            Debug.Print("Goto Location");
+
+            WebAnnotation.AnnotationOverlay.CurrentOverlay.OpenGotoLocationForm();
         }
 
         [MenuItem("Merge Structures")]

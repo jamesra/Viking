@@ -476,6 +476,35 @@ namespace WebAnnotation
         }
 
 
+        public void OpenGotoStructureForm()
+        {
+            if (GoToStructureForm == null)
+            {
+                GoToStructureForm = new UI.Forms.GoToStructureForm();
+                GoToStructureForm.Closed += GoToStructureForm_Closed;
+                System.Windows.Forms.Integration.ElementHost.EnableModelessKeyboardInterop(GoToStructureForm);
+                GoToStructureForm.Show();
+            }
+            else
+            {
+                GoToStructureForm.Activate();
+            }
+        }
+
+        public void OpenGotoLocationForm()
+        {
+            if (GoToLocationForm == null)
+            {
+                GoToLocationForm = new UI.Forms.GoToLocationForm();
+                GoToLocationForm.Closed += GoToLocationForm_Closed;
+                System.Windows.Forms.Integration.ElementHost.EnableModelessKeyboardInterop(GoToLocationForm);
+                GoToLocationForm.Show();
+            }
+            else
+            {
+                GoToLocationForm.Activate();
+            }
+        }
 
         protected void OnKeyDown(object sender, KeyEventArgs e)
         {
@@ -513,30 +542,10 @@ namespace WebAnnotation
                     UpdateMouseCursor();
                     break;
                 case Keys.F12:
-                    if(GoToLocationForm == null)
-                    {
-                        GoToLocationForm = new UI.Forms.GoToLocationForm();
-                        GoToLocationForm.Closed += GoToLocationForm_Closed; 
-                        System.Windows.Forms.Integration.ElementHost.EnableModelessKeyboardInterop(GoToLocationForm);
-                        GoToLocationForm.Show();
-                    }
-                    else
-                    {
-                        GoToLocationForm.Activate();
-                    }
+                    OpenGotoLocationForm();
                    break;
                 case Keys.F11:
-                    if (GoToStructureForm == null)
-                    {
-                        GoToStructureForm = new UI.Forms.GoToStructureForm();
-                        GoToStructureForm.Closed += GoToStructureForm_Closed;
-                        System.Windows.Forms.Integration.ElementHost.EnableModelessKeyboardInterop(GoToStructureForm);
-                        GoToStructureForm.Show(); 
-                    }
-                    else
-                    {
-                        GoToStructureForm.Activate();
-                    }
+                    OpenGotoStructureForm();
                     break;
             }
 
