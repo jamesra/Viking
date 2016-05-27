@@ -42,6 +42,9 @@ namespace WebAnnotation
         private static AnnotationOverlay _CurrentOverlay = null; 
         public static AnnotationOverlay CurrentOverlay { get { return _CurrentOverlay;}}
 
+        protected static WebAnnotation.UI.Forms.GoToLocationForm GoToLocationForm;
+        public static WebAnnotation.UI.Forms.GoToStructureForm GoToStructureForm;
+
         GridVector2 LastMouseDownCoords;
         GridVector2 LastMouseMoveVolumeCoords;
 
@@ -79,7 +82,50 @@ namespace WebAnnotation
         {
             return 10;
         }
-        
+
+        static public void GoToStructure(long locID)
+        {
+            StructureObj s = Store.Structures.GetObjectByID(locID);
+            if (s == null)
+                return;
+
+            GoToStructure(s);
+        }
+
+        static public void GoToStructure(StructureObj s)
+        {
+            if (s == null)
+                return;
+
+            ICollection<LocationObj> locations = Store.Locations.GetLocationsForStructure(s.ID);
+            if (!locations.Any())
+                return; 
+
+            {
+                //ICanvasView lastObj = 
+                GridVector2 lastObjCenter = WebAnnotation.AnnotationOverlay.CurrentOverlay.LastMouseDownCoords;
+                GridVector3 origin = new GridVector3(lastObjCenter.X * Global.Scale.X, lastObjCenter.Y * Global.Scale.Y, WebAnnotation.AnnotationOverlay.CurrentOverlay.Parent.Section.Number * Global.Scale.Z);
+                 
+                //Sort locations by distance
+                List<LocationObj> nearest = locations.OrderBy(l => l.DistanceToPoint3D(origin)).ToList();
+
+                List<double> Distance = nearest.Select(l => l.DistanceToPoint3D(origin)).ToList();
+                List<double> Depth = nearest.Select(l => l.Z).ToList();
+
+                GoToLocation(nearest.First());
+            }
+                 
+        }
+
+        static public void GoToLocation(long locID)
+        {
+            LocationObj loc = Store.Locations.GetObjectByID(locID);
+            if (loc == null)
+                return;
+
+            GoToLocation(loc);
+        }
+
         static public void  GoToLocation(LocationObj loc)
         {
             if(loc == null)
@@ -93,7 +139,8 @@ namespace WebAnnotation
 
             //BUG: This is because the way I handle commands changed dramatically between Plantmap and Viking.  I need to
             //set selected object to null to keep the UI from doing strange things
-            Viking.UI.State.SelectedObject = null; 
+            Viking.UI.State.SelectedObject = null;
+            CreateNewLinkedLocationCommand.LastEditedLocation = null;
         }
 
         public int CurrentSectionNumber
@@ -410,7 +457,9 @@ namespace WebAnnotation
             {
                 "F3 or Enter Key: Create new annotation linked to the last placed annotation",
                 "F5 Key: Reload section annotations",
-                "Back Key: Return to last edited location"
+                "Back Key: Return to last edited location",
+                "F12: Open goto location ID dialog", 
+                "F11: Open goto structure ID dialog"
             };
         }
          
@@ -425,6 +474,8 @@ namespace WebAnnotation
 
             return hotkeyStrings.ToArray();
         }
+
+
 
         protected void OnKeyDown(object sender, KeyEventArgs e)
         {
@@ -460,6 +511,32 @@ namespace WebAnnotation
                     break;
                 case Keys.ControlKey:
                     UpdateMouseCursor();
+                    break;
+                case Keys.F12:
+                    if(GoToLocationForm == null)
+                    {
+                        GoToLocationForm = new UI.Forms.GoToLocationForm();
+                        GoToLocationForm.Closed += GoToLocationForm_Closed; 
+                        System.Windows.Forms.Integration.ElementHost.EnableModelessKeyboardInterop(GoToLocationForm);
+                        GoToLocationForm.Show();
+                    }
+                    else
+                    {
+                        GoToLocationForm.Activate();
+                    }
+                   break;
+                case Keys.F11:
+                    if (GoToStructureForm == null)
+                    {
+                        GoToStructureForm = new UI.Forms.GoToStructureForm();
+                        GoToStructureForm.Closed += GoToStructureForm_Closed;
+                        System.Windows.Forms.Integration.ElementHost.EnableModelessKeyboardInterop(GoToStructureForm);
+                        GoToStructureForm.Show(); 
+                    }
+                    else
+                    {
+                        GoToStructureForm.Activate();
+                    }
                     break;
             }
 
@@ -563,6 +640,16 @@ namespace WebAnnotation
                 Trace.WriteLine("Error with hotkeys: " + except.ToString()); 
             }
              
+        }
+
+        private void GoToStructureForm_Closed(object sender, EventArgs e)
+        {
+            WebAnnotation.AnnotationOverlay.GoToStructureForm = null;
+        }
+
+        private void GoToLocationForm_Closed(object sender, EventArgs e)
+        {
+            WebAnnotation.AnnotationOverlay.GoToLocationForm = null; 
         }
 
         protected void OnKeyUp(object sender, KeyEventArgs e)
@@ -1376,7 +1463,7 @@ namespace WebAnnotation
 
         private static List<LocationCanvasView> FindVisibleAdjacentLocations(IEnumerable<LocationCanvasView> locations, VikingXNA.Scene scene)
         { 
-            return locations.Where(l => l != null && l.Parent != null && l.Parent.Type != null && l.IsVisible(scene)).ToList();
+            return locations.Where(l => l != null && l.Parent != null && l.Parent.Type != null && l.IsVisible(scene) ).ToList();
         }
         /*
         /// <summary>

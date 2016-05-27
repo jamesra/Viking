@@ -397,6 +397,19 @@ namespace WebAnnotationModel
         }
 
         /// <summary>
+        /// This should return true when we know no further annotation will proceed from this point
+        /// </summary>
+        public bool IsVerifiedTerminal
+        {
+            get
+            { 
+                return (Terminal || OffEdge || VericosityCap || Untraceable);
+            }
+        }
+
+
+
+        /// <summary>
         /// This is readonly because changing it would break a datastructure in location store
         /// and also would require update of X,Y to the section space of the different section
         /// </summary>

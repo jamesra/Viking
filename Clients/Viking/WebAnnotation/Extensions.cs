@@ -9,6 +9,7 @@ using Geometry;
 using SqlGeometryUtils;
 using WebAnnotation.ViewModel;
 using connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd;
+using WebAnnotation.UI;
 
 namespace WebAnnotation
 {
@@ -92,13 +93,13 @@ namespace WebAnnotation
 
             if (listLocationsOnSection.Count > 0)
             {
-                listLocationsOnSection.Sort(new HitTest_Z_Distance_Sorter());
+                listLocationsOnSection.Sort(new HitTest_Z_Depth_Distance_Sorter());
                 return listLocationsOnSection.First();
             } 
             else if (listLocations.Count > 0)
             {
                 List<HitTestResult> listObjectsOnAdjacentSection = listLocations.ToList();
-                listObjectsOnAdjacentSection.Sort(new HitTest_Z_Distance_Sorter());
+                listObjectsOnAdjacentSection.Sort(new HitTest_Z_Depth_Distance_Sorter());
                 return listHitTestObjects.First();
             }
 
@@ -219,6 +220,23 @@ namespace WebAnnotation
         {
             WebAnnotation.ViewModel.NotifyPropertyChangingEventManager.RemoveListener(s, listener);
             WebAnnotation.ViewModel.NotifyPropertyChangedEventManager.RemoveListener(s, listener);
+        }
+    }
+
+    internal static class LocationObjExtensions
+    {
+        public static double DistanceToPoint3D(this WebAnnotationModel.LocationObj l, GridVector3 origin)
+        {
+            Viking.VolumeModel.IVolumeToSectionTransform mapper = Viking.UI.State.volume.GetSectionToVolumeTransform((int)l.Z);
+            if (mapper == null)
+                return double.MaxValue;
+
+            GridVector2 vPos;
+            if (!mapper.TrySectionToVolume(l.Position, out vPos))
+                return double.MaxValue;
+
+            GridVector3 p = new GridVector3(vPos.X * Global.Scale.X, vPos.Y * Global.Scale.Y, l.Z * Global.Scale.Z);
+            return GridVector3.Distance(p, origin);
         }
     }
 

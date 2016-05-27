@@ -284,7 +284,8 @@ namespace WebAnnotation.UI.Commands
             "CTRL+Click another curve: Copy control points",
             "Middle Button click: Reset to original size",
             "Hold Right click and drag: Rotate",
-            "Mouse Wheel: Change annotation size"
+            "Mouse Wheel: Change annotation size",
+            "SHIFT + Scroll wheel: Scale annotation size slowly"
         };
 
         public TranslateCurveLocationCommand(Viking.UI.Controls.SectionViewerControl parent,
@@ -317,8 +318,8 @@ namespace WebAnnotation.UI.Commands
             if(e.Control)
             {
                 GridVector2 WorldPosition = this.oldWorldPosition;
-                List<ViewModel.HitTestResult> listHitResults = Overlay.GetAnnotationsAtPosition(WorldPosition);
-                List<ViewModel.HitTestResult> listCurves = listHitResults.Where(h => h.Z == Parent.Section.Number && h.obj as LocationOpenCurveView != null).ToList();
+                List<HitTestResult> listHitResults = Overlay.GetAnnotationsAtPosition(WorldPosition);
+                List<HitTestResult> listCurves = listHitResults.Where(h => h.Z == Parent.Section.Number && h.obj as LocationOpenCurveView != null).ToList();
 
                 if (listCurves.Count == 0)
                     return;
@@ -395,10 +396,18 @@ namespace WebAnnotation.UI.Commands
         }
     }
 
-    class TranslateCircleLocationCommand : TranslateLocationCommand, Viking.Common.IHelpStrings
+    class TranslateCircleLocationCommand : TranslateLocationCommand, Viking.Common.IHelpStrings, Viking.Common.IObservableHelpStrings
     {
         CircleView circleView;
         GridCircle OriginalCircle;
+
+        public ObservableCollection<string> ObservableHelpStrings
+        {
+            get
+            {
+                return new ObservableCollection<string>(this.HelpStrings);
+            }
+        }
 
         public  string[] HelpStrings
         {
@@ -523,7 +532,8 @@ namespace WebAnnotation.UI.Commands
         public new static string[] DefaultMouseHelpStrings = new String[] {
            "Hold Left+Click Drag to move",
            "Release Left button to place",
-           "Scroll wheel: Scale annotation size"
+           "Scroll wheel: Scale annotation size",
+           "SHIFT + Scroll wheel: Scale annotation size slowly"
         };
          
 
@@ -583,7 +593,10 @@ namespace WebAnnotation.UI.Commands
         {
             Trace.WriteLine(e.Delta.ToString());
 
-            scroll_delta_sum += e.Delta;
+            if (Control.ModifierKeys.ShiftPressed())
+                scroll_delta_sum += (int)(e.Delta / 5.0);
+            else
+                scroll_delta_sum += e.Delta;
 
             double scalar = GetScalarForScrollWheelDelta(scroll_delta_sum); 
 

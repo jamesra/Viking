@@ -36,6 +36,9 @@ namespace WebAnnotation.View
         }
          
         public ContextMenuGeneratorDelegate ContextMenuGenerator = null;
+
+        int ICanvasView.VisualHeight
+        { get { return this.ParentDepth; } }
         
         /// <summary>
         /// The number of parent structures until we hit a root structure

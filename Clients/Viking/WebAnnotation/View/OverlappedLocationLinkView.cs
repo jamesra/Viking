@@ -195,5 +195,13 @@ namespace WebAnnotation.View
                 };
             }
         }
+
+        int ICanvasView.VisualHeight
+        {
+            get
+            {
+                return 0;
+            }
+        }
     }
 }

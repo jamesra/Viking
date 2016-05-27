@@ -106,7 +106,7 @@ namespace WebAnnotation.View
                 case LocationAction.TRANSLATE:
                     return new TranslateCircleLocationCommand(Parent,
                                                               new GridCircle(loc.Position, loc.Radius),
-                                                              loc.Parent.Type.Color.ToXNAColor(0.5f),
+                                                              loc.Parent.Type.Color.ToXNAColor(1f),
                                                               (NewVolumePosition, NewMosaicPosition, NewRadius) => UpdateCircleLocationCallback(loc, NewVolumePosition, NewMosaicPosition, NewRadius));
                 case LocationAction.SCALE: 
                     return new ResizeCircleCommand(Parent,
@@ -124,37 +124,26 @@ namespace WebAnnotation.View
 
                     SqlGeometry VolumeShape;
                     SqlGeometry MosaicShape = TransformMosaicShapeToSection(Parent.Volume, loc.MosaicShape.MoveTo(MosaicPosition), (int)loc.Z, Parent.Section.Number, out VolumeShape);
-                     
-                    LocationObj newLoc = new LocationObj(loc.Parent,
-                                                        MosaicShape,
-                                                        VolumeShape,
-                                                        Parent.Section.Number,
-                                                        loc.TypeCode);
-
-                    newLoc.Radius = loc.Radius;
-
-                    LocationCanvasView newLocView = AnnotationViewFactory.Create(newLoc, Parent.Section.ActiveSectionToVolumeTransform);
+                      
                     return new TranslateCircleLocationCommand(Parent,
                                                                 new GridCircle(MosaicShape.Centroid(), loc.Radius),
-                                                                newLoc.Parent.Type.Color.ToXNAColor(0.5f),
+                                                                loc.Parent.Type.Color.ToXNAColor(1f),
                                                                 new TranslateCircleLocationCommand.OnCommandSuccess((NewVolumePosition, NewMosaicPosition, NewRadius) =>
                                                                    {
+                                                                       LocationObj newLoc = new LocationObj(loc.Parent,
+                                                                            MosaicShape,
+                                                                            VolumeShape,
+                                                                            Parent.Section.Number,
+                                                                            loc.TypeCode);
+
+                                                                        newLoc.Radius = loc.Radius;
+
+                                                                       IVolumeToSectionTransform section_mapper = Parent.Volume.GetSectionToVolumeTransform((int)Parent.Section.Number);
+                                                                       NewMosaicPosition = section_mapper.VolumeToSection(NewVolumePosition);
                                                                        UpdateCircleLocationNoSaveCallback(newLoc, NewVolumePosition, NewMosaicPosition, NewRadius);
 
-                                                                       /*Viking.UI.Commands.Command.EnqueueCommand(typeof(ResizeCircleCommand), new object[] 
-                                                                           { Parent, System.Drawing.Color.FromArgb(loc.Parent.Type.Color), VolumePosition,
-                                                                               new ResizeCircleCommand.OnCommandSuccess((double radius) =>
-                                                                               {
-                                                                                   newLoc.Radius = radius;
-                                                                                   */
                                                                        Viking.UI.Commands.Command.EnqueueCommand(typeof(CreateNewLinkedLocationCommand), new object[] { Parent, loc, newLoc });
-                                                                       /*
-                                                                   })
-                                                               });*/
                                                                    }));
-                    
-                    
-                    return null; 
                 default:
                     return null;
             }
@@ -215,25 +204,25 @@ namespace WebAnnotation.View
 
                     SqlGeometry VolumeShape;
                     SqlGeometry MosaicShape = TransformMosaicShapeToSection(Parent.Volume, loc.MosaicShape.MoveTo(MosaicPosition), (int)loc.Z, Parent.Section.Number, out VolumeShape);
-
-                    LocationObj newLoc = new LocationObj(loc.Parent,
-                                                        MosaicShape,
-                                                        VolumeShape,
-                                                        Parent.Section.Number,
-                                                        loc.TypeCode);
-
-                    newLoc.Radius = loc.Radius;
-
-                    LocationCanvasView newLocView = AnnotationViewFactory.Create(newLoc, Parent.Section.ActiveSectionToVolumeTransform);
+                   
+                     
                     return new TranslateOpenCurveCommand(Parent,
-                                                             newLoc.MosaicShape.Centroid(),
-                                                             newLoc.MosaicShape.ToPoints(),
-                                                             newLoc.Parent.Type.Color.ToXNAColor(0.5f),
-                                                             newLoc.Radius * 2.0, 
+                                                             MosaicShape.Centroid(),
+                                                             MosaicShape.ToPoints(),
+                                                             loc.Parent.Type.Color.ToXNAColor(0.5f),
+                                                             loc.Radius * 2.0,
                                                              (NewVolumeControlPoints, NewMosaicControlPoints, NewWidth) =>
                                                                 {
-                                                                    UpdateLineLocationNoSaveCallback(newLoc, NewVolumeControlPoints, NewMosaicControlPoints, NewWidth);
+                                                                    LocationObj newLoc = new LocationObj(loc.Parent,
+                                                                       MosaicShape,
+                                                                       VolumeShape,
+                                                                       Parent.Section.Number,
+                                                                       loc.TypeCode);
+                                                                    
+                                                                    IVolumeToSectionTransform section_mapper = Parent.Volume.GetSectionToVolumeTransform((int)Parent.Section.Number);
+                                                                    NewMosaicControlPoints = section_mapper.VolumeToSection(NewVolumeControlPoints);
 
+                                                                    UpdateLineLocationNoSaveCallback(newLoc, NewVolumeControlPoints, NewMosaicControlPoints, NewWidth); 
                                                                     Viking.UI.Commands.Command.EnqueueCommand(typeof(CreateNewLinkedLocationCommand), new object[] { Parent, loc, newLoc });
                                                                 }
                                                              );
@@ -297,23 +286,23 @@ namespace WebAnnotation.View
 
                     SqlGeometry VolumeShape;
                     SqlGeometry MosaicShape = TransformMosaicShapeToSection(Parent.Volume, loc.MosaicShape.MoveTo(MosaicPosition), (int)loc.Z, Parent.Section.Number, out VolumeShape);
-
-                    LocationObj newLoc = new LocationObj(loc.Parent,
-                                                        MosaicShape,
-                                                        VolumeShape,
-                                                        Parent.Section.Number,
-                                                        loc.TypeCode);
-
-                    newLoc.Radius = loc.Radius;
-
-                    LocationCanvasView newLocView = AnnotationViewFactory.Create(newLoc, Parent.Section.ActiveSectionToVolumeTransform);
+                    
                     return new TranslateClosedCurveCommand(Parent,
-                                                             newLoc.MosaicShape.Centroid(),
-                                                             newLoc.MosaicShape.ToPoints(),
-                                                             newLoc.Parent.Type.Color.ToXNAColor(0.5f),
-                                                             newLoc.Radius * 2.0, 
+                                                             MosaicShape.Centroid(),
+                                                             MosaicShape.ToPoints(),
+                                                             loc.Parent.Type.Color.ToXNAColor(0.5f),
+                                                             loc.Radius * 2.0, 
                                                              (NewVolumeControlPoints, NewMosaicControlPoints, NewWidth) =>
                                                              {
+                                                                 LocationObj newLoc = new LocationObj(loc.Parent,
+                                                                    MosaicShape,
+                                                                    VolumeShape,
+                                                                    Parent.Section.Number,
+                                                                    loc.TypeCode);
+
+                                                                 IVolumeToSectionTransform section_mapper = Parent.Volume.GetSectionToVolumeTransform((int)Parent.Section.Number);
+                                                                 NewMosaicControlPoints = section_mapper.VolumeToSection(NewVolumeControlPoints);
+
                                                                  UpdateLineLocationNoSaveCallback(newLoc, NewVolumeControlPoints, NewMosaicControlPoints, NewWidth);
 
                                                                  Viking.UI.Commands.Command.EnqueueCommand(typeof(CreateNewLinkedLocationCommand), new object[] { Parent, loc, newLoc });

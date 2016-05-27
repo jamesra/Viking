@@ -213,6 +213,14 @@ namespace WebAnnotation.ViewModel
             BView = AnnotationViewFactory.Create(B, MapperB);
         }
 
+        int ICanvasView.VisualHeight
+        {
+            get
+            {
+                return 0;
+            }
+        }
+
         public double LineWidth
         {
             get

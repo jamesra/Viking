@@ -75,6 +75,11 @@ namespace WebAnnotation
         bool IsVisible(Scene scene);
 
         /// <summary>
+        /// Indicates what level the CanvasViewObject occupies for selection and rendering purposes
+        /// </summary>
+        int VisualHeight { get; }
+
+        /// <summary>
         /// Bounding box of the annotation
         /// </summary>
         GridRectangle BoundingBox

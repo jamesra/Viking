@@ -133,7 +133,15 @@ namespace WebAnnotation.View
                 return null;
             
             return annotation;
-        } 
+        }
+
+        int ICanvasView.VisualHeight
+        {
+            get
+            {
+                return 0;
+            }
+        }
 
         private void CreateViews()
         {

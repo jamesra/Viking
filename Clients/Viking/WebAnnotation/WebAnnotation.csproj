@@ -105,6 +105,7 @@
     <Reference Include="Microsoft.Xna.Framework, Version=4.0.0.0, Culture=neutral, PublicKeyToken=842cf8be1de50553, processorArchitecture=x86" />
     <Reference Include="Microsoft.Xna.Framework.Graphics, Version=4.0.0.0, Culture=neutral, PublicKeyToken=842cf8be1de50553, processorArchitecture=x86" />
     <Reference Include="PresentationCore" />
+    <Reference Include="PresentationFramework" />
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.DataAnnotations" />
     <Reference Include="System.Core">
@@ -117,6 +118,7 @@
     </Reference>
     <Reference Include="System.ServiceModel" />
     <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xaml" />
     <Reference Include="System.Xml.Linq">
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
     </Reference>
@@ -128,6 +130,7 @@
     <Reference Include="WindowsBase">
       <RequiredTargetFramework>3.0</RequiredTargetFramework>
     </Reference>
+    <Reference Include="WindowsFormsIntegration" />
     <Reference Include="Xml.Schema.Linq">
       <HintPath>..\..\Libs\LinqToXSD\2.0.2\Xml.Schema.Linq.dll</HintPath>
     </Reference>
@@ -138,6 +141,7 @@
     <Compile Include="Extensions.cs" />
     <Compile Include="Global.cs" />
     <Compile Include="Interfaces\CanvasInterfaces.cs" />
+    <Compile Include="Sorters.cs" />
     <Compile Include="UI\Actions\MouseOverLocationCanvasViewEffect.cs" />
     <Compile Include="UI\Commands\AddRemoveLineControlPointCommand.cs" />
     <Compile Include="UI\Commands\AdjustControlPointCommand.cs" />
@@ -149,6 +153,19 @@
     <Compile Include="UI\Controls\ListStructures.Designer.cs">
       <DependentUpon>ListStructures.cs</DependentUpon>
     </Compile>
+    <Page Include="UI\Forms\GoToStructureForm.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="UI\Forms\GoToLocationForm.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Compile Include="UI\Forms\GoToStructureForm.xaml.cs">
+      <DependentUpon>GoToStructureForm.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="UI\Forms\GoToLocationForm.xaml.cs" />
+    <Compile Include="UI\HitTestResult.cs" />
     <Compile Include="ViewModel\SectionLocationLinksAnnotationsViewModel.cs" />
     <Compile Include="View\StructureCircleLabels.cs" />
     <Compile Include="View\StructureLink_ContextMenuView.cs" />

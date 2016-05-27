@@ -849,8 +849,9 @@ namespace Viking.UI.Controls
 
         public static string[] DefaultKeyHelpStrings = new String[] {
             "F1: Expand full list of commands",
+            "CTRL + G: Open goto position dialog",
             "Space bar: Hide annotations",
-            "Space bar + SHIFT: Show only annotations"
+            "Space bar + CTRL: Show only annotations"
             };
 
         public string[] HelpStrings
@@ -1504,12 +1505,12 @@ namespace Viking.UI.Controls
             this.Invalidate();
         }
 
-        protected void SetOverlayVisiblity(bool ShiftDown, bool SpaceDown)
+        protected void SetOverlayVisiblity(bool ControlDown, bool SpaceDown)
         {
             if(SpaceDown)
             {
-                ShowOnlyOverlays = ShiftDown;
-                ShowOverlays = ShiftDown;
+                ShowOnlyOverlays = ControlDown;
+                ShowOverlays = ControlDown;
             }
             else
             {
@@ -1536,11 +1537,11 @@ namespace Viking.UI.Controls
                     }
                     break;
                 case Keys.Space:
-                    SetOverlayVisiblity(e.Shift, true);
+                    SetOverlayVisiblity(e.Control, true);
                     this.Invalidate();
                     break;
-                case Keys.Shift:
-                case Keys.ShiftKey:
+                case Keys.Control:
+                case Keys.ControlKey:
                     SetOverlayVisiblity(true, System.Windows.Input.Keyboard.IsKeyDown(System.Windows.Input.Key.Space));
                     this.Invalidate();
                     break;
@@ -1558,13 +1559,13 @@ namespace Viking.UI.Controls
         {
             switch (e.KeyCode)
             {
-                case Keys.Shift:
-                case Keys.ShiftKey:
+                case Keys.Control:
+                case Keys.ControlKey:
                     SetOverlayVisiblity(false, System.Windows.Input.Keyboard.IsKeyDown(System.Windows.Input.Key.Space));
                     this.Invalidate();
                     break;
                 case Keys.Space:
-                    SetOverlayVisiblity(e.Shift, false);
+                    SetOverlayVisiblity(e.Control, false);
                     this.Invalidate();
                     break;
             }

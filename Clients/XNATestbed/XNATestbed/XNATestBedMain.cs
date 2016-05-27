@@ -543,7 +543,7 @@ namespace XNATestbed
         public void Init(XNATestBedMain window)
         {
             GridVector2[] cps = CreateTestCurve(90, 190);
-            curveView = new CurveView(cps, Color.Red, true, null, lineStyle: LineStyle.HalfTube);
+            curveView = new CurveView(cps, Color.Red, true, null, lineWidth: 64, controlPointRadius: 16, lineStyle: LineStyle.HalfTube);
             curveLabel = new CurveLabel("The quick brown fox jumps over the lazy dog", cps, Color.Black, true); 
         }
 
@@ -567,7 +567,7 @@ namespace XNATestbed
         private static GridVector2[] CreateTestCurve(double height, double width)
         {
             GridVector2[] cps = new GridVector2[] {new GridVector2(-width,0),
-                                                   new GridVector2(-width / 2.0, height),
+                                                   new GridVector2(-width / 2.0, -height/4),
                                                    new GridVector2(0,0),
                                                    new GridVector2(width / 2.0, height),
                                                    new GridVector2(width,0),

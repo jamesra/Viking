@@ -269,6 +269,14 @@ namespace WebAnnotation.ViewModel
             }
         }
 
+        int ICanvasView.VisualHeight
+        {
+            get
+            {
+                return 0;
+            }
+        }
+
         protected abstract void CreateView(SectionStructureLinkViewKey key, Viking.VolumeModel.IVolumeToSectionTransform mapper);
 
         public abstract double Distance(SqlGeometry Position);

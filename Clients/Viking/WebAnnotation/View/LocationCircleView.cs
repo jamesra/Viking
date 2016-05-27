@@ -219,7 +219,7 @@ namespace WebAnnotation.View
 
         public override bool IsVisible(VikingXNA.Scene scene)
         {
-            return this.modelObj.IsUnverifiedTerminal && upCircleView.IsVisible(scene);
+            return !this.modelObj.IsVerifiedTerminal && upCircleView.IsVisible(scene);
         }
 
         public override bool IsLabelVisible(VikingXNA.Scene scene)

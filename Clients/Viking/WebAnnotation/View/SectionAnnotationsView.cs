@@ -22,31 +22,7 @@ using Viking.VolumeModel;
 
 namespace WebAnnotation.ViewModel
 { 
-    public class HitTestResult
-    {
-        public readonly double Distance;
-        public readonly int Z;
-        public readonly ICanvasView obj;
-
-        public HitTestResult(ICanvasView o, int z, double dist)
-        {
-            this.obj = o;
-            this.Z = z;
-            this.Distance = dist;
-        }
-    }
-
-    public class HitTest_Z_Distance_Sorter : IComparer<HitTestResult>
-    {
-        public int Compare(HitTestResult x, HitTestResult y)
-        {
-            int compareVal = x.Z.CompareTo(y.Z);
-            if (compareVal != 0)
-                return compareVal;
-
-            return x.Distance.CompareTo(y.Distance);
-        }
-    }
+  
     
     public interface ISectionAnnotationsView
     {
