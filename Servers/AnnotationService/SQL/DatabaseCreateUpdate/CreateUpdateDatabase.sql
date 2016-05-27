@@ -5300,7 +5300,7 @@ end
 
 	 Grant EXECUTE on TYPE::integer_list to public  
 
-	 CREATE FUNCTION TypeIDToName
+	 exec('CREATE FUNCTION TypeIDToName
 		(
 			-- Add the parameters for the function here
 			@ID bigint 
@@ -5316,8 +5316,7 @@ end
 			-- Return the result of the function
 			RETURN @Retval
 
-		END
-		GO
+		END')
 
 		Grant EXECUTE on TypeIDToName to public  
 
@@ -5332,6 +5331,29 @@ end
 		   N'Grant permissions on integer_list',getDate(),User_ID())
 
 	 COMMIT TRANSACTION fortyeight
+	 end
+
+	if(not(exists(select (1) from DBVersion where DBVersionID = 49)))
+	begin
+     print N'Calculate VolumeX/Y correctly for LineStrings'
+     BEGIN TRANSACTION fortynine
+	  
+	  ALTER TABLE Location DROP COLUMN VolumeX 
+	  ALTER TABLE Location ADD VolumeX as ISNULL(VolumeShape.STCentroid().STX, ISNULL(VolumeShape.STX, ISNULL(VolumeShape.STEnvelope().STCentroid().STX, 0))) PERSISTED
+	  ALTER TABLE Location DROP COLUMN VolumeY
+	  ALTER TABLE Location ADD VolumeY as ISNULL(VolumeShape.STCentroid().STY, ISNULL(VolumeShape.STY, ISNULL(VolumeShape.STEnvelope().STCentroid().STY, 0))) PERSISTED
+	   
+	 if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
+		  --insert the second version marker
+		 INSERT INTO DBVersion values (49, 
+		   N'Calculate VolumeX/Y correctly for LineStrings',getDate(),User_ID())
+
+	 COMMIT TRANSACTION fortynine
 	end
 	 
 --from here on, continually add steps in the previous manner as needed.
