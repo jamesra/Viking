@@ -73,7 +73,7 @@ namespace Viking.ViewModels
         /// <summary>
         /// Fires when one of the reference sections has been changed
         /// </summary>
-        public event EventHandler OnReferenceSectionChanged;
+        public event ReferenceSectionChangedEventHandler OnReferenceSectionChanged;
 
         /// <summary>
         /// Pointer to a section above this one, user configurable to point to a properly registered section suitable as a reference
@@ -102,13 +102,15 @@ namespace Viking.ViewModels
                 if (section == value)
                     return;
 
+                Section _oldReference = this._ReferenceSectionAbove;
+
                 //See if the new section is really above us
                 if (value != null)
                 {
                     Debug.Assert(section.Number < value.Number);
                 }
 
-                if (this._ReferenceSectionBelow != value)
+                if (this._ReferenceSectionAbove != value)
                     SendEvent = true;
 
                 this._ReferenceSectionAbove = value;
@@ -116,7 +118,9 @@ namespace Viking.ViewModels
 
                 if (SendEvent && OnReferenceSectionChanged != null)
                 {
-                    OnReferenceSectionChanged(this, new EventArgs());
+                    OnReferenceSectionChanged(this, new ReferenceSectionChangedEventArgs(this,
+                                                                                         _oldReference == null ? new long?() : _oldReference.Number,
+                                                                                         value == null ? new long?() : value.Number));
                 }
             }
         }
@@ -142,11 +146,13 @@ namespace Viking.ViewModels
             }
 
             set
-            {
+            {   
                 bool SendEvent = false;
                 Debug.Assert(section != value);
                 if (section == value)
                     return;
+
+                Section _oldReference = this._ReferenceSectionBelow;
 
                 //See if the new section is really below us
                 if (value != null)
@@ -162,7 +168,9 @@ namespace Viking.ViewModels
 
                 if (SendEvent && OnReferenceSectionChanged != null)
                 {
-                    OnReferenceSectionChanged(this, new EventArgs());
+                    OnReferenceSectionChanged(this, new ReferenceSectionChangedEventArgs(this, 
+                                                                                         _oldReference == null ? new long?() : _oldReference.Number,
+                                                                                         value == null ? new long?() : value.Number));
                 }
             }
         }

@@ -337,7 +337,7 @@ namespace Viking.UI.Controls
             StatusBar.Items.Add(tsChannels);
 
             ObjectSelectedHandler = new Viking.Common.ObjectSelectedEventHandler(this.OnSelectedItemChanged);
-            InternalReferenceSectionChanged = new EventHandler(this.OnInternalReferenceSectionChanged);
+            InternalReferenceSectionChanged = new ReferenceSectionChangedEventHandler(this.OnInternalReferenceSectionChanged);
             State.ItemSelected += ObjectSelectedHandler;
 
             
@@ -407,13 +407,13 @@ namespace Viking.UI.Controls
         /// <summary>
         /// Fires when one of the reference sections has changed
         /// </summary>
-        public event EventHandler OnReferenceSectionChanged;
+        public event ReferenceSectionChangedEventHandler OnReferenceSectionChanged;
 
         /// <summary>
         /// Called when the reference section for the current section has changed. 
         /// Fires our public ReferenceSectionChanged event
         /// </summary>
-        private EventHandler InternalReferenceSectionChanged;
+        private ReferenceSectionChangedEventHandler InternalReferenceSectionChanged;
 
         private void OnSelectedItemChanged(object sender, Viking.Common.ObjectSelectedEventArgs e)
         {
@@ -428,7 +428,7 @@ namespace Viking.UI.Controls
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void OnInternalReferenceSectionChanged(object sender, EventArgs e)
+        private void OnInternalReferenceSectionChanged(object sender, ReferenceSectionChangedEventArgs e)
         {
             if (OnReferenceSectionChanged != null)
             {

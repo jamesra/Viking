@@ -38,6 +38,24 @@ namespace Viking.Common
     }
     public delegate void SectionChangedEventHandler(object sender, SectionChangedEventArgs e);
 
+    public class ReferenceSectionChangedEventArgs : System.EventArgs
+    {
+        public SectionViewModel ChangedSection;
+        public long? OldReferenceSection;
+        public long? NewReferenceSection;
+
+        public ReferenceSectionChangedEventArgs(SectionViewModel changedSection,
+                                                long? oldReference,
+                                                long? newReference)
+        {
+            this.ChangedSection = changedSection;
+            this.OldReferenceSection = oldReference;
+            this.NewReferenceSection = newReference;
+        }
+    }
+
+    public delegate void ReferenceSectionChangedEventHandler(object sender, ReferenceSectionChangedEventArgs e);
+
     public class TransformChangedEventArgs : System.EventArgs
     {
         public string NewTransform;

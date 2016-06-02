@@ -173,16 +173,15 @@ namespace WebAnnotation
         /// Returns annotations for section if they exist or creates new SectionLocationsViewModel if they do not
         /// </summary>
         /// <param name="SectionNumber"></param>
-        public static SectionAnnotationsView GetOrCreateAnnotationsForSection(int SectionNumber, 
-                                                                                 Viking.UI.Controls.SectionViewerControl parent)
+        public static SectionAnnotationsView GetOrCreateAnnotationsForSection(int SectionNumber)
         {
-            if (parent.Section.VolumeViewModel.SectionViewModels.ContainsKey(SectionNumber))
+            if (Viking.UI.State.volume.SectionViewModels.ContainsKey(SectionNumber))
             {
                 SectionAnnotationsView SectionAnnotations = cacheSectionAnnotations.Fetch(SectionNumber);
                 if (SectionAnnotations != null)
                     return SectionAnnotations; 
                                 
-                SectionAnnotations = new SectionAnnotationsView(parent.Section.VolumeViewModel.SectionViewModels[SectionNumber]);
+                SectionAnnotations = new SectionAnnotationsView(Viking.UI.State.volume.SectionViewModels[SectionNumber]);
 
                 SectionAnnotationsView retVal = cacheSectionAnnotations.GetOrAdd(SectionNumber, SectionAnnotations);
 
@@ -201,7 +200,7 @@ namespace WebAnnotation
             }
 
             return null; 
-        }
+        } 
         
         
 
@@ -209,7 +208,7 @@ namespace WebAnnotation
         {
             get
             {
-                return GetOrCreateAnnotationsForSection(_Parent.Section.Number, Parent);
+                return GetOrCreateAnnotationsForSection(_Parent.Section.Number);
             }
         }
 
@@ -323,7 +322,7 @@ namespace WebAnnotation
             //Load the locations for the current sections
             this._Parent.OnSectionChanged += new SectionChangedEventHandler(this.OnSectionChanged);
             Viking.UI.State.volume.TransformChanged  += new TransformChangedEventHandler(this.OnVolumeTransformChanged); 
-            this._Parent.OnReferenceSectionChanged += new EventHandler(this.OnReferenceSectionChanged);
+            this._Parent.OnReferenceSectionChanged += new ReferenceSectionChangedEventHandler(this.OnReferenceSectionChanged);
 
             this._Parent.MouseDown += new MouseEventHandler(this.OnMouseDown);
             this._Parent.MouseMove += new MouseEventHandler(this.OnMouseMove);
@@ -1123,7 +1122,7 @@ namespace WebAnnotation
             
             foreach (int section in changedSections)
             {
-                SectionAnnotationsView SLVModel = GetOrCreateAnnotationsForSection(section, this.Parent);
+                SectionAnnotationsView SLVModel = GetOrCreateAnnotationsForSection(section);
                 if (SLVModel != null)
                 {
                     SLVModel.OnLocationsStoreChanged(sender, e);
@@ -1134,7 +1133,7 @@ namespace WebAnnotation
             {
                 if (!changedSections.Contains(section))
                 {
-                    SectionAnnotationsView SLVModel = GetOrCreateAnnotationsForSection(section, this.Parent);
+                    SectionAnnotationsView SLVModel = GetOrCreateAnnotationsForSection(section);
                     if (SLVModel != null)
                     {
                         SLVModel.OnLocationsStoreChanged(sender, e);
@@ -1158,7 +1157,7 @@ namespace WebAnnotation
 
             foreach (int section in changedSections)
             {
-                SectionAnnotationsView SLVModel = GetOrCreateAnnotationsForSection(section, this.Parent);
+                SectionAnnotationsView SLVModel = GetOrCreateAnnotationsForSection(section);
                 if (SLVModel != null)
                 {
                     SLVModel.OnLocationLinksStoreChanged(sender, e);
@@ -1171,10 +1170,13 @@ namespace WebAnnotation
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        public void OnReferenceSectionChanged(object sender, EventArgs e)
+        public void OnReferenceSectionChanged(object sender, ReferenceSectionChangedEventArgs e)
         {
             ///This could be optimized, but it should be a rare event
-            LoadSectionAnnotations();
+            cacheSectionAnnotations.RemoveEntry(e.ChangedSection.Number);
+
+            if(e.ChangedSection.Number == this.CurrentSectionNumber)
+                LoadSectionAnnotations();
         }
 
         /// <summary>
@@ -1232,7 +1234,7 @@ namespace WebAnnotation
             int StartingSectionNumber = _Parent.Section.Number;
             SectionAnnotationsView SectionAnnotations;
 
-            SectionAnnotations = GetOrCreateAnnotationsForSection(_Parent.Section.Number, _Parent);
+            SectionAnnotations = GetOrCreateAnnotationsForSection(_Parent.Section.Number);
             SectionAnnotations.LoadAnnotationsInRegion(Parent.Scene);
             //SectionAnnotationsView.LoadSectionAnnotations(SectionAnnotations, false);
         }

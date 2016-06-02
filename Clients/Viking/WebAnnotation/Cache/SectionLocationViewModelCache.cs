@@ -46,5 +46,11 @@ namespace WebAnnotation
         {
             return new SectionAnnotationsViewCacheEntry(key, value);
         }
+
+        public bool RemoveEntry(int key)
+        {
+            SectionAnnotationsViewCacheEntry entry;
+            return this.dictEntries.TryRemove(key, out entry);
+        }
     }
 }
