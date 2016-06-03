@@ -99,6 +99,14 @@ namespace Geometry
 
                 return _MaxMapY;
             }
+        } 
+
+        public GridRectangle MappedBoundingBox
+        {
+            get
+            {
+                return new GridRectangle(MinMapX, MaxMapX, MinMapY, MaxMapY);
+            }
         }
 
         #endregion
@@ -170,6 +178,15 @@ namespace Geometry
         }
 
         #endregion
+
+        public GridRectangle ControlBoundingBox
+        {
+            get
+            {
+                return new GridRectangle(MinCtrlX, MaxCtrlX, MinCtrlY, MaxCtrlY);
+            }
+        }
+
 
 
         public GridTriangle Control

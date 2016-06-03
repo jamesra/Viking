@@ -39,7 +39,7 @@ namespace Geometry.Transforms
         /// <summary>
         /// This stores the output of the Delaunay triangulation.  Every group of three integers represents a triangle
         /// </summary>
-        private int[] _TriangleIndicies = null;
+        protected int[] _TriangleIndicies = null;
         public virtual int[] TriangleIndicies
         {
             get
@@ -423,45 +423,7 @@ namespace Geometry.Transforms
 
                     throw;
                 }
-
-                /*
-                MappingGridVector2 UnmappedPoint = mapPoints[iPoint];
-                MappingGridTriangle mapTri = transform.GetTransform(mapPoints[iPoint].ControlPoint);
-
-                if (mapTri != null)
-                {
-                    GridVector2 newControl = mapTri.Transform(UnmappedPoint.ControlPoint);
-                    newPoints.AddRange(new MappingGridVector2[] { new MappingGridVector2(newControl, UnmappedPoint.MappedPoint) });
-
-                    List<MappingGridVector2> sortPoints = new List<MappingGridVector2>(newPoints);
-                    sortPoints.Sort();
-                    for (int i = 1; i < sortPoints.Count; i++)
-                    {
-                        Debug.Assert(sortPoints[i - 1].ControlPoint != sortPoints[i].ControlPoint);
-                    }
-                }
-                else
-                {
-                    //In this case we need to test each edge connecting this point to other points.
-                    //newPoints = new MappingGridVector2[0];
-                    for(int i = 0; i < TriangleIndicies.Length; i += 3)
-                    {
-                        if(TriangleIndicies[i] == iPoint)
-                        {
-                            
-                    int[] EdgesIndicies = Array.Find<int>(this.TriangleIndicies, iPoint);
-                }
-                */
-
                 
-                //                AddThreadObj.ThreadPoolCallback(null);
-
-
-                //newPoints.AddRange(AddThreadObj.newPoints);
-
-                //newPoints.Sort();
-
-
 #if false
                 for (int iTest = 1; iTest < newPoints.Count; iTest++)
                 {
@@ -629,7 +591,8 @@ namespace Geometry.Transforms
 
         public List<MappingGridVector2> IntersectingControlRectangle(GridRectangle gridRect, bool IncludeAdjacent)
         {
-            List<MappingGridVector2> foundPoints = IntersectingRectangle(gridRect, this.controlTriangles);
+            //List<MappingGridVector2> foundPoints = IntersectingRectangle(gridRect, this.controlTriangles);
+            List<MappingGridVector2> foundPoints = IntersectingRectangleRTree(gridRect, this.controlTrianglesRTree);
             if (!IncludeAdjacent)
             {
                 for (int i = 0; i < foundPoints.Count; i++)
@@ -647,7 +610,8 @@ namespace Geometry.Transforms
 
         public List<MappingGridVector2> IntersectingMappedRectangle(GridRectangle gridRect, bool IncludeAdjacent)
         {
-            List<MappingGridVector2> foundPoints = IntersectingRectangle(gridRect, this.mapTriangles);
+            //List<MappingGridVector2> foundPoints = IntersectingRectangle(gridRect, this.mapTriangles);
+            List<MappingGridVector2> foundPoints = IntersectingRectangleRTree(gridRect, this.mapTrianglesRTree);
             if (!IncludeAdjacent)
             {
                 for (int i = 0; i < foundPoints.Count; i++)
@@ -709,49 +673,6 @@ namespace Geometry.Transforms
             }
         }
 
-        private QuadTree<List<MappingGridTriangle>> _mapTriangles = null; 
-
-        /// <summary>
-        /// Quadtree mapping mapped points to triangles that contain the points
-        /// </summary>
-        public QuadTree<List<MappingGridTriangle>> mapTriangles
-        {
-            get
-            {
-                //Try the read lock first since only one thread can be in upgradeable mode
-                try
-                {
-                    rwLockTriangles.EnterReadLock();
-                    if (_mapTriangles != null)
-                    {
-                        return _mapTriangles; 
-                    }
-                }
-                finally
-                {
-                    if(rwLockTriangles.IsReadLockHeld)
-                        rwLockTriangles.ExitReadLock(); 
-                }
-
-                //_mapTriangles was null, so get in line to populate it
-                try
-                {
-                    rwLockTriangles.EnterUpgradeableReadLock();
-                    if(_mapTriangles == null)
-                        BuildTriangleQuadTree(); //Locks internally
-
-                    Debug.Assert(_mapTriangles != null);
-                    return _mapTriangles;
-                }
-                finally
-                {
-                    if(rwLockTriangles.IsUpgradeableReadLockHeld)
-                        rwLockTriangles.ExitUpgradeableReadLock(); 
-                }
-            }
-        }
-
-
         private RTree.RTree<MappingGridTriangle> _controlTrianglesRTree = null;
 
         /// <summary>
@@ -793,50 +714,7 @@ namespace Geometry.Transforms
                 }
             }
         }
-
-        private QuadTree<List<MappingGridTriangle>> _controlTriangles = null;
-
-
-        /// <summary>
-        /// Quadtree mapping control points to triangles that contain the points
-        /// </summary>
-        public QuadTree<List<MappingGridTriangle>> controlTriangles
-        {
-            get
-            {
-                //Try the read lock first since only one thread can be in upgradeable mode
-                try
-                {
-                    rwLockTriangles.EnterReadLock();
-                    if (_controlTriangles != null)
-                    {
-                        return _controlTriangles;
-                    }
-                }
-                finally
-                {
-                    if (rwLockTriangles.IsReadLockHeld)
-                        rwLockTriangles.ExitReadLock();
-                }
-
-                //_mapTriangles was null, so get in line to populate it
-                try
-                {
-                    rwLockTriangles.EnterUpgradeableReadLock();
-                    if (_controlTriangles == null)
-                        BuildTriangleQuadTree(); //Locks internally
-
-                    Debug.Assert(_controlTriangles != null);
-                    return _controlTriangles;
-                }
-                finally
-                {
-                    if (rwLockTriangles.IsUpgradeableReadLockHeld)
-                        rwLockTriangles.ExitUpgradeableReadLock();
-                }
-            }
-        }
-
+        
         private List<MappingGridTriangle>[] _TriangleList;
         List<MappingGridTriangle>[] TriangleList
         {
@@ -919,44 +797,24 @@ namespace Geometry.Transforms
                     rwLockTriangles.ExitWriteLock();
             }
         }
-
-        //
-        /// <summary>
-        /// Build a quad tree for both mapping and control triangles, takes the rwLockTriangles write lock
-        /// </summary>
-        protected void BuildTriangleQuadTree()
-        {
-            try
-            {
-                rwLockTriangles.EnterWriteLock();
-
-                //Don't rebuild if they already exist, someone probably calculated them while we waited for the lock
-                if(_mapTriangles != null)
-                    return; 
-
-                GridVector2[] quadMapPoints = new GridVector2[MapPoints.Length];
-                GridVector2[] quadControlPoints = new GridVector2[MapPoints.Length];
-                //Build the list map points
-                for(int i = 0; i < MapPoints.Length; i++)
-                {
-                    quadMapPoints[i] = MapPoints[i].MappedPoint;
-                    quadControlPoints[i] = MapPoints[i].ControlPoint;
-                }
-
-                //Build the quad tree for mapping points
-                _mapTriangles = new QuadTree<List<MappingGridTriangle>>(quadMapPoints, TriangleList, MappedBounds);
-
-                //Build the quad tree for control points
-                _controlTriangles = new QuadTree<List<MappingGridTriangle>>(quadControlPoints, TriangleList, ControlBounds);
-            }
-            finally 
-            {
-                if(rwLockTriangles.IsWriteLockHeld)
-                    rwLockTriangles.ExitWriteLock();
-            }
-        }
-
         
+        private List<MappingGridVector2> IntersectingRectangleRTree(GridRectangle gridRect, 
+                                                               RTree.RTree<MappingGridTriangle> TriangleRTree)
+        {
+            List<MappingGridTriangle> intersectingTriangles = TriangleRTree.Intersects(gridRect.ToRTreeRect(0));
+            SortedSet<long> sortedIndicies = new SortedSet<long>();
+
+            foreach(MappingGridTriangle t in intersectingTriangles)
+            {
+                sortedIndicies.Add(t.N1);
+                sortedIndicies.Add(t.N2);
+                sortedIndicies.Add(t.N3);
+            }
+
+            IEnumerable<long> distinctIndicies = sortedIndicies.Distinct();
+
+            return distinctIndicies.Select(i => this.MapPoints[i]).ToList();
+        }
 
         /// <summary>
         /// Returns all points inside the requested region.  
@@ -1030,8 +888,8 @@ namespace Geometry.Transforms
             {
                 rwLockTriangles.EnterWriteLock();
 
-                _mapTriangles = null;
-                _controlTriangles = null;
+                _mapTrianglesRTree = null;
+                _controlTrianglesRTree = null;
                 _TriangleList = null; 
             }
             finally
@@ -1055,18 +913,6 @@ namespace Geometry.Transforms
                 {
                     rwLockTriangles.Dispose();
                     rwLockTriangles = null;
-                }
-
-                if (_controlTriangles != null)
-                {
-                    _controlTriangles.Dispose();
-                    _controlTriangles = null;
-                }
-
-                if (_mapTriangles != null)
-                {
-                    _mapTriangles.Dispose();
-                    _mapTriangles = null;
                 }
             }
         }

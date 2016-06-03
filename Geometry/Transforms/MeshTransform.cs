@@ -90,7 +90,7 @@ namespace Geometry.Transforms
         public void BuildDataStructures()
         {
             CalculateEdges();
-            BuildTriangleQuadTree();
+            BuildTriangleRTree();
         }
 
         /// <summary>
@@ -186,18 +186,12 @@ namespace Geometry.Transforms
                 //We just want to know if we are close enough to check with the more time consuming math
                 double epsilon = 5;
 
-                if (Point.X < MappedBounds.Left - epsilon)
-                    return null;
-                if (Point.X > MappedBounds.Right + epsilon)
-                    return null;
-                if (Point.Y > MappedBounds.Top + epsilon)
-                    return null;
-                if (Point.Y < MappedBounds.Bottom - epsilon)
+                if (!MappedBounds.Contains(Point, epsilon))
                     return null;
 
                 //Fetch a list of triangles from the nearest point
                 double distance;
-                List<MappingGridTriangle> triangles = mapTriangles.FindNearest(Point, out distance);
+                List<MappingGridTriangle> triangles = mapTrianglesRTree.Intersects(Point.ToRTreeRect(0));//mapTriangles.FindNearest(Point, out distance);
 
                 if (triangles == null)
                     return null;
@@ -205,47 +199,13 @@ namespace Geometry.Transforms
 
                 foreach (MappingGridTriangle t in triangles)
                 {
-                    if (t.MinMapX > Point.X)
-                        continue;
-                    if (t.MaxMapX < Point.X)
-                        continue;
-                    if (t.MinMapY > Point.Y)
-                        continue;
-                    if (t.MaxMapY < Point.Y)
-                        continue;
+                    if (!t.MappedBoundingBox.Contains(Point))
+                        continue; 
 
                     if (t.IntersectsMapped(Point))
                         return t;
                 }
-
-                //You can't just accept that these triangles are the closest triangles.  It's possible there is a point
-                //which is the closest to the test point, but isn't a vertex of the bounding tiangle.
-                //As a hack I expand the search to include all verticies of the bounding triangles if the first search failss
-                List<MappingGridTriangle> fallbackTriangles = new List<MappingGridTriangle>();
-
-                foreach (MappingGridTriangle t in triangles)
-                {
-                    fallbackTriangles.AddRange(mapTriangles.FindNearest(t.Mapped.p1, out distance));
-                    fallbackTriangles.AddRange(mapTriangles.FindNearest(t.Mapped.p2, out distance));
-                    fallbackTriangles.AddRange(mapTriangles.FindNearest(t.Mapped.p3, out distance));
-                }
-
-                //Check the fallback triangles
-                foreach (MappingGridTriangle t in fallbackTriangles)
-                {
-                    if (t.MinMapX > Point.X)
-                        continue;
-                    if (t.MaxMapX < Point.X)
-                        continue;
-                    if (t.MinMapY > Point.Y)
-                        continue;
-                    if (t.MaxMapY < Point.Y)
-                        continue;
-
-                    if (t.IntersectsMapped(Point))
-                        return t;
-                }
-
+                
                 return null;
             }
 
@@ -262,18 +222,12 @@ namespace Geometry.Transforms
                 //We just want to know if we are close enough to check with the more time consuming math
                 double epsilon = 5;
 
-                if (Point.X < ControlBounds.Left - epsilon)
-                    return null;
-                if (Point.X > ControlBounds.Right + epsilon)
-                    return null;
-                if (Point.Y > ControlBounds.Top + epsilon)
-                    return null;
-                if (Point.Y < ControlBounds.Bottom - epsilon)
+                if (!ControlBounds.Contains(Point, epsilon))
                     return null;
 
                 //Fetch a list of triangles from the nearest point
                 double distance;
-                List<MappingGridTriangle> triangles = controlTriangles.FindNearest(Point, out distance);
+                List<MappingGridTriangle> triangles = controlTrianglesRTree.Intersects(Point.ToRTreeRect(0));
 
                 if (triangles == null)
                     return null;
@@ -281,48 +235,13 @@ namespace Geometry.Transforms
 
                 foreach (MappingGridTriangle t in triangles)
                 {
-                    if (t.MinCtrlX > Point.X)
-                        continue;
-                    if (t.MaxCtrlX < Point.X)
-                        continue;
-                    if (t.MinCtrlY > Point.Y)
-                        continue;
-                    if (t.MaxCtrlY < Point.Y)
+                    if (!t.ControlBoundingBox.Contains(Point))
                         continue;
 
                     if (t.IntersectsControl(Point))
-                        return t;
+                            return t;
                 }
-
-                //You can't just accept that these triangles are the closest triangles.  It's possible there is a point
-                //which is the closest to the test point, but isn't a vertex of the bounding tiangle.
-                //As a hack I expand the search to include all verticies of the bounding triangles if the first search failss
-                List<MappingGridTriangle> fallbackTriangles = new List<MappingGridTriangle>();
-
-                foreach (MappingGridTriangle t in triangles)
-                {
-                    fallbackTriangles.AddRange(controlTriangles.FindNearest(t.Control.p1, out distance));
-                    fallbackTriangles.AddRange(controlTriangles.FindNearest(t.Control.p2, out distance));
-                    fallbackTriangles.AddRange(controlTriangles.FindNearest(t.Control.p3, out distance));
-                }
-
-                //Check the fallback triangles
-                foreach (MappingGridTriangle t in fallbackTriangles)
-                {
-                    if (t.MinCtrlX > Point.X)
-                        continue;
-                    if (t.MaxCtrlX < Point.X)
-                        continue;
-                    if (t.MinCtrlY > Point.Y)
-                        continue;
-                    if (t.MaxCtrlY < Point.Y)
-                        continue;
-
-                    if (t.IntersectsControl(Point))
-                        return t;
-                }
-
-
+                
                 return null;
             }
 
@@ -473,448 +392,7 @@ namespace Geometry.Transforms
 
            _LineSegmentGrid = null;
        }
-
-       /*
-        protected GridRectangle _CachedMappedBounds = new GridRectangle(double.MinValue, double.MinValue, double.MinValue, double.MinValue);
-        public GridRectangle CachedMappedBounds
-        {
-            get
-            {
-                if (_CachedMappedBounds.Left == double.MaxValue ||
-                    _CachedMappedBounds.Left == double.MinValue)
-                {
-                    this._CachedMappedBounds = MappingGridVector2.CalculateMappedBounds(this.MapPoints);
-                }
-
-                return _CachedMappedBounds;
-            }
-        }
-
-
-
-        protected GridRectangle _CachedControlBounds = new GridRectangle(double.MinValue, double.MinValue, double.MinValue, double.MinValue );
-        public GridRectangle CachedControlBounds
-        {
-            get
-            {
-                if (_CachedControlBounds.Left == double.MinValue)
-                {
-                    this._CachedControlBounds = MappingGridVector2.CalculateControlBounds(this.MapPoints);
-                }
-
-                return _CachedControlBounds;
-            }
-        }
-        */
         
-
-        /*
-        /// <summary>
-        /// Takes two transforms and transforms the control grid of this section into the control grid space of the passed transfrom. Requires control section
-        /// of this transform to match mapped section of adding transform
-        /// 
-        /// When we add a transform (tAdd) to another transform (this) we follow this algorithm:
-        //We pass the control points of this to tAdd and find out if they can be mapped into the space of tAdd.   The triangle of this is ABC. 
-        //If all three points of a triangle map inside the space we accept the new points as the control points and proceed.
-        //If two points of a triangle map inside the space and we assume point A is outside space we find the intersection of
-        //AB & AC with mapped space and create new points, D & E.  We bisect the line between BC to create point F 
-        //(Asserting F is able to be mapped).  We then remove triangle ABC from the mapping list and add BDF, FDE, CFE.
-        //Optimization:  Before bisecting we check if the lines intersecting AC and AB have a common origin point.  If they 
-        //do we use this point as the bisection point.  This prevents erosion in the convex boundary case.
-        //Problems: If there is a concave boundary then the line connecting ED may pass outside mapped space, but it should 
-        //be mappable because we know all points of the triangle are in mappable space.
-        //If two points of a triangle maps outside the space and we assume points BC are these points then we find the
-        //intersection of AB and AC with mapped space to define points D & E.  We then redefine C=E and B=D. 
-        //Optimization:  Check if lines intersecting AC and AB intersect outside ADE.  If they do define EDF and add it
-        //to the triangle list.  This expands the mapped space in a concave boundary case.
-        //If three points of a triangle map outside the space we discard the triangle for now.
-        //Optimization: Check each line to ensure it doesn’t intersect with map space.  If it does…
-        /// </summary>
-        /// <param name="t1"></param>
-        /// <param name="t2"></param>
-        /// <returns></returns>
-        public void Add(StosGridTransform transform)
-        {
-            
- //           Trace.WriteLine("Adding transforms: " + this.ToString() + " to " + transform.ToString(), "Geometry"); 
- //           Debug.Assert(transform.MappedSection == this.ControlSection, "Can't skip sections when assembling volume transforms");
-
-            //Reset boundaries since they will be changed
-            _CachedControlBounds = new Rectangle(int.MinValue, int.MinValue, 0, 0);
-            _CachedMappedBounds = new Rectangle(int.MinValue, int.MinValue, 0, 0);
-
-            List<AddTransformThreadObj> threadObjList = new List<AddTransformThreadObj>();
-            List<ManualResetEvent> doneEvents = new List<ManualResetEvent>(); 
-
-            //Search all mapping triangles and update control points, if they fall outside the grid then discard the triangle
-            for (int iTri = 0; iTri < mappings.Count; iTri++ )
-            {
-                MappingTriangle mapTri = mappings[iTri];
-                AddTransformThreadObj AddThreadObj = new AddTransformThreadObj(mapTri, transform);
-                doneEvents.Add(AddThreadObj.DoneEvent);
-                threadObjList.Add(AddThreadObj);
-
-                ThreadPool.QueueUserWorkItem(AddThreadObj.ThreadPoolCallback);
-               
-            }
-
-            //Wait for the threads to finish processing.  There is a 64 handle limit for WaitAll so we wait on one at a time
-            foreach (ManualResetEvent doneEvent in doneEvents)
-                doneEvent.WaitOne(); 
-
-            mappings.Clear();
-
-            foreach(AddTransformThreadObj obj in threadObjList)
-            {
-                mappings.AddRange(obj.newMaps);
-            }
-
-            _CachedControlBounds = new Rectangle(int.MinValue, int.MinValue, 0, 0);
-            _CachedMappedBounds = new Rectangle(int.MinValue, int.MinValue, 0, 0);
-
-            this.ControlSection = transform.ControlSection;
-             
-        }
-
-        /// <summary>
-        /// Given a mapping triangle with one vertex outside our mapping space (A) we return a list
-        /// of mapping triangles which fill our mapping space and crop the unmappable space
-        /// </summary>
-        /// <param name="mapTri">Mapping triangle which doesn't fit</param>
-        /// <returns></returns>
-        internal MappingTriangle[] FitTriangleOneExternalVertex(MappingTriangle mapTri)
-        {
-            
-            //Figure out which vertex is external and relabel vectors A,B,C in clockwise fashion
-            //with A being outside mapped space
-            Vector2 A,B,C;
-
-            if(false == CanTransform(mapTri.Control.p1))
-            {
-                A = mapTri.Control.p1;
-                B = mapTri.Control.p2;
-                C = mapTri.Control.p3; 
-            }
-            else if (false == CanTransform(mapTri.Control.p2))
-            {
-                A = mapTri.Control.p2;
-                B = mapTri.Control.p3;
-                C = mapTri.Control.p1; 
-            }
-            else
-            {
-                Debug.Assert(CanTransform(mapTri.Control.p3) == false, "FitTriangleOneExternalVertex - all verts inside mapped space");
-                A = mapTri.Control.p3;
-                B = mapTri.Control.p1;
-                C = mapTri.Control.p2; 
-            }
-
-            LineSegment AB = new LineSegment(A, B); //Leave points outside mapping as first term so I can calculate distance to closest point in mapped space
-            LineSegment AC = new LineSegment(A, C);
-            LineSegment BC = new LineSegment(B, C); 
-
-            //Find the nearest point inside the grid from the external points
-            LineSegment lineThroughAB;
-            Vector2 D = new Vector2(); //The intersection point of BA with mapped space
-            float nearestABintersect = float.MaxValue;
-            LineSegment lineThroughAC;
-            Vector2 E = new Vector2(); //The intersection point of CA with mapped space
-            float nearestACintersect = float.MaxValue;
-
-            LineSegment lineThroughBC;
-            Vector2 F = new Vector2(); //The intersection point of CA with mapped space
-            float nearestBCintersect = float.MaxValue;
-
-
-            nearestABintersect = NearestLine(AB, out lineThroughAB, out D);
-            nearestACintersect = NearestLine(AC, out lineThroughAC, out E);
-            nearestBCintersect = NearestLine(BC, out lineThroughBC, out F);
-
-            //TODO: Fiddle with epsilon or figure out why this error happens sometimes
-            //Debug.Assert(lineThroughAB != null && lineThroughAC != null, "FitTriangleOneExternalVertex: Couldn't find intersection with mapped space");
-            if (lineThroughAB == null || lineThroughAC == null)
-                return new MappingTriangle[0]; 
-
-            //OK, we know where the lines intersect with mapped space, find midpoint of BC to define F.  Then create
-            //mapping triangles BDF, FDE, CFE
-
-            //First we check to see if there is a common point between two intersection lines we can use as a node;
-            if (nearestBCintersect >= float.MaxValue)
-            {
-                //TODO: If this fails to find a valid transform spot I want to remove the triangle from the transform.
-                //hopefully this case is only hit when two nodes are in the same triangle.
-                F =  BC.Bisect(); 
-            }
-
-            //Find the closest line intersection to BC
-
-            //My approach to dealing with failed transforms due to floating point error is to remove those triangles
-
-            Vector2 Bctrl;
-            Vector2 Cctrl;
-            Vector2 Dctrl;
-            Vector2 Ectrl;
-            Vector2 Fctrl;
-
-            //Work backwards to find where new control points where in the mapped space
-            Vector2 Bmap;
-            Vector2 Cmap;
-            Vector2 Dmap;
-            Vector2 Emap;;
-            Vector2 Fmap;
-
-            try
-            {
-                //Transform all points into the new control space
-                Bctrl = Transform(B);
-                Cctrl = Transform(C);
-                Dctrl = Transform(D);
-                Ectrl = Transform(E);
-                Fctrl = Transform(F);
-
-                //Work backwards to find where new control points where in the mapped space
-                Bmap = mapTri.InverseTransform(B);
-                Cmap = mapTri.InverseTransform(C);
-                Dmap = mapTri.InverseTransform(D);
-                Emap = mapTri.InverseTransform(E);
-                Fmap = mapTri.InverseTransform(F);
-            }
-            catch (ArgumentException e)
-            {
-                return new MappingTriangle[0]; 
-            }
-
-            List<MappingTriangle> newMaps = new List<MappingTriangle>();
-            MappingTriangle newTri = null;
-            try
-            {
-                newTri = new MappingTriangle(new Triangle(Cctrl, Fctrl, Ectrl, Color.Yellow), new Triangle(Cmap, Fmap, Emap, Color.Gold));
-                newMaps.Add(newTri); 
-            }catch(ArgumentException e)
-            {
-                Trace.WriteLine("Tried to create triangle which is really a line", "Geometry"); 
-            }
-            
-            try
-            {
-                newTri = new MappingTriangle(new Triangle(Fctrl, Dctrl, Ectrl, Color.Violet), new Triangle(Fmap, Dmap, Emap, Color.Black));
-                newMaps.Add(newTri); 
-            }
-            catch(ArgumentException e)
-            {
-                Trace.WriteLine("Tried to create triangle which is really a line", "Geometry"); 
-            }
-
-            try{
-                newTri = new MappingTriangle(new Triangle(Fctrl, Bctrl, Dctrl, Color.Green), new Triangle(Fmap, Bmap, Dmap, Color.White));
-                newMaps.Add(newTri); 
-            }catch(ArgumentException e)
-            {
-                Trace.WriteLine("Tried to create triangle which is really a line", "Geometry"); 
-            }
-
-            return newMaps.ToArray(); 
-             
-        }
-
-        /// <summary>
-        /// Given a mapping triangle with two vertex (B&C) outside our mapping space we return a list
-        /// of mapping triangles which fill our mapping space and crop the unmappable space
-        /// </summary>
-        /// <param name="mapTri">Mapping triangle which doesn't fit</param>
-        /// <returns></returns>
-        internal MappingTriangle[] FitTriangleTwoExternalVertex(MappingTriangle mapTri)
-        {
-            
-            //Figure out which two vertex are external and relabel vectors A,B,C in clockwise fashion
-            //with A being inside mapped space
-            Vector2 A, B, C;
-
-            if (CanTransform(mapTri.Control.p1))
-            {
-                A = mapTri.Control.p1;
-                B = mapTri.Control.p2;
-                C = mapTri.Control.p3;
-            }
-            else if (CanTransform(mapTri.Control.p2))
-            {
-                A = mapTri.Control.p2;
-                B = mapTri.Control.p3;
-                C = mapTri.Control.p1;
-            }
-            else
-            {
-                Debug.Assert(CanTransform(mapTri.Control.p3), "FitTriangleOneExternalVertex - all verts outside mapped space");
-                A = mapTri.Control.p3;
-                B = mapTri.Control.p1;
-                C = mapTri.Control.p2;
-            }
-
-            LineSegment BA = new LineSegment(B, A); //Leave points outside mapping as first term so I can calculate distance to closest point in mapped space
-            LineSegment CA = new LineSegment(C, A);
-            LineSegment BC = new LineSegment(B, C);
-
-            //Find the nearest point inside the grid from the external points
-            LineSegment lineThroughBA;
-            Vector2 D = new Vector2(); //The intersection point of BA with mapped space
-            float nearestBAintersect = float.MaxValue;
-            LineSegment lineThroughCA;
-            Vector2 E = new Vector2(); //The intersection point of CA with mapped space
-            float nearestCAintersect = float.MaxValue;
-
-//            LineSegment lineThroughBC;
-//            Vector2 F = new Vector2(); //The intersection point of CA with mapped space
-//            float nearestBCintersect = float.MaxValue;
-
-
-            nearestBAintersect = NearestLine(BA, out lineThroughBA, out D);
-            nearestCAintersect = NearestLine(CA, out lineThroughCA, out E);
-        //    nearestBCintersect = NearestLine(BC, out lineThroughBC, out F);
-
-            //TODO: Figure out if we can prevent this from occuring
-            //Debug.Assert(lineThroughBA != null && lineThroughCA != null, "FitTriangleOneExternalVertex: Couldn't find intersection with mapped space");
-            if(lineThroughBA == null || lineThroughCA == null)
-                return new MappingTriangle[0]; 
-
-            //Transform all points into the new control space
-            MappingTriangle[] newMaps = new MappingTriangle[1];
-
-            try
-            {
-                Vector2 Actrl = Transform(A);
-                Vector2 Dctrl = Transform(D);
-                Vector2 Ectrl = Transform(E);
-
-                //Work backwards to find where new control points where in the mapped space
-                Vector2 Amap = mapTri.InverseTransform(A);
-                Vector2 Dmap = mapTri.InverseTransform(D);
-                Vector2 Emap = mapTri.InverseTransform(E);
-
-                
-
-                newMaps[0] = new MappingTriangle(new Triangle(Actrl, Dctrl, Ectrl, Color.Ivory), new Triangle(Amap, Dmap, Emap, Color.Gold));
-            }
-            catch (ArgumentException e)
-            {
-                Trace.WriteLine("Tried to create triangle which is really a line", "Geometry");
-                return new MappingTriangle[0]; 
-            }
-
-            
-            return newMaps;
-        }
-        */
-
-        /*
-        protected float NearestLine(LineSegment L, out LineSegment foundLine, out Vector2 intersection)
-        {
-            float nearestIntersect = float.MaxValue;
-
-            //For debugging only
-            float nearestFailedIntersect = float.MaxValue;
-            Vector2 nearestFailedPoint = new Vector2(); 
-            LineSegment nearestFailedSegment = null;
-
-
-            foundLine = null;
-            intersection = new Vector2(); 
-
-            foreach (MappingTriangle T in mappings)
-            {
-                Vector2 result;
-
-                LineSegment One = new LineSegment(T.Mapped.p1, T.Mapped.p2);
-                LineSegment Two = new LineSegment(T.Mapped.p2, T.Mapped.p3);
-                LineSegment Three = new LineSegment(T.Mapped.p3, T.Mapped.p1);
-
-                bool bIntersected = One.Intersects(L, out result);
-                float distance = Vector2.Distance(L.A, result);
-                if (distance < nearestIntersect && bIntersected)
-                {
-                    nearestIntersect = distance;
-                    intersection = result;
-                    foundLine = One;
-                }
-                if(distance < nearestFailedIntersect && !bIntersected)
-                {
-                    nearestFailedPoint = result; 
-                    nearestFailedSegment = One;
-                    nearestFailedIntersect = distance;
-                }
-
-                bIntersected = Two.Intersects(L, out result);
-                distance = Vector2.Distance(L.A, result);
-                if (distance < nearestIntersect &&  bIntersected)
-                {
-                    nearestIntersect = distance;
-                    intersection = result;
-                    foundLine = Two;
-                }
-                if(distance < nearestFailedIntersect && !bIntersected)
-                {
-                    nearestFailedPoint = result; 
-                    nearestFailedSegment = Two;
-                    nearestFailedIntersect = distance;
-                }
-
-                bIntersected = Three.Intersects(L, out result);
-                distance = Vector2.Distance(L.A, result);
-                if (distance < nearestIntersect && bIntersected)
-                {
-                    nearestIntersect = distance;
-                    intersection = result;   
-                    foundLine = Three;
-                }
-                if(distance < nearestFailedIntersect && !bIntersected)
-                {
-                    nearestFailedPoint = result; 
-                    nearestFailedSegment = Three;
-                    nearestFailedIntersect = distance;
-                }
-            }
-
-            return nearestIntersect;
-            
-        }*/
-         
-        /*
-        public void Draw(GraphicsDevice graphicsDevice, BasicEffect basicEffect)
-        {
-            /*
-            BasicEffect basicEffect = new BasicEffect(graphicsDevice, null);
-            basicEffect.AmbientLightColor = templateEffect.AmbientLightColor;
-            basicEffect.Projection = templateEffect.Projection;
-            basicEffect.World = templateEffect.World;
-            basicEffect.View = templateEffect.View;
-            basicEffect.Projection = templateEffect.Projection;
-             */
-
-            /*
-            basicEffect.TextureEnabled = false;
-            basicEffect.VertexColorEnabled = true;
-            basicEffect.CommitChanges();
-
-            VertexDeclaration originalVertDeclare = graphicsDevice.VertexDeclaration;
-
-            basicEffect.Begin();
-
-            foreach (EffectPass pass in basicEffect.CurrentTechnique.Passes)
-            {
-                pass.Begin();
-                foreach (MappingTriangle tri in mappings)
-                {
-                    tri.Draw(graphicsDevice);
-                }
-                pass.End();
-            }
-
-            basicEffect.End();
-
-            graphicsDevice.VertexDeclaration = originalVertDeclare;
-             * */
-        //    return; 
-        //   }
-
 
        protected override void Dispose(bool disposing)
        {

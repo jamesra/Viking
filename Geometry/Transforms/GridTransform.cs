@@ -81,13 +81,7 @@ namespace Geometry.Transforms
             //We just want to know if we are close enough to check with the more time consuming math
             double epsilon = 5;
 
-            if (Point.X < Bounds.Left - epsilon)
-                return null;
-            if (Point.X > Bounds.Right + epsilon)
-                return null;
-            if (Point.Y > Bounds.Top + epsilon)
-                return null;
-            if (Point.Y < Bounds.Bottom - epsilon)
+            if(!Bounds.Contains(Point, epsilon))
                 return null;
             
             double OffsetX = Point.X - Bounds.Left;
@@ -117,7 +111,6 @@ namespace Geometry.Transforms
             {
                 IsUpper = (X - iX) + (Y - iY) > 1;
             }
-
             
             int iTri = (iY * 2) + ((GridSizeY-1) * 2 * iX);
             //int iTri = (iX * 2) + ((GridSizeX-1) * 2 * iY);
@@ -205,9 +198,7 @@ namespace Geometry.Transforms
         /// Size of y dimension of grid 
         /// </summary>
         public int GridSizeY { get; protected set; }
-
-
-        private int[] _TriangleIndicies; 
+        
         public override int[] TriangleIndicies 
         {
             get
@@ -305,13 +296,7 @@ namespace Geometry.Transforms
             //We just want to know if we are close enough to check with the more time consuming math
             double epsilon = 0;
 
-            if (Point.X < MappedBounds.Left - epsilon)
-                return null;
-            if (Point.X > MappedBounds.Right + epsilon)
-                return null;
-            if (Point.Y > MappedBounds.Top + epsilon)
-                return null;
-            if (Point.Y < MappedBounds.Bottom - epsilon)
+            if (!MappedBounds.Contains(Point, epsilon))
                 return null;
 
             //Triangles are ordered from left to right, and then bottom to top
@@ -326,42 +311,12 @@ namespace Geometry.Transforms
         internal override MappingGridTriangle GetInverseTransform(GridVector2 Point)
         {
             //Fetch a list of triangles from the nearest point
-            double distance;
-            List<MappingGridTriangle> triangles = controlTriangles.FindNearest(Point, out distance);
+            List<MappingGridTriangle> triangles = controlTrianglesRTree.Intersects(Point.ToRTreeRect(0));
 
             if (triangles == null)
                 return null;
 
-
             foreach (MappingGridTriangle t in triangles)
-            {
-                if (t.MinCtrlX > Point.X)
-                    continue;
-                if (t.MaxCtrlX < Point.X)
-                    continue;
-                if (t.MinCtrlY > Point.Y)
-                    continue;
-                if (t.MaxCtrlY < Point.Y)
-                    continue;
-
-                if (t.IntersectsControl(Point))
-                    return t;
-            }
-
-            //You can't just accept that these triangles are the closest triangles.  It's possible there is a point
-            //which is the closest to the test point, but isn't a vertex of the bounding tiangle.
-            //As a hack I expand the search to include all verticies of the bounding triangles if the first search failss
-            List<MappingGridTriangle> fallbackTriangles = new List<MappingGridTriangle>();
-
-            foreach (MappingGridTriangle t in triangles)
-            {
-                fallbackTriangles.AddRange(controlTriangles.FindNearest(t.Control.p1, out distance));
-                fallbackTriangles.AddRange(controlTriangles.FindNearest(t.Control.p2, out distance));
-                fallbackTriangles.AddRange(controlTriangles.FindNearest(t.Control.p3, out distance));
-            }
-
-            //Check the fallback triangles
-            foreach (MappingGridTriangle t in fallbackTriangles)
             {
                 if (t.MinCtrlX > Point.X)
                     continue;

@@ -319,6 +319,18 @@ namespace Geometry
             return false;
         }
 
+        public bool Contains(GridVector2 pos, double epsilon)
+        {
+            //Find out if the rectangles can't possibly intersect
+            if (pos.X >= this.Left - epsilon &&
+               pos.Y >= this.Bottom - epsilon &&
+               pos.X <= this.Right + epsilon &&
+               pos.Y <= this.Top + epsilon)
+                return true;
+
+            return false;
+        }
+
         public bool Contains(IPoint pos)
         {
             if(pos == null)
