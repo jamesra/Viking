@@ -7,7 +7,7 @@ using System.Diagnostics;
 
 namespace Geometry
 {
-    public class MappingGridTriangle : ICloneable
+    public class MappingGridTriangle : ICloneable, IEquatable<MappingGridTriangle>
     {
         internal MappingGridVector2[] Nodes; 
 
@@ -252,5 +252,15 @@ namespace Geometry
             return uv_points.Select(uv => GridVector2.FromBarycentric(Mapped.p1, Mapped.p2, Mapped.p3, uv.Y, uv.X)).ToArray();
         }
 
+        public bool Equals(MappingGridTriangle other)
+        {
+            if (object.ReferenceEquals(this, other))
+                return true;
+
+            if (!object.ReferenceEquals(this.Nodes, other.Nodes))
+                return false;
+
+            return this.N1 == other.N1 && this.N2 == other.N2 && this.N3 == other.N3;
+        }
     }
 }

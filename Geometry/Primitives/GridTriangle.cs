@@ -247,6 +247,27 @@ namespace Geometry
             return false; 
         }
 
+        public GridVector2[] Points
+        {
+            get
+            {
+                return new GridVector2[] { p1, p2, p3 };
+            }
+        }
+
+        public GridRectangle BoundingBox
+        {
+            get
+            {
+                GridVector2[] points = this.Points;
+                double minx = points.Min(p => p.X);
+                double maxx = points.Max(p => p.X);
+                double miny = points.Min(p => p.Y);
+                double maxy = points.Max(p => p.Y);
+                return new GridRectangle(minx, maxx, miny, maxy);
+            }
+        }
+
         /// <summary>
         /// Returns u,v coordinate of point in triangle.  Calculates areas and returns fractions of area.  This can return 0,0 if the point is well outside the 
         /// triangle because the math hits the limit of the double data-type

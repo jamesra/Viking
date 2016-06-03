@@ -666,7 +666,49 @@ namespace Geometry.Transforms
                 /// <summary>
         /// You need to take this lock when building or changing the QuadTrees managing the triangles of the mesh
         /// </summary>
-        ReaderWriterLockSlim rwLockTriangles = new ReaderWriterLockSlim(); 
+        ReaderWriterLockSlim rwLockTriangles = new ReaderWriterLockSlim();
+        private RTree.RTree<MappingGridTriangle> _mapTrianglesRTree = null;
+
+        /// <summary>
+        /// Quadtree mapping mapped points to triangles that contain the points
+        /// </summary>
+        public RTree.RTree<MappingGridTriangle> mapTrianglesRTree
+        {
+            get
+            {
+                //Try the read lock first since only one thread can be in upgradeable mode
+                try
+                {
+                    rwLockTriangles.EnterReadLock();
+                    if (_mapTrianglesRTree != null)
+                    {
+                        return _mapTrianglesRTree;
+                    }
+                }
+                finally
+                {
+                    if (rwLockTriangles.IsReadLockHeld)
+                        rwLockTriangles.ExitReadLock();
+                }
+
+                //_mapTriangles was null, so get in line to populate it
+                try
+                {
+                    rwLockTriangles.EnterUpgradeableReadLock();
+                    if (_mapTrianglesRTree == null)
+                        BuildTriangleRTree(); //Locks internally
+
+                    Debug.Assert(_mapTrianglesRTree != null);
+                    return _mapTrianglesRTree;
+                }
+                finally
+                {
+                    if (rwLockTriangles.IsUpgradeableReadLockHeld)
+                        rwLockTriangles.ExitUpgradeableReadLock();
+                }
+            }
+        }
+
         private QuadTree<List<MappingGridTriangle>> _mapTriangles = null; 
 
         /// <summary>
@@ -709,7 +751,51 @@ namespace Geometry.Transforms
             }
         }
 
+
+        private RTree.RTree<MappingGridTriangle> _controlTrianglesRTree = null;
+
+        /// <summary>
+        /// Quadtree mapping control points to triangles that contain the points
+        /// </summary>
+        public RTree.RTree<MappingGridTriangle> controlTrianglesRTree
+        {
+            get
+            {
+                //Try the read lock first since only one thread can be in upgradeable mode
+                try
+                {
+                    rwLockTriangles.EnterReadLock();
+                    if (_controlTrianglesRTree != null)
+                    {
+                        return _controlTrianglesRTree;
+                    }
+                }
+                finally
+                {
+                    if (rwLockTriangles.IsReadLockHeld)
+                        rwLockTriangles.ExitReadLock();
+                }
+
+                //_mapTriangles was null, so get in line to populate it
+                try
+                {
+                    rwLockTriangles.EnterUpgradeableReadLock();
+                    if (_controlTrianglesRTree == null)
+                        BuildTriangleRTree(); //Locks internally
+
+                    Debug.Assert(_controlTrianglesRTree != null);
+                    return _controlTrianglesRTree;
+                }
+                finally
+                {
+                    if (rwLockTriangles.IsUpgradeableReadLockHeld)
+                        rwLockTriangles.ExitUpgradeableReadLock();
+                }
+            }
+        }
+
         private QuadTree<List<MappingGridTriangle>> _controlTriangles = null;
+
 
         /// <summary>
         /// Quadtree mapping control points to triangles that contain the points
@@ -807,6 +893,33 @@ namespace Geometry.Transforms
             }
         }
 
+        protected void BuildTriangleRTree()
+        {
+            try
+            {
+                rwLockTriangles.EnterWriteLock();
+
+                this._mapTrianglesRTree = new RTree.RTree<MappingGridTriangle>();
+                this._controlTrianglesRTree = new RTree.RTree<MappingGridTriangle>();
+
+                for (int i = 0; i < this.TriangleIndicies.Length; i += 3)
+                {
+                    MappingGridTriangle t = new MappingGridTriangle(this.MapPoints,
+                                                                    _TriangleIndicies[i],
+                                                                    _TriangleIndicies[i + 1],
+                                                                    _TriangleIndicies[i + 2]);
+
+                    this._mapTrianglesRTree.Add(t.Mapped.BoundingBox.ToRTreeRect(0), t);
+                    this._controlTrianglesRTree.Add(t.Control.BoundingBox.ToRTreeRect(0), t);
+                }
+            }
+            finally
+            {
+                if (rwLockTriangles.IsWriteLockHeld)
+                    rwLockTriangles.ExitWriteLock();
+            }
+        }
+
         //
         /// <summary>
         /// Build a quad tree for both mapping and control triangles, takes the rwLockTriangles write lock
@@ -854,7 +967,7 @@ namespace Geometry.Transforms
         private List<MappingGridVector2> IntersectingRectangle(GridRectangle gridRect,
                                                                QuadTree<List<MappingGridTriangle>> PointTree)
         {
-            List<GridVector2> Points; 
+            List<GridVector2> Points;
             List<List<MappingGridTriangle>> ListofListTriangles;
 
             List<MappingGridVector2> MappingPointList= null;
