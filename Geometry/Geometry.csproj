@@ -33,6 +33,8 @@
     <BootstrapperEnabled>true</BootstrapperEnabled>
     <TargetFrameworkProfile>
     </TargetFrameworkProfile>
+    <NuGetPackageImportStamp>
+    </NuGetPackageImportStamp>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -178,6 +180,15 @@
     <None Include="Viking_TemporaryKey.pfx" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <Import Project="..\Clients\packages\MathNet.Numerics.MKL.Win-x86.2.0.0\build\MathNet.Numerics.MKL.Win-x86.targets" Condition="Exists('..\Clients\packages\MathNet.Numerics.MKL.Win-x86.2.0.0\build\MathNet.Numerics.MKL.Win-x86.targets')" />
+  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
+    </PropertyGroup>
+    <Error Condition="!Exists('..\Clients\packages\MathNet.Numerics.MKL.Win-x86.2.0.0\build\MathNet.Numerics.MKL.Win-x86.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\Clients\packages\MathNet.Numerics.MKL.Win-x86.2.0.0\build\MathNet.Numerics.MKL.Win-x86.targets'))" />
+    <Error Condition="!Exists('..\Clients\packages\MathNet.Numerics.OpenBLAS.Win.0.2.0\build\MathNet.Numerics.OpenBLAS.Win.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\Clients\packages\MathNet.Numerics.OpenBLAS.Win.0.2.0\build\MathNet.Numerics.OpenBLAS.Win.targets'))" />
+  </Target>
+  <Import Project="..\Clients\packages\MathNet.Numerics.OpenBLAS.Win.0.2.0\build\MathNet.Numerics.OpenBLAS.Win.targets" Condition="Exists('..\Clients\packages\MathNet.Numerics.OpenBLAS.Win.0.2.0\build\MathNet.Numerics.OpenBLAS.Win.targets')" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">

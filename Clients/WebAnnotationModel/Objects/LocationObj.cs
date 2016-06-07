@@ -40,10 +40,10 @@ namespace WebAnnotationModel
                     return true;
                 case "WorldPosition":
                     return true;
-                case "VolumePosition":
-                    return true;
-                case "VolumeShape":
-                    return true;
+                //case "VolumePosition":
+                //    return true;
+                //case "VolumeShape":
+                  //  return true;
                 case "MosaicShape":
                     return true;
                 default:
@@ -58,8 +58,8 @@ namespace WebAnnotationModel
 
             switch (propertyName)
             {
-                case "VolumeShape":
-                    return true;
+                //case "VolumeShape":
+                  //  return true;
                 case "MosaicShape":
                     return true;
                 case "Radius":

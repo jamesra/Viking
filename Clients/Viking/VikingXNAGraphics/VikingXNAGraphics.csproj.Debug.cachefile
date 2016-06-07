@@ -23,3 +23,15 @@ Content\MergeHSVImages.fx
 Content\RoundCurve.fx
 Content\RoundLineHSV.fx
 Content\RoundCurveHSV.fx
+x86\libiomp5md.dll
+x86\MathNet.Numerics.MKL.dll
+x64\libgcc_s_seh-1.dll
+x64\libgfortran-3.dll
+x64\libopenblas.dll
+x64\libquadmath-0.dll
+x64\MathNet.Numerics.OpenBLAS.dll
+x86\libgcc_s_sjlj-1.dll
+x86\libgfortran-3.dll
+x86\libopenblas.dll
+x86\libquadmath-0.dll
+x86\MathNet.Numerics.OpenBLAS.dll

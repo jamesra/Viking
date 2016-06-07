@@ -23,4 +23,10 @@ namespace Geometry
         void Translate(GridVector2 vector);
     }
 
+    public interface IITKSerialization
+    {
+        void WriteITKTransform(System.IO.StreamWriter stream);
+    }
+
+
 }

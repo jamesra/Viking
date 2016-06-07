@@ -122,6 +122,8 @@ namespace Viking.VolumeModel
 
             iMinX = iMinX < 0 ? 0 : iMinX;
             iMinY = iMinY < 0 ? 0 : iMinY;
+            iMaxX = iMaxX < 0 ? 0 : iMaxX;
+            iMaxY = iMaxY < 0 ? 0 : iMaxY;
             iMaxX = iMaxX > gridInfo.GridXDim ? gridInfo.GridXDim : iMaxX;
             iMaxY = iMaxY > gridInfo.GridYDim ? gridInfo.GridYDim : iMaxY;
 

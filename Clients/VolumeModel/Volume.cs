@@ -922,7 +922,109 @@ namespace Viking.VolumeModel
                 section.AddOCPTileserver(tileserver);
             } 
         }
-         
+
+        private string GetCacheName(long mappedSection, long controlSection, string extension)
+        { 
+            return this.LocalCachePath +
+              System.IO.Path.DirectorySeparatorChar +
+              this.Name +
+              System.IO.Path.DirectorySeparatorChar +
+              mappedSection.ToString() + "-" + controlSection.ToString() + extension;
+        }
+
+        private string GetStosCacheName(long mappedSection, long controlSection)
+        {
+            return GetCacheName(mappedSection, controlSection, ".stos");
+        }
+
+        private string GetSerializerCacheName(long mappedSection, long controlSection)
+        {
+            return GetCacheName(mappedSection, controlSection, ".stos_bin");
+        }
+
+        private static bool IsCacheFileValid(string CacheStosPath, ICollection<DateTime> times)
+        {
+            if (System.IO.File.Exists(CacheStosPath))
+            {
+                DateTime CacheLastModifiedUtc = System.IO.File.GetLastWriteTimeUtc(CacheStosPath);
+                return times.Any(server_transform_time => server_transform_time <= CacheLastModifiedUtc);
+            }
+
+            return false;
+        }
+
+        private static TriangulationTransform LoadSerializedTransformFromCache(string CacheStosPath, StosTransformInfo ControlToVolumeInfo, StosTransformInfo SectionToControlInfo)
+        {
+            TriangulationTransform cachedTransform = null;
+            
+            try
+            {
+                if (IsCacheFileValid(CacheStosPath, new DateTime[] { ControlToVolumeInfo.LastModified, SectionToControlInfo.LastModified }))
+                {
+                    string outString = "Loading from binary cache: " + SectionToControlInfo.MappedSection + " to " + ControlToVolumeInfo.ControlSection.ToString();
+                    Trace.WriteLine(outString);
+                    using (Stream binFile = System.IO.File.OpenRead(CacheStosPath))
+                    {
+                        var binaryFormatter = new System.Runtime.Serialization.Formatters.Binary.BinaryFormatter();
+                        cachedTransform = binaryFormatter.Deserialize(binFile) as TriangulationTransform;
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+
+            return cachedTransform;
+        }
+
+        private static TriangulationTransform LoadStosFromCache(string CacheStosPath, StosTransformInfo ControlToVolumeInfo, StosTransformInfo SectionToControlInfo)
+        {
+            TriangulationTransform cachedTransform = null; 
+             
+            try
+            {
+                if (IsCacheFileValid(CacheStosPath, new DateTime[] { ControlToVolumeInfo.LastModified, SectionToControlInfo.LastModified }))
+                {
+                    string outString = "Loading from ITK string cache: " + SectionToControlInfo.MappedSection + " to " + ControlToVolumeInfo.ControlSection.ToString();
+                    Trace.WriteLine(outString);
+                    DateTime CacheLastModifiedUtc = System.IO.File.GetLastWriteTimeUtc(CacheStosPath);
+                    using (Stream stostext = System.IO.File.OpenRead(CacheStosPath) as Stream)
+                    {
+                        cachedTransform = TransformFactory.ParseStos(stostext,
+                                                                        new StosTransformInfo(ControlToVolumeInfo.ControlSection, SectionToControlInfo.MappedSection, CacheLastModifiedUtc),
+                                                                            1) as TriangulationTransform;
+                    } 
+                }
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+
+            return cachedTransform;
+        }
+
+        private static void SaveSerializedTransformToCache(string CacheStosPath, IITKSerialization itkTransform)
+        {
+            using (Stream binFile = System.IO.File.OpenWrite(CacheStosPath))
+            {
+                var binaryFormatter = new System.Runtime.Serialization.Formatters.Binary.BinaryFormatter();
+                binaryFormatter.Serialize(binFile, itkTransform);
+            } 
+        }
+
+        private static void SaveStosToCache(string CacheStosPath, IITKSerialization itkTransform, StosTransformInfo ControlToVolumeInfo, StosTransformInfo SectionToControlInfo)
+        { 
+            using (StreamWriter fs = System.IO.File.CreateText(CacheStosPath))
+            {
+                fs.WriteLine(ControlToVolumeInfo.ToString());
+                fs.WriteLine(SectionToControlInfo.ToString());
+
+                itkTransform.WriteITKTransform(fs); 
+            }
+        }
+
         /// <summary>
         /// Adds a transform to each section mapping it into each of the volume spaces we found
         /// </summary>
@@ -994,53 +1096,13 @@ namespace Viking.VolumeModel
                             {
                                 StosTransformInfo ControlInfo = ControlTrans.Info as StosTransformInfo;
 
-                                string CacheStosPath = this.LocalCachePath +
-                                                      System.IO.Path.DirectorySeparatorChar +
-                                                      this.Name +
-                                                      System.IO.Path.DirectorySeparatorChar +
-                                                      info.MappedSection.ToString() + "-" + ControlInfo.ControlSection.ToString() + ".stos"; 
-
-                               
-
-                                
-                                bool CalculateSliceToVolume = true;
-                                
-                                Stream stostext = null;
-                                try
-                                {
-                                    if (System.IO.File.Exists(CacheStosPath))
-                                    {
-                                        DateTime CacheLastModifiedUtc = System.IO.File.GetLastWriteTimeUtc(CacheStosPath);
-                                        if (ControlTrans.Info.LastModified < CacheLastModifiedUtc && trans.Info.LastModified < CacheLastModifiedUtc)
-                                        {
-
-                                            string outString = "Loading from cache: " + trans.ToString() + " to " + ControlTrans.ToString();
-                                            Trace.WriteLine(outString); 
-                                            stostext = System.IO.File.OpenRead(CacheStosPath) as Stream;
-                                            TList[childSection] = TransformFactory.ParseStos(stostext,
-                                                                                            new StosTransformInfo(ControlInfo.ControlSection, info.MappedSection, CacheLastModifiedUtc),
-                                                                                             1) as TriangulationTransform;
-
-                                            if (TList[childSection] != null)
-                                                CalculateSliceToVolume = false;
-                                        }
-                                    }
-                                }
-                                catch (Exception)
-                                {
-
-                                }
-                                finally
-                                {
-                                    if (stostext != null)
-                                    {
-                                        stostext.Close();
-                                        stostext = null; 
-                                    }
-                                }
+                                string CacheStosPath = GetStosCacheName(info.MappedSection, ControlInfo.ControlSection);
+                                string CacheSerializedPath = GetSerializerCacheName(info.MappedSection, info.ControlSection);
+                                //TList[childSection] = LoadStosFromCache(CacheStosPath, ControlInfo, info);
+                                TList[childSection] = LoadSerializedTransformFromCache(CacheSerializedPath, ControlInfo, info);
 
                                 //CalculateSliceToVolume = true; 
-                                if (CalculateSliceToVolume)
+                                if (TList[childSection] == null)
                                 {
                                     try
                                     {
@@ -1057,26 +1119,20 @@ namespace Viking.VolumeModel
                                     }
 
                                     StreamWriter fs = null;
-                                    
-                                    MeshTransform meshTransform = TList[childSection] as MeshTransform;
-                                    if (meshTransform != null)
-                                    { 
-                                        using (fs = System.IO.File.CreateText(CacheStosPath))
-                                        {
 
-                                            fs.WriteLine(ControlTrans.ToString());
-                                            fs.WriteLine(trans.ToString());
-
-                                            meshTransform.SaveMosaic(fs);
-
-                                            fs.Flush();
-                                        }
-                                    }                             
-                                   
+                                    IITKSerialization itkTransform = TList[childSection] as IITKSerialization;
+                                    if (itkTransform != null)
+                                    {
+                                        SaveSerializedTransformToCache(CacheSerializedPath, itkTransform);
+                                        SaveStosToCache(CacheStosPath, itkTransform, ControlInfo, info); 
+                                    }                  
                                 }
-                            }
-
-
+                                else
+                                {
+                                    string outString = "Loading transforms from Cache: " + trans.ToString() + " to " + ControlTrans.ToString();
+                                    workerThread.ReportProgress((iSectionProgress * 100) / TList.Count, outString);
+                                }
+                            } 
 
                             SafeNodes.Enqueue(childSection);
                         }

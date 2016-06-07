@@ -98,7 +98,8 @@ namespace Geometry.Transforms
             if (info == null)
                 throw new ArgumentNullException(); 
 
-            _TriangleIndicies = info.GetValue("_TriangleIndicies", typeof(int[])) as int[]; 
+            _TriangleIndicies = info.GetValue("_TriangleIndicies", typeof(int[])) as int[];
+            FallBackTransform = info.GetValue("FallBackTransform", typeof(RBFTransform)) as RBFTransform;
         }
 
         public override void GetObjectData(SerializationInfo info, StreamingContext context)
@@ -106,8 +107,8 @@ namespace Geometry.Transforms
             if (info == null)
                 throw new ArgumentNullException(); 
 
-
             info.AddValue("_TriangleIndicies", _TriangleIndicies);
+            info.AddValue("FallBackTransform", FallBackTransform);
 
             base.GetObjectData(info, context);
         }
@@ -139,8 +140,8 @@ namespace Geometry.Transforms
             MappingGridTriangle t = GetTransform(Point);
             if (t == null)
             {
-                //return FallBackTransform.Transform(Point); 
-                throw new ArgumentOutOfRangeException("Point", "Transform: Point could not be mapped");
+                return FallBackTransform.Transform(Point); 
+                //throw new ArgumentOutOfRangeException("Point", "Transform: Point could not be mapped");
             }
 
             return t.Transform(Point);
@@ -156,8 +157,8 @@ namespace Geometry.Transforms
             MappingGridTriangle[] triangles = Points.Select(Point => GetTransform(Point)).ToArray();
             if (triangles.Any(t => t == null))
             {
-                //return FallBackTransform.Transform(Point); 
-                throw new ArgumentOutOfRangeException("Point", "Transform: Point could not be mapped");
+                return FallBackTransform.Transform(Points);
+                //throw new ArgumentOutOfRangeException("Point", "Transform: Point could not be mapped");
             }
 
             return triangles.Select((tri, i) => tri.Transform(Points[i])).ToArray();
@@ -174,8 +175,8 @@ namespace Geometry.Transforms
             MappingGridTriangle t = GetTransform(Point);
             if (t == null)
             {
-                //return FallBackTransform.TryTransform(Point, out v);
-                return false;
+                return FallBackTransform.TryTransform(Point, out v);
+                //return false;
             }
 
             v = t.Transform(Point);
@@ -197,11 +198,12 @@ namespace Geometry.Transforms
                 if (tri != null)
                     return tri.Transform(Points[i]);
                 else
-                    return new GridVector2();
+                    return FallBackTransform.Transform(Points[i]);
             }
             ).ToArray();
-               
-            return IsTransformed; 
+
+            //return IsTransformed; 
+            return Points.Select(p => true).ToArray();
         }
 
         private GridVector2[] TransformWithRBFFallback(GridVector2[] Points, MappingGridTriangle[] triangles)
@@ -242,8 +244,8 @@ namespace Geometry.Transforms
             MappingGridTriangle t = GetInverseTransform(Point);
             if (t == null)
             {
-                //return FallBackTransform.InverseTransform(Point); 
-                throw new ArgumentOutOfRangeException("Point", "InverseTransform: Point could not be mapped");
+                return FallBackTransform.InverseTransform(Point); 
+                //throw new ArgumentOutOfRangeException("Point", "InverseTransform: Point could not be mapped");
             }
 
             return t.InverseTransform(Point);
@@ -259,8 +261,8 @@ namespace Geometry.Transforms
             MappingGridTriangle[] triangles = Points.Select(Point => GetInverseTransform(Point)).ToArray();
             if (triangles.Any(t => t == null))
             {
-                //return FallBackTransform.Transform(Point); 
-                throw new ArgumentOutOfRangeException("Point", "InverseTransform: Point could not be mapped");
+                return FallBackTransform.Transform(Points); 
+                //throw new ArgumentOutOfRangeException("Point", "InverseTransform: Point could not be mapped");
             }
 
             return triangles.Select((tri, i) => tri.InverseTransform(Points[i])).ToArray();
@@ -278,8 +280,8 @@ namespace Geometry.Transforms
             MappingGridTriangle t = GetInverseTransform(Point);
             if (t == null)
             {
-//                return FallBackTransform.TryInverseTransform(Point, out v); 
-                return false;
+                return FallBackTransform.TryInverseTransform(Point, out v); 
+//                return false;
             }
 
             v = t.InverseTransform(Point);
@@ -302,11 +304,12 @@ namespace Geometry.Transforms
                 if (tri != null)
                     return tri.InverseTransform(Points[i]);
                 else
-                    return new GridVector2();
+                    return FallBackTransform.InverseTransform(Points[i]);
             }
             ).ToArray();
 
-            return IsTransformed;
+            //return IsTransformed;
+            return Points.Select(p => true).ToArray();
         }
 
         private GridVector2[] InverseTransformWithRBFFallback(GridVector2[] Points, MappingGridTriangle[] triangles)

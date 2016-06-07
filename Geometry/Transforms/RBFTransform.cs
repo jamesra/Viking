@@ -92,10 +92,12 @@ namespace Geometry.Transforms
 
         public override void GetObjectData(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context)
         {
+            
+            info.AddValue("_ControlToMappedSpaceWeights", ControlToMappedSpaceWeights);
+            info.AddValue("_MappedToControlSpaceWeights", MappedToControlSpaceWeights);
+
             base.GetObjectData(info, context);
 
-            info.AddValue("_ControlToMappedSpaceWeights", _ControlToMappedSpaceWeights);
-            info.AddValue("_MappedToControlSpaceWeights", _MappedToControlSpaceWeights);  
         }
 
         public override bool CanTransform(GridVector2 Point)
