@@ -155,13 +155,18 @@ namespace Geometry.Transforms
         public override GridVector2[] Transform(GridVector2[] Points)
         {
             MappingGridTriangle[] triangles = Points.Select(Point => GetTransform(Point)).ToArray();
-            if (triangles.Any(t => t == null))
+            return Points.Select(p =>
             {
-                return FallBackTransform.Transform(Points);
-                //throw new ArgumentOutOfRangeException("Point", "Transform: Point could not be mapped");
-            }
-
-            return triangles.Select((tri, i) => tri.Transform(Points[i])).ToArray();
+                MappingGridTriangle t = GetTransform(p);
+                if (t == null)
+                {
+                    return FallBackTransform.Transform(p);
+                }
+                else
+                {
+                    return t.Transform(p);
+                }
+            }).ToArray();
         }
 
         /// <summary>
@@ -259,13 +264,18 @@ namespace Geometry.Transforms
         public override GridVector2[] InverseTransform(GridVector2[] Points)
         {
             MappingGridTriangle[] triangles = Points.Select(Point => GetInverseTransform(Point)).ToArray();
-            if (triangles.Any(t => t == null))
+            return Points.Select(p =>
             {
-                return FallBackTransform.Transform(Points); 
-                //throw new ArgumentOutOfRangeException("Point", "InverseTransform: Point could not be mapped");
-            }
-
-            return triangles.Select((tri, i) => tri.InverseTransform(Points[i])).ToArray();
+                MappingGridTriangle t = GetInverseTransform(p);
+                if (t == null)
+                {
+                    return FallBackTransform.InverseTransform(p);
+                }
+                else
+                {
+                    return t.InverseTransform(p);
+                }
+            }).ToArray();
         }
 
         /// <summary>
