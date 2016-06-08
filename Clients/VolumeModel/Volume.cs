@@ -81,7 +81,7 @@ namespace Viking.VolumeModel
     {
         
 
-        /// <summary>z
+        /// <summary>
         /// Friendly name for the volume
         /// </summary>
         public string Name = "";
@@ -507,7 +507,6 @@ namespace Viking.VolumeModel
             } 
             catch (WebException e)
             {
-                /*PORT: Don't have forms, throw a better exception*/
                 Trace.WriteLine("Error connecting to volume server: \n" + StosZipPath + "\n" + e.Message, "VolumeModel");
                 return false; 
             }
@@ -637,7 +636,6 @@ namespace Viking.VolumeModel
             if (this._Host.EndsWith("/"))
                 this._Host = this._Host.TrimEnd('/');
 
-
             if (IO.GetAttributeCaseInsensitive(volumeElement,"UniqueID") != null)
                 this._UniqueID = IO.GetAttributeCaseInsensitive(volumeElement,"UniqueID").Value;
 
@@ -680,32 +678,14 @@ namespace Viking.VolumeModel
                         int ProgressPercent = (countStos * 100) / NumStosFiles;
                         countStos++;
                         workerThread.ReportProgress(ProgressPercent, "Loading " + StosPath);
-
-                        //string groupName = type + " " + pixelSpacing.ToString();
-                        
-
-                  //      XAttribute GroupNameAttribute = GetAttributeCaseInsensitive(elem,"GroupName");
-                  //      if (GroupNameAttribute != null)
-                  //      {
-                  //          groupName = GroupNameAttribute.Value;
-                  //      }
-
-                  //      if (false == VolumeTransformNames.Contains(groupName))
-                  //      {
-                  //          VolumeTransformNames.Add(groupName);
-                  //      }
-
-                       
-
-                        //StosGridTransform stosTransform = null;
+                         
                         CreateStosTransformThreadingObj CreateStosThreadObj = null;
 
                         if (HaveStosZip)
                         {
                             String StosFileCacheFullPath = System.IO.Path.Combine(this.VolumeStosZipCachePath, StosFileName);
                             if (System.IO.File.Exists(StosFileCacheFullPath))
-                            {
-                                //stosTransform = new StosGridTransform(memStream, elem);
+                            { 
                                 CreateStosThreadObj = new CreateStosTransformThreadingObj(StosFileCacheFullPath, elem);
                             }
                         }
@@ -715,7 +695,6 @@ namespace Viking.VolumeModel
                         {
                         //    Trace.WriteLine("Loading " + StosFileName + " from HTTP Server", "VolumeModel");
                             CreateStosThreadObj = new CreateStosTransformThreadingObj(StosPath, this.UserCredentials, elem);
-                            //stosTransform = new StosGridTransform(StosPath, elem, this.UserCredentials);
                         }
 
                         ListStosGridTransformThreadingObj.Add(CreateStosThreadObj); 
@@ -1097,7 +1076,7 @@ namespace Viking.VolumeModel
                                 StosTransformInfo ControlInfo = ControlTrans.Info as StosTransformInfo;
 
                                 string CacheStosPath = GetStosCacheName(info.MappedSection, ControlInfo.ControlSection);
-                                string CacheSerializedPath = GetSerializerCacheName(info.MappedSection, info.ControlSection);
+                                string CacheSerializedPath = GetSerializerCacheName(info.MappedSection, ControlInfo.ControlSection);
                                 //TList[childSection] = LoadStosFromCache(CacheStosPath, ControlInfo, info);
                                 TList[childSection] = LoadSerializedTransformFromCache(CacheSerializedPath, ControlInfo, info);
 
@@ -1136,10 +1115,8 @@ namespace Viking.VolumeModel
 
                             SafeNodes.Enqueue(childSection);
                         }
-
                     }
                 }
-                
             }
         }
     }
