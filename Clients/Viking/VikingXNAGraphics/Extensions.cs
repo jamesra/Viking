@@ -247,5 +247,27 @@ namespace VikingXNAGraphics
             basicEffect.World = scene.World;
         }
     }
+
+    public static class RenderTarget2DExtensions
+    {
+        public static byte[] GetData(this RenderTarget2D renderTarget)
+        {
+            Microsoft.Xna.Framework.Graphics.PackedVector.Byte4[] Data = new Microsoft.Xna.Framework.Graphics.PackedVector.Byte4[renderTarget.Bounds.Width * renderTarget.Bounds.Height];
+
+            renderTarget.GetData<Microsoft.Xna.Framework.Graphics.PackedVector.Byte4>(Data);
+
+            byte[] byteArray = new Byte[Data.Length * 4];
+            int iByte = 0;
+            for (int iData = 0; iData < Data.Length; iData++, iByte += 4)
+            {
+                byteArray[iByte] = (Byte)(Data[iData].PackedValue >> 16);
+                byteArray[iByte + 1] = (Byte)(Data[iData].PackedValue >> 8);
+                byteArray[iByte + 2] = (Byte)(Data[iData].PackedValue >> 0);
+                byteArray[iByte + 3] = (Byte)(Data[iData].PackedValue >> 24);
+            }
+
+            return byteArray;
+        }
+    }
 }
 

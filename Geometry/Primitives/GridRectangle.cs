@@ -129,7 +129,25 @@ namespace Geometry
             }
         }
 
-         
+
+        public GridRectangle(GridVector2 corner, GridVector2 oppositeCorner)
+        {
+
+            GridVector2 RectOrigin = new GridVector2(Math.Min(corner.X, oppositeCorner.X), Math.Min(corner.Y, oppositeCorner.Y));
+            double Width = Math.Abs(corner.X - oppositeCorner.X);
+            double Height = Math.Abs(corner.Y - oppositeCorner.Y);
+            if (Width == 0 || Height == 0)
+            {
+                throw new ArgumentException("Grid Rectangle must have non-zero width and height");
+            }
+
+            Left = RectOrigin.X;
+            Bottom = RectOrigin.Y;
+            Top = RectOrigin.Y + Height;
+            Right = RectOrigin.X + Width;
+            _HashCode = new int?();
+        }
+
 
         public GridRectangle(double left, double right,  double bottom, double top)
         {
@@ -142,7 +160,11 @@ namespace Geometry
 
             if (!double.IsNaN(Left))
             {
-                Debug.Assert(Left <= Right && Bottom <= Top, "Grid Rectable argument error");
+                Debug.Assert(Left <= Right && Bottom <= Top, "Grid Rectangle argument error");
+                if (Left >= Right || Bottom >= Top)
+                {
+                    throw new ArgumentException("Grid Rectangle must have non-zero width and height");
+                }
             }
         }
 
@@ -153,7 +175,11 @@ namespace Geometry
             Top = Bottom + height;
             Right = Left + width;
             _HashCode = new int?();
-            Debug.Assert(Left <= Right && Bottom <= Top, "Grid Rectable argument error"); 
+            Debug.Assert(Left <= Right && Bottom <= Top, "Grid Rectable argument error");
+            if (Left >= Right || Bottom >= Top)
+            {
+                throw new ArgumentException("Grid Rectangle must have non-zero width and height");
+            }
         }
 
         public GridRectangle(GridVector2 position, double radius)
@@ -164,7 +190,7 @@ namespace Geometry
             Right = position.X + radius;
             _HashCode = new int?();
 
-            Debug.Assert(Left <= Right && Bottom <= Top, "Grid Rectable argument error"); 
+            Debug.Assert(Left <= Right && Bottom <= Top, "Grid Rectable argument error");
         } 
 
         public GridRectangle(IPoint position, double width, double height)
@@ -178,7 +204,11 @@ namespace Geometry
             Right = Left + width;
             _HashCode = new int?();
 
-            Debug.Assert(Left <= Right && Bottom <= Top, "Grid Rectable argument error"); 
+            Debug.Assert(Left <= Right && Bottom <= Top, "Grid Rectable argument error");
+            if (Left >= Right || Bottom >= Top)
+            {
+                throw new ArgumentException("Grid Rectangle must have non-zero width and height");
+            }
         }
 
         public GridRectangle(IPoint position, double radius)
@@ -192,7 +222,11 @@ namespace Geometry
             Right = position.X + radius;
             _HashCode = new int?();
 
-            Debug.Assert(Left <= Right && Bottom <= Top, "Grid Rectable argument error"); 
+            Debug.Assert(Left <= Right && Bottom <= Top, "Grid Rectable argument error");
+            if (Left >= Right || Bottom >= Top)
+            {
+                throw new ArgumentException("Grid Rectangle must have non-zero width and height");
+            }
         }
 
         

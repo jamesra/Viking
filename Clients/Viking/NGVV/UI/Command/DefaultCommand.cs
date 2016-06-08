@@ -22,7 +22,7 @@ namespace Viking.UI.Commands
             _ObservableHelpStrings = new ObservableCollection<string>(this.HelpStrings);
         }
 
-        public string[] HelpStrings
+        public virtual string[] HelpStrings
         {
             get
             {
@@ -32,7 +32,7 @@ namespace Viking.UI.Commands
 
         private ObservableCollection<string> _ObservableHelpStrings;
 
-        public ObservableCollection<string> ObservableHelpStrings { get { return _ObservableHelpStrings; } }
+        public virtual ObservableCollection<string> ObservableHelpStrings { get { return _ObservableHelpStrings; } }
 
         private object LastNearestObject = null;
 

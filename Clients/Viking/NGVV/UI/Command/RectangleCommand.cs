@@ -3,20 +3,40 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using VikingXNA;
-using System.Windows.Forms; 
+using System.Windows.Forms;
 using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Graphics; 
+using Microsoft.Xna.Framework.Graphics;
 using Geometry;
 using VikingXNAGraphics;
+using System.Collections.ObjectModel;
 
 namespace Viking.UI.Commands
 {
-    public class RectangleCommand : DefaultCommand
+    public class RectangleCommand : DefaultCommand, Viking.Common.IHelpStrings, Viking.Common.IObservableHelpStrings
     {
         protected GridVector2 Origin;
         protected Geometry.GridRectangle MyRect;
         protected Microsoft.Xna.Framework.Color Color; 
- 
+
+        public override string[] HelpStrings
+        {
+            get
+            {
+                return new string[] {
+                    "Left click to set origin of rectangle",
+                    "Drag mouse to size rectangle",
+                    "Release left button to finish rectangle"};
+            }
+        }
+
+        public override ObservableCollection<string> ObservableHelpStrings
+        {
+            get
+            {
+                return new ObservableCollection<string>(this.HelpStrings);
+            }
+        }
+
         public RectangleCommand(Viking.UI.Controls.SectionViewerControl parent)
             : base(parent)
         {
@@ -39,6 +59,20 @@ namespace Viking.UI.Commands
             base.OnMouseDown(sender, e);
         }
 
+        private bool TryUpdateMyRect(GridVector2 NewPosition)
+        {
+            try
+            {
+                MyRect = new GridRectangle(NewPosition, Origin); 
+                return true;
+            }
+            catch (ArgumentException)
+            {
+               
+            }
+            return false;
+        }
+
         protected override void OnMouseMove(object sender, MouseEventArgs e)
         {
             //Figure out if we are starting a rectangle
@@ -46,15 +80,11 @@ namespace Viking.UI.Commands
             {
                 GridVector2 NewPosition = Parent.ScreenToWorld(e.X, e.Y);
 
-                double Width = NewPosition.X - Origin.X;
-                double Height = NewPosition.Y - Origin.Y;
-                if (Width != 0 && Height != 0)
+                if(TryUpdateMyRect(NewPosition))
                 {
-                    MyRect = new GridRectangle(Origin, Width, Height);
                     this.Color = Color.Red;
-
-                    this.Parent.Refresh(); 
-                }
+                    this.Parent.Refresh();
+                } 
             }
 
             base.OnMouseMove(sender, e);
@@ -67,16 +97,12 @@ namespace Viking.UI.Commands
                 if (oldMouse.Button.Left() && this.CommandActive)
                 {
                     GridVector2 NewPosition = Parent.ScreenToWorld(e.X, e.Y);
+                    if(TryUpdateMyRect(NewPosition))
+                    {
+                        Execute();
+                        this.Parent.Refresh();
+                    }
 
-                    double Width = Math.Abs(NewPosition.X - Origin.X);
-                    double Height = Math.Abs(NewPosition.Y - Origin.Y);
-                    double X = Math.Min(Origin.X, NewPosition.X);
-                    double Y = Math.Min(Origin.Y, NewPosition.Y);
-                    MyRect = new GridRectangle(new GridVector2(X, Y), Width, Height);
-
-                    Execute();
-
-                    this.Parent.Refresh();
                 }
             }
             base.OnMouseUp(sender, e);

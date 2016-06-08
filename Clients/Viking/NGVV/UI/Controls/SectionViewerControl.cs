@@ -18,7 +18,8 @@ using Viking.Common;
 using System.Diagnostics;
 using Viking.VolumeModel;
 using Viking.ViewModels;
-using VikingXNA; 
+using VikingXNA;
+using VikingXNAGraphics;
 
 
 namespace Viking.UI.Controls
@@ -540,6 +541,9 @@ namespace Viking.UI.Controls
 
         public void ExportImage(string Filename, GridRectangle MyRect, double Downsample, bool IncludeOverlays)
         {
+            MyRect = new GridRectangle(new GridVector2(50000, 50000), 1000, 1000);
+            Downsample = 1;
+
             Debug.Assert(MyRect.Left < MyRect.Right);
             Debug.Assert(MyRect.Bottom < MyRect.Top);
 
@@ -614,17 +618,11 @@ namespace Viking.UI.Controls
 
             using(VikingXNA.Scene TileScene = new Scene(new Viewport(0, 0, CapturedTileSizeX, CapturedTileSizeY), camera))
             {
-
+                
                 using (System.Drawing.Bitmap bmp = new Bitmap(FinalImageWidth, FinalImageHeight, System.Drawing.Imaging.PixelFormat.Format32bppArgb))
-                {
-
-                    // int numCols = PixelSpaceWidth / PixelSpaceCellDim;
-                    // int numRows = PixelSpaceHeight / PixelSpaceCellDim;
-
-
-                    //            VikingXNA.BitmapFile bmpFile = new VikingXNA.BitmapFile(Filename, ImageWidth, ImageHeight, 8);
+                {  
                     GraphicsDevice graphicsDevice = this.graphicsDeviceService.GraphicsDevice;
-                    
+                   
                     //Figure out how to cut the rectangle into 512x512 cells and take the screenshots
                     for (int iRow = 0; iRow < numTilesY; iRow++)
                     {
@@ -634,44 +632,22 @@ namespace Viking.UI.Controls
                         {
                             //Figure out the rectangle we need to capture at this location
                             double X = AdjustedWorldX + (iCol * WorldTileSizeX);
-
-
+                             
                             BitmapData lockedBmpData = null;
                             try
                             {
                                 TileScene.Camera.LookAt = new Vector2((float)X, (float)Y);
-
-                                //PORT XNA 4
-                                /*GridRectangle CaptureArea = new GridRectangle(new GridVector2(X, Y),
-                                                                              WorldTileSizeX,
-                                                                              WorldTileSizeY);
-                                */
-
+                                
                                 Byte[] byteArray = null; 
                                 using (RenderTarget2D renderTargetTile = new RenderTarget2D(graphicsDevice, CapturedTileSizeX, CapturedTileSizeY, false, SurfaceFormat.Color, DepthFormat.Depth24Stencil8, 0, RenderTargetUsage.PreserveContents))
                                 {
 
                                     Draw(TileScene, renderTargetTile);
-
-                                    //Draw the scene to the renderTargetTile
-                                    //Draw(this.graphicsDeviceService.GraphicsDevice, CaptureArea, Downsample, renderTargetTile);
-
+                                     
                                     //Obtain texture from renderTarget
                                     graphicsDevice.SetRenderTarget(null);
 
-                                    Microsoft.Xna.Framework.Graphics.PackedVector.Byte4[] Data = new Microsoft.Xna.Framework.Graphics.PackedVector.Byte4[CapturedTileSizeX * CapturedTileSizeY];
-
-                                    renderTargetTile.GetData<Microsoft.Xna.Framework.Graphics.PackedVector.Byte4>(Data);
-
-                                    byteArray = new Byte[Data.Length * 4];
-                                    int iByte = 0;
-                                    for (int iData = 0; iData < Data.Length; iData++, iByte += 4)
-                                    {
-                                        byteArray[iByte] = (Byte)(Data[iData].PackedValue >> 16);
-                                        byteArray[iByte + 1] = (Byte)(Data[iData].PackedValue >> 8);
-                                        byteArray[iByte + 2] = (Byte)(Data[iData].PackedValue >> 0);
-                                        byteArray[iByte + 3] = (Byte)(Data[iData].PackedValue >> 24);
-                                    }
+                                    byteArray = renderTargetTile.GetData(); 
                                 }
 
                                 System.Drawing.Rectangle bmpRect = new System.Drawing.Rectangle((int)(iCol * CapturedTileSizeX),
@@ -679,15 +655,9 @@ namespace Viking.UI.Controls
                                                                                                 CapturedTileSizeX,
                                                                                                 CapturedTileSizeY);
 
-                                //Write the Data into the bitmap
-                                //bmpFile.WriteRectangle(bmpRect, byteArray);
-
+                                //Write the Data into the bitmap 
                                 lockedBmpData = bmp.LockBits(bmpRect, System.Drawing.Imaging.ImageLockMode.WriteOnly, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
-
-                                //                      PixelSize = data.Stride / data.Width;
-                                //                        int TotalBytes = lockedBmpData.Stride * lockedBmpData.Height;
-                                //                        rgbValues = new Byte[TotalBytes];
-
+                                
                                 //The easy case...
                                 if (lockedBmpData.Stride == lockedBmpData.Width * 4)
                                     System.Runtime.InteropServices.Marshal.Copy(byteArray, 0, lockedBmpData.Scan0, byteArray.Length);
