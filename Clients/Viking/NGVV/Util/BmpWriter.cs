@@ -65,6 +65,8 @@ namespace Viking.Common
             {
                 Byte[] textureData = new byte[4 * texture.Width * texture.Height];
                 texture.GetData<byte>(textureData);
+
+                /*Reverse the position of the blue channel*/
                 byte blue;
                 for (int i = 0; i < textureData.Length; i += 4)
                 {
@@ -73,24 +75,32 @@ namespace Viking.Common
                     textureData[i + 2] = blue;
                 }
 
-                BitmapData bitmapData;
+                BitmapData lockedBmpData;
                 Rectangle rect = new System.Drawing.Rectangle(0, 0, texture.Width, texture.Height);
-                bitmapData = bmp.LockBits(
+                lockedBmpData = bmp.LockBits(
                                 rect,
                                 System.Drawing.Imaging.ImageLockMode.WriteOnly,
                                 System.Drawing.Imaging.PixelFormat.Format32bppArgb
                                 );
 
                 IntPtr safePtr;
-                safePtr = bitmapData.Scan0;
-                System.Runtime.InteropServices.Marshal.Copy(textureData, 0, safePtr, textureData.Length);
-                bmp.UnlockBits(bitmapData);
+                safePtr = lockedBmpData.Scan0;
+
+                //The easy case...
+                if (lockedBmpData.Stride == lockedBmpData.Width * 4) 
+                    System.Runtime.InteropServices.Marshal.Copy(textureData, 0, safePtr, textureData.Length);
+                else
+                {
+                    for (int iBmpRow = 0; iBmpRow < lockedBmpData.Height; iBmpRow++)
+                    {
+                        System.Runtime.InteropServices.Marshal.Copy(textureData, iBmpRow * 4 * texture.Width, lockedBmpData.Scan0 + (lockedBmpData.Stride * iBmpRow), 4 * texture.Width);
+                    }
+                }
+
+                bmp.UnlockBits(lockedBmpData);
 
                 bmp.Save(filename, ImageFormat.Png);
             }
-            //System.Threading.Tasks.Task T = new System.Threading.Tasks.Task(() => bmp.Save(filename, ImageFormat.Png));
-
-            //T.Start();
         }
     } 
 }

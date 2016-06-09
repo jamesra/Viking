@@ -86,7 +86,7 @@ namespace Viking.UI.Controls
         /// When set to true Commands and ISectionOverlayExtension draw methods are called
         /// </summary>
         public bool ShowOverlays = true;
-        public bool ShowOnlyOverlays = false;        
+        public bool ShowOnlyOverlays = false;
 
         public bool ColorizeTiles
         {
@@ -254,7 +254,7 @@ namespace Viking.UI.Controls
                     OldSection.TransformChanged -= this.OnSectionTransformChanged;
                     OldSection.PropertyChanged -= this.OnSectionPropertyChanged;
                 }
-                
+
                 _Section = value;
                 if (_Section != null)
                 {
@@ -309,7 +309,7 @@ namespace Viking.UI.Controls
             get { return Section.ActiveChannel; }
             set { Section.ActiveChannel = value; }
         }
-         
+
         public string CurrentTransform
         {
             get { return Section.ActiveTileTransform; }
@@ -343,12 +343,12 @@ namespace Viking.UI.Controls
             StatusBar = new System.Windows.Forms.StatusStrip();
             StatusBar.Parent = this;
             StatusBar.Dock = System.Windows.Forms.DockStyle.Bottom;
-             
+
             tsSection = new System.Windows.Forms.ToolStripLabel("Section: ");
             tsPosition = new System.Windows.Forms.ToolStripLabel("Position: ");
             tsMagnification = new System.Windows.Forms.ToolStripLabel("Zoom: ");
             tsChannels = new System.Windows.Forms.ToolStripLabel("Channels: ");
-             
+
             StatusBar.Items.Add(tsSection);
             StatusBar.Items.Add(tsPosition);
             StatusBar.Items.Add(tsMagnification);
@@ -358,8 +358,8 @@ namespace Viking.UI.Controls
             InternalReferenceSectionChanged = new ReferenceSectionChangedEventHandler(this.OnInternalReferenceSectionChanged);
             State.ItemSelected += ObjectSelectedHandler;
 
-            
-             
+
+
             ExtensionManager.AddMenuItems(this.menuStrip);
         }
 
@@ -481,7 +481,7 @@ namespace Viking.UI.Controls
         /// <returns></returns>
         protected override bool IsInputKey(Keys keyData)
         {
-            switch(keyData)
+            switch (keyData)
             {
                 case Keys.Right:
                 case Keys.Left:
@@ -505,12 +505,12 @@ namespace Viking.UI.Controls
 
             List<string> names = new List<string>(this.listOverlays.Count());
 
-            foreach(ISectionOverlayExtension IOverlay in this.listOverlays)
+            foreach (ISectionOverlayExtension IOverlay in this.listOverlays)
             {
                 string name = IOverlay.Name();
-                if(name == null)
+                if (name == null)
                     continue;
-                if(name.Length == 0)
+                if (name.Length == 0)
                     continue;
 
                 names.Add(name);
@@ -558,9 +558,6 @@ namespace Viking.UI.Controls
 
         public void ExportImage(string Filename, GridRectangle MyRect, double Downsample, bool IncludeOverlays)
         {
-            MyRect = new GridRectangle(new GridVector2(50000, 50000), 1000, 1000);
-            Downsample = 1;
-
             Scene originalScene = this.Scene;
 
             Debug.Assert(MyRect.Left < MyRect.Right);
@@ -635,94 +632,264 @@ namespace Viking.UI.Controls
                 AdjustedWorldY = RequestedWorldY + (OffsetY / 2);
             }
 
-            using(VikingXNA.Scene TileScene = new Scene(new Viewport(0, 0, CapturedTileSizeX, CapturedTileSizeY), camera))
+            using (VikingXNA.Scene TileScene = new Scene(new Viewport(0, 0, CapturedTileSizeX, CapturedTileSizeY), camera))
             {
-                
-                using (System.Drawing.Bitmap bmp = new Bitmap(FinalImageWidth, FinalImageHeight, System.Drawing.Imaging.PixelFormat.Format32bppArgb))
-                {  
-                    GraphicsDevice graphicsDevice = this.graphicsDeviceService.GraphicsDevice;
-                   
-                    //Figure out how to cut the rectangle into 512x512 cells and take the screenshots
-                    for (int iRow = 0; iRow < numTilesY; iRow++)
+                GraphicsDevice graphicsDevice = this.graphicsDeviceService.GraphicsDevice;
+
+                //Figure out how to cut the rectangle into 512x512 cells and take the screenshots
+                for (int iRow = 0; iRow < numTilesY; iRow++)
+                {
+                    double Y = AdjustedWorldY + (iRow * WorldTileSizeY);
+
+                    for (int iCol = 0; iCol < numTilesX; iCol++)
                     {
-                        double Y = AdjustedWorldY + (iRow * WorldTileSizeY);
+                        //Figure out the rectangle we need to capture at this location
+                        double X = AdjustedWorldX + (iCol * WorldTileSizeX);
+                        
+                        TileScene.Camera.LookAt = new Vector2((float)X, (float)Y);
+                        this.Scene = TileScene;
 
-                        for (int iCol = 0; iCol < numTilesX; iCol++)
+                        Byte[] byteArray = null;
+                        using (RenderTarget2D renderTargetTile = new RenderTarget2D(graphicsDevice, CapturedTileSizeX, CapturedTileSizeY, false, SurfaceFormat.Color, DepthFormat.Depth24Stencil8, 0, RenderTargetUsage.PreserveContents))
                         {
-                            //Figure out the rectangle we need to capture at this location
-                            double X = AdjustedWorldX + (iCol * WorldTileSizeX);
-                             
-                            BitmapData lockedBmpData = null;
-                            try
-                            {
-                                TileScene.Camera.LookAt = new Vector2((float)X, (float)Y);
-                                this.Scene = TileScene;
+                            Draw(TileScene, renderTargetTile);
 
-                                Byte[] byteArray = null; 
-                                using (RenderTarget2D renderTargetTile = new RenderTarget2D(graphicsDevice, CapturedTileSizeX, CapturedTileSizeY, false, SurfaceFormat.Color, DepthFormat.Depth24Stencil8, 0, RenderTargetUsage.PreserveContents))
-                                {
+                            //Obtain texture from renderTarget
+                            graphicsDevice.SetRenderTarget(null);
 
-                                    Draw(TileScene, renderTargetTile);
-                                     
-                                    //Obtain texture from renderTarget
-                                    graphicsDevice.SetRenderTarget(null);
+                            byteArray = renderTargetTile.GetData();
 
-                                    byteArray = renderTargetTile.GetData(); 
-                                }
-
-                                System.Drawing.Rectangle bmpRect = new System.Drawing.Rectangle((int)(iCol * CapturedTileSizeX),
-                                                                                                (int)(((numTilesY - 1) - iRow) * CapturedTileSizeY),
-                                                                                                CapturedTileSizeX,
-                                                                                                CapturedTileSizeY);
-
-                                //Write the Data into the bitmap 
-                                lockedBmpData = bmp.LockBits(bmpRect, System.Drawing.Imaging.ImageLockMode.WriteOnly, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
-                                
-                                //The easy case...
-                                if (lockedBmpData.Stride == lockedBmpData.Width * 4)
-                                    System.Runtime.InteropServices.Marshal.Copy(byteArray, 0, lockedBmpData.Scan0, byteArray.Length);
-                                else
-                                {
-                                    for (int iBmpRow = 0; iBmpRow < lockedBmpData.Height; iBmpRow++)
-                                    {
-                                        System.Runtime.InteropServices.Marshal.Copy(byteArray, iBmpRow * 4 * CapturedTileSizeX, lockedBmpData.Scan0 + (lockedBmpData.Stride * iBmpRow), 4 * CapturedTileSizeX);
-                                    }
-                                }
-
-                                bmp.UnlockBits(lockedBmpData);
-                                lockedBmpData = null; 
-                                
-                            }
-                            catch (Exception e)
-                            {
-                                MessageBox.Show("An exception occured during capture.  The only suggestion is to update graphics drivers." + e.ToString(), "Screenshot Error");
-                                break;
-                            }
-                            finally
-                            {
-                                if (lockedBmpData != null)
-                                {
-                                    bmp.UnlockBits(lockedBmpData);
-                                    lockedBmpData = null;
-                                }
-
-                                graphicsDevice.SetRenderTarget(null);  
-                            }
+                            BmpWriter.TextureToBmpAsync(renderTargetTile, Filename);
                         }
-                    }
 
-                    bmp.Save(Filename);
-                } 
-            }
+                        graphicsDevice.SetRenderTarget(null);
 
-            //            System.GC.Collect();
+                    } 
+                }
+            } 
 
             this.ShowOverlays = OriginalOverlays;
             this.AsynchTextureLoad = AsynchTextureLoad;
 
-            this.Scene = originalScene;
-             
-            //bmpFile.Close();
+            this.Scene = originalScene; 
+        }
+
+
+        private void ExportTiles(string ExportPath, int FirstSection, int LastSection, int Downsample = 1)
+        {
+            //Make sure sections are in order
+            if (FirstSection > LastSection)
+            {
+                int temp = FirstSection;
+                FirstSection = LastSection;
+                LastSection = temp;
+            }
+
+            ExportPath = ExportPath + "/";
+
+            //Capture each of the requested frames
+            GenericProgressForm progressForm = new GenericProgressForm();
+            progressForm.Show();
+
+            this.AsynchTextureLoad = false;
+
+            bool OriginalOverlay = this.ShowOverlays;
+            this.ShowOverlays = false;
+
+            //long OldCacheSize = Global.TextureCache.MaxCacheSize; 
+            //Global.TextureCache.MaxCacheSize = (1 << 30);
+
+            //            string OldVolumeTransform = this.CurrentVolumeTransform;
+
+            //            this.CurrentVolumeTransform = null; 
+
+            Scene originalScene = this.Scene;
+
+            foreach (SectionViewModel S in State.volume.SectionViewModels.Values)
+            {
+                if (S.Number < FirstSection || S.Number > LastSection)
+                    continue;
+
+                string Path = ExportPath + S.VolumeViewModel.Name + "/" + S.Number.ToString("D3") + "/Tiles/" + Downsample.ToString("D3") + "/";
+
+                System.IO.DirectoryInfo dirInfo;
+                if (System.IO.Directory.Exists(Path) == false)
+                    dirInfo = System.IO.Directory.CreateDirectory(Path);
+                else
+                    dirInfo = new System.IO.DirectoryInfo(Path);
+
+                dirInfo.Attributes = dirInfo.Attributes & ~System.IO.FileAttributes.ReadOnly;
+
+                this.Section = S;
+
+                //                GC.Collect();
+
+                //Get the boundaries of the section
+                MappingBase mapping = this.Section.VolumeViewModel.GetTileMapping(Volume.ActiveVolumeTransform, this.Section.Number, this.CurrentChannel, this.CurrentTransform);
+
+                //Figure out how much we need to capture
+                Size TileImageSize = new Size(512, 512);
+
+                Size TileWorldSize = new Size(TileImageSize.Width * Downsample,
+                                              TileImageSize.Height * Downsample);
+
+                //Figure out how many tiles to expect
+                Size TileDim = new Size((int)Math.Ceiling(mapping.Bounds.Width / (TileImageSize.Width * Downsample)),
+                                        (int)Math.Ceiling(mapping.Bounds.Height / (TileImageSize.Height * Downsample)));
+
+                Scene TileScene = new VikingXNA.Scene(new Viewport(0, 0, TileImageSize.Width, TileImageSize.Height), new Camera());
+                TileScene.Camera.Downsample = Downsample;
+                this.Scene = TileScene;
+
+                int numTiles = TileDim.Width * TileDim.Height;
+                int iTile = 0;
+                int MemoryFreeInterval = 1000;
+                int EventInterval = (int)Math.Pow(TileDim.Width * TileDim.Height, 1 / 3.0);
+                int ExistingTileUpdateInterval = 10000;
+                int LoopCounter = 0;
+                int NumTilesQueued = 256;
+
+                BmpWriter writer = new BmpWriter(TileImageSize.Width, TileImageSize.Height);
+                writer.imageFormat = System.Drawing.Imaging.ImageFormat.Png;
+
+                System.Threading.Tasks.TaskFactory taskFactory = new System.Threading.Tasks.TaskFactory();
+
+                Queue<System.Threading.Tasks.Task> listTasks = new Queue<System.Threading.Tasks.Task>(NumTilesQueued);
+
+                for (int iX = 0; iX < TileDim.Width; iX++)
+                {
+                    double X = (iX * TileWorldSize.Width) + (TileWorldSize.Width / 2);
+
+                    for (int iY = 0; iY < TileDim.Height; iY++, iTile++)
+                    {
+                        LoopCounter++;
+                        double Y = (iY * TileWorldSize.Height) + (TileWorldSize.Height / 2);
+
+                        TileScene.Camera.LookAt = new Vector2((float)X, (float)Y);
+
+                        string Filename = Path + string.Format("X{0}_Y{1}.png", iX.ToString("D3"), iY.ToString("D3"));
+
+                        //Assume images already on disk are good
+                        if (System.IO.File.Exists(Filename))
+                        {
+                            if (LoopCounter % ExistingTileUpdateInterval == 0)
+                            {
+                                progressForm.ShowProgress("Section " + S.Name + "\nFrame ID: " + Filename, (double)iTile / (double)numTiles);
+                                Application.DoEvents();
+                            }
+
+                            continue;
+                        }
+
+                        RenderTarget2D renderTargetTile = new RenderTarget2D(Device, TileImageSize.Width, TileImageSize.Height, false, SurfaceFormat.Color, DepthFormat.Depth24Stencil8, 0, RenderTargetUsage.PreserveContents);
+                        {
+                            this.PreloadSceneTextures(TileScene, false);
+                            this.Draw(TileScene, renderTargetTile);
+
+                            Device.SetRenderTarget(null);
+
+                            System.Threading.Tasks.Task T = taskFactory.StartNew(() =>
+                            {
+                                BmpWriter.TextureToBmpAsync(renderTargetTile, Filename);
+                                renderTargetTile.Dispose();
+                            });
+
+                            listTasks.Enqueue(T);
+                        }
+
+                        bool ContinueRemove = false;
+                        while (listTasks.Count > NumTilesQueued || ContinueRemove)
+                        {
+                            ContinueRemove = false;
+                            System.Threading.Tasks.Task topTask = listTasks.Dequeue();
+                            if (topTask.IsCompleted)
+                            {
+                                ContinueRemove = true;
+                                continue;
+                            }
+                            else
+                            {
+                                topTask.Wait();
+                            }
+                        }
+
+                        //                      BmpWriter.TextureToBmpAsync(renderTargetTile, Filename);
+
+                        if (progressForm.DialogResult == DialogResult.Cancel)
+                            break;
+
+                        //Do events once in a while
+                        if (LoopCounter % EventInterval == 0)
+                        {
+                            Application.DoEvents();
+
+                            progressForm.ShowProgress("Section " + S.Name + "\nFrame ID: " + Filename, (double)iTile / (double)numTiles);
+
+                            //System.Windows.Forms.Application.DoEvents();
+                            if (progressForm.DialogResult == DialogResult.Cancel)
+                                break;
+                        }
+
+                        if (LoopCounter >= MemoryFreeInterval)
+                        {
+                            Trace.WriteLine(Filename);
+
+                            //Global.TextureCache.Checkpoint();
+                            // Global.TileViewModelCache.Checkpoint();
+
+                            // Viking.VolumeModel.Global.TileCache.Checkpoint();
+
+                            Global.TextureCache.ReduceCacheFootprint(null);
+                            Global.TileViewModelCache.ReduceCacheFootprint(null);
+                            Viking.VolumeModel.Global.TileCache.ReduceCacheFootprint(null);
+
+                            //                            GC.Collect();
+                            LoopCounter = -1;
+                        }
+                    }
+
+                    if (progressForm.DialogResult == DialogResult.Cancel)
+                        break;
+
+                }
+
+                /*if(renderTargetTile != null)
+                {
+                    renderTargetTile.Dispose();
+                    renderTargetTile = null;
+                }
+                */
+                System.IO.StreamWriter stream = null;
+                try
+                {
+                    string XMLString = string.Format("<?xml version=\"1.0\"?>\n<Level FilePostfix=\".png\" FilePrefix=\"\" Downsample=\"{0}\" TileYDim=\"256\" TileXDim=\"256\" GridDimY=\"{1}\" GridDimX=\"{2}\"/>", Downsample.ToString(), TileDim.Height.ToString(), TileDim.Width.ToString());
+                    string XMLPath = Path + string.Format("{0}.xml", S.Number.ToString("D4"));
+                    stream = System.IO.File.CreateText(XMLPath);
+                    stream.Write(XMLString);
+                }
+                finally
+                {
+                    if (stream != null)
+                    {
+                        stream.Close();
+                        stream = null;
+                    }
+
+                    this.Scene = originalScene;
+                }
+
+                if (progressForm.DialogResult == DialogResult.Cancel)
+                    break;
+
+            }
+
+            //Global.TextureCache.MaxCacheSize = OldCacheSize;
+
+
+            progressForm.Close();
+
+            this.AsynchTextureLoad = true;
+            this.ShowOverlays = OriginalOverlay;
         }
 
         protected void InitGraphicsDeviceForDraw(GraphicsDevice graphicsDevice)
@@ -936,7 +1103,7 @@ namespace Viking.UI.Controls
                                                                                       indicies, 0, indicies.Length / 3);
                 }
             }
-            
+
             //Draw the tiles without annotations, allow them to overwrite existing data
             //            List<RenderTarget2D> OverlayList = new List<RenderTarget2D>(listOverlays.Length);
             if (ShowOverlays)
@@ -1013,7 +1180,7 @@ namespace Viking.UI.Controls
         }
 
         protected void PreloadSceneTextures(Scene scene, bool AsyncTextureLoad = true)
-        {   
+        {
             foreach (ChannelInfo channel in this.CurrentChannelset)
             {
                 Section section = GetSectionToDrawForChannel(channel);
@@ -1047,7 +1214,7 @@ namespace Viking.UI.Controls
                                                                                                         Mapping.Name,
                                                                                                         0);
                         if (tileViewModel == null)
-                            continue; 
+                            continue;
 
                         //Don't request and draw a bunch of levels that cover the entire screen.  Saves time if we are at high magnification
                         if (tileViewModel.HasTexture == false && tileViewModel.Downsample > Downsample * 8 && iLevel < DownsamplesToRender.Length - 1)
@@ -1067,19 +1234,19 @@ namespace Viking.UI.Controls
             //                                          new Microsoft.Xna.Framework.Color(0,0,1f)};
 
             MappingBase Mapping = Viking.UI.State.volume.GetTileMapping(section.Number, channel, this.CurrentTransform);
-            
+
             if (Mapping == null)
                 return null;
-                        
+
             int[] DownsamplesToRender = CalculateDownsamplesToRender(Mapping, scene.Camera.Downsample);
 
             //Get all of the visible tiles
             TilePyramid visibleTiles = Mapping.VisibleTiles(scene.VisibleWorldBounds, scene.Camera.Downsample);
-            
+
             RenderTarget2D renderTarget = new RenderTarget2D(graphicsDevice,
                                               scene.Viewport.Width,
                                               scene.Viewport.Height, false, SurfaceFormat.Color, DepthFormat.Depth24Stencil8);
-        
+
             //        Debug.Assert(graphicsDevice.Viewport.Width == ClientRectangle.Width); 
 
             graphicsDevice.SetRenderTarget(renderTarget);
@@ -1088,9 +1255,9 @@ namespace Viking.UI.Controls
             //Clear the stencil buffer before we begin
             graphicsDevice.Clear(ClearOptions.Stencil, Microsoft.Xna.Framework.Color.Black, float.MaxValue, 0);
             DepthStencilState originalDepthState = graphicsDevice.DepthStencilState;
-            
+
             List<TileViewModel> MeshTiles = new List<TileViewModel>();
-             
+
             for (int iLevel = 0; iLevel < DownsamplesToRender.Length; iLevel++)
             {
                 int level = Mapping.AvailableLevels[DownsamplesToRender[iLevel]];
@@ -1229,7 +1396,7 @@ namespace Viking.UI.Controls
 
 
             return null;
-            
+
         }
 
         private VolumeModel.Section GetSectionToDrawForChannel(ChannelInfo channel)
@@ -1260,7 +1427,7 @@ namespace Viking.UI.Controls
             return sectionToDraw;
         }
 
-        
+
         protected int[] CalculateDownsamplesToRender(MappingBase Mapping, double downsample)
         {
             int roundedDownsample = Mapping.NearestAvailableLevel(downsample);
@@ -1337,7 +1504,7 @@ namespace Viking.UI.Controls
             {
                 //Figure out which section we need to load
                 Section sectionToDraw = GetSectionToDrawForChannel(channel);
-                
+
                 //Can't draw if the section doesn't exist
                 if (sectionToDraw == null)
                     continue;
@@ -1557,7 +1724,7 @@ namespace Viking.UI.Controls
 
         protected void SetOverlayVisiblity(bool ControlDown, bool SpaceDown)
         {
-            if(SpaceDown)
+            if (SpaceDown)
             {
                 ShowOnlyOverlays = ControlDown;
                 ShowOverlays = ControlDown;
@@ -1659,12 +1826,12 @@ namespace Viking.UI.Controls
 
                 //TileViewModelCacheCheckpointAction.BeginInvoke(null, null);
                 //TileCacheCheckpointAction.BeginInvoke(null, null);
-                
+
                 //Global.TileViewModelCache.Checkpoint();
                 //Viking.VolumeModel.Global.TileCache.Checkpoint();
 
                 //DrawCallSinceTileCacheCheckpoint = false;
-                Dispatcher.CurrentDispatcher.BeginInvoke(new Action(delegate() { DrawCallSinceTileCacheCheckpoint = false; }), DispatcherPriority.Background, null);
+                Dispatcher.CurrentDispatcher.BeginInvoke(new Action(delegate () { DrawCallSinceTileCacheCheckpoint = false; }), DispatcherPriority.Background, null);
             }
         }
 
@@ -1796,7 +1963,7 @@ namespace Viking.UI.Controls
         private void menuExportFrames_Click(object sender, EventArgs e)
         {
             using (Viking.UI.Forms.FrameCapturesForm form = new FrameCapturesForm())
-            {  
+            {
                 DialogResult result = form.ShowDialog();
                 if (result == DialogResult.Cancel)
                     return;
@@ -1835,227 +2002,6 @@ namespace Viking.UI.Controls
                     progressForm.Close();
                 }
             }
-        }
-
-        private void ExportTiles(string ExportPath, int FirstSection, int LastSection, int Downsample = 1)
-        {
-            //Make sure sections are in order
-            if (FirstSection > LastSection)
-            {
-                int temp = FirstSection;
-                FirstSection = LastSection;
-                LastSection = temp;
-            }
-
-            ExportPath = ExportPath + "/";
-
-            //Capture each of the requested frames
-            GenericProgressForm progressForm = new GenericProgressForm();
-            progressForm.Show();
-
-            this.AsynchTextureLoad = false;
-
-            bool OriginalOverlay = this.ShowOverlays;
-            this.ShowOverlays = false;
-
-            //long OldCacheSize = Global.TextureCache.MaxCacheSize; 
-            //Global.TextureCache.MaxCacheSize = (1 << 30);
-
-            //            string OldVolumeTransform = this.CurrentVolumeTransform;
-
-            //            this.CurrentVolumeTransform = null; 
-
-            Scene originalScene = this.Scene;
-
-            foreach (SectionViewModel S in State.volume.SectionViewModels.Values)
-            {
-                if (S.Number < FirstSection || S.Number > LastSection)
-                    continue;
-
-                string Path = ExportPath + S.VolumeViewModel.Name + "/" + S.Number.ToString("D3") + "/Tiles/" + Downsample.ToString("D3") + "/";
-
-                System.IO.DirectoryInfo dirInfo;
-                if (System.IO.Directory.Exists(Path) == false)
-                    dirInfo = System.IO.Directory.CreateDirectory(Path);
-                else
-                    dirInfo = new System.IO.DirectoryInfo(Path);
-
-                dirInfo.Attributes = dirInfo.Attributes & ~System.IO.FileAttributes.ReadOnly;
-
-                this.Section = S;
-
-                //                GC.Collect();
-
-                //Get the boundaries of the section
-                MappingBase mapping = this.Section.VolumeViewModel.GetTileMapping(Volume.ActiveVolumeTransform, this.Section.Number, this.CurrentChannel, this.CurrentTransform);
-
-                //Figure out how much we need to capture
-                Size TileImageSize = new Size(256, 256);
-
-                Size TileWorldSize = new Size(TileImageSize.Width * Downsample,
-                                              TileImageSize.Height * Downsample);
-
-                //Figure out how many tiles to expect
-                Size TileDim = new Size((int)Math.Ceiling(mapping.Bounds.Width / (TileImageSize.Width * Downsample)),
-                                        (int)Math.Ceiling(mapping.Bounds.Height / (TileImageSize.Height * Downsample)));
-
-                Scene TileScene = new VikingXNA.Scene(new Viewport(0, 0, TileImageSize.Width, TileImageSize.Height), new Camera());
-                TileScene.Camera.Downsample = Downsample;
-                this.Scene = TileScene;
-
-                int numTiles = TileDim.Width * TileDim.Height;
-                int iTile = 0;
-                int MemoryFreeInterval = 1000;
-                int EventInterval = (int)Math.Pow(TileDim.Width * TileDim.Height, 1 / 3.0);
-                int ExistingTileUpdateInterval = 10000;
-                int LoopCounter = 0;
-                int NumTilesQueued = 256;
-
-                BmpWriter writer = new BmpWriter(TileImageSize.Width, TileImageSize.Height);
-                writer.imageFormat = System.Drawing.Imaging.ImageFormat.Png;
-
-                System.Threading.Tasks.TaskFactory taskFactory = new System.Threading.Tasks.TaskFactory();
-
-                Queue<System.Threading.Tasks.Task> listTasks = new Queue<System.Threading.Tasks.Task>(NumTilesQueued);
-
-                for (int iX = 0; iX < TileDim.Width; iX++)
-                {
-                    double X = (iX * TileWorldSize.Width) + (TileWorldSize.Width / 2);
-
-                    for (int iY = 0; iY < TileDim.Height; iY++, iTile++)
-                    {
-                        LoopCounter++;
-                        double Y = (iY * TileWorldSize.Height) + (TileWorldSize.Height / 2);
-
-                        TileScene.Camera.LookAt = new Vector2((float)X, (float)Y);
-
-                        string Filename = Path + string.Format("X{0}_Y{1}.png", iX.ToString("D3"), iY.ToString("D3"));
-
-                        //Assume images already on disk are good
-                        if (System.IO.File.Exists(Filename))
-                        {
-                            if (LoopCounter % ExistingTileUpdateInterval == 0)
-                            {
-                                progressForm.ShowProgress("Section " + S.Name + "\nFrame ID: " + Filename, (double)iTile / (double)numTiles);
-                                Application.DoEvents();
-                            }
-
-                            continue;
-                        }
-
-                        RenderTarget2D renderTargetTile = new RenderTarget2D(Device, TileImageSize.Width, TileImageSize.Height, false, SurfaceFormat.Color, DepthFormat.Depth24Stencil8, 0, RenderTargetUsage.PreserveContents);
-
-                        this.PreloadSceneTextures(TileScene, false);
-                        this.Draw(TileScene, renderTargetTile);
-
-                        Device.SetRenderTarget(null);
-
-                        System.Threading.Tasks.Task T = taskFactory.StartNew(() =>
-                        {
-                            //BmpWriter bmpwriter = new BmpWriter(TileImageSize.Width, TileImageSize.Height);
-                            //bmpwriter.imageFormat = ImageFormat.Png;
-                            //bmpwriter.TextureToBmp(renderTargetTile, Filename); 
-
-                            //renderTargetTile.Dispose();
-                            //renderTargetTile = null;
-                            BmpWriter.TextureToBmpAsync(renderTargetTile, Filename);
-                        });
-
-                        listTasks.Enqueue(T);
-
-                        bool ContinueRemove = false;
-                        while (listTasks.Count > NumTilesQueued || ContinueRemove)
-                        {
-                            ContinueRemove = false;
-                            System.Threading.Tasks.Task topTask = listTasks.Dequeue();
-                            if (topTask.IsCompleted)
-                            {
-                                ContinueRemove = true;
-                                continue;
-                            }
-                            else
-                            {
-                                topTask.Wait();
-                            }
-                        }
-
-                        //                      BmpWriter.TextureToBmpAsync(renderTargetTile, Filename);
-
-                        if (progressForm.DialogResult == DialogResult.Cancel)
-                            break;
-
-                        //Do events once in a while
-                        if (LoopCounter % EventInterval == 0)
-                        {
-                            Application.DoEvents();
-
-                            progressForm.ShowProgress("Section " + S.Name + "\nFrame ID: " + Filename, (double)iTile / (double)numTiles);
-
-                            //System.Windows.Forms.Application.DoEvents();
-                            if (progressForm.DialogResult == DialogResult.Cancel)
-                                break;
-                        }
-
-                        if (LoopCounter >= MemoryFreeInterval)
-                        {
-                            Trace.WriteLine(Filename);
-
-                            //Global.TextureCache.Checkpoint();
-                            // Global.TileViewModelCache.Checkpoint();
-
-                            // Viking.VolumeModel.Global.TileCache.Checkpoint();
-
-                            Global.TextureCache.ReduceCacheFootprint(null);
-                            Global.TileViewModelCache.ReduceCacheFootprint(null);
-                            Viking.VolumeModel.Global.TileCache.ReduceCacheFootprint(null);
-
-                            //                            GC.Collect();
-                            LoopCounter = -1;
-                        }
-                    }
-
-                    if (progressForm.DialogResult == DialogResult.Cancel)
-                        break;
-
-                }
-
-                /*if(renderTargetTile != null)
-                {
-                    renderTargetTile.Dispose();
-                    renderTargetTile = null;
-                }
-                */
-                System.IO.StreamWriter stream = null;
-                try
-                {
-                    string XMLString = string.Format("<?xml version=\"1.0\"?>\n<Level FilePostfix=\".png\" FilePrefix=\"\" Downsample=\"{0}\" TileYDim=\"256\" TileXDim=\"256\" GridDimY=\"{1}\" GridDimX=\"{2}\"/>", Downsample.ToString(), TileDim.Height.ToString(), TileDim.Width.ToString());
-                    string XMLPath = Path + string.Format("{0}.xml", S.Number.ToString("D4"));
-                    stream = System.IO.File.CreateText(XMLPath);
-                    stream.Write(XMLString);
-                }
-                finally
-                {
-                    if (stream != null)
-                    {
-                        stream.Close();
-                        stream = null;
-                    }
-
-                    this.Scene = originalScene;
-                }
-
-                if (progressForm.DialogResult == DialogResult.Cancel)
-                    break;
-
-            }
-
-            //Global.TextureCache.MaxCacheSize = OldCacheSize;
-
-
-            progressForm.Close();
-
-            this.AsynchTextureLoad = true;
-            this.ShowOverlays = OriginalOverlay;
         }
 
         private void menuGoToLocation_Click(object sender, EventArgs e)
@@ -2163,7 +2109,7 @@ namespace Viking.UI.Controls
         private void menuSetupChannels_Click(object sender, EventArgs e)
         {
             using (SetupChannelsForm ChannelSetup = new SetupChannelsForm(this.Section.VolumeViewModel.DefaultChannels, this.Section.VolumeViewModel.ChannelNames))
-            { 
+            {
                 if (ChannelSetup.ShowDialog() == DialogResult.OK)
                 {
                     this.Section.VolumeViewModel.DefaultChannels = ChannelSetup.ChannelInfo;
@@ -2193,7 +2139,7 @@ namespace Viking.UI.Controls
             //TODO: Cancel the active command
             this.Invalidate();
         }
-         
+
         private void OnSectionPropertyChanged(object sender, PropertyChangedEventArgs e)
         {
             //TODO: Cancel the active command
@@ -2246,7 +2192,7 @@ namespace Viking.UI.Controls
                 ExportTiles(exportProperties.ExportPath, FirstExportSection, LastExportSection, exportProperties.Downsample);
             }
         }
-        
+
         private void menuSectionShowTileMesh_Click(object sender, EventArgs e)
         {
             State.ShowTileMesh = !State.ShowTileMesh;
@@ -2270,12 +2216,12 @@ namespace Viking.UI.Controls
             {
                 this.Cursor = originalCursor;
             }
-            
+
         }
 
         private void timerHelpTextChange_Tick(object sender, EventArgs e)
         {
-            this.commandHelpText.TextArrayIndex++;            
+            this.commandHelpText.TextArrayIndex++;
         }
 
         private void menuShowCommandHelp_Click(object sender, EventArgs e)
