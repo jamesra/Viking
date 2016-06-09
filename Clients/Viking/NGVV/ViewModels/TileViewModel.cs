@@ -382,49 +382,7 @@ namespace Viking.ViewModels
                 return this.texture; // Can return null or a texture with a different downsample level if we have one
             }                 
         }
-
-        /*
-        public void FileReadComplete(IAsyncResult ar)
-        {
-            Debug.Assert(ar.IsCompleted, "Wasn't expecting Asynch read not to complete successfully");
-            if (!ar.IsCompleted)
-            {
-                //ReadRequestInProgress = false;
-                return;
-            }
-
-            object[] objs = ar.AsyncState as object[];
-//            FileStream stream = objs[0] as FileStream;
-            GraphicsDevice graphicsDevice = objs[1] as GraphicsDevice;
-            byte[] fileBuffer = objs[2] as byte[];
-            int Level = (int)objs[3];
-            
-            MemoryStream MemStream = null;
-            try
-            {
-                MemStream = new MemoryStream(fileBuffer, false);
-
-                Monitor.Enter(this);
-
-                texture = Texture2D.FromStream(graphicsDevice, MemStream);
-            }
-            finally
-            {
-                if (MemStream != null)
-                {
-                    MemStream.Close();
-                    MemStream.Dispose(); 
-                    MemStream = null; 
-                }
-            }
-
-            Trace.WriteLine("AsSynch load completed " + Level.ToString("D3") + " " + this.TextureFileName, "Tile");
-
-            //ReadRequestInProgress = false;
-
-            Monitor.Exit(this);
-        }
-         */
+        
 
 #if DEBUG
         private static bool NullGridWarningPrinted = false; 
