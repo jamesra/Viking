@@ -6,7 +6,8 @@ using System.Diagnostics;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System.ComponentModel;
-using Geometry; 
+using Geometry;
+using System.Runtime.CompilerServices;
 
 namespace VikingXNA
 {
@@ -15,6 +16,13 @@ namespace VikingXNA
     /// </summary>
     public class Scene : IDisposable
     {
+        public event PropertyChangedEventHandler OnSceneChanged;
+
+        protected void OnPropertyChanged([CallerMemberName] string propertyName = null)
+        {
+            OnSceneChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+
         private Matrix _Projection;
 
         public Matrix Projection
@@ -28,6 +36,7 @@ namespace VikingXNA
             get { return _World; }
             set { _World = value;
                   _WorldViewProj = (_World * Camera.View) * _Projection;
+                  OnPropertyChanged();
             }
         }
 
@@ -64,6 +73,8 @@ namespace VikingXNA
                     _camera = value; 
                     UpdateProjectionMatrix();
                 }
+
+                OnPropertyChanged();
             }
         }
 
@@ -86,6 +97,8 @@ namespace VikingXNA
                     _Viewport = value;
 
                 UpdateProjectionMatrix();
+
+                OnPropertyChanged();
             }
         }
 
@@ -127,6 +140,8 @@ namespace VikingXNA
                 _WorldViewProj = (_World * Camera.View) * _Projection;
                 _VisibleWorldBounds = new GridRectangle?();
             }
+
+            OnPropertyChanged("Camera." + e.PropertyName);
         }
 
         private Geometry.GridRectangle? _VisibleWorldBounds;

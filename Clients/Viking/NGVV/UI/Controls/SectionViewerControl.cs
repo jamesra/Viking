@@ -20,6 +20,8 @@ using Viking.VolumeModel;
 using Viking.ViewModels;
 using VikingXNA;
 using VikingXNAGraphics;
+using System.Threading;
+using System.Threading.Tasks;
 
 
 namespace Viking.UI.Controls
@@ -314,6 +316,21 @@ namespace Viking.UI.Controls
             set { Section.ActiveTileTransform = value; }
         }
 
+        public ChannelInfo[] CurrentChannelset
+        {
+            get
+            {
+                ChannelInfo[] Channelset = Section.ChannelInfoArray;
+                if (Channelset.Length == 0)
+                {
+                    //See if there are any global channel settings
+                    Channelset = Section.VolumeViewModel.DefaultChannels;
+                }
+
+                return Channelset;
+            }
+        }
+
         private ElementHost commandHelpTextScrollerHost;
         private Viking.WPF.StringArrayAutoScroller commandHelpText;
 
@@ -544,6 +561,8 @@ namespace Viking.UI.Controls
             MyRect = new GridRectangle(new GridVector2(50000, 50000), 1000, 1000);
             Downsample = 1;
 
+            Scene originalScene = this.Scene;
+
             Debug.Assert(MyRect.Left < MyRect.Right);
             Debug.Assert(MyRect.Bottom < MyRect.Top);
 
@@ -637,7 +656,8 @@ namespace Viking.UI.Controls
                             try
                             {
                                 TileScene.Camera.LookAt = new Vector2((float)X, (float)Y);
-                                
+                                this.Scene = TileScene;
+
                                 Byte[] byteArray = null; 
                                 using (RenderTarget2D renderTargetTile = new RenderTarget2D(graphicsDevice, CapturedTileSizeX, CapturedTileSizeY, false, SurfaceFormat.Color, DepthFormat.Depth24Stencil8, 0, RenderTargetUsage.PreserveContents))
                                 {
@@ -700,6 +720,7 @@ namespace Viking.UI.Controls
             this.ShowOverlays = OriginalOverlays;
             this.AsynchTextureLoad = AsynchTextureLoad;
 
+            this.Scene = originalScene;
              
             //bmpFile.Close();
         }
@@ -867,12 +888,7 @@ namespace Viking.UI.Controls
             //OK, figure out if we are rendering channels or not.
             //The section channel settings are checked first.  If they
             //are not found we use the global channel settings.
-            ChannelInfo[] Channelset = Section.ChannelInfoArray;
-            if (Channelset.Length == 0)
-            {
-                //See if there are any global channel settings
-                Channelset = Section.VolumeViewModel.DefaultChannels;
-            }
+            ChannelInfo[] Channelset = CurrentChannelset;
 
             StatusChannels = Channelset;
             State.CurrentMode = this.CurrentChannel;
@@ -991,6 +1007,59 @@ namespace Viking.UI.Controls
             return System.IO.Path.Combine(new string[] { State.TextureCachePath, section.SectionSubPath, TextureFileName });
         }
 
+        protected override void OnSceneChanged(object sender, PropertyChangedEventArgs e)
+        {
+            PreloadSceneTextures(this.Scene);
+        }
+
+        protected void PreloadSceneTextures(Scene scene, bool AsyncTextureLoad = true)
+        {   
+            foreach (ChannelInfo channel in this.CurrentChannelset)
+            {
+                Section section = GetSectionToDrawForChannel(channel);
+                MappingBase Mapping = Viking.UI.State.volume.GetTileMapping(section.Number, channel.ChannelName, this.CurrentTransform);
+                int[] DownsamplesToRender = CalculateDownsamplesToRender(Mapping, scene.Camera.Downsample);
+
+                //Get all of the visible tiles
+                TilePyramid visibleTiles = Mapping.VisibleTiles(scene.VisibleWorldBounds, scene.Camera.Downsample);
+
+                for (int iLevel = 0; iLevel < DownsamplesToRender.Length; iLevel++)
+                {
+                    int level = Mapping.AvailableLevels[DownsamplesToRender[iLevel]];
+
+                    SortedDictionary<string, Tile> tileList = visibleTiles.GetTilesForLevel(level);
+
+                    foreach (Tile t in tileList.Values)
+                    {
+                        //Don't bother with huge tiles
+                        string tileFileName = t.TextureFullPath;
+                        //Calculate the path of the tile
+                        if (!(t.TextureFullPath.StartsWith(System.Uri.UriSchemeHttps) ||
+                            t.TextureFullPath.StartsWith(System.Uri.UriSchemeHttp)))
+                        {
+                            tileFileName = section.Path + System.IO.Path.DirectorySeparatorChar + tileFileName;
+                        }
+                        //Create a TileViewModel if it doesn't exist and draw it
+
+                        TileViewModel tileViewModel = Global.TileViewModelCache.FetchOrConstructTile(t,
+                                                                                                        tileFileName,
+                                                                                                        SectionViewerControl.TileCacheFullPath(section, t.TextureCacheFilePath),
+                                                                                                        Mapping.Name,
+                                                                                                        0);
+                        if (tileViewModel == null)
+                            continue; 
+
+                        //Don't request and draw a bunch of levels that cover the entire screen.  Saves time if we are at high magnification
+                        if (tileViewModel.HasTexture == false && tileViewModel.Downsample > Downsample * 8 && iLevel < DownsamplesToRender.Length - 1)
+                            continue;
+
+                        tileViewModel.GetTexture(this.graphicsDeviceService.GraphicsDevice, AsyncTextureLoad);
+                    }
+                }
+            }
+        }
+
+
         protected Texture DrawSection(GraphicsDevice graphicsDevice, Section section, string channel, Scene scene)
         {
             //           Microsoft.Xna.Framework.Color[] ColorWheel = new Microsoft.Xna.Framework.Color[] { new Microsoft.Xna.Framework.Color(1f,0,0), 
@@ -998,49 +1067,19 @@ namespace Viking.UI.Controls
             //                                          new Microsoft.Xna.Framework.Color(0,0,1f)};
 
             MappingBase Mapping = Viking.UI.State.volume.GetTileMapping(section.Number, channel, this.CurrentTransform);
-
+            
             if (Mapping == null)
                 return null;
-
-            double downsample = scene.Camera.Downsample;
-
-            int roundedDownsample = Mapping.NearestAvailableLevel(downsample);
+                        
+            int[] DownsamplesToRender = CalculateDownsamplesToRender(Mapping, scene.Camera.Downsample);
 
             //Get all of the visible tiles
-            TilePyramid visibleTiles = Mapping.VisibleTiles(scene.VisibleWorldBounds, downsample);
-
-            //Find the index of the requested downsample level
-            List<int> DownsamplesToRender = new List<int>(Mapping.AvailableLevels.Length);
-
-            //Render every other downsample level starting with the requested level
-            //Render downsample levels that require more than one tile to cover the screen;
-            //            int ScreenArea = graphicsDevice.Viewport.Width * graphicsDevice.Viewport.Height; 
-
-            //            int iStartingDownsampleLevel = 0;
-            for (int i = 0; i < Mapping.AvailableLevels.Length; i++)
-            {
-                if (roundedDownsample == Mapping.AvailableLevels[i])
-                {
-                    //   iStartingDownsampleLevel = i;
-                    DownsamplesToRender.Add(i);
-
-                }
-                else if (roundedDownsample < Mapping.AvailableLevels[i])
-                {
-                    //Don't bother loading other textures if we are loading them synchronously
-                    if (AsynchTextureLoad)
-                    {
-                        DownsamplesToRender.Add(i);
-                    }
-                }
-            }
-
+            TilePyramid visibleTiles = Mapping.VisibleTiles(scene.VisibleWorldBounds, scene.Camera.Downsample);
+            
             RenderTarget2D renderTarget = new RenderTarget2D(graphicsDevice,
                                               scene.Viewport.Width,
                                               scene.Viewport.Height, false, SurfaceFormat.Color, DepthFormat.Depth24Stencil8);
         
-
-
             //        Debug.Assert(graphicsDevice.Viewport.Width == ClientRectangle.Width); 
 
             graphicsDevice.SetRenderTarget(renderTarget);
@@ -1049,15 +1088,10 @@ namespace Viking.UI.Controls
             //Clear the stencil buffer before we begin
             graphicsDevice.Clear(ClearOptions.Stencil, Microsoft.Xna.Framework.Color.Black, float.MaxValue, 0);
             DepthStencilState originalDepthState = graphicsDevice.DepthStencilState;
-
-            //Textures are fetched in the order they are asked for.  So we should ask for low-res textures before high-res textures.  However if high-res textures are available we shouldn't bother
-            //with asking for low res textures.
-            DownsamplesToRender.Reverse();
-
+            
             List<TileViewModel> MeshTiles = new List<TileViewModel>();
-
-            //We only request textures for every other downsample level if they aren't loaded
-            for (int iLevel = 0; iLevel < DownsamplesToRender.Count; iLevel++)
+             
+            for (int iLevel = 0; iLevel < DownsamplesToRender.Length; iLevel++)
             {
                 int level = Mapping.AvailableLevels[DownsamplesToRender[iLevel]];
 
@@ -1092,13 +1126,13 @@ namespace Viking.UI.Controls
                                                                                                     0);
 
                     //Don't request and draw a bunch of levels that cover the entire screen.  Saves time if we are at high magnification
-                    if (tileViewModel.HasTexture == false && tileViewModel.Downsample > Downsample * 8 && iLevel < DownsamplesToRender.Count - 1)
+                    if (tileViewModel.HasTexture == false && tileViewModel.Downsample > Downsample * 8 && iLevel < DownsamplesToRender.Length - 1)
                         continue;
 
                     //         AllTilesDrawn = AllTilesDrawn & tileViewModel.HasTexture; 
                     tileViewModel.Draw(graphicsDevice, tileLayoutEffect, AsynchTextureLoad, ColorizeTiles);
 
-                    if (iLevel == DownsamplesToRender.Count - 1 && Viking.UI.State.ShowTileMesh)
+                    if (iLevel == DownsamplesToRender.Length - 1 && Viking.UI.State.ShowTileMesh)
                     {
                         tileViewModel.DrawMesh(graphicsDevice, basicEffect);
 
@@ -1198,6 +1232,72 @@ namespace Viking.UI.Controls
             
         }
 
+        private VolumeModel.Section GetSectionToDrawForChannel(ChannelInfo channel)
+        {
+            Section sectionToDraw = null;
+
+            switch (channel.SectionSource)
+            {
+                case ChannelInfo.SectionInfo.SELECTED:
+                    sectionToDraw = this.Section.section;
+                    break;
+                case ChannelInfo.SectionInfo.ABOVE:
+                    sectionToDraw = this.Section.ReferenceSectionAbove;
+                    break;
+                case ChannelInfo.SectionInfo.BELOW:
+                    sectionToDraw = this.Section.ReferenceSectionBelow;
+                    break;
+                case ChannelInfo.SectionInfo.FIXED:
+                    int SectionNumber = channel.FixedSectionNumber.Value;
+                    if (false == UI.State.volume.SectionViewModels.ContainsKey(SectionNumber))
+                        sectionToDraw = null;
+                    else
+                        sectionToDraw = UI.State.volume.SectionViewModels[SectionNumber].section;
+
+                    break;
+            }
+
+            return sectionToDraw;
+        }
+
+        
+        protected int[] CalculateDownsamplesToRender(MappingBase Mapping, double downsample)
+        {
+            int roundedDownsample = Mapping.NearestAvailableLevel(downsample);
+
+            //Find the index of the requested downsample level
+            List<int> DownsamplesToRender = new List<int>(Mapping.AvailableLevels.Length);
+
+            //Render every other downsample level starting with the requested level
+            //Render downsample levels that require more than one tile to cover the screen;
+            //            int ScreenArea = graphicsDevice.Viewport.Width * graphicsDevice.Viewport.Height; 
+
+            //            int iStartingDownsampleLevel = 0;
+            for (int i = 0; i < Mapping.AvailableLevels.Length; i++)
+            {
+                if (roundedDownsample == Mapping.AvailableLevels[i])
+                {
+                    //   iStartingDownsampleLevel = i;
+                    DownsamplesToRender.Add(i);
+
+                }
+                else if (roundedDownsample < Mapping.AvailableLevels[i])
+                {
+                    //Don't bother loading other textures if we are loading them synchronously
+                    if (AsynchTextureLoad)
+                    {
+                        DownsamplesToRender.Add(i);
+                    }
+                }
+            }
+
+            //Textures are fetched in the order they are asked for.  So we should ask for low-res textures before high-res textures.  However if high-res textures are available we shouldn't bother
+            //with asking for low res textures.
+            DownsamplesToRender.Reverse();
+
+            return DownsamplesToRender.ToArray();
+        }
+
         private Texture DrawSectionsWithChannels(GraphicsDevice graphicsDevice, ChannelInfo[] Channelset, Scene scene, out Texture ChannelOverlay)
         {
             Texture backgroundSection = null;
@@ -1236,28 +1336,8 @@ namespace Viking.UI.Controls
             foreach (ChannelInfo channel in Channelset)
             {
                 //Figure out which section we need to load
-                Section sectionToDraw = null;
-                switch (channel.SectionSource)
-                {
-                    case ChannelInfo.SectionInfo.SELECTED:
-                        sectionToDraw = this.Section.section;
-                        break;
-                    case ChannelInfo.SectionInfo.ABOVE:
-                        sectionToDraw = this.Section.ReferenceSectionAbove;
-                        break;
-                    case ChannelInfo.SectionInfo.BELOW:
-                        sectionToDraw = this.Section.ReferenceSectionBelow;
-                        break;
-                    case ChannelInfo.SectionInfo.FIXED:
-                        int SectionNumber = channel.FixedSectionNumber.Value;
-                        if (false == UI.State.volume.SectionViewModels.ContainsKey(SectionNumber))
-                            sectionToDraw = null;
-                        else
-                            sectionToDraw = UI.State.volume.SectionViewModels[SectionNumber].section;
-
-                        break;
-                }
-
+                Section sectionToDraw = GetSectionToDrawForChannel(channel);
+                
                 //Can't draw if the section doesn't exist
                 if (sectionToDraw == null)
                     continue;
@@ -1865,6 +1945,7 @@ namespace Viking.UI.Controls
 
                         RenderTarget2D renderTargetTile = new RenderTarget2D(Device, TileImageSize.Width, TileImageSize.Height, false, SurfaceFormat.Color, DepthFormat.Depth24Stencil8, 0, RenderTargetUsage.PreserveContents);
 
+                        this.PreloadSceneTextures(TileScene, false);
                         this.Draw(TileScene, renderTargetTile);
 
                         Device.SetRenderTarget(null);

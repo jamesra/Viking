@@ -7,6 +7,7 @@ using Microsoft.Xna.Framework.Graphics;
 using VikingXNA; 
 using Geometry;
 using RoundCurve;
+using System.ComponentModel;
 using System.Drawing.Imaging; 
 
 namespace VikingXNA
@@ -84,10 +85,28 @@ namespace VikingXNA
 
         #endregion
 
+        private Scene _scene;
         /// <summary>
         /// Combination of the viewport and a camera used to draw this control
         /// </summary>
-        public Scene Scene;
+        public Scene Scene
+        {
+            get { return _scene; }
+            set
+            {
+                if (_scene != null)
+                    _scene.OnSceneChanged -= this.OnSceneChanged;
+
+                _scene = value;
+
+                _scene.OnSceneChanged += this.OnSceneChanged;
+            }
+        }
+
+        protected virtual void OnSceneChanged(object sender, PropertyChangedEventArgs e)
+        {
+            throw new NotImplementedException();
+        }
 
         private Matrix worldMatrix
         {
@@ -495,13 +514,13 @@ namespace VikingXNA
             Viewport viewport = Device.Viewport;
             if (Device != null)
             {
-                    this.Downsample = Downsample * (((double)viewport.Width * (double)viewport.Height) / ((double)ClientBounds.Width * (double)ClientBounds.Height));
+                this.Downsample = Downsample * (((double)viewport.Width * (double)viewport.Height) / ((double)ClientBounds.Width * (double)ClientBounds.Height));
 
-                    if (viewport.Width != ClientBounds.Width ||
-                        viewport.Height != ClientBounds.Height)
-                    {
-                        this.graphicsDeviceService.ResetDevice(ClientRectangle.Width, ClientRectangle.Height);
-                    }
+                if (viewport.Width != ClientBounds.Width ||
+                    viewport.Height != ClientBounds.Height)
+                {
+                    this.graphicsDeviceService.ResetDevice(ClientRectangle.Width, ClientRectangle.Height);
+                }
             }
 
             // this.GraphicsDevice.Viewport.Width = ClientSize.Width;
