@@ -891,7 +891,6 @@ namespace Viking
             if (this.Aborted || this.IsDisposed)
                 return;
 
-            //System.Threading.Tasks.Task.Run(() => {
             TextureData data = TextureReader.TextureDataFromStream(streamdata);
             Action a = new Action(() =>
             {
@@ -899,7 +898,15 @@ namespace Viking
                 this.SetTexture(texture);
             });
 
-            Viking.UI.State.MainThreadDispatcher.BeginInvoke(a);
+            //Ensure we create the texture on the main thread
+            if (Viking.UI.State.Appwindow.InvokeRequired)
+            {
+                Viking.UI.State.MainThreadDispatcher.BeginInvoke(a);
+            }
+            else
+            {
+                a();
+            }
         }
 
         protected void EndTextureDataFromStream(IAsyncResult result)
