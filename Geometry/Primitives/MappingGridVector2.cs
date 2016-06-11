@@ -34,7 +34,7 @@ namespace Geometry
     /// Records the position of a point in two different 2D planes
     /// </summary>
     [Serializable]
-    public class MappingGridVector2 : ICloneable, IComparable
+    public class MappingGridVector2 : ICloneable, IComparable, IEquatable<MappingGridVector2>
     {
         public GridVector2 MappedPoint;
         public GridVector2 ControlPoint;
@@ -227,6 +227,18 @@ namespace Geometry
             }
 
             return DuplicateFound;
+        }
+
+        public bool Equals(MappingGridVector2 other)
+        {
+            if (object.ReferenceEquals(this, other))
+                return true;
+
+            if (null == other)
+                return false;
+
+            return this.ControlPoint == other.ControlPoint &&
+                   this.MappedPoint == other.MappedPoint;
         }
     }
 }
