@@ -190,14 +190,14 @@ namespace Annotation
         public LocationPositionOnly(ConnectomeDataModel.SelectUnfinishedStructureBranchesWithPosition_Result db)
         {
             this.ID = db.ID;
-            this.Position = new AnnotationPoint(db.X, db.Y, db.Z);
+            this.Position = new AnnotationPoint(db.X, db.Y, (double)db.Z);
             this.Radius = db.Radius;
         }
 
         public LocationPositionOnly(ConnectomeDataModel.Location db)
         {
             this.ID = db.ID;
-            this.Position = new AnnotationPoint(db.X, db.Y, (int)db.Z);
+            this.Position = new AnnotationPoint(db.X, db.Y, db.Z);
             this.Radius = db.Radius;
         } 
     }
@@ -467,7 +467,7 @@ namespace Annotation
 
         public void Sync(ConnectomeDataModel.Location db)
         {
-            //This is a hack.  I want to update VolumeX and VolumeY with the viking client, but I don't want to 
+            //I want to update VolumeX and VolumeY with the viking client, but I don't want to 
             //write all the code for a server utility to update it manually.  So if the only column changing is 
             //VolumeX and VolumeY we do not update the username field.  Currently if I regenerate the volume transforms the
             //next client to run viking would plaster the username history if I did not do this.
@@ -514,19 +514,12 @@ namespace Annotation
             db.Closed = this.Closed;
 
             //Update the tags
-            /*
-            string tags = "";
-            foreach (string s in _Tags)
-            {
-                tags = s + ';';
-            }
-            */
             if (db.Tags != null)
                 if (db.Tags != this.AttributesXml)
                     if (!(db.Tags.Length <= 1 && this.AttributesXml.Length <= 1))
                         UpdateUserName = true;
 
-            if (this.AttributesXml == "")
+            if (string.IsNullOrWhiteSpace(this.AttributesXml))
                 db.Tags = null;
             else
                 db.Tags = this.AttributesXml;

@@ -18,7 +18,7 @@
           </Key>
           <Property Name="ID" Type="bigint" StoreGeneratedPattern="Identity" Nullable="false" />
           <Property Name="ParentID" Type="bigint" Nullable="false" />
-          <Property Name="Z" Type="int" Nullable="false"/>
+          <Property Name="Z" Type="bigint" Nullable="false" />
           <Property Name="Closed" Type="bit" Nullable="false" />
           <Property Name="Version" Type="timestamp" StoreGeneratedPattern="Computed" Nullable="false" />
           <Property Name="Overlay" Type="varbinary(max)" />
@@ -70,6 +70,10 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
           <Key>
             <PropertyRef Name="SourceID" />
             <PropertyRef Name="TargetID" />
+            
+            
+            
+            
           </Key>
           <Property Name="SourceID" Type="bigint" Nullable="false" />
           <Property Name="TargetID" Type="bigint" Nullable="false" />
@@ -243,7 +247,7 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
               <RowType>
                 <Property Name="ID" Type="bigint" Nullable="false" />
                 <Property Name="ParentID" Type="bigint" Nullable="false" />
-                <Property Name="Z" Type="float" Nullable="false" />
+                <Property Name="Z" Type="bigint" Nullable="false" />
                 <Property Name="Closed" Type="bit" Nullable="false" />
                 <Property Name="Version" Type="timestamp" Nullable="false" />
                 <Property Name="Overlay" Type="varbinary(max)" />
@@ -273,7 +277,7 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
               <RowType>
                 <Property Name="ID" Type="bigint" Nullable="false" />
                 <Property Name="ParentID" Type="bigint" Nullable="false" />
-                <Property Name="Z" Type="float" Nullable="false" />
+                <Property Name="Z" Type="bigint" Nullable="false" />
                 <Property Name="Closed" Type="bit" Nullable="false" />
                 <Property Name="Version" Type="timestamp" Nullable="false" />
                 <Property Name="Overlay" Type="varbinary(max)" />
@@ -482,7 +486,7 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
           <Property Name="ParentID" Type="Int64" Nullable="false" />
           <Property Name="X" Type="Double" a:SetterAccess="Public" xmlns:a="http://schemas.microsoft.com/ado/2006/04/codegeneration" annotation:StoreGeneratedPattern="Computed" Nullable="false" />
           <Property Name="Y" Type="Double" a:SetterAccess="Public" xmlns:a="http://schemas.microsoft.com/ado/2006/04/codegeneration" annotation:StoreGeneratedPattern="Computed" Nullable="false" />
-          <Property Name="Z" Type="Int32" a:SetterAccess="Public" xmlns:a="http://schemas.microsoft.com/ado/2006/04/codegeneration" Nullable="false" />
+          <Property Name="Z" Type="Int64" a:SetterAccess="Public" xmlns:a="http://schemas.microsoft.com/ado/2006/04/codegeneration" Nullable="false" />
           <Property Name="Closed" Type="Boolean" Nullable="false" />
           <Property Name="Version" Type="Binary" MaxLength="8" FixedLength="true" Nullable="false" annotation:StoreGeneratedPattern="Computed" />
           <Property Name="Overlay" Type="Binary" MaxLength="Max" FixedLength="false" />
@@ -724,10 +728,10 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
             <End Role="StructureType1" EntitySet="StructureTypes" />
           </AssociationSet>
           <FunctionImport Name="ApproximateStructureLocation" ReturnType="Collection(ConnectomeModel.ApproximateStructureLocation_Result)">
-            <Parameter Name="StructureID" Mode="In" Type="Int32" />
+          <Parameter Name="StructureID" Mode="In" Type="Int32" />
           </FunctionImport>
           <FunctionImport Name="CountChildStructuresByType" ReturnType="Collection(ConnectomeModel.CountChildStructuresByType_Result)">
-            <Parameter Name="StructureID" Mode="In" Type="Int64" />
+          <Parameter Name="StructureID" Mode="In" Type="Int64" />
           </FunctionImport>
           <FunctionImport Name="MergeStructures">
             <Parameter Name="KeepStructureID" Mode="In" Type="Int64" />
@@ -737,7 +741,7 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
           <FunctionImport Name="SelectAllStructureLocations" EntitySet="Locations" ReturnType="Collection(ConnectomeModel.Location)" />
           <FunctionImport Name="SelectAllStructures" EntitySet="Structures" ReturnType="Collection(ConnectomeModel.Structure)" />
           <FunctionImport Name="SelectChildrenStructureLinks" EntitySet="StructureLinks" ReturnType="Collection(ConnectomeModel.StructureLink)">
-            <Parameter Name="StructureID" Mode="In" Type="Int64" />
+          <Parameter Name="StructureID" Mode="In" Type="Int64" />
           </FunctionImport>
           <FunctionImport Name="SelectLastModifiedLocationByUsers" EntitySet="Locations" ReturnType="Collection(ConnectomeModel.Location)" />
           <FunctionImport Name="SelectNumConnectionsPerStructure" ReturnType="Collection(ConnectomeModel.SelectNumConnectionsPerStructure_Result)" />
@@ -751,9 +755,9 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
             <ReturnType EntitySet="LocationLinks" Type="Collection(ConnectomeModel.LocationLink)"/>
             <Parameter Name="Z" Mode="In" Type="Double" />
             <Parameter Name="QueryDate" Mode="In" Type="DateTime" />
-          </FunctionImport>
+            </FunctionImport>
           <FunctionImport Name="SelectStructure" EntitySet="Structures" ReturnType="Collection(ConnectomeModel.Structure)">
-            <Parameter Name="StructureID" Mode="In" Type="Int64" />
+          <Parameter Name="StructureID" Mode="In" Type="Int64" />
           </FunctionImport>
           <FunctionImport Name="SelectStructureChangeLog" ReturnType="Collection(ConnectomeModel.SelectStructureChangeLog_Result)">
             <Parameter Name="structure_ID" Mode="In" Type="Int64" />
@@ -767,23 +771,23 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
             <Parameter Name="end_time" Mode="In" Type="DateTime" />
           </FunctionImport>
           <FunctionImport Name="SelectStructureLocationLinks" EntitySet="LocationLinks" ReturnType="Collection(ConnectomeModel.LocationLink)">
-            <Parameter Name="StructureID" Mode="In" Type="Int64" />
+          <Parameter Name="StructureID" Mode="In" Type="Int64" />
           </FunctionImport>
           <FunctionImport Name="SelectStructureLocationLinksNoChildren" EntitySet="LocationLinks" ReturnType="Collection(ConnectomeModel.LocationLink)">
-            <Parameter Name="StructureID" Mode="In" Type="Int64" />
+          <Parameter Name="StructureID" Mode="In" Type="Int64" />
           </FunctionImport>
           <FunctionImport Name="SelectStructureLocations" EntitySet="Locations" ReturnType="Collection(ConnectomeModel.Location)">
-            <Parameter Name="StructureID" Mode="In" Type="Int64" />
+          <Parameter Name="StructureID" Mode="In" Type="Int64" />
           </FunctionImport>
           <FunctionImport Name="SelectStructuresAndLinks">
             <ReturnType EntitySet="Structures" Type="Collection(ConnectomeModel.Structure)"/>
             <ReturnType EntitySet="StructureLinks" Type="Collection(ConnectomeModel.StructureLink)"/>
           </FunctionImport>
           <FunctionImport Name="SelectUnfinishedStructureBranches" ReturnType="Collection(Int64)">
-            <Parameter Name="StructureID" Mode="In" Type="Int64" />
+          <Parameter Name="StructureID" Mode="In" Type="Int64" />
           </FunctionImport>
           <FunctionImport Name="SelectUnfinishedStructureBranchesWithPosition" ReturnType="Collection(ConnectomeModel.SelectUnfinishedStructureBranchesWithPosition_Result)">
-            <Parameter Name="StructureID" Mode="In" Type="Int64" />
+          <Parameter Name="StructureID" Mode="In" Type="Int64" />
           </FunctionImport>
           <FunctionImport Name="StructureLocationLinks" IsComposable="true" EntitySet="LocationLinks" ReturnType="Collection(ConnectomeModel.LocationLink)">
             <Parameter Name="StructureID" Mode="In" Type="Int64" />
@@ -794,7 +798,7 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
             <Parameter Name="StructureID" Mode="In" Type="Int64" />
           </FunctionImport>
           <FunctionImport Name="SelectStructuresLinkedViaChildren" ReturnType="Collection(Int64)">
-            <Parameter Name="ID" Mode="In" Type="Int64" />
+          <Parameter Name="ID" Mode="In" Type="Int64" />
           </FunctionImport>
           <FunctionImport Name="SelectSectionStructures" EntitySet="Structures" ReturnType="Collection(ConnectomeModel.Structure)">
             <Parameter Name="Z" Mode="In" Type="Double" />
@@ -805,17 +809,17 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
             <ReturnType EntitySet="StructureLinks" Type="Collection(ConnectomeModel.StructureLink)"/>
             <Parameter Name="Z" Mode="In" Type="Double" />
             <Parameter Name="QueryDate" Mode="In" Type="DateTime" />
-          </FunctionImport>
+            </FunctionImport>
           <FunctionImport Name="ApproximateStructureLocations" ReturnType="Collection(ConnectomeModel.ApproximateStructureLocations_Result)" />
           <FunctionImport Name="SectionLocationLinks" IsComposable="true" EntitySet="LocationLinks" ReturnType="Collection(ConnectomeModel.LocationLink)">
-            <Parameter Name="Z" Mode="In" Type="Double" />
+          <Parameter Name="Z" Mode="In" Type="Double" />
           </FunctionImport>
           <FunctionImport Name="SectionLocationLinksModifiedAfterDate" IsComposable="true" EntitySet="LocationLinks" ReturnType="Collection(ConnectomeModel.LocationLink)">
             <Parameter Name="Z" Mode="In" Type="Double" />
             <Parameter Name="QueryDate" Mode="In" Type="DateTime" />
           </FunctionImport>
           <FunctionImport Name="SectionLocations" IsComposable="true" EntitySet="Locations" ReturnType="Collection(ConnectomeModel.Location)">
-            <Parameter Name="Z" Mode="In" Type="Double" />
+          <Parameter Name="Z" Mode="In" Type="Double" />
           </FunctionImport>
           <FunctionImport Name="SectionLocationsModifiedAfterDate" IsComposable="true" EntitySet="Locations" ReturnType="Collection(ConnectomeModel.Location)">
             <Parameter Name="Z" Mode="In" Type="Double" />
@@ -828,7 +832,7 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
             <Parameter Name="BBox" Mode="In" Type="Geometry" />
             <Parameter Name="Radius" Mode="In" Type="Double" />
             <Parameter Name="QueryDate" Mode="In" Type="DateTime" />
-          </FunctionImport>
+            </FunctionImport>
           <FunctionImport Name="SelectSectionLocationsAndLinksInVolumeBounds">
             <ReturnType EntitySet="Locations" Type="Collection(ConnectomeModel.Location)"/>
             <ReturnType EntitySet="LocationLinks" Type="Collection(ConnectomeModel.LocationLink)"/>
@@ -836,7 +840,7 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
             <Parameter Name="BBox" Mode="In" Type="Geometry" />
             <Parameter Name="Radius" Mode="In" Type="Double" />
             <Parameter Name="QueryDate" Mode="In" Type="DateTime" />
-          </FunctionImport>
+            </FunctionImport>
           <FunctionImport Name="SelectSectionStructuresAndLinksInMosaicBounds">
             <ReturnType EntitySet="Structures" Type="Collection(ConnectomeModel.Structure)"/>
             <ReturnType EntitySet="StructureLinks" Type="Collection(ConnectomeModel.StructureLink)"/>
@@ -844,7 +848,7 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
             <Parameter Name="BBox" Mode="In" Type="Geometry" />
             <Parameter Name="MinRadius" Mode="In" Type="Double" />
             <Parameter Name="QueryDate" Mode="In" Type="DateTime" />
-          </FunctionImport>
+            </FunctionImport>
           <FunctionImport Name="SelectSectionStructuresAndLinksInVolumeBounds">
             <ReturnType EntitySet="Structures" Type="Collection(ConnectomeModel.Structure)"/>
             <ReturnType EntitySet="StructureLinks" Type="Collection(ConnectomeModel.StructureLink)"/>
@@ -890,7 +894,7 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
             <Parameter Name="BBox" Mode="In" Type="Geometry" />
             <Parameter Name="MinRadius" Mode="In" Type="Double" />
             <Parameter Name="QueryDate" Mode="In" Type="DateTime" />
-          </FunctionImport>
+            </FunctionImport>
           <FunctionImport Name="SelectSectionAnnotationsInVolumeBounds">
             <ReturnType EntitySet="Structures" Type="Collection(ConnectomeModel.Structure)"/>
             <ReturnType EntitySet="StructureLinks" Type="Collection(ConnectomeModel.StructureLink)"/>
@@ -900,7 +904,7 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
             <Parameter Name="BBox" Mode="In" Type="Geometry" />
             <Parameter Name="MinRadius" Mode="In" Type="Double" />
             <Parameter Name="QueryDate" Mode="In" Type="DateTime" />
-          </FunctionImport>
+            </FunctionImport>
         </EntityContainer>
         <ComplexType Name="ApproximateStructureLocation_Result">
           <Property Type="Double" Name="X" Nullable="true" />
@@ -1099,7 +1103,7 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
           <Property Type="Int64" Name="ID" Nullable="false" />
           <Property Type="Double" Name="X" Nullable="false" />
           <Property Type="Double" Name="Y" Nullable="false" />
-          <Property Type="Int32" Name="Z" Nullable="false" />
+          <Property Type="Int64" Name="Z" Nullable="false" />
           <Property Type="Double" Name="Radius" Nullable="false" />
         </ComplexType>
         <ComplexType Name="SectionLocations_Result">

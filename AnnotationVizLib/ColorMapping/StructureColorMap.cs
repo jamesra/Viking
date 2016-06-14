@@ -31,7 +31,7 @@ namespace AnnotationVizLib
         public virtual System.Drawing.Color GetColor(AnnotationService.Structure structure)
         {
             if (structure == null)
-                return System.Drawing.Color.Empty;
+                return System.Drawing.Color.Gray;
 
             if (structure_color_map != null)
             {
@@ -49,7 +49,7 @@ namespace AnnotationVizLib
                 }
             }
 
-            return System.Drawing.Color.Empty;
+            return System.Drawing.Color.Gray;
         } 
     }
 
@@ -88,7 +88,7 @@ namespace AnnotationVizLib
         public System.Drawing.Color GetColor(MorphologyGraph graph)
         {
             if (graph.structure == null)
-                return Color.Empty; 
+                return Color.Gray; 
 
             //Check for a default color.  If it does not exist use the morphology
             Color color = GetColor(graph.structure);
@@ -96,7 +96,7 @@ namespace AnnotationVizLib
                 return color;
 
             if (LocationColorMap == null)
-                return Color.Empty;
+                return Color.Gray;
 
             IEnumerable<MorphologyNode> nodes = graph.Nodes.Values.Where(v => LocationColorMap.SectionNumbers.Contains((int)v.Location.VolumePosition.Z));
 

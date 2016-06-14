@@ -16,7 +16,7 @@ namespace ConnectomeDataModel
         public long ID { get; set; }
         public double X { get; set; }
         public double Y { get; set; }
-        public double Z { get; set; }
+        public long Z { get; set; }
         public double Radius { get; set; }
     }
 }
