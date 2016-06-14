@@ -419,6 +419,19 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
         <Function Name="SelectUnfinishedStructureBranchesWithPosition" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="false" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo">
           <Parameter Name="StructureID" Type="bigint" Mode="In" />
         </Function>
+        <Function Name="StructureLocationLinks" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="true" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo">
+          <Parameter Name="StructureID" Type="bigint" Mode="In" />
+          <ReturnType>
+            <CollectionType>
+              <RowType>
+                <Property Name="A" Type="bigint" Nullable="false" />
+                <Property Name="B" Type="bigint" Nullable="false" />
+                <Property Name="Username" Type="nchar" MaxLength="16" Nullable="false" />
+                <Property Name="Created" Type="datetime" Nullable="false" />
+              </RowType>
+            </CollectionType>
+          </ReturnType>
+        </Function>
         <Function Name="UpdateStructureType" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="false" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo">
           <Parameter Name="StructureID" Type="bigint" Mode="In" />
           <Parameter Name="TypeID" Type="bigint" Mode="In" />
@@ -1863,6 +1876,16 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
                 <ScalarProperty Name="Username" ColumnName="Username" />
               </EntityTypeMapping>
             </ResultMapping>
+            <ResultMapping>
+              <EntityTypeMapping TypeName="ConnectomeModel.LocationLink">
+                <ScalarProperty Name="A" ColumnName="A" />
+                <ScalarProperty Name="B" ColumnName="B" />
+                <ScalarProperty Name="Username" ColumnName="Username" />
+                <ScalarProperty Name="Created" ColumnName="Created" />
+              </EntityTypeMapping>
+            </ResultMapping>
+          </FunctionImportMapping>
+          <FunctionImportMapping FunctionImportName="StructureLocationLinks" FunctionName="ConnectomeModel.Store.StructureLocationLinks">
             <ResultMapping>
               <EntityTypeMapping TypeName="ConnectomeModel.LocationLink">
                 <ScalarProperty Name="A" ColumnName="A" />
