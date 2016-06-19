@@ -149,48 +149,13 @@ namespace Geometry
 
         public static GridRectangle CalculateControlBounds(MappingGridVector2[] mapPoints)
         {
-            double minX = double.MaxValue;
-            double minY = double.MaxValue;
-            double maxX = double.MinValue;
-            double maxY = double.MinValue;
-
-            //Looking at gridIndicies isn't efficient, but it prevents adding removed verticies to 
-            //boundary
-            for (int i = 0; i < mapPoints.Length; i++)
-            {
-                minX = Math.Min(minX, mapPoints[i].ControlPoint.X);
-
-                maxX = Math.Max(maxX, mapPoints[i].ControlPoint.X);
-
-                minY = Math.Min(minY, mapPoints[i].ControlPoint.Y);
-
-                maxY = Math.Max(maxY, mapPoints[i].ControlPoint.Y);
-            }
-
-            return new GridRectangle(minX, maxX, minY, maxY);
+            return mapPoints.ControlBounds();
         }
 
 
         public static GridRectangle CalculateMappedBounds(MappingGridVector2[] mapPoints)
         {
-            double minX = double.MaxValue;
-            double minY = double.MaxValue;
-            double maxX = double.MinValue;
-            double maxY = double.MinValue;
-
-            //   Debug.Assert(mapPoints.Length > 0); 
-
-            //Looking at gridIndicies isn't efficient, but it prevents adding removed verticies to 
-            //boundary
-            for (int i = 0; i < mapPoints.Length; i++)
-            {
-                minX = Math.Min(minX, mapPoints[i].MappedPoint.X);
-                maxX = Math.Max(maxX, mapPoints[i].MappedPoint.X);
-                minY = Math.Min(minY, mapPoints[i].MappedPoint.Y);
-                maxY = Math.Max(maxY, mapPoints[i].MappedPoint.Y);
-            }
-
-            return new GridRectangle(minX, maxX, minY, maxY);
+            return mapPoints.MappedBounds();
         }
 
         /// <summary>
