@@ -434,7 +434,7 @@ namespace Viking.VolumeModel
         /// </summary>
         /// <param name="transform">Tranformation to appy. If null is passed then a copy is made unmodified and added under the volume name</param>
         /// <param name="volumeName">Name of the transform</param>
-        public MappingBase CreateSectionToVolumeMapping(Geometry.Transforms.TriangulationTransform transform, string SectionMapping, string UniqueName)
+        public MappingBase CreateSectionToVolumeMapping(ITransform transform, string SectionMapping, string UniqueName)
         {
             MappingBase mapBase = this.WarpedTo[SectionMapping];
             Debug.Assert(mapBase != null);

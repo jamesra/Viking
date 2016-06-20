@@ -13,10 +13,8 @@ namespace Geometry.Transforms
     /// A transform that uses a triangulation
     /// </summary>
     [Serializable]
-    public abstract class TriangulationTransform : ReferencePointBasedTransform, IDisposable
+    public abstract class TriangulationTransform : ReferencePointBasedTransform, IDisposable, IDiscreteTransform
     {
-        internal RBFTransform FallBackTransform = null; 
-
         /// <summary>
         /// Return the control triangle which can map the point
         /// </summary>
@@ -78,16 +76,12 @@ namespace Geometry.Transforms
         protected TriangulationTransform(MappingGridVector2[] mapPoints, TransformInfo info) : base(mapPoints, info)
         {
             Debug.Assert(mapPoints.Length >= 3, "Triangulation transform requires at least 3 points");
-
-            FallBackTransform = new RBFTransform(mapPoints, info); 
         }
 
         protected TriangulationTransform(MappingGridVector2[] mapPoints, GridRectangle mappedBounds, TransformInfo info)
             : base(mapPoints, mappedBounds, info)
         {
             Debug.Assert(mapPoints.Length >= 3, "Triangulation transform requires at least 3 points"); 
-
-            FallBackTransform = new RBFTransform(mapPoints, info); 
         }
 
         #region ISerializable Members
@@ -99,7 +93,6 @@ namespace Geometry.Transforms
                 throw new ArgumentNullException(); 
 
             _TriangleIndicies = info.GetValue("_TriangleIndicies", typeof(int[])) as int[];
-            FallBackTransform = info.GetValue("FallBackTransform", typeof(RBFTransform)) as RBFTransform;
         }
 
         public override void GetObjectData(SerializationInfo info, StreamingContext context)
@@ -107,8 +100,7 @@ namespace Geometry.Transforms
             if (info == null)
                 throw new ArgumentNullException(); 
 
-            info.AddValue("_TriangleIndicies", _TriangleIndicies);
-            info.AddValue("FallBackTransform", FallBackTransform);
+            info.AddValue("_TriangleIndicies", _TriangleIndicies); 
 
             base.GetObjectData(info, context);
         }
@@ -122,12 +114,9 @@ namespace Geometry.Transforms
         /// </summary>
         /// <param name="Point"></param>
         /// <returns></returns>
-        public override bool CanTransform(GridVector2 Point)
+        public bool CanTransform(GridVector2 Point)
         {
-            if (GetTransform(Point) == null)
-                return false;
-
-            return true;
+            return GetTransform(Point) != null;
         }
         
         /// <summary>
@@ -135,13 +124,12 @@ namespace Geometry.Transforms
         /// </summary>
         /// <param name="Point"></param>
         /// <returns></returns>
-        public override GridVector2 Transform(GridVector2 Point)
+        public GridVector2 Transform(GridVector2 Point)
         {
             MappingGridTriangle t = GetTransform(Point);
             if (t == null)
             {
-                return FallBackTransform.Transform(Point); 
-                //throw new ArgumentOutOfRangeException("Point", "Transform: Point could not be mapped");
+                throw new ArgumentOutOfRangeException("Point", string.Format("Transform: Point could not be mapped {0}", Point.ToString()));
             }
 
             return t.Transform(Point);
@@ -152,7 +140,7 @@ namespace Geometry.Transforms
         /// </summary>
         /// <param name="Point"></param>
         /// <returns></returns>
-        public override GridVector2[] Transform(GridVector2[] Points)
+        public GridVector2[] Transform(GridVector2[] Points)
         {
             MappingGridTriangle[] triangles = Points.Select(Point => GetTransform(Point)).ToArray();
             return Points.Select(p =>
@@ -160,7 +148,7 @@ namespace Geometry.Transforms
                 MappingGridTriangle t = GetTransform(p);
                 if (t == null)
                 {
-                    return FallBackTransform.Transform(p);
+                    throw new ArgumentOutOfRangeException("Point", string.Format("Transform: Point could not be mapped {0}", p.ToString()));
                 }
                 else
                 {
@@ -174,14 +162,14 @@ namespace Geometry.Transforms
         /// </summary>
         /// <param name="Point"></param>
         /// <returns></returns>
-        public override bool TryTransform(GridVector2 Point, out GridVector2 v)
+        public bool TryTransform(GridVector2 Point, out GridVector2 v)
         {
             v = new GridVector2();
             MappingGridTriangle t = GetTransform(Point);
             if (t == null)
             {
-                return FallBackTransform.TryTransform(Point, out v);
-                //return false;
+                v = default(GridVector2);
+                return false;
             }
 
             v = t.Transform(Point);
@@ -193,7 +181,7 @@ namespace Geometry.Transforms
         /// </summary>
         /// <param name="Point"></param>
         /// <returns></returns>
-        public override bool[] TryTransform(GridVector2[] Points, out GridVector2[] output)
+        public bool[] TryTransform(GridVector2[] Points, out GridVector2[] output)
         {
             MappingGridTriangle[] triangles = Points.Select(Point => GetTransform(Point)).ToArray();
             bool[] IsTransformed = triangles.Select(t => t != null).ToArray();
@@ -201,26 +189,18 @@ namespace Geometry.Transforms
             output = triangles.Select((tri, i) =>
             {
                 if (tri != null)
+                {
                     return tri.Transform(Points[i]);
+                }
                 else
-                    return FallBackTransform.Transform(Points[i]);
+                    return default(GridVector2);
+                
             }
             ).ToArray();
 
             //return IsTransformed; 
-            return Points.Select(p => true).ToArray();
-        }
-
-        private GridVector2[] TransformWithRBFFallback(GridVector2[] Points, MappingGridTriangle[] triangles)
-        {
-            return triangles.Select((t, i) =>
-            {
-                if (t == null)
-                    return FallBackTransform.Transform(Points[i]);
-
-                return t.Transform(Points[i]);
-            }).ToArray(); 
-        }
+            return IsTransformed;
+        } 
 
         #endregion
 
@@ -231,12 +211,9 @@ namespace Geometry.Transforms
         /// </summary>
         /// <param name="Point"></param>
         /// <returns></returns>
-        public override bool CanInverseTransform(GridVector2 Point)
+        public bool CanInverseTransform(GridVector2 Point)
         {
-            if (GetInverseTransform(Point) == null)
-                return false;
-
-            return true;
+            return GetInverseTransform(Point) != null;
         }
         
         /// <summary>
@@ -244,13 +221,12 @@ namespace Geometry.Transforms
         /// </summary>
         /// <param name="Point"></param>
         /// <returns></returns>
-        public override GridVector2 InverseTransform(GridVector2 Point)
+        public GridVector2 InverseTransform(GridVector2 Point)
         {
             MappingGridTriangle t = GetInverseTransform(Point);
             if (t == null)
             {
-                return FallBackTransform.InverseTransform(Point); 
-                //throw new ArgumentOutOfRangeException("Point", "InverseTransform: Point could not be mapped");
+                throw new ArgumentOutOfRangeException("Point", string.Format("InverseTransform: Point could not be mapped {0}", Point.ToString()));
             }
 
             return t.InverseTransform(Point);
@@ -261,7 +237,7 @@ namespace Geometry.Transforms
         /// </summary>
         /// <param name="Point"></param>
         /// <returns></returns>
-        public override GridVector2[] InverseTransform(GridVector2[] Points)
+        public GridVector2[] InverseTransform(GridVector2[] Points)
         {
             MappingGridTriangle[] triangles = Points.Select(Point => GetInverseTransform(Point)).ToArray();
             return Points.Select(p =>
@@ -269,7 +245,7 @@ namespace Geometry.Transforms
                 MappingGridTriangle t = GetInverseTransform(p);
                 if (t == null)
                 {
-                    return FallBackTransform.InverseTransform(p);
+                    throw new ArgumentOutOfRangeException("Point", string.Format("InverseTransform: Point could not be mapped {0}", p.ToString()));
                 }
                 else
                 {
@@ -283,19 +259,17 @@ namespace Geometry.Transforms
         /// </summary>
         /// <param name="Point"></param>
         /// <returns></returns>
-        public override bool TryInverseTransform(GridVector2 Point, out GridVector2 v)
+        public bool TryInverseTransform(GridVector2 Point, out GridVector2 v)
         {
             v = new GridVector2();
-
             MappingGridTriangle t = GetInverseTransform(Point);
             if (t == null)
             {
-                return FallBackTransform.TryInverseTransform(Point, out v); 
-//                return false;
+                v = default(GridVector2);
+                return false;
             }
 
             v = t.InverseTransform(Point);
-
             return true;
         }
 
@@ -304,7 +278,7 @@ namespace Geometry.Transforms
         /// </summary>
         /// <param name="Point"></param>
         /// <returns></returns>
-        public override bool[] TryInverseTransform(GridVector2[] Points, out GridVector2[] output)
+        public bool[] TryInverseTransform(GridVector2[] Points, out GridVector2[] output)
         {
             MappingGridTriangle[] triangles = Points.Select(Point => GetInverseTransform(Point)).ToArray();
             bool[] IsTransformed = triangles.Select(t => t != null).ToArray();
@@ -312,273 +286,19 @@ namespace Geometry.Transforms
             output = triangles.Select((tri, i) =>
             {
                 if (tri != null)
+                {
                     return tri.InverseTransform(Points[i]);
+                }
                 else
-                    return FallBackTransform.InverseTransform(Points[i]);
+                    return default(GridVector2);
+
             }
             ).ToArray();
 
-            //return IsTransformed;
-            return Points.Select(p => true).ToArray();
-        }
+            //return IsTransformed; 
+            return IsTransformed;
+        } 
 
-        private GridVector2[] InverseTransformWithRBFFallback(GridVector2[] Points, MappingGridTriangle[] triangles)
-        {
-            return triangles.Select((t, i) =>
-            {
-                if (t == null)
-                    return FallBackTransform.InverseTransform(Points[i]);
-
-                return t.Transform(Points[i]);
-            }).ToArray();
-        }
-
-        /// <summary>
-        /// Takes two transforms and transforms the control grid of this section into the control grid space of the passed transfrom. Requires control section
-        /// of this transform to match mapped section of adding transform
-        /// </summary>
-        public static TriangulationTransform Transform(TriangulationTransform FixedTransform, TriangulationTransform WarpingTransform, TransformInfo info)
-        {
-            if (FixedTransform == null || WarpingTransform == null)
-            {
-                throw new ArgumentNullException("TriangulationTransform Transform"); 
-            }
-
-            //We can't map if we don't have a triangle, return a copy of the triangle we were trying to transform
-            if (WarpingTransform.MapPoints.Length < 3)
-            {
-                Debug.Fail("Can't transform with Triangulation with fewer than three points");
-                return null;
-            }
-
-            //If they don't overlap lets save ourselves a lot of time...
-            if (FixedTransform.MappedBounds.Intersects(WarpingTransform.ControlBounds) == false)
-            {
-                
-                return null;
-            }
-
-            //FixedTransform.CalculateEdges();
-            //WarpingTransform.BuildDataStructures();
-
-            //Reset boundaries since they will be changed
-            //filter.ControlBounds = new GridRectangle(double.MinValue, double.MinValue, 0, 0);
-            //filter.MappedBounds = new GridRectangle(double.MinValue, double.MinValue, 0, 0);
-
-            List<AddTransformThreadObj> threadObjList = new List<AddTransformThreadObj>();
-
-            List<ManualResetEvent> doneEvents = new List<ManualResetEvent>();
-            List<MappingGridVector2> newPoints = new List<MappingGridVector2>(WarpingTransform.MapPoints.Length);
-
-#if DEBUG
-//            List<GridVector2> mapPointList = new List<GridVector2>(newPoints.Count);
-#endif
-
-            int MinThreadPoints = 64; 
-
-            //            Trace.WriteLine("Starting with " + mapPoints.Length + " points", "Geometry"); 
-
-            //    List<MappingGridVector2> newPoints = new List<MappingGridVector2>(); 
-
-            //           Trace.WriteLine("Started GridTransform.Add with " + mapPoints.Length.ToString() + " points", "Geometry"); 
-
-            //Search all mapping triangles and update control points, if they fall outside the grid then discard the triangle
-            //Give each thread a lot of work to do
-            int PointsPerThread = WarpingTransform.MapPoints.Length / (System.Environment.ProcessorCount * 8);
-            if (PointsPerThread < MinThreadPoints)
-            {
-                PointsPerThread = MinThreadPoints;
-            }
-
-            for (int iPoint = 0; iPoint < WarpingTransform.MapPoints.Length; iPoint += PointsPerThread)
-            {
-                //Create a series of points for the thread to process so they aren't constantly hitting the queue lock looking for new work. 
-                List<int> listPoints = new List<int>(PointsPerThread);
-                for (int iAddPoint = iPoint; iAddPoint < iPoint + PointsPerThread; iAddPoint++)
-                {
-                    //Don't add if the point is out of range
-                    if (iAddPoint >= WarpingTransform.MapPoints.Length)
-                        break;
-
-                    listPoints.Add(iAddPoint);
-                }
-
-                //MappingGridVector2 mapPoint = mapPoints[iPoint];
-                AddTransformThreadObj AddThreadObj = null;
-                try
-                {
-                    AddThreadObj = new AddTransformThreadObj(listPoints.ToArray(), WarpingTransform, FixedTransform);
-                    
-                    threadObjList.Add(AddThreadObj);
-
-                    if (WarpingTransform.MapPoints.Length <= MinThreadPoints)
-                    {
-                        AddThreadObj.DoneEvent.Set();
-                        AddThreadObj.ThreadPoolCallback(System.Threading.Thread.CurrentContext);
-                    }
-                    else
-                    {
-                        doneEvents.Add(AddThreadObj.DoneEvent);
-                        //For single threaded debug, comment out threadpool and uncomment AddThreadObj.ThreadPoolCallback line
-                        ThreadPool.QueueUserWorkItem(AddThreadObj.ThreadPoolCallback);
-
-                    }
-
-                    AddThreadObj = null;
-                }
-                catch (Exception)
-                {
-                    if (AddThreadObj != null)
-                    {
-                        AddThreadObj.Dispose();
-                        AddThreadObj = null;
-                    }
-
-                    throw;
-                }
-                
-#if false
-                for (int iTest = 1; iTest < newPoints.Count; iTest++)
-                {
-                    Debug.Assert(newPoints[iTest - 1].ControlPoint != newPoints[iTest].ControlPoint); 
-                }
-
-                for (int iMap = 0; iMap < AddThreadObj.newPoints.Length; iMap++)
-                {
-                    mapPointList.Add(AddThreadObj.newPoints[iMap].MappedPoint);
-                }
-
-                mapPointList.Sort();
-
-                for (int iMap = 1; iMap < mapPointList.Count; iMap++)
-                {
-                    Debug.Assert(GridVector2.Distance(mapPointList[iMap], mapPointList[iMap - 1]) > Global.epsilon);
-                }
-#endif
-            }
-
-            //Wait for the threads to finish processing.  There is a 64 handle limit for WaitAll so we wait on one at a time
-            foreach (ManualResetEvent doneEvent in doneEvents)
-            {
-                doneEvent.WaitOne();
-            }
-
-            newPoints.Clear();
-
-            //This indicates if every original point was transformable.  If it is true and we started with a grid transform we then know the output can also be a grid transform
-            bool AllPointsTransformed = true;
-            foreach (AddTransformThreadObj obj in threadObjList)
-            {
-                AllPointsTransformed = AllPointsTransformed && obj.AllPointsTransformed;
-                if (obj.newPoints != null)
-                    newPoints.AddRange(obj.newPoints);
-
-                obj.Dispose();
-            }
-
-            //            Trace.WriteLine("Mapped " + newPoints.Count + " points", "Geometry"); 
-
-#if false
-
-            mapPointList.Clear(); 
-            for (int iMap = 0; iMap < newPoints.Count; iMap++)
-            {
-                mapPointList.Add(newPoints[iMap].MappedPoint);
-            }
-
-            mapPointList.Sort();
-
-            for (int iMap = 1; iMap < mapPointList.Count; iMap++)
-            {
-                Debug.Assert(GridVector2.Distance(mapPointList[iMap], mapPointList[iMap - 1]) > Global.epsilon);
-            }
-#endif
-
-            MappingGridVector2.RemoveDuplicates(newPoints);
-
-            //Cannot make a transform with fewer than 3 points
-            if (newPoints.Count < 3)
-            {
-                return null; 
-            }
-
-            TriangulationTransform newTransform = null;
-
-            //If we started with a grid transform and all the control points mapped then we can create a new grid transform
-            GridTransform gridTransform = WarpingTransform as GridTransform;
-            if (gridTransform != null && AllPointsTransformed)
-            {
-                Debug.Assert(WarpingTransform.MapPoints.Length == newPoints.Count);
-
-                //Used to set mapped bounds to WarpingTransform.MappedBounds, but it was incorrect.  Setting mapped bounds to null so it is calculated.
-                newTransform = new GridTransform(newPoints.ToArray(), new GridRectangle(), gridTransform.GridSizeX, gridTransform.GridSizeY, info);
-            }
-            else
-            {
-                newTransform = new MeshTransform(newPoints.ToArray(), info);
-            }
-
-            //Optional, but useful step. In rare cases we lose some mappable space when the fixed transform are inside the control space of the mapped transform, but the triangulation of the mapped control points would eliminate these points
-            //in these cases we can test if they can be added back in. 
-            /*
-            System.Collections.Concurrent.ConcurrentBag<MappingGridVector2> MappableFixedPoints = new System.Collections.Concurrent.ConcurrentBag<MappingGridVector2>();
-            Parallel.ForEach<MappingGridVector2>(FixedTransform.MapPoints, FixedPointPair =>
-            {
-                if (!newTransform.CanInverseTransform(FixedPointPair.ControlPoint) &&
-                    WarpingTransform.CanInverseTransform(FixedPointPair.MappedPoint))
-                {
-                    GridVector2 NewMapPoint = WarpingTransform.InverseTransform(FixedPointPair.MappedPoint);
-
-                    MappableFixedPoints.Add(new MappingGridVector2(FixedPointPair.ControlPoint, NewMapPoint));
-                    
-                }
-            }
-            );
-
-            if (MappableFixedPoints.Count > 0)
-            {
-                foreach (MappingGridVector2 newPoint in MappableFixedPoints)
-                {
-                    bool add = true; 
-                    foreach (MappingGridVector2 oldPoint in newPoints)
-                    {
-                        if (newPoint.ControlPoint == oldPoint.ControlPoint ||
-                           newPoint.MappedPoint == oldPoint.MappedPoint)
-                        {
-                            add = false;
-                            break;
-                        }
-                    }
-                    
-                    if(add)
-                    {
-                        newPoints.Add(newPoint);
-                    }
-                }
-
-                //MappingGridVector2.RemoveDuplicates(newPoints);
-                newTransform = new MeshTransform(newPoints.ToArray(), info);
-            }
-            */
-            /*
-             
-            //            Trace.WriteLine("Ended with " + newPoints.Count + " points", "Geometry");
-            this.MapPoints = newPoints.ToArray();
-
-            //Edges are build on mapPoints, so we need to remove them so they'll be recalculates
-            _edges = null;
-            //Other datastructures are dependent on edges, so minimize memory will delete them
-            MinimizeMemory();
-
-            //            Trace.WriteLine("Finished GridTransform.Add with " + newPoints.Count.ToString() + " points", "Geometry"); 
-
-            //Check whether these have been set yet or if I don't need to clear them again
-            this.Info.ControlSection = WarpingTransform.Info.ControlSection;
-            
-            */
-
-            return newTransform;
-        }
 
         #endregion
 
@@ -603,8 +323,7 @@ namespace Geometry.Transforms
         #region Extra data cruft
 
         public List<MappingGridVector2> IntersectingControlRectangle(GridRectangle gridRect, bool IncludeAdjacent)
-        {
-            //List<MappingGridVector2> foundPoints = IntersectingRectangle(gridRect, this.controlTriangles);
+        { 
             List<MappingGridVector2> foundPoints = IntersectingRectangleRTree(gridRect, this.controlTrianglesRTree);
             if (!IncludeAdjacent)
             {
@@ -622,8 +341,7 @@ namespace Geometry.Transforms
         }
 
         public List<MappingGridVector2> IntersectingMappedRectangle(GridRectangle gridRect, bool IncludeAdjacent)
-        {
-            //List<MappingGridVector2> foundPoints = IntersectingRectangle(gridRect, this.mapTriangles);
+        { 
             List<MappingGridVector2> foundPoints = IntersectingRectangleRTree(gridRect, this.mapTrianglesRTree);
             if (!IncludeAdjacent)
             {
@@ -640,9 +358,11 @@ namespace Geometry.Transforms
             return foundPoints;
         }
 
-                /// <summary>
+        /// <summary>
         /// You need to take this lock when building or changing the QuadTrees managing the triangles of the mesh
         /// </summary>
+        ///
+        [NonSerialized]
         ReaderWriterLockSlim rwLockTriangles = new ReaderWriterLockSlim();
         private RTree.RTree<MappingGridTriangle> _mapTrianglesRTree = null;
 
@@ -883,10 +603,7 @@ namespace Geometry.Transforms
                 }
             }
 
-            return MappingPointList; 
-            
-
-           
+            return MappingPointList;
         }
 
         
@@ -903,7 +620,7 @@ namespace Geometry.Transforms
 
                 _mapTrianglesRTree = null;
                 _controlTrianglesRTree = null;
-                _TriangleList = null; 
+                _TriangleList = null;
             }
             finally
             {
@@ -935,5 +652,253 @@ namespace Geometry.Transforms
             Dispose(true);
             GC.SuppressFinalize(this);
         }
+
+
+
+        /// <summary>
+        /// Takes two transforms and transforms the control grid of this section into the control grid space of the passed transfrom. Requires control section
+        /// of this transform to match mapped section of adding transform
+        /// </summary>
+        public static TriangulationTransform Transform(TriangulationTransform BtoC, TriangulationTransform AtoB, TransformInfo info)
+        {
+            if (BtoC == null || AtoB == null)
+            {
+                throw new ArgumentNullException("TriangulationTransform Transform");
+            }
+
+            //We can't map if we don't have a triangle, return a copy of the triangle we were trying to transform
+            if (AtoB.MapPoints.Length < 3)
+            {
+                Debug.Fail("Can't transform with Triangulation with fewer than three points");
+                return null;
+            }
+
+            //If they don't overlap lets save ourselves a lot of time...
+            if (BtoC.MappedBounds.Intersects(AtoB.ControlBounds) == false)
+            {
+                return null;
+            }
+
+            //FixedTransform.CalculateEdges();
+            //WarpingTransform.BuildDataStructures();
+
+            //Reset boundaries since they will be changed
+            //filter.ControlBounds = new GridRectangle(double.MinValue, double.MinValue, 0, 0);
+            //filter.MappedBounds = new GridRectangle(double.MinValue, double.MinValue, 0, 0);
+
+            List<AddTransformThreadObj> threadObjList = new List<AddTransformThreadObj>();
+
+            List<ManualResetEvent> doneEvents = new List<ManualResetEvent>();
+            List<MappingGridVector2> newPoints = new List<MappingGridVector2>(AtoB.MapPoints.Length);
+
+#if DEBUG
+            //            List<GridVector2> mapPointList = new List<GridVector2>(newPoints.Count);
+#endif
+
+            int MinThreadPoints = 64;
+
+            //            Trace.WriteLine("Starting with " + mapPoints.Length + " points", "Geometry"); 
+
+            //    List<MappingGridVector2> newPoints = new List<MappingGridVector2>(); 
+
+            //           Trace.WriteLine("Started GridTransform.Add with " + mapPoints.Length.ToString() + " points", "Geometry"); 
+
+            //Search all mapping triangles and update control points, if they fall outside the grid then discard the triangle
+            //Give each thread a lot of work to do
+            int PointsPerThread = AtoB.MapPoints.Length / (System.Environment.ProcessorCount * 8);
+            if (PointsPerThread < MinThreadPoints)
+            {
+                PointsPerThread = MinThreadPoints;
+            }
+
+            for (int iPoint = 0; iPoint < AtoB.MapPoints.Length; iPoint += PointsPerThread)
+            {
+                //Create a series of points for the thread to process so they aren't constantly hitting the queue lock looking for new work. 
+                List<int> listPoints = new List<int>(PointsPerThread);
+                for (int iAddPoint = iPoint; iAddPoint < iPoint + PointsPerThread; iAddPoint++)
+                {
+                    //Don't add if the point is out of range
+                    if (iAddPoint >= AtoB.MapPoints.Length)
+                        break;
+
+                    listPoints.Add(iAddPoint);
+                }
+
+                //MappingGridVector2 mapPoint = mapPoints[iPoint];
+                AddTransformThreadObj AddThreadObj = null;
+                try
+                {
+                    AddThreadObj = new AddTransformThreadObj(listPoints.ToArray(), AtoB, BtoC);
+
+                    threadObjList.Add(AddThreadObj);
+
+                    if (AtoB.MapPoints.Length <= MinThreadPoints)
+                    {
+                        AddThreadObj.DoneEvent.Set();
+                        AddThreadObj.ThreadPoolCallback(System.Threading.Thread.CurrentContext);
+                    }
+                    else
+                    {
+                        doneEvents.Add(AddThreadObj.DoneEvent);
+                        //For single threaded debug, comment out threadpool and uncomment AddThreadObj.ThreadPoolCallback line
+                        ThreadPool.QueueUserWorkItem(AddThreadObj.ThreadPoolCallback);
+                    }
+
+                    AddThreadObj = null;
+                }
+                catch (Exception)
+                {
+                    if (AddThreadObj != null)
+                    {
+                        AddThreadObj.Dispose();
+                        AddThreadObj = null;
+                    }
+
+                    throw;
+                }
+
+#if false
+                for (int iTest = 1; iTest < newPoints.Count; iTest++)
+                {
+                    Debug.Assert(newPoints[iTest - 1].ControlPoint != newPoints[iTest].ControlPoint); 
+                }
+
+                for (int iMap = 0; iMap < AddThreadObj.newPoints.Length; iMap++)
+                {
+                    mapPointList.Add(AddThreadObj.newPoints[iMap].MappedPoint);
+                }
+
+                mapPointList.Sort();
+
+                for (int iMap = 1; iMap < mapPointList.Count; iMap++)
+                {
+                    Debug.Assert(GridVector2.Distance(mapPointList[iMap], mapPointList[iMap - 1]) > Global.epsilon);
+                }
+#endif
+            }
+
+            //Wait for the threads to finish processing.  There is a 64 handle limit for WaitAll so we wait on one at a time
+            foreach (ManualResetEvent doneEvent in doneEvents)
+            {
+                doneEvent.WaitOne();
+            }
+
+            newPoints.Clear();
+
+            //This indicates if every original point was transformable.  If it is true and we started with a grid transform we then know the output can also be a grid transform
+            bool AllPointsTransformed = true;
+            foreach (AddTransformThreadObj obj in threadObjList)
+            {
+                AllPointsTransformed = AllPointsTransformed && obj.AllPointsTransformed;
+                if (obj.newPoints != null)
+                    newPoints.AddRange(obj.newPoints);
+
+                obj.Dispose();
+            }
+
+            //            Trace.WriteLine("Mapped " + newPoints.Count + " points", "Geometry"); 
+
+#if false
+
+            mapPointList.Clear(); 
+            for (int iMap = 0; iMap < newPoints.Count; iMap++)
+            {
+                mapPointList.Add(newPoints[iMap].MappedPoint);
+            }
+
+            mapPointList.Sort();
+
+            for (int iMap = 1; iMap < mapPointList.Count; iMap++)
+            {
+                Debug.Assert(GridVector2.Distance(mapPointList[iMap], mapPointList[iMap - 1]) > Global.epsilon);
+            }
+#endif
+
+            MappingGridVector2.RemoveDuplicates(newPoints);
+
+            //Cannot make a transform with fewer than 3 points
+            if (newPoints.Count < 3)
+            {
+                return null;
+            }
+
+            TriangulationTransform newTransform = null;
+
+            //If we started with a grid transform and all the control points mapped then we can create a new grid transform
+            GridTransform gridTransform = AtoB as GridTransform;
+            if (gridTransform != null && AllPointsTransformed)
+            {
+                Debug.Assert(AtoB.MapPoints.Length == newPoints.Count);
+
+                //Used to set mapped bounds to WarpingTransform.MappedBounds, but it was incorrect.  Setting mapped bounds to null so it is calculated.
+                newTransform = new GridTransform(newPoints.ToArray(), new GridRectangle(), gridTransform.GridSizeX, gridTransform.GridSizeY, info);
+            }
+            else
+            {
+                newTransform = new MeshTransform(newPoints.ToArray(), info);
+            }
+
+            //Optional, but useful step. In rare cases we lose some mappable space when the fixed transform are inside the control space of the mapped transform, but the triangulation of the mapped control points would eliminate these points
+            //in these cases we can test if they can be added back in. 
+            /*
+            System.Collections.Concurrent.ConcurrentBag<MappingGridVector2> MappableFixedPoints = new System.Collections.Concurrent.ConcurrentBag<MappingGridVector2>();
+            Parallel.ForEach<MappingGridVector2>(FixedTransform.MapPoints, FixedPointPair =>
+            {
+                if (!newTransform.CanInverseTransform(FixedPointPair.ControlPoint) &&
+                    WarpingTransform.CanInverseTransform(FixedPointPair.MappedPoint))
+                {
+                    GridVector2 NewMapPoint = WarpingTransform.InverseTransform(FixedPointPair.MappedPoint);
+
+                    MappableFixedPoints.Add(new MappingGridVector2(FixedPointPair.ControlPoint, NewMapPoint));
+                    
+                }
+            }
+            );
+
+            if (MappableFixedPoints.Count > 0)
+            {
+                foreach (MappingGridVector2 newPoint in MappableFixedPoints)
+                {
+                    bool add = true; 
+                    foreach (MappingGridVector2 oldPoint in newPoints)
+                    {
+                        if (newPoint.ControlPoint == oldPoint.ControlPoint ||
+                           newPoint.MappedPoint == oldPoint.MappedPoint)
+                        {
+                            add = false;
+                            break;
+                        }
+                    }
+                    
+                    if(add)
+                    {
+                        newPoints.Add(newPoint);
+                    }
+                }
+
+                //MappingGridVector2.RemoveDuplicates(newPoints);
+                newTransform = new MeshTransform(newPoints.ToArray(), info);
+            }
+            */
+            /*
+             
+            //            Trace.WriteLine("Ended with " + newPoints.Count + " points", "Geometry");
+            this.MapPoints = newPoints.ToArray();
+
+            //Edges are build on mapPoints, so we need to remove them so they'll be recalculates
+            _edges = null;
+            //Other datastructures are dependent on edges, so minimize memory will delete them
+            MinimizeMemory();
+
+            //            Trace.WriteLine("Finished GridTransform.Add with " + newPoints.Count.ToString() + " points", "Geometry"); 
+
+            //Check whether these have been set yet or if I don't need to clear them again
+            this.Info.ControlSection = WarpingTransform.Info.ControlSection;
+            
+            */
+
+            return newTransform;
+        }
     }
+
 }

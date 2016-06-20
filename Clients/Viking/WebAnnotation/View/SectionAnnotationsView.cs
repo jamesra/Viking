@@ -21,9 +21,7 @@ using WebAnnotation;
 using Viking.VolumeModel;
 
 namespace WebAnnotation.ViewModel
-{ 
-  
-    
+{  
     public interface ISectionAnnotationsView
     {
         void AddLocations(ICollection<LocationObj> locations);
@@ -1117,7 +1115,6 @@ namespace WebAnnotation.ViewModel
             AddLocationBatch(locationObjs);
         }
         
-
         public override bool ReceiveWeakEvent(Type managerType, object sender, EventArgs e)
         {
             System.Collections.Specialized.NotifyCollectionChangedEventArgs CollectionChangeArgs = e as System.Collections.Specialized.NotifyCollectionChangedEventArgs;

@@ -217,8 +217,8 @@ namespace Viking.VolumeModel
         /// <param name="transform"></param>
         /// <param name="VisibleBounds"></param>
         /// <returns></returns>
-        protected List<MappingGridVector2> VisibleBoundsCorners(Geometry.Transforms.TransformBase transform, GridRectangle VisibleBounds)
-        {
+        protected List<MappingGridVector2> VisibleBoundsCorners(ITransform transform, GridRectangle VisibleBounds)
+        {  
             List<MappingGridVector2> listBoundCorners = new List<MappingGridVector2>(4);
             //Add any corners of the VisibleBounds that we can transform to the list of points
             bool transformSuccess = false;

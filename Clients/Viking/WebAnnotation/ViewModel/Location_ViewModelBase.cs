@@ -124,7 +124,7 @@ namespace WebAnnotation.ViewModel
                 return _Parent;
             }
         }
-
+        /*
         #region Weak Events
         private object EventsLock = new object();
         private bool EventsRegistered = false;
@@ -176,7 +176,7 @@ namespace WebAnnotation.ViewModel
             }
         }
         #endregion
-
+        */
         #region IUIObject Members
 
         public override void Delete()

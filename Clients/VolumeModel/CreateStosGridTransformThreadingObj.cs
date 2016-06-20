@@ -6,7 +6,8 @@ using System.Text;
 using System.Threading;
 using System.Xml.Linq; 
 using Geometry;
-using System.IO; 
+using System.IO;
+using Geometry.Transforms;
 
 namespace Viking.VolumeModel
 {
@@ -15,13 +16,14 @@ namespace Viking.VolumeModel
         public ManualResetEvent DoneEvent = new ManualResetEvent(false);
 
         readonly Uri ServerPath;
-        readonly string LocalPath;
+        readonly string LocalCachePath;
+        readonly string LocalCacheDir;
         readonly System.Net.NetworkCredential UserCredentials;
 
         public readonly XElement element;
         private Stream stream;
 
-        public Geometry.Transforms.TransformBase stosTransform;
+        public ITransform stosTransform;
 
         protected DateTime? lastModified; 
 
@@ -30,28 +32,31 @@ namespace Viking.VolumeModel
             return element.ToString(); 
         }
 
-        public CreateStosTransformThreadingObj(Stream stream, XElement reader, DateTime LastModified)
+        public CreateStosTransformThreadingObj(Stream stream, XElement reader, DateTime LastModified, string LocalCacheDir)
         {
             this.element = reader;
             this.stream = stream;
-            this.lastModified = new DateTime?(LastModified); 
+            this.lastModified = new DateTime?(LastModified);
+            this.LocalCacheDir = LocalCacheDir;
         }
 
-        public CreateStosTransformThreadingObj(String fullpath, XElement reader)
+        public CreateStosTransformThreadingObj(String localCachePath, XElement reader, string LocalCacheDir)
         {
             this.element = reader;
-            this.LocalPath = fullpath; 
+            this.LocalCachePath = localCachePath;
+            this.LocalCacheDir = LocalCacheDir;
         }
 
-        public CreateStosTransformThreadingObj(Uri path, System.Net.NetworkCredential userCreds, XElement reader)
+        public CreateStosTransformThreadingObj(Uri path, System.Net.NetworkCredential userCreds, XElement reader, string LocalCacheDir)
         {
             this.element = reader;
             this.ServerPath = path;
             UserCredentials = userCreds;
+            this.LocalCacheDir = LocalCacheDir;
         }
 
         public void ThreadPoolCallback(Object threadContext)
-        {
+        {  
             if (stream != null)
             {
                 //stosTransform = new StosGridTransform(stream, element);
@@ -67,7 +72,7 @@ namespace Viking.VolumeModel
 
                 Geometry.Transforms.StosTransformInfo info = new Geometry.Transforms.StosTransformInfo(ControlSection, MappedSection, this.lastModified.Value);
 
-                stosTransform = Geometry.Transforms.TransformFactory.ParseStos(stream, info, pixelSpacing);
+                stosTransform = TransformFactory.ParseStos(stream, info, pixelSpacing);
 
                 if (stream != null)
                 {
@@ -76,19 +81,39 @@ namespace Viking.VolumeModel
                     stream = null; 
                 }
             }
-            else if (LocalPath != null)
+            else if (LocalCachePath != null)
             {
-                stosTransform = Geometry.Transforms.TransformFactory.ParseStos(LocalPath);
+                stosTransform = TransformFactory.ParseStos(LocalCachePath);
             }
             else
             {
                 //stosTransform = new StosGridTransform(Path, element, UserCredentials); 
-                stosTransform = Geometry.Transforms.TransformFactory.ParseStos(ServerPath, element, UserCredentials);
+                stosTransform = TransformFactory.ParseStos(ServerPath, element, UserCredentials);
             }
 
+            /*
+            if(loadedTransform as IDiscreteTransform != null)
+            {
+                Geometry.Transforms.StosTransformInfo info = ((ITransformInfo)loadedTransform).Info as Geometry.Transforms.StosTransformInfo;
+                string SerializerCacheFullPath = Path.Combine(this.LocalCacheDir, info.GetCacheFilename(".stos_bin"));
+                if (Geometry.Global.IsCacheFileValid(SerializerCacheFullPath, info.LastModified))
+                {
+                    stosTransform = Serialization.LoadSerializedTransformFromCache(SerializerCacheFullPath);
+                }
+                else
+                {
+                    stosTransform = loadedTransform;
+                }
+            }
+            else
+            {
+                stosTransform = loadedTransform as IContinuousTransform;
+            }*/
+
             DoneEvent.Set();
-           
         }
+
+       
 
         #region IDisposable Members
 

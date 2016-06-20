@@ -153,7 +153,7 @@ namespace WebAnnotation
             WebAnnotationModel.State.UserCredentials = Viking.UI.State.UserCredentials; 
 
             //Check the VikingXML for the endpoint first.  
-            if (GetEndpointFromXML(volume.VolumeXML))
+            if (GetEndpointFromXML(volume.VolumeElement))
             {
                 LoadUserPreferences();
                 return true;
@@ -198,44 +198,33 @@ namespace WebAnnotation
             } 
         }
 
-        static bool GetEndpointFromXML(XDocument XMLMapping)
-        {
-            if(XMLMapping == null)
+        static bool GetEndpointFromXML(XElement elem)
+    { 
+            //Fetch the name if we know it
+            switch (elem.Name.LocalName)
             {
-                return false;
+                case "Volume":
+                    IEnumerable<XElement> SettingsElements = elem.Elements().Where(e => e.Name.LocalName == "DefaultWebAnnotationUserSettings");
+                    if (SettingsElements.Count() > 0)
+                    {
+                        UserSettingsElement = SettingsElements.First();
+                    }
+
+                    IEnumerable<XElement> MappingElements = elem.Elements().Where(e => e.Name.LocalName == "VolumeToEndpoint");
+
+                    if (MappingElements.Count() == 0)
+                        break;
+
+                    Global.PopulateEndpointStateFromVolumeToEndpointElement(MappingElements.First());
+
+                    break;
+                default:
+                    break;
             }
 
-            //Examine the mappings and determine if we can map the volume
-            IEnumerable<XElement> VolumeElements = XMLMapping.Elements().Where(elem => elem.Name.LocalName == "Volume");
-
-            foreach (XElement elem in VolumeElements)
-            {
-                //Fetch the name if we know it
-                switch (elem.Name.LocalName)
-                {
-                    case "Volume":
-                        IEnumerable<XElement> SettingsElements = elem.Elements().Where(e => e.Name.LocalName == "DefaultWebAnnotationUserSettings");
-                        if (SettingsElements.Count() > 0)
-                        {
-                            UserSettingsElement = SettingsElements.First();
-                        }
-
-                        IEnumerable<XElement> MappingElements = elem.Elements().Where(e => e.Name.LocalName == "VolumeToEndpoint");
-
-                        if (MappingElements.Count() == 0)
-                            break;
-
-                        Global.PopulateEndpointStateFromVolumeToEndpointElement(MappingElements.First());
-
-                        break;
-                    default:
-                        break;
-                }
-
-                //If we have an endpoint address then give the OK to load
-                if (WebAnnotationModel.State.EndpointAddress != null)
-                    return true;
-            }
+            //If we have an endpoint address then give the OK to load
+            if (WebAnnotationModel.State.EndpointAddress != null)
+                return true; 
 
             //We don't have an endpoint to read/write annotations.  Do not load.
             return false;

@@ -31,12 +31,12 @@ namespace Geometry.Transforms
         /// <summary>
         /// Space the transform maps to
         /// </summary>
-        public int ControlSection;
+        public readonly int ControlSection;
 
         /// <summary>
         /// Space the transform maps from
         /// </summary>
-        public int MappedSection;
+        public readonly int MappedSection;
 
         public StosTransformInfo(int cSection, int mSection)
         {
@@ -51,9 +51,21 @@ namespace Geometry.Transforms
             this.MappedSection = mSection;
         }
 
+        public string GetCacheFilename(string extension)
+        {
+            return MappedSection.ToString() + "-" + ControlSection.ToString() + extension;
+        }
+
         public override string ToString()
         {
             return MappedSection.ToString() + " to " + ControlSection.ToString();
+        }
+
+        public static StosTransformInfo Merge(StosTransformInfo AtoB, StosTransformInfo BtoC)
+        {
+            return new StosTransformInfo(BtoC.ControlSection,
+                                         AtoB.MappedSection,
+                                         BtoC.LastModified > AtoB.LastModified ? AtoB.LastModified : BtoC.LastModified);
         }
     }
 
@@ -82,34 +94,61 @@ namespace Geometry.Transforms
         {
             return TileFileName;
         }
-        
-        /*
-         * 
-#region ISerializable
+    }
 
-        public TileGridTransform(SerializationInfo info, StreamingContext context)
-            : base(info, context)
+    /// <summary>
+    /// Transforms can expose this interface for to provide storage location info for serializing transforms
+    /// </summary>
+    [Serializable]
+    public class TransformCacheInfo : ITransformCacheInfo
+    {
+        private readonly string _CacheDirectory;
+        private string _FilenameBase = null;
+        private string _Extension = null;
+
+        public TransformCacheInfo(string CacheDirectory, string Filename)
         {
-            TileWidth = info.GetInt32("ImageWidth");
-            TileHeight = info.GetInt32("ImageHeight");
-            Number = info.GetInt32("Number");
-            TileFileName = info.GetString("TileFileName");
+            _Extension = ".stos_bin";
+            _FilenameBase = System.IO.Path.GetFileNameWithoutExtension(Filename);
+            _Extension = System.IO.Path.GetExtension(Filename); 
+        }
+         
+        public string CacheDirectory
+        {
+            get
+            {
+                return _CacheDirectory;
+            }
         }
 
-        public override void GetObjectData(SerializationInfo info, StreamingContext context)
+        public string CacheFilename
         {
-            base.GetObjectData(info, context);
-
-            info.AddValue("TileFileName", TileFileName);
-            info.AddValue("ImageWidth", TileWidth);
-            info.AddValue("ImageHeight", TileHeight);
-            info.AddValue("Number", Number);
+            get
+            {
+                return _FilenameBase + _Extension;
+            }
         }
-        
-#endregion
-         * 
-         */
 
+        public string CacheFullPath
+        {
+            get
+            {
+                return System.IO.Path.Combine(this.CacheDirectory, this.CacheFilename);
+            }
+        }
+
+        public string Extension
+        {
+            get
+            {
+                return _Extension;
+            }
+
+            set
+            {
+                _Extension = value;
+            }
+        }        
     }
 
 }

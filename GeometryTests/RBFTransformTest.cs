@@ -5,7 +5,10 @@ using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Geometry;
 using Geometry.Transforms;
-using System.Diagnostics; 
+using System.Diagnostics;
+using MathNet;
+using MathNet.Numerics;
+using MathNet.Numerics.LinearAlgebra;
 
 namespace GeometryTests
 {
@@ -26,13 +29,13 @@ namespace GeometryTests
                                                            new GridVector2(281.1427, 149.3817)};
 
 
-            double[,] BetaMatrix = Geometry.Transforms.RBFTransform.CreateBetaMatrixWithLinear(ControlPoints, 
+            Matrix<float> BetaMatrix = Geometry.Transforms.RBFTransform.CreateBetaMatrixWithLinear(ControlPoints, 
                                                                                                Geometry.Transforms.RBFTransform.StandardBasisFunction);
 
-            double[] SolutionMatrix = Geometry.Transforms.RBFTransform.CreateSolutionMatrixWithLinear(MappedPoints);
+            float[] SolutionMatrix = Geometry.Transforms.RBFTransform.CreateSolutionMatrixWithLinear(MappedPoints);
 
             //double[] Weights = GridMatrix.LinSolve(BetaMatrix, SolutionMatrix); 
-            double[] Weights = RBFTransform.CalculateRBFWeights(MappedPoints, ControlPoints, RBFTransform.StandardBasisFunction);
+            float[] Weights = RBFTransform.CalculateRBFWeights(MappedPoints, ControlPoints, RBFTransform.StandardBasisFunction);
 
             MappingGridVector2[] Points = new MappingGridVector2[ControlPoints.Length]; 
             for(int i = 0; i < ControlPoints.Length; i++)

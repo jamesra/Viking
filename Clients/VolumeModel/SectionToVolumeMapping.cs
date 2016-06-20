@@ -55,18 +55,14 @@ namespace Viking.VolumeModel
         /// The transformation which will/has converted the tiles from section space into volume space.
         /// This can be null if this section is not warped into volume space. 
         /// </summary>
-        public readonly TriangulationTransform VolumeTransform;
+        public readonly ITransform VolumeTransform;
 
         public override string CachedTransformsFileName
         {
-            get { return Section.volume.LocalCachePath + 
-                System.IO.Path.DirectorySeparatorChar + 
-                Section.volume.Name + 
-                System.IO.Path.DirectorySeparatorChar + 
-                VolumeTransform.ToString() + "_stos.cache"; }
+            get { return System.IO.Path.Combine(Section.volume.Paths.LocalVolumeDir, VolumeTransform.ToString() + "_stos.cache"); }
         }
 
-        public SectionToVolumeMapping(Section section, string name,  FixedTileCountMapping sourceMapping, TriangulationTransform volumeTransform) 
+        public SectionToVolumeMapping(Section section, string name,  FixedTileCountMapping sourceMapping, ITransform volumeTransform) 
             : base(section, name, sourceMapping.TilePrefix, sourceMapping.TilePostfix )
         {
             HasBeenWarped = false;
@@ -108,13 +104,15 @@ namespace Viking.VolumeModel
 
                 Debug.Assert(this.VolumeTransform != null);
 
+                TransformInfo VolumeTransformInfo = ((ITransformInfo)VolumeTransform).Info;
+
                 bool LoadedFromCache = false; 
                 if (System.IO.File.Exists(this.CachedTransformsFileName))
                 {
                     /*Check to make sure cache file is older than both .stos modified time and mapping modified time*/
                     DateTime CacheCreationTime = System.IO.File.GetLastWriteTimeUtc(this.CachedTransformsFileName);
 
-                    if (CacheCreationTime >= VolumeTransform.Info.LastModified &&
+                    if (CacheCreationTime >= VolumeTransformInfo.LastModified &&
                         CacheCreationTime >= SourceMapping.LastModified)
                     {
                         try
@@ -175,10 +173,11 @@ namespace Viking.VolumeModel
 
                     if (VolumeTransform != null)
                     {
+                        
                         TileTransformInfo originalInfo = T.Info as TileTransformInfo;
                         TileTransformInfo info = new TileTransformInfo(originalInfo.TileFileName,
                                                                        originalInfo.TileNumber,
-                                                                       originalInfo.LastModified < this.VolumeTransform.Info.LastModified ? originalInfo.LastModified : this.VolumeTransform.Info.LastModified,
+                                                                       originalInfo.LastModified < VolumeTransformInfo.LastModified ? originalInfo.LastModified : VolumeTransformInfo.LastModified,
                                                                        originalInfo.ImageWidth, 
                                                                        originalInfo.ImageHeight);
                         //FIXME

@@ -90,9 +90,7 @@ namespace GeometryTests
                                                                                                DateTime.UtcNow));
             using (System.IO.StreamWriter fs = System.IO.File.CreateText(outputStosFile))
             {
-                 
-
-                SliceToVolumeTriangulation.SaveMosaic(fs);
+                ((Geometry.IITKSerialization)SliceToVolumeTriangulation).WriteITKTransform(fs);
 
                 fs.Flush();
             }

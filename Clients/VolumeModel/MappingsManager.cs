@@ -209,7 +209,7 @@ namespace Viking.VolumeModel
                 if(false == volume.Transforms.ContainsKey(VolumeTransformName))
                     return null;
 
-                SortedList<int, Geometry.Transforms.TriangulationTransform> stosTransforms = volume.Transforms[VolumeTransformName];
+                SortedList<int, ITransform> stosTransforms = volume.Transforms[VolumeTransformName];
                 if (false == stosTransforms.ContainsKey(section.Number))
                 {
                     //Maybe we are the reference section, check if there is a mapping for no transform.  This at least prevents displaying

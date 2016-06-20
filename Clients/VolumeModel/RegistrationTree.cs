@@ -51,6 +51,37 @@ namespace Viking.VolumeModel
                 Nodes.Add(MappedNode.SectionNumber, MappedNode); 
             }
         }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="TList"></param>
+        /// <param name="ValidSections">Optional. Restrict tree to contain only section numbers in the valid section list.</param>
+        /// <returns></returns>
+        public static RegistrationTree Build(SortedList<int, Geometry.ITransform> TList, IList<int> ValidSections = null)
+        {
+            SortedSet<int> ValidSectionsLookup = null;
+            if(ValidSections != null)
+            {
+                ValidSectionsLookup = new SortedSet<int>(ValidSections);
+            }
+            //Create a registration chain so we know what order to register the sections in
+            RegistrationTree tree = new RegistrationTree();
+            foreach (int iSection in TList.Keys)
+            {
+                Geometry.ITransform trans = TList[iSection];
+                Geometry.Transforms.StosTransformInfo info = ((Geometry.ITransformInfo)trans)?.Info as Geometry.Transforms.StosTransformInfo;
+                if (info == null)
+                    continue;
+
+                if (ValidSectionsLookup != null && !ValidSectionsLookup.Contains(info.MappedSection))
+                    continue;
+
+                tree.AddPair(info.ControlSection, info.MappedSection);
+            }
+
+            return tree;
+        }
     }
 
     class RegistrationTreeNode

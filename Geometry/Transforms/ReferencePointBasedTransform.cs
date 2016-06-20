@@ -4,13 +4,24 @@ using System.Linq;
 using System.Text;
 using System.Diagnostics;
 using System.Runtime.Serialization;
+using System.Threading;
 using System.IO;
 
 namespace Geometry.Transforms
 {
     [Serializable]
-    public abstract class ReferencePointBasedTransform  : TransformBase, IITKSerialization
+    public abstract class ReferencePointBasedTransform  : IITKSerialization, ITransformInfo, ITransformControlPoints, ISerializable
     {
+        public TransformInfo Info { get; internal set; }
+
+        public override string ToString()
+        {
+            if (Info != null)
+                return Info.ToString();
+            else
+                return "Transform Base, No Info";
+        }
+
         private GridRectangle _ControlBounds = new GridRectangle();
         public GridRectangle ControlBounds
         {
@@ -18,7 +29,7 @@ namespace Geometry.Transforms
             {
                 if (_ControlBounds.Width <= 0)
                 {
-                    _ControlBounds = MappingGridVector2.CalculateControlBounds(this.MapPoints); 
+                    _ControlBounds = this.MapPoints.ControlBounds();
                 }
 
                 return _ControlBounds; 
@@ -36,7 +47,7 @@ namespace Geometry.Transforms
             {
                 if (_MappedBounds.Width <= 0)
                 {
-                    _MappedBounds = MappingGridVector2.CalculateMappedBounds(this.MapPoints);
+                    _MappedBounds = this.MapPoints.MappedBounds();
                 }
 
                 return _MappedBounds;
@@ -81,14 +92,14 @@ namespace Geometry.Transforms
             } 
         }
 
-        protected ReferencePointBasedTransform(MappingGridVector2[] points, TransformInfo info)
-            : base(info)
+        protected ReferencePointBasedTransform(MappingGridVector2[] points, TransformInfo info) 
         {
             //List<MappingGridVector2> listPoints = new List<MappingGridVector2>(points);
             //MappingGridVector2.RemoveDuplicates(listPoints);
 
             //this.MapPoints = listPoints.ToArray();
             this.MapPoints = points;
+            this.Info = info;
         }
 
         protected ReferencePointBasedTransform(MappingGridVector2[] points, GridRectangle mappedBounds, TransformInfo info)
@@ -98,41 +109,40 @@ namespace Geometry.Transforms
         }
 
         protected ReferencePointBasedTransform(MappingGridVector2[] points, GridRectangle mappedBounds, GridRectangle controlBounds, TransformInfo info)
-            : base(info)
         {
             this.MapPoints = points;
             this.MappedBounds = mappedBounds;
             this.ControlBounds = controlBounds;
+            this.Info = info;
         }
 
         protected ReferencePointBasedTransform(SerializationInfo info, StreamingContext context)
-            : base(info, context)
         {
             if (info == null)
                 throw new ArgumentNullException(); 
 
             _mapPoints = info.GetValue("_mapPoints", typeof(MappingGridVector2[])) as MappingGridVector2[];
+            this.Info = info.GetValue("Info", typeof(TransformInfo)) as TransformInfo;
             MappedBounds = (GridRectangle)info.GetValue("MappedBounds", typeof(GridRectangle));
             ControlBounds = (GridRectangle)info.GetValue("ControlBounds", typeof(GridRectangle));
         }
 
-        public override void GetObjectData(SerializationInfo info, StreamingContext context)
+        public virtual void GetObjectData(SerializationInfo info, StreamingContext context)
         {
             if (info == null)
                 throw new ArgumentNullException(); 
 
             info.AddValue("_mapPoints", _mapPoints);
             info.AddValue("MappedBounds", MappedBounds);
-            info.AddValue("ControlBounds", ControlBounds); 
-
-            base.GetObjectData(info, context);
+            info.AddValue("ControlBounds", ControlBounds);
+            info.AddValue("Info", this.Info);  
         }
 
         /// <summary>
         /// Translates all verticies in the tile according to the vector
         /// </summary>
         /// <param name="vector"></param>
-        public override void Translate(GridVector2 vector)
+        public void Translate(GridVector2 vector)
         {
             for (int i = 0; i < MapPoints.Length; i++)
             {
@@ -174,13 +184,140 @@ namespace Geometry.Transforms
 
             return new GridRectangle(minX, maxX, minY, maxY);
         }
+         
+        public List<MappingGridVector2> IntersectingControlRectangle(GridRectangle gridRect)
+        {
+            List<MappingGridVector2> foundPoints = this.controlPointsRTree.Intersects(gridRect.ToRTreeRect(0)).ToList();
+            return foundPoints;
+        }
+
+        public List<MappingGridVector2> IntersectingMappedRectangle(GridRectangle gridRect)
+        {
+            List<MappingGridVector2> foundPoints = this.mappedPointsRTree.Intersects(gridRect.ToRTreeRect(0)).ToList();
+            return foundPoints;
+        }
+
 
         /// <summary>
-        /// Save a transform using the itk transform text format
+        /// You need to take this lock when building or changing the QuadTrees managing the triangles of the mesh
+        /// </summary>
+        [NonSerialized]
+        ReaderWriterLockSlim rwLockTriangles = new ReaderWriterLockSlim();
+
+        private RTree.RTree<MappingGridVector2> _mappedPointsRTree = null;
+
+        /// <summary>
+        /// Quadtree mapping mapped points to triangles that contain the points
+        /// </summary>
+        public RTree.RTree<MappingGridVector2> mappedPointsRTree
+        {
+            get
+            {
+                //Try the read lock first since only one thread can be in upgradeable mode
+                try
+                {
+                    rwLockTriangles.EnterReadLock();
+                    if (_mappedPointsRTree != null)
+                    {
+                        return _mappedPointsRTree;
+                    }
+                }
+                finally
+                {
+                    if (rwLockTriangles.IsReadLockHeld)
+                        rwLockTriangles.ExitReadLock();
+                }
+
+                //_mapTriangles was null, so get in line to populate it
+                try
+                {
+                    rwLockTriangles.EnterUpgradeableReadLock();
+                    if (_mappedPointsRTree == null)
+                        BuildPointRTree(); //Locks internally
+
+                    Debug.Assert(_mappedPointsRTree != null);
+                    return _mappedPointsRTree;
+                }
+                finally
+                {
+                    if (rwLockTriangles.IsUpgradeableReadLockHeld)
+                        rwLockTriangles.ExitUpgradeableReadLock();
+                }
+            }
+        }
+
+        private RTree.RTree<MappingGridVector2> _controlPointsRTree = null;
+
+        /// <summary>
+        /// Quadtree mapping control points to triangles that contain the points
+        /// </summary>
+        public RTree.RTree<MappingGridVector2> controlPointsRTree
+        {
+            get
+            {
+                //Try the read lock first since only one thread can be in upgradeable mode
+                try
+                {
+                    rwLockTriangles.EnterReadLock();
+                    if (_controlPointsRTree != null)
+                    {
+                        return _controlPointsRTree;
+                    }
+                }
+                finally
+                {
+                    if (rwLockTriangles.IsReadLockHeld)
+                        rwLockTriangles.ExitReadLock();
+                }
+
+                //_mapTriangles was null, so get in line to populate it
+                try
+                {
+                    rwLockTriangles.EnterUpgradeableReadLock();
+                    if (_controlPointsRTree == null)
+                        BuildPointRTree(); //Locks internally
+
+                    Debug.Assert(_controlPointsRTree != null);
+                    return _controlPointsRTree;
+                }
+                finally
+                {
+                    if (rwLockTriangles.IsUpgradeableReadLockHeld)
+                        rwLockTriangles.ExitUpgradeableReadLock();
+                }
+            }
+        }
+
+        protected void BuildPointRTree()
+        {
+            try
+            {
+                rwLockTriangles.EnterWriteLock();
+
+                this._mappedPointsRTree = new RTree.RTree<MappingGridVector2>();
+                this._controlPointsRTree = new RTree.RTree<MappingGridVector2>();
+
+                for (int i = 0; i < this.MapPoints.Length; i++)
+                {
+                    MappingGridVector2 mp = this._mapPoints[i];
+                    this._mappedPointsRTree.Add(mp.MappedPoint.ToRTreeRect(0), mp);
+                    this._controlPointsRTree.Add(mp.ControlPoint.ToRTreeRect(0), mp);
+                }
+            }
+            finally
+            {
+                if (rwLockTriangles.IsWriteLockHeld)
+                    rwLockTriangles.ExitWriteLock();
+            }
+        }
+
+
+        /// <summary>
+        /// Save a transform using the itk transform text format.  Any reference point transform can be a mesh, so we default to that representation
         /// </summary>
         /// <param name="stream"></param>
-        public void WriteITKTransform(StreamWriter stream)
-        { 
+        public virtual void WriteITKTransform(System.IO.StreamWriter stream)
+        {
             if (stream == null)
                 throw new ArgumentNullException("stream");
 
@@ -216,6 +353,7 @@ namespace Geometry.Transforms
             output.AppendFormat(" {0:d}\n", this.MapPoints.Length);
 
             stream.Write(output.ToString());
-        } 
+        }
+
     }
 }

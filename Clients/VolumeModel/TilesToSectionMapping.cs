@@ -47,12 +47,7 @@ namespace Viking.VolumeModel
         {
             get {
                 string mosaicName = System.IO.Path.GetFileNameWithoutExtension(MosaicPath);
-                return Section.volume.LocalCachePath +
-                    System.IO.Path.DirectorySeparatorChar +
-                    Section.volume.Name +
-                    System.IO.Path.DirectorySeparatorChar +
-                    Section.Number.ToString("D4") +
-                    "_" + mosaicName + ".cache"; 
+                return System.IO.Path.Combine(Section.volume.Paths.LocalVolumeDir, Section.Number.ToString("D4") + "_" + mosaicName + ".cache");
             }
         }
 

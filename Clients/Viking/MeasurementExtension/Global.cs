@@ -42,7 +42,7 @@ namespace MeasurementExtension
             if (volume == null)
                 return false;
             
-            if(GetScaleFromXML(volume.VolumeXML))
+            if(GetScaleFromXML(volume.VolumeElement))
                 return true;
 
             //See if we can load the about.xml file, this is for legacy support and can be removed after VikinkXML files have been regenerated with latest
@@ -80,7 +80,7 @@ namespace MeasurementExtension
             response.Close();
 
             //See if we can locate a scale tag
-            GetScaleFromXML(XMLMapping); 
+            GetScaleFromXML(Viking.VolumeModel.Volume.GetVolumeElement(XMLMapping)); 
             
             //Even if we couldn't load the default values, the user can set them.  Go ahead and load up.
             //If this module could not function we should return false which would tell Viking to unload it
@@ -88,42 +88,38 @@ namespace MeasurementExtension
 
         }
 
-        private bool GetScaleFromXML(XDocument XMLMapping)
+        private bool GetScaleFromXML(XElement elem)
         {
 
             //Examine the XML document and determine the scale
-            IEnumerable<XElement> VolumeElements = XMLMapping.Elements().Where(elem => elem.Name.LocalName == "Volume");
-
-            foreach (XElement elem in VolumeElements)
+            
+            //Fetch the name if we know it
+            switch (elem.Name.LocalName)
             {
-                //Fetch the name if we know it
-                switch (elem.Name.LocalName)
-                {
-                    case "Volume":
-                        IEnumerable<XElement> MappingElements = elem.Elements().Where(e => e.Name.LocalName == "Scale");
+                case "Volume":
+                    IEnumerable<XElement> MappingElements = elem.Elements().Where(e => e.Name.LocalName == "Scale");
 
-                        if (MappingElements.Count() == 0)
-                            break;
-
-                        XElement MappingElement = MappingElements.First();
-
-                        XAttribute EndpointAttribute = MappingElement.Attribute("UnitsPerPixel");
-                        if (EndpointAttribute == null)
-                            break;
-
-                        Global._UnitsPerPixel = System.Convert.ToDouble(EndpointAttribute.Value);
-
-                        EndpointAttribute = MappingElement.Attribute("UnitsOfMeasure");
-                        if (EndpointAttribute == null)
-                            break;
-
-                        Global._UnitOfMeasure = EndpointAttribute.Value;
-
-                        return true; 
-
-                    default:
+                    if (MappingElements.Count() == 0)
                         break;
-                }
+
+                    XElement MappingElement = MappingElements.First();
+
+                    XAttribute EndpointAttribute = MappingElement.Attribute("UnitsPerPixel");
+                    if (EndpointAttribute == null)
+                        break;
+
+                    Global._UnitsPerPixel = System.Convert.ToDouble(EndpointAttribute.Value);
+
+                    EndpointAttribute = MappingElement.Attribute("UnitsOfMeasure");
+                    if (EndpointAttribute == null)
+                        break;
+
+                    Global._UnitOfMeasure = EndpointAttribute.Value;
+
+                    return true; 
+
+                default:
+                    break;
             }
 
             //Even if we couldn't load the default values, the user can set them.  Go ahead and load up.

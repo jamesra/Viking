@@ -108,7 +108,7 @@ namespace Viking.ViewModels
 
         public string[] TransformNames { get { return _Volume.Transforms.Keys.ToArray(); } }
 
-        public XDocument VolumeXML { get { return _Volume.VolumeXML; } }
+        public XElement VolumeElement { get { return _Volume.VolumeElement; } }
 
         public bool UpdateServerVolumePositions { get { return _Volume.UpdateServerVolumePositions; } }
 
@@ -147,7 +147,7 @@ namespace Viking.ViewModels
         public IVolumeToSectionTransform GetSectionToVolumeTransform(int SectionNumber)
         {
             SectionViewModel svm = this.SectionViewModels[SectionNumber];
-            SortedList<int, Geometry.Transforms.TriangulationTransform> SectionTransforms = _Volume.Transforms[this.ActiveVolumeTransform];
+            SortedList<int, ITransform> SectionTransforms = _Volume.Transforms[this.ActiveVolumeTransform];
 
             if(SectionTransforms.ContainsKey(SectionNumber))
                 return new VolumeToSectionTransform(BuildTransformKey(this.ActiveVolumeTransform, SectionNumber),

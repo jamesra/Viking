@@ -747,14 +747,11 @@ namespace Viking.UI.Controls
                 int EventInterval = (int)Math.Pow(TileDim.Width * TileDim.Height, 1 / 3.0);
                 int ExistingTileUpdateInterval = 10000;
                 int LoopCounter = 0;
-                int NumTilesQueued = 256;
-
-                BmpWriter writer = new BmpWriter(TileImageSize.Width, TileImageSize.Height);
-                writer.imageFormat = System.Drawing.Imaging.ImageFormat.Png;
+                int MaxTilesQueued = 256; 
 
                 System.Threading.Tasks.TaskFactory taskFactory = new System.Threading.Tasks.TaskFactory();
 
-                Queue<System.Threading.Tasks.Task> listTasks = new Queue<System.Threading.Tasks.Task>(NumTilesQueued);
+                Queue<System.Threading.Tasks.Task> listTasks = new Queue<System.Threading.Tasks.Task>(MaxTilesQueued);
 
                 for (int iX = 0; iX < TileDim.Width; iX++)
                 {
@@ -783,6 +780,7 @@ namespace Viking.UI.Controls
 
                         RenderTarget2D renderTargetTile = new RenderTarget2D(Device, TileImageSize.Width, TileImageSize.Height, false, SurfaceFormat.Color, DepthFormat.Depth24Stencil8, 0, RenderTargetUsage.PreserveContents);
                         {
+                            //Todo: PreloadScene for next tile, or entire column
                             this.PreloadSceneTextures(TileScene, false);
                             this.Draw(TileScene, renderTargetTile);
 
@@ -796,15 +794,13 @@ namespace Viking.UI.Controls
 
                             listTasks.Enqueue(T);
                         }
-
-                        bool ContinueRemove = false;
-                        while (listTasks.Count > NumTilesQueued || ContinueRemove)
+                        
+                        //Throttle tile creation so we don't exceed our memory limits
+                        while (listTasks.Count > 0 && (listTasks.Count > MaxTilesQueued || listTasks.Peek().IsCompleted))
                         {
-                            ContinueRemove = false;
                             System.Threading.Tasks.Task topTask = listTasks.Dequeue();
                             if (topTask.IsCompleted)
                             {
-                                ContinueRemove = true;
                                 continue;
                             }
                             else
@@ -821,10 +817,10 @@ namespace Viking.UI.Controls
                         //Do events once in a while
                         if (LoopCounter % EventInterval == 0)
                         {
-                            Application.DoEvents();
-
                             progressForm.ShowProgress("Section " + S.Name + "\nFrame ID: " + Filename, (double)iTile / (double)numTiles);
-
+                            Parent.Invalidate();
+                            Application.DoEvents();
+                            
                             //System.Windows.Forms.Application.DoEvents();
                             if (progressForm.DialogResult == DialogResult.Cancel)
                                 break;
@@ -851,18 +847,12 @@ namespace Viking.UI.Controls
                     if (progressForm.DialogResult == DialogResult.Cancel)
                         break;
 
-                }
+                } 
 
-                /*if(renderTargetTile != null)
-                {
-                    renderTargetTile.Dispose();
-                    renderTargetTile = null;
-                }
-                */
                 System.IO.StreamWriter stream = null;
                 try
                 {
-                    string XMLString = string.Format("<?xml version=\"1.0\"?>\n<Level FilePostfix=\".png\" FilePrefix=\"\" Downsample=\"{0}\" TileYDim=\"256\" TileXDim=\"256\" GridDimY=\"{1}\" GridDimX=\"{2}\"/>", Downsample.ToString(), TileDim.Height.ToString(), TileDim.Width.ToString());
+                    string XMLString = string.Format("<?xml version=\"1.0\"?>\n<Level FilePostfix=\".png\" FilePrefix=\"\" Downsample=\"{0}\" TileYDim=\"{1}\" TileXDim=\"{2}\" GridDimY=\"{3}\" GridDimX=\"{4}\"/>", Downsample.ToString(), TileImageSize.Width, TileImageSize.Height, TileDim.Height.ToString(), TileDim.Width.ToString());
                     string XMLPath = Path + string.Format("{0}.xml", S.Number.ToString("D4"));
                     stream = System.IO.File.CreateText(XMLPath);
                     stream.Write(XMLString);
@@ -882,10 +872,7 @@ namespace Viking.UI.Controls
                     break;
 
             }
-
-            //Global.TextureCache.MaxCacheSize = OldCacheSize;
-
-
+             
             progressForm.Close();
 
             this.AsynchTextureLoad = true;
@@ -1316,7 +1303,7 @@ namespace Viking.UI.Controls
 
             if (Viking.UI.State.ShowStosMesh)
             {
-                Geometry.Transforms.TriangulationTransform transform = null;
+                ITransform transform = null;
 
                 SectionToVolumeMapping StosMapping = Mapping as SectionToVolumeMapping;
                 if (StosMapping != null)
@@ -1332,12 +1319,12 @@ namespace Viking.UI.Controls
                     }
                 }
 
-                if (transform != null)
+                if (transform as Geometry.Transforms.TriangulationTransform != null)
                 {
                     graphicsDevice.ReferenceStencil = int.MaxValue;
                     graphicsDevice.DepthStencilState = CreateDepthStateForDownsampleLevel(int.MaxValue);
 
-                    using (TriangulationViewModel stosMeshViewModel = new TriangulationViewModel(transform))
+                    using (TriangulationViewModel stosMeshViewModel = new TriangulationViewModel(transform as Geometry.Transforms.TriangulationTransform))
                     {
                         stosMeshViewModel.DrawMesh(graphicsDevice, basicEffect);
                         stosMeshViewModel.DrawLabels(this);

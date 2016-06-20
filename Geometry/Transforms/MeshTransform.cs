@@ -14,8 +14,6 @@ namespace Geometry.Transforms
     [Serializable]
     public class MeshTransform : TriangulationTransform, ICloneable, ISerializable
     {
-        
-
         #region Edges
 
             protected ReaderWriterLockSlim rwLockEdges = new ReaderWriterLockSlim();
@@ -342,7 +340,7 @@ namespace Geometry.Transforms
             return nearestIntersect;
         }
 
-       public override void MinimizeMemory()
+       public void MinimizeMemory()
        {
            base.MinimizeMemory();
 
@@ -366,5 +364,6 @@ namespace Geometry.Transforms
            base.Dispose(disposing); 
 
        }
+
     }
 }

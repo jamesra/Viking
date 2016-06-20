@@ -21,9 +21,9 @@ namespace Viking.VolumeModel
         /// The transformation which will/has converted the tiles from section space into volume space.
         /// This can be null if this section is not warped into volume space. 
         /// </summary>
-        public readonly TriangulationTransform VolumeTransform;
+        public readonly ITransform VolumeTransform;
 
-        public OCPTileServerToVolumeMapping(Section section, string name, OCPTileServerMapping ToWarp, TriangulationTransform Transform)
+        public OCPTileServerToVolumeMapping(Section section, string name, OCPTileServerMapping ToWarp, ITransform Transform)
             : base(ToWarp, section, name)
         {
             this.VolumeTransform = Transform;
@@ -57,8 +57,11 @@ namespace Viking.VolumeModel
             {
                 //If we can't map all four corners then add all the points from the transform falling inside the visible rectangle or 
                 //connected to those points by an edge
-                List<MappingGridVector2> listTransformPoints = this.VolumeTransform.IntersectingControlRectangle(VisibleBounds, true);
-                VisiblePoints.AddRange(listTransformPoints);
+                if(VolumeTransform as ITransformControlPoints != null)
+                {
+                    List<MappingGridVector2> listTransformPoints = (VolumeTransform as ITransformControlPoints).IntersectingControlRectangle(VisibleBounds);
+                    VisiblePoints.AddRange(listTransformPoints);
+                }
             }
             else
             {
@@ -271,8 +274,11 @@ namespace Viking.VolumeModel
             List<MappingGridVector2> MappedPoints = new List<MappingGridVector2>(16);
 
             //Add all of the points in the tiles rectangle
-            
-            MappedPoints.AddRange(VolumeTransform.IntersectingMappedRectangle(tileBorder, false));
+
+            if (VolumeTransform as ITransformControlPoints != null)
+            {
+                MappedPoints.AddRange((VolumeTransform as ITransformControlPoints)?.IntersectingMappedRectangle(tileBorder));
+            }
 
 //            MappedPoints.Sort(new MappingGridVector2SortByMapPoints());
 

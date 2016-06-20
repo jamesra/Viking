@@ -97,7 +97,7 @@ namespace Geometry.Transforms
 
     #region Stos Parsing code
 
-        public static TransformBase ParseStos(string stosfile)
+        public static ITransform ParseStos(string stosfile)
         {
             string filename = Path.GetFileNameWithoutExtension(stosfile);
 
@@ -122,14 +122,14 @@ namespace Geometry.Transforms
 
             using (Stream transformStream = File.OpenRead(stosfile))
             {
-                TransformBase transform = ParseStos(transformStream, Info, pixelSpacing);              
+                ITransform transform = ParseStos(transformStream, Info, pixelSpacing);              
 
                 return transform; 
             }
             
         }
         
-        public static TransformBase ParseStos(Uri stosURI, XElement elem, System.Net.NetworkCredential UserCredentials)
+        public static ITransform ParseStos(Uri stosURI, XElement elem, System.Net.NetworkCredential UserCredentials)
         {
             if (elem == null || stosURI == null)
                 throw new ArgumentNullException(); 
@@ -165,14 +165,9 @@ namespace Geometry.Transforms
                 Trace.WriteLine(stosURI.ToString() + " could not be loaded", "Geometry");
                 return null;
             }
-        }
+        } 
 
-
-
-
-        
-
-        public static TransformBase ParseStos(Stream stream, StosTransformInfo info, int pixelSpacing)
+        public static ITransform ParseStos(Stream stream, StosTransformInfo info, int pixelSpacing)
         {
             string[] lines = StreamUtil.StreamToLines(stream); 
             string[] controlDims = lines[4].Split(new char[] { ' ','\t'}, StringSplitOptions.RemoveEmptyEntries);
@@ -428,9 +423,9 @@ namespace Geometry.Transforms
             return mappings;
         }
 
-    #endregion
+        #endregion
 
-    #region .mosaic Parsing code
+        #region .mosaic Parsing code
 
         /// <summary>
         /// Load mosaic from specified file and add it to transforms list using specified key

@@ -50,6 +50,7 @@ namespace RTree
     /// Ported to C# By Dror Gluska, April 9th, 2009
     /// </summary>
     /// <typeparam name="T"></typeparam>
+    [Serializable]
     public class RTree<T>
         where T : IEquatable<T>
     {
@@ -120,6 +121,7 @@ namespace RTree
         //the recursion methods require a delegate to retrieve data
         private delegate void intproc(int x);
 
+        [NonSerialized]
         System.Threading.ReaderWriterLockSlim rwLock = new System.Threading.ReaderWriterLockSlim(); 
 
         /// <summary>

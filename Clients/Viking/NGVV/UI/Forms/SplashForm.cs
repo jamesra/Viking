@@ -95,9 +95,7 @@ namespace Viking.UI.Forms
         }
 
         private void backgroundWorker_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
-        {
-            
-
+        {  
             endVolumeLoadTime = DateTime.Now;
 
             TimeSpan elapsedTime = endVolumeLoadTime.Subtract(startTime);
