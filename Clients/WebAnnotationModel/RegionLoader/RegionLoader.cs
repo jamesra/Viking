@@ -174,12 +174,16 @@ namespace WebAnnotationModel
 
             DateTime currentTime = DateTime.UtcNow;
 
+            
+
             foreach (GridIndex iCell in gridRange.Indicies)
             {
                 int iX = iCell.X;
                 int iY = iCell.Y;
 
-                RegionRequestData<OBJECT> cell = level.GetOrAddCell(iCell, (key) => { return CreateRegionRequest(level, key, SectionNumber, OnServerObjectsLoadedCallback); });
+                //Trace.WriteLine(string.Format("Grid Region Loading Z:{0} L:{1} X:{2} Y:{3}", SectionNumber, level.Level, iX, iY));
+
+                RegionRequestData <OBJECT> cell = level.GetOrAddCell(iCell, (key) => { return CreateRegionRequest(level, key, SectionNumber, OnServerObjectsLoadedCallback); });
                 lock(cell)
                 {
                     //If we are waiting on results, add our callback to the list of functions to call when the request is complete

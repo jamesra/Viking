@@ -167,8 +167,11 @@ namespace WebAnnotation.ViewModel
         /// <param name="locationObjs"></param>
         protected override void AddLocationsInLocalCache(IEnumerable<LocationObj> locationObjs)
         {
-            IEnumerable<LocationObj> unknownObjs = locationObjs.Where(l => !this.KnownLocations.Contains(l.ID));
-            AddLocations(unknownObjs);
+            LocationObj[] unknownObjs = locationObjs.Where(l => !this.KnownLocations.Contains(l.ID)).ToArray();
+            if (unknownObjs.Length > 0)
+            {
+                AddLocations(unknownObjs);
+            }
         }
 
         public override void AddLocations(IEnumerable<LocationObj> locations)
@@ -1127,8 +1130,9 @@ namespace WebAnnotation.ViewModel
         /// <param name="locationObjs"></param>
         protected override void AddLocationsInLocalCache(IEnumerable<LocationObj> locationObjs)
         {
-            IEnumerable<LocationObj> unknownObjs = locationObjs.Where(l => !this.KnownLocations.Contains(l.ID));
-            AddLocationBatch(unknownObjs);
+            LocationObj[] unknownObjs = locationObjs.Where(l => !this.KnownLocations.Contains(l.ID)).ToArray();
+            if(unknownObjs.Length > 0)
+                AddLocationBatch(unknownObjs);
         }
 
         private void AddLocationsInRegionCallback(IEnumerable<LocationObj> locationObjs)
