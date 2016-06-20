@@ -575,7 +575,7 @@ namespace WebAnnotationModel
                 GetObjectBySectionCallbackState<AnnotateLocationsClient, LocationObj> newState = new GetObjectBySectionCallbackState<AnnotateLocationsClient, LocationObj>(proxy, SectionNumber, LastQueryUtc.HasValue ? LastQueryUtc.Value : DateTime.MinValue, OnLoadCompletedCallBack);
 
                 //Build list of Locations to check
-                proxy.BeginGetAnnotationsInMosaicRegion(SectionNumber,
+                result = proxy.BeginGetAnnotationsInMosaicRegion(SectionNumber,
                                         bounds.ToBoundingRectangle(),
                                         MinRadius,
                                         newState.LastQueryExecutedTime.Ticks,
