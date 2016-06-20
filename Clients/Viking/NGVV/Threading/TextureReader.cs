@@ -399,6 +399,11 @@ namespace Viking
                 {
                     ProcessTextureWebException(e, BodyRequestState);
                 }
+                catch(System.Net.Sockets.SocketException e)
+                {
+                    Trace.WriteLine("Socket Exception: " + textureUri + " " + e.Message);
+                    this.SetTexture(null);
+                }
             }
         }
 

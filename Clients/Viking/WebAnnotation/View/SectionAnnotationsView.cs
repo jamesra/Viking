@@ -52,7 +52,7 @@ namespace WebAnnotation.ViewModel
             GridRectangle? VisibleMosaicBounds = scene.VisibleWorldBounds.ApproximateVisibleMosaicBounds(this.mapper);
 
             if (VisibleMosaicBounds.HasValue)
-                Store.LocationsByRegion.LoadSectionAnnotationsInRegion(VisibleMosaicBounds.Value, scene.ScreenPixelSizeInVolume, this.SectionNumber, null);// this.AddLocations);
+                Store.LocationsByRegion.LoadSectionAnnotationsInRegion(VisibleMosaicBounds.Value, scene.ScreenPixelSizeInVolume, this.SectionNumber, null, null); // this.AddLocations, null);
         }
         
 
@@ -1097,7 +1097,7 @@ namespace WebAnnotation.ViewModel
             GridRectangle? VisibleMosaicBounds = scene.VisibleWorldBounds.ApproximateVisibleMosaicBounds(this.mapper);
 
             if (VisibleMosaicBounds.HasValue)
-                Store.LocationsByRegion.LoadSectionAnnotationsInRegion(VisibleMosaicBounds.Value, scene.ScreenPixelSizeInVolume, this.SectionNumber, null);//this.AddLocationsInRegionCallback);
+                Store.LocationsByRegion.LoadSectionAnnotationsInRegion(VisibleMosaicBounds.Value, scene.ScreenPixelSizeInVolume, this.SectionNumber, null, null);// this.AddLocationsInRegionCallback);
 
             if (this.SectionAbove != null)
             {
@@ -1108,6 +1108,16 @@ namespace WebAnnotation.ViewModel
             {
                 this.SectionBelow.LoadAnnotationsInRegion(scene);
             }
+        }
+
+        /// <summary>
+        /// Load 
+        /// </summary>
+        /// <param name="locationObjs"></param>
+        private void AddLocationsInLocalCache(IEnumerable<LocationObj> locationObjs)
+        {
+            IEnumerable<LocationObj> unknownObjs = locationObjs.Where(l => !this.KnownLocations.Contains(l.ID));
+            AddLocationBatch(unknownObjs);
         }
 
         private void AddLocationsInRegionCallback(IEnumerable<LocationObj> locationObjs)

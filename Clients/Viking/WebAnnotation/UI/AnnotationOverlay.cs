@@ -1,11 +1,11 @@
 ﻿using System;
-using System.Windows.Forms; 
+using System.Windows.Forms;
 using System.Collections.Generic;
-using System.Collections.Specialized; 
+using System.Collections.Specialized;
 using System.Linq;
 using System.Text;
 using System.Diagnostics;
-using Viking; 
+using Viking;
 using Viking.Common;
 using Viking.ViewModels;
 using Microsoft.Xna.Framework;
@@ -20,6 +20,7 @@ using System.Threading.Tasks;
 using SqlGeometryUtils;
 using VikingXNAGraphics;
 using WebAnnotation.Actions;
+using System.ComponentModel;
 
 namespace WebAnnotation
 {
@@ -330,10 +331,15 @@ namespace WebAnnotation
             this._Parent.KeyDown += new KeyEventHandler(this.OnKeyDown);
             this._Parent.KeyUp += new KeyEventHandler(this.OnKeyUp);
 
-           
+            this._Parent.Camera.PropertyChanged += new System.ComponentModel.PropertyChangedEventHandler(this.OnCameraPropertyChanged);
             //linksView = new LocationLinksViewModel(parent); 
 
             LoadSectionAnnotations();
+        }
+
+        private void OnCameraPropertyChanged(object sender, PropertyChangedEventArgs e)
+        {
+            System.Threading.Tasks.Task.Run(() => LoadSectionAnnotations());
         }
 
         protected void UpdateMouseCursor()
@@ -1325,9 +1331,6 @@ namespace WebAnnotation
 
             if (_Parent.spriteBatch.GraphicsDevice.IsDisposed)
                 return;
-            
-            if (ShouldLoadAnnotationsForSceneMovement(scene))
-                System.Threading.Tasks.Task.Run(() => LoadSectionAnnotations());
 
             UpdateSceneHistory(Parent.Scene);
 

@@ -163,7 +163,8 @@ namespace WebAnnotationModel
         public void LoadSectionAnnotationsInRegion(GridRectangle VolumeBounds,
                                                     double ScreenPixelSizeInVolume,
                                                     int SectionNumber, 
-                                                    Action<ICollection<OBJECT>> OnObjectsLoadedCallback)
+                                                    Action<ICollection<OBJECT>> OnServerObjectsLoadedCallback,
+                                                    Action<ICollection<OBJECT>> FoundCachedLocalObjectsCallback)
         {
             RegionPyramid<OBJECT> RegionPyramid = GetOrAddRegionPyramidForSection(SectionNumber);
             //If we change the magnification factor we should stop loading regions
@@ -178,31 +179,34 @@ namespace WebAnnotationModel
                 int iX = iCell.X;
                 int iY = iCell.Y;
 
-                RegionRequestData<OBJECT> cell = level.GetOrAddCell(iCell, (key) => { return CreateRegionRequest(level, key, SectionNumber, OnObjectsLoadedCallback); });
+                RegionRequestData<OBJECT> cell = level.GetOrAddCell(iCell, (key) => { return CreateRegionRequest(level, key, SectionNumber, OnServerObjectsLoadedCallback); });
                 lock(cell)
                 {
                     //If we are waiting on results, add our callback to the list of functions to call when the request is complete
                     if (RegionIsDueForRefresh(cell))
                     {
-                        AttachRequestForRegion(cell, level, iCell, SectionNumber, OnObjectsLoadedCallback);
+                        AttachRequestForRegion(cell, level, iCell, SectionNumber, OnServerObjectsLoadedCallback);
                     }
                     else
                     {
                         //Add our callback to the list, and return any known local objects
                         if (cell.OutstandingQuery)
                         {
-                            if (OnObjectsLoadedCallback != null)
-                                cell.AddCallback(OnObjectsLoadedCallback);
+                            if (OnServerObjectsLoadedCallback != null)
+                                cell.AddCallback(OnServerObjectsLoadedCallback);
                         }
 
-                        //Use the callback for the known local objects
-                        Task.Run(() =>
+                        if (FoundCachedLocalObjectsCallback != null)
                         {
-                            GridRectangle cellBounds = level.CellBounds(iCell.X, iCell.Y);
-                            ICollection<OBJECT> local_objects_in_region = this.objectStore.GetLocalObjectsInRegion(SectionNumber, cellBounds, level.MinRadius);
-                            if (OnObjectsLoadedCallback != null)
-                                OnObjectsLoadedCallback(local_objects_in_region);
-                        });
+                            //Use the callback for the known local objects
+                            Task.Run(() =>
+                            {
+                                GridRectangle cellBounds = level.CellBounds(iCell.X, iCell.Y);
+                                ICollection<OBJECT> local_objects_in_region = this.objectStore.GetLocalObjectsInRegion(SectionNumber, cellBounds, level.MinRadius);
+                                if (FoundCachedLocalObjectsCallback != null)
+                                    FoundCachedLocalObjectsCallback(local_objects_in_region);
+                            });
+                        }
                     }
                 }
             }
