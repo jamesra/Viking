@@ -52,10 +52,11 @@ namespace WebAnnotation.ViewModel
             GridRectangle? VisibleMosaicBounds = scene.VisibleWorldBounds.ApproximateVisibleMosaicBounds(this.mapper);
 
             if (VisibleMosaicBounds.HasValue)
-                Store.LocationsByRegion.LoadSectionAnnotationsInRegion(VisibleMosaicBounds.Value, scene.ScreenPixelSizeInVolume, this.SectionNumber, null, null); // this.AddLocations, null);
+                Store.LocationsByRegion.LoadSectionAnnotationsInRegion(VisibleMosaicBounds.Value, scene.ScreenPixelSizeInVolume, this.SectionNumber, null, AddLocationsInLocalCache); // this.AddLocations, null);
         }
-        
 
+        protected abstract void AddLocationsInLocalCache(IEnumerable<LocationObj> locations);
+        
         public abstract void AddLocations(IEnumerable<LocationObj> locations);
 
         public abstract void RemoveLocations(IEnumerable<LocationObj> locations);
@@ -159,7 +160,17 @@ namespace WebAnnotation.ViewModel
         {
             return Store.Locations.GetObjectsByIDs(LinkedIDs, false).Where(l => (int)l.Z == this.AdjacentSection.Number);
         }
-        
+
+        /// <summary>
+        /// Load 
+        /// </summary>
+        /// <param name="locationObjs"></param>
+        protected override void AddLocationsInLocalCache(IEnumerable<LocationObj> locationObjs)
+        {
+            IEnumerable<LocationObj> unknownObjs = locationObjs.Where(l => !this.KnownLocations.Contains(l.ID));
+            AddLocations(unknownObjs);
+        }
+
         public override void AddLocations(IEnumerable<LocationObj> locations)
         {
             foreach(LocationObj loc in locations)
@@ -1097,7 +1108,7 @@ namespace WebAnnotation.ViewModel
             GridRectangle? VisibleMosaicBounds = scene.VisibleWorldBounds.ApproximateVisibleMosaicBounds(this.mapper);
 
             if (VisibleMosaicBounds.HasValue)
-                Store.LocationsByRegion.LoadSectionAnnotationsInRegion(VisibleMosaicBounds.Value, scene.ScreenPixelSizeInVolume, this.SectionNumber, null, null);// this.AddLocationsInRegionCallback);
+                Store.LocationsByRegion.LoadSectionAnnotationsInRegion(VisibleMosaicBounds.Value, scene.ScreenPixelSizeInVolume, this.SectionNumber, null, AddLocationsInLocalCache);// this.AddLocationsInRegionCallback);
 
             if (this.SectionAbove != null)
             {
@@ -1114,7 +1125,7 @@ namespace WebAnnotation.ViewModel
         /// Load 
         /// </summary>
         /// <param name="locationObjs"></param>
-        private void AddLocationsInLocalCache(IEnumerable<LocationObj> locationObjs)
+        protected override void AddLocationsInLocalCache(IEnumerable<LocationObj> locationObjs)
         {
             IEnumerable<LocationObj> unknownObjs = locationObjs.Where(l => !this.KnownLocations.Contains(l.ID));
             AddLocationBatch(unknownObjs);
