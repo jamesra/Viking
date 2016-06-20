@@ -243,8 +243,8 @@ namespace WebAnnotationModel
             MixedLocalAndRemoteQueryResults<KEY, OBJECT> localObjects = objectStore.GetObjectsInRegionAsync(SectionNumber, cellBounds, level.MinRadius, LastQueryUtc, cell.OnLoadCompleted);
             cell.SetQuery(localObjects.ServerRequestResult);
 
-            if (localObjects.KnownObjects.Count > 0 && OnLoadCompletedCallback != null)
-                OnLoadCompletedCallback(localObjects.KnownObjects);
+            /*if (localObjects.KnownObjects.Count > 0 && OnLoadCompletedCallback != null)
+                OnLoadCompletedCallback(localObjects.KnownObjects);*/
 
             string TraceString = string.Format("CreateRegionRequest: {0} ({1},{2}) Level:{3} MinRadius:{4}", SectionNumber, iCell.X, iCell.Y, level.Level, level.MinRadius);
             Trace.WriteLine(TraceString, "WebAnnotation");
