@@ -318,15 +318,9 @@ namespace Geometry.Transforms
 
             foreach (MappingGridTriangle t in triangles)
             {
-                if (t.MinCtrlX > Point.X)
+                if (!t.ControlBoundingBox.Contains(Point))
                     continue;
-                if (t.MaxCtrlX < Point.X)
-                    continue;
-                if (t.MinCtrlY > Point.Y)
-                    continue;
-                if (t.MaxCtrlY < Point.Y)
-                    continue;
-
+                
                 if (t.IntersectsControl(Point))
                     return t;
             }

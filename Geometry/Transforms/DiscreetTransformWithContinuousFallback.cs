@@ -138,7 +138,7 @@ namespace Geometry.Transforms
 
         public bool[] TryInverseTransform(GridVector2[] Points, out GridVector2[] v)
         {
-            v = Transform(Points);
+            v = InverseTransform(Points);
             return v.Select(p => true).ToArray();
         }
 

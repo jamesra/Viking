@@ -359,17 +359,18 @@ namespace Viking.UI.Forms
 
             // Do not validate server certificate, since its user generated for now
             ServicePointManager.ServerCertificateValidationCallback = delegate { return true; };
-
-            using (HttpWebResponse response = (HttpWebResponse)request.GetResponse())
+            
+            using (HttpWebResponse response = request.GetResponse() as HttpWebResponse)
             {
-
-                if (response.StatusCode != HttpStatusCode.OK)
+                if (response == null)
+                    this.update_label.Text = "Null response";
+                else if (response.StatusCode != HttpStatusCode.OK)
                     this.update_label.Text = response.StatusDescription;
                 else
                 {
                     using (StreamReader streamRead = new StreamReader(response.GetResponseStream()))
                     {
-                        return streamRead.ReadToEnd(); 
+                        return streamRead.ReadToEnd();
                     }
                 }
             }

@@ -455,5 +455,44 @@ namespace GeometryTests
              Debug.Assert(newPoints[2].ControlPoint.X == 10 && newPoints[2].ControlPoint.Y == 2.5);
              Debug.Assert(newPoints[3].ControlPoint.X == 10 && newPoints[3].ControlPoint.Y == 10);
          }
+
+        [TestMethod]
+        public void GridTransformTestMethodThree()
+        {
+            //
+            // A simple test adding two transforms built from three points each
+            // 
+            GridVector2 fixedV1 = new GridVector2(0, 0);
+            GridVector2 fixedV2 = new GridVector2(10, 0);
+            GridVector2 fixedV3 = new GridVector2(0, 10);
+            GridVector2 fixedV4 = new GridVector2(10, 10);
+
+
+            GridVector2 movingV1 = new GridVector2(2.5, 2.5);
+            GridVector2 movingV2 = new GridVector2(2.5, 12.5);
+            GridVector2 movingV3 = new GridVector2(12.5, 12.5);
+            GridVector2 movingV4 = new GridVector2(12.5, 2.5);
+
+            MappingGridVector2[] transformPoints = new MappingGridVector2[] {new MappingGridVector2(fixedV1, movingV1),
+                                                                         new MappingGridVector2(fixedV2, movingV2),
+                                                                         new MappingGridVector2(fixedV3, movingV3),
+                                                                         new MappingGridVector2(fixedV4, movingV4)};
+             
+            GridTransform fixedTransform = new GridTransform(transformPoints, new GridRectangle(fixedV1, 10, 10), 2, 2, new TransformInfo(DateTime.UtcNow));
+
+            GridVector2[] PointsToTransform = new GridVector2[] { new GridVector2(2.5, 2.5),
+                                                                new GridVector2(2.5, 7.5),
+                                                                new GridVector2(7.5, 2.5),
+                                                                new GridVector2(7.5, 7.5) };
+
+            GridVector2[] PointsToInverseTransform = fixedTransform.Transform(PointsToTransform);
+
+            GridVector2[] RevertedPoints = fixedTransform.InverseTransform(PointsToInverseTransform);
+
+            for (int i = 0; i < PointsToTransform.Length; i++)
+            {
+                Microsoft.VisualStudio.TestTools.UnitTesting.Assert.AreEqual(PointsToTransform[i], RevertedPoints[i]);
+            } 
+        } 
     }
 }
