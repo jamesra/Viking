@@ -1778,7 +1778,7 @@ namespace Annotation
 
             }
         }
-
+         
         [PrincipalPermission(SecurityAction.Demand, Role = "Modify")]
         public long[] Update(Location[] locations)
         {

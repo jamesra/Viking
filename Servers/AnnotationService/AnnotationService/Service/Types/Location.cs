@@ -216,6 +216,7 @@ namespace Annotation
         protected bool _Terminal;
         protected bool _OffEdge;
         protected double _Radius;
+        protected double? _Width;
         protected short _TypeCode;
         protected long _LastModified;
         protected string _Username;
@@ -331,6 +332,14 @@ namespace Annotation
         }
 
         [DataMember]
+        [Column("Width")]
+        public double? Width
+        {
+            get { return _Width; }
+            set { _Width = value; }
+        }
+
+        [DataMember]
         [Column("TypeCode")]
         public short TypeCode
         {
@@ -427,6 +436,7 @@ namespace Annotation
             this._OffEdge = db.OffEdge;
             this._TypeCode = db.TypeCode;
             this._Radius = db.Radius;
+            this._Width = db.Width;
              
             if (db.Tags == null)
             {
@@ -535,6 +545,9 @@ namespace Annotation
 
             UpdateUserName |= db.Radius != this._Radius; 
             db.Radius = this._Radius;
+
+            UpdateUserName |= db.Width != this._Width;
+            db.Width = this._Width;
 
             UpdateUserName |= db.Username == null; 
 
