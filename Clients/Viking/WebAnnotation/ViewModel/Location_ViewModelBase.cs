@@ -540,27 +540,18 @@ namespace WebAnnotation.ViewModel
             }
         }
 
+
+
+        [Column("Width")]
+        public double Width
+        {
+            get { return modelObj.Width.HasValue ? modelObj.Width.Value : 0; }
+        }
+
         [Column("Radius")]
         public double Radius
         {
             get { return modelObj.Radius; }
-            /*
-            set
-            {
-                if(modelObj.TypeCode == LocationType.CIRCLE)
-                {
-                    if (modelObj.Radius == value)
-                        return;
-
-                   
-                    modelObj.Radius = value;
-                }
-                else
-                {
-                    throw new ArgumentException("Cannot change radius on a non-circle annotation type");
-                }
-            }
-            */
         }
                 
         

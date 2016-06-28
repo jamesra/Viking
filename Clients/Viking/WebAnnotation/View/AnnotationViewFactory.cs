@@ -72,7 +72,7 @@ namespace WebAnnotation.View
                     return new AdjacentLocationCircleView(obj, mapping);
                 case LocationType.OPENCURVE:
                     {
-                        return new AdjacentLocationCircleView(obj, mapping, obj.Radius * 2.0);
+                        return new AdjacentLocationCircleView(obj, mapping, obj.Width.Value);
                         /*
                         LocationOpenCurveView view = new LocationOpenCurveView(obj, mapping, obj.Radius);
                         view.Color = new Microsoft.Xna.Framework.Color(1, 1, 1, 0.2f);

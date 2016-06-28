@@ -112,7 +112,10 @@ namespace WebAnnotation.View
                     return new ResizeCircleCommand(Parent,
                             System.Drawing.Color.FromArgb(loc.Parent.Type.Color).SetAlpha(0.5f),
                             loc.VolumePosition,
-                            (radius) => { loc.Radius = radius; Store.Locations.Save(); });
+                            (radius) => 
+                            {
+                                WebAnnotation.View.LocationActions.UpdateCircleLocationCallback(loc, loc.VolumePosition, loc.Position, radius);
+                            });
                 case LocationAction.ADJUST:
                     return null;
                 case LocationAction.CREATELINK:
@@ -135,9 +138,7 @@ namespace WebAnnotation.View
                                                                             VolumeShape,
                                                                             Parent.Section.Number,
                                                                             loc.TypeCode);
-
-                                                                        newLoc.Radius = loc.Radius;
-
+                                                                         
                                                                        IVolumeToSectionTransform section_mapper = Parent.Volume.GetSectionToVolumeTransform((int)Parent.Section.Number);
                                                                        NewMosaicPosition = section_mapper.VolumeToSection(NewVolumePosition);
                                                                        UpdateCircleLocationNoSaveCallback(newLoc, NewVolumePosition, NewMosaicPosition, NewRadius);
@@ -171,14 +172,14 @@ namespace WebAnnotation.View
                                                              loc.MosaicShape.Centroid(),
                                                              loc.MosaicShape.ToPoints(),
                                                              loc.Parent.Type.Color.ToXNAColor(0.5f),
-                                                             loc.Radius * 2.0,
+                                                             loc.Width.HasValue ? loc.Width.Value : 16.0,
                                                              (VolumeControlPoints, MosaicControlPoints, LineWidth) => UpdateLineLocationCallback(loc, VolumeControlPoints, MosaicControlPoints, LineWidth));
                 case LocationAction.SCALE:
                     return null; 
                 case LocationAction.ADJUST:
                     return new AdjustCurveControlPointCommand(Parent, loc.MosaicShape.ToPoints(),
-                                                                      loc.Parent.Type.Color.ToXNAColor(0.5f), 
-                                                                      loc.Radius * 2.0,
+                                                                      loc.Parent.Type.Color.ToXNAColor(0.5f),
+                                                                      loc.Width.HasValue ? loc.Width.Value : 16.0,
                                                                       IsClosedCurve(loc),
                                                                       (VolumeControlPoints, MosaicControlPoints) => UpdateLineLocationCallback(loc, VolumeControlPoints, MosaicControlPoints));
                 case LocationAction.CREATELINK:
@@ -210,7 +211,7 @@ namespace WebAnnotation.View
                                                              MosaicShape.Centroid(),
                                                              MosaicShape.ToPoints(),
                                                              loc.Parent.Type.Color.ToXNAColor(0.5f),
-                                                             loc.Radius * 2.0,
+                                                             loc.Width.HasValue ? loc.Width.Value : 16.0,
                                                              (NewVolumeControlPoints, NewMosaicControlPoints, NewWidth) =>
                                                                 {
                                                                     LocationObj newLoc = new LocationObj(loc.Parent,
@@ -253,7 +254,7 @@ namespace WebAnnotation.View
                                                              loc.MosaicShape.Centroid(),
                                                              loc.MosaicShape.ToPoints(),
                                                              loc.Parent.Type.Color.ToXNAColor().SetAlpha(0.5f),
-                                                             loc.Radius * 2.0, 
+                                                             loc.Width.HasValue ? loc.Width.Value : 16.0,
                                                              (VolumeControlPoints, MosaicControlPoints, LineWidth) => UpdateLineLocationCallback(loc, VolumeControlPoints, MosaicControlPoints, LineWidth));
                 case LocationAction.SCALE:
                     return null;
@@ -291,7 +292,7 @@ namespace WebAnnotation.View
                                                              MosaicShape.Centroid(),
                                                              MosaicShape.ToPoints(),
                                                              loc.Parent.Type.Color.ToXNAColor(0.5f),
-                                                             loc.Radius * 2.0, 
+                                                             loc.Width.HasValue ? loc.Width.Value : 16.0,
                                                              (NewVolumeControlPoints, NewMosaicControlPoints, NewWidth) =>
                                                              {
                                                                  LocationObj newLoc = new LocationObj(loc.Parent,
@@ -382,7 +383,7 @@ namespace WebAnnotation.View
         static void UpdateLineLocationNoSaveCallback(LocationObj loc, GridVector2[] VolumeControlPoints, GridVector2[] MosaicControlPoints, double NewWidth)
         {
             UpdateLineLocationNoSaveCallback(loc, VolumeControlPoints, MosaicControlPoints);
-            loc.Radius = NewWidth / 2.0;
+            loc.Width = NewWidth;
         }
 
         public static void UpdateCircleLocationCallback(LocationObj loc, GridVector2 WorldPosition, GridVector2 MosaicPosition, double NewRadius)
@@ -401,12 +402,21 @@ namespace WebAnnotation.View
         {
             loc.MosaicShape = loc.MosaicShape.MoveTo(MosaicPosition);
             loc.VolumeShape = loc.VolumeShape.MoveTo(WorldPosition);
+
+            
         }
 
         public static void UpdateCircleLocationNoSaveCallback(LocationObj loc, GridVector2 WorldPosition, GridVector2 MosaicPosition, double NewRadius)
-        {
-            loc.Radius = NewRadius;
-            UpdateCircleLocationNoSaveCallback(loc, WorldPosition, MosaicPosition);
+        { 
+            loc.MosaicShape = SqlGeometryUtils.GeometryExtensions.ToCircle(MosaicPosition.X,
+                                           MosaicPosition.Y,
+                                           loc.Z,
+                                           NewRadius);
+
+            loc.VolumeShape = SqlGeometryUtils.GeometryExtensions.ToCircle(WorldPosition.X,
+                                   WorldPosition.Y,
+                                   loc.Z,
+                                   NewRadius);
         }
     }
 }

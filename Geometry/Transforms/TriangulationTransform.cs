@@ -840,7 +840,7 @@ namespace Geometry.Transforms
 
             //Optional, but useful step. In rare cases we lose some mappable space when the fixed transform are inside the control space of the mapped transform, but the triangulation of the mapped control points would eliminate these points
             //in these cases we can test if they can be added back in. 
-            
+            /*
             System.Collections.Concurrent.ConcurrentBag<MappingGridVector2> MappableFixedPoints = new System.Collections.Concurrent.ConcurrentBag<MappingGridVector2>();
             Parallel.ForEach<MappingGridVector2>(BtoC.MapPoints, FixedPointPair =>
             {
@@ -879,7 +879,7 @@ namespace Geometry.Transforms
                 //MappingGridVector2.RemoveDuplicates(newPoints);
                 newTransform = new MeshTransform(newPoints.ToArray(), info);
             }
-            
+            */
             /*
              
             //            Trace.WriteLine("Ended with " + newPoints.Count + " points", "Geometry");

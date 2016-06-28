@@ -94,7 +94,11 @@ namespace WebAnnotation.UI.Commands
                 newLocation.MosaicShape = SqlGeometryUtils.GeometryExtensions.ToCircle(SectionPos.X, SectionPos.Y, Parent.Section.Number, 16.0);
                 newLocation.VolumeShape = SqlGeometryUtils.GeometryExtensions.ToCircle(WorldPos.X, WorldPos.Y, Parent.Section.Number, 16.0);
 
-                Viking.UI.Commands.Command.EnqueueCommand(typeof(ResizeCircleCommand), new object[] { Parent, Type.Color, WorldPos, new ResizeCircleCommand.OnCommandSuccess((double radius) => { newLocation.Radius = radius; }) });
+                Viking.UI.Commands.Command.EnqueueCommand(typeof(ResizeCircleCommand), new object[] { Parent, Type.Color, WorldPos,
+                        new ResizeCircleCommand.OnCommandSuccess((double radius) => 
+                        {
+                            WebAnnotation.View.LocationActions.UpdateCircleLocationNoSaveCallback(newLocation, WorldPos, SectionPos, radius);
+                        }) });
                 if (Type.Parent != null)
                 {
                     //Enqueue extra command to select a parent

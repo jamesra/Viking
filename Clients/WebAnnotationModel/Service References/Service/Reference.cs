@@ -276,6 +276,9 @@ namespace WebAnnotationModel.Service {
         [System.Runtime.Serialization.OptionalFieldAttribute()]
         private System.Data.Entity.Spatial.DbGeometry VolumeShapeField;
         
+        [System.Runtime.Serialization.OptionalFieldAttribute()]
+        private System.Nullable<double> WidthField;
+        
         [System.Runtime.Serialization.DataMemberAttribute()]
         public string AttributesXml {
             get {
@@ -467,6 +470,19 @@ namespace WebAnnotationModel.Service {
                 if ((object.ReferenceEquals(this.VolumeShapeField, value) != true)) {
                     this.VolumeShapeField = value;
                     this.RaisePropertyChanged("VolumeShape");
+                }
+            }
+        }
+        
+        [System.Runtime.Serialization.DataMemberAttribute()]
+        public System.Nullable<double> Width {
+            get {
+                return this.WidthField;
+            }
+            set {
+                if ((this.WidthField.Equals(value) != true)) {
+                    this.WidthField = value;
+                    this.RaisePropertyChanged("Width");
                 }
             }
         }

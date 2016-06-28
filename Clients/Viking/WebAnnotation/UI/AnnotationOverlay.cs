@@ -532,7 +532,7 @@ namespace WebAnnotation
                                                                                 (float)CreateNewLinkedLocationCommand.LastEditedLocation.Position.Y),
                                             (int)CreateNewLinkedLocationCommand.LastEditedLocation.Z,
                                             true,
-                                            (double)((CreateNewLinkedLocationCommand.LastEditedLocation.Radius * 2) / Parent.Width) * 2); 
+                                            (double)((CreateNewLinkedLocationCommand.LastEditedLocation.Width) / Parent.Width) * 2); 
 
                     }
                     else
@@ -724,11 +724,11 @@ namespace WebAnnotation
                         QueuePlacementCommandForCircleStructure(this.Parent,newLocation, WorldPos, SectionPos, type.Color.SetAlpha(0.5f), false);
                         break;
                     case LocationType.OPENCURVE:
-                        newLocation.Radius = 8.0;
+                        newLocation.Width = 8.0;
                         QueuePlacementCommandForOpenCurveStructure(this.Parent, newLocation, WorldPos, type.Color.SetAlpha(0.5f), false);
                         break;
                     case LocationType.CLOSEDCURVE:
-                        newLocation.Radius = 8.0;
+                        newLocation.Width = 8.0;
                         QueuePlacementCommandForClosedCurveStructure(this.Parent, newLocation, WorldPos, type.Color.SetAlpha(0.5f), false);
                         break;
                     default:
@@ -764,7 +764,7 @@ namespace WebAnnotation
                                         worldPos.Y,
                                         newLocation.Section,
                                         radius);
-                                    newLocation.Radius = radius;
+                                    newLocation.Width = null;
 
                                     if(SaveToStore)
                                         Store.Locations.Save();
@@ -784,7 +784,7 @@ namespace WebAnnotation
             Viking.UI.Commands.Command.EnqueueCommand(typeof(PlaceOpenCurveCommand), new object[] { Parent, typecolor, origin,  LineWidth,
                                                             new ControlPointCommandBase.OnCommandSuccess((GridVector2[] points) => {
                                                                     newLocation.TypeCode = LocationType.OPENCURVE;
-                                                                    newLocation.Radius = LineWidth / 2.0;
+                                                                    newLocation.Width = LineWidth;
                                                                     SetLocationShapeFromPointsInVolume(Parent.Section, newLocation, points);
                                                                     if(SaveToStore)
                                                                         Store.Locations.Save();
@@ -804,7 +804,7 @@ namespace WebAnnotation
             Viking.UI.Commands.Command.EnqueueCommand(typeof(PlaceClosedCurveCommand), new object[] { Parent, typecolor, origin, LineWidth,
                                                             new ControlPointCommandBase.OnCommandSuccess((GridVector2[] points) => {
                                                                     newLocation.TypeCode = LocationType.CLOSEDCURVE;
-                                                                    newLocation.Radius = LineWidth / 2.0;
+                                                                    newLocation.Width = LineWidth;
                                                                     SetLocationShapeFromPointsInVolume(Parent.Section, newLocation, points);
                                                                     if(SaveToStore)
                                                                         Store.Locations.Save();

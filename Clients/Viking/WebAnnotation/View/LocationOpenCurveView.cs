@@ -67,7 +67,7 @@ namespace WebAnnotation.View
             //RegisterForLocationEvents();
             //RegisterForStructureChangeEvents();
             
-            curveView = new CurveView(VolumeControlPoints, obj.Parent.Type.Color.ToXNAColor(0.5f), false, lineWidth: obj.Radius * 2.0, lineStyle: LineStyle.Tubular);
+            curveView = new CurveView(VolumeControlPoints, obj.Parent.Type.Color.ToXNAColor(0.5f), false, lineWidth: obj.Width.Value, lineStyle: LineStyle.Tubular);
             CreateLabelViews(VolumeControlPoints, obj.ParentID);
         }
 

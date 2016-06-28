@@ -310,6 +310,10 @@ namespace WebAnnotationModel
                 _MosaicShape = null;
                 OnPropertyChanged("MosaicShape");
 
+                OnPropertyChanging("Radius");
+                _Radius = CalculateRadius(newValue);
+                OnPropertyChanged("Radius");
+
                 SetDBActionForChange();
             }
         }
@@ -332,16 +336,45 @@ namespace WebAnnotationModel
         {
             this.VolumeTransformID = new int?();
         }
+
+        private double CalculateRadius(Microsoft.SqlServer.Types.SqlGeometry shape)
+        {
+            if (shape.STDimension() == 1)
+            {
+                return shape.STLength().Value / 2.0;
+            }
+            else if (shape.STDimension() == 2)
+            {
+                return Math.Sqrt(shape.STArea().Value / Math.PI);
+            }
+            else
+                return this.Width.Value / 2.0;
+        }
+
+        private double CalculateRadius(DbGeometry shape)
+        {
+            if (shape.Dimension == 1)
+            {
+                return shape.Length.Value / 2.0;
+            }
+            else if (shape.Dimension == 2)
+                return Math.Sqrt(shape.Area.Value / Math.PI);
+            else
+                return this.Width.Value / 2.0;
+        }
         
-        private const double g_MinimumRadius = 1.0;
+        private double? _Radius;
         public double Radius
         {
             get {
-                if (Data.Radius < g_MinimumRadius)
+                if (!_Radius.HasValue)
                 {
-                    return g_MinimumRadius;
+                    _Radius = Math.Sqrt(MosaicShape.STArea().Value / Math.PI);
                 }
-                return Data.Radius; }
+
+                return _Radius.Value;
+        }
+            /*
             set {
                 if (Data.Radius == value)
                     return;
@@ -363,6 +396,31 @@ namespace WebAnnotationModel
                                            value);
                 }
                  
+                SetDBActionForChange();
+            }
+            */
+        }
+
+        private const double g_MinimumWidth = 1.0;
+        public double? Width
+        {
+            get
+            {
+                if (Data.Width.HasValue && Data.Width < g_MinimumWidth)
+                {
+                    return g_MinimumWidth;
+                }
+                return Data.Width;
+            }
+            set
+            {
+                if (Data.Width == value)
+                    return;
+
+                OnPropertyChanging("Width");
+                Data.Width = value;
+                OnPropertyChanged("Width");
+                
                 SetDBActionForChange();
             }
         }

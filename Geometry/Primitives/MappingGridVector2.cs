@@ -72,26 +72,12 @@ namespace Geometry
 
         public static GridVector2[] ControlPoints(MappingGridVector2[] mapPoints)
         {
-            GridVector2[] array = new GridVector2[mapPoints.Length];
-
-            for (int i = 0; i < mapPoints.Length; i++)
-            {
-                array[i] = mapPoints[i].ControlPoint;
-            }
-
-            return array; 
+            return mapPoints.Select(p => p.ControlPoint).ToArray();
         }
 
         public static GridVector2[] MappedPoints(MappingGridVector2[] mapPoints)
         {
-            GridVector2[] array = new GridVector2[mapPoints.Length];
-
-            for (int i = 0; i < mapPoints.Length; i++)
-            {
-                array[i] = mapPoints[i].MappedPoint;
-            }
-
-            return array;
+            return mapPoints.Select(p => p.MappedPoint).ToArray();
         }
 
         public MappingGridVector2 Copy()

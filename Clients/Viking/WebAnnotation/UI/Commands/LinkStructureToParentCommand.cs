@@ -171,7 +171,7 @@ namespace WebAnnotation.UI.Commands
 
             if(labelView == null)
             {
-                labelView = new CurveLabel("Select Parent Structure", new GridVector2[] { transformedPos, target }, Microsoft.Xna.Framework.Color.Black, false, lineWidth: putativeLoc.Radius * 2, numInterpolations: 0);
+                labelView = new CurveLabel("Select Parent Structure", new GridVector2[] { transformedPos, target }, Microsoft.Xna.Framework.Color.Black, false, lineWidth: line.LineWidth, numInterpolations: 0);
             }
             else
             {

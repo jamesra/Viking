@@ -133,6 +133,7 @@
           <xs:element minOccurs="0" name="Username" nillable="true" type="xs:string" />
           <xs:element minOccurs="0" name="VolumePosition" type="tns:AnnotationPoint" />
           <xs:element xmlns:q6="http://schemas.datacontract.org/2004/07/System.Data.Entity.Spatial" minOccurs="0" name="VolumeShape" nillable="true" type="q6:DbGeometry" />
+          <xs:element minOccurs="0" name="Width" nillable="true" type="xs:double" />
         </xs:sequence>
       </xs:extension>
     </xs:complexContent>
