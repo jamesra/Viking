@@ -1,9 +1,9 @@
 /**** You need to replace the following templates to use this script ****/
-/**** NEITZTEMPORALMONKEY = Name of the database  */
+/**** RABBIT = Name of the database  */
 /**** {DATABASE_DIRECTORY} = Directory Datbase lives in if it needs to be created, with the trailing slash i.e. C:\Database\
 */
 DECLARE @DATABASE_NAME VARCHAR(50)
-SET @DATABASE_NAME = 'NEITZTEMPORALMONKEY'
+SET @DATABASE_NAME = 'RABBIT'
 DECLARE @DATABASE_DIRECTORY VARCHAR(50)
 SET @DATABASE_DIRECTORY = 'C:\Database\'
 
@@ -29,7 +29,7 @@ BEGIN
 END
 	
 CREATE TABLE #UpdateVars ([Version] VARCHAR(100));
-INSERT INTO #UpdateVars Values (N'NEITZTEMPORALMONKEY');
+INSERT INTO #UpdateVars Values (N'RABBIT');
 
 DECLARE @db_id VARCHAR(100);
 SET @db_id = db_id(@DATABASE_NAME)
@@ -42,50 +42,50 @@ BEGIN
 	print N'Database does not exist, creating...' 
 	
 	declare @Path varchar(100)
-	set @Path = N'C:\Database\NEITZTEMPORALMONKEY\'
+	set @Path = N'C:\Database\RABBIT\'
 	EXEC master.dbo.xp_create_subdir @Path
 	
-	/****** Object:  Database [NEITZTEMPORALMONKEY]    Script Date: 06/14/2011 13:13:50 ******/
-	CREATE DATABASE [NEITZTEMPORALMONKEY] ON  PRIMARY 
-		( NAME = N'NEITZTEMPORALMONKEY', FILENAME = N'C:\Database\NEITZTEMPORALMONKEY\NEITZTEMPORALMONKEY.mdf' , SIZE = 4096KB , MAXSIZE = UNLIMITED, FILEGROWTH = 1024KB )
+	/****** Object:  Database [RABBIT]    Script Date: 06/14/2011 13:13:50 ******/
+	CREATE DATABASE [RABBIT] ON  PRIMARY 
+		( NAME = N'RABBIT', FILENAME = N'C:\Database\RABBIT\RABBIT.mdf' , SIZE = 4096KB , MAXSIZE = UNLIMITED, FILEGROWTH = 1024KB )
 		 LOG ON 
-		( NAME = N'NEITZTEMPORALMONKEY_log', FILENAME = N'C:\Database\NEITZTEMPORALMONKEY\NEITZTEMPORALMONKEY_log.ldf' , SIZE = 4096KB , MAXSIZE = 2048GB , FILEGROWTH = 10%)
+		( NAME = N'NEITZTEMPORALMONKEY_log', FILENAME = N'C:\Database\RABBIT\NEITZTEMPORALMONKEY_log.ldf' , SIZE = 4096KB , MAXSIZE = 2048GB , FILEGROWTH = 10%)
 		
-	ALTER DATABASE [NEITZTEMPORALMONKEY] SET COMPATIBILITY_LEVEL = 100
+	ALTER DATABASE [RABBIT] SET COMPATIBILITY_LEVEL = 100
 	
 	IF (1 = FULLTEXTSERVICEPROPERTY('IsFullTextInstalled'))
 	begin
-		EXEC [NEITZTEMPORALMONKEY].[dbo].[sp_fulltext_database] @action = 'enable'
+		EXEC [RABBIT].[dbo].[sp_fulltext_database] @action = 'enable'
 	end
 	
-	ALTER DATABASE [NEITZTEMPORALMONKEY] SET ANSI_NULL_DEFAULT OFF
-	ALTER DATABASE [NEITZTEMPORALMONKEY] SET ANSI_NULLS OFF
-	ALTER DATABASE [NEITZTEMPORALMONKEY] SET ANSI_PADDING ON
-	ALTER DATABASE [NEITZTEMPORALMONKEY] SET ANSI_WARNINGS OFF
-	ALTER DATABASE [NEITZTEMPORALMONKEY] SET ARITHABORT OFF
-	ALTER DATABASE [NEITZTEMPORALMONKEY] SET AUTO_CLOSE OFF
-	ALTER DATABASE [NEITZTEMPORALMONKEY] SET AUTO_CREATE_STATISTICS ON
-	ALTER DATABASE [NEITZTEMPORALMONKEY] SET AUTO_SHRINK OFF
-	ALTER DATABASE [NEITZTEMPORALMONKEY] SET AUTO_UPDATE_STATISTICS ON
-	ALTER DATABASE [NEITZTEMPORALMONKEY] SET CURSOR_CLOSE_ON_COMMIT OFF
-	ALTER DATABASE [NEITZTEMPORALMONKEY] SET CURSOR_DEFAULT  GLOBAL
-	ALTER DATABASE [NEITZTEMPORALMONKEY] SET CONCAT_NULL_YIELDS_NULL OFF
-	ALTER DATABASE [NEITZTEMPORALMONKEY] SET NUMERIC_ROUNDABORT OFF
-	ALTER DATABASE [NEITZTEMPORALMONKEY] SET QUOTED_IDENTIFIER OFF
-	ALTER DATABASE [NEITZTEMPORALMONKEY] SET RECURSIVE_TRIGGERS OFF
-	ALTER DATABASE [NEITZTEMPORALMONKEY] SET  DISABLE_BROKER
-	ALTER DATABASE [NEITZTEMPORALMONKEY] SET AUTO_UPDATE_STATISTICS_ASYNC OFF
-	ALTER DATABASE [NEITZTEMPORALMONKEY] SET DATE_CORRELATION_OPTIMIZATION OFF
-	ALTER DATABASE [NEITZTEMPORALMONKEY] SET TRUSTWORTHY OFF
-	ALTER DATABASE [NEITZTEMPORALMONKEY] SET ALLOW_SNAPSHOT_ISOLATION OFF
-	ALTER DATABASE [NEITZTEMPORALMONKEY] SET PARAMETERIZATION SIMPLE
-	ALTER DATABASE [NEITZTEMPORALMONKEY] SET READ_COMMITTED_SNAPSHOT OFF
-	ALTER DATABASE [NEITZTEMPORALMONKEY] SET HONOR_BROKER_PRIORITY OFF
-	ALTER DATABASE [NEITZTEMPORALMONKEY] SET  READ_WRITE
-	ALTER DATABASE [NEITZTEMPORALMONKEY] SET RECOVERY SIMPLE
-	ALTER DATABASE [NEITZTEMPORALMONKEY] SET  MULTI_USER
-	ALTER DATABASE [NEITZTEMPORALMONKEY] SET PAGE_VERIFY CHECKSUM
-	ALTER DATABASE [NEITZTEMPORALMONKEY] SET DB_CHAINING OFF
+	ALTER DATABASE [RABBIT] SET ANSI_NULL_DEFAULT OFF
+	ALTER DATABASE [RABBIT] SET ANSI_NULLS OFF
+	ALTER DATABASE [RABBIT] SET ANSI_PADDING ON
+	ALTER DATABASE [RABBIT] SET ANSI_WARNINGS OFF
+	ALTER DATABASE [RABBIT] SET ARITHABORT OFF
+	ALTER DATABASE [RABBIT] SET AUTO_CLOSE OFF
+	ALTER DATABASE [RABBIT] SET AUTO_CREATE_STATISTICS ON
+	ALTER DATABASE [RABBIT] SET AUTO_SHRINK OFF
+	ALTER DATABASE [RABBIT] SET AUTO_UPDATE_STATISTICS ON
+	ALTER DATABASE [RABBIT] SET CURSOR_CLOSE_ON_COMMIT OFF
+	ALTER DATABASE [RABBIT] SET CURSOR_DEFAULT  GLOBAL
+	ALTER DATABASE [RABBIT] SET CONCAT_NULL_YIELDS_NULL OFF
+	ALTER DATABASE [RABBIT] SET NUMERIC_ROUNDABORT OFF
+	ALTER DATABASE [RABBIT] SET QUOTED_IDENTIFIER OFF
+	ALTER DATABASE [RABBIT] SET RECURSIVE_TRIGGERS OFF
+	ALTER DATABASE [RABBIT] SET  DISABLE_BROKER
+	ALTER DATABASE [RABBIT] SET AUTO_UPDATE_STATISTICS_ASYNC OFF
+	ALTER DATABASE [RABBIT] SET DATE_CORRELATION_OPTIMIZATION OFF
+	ALTER DATABASE [RABBIT] SET TRUSTWORTHY OFF
+	ALTER DATABASE [RABBIT] SET ALLOW_SNAPSHOT_ISOLATION OFF
+	ALTER DATABASE [RABBIT] SET PARAMETERIZATION SIMPLE
+	ALTER DATABASE [RABBIT] SET READ_COMMITTED_SNAPSHOT OFF
+	ALTER DATABASE [RABBIT] SET HONOR_BROKER_PRIORITY OFF
+	ALTER DATABASE [RABBIT] SET  READ_WRITE
+	ALTER DATABASE [RABBIT] SET RECOVERY SIMPLE
+	ALTER DATABASE [RABBIT] SET  MULTI_USER
+	ALTER DATABASE [RABBIT] SET PAGE_VERIFY CHECKSUM
+	ALTER DATABASE [RABBIT] SET DB_CHAINING OFF
 	
 	print N'Created Database...' 
 	INSERT INTO #UpdateVars Values (DB_ID(N'CreateTables'));
@@ -93,7 +93,7 @@ END
 
 GO
 
-USE [NEITZTEMPORALMONKEY]
+USE [RABBIT]
 GO
 
 --Need to specify database owner before enabling change tracking
@@ -282,7 +282,7 @@ BEGIN
 	EXEC sys.sp_addextendedproperty @name=N'MS_Description', @value=N'VolumeY is the location in volume space.  It exists so that data analysis code does not need to implement transforms' , @level0type=N'SCHEMA',@level0name=N'dbo', @level1type=N'TABLE',@level1name=N'Location', @level2type=N'COLUMN',@level2name=N'VolumeY'
 	EXEC sys.sp_addextendedproperty @name=N'MS_Description', @value=N'Set to true if this location is the edge of a structure and cannot be extended.' , @level0type=N'SCHEMA',@level0name=N'dbo', @level1type=N'TABLE',@level1name=N'Location', @level2type=N'COLUMN',@level2name=N'Terminal'
 	EXEC sys.sp_addextendedproperty @name=N'MS_Description', @value=N'This bit is set if the structure leaves the volume at this location' , @level0type=N'SCHEMA',@level0name=N'dbo', @level1type=N'TABLE',@level1name=N'Location', @level2type=N'COLUMN',@level2name=N'OffEdge'
-	EXEC sys.sp_addextendedproperty @name=N'MS_Description', @value=N'0 = Point, 1 = Circle, 2 =' , @level0type=N'SCHEMA',@level0name=N'dbo', @level1type=N'TABLE',@level1name=N'Location', @level2type=N'COLUMN',@level2name=N'TypeCode'
+	EXEC sys.sp_addextendedproperty @name=N'MS_Description', @value=N'0 = Point, 1 = Circle, 2 =' , @level0type=N'SCHEMA',@level0name=N'dbo', @level1type=N'TABLE',@level1name=N'Location', @level2type=N'COLUMN',@level2name=N'RABBIT'
 	EXEC sys.sp_addextendedproperty @name=N'MS_Description', @value=N'Date the location was last modified' , @level0type=N'SCHEMA',@level0name=N'dbo', @level1type=N'TABLE',@level1name=N'Location', @level2type=N'COLUMN',@level2name=N'LastModified'
 	EXEC sys.sp_addextendedproperty @name=N'MS_Description', @value=N'Date the location was created' , @level0type=N'SCHEMA',@level0name=N'dbo', @level1type=N'TABLE',@level1name=N'Location', @level2type=N'COLUMN',@level2name=N'Created'
 	EXEC sys.sp_addextendedproperty @name=N'MS_Description', @value=N'Last username to modify the row' , @level0type=N'SCHEMA',@level0name=N'dbo', @level1type=N'TABLE',@level1name=N'Location', @level2type=N'COLUMN',@level2name=N'Username'
@@ -1106,15 +1106,15 @@ END
 */  
 GO
 
-Use [NEITZTEMPORALMONKEY]
+Use [RABBIT]
 GO
   
 DECLARE @compat_level int
-SET @compat_level = (SELECT compatibility_level FROM sys.databases WHERE name = 'NEITZTEMPORALMONKEY')
+SET @compat_level = (SELECT compatibility_level FROM sys.databases WHERE name = 'RABBIT')
 IF(@compat_level < 120)
 BEGIN
 	print N'Setting the database compatability level to SQL 2014'
-	ALTER DATABASE [NEITZTEMPORALMONKEY] SET COMPATIBILITY_LEVEL = 120  
+	ALTER DATABASE [RABBIT] SET COMPATIBILITY_LEVEL = 120  
 END
 GO
 
@@ -5355,6 +5355,131 @@ end
 
 	 COMMIT TRANSACTION fortynine
 	end
+
+	if(not(exists(select (1) from DBVersion where DBVersionID = 50)))
+	begin
+     print N'Add width column'
+     BEGIN TRANSACTION fifty
+	   
+	  -- ALTER TABLE Location DROP COLUMN Width 
+	  ALTER TABLE Location ADD Width float NULL
+
+	  if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+		 
+		  --insert the second version marker
+		 INSERT INTO DBVersion values (50, 
+		   N'Add width column',getDate(),User_ID())
+
+	 COMMIT TRANSACTION fifty
+	end
+
+	if(not(exists(select (1) from DBVersion where DBVersionID = 51)))
+	begin
+     print N'Convert Radius to computed column and add a new width property for use with lines'
+     BEGIN TRANSACTION fiftyone 
+
+	 EXEC sys.sp_addextendedproperty @name=N'MS_Description', @value=N'Width used for line annotation types' , @level0type=N'SCHEMA',@level0name=N'dbo', @level1type=N'TABLE',@level1name=N'Location', @level2type=N'COLUMN',@level2name=N'Width'
+	  
+	 --ALTER TABLE Location DROP CONSTRAINT chk_Location_Width
+
+	 UPDATE Location SET Width = Radius FROM Location WHERE TypeCode != 1
+	 
+	 if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+	 
+	 ALTER TABLE Location
+		ADD CONSTRAINT chk_Location_Width CHECK (
+			(TypeCode = 1 AND Width IS NULL) OR
+			(TypeCode != 1 AND Width IS NOT NULL)
+		) 
+
+	  if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
+      ALTER TABLE Location DROP CONSTRAINT DF_Location_Radius
+
+	  if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
+	  ALTER TABLE Location DROP COLUMN Radius
+
+	  if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+	  
+	  ALTER TABLE Location ADD Radius as  
+		CASE MosaicShape.STDimension()
+			WHEN 0 THEN 0
+			WHEN 1 THEN MosaicShape.STLength() / 2.0
+			WHEN 2 THEN SQRT( MosaicShape.STArea() / PI() )
+		END PERSISTED NOT NULL
+
+	 if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
+	 EXEC sys.sp_addextendedproperty @name=N'MS_Description', @value=N'Radius, calculated column needed for backwards compatability' , @level0type=N'SCHEMA',@level0name=N'dbo', @level1type=N'TABLE',@level1name=N'Location', @level2type=N'COLUMN',@level2name=N'Radius'
+
+		  --insert the second version marker
+		 INSERT INTO DBVersion values (51, 
+		   N'Convert Radius to computed column and add a new width property for use with lines',getDate(),User_ID())
+
+	 COMMIT TRANSACTION fiftyone
+	end
+
+	if(not(exists(select (1) from DBVersion where DBVersionID = 52)))
+	begin
+     print N'Add table listing which structures are allowed to be linked'
+     BEGIN TRANSACTION fiftytwo
+	   
+	  -- ALTER TABLE Location DROP COLUMN Width 
+	  CREATE TABLE [dbo].[PermittedStructureLink](
+		[SourceType] [bigint] NOT NULL,
+		[TargetType] [bigint] NOT NULL
+		CONSTRAINT [PK_PermittedStructureLink] PRIMARY KEY CLUSTERED 
+	(
+		[SourceType] ASC,
+		[TargetType] ASC
+	)WITH (PAD_INDEX  = OFF, STATISTICS_NORECOMPUTE  = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS  = ON, ALLOW_PAGE_LOCKS  = ON) ON [PRIMARY]
+	) ON [PRIMARY]
+
+	  if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
+	ALTER TABLE [dbo].[PermittedStructureLink]  WITH CHECK ADD  CONSTRAINT [FK_PermittedStructureLink_SourceType] FOREIGN KEY([SourceType])
+	REFERENCES [dbo].[StructureType] ([ID])
+
+	ALTER TABLE [dbo].[PermittedStructureLink]  WITH CHECK ADD  CONSTRAINT [FK_PermittedStructureLink_TargetType] FOREIGN KEY([TargetType])
+	REFERENCES [dbo].[StructureType] ([ID])
+
+
+		  --insert the second version marker
+		 INSERT INTO DBVersion values (52, 
+		   N'Add table listing which structures are allowed to be linked',getDate(),User_ID())
+
+	 COMMIT TRANSACTION fiftytwo
+	end
+
 	 
 --from here on, continually add steps in the previous manner as needed.
 	COMMIT TRANSACTION main
