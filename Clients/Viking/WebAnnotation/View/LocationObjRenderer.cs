@@ -125,9 +125,48 @@ namespace WebAnnotation
                     throw new ArgumentException("Cannot draw background for unknown type" + typeGroup.Key.FullName);
                 }
             } 
-
         }
-        
+
+        public static void DrawCanvasView(ICollection<LocationCanvasView> views, GraphicsDevice graphicsDevice, BasicEffect basicEffect,
+                                           VikingXNA.AnnotationOverBackgroundLumaEffect overlayEffect, RoundLineCode.RoundLineManager overlayLineManager,
+                                           RoundCurve.CurveManager overlayCurveManager,
+                                           VikingXNA.Scene Scene, int VisibleSectionNumber)
+        {
+            IEnumerable<IGrouping<Type, LocationCanvasView>> typeGroups = views.GroupBy(l => l.GetType());
+
+            foreach (var typeGroup in typeGroups)
+            {
+                if (typeGroup.Key == typeof(LocationOpenCurveView))
+                {
+                    LocationOpenCurveView.Draw(graphicsDevice, Scene, overlayCurveManager, basicEffect, overlayEffect, typeGroup.Cast<LocationOpenCurveView>().ToArray());
+                }
+                else if (typeGroup.Key == typeof(LocationClosedCurveView))
+                {
+                    LocationClosedCurveView.Draw(graphicsDevice, Scene, overlayCurveManager, basicEffect, overlayEffect, typeGroup.Cast<LocationClosedCurveView>().ToArray());
+                }
+                else if (typeGroup.Key == typeof(LocationLineView))
+                {
+                    LocationLineView.Draw(graphicsDevice, Scene, overlayLineManager, basicEffect, overlayEffect, typeGroup.Cast<LocationLineView>().ToArray());
+                }
+                else if (typeGroup.Key == typeof(LocationCircleView))
+                {
+                    LocationCircleView.Draw(graphicsDevice, Scene, basicEffect, overlayEffect, typeGroup.Cast<LocationCircleView>().ToArray());
+                }
+                else if (typeGroup.Key == typeof(AdjacentLocationCircleView))
+                {
+                    AdjacentLocationCircleView.Draw(graphicsDevice, Scene, basicEffect, overlayEffect, typeGroup.Cast<AdjacentLocationCircleView>().ToArray(), VisibleSectionNumber);
+                }
+                else if (typeGroup.Key == typeof(AdjacentLocationLineView))
+                {
+                    AdjacentLocationLineView.Draw(graphicsDevice, Scene, overlayLineManager, basicEffect, overlayEffect, typeGroup.Cast<AdjacentLocationLineView>().ToArray(), VisibleSectionNumber);
+                }
+                else
+                {
+                    throw new ArgumentException("Cannot draw background for unknown type" + typeGroup.Key.FullName);
+                }
+            }
+        }
+
         /// <summary>
         /// Divide the label into two lines
         /// </summary>

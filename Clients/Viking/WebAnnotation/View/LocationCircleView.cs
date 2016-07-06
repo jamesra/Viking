@@ -371,7 +371,8 @@ namespace WebAnnotation.View
         private void CreateViewObjects(GridCircle MosaicCircle, IVolumeToSectionTransform mapper)
         {
             GridVector2 VolumePosition = mapper.SectionToVolume(MosaicCircle.Center);
-            circleView = new CircleView(new GridCircle(VolumePosition, modelObj.Radius), modelObj.Parent.Type.Color.ToXNAColor(1f));
+            Color color = modelObj.Parent == null ? Color.Gray.SetAlpha(0.5f) : modelObj.Parent.Type.Color.ToXNAColor(1.0f);
+            circleView = new CircleView(new GridCircle(VolumePosition, modelObj.Radius), color);
         }
 
         private void CreateLabelObjects()

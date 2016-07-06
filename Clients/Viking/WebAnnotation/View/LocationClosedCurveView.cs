@@ -10,6 +10,7 @@ using WebAnnotationModel;
 using VikingXNAGraphics;
 using System.Windows.Forms;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework;
 using VikingXNA;
 using System.ComponentModel;
 
@@ -61,8 +62,9 @@ namespace WebAnnotation.View
         public static uint NumInterpolationPoints = Global.NumClosedCurveInterpolationPoints;
         public LocationClosedCurveView(LocationObj obj, Viking.VolumeModel.IVolumeToSectionTransform mapper) : base(obj, mapper)
         {
-           _ControlPointRadius = Global.DefaultClosedLineWidth / 2.0;
-           curveView = new CurveView(this.VolumeControlPoints, obj.Parent.Type.Color.ToXNAColor(0.5f), true, lineWidth: this.VolumeControlPoints.MinDistanceBetweenPoints(), controlPointRadius: ControlPointRadius, lineStyle: LineStyle.HalfTube, numInterpolations: NumInterpolationPoints);
+            _ControlPointRadius = Global.DefaultClosedLineWidth / 2.0;
+            Color color = obj.Parent == null ? Color.Gray.SetAlpha(0.5f) : obj.Parent.Type.Color.ToXNAColor(0.5f);
+            curveView = new CurveView(this.VolumeControlPoints, color, true, lineWidth: this.VolumeControlPoints.MinDistanceBetweenPoints(), controlPointRadius: ControlPointRadius, lineStyle: LineStyle.HalfTube, numInterpolations: NumInterpolationPoints);
             CreateLabelObjects();
         }
 

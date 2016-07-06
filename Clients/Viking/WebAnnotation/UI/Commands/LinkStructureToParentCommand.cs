@@ -33,6 +33,8 @@ namespace WebAnnotation.UI.Commands
 
         LocationObj nearestParent;
 
+        LocationCanvasView locView;
+
         Microsoft.Xna.Framework.Color linecolor;
 
         CurveLabel labelView = null;
@@ -79,6 +81,8 @@ namespace WebAnnotation.UI.Commands
             parent.Cursor = Cursors.Cross;
 
             double textHeight = location.Radius * 2;
+
+            locView = AnnotationViewFactory.Create(putativeLoc, parent.Section.ActiveSectionToVolumeTransform);
             
         }
 
@@ -148,8 +152,11 @@ namespace WebAnnotation.UI.Commands
         {
             if (this.oldMouse == null)
                 return;
-            
-            GlobalPrimitives.DrawCircle(graphicsDevice, basicEffect, transformedPos, putativeLoc.Radius, linecolor);
+
+            if (locView != null)
+                LocationObjRenderer.DrawCanvasView(new LocationCanvasView[] { locView }, graphicsDevice, basicEffect, Parent.annotationOverlayEffect, Parent.LumaOverlayLineManager, Parent.LumaOverlayCurveManager, scene, (int)locView.Z);
+            else
+                GlobalPrimitives.DrawCircle(graphicsDevice, basicEffect, transformedPos, putativeLoc.Radius, linecolor);
 
             GridVector2 target;
             if (nearestParent != null)

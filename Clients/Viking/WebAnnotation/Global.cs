@@ -40,6 +40,8 @@ namespace WebAnnotation
 
         static public double DefaultClosedLineWidth = 24.0;
 
+        static public double MinRadius = 0.5;
+
         /// <summary>
         /// Number of interpolations to place between curve control points, determines distance between control points
         /// </summary>

@@ -155,7 +155,7 @@ namespace WebAnnotation.View
         protected string StructureLabel()
         {
             string InfoLabel = "";
-            if (Parent.InfoLabel != null)
+            if (Parent?.InfoLabel != null)
                 InfoLabel = Parent.InfoLabel.Trim();
 
             return InfoLabel;
@@ -163,6 +163,9 @@ namespace WebAnnotation.View
 
         protected string TagLabel()
         {
+            if (Parent == null)
+                return "";
+
             string InfoLabel = "";
             foreach (ObjAttribute tag in Parent.Attributes)
             {

@@ -97,6 +97,7 @@ namespace WebAnnotation.UI.Commands
                 Viking.UI.Commands.Command.EnqueueCommand(typeof(ResizeCircleCommand), new object[] { Parent, Type.Color, WorldPos,
                         new ResizeCircleCommand.OnCommandSuccess((double radius) => 
                         {
+                            radius = radius < Global.MinRadius ? Global.MinRadius : radius;
                             WebAnnotation.View.LocationActions.UpdateCircleLocationNoSaveCallback(newLocation, WorldPos, SectionPos, radius);
                         }) });
                 if (Type.Parent != null)

@@ -58,7 +58,8 @@ namespace WebAnnotation.View
             //RegisterForLocationEvents();
             //RegisterForStructureChangeEvents();
 
-            curveView = new CurveView(VolumeControlPoints, obj.Parent.Type.Color.ToXNAColor(0.5f), false, lineWidth: lineWidth, lineStyle: LineStyle.Tubular);
+            Color color = obj.Parent == null ? Color.Gray.SetAlpha(0.5f) : obj.Parent.Type.Color.ToXNAColor(0.5f);
+            curveView = new CurveView(VolumeControlPoints, color, false, lineWidth: lineWidth, lineStyle: LineStyle.Tubular);
             CreateLabelViews(VolumeControlPoints, obj.ParentID);
         }
 
@@ -66,8 +67,9 @@ namespace WebAnnotation.View
         {
             //RegisterForLocationEvents();
             //RegisterForStructureChangeEvents();
-            
-            curveView = new CurveView(VolumeControlPoints, obj.Parent.Type.Color.ToXNAColor(0.5f), false, lineWidth: obj.Width.Value, lineStyle: LineStyle.Tubular);
+
+            Color color = obj.Parent == null ? Color.Gray.SetAlpha(0.5f) : obj.Parent.Type.Color.ToXNAColor(0.5f);
+            curveView = new CurveView(VolumeControlPoints, color, false, lineWidth: obj.Width.Value, lineStyle: LineStyle.Tubular);
             CreateLabelViews(VolumeControlPoints, obj.ParentID);
         }
 
@@ -76,7 +78,7 @@ namespace WebAnnotation.View
             string LabelText = this.ParentID.ToString() + " " + this.FullLabelText();
 
             string ParentStructureLabelText = "";
-            if (this.Parent.ParentID.HasValue)
+            if (this.Parent != null && this.Parent.ParentID.HasValue)
             {
                 ParentStructureLabelText = this.Parent.ParentID.ToString();
                 LabelText = this.Parent.Type.Code + " " + LabelText;

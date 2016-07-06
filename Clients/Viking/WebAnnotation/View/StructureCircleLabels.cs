@@ -46,6 +46,9 @@ namespace WebAnnotation.View
 
         protected string StructureIDLabelWithTypeCode(StructureObj obj)
         {
+            if (obj == null)
+                return "";
+
             return obj.Type.Code + " " + obj.ID.ToString();
         }
 
@@ -67,6 +70,9 @@ namespace WebAnnotation.View
          
         protected string TagLabel()
         {
+            if (locationObj.Parent == null)
+                return "";
+
             string InfoLabel = "";
             foreach (ObjAttribute tag in locationObj.Parent.Attributes)
             {
@@ -84,6 +90,9 @@ namespace WebAnnotation.View
         protected string StructureLabel()
         {
             string InfoLabel = "";
+            if (locationObj.Parent == null)
+                return InfoLabel;
+
             if (locationObj.Parent.Label != null)
                 InfoLabel = locationObj.Parent.Label.Trim();
 
@@ -102,7 +111,7 @@ namespace WebAnnotation.View
                 StructureLabelView.MaxLineWidth = this.Radius * 2;
             }
             
-            if (locationObj.Parent.ParentID.HasValue)
+            if (locationObj.Parent != null && locationObj.Parent.ParentID.HasValue)
             {
                 ParentStructureLabelView = new LabelView(locationObj.Parent.ParentID.ToString(), this.VolumeCircle.Center + new GridVector2(0, this.Radius / 2.0f));
                 ParentStructureLabelView._Color = Color.Red; //locationObj.Parent.Parent.Type.Color.ToXNAColor(0.75f);
