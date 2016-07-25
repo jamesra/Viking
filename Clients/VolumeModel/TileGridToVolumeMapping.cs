@@ -196,7 +196,9 @@ namespace Viking.VolumeModel
             iMaxX = iMaxX < 0 ? 0 : iMaxX;
             iMaxY = iMaxY < 0 ? 0 : iMaxY;
             iMaxX = iMaxX > gridInfo.GridXDim ? gridInfo.GridXDim : iMaxX;
-            iMaxY = iMaxY > gridInfo.GridYDim ? gridInfo.GridYDim : iMaxY; 
+            iMaxY = iMaxY > gridInfo.GridYDim ? gridInfo.GridYDim : iMaxY;
+            iMinX = iMinX > iMaxX ? iMaxX : iMinX;
+            iMinY = iMinY > iMaxY ? iMaxY : iMinY;
 
             int ExpectedTileCount = (iMaxX - iMinX) * (iMaxY - iMinY);
             List<Tile> TilesToDraw = new List<Tile>(ExpectedTileCount);
