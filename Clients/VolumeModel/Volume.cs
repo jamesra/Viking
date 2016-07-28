@@ -91,7 +91,7 @@ namespace Viking.VolumeModel
         /// <summary>
         /// Name of the volume transform to use by default
         /// </summary>
-        public string DefaultVolumeTransform = "None";
+        public string DefaultVolumeTransform = null;
 
         /// <summary>
         /// Name of the default stos group
@@ -758,7 +758,7 @@ namespace Viking.VolumeModel
                                 VolumeTransformNames.Add(groupName);
                             }
 
-                            if (this.DefaultVolumeTransform == "None")
+                            if (this.DefaultVolumeTransform == null || this.DefaultVolumeTransform == "None")
                                 this.DefaultVolumeTransform = groupName;
 
                             if (CreateStosGridTransformObj.stosTransform != null)

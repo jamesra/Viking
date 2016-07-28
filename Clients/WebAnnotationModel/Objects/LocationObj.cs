@@ -339,7 +339,11 @@ namespace WebAnnotationModel
 
         private double CalculateRadius(Microsoft.SqlServer.Types.SqlGeometry shape)
         {
-            if (shape.STDimension() == 1)
+            if(shape.STDimension() == 0)
+            {
+                return 8;
+            }
+            else if (shape.STDimension() == 1)
             {
                 return shape.STLength().Value / 2.0;
             }
@@ -369,7 +373,8 @@ namespace WebAnnotationModel
             get {
                 if (!_Radius.HasValue)
                 {
-                    _Radius = Math.Sqrt(MosaicShape.STArea().Value / Math.PI);
+                    _Radius = CalculateRadius(MosaicShape);
+                    Debug.Assert(_Radius > 0);
                 }
 
                 return _Radius.Value;
