@@ -405,7 +405,7 @@ namespace WebAnnotation.ViewModel
         {
             get
             {
-                return ((SourceLocation.Radius + TargetLocation.Radius));
+                return ((SourceLocation.Width.Value + TargetLocation.Width.Value) / 2.0);
             }
         }
 
@@ -504,7 +504,7 @@ namespace WebAnnotation.ViewModel
             SqlGeometry sourceShape = mapper.TryMapShapeSectionToVolume(source.MosaicShape);
             SqlGeometry targetShape = mapper.TryMapShapeSectionToVolume(target.MosaicShape);
 
-            lineView = new LinkedPolyLineSimpleView(sourceShape.ToPoints(), targetShape.ToPoints(), DefaultLineWidth, DefaultColor, link.Bidirectional ? LineStyle.AnimatedBidirectional : LineStyle.AnimatedLinear);          
+            lineView = new LinkedPolyLineSimpleView(sourceShape.ToPoints(), targetShape.ToPoints(), (float)this.LineWidth, DefaultColor, link.Bidirectional ? LineStyle.AnimatedBidirectional : LineStyle.AnimatedLinear);          
         }
 
         public static void Draw(GraphicsDevice device,

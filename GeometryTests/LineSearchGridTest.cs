@@ -86,16 +86,16 @@ namespace GeometryTests
             GridVector2 intersection;
             double distance;
             string value = LineSearch.GetNearest(new GridVector2(-5, 3), out intersection, out distance);
-            Debug.Assert(value == "A");
+            Assert.IsTrue(value == "A");
 
             value = LineSearch.GetNearest(new GridVector2(-10, -10), out intersection, out distance);
-            Debug.Assert(value == "C");
+            Assert.IsTrue(value == "C");
 
             value = LineSearch.GetNearest(new GridVector2(7, 4), out intersection, out distance);
-            Debug.Assert(value == "A");
+            Assert.IsTrue(value == "A");
 
             value = LineSearch.GetNearest(new GridVector2(3.5, 6), out intersection, out distance);
-            Debug.Assert(value == "B"); 
+            Assert.IsTrue(value == "B"); 
         }
     }
 }

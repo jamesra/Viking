@@ -209,8 +209,8 @@ namespace WebAnnotation.ViewModel
             IVolumeToSectionTransform MapperA = mapProvider.GetSectionToVolumeTransform((int)Math.Round(A.Z));
             IVolumeToSectionTransform MapperB = mapProvider.GetSectionToVolumeTransform((int)Math.Round(B.Z));
 
-            AView = AnnotationViewFactory.Create(A, MapperA);
-            BView = AnnotationViewFactory.Create(B, MapperB);
+            AView = A.Z == this.Z ? AnnotationViewFactory.Create(A, MapperA) : AnnotationViewFactory.CreateAdjacent(A, MapperA);
+            BView = B.Z == this.Z ? AnnotationViewFactory.Create(B, MapperB) : AnnotationViewFactory.CreateAdjacent(B, MapperB);
         }
 
         int ICanvasView.VisualHeight

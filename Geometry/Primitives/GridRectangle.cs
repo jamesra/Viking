@@ -320,7 +320,10 @@ namespace Geometry
 
         public bool Union(GridRectangle rect)
         {
-            return this.Union(rect.LowerLeft) || this.Union(rect.UpperRight); 
+            bool llExpand = this.Union(rect.LowerLeft);
+            bool urExpand = this.Union(rect.UpperRight);
+
+            return llExpand || urExpand; //Cannot combine these or short-circuit execution will cancel one.
         }
 
         

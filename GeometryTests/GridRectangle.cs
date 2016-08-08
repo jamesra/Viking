@@ -67,39 +67,39 @@ namespace GeometryTests
             GridRectangle rectA = new GridRectangle(10, 50, 20, 40);
 
             bool success = rectA.Contains(new GridVector2(10, 20));
-            Debug.Assert(success);
+            Assert.IsTrue(success);
 
             success = rectA.Contains(new GridVector2(50, 40));
-            Debug.Assert(success);
+            Assert.IsTrue(success);
 
             success = rectA.Contains(rectA.Center);
-            Debug.Assert(success);
+            Assert.IsTrue(success);
 
             GridRectangle rectBOverlaps = new GridRectangle(5, 15, 10, 21);
             success = rectA.Intersects(rectBOverlaps);
-            Debug.Assert(success);
+            Assert.IsTrue(success);
 
             success = rectA.Contains(rectBOverlaps);
-            Debug.Assert(false == success);
+            Assert.IsTrue(false == success);
 
             GridRectangle rectCNoOverlap = new GridRectangle(5, 15, 10, 19);
             success = rectA.Intersects(rectCNoOverlap);
-            Debug.Assert(false == success);
+            Assert.IsTrue(false == success);
 
             success = rectA.Contains(rectBOverlaps);
-            Debug.Assert(false == success);
+            Assert.IsTrue(false == success);
 
             GridRectangle rectDContained = new GridRectangle(15, 45, 25, 35);
             success = rectA.Intersects(rectDContained);
-            Debug.Assert(success);
+            Assert.IsTrue(success);
 
             success = rectA.Contains(rectDContained);
-            Debug.Assert(success);
+            Assert.IsTrue(success);
             
             /*Scale the rectangle and test again*/
             rectA.Scale(2);
 
-            Debug.Assert(-10.0 == rectA.Left &&
+            Assert.IsTrue(-10.0 == rectA.Left &&
                          70 == rectA.Right &&
                          10 == rectA.Bottom &&
                          50 == rectA.Top);
@@ -107,7 +107,7 @@ namespace GeometryTests
             /*Scale the rectangle and test again*/
             rectA.Scale(0.5);
 
-            Debug.Assert(10.0 == rectA.Left &&
+            Assert.IsTrue(10.0 == rectA.Left &&
                          50 == rectA.Right &&
                          20 == rectA.Bottom &&
                          40 == rectA.Top);

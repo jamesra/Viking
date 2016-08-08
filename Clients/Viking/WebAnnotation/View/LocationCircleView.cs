@@ -69,7 +69,7 @@ namespace WebAnnotation.View
 
         public override bool Intersects(SqlGeometry shape)
         {
-            return this.modelObj.VolumeShape.STIntersects(shape).IsTrue;
+            return this.VolumeShapeAsRendered.STIntersects(shape).IsTrue;
         }
         
         /// <summary>
