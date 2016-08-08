@@ -1,0 +1,271 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Web Services &mdash; Viking 1.1 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '1.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="author" title="About these documents" href="../../about.html" />
+    <link rel="top" title="Viking 1.1 documentation" href="../../index.html" />
+    <link rel="up" title="Developer Documentation" href="../toctree.html" />
+    <link rel="next" title="The VikingXML format" href="../viking_volume_xml.html" />
+    <link rel="prev" title="Identity Service" href="../Identity/identity.html" />
+   
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9">
+
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../http-routingtable.html" title="HTTP Routing Table"
+             >routing table</a> |</li>
+        <li class="right" >
+          <a href="../viking_volume_xml.html" title="The VikingXML format"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="../Identity/identity.html" title="Identity Service"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">Viking 1.1 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../toctree.html" accesskey="U">Developer Documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="web-services">
+<h1>Web Services<a class="headerlink" href="#web-services" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="overview">
+<h2>Overview<a class="headerlink" href="#overview" title="Permalink to this headline">¶</a></h2>
+<img alt="../../_images/Architecture.png" src="../../_images/Architecture.png" />
+<p>Installing the web services requires IIS.  This will document how we configure web services for two volumes <strong>RC1</strong> and <strong>RC2</strong>.</p>
+</div>
+<div class="section" id="initial-iis-configuration">
+<h2>Initial IIS configuration<a class="headerlink" href="#initial-iis-configuration" title="Permalink to this headline">¶</a></h2>
+<p>IIS must be installed on the machine with WCF and .NET 4.0 support.  <a class="reference download internal" href="../../_downloads/IISServerConfig.png"><code class="xref download docutils literal"><span class="pre">Screenshot</span> <span class="pre">of</span> <span class="pre">our</span> <span class="pre">IIS</span> <span class="pre">installed</span> <span class="pre">roles.</span></code></a></p>
+<p>Either generate a local SSL certificate or obtain an official one.  Viking&#8217;s annotation service refers to the certificate by serial number in a later configuration step.  The serial number can be found on by viewing the installed certificate.</p>
+<img alt="../../_images/IISSSLCert.png" src="../../_images/IISSSLCert.png" />
+</div>
+<div class="section" id="web-service-deployment-procedure">
+<h2>Web Service Deployment Procedure<a class="headerlink" href="#web-service-deployment-procedure" title="Permalink to this headline">¶</a></h2>
+<p>Load the Server component solution in Visual Studio.  Open the web.config file of the AnnotationService project.  Update the serviceCertificate node&#8217;s findvalue attribute to match the serial number of the certificate you will be using.</p>
+<blockquote>
+<div><div class="highlight-python"><div class="highlight"><pre>&lt;serviceCertificate findValue =&quot;00f19cb44c6565392ba1cda8423adfcf25&quot; storeLocation =&quot;LocalMachine&quot; x509FindType=&quot;FindBySerialNumber&quot;/&gt;
+</pre></div>
+</div>
+</div></blockquote>
+<p>This step is only required if you will be writing to your own annotation web service.  The OData and Export projects can be configured to point at an existing web service.</p>
+<dl class="docutils">
+<dt>After getting the Server components solution to build these projects should be published to the deployment directory:</dt>
+<dd><ul class="first last simple">
+<li><strong>Annotation Service</strong> This project has to be manually built as both Release and Debug and deployed to the relevant diretory.</li>
+<li><strong>ConnectomeOpenData</strong> Publish both the Production and Test configuration</li>
+<li><strong>DataExport</strong> Publish both the Production and Test configuration</li>
+</ul>
+</dd>
+</dl>
+<p>We prefer to upgrade all of our services with a single copy.  To accomplish this we copy the deployment directory to a folder outside of IIS.  The volumes in IIS will all point to this directory as a virtual directory.  When we update the binaries here all volumes will be upgraded.</p>
+<img alt="../../_images/WebServiceApplicationFolders.png" src="../../_images/WebServiceApplicationFolders.png" />
+</div>
+<div class="section" id="volume-deployment-procedure">
+<h2>Volume deployment procedure<a class="headerlink" href="#volume-deployment-procedure" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="explorer">
+<h3>Explorer<a class="headerlink" href="#explorer" title="Permalink to this headline">¶</a></h3>
+<p>Each volume gets its own application within IIS.  We create a folder for the volume under the root website.</p>
+<img alt="../../_images/WebServiceFolders.png" src="../../_images/WebServiceFolders.png" />
+<p>Note the ExportColorMapping folder under RC1 which will contain the default color mappings used by the file exporter web service.</p>
+<p>There is a default web.config file which arrived with the deployment directory.  This file contains the default values for all of the application settings.
+Copy this folder to the root of your new volume directory.  In this example it would be copied to C:inetpubwwwrootRC1web.config.  These settings will be updated in a later step.</p>
+</div>
+<div class="section" id="iis">
+<h3>IIS<a class="headerlink" href="#iis" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="create-an-application-pool-for-the-volume">
+<h4>Create an application pool for the volume<a class="headerlink" href="#create-an-application-pool-for-the-volume" title="Permalink to this headline">¶</a></h4>
+<p>Below shows the application pool for the volume.  If the database is on a remote machine you will need to create an active directory account for the application identity.  If the database is local the application&#8217;s identity is sufficient.</p>
+<p>The application pool must be configured to use .NET 4.  It is possible to share the application pool across multiple volumes.  In our production server we assign a seperate application pool to the annotation service which has write permissions to the database.</p>
+<img alt="../../_images/IISVolumeApplicationPoolConfig.png" src="../../_images/IISVolumeApplicationPoolConfig.png" />
+</div>
+<div class="section" id="configure-the-volume-application">
+<h4>Configure the volume application<a class="headerlink" href="#configure-the-volume-application" title="Permalink to this headline">¶</a></h4>
+<ol class="arabic simple">
+<li>Open IIS manager and open the website containing the folders you created above.  If they appear to be normal
+folders right-click the folder and choose &#8220;Convert to Application&#8221;.  Assign the application to the .NET 4.0
+application pool you have created.</li>
+<li>Create a database connection string, <em>VikingApplicationServices</em>, for your membership and roles database.
+The default web.config for a Viking volume expects this connection string to be configured.  This database
+must be an ASP.NET SQL roles provider database.</li>
+<li>Create a database connection string, <em>VikingDatabaseConnection</em>, for your annotation database.  The default
+web.config for a Viking volume expects this connection string to be configured.</li>
+</ol>
+</div>
+<div class="section" id="create-virtual-applications-for-each-web-service">
+<h4>Create virtual applications for each web service<a class="headerlink" href="#create-virtual-applications-for-each-web-service" title="Permalink to this headline">¶</a></h4>
+<p>For each web service add a new application to the volume application.</p>
+<dl class="docutils">
+<dt>The standard application names for each C# project:</dt>
+<dd><ul class="first last simple">
+<li><strong>Annotation Service</strong> → Annotation</li>
+<li><strong>ConnectomeOpenData</strong> → OData</li>
+<li><strong>DataExport</strong> → Export</li>
+<li>Append &#8220;Test&#8221; to the above names when pointing to debug binaries, ex: <em>ODataTest</em></li>
+</ul>
+</dd>
+</dl>
+<p>In the image below we are adding an ExportTest application to the RC1 volume.</p>
+<img alt="../../_images/IISCreateApplication.png" src="../../_images/IISCreateApplication.png" />
+</div>
+<div class="section" id="application-settings">
+<h4>Application settings<a class="headerlink" href="#application-settings" title="Permalink to this headline">¶</a></h4>
+<p>Open the application settings for the volume application.</p>
+<img alt="../../_images/IISAppSettings.png" src="../../_images/IISAppSettings.png" />
+<p>These settings will be inherited by the child applications unless overridden, so we configure at the root application level.</p>
+<dl class="docutils">
+<dt><strong>Shared</strong></dt>
+<dd><table class="first last docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name" colspan="2">DatabaseConnectionString:</th></tr>
+<tr class="field-odd field"><td>&nbsp;</td><td class="field-body">Annotation and OData service. The IIS connection string to use when talking directly to the annotation database.  <em>VikingDatabaseConnection</em> by default.</td>
+</tr>
+</tbody>
+</table>
+</dd>
+<dt><strong>Export</strong></dt>
+<dd><table class="first last docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name" colspan="2">DefaultLocationColorMapsPath:</th></tr>
+<tr class="field-odd field"><td>&nbsp;</td><td class="field-body">Default configuration file to map location positions to colors.</td>
+</tr>
+<tr class="field-even field"><th class="field-name" colspan="2">DefaultStructureColorsPath:</th></tr>
+<tr class="field-even field"><td>&nbsp;</td><td class="field-body">Default configuration file to map strcture IDs to colors.</td>
+</tr>
+<tr class="field-odd field"><th class="field-name" colspan="2">DefaultStructureTypeColorsPath:</th></tr>
+<tr class="field-odd field"><td>&nbsp;</td><td class="field-body">Default configuration file to map structure type IDs to colors.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">EndpoingURL:</th><td class="field-body">URL of annotation service to use when exporting data.</td>
+</tr>
+<tr class="field-odd field"><th class="field-name" colspan="2">EndpointUsername:</th></tr>
+<tr class="field-odd field"><td>&nbsp;</td><td class="field-body">Username to use for annotation service endpoint, should be a user with read-only access, we use <em>anonymous</em>.</td>
+</tr>
+<tr class="field-even field"><th class="field-name" colspan="2">EndpointPassword:</th></tr>
+<tr class="field-even field"><td>&nbsp;</td><td class="field-body">Password to use for annotation service endpoint.</td>
+</tr>
+<tr class="field-odd field"><th class="field-name" colspan="2">(X/Y/Z)ScaleUnits:</th></tr>
+<tr class="field-odd field"><td>&nbsp;</td><td class="field-body">Pixel to measurement unit mapping.</td>
+</tr>
+<tr class="field-even field"><th class="field-name" colspan="2">(X/Y/Z)ScaleValue:</th></tr>
+<tr class="field-even field"><td>&nbsp;</td><td class="field-body">Units of measure for pixel scale, defaults to <em>nm</em>.</td>
+</tr>
+</tbody>
+</table>
+</dd>
+</dl>
+<p>The configuration of the web services should be complete.  Please let us know if these instructions are missing any steps.</p>
+</div>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Web Services</a><ul>
+<li><a class="reference internal" href="#overview">Overview</a></li>
+<li><a class="reference internal" href="#initial-iis-configuration">Initial IIS configuration</a></li>
+<li><a class="reference internal" href="#web-service-deployment-procedure">Web Service Deployment Procedure</a></li>
+<li><a class="reference internal" href="#volume-deployment-procedure">Volume deployment procedure</a><ul>
+<li><a class="reference internal" href="#explorer">Explorer</a></li>
+<li><a class="reference internal" href="#iis">IIS</a><ul>
+<li><a class="reference internal" href="#create-an-application-pool-for-the-volume">Create an application pool for the volume</a></li>
+<li><a class="reference internal" href="#configure-the-volume-application">Configure the volume application</a></li>
+<li><a class="reference internal" href="#create-virtual-applications-for-each-web-service">Create virtual applications for each web service</a></li>
+<li><a class="reference internal" href="#application-settings">Application settings</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="../Identity/identity.html"
+                        title="previous chapter">Identity Service</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="../viking_volume_xml.html"
+                        title="next chapter">The VikingXML format</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../../_sources/server/IIS/webservices.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2015, James Anderson.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.3.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.3</a>
+      
+      |
+      <a href="../../_sources/server/IIS/webservices.txt"
+          rel="nofollow">Page source</a></li>
+    </div>
+
+    
+
+    
+  </body>
+</html>

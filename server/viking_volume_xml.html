@@ -1,0 +1,399 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>The VikingXML format &mdash; Viking 1.1 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="author" title="About these documents" href="../about.html" />
+    <link rel="top" title="Viking 1.1 documentation" href="../index.html" />
+    <link rel="up" title="Developer Documentation" href="toctree.html" />
+    <link rel="next" title="About" href="../about.html" />
+    <link rel="prev" title="Web Services" href="IIS/webservices.html" />
+   
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9">
+
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../http-routingtable.html" title="HTTP Routing Table"
+             >routing table</a> |</li>
+        <li class="right" >
+          <a href="../about.html" title="About"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="IIS/webservices.html" title="Web Services"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">Viking 1.1 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="toctree.html" accesskey="U">Developer Documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="the-vikingxml-format">
+<h1>The VikingXML format<a class="headerlink" href="#the-vikingxml-format" title="Permalink to this headline">¶</a></h1>
+<p>Viking is capable of displaying any correct formatted image data.
+To use Viking for different images you need to make a VikingXML file available on a web server
+which you can then pass to Viking&#8217;s splash screen.</p>
+<p>Nornir contains scripts which VikingXML files automatically.</p>
+<p>Link to the <a href="#id1"><span class="problematic" id="id2">`XML Schema Definition for VikingXML`_</span></a></p>
+<p>Viking has not been tested against a lot of different input and does not yet have robust error reporting.
+We recommend testing after adding each element and not deviating too much from the sample below at first.
+Please let Dr. James Anderson know if you encounter trouble (james.r.anderson at utah.edu).</p>
+<div class="section" id="sample-vikingxml">
+<h2>Sample VikingXML<a class="headerlink" href="#sample-vikingxml" title="Permalink to this headline">¶</a></h2>
+<p>Below is an example <a class="reference external" href="http://connectomes.utah.edu/Rabbit/Volume.VikingXML">snippet of VikingXML</a> which loads one section of our RC1 volume:</p>
+<div class="highlight-python"><div class="highlight"><pre>&lt;?xml version=&quot;1.0&quot;?&gt;
+     &lt;Volume name=&quot;Rabbit&quot; UniqueID=&quot;1&quot; num_stos=&quot;340&quot;  num_sections=&quot;341&quot; path=&quot;http://155.100.105.9/Rabbit&quot;
+       xmlns:xsi=&quot;http://www.w3.org/2001/XMLSchema-instance&quot; xsi:noNamespaceSchemaLocation=&quot;http://connectome.utah.edu/VikingXML.xsd&quot;&gt;
+             &lt;stos mappedSection=&quot;2&quot; controlSection=&quot;1&quot; pixelSpacing=&quot;16&quot; type=&quot;grid&quot; path=&quot;0002-0001_grid_16.stos&quot;/&gt;
+             &lt;stos mappedSection=&quot;3&quot; controlSection=&quot;2&quot; pixelSpacing=&quot;16&quot; type=&quot;grid&quot; path=&quot;0003-0002_grid_16.stos&quot;/&gt;
+             &lt;Section number=&quot;30&quot; path=&quot;0030&quot; &gt;
+                     &lt;transform name=&quot;0030_Supertile.mosaic&quot; path=&quot;0030_Supertile.mosaic&quot; UseForVolume=&quot;false&quot; FilePrefix=&quot;0030&quot; FilePostfix=&quot;.png&quot; /&gt;
+                     &lt;transform name=&quot;grid.mosaic&quot; path=&quot;grid.mosaic&quot; UseForVolume=&quot;true&quot; FilePrefix=&quot;0030&quot; FilePostfix=&quot;.png&quot; /&gt;
+                     &lt;transform name=&quot;translate.mosaic&quot; path=&quot;translate.mosaic&quot; UseForVolume=&quot;false&quot; FilePrefix=&quot;0030&quot; FilePostfix=&quot;.png&quot; /&gt;
+                     &lt;Pyramid name=&quot;8-bit&quot; path=&quot;8-bit&quot;&gt;
+                             &lt;Level Downsample=&quot;1&quot; path=&quot;001&quot;/&gt;
+                             &lt;Level Downsample=&quot;2&quot; path=&quot;002&quot;/&gt;
+                             &lt;Level Downsample=&quot;4&quot; path=&quot;004&quot;/&gt;
+                             &lt;Level Downsample=&quot;8&quot; path=&quot;008&quot;/&gt;
+                             &lt;Level Downsample=&quot;16&quot; path=&quot;016&quot;/&gt;
+                             &lt;Level Downsample=&quot;32&quot; path=&quot;032&quot;/&gt;
+                             &lt;Level Downsample=&quot;64&quot; path=&quot;064&quot;/&gt;
+                     &lt;/Pyramid&gt;
+                     &lt;Tileset name=&quot;mosaic&quot; path=&quot;mosaic&quot; FilePrefix=&quot;0030_&quot; FilePostfix=&quot;.png&quot; TileXDim=&quot;256&quot; TileYDim=&quot;256&quot; &gt;
+                             &lt;Level Downsample=&quot;1&quot; GridDimX=&quot;462&quot; GridDimY=&quot;466&quot; path=&quot;001&quot;/&gt;
+                             &lt;Level Downsample=&quot;2&quot; GridDimX=&quot;231&quot; GridDimY=&quot;233&quot; path=&quot;002&quot;/&gt;
+                             &lt;Level Downsample=&quot;4&quot; GridDimX=&quot;116&quot; GridDimY=&quot;117&quot; path=&quot;004&quot;/&gt;
+                             &lt;Level Downsample=&quot;8&quot; GridDimX=&quot;58&quot; GridDimY=&quot;59&quot; path=&quot;008&quot;/&gt;
+                             &lt;Level Downsample=&quot;16&quot; GridDimX=&quot;29&quot; GridDimY=&quot;30&quot; path=&quot;016&quot;/&gt;
+                             &lt;Level Downsample=&quot;32&quot; GridDimX=&quot;15&quot; GridDimY=&quot;15&quot; path=&quot;032&quot;/&gt;
+                             &lt;Level Downsample=&quot;64&quot; GridDimX=&quot;8&quot; GridDimY=&quot;8&quot; path=&quot;064&quot;/&gt;
+                     &lt;/Tileset&gt;
+                     &lt;Tileset name=&quot;Glycine&quot; path=&quot;Glycine&quot; FilePrefix=&quot;&quot; FilePostfix=&quot;.png&quot;  TileXDim=&quot;256&quot; TileYDim=&quot;256&quot;&gt;
+                             &lt;Level GridDimX=&quot;15&quot; GridDimY=&quot;15&quot; Downsample=&quot;32&quot; path=&quot;032&quot;/&gt;
+                             &lt;Level GridDimX=&quot;8&quot; GridDimY=&quot;8&quot; Downsample=&quot;64&quot; path=&quot;064&quot;/&gt;
+                     &lt;/Tileset&gt;
+                     &lt;ChannelInfo&gt;
+                             &lt;Channel Section=&quot;Selected&quot; Channel=&quot;mosaic&quot; Color=&quot;0xFF00FF&quot;/&gt;
+                             &lt;Channel Section=&quot;Selected&quot; Channel=&quot;Glycine&quot; Color=&quot;0x00FF00&quot;/&gt;
+                     &lt;/ChannelInfo&gt;
+             &lt;/Section&gt;
+     &lt;/Volume&gt;
+</pre></div>
+</div>
+</div>
+<div class="section" id="vikingxml-element-documentation">
+<h2>VikingXML Element Documentation<a class="headerlink" href="#vikingxml-element-documentation" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="volume">
+<h3>Volume<a class="headerlink" href="#volume" title="Permalink to this headline">¶</a></h3>
+<blockquote>
+<div><p>Required element which contains all information about the volume and optionally points to the VikigXML schema definition.</p>
+<div class="highlight-python"><div class="highlight"><pre>&lt;Volume name=&quot;Rabbit&quot; UniqueID=&quot;1&quot; num_stos=&quot;340&quot;  num_sections=&quot;341&quot; path=&quot;http://155.100.105.9/Rabbit&quot; xmlns:xsi=&quot;http://www.w3.org/2001/XMLSchema-instance&quot; xsi:noNamespaceSchemaLocation=&quot;http://connectome.utah.edu/VikingXML.xsd&quot;&gt;
+</pre></div>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Name:</th><td class="field-body">The name of the volume.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">num_stos:</th><td class="field-body">Optional, the number of stos tags in the volume. Only used for loading progress bar and will eventually be removed.</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">num_sections:</th><td class="field-body">Optional, the number of section tags in the volume. Only used for loading progress bar and will eventually be removed.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">path:</th><td class="field-body">Required, the URL of the root path of the volume. Only used when VikingXML is loaded from local disk.</td>
+</tr>
+</tbody>
+</table>
+</div></blockquote>
+</div>
+<div class="section" id="stos">
+<h3>stos<a class="headerlink" href="#stos" title="Permalink to this headline">¶</a></h3>
+<blockquote>
+<div><p>Optional element which defines a slice-to-slice transform (stos). These are used to tell Viking how to warp from section space to volume space. All attributes are required.</p>
+<div class="highlight-python"><div class="highlight"><pre>&lt;stos mappedSection=&quot;2&quot; controlSection=&quot;1&quot; pixelSpacing=&quot;16&quot; type=&quot;grid&quot; path=&quot;0002-0001_grid_16.stos&quot;/&gt;
+</pre></div>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">mappedSection:</th><td class="field-body">The section being transformed</td>
+</tr>
+<tr class="field-even field"><th class="field-name">controlSection:</th><td class="field-body">The section not being transformed</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">pixelSpacing:</th><td class="field-body">stos files are rarely generated against the full-resolution data. This value tells viking how much the coordinates should be scaled by to match the actual image dimensions.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">type:</th><td class="field-body">The type of transform to use, currently always use &#8220;grid&#8221;.</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">path:</th><td class="field-body">Relative path from Volume path to the stos file containing transformation data.</td>
+</tr>
+</tbody>
+</table>
+</div></blockquote>
+</div>
+<div class="section" id="section">
+<h3>Section<a class="headerlink" href="#section" title="Permalink to this headline">¶</a></h3>
+<blockquote>
+<div><p>The section tag describes a slice in the volume at a specific z depth. If there are no section tags there are no images in the volume.</p>
+<div class="highlight-python"><div class="highlight"><pre>&lt;Section number=&quot;30&quot; path=&quot;0030&quot; &gt;
+</pre></div>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">name:</th><td class="field-body">Friendly name of the section. Defaults to section number. I recommend using section number because I haven&#8217;t tested anything else.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">number:</th><td class="field-body">Integer, numbers should be sequential according to the order in which sections were cut. It is OK to skip numbers for lost sections.</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">path:</th><td class="field-body">Relative path from Volume path to the Section directory.</td>
+</tr>
+</tbody>
+</table>
+</div></blockquote>
+</div>
+<div class="section" id="pyramid">
+<h3>Pyramid<a class="headerlink" href="#pyramid" title="Permalink to this headline">¶</a></h3>
+<blockquote>
+<div><p>Image pyramids are generated from the original images captured by an imaging platform.</p>
+<div class="highlight-python"><div class="highlight"><pre>&lt;Pyramid name=&quot;8-bit&quot; path=&quot;8-bit&quot;&gt;
+</pre></div>
+</div>
+<p>We use these image pyramids with the NCRToolset to generate transforms that describe
+where each tile in the pyramid is positioned in section space. In the pyramid each tile size
+is variable according to its source pyramid level. This makes for poor performance over the internet
+but is very useful for debugging the output of the NCRToolset over an intranet.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">name:</th><td class="field-body">Name of the channel displayed in the Viking UI.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">path:</th><td class="field-body">Relative path from the section path.</td>
+</tr>
+</tbody>
+</table>
+</div></blockquote>
+</div>
+<div class="section" id="transform">
+<h3>Transform<a class="headerlink" href="#transform" title="Permalink to this headline">¶</a></h3>
+<blockquote>
+<div><p>Transforms are only applied to Pyramids. They are generated by the NCRToolset, using the ITK string formatting for transforms, and describe how each tile in a mosaic is positioned in the section.</p>
+<div class="highlight-python"><div class="highlight"><pre>&lt;transform name=&quot;grid.mosaic&quot; path=&quot;grid.mosaic&quot; UseForVolume=&quot;true&quot; FilePrefix=&quot;0030&quot; FilePostfix=&quot;.png&quot; /&gt;
+</pre></div>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Name:</th><td class="field-body">Name of the transform in the Viking UI</td>
+</tr>
+<tr class="field-even field"><th class="field-name">path:</th><td class="field-body">Relative path from the section path.</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">UseForVolume:</th><td class="field-body">Boolean, specifies that this transform is used to position tiles in the section before the are warped into the volume. Only the highest quality transform should have this set.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">FilePrefix:</th><td class="field-body">String to prepend to all file names, if needed. A period is added after the file prefix. Traditionally we prepend the section number to tile names. Tiles are expected to be numbered with three digits. i.e. Section 1 Tile 243 = 0001.243.png</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">FilePostfix:</th><td class="field-body">Extension to add to file names, must be supported by XNA library. .png format recommended.</td>
+</tr>
+</tbody>
+</table>
+</div></blockquote>
+</div>
+<div class="section" id="tileset">
+<h3>Tileset<a class="headerlink" href="#tileset" title="Permalink to this headline">¶</a></h3>
+<blockquote>
+<div><p>In a tileset all the images have a fixed size regardless of the level of the pyramid.
+We typically use 256x256 pixel tiles laid out on a grid with no overlap. This optimizes
+bandwidth use. Tile names include the grid position, i.e. X001_Y001.png</p>
+<div class="highlight-python"><div class="highlight"><pre>&lt;Tileset name=&quot;Glycine&quot; path=&quot;Glycine&quot; FilePrefix=&quot;&quot; FilePostfix=&quot;.png&quot;  TileXDim=&quot;256&quot; TileYDim=&quot;256&quot;&gt;
+</pre></div>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Name:</th><td class="field-body">Name of the channel displayed in the Viking UI</td>
+</tr>
+<tr class="field-even field"><th class="field-name">path:</th><td class="field-body">Relative path from the section path.</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">UseForVolume:</th><td class="field-body">Boolean, specifies that this transform is used to position tiles in the section before the are warped into the volume. Only the highest quality transform should have this set.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">FilePrefix:</th><td class="field-body">String to prepend to all file names, if needed. A period is added after the file prefix. Traditionally we prepend the section number to tile names. Tiles are expected to be numbered with three digits. i.e. Section 1 Tile 243 = 0001.243.png</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">FilePostfix:</th><td class="field-body">Extension to add to file names, must be supported by XNA library. .png format recommended.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">TileXDim:</th><td class="field-body">Pixel X dimensions of each tile</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">TileYDim:</th><td class="field-body">Pixel Y dimensions of each tile</td>
+</tr>
+</tbody>
+</table>
+</div></blockquote>
+</div>
+<div class="section" id="level">
+<h3>Level<a class="headerlink" href="#level" title="Permalink to this headline">¶</a></h3>
+<blockquote>
+<div><p>Describes a level in a &#8220;tileset&#8221; or &#8220;pyramid&#8221; image pyramid. A level is a directory containing all of the original tiles downsampled by a common factor.</p>
+<div class="highlight-python"><div class="highlight"><pre>&lt;Level Downsample=&quot;1&quot; GridDimX=&quot;462&quot; GridDimY=&quot;466&quot; path=&quot;001&quot;/&gt;
+</pre></div>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Level:</th><td class="field-body">A number defining what level of the pyramid this is. Must currently be a power of two.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">path:</th><td class="field-body">Relative path from the tileset or pyramid path.</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">GridDimX:</th><td class="field-body">Tilesets only, Integer defining the dimensions of the grid in X</td>
+</tr>
+<tr class="field-even field"><th class="field-name">GridDimY:</th><td class="field-body">Tilesets only, Integer defining the dimensions of the grid in Y</td>
+</tr>
+</tbody>
+</table>
+</div></blockquote>
+</div>
+<div class="section" id="channelinfo">
+<h3>ChannelInfo<a class="headerlink" href="#channelinfo" title="Permalink to this headline">¶</a></h3>
+<blockquote>
+<div><p>Channel info is an optional element allowing volumes to define a default mix of channels for a section.
+This element can also be placed under the volume element to define a global default channel setup.
+Section channel configurations override volume channel configurations.</p>
+<div class="highlight-python"><div class="highlight"><pre>&lt;ChannelInfo&gt;
+</pre></div>
+</div>
+</div></blockquote>
+</div>
+<div class="section" id="channel">
+<h3>Channel<a class="headerlink" href="#channel" title="Permalink to this headline">¶</a></h3>
+<blockquote>
+<div><p>Specifies a channel to display by default.</p>
+<div class="highlight-python"><div class="highlight"><pre>&lt;Channel Section=&quot;Selected&quot; Channel=&quot;Glycine&quot; Color=&quot;0x00FF00&quot;/&gt;
+</pre></div>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Section:</th><td class="field-body">The section to load the channel from, must be one of these values: Defines which section to load a channel from
+* <strong>Selected</strong>: Load images from the users currently selected section
+* <strong>Fixed</strong>: Load images from the specified section
+* <strong>Above</strong>: Load images from the reference section above the users selected section
+* <em>Below*</em>: Load images from the reference section below the users selected section</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Channel:</th><td class="field-body">The name of the channel, either a pyramid or tileset, to load, or &#8220;Selected&#8221; for user selected channel</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Color:</th><td class="field-body">Color to use when displaying channel, specify as a web color i.e. #00ff00</td>
+</tr>
+</tbody>
+</table>
+</div></blockquote>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">The VikingXML format</a><ul>
+<li><a class="reference internal" href="#sample-vikingxml">Sample VikingXML</a></li>
+<li><a class="reference internal" href="#vikingxml-element-documentation">VikingXML Element Documentation</a><ul>
+<li><a class="reference internal" href="#volume">Volume</a></li>
+<li><a class="reference internal" href="#stos">stos</a></li>
+<li><a class="reference internal" href="#section">Section</a></li>
+<li><a class="reference internal" href="#pyramid">Pyramid</a></li>
+<li><a class="reference internal" href="#transform">Transform</a></li>
+<li><a class="reference internal" href="#tileset">Tileset</a></li>
+<li><a class="reference internal" href="#level">Level</a></li>
+<li><a class="reference internal" href="#channelinfo">ChannelInfo</a></li>
+<li><a class="reference internal" href="#channel">Channel</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="IIS/webservices.html"
+                        title="previous chapter">Web Services</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="../about.html"
+                        title="next chapter">About</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/server/viking_volume_xml.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2015, James Anderson.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.3.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.3</a>
+      
+      |
+      <a href="../_sources/server/viking_volume_xml.txt"
+          rel="nofollow">Page source</a></li>
+    </div>
+
+    
+
+    
+  </body>
+</html>

@@ -1,0 +1,313 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Network Visualization &mdash; Viking 1.1 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="author" title="About these documents" href="../about.html" />
+    <link rel="top" title="Viking 1.1 documentation" href="../index.html" />
+    <link rel="up" title="Export" href="toctree.html" />
+    <link rel="next" title="Developer Documentation" href="../server/toctree.html" />
+    <link rel="prev" title="OData Web Service" href="odata.html" />
+   
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9">
+
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../http-routingtable.html" title="HTTP Routing Table"
+             >routing table</a> |</li>
+        <li class="right" >
+          <a href="../server/toctree.html" title="Developer Documentation"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="odata.html" title="OData Web Service"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">Viking 1.1 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="toctree.html" accesskey="U">Export</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="network-visualization">
+<h1>Network Visualization<a class="headerlink" href="#network-visualization" title="Permalink to this headline">¶</a></h1>
+<p>The Viking web services can export files for use in external tools.</p>
+<p>For more technical users exporting directly using URL&#8217;s is documented below</p>
+<div class="section" id="prerequisites">
+<h2>Prerequisites<a class="headerlink" href="#prerequisites" title="Permalink to this headline">¶</a></h2>
+<p>For graph visualization we recommend using <a class="reference external" href="http://tulip.labri.fr/">Tulip</a> and the TLP file format.  We also provide .dot files for use with <a class="reference external" href="http://www.graphviz.org/">Graphviz</a>.</p>
+</div>
+<div class="section" id="export-from-the-web-page">
+<h2>Export from the web page<a class="headerlink" href="#export-from-the-web-page" title="Permalink to this headline">¶</a></h2>
+<p>This user friendlier <a class="reference external" href="http://websvc1.connectomes.utah.edu/Export">website</a> exports files for Marc lab hosted databases.</p>
+</div>
+<div class="section" id="export-directly-from-a-url">
+<h2>Export directly from a URL<a class="headerlink" href="#export-directly-from-a-url" title="Permalink to this headline">¶</a></h2>
+<p>Exports are available under a volume URL&#8217;s /export/ subpath.  An Export URL has the following components</p>
+<dl class="get">
+<dt id="get--export-( report_type )-( format )-">
+<code class="descname">GET </code><code class="descname">/export/( report_type )/( format )/</code><a class="headerlink" href="#get--export-( report_type )-( format )-" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="neuron-connectivity-network">
+<h2>Neuron connectivity network<a class="headerlink" href="#neuron-connectivity-network" title="Permalink to this headline">¶</a></h2>
+<dl class="get">
+<dt id="get--export-network-( Format )">
+<code class="descname">GET </code><code class="descname">/export/network/( Format )</code><a class="headerlink" href="#get--export-network-( Format )" title="Permalink to this definition">¶</a></dt>
+<dd><p>Requests the connectivity graph for the neurons specified in the query string.</p>
+<dl class="docutils">
+<dt><strong>Format:</strong></dt>
+<dd><ul class="first last simple">
+<li><em>TLP</em> - Tulip file format</li>
+<li><em>DOT</em> - Graphviz DOT file format</li>
+<li><em>GraphML</em> - GraphML file format</li>
+<li><em>JSON</em> - Java script object notation</li>
+</ul>
+</dd>
+</dl>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name" colspan="2">Query Parameters:</th></tr>
+<tr class="field-odd field"><td>&nbsp;</td><td class="field-body"><ul class="first simple">
+<li><strong>id</strong> &#8211; ID numbers of cells to include in connectivity graph.  Commas seperate multiple IDs.</li>
+<li><strong>hops</strong> &#8211; Degrees of seperation to include additional neurons in graph</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name" colspan="2">Response Headers:</th></tr>
+<tr class="field-even field"><td>&nbsp;</td><td class="field-body"><ul class="first last simple">
+<li><a class="reference external" href="http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.17">Content-Type</a> &#8211; text/plain</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Example request</strong></p>
+<blockquote>
+<div><p>Get all cells within one degree of seperation of cells 476 and 514.</p>
+<div class="highlight-http"><div class="highlight"><pre>http://websvc1.connectomes.utah.edu/RC1/export/network/tlp?id=476,514&amp;hops=1
+</pre></div>
+</div>
+<p>Get all cells in the network:</p>
+<div class="highlight-http"><div class="highlight"><pre>http://websvc1.connectomes.utah.edu/RC1/export/network/tlp
+</pre></div>
+</div>
+<div class="figure">
+<img alt="../_images/Network_2014_11_25.png" src="../_images/Network_2014_11_25.png" />
+</div>
+</div></blockquote>
+</dd></dl>
+
+</div>
+<div class="section" id="motif-connectivity">
+<h2>Motif connectivity<a class="headerlink" href="#motif-connectivity" title="Permalink to this headline">¶</a></h2>
+<dl class="get">
+<dt id="get--export-motif-( Format )">
+<code class="descname">GET </code><code class="descname">/export/motif/( Format )</code><a class="headerlink" href="#get--export-motif-( Format )" title="Permalink to this definition">¶</a></dt>
+<dd><p>Connectivity between classes of neurons based on label.  Includes all neurons.</p>
+<dl class="docutils">
+<dt><strong>Format:</strong></dt>
+<dd><ul class="first last simple">
+<li><em>TLP</em> - Tulip file format</li>
+<li><em>DOT</em> - Graphviz DOT file format</li>
+<li><em>GraphML</em> - GraphML file format</li>
+<li><em>JSON</em> - Java script object notation</li>
+</ul>
+</dd>
+</dl>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name" colspan="2">Response Headers:</th></tr>
+<tr class="field-odd field"><td>&nbsp;</td><td class="field-body"><ul class="first last simple">
+<li><a class="reference external" href="http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.17">Content-Type</a> &#8211; text/plain</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Example request</strong></p>
+<blockquote>
+<div><p>Get a dot file of the morphology for use in Graphviz</p>
+<div class="highlight-http"><div class="highlight"><pre>http://websvc1.connectomes.utah.edu/RC1/export/motifs/dot
+</pre></div>
+</div>
+<div class="figure">
+<img alt="../_images/Motif_Export1.png" src="../_images/Motif_Export1.png" />
+</div>
+</div></blockquote>
+</dd></dl>
+
+</div>
+<div class="section" id="morphology">
+<h2>Morphology<a class="headerlink" href="#morphology" title="Permalink to this headline">¶</a></h2>
+<dl class="get">
+<dt id="get--export-morphology-( Format )">
+<code class="descname">GET </code><code class="descname">/export/morphology/( Format )</code><a class="headerlink" href="#get--export-morphology-( Format )" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a 3D graph using annotations to determine node position.</p>
+<p>Nodes with a glowing effect are involved in a structure link.</p>
+<dl class="docutils">
+<dt><strong>Format:</strong></dt>
+<dd><ul class="first last simple">
+<li><em>TLP</em> - Tulip file format</li>
+<li><em>JSON</em> - Java script object notation</li>
+</ul>
+</dd>
+</dl>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name" colspan="2">Query Parameters:</th></tr>
+<tr class="field-odd field"><td>&nbsp;</td><td class="field-body"><ul class="first simple">
+<li><strong>id</strong> &#8211; ID numbers of cells to include in connectivity graph.  Commas seperate multiple IDs.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name" colspan="2">Response Headers:</th></tr>
+<tr class="field-even field"><td>&nbsp;</td><td class="field-body"><ul class="first last simple">
+<li><a class="reference external" href="http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.17">Content-Type</a> &#8211; text/plain</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Example request</strong></p>
+<blockquote>
+<div><p>Get the morphology of cells 180 and 476.</p>
+<div class="highlight-http"><div class="highlight"><pre>http://websvc1.connectomes.utah.edu/RC1/export/morphology/tlp?id=180,476
+</pre></div>
+</div>
+<div class="figure">
+<img alt="../_images/Morphology_Export1.png" src="../_images/Morphology_Export1.png" />
+</div>
+</div></blockquote>
+</dd></dl>
+
+<div class="section" id="navigation-between-viking-and-tulip">
+<h3>Navigation between Viking and Tulip<a class="headerlink" href="#navigation-between-viking-and-tulip" title="Permalink to this headline">¶</a></h3>
+<blockquote>
+<div><ul>
+<li><p class="first">Tulip to Viking: Morphology nodes in Tulip contain a <strong>LocationInViking</strong> column.  The contents of that column can be copied into the clip board.  Then in Viking use CTRL+G and paste the coordinates to jump to that location</p>
+</li>
+<li><p class="first">Viking to Tulip: The context menus for annotations in Viking contain a <strong>Copy Location ID</strong> column.  Selecting that option puts the ID into the clipboard.  Then switch to Tulip and use the ID value to search the <strong>LocationID</strong> column of all nodes.  The resulting node matches the annotation in Viking.</p>
+<blockquote>
+<div><p>Viking <strong>Copy Location ID</strong> context menu</p>
+<div class="figure">
+<img alt="../_images/TulipLocationIDSearch0.png" src="../_images/TulipLocationIDSearch0.png" />
+</div>
+<p>Tulip search UI</p>
+<div class="figure">
+<img alt="../_images/TulipLocationIDSearch.png" src="../_images/TulipLocationIDSearch.png" />
+</div>
+</div></blockquote>
+</li>
+</ul>
+</div></blockquote>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Network Visualization</a><ul>
+<li><a class="reference internal" href="#prerequisites">Prerequisites</a></li>
+<li><a class="reference internal" href="#export-from-the-web-page">Export from the web page</a></li>
+<li><a class="reference internal" href="#export-directly-from-a-url">Export directly from a URL</a></li>
+<li><a class="reference internal" href="#neuron-connectivity-network">Neuron connectivity network</a></li>
+<li><a class="reference internal" href="#motif-connectivity">Motif connectivity</a></li>
+<li><a class="reference internal" href="#morphology">Morphology</a><ul>
+<li><a class="reference internal" href="#navigation-between-viking-and-tulip">Navigation between Viking and Tulip</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="odata.html"
+                        title="previous chapter">OData Web Service</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="../server/toctree.html"
+                        title="next chapter">Developer Documentation</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/export/files.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2015, James Anderson.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.3.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.3</a>
+      
+      |
+      <a href="../_sources/export/files.txt"
+          rel="nofollow">Page source</a></li>
+    </div>
+
+    
+
+    
+  </body>
+</html>

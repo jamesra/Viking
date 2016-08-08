@@ -1,4 +1,0 @@
-Section	XOffset	YOffset	XScale	YScale	Alpha	Red	Green	Blue	Filename	
-1	0	0	4	4	1	1	1	1	ColorMap12x8.png
-1	0	0	4	4	1	0	1	0	ColorMap12x8.png
-2	0	0	4	4	1	1	0	0	ColorMap12x8.png

@@ -1,0 +1,198 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Usage &mdash; Viking 1.1 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="author" title="About these documents" href="../about.html" />
+    <link rel="top" title="Viking 1.1 documentation" href="../index.html" />
+    <link rel="up" title="Viking Client Usage" href="toctree.html" />
+    <link rel="next" title="Version History" href="versionhistory.html" />
+    <link rel="prev" title="Viking Client Usage" href="toctree.html" />
+   
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9">
+
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../http-routingtable.html" title="HTTP Routing Table"
+             >routing table</a> |</li>
+        <li class="right" >
+          <a href="versionhistory.html" title="Version History"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="toctree.html" title="Viking Client Usage"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">Viking 1.1 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="toctree.html" accesskey="U">Viking Client Usage</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="usage">
+<h1>Usage<a class="headerlink" href="#usage" title="Permalink to this headline">¶</a></h1>
+<p>This documentation is the orinal documentation for Viking.  For a more comprehensive introduction we recommend this <a class="reference download internal" href="../_downloads/VikingUsage_MarshakLab2014.pdf"><code class="xref download docutils literal"><span class="pre">guide</span> <span class="pre">organized</span> <span class="pre">by</span> <span class="pre">Andrea</span> <span class="pre">Bordt</span></code></a> based on documentation from the Marc Lab Annotation Fest.</p>
+<div class="section" id="startup">
+<h2>Startup<a class="headerlink" href="#startup" title="Permalink to this headline">¶</a></h2>
+<p>The first step in using the Viking Annotation System is to <a class="reference external" href="http://connectomes.utah.edu/Software/Viking4/setup.exe">install the software on a PC</a>.  Write permissions will require a user login and password assigned by the Marclab connectomics administrator. Every time Viking is launched thereafter it will automatically check for and install any updates. By default Viking will open the RC1 rabbit dataset or the last used dataset. To choose different datasets, examine the Viking dropdown list, enter new URL or see the Volumes page.</p>
+<p>On startup a small window will appear as Viking downloads the transforms required to warp each image into the volume. Afterwards the main window appears after a short delay. The window has two fields. On left is a tabbed field that initially shows a list of available slices. Double-click a number to open that slice. By default Viking uses tiles and transforms optimized for internet use.</p>
+</div>
+<div class="section" id="navigation">
+<h2>Navigation<a class="headerlink" href="#navigation" title="Permalink to this headline">¶</a></h2>
+<p>The escape key cancels any command. If you find yourself in an unfamiliar situation use escape to start over. No changes will be made to the database. The volume is viewed in read-only or annotate modes. Everyone has read privileges. Only validated analysts are permitted to annotate.</p>
+<p>The volume has a number of structures:</p>
+<blockquote>
+<div><ol class="arabic simple">
+<li>Greyscale image texture</li>
+<li>RGB image molecular channels</li>
+<li>Blue discs with identifying text - positional annotations</li>
+<li>Blue arrows indicate the location of annotations in slices above and below</li>
+<li>Small arrows within circles indicating links between overlapping annotations on adjacent sections</li>
+<li>White lines indicating links between non-overlapping annotations on adjacent sections.</li>
+<li>Other colored discs are child structures (synapses etc.) belonging to a parent structure (cell).</li>
+<li>The space bar toggles the annotations on and off</li>
+<li>The status bar at bottom gives the location:<ul>
+<li><strong>Section:</strong> slice number</li>
+<li><strong>X:</strong> X location in physical pixels at magnification 1</li>
+<li><strong>Y:</strong> Y location in physical pixels at magnification 1</li>
+<li><strong>Magnification:</strong> actually the zoom out. Mag 1=maximum resolution Mag 10= 1/10 resolution</li>
+<li><strong>Channels:</strong> TEM or molecular channel names.  Font color matches channel color.</li>
+</ul>
+</li>
+</ol>
+</div></blockquote>
+<div class="section" id="moving-around-in-xyz-with-the-mouse">
+<h3>Moving around in XYZ with the mouse<a class="headerlink" href="#moving-around-in-xyz-with-the-mouse" title="Permalink to this headline">¶</a></h3>
+<p>Right click and drag on image (not annotations) to pan across the image. Avoid annotations.
+Right click on annotations to open a context menu
+Scroll wheel zooms
+Left click and drag on blue arrows places new annotations
+Left click and release on blank area continue the last annotation
+Side clicks on a 5 button mouse move down and up 1 slice</p>
+</div>
+<div class="section" id="keyboard-commands">
+<h3>Keyboard commands<a class="headerlink" href="#keyboard-commands" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li><strong>+</strong> and <strong>-</strong> move down and up 1 slice</li>
+<li><strong>SHIFT +</strong> and <strong>-</strong> move down and up 10 slices</li>
+<li><strong>PageUp/PageDown</strong> Increase/Decrease zoom</li>
+<li><strong>Home</strong> Roounds the zoom to the nearest integer.  If the zoom rounds to zero we use a zoom of 200%, downsampled by 0.5.</li>
+</ul>
+</div>
+<div class="section" id="menu-commands">
+<h3>Menu commands<a class="headerlink" href="#menu-commands" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li>Commands → Go to location → lets you to enter or paste (ctrl v) &amp; jump to a site</li>
+<li><strong>Ctrl+C</strong> copies a location</li>
+<li>Annotation → Open Structure → opens a navigation dialogue for a cell</li>
+<li>Bookmarks can be used (see below)</li>
+<li>Channels</li>
+</ul>
+</div>
+<div class="section" id="channels">
+<h3>Channels<a class="headerlink" href="#channels" title="Permalink to this headline">¶</a></h3>
+<p>There are two levels at which channel information is stored, volumes and sections. Default channel information is specified in the VolumeXML file. Section channel information overrides volume channel information. When drawing a section Viking first checks to see if the section specifies which channels should be used. If no channel information is present it then defaults to the volume channel setup. If no channel information is specified at all Viking defaults to displaying greyscale images.</p>
+<p>Changing channel setup
+To override channels for a section right-click section number from the list on the left side. Select Properties from the drop down menu. One of the property page tabs be labeled channels. Select Default and click OK. The image should go to grayscale. Then you can switch channels by selecting Section → Channels from the drop down menu at the top menu bar.</p>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Usage</a><ul>
+<li><a class="reference internal" href="#startup">Startup</a></li>
+<li><a class="reference internal" href="#navigation">Navigation</a><ul>
+<li><a class="reference internal" href="#moving-around-in-xyz-with-the-mouse">Moving around in XYZ with the mouse</a></li>
+<li><a class="reference internal" href="#keyboard-commands">Keyboard commands</a></li>
+<li><a class="reference internal" href="#menu-commands">Menu commands</a></li>
+<li><a class="reference internal" href="#channels">Channels</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="toctree.html"
+                        title="previous chapter">Viking Client Usage</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="versionhistory.html"
+                        title="next chapter">Version History</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/client/useage.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2015, James Anderson.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.3.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.3</a>
+      
+      |
+      <a href="../_sources/client/useage.txt"
+          rel="nofollow">Page source</a></li>
+    </div>
+
+    
+
+    
+  </body>
+</html>

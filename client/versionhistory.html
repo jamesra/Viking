@@ -1,0 +1,353 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Version History &mdash; Viking 1.1 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="author" title="About these documents" href="../about.html" />
+    <link rel="top" title="Viking 1.1 documentation" href="../index.html" />
+    <link rel="up" title="Viking Client Usage" href="toctree.html" />
+    <link rel="next" title="Video Tutorials" href="movies.html" />
+    <link rel="prev" title="Usage" href="useage.html" />
+   
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9">
+
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../http-routingtable.html" title="HTTP Routing Table"
+             >routing table</a> |</li>
+        <li class="right" >
+          <a href="movies.html" title="Video Tutorials"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="useage.html" title="Usage"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">Viking 1.1 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="toctree.html" accesskey="U">Viking Client Usage</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="version-history">
+<h1>Version History<a class="headerlink" href="#version-history" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="id1">
+<h2>1.1.186<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h2>
+<blockquote>
+<div><ul class="simple">
+<li>Moved many async tasks to use the Task.Run() semantics.  Some of the old calls were made using BeginInvoke on the main thread so a performance increase was seen.</li>
+</ul>
+</div></blockquote>
+</div>
+<div class="section" id="id2">
+<h2>1.1.181<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h2>
+<blockquote>
+<div><ul>
+<li><p class="first">Fixed the test for XNA installation.  A message now pops up correctly if XNA is not installed.</p>
+</li>
+<li><p class="first">Structure Links now default to bidirectional when created between structures with the same type, i.e. Gap junctions, Adherens, etc...</p>
+</li>
+<li><p class="first">Locations can now be tagged using Hotkeys.  These hotkeys exist for these use semantics:</p>
+<blockquote>
+<div><ul class="simple">
+<li>Shift + X : Terminal.  Used at the tip of a fine process.  Typically found at the boundaries of a cells receptive field.</li>
+<li>Shift + V : Vericosity cap.  Used at the top of a &#8220;Stack of coins&#8221; that marks the top or bottom of a vericosity.  Distinct from the tip of a process marking the boundaries of the cell.</li>
+<li>Shift + U : Untraceable.  A process marked Untraceable may or may not continue, but the user is unable to continue with the information available.</li>
+<li>Note that &#8220;Off Edge&#8221; flag found in the context menu also applies when a cell exits the volume.  It does not have a hotkey yet.</li>
+</ul>
+</div></blockquote>
+</li>
+</ul>
+</div></blockquote>
+</div>
+<div class="section" id="id3">
+<h2>1.1.168<a class="headerlink" href="#id3" title="Permalink to this headline">¶</a></h2>
+<blockquote>
+<div><ul class="simple">
+<li>Added a &#8220;Find Volumes&#8221; button to the login UI.</li>
+<li>Added support for viewing Open Connectome Project volumes</li>
+</ul>
+</div></blockquote>
+</div>
+<div class="section" id="id4">
+<h2>1.1.165<a class="headerlink" href="#id4" title="Permalink to this headline">¶</a></h2>
+<blockquote>
+<div><ul class="simple">
+<li>Added context menu for locations to copy the ID into the clipboard.  This is useful to use to navigate to location in Tulip when rendering morphology.</li>
+<li>Made exception catches when loading textures more specific in hopes of obtaining more informative bug reports for rare Acccess Violation.</li>
+</ul>
+</div></blockquote>
+</div>
+<div class="section" id="id5">
+<h2>1.1.162<a class="headerlink" href="#id5" title="Permalink to this headline">¶</a></h2>
+<blockquote>
+<div><ul class="simple">
+<li>Only visible annotations are loaded from the server</li>
+</ul>
+</div></blockquote>
+</div>
+<div class="section" id="id6">
+<h2>1.1.159<a class="headerlink" href="#id6" title="Permalink to this headline">¶</a></h2>
+<blockquote>
+<div><ul class="simple">
+<li>Reverted changes that used Microsoft.SqlServer.Types due to deployment error which I cannot investigate fully at this time</li>
+<li>Added chevron arrow to animated structure links</li>
+<li>Changed lines colors used when creating structure links.</li>
+<li>Fixed issue where invisbile adjacent section locations which were overlapped by locations on the current section could still be selected.</li>
+<li>Improved logic to determine if a proposed LocationLink or StructureLink is valid.  This prevents linking child structures to their parents.</li>
+<li>Fixed issue where two structure links were created for each structure link.</li>
+</ul>
+</div></blockquote>
+</div>
+<div class="section" id="id7">
+<h2>1.1.152<a class="headerlink" href="#id7" title="Permalink to this headline">¶</a></h2>
+<blockquote>
+<div><ul class="simple">
+<li>Lines and Adjacent location indicators now use HSL blending to make details under the line more visible</li>
+<li>Animated Structure Links are now longer to make the direction more apparent.</li>
+<li>Preview feature, Hitting &#8220;L&#8221; enables one to add a curve which will not be saved.  Hit Esc to exit the command.</li>
+</ul>
+</div></blockquote>
+</div>
+<div class="section" id="id8">
+<h2>1.1.150<a class="headerlink" href="#id8" title="Permalink to this headline">¶</a></h2>
+<blockquote>
+<div><ul class="simple">
+<li>Fixed crash when paging sections very fast</li>
+</ul>
+</div></blockquote>
+</div>
+<div class="section" id="id9">
+<h2>1.1.148<a class="headerlink" href="#id9" title="Permalink to this headline">¶</a></h2>
+<blockquote>
+<div><ul class="simple">
+<li>Tweaks to reduce memory footprint</li>
+<li>Updated installer to install the .NET 4.6 framework</li>
+</ul>
+</div></blockquote>
+</div>
+<div class="section" id="id10">
+<h2>1.1.145<a class="headerlink" href="#id10" title="Permalink to this headline">¶</a></h2>
+<blockquote>
+<div><ul class="simple">
+<li>Changed the selection of structure links to require the point fall within the line segment between the linked locations.</li>
+</ul>
+</div></blockquote>
+</div>
+<div class="section" id="id11">
+<h2>1.1.141<a class="headerlink" href="#id11" title="Permalink to this headline">¶</a></h2>
+<blockquote>
+<div><ul class="simple">
+<li>Fixed merge structures returning an error</li>
+</ul>
+</div></blockquote>
+</div>
+<div class="section" id="id12">
+<h2>1.1.140<a class="headerlink" href="#id12" title="Permalink to this headline">¶</a></h2>
+<blockquote>
+<div><ul class="simple">
+<li>Detect changes to files in stos.zip and correctly update viking</li>
+</ul>
+</div></blockquote>
+</div>
+<div class="section" id="id13">
+<h2>1.1.139<a class="headerlink" href="#id13" title="Permalink to this headline">¶</a></h2>
+<blockquote>
+<div><ul class="simple">
+<li>Free memory more aggressively when changing sections</li>
+</ul>
+</div></blockquote>
+</div>
+<div class="section" id="id14">
+<h2>1.1.138<a class="headerlink" href="#id14" title="Permalink to this headline">¶</a></h2>
+<blockquote>
+<div><ul class="simple">
+<li>Shift+X now toggles the &#8220;Terminal&#8221; flag on the location under the mouse</li>
+<li>Locations marked Terminal do not render on adjacent sections</li>
+<li>Cleanup up the selection of locations on adjacent sections</li>
+</ul>
+</div></blockquote>
+</div>
+<div class="section" id="id15">
+<h2>1.1.137<a class="headerlink" href="#id15" title="Permalink to this headline">¶</a></h2>
+<blockquote>
+<div><ul class="simple">
+<li>Fixed problem with missing DLL&#8217;s in deployment</li>
+<li>Optimized drawing code for annotations to take advantage of RTree</li>
+<li>Increased maximum downloadable graph size to fix sections, RC1 #240, with too many annotations</li>
+</ul>
+</div></blockquote>
+</div>
+<div class="section" id="id16">
+<h2>1.1.130<a class="headerlink" href="#id16" title="Permalink to this headline">¶</a></h2>
+<blockquote>
+<div><ul class="simple">
+<li>Fixed (hopefully) bugs involved with commands not exiting correctly</li>
+<li>Switched to RTree, for more accurate selection of structures in the UI.</li>
+</ul>
+<p>Known-issue:</p>
+<ul class="simple">
+<li>Viewing annotations with the volume transform disabled shows them in the incorrect position</li>
+</ul>
+</div></blockquote>
+</div>
+<div class="section" id="id17">
+<h2>1.1.129<a class="headerlink" href="#id17" title="Permalink to this headline">¶</a></h2>
+<blockquote>
+<div>Fixed a bug where the resize command was launching the move command (the default) for the selected location after exit.</div></blockquote>
+</div>
+<div class="section" id="id18">
+<h2>1.1.128<a class="headerlink" href="#id18" title="Permalink to this headline">¶</a></h2>
+<blockquote>
+<div>2015-09-01</div></blockquote>
+<ul>
+<li><p class="first">Added ability for hotkey commands to automatically add tags to new structures via WebAnnotationUserSettings.xml file</p>
+<blockquote>
+<div><ul class="simple">
+<li>Ctrl+R : Create new ribbon post-synapse with “Bipolar”, “Ribbon”, “Glutamate” tags.</li>
+<li>Ctrl+S : Create new conventional post-synapse with “Conventional” tag.</li>
+<li>Ctrl+B : Create new conventional glutamatergic post-synapse with “Bipolar”, “Conventional”, “Glutamate” tags.</li>
+</ul>
+</div></blockquote>
+</li>
+<li><p class="first">Added support for hotkey commands to toggle structure attributes on/off.  Users can place the mouse over a structure and hit the hotkey to toggle one the following tags:</p>
+<blockquote>
+<div><ul class="simple">
+<li>Shift+C - Conventional</li>
+<li>Shift+E - Glutamate</li>
+<li>Shift+G - Glycine</li>
+<li>Shift+P - Peptide</li>
+<li>Shift+R - Ribbon</li>
+<li>Shift+T - Tyrosine Hydroxylase</li>
+<li>Shift+Y - GABA</li>
+</ul>
+<p>Mappings and tags can be customized on the server by editing the WebAnnotationUserSettings.xml file</p>
+</div></blockquote>
+</li>
+</ul>
+</div>
+<div class="section" id="id19">
+<h2>1.1.125<a class="headerlink" href="#id19" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>The measurement tool now reports two values when a volume transform is applied.  The volume distance is the distance as it appears on the screen.  The mosaic distance is measured after transforming the origin points into mosaic space which does not have the additional distortion of the slice-to-volume transformations.</li>
+</ul>
+</div>
+<div class="section" id="id20">
+<h2>1.1.124<a class="headerlink" href="#id20" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>Mapped <em>Home</em> key to rounding the downsample to nearest integer value</li>
+<li>Use UTC time when checking cache validity.</li>
+</ul>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Version History</a><ul>
+<li><a class="reference internal" href="#id1">1.1.186</a></li>
+<li><a class="reference internal" href="#id2">1.1.181</a></li>
+<li><a class="reference internal" href="#id3">1.1.168</a></li>
+<li><a class="reference internal" href="#id4">1.1.165</a></li>
+<li><a class="reference internal" href="#id5">1.1.162</a></li>
+<li><a class="reference internal" href="#id6">1.1.159</a></li>
+<li><a class="reference internal" href="#id7">1.1.152</a></li>
+<li><a class="reference internal" href="#id8">1.1.150</a></li>
+<li><a class="reference internal" href="#id9">1.1.148</a></li>
+<li><a class="reference internal" href="#id10">1.1.145</a></li>
+<li><a class="reference internal" href="#id11">1.1.141</a></li>
+<li><a class="reference internal" href="#id12">1.1.140</a></li>
+<li><a class="reference internal" href="#id13">1.1.139</a></li>
+<li><a class="reference internal" href="#id14">1.1.138</a></li>
+<li><a class="reference internal" href="#id15">1.1.137</a></li>
+<li><a class="reference internal" href="#id16">1.1.130</a></li>
+<li><a class="reference internal" href="#id17">1.1.129</a></li>
+<li><a class="reference internal" href="#id18">1.1.128</a></li>
+<li><a class="reference internal" href="#id19">1.1.125</a></li>
+<li><a class="reference internal" href="#id20">1.1.124</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="useage.html"
+                        title="previous chapter">Usage</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="movies.html"
+                        title="next chapter">Video Tutorials</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/client/versionhistory.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2015, James Anderson.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.3.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.3</a>
+      
+      |
+      <a href="../_sources/client/versionhistory.txt"
+          rel="nofollow">Page source</a></li>
+    </div>
+
+    
+
+    
+  </body>
+</html>

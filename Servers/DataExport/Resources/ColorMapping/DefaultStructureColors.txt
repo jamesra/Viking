@@ -1,1 +1,0 @@
-﻿%ID Red Green Blue Alpha - Tab delimited entries mapping a specific structure ID to color. 

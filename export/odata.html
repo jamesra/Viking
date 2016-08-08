@@ -1,0 +1,153 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>OData Web Service &mdash; Viking 1.1 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="author" title="About these documents" href="../about.html" />
+    <link rel="top" title="Viking 1.1 documentation" href="../index.html" />
+    <link rel="up" title="Export" href="toctree.html" />
+    <link rel="next" title="Network Visualization" href="files.html" />
+    <link rel="prev" title="Export" href="toctree.html" />
+   
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9">
+
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../http-routingtable.html" title="HTTP Routing Table"
+             >routing table</a> |</li>
+        <li class="right" >
+          <a href="files.html" title="Network Visualization"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="toctree.html" title="Export"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">Viking 1.1 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="toctree.html" accesskey="U">Export</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="odata-web-service">
+<h1>OData Web Service<a class="headerlink" href="#odata-web-service" title="Permalink to this headline">¶</a></h1>
+<p><a class="reference external" href="http://www.odata.org/">OData</a> is an open consistent method for querying data over the web.  Viking volumes suppport a read-only OData 4.0 interface under the <a class="reference external" href="http:/">http:/</a>/&lt;Volume&gt;/OData/ path.</p>
+<dl class="docutils">
+<dt>For example, the RC1 OData service is available here:</dt>
+<dd><a class="reference external" href="http://websvc1.connectomes.utah.edu/RC1/OData/">http://websvc1.connectomes.utah.edu/RC1/OData/</a></dd>
+</dl>
+<p>The power of OData is allowing external clients to access annotations over the web.  OData can export either <a class="reference external" href="http://www.json.org/">JSON</a> or <a class="reference external" href="http://www.atomenabled.org/">ATOM</a> formats.  Below are examples of using OData.</p>
+</div>
+<div class="section" id="excel">
+<h1>Excel<a class="headerlink" href="#excel" title="Permalink to this headline">¶</a></h1>
+<p>To use OData from Excel begin by installing the free <a class="reference external" href="http://www.microsoft.com/en-us/download/details.aspx?id=39379">Power Query</a> plugin from Microsoft.  Import OData by using the Power Query tab this adds to Excel:</p>
+<img alt="../_images/Excel2010_ODataImport1.jpg" src="../_images/Excel2010_ODataImport1.jpg" />
+<p>Enter the OData URL into the prompt provided by Excel:</p>
+<img alt="../_images/Excel2010_ODataImport2.jpg" src="../_images/Excel2010_ODataImport2.jpg" />
+<p>This provides access to the raw annotation data from the database.</p>
+</div>
+<div class="section" id="python">
+<h1>Python<a class="headerlink" href="#python" title="Permalink to this headline">¶</a></h1>
+<p>It is also easy to access data from Python scripts.  I have begun a <a class="reference external" href="https://github.com/jamesra/py-connectome-analysis">connectome analysis package</a> which uses the OData service from Python to run some common queries and build datastructures.
+I plan to polish the connectome analysis package when time permits and complete the <a class="reference external" href="https://github.com/jamesra/py-connectome-analysis/wiki">documentation</a>.  Feel free to contact the Marc Lab if you need assistance sooner.</p>
+<p>The connectome analysis package also contains unit tests and examples which are instructive for how to access OData from Python:</p>
+<blockquote>
+<div><p>The jsonwebclient sub-package converts OData JSON responses into Python objects
+<a class="reference external" href="https://github.com/jamesra/py-connectome-analysis/tree/master/connectome_analysis/webclient">https://github.com/jamesra/py-connectome-analysis/tree/master/connectome_analysis/webclient</a></p>
+<p>Unit tests which perform simple queries
+<a class="reference external" href="https://github.com/jamesra/py-connectome-analysis/blob/master/test/test_jsonwebclient/test_jsonwebclient.py">https://github.com/jamesra/py-connectome-analysis/blob/master/test/test_jsonwebclient/test_jsonwebclient.py</a></p>
+<p>Exporting SWC files for use in NEURON using the large connectomics analysis package.
+<a class="reference external" href="https://github.com/jamesra/py-connectome-analysis/blob/master/examples/CreateSWC.py">https://github.com/jamesra/py-connectome-analysis/blob/master/examples/CreateSWC.py</a></p>
+</div></blockquote>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">OData Web Service</a></li>
+<li><a class="reference internal" href="#excel">Excel</a></li>
+<li><a class="reference internal" href="#python">Python</a></li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="toctree.html"
+                        title="previous chapter">Export</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="files.html"
+                        title="next chapter">Network Visualization</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/export/odata.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2015, James Anderson.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.3.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.3</a>
+      
+      |
+      <a href="../_sources/export/odata.txt"
+          rel="nofollow">Page source</a></li>
+    </div>
+
+    
+
+    
+  </body>
+</html>

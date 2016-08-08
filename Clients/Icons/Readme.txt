@@ -1,1 +1,0 @@
-Install the VS2010 image library here under a "VS2010ImageLibrary" folder
