@@ -2968,17 +2968,7 @@ end
 		 begin
 		   ROLLBACK TRANSACTION 
 		   RETURN
-		 end
-
-		 EXEC('
-			DROP PROCEDURE [dbo].[SelectAllStructures]
-			')
-
-		if(@@error <> 0)
-		 begin
-		   ROLLBACK TRANSACTION 
-		   RETURN
-		 end
+		 end 
 
 	   INSERT INTO DBVersion values (31, 
 		    N'Create Functions for spatial queries'  ,getDate(),User_ID())
@@ -5478,6 +5468,49 @@ end
 		   N'Add table listing which structures are allowed to be linked',getDate(),User_ID())
 
 	 COMMIT TRANSACTION fiftytwo
+	end
+
+	
+	if(not(exists(select (1) from DBVersion where DBVersionID = 53)))
+	begin
+     print N'Grant permissions on spatial user-defined-functions'
+     BEGIN TRANSACTION fiftythree
+
+	 Grant EXECUTE on ufnAngleBetweenShapes to public
+	 Grant EXECUTE on ufnCreateCircle to public
+	 Grant EXECUTE on ufnIntersectingCurveForCircles to public
+	 Grant EXECUTE on ufnLineFromAngleAndDistance to public
+	 Grant EXECUTE on ufnLineFromLinkedShapes to public
+	 Grant EXECUTE on ufnLineFromPoints to public
+	 Grant EXECUTE on ufnLineFromLinkedShapes to public
+	 Grant EXECUTE on ufnLineFromThreePoints to public
+	 Grant EXECUTE on ufnLineThroughCircle to public
+	 Grant EXECUTE on ufnParallelLineForLinkedShapes to public
+	 Grant EXECUTE on ufnParallelLineThroughCircle to public
+	 Grant EXECUTE on ufnPerpendicularLineForLinkedShapes to public
+	 Grant EXECUTE on ufnPerpendicularLineThroughCircle to public
+	 Grant EXECUTE on ufnPerpendicularLineToIntersectionPointOfCircles to public
+	 Grant EXECUTE on ufnTranslatePoint to public
+	 Grant EXECUTE on ufnTriangleArea to public
+	 Grant EXECUTE on ufnVector to public
+	 Grant EXECUTE on ufnWeightedMidpointBetweenCircles to public
+	 Grant EXECUTE on XYScale to public
+	 Grant EXECUTE on XYScaleUnits to public
+	 Grant EXECUTE on ZScale to public
+	 Grant EXECUTE on ZScaleUnits to public
+
+	 Grant EXECUTE on SelectStructure to public
+	 Grant EXECUTE on SelectStructureLocations to public
+	 Grant EXECUTE on SelectStructureLocationLinks to public
+	 Grant EXECUTE on SelectAllStructures to public
+	 Grant EXECUTE on SelectAllStructureLocations to public
+	 Grant EXECUTE on SelectAllStructureLocationLinks to public
+	 
+
+	  INSERT INTO DBVersion values (53, 
+		   N'Grant permissions on spatial user-defined-functions',getDate(),User_ID())
+
+	 COMMIT TRANSACTION fiftythree
 	end
 
 	 
