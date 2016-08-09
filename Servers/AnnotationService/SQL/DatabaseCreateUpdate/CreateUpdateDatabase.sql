@@ -5513,6 +5513,46 @@ end
 	 COMMIT TRANSACTION fiftythree
 	end
 
+	
+	if(not(exists(select (1) from DBVersion where DBVersionID = 54)))
+	begin
+     print N'Create ufn for measuring structure area'
+     BEGIN TRANSACTION fiftyfour
+
+	 EXEC('
+	 CREATE FUNCTION ufnStructureArea
+	(
+		-- Add the parameters for the function here
+		@StructureID bigint
+	)
+	RETURNS float
+	AS
+	BEGIN
+		declare @Area float
+		declare @AreaScalar float
+		--Measures the area of the PSD
+		set @AreaScalar = dbo.XYScale() * dbo.ZScale()
+
+	
+		select top 1 @Area = sum(MosaicShape.STLength()) * @AreaScalar from Location 
+		where ParentID = @StructureID
+		group by ParentID
+	  
+		-- Return the result of the function
+		RETURN @Area
+
+	END
+	')
+
+	Grant EXECUTE on ufnStructureArea to public
+	 
+
+	  INSERT INTO DBVersion values (54, 
+		   N'Create ufn for measuring structure area',getDate(),User_ID())
+
+	 COMMIT TRANSACTION fiftyfour
+	end
+
 	 
 --from here on, continually add steps in the previous manner as needed.
 	COMMIT TRANSACTION main

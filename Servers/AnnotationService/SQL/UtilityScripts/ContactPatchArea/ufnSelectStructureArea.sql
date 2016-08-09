@@ -18,7 +18,7 @@ GO
 -- Create date: <Create Date, ,>
 -- Description:	<Description, ,>
 -- =============================================
-MODIFY FUNCTION ufnStructureArea
+CREATE FUNCTION ufnStructureArea
 (
 	-- Add the parameters for the function here
 	@StructureID bigint
@@ -35,8 +35,7 @@ BEGIN
 	select top 1 @Area = sum(MosaicShape.STLength()) * @AreaScalar from Location 
 	where ParentID = @StructureID
 	group by ParentID
-	 
-  
+	  
 	-- Return the result of the function
 	RETURN @Area
 
