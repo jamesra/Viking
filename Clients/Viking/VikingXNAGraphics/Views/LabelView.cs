@@ -232,6 +232,12 @@ namespace VikingXNAGraphics
                 {
                     iRow++;
                     labelStack.Push(word);
+
+                    if (iRow >= MaxRows)
+                    {
+                        rows[iRow - 1] = rows[iRow - 1] + "...";
+                        break;
+                    }
                 }
             }
 
