@@ -86,6 +86,30 @@ namespace VikingWebAppSettings
             }
         }
 
+        public static Uri VolumeURI
+        {
+            get
+            {
+                Uri uri = null;
+                if (Uri.TryCreate(VolumeURL, UriKind.Absolute, out uri))
+                    return uri;
+
+                return null;
+            }
+        }
+
+        public static Uri ODataURL
+        {
+            get
+            {
+                Uri uri = null;
+                if (Uri.TryCreate(VolumeURI, "OData", out uri))
+                    return uri;
+
+                return null;
+            }
+        }
+
         public static System.Net.NetworkCredential EndpointCredentials
         {
             get

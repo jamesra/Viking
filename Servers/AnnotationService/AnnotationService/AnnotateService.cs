@@ -59,7 +59,7 @@ namespace Annotation
         ConnectomeDataModel.ConnectomeEntities GetOrCreateDatabaseContext()
         {
             return new ConnectomeEntities(); 
-
+            /*
             if (_db != null)
             {
                 switch (_db.Database.Connection.State)
@@ -95,7 +95,7 @@ namespace Annotation
                 _db = new ConnectomeEntities();
             } 
 
-            return _db;
+            return _db;*/
         }
 
         ConnectomeDataModel.ConnectomeEntities _db;

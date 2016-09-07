@@ -9,6 +9,7 @@
     <WebStackScaffolding_DbContextTypeFullName>ConnectomeODataV3.Models.ConnectomeEntities</WebStackScaffolding_DbContextTypeFullName>
     <WebStackScaffolding_IsAsyncSelected>True</WebStackScaffolding_IsAsyncSelected>
     <NameOfLastUsedPublishProfile>Release</NameOfLastUsedPublishProfile>
+    <UseIISExpress>false</UseIISExpress>
   </PropertyGroup>
   <ProjectExtensions>
     <VisualStudio>

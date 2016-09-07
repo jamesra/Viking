@@ -8,7 +8,18 @@ using AnnotationVizLib.AnnotationService;
 using System.Diagnostics;
 
 namespace AnnotationVizLib
-{
+{ 
+    public enum LocationType
+    {
+        POINT = 0,
+        CIRCLE = 1,
+        ELLIPSE = 2,
+        POLYLINE = 3,
+        POLYGON = 4,
+        OPENCURVE = 5,
+        CLOSEDCURVE = 6
+    };
+
     public class MorphologyEdge : Edge<ulong>
     {
             

@@ -38,8 +38,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConnectomeODataV4", "Connec
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConnectomeDataModel", "ConnectomeDataModel\ConnectomeDataModel.csproj", "{9599F439-7526-4C45-A1EB-FDE32648CFCD}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConnectomeODataV3", "ConnectomeODataV3\ConnectomeODataV3.csproj", "{6D206D37-3B4D-4A14-81A0-471BEB33876E}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConnectomeDataModelTests", "ConnectomeDataModelTests\ConnectomeDataModelTests.csproj", "{7081036D-4F8C-4A1E-89B6-CE2342E5CD39}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EntityFrameworkExtras", "..\..\EntityFrameworkExtras\EntityFrameworkExtras\EntityFrameworkExtras.csproj", "{7A59AE4F-751F-4BE0-BA70-020072F1409E}"
@@ -96,10 +94,6 @@ Global
 		{9599F439-7526-4C45-A1EB-FDE32648CFCD}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9599F439-7526-4C45-A1EB-FDE32648CFCD}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9599F439-7526-4C45-A1EB-FDE32648CFCD}.Release|Any CPU.Build.0 = Release|Any CPU
-		{6D206D37-3B4D-4A14-81A0-471BEB33876E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{6D206D37-3B4D-4A14-81A0-471BEB33876E}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{6D206D37-3B4D-4A14-81A0-471BEB33876E}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{6D206D37-3B4D-4A14-81A0-471BEB33876E}.Release|Any CPU.Build.0 = Release|Any CPU
 		{7081036D-4F8C-4A1E-89B6-CE2342E5CD39}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{7081036D-4F8C-4A1E-89B6-CE2342E5CD39}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7081036D-4F8C-4A1E-89B6-CE2342E5CD39}.Release|Any CPU.ActiveCfg = Release|Any CPU

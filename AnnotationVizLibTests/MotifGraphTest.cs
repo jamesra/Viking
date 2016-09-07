@@ -74,6 +74,7 @@ namespace AnnotationUtilsTests
 
             string DotFileFullPath = "C:\\Temp\\Motif.dot";
             dotGraph.SaveDOT(DotFileFullPath);
+            Assert.IsTrue(System.IO.File.Exists(DotFileFullPath));
 
             string[] Types = new string[] {"svg"};
 
