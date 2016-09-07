@@ -5,10 +5,11 @@ using System.Text;
 
 namespace AnnotationVizLib
 { 
-    public struct AxisUnits
+    [Serializable]
+    public class AxisUnits
     {
-        public readonly double Value;
-        public readonly string Units;
+        public double Value { get; private set; }
+        public string Units { get; private set; }
 
         public AxisUnits(double value, string units)
         {
@@ -17,11 +18,12 @@ namespace AnnotationVizLib
         }
     }
 
-    public struct Scale
+    [Serializable]
+    public class Scale
     {
-        public readonly AxisUnits X;
-        public readonly AxisUnits Y;
-        public readonly AxisUnits Z;
+        public AxisUnits X { get; private set; }
+        public AxisUnits Y { get; private set; }
+        public AxisUnits Z { get; private set; }
 
         public Scale(AxisUnits X, AxisUnits Y, AxisUnits Z)
         {
