@@ -13,7 +13,7 @@ namespace DataExport.Controllers
     {
         public string GetOutputFilename(string ext)
         {
-            ICollection<long> requestIDs = RequestVariables.GetQueryStringIDs(Request).Cast<long>().ToArray();
+            ICollection<long> requestIDs = RequestVariables.GetIDs(Request.QueryString).Cast<long>().ToArray();
             string ID_List = "";
             bool first = true;
             if (requestIDs.Count == 0)
@@ -110,7 +110,7 @@ namespace DataExport.Controllers
             
             AnnotationVizLib.ConnectionFactory.SetConnection(EndpointURL, AppSettings.EndpointCredentials);
             
-            ICollection<long> requestIDs = RequestVariables.GetQueryStringIDs(Request).Cast<long>().ToArray();
+            ICollection<long> requestIDs = RequestVariables.GetIDs(Request.QueryString).Cast<long>().ToArray();
             if (requestIDs == null || requestIDs.Count == 0)
                 requestIDs = Queries.GetLinkedStructureParentIDs(); 
 
