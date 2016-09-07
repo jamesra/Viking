@@ -197,6 +197,15 @@ namespace ConnectomeODataV4.Controllers
         }
 
         [HttpGet]
+        [ODataRoute("Scale()")]
+        public IHttpActionResult GetScale()
+        {
+            AnnotationVizLib.Scale scale = VikingWebAppSettings.AppSettings.GetScale();
+            return Ok(scale);
+        }
+
+
+        [HttpGet]
         [ODataRoute("Network(IDs={IDs},Hops={Hops})")]
         public IHttpActionResult GetNetwork([FromODataUri] long[] IDs, [FromODataUri] int Hops)
         {

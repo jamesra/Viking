@@ -70,7 +70,8 @@ namespace ConnectomeODataV4
             builder.EntitySet<StructureType>("StructureTypes");
             builder.EntitySet<Structure>("Structures");
             builder.EntitySet<Location>("Locations");
-
+            
+            AddScaleType(builder);
             AddStructureLinks(builder);
             AddLocationLinks(builder);
             AddFunctions(builder);
@@ -83,6 +84,17 @@ namespace ConnectomeODataV4
             return edmModel;
         }
 
+        private static void AddScaleType(ODataConventionModelBuilder builder)
+        {
+            builder.ComplexType<AnnotationVizLib.AxisUnits>().Property(c => c.Units);
+            builder.ComplexType<AnnotationVizLib.AxisUnits>().Property<double>(c => c.Value);
+            builder.ComplexType<AnnotationVizLib.Scale>().ComplexProperty<AnnotationVizLib.AxisUnits>(c => c.X);
+            builder.ComplexType<AnnotationVizLib.Scale>().ComplexProperty<AnnotationVizLib.AxisUnits>(c => c.Y);
+            builder.ComplexType<AnnotationVizLib.Scale>().ComplexProperty<AnnotationVizLib.AxisUnits>(c => c.Z);
+
+            builder.Function("Scale").Returns<AnnotationVizLib.Scale>();
+        }
+         
         private static Microsoft.OData.Edm.IEdmModel AddStructureLocationLinks(IEdmModel edmModel)
         { 
             
