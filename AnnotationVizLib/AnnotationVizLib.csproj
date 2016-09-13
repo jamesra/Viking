@@ -113,16 +113,22 @@
     <None Include="Service References\AnnotationService\Annotation1.xsd">
       <SubType>Designer</SubType>
     </None>
+    <None Include="Service References\AnnotationService\AnnotationVizLib.AnnotationService.AnnotationSet.datasource">
+      <DependentUpon>Reference.svcmap</DependentUpon>
+    </None>
     <None Include="Service References\AnnotationService\AnnotationVizLib.AnnotationService.CreateStructureRetval.datasource">
       <DependentUpon>Reference.svcmap</DependentUpon>
     </None>
-    <None Include="Service References\AnnotationService\AnnotationVizLib.AnnotationService.GetLocationChangesInRegionResponse.datasource">
+    <None Include="Service References\AnnotationService\AnnotationVizLib.AnnotationService.GetAnnotationsInMosaicRegionResponse.datasource">
+      <DependentUpon>Reference.svcmap</DependentUpon>
+    </None>
+    <None Include="Service References\AnnotationService\AnnotationVizLib.AnnotationService.GetLocationChangesInMosaicRegionResponse.datasource">
       <DependentUpon>Reference.svcmap</DependentUpon>
     </None>
     <None Include="Service References\AnnotationService\AnnotationVizLib.AnnotationService.GetLocationChangesResponse.datasource">
       <DependentUpon>Reference.svcmap</DependentUpon>
     </None>
-    <None Include="Service References\AnnotationService\AnnotationVizLib.AnnotationService.GetLocationLinksForSectionInRegionResponse.datasource">
+    <None Include="Service References\AnnotationService\AnnotationVizLib.AnnotationService.GetLocationLinksForSectionInMosaicRegionResponse.datasource">
       <DependentUpon>Reference.svcmap</DependentUpon>
     </None>
     <None Include="Service References\AnnotationService\AnnotationVizLib.AnnotationService.GetLocationLinksForSectionResponse.datasource">
@@ -131,7 +137,10 @@
     <None Include="Service References\AnnotationService\AnnotationVizLib.AnnotationService.GetLocationsForSectionResponse.datasource">
       <DependentUpon>Reference.svcmap</DependentUpon>
     </None>
-    <None Include="Service References\AnnotationService\AnnotationVizLib.AnnotationService.GetStructuresForSectionInRegionResponse.datasource">
+    <None Include="Service References\AnnotationService\AnnotationVizLib.AnnotationService.GetStructuresForSectionInMosaicRegionResponse.datasource">
+      <DependentUpon>Reference.svcmap</DependentUpon>
+    </None>
+    <None Include="Service References\AnnotationService\AnnotationVizLib.AnnotationService.GetStructuresForSectionInVolumeRegionResponse.datasource">
       <DependentUpon>Reference.svcmap</DependentUpon>
     </None>
     <None Include="Service References\AnnotationService\AnnotationVizLib.AnnotationService.GetStructuresForSectionResponse.datasource">

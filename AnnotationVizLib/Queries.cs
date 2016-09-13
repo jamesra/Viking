@@ -115,9 +115,53 @@ namespace AnnotationVizLib
             return listStructures.ToArray();
         }
 
+        /// <summary>
+        /// Handles chunking the request so we do not ask for too much at once
+        /// </summary>
+        /// <param name="proxy"></param>
+        /// <param name="IDs"></param>
+        /// <returns></returns>
+        public static Structure[] GetNetworkedStructures(long[] IDs, int numHops)
+        {
+            using (AnnotateStructuresClient proxy = ConnectionFactory.CreateStructuresClient())
+            {
+                long[] network_IDs = proxy.GetNetworkedStructures(IDs, numHops);
+                return proxy.GetStructuresByIDs(network_IDs, false);
+            }
+        }
+
+        /// <summary>
+        /// Handles chunking the request so we do not ask for too much at once
+        /// </summary>
+        /// <param name="proxy"></param>
+        /// <param name="IDs"></param>
+        /// <returns></returns>
+        public static Structure[] GetChildStructuresInNetwork(long[] IDs, int numHops)
+        {
+            using (AnnotateStructuresClient proxy = ConnectionFactory.CreateStructuresClient())
+            {
+                return proxy.GetChildStructuresInNetwork(IDs, numHops);
+            }
+        }
+
+        /// <summary>
+        /// Handles chunking the request so we do not ask for too much at once
+        /// </summary>
+        /// <param name="proxy"></param>
+        /// <param name="IDs"></param>
+        /// <returns></returns>
+        public static StructureLink[] GetStructureLinksInNetwork(long[] IDs, int numHops)
+        {
+            using (AnnotateStructuresClient proxy = ConnectionFactory.CreateStructuresClient())
+            {
+                return proxy.GetStructureLinksInNetwork(IDs, numHops);
+            }
+        }
+        
+
         /***************************************
         * Create structure types dictionary
-        * *************************************/ 
+        * *************************************/
         public static SortedDictionary<long, StructureType> GetStructureTypes()
         {
             using (AnnotateStructureTypesClient proxy = ConnectionFactory.CreateStructureTypesClient())

@@ -133,6 +133,7 @@
           <xs:element minOccurs="0" name="Username" nillable="true" type="xs:string" />
           <xs:element minOccurs="0" name="VolumePosition" type="tns:AnnotationPoint" />
           <xs:element xmlns:q6="http://schemas.datacontract.org/2004/07/System.Data.Entity.Spatial" minOccurs="0" name="VolumeShape" nillable="true" type="q6:DbGeometry" />
+          <xs:element minOccurs="0" name="Width" nillable="true" type="xs:double" />
         </xs:sequence>
       </xs:extension>
     </xs:complexContent>
@@ -226,6 +227,13 @@
     </xs:sequence>
   </xs:complexType>
   <xs:element name="ArrayOfLocation" nillable="true" type="tns:ArrayOfLocation" />
+  <xs:complexType name="AnnotationSet">
+    <xs:sequence>
+      <xs:element minOccurs="0" name="Locations" nillable="true" type="tns:ArrayOfLocation" />
+      <xs:element minOccurs="0" name="Structures" nillable="true" type="tns:ArrayOfStructure" />
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="AnnotationSet" nillable="true" type="tns:AnnotationSet" />
   <xs:complexType name="ArrayOfLocationLink">
     <xs:sequence>
       <xs:element minOccurs="0" maxOccurs="unbounded" name="LocationLink" nillable="true" type="tns:LocationLink" />

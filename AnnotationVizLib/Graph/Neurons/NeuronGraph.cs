@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using GraphLib;
+using System.Threading.Tasks;
 using AnnotationVizLib.AnnotationService;
 using System.Diagnostics;
 
@@ -190,16 +191,35 @@ namespace AnnotationVizLib
 
             using (AnnotateStructuresClient proxy = ConnectionFactory.CreateStructuresClient())
             {
-                // Get the nodes and build graph for numHops
-                for (int i = 0; i < numHops+1; i++)
-                {
-                    MissingParents = graph.GetHop(proxy, MissingParents);
-                }
+                long[] struct_IDs = StructureIDs.ToArray();
+                Task<Structure[]> task_nodes = Task<Structure[]>.Run(() => Queries.GetNetworkedStructures(struct_IDs, (int)numHops));
+                Task<Structure[]> task_childStructures = Task<Structure[]>.Run(() => Queries.GetChildStructuresInNetwork(struct_IDs, (int)numHops));
+                Task<StructureLink[]> task_struct_links = Task<StructureLink[]>.Run(() => Queries.GetStructureLinksInNetwork(struct_IDs, (int)numHops));
+
+                Task.WaitAll(new Task[] { task_nodes, task_childStructures, task_struct_links });
+               
+                Structure[] network_node_IDs = task_nodes.Result;
+                Structure[] childStructures = task_childStructures.Result;
+                StructureLink[] struct_links = task_struct_links.Result;
+
+                graph.AddStructuresByID(proxy, network_node_IDs, childStructures, struct_links);
             }
 
             graph.NextHopNodes = MissingParents;
 
             return graph;
+        }
+
+        private void AddStructuresByID(AnnotateStructuresClient proxy, Structure[] Nodes, Structure[] childStructures, StructureLink[] struct_links)
+        {
+            AddStructuresAsNodes(Nodes);
+
+            foreach (Structure s in childStructures)
+            {
+                IDToStructure.Add(s.ID, s);
+            }
+
+            AddEdgesForChildStructures(struct_links);
         }
 
         /// <summary>
@@ -211,6 +231,50 @@ namespace AnnotationVizLib
             {
                 if (this.Nodes.ContainsKey(id))
                     this.Nodes.Remove(id);
+            }
+        }
+
+        private void AddEdgesForChildStructures(StructureLink[] struct_links)
+        {
+            foreach (StructureLink link in struct_links)
+            {
+                //After this point both nodes are already in the graph and we can create an edge
+                Structure LinkSource = IDToStructure[link.SourceID];
+                Structure LinkTarget = IDToStructure[link.TargetID];
+
+                if (LinkTarget.ParentID != null && LinkSource.ParentID != null)
+                {
+                    string SourceTypeName = "";
+                    if (IDToStructureType.ContainsKey(LinkSource.TypeID))
+                    {
+                        SourceTypeName = IDToStructureType[LinkSource.TypeID].Name;
+                    }
+
+                    //Links should have parents
+                    if (!(LinkSource.ParentID.HasValue && LinkTarget.ParentID.HasValue))
+                        continue;
+
+                    NeuronEdge E = new NeuronEdge(LinkSource.ParentID.Value, LinkTarget.ParentID.Value, link, SourceTypeName);
+
+                    if (this.Edges.ContainsKey(E))
+                    {
+                        E = this.Edges[E];
+                        E.AddLink(link);
+                    }
+                    else
+                    {
+                        this.Edges.Add(E, E);
+                    }
+                }
+            }
+        }
+
+        private void AddEdgesForChildStructures(Structure[] ChildStructures)
+        {
+            //Create edges
+            foreach (Structure child in ChildStructures.Where(child => child.Links != null && child.Links.Length > 0))
+            {
+                AddEdgesForChildStructures(child.Links.Where(link => IDToStructure.ContainsKey(link.SourceID) && IDToStructure.ContainsKey(link.TargetID)).ToArray());
             }
         }
 
@@ -233,41 +297,7 @@ namespace AnnotationVizLib
                 IDToStructure.Add(s.ID, s); 
             }
 
-            //Create edges
-            foreach (Structure child in ChildStructures.Where(child => child.Links != null && child.Links.Length > 0))
-            {
-                foreach (StructureLink link in child.Links.Where(link => IDToStructure.ContainsKey(link.SourceID) && IDToStructure.ContainsKey(link.TargetID)))
-                {
-                    //After this point both nodes are already in the graph and we can create an edge
-                    Structure LinkSource = IDToStructure[link.SourceID];
-                    Structure LinkTarget = IDToStructure[link.TargetID];
-
-                    if (LinkTarget.ParentID != null && LinkSource.ParentID != null)
-                    {
-                        string SourceTypeName = "";
-                        if (IDToStructureType.ContainsKey(LinkSource.TypeID))
-                        {
-                            SourceTypeName = IDToStructureType[LinkSource.TypeID].Name;
-                        }
-
-                        //Links should have parents
-                        if (!(LinkSource.ParentID.HasValue && LinkTarget.ParentID.HasValue))
-                            continue;
-                        
-                        NeuronEdge E = new NeuronEdge(LinkSource.ParentID.Value, LinkTarget.ParentID.Value, link, SourceTypeName);
-
-                        if (this.Edges.ContainsKey(E))
-                        {
-                            E = this.Edges[E];
-                            E.AddLink(link);
-                        }
-                        else
-                        {
-                            this.Edges.Add(E, E);
-                        }
-                    }
-                }
-            }
+            AddEdgesForChildStructures(ChildStructures);
 
             List<long> ListAbsentParents = new List<long>(LinkedStructurePartners.Length);
 
@@ -287,6 +317,17 @@ namespace AnnotationVizLib
 
             return ListAbsentParents;
             
+        }
+
+        private void AddStructuresAsNodes(Structure[] structs)
+        {
+            foreach (Structure s in structs)
+            {
+                NeuronNode node = new NeuronNode(s.ID, s);
+                this.Nodes[s.ID] = node;
+
+                IDToStructure[s.ID] = s;
+            }
         }
 
         private Structure[]  FindMissingChildStructures(AnnotateStructuresClient proxy, Structure[] MissingStructures)

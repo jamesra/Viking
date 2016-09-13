@@ -253,11 +253,17 @@
   <wsdl:message name="IAnnotateStructures_GetStructuresForSection_OutputMessage">
     <wsdl:part name="parameters" element="tns:GetStructuresForSectionResponse" />
   </wsdl:message>
-  <wsdl:message name="IAnnotateStructures_GetStructuresForSectionInRegion_InputMessage">
-    <wsdl:part name="parameters" element="tns:GetStructuresForSectionInRegion" />
+  <wsdl:message name="IAnnotateStructures_GetStructuresForSectionInMosaicRegion_InputMessage">
+    <wsdl:part name="parameters" element="tns:GetStructuresForSectionInMosaicRegion" />
   </wsdl:message>
-  <wsdl:message name="IAnnotateStructures_GetStructuresForSectionInRegion_OutputMessage">
-    <wsdl:part name="parameters" element="tns:GetStructuresForSectionInRegionResponse" />
+  <wsdl:message name="IAnnotateStructures_GetStructuresForSectionInMosaicRegion_OutputMessage">
+    <wsdl:part name="parameters" element="tns:GetStructuresForSectionInMosaicRegionResponse" />
+  </wsdl:message>
+  <wsdl:message name="IAnnotateStructures_GetStructuresForSectionInVolumeRegion_InputMessage">
+    <wsdl:part name="parameters" element="tns:GetStructuresForSectionInVolumeRegion" />
+  </wsdl:message>
+  <wsdl:message name="IAnnotateStructures_GetStructuresForSectionInVolumeRegion_OutputMessage">
+    <wsdl:part name="parameters" element="tns:GetStructuresForSectionInVolumeRegionResponse" />
   </wsdl:message>
   <wsdl:message name="IAnnotateStructures_GetStructureByID_InputMessage">
     <wsdl:part name="parameters" element="tns:GetStructureByID" />
@@ -288,6 +294,24 @@
   </wsdl:message>
   <wsdl:message name="IAnnotateStructures_GetLinkedStructuresByID_OutputMessage">
     <wsdl:part name="parameters" element="tns:GetLinkedStructuresByIDResponse" />
+  </wsdl:message>
+  <wsdl:message name="IAnnotateStructures_GetNetworkedStructures_InputMessage">
+    <wsdl:part name="parameters" element="tns:GetNetworkedStructures" />
+  </wsdl:message>
+  <wsdl:message name="IAnnotateStructures_GetNetworkedStructures_OutputMessage">
+    <wsdl:part name="parameters" element="tns:GetNetworkedStructuresResponse" />
+  </wsdl:message>
+  <wsdl:message name="IAnnotateStructures_GetChildStructuresInNetwork_InputMessage">
+    <wsdl:part name="parameters" element="tns:GetChildStructuresInNetwork" />
+  </wsdl:message>
+  <wsdl:message name="IAnnotateStructures_GetChildStructuresInNetwork_OutputMessage">
+    <wsdl:part name="parameters" element="tns:GetChildStructuresInNetworkResponse" />
+  </wsdl:message>
+  <wsdl:message name="IAnnotateStructures_GetStructureLinksInNetwork_InputMessage">
+    <wsdl:part name="parameters" element="tns:GetStructureLinksInNetwork" />
+  </wsdl:message>
+  <wsdl:message name="IAnnotateStructures_GetStructureLinksInNetwork_OutputMessage">
+    <wsdl:part name="parameters" element="tns:GetStructureLinksInNetworkResponse" />
   </wsdl:message>
   <wsdl:message name="IAnnotateStructures_NumberOfLocationsForStructure_InputMessage">
     <wsdl:part name="parameters" element="tns:NumberOfLocationsForStructure" />
@@ -385,11 +409,17 @@
   <wsdl:message name="IAnnotateLocations_GetLocationsForStructure_OutputMessage">
     <wsdl:part name="parameters" element="tns:GetLocationsForStructureResponse" />
   </wsdl:message>
-  <wsdl:message name="IAnnotateLocations_GetLocationChangesInRegion_InputMessage">
-    <wsdl:part name="parameters" element="tns:GetLocationChangesInRegion" />
+  <wsdl:message name="IAnnotateLocations_GetLocationChangesInMosaicRegion_InputMessage">
+    <wsdl:part name="parameters" element="tns:GetLocationChangesInMosaicRegion" />
   </wsdl:message>
-  <wsdl:message name="IAnnotateLocations_GetLocationChangesInRegion_OutputMessage">
-    <wsdl:part name="parameters" element="tns:GetLocationChangesInRegionResponse" />
+  <wsdl:message name="IAnnotateLocations_GetLocationChangesInMosaicRegion_OutputMessage">
+    <wsdl:part name="parameters" element="tns:GetLocationChangesInMosaicRegionResponse" />
+  </wsdl:message>
+  <wsdl:message name="IAnnotateLocations_GetAnnotationsInMosaicRegion_InputMessage">
+    <wsdl:part name="parameters" element="tns:GetAnnotationsInMosaicRegion" />
+  </wsdl:message>
+  <wsdl:message name="IAnnotateLocations_GetAnnotationsInMosaicRegion_OutputMessage">
+    <wsdl:part name="parameters" element="tns:GetAnnotationsInMosaicRegionResponse" />
   </wsdl:message>
   <wsdl:message name="IAnnotateLocations_GetLocationChanges_InputMessage">
     <wsdl:part name="parameters" element="tns:GetLocationChanges" />
@@ -421,11 +451,11 @@
   <wsdl:message name="IAnnotateLocations_GetLocationLinksForSection_OutputMessage">
     <wsdl:part name="parameters" element="tns:GetLocationLinksForSectionResponse" />
   </wsdl:message>
-  <wsdl:message name="IAnnotateLocations_GetLocationLinksForSectionInRegion_InputMessage">
-    <wsdl:part name="parameters" element="tns:GetLocationLinksForSectionInRegion" />
+  <wsdl:message name="IAnnotateLocations_GetLocationLinksForSectionInMosaicRegion_InputMessage">
+    <wsdl:part name="parameters" element="tns:GetLocationLinksForSectionInMosaicRegion" />
   </wsdl:message>
-  <wsdl:message name="IAnnotateLocations_GetLocationLinksForSectionInRegion_OutputMessage">
-    <wsdl:part name="parameters" element="tns:GetLocationLinksForSectionInRegionResponse" />
+  <wsdl:message name="IAnnotateLocations_GetLocationLinksForSectionInMosaicRegion_OutputMessage">
+    <wsdl:part name="parameters" element="tns:GetLocationLinksForSectionInMosaicRegionResponse" />
   </wsdl:message>
   <wsdl:message name="IAnnotateLocations_GetLocationChangeLog_InputMessage">
     <wsdl:part name="parameters" element="tns:GetLocationChangeLog" />
@@ -508,9 +538,13 @@
       <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateStructures/GetStructuresForSection" message="tns:IAnnotateStructures_GetStructuresForSection_InputMessage" />
       <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateStructures/GetStructuresForSectionResponse" message="tns:IAnnotateStructures_GetStructuresForSection_OutputMessage" />
     </wsdl:operation>
-    <wsdl:operation name="GetStructuresForSectionInRegion">
-      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateStructures/GetStructuresForSectionInRegion" message="tns:IAnnotateStructures_GetStructuresForSectionInRegion_InputMessage" />
-      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateStructures/GetStructuresForSectionInRegionResponse" message="tns:IAnnotateStructures_GetStructuresForSectionInRegion_OutputMessage" />
+    <wsdl:operation name="GetStructuresForSectionInMosaicRegion">
+      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateStructures/GetStructuresForSectionInMosaicRegion" message="tns:IAnnotateStructures_GetStructuresForSectionInMosaicRegion_InputMessage" />
+      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateStructures/GetStructuresForSectionInMosaicRegionResponse" message="tns:IAnnotateStructures_GetStructuresForSectionInMosaicRegion_OutputMessage" />
+    </wsdl:operation>
+    <wsdl:operation name="GetStructuresForSectionInVolumeRegion">
+      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateStructures/GetStructuresForSectionInVolumeRegion" message="tns:IAnnotateStructures_GetStructuresForSectionInVolumeRegion_InputMessage" />
+      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateStructures/GetStructuresForSectionInVolumeRegionResponse" message="tns:IAnnotateStructures_GetStructuresForSectionInVolumeRegion_OutputMessage" />
     </wsdl:operation>
     <wsdl:operation name="GetStructureByID">
       <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateStructures/GetStructureByID" message="tns:IAnnotateStructures_GetStructureByID_InputMessage" />
@@ -531,6 +565,18 @@
     <wsdl:operation name="GetLinkedStructuresByID">
       <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateStructures/GetLinkedStructuresByID" message="tns:IAnnotateStructures_GetLinkedStructuresByID_InputMessage" />
       <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateStructures/GetLinkedStructuresByIDResponse" message="tns:IAnnotateStructures_GetLinkedStructuresByID_OutputMessage" />
+    </wsdl:operation>
+    <wsdl:operation name="GetNetworkedStructures">
+      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateStructures/GetNetworkedStructures" message="tns:IAnnotateStructures_GetNetworkedStructures_InputMessage" />
+      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateStructures/GetNetworkedStructuresResponse" message="tns:IAnnotateStructures_GetNetworkedStructures_OutputMessage" />
+    </wsdl:operation>
+    <wsdl:operation name="GetChildStructuresInNetwork">
+      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateStructures/GetChildStructuresInNetwork" message="tns:IAnnotateStructures_GetChildStructuresInNetwork_InputMessage" />
+      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateStructures/GetChildStructuresInNetworkResponse" message="tns:IAnnotateStructures_GetChildStructuresInNetwork_OutputMessage" />
+    </wsdl:operation>
+    <wsdl:operation name="GetStructureLinksInNetwork">
+      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateStructures/GetStructureLinksInNetwork" message="tns:IAnnotateStructures_GetStructureLinksInNetwork_InputMessage" />
+      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateStructures/GetStructureLinksInNetworkResponse" message="tns:IAnnotateStructures_GetStructureLinksInNetwork_OutputMessage" />
     </wsdl:operation>
     <wsdl:operation name="NumberOfLocationsForStructure">
       <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateStructures/NumberOfLocationsForStructure" message="tns:IAnnotateStructures_NumberOfLocationsForStructure_InputMessage" />
@@ -598,9 +644,13 @@
       <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateLocations/GetLocationsForStructure" message="tns:IAnnotateLocations_GetLocationsForStructure_InputMessage" />
       <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateLocations/GetLocationsForStructureResponse" message="tns:IAnnotateLocations_GetLocationsForStructure_OutputMessage" />
     </wsdl:operation>
-    <wsdl:operation name="GetLocationChangesInRegion">
-      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateLocations/GetLocationChangesInRegion" message="tns:IAnnotateLocations_GetLocationChangesInRegion_InputMessage" />
-      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateLocations/GetLocationChangesInRegionResponse" message="tns:IAnnotateLocations_GetLocationChangesInRegion_OutputMessage" />
+    <wsdl:operation name="GetLocationChangesInMosaicRegion">
+      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateLocations/GetLocationChangesInMosaicRegion" message="tns:IAnnotateLocations_GetLocationChangesInMosaicRegion_InputMessage" />
+      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateLocations/GetLocationChangesInMosaicRegionResponse" message="tns:IAnnotateLocations_GetLocationChangesInMosaicRegion_OutputMessage" />
+    </wsdl:operation>
+    <wsdl:operation name="GetAnnotationsInMosaicRegion">
+      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateLocations/GetAnnotationsInMosaicRegion" message="tns:IAnnotateLocations_GetAnnotationsInMosaicRegion_InputMessage" />
+      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateLocations/GetAnnotationsInMosaicRegionResponse" message="tns:IAnnotateLocations_GetAnnotationsInMosaicRegion_OutputMessage" />
     </wsdl:operation>
     <wsdl:operation name="GetLocationChanges">
       <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateLocations/GetLocationChanges" message="tns:IAnnotateLocations_GetLocationChanges_InputMessage" />
@@ -622,9 +672,9 @@
       <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateLocations/GetLocationLinksForSection" message="tns:IAnnotateLocations_GetLocationLinksForSection_InputMessage" />
       <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateLocations/GetLocationLinksForSectionResponse" message="tns:IAnnotateLocations_GetLocationLinksForSection_OutputMessage" />
     </wsdl:operation>
-    <wsdl:operation name="GetLocationLinksForSectionInRegion">
-      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateLocations/GetLocationLinksForSectionInRegion" message="tns:IAnnotateLocations_GetLocationLinksForSectionInRegion_InputMessage" />
-      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateLocations/GetLocationLinksForSectionInRegionResponse" message="tns:IAnnotateLocations_GetLocationLinksForSectionInRegion_OutputMessage" />
+    <wsdl:operation name="GetLocationLinksForSectionInMosaicRegion">
+      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateLocations/GetLocationLinksForSectionInMosaicRegion" message="tns:IAnnotateLocations_GetLocationLinksForSectionInMosaicRegion_InputMessage" />
+      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateLocations/GetLocationLinksForSectionInMosaicRegionResponse" message="tns:IAnnotateLocations_GetLocationLinksForSectionInMosaicRegion_OutputMessage" />
     </wsdl:operation>
     <wsdl:operation name="GetLocationChangeLog">
       <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateLocations/GetLocationChangeLog" message="tns:IAnnotateLocations_GetLocationChangeLog_InputMessage" />
@@ -745,8 +795,17 @@
         <soap12:body use="literal" />
       </wsdl:output>
     </wsdl:operation>
-    <wsdl:operation name="GetStructuresForSectionInRegion">
-      <soap12:operation soapAction="http://tempuri.org/IAnnotateStructures/GetStructuresForSectionInRegion" style="document" />
+    <wsdl:operation name="GetStructuresForSectionInMosaicRegion">
+      <soap12:operation soapAction="http://tempuri.org/IAnnotateStructures/GetStructuresForSectionInMosaicRegion" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="GetStructuresForSectionInVolumeRegion">
+      <soap12:operation soapAction="http://tempuri.org/IAnnotateStructures/GetStructuresForSectionInVolumeRegion" style="document" />
       <wsdl:input>
         <soap12:body use="literal" />
       </wsdl:input>
@@ -792,6 +851,33 @@
     </wsdl:operation>
     <wsdl:operation name="GetLinkedStructuresByID">
       <soap12:operation soapAction="http://tempuri.org/IAnnotateStructures/GetLinkedStructuresByID" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="GetNetworkedStructures">
+      <soap12:operation soapAction="http://tempuri.org/IAnnotateStructures/GetNetworkedStructures" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="GetChildStructuresInNetwork">
+      <soap12:operation soapAction="http://tempuri.org/IAnnotateStructures/GetChildStructuresInNetwork" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="GetStructureLinksInNetwork">
+      <soap12:operation soapAction="http://tempuri.org/IAnnotateStructures/GetStructureLinksInNetwork" style="document" />
       <wsdl:input>
         <soap12:body use="literal" />
       </wsdl:input>
@@ -947,8 +1033,17 @@
         <soap12:body use="literal" />
       </wsdl:output>
     </wsdl:operation>
-    <wsdl:operation name="GetLocationChangesInRegion">
-      <soap12:operation soapAction="http://tempuri.org/IAnnotateLocations/GetLocationChangesInRegion" style="document" />
+    <wsdl:operation name="GetLocationChangesInMosaicRegion">
+      <soap12:operation soapAction="http://tempuri.org/IAnnotateLocations/GetLocationChangesInMosaicRegion" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="GetAnnotationsInMosaicRegion">
+      <soap12:operation soapAction="http://tempuri.org/IAnnotateLocations/GetAnnotationsInMosaicRegion" style="document" />
       <wsdl:input>
         <soap12:body use="literal" />
       </wsdl:input>
@@ -1001,8 +1096,8 @@
         <soap12:body use="literal" />
       </wsdl:output>
     </wsdl:operation>
-    <wsdl:operation name="GetLocationLinksForSectionInRegion">
-      <soap12:operation soapAction="http://tempuri.org/IAnnotateLocations/GetLocationLinksForSectionInRegion" style="document" />
+    <wsdl:operation name="GetLocationLinksForSectionInMosaicRegion">
+      <soap12:operation soapAction="http://tempuri.org/IAnnotateLocations/GetLocationLinksForSectionInMosaicRegion" style="document" />
       <wsdl:input>
         <soap12:body use="literal" />
       </wsdl:input>
