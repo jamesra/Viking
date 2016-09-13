@@ -52,7 +52,7 @@ namespace DataExport.Tests
             Uri endpoint;
             Uri.TryCreate("http://webdev.connectomes.utah.edu/RC1Test/OData", UriKind.Absolute, out endpoint);
               
-            ICollection<long> ids = RequestVariables.GetIDs(HttpContext.Current.Request.QueryString);
+            ICollection<long> ids = RequestVariables.GetIDsFromQueryData(HttpContext.Current.Request.QueryString);
             Microsoft.VisualStudio.TestTools.UnitTesting.Assert.IsTrue(ids.Count == 1);
             Microsoft.VisualStudio.TestTools.UnitTesting.Assert.IsTrue(ids.Contains(180));
 

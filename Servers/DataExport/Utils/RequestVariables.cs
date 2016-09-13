@@ -15,7 +15,37 @@ namespace DataExport.Controllers
     /// </summary>
     public static class RequestVariables
     {
-        public static ICollection<long> GetIDs(NameValueCollection  QueryData)
+        public static ICollection<long> GetIDs(HttpRequestBase Request)
+        {
+            ICollection<long> requestIDs = RequestVariables.GetIDsFromRequestFiles(Request.Files);
+            ICollection<long> queryIDs = RequestVariables.GetIDsFromQueryData(Request.QueryString);
+
+            List<long> IDs = new List<long>(requestIDs.Count + queryIDs.Count);
+            IDs.AddRange(requestIDs);
+            IDs.AddRange(queryIDs);
+
+            return IDs;
+        }
+
+        public static ICollection<long> GetIDsFromRequestFiles(HttpFileCollectionBase files)
+        {
+            List<long> ids = new List<long>();
+
+            for (int i = 0; i < files.Count; i++)
+            {
+                var f = files[i];
+
+                byte[] buffer = new byte[f.ContentLength];
+                int length = f.InputStream.Read(buffer, 0, f.ContentLength);
+                string ids_string = System.Text.Encoding.UTF8.GetString(buffer);
+
+                ids.AddRange(RequestVariables.ParseIDString(ids_string));
+            }
+
+            return ids;
+        }
+
+        public static ICollection<long> GetIDsFromQueryData(NameValueCollection  QueryData)
         {
             //A hack, but should only occur in unit testing
             if (QueryData == null)

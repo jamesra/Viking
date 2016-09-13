@@ -13,9 +13,8 @@ namespace DataExport.Controllers
     public class MorphologyController : Controller
     {
 
-        public string GetOutputFilename(string ext)
-        {
-            ICollection<long> requestIDs = RequestVariables.GetIDs(Request.QueryString).Cast<long>().ToArray();
+        public string GetOutputFilename(ICollection<long> requestIDs, string ext)
+        { 
             string ID_List = "";
             bool first = true;
             if (requestIDs.Count == 0)
@@ -42,12 +41,64 @@ namespace DataExport.Controllers
             return string.Format("morph-{0}.{1}", ID_List, ext);
         }
 
+        private ActionResult RedirectToFile(string outputFilename)
+        {
+            Response.StatusCode = (int)System.Net.HttpStatusCode.Created;
+            Uri host = AppSettings.VolumeURI;
+            string url = new Uri(host, Request.ApplicationPath + "/Output/" + outputFilename).ToString();
+            Response.Headers["Location"] = url;
+            Response.Redirect(url, true);
+            return new EmptyResult();
+        }
+
+        [HttpPost()]
+        [AcceptVerbs(HttpVerbs.Post)]
+        public ActionResult PostTLP()
+        {
+            ICollection<long> requestIDs = RequestVariables.GetIDs(Request);
+
+            string OutputFile = GetOutputFilename(requestIDs, "tlp");
+            string userOutputDirectory = GetAndCreateOutputDirectories();
+            string userOutputFileFullPath = System.IO.Path.Combine(userOutputDirectory, OutputFile);
+            Scale scale = AppSettings.GetScale();
+
+            StructureMorphologyColorMap colorMap = new StructureMorphologyColorMap(GetStructureTypeColorMap(),
+                                                                                   GetStructureColorMap(),
+                                                                                   GetColorMapImage());
+
+            MorphologyGraph structure_graph = GetGraph(requestIDs);
+            MorphologyTLPView TlpGraph = MorphologyTLPView.ToTLP(structure_graph, scale, colorMap, AppSettings.VolumeURL);
+            TlpGraph.SaveTLP(userOutputFileFullPath);
+
+            return RedirectToFile(OutputFile);
+        }
+
+        [HttpPost()]
+        [AcceptVerbs(HttpVerbs.Post)]
+        public ActionResult PostJSON()
+        { 
+            ICollection<long> requestIDs = RequestVariables.GetIDsFromQueryData(Request.QueryString);
+
+            string OutputFile = GetOutputFilename(requestIDs, "json");
+            string userOutputDirectory = GetAndCreateOutputDirectories();
+            string userOutputFileFullPath = System.IO.Path.Combine(userOutputDirectory, OutputFile);
+            Scale scale = AppSettings.GetScale();
+
+            MorphologyGraph structure_graph = GetGraph(requestIDs);
+            MorphologyJSONView JSONGraph = MorphologyJSONView.ToJSON(structure_graph);
+            JSONGraph.SaveJSON(userOutputFileFullPath);
+
+            return RedirectToFile(OutputFile);
+        }
+
 
         [ActionName("GetTLP")]
         public ActionResult GetTLP()
-        {
-            string OutputFile = GetOutputFilename("tlp");
-            string userOutputDirectory = GetAndCreateOutputDirectories("~/Output/");
+        { 
+            ICollection<long> requestIDs = RequestVariables.GetIDs(Request);
+
+            string OutputFile = GetOutputFilename(requestIDs, "tlp");
+            string userOutputDirectory = GetAndCreateOutputDirectories();
             string userOutputFileFullPath = System.IO.Path.Combine(userOutputDirectory, OutputFile);
             Scale scale = AppSettings.GetScale();
              
@@ -55,7 +106,7 @@ namespace DataExport.Controllers
                                                                                    GetStructureColorMap(),
                                                                                    GetColorMapImage());
 
-            MorphologyGraph structure_graph = GetGraph();
+            MorphologyGraph structure_graph = GetGraph(requestIDs);
             MorphologyTLPView TlpGraph = MorphologyTLPView.ToTLP(structure_graph, scale, colorMap, AppSettings.VolumeURL);
             TlpGraph.SaveTLP(userOutputFileFullPath);
 
@@ -65,12 +116,15 @@ namespace DataExport.Controllers
         [ActionName("GetJSON")]
         public ActionResult GetJSON()
         {
-            string OutputFile = GetOutputFilename("json");
-            string userOutputDirectory = GetAndCreateOutputDirectories("~/Output/");
+
+            ICollection<long> requestIDs = RequestVariables.GetIDsFromQueryData(Request.QueryString);
+
+            string OutputFile = GetOutputFilename(requestIDs, "json");
+            string userOutputDirectory = GetAndCreateOutputDirectories();
             string userOutputFileFullPath = System.IO.Path.Combine(userOutputDirectory, OutputFile);
             Scale scale = AppSettings.GetScale();
 
-            MorphologyGraph structure_graph = GetGraph();
+            MorphologyGraph structure_graph = GetGraph(requestIDs);
             MorphologyJSONView JSONGraph = MorphologyJSONView.ToJSON(structure_graph);
             JSONGraph.SaveJSON(userOutputFileFullPath);
 
@@ -121,23 +175,22 @@ namespace DataExport.Controllers
         /// </summary>
         /// <param name="output_path"></param>
         /// <returns></returns>
-        private string GetAndCreateOutputDirectories(string output_dir)
+        private string GetAndCreateOutputDirectories()
         {
-            string userDotDirectory = "Output";
+            string output_dir = "~/Output";
             if (Server != null)
-                userDotDirectory = Server.MapPath(output_dir); //"~/Dot/");
+                output_dir = Server.MapPath(output_dir);
               
-            if (!System.IO.Directory.Exists(userDotDirectory))
-                System.IO.Directory.CreateDirectory(userDotDirectory);
+            if (!System.IO.Directory.Exists(output_dir))
+                System.IO.Directory.CreateDirectory(output_dir);
 
-            return userDotDirectory;
+            return output_dir;
         }
           
-        private MorphologyGraph GetGraph()
+        private MorphologyGraph GetGraph(ICollection<long> requestIDs)
         {
             AnnotationVizLib.ConnectionFactory.SetConnection(AppSettings.WebServiceURL , AppSettings.EndpointCredentials);
 
-            ICollection<long> requestIDs = RequestVariables.GetIDs(Request.QueryString);
             if (requestIDs == null || requestIDs.Count == 0)
                 requestIDs = Queries.GetLinkedStructureParentIDs();
 

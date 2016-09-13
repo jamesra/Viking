@@ -18,41 +18,67 @@ namespace DataExport
     {
         public static void RegisterRoutes(RouteCollection routes)
         {
-            routes.MapRoute("Network_Dot", "Network/Dot",
-                            new { controller = "Network", action = "GetDot"},
-                            new { controller = "Network"});
+            routes.MapRoute("Network_GetDot", "Network/Dot",
+                            new { controller = "Network", action = "GetDot" },
+                            new { controller = "Network", httpMethod = new HttpMethodConstraint("GET") });
 
-            routes.MapRoute("Network_TLP", "Network/TLP",
+            routes.MapRoute("Network_PostDot", "Network/Dot",
+                            new { controller = "Network", action = "PostDot" },
+                            new { controller = "Network", httpMethod = new HttpMethodConstraint("POST") });
+
+            routes.MapRoute("Network_GetTLP", "Network/TLP",
                             new { controller = "Network", action = "GetTLP" },
-                            new { controller = "Network" });
+                            new { controller = "Network", httpMethod = new HttpMethodConstraint("GET") });
 
-            routes.MapRoute("Network_GML", "Network/GraphML",
+            routes.MapRoute("Network_PostTLP", "Network/TLP",
+                            new { controller = "Network", action = "PostTLP" },
+                            new { controller = "Network", httpMethod = new HttpMethodConstraint("POST") });
+
+            routes.MapRoute("Network_GetGML", "Network/GraphML",
                             new { controller = "Network", action = "GetGML" },
-                            new { controller = "Network" });
+                            new { controller = "Network", httpMethod = new HttpMethodConstraint("GET") });
 
-            routes.MapRoute("Network_JSON", "Network/JSON",
+            routes.MapRoute("Network_PostGML", "Network/GraphML",
+                            new { controller = "Network", action = "PostGML" },
+                            new { controller = "Network", httpMethod = new HttpMethodConstraint("POST") });
+
+            routes.MapRoute("Network_GetJSON", "Network/JSON",
                             new { controller = "Network", action = "GetJSON" },
-                            new { controller = "Network" });
+                            new { controller = "Network", httpMethod = new HttpMethodConstraint("GET") });
 
-            routes.MapRoute("Motifs_Dot", "Motifs/Dot",
+            routes.MapRoute("Network_PostJSON", "Network/JSON",
+                            new { controller = "Network", action = "PostJSON" },
+                            new { controller = "Network", httpMethod = new HttpMethodConstraint("POST") });
+
+            routes.MapRoute("Motifs_GetDot", "Motifs/Dot",
                             new { controller = "Motif", action = "GetDot"},
                             new { controller = "Motif"});
 
-            routes.MapRoute("Motifs_TLP", "Motifs/TLP",
+            routes.MapRoute("Motifs_GetTLP", "Motifs/TLP",
                             new { controller = "Motif", action = "GetTLP" },
                             new { controller = "Motif" });
 
-            routes.MapRoute("Motifs_JSON", "Motifs/JSON",
+            routes.MapRoute("Motifs_GetJSON", "Motifs/JSON",
                             new { controller = "Motif", action = "GetJSON" },
                             new { controller = "Motif" });
 
-            routes.MapRoute("Morphology_TLP", "Morphology/TLP",
+            routes.MapRoute("Morphology_GetTLP", "Morphology/TLP",
                             new { controller = "Morphology", action = "GetTLP" },
-                            new { controller = "Morphology" });
+                            new { controller = "Morphology", httpMethod = new HttpMethodConstraint("GET") });
 
-            routes.MapRoute("Morphology_JSON", "Morphology/JSON",
+            routes.MapRoute("Morphology_PostTLP", "Morphology/TLP",
+                            new { controller = "Morphology", action = "PostTLP" },
+                            new { controller = "Morphology", httpMethod = new HttpMethodConstraint("POST") });
+
+            routes.MapRoute("Morphology_GetJSON", "Morphology/JSON",
                             new { controller = "Morphology", action = "GetJSON" },
                             new { controller = "Morphology" });
+
+            routes.MapRoute("Morphology_PostJSON", "Morphology/JSON",
+                            new { controller = "Morphology", action = "PostJSON" },
+                            new { controller = "Morphology", httpMethod = new HttpMethodConstraint("POST") });
+
+            routes.IgnoreRoute("Output");
 
             //Ignore the root level so we can load our static index.html file
             routes.IgnoreRoute("");
