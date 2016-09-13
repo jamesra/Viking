@@ -915,6 +915,34 @@ namespace Annotation
             }
         }
 
+        public long[] GetNetworkedStructures(long[] IDs, int numHops)
+        {
+            using(var db = GetOrCreateReadOnlyContext())
+            {
+                
+                return db.SelectNetworkStructureIDs(IDs, numHops).ToArray();
+            } 
+        }
+
+        public Structure[] GetChildStructuresInNetwork(long[] IDs, int numHops)
+        {
+            using(var db = GetOrCreateReadOnlyContext())
+            {
+                var child_structs = db.SelectNetworkChildStructures(IDs, numHops);
+                return child_structs.ToList().Select(s => new Structure(s, false)).ToArray();
+            }
+        }
+
+        public StructureLink[] GetStructureLinksInNetwork(long[] IDs, int numHops)
+        {
+            using (var db = GetOrCreateReadOnlyContext())
+            {
+                var structure_links = db.SelectNetworkStructureLinks(IDs, numHops);
+                return structure_links.ToList().Select(sl => new StructureLink(sl)).ToArray();
+            }
+        }
+
+
         [PrincipalPermission(SecurityAction.Demand, Role = "Read")]
         public Location[] GetLocationsForStructure(long structureID)
         {

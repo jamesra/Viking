@@ -96,7 +96,16 @@ namespace Annotation.Service.Interfaces
         /// <returns></returns>
         [OperationContract]
         StructureLink[] GetLinkedStructuresByID(long ID);
-        
+
+        [OperationContract]
+        long[] GetNetworkedStructures(long[] IDs, int numHops);
+
+        [OperationContract]
+        Structure[] GetChildStructuresInNetwork(long[] IDs, int numHops);
+
+        [OperationContract]
+        StructureLink[] GetStructureLinksInNetwork(long[] IDs, int numHops);
+
         /// <summary>
         /// Return all locations for this structure
         /// </summary>
