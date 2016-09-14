@@ -19,15 +19,15 @@ insert into @IDs
 	select distinct TargetID as ID from StructureLink 
 		inner join Structure TStruct ON TStruct.ID = TargetID 
 		where TStruct.ParentID = @NetworkCenter
-	
-
-select * from @IDs order by ID
-   
-select S.ID as ConnectionStructure, S.ParentID as CellID, SP.Label as CellLabel,
-	   S.TypeID as SourceTypeID, 
-	   dbo.ufnStructureArea(LocIDs.ID) as Area_nm,
-	   dbo.ufnStructureArea(LocIDs.ID) / 1000000.0 as Area_um
-from @IDs LocIDs
-	join Structure S ON S.ID = LocIDs.ID
-	join Structure SP ON SP.ID = S.ParentID
-	order by LocIDs.ID
+		
+select SourceParent.ID as SourceCellID, SL.SourceID as SourceID, SourceType.ID as SourceTypeID, SourceType.Name as SourceType, dbo.ufnStructureArea(SL.SourceID) as SourceArea_nm,  dbo.ufnStructureArea(SL.SourceID) / 1000000.0 as SourceArea_um,
+	   TargetParent.ID as TargetCellID, SL.TargetID as TargetID, TargetType.ID as TargetTypeID, TargetType.Name as TargetType, dbo.ufnStructureArea(SL.TargetID) as TargetArea_nm,  dbo.ufnStructureArea(SL.TargetID) / 1000000.0 as TargetArea_um
+	    from StructureLink SL
+	inner join Structure Source on Source.ID = SL.SourceID
+	inner join Structure SourceParent on SourceParent.ID = Source.ParentID
+	inner join StructureType SourceType on SourceType.ID = Source.TypeID
+	inner join Structure Target on Target.ID = SL.TargetID
+	inner join Structure TargetParent on TargetParent.ID = Target.ParentID
+	inner join StructureType TargetType on TargetType.ID = Target.TypeID
+	where (SL.SourceID in (select ID from @IDs)) OR (SL.TargetID in (select ID from @IDs))
+	order by SourceCellID, TargetCellID, SourceID, TargetID
