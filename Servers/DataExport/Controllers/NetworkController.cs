@@ -31,7 +31,7 @@ namespace DataExport.Controllers
                 }
 
                 ID_List += ID.ToString();
-                if (ID_List.Length > 200)
+                if (ID_List.Length > 140)
                 {
                     ID_List += "etc";
                     break;
