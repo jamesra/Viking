@@ -106,6 +106,12 @@ namespace WebAnnotation.View
         public static StructureLinkViewModelBase Create(SectionStructureLinkViewKey key, Viking.VolumeModel.IVolumeToSectionTransform mapper)
         {
             LocationObj sourceLocation = Store.Locations[key.SourceLocID];
+            LocationObj targetLocation = Store.Locations[key.TargetLocID];
+
+            //If the location types don't match then use the default circle view, which all annotations are compatible with
+            if (sourceLocation.TypeCode != targetLocation.TypeCode)
+                return new StructureLinkCirclesView(key, mapper);
+
             switch (sourceLocation.TypeCode)
             {
                 case LocationType.CIRCLE:
