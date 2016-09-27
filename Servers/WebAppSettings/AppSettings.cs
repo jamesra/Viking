@@ -7,7 +7,15 @@ using System.Web.Configuration;
 using AnnotationVizLib;
 
 namespace VikingWebAppSettings
-{ 
+{
+    public static class UriExtensions
+    {
+        public static Uri Append(this Uri uri, params string[] paths)
+        {
+            return new Uri(paths.Aggregate(uri.AbsoluteUri, (current, path) => string.Format("{0}/{1}", current.TrimEnd('/'), path.TrimStart('/'))));
+        }
+    }
+
     public static class AppSettings
     {
         public static string GetApplicationSetting(string name)
@@ -103,10 +111,7 @@ namespace VikingWebAppSettings
             get
             {
                 Uri uri = null;
-                if (Uri.TryCreate(VolumeURI, "OData", out uri))
-                    return uri;
-
-                return null;
+                return VolumeURI.Append("OData");
             }
         }
 

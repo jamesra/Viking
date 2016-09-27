@@ -77,7 +77,7 @@ namespace DataExport.Controllers
 
         public static ICollection<long> ParseIDString(string idListstr)
         {
-            string[] parts = idListstr.Split(new char[] { ',', ';', ' ', '\n'}, StringSplitOptions.RemoveEmptyEntries);
+            string[] parts = idListstr.Split(new char[] {';', '\n'}, StringSplitOptions.RemoveEmptyEntries);
             List<long> ids = new List<long>(parts.Length);
             var query_tasks = new List<Task<ICollection<long>>>();
             foreach (string id in parts)
@@ -89,34 +89,45 @@ namespace DataExport.Controllers
                 }
                 catch (FormatException)
                 {
-                    //Try to parse a query
+                    ICollection<long> query_ids = GetIDsFromQuery(VikingWebAppSettings.AppSettings.ODataURL, id);
+                    ids.AddRange(query_ids);
+                    //Try to parse a 
+                    /*
                     var task = GetIDsFromQueryAsync(VikingWebAppSettings.AppSettings.ODataURL, id);
-                    task.Start();
                     query_tasks.Add(task);
                     continue;
+                    */
                 }
             }
-
+            /*
             foreach(var query_task in query_tasks)
-            {
-                query_task.Wait();
-
+            { 
                 if(!query_task.IsFaulted)
                 {
                     ids.AddRange(query_task.Result);
                 }
             }
+            */
 
             return ids;
         }
-
+        
         public static ICollection<long> GetIDsFromQuery(Uri ODataURI, string query)
         {
             ODataClient client = new ODataClient(ODataURI);
+            IEnumerable<IDictionary<string, object>> packages = null;
 
-            Task<IEnumerable<IDictionary<string, object>>> packages_task = client.FindEntriesAsync(query);
-            packages_task.Wait();
-            var packages = packages_task.Result;
+            try
+            {
+                Task<IEnumerable<IDictionary<string, object>>> packages_task = client.FindEntriesAsync(query);
+                packages_task.Wait();
+                packages = packages_task.Result;
+            }
+            catch(Simple.OData.Client.WebRequestException e)
+            {
+                System.Diagnostics.Trace.WriteLine(string.Format("Exception requesting OData\n{0}", query));
+                return new List<long>();
+            }
 
             List<long> IDs = new List<long>();
 

@@ -10,16 +10,34 @@ by editing this MSBuild file. In order to learn more about this please visit htt
   </PropertyGroup>
   <ItemGroup>
     <File Include="bin/AnnotationVizLib.dll">
-      <publishTime>07/28/2016 15:01:21</publishTime>
+      <publishTime>09/14/2016 17:33:45</publishTime>
     </File>
     <File Include="bin/Antlr3.Runtime.dll">
       <publishTime>08/31/2015 16:54:16</publishTime>
     </File>
     <File Include="bin/Content/Index.html">
-      <publishTime>08/06/2015 14:40:22</publishTime>
+      <publishTime>09/14/2016 14:52:28</publishTime>
     </File>
     <File Include="bin/DataExport.dll">
-      <publishTime>07/28/2016 15:01:49</publishTime>
+      <publishTime>09/14/2016 17:37:38</publishTime>
+    </File>
+    <File Include="bin/de/Microsoft.Data.Edm.resources.dll">
+      <publishTime>03/28/2016 17:17:55</publishTime>
+    </File>
+    <File Include="bin/de/Microsoft.Data.OData.resources.dll">
+      <publishTime>03/28/2016 17:18:02</publishTime>
+    </File>
+    <File Include="bin/de/Microsoft.OData.Core.resources.dll">
+      <publishTime>03/28/2016 17:18:28</publishTime>
+    </File>
+    <File Include="bin/de/Microsoft.OData.Edm.resources.dll">
+      <publishTime>03/28/2016 17:18:21</publishTime>
+    </File>
+    <File Include="bin/de/Microsoft.Spatial.resources.dll">
+      <publishTime>03/28/2016 17:18:23</publishTime>
+    </File>
+    <File Include="bin/de/System.Spatial.resources.dll">
+      <publishTime>03/28/2016 17:17:58</publishTime>
     </File>
     <File Include="bin/DefaultImageColorMaps.txt">
       <publishTime>01/15/2015 11:59:42</publishTime>
@@ -36,8 +54,122 @@ by editing this MSBuild file. In order to learn more about this please visit htt
     <File Include="bin/EntityFramework.SqlServer.dll">
       <publishTime>06/23/2015 15:05:28</publishTime>
     </File>
+    <File Include="bin/es/Microsoft.Data.Edm.resources.dll">
+      <publishTime>03/28/2016 17:17:55</publishTime>
+    </File>
+    <File Include="bin/es/Microsoft.Data.OData.resources.dll">
+      <publishTime>03/28/2016 17:18:02</publishTime>
+    </File>
+    <File Include="bin/es/Microsoft.OData.Core.resources.dll">
+      <publishTime>03/28/2016 17:18:28</publishTime>
+    </File>
+    <File Include="bin/es/Microsoft.OData.Edm.resources.dll">
+      <publishTime>03/28/2016 17:18:21</publishTime>
+    </File>
+    <File Include="bin/es/Microsoft.Spatial.resources.dll">
+      <publishTime>03/28/2016 17:18:23</publishTime>
+    </File>
+    <File Include="bin/es/System.Spatial.resources.dll">
+      <publishTime>03/28/2016 17:17:58</publishTime>
+    </File>
+    <File Include="bin/fr/Microsoft.Data.Edm.resources.dll">
+      <publishTime>03/28/2016 17:17:55</publishTime>
+    </File>
+    <File Include="bin/fr/Microsoft.Data.OData.resources.dll">
+      <publishTime>03/28/2016 17:18:02</publishTime>
+    </File>
+    <File Include="bin/fr/Microsoft.OData.Core.resources.dll">
+      <publishTime>03/28/2016 17:18:28</publishTime>
+    </File>
+    <File Include="bin/fr/Microsoft.OData.Edm.resources.dll">
+      <publishTime>03/28/2016 17:18:21</publishTime>
+    </File>
+    <File Include="bin/fr/Microsoft.Spatial.resources.dll">
+      <publishTime>03/28/2016 17:18:23</publishTime>
+    </File>
+    <File Include="bin/fr/System.Spatial.resources.dll">
+      <publishTime>03/28/2016 17:17:58</publishTime>
+    </File>
     <File Include="bin/GraphLib.dll">
-      <publishTime>07/28/2016 15:01:20</publishTime>
+      <publishTime>09/14/2016 17:33:44</publishTime>
+    </File>
+    <File Include="bin/it/Microsoft.Data.Edm.resources.dll">
+      <publishTime>03/28/2016 17:17:55</publishTime>
+    </File>
+    <File Include="bin/it/Microsoft.Data.OData.resources.dll">
+      <publishTime>03/28/2016 17:18:02</publishTime>
+    </File>
+    <File Include="bin/it/Microsoft.OData.Core.resources.dll">
+      <publishTime>03/28/2016 17:18:28</publishTime>
+    </File>
+    <File Include="bin/it/Microsoft.OData.Edm.resources.dll">
+      <publishTime>03/28/2016 17:18:21</publishTime>
+    </File>
+    <File Include="bin/it/Microsoft.Spatial.resources.dll">
+      <publishTime>03/28/2016 17:18:23</publishTime>
+    </File>
+    <File Include="bin/it/System.Spatial.resources.dll">
+      <publishTime>03/28/2016 17:17:58</publishTime>
+    </File>
+    <File Include="bin/ja/Microsoft.Data.Edm.resources.dll">
+      <publishTime>03/28/2016 17:17:55</publishTime>
+    </File>
+    <File Include="bin/ja/Microsoft.Data.OData.resources.dll">
+      <publishTime>03/28/2016 17:18:02</publishTime>
+    </File>
+    <File Include="bin/ja/Microsoft.OData.Core.resources.dll">
+      <publishTime>03/28/2016 17:18:28</publishTime>
+    </File>
+    <File Include="bin/ja/Microsoft.OData.Edm.resources.dll">
+      <publishTime>03/28/2016 17:18:21</publishTime>
+    </File>
+    <File Include="bin/ja/Microsoft.Spatial.resources.dll">
+      <publishTime>03/28/2016 17:18:23</publishTime>
+    </File>
+    <File Include="bin/ja/System.Spatial.resources.dll">
+      <publishTime>03/28/2016 17:17:58</publishTime>
+    </File>
+    <File Include="bin/ko/Microsoft.Data.Edm.resources.dll">
+      <publishTime>03/28/2016 17:17:55</publishTime>
+    </File>
+    <File Include="bin/ko/Microsoft.Data.OData.resources.dll">
+      <publishTime>03/28/2016 17:18:02</publishTime>
+    </File>
+    <File Include="bin/ko/Microsoft.OData.Core.resources.dll">
+      <publishTime>03/28/2016 17:18:28</publishTime>
+    </File>
+    <File Include="bin/ko/Microsoft.OData.Edm.resources.dll">
+      <publishTime>03/28/2016 17:18:21</publishTime>
+    </File>
+    <File Include="bin/ko/Microsoft.Spatial.resources.dll">
+      <publishTime>03/28/2016 17:18:23</publishTime>
+    </File>
+    <File Include="bin/ko/System.Spatial.resources.dll">
+      <publishTime>03/28/2016 17:17:58</publishTime>
+    </File>
+    <File Include="bin/Microsoft.Data.Edm.dll">
+      <publishTime>03/28/2016 17:17:55</publishTime>
+    </File>
+    <File Include="bin/Microsoft.Data.OData.dll">
+      <publishTime>03/28/2016 17:18:02</publishTime>
+    </File>
+    <File Include="bin/Microsoft.OData.Core.dll">
+      <publishTime>03/28/2016 17:18:28</publishTime>
+    </File>
+    <File Include="bin/Microsoft.OData.Edm.dll">
+      <publishTime>03/28/2016 17:18:21</publishTime>
+    </File>
+    <File Include="bin/Microsoft.Spatial.dll">
+      <publishTime>03/28/2016 17:18:23</publishTime>
+    </File>
+    <File Include="bin/Microsoft.Threading.Tasks.dll">
+      <publishTime>04/07/2014 12:26:14</publishTime>
+    </File>
+    <File Include="bin/Microsoft.Threading.Tasks.Extensions.Desktop.dll">
+      <publishTime>04/07/2014 12:26:14</publishTime>
+    </File>
+    <File Include="bin/Microsoft.Threading.Tasks.Extensions.dll">
+      <publishTime>04/07/2014 12:26:14</publishTime>
     </File>
     <File Include="bin/Microsoft.Web.Infrastructure.dll">
       <publishTime>05/27/2015 17:26:00</publishTime>
@@ -54,14 +186,53 @@ by editing this MSBuild file. In order to learn more about this please visit htt
     <File Include="bin/Resources/ColorMapping/DefaultStructureTypeColors.txt">
       <publishTime>06/09/2015 12:08:50</publishTime>
     </File>
+    <File Include="bin/ru/Microsoft.Data.Edm.resources.dll">
+      <publishTime>03/28/2016 17:17:55</publishTime>
+    </File>
+    <File Include="bin/ru/Microsoft.Data.OData.resources.dll">
+      <publishTime>03/28/2016 17:18:02</publishTime>
+    </File>
+    <File Include="bin/ru/Microsoft.OData.Core.resources.dll">
+      <publishTime>03/28/2016 17:18:28</publishTime>
+    </File>
+    <File Include="bin/ru/Microsoft.OData.Edm.resources.dll">
+      <publishTime>03/28/2016 17:18:21</publishTime>
+    </File>
+    <File Include="bin/ru/Microsoft.Spatial.resources.dll">
+      <publishTime>03/28/2016 17:18:23</publishTime>
+    </File>
+    <File Include="bin/ru/System.Spatial.resources.dll">
+      <publishTime>03/28/2016 17:17:58</publishTime>
+    </File>
+    <File Include="bin/Simple.OData.Client.Core.dll">
+      <publishTime>08/19/2016 15:19:38</publishTime>
+    </File>
+    <File Include="bin/Simple.OData.Client.Dynamic.dll">
+      <publishTime>08/19/2016 15:19:38</publishTime>
+    </File>
+    <File Include="bin/Simple.OData.Client.Net40.dll">
+      <publishTime>08/19/2016 15:19:36</publishTime>
+    </File>
+    <File Include="bin/Simple.OData.Client.V4.Adapter.dll">
+      <publishTime>08/19/2016 15:19:38</publishTime>
+    </File>
     <File Include="bin/System.Net.Http.dll">
       <publishTime>08/13/2013 01:19:06</publishTime>
+    </File>
+    <File Include="bin/System.Net.Http.Extensions.dll">
+      <publishTime>07/21/2014 13:52:18</publishTime>
     </File>
     <File Include="bin/System.Net.Http.Formatting.dll">
       <publishTime>05/27/2015 17:25:56</publishTime>
     </File>
+    <File Include="bin/System.Net.Http.Primitives.dll">
+      <publishTime>07/21/2014 13:52:18</publishTime>
+    </File>
     <File Include="bin/System.Net.Http.WebRequest.dll">
       <publishTime>08/13/2013 01:19:06</publishTime>
+    </File>
+    <File Include="bin/System.Spatial.dll">
+      <publishTime>03/28/2016 17:17:58</publishTime>
     </File>
     <File Include="bin/System.Web.Helpers.dll">
       <publishTime>08/31/2015 16:44:09</publishTime>
@@ -94,13 +265,49 @@ by editing this MSBuild file. In order to learn more about this please visit htt
       <publishTime>08/31/2015 16:44:09</publishTime>
     </File>
     <File Include="bin/VikingWebAppSettings.dll">
-      <publishTime>07/28/2016 15:01:21</publishTime>
+      <publishTime>09/14/2016 17:33:46</publishTime>
     </File>
     <File Include="bin/WebGrease.dll">
       <publishTime>08/31/2015 16:53:53</publishTime>
     </File>
+    <File Include="bin/zh-Hans/Microsoft.Data.Edm.resources.dll">
+      <publishTime>03/28/2016 17:17:55</publishTime>
+    </File>
+    <File Include="bin/zh-Hans/Microsoft.Data.OData.resources.dll">
+      <publishTime>03/28/2016 17:18:02</publishTime>
+    </File>
+    <File Include="bin/zh-Hans/Microsoft.OData.Core.resources.dll">
+      <publishTime>03/28/2016 17:18:28</publishTime>
+    </File>
+    <File Include="bin/zh-Hans/Microsoft.OData.Edm.resources.dll">
+      <publishTime>03/28/2016 17:18:21</publishTime>
+    </File>
+    <File Include="bin/zh-Hans/Microsoft.Spatial.resources.dll">
+      <publishTime>03/28/2016 17:18:23</publishTime>
+    </File>
+    <File Include="bin/zh-Hans/System.Spatial.resources.dll">
+      <publishTime>03/28/2016 17:17:58</publishTime>
+    </File>
+    <File Include="bin/zh-Hant/Microsoft.Data.Edm.resources.dll">
+      <publishTime>03/28/2016 17:17:55</publishTime>
+    </File>
+    <File Include="bin/zh-Hant/Microsoft.Data.OData.resources.dll">
+      <publishTime>03/28/2016 17:18:02</publishTime>
+    </File>
+    <File Include="bin/zh-Hant/Microsoft.OData.Core.resources.dll">
+      <publishTime>03/28/2016 17:18:28</publishTime>
+    </File>
+    <File Include="bin/zh-Hant/Microsoft.OData.Edm.resources.dll">
+      <publishTime>03/28/2016 17:18:21</publishTime>
+    </File>
+    <File Include="bin/zh-Hant/Microsoft.Spatial.resources.dll">
+      <publishTime>03/28/2016 17:18:23</publishTime>
+    </File>
+    <File Include="bin/zh-Hant/System.Spatial.resources.dll">
+      <publishTime>03/28/2016 17:17:58</publishTime>
+    </File>
     <File Include="Content/Index.html">
-      <publishTime>08/06/2015 14:40:22</publishTime>
+      <publishTime>09/14/2016 14:52:28</publishTime>
     </File>
     <File Include="Content/Site.css">
       <publishTime>06/09/2015 12:08:50</publishTime>
@@ -274,7 +481,7 @@ by editing this MSBuild file. In order to learn more about this please visit htt
       <publishTime>06/09/2015 12:08:50</publishTime>
     </File>
     <File Include="packages.config">
-      <publishTime>07/28/2016 12:55:48</publishTime>
+      <publishTime>09/14/2016 17:37:29</publishTime>
     </File>
     <File Include="Resources/ColorMapping/DefaultLocationColorMap.txt">
       <publishTime>06/09/2015 12:08:50</publishTime>
@@ -325,10 +532,10 @@ by editing this MSBuild file. In order to learn more about this please visit htt
       <publishTime>08/31/2015 16:50:11</publishTime>
     </File>
     <File Include="Scripts/jquery-ui-1.8.20.js">
-      <publishTime>07/27/2016 17:33:42</publishTime>
+      <publishTime>09/06/2016 15:13:50</publishTime>
     </File>
     <File Include="Scripts/jquery-ui-1.8.20.min.js">
-      <publishTime>07/27/2016 17:33:42</publishTime>
+      <publishTime>09/06/2016 15:13:50</publishTime>
     </File>
     <File Include="Scripts/jquery.unobtrusive-ajax.js">
       <publishTime>08/31/2015 16:54:35</publishTime>
@@ -376,10 +583,10 @@ by editing this MSBuild file. In order to learn more about this please visit htt
       <publishTime>06/09/2015 12:08:50</publishTime>
     </File>
     <File Include="Views/Web.config">
-      <publishTime>06/09/2015 12:09:10</publishTime>
+      <publishTime>09/14/2016 14:52:06</publishTime>
     </File>
     <File Include="Web.config">
-      <publishTime>07/28/2016 15:42:25</publishTime>
+      <publishTime>09/14/2016 17:38:23</publishTime>
     </File>
   </ItemGroup>
 </Project>
