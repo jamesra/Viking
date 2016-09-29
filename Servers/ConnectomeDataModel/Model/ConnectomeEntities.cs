@@ -389,31 +389,5 @@ namespace ConnectomeDataModel
             } 
         }
 
-        [DbFunction("ConnectomeModel.Store", "ufnStructureArea")]
-        public string GetStructureArea(long ID)
-        {
-            var objectContext = ((IObjectContextAdapter)this).ObjectContext;
-
-            var parameters = new List<ObjectParameter>();
-            parameters.Add(new ObjectParameter("Id", ID));
-
-            return objectContext.CreateQuery<string>("ConnectomeModel.Store.ufnStructureArea(@Id)", parameters.ToArray())
-                 .Execute(MergeOption.NoTracking)
-                 .FirstOrDefault();
-        }
-
-        [DbFunction("ConnectomeModel.Store", "ufnStructureVolume")]
-        public string GetStructureVolume(long ID)
-        {
-            var objectContext = ((IObjectContextAdapter)this).ObjectContext;
-
-            var parameters = new List<ObjectParameter>();
-            parameters.Add(new ObjectParameter("Id", ID));
-
-            return objectContext.CreateQuery<string>("ConnectomeModel.Store.ufnStructureVolume(@Id)", parameters.ToArray())
-                 .Execute(MergeOption.NoTracking)
-                 .FirstOrDefault();
-        }
-
     }
 }
