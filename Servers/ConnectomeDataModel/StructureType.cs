@@ -18,8 +18,8 @@ namespace ConnectomeDataModel
         {
             this.Structures = new HashSet<Structure>();
             this.Children = new HashSet<StructureType>();
-            this.StructureType11 = new HashSet<StructureType>();
-            this.StructureTypes = new HashSet<StructureType>();
+            this.SourceOfLinks = new HashSet<PermittedStructureLink>();
+            this.TargetOfLinks = new HashSet<PermittedStructureLink>();
         }
     
         public long ID { get; set; }
@@ -41,7 +41,7 @@ namespace ConnectomeDataModel
         public virtual ICollection<Structure> Structures { get; set; }
         public virtual ICollection<StructureType> Children { get; set; }
         public virtual StructureType Parent { get; set; }
-        public virtual ICollection<StructureType> StructureType11 { get; set; }
-        public virtual ICollection<StructureType> StructureTypes { get; set; }
+        public virtual ICollection<PermittedStructureLink> SourceOfLinks { get; set; }
+        public virtual ICollection<PermittedStructureLink> TargetOfLinks { get; set; }
     }
 }

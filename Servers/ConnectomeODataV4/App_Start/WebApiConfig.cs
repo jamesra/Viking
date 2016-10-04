@@ -73,6 +73,7 @@ namespace ConnectomeODataV4
             
             AddScaleType(builder);
             AddStructureLinks(builder);
+            AddPermittedStructureLinks(builder);
             AddLocationLinks(builder);
             AddFunctions(builder);
 
@@ -142,6 +143,14 @@ namespace ConnectomeODataV4
             type.HasKey(sl => sl.SourceID);
             type.HasKey(sl => sl.TargetID);
             builder.EntitySet<StructureLink>("StructureLinks");
+        }
+
+        public static void AddPermittedStructureLinks(ODataModelBuilder builder)
+        {
+            var type = builder.EntityType<PermittedStructureLink>();
+            type.HasKey(sl => sl.SourceTypeID);
+            type.HasKey(sl => sl.TargetTypeID);
+            builder.EntitySet<PermittedStructureLink>("PermittedStructureLinks");
         }
 
         public static void AddLocationLinks(ODataModelBuilder builder)

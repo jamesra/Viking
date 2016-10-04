@@ -22,7 +22,6 @@ namespace AnnotationVizLib
 
     public class MorphologyEdge : Edge<ulong>
     {
-            
         public MorphologyEdge(ulong A, ulong B)
             : base(A, B)
         {

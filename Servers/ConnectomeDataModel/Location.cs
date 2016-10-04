@@ -42,7 +42,7 @@ namespace ConnectomeDataModel
         public System.Data.Entity.Spatial.DbGeometry VolumeShape { get; set; }
         public Nullable<double> Width { get; set; }
     
-        public virtual Structure Structure { get; set; }
+        public virtual Structure Parent { get; set; }
         public virtual ICollection<LocationLink> LocationLinksA { get; set; }
         public virtual ICollection<LocationLink> LocationLinksB { get; set; }
     }

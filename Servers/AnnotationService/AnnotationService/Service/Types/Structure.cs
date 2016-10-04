@@ -138,8 +138,6 @@ namespace Annotation
                 i++;
             }
 
-            
-
             return _Links;
         }
 

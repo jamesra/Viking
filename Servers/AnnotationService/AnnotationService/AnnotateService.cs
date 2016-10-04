@@ -737,6 +737,105 @@ namespace Annotation
             }
         }
 
+        [PrincipalPermission(SecurityAction.Demand, Role = "Admin")]
+        public PermittedStructureLink CreatePermittedStructureLink(PermittedStructureLink link)
+        {
+            ConnectomeDataModel.PermittedStructureLink newRow = new ConnectomeDataModel.PermittedStructureLink();
+            link.Sync(newRow);
+            using (ConnectomeEntities db = GetOrCreateDatabaseContext())
+            {
+                db.PermittedStructureLink.Add(newRow);
+                db.SaveChanges();
+            }
+
+            PermittedStructureLink newLink = new PermittedStructureLink(newRow);
+            return newLink;
+        }
+
+        [PrincipalPermission(SecurityAction.Demand, Role = "Admin")]
+        public void UpdatePermittedStructureLinks(PermittedStructureLink[] links)
+        {
+            //Stores the ID of each object manipulated for the return value
+            using (ConnectomeEntities db = GetOrCreateDatabaseContext())
+            {
+                try
+                {
+                    for (int iObj = 0; iObj < links.Length; iObj++)
+                    {
+                        PermittedStructureLink obj = links[iObj];
+                        ConnectomeDataModel.PermittedStructureLink DBObj = null;
+
+                        switch (obj.DBAction)
+                        {
+                            case DBACTION.INSERT:
+
+                                DBObj = new ConnectomeDataModel.PermittedStructureLink();
+                                obj.Sync(DBObj);
+                                db.PermittedStructureLink.Add(DBObj);
+                                break;
+                            case DBACTION.UPDATE:
+
+                                try
+                                {
+                                    DBObj = (from u in db.PermittedStructureLink
+                                             where u.SourceTypeID == obj.SourceTypeID &&
+                                                   u.TargetTypeID == obj.TargetTypeID
+                                             select u).Single();
+                                }
+                                catch (System.ArgumentNullException)
+                                {
+                                    Debug.WriteLine("Could not find structuretype to update: " + obj.ToString());
+                                    break;
+                                }
+                                catch (System.InvalidOperationException)
+                                {
+                                    Debug.WriteLine("Could not find structuretype to update: " + obj.ToString());
+                                    break;
+                                }
+
+                                obj.Sync(DBObj);
+                                //  db.ConnectomeDataModel.StructureTypes.(updateType);
+                                break;
+                            case DBACTION.DELETE:
+                                try
+                                {
+                                    DBObj = (from u in db.PermittedStructureLink
+                                             where u.SourceTypeID == obj.SourceTypeID &&
+                                                   u.TargetTypeID == obj.TargetTypeID
+                                             select u).Single();
+                                }
+                                catch (System.ArgumentNullException)
+                                {
+                                    Debug.WriteLine("Could not find structuretype to delete: " + obj.ToString());
+                                    break;
+                                }
+                                catch (System.InvalidOperationException)
+                                {
+                                    Debug.WriteLine("Could not find structuretype to update: " + obj.ToString());
+                                    break;
+                                }
+
+                                db.PermittedStructureLink.Remove(DBObj);
+
+                                break;
+                        }
+
+                        db.SaveChanges();
+                    }
+
+
+                }
+                catch (Exception e)
+                {
+                    Debug.WriteLine(e.ToString());
+                    throw e;
+                }
+            }
+
+            //Recover the ID's for new objects
+            return;
+        }
+
         [PrincipalPermission(SecurityAction.Demand, Role = "Modify")]
         public StructureLink CreateStructureLink(StructureLink link)
         {
@@ -1116,7 +1215,7 @@ namespace Annotation
                     ConnectomeDataModel.Location DBLoc = db.Locations.Create();
                     location.Sync(DBLoc);
                     db.Locations.Add(DBLoc);
-                    DBLoc.Structure = DBStruct;
+                    DBLoc.Parent = DBStruct;
                     
                     db.SaveChanges();
 

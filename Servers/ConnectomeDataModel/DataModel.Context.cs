@@ -38,6 +38,7 @@ namespace ConnectomeDataModel
         public virtual DbSet<Structure> Structures { get; set; }
         public virtual DbSet<StructureType> StructureTypes { get; set; }
         public virtual DbSet<StructureLink> StructureLinks { get; set; }
+        public virtual DbSet<PermittedStructureLink> PermittedStructureLink { get; set; }
     
         public virtual ObjectResult<ApproximateStructureLocation_Result> ApproximateStructureLocation(Nullable<int> structureID)
         {

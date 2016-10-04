@@ -12,14 +12,17 @@
         <EntityTypeShape EntityType="ConnectomeModel.StructureType" Width="1.5" PointX="0.75" PointY="3.375" IsExpanded="true" />
         <EntityTypeShape EntityType="ConnectomeModel.StructureLink" Width="1.5" PointX="5.25" PointY="7.25" IsExpanded="true" />
       	<EntityTypeShape EntityType="ConnectomeModel.PermittedStructureLink" Width="1.5" PointX="10" PointY="2" IsExpanded="true" />
-        <AssociationConnector Association="ConnectomeModel.FK_Location_StructureBase1" ManuallyRouted="false" />
+        <AssociationConnector Association="ConnectomeModel.FK_Location_Structure" ManuallyRouted="false" />
         <AssociationConnector Association="ConnectomeModel.FK_LocationLink_Location" ManuallyRouted="false" />
         <AssociationConnector Association="ConnectomeModel.FK_LocationLink_Location1" ManuallyRouted="false" />
         <AssociationConnector Association="ConnectomeModel.FK_Structure_Structure" ManuallyRouted="false" />
         <AssociationConnector Association="ConnectomeModel.FK_StructureBase_StructureType" ManuallyRouted="false" />
         <AssociationConnector Association="ConnectomeModel.FK_StructureLinkSource_StructureBaseID" ManuallyRouted="false" />
         <AssociationConnector Association="ConnectomeModel.FK_StructureLinkTarget_StructureBaseID" ManuallyRouted="false" />
-        <AssociationConnector Association="ConnectomeModel.FK_StructureType_StructureType" ManuallyRouted="false" /> 
+        <AssociationConnector Association="ConnectomeModel.FK_StructureType_StructureType" ManuallyRouted="false" />
+        <EntityTypeShape EntityType="ConnectomeModel.PermittedStructureLink" Width="1.5" PointX="3" PointY="9" />
+        <AssociationConnector Association="ConnectomeModel.FK_PermittedStructureLink_SourceType1" />
+        <AssociationConnector Association="ConnectomeModel.FK_PermittedStructureLink_TargetType1" /> 
       </Diagram>
     </edmx:Diagrams>
   </edmx:Designer>

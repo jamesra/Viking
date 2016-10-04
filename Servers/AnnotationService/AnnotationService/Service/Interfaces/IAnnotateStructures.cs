@@ -56,8 +56,7 @@ namespace Annotation.Service.Interfaces
         /// <returns></returns>
         [OperationContract]
         Structure[] GetStructuresForSectionInVolumeRegion(long section, BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisTime, out long QueryExecutedTime, out long[] DeletedIDs);
-
-
+        
         /// <summary>
         /// Return a single structure from the Database
         /// </summary>

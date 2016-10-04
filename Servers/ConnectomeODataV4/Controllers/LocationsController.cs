@@ -148,7 +148,7 @@ namespace ConnectomeODataV4.Controllers
         [EnableQuery]
         public SingleResult<Structure> GetStructure([FromODataUri] long key)
         {
-            return SingleResult.Create(db.Locations.Where(m => m.ID == key).Select(m => m.Structure));
+            return SingleResult.Create(db.Locations.Where(m => m.ID == key).Select(m => m.Parent));
         }
 
         // GET: odata/Locations(5)/LocationLinksA

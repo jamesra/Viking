@@ -101,6 +101,9 @@
     </Compile>
     <Compile Include="Model\ConnectomeEntities.cs" />
     <Compile Include="Model\NetworkProcedures.cs" />
+    <Compile Include="PermittedStructureLink.cs">
+      <DependentUpon>DataModel.tt</DependentUpon>
+    </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SectionLocationLinksModifiedAfterDate_Result.cs">
       <DependentUpon>DataModel.tt</DependentUpon>

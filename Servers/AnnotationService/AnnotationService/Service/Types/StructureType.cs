@@ -19,6 +19,7 @@ namespace Annotation
         private int _Color;
         private string _Code;
         private char _HotKey;
+        protected PermittedStructureLink[] _Links;
 
         [DataMember]
         public string Name
@@ -83,6 +84,36 @@ namespace Annotation
             set { _HotKey = value; }
         }
 
+        [DataMember]
+        public PermittedStructureLink[] PermittedLinks
+        {
+            get { return _Links; }
+            set { _Links = value; }
+        }
+
+        private static PermittedStructureLink[] PopulateLinks(ConnectomeDataModel.StructureType typeObj)
+        {
+            if (!(typeObj.SourceOfLinks.Any() || typeObj.TargetOfLinks.Any()))
+                return null;
+
+            PermittedStructureLink[] _Links = new PermittedStructureLink[typeObj.SourceOfLinks.Count + typeObj.TargetOfLinks.Count];
+
+            int i = 0;
+            foreach (ConnectomeDataModel.PermittedStructureLink link in typeObj.SourceOfLinks)
+            {
+                _Links[i] = new PermittedStructureLink(link);
+                i++;
+            }
+
+            foreach (ConnectomeDataModel.PermittedStructureLink link in typeObj.TargetOfLinks)
+            {
+                _Links[i] = new PermittedStructureLink(link);
+                i++;
+            }
+
+            return _Links;
+        }
+
         public StructureType()
         {
      //       DBAction = DBACTION.INSERT; 
@@ -113,6 +144,7 @@ namespace Annotation
             _Color = type.Color;
             _Code = type.Code;
             _HotKey = type.HotKey.Length > 0 ? type.HotKey[0] : '\0';
+            _Links = PopulateLinks(type);
         }
 
         public void Sync(ConnectomeDataModel.StructureType type)

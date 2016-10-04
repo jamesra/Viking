@@ -56,8 +56,19 @@ namespace Annotation.Service.Interfaces
         /// <returns></returns>
         [OperationContract]
         long[] UpdateStructureTypes(StructureType[] structType);
-         
-        
+
+
+        [OperationContract]
+        PermittedStructureLink CreatePermittedStructureLink(PermittedStructureLink link);
+
+        /// <summary>
+        /// Updates or creates structure links
+        /// </summary>
+        /// <param name="structType"></param>
+        /// <returns>IDs of updated</returns.
+        [OperationContract]
+        void UpdatePermittedStructureLinks(PermittedStructureLink[] permittedStructureLinks);
+
         /// <summary>
         /// A test method used to ensure the service can handle a basic call
         /// </summary>
@@ -65,6 +76,7 @@ namespace Annotation.Service.Interfaces
         /// <returns></returns>
         [OperationContract]
         string TestMethod();
+
 
         /// <summary>
         /// Return all structure types in the database
@@ -79,6 +91,5 @@ namespace Annotation.Service.Interfaces
         /// <returns></returns>
 //        [OperationContract]
 //        StructureType[] UpdateStructureTemplates();
-         
     }
 }

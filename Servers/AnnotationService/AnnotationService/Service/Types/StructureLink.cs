@@ -15,7 +15,10 @@ namespace Annotation
     {
         public override string ToString()
         {
-            return _SourceID.ToString() + " -> " + _TargetID.ToString(); 
+            string result = _SourceID.ToString();
+            result += _Bidirectional ? " <-> " : " -> ";
+            result += _TargetID.ToString();
+            return result;
         }
 
         long _SourceID;
@@ -83,5 +86,4 @@ namespace Annotation
             db.Username = ServiceModelUtil.GetUserForCall();
         }
     }
-     
 }

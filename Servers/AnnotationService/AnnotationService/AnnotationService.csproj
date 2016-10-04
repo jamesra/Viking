@@ -125,6 +125,7 @@
     <Compile Include="Service\Types\Enums.cs" />
     <Compile Include="Service\Types\Location.cs" />
     <Compile Include="Service\Types\LocationLink.cs" />
+    <Compile Include="Service\Types\PermittedStructureLink.cs" />
     <Compile Include="Service\Types\Structure.cs" />
     <Compile Include="Service\Types\StructureLink.cs" />
     <Compile Include="Service\Types\StructureType.cs" />
