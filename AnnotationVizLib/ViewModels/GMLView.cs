@@ -9,7 +9,7 @@ using System.Diagnostics;
 namespace AnnotationVizLib
 {
     /// <summary>
-    /// Tulip IDs every node with an index.  This is seperate than the key for the source node we are viewing.
+    /// Tulip IDs every node with an index.  This is separate than the key for the source node we are viewing.
     /// </summary>
     /// <typeparam name="KEY"></typeparam>
     public class GMLViewNode : GraphViewNode<ulong>

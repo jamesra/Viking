@@ -406,7 +406,7 @@ namespace Annotation
         } 
 
         /// <summary>
-        /// Populate the Links array using links loaded seperately from the relations in the database
+        /// Populate the Links array using links loaded separately from the relations in the database
         /// </summary>
         /// <param name="link"></param>
         public void AddLink(ConnectomeDataModel.LocationLink link)
