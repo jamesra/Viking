@@ -268,7 +268,7 @@ namespace WebAnnotationModel
                 //Because we are handling collection changes these events need to appear in order, however there are
                 //too many cascading events...  RIght now the worst case is a location doesn't show in the UI as expected.
                 //This can be fixed by implementing the replaced collection change action for delete instead of using
-                //remove and then add.  When we seperate the operation the order can be flipped.
+                //remove and then add.  When we separate the operation the order can be flipped.
                 /*
                 Action a = new Action(() => OnCollectionChanged(this, e));
                 if (State.UseAsynchEvents)

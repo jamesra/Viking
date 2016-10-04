@@ -40,7 +40,7 @@ Neuron connectivity network
       * *GraphML* - GraphML file format
       * *JSON* - Java script object notation
         
-   :query id: ID numbers of cells to include in connectivity graph.  Commas seperate multiple IDs.
+   :query id: ID numbers of cells to include in connectivity graph.  Commas separate multiple IDs.
    :query hops: Degrees of seperation to include additional neurons in graph
    
    :resheader Content-Type: text/plain
@@ -99,7 +99,7 @@ Morphology
       * *TLP* - Tulip file format
       * *JSON* - Java script object notation
      
-   :query id: ID numbers of cells to include in connectivity graph.  Commas seperate multiple IDs.
+   :query id: ID numbers of cells to include in connectivity graph.  Commas separate multiple IDs.
    
    :resheader Content-Type: text/plain
    

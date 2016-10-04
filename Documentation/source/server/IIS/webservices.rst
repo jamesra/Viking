@@ -64,7 +64,7 @@ _________________________________________
 
 Below shows the application pool for the volume.  If the database is on a remote machine you will need to create an active directory account for the application identity.  If the database is local the application's identity is sufficient.
 
-The application pool must be configured to use .NET 4.  It is possible to share the application pool across multiple volumes.  In our production server we assign a seperate application pool to the annotation service which has write permissions to the database.
+The application pool must be configured to use .NET 4.  It is possible to share the application pool across multiple volumes.  In our production server we assign a separate application pool to the annotation service which has write permissions to the database.
 
 .. image:: IISVolumeApplicationPoolConfig.png
 

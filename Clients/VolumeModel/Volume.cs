@@ -77,7 +77,7 @@ namespace Viking.VolumeModel
 
     /// <summary>
     /// Collection of volumes, sections and tiles. There is only one dataset loaded at a time.
-    /// TODO: Split parsing the VikingXML into a seperate class
+    /// TODO: Split parsing the VikingXML into a separate class
     /// </summary>
     public class Volume
     {

@@ -958,10 +958,7 @@ namespace Viking
                 }
             }
         }
-
         
-
-
         public static TextureData TextureDataFromStream(byte[] streamdata)
         { 
             using (MemoryStream stream = new MemoryStream(streamdata))

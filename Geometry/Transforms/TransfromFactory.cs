@@ -713,7 +713,7 @@ namespace Geometry.Transforms
             Double maxX = Double.MinValue;
             Double maxY = Double.MinValue;
 
-            //Every number in the array is seperated by an empty space in the array
+            //Every number in the array is separated by an empty space in the array
             for (int i = 0; i < NumPts; i++)
             {
                 int iPoint = (i * 2);

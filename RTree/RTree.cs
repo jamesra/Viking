@@ -306,7 +306,7 @@ namespace RTree
         /// </summary>
         /// <param name="r"></param>
         /// <param name="item"></param>
-        /// <param name="removedItem">The item which we pointed to, which may be a seperate object instance from the remove request</param>
+        /// <param name="removedItem">The item which we pointed to, which may be a separate object instance from the remove request</param>
         /// <returns></returns>
         public bool Delete(T item, out T removedItem)
         {
@@ -363,7 +363,7 @@ namespace RTree
         /// </summary>
         /// <param name="r"></param>
         /// <param name="item"></param>
-        /// <param name="removedItem">The item which we pointed to, which may be a seperate object instance from the remove request</param>
+        /// <param name="removedItem">The item which we pointed to, which may be a separate object instance from the remove request</param>
         /// <returns></returns>
         public bool Delete(Rectangle r, T item, out T removedItem)
         {
