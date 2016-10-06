@@ -5439,14 +5439,15 @@ end
      print N'Add table listing which structures are allowed to be linked'
      BEGIN TRANSACTION fiftytwo
 	   
-	  -- ALTER TABLE Location DROP COLUMN Width 
+	   -- ALTER TABLE Location DROP COLUMN Width 
 	  CREATE TABLE [dbo].[PermittedStructureLink](
-		[SourceType] [bigint] NOT NULL,
-		[TargetType] [bigint] NOT NULL
+		[SourceTypeID] [bigint] NOT NULL,
+		[TargetTypeID] [bigint] NOT NULL,
+		[Bidirectional] [BIT] NOT NULL,
 		CONSTRAINT [PK_PermittedStructureLink] PRIMARY KEY CLUSTERED 
 	(
-		[SourceType] ASC,
-		[TargetType] ASC
+		[SourceTypeID] ASC,
+		[TargetTypeID] ASC
 	)WITH (PAD_INDEX  = OFF, STATISTICS_NORECOMPUTE  = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS  = ON, ALLOW_PAGE_LOCKS  = ON) ON [PRIMARY]
 	) ON [PRIMARY]
 
@@ -5456,10 +5457,10 @@ end
 		   RETURN
 		 end
 
-	ALTER TABLE [dbo].[PermittedStructureLink]  WITH CHECK ADD  CONSTRAINT [FK_PermittedStructureLink_SourceType] FOREIGN KEY([SourceType])
+	ALTER TABLE [dbo].[PermittedStructureLink]  WITH CHECK ADD  CONSTRAINT [FK_PermittedStructureLink_SourceType] FOREIGN KEY([SourceTypeID])
 	REFERENCES [dbo].[StructureType] ([ID])
 
-	ALTER TABLE [dbo].[PermittedStructureLink]  WITH CHECK ADD  CONSTRAINT [FK_PermittedStructureLink_TargetType] FOREIGN KEY([TargetType])
+	ALTER TABLE [dbo].[PermittedStructureLink]  WITH CHECK ADD  CONSTRAINT [FK_PermittedStructureLink_TargetType] FOREIGN KEY([TargetTypeID])
 	REFERENCES [dbo].[StructureType] ([ID])
 
 
@@ -5551,6 +5552,138 @@ end
 		   N'Create ufn for measuring structure area',getDate(),User_ID())
 
 	 COMMIT TRANSACTION fiftyfour
+	end
+
+	if(not(exists(select (1) from DBVersion where DBVersionID = 55)))
+	begin
+     print N'Create stored procedure for recursively selecting child IDs for a structure'
+     BEGIN TRANSACTION fiftyfive
+
+	 EXEC('
+		CREATE PROCEDURE [dbo].[RecursiveSelectChildStructureIDs]
+						-- Add the parameters for the stored procedure here
+						@IDs integer_list READONLY
+			AS
+			BEGIN 	 
+				DECLARE @NumSeedStructures int
+				DECLARE @SeedStructures integer_list
+				DECLARE @ChildStructures integer_list 
+
+				insert into @SeedStructures select ID from @IDs 
+
+				select @NumSeedStructures=count(ID) from @SeedStructures
+
+				while @NumSeedStructures > 0
+				BEGIN
+					DECLARE @NewChildStructures integer_list 
+					insert into @NewChildStructures
+						select distinct Child.ID from Structure Child
+							inner join @SeedStructures Parents on Parents.ID = Child.ParentID
+
+					delete from @SeedStructures
+					insert into @SeedStructures select ID from @NewChildStructures
+					select @NumSeedStructures=count(ID) from @SeedStructures
+
+					insert into @ChildStructures select ID from @NewChildStructures
+					delete from @NewChildStructures
+				END
+
+				select ID from @ChildStructures
+			END
+	')
+
+	Grant EXECUTE on RecursiveSelectChildStructureIDs to public
+	  
+	  INSERT INTO DBVersion values (55, 
+		   N'Create stored procedure for recursively selecting child IDs for a structure',getDate(),User_ID())
+
+	 COMMIT TRANSACTION fiftyfive
+	end
+
+	if(not(exists(select (1) from DBVersion where DBVersionID = 56)))
+	begin
+     print N'Create ufn for measuring structure volume'
+     BEGIN TRANSACTION fiftysix
+
+	 EXEC('
+	 CREATE FUNCTION ufnStructureVolume
+	(
+		-- Add the parameters for the function here
+		@StructureID bigint
+	)
+	RETURNS float
+	AS
+	BEGIN
+		declare @Area float
+		declare @AreaScalar float
+		--Measures the area of the PSD
+		set @AreaScalar = dbo.XYScale() * dbo.ZScale()
+
+		select top 1 @Volume = sum(MosaicShape.STArea()) * @AreaScalar from Location 
+		where ParentID = @StructureID
+		group by ParentID
+	  
+		-- Return the result of the function
+		RETURN @Volume
+
+	END
+	')
+
+	Grant EXECUTE on ufnStructureVolume to public
+	 
+
+	  INSERT INTO DBVersion values (56, 
+		   N'Create ufn for measuring structure volume',getDate(),User_ID())
+
+	 COMMIT TRANSACTION fiftysix
+
+	 
+
+	if(not(exists(select (1) from DBVersion where DBVersionID = 57)))
+	begin
+     print N'Update UDTs for Locations to include width column'
+     BEGIN TRANSACTION fiftyseven
+
+		EXEC('
+		ALTER FUNCTION [dbo].[SectionLocations](@Z float)
+			RETURNS TABLE 
+			AS
+			RETURN(
+ 					Select * from Location where Z = @Z
+				);
+		')
+		
+		EXEC('
+			ALTER FUNCTION [dbo].[SectionLocationsModifiedAfterDate](@Z float, @QueryDate datetime)
+			RETURNS TABLE 
+			AS
+			RETURN(
+ 					Select * from Location 
+					where Z = @Z AND LastModified >= @QueryDate
+				);
+		')
+
+	  INSERT INTO DBVersion values (57, 
+		    N'Update UDTs for Locations to include width column',getDate(),User_ID())
+
+	 COMMIT TRANSACTION fiftyseven
+	end
+
+	if(not(exists(select (1) from DBVersion where DBVersionID = 58)))
+	begin
+     print N'Add unique constraint to PermittedStructureLink table'
+     BEGIN TRANSACTION fiftyeight
+	  
+	 ALTER TABLE [dbo].[PermittedStructureLink] ADD  CONSTRAINT [PermittedStructureLink_source_target_unique] UNIQUE NONCLUSTERED 
+	 (
+		[SourceTypeID] ASC,
+		[TargetTypeID] ASC
+	 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
+
+	 INSERT INTO DBVersion values (58, 
+		    N'Add unique constraint to PermittedStructureLink table',getDate(),User_ID())
+
+	 COMMIT TRANSACTION fiftyeight
 	end
 
 	 
