@@ -6,7 +6,7 @@ using System.Diagnostics;
 
 namespace GraphLib
 {
-    public class Graph<KEY,NODETYPE, EDGETYPE> 
+    public partial class Graph<KEY,NODETYPE, EDGETYPE> 
         where KEY : IComparable<KEY>, IEquatable<KEY>
         where NODETYPE : Node<KEY, EDGETYPE>
         where EDGETYPE : Edge<KEY>
