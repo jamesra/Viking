@@ -9,3 +9,4 @@ bin
 *.csr
 *.key
 TestResults
+/Packages/
