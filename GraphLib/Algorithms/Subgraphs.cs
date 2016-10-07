@@ -14,7 +14,7 @@ namespace GraphLib
         /// </summary>
         /// <param name="graph"></param>
         /// <returns></returns>
-        public static List<SortedSet<KEY>> IsolatedSubgraphs(Graph<KEY, NODETYPE, EDGETYPE> graph)
+        public static IList<SortedSet<KEY>> IsolatedSubgraphs(Graph<KEY, NODETYPE, EDGETYPE> graph)
         {
             List<SortedSet<KEY>> subgraphs = new List<SortedSet<KEY>>();
 

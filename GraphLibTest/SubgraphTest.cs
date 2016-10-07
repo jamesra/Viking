@@ -34,7 +34,7 @@ namespace GraphLibTest
         public void TestIsolatedSubgraphButEmpty()
         {
             SimpleGraph graph = new GraphLibTest.SimpleGraph();
-            List<SortedSet<long>> subgraphs = SimpleGraph.IsolatedSubgraphs(graph);
+            IList<SortedSet<long>> subgraphs = SimpleGraph.IsolatedSubgraphs(graph);
 
             Assert.AreEqual(subgraphs.Count, 0);
         }
@@ -46,7 +46,7 @@ namespace GraphLibTest
             SimpleNode A1 = new SimpleNode(1);
             graph.AddNode(A1);
 
-            List<SortedSet<long>> subgraphs = SimpleGraph.IsolatedSubgraphs(graph);
+            IList<SortedSet<long>> subgraphs = SimpleGraph.IsolatedSubgraphs(graph);
 
             Assert.AreEqual(subgraphs.Count, 1);
             Assert.AreEqual(subgraphs[0].Count, 1);
@@ -58,7 +58,7 @@ namespace GraphLibTest
         {
             SimpleGraph graph = CreateGraphWithIsolations();
 
-            List<SortedSet<long>> subgraphs = SimpleGraph.IsolatedSubgraphs(graph);
+            IList<SortedSet<long>> subgraphs = SimpleGraph.IsolatedSubgraphs(graph);
 
             Assert.AreEqual(subgraphs.Count, 2);
             Assert.AreEqual(subgraphs[0].Count, 3);
