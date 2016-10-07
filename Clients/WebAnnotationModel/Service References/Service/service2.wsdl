@@ -295,6 +295,24 @@
   <wsdl:message name="IAnnotateStructures_GetLinkedStructuresByID_OutputMessage">
     <wsdl:part name="parameters" element="tns:GetLinkedStructuresByIDResponse" />
   </wsdl:message>
+  <wsdl:message name="IAnnotateStructures_GetNetworkedStructures_InputMessage">
+    <wsdl:part name="parameters" element="tns:GetNetworkedStructures" />
+  </wsdl:message>
+  <wsdl:message name="IAnnotateStructures_GetNetworkedStructures_OutputMessage">
+    <wsdl:part name="parameters" element="tns:GetNetworkedStructuresResponse" />
+  </wsdl:message>
+  <wsdl:message name="IAnnotateStructures_GetChildStructuresInNetwork_InputMessage">
+    <wsdl:part name="parameters" element="tns:GetChildStructuresInNetwork" />
+  </wsdl:message>
+  <wsdl:message name="IAnnotateStructures_GetChildStructuresInNetwork_OutputMessage">
+    <wsdl:part name="parameters" element="tns:GetChildStructuresInNetworkResponse" />
+  </wsdl:message>
+  <wsdl:message name="IAnnotateStructures_GetStructureLinksInNetwork_InputMessage">
+    <wsdl:part name="parameters" element="tns:GetStructureLinksInNetwork" />
+  </wsdl:message>
+  <wsdl:message name="IAnnotateStructures_GetStructureLinksInNetwork_OutputMessage">
+    <wsdl:part name="parameters" element="tns:GetStructureLinksInNetworkResponse" />
+  </wsdl:message>
   <wsdl:message name="IAnnotateStructures_NumberOfLocationsForStructure_InputMessage">
     <wsdl:part name="parameters" element="tns:NumberOfLocationsForStructure" />
   </wsdl:message>
@@ -547,6 +565,18 @@
     <wsdl:operation name="GetLinkedStructuresByID">
       <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateStructures/GetLinkedStructuresByID" message="tns:IAnnotateStructures_GetLinkedStructuresByID_InputMessage" />
       <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateStructures/GetLinkedStructuresByIDResponse" message="tns:IAnnotateStructures_GetLinkedStructuresByID_OutputMessage" />
+    </wsdl:operation>
+    <wsdl:operation name="GetNetworkedStructures">
+      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateStructures/GetNetworkedStructures" message="tns:IAnnotateStructures_GetNetworkedStructures_InputMessage" />
+      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateStructures/GetNetworkedStructuresResponse" message="tns:IAnnotateStructures_GetNetworkedStructures_OutputMessage" />
+    </wsdl:operation>
+    <wsdl:operation name="GetChildStructuresInNetwork">
+      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateStructures/GetChildStructuresInNetwork" message="tns:IAnnotateStructures_GetChildStructuresInNetwork_InputMessage" />
+      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateStructures/GetChildStructuresInNetworkResponse" message="tns:IAnnotateStructures_GetChildStructuresInNetwork_OutputMessage" />
+    </wsdl:operation>
+    <wsdl:operation name="GetStructureLinksInNetwork">
+      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateStructures/GetStructureLinksInNetwork" message="tns:IAnnotateStructures_GetStructureLinksInNetwork_InputMessage" />
+      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateStructures/GetStructureLinksInNetworkResponse" message="tns:IAnnotateStructures_GetStructureLinksInNetwork_OutputMessage" />
     </wsdl:operation>
     <wsdl:operation name="NumberOfLocationsForStructure">
       <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateStructures/NumberOfLocationsForStructure" message="tns:IAnnotateStructures_NumberOfLocationsForStructure_InputMessage" />
@@ -821,6 +851,33 @@
     </wsdl:operation>
     <wsdl:operation name="GetLinkedStructuresByID">
       <soap12:operation soapAction="http://tempuri.org/IAnnotateStructures/GetLinkedStructuresByID" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="GetNetworkedStructures">
+      <soap12:operation soapAction="http://tempuri.org/IAnnotateStructures/GetNetworkedStructures" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="GetChildStructuresInNetwork">
+      <soap12:operation soapAction="http://tempuri.org/IAnnotateStructures/GetChildStructuresInNetwork" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="GetStructureLinksInNetwork">
+      <soap12:operation soapAction="http://tempuri.org/IAnnotateStructures/GetStructureLinksInNetwork" style="document" />
       <wsdl:input>
         <soap12:body use="literal" />
       </wsdl:input>

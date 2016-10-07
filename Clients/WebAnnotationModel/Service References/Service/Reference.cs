@@ -2301,6 +2301,30 @@ namespace WebAnnotationModel.Service {
         
         WebAnnotationModel.Service.StructureLink[] EndGetLinkedStructuresByID(System.IAsyncResult result);
         
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/GetNetworkedStructures", ReplyAction="http://tempuri.org/IAnnotateStructures/GetNetworkedStructuresResponse")]
+        long[] GetNetworkedStructures(long[] IDs, int numHops);
+        
+        [System.ServiceModel.OperationContractAttribute(AsyncPattern=true, Action="http://tempuri.org/IAnnotateStructures/GetNetworkedStructures", ReplyAction="http://tempuri.org/IAnnotateStructures/GetNetworkedStructuresResponse")]
+        System.IAsyncResult BeginGetNetworkedStructures(long[] IDs, int numHops, System.AsyncCallback callback, object asyncState);
+        
+        long[] EndGetNetworkedStructures(System.IAsyncResult result);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/GetChildStructuresInNetwork", ReplyAction="http://tempuri.org/IAnnotateStructures/GetChildStructuresInNetworkResponse")]
+        WebAnnotationModel.Service.Structure[] GetChildStructuresInNetwork(long[] IDs, int numHops);
+        
+        [System.ServiceModel.OperationContractAttribute(AsyncPattern=true, Action="http://tempuri.org/IAnnotateStructures/GetChildStructuresInNetwork", ReplyAction="http://tempuri.org/IAnnotateStructures/GetChildStructuresInNetworkResponse")]
+        System.IAsyncResult BeginGetChildStructuresInNetwork(long[] IDs, int numHops, System.AsyncCallback callback, object asyncState);
+        
+        WebAnnotationModel.Service.Structure[] EndGetChildStructuresInNetwork(System.IAsyncResult result);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/GetStructureLinksInNetwork", ReplyAction="http://tempuri.org/IAnnotateStructures/GetStructureLinksInNetworkResponse")]
+        WebAnnotationModel.Service.StructureLink[] GetStructureLinksInNetwork(long[] IDs, int numHops);
+        
+        [System.ServiceModel.OperationContractAttribute(AsyncPattern=true, Action="http://tempuri.org/IAnnotateStructures/GetStructureLinksInNetwork", ReplyAction="http://tempuri.org/IAnnotateStructures/GetStructureLinksInNetworkResponse")]
+        System.IAsyncResult BeginGetStructureLinksInNetwork(long[] IDs, int numHops, System.AsyncCallback callback, object asyncState);
+        
+        WebAnnotationModel.Service.StructureLink[] EndGetStructureLinksInNetwork(System.IAsyncResult result);
+        
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/NumberOfLocationsForStructure", ReplyAction="http://tempuri.org/IAnnotateStructures/NumberOfLocationsForStructureResponse")]
         long NumberOfLocationsForStructure(long structureID);
         
@@ -2614,6 +2638,63 @@ namespace WebAnnotationModel.Service {
     
     [System.Diagnostics.DebuggerStepThroughAttribute()]
     [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
+    public partial class GetNetworkedStructuresCompletedEventArgs : System.ComponentModel.AsyncCompletedEventArgs {
+        
+        private object[] results;
+        
+        public GetNetworkedStructuresCompletedEventArgs(object[] results, System.Exception exception, bool cancelled, object userState) : 
+                base(exception, cancelled, userState) {
+            this.results = results;
+        }
+        
+        public long[] Result {
+            get {
+                base.RaiseExceptionIfNecessary();
+                return ((long[])(this.results[0]));
+            }
+        }
+    }
+    
+    [System.Diagnostics.DebuggerStepThroughAttribute()]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
+    public partial class GetChildStructuresInNetworkCompletedEventArgs : System.ComponentModel.AsyncCompletedEventArgs {
+        
+        private object[] results;
+        
+        public GetChildStructuresInNetworkCompletedEventArgs(object[] results, System.Exception exception, bool cancelled, object userState) : 
+                base(exception, cancelled, userState) {
+            this.results = results;
+        }
+        
+        public WebAnnotationModel.Service.Structure[] Result {
+            get {
+                base.RaiseExceptionIfNecessary();
+                return ((WebAnnotationModel.Service.Structure[])(this.results[0]));
+            }
+        }
+    }
+    
+    [System.Diagnostics.DebuggerStepThroughAttribute()]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
+    public partial class GetStructureLinksInNetworkCompletedEventArgs : System.ComponentModel.AsyncCompletedEventArgs {
+        
+        private object[] results;
+        
+        public GetStructureLinksInNetworkCompletedEventArgs(object[] results, System.Exception exception, bool cancelled, object userState) : 
+                base(exception, cancelled, userState) {
+            this.results = results;
+        }
+        
+        public WebAnnotationModel.Service.StructureLink[] Result {
+            get {
+                base.RaiseExceptionIfNecessary();
+                return ((WebAnnotationModel.Service.StructureLink[])(this.results[0]));
+            }
+        }
+    }
+    
+    [System.Diagnostics.DebuggerStepThroughAttribute()]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
     public partial class NumberOfLocationsForStructureCompletedEventArgs : System.ComponentModel.AsyncCompletedEventArgs {
         
         private object[] results;
@@ -2828,6 +2909,24 @@ namespace WebAnnotationModel.Service {
         
         private System.Threading.SendOrPostCallback onGetLinkedStructuresByIDCompletedDelegate;
         
+        private BeginOperationDelegate onBeginGetNetworkedStructuresDelegate;
+        
+        private EndOperationDelegate onEndGetNetworkedStructuresDelegate;
+        
+        private System.Threading.SendOrPostCallback onGetNetworkedStructuresCompletedDelegate;
+        
+        private BeginOperationDelegate onBeginGetChildStructuresInNetworkDelegate;
+        
+        private EndOperationDelegate onEndGetChildStructuresInNetworkDelegate;
+        
+        private System.Threading.SendOrPostCallback onGetChildStructuresInNetworkCompletedDelegate;
+        
+        private BeginOperationDelegate onBeginGetStructureLinksInNetworkDelegate;
+        
+        private EndOperationDelegate onEndGetStructureLinksInNetworkDelegate;
+        
+        private System.Threading.SendOrPostCallback onGetStructureLinksInNetworkCompletedDelegate;
+        
         private BeginOperationDelegate onBeginNumberOfLocationsForStructureDelegate;
         
         private EndOperationDelegate onEndNumberOfLocationsForStructureDelegate;
@@ -2920,6 +3019,12 @@ namespace WebAnnotationModel.Service {
         public event System.EventHandler<GetLinkedStructuresCompletedEventArgs> GetLinkedStructuresCompleted;
         
         public event System.EventHandler<GetLinkedStructuresByIDCompletedEventArgs> GetLinkedStructuresByIDCompleted;
+        
+        public event System.EventHandler<GetNetworkedStructuresCompletedEventArgs> GetNetworkedStructuresCompleted;
+        
+        public event System.EventHandler<GetChildStructuresInNetworkCompletedEventArgs> GetChildStructuresInNetworkCompleted;
+        
+        public event System.EventHandler<GetStructureLinksInNetworkCompletedEventArgs> GetStructureLinksInNetworkCompleted;
         
         public event System.EventHandler<NumberOfLocationsForStructureCompletedEventArgs> NumberOfLocationsForStructureCompleted;
         
@@ -3465,6 +3570,162 @@ namespace WebAnnotationModel.Service {
             }
             base.InvokeAsync(this.onBeginGetLinkedStructuresByIDDelegate, new object[] {
                         ID}, this.onEndGetLinkedStructuresByIDDelegate, this.onGetLinkedStructuresByIDCompletedDelegate, userState);
+        }
+        
+        public long[] GetNetworkedStructures(long[] IDs, int numHops) {
+            return base.Channel.GetNetworkedStructures(IDs, numHops);
+        }
+        
+        [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
+        public System.IAsyncResult BeginGetNetworkedStructures(long[] IDs, int numHops, System.AsyncCallback callback, object asyncState) {
+            return base.Channel.BeginGetNetworkedStructures(IDs, numHops, callback, asyncState);
+        }
+        
+        [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
+        public long[] EndGetNetworkedStructures(System.IAsyncResult result) {
+            return base.Channel.EndGetNetworkedStructures(result);
+        }
+        
+        private System.IAsyncResult OnBeginGetNetworkedStructures(object[] inValues, System.AsyncCallback callback, object asyncState) {
+            long[] IDs = ((long[])(inValues[0]));
+            int numHops = ((int)(inValues[1]));
+            return this.BeginGetNetworkedStructures(IDs, numHops, callback, asyncState);
+        }
+        
+        private object[] OnEndGetNetworkedStructures(System.IAsyncResult result) {
+            long[] retVal = this.EndGetNetworkedStructures(result);
+            return new object[] {
+                    retVal};
+        }
+        
+        private void OnGetNetworkedStructuresCompleted(object state) {
+            if ((this.GetNetworkedStructuresCompleted != null)) {
+                InvokeAsyncCompletedEventArgs e = ((InvokeAsyncCompletedEventArgs)(state));
+                this.GetNetworkedStructuresCompleted(this, new GetNetworkedStructuresCompletedEventArgs(e.Results, e.Error, e.Cancelled, e.UserState));
+            }
+        }
+        
+        public void GetNetworkedStructuresAsync(long[] IDs, int numHops) {
+            this.GetNetworkedStructuresAsync(IDs, numHops, null);
+        }
+        
+        public void GetNetworkedStructuresAsync(long[] IDs, int numHops, object userState) {
+            if ((this.onBeginGetNetworkedStructuresDelegate == null)) {
+                this.onBeginGetNetworkedStructuresDelegate = new BeginOperationDelegate(this.OnBeginGetNetworkedStructures);
+            }
+            if ((this.onEndGetNetworkedStructuresDelegate == null)) {
+                this.onEndGetNetworkedStructuresDelegate = new EndOperationDelegate(this.OnEndGetNetworkedStructures);
+            }
+            if ((this.onGetNetworkedStructuresCompletedDelegate == null)) {
+                this.onGetNetworkedStructuresCompletedDelegate = new System.Threading.SendOrPostCallback(this.OnGetNetworkedStructuresCompleted);
+            }
+            base.InvokeAsync(this.onBeginGetNetworkedStructuresDelegate, new object[] {
+                        IDs,
+                        numHops}, this.onEndGetNetworkedStructuresDelegate, this.onGetNetworkedStructuresCompletedDelegate, userState);
+        }
+        
+        public WebAnnotationModel.Service.Structure[] GetChildStructuresInNetwork(long[] IDs, int numHops) {
+            return base.Channel.GetChildStructuresInNetwork(IDs, numHops);
+        }
+        
+        [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
+        public System.IAsyncResult BeginGetChildStructuresInNetwork(long[] IDs, int numHops, System.AsyncCallback callback, object asyncState) {
+            return base.Channel.BeginGetChildStructuresInNetwork(IDs, numHops, callback, asyncState);
+        }
+        
+        [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
+        public WebAnnotationModel.Service.Structure[] EndGetChildStructuresInNetwork(System.IAsyncResult result) {
+            return base.Channel.EndGetChildStructuresInNetwork(result);
+        }
+        
+        private System.IAsyncResult OnBeginGetChildStructuresInNetwork(object[] inValues, System.AsyncCallback callback, object asyncState) {
+            long[] IDs = ((long[])(inValues[0]));
+            int numHops = ((int)(inValues[1]));
+            return this.BeginGetChildStructuresInNetwork(IDs, numHops, callback, asyncState);
+        }
+        
+        private object[] OnEndGetChildStructuresInNetwork(System.IAsyncResult result) {
+            WebAnnotationModel.Service.Structure[] retVal = this.EndGetChildStructuresInNetwork(result);
+            return new object[] {
+                    retVal};
+        }
+        
+        private void OnGetChildStructuresInNetworkCompleted(object state) {
+            if ((this.GetChildStructuresInNetworkCompleted != null)) {
+                InvokeAsyncCompletedEventArgs e = ((InvokeAsyncCompletedEventArgs)(state));
+                this.GetChildStructuresInNetworkCompleted(this, new GetChildStructuresInNetworkCompletedEventArgs(e.Results, e.Error, e.Cancelled, e.UserState));
+            }
+        }
+        
+        public void GetChildStructuresInNetworkAsync(long[] IDs, int numHops) {
+            this.GetChildStructuresInNetworkAsync(IDs, numHops, null);
+        }
+        
+        public void GetChildStructuresInNetworkAsync(long[] IDs, int numHops, object userState) {
+            if ((this.onBeginGetChildStructuresInNetworkDelegate == null)) {
+                this.onBeginGetChildStructuresInNetworkDelegate = new BeginOperationDelegate(this.OnBeginGetChildStructuresInNetwork);
+            }
+            if ((this.onEndGetChildStructuresInNetworkDelegate == null)) {
+                this.onEndGetChildStructuresInNetworkDelegate = new EndOperationDelegate(this.OnEndGetChildStructuresInNetwork);
+            }
+            if ((this.onGetChildStructuresInNetworkCompletedDelegate == null)) {
+                this.onGetChildStructuresInNetworkCompletedDelegate = new System.Threading.SendOrPostCallback(this.OnGetChildStructuresInNetworkCompleted);
+            }
+            base.InvokeAsync(this.onBeginGetChildStructuresInNetworkDelegate, new object[] {
+                        IDs,
+                        numHops}, this.onEndGetChildStructuresInNetworkDelegate, this.onGetChildStructuresInNetworkCompletedDelegate, userState);
+        }
+        
+        public WebAnnotationModel.Service.StructureLink[] GetStructureLinksInNetwork(long[] IDs, int numHops) {
+            return base.Channel.GetStructureLinksInNetwork(IDs, numHops);
+        }
+        
+        [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
+        public System.IAsyncResult BeginGetStructureLinksInNetwork(long[] IDs, int numHops, System.AsyncCallback callback, object asyncState) {
+            return base.Channel.BeginGetStructureLinksInNetwork(IDs, numHops, callback, asyncState);
+        }
+        
+        [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
+        public WebAnnotationModel.Service.StructureLink[] EndGetStructureLinksInNetwork(System.IAsyncResult result) {
+            return base.Channel.EndGetStructureLinksInNetwork(result);
+        }
+        
+        private System.IAsyncResult OnBeginGetStructureLinksInNetwork(object[] inValues, System.AsyncCallback callback, object asyncState) {
+            long[] IDs = ((long[])(inValues[0]));
+            int numHops = ((int)(inValues[1]));
+            return this.BeginGetStructureLinksInNetwork(IDs, numHops, callback, asyncState);
+        }
+        
+        private object[] OnEndGetStructureLinksInNetwork(System.IAsyncResult result) {
+            WebAnnotationModel.Service.StructureLink[] retVal = this.EndGetStructureLinksInNetwork(result);
+            return new object[] {
+                    retVal};
+        }
+        
+        private void OnGetStructureLinksInNetworkCompleted(object state) {
+            if ((this.GetStructureLinksInNetworkCompleted != null)) {
+                InvokeAsyncCompletedEventArgs e = ((InvokeAsyncCompletedEventArgs)(state));
+                this.GetStructureLinksInNetworkCompleted(this, new GetStructureLinksInNetworkCompletedEventArgs(e.Results, e.Error, e.Cancelled, e.UserState));
+            }
+        }
+        
+        public void GetStructureLinksInNetworkAsync(long[] IDs, int numHops) {
+            this.GetStructureLinksInNetworkAsync(IDs, numHops, null);
+        }
+        
+        public void GetStructureLinksInNetworkAsync(long[] IDs, int numHops, object userState) {
+            if ((this.onBeginGetStructureLinksInNetworkDelegate == null)) {
+                this.onBeginGetStructureLinksInNetworkDelegate = new BeginOperationDelegate(this.OnBeginGetStructureLinksInNetwork);
+            }
+            if ((this.onEndGetStructureLinksInNetworkDelegate == null)) {
+                this.onEndGetStructureLinksInNetworkDelegate = new EndOperationDelegate(this.OnEndGetStructureLinksInNetwork);
+            }
+            if ((this.onGetStructureLinksInNetworkCompletedDelegate == null)) {
+                this.onGetStructureLinksInNetworkCompletedDelegate = new System.Threading.SendOrPostCallback(this.OnGetStructureLinksInNetworkCompleted);
+            }
+            base.InvokeAsync(this.onBeginGetStructureLinksInNetworkDelegate, new object[] {
+                        IDs,
+                        numHops}, this.onEndGetStructureLinksInNetworkDelegate, this.onGetStructureLinksInNetworkCompletedDelegate, userState);
         }
         
         public long NumberOfLocationsForStructure(long structureID) {

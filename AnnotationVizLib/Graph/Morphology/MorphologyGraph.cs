@@ -65,8 +65,9 @@ namespace AnnotationVizLib
         }
     }
 
-    public class MorphologyGraph : Graph<ulong, MorphologyNode, MorphologyEdge>
+    public partial class MorphologyGraph : Graph<ulong, MorphologyNode, MorphologyEdge>
     {
+        
         /// <summary>
         /// ID of the structure graph, zero for root or StructureID of structure
         /// </summary>

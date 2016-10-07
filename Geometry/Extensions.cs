@@ -10,6 +10,11 @@ namespace Geometry
 {
     public static class GeometryRTreeExtensions
     {
+        public static RTree.Rectangle ToRTreeRect(this GridRectangle rect, float MinZ, float MaxZ)
+        {
+            return new RTree.Rectangle((float)rect.Left, (float)rect.Bottom, (float)rect.Right, (float)rect.Top, MinZ, MaxZ);
+        }
+
         public static RTree.Rectangle ToRTreeRect(this GridRectangle rect, float Z)
         {
             return new RTree.Rectangle((float)rect.Left, (float)rect.Bottom, (float)rect.Right, (float)rect.Top, Z, Z);

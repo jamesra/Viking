@@ -28,7 +28,7 @@ namespace WebAnnotationModel
 
         public void AddObject(LocationObj obj)
         {
-            RTree.Rectangle bbox = obj.MosaicShape.Envelope().ToRTreeRect((float)obj.Z);
+            RTree.Rectangle bbox = obj.MosaicShape.BoundingBox().ToRTreeRect((float)obj.Z);
 
             Debug.Assert(!SpatialSearch.Contains(obj.ID));
             SpatialSearch.Add(bbox, obj.ID);

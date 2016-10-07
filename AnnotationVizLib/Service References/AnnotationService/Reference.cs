@@ -244,7 +244,7 @@ namespace AnnotationVizLib.AnnotationService {
         private long[] LinksField;
         
         [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private AnnotationVizLib.AnnotationService.DbGeometry MosaicShapeField;
+        private System.Data.Entity.Spatial.DbGeometry MosaicShapeField;
         
         [System.Runtime.Serialization.OptionalFieldAttribute()]
         private bool OffEdgeField;
@@ -274,7 +274,7 @@ namespace AnnotationVizLib.AnnotationService {
         private AnnotationVizLib.AnnotationService.AnnotationPoint VolumePositionField;
         
         [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private AnnotationVizLib.AnnotationService.DbGeometry VolumeShapeField;
+        private System.Data.Entity.Spatial.DbGeometry VolumeShapeField;
         
         [System.Runtime.Serialization.OptionalFieldAttribute()]
         private System.Nullable<double> WidthField;
@@ -332,7 +332,7 @@ namespace AnnotationVizLib.AnnotationService {
         }
         
         [System.Runtime.Serialization.DataMemberAttribute()]
-        public AnnotationVizLib.AnnotationService.DbGeometry MosaicShape {
+        public System.Data.Entity.Spatial.DbGeometry MosaicShape {
             get {
                 return this.MosaicShapeField;
             }
@@ -462,7 +462,7 @@ namespace AnnotationVizLib.AnnotationService {
         }
         
         [System.Runtime.Serialization.DataMemberAttribute()]
-        public AnnotationVizLib.AnnotationService.DbGeometry VolumeShape {
+        public System.Data.Entity.Spatial.DbGeometry VolumeShape {
             get {
                 return this.VolumeShapeField;
             }
@@ -905,51 +905,6 @@ namespace AnnotationVizLib.AnnotationService {
     
     [System.Diagnostics.DebuggerStepThroughAttribute()]
     [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Runtime.Serialization", "4.0.0.0")]
-    [System.Runtime.Serialization.DataContractAttribute(Name="DbGeometry", Namespace="http://schemas.datacontract.org/2004/07/System.Data.Entity.Spatial")]
-    [System.SerializableAttribute()]
-    public partial class DbGeometry : object, System.Runtime.Serialization.IExtensibleDataObject, System.ComponentModel.INotifyPropertyChanged {
-        
-        [System.NonSerializedAttribute()]
-        private System.Runtime.Serialization.ExtensionDataObject extensionDataField;
-        
-        [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private AnnotationVizLib.AnnotationService.DbGeometryWellKnownValue GeometryField;
-        
-        [global::System.ComponentModel.BrowsableAttribute(false)]
-        public System.Runtime.Serialization.ExtensionDataObject ExtensionData {
-            get {
-                return this.extensionDataField;
-            }
-            set {
-                this.extensionDataField = value;
-            }
-        }
-        
-        [System.Runtime.Serialization.DataMemberAttribute()]
-        public AnnotationVizLib.AnnotationService.DbGeometryWellKnownValue Geometry {
-            get {
-                return this.GeometryField;
-            }
-            set {
-                if ((object.ReferenceEquals(this.GeometryField, value) != true)) {
-                    this.GeometryField = value;
-                    this.RaisePropertyChanged("Geometry");
-                }
-            }
-        }
-        
-        public event System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
-        
-        protected void RaisePropertyChanged(string propertyName) {
-            System.ComponentModel.PropertyChangedEventHandler propertyChanged = this.PropertyChanged;
-            if ((propertyChanged != null)) {
-                propertyChanged(this, new System.ComponentModel.PropertyChangedEventArgs(propertyName));
-            }
-        }
-    }
-    
-    [System.Diagnostics.DebuggerStepThroughAttribute()]
-    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Runtime.Serialization", "4.0.0.0")]
     [System.Runtime.Serialization.DataContractAttribute(Name="AnnotationPoint", Namespace="http://schemas.datacontract.org/2004/07/Annotation")]
     [System.SerializableAttribute()]
     public partial struct AnnotationPoint : System.Runtime.Serialization.IExtensibleDataObject, System.ComponentModel.INotifyPropertyChanged {
@@ -1017,83 +972,6 @@ namespace AnnotationVizLib.AnnotationService {
         public event System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
         
         void RaisePropertyChanged(string propertyName) {
-            System.ComponentModel.PropertyChangedEventHandler propertyChanged = this.PropertyChanged;
-            if ((propertyChanged != null)) {
-                propertyChanged(this, new System.ComponentModel.PropertyChangedEventArgs(propertyName));
-            }
-        }
-    }
-    
-    [System.Diagnostics.DebuggerStepThroughAttribute()]
-    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Runtime.Serialization", "4.0.0.0")]
-    [System.Runtime.Serialization.DataContractAttribute(Name="DbGeometryWellKnownValue", Namespace="http://schemas.datacontract.org/2004/07/System.Data.Entity.Spatial")]
-    [System.SerializableAttribute()]
-    public partial class DbGeometryWellKnownValue : object, System.Runtime.Serialization.IExtensibleDataObject, System.ComponentModel.INotifyPropertyChanged {
-        
-        [System.NonSerializedAttribute()]
-        private System.Runtime.Serialization.ExtensionDataObject extensionDataField;
-        
-        [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private int CoordinateSystemIdField;
-        
-        [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private string WellKnownTextField;
-        
-        [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private byte[] WellKnownBinaryField;
-        
-        [global::System.ComponentModel.BrowsableAttribute(false)]
-        public System.Runtime.Serialization.ExtensionDataObject ExtensionData {
-            get {
-                return this.extensionDataField;
-            }
-            set {
-                this.extensionDataField = value;
-            }
-        }
-        
-        [System.Runtime.Serialization.DataMemberAttribute(EmitDefaultValue=false)]
-        public int CoordinateSystemId {
-            get {
-                return this.CoordinateSystemIdField;
-            }
-            set {
-                if ((this.CoordinateSystemIdField.Equals(value) != true)) {
-                    this.CoordinateSystemIdField = value;
-                    this.RaisePropertyChanged("CoordinateSystemId");
-                }
-            }
-        }
-        
-        [System.Runtime.Serialization.DataMemberAttribute(EmitDefaultValue=false)]
-        public string WellKnownText {
-            get {
-                return this.WellKnownTextField;
-            }
-            set {
-                if ((object.ReferenceEquals(this.WellKnownTextField, value) != true)) {
-                    this.WellKnownTextField = value;
-                    this.RaisePropertyChanged("WellKnownText");
-                }
-            }
-        }
-        
-        [System.Runtime.Serialization.DataMemberAttribute(EmitDefaultValue=false, Order=2)]
-        public byte[] WellKnownBinary {
-            get {
-                return this.WellKnownBinaryField;
-            }
-            set {
-                if ((object.ReferenceEquals(this.WellKnownBinaryField, value) != true)) {
-                    this.WellKnownBinaryField = value;
-                    this.RaisePropertyChanged("WellKnownBinary");
-                }
-            }
-        }
-        
-        public event System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
-        
-        protected void RaisePropertyChanged(string propertyName) {
             System.ComponentModel.PropertyChangedEventHandler propertyChanged = this.PropertyChanged;
             if ((propertyChanged != null)) {
                 propertyChanged(this, new System.ComponentModel.PropertyChangedEventArgs(propertyName));

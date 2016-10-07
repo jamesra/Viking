@@ -161,7 +161,7 @@ namespace WebAnnotation.View
             {
                 if(!_bbox.HasValue)
                 {
-                    _bbox = this.VolumeShapeAsRendered.Envelope();
+                    _bbox = this.VolumeShapeAsRendered.BoundingBox();
                 }
 
                 return _bbox.Value;

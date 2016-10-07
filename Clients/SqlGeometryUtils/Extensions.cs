@@ -192,9 +192,15 @@ namespace SqlGeometryUtils
             return geometry.STGeometryN(i + 1);
         }
 
-        public static GridRectangle Envelope(this SqlGeometry geometry)
+        public static GridRectangle BoundingBox(this SqlGeometry geometry)
         {
             return GridRectangle.GetBoundingBox(geometry.STEnvelope().ToPoints());
+        }
+
+        public static GridRectangle BoundingBox(this System.Data.Entity.Spatial.DbGeometry geometry)
+        {
+            System.Data.Entity.Spatial.DbGeometry envelope = geometry.Envelope;
+            return GridRectangle.GetBoundingBox(envelope.ToPoints());
         }
 
         public static bool Intersects(this SqlGeometry geometry, GridVector2 point)
@@ -210,10 +216,25 @@ namespace SqlGeometryUtils
             return geometry.STDistance(point.ToGeometryPoint()).Value;
         }
 
+        public static GridVector2[] ToPoints(this System.Data.Entity.Spatial.DbGeometry geometry)
+        {
+            if (!geometry.PointCount.HasValue)
+                return new GridVector2[0];
+
+            GridVector2[] points = new GridVector2[geometry.PointCount.Value];
+            for (int i = 0; i < points.Length; i++)
+            {
+                System.Data.Entity.Spatial.DbGeometry point = geometry.PointAt(i);
+                points[i] = new GridVector2(point.XCoordinate.Value, point.YCoordinate.Value);
+            }
+
+            return points;
+        }
+
         public static GridVector2[] ToPoints(this Microsoft.SqlServer.Types.SqlGeometry geometry)
         {
             GridVector2[] points = new GridVector2[geometry.STNumPoints().Value];
-            for (int i = 0; i < geometry.STNumPoints(); i++)
+            for (int i = 0; i < points.Length; i++)
             {
                 SqlGeometry point = geometry.GetPoint(i);
                 points[i] = new GridVector2(point.STX.Value, point.STY.Value);

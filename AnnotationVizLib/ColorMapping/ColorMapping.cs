@@ -4,6 +4,8 @@ using System.Diagnostics;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Geometry;
+
 
 
 namespace AnnotationVizLib
@@ -47,14 +49,14 @@ namespace AnnotationVizLib
         ColorScalars color_scalar = new ColorScalars(1, 1, 1, 1);
         ColorImageOffset offset = new ColorImageOffset(0,0);
 
-        public ColorMapImageData(System.IO.Stream ImageStream, int section_number, Scale scale_data)
+        public ColorMapImageData(System.IO.Stream ImageStream, int section_number, Geometry.Scale scale_data)
         {
             this.SectionNumber = section_number; 
             this.image = new Bitmap(ImageStream);
             this.scale = scale_data;
         }
 
-        public ColorMapImageData(System.IO.Stream ImageStream, int section_number, Scale scale_data, ColorScalars color_scalars, ColorImageOffset offset)
+        public ColorMapImageData(System.IO.Stream ImageStream, int section_number, Geometry.Scale scale_data, ColorScalars color_scalars, ColorImageOffset offset)
             : this(ImageStream, section_number, scale_data)
         {
             this.color_scalar = color_scalars;

@@ -3,6 +3,7 @@ Content\Circle.xnb
 Content\UpArrowMask.xnb
 Content\UpArrowV2.xnb
 Content\CircleMask.xnb
+Content\DownArrowV2.xnb
 Content\RoundLine.xnb
 Content\RGBToHSV.xnb
 Content\TileLayout.xnb
@@ -11,7 +12,6 @@ Content\AnnotationOverlayShader.xnb
 Content\MergeHSVImages.xnb
 Content\RoundCurve.xnb
 Content\RoundLineHSV.xnb
-Content\DownArrowV2.xnb
 Content\RoundCurveHSV.xnb
 Content\Arial.spritefont
 Content\RoundLine.fx
@@ -23,3 +23,5 @@ Content\MergeHSVImages.fx
 Content\RoundCurve.fx
 Content\RoundLineHSV.fx
 Content\RoundCurveHSV.fx
+x86\libiomp5md.dll
+x86\MathNet.Numerics.MKL.dll

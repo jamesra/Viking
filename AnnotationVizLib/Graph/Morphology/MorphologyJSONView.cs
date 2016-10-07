@@ -48,7 +48,7 @@ namespace AnnotationVizLib
                 JSONView.Nodes.Add(new
                 {
                     ID = node.Key,
-                    Shape = node.Location.VolumeShape.Geometry.WellKnownText
+                    Shape = node.Location.VolumeShape.WellKnownValue.WellKnownText
                 });
             }
 

@@ -130,6 +130,7 @@
     <Compile Include="Primitives\GridLineSegment.cs" />
     <Compile Include="Primitives\GridRectangle.cs" />
     <Compile Include="Primitives\Matrix.cs" />
+    <Compile Include="Primitives\Scale.cs" />
     <Compile Include="Transforms\DiscreetTransformWithContinuousFallback.cs" />
     <Compile Include="Transforms\GridTransform.cs" />
     <Compile Include="Transforms\MeshTransform.cs" />
