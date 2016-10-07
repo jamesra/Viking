@@ -64,7 +64,7 @@
       <Private>True</Private>
     </Reference>
     <Reference Include="Microsoft.SqlServer.Types, Version=11.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91, processorArchitecture=MSIL">
-      <HintPath>..\packages\Microsoft.SqlServer.Types.11.0.2\lib\net20\Microsoft.SqlServer.Types.dll</HintPath>
+      <HintPath>..\..\Packages\Microsoft.SqlServer.Types.11.0.2\lib\net20\Microsoft.SqlServer.Types.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="System" />
@@ -84,6 +84,7 @@
     <Compile Include="Objects\Attribute.cs" />
     <Compile Include="Objects\LocationLinkObj.cs" />
     <Compile Include="RegionLoader\RegionLoader.cs" />
+    <Compile Include="SqlServerTypes\Loader.cs" />
     <Compile Include="Store\Interfaces.cs" />
     <Compile Include="Store\LocationLinkStore.cs" />
     <Compile Include="Store\LocationStore.cs" />
@@ -204,14 +205,32 @@
       <Name>RTree</Name>
       <Private>False</Private>
     </ProjectReference>
-    <ProjectReference Include="..\SqlGeometryUtils\SqlGeometryUtils.csproj">
+    <ProjectReference Include="..\..\SqlGeometryUtils\SqlGeometryUtils.csproj">
       <Project>{6702adda-3f8f-43d0-9c7e-1e7fdbbe983f}</Project>
       <Name>SqlGeometryUtils</Name>
-      <Private>True</Private>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="..\Packages\Microsoft.SqlServer.Types.11.0.2\nativeBinaries\x64\msvcr100.dll">
+      <Link>SqlServerTypes\x64\msvcr100.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\Packages\Microsoft.SqlServer.Types.11.0.2\nativeBinaries\x64\SqlServerSpatial110.dll">
+      <Link>SqlServerTypes\x64\SqlServerSpatial110.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\Packages\Microsoft.SqlServer.Types.11.0.2\nativeBinaries\x86\msvcr100.dll">
+      <Link>SqlServerTypes\x86\msvcr100.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\Packages\Microsoft.SqlServer.Types.11.0.2\nativeBinaries\x86\SqlServerSpatial110.dll">
+      <Link>SqlServerTypes\x86\SqlServerSpatial110.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="SqlServerTypes\readme.htm" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>

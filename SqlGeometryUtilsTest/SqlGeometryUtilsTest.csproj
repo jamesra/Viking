@@ -49,7 +49,7 @@
       <Private>True</Private>
     </Reference>
     <Reference Include="Microsoft.SqlServer.Types, Version=11.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91, processorArchitecture=MSIL">
-      <HintPath>..\packages\Microsoft.SqlServer.Types.11.0.2\lib\net20\Microsoft.SqlServer.Types.dll</HintPath>
+      <HintPath>..\Packages\Microsoft.SqlServer.Types.11.0.2\lib\net20\Microsoft.SqlServer.Types.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="System" />
@@ -75,7 +75,7 @@
     <Compile Include="SqlServerTypes\Loader.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\Geometry\Geometry.csproj">
+    <ProjectReference Include="..\Geometry\Geometry.csproj">
       <Project>{eacb87e8-a5e3-417e-a9ef-b80c2a68c020}</Project>
       <Name>Geometry</Name>
     </ProjectReference>

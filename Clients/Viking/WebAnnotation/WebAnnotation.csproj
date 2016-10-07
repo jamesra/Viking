@@ -103,7 +103,7 @@
       <Private>True</Private>
     </Reference>
     <Reference Include="Microsoft.SqlServer.Types, Version=11.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91, processorArchitecture=MSIL">
-      <HintPath>..\..\packages\Microsoft.SqlServer.Types.11.0.2\lib\net20\Microsoft.SqlServer.Types.dll</HintPath>
+      <HintPath>..\..\..\Packages\Microsoft.SqlServer.Types.11.0.2\lib\net20\Microsoft.SqlServer.Types.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="Microsoft.Xna.Framework, Version=4.0.0.0, Culture=neutral, PublicKeyToken=842cf8be1de50553, processorArchitecture=x86" />
@@ -146,6 +146,7 @@
     <Compile Include="Global.cs" />
     <Compile Include="Interfaces\CanvasInterfaces.cs" />
     <Compile Include="Sorters.cs" />
+    <Compile Include="SqlServerTypes\Loader.cs" />
     <Compile Include="UI\Actions\MouseOverLocationCanvasViewEffect.cs" />
     <Compile Include="UI\Commands\AddRemoveLineControlPointCommand.cs" />
     <Compile Include="UI\Commands\AdjustControlPointCommand.cs" />
@@ -383,6 +384,10 @@
       <Name>RTree</Name>
       <Private>False</Private>
     </ProjectReference>
+    <ProjectReference Include="..\..\..\SqlGeometryUtils\SqlGeometryUtils.csproj">
+      <Project>{6702adda-3f8f-43d0-9c7e-1e7fdbbe983f}</Project>
+      <Name>SqlGeometryUtils</Name>
+    </ProjectReference>
     <ProjectReference Include="..\..\Common\Common.csproj">
       <Project>{B35B0C61-EC9C-425A-846D-F160D5B12158}</Project>
       <Name>Common</Name>
@@ -392,11 +397,6 @@
       <Project>{EACB87E8-A5E3-417E-A9EF-B80C2A68C020}</Project>
       <Name>Geometry</Name>
       <Private>False</Private>
-    </ProjectReference>
-    <ProjectReference Include="..\..\SqlGeometryUtils\SqlGeometryUtils.csproj">
-      <Project>{6702adda-3f8f-43d0-9c7e-1e7fdbbe983f}</Project>
-      <Name>SqlGeometryUtils</Name>
-      <Private>True</Private>
     </ProjectReference>
     <ProjectReference Include="..\NGVV\VikingCore.csproj">
       <Project>{AEB1B24B-C968-40F9-B9F5-5C1FCE2EFD6D}</Project>
@@ -420,6 +420,25 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="UI\ViewEffects\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="..\..\..\Packages\Microsoft.SqlServer.Types.11.0.2\nativeBinaries\x64\msvcr100.dll">
+      <Link>SqlServerTypes\x64\msvcr100.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\..\Packages\Microsoft.SqlServer.Types.11.0.2\nativeBinaries\x64\SqlServerSpatial110.dll">
+      <Link>SqlServerTypes\x64\SqlServerSpatial110.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\..\Packages\Microsoft.SqlServer.Types.11.0.2\nativeBinaries\x86\msvcr100.dll">
+      <Link>SqlServerTypes\x86\msvcr100.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\..\Packages\Microsoft.SqlServer.Types.11.0.2\nativeBinaries\x86\SqlServerSpatial110.dll">
+      <Link>SqlServerTypes\x86\SqlServerSpatial110.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="SqlServerTypes\readme.htm" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
