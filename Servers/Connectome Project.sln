@@ -46,13 +46,15 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EntityFrameworkExtras.EF6",
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Geometry", "..\Geometry\Geometry.csproj", "{EACB87E8-A5E3-417E-A9EF-B80C2A68C020}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SqlGeometryUtils", "..\Clients\SqlGeometryUtils\SqlGeometryUtils.csproj", "{6702ADDA-3F8F-43D0-9C7E-1E7FDBBE983F}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Utils", "..\Utils\Utils.csproj", "{49F7DDA5-1634-49ED-99FA-74962E43F2D2}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RTree", "..\RTree\RTree.csproj", "{4085BA67-60D7-4679-886E-457AAF37EC7B}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GraphLibTest", "..\GraphLibTest\GraphLibTest.csproj", "{C93E423F-C90F-47F9-A2CF-BFF3E3CF6896}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SqlGeometryUtils", "..\SqlGeometryUtils\SqlGeometryUtils.csproj", "{6702ADDA-3F8F-43D0-9C7E-1E7FDBBE983F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SqlGeometryUtilsTest", "..\SqlGeometryUtilsTest\SqlGeometryUtilsTest.csproj", "{E4C80E39-8E55-4528-AE09-1558CCBD846B}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -148,12 +150,6 @@ Global
 		{EACB87E8-A5E3-417E-A9EF-B80C2A68C020}.Release|Any CPU.Build.0 = Release|Any CPU
 		{EACB87E8-A5E3-417E-A9EF-B80C2A68C020}.ReleaseWithSymbols|Any CPU.ActiveCfg = ReleaseWithSymbols|Any CPU
 		{EACB87E8-A5E3-417E-A9EF-B80C2A68C020}.ReleaseWithSymbols|Any CPU.Build.0 = ReleaseWithSymbols|Any CPU
-		{6702ADDA-3F8F-43D0-9C7E-1E7FDBBE983F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{6702ADDA-3F8F-43D0-9C7E-1E7FDBBE983F}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{6702ADDA-3F8F-43D0-9C7E-1E7FDBBE983F}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{6702ADDA-3F8F-43D0-9C7E-1E7FDBBE983F}.Release|Any CPU.Build.0 = Release|Any CPU
-		{6702ADDA-3F8F-43D0-9C7E-1E7FDBBE983F}.ReleaseWithSymbols|Any CPU.ActiveCfg = Release|Any CPU
-		{6702ADDA-3F8F-43D0-9C7E-1E7FDBBE983F}.ReleaseWithSymbols|Any CPU.Build.0 = Release|Any CPU
 		{49F7DDA5-1634-49ED-99FA-74962E43F2D2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{49F7DDA5-1634-49ED-99FA-74962E43F2D2}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{49F7DDA5-1634-49ED-99FA-74962E43F2D2}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -172,6 +168,18 @@ Global
 		{C93E423F-C90F-47F9-A2CF-BFF3E3CF6896}.Release|Any CPU.Build.0 = Release|Any CPU
 		{C93E423F-C90F-47F9-A2CF-BFF3E3CF6896}.ReleaseWithSymbols|Any CPU.ActiveCfg = Release|Any CPU
 		{C93E423F-C90F-47F9-A2CF-BFF3E3CF6896}.ReleaseWithSymbols|Any CPU.Build.0 = Release|Any CPU
+		{6702ADDA-3F8F-43D0-9C7E-1E7FDBBE983F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6702ADDA-3F8F-43D0-9C7E-1E7FDBBE983F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6702ADDA-3F8F-43D0-9C7E-1E7FDBBE983F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6702ADDA-3F8F-43D0-9C7E-1E7FDBBE983F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6702ADDA-3F8F-43D0-9C7E-1E7FDBBE983F}.ReleaseWithSymbols|Any CPU.ActiveCfg = Release|Any CPU
+		{6702ADDA-3F8F-43D0-9C7E-1E7FDBBE983F}.ReleaseWithSymbols|Any CPU.Build.0 = Release|Any CPU
+		{E4C80E39-8E55-4528-AE09-1558CCBD846B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E4C80E39-8E55-4528-AE09-1558CCBD846B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E4C80E39-8E55-4528-AE09-1558CCBD846B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E4C80E39-8E55-4528-AE09-1558CCBD846B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E4C80E39-8E55-4528-AE09-1558CCBD846B}.ReleaseWithSymbols|Any CPU.ActiveCfg = Release|Any CPU
+		{E4C80E39-8E55-4528-AE09-1558CCBD846B}.ReleaseWithSymbols|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
