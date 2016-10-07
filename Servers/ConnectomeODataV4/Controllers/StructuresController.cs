@@ -200,7 +200,7 @@ namespace ConnectomeODataV4.Controllers
         [ODataRoute("Scale()")]
         public IHttpActionResult GetScale()
         {
-            AnnotationVizLib.Scale scale = VikingWebAppSettings.AppSettings.GetScale();
+            Geometry.Scale scale = VikingWebAppSettings.AppSettings.GetScale();
             return Ok(scale);
         }
 

@@ -37,7 +37,6 @@ namespace Utils
 
         private static XDocument LoadHTTP(Uri path)
         {
-            
             //Remove the .xml file from the path
             int iRemove = path.OriginalString.LastIndexOf('/');
             string VolumePath = path.OriginalString;

@@ -11,7 +11,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>DataExport.Tests</RootNamespace>
     <AssemblyName>DataExport.Tests</AssemblyName>
-    <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.6</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <ProjectTypeGuids>{3AC096D0-A1C2-E12C-1390-A8335801FDAB};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
     <TargetFrameworkProfile />
@@ -149,6 +149,10 @@
     <ProjectReference Include="..\..\AnnotationVizLib\AnnotationVizLib.csproj">
       <Project>{A89A628B-3FFA-4271-B99A-E45C3D72D3E3}</Project>
       <Name>AnnotationVizLib</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\Geometry\Geometry.csproj">
+      <Project>{eacb87e8-a5e3-417e-a9ef-b80c2a68c020}</Project>
+      <Name>Geometry</Name>
     </ProjectReference>
     <ProjectReference Include="..\..\GraphLib\GraphLib.csproj">
       <Project>{d6f219fc-733b-481f-bf78-d34a7cb893ec}</Project>

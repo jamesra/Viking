@@ -20,7 +20,6 @@
         <AssociationConnector Association="ConnectomeModel.FK_StructureLinkSource_StructureBaseID" ManuallyRouted="false" />
         <AssociationConnector Association="ConnectomeModel.FK_StructureLinkTarget_StructureBaseID" ManuallyRouted="false" />
         <AssociationConnector Association="ConnectomeModel.FK_StructureType_StructureType" ManuallyRouted="false" />
-        <EntityTypeShape EntityType="ConnectomeModel.PermittedStructureLink" Width="1.5" PointX="3" PointY="9" />
         <AssociationConnector Association="ConnectomeModel.FK_PermittedStructureLink_SourceType1" />
         <AssociationConnector Association="ConnectomeModel.FK_PermittedStructureLink_TargetType1" /> 
       </Diagram>

@@ -7,6 +7,7 @@ using System.Web.Mvc;
 using AnnotationVizLib;
 using GraphLib;
 using VikingWebAppSettings;
+using Geometry;
 
 namespace DataExport.Controllers
 {

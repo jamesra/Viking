@@ -5,9 +5,7 @@ using System.Web.OData.Extensions;
 using System.Web.OData.Batch;
 using ConnectomeDataModel;
 using Microsoft.OData.Edm.Library;
-using Microsoft.OData;
 using Microsoft.OData.Edm;
-using System.Collections.Generic; 
  
 
 namespace ConnectomeODataV4
@@ -87,13 +85,13 @@ namespace ConnectomeODataV4
 
         private static void AddScaleType(ODataConventionModelBuilder builder)
         {
-            builder.ComplexType<AnnotationVizLib.AxisUnits>().Property(c => c.Units);
-            builder.ComplexType<AnnotationVizLib.AxisUnits>().Property<double>(c => c.Value);
-            builder.ComplexType<AnnotationVizLib.Scale>().ComplexProperty<AnnotationVizLib.AxisUnits>(c => c.X);
-            builder.ComplexType<AnnotationVizLib.Scale>().ComplexProperty<AnnotationVizLib.AxisUnits>(c => c.Y);
-            builder.ComplexType<AnnotationVizLib.Scale>().ComplexProperty<AnnotationVizLib.AxisUnits>(c => c.Z);
+            builder.ComplexType<Geometry.AxisUnits>().Property(c => c.Units);
+            builder.ComplexType<Geometry.AxisUnits>().Property<double>(c => c.Value);
+            builder.ComplexType<Geometry.Scale>().ComplexProperty<Geometry.AxisUnits>(c => c.X);
+            builder.ComplexType<Geometry.Scale>().ComplexProperty<Geometry.AxisUnits>(c => c.Y);
+            builder.ComplexType<Geometry.Scale>().ComplexProperty<Geometry.AxisUnits>(c => c.Z);
 
-            builder.Function("Scale").Returns<AnnotationVizLib.Scale>();
+            builder.Function("Scale").Returns<Geometry.Scale>();
         }
          
         private static Microsoft.OData.Edm.IEdmModel AddStructureLocationLinks(IEdmModel edmModel)
