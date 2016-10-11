@@ -13,6 +13,8 @@ using Viking.ViewModels;
 
 namespace Viking.UI.Forms
 {
+    
+
     public partial class SplashForm : Form
     {
         int Progress = 0;
@@ -79,7 +81,8 @@ namespace Viking.UI.Forms
 
         private void backgroundWorker_DoWork(object sender, DoWorkEventArgs e)
         {
-            Viking.VolumeModel.Volume _Volume = new Viking.VolumeModel.Volume(this.VolumePath, UI.State.CachePath, this.LoadVolumeWorker);
+            BackgroundThreadProgressReporter progressReporter = new BackgroundThreadProgressReporter(this.LoadVolumeWorker);
+            Viking.VolumeModel.Volume _Volume = new Viking.VolumeModel.Volume(this.VolumePath, UI.State.CachePath, progressReporter);
             State.volume = new VolumeViewModel(_Volume); 
         }   
 

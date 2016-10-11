@@ -32,6 +32,36 @@ namespace Viking.ViewModels
             }
         }
 
+        public GridRectangle? SectionBounds
+        {
+            get
+            {
+                if(Transform as IDiscreteTransform != null)
+                {
+                    return ((IDiscreteTransform)Transform).MappedBounds;
+                }
+                else
+                {
+                    return new GridRectangle?();
+                }
+            }
+        }
+
+        public GridRectangle? VolumeBounds
+        {
+            get
+            {
+                if (Transform as IDiscreteTransform != null)
+                {
+                    return ((IDiscreteTransform)Transform).ControlBounds;
+                }
+                else
+                {
+                    return new GridRectangle?();
+                }
+            }
+        }
+
         public GridVector2[] SectionToVolume(GridVector2[] Points)
         {
             return Transform.Transform(Points);

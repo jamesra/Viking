@@ -261,7 +261,7 @@ namespace Viking.VolumeModel
         /// <param name="path">The host and path to the volume, no filenames</param>
         /// <param name="localCachePath">LocaL cache path corresponding to the path</param>
         /// <param name="workerThread">optional worker thread to report progress</param>
-        public Volume(string path, string localCachePath, System.ComponentModel.BackgroundWorker workerThread)
+        public Volume(string path, string localCachePath, Viking.Common.IProgressReporter workerThread)
         {
             //Load the default settings from user preferences
             //            ChannelInfo DefaultChannel = new ChannelInfo();
@@ -284,7 +284,7 @@ namespace Viking.VolumeModel
         /// <param name="path">The host and path to the volume, no filenames</param>
         /// <param name="localCachePath">LocaL cache path corresponding to the path</param>
         /// <param name="workerThread">optional worker thread to report progress</param>
-        public Volume(string path, string localCachePath, XDocument VolumeXML, System.ComponentModel.BackgroundWorker workerThread)
+        public Volume(string path, string localCachePath, XDocument VolumeXML, Viking.Common.IProgressReporter workerThread)
         {
             //Load the default settings from user preferences
             //ChannelInfo DefaultChannel = new ChannelInfo();
@@ -356,7 +356,7 @@ namespace Viking.VolumeModel
         /// Loads a path, determines whether path refers to XML file or a local directory
         /// </summary>
         /// <param name="path"></param>
-        protected XDocument Load(string path, BackgroundWorker workerThread)
+        protected XDocument Load(string path, Viking.Common.IProgressReporter workerThread)
         {
             Uri uri = new Uri(path);
 
@@ -582,7 +582,7 @@ namespace Viking.VolumeModel
         }
 
 
-        void Initialize(XDocument reader, BackgroundWorker workerThread)
+        void Initialize(XDocument reader, Viking.Common.IProgressReporter workerThread)
         {
             List<CreateSectionThreadingObj> ListSectionThreadingObj = new List<CreateSectionThreadingObj>();
             List<CreateStosTransformThreadingObj> ListStosGridTransformThreadingObj = new List<CreateStosTransformThreadingObj>();
@@ -817,7 +817,7 @@ namespace Viking.VolumeModel
             return transform as IContinuousTransform;
         }
 
-        private void WaitForCreateSectionThreads(List<CreateSectionThreadingObj> ListSectionThreadingObj, BackgroundWorker workerThread)
+        private void WaitForCreateSectionThreads(List<CreateSectionThreadingObj> ListSectionThreadingObj, Viking.Common.IProgressReporter workerThread)
         {
             //            XMLStream.Close();
             //            response.Close();
@@ -966,7 +966,7 @@ namespace Viking.VolumeModel
         /// <summary>
         /// Adds a transform to each section mapping it into each of the volume spaces we found
         /// </summary>
-        public void CreateVolumeTransforms(BackgroundWorker workerThread)
+        public void CreateVolumeTransforms(Viking.Common.IProgressReporter workerThread)
         {
             int iSectionProgress = 0;
             foreach (string TransformKey in Transforms.Keys)

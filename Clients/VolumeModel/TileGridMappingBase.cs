@@ -68,13 +68,33 @@ namespace Viking.VolumeModel
             }
         }
 
-        public override GridRectangle Bounds
+        public override GridRectangle ControlBounds
         {
             get 
             {
                 GridInfo Level = LevelToGridInfo[MaxDownsample];
                 return new GridRectangle(0, Level.GridXDim * Level.Downsample * TileSizeX,
                                          0, Level.GridYDim * Level.Downsample * TileSizeY); 
+            }
+        }
+
+        public override GridRectangle? SectionBounds
+        {
+            get
+            {
+                GridInfo Level = LevelToGridInfo[MaxDownsample];
+                return new GridRectangle(0, Level.GridXDim * Level.Downsample * TileSizeX,
+                                         0, Level.GridYDim * Level.Downsample * TileSizeY);
+            }
+        }
+
+        public override GridRectangle? VolumeBounds
+        {
+            get
+            {
+                GridInfo Level = LevelToGridInfo[MaxDownsample];
+                return new GridRectangle(0, Level.GridXDim * Level.Downsample * TileSizeX,
+                                         0, Level.GridYDim * Level.Downsample * TileSizeY);
             }
         }
 

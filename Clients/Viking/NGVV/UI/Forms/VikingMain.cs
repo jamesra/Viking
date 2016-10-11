@@ -204,7 +204,7 @@ namespace Viking
                 MappingBase map = Viking.UI.State.volume.GetTileMapping(null, DefaultSection.Number, null, null);
                 if (map != null)
                 {
-                    Geometry.GridVector2 Center = map.Bounds.Center;
+                    Geometry.GridVector2 Center = map.ControlBounds.Center;
                     SectionViewer.GoToLocation(new Vector2((float)Center.X, (float)Center.Y), DefaultSection.Number, true);
                 }
             }

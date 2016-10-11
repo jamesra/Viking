@@ -32,8 +32,10 @@ namespace Viking.VolumeModel
                 //We mapped one or two points but not opposite corners.  Guesstimate the region by using the width/height in volume space since we know the mappings have minimal distortion.
                 return EstimateMosaicRectangle(mapped, MosaicRectCorners, VisibleWorldBounds);
             } 
-
-            return new GridRectangle?();
+            else
+            {
+                return mapper.SectionBounds;
+            }
         }
 
         /// <summary>
@@ -71,9 +73,9 @@ namespace Viking.VolumeModel
             double CircleRadius = Math.Max(VisibleWorldBounds.Width, VisibleWorldBounds.Height) * 1.44; //Sqrt(2)
             for (int iPoint = 0; iPoint < points.Length; iPoint++)
             {
-                if (IsMapped[0])
+                if (IsMapped[iPoint])
                 {
-                    return new GridCircle(points[0], CircleRadius).BoundingBox;
+                    return new GridCircle(points[iPoint], CircleRadius).BoundingBox;
                 }
             }
 

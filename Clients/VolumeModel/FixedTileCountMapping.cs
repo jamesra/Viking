@@ -17,18 +17,48 @@ namespace Viking.VolumeModel
     /// </summary>
     public abstract class FixedTileCountMapping : MappingBase 
     {
-        private GridRectangle? _Bounds; 
-        public override GridRectangle Bounds
+        private GridRectangle? _VolumeBounds; 
+        public override GridRectangle ControlBounds
         {
             get
             {
-                if (_Bounds.HasValue == false)
+                if (_VolumeBounds.HasValue == false)
                 {
                     GridRectangle bounds = Geometry.Transforms.ReferencePointBasedTransform.CalculateControlBounds(TileTransforms);
-                    _Bounds = new GridRectangle?(bounds);
+                    _VolumeBounds = new GridRectangle?(bounds);
                 }
 
-                return _Bounds.Value;
+                return _VolumeBounds.Value;
+            }
+        }
+
+        private GridRectangle? _SectionBounds;
+
+        public override GridRectangle? SectionBounds
+        {
+            get
+            {
+                if (_SectionBounds.HasValue == false)
+                {
+                    GridRectangle bounds = Geometry.Transforms.ReferencePointBasedTransform.CalculateMappedBounds(TileTransforms);
+                    _SectionBounds = new GridRectangle?(bounds);
+                }
+
+                return _SectionBounds.Value; 
+            }
+        }
+
+        public override GridRectangle? VolumeBounds
+        {
+            get
+            {
+                if (_VolumeBounds.HasValue == false)
+                {
+                    GridRectangle bounds = Geometry.Transforms.ReferencePointBasedTransform.CalculateControlBounds(TileTransforms);
+                    _VolumeBounds = new GridRectangle?(bounds);
+                }
+
+                return _VolumeBounds.Value;
             }
         }
 

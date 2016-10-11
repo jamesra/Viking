@@ -82,6 +82,15 @@ namespace Viking.VolumeModel
         /// <returns></returns>
         GridVector2[] VolumeToSection(GridVector2[] Points);
 
+        /// <summary>
+        /// Bounding box of section space. Returns no value if a continuous transform
+        /// </summary>
+        GridRectangle? SectionBounds { get; }
+
+        /// <summary>
+        /// Bounding box of volume space.  Returns no value if a continuous transform.
+        /// </summary>
+        GridRectangle? VolumeBounds { get; }
 
     }
 
@@ -138,7 +147,7 @@ namespace Viking.VolumeModel
         /// </summary>
         internal readonly string TilePostfix;
 
-        public abstract GridRectangle Bounds
+        public abstract GridRectangle ControlBounds
         {
             get;
         }
@@ -345,6 +354,9 @@ namespace Viking.VolumeModel
                 return _ID.Value;
             }
         }
+
+        public abstract GridRectangle? SectionBounds { get; }
+        public abstract GridRectangle? VolumeBounds { get; }
 
         /// <summary>
         /// Maps the point from the volume to the section if this is overriden by a volume mapping class

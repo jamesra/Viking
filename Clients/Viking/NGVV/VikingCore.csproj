@@ -167,6 +167,7 @@
     <Compile Include="Threading\StreamToTexture.cs" />
     <Compile Include="Threading\TextureRequestQueue.cs" />
     <Compile Include="TileViewModelCache.cs" />
+    <Compile Include="UI\BackgroundThreadProgressReporter.cs" />
     <Compile Include="UI\BaseClasses\DockableUserControl.cs">
       <SubType>UserControl</SubType>
     </Compile>

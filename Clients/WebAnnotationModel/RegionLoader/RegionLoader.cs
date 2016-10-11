@@ -160,7 +160,7 @@ namespace WebAnnotationModel
         /// <param name="ScreenPixelSizeInVolume"></param>
         /// <param name="SectionNumber"></param>
         /// <param name="callback">A thread-safe callback function to hand the loaded objects to</param>
-        public void LoadSectionAnnotationsInRegion(GridRectangle VolumeBounds,
+        public void LoadSectionAnnotationsInRegion(GridRectangle? VolumeBounds,
                                                     double ScreenPixelSizeInVolume,
                                                     int SectionNumber, 
                                                     Action<ICollection<OBJECT>> OnServerObjectsLoadedCallback,
@@ -173,9 +173,7 @@ namespace WebAnnotationModel
             GridRange<RegionRequestData<OBJECT>> gridRange = level.SubGridForRegion(VolumeBounds);
 
             DateTime currentTime = DateTime.UtcNow;
-
             
-
             foreach (GridIndex iCell in gridRange.Indicies)
             {
                 int iX = iCell.X;

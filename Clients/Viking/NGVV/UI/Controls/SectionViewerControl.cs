@@ -734,8 +734,8 @@ namespace Viking.UI.Controls
                                               TileImageSize.Height * Downsample);
 
                 //Figure out how many tiles to expect
-                Size TileDim = new Size((int)Math.Ceiling(mapping.Bounds.Width / (TileImageSize.Width * Downsample)),
-                                        (int)Math.Ceiling(mapping.Bounds.Height / (TileImageSize.Height * Downsample)));
+                Size TileDim = new Size((int)Math.Ceiling(mapping.ControlBounds.Width / (TileImageSize.Width * Downsample)),
+                                        (int)Math.Ceiling(mapping.ControlBounds.Height / (TileImageSize.Height * Downsample)));
 
                 Scene TileScene = new VikingXNA.Scene(new Viewport(0, 0, TileImageSize.Width, TileImageSize.Height), new Camera());
                 TileScene.Camera.Downsample = Downsample;
