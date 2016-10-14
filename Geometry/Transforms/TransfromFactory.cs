@@ -735,7 +735,7 @@ namespace Geometry.Transforms
 
 //            List<int> indicies = new List<int>();
             MappingGridVector2[] mapList = new MappingGridVector2[gridHeight * gridWidth];
-            List<int> triangleIndicies = new List<int>();
+            List<int> triangleIndicies = new List<int>((gridHeight-1) * (gridWidth-1) * 6);
 
             for (int y = 0; y < gridHeight; y++)
             {
@@ -745,11 +745,12 @@ namespace Geometry.Transforms
 
                     GridVector2 mapPoint = GridTransform.CoordinateFromGridPos(x, y, gridWidth, gridHeight, ImageWidth,ImageHeight);
                     GridVector2 ctrlPoint = Points[i];
-
-                    MappingGridVector2 gridPoint = new MappingGridVector2(ctrlPoint, mapPoint);
-                    mapList[i] = gridPoint; 
+                     
+                    mapList[i] = new MappingGridVector2(ctrlPoint, mapPoint); ; 
                 }
             }
+
+            int[] triangles = new int[6];
 
             for (int y = 0; y < gridHeight - 1; y++)
             {
@@ -760,8 +761,13 @@ namespace Geometry.Transforms
                     int topLeft = x + ((y + 1) * gridWidth);
                     int topRight = (x + 1) + ((y + 1) * gridWidth);
 
-
-                    int[] triangles = new int[] { botLeft, botRight, topLeft, botRight, topRight, topLeft };
+                    triangles[0] = botLeft;
+                    triangles[1] = botRight;
+                    triangles[2] = topLeft;
+                    triangles[3] = botRight;
+                    triangles[4] = topRight;
+                    triangles[5] = topLeft;
+                    
                     triangleIndicies.AddRange(triangles);
                 }
             }
