@@ -41,12 +41,12 @@ namespace SqlGeometryUtils
 
         public static Microsoft.SqlServer.Types.SqlGeometry ToSqlGeometry(this System.Data.Entity.Spatial.DbGeometry geometry)
         {
-            return Microsoft.SqlServer.Types.SqlGeometry.STGeomFromWKB(new System.Data.SqlTypes.SqlBytes(geometry.AsBinary()), 0);
+            return Microsoft.SqlServer.Types.SqlGeometry.STGeomFromWKB(new System.Data.SqlTypes.SqlBytes(geometry.AsBinary()), geometry.CoordinateSystemId);
         }
 
         public static System.Data.Entity.Spatial.DbGeometry ToDbGeometry(this Microsoft.SqlServer.Types.SqlGeometry geometry)
         {
-            return System.Data.Entity.Spatial.DbGeometry.FromBinary(geometry.STAsBinary().Buffer);
+            return System.Data.Entity.Spatial.DbGeometry.FromBinary(geometry.STAsBinary().Buffer, geometry.STSrid.Value);
         }
 
         public static SqlGeometry ToSqlGeometry(this GridCircle circle, double Z)
@@ -311,7 +311,7 @@ namespace SqlGeometryUtils
         public static SqlGeometry MoveTo(this SqlGeometry geometry, GridVector2 offset)
         {
             GridVector2 center = geometry.Centroid();
-            return SqlGeometry.STGeomFromText(TranslateString(geometry, offset - center).ToSqlChars(), 0);
+            return SqlGeometry.STGeomFromText(TranslateString(geometry, offset - center).ToSqlChars(), geometry.STSrid.Value);
         }
 
         /// <summary>
@@ -322,7 +322,7 @@ namespace SqlGeometryUtils
         /// <returns></returns>
         public static SqlGeometry Translate(this SqlGeometry geometry, GridVector2 offset)
         {
-            return SqlGeometry.STGeomFromText(TranslateString(geometry, offset).ToSqlChars(),0);
+            return SqlGeometry.STGeomFromText(TranslateString(geometry, offset).ToSqlChars(), geometry.STSrid.Value);
         }
 
         public static string TranslateString(SqlGeometry geometry, GridVector2 offset)
