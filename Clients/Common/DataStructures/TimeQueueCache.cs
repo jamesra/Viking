@@ -145,6 +145,26 @@ namespace Viking.Common
         }
 
         /// <summary>
+        /// Remove the entry from the cache
+        /// </summary>
+        /// <param name="key"></param>
+        /// <returns></returns>
+        public bool Remove(KEY key)
+        {
+            CACHEENTRY value;
+            bool removed = dictEntries.TryRemove(key, out value);
+            if(removed)
+            {
+                long size = value.Size;
+                ChangeCacheSize(-size);
+
+                return OnRemoveEntry(value);
+            }
+
+            return removed;
+        }
+
+        /// <summary>
         /// This can be called by derived classes if they want to use asynch operations and wan't to delay adding an entry to 
         /// the cache after thier CreateEntry method is called.  I
         /// </summary>
@@ -263,6 +283,7 @@ namespace Viking.Common
 
             EntryListCopy = null;
         }
+
 
         /// <summary>
         /// Remove an entry from the cache, does not lock
