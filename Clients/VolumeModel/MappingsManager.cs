@@ -106,7 +106,7 @@ namespace Viking.VolumeModel
         /// <returns></returns>
         public MappingBase GetMapping(string VolumeTransformName, int SectionNumber, string ChannelName, string SectionTransformName)
         {
-            if(!volume.SectionsTable.ContainsKey(SectionNumber))
+            if(!volume.Sections.ContainsKey(SectionNumber))
             {
                 return null;
             }
@@ -123,7 +123,7 @@ namespace Viking.VolumeModel
 
         private MappingBase GetMappingForSection(SectionTransformsDictionary transformsForSection, string VolumeTransformName, int SectionNumber, string ChannelName, string SectionTransformName)
         {
-            Section section = volume.SectionsTable[SectionNumber];
+            Section section = volume.Sections[SectionNumber];
              
             if (SectionTransformName == null)
                 SectionTransformName = section.DefaultPyramidTransform;

@@ -823,7 +823,7 @@ namespace WebAnnotation
                     break;
                 case LocationType.OPENCURVE:
                     location.MosaicShape = mosaic_points.ToPolyLine();
-                    location.VolumeShape = CurveViewControlPoints.CalculateCurvePoints(points, Global.NumOpenCurveInterpolationPoints, false).ToArray().ToPolyLine();
+                    location.VolumeShape = points.CalculateCurvePoints(Global.NumOpenCurveInterpolationPoints, false).ToArray().ToPolyLine();
                     break;
                 case LocationType.POLYLINE:
                     location.MosaicShape = mosaic_points.ToPolyLine();
@@ -835,7 +835,7 @@ namespace WebAnnotation
                     break;
                 case LocationType.CLOSEDCURVE:
                     location.MosaicShape = mosaic_points.ToPolygon(); 
-                    location.VolumeShape = CurveViewControlPoints.CalculateCurvePoints(points, Global.NumClosedCurveInterpolationPoints, true).ToArray().ToPolygon();
+                    location.VolumeShape = points.CalculateCurvePoints(Global.NumClosedCurveInterpolationPoints, true).ToArray().ToPolygon();
                     break;
             }
         }

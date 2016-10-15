@@ -97,7 +97,8 @@ namespace Viking.VolumeModel
                                          0, Level.GridYDim * Level.Downsample * TileSizeY);
             }
         }
-
+        
+        /*
         public override bool TrySectionToVolume(GridVector2 P, out GridVector2 transformedP)
         {
             transformedP = P;
@@ -147,7 +148,7 @@ namespace Viking.VolumeModel
             P.CopyTo(transformedP, 0);
             return transformedP;
         }
-
+        */
         #region TextureFileNames
 
         public abstract string TileFullPath(int iX, int iY, int DownsampleLevel);

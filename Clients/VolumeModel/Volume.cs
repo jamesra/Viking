@@ -34,6 +34,27 @@ namespace Viking.VolumeModel
         }
     }
 
+    public class EndpointInformation
+    {
+        public readonly Uri AuthenticationURL;
+        public readonly Uri EndpointURL;
+        public readonly Uri ExportURL;
+
+        public EndpointInformation(string Authentication, string Endpoint, string exportURL)
+        {
+            AuthenticationURL = new Uri(Authentication);
+            EndpointURL = new Uri(Endpoint);
+            this.ExportURL = new Uri(exportURL);
+        }
+
+        internal static EndpointInformation CreateFromElement(XElement elem)
+        {
+            return new EndpointInformation(elem.GetAttributeCaseInsensitive("authentication").Value,
+                                           elem.GetAttributeCaseInsensitive("endpoint").Value, 
+                                           elem.GetAttributeCaseInsensitive("exporturl").Value);
+        }
+    }
+
     public class TileServerInfo
     {
         public string Host { get; private set; }
@@ -118,6 +139,8 @@ namespace Viking.VolumeModel
         /// </summary>
         public bool UpdateServerVolumePositions = false;
 
+        public EndpointInformation Endpoint = null;
+
         private string _UniqueID = "";
         /// <summary>
         /// Unique ID for this volume on the server
@@ -155,12 +178,7 @@ namespace Viking.VolumeModel
                 return _VolumeElement;
             }
         }
-
-        public Section[] Sections
-        {
-            get { return SectionsTable.Values.ToArray(); }
-        }
-
+        
         /// <summary>
         /// Names of transform groups that can be used to register images into the volume
         /// </summary>
@@ -191,7 +209,7 @@ namespace Viking.VolumeModel
         /// <summary>
         /// Maps a section number to its section object
         /// </summary>
-        public SortedList<int, Section> SectionsTable = new SortedList<int, Section>();
+        public SortedList<int, Section> Sections = new SortedList<int, Section>();
 
         /// <summary>
         /// Sorted list containing the transforms for each volume transform we find
@@ -202,7 +220,7 @@ namespace Viking.VolumeModel
 
         public int NumSections
         {
-            get { return SectionsTable.Count; }
+            get { return Sections.Count; }
         }
 
         /// <summary>
@@ -217,11 +235,11 @@ namespace Viking.VolumeModel
 
             //Optimistic implementation that looks at section immediately above
             int refnumber = section.Number - 1;
-            int minSectionNumber = SectionsTable.Keys.Min();
+            int minSectionNumber = Sections.Keys.Min();
             while (refnumber >= minSectionNumber)
             {
-                if (SectionsTable.ContainsKey(refnumber))
-                    return SectionsTable[refnumber];
+                if (Sections.ContainsKey(refnumber))
+                    return Sections[refnumber];
                 refnumber--;
             }
 
@@ -240,11 +258,11 @@ namespace Viking.VolumeModel
 
             //Optimistic implementation that looks at section immediately above
             int refnumber = section.Number + 1;
-            int maxSectionNumber = SectionsTable.Keys.Max();
+            int maxSectionNumber = Sections.Keys.Max();
             while (refnumber <= maxSectionNumber)
             {
-                if (SectionsTable.ContainsKey(refnumber))
-                    return SectionsTable[refnumber];
+                if (Sections.ContainsKey(refnumber))
+                    return Sections[refnumber];
                 refnumber++;
             }
 
@@ -508,6 +526,9 @@ namespace Viking.VolumeModel
                         break;
                     case "channelinfo":
                         this.DefaultChannels = ChannelInfo.FromXML(elem);
+                        break;
+                    case "volumetoendpoint":
+                        this.Endpoint = EndpointInformation.CreateFromElement(elem);
                         break;
                 }
             }
@@ -873,7 +894,7 @@ namespace Viking.VolumeModel
                 }
             }
 
-            this.SectionsTable.Add(section.Number, section);
+            this.Sections.Add(section.Number, section);
         }
 
         private void AddTileServerToSectionMappings(Section section)
@@ -976,7 +997,7 @@ namespace Viking.VolumeModel
                 SortedList<int, ITransform> TList = Transforms[TransformKey];
 
                 //Create a registration chain so we know what order to register the sections in
-                RegistrationTree tree = RegistrationTree.Build(TList, SectionsTable.Keys);
+                RegistrationTree tree = RegistrationTree.Build(TList, Sections.Keys);
 
                 iSectionProgress = 0;
                 //OK, walk the tree, adding from the root nodes down
@@ -1009,7 +1030,7 @@ namespace Viking.VolumeModel
                             if (info == null)
                                 continue;
 
-                            if (false == SectionsTable.ContainsKey(info.MappedSection))
+                            if (false == Sections.ContainsKey(info.MappedSection))
                                 continue;
 
                             //Add this mapping to our dictionary:

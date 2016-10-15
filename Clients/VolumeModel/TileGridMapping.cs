@@ -4,6 +4,8 @@ using System.Text;
 using System.Xml; 
 using System.Xml.Linq;
 using System.Diagnostics;
+using System.Linq;
+
 using Utils;
 
 using Geometry;
@@ -15,9 +17,7 @@ namespace Viking.VolumeModel
     /// to the same value at every level of the pyramid, so the area must change
     /// </summary>
     public class TileGridMapping : TileGridMappingBase
-    {  
-         
-
+    {    
         #region TextureFileNames
 
         public override string TileFullPath(int iX, int iY, int DownsampleLevel)
@@ -70,7 +70,7 @@ namespace Viking.VolumeModel
             base(section, name, Prefix, Postfix, TileSizeX, TileSizeY, GridTilePath, GridCoordFormat)
         { 
         }
-
+            
         public static TileGridMapping CreateFromTilesetElement(XElement TilesetNode, Section section)
         {
             string Name = IO.GetAttributeCaseInsensitive(TilesetNode, "name").Value;
@@ -112,6 +112,56 @@ namespace Viking.VolumeModel
             }
 
             return mapping;
+        }
+
+        public override bool TrySectionToVolume(GridVector2 P, out GridVector2 transformedP)
+        {
+            transformedP = P;
+            return true;
+        }
+
+        public override bool TryVolumeToSection(GridVector2 P, out GridVector2 transformedP)
+        {
+            transformedP = P;
+            return true;
+        }
+        public override GridVector2[] VolumeToSection(GridVector2[] P)
+        {
+            GridVector2[] transformedP = new GridVector2[P.Length];
+            P.CopyTo(transformedP, 0);
+            return transformedP;
+        }
+
+
+        /// <summary>
+        /// Maps a point from volume space into the section space
+        /// </summary>
+        /// <param name="?"></param>
+        /// <returns></returns>
+        public override bool[] TryVolumeToSection(GridVector2[] P, out GridVector2[] transformedP)
+        {
+            transformedP = new GridVector2[P.Length];
+            P.CopyTo(transformedP, 0);
+            return P.Select(p => { return true; }).ToArray();
+        }
+
+        /// <summary>
+        /// Maps a point from section space into the volume space
+        /// </summary>
+        /// <param name="?"></param>
+        /// <returns></returns>
+        public override bool[] TrySectionToVolume(GridVector2[] P, out GridVector2[] transformedP)
+        {
+            transformedP = new GridVector2[P.Length];
+            P.CopyTo(transformedP, 0);
+            return P.Select(p => { return true; }).ToArray();
+        }
+
+        public override GridVector2[] SectionToVolume(GridVector2[] P)
+        {
+            GridVector2[] transformedP = new GridVector2[P.Length];
+            P.CopyTo(transformedP, 0);
+            return transformedP;
         }
     }
 }

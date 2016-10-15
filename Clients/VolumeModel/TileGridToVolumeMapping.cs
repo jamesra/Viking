@@ -99,6 +99,18 @@ namespace Viking.VolumeModel
             return this.VolumeTransform.TryInverseTransform(P, out transformedP);
         }
 
+        
+        public override GridVector2[] VolumeToSection(GridVector2[] P)
+        {
+            return this.VolumeTransform.InverseTransform(P);
+        }
+        
+
+        public override GridVector2[] SectionToVolume(GridVector2[] P)
+        {
+            return this.VolumeTransform.Transform(P);
+        }
+
         public override void FreeMemory()
         {
             if (VolumeTransform as IMemoryMinimization != null)

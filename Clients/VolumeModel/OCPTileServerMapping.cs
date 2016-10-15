@@ -5,6 +5,7 @@ using System.Xml;
 using System.Xml.Linq;
 using System.Diagnostics;
 using Utils;
+using System.Linq;
 
 using Geometry;
 
@@ -74,6 +75,56 @@ namespace Viking.VolumeModel
                 int downsample = (int)Math.Pow(2, CurrentLevel);
                 this.AddLevel(downsample, (int)Math.Ceiling((double)GridDimX / downsample), (int)Math.Ceiling((double)GridDimY / downsample), CurrentLevel.ToString("D3"));
             }
+        }
+
+        public override bool TrySectionToVolume(GridVector2 P, out GridVector2 transformedP)
+        {
+            transformedP = P;
+            return true;
+        }
+
+        public override bool TryVolumeToSection(GridVector2 P, out GridVector2 transformedP)
+        {
+            transformedP = P;
+            return true;
+        }
+        public override GridVector2[] VolumeToSection(GridVector2[] P)
+        {
+            GridVector2[] transformedP = new GridVector2[P.Length];
+            P.CopyTo(transformedP, 0);
+            return transformedP;
+        }
+
+
+        /// <summary>
+        /// Maps a point from volume space into the section space
+        /// </summary>
+        /// <param name="?"></param>
+        /// <returns></returns>
+        public override bool[] TryVolumeToSection(GridVector2[] P, out GridVector2[] transformedP)
+        {
+            transformedP = new GridVector2[P.Length];
+            P.CopyTo(transformedP, 0);
+            return P.Select(p => { return true; }).ToArray();
+        }
+
+        /// <summary>
+        /// Maps a point from section space into the volume space
+        /// </summary>
+        /// <param name="?"></param>
+        /// <returns></returns>
+        public override bool[] TrySectionToVolume(GridVector2[] P, out GridVector2[] transformedP)
+        {
+            transformedP = new GridVector2[P.Length];
+            P.CopyTo(transformedP, 0);
+            return P.Select(p => { return true; }).ToArray();
+        }
+
+        public override GridVector2[] SectionToVolume(GridVector2[] P)
+        {
+            GridVector2[] transformedP = new GridVector2[P.Length];
+            P.CopyTo(transformedP, 0);
+            return transformedP;
         }
     }
 }

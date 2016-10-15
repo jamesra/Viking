@@ -122,6 +122,7 @@
     <Compile Include="Volume.cs" />
     <Compile Include="VolumeExtensions.cs" />
     <Compile Include="VolumePaths.cs" />
+    <Compile Include="VolumeToSectionTransform.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Common\Common.csproj">

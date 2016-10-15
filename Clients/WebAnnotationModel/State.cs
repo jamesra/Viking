@@ -12,9 +12,15 @@ namespace WebAnnotationModel
 
         static public bool UseAsynchEvents = true;
 
-        static public EndpointAddress EndpointAddress
+        static public Uri Endpoint
         {
-            get; set;
+            get { return EndpointAddress != null ? EndpointAddress.Uri : null; }
+            set { EndpointAddress = new EndpointAddress(value); }
+        }
+
+        static internal EndpointAddress EndpointAddress
+        {
+            get; private set;
         }
     }
 }
