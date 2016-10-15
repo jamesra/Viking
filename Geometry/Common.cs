@@ -14,16 +14,20 @@ namespace Geometry
 
             using (System.IO.StreamReader MosaicStream = new System.IO.StreamReader(stream))
             {
+                List<string> Lines;
                 if (stream.CanSeek)
                 {
                     stream.Seek(0, System.IO.SeekOrigin.Begin);
+                    Lines = new List<string>((int)(stream.Length / 80));
                 }
-
-                List<string> Lines = new List<string>();
+                else
+                {
+                    Lines = new List<string>(100);
+                }
+                
                 while (!MosaicStream.EndOfStream)
                 {
-                    string line = MosaicStream.ReadLine();
-                    Lines.Add(line);
+                    Lines.Add(MosaicStream.ReadLine());
                 }
                  
                 return Lines.ToArray(); 

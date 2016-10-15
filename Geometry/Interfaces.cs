@@ -33,7 +33,9 @@ namespace Geometry
     /// </summary>
     public interface IDiscreteTransform : ITransform
     { 
-        
+        GridRectangle ControlBounds { get; }
+
+        GridRectangle MappedBounds { get; }
     }
 
     public interface IContinuousTransform : ITransform

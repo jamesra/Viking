@@ -360,11 +360,11 @@ namespace WebAnnotation.View
                     break;
 
                 case LocationType.OPENCURVE:
-                    EnrichedVolumeControlPoints = CurveViewControlPoints.CalculateCurvePoints(VolumeControlPoints, Global.NumOpenCurveInterpolationPoints, false).ToArray();
+                    EnrichedVolumeControlPoints = VolumeControlPoints.CalculateCurvePoints(Global.NumOpenCurveInterpolationPoints, false).ToArray();
                     break;
 
                 case LocationType.CLOSEDCURVE:
-                    EnrichedVolumeControlPoints = CurveViewControlPoints.CalculateCurvePoints(VolumeControlPoints, Global.NumClosedCurveInterpolationPoints, true).ToArray();
+                    EnrichedVolumeControlPoints = VolumeControlPoints.CalculateCurvePoints(Global.NumClosedCurveInterpolationPoints, true).ToArray();
                     break;
                 default:
                     EnrichedVolumeControlPoints = VolumeControlPoints;

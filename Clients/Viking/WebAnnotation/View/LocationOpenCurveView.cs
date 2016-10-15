@@ -108,7 +108,7 @@ namespace WebAnnotation.View
             {
                 if (_MosaicCurveControlPoints == null)
                 {
-                    _MosaicCurveControlPoints = CurveViewControlPoints.CalculateCurvePoints(MosaicControlPoints, LocationOpenCurveView.NumInterpolationPoints, false).ToArray();
+                    _MosaicCurveControlPoints = MosaicControlPoints.CalculateCurvePoints(LocationOpenCurveView.NumInterpolationPoints, false).ToArray();
                 }
 
                 return _MosaicCurveControlPoints;
@@ -122,7 +122,7 @@ namespace WebAnnotation.View
             {
                 if (_VolumeCurveControlPoints == null)
                 {
-                    _VolumeCurveControlPoints = CurveViewControlPoints.CalculateCurvePoints(VolumeControlPoints, LocationOpenCurveView.NumInterpolationPoints, false).ToArray();
+                    _VolumeCurveControlPoints = VolumeControlPoints.CalculateCurvePoints(LocationOpenCurveView.NumInterpolationPoints, false).ToArray();
                 }
 
                 return _VolumeCurveControlPoints;

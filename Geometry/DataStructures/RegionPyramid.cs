@@ -142,6 +142,17 @@ namespace Geometry
             get { return (iMaxY - iMinY); }
         }
 
+        public static GridIndicies FromGridDimensions(GridDimensions gridDim)
+        {
+            GridIndicies obj = new GridIndicies();
+            //Figure out which grid locations are visible
+            obj.iMinX = 0;
+            obj.iMinY = 0;
+            obj.iMaxX = gridDim.Width;
+            obj.iMaxY = gridDim.Height;
+            return obj;
+        }
+
         public static GridIndicies FromRectangle(GridRectangle bounds, GridCellDimensions cellDim)
         {
             return FromRectangle(bounds, cellDim.Width, cellDim.Height);
@@ -266,7 +277,7 @@ namespace Geometry
 
         T[] ArrayForRegion(GridRectangle volumeBounds);
 
-        GridRange<T> SubGridForRegion(GridRectangle volumeBounds);
+        GridRange<T> SubGridForRegion(GridRectangle? volumeBounds);
 
         GridRectangle CellBounds(int iX, int iY);
 
@@ -322,12 +333,22 @@ namespace Geometry
             return RegionPyramidLevel<T>.ToArray(Cells, iGrid);
         }
 
-        public GridRange<T> SubGridForRegion(GridRectangle volumeBounds)
+        public GridRange<T> SubGridForRegion(GridRectangle? volumeBounds)
         {
-            GridIndicies iGrid = GridIndicies.FromRectangle(volumeBounds, this.CellDimensions);
-            iGrid.CropToBounds(this.GridDimensions);
+            if(volumeBounds.HasValue)
+            {
+                GridIndicies iGrid = GridIndicies.FromRectangle(volumeBounds.Value, this.CellDimensions);
+                iGrid.CropToBounds(this.GridDimensions);
 
-            return RegionPyramidLevel<T>.ToSubGrid(Cells, iGrid);
+                return RegionPyramidLevel<T>.ToSubGrid(Cells, iGrid);
+            }
+            else
+            {
+                GridIndicies iGrid = GridIndicies.FromGridDimensions(this.GridDimensions);
+                return RegionPyramidLevel<T>.ToSubGrid(Cells, iGrid);
+
+            }
+            
         }
 
         protected static T[] ToArray(T[,] grid, GridIndicies iGrid)

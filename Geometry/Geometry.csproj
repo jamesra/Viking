@@ -108,6 +108,7 @@
     <Compile Include="CurveFitting\Algorithms\ConvexHull.cs" />
     <Compile Include="CurveFitting\Comparable\GridVector2CompareByAngle.cs" />
     <Compile Include="CurveFitting\CatmullRom.cs" />
+    <Compile Include="CurveFitting\CurveExtensions.cs" />
     <Compile Include="CurveFitting\Lagrange.cs" />
     <Compile Include="DataStructures\BoundlessRegionPyramid.cs" />
     <Compile Include="DataStructures\Coord.cs" />

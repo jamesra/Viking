@@ -184,7 +184,34 @@ namespace Geometry.Transforms
 
             return new GridRectangle(minX, maxX, minY, maxY);
         }
-         
+
+        public static GridRectangle CalculateMappedBounds(ReferencePointBasedTransform[] transforms)
+        {
+            if (transforms == null || transforms.Length == 0)
+                return new GridRectangle();
+
+            double minX = double.MaxValue;
+            double minY = double.MaxValue;
+            double maxX = double.MinValue;
+            double maxY = double.MinValue;
+
+            foreach (ReferencePointBasedTransform T in transforms)
+            {
+                GridRectangle R = T.MappedBounds;
+
+                if (R.Left < minX)
+                    minX = R.Left;
+                if (R.Right > maxX)
+                    maxX = R.Right;
+                if (R.Bottom < minY)
+                    minY = R.Bottom;
+                if (R.Top > maxY)
+                    maxY = R.Top;
+            }
+
+            return new GridRectangle(minX, maxX, minY, maxY);
+        }
+
         public List<MappingGridVector2> IntersectingControlRectangle(GridRectangle gridRect)
         {
             List<MappingGridVector2> foundPoints = this.controlPointsRTree.Intersects(gridRect.ToRTreeRect(0)).ToList();

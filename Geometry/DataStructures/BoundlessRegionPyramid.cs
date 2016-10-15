@@ -84,9 +84,14 @@ namespace Geometry
             return BoundlessRegionPyramidLevel<T>.ToArray(Cells, iGrid);
         }
 
-        public GridRange<T> SubGridForRegion(GridRectangle volumeBounds)
+        public GridRange<T> SubGridForRegion(GridRectangle? volumeBounds)
         {
-            GridIndicies iGrid = GridIndicies.FromRectangle(volumeBounds, this.ScaledCellDimensions);
+            if(!volumeBounds.HasValue)
+            {
+                throw new ArgumentException("Volume Bounds does not have a value.  Continuuous transforms should  ");
+            }
+
+            GridIndicies iGrid = GridIndicies.FromRectangle(volumeBounds.Value, this.ScaledCellDimensions);
             return BoundlessRegionPyramidLevel<T>.ToSubGrid(Cells, iGrid);
         }
 
