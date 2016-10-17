@@ -10,7 +10,7 @@ using System.IO;
 namespace Geometry.Transforms
 {
     [Serializable]
-    public abstract class ReferencePointBasedTransform  : IITKSerialization, ITransformInfo, ITransformControlPoints, ISerializable
+    public abstract class ReferencePointBasedTransform  : IITKSerialization, ITransformInfo, ITransformControlPoints, ISerializable, IMemoryMinimization
     {
         public TransformInfo Info { get; internal set; }
 
@@ -382,5 +382,19 @@ namespace Geometry.Transforms
             stream.Write(output.ToString());
         }
 
+        public virtual void MinimizeMemory()
+        {
+            try
+            {
+                rwLockTriangles.EnterWriteLock();
+                this._controlPointsRTree = null;
+                this._mappedPointsRTree = null;
+            }
+            finally
+            {
+                if (rwLockTriangles.IsWriteLockHeld)
+                    rwLockTriangles.ExitWriteLock();
+            }
+        }
     }
 }

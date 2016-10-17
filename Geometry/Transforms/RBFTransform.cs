@@ -414,6 +414,8 @@ namespace Geometry.Transforms
         {
             _MappedToControlSpaceWeights = null;
             _ControlToMappedSpaceWeights = null;
+
+            base.MinimizeMemory();
         }
 
         
