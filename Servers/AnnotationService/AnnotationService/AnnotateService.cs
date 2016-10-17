@@ -19,7 +19,7 @@ namespace Annotation
 {
     [ServiceBehavior(InstanceContextMode = InstanceContextMode.PerCall)]
     [AspNetCompatibilityRequirements(RequirementsMode= AspNetCompatibilityRequirementsMode.Required)]
-    public class AnnotateService : IAnnotateStructureTypes, IAnnotateStructures, IAnnotateLocations, IDisposable, ICircuit, ICredentials
+    public class AnnotateService : IAnnotateStructureTypes, IAnnotateStructures, IAnnotateLocations, IDisposable, ICircuit, ICredentials, IVolumeMeta
     {
  
         public AnnotateService()
@@ -119,6 +119,26 @@ namespace Annotation
         {
             return VikingWebAppSettings.AppSettings.GetDefaultConnectionString();
         }
+
+        #region IVolumeMeta Members
+
+        [PrincipalPermission(SecurityAction.Demand, Role = "Read")]
+        public Scale GetScale()
+        {
+            using (ConnectomeEntities db = GetOrCreateDatabaseContext())
+            {
+                AxisUnits X = new Annotation.AxisUnits(db.GetXYScale(), db.GetXYUnits());
+                AxisUnits Y = new Annotation.AxisUnits(X.Value, X.Units);
+                AxisUnits Z = new Annotation.AxisUnits(db.GetZScale(), db.GetZUnits());
+
+                Scale scale = new Annotation.Scale(X, Y, Z);
+
+                return scale; 
+            }
+        }
+
+        #endregion
+
 
         #region IAnnotateStructureTypes Members
 
@@ -2737,7 +2757,8 @@ namespace Annotation
 
         }
 
-        
+       
+
         #endregion
 
 

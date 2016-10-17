@@ -414,5 +414,53 @@ namespace ConnectomeDataModel
                  .Execute(MergeOption.NoTracking)
                  .FirstOrDefault();
         }
+
+        [DbFunction("ConnectomeModel.Store", "XYScale")]
+        public double GetXYScale()
+        {
+            var objectContext = ((IObjectContextAdapter)this).ObjectContext;
+
+            var parameters = new List<ObjectParameter>(); 
+            
+            return objectContext.CreateQuery<double>("ConnectomeModel.Store.XYScale()", parameters.ToArray())
+                 .Execute(MergeOption.NoTracking)
+                 .FirstOrDefault();
+        }
+
+        [DbFunction("ConnectomeModel.Store", "ZScale")]
+        public double GetZScale()
+        {
+            var objectContext = ((IObjectContextAdapter)this).ObjectContext;
+
+            var parameters = new List<ObjectParameter>();
+
+            return objectContext.CreateQuery<double>("ConnectomeModel.Store.ZScale()", parameters.ToArray())
+                 .Execute(MergeOption.NoTracking)
+                 .FirstOrDefault();
+        }
+
+        [DbFunction("ConnectomeModel.Store", "XYScaleUnits")]
+        public string GetXYUnits()
+        {
+            var objectContext = ((IObjectContextAdapter)this).ObjectContext;
+
+            var parameters = new List<ObjectParameter>();
+
+            return objectContext.CreateQuery<string>("ConnectomeModel.Store.XYScaleUnits()", parameters.ToArray())
+                 .Execute(MergeOption.NoTracking)
+                 .FirstOrDefault();
+        }
+
+        [DbFunction("ConnectomeModel.Store", "ZScaleUnits")]
+        public string GetZUnits()
+        {
+            var objectContext = ((IObjectContextAdapter)this).ObjectContext;
+
+            var parameters = new List<ObjectParameter>();
+
+            return objectContext.CreateQuery<string>("ConnectomeModel.Store.ZScaleUnits()", parameters.ToArray())
+                 .Execute(MergeOption.NoTracking)
+                 .FirstOrDefault();
+        }
     }
 }
