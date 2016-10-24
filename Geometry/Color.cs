@@ -31,9 +31,9 @@ namespace Geometry.Graphics
             _HashCode = new int?();
         }
 
-        public Color(double r, double g, double b) : this((byte)(r / (double)byte.MaxValue),
-                                                          (byte)(g / (double)byte.MaxValue),
-                                                          (byte)(b / (double)byte.MaxValue))
+        public Color(double r, double g, double b) : this((byte)(r * (double)byte.MaxValue),
+                                                          (byte)(g * (double)byte.MaxValue),
+                                                          (byte)(b * (double)byte.MaxValue))
         {
 
         }
