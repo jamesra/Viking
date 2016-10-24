@@ -94,6 +94,9 @@ namespace VikingXNA
             get { return _scene; }
             set
             {
+                if (_scene == value)
+                    return;
+
                 if (_scene != null)
                     _scene.OnSceneChanged -= this.OnSceneChanged;
 
