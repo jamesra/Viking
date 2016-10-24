@@ -242,7 +242,7 @@ namespace WebAnnotation
             if (EndpointAttribute != null)
             {
                 #if DEBUG
-                                   WebAnnotationModel.State.Endpoint = new Uri(EndpointAttribute.Value); 
+                          WebAnnotationModel.State.Endpoint = new Uri(EndpointAttribute.Value); 
 //                        WebAnnotationModel.State.EndpointAddress = new EndpointAddress("https://connectomes.utah.edu/Services/TestBinary/Annotate.svc");
                 #else
                 WebAnnotationModel.State.Endpoint = new Uri(EndpointAttribute.Value);

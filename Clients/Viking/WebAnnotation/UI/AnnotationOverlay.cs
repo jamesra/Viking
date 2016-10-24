@@ -201,8 +201,9 @@ namespace WebAnnotation
             }
 
             return null; 
-        } 
-        
+        }
+
+
         
 
         public SectionAnnotationsView CurrentSectionAnnotations
@@ -517,7 +518,7 @@ namespace WebAnnotation
             {
                 //Refresh the annotations on F5
                 case Keys.F5:
-                    LoadSectionAnnotations();
+                    ResetAnnotationsAsync();
                     return;
                 case Keys.F3:
                     OnContinueLastTrace();
@@ -1184,7 +1185,7 @@ namespace WebAnnotation
             if(e.ChangedSection.Number == this.CurrentSectionNumber)
                 LoadSectionAnnotations();
         }
-
+        
         /// <summary>
         /// When this occurs we should update the positions we draw the locations at. 
         /// </summary>
@@ -1192,9 +1193,7 @@ namespace WebAnnotation
         /// <param name="e"></param>
         public void OnSectionTransformChanged(object sender, TransformChangedEventArgs e)
         {
-            //AnnotationCache.TransformLocationsToVolume();
-            //AnnotationCache.PopulateLocationLinks(); 
-            LoadSectionAnnotations();
+            ResetAnnotationsAsync();
         }
 
         /// <summary>
@@ -1204,9 +1203,16 @@ namespace WebAnnotation
         /// <param name="e"></param>
         public void OnVolumeTransformChanged(object sender, TransformChangedEventArgs e)
         {
-            //AnnotationCache.TransformLocationsToVolume();
-            //AnnotationCache.PopulateLocationLinks(); 
-            LoadSectionAnnotations();
+            ResetAnnotationsAsync();
+        }
+
+        private void ResetAnnotationsAsync()
+        {
+            Task.Run(() =>
+            {
+                cacheSectionAnnotations.Clear();
+                LoadSectionAnnotations();
+            });
         }
 
         private GridRectangle LastVisibleWorldBounds;

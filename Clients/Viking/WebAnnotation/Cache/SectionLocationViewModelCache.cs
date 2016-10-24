@@ -50,7 +50,18 @@ namespace WebAnnotation
         public bool RemoveEntry(int key)
         {
             SectionAnnotationsViewCacheEntry entry;
-            return this.dictEntries.TryRemove(key, out entry);
+            return this.Remove(key); 
+        }
+
+        /// <summary>
+        /// Remove all cached entries
+        /// </summary>
+        public void Clear()
+        {
+            foreach(var s in this.dictEntries.Keys)
+            {
+                this.Remove(s);
+            }
         }
     }
 }

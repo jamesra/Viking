@@ -749,28 +749,23 @@ namespace WebAnnotation.ViewModel
             bool UpdateVolumeLocations = false;
             bool HaveUpdatedVolumePositionsToSubmit = false;
             long VolumePositionUpdatedCount = 0;
-            
+            /*
+             * 10/17/2016: This update feature was replaced by the VikingAU command-line tool
             if (this.SubmitUpdatedVolumePositions)// && this.mapper.ID == this.Section.VolumeViewModel.DefaultVolumeTransform) TODO: Add the line back in to prevent saving transforms when the mosaic transform has been changed
             {
                 UpdateVolumeLocations = true;
             }  
-                        
+               */         
+
             foreach(LocationObj loc in listLocations)
             {
                 if(AddLocation(loc, Subscribe, UpdateVolumeLocations))
                 {
                     VolumePositionUpdatedCount++; 
                     HaveUpdatedVolumePositionsToSubmit |= true; 
-                }
-                //Add the location to our mapping if the location is on our section
-                
-                   
-                   // Debug.Assert(Added);
-
-                //    AddLocationLinks(locView);
-                
+                } 
             }
-
+            /*
             if (UpdateVolumeLocations && HaveUpdatedVolumePositionsToSubmit)
             {
                 //System.Threading.ThreadPool.QueueUserWorkItem( f => { Store.Locations.Save(); } );
@@ -779,7 +774,7 @@ namespace WebAnnotation.ViewModel
 
                 Trace.WriteLine("Updated " + VolumePositionUpdatedCount.ToString() + " volume positions");
                 Store.Locations.Save(); 
-            }
+            }*/
         }
         
         /// <summary>
