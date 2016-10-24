@@ -83,14 +83,22 @@ namespace Viking.ViewModels
         public IVolumeToSectionTransform GetSectionToVolumeTransform(int SectionNumber)
         {
             SectionViewModel svm = this.SectionViewModels[SectionNumber];
-            SortedList<int, ITransform> SectionTransforms = _Volume.Transforms[this.ActiveVolumeTransform];
-
-            if(SectionTransforms.ContainsKey(SectionNumber))
-                return new VolumeToSectionTransform(BuildTransformKey(this.ActiveVolumeTransform, SectionNumber),
-                                                    SectionTransforms[SectionNumber]);
-            else
-                return new VolumeToSectionTransform(BuildTransformKey(this.ActiveVolumeTransform, SectionNumber),
+            if (this.ActiveVolumeTransform == null)
+            {
+                return new VolumeToSectionTransform(BuildTransformKey("Identity", SectionNumber),
                                                     new Geometry.Transforms.IdentityTransform());
+            }
+            else
+            {
+                SortedList<int, ITransform> SectionTransforms = _Volume.Transforms[this.ActiveVolumeTransform];
+
+                if (SectionTransforms.ContainsKey(SectionNumber))
+                    return new VolumeToSectionTransform(BuildTransformKey(this.ActiveVolumeTransform, SectionNumber),
+                                                        SectionTransforms[SectionNumber]);
+                else
+                    return new VolumeToSectionTransform(BuildTransformKey("Identity", SectionNumber),
+                                                        new Geometry.Transforms.IdentityTransform());
+            }
         }
 
         public void ReduceCacheFootprint(object state)
