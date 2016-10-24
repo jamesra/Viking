@@ -36,6 +36,19 @@ namespace Geometry
         GridRectangle ControlBounds { get; }
 
         GridRectangle MappedBounds { get; }
+
+        /// <summary>
+        /// Find the edge which intersects the passed edge L.
+        /// Return the distance to the intersection point.  If they exist the out parameters are intersection point and the Control and Mapped Line.
+        /// </summary>
+        /// <param name="L">Line to test for intersection with the transform</param>
+        /// <param name="OutsidePoint">Point on line which is outside the convex hull from which distance is calculated</param>
+        /// <param name="foundCtrlLine"></param>
+        /// <param name="foundMapLine"></param>
+        /// <param name="intersection">Intersection point</param>
+        /// <returns>Distance to intersection or double.MaxValue if no intersection is found</returns>
+        double ConvexHullIntersection(GridLineSegment L, GridVector2 OutsidePoint, out GridLineSegment foundCtrlLine, out GridLineSegment foundMapLine, out GridVector2 intersection);
+
     }
 
     public interface IContinuousTransform : ITransform
