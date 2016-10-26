@@ -34,7 +34,7 @@ namespace Viking.UI.Commands
                     MyRect = form.Rect;
 
                     double Downsample = form.Downsample;
-                    Parent.ExportImage(form.Filename, MyRect, Downsample, form.IncludeOverlays);
+                    Parent.ExportImage(form.Filename, MyRect, Parent.Section.Number, Downsample, form.IncludeOverlays);
                 }
             }
 

@@ -57,7 +57,17 @@ namespace Viking.ViewModels
         /// The currently displayed channels
         /// </summary>
         public ChannelInfo[] ChannelInfoArray {
-            get { return section.ChannelInfoArray;}
+            get {
+                if(section.ChannelInfoArray == null || section.ChannelInfoArray.Length == 0)
+                {
+                    ChannelInfo channel = new ChannelInfo();
+                    channel.ChannelName = this.ActiveChannel;
+                    channel.SectionSource = ChannelInfo.SectionInfo.FIXED;
+                    channel.FixedSectionNumber = this.section.Number;
+                    return new ChannelInfo[] { channel };
+                }
+                return section.ChannelInfoArray;
+            }
             set { section.ChannelInfoArray = value; }
         }
 
@@ -325,7 +335,6 @@ namespace Viking.ViewModels
                 return this._VolumeViewModel.GetSectionToVolumeTransform(this.section.Number);
             }
         }
-
         
 
         /// <summary>
@@ -374,6 +383,34 @@ namespace Viking.ViewModels
             {
                 PropertyChanged(this, new PropertyChangedEventArgs(propertyName));
             }
+        }
+
+        public Section GetSectionToDrawForChannel(ChannelInfo channel)
+        {
+            Section sectionToDraw = null;
+
+            switch (channel.SectionSource)
+            {
+                case ChannelInfo.SectionInfo.SELECTED:
+                    sectionToDraw = this.section;
+                    break;
+                case ChannelInfo.SectionInfo.ABOVE:
+                    sectionToDraw = this.ReferenceSectionAbove;
+                    break;
+                case ChannelInfo.SectionInfo.BELOW:
+                    sectionToDraw = this.ReferenceSectionBelow;
+                    break;
+                case ChannelInfo.SectionInfo.FIXED:
+                    int SectionNumber = channel.FixedSectionNumber.Value;
+                    if (false == UI.State.volume.SectionViewModels.ContainsKey(SectionNumber))
+                        sectionToDraw = null;
+                    else
+                        sectionToDraw = UI.State.volume.SectionViewModels[SectionNumber].section;
+
+                    break;
+            }
+
+            return sectionToDraw;
         }
 
     }

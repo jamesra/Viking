@@ -21,14 +21,14 @@ namespace Viking.ViewModels
     /// </summary>
     public class TileViewModel : IDisposable
     {
-        readonly Tile Tile; 
-        
+        readonly Tile Tile;
+
         /// <summary>
         /// Stores the verticies used for drawing
         /// </summary>
         private VertexBuffer VertBuffer = null;
 
-        private IndexBuffer IndBuffer = null; 
+        private IndexBuffer IndBuffer = null;
 
         /// <summary>
         /// Indicies passed to render call specifying triangle verticies
@@ -48,8 +48,8 @@ namespace Viking.ViewModels
         /// <summary>
         /// Setting this to true indicates we've already asked the server for this texture and it was not found.  We should stop asking.
         /// </summary>
-        public bool ServerTextureNotFound = false; 
-        
+        public bool ServerTextureNotFound = false;
+
         /// <summary>
         /// This should only be written via the texture member 
         /// </summary>
@@ -63,7 +63,7 @@ namespace Viking.ViewModels
                     if (_texture.IsDisposed)
                         _texture = null;
                 }
-                return _texture; 
+                return _texture;
             }
             set
             {
@@ -86,12 +86,22 @@ namespace Viking.ViewModels
             get { return this._texture != null; }
         }
 
+        internal bool TextureReadComplete
+        {
+            get { return (this._texture != null || this.ServerTextureNotFound) && this.TexReader == null; }
+        }
+
+        internal bool TextureNeedsLoading
+        {
+            get { return !(this.ServerTextureNotFound || this.texture != null || this.TexReader != null); }
+        }
+
         private TextureReader _TexReader;
         private TextureReader TexReader
         {
             get { return _TexReader; }
             set {
-                lock (this)
+                lock (thisLock)
                 {
                     if (_TexReader != null && _TexReader != value)
                     {
@@ -105,18 +115,20 @@ namespace Viking.ViewModels
 
         }
 
-        public int TileID; 
+        public int TileID;
 
-        public readonly string TextureFileName; 
-        public readonly string TextureCachedFileName; 
+        public readonly string TextureFileName;
+        public readonly string TextureCachedFileName;
 
         private int MipMapLevels = 1;
 
         private Color TileColor;
 
+        private Object thisLock = new Object();
+
         private static ushort IntToShort(int value)
         {
-            return (ushort)value; 
+            return (ushort)value;
         }
 
         public TileViewModel(Tile tile,
@@ -131,11 +143,11 @@ namespace Viking.ViewModels
             this.TextureFileName = textureFileName;
             this.TextureCachedFileName = cachedTextureFileName;
             this.MipMapLevels = mipMapLevels;
-            
+
             Random r = new Random(TileID);
 
-            this.TileColor = new Color((float)(r.NextDouble() * 0.5) + 0.5f, (float)(r.NextDouble() * 0.5) + 0.5f, (float)(r.NextDouble() * 0.5) + 0.5f, 0.5f); 
-            
+            this.TileColor = new Color((float)(r.NextDouble() * 0.5) + 0.5f, (float)(r.NextDouble() * 0.5) + 0.5f, (float)(r.NextDouble() * 0.5) + 0.5f, 0.5f);
+
         }
 
         /// <summary>
@@ -145,17 +157,17 @@ namespace Viking.ViewModels
         /// <returns></returns>
         private static VertexBuffer CreateVertexBuffer(GraphicsDevice device, VolumeModel.PositionNormalTextureVertex[] Verticies)
         {
-            
+
             VertexPositionNormalTexture[] vertArray = new VertexPositionNormalTexture[Verticies.Length];
 
-            for(int i = 0; i < Verticies.Length; i++)
+            for (int i = 0; i < Verticies.Length; i++)
             {
                 GridVector3 pos = Verticies[i].Position;
-                GridVector3 norm = Verticies[i].Normal; 
+                GridVector3 norm = Verticies[i].Normal;
                 GridVector2 tex = Verticies[i].Texture;
 
-                vertArray[i] = new VertexPositionNormalTexture( new Vector3((float)pos.X,(float)pos.Y, (float)pos.Z),
-                                                                new Vector3((float)norm.X,(float)norm.Y,(float)norm.Z),
+                vertArray[i] = new VertexPositionNormalTexture(new Vector3((float)pos.X, (float)pos.Y, (float)pos.Z),
+                                                                new Vector3((float)norm.X, (float)norm.Y, (float)norm.Z),
                                                                 new Vector2((float)tex.X, (float)tex.Y));
 
             }
@@ -177,7 +189,7 @@ namespace Viking.ViewModels
                 throw;
             }
 
-            return vb; 
+            return vb;
         }
 
         public override string ToString()
@@ -190,10 +202,10 @@ namespace Viking.ViewModels
             //Stop trying to load textures if we have a request out
             AbortRequest();
 
-            lock (this)
+            lock (thisLock)
             {
                 //This disposes of the texture
-                this.texture = null; 
+                this.texture = null;
 
                 if (VertBuffer != null)
                 {
@@ -216,19 +228,66 @@ namespace Viking.ViewModels
             if (this.TexReader != null)
             {
                 //Other methods may be counting on TexReader not being set to null, so take a lock
-                lock (this)
+                lock (thisLock)
                 {
                     if (this.TexReader != null)
                     {
-                        this.TexReader.AbortRequest();
+                        if (this.TexReader.FinishedReading)
+                            HandleTextureReaderResult();
+                        else
+                        {
+                            this.TexReader.AbortRequest();
+                        }
+
                         this.TexReader = null;
                     }
                 }
             }
         }
 
-        public Texture2D GetTexture(GraphicsDevice graphicsDevice, bool AsynchTextureLoad)
-        {  
+        /// <summary>
+        /// Takes a completd TextureReader and returns true if a texture was loaded
+        /// </summary>
+        /// <param name="texReader"></param>
+        /// <returns></returns>
+        private bool HandleTextureReaderResult()
+        {
+            lock (thisLock)
+            {
+                if (this.TexReader == null)
+                {
+                    Trace.WriteLine("Missing texture reader in TextureReaderResult");
+                    return false;
+                }
+
+                //If reading the texture failed don't change our state. 
+                if (this.TexReader.FinishedReading)
+                {
+                    if (this.TexReader.HasTexture)
+                    {
+                        this.texture = this.TexReader.GetTexture();
+                    }
+                    else
+                    {
+                        //We should stop asking if the server just doesn't have it. 
+                        this.ServerTextureNotFound = this.TexReader.TextureNotFound;
+                    }
+
+                    this.TexReader.Dispose();
+                    this.TexReader = null;
+                }
+            }
+
+            return this.texture != null;
+        }
+
+        private void OnTextureReaderCompleted()
+        {
+            HandleTextureReaderResult();
+        }
+
+        public Texture2D GetTexture(GraphicsDevice graphicsDevice)
+        {
             //Check if the texture's graphics device has been disposed, in which case load a new texture
             if (texture != null)
             {
@@ -241,49 +300,16 @@ namespace Viking.ViewModels
             //Don't bother asking if we've already tried
             if (this.ServerTextureNotFound)
             {
-                //Don't know how this could happen, but we should not have a texture if the server does not.  This indicates the code will leak resources
-                Debug.Assert(TexReader == null);
-                Debug.Assert(texture == null);
-                return null;
-            }
-
-            //If we are trying to read a new texture, check if it is finished yet
-            if (TexReader != null)
-            {
-                lock (this) //Don't let other threads change TexReader state
+#if DEBUG
+                lock (thisLock)
                 {
-                    if (TexReader != null) //In case someone freed TexReader before taking the lock
-                    {
-                        if (TexReader.FinishedReading)
-                        {
-                            TextureReader texReader = this.TexReader;
-
-                            bool Entered = Monitor.TryEnter(texReader);
-                            if (Entered)
-                            {
-                                //If reading the texture failed don't change our state. 
-                                if (texReader.FinishedReading)
-                                {
-                                    if (texReader.HasTexture)
-                                    {
-                                        this.texture = texReader.GetTexture();
-                                        this.TexReader = null;
-                                    }
-                                    else
-                                    {
-                                        //We should stop asking if the server just doesn't have it. 
-                                        this.ServerTextureNotFound = texReader.TextureNotFound;
-                                        this.TexReader.Dispose();
-                                        this.TexReader = null; 
-                                        return null;
-                                    } 
-                                }
-
-                                Monitor.Exit(texReader);
-                            }
-                        }
-                    }
+                    //Don't know how this could happen, but we should not have a texture if the server does not.  This indicates the code will leak resources
+                    Debug.Assert(TexReader == null);
+                    Debug.Assert(texture == null);
                 }
+#endif
+
+                return null;
             }
 
             //If we have a texture that is what we want or better then return it and kill any requests
@@ -296,6 +322,7 @@ namespace Viking.ViewModels
             }
             else
             {
+
                 //In this path we either have no texture, or a low-res texture.  Ask for a new one if we haven't already
                 if (this.TexReader == null)
                 {
@@ -303,86 +330,27 @@ namespace Viking.ViewModels
                     if (State.volume.IsLocal == false)
                     {
                         this.TexReader = new TextureReader(graphicsDevice,
-                                                           new Uri(this.TextureFileName), 
-                                                           this.TextureCachedFileName,
-                                                           this.MipMapLevels);
+                                                            new Uri(this.TextureFileName),
+                                                            this.TextureCachedFileName,
+                                                            this.MipMapLevels,
+                                                            () => this.OnTextureReaderCompleted());
                     }
                     else
                     {
                         this.TexReader = new TextureReader(graphicsDevice,
                                                             new Uri(this.TextureFileName),
-                                                           this.MipMapLevels);
+                                                            this.MipMapLevels,
+                                                            () => this.OnTextureReaderCompleted());
                     }
 
-                    if (AsynchTextureLoad)
-                    {
-                        //TexReader.Go();
-
-                        ThreadPool.QueueUserWorkItem(TexReader.ThreadPoolCallback);
-                        //TexReader.ThreadPoolCallback(System.Threading.Thread.CurrentContext);
-                    }
-                    else
-                    {
-                        //I think reentrant paint calls make this lock useless
-                        lock (this)
-                        {
-                            TextureReader texReader = this.TexReader;
-                            this._TexReader = null;
-                            texReader.ThreadPoolCallback(System.Threading.Thread.CurrentContext);
-
-                            texReader.DoneEvent.WaitOne();
-
- //                           Debug.Assert(texReader.HasTexture);
-                            if (texReader.HasTexture)
-                            {
-                                this.texture = texReader.GetTexture();
-                            }
-                            else
-                            {
-                                Trace.WriteLine("Synchronous texture reader does not have texture: " + TextureFileName);
-                                
-                                this.ServerTextureNotFound = texReader.TextureNotFound;
-                            }
-
-                            texReader.Dispose();
-                            texReader = null;
-                        }
-                    }
-                }
-                //We have a pending request, but we've been asked to load the texture NOW
-                else if (this.TexReader != null && AsynchTextureLoad == false)
-                {
-                    //I think reentrant paint calls make this lock useless
-                    lock (this)
-                    {
-                        if (this.TexReader != null)
-                        {
-                            TextureReader texReader = this.TexReader;
-                            this._TexReader = null; 
-                            texReader.DoneEvent.WaitOne(); //Timeout after a minute?
-
-                            Debug.Assert(texReader != null);
-                            Debug.Assert(texReader.HasTexture);
-
-                            if (texReader.HasTexture)
-                            {
-                                this.texture = texReader.GetTexture();
-                            }
-
-                            texReader.Dispose();
-                            texReader = null; 
-                        }
-                        else
-                        {
-                            Debug.Assert(this.texture != null, "Someone nulled out our texture reader, but didn't leave a texture during Synch texture load");
-                        }
-                    }
+                    ThreadPool.QueueUserWorkItem((TexReader.ThreadPoolCallback));
                 }
 
-                return this.texture; // Can return null or a texture with a different downsample level if we have one
-            }                 
+
+                return null;
+            }
         }
-        
+             
 
 #if DEBUG
         private static bool NullGridWarningPrinted = false; 
@@ -415,15 +383,15 @@ namespace Viking.ViewModels
                 return;
             }
 
-            Texture2D currentTexture = GetTexture(graphicsDevice, AsynchTextureLoad);
+            Texture2D currentTexture = GetTexture(graphicsDevice);
 
             //Do not draw if we don't have a texture
             if (currentTexture == null)
                 return;
 
-            lock (this)
+            lock (thisLock)
             {
-                currentTexture = GetTexture(graphicsDevice, AsynchTextureLoad);
+                currentTexture = GetTexture(graphicsDevice);
 
                 //Do not draw if we don't have a texture
                 if (currentTexture == null)
@@ -649,7 +617,7 @@ namespace Viking.ViewModels
         {
             if(disposing)
             {
-                lock (this)
+                lock (thisLock)
                 {
                     //This disposes of the texture
                     //_texture = null;

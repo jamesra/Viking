@@ -42,7 +42,7 @@ namespace Viking.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        [global::System.Configuration.DefaultSettingValueAttribute("%UserProfile%")]
         public string LastTileExportDirectory {
             get {
                 return ((string)(this["LastTileExportDirectory"]));
@@ -102,7 +102,7 @@ namespace Viking.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        [global::System.Configuration.DefaultSettingValueAttribute("%UserProfile%")]
         public string LastFrameCaptureExportDirectory {
             get {
                 return ((string)(this["LastFrameCaptureExportDirectory"]));
