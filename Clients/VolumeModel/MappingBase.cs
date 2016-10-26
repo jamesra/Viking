@@ -226,35 +226,17 @@ namespace Viking.VolumeModel
         /// <param name="transform"></param>
         /// <param name="VisibleBounds"></param>
         /// <returns></returns>
-        protected List<MappingGridVector2> VisibleBoundsCorners(ITransform transform, GridRectangle VisibleBounds)
-        {  
-            List<MappingGridVector2> listBoundCorners = new List<MappingGridVector2>(4);
-            //Add any corners of the VisibleBounds that we can transform to the list of points
-            bool transformSuccess = false;
-            GridVector2 TLowerLeft;
-            GridVector2 TLowerRight;
-            GridVector2 TUpperLeft;
-            GridVector2 TUpperRight;
-
-
-            transformSuccess = transform.TryInverseTransform(VisibleBounds.LowerLeft, out TLowerLeft);
-            if(transformSuccess)
-                listBoundCorners.Add(new MappingGridVector2(VisibleBounds.LowerLeft, TLowerLeft));
+        protected List<MappingGridVector2> VisibleBoundsCorners(GridRectangle VisibleBounds)
+        {
+            GridVector2[] VolumeRectCorners = new GridVector2[] {   VisibleBounds.LowerLeft,
+                                                                    VisibleBounds.LowerRight,
+                                                                    VisibleBounds.UpperLeft,
+                                                                    VisibleBounds.UpperRight };
+            GridVector2[] MosaicRectCorners;
+            bool[] mapped = TryVolumeToSection(VolumeRectCorners, out MosaicRectCorners);
             
-            //Add any corners of the VisibleBounds that we can transform to the list of points
-            transformSuccess = transform.TryInverseTransform(VisibleBounds.LowerRight, out TLowerRight);
-            if(transformSuccess)
-                listBoundCorners.Add(new MappingGridVector2(VisibleBounds.LowerRight, TLowerRight));
-
-            transformSuccess = transform.TryInverseTransform(VisibleBounds.UpperLeft, out TUpperLeft);
-            if(transformSuccess)
-                listBoundCorners.Add(new MappingGridVector2(VisibleBounds.UpperLeft, TUpperLeft));
-
-            transformSuccess = transform.TryInverseTransform(VisibleBounds.UpperRight, out TUpperRight);
-            if(transformSuccess)
-                listBoundCorners.Add(new MappingGridVector2(VisibleBounds.UpperRight, TUpperRight));
-            
-            return listBoundCorners;
+            List<MappingGridVector2> MappedMosaicCorners = MosaicRectCorners.Select((p, i) => new MappingGridVector2(VolumeRectCorners[i], MosaicRectCorners[i])).Where((p,i) => mapped[i]).ToList();
+            return MappedMosaicCorners;
         }
 
         /// <summary>

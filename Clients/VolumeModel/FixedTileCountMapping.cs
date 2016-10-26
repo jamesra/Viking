@@ -283,123 +283,12 @@ namespace Viking.VolumeModel
                     if(tile != null)
                         VisibleTiles.AddTile(roundedDownsample, tile);
 
-                    /*
-                    if (LoadOnly)
-                    {
-                        TilesToLoad.Add(tile);
-                        continue;
-                    }
-                     */
-
-                    
-                    //I used to call draw here, but when exporting frames I want to have all tiles launch threads to load thier textures and then wait.
-                    //It is much faster than doing one texture at a time
-                    //PORT: Removed
-                    //tile.GetTexture(graphicsDevice, true);
+                   
                     TilesToDraw.Add(tile);
-
-                    //PORT: Modified to return all tiles of lower resolution
-                    
-                    /*
-                    //See if any tiles of alternate resolution are already loaded                    
-                    //Use them if the correct resolution doesn't have a texture, otherwise abort any requests
-                    bool TextureFound = tile.HasTexture; 
-
-                    foreach(int testLevel in UI.State.DownsampleLevels)
-                    {
-                        if(testLevel == roundedDownsample)
-                            continue;
-
-                        string altResName = TileFileName(T.Number, testLevel);
-                        Tile altResTile = Global.TileCache.GetTile(altResName, this.Name);
-                        if (altResTile != null)
-                        {
-                            //Stop the network request if we've already got a texture
-                            //TODO: Once we have a list of textures to draw, send it to TextureConstructor
-                            //and have it abort textures not in the list
-                            if (TextureFound)
-                                altResTile.AbortRequest();
-                            else
-                            {
-                                if (altResTile.HasTexture)
-                                {
-                                    TilesToDraw.Add(altResTile);
-                                    TextureFound = true;
-                                }
-                            }
-                        }
-                    }
-                     */
-                    
                 }
-
-                /*PORT We no longer handle tiles to be loaded and the aborting tiles here
-                else
-                {
-                    if (loadBounds.Intersects(T.CachedControlBounds))
-                    {
-                        string name = TileFileName(T.Number, predictiveDownsample);
-                        Tile tile = Global.TileCache.GetTile(name, this.Name);
-                        if(tile == null)
-                        {
-                            //First create a new tile
-                            int MipMapLevels = 1; //No mip maps
-                            if (roundedDownsample == this.AvailableLevels[AvailableLevels.Length - 1])
-                                MipMapLevels = 0; //Generate mipmaps for lowest res texture
-
-                            VertexPositionNormalTexture[] verticies = Tile.CalculateVerticies(T);
-                            tile = Global.TileCache.ConstructTile(verticies,
-                                                                 T.TriangleIndicies,
-                                                                 name,
-                                                                 TileCacheName(T.Number, predictiveDownsample),
-                                                                 this.Name,
-                                                                 roundedDownsample, 
-                                                                 MipMapLevels,
-                                                                 T.ImageHeight * T.ImageWidth / predictiveDownsample);
-                        }
-
-                        TilesToLoad.Add(tile); 
-                    }
-                    //Sometimes tiles can overlap both zones, so else if is used
-                    else if (abortBounds.Intersects(T.CachedControlBounds) == false)
-                    {
-                        foreach (int testLevel in UI.State.DownsampleLevels)
-                        {
-                            string AbortTileName = TileFileName(T.Number, testLevel);
-                            Tile tile = Global.TileCache.GetTile(AbortTileName, this.Name);
-                            if (tile != null)
-                            {
-                                tile.AbortRequest();
-                            }
-                        }
-                    }
-                }
-                 */
             }
-
-            /*PORT Model does not load textures
-            foreach (Tile tile in TilesToLoad)
-            {
-                //We are asking for a lower quality texture, but tile will keep any existing higher quality textures
-                if (AsynchTextureLoad)
-                    tile.GetTexture(graphicsDevice, true);
-            }
-            
-
-            //TODO: Give a list of tiles to the TileConstructor that are OK to have outstanding load requests.
-            //All other tiles will be aborted
-
-            List<Tile> SafeTiles = new List<Tile>(TilesToLoad.Count + TilesToDraw.Count);
-            SafeTiles.AddRange(TilesToLoad);
-            SafeTiles.AddRange(TilesToDraw);
-
-            Trace.WriteLine("Drawing " + TilesToDraw.Count.ToString() + " Tiles", "VolumeModel");
-
-            return TilesToDraw.ToArray(); 
-            */
 
             return VisibleTiles;
-
         }
     }
 }

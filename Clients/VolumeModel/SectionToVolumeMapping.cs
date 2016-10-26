@@ -181,7 +181,7 @@ namespace Viking.VolumeModel
                                                                        originalInfo.ImageWidth, 
                                                                        originalInfo.ImageHeight);
                         //FIXME
-                        newTransform = TriangulationTransform.Transform(this.VolumeTransform as TriangulationTransform, T, info);
+                        newTransform = TriangulationTransform.Transform(this.VolumeTransform, T, info);
                     }
 
                     if (newTransform == null)
@@ -263,7 +263,7 @@ namespace Viking.VolumeModel
             {
                 GridQuad VisibleQuad = null;
                 //Add any corners of the VisibleBounds that we can transform to the list of points
-                List<MappingGridVector2> VisiblePoints = VisibleBoundsCorners(VolumeTransform, VisibleBounds);
+                List<MappingGridVector2> VisiblePoints = VisibleBoundsCorners(VisibleBounds);
                 if (VisiblePoints.Count == 4)
                 {
                     VisiblePoints.Sort(new MappingGridVector2SortByMapPoints());
