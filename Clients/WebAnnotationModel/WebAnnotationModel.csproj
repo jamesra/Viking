@@ -163,6 +163,12 @@
     <None Include="Service References\Service\WebAnnotationModel.Service.LocationPositionOnly.datasource">
       <DependentUpon>Reference.svcmap</DependentUpon>
     </None>
+    <None Include="Service References\Service\WebAnnotationModel.Service.PermittedStructureLink.datasource">
+      <DependentUpon>Reference.svcmap</DependentUpon>
+    </None>
+    <None Include="Service References\Service\WebAnnotationModel.Service.Scale.datasource">
+      <DependentUpon>Reference.svcmap</DependentUpon>
+    </None>
     <None Include="Service References\Service\WebAnnotationModel.Service.Structure.datasource">
       <DependentUpon>Reference.svcmap</DependentUpon>
     </None>

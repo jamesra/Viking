@@ -17,6 +17,7 @@ namespace WebAnnotationModel.Service {
     [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Runtime.Serialization", "4.0.0.0")]
     [System.Runtime.Serialization.DataContractAttribute(Name="DataObject", Namespace="http://schemas.datacontract.org/2004/07/Annotation")]
     [System.SerializableAttribute()]
+    [System.Runtime.Serialization.KnownTypeAttribute(typeof(WebAnnotationModel.Service.PermittedStructureLink))]
     [System.Runtime.Serialization.KnownTypeAttribute(typeof(WebAnnotationModel.Service.StructureLink))]
     [System.Runtime.Serialization.KnownTypeAttribute(typeof(WebAnnotationModel.Service.LocationLink))]
     [System.Runtime.Serialization.KnownTypeAttribute(typeof(WebAnnotationModel.Service.DataObjectWithKeyOflong))]
@@ -64,6 +65,61 @@ namespace WebAnnotationModel.Service {
             System.ComponentModel.PropertyChangedEventHandler propertyChanged = this.PropertyChanged;
             if ((propertyChanged != null)) {
                 propertyChanged(this, new System.ComponentModel.PropertyChangedEventArgs(propertyName));
+            }
+        }
+    }
+    
+    [System.Diagnostics.DebuggerStepThroughAttribute()]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Runtime.Serialization", "4.0.0.0")]
+    [System.Runtime.Serialization.DataContractAttribute(Name="PermittedStructureLink", Namespace="http://schemas.datacontract.org/2004/07/Annotation")]
+    [System.SerializableAttribute()]
+    public partial class PermittedStructureLink : WebAnnotationModel.Service.DataObject {
+        
+        [System.Runtime.Serialization.OptionalFieldAttribute()]
+        private bool BidirectionalField;
+        
+        [System.Runtime.Serialization.OptionalFieldAttribute()]
+        private long SourceTypeIDField;
+        
+        [System.Runtime.Serialization.OptionalFieldAttribute()]
+        private long TargetTypeIDField;
+        
+        [System.Runtime.Serialization.DataMemberAttribute()]
+        public bool Bidirectional {
+            get {
+                return this.BidirectionalField;
+            }
+            set {
+                if ((this.BidirectionalField.Equals(value) != true)) {
+                    this.BidirectionalField = value;
+                    this.RaisePropertyChanged("Bidirectional");
+                }
+            }
+        }
+        
+        [System.Runtime.Serialization.DataMemberAttribute()]
+        public long SourceTypeID {
+            get {
+                return this.SourceTypeIDField;
+            }
+            set {
+                if ((this.SourceTypeIDField.Equals(value) != true)) {
+                    this.SourceTypeIDField = value;
+                    this.RaisePropertyChanged("SourceTypeID");
+                }
+            }
+        }
+        
+        [System.Runtime.Serialization.DataMemberAttribute()]
+        public long TargetTypeID {
+            get {
+                return this.TargetTypeIDField;
+            }
+            set {
+                if ((this.TargetTypeIDField.Equals(value) != true)) {
+                    this.TargetTypeIDField = value;
+                    this.RaisePropertyChanged("TargetTypeID");
+                }
             }
         }
     }
@@ -763,6 +819,9 @@ namespace WebAnnotationModel.Service {
         private string NotesField;
         
         [System.Runtime.Serialization.OptionalFieldAttribute()]
+        private WebAnnotationModel.Service.PermittedStructureLink[] PermittedLinksField;
+        
+        [System.Runtime.Serialization.OptionalFieldAttribute()]
         private string[] StructureTagsField;
         
         [System.Runtime.Serialization.OptionalFieldAttribute()]
@@ -855,6 +914,19 @@ namespace WebAnnotationModel.Service {
                 if ((object.ReferenceEquals(this.NotesField, value) != true)) {
                     this.NotesField = value;
                     this.RaisePropertyChanged("Notes");
+                }
+            }
+        }
+        
+        [System.Runtime.Serialization.DataMemberAttribute()]
+        public WebAnnotationModel.Service.PermittedStructureLink[] PermittedLinks {
+            get {
+                return this.PermittedLinksField;
+            }
+            set {
+                if ((object.ReferenceEquals(this.PermittedLinksField, value) != true)) {
+                    this.PermittedLinksField = value;
+                    this.RaisePropertyChanged("PermittedLinks");
                 }
             }
         }
@@ -1179,6 +1251,144 @@ namespace WebAnnotationModel.Service {
                 if ((object.ReferenceEquals(this.StructuresField, value) != true)) {
                     this.StructuresField = value;
                     this.RaisePropertyChanged("Structures");
+                }
+            }
+        }
+        
+        public event System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
+        
+        protected void RaisePropertyChanged(string propertyName) {
+            System.ComponentModel.PropertyChangedEventHandler propertyChanged = this.PropertyChanged;
+            if ((propertyChanged != null)) {
+                propertyChanged(this, new System.ComponentModel.PropertyChangedEventArgs(propertyName));
+            }
+        }
+    }
+    
+    [System.Diagnostics.DebuggerStepThroughAttribute()]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Runtime.Serialization", "4.0.0.0")]
+    [System.Runtime.Serialization.DataContractAttribute(Name="Scale", Namespace="http://schemas.datacontract.org/2004/07/Annotation")]
+    [System.SerializableAttribute()]
+    public partial class Scale : object, System.Runtime.Serialization.IExtensibleDataObject, System.ComponentModel.INotifyPropertyChanged {
+        
+        [System.NonSerializedAttribute()]
+        private System.Runtime.Serialization.ExtensionDataObject extensionDataField;
+        
+        [System.Runtime.Serialization.OptionalFieldAttribute()]
+        private WebAnnotationModel.Service.AxisUnits XField;
+        
+        [System.Runtime.Serialization.OptionalFieldAttribute()]
+        private WebAnnotationModel.Service.AxisUnits YField;
+        
+        [System.Runtime.Serialization.OptionalFieldAttribute()]
+        private WebAnnotationModel.Service.AxisUnits ZField;
+        
+        [global::System.ComponentModel.BrowsableAttribute(false)]
+        public System.Runtime.Serialization.ExtensionDataObject ExtensionData {
+            get {
+                return this.extensionDataField;
+            }
+            set {
+                this.extensionDataField = value;
+            }
+        }
+        
+        [System.Runtime.Serialization.DataMemberAttribute()]
+        public WebAnnotationModel.Service.AxisUnits X {
+            get {
+                return this.XField;
+            }
+            set {
+                if ((object.ReferenceEquals(this.XField, value) != true)) {
+                    this.XField = value;
+                    this.RaisePropertyChanged("X");
+                }
+            }
+        }
+        
+        [System.Runtime.Serialization.DataMemberAttribute()]
+        public WebAnnotationModel.Service.AxisUnits Y {
+            get {
+                return this.YField;
+            }
+            set {
+                if ((object.ReferenceEquals(this.YField, value) != true)) {
+                    this.YField = value;
+                    this.RaisePropertyChanged("Y");
+                }
+            }
+        }
+        
+        [System.Runtime.Serialization.DataMemberAttribute()]
+        public WebAnnotationModel.Service.AxisUnits Z {
+            get {
+                return this.ZField;
+            }
+            set {
+                if ((object.ReferenceEquals(this.ZField, value) != true)) {
+                    this.ZField = value;
+                    this.RaisePropertyChanged("Z");
+                }
+            }
+        }
+        
+        public event System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
+        
+        protected void RaisePropertyChanged(string propertyName) {
+            System.ComponentModel.PropertyChangedEventHandler propertyChanged = this.PropertyChanged;
+            if ((propertyChanged != null)) {
+                propertyChanged(this, new System.ComponentModel.PropertyChangedEventArgs(propertyName));
+            }
+        }
+    }
+    
+    [System.Diagnostics.DebuggerStepThroughAttribute()]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Runtime.Serialization", "4.0.0.0")]
+    [System.Runtime.Serialization.DataContractAttribute(Name="AxisUnits", Namespace="http://schemas.datacontract.org/2004/07/Annotation")]
+    [System.SerializableAttribute()]
+    public partial class AxisUnits : object, System.Runtime.Serialization.IExtensibleDataObject, System.ComponentModel.INotifyPropertyChanged {
+        
+        [System.NonSerializedAttribute()]
+        private System.Runtime.Serialization.ExtensionDataObject extensionDataField;
+        
+        [System.Runtime.Serialization.OptionalFieldAttribute()]
+        private string UnitsField;
+        
+        [System.Runtime.Serialization.OptionalFieldAttribute()]
+        private double ValueField;
+        
+        [global::System.ComponentModel.BrowsableAttribute(false)]
+        public System.Runtime.Serialization.ExtensionDataObject ExtensionData {
+            get {
+                return this.extensionDataField;
+            }
+            set {
+                this.extensionDataField = value;
+            }
+        }
+        
+        [System.Runtime.Serialization.DataMemberAttribute()]
+        public string Units {
+            get {
+                return this.UnitsField;
+            }
+            set {
+                if ((object.ReferenceEquals(this.UnitsField, value) != true)) {
+                    this.UnitsField = value;
+                    this.RaisePropertyChanged("Units");
+                }
+            }
+        }
+        
+        [System.Runtime.Serialization.DataMemberAttribute()]
+        public double Value {
+            get {
+                return this.ValueField;
+            }
+            set {
+                if ((this.ValueField.Equals(value) != true)) {
+                    this.ValueField = value;
+                    this.RaisePropertyChanged("Value");
                 }
             }
         }
@@ -1718,6 +1928,22 @@ namespace WebAnnotationModel.Service {
         
         long[] EndUpdateStructureTypes(System.IAsyncResult result);
         
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructureTypes/CreatePermittedStructureLink", ReplyAction="http://tempuri.org/IAnnotateStructureTypes/CreatePermittedStructureLinkResponse")]
+        WebAnnotationModel.Service.PermittedStructureLink CreatePermittedStructureLink(WebAnnotationModel.Service.PermittedStructureLink link);
+        
+        [System.ServiceModel.OperationContractAttribute(AsyncPattern=true, Action="http://tempuri.org/IAnnotateStructureTypes/CreatePermittedStructureLink", ReplyAction="http://tempuri.org/IAnnotateStructureTypes/CreatePermittedStructureLinkResponse")]
+        System.IAsyncResult BeginCreatePermittedStructureLink(WebAnnotationModel.Service.PermittedStructureLink link, System.AsyncCallback callback, object asyncState);
+        
+        WebAnnotationModel.Service.PermittedStructureLink EndCreatePermittedStructureLink(System.IAsyncResult result);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructureTypes/UpdatePermittedStructureLinks", ReplyAction="http://tempuri.org/IAnnotateStructureTypes/UpdatePermittedStructureLinksResponse")]
+        void UpdatePermittedStructureLinks(WebAnnotationModel.Service.PermittedStructureLink[] permittedStructureLinks);
+        
+        [System.ServiceModel.OperationContractAttribute(AsyncPattern=true, Action="http://tempuri.org/IAnnotateStructureTypes/UpdatePermittedStructureLinks", ReplyAction="http://tempuri.org/IAnnotateStructureTypes/UpdatePermittedStructureLinksResponse")]
+        System.IAsyncResult BeginUpdatePermittedStructureLinks(WebAnnotationModel.Service.PermittedStructureLink[] permittedStructureLinks, System.AsyncCallback callback, object asyncState);
+        
+        void EndUpdatePermittedStructureLinks(System.IAsyncResult result);
+        
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructureTypes/TestMethod", ReplyAction="http://tempuri.org/IAnnotateStructureTypes/TestMethodResponse")]
         string TestMethod();
         
@@ -1828,6 +2054,25 @@ namespace WebAnnotationModel.Service {
     
     [System.Diagnostics.DebuggerStepThroughAttribute()]
     [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
+    public partial class CreatePermittedStructureLinkCompletedEventArgs : System.ComponentModel.AsyncCompletedEventArgs {
+        
+        private object[] results;
+        
+        public CreatePermittedStructureLinkCompletedEventArgs(object[] results, System.Exception exception, bool cancelled, object userState) : 
+                base(exception, cancelled, userState) {
+            this.results = results;
+        }
+        
+        public WebAnnotationModel.Service.PermittedStructureLink Result {
+            get {
+                base.RaiseExceptionIfNecessary();
+                return ((WebAnnotationModel.Service.PermittedStructureLink)(this.results[0]));
+            }
+        }
+    }
+    
+    [System.Diagnostics.DebuggerStepThroughAttribute()]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
     public partial class TestMethodCompletedEventArgs : System.ComponentModel.AsyncCompletedEventArgs {
         
         private object[] results;
@@ -1879,6 +2124,18 @@ namespace WebAnnotationModel.Service {
         
         private System.Threading.SendOrPostCallback onUpdateStructureTypesCompletedDelegate;
         
+        private BeginOperationDelegate onBeginCreatePermittedStructureLinkDelegate;
+        
+        private EndOperationDelegate onEndCreatePermittedStructureLinkDelegate;
+        
+        private System.Threading.SendOrPostCallback onCreatePermittedStructureLinkCompletedDelegate;
+        
+        private BeginOperationDelegate onBeginUpdatePermittedStructureLinksDelegate;
+        
+        private EndOperationDelegate onEndUpdatePermittedStructureLinksDelegate;
+        
+        private System.Threading.SendOrPostCallback onUpdatePermittedStructureLinksCompletedDelegate;
+        
         private BeginOperationDelegate onBeginTestMethodDelegate;
         
         private EndOperationDelegate onEndTestMethodDelegate;
@@ -1913,6 +2170,10 @@ namespace WebAnnotationModel.Service {
         public event System.EventHandler<GetStructureTypesByIDsCompletedEventArgs> GetStructureTypesByIDsCompleted;
         
         public event System.EventHandler<UpdateStructureTypesCompletedEventArgs> UpdateStructureTypesCompleted;
+        
+        public event System.EventHandler<CreatePermittedStructureLinkCompletedEventArgs> CreatePermittedStructureLinkCompleted;
+        
+        public event System.EventHandler<System.ComponentModel.AsyncCompletedEventArgs> UpdatePermittedStructureLinksCompleted;
         
         public event System.EventHandler<TestMethodCompletedEventArgs> TestMethodCompleted;
         
@@ -2162,6 +2423,105 @@ namespace WebAnnotationModel.Service {
             }
             base.InvokeAsync(this.onBeginUpdateStructureTypesDelegate, new object[] {
                         structType}, this.onEndUpdateStructureTypesDelegate, this.onUpdateStructureTypesCompletedDelegate, userState);
+        }
+        
+        public WebAnnotationModel.Service.PermittedStructureLink CreatePermittedStructureLink(WebAnnotationModel.Service.PermittedStructureLink link) {
+            return base.Channel.CreatePermittedStructureLink(link);
+        }
+        
+        [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
+        public System.IAsyncResult BeginCreatePermittedStructureLink(WebAnnotationModel.Service.PermittedStructureLink link, System.AsyncCallback callback, object asyncState) {
+            return base.Channel.BeginCreatePermittedStructureLink(link, callback, asyncState);
+        }
+        
+        [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
+        public WebAnnotationModel.Service.PermittedStructureLink EndCreatePermittedStructureLink(System.IAsyncResult result) {
+            return base.Channel.EndCreatePermittedStructureLink(result);
+        }
+        
+        private System.IAsyncResult OnBeginCreatePermittedStructureLink(object[] inValues, System.AsyncCallback callback, object asyncState) {
+            WebAnnotationModel.Service.PermittedStructureLink link = ((WebAnnotationModel.Service.PermittedStructureLink)(inValues[0]));
+            return this.BeginCreatePermittedStructureLink(link, callback, asyncState);
+        }
+        
+        private object[] OnEndCreatePermittedStructureLink(System.IAsyncResult result) {
+            WebAnnotationModel.Service.PermittedStructureLink retVal = this.EndCreatePermittedStructureLink(result);
+            return new object[] {
+                    retVal};
+        }
+        
+        private void OnCreatePermittedStructureLinkCompleted(object state) {
+            if ((this.CreatePermittedStructureLinkCompleted != null)) {
+                InvokeAsyncCompletedEventArgs e = ((InvokeAsyncCompletedEventArgs)(state));
+                this.CreatePermittedStructureLinkCompleted(this, new CreatePermittedStructureLinkCompletedEventArgs(e.Results, e.Error, e.Cancelled, e.UserState));
+            }
+        }
+        
+        public void CreatePermittedStructureLinkAsync(WebAnnotationModel.Service.PermittedStructureLink link) {
+            this.CreatePermittedStructureLinkAsync(link, null);
+        }
+        
+        public void CreatePermittedStructureLinkAsync(WebAnnotationModel.Service.PermittedStructureLink link, object userState) {
+            if ((this.onBeginCreatePermittedStructureLinkDelegate == null)) {
+                this.onBeginCreatePermittedStructureLinkDelegate = new BeginOperationDelegate(this.OnBeginCreatePermittedStructureLink);
+            }
+            if ((this.onEndCreatePermittedStructureLinkDelegate == null)) {
+                this.onEndCreatePermittedStructureLinkDelegate = new EndOperationDelegate(this.OnEndCreatePermittedStructureLink);
+            }
+            if ((this.onCreatePermittedStructureLinkCompletedDelegate == null)) {
+                this.onCreatePermittedStructureLinkCompletedDelegate = new System.Threading.SendOrPostCallback(this.OnCreatePermittedStructureLinkCompleted);
+            }
+            base.InvokeAsync(this.onBeginCreatePermittedStructureLinkDelegate, new object[] {
+                        link}, this.onEndCreatePermittedStructureLinkDelegate, this.onCreatePermittedStructureLinkCompletedDelegate, userState);
+        }
+        
+        public void UpdatePermittedStructureLinks(WebAnnotationModel.Service.PermittedStructureLink[] permittedStructureLinks) {
+            base.Channel.UpdatePermittedStructureLinks(permittedStructureLinks);
+        }
+        
+        [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
+        public System.IAsyncResult BeginUpdatePermittedStructureLinks(WebAnnotationModel.Service.PermittedStructureLink[] permittedStructureLinks, System.AsyncCallback callback, object asyncState) {
+            return base.Channel.BeginUpdatePermittedStructureLinks(permittedStructureLinks, callback, asyncState);
+        }
+        
+        [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
+        public void EndUpdatePermittedStructureLinks(System.IAsyncResult result) {
+            base.Channel.EndUpdatePermittedStructureLinks(result);
+        }
+        
+        private System.IAsyncResult OnBeginUpdatePermittedStructureLinks(object[] inValues, System.AsyncCallback callback, object asyncState) {
+            WebAnnotationModel.Service.PermittedStructureLink[] permittedStructureLinks = ((WebAnnotationModel.Service.PermittedStructureLink[])(inValues[0]));
+            return this.BeginUpdatePermittedStructureLinks(permittedStructureLinks, callback, asyncState);
+        }
+        
+        private object[] OnEndUpdatePermittedStructureLinks(System.IAsyncResult result) {
+            this.EndUpdatePermittedStructureLinks(result);
+            return null;
+        }
+        
+        private void OnUpdatePermittedStructureLinksCompleted(object state) {
+            if ((this.UpdatePermittedStructureLinksCompleted != null)) {
+                InvokeAsyncCompletedEventArgs e = ((InvokeAsyncCompletedEventArgs)(state));
+                this.UpdatePermittedStructureLinksCompleted(this, new System.ComponentModel.AsyncCompletedEventArgs(e.Error, e.Cancelled, e.UserState));
+            }
+        }
+        
+        public void UpdatePermittedStructureLinksAsync(WebAnnotationModel.Service.PermittedStructureLink[] permittedStructureLinks) {
+            this.UpdatePermittedStructureLinksAsync(permittedStructureLinks, null);
+        }
+        
+        public void UpdatePermittedStructureLinksAsync(WebAnnotationModel.Service.PermittedStructureLink[] permittedStructureLinks, object userState) {
+            if ((this.onBeginUpdatePermittedStructureLinksDelegate == null)) {
+                this.onBeginUpdatePermittedStructureLinksDelegate = new BeginOperationDelegate(this.OnBeginUpdatePermittedStructureLinks);
+            }
+            if ((this.onEndUpdatePermittedStructureLinksDelegate == null)) {
+                this.onEndUpdatePermittedStructureLinksDelegate = new EndOperationDelegate(this.OnEndUpdatePermittedStructureLinks);
+            }
+            if ((this.onUpdatePermittedStructureLinksCompletedDelegate == null)) {
+                this.onUpdatePermittedStructureLinksCompletedDelegate = new System.Threading.SendOrPostCallback(this.OnUpdatePermittedStructureLinksCompleted);
+            }
+            base.InvokeAsync(this.onBeginUpdatePermittedStructureLinksDelegate, new object[] {
+                        permittedStructureLinks}, this.onEndUpdatePermittedStructureLinksDelegate, this.onUpdatePermittedStructureLinksCompletedDelegate, userState);
         }
         
         public string TestMethod() {
@@ -5667,6 +6027,122 @@ namespace WebAnnotationModel.Service {
                         structure_id,
                         begin_time,
                         end_time}, this.onEndGetLocationChangeLogDelegate, this.onGetLocationChangeLogCompletedDelegate, userState);
+        }
+    }
+    
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
+    [System.ServiceModel.ServiceContractAttribute(ConfigurationName="Service.IVolumeMeta")]
+    public interface IVolumeMeta {
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IVolumeMeta/GetScale", ReplyAction="http://tempuri.org/IVolumeMeta/GetScaleResponse")]
+        WebAnnotationModel.Service.Scale GetScale();
+        
+        [System.ServiceModel.OperationContractAttribute(AsyncPattern=true, Action="http://tempuri.org/IVolumeMeta/GetScale", ReplyAction="http://tempuri.org/IVolumeMeta/GetScaleResponse")]
+        System.IAsyncResult BeginGetScale(System.AsyncCallback callback, object asyncState);
+        
+        WebAnnotationModel.Service.Scale EndGetScale(System.IAsyncResult result);
+    }
+    
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
+    public interface IVolumeMetaChannel : WebAnnotationModel.Service.IVolumeMeta, System.ServiceModel.IClientChannel {
+    }
+    
+    [System.Diagnostics.DebuggerStepThroughAttribute()]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
+    public partial class GetScaleCompletedEventArgs : System.ComponentModel.AsyncCompletedEventArgs {
+        
+        private object[] results;
+        
+        public GetScaleCompletedEventArgs(object[] results, System.Exception exception, bool cancelled, object userState) : 
+                base(exception, cancelled, userState) {
+            this.results = results;
+        }
+        
+        public WebAnnotationModel.Service.Scale Result {
+            get {
+                base.RaiseExceptionIfNecessary();
+                return ((WebAnnotationModel.Service.Scale)(this.results[0]));
+            }
+        }
+    }
+    
+    [System.Diagnostics.DebuggerStepThroughAttribute()]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
+    public partial class VolumeMetaClient : System.ServiceModel.ClientBase<WebAnnotationModel.Service.IVolumeMeta>, WebAnnotationModel.Service.IVolumeMeta {
+        
+        private BeginOperationDelegate onBeginGetScaleDelegate;
+        
+        private EndOperationDelegate onEndGetScaleDelegate;
+        
+        private System.Threading.SendOrPostCallback onGetScaleCompletedDelegate;
+        
+        public VolumeMetaClient() {
+        }
+        
+        public VolumeMetaClient(string endpointConfigurationName) : 
+                base(endpointConfigurationName) {
+        }
+        
+        public VolumeMetaClient(string endpointConfigurationName, string remoteAddress) : 
+                base(endpointConfigurationName, remoteAddress) {
+        }
+        
+        public VolumeMetaClient(string endpointConfigurationName, System.ServiceModel.EndpointAddress remoteAddress) : 
+                base(endpointConfigurationName, remoteAddress) {
+        }
+        
+        public VolumeMetaClient(System.ServiceModel.Channels.Binding binding, System.ServiceModel.EndpointAddress remoteAddress) : 
+                base(binding, remoteAddress) {
+        }
+        
+        public event System.EventHandler<GetScaleCompletedEventArgs> GetScaleCompleted;
+        
+        public WebAnnotationModel.Service.Scale GetScale() {
+            return base.Channel.GetScale();
+        }
+        
+        [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
+        public System.IAsyncResult BeginGetScale(System.AsyncCallback callback, object asyncState) {
+            return base.Channel.BeginGetScale(callback, asyncState);
+        }
+        
+        [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
+        public WebAnnotationModel.Service.Scale EndGetScale(System.IAsyncResult result) {
+            return base.Channel.EndGetScale(result);
+        }
+        
+        private System.IAsyncResult OnBeginGetScale(object[] inValues, System.AsyncCallback callback, object asyncState) {
+            return this.BeginGetScale(callback, asyncState);
+        }
+        
+        private object[] OnEndGetScale(System.IAsyncResult result) {
+            WebAnnotationModel.Service.Scale retVal = this.EndGetScale(result);
+            return new object[] {
+                    retVal};
+        }
+        
+        private void OnGetScaleCompleted(object state) {
+            if ((this.GetScaleCompleted != null)) {
+                InvokeAsyncCompletedEventArgs e = ((InvokeAsyncCompletedEventArgs)(state));
+                this.GetScaleCompleted(this, new GetScaleCompletedEventArgs(e.Results, e.Error, e.Cancelled, e.UserState));
+            }
+        }
+        
+        public void GetScaleAsync() {
+            this.GetScaleAsync(null);
+        }
+        
+        public void GetScaleAsync(object userState) {
+            if ((this.onBeginGetScaleDelegate == null)) {
+                this.onBeginGetScaleDelegate = new BeginOperationDelegate(this.OnBeginGetScale);
+            }
+            if ((this.onEndGetScaleDelegate == null)) {
+                this.onEndGetScaleDelegate = new EndOperationDelegate(this.OnEndGetScale);
+            }
+            if ((this.onGetScaleCompletedDelegate == null)) {
+                this.onGetScaleCompletedDelegate = new System.Threading.SendOrPostCallback(this.OnGetScaleCompleted);
+            }
+            base.InvokeAsync(this.onBeginGetScaleDelegate, null, this.onEndGetScaleDelegate, this.onGetScaleCompletedDelegate, userState);
         }
     }
     

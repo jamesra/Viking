@@ -21,14 +21,14 @@
     <MetadataSource Address="https://webdev.connectomes.utah.edu/RC1Test/Annotation/Service.svc/mex" Protocol="mex" SourceId="1" />
   </MetadataSources>
   <Metadata>
-    <MetadataFile FileName="service2.wsdl" MetadataType="Wsdl" ID="34ae6e30-9d67-4d07-b965-40a58935d16d" SourceId="1" SourceUrl="https://webdev.connectomes.utah.edu/RC1Test/Annotation/Service.svc/mex" />
-    <MetadataFile FileName="service31.xsd" MetadataType="Schema" ID="9e6ea054-bb33-427f-a682-a95de4bdde28" SourceId="1" SourceUrl="https://webdev.connectomes.utah.edu/RC1Test/Annotation/Service.svc/mex" />
-    <MetadataFile FileName="service32.xsd" MetadataType="Schema" ID="9d5b35ce-5300-4d32-b53d-b46e66de63fd" SourceId="1" SourceUrl="https://webdev.connectomes.utah.edu/RC1Test/Annotation/Service.svc/mex" />
-    <MetadataFile FileName="Annotation11.xsd" MetadataType="Schema" ID="50b91b6e-3a9f-4aeb-a158-5155de6bfc8c" SourceId="1" SourceUrl="https://webdev.connectomes.utah.edu/RC1Test/Annotation/Service.svc/mex" />
-    <MetadataFile FileName="Arrays11.xsd" MetadataType="Schema" ID="dfcf4caa-3276-40a1-82f4-22a556f2822c" SourceId="1" SourceUrl="https://webdev.connectomes.utah.edu/RC1Test/Annotation/Service.svc/mex" />
-    <MetadataFile FileName="System.Data.Entity.Spatial.xsd" MetadataType="Schema" ID="9d7be908-7bea-4f49-bd33-802f30d8719f" SourceId="1" SourceUrl="https://webdev.connectomes.utah.edu/RC1Test/Annotation/Service.svc/mex" />
-    <MetadataFile FileName="service33.xsd" MetadataType="Schema" ID="bed21d1b-eaa8-4387-8c03-d00c1e2aa57b" SourceId="1" SourceUrl="https://webdev.connectomes.utah.edu/RC1Test/Annotation/Service.svc/mex" />
-    <MetadataFile FileName="Annotation.Service.GraphClasses11.xsd" MetadataType="Schema" ID="02398a5f-405f-4b54-8823-2f5b0d126d97" SourceId="1" SourceUrl="https://webdev.connectomes.utah.edu/RC1Test/Annotation/Service.svc/mex" />
+    <MetadataFile FileName="service2.wsdl" MetadataType="Wsdl" ID="6668c6bb-bf14-4dda-bcb8-e57944257c5f" SourceId="1" SourceUrl="https://webdev.connectomes.utah.edu/RC1Test/Annotation/Service.svc/mex" />
+    <MetadataFile FileName="service31.xsd" MetadataType="Schema" ID="7d88473f-0a8f-4e97-89a1-31a80db29d26" SourceId="1" SourceUrl="https://webdev.connectomes.utah.edu/RC1Test/Annotation/Service.svc/mex" />
+    <MetadataFile FileName="service32.xsd" MetadataType="Schema" ID="aa389e9a-3461-442b-b0c1-70e004d4dee4" SourceId="1" SourceUrl="https://webdev.connectomes.utah.edu/RC1Test/Annotation/Service.svc/mex" />
+    <MetadataFile FileName="Annotation11.xsd" MetadataType="Schema" ID="c36ac761-a9aa-49ae-9900-1360facad681" SourceId="1" SourceUrl="https://webdev.connectomes.utah.edu/RC1Test/Annotation/Service.svc/mex" />
+    <MetadataFile FileName="Arrays11.xsd" MetadataType="Schema" ID="9baef066-6696-475e-a593-3e8b8da1a1cf" SourceId="1" SourceUrl="https://webdev.connectomes.utah.edu/RC1Test/Annotation/Service.svc/mex" />
+    <MetadataFile FileName="System.Data.Entity.Spatial.xsd" MetadataType="Schema" ID="1ad092b3-63cf-48c5-9ddf-ee169f77c43e" SourceId="1" SourceUrl="https://webdev.connectomes.utah.edu/RC1Test/Annotation/Service.svc/mex" />
+    <MetadataFile FileName="service33.xsd" MetadataType="Schema" ID="98734e00-4e82-4de8-846c-9a416344b3ce" SourceId="1" SourceUrl="https://webdev.connectomes.utah.edu/RC1Test/Annotation/Service.svc/mex" />
+    <MetadataFile FileName="Annotation.Service.GraphClasses11.xsd" MetadataType="Schema" ID="e697a861-d2ce-437b-9a90-55d420fbc299" SourceId="1" SourceUrl="https://webdev.connectomes.utah.edu/RC1Test/Annotation/Service.svc/mex" />
   </Metadata>
   <Extensions>
     <ExtensionFile FileName="configuration91.svcinfo" Name="configuration91.svcinfo" />
