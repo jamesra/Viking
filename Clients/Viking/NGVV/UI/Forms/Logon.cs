@@ -579,7 +579,7 @@ namespace Viking.UI.Forms
         {
             string NewURL = URL;
 
-            if (!NewURL.EndsWith(".vikingxml"))
+            if (!NewURL.ToLower().EndsWith(".vikingxml"))
             {
                 if (NewURL.EndsWith("/") == false)
                     NewURL = NewURL + '/';

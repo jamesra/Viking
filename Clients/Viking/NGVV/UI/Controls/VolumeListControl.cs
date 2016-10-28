@@ -116,7 +116,7 @@ namespace Viking.UI.Controls
             string OCPServerURL = listServers.SelectedItem.ToString();
 
             this.Cursor = Cursors.WaitCursor;
-            string[] volumes = Viking.Common.OCPVolumes.ReadServer(new Uri(OCPServerURL + "public_tokens/"));
+            string[] volumes = Viking.Common.OCPVolumes.ReadServer(new Uri(OCPServerURL + "public_tokens"));
             this.Cursor = Cursors.Default;
 
             foreach(string v in volumes)
