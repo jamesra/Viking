@@ -5,27 +5,26 @@ using System.Text;
 
 namespace GraphLib
 {
-    public class Node<KEY, EDGETYPE> : IComparer<Node<KEY, EDGETYPE>>, IComparable<Node<KEY, EDGETYPE>>
+    public class Node<KEY, EDGETYPE> : IComparer<Node<KEY, EDGETYPE>>, IComparable<Node<KEY, EDGETYPE>>, IEquatable<Node<KEY, EDGETYPE>>
         where KEY : IComparable<KEY>, IEquatable<KEY>
         where EDGETYPE : Edge<KEY>
     {
-        public KEY Key; 
+        public readonly KEY Key; 
 
         /// <summary>
         /// Keys are the ID of the other node in the edge, or our iD if it is a circular reference
         /// </summary>
-        public SortedDictionary<KEY, List<EDGETYPE>> Edges = new SortedDictionary<KEY, List<EDGETYPE>>();
+        public SortedDictionary<KEY, SortedSet<EDGETYPE>> Edges = new SortedDictionary<KEY, SortedSet<EDGETYPE>>();
 
         public Node(KEY k)
         {
             this.Key = k;
         }
 
-        public void AddEdge(EDGETYPE Link)
+        internal void AddEdge(EDGETYPE Link)
         { 
-            
             KEY PartnerKey = Link.SourceNodeKey;
-            if (Link.SourceNodeKey.CompareTo(Link.TargetNodeKey) == 0)
+            if (Link.IsLoop)
             {
                 //Circular reference, just proceed
             }
@@ -34,21 +33,51 @@ namespace GraphLib
                 PartnerKey = Link.TargetNodeKey;
             }
 
-            List<EDGETYPE> edgeList = null; 
+            SortedSet<EDGETYPE> edgeList = null; 
             if( Edges.ContainsKey(PartnerKey))
             {
                 edgeList = Edges[PartnerKey]; 
             }
             else
             {
-                edgeList = new List<EDGETYPE>();
+                edgeList = new SortedSet<EDGETYPE>();
                 Edges[PartnerKey] = edgeList; 
             }
                 
-            edgeList.Add(Link); 
-            
+            edgeList.Add(Link);  
         }
 
+        internal void RemoveEdge(KEY other)
+        {
+            SortedSet<EDGETYPE> edgeList = null;
+            if (Edges.ContainsKey(other))
+            {
+                Edges.Remove(other);
+            }
+        }
+
+        internal void RemoveEdge(EDGETYPE Link)
+        {
+            KEY PartnerKey = Link.SourceNodeKey;
+            if (Link.IsLoop)
+            {
+                //Circular reference, just proceed
+            }
+            else if (Link.SourceNodeKey.CompareTo(this.Key) == 0)
+            {
+                PartnerKey = Link.TargetNodeKey;
+            }
+
+            SortedSet<EDGETYPE> edgeList = null;
+            if (Edges.ContainsKey(PartnerKey))
+            {
+                edgeList = Edges[PartnerKey];
+                edgeList.Remove(Link);
+
+                if (edgeList.Count == 0)
+                    Edges.Remove(PartnerKey);
+            }
+        }
 
         public int Compare(Node<KEY, EDGETYPE> x, Node<KEY, EDGETYPE> y)
         {
@@ -59,5 +88,57 @@ namespace GraphLib
         {
             return this.Key.CompareTo(other.Key);
         }
+
+        public override bool Equals(object other)
+        {
+            if(other as Node<KEY, EDGETYPE> != null)
+            {
+                return this.Key.Equals(((Node<KEY, EDGETYPE>)other).Key);
+            }
+            return base.Equals(other);
+        }
+
+        public bool Equals(Node<KEY, EDGETYPE> other)
+        {
+            if (object.ReferenceEquals(this, other))
+                return true;
+
+            if ((object)other == null)
+                return false;
+
+            return this.Key.Equals(other.Key);
+        }
+
+        public override int GetHashCode()
+        {
+            return this.Key.GetHashCode();
+        }
+
+        public static bool operator ==(Node<KEY, EDGETYPE> A, Node<KEY, EDGETYPE> B)
+        {
+            if (System.Object.ReferenceEquals(A, B))
+            {
+                return true;
+            }
+
+            if ((object)A != null)
+                return A.Equals(B);
+
+            return false;
+        }
+
+        public static bool operator !=(Node<KEY, EDGETYPE> A, Node<KEY, EDGETYPE> B)
+        {
+            if (System.Object.ReferenceEquals(A, B))
+            {
+                return false;
+            }
+
+            if ((object)A != null)
+                return !A.Equals(B);
+
+            return true;
+        }
+
     }
 }

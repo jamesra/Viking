@@ -55,6 +55,10 @@ namespace GraphLib
                 return null;
             else if (linked_Keys.Count == 1)
             {
+                //Is the edge directional?
+                if (false == CanTravelPath(Origin, origin_node.Edges[linked_Keys.First()]))
+                    return null;
+
                 //Optimization, avoids copying the testedNodes set if there is only one path
                 IList<KEY> result =  RecursePath(ref testedNodes, graph, linked_Keys.First(), Destination);
                 if (result == null)
@@ -68,6 +72,10 @@ namespace GraphLib
                 List<IList<KEY>> listPotentialPaths = new List<IList<KEY>>(linked_Keys.Count);
                 foreach (KEY linked_Key in linked_Keys)
                 {
+                    // Is the edge directional ?
+                    if (false == CanTravelPath(Origin, origin_node.Edges[linked_Key]))
+                        continue;
+
                     SortedSet<KEY> testedNodesCopy = new SortedSet<KEY>(testedNodes);
                     IList<KEY> result = RecursePath(ref testedNodesCopy, graph, linked_Key, Destination);
                     if (result == null)
@@ -86,6 +94,41 @@ namespace GraphLib
                 path.AddRange(shortestPath);
                 return path;
             } 
+        }
+
+        /// <summary>
+        /// Some edges are direction.  This test checks if we can travel an edge going from the node key
+        /// </summary>
+        /// <param name="Source"></param>
+        /// <param name="Destination"></param>
+        /// <param name="edge"></param>
+        protected static bool CanTravelPath(KEY Source, EDGETYPE edge)
+        {
+            if(edge.Directional)
+            {
+                return edge.SourceNodeKey.Equals(Source);
+            }
+            else
+            {
+                return edge.SourceNodeKey.Equals(Source) || edge.TargetNodeKey.Equals(Source);
+            }
+        }
+
+        /// <summary>
+        /// Some edges are direction.  This test checks if we can travel an edge going from the node key
+        /// </summary>
+        /// <param name="Source"></param>
+        /// <param name="Destination"></param>
+        /// <param name="edge"></param>
+        protected static bool CanTravelPath(KEY Source, ICollection<EDGETYPE> edges)
+        {
+            foreach (EDGETYPE edge in edges)
+            {
+                if (CanTravelPath(Source, edge))
+                    return true;
+            }
+
+            return false;
         }
     }
 }

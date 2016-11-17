@@ -52,6 +52,7 @@
     </Otherwise>
   </Choose>
   <ItemGroup>
+    <Compile Include="AddRemoveTests.cs" />
     <Compile Include="PathTest.cs" />
     <Compile Include="SimpleGraphTypes.cs" />
     <Compile Include="SubgraphTest.cs" />
