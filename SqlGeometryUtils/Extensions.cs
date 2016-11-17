@@ -224,7 +224,7 @@ namespace SqlGeometryUtils
             GridVector2[] points = new GridVector2[geometry.PointCount.Value];
             for (int i = 0; i < points.Length; i++)
             {
-                System.Data.Entity.Spatial.DbGeometry point = geometry.PointAt(i);
+                System.Data.Entity.Spatial.DbGeometry point = geometry.PointAt(i+1);
                 points[i] = new GridVector2(point.XCoordinate.Value, point.YCoordinate.Value);
             }
 
@@ -312,6 +312,19 @@ namespace SqlGeometryUtils
         {
             GridVector2 center = geometry.Centroid();
             return SqlGeometry.STGeomFromText(TranslateString(geometry, offset - center).ToSqlChars(), geometry.STSrid.Value);
+        }
+
+        /// <summary>
+        /// Scale the geometry object using the scale object
+        /// </summary>
+        /// <param name="geometry"></param>
+        /// <param name="scale"></param>
+        /// <returns></returns>
+        public static SqlGeometry Scale(this SqlGeometry geometry, Scale scale)
+        {
+            GridVector2[] points = geometry.ToPoints();
+            GridVector2[] scaled_p = points.Select(p => new GridVector2(p.X * scale.X.Value, p.Y * scale.Y.Value)).ToArray();
+            return ToGeometry(geometry.STGeometryType(), scaled_p);
         }
 
         /// <summary>
