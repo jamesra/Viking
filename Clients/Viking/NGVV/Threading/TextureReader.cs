@@ -511,10 +511,19 @@ namespace Viking
 
                     this.SetTexture(null);
                 }
+                catch (ArgumentException e)
+                {
+                    //Very rare, usually the result of a corrupt file
+                    Trace.WriteLine("Unanticipated Argument Exception loading texture: " + response.ResponseUri.ToString(), "TextureUse");
+                    Trace.WriteLine(e.Message, "TextureUse");
+
+                    this.TextureNotFound = true;
+                    this.SetTexture(null);
+                }
                 catch (Exception e)
                 {
-                    //Trace.WriteLine("Unanticipated exception loading texture: " + requestState.request.RequestUri.ToString(), "TextureUse");
-                    //Trace.WriteLine(e.Message, "TextureUse");
+                    Trace.WriteLine("Unanticipated Exception loading texture: " + response.ResponseUri.ToString(), "TextureUse");
+                    Trace.WriteLine(e.Message, "TextureUse");
 
                     this.SetTexture(null);
                     throw e; 
