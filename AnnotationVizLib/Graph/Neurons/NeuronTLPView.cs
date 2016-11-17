@@ -78,7 +78,7 @@ namespace AnnotationVizLib
             try
             {
                 tlpedge = this.addEdge(edge.SourceNodeKey, edge.TargetNodeKey);
-                if(edge.Bidirectional && !edge.IsLoop)
+                if(!edge.Directional && !edge.IsLoop)
                 {
                     tlp_reverse_edge = this.addEdge(edge.TargetNodeKey, edge.SourceNodeKey);
                 }
@@ -131,7 +131,7 @@ namespace AnnotationVizLib
             EdgeAttribs.Add("edgeType", edge.SynapseType);
             EdgeAttribs.Add("LinkedStructures", LinkedStructures(edge));
             EdgeAttribs.Add("IsLoop", edge.IsLoop.ToString());
-            EdgeAttribs.Add("Bidirectional", edge.Bidirectional.ToString());
+            EdgeAttribs.Add("Directional", edge.Directional.ToString());
 
             return EdgeAttribs;
         }

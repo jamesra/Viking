@@ -141,6 +141,53 @@
       </wsp:All>
     </wsp:ExactlyOne>
   </wsp:Policy>
+  <wsp:Policy wsu:Id="Annotation.Service.Interfaces.IVolumeMeta-Binary_policy">
+    <wsp:ExactlyOne>
+      <wsp:All>
+        <msb:BinaryEncoding xmlns:msb="http://schemas.microsoft.com/ws/06/2004/mspolicy/netbinary1" />
+        <sp:TransportBinding xmlns:sp="http://schemas.xmlsoap.org/ws/2005/07/securitypolicy">
+          <wsp:Policy>
+            <sp:TransportToken>
+              <wsp:Policy>
+                <sp:HttpsToken RequireClientCertificate="false" />
+              </wsp:Policy>
+            </sp:TransportToken>
+            <sp:AlgorithmSuite>
+              <wsp:Policy>
+                <sp:Basic256 />
+              </wsp:Policy>
+            </sp:AlgorithmSuite>
+            <sp:Layout>
+              <wsp:Policy>
+                <sp:Strict />
+              </wsp:Policy>
+            </sp:Layout>
+            <sp:IncludeTimestamp />
+          </wsp:Policy>
+        </sp:TransportBinding>
+        <sp:SignedSupportingTokens xmlns:sp="http://schemas.xmlsoap.org/ws/2005/07/securitypolicy">
+          <wsp:Policy>
+            <sp:UsernameToken sp:IncludeToken="http://schemas.xmlsoap.org/ws/2005/07/securitypolicy/IncludeToken/AlwaysToRecipient">
+              <wsp:Policy>
+                <sp:WssUsernameToken10 />
+              </wsp:Policy>
+            </sp:UsernameToken>
+          </wsp:Policy>
+        </sp:SignedSupportingTokens>
+        <sp:Wss11 xmlns:sp="http://schemas.xmlsoap.org/ws/2005/07/securitypolicy">
+          <wsp:Policy />
+        </sp:Wss11>
+        <sp:Trust10 xmlns:sp="http://schemas.xmlsoap.org/ws/2005/07/securitypolicy">
+          <wsp:Policy>
+            <sp:MustSupportIssuedTokens />
+            <sp:RequireClientEntropy />
+            <sp:RequireServerEntropy />
+          </wsp:Policy>
+        </sp:Trust10>
+        <wsaw:UsingAddressing />
+      </wsp:All>
+    </wsp:ExactlyOne>
+  </wsp:Policy>
   <wsp:Policy wsu:Id="Annotation.Service.Interfaces.ICircuit-Binary_policy">
     <wsp:ExactlyOne>
       <wsp:All>
@@ -228,6 +275,18 @@
   </wsdl:message>
   <wsdl:message name="IAnnotateStructureTypes_UpdateStructureTypes_OutputMessage">
     <wsdl:part name="parameters" element="tns:UpdateStructureTypesResponse" />
+  </wsdl:message>
+  <wsdl:message name="IAnnotateStructureTypes_CreatePermittedStructureLink_InputMessage">
+    <wsdl:part name="parameters" element="tns:CreatePermittedStructureLink" />
+  </wsdl:message>
+  <wsdl:message name="IAnnotateStructureTypes_CreatePermittedStructureLink_OutputMessage">
+    <wsdl:part name="parameters" element="tns:CreatePermittedStructureLinkResponse" />
+  </wsdl:message>
+  <wsdl:message name="IAnnotateStructureTypes_UpdatePermittedStructureLinks_InputMessage">
+    <wsdl:part name="parameters" element="tns:UpdatePermittedStructureLinks" />
+  </wsdl:message>
+  <wsdl:message name="IAnnotateStructureTypes_UpdatePermittedStructureLinks_OutputMessage">
+    <wsdl:part name="parameters" element="tns:UpdatePermittedStructureLinksResponse" />
   </wsdl:message>
   <wsdl:message name="IAnnotateStructureTypes_TestMethod_InputMessage">
     <wsdl:part name="parameters" element="tns:TestMethod" />
@@ -463,6 +522,12 @@
   <wsdl:message name="IAnnotateLocations_GetLocationChangeLog_OutputMessage">
     <wsdl:part name="parameters" element="tns:GetLocationChangeLogResponse" />
   </wsdl:message>
+  <wsdl:message name="IVolumeMeta_GetScale_InputMessage">
+    <wsdl:part name="parameters" element="tns:GetScale" />
+  </wsdl:message>
+  <wsdl:message name="IVolumeMeta_GetScale_OutputMessage">
+    <wsdl:part name="parameters" element="tns:GetScaleResponse" />
+  </wsdl:message>
   <wsdl:message name="ICircuit_getGraph_InputMessage">
     <wsdl:part name="parameters" element="tns:getGraph" />
   </wsdl:message>
@@ -519,6 +584,14 @@
     <wsdl:operation name="UpdateStructureTypes">
       <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateStructureTypes/UpdateStructureTypes" message="tns:IAnnotateStructureTypes_UpdateStructureTypes_InputMessage" />
       <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateStructureTypes/UpdateStructureTypesResponse" message="tns:IAnnotateStructureTypes_UpdateStructureTypes_OutputMessage" />
+    </wsdl:operation>
+    <wsdl:operation name="CreatePermittedStructureLink">
+      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateStructureTypes/CreatePermittedStructureLink" message="tns:IAnnotateStructureTypes_CreatePermittedStructureLink_InputMessage" />
+      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateStructureTypes/CreatePermittedStructureLinkResponse" message="tns:IAnnotateStructureTypes_CreatePermittedStructureLink_OutputMessage" />
+    </wsdl:operation>
+    <wsdl:operation name="UpdatePermittedStructureLinks">
+      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateStructureTypes/UpdatePermittedStructureLinks" message="tns:IAnnotateStructureTypes_UpdatePermittedStructureLinks_InputMessage" />
+      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateStructureTypes/UpdatePermittedStructureLinksResponse" message="tns:IAnnotateStructureTypes_UpdatePermittedStructureLinks_OutputMessage" />
     </wsdl:operation>
     <wsdl:operation name="TestMethod">
       <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateStructureTypes/TestMethod" message="tns:IAnnotateStructureTypes_TestMethod_InputMessage" />
@@ -681,6 +754,12 @@
       <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateLocations/GetLocationChangeLogResponse" message="tns:IAnnotateLocations_GetLocationChangeLog_OutputMessage" />
     </wsdl:operation>
   </wsdl:portType>
+  <wsdl:portType name="IVolumeMeta">
+    <wsdl:operation name="GetScale">
+      <wsdl:input wsaw:Action="http://tempuri.org/IVolumeMeta/GetScale" message="tns:IVolumeMeta_GetScale_InputMessage" />
+      <wsdl:output wsaw:Action="http://tempuri.org/IVolumeMeta/GetScaleResponse" message="tns:IVolumeMeta_GetScale_OutputMessage" />
+    </wsdl:operation>
+  </wsdl:portType>
   <wsdl:portType name="ICircuit">
     <wsdl:operation name="getGraph">
       <wsdl:input wsaw:Action="http://tempuri.org/ICircuit/getGraph" message="tns:ICircuit_getGraph_InputMessage" />
@@ -748,6 +827,24 @@
     </wsdl:operation>
     <wsdl:operation name="UpdateStructureTypes">
       <soap12:operation soapAction="http://tempuri.org/IAnnotateStructureTypes/UpdateStructureTypes" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="CreatePermittedStructureLink">
+      <soap12:operation soapAction="http://tempuri.org/IAnnotateStructureTypes/CreatePermittedStructureLink" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="UpdatePermittedStructureLinks">
+      <soap12:operation soapAction="http://tempuri.org/IAnnotateStructureTypes/UpdatePermittedStructureLinks" style="document" />
       <wsdl:input>
         <soap12:body use="literal" />
       </wsdl:input>
@@ -1115,6 +1212,19 @@
       </wsdl:output>
     </wsdl:operation>
   </wsdl:binding>
+  <wsdl:binding name="Annotation.Service.Interfaces.IVolumeMeta-Binary" type="tns:IVolumeMeta">
+    <wsp:PolicyReference URI="#Annotation.Service.Interfaces.IVolumeMeta-Binary_policy" />
+    <soap12:binding transport="http://schemas.xmlsoap.org/soap/http" />
+    <wsdl:operation name="GetScale">
+      <soap12:operation soapAction="http://tempuri.org/IVolumeMeta/GetScale" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+  </wsdl:binding>
   <wsdl:binding name="Annotation.Service.Interfaces.ICircuit-Binary" type="tns:ICircuit">
     <wsp:PolicyReference URI="#Annotation.Service.Interfaces.ICircuit-Binary_policy" />
     <soap12:binding transport="http://schemas.xmlsoap.org/soap/http" />
@@ -1187,6 +1297,12 @@
       </wsa10:EndpointReference>
     </wsdl:port>
     <wsdl:port name="Annotation.Service.Interfaces.IAnnotateLocations-Binary" binding="tns:Annotation.Service.Interfaces.IAnnotateLocations-Binary">
+      <soap12:address location="https://webdev.connectomes.utah.edu/RC1Test/Annotation/service.svc" />
+      <wsa10:EndpointReference>
+        <wsa10:Address>https://webdev.connectomes.utah.edu/RC1Test/Annotation/service.svc</wsa10:Address>
+      </wsa10:EndpointReference>
+    </wsdl:port>
+    <wsdl:port name="Annotation.Service.Interfaces.IVolumeMeta-Binary" binding="tns:Annotation.Service.Interfaces.IVolumeMeta-Binary">
       <soap12:address location="https://webdev.connectomes.utah.edu/RC1Test/Annotation/service.svc" />
       <wsa10:EndpointReference>
         <wsa10:Address>https://webdev.connectomes.utah.edu/RC1Test/Annotation/service.svc</wsa10:Address>

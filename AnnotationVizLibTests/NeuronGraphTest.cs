@@ -5,7 +5,7 @@ using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using AnnotationVizLib;
 
-namespace AnnotationUtilsTests
+namespace AnnotationVizLibTests
 {
     [TestClass]
     public class NeuronGraphTest

@@ -12,7 +12,7 @@ namespace AnnotationVizLib
     public class MotifEdge : Edge<string>, IComparer<MotifEdge>, IComparable<MotifEdge>
     {
         public string SynapseType;
-
+        
         /// <summary>
         /// A list of unique values indicating which structures have this type of connection
         /// </summary>
@@ -34,7 +34,7 @@ namespace AnnotationVizLib
         }
 
         public MotifEdge(string SourceKey, string TargetKey, string SynapseType)
-            : base(SourceKey, TargetKey)
+            : base(SourceKey, TargetKey, true)
         {
             this.SynapseType = SynapseType;
         }

@@ -42,6 +42,10 @@
       <HintPath>..\Packages\EntityFramework.6.1.3\lib\net45\EntityFramework.SqlServer.dll</HintPath>
       <Private>True</Private>
     </Reference>
+    <Reference Include="Microsoft.OData.Client, Version=6.15.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\Packages\Microsoft.OData.Client.6.15.0\lib\net40\Microsoft.OData.Client.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="Microsoft.SqlServer.Types, Version=11.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91, processorArchitecture=MSIL">
       <HintPath>..\Packages\Microsoft.SqlServer.Types.11.0.2\lib\net20\Microsoft.SqlServer.Types.dll</HintPath>
       <Private>True</Private>
@@ -73,8 +77,21 @@
     <Compile Include="ColorMapping\ColorMapping.cs" />
     <Compile Include="ColorMapping\StructureColorMap.cs" />
     <Compile Include="Extensions.cs" />
+    <Compile Include="Factories\OData\ODataExtensions.cs" />
+    <Compile Include="Factories\OData\ODataLocationAdapter.cs" />
+    <Compile Include="Factories\OData\ODataLocationExtensions.cs" />
+    <Compile Include="Factories\OData\ODataStructureLinkAdapter.cs" />
+    <Compile Include="Factories\OData\ODataStructureAdapter.cs" />
+    <Compile Include="Factories\OData\ODataStructureTypeAdapter.cs" />
+    <Compile Include="Factories\WCF\WCFLocationAdapter.cs" />
+    <Compile Include="Factories\WCF\WCFLocationExtensions.cs" />
+    <Compile Include="Factories\WCF\WCFStructureLinkAdapter.cs" />
+    <Compile Include="Factories\WCF\WCFStructureAdapter.cs" />
+    <Compile Include="Factories\WCF\WCFStructureTypeAdapter.cs" />
     <Compile Include="Graph\Morphology\MorphologyAlgorithms.cs" />
     <Compile Include="Graph\Morphology\MorphologyJSONView.cs" />
+    <Compile Include="Graph\Morphology\MorphologyNode.cs" />
+    <Compile Include="Factories\WCF\WCFExtensions.cs" />
     <Compile Include="Graph\Motifs\MotifJSONView.cs" />
     <Compile Include="Graph\Motifs\MotifTLPView.cs" />
     <Compile Include="Graph\Neurons\NeuronGMLView.cs" />
@@ -86,11 +103,17 @@
     <Compile Include="Graph\Neurons\NeuronTLPView.cs" />
     <Compile Include="Graph\Morphology\MorphologyTLPView.cs" />
     <Compile Include="Graph\Morphology\MorphologyGraph.cs" />
+    <Compile Include="Interfaces\IAttributes.cs" />
+    <Compile Include="Interfaces\IGeometry.cs" />
+    <Compile Include="Interfaces\ILocation.cs" />
+    <Compile Include="Interfaces\IStructure.cs" />
+    <Compile Include="Interfaces\IStructureLink.cs" />
+    <Compile Include="Interfaces\IStructureType.cs" />
     <Compile Include="SqlServerTypes\Loader.cs" />
     <Compile Include="Utils.cs" />
     <Compile Include="ViewModels\GMLView.cs" />
     <Compile Include="ViewModels\GraphViewEngine.cs" />
-    <Compile Include="Queries.cs" />
+    <Compile Include="Factories\WCF\Queries.cs" />
     <Compile Include="ConnectionFactory.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Service References\AnnotationService\Reference.cs">
@@ -163,6 +186,12 @@
     <None Include="Service References\AnnotationService\AnnotationVizLib.AnnotationService.LocationPositionOnly.datasource">
       <DependentUpon>Reference.svcmap</DependentUpon>
     </None>
+    <None Include="Service References\AnnotationService\AnnotationVizLib.AnnotationService.PermittedStructureLink.datasource">
+      <DependentUpon>Reference.svcmap</DependentUpon>
+    </None>
+    <None Include="Service References\AnnotationService\AnnotationVizLib.AnnotationService.Scale.datasource">
+      <DependentUpon>Reference.svcmap</DependentUpon>
+    </None>
     <None Include="Service References\AnnotationService\AnnotationVizLib.AnnotationService.Structure.datasource">
       <DependentUpon>Reference.svcmap</DependentUpon>
     </None>
@@ -219,6 +248,10 @@
       <Project>{d6f219fc-733b-481f-bf78-d34a7cb893ec}</Project>
       <Name>GraphLib</Name>
     </ProjectReference>
+    <ProjectReference Include="..\ODataClient\ODataClient.csproj">
+      <Project>{9ddb7c0e-1f00-4efc-8d11-4ba6a00fb9b4}</Project>
+      <Name>ODataClient</Name>
+    </ProjectReference>
     <ProjectReference Include="..\RTree\RTree.csproj">
       <Project>{4085ba67-60d7-4679-886e-457aaf37ec7b}</Project>
       <Name>RTree</Name>
@@ -230,7 +263,7 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Config\" />
-    <Folder Include="Distance\" />
+    <Folder Include="Factories\Distance\" />
   </ItemGroup>
   <ItemGroup>
     <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />

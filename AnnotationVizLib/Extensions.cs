@@ -6,23 +6,44 @@ using AnnotationVizLib.AnnotationService;
 
 namespace AnnotationVizLib
 {
-    static class Extensions
+    public static class AttributeExtensions
     {
-        public static List<ObjAttribute> Attributes(this Location loc)
+        /// <summary>
+        /// Converts attributes to a string and caches the results.  Not caching the results was causing performance issues.
+        /// </summary>
+        /// <returns></returns>
+        public static string AttributesToString(this IDictionary<string, object> dict)
         {
-            return ObjAttribute.Parse(loc.AttributesXml);
-        }
+            StringBuilder sb = new StringBuilder();
+            List<string> keys = dict.Keys.ToList();
+            keys.Sort();
+             
+            foreach (string key in keys)
+            { 
+                sb.AppendFormat(" {0} : {1}", key, dict[key].ToString());
+            }
 
-        public static bool IsVericosityCap(this Location loc)
-        {
-            List<ObjAttribute> attribs = loc.Attributes();
-            return attribs.Any(a => a.Name == "Vericosity Cap");
+            return sb.ToString();
         }
+    }
 
-        public static bool IsUntraceable(this Location loc)
+    public static class ODataExtensions
+    {
+        public static Geometry.Scale ToGeometryScale(this ODataClient.Geometry.Scale scale)
         {
-            List<ObjAttribute> attribs = loc.Attributes();
-            return attribs.Any(a => a.Name == "Untraceable");
+            return new Geometry.Scale(new Geometry.AxisUnits(scale.X.Value, scale.X.Units),
+                                      new Geometry.AxisUnits(scale.Y.Value, scale.Y.Units),
+                                      new Geometry.AxisUnits(scale.Z.Value, scale.Z.Units));
+        }
+    }
+
+    public static class WCFExtensions
+    {
+        public static Geometry.Scale ToGeometryScale(this AnnotationVizLib.AnnotationService.Scale scale)
+        {
+            return new Geometry.Scale(new Geometry.AxisUnits(scale.X.Value, scale.X.Units),
+                                      new Geometry.AxisUnits(scale.Y.Value, scale.Y.Units),
+                                      new Geometry.AxisUnits(scale.Z.Value, scale.Z.Units));
         }
     }
 }

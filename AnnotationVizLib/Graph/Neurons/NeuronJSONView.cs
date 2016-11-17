@@ -55,7 +55,7 @@ namespace AnnotationVizLib
                     TargetStructureID = TargetNode.Key,
                     Label = KeyString,
                     Type = edge.SynapseType,
-                    Bidirectional = edge.Bidirectional
+                    Directional = edge.Directional
                 });
 
                 edgeCount++; 

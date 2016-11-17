@@ -4,8 +4,10 @@ using System.Collections.Concurrent;
 using System.Linq;
 using System.Text;
 using GraphLib;
-using AnnotationVizLib.AnnotationService;
 using System.Diagnostics;
+using SqlGeometryUtils;
+using AnnotationVizLib.AnnotationService;
+using Geometry;
 
 namespace AnnotationVizLib
 { 
@@ -22,16 +24,32 @@ namespace AnnotationVizLib
 
     public class MorphologyEdge : Edge<ulong>
     {
-        public MorphologyEdge(ulong A, ulong B)
-            : base(A, B)
+        public override bool Directional
         {
-            Debug.Assert(A < B);
+            get
+            {
+                return false;
+            }
+        }
+
+        public MorphologyEdge(ulong A, ulong B)
+            : base(A < B ? A : B, A < B ? B : A, false)
+        {
         }
 
         public MorphologyEdge(long A, long B)
-            : base((ulong)A, (ulong)B)
+            : this((ulong)A, (ulong)B)
         {
-            Debug.Assert(A < B);
+        }
+
+        /// <summary>
+        /// Return the other node connected by the edge
+        /// </summary>
+        /// <param name="key"></param>
+        /// <returns></returns>
+        public ulong OtherNode(ulong key)
+        {
+            return SourceNodeKey == key ? TargetNodeKey : SourceNodeKey;
         }
           
         public override string ToString()
@@ -39,31 +57,7 @@ namespace AnnotationVizLib
             return this.SourceNodeKey.ToString() + "-" + this.TargetNodeKey.ToString();
         }    
     }
-
-    public class MorphologyNode : Node<ulong, MorphologyEdge>
-    {
-        //Structure this node represents
-        public Location Location;
-        public MorphologyGraph Graph;
-
-        public MorphologyNode(ulong key, MorphologyGraph parent, Location value)
-            : base(key)
-        {
-            this.Location = value;
-            this.Graph = parent;
-        }
-
-        public MorphologyNode(long key, MorphologyGraph parent, Location value)
-            : this((ulong)key, parent, value)
-        {
-
-        }
-
-        public override string ToString()
-        {
-            return this.Key.ToString() + " : " + Location.ID;
-        }
-    }
+     
 
     public partial class MorphologyGraph : Graph<ulong, MorphologyNode, MorphologyEdge>
     {
@@ -71,145 +65,162 @@ namespace AnnotationVizLib
         /// <summary>
         /// ID of the structure graph, zero for root or StructureID of structure
         /// </summary>
-        public readonly ulong ID = 0;
+        public readonly ulong StructureID = 0;
+
+        public IStructure structure = null;
+
+        public readonly Geometry.Scale scale = null;
+
+        public virtual double SectionThickness
+        {
+            get { return scale.Z.Value; }
+        }
+
+        public IStructureType structureType
+        {
+            get { return structure.Type; }
+        } 
+
         /// <summary>
         /// Map the motif label to the arbitrary id used by TLP
         /// </summary>
         public ConcurrentDictionary<ulong, MorphologyGraph> Subgraphs = new ConcurrentDictionary<ulong, MorphologyGraph>();
 
-        public Structure structure = null;
+        public MorphologyGraph(ulong subgraph_id, Geometry.Scale scale)
+        {
+            this.StructureID = subgraph_id;
+            this.structure = null;
+            this.scale = scale;
+        }
 
-        public StructureType structureType
+        public MorphologyGraph(ulong subgraph_id, Geometry.Scale scale, IStructure structure)
+        {
+            this.StructureID = subgraph_id;
+            this.structure = structure;
+            this.scale = scale;
+        }
+
+        /// <summary>
+        /// Remove the node, for any edges create new links between the remaining nodes
+        /// </summary>
+        /// <param name="key"></param>
+        private SortedSet<MorphologyEdge> EdgesForRemovedNode(ulong key)
+        {
+            //Move all of my edges to the nearest node
+            double min_distance;
+            MorphologyNode node_to_remove = Nodes[key];
+            SortedSet<ulong> other_nodes = new SortedSet<ulong>(node_to_remove.Edges.Keys);
+
+            ulong nearest_id = NearestNode(key, other_nodes, out min_distance);
+
+            other_nodes.Remove(nearest_id); //Do not link nearest_node to itself
+
+            SortedSet<MorphologyEdge> new_edges = new SortedSet<AnnotationVizLib.MorphologyEdge>();
+            foreach (ulong relink_id in other_nodes)
+            {
+                MorphologyEdge new_edge = new AnnotationVizLib.MorphologyEdge(nearest_id, relink_id);
+                new_edges.Add(new_edge);
+            }
+
+            return new_edges;
+        }
+
+        private void RemoveNodePreserveEdges(ulong key)
+        {
+            SortedSet<MorphologyEdge> new_edges = EdgesForRemovedNode(key);
+
+            RemoveNode(key);
+
+            foreach (MorphologyEdge edge in new_edges)
+            {
+                if(this.Edges.ContainsKey(edge) == false)
+                    this.AddEdge(edge);
+            }
+        } 
+
+        public Geometry.GridBox BoundingBox
         {
             get
             {
-                if (structure == null)
-                    return null;
+                GridBox bbox_accumulator = null;
 
-                return Queries.IDToStructureType[this.structure.TypeID];
+                if (this.Nodes.Count > 0)
+                {
+                    bbox_accumulator = this.Nodes.First().Value.BoundingBox;
+
+                    foreach (MorphologyNode node in this.Nodes.Values)
+                    {
+                        bbox_accumulator.Union(node.BoundingBox);
+                    }
+                }              
+                    
+                foreach (MorphologyGraph graph in Subgraphs.Values)
+                {
+                    if (bbox_accumulator == null)
+                        bbox_accumulator = graph.BoundingBox;
+                    else
+                        bbox_accumulator.Union(graph.BoundingBox);
+                }
+
+                return bbox_accumulator;
             }
         }
 
-        private string _AttributesAsString = null; 
+        protected SortedDictionary<ulong, SortedSet<ulong>> BuildEdgeLookup()
+        {
+            SortedDictionary<ulong, SortedSet<ulong>> Links = new SortedDictionary<ulong, SortedSet<ulong>>();
+
+            foreach (MorphologyEdge edge in Edges.Values)
+            {
+                if (!Links.ContainsKey(edge.SourceNodeKey))
+                {
+                    Links[edge.SourceNodeKey] = new SortedSet<ulong>(new ulong[] { edge.TargetNodeKey });
+                }
+                else
+                {
+                    Links[edge.SourceNodeKey].Add(edge.TargetNodeKey);
+                }
+
+                if (!Links.ContainsKey(edge.TargetNodeKey))
+                {
+                    Links[edge.TargetNodeKey] = new SortedSet<ulong>(new ulong[] { edge.SourceNodeKey });
+                }
+                else
+                {
+                    Links[edge.TargetNodeKey].Add(edge.SourceNodeKey);
+                }
+            }
+
+            return Links;
+        }
+
         /// <summary>
-        /// Converts attributes to a string and caches the results.  Not caching the results was causing performance issues.
+        /// Locations with 3 or more edges, branch points in a process
         /// </summary>
         /// <returns></returns>
-        public string AttributesToString()
+        public ulong[] GetBranchPoints()
         {
-            if (_AttributesAsString == null)
-                _AttributesAsString = ObjAttribute.AttributesToString(structure.AttributesXml);
-
-             return _AttributesAsString;
-        }
-
-        public MorphologyGraph(ulong subgraph_id)
-        {
-            this.ID = subgraph_id;
-            this.structure = null;
-        }
-
-        public MorphologyGraph(ulong subgraph_id, Structure structure)
-        {
-            this.ID = subgraph_id;
-            this.structure = structure;
-        } 
-
-        public static MorphologyGraph BuildGraphs(ICollection<long> StructureIDs, bool include_children,  string Endpoint, System.Net.NetworkCredential userCredentials)
-        {
-            ConnectionFactory.SetConnection(Endpoint, userCredentials);
-
-            MorphologyGraph rootGraph = new MorphologyGraph(0);
-            MorphologyForStructures(rootGraph, StructureIDs, include_children);
-
-            return rootGraph;
+            return this.Nodes.Values.Where(n => n.Edges.Count > 2).Select(n => n.Key).ToArray();
         }
 
         /// <summary>
-        /// Add the morphology for the passed structure ID to the provided root graph
+        /// Locations with 1 or fewer links, the tip of a process
         /// </summary>
-        /// <param name="rootGraph"></param>
-        /// <param name="StructureIDs"></param>
-        private static void MorphologyForStructures(MorphologyGraph rootGraph, ICollection<long> StructureIDs, bool include_children)
+        /// <returns></returns>
+        public ulong[] GetTerminals()
         {
-            if (StructureIDs == null)
-                return;
-
-            Structure[] structures = Queries.GetStructuresByIDs(StructureIDs.ToArray(), include_children);
-
-            Queries.PopulateStructureTypes();
-
-            // Get the nodes and build graph for numHops            
-            System.Threading.Tasks.Parallel.ForEach<Structure>(structures, s =>
-            //foreach(Structure s in structures)
-            { 
-                MorphologyGraph graph = MorphologyForStructure(s);
-                if (graph == null)
-                    return;
-                
-                graph.structure = s;
-                rootGraph.Subgraphs.TryAdd((ulong)s.ID, graph);
-
-                if (include_children)
-                { 
-                    MorphologyForStructures(graph, s.ChildIDs, include_children); 
-                }
-            }
-            );
-        } 
-
-        private static MorphologyGraph MorphologyForStructure(Structure s)
-        {
-            MorphologyGraph root_graph = null; 
-
-            using (AnnotateLocationsClient proxy = ConnectionFactory.CreateLocationsClient())
-            {
-                Location[] struct_locations = proxy.GetLocationsForStructure((long)s.ID);                
-
-                root_graph = BuildGraphFromLocations(s, struct_locations);
-            }
-
-            return root_graph;
+            return this.Nodes.Values.Where(n => n.Edges.Count == 1 && !n.Location.IsVericosityCap).Select(n => n.Key).ToArray();
         }
 
-        private static MorphologyGraph BuildGraphFromLocations(Structure s, Location[] locations)
+        /// <summary>
+        /// Locations with 2 links, the middle of a process
+        /// </summary>
+        /// <returns></returns>
+        public ulong[] GetProcess()
         {
-            if(locations.Length <= 0)
-            {
-                return null; 
-            }
-
-            MorphologyGraph graph = new MorphologyGraph((ulong)locations[0].ParentID, s);
-
-            foreach(Location loc in locations)
-            {
-                graph.AddNode(new MorphologyNode((ulong)loc.ID, graph, loc));
-            }
-
-            foreach (Location loc in locations)
-            {
-                AddLocationEdges(graph, loc);
-            }
-
-            return graph;
+            return this.Nodes.Values.Where(n => n.Edges.Count == 2).Select(n => n.Key).ToArray();
         }
 
-        private static void AddLocationEdges(MorphologyGraph graph, Location Loc)
-        {
-            if (Loc.Links == null)
-                return; 
-
-            foreach(long loc_link in Loc.Links)
-            {
-                //Only add the links with ID's less than ours to prevent duplicate links in the graph
-                if (loc_link < Loc.ID)
-                {
-                    graph.AddEdge(new MorphologyEdge(loc_link, Loc.ID));
-                }
-            }
-
-            return;
-        }
     }
 }
 

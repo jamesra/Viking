@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using SqlGeometryUtils;
+
 using System.Drawing;
 
 
@@ -28,24 +30,24 @@ namespace AnnotationVizLib
         /// </summary>
         /// <param name="structure"></param>
         /// <returns></returns>
-        public virtual System.Drawing.Color GetColor(AnnotationService.Structure structure)
+        public virtual System.Drawing.Color GetColor(IStructure structure)
         {
             if (structure == null)
                 return System.Drawing.Color.Gray;
 
             if (structure_color_map != null)
             {
-                if (this.structure_color_map.ContainsKey(structure.ID))
+                if (this.structure_color_map.ContainsKey((long)structure.ID))
                 {
-                    return structure_color_map.GetColor(structure.ID);
+                    return structure_color_map.GetColor((long)structure.ID);
                 }
             }
 
             if (structureType_color_map != null)
             {
-                if (this.structureType_color_map.ContainsKey(structure.TypeID))
+                if (this.structureType_color_map.ContainsKey((long)structure.TypeID))
                 {
-                    return structureType_color_map.GetColor(structure.TypeID);
+                    return structureType_color_map.GetColor((long)structure.TypeID);
                 }
             }
 
@@ -98,9 +100,18 @@ namespace AnnotationVizLib
             if (LocationColorMap == null)
                 return Color.Gray;
 
-            IEnumerable<MorphologyNode> nodes = graph.Nodes.Values.Where(v => LocationColorMap.SectionNumbers.Contains((int)v.Location.VolumePosition.Z));
+            IEnumerable<MorphologyNode> nodes = graph.Nodes.Values.Where(v => LocationColorMap.SectionNumbers.Contains((int)v.Location.UnscaledZ));
 
-            List<AnnotationService.AnnotationPoint> listPoints = nodes.Select<MorphologyNode, AnnotationService.AnnotationPoint>(n => n.Location.VolumePosition).ToList();
+            List<AnnotationService.AnnotationPoint> listPoints = nodes.Select<MorphologyNode, AnnotationService.AnnotationPoint>(n =>
+            {
+                Geometry.GridVector2 p = n.VolumeShape.Centroid();
+                
+                var ap = new AnnotationService.AnnotationPoint();
+                ap.X = p.X;
+                ap.Y = p.Y;
+                ap.Z = n.UnscaledZ;
+                return ap;
+            }).ToList();
             return GetStructureColorFromMorphology(listPoints);
         } 
     }

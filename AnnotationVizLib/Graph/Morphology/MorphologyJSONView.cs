@@ -42,13 +42,13 @@ namespace AnnotationVizLib
         static private JSONStructureMorphology MorphologyGraphToJSONStructureMorphology(MorphologyGraph graph)
         {
             JSONStructureMorphology JSONView = new JSONStructureMorphology();
-            JSONView.StructureID = graph.ID;
+            JSONView.StructureID = graph.StructureID;
             foreach (MorphologyNode node in graph.Nodes.Values)
             {
                 JSONView.Nodes.Add(new
                 {
                     ID = node.Key,
-                    Shape = node.Location.VolumeShape.WellKnownValue.WellKnownText
+                    Shape = node.Location.VolumeShape.STAsText().ToString()
                 });
             }
 

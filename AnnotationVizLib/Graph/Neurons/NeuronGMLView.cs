@@ -63,7 +63,7 @@ namespace AnnotationVizLib
             try
             {
                 GMLedge = this.addEdge(edge.SourceNodeKey, edge.TargetNodeKey);
-                if(edge.Bidirectional && !edge.IsLoop)
+                if(!edge.Directional && !edge.IsLoop)
                 {
                     GMLReverseEdge = this.addEdge(edge.TargetNodeKey, edge.SourceNodeKey);
                 }                
@@ -87,7 +87,7 @@ namespace AnnotationVizLib
         {
             Dictionary<string, string> EdgeAttribs = new Dictionary<string, string>();
             EdgeAttribs.Add("edgeType", edge.SynapseType);
-            EdgeAttribs.Add("Bidirectional", edge.Bidirectional.ToString());
+            EdgeAttribs.Add("Directional", (edge.Directional).ToString());
             return EdgeAttribs;
         }
 

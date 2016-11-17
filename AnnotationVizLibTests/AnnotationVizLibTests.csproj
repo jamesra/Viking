@@ -36,12 +36,41 @@
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="EntityFramework, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
+      <HintPath>..\Packages\EntityFramework.6.1.3\lib\net45\EntityFramework.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="EntityFramework.SqlServer, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
+      <HintPath>..\Packages\EntityFramework.6.1.3\lib\net45\EntityFramework.SqlServer.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Microsoft.OData.Client, Version=6.15.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\Packages\Microsoft.OData.Client.6.15.0\lib\net40\Microsoft.OData.Client.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Microsoft.OData.Core, Version=6.15.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\Packages\Microsoft.OData.Core.6.15.0\lib\portable-net45+win+wpa81\Microsoft.OData.Core.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Microsoft.OData.Edm, Version=6.15.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\Packages\Microsoft.OData.Edm.6.15.0\lib\portable-net45+win+wpa81\Microsoft.OData.Edm.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Microsoft.Spatial, Version=6.15.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\Packages\Microsoft.Spatial.6.15.0\lib\portable-net45+win+wpa81\Microsoft.Spatial.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Microsoft.SqlServer.Types, Version=11.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91, processorArchitecture=MSIL">
+      <HintPath>..\Packages\Microsoft.SqlServer.Types.11.0.2\lib\net20\Microsoft.SqlServer.Types.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="Microsoft.VisualStudio.QualityTools.UnitTestFramework, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL" />
     <Reference Include="Newtonsoft.Json, Version=9.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <HintPath>..\Packages\Newtonsoft.Json.9.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="System" />
+    <Reference Include="System.ComponentModel.DataAnnotations" />
     <Reference Include="System.Core">
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
     </Reference>
@@ -79,6 +108,8 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>Reference.svcmap</DependentUpon>
     </Compile>
+    <Compile Include="SqlServerTypes\Loader.cs" />
+    <Compile Include="TestUtils.cs" />
   </ItemGroup>
   <ItemGroup>
     <WCFMetadata Include="Service References\" />
@@ -97,39 +128,47 @@
     <None Include="Properties\DataSources\AnnotationUtils.AnnotationService.StructureLink.datasource" />
     <None Include="Properties\DataSources\AnnotationUtils.AnnotationService.StructureType.datasource" />
     <None Include="Properties\DataSources\AnnotationUtils.AnnotationService.SynapseObject.datasource" />
+    <None Include="Properties\DataSources\AnnotationVizLib.AnnotationService.AnnotationSet.datasource" />
     <None Include="Properties\DataSources\AnnotationVizLib.AnnotationService.CreateStructureRetval.datasource" />
     <None Include="Properties\DataSources\AnnotationVizLib.AnnotationService.Graphx.datasource" />
     <None Include="Properties\DataSources\AnnotationVizLib.AnnotationService.Location.datasource" />
+    <None Include="Properties\DataSources\AnnotationVizLib.AnnotationService.LocationHistory1.datasource" />
     <None Include="Properties\DataSources\AnnotationVizLib.AnnotationService.LocationLink.datasource" />
     <None Include="Properties\DataSources\AnnotationVizLib.AnnotationService.LocationPositionOnly.datasource" />
+    <None Include="Properties\DataSources\AnnotationVizLib.AnnotationService.PermittedStructureLink.datasource" />
+    <None Include="Properties\DataSources\AnnotationVizLib.AnnotationService.Scale.datasource" />
     <None Include="Properties\DataSources\AnnotationVizLib.AnnotationService.Structure.datasource" />
+    <None Include="Properties\DataSources\AnnotationVizLib.AnnotationService.StructureHistory1.datasource" />
     <None Include="Properties\DataSources\AnnotationVizLib.AnnotationService.StructureLink.datasource" />
     <None Include="Properties\DataSources\AnnotationVizLib.AnnotationService.StructureType.datasource" />
     <None Include="Properties\DataSources\AnnotationVizLib.AnnotationService.SynapseObject.datasource" />
-    <None Include="Service References\AnnotationService\Annotation.Service.GraphClasses.xsd">
-      <SubType>Designer</SubType>
-    </None>
-    <None Include="Service References\AnnotationService\Annotation.xsd">
-      <SubType>Designer</SubType>
-    </None>
-    <None Include="Service References\AnnotationService\Arrays.xsd">
-      <SubType>Designer</SubType>
-    </None>
-    <None Include="Service References\AnnotationService\service.wsdl" />
-    <None Include="Service References\AnnotationService\service.xsd">
-      <SubType>Designer</SubType>
-    </None>
-    <None Include="Service References\AnnotationService\service3.xsd">
-      <SubType>Designer</SubType>
-    </None>
-    <None Include="Service References\AnnotationService\service31.xsd">
-      <SubType>Designer</SubType>
-    </None>
   </ItemGroup>
   <ItemGroup>
     <WCFMetadataStorage Include="Service References\AnnotationService\" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="Service References\AnnotationService\Annotate.xsd">
+      <SubType>Designer</SubType>
+    </None>
+    <None Include="Service References\AnnotationService\Annotate1.xsd">
+      <SubType>Designer</SubType>
+    </None>
+    <None Include="Service References\AnnotationService\Annotate2.xsd">
+      <SubType>Designer</SubType>
+    </None>
+    <None Include="Service References\AnnotationService\Annotate3.xsd">
+      <SubType>Designer</SubType>
+    </None>
+    <None Include="Service References\AnnotationService\Annotate4.xsd">
+      <SubType>Designer</SubType>
+    </None>
+    <None Include="Service References\AnnotationService\Annotate5.xsd">
+      <SubType>Designer</SubType>
+    </None>
+    <None Include="Service References\AnnotationService\Annotate6.xsd">
+      <SubType>Designer</SubType>
+    </None>
+    <None Include="Service References\AnnotationService\AnnotateService.wsdl" />
     <None Include="Service References\AnnotationService\configuration91.svcinfo" />
   </ItemGroup>
   <ItemGroup>
@@ -157,18 +196,66 @@
   </ItemGroup>
   <ItemGroup />
   <ItemGroup>
+    <Content Include="..\Packages\Microsoft.SqlServer.Types.11.0.2\nativeBinaries\x64\msvcr100.dll">
+      <Link>SqlServerTypes\x64\msvcr100.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\Packages\Microsoft.SqlServer.Types.11.0.2\nativeBinaries\x64\SqlServerSpatial110.dll">
+      <Link>SqlServerTypes\x64\SqlServerSpatial110.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\Packages\Microsoft.SqlServer.Types.11.0.2\nativeBinaries\x86\msvcr100.dll">
+      <Link>SqlServerTypes\x86\msvcr100.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\Packages\Microsoft.SqlServer.Types.11.0.2\nativeBinaries\x86\SqlServerSpatial110.dll">
+      <Link>SqlServerTypes\x86\SqlServerSpatial110.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="Resources\ColorMap12x8.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="Resources\ColorMap3x2.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Content Include="Resources\ExportColorMapping\0001_5604_CMPv2.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\ExportColorMapping\0030_Glycine_32.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\ExportColorMapping\0061_GABA_32.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\ExportColorMapping\0090_AGB_32.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\ExportColorMapping\0184_GABA_32.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\ExportColorMapping\0277_Glycine_32.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\ExportColorMapping\0371_PCAImage.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\ExportColorMapping\ImageColorMaps.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\ExportColorMapping\StructureColors.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\ExportColorMapping\StructureTypeColors.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="Resources\ImageColorMaps.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="Resources\StructureTypeColors.txt">
+    <Content Include="SqlServerTypes\StructureTypeColors.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Content Include="SqlServerTypes\readme.htm" />
+    <None Include="Service References\AnnotationService\Annotate.disco" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

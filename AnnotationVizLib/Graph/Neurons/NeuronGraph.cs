@@ -39,8 +39,6 @@ namespace AnnotationVizLib
     {
         public string SynapseType;
 
-        public bool Bidirectional;
-
         /// <summary>
         /// List of child structures involved in the link
         /// </summary>
@@ -55,17 +53,16 @@ namespace AnnotationVizLib
         }
 
         public NeuronEdge(long SourceKey, long TargetKey, StructureLink Link, string SynapseType)
-            : base(SourceKey, TargetKey)
+            : base(SourceKey, TargetKey, !Link.Bidirectional)
         {
             this.Links.Add(Link);
             this.SynapseType = SynapseType;
-            this.Bidirectional = Link.Bidirectional;
         } 
 
         public void AddLink(StructureLink link)
         {
             Debug.Assert(!Links.Contains(link));
-            Debug.Assert(this.Bidirectional == link.Bidirectional);
+            Debug.Assert(this.Directional != link.Bidirectional);
 
             Links.Add(link);
         }
@@ -102,10 +99,6 @@ namespace AnnotationVizLib
 
             if((object)x != null && (object)y != null)
             {
-                comparison = x.Bidirectional.CompareTo(y.Bidirectional);
-                if (comparison != 0)
-                    return comparison;
-
                 return string.Compare(x.SynapseType, y.SynapseType);
             }
             else
@@ -120,10 +113,6 @@ namespace AnnotationVizLib
 
             if((object)other != null)
             {
-                comparison = this.Bidirectional.CompareTo(other.Bidirectional);
-                if (comparison != 0)
-                    return comparison;
-                 
                 return this.SynapseType.CompareTo(other.SynapseType);
             }
             else
@@ -132,12 +121,9 @@ namespace AnnotationVizLib
 
         public bool Equals(NeuronEdge other)
         {
-            bool baseEquals = this.Equals(other);
+            bool baseEquals = base.Equals(other);
             if(baseEquals && ((object)other != null))
             {
-                if (this.Bidirectional != other.Bidirectional)
-                    return false;
-
                 return this.SynapseType.Equals(other.SynapseType);
             }
 

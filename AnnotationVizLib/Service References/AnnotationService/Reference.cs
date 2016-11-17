@@ -17,6 +17,7 @@ namespace AnnotationVizLib.AnnotationService {
     [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Runtime.Serialization", "4.0.0.0")]
     [System.Runtime.Serialization.DataContractAttribute(Name="DataObject", Namespace="http://schemas.datacontract.org/2004/07/Annotation")]
     [System.SerializableAttribute()]
+    [System.Runtime.Serialization.KnownTypeAttribute(typeof(AnnotationVizLib.AnnotationService.PermittedStructureLink))]
     [System.Runtime.Serialization.KnownTypeAttribute(typeof(AnnotationVizLib.AnnotationService.StructureLink))]
     [System.Runtime.Serialization.KnownTypeAttribute(typeof(AnnotationVizLib.AnnotationService.LocationLink))]
     [System.Runtime.Serialization.KnownTypeAttribute(typeof(AnnotationVizLib.AnnotationService.DataObjectWithKeyOflong))]
@@ -64,6 +65,61 @@ namespace AnnotationVizLib.AnnotationService {
             System.ComponentModel.PropertyChangedEventHandler propertyChanged = this.PropertyChanged;
             if ((propertyChanged != null)) {
                 propertyChanged(this, new System.ComponentModel.PropertyChangedEventArgs(propertyName));
+            }
+        }
+    }
+    
+    [System.Diagnostics.DebuggerStepThroughAttribute()]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Runtime.Serialization", "4.0.0.0")]
+    [System.Runtime.Serialization.DataContractAttribute(Name="PermittedStructureLink", Namespace="http://schemas.datacontract.org/2004/07/Annotation")]
+    [System.SerializableAttribute()]
+    public partial class PermittedStructureLink : AnnotationVizLib.AnnotationService.DataObject {
+        
+        [System.Runtime.Serialization.OptionalFieldAttribute()]
+        private bool BidirectionalField;
+        
+        [System.Runtime.Serialization.OptionalFieldAttribute()]
+        private long SourceTypeIDField;
+        
+        [System.Runtime.Serialization.OptionalFieldAttribute()]
+        private long TargetTypeIDField;
+        
+        [System.Runtime.Serialization.DataMemberAttribute()]
+        public bool Bidirectional {
+            get {
+                return this.BidirectionalField;
+            }
+            set {
+                if ((this.BidirectionalField.Equals(value) != true)) {
+                    this.BidirectionalField = value;
+                    this.RaisePropertyChanged("Bidirectional");
+                }
+            }
+        }
+        
+        [System.Runtime.Serialization.DataMemberAttribute()]
+        public long SourceTypeID {
+            get {
+                return this.SourceTypeIDField;
+            }
+            set {
+                if ((this.SourceTypeIDField.Equals(value) != true)) {
+                    this.SourceTypeIDField = value;
+                    this.RaisePropertyChanged("SourceTypeID");
+                }
+            }
+        }
+        
+        [System.Runtime.Serialization.DataMemberAttribute()]
+        public long TargetTypeID {
+            get {
+                return this.TargetTypeIDField;
+            }
+            set {
+                if ((this.TargetTypeIDField.Equals(value) != true)) {
+                    this.TargetTypeIDField = value;
+                    this.RaisePropertyChanged("TargetTypeID");
+                }
             }
         }
     }
@@ -763,6 +819,9 @@ namespace AnnotationVizLib.AnnotationService {
         private string NotesField;
         
         [System.Runtime.Serialization.OptionalFieldAttribute()]
+        private AnnotationVizLib.AnnotationService.PermittedStructureLink[] PermittedLinksField;
+        
+        [System.Runtime.Serialization.OptionalFieldAttribute()]
         private string[] StructureTagsField;
         
         [System.Runtime.Serialization.OptionalFieldAttribute()]
@@ -855,6 +914,19 @@ namespace AnnotationVizLib.AnnotationService {
                 if ((object.ReferenceEquals(this.NotesField, value) != true)) {
                     this.NotesField = value;
                     this.RaisePropertyChanged("Notes");
+                }
+            }
+        }
+        
+        [System.Runtime.Serialization.DataMemberAttribute()]
+        public AnnotationVizLib.AnnotationService.PermittedStructureLink[] PermittedLinks {
+            get {
+                return this.PermittedLinksField;
+            }
+            set {
+                if ((object.ReferenceEquals(this.PermittedLinksField, value) != true)) {
+                    this.PermittedLinksField = value;
+                    this.RaisePropertyChanged("PermittedLinks");
                 }
             }
         }
@@ -1179,6 +1251,144 @@ namespace AnnotationVizLib.AnnotationService {
                 if ((object.ReferenceEquals(this.StructuresField, value) != true)) {
                     this.StructuresField = value;
                     this.RaisePropertyChanged("Structures");
+                }
+            }
+        }
+        
+        public event System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
+        
+        protected void RaisePropertyChanged(string propertyName) {
+            System.ComponentModel.PropertyChangedEventHandler propertyChanged = this.PropertyChanged;
+            if ((propertyChanged != null)) {
+                propertyChanged(this, new System.ComponentModel.PropertyChangedEventArgs(propertyName));
+            }
+        }
+    }
+    
+    [System.Diagnostics.DebuggerStepThroughAttribute()]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Runtime.Serialization", "4.0.0.0")]
+    [System.Runtime.Serialization.DataContractAttribute(Name="Scale", Namespace="http://schemas.datacontract.org/2004/07/Annotation")]
+    [System.SerializableAttribute()]
+    public partial class Scale : object, System.Runtime.Serialization.IExtensibleDataObject, System.ComponentModel.INotifyPropertyChanged {
+        
+        [System.NonSerializedAttribute()]
+        private System.Runtime.Serialization.ExtensionDataObject extensionDataField;
+        
+        [System.Runtime.Serialization.OptionalFieldAttribute()]
+        private AnnotationVizLib.AnnotationService.AxisUnits XField;
+        
+        [System.Runtime.Serialization.OptionalFieldAttribute()]
+        private AnnotationVizLib.AnnotationService.AxisUnits YField;
+        
+        [System.Runtime.Serialization.OptionalFieldAttribute()]
+        private AnnotationVizLib.AnnotationService.AxisUnits ZField;
+        
+        [global::System.ComponentModel.BrowsableAttribute(false)]
+        public System.Runtime.Serialization.ExtensionDataObject ExtensionData {
+            get {
+                return this.extensionDataField;
+            }
+            set {
+                this.extensionDataField = value;
+            }
+        }
+        
+        [System.Runtime.Serialization.DataMemberAttribute()]
+        public AnnotationVizLib.AnnotationService.AxisUnits X {
+            get {
+                return this.XField;
+            }
+            set {
+                if ((object.ReferenceEquals(this.XField, value) != true)) {
+                    this.XField = value;
+                    this.RaisePropertyChanged("X");
+                }
+            }
+        }
+        
+        [System.Runtime.Serialization.DataMemberAttribute()]
+        public AnnotationVizLib.AnnotationService.AxisUnits Y {
+            get {
+                return this.YField;
+            }
+            set {
+                if ((object.ReferenceEquals(this.YField, value) != true)) {
+                    this.YField = value;
+                    this.RaisePropertyChanged("Y");
+                }
+            }
+        }
+        
+        [System.Runtime.Serialization.DataMemberAttribute()]
+        public AnnotationVizLib.AnnotationService.AxisUnits Z {
+            get {
+                return this.ZField;
+            }
+            set {
+                if ((object.ReferenceEquals(this.ZField, value) != true)) {
+                    this.ZField = value;
+                    this.RaisePropertyChanged("Z");
+                }
+            }
+        }
+        
+        public event System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
+        
+        protected void RaisePropertyChanged(string propertyName) {
+            System.ComponentModel.PropertyChangedEventHandler propertyChanged = this.PropertyChanged;
+            if ((propertyChanged != null)) {
+                propertyChanged(this, new System.ComponentModel.PropertyChangedEventArgs(propertyName));
+            }
+        }
+    }
+    
+    [System.Diagnostics.DebuggerStepThroughAttribute()]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Runtime.Serialization", "4.0.0.0")]
+    [System.Runtime.Serialization.DataContractAttribute(Name="AxisUnits", Namespace="http://schemas.datacontract.org/2004/07/Annotation")]
+    [System.SerializableAttribute()]
+    public partial class AxisUnits : object, System.Runtime.Serialization.IExtensibleDataObject, System.ComponentModel.INotifyPropertyChanged {
+        
+        [System.NonSerializedAttribute()]
+        private System.Runtime.Serialization.ExtensionDataObject extensionDataField;
+        
+        [System.Runtime.Serialization.OptionalFieldAttribute()]
+        private string UnitsField;
+        
+        [System.Runtime.Serialization.OptionalFieldAttribute()]
+        private double ValueField;
+        
+        [global::System.ComponentModel.BrowsableAttribute(false)]
+        public System.Runtime.Serialization.ExtensionDataObject ExtensionData {
+            get {
+                return this.extensionDataField;
+            }
+            set {
+                this.extensionDataField = value;
+            }
+        }
+        
+        [System.Runtime.Serialization.DataMemberAttribute()]
+        public string Units {
+            get {
+                return this.UnitsField;
+            }
+            set {
+                if ((object.ReferenceEquals(this.UnitsField, value) != true)) {
+                    this.UnitsField = value;
+                    this.RaisePropertyChanged("Units");
+                }
+            }
+        }
+        
+        [System.Runtime.Serialization.DataMemberAttribute()]
+        public double Value {
+            get {
+                return this.ValueField;
+            }
+            set {
+                if ((this.ValueField.Equals(value) != true)) {
+                    this.ValueField = value;
+                    this.RaisePropertyChanged("Value");
                 }
             }
         }
@@ -1708,6 +1918,18 @@ namespace AnnotationVizLib.AnnotationService {
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructureTypes/UpdateStructureTypes", ReplyAction="http://tempuri.org/IAnnotateStructureTypes/UpdateStructureTypesResponse")]
         System.Threading.Tasks.Task<long[]> UpdateStructureTypesAsync(AnnotationVizLib.AnnotationService.StructureType[] structType);
         
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructureTypes/CreatePermittedStructureLink", ReplyAction="http://tempuri.org/IAnnotateStructureTypes/CreatePermittedStructureLinkResponse")]
+        AnnotationVizLib.AnnotationService.PermittedStructureLink CreatePermittedStructureLink(AnnotationVizLib.AnnotationService.PermittedStructureLink link);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructureTypes/CreatePermittedStructureLink", ReplyAction="http://tempuri.org/IAnnotateStructureTypes/CreatePermittedStructureLinkResponse")]
+        System.Threading.Tasks.Task<AnnotationVizLib.AnnotationService.PermittedStructureLink> CreatePermittedStructureLinkAsync(AnnotationVizLib.AnnotationService.PermittedStructureLink link);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructureTypes/UpdatePermittedStructureLinks", ReplyAction="http://tempuri.org/IAnnotateStructureTypes/UpdatePermittedStructureLinksResponse")]
+        void UpdatePermittedStructureLinks(AnnotationVizLib.AnnotationService.PermittedStructureLink[] permittedStructureLinks);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructureTypes/UpdatePermittedStructureLinks", ReplyAction="http://tempuri.org/IAnnotateStructureTypes/UpdatePermittedStructureLinksResponse")]
+        System.Threading.Tasks.Task UpdatePermittedStructureLinksAsync(AnnotationVizLib.AnnotationService.PermittedStructureLink[] permittedStructureLinks);
+        
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructureTypes/TestMethod", ReplyAction="http://tempuri.org/IAnnotateStructureTypes/TestMethodResponse")]
         string TestMethod();
         
@@ -1780,6 +2002,22 @@ namespace AnnotationVizLib.AnnotationService {
         
         public System.Threading.Tasks.Task<long[]> UpdateStructureTypesAsync(AnnotationVizLib.AnnotationService.StructureType[] structType) {
             return base.Channel.UpdateStructureTypesAsync(structType);
+        }
+        
+        public AnnotationVizLib.AnnotationService.PermittedStructureLink CreatePermittedStructureLink(AnnotationVizLib.AnnotationService.PermittedStructureLink link) {
+            return base.Channel.CreatePermittedStructureLink(link);
+        }
+        
+        public System.Threading.Tasks.Task<AnnotationVizLib.AnnotationService.PermittedStructureLink> CreatePermittedStructureLinkAsync(AnnotationVizLib.AnnotationService.PermittedStructureLink link) {
+            return base.Channel.CreatePermittedStructureLinkAsync(link);
+        }
+        
+        public void UpdatePermittedStructureLinks(AnnotationVizLib.AnnotationService.PermittedStructureLink[] permittedStructureLinks) {
+            base.Channel.UpdatePermittedStructureLinks(permittedStructureLinks);
+        }
+        
+        public System.Threading.Tasks.Task UpdatePermittedStructureLinksAsync(AnnotationVizLib.AnnotationService.PermittedStructureLink[] permittedStructureLinks) {
+            return base.Channel.UpdatePermittedStructureLinksAsync(permittedStructureLinks);
         }
         
         public string TestMethod() {
@@ -2938,6 +3176,53 @@ namespace AnnotationVizLib.AnnotationService {
         
         public System.Threading.Tasks.Task<AnnotationVizLib.AnnotationService.LocationHistory[]> GetLocationChangeLogAsync(System.Nullable<long> structure_id, System.Nullable<System.DateTime> begin_time, System.Nullable<System.DateTime> end_time) {
             return base.Channel.GetLocationChangeLogAsync(structure_id, begin_time, end_time);
+        }
+    }
+    
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
+    [System.ServiceModel.ServiceContractAttribute(ConfigurationName="AnnotationService.IVolumeMeta")]
+    public interface IVolumeMeta {
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IVolumeMeta/GetScale", ReplyAction="http://tempuri.org/IVolumeMeta/GetScaleResponse")]
+        AnnotationVizLib.AnnotationService.Scale GetScale();
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IVolumeMeta/GetScale", ReplyAction="http://tempuri.org/IVolumeMeta/GetScaleResponse")]
+        System.Threading.Tasks.Task<AnnotationVizLib.AnnotationService.Scale> GetScaleAsync();
+    }
+    
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
+    public interface IVolumeMetaChannel : AnnotationVizLib.AnnotationService.IVolumeMeta, System.ServiceModel.IClientChannel {
+    }
+    
+    [System.Diagnostics.DebuggerStepThroughAttribute()]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
+    public partial class VolumeMetaClient : System.ServiceModel.ClientBase<AnnotationVizLib.AnnotationService.IVolumeMeta>, AnnotationVizLib.AnnotationService.IVolumeMeta {
+        
+        public VolumeMetaClient() {
+        }
+        
+        public VolumeMetaClient(string endpointConfigurationName) : 
+                base(endpointConfigurationName) {
+        }
+        
+        public VolumeMetaClient(string endpointConfigurationName, string remoteAddress) : 
+                base(endpointConfigurationName, remoteAddress) {
+        }
+        
+        public VolumeMetaClient(string endpointConfigurationName, System.ServiceModel.EndpointAddress remoteAddress) : 
+                base(endpointConfigurationName, remoteAddress) {
+        }
+        
+        public VolumeMetaClient(System.ServiceModel.Channels.Binding binding, System.ServiceModel.EndpointAddress remoteAddress) : 
+                base(binding, remoteAddress) {
+        }
+        
+        public AnnotationVizLib.AnnotationService.Scale GetScale() {
+            return base.Channel.GetScale();
+        }
+        
+        public System.Threading.Tasks.Task<AnnotationVizLib.AnnotationService.Scale> GetScaleAsync() {
+            return base.Channel.GetScaleAsync();
         }
     }
     

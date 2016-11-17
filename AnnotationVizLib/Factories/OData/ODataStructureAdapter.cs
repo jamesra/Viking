@@ -1,0 +1,81 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using ODataClient.ConnectomeDataModel;
+
+namespace AnnotationVizLib
+{
+    class ODataStructureAdapter : IStructure
+    {
+        private Structure structure;
+
+        public ODataStructureAdapter(Structure s)
+        {
+            if (s == null)
+                throw new ArgumentNullException();
+
+            this.structure = s;
+        }
+
+        public ulong ID
+        {
+            get
+            {
+                return (ulong)structure.ID;
+            }
+        }
+
+        public string Label
+        {
+            get
+            {
+                return structure.Label;
+            }
+        }
+
+        public IStructureLink[] Links
+        {
+            get
+            {
+                List<StructureLink> links = structure.SourceOfLinks.ToList();
+                links.AddRange(structure.TargetOfLinks);
+
+                return links.Select(l => new ODataStructureLinkAdapter(l)).ToArray();
+            }
+        }
+
+        public ulong ParentID
+        {
+            get
+            {
+                return (ulong)structure.ParentID;
+            }
+        }
+
+        public string TagsXML
+        {
+            get
+            {
+                return structure.Tags;
+            }
+        }
+
+        public IStructureType Type
+        {
+            get
+            {
+                return new ODataStructureTypeAdapter(structure.Type);
+            }
+        }
+
+        public ulong TypeID
+        {
+            get
+            {
+                return (ulong)structure.TypeID;
+            }
+        }
+    }
+}
