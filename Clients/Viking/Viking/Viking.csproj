@@ -45,7 +45,7 @@
     <CreateWebPageOnPublish>true</CreateWebPageOnPublish>
     <WebPage>Viking.html</WebPage>
     <TrustUrlParameters>true</TrustUrlParameters>
-    <ApplicationRevision>232</ApplicationRevision>
+    <ApplicationRevision>233</ApplicationRevision>
     <ApplicationVersion>1.1.0.%2a</ApplicationVersion>
     <UseApplicationTrust>false</UseApplicationTrust>
     <CreateDesktopShortcut>true</CreateDesktopShortcut>
@@ -102,8 +102,8 @@
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="MathNet.Numerics, Version=3.11.1.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\..\packages\MathNet.Numerics.3.11.1\lib\net40\MathNet.Numerics.dll</HintPath>
+    <Reference Include="MathNet.Numerics, Version=3.13.1.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\..\..\Packages\MathNet.Numerics.3.13.1\lib\net40\MathNet.Numerics.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="Microsoft.SqlServer.Types, Version=11.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91, processorArchitecture=MSIL">
@@ -287,11 +287,11 @@ robocopy $(ProjectDir)Modules $(TargetDir)Modules * /PURGE</PostBuildEvent>
     <PreBuildEvent>
     </PreBuildEvent>
   </PropertyGroup>
-  <Import Project="..\..\..\Packages\MathNet.Numerics.MKL.Win-x86.2.1.0\build\MathNet.Numerics.MKL.Win-x86.targets" Condition="Exists('..\..\..\Packages\MathNet.Numerics.MKL.Win-x86.2.1.0\build\MathNet.Numerics.MKL.Win-x86.targets')" />
+  <Import Project="..\..\..\Packages\MathNet.Numerics.MKL.Win-x86.2.2.0\build\MathNet.Numerics.MKL.Win-x86.targets" Condition="Exists('..\..\..\Packages\MathNet.Numerics.MKL.Win-x86.2.2.0\build\MathNet.Numerics.MKL.Win-x86.targets')" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
       <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
     </PropertyGroup>
-    <Error Condition="!Exists('..\..\..\Packages\MathNet.Numerics.MKL.Win-x86.2.1.0\build\MathNet.Numerics.MKL.Win-x86.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\..\Packages\MathNet.Numerics.MKL.Win-x86.2.1.0\build\MathNet.Numerics.MKL.Win-x86.targets'))" />
+    <Error Condition="!Exists('..\..\..\Packages\MathNet.Numerics.MKL.Win-x86.2.2.0\build\MathNet.Numerics.MKL.Win-x86.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\..\Packages\MathNet.Numerics.MKL.Win-x86.2.2.0\build\MathNet.Numerics.MKL.Win-x86.targets'))" />
   </Target>
 </Project>
