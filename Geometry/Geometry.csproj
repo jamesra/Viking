@@ -86,8 +86,8 @@
     <AssemblyOriginatorKeyFile>Viking_TemporaryKey.pfx</AssemblyOriginatorKeyFile>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="MathNet.Numerics">
-      <HintPath>..\Servers\packages\MathNet.Numerics.Signed.3.13.1\lib\net40\MathNet.Numerics.dll</HintPath>
+    <Reference Include="MathNet.Numerics, Version=3.13.1.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\Packages\MathNet.Numerics.3.13.1\lib\net40\MathNet.Numerics.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="System" />
@@ -121,6 +121,8 @@
     <Compile Include="Extensions.cs" />
     <Compile Include="GlobalSuppressions.cs" />
     <Compile Include="Interfaces.cs" />
+    <Compile Include="Primitives\AxisEnum.cs" />
+    <Compile Include="Primitives\GridBox.cs" />
     <Compile Include="Primitives\GridQuad.cs" />
     <Compile Include="DataStructures\QuadTreeNodeTemplatePoint.cs" />
     <Compile Include="CurveFitting\Algorithms\Delaunay.cs" />
@@ -186,13 +188,13 @@
     <None Include="Viking_TemporaryKey.pfx" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <Import Project="..\Packages\MathNet.Numerics.MKL.Win-x86.2.2.0\build\MathNet.Numerics.MKL.Win-x86.targets" Condition="Exists('..\Packages\MathNet.Numerics.MKL.Win-x86.2.2.0\build\MathNet.Numerics.MKL.Win-x86.targets')" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
       <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
     </PropertyGroup>
-    <Error Condition="!Exists('..\Packages\MathNet.Numerics.MKL.Win-x86.2.1.0\build\MathNet.Numerics.MKL.Win-x86.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\Packages\MathNet.Numerics.MKL.Win-x86.2.1.0\build\MathNet.Numerics.MKL.Win-x86.targets'))" />
+    <Error Condition="!Exists('..\Packages\MathNet.Numerics.MKL.Win-x86.2.2.0\build\MathNet.Numerics.MKL.Win-x86.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\Packages\MathNet.Numerics.MKL.Win-x86.2.2.0\build\MathNet.Numerics.MKL.Win-x86.targets'))" />
   </Target>
-  <Import Project="..\Packages\MathNet.Numerics.MKL.Win-x86.2.1.0\build\MathNet.Numerics.MKL.Win-x86.targets" Condition="Exists('..\Packages\MathNet.Numerics.MKL.Win-x86.2.1.0\build\MathNet.Numerics.MKL.Win-x86.targets')" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">

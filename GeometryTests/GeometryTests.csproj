@@ -90,6 +90,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="CircleFromPoints.cs" />
+    <Compile Include="GridBox.cs" />
     <Compile Include="GridRectangle.cs" />
     <Compile Include="CurveFitting.cs" />
     <Compile Include="GridVector2Test.cs" />
@@ -101,6 +102,7 @@
     <Compile Include="RegionPyramidTest.cs" />
     <Compile Include="Scratch.cs" />
     <Compile Include="TransformAdditionTest.cs" />
+    <Compile Include="TransformFactoryTest.cs" />
     <Compile Include="TransformTest.cs" />
     <Compile Include="TriangleTest.cs" />
   </ItemGroup>

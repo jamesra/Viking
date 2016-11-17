@@ -8,7 +8,6 @@ using System.IO;
 
 namespace AnnotationVizLib
 {
-    
     public class ObjAttribute : Object, IComparable<ObjAttribute>
     {
         public readonly string Name;

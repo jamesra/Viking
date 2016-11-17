@@ -409,7 +409,13 @@ namespace AnnotationVizLib
 
         public static ColorMapWithLong CreateFromConfigFile(string config_txt_full_path)
         {
-            string config = System.IO.File.ReadAllText(config_txt_full_path);
+            string full_path = System.IO.Path.GetFullPath(config_txt_full_path);
+            if (!System.IO.File.Exists(full_path))
+            {
+                throw new System.IO.FileNotFoundException("Color mapping file not found " + full_path);
+            }
+
+            string config = System.IO.File.ReadAllText(full_path);
             return ColorMapWithLong.Create(config);
         }
 

@@ -8,8 +8,46 @@ using MathNet.Numerics.LinearAlgebra;
 
 namespace Geometry
 {
+    public static class ArrayToStringExtensions
+    {
+        public static string ToCSV(this double[] array, char delimiter = ',', string format = "F2")
+        {
+            StringBuilder sb = new StringBuilder();
+            for(int i = 0; i < array.Count(); i++)
+            {
+                sb.Append(array[i].ToString(format));
+                if (i < array.Count() - 1)
+                    sb.Append(",");
+            }
+
+            return sb.ToString();
+        }
+
+        public static string ToMatlab(this double[] array, string format = "F2")
+        {
+            StringBuilder sb = new StringBuilder();
+            sb.Append("[");
+            sb.Append(array.ToCSV(' '));
+            sb.Append("]");
+
+            return sb.ToString();
+        }
+    }
+
     public static class GeometryRTreeExtensions
     {
+        public static RTree.Point ToRTreePoint(this GridVector2 p, float Z)
+        {
+            return new RTree.Point((float)p.X, (float)p.Y, Z);
+        }
+
+        public static RTree.Point ToRTreePoint(this GridVector3 p)
+        {
+            return new RTree.Point((float)p.coords[0],
+                                   (float)p.coords[1],
+                                   (float)p.coords[2]);
+        }
+
         public static RTree.Rectangle ToRTreeRect(this GridRectangle rect, float MinZ, float MaxZ)
         {
             return new RTree.Rectangle((float)rect.Left, (float)rect.Bottom, (float)rect.Right, (float)rect.Top, MinZ, MaxZ);
@@ -34,6 +72,13 @@ namespace Geometry
         {
             return new RTree.Rectangle((float)p.X, (float)p.Y, (float)p.X, (float)p.Y, (float)Z, (float)Z);
         }
+
+        public static RTree.Rectangle ToRTreeRect(this GridBox bbox)
+        {
+            return new RTree.Rectangle(bbox.minVals, 
+                                       bbox.maxVals);
+        }
+
     }
 
     public static class GeometryMathNetNumerics
