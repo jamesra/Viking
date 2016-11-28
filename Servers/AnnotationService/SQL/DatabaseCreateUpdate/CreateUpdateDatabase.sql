@@ -5679,12 +5679,51 @@ end
 		[SourceTypeID] ASC,
 		[TargetTypeID] ASC
 	 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
+	 
+	  if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
 
 	 INSERT INTO DBVersion values (58, 
 		    N'Add unique constraint to PermittedStructureLink table',getDate(),User_ID())
 
 	 COMMIT TRANSACTION fiftyeight
 	end
+
+	if(not(exists(select (1) from DBVersion where DBVersionID = 59)))
+	begin
+     print N'Fixed bug in StructureLocationLinks where a specific database was named'
+     BEGIN TRANSACTION fiftynine
+	  
+	  EXEC('
+			ALTER FUNCTION [dbo].[StructureLocationLinks](@StructureID bigint)
+				RETURNS TABLE 
+				AS
+				RETURN(
+ 						select LLA.* from  LocationLink LLA 
+						inner join Location L ON LLA.A = L.ID
+						where L.ParentID = @StructureID
+						union
+						select LLB.* from LocationLink LLB  
+						inner join Location L ON LLB.B = L.ID
+						where L.ParentID = @StructureID
+						)
+						')
+			
+	  if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
+		INSERT INTO DBVersion values (59, 
+		    N'Fixed bug in StructureLocationLinks where a specific database was named' ,getDate(),User_ID())
+
+	 COMMIT TRANSACTION fiftynine
+	end
+			
 
 	 
 --from here on, continually add steps in the previous manner as needed.
