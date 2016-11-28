@@ -35,7 +35,7 @@ namespace AnnotationVizLib
                     StructureID = node.Key,
                     TypeID = node.Structure.TypeID,
                     Label = node.Structure.Label,
-                    Tags = node.Structure.AttributesXml
+                    Tags = node.Structure.TagsXML
                 });
             }
 

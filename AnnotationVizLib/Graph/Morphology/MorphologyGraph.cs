@@ -8,6 +8,7 @@ using System.Diagnostics;
 using SqlGeometryUtils;
 using AnnotationVizLib.AnnotationService;
 using Geometry;
+using RTree;
 
 namespace AnnotationVizLib
 { 
@@ -22,41 +23,6 @@ namespace AnnotationVizLib
         CLOSEDCURVE = 6
     };
 
-    public class MorphologyEdge : Edge<ulong>
-    {
-        public override bool Directional
-        {
-            get
-            {
-                return false;
-            }
-        }
-
-        public MorphologyEdge(ulong A, ulong B)
-            : base(A < B ? A : B, A < B ? B : A, false)
-        {
-        }
-
-        public MorphologyEdge(long A, long B)
-            : this((ulong)A, (ulong)B)
-        {
-        }
-
-        /// <summary>
-        /// Return the other node connected by the edge
-        /// </summary>
-        /// <param name="key"></param>
-        /// <returns></returns>
-        public ulong OtherNode(ulong key)
-        {
-            return SourceNodeKey == key ? TargetNodeKey : SourceNodeKey;
-        }
-          
-        public override string ToString()
-        {
-            return this.SourceNodeKey.ToString() + "-" + this.TargetNodeKey.ToString();
-        }    
-    }
      
 
     public partial class MorphologyGraph : Graph<ulong, MorphologyNode, MorphologyEdge>
@@ -79,12 +45,28 @@ namespace AnnotationVizLib
         public IStructureType structureType
         {
             get { return structure.Type; }
-        } 
+        }
+
+        private RTree<ulong> _RTree = null;
+        private RTree<ulong> RTree
+        {
+            get
+            {
+                if(_RTree == null)
+                {
+                    _RTree = CreateRTree(this);
+                }
+
+                return _RTree;
+            }
+        }
 
         /// <summary>
-        /// Map the motif label to the arbitrary id used by TLP
+        /// Map the motif label to the arbitrary id used by TLP.  Do not add directly to this collection.  Use Add/Remove Subgraph instead.
         /// </summary>
-        public ConcurrentDictionary<ulong, MorphologyGraph> Subgraphs = new ConcurrentDictionary<ulong, MorphologyGraph>();
+        internal ConcurrentDictionary<ulong, MorphologyGraph> Subgraphs = new ConcurrentDictionary<ulong, MorphologyGraph>();
+
+        internal ConcurrentDictionary<ulong, ulong> NearestNodeToSubgraph = new ConcurrentDictionary<ulong, ulong>();
 
         public MorphologyGraph(ulong subgraph_id, Geometry.Scale scale)
         {
@@ -98,6 +80,53 @@ namespace AnnotationVizLib
             this.StructureID = subgraph_id;
             this.structure = structure;
             this.scale = scale;
+        }
+
+        public void AddSubgraph(MorphologyGraph subgraph)
+        {
+            Subgraphs.TryAdd(subgraph.StructureID, subgraph);
+            double minDistance;
+            ulong nearest_id = NearestNode(subgraph, out minDistance);
+            if (nearest_id != ulong.MaxValue)
+            {
+                MorphologyNode nearest_node_in_parent = Nodes[nearest_id];
+                NearestNodeToSubgraph.TryAdd(subgraph.StructureID, nearest_id);
+                Nodes[nearest_id].AddSubgraph(subgraph.StructureID);
+            }
+        }
+
+        public void RemoveSubgraph(ulong StructureID)
+        {
+            MorphologyGraph value;
+            Subgraphs.TryRemove(StructureID, out value);
+            ulong nearest_node_id;
+            if (NearestNodeToSubgraph.TryRemove(StructureID, out nearest_node_id))
+            {
+                Nodes[nearest_node_id].RemoveSubgraph(StructureID);
+            }
+        }
+
+        internal static RTree<ulong> CreateRTree(MorphologyGraph graph)
+        {
+            RTree<ulong> rtree = new RTree<ulong>();
+            foreach(MorphologyNode node in graph.Nodes.Values)
+            {
+                rtree.Add(node.BoundingBox.ToRTreeRect(), node.Key);
+            }
+
+            return rtree;
+        }
+
+        public override void AddNode(MorphologyNode node)
+        {
+            _RTree = null;
+            base.AddNode(node);
+        }
+
+        public override void RemoveNode(ulong key)
+        {
+            _RTree = null;
+            base.RemoveNode(key);
         }
 
         /// <summary>
@@ -118,7 +147,7 @@ namespace AnnotationVizLib
             SortedSet<MorphologyEdge> new_edges = new SortedSet<AnnotationVizLib.MorphologyEdge>();
             foreach (ulong relink_id in other_nodes)
             {
-                MorphologyEdge new_edge = new AnnotationVizLib.MorphologyEdge(nearest_id, relink_id);
+                MorphologyEdge new_edge = new AnnotationVizLib.MorphologyEdge(this, nearest_id, relink_id);
                 new_edges.Add(new_edge);
             }
 
@@ -220,7 +249,6 @@ namespace AnnotationVizLib
         {
             return this.Nodes.Values.Where(n => n.Edges.Count == 2).Select(n => n.Key).ToArray();
         }
-
     }
 }
 

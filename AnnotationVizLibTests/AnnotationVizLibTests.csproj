@@ -193,6 +193,10 @@
       <Project>{d6f219fc-733b-481f-bf78-d34a7cb893ec}</Project>
       <Name>GraphLib</Name>
     </ProjectReference>
+    <ProjectReference Include="..\ODataClient\ODataClient.csproj">
+      <Project>{9ddb7c0e-1f00-4efc-8d11-4ba6a00fb9b4}</Project>
+      <Name>ODataClient</Name>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup />
   <ItemGroup>

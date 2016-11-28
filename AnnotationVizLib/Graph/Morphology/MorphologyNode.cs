@@ -64,5 +64,28 @@ namespace AnnotationVizLib
                 return new GridVector3(c.X, c.Y, Z);
             }
         }
+
+        private SortedSet<ulong> _Subgraphs = new SortedSet<ulong>();
+
+        internal void AddSubgraph(ulong StructureID)
+        {
+            _Subgraphs.Add(StructureID);
+        }
+
+        internal void RemoveSubgraph(ulong StructureID)
+        {
+            _Subgraphs.Remove(StructureID);
+        }
+
+        /// <summary>
+        /// List the subgraphs that are nearest to this node, if any
+        /// </summary>
+        public IReadOnlyList<MorphologyGraph> Subgraphs
+        {
+            get
+            {
+                return _Subgraphs.Select(sid => Graph.Subgraphs[sid]).ToList();
+            }
+        }
     }
 }

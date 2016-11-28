@@ -11,5 +11,7 @@ namespace AnnotationVizLib
         ulong SourceID { get; }
 
         ulong TargetID { get; }
+
+        bool Directional { get; }
     }
 }

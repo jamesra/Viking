@@ -10,7 +10,7 @@ namespace AnnotationVizLib
     {
         ulong ID { get; }
 
-        ulong ParentID { get; }
+        ulong? ParentID { get; }
 
         ulong TypeID { get; }
 

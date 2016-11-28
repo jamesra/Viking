@@ -129,5 +129,20 @@ namespace AnnotationVizLib
                 return loc.Tags;
             }
         }
+
+        GridBox _BoundingBox = null;
+        public GridBox BoundingBox
+        {
+            get
+            {
+                if (_BoundingBox == null)
+                {
+                    GridRectangle bound_rect = VolumeShape.BoundingBox();
+                    _BoundingBox = new GridBox(bound_rect, Z - scale.Z.Value, Z + scale.Z.Value);
+                }
+
+                return _BoundingBox;
+            }
+        }
     }
 }

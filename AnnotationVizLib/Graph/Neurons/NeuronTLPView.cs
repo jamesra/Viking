@@ -33,7 +33,7 @@ namespace AnnotationVizLib
 
             NodeAttribs.Add("StructureURL", string.Format("{0}/OData/ConnectomeData.svc/Structures({1}L)", this.VolumeURL, node.Key));
             NodeAttribs.Add("ID", string.Format("{0}", node.Key));
-            NodeAttribs.Add("Tags", ObjAttribute.AttributesToString(node.Structure.AttributesXml));
+            NodeAttribs.Add("Tags", ObjAttribute.AttributesToString(node.Structure.TagsXML));
 
             tlpnode.AddAttributes(NodeAttribs);
 
@@ -53,7 +53,7 @@ namespace AnnotationVizLib
             StringBuilder sb = new StringBuilder();
 
             //sb.Append(edge.SynapseType);
-            foreach (AnnotationService.StructureLink link in edge.Links)
+            foreach (IStructureLink link in edge.Links)
             {
                 sb.AppendLine("\t" + LinkString(link));
             }
@@ -61,7 +61,7 @@ namespace AnnotationVizLib
             return sb.ToString();
         }
 
-        public static string LinkString(AnnotationService.StructureLink link)
+        public static string LinkString(IStructureLink link)
         {
             return link.SourceID + " -> " + link.TargetID;
         }

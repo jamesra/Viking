@@ -9,9 +9,9 @@ using System.Diagnostics;
 
 namespace AnnotationVizLib
 {
-    public class StructureLinkComparer : Comparer<StructureLink>
+    public class StructureLinkComparer : Comparer<IStructureLink>
     {
-        public override int Compare(StructureLink x, StructureLink y)
+        public override int Compare(IStructureLink x, IStructureLink y)
         {
             if (object.ReferenceEquals(x, y))
                 return 0;
@@ -42,7 +42,7 @@ namespace AnnotationVizLib
         /// <summary>
         /// List of child structures involved in the link
         /// </summary>
-        public SortedSet<StructureLink> Links = new SortedSet<StructureLink>(new StructureLinkComparer());
+        public SortedSet<IStructureLink> Links = new SortedSet<IStructureLink>(new StructureLinkComparer());
 
         public override float Weight
         {
@@ -52,17 +52,17 @@ namespace AnnotationVizLib
             }
         }
 
-        public NeuronEdge(long SourceKey, long TargetKey, StructureLink Link, string SynapseType)
-            : base(SourceKey, TargetKey, !Link.Bidirectional)
+        public NeuronEdge(long SourceKey, long TargetKey, IStructureLink Link, string SynapseType)
+            : base(SourceKey, TargetKey, Link.Directional)
         {
             this.Links.Add(Link);
             this.SynapseType = SynapseType;
-        } 
+        }
 
-        public void AddLink(StructureLink link)
+        public void AddLink(IStructureLink link)
         {
             Debug.Assert(!Links.Contains(link));
-            Debug.Assert(this.Directional != link.Bidirectional);
+            Debug.Assert(this.Directional == link.Directional);
 
             Links.Add(link);
         }
@@ -71,7 +71,7 @@ namespace AnnotationVizLib
         {
             string output = "";
             bool first = true;
-            foreach( StructureLink link in Links)
+            foreach(IStructureLink link in Links)
             {
                 if (!first)
                 {
@@ -134,9 +134,9 @@ namespace AnnotationVizLib
     public class NeuronNode : Node<long, NeuronEdge>
     {
         //Structure this node represents
-        public Structure Structure;
+        public IStructure Structure;
 
-        public NeuronNode(long key, Structure value)
+        public NeuronNode(long key, IStructure value)
             : base(key)
         {
             this.Structure = value;
@@ -151,232 +151,7 @@ namespace AnnotationVizLib
 
     public class NeuronGraph : Graph<long, NeuronNode, NeuronEdge>
     { 
-        SortedDictionary<long, Structure> IDToStructure = new SortedDictionary<long, Structure>();
-
-        SortedDictionary<long, StructureType> IDToStructureType = new SortedDictionary<long, StructureType>();
-
-        List<long> NextHopNodes = new List<long>();
-
-        public System.Collections.ObjectModel.ReadOnlyCollection<long> IncompleteNodes
-        {
-            get
-            {
-                return NextHopNodes.AsReadOnly();
-            }
-        }
-
-        public static NeuronGraph BuildGraph(ICollection<long> StructureIDs, uint numHops, string Endpoint, System.Net.NetworkCredential userCredentials)
-        {
-            ConnectionFactory.SetConnection(Endpoint, userCredentials);
-
-            NeuronGraph graph = new NeuronGraph();
-
-            graph.IDToStructureType = Queries.GetStructureTypes();
-
-            List<long> MissingParents = new List<long>(StructureIDs);
-
-            using (AnnotateStructuresClient proxy = ConnectionFactory.CreateStructuresClient())
-            {
-                long[] struct_IDs = StructureIDs.ToArray();
-                Task<Structure[]> task_nodes = Task<Structure[]>.Run(() => Queries.GetNetworkedStructures(struct_IDs, (int)numHops));
-                Task<Structure[]> task_childStructures = Task<Structure[]>.Run(() => Queries.GetChildStructuresInNetwork(struct_IDs, (int)numHops));
-                Task<StructureLink[]> task_struct_links = Task<StructureLink[]>.Run(() => Queries.GetStructureLinksInNetwork(struct_IDs, (int)numHops));
-
-                Task.WaitAll(new Task[] { task_nodes, task_childStructures, task_struct_links });
-               
-                Structure[] network_node_IDs = task_nodes.Result;
-                Structure[] childStructures = task_childStructures.Result;
-                StructureLink[] struct_links = task_struct_links.Result;
-
-                graph.AddStructuresByID(proxy, network_node_IDs, childStructures, struct_links);
-            }
-
-            graph.NextHopNodes = MissingParents;
-
-            return graph;
-        }
-
-        private void AddStructuresByID(AnnotateStructuresClient proxy, Structure[] Nodes, Structure[] childStructures, StructureLink[] struct_links)
-        {
-            AddStructuresAsNodes(Nodes);
-
-            foreach (Structure s in childStructures)
-            {
-                IDToStructure.Add(s.ID, s);
-            }
-
-            AddEdgesForChildStructures(struct_links);
-        }
-
-        /// <summary>
-        /// Remove nodes which are for the next hop
-        /// </summary>
-        public void RemoveIncompleteNodes()
-        {
-            foreach (long id in this.NextHopNodes)
-            {
-                if (this.Nodes.ContainsKey(id))
-                    this.Nodes.Remove(id);
-            }
-        }
-
-        private void AddEdgesForChildStructures(StructureLink[] struct_links)
-        {
-            foreach (StructureLink link in struct_links)
-            {
-                //After this point both nodes are already in the graph and we can create an edge
-                Structure LinkSource = IDToStructure[link.SourceID];
-                Structure LinkTarget = IDToStructure[link.TargetID];
-
-                if (LinkTarget.ParentID != null && LinkSource.ParentID != null)
-                {
-                    string SourceTypeName = "";
-                    if (IDToStructureType.ContainsKey(LinkSource.TypeID))
-                    {
-                        SourceTypeName = IDToStructureType[LinkSource.TypeID].Name;
-                    }
-
-                    //Links should have parents
-                    if (!(LinkSource.ParentID.HasValue && LinkTarget.ParentID.HasValue))
-                        continue;
-
-                    NeuronEdge E = new NeuronEdge(LinkSource.ParentID.Value, LinkTarget.ParentID.Value, link, SourceTypeName);
-
-                    if (this.Edges.ContainsKey(E))
-                    {
-                        E = this.Edges[E];
-                        E.AddLink(link);
-                    }
-                    else
-                    {
-                        this.Edges.Add(E, E);
-                    }
-                }
-            }
-        }
-
-        private void AddEdgesForChildStructures(Structure[] ChildStructures)
-        {
-            //Create edges
-            foreach (Structure child in ChildStructures.Where(child => child.Links != null && child.Links.Length > 0))
-            {
-                AddEdgesForChildStructures(child.Links.Where(link => IDToStructure.ContainsKey(link.SourceID) && IDToStructure.ContainsKey(link.TargetID)).ToArray());
-            }
-        }
-
-        private List<long> GetHop(AnnotateStructuresClient proxy, IList<long> CellIDs)
-        {
-            if (CellIDs.Count == 0)
-                return new List<long>();
-
-            //Remove nodes we have already mapped
-            CellIDs = CellIDs.Where(id => !this.Nodes.ContainsKey(id)).ToList();
-           
-            Structure[] MissingStructures = proxy.GetStructuresByIDs(CellIDs.ToArray(), true);
-
-            Structure[] ChildStructures = FindMissingChildStructures(proxy, MissingStructures);
-
-            Structure[] LinkedStructurePartners = FindMissingLinkedStructures(proxy, ChildStructures);
-
-            foreach(Structure s in LinkedStructurePartners.Where(s => !IDToStructure.ContainsKey(s.ID)))
-            {
-                IDToStructure.Add(s.ID, s); 
-            }
-
-            AddEdgesForChildStructures(ChildStructures);
-
-            List<long> ListAbsentParents = new List<long>(LinkedStructurePartners.Length);
-
-            //Find a list of the parentIDs we are missing, and add them to the graph, and return them
-            //so we can easily make another hop later
-            foreach (Structure sibling in LinkedStructurePartners)
-            {
-                if (sibling.ParentID.HasValue == false)
-                    continue;
-
-                if (this.Nodes.ContainsKey(sibling.ParentID.Value))
-                    continue;
-
-                if (ListAbsentParents.Contains(sibling.ParentID.Value) == false)
-                    ListAbsentParents.Add(sibling.ParentID.Value);
-            }
-
-            return ListAbsentParents;
-            
-        }
-
-        private void AddStructuresAsNodes(Structure[] structs)
-        {
-            foreach (Structure s in structs)
-            {
-                NeuronNode node = new NeuronNode(s.ID, s);
-                this.Nodes[s.ID] = node;
-
-                IDToStructure[s.ID] = s;
-            }
-        }
-
-        private Structure[]  FindMissingChildStructures(AnnotateStructuresClient proxy, Structure[] MissingStructures)
-        {
-            List<long> ListMissingChildrenIDs = new List<long>(MissingStructures.Length);
-
-            foreach (Structure s in MissingStructures)
-            {
-                NeuronNode node = new NeuronNode(s.ID, s);
-                this.Nodes[s.ID] = node;
-
-                IDToStructure[s.ID] = s;
-
-                if (s.ChildIDs == null)
-                    continue; 
-
-                //Find all of the details on child synapses, which we probably do not have
-                foreach (long childID in s.ChildIDs.Where(childID => !IDToStructure.ContainsKey(childID)))
-                { 
-                    ListMissingChildrenIDs.Add(childID);
-                }
-            }
-
-            //Find all synapses and gap junctions
-
-            Structure[] ChildStructures = Queries.GetStructuresByIDs(proxy, ListMissingChildrenIDs.ToArray());
-            return ChildStructures;
-        }
-         
-
-        private Structure[] FindMissingLinkedStructures(AnnotateStructuresClient proxy, Structure[] ChildStructures)
-        { 
-            SortedSet<long> ListAbsentLinkPartners = new SortedSet<long>();
-
-            //Find missing structures and populate the list
-            foreach (Structure child in ChildStructures)
-            {
-                if (!IDToStructure.ContainsKey(child.ID))
-                {
-                    IDToStructure.Add(child.ID, child); 
-                }
-
-                if (child.Links == null)
-                    continue; 
-
-                foreach (StructureLink link in child.Links)
-                {
-                    if (!IDToStructure.ContainsKey(link.SourceID))
-                    {
-                        ListAbsentLinkPartners.Add(link.SourceID);
-                    }
-
-                    if (!IDToStructure.ContainsKey(link.TargetID))
-                    {
-                        ListAbsentLinkPartners.Add(link.TargetID); 
-                    }
-                }
-            }
-
-            Structure[] LinkedStructurePartners = proxy.GetStructuresByIDs(ListAbsentLinkPartners.Distinct().ToArray(), false);
-            return LinkedStructurePartners;
-        } 
-        
+       
     }
 
 }

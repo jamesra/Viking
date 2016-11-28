@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-// Generation date: 11/8/2016 3:55:53 PM
+// Generation date: 11/18/2016 2:52:09 PM
 namespace ODataClient.ConnectomeDataModel
 {
     /// <summary>
@@ -3811,20 +3811,12 @@ namespace ODataClient.ConnectomeODataV4
         <Parameter Name=""Hops"" Type=""Edm.Int32"" Nullable=""false"" />
         <ReturnType Type=""Collection(ConnectomeDataModel.Structure)"" />
       </Function>
-      <Function Name=""Network"" IsBound=""true"">
-        <Parameter Name=""bindingParameter"" Type=""Collection(ConnectomeDataModel.Structure)"" />
+      <Function Name=""NetworkChildStructures"">
         <Parameter Name=""IDs"" Type=""Collection(Edm.Int64)"" Nullable=""false"" />
         <Parameter Name=""Hops"" Type=""Edm.Int32"" Nullable=""false"" />
         <ReturnType Type=""Collection(ConnectomeDataModel.Structure)"" />
       </Function>
-      <Function Name=""NetworkChildStructures"" IsBound=""true"">
-        <Parameter Name=""bindingParameter"" Type=""Collection(ConnectomeDataModel.Structure)"" />
-        <Parameter Name=""IDs"" Type=""Collection(Edm.Int64)"" Nullable=""false"" />
-        <Parameter Name=""Hops"" Type=""Edm.Int32"" Nullable=""false"" />
-        <ReturnType Type=""Collection(ConnectomeDataModel.Structure)"" />
-      </Function>
-      <Function Name=""Network"" IsBound=""true"">
-        <Parameter Name=""bindingParameter"" Type=""Collection(ConnectomeDataModel.StructureLink)"" />
+      <Function Name=""NetworkLinks"">
         <Parameter Name=""IDs"" Type=""Collection(Edm.Int64)"" Nullable=""false"" />
         <Parameter Name=""Hops"" Type=""Edm.Int32"" Nullable=""false"" />
         <ReturnType Type=""Collection(ConnectomeDataModel.StructureLink)"" />
@@ -3871,6 +3863,8 @@ namespace ODataClient.ConnectomeODataV4
         <FunctionImport Name=""Scale"" Function=""ConnectomeODataV4.Scale"" IncludeInServiceDocument=""true"" />
         <FunctionImport Name=""Network"" Function=""ConnectomeODataV4.Network"" IncludeInServiceDocument=""true"" />
         <FunctionImport Name=""NetworkCells"" Function=""ConnectomeODataV4.NetworkCells"" EntitySet=""Structures"" IncludeInServiceDocument=""true"" />
+        <FunctionImport Name=""NetworkChildStructures"" Function=""ConnectomeODataV4.NetworkChildStructures"" EntitySet=""Structures"" IncludeInServiceDocument=""true"" />
+        <FunctionImport Name=""NetworkLinks"" Function=""ConnectomeODataV4.NetworkLinks"" EntitySet=""StructureLinks"" IncludeInServiceDocument=""true"" />
         <FunctionImport Name=""StructureLocationLinks"" Function=""ConnectomeODataV4.StructureLocationLinks"" EntitySet=""LocationLinks"" IncludeInServiceDocument=""true"" />
       </EntityContainer>
     </Schema>
@@ -3927,60 +3921,30 @@ namespace ODataClient.ConnectomeODataV4
                     new global::Microsoft.OData.Client.UriOperationParameter("Hops", Hops));
         }
         /// <summary>
+        /// There are no comments for NetworkChildStructures in the schema.
+        /// </summary>
+        [global::Microsoft.OData.Client.OriginalNameAttribute("NetworkChildStructures")]
+        public global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.ConnectomeDataModel.Structure> NetworkChildStructures(global::System.Collections.Generic.ICollection<long> IDs, int Hops)
+        {
+            return this.CreateFunctionQuery<global::ODataClient.ConnectomeDataModel.Structure>("", "NetworkChildStructures", false, new global::Microsoft.OData.Client.UriOperationParameter("IDs", IDs),
+                    new global::Microsoft.OData.Client.UriOperationParameter("Hops", Hops));
+        }
+        /// <summary>
+        /// There are no comments for NetworkLinks in the schema.
+        /// </summary>
+        [global::Microsoft.OData.Client.OriginalNameAttribute("NetworkLinks")]
+        public global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.ConnectomeDataModel.StructureLink> NetworkLinks(global::System.Collections.Generic.ICollection<long> IDs, int Hops)
+        {
+            return this.CreateFunctionQuery<global::ODataClient.ConnectomeDataModel.StructureLink>("", "NetworkLinks", false, new global::Microsoft.OData.Client.UriOperationParameter("IDs", IDs),
+                    new global::Microsoft.OData.Client.UriOperationParameter("Hops", Hops));
+        }
+        /// <summary>
         /// There are no comments for StructureLocationLinks in the schema.
         /// </summary>
         [global::Microsoft.OData.Client.OriginalNameAttribute("StructureLocationLinks")]
         public global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.ConnectomeDataModel.LocationLink> StructureLocationLinks(long StructureID)
         {
             return this.CreateFunctionQuery<global::ODataClient.ConnectomeDataModel.LocationLink>("", "StructureLocationLinks", false, new global::Microsoft.OData.Client.UriOperationParameter("StructureID", StructureID));
-        }
-    }
-    /// <summary>
-    /// Class containing all extension methods
-    /// </summary>
-    public static class ExtensionMethods
-    {
-        /// <summary>
-        /// There are no comments for Network in the schema.
-        /// </summary>
-        [global::Microsoft.OData.Client.OriginalNameAttribute("Network")]
-        public static global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.ConnectomeDataModel.Structure> Network(this global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.ConnectomeDataModel.Structure> source, global::System.Collections.Generic.ICollection<long> IDs, int Hops)
-        {
-            if (!source.IsComposable)
-            {
-                throw new global::System.NotSupportedException("The previous function is not composable.");
-            }
-
-            return source.CreateFunctionQuery<global::ODataClient.ConnectomeDataModel.Structure>("ConnectomeODataV4.Network", false, new global::Microsoft.OData.Client.UriOperationParameter("IDs", IDs),
-                    new global::Microsoft.OData.Client.UriOperationParameter("Hops", Hops));
-        }
-        /// <summary>
-        /// There are no comments for NetworkChildStructures in the schema.
-        /// </summary>
-        [global::Microsoft.OData.Client.OriginalNameAttribute("NetworkChildStructures")]
-        public static global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.ConnectomeDataModel.Structure> NetworkChildStructures(this global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.ConnectomeDataModel.Structure> source, global::System.Collections.Generic.ICollection<long> IDs, int Hops)
-        {
-            if (!source.IsComposable)
-            {
-                throw new global::System.NotSupportedException("The previous function is not composable.");
-            }
-
-            return source.CreateFunctionQuery<global::ODataClient.ConnectomeDataModel.Structure>("ConnectomeODataV4.NetworkChildStructures", false, new global::Microsoft.OData.Client.UriOperationParameter("IDs", IDs),
-                    new global::Microsoft.OData.Client.UriOperationParameter("Hops", Hops));
-        }
-        /// <summary>
-        /// There are no comments for Network in the schema.
-        /// </summary>
-        [global::Microsoft.OData.Client.OriginalNameAttribute("Network")]
-        public static global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.ConnectomeDataModel.StructureLink> Network(this global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.ConnectomeDataModel.StructureLink> source, global::System.Collections.Generic.ICollection<long> IDs, int Hops)
-        {
-            if (!source.IsComposable)
-            {
-                throw new global::System.NotSupportedException("The previous function is not composable.");
-            }
-
-            return source.CreateFunctionQuery<global::ODataClient.ConnectomeDataModel.StructureLink>("ConnectomeODataV4.Network", false, new global::Microsoft.OData.Client.UriOperationParameter("IDs", IDs),
-                    new global::Microsoft.OData.Client.UriOperationParameter("Hops", Hops));
         }
     }
 }

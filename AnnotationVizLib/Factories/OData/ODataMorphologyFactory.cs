@@ -18,7 +18,7 @@ namespace AnnotationVizLib
         public static MorphologyGraph FromOData(ICollection<long> StructureIDs, bool include_children, Uri Endpoint)
         {
             ODataClient.ConnectomeODataV4.Container container = new ODataClient.ConnectomeODataV4.Container(Endpoint);
-
+            container.MergeOption = Microsoft.OData.Client.MergeOption.NoTracking;
             var scale_retval = container.Scale();
             var scale = scale_retval.GetValue().ToGeometryScale();
 
@@ -31,7 +31,7 @@ namespace AnnotationVizLib
 
             foreach(long ID in StructureIDs)
             { 
-                Structure result = container.Structures.Expand(s => s.Locations).Expand(s => s.Type).Where(s => s.ID == ID).FirstOrDefault();
+                Structure result = container.Structures.Expand(s => s.Locations).Expand(s => s.Type).Expand(s => s.Children).Where(s => s.ID == ID).FirstOrDefault();
 
                 if (result != null)
                 {
@@ -39,24 +39,20 @@ namespace AnnotationVizLib
                     result.LocationLinks.Load(LocationLink);
                     listStructures.Add(result);
                 }
-            }
+            }            
 
-            //var Structures = container.Structures.Where(s => StructureIDs.Contains(s.ID));
-            
-            /*
-            var Structures = from s in container.Structures
-                             from id in StructureIDs
-                             where s.ID == id
-                             select s;
-                             */
-            //IList<Structure> listStructures = Structures.ToList();
-
-
-            
-
-            MorphologyForStructures(rootGraph, listStructures, include_children, scale);
+            MorphologyForStructures(container, rootGraph, listStructures, include_children, scale);
 
             return rootGraph;
+        }
+
+        private static void LoadStructureLocationLinks(Container container, ICollection<Structure> structures)
+        {
+            foreach(Structure s in structures)
+            {
+                var LocationLinks = container.StructureLocationLinks(s.ID);
+                s.LocationLinks.Load(LocationLinks);
+            }
         }
 
         /// <summary>
@@ -64,26 +60,30 @@ namespace AnnotationVizLib
         /// </summary>
         /// <param name="rootGraph"></param>
         /// <param name="StructureIDs"></param>
-        private static void MorphologyForStructures(MorphologyGraph rootGraph, ICollection<Structure> Structures, bool include_children, Geometry.Scale scale)
+        private static void MorphologyForStructures(Container container, MorphologyGraph rootGraph, ICollection<Structure> Structures, bool include_children, Geometry.Scale scale)
         {
             //Queries.PopulateStructureTypes();
 
             // Get the nodes and build graph for numHops            
-            //System.Threading.Tasks.Parallel.ForEach<Structure>(structures, s =>
-            foreach(Structure s in Structures)
-            {
-                MorphologyGraph graph = MorphologyForStructure(s, scale);
-                if (graph == null)
-                    return;
-                                 
-                rootGraph.Subgraphs.TryAdd((ulong)s.ID, graph);
+            System.Threading.Tasks.Parallel.ForEach<Structure>(Structures, s =>
 
-                if (include_children)
-                {
-                    MorphologyForStructures(graph, s.Children, include_children, scale);
+            //foreach (Structure s in Structures)
+            {
+                    MorphologyGraph graph = MorphologyForStructure(s, scale);
+                    if (graph == null)
+                        return;
+
+                    rootGraph.AddSubgraph(graph);
+
+                    if (include_children && s.Children.Any())
+                    {
+                        //Optimization, use the already loaded StructureTypes instead of expand
+                        IList<Structure> child_structs = container.Structures.Expand(st => st.Locations).Expand(st => st.Type).Expand(st => st.Children).Where(st => st.ParentID == s.ID).ToList();
+                        LoadStructureLocationLinks(container, child_structs);
+                        MorphologyForStructures(container, graph, child_structs, include_children, scale);
+                    }
                 }
-            //);
-            }
+            );
         }
 
         private static MorphologyGraph MorphologyForStructure(Structure s, Geometry.Scale scale)
@@ -118,7 +118,7 @@ namespace AnnotationVizLib
             foreach (LocationLink loc_link in location_links)
             {
                 //Only add the links with ID's less than ours to prevent duplicate links in the graph
-                graph.AddEdge(new MorphologyEdge(loc_link.A, loc_link.B)); 
+                graph.AddEdge(new MorphologyEdge(graph, loc_link.A, loc_link.B)); 
             }
 
             return;

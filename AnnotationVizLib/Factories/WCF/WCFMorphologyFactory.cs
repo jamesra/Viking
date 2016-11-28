@@ -50,8 +50,8 @@ namespace AnnotationVizLib
                 MorphologyGraph graph = MorphologyForStructure(s, scale);
                 if (graph == null)
                     return;
-                 
-                rootGraph.Subgraphs.TryAdd((ulong)s.ID, graph);
+
+                rootGraph.AddSubgraph(graph);
 
                 if (include_children)
                 {
@@ -107,7 +107,7 @@ namespace AnnotationVizLib
                 //Only add the links with ID's less than ours to prevent duplicate links in the graph
                 if (loc_link < Loc.ID)
                 {
-                    graph.AddEdge(new MorphologyEdge(loc_link, Loc.ID));
+                    graph.AddEdge(new MorphologyEdge(graph, loc_link, Loc.ID));
                 }
             }
 

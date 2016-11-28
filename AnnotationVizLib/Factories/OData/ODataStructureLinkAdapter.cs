@@ -16,6 +16,14 @@ namespace AnnotationVizLib
             this.structureLink = sl;
         }
 
+        public bool Directional
+        {
+            get
+            {
+                return !structureLink.Bidirectional;
+            }
+        }
+
         public ulong SourceID
         {
             get

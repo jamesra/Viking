@@ -46,11 +46,14 @@ namespace AnnotationVizLib
             }
         }
 
-        public ulong ParentID
+        public ulong? ParentID
         {
             get
             {
-                return (ulong)structure.ParentID;
+                if (structure.ParentID.HasValue)
+                    return (ulong)structure.ParentID;
+                else
+                    return new ulong?();
             }
         }
 
