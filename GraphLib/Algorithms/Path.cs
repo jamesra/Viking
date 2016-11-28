@@ -25,19 +25,32 @@ namespace GraphLib
             }
         }
 
+        public static IList<KEY> Path(Graph<KEY, NODETYPE, EDGETYPE> graph, KEY Origin, Func<NODETYPE, bool> IsMatch)
+        {
+            SortedSet<KEY> testedNodes = new SortedSet<KEY>();
+            return RecursePath(ref testedNodes, graph, Origin, IsMatch);
+        }
+
         public static IList<KEY> Path(Graph<KEY, NODETYPE, EDGETYPE> graph, KEY Origin, KEY Destination)
         {
             SortedSet<KEY> testedNodes = new SortedSet<KEY>();
-            return RecursePath(ref testedNodes, graph, Origin, Destination);
+            return RecursePath(ref testedNodes, graph, Origin, (node) => node.Key.Equals(Destination));
         }
 
-        private static IList<KEY> RecursePath(ref SortedSet<KEY> testedNodes, Graph<KEY, NODETYPE, EDGETYPE> graph, KEY Origin, KEY Destination)
+        /// <summary>
+        /// Return the path to the nearest node matching the predicate
+        /// </summary>
+        /// <param name="graph"></param>
+        /// <param name="Origin"></param>
+        /// <param name="predicate"></param>
+        /// <returns></returns>
+        private static IList<KEY> RecursePath(ref SortedSet<KEY> testedNodes, Graph<KEY, NODETYPE, EDGETYPE> graph, KEY Origin, Func<NODETYPE, bool> IsMatch)
         {
             testedNodes.Add(Origin);
 
             List<KEY> path = new List<KEY>();
             path.Add(Origin);
-            if (Origin.Equals(Destination))
+            if (IsMatch(graph.Nodes[Origin]))
                 return path;
 
             NODETYPE origin_node = graph.Nodes[Origin];
@@ -60,7 +73,7 @@ namespace GraphLib
                     return null;
 
                 //Optimization, avoids copying the testedNodes set if there is only one path
-                IList<KEY> result =  RecursePath(ref testedNodes, graph, linked_Keys.First(), Destination);
+                IList<KEY> result =  RecursePath(ref testedNodes, graph, linked_Keys.First(), IsMatch);
                 if (result == null)
                     return null;
 
@@ -77,7 +90,7 @@ namespace GraphLib
                         continue;
 
                     SortedSet<KEY> testedNodesCopy = new SortedSet<KEY>(testedNodes);
-                    IList<KEY> result = RecursePath(ref testedNodesCopy, graph, linked_Key, Destination);
+                    IList<KEY> result = RecursePath(ref testedNodesCopy, graph, linked_Key, IsMatch);
                     if (result == null)
                         continue;
 

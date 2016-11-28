@@ -21,7 +21,7 @@ namespace GraphLib
             
         }
 
-        public void AddNode(NODETYPE node)
+        public virtual void AddNode(NODETYPE node)
         {
             this.Nodes.Add(node.Key, node); 
         }
@@ -30,7 +30,7 @@ namespace GraphLib
         /// Remove the node, remove all edges to the node
         /// </summary>
         /// <param name="key"></param>
-        public void RemoveNode(KEY key)
+        public virtual void RemoveNode(KEY key)
         {
             NODETYPE node_to_remove = Nodes[key];
             SortedSet<KEY> other_nodes = new SortedSet<KEY>(node_to_remove.Edges.Keys);
