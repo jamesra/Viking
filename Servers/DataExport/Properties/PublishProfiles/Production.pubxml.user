@@ -10,7 +10,7 @@ by editing this MSBuild file. In order to learn more about this please visit htt
   </PropertyGroup>
   <ItemGroup>
     <File Include="bin/AnnotationVizLib.dll">
-      <publishTime>09/14/2016 17:33:45</publishTime>
+      <publishTime>10/17/2016 13:45:02</publishTime>
     </File>
     <File Include="bin/Antlr3.Runtime.dll">
       <publishTime>08/31/2015 16:54:16</publishTime>
@@ -19,7 +19,7 @@ by editing this MSBuild file. In order to learn more about this please visit htt
       <publishTime>09/14/2016 14:52:28</publishTime>
     </File>
     <File Include="bin/DataExport.dll">
-      <publishTime>09/14/2016 17:37:38</publishTime>
+      <publishTime>10/17/2016 13:45:04</publishTime>
     </File>
     <File Include="bin/de/Microsoft.Data.Edm.resources.dll">
       <publishTime>03/28/2016 17:17:55</publishTime>
@@ -90,8 +90,11 @@ by editing this MSBuild file. In order to learn more about this please visit htt
     <File Include="bin/fr/System.Spatial.resources.dll">
       <publishTime>03/28/2016 17:17:58</publishTime>
     </File>
+    <File Include="bin/Geometry.dll">
+      <publishTime>10/17/2016 13:44:59</publishTime>
+    </File>
     <File Include="bin/GraphLib.dll">
-      <publishTime>09/14/2016 17:33:44</publishTime>
+      <publishTime>10/07/2016 14:01:41</publishTime>
     </File>
     <File Include="bin/it/Microsoft.Data.Edm.resources.dll">
       <publishTime>03/28/2016 17:17:55</publishTime>
@@ -147,6 +150,12 @@ by editing this MSBuild file. In order to learn more about this please visit htt
     <File Include="bin/ko/System.Spatial.resources.dll">
       <publishTime>03/28/2016 17:17:58</publishTime>
     </File>
+    <File Include="bin/log4net.dll">
+      <publishTime>12/10/2015 16:55:06</publishTime>
+    </File>
+    <File Include="bin/MathNet.Numerics.dll">
+      <publishTime>09/06/2016 12:49:12</publishTime>
+    </File>
     <File Include="bin/Microsoft.Data.Edm.dll">
       <publishTime>03/28/2016 17:17:55</publishTime>
     </File>
@@ -161,6 +170,9 @@ by editing this MSBuild file. In order to learn more about this please visit htt
     </File>
     <File Include="bin/Microsoft.Spatial.dll">
       <publishTime>03/28/2016 17:18:23</publishTime>
+    </File>
+    <File Include="bin/Microsoft.SqlServer.Types.dll">
+      <publishTime>08/13/2015 17:00:26</publishTime>
     </File>
     <File Include="bin/Microsoft.Threading.Tasks.dll">
       <publishTime>04/07/2014 12:26:14</publishTime>
@@ -185,6 +197,9 @@ by editing this MSBuild file. In order to learn more about this please visit htt
     </File>
     <File Include="bin/Resources/ColorMapping/DefaultStructureTypeColors.txt">
       <publishTime>06/09/2015 12:08:50</publishTime>
+    </File>
+    <File Include="bin/RTree.dll">
+      <publishTime>10/07/2016 13:39:31</publishTime>
     </File>
     <File Include="bin/ru/Microsoft.Data.Edm.resources.dll">
       <publishTime>03/28/2016 17:17:55</publishTime>
@@ -215,6 +230,21 @@ by editing this MSBuild file. In order to learn more about this please visit htt
     </File>
     <File Include="bin/Simple.OData.Client.V4.Adapter.dll">
       <publishTime>08/19/2016 15:19:38</publishTime>
+    </File>
+    <File Include="bin/SqlGeometryUtils.dll">
+      <publishTime>10/17/2016 13:45:00</publishTime>
+    </File>
+    <File Include="bin/SqlServerTypes/x64/msvcr100.dll">
+      <publishTime>08/13/2015 17:00:26</publishTime>
+    </File>
+    <File Include="bin/SqlServerTypes/x64/SqlServerSpatial110.dll">
+      <publishTime>08/13/2015 17:00:26</publishTime>
+    </File>
+    <File Include="bin/SqlServerTypes/x86/msvcr100.dll">
+      <publishTime>08/13/2015 17:00:26</publishTime>
+    </File>
+    <File Include="bin/SqlServerTypes/x86/SqlServerSpatial110.dll">
+      <publishTime>08/13/2015 17:00:26</publishTime>
     </File>
     <File Include="bin/System.Net.Http.dll">
       <publishTime>08/13/2013 01:19:06</publishTime>
@@ -264,11 +294,20 @@ by editing this MSBuild file. In order to learn more about this please visit htt
     <File Include="bin/System.Web.WebPages.Razor.dll">
       <publishTime>08/31/2015 16:44:09</publishTime>
     </File>
+    <File Include="bin/Utils.dll">
+      <publishTime>10/07/2016 13:20:31</publishTime>
+    </File>
     <File Include="bin/VikingWebAppSettings.dll">
-      <publishTime>09/14/2016 17:33:46</publishTime>
+      <publishTime>10/17/2016 13:45:01</publishTime>
     </File>
     <File Include="bin/WebGrease.dll">
       <publishTime>08/31/2015 16:53:53</publishTime>
+    </File>
+    <File Include="bin/x86/libiomp5md.dll">
+      <publishTime>09/08/2016 09:42:12</publishTime>
+    </File>
+    <File Include="bin/x86/MathNet.Numerics.MKL.dll">
+      <publishTime>09/08/2016 09:42:14</publishTime>
     </File>
     <File Include="bin/zh-Hans/Microsoft.Data.Edm.resources.dll">
       <publishTime>03/28/2016 17:17:55</publishTime>
@@ -481,7 +520,7 @@ by editing this MSBuild file. In order to learn more about this please visit htt
       <publishTime>06/09/2015 12:08:50</publishTime>
     </File>
     <File Include="packages.config">
-      <publishTime>09/14/2016 17:37:29</publishTime>
+      <publishTime>10/07/2016 13:48:30</publishTime>
     </File>
     <File Include="Resources/ColorMapping/DefaultLocationColorMap.txt">
       <publishTime>06/09/2015 12:08:50</publishTime>
@@ -586,7 +625,7 @@ by editing this MSBuild file. In order to learn more about this please visit htt
       <publishTime>09/14/2016 14:52:06</publishTime>
     </File>
     <File Include="Web.config">
-      <publishTime>09/14/2016 17:38:23</publishTime>
+      <publishTime>10/17/2016 14:00:23</publishTime>
     </File>
   </ItemGroup>
 </Project>
