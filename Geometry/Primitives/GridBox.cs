@@ -104,9 +104,13 @@ namespace Geometry
 
         public GridBox(double[] mins, double[] maxs)
         {
-            minVals = mins;
-            maxVals = maxs;
+            //Copy the array in case the caller tries to re-use the array somewhere else.  Required for how I implemented the Clone function
+            minVals = new double[mins.Length];
+            maxVals = new double[maxs.Length];
             _HashCode = new int?();
+
+            mins.CopyTo(minVals, 0);
+            maxs.CopyTo(maxVals, 0);
 
             ThrowOnNegativeDimensions();
             ThrowOnMinGreaterThanMax();
@@ -165,6 +169,17 @@ namespace Geometry
 
             minVals = new double[] { position.X - radius, position.Y - radius, position.Z - radius };
             maxVals = new double[] { position.X + radius, position.Y + radius, position.Z + radius };
+
+            _HashCode = new int?();
+
+            ThrowOnNegativeDimensions();
+            ThrowOnMinGreaterThanMax();
+        }
+
+        public GridBox(GridRectangle bound_rect, double minZ, double maxZ)
+        {
+            minVals = new double[] { bound_rect.Left, bound_rect.Bottom, minZ };
+            maxVals = new double[] { bound_rect.Right, bound_rect.Top, minZ };
 
             _HashCode = new int?();
 
@@ -360,6 +375,11 @@ namespace Geometry
             }
 
             return new GridBox(new_mins, new_maxs);
+        }
+
+        public GridBox Clone()
+        {
+            return new GridBox(this.minVals, this.maxVals);
         }
 
         #endregion
