@@ -6,6 +6,7 @@ using System.Web.OData.Extensions;
 using Microsoft.OData.Edm;
 using System.Web.OData.Routing;
 using ConnectomeDataModel;
+using System.Collections.Generic;
 
 namespace ConnectomeODataV4.Controllers
 {
@@ -23,6 +24,17 @@ namespace ConnectomeODataV4.Controllers
     public class StructureLinksController : ODataController
     {
         private ConnectomeEntities db = new ConnectomeEntities();
+
+        /// <summary>
+        /// Return the ODataPath we need to set on requests when invoking functions that return collections of entities
+        /// </summary>
+        /// <returns></returns>
+        private ODataPath GetRequestPath()
+        {
+            return new DefaultODataPathHandler().Parse(System.Web.HttpContext.Current.Request.Url.GetLeftPart(System.UriPartial.Path),
+                                                                 "StructureLinks",
+                                                                 Request.GetRequestContainer());
+        }
 
         // GET: odata/StructureLinks
         [EnableQuery(PageSize = WebApiConfig.PageSize)]
@@ -174,25 +186,31 @@ namespace ConnectomeODataV4.Controllers
             return SingleResult.Create(db.StructureLinks.Where(m => m.SourceID == key).Select(m => m.Target));
         }
 
+        
         [HttpGet]
         [EnableQuery(PageSize = 2048)]
-        [ODataRoute("StructureLinks/Network(IDs={IDs},Hops={Hops})")]
-        public IQueryable<StructureLink> Network([FromODataUri] long[] IDs, [FromODataUri] int Hops)
+        [ODataRoute("NetworkLinks(IDs={IDs},Hops={Hops})")]
+        public IQueryable<StructureLink> Network([FromODataUri] ICollection<long> IDs, [FromODataUri] int Hops)
         {
             //db.ConfigureAsReadOnly();
+            Request.ODataProperties().Path = GetRequestPath();
 
-            IQueryable<StructureLink> StructureLinks = db.SelectNetworkStructureLinks(IDs, Hops);
+            return db.SelectNetworkStructureLinks(IDs, Hops);
+            
 
             /* https://github.com/OData/WebApi/issues/255 */
 
-            IEdmModel model = Request.ODataProperties().Model;
+            /*
+            IEdmModel model = Request.ODataProperties().Path();
 
             ODataPath path = new DefaultODataPathHandler().Parse(model, System.Web.HttpContext.Current.Request.Url.GetLeftPart(System.UriPartial.Path), "StructureLinks");
-
-            Request.ODataProperties().Path = path;
-
+            
+            Request.ODataProperties().Path = Request.ODataProperties().Path();
+            
             return StructureLinks;
+            */
         }
+        
 
         protected override void Dispose(bool disposing)
         {

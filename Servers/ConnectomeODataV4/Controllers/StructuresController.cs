@@ -42,6 +42,17 @@ namespace ConnectomeODataV4.Controllers
             return SingleResult.Create(db.Structures.Where(structure => structure.ID == key));
         }
 
+        /// <summary>
+        /// Return the ODataPath we need to set on requests when invoking functions that return collections of entities
+        /// </summary>
+        /// <returns></returns>
+        private ODataPath GetRequestPath()
+        {
+            return new DefaultODataPathHandler().Parse(System.Web.HttpContext.Current.Request.Url.GetLeftPart(System.UriPartial.Path),
+                                                                 "Structures",
+                                                                 Request.GetRequestContainer());
+        }
+
         /*
         // PUT: odata/Structures(5)
         public async Task<IHttpActionResult> Put([FromODataUri] long key, Delta<Structure> patch)
@@ -149,17 +160,21 @@ namespace ConnectomeODataV4.Controllers
         */
 
         // GET: odata/Structures(5)/Locations
+        [HttpGet]
         [EnableQuery]
         public IQueryable<Location> GetLocations([FromODataUri] long key)
         {
             return db.Structures.Where(m => m.ID == key).SelectMany(m => m.Locations);
         }
 
+        // GET: odata/Structures(5)/LocationLinks
         [EnableQuery]
         public IQueryable<LocationLink> GetLocationLinks([FromODataUri] long key)
         {
             return db.StructureLocationLinks(key);
         }
+
+        
 
         // GET: odata/Structures(5)/Children
         [EnableQuery]
@@ -204,72 +219,69 @@ namespace ConnectomeODataV4.Controllers
             return Ok(scale);
         }
 
+        // GET: odata/StructureLocationLinks
+        [HttpGet]
+        [EnableQuery]
+        [ODataRoute("StructureLocationLinks(StructureID={key})")]
+        public IQueryable<LocationLink> StructureLocationLinks([FromODataUri] long key)
+        {
+            return db.StructureLocationLinks(key);
+        }
+
 
         [HttpGet]
         [ODataRoute("Network(IDs={IDs},Hops={Hops})")]
-        public IHttpActionResult GetNetwork([FromODataUri] long[] IDs, [FromODataUri] int Hops)
+        public IHttpActionResult GetNetwork([FromODataUri] ICollection<long> IDs, [FromODataUri] int Hops)
         {
             return Ok(db.SelectNetworkStructureIDs(IDs, Hops));
         }
 
-        [EnableQuery(PageSize = 2048)]
-        [ODataRoute("NetworkCells(IDs={IDs},Hops={Hops})")]
-        public IQueryable<Structure> GetNetworkCells([FromODataUri] long[] IDs, [FromODataUri] int Hops)
-        {
-           // db.ConfigureAsReadOnly();
-
-            SortedSet<long> CellIDs = new SortedSet<long>(db.SelectNetworkStructureIDs(IDs, Hops));
-
-            /* https://github.com/OData/WebApi/issues/255 */
-
-            IEdmModel model = Request.ODataProperties().Model;
-
-            ODataPath path = new DefaultODataPathHandler().Parse(model, System.Web.HttpContext.Current.Request.Url.GetLeftPart(System.UriPartial.Path), "Structures");
-
-            Request.ODataProperties().Path = path;
-
-            return db.Structures.Where(s => CellIDs.Contains(s.ID));
-        }
 
         [HttpGet]
         [EnableQuery(PageSize = 2048)]
-        [ODataRoute("Structures/Network(IDs={IDs},Hops={Hops})")]
+        [ODataRoute("NetworkCells(IDs={IDs},Hops={Hops})")]
+        public IQueryable<Structure> GetNetworkCells([FromODataUri] ICollection<long> IDs, [FromODataUri] int Hops)
+        {
+            Request.ODataProperties().Path = GetRequestPath(); 
+            return db.SelectNetworkStructures(IDs, Hops);
+        }
+
+        /*
+        [HttpGet]
+        [EnableQuery(PageSize = 2048)]
+        //[ODataRoute("Structures/Network(IDs={IDs},Hops={Hops})")]
+        //[ODataRoute("Network(IDs={IDs},Hops={Hops})")]
         public IQueryable<Structure> Network([FromODataUri] long[] IDs, [FromODataUri] int Hops)
         {
             //db.ConfigureAsReadOnly();
 
             IQueryable<Structure> Structures = db.SelectNetworkStructures(IDs, Hops);
 
-            /* https://github.com/OData/WebApi/issues/255 */
+            // https://github.com/OData/WebApi/issues/255
+            
+            //ODataPath path = new DefaultODataPathHandler().Parse(System.Web.HttpContext.Current.Request.Url.GetLeftPart(System.UriPartial.Path), "Structures");
 
-            IEdmModel model = Request.ODataProperties().Model;
-
-            ODataPath path = new DefaultODataPathHandler().Parse(model, System.Web.HttpContext.Current.Request.Url.GetLeftPart(System.UriPartial.Path), "Structures");
-
-            Request.ODataProperties().Path = path;
+            //Request.ODataProperties().Path = path;
 
             return Structures;
         }
+        */
+    
 
         [HttpGet]
         [EnableQuery(PageSize = 2048)]
-        [ODataRoute("Structures/NetworkChildStructures(IDs={IDs},Hops={Hops})")]
+        [ODataRoute("NetworkChildStructures(IDs={IDs},Hops={Hops})")]
         public IQueryable<Structure> GetNetworkChildren([FromODataUri] long[] IDs, [FromODataUri] int Hops)
         {
             //db.ConfigureAsReadOnly();
+            Request.ODataProperties().Path = GetRequestPath();
+            return db.SelectNetworkChildStructures(IDs, Hops);
 
-            IQueryable<Structure> Structures = db.SelectNetworkChildStructures(IDs, Hops);
-
-            /* https://github.com/OData/WebApi/issues/255 */
-
-            IEdmModel model = Request.ODataProperties().Model;
-
-            ODataPath path = new DefaultODataPathHandler().Parse(model, System.Web.HttpContext.Current.Request.Url.GetLeftPart(System.UriPartial.Path), "Structures");
-
-            Request.ODataProperties().Path = path;
-
-            return Structures;
+            // https://github.com/OData/WebApi/issues/255 
+             
         }
+
+    
 
         protected override void Dispose(bool disposing)
         {

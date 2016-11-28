@@ -37,6 +37,7 @@ namespace ConnectomeODataV4.Controllers
             return SingleResult.Create(db.StructureTypes.Where(structureType => structureType.ID == key));
         }
 
+        /*
         // PUT: odata/StructureTypes(5)
         public async Task<IHttpActionResult> Put([FromODataUri] long key, Delta<StructureType> patch)
         {
@@ -73,7 +74,7 @@ namespace ConnectomeODataV4.Controllers
 
             return Updated(structureType);
         }
-
+        */
         /*
         // POST: odata/StructureTypes
         public async Task<IHttpActionResult> Post(StructureType structureType)
