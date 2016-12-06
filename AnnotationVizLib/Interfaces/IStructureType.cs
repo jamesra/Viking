@@ -9,7 +9,7 @@ namespace AnnotationVizLib
     public interface IStructureType
     {
         ulong ID { get; }
-        ulong ParentID { get; }
+        ulong? ParentID { get; }
         string Name { get; } 
         string[] Tags { get; }
     }

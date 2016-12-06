@@ -33,11 +33,11 @@ namespace AnnotationVizLib
             }
         }
 
-        public ulong ParentID
+        public ulong? ParentID
         {
             get
             {
-                return (ulong)type.ParentID;
+                return (ulong?)type.ParentID;
             }
         }
 

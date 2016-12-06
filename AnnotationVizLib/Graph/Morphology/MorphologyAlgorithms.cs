@@ -182,7 +182,7 @@ namespace AnnotationVizLib
                 if (z_distance > min_distance)
                     continue;
 
-                double pair_distance = shape_to_check.VolumeShape.STDistance(compare_node.VolumeShape).Value;
+                double pair_distance = shape_to_check.Geometry.STDistance(compare_node.Geometry).Value;
                 if (pair_distance > min_distance)
                     continue;
 
@@ -221,6 +221,10 @@ namespace AnnotationVizLib
             {
                 graph.RemoveNodePreserveEdges(key);
             }
+
+            //Once in a while, we have a branch attached to a cycle.  This allows the cycle to be removed, and then the branch to be removed in a second-pass if needed
+            if (graph.GetProcess().Length > 0)
+                ToStickFigure(graph);
         }
 
         /// <summary>

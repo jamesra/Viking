@@ -333,7 +333,12 @@ namespace Geometry
             if (System.Object.ReferenceEquals(A, B))
             {
                 return true;
-            } 
+            }
+
+            if ((object)A == null)
+                return false;
+            if ((object)B == null)
+                return false;
 
             bool mins_match = A.minVals.Select((val, i) => val == B.minVals[i]).All(b => b);
             bool maxs_match = A.maxVals.Select((val, i) => val == B.maxVals[i]).All(b => b);

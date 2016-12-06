@@ -40,7 +40,7 @@ namespace AnnotationVizLib
             }
 
             //List<long> listNetworkStructureID = container.Network(StructureIDs, (int)numHops).ToList();
-            List<Structure> listNetworkStructures = container.NetworkCells(StructureIDs, (int)numHops).Expand(s => s.Children).ToList();
+            List<Structure> listNetworkStructures = container.Network(StructureIDs, (int)numHops).Expand(s => s.Children).ToList();
 
             graphFactory.PopulateStructureDictionary(listNetworkStructures);
 

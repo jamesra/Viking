@@ -28,10 +28,10 @@ namespace AnnotationVizLib
             this.Location = Location;
         }
 
-        public SqlGeometry VolumeShape {
+        public SqlGeometry Geometry {
             get
-            { return Location.VolumeShape; }
-            set { Location.VolumeShape = value; }
+            { return Location.Geometry; }
+            set { Location.Geometry = value; }
         }
         
         public double Z { get { return Location.Z; }}
@@ -47,7 +47,7 @@ namespace AnnotationVizLib
         {
             get
             {
-                GridRectangle rect = VolumeShape.BoundingBox();
+                GridRectangle rect = Geometry.BoundingBox();
                 GridVector3 botleft = new GridVector3(rect.Left, rect.Bottom, Z - Graph.SectionThickness / 2.0);
                 GridVector3 topright = new GridVector3(rect.Right, rect.Top, Z + Graph.SectionThickness / 2.0);
 
@@ -60,7 +60,7 @@ namespace AnnotationVizLib
         {
             get
             {
-                GridVector2 c = VolumeShape.Centroid();
+                GridVector2 c = Geometry.Centroid();
                 return new GridVector3(c.X, c.Y, Z);
             }
         }

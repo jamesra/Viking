@@ -29,7 +29,7 @@ namespace AnnotationVizLib
         }
 
         private SqlGeometry _VolumeShape = null;
-        public SqlGeometry VolumeShape
+        public SqlGeometry Geometry
         {
             get
             {
@@ -133,7 +133,7 @@ namespace AnnotationVizLib
             {
                 if (_BoundingBox == null)
                 {
-                    GridRectangle bound_rect = VolumeShape.BoundingBox();
+                    GridRectangle bound_rect = Geometry.BoundingBox();
                     _BoundingBox = new GridBox(bound_rect, Z - scale.Z.Value, Z + scale.Z.Value);
                 }
 

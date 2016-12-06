@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-// Generation date: 11/18/2016 2:52:09 PM
+// Generation date: 12/5/2016 5:01:47 PM
 namespace ODataClient.ConnectomeDataModel
 {
     /// <summary>
@@ -3804,11 +3804,6 @@ namespace ODataClient.ConnectomeODataV4
       <Function Name=""Network"">
         <Parameter Name=""IDs"" Type=""Collection(Edm.Int64)"" Nullable=""false"" />
         <Parameter Name=""Hops"" Type=""Edm.Int32"" Nullable=""false"" />
-        <ReturnType Type=""Collection(Edm.Int64)"" Nullable=""false"" />
-      </Function>
-      <Function Name=""NetworkCells"">
-        <Parameter Name=""IDs"" Type=""Collection(Edm.Int64)"" Nullable=""false"" />
-        <Parameter Name=""Hops"" Type=""Edm.Int32"" Nullable=""false"" />
         <ReturnType Type=""Collection(ConnectomeDataModel.Structure)"" />
       </Function>
       <Function Name=""NetworkChildStructures"">
@@ -3861,8 +3856,7 @@ namespace ODataClient.ConnectomeODataV4
           <NavigationPropertyBinding Path=""LocationB"" Target=""Locations"" />
         </EntitySet>
         <FunctionImport Name=""Scale"" Function=""ConnectomeODataV4.Scale"" IncludeInServiceDocument=""true"" />
-        <FunctionImport Name=""Network"" Function=""ConnectomeODataV4.Network"" IncludeInServiceDocument=""true"" />
-        <FunctionImport Name=""NetworkCells"" Function=""ConnectomeODataV4.NetworkCells"" EntitySet=""Structures"" IncludeInServiceDocument=""true"" />
+        <FunctionImport Name=""Network"" Function=""ConnectomeODataV4.Network"" EntitySet=""Structures"" IncludeInServiceDocument=""true"" />
         <FunctionImport Name=""NetworkChildStructures"" Function=""ConnectomeODataV4.NetworkChildStructures"" EntitySet=""Structures"" IncludeInServiceDocument=""true"" />
         <FunctionImport Name=""NetworkLinks"" Function=""ConnectomeODataV4.NetworkLinks"" EntitySet=""StructureLinks"" IncludeInServiceDocument=""true"" />
         <FunctionImport Name=""StructureLocationLinks"" Function=""ConnectomeODataV4.StructureLocationLinks"" EntitySet=""LocationLinks"" IncludeInServiceDocument=""true"" />
@@ -3906,18 +3900,9 @@ namespace ODataClient.ConnectomeODataV4
         /// There are no comments for Network in the schema.
         /// </summary>
         [global::Microsoft.OData.Client.OriginalNameAttribute("Network")]
-        public global::Microsoft.OData.Client.DataServiceQuery<long> Network(global::System.Collections.Generic.ICollection<long> IDs, int Hops)
+        public global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.ConnectomeDataModel.Structure> Network(global::System.Collections.Generic.ICollection<long> IDs, int Hops)
         {
-            return this.CreateFunctionQuery<long>("", "Network", false, new global::Microsoft.OData.Client.UriOperationParameter("IDs", IDs),
-                    new global::Microsoft.OData.Client.UriOperationParameter("Hops", Hops));
-        }
-        /// <summary>
-        /// There are no comments for NetworkCells in the schema.
-        /// </summary>
-        [global::Microsoft.OData.Client.OriginalNameAttribute("NetworkCells")]
-        public global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.ConnectomeDataModel.Structure> NetworkCells(global::System.Collections.Generic.ICollection<long> IDs, int Hops)
-        {
-            return this.CreateFunctionQuery<global::ODataClient.ConnectomeDataModel.Structure>("", "NetworkCells", false, new global::Microsoft.OData.Client.UriOperationParameter("IDs", IDs),
+            return this.CreateFunctionQuery<global::ODataClient.ConnectomeDataModel.Structure>("", "Network", false, new global::Microsoft.OData.Client.UriOperationParameter("IDs", IDs),
                     new global::Microsoft.OData.Client.UriOperationParameter("Hops", Hops));
         }
         /// <summary>

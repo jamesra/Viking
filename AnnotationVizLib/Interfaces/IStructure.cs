@@ -16,7 +16,7 @@ namespace AnnotationVizLib
 
         string Label { get; }
 
-        IStructureLink[] Links
+        ICollection<IStructureLink> Links
         {
             get;
         }

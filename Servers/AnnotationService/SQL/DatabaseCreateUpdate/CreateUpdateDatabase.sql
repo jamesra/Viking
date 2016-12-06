@@ -5723,7 +5723,321 @@ end
 
 	 COMMIT TRANSACTION fiftynine
 	end
+
+	if(not(exists(select (1) from DBVersion where DBVersionID = 60)))
+	begin
+     print N'Added Stored Procedure to return NetworkChildStructures'
+     BEGIN TRANSACTION sixty
+	  
+	  EXEC('
 			
+			CREATE PROCEDURE [dbo].[SelectNetworkChildStructures]
+						-- Add the parameters for the stored procedure here
+						@IDs integer_list READONLY,
+						@Hops int
+			AS
+			BEGIN
+				DECLARE @CellsInNetwork integer_list 
+				DECLARE @ChildrenInNetwork integer_list 
+
+				insert into @CellsInNetwork exec SelectNetworkStructureIDs @IDs, @Hops
+
+				select S.* from Structure S 
+					inner join @CellsInNetwork N ON N.ID = S.ParentID
+			END
+			
+						')
+			
+	  if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
+		INSERT INTO DBVersion values (60, 
+		     N'Added Stored Procedure to return NetworkChildStructures' ,getDate(),User_ID())
+
+	 COMMIT TRANSACTION sixty
+	end
+
+	if(not(exists(select (1) from DBVersion where DBVersionID = 61)))
+	begin
+     print N'Fixed bugs in Network stored procedures'
+     BEGIN TRANSACTION sixtyone
+	  
+	  /*Update the return value to use "ID" for the column name instead of "SourceID"*/
+	  EXEC('DROP PROCEDURE SelectNetworkChildStructureIDs')
+			
+	  if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
+	  EXEC('DROP PROCEDURE SelectNetworkStructureIDs')
+			
+	  if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
+		 /*Update the return value to use "ID" for the column name instead of "SourceID"*/
+	  EXEC('CREATE FUNCTION NetworkStructureIDs
+			(
+				-- Add the parameters for the function here
+				@IDs integer_list READONLY,
+				@Hops int
+			)
+			RETURNS @CellsInNetwork TABLE 
+			(
+				-- Add the column definitions for the TABLE variable here
+				ID bigint PRIMARY KEY
+			)
+			AS
+			BEGIN
+				-- Fill the table variable with the rows for your result set
+	
+				DECLARE @HopSeedCells integer_list 
+
+				insert into @HopSeedCells select ID from @IDs 
+				insert into @CellsInNetwork select ID from @IDs 
+
+				while @Hops > 0
+				BEGIN
+					DECLARE @HopSeedCellsChildStructures integer_list
+					DECLARE @ChildStructurePartners integer_list
+					DECLARE @HopCellsFound integer_list
+		
+					insert into @HopSeedCellsChildStructures
+						select distinct Child.ID from Structure Parent
+							inner join Structure Child ON Child.ParentID = Parent.ID
+							inner join @HopSeedCells Cells ON Cells.ID = Parent.ID
+		
+					insert into @ChildStructurePartners
+						select distinct SL.TargetID from StructureLink SL
+							inner join @HopSeedCellsChildStructures C ON C.ID = SL.SourceID
+						UNION
+						select distinct SL.SourceID from StructureLink SL
+							inner join @HopSeedCellsChildStructures C ON C.ID = SL.TargetID
+				 
+					insert into @HopCellsFound 
+						select distinct Parent.ID from Structure Parent
+							inner join Structure Child ON Child.ParentID = Parent.ID
+							inner join @ChildStructurePartners Partners ON Partners.ID = Child.ID
+						where Parent.ID not in (Select ID from @CellsInNetwork union select ID from @HopSeedCells)
+		
+					delete S from @HopSeedCells S
+		
+					insert into @HopSeedCells 
+						select ID from @HopCellsFound 
+						where ID not in (Select ID from @CellsInNetwork)
+
+					insert into @CellsInNetwork select ID from @HopCellsFound 
+						where ID not in (Select ID from @CellsInNetwork)
+			 
+
+					delete from @ChildStructurePartners
+					delete from @HopCellsFound
+			 
+					set @Hops = @Hops - 1
+				END 
+
+				RETURN 
+			END')
+			
+	  if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
+		 EXEC('
+		    CREATE FUNCTION [dbo].[NetworkChildStructureIDs]
+			(
+				-- Add the parameters for the function here
+				@IDs integer_list READONLY,
+				@Hops int
+			)
+			RETURNS @ChildStructuresInNetwork TABLE 
+			(
+				-- Add the column definitions for the TABLE variable here
+				ID bigint PRIMARY KEY
+			)
+			AS
+			BEGIN
+				-- Fill the table variable with the rows for your result set
+				DECLARE @ChildIDsInNetwork integer_list 
+	 
+				insert into @ChildIDsInNetwork 
+					select ChildStruct.ID from Structure S
+					inner join NetworkStructureIDs(@IDs, @Hops) N ON S.ID = N.ID
+					inner join Structure ChildStruct ON ChildStruct.ParentID = N.ID
+
+				insert into @ChildStructuresInNetwork 
+					select SL.SourceID as ID from StructureLink SL
+						where SL.SourceID in (Select ID from @ChildIDsInNetwork)
+					UNION
+					select SL.TargetID as ID from StructureLink SL
+						where SL.TargetID in (Select ID from @ChildIDsInNetwork)
+
+				RETURN
+			END')
+			
+	  if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
+		 EXEC('
+		    ALTER PROCEDURE [dbo].[SelectNetworkStructures]
+				-- Add the parameters for the stored procedure here
+				@IDs integer_list READONLY,
+				@Hops int
+			AS
+			BEGIN
+				select S.* from Structure S 
+					inner join NetworkStructureIDs(@IDs, @Hops) N ON N.ID = S.ID
+			END')
+			
+		  if(@@error <> 0)
+			 begin
+			   ROLLBACK TRANSACTION 
+			   RETURN
+			 end
+
+			 if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
+		 EXEC('
+		    ALTER PROCEDURE [dbo].[SelectNetworkChildStructures]
+						-- Add the parameters for the stored procedure here
+						@IDs integer_list READONLY,
+						@Hops int
+			AS
+			BEGIN
+				select S.* from Structure S 
+					inner join NetworkChildStructureIDs(@IDs, @Hops) N ON N.ID = S.ID
+			END')
+			
+		  if(@@error <> 0)
+			 begin
+			   ROLLBACK TRANSACTION 
+			   RETURN
+			 end
+
+		  EXEC('
+			ALTER PROCEDURE [dbo].[SelectNetworkStructureLinks]
+						-- Add the parameters for the stored procedure here
+						@IDs integer_list READONLY,
+						@Hops int
+			AS
+			BEGIN
+				select SL.* from StructureLink SL
+					where SL.SourceID in (Select ID from NetworkChildStructureIDs( @IDs, @Hops)) OR
+							SL.TargetID in (Select ID from NetworkChildStructureIDs( @IDs, @Hops))
+			END')
+			
+		  if(@@error <> 0)
+			 begin
+			   ROLLBACK TRANSACTION 
+			   RETURN
+			 end
+
+		
+
+		INSERT INTO DBVersion values (61, 
+		     N'Fixed bugs in Network stored procedures' ,getDate(),User_ID() )
+		
+	 COMMIT TRANSACTION sixtyone
+	end
+
+	if(not(exists(select (1) from DBVersion where DBVersionID = 62)))
+	begin
+     print N'Updated SectionLocations function to ensure they use the new width column'
+     BEGIN TRANSACTION sixtytwo
+	  
+	  EXEC('
+			ALTER FUNCTION [dbo].[SectionLocations](@Z float)
+			RETURNS TABLE 
+			AS
+			RETURN(
+ 					Select * from Location where Z = @Z
+				);
+						')
+			
+	  if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
+	  EXEC('
+			ALTER FUNCTION [dbo].[SectionLocationsModifiedAfterDate](@Z float, @QueryDate datetime)
+			RETURNS TABLE 
+			AS
+			RETURN(
+ 					Select * from Location 
+					where Z = @Z AND LastModified >= @QueryDate
+				);
+						')
+			
+	  if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
+		INSERT INTO DBVersion values (62, 
+		    N'Fixed bug in StructureLocationLinks where a specific database was named' ,getDate(),User_ID())
+
+	 COMMIT TRANSACTION sixtytwo
+	end
+
+	if(not(exists(select (1) from DBVersion where DBVersionID = 63)))
+	begin
+     print N'Re-add the select NetworkStructureID and NetworkChildStructureID procedures to work around entity framework issues with udt parameters'
+     BEGIN TRANSACTION sixtythree
+	  
+	  EXEC('CREATE PROCEDURE [dbo].SelectNetworkStructureIDs
+				-- Add the parameters for the stored procedure here
+				@IDs integer_list READONLY,
+				@Hops int
+			AS
+			BEGIN
+				select N.ID as ID from NetworkStructureIDs(@IDs, @Hops) N
+			END')
+			
+	  if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
+	  EXEC('CREATE PROCEDURE [dbo].SelectNetworkChildStructureIDs
+				-- Add the parameters for the stored procedure here
+				@IDs integer_list READONLY,
+				@Hops int
+			AS
+			BEGIN
+				select N.ID as ID from NetworkChildStructureIDs(@IDs, @Hops) N
+			END')
+			
+	  if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
+		INSERT INTO DBVersion values (63, 
+		    N'Re-add the select NetworkStructureID and NetworkChildStructureID procedures to work around entity framework issues with udt parameters' ,getDate(),User_ID())
+
+	 COMMIT TRANSACTION sixtythree
+	end
 
 	 
 --from here on, continually add steps in the previous manner as needed.

@@ -35,7 +35,7 @@ namespace AnnotationVizLib
             }
         }
 
-        public IStructureLink[] Links
+        public ICollection<IStructureLink> Links
         {
             get
             {

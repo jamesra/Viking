@@ -101,19 +101,19 @@ namespace AnnotationVizLib
 
         public static string NodeVikingLocation(MorphologyNode node)
         {
-            GridVector2 pos = node.Location.VolumeShape.Centroid();
+            GridVector2 pos = node.Location.Geometry.Centroid();
             return string.Format("X:{0} Y:{1} Z:{2}", pos.X / node.Graph.scale.X.Value, pos.Y / node.Graph.scale.Y.Value, node.UnscaledZ);
         }
 
         public static string NodeLayout(MorphologyNode node)
         {
-            GridVector2 pos = node.Location.VolumeShape.Centroid();
+            GridVector2 pos = node.Location.Geometry.Centroid();
             return string.Format("({0},{1},{2})", pos.X, pos.Y, node.Z);
         }
 
         public static string NodeSize(MorphologyNode node, Geometry.Scale scale)
         {
-            GridRectangle bbox = node.VolumeShape.BoundingBox();
+            GridRectangle bbox = node.Geometry.BoundingBox();
             //OK, tulip treats the location property as the center of the shape.  The size is centered on the origin.  So if a cell is centered on 0, and the radius is 50.  We need to use the diamater to ensure the size is correct.
             return string.Format("({0},{1},{2})", bbox.Width, bbox.Height, 1 * scale.Z.Value);
         }

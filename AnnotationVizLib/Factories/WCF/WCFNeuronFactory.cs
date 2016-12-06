@@ -46,13 +46,11 @@ namespace AnnotationVizLib
             {
                 long[] struct_IDs = StructureIDs.ToArray();
                 Task<Structure[]> task_nodes = Task<Structure[]>.Run(() => Queries.GetNetworkedStructures(struct_IDs, (int)numHops));
-                Task<Structure[]> task_childStructures = Task<Structure[]>.Run(() => Queries.GetChildStructuresInNetwork(struct_IDs, (int)numHops));
                 Task<StructureLink[]> task_struct_links = Task<StructureLink[]>.Run(() => Queries.GetStructureLinksInNetwork(struct_IDs, (int)numHops));
-
-                Task.WaitAll(new Task[] { task_nodes, task_childStructures, task_struct_links });
+                Structure[] childStructures = Queries.GetChildStructuresInNetwork(struct_IDs, (int)numHops);
+                Task.WaitAll(new Task[] { task_nodes, /*task_childStructures,*/ task_struct_links });
 
                 Structure[] network_node_IDs = task_nodes.Result;
-                Structure[] childStructures = task_childStructures.Result;
                 StructureLink[] struct_links = task_struct_links.Result;
 
                 graphFactory.AddStructuresByID(proxy, network_node_IDs, childStructures, struct_links);
@@ -69,7 +67,10 @@ namespace AnnotationVizLib
 
             foreach (IStructure s in childStructures.Select(s => new WCFStructureAdapter(s)))
             {
-                IDToStructure.Add(s.ID, s);
+                if (!IDToStructure.ContainsKey(s.ID))
+                    IDToStructure.Add(s.ID, s);
+                else
+                    Trace.WriteLine(string.Format("Duplicate add of structure {0}", s.ID));
             }
 
             AddEdgesForChildStructures(struct_links);
@@ -92,27 +93,30 @@ namespace AnnotationVizLib
             foreach (StructureLink link in struct_links)
             {
                 //After this point both nodes are already in the graph and we can create an edge
-                IStructure LinkSource = IDToStructure[(ulong)link.SourceID];
-                IStructure LinkTarget = IDToStructure[(ulong)link.TargetID];
-
-                if (LinkTarget.ParentID.HasValue && LinkSource.ParentID.HasValue)
+                if (IDToStructure.ContainsKey((ulong)link.SourceID) && IDToStructure.ContainsKey((ulong)link.TargetID))
                 {
-                    string SourceTypeName = "";
-                    if (IDToStructureType.ContainsKey((long)LinkSource.TypeID))
-                    {
-                        SourceTypeName = IDToStructureType[(long)LinkSource.TypeID].Name;
-                    }
-                     
-                    NeuronEdge E = new NeuronEdge((long)LinkSource.ParentID.Value, (long)LinkTarget.ParentID.Value, new WCFStructureLinkAdapter(link), SourceTypeName);
+                    IStructure LinkSource = IDToStructure[(ulong)link.SourceID];
+                    IStructure LinkTarget = IDToStructure[(ulong)link.TargetID];
 
-                    if (graph.Edges.ContainsKey(E))
+                    if (LinkTarget.ParentID.HasValue && LinkSource.ParentID.HasValue)
                     {
-                        E = graph.Edges[E];
-                        E.AddLink(new WCFStructureLinkAdapter(link));
-                    }
-                    else
-                    {
-                        graph.AddEdge(E);
+                        string SourceTypeName = "";
+                        if (IDToStructureType.ContainsKey((long)LinkSource.TypeID))
+                        {
+                            SourceTypeName = IDToStructureType[(long)LinkSource.TypeID].Name;
+                        }
+
+                        NeuronEdge E = new NeuronEdge((long)LinkSource.ParentID.Value, (long)LinkTarget.ParentID.Value, new WCFStructureLinkAdapter(link), SourceTypeName);
+
+                        if (graph.Edges.ContainsKey(E))
+                        {
+                            E = graph.Edges[E];
+                            E.AddLink(new WCFStructureLinkAdapter(link));
+                        }
+                        else
+                        {
+                            graph.AddEdge(E);
+                        }
                     }
                 }
             }

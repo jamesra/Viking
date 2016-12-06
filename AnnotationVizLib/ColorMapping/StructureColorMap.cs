@@ -104,7 +104,7 @@ namespace AnnotationVizLib
 
             List<AnnotationService.AnnotationPoint> listPoints = nodes.Select<MorphologyNode, AnnotationService.AnnotationPoint>(n =>
             {
-                Geometry.GridVector2 p = n.VolumeShape.Centroid();
+                Geometry.GridVector2 p = n.Geometry.Centroid();
                 
                 var ap = new AnnotationService.AnnotationPoint();
                 ap.X = p.X;

@@ -7,23 +7,14 @@ using ODataClient.ConnectomeDataModel;
 using SqlGeometryUtils;
 using Geometry;
 
-namespace AnnotationVizLib
+namespace AnnotationVizLib.SimpleOData
 {
-    public class ODataLocationAdapter : ILocation
+    public class Location : ILocation
     {
-        private readonly Location loc;
-        public readonly Geometry.Scale scale;
+        public Geometry.Scale scale { get; set; }
 
-        public ODataLocationAdapter(Location l, Geometry.Scale scale)
+        public Location()
         {
-            if (l == null)
-                throw new ArgumentNullException();
-
-            if (scale == null)
-                throw new ArgumentNullException();
-
-            this.loc = l;
-            this.scale = scale;
         }
 
         public IDictionary<string, string> Attributes
@@ -34,6 +25,8 @@ namespace AnnotationVizLib
             }
         }
 
+        public System.Data.Entity.Spatial.DbGeometry VolumeShape { get; set; }
+
         private SqlGeometry _VolumeShape = null;
         public SqlGeometry Geometry
         {
@@ -41,11 +34,7 @@ namespace AnnotationVizLib
             {
                 if (_VolumeShape == null)
                 {
-                    if (loc.VolumeShape.Geometry.WellKnownBinary != null)
-                        _VolumeShape = Microsoft.SqlServer.Types.SqlGeometry.STGeomFromWKB(new System.Data.SqlTypes.SqlBytes(loc.VolumeShape.Geometry.WellKnownBinary), loc.VolumeShape.Geometry.CoordinateSystemId.Value);
-                    else
-                        _VolumeShape = Microsoft.SqlServer.Types.SqlGeometry.STGeomFromText(new System.Data.SqlTypes.SqlChars(loc.VolumeShape.Geometry.WellKnownText), loc.VolumeShape.Geometry.CoordinateSystemId.Value);
-
+                    _VolumeShape = this.VolumeShape.ToSqlGeometry();
                     _VolumeShape = _VolumeShape.Scale(scale);
                 }
 
@@ -57,77 +46,64 @@ namespace AnnotationVizLib
                 _VolumeShape = value;
             }
         }
+        
 
         public ulong ID
         {
-            get
-            {
-                return (ulong)loc.ID;
-            }
+            get; private set;
         }
 
         public bool IsUntraceable
         {
-            get
-            {
-                return loc.IsUntraceable();
-            }
+            get; private set;
         }
 
         public bool IsVericosityCap
         {
-            get
-            {
-                return loc.IsVericosityCap();
-            }
+            get; private set;
         }
 
         public bool OffEdge
         {
-            get
-            {
-                return loc.OffEdge;
-            }
+            get; private set;
         }
 
         public ulong ParentID
         {
-            get
-            {
-                return (ulong)loc.ParentID;
-            }
+            get; private set;
         }
 
         public bool Terminal
         {
-            get
-            {
-                return loc.Terminal;
-            }
+            get; private set;
         }
 
         public long UnscaledZ
         {
             get
             {
-                return loc.Z;
+                return (long)this.Z;
             }
         }
 
         public double Z
         {
-            get
-            {
-                return (double)loc.Z * scale.Z.Value;
-            }
+            get; private set;
+        }
+
+        double IGeometry.Z
+        {
+            get { return (double)UnscaledZ * scale.Z.Value; }
         }
 
         public string TagsXml
         {
-            get
-            {
-                return loc.Tags;
-            }
+            get { return this.Tags; }
+        }
+
+        public string Tags
+        {
+            get; private set;
         }
 
         GridBox _BoundingBox = null;
@@ -143,6 +119,11 @@ namespace AnnotationVizLib
 
                 return _BoundingBox;
             }
+        }
+
+        public override string ToString()
+        {
+            return ID.ToString();
         }
     }
 }

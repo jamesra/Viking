@@ -23,11 +23,11 @@ namespace AnnotationVizLibTests
         [TestMethod]
         public void GenerateWCFNeuronGraph()
         {
-            AnnotationVizLib.NeuronGraph graph = WCFNeuronFactory.BuildGraph(new long[] {476}, 1, WCFEndpoint, this.userCredentials);
+            AnnotationVizLib.NeuronGraph graph = WCFNeuronFactory.BuildGraph(new long[] {476}, 2, WCFEndpoint, this.userCredentials);
 
             System.Diagnostics.Debug.Assert(graph != null);
 
-            string JSONPath = "C:\\Temp\\Neuron476.json";
+            string JSONPath = "C:\\Temp\\WCFNeuron476.json";
 
             NeuronJSONView JSONView = NeuronJSONView.ToJSON(graph);
             string JSON = JSONView.ToString(); 
@@ -35,19 +35,18 @@ namespace AnnotationVizLibTests
 
             NeuronGMLView gmlGraph = AnnotationVizLib.NeuronGMLView.ToGML(graph, "", true);
 
-            string gmlPath = "C:\\Temp\\Neuron476.gml";
+            string gmlPath = "C:\\Temp\\WCFNeuron476.gml";
             gmlGraph.SaveGML(gmlPath);
 
             NeuronDOTView dotGraph = AnnotationVizLib.NeuronDOTView.ToDOT(graph, true);
 
-            string dotPath = "C:\\Temp\\Neuron476.dot";
+            string dotPath = "C:\\Temp\\WCFNeuron476.dot";
             dotGraph.SaveDOT(dotPath);
 
-            string[] Types = new string[] {"svg"};
+            //string[] Types = new string[] {"svg"};
+            //NeuronDOTView.Convert("dot", dotPath, Types);
 
-            NeuronDOTView.Convert("dot", dotPath, Types);
-
-            string tlpPath = "C:\\Temp\\Neuron476.tlp";
+            string tlpPath = "C:\\Temp\\WCFNeuron476.tlp";
 
             NeuronTLPView tlpGraph = AnnotationVizLib.NeuronTLPView.ToTLP(graph, ODataEndpoint, true);
             tlpGraph.SaveTLP(tlpPath);
@@ -60,7 +59,7 @@ namespace AnnotationVizLibTests
 
             System.Diagnostics.Debug.Assert(graph != null);
 
-            string JSONPath = "C:\\Temp\\Neuron476_9Hops.json";
+            string JSONPath = "C:\\Temp\\NeuronWCF476_9Hops.json";
 
             NeuronJSONView JSONView = NeuronJSONView.ToJSON(graph);
             string JSON = JSONView.ToString();
@@ -68,19 +67,15 @@ namespace AnnotationVizLibTests
 
             NeuronGMLView gmlGraph = AnnotationVizLib.NeuronGMLView.ToGML(graph, "", true);
 
-            string gmlPath = "C:\\Temp\\Neuron476_9Hops.gml";
+            string gmlPath = "C:\\Temp\\NeuronWCF476_9Hops.gml";
             gmlGraph.SaveGML(gmlPath);
 
             NeuronDOTView dotGraph = AnnotationVizLib.NeuronDOTView.ToDOT(graph, true);
 
-            string dotPath = "C:\\Temp\\Neuron476_9Hops.dot";
+            string dotPath = "C:\\Temp\\NeuronWCF476_9Hops.dot";
             dotGraph.SaveDOT(dotPath);
-
-            string[] Types = new string[] { "svg" };
-
-            NeuronDOTView.Convert("dot", dotPath, Types);
-
-            string tlpPath = "C:\\Temp\\Neuron476_9Hops.tlp";
+             
+            string tlpPath = "C:\\Temp\\NeuronWCF476_9Hops.tlp";
 
             NeuronTLPView tlpGraph = AnnotationVizLib.NeuronTLPView.ToTLP(graph, ODataEndpoint, true);
             tlpGraph.SaveTLP(tlpPath);
@@ -89,7 +84,7 @@ namespace AnnotationVizLibTests
         [TestMethod]
         public void GenerateODataNeuronGraph()
         {
-            AnnotationVizLib.NeuronGraph graph = ODataNeuronFactory.FromOData(new long[] { 180, 476 }, 1, new Uri(ODataEndpoint));
+            AnnotationVizLib.NeuronGraph graph = ODataNeuronFactory.FromOData(new long[] { 180, 476 }, 2, new Uri(ODataEndpoint));
 
             System.Diagnostics.Debug.Assert(graph != null);
 
@@ -117,6 +112,39 @@ namespace AnnotationVizLibTests
 
             NeuronTLPView tlpGraph = AnnotationVizLib.NeuronTLPView.ToTLP(graph, ODataEndpoint, true);
             tlpGraph.SaveTLP(tlpPath);
+        }
+
+        [TestMethod]
+        public void GenerateSimpleODataNeuronGraph()
+        {
+            AnnotationVizLib.NeuronGraph graph = SimpleODataNeuronFactory.FromOData(new long[] { 476 }, 9, new Uri(ODataEndpoint));
+
+            System.Diagnostics.Debug.Assert(graph != null);
+
+            string JSONPath = "C:\\Temp\\NeuronSimpleOData476.json";
+
+            NeuronJSONView JSONView = NeuronJSONView.ToJSON(graph);
+            string JSON = JSONView.ToString();
+            JSONView.SaveJSON(JSONPath);
+            
+            string tlpPath = "C:\\Temp\\NeuronSimpleOData476.tlp";
+
+            NeuronTLPView tlpGraph = AnnotationVizLib.NeuronTLPView.ToTLP(graph, ODataEndpoint, true);
+            tlpGraph.SaveTLP(tlpPath);
+
+            NeuronGMLView gmlGraph = AnnotationVizLib.NeuronGMLView.ToGML(graph, "", true);
+
+            string gmlPath = "C:\\Temp\\NeuronSimpleOData476.gml";
+            gmlGraph.SaveGML(gmlPath);
+
+            NeuronDOTView dotGraph = AnnotationVizLib.NeuronDOTView.ToDOT(graph, true);
+
+            string dotPath = "C:\\Temp\\NeuronSimpleOData476.dot";
+            dotGraph.SaveDOT(dotPath);
+
+            string[] Types = new string[] { "svg" };
+
+            //NeuronDOTView.Convert("dot", dotPath, Types);
         }
     }
 }
