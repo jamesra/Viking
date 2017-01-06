@@ -221,7 +221,7 @@ namespace Viking.VolumeModel
                 for (int iY = iMinY; iY < iMaxY; iY++)
                 {
                     //Figure out if the tile would be visible
-                    GridRectangle tileBorder = TileBorder(iX, iY, roundedDownsample);
+                    GridRectangle tileBorder = TileBoundingBox(iX, iY, roundedDownsample);
                     if (tileBorder.Intersects(SectionVisibleBounds) == false)
                         continue; 
 
@@ -278,7 +278,7 @@ namespace Viking.VolumeModel
         /// <param name="iX"></param>
         /// <param name="iY"></param>
         /// <returns></returns>
-        private GridRectangle TileBorder(int iX, int iY, int Downsample)
+        private GridRectangle TileBoundingBox(int iX, int iY, int Downsample)
         {
             GridRectangle TileBorder;
             double Width = this.TileSizeX * Downsample;
@@ -337,21 +337,20 @@ namespace Viking.VolumeModel
                                                                             out int[] TriangleEdges)
         {
             GridVector2[] SectionTileCorners = TileHull(iX,iY,Downsample);
-            List<MappingGridVector2> TileCornerMappedPoints = new List<MappingGridVector2>(4);
-            
-            bool transformSuccess = false; 
-            GridVector2 mappedVert;
+            List<MappingGridVector2> TileCornerMappedPoints = new List<MappingGridVector2>(SectionTileCorners.Length);
+             
+            GridVector2[] mappedVerts;
+            bool[] transformSuccess = VolumeTransform.TryTransform(SectionTileCorners, out mappedVerts);
+
             for(int i = 0; i < SectionTileCorners.Length; i++)
             {
-                GridVector2 Vert = SectionTileCorners[i];
-                transformSuccess = VolumeTransform.TryTransform(Vert, out mappedVert);
-                if(transformSuccess)
-                {
-                    TileCornerMappedPoints.Add(new MappingGridVector2(mappedVert, Vert)); 
+                if(transformSuccess[i])
+                { 
+                    TileCornerMappedPoints.Add(new MappingGridVector2(mappedVerts[i], SectionTileCorners[i])); 
                 }
             }
 
-            GridRectangle tileBorder = TileBorder(iX,iY,Downsample);
+            GridRectangle tileBorder = TileBoundingBox(iX,iY,Downsample);
 
             List<MappingGridVector2> MappedPoints = new List<MappingGridVector2>(16);
 
