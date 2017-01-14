@@ -1,9 +1,9 @@
 /**** You need to replace the following templates to use this script ****/
-/**** RABBIT = Name of the database  */
+/**** NeitzInferiorMonkey = Name of the database  */
 /**** {DATABASE_DIRECTORY} = Directory Datbase lives in if it needs to be created, with the trailing slash i.e. C:\Database\
 */
 DECLARE @DATABASE_NAME VARCHAR(50)
-SET @DATABASE_NAME = 'RABBIT'
+SET @DATABASE_NAME = 'NeitzInferiorMonkey'
 DECLARE @DATABASE_DIRECTORY VARCHAR(50)
 SET @DATABASE_DIRECTORY = 'C:\Database\'
 
@@ -29,7 +29,7 @@ BEGIN
 END
 	
 CREATE TABLE #UpdateVars ([Version] VARCHAR(100));
-INSERT INTO #UpdateVars Values (N'RABBIT');
+INSERT INTO #UpdateVars Values (N'NeitzInferiorMonkey');
 
 DECLARE @db_id VARCHAR(100);
 SET @db_id = db_id(@DATABASE_NAME)
@@ -42,50 +42,50 @@ BEGIN
 	print N'Database does not exist, creating...' 
 	
 	declare @Path varchar(100)
-	set @Path = N'C:\Database\RABBIT\'
+	set @Path = N'C:\Database\NeitzInferiorMonkey\'
 	EXEC master.dbo.xp_create_subdir @Path
 	
-	/****** Object:  Database [RABBIT]    Script Date: 06/14/2011 13:13:50 ******/
-	CREATE DATABASE [RABBIT] ON  PRIMARY 
-		( NAME = N'RABBIT', FILENAME = N'C:\Database\RABBIT\RABBIT.mdf' , SIZE = 4096KB , MAXSIZE = UNLIMITED, FILEGROWTH = 1024KB )
+	/****** Object:  Database [NeitzInferiorMonkey]    Script Date: 06/14/2011 13:13:50 ******/
+	CREATE DATABASE [NeitzInferiorMonkey] ON  PRIMARY 
+		( NAME = N'NeitzInferiorMonkey', FILENAME = N'C:\Database\NeitzInferiorMonkey\NeitzInferiorMonkey.mdf' , SIZE = 4096KB , MAXSIZE = UNLIMITED, FILEGROWTH = 1024KB )
 		 LOG ON 
-		( NAME = N'NEITZTEMPORALMONKEY_log', FILENAME = N'C:\Database\RABBIT\NEITZTEMPORALMONKEY_log.ldf' , SIZE = 4096KB , MAXSIZE = 2048GB , FILEGROWTH = 10%)
+		( NAME = N'NEITZTEMPORALMONKEY_log', FILENAME = N'C:\Database\NeitzInferiorMonkey\NEITZTEMPORALMONKEY_log.ldf' , SIZE = 4096KB , MAXSIZE = 2048GB , FILEGROWTH = 10%)
 		
-	ALTER DATABASE [RABBIT] SET COMPATIBILITY_LEVEL = 100
+	ALTER DATABASE [NeitzInferiorMonkey] SET COMPATIBILITY_LEVEL = 100
 	
 	IF (1 = FULLTEXTSERVICEPROPERTY('IsFullTextInstalled'))
 	begin
-		EXEC [RABBIT].[dbo].[sp_fulltext_database] @action = 'enable'
+		EXEC [NeitzInferiorMonkey].[dbo].[sp_fulltext_database] @action = 'enable'
 	end
 	
-	ALTER DATABASE [RABBIT] SET ANSI_NULL_DEFAULT OFF
-	ALTER DATABASE [RABBIT] SET ANSI_NULLS OFF
-	ALTER DATABASE [RABBIT] SET ANSI_PADDING ON
-	ALTER DATABASE [RABBIT] SET ANSI_WARNINGS OFF
-	ALTER DATABASE [RABBIT] SET ARITHABORT OFF
-	ALTER DATABASE [RABBIT] SET AUTO_CLOSE OFF
-	ALTER DATABASE [RABBIT] SET AUTO_CREATE_STATISTICS ON
-	ALTER DATABASE [RABBIT] SET AUTO_SHRINK OFF
-	ALTER DATABASE [RABBIT] SET AUTO_UPDATE_STATISTICS ON
-	ALTER DATABASE [RABBIT] SET CURSOR_CLOSE_ON_COMMIT OFF
-	ALTER DATABASE [RABBIT] SET CURSOR_DEFAULT  GLOBAL
-	ALTER DATABASE [RABBIT] SET CONCAT_NULL_YIELDS_NULL OFF
-	ALTER DATABASE [RABBIT] SET NUMERIC_ROUNDABORT OFF
-	ALTER DATABASE [RABBIT] SET QUOTED_IDENTIFIER OFF
-	ALTER DATABASE [RABBIT] SET RECURSIVE_TRIGGERS OFF
-	ALTER DATABASE [RABBIT] SET  DISABLE_BROKER
-	ALTER DATABASE [RABBIT] SET AUTO_UPDATE_STATISTICS_ASYNC OFF
-	ALTER DATABASE [RABBIT] SET DATE_CORRELATION_OPTIMIZATION OFF
-	ALTER DATABASE [RABBIT] SET TRUSTWORTHY OFF
-	ALTER DATABASE [RABBIT] SET ALLOW_SNAPSHOT_ISOLATION OFF
-	ALTER DATABASE [RABBIT] SET PARAMETERIZATION SIMPLE
-	ALTER DATABASE [RABBIT] SET READ_COMMITTED_SNAPSHOT OFF
-	ALTER DATABASE [RABBIT] SET HONOR_BROKER_PRIORITY OFF
-	ALTER DATABASE [RABBIT] SET  READ_WRITE
-	ALTER DATABASE [RABBIT] SET RECOVERY SIMPLE
-	ALTER DATABASE [RABBIT] SET  MULTI_USER
-	ALTER DATABASE [RABBIT] SET PAGE_VERIFY CHECKSUM
-	ALTER DATABASE [RABBIT] SET DB_CHAINING OFF
+	ALTER DATABASE [NeitzInferiorMonkey] SET ANSI_NULL_DEFAULT OFF
+	ALTER DATABASE [NeitzInferiorMonkey] SET ANSI_NULLS OFF
+	ALTER DATABASE [NeitzInferiorMonkey] SET ANSI_PADDING ON
+	ALTER DATABASE [NeitzInferiorMonkey] SET ANSI_WARNINGS OFF
+	ALTER DATABASE [NeitzInferiorMonkey] SET ARITHABORT OFF
+	ALTER DATABASE [NeitzInferiorMonkey] SET AUTO_CLOSE OFF
+	ALTER DATABASE [NeitzInferiorMonkey] SET AUTO_CREATE_STATISTICS ON
+	ALTER DATABASE [NeitzInferiorMonkey] SET AUTO_SHRINK OFF
+	ALTER DATABASE [NeitzInferiorMonkey] SET AUTO_UPDATE_STATISTICS ON
+	ALTER DATABASE [NeitzInferiorMonkey] SET CURSOR_CLOSE_ON_COMMIT OFF
+	ALTER DATABASE [NeitzInferiorMonkey] SET CURSOR_DEFAULT  GLOBAL
+	ALTER DATABASE [NeitzInferiorMonkey] SET CONCAT_NULL_YIELDS_NULL OFF
+	ALTER DATABASE [NeitzInferiorMonkey] SET NUMERIC_ROUNDABORT OFF
+	ALTER DATABASE [NeitzInferiorMonkey] SET QUOTED_IDENTIFIER OFF
+	ALTER DATABASE [NeitzInferiorMonkey] SET RECURSIVE_TRIGGERS OFF
+	ALTER DATABASE [NeitzInferiorMonkey] SET  DISABLE_BROKER
+	ALTER DATABASE [NeitzInferiorMonkey] SET AUTO_UPDATE_STATISTICS_ASYNC OFF
+	ALTER DATABASE [NeitzInferiorMonkey] SET DATE_CORRELATION_OPTIMIZATION OFF
+	ALTER DATABASE [NeitzInferiorMonkey] SET TRUSTWORTHY OFF
+	ALTER DATABASE [NeitzInferiorMonkey] SET ALLOW_SNAPSHOT_ISOLATION OFF
+	ALTER DATABASE [NeitzInferiorMonkey] SET PARAMETERIZATION SIMPLE
+	ALTER DATABASE [NeitzInferiorMonkey] SET READ_COMMITTED_SNAPSHOT OFF
+	ALTER DATABASE [NeitzInferiorMonkey] SET HONOR_BROKER_PRIORITY OFF
+	ALTER DATABASE [NeitzInferiorMonkey] SET  READ_WRITE
+	ALTER DATABASE [NeitzInferiorMonkey] SET RECOVERY SIMPLE
+	ALTER DATABASE [NeitzInferiorMonkey] SET  MULTI_USER
+	ALTER DATABASE [NeitzInferiorMonkey] SET PAGE_VERIFY CHECKSUM
+	ALTER DATABASE [NeitzInferiorMonkey] SET DB_CHAINING OFF
 	
 	print N'Created Database...' 
 	INSERT INTO #UpdateVars Values (DB_ID(N'CreateTables'));
@@ -93,7 +93,7 @@ END
 
 GO
 
-USE [RABBIT]
+USE [NeitzInferiorMonkey]
 GO
 
 --Need to specify database owner before enabling change tracking
@@ -282,7 +282,7 @@ BEGIN
 	EXEC sys.sp_addextendedproperty @name=N'MS_Description', @value=N'VolumeY is the location in volume space.  It exists so that data analysis code does not need to implement transforms' , @level0type=N'SCHEMA',@level0name=N'dbo', @level1type=N'TABLE',@level1name=N'Location', @level2type=N'COLUMN',@level2name=N'VolumeY'
 	EXEC sys.sp_addextendedproperty @name=N'MS_Description', @value=N'Set to true if this location is the edge of a structure and cannot be extended.' , @level0type=N'SCHEMA',@level0name=N'dbo', @level1type=N'TABLE',@level1name=N'Location', @level2type=N'COLUMN',@level2name=N'Terminal'
 	EXEC sys.sp_addextendedproperty @name=N'MS_Description', @value=N'This bit is set if the structure leaves the volume at this location' , @level0type=N'SCHEMA',@level0name=N'dbo', @level1type=N'TABLE',@level1name=N'Location', @level2type=N'COLUMN',@level2name=N'OffEdge'
-	EXEC sys.sp_addextendedproperty @name=N'MS_Description', @value=N'0 = Point, 1 = Circle, 2 =' , @level0type=N'SCHEMA',@level0name=N'dbo', @level1type=N'TABLE',@level1name=N'Location', @level2type=N'COLUMN',@level2name=N'RABBIT'
+	EXEC sys.sp_addextendedproperty @name=N'MS_Description', @value=N'0 = Point, 1 = Circle, 2=Ellipse, 3 =PolyLine, 4=Polygon' , @level0type=N'SCHEMA',@level0name=N'dbo', @level1type=N'TABLE',@level1name=N'Location', @level2type=N'COLUMN',@level2name=N'TypeCode'
 	EXEC sys.sp_addextendedproperty @name=N'MS_Description', @value=N'Date the location was last modified' , @level0type=N'SCHEMA',@level0name=N'dbo', @level1type=N'TABLE',@level1name=N'Location', @level2type=N'COLUMN',@level2name=N'LastModified'
 	EXEC sys.sp_addextendedproperty @name=N'MS_Description', @value=N'Date the location was created' , @level0type=N'SCHEMA',@level0name=N'dbo', @level1type=N'TABLE',@level1name=N'Location', @level2type=N'COLUMN',@level2name=N'Created'
 	EXEC sys.sp_addextendedproperty @name=N'MS_Description', @value=N'Last username to modify the row' , @level0type=N'SCHEMA',@level0name=N'dbo', @level1type=N'TABLE',@level1name=N'Location', @level2type=N'COLUMN',@level2name=N'Username'
@@ -1106,15 +1106,15 @@ END
 */  
 GO
 
-Use [RABBIT]
+Use [NeitzInferiorMonkey]
 GO
   
 DECLARE @compat_level int
-SET @compat_level = (SELECT compatibility_level FROM sys.databases WHERE name = 'RABBIT')
+SET @compat_level = (SELECT compatibility_level FROM sys.databases WHERE name = 'NeitzInferiorMonkey')
 IF(@compat_level < 120)
 BEGIN
 	print N'Setting the database compatability level to SQL 2014'
-	ALTER DATABASE [RABBIT] SET COMPATIBILITY_LEVEL = 120  
+	ALTER DATABASE [NeitzInferiorMonkey] SET COMPATIBILITY_LEVEL = 120  
 END
 GO
 
@@ -2514,7 +2514,6 @@ end
 		    N'Create Spatial Indicies' ,getDate(),User_ID())
 	 COMMIT TRANSACTION twentyeight
 	end
-	go
 
 	if(not(exists(select (1) from DBVersion where DBVersionID = 29)))
 	begin
@@ -2557,7 +2556,6 @@ end
 		    N'Create Function for SelectStructureLinks for easy OData use'  ,getDate(),User_ID())
 	 COMMIT TRANSACTION twentynine
 	end
-	go
 
 	if(not(exists(select (1) from DBVersion where DBVersionID = 30)))
 	begin
@@ -2974,7 +2972,6 @@ end
 		    N'Create Functions for spatial queries'  ,getDate(),User_ID())
 	 COMMIT TRANSACTION thirtyone
 	end
-	go
 
 	if(not(exists(select (1) from DBVersion where DBVersionID = 32)))
 	begin
@@ -5366,7 +5363,7 @@ end
 
 	 COMMIT TRANSACTION fifty
 	end
-
+	
 	if(not(exists(select (1) from DBVersion where DBVersionID = 51)))
 	begin
      print N'Convert Radius to computed column and add a new width property for use with lines'
@@ -5376,7 +5373,7 @@ end
 	  
 	 --ALTER TABLE Location DROP CONSTRAINT chk_Location_Width
 
-	 UPDATE Location SET Width = Radius FROM Location WHERE TypeCode != 1
+	 EXEC('UPDATE Location SET Width = Radius FROM Location WHERE TypeCode != 1')
 	 
 	 if(@@error <> 0)
 		 begin
@@ -5384,11 +5381,11 @@ end
 		   RETURN
 		 end
 	 
-	 ALTER TABLE Location
+	  EXEC('ALTER TABLE Location
 		ADD CONSTRAINT chk_Location_Width CHECK (
 			(TypeCode = 1 AND Width IS NULL) OR
 			(TypeCode != 1 AND Width IS NOT NULL)
-		) 
+		) ')
 
 	  if(@@error <> 0)
 		 begin
@@ -5396,7 +5393,7 @@ end
 		   RETURN
 		 end
 
-      ALTER TABLE Location DROP CONSTRAINT DF_Location_Radius
+      EXEC(' ALTER TABLE Location DROP CONSTRAINT DF_Location_Radius ')
 
 	  if(@@error <> 0)
 		 begin
@@ -5404,7 +5401,7 @@ end
 		   RETURN
 		 end
 
-	  ALTER TABLE Location DROP COLUMN Radius
+	  EXEC( ' ALTER TABLE Location DROP COLUMN Radius ')
 
 	  if(@@error <> 0)
 		 begin
@@ -5412,12 +5409,12 @@ end
 		   RETURN
 		 end
 	  
-	  ALTER TABLE Location ADD Radius as  
+	  EXEC(' ALTER TABLE Location ADD Radius as  
 		CASE MosaicShape.STDimension()
 			WHEN 0 THEN 0
 			WHEN 1 THEN MosaicShape.STLength() / 2.0
 			WHEN 2 THEN SQRT( MosaicShape.STArea() / PI() )
-		END PERSISTED NOT NULL
+		END PERSISTED NOT NULL ')
 
 	 if(@@error <> 0)
 		 begin
@@ -5606,37 +5603,48 @@ end
      BEGIN TRANSACTION fiftysix
 
 	 EXEC('
-	 CREATE FUNCTION ufnStructureVolume
-	(
-		-- Add the parameters for the function here
-		@StructureID bigint
-	)
-	RETURNS float
-	AS
-	BEGIN
-		declare @Area float
-		declare @AreaScalar float
-		--Measures the area of the PSD
-		set @AreaScalar = dbo.XYScale() * dbo.ZScale()
+		 CREATE FUNCTION ufnStructureVolume
+		(
+			-- Add the parameters for the function here
+			@StructureID bigint
+		)
+		RETURNS float
+		AS
+		BEGIN
+			declare @Area float
+			declare @AreaScalar float
+			--Measures the area of the PSD
+			set @AreaScalar = dbo.XYScale() * dbo.ZScale()
 
-		select top 1 @Volume = sum(MosaicShape.STArea()) * @AreaScalar from Location 
-		where ParentID = @StructureID
-		group by ParentID
+			select top 1 @Area = sum(MosaicShape.STArea()) * @AreaScalar from Location 
+			where ParentID = @StructureID
+			group by ParentID
 	  
-		-- Return the result of the function
-		RETURN @Volume
+			-- Return the result of the function
+			RETURN @Area
 
-	END
-	')
+		END
+		')
 
-	Grant EXECUTE on ufnStructureVolume to public
-	 
+		if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
+		Grant EXECUTE on ufnStructureVolume to public
+
+		if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
 
 	  INSERT INTO DBVersion values (56, 
 		   N'Create ufn for measuring structure volume',getDate(),User_ID())
 
 	 COMMIT TRANSACTION fiftysix
-
+	end
 	 
 
 	if(not(exists(select (1) from DBVersion where DBVersionID = 57)))
@@ -5728,7 +5736,7 @@ end
 	begin
      print N'Added Stored Procedure to return NetworkChildStructures'
      BEGIN TRANSACTION sixty
-	  
+	 
 	  EXEC('
 			
 			CREATE PROCEDURE [dbo].[SelectNetworkChildStructures]
@@ -5781,7 +5789,7 @@ end
 		   ROLLBACK TRANSACTION 
 		   RETURN
 		 end
-
+		 
 		 /*Update the return value to use "ID" for the column name instead of "SourceID"*/
 	  EXEC('CREATE FUNCTION NetworkStructureIDs
 			(
@@ -5907,12 +5915,6 @@ end
 			   RETURN
 			 end
 
-			 if(@@error <> 0)
-		 begin
-		   ROLLBACK TRANSACTION 
-		   RETURN
-		 end
-
 		 EXEC('
 		    ALTER PROCEDURE [dbo].[SelectNetworkChildStructures]
 						-- Add the parameters for the stored procedure here
@@ -5992,8 +5994,7 @@ end
 		   RETURN
 		 end
 
-		INSERT INTO DBVersion values (62, 
-		    N'Fixed bug in StructureLocationLinks where a specific database was named' ,getDate(),User_ID())
+		INSERT INTO DBVersion values (62, N'Fixed bug in StructureLocationLinks where a specific database was named' ,getDate(),User_ID())
 
 	 COMMIT TRANSACTION sixtytwo
 	end
@@ -6033,12 +6034,11 @@ end
 		   RETURN
 		 end
 
-		INSERT INTO DBVersion values (63, 
-		    N'Re-add the select NetworkStructureID and NetworkChildStructureID procedures to work around entity framework issues with udt parameters' ,getDate(),User_ID())
+		INSERT INTO DBVersion values (63, N'Re-add the select NetworkStructureID and NetworkChildStructureID procedures to work around entity framework issues with udt parameters' ,getDate(),User_ID())
 
 	 COMMIT TRANSACTION sixtythree
 	end
 
 	 
 --from here on, continually add steps in the previous manner as needed.
-	COMMIT TRANSACTION main
+COMMIT TRANSACTION main
