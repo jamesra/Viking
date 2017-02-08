@@ -23,8 +23,6 @@ namespace AnnotationVizLib
         CLOSEDCURVE = 6
     };
 
-     
-
     public partial class MorphologyGraph : Graph<ulong, MorphologyNode, MorphologyEdge>
     {
         
@@ -64,7 +62,7 @@ namespace AnnotationVizLib
         /// <summary>
         /// Map the motif label to the arbitrary id used by TLP.  Do not add directly to this collection.  Use Add/Remove Subgraph instead.
         /// </summary>
-        internal ConcurrentDictionary<ulong, MorphologyGraph> Subgraphs = new ConcurrentDictionary<ulong, MorphologyGraph>();
+        public ConcurrentDictionary<ulong, MorphologyGraph> Subgraphs = new ConcurrentDictionary<ulong, MorphologyGraph>();
 
         internal ConcurrentDictionary<ulong, ulong> NearestNodeToSubgraph = new ConcurrentDictionary<ulong, ulong>();
 
@@ -221,8 +219,8 @@ namespace AnnotationVizLib
             }
 
             return Links;
-        }
-
+        } 
+        
         /// <summary>
         /// Locations with 3 or more edges, branch points in a process
         /// </summary>

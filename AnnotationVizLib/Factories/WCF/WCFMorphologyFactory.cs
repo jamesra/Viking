@@ -20,9 +20,7 @@ namespace AnnotationVizLib
             Geometry.Scale scale = Queries.GetScale().ToGeometryScale();
 
             MorphologyGraph rootGraph = new MorphologyGraph(0, scale);
-
             
-
             MorphologyForStructures(rootGraph, StructureIDs, include_children, scale);
 
             return rootGraph;

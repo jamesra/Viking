@@ -311,5 +311,93 @@ namespace AnnotationVizLib
 
             return minDistance;
         }
+
+
+        /// <summary>
+        /// Return the distance between all subgraphs of the indicated types
+        /// </summary>
+        /// <param name="cell_graph"></param>
+        /// <param name="SourceTypeIDs"></param>
+        /// <param name="TargetTypeIDs"></param>
+        /// <returns></returns>
+        public static PathData[] DistancesBetweenSubgraphsByType(MorphologyGraph cell_graph, SortedSet<ulong> SourceTypeIDs, SortedSet<ulong> TargetTypeIDs)
+        {
+            List<ulong> source_ids = cell_graph.Subgraphs.Where(sg => SourceTypeIDs.Contains(sg.Value.structureType.ID)).Select(sg => sg.Key).ToList();
+            //Assert.IsTrue(desmosome_ids.Count > 0);
+            if (source_ids.Count == 0)
+                return new PathData[0];
+
+            var nodes_with_sourceType_subgraphs = source_ids.Select(id => new { Node = cell_graph.NearestNodeToSubgraph[id], StructureID = id }).ToList();
+            
+            SortedDictionary<ulong, PathData> paths_between_types = new SortedDictionary<ulong, PathData>();
+
+            //Find the nearest synapse
+            foreach (var node_with_sourceType in nodes_with_sourceType_subgraphs)
+            {
+                IList<ulong> path_to_targetType = MorphologyGraph.Path(cell_graph, node_with_sourceType.Node, (n) => n.NodeContainsStructureOfType(TargetTypeIDs));
+                if (path_to_targetType == null)
+                    continue;
+
+                //Find the substructure on the final node of the path
+                MorphologyNode destination = cell_graph.Nodes[path_to_targetType.Last()];
+                ulong TargetStructureID = destination.Subgraphs.Where(s => TargetTypeIDs.Contains(s.structureType.ID)).Select(s => s.StructureID).First();
+
+                paths_between_types[node_with_sourceType.Node] = new PathData
+                {
+                    Path = path_to_targetType,
+                    SourceStructureID = node_with_sourceType.StructureID,
+                    TargetStructureID = TargetStructureID,
+                    NearestNodeToSource = cell_graph.Nodes[node_with_sourceType.Node],
+                    NearestNodeToTarget = destination
+                };
+            }
+
+            /*
+            if (paths_between_types.Count > 0)
+            {
+                //int[] hops = paths_for_desmosomes.Select(p => p.Value.Path.Count).ToArray();
+                //double avg_hops = paths_for_desmosomes.Select(p => p.Value.Path.Count).Average();
+                //Console.WriteLine("Avg number of hops to synapse component: {0}", avg_hops);
+            }
+            */
+
+            //Precalculate the distance between the substructures using the path
+            foreach(ulong ID in paths_between_types.Keys)
+            {
+                PathData p = paths_between_types[ID];
+                p.Distance = DistanceBetweenSubstructures(cell_graph, p.Path, p.SourceStructureID, p.TargetStructureID);
+            }
+
+            return paths_between_types.Values.ToArray();
+        }
+
+
+        /// <summary>
+        /// The distance between two substructures in a cell
+        /// </summary>
+        /// <param name="path_between"></param>
+        /// <param name="SourceStructureID"></param>
+        /// <param name="TargetStructureID"></param>
+        /// <returns></returns>
+        internal static double DistanceBetweenSubstructures(MorphologyGraph graph, IList<ulong> path_between, ulong SourceStructureID, ulong TargetStructureID)
+        {
+            if (path_between.Count <= 2)
+            {
+                //Measure the direct distance between the structures because there is a direct line between the two
+                MorphologyGraph source = graph.Subgraphs[SourceStructureID];
+                MorphologyGraph target = graph.Subgraphs[TargetStructureID];
+
+                return MorphologyGraph.GraphDistance(source, target);
+            }
+
+            double path_distance = graph.PathLength(path_between);
+
+            double SourceToPathDistance;
+            ulong nearest_node_to_source = graph.NearestNode(graph.Subgraphs[SourceStructureID], out SourceToPathDistance);
+            double TargetToPathDistance;
+            ulong nearest_node_to_target = graph.NearestNode(graph.Subgraphs[TargetStructureID], out TargetToPathDistance);
+
+            return path_distance + SourceToPathDistance + TargetToPathDistance;
+        }
     }
 }

@@ -34,7 +34,7 @@ namespace AnnotationVizLib
             
             return rootGraph;
         }
-
+        
         private static List<Structure> LoadStructures(Simple.OData.Client.ODataClient client, ICollection<long> StructureIDs, Geometry.Scale scale)
         {
             List<Task<Structure>> listTasks = new List<Task<SimpleOData.Structure>>();
@@ -42,7 +42,13 @@ namespace AnnotationVizLib
 
             foreach (long ID in StructureIDs)
             {
-                Task<Structure> t = client.For<Structure>().Filter(s => s.ID == (ulong)ID).Expand(s => s.Type).Expand(s => s.Locations).Expand(s => s.Children).Expand(s => s.SourceOfLinks).Expand(s => s.TargetOfLinks).FindEntryAsync();
+                Task<Structure> t = client.For<Structure>().Filter(s => s.ID == (ulong)ID)
+                                                           .Expand(s => s.Type)
+                                                           //.Expand(s => s.Locations.Select(l => new Location {ID = l.ID, ParentID = l.ParentID, VolumeShape = l.VolumeShape, Z = l.Z, Tags = l.Tags, Terminal = l.Terminal, OffEdge = l.OffEdge}))
+                                                           .Expand(s => s.Locations)
+                                                           .Expand(s => s.Children)
+                                                           .Expand(s => s.SourceOfLinks)
+                                                           .Expand(s => s.TargetOfLinks).FindEntryAsync();
                 listTasks.Add(t);
             }
 

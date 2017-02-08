@@ -50,7 +50,7 @@ namespace AnnotationVizLib.SimpleOData
 
         public ulong ID
         {
-            get; private set;
+            get; internal set;
         }
 
         public bool IsUntraceable
@@ -65,17 +65,17 @@ namespace AnnotationVizLib.SimpleOData
 
         public bool OffEdge
         {
-            get; private set;
+            get; internal set;
         }
 
         public ulong ParentID
         {
-            get; private set;
+            get; internal set;
         }
 
         public bool Terminal
         {
-            get; private set;
+            get; internal set;
         }
 
         public long UnscaledZ
@@ -88,7 +88,7 @@ namespace AnnotationVizLib.SimpleOData
 
         public double Z
         {
-            get; private set;
+            get; internal set;
         }
 
         double IGeometry.Z
@@ -103,7 +103,7 @@ namespace AnnotationVizLib.SimpleOData
 
         public string Tags
         {
-            get; private set;
+            get; internal set;
         }
 
         GridBox _BoundingBox = null;

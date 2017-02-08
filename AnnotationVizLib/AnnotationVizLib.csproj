@@ -134,11 +134,13 @@
     <Compile Include="Factories\WCF\WCFStructureLinkAdapter.cs" />
     <Compile Include="Factories\WCF\WCFStructureAdapter.cs" />
     <Compile Include="Factories\WCF\WCFStructureTypeAdapter.cs" />
+    <Compile Include="Graph\Morphology\DistanceExtensions.cs" />
     <Compile Include="Graph\Morphology\MorphologyAlgorithms.cs" />
     <Compile Include="Graph\Morphology\MorphologyEdge.cs" />
     <Compile Include="Graph\Morphology\MorphologyJSONView.cs" />
     <Compile Include="Graph\Morphology\MorphologyNode.cs" />
     <Compile Include="Factories\WCF\WCFMorphologyFactory.cs" />
+    <Compile Include="Graph\Morphology\PathData.cs" />
     <Compile Include="Graph\Motifs\MotifJSONView.cs" />
     <Compile Include="Graph\Motifs\MotifTLPView.cs" />
     <Compile Include="Graph\Neurons\NeuronGMLView.cs" />
