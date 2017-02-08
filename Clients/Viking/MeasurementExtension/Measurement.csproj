@@ -161,9 +161,13 @@
       <Name>VikingXNAGraphics</Name>
       <Private>False</Private>
     </ProjectReference>
+    <ProjectReference Include="..\VikingXNAWinForms\VikingXNAWinForms.csproj">
+      <Project>{8e2f9eac-3b70-46fe-b8d6-7a04b9d183b9}</Project>
+      <Name>VikingXNAWinForms</Name>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <None Include="packages.config" />
+    <None Include="app.config" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

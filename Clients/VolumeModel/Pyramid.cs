@@ -18,7 +18,10 @@ namespace Viking.VolumeModel
         /// <summary>
         /// Maps downsample levels to the path
         /// </summary>
-        private SortedList<int, string> LevelsToPaths = new SortedList<int, string>(); 
+        private SortedList<int, string> LevelsToPaths = new SortedList<int, string>();
+
+        public readonly Geometry.AxisUnits XYScale;
+        
 
         public Pyramid(string name, string path)
         {
@@ -31,6 +34,10 @@ namespace Viking.VolumeModel
             this.Name = IO.GetAttributeCaseInsensitive(PyramidElement,"name").Value;
             this.Path = IO.GetAttributeCaseInsensitive(PyramidElement, "path").Value;
 
+            XElement scale_elem = PyramidElement.Elements().Where(elem => elem.Name.LocalName == "Scale").FirstOrDefault();
+            if (scale_elem != null)
+                this.XYScale = scale_elem.ParseScale();
+            
             //Examine the XML document and determine the scale
             IEnumerable<XElement> LevelElements = PyramidElement.Elements().Where(elem => elem.Name.LocalName == "Level");
             foreach (XElement levelElement in LevelElements)

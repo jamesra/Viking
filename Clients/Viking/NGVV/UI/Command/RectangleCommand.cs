@@ -9,6 +9,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Geometry;
 using VikingXNAGraphics;
 using System.Collections.ObjectModel;
+using VikingXNAWinForms;
 
 namespace Viking.UI.Commands
 {

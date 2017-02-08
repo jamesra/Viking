@@ -237,6 +237,8 @@ namespace WebAnnotationModel
 
             if (OnLoadCompletedCallback != null)
                 cell.AddCallback(OnLoadCompletedCallback);
+
+            Debug.Assert(!cell.OutstandingQuery, "Starting a query for a region we already have an outstanding request for");
             
             MixedLocalAndRemoteQueryResults<KEY, OBJECT> localObjects = objectStore.GetObjectsInRegionAsync(SectionNumber, cellBounds, level.MinRadius, LastQueryUtc, cell.OnLoadCompleted);
             cell.SetQuery(localObjects.ServerRequestResult);

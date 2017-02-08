@@ -12,7 +12,7 @@ namespace Geometry.Transforms
     /// A transform which uses a discreet transform where possible, but falls back to a continuous transform for points that cannot be mapped discreetly.
     /// </summary>
     [Serializable]
-    public class DiscreteTransformWithContinuousFallback : IContinuousTransform, ITransformInfo, IMemoryMinimization, ITransformControlPoints
+    public class DiscreteTransformWithContinuousFallback : IContinuousTransform, ITransformInfo, IMemoryMinimization, IControlPointTriangulation
     {
         IDiscreteTransform DiscreteTransform;
         IContinuousTransform ContinuousTransform;
@@ -24,7 +24,7 @@ namespace Geometry.Transforms
 
         public TransformInfo Info
         {
-            get; internal set;
+            get; set;
         }
 
         public MappingGridVector2[] MapPoints
@@ -48,6 +48,32 @@ namespace Geometry.Transforms
             get
             {
                 return ((ITransformControlPoints)DiscreteTransform).MappedBounds;
+            }
+        }
+
+        public int[] TriangleIndicies
+        {
+            get
+            {
+                if(DiscreteTransform as IControlPointTriangulation != null)
+                {
+                    return ((IControlPointTriangulation)DiscreteTransform).TriangleIndicies;
+                }
+
+                return new int[0];
+            }
+        }
+
+        public List<int>[] Edges
+        {
+            get
+            {
+                if (DiscreteTransform as IControlPointTriangulation != null)
+                {
+                    return ((IControlPointTriangulation)DiscreteTransform).Edges;
+                }
+
+                return new List<int>[] { };
             }
         }
 

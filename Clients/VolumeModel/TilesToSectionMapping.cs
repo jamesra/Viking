@@ -22,7 +22,7 @@ namespace Viking.VolumeModel
         protected bool HasBeenLoaded = false;
         private object LockObj = new object();
 
-        public override ReferencePointBasedTransform[] TileTransforms
+        public override ITransform[] TileTransforms
         {
             get 
             {
@@ -30,7 +30,7 @@ namespace Viking.VolumeModel
                     LoadTransform();
 
                 if (_TileTransforms == null)
-                    return new ReferencePointBasedTransform[0]; 
+                    return new ITransform[0]; 
 
                 return _TileTransforms;
             }

@@ -12,9 +12,10 @@ using System;
 using System.Drawing;
 using System.Windows.Forms;
 using Microsoft.Xna.Framework.Graphics;
+using System.ComponentModel.Design;
 #endregion
 
-namespace VikingXNA
+namespace VikingXNAWinForms
 {
     // System.Drawing and the XNA Framework both define Color and Rectangle
     // types. To avoid conflicts, we specify which ones to use.
@@ -110,7 +111,8 @@ namespace VikingXNA
                                                                      ClientSize.Height);
 
                 // Register the service, so components like ContentManager can find it.
-                services.AddService<IGraphicsDeviceService>(graphicsDeviceService);
+                //services.AddService<IGraphicsDeviceService>(graphicsDeviceService);
+                services.AddService(typeof(IGraphicsDeviceService), graphicsDeviceService);
 
                 // Give derived classes a chance to initialize themselves.
                 Initialize();

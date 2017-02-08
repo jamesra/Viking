@@ -10,6 +10,7 @@
 #region Using Statements
 using System;
 using System.Threading;
+using System.ComponentModel.Design;
 using Microsoft.Xna.Framework.Graphics;
 using VikingXNAGraphics;
 #endregion
@@ -20,7 +21,7 @@ using VikingXNAGraphics;
 // we don't care so we just disable this warning.
 #pragma warning disable 67
 
-namespace VikingXNA
+namespace VikingXNAWinForms
 {
     /// <summary>
     /// Helper class responsible for creating and managing the GraphicsDevice.
@@ -181,7 +182,8 @@ namespace VikingXNA
                 if (_Content == null)
                 {
                     ServiceContainer tempContainer = new ServiceContainer();
-                    tempContainer.AddService<IGraphicsDeviceService>(this);
+                    tempContainer.AddService(typeof(IGraphicsDeviceService), this);
+                    //tempContainer.AddService<IGraphicsDeviceService>(this);
                     _Content = new Microsoft.Xna.Framework.Content.ContentManager(tempContainer, "Content");
                 }
 

@@ -535,6 +535,13 @@ namespace Viking.ViewModels
             basicEffect.VertexColorEnabled = true;
             basicEffect.LightingEnabled = false;
 
+            DepthStencilState originalDepthState = graphicsDevice.DepthStencilState;
+
+            DepthStencilState newDepthState = new DepthStencilState();
+            newDepthState.DepthBufferEnable = false;
+            newDepthState.StencilEnable = false;
+            graphicsDevice.DepthStencilState = newDepthState;
+
             graphicsDevice.SetVertexBuffer(vbMesh);
             graphicsDevice.Indices = ibMesh;
             //PORT XNA 4
@@ -552,6 +559,9 @@ namespace Viking.ViewModels
                 graphicsDevice.DrawIndexedPrimitives(PrimitiveType.LineList, 0, 0, vbMesh.VertexCount, 0, ibMesh.IndexCount / 2);
 
             }
+
+            if(originalDepthState != null)
+                graphicsDevice.DepthStencilState = originalDepthState;
 
         }
 

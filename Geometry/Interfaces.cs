@@ -27,7 +27,7 @@ namespace Geometry
         
         void Translate(GridVector2 vector); 
     }
-
+    
     /// <summary>
     /// Adds helper methods to ITransform interface useful for discrete transforms
     /// </summary>
@@ -70,6 +70,13 @@ namespace Geometry
         GridRectangle MappedBounds { get; }
     }
 
+    public interface IControlPointTriangulation : ITransformControlPoints
+    {
+        int[] TriangleIndicies { get; }
+
+        List<int>[] Edges { get; }
+    }
+
     public interface IITKSerialization
     {
         void WriteITKTransform(System.IO.StreamWriter stream);
@@ -82,7 +89,7 @@ namespace Geometry
     
     public interface ITransformInfo
     { 
-        Geometry.Transforms.TransformInfo Info { get; }
+        Geometry.Transforms.TransformInfo Info { get; set; }
     }
 
     public interface IStosTransformInfo

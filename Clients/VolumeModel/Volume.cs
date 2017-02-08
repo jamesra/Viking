@@ -94,7 +94,7 @@ namespace Viking.VolumeModel
         }
     }
 
-    
+
 
     /// <summary>
     /// Collection of volumes, sections and tiles. There is only one dataset loaded at a time.
@@ -102,8 +102,6 @@ namespace Viking.VolumeModel
     /// </summary>
     public class Volume
     {
-
-
         /// <summary>
         /// Friendly name for the volume
         /// </summary>
@@ -178,7 +176,7 @@ namespace Viking.VolumeModel
                 return _VolumeElement;
             }
         }
-        
+
         /// <summary>
         /// Names of transform groups that can be used to register images into the volume
         /// </summary>
@@ -221,6 +219,13 @@ namespace Viking.VolumeModel
         public int NumSections
         {
             get { return Sections.Count; }
+        }
+
+        private AxisUnits _DefaultXYScale;
+
+        public Geometry.AxisUnits DefaultXYScale
+        {
+            get { return _DefaultXYScale;}
         }
 
         /// <summary>
@@ -724,6 +729,10 @@ namespace Viking.VolumeModel
                         this.TileServerList.Add(info);
                         break;
 
+                    case "scale":
+                        this._DefaultXYScale = VikingXMLUtils.ParseScale(elem);
+                        break;
+
                     default:
                         break;
                 }
@@ -824,6 +833,8 @@ namespace Viking.VolumeModel
             CreateVolumeTransforms(workerThread);
             workerThread.ReportProgress(101, "Done!");
         }
+
+       
         
 
         private IContinuousTransform EnsureTransformIsContinuous(ITransform transform)

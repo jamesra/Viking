@@ -37,6 +37,29 @@ namespace Viking.VolumeModel
         private int _MaxDownsample = int.MinValue;
         private int _MinDownsample = int.MaxValue;
 
+        protected AxisUnits _XYScale;
+        public Geometry.AxisUnits XYScale
+        {
+            get
+            {
+                return _XYScale;
+            }
+        }
+
+        /// <summary>
+        /// Adjust the downsample level to match the difference between the scale used in the pyramid/mapping and the default scale for the volume
+        /// </summary>
+        /// <param name="input"></param>
+        /// <returns></returns>
+        protected double AdjustDownsampleForScale(double input)
+        {
+            if (this.XYScale == null)
+                return input;
+
+            double relative_scale = this.XYScale.Value / this.Section.XYScale.Value;
+            return input / relative_scale;
+        }
+
         public int MaxDownsample
         {
             get { return _MaxDownsample; }
@@ -203,6 +226,7 @@ namespace Viking.VolumeModel
             MinDownsample = ToCopy.MinDownsample;
             MaxDownsample = ToCopy.MaxDownsample;
             this.GridCoordFormat = ToCopy.GridCoordFormat;
+            this._XYScale = ToCopy.XYScale;
 
             foreach(GridInfo info in ToCopy.LevelToGridInfo.Values)
             {
@@ -211,13 +235,14 @@ namespace Viking.VolumeModel
             }
         }
 
-        public TileGridMappingBase(Section section, string name, string Prefix, string Postfix, int TileSizeX, int TileSizeY, string TileGridPath, string GridCoordFormat=null) :
+        public TileGridMappingBase(Section section, string name, string Prefix, string Postfix, int TileSizeX, int TileSizeY, string TileGridPath, string GridCoordFormat, AxisUnits XYScale) :
             base(section, name, Prefix, Postfix )
         {
             this.TileSizeX = TileSizeX;
             this.TileSizeY = TileSizeY; 
             this.TotalTileSize = TileSizeX * TileSizeY;
             this.TileGridPath = TileGridPath;
+            this._XYScale = XYScale;
             if(GridCoordFormat != null)
                 this.GridCoordFormat = GridCoordFormat; 
         }
@@ -271,7 +296,10 @@ namespace Viking.VolumeModel
         public override TilePyramid VisibleTiles(GridRectangle VisibleBounds, double DownSample)
         {
             TilePyramid VisibleTiles = new TilePyramid(VisibleBounds);
-            int roundedDownsample = NearestAvailableLevel(DownSample); 
+
+            double scaledDownsampleLevel = AdjustDownsampleForScale(DownSample);
+
+            int roundedDownsample = NearestAvailableLevel(scaledDownsampleLevel); 
 
             //Starting with low-res tiles, add tiles to the list until we reach desired resolution
 //            List<Tile> TilesToDraw = new List<Tile>(); 

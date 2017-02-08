@@ -6,6 +6,7 @@ using Geometry;
 using System.Windows.Forms;
 using WebAnnotation.View;
 using VikingXNAGraphics;
+using VikingXNAWinForms;
 
 namespace WebAnnotation.UI.Commands
 {

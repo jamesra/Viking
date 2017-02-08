@@ -123,7 +123,6 @@
     </Reference>
     <Reference Include="System.Data" />
     <Reference Include="System.Drawing" />
-    <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml">
       <Private>False</Private>
     </Reference>
@@ -148,16 +147,9 @@
     <Compile Include="Scene.cs" />
     <Compile Include="TileBlendEffect.cs" />
     <Compile Include="DrawExtensions.cs" />
-    <Compile Include="GraphicsDeviceControl.cs">
-      <SubType>Component</SubType>
-    </Compile>
-    <Compile Include="GraphicsDeviceService.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RoundLine.cs" />
     <Compile Include="ServiceContainer.cs" />
-    <Compile Include="ViewerControl.cs">
-      <SubType>Component</SubType>
-    </Compile>
     <Compile Include="Views\CircleView.cs" />
     <Compile Include="Views\CurveView.cs" />
     <Compile Include="Views\DeviceStateManager.cs" />
@@ -231,14 +223,6 @@
       <Name>VikingXNAGraphicsContent</Name>
       <XnaReferenceType>Content</XnaReferenceType>
     </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
-    <EmbeddedResource Include="GraphicsDeviceControl.resx">
-      <DependentUpon>GraphicsDeviceControl.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="ViewerControl.resx">
-      <DependentUpon>ViewerControl.cs</DependentUpon>
-    </EmbeddedResource>
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <Import Project="$(MSBuildExtensionsPath)\Microsoft\XNA Game Studio\Microsoft.Xna.GameStudio.targets" />

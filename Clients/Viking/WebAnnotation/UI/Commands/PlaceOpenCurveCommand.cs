@@ -10,6 +10,7 @@ using WebAnnotation.View;
 using VikingXNAGraphics;
 using SqlGeometryUtils;
 using System.Collections.ObjectModel;
+using VikingXNAWinForms;
 
 namespace WebAnnotation.UI.Commands
 {

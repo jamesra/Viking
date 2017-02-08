@@ -42,7 +42,7 @@ namespace LocalBookmarks
                 Global.BookmarksVisible = !Global.BookmarksVisible;
 
                 menuItem.Text = Global.BookmarksVisible ? HideBookmarksString : ShowBookmarksString;
-                Viking.UI.State.ViewerControl.Invalidate(); 
+                Viking.UI.State.InvalidateViewerControl();
             }
         }
 

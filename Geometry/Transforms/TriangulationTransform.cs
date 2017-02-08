@@ -13,7 +13,7 @@ namespace Geometry.Transforms
     /// A transform that uses a triangulation
     /// </summary>
     [Serializable]
-    public abstract class TriangulationTransform : ReferencePointBasedTransform, IDisposable, IDiscreteTransform
+    public abstract class TriangulationTransform : ReferencePointBasedTransform, IDisposable, IDiscreteTransform, IControlPointTriangulation
     {
         /// <summary>
         /// Return the control triangle which can map the point
@@ -659,7 +659,7 @@ namespace Geometry.Transforms
         /// Takes two transforms and transforms the control grid of this section into the control grid space of the passed transfrom. Requires control section
         /// of this transform to match mapped section of adding transform
         /// </summary>
-        public static TriangulationTransform Transform(ITransform BtoC, TriangulationTransform AtoB, TransformInfo info)
+        public static TriangulationTransform Transform(ITransform BtoC, IControlPointTriangulation AtoB, TransformInfo info)
         {
             if (BtoC == null || AtoB == null)
             {

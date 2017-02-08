@@ -66,8 +66,9 @@ namespace Viking.VolumeModel
                                string Prefix, string Postfix,
                                int TileSizeX, int TileSizeY, 
                                string GridTilePath, 
-                               string GridCoordFormat) :
-            base(section, name, Prefix, Postfix, TileSizeX, TileSizeY, GridTilePath, GridCoordFormat)
+                               string GridCoordFormat,
+                               AxisUnits XYScale) :
+            base(section, name, Prefix, Postfix, TileSizeX, TileSizeY, GridTilePath, GridCoordFormat, XYScale)
         { 
         }
             
@@ -82,6 +83,11 @@ namespace Viking.VolumeModel
             string TileGridPath = IO.GetAttributeCaseInsensitive(TilesetNode, "path").Value;
             string GridTileFormat = null;
 
+            XElement scale_elem = TilesetNode.Elements().Where(elem => elem.Name.LocalName == "Scale").FirstOrDefault();
+            AxisUnits XYScale = null;
+            if (scale_elem != null)
+                XYScale = scale_elem.ParseScale();
+
             XAttribute GridTileFormatAttribute = TilesetNode.Attribute("CoordFormat"); 
             if(GridTileFormatAttribute != null)
             {
@@ -89,7 +95,7 @@ namespace Viking.VolumeModel
             }
 
             TileGridMapping mapping = new TileGridMapping(section, Name, TilePrefix, TilePostfix,
-                                                          TileSizeX, TileSizeY, TileGridPath, GridTileFormat);
+                                                          TileSizeX, TileSizeY, TileGridPath, GridTileFormat, XYScale);
 
             
             foreach (XNode node in TilesetNode.Nodes())

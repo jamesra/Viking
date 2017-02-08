@@ -12,7 +12,7 @@ namespace Geometry.Transforms
     [Serializable]
     public abstract class ReferencePointBasedTransform  : IITKSerialization, ITransformInfo, ITransformControlPoints, ISerializable, IMemoryMinimization
     {
-        public TransformInfo Info { get; internal set; }
+        public TransformInfo Info { get; set; }
 
         public override string ToString()
         {
@@ -158,7 +158,7 @@ namespace Geometry.Transforms
                                               ControlBounds.Top + vector.Y);
         }
 
-        public static GridRectangle CalculateControlBounds(ReferencePointBasedTransform[] transforms)
+        public static GridRectangle CalculateControlBounds(ITransformControlPoints[] transforms)
         {
             if (transforms == null || transforms.Length == 0)
                 return new GridRectangle();
@@ -185,7 +185,7 @@ namespace Geometry.Transforms
             return new GridRectangle(minX, maxX, minY, maxY);
         }
 
-        public static GridRectangle CalculateMappedBounds(ReferencePointBasedTransform[] transforms)
+        public static GridRectangle CalculateMappedBounds(ITransformControlPoints[] transforms)
         {
             if (transforms == null || transforms.Length == 0)
                 return new GridRectangle();

@@ -417,6 +417,10 @@
       <Project>{709A3C16-7218-4FF0-9A2D-6BF015C243BF}</Project>
       <Name>WebAnnotationModel</Name>
     </ProjectReference>
+    <ProjectReference Include="..\VikingXNAWinForms\VikingXNAWinForms.csproj">
+      <Project>{8e2f9eac-3b70-46fe-b8d6-7a04b9d183b9}</Project>
+      <Name>VikingXNAWinForms</Name>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <Folder Include="UI\ViewEffects\" />

@@ -8,6 +8,7 @@ using Geometry;
 using System.Windows; 
 using Viking.Common;
 using VikingXNAGraphics;
+using VikingXNAWinForms;
 
 namespace Viking.UI.Commands
 {

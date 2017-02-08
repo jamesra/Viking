@@ -82,7 +82,7 @@ namespace Geometry.Transforms
     [Serializable]
     abstract public class TransformBase : ISerializable, IMemoryMinimization, ITransformInfo
     {
-        public TransformInfo Info { get; internal set; }
+        public TransformInfo Info { get; set; }
 
         public override string ToString()
         {

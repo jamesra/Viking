@@ -26,6 +26,12 @@ namespace Viking.UI
 
         static public Viking.UI.Forms.SectionViewerForm ViewerForm;
 
+        static public void InvalidateViewerControl()
+        {
+            if(ViewerControl != null)
+                ViewerControl.Invalidate();
+        }
+
         /// <summary>
         /// The section viewer control for creating commands
         /// 

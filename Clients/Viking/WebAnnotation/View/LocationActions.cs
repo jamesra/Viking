@@ -13,6 +13,7 @@ using VikingXNAGraphics;
 using Viking.VolumeModel;
 using WebAnnotationModel;
 using Microsoft.SqlServer.Types;
+using VikingXNAWinForms;
 
 namespace WebAnnotation.View
 {

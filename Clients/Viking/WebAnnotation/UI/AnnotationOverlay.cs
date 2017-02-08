@@ -21,6 +21,7 @@ using SqlGeometryUtils;
 using VikingXNAGraphics;
 using WebAnnotation.Actions;
 using System.ComponentModel;
+using VikingXNAWinForms;
 
 namespace WebAnnotation
 {

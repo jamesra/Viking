@@ -13,6 +13,7 @@ using System.Windows.Forms;
 using System.Diagnostics;
 using WebAnnotation;
 using System.Collections.ObjectModel;
+using VikingXNAWinForms;
 
 namespace WebAnnotation.UI.Commands
 {

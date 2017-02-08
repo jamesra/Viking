@@ -128,7 +128,7 @@ namespace Viking.VolumeModel
             
         }
 
-        public static PositionNormalTextureVertex[] CalculateVerticies(Geometry.Transforms.ReferencePointBasedTransform transform, Geometry.Transforms.TileTransformInfo info)
+        public static PositionNormalTextureVertex[] CalculateVerticies(ITransformControlPoints transform, Geometry.Transforms.TileTransformInfo info)
         {
             PositionNormalTextureVertex[] verticies = new PositionNormalTextureVertex[transform.MapPoints.Length];
 

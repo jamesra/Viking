@@ -12,6 +12,7 @@ using Viking.UI.Commands;
 using WebAnnotation.ViewModel;
 using WebAnnotationModel;
 using VikingXNAGraphics;
+using VikingXNAWinForms;
 
 using Viking.Common; 
 

@@ -62,7 +62,7 @@ namespace Viking.VolumeModel
                                  string TileServerHost,
                                  string TileGridPath,
                                  string GridCoordFormat = null) :
-            base(section, Name, Prefix, Postfix, TileSizeX, TileSizeY, TileGridPath, GridCoordFormat)
+            base(section, Name, Prefix, Postfix, TileSizeX, TileSizeY, TileGridPath, GridCoordFormat, null)
         {
             this.Host = TileServerHost;
             this.ChannelName = channelName;

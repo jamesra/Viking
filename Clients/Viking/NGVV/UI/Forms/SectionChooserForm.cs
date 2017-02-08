@@ -6,13 +6,13 @@ using System.Drawing;
 using System.Linq;
 using System.Text;
 using System.Windows.Forms;
-using Viking.VolumeModel; 
+using Viking.ViewModels; 
 
 namespace Viking.UI.Forms
 {
     public partial class SectionChooserForm : Form
     {
-        public Section SelectedSection = null; 
+        public SectionViewModel SelectedSection = null; 
 
         public SectionChooserForm()
         {
@@ -27,7 +27,7 @@ namespace Viking.UI.Forms
                 return; 
             }
 
-            SelectedSection = listSections.SelectedObject as Section; 
+            SelectedSection = listSections.SelectedObject as SectionViewModel; 
 
             this.Close(); 
         }

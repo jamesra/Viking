@@ -11,6 +11,7 @@ using SqlGeometryUtils;
 using VikingXNAGraphics;
 using System.Windows.Forms;
 using System.Diagnostics;
+using VikingXNAWinForms;
 
 namespace WebAnnotation.UI.Commands 
 {

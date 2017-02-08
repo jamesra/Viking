@@ -214,6 +214,10 @@
       <Name>VikingXNAGraphics</Name>
       <Private>False</Private>
     </ProjectReference>
+    <ProjectReference Include="..\VikingXNAWinForms\VikingXNAWinForms.csproj">
+      <Project>{8e2f9eac-3b70-46fe-b8d6-7a04b9d183b9}</Project>
+      <Name>VikingXNAWinForms</Name>
+    </ProjectReference>
     <ProjectReference Include="Content\LocalBookmarksContent.contentproj">
       <Project>{C8DE97A9-C4F2-4B6C-B794-BF1B8D025DD3}</Project>
       <Name>LocalBookmarksContent</Name>

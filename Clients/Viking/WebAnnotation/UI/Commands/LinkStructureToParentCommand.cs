@@ -14,6 +14,7 @@ using WebAnnotation.View;
 using WebAnnotationModel;
 using VikingXNAGraphics;
 using System.Collections.ObjectModel;
+using VikingXNAWinForms;
 
 namespace WebAnnotation.UI.Commands
 {

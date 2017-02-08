@@ -7,6 +7,7 @@ using Microsoft.Xna.Framework.Graphics;
 using System.Windows.Forms;
 using VikingXNAGraphics;
 using Geometry;
+using VikingXNAWinForms;
 
 
 namespace Viking.UI.Commands

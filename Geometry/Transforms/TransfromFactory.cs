@@ -432,7 +432,7 @@ namespace Geometry.Transforms
         /// </summary>
         /// <param name="file"></param>
         /// <param name="Key"></param>
-        public static ReferencePointBasedTransform[] LoadMosaic(string path, string[] mosaic, DateTime lastModified)
+        public static ITransform[] LoadMosaic(string path, string[] mosaic, DateTime lastModified)
         {
             if (mosaic == null || path == null)
                 throw new ArgumentNullException(); 
@@ -469,7 +469,7 @@ namespace Geometry.Transforms
             }
 
             Trace.WriteLine("Loading " + numTiles.ToString() + " tiles", "Geometry");
-            ReferencePointBasedTransform[] tileTransforms = new ReferencePointBasedTransform[numTiles];
+            ITransform[] tileTransforms = new ITransform[numTiles];
 
             int iTile = 0; 
 
@@ -507,16 +507,16 @@ namespace Geometry.Transforms
                     int iFileName = Transform.IndexOf(TileFileName);
                     Transform = Transform.Remove(0, iFileName + TileFileName.Length);
 
-                    
-                    ReferencePointBasedTransform newTGT = ParseMosaicTileEntry(Transform, null);
+
+                    ITransformControlPoints newTGT = ParseMosaicTileEntry(Transform, null) as ITransformControlPoints;
                     TileTransformInfo info = new TileTransformInfo(TileFileName, iTileNumber, lastModified, newTGT.MappedBounds.Width, newTGT.MappedBounds.Height);
-                    newTGT.Info = info; 
+                    ((ITransformInfo)newTGT).Info = info; 
 
                     
 
                     //GridTransform newTGT = new GridTransform(path, Transform, new TileTransformInfo(TileFileName, iTileNumber, lastModified));
 
-                    tileTransforms[iTile++] = newTGT;
+                    tileTransforms[iTile++] = (ITransform)newTGT;
                     //tileTransforms.Add(newTGT);
                 }
             }
@@ -549,17 +549,18 @@ namespace Geometry.Transforms
                     {
                         iTileNumber = i;
                     }
-                    
+
 
                     //Get the second entry which is the transform 
-                    ReferencePointBasedTransform newTGT = ParseMosaicTileEntry(Transform, null);
+                    ITransformControlPoints newTGT = ParseMosaicTileEntry(Transform, null) as ITransformControlPoints;
                     TileTransformInfo info = new TileTransformInfo(TileFileName, iTileNumber, lastModified, newTGT.MappedBounds.Width, newTGT.MappedBounds.Height);
-                    newTGT.Info = info; 
+
+                    ((ITransformInfo)newTGT).Info = info;
 
                     //string[] transformParts = Transform.Split(new char[] { ' ' }, 3, StringSplitOptions.RemoveEmptyEntries);
                     //TileGridTransform newTGT = new TileGridTransform(path, Transform, new TileTransformInfo(TileFileName, iTileNumber, lastModified));
                     
-                    tileTransforms[iTile++] = newTGT;
+                    tileTransforms[iTile++] = (ITransform)newTGT;
                     //tileTransforms.Add(newTGT);
                 }
             }
@@ -586,7 +587,7 @@ namespace Geometry.Transforms
         }
 
 
-        private static ReferencePointBasedTransform ParseMosaicTileEntry(string transformString, TransformInfo info)
+        private static ITransform ParseMosaicTileEntry(string transformString, TransformInfo info)
         {
             TransformParameters transform = TransformParameters.Parse(transformString);
 
@@ -616,7 +617,7 @@ namespace Geometry.Transforms
         }
 
 
-        private static ReferencePointBasedTransform ParsePolyTransform(TransformParameters transform, TransformInfo info)
+        private static ITransform ParsePolyTransform(TransformParameters transform, TransformInfo info)
         {
             //            string filename = System.IO.Path.GetFileName(parts[1]);
             //            string[] fileparts = filename.Split(new char[] { '.' }, StringSplitOptions.RemoveEmptyEntries);
@@ -650,7 +651,7 @@ namespace Geometry.Transforms
             return new GridTransform(MapPoints, new GridRectangle(0, ImageWidth, 0, ImageHeight), 2, 2, info); 
         }
 
-        private static ReferencePointBasedTransform ParseTranslateTransform(TransformParameters transform, TransformInfo info)
+        private static ITransform ParseTranslateTransform(TransformParameters transform, TransformInfo info)
         {
             if (transform == null)
                 throw new ArgumentNullException("transform"); 
@@ -775,16 +776,16 @@ namespace Geometry.Transforms
             return new GridTransform(mapList, MappedBounds, gridWidth, gridHeight, info);
         }
 
-        private static MeshTransform ParseMeshTransform(TransformParameters transform, TransformInfo info, double PixelSpacing= 1.0 )
+        private static DiscreteTransformWithContinuousFallback ParseMeshTransform(TransformParameters transform, TransformInfo info, double PixelSpacing= 1.0 )
         {
             int NumVariableParameters = transform.variableParameters.Length;
             Debug.Assert(NumVariableParameters % 4 == 0);
             int NumPoints = NumVariableParameters / 4;
 
-            double Left = System.Convert.ToInt32(transform.fixedParameters[3] * PixelSpacing);
-            double Bottom = System.Convert.ToInt32(transform.fixedParameters[4] * PixelSpacing);
-            double ImageWidth = System.Convert.ToInt32(transform.fixedParameters[5] * PixelSpacing);
-            double ImageHeight = System.Convert.ToInt32(transform.fixedParameters[6] * PixelSpacing);
+            double Left = transform.fixedParameters[3] * PixelSpacing;
+            double Bottom = transform.fixedParameters[4] * PixelSpacing;
+            double ImageWidth = transform.fixedParameters[5] * PixelSpacing;
+            double ImageHeight = transform.fixedParameters[6] * PixelSpacing;
 
             MappingGridVector2[] Points = new MappingGridVector2[NumPoints];
 
@@ -799,7 +800,10 @@ namespace Geometry.Transforms
                 Points[iP] = new MappingGridVector2(Control, Mapped); 
             }
 
-            return new MeshTransform(Points, info);
+            MeshTransform discreteTransform = new MeshTransform(Points, info);
+            RBFTransform continuousTransform = new RBFTransform(Points, info);
+
+            return new DiscreteTransformWithContinuousFallback(discreteTransform, continuousTransform, info);
         }
 
     #endregion

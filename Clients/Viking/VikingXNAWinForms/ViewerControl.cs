@@ -10,7 +10,7 @@ using RoundCurve;
 using System.ComponentModel;
 using System.Drawing.Imaging; 
 
-namespace VikingXNA
+namespace VikingXNAWinForms
 {
     public class ViewerControl : GraphicsDeviceControl
     {

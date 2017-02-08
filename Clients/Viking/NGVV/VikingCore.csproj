@@ -560,6 +560,10 @@
       <Project>{2EBA2A77-F7F0-4EFC-AC06-A12FE249388F}</Project>
       <Name>VolumeModel</Name>
     </ProjectReference>
+    <ProjectReference Include="..\VikingXNAWinForms\VikingXNAWinForms.csproj">
+      <Project>{8e2f9eac-3b70-46fe-b8d6-7a04b9d183b9}</Project>
+      <Name>VikingXNAWinForms</Name>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <None Include="Resources\marclab.png" />

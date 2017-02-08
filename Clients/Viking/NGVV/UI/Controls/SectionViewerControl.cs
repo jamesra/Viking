@@ -26,7 +26,7 @@ using System.Threading.Tasks;
 
 namespace Viking.UI.Controls
 {
-    public partial class SectionViewerControl : VikingXNA.ViewerControl, IHelpStrings
+    public partial class SectionViewerControl : VikingXNAWinForms.ViewerControl, IHelpStrings
     {
         Viking.UI.Commands.Command _CurrentCommand;
         public Viking.UI.Commands.Command CurrentCommand
@@ -1233,6 +1233,10 @@ namespace Viking.UI.Controls
             {
                 Section section =visibleSection.GetSectionToDrawForChannel(channel);
                 MappingBase Mapping = Viking.UI.State.volume.GetTileMapping(section.Number, channel.ChannelName, this.CurrentTransform);
+
+                if (Mapping == null)
+                    continue; 
+
                 int[] DownsamplesToRender = CalculateDownsamplesToRender(Mapping, scene.Camera.Downsample);
 
                 //If we aren't loading asynchronously only load the hi-res textures since we are waiting for completion
@@ -1390,7 +1394,7 @@ namespace Viking.UI.Controls
                     {
                         tileViewModel.DrawMesh(graphicsDevice, basicEffect);
 
-                        tileViewModel.DrawLabels(this);
+                        //tileViewModel.DrawLabels(this);
                     }
 
                     iColor++;
@@ -1419,17 +1423,17 @@ namespace Viking.UI.Controls
                     }
                 }
 
-                if (transform as Geometry.Transforms.TriangulationTransform != null)
+                if (transform as Geometry.IControlPointTriangulation != null)
                 {
                     graphicsDevice.ReferenceStencil = int.MaxValue;
                     graphicsDevice.DepthStencilState = CreateDepthStateForDownsampleLevel(int.MaxValue);
 
-                    using (TriangulationViewModel stosMeshViewModel = new TriangulationViewModel(transform as Geometry.Transforms.TriangulationTransform))
+                    using (TriangulationViewModel stosMeshViewModel = new TriangulationViewModel(transform as Geometry.IControlPointTriangulation))
                     {
                         stosMeshViewModel.DrawMesh(graphicsDevice, basicEffect);
                         stosMeshViewModel.DrawLabels(this);
                     }
-                }
+                } 
             }
 
             tileLayoutEffect.TileColor = new Microsoft.Xna.Framework.Color(1, 1, 1);
@@ -1485,12 +1489,16 @@ namespace Viking.UI.Controls
             return null;
 
         }
-
-        
-
+         
 
         protected int[] CalculateDownsamplesToRender(MappingBase Mapping, double downsample)
         {
+            if(Mapping == null)
+            {
+                Trace.WriteLine("CalculateDownsamplesToRender Mapping parameter is null");
+                return new int[0];
+            }
+
             int roundedDownsample = Mapping.NearestAvailableLevel(downsample);
 
             //Find the index of the requested downsample level

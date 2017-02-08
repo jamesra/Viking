@@ -26,7 +26,7 @@ namespace Viking.ViewModels
         private readonly MappingGridVector2[] MapPoints;
         private readonly int[] TriangleIndicies;
 
-        public TriangulationViewModel(TriangulationTransform Mapping)
+        public TriangulationViewModel(IControlPointTriangulation Mapping)
         {
             this.MapPoints = Mapping.MapPoints;
             this.TriangleIndicies = Mapping.TriangleIndicies;
@@ -94,8 +94,15 @@ namespace Viking.ViewModels
             basicEffect.VertexColorEnabled = true;
             basicEffect.LightingEnabled = false;
 
+            DepthStencilState originalDepthState = graphicsDevice.DepthStencilState;
+
+            DepthStencilState newDepthState = new DepthStencilState();
+            newDepthState.DepthBufferEnable = false;
+            newDepthState.StencilEnable = false;
+            graphicsDevice.DepthStencilState = newDepthState;
+            
             graphicsDevice.SetVertexBuffer(vbMappedMesh);
-            graphicsDevice.Indices = ibMesh;
+            graphicsDevice.Indices = ibMesh; 
             //PORT XNA 4
             //basicEffect.CommitChanges();
 
@@ -122,6 +129,8 @@ namespace Viking.ViewModels
 
                 graphicsDevice.DrawIndexedPrimitives(PrimitiveType.LineList, 0, 0, vbControlMesh.VertexCount, 0, ibMesh.IndexCount / 2);
             }
+
+            graphicsDevice.DepthStencilState = originalDepthState;
 
         }
 

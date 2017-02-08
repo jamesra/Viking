@@ -123,6 +123,14 @@ namespace Viking.VolumeModel
         /// This transform contains the tile transformation for mosaics (usually grid.mosaic) which will be warped into volume space
         /// </summary>
         public List<string> VolumeTransformList = new List<string>();
+         
+        public Geometry.AxisUnits XYScale
+        {
+            get
+            { 
+                return this.volume.DefaultXYScale; 
+            }
+        }
 
         /// <summary>
         /// Current the section number padded with four digits.  Could be a different name, 
@@ -283,6 +291,8 @@ namespace Viking.VolumeModel
                         }
 
                         break;
+                    
+
                 }
             }
         }

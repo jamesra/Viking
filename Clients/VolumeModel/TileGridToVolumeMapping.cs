@@ -124,7 +124,8 @@ namespace Viking.VolumeModel
 
         public override TilePyramid VisibleTiles(GridRectangle VisibleBounds, double DownSample)
         {
-            int roundedDownsample = NearestAvailableLevel(DownSample);
+            double AdjustedDownSample = AdjustDownsampleForScale(DownSample);
+            int roundedDownsample = NearestAvailableLevel(AdjustedDownSample);
 
             GridQuad VisibleQuad = null; 
 
@@ -296,10 +297,10 @@ namespace Viking.VolumeModel
             GridVector2[] verts = new GridVector2[16];
             double Width = this.TileSizeX * Downsample;
             double Height = this.TileSizeY * Downsample;
-            double HalfWidth = Width / 2;
-            double HalfHeight = Height / 2;
-            double QuarterWidth = HalfWidth / 2;
-            double QuarterHeight = HalfHeight / 2; 
+            double HalfWidth = Width / 2.0;
+            double HalfHeight = Height / 2.0;
+            double QuarterWidth = HalfWidth / 2.0;
+            double QuarterHeight = HalfHeight / 2.0; 
             double X = iX * Width;
             double Y = iY * Height;
             verts[0] = new GridVector2(X, Y);
@@ -325,8 +326,36 @@ namespace Viking.VolumeModel
             verts[14] = new GridVector2(X + HalfWidth, Y + Height);
             verts[15] = new GridVector2(X + HalfWidth + QuarterHeight, Y + Height);
 
+            //verts[16] = new GridVector2(X + HalfWidth, Y + HalfHeight);
+
            // verts[8] = new GridVector2(X + HalfWidth, Y + HalfHeight);
              
+
+            return verts;
+        }
+
+        GridVector2[] TileGrid(int iX, int iY, int GridDimX, int GridDimY, int Downsample)
+        {
+            GridVector2[] verts = new GridVector2[(GridDimX+1) * (GridDimY+1)];
+            double Width = this.TileSizeX * Downsample;
+            double Height = this.TileSizeY * Downsample;
+            double XOrigin = iX * Width;
+            double YOrigin = iY * Height;
+
+            double XStep = Width / (double)GridDimX;
+            double YStep = Height / (double)GridDimY;
+
+            for (int jY = 0; jY <= GridDimY; jY++)
+            {
+                double Y = YOrigin + (YStep * (double)jY);
+                for (int jX = 0; jX <= GridDimX; jX++)
+                {
+                    int i = (jY * (GridDimX+1)) + jX;
+                    double X = XOrigin + (XStep * (double)jX);
+
+                    verts[i] = new GridVector2(X, Y);
+                }
+            }
 
             return verts;
         }
@@ -336,7 +365,8 @@ namespace Viking.VolumeModel
                                                                             int Downsample,
                                                                             out int[] TriangleEdges)
         {
-            GridVector2[] SectionTileCorners = TileHull(iX,iY,Downsample);
+            //GridVector2[] SectionTileCorners = TileGrid(iX,iY,3,3,Downsample);
+            GridVector2[] SectionTileCorners = TileHull(iX, iY, Downsample);
             List<MappingGridVector2> TileCornerMappedPoints = new List<MappingGridVector2>(SectionTileCorners.Length);
              
             GridVector2[] mappedVerts;
