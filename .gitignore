@@ -8,5 +8,6 @@ bin
 *.psess
 *.csr
 *.key
+*.pdb
 TestResults
 /Packages/
