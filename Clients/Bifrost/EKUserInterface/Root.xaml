@@ -12,20 +12,23 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"></RowDefinition>
             <RowDefinition></RowDefinition>
+            <RowDefinition></RowDefinition>
         </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="Auto"></ColumnDefinition>
+            <ColumnDefinition></ColumnDefinition>
             <ColumnDefinition></ColumnDefinition>
         </Grid.ColumnDefinitions>
 
         
         <TextBlock Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Text="Viking" HorizontalAlignment="Center" VerticalAlignment="Top"/>
         
-        <TabControl Grid.Row="1" Grid.Column="0">
+        <TabControl Grid.Row="1" Grid.Column="0" Width="100" Grid.RowSpan="2">
         </TabControl>
-        
-        <Canvas Grid.Row="1" Grid.Column="1" Name="RenderCanvas">
-            <Image Grid.Row="2" Grid.Column="2" Source="{Binding RenderTargetSource}" />
-        </Canvas>
+
+        <Rectangle Height="100" Width="200" Fill="Orange" Margin="5"  Grid.Row="1" Grid.Column="1" />
+        <Rectangle Height="100" Width="200" Fill="Green" Margin="5"  Grid.Row="1" Grid.Column="2" />
+        <Rectangle Height="100" Width="200" Fill="Blue" Margin="5"  Grid.Row="2" Grid.Column="1" />
+        <Image Grid.Row="2" Grid.Column="2" Source="{Binding RenderTargetSource}" />
     </Grid>
 </ek:UIRoot>

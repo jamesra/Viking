@@ -115,7 +115,7 @@
   <PropertyGroup>
     <PostBuildEvent>cd "$(SolutionDir)packages\EmptyKeysUI_Generator*\tools"
 
-ekUIGen.exe -i="$(ProjectDir)\" -o="$(ProjectDir)..\RuneLibrary\GeneratedUI" -oa="$(ProjectDir)..\Viewer\Content" -bd="$(TargetDir)\" -rm=MonoGame /generate-bindings /da:UserInterface</PostBuildEvent>
+ekUIGen.exe -i="$(ProjectDir)\" -o="$(ProjectDir)..\EKLibrary\GeneratedUI" -oa="$(ProjectDir)..\Viewer\Content" -bd="$(TargetDir)\" -rm=MonoGame /generate-bindings /da:UserInterface</PostBuildEvent>
   </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

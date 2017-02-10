@@ -18,8 +18,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DXViews", "DXViews\DXViews.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Monographics", "Monographics\Monographics.csproj", "{5F9CAF24-0CF5-481F-B7EC-9327ECB269A7}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ViewerDX", "ViewerDX\ViewerDX.csproj", "{4C796361-4522-4B83-B274-7D98B0ACE639}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Geometry", "..\..\Geometry\Geometry.csproj", "{EACB87E8-A5E3-417E-A9EF-B80C2A68C020}"
 EndProject
 Global
@@ -140,20 +138,6 @@ Global
 		{5F9CAF24-0CF5-481F-B7EC-9327ECB269A7}.ReleaseWithSymbols|x64.Build.0 = Release|Any CPU
 		{5F9CAF24-0CF5-481F-B7EC-9327ECB269A7}.ReleaseWithSymbols|x86.ActiveCfg = Release|Any CPU
 		{5F9CAF24-0CF5-481F-B7EC-9327ECB269A7}.ReleaseWithSymbols|x86.Build.0 = Release|Any CPU
-		{4C796361-4522-4B83-B274-7D98B0ACE639}.Debug|Any CPU.ActiveCfg = Debug|x86
-		{4C796361-4522-4B83-B274-7D98B0ACE639}.Debug|x64.ActiveCfg = Debug|x86
-		{4C796361-4522-4B83-B274-7D98B0ACE639}.Debug|x86.ActiveCfg = Debug|x86
-		{4C796361-4522-4B83-B274-7D98B0ACE639}.Debug|x86.Build.0 = Debug|x86
-		{4C796361-4522-4B83-B274-7D98B0ACE639}.Release|Any CPU.ActiveCfg = Release|x86
-		{4C796361-4522-4B83-B274-7D98B0ACE639}.Release|x64.ActiveCfg = Release|x86
-		{4C796361-4522-4B83-B274-7D98B0ACE639}.Release|x86.ActiveCfg = Release|x86
-		{4C796361-4522-4B83-B274-7D98B0ACE639}.Release|x86.Build.0 = Release|x86
-		{4C796361-4522-4B83-B274-7D98B0ACE639}.ReleaseWithSymbols|Any CPU.ActiveCfg = Release|x86
-		{4C796361-4522-4B83-B274-7D98B0ACE639}.ReleaseWithSymbols|Any CPU.Build.0 = Release|x86
-		{4C796361-4522-4B83-B274-7D98B0ACE639}.ReleaseWithSymbols|x64.ActiveCfg = Release|x86
-		{4C796361-4522-4B83-B274-7D98B0ACE639}.ReleaseWithSymbols|x64.Build.0 = Release|x86
-		{4C796361-4522-4B83-B274-7D98B0ACE639}.ReleaseWithSymbols|x86.ActiveCfg = Release|x86
-		{4C796361-4522-4B83-B274-7D98B0ACE639}.ReleaseWithSymbols|x86.Build.0 = Release|x86
 		{EACB87E8-A5E3-417E-A9EF-B80C2A68C020}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{EACB87E8-A5E3-417E-A9EF-B80C2A68C020}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{EACB87E8-A5E3-417E-A9EF-B80C2A68C020}.Debug|x64.ActiveCfg = Debug|Any CPU

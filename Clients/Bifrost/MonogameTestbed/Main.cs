@@ -58,6 +58,9 @@ namespace Viewer
 
         TestMode Mode = TestMode.CURVE_LABEL;
 
+        RenderTarget2D renderTarget = null;
+        EKLibrary.RenderTargetViewModel rtViewModel = new EKLibrary.RenderTargetViewModel();
+
         public MonoTestbed()
         {
             graphics = new GraphicsDeviceManager(this);
@@ -114,7 +117,8 @@ namespace Viewer
             SpriteFont font = Content.Load<SpriteFont>("Segoe_UI_15_Bold");
             fontArial = Content.Load<SpriteFont>("Arial");
             FontManager.DefaultFont = Engine.Instance.Renderer.CreateFont(font);
-            root = new Root();
+            root = new Root(); 
+            root.DataContext = rtViewModel;
 
             FontManager.Instance.LoadFonts(Content);
 
@@ -146,6 +150,9 @@ namespace Viewer
             lineStyleTest.Init(this);
             curveStyleTest.Init(this);
             closedCurveTest.Init(this);
+
+            renderTarget = new RenderTarget2D(GraphicsDevice, GraphicsDevice.Viewport.Width / 2, GraphicsDevice.Viewport.Height / 2);
+            rtViewModel.RenderTargetSource.Texture = Engine.Instance.Renderer.CreateTexture(renderTarget);
         }
 
         /// <summary>
@@ -233,7 +240,7 @@ namespace Viewer
             root.UpdateInput(gameTime.ElapsedGameTime.TotalMilliseconds);
             root.UpdateLayout(gameTime.ElapsedGameTime.TotalMilliseconds);
 
-            //meshView.Update(gameTime); 
+            meshView.Update(gameTime); 
 
             base.Update(gameTime);
         }
@@ -244,11 +251,18 @@ namespace Viewer
         /// <param name="gameTime">Provides a snapshot of timing values.</param>
         protected override void Draw(GameTime gameTime)
         {
-            
-
             GraphicsDevice.Clear(Color.CornflowerBlue);
 
-            //root.Draw(gameTime.ElapsedGameTime.TotalMilliseconds);
+            GraphicsDevice.SetRenderTarget(renderTarget);
+            meshView.Draw(GraphicsDevice);
+            GraphicsDevice.SetRenderTarget(null);
+            /*
+            using (RenderTarget2D rt = DrawToRenderTarget(GraphicsDevice, meshView.Draw))
+            {
+                rtViewModel.RenderTargetSource.Texture = Engine.Instance.Renderer.CreateTexture(rt);
+            }
+            */
+            root.Draw(gameTime.ElapsedGameTime.TotalMilliseconds);
 
             // TODO: Add your drawing code here
 
@@ -286,9 +300,7 @@ namespace Viewer
                     break;
             }
 
-            spriteBatch.End();
-
-            //meshView.Draw(this.GraphicsDevice);
+            spriteBatch.End(); 
 
             base.Draw(gameTime);
         }
