@@ -3,13 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.IO;
-using Microsoft.Practices.Prism;
-using Microsoft.Practices.Prism.Modularity;
-using Microsoft.Practices.Prism.MefExtensions;
-using Microsoft.Practices.Prism.MefExtensions;
+using Prism;
+using Prism.Modularity;
+using Prism.Mef.Modularity;
 using System.ComponentModel.Composition.Hosting;
 using System.ComponentModel.Composition;
 using System.Diagnostics;
+using Prism.Mef;
 
 namespace Jotunn
 {

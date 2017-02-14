@@ -2,12 +2,12 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Common;
+using Viking.Common;
 using System.Windows.Media;
 
 namespace Viking.VolumeViewModel
 {
-    class BrushCacheEntry : Common.DataStructures.CacheEntry<string>
+    class BrushCacheEntry : Viking.Common.CacheEntry<string>
     {
         public Brush Brush;
 
@@ -19,11 +19,11 @@ namespace Viking.VolumeViewModel
 
         public override void Dispose()
         {
-            Brush = null; 
+            Brush = null;
         }
     }
 
-    class ImageBrushCache : Common.DataStructures.TimeQueueCache<string, BrushCacheEntry, Brush, Brush>
+    class ImageBrushCache : Viking.Common.TimeQueueCache<string, BrushCacheEntry, Brush, Brush>
     {
 
         protected override Brush Fetch(BrushCacheEntry key)

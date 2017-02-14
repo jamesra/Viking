@@ -21,6 +21,7 @@
                     ClipToBounds="True"
                     LayoutUpdated="Viewport_LayoutUpdated"
                     IsHitTestVisible="False"
+                    SnapsToDevicePixels="True"
                     >
             <Viewport3D.Camera>
                 <OrthographicCamera x:Name="Camera"
@@ -34,7 +35,7 @@
             <Viewport3D.Children>
                 <ModelVisual3D>
                     <ModelVisual3D.Content>
-                        <AmbientLight Color="White"/>                        
+                        <AmbientLight Color="White"/>
                     </ModelVisual3D.Content>
                 </ModelVisual3D>
                 <ModelUIElement3D AllowDrop="False" IsHitTestVisible="False">

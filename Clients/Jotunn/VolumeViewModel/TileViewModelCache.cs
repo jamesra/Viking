@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Common.DataStructures; 
+using Viking.Common;
 
 namespace Viking.VolumeViewModel
 {
@@ -23,7 +23,7 @@ namespace Viking.VolumeViewModel
 
     }
 
-    class TileViewModelCache : Common.DataStructures.TimeQueueCache<string, TileViewModelCacheEntry, TileViewModel, TileViewModel>
+    class TileViewModelCache : TimeQueueCache<string, TileViewModelCacheEntry, TileViewModel, TileViewModel>
     {
         protected override TileViewModel Fetch(TileViewModelCacheEntry key)
         {

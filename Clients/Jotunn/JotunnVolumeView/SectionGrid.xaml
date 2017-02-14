@@ -10,59 +10,71 @@
              d:DesignHeight="300" d:DesignWidth="300"
              Name="Sections"
               >
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition  Height="Auto"></RowDefinition>
+            <RowDefinition></RowDefinition>
+            <RowDefinition Height="Auto"></RowDefinition>
+        </Grid.RowDefinitions>
 
-    <ItemsControl x:Name="SectionsGrid"
-             ScrollViewer.VerticalScrollBarVisibility="Auto"
-             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-             ScrollViewer.CanContentScroll="True"
-             HorizontalContentAlignment="Stretch"
-             VerticalContentAlignment="Stretch">
-        <!--
-        <ItemsControl.ItemContainerStyle>
-            <Style TargetType="ListBoxItem"> 
-                <Style.Resources> 
-                    <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="Transparent"/> 
-                    <SolidColorBrush x:Key="{x:Static SystemColors.ControlBrushKey}" Color="Transparent"/> 
-                </Style.Resources> 
-            </Style>
-        </ItemsControl.ItemContainerStyle>
-        -->
-        <ItemsControl.ItemsPanel>
-            <ItemsPanelTemplate>
-                <Viking:VirtualizingGrid IsItemsHost="True" Name="ItemsPanel"/>
-            </ItemsPanelTemplate>
-        </ItemsControl.ItemsPanel>
-        <ItemsControl.ItemTemplate>
-            <DataTemplate>
-                <Grid Background="Transparent">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="16"/> 
-                        <RowDefinition/>
-                    </Grid.RowDefinitions>
-                    <VolumeView:PyramidViewer Grid.Row="0"
-                                              Grid.RowSpan="2"
-                                              TileMapping="{Binding Path=DefaultMapping}"
-                                              VisibleRegion="{Binding ElementName=ItemsPanel, Path=VisibleRegion,Mode=TwoWay}"
-                                              />
-                    <TextBlock Grid.Row="0"
-                               Text="{Binding Path=Name}"
-                               SnapsToDevicePixels="True"
-                               TextAlignment="Center"
-                               Foreground="LimeGreen"
-                               HorizontalAlignment="Stretch">
-                        <TextBlock.Background>
-                            <LinearGradientBrush StartPoint="0, 0.5" EndPoint="1, 0.5" >
-                                <GradientStop Offset="0" Color="Transparent"/>
-                                <GradientStop Offset="0.33" Color="#00000000"/>
-                                <GradientStop Offset="0.5" Color="#FF000000"/>
-                                <GradientStop Offset="0.66" Color="#00000000"/>
-                                <GradientStop Offset="1" Color="Transparent"/>
-                            </LinearGradientBrush>
-                        </TextBlock.Background>
-                    </TextBlock>
-                </Grid>
-            </DataTemplate>
-        </ItemsControl.ItemTemplate>
-    </ItemsControl>
-    
+        <Button Grid.Row="0" Command="{Binding ElementName=ItemsPanel, Path=AddRowCommand}">Add Row</Button>
+        <Button Grid.Row="2" Command="{Binding ElementName=ItemsPanel, Path=RemoveRowCommand}">Remove Row</Button>
+ 
+        <ItemsControl Grid.Row="1" x:Name="SectionsGrid"
+                 ScrollViewer.VerticalScrollBarVisibility="Auto"
+                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                 ScrollViewer.CanContentScroll="True"
+                 HorizontalContentAlignment="Stretch"
+                 VerticalContentAlignment="Stretch">
+
+            <!--
+            <ItemsControl.ItemContainerStyle>
+                <Style TargetType="ListBoxItem"> 
+                    <Style.Resources> 
+                        <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="Transparent"/> 
+                        <SolidColorBrush x:Key="{x:Static SystemColors.ControlBrushKey}" Color="Transparent"/> 
+                    </Style.Resources> 
+                </Style>
+            </ItemsControl.ItemContainerStyle>
+            -->
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <Viking:VirtualizingGrid IsItemsHost="True" Name="ItemsPanel">
+                    </Viking:VirtualizingGrid>
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <Grid Background="Transparent">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="16"/>
+                            <RowDefinition/>
+                        </Grid.RowDefinitions>
+                        <VolumeView:PyramidViewer Grid.Row="0"
+                                                  Grid.RowSpan="2"
+                                                  TileMapping="{Binding Path=DefaultMapping}"
+                                                  VisibleRegion="{Binding ElementName=ItemsPanel, Path=VisibleRegion,Mode=TwoWay}"
+                                                  />
+                        <TextBlock Grid.Row="0"
+                                   Text="{Binding Path=Name}"
+                                   SnapsToDevicePixels="True"
+                                   TextAlignment="Center"
+                                   Foreground="LimeGreen"
+                                   HorizontalAlignment="Stretch">
+                            <TextBlock.Background>
+                                <LinearGradientBrush StartPoint="0, 0.5" EndPoint="1, 0.5" >
+                                    <GradientStop Offset="0" Color="Transparent"/>
+                                    <GradientStop Offset="0.33" Color="#00000000"/>
+                                    <GradientStop Offset="0.5" Color="#FF000000"/>
+                                    <GradientStop Offset="0.66" Color="#00000000"/>
+                                    <GradientStop Offset="1" Color="Transparent"/>
+                                </LinearGradientBrush>
+                            </TextBlock.Background>
+                        </TextBlock>
+                    </Grid>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+    </Grid>
+
 </UserControl>

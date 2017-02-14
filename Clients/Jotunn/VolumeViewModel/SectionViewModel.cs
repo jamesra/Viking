@@ -32,7 +32,7 @@ namespace Viking.VolumeViewModel
                                                                                        FrameworkPropertyMetadataOptions.AffectsRender));
         }
 
-        public SectionViewModel(Volume Volume, Section section) : base(Volume, section)
+        public SectionViewModel(Volume Volume, Section section, MappingManager _MappingManager) : base(Volume, section, _MappingManager)
         {
         }
     }
@@ -44,6 +44,8 @@ namespace Viking.VolumeViewModel
     public class SectionViewModelBase : DependencyObject
     {
         public readonly Section section;
+
+        public MappingManager _MappingManager;
 
         public string Name { get { return section.Name; } }
 
@@ -100,15 +102,17 @@ namespace Viking.VolumeViewModel
         private Volume _VolumeModel;
         public Volume VolumeModel { get { return _VolumeModel; } }
 
+        
         public TileMappingViewModel DefaultMapping
         {
             get
-            {
-                MappingBase mapping = MappingManager.GetMapping(_VolumeModel.DefaultVolumeTransform, section, DefaultChannel, DefaultPyramidTransform);
+            {  
+                MappingBase mapping = _MappingManager.GetMapping(_VolumeModel.DefaultVolumeTransform, section.Number, DefaultChannel, DefaultPyramidTransform);
                 TileMappingViewModel mapViewModel = new TileMappingViewModel(mapping);
                 return mapViewModel;
             }
         }
+        
 
 #region Dependency Properties
 
@@ -131,10 +135,11 @@ namespace Viking.VolumeViewModel
 
 #endregion 
 
-        public SectionViewModelBase(Volume Volume, Section section)
+        public SectionViewModelBase(Volume Volume, Section section, MappingManager _MappingManager)
         {
             this._VolumeModel = Volume;
-            this.section = section; 
+            this.section = section;
+            this._MappingManager = _MappingManager;
         }
 
         public void PrepareTransform(string transform)

@@ -82,8 +82,7 @@ namespace AnnotationViewModel
             LocationViewModel lvm = o as LocationViewModel;
             if (o == null)
                 return;
-
-            lvm.obj.Radius = (double)e.NewValue;
+             
         }
 
         static LocationViewModel()

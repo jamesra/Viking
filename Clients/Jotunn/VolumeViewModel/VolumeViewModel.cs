@@ -63,6 +63,8 @@ namespace Viking.VolumeViewModel
     {
         private Volume _Volume;
 
+        private MappingManager _MappingManager;
+
         public SortedList<int, SectionViewModel> SectionViewModels;
 
         public string Name { get { return _Volume.Name; } }
@@ -75,7 +77,7 @@ namespace Viking.VolumeViewModel
 
         public string[] ChannelNames { get { return _Volume.ChannelNames; } }
 
-        public XDocument VolumeXML { get { return _Volume.VolumeXML; } }
+        public XDocument VolumeXML { get { return _Volume.VolumeElement.Document; } }
 
  //       public string[] TransformNames { get { return _Volume.Transforms.Keys.ToArray(); } }
                
@@ -83,11 +85,13 @@ namespace Viking.VolumeViewModel
         {
             _Volume = volume;
 
-            SectionViewModels = new SortedList<int, SectionViewModel>(_Volume.Sections.Length);
+            _MappingManager = new MappingManager(volume);
 
-            foreach (Section s in _Volume.Sections)
+            SectionViewModels = new SortedList<int, SectionViewModel>(_Volume.Sections.Count);
+
+            foreach (Section s in _Volume.Sections.Values)
             {
-                SectionViewModel sectionViewModel = new SectionViewModel(volume, s);
+                SectionViewModel sectionViewModel = new SectionViewModel(volume, s, _MappingManager);
                 SectionViewModels.Add(s.Number, sectionViewModel);
             }
              

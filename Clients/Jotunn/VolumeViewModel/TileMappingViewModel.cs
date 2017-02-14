@@ -102,7 +102,7 @@ namespace Viking.VolumeViewModel
         {
             get
             {
-                Geometry.GridRectangle grect = this.TileMapping.Bounds;
+                Geometry.GridRectangle grect = this.TileMapping.ControlBounds;
                 Rect bounds = new Rect(grect.Left, grect.Bottom, grect.Width, grect.Height);
                 return bounds; 
             }
@@ -151,7 +151,7 @@ namespace Viking.VolumeViewModel
             
             
             this.VisibleRegion = new VisibleRegionInfo(
-                                            new Rect(mapping.Bounds.Left, mapping.Bounds.Bottom, mapping.Bounds.Width, mapping.Bounds.Height),//Set the visible rect to include the entire mappable area
+                                            new Rect(mapping.ControlBounds.Left, mapping.ControlBounds.Bottom, mapping.ControlBounds.Width, mapping.ControlBounds.Height),//Set the visible rect to include the entire mappable area
                                             mapping.AvailableLevels[mapping.AvailableLevels.Length - 1]); //Set the downsample to the highest possible value
                 
             

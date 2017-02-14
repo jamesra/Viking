@@ -2,9 +2,12 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Microsoft.Practices.Prism.Modularity;
-using Microsoft.Practices.Prism.MefExtensions;
-using Microsoft.Practices.Prism.MefExtensions.Modularity;
+
+using Prism.Modularity;
+using Prism.Mef.Modularity;
+using Prism;
+//using Prism.MefExtensions;
+//using Prism.MefExtensions.Modularity;
 using System.ComponentModel.Composition;
 using System.ComponentModel.Composition.Hosting;
 using System.Diagnostics;
@@ -12,6 +15,26 @@ using System.Diagnostics;
 
 namespace Viking.VolumeViewModel
 {
+    public class BackgroundThreadProgressReporter : Viking.Common.IProgressReporter
+    {
+        System.ComponentModel.BackgroundWorker worker;
+
+        public BackgroundThreadProgressReporter(System.ComponentModel.BackgroundWorker worker)
+        {
+            this.worker = worker;
+        }
+
+        public void ReportProgress(double PercentProgress, string message)
+        {
+            worker.ReportProgress((int)PercentProgress, message);
+        }
+
+        public void TaskComplete()
+        {
+            worker.ReportProgress(100, "Task complete");
+        }
+    }
+
     [ModuleExport(typeof(VolumeViewModelModule), InitializationMode = InitializationMode.WhenAvailable)]
     public class VolumeViewModelModule : IModule
     {
@@ -42,7 +65,7 @@ namespace Viking.VolumeViewModel
         {
             string HostPath = ShellParameters.GetArgTable["HostPath"];
             //Create the model for the volume
-            Global.Volume = new VolumeModel.Volume(HostPath, Global.CachePath, ShellParameters.GetXML, InitializeBackgroundWorker);
+            Global.Volume = new VolumeModel.Volume(HostPath, Global.CachePath, ShellParameters.GetXML, new BackgroundThreadProgressReporter(InitializeBackgroundWorker));
 
             this.VolumeViewModel = new Viking.VolumeViewModel.VolumeViewModel(Global.Volume, InitializeBackgroundWorker);
             this.VolumeViewModelMainPanel = new VolumeViewModelSharedView(this.VolumeViewModel);

@@ -2,10 +2,10 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Microsoft.Practices.Prism.Modularity;
-using Microsoft.Practices.Prism.MefExtensions.Modularity;
+using Prism.Modularity;
+using Prism.Mef.Modularity;
 using Microsoft.Practices.ServiceLocation;
-using Microsoft.Practices.Prism.Regions;
+using Prism.Regions;
 using System.ComponentModel.Composition;
 using AnnotationViewModel;
 using System.Xml;
@@ -33,7 +33,7 @@ namespace Viking.VolumeView
 
             Viking.VolumeViewModel.VolumeViewModel volume = Microsoft.Practices.ServiceLocation.ServiceLocator.Current.GetInstance<Viking.VolumeViewModel.VolumeViewModel>();
 
-            WebAnnotationModel.State.EndpointAddress = GetEndpointFromXML(volume.VolumeXML);
+            WebAnnotationModel.State.Endpoint = GetEndpointFromXML(volume.VolumeXML).Uri;
             WebAnnotationModel.State.UserCredentials = new System.Net.NetworkCredential("anonymous", "connectome"); 
         }
 

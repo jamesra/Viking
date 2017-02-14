@@ -10,9 +10,9 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
-using Microsoft.Practices.Prism;
-using Microsoft.Practices.Prism.Regions;
-using Microsoft.Practices.Prism.Modularity;
+using Prism;
+using Prism.Regions;
+using Prism.Modularity;
 using Jotunn.Common;
 
 namespace Jotunn
@@ -52,21 +52,24 @@ namespace Jotunn
                 GlobalCommands.IncrementSectionNumber, new KeyGesture(Key.U, ModifierKeys.Control));
             this.InputBindings.Add(ib);
             */
+            /*
+             incrementCenterIndexCommand = new RoutedUICommand("Increments the section number", "IncrementCenterIndexCommand", typeof(MainWindow));
+             decrementCenterIndexCommand = new RoutedUICommand("Decrements the section number", "DecrementCenterIndexCommand", typeof(MainWindow));
 
-            incrementCenterIndexCommand = new RoutedUICommand("+", "IncrementCenterIndexCommand", typeof(MainWindow));
-            decrementCenterIndexCommand = new RoutedUICommand("-", "DecrementCenterIndexCommand", typeof(MainWindow));
+             CommandBinding cb = new CommandBinding(incrementCenterIndexCommand, OnIncrementSectionNumber);
+             this.CommandBindings.Add(cb);
 
-            CommandBinding cb = new CommandBinding(incrementCenterIndexCommand, OnIncrementSectionNumber);
-            this.CommandBindings.Add(cb);
+             cb = new CommandBinding(decrementCenterIndexCommand, OnDecrementSectionNumber);
+             this.CommandBindings.Add(cb);
+             */
 
-            cb = new CommandBinding(decrementCenterIndexCommand, OnDecrementSectionNumber);
-            this.CommandBindings.Add(cb);
+            Prism.Commands.DelegateCommand incrementCommand = new Prism.Commands.DelegateCommand(IncrementSectionNumber);
+            Prism.Commands.DelegateCommand decrementCommand = new Prism.Commands.DelegateCommand(IncrementSectionNumber);
 
-            GlobalCommands.IncrementSectionNumber.RegisterCommand(incrementCenterIndexCommand);
-            GlobalCommands.IncrementSectionNumber.RegisterCommand(decrementCenterIndexCommand);
+            GlobalCommands.IncrementSectionNumber.RegisterCommand(incrementCommand);
+            GlobalCommands.DecrementSectionNumber.RegisterCommand(decrementCommand);
             //GlobalCommands.IncrementSectionNumber.Execute(null);
-                
-
+                 
             OnStartup(null);
 		}
 
@@ -84,23 +87,37 @@ namespace Jotunn
             if(e.Key == Key.Insert)
             {
                 GlobalCommands.IncrementSectionNumber.Execute(null);
+                e.Handled = true;
             }
             else if (e.Key == Key.Delete)
             {
                 GlobalCommands.DecrementSectionNumber.Execute(null);
+                e.Handled = true;
             }
+
+            e.Handled = false;
         }
 
         #region IShellView Members
 
         private void OnIncrementSectionNumber(object sender, ExecutedRoutedEventArgs e)
         {
+            IncrementSectionNumber();
+        }
+
+        private void IncrementSectionNumber()
+        {
             Trace.WriteLine("OnIncrementSectionNumber keys do sometimes work");
         }
 
         private void OnDecrementSectionNumber(object sender, ExecutedRoutedEventArgs e)
         {
-            Trace.WriteLine("OnIncrementSectionNumber keys do sometimes work");
+            DecrementSectionNumber();
+        }
+
+        private void DecrementSectionNumber()
+        {
+            Trace.WriteLine("OnDecrementSectionNumber keys do sometimes work");
         }
 
         void IShellView.ShowView()
