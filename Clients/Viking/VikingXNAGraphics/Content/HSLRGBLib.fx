@@ -30,8 +30,6 @@ float BlendLumaWithBackground(float BackgroundLuma, float ForegroundLuma, float 
 	return (BackgroundLuma * (1 - Alpha)) + ((ForegroundLuma * Alpha));
 }
 
-
-
 //Convert RGB value to Hue, Chroma, Luma, slope
 float4 RGBToHCL(float4 RGB)
 {
@@ -78,10 +76,9 @@ float4 RGBToHCL(float4 RGB)
 
 float3 CorrectLuma(int Hextant, float3 Components, float Luma)
 {
-	float4 ComponentLumaWeights = ComponentLumaWeightsMap[Hextant]; 
-	float4 InverseComponentLumaWeights = InverseComponentLumaWeightsMap[Hextant];
+	float4 ComponentLumaWeights = ComponentLumaWeightsMap[Hextant];
 
-	float OverlayLuma = mul(ComponentLumaWeights, Components); 
+	float OverlayLuma = mul(ComponentLumaWeights.xyz, Components); 
 	float m = (Luma - OverlayLuma);
 	Components += m; 
 
@@ -140,7 +137,7 @@ float4 BlendHSLColorOverBackground(float4 HSLForegroundColor, float4 RGBBackgrou
 	float Hue = HSLForegroundColor.r;
 	float Saturation = HSLForegroundColor.g;
 	float ForegroundLuma = HSLForegroundColor.b;
-	float BackgroundLuma = mul(RGBBackgroundColor, LumaWeights);
+    float BackgroundLuma = mul(RGBBackgroundColor.xyz, LumaWeights.xyz);
 
 	float Luma = BlendLumaWithBackground(BackgroundLuma, ForegroundLuma, ForegroundLumaAlpha);
 

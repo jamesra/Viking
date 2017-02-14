@@ -10,7 +10,7 @@ float texture_x_end = 1;
 
 struct LINE_VS_INPUT
 {
-	float4 pos : POSITION;
+	float3 pos : POSITION;
 	float2 vertRhoTheta : NORMAL;
 	float2 vertScaleTrans : TEXCOORD0;
 	float instanceIndex : TEXCOORD1;
@@ -28,12 +28,13 @@ struct LINE_VS_OUTPUT
 LINE_VS_OUTPUT LineVertexShader(LINE_VS_INPUT In)
 {
 	LINE_VS_OUTPUT Out = (LINE_VS_OUTPUT)0;
-	float4 pos = In.pos;
+	float4 pos = float4(In.pos,1);
 	float distanceToOriginNormalized = In.vertScaleTrans.y;
-	float x0 = instanceData[In.instanceIndex].x;
-	float y0 = instanceData[In.instanceIndex].y;
-	float rho = instanceData[In.instanceIndex].z;
-	float theta = instanceData[In.instanceIndex].w;
+    int index = int(In.instanceIndex);
+    float x0 = instanceData[index].x;
+    float y0 = instanceData[index].y;
+    float rho = instanceData[index].z;
+    float theta = instanceData[index].w;
 
 	// Scale X by lineRadius, and translate X by rho, in worldspace
 	// based on what part of the line we're on

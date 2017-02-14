@@ -34,10 +34,8 @@ float4 MyPSStandard(float3 polar : TEXCOORD0) : COLOR0
 float4 MyPSAlphaGradient(float3 polar : TEXCOORD0) : COLOR0
 {
 	float4 finalColor;
-	finalColor.r = polar.x;
 	finalColor.rgb = lineColor.rgb;
-	//finalColor.a = lineColor.a * polar.z * BlurEdge( polar.x );
-
+	
 	finalColor.a = lineColor.a *  ((polar.z * 2) > 1 ? ((1 - polar.z) * 2) : (polar.z * 2)) * BlurEdge(polar.x, blurThreshold);
 
 	return finalColor;
