@@ -99,11 +99,11 @@ namespace XNATestbed
 
             InitializeEffects();
 
-            //curveTest.Init(this);
-            //curveViewTest.Init(this);
-            //labelTest.Init(this);
-            //lineStyleTest.Init(this);
-            //curveStyleTest.Init(this);
+            curveTest.Init(this);
+            curveViewTest.Init(this);
+            labelTest.Init(this);
+            lineStyleTest.Init(this);
+            curveStyleTest.Init(this);
             closedCurveTest.Init(this);
         }
 
@@ -248,7 +248,7 @@ namespace XNATestbed
 
     public class CurveTest
     {
-        public Texture2D labelTexture;
+        public RenderTarget2D labelTexture;
 
         double CurveAngle = 3.14159 / 4.0;
 
@@ -268,6 +268,11 @@ namespace XNATestbed
             Matrix ViewProjMatrix = scene.ViewProj;
             string TechniqueName = "AnimatedLinear";
             float time = DateTime.Now.Millisecond / 1000.0f;
+
+            if(labelTexture.IsContentLost)
+            {
+                labelTexture = CreateTextureForLabel("The quick brown fox jumps over the lazy dog", window.GraphicsDevice, window.spriteBatch, window.fontArial);
+            }
             
             RoundLine line = new RoundLine(new Vector2((float)(-50.0f * Math.Cos(CurveAngle)), (float)(-50.0f * Math.Sin(CurveAngle)) + 50.0f),
                                            new Vector2((float)(50.0f * Math.Cos(CurveAngle)), (float)(50.0f * Math.Sin(CurveAngle)) + 50.0f));
@@ -279,7 +284,7 @@ namespace XNATestbed
             window.curveManager.Draw(new RoundCurve.RoundCurve[] { curve }, 16, Color.Blue, ViewProjMatrix, time, TechniqueName);
         }
          
-        public Texture2D CreateTextureForLabel(string label, GraphicsDevice device,
+        public RenderTarget2D CreateTextureForLabel(string label, GraphicsDevice device,
                               SpriteBatch spriteBatch,
                               SpriteFont font)
         {
