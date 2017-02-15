@@ -18,6 +18,10 @@
         <Grid.InputBindings>
             <KeyBinding Command="{x:Static jotunnuicommon:GlobalCommands.IncrementSectionNumber}" Key="PageUp"/>
             <KeyBinding Command="{x:Static jotunnuicommon:GlobalCommands.DecrementSectionNumber}" Key="PageDown"/>
+            <KeyBinding Key="Left" Command="{x:Static jotunnuicommon:GlobalCommands.RemoveGridColumnCommand}"></KeyBinding>
+            <KeyBinding Key="Right" Command="{x:Static jotunnuicommon:GlobalCommands.AddGridColumnCommand}"></KeyBinding>
+            <KeyBinding Key="Up" Command="{x:Static jotunnuicommon:GlobalCommands.AddGridRowCommand}"></KeyBinding>
+            <KeyBinding Key="Down" Command="{x:Static jotunnuicommon:GlobalCommands.RemoveGridRowCommand}"></KeyBinding>
         </Grid.InputBindings>
         
         <Grid.ColumnDefinitions >
@@ -43,8 +47,12 @@
                     Grid.Column="1"
                     Grid.Row="0"
                     Grid.RowSpan="2"
-                    region:RegionManager.RegionName="{x:Static jotunnuicommon:RegionNames.View}" Name="View"/>
-        
+                    region:RegionManager.RegionName="{x:Static jotunnuicommon:RegionNames.View}" Name="View">
+            <ContentControl.InputBindings>
+                
+            </ContentControl.InputBindings>
+        </ContentControl>
+
         <ContentControl  Background="Transparent"
                 Grid.Column="1"
                         Grid.Row="0"

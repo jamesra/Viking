@@ -143,12 +143,22 @@ namespace Viking.VolumeViewModel
             this.Tile = t;
 
             //CreateMesh(value);
+            
 
-            Action<Tile> createMeshAction = new Action<Tile>(CreateMesh);
-            createMeshAction.BeginInvoke(Tile, null, null);
+            
+            System.Threading.Tasks.Task create_mesh_task = new System.Threading.Tasks.Task(() => CreateMesh(this.Tile));
+            create_mesh_task.Start();
+            //Thread mesh_worker = new Thread(new ThreadStart(CreateMesh(Tile)));
+            //mesh_worker.Start();
+
+            //Action<Tile> createMeshAction = new Action<Tile>(CreateMesh);
+            //createMeshAction.BeginInvoke(Tile, null, null);
             //System.Threading.Tasks.Task t = new System.Threading.Tasks.(createMeshAction); 
 
-            Debug.WriteLine("TileViewModel: " + t.TextureFullPath);
+            //    Debug.WriteLine("TileViewModel: " + t.TextureFullPath);
+
+            //System.Threading.Tasks.Task create_texture_task = new System.Threading.Tasks.Task(LoadTexture);
+            //create_texture_task.Start();
             Thread worker = new Thread(new ThreadStart(LoadTexture));
             worker.Start();
 
@@ -186,8 +196,9 @@ namespace Viking.VolumeViewModel
                 return;
             }
 
-            Dispatcher.CurrentDispatcher.Invoke(DispatcherPriority.Normal,
-                    (Action)(() => { mesh = new MeshGeometry3D(); }));
+            //Dispatcher.CurrentDispatcher.Invoke(DispatcherPriority.Normal,
+            //(Action)(() => { mesh = new MeshGeometry3D(); }));
+            mesh = new MeshGeometry3D();
 
             foreach(PositionNormalTextureVertex v in t.Verticies)
             {
@@ -222,19 +233,20 @@ namespace Viking.VolumeViewModel
                 DiffuseMaterial mat = new DiffuseMaterial(imageBrush);
                 mat.Freeze();
 
-                _MainUIDispatcher.Invoke(new Action<DiffuseMaterial>(delegate(DiffuseMaterial material) { Texture = material; }), mat);
+                _MainUIDispatcher.BeginInvoke(new Action<DiffuseMaterial>(delegate(DiffuseMaterial material) { Texture = material; }), mat);
  //               Texture = mat;
             }
             else
             {
                 //This puts a light grey overlay on tiles which have a higher resolution which has not loaded yet
-                _MainUIDispatcher.Invoke(new Action<DiffuseMaterial>(delegate(DiffuseMaterial material) { Texture = material;}),  TileViewModel.LoadingTexture);
+                _MainUIDispatcher.BeginInvoke(new Action<DiffuseMaterial>(delegate(DiffuseMaterial material) { Texture = material;}),  TileViewModel.LoadingTexture);
                 
-                BitmapImage bmp = null;
+                BitmapImage bmp = new BitmapImage();
 
+                /*
                 Dispatcher.CurrentDispatcher.Invoke(DispatcherPriority.Render,
                                                    (Action)(() => { bmp = new BitmapImage(); }));
-
+                                                   */
                 bmp.BeginInit();
                 
                 bmp.UriSource = new Uri(this.TilePath + Tile.TextureFullPath);

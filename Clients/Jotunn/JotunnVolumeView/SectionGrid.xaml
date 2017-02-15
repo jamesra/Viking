@@ -10,16 +10,7 @@
              d:DesignHeight="300" d:DesignWidth="300"
              Name="Sections"
               >
-    <Grid>
-        <Grid.RowDefinitions>
-            <RowDefinition  Height="Auto"></RowDefinition>
-            <RowDefinition></RowDefinition>
-            <RowDefinition Height="Auto"></RowDefinition>
-        </Grid.RowDefinitions>
-
-        <Button Grid.Row="0" Command="{Binding ElementName=ItemsPanel, Path=AddRowCommand}">Add Row</Button>
-        <Button Grid.Row="2" Command="{Binding ElementName=ItemsPanel, Path=RemoveRowCommand}">Remove Row</Button>
- 
+    
         <ItemsControl Grid.Row="1" x:Name="SectionsGrid"
                  ScrollViewer.VerticalScrollBarVisibility="Auto"
                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
@@ -44,8 +35,8 @@
                 </ItemsPanelTemplate>
             </ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
-                <DataTemplate>
-                    <Grid Background="Transparent">
+            <DataTemplate>
+                <Grid Background="Transparent">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="16"/>
                             <RowDefinition/>
@@ -75,6 +66,5 @@
                 </DataTemplate>
             </ItemsControl.ItemTemplate>
         </ItemsControl>
-    </Grid>
 
 </UserControl>

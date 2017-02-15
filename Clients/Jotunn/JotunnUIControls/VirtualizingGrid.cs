@@ -222,6 +222,18 @@ namespace Jotunn.Controls
             GlobalCommands.IncrementSectionNumber.RegisterCommand(incrementCommand);
             GlobalCommands.DecrementSectionNumber.RegisterCommand(decrementCommand);
 
+            Prism.Commands.DelegateCommand addRowCommand = new Prism.Commands.DelegateCommand(AddRows);
+            Prism.Commands.DelegateCommand removeRowCommand = new Prism.Commands.DelegateCommand(RemoveRows, CanRemoveRows);
+
+            GlobalCommands.AddGridRowCommand.RegisterCommand(addRowCommand);
+            GlobalCommands.RemoveGridRowCommand.RegisterCommand(removeRowCommand);
+
+            Prism.Commands.DelegateCommand addColCommand = new Prism.Commands.DelegateCommand(AddColumns);
+            Prism.Commands.DelegateCommand removeColCommand = new Prism.Commands.DelegateCommand(RemoveColumns, CanRemoveColumns);
+
+            GlobalCommands.AddGridColumnCommand.RegisterCommand(addColCommand);
+            GlobalCommands.RemoveGridColumnCommand.RegisterCommand(removeColCommand);
+
             CenterNumber = 10;
             //GlobalCommands.IncrementSectionNumber.RegisterCommand(VirtualizingGrid.IncrementCommand);
             //Need to do this so the mouse commands are handled
@@ -504,5 +516,41 @@ namespace Jotunn.Controls
         {
             NumCols -= 2;
         }
+
+        protected void AddRows()
+        {
+            NumRows += 2;
+        }
+
+        protected bool CanRemoveRows()
+        {
+            return NumRows > 1;
+        }
+
+        protected void RemoveRows()
+        {
+            NumRows -= 2;
+            if (NumRows < 1)
+                NumRows = 1;
+        }
+
+        protected void AddColumns()
+        {
+            NumCols += 2;
+        }
+
+        protected bool CanRemoveColumns()
+        {
+            return NumCols > 1; 
+        }
+
+        protected void RemoveColumns()
+        {
+            NumCols -= 2;
+            if (NumCols < 1)
+                NumCols = 1;
+        }
+
+
     }
 }
