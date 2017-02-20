@@ -75,6 +75,7 @@ namespace ConnectomeODataV4
             AddPermittedStructureLinks(builder);
             AddLocationLinks(builder);
             AddNetworkFunctions(builder);
+            AddDistinctLabelFunctions(builder);
 
             var edmModel = builder.GetEdmModel();
             AddStructureLocationLinks(builder, edmModel);
@@ -157,7 +158,16 @@ namespace ConnectomeODataV4
             type.HasKey(sl => sl.B);
             builder.EntitySet<LocationLink>("LocationLinks");
         }
-        
+
+        public static void AddDistinctLabelFunctions(ODataModelBuilder builder)
+        {
+            
+            var Distinct = builder.EntityType<Structure>().Collection.Function("DistinctLabels");
+            
+            Distinct.ReturnsCollection<string>();  
+        }
+
+
         public static void AddNetworkFunctions(ODataModelBuilder builder)
         {
             //builder.EntitySet<Structure>("Structures");
@@ -165,15 +175,15 @@ namespace ConnectomeODataV4
             var NetworkIDsFuncConfig = builder.Function("Network");
             NetworkIDsFuncConfig.CollectionParameter<long>("IDs");
             NetworkIDsFuncConfig.Parameter<int>("Hops");
-            NetworkIDsFuncConfig.ReturnsCollection<long>();
+            NetworkIDsFuncConfig.ReturnsCollectionFromEntitySet<Structure>("Structures");
             NetworkIDsFuncConfig.Namespace = null;
-            
+/*            
             var NetworkCellsFuncConfig = builder.Function("NetworkCells");
             NetworkCellsFuncConfig.CollectionParameter<long>("IDs");
             NetworkCellsFuncConfig.Parameter<int>("Hops");
             NetworkCellsFuncConfig.ReturnsCollectionFromEntitySet<Structure>("Structures");
             NetworkCellsFuncConfig.Namespace = null;
-
+*/
             /*
             var StructuresNetworkFuncConfig = builder.EntityType<Structure>().Collection.Function("Network");
             StructuresNetworkFuncConfig.CollectionParameter<long>("IDs");
@@ -195,8 +205,8 @@ namespace ConnectomeODataV4
             NetworkStructureLinksFuncConfig.Namespace = null;
             
             var StructuresLocationLinkFuncConfig = builder.Function("StructureLocationLinks");
-            StructuresLocationLinkFuncConfig.ReturnsCollectionFromEntitySet<LocationLink>("LocationLinks");
             StructuresLocationLinkFuncConfig.Parameter<long>("StructureID");
+            StructuresLocationLinkFuncConfig.ReturnsCollectionFromEntitySet<LocationLink>("LocationLinks");
             StructuresLocationLinkFuncConfig.Namespace = null;
         }
     }

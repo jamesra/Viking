@@ -16,13 +16,7 @@ namespace ConnectomeDataModel
         [StoredProcedureParameter(System.Data.SqlDbType.Int, Direction = System.Data.ParameterDirection.Input)]
         public int Hops { get; set; }
     }
-
-    [StoredProcedure("SelectNetworkStructureIDs")]
-    class SelectNetworkStructureIDsStoredProcedure : NetworkQueryParameters
-    {
-        
-    }
-
+    
     [StoredProcedure("SelectNetworkDetails")]
     class SelectNetworkDetailsStoredProcedure : NetworkQueryParameters
     {
@@ -39,6 +33,19 @@ namespace ConnectomeDataModel
     class SelectNetworkStructureLinksProcedure : NetworkQueryParameters
     {
         
+    }
+
+    [StoredProcedure("SelectNetworkChildStructures")]
+    class SelectNetworkChildStructuresProcedure : NetworkQueryParameters
+    {
+
+    }
+
+
+    [StoredProcedure("SelectNetworkStructureIDs")]
+    class SelectNetworkStructureIDsStoredProcedure : NetworkQueryParameters
+    {
+
     }
 
     [StoredProcedure("SelectNetworkChildStructureIDs")]

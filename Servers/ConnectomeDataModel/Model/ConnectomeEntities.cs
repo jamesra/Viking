@@ -308,21 +308,34 @@ namespace ConnectomeDataModel
 
         public IQueryable<Structure> SelectNetworkStructures(IEnumerable<long> IDs, int numHops)
         {
-            SortedSet<long> NodeIDs = SelectNetworkStructureIDs(IDs, numHops);
+            var proc = new SelectNetworkStructuresProcedure()
+            {
+                Hops = numHops,
+                IDs = udt_integer_list.Create(IDs)
+            };
+              
+            if (this.Database.Connection.State != System.Data.ConnectionState.Open)
+                this.Database.Connection.Open();
 
-            return from s in this.Structures
-                   where NodeIDs.Contains(s.ID)
-                   select s; 
+            Structure[] NodeObjects; 
+            using (System.Data.Common.DbDataReader reader = EntityFrameworkExtras.EF6.DatabaseExtensions.ExecuteReader(this.Database, proc))
+            {
+                NodeObjects = ((IObjectContextAdapter)this).ObjectContext.Translate<Structure>(reader, "Structures", MergeOption.NoTracking).ToArray();
+            }
+
+            this.Database.Connection.Close();
+
+            return NodeObjects.AsQueryable<Structure>();
         }
 
-        public IQueryable<Structure> SelectNetworkChildStructures(IEnumerable<long> IDs, int numHops)
+        public IQueryable<Structure> SelectNetworkChildStructuresIDs(IEnumerable<long> IDs, int numHops)
         {
             var proc = new SelectNetworkChildStructureIDsProcedure()
             {
                 Hops = numHops,
                 IDs = udt_integer_list.Create(IDs)
             };
-
+            
             SortedSet<long> ChildStructureIDs = new SortedSet<long>(EntityFrameworkExtras.EF6.DatabaseExtensions.ExecuteStoredProcedure<long>(this.Database, proc));
             
             return from s in this.Structures
@@ -330,16 +343,51 @@ namespace ConnectomeDataModel
                    select s;
         }
 
+        public IQueryable<Structure> SelectNetworkChildStructures(IEnumerable<long> IDs, int numHops)
+        {
+            var proc = new SelectNetworkChildStructuresProcedure()
+            {
+                Hops = numHops,
+                IDs = udt_integer_list.Create(IDs)
+            };
+
+            if (this.Database.Connection.State != System.Data.ConnectionState.Open)
+                this.Database.Connection.Open();
+
+            Structure[] ChildStructures;
+            using (System.Data.Common.DbDataReader reader = EntityFrameworkExtras.EF6.DatabaseExtensions.ExecuteReader(this.Database, proc))
+            {
+                ChildStructures = ((IObjectContextAdapter)this).ObjectContext.Translate<Structure>(reader, "Structures", MergeOption.NoTracking).ToArray();
+            }
+
+            this.Database.Connection.Close();
+
+            return ChildStructures.AsQueryable<Structure>();
+        }
+
         public IQueryable<StructureLink> SelectNetworkStructureLinks(IEnumerable<long> IDs, int numHops)
         {
-            SortedSet<long> NodeIDs = SelectNetworkStructureIDs(IDs, numHops);
-            
-            var ChildStructures = from S in Structures where S.ParentID.HasValue && NodeIDs.Contains(S.ParentID.Value) select S;
-            return from SL in this.StructureLinks
-                    join CSource in ChildStructures on SL.SourceID equals CSource.ID
-                    join CTarget in ChildStructures on SL.TargetID equals CTarget.ID
-                    select SL;
+            var proc = new SelectNetworkStructureLinksProcedure()
+            {
+                Hops = numHops,
+                IDs = udt_integer_list.Create(IDs)
+            };
+
+            if (this.Database.Connection.State != System.Data.ConnectionState.Open)
+                this.Database.Connection.Open();
+
+            StructureLink[] Links;
+            using (System.Data.Common.DbDataReader reader = EntityFrameworkExtras.EF6.DatabaseExtensions.ExecuteReader(this.Database, proc))
+            {
+                Links = ((IObjectContextAdapter)this).ObjectContext.Translate<StructureLink>(reader, "StructureLinks", MergeOption.NoTracking).ToArray();
+            }
+
+            this.Database.Connection.Close();
+
+            return Links.AsQueryable<StructureLink>();
         }
+
+
 
 
         /// <summary>

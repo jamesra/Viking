@@ -33,10 +33,10 @@
           <Property Name="VolumeShape" Type="geometry" Nullable="false" />
           <Property Name="X" Type="float" StoreGeneratedPattern="Computed" Nullable="false" />
           <Property Name="Y" Type="float" StoreGeneratedPattern="Computed" Nullable="false" />
-          <Property Name="Width" Type="float" />
-          <Property Name="Radius" Type="float" StoreGeneratedPattern="Computed" Nullable="false" />
           <Property Name="VolumeX" Type="float" StoreGeneratedPattern="Computed" Nullable="false" />
           <Property Name="VolumeY" Type="float" StoreGeneratedPattern="Computed" Nullable="false" />
+          <Property Name="Width" Type="float" />
+          <Property Name="Radius" Type="float" StoreGeneratedPattern="Computed" Nullable="false" />
         </EntityType>
         <EntityType Name="LocationLink">
           <Key>
@@ -247,6 +247,26 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
           <Parameter Name="KeepStructureID" Type="bigint" Mode="In" />
           <Parameter Name="MergeStructureID" Type="bigint" Mode="In" />
         </Function>
+        <Function Name="NetworkChildStructureIDs" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="true" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo">
+          <Parameter Name="Hops" Type="int" Mode="In" />
+          <ReturnType>
+            <CollectionType>
+              <RowType>
+                <Property Name="ID" Type="bigint" Nullable="false" />
+              </RowType>
+            </CollectionType>
+          </ReturnType>
+        </Function>
+        <Function Name="NetworkStructureIDs" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="true" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo">
+          <Parameter Name="Hops" Type="int" Mode="In" />
+          <ReturnType>
+            <CollectionType>
+              <RowType>
+                <Property Name="ID" Type="bigint" Nullable="false" />
+              </RowType>
+            </CollectionType>
+          </ReturnType>
+        </Function>
         <Function Name="SectionLocationLinks" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="true" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo">
           <Parameter Name="Z" Type="float" Mode="In" />
           <ReturnType>
@@ -296,10 +316,10 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
                 <Property Name="VolumeShape" Type="geometry" Nullable="false" />
                 <Property Name="X" Type="float" Nullable="false" />
                 <Property Name="Y" Type="float" Nullable="false" />
-                <Property Name="Width" Type="float" />
-                <Property Name="Radius" Type="float" />
                 <Property Name="VolumeX" Type="float" Nullable="false" />
                 <Property Name="VolumeY" Type="float" Nullable="false" />
+                <Property Name="Width" Type="float" />
+                <Property Name="Radius" Type="float" />
               </RowType>
             </CollectionType>
           </ReturnType>
@@ -327,10 +347,10 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
                 <Property Name="VolumeShape" Type="geometry" Nullable="false" />
                 <Property Name="X" Type="float" Nullable="false" />
                 <Property Name="Y" Type="float" Nullable="false" />
-                <Property Name="Width" Type="float" />
-                <Property Name="Radius" Type="float" />
                 <Property Name="VolumeX" Type="float" Nullable="false" />
                 <Property Name="VolumeY" Type="float" Nullable="false" />
+                <Property Name="Width" Type="float" />
+                <Property Name="Radius" Type="float" />
               </RowType>
             </CollectionType>
           </ReturnType>
@@ -341,6 +361,15 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
           <Parameter Name="StructureID" Type="bigint" Mode="In" />
         </Function>
         <Function Name="SelectLastModifiedLocationByUsers" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="false" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo" />
+        <Function Name="SelectNetworkChildStructureIDs" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="false" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo">
+          <Parameter Name="Hops" Type="int" Mode="In" />
+        </Function>
+        <Function Name="SelectNetworkChildStructures" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="false" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo">
+          <Parameter Name="Hops" Type="int" Mode="In" />
+        </Function>
+        <Function Name="SelectNetworkStructureIDs" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="false" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo">
+          <Parameter Name="Hops" Type="int" Mode="In" />
+        </Function>
         <Function Name="SelectNumConnectionsPerStructure" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="false" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo" />
         <Function Name="SelectRootStructures" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="false" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo" />
         <Function Name="SelectSectionAnnotationsInMosaicBounds" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="false" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo">
@@ -975,6 +1004,15 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
             <End Role="StructureType" EntitySet="StructureTypes" />
             <End Role="PermittedStructureLink" EntitySet="PermittedStructureLink" />
           </AssociationSet>
+          <FunctionImport Name="SelectNetworkChildStructures" EntitySet="Structures" ReturnType="Collection(ConnectomeModel.Structure)">
+          <Parameter Name="Hops" Mode="In" Type="Int32" />
+          </FunctionImport>
+          <FunctionImport Name="SelectNetworkChildStructureIDs">
+            <Parameter Name="Hops" Mode="In" Type="Int32" />
+          </FunctionImport>
+          <FunctionImport Name="SelectNetworkStructureIDs">
+            <Parameter Name="Hops" Mode="In" Type="Int32" />
+          </FunctionImport>
         </EntityContainer>
         <ComplexType Name="ApproximateStructureLocation_Result">
           <Property Type="Double" Name="X" Nullable="true" />
@@ -2003,6 +2041,9 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
                 </MappingFragment>
             </EntityTypeMapping>
           </EntitySetMapping>
+          <FunctionImportMapping FunctionImportName="SelectNetworkChildStructures" FunctionName="ConnectomeModel.Store.SelectNetworkChildStructures" />
+          <FunctionImportMapping FunctionImportName="SelectNetworkChildStructureIDs" FunctionName="ConnectomeModel.Store.SelectNetworkChildStructureIDs" />
+          <FunctionImportMapping FunctionImportName="SelectNetworkStructureIDs" FunctionName="ConnectomeModel.Store.SelectNetworkStructureIDs" />
         </EntityContainerMapping>
       </Mapping>
     </edmx:Mappings>

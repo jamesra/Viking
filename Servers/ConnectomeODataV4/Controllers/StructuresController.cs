@@ -225,26 +225,41 @@ namespace ConnectomeODataV4.Controllers
         [ODataRoute("StructureLocationLinks(StructureID={key})")]
         public IQueryable<LocationLink> StructureLocationLinks([FromODataUri] long key)
         {
+            db.ConfigureAsReadOnly();
             return db.StructureLocationLinks(key);
         }
+        
+        /*
+        [HttpGet]
+        [EnableQuery]
+        [ODataRoute("LocationLinks")]
+        public IQueryable<LocationLink> LocationLinks([FromODataUri] long key)
+        {
+            return StructureLocationLinks(key);
+        }
+        */
 
 
         [HttpGet]
+        [EnableQuery()]
         [ODataRoute("Network(IDs={IDs},Hops={Hops})")]
-        public IHttpActionResult GetNetwork([FromODataUri] ICollection<long> IDs, [FromODataUri] int Hops)
+        public IQueryable<Structure> GetNetwork([FromODataUri] ICollection<long> IDs, [FromODataUri] int Hops)
         {
-            return Ok(db.SelectNetworkStructureIDs(IDs, Hops));
+            db.ConfigureAsReadOnly();
+            Request.ODataProperties().Path = GetRequestPath();
+            return db.SelectNetworkStructures(IDs, Hops);
         }
 
-
+        /*
         [HttpGet]
-        [EnableQuery(PageSize = 2048)]
+        [EnableQuery()]
         [ODataRoute("NetworkCells(IDs={IDs},Hops={Hops})")]
         public IQueryable<Structure> GetNetworkCells([FromODataUri] ICollection<long> IDs, [FromODataUri] int Hops)
         {
             Request.ODataProperties().Path = GetRequestPath(); 
             return db.SelectNetworkStructures(IDs, Hops);
         }
+        */
 
         /*
         [HttpGet]
@@ -269,11 +284,11 @@ namespace ConnectomeODataV4.Controllers
     
 
         [HttpGet]
-        [EnableQuery(PageSize = 2048)]
+        [EnableQuery()]
         [ODataRoute("NetworkChildStructures(IDs={IDs},Hops={Hops})")]
         public IQueryable<Structure> GetNetworkChildren([FromODataUri] long[] IDs, [FromODataUri] int Hops)
         {
-            //db.ConfigureAsReadOnly();
+            db.ConfigureAsReadOnly();
             Request.ODataProperties().Path = GetRequestPath();
             return db.SelectNetworkChildStructures(IDs, Hops);
 
@@ -281,7 +296,18 @@ namespace ConnectomeODataV4.Controllers
              
         }
 
-    
+        [HttpGet]
+        [EnableQuery()]
+        public IQueryable<string> DistinctLabels(ODataActionParameters parameters)
+        {
+            db.ConfigureAsReadOnly();
+            Request.ODataProperties().Path = GetRequestPath();
+            return db.Structures.Select(s => s.Label).Distinct();
+            
+            // https://github.com/OData/WebApi/issues/255
+
+        }
+
 
         protected override void Dispose(bool disposing)
         {

@@ -188,7 +188,7 @@ namespace ConnectomeODataV4.Controllers
 
         
         [HttpGet]
-        [EnableQuery(PageSize = 2048)]
+        [EnableQuery()]
         [ODataRoute("NetworkLinks(IDs={IDs},Hops={Hops})")]
         public IQueryable<StructureLink> Network([FromODataUri] ICollection<long> IDs, [FromODataUri] int Hops)
         {

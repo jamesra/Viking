@@ -10,7 +10,7 @@ by editing this MSBuild file. In order to learn more about this please visit htt
   </PropertyGroup>
   <ItemGroup>
     <File Include="bin/AnnotationVizLib.dll">
-      <publishTime>10/17/2016 13:45:02</publishTime>
+      <publishTime>02/20/2017 14:15:11</publishTime>
     </File>
     <File Include="bin/Antlr3.Runtime.dll">
       <publishTime>08/31/2015 16:54:16</publishTime>
@@ -19,13 +19,16 @@ by editing this MSBuild file. In order to learn more about this please visit htt
       <publishTime>09/14/2016 14:52:28</publishTime>
     </File>
     <File Include="bin/DataExport.dll">
-      <publishTime>10/17/2016 13:45:04</publishTime>
+      <publishTime>02/20/2017 14:15:15</publishTime>
     </File>
     <File Include="bin/de/Microsoft.Data.Edm.resources.dll">
       <publishTime>03/28/2016 17:17:55</publishTime>
     </File>
     <File Include="bin/de/Microsoft.Data.OData.resources.dll">
       <publishTime>03/28/2016 17:18:02</publishTime>
+    </File>
+    <File Include="bin/de/Microsoft.OData.Client.resources.dll">
+      <publishTime>03/31/2016 13:54:37</publishTime>
     </File>
     <File Include="bin/de/Microsoft.OData.Core.resources.dll">
       <publishTime>03/28/2016 17:18:28</publishTime>
@@ -60,6 +63,9 @@ by editing this MSBuild file. In order to learn more about this please visit htt
     <File Include="bin/es/Microsoft.Data.OData.resources.dll">
       <publishTime>03/28/2016 17:18:02</publishTime>
     </File>
+    <File Include="bin/es/Microsoft.OData.Client.resources.dll">
+      <publishTime>03/31/2016 13:54:37</publishTime>
+    </File>
     <File Include="bin/es/Microsoft.OData.Core.resources.dll">
       <publishTime>03/28/2016 17:18:28</publishTime>
     </File>
@@ -78,6 +84,9 @@ by editing this MSBuild file. In order to learn more about this please visit htt
     <File Include="bin/fr/Microsoft.Data.OData.resources.dll">
       <publishTime>03/28/2016 17:18:02</publishTime>
     </File>
+    <File Include="bin/fr/Microsoft.OData.Client.resources.dll">
+      <publishTime>03/31/2016 13:54:37</publishTime>
+    </File>
     <File Include="bin/fr/Microsoft.OData.Core.resources.dll">
       <publishTime>03/28/2016 17:18:28</publishTime>
     </File>
@@ -91,16 +100,19 @@ by editing this MSBuild file. In order to learn more about this please visit htt
       <publishTime>03/28/2016 17:17:58</publishTime>
     </File>
     <File Include="bin/Geometry.dll">
-      <publishTime>10/17/2016 13:44:59</publishTime>
+      <publishTime>02/20/2017 14:15:05</publishTime>
     </File>
     <File Include="bin/GraphLib.dll">
-      <publishTime>10/07/2016 14:01:41</publishTime>
+      <publishTime>12/07/2016 11:51:15</publishTime>
     </File>
     <File Include="bin/it/Microsoft.Data.Edm.resources.dll">
       <publishTime>03/28/2016 17:17:55</publishTime>
     </File>
     <File Include="bin/it/Microsoft.Data.OData.resources.dll">
       <publishTime>03/28/2016 17:18:02</publishTime>
+    </File>
+    <File Include="bin/it/Microsoft.OData.Client.resources.dll">
+      <publishTime>03/31/2016 13:54:37</publishTime>
     </File>
     <File Include="bin/it/Microsoft.OData.Core.resources.dll">
       <publishTime>03/28/2016 17:18:28</publishTime>
@@ -120,6 +132,9 @@ by editing this MSBuild file. In order to learn more about this please visit htt
     <File Include="bin/ja/Microsoft.Data.OData.resources.dll">
       <publishTime>03/28/2016 17:18:02</publishTime>
     </File>
+    <File Include="bin/ja/Microsoft.OData.Client.resources.dll">
+      <publishTime>03/31/2016 13:54:37</publishTime>
+    </File>
     <File Include="bin/ja/Microsoft.OData.Core.resources.dll">
       <publishTime>03/28/2016 17:18:28</publishTime>
     </File>
@@ -138,6 +153,9 @@ by editing this MSBuild file. In order to learn more about this please visit htt
     <File Include="bin/ko/Microsoft.Data.OData.resources.dll">
       <publishTime>03/28/2016 17:18:02</publishTime>
     </File>
+    <File Include="bin/ko/Microsoft.OData.Client.resources.dll">
+      <publishTime>03/31/2016 13:54:37</publishTime>
+    </File>
     <File Include="bin/ko/Microsoft.OData.Core.resources.dll">
       <publishTime>03/28/2016 17:18:28</publishTime>
     </File>
@@ -154,13 +172,16 @@ by editing this MSBuild file. In order to learn more about this please visit htt
       <publishTime>12/10/2015 16:55:06</publishTime>
     </File>
     <File Include="bin/MathNet.Numerics.dll">
-      <publishTime>09/06/2016 12:49:12</publishTime>
+      <publishTime>01/15/2017 17:09:16</publishTime>
     </File>
     <File Include="bin/Microsoft.Data.Edm.dll">
       <publishTime>03/28/2016 17:17:55</publishTime>
     </File>
     <File Include="bin/Microsoft.Data.OData.dll">
       <publishTime>03/28/2016 17:18:02</publishTime>
+    </File>
+    <File Include="bin/Microsoft.OData.Client.dll">
+      <publishTime>03/31/2016 13:54:37</publishTime>
     </File>
     <File Include="bin/Microsoft.OData.Core.dll">
       <publishTime>03/28/2016 17:18:28</publishTime>
@@ -189,6 +210,9 @@ by editing this MSBuild file. In order to learn more about this please visit htt
     <File Include="bin/Newtonsoft.Json.dll">
       <publishTime>06/13/2016 23:06:14</publishTime>
     </File>
+    <File Include="bin/ODataClient.dll">
+      <publishTime>02/20/2017 14:15:06</publishTime>
+    </File>
     <File Include="bin/Resources/ColorMapping/DefaultLocationColorMap.txt">
       <publishTime>06/09/2015 12:08:50</publishTime>
     </File>
@@ -206,6 +230,9 @@ by editing this MSBuild file. In order to learn more about this please visit htt
     </File>
     <File Include="bin/ru/Microsoft.Data.OData.resources.dll">
       <publishTime>03/28/2016 17:18:02</publishTime>
+    </File>
+    <File Include="bin/ru/Microsoft.OData.Client.resources.dll">
+      <publishTime>03/31/2016 13:54:37</publishTime>
     </File>
     <File Include="bin/ru/Microsoft.OData.Core.resources.dll">
       <publishTime>03/28/2016 17:18:28</publishTime>
@@ -232,7 +259,7 @@ by editing this MSBuild file. In order to learn more about this please visit htt
       <publishTime>08/19/2016 15:19:38</publishTime>
     </File>
     <File Include="bin/SqlGeometryUtils.dll">
-      <publishTime>10/17/2016 13:45:00</publishTime>
+      <publishTime>02/20/2017 14:15:07</publishTime>
     </File>
     <File Include="bin/SqlServerTypes/x64/msvcr100.dll">
       <publishTime>08/13/2015 17:00:26</publishTime>
@@ -298,22 +325,31 @@ by editing this MSBuild file. In order to learn more about this please visit htt
       <publishTime>10/07/2016 13:20:31</publishTime>
     </File>
     <File Include="bin/VikingWebAppSettings.dll">
-      <publishTime>10/17/2016 13:45:01</publishTime>
+      <publishTime>02/20/2017 14:15:07</publishTime>
     </File>
     <File Include="bin/WebGrease.dll">
       <publishTime>08/31/2015 16:53:53</publishTime>
     </File>
+    <File Include="bin/x64/libiomp5md.dll">
+      <publishTime>10/30/2016 16:01:02</publishTime>
+    </File>
+    <File Include="bin/x64/MathNet.Numerics.MKL.dll">
+      <publishTime>10/30/2016 16:01:16</publishTime>
+    </File>
     <File Include="bin/x86/libiomp5md.dll">
-      <publishTime>09/08/2016 09:42:12</publishTime>
+      <publishTime>10/30/2016 16:03:02</publishTime>
     </File>
     <File Include="bin/x86/MathNet.Numerics.MKL.dll">
-      <publishTime>09/08/2016 09:42:14</publishTime>
+      <publishTime>10/30/2016 16:03:10</publishTime>
     </File>
     <File Include="bin/zh-Hans/Microsoft.Data.Edm.resources.dll">
       <publishTime>03/28/2016 17:17:55</publishTime>
     </File>
     <File Include="bin/zh-Hans/Microsoft.Data.OData.resources.dll">
       <publishTime>03/28/2016 17:18:02</publishTime>
+    </File>
+    <File Include="bin/zh-Hans/Microsoft.OData.Client.resources.dll">
+      <publishTime>03/31/2016 13:54:37</publishTime>
     </File>
     <File Include="bin/zh-Hans/Microsoft.OData.Core.resources.dll">
       <publishTime>03/28/2016 17:18:28</publishTime>
@@ -332,6 +368,9 @@ by editing this MSBuild file. In order to learn more about this please visit htt
     </File>
     <File Include="bin/zh-Hant/Microsoft.Data.OData.resources.dll">
       <publishTime>03/28/2016 17:18:02</publishTime>
+    </File>
+    <File Include="bin/zh-Hant/Microsoft.OData.Client.resources.dll">
+      <publishTime>03/31/2016 13:54:37</publishTime>
     </File>
     <File Include="bin/zh-Hant/Microsoft.OData.Core.resources.dll">
       <publishTime>03/28/2016 17:18:28</publishTime>
@@ -520,7 +559,7 @@ by editing this MSBuild file. In order to learn more about this please visit htt
       <publishTime>06/09/2015 12:08:50</publishTime>
     </File>
     <File Include="packages.config">
-      <publishTime>10/07/2016 13:48:30</publishTime>
+      <publishTime>02/20/2017 14:12:43</publishTime>
     </File>
     <File Include="Resources/ColorMapping/DefaultLocationColorMap.txt">
       <publishTime>06/09/2015 12:08:50</publishTime>
@@ -625,7 +664,7 @@ by editing this MSBuild file. In order to learn more about this please visit htt
       <publishTime>09/14/2016 14:52:06</publishTime>
     </File>
     <File Include="Web.config">
-      <publishTime>10/17/2016 14:00:23</publishTime>
+      <publishTime>02/20/2017 14:17:02</publishTime>
     </File>
   </ItemGroup>
 </Project>

@@ -1,8 +1,7 @@
 <publishData>
   <publishTarget publishUrl="C:\Src\Git\Viking\Servers\Deployment\Release\AnnotationService\">
     <file relUrl="bin/GraphLib.dll" publishTime="09/06/2016 15:16:06" />
-    <file relUrl="bin/System.Web.Http.dll" publishTime="05/27/2015 17:25:58" />
-    <file relUrl="bin/MathNet.Numerics.xml" publishTime="09/06/2016 12:49:12" />
+    <file relUrl="bin/MathNet.Numerics.xml" publishTime="09/06/2016 12:48:20" />
     <file relUrl="bin/log4net.xml" publishTime="12/10/2015 16:55:06" />
     <file relUrl="bin/DefaultStructureTypeColors.txt" publishTime="04/16/2013 14:44:48" />
     <file relUrl="bin/EntityFramework.xml" publishTime="06/23/2015 15:05:28" />
@@ -11,54 +10,56 @@
     <file relUrl="bin/EntityFrameworkExtras.EF6.dll" publishTime="10/07/2016 13:20:32" />
     <file relUrl="bin/System.Web.Http.WebHost.xml" publishTime="06/25/2015 15:08:14" />
     <file relUrl="bin/AnnotationService.vshost.exe.manifest" publishTime="07/21/2007 02:33:20" />
-    <file relUrl="bin/AnnotationService.pdb" publishTime="10/17/2016 13:45:02" />
+    <file relUrl="bin/AnnotationService.pdb" publishTime="12/07/2016 11:51:19" />
     <file relUrl="bin/System.Net.Http.Formatting.dll" publishTime="05/27/2015 17:25:56" />
-    <file relUrl="bin/AnnotationService.dll" publishTime="10/17/2016 13:45:02" />
-    <file relUrl="bin/ConnectomeDataModel.dll" publishTime="10/17/2016 13:44:59" />
+    <file relUrl="bin/AnnotationService.dll" publishTime="12/07/2016 11:51:19" />
+    <file relUrl="bin/ConnectomeDataModel.dll" publishTime="12/07/2016 11:51:16" />
     <file relUrl="bin/Newtonsoft.Json.xml" publishTime="06/13/2016 23:06:14" />
-    <file relUrl="Annotation.AnnotateService.svc" publishTime="10/17/2016 13:59:22" />
+    <file relUrl="Annotation.AnnotateService.svc" publishTime="12/07/2016 11:58:39" />
     <file relUrl="bin/RTree.dll" publishTime="10/07/2016 13:39:31" />
-    <file relUrl="bin/EntityFramework.dll" publishTime="06/23/2015 15:05:28" />
+    <file relUrl="bin/log4net.dll" publishTime="12/10/2015 16:55:06" />
     <file relUrl="bin/GraphLib.pdb" publishTime="09/06/2016 15:16:06" />
     <file relUrl="bin/AnnotationService.vshost.exe.config" publishTime="06/10/2009 13:09:36" />
-    <file relUrl="bin/MathNet.Numerics.dll" publishTime="09/06/2016 12:49:12" />
-    <file relUrl="bin/ConnectomeDataModel.pdb" publishTime="10/17/2016 13:44:59" />
+    <file relUrl="bin/MathNet.Numerics.dll" publishTime="09/06/2016 12:48:20" />
+    <file relUrl="bin/ConnectomeDataModel.pdb" publishTime="12/07/2016 11:51:16" />
+    <file relUrl="bin/web.config" publishTime="12/06/2016 15:20:29" />
     <file relUrl="bin/System.Web.Http.xml" publishTime="05/27/2015 17:25:58" />
     <file relUrl="bin/AnnotationService.dll.config" publishTime="10/07/2016 13:31:14" />
     <file relUrl="bin/Utils.dll" publishTime="10/07/2016 13:20:31" />
-    <file relUrl="bin/AnnotationService.vshost.exe" publishTime="06/10/2009 15:32:22" />
-    <file relUrl="bin/web.config" publishTime="10/17/2016 13:41:54" />
+    <file relUrl="bin/System.Web.Http.dll" publishTime="05/27/2015 17:25:58" />
     <file relUrl="bin/Newtonsoft.Json.dll" publishTime="06/13/2016 23:06:14" />
     <file relUrl="bin/webText.config" publishTime="06/09/2015 12:08:50" />
-    <file relUrl="bin/log4net.dll" publishTime="12/10/2015 16:55:06" />
+    <file relUrl="bin/AnnotationVizLib.pdb" publishTime="09/09/2016 11:12:57" />
     <file relUrl="bin/EntityFramework.SqlServer.xml" publishTime="06/23/2015 15:05:28" />
-    <file relUrl="bin/Geometry.pdb" publishTime="10/17/2016 13:44:59" />
-    <file relUrl="bin/Geometry.dll" publishTime="10/17/2016 13:44:59" />
+    <file relUrl="bin/Geometry.pdb" publishTime="12/07/2016 11:51:16" />
+    <file relUrl="bin/Geometry.dll" publishTime="12/07/2016 11:51:16" />
     <file relUrl="bin/AnnotationVizLib.dll" publishTime="09/09/2016 11:12:57" />
     <file relUrl="bin/System.Web.Http.WebHost.dll" publishTime="06/25/2015 15:08:14" />
     <file relUrl="bin/EntityFrameworkExtras.EF6.pdb" publishTime="10/07/2016 13:20:32" />
-    <file relUrl="bin/AnnotationVizLib.pdb" publishTime="09/09/2016 11:12:57" />
-    <file relUrl="bin/VikingWebAppSettings.dll" publishTime="10/17/2016 13:45:01" />
     <file relUrl="bin/System.Net.Http.Formatting.xml" publishTime="05/27/2015 17:25:58" />
+    <file relUrl="bin/AnnotationService.vshost.exe" publishTime="06/10/2009 15:32:22" />
+    <file relUrl="bin/VikingWebAppSettings.dll" publishTime="12/07/2016 11:51:17" />
+    <file relUrl="bin/EntityFramework.dll" publishTime="06/23/2015 15:05:28" />
     <file relUrl="bin/DefaultImageColorMaps.txt" publishTime="01/15/2015 11:59:42" />
-    <file relUrl="Web.config" publishTime="10/17/2016 13:41:54" />
-    <file relUrl="bin/VikingWebAppSettings.pdb" publishTime="10/17/2016 13:45:01" />
+    <file relUrl="Web.config" publishTime="12/06/2016 15:20:29" />
+    <file relUrl="bin/VikingWebAppSettings.pdb" publishTime="12/07/2016 11:51:17" />
     <file relUrl="bin/DefaultStructureColors.txt" publishTime="01/15/2015 12:27:46" />
     <file relUrl="bin/RTree.pdb" publishTime="10/07/2016 13:39:31" />
   </publishTarget>
   <publishTarget publishUrl="C:\Src\Git\Viking\Servers\Deployment\Debug\AnnotationService\">
     <file relUrl="bin/GraphLib.dll" publishTime="08/27/2015 20:51:30" />
-    <file relUrl="bin/System.Web.Http.dll" publishTime="05/27/2015 17:25:48" />
     <file relUrl="bin\Release/System.Web.Http.xml" publishTime="05/27/2015 17:25:48" />
     <file relUrl="bin\Release/System.Net.Http.Formatting.dll" publishTime="05/27/2015 17:25:48" />
     <file relUrl="bin/DefaultStructureTypeColors.txt" publishTime="04/16/2013 14:44:48" />
     <file relUrl="bin\Release/AnnotationService.dll.config" publishTime="06/29/2015 14:26:20" />
     <file relUrl="bin/AnnotationService.vshost.exe" publishTime="06/10/2009 15:32:22" />
     <file relUrl="bin\Release/AnnotationService.dll" publishTime="08/18/2015 17:57:39" />
+    <file relUrl="bin/AnnotationVizLib.dll" publishTime="08/27/2015 20:51:31" />
     <file relUrl="bin/EntityFramework.SqlServer.dll" publishTime="06/23/2015 15:05:28" />
     <file relUrl="bin\Release/EntityFramework.SqlServer.dll" publishTime="06/23/2015 15:05:28" />
     <file relUrl="bin\Release/System.Net.Http.Formatting.xml" publishTime="05/27/2015 17:25:48" />
     <file relUrl="Annotation.AnnotateService.svc" publishTime="08/27/2015 20:51:45" />
+    <file relUrl="bin/System.Web.Http.WebHost.xml" publishTime="05/27/2015 17:25:48" />
     <file relUrl="bin/AnnotationService.vshost.exe.manifest" publishTime="07/21/2007 02:33:20" />
     <file relUrl="bin\Release/System.Web.Http.WebHost.xml" publishTime="05/27/2015 17:25:48" />
     <file relUrl="bin/AnnotationService.pdb" publishTime="08/27/2015 20:51:31" />
@@ -69,7 +70,7 @@
     <file relUrl="bin/ConnectomeDataModel.dll" publishTime="08/27/2015 20:51:30" />
     <file relUrl="bin/Newtonsoft.Json.xml" publishTime="05/27/2015 17:25:54" />
     <file relUrl="bin\Release/VikingWebAppSettings.pdb" publishTime="08/18/2015 17:57:38" />
-    <file relUrl="bin/VikingWebAppSettings.pdb" publishTime="08/27/2015 20:51:31" />
+    <file relUrl="bin/EntityFramework.dll" publishTime="06/23/2015 15:05:28" />
     <file relUrl="bin/GraphLib.pdb" publishTime="08/27/2015 20:51:30" />
     <file relUrl="bin/AnnotationService.vshost.exe.config" publishTime="06/10/2009 13:09:36" />
     <file relUrl="bin/ConnectomeDataModel.pdb" publishTime="08/27/2015 20:51:30" />
@@ -80,33 +81,32 @@
     <file relUrl="bin\Release/DefaultStructureColors.txt" publishTime="01/15/2015 12:27:46" />
     <file relUrl="bin/AnnotationService.dll.config" publishTime="06/29/2015 14:26:20" />
     <file relUrl="bin\Release/EntityFramework.xml" publishTime="06/23/2015 15:05:28" />
-    <file relUrl="bin/System.Web.Http.WebHost.xml" publishTime="05/27/2015 17:25:48" />
+    <file relUrl="bin/System.Web.Http.dll" publishTime="05/27/2015 17:25:48" />
     <file relUrl="bin/Newtonsoft.Json.dll" publishTime="05/27/2015 17:25:54" />
     <file relUrl="bin/webText.config" publishTime="06/09/2015 12:08:50" />
-    <file relUrl="bin\Release/AnnotationVizLib.dll" publishTime="08/18/2015 17:57:37" />
-    <file relUrl="bin/AnnotationVizLib.pdb" publishTime="08/27/2015 20:51:31" />
+    <file relUrl="bin/DefaultStructureColors.txt" publishTime="01/15/2015 12:27:46" />
     <file relUrl="bin\Release/GraphLib.dll" publishTime="08/18/2015 17:57:35" />
+    <file relUrl="bin\Release/EntityFramework.dll" publishTime="06/23/2015 15:05:28" />
     <file relUrl="bin/EntityFramework.SqlServer.xml" publishTime="06/23/2015 15:05:28" />
     <file relUrl="bin\Release/System.Web.Http.dll" publishTime="05/27/2015 17:25:48" />
     <file relUrl="bin\Release/DefaultImageColorMaps.txt" publishTime="01/15/2015 11:59:42" />
     <file relUrl="bin\Release/webText.config" publishTime="06/09/2015 12:08:50" />
     <file relUrl="bin\Release/GraphLib.pdb" publishTime="08/18/2015 17:57:35" />
+    <file relUrl="bin\Release/EntityFramework.SqlServer.xml" publishTime="06/23/2015 15:05:28" />
     <file relUrl="bin\Release/AnnotationVizLib.pdb" publishTime="08/18/2015 17:57:37" />
     <file relUrl="bin\Release/VikingWebAppSettings.dll" publishTime="08/18/2015 17:57:38" />
-    <file relUrl="bin/AnnotationVizLib.dll" publishTime="08/27/2015 20:51:31" />
+    <file relUrl="bin\Release/AnnotationVizLib.dll" publishTime="08/18/2015 17:57:37" />
     <file relUrl="bin/System.Web.Http.xml" publishTime="05/27/2015 17:25:48" />
     <file relUrl="bin/System.Web.Http.WebHost.dll" publishTime="05/27/2015 17:25:48" />
-    <file relUrl="bin/System.Net.Http.Formatting.xml" publishTime="05/27/2015 17:25:48" />
-    <file relUrl="Web.config" publishTime="08/24/2015 16:27:24" />
+    <file relUrl="bin/AnnotationVizLib.pdb" publishTime="08/27/2015 20:51:31" />
     <file relUrl="bin/VikingWebAppSettings.dll" publishTime="08/27/2015 20:51:31" />
     <file relUrl="bin\Release/Newtonsoft.Json.dll" publishTime="05/27/2015 17:25:54" />
-    <file relUrl="bin/EntityFramework.dll" publishTime="06/23/2015 15:05:28" />
+    <file relUrl="bin/System.Net.Http.Formatting.xml" publishTime="05/27/2015 17:25:48" />
     <file relUrl="bin/DefaultImageColorMaps.txt" publishTime="01/15/2015 11:59:42" />
-    <file relUrl="bin\Release/ConnectomeDataModel.pdb" publishTime="08/18/2015 17:57:36" />
     <file relUrl="bin\Release/DefaultStructureTypeColors.txt" publishTime="04/16/2013 14:44:48" />
     <file relUrl="bin/EntityFramework.xml" publishTime="06/23/2015 15:05:28" />
-    <file relUrl="bin\Release/EntityFramework.SqlServer.xml" publishTime="06/23/2015 15:05:28" />
-    <file relUrl="bin\Release/EntityFramework.dll" publishTime="06/23/2015 15:05:28" />
-    <file relUrl="bin/DefaultStructureColors.txt" publishTime="01/15/2015 12:27:46" />
+    <file relUrl="Web.config" publishTime="08/24/2015 16:27:24" />
+    <file relUrl="bin/VikingWebAppSettings.pdb" publishTime="08/27/2015 20:51:31" />
+    <file relUrl="bin\Release/ConnectomeDataModel.pdb" publishTime="08/18/2015 17:57:36" />
   </publishTarget>
 </publishData>

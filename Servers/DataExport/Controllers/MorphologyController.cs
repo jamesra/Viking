@@ -195,7 +195,7 @@ namespace DataExport.Controllers
             if (requestIDs == null || requestIDs.Count == 0)
                 requestIDs = Queries.GetLinkedStructureParentIDs();
 
-            return MorphologyGraph.BuildGraphs(requestIDs, true, AppSettings.WebServiceURL, AppSettings.EndpointCredentials);
+            return WCFMorphologyFactory.FromWCF(requestIDs, true, AppSettings.WebServiceURL, AppSettings.EndpointCredentials);
         }
     }
 }

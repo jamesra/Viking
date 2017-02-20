@@ -909,5 +909,41 @@ namespace ConnectomeDataModel
     
             return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction<Structure>("SelectSectionAnnotationsInVolumeBounds", mergeOption, zParameter, bBoxParameter, minRadiusParameter, queryDateParameter);
         }
+    
+        public virtual ObjectResult<Structure> SelectNetworkChildStructures(Nullable<int> hops)
+        {
+            var hopsParameter = hops.HasValue ?
+                new ObjectParameter("Hops", hops) :
+                new ObjectParameter("Hops", typeof(int));
+    
+            return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction<Structure>("SelectNetworkChildStructures", hopsParameter);
+        }
+    
+        public virtual ObjectResult<Structure> SelectNetworkChildStructures(Nullable<int> hops, MergeOption mergeOption)
+        {
+            var hopsParameter = hops.HasValue ?
+                new ObjectParameter("Hops", hops) :
+                new ObjectParameter("Hops", typeof(int));
+    
+            return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction<Structure>("SelectNetworkChildStructures", mergeOption, hopsParameter);
+        }
+    
+        public virtual int SelectNetworkChildStructureIDs(Nullable<int> hops)
+        {
+            var hopsParameter = hops.HasValue ?
+                new ObjectParameter("Hops", hops) :
+                new ObjectParameter("Hops", typeof(int));
+    
+            return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction("SelectNetworkChildStructureIDs", hopsParameter);
+        }
+    
+        public virtual int SelectNetworkStructureIDs(Nullable<int> hops)
+        {
+            var hopsParameter = hops.HasValue ?
+                new ObjectParameter("Hops", hops) :
+                new ObjectParameter("Hops", typeof(int));
+    
+            return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction("SelectNetworkStructureIDs", hopsParameter);
+        }
     }
 }

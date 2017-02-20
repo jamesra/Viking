@@ -194,7 +194,7 @@ namespace DataExport.Controllers
             if (requestIDs == null || requestIDs.Count == 0)
                 requestIDs = Queries.GetLinkedStructureParentIDs(); 
 
-            return NeuronGraph.BuildGraph(requestIDs, GetNumHops(), EndpointURL, AppSettings.EndpointCredentials);
+            return WCFNeuronFactory.BuildGraph(requestIDs, GetNumHops(), EndpointURL, AppSettings.EndpointCredentials);
         }
 
         private uint GetNumHops()

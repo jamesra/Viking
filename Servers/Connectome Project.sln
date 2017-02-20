@@ -56,6 +56,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SqlGeometryUtils", "..\SqlG
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SqlGeometryUtilsTest", "..\SqlGeometryUtilsTest\SqlGeometryUtilsTest.csproj", "{E4C80E39-8E55-4528-AE09-1558CCBD846B}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ODataClient", "..\ODataClient\ODataClient.csproj", "{9DDB7C0E-1F00-4EFC-8D11-4BA6A00FB9B4}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -180,6 +182,12 @@ Global
 		{E4C80E39-8E55-4528-AE09-1558CCBD846B}.Release|Any CPU.Build.0 = Release|Any CPU
 		{E4C80E39-8E55-4528-AE09-1558CCBD846B}.ReleaseWithSymbols|Any CPU.ActiveCfg = Release|Any CPU
 		{E4C80E39-8E55-4528-AE09-1558CCBD846B}.ReleaseWithSymbols|Any CPU.Build.0 = Release|Any CPU
+		{9DDB7C0E-1F00-4EFC-8D11-4BA6A00FB9B4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9DDB7C0E-1F00-4EFC-8D11-4BA6A00FB9B4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9DDB7C0E-1F00-4EFC-8D11-4BA6A00FB9B4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9DDB7C0E-1F00-4EFC-8D11-4BA6A00FB9B4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9DDB7C0E-1F00-4EFC-8D11-4BA6A00FB9B4}.ReleaseWithSymbols|Any CPU.ActiveCfg = Release|Any CPU
+		{9DDB7C0E-1F00-4EFC-8D11-4BA6A00FB9B4}.ReleaseWithSymbols|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

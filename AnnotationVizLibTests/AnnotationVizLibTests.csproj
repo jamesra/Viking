@@ -291,9 +291,6 @@
     <Content Include="Resources\ImageColorMaps.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="SqlServerTypes\StructureTypeColors.txt">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
     <Content Include="SqlServerTypes\readme.htm" />
     <None Include="Service References\AnnotationService\Annotate.disco" />
   </ItemGroup>
