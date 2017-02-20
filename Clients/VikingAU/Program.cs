@@ -206,7 +206,7 @@ namespace Viking.AU
                 var task = tasks[sectionNumber];
                 task.Wait();
                 Console.WriteLine(task.Result);
-                Store.Locations.RemoveSection((int)sectionNumber);
+                
                 State.MappingsManager.SectionMappingCache.Remove((int)sectionNumber);
             }
         }
@@ -238,7 +238,11 @@ namespace Viking.AU
                 //Console.Write("...Locations updated");
             }
 
-            return string.Format("Section {0} : {1} / {2} locations needed updates", SectionNumber, NumUpdated, LocDict.Count);
+            string Result = string.Format("Section {0} : {1} / {2} locations needed updates", SectionNumber, NumUpdated, LocDict.Count);
+
+            Store.Locations.RemoveSection((int)SectionNumber);
+
+            return Result;
         }
 
         /// <summary>
