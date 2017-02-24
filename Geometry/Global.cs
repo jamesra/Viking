@@ -32,5 +32,23 @@ namespace Geometry
 
             return false;
         }
+         
+        public static bool TryDeleteCacheFile(string FilePath)
+        {
+            if (System.IO.File.Exists(FilePath))
+            {
+                try
+                {
+                    System.IO.File.Delete(FilePath);
+                    return true;
+                }
+                catch (Exception e)
+                {
+                    System.Diagnostics.Trace.WriteLine("Unable to delete cache file " + FilePath);
+                }
+            }
+
+            return false;
+        }
     }
 }
