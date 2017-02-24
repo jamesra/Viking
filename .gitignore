@@ -9,5 +9,7 @@ bin
 *.csr
 *.key
 *.pdb
+*.user
+*.cachefile
 TestResults
 /Packages/
