@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-// Generation date: 12/5/2016 5:01:47 PM
+// Generation date: 2/24/2017 12:12:30 PM
 namespace ODataClient.ConnectomeDataModel
 {
     /// <summary>
@@ -3820,6 +3820,10 @@ namespace ODataClient.ConnectomeODataV4
         <Parameter Name=""StructureID"" Type=""Edm.Int64"" Nullable=""false"" />
         <ReturnType Type=""Collection(ConnectomeDataModel.LocationLink)"" />
       </Function>
+      <Function Name=""DistinctLabels"" IsBound=""true"">
+        <Parameter Name=""bindingParameter"" Type=""Collection(ConnectomeDataModel.Structure)"" />
+        <ReturnType Type=""Collection(Edm.String)"" Unicode=""false"" />
+      </Function>
       <EntityContainer Name=""Container"">
         <EntitySet Name=""StructureTypes"" EntityType=""ConnectomeDataModel.StructureType"">
           <NavigationPropertyBinding Path=""Structures"" Target=""Structures"" />
@@ -3930,6 +3934,25 @@ namespace ODataClient.ConnectomeODataV4
         public global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.ConnectomeDataModel.LocationLink> StructureLocationLinks(long StructureID)
         {
             return this.CreateFunctionQuery<global::ODataClient.ConnectomeDataModel.LocationLink>("", "StructureLocationLinks", false, new global::Microsoft.OData.Client.UriOperationParameter("StructureID", StructureID));
+        }
+    }
+    /// <summary>
+    /// Class containing all extension methods
+    /// </summary>
+    public static class ExtensionMethods
+    {
+        /// <summary>
+        /// There are no comments for DistinctLabels in the schema.
+        /// </summary>
+        [global::Microsoft.OData.Client.OriginalNameAttribute("DistinctLabels")]
+        public static global::Microsoft.OData.Client.DataServiceQuery<string> DistinctLabels(this global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.ConnectomeDataModel.Structure> source)
+        {
+            if (!source.IsComposable)
+            {
+                throw new global::System.NotSupportedException("The previous function is not composable.");
+            }
+
+            return source.CreateFunctionQuery<string>("ConnectomeODataV4.DistinctLabels", false);
         }
     }
 }

@@ -11,7 +11,7 @@ namespace AnnotationVizLibTests
     {
         static TestUtils()
         {
-            SqlServerTypes.Utilities.LoadNativeAssemblies(AppDomain.CurrentDomain.BaseDirectory);
+            
         }
 
         public static StructureMorphologyColorMap LoadColorMap(string directory)

@@ -10,7 +10,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Viking</RootNamespace>
     <AssemblyName>Viking</AssemblyName>
-    <TargetFrameworkVersion>v4.6</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <IsWebBootstrapper>true</IsWebBootstrapper>
     <ApplicationIcon>Viking.ico</ApplicationIcon>
@@ -106,8 +106,8 @@
       <HintPath>..\..\..\Packages\MathNet.Numerics.3.17.0\lib\net40\MathNet.Numerics.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Microsoft.SqlServer.Types, Version=11.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91, processorArchitecture=MSIL">
-      <HintPath>..\..\..\Packages\Microsoft.SqlServer.Types.11.0.2\lib\net20\Microsoft.SqlServer.Types.dll</HintPath>
+    <Reference Include="Microsoft.SqlServer.Types, Version=13.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91, processorArchitecture=MSIL">
+      <HintPath>..\..\..\Packages\Microsoft.SqlServer.Types.13.0.4001.0\lib\net40\Microsoft.SqlServer.Types.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="System" />
@@ -131,7 +131,6 @@
   <ItemGroup>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="SqlServerTypes\Loader.cs" />
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>PublicResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
@@ -145,22 +144,6 @@
     <None Include="app.config">
       <SubType>Designer</SubType>
     </None>
-    <Content Include="..\..\packages\Microsoft.SqlServer.Types.11.0.2\nativeBinaries\x64\msvcr100.dll">
-      <Link>SqlServerTypes\x64\msvcr100.dll</Link>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="..\..\packages\Microsoft.SqlServer.Types.11.0.2\nativeBinaries\x64\SqlServerSpatial110.dll">
-      <Link>SqlServerTypes\x64\SqlServerSpatial110.dll</Link>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="..\..\packages\Microsoft.SqlServer.Types.11.0.2\nativeBinaries\x86\msvcr100.dll">
-      <Link>SqlServerTypes\x86\msvcr100.dll</Link>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="..\..\packages\Microsoft.SqlServer.Types.11.0.2\nativeBinaries\x86\SqlServerSpatial110.dll">
-      <Link>SqlServerTypes\x86\SqlServerSpatial110.dll</Link>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
     <Content Include="Content\Arial.spritefont" />
     <Content Include="Content\Arial.xnb" />
     <Content Include="Content\Circle.xnb" />
@@ -234,12 +217,6 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
-    <Content Include="libiomp5md.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="MathNet.Numerics.MKL.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
     <Content Include="Modules\LocalBookmarks\LocalBookmarks.dll" />
     <Content Include="Modules\LocalBookmarks\Xml.Schema.Linq.dll" />
     <Content Include="Modules\Measurement\Measurement.dll" />
@@ -252,7 +229,6 @@
     <Content Include="Modules\WebAnnotation\WebAnnotation.dll" />
     <Content Include="Modules\WebAnnotation\WebAnnotationModel.dll" />
     <Content Include="Modules\WebAnnotation\Xml.Schema.Linq.dll" />
-    <Content Include="SqlServerTypes\readme.htm" />
     <Content Include="Viking.ico" />
   </ItemGroup>
   <ItemGroup />
@@ -265,9 +241,17 @@
     </FileAssociation>
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\..\Geometry\Geometry.csproj">
+      <Project>{eacb87e8-a5e3-417e-a9ef-b80c2a68c020}</Project>
+      <Name>Geometry</Name>
+    </ProjectReference>
     <ProjectReference Include="..\NGVV\VikingCore.csproj">
       <Project>{aeb1b24b-c968-40f9-b9f5-5c1fce2efd6d}</Project>
       <Name>VikingCore</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\VikingXNAGraphics\VikingXNAGraphics.csproj">
+      <Project>{7ede0b00-89f9-4ef5-a629-2ed66cee273b}</Project>
+      <Name>VikingXNAGraphics</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
@@ -287,11 +271,11 @@ robocopy $(ProjectDir)Modules $(TargetDir)Modules * /PURGE</PostBuildEvent>
     <PreBuildEvent>
     </PreBuildEvent>
   </PropertyGroup>
-  <Import Project="..\..\..\Packages\MathNet.Numerics.MKL.Win-x86.2.2.0\build\MathNet.Numerics.MKL.Win-x86.targets" Condition="Exists('..\..\..\Packages\MathNet.Numerics.MKL.Win-x86.2.2.0\build\MathNet.Numerics.MKL.Win-x86.targets')" />
+  <Import Project="..\..\..\Packages\MathNet.Numerics.MKL.Win.2.2.0\build\MathNet.Numerics.MKL.Win.targets" Condition="Exists('..\..\..\Packages\MathNet.Numerics.MKL.Win.2.2.0\build\MathNet.Numerics.MKL.Win.targets')" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
       <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
     </PropertyGroup>
-    <Error Condition="!Exists('..\..\..\Packages\MathNet.Numerics.MKL.Win-x86.2.2.0\build\MathNet.Numerics.MKL.Win-x86.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\..\Packages\MathNet.Numerics.MKL.Win-x86.2.2.0\build\MathNet.Numerics.MKL.Win-x86.targets'))" />
+    <Error Condition="!Exists('..\..\..\Packages\MathNet.Numerics.MKL.Win.2.2.0\build\MathNet.Numerics.MKL.Win.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\..\Packages\MathNet.Numerics.MKL.Win.2.2.0\build\MathNet.Numerics.MKL.Win.targets'))" />
   </Target>
 </Project>

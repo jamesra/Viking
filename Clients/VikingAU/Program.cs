@@ -149,9 +149,7 @@ namespace Viking.AU
         static CommandLineOptions options = new CommandLineOptions();
 
         static void Main(string[] args)
-        {
-            SqlServerTypes.Utilities.LoadNativeAssemblies(AppDomain.CurrentDomain.BaseDirectory);
-
+        { 
             if (!CommandLine.Parser.Default.ParseArguments(args, Program.options))
             {
                 System.Console.WriteLine("Unable to parse command line arguments, aborting");

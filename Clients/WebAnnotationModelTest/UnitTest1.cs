@@ -24,7 +24,7 @@ namespace WebAnnotationModelTest
         [TestInitialize]
         public void Init()
         {
-            WebAnnotationModel.State.EndpointAddress = new EndpointAddress("https://webdev.connectomes.utah.edu/RC1Test/Annotation/Service.svc");
+            WebAnnotationModel.State.Endpoint = new Uri("https://webdev.connectomes.utah.edu/RC1Test/Annotation/Service.svc");
             WebAnnotationModel.State.UserCredentials = TestCredentials;
 
             System.Net.ServicePointManager.ServerCertificateValidationCallback =
@@ -218,9 +218,11 @@ namespace WebAnnotationModelTest
             Assert.IsTrue(targetStruct.LinksCopy.Contains(link));
 
             //Check that we can adjust link properties
-            link.Bidirectional = !link.Bidirectional;
+            /*We no longer toggle Bidirectional.  We delete and recreate the link.
+             * link.Bidirectional = !link.Bidirectional;
             Assert.AreEqual(link.DBAction, DBACTION.UPDATE);
             Store.StructureLinks.Save();
+            */
 
             //Ensure our change was submitted, this should reset DBAction
             Assert.AreEqual(link.DBAction, DBACTION.NONE);
@@ -274,11 +276,10 @@ namespace WebAnnotationModelTest
             Assert.AreEqual(obj.DBAction, DBACTION.NONE);
             Geometry.GridVector2 oldPosition = obj.VolumePosition; 
             Geometry.GridVector2 newPosition = new Geometry.GridVector2(1,1);
-
-
-            obj.VolumePosition = newPosition;
-            LocationEventLog.PopObjectPropertyChangingEvent(obj, "VolumePosition");            
-            LocationEventLog.PopObjectPropertyChangedEvent(obj, "VolumePosition");
+             
+            //obj.VolumeShape = newPosition;
+            //LocationEventLog.PopObjectPropertyChangingEvent(obj, "VolumePosition");            
+            //LocationEventLog.PopObjectPropertyChangedEvent(obj, "VolumePosition");
 
             //VolumePosition is special because it is not automatically updated.
             Assert.AreEqual(obj.DBAction, DBACTION.NONE);

@@ -933,9 +933,15 @@ namespace Viking.VolumeModel
                         cachedTransform = binaryFormatter.Deserialize(binFile) as ITransform;
                     }
                 }
+                else
+                {
+                    Geometry.Global.TryDeleteCacheFile(CacheStosPath);
+                }
             }
             catch (Exception)
             {
+                Geometry.Global.TryDeleteCacheFile(CacheStosPath);
+
                 return null;
             }
 
@@ -965,9 +971,15 @@ namespace Viking.VolumeModel
                                                                                             stosInfo);
                     }
                 }
+                else
+                {
+                    Geometry.Global.TryDeleteCacheFile(CacheStosPath);
+                }
             }
             catch (Exception)
             {
+                Geometry.Global.TryDeleteCacheFile(CacheStosPath);
+
                 return null;
             }
 

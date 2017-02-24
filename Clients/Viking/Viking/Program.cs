@@ -58,9 +58,7 @@ namespace Viking
 
             //Change to the executing assemblies directory so we can load modules correctly
             //  System.Environment.CurrentDirectory = System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
-
-            SqlServerTypes.Utilities.LoadNativeAssemblies(AppDomain.CurrentDomain.BaseDirectory);
-
+             
             int workThreads;
             int portThreads;
             System.Threading.ThreadPool.GetMaxThreads(out workThreads, out portThreads);
