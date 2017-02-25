@@ -1,0 +1,29 @@
+﻿<UserControl x:Class="MorphologyView.MorphologyView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:MorphologyView"
+             xmlns:Monolib="clr-namespace:MonogameWPFLibrary.Views;assembly=MonogameWPFLibrary"
+             xmlns:e="http://schemas.microsoft.com/expression/2010/interactivity"
+             mc:Ignorable="d" 
+             d:DesignHeight="300" d:DesignWidth="300"
+             Background="Transparent"
+             >
+    <Grid>
+
+        <!-- This line is behind the rendered image and hidden-->
+        <!-- <Line X1="0" Y1="200" X2="150" Y2="0" StrokeThickness="5" Stroke="Red"></Line> -->
+
+        <Monolib:MeshView>
+            <e:Interaction.Behaviors>
+            <Monolib:Camera3DBehavior></Monolib:Camera3DBehavior>
+        </e:Interaction.Behaviors>
+    </Monolib:MeshView>
+        
+        <!-- This line is in front of the rendered image and visible -->
+        <!-- <Line X1="0" Y1="0" X2="150" Y2="200" StrokeThickness="5" Stroke="Green"></Line> -->
+    </Grid>
+
+    
+</UserControl>
