@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.Serialization;
 using System.Text;
 
 namespace GraphLib
 {
-    public class Node<KEY, EDGETYPE> : IComparer<Node<KEY, EDGETYPE>>, IComparable<Node<KEY, EDGETYPE>>, IEquatable<Node<KEY, EDGETYPE>>
+    [Serializable]
+    public class Node<KEY, EDGETYPE> : IComparer<Node<KEY, EDGETYPE>>, IComparable<Node<KEY, EDGETYPE>>, IEquatable<Node<KEY, EDGETYPE>>, ISerializable
         where KEY : IComparable<KEY>, IEquatable<KEY>
         where EDGETYPE : Edge<KEY>
     {
@@ -19,6 +21,11 @@ namespace GraphLib
         public Node(KEY k)
         {
             this.Key = k;
+        }
+
+        public void GetObjectData(SerializationInfo info, StreamingContext context)
+        {
+            info.AddValue("Key", Key, typeof(KEY));
         }
 
         internal void AddEdge(EDGETYPE Link)
@@ -113,6 +120,7 @@ namespace GraphLib
         {
             return this.Key.GetHashCode();
         }
+
 
         public static bool operator ==(Node<KEY, EDGETYPE> A, Node<KEY, EDGETYPE> B)
         {

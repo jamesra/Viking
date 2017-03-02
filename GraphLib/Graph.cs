@@ -3,22 +3,46 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Web;
 using System.Diagnostics;
+using System.Runtime.Serialization;
 
 namespace GraphLib
 {
-    public partial class Graph<KEY,NODETYPE, EDGETYPE> 
+    [Serializable]
+    public partial class Graph<KEY,NODETYPE, EDGETYPE> : ISerializable
         where KEY : IComparable<KEY>, IEquatable<KEY>
         where NODETYPE : Node<KEY, EDGETYPE>
         where EDGETYPE : Edge<KEY>
     {
         // Contains all edges
-        public SortedList<EDGETYPE, EDGETYPE> Edges = new SortedList<EDGETYPE, EDGETYPE>();
+        public SortedList<EDGETYPE, EDGETYPE> Edges { get;  }
 
-        public Dictionary<KEY,NODETYPE> Nodes = new Dictionary<KEY,NODETYPE>(); 
+        public Dictionary<KEY,NODETYPE> Nodes { get; }
         
         public Graph()
         {
-            
+            Edges = new SortedList<EDGETYPE, EDGETYPE>();
+            Nodes = new Dictionary<KEY, NODETYPE>();
+        }
+
+        public Graph(SerializationInfo info, StreamingContext context)
+        {
+            Edges = (SortedList<EDGETYPE, EDGETYPE>)info.GetValue("Edges", typeof(SortedList<EDGETYPE, EDGETYPE>));
+            Nodes = (Dictionary<KEY, NODETYPE>)info.GetValue("Nodes", typeof(Dictionary<KEY, NODETYPE>));
+
+            foreach(EDGETYPE e in Edges.Values)
+            {
+                NODETYPE source = Nodes[e.SourceNodeKey];
+                NODETYPE target = Nodes[e.TargetNodeKey];
+
+                source.AddEdge(e);
+                target.AddEdge(e);
+            }
+        }
+
+        public void GetObjectData(SerializationInfo info, StreamingContext context)
+        {
+            info.AddValue("Edges", Edges, typeof(SortedList<EDGETYPE, EDGETYPE>));
+            info.AddValue("Nodes", Nodes, typeof(Dictionary<KEY, NODETYPE>));
         }
 
         public virtual void AddNode(NODETYPE node)
@@ -87,5 +111,7 @@ namespace GraphLib
 
             this.Edges.Remove(edge);
         }
+
+        
     }
 }

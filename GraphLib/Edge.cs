@@ -2,11 +2,13 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Diagnostics; 
+using System.Diagnostics;
+using System.Runtime.Serialization;
 
 namespace GraphLib
-{ 
-    public abstract class Edge<NODEKEY> : IComparer<Edge<NODEKEY>>, IComparable<Edge<NODEKEY>>, IEquatable<Edge<NODEKEY>>
+{
+    [Serializable]
+    public abstract class Edge<NODEKEY> : IComparer<Edge<NODEKEY>>, IComparable<Edge<NODEKEY>>, IEquatable<Edge<NODEKEY>>, ISerializable
         where NODEKEY : IComparable<NODEKEY>, IEquatable<NODEKEY>
     {
         public readonly NODEKEY SourceNodeKey;
@@ -25,6 +27,14 @@ namespace GraphLib
             this.SourceNodeKey = SourceNode;
             this.TargetNodeKey = TargetNode;
             this.Directional = Directional;
+        }
+
+        public void GetObjectData(SerializationInfo info, StreamingContext context)
+        {
+            info.AddValue("SourceNodeKey", SourceNodeKey, typeof(NODEKEY));
+            info.AddValue("TargetNodeKey", TargetNodeKey, typeof(NODEKEY));
+            info.AddValue("Directional", Directional, typeof(bool));
+            info.AddValue("Weight", Weight, typeof(float));
         }
 
         public virtual int Compare(Edge<NODEKEY> x, Edge<NODEKEY> y)
@@ -123,7 +133,7 @@ namespace GraphLib
 
             return base.Equals(obj);
         }
-
+        
         public static bool operator ==(Edge<NODEKEY> A, Edge<NODEKEY> B)
         {
             if (System.Object.ReferenceEquals(A, B))
