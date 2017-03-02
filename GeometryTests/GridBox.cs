@@ -123,11 +123,13 @@ namespace GeometryTests
         [TestMethod]
         public void TestGridBoxScale()
         {
+            double[] original_mins = new double[] { -20, -20, 50 };
             GridVector3 BotLeftA = new GridVector3(-20, -20, 50);
             GridVector3 TopRightA = new GridVector3(0, 20, 150);
             GridBox boxA = new GridBox(BotLeftA, TopRightA);
 
             //--------------------------------------------------------------
+            Assert.IsTrue(boxA.minVals.Select((val, i) => (original_mins[i]) == val).All(b => b));
 
             /*Scale the rectangle and test again*/
             boxA.Scale(2);
@@ -140,7 +142,7 @@ namespace GeometryTests
             /*Scale the rectangle and test again*/
             boxA.Scale(0.5);
 
-            Assert.IsTrue(boxA.minVals.Select((val, i) => (scaled_maxs[i]) == val).All(b => b));
+            Assert.IsTrue(boxA.minVals.Select((val, i) => (original_mins[i]) == val).All(b => b));
         }
     }
 }
