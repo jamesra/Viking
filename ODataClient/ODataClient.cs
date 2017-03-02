@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-// Generation date: 2/24/2017 12:12:30 PM
+// Generation date: 3/1/2017 5:40:12 PM
 namespace ODataClient.ConnectomeDataModel
 {
     /// <summary>
