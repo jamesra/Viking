@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using AnnotationVizLib.AnnotationService;
 
 namespace AnnotationVizLib
 {
@@ -74,7 +73,7 @@ namespace AnnotationVizLib
             string ToolTipStr = node.Structures.Count.ToString() + " " + node.Key + " instances: ";
 
             bool firstentry = true;
-            foreach(Structure s in node.Structures)
+            foreach(IStructure s in node.Structures)
             {
                 if (!firstentry)
                     ToolTipStr = ToolTipStr + ", ";

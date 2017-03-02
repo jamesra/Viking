@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using AnnotationVizLib.AnnotationService;
-using Simple.OData.Client;
+using System.Text; 
 
 namespace AnnotationVizLib
 {
@@ -28,23 +26,5 @@ namespace AnnotationVizLib
         }
     }
 
-    public static class ODataExtensions
-    {
-        public static Geometry.Scale ToGeometryScale(this ODataClient.Geometry.Scale scale)
-        {
-            return new Geometry.Scale(new Geometry.AxisUnits(scale.X.Value, scale.X.Units),
-                                      new Geometry.AxisUnits(scale.Y.Value, scale.Y.Units),
-                                      new Geometry.AxisUnits(scale.Z.Value, scale.Z.Units));
-        }
-    }
 
-    public static class WCFExtensions
-    {
-        public static Geometry.Scale ToGeometryScale(this AnnotationVizLib.AnnotationService.Scale scale)
-        {
-            return new Geometry.Scale(new Geometry.AxisUnits(scale.X.Value, scale.X.Units),
-                                      new Geometry.AxisUnits(scale.Y.Value, scale.Y.Units),
-                                      new Geometry.AxisUnits(scale.Z.Value, scale.Z.Units));
-        }
-    }
 }

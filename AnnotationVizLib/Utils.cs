@@ -35,6 +35,5 @@ namespace AnnotationVizLib
 
             return arrayOfLists;
         }
-    }
-
+    } 
 }

@@ -3,8 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using GraphLib;
-using System.Threading.Tasks;
-using AnnotationVizLib.AnnotationService;
+using System.Threading.Tasks; 
 using System.Diagnostics;
 
 namespace AnnotationVizLib

@@ -5,10 +5,11 @@ using System.Text;
 using System.Threading.Tasks;
 using GraphLib;
 using Geometry;
+using System.Runtime.Serialization;
 
 namespace AnnotationVizLib
 {
-     
+    [Serializable]
     public class MorphologyEdge : Edge<ulong>
     {
         //Structure this edge is part of
@@ -46,7 +47,7 @@ namespace AnnotationVizLib
         {
             return this.SourceNodeKey.ToString() + "-" + this.TargetNodeKey.ToString();
         }
-
+         
         private double? _DistanceCenterToCenter = new double?(); //Distance between node centers
         /// <summary>
         /// The length between the centers of the two connected nodes.

@@ -77,6 +77,15 @@ namespace Geometry
             }
         }
 
+        public GridVector3 CenterPoint
+        {
+            get
+            {
+                double[] center = this.Center;
+                return new GridVector3(Center[0], Center[1], Center[2]);
+            }
+        }
+
         public double Volume
         {
             get
@@ -367,9 +376,15 @@ namespace Geometry
             return new GridBox(new_mins, new_maxs);
         }
 
-        static public GridBox GetBoundingBox(GridVector3[] points)
+        static public GridBox GetBoundingBox(IEnumerable<GridVector3> points)
         {
-            int numDims = points[0].coords.Count();
+            if (points == null)
+                throw new ArgumentException("Bounding box cannot be created for null points collection");
+
+            if(points.First() == null)
+                throw new ArgumentException("Bounding box cannot be created for empty points collection");
+
+            int numDims = points.First().coords.Length;
             double[] new_mins = new double[numDims];
             double[] new_maxs = new double[numDims];
 

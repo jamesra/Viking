@@ -5,8 +5,7 @@ using System.Linq;
 using System.Text;
 using GraphLib;
 using System.Diagnostics;
-using SqlGeometryUtils;
-using AnnotationVizLib.AnnotationService;
+using SqlGeometryUtils; 
 using Geometry;
 using RTree;
 
@@ -22,7 +21,8 @@ namespace AnnotationVizLib
         OPENCURVE = 5,
         CLOSEDCURVE = 6
     };
-
+    
+    [Serializable]
     public partial class MorphologyGraph : Graph<ulong, MorphologyNode, MorphologyEdge>
     {
         
@@ -80,6 +80,12 @@ namespace AnnotationVizLib
             this.scale = scale;
         }
 
+        //Call this when the graph has changed any spatial qualities that should reset cached measurements
+        protected void ResetCachedMeasurements()
+        {
+            _BoundingBox = null;
+        }
+
         public void AddSubgraph(MorphologyGraph subgraph)
         {
             Subgraphs.TryAdd(subgraph.StructureID, subgraph);
@@ -119,12 +125,14 @@ namespace AnnotationVizLib
         {
             _RTree = null;
             base.AddNode(node);
+            ResetCachedMeasurements();
         }
 
         public override void RemoveNode(ulong key)
         {
             _RTree = null;
             base.RemoveNode(key);
+            ResetCachedMeasurements();
         }
 
         /// <summary>
@@ -163,33 +171,49 @@ namespace AnnotationVizLib
                 if(this.Edges.ContainsKey(edge) == false)
                     this.AddEdge(edge);
             }
-        } 
+        }
 
+        private GridBox _BoundingBox = null;
         public Geometry.GridBox BoundingBox
         {
             get
             {
-                GridBox bbox_accumulator = null;
+                const int ParallelThreshold = 64;
+                if (_BoundingBox == null)
+                { 
+                    if (this.Nodes.Count > 0)
+                    { 
+                        //Don't bother using parrallelism for small graphs
+                        IEnumerable<GridBox> boxes;
+                        if (this.Nodes.Count > ParallelThreshold)
+                        { 
+                            boxes = this.Nodes.Values.Select(n => n.BoundingBox).AsParallel();
+                        }
+                        else
+                        {
+                            boxes = this.Nodes.Values.Select(n => n.BoundingBox);
+                        }
 
-                if (this.Nodes.Count > 0)
-                {
-                    bbox_accumulator = this.Nodes.First().Value.BoundingBox;
-
-                    foreach (MorphologyNode node in this.Nodes.Values)
-                    {
-                        bbox_accumulator.Union(node.BoundingBox);
+                        _BoundingBox = boxes.Aggregate((a, b) => GridBox.Union(a,b) );
                     }
-                }              
-                    
-                foreach (MorphologyGraph graph in Subgraphs.Values)
-                {
-                    if (bbox_accumulator == null)
-                        bbox_accumulator = graph.BoundingBox;
-                    else
-                        bbox_accumulator.Union(graph.BoundingBox);
+
+                    if (this.Subgraphs.Count > 0)
+                    {
+                        IEnumerable<GridBox> subgraphBoxes;
+
+                        if (this.Subgraphs.Count > ParallelThreshold)
+                            subgraphBoxes = Subgraphs.Values.Select(sg => sg.BoundingBox).AsParallel();
+                        else
+                            subgraphBoxes = Subgraphs.Values.Select(sg => sg.BoundingBox);
+
+                        GridBox subgraph_bbox = subgraphBoxes.Aggregate((a, b) => GridBox.Union(a, b));
+
+                        _BoundingBox = GridBox.Union(_BoundingBox, subgraph_bbox);
+                    }  
                 }
 
-                return bbox_accumulator;
+                Debug.Assert(_BoundingBox != null);
+                return _BoundingBox;
             }
         }
 

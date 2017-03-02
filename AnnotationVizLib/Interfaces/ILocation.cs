@@ -7,6 +7,7 @@ using Microsoft.SqlServer.Types;
 
 namespace AnnotationVizLib
 {
+    
     public interface ILocation : IGeometry
     {
         ulong ID { get; }
@@ -25,6 +26,8 @@ namespace AnnotationVizLib
         long UnscaledZ { get; }
 
         string TagsXml { get; }
+
+        LocationType TypeCode { get; }
 
     }
 }

@@ -137,7 +137,7 @@ namespace AnnotationVizLib
             return string.Format("{0} #{1}", s.ID, s.Label);
         }
 
-        public static string LinkString(AnnotationService.StructureLink link)
+        public static string LinkString(IStructureLink link)
         {
             return link.SourceID + " -> " + link.TargetID;
         }

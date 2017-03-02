@@ -9,11 +9,6 @@ namespace AnnotationVizLibTests
 {
     internal static class TestUtils
     {
-        static TestUtils()
-        {
-            
-        }
-
         public static StructureMorphologyColorMap LoadColorMap(string directory)
         {
             ColorMapWithLong StructureColors = ColorMapWithLong.CreateFromConfigFile(System.IO.Path.Combine(directory, "StructureColors.txt"));

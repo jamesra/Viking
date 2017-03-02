@@ -80,7 +80,7 @@ namespace AnnotationVizLib
             StringBuilder sb = new StringBuilder();
 
             bool first = false; 
-            foreach(AnnotationService.Structure s in node.Structures)
+            foreach(IStructure s in node.Structures)
             {
                 if (!first)
                     first = true;

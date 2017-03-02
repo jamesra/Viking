@@ -24,6 +24,11 @@ namespace Geometry
             this.Y = y; 
         }
 
+        public GridVector3 ToGridVector3(double Z)
+        {
+            return new GridVector3(this.X, this.Y, Z);
+        }
+
         /// <summary>
         /// Compares two vectors, assumes they have the same position if they are within the epsilon squared distance of each other
         /// </summary>

@@ -66,7 +66,7 @@ namespace AnnotationVizLib
             this.LocationColorMap = locationColorMap;
         }
          
-        public System.Drawing.Color GetStructureColorFromMorphology(List<AnnotationService.Location> locations)
+        public System.Drawing.Color GetStructureColorFromMorphology(List<ILocation> locations)
         {
             if (LocationColorMap == null)
                 return System.Drawing.Color.Empty;
@@ -74,7 +74,7 @@ namespace AnnotationVizLib
             return LocationColorMap.GetColor(locations);
         }
 
-        public System.Drawing.Color GetStructureColorFromMorphology(List<AnnotationService.AnnotationPoint> points)
+        public System.Drawing.Color GetStructureColorFromMorphology(List<Geometry.GridVector3> points)
         {
             if (LocationColorMap == null)
                 return System.Drawing.Color.Empty;
@@ -102,16 +102,10 @@ namespace AnnotationVizLib
 
             IEnumerable<MorphologyNode> nodes = graph.Nodes.Values.Where(v => LocationColorMap.SectionNumbers.Contains((int)v.Location.UnscaledZ));
 
-            List<AnnotationService.AnnotationPoint> listPoints = nodes.Select<MorphologyNode, AnnotationService.AnnotationPoint>(n =>
-            {
-                Geometry.GridVector2 p = n.Geometry.Centroid();
-                
-                var ap = new AnnotationService.AnnotationPoint();
-                ap.X = p.X;
-                ap.Y = p.Y;
-                ap.Z = n.UnscaledZ;
-                return ap;
-            }).ToList();
+            List<Geometry.GridVector3> listPoints = nodes.Select<MorphologyNode, Geometry.GridVector3>(n =>
+                n.Geometry.Centroid().ToGridVector3(n.UnscaledZ)
+               
+             ).ToList();
             return GetStructureColorFromMorphology(listPoints);
         } 
     }

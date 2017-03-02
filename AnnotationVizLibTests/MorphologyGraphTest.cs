@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Runtime.Serialization.Formatters;
 using System.Text;
 using System.Collections.Generic;
 using System.Linq;
@@ -107,6 +108,28 @@ namespace AnnotationVizLibTests
 
             Assert.IsTrue(bbox.Contains(node_center_bbox));
         } 
+
+        public static void SaveGraph(string Filename, MorphologyGraph graph)
+        {
+
+            using (System.IO.FileStream fileStream = System.IO.File.OpenWrite(Filename))
+            {
+                var formatter = new System.Runtime.Serialization.Formatters.Binary.BinaryFormatter();
+                formatter.Serialize(fileStream, graph);
+                fileStream.Close();
+            }
+        }
+
+        public static MorphologyGraph LoadGraph(string Filename)
+        { 
+            using (System.IO.FileStream fileStream = System.IO.File.OpenRead(Filename))
+            {
+                var formatter = new System.Runtime.Serialization.Formatters.Binary.BinaryFormatter();
+                MorphologyGraph graph = (MorphologyGraph)formatter.Deserialize(fileStream);
+                fileStream.Close();
+                return graph;
+            }
+        }
     } 
      
     /// <summary>
@@ -169,6 +192,30 @@ namespace AnnotationVizLibTests
         {
 
             
+        }
+
+        [TestMethod]
+        public void TestSaveLoadGraph()
+        {
+            SharedGraph = SimpleODataMorphologyFactory.FromOData(new long[] { 180 }, true, new Uri(GraphTestShared.ODataEndpoint));
+            Assert.IsNotNull(SharedGraph);
+            Assert.IsTrue(SharedGraph.Subgraphs.Count > 0);
+
+            string SavedGraphFullPath = "C:\\Temp\\180.bin";
+
+            GraphTestShared.SaveGraph(SavedGraphFullPath, SharedGraph);
+
+            MorphologyGraph loadedGraph = GraphTestShared.LoadGraph(SavedGraphFullPath);
+
+            Assert.IsNotNull(loadedGraph);
+            Assert.Equals(SharedGraph.Nodes.Count, loadedGraph.Nodes.Count);
+            Assert.Equals(SharedGraph.Edges.Count, loadedGraph.Edges.Count);
+
+            foreach(MorphologyNode n in SharedGraph.Nodes.Values)
+            {
+                Assert.IsTrue(loadedGraph.Nodes.ContainsKey(n.Key));
+                Assert.IsTrue(loadedGraph.Nodes[n.Key].Edges.Count == n.Edges.Count);
+            }
         }
          
         [TestMethod]
@@ -237,15 +284,16 @@ namespace AnnotationVizLibTests
             if (Label == null)
                 return distanceForLabel;
 
-            ODataClient.ConnectomeODataV4.Container container = new ODataClient.ConnectomeODataV4.Container(new Uri(GraphTestShared.ODataEndpoint));
-            long[] IDs = container.Structures.Where(s => s.Label.ToLower().Equals(Label.ToLower())).Select(s => s.ID).ToArray();
-            
+            string LowerLabel = Label.ToLower();
 
-            MorphologyGraph graph = ODataMorphologyFactory.FromOData(IDs, true, new Uri(GraphTestShared.ODataEndpoint));
+            ODataClient.ConnectomeODataV4.Container container = new ODataClient.ConnectomeODataV4.Container(new Uri(GraphTestShared.ODataEndpoint));
+            //var IDsAndLabels = container.Structures.Select(s => new { ID = s.ID, Label = s.Label }).Where(s => s.Label.ToLower().Equals(Label.ToLower()));
+            long[] IDs = container.Structures.Where(s => s.Label == Label).AsEnumerable().Select(s => s.ID).ToArray();
+            
+            MorphologyGraph graph = AnnotationVizLib.OData.ODataMorphologyFactory.FromOData(IDs, true, new Uri(GraphTestShared.ODataEndpoint));
 
             SortedSet<ulong> TargetTypes = new SortedSet<ulong>(new ulong[] { 85 }); //Adherens
             SortedSet<ulong> SourceTypes = new SortedSet<ulong>(new ulong[] { 28,34,35,73 });
-
             
             foreach (ulong TargetType in TargetTypes)
             {
@@ -344,8 +392,9 @@ namespace AnnotationVizLibTests
         [ClassInitialize()]
         public static void InitializeSharedGraph(TestContext testContext)
         {
-            
-            SharedGraph = ODataMorphologyFactory.FromOData(new long[] { 180 }, true, new Uri(GraphTestShared.ODataEndpoint));
+            SqlServerTypes.Utilities.LoadNativeAssemblies(AppDomain.CurrentDomain.BaseDirectory);
+
+            SharedGraph = AnnotationVizLib.OData.ODataMorphologyFactory.FromOData(new long[] { 180 }, true, new Uri(GraphTestShared.ODataEndpoint));
             Assert.IsNotNull(SharedGraph);
             Assert.IsTrue(SharedGraph.Subgraphs.Count > 0);
             
@@ -396,7 +445,7 @@ namespace AnnotationVizLibTests
         {
             StructureMorphologyColorMap colormap = AnnotationVizLibTests.TestUtils.LoadColorMap("Resources/ExportColorMapping");
 
-            MorphologyGraph graph = ODataMorphologyFactory.FromOData(new long[] { 180 }, true, new Uri(GraphTestShared.ODataEndpoint));
+            MorphologyGraph graph = AnnotationVizLib.OData.ODataMorphologyFactory.FromOData(new long[] { 180 }, true, new Uri(GraphTestShared.ODataEndpoint));
             Assert.IsNotNull(graph);
 
             graph.ConnectIsolatedSubgraphs();
@@ -478,7 +527,7 @@ namespace AnnotationVizLibTests
         public static void InitializeSharedGraph(TestContext testContext)
         {
 
-            SharedGraph = ODataMorphologyFactory.FromOData(new long[] { 180 }, true, new Uri(GraphTestShared.ODataEndpoint));
+            SharedGraph = AnnotationVizLib.OData.ODataMorphologyFactory.FromOData(new long[] { 180 }, true, new Uri(GraphTestShared.ODataEndpoint));
             Assert.IsNotNull(SharedGraph);
             Assert.IsTrue(SharedGraph.Subgraphs.Count > 0);
 
@@ -674,7 +723,7 @@ namespace AnnotationVizLibTests
         public static void InitializeSharedGraph(TestContext testContext)
         {
 
-            SharedGraph = WCFMorphologyFactory.FromWCF(new long[] { 180 }, true, GraphTestShared.WCFEndpoint, GraphTestShared.userCredentials);
+            SharedGraph = AnnotationVizLib.WCFClient.WCFMorphologyFactory.FromWCF(new long[] { 180 }, true, GraphTestShared.WCFEndpoint, GraphTestShared.userCredentials);
             Assert.IsNotNull(SharedGraph);
             Assert.IsTrue(SharedGraph.Subgraphs.Count > 0);
 

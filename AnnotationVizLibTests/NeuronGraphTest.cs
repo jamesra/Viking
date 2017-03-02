@@ -23,7 +23,7 @@ namespace AnnotationVizLibTests
         [TestMethod]
         public void GenerateWCFNeuronGraph()
         {
-            AnnotationVizLib.NeuronGraph graph = WCFNeuronFactory.BuildGraph(new long[] {476}, 2, WCFEndpoint, this.userCredentials);
+            AnnotationVizLib.NeuronGraph graph = AnnotationVizLib.WCFClient.WCFNeuronFactory.BuildGraph(new long[] {476}, 2, WCFEndpoint, this.userCredentials);
 
             System.Diagnostics.Debug.Assert(graph != null);
 
@@ -55,7 +55,7 @@ namespace AnnotationVizLibTests
         [TestMethod]
         public void GenerateHugeWCFNeuronGraph()
         {
-            AnnotationVizLib.NeuronGraph graph = WCFNeuronFactory.BuildGraph(new long[] { 476 }, 9, WCFEndpoint, this.userCredentials);
+            AnnotationVizLib.NeuronGraph graph = AnnotationVizLib.WCFClient.WCFNeuronFactory.BuildGraph(new long[] { 476 }, 9, WCFEndpoint, this.userCredentials);
 
             System.Diagnostics.Debug.Assert(graph != null);
 
@@ -84,7 +84,7 @@ namespace AnnotationVizLibTests
         [TestMethod]
         public void GenerateODataNeuronGraph()
         {
-            AnnotationVizLib.NeuronGraph graph = ODataNeuronFactory.FromOData(new long[] { 180, 476 }, 2, new Uri(ODataEndpoint));
+            AnnotationVizLib.NeuronGraph graph = AnnotationVizLib.OData.ODataNeuronFactory.FromOData(new long[] { 180, 476 }, 2, new Uri(ODataEndpoint));
 
             System.Diagnostics.Debug.Assert(graph != null);
 

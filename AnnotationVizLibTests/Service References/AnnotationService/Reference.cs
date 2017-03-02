@@ -16,28 +16,52 @@ namespace AnnotationVizLibTests.AnnotationService {
     public interface IAnnotateStructureTypes {
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructureTypes/CreateStructureType", ReplyAction="http://tempuri.org/IAnnotateStructureTypes/CreateStructureTypeResponse")]
-        AnnotationVizLib.AnnotationService.StructureType CreateStructureType(AnnotationVizLib.AnnotationService.StructureType obj);
+        AnnotationVizLib.WCFClient.AnnotationService.StructureType CreateStructureType(AnnotationVizLib.WCFClient.AnnotationService.StructureType obj);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructureTypes/CreateStructureType", ReplyAction="http://tempuri.org/IAnnotateStructureTypes/CreateStructureTypeResponse")]
+        System.Threading.Tasks.Task<AnnotationVizLib.WCFClient.AnnotationService.StructureType> CreateStructureTypeAsync(AnnotationVizLib.WCFClient.AnnotationService.StructureType obj);
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructureTypes/GetStructureTypes", ReplyAction="http://tempuri.org/IAnnotateStructureTypes/GetStructureTypesResponse")]
-        AnnotationVizLib.AnnotationService.StructureType[] GetStructureTypes();
+        AnnotationVizLib.WCFClient.AnnotationService.StructureType[] GetStructureTypes();
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructureTypes/GetStructureTypes", ReplyAction="http://tempuri.org/IAnnotateStructureTypes/GetStructureTypesResponse")]
+        System.Threading.Tasks.Task<AnnotationVizLib.WCFClient.AnnotationService.StructureType[]> GetStructureTypesAsync();
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructureTypes/GetStructureTypeByID", ReplyAction="http://tempuri.org/IAnnotateStructureTypes/GetStructureTypeByIDResponse")]
-        AnnotationVizLib.AnnotationService.StructureType GetStructureTypeByID(long ID);
+        AnnotationVizLib.WCFClient.AnnotationService.StructureType GetStructureTypeByID(long ID);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructureTypes/GetStructureTypeByID", ReplyAction="http://tempuri.org/IAnnotateStructureTypes/GetStructureTypeByIDResponse")]
+        System.Threading.Tasks.Task<AnnotationVizLib.WCFClient.AnnotationService.StructureType> GetStructureTypeByIDAsync(long ID);
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructureTypes/GetStructureTypesByIDs", ReplyAction="http://tempuri.org/IAnnotateStructureTypes/GetStructureTypesByIDsResponse")]
-        AnnotationVizLib.AnnotationService.StructureType[] GetStructureTypesByIDs(long[] IDs);
+        AnnotationVizLib.WCFClient.AnnotationService.StructureType[] GetStructureTypesByIDs(long[] IDs);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructureTypes/GetStructureTypesByIDs", ReplyAction="http://tempuri.org/IAnnotateStructureTypes/GetStructureTypesByIDsResponse")]
+        System.Threading.Tasks.Task<AnnotationVizLib.WCFClient.AnnotationService.StructureType[]> GetStructureTypesByIDsAsync(long[] IDs);
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructureTypes/UpdateStructureTypes", ReplyAction="http://tempuri.org/IAnnotateStructureTypes/UpdateStructureTypesResponse")]
-        long[] UpdateStructureTypes(AnnotationVizLib.AnnotationService.StructureType[] structType);
+        long[] UpdateStructureTypes(AnnotationVizLib.WCFClient.AnnotationService.StructureType[] structType);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructureTypes/UpdateStructureTypes", ReplyAction="http://tempuri.org/IAnnotateStructureTypes/UpdateStructureTypesResponse")]
+        System.Threading.Tasks.Task<long[]> UpdateStructureTypesAsync(AnnotationVizLib.WCFClient.AnnotationService.StructureType[] structType);
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructureTypes/CreatePermittedStructureLink", ReplyAction="http://tempuri.org/IAnnotateStructureTypes/CreatePermittedStructureLinkResponse")]
-        AnnotationVizLib.AnnotationService.PermittedStructureLink CreatePermittedStructureLink(AnnotationVizLib.AnnotationService.PermittedStructureLink link);
+        AnnotationVizLib.WCFClient.AnnotationService.PermittedStructureLink CreatePermittedStructureLink(AnnotationVizLib.WCFClient.AnnotationService.PermittedStructureLink link);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructureTypes/CreatePermittedStructureLink", ReplyAction="http://tempuri.org/IAnnotateStructureTypes/CreatePermittedStructureLinkResponse")]
+        System.Threading.Tasks.Task<AnnotationVizLib.WCFClient.AnnotationService.PermittedStructureLink> CreatePermittedStructureLinkAsync(AnnotationVizLib.WCFClient.AnnotationService.PermittedStructureLink link);
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructureTypes/UpdatePermittedStructureLinks", ReplyAction="http://tempuri.org/IAnnotateStructureTypes/UpdatePermittedStructureLinksResponse")]
-        void UpdatePermittedStructureLinks(AnnotationVizLib.AnnotationService.PermittedStructureLink[] permittedStructureLinks);
+        void UpdatePermittedStructureLinks(AnnotationVizLib.WCFClient.AnnotationService.PermittedStructureLink[] permittedStructureLinks);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructureTypes/UpdatePermittedStructureLinks", ReplyAction="http://tempuri.org/IAnnotateStructureTypes/UpdatePermittedStructureLinksResponse")]
+        System.Threading.Tasks.Task UpdatePermittedStructureLinksAsync(AnnotationVizLib.WCFClient.AnnotationService.PermittedStructureLink[] permittedStructureLinks);
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructureTypes/TestMethod", ReplyAction="http://tempuri.org/IAnnotateStructureTypes/TestMethodResponse")]
         string TestMethod();
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructureTypes/TestMethod", ReplyAction="http://tempuri.org/IAnnotateStructureTypes/TestMethodResponse")]
+        System.Threading.Tasks.Task<string> TestMethodAsync();
     }
     
     [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
@@ -67,36 +91,68 @@ namespace AnnotationVizLibTests.AnnotationService {
                 base(binding, remoteAddress) {
         }
         
-        public AnnotationVizLib.AnnotationService.StructureType CreateStructureType(AnnotationVizLib.AnnotationService.StructureType obj) {
+        public AnnotationVizLib.WCFClient.AnnotationService.StructureType CreateStructureType(AnnotationVizLib.WCFClient.AnnotationService.StructureType obj) {
             return base.Channel.CreateStructureType(obj);
         }
         
-        public AnnotationVizLib.AnnotationService.StructureType[] GetStructureTypes() {
+        public System.Threading.Tasks.Task<AnnotationVizLib.WCFClient.AnnotationService.StructureType> CreateStructureTypeAsync(AnnotationVizLib.WCFClient.AnnotationService.StructureType obj) {
+            return base.Channel.CreateStructureTypeAsync(obj);
+        }
+        
+        public AnnotationVizLib.WCFClient.AnnotationService.StructureType[] GetStructureTypes() {
             return base.Channel.GetStructureTypes();
         }
         
-        public AnnotationVizLib.AnnotationService.StructureType GetStructureTypeByID(long ID) {
+        public System.Threading.Tasks.Task<AnnotationVizLib.WCFClient.AnnotationService.StructureType[]> GetStructureTypesAsync() {
+            return base.Channel.GetStructureTypesAsync();
+        }
+        
+        public AnnotationVizLib.WCFClient.AnnotationService.StructureType GetStructureTypeByID(long ID) {
             return base.Channel.GetStructureTypeByID(ID);
         }
         
-        public AnnotationVizLib.AnnotationService.StructureType[] GetStructureTypesByIDs(long[] IDs) {
+        public System.Threading.Tasks.Task<AnnotationVizLib.WCFClient.AnnotationService.StructureType> GetStructureTypeByIDAsync(long ID) {
+            return base.Channel.GetStructureTypeByIDAsync(ID);
+        }
+        
+        public AnnotationVizLib.WCFClient.AnnotationService.StructureType[] GetStructureTypesByIDs(long[] IDs) {
             return base.Channel.GetStructureTypesByIDs(IDs);
         }
         
-        public long[] UpdateStructureTypes(AnnotationVizLib.AnnotationService.StructureType[] structType) {
+        public System.Threading.Tasks.Task<AnnotationVizLib.WCFClient.AnnotationService.StructureType[]> GetStructureTypesByIDsAsync(long[] IDs) {
+            return base.Channel.GetStructureTypesByIDsAsync(IDs);
+        }
+        
+        public long[] UpdateStructureTypes(AnnotationVizLib.WCFClient.AnnotationService.StructureType[] structType) {
             return base.Channel.UpdateStructureTypes(structType);
         }
         
-        public AnnotationVizLib.AnnotationService.PermittedStructureLink CreatePermittedStructureLink(AnnotationVizLib.AnnotationService.PermittedStructureLink link) {
+        public System.Threading.Tasks.Task<long[]> UpdateStructureTypesAsync(AnnotationVizLib.WCFClient.AnnotationService.StructureType[] structType) {
+            return base.Channel.UpdateStructureTypesAsync(structType);
+        }
+        
+        public AnnotationVizLib.WCFClient.AnnotationService.PermittedStructureLink CreatePermittedStructureLink(AnnotationVizLib.WCFClient.AnnotationService.PermittedStructureLink link) {
             return base.Channel.CreatePermittedStructureLink(link);
         }
         
-        public void UpdatePermittedStructureLinks(AnnotationVizLib.AnnotationService.PermittedStructureLink[] permittedStructureLinks) {
+        public System.Threading.Tasks.Task<AnnotationVizLib.WCFClient.AnnotationService.PermittedStructureLink> CreatePermittedStructureLinkAsync(AnnotationVizLib.WCFClient.AnnotationService.PermittedStructureLink link) {
+            return base.Channel.CreatePermittedStructureLinkAsync(link);
+        }
+        
+        public void UpdatePermittedStructureLinks(AnnotationVizLib.WCFClient.AnnotationService.PermittedStructureLink[] permittedStructureLinks) {
             base.Channel.UpdatePermittedStructureLinks(permittedStructureLinks);
+        }
+        
+        public System.Threading.Tasks.Task UpdatePermittedStructureLinksAsync(AnnotationVizLib.WCFClient.AnnotationService.PermittedStructureLink[] permittedStructureLinks) {
+            return base.Channel.UpdatePermittedStructureLinksAsync(permittedStructureLinks);
         }
         
         public string TestMethod() {
             return base.Channel.TestMethod();
+        }
+        
+        public System.Threading.Tasks.Task<string> TestMethodAsync() {
+            return base.Channel.TestMethodAsync();
         }
     }
     
@@ -105,76 +161,296 @@ namespace AnnotationVizLibTests.AnnotationService {
     public interface IAnnotateStructures {
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/CreateStructure", ReplyAction="http://tempuri.org/IAnnotateStructures/CreateStructureResponse")]
-        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(AnnotationVizLib.AnnotationService.StructureHistory))]
-        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(AnnotationVizLib.AnnotationService.LocationHistory))]
-        AnnotationVizLib.AnnotationService.CreateStructureRetval CreateStructure(AnnotationVizLib.AnnotationService.Structure structure, AnnotationVizLib.AnnotationService.Location location);
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(AnnotationVizLib.WCFClient.AnnotationService.StructureHistory))]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(AnnotationVizLib.WCFClient.AnnotationService.LocationHistory))]
+        AnnotationVizLib.WCFClient.AnnotationService.CreateStructureRetval CreateStructure(AnnotationVizLib.WCFClient.AnnotationService.Structure structure, AnnotationVizLib.WCFClient.AnnotationService.Location location);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/CreateStructure", ReplyAction="http://tempuri.org/IAnnotateStructures/CreateStructureResponse")]
+        System.Threading.Tasks.Task<AnnotationVizLib.WCFClient.AnnotationService.CreateStructureRetval> CreateStructureAsync(AnnotationVizLib.WCFClient.AnnotationService.Structure structure, AnnotationVizLib.WCFClient.AnnotationService.Location location);
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/GetStructures", ReplyAction="http://tempuri.org/IAnnotateStructures/GetStructuresResponse")]
-        AnnotationVizLib.AnnotationService.Structure[] GetStructures();
+        AnnotationVizLib.WCFClient.AnnotationService.Structure[] GetStructures();
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/GetStructures", ReplyAction="http://tempuri.org/IAnnotateStructures/GetStructuresResponse")]
+        System.Threading.Tasks.Task<AnnotationVizLib.WCFClient.AnnotationService.Structure[]> GetStructuresAsync();
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/GetStructuresForSection", ReplyAction="http://tempuri.org/IAnnotateStructures/GetStructuresForSectionResponse")]
-        AnnotationVizLib.AnnotationService.Structure[] GetStructuresForSection(out long QueryExecutedTime, out long[] DeletedIDs, long Section, long ModifiedAfterThisTime);
+        AnnotationVizLibTests.AnnotationService.GetStructuresForSectionResponse GetStructuresForSection(AnnotationVizLibTests.AnnotationService.GetStructuresForSectionRequest request);
+        
+        // CODEGEN: Generating message contract since the operation has multiple return values.
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/GetStructuresForSection", ReplyAction="http://tempuri.org/IAnnotateStructures/GetStructuresForSectionResponse")]
+        System.Threading.Tasks.Task<AnnotationVizLibTests.AnnotationService.GetStructuresForSectionResponse> GetStructuresForSectionAsync(AnnotationVizLibTests.AnnotationService.GetStructuresForSectionRequest request);
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/GetStructuresForSectionInMosaicRegion", ReplyAction="http://tempuri.org/IAnnotateStructures/GetStructuresForSectionInMosaicRegionRespo" +
             "nse")]
-        AnnotationVizLib.AnnotationService.Structure[] GetStructuresForSectionInMosaicRegion(out long QueryExecutedTime, out long[] DeletedIDs, long section, AnnotationVizLib.AnnotationService.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisTime);
+        AnnotationVizLibTests.AnnotationService.GetStructuresForSectionInMosaicRegionResponse GetStructuresForSectionInMosaicRegion(AnnotationVizLibTests.AnnotationService.GetStructuresForSectionInMosaicRegionRequest request);
+        
+        // CODEGEN: Generating message contract since the operation has multiple return values.
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/GetStructuresForSectionInMosaicRegion", ReplyAction="http://tempuri.org/IAnnotateStructures/GetStructuresForSectionInMosaicRegionRespo" +
+            "nse")]
+        System.Threading.Tasks.Task<AnnotationVizLibTests.AnnotationService.GetStructuresForSectionInMosaicRegionResponse> GetStructuresForSectionInMosaicRegionAsync(AnnotationVizLibTests.AnnotationService.GetStructuresForSectionInMosaicRegionRequest request);
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/GetStructuresForSectionInVolumeRegion", ReplyAction="http://tempuri.org/IAnnotateStructures/GetStructuresForSectionInVolumeRegionRespo" +
             "nse")]
-        AnnotationVizLib.AnnotationService.Structure[] GetStructuresForSectionInVolumeRegion(out long QueryExecutedTime, out long[] DeletedIDs, long section, AnnotationVizLib.AnnotationService.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisTime);
+        AnnotationVizLibTests.AnnotationService.GetStructuresForSectionInVolumeRegionResponse GetStructuresForSectionInVolumeRegion(AnnotationVizLibTests.AnnotationService.GetStructuresForSectionInVolumeRegionRequest request);
+        
+        // CODEGEN: Generating message contract since the operation has multiple return values.
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/GetStructuresForSectionInVolumeRegion", ReplyAction="http://tempuri.org/IAnnotateStructures/GetStructuresForSectionInVolumeRegionRespo" +
+            "nse")]
+        System.Threading.Tasks.Task<AnnotationVizLibTests.AnnotationService.GetStructuresForSectionInVolumeRegionResponse> GetStructuresForSectionInVolumeRegionAsync(AnnotationVizLibTests.AnnotationService.GetStructuresForSectionInVolumeRegionRequest request);
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/GetStructureByID", ReplyAction="http://tempuri.org/IAnnotateStructures/GetStructureByIDResponse")]
-        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(AnnotationVizLib.AnnotationService.StructureHistory))]
-        AnnotationVizLib.AnnotationService.Structure GetStructureByID(long ID, bool IncludeChildren);
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(AnnotationVizLib.WCFClient.AnnotationService.StructureHistory))]
+        AnnotationVizLib.WCFClient.AnnotationService.Structure GetStructureByID(long ID, bool IncludeChildren);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/GetStructureByID", ReplyAction="http://tempuri.org/IAnnotateStructures/GetStructureByIDResponse")]
+        System.Threading.Tasks.Task<AnnotationVizLib.WCFClient.AnnotationService.Structure> GetStructureByIDAsync(long ID, bool IncludeChildren);
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/GetStructuresByIDs", ReplyAction="http://tempuri.org/IAnnotateStructures/GetStructuresByIDsResponse")]
-        AnnotationVizLib.AnnotationService.Structure[] GetStructuresByIDs(long[] ID, bool IncludeChildren);
+        AnnotationVizLib.WCFClient.AnnotationService.Structure[] GetStructuresByIDs(long[] ID, bool IncludeChildren);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/GetStructuresByIDs", ReplyAction="http://tempuri.org/IAnnotateStructures/GetStructuresByIDsResponse")]
+        System.Threading.Tasks.Task<AnnotationVizLib.WCFClient.AnnotationService.Structure[]> GetStructuresByIDsAsync(long[] ID, bool IncludeChildren);
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/CreateStructureLink", ReplyAction="http://tempuri.org/IAnnotateStructures/CreateStructureLinkResponse")]
-        AnnotationVizLib.AnnotationService.StructureLink CreateStructureLink(AnnotationVizLib.AnnotationService.StructureLink link);
+        AnnotationVizLib.WCFClient.AnnotationService.StructureLink CreateStructureLink(AnnotationVizLib.WCFClient.AnnotationService.StructureLink link);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/CreateStructureLink", ReplyAction="http://tempuri.org/IAnnotateStructures/CreateStructureLinkResponse")]
+        System.Threading.Tasks.Task<AnnotationVizLib.WCFClient.AnnotationService.StructureLink> CreateStructureLinkAsync(AnnotationVizLib.WCFClient.AnnotationService.StructureLink link);
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/GetLinkedStructures", ReplyAction="http://tempuri.org/IAnnotateStructures/GetLinkedStructuresResponse")]
-        AnnotationVizLib.AnnotationService.StructureLink[] GetLinkedStructures();
+        AnnotationVizLib.WCFClient.AnnotationService.StructureLink[] GetLinkedStructures();
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/GetLinkedStructures", ReplyAction="http://tempuri.org/IAnnotateStructures/GetLinkedStructuresResponse")]
+        System.Threading.Tasks.Task<AnnotationVizLib.WCFClient.AnnotationService.StructureLink[]> GetLinkedStructuresAsync();
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/GetLinkedStructuresByID", ReplyAction="http://tempuri.org/IAnnotateStructures/GetLinkedStructuresByIDResponse")]
-        AnnotationVizLib.AnnotationService.StructureLink[] GetLinkedStructuresByID(long ID);
+        AnnotationVizLib.WCFClient.AnnotationService.StructureLink[] GetLinkedStructuresByID(long ID);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/GetLinkedStructuresByID", ReplyAction="http://tempuri.org/IAnnotateStructures/GetLinkedStructuresByIDResponse")]
+        System.Threading.Tasks.Task<AnnotationVizLib.WCFClient.AnnotationService.StructureLink[]> GetLinkedStructuresByIDAsync(long ID);
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/GetNetworkedStructures", ReplyAction="http://tempuri.org/IAnnotateStructures/GetNetworkedStructuresResponse")]
         long[] GetNetworkedStructures(long[] IDs, int numHops);
         
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/GetNetworkedStructures", ReplyAction="http://tempuri.org/IAnnotateStructures/GetNetworkedStructuresResponse")]
+        System.Threading.Tasks.Task<long[]> GetNetworkedStructuresAsync(long[] IDs, int numHops);
+        
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/GetChildStructuresInNetwork", ReplyAction="http://tempuri.org/IAnnotateStructures/GetChildStructuresInNetworkResponse")]
-        AnnotationVizLib.AnnotationService.Structure[] GetChildStructuresInNetwork(long[] IDs, int numHops);
+        AnnotationVizLib.WCFClient.AnnotationService.Structure[] GetChildStructuresInNetwork(long[] IDs, int numHops);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/GetChildStructuresInNetwork", ReplyAction="http://tempuri.org/IAnnotateStructures/GetChildStructuresInNetworkResponse")]
+        System.Threading.Tasks.Task<AnnotationVizLib.WCFClient.AnnotationService.Structure[]> GetChildStructuresInNetworkAsync(long[] IDs, int numHops);
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/GetStructureLinksInNetwork", ReplyAction="http://tempuri.org/IAnnotateStructures/GetStructureLinksInNetworkResponse")]
-        AnnotationVizLib.AnnotationService.StructureLink[] GetStructureLinksInNetwork(long[] IDs, int numHops);
+        AnnotationVizLib.WCFClient.AnnotationService.StructureLink[] GetStructureLinksInNetwork(long[] IDs, int numHops);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/GetStructureLinksInNetwork", ReplyAction="http://tempuri.org/IAnnotateStructures/GetStructureLinksInNetworkResponse")]
+        System.Threading.Tasks.Task<AnnotationVizLib.WCFClient.AnnotationService.StructureLink[]> GetStructureLinksInNetworkAsync(long[] IDs, int numHops);
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/NumberOfLocationsForStructure", ReplyAction="http://tempuri.org/IAnnotateStructures/NumberOfLocationsForStructureResponse")]
         long NumberOfLocationsForStructure(long structureID);
         
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/NumberOfLocationsForStructure", ReplyAction="http://tempuri.org/IAnnotateStructures/NumberOfLocationsForStructureResponse")]
+        System.Threading.Tasks.Task<long> NumberOfLocationsForStructureAsync(long structureID);
+        
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/UpdateStructures", ReplyAction="http://tempuri.org/IAnnotateStructures/UpdateStructuresResponse")]
-        long[] UpdateStructures(AnnotationVizLib.AnnotationService.Structure[] structure);
+        long[] UpdateStructures(AnnotationVizLib.WCFClient.AnnotationService.Structure[] structure);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/UpdateStructures", ReplyAction="http://tempuri.org/IAnnotateStructures/UpdateStructuresResponse")]
+        System.Threading.Tasks.Task<long[]> UpdateStructuresAsync(AnnotationVizLib.WCFClient.AnnotationService.Structure[] structure);
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/UpdateStructureLinks", ReplyAction="http://tempuri.org/IAnnotateStructures/UpdateStructureLinksResponse")]
-        void UpdateStructureLinks(AnnotationVizLib.AnnotationService.StructureLink[] structureLinks);
+        void UpdateStructureLinks(AnnotationVizLib.WCFClient.AnnotationService.StructureLink[] structureLinks);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/UpdateStructureLinks", ReplyAction="http://tempuri.org/IAnnotateStructures/UpdateStructureLinksResponse")]
+        System.Threading.Tasks.Task UpdateStructureLinksAsync(AnnotationVizLib.WCFClient.AnnotationService.StructureLink[] structureLinks);
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/GetUnfinishedLocations", ReplyAction="http://tempuri.org/IAnnotateStructures/GetUnfinishedLocationsResponse")]
         long[] GetUnfinishedLocations(long structureID);
         
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/GetUnfinishedLocations", ReplyAction="http://tempuri.org/IAnnotateStructures/GetUnfinishedLocationsResponse")]
+        System.Threading.Tasks.Task<long[]> GetUnfinishedLocationsAsync(long structureID);
+        
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/GetUnfinishedLocationsWithPosition", ReplyAction="http://tempuri.org/IAnnotateStructures/GetUnfinishedLocationsWithPositionResponse" +
             "")]
-        AnnotationVizLib.AnnotationService.LocationPositionOnly[] GetUnfinishedLocationsWithPosition(long structureID);
+        AnnotationVizLib.WCFClient.AnnotationService.LocationPositionOnly[] GetUnfinishedLocationsWithPosition(long structureID);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/GetUnfinishedLocationsWithPosition", ReplyAction="http://tempuri.org/IAnnotateStructures/GetUnfinishedLocationsWithPositionResponse" +
+            "")]
+        System.Threading.Tasks.Task<AnnotationVizLib.WCFClient.AnnotationService.LocationPositionOnly[]> GetUnfinishedLocationsWithPositionAsync(long structureID);
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/GetStructuresOfType", ReplyAction="http://tempuri.org/IAnnotateStructures/GetStructuresOfTypeResponse")]
-        AnnotationVizLib.AnnotationService.Structure[] GetStructuresOfType(long typeID);
+        AnnotationVizLib.WCFClient.AnnotationService.Structure[] GetStructuresOfType(long typeID);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/GetStructuresOfType", ReplyAction="http://tempuri.org/IAnnotateStructures/GetStructuresOfTypeResponse")]
+        System.Threading.Tasks.Task<AnnotationVizLib.WCFClient.AnnotationService.Structure[]> GetStructuresOfTypeAsync(long typeID);
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/Merge", ReplyAction="http://tempuri.org/IAnnotateStructures/MergeResponse")]
         long Merge(long KeepID, long MergeID);
         
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/Merge", ReplyAction="http://tempuri.org/IAnnotateStructures/MergeResponse")]
+        System.Threading.Tasks.Task<long> MergeAsync(long KeepID, long MergeID);
+        
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/Split", ReplyAction="http://tempuri.org/IAnnotateStructures/SplitResponse")]
-        long Split(long StructureA, AnnotationVizLib.AnnotationService.LocationLink locLink);
+        long Split(long StructureA, AnnotationVizLib.WCFClient.AnnotationService.LocationLink locLink);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/Split", ReplyAction="http://tempuri.org/IAnnotateStructures/SplitResponse")]
+        System.Threading.Tasks.Task<long> SplitAsync(long StructureA, AnnotationVizLib.WCFClient.AnnotationService.LocationLink locLink);
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/GetStructureChangeLog", ReplyAction="http://tempuri.org/IAnnotateStructures/GetStructureChangeLogResponse")]
-        AnnotationVizLib.AnnotationService.StructureHistory[] GetStructureChangeLog(System.Nullable<long> structure_id, System.Nullable<System.DateTime> begin_time, System.Nullable<System.DateTime> end_time);
+        AnnotationVizLib.WCFClient.AnnotationService.StructureHistory[] GetStructureChangeLog(System.Nullable<long> structure_id, System.Nullable<System.DateTime> begin_time, System.Nullable<System.DateTime> end_time);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/GetStructureChangeLog", ReplyAction="http://tempuri.org/IAnnotateStructures/GetStructureChangeLogResponse")]
+        System.Threading.Tasks.Task<AnnotationVizLib.WCFClient.AnnotationService.StructureHistory[]> GetStructureChangeLogAsync(System.Nullable<long> structure_id, System.Nullable<System.DateTime> begin_time, System.Nullable<System.DateTime> end_time);
+    }
+    
+    [System.Diagnostics.DebuggerStepThroughAttribute()]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
+    [System.ServiceModel.MessageContractAttribute(WrapperName="GetStructuresForSection", WrapperNamespace="http://tempuri.org/", IsWrapped=true)]
+    public partial class GetStructuresForSectionRequest {
+        
+        [System.ServiceModel.MessageBodyMemberAttribute(Namespace="http://tempuri.org/", Order=0)]
+        public long Section;
+        
+        [System.ServiceModel.MessageBodyMemberAttribute(Namespace="http://tempuri.org/", Order=1)]
+        public long ModifiedAfterThisTime;
+        
+        public GetStructuresForSectionRequest() {
+        }
+        
+        public GetStructuresForSectionRequest(long Section, long ModifiedAfterThisTime) {
+            this.Section = Section;
+            this.ModifiedAfterThisTime = ModifiedAfterThisTime;
+        }
+    }
+    
+    [System.Diagnostics.DebuggerStepThroughAttribute()]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
+    [System.ServiceModel.MessageContractAttribute(WrapperName="GetStructuresForSectionResponse", WrapperNamespace="http://tempuri.org/", IsWrapped=true)]
+    public partial class GetStructuresForSectionResponse {
+        
+        [System.ServiceModel.MessageBodyMemberAttribute(Namespace="http://tempuri.org/", Order=0)]
+        public AnnotationVizLib.WCFClient.AnnotationService.Structure[] GetStructuresForSectionResult;
+        
+        [System.ServiceModel.MessageBodyMemberAttribute(Namespace="http://tempuri.org/", Order=1)]
+        public long QueryExecutedTime;
+        
+        [System.ServiceModel.MessageBodyMemberAttribute(Namespace="http://tempuri.org/", Order=2)]
+        public long[] DeletedIDs;
+        
+        public GetStructuresForSectionResponse() {
+        }
+        
+        public GetStructuresForSectionResponse(AnnotationVizLib.WCFClient.AnnotationService.Structure[] GetStructuresForSectionResult, long QueryExecutedTime, long[] DeletedIDs) {
+            this.GetStructuresForSectionResult = GetStructuresForSectionResult;
+            this.QueryExecutedTime = QueryExecutedTime;
+            this.DeletedIDs = DeletedIDs;
+        }
+    }
+    
+    [System.Diagnostics.DebuggerStepThroughAttribute()]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
+    [System.ServiceModel.MessageContractAttribute(WrapperName="GetStructuresForSectionInMosaicRegion", WrapperNamespace="http://tempuri.org/", IsWrapped=true)]
+    public partial class GetStructuresForSectionInMosaicRegionRequest {
+        
+        [System.ServiceModel.MessageBodyMemberAttribute(Namespace="http://tempuri.org/", Order=0)]
+        public long section;
+        
+        [System.ServiceModel.MessageBodyMemberAttribute(Namespace="http://tempuri.org/", Order=1)]
+        public AnnotationVizLib.WCFClient.AnnotationService.BoundingRectangle bbox;
+        
+        [System.ServiceModel.MessageBodyMemberAttribute(Namespace="http://tempuri.org/", Order=2)]
+        public double MinRadius;
+        
+        [System.ServiceModel.MessageBodyMemberAttribute(Namespace="http://tempuri.org/", Order=3)]
+        public long ModifiedAfterThisTime;
+        
+        public GetStructuresForSectionInMosaicRegionRequest() {
+        }
+        
+        public GetStructuresForSectionInMosaicRegionRequest(long section, AnnotationVizLib.WCFClient.AnnotationService.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisTime) {
+            this.section = section;
+            this.bbox = bbox;
+            this.MinRadius = MinRadius;
+            this.ModifiedAfterThisTime = ModifiedAfterThisTime;
+        }
+    }
+    
+    [System.Diagnostics.DebuggerStepThroughAttribute()]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
+    [System.ServiceModel.MessageContractAttribute(WrapperName="GetStructuresForSectionInMosaicRegionResponse", WrapperNamespace="http://tempuri.org/", IsWrapped=true)]
+    public partial class GetStructuresForSectionInMosaicRegionResponse {
+        
+        [System.ServiceModel.MessageBodyMemberAttribute(Namespace="http://tempuri.org/", Order=0)]
+        public AnnotationVizLib.WCFClient.AnnotationService.Structure[] GetStructuresForSectionInMosaicRegionResult;
+        
+        [System.ServiceModel.MessageBodyMemberAttribute(Namespace="http://tempuri.org/", Order=1)]
+        public long QueryExecutedTime;
+        
+        [System.ServiceModel.MessageBodyMemberAttribute(Namespace="http://tempuri.org/", Order=2)]
+        public long[] DeletedIDs;
+        
+        public GetStructuresForSectionInMosaicRegionResponse() {
+        }
+        
+        public GetStructuresForSectionInMosaicRegionResponse(AnnotationVizLib.WCFClient.AnnotationService.Structure[] GetStructuresForSectionInMosaicRegionResult, long QueryExecutedTime, long[] DeletedIDs) {
+            this.GetStructuresForSectionInMosaicRegionResult = GetStructuresForSectionInMosaicRegionResult;
+            this.QueryExecutedTime = QueryExecutedTime;
+            this.DeletedIDs = DeletedIDs;
+        }
+    }
+    
+    [System.Diagnostics.DebuggerStepThroughAttribute()]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
+    [System.ServiceModel.MessageContractAttribute(WrapperName="GetStructuresForSectionInVolumeRegion", WrapperNamespace="http://tempuri.org/", IsWrapped=true)]
+    public partial class GetStructuresForSectionInVolumeRegionRequest {
+        
+        [System.ServiceModel.MessageBodyMemberAttribute(Namespace="http://tempuri.org/", Order=0)]
+        public long section;
+        
+        [System.ServiceModel.MessageBodyMemberAttribute(Namespace="http://tempuri.org/", Order=1)]
+        public AnnotationVizLib.WCFClient.AnnotationService.BoundingRectangle bbox;
+        
+        [System.ServiceModel.MessageBodyMemberAttribute(Namespace="http://tempuri.org/", Order=2)]
+        public double MinRadius;
+        
+        [System.ServiceModel.MessageBodyMemberAttribute(Namespace="http://tempuri.org/", Order=3)]
+        public long ModifiedAfterThisTime;
+        
+        public GetStructuresForSectionInVolumeRegionRequest() {
+        }
+        
+        public GetStructuresForSectionInVolumeRegionRequest(long section, AnnotationVizLib.WCFClient.AnnotationService.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisTime) {
+            this.section = section;
+            this.bbox = bbox;
+            this.MinRadius = MinRadius;
+            this.ModifiedAfterThisTime = ModifiedAfterThisTime;
+        }
+    }
+    
+    [System.Diagnostics.DebuggerStepThroughAttribute()]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
+    [System.ServiceModel.MessageContractAttribute(WrapperName="GetStructuresForSectionInVolumeRegionResponse", WrapperNamespace="http://tempuri.org/", IsWrapped=true)]
+    public partial class GetStructuresForSectionInVolumeRegionResponse {
+        
+        [System.ServiceModel.MessageBodyMemberAttribute(Namespace="http://tempuri.org/", Order=0)]
+        public AnnotationVizLib.WCFClient.AnnotationService.Structure[] GetStructuresForSectionInVolumeRegionResult;
+        
+        [System.ServiceModel.MessageBodyMemberAttribute(Namespace="http://tempuri.org/", Order=1)]
+        public long QueryExecutedTime;
+        
+        [System.ServiceModel.MessageBodyMemberAttribute(Namespace="http://tempuri.org/", Order=2)]
+        public long[] DeletedIDs;
+        
+        public GetStructuresForSectionInVolumeRegionResponse() {
+        }
+        
+        public GetStructuresForSectionInVolumeRegionResponse(AnnotationVizLib.WCFClient.AnnotationService.Structure[] GetStructuresForSectionInVolumeRegionResult, long QueryExecutedTime, long[] DeletedIDs) {
+            this.GetStructuresForSectionInVolumeRegionResult = GetStructuresForSectionInVolumeRegionResult;
+            this.QueryExecutedTime = QueryExecutedTime;
+            this.DeletedIDs = DeletedIDs;
+        }
     }
     
     [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
@@ -204,92 +480,217 @@ namespace AnnotationVizLibTests.AnnotationService {
                 base(binding, remoteAddress) {
         }
         
-        public AnnotationVizLib.AnnotationService.CreateStructureRetval CreateStructure(AnnotationVizLib.AnnotationService.Structure structure, AnnotationVizLib.AnnotationService.Location location) {
+        public AnnotationVizLib.WCFClient.AnnotationService.CreateStructureRetval CreateStructure(AnnotationVizLib.WCFClient.AnnotationService.Structure structure, AnnotationVizLib.WCFClient.AnnotationService.Location location) {
             return base.Channel.CreateStructure(structure, location);
         }
         
-        public AnnotationVizLib.AnnotationService.Structure[] GetStructures() {
+        public System.Threading.Tasks.Task<AnnotationVizLib.WCFClient.AnnotationService.CreateStructureRetval> CreateStructureAsync(AnnotationVizLib.WCFClient.AnnotationService.Structure structure, AnnotationVizLib.WCFClient.AnnotationService.Location location) {
+            return base.Channel.CreateStructureAsync(structure, location);
+        }
+        
+        public AnnotationVizLib.WCFClient.AnnotationService.Structure[] GetStructures() {
             return base.Channel.GetStructures();
         }
         
-        public AnnotationVizLib.AnnotationService.Structure[] GetStructuresForSection(out long QueryExecutedTime, out long[] DeletedIDs, long Section, long ModifiedAfterThisTime) {
-            return base.Channel.GetStructuresForSection(out QueryExecutedTime, out DeletedIDs, Section, ModifiedAfterThisTime);
+        public System.Threading.Tasks.Task<AnnotationVizLib.WCFClient.AnnotationService.Structure[]> GetStructuresAsync() {
+            return base.Channel.GetStructuresAsync();
         }
         
-        public AnnotationVizLib.AnnotationService.Structure[] GetStructuresForSectionInMosaicRegion(out long QueryExecutedTime, out long[] DeletedIDs, long section, AnnotationVizLib.AnnotationService.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisTime) {
-            return base.Channel.GetStructuresForSectionInMosaicRegion(out QueryExecutedTime, out DeletedIDs, section, bbox, MinRadius, ModifiedAfterThisTime);
+        [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
+        AnnotationVizLibTests.AnnotationService.GetStructuresForSectionResponse AnnotationVizLibTests.AnnotationService.IAnnotateStructures.GetStructuresForSection(AnnotationVizLibTests.AnnotationService.GetStructuresForSectionRequest request) {
+            return base.Channel.GetStructuresForSection(request);
         }
         
-        public AnnotationVizLib.AnnotationService.Structure[] GetStructuresForSectionInVolumeRegion(out long QueryExecutedTime, out long[] DeletedIDs, long section, AnnotationVizLib.AnnotationService.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisTime) {
-            return base.Channel.GetStructuresForSectionInVolumeRegion(out QueryExecutedTime, out DeletedIDs, section, bbox, MinRadius, ModifiedAfterThisTime);
+        public AnnotationVizLib.WCFClient.AnnotationService.Structure[] GetStructuresForSection(long Section, long ModifiedAfterThisTime, out long QueryExecutedTime, out long[] DeletedIDs) {
+            AnnotationVizLibTests.AnnotationService.GetStructuresForSectionRequest inValue = new AnnotationVizLibTests.AnnotationService.GetStructuresForSectionRequest();
+            inValue.Section = Section;
+            inValue.ModifiedAfterThisTime = ModifiedAfterThisTime;
+            AnnotationVizLibTests.AnnotationService.GetStructuresForSectionResponse retVal = ((AnnotationVizLibTests.AnnotationService.IAnnotateStructures)(this)).GetStructuresForSection(inValue);
+            QueryExecutedTime = retVal.QueryExecutedTime;
+            DeletedIDs = retVal.DeletedIDs;
+            return retVal.GetStructuresForSectionResult;
         }
         
-        public AnnotationVizLib.AnnotationService.Structure GetStructureByID(long ID, bool IncludeChildren) {
+        public System.Threading.Tasks.Task<AnnotationVizLibTests.AnnotationService.GetStructuresForSectionResponse> GetStructuresForSectionAsync(AnnotationVizLibTests.AnnotationService.GetStructuresForSectionRequest request) {
+            return base.Channel.GetStructuresForSectionAsync(request);
+        }
+        
+        [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
+        AnnotationVizLibTests.AnnotationService.GetStructuresForSectionInMosaicRegionResponse AnnotationVizLibTests.AnnotationService.IAnnotateStructures.GetStructuresForSectionInMosaicRegion(AnnotationVizLibTests.AnnotationService.GetStructuresForSectionInMosaicRegionRequest request) {
+            return base.Channel.GetStructuresForSectionInMosaicRegion(request);
+        }
+        
+        public AnnotationVizLib.WCFClient.AnnotationService.Structure[] GetStructuresForSectionInMosaicRegion(long section, AnnotationVizLib.WCFClient.AnnotationService.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisTime, out long QueryExecutedTime, out long[] DeletedIDs) {
+            AnnotationVizLibTests.AnnotationService.GetStructuresForSectionInMosaicRegionRequest inValue = new AnnotationVizLibTests.AnnotationService.GetStructuresForSectionInMosaicRegionRequest();
+            inValue.section = section;
+            inValue.bbox = bbox;
+            inValue.MinRadius = MinRadius;
+            inValue.ModifiedAfterThisTime = ModifiedAfterThisTime;
+            AnnotationVizLibTests.AnnotationService.GetStructuresForSectionInMosaicRegionResponse retVal = ((AnnotationVizLibTests.AnnotationService.IAnnotateStructures)(this)).GetStructuresForSectionInMosaicRegion(inValue);
+            QueryExecutedTime = retVal.QueryExecutedTime;
+            DeletedIDs = retVal.DeletedIDs;
+            return retVal.GetStructuresForSectionInMosaicRegionResult;
+        }
+        
+        public System.Threading.Tasks.Task<AnnotationVizLibTests.AnnotationService.GetStructuresForSectionInMosaicRegionResponse> GetStructuresForSectionInMosaicRegionAsync(AnnotationVizLibTests.AnnotationService.GetStructuresForSectionInMosaicRegionRequest request) {
+            return base.Channel.GetStructuresForSectionInMosaicRegionAsync(request);
+        }
+        
+        [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
+        AnnotationVizLibTests.AnnotationService.GetStructuresForSectionInVolumeRegionResponse AnnotationVizLibTests.AnnotationService.IAnnotateStructures.GetStructuresForSectionInVolumeRegion(AnnotationVizLibTests.AnnotationService.GetStructuresForSectionInVolumeRegionRequest request) {
+            return base.Channel.GetStructuresForSectionInVolumeRegion(request);
+        }
+        
+        public AnnotationVizLib.WCFClient.AnnotationService.Structure[] GetStructuresForSectionInVolumeRegion(long section, AnnotationVizLib.WCFClient.AnnotationService.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisTime, out long QueryExecutedTime, out long[] DeletedIDs) {
+            AnnotationVizLibTests.AnnotationService.GetStructuresForSectionInVolumeRegionRequest inValue = new AnnotationVizLibTests.AnnotationService.GetStructuresForSectionInVolumeRegionRequest();
+            inValue.section = section;
+            inValue.bbox = bbox;
+            inValue.MinRadius = MinRadius;
+            inValue.ModifiedAfterThisTime = ModifiedAfterThisTime;
+            AnnotationVizLibTests.AnnotationService.GetStructuresForSectionInVolumeRegionResponse retVal = ((AnnotationVizLibTests.AnnotationService.IAnnotateStructures)(this)).GetStructuresForSectionInVolumeRegion(inValue);
+            QueryExecutedTime = retVal.QueryExecutedTime;
+            DeletedIDs = retVal.DeletedIDs;
+            return retVal.GetStructuresForSectionInVolumeRegionResult;
+        }
+        
+        public System.Threading.Tasks.Task<AnnotationVizLibTests.AnnotationService.GetStructuresForSectionInVolumeRegionResponse> GetStructuresForSectionInVolumeRegionAsync(AnnotationVizLibTests.AnnotationService.GetStructuresForSectionInVolumeRegionRequest request) {
+            return base.Channel.GetStructuresForSectionInVolumeRegionAsync(request);
+        }
+        
+        public AnnotationVizLib.WCFClient.AnnotationService.Structure GetStructureByID(long ID, bool IncludeChildren) {
             return base.Channel.GetStructureByID(ID, IncludeChildren);
         }
         
-        public AnnotationVizLib.AnnotationService.Structure[] GetStructuresByIDs(long[] ID, bool IncludeChildren) {
+        public System.Threading.Tasks.Task<AnnotationVizLib.WCFClient.AnnotationService.Structure> GetStructureByIDAsync(long ID, bool IncludeChildren) {
+            return base.Channel.GetStructureByIDAsync(ID, IncludeChildren);
+        }
+        
+        public AnnotationVizLib.WCFClient.AnnotationService.Structure[] GetStructuresByIDs(long[] ID, bool IncludeChildren) {
             return base.Channel.GetStructuresByIDs(ID, IncludeChildren);
         }
         
-        public AnnotationVizLib.AnnotationService.StructureLink CreateStructureLink(AnnotationVizLib.AnnotationService.StructureLink link) {
+        public System.Threading.Tasks.Task<AnnotationVizLib.WCFClient.AnnotationService.Structure[]> GetStructuresByIDsAsync(long[] ID, bool IncludeChildren) {
+            return base.Channel.GetStructuresByIDsAsync(ID, IncludeChildren);
+        }
+        
+        public AnnotationVizLib.WCFClient.AnnotationService.StructureLink CreateStructureLink(AnnotationVizLib.WCFClient.AnnotationService.StructureLink link) {
             return base.Channel.CreateStructureLink(link);
         }
         
-        public AnnotationVizLib.AnnotationService.StructureLink[] GetLinkedStructures() {
+        public System.Threading.Tasks.Task<AnnotationVizLib.WCFClient.AnnotationService.StructureLink> CreateStructureLinkAsync(AnnotationVizLib.WCFClient.AnnotationService.StructureLink link) {
+            return base.Channel.CreateStructureLinkAsync(link);
+        }
+        
+        public AnnotationVizLib.WCFClient.AnnotationService.StructureLink[] GetLinkedStructures() {
             return base.Channel.GetLinkedStructures();
         }
         
-        public AnnotationVizLib.AnnotationService.StructureLink[] GetLinkedStructuresByID(long ID) {
+        public System.Threading.Tasks.Task<AnnotationVizLib.WCFClient.AnnotationService.StructureLink[]> GetLinkedStructuresAsync() {
+            return base.Channel.GetLinkedStructuresAsync();
+        }
+        
+        public AnnotationVizLib.WCFClient.AnnotationService.StructureLink[] GetLinkedStructuresByID(long ID) {
             return base.Channel.GetLinkedStructuresByID(ID);
+        }
+        
+        public System.Threading.Tasks.Task<AnnotationVizLib.WCFClient.AnnotationService.StructureLink[]> GetLinkedStructuresByIDAsync(long ID) {
+            return base.Channel.GetLinkedStructuresByIDAsync(ID);
         }
         
         public long[] GetNetworkedStructures(long[] IDs, int numHops) {
             return base.Channel.GetNetworkedStructures(IDs, numHops);
         }
         
-        public AnnotationVizLib.AnnotationService.Structure[] GetChildStructuresInNetwork(long[] IDs, int numHops) {
+        public System.Threading.Tasks.Task<long[]> GetNetworkedStructuresAsync(long[] IDs, int numHops) {
+            return base.Channel.GetNetworkedStructuresAsync(IDs, numHops);
+        }
+        
+        public AnnotationVizLib.WCFClient.AnnotationService.Structure[] GetChildStructuresInNetwork(long[] IDs, int numHops) {
             return base.Channel.GetChildStructuresInNetwork(IDs, numHops);
         }
         
-        public AnnotationVizLib.AnnotationService.StructureLink[] GetStructureLinksInNetwork(long[] IDs, int numHops) {
+        public System.Threading.Tasks.Task<AnnotationVizLib.WCFClient.AnnotationService.Structure[]> GetChildStructuresInNetworkAsync(long[] IDs, int numHops) {
+            return base.Channel.GetChildStructuresInNetworkAsync(IDs, numHops);
+        }
+        
+        public AnnotationVizLib.WCFClient.AnnotationService.StructureLink[] GetStructureLinksInNetwork(long[] IDs, int numHops) {
             return base.Channel.GetStructureLinksInNetwork(IDs, numHops);
+        }
+        
+        public System.Threading.Tasks.Task<AnnotationVizLib.WCFClient.AnnotationService.StructureLink[]> GetStructureLinksInNetworkAsync(long[] IDs, int numHops) {
+            return base.Channel.GetStructureLinksInNetworkAsync(IDs, numHops);
         }
         
         public long NumberOfLocationsForStructure(long structureID) {
             return base.Channel.NumberOfLocationsForStructure(structureID);
         }
         
-        public long[] UpdateStructures(AnnotationVizLib.AnnotationService.Structure[] structure) {
+        public System.Threading.Tasks.Task<long> NumberOfLocationsForStructureAsync(long structureID) {
+            return base.Channel.NumberOfLocationsForStructureAsync(structureID);
+        }
+        
+        public long[] UpdateStructures(AnnotationVizLib.WCFClient.AnnotationService.Structure[] structure) {
             return base.Channel.UpdateStructures(structure);
         }
         
-        public void UpdateStructureLinks(AnnotationVizLib.AnnotationService.StructureLink[] structureLinks) {
+        public System.Threading.Tasks.Task<long[]> UpdateStructuresAsync(AnnotationVizLib.WCFClient.AnnotationService.Structure[] structure) {
+            return base.Channel.UpdateStructuresAsync(structure);
+        }
+        
+        public void UpdateStructureLinks(AnnotationVizLib.WCFClient.AnnotationService.StructureLink[] structureLinks) {
             base.Channel.UpdateStructureLinks(structureLinks);
+        }
+        
+        public System.Threading.Tasks.Task UpdateStructureLinksAsync(AnnotationVizLib.WCFClient.AnnotationService.StructureLink[] structureLinks) {
+            return base.Channel.UpdateStructureLinksAsync(structureLinks);
         }
         
         public long[] GetUnfinishedLocations(long structureID) {
             return base.Channel.GetUnfinishedLocations(structureID);
         }
         
-        public AnnotationVizLib.AnnotationService.LocationPositionOnly[] GetUnfinishedLocationsWithPosition(long structureID) {
+        public System.Threading.Tasks.Task<long[]> GetUnfinishedLocationsAsync(long structureID) {
+            return base.Channel.GetUnfinishedLocationsAsync(structureID);
+        }
+        
+        public AnnotationVizLib.WCFClient.AnnotationService.LocationPositionOnly[] GetUnfinishedLocationsWithPosition(long structureID) {
             return base.Channel.GetUnfinishedLocationsWithPosition(structureID);
         }
         
-        public AnnotationVizLib.AnnotationService.Structure[] GetStructuresOfType(long typeID) {
+        public System.Threading.Tasks.Task<AnnotationVizLib.WCFClient.AnnotationService.LocationPositionOnly[]> GetUnfinishedLocationsWithPositionAsync(long structureID) {
+            return base.Channel.GetUnfinishedLocationsWithPositionAsync(structureID);
+        }
+        
+        public AnnotationVizLib.WCFClient.AnnotationService.Structure[] GetStructuresOfType(long typeID) {
             return base.Channel.GetStructuresOfType(typeID);
+        }
+        
+        public System.Threading.Tasks.Task<AnnotationVizLib.WCFClient.AnnotationService.Structure[]> GetStructuresOfTypeAsync(long typeID) {
+            return base.Channel.GetStructuresOfTypeAsync(typeID);
         }
         
         public long Merge(long KeepID, long MergeID) {
             return base.Channel.Merge(KeepID, MergeID);
         }
         
-        public long Split(long StructureA, AnnotationVizLib.AnnotationService.LocationLink locLink) {
+        public System.Threading.Tasks.Task<long> MergeAsync(long KeepID, long MergeID) {
+            return base.Channel.MergeAsync(KeepID, MergeID);
+        }
+        
+        public long Split(long StructureA, AnnotationVizLib.WCFClient.AnnotationService.LocationLink locLink) {
             return base.Channel.Split(StructureA, locLink);
         }
         
-        public AnnotationVizLib.AnnotationService.StructureHistory[] GetStructureChangeLog(System.Nullable<long> structure_id, System.Nullable<System.DateTime> begin_time, System.Nullable<System.DateTime> end_time) {
+        public System.Threading.Tasks.Task<long> SplitAsync(long StructureA, AnnotationVizLib.WCFClient.AnnotationService.LocationLink locLink) {
+            return base.Channel.SplitAsync(StructureA, locLink);
+        }
+        
+        public AnnotationVizLib.WCFClient.AnnotationService.StructureHistory[] GetStructureChangeLog(System.Nullable<long> structure_id, System.Nullable<System.DateTime> begin_time, System.Nullable<System.DateTime> end_time) {
             return base.Channel.GetStructureChangeLog(structure_id, begin_time, end_time);
+        }
+        
+        public System.Threading.Tasks.Task<AnnotationVizLib.WCFClient.AnnotationService.StructureHistory[]> GetStructureChangeLogAsync(System.Nullable<long> structure_id, System.Nullable<System.DateTime> begin_time, System.Nullable<System.DateTime> end_time) {
+            return base.Channel.GetStructureChangeLogAsync(structure_id, begin_time, end_time);
         }
     }
     
@@ -298,56 +699,391 @@ namespace AnnotationVizLibTests.AnnotationService {
     public interface IAnnotateLocations {
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateLocations/CreateLocation", ReplyAction="http://tempuri.org/IAnnotateLocations/CreateLocationResponse")]
-        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(AnnotationVizLib.AnnotationService.LocationHistory))]
-        AnnotationVizLib.AnnotationService.Location CreateLocation(AnnotationVizLib.AnnotationService.Location obj, long[] LinkedIDs);
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(AnnotationVizLib.WCFClient.AnnotationService.LocationHistory))]
+        AnnotationVizLib.WCFClient.AnnotationService.Location CreateLocation(AnnotationVizLib.WCFClient.AnnotationService.Location obj, long[] LinkedIDs);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateLocations/CreateLocation", ReplyAction="http://tempuri.org/IAnnotateLocations/CreateLocationResponse")]
+        System.Threading.Tasks.Task<AnnotationVizLib.WCFClient.AnnotationService.Location> CreateLocationAsync(AnnotationVizLib.WCFClient.AnnotationService.Location obj, long[] LinkedIDs);
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateLocations/GetLocationByID", ReplyAction="http://tempuri.org/IAnnotateLocations/GetLocationByIDResponse")]
-        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(AnnotationVizLib.AnnotationService.LocationHistory))]
-        AnnotationVizLib.AnnotationService.Location GetLocationByID(long ID);
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(AnnotationVizLib.WCFClient.AnnotationService.LocationHistory))]
+        AnnotationVizLib.WCFClient.AnnotationService.Location GetLocationByID(long ID);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateLocations/GetLocationByID", ReplyAction="http://tempuri.org/IAnnotateLocations/GetLocationByIDResponse")]
+        System.Threading.Tasks.Task<AnnotationVizLib.WCFClient.AnnotationService.Location> GetLocationByIDAsync(long ID);
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateLocations/GetLocationsByID", ReplyAction="http://tempuri.org/IAnnotateLocations/GetLocationsByIDResponse")]
-        AnnotationVizLib.AnnotationService.Location[] GetLocationsByID(long[] IDs);
+        AnnotationVizLib.WCFClient.AnnotationService.Location[] GetLocationsByID(long[] IDs);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateLocations/GetLocationsByID", ReplyAction="http://tempuri.org/IAnnotateLocations/GetLocationsByIDResponse")]
+        System.Threading.Tasks.Task<AnnotationVizLib.WCFClient.AnnotationService.Location[]> GetLocationsByIDAsync(long[] IDs);
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateLocations/GetLastModifiedLocation", ReplyAction="http://tempuri.org/IAnnotateLocations/GetLastModifiedLocationResponse")]
-        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(AnnotationVizLib.AnnotationService.LocationHistory))]
-        AnnotationVizLib.AnnotationService.Location GetLastModifiedLocation();
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(AnnotationVizLib.WCFClient.AnnotationService.LocationHistory))]
+        AnnotationVizLib.WCFClient.AnnotationService.Location GetLastModifiedLocation();
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateLocations/GetLastModifiedLocation", ReplyAction="http://tempuri.org/IAnnotateLocations/GetLastModifiedLocationResponse")]
+        System.Threading.Tasks.Task<AnnotationVizLib.WCFClient.AnnotationService.Location> GetLastModifiedLocationAsync();
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateLocations/GetLinkedLocations", ReplyAction="http://tempuri.org/IAnnotateLocations/GetLinkedLocationsResponse")]
         long[] GetLinkedLocations(long ID);
         
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateLocations/GetLinkedLocations", ReplyAction="http://tempuri.org/IAnnotateLocations/GetLinkedLocationsResponse")]
+        System.Threading.Tasks.Task<long[]> GetLinkedLocationsAsync(long ID);
+        
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateLocations/GetLocationsForSection", ReplyAction="http://tempuri.org/IAnnotateLocations/GetLocationsForSectionResponse")]
-        AnnotationVizLib.AnnotationService.Location[] GetLocationsForSection(out long QueryExecutedTime, long section);
+        AnnotationVizLibTests.AnnotationService.GetLocationsForSectionResponse GetLocationsForSection(AnnotationVizLibTests.AnnotationService.GetLocationsForSectionRequest request);
+        
+        // CODEGEN: Generating message contract since the operation has multiple return values.
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateLocations/GetLocationsForSection", ReplyAction="http://tempuri.org/IAnnotateLocations/GetLocationsForSectionResponse")]
+        System.Threading.Tasks.Task<AnnotationVizLibTests.AnnotationService.GetLocationsForSectionResponse> GetLocationsForSectionAsync(AnnotationVizLibTests.AnnotationService.GetLocationsForSectionRequest request);
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateLocations/GetLocationsForStructure", ReplyAction="http://tempuri.org/IAnnotateLocations/GetLocationsForStructureResponse")]
-        AnnotationVizLib.AnnotationService.Location[] GetLocationsForStructure(long structureID);
+        AnnotationVizLib.WCFClient.AnnotationService.Location[] GetLocationsForStructure(long structureID);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateLocations/GetLocationsForStructure", ReplyAction="http://tempuri.org/IAnnotateLocations/GetLocationsForStructureResponse")]
+        System.Threading.Tasks.Task<AnnotationVizLib.WCFClient.AnnotationService.Location[]> GetLocationsForStructureAsync(long structureID);
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateLocations/GetLocationChangesInMosaicRegion", ReplyAction="http://tempuri.org/IAnnotateLocations/GetLocationChangesInMosaicRegionResponse")]
-        AnnotationVizLib.AnnotationService.Location[] GetLocationChangesInMosaicRegion(out long QueryExecutedTime, out long[] DeletedIDs, long section, AnnotationVizLib.AnnotationService.BoundingRectangle bbox, double MinRadius, System.Nullable<long> ModifiedAfterThisUtcTime);
+        AnnotationVizLibTests.AnnotationService.GetLocationChangesInMosaicRegionResponse GetLocationChangesInMosaicRegion(AnnotationVizLibTests.AnnotationService.GetLocationChangesInMosaicRegionRequest request);
+        
+        // CODEGEN: Generating message contract since the operation has multiple return values.
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateLocations/GetLocationChangesInMosaicRegion", ReplyAction="http://tempuri.org/IAnnotateLocations/GetLocationChangesInMosaicRegionResponse")]
+        System.Threading.Tasks.Task<AnnotationVizLibTests.AnnotationService.GetLocationChangesInMosaicRegionResponse> GetLocationChangesInMosaicRegionAsync(AnnotationVizLibTests.AnnotationService.GetLocationChangesInMosaicRegionRequest request);
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateLocations/GetAnnotationsInMosaicRegion", ReplyAction="http://tempuri.org/IAnnotateLocations/GetAnnotationsInMosaicRegionResponse")]
-        AnnotationVizLib.AnnotationService.AnnotationSet GetAnnotationsInMosaicRegion(out long QueryExecutedTime, out long[] DeletedIDs, long section, AnnotationVizLib.AnnotationService.BoundingRectangle bbox, double MinRadius, System.Nullable<long> ModifiedAfterThisUtcTime);
+        AnnotationVizLibTests.AnnotationService.GetAnnotationsInMosaicRegionResponse GetAnnotationsInMosaicRegion(AnnotationVizLibTests.AnnotationService.GetAnnotationsInMosaicRegionRequest request);
+        
+        // CODEGEN: Generating message contract since the operation has multiple return values.
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateLocations/GetAnnotationsInMosaicRegion", ReplyAction="http://tempuri.org/IAnnotateLocations/GetAnnotationsInMosaicRegionResponse")]
+        System.Threading.Tasks.Task<AnnotationVizLibTests.AnnotationService.GetAnnotationsInMosaicRegionResponse> GetAnnotationsInMosaicRegionAsync(AnnotationVizLibTests.AnnotationService.GetAnnotationsInMosaicRegionRequest request);
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateLocations/GetLocationChanges", ReplyAction="http://tempuri.org/IAnnotateLocations/GetLocationChangesResponse")]
-        AnnotationVizLib.AnnotationService.Location[] GetLocationChanges(out long QueryExecutedTime, out long[] DeletedIDs, long section, long ModifiedAfterThisUtcTime);
+        AnnotationVizLibTests.AnnotationService.GetLocationChangesResponse GetLocationChanges(AnnotationVizLibTests.AnnotationService.GetLocationChangesRequest request);
+        
+        // CODEGEN: Generating message contract since the operation has multiple return values.
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateLocations/GetLocationChanges", ReplyAction="http://tempuri.org/IAnnotateLocations/GetLocationChangesResponse")]
+        System.Threading.Tasks.Task<AnnotationVizLibTests.AnnotationService.GetLocationChangesResponse> GetLocationChangesAsync(AnnotationVizLibTests.AnnotationService.GetLocationChangesRequest request);
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateLocations/Update", ReplyAction="http://tempuri.org/IAnnotateLocations/UpdateResponse")]
-        long[] Update(AnnotationVizLib.AnnotationService.Location[] locations);
+        long[] Update(AnnotationVizLib.WCFClient.AnnotationService.Location[] locations);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateLocations/Update", ReplyAction="http://tempuri.org/IAnnotateLocations/UpdateResponse")]
+        System.Threading.Tasks.Task<long[]> UpdateAsync(AnnotationVizLib.WCFClient.AnnotationService.Location[] locations);
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateLocations/CreateLocationLink", ReplyAction="http://tempuri.org/IAnnotateLocations/CreateLocationLinkResponse")]
         void CreateLocationLink(long SourceID, long TargetID);
         
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateLocations/CreateLocationLink", ReplyAction="http://tempuri.org/IAnnotateLocations/CreateLocationLinkResponse")]
+        System.Threading.Tasks.Task CreateLocationLinkAsync(long SourceID, long TargetID);
+        
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateLocations/DeleteLocationLink", ReplyAction="http://tempuri.org/IAnnotateLocations/DeleteLocationLinkResponse")]
         void DeleteLocationLink(long SourceID, long TargetID);
         
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateLocations/DeleteLocationLink", ReplyAction="http://tempuri.org/IAnnotateLocations/DeleteLocationLinkResponse")]
+        System.Threading.Tasks.Task DeleteLocationLinkAsync(long SourceID, long TargetID);
+        
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateLocations/GetLocationLinksForSection", ReplyAction="http://tempuri.org/IAnnotateLocations/GetLocationLinksForSectionResponse")]
-        AnnotationVizLib.AnnotationService.LocationLink[] GetLocationLinksForSection(out long QueryExecutedTime, out AnnotationVizLib.AnnotationService.LocationLink[] DeletedLinks, long section, long ModifiedAfterThisTime);
+        AnnotationVizLibTests.AnnotationService.GetLocationLinksForSectionResponse GetLocationLinksForSection(AnnotationVizLibTests.AnnotationService.GetLocationLinksForSectionRequest request);
+        
+        // CODEGEN: Generating message contract since the operation has multiple return values.
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateLocations/GetLocationLinksForSection", ReplyAction="http://tempuri.org/IAnnotateLocations/GetLocationLinksForSectionResponse")]
+        System.Threading.Tasks.Task<AnnotationVizLibTests.AnnotationService.GetLocationLinksForSectionResponse> GetLocationLinksForSectionAsync(AnnotationVizLibTests.AnnotationService.GetLocationLinksForSectionRequest request);
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateLocations/GetLocationLinksForSectionInMosaicRegion", ReplyAction="http://tempuri.org/IAnnotateLocations/GetLocationLinksForSectionInMosaicRegionRes" +
             "ponse")]
-        AnnotationVizLib.AnnotationService.LocationLink[] GetLocationLinksForSectionInMosaicRegion(out long QueryExecutedTime, out AnnotationVizLib.AnnotationService.LocationLink[] DeletedLinks, long section, AnnotationVizLib.AnnotationService.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisUtcTime);
+        AnnotationVizLibTests.AnnotationService.GetLocationLinksForSectionInMosaicRegionResponse GetLocationLinksForSectionInMosaicRegion(AnnotationVizLibTests.AnnotationService.GetLocationLinksForSectionInMosaicRegionRequest request);
+        
+        // CODEGEN: Generating message contract since the operation has multiple return values.
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateLocations/GetLocationLinksForSectionInMosaicRegion", ReplyAction="http://tempuri.org/IAnnotateLocations/GetLocationLinksForSectionInMosaicRegionRes" +
+            "ponse")]
+        System.Threading.Tasks.Task<AnnotationVizLibTests.AnnotationService.GetLocationLinksForSectionInMosaicRegionResponse> GetLocationLinksForSectionInMosaicRegionAsync(AnnotationVizLibTests.AnnotationService.GetLocationLinksForSectionInMosaicRegionRequest request);
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateLocations/GetLocationChangeLog", ReplyAction="http://tempuri.org/IAnnotateLocations/GetLocationChangeLogResponse")]
-        AnnotationVizLib.AnnotationService.LocationHistory[] GetLocationChangeLog(System.Nullable<long> structure_id, System.Nullable<System.DateTime> begin_time, System.Nullable<System.DateTime> end_time);
+        AnnotationVizLib.WCFClient.AnnotationService.LocationHistory[] GetLocationChangeLog(System.Nullable<long> structure_id, System.Nullable<System.DateTime> begin_time, System.Nullable<System.DateTime> end_time);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateLocations/GetLocationChangeLog", ReplyAction="http://tempuri.org/IAnnotateLocations/GetLocationChangeLogResponse")]
+        System.Threading.Tasks.Task<AnnotationVizLib.WCFClient.AnnotationService.LocationHistory[]> GetLocationChangeLogAsync(System.Nullable<long> structure_id, System.Nullable<System.DateTime> begin_time, System.Nullable<System.DateTime> end_time);
+    }
+    
+    [System.Diagnostics.DebuggerStepThroughAttribute()]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
+    [System.ServiceModel.MessageContractAttribute(WrapperName="GetLocationsForSection", WrapperNamespace="http://tempuri.org/", IsWrapped=true)]
+    public partial class GetLocationsForSectionRequest {
+        
+        [System.ServiceModel.MessageBodyMemberAttribute(Namespace="http://tempuri.org/", Order=0)]
+        public long section;
+        
+        public GetLocationsForSectionRequest() {
+        }
+        
+        public GetLocationsForSectionRequest(long section) {
+            this.section = section;
+        }
+    }
+    
+    [System.Diagnostics.DebuggerStepThroughAttribute()]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
+    [System.ServiceModel.MessageContractAttribute(WrapperName="GetLocationsForSectionResponse", WrapperNamespace="http://tempuri.org/", IsWrapped=true)]
+    public partial class GetLocationsForSectionResponse {
+        
+        [System.ServiceModel.MessageBodyMemberAttribute(Namespace="http://tempuri.org/", Order=0)]
+        public AnnotationVizLib.WCFClient.AnnotationService.Location[] GetLocationsForSectionResult;
+        
+        [System.ServiceModel.MessageBodyMemberAttribute(Namespace="http://tempuri.org/", Order=1)]
+        public long QueryExecutedTime;
+        
+        public GetLocationsForSectionResponse() {
+        }
+        
+        public GetLocationsForSectionResponse(AnnotationVizLib.WCFClient.AnnotationService.Location[] GetLocationsForSectionResult, long QueryExecutedTime) {
+            this.GetLocationsForSectionResult = GetLocationsForSectionResult;
+            this.QueryExecutedTime = QueryExecutedTime;
+        }
+    }
+    
+    [System.Diagnostics.DebuggerStepThroughAttribute()]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
+    [System.ServiceModel.MessageContractAttribute(WrapperName="GetLocationChangesInMosaicRegion", WrapperNamespace="http://tempuri.org/", IsWrapped=true)]
+    public partial class GetLocationChangesInMosaicRegionRequest {
+        
+        [System.ServiceModel.MessageBodyMemberAttribute(Namespace="http://tempuri.org/", Order=0)]
+        public long section;
+        
+        [System.ServiceModel.MessageBodyMemberAttribute(Namespace="http://tempuri.org/", Order=1)]
+        public AnnotationVizLib.WCFClient.AnnotationService.BoundingRectangle bbox;
+        
+        [System.ServiceModel.MessageBodyMemberAttribute(Namespace="http://tempuri.org/", Order=2)]
+        public double MinRadius;
+        
+        [System.ServiceModel.MessageBodyMemberAttribute(Namespace="http://tempuri.org/", Order=3)]
+        public System.Nullable<long> ModifiedAfterThisUtcTime;
+        
+        public GetLocationChangesInMosaicRegionRequest() {
+        }
+        
+        public GetLocationChangesInMosaicRegionRequest(long section, AnnotationVizLib.WCFClient.AnnotationService.BoundingRectangle bbox, double MinRadius, System.Nullable<long> ModifiedAfterThisUtcTime) {
+            this.section = section;
+            this.bbox = bbox;
+            this.MinRadius = MinRadius;
+            this.ModifiedAfterThisUtcTime = ModifiedAfterThisUtcTime;
+        }
+    }
+    
+    [System.Diagnostics.DebuggerStepThroughAttribute()]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
+    [System.ServiceModel.MessageContractAttribute(WrapperName="GetLocationChangesInMosaicRegionResponse", WrapperNamespace="http://tempuri.org/", IsWrapped=true)]
+    public partial class GetLocationChangesInMosaicRegionResponse {
+        
+        [System.ServiceModel.MessageBodyMemberAttribute(Namespace="http://tempuri.org/", Order=0)]
+        public AnnotationVizLib.WCFClient.AnnotationService.Location[] GetLocationChangesInMosaicRegionResult;
+        
+        [System.ServiceModel.MessageBodyMemberAttribute(Namespace="http://tempuri.org/", Order=1)]
+        public long QueryExecutedTime;
+        
+        [System.ServiceModel.MessageBodyMemberAttribute(Namespace="http://tempuri.org/", Order=2)]
+        public long[] DeletedIDs;
+        
+        public GetLocationChangesInMosaicRegionResponse() {
+        }
+        
+        public GetLocationChangesInMosaicRegionResponse(AnnotationVizLib.WCFClient.AnnotationService.Location[] GetLocationChangesInMosaicRegionResult, long QueryExecutedTime, long[] DeletedIDs) {
+            this.GetLocationChangesInMosaicRegionResult = GetLocationChangesInMosaicRegionResult;
+            this.QueryExecutedTime = QueryExecutedTime;
+            this.DeletedIDs = DeletedIDs;
+        }
+    }
+    
+    [System.Diagnostics.DebuggerStepThroughAttribute()]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
+    [System.ServiceModel.MessageContractAttribute(WrapperName="GetAnnotationsInMosaicRegion", WrapperNamespace="http://tempuri.org/", IsWrapped=true)]
+    public partial class GetAnnotationsInMosaicRegionRequest {
+        
+        [System.ServiceModel.MessageBodyMemberAttribute(Namespace="http://tempuri.org/", Order=0)]
+        public long section;
+        
+        [System.ServiceModel.MessageBodyMemberAttribute(Namespace="http://tempuri.org/", Order=1)]
+        public AnnotationVizLib.WCFClient.AnnotationService.BoundingRectangle bbox;
+        
+        [System.ServiceModel.MessageBodyMemberAttribute(Namespace="http://tempuri.org/", Order=2)]
+        public double MinRadius;
+        
+        [System.ServiceModel.MessageBodyMemberAttribute(Namespace="http://tempuri.org/", Order=3)]
+        public System.Nullable<long> ModifiedAfterThisUtcTime;
+        
+        public GetAnnotationsInMosaicRegionRequest() {
+        }
+        
+        public GetAnnotationsInMosaicRegionRequest(long section, AnnotationVizLib.WCFClient.AnnotationService.BoundingRectangle bbox, double MinRadius, System.Nullable<long> ModifiedAfterThisUtcTime) {
+            this.section = section;
+            this.bbox = bbox;
+            this.MinRadius = MinRadius;
+            this.ModifiedAfterThisUtcTime = ModifiedAfterThisUtcTime;
+        }
+    }
+    
+    [System.Diagnostics.DebuggerStepThroughAttribute()]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
+    [System.ServiceModel.MessageContractAttribute(WrapperName="GetAnnotationsInMosaicRegionResponse", WrapperNamespace="http://tempuri.org/", IsWrapped=true)]
+    public partial class GetAnnotationsInMosaicRegionResponse {
+        
+        [System.ServiceModel.MessageBodyMemberAttribute(Namespace="http://tempuri.org/", Order=0)]
+        public AnnotationVizLib.WCFClient.AnnotationService.AnnotationSet GetAnnotationsInMosaicRegionResult;
+        
+        [System.ServiceModel.MessageBodyMemberAttribute(Namespace="http://tempuri.org/", Order=1)]
+        public long QueryExecutedTime;
+        
+        [System.ServiceModel.MessageBodyMemberAttribute(Namespace="http://tempuri.org/", Order=2)]
+        public long[] DeletedIDs;
+        
+        public GetAnnotationsInMosaicRegionResponse() {
+        }
+        
+        public GetAnnotationsInMosaicRegionResponse(AnnotationVizLib.WCFClient.AnnotationService.AnnotationSet GetAnnotationsInMosaicRegionResult, long QueryExecutedTime, long[] DeletedIDs) {
+            this.GetAnnotationsInMosaicRegionResult = GetAnnotationsInMosaicRegionResult;
+            this.QueryExecutedTime = QueryExecutedTime;
+            this.DeletedIDs = DeletedIDs;
+        }
+    }
+    
+    [System.Diagnostics.DebuggerStepThroughAttribute()]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
+    [System.ServiceModel.MessageContractAttribute(WrapperName="GetLocationChanges", WrapperNamespace="http://tempuri.org/", IsWrapped=true)]
+    public partial class GetLocationChangesRequest {
+        
+        [System.ServiceModel.MessageBodyMemberAttribute(Namespace="http://tempuri.org/", Order=0)]
+        public long section;
+        
+        [System.ServiceModel.MessageBodyMemberAttribute(Namespace="http://tempuri.org/", Order=1)]
+        public long ModifiedAfterThisUtcTime;
+        
+        public GetLocationChangesRequest() {
+        }
+        
+        public GetLocationChangesRequest(long section, long ModifiedAfterThisUtcTime) {
+            this.section = section;
+            this.ModifiedAfterThisUtcTime = ModifiedAfterThisUtcTime;
+        }
+    }
+    
+    [System.Diagnostics.DebuggerStepThroughAttribute()]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
+    [System.ServiceModel.MessageContractAttribute(WrapperName="GetLocationChangesResponse", WrapperNamespace="http://tempuri.org/", IsWrapped=true)]
+    public partial class GetLocationChangesResponse {
+        
+        [System.ServiceModel.MessageBodyMemberAttribute(Namespace="http://tempuri.org/", Order=0)]
+        public AnnotationVizLib.WCFClient.AnnotationService.Location[] GetLocationChangesResult;
+        
+        [System.ServiceModel.MessageBodyMemberAttribute(Namespace="http://tempuri.org/", Order=1)]
+        public long QueryExecutedTime;
+        
+        [System.ServiceModel.MessageBodyMemberAttribute(Namespace="http://tempuri.org/", Order=2)]
+        public long[] DeletedIDs;
+        
+        public GetLocationChangesResponse() {
+        }
+        
+        public GetLocationChangesResponse(AnnotationVizLib.WCFClient.AnnotationService.Location[] GetLocationChangesResult, long QueryExecutedTime, long[] DeletedIDs) {
+            this.GetLocationChangesResult = GetLocationChangesResult;
+            this.QueryExecutedTime = QueryExecutedTime;
+            this.DeletedIDs = DeletedIDs;
+        }
+    }
+    
+    [System.Diagnostics.DebuggerStepThroughAttribute()]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
+    [System.ServiceModel.MessageContractAttribute(WrapperName="GetLocationLinksForSection", WrapperNamespace="http://tempuri.org/", IsWrapped=true)]
+    public partial class GetLocationLinksForSectionRequest {
+        
+        [System.ServiceModel.MessageBodyMemberAttribute(Namespace="http://tempuri.org/", Order=0)]
+        public long section;
+        
+        [System.ServiceModel.MessageBodyMemberAttribute(Namespace="http://tempuri.org/", Order=1)]
+        public long ModifiedAfterThisTime;
+        
+        public GetLocationLinksForSectionRequest() {
+        }
+        
+        public GetLocationLinksForSectionRequest(long section, long ModifiedAfterThisTime) {
+            this.section = section;
+            this.ModifiedAfterThisTime = ModifiedAfterThisTime;
+        }
+    }
+    
+    [System.Diagnostics.DebuggerStepThroughAttribute()]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
+    [System.ServiceModel.MessageContractAttribute(WrapperName="GetLocationLinksForSectionResponse", WrapperNamespace="http://tempuri.org/", IsWrapped=true)]
+    public partial class GetLocationLinksForSectionResponse {
+        
+        [System.ServiceModel.MessageBodyMemberAttribute(Namespace="http://tempuri.org/", Order=0)]
+        public AnnotationVizLib.WCFClient.AnnotationService.LocationLink[] GetLocationLinksForSectionResult;
+        
+        [System.ServiceModel.MessageBodyMemberAttribute(Namespace="http://tempuri.org/", Order=1)]
+        public long QueryExecutedTime;
+        
+        [System.ServiceModel.MessageBodyMemberAttribute(Namespace="http://tempuri.org/", Order=2)]
+        public AnnotationVizLib.WCFClient.AnnotationService.LocationLink[] DeletedLinks;
+        
+        public GetLocationLinksForSectionResponse() {
+        }
+        
+        public GetLocationLinksForSectionResponse(AnnotationVizLib.WCFClient.AnnotationService.LocationLink[] GetLocationLinksForSectionResult, long QueryExecutedTime, AnnotationVizLib.WCFClient.AnnotationService.LocationLink[] DeletedLinks) {
+            this.GetLocationLinksForSectionResult = GetLocationLinksForSectionResult;
+            this.QueryExecutedTime = QueryExecutedTime;
+            this.DeletedLinks = DeletedLinks;
+        }
+    }
+    
+    [System.Diagnostics.DebuggerStepThroughAttribute()]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
+    [System.ServiceModel.MessageContractAttribute(WrapperName="GetLocationLinksForSectionInMosaicRegion", WrapperNamespace="http://tempuri.org/", IsWrapped=true)]
+    public partial class GetLocationLinksForSectionInMosaicRegionRequest {
+        
+        [System.ServiceModel.MessageBodyMemberAttribute(Namespace="http://tempuri.org/", Order=0)]
+        public long section;
+        
+        [System.ServiceModel.MessageBodyMemberAttribute(Namespace="http://tempuri.org/", Order=1)]
+        public AnnotationVizLib.WCFClient.AnnotationService.BoundingRectangle bbox;
+        
+        [System.ServiceModel.MessageBodyMemberAttribute(Namespace="http://tempuri.org/", Order=2)]
+        public double MinRadius;
+        
+        [System.ServiceModel.MessageBodyMemberAttribute(Namespace="http://tempuri.org/", Order=3)]
+        public long ModifiedAfterThisUtcTime;
+        
+        public GetLocationLinksForSectionInMosaicRegionRequest() {
+        }
+        
+        public GetLocationLinksForSectionInMosaicRegionRequest(long section, AnnotationVizLib.WCFClient.AnnotationService.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisUtcTime) {
+            this.section = section;
+            this.bbox = bbox;
+            this.MinRadius = MinRadius;
+            this.ModifiedAfterThisUtcTime = ModifiedAfterThisUtcTime;
+        }
+    }
+    
+    [System.Diagnostics.DebuggerStepThroughAttribute()]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
+    [System.ServiceModel.MessageContractAttribute(WrapperName="GetLocationLinksForSectionInMosaicRegionResponse", WrapperNamespace="http://tempuri.org/", IsWrapped=true)]
+    public partial class GetLocationLinksForSectionInMosaicRegionResponse {
+        
+        [System.ServiceModel.MessageBodyMemberAttribute(Namespace="http://tempuri.org/", Order=0)]
+        public AnnotationVizLib.WCFClient.AnnotationService.LocationLink[] GetLocationLinksForSectionInMosaicRegionResult;
+        
+        [System.ServiceModel.MessageBodyMemberAttribute(Namespace="http://tempuri.org/", Order=1)]
+        public long QueryExecutedTime;
+        
+        [System.ServiceModel.MessageBodyMemberAttribute(Namespace="http://tempuri.org/", Order=2)]
+        public AnnotationVizLib.WCFClient.AnnotationService.LocationLink[] DeletedLinks;
+        
+        public GetLocationLinksForSectionInMosaicRegionResponse() {
+        }
+        
+        public GetLocationLinksForSectionInMosaicRegionResponse(AnnotationVizLib.WCFClient.AnnotationService.LocationLink[] GetLocationLinksForSectionInMosaicRegionResult, long QueryExecutedTime, AnnotationVizLib.WCFClient.AnnotationService.LocationLink[] DeletedLinks) {
+            this.GetLocationLinksForSectionInMosaicRegionResult = GetLocationLinksForSectionInMosaicRegionResult;
+            this.QueryExecutedTime = QueryExecutedTime;
+            this.DeletedLinks = DeletedLinks;
+        }
     }
     
     [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
@@ -377,68 +1113,202 @@ namespace AnnotationVizLibTests.AnnotationService {
                 base(binding, remoteAddress) {
         }
         
-        public AnnotationVizLib.AnnotationService.Location CreateLocation(AnnotationVizLib.AnnotationService.Location obj, long[] LinkedIDs) {
+        public AnnotationVizLib.WCFClient.AnnotationService.Location CreateLocation(AnnotationVizLib.WCFClient.AnnotationService.Location obj, long[] LinkedIDs) {
             return base.Channel.CreateLocation(obj, LinkedIDs);
         }
         
-        public AnnotationVizLib.AnnotationService.Location GetLocationByID(long ID) {
+        public System.Threading.Tasks.Task<AnnotationVizLib.WCFClient.AnnotationService.Location> CreateLocationAsync(AnnotationVizLib.WCFClient.AnnotationService.Location obj, long[] LinkedIDs) {
+            return base.Channel.CreateLocationAsync(obj, LinkedIDs);
+        }
+        
+        public AnnotationVizLib.WCFClient.AnnotationService.Location GetLocationByID(long ID) {
             return base.Channel.GetLocationByID(ID);
         }
         
-        public AnnotationVizLib.AnnotationService.Location[] GetLocationsByID(long[] IDs) {
+        public System.Threading.Tasks.Task<AnnotationVizLib.WCFClient.AnnotationService.Location> GetLocationByIDAsync(long ID) {
+            return base.Channel.GetLocationByIDAsync(ID);
+        }
+        
+        public AnnotationVizLib.WCFClient.AnnotationService.Location[] GetLocationsByID(long[] IDs) {
             return base.Channel.GetLocationsByID(IDs);
         }
         
-        public AnnotationVizLib.AnnotationService.Location GetLastModifiedLocation() {
+        public System.Threading.Tasks.Task<AnnotationVizLib.WCFClient.AnnotationService.Location[]> GetLocationsByIDAsync(long[] IDs) {
+            return base.Channel.GetLocationsByIDAsync(IDs);
+        }
+        
+        public AnnotationVizLib.WCFClient.AnnotationService.Location GetLastModifiedLocation() {
             return base.Channel.GetLastModifiedLocation();
+        }
+        
+        public System.Threading.Tasks.Task<AnnotationVizLib.WCFClient.AnnotationService.Location> GetLastModifiedLocationAsync() {
+            return base.Channel.GetLastModifiedLocationAsync();
         }
         
         public long[] GetLinkedLocations(long ID) {
             return base.Channel.GetLinkedLocations(ID);
         }
         
-        public AnnotationVizLib.AnnotationService.Location[] GetLocationsForSection(out long QueryExecutedTime, long section) {
-            return base.Channel.GetLocationsForSection(out QueryExecutedTime, section);
+        public System.Threading.Tasks.Task<long[]> GetLinkedLocationsAsync(long ID) {
+            return base.Channel.GetLinkedLocationsAsync(ID);
         }
         
-        public AnnotationVizLib.AnnotationService.Location[] GetLocationsForStructure(long structureID) {
+        [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
+        AnnotationVizLibTests.AnnotationService.GetLocationsForSectionResponse AnnotationVizLibTests.AnnotationService.IAnnotateLocations.GetLocationsForSection(AnnotationVizLibTests.AnnotationService.GetLocationsForSectionRequest request) {
+            return base.Channel.GetLocationsForSection(request);
+        }
+        
+        public AnnotationVizLib.WCFClient.AnnotationService.Location[] GetLocationsForSection(long section, out long QueryExecutedTime) {
+            AnnotationVizLibTests.AnnotationService.GetLocationsForSectionRequest inValue = new AnnotationVizLibTests.AnnotationService.GetLocationsForSectionRequest();
+            inValue.section = section;
+            AnnotationVizLibTests.AnnotationService.GetLocationsForSectionResponse retVal = ((AnnotationVizLibTests.AnnotationService.IAnnotateLocations)(this)).GetLocationsForSection(inValue);
+            QueryExecutedTime = retVal.QueryExecutedTime;
+            return retVal.GetLocationsForSectionResult;
+        }
+        
+        public System.Threading.Tasks.Task<AnnotationVizLibTests.AnnotationService.GetLocationsForSectionResponse> GetLocationsForSectionAsync(AnnotationVizLibTests.AnnotationService.GetLocationsForSectionRequest request) {
+            return base.Channel.GetLocationsForSectionAsync(request);
+        }
+        
+        public AnnotationVizLib.WCFClient.AnnotationService.Location[] GetLocationsForStructure(long structureID) {
             return base.Channel.GetLocationsForStructure(structureID);
         }
         
-        public AnnotationVizLib.AnnotationService.Location[] GetLocationChangesInMosaicRegion(out long QueryExecutedTime, out long[] DeletedIDs, long section, AnnotationVizLib.AnnotationService.BoundingRectangle bbox, double MinRadius, System.Nullable<long> ModifiedAfterThisUtcTime) {
-            return base.Channel.GetLocationChangesInMosaicRegion(out QueryExecutedTime, out DeletedIDs, section, bbox, MinRadius, ModifiedAfterThisUtcTime);
+        public System.Threading.Tasks.Task<AnnotationVizLib.WCFClient.AnnotationService.Location[]> GetLocationsForStructureAsync(long structureID) {
+            return base.Channel.GetLocationsForStructureAsync(structureID);
         }
         
-        public AnnotationVizLib.AnnotationService.AnnotationSet GetAnnotationsInMosaicRegion(out long QueryExecutedTime, out long[] DeletedIDs, long section, AnnotationVizLib.AnnotationService.BoundingRectangle bbox, double MinRadius, System.Nullable<long> ModifiedAfterThisUtcTime) {
-            return base.Channel.GetAnnotationsInMosaicRegion(out QueryExecutedTime, out DeletedIDs, section, bbox, MinRadius, ModifiedAfterThisUtcTime);
+        [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
+        AnnotationVizLibTests.AnnotationService.GetLocationChangesInMosaicRegionResponse AnnotationVizLibTests.AnnotationService.IAnnotateLocations.GetLocationChangesInMosaicRegion(AnnotationVizLibTests.AnnotationService.GetLocationChangesInMosaicRegionRequest request) {
+            return base.Channel.GetLocationChangesInMosaicRegion(request);
         }
         
-        public AnnotationVizLib.AnnotationService.Location[] GetLocationChanges(out long QueryExecutedTime, out long[] DeletedIDs, long section, long ModifiedAfterThisUtcTime) {
-            return base.Channel.GetLocationChanges(out QueryExecutedTime, out DeletedIDs, section, ModifiedAfterThisUtcTime);
+        public AnnotationVizLib.WCFClient.AnnotationService.Location[] GetLocationChangesInMosaicRegion(long section, AnnotationVizLib.WCFClient.AnnotationService.BoundingRectangle bbox, double MinRadius, System.Nullable<long> ModifiedAfterThisUtcTime, out long QueryExecutedTime, out long[] DeletedIDs) {
+            AnnotationVizLibTests.AnnotationService.GetLocationChangesInMosaicRegionRequest inValue = new AnnotationVizLibTests.AnnotationService.GetLocationChangesInMosaicRegionRequest();
+            inValue.section = section;
+            inValue.bbox = bbox;
+            inValue.MinRadius = MinRadius;
+            inValue.ModifiedAfterThisUtcTime = ModifiedAfterThisUtcTime;
+            AnnotationVizLibTests.AnnotationService.GetLocationChangesInMosaicRegionResponse retVal = ((AnnotationVizLibTests.AnnotationService.IAnnotateLocations)(this)).GetLocationChangesInMosaicRegion(inValue);
+            QueryExecutedTime = retVal.QueryExecutedTime;
+            DeletedIDs = retVal.DeletedIDs;
+            return retVal.GetLocationChangesInMosaicRegionResult;
         }
         
-        public long[] Update(AnnotationVizLib.AnnotationService.Location[] locations) {
+        public System.Threading.Tasks.Task<AnnotationVizLibTests.AnnotationService.GetLocationChangesInMosaicRegionResponse> GetLocationChangesInMosaicRegionAsync(AnnotationVizLibTests.AnnotationService.GetLocationChangesInMosaicRegionRequest request) {
+            return base.Channel.GetLocationChangesInMosaicRegionAsync(request);
+        }
+        
+        [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
+        AnnotationVizLibTests.AnnotationService.GetAnnotationsInMosaicRegionResponse AnnotationVizLibTests.AnnotationService.IAnnotateLocations.GetAnnotationsInMosaicRegion(AnnotationVizLibTests.AnnotationService.GetAnnotationsInMosaicRegionRequest request) {
+            return base.Channel.GetAnnotationsInMosaicRegion(request);
+        }
+        
+        public AnnotationVizLib.WCFClient.AnnotationService.AnnotationSet GetAnnotationsInMosaicRegion(long section, AnnotationVizLib.WCFClient.AnnotationService.BoundingRectangle bbox, double MinRadius, System.Nullable<long> ModifiedAfterThisUtcTime, out long QueryExecutedTime, out long[] DeletedIDs) {
+            AnnotationVizLibTests.AnnotationService.GetAnnotationsInMosaicRegionRequest inValue = new AnnotationVizLibTests.AnnotationService.GetAnnotationsInMosaicRegionRequest();
+            inValue.section = section;
+            inValue.bbox = bbox;
+            inValue.MinRadius = MinRadius;
+            inValue.ModifiedAfterThisUtcTime = ModifiedAfterThisUtcTime;
+            AnnotationVizLibTests.AnnotationService.GetAnnotationsInMosaicRegionResponse retVal = ((AnnotationVizLibTests.AnnotationService.IAnnotateLocations)(this)).GetAnnotationsInMosaicRegion(inValue);
+            QueryExecutedTime = retVal.QueryExecutedTime;
+            DeletedIDs = retVal.DeletedIDs;
+            return retVal.GetAnnotationsInMosaicRegionResult;
+        }
+        
+        public System.Threading.Tasks.Task<AnnotationVizLibTests.AnnotationService.GetAnnotationsInMosaicRegionResponse> GetAnnotationsInMosaicRegionAsync(AnnotationVizLibTests.AnnotationService.GetAnnotationsInMosaicRegionRequest request) {
+            return base.Channel.GetAnnotationsInMosaicRegionAsync(request);
+        }
+        
+        [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
+        AnnotationVizLibTests.AnnotationService.GetLocationChangesResponse AnnotationVizLibTests.AnnotationService.IAnnotateLocations.GetLocationChanges(AnnotationVizLibTests.AnnotationService.GetLocationChangesRequest request) {
+            return base.Channel.GetLocationChanges(request);
+        }
+        
+        public AnnotationVizLib.WCFClient.AnnotationService.Location[] GetLocationChanges(long section, long ModifiedAfterThisUtcTime, out long QueryExecutedTime, out long[] DeletedIDs) {
+            AnnotationVizLibTests.AnnotationService.GetLocationChangesRequest inValue = new AnnotationVizLibTests.AnnotationService.GetLocationChangesRequest();
+            inValue.section = section;
+            inValue.ModifiedAfterThisUtcTime = ModifiedAfterThisUtcTime;
+            AnnotationVizLibTests.AnnotationService.GetLocationChangesResponse retVal = ((AnnotationVizLibTests.AnnotationService.IAnnotateLocations)(this)).GetLocationChanges(inValue);
+            QueryExecutedTime = retVal.QueryExecutedTime;
+            DeletedIDs = retVal.DeletedIDs;
+            return retVal.GetLocationChangesResult;
+        }
+        
+        public System.Threading.Tasks.Task<AnnotationVizLibTests.AnnotationService.GetLocationChangesResponse> GetLocationChangesAsync(AnnotationVizLibTests.AnnotationService.GetLocationChangesRequest request) {
+            return base.Channel.GetLocationChangesAsync(request);
+        }
+        
+        public long[] Update(AnnotationVizLib.WCFClient.AnnotationService.Location[] locations) {
             return base.Channel.Update(locations);
+        }
+        
+        public System.Threading.Tasks.Task<long[]> UpdateAsync(AnnotationVizLib.WCFClient.AnnotationService.Location[] locations) {
+            return base.Channel.UpdateAsync(locations);
         }
         
         public void CreateLocationLink(long SourceID, long TargetID) {
             base.Channel.CreateLocationLink(SourceID, TargetID);
         }
         
+        public System.Threading.Tasks.Task CreateLocationLinkAsync(long SourceID, long TargetID) {
+            return base.Channel.CreateLocationLinkAsync(SourceID, TargetID);
+        }
+        
         public void DeleteLocationLink(long SourceID, long TargetID) {
             base.Channel.DeleteLocationLink(SourceID, TargetID);
         }
         
-        public AnnotationVizLib.AnnotationService.LocationLink[] GetLocationLinksForSection(out long QueryExecutedTime, out AnnotationVizLib.AnnotationService.LocationLink[] DeletedLinks, long section, long ModifiedAfterThisTime) {
-            return base.Channel.GetLocationLinksForSection(out QueryExecutedTime, out DeletedLinks, section, ModifiedAfterThisTime);
+        public System.Threading.Tasks.Task DeleteLocationLinkAsync(long SourceID, long TargetID) {
+            return base.Channel.DeleteLocationLinkAsync(SourceID, TargetID);
         }
         
-        public AnnotationVizLib.AnnotationService.LocationLink[] GetLocationLinksForSectionInMosaicRegion(out long QueryExecutedTime, out AnnotationVizLib.AnnotationService.LocationLink[] DeletedLinks, long section, AnnotationVizLib.AnnotationService.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisUtcTime) {
-            return base.Channel.GetLocationLinksForSectionInMosaicRegion(out QueryExecutedTime, out DeletedLinks, section, bbox, MinRadius, ModifiedAfterThisUtcTime);
+        [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
+        AnnotationVizLibTests.AnnotationService.GetLocationLinksForSectionResponse AnnotationVizLibTests.AnnotationService.IAnnotateLocations.GetLocationLinksForSection(AnnotationVizLibTests.AnnotationService.GetLocationLinksForSectionRequest request) {
+            return base.Channel.GetLocationLinksForSection(request);
         }
         
-        public AnnotationVizLib.AnnotationService.LocationHistory[] GetLocationChangeLog(System.Nullable<long> structure_id, System.Nullable<System.DateTime> begin_time, System.Nullable<System.DateTime> end_time) {
+        public AnnotationVizLib.WCFClient.AnnotationService.LocationLink[] GetLocationLinksForSection(long section, long ModifiedAfterThisTime, out long QueryExecutedTime, out AnnotationVizLib.WCFClient.AnnotationService.LocationLink[] DeletedLinks) {
+            AnnotationVizLibTests.AnnotationService.GetLocationLinksForSectionRequest inValue = new AnnotationVizLibTests.AnnotationService.GetLocationLinksForSectionRequest();
+            inValue.section = section;
+            inValue.ModifiedAfterThisTime = ModifiedAfterThisTime;
+            AnnotationVizLibTests.AnnotationService.GetLocationLinksForSectionResponse retVal = ((AnnotationVizLibTests.AnnotationService.IAnnotateLocations)(this)).GetLocationLinksForSection(inValue);
+            QueryExecutedTime = retVal.QueryExecutedTime;
+            DeletedLinks = retVal.DeletedLinks;
+            return retVal.GetLocationLinksForSectionResult;
+        }
+        
+        public System.Threading.Tasks.Task<AnnotationVizLibTests.AnnotationService.GetLocationLinksForSectionResponse> GetLocationLinksForSectionAsync(AnnotationVizLibTests.AnnotationService.GetLocationLinksForSectionRequest request) {
+            return base.Channel.GetLocationLinksForSectionAsync(request);
+        }
+        
+        [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
+        AnnotationVizLibTests.AnnotationService.GetLocationLinksForSectionInMosaicRegionResponse AnnotationVizLibTests.AnnotationService.IAnnotateLocations.GetLocationLinksForSectionInMosaicRegion(AnnotationVizLibTests.AnnotationService.GetLocationLinksForSectionInMosaicRegionRequest request) {
+            return base.Channel.GetLocationLinksForSectionInMosaicRegion(request);
+        }
+        
+        public AnnotationVizLib.WCFClient.AnnotationService.LocationLink[] GetLocationLinksForSectionInMosaicRegion(long section, AnnotationVizLib.WCFClient.AnnotationService.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisUtcTime, out long QueryExecutedTime, out AnnotationVizLib.WCFClient.AnnotationService.LocationLink[] DeletedLinks) {
+            AnnotationVizLibTests.AnnotationService.GetLocationLinksForSectionInMosaicRegionRequest inValue = new AnnotationVizLibTests.AnnotationService.GetLocationLinksForSectionInMosaicRegionRequest();
+            inValue.section = section;
+            inValue.bbox = bbox;
+            inValue.MinRadius = MinRadius;
+            inValue.ModifiedAfterThisUtcTime = ModifiedAfterThisUtcTime;
+            AnnotationVizLibTests.AnnotationService.GetLocationLinksForSectionInMosaicRegionResponse retVal = ((AnnotationVizLibTests.AnnotationService.IAnnotateLocations)(this)).GetLocationLinksForSectionInMosaicRegion(inValue);
+            QueryExecutedTime = retVal.QueryExecutedTime;
+            DeletedLinks = retVal.DeletedLinks;
+            return retVal.GetLocationLinksForSectionInMosaicRegionResult;
+        }
+        
+        public System.Threading.Tasks.Task<AnnotationVizLibTests.AnnotationService.GetLocationLinksForSectionInMosaicRegionResponse> GetLocationLinksForSectionInMosaicRegionAsync(AnnotationVizLibTests.AnnotationService.GetLocationLinksForSectionInMosaicRegionRequest request) {
+            return base.Channel.GetLocationLinksForSectionInMosaicRegionAsync(request);
+        }
+        
+        public AnnotationVizLib.WCFClient.AnnotationService.LocationHistory[] GetLocationChangeLog(System.Nullable<long> structure_id, System.Nullable<System.DateTime> begin_time, System.Nullable<System.DateTime> end_time) {
             return base.Channel.GetLocationChangeLog(structure_id, begin_time, end_time);
+        }
+        
+        public System.Threading.Tasks.Task<AnnotationVizLib.WCFClient.AnnotationService.LocationHistory[]> GetLocationChangeLogAsync(System.Nullable<long> structure_id, System.Nullable<System.DateTime> begin_time, System.Nullable<System.DateTime> end_time) {
+            return base.Channel.GetLocationChangeLogAsync(structure_id, begin_time, end_time);
         }
     }
     
@@ -447,7 +1317,10 @@ namespace AnnotationVizLibTests.AnnotationService {
     public interface IVolumeMeta {
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IVolumeMeta/GetScale", ReplyAction="http://tempuri.org/IVolumeMeta/GetScaleResponse")]
-        AnnotationVizLib.AnnotationService.Scale GetScale();
+        AnnotationVizLib.WCFClient.AnnotationService.Scale GetScale();
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IVolumeMeta/GetScale", ReplyAction="http://tempuri.org/IVolumeMeta/GetScaleResponse")]
+        System.Threading.Tasks.Task<AnnotationVizLib.WCFClient.AnnotationService.Scale> GetScaleAsync();
     }
     
     [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
@@ -477,8 +1350,12 @@ namespace AnnotationVizLibTests.AnnotationService {
                 base(binding, remoteAddress) {
         }
         
-        public AnnotationVizLib.AnnotationService.Scale GetScale() {
+        public AnnotationVizLib.WCFClient.AnnotationService.Scale GetScale() {
             return base.Channel.GetScale();
+        }
+        
+        public System.Threading.Tasks.Task<AnnotationVizLib.WCFClient.AnnotationService.Scale> GetScaleAsync() {
+            return base.Channel.GetScaleAsync();
         }
     }
     
@@ -487,22 +1364,40 @@ namespace AnnotationVizLibTests.AnnotationService {
     public interface ICircuit {
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/ICircuit/getGraph", ReplyAction="http://tempuri.org/ICircuit/getGraphResponse")]
-        AnnotationVizLib.AnnotationService.Graphx getGraph(int cellID, int numHops);
+        AnnotationVizLib.WCFClient.AnnotationService.Graphx getGraph(int cellID, int numHops);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/ICircuit/getGraph", ReplyAction="http://tempuri.org/ICircuit/getGraphResponse")]
+        System.Threading.Tasks.Task<AnnotationVizLib.WCFClient.AnnotationService.Graphx> getGraphAsync(int cellID, int numHops);
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/ICircuit/getStructuresByTypeID", ReplyAction="http://tempuri.org/ICircuit/getStructuresByTypeIDResponse")]
         long[] getStructuresByTypeID(int typeID);
         
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/ICircuit/getStructuresByTypeID", ReplyAction="http://tempuri.org/ICircuit/getStructuresByTypeIDResponse")]
+        System.Threading.Tasks.Task<long[]> getStructuresByTypeIDAsync(int typeID);
+        
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/ICircuit/getSynapses", ReplyAction="http://tempuri.org/ICircuit/getSynapsesResponse")]
         string[] getSynapses(int cellID);
         
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/ICircuit/getSynapses", ReplyAction="http://tempuri.org/ICircuit/getSynapsesResponse")]
+        System.Threading.Tasks.Task<string[]> getSynapsesAsync(int cellID);
+        
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/ICircuit/getSynapseStats", ReplyAction="http://tempuri.org/ICircuit/getSynapseStatsResponse")]
-        AnnotationVizLib.AnnotationService.SynapseObject getSynapseStats();
+        AnnotationVizLib.WCFClient.AnnotationService.SynapseObject getSynapseStats();
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/ICircuit/getSynapseStats", ReplyAction="http://tempuri.org/ICircuit/getSynapseStatsResponse")]
+        System.Threading.Tasks.Task<AnnotationVizLib.WCFClient.AnnotationService.SynapseObject> getSynapseStatsAsync();
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/ICircuit/getTopConnectedStructures", ReplyAction="http://tempuri.org/ICircuit/getTopConnectedStructuresResponse")]
         string[] getTopConnectedStructures(int num);
         
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/ICircuit/getTopConnectedStructures", ReplyAction="http://tempuri.org/ICircuit/getTopConnectedStructuresResponse")]
+        System.Threading.Tasks.Task<string[]> getTopConnectedStructuresAsync(int num);
+        
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/ICircuit/getTopConnectedCells", ReplyAction="http://tempuri.org/ICircuit/getTopConnectedCellsResponse")]
         string[] getTopConnectedCells();
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/ICircuit/getTopConnectedCells", ReplyAction="http://tempuri.org/ICircuit/getTopConnectedCellsResponse")]
+        System.Threading.Tasks.Task<string[]> getTopConnectedCellsAsync();
     }
     
     [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
@@ -532,28 +1427,52 @@ namespace AnnotationVizLibTests.AnnotationService {
                 base(binding, remoteAddress) {
         }
         
-        public AnnotationVizLib.AnnotationService.Graphx getGraph(int cellID, int numHops) {
+        public AnnotationVizLib.WCFClient.AnnotationService.Graphx getGraph(int cellID, int numHops) {
             return base.Channel.getGraph(cellID, numHops);
+        }
+        
+        public System.Threading.Tasks.Task<AnnotationVizLib.WCFClient.AnnotationService.Graphx> getGraphAsync(int cellID, int numHops) {
+            return base.Channel.getGraphAsync(cellID, numHops);
         }
         
         public long[] getStructuresByTypeID(int typeID) {
             return base.Channel.getStructuresByTypeID(typeID);
         }
         
+        public System.Threading.Tasks.Task<long[]> getStructuresByTypeIDAsync(int typeID) {
+            return base.Channel.getStructuresByTypeIDAsync(typeID);
+        }
+        
         public string[] getSynapses(int cellID) {
             return base.Channel.getSynapses(cellID);
         }
         
-        public AnnotationVizLib.AnnotationService.SynapseObject getSynapseStats() {
+        public System.Threading.Tasks.Task<string[]> getSynapsesAsync(int cellID) {
+            return base.Channel.getSynapsesAsync(cellID);
+        }
+        
+        public AnnotationVizLib.WCFClient.AnnotationService.SynapseObject getSynapseStats() {
             return base.Channel.getSynapseStats();
+        }
+        
+        public System.Threading.Tasks.Task<AnnotationVizLib.WCFClient.AnnotationService.SynapseObject> getSynapseStatsAsync() {
+            return base.Channel.getSynapseStatsAsync();
         }
         
         public string[] getTopConnectedStructures(int num) {
             return base.Channel.getTopConnectedStructures(num);
         }
         
+        public System.Threading.Tasks.Task<string[]> getTopConnectedStructuresAsync(int num) {
+            return base.Channel.getTopConnectedStructuresAsync(num);
+        }
+        
         public string[] getTopConnectedCells() {
             return base.Channel.getTopConnectedCells();
+        }
+        
+        public System.Threading.Tasks.Task<string[]> getTopConnectedCellsAsync() {
+            return base.Channel.getTopConnectedCellsAsync();
         }
     }
 }

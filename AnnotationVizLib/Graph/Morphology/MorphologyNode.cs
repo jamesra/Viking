@@ -5,12 +5,12 @@ using System.Text;
 using GraphLib;
 using SqlGeometryUtils;
 using Microsoft.SqlServer.Types;
-using AnnotationVizLib.AnnotationService;
 using Geometry;
 
 
 namespace AnnotationVizLib
-{   
+{
+    [Serializable]
     public class MorphologyNode : Node<ulong, MorphologyEdge>, IGeometry
     { 
         public ILocation Location = null;
@@ -46,7 +46,7 @@ namespace AnnotationVizLib
         public GridBox BoundingBox
         {
             get
-            {
+            { 
                 GridRectangle rect = Geometry.BoundingBox();
                 GridVector3 botleft = new GridVector3(rect.Left, rect.Bottom, Z - Graph.SectionThickness / 2.0);
                 GridVector3 topright = new GridVector3(rect.Right, rect.Top, Z + Graph.SectionThickness / 2.0);

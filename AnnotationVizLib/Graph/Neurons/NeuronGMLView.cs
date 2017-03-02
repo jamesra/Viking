@@ -38,7 +38,7 @@ namespace AnnotationVizLib
         {
             StringBuilder sb = new StringBuilder();
             //sb.Append(edge.SynapseType);
-            foreach (AnnotationService.StructureLink link in edge.Links)
+            foreach (IStructureLink link in edge.Links)
             {
                 sb.Append("\t" + LinkString(link));
             }
@@ -46,7 +46,7 @@ namespace AnnotationVizLib
             return sb.ToString();
         }
 
-        public static string LinkString(AnnotationService.StructureLink link)
+        public static string LinkString(IStructureLink link)
         {
             return link.SourceID + " -> " + link.TargetID;
         }

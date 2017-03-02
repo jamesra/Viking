@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Geometry;
+using SqlGeometryUtils;
 
 
 
@@ -230,9 +231,10 @@ namespace AnnotationVizLib
         /// </summary>
         /// <param name="locations"></param>
         /// <returns></returns>
-        public Color GetColor(List<AnnotationService.Location> locations)
+        public Color GetColor(List<ILocation> locations)
         {
-            List<AnnotationService.AnnotationPoint> listPoints = locations.ConvertAll(loc => loc.VolumePosition);
+            //Remove locations with Z values not in our lookup list to save a lot of time
+            List<GridVector3> listPoints = locations.Where(l => ColorMapTable.ContainsKey((int)l.UnscaledZ)).ToList().ConvertAll(loc => loc.Geometry.Centroid().ToGridVector3(loc.UnscaledZ));
 
             return GetColor(listPoints);
         }
@@ -242,13 +244,13 @@ namespace AnnotationVizLib
         /// </summary>
         /// <param name="locations"></param>
         /// <returns></returns>
-        public Color GetColor(IList<AnnotationService.AnnotationPoint> points)
+        public Color GetColor(IList<GridVector3> points)
         {
             if (points.Count == 0)
                 return Color.Empty;
 
-            IEnumerable<AnnotationService.AnnotationPoint> filteredPoints = points.Where(p => ColorMapTable.ContainsKey((int)p.Z));
-            IList<Color> colors = filteredPoints.Select<AnnotationService.AnnotationPoint, Color>(p => GetColor(p.X, p.Y, (int)p.Z)).ToList();
+            IEnumerable<GridVector3> filteredPoints = points.Where(p => ColorMapTable.ContainsKey((int)p.Z));
+            IList<Color> colors = filteredPoints.Select<GridVector3, Color>(p => GetColor(p.X, p.Y, (int)p.Z)).ToList();
             return AverageColors(colors);
         }
 
