@@ -7,7 +7,7 @@ using Simple.OData.Client;
 using AnnotationVizLib.SimpleOData;
 using System.Diagnostics;
 
-namespace AnnotationVizLib
+namespace AnnotationVizLib.SimpleOData
 {
     public class SimpleODataNeuronFactory
     {

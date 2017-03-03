@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Windows;
+using System.Linq;
+using System.Linq.Expressions;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
@@ -45,7 +47,20 @@ namespace MonogameWPFLibrary.Views
             get;
             set;
         }
-          
+         
+
+        public Geometry.GridBox BoundingBox
+        {
+            get { return (Geometry.GridBox)GetValue(BoundingBoxProperty); }
+            protected set { SetValue(BoundingBoxPropertyKey, value); }
+        }
+
+        // Using a DependencyProperty as the backing store for View.  This enables animation, styling, binding, etc...
+        protected static readonly DependencyPropertyKey BoundingBoxPropertyKey = DependencyProperty.RegisterReadOnly("BoundingBox", typeof(Geometry.GridBox), typeof(MeshView), 
+                                                                                                                     new PropertyMetadata(new Geometry.GridBox(new double[] { 0, 0, 0 }, new double[] { 1, 1, 1 })));
+
+        public static readonly DependencyProperty BoundingBoxProperty = BoundingBoxPropertyKey.DependencyProperty;
+        
         public System.Collections.ObjectModel.ObservableCollection<MeshViewModel> Models
         {
             get { return (ObservableCollection<MeshViewModel>)GetValue(ModelsProperty); }
@@ -55,9 +70,16 @@ namespace MonogameWPFLibrary.Views
         // Using a DependencyProperty as the backing store for Models.  This enables animation, styling, binding, etc...
         public static readonly DependencyProperty ModelsProperty =
             DependencyProperty.Register("Models", typeof(ObservableCollection<MeshViewModel>), typeof(MeshView),
-                new PropertyMetadata(new ObservableCollection<MeshViewModel>()));
+                new PropertyMetadata(new ObservableCollection<MeshViewModel>(), OnModelsChanged));
 
-
+        private static void OnModelsChanged(DependencyObject o, DependencyPropertyChangedEventArgs e)
+        {
+            MeshView view = o as MeshView;
+            if (view != null)
+            {
+                view.BoundingBox = view.Models.Select(m => m.BoundingBox).Aggregate((a, b) => Geometry.GridBox.Union(a, b));
+            }
+        }
 
         public Matrix World
         {
@@ -99,6 +121,8 @@ namespace MonogameWPFLibrary.Views
 
         }
 
+
+
         protected override void Initialize()
         {
             // must be initialized. required by Content loading and rendering (will add itself to the Services)
@@ -131,13 +155,14 @@ namespace MonogameWPFLibrary.Views
             elapsedTime += time.ElapsedGameTime;
             double angle = ((double)((elapsedTime.TotalMilliseconds / 500) % 1000)) / 1000.0;
             angle *= 360; // Math.PI * 2.0;
-
+            /*
             Matrix rotMatrix = Matrix.CreateRotationX((float)angle);
 
             foreach (MeshViewModel meshViewModel in Models)
             {
                 meshViewModel.Rotation = rotMatrix;
             }
+            */
         }
 
         protected override void Draw(GameTime time)
@@ -150,10 +175,17 @@ namespace MonogameWPFLibrary.Views
 
             GraphicsDevice device = _graphicsDeviceManager.GraphicsDevice;
 
+            RasterizerState rstate = new RasterizerState();
+            rstate.CullMode = CullMode.None;
+            rstate.DepthClipEnable = true;
+            rstate.FillMode = FillMode.WireFrame;
+
+            device.RasterizerState = rstate; 
+
             using (BasicEffect effect = new BasicEffect(device))
             {
                 effect.View = Camera.View;
-                effect.Projection = Matrix.CreatePerspectiveFieldOfView(MathHelper.ToRadians(45), (float)device.Viewport.Width / (float)device.Viewport.Height, 0.1f, 100f);
+                effect.Projection = Matrix.CreatePerspectiveFieldOfView(MathHelper.ToRadians(45), (float)device.Viewport.Width / (float)device.Viewport.Height, 0.1f, 500000f);
                 effect.AmbientLightColor = Color.White.ToVector3();
                 effect.VertexColorEnabled = true;
 

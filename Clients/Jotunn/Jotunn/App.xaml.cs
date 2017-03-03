@@ -19,6 +19,7 @@ namespace Jotunn
         {
             base.OnStartup(e);
 
+            Global.Initialize();
 
             this.ShutdownMode = ShutdownMode.OnMainWindowClose;
 

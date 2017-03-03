@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using Simple.OData.Client;
 using System.Diagnostics;
 
-namespace AnnotationVizLib
+namespace AnnotationVizLib.SimpleOData
 {
     static class SimpleODataExtensions
     {

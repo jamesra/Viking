@@ -18,9 +18,9 @@ namespace MorphologyView
     /// <summary>
     /// Interaction logic for MorphologyView.xaml
     /// </summary>
-    public partial class MorphologyView : UserControl
+    public partial class MorphologyViewer : UserControl
     {
-        public MorphologyView()
+        public MorphologyViewer()
         {
             InitializeComponent();
         }

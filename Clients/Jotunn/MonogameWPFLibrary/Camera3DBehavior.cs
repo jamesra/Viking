@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Data;
 using System.Windows.Interactivity;
 using MonogameWPFLibrary.Views;
 using MathNet.Numerics.LinearAlgebra; 
@@ -14,12 +15,26 @@ namespace MonogameWPFLibrary.Views
     {
         private bool mouseDown;
         Point LastMousePosition;
-        private MonogameCamera3D camera; 
+        private MonogameCamera3D camera;
 
+        public Geometry.GridBox BoundingBox
+        {
+            get { return (Geometry.GridBox)GetValue(BoundingBoxProperty); }
+            set { SetValue(BoundingBoxProperty, value); }
+        }
+
+        // Using a DependencyProperty as the backing store for View.  This enables animation, styling, binding, etc...
+        protected static readonly DependencyProperty BoundingBoxProperty = DependencyProperty.Register("BoundingBox", typeof(Geometry.GridBox), typeof(Camera3DBehavior), new PropertyMetadata());
+          
         protected override void OnAttached()
         {
             camera = AssociatedObject.Camera as MonogameCamera3D;
 
+            System.Windows.Data.Binding binding = new Binding("BoundingBox");
+            binding.Source = AssociatedObject;
+
+            BindingOperations.SetBinding(this, Camera3DBehavior.BoundingBoxProperty, binding);
+            
             if(camera == null)
             {
                 throw new ArgumentException("Camera3DBehavior requires being attached to a MonogameCamera3D object");
@@ -39,7 +54,7 @@ namespace MonogameWPFLibrary.Views
 
                 if (e.LeftButton == System.Windows.Input.MouseButtonState.Pressed)
                 {
-                    Microsoft.Xna.Framework.Vector3 translation = TranslateRelativeToCameraView(-Delta.X / AssociatedObject.ActualWidth, Delta.Y / AssociatedObject.ActualHeight, 0.0);
+                    Microsoft.Xna.Framework.Vector3 translation = TranslateRelativeToCameraView((-Delta.X / AssociatedObject.ActualWidth) * BoundingBox.dimensions.Max(), (Delta.Y / AssociatedObject.ActualHeight) * BoundingBox.dimensions.Max(), 0.0);
 
                     camera.Position += translation;
                 }
@@ -54,7 +69,15 @@ namespace MonogameWPFLibrary.Views
 
             AssociatedObject.MouseWheel += (s, e) =>
             {
-                double totalDelta = (double)-e.Delta / (double)System.Windows.Input.Mouse.MouseWheelDeltaForOneLine;
+                double LinesToScrollEntireBoundingBox = 100;
+                double lineDelta = (double)-e.Delta / (double)System.Windows.Input.Mouse.MouseWheelDeltaForOneLine;
+                /*lineDelta *= lineDelta;
+                if (e.Delta > 0)
+                    lineDelta = -lineDelta;
+                    */
+                double percentOfVolume = lineDelta / LinesToScrollEntireBoundingBox;
+                double totalDelta = percentOfVolume * BoundingBox.dimensions.Max();
+
                 Microsoft.Xna.Framework.Vector3 translation = TranslateRelativeToCameraView(0, 0, totalDelta);
                 camera.Position += translation;
             };

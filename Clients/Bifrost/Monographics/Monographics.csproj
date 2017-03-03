@@ -51,6 +51,7 @@
     <Compile Include="AnnotationOverBackgroundLumaEffect.cs" />
     <Compile Include="Camera.cs" />
     <Compile Include="ChannelOverlayEffect.cs" />
+    <Compile Include="ColorPositionMeshModel.cs" />
     <Compile Include="DrawExtensions.cs" />
     <Compile Include="Extensions.cs" />
     <Compile Include="MergeHSVEffect.cs" />
@@ -73,7 +74,7 @@
     <Compile Include="Views\LabelView.cs" />
     <Compile Include="Views\LineView.cs" />
     <Compile Include="Views\LinkedLineView.cs" />
-    <Compile Include="Views\PolygonView.cs" />
+    <Compile Include="Views\MeshView.cs" />
     <Compile Include="Views\PolyLineView.cs" />
     <Compile Include="Views\SharedEffectFunctions.cs" />
   </ItemGroup>

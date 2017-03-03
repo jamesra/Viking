@@ -117,7 +117,7 @@ namespace AnnotationVizLibTests
         [TestMethod]
         public void GenerateSimpleODataNeuronGraph()
         {
-            AnnotationVizLib.NeuronGraph graph = SimpleODataNeuronFactory.FromOData(new long[] { 476 }, 9, new Uri(ODataEndpoint));
+            AnnotationVizLib.NeuronGraph graph = AnnotationVizLib.SimpleOData.SimpleODataNeuronFactory.FromOData(new long[] { 476 }, 9, new Uri(ODataEndpoint));
 
             System.Diagnostics.Debug.Assert(graph != null);
 

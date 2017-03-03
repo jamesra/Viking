@@ -197,7 +197,7 @@ namespace AnnotationVizLibTests
         [TestMethod]
         public void TestSaveLoadGraph()
         {
-            SharedGraph = SimpleODataMorphologyFactory.FromOData(new long[] { 180 }, true, new Uri(GraphTestShared.ODataEndpoint));
+            SharedGraph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromOData(new long[] { 180 }, true, new Uri(GraphTestShared.ODataEndpoint));
             Assert.IsNotNull(SharedGraph);
             Assert.IsTrue(SharedGraph.Subgraphs.Count > 0);
 
@@ -221,7 +221,7 @@ namespace AnnotationVizLibTests
         [TestMethod]
         public void TestDistanceMeasurement()
         {
-            SharedGraph = SimpleODataMorphologyFactory.FromOData(new long[] { 180 }, true, new Uri(GraphTestShared.ODataEndpoint));
+            SharedGraph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromOData(new long[] { 180 }, true, new Uri(GraphTestShared.ODataEndpoint));
             Assert.IsNotNull(SharedGraph);
             Assert.IsTrue(SharedGraph.Subgraphs.Count > 0);
 
@@ -267,7 +267,8 @@ namespace AnnotationVizLibTests
             
             foreach (string label in distinctLabels)
             {
-                LabelDict[label] = BulkMeasureForLabel(label);
+                if(label != null)
+                    LabelDict[label] = BulkMeasureForLabel(label);
             }
 
 

@@ -1,14 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using Prism.Modularity;
+﻿using Prism.Modularity;
 using Prism.Mef.Modularity;
 using Microsoft.Practices.ServiceLocation;
-using Prism.Regions; 
-using System.ComponentModel.Composition;
-using Viking.VolumeViewModel;
-using Jotunn.Common;
+using Prism.Regions;
 
 namespace Viking.VolumeView
 {

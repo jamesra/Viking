@@ -19,12 +19,13 @@ namespace MorphologyView
 
         delegate void InitializeUIDelegate();
 
-        public MorphologyView morphologyView { get; set; }
+        public MorphologyViewer morphologyView { get; set; }
 
         void IModule.Initialize()
         {
             System.Diagnostics.Trace.WriteLine("VikingVolumeViewModule::Initialize()");
 
+            SqlServerTypes.Utilities.LoadNativeAssemblies(AppDomain.CurrentDomain.BaseDirectory);
 
             InitializeUIDelegate InitUIDelegate = new InitializeUIDelegate(InitializeUI);
 
@@ -35,31 +36,32 @@ namespace MorphologyView
         /// The initialization of UI must occur on the STA thread
         /// </summary>
         void InitializeUI()
-        {
-
+        {  
             IRegionManager regionManager = ServiceLocator.Current.GetInstance<IRegionManager>();
-            this.morphologyView = new MorphologyView();
-
-            //            Checkerboard checkerboard = new Checkerboard();
-
-            //            regionManager.AddToRegion(Jotunn.RegionNames.View, checkerboard);
-
-
-            //            PyramidViewer pyramidViewer = new PyramidViewer();
-
-            //            Viking.VolumeViewModel.VolumeViewModel volume = Microsoft.Practices.ServiceLocation.ServiceLocator.Current.GetInstance<Viking.VolumeViewModel.VolumeViewModel>();
-            //            SectionViewModel section = volume.SectionViewModels.Values[1];
-
-            //pyramidViewer.TileMapping = section.DefaultMapping; 
-
-            //regionManager.AddToRegion(Jotunn.RegionNames.Navigation, sectionList);
-            //regionManager.AddToRegion(Jotunn.RegionNames.View, pyramidViewer);
+            this.morphologyView = new MorphologyViewer(); 
 
             regionManager.AddToRegion(Jotunn.Common.RegionNames.View, morphologyView);
             
+            System.Threading.Tasks.Task t = new System.Threading.Tasks.Task(() =>
+            {
+                AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromOData(new long[] { 8883 }, true, new Uri("http://webdev.connectomes.utah.edu/RC1Test/OData"));
+                //AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleODataMorphologyFactory.FromOData(new long[] { 180 }, true, new Uri("http://webdev.connectomes.utah.edu/RC1Test/OData"));
+                if (graph != null)
+                {
+                    //System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() => ((MorphologyView.ViewModels.MorphologyGraphViewModel)morphologyView.DataContext).Graph = graph.Subgraphs.Values.First()));
+                    System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() => morphologyView.DataContext = graph.Subgraphs.Values.First()));
+                    System.Diagnostics.Trace.WriteLine("Loaded the morphology graph!");
+                }
+                else
+                {
+                    throw new ArgumentException("NO graph found on module initialize");
+                }
+            });
+              
+
+            t.Start();
         }
 
         #endregion
-
     }
 }

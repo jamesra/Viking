@@ -8,9 +8,10 @@ namespace Jotunn
 {
     public static class Global
     {
-        static Global()
+        internal static void Initialize()
         {
             MathNet.Numerics.Control.UseNativeMKL();
+            SqlServerTypes.Utilities.LoadNativeAssemblies(AppDomain.CurrentDomain.BaseDirectory);
         }
     }
 }

@@ -11,7 +11,7 @@ using SqlGeometryUtils;
 using Geometry;
 using AnnotationVizLib.SimpleOData;
 
-namespace AnnotationVizLib
+namespace AnnotationVizLib.SimpleOData
 {  
     public static class SimpleODataMorphologyFactory
     {

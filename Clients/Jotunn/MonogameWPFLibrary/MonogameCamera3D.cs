@@ -112,18 +112,15 @@ namespace MonogameWPFLibrary
             protected set { SetValue(ViewPropertyKey, value); }
         }
 
-        public static readonly DependencyProperty ViewProperty;
-
         // Using a DependencyProperty as the backing store for View.  This enables animation, styling, binding, etc...
-        protected static readonly DependencyPropertyKey ViewPropertyKey;
-
-        static MonogameCamera3D()
-        {
-            ViewPropertyKey  = DependencyProperty.RegisterReadOnly("View", typeof(Matrix), typeof(MonogameCamera3D),
+        protected static readonly DependencyPropertyKey ViewPropertyKey = DependencyProperty.RegisterReadOnly("View", typeof(Matrix), typeof(MonogameCamera3D),
                 new FrameworkPropertyMetadata(Matrix.CreateLookAt(DefaultPositionVector, DefaultLookAtVector, DefaultUpVector),
                                               FrameworkPropertyMetadataOptions.AffectsRender));
 
-            ViewProperty = ViewPropertyKey.DependencyProperty;
+        public static readonly DependencyProperty ViewProperty = ViewPropertyKey.DependencyProperty;
+
+        static MonogameCamera3D()
+        {
         }
 
         public MonogameCamera3D()

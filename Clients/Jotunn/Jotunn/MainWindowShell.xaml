@@ -8,9 +8,10 @@
 	x:Name="Window"
 	Title="Viking - Jotunn"
 	Width="1650" Height="1050"
-    Icon="/Jotunn;component/Viking.ico"
+    Icon="/Jotunn;component/Viking.ico"     
     Closed="Window_Closed"
     >
+    <!-- AllowsTransparency="True" WindowStyle="None" -->
     
 
     <Grid>
@@ -43,21 +44,20 @@
                     region:RegionManager.RegionName="{x:Static jotunnuicommon:RegionNames.Details}" >
         </TabControl>
 
-        <ContentControl Background="Transparent"
+        <TabControl Background="Transparent"
                     Grid.Column="1"
                     Grid.Row="0"
                     Grid.RowSpan="2"
                     region:RegionManager.RegionName="{x:Static jotunnuicommon:RegionNames.View}" Name="View">
-            <ContentControl.InputBindings>
-                
-            </ContentControl.InputBindings>
-        </ContentControl>
-
+           
+        </TabControl> 
+        
         <ContentControl  Background="Transparent"
                 Grid.Column="1"
                         Grid.Row="0"
                         Grid.RowSpan="2"
-                region:RegionManager.RegionName="{x:Static jotunnuicommon:RegionNames.ViewOverlay}"  Name="ViewOverlay"/>
+                region:RegionManager.RegionName="{x:Static jotunnuicommon:RegionNames.ViewOverlay}" 
+                         Name="ViewOverlay"/>
         
         <TabControl Grid.Column="0"
                     Grid.Row="0"
