@@ -1359,7 +1359,8 @@ namespace WebAnnotation
             VikingXNA.AnnotationOverBackgroundLumaEffect overlayEffect = Parent.annotationOverlayEffect;
 
             overlayEffect.LumaTexture = BackgroundLuma;
-            Parent.LumaOverlayLineManager.LumaTexture = BackgroundLuma; 
+            Parent.LumaOverlayLineManager.LumaTexture = BackgroundLuma;
+            Parent.LumaOverlayCurveManager.LumaTexture = BackgroundLuma;
 
             overlayEffect.RenderTargetSize = graphicsDevice.Viewport;
             Parent.LumaOverlayLineManager.RenderTargetSize = graphicsDevice.Viewport;
