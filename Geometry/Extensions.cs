@@ -105,13 +105,15 @@ namespace Geometry
 
         public static ICollection<GridVector2> ToGridVector2(this Matrix<double> m)
         {
-            List<GridVector2> listPoints = new List<GridVector2>(m.ColumnCount);
+            GridVector2[] points = new GridVector2[m.ColumnCount];
+            int icol = 0; 
             foreach(Vector<double> col in m.EnumerateColumns())
             {
-                listPoints.Add(new GridVector2(col[0], col[1]));
+                points[icol] = new GridVector2(col[0], col[1]);
+                icol++; 
             }
 
-            return listPoints;
+            return points;
         }
 
         public static Matrix<double> CreateTranslationMatrix(this GridVector2 p)
@@ -209,7 +211,7 @@ namespace Geometry
 
             ICollection<GridVector2> results = translatedPoints.ToGridVector2();
             return results;
-        }
+        } 
     }
     
     public static class GridPoint2Extensions
