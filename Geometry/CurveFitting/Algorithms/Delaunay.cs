@@ -164,7 +164,7 @@ namespace Geometry
          
 #if DEBUG
                     //Check to make sure the new triangle intersects the point.  This is a slow test.
-                    Debug.Assert(((GridTriangle)newTri).Intersects(P));
+                    Debug.Assert(((GridTriangle)newTri).Contains(P));
 #endif
                 }
             }

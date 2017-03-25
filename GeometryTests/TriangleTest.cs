@@ -71,10 +71,10 @@ namespace GeometryTests
 
 
             GridVector2 outsidetest = new GridVector2(5, 75);
-            Debug.Assert(tri.Intersects(outsidetest) == false);
+            Debug.Assert(tri.Contains(outsidetest) == false);
 
             GridVector2 insidetest = new GridVector2(25, 75);
-            Debug.Assert(tri.Intersects(insidetest) == true);
+            Debug.Assert(tri.Contains(insidetest) == true);
             
             //Bug Fix #1
             v1 = new GridVector2(6313.066666666, 13608);
@@ -84,7 +84,7 @@ namespace GeometryTests
             tri = new GridTriangle(v1, v2, v3);
 
             outsidetest = new GridVector2(double.MaxValue / 2, 10652.94);
-            Debug.Assert(tri.Intersects(outsidetest) == false);
+            Debug.Assert(tri.Contains(outsidetest) == false);
         }
 
         [TestMethod]

@@ -14,7 +14,14 @@ namespace Geometry
 
         static Global()
         {
-            MathNet.Numerics.Control.UseNativeMKL();
+            try
+            {
+                MathNet.Numerics.Control.UseNativeMKL();
+            }
+            catch (Exception e)
+            {
+                System.Diagnostics.Trace.WriteLine("Unable to load Native MKL library.  Exception text:\n" + e.Message);
+            }
         }
 
         public static bool IsCacheFileValid(string CacheStosPath, DateTime time)

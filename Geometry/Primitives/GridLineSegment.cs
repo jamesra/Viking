@@ -388,6 +388,13 @@ namespace Geometry
 
         public bool Intersects(GridLineSegment seg, out GridVector2 Intersection)
         {
+            //Don't do the full check if the bounding boxes don't overlap
+            if (!this.BoundingBox.Intersects(seg.BoundingBox))
+            {
+                Intersection = new GridVector2();
+                return false;
+            }
+
             //Function for each line
             //Ax + By = C
 
@@ -486,6 +493,11 @@ namespace Geometry
             {
                 return new GridRectangle(MinX, MaxX, MinY, MaxY);
             }
+        }
+
+        public GridLine ToLine()
+        {
+            return new GridLine(this.A, this.Direction);
         }
     }
 }

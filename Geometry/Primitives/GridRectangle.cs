@@ -8,7 +8,7 @@ using Geometry;
 namespace Geometry
 {
     [Serializable]
-    public struct GridRectangle
+    public struct GridRectangle : IShape2D
     {
         public double Left;
         public double Right;
@@ -129,6 +129,13 @@ namespace Geometry
             }
         }
 
+        public GridRectangle BoundingBox
+        {
+            get
+            {
+                return this;
+            }
+        }
 
         public GridRectangle(GridVector2 corner, GridVector2 oppositeCorner)
         {

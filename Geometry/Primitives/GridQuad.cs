@@ -139,9 +139,9 @@ namespace Geometry
 
         public bool Contains(GridVector2 p)
         {
-            if(this.T0.Intersects(p))
+            if(this.T0.Contains(p))
                 return true;
-            if(this.T1.Intersects(p))
+            if(this.T1.Contains(p))
                 return true;
 
             return false; 
@@ -163,12 +163,12 @@ namespace Geometry
             GridVector2 v4 = R.TopLeft;
 
             //If any verticies are in the quad we return true 
-            if (T0.Intersects(v1) || T0.Intersects(v2) || T0.Intersects(v3) || T0.Intersects(v4) ||
-                T1.Intersects(v1) || T1.Intersects(v2) || T1.Intersects(v3) || T1.Intersects(v4))
+            if (T0.Contains(v1) || T0.Contains(v2) || T0.Contains(v3) || T0.Contains(v4) ||
+                T1.Contains(v1) || T1.Contains(v2) || T1.Contains(v3) || T1.Contains(v4))
                 return true;
 
-            if (R.T0.Intersects(TopLeft) || R.T0.Intersects(TopRight) || R.T0.Intersects(BottomLeft) || R.T0.Intersects(BottomRight) ||
-                R.T1.Intersects(TopLeft) || R.T1.Intersects(TopRight) || R.T1.Intersects(BottomLeft) || R.T1.Intersects(BottomRight))
+            if (R.T0.Contains(TopLeft) || R.T0.Contains(TopRight) || R.T0.Contains(BottomLeft) || R.T0.Contains(BottomRight) ||
+                R.T1.Contains(TopLeft) || R.T1.Contains(TopRight) || R.T1.Contains(BottomLeft) || R.T1.Contains(BottomRight))
                 return true; 
 
             GridLineSegment RL1 = new GridLineSegment(v1, v2);

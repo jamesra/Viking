@@ -57,7 +57,7 @@ namespace Geometry
 
                     for (int iTriangle = 0; iTriangle < listBoundingTriangles.Count; iTriangle++)
                     {
-                        if (listBoundingTriangles[iTriangle].Intersects(Point))
+                        if (listBoundingTriangles[iTriangle].Contains(Point))
                         {
                             PointsToExclude[iPoint] = true; 
                         }

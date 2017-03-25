@@ -225,12 +225,12 @@ namespace Geometry
 
         public bool IntersectsMapped(GridVector2 Point)
         {
-            return Mapped.Intersects(Point);
+            return Mapped.Contains(Point);
         }
 
         public bool IntersectsControl(GridVector2 Point)
         {
-            return Control.Intersects(Point); 
+            return Control.Contains(Point); 
         }
 
         public GridVector2 Transform(GridVector2 Point)

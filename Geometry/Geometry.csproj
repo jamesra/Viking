@@ -120,9 +120,11 @@
     <Compile Include="DataStructures\RegionPyramid.cs" />
     <Compile Include="Extensions.cs" />
     <Compile Include="GlobalSuppressions.cs" />
-    <Compile Include="Interfaces.cs" />
+    <Compile Include="Primitives\Interfaces.cs" />
+    <Compile Include="Transforms\Interfaces.cs" />
     <Compile Include="Primitives\AxisEnum.cs" />
     <Compile Include="Primitives\GridBox.cs" />
+    <Compile Include="Primitives\GridPolygon.cs" />
     <Compile Include="Primitives\GridQuad.cs" />
     <Compile Include="DataStructures\QuadTreeNodeTemplatePoint.cs" />
     <Compile Include="CurveFitting\Algorithms\Delaunay.cs" />

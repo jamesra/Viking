@@ -7,7 +7,7 @@ using System.Text;
 namespace Geometry
 {
     [Serializable]
-    public struct GridCircle
+    public struct GridCircle : IShape2D
     {
         public GridVector2 Center;
         public double Radius;
@@ -17,6 +17,10 @@ namespace Geometry
         {
             this.Center = center;
             this.Radius = radius;
+
+            if (double.IsInfinity(radius) || double.IsNaN(radius))
+                throw new ArgumentException("Radius cannot be infinite or NaN");
+
             this.RadiusSquared = radius * radius;
             _HashCode = new int?();
         }
@@ -143,7 +147,15 @@ namespace Geometry
             {
                 return new GridRectangle(this.Center, this.Radius);
             }
-        }   
+        }
+
+        public double Area
+        {
+            get
+            {
+                return this.RadiusSquared * Math.PI;
+            }
+        }
 
         public bool Contains(GridVector2 p)
         {

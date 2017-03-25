@@ -13,14 +13,20 @@ namespace SqlGeometryUtils
     {
         public static TriangleNet.Geometry.Vertex[] ToTriangleNetVerticies(this SqlGeometry geometry)
         {
-            TriangleNet.Geometry.Vertex[] verts = new Vertex[geometry.STNumPoints().Value];
-            for(int i = 0; i < verts.Length; i++)
+            if (!geometry.HasInteriorRings())
             {
-                SqlGeometry point = geometry.GetPoint(i);
-                verts[i] = new Vertex(point.STX.Value, point.STY.Value);
+                TriangleNet.Geometry.Vertex[] verts = new Vertex[geometry.STNumPoints().Value];
+                for (int i = 0; i < verts.Length; i++)
+                {
+                    SqlGeometry point = geometry.GetPoint(i);
+                    verts[i] = new Vertex(point.STX.Value, point.STY.Value);
+                }
+
+                return verts;
             }
 
-            return verts;
+            //Ensure we only return the outer ring verticies
+            return geometry.STExteriorRing().ToTriangleNetVerticies();
         }
 
         public static TriangleNet.Geometry.Contour ToTriangleNetContour(this SqlGeometry geometry)
@@ -37,12 +43,14 @@ namespace SqlGeometryUtils
             Contour outer_contour = new Contour(outer_verts);
             Polygon polygon = new Polygon(outer_verts.Length);
 
+            /*
             foreach (Vertex v in outer_verts)
             {
                 polygon.Add(v);
             }
+            */
 
-            polygon.Add(outer_contour);
+            polygon.Add(outer_contour, false);
 
             for(int iRing = 0; iRing < geometry.STNumInteriorRing().Value; iRing++)
             {

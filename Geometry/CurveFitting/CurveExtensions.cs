@@ -8,12 +8,12 @@ namespace Geometry
 {
     public static class CurveExtensions
     {
-        public static List<GridVector2> CalculateCurvePoints(this GridVector2 ControlPoints, uint NumInterpolations, bool closeCurve)
+        public static GridVector2[] CalculateCurvePoints(this GridVector2 ControlPoints, uint NumInterpolations, bool closeCurve)
         {
             return ControlPoints.CalculateCurvePoints(NumInterpolations, closeCurve);
         }
 
-        public static List<GridVector2> CalculateCurvePoints(this ICollection<GridVector2> ControlPoints, uint NumInterpolations, bool closeCurve)
+        public static GridVector2[] CalculateCurvePoints(this ICollection<GridVector2> ControlPoints, uint NumInterpolations, bool closeCurve)
         {
             if (closeCurve)
                 return CalculateClosedCurvePoints(ControlPoints, NumInterpolations);
@@ -21,32 +21,38 @@ namespace Geometry
                 return CalculateOpenCurvePoints(ControlPoints, NumInterpolations);
         }
 
-        private static List<GridVector2> CalculateClosedCurvePoints(this ICollection<GridVector2> ControlPoints, uint NumInterpolations)
+        private static GridVector2[] CalculateClosedCurvePoints(this ICollection<GridVector2> ControlPoints, uint NumInterpolations)
         {
-            List<GridVector2> CurvePoints = new List<GridVector2>(ControlPoints.Count);
+            GridVector2[] CurvePoints = null;
             if (ControlPoints.Count <= 2)
             {
-                CurvePoints = new List<GridVector2>(ControlPoints);
+                CurvePoints = new GridVector2[ControlPoints.Count];
+                ControlPoints.CopyTo(CurvePoints, 0);
             }
             else if (ControlPoints.Count >= 3)
             {
-                CurvePoints = Geometry.CatmullRom.FitCurve(ControlPoints.ToArray(), (int)NumInterpolations, true).ToList();
-                CurvePoints.Add(CurvePoints.First());
+                GridVector2[] SmoothedCurvePoints = Geometry.CatmullRom.FitCurve(ControlPoints.ToArray(), (int)NumInterpolations, true);
+                CurvePoints = new GridVector2[SmoothedCurvePoints.Length + 1];
+                SmoothedCurvePoints.CopyTo(CurvePoints, 0);
+
+                //Ensure the first and last point are identical in a closed curve
+                CurvePoints[CurvePoints.Length-1] = SmoothedCurvePoints[0];
             }
 
             return CurvePoints;
         }
 
-        private static List<GridVector2> CalculateOpenCurvePoints(this ICollection<GridVector2> ControlPoints, uint NumInterpolations)
+        private static GridVector2[] CalculateOpenCurvePoints(this ICollection<GridVector2> ControlPoints, uint NumInterpolations)
         {
-            List<GridVector2> CurvePoints = new List<GridVector2>(ControlPoints.Count);
+            GridVector2[] CurvePoints = null;
             if (ControlPoints.Count <= 2)
             {
-                CurvePoints = new List<GridVector2>(ControlPoints);
+                CurvePoints = new GridVector2[ControlPoints.Count];
+                ControlPoints.CopyTo(CurvePoints, 0);
             }
             if (ControlPoints.Count >= 3)
             {
-                CurvePoints = Geometry.Lagrange.FitCurve(ControlPoints.ToArray(), (int)NumInterpolations * ControlPoints.Count).ToList();
+                CurvePoints = Geometry.Lagrange.FitCurve(ControlPoints.ToArray(), (int)NumInterpolations * ControlPoints.Count);
             }
 
             return CurvePoints;

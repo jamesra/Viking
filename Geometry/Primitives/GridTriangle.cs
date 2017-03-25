@@ -60,7 +60,7 @@ namespace Geometry
     /// </summary>
     /// 
     [Serializable]
-    public struct GridTriangle : ICloneable
+    public struct GridTriangle : ICloneable, IShape2D
     {
         readonly GridVector2 _p1;
         readonly GridVector2 _p2;
@@ -234,7 +234,7 @@ namespace Geometry
         /// </summary>
         /// <param name="test"></param>
         /// <returns></returns>
-        public bool Intersects(GridVector2 point)
+        public bool Contains(GridVector2 point)
         {                
             GridVector2 uv = Barycentric(point);
 
@@ -305,6 +305,6 @@ namespace Geometry
             }
 
             return uv;
-        }
+        } 
     }
 }
