@@ -6039,6 +6039,51 @@ end
 	 COMMIT TRANSACTION sixtythree
 	end
 
+	if(not(exists(select (1) from DBVersion where DBVersionID = 64)))
+	begin
+     print N'Update the location types required to have a width'
+	 BEGIN TRANSACTION sixtyfour
+
+		--ALTER TABLE Location DROP CONSTRAINT chk_Location_Width 
+		EXEC(' ALTER TABLE Location DROP CONSTRAINT chk_Location_Width ')
+      
+		if(@@error <> 0)
+		 begin
+			ROLLBACK TRANSACTION 
+			RETURN
+		 end 
+
+		 EXEC('UPDATE Location set Width = NULL WHERE (TypeCode = 6 OR TypeCode <= 2 OR TypeCode = 4) AND Width IS NOT NULL')
+		 if(@@error <> 0)
+		 begin
+			ROLLBACK TRANSACTION 
+			RETURN
+		 end 
+		 
+		  EXEC('ALTER TABLE Location
+				ADD CONSTRAINT chk_Location_Width CHECK (
+				(0 = TypeCode AND Width IS NULL) OR 
+				(1 = TypeCode AND Width IS NULL) OR
+				(2 = TypeCode AND Width IS NULL) OR
+				(3 = TypeCode AND Width IS NOT NULL) OR
+				(4 = TypeCode AND Width IS NULL) OR
+				(5 = TypeCode AND Width IS NOT NULL) OR
+				(6 = TypeCode AND Width IS NULL) OR
+				(7 = TypeCode AND Width IS NOT NULL)
+			) ') 
+
+		  if(@@error <> 0)
+			 begin
+			   ROLLBACK TRANSACTION 
+			 RETURN
+		  end
+
+		  INSERT INTO DBVersion values (64, N'Update the location types required to have a width' ,getDate(),User_ID())
+
+	 COMMIT TRANSACTION sixtyfour
+	end
+
+
 	 
 --from here on, continually add steps in the previous manner as needed.
 COMMIT TRANSACTION main
