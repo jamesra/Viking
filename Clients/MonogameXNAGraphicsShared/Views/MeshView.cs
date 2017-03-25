@@ -5,60 +5,86 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using System.Collections.ObjectModel;
 
-namespace Monographics
+namespace VikingXNAGraphics
 {
     //Displays a mesh
-    public class MeshView
+    public class MeshView<VERTEXTYPE>
+        where VERTEXTYPE : struct, IVertexType
     {
-        ColorPositionMeshModel[] models;
+        public bool WireFrame { get; set; }
+        public ObservableCollection<MeshModel<VERTEXTYPE>> models = new ObservableCollection<MeshModel<VERTEXTYPE>>();
          
-        private Matrix world = Matrix.CreateTranslation(new Vector3(0, 0, 0));
-        private Matrix view = Matrix.CreateLookAt(new Vector3(0, 0, 10), new Vector3(0, 0, 0), Vector3.UnitY);
-        private Matrix projection = Matrix.CreatePerspectiveFieldOfView(MathHelper.ToRadians(45), 800f / 480f, 0.1f, 100f);
-
         public MeshView()
         {
         }
-
-
-        /*
-            public void Update(GameTime gameTime)
-            {
-                double angle = ((double)((gameTime.TotalGameTime.TotalMilliseconds / 500) % 1000)) / 1000.0;
-                angle *= 360;
-
-                view = Matrix.CreateLookAt(new Vector3((float)Math.Cos(angle) * 10,
-                                                       (float)Math.Sin(angle) * 10,
-                                                        -1),
-                                           new Vector3(0, 0, 0), Vector3.UnitZ);
-          
-            }
-                             */
-
-        public void Draw(GraphicsDevice device)
+        
+        public void Draw(GraphicsDevice device, VikingXNA.Scene scene)
         {
             if (models == null)
                 return;
 
+            if (WireFrame)
+            {
+                RasterizerState rstate = new RasterizerState();
+                rstate.CullMode = CullMode.None;
+                rstate.FillMode = FillMode.WireFrame;
+
+                device.RasterizerState = rstate;
+            }
+
             using (BasicEffect effect = new BasicEffect(device))
             {
-                effect.View = view;
-                effect.World = world;
-                effect.Projection = projection;
+                effect.View = scene.Camera.View;
+                effect.World = scene.World;
+                effect.Projection = scene.Projection;
+                effect.AmbientLightColor = Color.White.ToVector3();
+                effect.VertexColorEnabled = true;
+                effect.LightingEnabled = false;
 
-                foreach (ColorPositionMeshModel model in models)
-                {   
-                    effect.AmbientLightColor = Color.White.ToVector3();
-                    effect.VertexColorEnabled = true; 
-
-                    foreach (EffectPass pass in effect.CurrentTechnique.Passes)
-                    {
-                        pass.Apply();
-                        device.DrawUserIndexedPrimitives<VertexPositionColor>(PrimitiveType.TriangleList, model.verts, 0, model.verts.Length, model.edges, 0, model.edges.Length / 3);
+                foreach (EffectPass pass in effect.CurrentTechnique.Passes)
+                {
+                    pass.Apply();
+                    foreach (MeshModel<VERTEXTYPE> model in models)
+                    {   
+                        device.DrawUserIndexedPrimitives<VERTEXTYPE>(PrimitiveType.TriangleList, model.Verticies, 0, model.Verticies.Length, model.Edges, 0, model.Edges.Length / 3);
                     }
                 }
             } 
+        }
+
+        public static void Draw(GraphicsDevice device, VikingXNA.Scene scene, ICollection<MeshView<VERTEXTYPE>> meshViews)
+        {
+            if (meshViews == null)
+                return;
+
+            IEnumerable<MeshModel<VERTEXTYPE>> all_models = meshViews.SelectMany(mv => mv.models);
+
+            Draw(device, scene, all_models);
+        }
+
+        public static void Draw(GraphicsDevice device, VikingXNA.Scene scene, IEnumerable<MeshModel<VERTEXTYPE>> meshmodels)
+        {
+            if (meshmodels == null)
+                return;
+
+            PolygonOverlayEffect effect = DeviceEffectsStore<PolygonOverlayEffect>.TryGet(device); 
+            if (effect == null)
+                return;
+
+            effect.InputLumaAlphaValue = 0.0f; 
+
+            foreach (EffectPass pass in effect.effect.CurrentTechnique.Passes)
+            {
+                pass.Apply();
+
+                foreach (MeshModel<VERTEXTYPE> model in meshmodels)
+                {
+                    device.DrawUserIndexedPrimitives<VERTEXTYPE>(PrimitiveType.TriangleList, model.Verticies, 0, model.Verticies.Length, model.Edges, 0, model.Edges.Length / 3);
+                }
+            }
+            
         }
     }
 }

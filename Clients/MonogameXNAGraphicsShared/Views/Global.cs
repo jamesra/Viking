@@ -10,7 +10,7 @@ namespace VikingXNAGraphics
 {
     public static class Global
     {
-        public static int NumCurveInterpolationsDefault = 14;
+        public const uint NumCurveInterpolationsDefault = 5;
     }
 
     public static class GlobalPrimitives

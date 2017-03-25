@@ -3,23 +3,15 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using VikingXNAGraphics;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
-namespace Monographics
+namespace VikingXNAGraphics.Models
 {
-    class ColorPositionMeshModel
-    { 
-        public Texture2D texture;
-
-        public VertexPositionColor[] verts;
-        public int[] edges;
-
-        public ColorPositionMeshModel()
-        { 
-        }
-
-        public static ColorPositionMeshModel CreateTetrahedron()
+    public static class Tetrahedron
+    {
+        public static MeshModel<VertexPositionColor> CreateTetrahedron()
         {
             VertexPositionColor[] verts = new VertexPositionColor[]
             {
@@ -34,16 +26,11 @@ namespace Monographics
                                0,2,3,
                                1,3,2};
 
-            ColorPositionMeshModel model = new Monographics.ColorPositionMeshModel();
-            model.verts = verts;
-            model.edges = edges;
+            MeshModel<VertexPositionColor> model = new MeshModel<VertexPositionColor>();
+            model.Verticies = verts;
+            model.Edges = edges;
 
             return model;
-        }
-
-        public void Update()
-        {
-
         }
     }
 }

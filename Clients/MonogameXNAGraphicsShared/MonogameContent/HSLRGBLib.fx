@@ -31,6 +31,13 @@ float BlendLumaWithBackground(float BackgroundLuma, float ForegroundLuma, float 
 }
 
 
+float CalculateHSLLumaFromRGB(float4 RGB)
+{
+    float3 maxval = max(max(RGB.r, RGB.g), RGB.b);
+    float3 minval = min(min(RGB.r, RGB.g), RGB.b);
+
+    return (maxval + minval) / 2.0;
+}
 
 //Convert RGB value to Hue, Chroma, Luma, slope
 float4 RGBToHCL(float4 RGB)
@@ -69,7 +76,7 @@ float4 RGBToHCL(float4 RGB)
 	
 	Hue = HPrime / 6;
 	
-	float Luma = mul(LumaWeights, RGB);
+    float Luma = (maxC + minC) / 2.0; //mul(LumaWeights, RGB);
 
 	float4 HCL = {Hue, Chroma, Luma, RGB.a};
 
@@ -139,7 +146,7 @@ float4 BlendHSLColorOverBackground(float4 HSLForegroundColor, float4 RGBBackgrou
 	float Hue = HSLForegroundColor.r;
 	float Saturation = HSLForegroundColor.g;
 	float ForegroundLuma = HSLForegroundColor.b;
-	float BackgroundLuma = mul(RGBBackgroundColor.xyz, LumaWeights.xyz);
+    float BackgroundLuma = CalculateHSLLumaFromRGB(RGBBackgroundColor); //mul(RGBBackgroundColor.xyz, LumaWeights.xyz);
 
 	float Luma = BlendLumaWithBackground(BackgroundLuma, ForegroundLuma, ForegroundLumaAlpha);
 

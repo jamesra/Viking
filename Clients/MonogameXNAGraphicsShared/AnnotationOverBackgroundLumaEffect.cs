@@ -3,10 +3,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 
-namespace VikingXNA
+namespace VikingXNAGraphics
 {
+    /*
     // A vertex type for drawing RoundLines, including an instance index
     struct AnnotationOverlayVertex
     {
@@ -29,9 +31,16 @@ namespace VikingXNA
                 new VertexElement(3 * sizeof(float), VertexElementFormat.Vector2, VertexElementUsage.TextureCoordinate, 0)
             };
     }
+    */
 
-    public class AnnotationOverBackgroundLumaEffect
+    public class AnnotationOverBackgroundLumaEffect : IInitEffect
     {
+        public enum Techniques
+        {
+            RGBOverBackgroundValueOverlayEffect,
+            RGBCircleOverBackgroundValueOverlayEffect
+        };
+
         public Effect effect;
 
         private EffectParameter _WorldViewProjMatrix;
@@ -74,6 +83,33 @@ namespace VikingXNA
             }
         }
 
+        public Techniques Technique
+        {
+            set
+            {
+                switch (value)
+                {
+                    case Techniques.RGBOverBackgroundValueOverlayEffect:
+                        effect.CurrentTechnique = effect.Techniques["RGBOverBackgroundValueOverlayEffect"];
+                        break;
+                    case Techniques.RGBCircleOverBackgroundValueOverlayEffect:
+                        effect.CurrentTechnique = effect.Techniques["RGBCircleOverBackgroundValueOverlayEffect"];
+                        break;
+                    default:
+                        throw new ArgumentException("Unknown technique");
+                }
+            }
+        } 
+
+        public EffectTechnique CurrentTechnique
+        {
+            get
+            {
+                return this.effect.CurrentTechnique;
+            }
+
+        }
+
         public void AnnotateWithTexture(Texture2D AnnotationTexture)
         {            
             _AnnotationTexture.SetValue(AnnotationTexture);
@@ -106,11 +142,15 @@ namespace VikingXNA
             effect.CurrentTechnique = effect.Techniques["RGBCircleOverBackgroundValueOverlayEffect"]; 
         }
 
-
-        public AnnotationOverBackgroundLumaEffect(Effect effect)
+        public void Init(GraphicsDevice device, ContentManager content)
         {
-            this.effect = effect;
+            this.effect = content.Load<Effect>("AnnotationOverlayShader");
+            LoadParameters(this.effect);
+            this.Technique = Techniques.RGBOverBackgroundValueOverlayEffect;
+        }
 
+        private void LoadParameters(Effect effect)
+        {
             _WorldViewProjMatrix = effect.Parameters["mWorldViewProj"];
             _BackgroundTexture = effect.Parameters["BackgroundTexture"];
             _AnnotationTexture = effect.Parameters["AnnotationTexture"];
@@ -125,8 +165,10 @@ namespace VikingXNA
             _BorderBlendStartSquared = effect.Parameters["borderBlendStartSquared"];
 
             _InputLumaAlpha = effect.Parameters["InputLumaAlpha"];
+        }
 
-            effect.CurrentTechnique = effect.Techniques["RGBOverBackgroundValueOverlayEffect"];
+        public AnnotationOverBackgroundLumaEffect()
+        {
         }
     }
 }

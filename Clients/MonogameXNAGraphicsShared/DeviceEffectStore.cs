@@ -6,10 +6,10 @@ using System.Threading.Tasks;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Content;
 
-namespace VikingXNA
+namespace VikingXNAGraphics
 {
     public static class DeviceEffectsStore<T> where
-        T : class, VikingXNAGraphics.IInitRoundManager, new()
+        T : class, IInitEffect, new()
     {
         private static Dictionary<GraphicsDevice, T> ManagersForDevice = new Dictionary<GraphicsDevice, T>();
          

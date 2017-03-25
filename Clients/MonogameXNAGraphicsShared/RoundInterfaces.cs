@@ -8,7 +8,7 @@ using Microsoft.Xna.Framework.Content;
 
 namespace VikingXNAGraphics
 {
-    public interface IInitRoundManager
+    public interface IInitEffect
     {
         void Init(GraphicsDevice device, ContentManager content);
     }

@@ -124,7 +124,7 @@ namespace VikingXNAGraphics
                           VikingXNA.Scene scene,
                           RoundLineCode.RoundLineManager lineManager,
                           Microsoft.Xna.Framework.Graphics.BasicEffect basicEffect,
-                          VikingXNA.AnnotationOverBackgroundLumaEffect overlayEffect,
+                          AnnotationOverBackgroundLumaEffect overlayEffect,
                           PolyLineView[] listToDraw)
         {
             int OriginalStencilValue = DeviceStateManager.GetDepthStencilValue(device);

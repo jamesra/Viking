@@ -149,7 +149,7 @@ namespace RoundCurve
     /// <summary>
     /// Class to handle drawing a list of RoundLines.
     /// </summary>
-    public class CurveManager : VikingXNAGraphics.IInitRoundManager
+    public class CurveManager : VikingXNAGraphics.IInitEffect
     {
         protected GraphicsDevice device;
         protected Effect effect;
@@ -636,7 +636,6 @@ namespace RoundCurve
             {
                 _RenderTargetSize.SetValue(new Vector2(value.Width, value.Height));
             }
-
         }
 
         public override void Init(GraphicsDevice device, ContentManager content)
@@ -648,7 +647,5 @@ namespace RoundCurve
             LoadParameters(effect);
             CreateRoundLineMesh();
         }
-
-
     }
 }

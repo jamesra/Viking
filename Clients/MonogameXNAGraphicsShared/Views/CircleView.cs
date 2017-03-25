@@ -49,7 +49,7 @@ namespace VikingXNAGraphics
         }
 
 
-        public static void SetupGraphicsDevice(GraphicsDevice device, BasicEffect basicEffect, VikingXNA.AnnotationOverBackgroundLumaEffect overlayEffect)
+        public static void SetupGraphicsDevice(GraphicsDevice device, BasicEffect basicEffect, AnnotationOverBackgroundLumaEffect overlayEffect)
         {
             //Note one still needs to set the texture for the effect before rendering after calling this method
             //DeviceStateManager.SaveDeviceState(device);
@@ -74,7 +74,7 @@ namespace VikingXNAGraphics
         public static void Draw(GraphicsDevice device,
                           VikingXNA.Scene scene,
                           BasicEffect basicEffect,
-                          VikingXNA.AnnotationOverBackgroundLumaEffect overlayEffect,
+                          AnnotationOverBackgroundLumaEffect overlayEffect,
                           TextureCircleView[] listToDraw)
         {
             if (listToDraw.Length == 0)
@@ -92,7 +92,7 @@ namespace VikingXNAGraphics
                 int[] indicies;
                 VertexPositionColorTexture[] VertArray = AggregatePrimitives(views, out indicies);
 
-                foreach (EffectPass pass in overlayEffect.effect.CurrentTechnique.Passes)
+                foreach (EffectPass pass in overlayEffect.CurrentTechnique.Passes)
                 {
                     pass.Apply();
 
@@ -330,7 +330,7 @@ namespace VikingXNAGraphics
             return verts;
         }
 
-        public static void SetupGraphicsDevice(GraphicsDevice device, BasicEffect basicEffect, VikingXNA.AnnotationOverBackgroundLumaEffect overlayEffect)
+        public static void SetupGraphicsDevice(GraphicsDevice device, BasicEffect basicEffect, AnnotationOverBackgroundLumaEffect overlayEffect)
         {
             /*DeviceStateManager.SaveDeviceState(device);
             DeviceStateManager.SetRenderStateForShapes(device);
@@ -389,7 +389,7 @@ namespace VikingXNAGraphics
         public static void Draw(GraphicsDevice device,
                           VikingXNA.Scene scene,
                           BasicEffect basicEffect,
-                          VikingXNA.AnnotationOverBackgroundLumaEffect overlayEffect,
+                          AnnotationOverBackgroundLumaEffect overlayEffect,
                           CircleView[] listToDraw)
         {
             if (listToDraw.Length == 0)
@@ -408,7 +408,7 @@ namespace VikingXNAGraphics
             int[] indicies;
             VertexPositionColorTexture[] VertArray = AggregatePrimitives(listToDraw, out indicies);
 
-            foreach (EffectPass pass in overlayEffect.effect.CurrentTechnique.Passes)
+            foreach (EffectPass pass in overlayEffect.CurrentTechnique.Passes)
             {
                 pass.Apply();
 

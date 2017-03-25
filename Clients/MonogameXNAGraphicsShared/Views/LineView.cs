@@ -14,14 +14,14 @@ namespace VikingXNAGraphics
 
         public GridVector2 Source
         {
-            get { return line.P0.ToGridVector(); }
-            set { line.P0 = value.ToVector2(); }
+            get { return line.P0.ToGridVector2(); }
+            set { line.P0 = value.ToXNAVector2(); }
         }
 
         public GridVector2 Destination
         {
-            get { return line.P1.ToGridVector(); }
-            set { line.P1 = value.ToVector2(); }
+            get { return line.P1.ToGridVector2(); }
+            set { line.P1 = value.ToXNAVector2(); }
         }
 
         public float LineWidth;
@@ -43,7 +43,7 @@ namespace VikingXNAGraphics
 
         public LineView(GridVector2 source, GridVector2 destination, double width, Microsoft.Xna.Framework.Color color, LineStyle lineStyle)
         {
-            line = new RoundLineCode.RoundLine(source.ToVector2(), destination.ToVector2());
+            line = new RoundLineCode.RoundLine(source.ToXNAVector2(), destination.ToXNAVector2());
             this.LineWidth = (float)width;
             this.Color = color; 
             this.Style = lineStyle;

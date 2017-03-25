@@ -262,7 +262,7 @@ namespace VikingXNAGraphics
             if (IsLabelTooSmallToSee(fontSizeInScreenPixels))
                 return;
 
-            Vector2 LocationCenterScreenPosition = scene.WorldToScreen(this.Position).ToVector2();
+            Vector2 LocationCenterScreenPosition = scene.WorldToScreen(this.Position).ToXNAVector2();
             if (font == null)
                 throw new ArgumentNullException("font");
 

@@ -139,3 +139,9 @@
 /processorParam:TextureFormat=Color
 /build:UpArrowV2.png
 
+#begin PolygonOverlayShader.fx
+/importer:EffectImporter
+/processor:EffectProcessor
+/processorParam:DebugMode=Auto
+/build:PolygonOverlayShader.fx
+

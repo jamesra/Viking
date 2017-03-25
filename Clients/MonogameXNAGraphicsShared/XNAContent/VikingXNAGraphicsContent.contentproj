@@ -246,6 +246,18 @@
       <ProcessorParameters_DebugMode>Debug</ProcessorParameters_DebugMode>
     </Compile>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="OverlayShaderShared.fx">
+      <Name>OverlayShaderShared</Name>
+      <Importer>EffectImporter</Importer>
+      <Processor>EffectProcessor</Processor>
+    </None>
+    <Compile Include="PolygonOverlayShader.fx">
+      <Name>PolygonOverlayShader</Name>
+      <Importer>EffectImporter</Importer>
+      <Processor>EffectProcessor</Processor>
+    </Compile>
+  </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath)\Microsoft\XNA Game Studio\$(XnaFrameworkVersion)\Microsoft.Xna.GameStudio.ContentPipeline.targets" />
   <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">

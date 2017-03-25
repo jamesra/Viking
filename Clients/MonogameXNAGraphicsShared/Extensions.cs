@@ -34,7 +34,7 @@ namespace VikingXNAGraphics
         /// Hue angle in degrees
         /// </summary>
         public float Hue;
-        
+
         /// <summary>
         /// Saturation from 0 to 1
         /// </summary>
@@ -95,14 +95,34 @@ namespace VikingXNAGraphics
 
     public static class VectorExtensions
     {
-        public static Microsoft.Xna.Framework.Vector2 ToVector2(this Geometry.GridVector2 vec)
+        public static Microsoft.Xna.Framework.Vector2 ToXNAVector2(this Geometry.GridVector2 vec)
         {
             return new Vector2((float)vec.X, (float)vec.Y);
         }
 
-        public static Geometry.GridVector2 ToGridVector(this Vector2 vec)
+        public static Geometry.GridVector2 ToGridVector2(this Vector2 vec)
         {
             return new Geometry.GridVector2(vec.X, vec.Y);
+        }
+
+        public static Microsoft.Xna.Framework.Vector3 ToXNAVector3(this Geometry.GridVector3 v)
+        {
+            return new Microsoft.Xna.Framework.Vector3((float)v.X, (float)v.Y, (float)v.Z);
+        }
+
+        public static Microsoft.Xna.Framework.Vector3 ToXNAVector3(this Geometry.GridVector2 v, double z = 0)
+        {
+            return new Microsoft.Xna.Framework.Vector3((float)v.X, (float)v.Y, (float)z);
+        }
+
+        public static Geometry.GridVector3 ToGridVector3(this Microsoft.Xna.Framework.Vector3 v)
+        {
+            return new Geometry.GridVector3(v.X, v.Y, v.Z);
+        }
+
+        public static Geometry.GridVector3 ToGridVector3(this Microsoft.Xna.Framework.Vector2 v, double z = 0)
+        {
+            return new Geometry.GridVector3(v.X, v.Y, z);
         }
     }
 
@@ -195,7 +215,7 @@ namespace VikingXNAGraphics
         /// <param name="color"></param>
         /// <returns></returns>
         private static float[] GetColorFloatComponents(int color)
-        {  
+        {
             float[] ARGB = new float[4];
             int[] iARGB = GetColorComponents(color);
 
@@ -251,9 +271,9 @@ namespace VikingXNAGraphics
                 hsl.Hue = 0;
                 hsl.Saturation = 0;
                 return hsl;
-            } 
+            }
 
-            if(hsl.Luminance < 0.5)
+            if (hsl.Luminance < 0.5)
             {
                 hsl.Saturation = f_max_min_diff / (f_max + f_min);
             }
@@ -262,11 +282,11 @@ namespace VikingXNAGraphics
                 hsl.Saturation = f_max_min_diff / (2f - f_max_min_diff);
             }
 
-            if(max == color.R)
+            if (max == color.R)
             {
                 hsl.Hue = (G - B) / f_max_min_diff;
             }
-            else if(max == color.G)
+            else if (max == color.G)
             {
                 hsl.Hue = 2f + (B - R) / f_max_min_diff;
             }
@@ -304,6 +324,34 @@ namespace VikingXNAGraphics
             return color.ConvertToHSL((float)color.A / 255f);
         }
 
+        /// <summary>
+        /// Passed an HSL color, reverse the hue angle 180 degrees
+        /// </summary>
+        /// <param name="colorHSL">Input color in HSL space</param>
+        /// <param name="rotation_degrees">Angle in degrees to add to hue</param>
+        /// <param name="alpha">0 to 1</param>
+        /// <returns></returns>
+        public static Microsoft.Xna.Framework.Color AdjustHSLHue(this Microsoft.Xna.Framework.Color colorHSL, float rotation_degrees, float? alpha= null)
+        {
+            float HueAngle = ((float)colorHSL.R / 255f) * 360;
+
+            HueAngle += rotation_degrees;
+            if (HueAngle >= 360.0f)
+                HueAngle -= 360.0f;
+                          
+            Microsoft.Xna.Framework.Color OutputHSL = new Microsoft.Xna.Framework.Color();
+            OutputHSL.R = (byte)(255.0 * (HueAngle / 360.0));
+            OutputHSL.G = colorHSL.G;
+            OutputHSL.B = colorHSL.B;
+
+            if(alpha.HasValue)
+                OutputHSL.A = (byte)(alpha * 255f);
+            else
+                OutputHSL.A = colorHSL.A;
+
+            return OutputHSL;
+        }
+
         public static Vector2[] MeasureStrings(this SpriteFont font, string[] lines)
         {
             return lines.Select(line => font.MeasureString(line)).ToArray();
@@ -311,7 +359,7 @@ namespace VikingXNAGraphics
     }
 
     public static class BasicEffectExtensions
-    { 
+    {
         public static void SetScene(this BasicEffect basicEffect, VikingXNA.Scene scene)
         {
             basicEffect.Projection = scene.Projection;
@@ -341,5 +389,6 @@ namespace VikingXNAGraphics
             return byteArray;
         }
     }
+
 }
 
