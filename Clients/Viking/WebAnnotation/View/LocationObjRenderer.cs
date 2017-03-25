@@ -35,7 +35,7 @@ namespace WebAnnotation
         /// <param name="basicEffect"></param>
         /// <param name="SectionNumber"></param>
         public static void DrawBackgrounds(List<LocationCanvasView> listToDraw, GraphicsDevice graphicsDevice, BasicEffect basicEffect, 
-                                           VikingXNA.AnnotationOverBackgroundLumaEffect overlayEffect, RoundLineCode.RoundLineManager overlayLineManager,
+                                           AnnotationOverBackgroundLumaEffect overlayEffect, RoundLineCode.RoundLineManager overlayLineManager,
                                            RoundCurve.CurveManager overlayCurveManager,
                                            VikingXNA.Scene Scene, int VisibleSectionNumber)
         {
@@ -88,7 +88,7 @@ namespace WebAnnotation
         }
 
         private static void DrawBackgroundsAtDepth(IGrouping<int, LocationCanvasView> depthGroup, GraphicsDevice graphicsDevice, BasicEffect basicEffect,
-                                           VikingXNA.AnnotationOverBackgroundLumaEffect overlayEffect, RoundLineCode.RoundLineManager overlayLineManager,
+                                           AnnotationOverBackgroundLumaEffect overlayEffect, RoundLineCode.RoundLineManager overlayLineManager,
                                            RoundCurve.CurveManager overlayCurveManager,
                                            VikingXNA.Scene Scene, int VisibleSectionNumber)
         {
@@ -103,6 +103,10 @@ namespace WebAnnotation
                 else if (typeGroup.Key == typeof(LocationClosedCurveView))
                 {
                     LocationClosedCurveView.Draw(graphicsDevice, Scene, overlayCurveManager, basicEffect, overlayEffect, typeGroup.Cast<LocationClosedCurveView>().ToArray());
+                }
+                else if (typeGroup.Key == typeof(LocationPolygonView))
+                {
+                    LocationPolygonView.Draw(graphicsDevice, Scene, overlayCurveManager, basicEffect, overlayEffect, typeGroup.Cast<LocationPolygonView>().ToArray());
                 }
                 else if (typeGroup.Key == typeof(LocationLineView))
                 {
@@ -128,7 +132,7 @@ namespace WebAnnotation
         }
 
         public static void DrawCanvasView(ICollection<LocationCanvasView> views, GraphicsDevice graphicsDevice, BasicEffect basicEffect,
-                                           VikingXNA.AnnotationOverBackgroundLumaEffect overlayEffect, RoundLineCode.RoundLineManager overlayLineManager,
+                                           AnnotationOverBackgroundLumaEffect overlayEffect, RoundLineCode.RoundLineManager overlayLineManager,
                                            RoundCurve.CurveManager overlayCurveManager,
                                            VikingXNA.Scene Scene, int VisibleSectionNumber)
         {
@@ -143,6 +147,10 @@ namespace WebAnnotation
                 else if (typeGroup.Key == typeof(LocationClosedCurveView))
                 {
                     LocationClosedCurveView.Draw(graphicsDevice, Scene, overlayCurveManager, basicEffect, overlayEffect, typeGroup.Cast<LocationClosedCurveView>().ToArray());
+                }
+                else if (typeGroup.Key == typeof(LocationPolygonView))
+                {
+                    LocationPolygonView.Draw(graphicsDevice, Scene, overlayCurveManager, basicEffect, overlayEffect, typeGroup.Cast<LocationPolygonView>().ToArray());
                 }
                 else if (typeGroup.Key == typeof(LocationLineView))
                 {

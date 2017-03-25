@@ -45,7 +45,7 @@
     <CreateWebPageOnPublish>true</CreateWebPageOnPublish>
     <WebPage>Viking.html</WebPage>
     <TrustUrlParameters>true</TrustUrlParameters>
-    <ApplicationRevision>236</ApplicationRevision>
+    <ApplicationRevision>240</ApplicationRevision>
     <ApplicationVersion>1.1.0.%2a</ApplicationVersion>
     <UseApplicationTrust>false</UseApplicationTrust>
     <CreateDesktopShortcut>true</CreateDesktopShortcut>
@@ -131,7 +131,10 @@
   <ItemGroup>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Settings.cs" />
     <Compile Include="SqlServerTypes\Loader.cs" />
+    <Content Include="x86\libiomp5md.dll" />
+    <Content Include="x86\MathNet.Numerics.MKL.dll" />
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>PublicResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
@@ -162,6 +165,7 @@
     <Content Include="Content\RGBToHSV.xnb" />
     <Content Include="Content\RoundCurve.xnb" />
     <Content Include="Content\RoundCurveHSV.xnb" />
+    <Content Include="Content\PolygonOverlayShader.xnb" />
     <None Include="packages.config" />
     <None Include="Properties\app.manifest" />
     <None Include="Properties\Settings.settings">
@@ -176,9 +180,9 @@
     </Compile>
   </ItemGroup>
   <ItemGroup>
-    <BootstrapperPackage Include=".NETFramework,Version=v4.6">
+    <BootstrapperPackage Include=".NETFramework,Version=v4.6.1">
       <Visible>False</Visible>
-      <ProductName>Microsoft .NET Framework 4.6 %28x86 and x64%29</ProductName>
+      <ProductName>Microsoft .NET Framework 4.6.1 %28x86 and x64%29</ProductName>
       <Install>true</Install>
     </BootstrapperPackage>
     <BootstrapperPackage Include="Microsoft.Net.Client.3.5">
@@ -230,6 +234,7 @@
     <Content Include="Modules\WebAnnotation\WebAnnotation.dll" />
     <Content Include="Modules\WebAnnotation\WebAnnotationModel.dll" />
     <Content Include="Modules\WebAnnotation\Xml.Schema.Linq.dll" />
+    <EmbeddedResource Include="Resources\scissors_16xLG.png" />
     <Content Include="SqlServerTypes\readme.htm" />
     <None Include="SqlServerTypes\x64\msvcr120.dll" />
     <None Include="SqlServerTypes\x64\SqlServerSpatial140.dll" />
@@ -258,10 +263,6 @@
     <ProjectReference Include="..\NGVV\VikingCore.csproj">
       <Project>{aeb1b24b-c968-40f9-b9f5-5c1fce2efd6d}</Project>
       <Name>VikingCore</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\VikingXNAGraphics\VikingXNAGraphics.csproj">
-      <Project>{7ede0b00-89f9-4ef5-a629-2ed66cee273b}</Project>
-      <Name>VikingXNAGraphics</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

@@ -181,6 +181,8 @@ namespace WebAnnotation
                     return WebAnnotationModel.LocationType.POINT;
                 case "Ellipse":
                     return WebAnnotationModel.LocationType.ELLIPSE;
+                case "CurvePolygon":
+                    return WebAnnotationModel.LocationType.CURVEPOLYGON;
                 default:
                     return WebAnnotationModel.LocationType.CIRCLE;
             }
@@ -238,6 +240,109 @@ namespace WebAnnotation
             GridVector3 p = new GridVector3(vPos.X * Global.Scale.X, vPos.Y * Global.Scale.Y, l.Z * Global.Scale.Z);
             return GridVector3.Distance(p, origin);
         }
+
+        
+        /// <summary>
+        /// Takes unsmoothed points and sets both the mosaic and volume shape for a locationObj
+        /// </summary>
+        /// <param name="mapper"></param>
+        /// <param name="location"></param>
+        /// <param name="volumePoints"></param>
+        /// <param name="volume_innerRingPoints"></param>
+        public static void SetShapeFromPointsInVolume(this WebAnnotationModel.LocationObj location, Viking.VolumeModel.IVolumeToSectionTransform mapper, GridVector2[] volumePoints, ICollection<GridVector2[]> volume_innerRingPoints)
+        {
+            GridVector2[] mosaic_points = mapper.VolumeToSection(volumePoints);
+
+            location.VolumeShape = location.TypeCode.GetSmoothedShape(volumePoints, volume_innerRingPoints);
+            location.MosaicShape = location.TypeCode.GetShape(mosaic_points, VolumeInnerRingPointsToSection(mapper, volume_innerRingPoints));
+
+            return;
+        }
+
+        /// <summary>
+        /// Takes unsmoothed points and sets both the mosaic and volume shape for a locationObj
+        /// </summary>
+        /// <param name="mapper"></param>
+        /// <param name="location"></param>
+        /// <param name="volumePoints"></param>
+        /// <param name="volume_innerRingPoints"></param>
+        public static void SetShapeFromPointsInSection(this WebAnnotationModel.LocationObj location, Viking.VolumeModel.IVolumeToSectionTransform mapper, GridVector2[] sectionPoints, ICollection<GridVector2[]> section_innerRingPoints)
+        {
+            GridVector2[] volume_points = mapper.SectionToVolume(sectionPoints);
+
+            location.VolumeShape = location.TypeCode.GetSmoothedShape(volume_points, SectionInnerRingPointsToVolume(mapper, section_innerRingPoints));
+            location.MosaicShape = location.TypeCode.GetShape(sectionPoints, section_innerRingPoints);
+
+            return;
+        }
+
+        /// <summary>
+        /// Takes unsmoothed points and sets both the mosaic and volume shape for a locationObj
+        /// </summary>
+        /// <param name="mapper"></param>
+        /// <param name="location"></param>
+        /// <param name="volumePoints"></param>
+        /// <param name="volume_innerRingPoints"></param>
+        public static void SetShapeFromGeometryInSection(this WebAnnotationModel.LocationObj location, Viking.VolumeModel.IVolumeToSectionTransform mapper, Microsoft.SqlServer.Types.SqlGeometry shape)
+        {
+            if (!shape.STIsValid().Value)
+                throw new ArgumentException("Shape must be valid SQL Geometry " + shape.IsValidDetailed());
+
+            Microsoft.SqlServer.Types.SqlGeometry volume_shape = mapper.TryMapShapeSectionToVolume(shape);
+
+            location.VolumeShape = location.TypeCode.GetSmoothedShape(volume_shape);
+            location.MosaicShape = shape;
+
+            return;
+        }
+
+        /// <summary>
+        /// Takes unsmoothed points and sets both the mosaic and volume shape for a locationObj
+        /// </summary>
+        /// <param name="mapper"></param>
+        /// <param name="location"></param>
+        /// <param name="volumePoints"></param>
+        /// <param name="volume_innerRingPoints"></param>
+        public static void TrySetShapeFromGeometryInSectionShowErrorDialog(this WebAnnotationModel.LocationObj location, System.Windows.Window parent, Viking.VolumeModel.IVolumeToSectionTransform mapper, Microsoft.SqlServer.Types.SqlGeometry shape)
+        {
+            try
+            {
+                SetShapeFromGeometryInSection(location, mapper, shape);
+            }
+            catch (ArgumentException e)
+            {
+                System.Windows.MessageBox.Show(parent, e.Message, "Could not save Polygon", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+            } 
+        }
+
+        private static ICollection<GridVector2[]> VolumeInnerRingPointsToSection(Viking.VolumeModel.IVolumeToSectionTransform mapper, ICollection<GridVector2[]> volume_innerRingPoints)
+        {
+            if (volume_innerRingPoints == null)
+                return null;
+
+            List<GridVector2[]> mosaic_innerRingPoints = new List<GridVector2[]>(volume_innerRingPoints.Count);
+            foreach (GridVector2[] volume_ring in volume_innerRingPoints)
+            {
+                mosaic_innerRingPoints.Add(mapper.VolumeToSection(volume_ring));
+            }
+
+            return mosaic_innerRingPoints;
+        }
+
+        private static ICollection<GridVector2[]> SectionInnerRingPointsToVolume(Viking.VolumeModel.IVolumeToSectionTransform mapper, ICollection<GridVector2[]> section_innerRingPoints)
+        {
+            if (section_innerRingPoints == null)
+                return null;
+
+            List<GridVector2[]> volume_innerRingPoints = new List<GridVector2[]>(section_innerRingPoints.Count);
+            foreach (GridVector2[] volume_ring in section_innerRingPoints)
+            {
+                volume_innerRingPoints.Add(mapper.SectionToVolume(volume_ring));
+            }
+
+            return volume_innerRingPoints;
+        }
+
     }
 
     internal static class MappingExtensions
@@ -274,6 +379,7 @@ namespace WebAnnotation
         public static Microsoft.SqlServer.Types.SqlGeometry TryMapShapeSectionToVolume(this Viking.VolumeModel.IVolumeToSectionTransform mapper, Microsoft.SqlServer.Types.SqlGeometry shape)
         {
             GridVector2[] VolumePositions;
+            ICollection<GridVector2[]> VolumeInnerRings = null;
             GridVector2[] points = shape.ToPoints();
 
             bool[] mappedPosition = mapper.TrySectionToVolume(points, out VolumePositions);
@@ -283,22 +389,154 @@ namespace WebAnnotation
                 return null;
             }
 
-            return SqlGeometryUtils.GeometryExtensions.ToGeometry(shape.STGeometryType(), VolumePositions);
+            if (shape.HasInteriorRings())
+            {
+                ICollection<GridVector2[]> innerRings = shape.InteriorRingPoints();
+                VolumeInnerRings = new List<GridVector2[]>(innerRings.Count);
+
+                foreach (GridVector2[] innerRing in innerRings)
+                {
+                    GridVector2[] VolumeRingPositions;
+                    mappedPosition = mapper.TrySectionToVolume(innerRing, out VolumeRingPositions);
+                    if (mappedPosition.Any(success => success == false)) //Remove locations we can't map
+                    {
+                        Trace.WriteLine("TryMapShapeSectionToVolume: Shape #" + shape.ToString() + " inner ring was unmappable.", "WebAnnotation");
+                        return null;
+                    }
+
+                    VolumeInnerRings.Add(VolumeRingPositions);
+                }
+            }
+
+            return SqlGeometryUtils.Extensions.ToGeometry(shape.GeometryType(), VolumePositions, VolumeInnerRings);
         }
 
         public static Microsoft.SqlServer.Types.SqlGeometry TryMapShapeVolumeToSection(this Viking.VolumeModel.IVolumeToSectionTransform mapper, Microsoft.SqlServer.Types.SqlGeometry shape)
         {
             GridVector2[] SectionPositions;
+            ICollection<GridVector2[]> SectionInnerRings = null;
             GridVector2[] points = shape.ToPoints();
 
             bool[] mappedPosition = mapper.TryVolumeToSection(points, out SectionPositions);
             if (mappedPosition.Any(success => success == false)) //Remove locations we can't map
             {
-                Trace.WriteLine("MapShapeSectionToVolume: Shape #" + shape.ToString() + " was unmappable.", "WebAnnotation");
+                Trace.WriteLine("TryMapShapeVolumeToSection: Shape #" + shape.ToString() + " was unmappable.", "WebAnnotation");
                 return null;
             }
 
-            return SqlGeometryUtils.GeometryExtensions.ToGeometry(shape.STGeometryType(), SectionPositions);
+            if(shape.HasInteriorRings())
+            {
+                ICollection<GridVector2[]> innerRings = shape.InteriorRingPoints();
+                SectionInnerRings = new List<GridVector2[]>(innerRings.Count);
+
+                foreach(GridVector2[] innerRing in innerRings)
+                {
+                    GridVector2[] SectionRingPositions;
+                    mappedPosition = mapper.TryVolumeToSection(innerRing, out SectionRingPositions);
+                    if (mappedPosition.Any(success => success == false)) //Remove locations we can't map
+                    {
+                        Trace.WriteLine("TryMapShapeVolumeToSection: Shape #" + shape.ToString() + " inner ring was unmappable.", "WebAnnotation");
+                        return null;
+                    }
+
+                    SectionInnerRings.Add(SectionRingPositions);
+                }
+            }
+
+            return SqlGeometryUtils.Extensions.ToGeometry(shape.GeometryType(), SectionPositions, SectionInnerRings);
+        }
+    }
+
+    public static class ShapeSmoothingExtensions
+    {
+        public static Microsoft.SqlServer.Types.SqlGeometry GetShape(this WebAnnotationModel.LocationType shapeType, GridVector2[] points, ICollection<GridVector2[]> innerRingPoints = null)
+        {
+            Microsoft.SqlServer.Types.SqlGeometry shape = null;
+
+            switch (shapeType)
+            {
+                case WebAnnotationModel.LocationType.POINT:
+                    return points[0].ToGeometryPoint();
+                case WebAnnotationModel.LocationType.CIRCLE:
+                    return points.ToCircle();
+                case WebAnnotationModel.LocationType.OPENCURVE:
+                case WebAnnotationModel.LocationType.POLYLINE:
+                case WebAnnotationModel.LocationType.CLOSEDCURVE:
+                    return points.ToPolyLine();
+                case WebAnnotationModel.LocationType.POLYGON:
+                case WebAnnotationModel.LocationType.CURVEPOLYGON:
+                    return points.ToPolygon(innerRingPoints);
+                default:
+                    throw new ArgumentException("Unexpected location type " + shapeType.ToString());
+            }
+        }
+
+        public static Microsoft.SqlServer.Types.SqlGeometry GetSmoothedShape(this WebAnnotationModel.LocationType shapeType, Microsoft.SqlServer.Types.SqlGeometry shape)
+        {
+            GridVector2[] points = shape.ToPoints();
+
+            switch (shapeType)
+            {
+                case WebAnnotationModel.LocationType.POINT:
+                    return points[0].ToGeometryPoint();
+                case WebAnnotationModel.LocationType.CIRCLE:
+                    return points.ToCircle();
+                case WebAnnotationModel.LocationType.OPENCURVE:
+                    return points.CalculateCurvePoints(Global.NumOpenCurveInterpolationPoints, false).ToArray().ToPolyLine();
+                case WebAnnotationModel.LocationType.POLYLINE:
+                    return points.ToPolyLine();
+                case WebAnnotationModel.LocationType.POLYGON:
+                    return points.ToPolygon(shape.InteriorRingPoints());
+                case WebAnnotationModel.LocationType.CLOSEDCURVE:
+                    return points.CalculateCurvePoints(Global.NumClosedCurveInterpolationPoints, true).ToArray().ToPolyLine();
+                case WebAnnotationModel.LocationType.CURVEPOLYGON:
+                    List<GridVector2[]> curved_innerRingPoints = InnerRingPointsToCurvedRingPoints(shape.InteriorRingPoints());
+                    GridVector2[] curved_outerRing = points.CalculateCurvePoints(Global.NumClosedCurveInterpolationPoints, true).ToArray();
+                    return curved_outerRing.ToPolygon(curved_innerRingPoints);
+                default:
+                    throw new ArgumentException("Unexpected location type " + shapeType.ToString());
+            }
+        }
+
+        public static Microsoft.SqlServer.Types.SqlGeometry GetSmoothedShape(this WebAnnotationModel.LocationType shapeType, GridVector2[] points, ICollection<GridVector2[]> innerRingPoints = null)
+        {
+            Microsoft.SqlServer.Types.SqlGeometry shape = null;
+
+            switch (shapeType)
+            {
+                case WebAnnotationModel.LocationType.POINT:
+                    return points[0].ToGeometryPoint();
+                case WebAnnotationModel.LocationType.CIRCLE:
+                    return points.ToCircle(); 
+                case WebAnnotationModel.LocationType.OPENCURVE:
+                    return points.CalculateCurvePoints(Global.NumOpenCurveInterpolationPoints, false).ToArray().ToPolyLine();
+                case WebAnnotationModel.LocationType.CLOSEDCURVE:
+                    return points.CalculateCurvePoints(Global.NumClosedCurveInterpolationPoints, true).ToArray().ToPolyLine();
+                case WebAnnotationModel.LocationType.POLYLINE:
+                    return points.ToPolyLine();
+                case WebAnnotationModel.LocationType.POLYGON:
+                    return points.ToPolygon(innerRingPoints);
+                case WebAnnotationModel.LocationType.CURVEPOLYGON:
+                    ICollection<GridVector2[]> curved_innerRingPoints = InnerRingPointsToCurvedRingPoints(innerRingPoints);
+                    GridVector2[] curved_outerRing = points.CalculateCurvePoints(Global.NumClosedCurveInterpolationPoints, true).ToArray();
+                    return curved_outerRing.ToPolygon(curved_innerRingPoints);
+                default:
+                    throw new ArgumentException("Unexpected location type " + shapeType.ToString());
+            }
+        }
+
+        private static List<GridVector2[]> InnerRingPointsToCurvedRingPoints(ICollection<GridVector2[]> innerRingPoints)
+        {
+            if (innerRingPoints == null)
+                return null;
+
+            List<GridVector2[]> curved_innerRingPoints = new List<GridVector2[]>(innerRingPoints.Count);
+            foreach (GridVector2[] ringPoints in innerRingPoints)
+            {
+                curved_innerRingPoints.Add(ringPoints.CalculateCurvePoints(Global.NumClosedCurveInterpolationPoints, true).ToArray());
+            }
+
+            return curved_innerRingPoints;
         }
     }
 

@@ -504,9 +504,9 @@ namespace WebAnnotation.UI.Commands
                 else
                     pushed_point = false;
 
-                CurveView curveView = new CurveView(vert_stack.ToArray(), this.LineColor, !this.IsOpen, lineWidth: this.LineWidth, lineStyle: Style, controlPointRadius: this.ControlPointRadius);
+                CurveView curveView = new CurveView(vert_stack.ToArray(), this.LineColor, !this.IsOpen, Global.NumCurveInterpolationPoints(!this.IsOpen), lineWidth: this.LineWidth, lineStyle: Style, controlPointRadius: this.ControlPointRadius);
                 curveView.Color.SetAlpha(this.ShapeIsValid() ? 1 : 0.25f);
-                CurveView.Draw(graphicsDevice, scene, Parent.LumaOverlayCurveManager, basicEffect, Parent.annotationOverlayEffect, 0, new CurveView[] { curveView } );
+                CurveView.Draw(graphicsDevice, scene, Parent.LumaOverlayCurveManager, basicEffect, Parent.AnnotationOverlayEffect, 0, new CurveView[] { curveView } );
                 //GlobalPrimitives.DrawPolyline(Parent.LineManager, basicEffect, DrawnLineVerticies, this.LineWidth, this.LineColor);
 
                 if(pushed_point)
@@ -518,14 +518,14 @@ namespace WebAnnotation.UI.Commands
             {
                 if (this.Verticies.Length > 1)
                 {
-                    CurveView curveView = new CurveView(this.Verticies.ToArray(), this.LineColor, !this.IsOpen, lineWidth: this.LineWidth, lineStyle: Style, controlPointRadius: this.ControlPointRadius);
+                    CurveView curveView = new CurveView(this.Verticies.ToArray(), this.LineColor, !this.IsOpen, Global.NumCurveInterpolationPoints(!this.IsOpen), lineWidth: this.LineWidth, lineStyle: Style, controlPointRadius: this.ControlPointRadius);
                     curveView.Color.SetAlpha(this.ShapeIsValid() ? 1 : 0.25f);
-                    CurveView.Draw(graphicsDevice, scene, Parent.LumaOverlayCurveManager, basicEffect, Parent.annotationOverlayEffect, 0, new CurveView[] { curveView });
+                    CurveView.Draw(graphicsDevice, scene, Parent.LumaOverlayCurveManager, basicEffect, Parent.AnnotationOverlayEffect, 0, new CurveView[] { curveView });
                 }
                 else
                 {
                     CircleView view = new CircleView(new GridCircle(this.Verticies.First(), this.LineWidth / 2.0), this.LineColor);
-                    CircleView.Draw(graphicsDevice, scene, basicEffect, this.Parent.annotationOverlayEffect, new CircleView[] { view });
+                    CircleView.Draw(graphicsDevice, scene, basicEffect, this.Parent.AnnotationOverlayEffect, new CircleView[] { view });
                 } 
             } 
         }

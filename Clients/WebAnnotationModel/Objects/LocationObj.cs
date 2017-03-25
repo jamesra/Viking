@@ -22,9 +22,11 @@ namespace WebAnnotationModel
         CIRCLE = 1,
         ELLIPSE = 2,
         POLYLINE = 3,
-        POLYGON = 4,
-        OPENCURVE = 5,
-        CLOSEDCURVE = 6
+        POLYGON = 4,     //Polygon, no smoothing of exterior verticies with curve fitting
+        OPENCURVE = 5,   //Line segments with a line width, additional control points created using curve fitting function
+        CURVEPOLYGON = 6, //Polygon whose outer and inner verticies are supplimented with a curve fitting function
+        CLOSEDCURVE = 7 //Ring of line segments with a line width
+        
     };
 
     public class LocationObj : WCFObjBaseWithKey<long, Location>
@@ -63,6 +65,8 @@ namespace WebAnnotationModel
                 case "MosaicShape":
                     return true;
                 case "Radius":
+                    return true;
+                case "Width":
                     return true;
                 default:
                     return false;
@@ -736,7 +740,13 @@ namespace WebAnnotationModel
             this.Data.DBAction = DBACTION.INSERT;
             this.Data.ID = Store.Locations.GetTempKey();
             this.Data.TypeCode = (short)shapeType;
-            this.Data.Radius = 16;
+
+            if(shapeType == LocationType.CIRCLE)
+                this.Data.Radius = 16;
+
+            if (shapeType == LocationType.POINT)
+                this.Data.Radius = 16;
+
             this.Data.Links = null;
 
             //this.Data.MosaicShape = mosaicShape.ToDbGeometry();
@@ -759,6 +769,7 @@ namespace WebAnnotationModel
             this.Data.MosaicShape = mosaicShape.ToDbGeometry();
             this.Data.VolumeShape = volumeShape.ToDbGeometry();
         }
+         
 
         /// <summary>
         /// Override and write each property individually so we send specific property changed events

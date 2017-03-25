@@ -35,5 +35,15 @@ namespace WebAnnotation.View
                 return MinDistance / (this.LineWidth / 2.0);
             }
         }
+
+        protected override bool PointIntersectsAnyLineSegment(GridVector2 WorldPosition)
+        {
+            //TODO: This could be optimized considerably
+            GridLineSegment[] lineSegs = GridLineSegment.SegmentsFromPoints(this.VolumeCurveControlPoints);
+            //Find the line segment the NewControlPoint intersects
+            double MinDistance;
+            int iNearest = lineSegs.NearestSegment(WorldPosition, out MinDistance);
+            return MinDistance < this.LineWidth / 2.0f;
+        }
     }
 }

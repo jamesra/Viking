@@ -155,6 +155,9 @@ namespace Viking.AU
                 System.Console.WriteLine("Unable to parse command line arguments, aborting");
                 return;
             }
+            
+            //TODO: DO NOT RUN THIS CODE UNTIL IT SUPPORTS INTERNAL POLYGONS!
+            return; 
 
             ConsoleProgressReporter progressReporter = new AU.ConsoleProgressReporter();
 
@@ -288,6 +291,7 @@ namespace Viking.AU
                 case LocationType.POLYLINE:
                 case LocationType.OPENCURVE:
                 case LocationType.CLOSEDCURVE:
+                case LocationType.CURVEPOLYGON:
                     mosaicPoints = loc.MosaicShape.ToPoints();
                     break;
                 default:
@@ -312,25 +316,30 @@ namespace Viking.AU
                 case LocationType.POINT:
                     return VolumeControlPoints[0].ToGeometryPoint();
                 case LocationType.CIRCLE:
-                    return SqlGeometryUtils.GeometryExtensions.ToCircle(VolumeControlPoints[0].X,
+                    return SqlGeometryUtils.Extensions.ToCircle(VolumeControlPoints[0].X,
                                    VolumeControlPoints[0].Y,
                                    loc.Z,
                                    loc.Radius); 
                 case LocationType.POLYGON:
                 case LocationType.POLYLINE:
-                    return SqlGeometryUtils.GeometryExtensions.ToGeometry(loc.MosaicShape.STGeometryType(), VolumeControlPoints);
+                    return SqlGeometryUtils.Extensions.ToGeometry(loc.MosaicShape.GeometryType(), VolumeControlPoints);
                 case LocationType.OPENCURVE:
                     {
                         GridVector2[] curvePoints = VolumeControlPoints.CalculateCurvePoints((uint)options.NumOpenInterpolationPoints, false).ToArray();
-                        return SqlGeometryUtils.GeometryExtensions.ToGeometry(loc.MosaicShape.STGeometryType(), curvePoints);
+                        return SqlGeometryUtils.Extensions.ToGeometry(loc.MosaicShape.GeometryType(), curvePoints);
                     }
                 case LocationType.CLOSEDCURVE:
                     {
                         GridVector2[] curvePoints = VolumeControlPoints.CalculateCurvePoints((uint)options.NumOpenInterpolationPoints, true).ToArray();
-                        return SqlGeometryUtils.GeometryExtensions.ToGeometry(loc.MosaicShape.STGeometryType(), curvePoints);
+                        return SqlGeometryUtils.Extensions.ToGeometry(loc.MosaicShape.GeometryType(), curvePoints);
+                    }
+                case LocationType.CURVEPOLYGON:
+                    {
+                        throw new NotImplementedException();
+                        //return SqlGeometryUtils.Extensions.ToS
                     }
                 default:
-                    return SqlGeometryUtils.GeometryExtensions.ToGeometry(loc.MosaicShape.STGeometryType(), VolumeControlPoints);
+                    return SqlGeometryUtils.Extensions.ToGeometry(loc.MosaicShape.GeometryType(), VolumeControlPoints);
             }
         }
          

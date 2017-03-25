@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Geometry;
+using System.Diagnostics;
 
 namespace Viking.VolumeModel
 {
@@ -105,6 +106,59 @@ namespace Viking.VolumeModel
         private static bool OppositeCornersMapped(bool[] mappedCorners)
         {
             return (mappedCorners[0] && mappedCorners[2]) || (mappedCorners[1] && mappedCorners[3]);
+        }
+    }
+
+    public static class VolumeToSectionMappingExtensions
+    {
+        public static GridPolygon TryMapShapeSectionToVolume(this Viking.VolumeModel.IVolumeToSectionTransform mapper, GridPolygon shape)
+        {
+            GridVector2[] VolumePositions; 
+
+            bool[] mappedPosition = mapper.TrySectionToVolume(shape.ExteriorRing, out VolumePositions);
+            if (mappedPosition.Any(success => success == false)) //Remove locations we can't map
+            {
+                Trace.WriteLine("MapShapeSectionToVolume: Shape #" + shape.ToString() + " was unmappable.", "WebAnnotation");
+                return null;
+            }
+
+            GridPolygon transformed_polygon = new GridPolygon(VolumePositions);
+
+            if (shape.HasInteriorRings)
+            {
+                IEnumerable<GridPolygon> transformedPolygons = shape.InteriorPolygons.Select(ip => mapper.TryMapShapeSectionToVolume(ip));
+                foreach(GridPolygon inner_poly in transformedPolygons)
+                {
+                    transformed_polygon.AddInteriorRing(inner_poly);
+                }
+            }
+
+            return transformed_polygon;
+        }
+
+        public static GridPolygon TryMapShapeVolumeToSection(this Viking.VolumeModel.IVolumeToSectionTransform mapper, GridPolygon shape)
+        {
+            GridVector2[] SectionPositions;
+
+            bool[] mappedPosition = mapper.TryVolumeToSection(shape.ExteriorRing, out SectionPositions);
+            if (mappedPosition.Any(success => success == false)) //Remove locations we can't map
+            {
+                Trace.WriteLine("MapShapeSectionToVolume: Shape #" + shape.ToString() + " was unmappable.", "WebAnnotation");
+                return null;
+            }
+
+            GridPolygon transformed_polygon = new GridPolygon(SectionPositions);
+
+            if (shape.HasInteriorRings)
+            {
+                IEnumerable<GridPolygon> transformedPolygons = shape.InteriorPolygons.Select(ip => mapper.TryMapShapeVolumeToSection(ip));
+                foreach (GridPolygon inner_poly in transformedPolygons)
+                {
+                    transformed_polygon.AddInteriorRing(inner_poly);
+                }
+            }
+
+            return transformed_polygon;
         }
     }
 }

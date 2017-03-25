@@ -83,8 +83,12 @@
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Microsoft.Xna.Framework, Version=4.0.0.0, Culture=neutral, PublicKeyToken=842cf8be1de50553, processorArchitecture=x86" />
-    <Reference Include="Microsoft.Xna.Framework.Graphics, Version=4.0.0.0, Culture=neutral, PublicKeyToken=842cf8be1de50553, processorArchitecture=x86" />
+    <Reference Include="Microsoft.Xna.Framework, Version=4.0.0.0, Culture=neutral, PublicKeyToken=842cf8be1de50553, processorArchitecture=x86">
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Microsoft.Xna.Framework.Graphics, Version=4.0.0.0, Culture=neutral, PublicKeyToken=842cf8be1de50553, processorArchitecture=x86">
+      <Private>False</Private>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core">
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
@@ -146,6 +150,11 @@
       <Name>Geometry</Name>
       <Private>False</Private>
     </ProjectReference>
+    <ProjectReference Include="..\..\MonogameXNAGraphicsShared\VikingXNAGraphics.csproj">
+      <Project>{7ede0b00-89f9-4ef5-a629-2ed66cee273b}</Project>
+      <Name>VikingXNAGraphics</Name>
+      <Private>False</Private>
+    </ProjectReference>
     <ProjectReference Include="..\..\VolumeModel\VolumeModel.csproj">
       <Project>{2eba2a77-f7f0-4efc-ac06-a12fe249388f}</Project>
       <Name>VolumeModel</Name>
@@ -156,14 +165,10 @@
       <Name>VikingCore</Name>
       <Private>False</Private>
     </ProjectReference>
-    <ProjectReference Include="..\VikingXNAGraphics\VikingXNAGraphics.csproj">
-      <Project>{7EDE0B00-89F9-4EF5-A629-2ED66CEE273B}</Project>
-      <Name>VikingXNAGraphics</Name>
-      <Private>False</Private>
-    </ProjectReference>
     <ProjectReference Include="..\VikingXNAWinForms\VikingXNAWinForms.csproj">
       <Project>{8e2f9eac-3b70-46fe-b8d6-7a04b9d183b9}</Project>
       <Name>VikingXNAWinForms</Name>
+      <Private>False</Private>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

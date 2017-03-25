@@ -1113,6 +1113,7 @@ namespace Viking.UI.Controls
             //            List<RenderTarget2D> OverlayList = new List<RenderTarget2D>(listOverlays.Length);
             if (ShowOverlays)
             {
+                UpdateLumaTextureForOverlayEffects(backgroundSection);
                 //                List<Vector4> listChannelColors = new List<Vector4>();
                 //Vector4 white = new Microsoft.Xna.Framework.Color(1, 1, 1, 0).ToVector4(); //Use alpha=0 so we blend color with background by default
                 //                Vector4 white = Microsoft.Xna.Framework.Color.White.ToVector4();
@@ -1172,6 +1173,21 @@ namespace Viking.UI.Controls
             }
 
             graphicsDevice.BlendState = OriginalBlendState;
+        }
+
+        private void UpdateLumaTextureForOverlayEffects(Texture BackgroundLuma)
+        {
+            this.LumaOverlayCurveManager.LumaTexture = BackgroundLuma;
+            this.LumaOverlayCurveManager.RenderTargetSize = Device.Viewport;
+
+            this.LumaOverlayLineManager.LumaTexture = BackgroundLuma;
+            this.LumaOverlayLineManager.RenderTargetSize = Device.Viewport;
+
+            this.PolygonOverlayEffect.LumaTexture = BackgroundLuma;
+            this.PolygonOverlayEffect.RenderTargetSize = Device.Viewport;
+
+            this.AnnotationOverlayEffect.LumaTexture = BackgroundLuma; 
+            this.AnnotationOverlayEffect.RenderTargetSize = Device.Viewport;
         }
 
         public static string TileCacheFullPath(Section section, string TextureFileName)

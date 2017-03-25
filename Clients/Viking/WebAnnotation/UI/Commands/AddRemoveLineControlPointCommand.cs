@@ -39,33 +39,13 @@ namespace WebAnnotation.UI.Commands
         {
             iNewControlPoint = -1;
             GridLineSegment[] lineSegs = GridLineSegment.SegmentsFromPoints(OriginalControlPoints);
+
             //Find the line segment the NewControlPoint intersects
-            double[] distancesToNewPoint = lineSegs.Select(l => l.DistanceToPoint(NewControlPointPosition)).ToArray();
-            double MinDistance = distancesToNewPoint.Min();
-            int iNearestSegment = distancesToNewPoint.TakeWhile(d => d != MinDistance).Count();
-            GridVector2[] newControlPoints = new GridVector2[OriginalControlPoints.Length + 1];
+            double MinDistance;
+            int iNearestSegment = lineSegs.NearestSegment(NewControlPointPosition, out MinDistance);
+            GridLineSegment[] updatedSegments = lineSegs.Insert(NewControlPointPosition, iNearestSegment);
 
-            for(int iLine = 0; iLine < lineSegs.Length; iLine++)
-            {
-                GridLineSegment segment = lineSegs[iLine];
-                if(iLine < iNearestSegment)
-                {
-                    newControlPoints[iLine] = segment.A;
-                }
-                else if(iLine == iNearestSegment)
-                {
-                    newControlPoints[iLine] = segment.A;
-                    newControlPoints[iLine + 1] = NewControlPointPosition;
-                    iNewControlPoint = iLine + 1; 
-                    newControlPoints[iLine + 2] = segment.B;
-                }
-                else
-                {
-                    newControlPoints[iLine + 2] = segment.B;
-                }
-            }
-
-            return newControlPoints;
+            return updatedSegments.Verticies();
         }
 
         protected override void OnMouseMove(object sender, MouseEventArgs e)
@@ -119,14 +99,17 @@ namespace WebAnnotation.UI.Commands
             mapping = parent.Section.ActiveSectionToVolumeTransform;
         }
 
-        public static GridVector2[] RemoveControlPoint(GridVector2[] OriginalControlPoints, GridVector2 NewControlPointPosition, bool IsClosedShape)
+        public static GridVector2[] RemoveControlPoint(GridVector2[] OriginalControlPoints, GridVector2 RemovedControlPointPosition, bool IsClosedShape)
         {
-            double[] distancesToRemovalPoint = OriginalControlPoints.Select(p => GridVector2.Distance(p, NewControlPointPosition)).ToArray();
-            double MinDistance = distancesToRemovalPoint.Min();
-            int iNearestPoint = distancesToRemovalPoint.TakeWhile(d => d != MinDistance).Count();
-            GridVector2[] newControlPoints = new GridVector2[OriginalControlPoints.Length - 1];
+            double MinDistance;
+            int iNearestPoint = OriginalControlPoints.NearestPoint(RemovedControlPointPosition, out MinDistance);
 
-            for(int iOldPoint=0; iOldPoint < iNearestPoint; iOldPoint++)
+            GridVector2[] newControlPoints = new GridVector2[OriginalControlPoints.Length - 1];
+            
+            Array.Copy(OriginalControlPoints, newControlPoints, iNearestPoint);
+            Array.Copy(OriginalControlPoints, iNearestPoint+1, newControlPoints, iNearestPoint, OriginalControlPoints.Length - (iNearestPoint+1));
+            /*
+            for (int iOldPoint=0; iOldPoint < iNearestPoint; iOldPoint++)
             {
                 newControlPoints[iOldPoint] = OriginalControlPoints[iOldPoint];
             }
@@ -141,7 +124,7 @@ namespace WebAnnotation.UI.Commands
             {
                 newControlPoints[newControlPoints.Length - 1] = newControlPoints[0];
             }
-
+            */
             return newControlPoints;
         }
 

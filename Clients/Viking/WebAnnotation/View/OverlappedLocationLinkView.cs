@@ -155,7 +155,7 @@ namespace WebAnnotation.View
         public static void Draw(GraphicsDevice device,
                           VikingXNA.Scene scene,
                           BasicEffect basicEffect,
-                          VikingXNA.AnnotationOverBackgroundLumaEffect overlayEffect,
+                          AnnotationOverBackgroundLumaEffect overlayEffect,
                           OverlappedLocationLinkView[] listToDraw)
         {
             TextureCircleView[] backgroundCircles = listToDraw.Select(l => l.circleView).ToArray();

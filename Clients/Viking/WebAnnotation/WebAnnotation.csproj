@@ -149,9 +149,16 @@
     <Compile Include="SqlServerTypes\Loader.cs" />
     <Compile Include="UI\Actions\MouseOverLocationCanvasViewEffect.cs" />
     <Compile Include="UI\Commands\AddRemoveLineControlPointCommand.cs" />
+    <Compile Include="UI\Commands\AddRemovePolygonVertexCommand.cs" />
     <Compile Include="UI\Commands\AdjustControlPointCommand.cs" />
+    <Compile Include="UI\Commands\AdjustPolygonVertexCommand.cs" />
+    <Compile Include="UI\Commands\CutHoleCommand.cs" />
     <Compile Include="UI\Commands\PlaceOpenCurveCommand.cs" />
+    <Compile Include="UI\Commands\RemovePolygonHoleCommand.cs" />
     <Compile Include="UI\Commands\TranslateLocationCommand.cs" />
+    <Compile Include="UI\Commands\TranslateScaleCommandBase.cs" />
+    <Compile Include="UI\Commands\RotateTranslateScaleCommand.cs" />
+    <Compile Include="UI\Commands\TranslateSmoothedPolygonCommand.cs" />
     <Compile Include="UI\Controls\ListStructures.cs">
       <SubType>UserControl</SubType>
     </Compile>
@@ -172,6 +179,7 @@
     <Compile Include="UI\Forms\GoToLocationForm.xaml.cs" />
     <Compile Include="UI\HitTestResult.cs" />
     <Compile Include="ViewModel\SectionLocationLinksAnnotationsViewModel.cs" />
+    <Compile Include="View\LocationPolygonView.cs" />
     <Compile Include="View\StructureCircleLabels.cs" />
     <Compile Include="View\StructureLink_ContextMenuView.cs" />
     <Compile Include="View\LocationLink_ContextMenuView.cs" />
@@ -388,6 +396,11 @@
       <Project>{6702adda-3f8f-43d0-9c7e-1e7fdbbe983f}</Project>
       <Name>SqlGeometryUtils</Name>
     </ProjectReference>
+    <ProjectReference Include="..\..\..\Triangle.NET\Triangle\Triangle.csproj">
+      <Project>{f7907a0a-b75f-400b-9e78-bfad00db4d6b}</Project>
+      <Name>Triangle</Name>
+      <Private>False</Private>
+    </ProjectReference>
     <ProjectReference Include="..\..\Common\Common.csproj">
       <Project>{B35B0C61-EC9C-425A-846D-F160D5B12158}</Project>
       <Name>Common</Name>
@@ -398,14 +411,14 @@
       <Name>Geometry</Name>
       <Private>False</Private>
     </ProjectReference>
+    <ProjectReference Include="..\..\MonogameXNAGraphicsShared\VikingXNAGraphics.csproj">
+      <Project>{7ede0b00-89f9-4ef5-a629-2ed66cee273b}</Project>
+      <Name>VikingXNAGraphics</Name>
+      <Private>False</Private>
+    </ProjectReference>
     <ProjectReference Include="..\NGVV\VikingCore.csproj">
       <Project>{AEB1B24B-C968-40F9-B9F5-5C1FCE2EFD6D}</Project>
       <Name>VikingCore</Name>
-      <Private>False</Private>
-    </ProjectReference>
-    <ProjectReference Include="..\VikingXNAGraphics\VikingXNAGraphics.csproj">
-      <Project>{7EDE0B00-89F9-4EF5-A629-2ED66CEE273B}</Project>
-      <Name>VikingXNAGraphics</Name>
       <Private>False</Private>
     </ProjectReference>
     <ProjectReference Include="..\..\VolumeModel\VolumeModel.csproj">
@@ -420,6 +433,7 @@
     <ProjectReference Include="..\VikingXNAWinForms\VikingXNAWinForms.csproj">
       <Project>{8e2f9eac-3b70-46fe-b8d6-7a04b9d183b9}</Project>
       <Name>VikingXNAWinForms</Name>
+      <Private>False</Private>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

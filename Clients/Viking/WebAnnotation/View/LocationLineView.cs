@@ -12,7 +12,7 @@ using SqlGeometryUtils;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using VikingXNA;
-using VikingXNAGraphics;
+using VikingXNAGraphics; 
 
 namespace WebAnnotation.View
 {
@@ -52,7 +52,7 @@ namespace WebAnnotation.View
                           VikingXNA.Scene scene,
                           RoundLineCode.RoundLineManager lineManager,
                           Microsoft.Xna.Framework.Graphics.BasicEffect basicEffect,
-                          VikingXNA.AnnotationOverBackgroundLumaEffect overlayEffect,
+                          AnnotationOverBackgroundLumaEffect overlayEffect,
                           AdjacentLocationLineView[] listToDraw,
                           int VisibleSectionNumber)
         {
@@ -112,7 +112,7 @@ namespace WebAnnotation.View
                           VikingXNA.Scene scene,
                           RoundLineCode.RoundLineManager lineManager,
                           Microsoft.Xna.Framework.Graphics.BasicEffect basicEffect,
-                          VikingXNA.AnnotationOverBackgroundLumaEffect overlayEffect,
+                          AnnotationOverBackgroundLumaEffect overlayEffect,
                           LocationLineView[] listToDraw)
         {
             PolyLineView.Draw(device, scene, lineManager, basicEffect, overlayEffect, listToDraw.Select(l => l.polyLineView).ToArray());
@@ -181,9 +181,7 @@ namespace WebAnnotation.View
                 _OverlappedLinks = value;
             }
         }
-
-
-
+        
         public override double DistanceFromCenterNormalized(GridVector2 Position)
         {
             if (PointIntersectsAnyControlPoint(Position))
@@ -199,9 +197,20 @@ namespace WebAnnotation.View
             }
         }
                 
-        public bool PointIntersectsAnyControlPoint(GridVector2 WorldPosition)
+        protected bool PointIntersectsAnyControlPoint(GridVector2 WorldPosition)
         {
-            return VolumeControlPoints.Select(p => new GridCircle(p, ControlPointRadius)).Any(c => c.Contains(WorldPosition));
+            GridCircle testCircle = new GridCircle(WorldPosition, ControlPointRadius);
+            return VolumeControlPoints.Any(p => testCircle.Contains(p));
+        }
+
+        protected virtual bool PointIntersectsAnyLineSegment(GridVector2 WorldPosition)
+        {
+            //TODO: This could be optimized considerably
+            GridLineSegment[] lineSegs = GridLineSegment.SegmentsFromPoints(this.VolumeControlPoints);
+            //Find the line segment the NewControlPoint intersects
+            double MinDistance;
+            int iNearest = lineSegs.NearestSegment(WorldPosition, out MinDistance);
+            return MinDistance < this.LineWidth / 2.0f;
         }
 
         public override LocationAction GetMouseClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID)
@@ -218,18 +227,23 @@ namespace WebAnnotation.View
             }
             else if (ModifierKeys.CtrlPressed())
             {
-                //Allow user to add a control point if the mouse is not over an existing control point
-                if (PointIntersectsAnyControlPoint(WorldPosition))
+                if (PointIntersectsAnyLineSegment(WorldPosition))
                 {
-                    if (VolumeControlPoints.Length > 2)
-                        return LocationAction.REMOVECONTROLPOINT;
+                    //Allow user to add a control point if the mouse is not over an existing control point
+                    if (PointIntersectsAnyControlPoint(WorldPosition))
+                    {
+                        if (VolumeControlPoints.Length > 2)
+                            return LocationAction.REMOVECONTROLPOINT;
+                        else
+                            return LocationAction.NONE;
+                    }
                     else
-                        return LocationAction.NONE;
+                        return LocationAction.ADDCONTROLPOINT;
                 }
                 else
-                    return LocationAction.ADDCONTROLPOINT;
-
-                //return LocationAction.NONE;
+                {
+                    return LocationAction.NONE;
+                }
             }
             else
             {

@@ -727,12 +727,15 @@ namespace WebAnnotation
                         break;
                     case LocationType.OPENCURVE:
                         newLocation.Width = 8.0;
-                        QueuePlacementCommandForOpenCurveStructure(this.Parent, newLocation, WorldPos, type.Color.SetAlpha(0.5f), false);
+                        QueuePlacementCommandForOpenCurveStructure(this.Parent, newLocation, WorldPos, type.Color.SetAlpha(0.5f), LocationType.OPENCURVE, false);
                         break;
                     case LocationType.CLOSEDCURVE:
                         newLocation.Width = 8.0;
-                        QueuePlacementCommandForClosedCurveStructure(this.Parent, newLocation, WorldPos, type.Color.SetAlpha(0.5f), false);
+                        QueuePlacementCommandForClosedCurveStructure(this.Parent, newLocation, WorldPos, type.Color.SetAlpha(0.5f), AnnotationType, false);
                         break;
+                    case LocationType.CURVEPOLYGON:
+                        QueuePlacementCommandForPolygonStructure(this.Parent, newLocation, WorldPos, type.Color.SetAlpha(0.5f), AnnotationType, false);
+                        break; 
                     default:
                         Trace.WriteLine("Could not find commands for annotation type: " + AnnotationType.ToString());
                         return;
@@ -758,11 +761,11 @@ namespace WebAnnotation
                     new ResizeCircleCommand.OnCommandSuccess((double radius) => {
                                     
                                     newLocation.TypeCode = LocationType.CIRCLE;
-                                    newLocation.MosaicShape = SqlGeometryUtils.GeometryExtensions.ToCircle(sectionPos.X,
+                                    newLocation.MosaicShape = SqlGeometryUtils.Extensions.ToCircle(sectionPos.X,
                                        sectionPos.Y,
                                        newLocation.Section,
                                        radius);
-                                    newLocation.VolumeShape = SqlGeometryUtils.GeometryExtensions.ToCircle(worldPos.X,
+                                    newLocation.VolumeShape = SqlGeometryUtils.Extensions.ToCircle(worldPos.X,
                                         worldPos.Y,
                                         newLocation.Section,
                                         radius);
@@ -773,74 +776,46 @@ namespace WebAnnotation
                                      })});
         }
 
-        public static void QueuePlacementCommandForOpenCurveStructure(Viking.UI.Controls.SectionViewerControl Parent, LocationObj newLocation, GridVector2 origin, System.Drawing.Color typecolor, bool SaveToStore)
+        public static void QueuePlacementCommandForOpenCurveStructure(Viking.UI.Controls.SectionViewerControl Parent, LocationObj newLocation, GridVector2 origin, System.Drawing.Color typecolor, LocationType typecode, bool SaveToStore)
         {
-            /*
-            public PlaceOpenCurveCommand(Viking.UI.Controls.SectionViewerControl parent,
-                                        Microsoft.Xna.Framework.Color color,
-                                        GridVector2 origin,
-                                        double LineWidth,
-                                        OnCommandSuccess success_callback)
-                                        */
             double LineWidth = 16.0;
             Viking.UI.Commands.Command.EnqueueCommand(typeof(PlaceOpenCurveCommand), new object[] { Parent, typecolor, origin,  LineWidth,
                                                             new ControlPointCommandBase.OnCommandSuccess((GridVector2[] points) => {
-                                                                    newLocation.TypeCode = LocationType.OPENCURVE;
+                                                                    newLocation.TypeCode = typecode;
                                                                     newLocation.Width = LineWidth;
-                                                                    SetLocationShapeFromPointsInVolume(Parent.Section, newLocation, points);
+                                                                    newLocation.SetShapeFromPointsInVolume(Parent.Section.ActiveSectionToVolumeTransform, points, null);
                                                                     if(SaveToStore)
                                                                         Store.Locations.Save();
                                                             }) });
         }
 
-        public static void QueuePlacementCommandForClosedCurveStructure(Viking.UI.Controls.SectionViewerControl Parent, LocationObj newLocation, GridVector2 origin, System.Drawing.Color typecolor, bool SaveToStore)
+        public static void QueuePlacementCommandForClosedCurveStructure(Viking.UI.Controls.SectionViewerControl Parent, LocationObj newLocation, GridVector2 origin, System.Drawing.Color typecolor, LocationType typecode, bool SaveToStore)
         {
-            /*
-            public PlaceOpenCurveCommand(Viking.UI.Controls.SectionViewerControl parent,
-                                        Microsoft.Xna.Framework.Color color,
-                                        GridVector2 origin,
-                                        double LineWidth,
-                                        OnCommandSuccess success_callback)
-                                        */
             double LineWidth = 16.0; 
             Viking.UI.Commands.Command.EnqueueCommand(typeof(PlaceClosedCurveCommand), new object[] { Parent, typecolor, origin, LineWidth,
                                                             new ControlPointCommandBase.OnCommandSuccess((GridVector2[] points) => {
-                                                                    newLocation.TypeCode = LocationType.CLOSEDCURVE;
+                                                                    newLocation.TypeCode = typecode;
                                                                     newLocation.Width = LineWidth;
-                                                                    SetLocationShapeFromPointsInVolume(Parent.Section, newLocation, points);
+                                                                    newLocation.SetShapeFromPointsInVolume(Parent.Section.ActiveSectionToVolumeTransform, points, null);
                                                                     if(SaveToStore)
                                                                         Store.Locations.Save();
                                                             }) });
         }
 
-        public static void SetLocationShapeFromPointsInVolume(SectionViewModel Section, LocationObj location, GridVector2[] points)
+        public static void QueuePlacementCommandForPolygonStructure(Viking.UI.Controls.SectionViewerControl Parent, LocationObj newLocation, GridVector2 origin, System.Drawing.Color typecolor, LocationType typecode, bool SaveToStore)
         {
-            GridVector2[] mosaic_points = Section.ActiveSectionToVolumeTransform.VolumeToSection(points);
-
-            switch (location.TypeCode)
-            {
-                case LocationType.CIRCLE:
-                    location.MosaicShape = mosaic_points.ToCircle();
-                    location.VolumeShape = points.ToCircle();
-                    break;
-                case LocationType.OPENCURVE:
-                    location.MosaicShape = mosaic_points.ToPolyLine();
-                    location.VolumeShape = points.CalculateCurvePoints(Global.NumOpenCurveInterpolationPoints, false).ToArray().ToPolyLine();
-                    break;
-                case LocationType.POLYLINE:
-                    location.MosaicShape = mosaic_points.ToPolyLine();
-                    location.VolumeShape = points.ToPolyLine();
-                    break;
-                case LocationType.POLYGON:
-                    location.MosaicShape = mosaic_points.ToPolygon();
-                    location.VolumeShape = points.ToPolygon();
-                    break;
-                case LocationType.CLOSEDCURVE:
-                    location.MosaicShape = mosaic_points.ToPolygon(); 
-                    location.VolumeShape = points.CalculateCurvePoints(Global.NumClosedCurveInterpolationPoints, true).ToArray().ToPolygon();
-                    break;
-            }
+            double LineWidth = 16.0;
+            Viking.UI.Commands.Command.EnqueueCommand(typeof(PlaceClosedCurveCommand), new object[] { Parent, typecolor, origin, LineWidth,
+                                                            new ControlPointCommandBase.OnCommandSuccess((GridVector2[] points) => {
+                                                                    newLocation.TypeCode = typecode; 
+                                                                    newLocation.SetShapeFromPointsInVolume(Parent.Section.ActiveSectionToVolumeTransform, points, null);
+                                                                    if(SaveToStore)
+                                                                        Store.Locations.Save();
+                                                            }) });
         }
+
+
+
 
         protected void OnToggleStructureTag(string tag)
         {
@@ -931,10 +906,14 @@ namespace WebAnnotation
                     QueuePlacementCommandForCircleStructure(Parent, Store.Locations[loc.ID], LastMouseMoveVolumeCoords, SectionPos, loc.Parent.Type.Color, true);
                     break;
                 case LocationType.OPENCURVE: 
-                    QueuePlacementCommandForOpenCurveStructure(Parent, Store.Locations[loc.ID], LastMouseMoveVolumeCoords, loc.Parent.Type.Color, true);
+                    QueuePlacementCommandForOpenCurveStructure(Parent, Store.Locations[loc.ID], LastMouseMoveVolumeCoords, loc.Parent.Type.Color, newLocType, true);
                     break;
-                case LocationType.CLOSEDCURVE: 
-                    QueuePlacementCommandForClosedCurveStructure(Parent, Store.Locations[loc.ID], LastMouseMoveVolumeCoords, loc.Parent.Type.Color, true);
+                case LocationType.CLOSEDCURVE:
+                    QueuePlacementCommandForClosedCurveStructure(Parent, Store.Locations[loc.ID], LastMouseMoveVolumeCoords, loc.Parent.Type.Color, LocationType.CLOSEDCURVE, true);
+                    break;
+                case LocationType.CURVEPOLYGON:
+                    //TODO: Update the hotkeys at publish so we don't hardcode CURVEPOLYGON
+                    QueuePlacementCommandForPolygonStructure(Parent, Store.Locations[loc.ID], LastMouseMoveVolumeCoords, loc.Parent.Type.Color, LocationType.CURVEPOLYGON, true);
                     break; 
             }
         }
@@ -1356,14 +1335,7 @@ namespace WebAnnotation
 
             basicEffect.SetScene(scene);
 
-            VikingXNA.AnnotationOverBackgroundLumaEffect overlayEffect = Parent.annotationOverlayEffect;
-
-            overlayEffect.LumaTexture = BackgroundLuma;
-            Parent.LumaOverlayLineManager.LumaTexture = BackgroundLuma;
-            Parent.LumaOverlayCurveManager.LumaTexture = BackgroundLuma;
-
-            overlayEffect.RenderTargetSize = graphicsDevice.Viewport;
-            Parent.LumaOverlayLineManager.RenderTargetSize = graphicsDevice.Viewport;
+            VikingXNAGraphics.AnnotationOverBackgroundLumaEffect overlayEffect = Parent.AnnotationOverlayEffect;
             
             basicEffect.Alpha = 1;
             

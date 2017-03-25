@@ -33,7 +33,7 @@ namespace WebAnnotationModel
                     if (points.Length == 4)
                         return points.ToCurvePolygon();
                     else
-                        return GeometryExtensions.ToCircle(points[0].X, points[1].Y, Z, radius);
+                        return SqlGeometryUtils.Extensions.ToCircle(points[0].X, points[1].Y, Z, radius);
                 case LocationType.OPENCURVE:
                     return points.ToPolyLine();
             }

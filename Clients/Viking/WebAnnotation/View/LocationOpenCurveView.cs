@@ -59,7 +59,7 @@ namespace WebAnnotation.View
             //RegisterForStructureChangeEvents();
 
             Color color = obj.Parent == null ? Color.Gray.SetAlpha(0.5f) : obj.Parent.Type.Color.ToXNAColor(0.5f);
-            curveView = new CurveView(VolumeControlPoints, color, false, lineWidth: lineWidth, lineStyle: LineStyle.Tubular);
+            curveView = new CurveView(VolumeControlPoints, color, false, Global.NumOpenCurveInterpolationPoints, lineWidth: lineWidth, lineStyle: LineStyle.Tubular);
             CreateLabelViews(VolumeControlPoints, obj.ParentID);
         }
 
@@ -69,7 +69,7 @@ namespace WebAnnotation.View
             //RegisterForStructureChangeEvents();
 
             Color color = obj.Parent == null ? Color.Gray.SetAlpha(0.5f) : obj.Parent.Type.Color.ToXNAColor(0.5f);
-            curveView = new CurveView(VolumeControlPoints, color, false, lineWidth: obj.Width.Value, lineStyle: LineStyle.Tubular);
+            curveView = new CurveView(VolumeControlPoints, color, false, Global.NumOpenCurveInterpolationPoints, lineWidth: obj.Width.Value, lineStyle: LineStyle.Tubular);
             CreateLabelViews(VolumeControlPoints, obj.ParentID);
         }
 
@@ -147,7 +147,7 @@ namespace WebAnnotation.View
                           VikingXNA.Scene scene,
                           RoundCurve.CurveManager curveManager,
                           Microsoft.Xna.Framework.Graphics.BasicEffect basicEffect,
-                          VikingXNA.AnnotationOverBackgroundLumaEffect overlayEffect,
+                          AnnotationOverBackgroundLumaEffect overlayEffect,
                           LocationOpenCurveView[] listToDraw)
         {
             CurveView.Draw(device, scene, curveManager, basicEffect, overlayEffect, 0, listToDraw.Select(l => l.curveView).ToArray());
@@ -169,7 +169,7 @@ namespace WebAnnotation.View
             if (spriteBatch == null)
                 throw new ArgumentNullException("spriteBatch");
 
-            RoundCurve.CurveManager curveManager = VikingXNA.DeviceEffectsStore<RoundCurve.CurveManager>.TryGet(device);
+            RoundCurve.CurveManager curveManager = DeviceEffectsStore<RoundCurve.CurveManager>.TryGet(device);
             if (curveManager == null)
                 return;
             

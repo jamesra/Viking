@@ -4,7 +4,8 @@ using System.Text;
 using System.Diagnostics;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using VikingXNA; 
+using VikingXNAGraphics;
+using VikingXNA;
 using Geometry;
 using RoundCurve;
 using System.ComponentModel;
@@ -47,12 +48,27 @@ namespace VikingXNAWinForms
             }
         }
 
+        public PolygonOverlayEffect PolygonOverlayEffect
+        {
+            get
+            {
+                return DeviceEffectsStore<PolygonOverlayEffect>.GetOrCreateForDevice(this.Device, this.Content);
+            }
+        }
+
+        public AnnotationOverBackgroundLumaEffect AnnotationOverlayEffect
+        {
+            get
+            {
+                return DeviceEffectsStore<AnnotationOverBackgroundLumaEffect>.GetOrCreateForDevice(this.Device, this.Content);
+            }
+        } 
+
         public BasicEffect basicEffect;
 
         public TileLayoutEffect tileLayoutEffect;
         public MergeHSVImagesEffect mergeHSVImagesEffect;
-        public ChannelOverlayEffect channelOverlayEffect;
-        public AnnotationOverBackgroundLumaEffect annotationOverlayEffect;
+        public ChannelOverlayEffect channelOverlayEffect; 
 
         public readonly uint MaxTextureWidth = 4096;
         public readonly uint MaxTextureHeight = 4096; 
@@ -179,9 +195,6 @@ namespace VikingXNAWinForms
             this.channelOverlayEffect = new ChannelOverlayEffect(effectChannelOverlay);
             this.channelOverlayEffect.WorldViewProjMatrix = WorldViewProj;
 
-            Effect annotationOverlayEffect = Content.Load<Effect>("AnnotationOverlayShader");
-            this.annotationOverlayEffect = new AnnotationOverBackgroundLumaEffect(annotationOverlayEffect);
-            this.annotationOverlayEffect.WorldViewProjMatrix = WorldViewProj; 
         }
         
         public ViewerControl() : base()
@@ -326,12 +339,12 @@ namespace VikingXNAWinForms
             tileLayoutEffect.WorldViewProjMatrix = worldViewProj;
             this.channelOverlayEffect.WorldViewProjMatrix = worldViewProj;
             this.mergeHSVImagesEffect.WorldViewProjMatrix = worldViewProj;
-            this.annotationOverlayEffect.WorldViewProjMatrix = worldViewProj;
+            this.AnnotationOverlayEffect.WorldViewProjMatrix = worldViewProj;
+            this.PolygonOverlayEffect.WorldViewProjMatrix = worldViewProj;
         }
 
         protected void Draw(Scene drawnScene, RenderTarget2D renderTarget)
-        {
-
+        { 
             Device.SetRenderTarget(renderTarget);
             try
             {
@@ -343,9 +356,8 @@ namespace VikingXNAWinForms
                 Device.Viewport = drawnScene.Viewport;
 
             }
-
-
-            annotationOverlayEffect.RenderTargetSize = drawnScene.Viewport;
+            
+            AnnotationOverlayEffect.RenderTargetSize = drawnScene.Viewport;
             this.LumaOverlayLineManager.RenderTargetSize = drawnScene.Viewport;
 
 #if DEBUG

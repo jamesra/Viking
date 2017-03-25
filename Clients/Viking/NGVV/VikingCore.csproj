@@ -143,10 +143,10 @@
     <Reference Include="WindowsFormsIntegration" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Common\Attributes.cs" />
-    <Compile Include="Common\Enums.cs" />
-    <Compile Include="Common\EventArgs.cs" />
-    <Compile Include="Common\Interfaces.cs" />
+    <Compile Include="Objects\Common\Attributes.cs" />
+    <Compile Include="Objects\Common\Enums.cs" />
+    <Compile Include="Objects\Common\EventArgs.cs" />
+    <Compile Include="Objects\Common\Interfaces.cs" />
     <Compile Include="Global.cs" />
     <Compile Include="Objects\GenericTreeNode.cs" />
     <Compile Include="Objects\UIObjBase.cs" />
@@ -443,7 +443,7 @@
       <DependentUpon>VikingMain.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
-      <Generator>ResXFileCodeGenerator</Generator>
+      <Generator>PublicResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
       <SubType>Designer</SubType>
     </EmbeddedResource>
@@ -548,13 +548,13 @@
       <Project>{EACB87E8-A5E3-417E-A9EF-B80C2A68C020}</Project>
       <Name>Geometry</Name>
     </ProjectReference>
+    <ProjectReference Include="..\..\MonogameXNAGraphicsShared\VikingXNAGraphics.csproj">
+      <Project>{7ede0b00-89f9-4ef5-a629-2ed66cee273b}</Project>
+      <Name>VikingXNAGraphics</Name>
+    </ProjectReference>
     <ProjectReference Include="..\..\VikingWPFUserControls\VikingWPFUserControls.csproj">
       <Project>{4f62fce1-3fcf-431b-9526-80b859131513}</Project>
       <Name>VikingWPFUserControls</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\VikingXNAGraphics\VikingXNAGraphics.csproj">
-      <Project>{7EDE0B00-89F9-4EF5-A629-2ED66CEE273B}</Project>
-      <Name>VikingXNAGraphics</Name>
     </ProjectReference>
     <ProjectReference Include="..\..\VolumeModel\VolumeModel.csproj">
       <Project>{2EBA2A77-F7F0-4EFC-AC06-A12FE249388F}</Project>
@@ -570,6 +570,36 @@
   </ItemGroup>
   <ItemGroup>
     <WCFMetadata Include="Service References\" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\scissors_16xLG.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\Scissors2.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\PaintFill.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\FillTool_204.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\Association_12860.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\Create_16x.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\Cancel.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\cursor_addArrow.cur" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\cursor_paintbucket.cur" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\cursor_dupwedge.cur" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

@@ -58,17 +58,11 @@ namespace WebAnnotation.UI.Commands
         
         private void CreateView(GridVector2[] ControlPoints, Microsoft.Xna.Framework.Color color, double LineWidth, bool IsClosed)
         {
-            curveView = new CurveView(ControlPoints.ToList(), color, false, lineWidth: LineWidth);
-            curveView.TryCloseCurve = IsClosed;
+            curveView = new CurveView(ControlPoints.ToList(), color, IsClosed,
+                                      Global.NumCurveInterpolationPoints(IsClosed), 
+                                      lineWidth: LineWidth); 
         }
-
-        public override void OnDeactivate()
-        {
-            Viking.UI.State.SelectedObject = null;
-
-            base.OnDeactivate();
-        }
-
+        
         protected virtual void UpdatePosition(GridVector2 PositionDelta)
         {
             curveView.SetPoint(this.iAdjustedControlPoint, curveView.ControlPoints[iAdjustedControlPoint] + PositionDelta);
@@ -119,7 +113,7 @@ namespace WebAnnotation.UI.Commands
         public override void OnDraw(Microsoft.Xna.Framework.Graphics.GraphicsDevice graphicsDevice, VikingXNA.Scene scene,
                                     Microsoft.Xna.Framework.Graphics.BasicEffect basicEffect)
         {
-            CurveView.Draw(graphicsDevice, scene, Parent.LumaOverlayCurveManager, basicEffect, Parent.annotationOverlayEffect, 0, new CurveView[] { this.curveView });
+            CurveView.Draw(graphicsDevice, scene, Parent.LumaOverlayCurveManager, basicEffect, Parent.AnnotationOverlayEffect, 0, new CurveView[] { this.curveView });
         }
 
         protected override void Execute()

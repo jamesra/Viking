@@ -233,7 +233,7 @@ namespace WebAnnotation.View
         public static void Draw(GraphicsDevice device,
                           VikingXNA.Scene scene,
                           BasicEffect basicEffect,
-                          VikingXNA.AnnotationOverBackgroundLumaEffect overlayEffect,
+                          AnnotationOverBackgroundLumaEffect overlayEffect,
                           OverlappedLinkCircleView[] listToDraw)
         {
             OverlappedLocationLinkView[] linkViewArray = listToDraw.SelectMany(l => l.linkViews).ToArray();

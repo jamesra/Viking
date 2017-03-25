@@ -73,10 +73,6 @@
       <Project>{aeb1b24b-c968-40f9-b9f5-5c1fce2efd6d}</Project>
       <Name>VikingCore</Name>
     </ProjectReference>
-    <ProjectReference Include="..\VikingXNAGraphics\VikingXNAGraphics.csproj">
-      <Project>{7EDE0B00-89F9-4EF5-A629-2ED66CEE273B}</Project>
-      <Name>VikingXNAGraphics</Name>
-    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

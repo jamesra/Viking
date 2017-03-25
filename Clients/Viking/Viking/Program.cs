@@ -51,14 +51,24 @@ namespace Viking
 
             Trace.WriteLine("Arguments: " + args.ToString(), "Viking");
             Trace.WriteLine("Current Directory: " + System.Environment.CurrentDirectory, "Viking");
-            Trace.WriteLine("Application Directory: " + System.IO.Path.GetDirectoryName(execAssembly.CodeBase), "Viking");
+            Trace.WriteLine("Application Directory: " + execAssembly.Location, "Viking");
 #if DEBUG
-  //          System.Diagnostics.Debugger.Break();
+            //          System.Diagnostics.Debugger.Break();
 #endif
 
             //Change to the executing assemblies directory so we can load modules correctly
             //  System.Environment.CurrentDirectory = System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
-             
+            SqlServerTypes.Utilities.LoadNativeAssemblies(AppDomain.CurrentDomain.BaseDirectory);
+
+            try
+            {
+                MathNet.Numerics.Control.UseNativeMKL();
+            }
+            catch(Exception e)
+            {
+                Trace.WriteLine("Unable to load Native MKL library.  Exception text:\n" + e.Message);
+            }
+
             int workThreads;
             int portThreads;
             System.Threading.ThreadPool.GetMaxThreads(out workThreads, out portThreads);

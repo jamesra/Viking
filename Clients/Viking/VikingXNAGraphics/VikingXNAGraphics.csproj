@@ -161,7 +161,7 @@
     <Compile Include="Views\LabelView.cs" />
     <Compile Include="Views\LineView.cs" />
     <Compile Include="Views\LinkedLineView.cs" />
-    <Compile Include="Views\PolygonView.cs" />
+    <Compile Include="Views\Polygon2DView.cs" />
     <Compile Include="Views\PolyLineView.cs" />
     <Compile Include="Views\SharedEffectFunctions.cs" />
   </ItemGroup>

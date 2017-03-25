@@ -69,7 +69,20 @@ namespace WebAnnotation.View
 
         public override bool Intersects(SqlGeometry shape)
         {
-            return this.VolumeShapeAsRendered.STIntersects(shape).IsTrue;
+            ///If it is a circle, use the fast comparison
+            switch (shape.GeometryType())
+            {
+                case SupportedGeometryType.CURVEPOLYGON:
+                    GridRectangle bbox = shape.BoundingBox();
+                    System.Diagnostics.Debug.Assert(Math.Floor(bbox.Width) == Math.Floor(bbox.Height)); //Make sure our optimization is really getting a circle
+                    GridCircle circle = new GridCircle(bbox.Center, bbox.Width);
+                    return VolumeCircle.Intersects(circle);
+                case SupportedGeometryType.POINT:
+                    GridVector2 point = new GridVector2(shape.STX.Value, shape.STY.Value);
+                    return VolumeCircle.Contains(point);
+                default:
+                    return this.VolumeShapeAsRendered.STIntersects(shape).IsTrue;
+            }            
         }
         
         /// <summary>
@@ -256,7 +269,7 @@ namespace WebAnnotation.View
         public static void Draw(GraphicsDevice device,
                           VikingXNA.Scene scene,
                           BasicEffect basicEffect,
-                          VikingXNA.AnnotationOverBackgroundLumaEffect overlayEffect,
+                          AnnotationOverBackgroundLumaEffect overlayEffect,
                           AdjacentLocationCircleView[] listToDraw,
                           int VisibleSectionNumber)
         {
@@ -525,7 +538,7 @@ namespace WebAnnotation.View
         public static void Draw(GraphicsDevice device,
                           VikingXNA.Scene scene,
                           BasicEffect basicEffect,
-                          VikingXNA.AnnotationOverBackgroundLumaEffect overlayEffect,
+                          AnnotationOverBackgroundLumaEffect overlayEffect,
                           LocationCircleView[] listToDraw)
         {
             int stencilValue = DeviceStateManager.GetDepthStencilValue(device);

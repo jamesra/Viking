@@ -411,7 +411,7 @@ namespace WebAnnotation.ViewModel
                           VikingXNA.Scene scene,
                           RoundLineCode.LumaOverlayRoundLineManager lineManager,
                           Microsoft.Xna.Framework.Graphics.BasicEffect basicEffect,
-                          VikingXNA.AnnotationOverBackgroundLumaEffect overlayEffect,
+                          AnnotationOverBackgroundLumaEffect overlayEffect,
                           IEnumerable<LocationLinkView> listToDraw)
         {
             LineView[] linesToDraw = listToDraw.Select(l => l.lineView).ToArray();

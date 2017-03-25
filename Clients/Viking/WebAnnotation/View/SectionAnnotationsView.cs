@@ -1186,7 +1186,7 @@ namespace WebAnnotation.ViewModel
         }
         
         public static void Draw(Microsoft.Xna.Framework.Graphics.GraphicsDevice graphicsDevice, VikingXNA.Scene scene, 
-                                BasicEffect basicEffect, VikingXNA.AnnotationOverBackgroundLumaEffect overlayEffect, 
+                                BasicEffect basicEffect, VikingXNAGraphics.AnnotationOverBackgroundLumaEffect overlayEffect, 
                                 RoundLineCode.RoundLineManager overlayLineManager, RoundCurve.CurveManager overlayCurveManager
                                 )
         {

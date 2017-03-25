@@ -44,6 +44,9 @@ namespace WebAnnotation.View
                     return new LocationCircleView(obj, mapping);
                 case LocationType.OPENCURVE:
                     return new LocationOpenCurveView(obj, mapping);
+                case LocationType.CURVEPOLYGON:
+                case LocationType.POLYGON:
+                    return new LocationPolygonView(obj, mapping);
                 case LocationType.CLOSEDCURVE:
                     return new LocationClosedCurveView(obj, mapping);
                 case LocationType.POLYLINE:
@@ -81,6 +84,8 @@ namespace WebAnnotation.View
                         return view;
                         */
                     }
+                case LocationType.POLYGON:
+                case LocationType.CURVEPOLYGON:
                 case LocationType.CLOSEDCURVE:
                     {
                         AdjacentLocationCircleView view = new AdjacentLocationCircleView(obj, obj.MosaicShape.CalculateInscribedCircle(), mapping);

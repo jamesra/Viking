@@ -55,8 +55,7 @@ namespace WebAnnotation.View
                 return _ControlPointRadius;
             }
         }
-
-
+        
         public double lineWidth = 32;
 
         public static uint NumInterpolationPoints = Global.NumClosedCurveInterpolationPoints;
@@ -158,7 +157,7 @@ namespace WebAnnotation.View
                           VikingXNA.Scene scene,
                           RoundCurve.CurveManager lineManager,
                           Microsoft.Xna.Framework.Graphics.BasicEffect basicEffect,
-                          VikingXNA.AnnotationOverBackgroundLumaEffect overlayEffect,
+                          VikingXNAGraphics.AnnotationOverBackgroundLumaEffect overlayEffect,
                           LocationClosedCurveView[] listToDraw)
         {
             OverlappedLinkCircleView[] overlappedLocations = listToDraw.Select(l => l.OverlappedLinkView).Where(l => l != null && l.IsVisible(scene)).ToArray();
