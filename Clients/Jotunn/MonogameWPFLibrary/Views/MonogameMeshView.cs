@@ -15,6 +15,14 @@ using MonoGame.Framework.WpfInterop.Input;
 using MonogameWPFLibrary.ViewModels;
 using System.Collections.ObjectModel;
 
+using MonogameWPFLibrary;
+
+using VikingXNA;
+using VikingXNAGraphics;
+
+
+
+
 namespace MonogameWPFLibrary.Views
 {
     public class MeshView : WpfGame
@@ -25,6 +33,8 @@ namespace MonogameWPFLibrary.Views
 
         private static RoutedUICommand resetRotationCommand;
         private static RoutedUICommand translateCameraPositionCommand;
+
+        private VikingXNAGraphics.CircleView cView = new VikingXNAGraphics.CircleView(new Geometry.GridCircle(new Geometry.GridVector2(0, 0), 25), Color.Goldenrod);
           
         /// <summary>
         /// Increment the center number
@@ -201,7 +211,16 @@ namespace MonogameWPFLibrary.Views
                         device.DrawUserIndexedPrimitives<VertexPositionColor>(PrimitiveType.TriangleList, meshViewModel.Verticies, 0, meshViewModel.Verticies.Length, meshViewModel.Edges, 0, meshViewModel.Edges.Length / 3);
                     }
                 }
+                /*
+                Effect AnnotationOverlayShader = this.Content.Load<Effect>("AnnotationOverlayShader");
+                VikingXNA.AnnotationOverBackgroundLumaEffect overlayEffect = new AnnotationOverBackgroundLumaEffect(AnnotationOverlayShader);
+                VikingXNA.Scene scene = new VikingXNA.Scene(device.Viewport, new VikingXNA.Camera());
+                scene.Camera.LookAt = cView.Circle.Center.ToXNAVector2();
+                VikingXNAGraphics.CircleView.Draw(device, scene, effect, overlayEffect, new VikingXNAGraphics.CircleView[] { cView });
+                */
             }
+
+            
         }
     }
 }

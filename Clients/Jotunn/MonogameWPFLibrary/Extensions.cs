@@ -21,6 +21,11 @@ namespace MonogameWPFLibrary
 
     public static class GeometryMonogameExtensions
     {
+        public static Microsoft.Xna.Framework.Vector2 ToXNAVector2(this Geometry.GridVector2 v)
+        {
+            return new Microsoft.Xna.Framework.Vector2((float)v.X, (float)v.Y);
+        }
+
         public static Microsoft.Xna.Framework.Vector3 ToXNAVector3(this Geometry.GridVector3 v)
         {
             return new Microsoft.Xna.Framework.Vector3((float)v.X, (float)v.Y, (float)v.Z);
