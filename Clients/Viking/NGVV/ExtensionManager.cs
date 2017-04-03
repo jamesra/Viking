@@ -7,6 +7,7 @@ using System.IO;
 using System.Diagnostics;
 using Viking.Common;
 using System.ComponentModel;
+using System.Windows.Forms;
 
 namespace Viking.Common
 {
@@ -302,8 +303,16 @@ namespace Viking.Common
             catch (ReflectionTypeLoadException except)
             {
                 VikingExtensionAttribute Extension = GetAssemblyExtensionAttribute(A);
-                System.Windows.Forms.MessageBox.Show("Could not load module: " + Extension.Name + "\nHit OK to continue to run Viking without the extension.\nException: " + except.ToString());
-                return false; 
+                DialogResult result = MessageBox.Show("OK = Run Viking without the extension.\nCancel = Exit and throw exception with debug information.\n\nException:\n" + except.ToString(), "Could not load module: " + Extension.Name, MessageBoxButtons.OKCancel);
+
+                if (result == DialogResult.OK)
+                {
+                    return false;
+                }
+                else
+                {
+                    throw except;
+                }
             }
 
             if (types == null || types.Length == 0)
