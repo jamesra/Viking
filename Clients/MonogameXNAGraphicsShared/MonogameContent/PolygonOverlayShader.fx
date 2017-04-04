@@ -29,7 +29,6 @@ struct PixelShaderInput
 {
     float4 Position : POSITION0;
     float4 HSLColor : COLOR0;
-    float2 ScreenTexCoord : SV_Position;
 };
  
 struct PixelShaderOutput
@@ -52,7 +51,9 @@ PixelShaderOutput ColorPolygonOverBackgroundLumaPixelShaderFunction(PixelShaderI
     PixelShaderOutput output;
     output.Depth = 0.5; 
 
-    float4 RGBBackgroundColor = tex2D(BackgroundTextureSampler, ((input.ScreenTexCoord.xy) / (RenderTargetSize.xy - 1)));
+    float2 ScreenTexCoord = input.Position.xy / input.Position.w;
+
+    float4 RGBBackgroundColor = tex2D(BackgroundTextureSampler, (ScreenTexCoord.xy / (RenderTargetSize.xy - 1)));
     output.Color = BlendHSLColorOverBackground(input.HSLColor, RGBBackgroundColor, InputLumaAlpha);
     output.Color.a = input.HSLColor.a;
 

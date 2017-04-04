@@ -51,21 +51,25 @@
   <ItemGroup>
     <Compile Include="AnnotationOverBackgroundLumaEffect.cs" />
     <Compile Include="Camera.cs" />
+    <Compile Include="Camera3D.cs" />
     <Compile Include="ChannelOverlayEffect.cs" />
-    <Compile Include="ColorPositionMeshModel.cs" />
+    <Compile Include="DeviceEffectStore.cs" />
     <Compile Include="DrawExtensions.cs" />
     <Compile Include="Extensions.cs" />
     <Compile Include="MergeHSVEffect.cs" />
+    <Compile Include="MeshModel.cs" />
+    <Compile Include="PolygonOverlayEffect.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RoundCurve.cs" />
-    <Compile Include="RoundEffectStore.cs" />
     <Compile Include="RoundInterfaces.cs" />
     <Compile Include="RoundLine.cs" />
     <Compile Include="Scene.cs" />
     <Compile Include="ServiceContainer.cs" />
     <Compile Include="TileBlendEffect.cs" />
+    <Compile Include="TriangleNetExtensions.cs" />
     <Compile Include="Views\CircleView.cs" />
     <Compile Include="Views\CurveView.cs" />
+    <Compile Include="Views\CurveViewControlPoints.cs" />
     <Compile Include="Views\DeviceStateManager.cs" />
     <Compile Include="Views\Extensions.cs" />
     <Compile Include="Views\Global.cs" />
@@ -107,6 +111,10 @@
     <ProjectReference Include="..\..\Geometry\Geometry.csproj">
       <Project>{eacb87e8-a5e3-417e-a9ef-b80c2a68c020}</Project>
       <Name>Geometry</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\Triangle.NET\Triangle\Triangle.csproj">
+      <Project>{f7907a0a-b75f-400b-9e78-bfad00db4d6b}</Project>
+      <Name>Triangle</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

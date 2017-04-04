@@ -8,8 +8,8 @@ using System.Collections.Specialized;
 using WebAnnotationModel;
 using WebAnnotationModel.Objects; 
 using WebAnnotationModel.Service;
-using System.Data.Entity.Spatial;
 using SqlGeometryUtils;
+using System.Data.Entity.Spatial;
 
 using Geometry; 
 
@@ -359,7 +359,7 @@ namespace WebAnnotationModel
                 return this.Width.Value / 2.0;
         }
 
-        private double CalculateRadius(DbGeometry shape)
+        private double CalculateRadius(System.Data.Entity.Spatial.DbGeometry shape)
         {
             if (shape.Dimension == 1)
             {

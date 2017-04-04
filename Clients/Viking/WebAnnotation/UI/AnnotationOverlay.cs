@@ -534,7 +534,7 @@ namespace WebAnnotation
                                                                                 (float)CreateNewLinkedLocationCommand.LastEditedLocation.Position.Y),
                                             (int)CreateNewLinkedLocationCommand.LastEditedLocation.Z,
                                             true,
-                                            (double)((CreateNewLinkedLocationCommand.LastEditedLocation.Width) / Parent.Width) * 2); 
+                                            (double)((CreateNewLinkedLocationCommand.LastEditedLocation.VolumeShape.BoundingBox().Width) / Parent.Width) * 2);
 
                     }
                     else
@@ -940,32 +940,6 @@ namespace WebAnnotation
                     Viking.UI.State.SelectedObject = null;
                     CreateNewLinkedLocationCommand.LastEditedLocation = null;
                 }
-                /*
-                LocationObj template = CreateNewLinkedLocationCommand.LastEditedLocation;
-                if (template.Z != this.Parent.Section.Number)
-                {
-                    GridVector2 SectionPos;
-                    bool success = Parent.Section.ActiveSectionToVolumeTransform.TryVolumeToSection(WorldPos, out SectionPos);
-                    Debug.Assert(success);
-                    if (!success)
-                        return;
-
-                    LocationObj newLoc = new LocationObj(CreateNewLinkedLocationCommand.LastEditedLocation.Parent,
-                                        Parent.Section.Number,
-                                        template.TypeCode);
-
-                    if (template.TypeCode == LocationType.CIRCLE)
-                    {
-                        LocationCircleView newLocView = new LocationCircleView(newLoc, Parent.Section.ActiveSectionToVolumeTransform);
-
-                        Viking.UI.Commands.Command.EnqueueCommand(typeof(ResizeCircleCommand), new object[] { Parent, template.Parent.Type.Color, WorldPos, new ResizeCircleCommand.OnCommandSuccess((double radius) => { newLoc.Radius = radius; }) });
-                        Viking.UI.Commands.Command.EnqueueCommand(typeof(CreateNewLinkedLocationCommand), new object[] { Parent, template, newLocView });
-                    }
-
-                    Viking.UI.State.SelectedObject = null;
-                    CreateNewLinkedLocationCommand.LastEditedLocation = null; 
-                }
-                */
             }
         }
 

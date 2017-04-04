@@ -78,6 +78,8 @@ namespace WebAnnotation.UI.Commands
             OriginalMosaicPosition = mapping.VolumeToSection(VolumePoint);
             VolumePositionDeltaSum = new GridVector2(0, 0);
             MosaicPositionDeltaSum = new GridVector2(0, 0);
+            TranslatedVolumePosition = OriginalVolumePosition + VolumePositionDeltaSum;
+            TranslatedMosaicPosition = OriginalMosaicPosition;
         }
 
         /// <summary>
@@ -90,6 +92,8 @@ namespace WebAnnotation.UI.Commands
             OriginalMosaicPosition = MosaicPoint;
             VolumePositionDeltaSum = new GridVector2(0, 0);
             MosaicPositionDeltaSum = new GridVector2(0, 0);
+            TranslatedVolumePosition = OriginalVolumePosition + VolumePositionDeltaSum;
+            TranslatedMosaicPosition = OriginalMosaicPosition;
         }
 
 

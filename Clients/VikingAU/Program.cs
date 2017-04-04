@@ -155,7 +155,10 @@ namespace Viking.AU
                 System.Console.WriteLine("Unable to parse command line arguments, aborting");
                 return;
             }
-            
+
+            System.Data.Entity.SqlServer.SqlProviderServices.SqlServerTypesAssemblyName = "Microsoft.SqlServer.Types, Version=14.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91";
+            SqlServerTypes.Utilities.LoadNativeAssemblies(AppDomain.CurrentDomain.BaseDirectory);
+
             //TODO: DO NOT RUN THIS CODE UNTIL IT SUPPORTS INTERNAL POLYGONS!
             return; 
 

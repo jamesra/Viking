@@ -84,16 +84,16 @@
       <HintPath>..\Packages\Newtonsoft.Json.9.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Simple.OData.Client.Core, Version=4.24.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\Packages\Simple.OData.V4.Client.4.24.0.1\lib\portable-net45+win8+wp8+wpa81\Simple.OData.Client.Core.dll</HintPath>
+    <Reference Include="Simple.OData.Client.Core, Version=4.25.5.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\Packages\Simple.OData.V4.Client.4.25.5\lib\portable-net45+win8+wp8+wpa81\Simple.OData.Client.Core.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Simple.OData.Client.Dynamic, Version=4.24.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\Packages\Simple.OData.V4.Client.4.24.0.1\lib\portable-net45+win8+wp8+wpa81\Simple.OData.Client.Dynamic.dll</HintPath>
+    <Reference Include="Simple.OData.Client.Dynamic, Version=4.25.5.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\Packages\Simple.OData.V4.Client.4.25.5\lib\portable-net45+win8+wp8+wpa81\Simple.OData.Client.Dynamic.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Simple.OData.Client.V4.Adapter, Version=4.24.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\Packages\Simple.OData.V4.Client.4.24.0.1\lib\portable-net45+win8+wp8+wpa81\Simple.OData.Client.V4.Adapter.dll</HintPath>
+    <Reference Include="Simple.OData.Client.V4.Adapter, Version=4.25.5.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\Packages\Simple.OData.V4.Client.4.25.5\lib\portable-net45+win8+wp8+wpa81\Simple.OData.Client.V4.Adapter.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="System" />
@@ -158,19 +158,33 @@
     </None>
     <None Include="packages.config" />
     <None Include="Properties\DataSources\AnnotationVizLib.WCFClient.AnnotationService.AnnotationSet.datasource" />
+    <None Include="Properties\DataSources\AnnotationVizLib.WCFClient.AnnotationService.AnnotationSet1.datasource" />
     <None Include="Properties\DataSources\AnnotationVizLib.WCFClient.AnnotationService.CreateStructureRetval.datasource" />
+    <None Include="Properties\DataSources\AnnotationVizLib.WCFClient.AnnotationService.CreateStructureRetval1.datasource" />
     <None Include="Properties\DataSources\AnnotationVizLib.WCFClient.AnnotationService.Graphx.datasource" />
+    <None Include="Properties\DataSources\AnnotationVizLib.WCFClient.AnnotationService.Graphx1.datasource" />
     <None Include="Properties\DataSources\AnnotationVizLib.WCFClient.AnnotationService.Location.datasource" />
+    <None Include="Properties\DataSources\AnnotationVizLib.WCFClient.AnnotationService.Location1.datasource" />
     <None Include="Properties\DataSources\AnnotationVizLib.WCFClient.AnnotationService.LocationHistory.datasource" />
+    <None Include="Properties\DataSources\AnnotationVizLib.WCFClient.AnnotationService.LocationHistory1.datasource" />
     <None Include="Properties\DataSources\AnnotationVizLib.WCFClient.AnnotationService.LocationLink.datasource" />
+    <None Include="Properties\DataSources\AnnotationVizLib.WCFClient.AnnotationService.LocationLink1.datasource" />
     <None Include="Properties\DataSources\AnnotationVizLib.WCFClient.AnnotationService.LocationPositionOnly.datasource" />
+    <None Include="Properties\DataSources\AnnotationVizLib.WCFClient.AnnotationService.LocationPositionOnly1.datasource" />
     <None Include="Properties\DataSources\AnnotationVizLib.WCFClient.AnnotationService.PermittedStructureLink.datasource" />
+    <None Include="Properties\DataSources\AnnotationVizLib.WCFClient.AnnotationService.PermittedStructureLink1.datasource" />
     <None Include="Properties\DataSources\AnnotationVizLib.WCFClient.AnnotationService.Scale.datasource" />
+    <None Include="Properties\DataSources\AnnotationVizLib.WCFClient.AnnotationService.Scale1.datasource" />
     <None Include="Properties\DataSources\AnnotationVizLib.WCFClient.AnnotationService.Structure.datasource" />
+    <None Include="Properties\DataSources\AnnotationVizLib.WCFClient.AnnotationService.Structure1.datasource" />
     <None Include="Properties\DataSources\AnnotationVizLib.WCFClient.AnnotationService.StructureHistory.datasource" />
+    <None Include="Properties\DataSources\AnnotationVizLib.WCFClient.AnnotationService.StructureHistory1.datasource" />
     <None Include="Properties\DataSources\AnnotationVizLib.WCFClient.AnnotationService.StructureLink.datasource" />
+    <None Include="Properties\DataSources\AnnotationVizLib.WCFClient.AnnotationService.StructureLink1.datasource" />
     <None Include="Properties\DataSources\AnnotationVizLib.WCFClient.AnnotationService.StructureType.datasource" />
+    <None Include="Properties\DataSources\AnnotationVizLib.WCFClient.AnnotationService.StructureType1.datasource" />
     <None Include="Properties\DataSources\AnnotationVizLib.WCFClient.AnnotationService.SynapseObject.datasource" />
+    <None Include="Properties\DataSources\AnnotationVizLib.WCFClient.AnnotationService.SynapseObject1.datasource" />
     <None Include="Service References\AnnotationService\Annotation.Service.GraphClasses.xsd">
       <SubType>Designer</SubType>
     </None>
