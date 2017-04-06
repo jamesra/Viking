@@ -7,7 +7,7 @@ namespace SqlServerTypes
     /// <summary>
     /// Utility methods related to CLR Types for SQL Server 
     /// </summary>
-    internal class Utilities
+    internal class TestUtilities
     {
         [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
         private static extern IntPtr LoadLibrary(string libname);
