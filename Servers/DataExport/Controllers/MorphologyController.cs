@@ -8,6 +8,7 @@ using AnnotationVizLib;
 using GraphLib;
 using VikingWebAppSettings;
 using Geometry;
+using AnnotationVizLib.WCFClient;
 
 namespace DataExport.Controllers
 {
@@ -190,7 +191,7 @@ namespace DataExport.Controllers
           
         private MorphologyGraph GetGraph(ICollection<long> requestIDs)
         {
-            AnnotationVizLib.ConnectionFactory.SetConnection(AppSettings.WebServiceURL , AppSettings.EndpointCredentials);
+            AnnotationVizLib.WCFClient.ConnectionFactory.SetConnection(AppSettings.WebServiceURL , AppSettings.EndpointCredentials);
 
             if (requestIDs == null || requestIDs.Count == 0)
                 requestIDs = Queries.GetLinkedStructureParentIDs();

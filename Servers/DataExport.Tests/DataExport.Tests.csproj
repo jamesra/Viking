@@ -11,7 +11,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>DataExport.Tests</RootNamespace>
     <AssemblyName>DataExport.Tests</AssemblyName>
-    <TargetFrameworkVersion>v4.6</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <ProjectTypeGuids>{3AC096D0-A1C2-E12C-1390-A8335801FDAB};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
     <TargetFrameworkProfile />
@@ -146,6 +146,10 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\AnnotationServiceTypes\AnnotationServiceTypes.csproj">
+      <Project>{55ff8936-d9bc-4ac6-aa29-fc0d7a7640ec}</Project>
+      <Name>AnnotationServiceTypes</Name>
+    </ProjectReference>
     <ProjectReference Include="..\..\AnnotationVizLib\AnnotationVizLib.csproj">
       <Project>{A89A628B-3FFA-4271-B99A-E45C3D72D3E3}</Project>
       <Name>AnnotationVizLib</Name>

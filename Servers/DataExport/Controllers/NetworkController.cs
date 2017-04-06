@@ -7,6 +7,7 @@ using System.Net.Http;
 using DataExport;
 using AnnotationVizLib;
 using VikingWebAppSettings;
+using AnnotationVizLib.WCFClient;
 
 namespace DataExport.Controllers
 {
@@ -189,7 +190,7 @@ namespace DataExport.Controllers
         {
             string EndpointURL = AppSettings.WebServiceURL;
             
-            AnnotationVizLib.ConnectionFactory.SetConnection(EndpointURL, AppSettings.EndpointCredentials);
+            ConnectionFactory.SetConnection(EndpointURL, AppSettings.EndpointCredentials);
              
             if (requestIDs == null || requestIDs.Count == 0)
                 requestIDs = Queries.GetLinkedStructureParentIDs(); 
