@@ -5,12 +5,6 @@ using System.Text;
 
 namespace Geometry
 {
-    public interface IPoint
-    {
-        double X { get; set; }
-        double Y { get; set; }
-        double Z { get; set; }
-    }
 
     [Serializable]
     public struct GridVector2 : IPoint, ICloneable, IComparable, IComparable<GridVector2>, IComparer<GridVector2>
