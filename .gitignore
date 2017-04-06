@@ -13,3 +13,4 @@ bin
 *.cachefile
 TestResults
 /Packages/
+/Papers/
