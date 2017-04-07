@@ -7,7 +7,7 @@ using Geometry;
 using WebAnnotationModel.Service;
 using System.Data.SqlTypes;
 using Microsoft.SqlServer.Types;
-using SqlGeometryUtils;
+using SqlGeometryUtils; 
 
 
 
@@ -15,12 +15,12 @@ namespace WebAnnotationModel
 {
     public static class Extensions
     {
-        public static WebAnnotationModel.Service.BoundingRectangle ToBoundingRectangle(this GridRectangle rect)
+        public static AnnotationService.Types.BoundingRectangle ToBoundingRectangle(this GridRectangle rect)
         {
-            return new BoundingRectangle() { XMin = rect.Left, XMax = rect.Right, YMin = rect.Bottom, YMax = rect.Top };
+            return new AnnotationService.Types.BoundingRectangle() { XMin = rect.Left, XMax = rect.Right, YMin = rect.Bottom, YMax = rect.Top };
         }
 
-        public static GridRectangle ToGridRectangle(this WebAnnotationModel.Service.BoundingRectangle bbox)
+        public static GridRectangle ToGridRectangle(this AnnotationService.Types.BoundingRectangle bbox)
         {
             return new GridRectangle(bbox.XMin, bbox.XMax, bbox.YMin, bbox.YMax);
         }

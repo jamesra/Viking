@@ -88,6 +88,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VikingXNAGraphicsContent", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Triangle", "..\Triangle.NET\Triangle\Triangle.csproj", "{F7907A0A-B75F-400B-9E78-BFAD00DB4D6B}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AnnotationServiceTypes", "..\AnnotationServiceTypes\AnnotationServiceTypes.csproj", "{55FF8936-D9BC-4AC6-AA29-FC0D7A7640EC}"
+EndProject
 Global
 	GlobalSection(Performance) = preSolution
 		HasPerformanceSessions = true
@@ -647,6 +649,24 @@ Global
 		{F7907A0A-B75F-400B-9E78-BFAD00DB4D6B}.ReleaseWithSymbols|Mixed Platforms.Build.0 = Release|Any CPU
 		{F7907A0A-B75F-400B-9E78-BFAD00DB4D6B}.ReleaseWithSymbols|x86.ActiveCfg = Release|Any CPU
 		{F7907A0A-B75F-400B-9E78-BFAD00DB4D6B}.ReleaseWithSymbols|x86.Build.0 = Release|Any CPU
+		{55FF8936-D9BC-4AC6-AA29-FC0D7A7640EC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{55FF8936-D9BC-4AC6-AA29-FC0D7A7640EC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{55FF8936-D9BC-4AC6-AA29-FC0D7A7640EC}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{55FF8936-D9BC-4AC6-AA29-FC0D7A7640EC}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{55FF8936-D9BC-4AC6-AA29-FC0D7A7640EC}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{55FF8936-D9BC-4AC6-AA29-FC0D7A7640EC}.Debug|x86.Build.0 = Debug|Any CPU
+		{55FF8936-D9BC-4AC6-AA29-FC0D7A7640EC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{55FF8936-D9BC-4AC6-AA29-FC0D7A7640EC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{55FF8936-D9BC-4AC6-AA29-FC0D7A7640EC}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{55FF8936-D9BC-4AC6-AA29-FC0D7A7640EC}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{55FF8936-D9BC-4AC6-AA29-FC0D7A7640EC}.Release|x86.ActiveCfg = Release|Any CPU
+		{55FF8936-D9BC-4AC6-AA29-FC0D7A7640EC}.Release|x86.Build.0 = Release|Any CPU
+		{55FF8936-D9BC-4AC6-AA29-FC0D7A7640EC}.ReleaseWithSymbols|Any CPU.ActiveCfg = Release|Any CPU
+		{55FF8936-D9BC-4AC6-AA29-FC0D7A7640EC}.ReleaseWithSymbols|Any CPU.Build.0 = Release|Any CPU
+		{55FF8936-D9BC-4AC6-AA29-FC0D7A7640EC}.ReleaseWithSymbols|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{55FF8936-D9BC-4AC6-AA29-FC0D7A7640EC}.ReleaseWithSymbols|Mixed Platforms.Build.0 = Release|Any CPU
+		{55FF8936-D9BC-4AC6-AA29-FC0D7A7640EC}.ReleaseWithSymbols|x86.ActiveCfg = Release|Any CPU
+		{55FF8936-D9BC-4AC6-AA29-FC0D7A7640EC}.ReleaseWithSymbols|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

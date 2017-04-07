@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using WebAnnotationModel.Service;
-using WebAnnotationModel.Objects; 
+using System.Text; 
+using WebAnnotationModel.Objects;
+using AnnotationService.Types;
 
 namespace WebAnnotationModel
 {

@@ -5,6 +5,7 @@ using System.Text;
 using WebAnnotationModel.Service;
 using System.ComponentModel;
 using System.Diagnostics;
+using AnnotationService.Types;
 
 namespace WebAnnotationModel.Objects
 {

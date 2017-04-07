@@ -7,7 +7,8 @@ using WebAnnotationModel.Service;
 using WebAnnotationModel.Objects;
 using System.Diagnostics;
 using System.Collections.Concurrent;
-using System.Collections.Specialized; 
+using System.Collections.Specialized;
+using AnnotationService.Types;
 
 namespace WebAnnotationModel
 {
@@ -19,7 +20,7 @@ namespace WebAnnotationModel
         where KEY : struct, IEquatable<KEY>
         where KEYGEN : IKeyGenerator<KEY>, new()
         where PROXY : System.ServiceModel.ClientBase<INTERFACE>
-        where WCFOBJECT : WebAnnotationModel.Service.DataObjectWithKeyOflong, new()
+        where WCFOBJECT : AnnotationService.Types.DataObjectWithKeyOfLong, new()
         where OBJECT : WCFObjBaseWithKey<KEY, WCFOBJECT>, new()
     {
         /// <summary>

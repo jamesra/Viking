@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<SavedWcfConfigurationInformation xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" Version="9.1" CheckSum="fNxzM7mhfaX04nRpifKfzcpidig=">
+<SavedWcfConfigurationInformation xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" Version="9.1" CheckSum="HEYWcwTwcUaxwT6lNcU7VwP+Hx4=">
   <bindingConfigurations>
     <bindingConfiguration bindingType="customBinding" name="Annotation.Service.Interfaces.IAnnotateStructureTypes-Binary">
       <properties>
@@ -2149,10 +2149,10 @@
         </property>
       </properties>
     </bindingConfiguration>
-    <bindingConfiguration bindingType="customBinding" name="Annotation.Service.Interfaces.ICircuit-Binary">
+    <bindingConfiguration bindingType="customBinding" name="Annotation.Service.Interfaces.IVolumeMeta-Binary">
       <properties>
         <property path="/name" isComplexType="false" isExplicitlyDefined="true" clrType="System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089">
-          <serializedValue>Annotation.Service.Interfaces.ICircuit-Binary</serializedValue>
+          <serializedValue>Annotation.Service.Interfaces.IVolumeMeta-Binary</serializedValue>
         </property>
         <property path="/closeTimeout" isComplexType="false" isExplicitlyDefined="true" clrType="System.TimeSpan, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089">
           <serializedValue />
@@ -2865,10 +2865,10 @@
         </property>
       </properties>
     </bindingConfiguration>
-    <bindingConfiguration bindingType="customBinding" name="Annotation.Service.Interfaces.IVolumeMeta-Binary">
+    <bindingConfiguration bindingType="customBinding" name="Annotation.Service.Interfaces.ICircuit-Binary">
       <properties>
         <property path="/name" isComplexType="false" isExplicitlyDefined="true" clrType="System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089">
-          <serializedValue>Annotation.Service.Interfaces.IVolumeMeta-Binary</serializedValue>
+          <serializedValue>Annotation.Service.Interfaces.ICircuit-Binary</serializedValue>
         </property>
         <property path="/closeTimeout" isComplexType="false" isExplicitlyDefined="true" clrType="System.TimeSpan, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089">
           <serializedValue />

@@ -391,6 +391,10 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\..\AnnotationServiceTypes\AnnotationServiceTypes.csproj">
+      <Project>{55ff8936-d9bc-4ac6-aa29-fc0d7a7640ec}</Project>
+      <Name>AnnotationServiceTypes</Name>
+    </ProjectReference>
     <ProjectReference Include="..\..\..\RTree\RTree.csproj">
       <Project>{4085ba67-60d7-4679-886e-457aaf37ec7b}</Project>
       <Name>RTree</Name>

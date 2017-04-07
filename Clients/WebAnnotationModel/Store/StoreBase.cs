@@ -124,7 +124,7 @@ namespace WebAnnotationModel
     public abstract class StoreBase<PROXY, INTERFACE, OBJECT, WCFOBJECT> : INotifyCollectionChanged
         where INTERFACE : class        
         where PROXY : System.ServiceModel.ClientBase<INTERFACE>
-        where WCFOBJECT : DataObject, new()
+        where WCFOBJECT : AnnotationService.Types.DataObject, new()
         where OBJECT : WCFObjBase<WCFOBJECT>, new()
     {
         

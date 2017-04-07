@@ -10,6 +10,7 @@ using WebAnnotationModel.Objects;
 using WebAnnotationModel.Service;
 using SqlGeometryUtils;
 using System.Data.Entity.Spatial;
+using AnnotationService.Types;
 
 using Geometry; 
 

@@ -5,12 +5,13 @@ using System.Linq;
 using System.Text;
 using System.Diagnostics;
 using WebAnnotationModel.Service;
+using AnnotationService.Types;
 
 namespace WebAnnotationModel.Objects
 {
     abstract public class WCFObjBaseWithParent<KEY, T, THISTYPE> : WCFObjBaseWithKey<KEY, T>
         where KEY : struct, IEquatable<KEY>
-        where T : DataObjectWithParentOflong, new()
+        where T : AnnotationService.Types.DataObjectWithParentOfLong, new()
         where THISTYPE : WCFObjBaseWithParent<KEY, T, THISTYPE>, new() 
     {
         /// <summary>

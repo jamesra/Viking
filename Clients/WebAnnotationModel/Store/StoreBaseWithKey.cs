@@ -10,6 +10,7 @@ using System.Collections.Concurrent;
 using System.Collections.Specialized;
 using WebAnnotationModel;
 using Geometry;
+using AnnotationService.Types;
 
 namespace WebAnnotationModel
 {
@@ -51,7 +52,7 @@ namespace WebAnnotationModel
         where INTERFACE : class
         where KEY : struct, IEquatable<KEY>
         where PROXY : System.ServiceModel.ClientBase<INTERFACE>
-        where WCFOBJECT : DataObject, new()
+        where WCFOBJECT : AnnotationService.Types.DataObject, new()
         where OBJECT : WCFObjBaseWithKey<KEY, WCFOBJECT>, new()
     {
         /// <summary>

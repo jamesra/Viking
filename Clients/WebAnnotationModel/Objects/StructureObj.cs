@@ -4,9 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Diagnostics;
 using System.Collections.ObjectModel;
-using WebAnnotationModel.Objects; 
+using WebAnnotationModel.Objects;
 
-using WebAnnotationModel.Service;
+using AnnotationService.Types;
 
 namespace WebAnnotationModel
 {

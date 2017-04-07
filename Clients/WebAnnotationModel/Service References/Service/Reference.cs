@@ -15,1397 +15,7 @@ namespace WebAnnotationModel.Service {
     
     [System.Diagnostics.DebuggerStepThroughAttribute()]
     [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Runtime.Serialization", "4.0.0.0")]
-    [System.Runtime.Serialization.DataContractAttribute(Name="DataObject", Namespace="http://schemas.datacontract.org/2004/07/Annotation")]
-    [System.SerializableAttribute()]
-    [System.Runtime.Serialization.KnownTypeAttribute(typeof(WebAnnotationModel.Service.PermittedStructureLink))]
-    [System.Runtime.Serialization.KnownTypeAttribute(typeof(WebAnnotationModel.Service.StructureLink))]
-    [System.Runtime.Serialization.KnownTypeAttribute(typeof(WebAnnotationModel.Service.LocationLink))]
-    [System.Runtime.Serialization.KnownTypeAttribute(typeof(WebAnnotationModel.Service.DataObjectWithKeyOflong))]
-    [System.Runtime.Serialization.KnownTypeAttribute(typeof(WebAnnotationModel.Service.Location))]
-    [System.Runtime.Serialization.KnownTypeAttribute(typeof(WebAnnotationModel.Service.LocationHistory))]
-    [System.Runtime.Serialization.KnownTypeAttribute(typeof(WebAnnotationModel.Service.LocationPositionOnly))]
-    [System.Runtime.Serialization.KnownTypeAttribute(typeof(WebAnnotationModel.Service.DataObjectWithParentOflong))]
-    [System.Runtime.Serialization.KnownTypeAttribute(typeof(WebAnnotationModel.Service.Structure))]
-    [System.Runtime.Serialization.KnownTypeAttribute(typeof(WebAnnotationModel.Service.StructureHistory))]
-    [System.Runtime.Serialization.KnownTypeAttribute(typeof(WebAnnotationModel.Service.StructureType))]
-    public partial class DataObject : object, System.Runtime.Serialization.IExtensibleDataObject, System.ComponentModel.INotifyPropertyChanged {
-        
-        [System.NonSerializedAttribute()]
-        private System.Runtime.Serialization.ExtensionDataObject extensionDataField;
-        
-        [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private WebAnnotationModel.Service.DBACTION DBActionField;
-        
-        [global::System.ComponentModel.BrowsableAttribute(false)]
-        public System.Runtime.Serialization.ExtensionDataObject ExtensionData {
-            get {
-                return this.extensionDataField;
-            }
-            set {
-                this.extensionDataField = value;
-            }
-        }
-        
-        [System.Runtime.Serialization.DataMemberAttribute()]
-        public WebAnnotationModel.Service.DBACTION DBAction {
-            get {
-                return this.DBActionField;
-            }
-            set {
-                if ((this.DBActionField.Equals(value) != true)) {
-                    this.DBActionField = value;
-                    this.RaisePropertyChanged("DBAction");
-                }
-            }
-        }
-        
-        public event System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
-        
-        protected void RaisePropertyChanged(string propertyName) {
-            System.ComponentModel.PropertyChangedEventHandler propertyChanged = this.PropertyChanged;
-            if ((propertyChanged != null)) {
-                propertyChanged(this, new System.ComponentModel.PropertyChangedEventArgs(propertyName));
-            }
-        }
-    }
-    
-    [System.Diagnostics.DebuggerStepThroughAttribute()]
-    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Runtime.Serialization", "4.0.0.0")]
-    [System.Runtime.Serialization.DataContractAttribute(Name="PermittedStructureLink", Namespace="http://schemas.datacontract.org/2004/07/Annotation")]
-    [System.SerializableAttribute()]
-    public partial class PermittedStructureLink : WebAnnotationModel.Service.DataObject {
-        
-        [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private bool BidirectionalField;
-        
-        [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private long SourceTypeIDField;
-        
-        [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private long TargetTypeIDField;
-        
-        [System.Runtime.Serialization.DataMemberAttribute()]
-        public bool Bidirectional {
-            get {
-                return this.BidirectionalField;
-            }
-            set {
-                if ((this.BidirectionalField.Equals(value) != true)) {
-                    this.BidirectionalField = value;
-                    this.RaisePropertyChanged("Bidirectional");
-                }
-            }
-        }
-        
-        [System.Runtime.Serialization.DataMemberAttribute()]
-        public long SourceTypeID {
-            get {
-                return this.SourceTypeIDField;
-            }
-            set {
-                if ((this.SourceTypeIDField.Equals(value) != true)) {
-                    this.SourceTypeIDField = value;
-                    this.RaisePropertyChanged("SourceTypeID");
-                }
-            }
-        }
-        
-        [System.Runtime.Serialization.DataMemberAttribute()]
-        public long TargetTypeID {
-            get {
-                return this.TargetTypeIDField;
-            }
-            set {
-                if ((this.TargetTypeIDField.Equals(value) != true)) {
-                    this.TargetTypeIDField = value;
-                    this.RaisePropertyChanged("TargetTypeID");
-                }
-            }
-        }
-    }
-    
-    [System.Diagnostics.DebuggerStepThroughAttribute()]
-    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Runtime.Serialization", "4.0.0.0")]
-    [System.Runtime.Serialization.DataContractAttribute(Name="StructureLink", Namespace="http://schemas.datacontract.org/2004/07/Annotation")]
-    [System.SerializableAttribute()]
-    public partial class StructureLink : WebAnnotationModel.Service.DataObject {
-        
-        [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private bool BidirectionalField;
-        
-        [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private long SourceIDField;
-        
-        [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private string TagsField;
-        
-        [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private long TargetIDField;
-        
-        [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private string UsernameField;
-        
-        [System.Runtime.Serialization.DataMemberAttribute()]
-        public bool Bidirectional {
-            get {
-                return this.BidirectionalField;
-            }
-            set {
-                if ((this.BidirectionalField.Equals(value) != true)) {
-                    this.BidirectionalField = value;
-                    this.RaisePropertyChanged("Bidirectional");
-                }
-            }
-        }
-        
-        [System.Runtime.Serialization.DataMemberAttribute()]
-        public long SourceID {
-            get {
-                return this.SourceIDField;
-            }
-            set {
-                if ((this.SourceIDField.Equals(value) != true)) {
-                    this.SourceIDField = value;
-                    this.RaisePropertyChanged("SourceID");
-                }
-            }
-        }
-        
-        [System.Runtime.Serialization.DataMemberAttribute()]
-        public string Tags {
-            get {
-                return this.TagsField;
-            }
-            set {
-                if ((object.ReferenceEquals(this.TagsField, value) != true)) {
-                    this.TagsField = value;
-                    this.RaisePropertyChanged("Tags");
-                }
-            }
-        }
-        
-        [System.Runtime.Serialization.DataMemberAttribute()]
-        public long TargetID {
-            get {
-                return this.TargetIDField;
-            }
-            set {
-                if ((this.TargetIDField.Equals(value) != true)) {
-                    this.TargetIDField = value;
-                    this.RaisePropertyChanged("TargetID");
-                }
-            }
-        }
-        
-        [System.Runtime.Serialization.DataMemberAttribute()]
-        public string Username {
-            get {
-                return this.UsernameField;
-            }
-            set {
-                if ((object.ReferenceEquals(this.UsernameField, value) != true)) {
-                    this.UsernameField = value;
-                    this.RaisePropertyChanged("Username");
-                }
-            }
-        }
-    }
-    
-    [System.Diagnostics.DebuggerStepThroughAttribute()]
-    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Runtime.Serialization", "4.0.0.0")]
-    [System.Runtime.Serialization.DataContractAttribute(Name="LocationLink", Namespace="http://schemas.datacontract.org/2004/07/Annotation")]
-    [System.SerializableAttribute()]
-    public partial class LocationLink : WebAnnotationModel.Service.DataObject {
-        
-        [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private long SourceIDField;
-        
-        [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private long TargetIDField;
-        
-        [System.Runtime.Serialization.DataMemberAttribute()]
-        public long SourceID {
-            get {
-                return this.SourceIDField;
-            }
-            set {
-                if ((this.SourceIDField.Equals(value) != true)) {
-                    this.SourceIDField = value;
-                    this.RaisePropertyChanged("SourceID");
-                }
-            }
-        }
-        
-        [System.Runtime.Serialization.DataMemberAttribute()]
-        public long TargetID {
-            get {
-                return this.TargetIDField;
-            }
-            set {
-                if ((this.TargetIDField.Equals(value) != true)) {
-                    this.TargetIDField = value;
-                    this.RaisePropertyChanged("TargetID");
-                }
-            }
-        }
-    }
-    
-    [System.Diagnostics.DebuggerStepThroughAttribute()]
-    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Runtime.Serialization", "4.0.0.0")]
-    [System.Runtime.Serialization.DataContractAttribute(Name="DataObjectWithKeyOflong", Namespace="http://schemas.datacontract.org/2004/07/Annotation")]
-    [System.SerializableAttribute()]
-    [System.Runtime.Serialization.KnownTypeAttribute(typeof(WebAnnotationModel.Service.Location))]
-    [System.Runtime.Serialization.KnownTypeAttribute(typeof(WebAnnotationModel.Service.LocationHistory))]
-    [System.Runtime.Serialization.KnownTypeAttribute(typeof(WebAnnotationModel.Service.LocationPositionOnly))]
-    [System.Runtime.Serialization.KnownTypeAttribute(typeof(WebAnnotationModel.Service.DataObjectWithParentOflong))]
-    [System.Runtime.Serialization.KnownTypeAttribute(typeof(WebAnnotationModel.Service.Structure))]
-    [System.Runtime.Serialization.KnownTypeAttribute(typeof(WebAnnotationModel.Service.StructureHistory))]
-    [System.Runtime.Serialization.KnownTypeAttribute(typeof(WebAnnotationModel.Service.StructureType))]
-    public partial class DataObjectWithKeyOflong : WebAnnotationModel.Service.DataObject {
-        
-        [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private long IDField;
-        
-        [System.Runtime.Serialization.DataMemberAttribute()]
-        public long ID {
-            get {
-                return this.IDField;
-            }
-            set {
-                if ((this.IDField.Equals(value) != true)) {
-                    this.IDField = value;
-                    this.RaisePropertyChanged("ID");
-                }
-            }
-        }
-    }
-    
-    [System.Diagnostics.DebuggerStepThroughAttribute()]
-    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Runtime.Serialization", "4.0.0.0")]
-    [System.Runtime.Serialization.DataContractAttribute(Name="Location", Namespace="http://schemas.datacontract.org/2004/07/Annotation")]
-    [System.SerializableAttribute()]
-    [System.Runtime.Serialization.KnownTypeAttribute(typeof(WebAnnotationModel.Service.LocationHistory))]
-    public partial class Location : WebAnnotationModel.Service.DataObjectWithKeyOflong {
-        
-        [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private string AttributesXmlField;
-        
-        [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private bool ClosedField;
-        
-        [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private long LastModifiedField;
-        
-        [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private long[] LinksField;
-        
-        [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private System.Data.Entity.Spatial.DbGeometry MosaicShapeField;
-        
-        [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private bool OffEdgeField;
-        
-        [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private long ParentIDField;
-        
-        [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private WebAnnotationModel.Service.AnnotationPoint PositionField;
-        
-        [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private double RadiusField;
-        
-        [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private long SectionField;
-        
-        [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private bool TerminalField;
-        
-        [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private short TypeCodeField;
-        
-        [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private string UsernameField;
-        
-        [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private WebAnnotationModel.Service.AnnotationPoint VolumePositionField;
-        
-        [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private System.Data.Entity.Spatial.DbGeometry VolumeShapeField;
-        
-        [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private System.Nullable<double> WidthField;
-        
-        [System.Runtime.Serialization.DataMemberAttribute()]
-        public string AttributesXml {
-            get {
-                return this.AttributesXmlField;
-            }
-            set {
-                if ((object.ReferenceEquals(this.AttributesXmlField, value) != true)) {
-                    this.AttributesXmlField = value;
-                    this.RaisePropertyChanged("AttributesXml");
-                }
-            }
-        }
-        
-        [System.Runtime.Serialization.DataMemberAttribute()]
-        public bool Closed {
-            get {
-                return this.ClosedField;
-            }
-            set {
-                if ((this.ClosedField.Equals(value) != true)) {
-                    this.ClosedField = value;
-                    this.RaisePropertyChanged("Closed");
-                }
-            }
-        }
-        
-        [System.Runtime.Serialization.DataMemberAttribute()]
-        public long LastModified {
-            get {
-                return this.LastModifiedField;
-            }
-            set {
-                if ((this.LastModifiedField.Equals(value) != true)) {
-                    this.LastModifiedField = value;
-                    this.RaisePropertyChanged("LastModified");
-                }
-            }
-        }
-        
-        [System.Runtime.Serialization.DataMemberAttribute()]
-        public long[] Links {
-            get {
-                return this.LinksField;
-            }
-            set {
-                if ((object.ReferenceEquals(this.LinksField, value) != true)) {
-                    this.LinksField = value;
-                    this.RaisePropertyChanged("Links");
-                }
-            }
-        }
-        
-        [System.Runtime.Serialization.DataMemberAttribute()]
-        public System.Data.Entity.Spatial.DbGeometry MosaicShape {
-            get {
-                return this.MosaicShapeField;
-            }
-            set {
-                if ((object.ReferenceEquals(this.MosaicShapeField, value) != true)) {
-                    this.MosaicShapeField = value;
-                    this.RaisePropertyChanged("MosaicShape");
-                }
-            }
-        }
-        
-        [System.Runtime.Serialization.DataMemberAttribute()]
-        public bool OffEdge {
-            get {
-                return this.OffEdgeField;
-            }
-            set {
-                if ((this.OffEdgeField.Equals(value) != true)) {
-                    this.OffEdgeField = value;
-                    this.RaisePropertyChanged("OffEdge");
-                }
-            }
-        }
-        
-        [System.Runtime.Serialization.DataMemberAttribute()]
-        public long ParentID {
-            get {
-                return this.ParentIDField;
-            }
-            set {
-                if ((this.ParentIDField.Equals(value) != true)) {
-                    this.ParentIDField = value;
-                    this.RaisePropertyChanged("ParentID");
-                }
-            }
-        }
-        
-        [System.Runtime.Serialization.DataMemberAttribute()]
-        public WebAnnotationModel.Service.AnnotationPoint Position {
-            get {
-                return this.PositionField;
-            }
-            set {
-                if ((this.PositionField.Equals(value) != true)) {
-                    this.PositionField = value;
-                    this.RaisePropertyChanged("Position");
-                }
-            }
-        }
-        
-        [System.Runtime.Serialization.DataMemberAttribute()]
-        public double Radius {
-            get {
-                return this.RadiusField;
-            }
-            set {
-                if ((this.RadiusField.Equals(value) != true)) {
-                    this.RadiusField = value;
-                    this.RaisePropertyChanged("Radius");
-                }
-            }
-        }
-        
-        [System.Runtime.Serialization.DataMemberAttribute()]
-        public long Section {
-            get {
-                return this.SectionField;
-            }
-            set {
-                if ((this.SectionField.Equals(value) != true)) {
-                    this.SectionField = value;
-                    this.RaisePropertyChanged("Section");
-                }
-            }
-        }
-        
-        [System.Runtime.Serialization.DataMemberAttribute()]
-        public bool Terminal {
-            get {
-                return this.TerminalField;
-            }
-            set {
-                if ((this.TerminalField.Equals(value) != true)) {
-                    this.TerminalField = value;
-                    this.RaisePropertyChanged("Terminal");
-                }
-            }
-        }
-        
-        [System.Runtime.Serialization.DataMemberAttribute()]
-        public short TypeCode {
-            get {
-                return this.TypeCodeField;
-            }
-            set {
-                if ((this.TypeCodeField.Equals(value) != true)) {
-                    this.TypeCodeField = value;
-                    this.RaisePropertyChanged("TypeCode");
-                }
-            }
-        }
-        
-        [System.Runtime.Serialization.DataMemberAttribute()]
-        public string Username {
-            get {
-                return this.UsernameField;
-            }
-            set {
-                if ((object.ReferenceEquals(this.UsernameField, value) != true)) {
-                    this.UsernameField = value;
-                    this.RaisePropertyChanged("Username");
-                }
-            }
-        }
-        
-        [System.Runtime.Serialization.DataMemberAttribute()]
-        public WebAnnotationModel.Service.AnnotationPoint VolumePosition {
-            get {
-                return this.VolumePositionField;
-            }
-            set {
-                if ((this.VolumePositionField.Equals(value) != true)) {
-                    this.VolumePositionField = value;
-                    this.RaisePropertyChanged("VolumePosition");
-                }
-            }
-        }
-        
-        [System.Runtime.Serialization.DataMemberAttribute()]
-        public System.Data.Entity.Spatial.DbGeometry VolumeShape {
-            get {
-                return this.VolumeShapeField;
-            }
-            set {
-                if ((object.ReferenceEquals(this.VolumeShapeField, value) != true)) {
-                    this.VolumeShapeField = value;
-                    this.RaisePropertyChanged("VolumeShape");
-                }
-            }
-        }
-        
-        [System.Runtime.Serialization.DataMemberAttribute()]
-        public System.Nullable<double> Width {
-            get {
-                return this.WidthField;
-            }
-            set {
-                if ((this.WidthField.Equals(value) != true)) {
-                    this.WidthField = value;
-                    this.RaisePropertyChanged("Width");
-                }
-            }
-        }
-    }
-    
-    [System.Diagnostics.DebuggerStepThroughAttribute()]
-    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Runtime.Serialization", "4.0.0.0")]
-    [System.Runtime.Serialization.DataContractAttribute(Name="LocationHistory", Namespace="http://schemas.datacontract.org/2004/07/Annotation")]
-    [System.SerializableAttribute()]
-    public partial class LocationHistory : WebAnnotationModel.Service.Location {
-        
-        [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private ulong ChangedColumnMaskField;
-        
-        [System.Runtime.Serialization.DataMemberAttribute()]
-        public ulong ChangedColumnMask {
-            get {
-                return this.ChangedColumnMaskField;
-            }
-            set {
-                if ((this.ChangedColumnMaskField.Equals(value) != true)) {
-                    this.ChangedColumnMaskField = value;
-                    this.RaisePropertyChanged("ChangedColumnMask");
-                }
-            }
-        }
-    }
-    
-    [System.Diagnostics.DebuggerStepThroughAttribute()]
-    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Runtime.Serialization", "4.0.0.0")]
-    [System.Runtime.Serialization.DataContractAttribute(Name="LocationPositionOnly", Namespace="http://schemas.datacontract.org/2004/07/Annotation")]
-    [System.SerializableAttribute()]
-    public partial class LocationPositionOnly : WebAnnotationModel.Service.DataObjectWithKeyOflong {
-        
-        [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private WebAnnotationModel.Service.AnnotationPoint PositionField;
-        
-        [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private double RadiusField;
-        
-        [System.Runtime.Serialization.DataMemberAttribute()]
-        public WebAnnotationModel.Service.AnnotationPoint Position {
-            get {
-                return this.PositionField;
-            }
-            set {
-                if ((this.PositionField.Equals(value) != true)) {
-                    this.PositionField = value;
-                    this.RaisePropertyChanged("Position");
-                }
-            }
-        }
-        
-        [System.Runtime.Serialization.DataMemberAttribute()]
-        public double Radius {
-            get {
-                return this.RadiusField;
-            }
-            set {
-                if ((this.RadiusField.Equals(value) != true)) {
-                    this.RadiusField = value;
-                    this.RaisePropertyChanged("Radius");
-                }
-            }
-        }
-    }
-    
-    [System.Diagnostics.DebuggerStepThroughAttribute()]
-    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Runtime.Serialization", "4.0.0.0")]
-    [System.Runtime.Serialization.DataContractAttribute(Name="DataObjectWithParentOflong", Namespace="http://schemas.datacontract.org/2004/07/Annotation")]
-    [System.SerializableAttribute()]
-    [System.Runtime.Serialization.KnownTypeAttribute(typeof(WebAnnotationModel.Service.Structure))]
-    [System.Runtime.Serialization.KnownTypeAttribute(typeof(WebAnnotationModel.Service.StructureHistory))]
-    [System.Runtime.Serialization.KnownTypeAttribute(typeof(WebAnnotationModel.Service.StructureType))]
-    public partial class DataObjectWithParentOflong : WebAnnotationModel.Service.DataObjectWithKeyOflong {
-        
-        [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private System.Nullable<long> ParentIDField;
-        
-        [System.Runtime.Serialization.DataMemberAttribute()]
-        public System.Nullable<long> ParentID {
-            get {
-                return this.ParentIDField;
-            }
-            set {
-                if ((this.ParentIDField.Equals(value) != true)) {
-                    this.ParentIDField = value;
-                    this.RaisePropertyChanged("ParentID");
-                }
-            }
-        }
-    }
-    
-    [System.Diagnostics.DebuggerStepThroughAttribute()]
-    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Runtime.Serialization", "4.0.0.0")]
-    [System.Runtime.Serialization.DataContractAttribute(Name="Structure", Namespace="http://schemas.datacontract.org/2004/07/Annotation")]
-    [System.SerializableAttribute()]
-    [System.Runtime.Serialization.KnownTypeAttribute(typeof(WebAnnotationModel.Service.StructureHistory))]
-    public partial class Structure : WebAnnotationModel.Service.DataObjectWithParentOflong {
-        
-        [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private string AttributesXmlField;
-        
-        [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private long[] ChildIDsField;
-        
-        [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private double ConfidenceField;
-        
-        [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private string LabelField;
-        
-        [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private WebAnnotationModel.Service.StructureLink[] LinksField;
-        
-        [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private string NotesField;
-        
-        [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private long TypeIDField;
-        
-        [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private string UsernameField;
-        
-        [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private bool VerifiedField;
-        
-        [System.Runtime.Serialization.DataMemberAttribute()]
-        public string AttributesXml {
-            get {
-                return this.AttributesXmlField;
-            }
-            set {
-                if ((object.ReferenceEquals(this.AttributesXmlField, value) != true)) {
-                    this.AttributesXmlField = value;
-                    this.RaisePropertyChanged("AttributesXml");
-                }
-            }
-        }
-        
-        [System.Runtime.Serialization.DataMemberAttribute()]
-        public long[] ChildIDs {
-            get {
-                return this.ChildIDsField;
-            }
-            set {
-                if ((object.ReferenceEquals(this.ChildIDsField, value) != true)) {
-                    this.ChildIDsField = value;
-                    this.RaisePropertyChanged("ChildIDs");
-                }
-            }
-        }
-        
-        [System.Runtime.Serialization.DataMemberAttribute()]
-        public double Confidence {
-            get {
-                return this.ConfidenceField;
-            }
-            set {
-                if ((this.ConfidenceField.Equals(value) != true)) {
-                    this.ConfidenceField = value;
-                    this.RaisePropertyChanged("Confidence");
-                }
-            }
-        }
-        
-        [System.Runtime.Serialization.DataMemberAttribute()]
-        public string Label {
-            get {
-                return this.LabelField;
-            }
-            set {
-                if ((object.ReferenceEquals(this.LabelField, value) != true)) {
-                    this.LabelField = value;
-                    this.RaisePropertyChanged("Label");
-                }
-            }
-        }
-        
-        [System.Runtime.Serialization.DataMemberAttribute()]
-        public WebAnnotationModel.Service.StructureLink[] Links {
-            get {
-                return this.LinksField;
-            }
-            set {
-                if ((object.ReferenceEquals(this.LinksField, value) != true)) {
-                    this.LinksField = value;
-                    this.RaisePropertyChanged("Links");
-                }
-            }
-        }
-        
-        [System.Runtime.Serialization.DataMemberAttribute()]
-        public string Notes {
-            get {
-                return this.NotesField;
-            }
-            set {
-                if ((object.ReferenceEquals(this.NotesField, value) != true)) {
-                    this.NotesField = value;
-                    this.RaisePropertyChanged("Notes");
-                }
-            }
-        }
-        
-        [System.Runtime.Serialization.DataMemberAttribute()]
-        public long TypeID {
-            get {
-                return this.TypeIDField;
-            }
-            set {
-                if ((this.TypeIDField.Equals(value) != true)) {
-                    this.TypeIDField = value;
-                    this.RaisePropertyChanged("TypeID");
-                }
-            }
-        }
-        
-        [System.Runtime.Serialization.DataMemberAttribute()]
-        public string Username {
-            get {
-                return this.UsernameField;
-            }
-            set {
-                if ((object.ReferenceEquals(this.UsernameField, value) != true)) {
-                    this.UsernameField = value;
-                    this.RaisePropertyChanged("Username");
-                }
-            }
-        }
-        
-        [System.Runtime.Serialization.DataMemberAttribute()]
-        public bool Verified {
-            get {
-                return this.VerifiedField;
-            }
-            set {
-                if ((this.VerifiedField.Equals(value) != true)) {
-                    this.VerifiedField = value;
-                    this.RaisePropertyChanged("Verified");
-                }
-            }
-        }
-    }
-    
-    [System.Diagnostics.DebuggerStepThroughAttribute()]
-    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Runtime.Serialization", "4.0.0.0")]
-    [System.Runtime.Serialization.DataContractAttribute(Name="StructureHistory", Namespace="http://schemas.datacontract.org/2004/07/Annotation")]
-    [System.SerializableAttribute()]
-    public partial class StructureHistory : WebAnnotationModel.Service.Structure {
-    }
-    
-    [System.Diagnostics.DebuggerStepThroughAttribute()]
-    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Runtime.Serialization", "4.0.0.0")]
-    [System.Runtime.Serialization.DataContractAttribute(Name="StructureType", Namespace="http://schemas.datacontract.org/2004/07/Annotation")]
-    [System.SerializableAttribute()]
-    public partial class StructureType : WebAnnotationModel.Service.DataObjectWithParentOflong {
-        
-        [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private bool AbstractField;
-        
-        [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private string CodeField;
-        
-        [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private int ColorField;
-        
-        [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private char HotKeyField;
-        
-        [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private string MarkupTypeField;
-        
-        [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private string NameField;
-        
-        [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private string NotesField;
-        
-        [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private WebAnnotationModel.Service.PermittedStructureLink[] PermittedLinksField;
-        
-        [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private string[] StructureTagsField;
-        
-        [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private string[] TagsField;
-        
-        [System.Runtime.Serialization.DataMemberAttribute()]
-        public bool Abstract {
-            get {
-                return this.AbstractField;
-            }
-            set {
-                if ((this.AbstractField.Equals(value) != true)) {
-                    this.AbstractField = value;
-                    this.RaisePropertyChanged("Abstract");
-                }
-            }
-        }
-        
-        [System.Runtime.Serialization.DataMemberAttribute()]
-        public string Code {
-            get {
-                return this.CodeField;
-            }
-            set {
-                if ((object.ReferenceEquals(this.CodeField, value) != true)) {
-                    this.CodeField = value;
-                    this.RaisePropertyChanged("Code");
-                }
-            }
-        }
-        
-        [System.Runtime.Serialization.DataMemberAttribute()]
-        public int Color {
-            get {
-                return this.ColorField;
-            }
-            set {
-                if ((this.ColorField.Equals(value) != true)) {
-                    this.ColorField = value;
-                    this.RaisePropertyChanged("Color");
-                }
-            }
-        }
-        
-        [System.Runtime.Serialization.DataMemberAttribute()]
-        public char HotKey {
-            get {
-                return this.HotKeyField;
-            }
-            set {
-                if ((this.HotKeyField.Equals(value) != true)) {
-                    this.HotKeyField = value;
-                    this.RaisePropertyChanged("HotKey");
-                }
-            }
-        }
-        
-        [System.Runtime.Serialization.DataMemberAttribute()]
-        public string MarkupType {
-            get {
-                return this.MarkupTypeField;
-            }
-            set {
-                if ((object.ReferenceEquals(this.MarkupTypeField, value) != true)) {
-                    this.MarkupTypeField = value;
-                    this.RaisePropertyChanged("MarkupType");
-                }
-            }
-        }
-        
-        [System.Runtime.Serialization.DataMemberAttribute()]
-        public string Name {
-            get {
-                return this.NameField;
-            }
-            set {
-                if ((object.ReferenceEquals(this.NameField, value) != true)) {
-                    this.NameField = value;
-                    this.RaisePropertyChanged("Name");
-                }
-            }
-        }
-        
-        [System.Runtime.Serialization.DataMemberAttribute()]
-        public string Notes {
-            get {
-                return this.NotesField;
-            }
-            set {
-                if ((object.ReferenceEquals(this.NotesField, value) != true)) {
-                    this.NotesField = value;
-                    this.RaisePropertyChanged("Notes");
-                }
-            }
-        }
-        
-        [System.Runtime.Serialization.DataMemberAttribute()]
-        public WebAnnotationModel.Service.PermittedStructureLink[] PermittedLinks {
-            get {
-                return this.PermittedLinksField;
-            }
-            set {
-                if ((object.ReferenceEquals(this.PermittedLinksField, value) != true)) {
-                    this.PermittedLinksField = value;
-                    this.RaisePropertyChanged("PermittedLinks");
-                }
-            }
-        }
-        
-        [System.Runtime.Serialization.DataMemberAttribute()]
-        public string[] StructureTags {
-            get {
-                return this.StructureTagsField;
-            }
-            set {
-                if ((object.ReferenceEquals(this.StructureTagsField, value) != true)) {
-                    this.StructureTagsField = value;
-                    this.RaisePropertyChanged("StructureTags");
-                }
-            }
-        }
-        
-        [System.Runtime.Serialization.DataMemberAttribute()]
-        public string[] Tags {
-            get {
-                return this.TagsField;
-            }
-            set {
-                if ((object.ReferenceEquals(this.TagsField, value) != true)) {
-                    this.TagsField = value;
-                    this.RaisePropertyChanged("Tags");
-                }
-            }
-        }
-    }
-    
-    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Runtime.Serialization", "4.0.0.0")]
-    [System.Runtime.Serialization.DataContractAttribute(Name="DBACTION", Namespace="http://schemas.datacontract.org/2004/07/Annotation")]
-    public enum DBACTION : int {
-        
-        [System.Runtime.Serialization.EnumMemberAttribute()]
-        NONE = 0,
-        
-        [System.Runtime.Serialization.EnumMemberAttribute()]
-        INSERT = 1,
-        
-        [System.Runtime.Serialization.EnumMemberAttribute()]
-        UPDATE = 2,
-        
-        [System.Runtime.Serialization.EnumMemberAttribute()]
-        DELETE = 3,
-    }
-    
-    [System.Diagnostics.DebuggerStepThroughAttribute()]
-    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Runtime.Serialization", "4.0.0.0")]
-    [System.Runtime.Serialization.DataContractAttribute(Name="AnnotationPoint", Namespace="http://schemas.datacontract.org/2004/07/Annotation")]
-    [System.SerializableAttribute()]
-    public partial struct AnnotationPoint : System.Runtime.Serialization.IExtensibleDataObject, System.ComponentModel.INotifyPropertyChanged {
-        
-        [System.NonSerializedAttribute()]
-        private System.Runtime.Serialization.ExtensionDataObject extensionDataField;
-        
-        [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private double XField;
-        
-        [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private double YField;
-        
-        [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private double ZField;
-        
-        public System.Runtime.Serialization.ExtensionDataObject ExtensionData {
-            get {
-                return this.extensionDataField;
-            }
-            set {
-                this.extensionDataField = value;
-            }
-        }
-        
-        [System.Runtime.Serialization.DataMemberAttribute()]
-        public double X {
-            get {
-                return this.XField;
-            }
-            set {
-                if ((this.XField.Equals(value) != true)) {
-                    this.XField = value;
-                    this.RaisePropertyChanged("X");
-                }
-            }
-        }
-        
-        [System.Runtime.Serialization.DataMemberAttribute()]
-        public double Y {
-            get {
-                return this.YField;
-            }
-            set {
-                if ((this.YField.Equals(value) != true)) {
-                    this.YField = value;
-                    this.RaisePropertyChanged("Y");
-                }
-            }
-        }
-        
-        [System.Runtime.Serialization.DataMemberAttribute()]
-        public double Z {
-            get {
-                return this.ZField;
-            }
-            set {
-                if ((this.ZField.Equals(value) != true)) {
-                    this.ZField = value;
-                    this.RaisePropertyChanged("Z");
-                }
-            }
-        }
-        
-        public event System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
-        
-        void RaisePropertyChanged(string propertyName) {
-            System.ComponentModel.PropertyChangedEventHandler propertyChanged = this.PropertyChanged;
-            if ((propertyChanged != null)) {
-                propertyChanged(this, new System.ComponentModel.PropertyChangedEventArgs(propertyName));
-            }
-        }
-    }
-    
-    [System.Diagnostics.DebuggerStepThroughAttribute()]
-    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Runtime.Serialization", "4.0.0.0")]
-    [System.Runtime.Serialization.DataContractAttribute(Name="CreateStructureRetval", Namespace="http://schemas.datacontract.org/2004/07/Annotation")]
-    [System.SerializableAttribute()]
-    public partial class CreateStructureRetval : object, System.Runtime.Serialization.IExtensibleDataObject, System.ComponentModel.INotifyPropertyChanged {
-        
-        [System.NonSerializedAttribute()]
-        private System.Runtime.Serialization.ExtensionDataObject extensionDataField;
-        
-        [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private WebAnnotationModel.Service.Location locationField;
-        
-        [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private WebAnnotationModel.Service.Structure structureField;
-        
-        [global::System.ComponentModel.BrowsableAttribute(false)]
-        public System.Runtime.Serialization.ExtensionDataObject ExtensionData {
-            get {
-                return this.extensionDataField;
-            }
-            set {
-                this.extensionDataField = value;
-            }
-        }
-        
-        [System.Runtime.Serialization.DataMemberAttribute()]
-        public WebAnnotationModel.Service.Location location {
-            get {
-                return this.locationField;
-            }
-            set {
-                if ((object.ReferenceEquals(this.locationField, value) != true)) {
-                    this.locationField = value;
-                    this.RaisePropertyChanged("location");
-                }
-            }
-        }
-        
-        [System.Runtime.Serialization.DataMemberAttribute()]
-        public WebAnnotationModel.Service.Structure structure {
-            get {
-                return this.structureField;
-            }
-            set {
-                if ((object.ReferenceEquals(this.structureField, value) != true)) {
-                    this.structureField = value;
-                    this.RaisePropertyChanged("structure");
-                }
-            }
-        }
-        
-        public event System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
-        
-        protected void RaisePropertyChanged(string propertyName) {
-            System.ComponentModel.PropertyChangedEventHandler propertyChanged = this.PropertyChanged;
-            if ((propertyChanged != null)) {
-                propertyChanged(this, new System.ComponentModel.PropertyChangedEventArgs(propertyName));
-            }
-        }
-    }
-    
-    [System.Diagnostics.DebuggerStepThroughAttribute()]
-    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Runtime.Serialization", "4.0.0.0")]
-    [System.Runtime.Serialization.DataContractAttribute(Name="BoundingRectangle", Namespace="http://schemas.datacontract.org/2004/07/Annotation")]
-    [System.SerializableAttribute()]
-    public partial struct BoundingRectangle : System.Runtime.Serialization.IExtensibleDataObject, System.ComponentModel.INotifyPropertyChanged {
-        
-        [System.NonSerializedAttribute()]
-        private System.Runtime.Serialization.ExtensionDataObject extensionDataField;
-        
-        [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private double XMaxField;
-        
-        [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private double XMinField;
-        
-        [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private double YMaxField;
-        
-        [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private double YMinField;
-        
-        public System.Runtime.Serialization.ExtensionDataObject ExtensionData {
-            get {
-                return this.extensionDataField;
-            }
-            set {
-                this.extensionDataField = value;
-            }
-        }
-        
-        [System.Runtime.Serialization.DataMemberAttribute()]
-        public double XMax {
-            get {
-                return this.XMaxField;
-            }
-            set {
-                if ((this.XMaxField.Equals(value) != true)) {
-                    this.XMaxField = value;
-                    this.RaisePropertyChanged("XMax");
-                }
-            }
-        }
-        
-        [System.Runtime.Serialization.DataMemberAttribute()]
-        public double XMin {
-            get {
-                return this.XMinField;
-            }
-            set {
-                if ((this.XMinField.Equals(value) != true)) {
-                    this.XMinField = value;
-                    this.RaisePropertyChanged("XMin");
-                }
-            }
-        }
-        
-        [System.Runtime.Serialization.DataMemberAttribute()]
-        public double YMax {
-            get {
-                return this.YMaxField;
-            }
-            set {
-                if ((this.YMaxField.Equals(value) != true)) {
-                    this.YMaxField = value;
-                    this.RaisePropertyChanged("YMax");
-                }
-            }
-        }
-        
-        [System.Runtime.Serialization.DataMemberAttribute()]
-        public double YMin {
-            get {
-                return this.YMinField;
-            }
-            set {
-                if ((this.YMinField.Equals(value) != true)) {
-                    this.YMinField = value;
-                    this.RaisePropertyChanged("YMin");
-                }
-            }
-        }
-        
-        public event System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
-        
-        void RaisePropertyChanged(string propertyName) {
-            System.ComponentModel.PropertyChangedEventHandler propertyChanged = this.PropertyChanged;
-            if ((propertyChanged != null)) {
-                propertyChanged(this, new System.ComponentModel.PropertyChangedEventArgs(propertyName));
-            }
-        }
-    }
-    
-    [System.Diagnostics.DebuggerStepThroughAttribute()]
-    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Runtime.Serialization", "4.0.0.0")]
-    [System.Runtime.Serialization.DataContractAttribute(Name="AnnotationSet", Namespace="http://schemas.datacontract.org/2004/07/Annotation")]
-    [System.SerializableAttribute()]
-    public partial class AnnotationSet : object, System.Runtime.Serialization.IExtensibleDataObject, System.ComponentModel.INotifyPropertyChanged {
-        
-        [System.NonSerializedAttribute()]
-        private System.Runtime.Serialization.ExtensionDataObject extensionDataField;
-        
-        [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private WebAnnotationModel.Service.Location[] LocationsField;
-        
-        [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private WebAnnotationModel.Service.Structure[] StructuresField;
-        
-        [global::System.ComponentModel.BrowsableAttribute(false)]
-        public System.Runtime.Serialization.ExtensionDataObject ExtensionData {
-            get {
-                return this.extensionDataField;
-            }
-            set {
-                this.extensionDataField = value;
-            }
-        }
-        
-        [System.Runtime.Serialization.DataMemberAttribute()]
-        public WebAnnotationModel.Service.Location[] Locations {
-            get {
-                return this.LocationsField;
-            }
-            set {
-                if ((object.ReferenceEquals(this.LocationsField, value) != true)) {
-                    this.LocationsField = value;
-                    this.RaisePropertyChanged("Locations");
-                }
-            }
-        }
-        
-        [System.Runtime.Serialization.DataMemberAttribute()]
-        public WebAnnotationModel.Service.Structure[] Structures {
-            get {
-                return this.StructuresField;
-            }
-            set {
-                if ((object.ReferenceEquals(this.StructuresField, value) != true)) {
-                    this.StructuresField = value;
-                    this.RaisePropertyChanged("Structures");
-                }
-            }
-        }
-        
-        public event System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
-        
-        protected void RaisePropertyChanged(string propertyName) {
-            System.ComponentModel.PropertyChangedEventHandler propertyChanged = this.PropertyChanged;
-            if ((propertyChanged != null)) {
-                propertyChanged(this, new System.ComponentModel.PropertyChangedEventArgs(propertyName));
-            }
-        }
-    }
-    
-    [System.Diagnostics.DebuggerStepThroughAttribute()]
-    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Runtime.Serialization", "4.0.0.0")]
-    [System.Runtime.Serialization.DataContractAttribute(Name="Scale", Namespace="http://schemas.datacontract.org/2004/07/Annotation")]
-    [System.SerializableAttribute()]
-    public partial class Scale : object, System.Runtime.Serialization.IExtensibleDataObject, System.ComponentModel.INotifyPropertyChanged {
-        
-        [System.NonSerializedAttribute()]
-        private System.Runtime.Serialization.ExtensionDataObject extensionDataField;
-        
-        [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private WebAnnotationModel.Service.AxisUnits XField;
-        
-        [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private WebAnnotationModel.Service.AxisUnits YField;
-        
-        [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private WebAnnotationModel.Service.AxisUnits ZField;
-        
-        [global::System.ComponentModel.BrowsableAttribute(false)]
-        public System.Runtime.Serialization.ExtensionDataObject ExtensionData {
-            get {
-                return this.extensionDataField;
-            }
-            set {
-                this.extensionDataField = value;
-            }
-        }
-        
-        [System.Runtime.Serialization.DataMemberAttribute()]
-        public WebAnnotationModel.Service.AxisUnits X {
-            get {
-                return this.XField;
-            }
-            set {
-                if ((object.ReferenceEquals(this.XField, value) != true)) {
-                    this.XField = value;
-                    this.RaisePropertyChanged("X");
-                }
-            }
-        }
-        
-        [System.Runtime.Serialization.DataMemberAttribute()]
-        public WebAnnotationModel.Service.AxisUnits Y {
-            get {
-                return this.YField;
-            }
-            set {
-                if ((object.ReferenceEquals(this.YField, value) != true)) {
-                    this.YField = value;
-                    this.RaisePropertyChanged("Y");
-                }
-            }
-        }
-        
-        [System.Runtime.Serialization.DataMemberAttribute()]
-        public WebAnnotationModel.Service.AxisUnits Z {
-            get {
-                return this.ZField;
-            }
-            set {
-                if ((object.ReferenceEquals(this.ZField, value) != true)) {
-                    this.ZField = value;
-                    this.RaisePropertyChanged("Z");
-                }
-            }
-        }
-        
-        public event System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
-        
-        protected void RaisePropertyChanged(string propertyName) {
-            System.ComponentModel.PropertyChangedEventHandler propertyChanged = this.PropertyChanged;
-            if ((propertyChanged != null)) {
-                propertyChanged(this, new System.ComponentModel.PropertyChangedEventArgs(propertyName));
-            }
-        }
-    }
-    
-    [System.Diagnostics.DebuggerStepThroughAttribute()]
-    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Runtime.Serialization", "4.0.0.0")]
-    [System.Runtime.Serialization.DataContractAttribute(Name="AxisUnits", Namespace="http://schemas.datacontract.org/2004/07/Annotation")]
-    [System.SerializableAttribute()]
-    public partial class AxisUnits : object, System.Runtime.Serialization.IExtensibleDataObject, System.ComponentModel.INotifyPropertyChanged {
-        
-        [System.NonSerializedAttribute()]
-        private System.Runtime.Serialization.ExtensionDataObject extensionDataField;
-        
-        [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private string UnitsField;
-        
-        [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private double ValueField;
-        
-        [global::System.ComponentModel.BrowsableAttribute(false)]
-        public System.Runtime.Serialization.ExtensionDataObject ExtensionData {
-            get {
-                return this.extensionDataField;
-            }
-            set {
-                this.extensionDataField = value;
-            }
-        }
-        
-        [System.Runtime.Serialization.DataMemberAttribute()]
-        public string Units {
-            get {
-                return this.UnitsField;
-            }
-            set {
-                if ((object.ReferenceEquals(this.UnitsField, value) != true)) {
-                    this.UnitsField = value;
-                    this.RaisePropertyChanged("Units");
-                }
-            }
-        }
-        
-        [System.Runtime.Serialization.DataMemberAttribute()]
-        public double Value {
-            get {
-                return this.ValueField;
-            }
-            set {
-                if ((this.ValueField.Equals(value) != true)) {
-                    this.ValueField = value;
-                    this.RaisePropertyChanged("Value");
-                }
-            }
-        }
-        
-        public event System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
-        
-        protected void RaisePropertyChanged(string propertyName) {
-            System.ComponentModel.PropertyChangedEventHandler propertyChanged = this.PropertyChanged;
-            if ((propertyChanged != null)) {
-                propertyChanged(this, new System.ComponentModel.PropertyChangedEventArgs(propertyName));
-            }
-        }
-    }
-    
-    [System.Diagnostics.DebuggerStepThroughAttribute()]
-    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Runtime.Serialization", "4.0.0.0")]
-    [System.Runtime.Serialization.DataContractAttribute(Name="Graphx", Namespace="http://schemas.datacontract.org/2004/07/")]
+    [System.Runtime.Serialization.DataContractAttribute(Name="Graphx", Namespace="http://schemas.datacontract.org/2004/07/AnnotationService.Types")]
     [System.SerializableAttribute()]
     public partial class Graphx : object, System.Runtime.Serialization.IExtensibleDataObject, System.ComponentModel.INotifyPropertyChanged {
         
@@ -1422,7 +32,7 @@ namespace WebAnnotationModel.Service {
         private long[] InvolvedCellsField;
         
         [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private System.Collections.Generic.Dictionary<long, WebAnnotationModel.Service.Structure> NodeListField;
+        private System.Collections.Generic.Dictionary<long, AnnotationService.Types.Structure> NodeListField;
         
         [System.Runtime.Serialization.OptionalFieldAttribute()]
         private long[] ReducedEdgesField;
@@ -1486,7 +96,7 @@ namespace WebAnnotationModel.Service {
         }
         
         [System.Runtime.Serialization.DataMemberAttribute()]
-        public System.Collections.Generic.Dictionary<long, WebAnnotationModel.Service.Structure> NodeList {
+        public System.Collections.Generic.Dictionary<long, AnnotationService.Types.Structure> NodeList {
             get {
                 return this.NodeListField;
             }
@@ -1562,7 +172,7 @@ namespace WebAnnotationModel.Service {
     
     [System.Diagnostics.DebuggerStepThroughAttribute()]
     [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Runtime.Serialization", "4.0.0.0")]
-    [System.Runtime.Serialization.DataContractAttribute(Name="Edgex", Namespace="http://schemas.datacontract.org/2004/07/")]
+    [System.Runtime.Serialization.DataContractAttribute(Name="Edgex", Namespace="http://schemas.datacontract.org/2004/07/AnnotationService.Types")]
     [System.SerializableAttribute()]
     public partial class Edgex : object, System.Runtime.Serialization.IExtensibleDataObject, System.ComponentModel.INotifyPropertyChanged {
         
@@ -1570,7 +180,7 @@ namespace WebAnnotationModel.Service {
         private System.Runtime.Serialization.ExtensionDataObject extensionDataField;
         
         [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private WebAnnotationModel.Service.StructureLink LinkField;
+        private AnnotationService.Types.StructureLink LinkField;
         
         [System.Runtime.Serialization.OptionalFieldAttribute()]
         private long SourceIDField;
@@ -1598,7 +208,7 @@ namespace WebAnnotationModel.Service {
         }
         
         [System.Runtime.Serialization.DataMemberAttribute()]
-        public WebAnnotationModel.Service.StructureLink Link {
+        public AnnotationService.Types.StructureLink Link {
             get {
                 return this.LinkField;
             }
@@ -1687,7 +297,7 @@ namespace WebAnnotationModel.Service {
     
     [System.Diagnostics.DebuggerStepThroughAttribute()]
     [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Runtime.Serialization", "4.0.0.0")]
-    [System.Runtime.Serialization.DataContractAttribute(Name="LocationInfo", Namespace="http://schemas.datacontract.org/2004/07/")]
+    [System.Runtime.Serialization.DataContractAttribute(Name="LocationInfo", Namespace="http://schemas.datacontract.org/2004/07/AnnotationService.Types")]
     [System.SerializableAttribute()]
     public partial class LocationInfo : object, System.Runtime.Serialization.IExtensibleDataObject, System.ComponentModel.INotifyPropertyChanged {
         
@@ -1780,7 +390,7 @@ namespace WebAnnotationModel.Service {
     
     [System.Diagnostics.DebuggerStepThroughAttribute()]
     [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Runtime.Serialization", "4.0.0.0")]
-    [System.Runtime.Serialization.DataContractAttribute(Name="SynapseObject", Namespace="http://schemas.datacontract.org/2004/07/Annotation.Service.GraphClasses")]
+    [System.Runtime.Serialization.DataContractAttribute(Name="SynapseObject", Namespace="http://schemas.datacontract.org/2004/07/AnnotationService.Types")]
     [System.SerializableAttribute()]
     public partial class SynapseObject : object, System.Runtime.Serialization.IExtensibleDataObject, System.ComponentModel.INotifyPropertyChanged {
         
@@ -1825,7 +435,7 @@ namespace WebAnnotationModel.Service {
     
     [System.Diagnostics.DebuggerStepThroughAttribute()]
     [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Runtime.Serialization", "4.0.0.0")]
-    [System.Runtime.Serialization.DataContractAttribute(Name="SynapseStats", Namespace="http://schemas.datacontract.org/2004/07/Annotation.Service.GraphClasses")]
+    [System.Runtime.Serialization.DataContractAttribute(Name="SynapseStats", Namespace="http://schemas.datacontract.org/2004/07/AnnotationService.Types")]
     [System.SerializableAttribute()]
     public partial class SynapseStats : object, System.Runtime.Serialization.IExtensibleDataObject, System.ComponentModel.INotifyPropertyChanged {
         
@@ -1889,58 +499,58 @@ namespace WebAnnotationModel.Service {
     public interface IAnnotateStructureTypes {
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructureTypes/CreateStructureType", ReplyAction="http://tempuri.org/IAnnotateStructureTypes/CreateStructureTypeResponse")]
-        WebAnnotationModel.Service.StructureType CreateStructureType(WebAnnotationModel.Service.StructureType obj);
+        AnnotationService.Types.StructureType CreateStructureType(AnnotationService.Types.StructureType obj);
         
         [System.ServiceModel.OperationContractAttribute(AsyncPattern=true, Action="http://tempuri.org/IAnnotateStructureTypes/CreateStructureType", ReplyAction="http://tempuri.org/IAnnotateStructureTypes/CreateStructureTypeResponse")]
-        System.IAsyncResult BeginCreateStructureType(WebAnnotationModel.Service.StructureType obj, System.AsyncCallback callback, object asyncState);
+        System.IAsyncResult BeginCreateStructureType(AnnotationService.Types.StructureType obj, System.AsyncCallback callback, object asyncState);
         
-        WebAnnotationModel.Service.StructureType EndCreateStructureType(System.IAsyncResult result);
+        AnnotationService.Types.StructureType EndCreateStructureType(System.IAsyncResult result);
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructureTypes/GetStructureTypes", ReplyAction="http://tempuri.org/IAnnotateStructureTypes/GetStructureTypesResponse")]
-        WebAnnotationModel.Service.StructureType[] GetStructureTypes();
+        AnnotationService.Types.StructureType[] GetStructureTypes();
         
         [System.ServiceModel.OperationContractAttribute(AsyncPattern=true, Action="http://tempuri.org/IAnnotateStructureTypes/GetStructureTypes", ReplyAction="http://tempuri.org/IAnnotateStructureTypes/GetStructureTypesResponse")]
         System.IAsyncResult BeginGetStructureTypes(System.AsyncCallback callback, object asyncState);
         
-        WebAnnotationModel.Service.StructureType[] EndGetStructureTypes(System.IAsyncResult result);
+        AnnotationService.Types.StructureType[] EndGetStructureTypes(System.IAsyncResult result);
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructureTypes/GetStructureTypeByID", ReplyAction="http://tempuri.org/IAnnotateStructureTypes/GetStructureTypeByIDResponse")]
-        WebAnnotationModel.Service.StructureType GetStructureTypeByID(long ID);
+        AnnotationService.Types.StructureType GetStructureTypeByID(long ID);
         
         [System.ServiceModel.OperationContractAttribute(AsyncPattern=true, Action="http://tempuri.org/IAnnotateStructureTypes/GetStructureTypeByID", ReplyAction="http://tempuri.org/IAnnotateStructureTypes/GetStructureTypeByIDResponse")]
         System.IAsyncResult BeginGetStructureTypeByID(long ID, System.AsyncCallback callback, object asyncState);
         
-        WebAnnotationModel.Service.StructureType EndGetStructureTypeByID(System.IAsyncResult result);
+        AnnotationService.Types.StructureType EndGetStructureTypeByID(System.IAsyncResult result);
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructureTypes/GetStructureTypesByIDs", ReplyAction="http://tempuri.org/IAnnotateStructureTypes/GetStructureTypesByIDsResponse")]
-        WebAnnotationModel.Service.StructureType[] GetStructureTypesByIDs(long[] IDs);
+        AnnotationService.Types.StructureType[] GetStructureTypesByIDs(long[] IDs);
         
         [System.ServiceModel.OperationContractAttribute(AsyncPattern=true, Action="http://tempuri.org/IAnnotateStructureTypes/GetStructureTypesByIDs", ReplyAction="http://tempuri.org/IAnnotateStructureTypes/GetStructureTypesByIDsResponse")]
         System.IAsyncResult BeginGetStructureTypesByIDs(long[] IDs, System.AsyncCallback callback, object asyncState);
         
-        WebAnnotationModel.Service.StructureType[] EndGetStructureTypesByIDs(System.IAsyncResult result);
+        AnnotationService.Types.StructureType[] EndGetStructureTypesByIDs(System.IAsyncResult result);
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructureTypes/UpdateStructureTypes", ReplyAction="http://tempuri.org/IAnnotateStructureTypes/UpdateStructureTypesResponse")]
-        long[] UpdateStructureTypes(WebAnnotationModel.Service.StructureType[] structType);
+        long[] UpdateStructureTypes(AnnotationService.Types.StructureType[] structType);
         
         [System.ServiceModel.OperationContractAttribute(AsyncPattern=true, Action="http://tempuri.org/IAnnotateStructureTypes/UpdateStructureTypes", ReplyAction="http://tempuri.org/IAnnotateStructureTypes/UpdateStructureTypesResponse")]
-        System.IAsyncResult BeginUpdateStructureTypes(WebAnnotationModel.Service.StructureType[] structType, System.AsyncCallback callback, object asyncState);
+        System.IAsyncResult BeginUpdateStructureTypes(AnnotationService.Types.StructureType[] structType, System.AsyncCallback callback, object asyncState);
         
         long[] EndUpdateStructureTypes(System.IAsyncResult result);
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructureTypes/CreatePermittedStructureLink", ReplyAction="http://tempuri.org/IAnnotateStructureTypes/CreatePermittedStructureLinkResponse")]
-        WebAnnotationModel.Service.PermittedStructureLink CreatePermittedStructureLink(WebAnnotationModel.Service.PermittedStructureLink link);
+        AnnotationService.Types.PermittedStructureLink CreatePermittedStructureLink(AnnotationService.Types.PermittedStructureLink link);
         
         [System.ServiceModel.OperationContractAttribute(AsyncPattern=true, Action="http://tempuri.org/IAnnotateStructureTypes/CreatePermittedStructureLink", ReplyAction="http://tempuri.org/IAnnotateStructureTypes/CreatePermittedStructureLinkResponse")]
-        System.IAsyncResult BeginCreatePermittedStructureLink(WebAnnotationModel.Service.PermittedStructureLink link, System.AsyncCallback callback, object asyncState);
+        System.IAsyncResult BeginCreatePermittedStructureLink(AnnotationService.Types.PermittedStructureLink link, System.AsyncCallback callback, object asyncState);
         
-        WebAnnotationModel.Service.PermittedStructureLink EndCreatePermittedStructureLink(System.IAsyncResult result);
+        AnnotationService.Types.PermittedStructureLink EndCreatePermittedStructureLink(System.IAsyncResult result);
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructureTypes/UpdatePermittedStructureLinks", ReplyAction="http://tempuri.org/IAnnotateStructureTypes/UpdatePermittedStructureLinksResponse")]
-        void UpdatePermittedStructureLinks(WebAnnotationModel.Service.PermittedStructureLink[] permittedStructureLinks);
+        void UpdatePermittedStructureLinks(AnnotationService.Types.PermittedStructureLink[] permittedStructureLinks);
         
         [System.ServiceModel.OperationContractAttribute(AsyncPattern=true, Action="http://tempuri.org/IAnnotateStructureTypes/UpdatePermittedStructureLinks", ReplyAction="http://tempuri.org/IAnnotateStructureTypes/UpdatePermittedStructureLinksResponse")]
-        System.IAsyncResult BeginUpdatePermittedStructureLinks(WebAnnotationModel.Service.PermittedStructureLink[] permittedStructureLinks, System.AsyncCallback callback, object asyncState);
+        System.IAsyncResult BeginUpdatePermittedStructureLinks(AnnotationService.Types.PermittedStructureLink[] permittedStructureLinks, System.AsyncCallback callback, object asyncState);
         
         void EndUpdatePermittedStructureLinks(System.IAsyncResult result);
         
@@ -1968,10 +578,10 @@ namespace WebAnnotationModel.Service {
             this.results = results;
         }
         
-        public WebAnnotationModel.Service.StructureType Result {
+        public AnnotationService.Types.StructureType Result {
             get {
                 base.RaiseExceptionIfNecessary();
-                return ((WebAnnotationModel.Service.StructureType)(this.results[0]));
+                return ((AnnotationService.Types.StructureType)(this.results[0]));
             }
         }
     }
@@ -1987,10 +597,10 @@ namespace WebAnnotationModel.Service {
             this.results = results;
         }
         
-        public WebAnnotationModel.Service.StructureType[] Result {
+        public AnnotationService.Types.StructureType[] Result {
             get {
                 base.RaiseExceptionIfNecessary();
-                return ((WebAnnotationModel.Service.StructureType[])(this.results[0]));
+                return ((AnnotationService.Types.StructureType[])(this.results[0]));
             }
         }
     }
@@ -2006,10 +616,10 @@ namespace WebAnnotationModel.Service {
             this.results = results;
         }
         
-        public WebAnnotationModel.Service.StructureType Result {
+        public AnnotationService.Types.StructureType Result {
             get {
                 base.RaiseExceptionIfNecessary();
-                return ((WebAnnotationModel.Service.StructureType)(this.results[0]));
+                return ((AnnotationService.Types.StructureType)(this.results[0]));
             }
         }
     }
@@ -2025,10 +635,10 @@ namespace WebAnnotationModel.Service {
             this.results = results;
         }
         
-        public WebAnnotationModel.Service.StructureType[] Result {
+        public AnnotationService.Types.StructureType[] Result {
             get {
                 base.RaiseExceptionIfNecessary();
-                return ((WebAnnotationModel.Service.StructureType[])(this.results[0]));
+                return ((AnnotationService.Types.StructureType[])(this.results[0]));
             }
         }
     }
@@ -2063,10 +673,10 @@ namespace WebAnnotationModel.Service {
             this.results = results;
         }
         
-        public WebAnnotationModel.Service.PermittedStructureLink Result {
+        public AnnotationService.Types.PermittedStructureLink Result {
             get {
                 base.RaiseExceptionIfNecessary();
-                return ((WebAnnotationModel.Service.PermittedStructureLink)(this.results[0]));
+                return ((AnnotationService.Types.PermittedStructureLink)(this.results[0]));
             }
         }
     }
@@ -2177,27 +787,27 @@ namespace WebAnnotationModel.Service {
         
         public event System.EventHandler<TestMethodCompletedEventArgs> TestMethodCompleted;
         
-        public WebAnnotationModel.Service.StructureType CreateStructureType(WebAnnotationModel.Service.StructureType obj) {
+        public AnnotationService.Types.StructureType CreateStructureType(AnnotationService.Types.StructureType obj) {
             return base.Channel.CreateStructureType(obj);
         }
         
         [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
-        public System.IAsyncResult BeginCreateStructureType(WebAnnotationModel.Service.StructureType obj, System.AsyncCallback callback, object asyncState) {
+        public System.IAsyncResult BeginCreateStructureType(AnnotationService.Types.StructureType obj, System.AsyncCallback callback, object asyncState) {
             return base.Channel.BeginCreateStructureType(obj, callback, asyncState);
         }
         
         [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
-        public WebAnnotationModel.Service.StructureType EndCreateStructureType(System.IAsyncResult result) {
+        public AnnotationService.Types.StructureType EndCreateStructureType(System.IAsyncResult result) {
             return base.Channel.EndCreateStructureType(result);
         }
         
         private System.IAsyncResult OnBeginCreateStructureType(object[] inValues, System.AsyncCallback callback, object asyncState) {
-            WebAnnotationModel.Service.StructureType obj = ((WebAnnotationModel.Service.StructureType)(inValues[0]));
+            AnnotationService.Types.StructureType obj = ((AnnotationService.Types.StructureType)(inValues[0]));
             return this.BeginCreateStructureType(obj, callback, asyncState);
         }
         
         private object[] OnEndCreateStructureType(System.IAsyncResult result) {
-            WebAnnotationModel.Service.StructureType retVal = this.EndCreateStructureType(result);
+            AnnotationService.Types.StructureType retVal = this.EndCreateStructureType(result);
             return new object[] {
                     retVal};
         }
@@ -2209,11 +819,11 @@ namespace WebAnnotationModel.Service {
             }
         }
         
-        public void CreateStructureTypeAsync(WebAnnotationModel.Service.StructureType obj) {
+        public void CreateStructureTypeAsync(AnnotationService.Types.StructureType obj) {
             this.CreateStructureTypeAsync(obj, null);
         }
         
-        public void CreateStructureTypeAsync(WebAnnotationModel.Service.StructureType obj, object userState) {
+        public void CreateStructureTypeAsync(AnnotationService.Types.StructureType obj, object userState) {
             if ((this.onBeginCreateStructureTypeDelegate == null)) {
                 this.onBeginCreateStructureTypeDelegate = new BeginOperationDelegate(this.OnBeginCreateStructureType);
             }
@@ -2227,7 +837,7 @@ namespace WebAnnotationModel.Service {
                         obj}, this.onEndCreateStructureTypeDelegate, this.onCreateStructureTypeCompletedDelegate, userState);
         }
         
-        public WebAnnotationModel.Service.StructureType[] GetStructureTypes() {
+        public AnnotationService.Types.StructureType[] GetStructureTypes() {
             return base.Channel.GetStructureTypes();
         }
         
@@ -2237,7 +847,7 @@ namespace WebAnnotationModel.Service {
         }
         
         [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
-        public WebAnnotationModel.Service.StructureType[] EndGetStructureTypes(System.IAsyncResult result) {
+        public AnnotationService.Types.StructureType[] EndGetStructureTypes(System.IAsyncResult result) {
             return base.Channel.EndGetStructureTypes(result);
         }
         
@@ -2246,7 +856,7 @@ namespace WebAnnotationModel.Service {
         }
         
         private object[] OnEndGetStructureTypes(System.IAsyncResult result) {
-            WebAnnotationModel.Service.StructureType[] retVal = this.EndGetStructureTypes(result);
+            AnnotationService.Types.StructureType[] retVal = this.EndGetStructureTypes(result);
             return new object[] {
                     retVal};
         }
@@ -2275,7 +885,7 @@ namespace WebAnnotationModel.Service {
             base.InvokeAsync(this.onBeginGetStructureTypesDelegate, null, this.onEndGetStructureTypesDelegate, this.onGetStructureTypesCompletedDelegate, userState);
         }
         
-        public WebAnnotationModel.Service.StructureType GetStructureTypeByID(long ID) {
+        public AnnotationService.Types.StructureType GetStructureTypeByID(long ID) {
             return base.Channel.GetStructureTypeByID(ID);
         }
         
@@ -2285,7 +895,7 @@ namespace WebAnnotationModel.Service {
         }
         
         [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
-        public WebAnnotationModel.Service.StructureType EndGetStructureTypeByID(System.IAsyncResult result) {
+        public AnnotationService.Types.StructureType EndGetStructureTypeByID(System.IAsyncResult result) {
             return base.Channel.EndGetStructureTypeByID(result);
         }
         
@@ -2295,7 +905,7 @@ namespace WebAnnotationModel.Service {
         }
         
         private object[] OnEndGetStructureTypeByID(System.IAsyncResult result) {
-            WebAnnotationModel.Service.StructureType retVal = this.EndGetStructureTypeByID(result);
+            AnnotationService.Types.StructureType retVal = this.EndGetStructureTypeByID(result);
             return new object[] {
                     retVal};
         }
@@ -2325,7 +935,7 @@ namespace WebAnnotationModel.Service {
                         ID}, this.onEndGetStructureTypeByIDDelegate, this.onGetStructureTypeByIDCompletedDelegate, userState);
         }
         
-        public WebAnnotationModel.Service.StructureType[] GetStructureTypesByIDs(long[] IDs) {
+        public AnnotationService.Types.StructureType[] GetStructureTypesByIDs(long[] IDs) {
             return base.Channel.GetStructureTypesByIDs(IDs);
         }
         
@@ -2335,7 +945,7 @@ namespace WebAnnotationModel.Service {
         }
         
         [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
-        public WebAnnotationModel.Service.StructureType[] EndGetStructureTypesByIDs(System.IAsyncResult result) {
+        public AnnotationService.Types.StructureType[] EndGetStructureTypesByIDs(System.IAsyncResult result) {
             return base.Channel.EndGetStructureTypesByIDs(result);
         }
         
@@ -2345,7 +955,7 @@ namespace WebAnnotationModel.Service {
         }
         
         private object[] OnEndGetStructureTypesByIDs(System.IAsyncResult result) {
-            WebAnnotationModel.Service.StructureType[] retVal = this.EndGetStructureTypesByIDs(result);
+            AnnotationService.Types.StructureType[] retVal = this.EndGetStructureTypesByIDs(result);
             return new object[] {
                     retVal};
         }
@@ -2375,12 +985,12 @@ namespace WebAnnotationModel.Service {
                         IDs}, this.onEndGetStructureTypesByIDsDelegate, this.onGetStructureTypesByIDsCompletedDelegate, userState);
         }
         
-        public long[] UpdateStructureTypes(WebAnnotationModel.Service.StructureType[] structType) {
+        public long[] UpdateStructureTypes(AnnotationService.Types.StructureType[] structType) {
             return base.Channel.UpdateStructureTypes(structType);
         }
         
         [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
-        public System.IAsyncResult BeginUpdateStructureTypes(WebAnnotationModel.Service.StructureType[] structType, System.AsyncCallback callback, object asyncState) {
+        public System.IAsyncResult BeginUpdateStructureTypes(AnnotationService.Types.StructureType[] structType, System.AsyncCallback callback, object asyncState) {
             return base.Channel.BeginUpdateStructureTypes(structType, callback, asyncState);
         }
         
@@ -2390,7 +1000,7 @@ namespace WebAnnotationModel.Service {
         }
         
         private System.IAsyncResult OnBeginUpdateStructureTypes(object[] inValues, System.AsyncCallback callback, object asyncState) {
-            WebAnnotationModel.Service.StructureType[] structType = ((WebAnnotationModel.Service.StructureType[])(inValues[0]));
+            AnnotationService.Types.StructureType[] structType = ((AnnotationService.Types.StructureType[])(inValues[0]));
             return this.BeginUpdateStructureTypes(structType, callback, asyncState);
         }
         
@@ -2407,11 +1017,11 @@ namespace WebAnnotationModel.Service {
             }
         }
         
-        public void UpdateStructureTypesAsync(WebAnnotationModel.Service.StructureType[] structType) {
+        public void UpdateStructureTypesAsync(AnnotationService.Types.StructureType[] structType) {
             this.UpdateStructureTypesAsync(structType, null);
         }
         
-        public void UpdateStructureTypesAsync(WebAnnotationModel.Service.StructureType[] structType, object userState) {
+        public void UpdateStructureTypesAsync(AnnotationService.Types.StructureType[] structType, object userState) {
             if ((this.onBeginUpdateStructureTypesDelegate == null)) {
                 this.onBeginUpdateStructureTypesDelegate = new BeginOperationDelegate(this.OnBeginUpdateStructureTypes);
             }
@@ -2425,27 +1035,27 @@ namespace WebAnnotationModel.Service {
                         structType}, this.onEndUpdateStructureTypesDelegate, this.onUpdateStructureTypesCompletedDelegate, userState);
         }
         
-        public WebAnnotationModel.Service.PermittedStructureLink CreatePermittedStructureLink(WebAnnotationModel.Service.PermittedStructureLink link) {
+        public AnnotationService.Types.PermittedStructureLink CreatePermittedStructureLink(AnnotationService.Types.PermittedStructureLink link) {
             return base.Channel.CreatePermittedStructureLink(link);
         }
         
         [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
-        public System.IAsyncResult BeginCreatePermittedStructureLink(WebAnnotationModel.Service.PermittedStructureLink link, System.AsyncCallback callback, object asyncState) {
+        public System.IAsyncResult BeginCreatePermittedStructureLink(AnnotationService.Types.PermittedStructureLink link, System.AsyncCallback callback, object asyncState) {
             return base.Channel.BeginCreatePermittedStructureLink(link, callback, asyncState);
         }
         
         [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
-        public WebAnnotationModel.Service.PermittedStructureLink EndCreatePermittedStructureLink(System.IAsyncResult result) {
+        public AnnotationService.Types.PermittedStructureLink EndCreatePermittedStructureLink(System.IAsyncResult result) {
             return base.Channel.EndCreatePermittedStructureLink(result);
         }
         
         private System.IAsyncResult OnBeginCreatePermittedStructureLink(object[] inValues, System.AsyncCallback callback, object asyncState) {
-            WebAnnotationModel.Service.PermittedStructureLink link = ((WebAnnotationModel.Service.PermittedStructureLink)(inValues[0]));
+            AnnotationService.Types.PermittedStructureLink link = ((AnnotationService.Types.PermittedStructureLink)(inValues[0]));
             return this.BeginCreatePermittedStructureLink(link, callback, asyncState);
         }
         
         private object[] OnEndCreatePermittedStructureLink(System.IAsyncResult result) {
-            WebAnnotationModel.Service.PermittedStructureLink retVal = this.EndCreatePermittedStructureLink(result);
+            AnnotationService.Types.PermittedStructureLink retVal = this.EndCreatePermittedStructureLink(result);
             return new object[] {
                     retVal};
         }
@@ -2457,11 +1067,11 @@ namespace WebAnnotationModel.Service {
             }
         }
         
-        public void CreatePermittedStructureLinkAsync(WebAnnotationModel.Service.PermittedStructureLink link) {
+        public void CreatePermittedStructureLinkAsync(AnnotationService.Types.PermittedStructureLink link) {
             this.CreatePermittedStructureLinkAsync(link, null);
         }
         
-        public void CreatePermittedStructureLinkAsync(WebAnnotationModel.Service.PermittedStructureLink link, object userState) {
+        public void CreatePermittedStructureLinkAsync(AnnotationService.Types.PermittedStructureLink link, object userState) {
             if ((this.onBeginCreatePermittedStructureLinkDelegate == null)) {
                 this.onBeginCreatePermittedStructureLinkDelegate = new BeginOperationDelegate(this.OnBeginCreatePermittedStructureLink);
             }
@@ -2475,12 +1085,12 @@ namespace WebAnnotationModel.Service {
                         link}, this.onEndCreatePermittedStructureLinkDelegate, this.onCreatePermittedStructureLinkCompletedDelegate, userState);
         }
         
-        public void UpdatePermittedStructureLinks(WebAnnotationModel.Service.PermittedStructureLink[] permittedStructureLinks) {
+        public void UpdatePermittedStructureLinks(AnnotationService.Types.PermittedStructureLink[] permittedStructureLinks) {
             base.Channel.UpdatePermittedStructureLinks(permittedStructureLinks);
         }
         
         [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
-        public System.IAsyncResult BeginUpdatePermittedStructureLinks(WebAnnotationModel.Service.PermittedStructureLink[] permittedStructureLinks, System.AsyncCallback callback, object asyncState) {
+        public System.IAsyncResult BeginUpdatePermittedStructureLinks(AnnotationService.Types.PermittedStructureLink[] permittedStructureLinks, System.AsyncCallback callback, object asyncState) {
             return base.Channel.BeginUpdatePermittedStructureLinks(permittedStructureLinks, callback, asyncState);
         }
         
@@ -2490,7 +1100,7 @@ namespace WebAnnotationModel.Service {
         }
         
         private System.IAsyncResult OnBeginUpdatePermittedStructureLinks(object[] inValues, System.AsyncCallback callback, object asyncState) {
-            WebAnnotationModel.Service.PermittedStructureLink[] permittedStructureLinks = ((WebAnnotationModel.Service.PermittedStructureLink[])(inValues[0]));
+            AnnotationService.Types.PermittedStructureLink[] permittedStructureLinks = ((AnnotationService.Types.PermittedStructureLink[])(inValues[0]));
             return this.BeginUpdatePermittedStructureLinks(permittedStructureLinks, callback, asyncState);
         }
         
@@ -2506,11 +1116,11 @@ namespace WebAnnotationModel.Service {
             }
         }
         
-        public void UpdatePermittedStructureLinksAsync(WebAnnotationModel.Service.PermittedStructureLink[] permittedStructureLinks) {
+        public void UpdatePermittedStructureLinksAsync(AnnotationService.Types.PermittedStructureLink[] permittedStructureLinks) {
             this.UpdatePermittedStructureLinksAsync(permittedStructureLinks, null);
         }
         
-        public void UpdatePermittedStructureLinksAsync(WebAnnotationModel.Service.PermittedStructureLink[] permittedStructureLinks, object userState) {
+        public void UpdatePermittedStructureLinksAsync(AnnotationService.Types.PermittedStructureLink[] permittedStructureLinks, object userState) {
             if ((this.onBeginUpdatePermittedStructureLinksDelegate == null)) {
                 this.onBeginUpdatePermittedStructureLinksDelegate = new BeginOperationDelegate(this.OnBeginUpdatePermittedStructureLinks);
             }
@@ -2578,88 +1188,89 @@ namespace WebAnnotationModel.Service {
     public interface IAnnotateStructures {
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/CreateStructure", ReplyAction="http://tempuri.org/IAnnotateStructures/CreateStructureResponse")]
-        WebAnnotationModel.Service.CreateStructureRetval CreateStructure(WebAnnotationModel.Service.Structure structure, WebAnnotationModel.Service.Location location);
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(AnnotationService.Types.LocationHistory))]
+        AnnotationService.Types.CreateStructureRetval CreateStructure(AnnotationService.Types.Structure structure, AnnotationService.Types.Location location);
         
         [System.ServiceModel.OperationContractAttribute(AsyncPattern=true, Action="http://tempuri.org/IAnnotateStructures/CreateStructure", ReplyAction="http://tempuri.org/IAnnotateStructures/CreateStructureResponse")]
-        System.IAsyncResult BeginCreateStructure(WebAnnotationModel.Service.Structure structure, WebAnnotationModel.Service.Location location, System.AsyncCallback callback, object asyncState);
+        System.IAsyncResult BeginCreateStructure(AnnotationService.Types.Structure structure, AnnotationService.Types.Location location, System.AsyncCallback callback, object asyncState);
         
-        WebAnnotationModel.Service.CreateStructureRetval EndCreateStructure(System.IAsyncResult result);
+        AnnotationService.Types.CreateStructureRetval EndCreateStructure(System.IAsyncResult result);
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/GetStructures", ReplyAction="http://tempuri.org/IAnnotateStructures/GetStructuresResponse")]
-        WebAnnotationModel.Service.Structure[] GetStructures();
+        AnnotationService.Types.Structure[] GetStructures();
         
         [System.ServiceModel.OperationContractAttribute(AsyncPattern=true, Action="http://tempuri.org/IAnnotateStructures/GetStructures", ReplyAction="http://tempuri.org/IAnnotateStructures/GetStructuresResponse")]
         System.IAsyncResult BeginGetStructures(System.AsyncCallback callback, object asyncState);
         
-        WebAnnotationModel.Service.Structure[] EndGetStructures(System.IAsyncResult result);
+        AnnotationService.Types.Structure[] EndGetStructures(System.IAsyncResult result);
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/GetStructuresForSection", ReplyAction="http://tempuri.org/IAnnotateStructures/GetStructuresForSectionResponse")]
-        WebAnnotationModel.Service.Structure[] GetStructuresForSection(out long QueryExecutedTime, out long[] DeletedIDs, long Section, long ModifiedAfterThisTime);
+        AnnotationService.Types.Structure[] GetStructuresForSection(out long QueryExecutedTime, out long[] DeletedIDs, long Section, long ModifiedAfterThisTime);
         
         [System.ServiceModel.OperationContractAttribute(AsyncPattern=true, Action="http://tempuri.org/IAnnotateStructures/GetStructuresForSection", ReplyAction="http://tempuri.org/IAnnotateStructures/GetStructuresForSectionResponse")]
         System.IAsyncResult BeginGetStructuresForSection(long Section, long ModifiedAfterThisTime, System.AsyncCallback callback, object asyncState);
         
-        WebAnnotationModel.Service.Structure[] EndGetStructuresForSection(out long QueryExecutedTime, out long[] DeletedIDs, System.IAsyncResult result);
+        AnnotationService.Types.Structure[] EndGetStructuresForSection(out long QueryExecutedTime, out long[] DeletedIDs, System.IAsyncResult result);
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/GetStructuresForSectionInMosaicRegion", ReplyAction="http://tempuri.org/IAnnotateStructures/GetStructuresForSectionInMosaicRegionRespo" +
             "nse")]
-        WebAnnotationModel.Service.Structure[] GetStructuresForSectionInMosaicRegion(out long QueryExecutedTime, out long[] DeletedIDs, long section, WebAnnotationModel.Service.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisTime);
+        AnnotationService.Types.Structure[] GetStructuresForSectionInMosaicRegion(out long QueryExecutedTime, out long[] DeletedIDs, long section, AnnotationService.Types.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisTime);
         
         [System.ServiceModel.OperationContractAttribute(AsyncPattern=true, Action="http://tempuri.org/IAnnotateStructures/GetStructuresForSectionInMosaicRegion", ReplyAction="http://tempuri.org/IAnnotateStructures/GetStructuresForSectionInMosaicRegionRespo" +
             "nse")]
-        System.IAsyncResult BeginGetStructuresForSectionInMosaicRegion(long section, WebAnnotationModel.Service.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisTime, System.AsyncCallback callback, object asyncState);
+        System.IAsyncResult BeginGetStructuresForSectionInMosaicRegion(long section, AnnotationService.Types.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisTime, System.AsyncCallback callback, object asyncState);
         
-        WebAnnotationModel.Service.Structure[] EndGetStructuresForSectionInMosaicRegion(out long QueryExecutedTime, out long[] DeletedIDs, System.IAsyncResult result);
+        AnnotationService.Types.Structure[] EndGetStructuresForSectionInMosaicRegion(out long QueryExecutedTime, out long[] DeletedIDs, System.IAsyncResult result);
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/GetStructuresForSectionInVolumeRegion", ReplyAction="http://tempuri.org/IAnnotateStructures/GetStructuresForSectionInVolumeRegionRespo" +
             "nse")]
-        WebAnnotationModel.Service.Structure[] GetStructuresForSectionInVolumeRegion(out long QueryExecutedTime, out long[] DeletedIDs, long section, WebAnnotationModel.Service.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisTime);
+        AnnotationService.Types.Structure[] GetStructuresForSectionInVolumeRegion(out long QueryExecutedTime, out long[] DeletedIDs, long section, AnnotationService.Types.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisTime);
         
         [System.ServiceModel.OperationContractAttribute(AsyncPattern=true, Action="http://tempuri.org/IAnnotateStructures/GetStructuresForSectionInVolumeRegion", ReplyAction="http://tempuri.org/IAnnotateStructures/GetStructuresForSectionInVolumeRegionRespo" +
             "nse")]
-        System.IAsyncResult BeginGetStructuresForSectionInVolumeRegion(long section, WebAnnotationModel.Service.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisTime, System.AsyncCallback callback, object asyncState);
+        System.IAsyncResult BeginGetStructuresForSectionInVolumeRegion(long section, AnnotationService.Types.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisTime, System.AsyncCallback callback, object asyncState);
         
-        WebAnnotationModel.Service.Structure[] EndGetStructuresForSectionInVolumeRegion(out long QueryExecutedTime, out long[] DeletedIDs, System.IAsyncResult result);
+        AnnotationService.Types.Structure[] EndGetStructuresForSectionInVolumeRegion(out long QueryExecutedTime, out long[] DeletedIDs, System.IAsyncResult result);
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/GetStructureByID", ReplyAction="http://tempuri.org/IAnnotateStructures/GetStructureByIDResponse")]
-        WebAnnotationModel.Service.Structure GetStructureByID(long ID, bool IncludeChildren);
+        AnnotationService.Types.Structure GetStructureByID(long ID, bool IncludeChildren);
         
         [System.ServiceModel.OperationContractAttribute(AsyncPattern=true, Action="http://tempuri.org/IAnnotateStructures/GetStructureByID", ReplyAction="http://tempuri.org/IAnnotateStructures/GetStructureByIDResponse")]
         System.IAsyncResult BeginGetStructureByID(long ID, bool IncludeChildren, System.AsyncCallback callback, object asyncState);
         
-        WebAnnotationModel.Service.Structure EndGetStructureByID(System.IAsyncResult result);
+        AnnotationService.Types.Structure EndGetStructureByID(System.IAsyncResult result);
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/GetStructuresByIDs", ReplyAction="http://tempuri.org/IAnnotateStructures/GetStructuresByIDsResponse")]
-        WebAnnotationModel.Service.Structure[] GetStructuresByIDs(long[] ID, bool IncludeChildren);
+        AnnotationService.Types.Structure[] GetStructuresByIDs(long[] ID, bool IncludeChildren);
         
         [System.ServiceModel.OperationContractAttribute(AsyncPattern=true, Action="http://tempuri.org/IAnnotateStructures/GetStructuresByIDs", ReplyAction="http://tempuri.org/IAnnotateStructures/GetStructuresByIDsResponse")]
         System.IAsyncResult BeginGetStructuresByIDs(long[] ID, bool IncludeChildren, System.AsyncCallback callback, object asyncState);
         
-        WebAnnotationModel.Service.Structure[] EndGetStructuresByIDs(System.IAsyncResult result);
+        AnnotationService.Types.Structure[] EndGetStructuresByIDs(System.IAsyncResult result);
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/CreateStructureLink", ReplyAction="http://tempuri.org/IAnnotateStructures/CreateStructureLinkResponse")]
-        WebAnnotationModel.Service.StructureLink CreateStructureLink(WebAnnotationModel.Service.StructureLink link);
+        AnnotationService.Types.StructureLink CreateStructureLink(AnnotationService.Types.StructureLink link);
         
         [System.ServiceModel.OperationContractAttribute(AsyncPattern=true, Action="http://tempuri.org/IAnnotateStructures/CreateStructureLink", ReplyAction="http://tempuri.org/IAnnotateStructures/CreateStructureLinkResponse")]
-        System.IAsyncResult BeginCreateStructureLink(WebAnnotationModel.Service.StructureLink link, System.AsyncCallback callback, object asyncState);
+        System.IAsyncResult BeginCreateStructureLink(AnnotationService.Types.StructureLink link, System.AsyncCallback callback, object asyncState);
         
-        WebAnnotationModel.Service.StructureLink EndCreateStructureLink(System.IAsyncResult result);
+        AnnotationService.Types.StructureLink EndCreateStructureLink(System.IAsyncResult result);
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/GetLinkedStructures", ReplyAction="http://tempuri.org/IAnnotateStructures/GetLinkedStructuresResponse")]
-        WebAnnotationModel.Service.StructureLink[] GetLinkedStructures();
+        AnnotationService.Types.StructureLink[] GetLinkedStructures();
         
         [System.ServiceModel.OperationContractAttribute(AsyncPattern=true, Action="http://tempuri.org/IAnnotateStructures/GetLinkedStructures", ReplyAction="http://tempuri.org/IAnnotateStructures/GetLinkedStructuresResponse")]
         System.IAsyncResult BeginGetLinkedStructures(System.AsyncCallback callback, object asyncState);
         
-        WebAnnotationModel.Service.StructureLink[] EndGetLinkedStructures(System.IAsyncResult result);
+        AnnotationService.Types.StructureLink[] EndGetLinkedStructures(System.IAsyncResult result);
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/GetLinkedStructuresByID", ReplyAction="http://tempuri.org/IAnnotateStructures/GetLinkedStructuresByIDResponse")]
-        WebAnnotationModel.Service.StructureLink[] GetLinkedStructuresByID(long ID);
+        AnnotationService.Types.StructureLink[] GetLinkedStructuresByID(long ID);
         
         [System.ServiceModel.OperationContractAttribute(AsyncPattern=true, Action="http://tempuri.org/IAnnotateStructures/GetLinkedStructuresByID", ReplyAction="http://tempuri.org/IAnnotateStructures/GetLinkedStructuresByIDResponse")]
         System.IAsyncResult BeginGetLinkedStructuresByID(long ID, System.AsyncCallback callback, object asyncState);
         
-        WebAnnotationModel.Service.StructureLink[] EndGetLinkedStructuresByID(System.IAsyncResult result);
+        AnnotationService.Types.StructureLink[] EndGetLinkedStructuresByID(System.IAsyncResult result);
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/GetNetworkedStructures", ReplyAction="http://tempuri.org/IAnnotateStructures/GetNetworkedStructuresResponse")]
         long[] GetNetworkedStructures(long[] IDs, int numHops);
@@ -2670,20 +1281,20 @@ namespace WebAnnotationModel.Service {
         long[] EndGetNetworkedStructures(System.IAsyncResult result);
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/GetChildStructuresInNetwork", ReplyAction="http://tempuri.org/IAnnotateStructures/GetChildStructuresInNetworkResponse")]
-        WebAnnotationModel.Service.Structure[] GetChildStructuresInNetwork(long[] IDs, int numHops);
+        AnnotationService.Types.Structure[] GetChildStructuresInNetwork(long[] IDs, int numHops);
         
         [System.ServiceModel.OperationContractAttribute(AsyncPattern=true, Action="http://tempuri.org/IAnnotateStructures/GetChildStructuresInNetwork", ReplyAction="http://tempuri.org/IAnnotateStructures/GetChildStructuresInNetworkResponse")]
         System.IAsyncResult BeginGetChildStructuresInNetwork(long[] IDs, int numHops, System.AsyncCallback callback, object asyncState);
         
-        WebAnnotationModel.Service.Structure[] EndGetChildStructuresInNetwork(System.IAsyncResult result);
+        AnnotationService.Types.Structure[] EndGetChildStructuresInNetwork(System.IAsyncResult result);
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/GetStructureLinksInNetwork", ReplyAction="http://tempuri.org/IAnnotateStructures/GetStructureLinksInNetworkResponse")]
-        WebAnnotationModel.Service.StructureLink[] GetStructureLinksInNetwork(long[] IDs, int numHops);
+        AnnotationService.Types.StructureLink[] GetStructureLinksInNetwork(long[] IDs, int numHops);
         
         [System.ServiceModel.OperationContractAttribute(AsyncPattern=true, Action="http://tempuri.org/IAnnotateStructures/GetStructureLinksInNetwork", ReplyAction="http://tempuri.org/IAnnotateStructures/GetStructureLinksInNetworkResponse")]
         System.IAsyncResult BeginGetStructureLinksInNetwork(long[] IDs, int numHops, System.AsyncCallback callback, object asyncState);
         
-        WebAnnotationModel.Service.StructureLink[] EndGetStructureLinksInNetwork(System.IAsyncResult result);
+        AnnotationService.Types.StructureLink[] EndGetStructureLinksInNetwork(System.IAsyncResult result);
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/NumberOfLocationsForStructure", ReplyAction="http://tempuri.org/IAnnotateStructures/NumberOfLocationsForStructureResponse")]
         long NumberOfLocationsForStructure(long structureID);
@@ -2694,18 +1305,18 @@ namespace WebAnnotationModel.Service {
         long EndNumberOfLocationsForStructure(System.IAsyncResult result);
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/UpdateStructures", ReplyAction="http://tempuri.org/IAnnotateStructures/UpdateStructuresResponse")]
-        long[] UpdateStructures(WebAnnotationModel.Service.Structure[] structure);
+        long[] UpdateStructures(AnnotationService.Types.Structure[] structure);
         
         [System.ServiceModel.OperationContractAttribute(AsyncPattern=true, Action="http://tempuri.org/IAnnotateStructures/UpdateStructures", ReplyAction="http://tempuri.org/IAnnotateStructures/UpdateStructuresResponse")]
-        System.IAsyncResult BeginUpdateStructures(WebAnnotationModel.Service.Structure[] structure, System.AsyncCallback callback, object asyncState);
+        System.IAsyncResult BeginUpdateStructures(AnnotationService.Types.Structure[] structure, System.AsyncCallback callback, object asyncState);
         
         long[] EndUpdateStructures(System.IAsyncResult result);
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/UpdateStructureLinks", ReplyAction="http://tempuri.org/IAnnotateStructures/UpdateStructureLinksResponse")]
-        void UpdateStructureLinks(WebAnnotationModel.Service.StructureLink[] structureLinks);
+        void UpdateStructureLinks(AnnotationService.Types.StructureLink[] structureLinks);
         
         [System.ServiceModel.OperationContractAttribute(AsyncPattern=true, Action="http://tempuri.org/IAnnotateStructures/UpdateStructureLinks", ReplyAction="http://tempuri.org/IAnnotateStructures/UpdateStructureLinksResponse")]
-        System.IAsyncResult BeginUpdateStructureLinks(WebAnnotationModel.Service.StructureLink[] structureLinks, System.AsyncCallback callback, object asyncState);
+        System.IAsyncResult BeginUpdateStructureLinks(AnnotationService.Types.StructureLink[] structureLinks, System.AsyncCallback callback, object asyncState);
         
         void EndUpdateStructureLinks(System.IAsyncResult result);
         
@@ -2719,21 +1330,21 @@ namespace WebAnnotationModel.Service {
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/GetUnfinishedLocationsWithPosition", ReplyAction="http://tempuri.org/IAnnotateStructures/GetUnfinishedLocationsWithPositionResponse" +
             "")]
-        WebAnnotationModel.Service.LocationPositionOnly[] GetUnfinishedLocationsWithPosition(long structureID);
+        AnnotationService.Types.LocationPositionOnly[] GetUnfinishedLocationsWithPosition(long structureID);
         
         [System.ServiceModel.OperationContractAttribute(AsyncPattern=true, Action="http://tempuri.org/IAnnotateStructures/GetUnfinishedLocationsWithPosition", ReplyAction="http://tempuri.org/IAnnotateStructures/GetUnfinishedLocationsWithPositionResponse" +
             "")]
         System.IAsyncResult BeginGetUnfinishedLocationsWithPosition(long structureID, System.AsyncCallback callback, object asyncState);
         
-        WebAnnotationModel.Service.LocationPositionOnly[] EndGetUnfinishedLocationsWithPosition(System.IAsyncResult result);
+        AnnotationService.Types.LocationPositionOnly[] EndGetUnfinishedLocationsWithPosition(System.IAsyncResult result);
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/GetStructuresOfType", ReplyAction="http://tempuri.org/IAnnotateStructures/GetStructuresOfTypeResponse")]
-        WebAnnotationModel.Service.Structure[] GetStructuresOfType(long typeID);
+        AnnotationService.Types.Structure[] GetStructuresOfType(long typeID);
         
         [System.ServiceModel.OperationContractAttribute(AsyncPattern=true, Action="http://tempuri.org/IAnnotateStructures/GetStructuresOfType", ReplyAction="http://tempuri.org/IAnnotateStructures/GetStructuresOfTypeResponse")]
         System.IAsyncResult BeginGetStructuresOfType(long typeID, System.AsyncCallback callback, object asyncState);
         
-        WebAnnotationModel.Service.Structure[] EndGetStructuresOfType(System.IAsyncResult result);
+        AnnotationService.Types.Structure[] EndGetStructuresOfType(System.IAsyncResult result);
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/Merge", ReplyAction="http://tempuri.org/IAnnotateStructures/MergeResponse")]
         long Merge(long KeepID, long MergeID);
@@ -2744,20 +1355,20 @@ namespace WebAnnotationModel.Service {
         long EndMerge(System.IAsyncResult result);
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/Split", ReplyAction="http://tempuri.org/IAnnotateStructures/SplitResponse")]
-        long Split(long StructureA, WebAnnotationModel.Service.LocationLink locLink);
+        long Split(long StructureA, AnnotationService.Types.LocationLink locLink);
         
         [System.ServiceModel.OperationContractAttribute(AsyncPattern=true, Action="http://tempuri.org/IAnnotateStructures/Split", ReplyAction="http://tempuri.org/IAnnotateStructures/SplitResponse")]
-        System.IAsyncResult BeginSplit(long StructureA, WebAnnotationModel.Service.LocationLink locLink, System.AsyncCallback callback, object asyncState);
+        System.IAsyncResult BeginSplit(long StructureA, AnnotationService.Types.LocationLink locLink, System.AsyncCallback callback, object asyncState);
         
         long EndSplit(System.IAsyncResult result);
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/GetStructureChangeLog", ReplyAction="http://tempuri.org/IAnnotateStructures/GetStructureChangeLogResponse")]
-        WebAnnotationModel.Service.StructureHistory[] GetStructureChangeLog(System.Nullable<long> structure_id, System.Nullable<System.DateTime> begin_time, System.Nullable<System.DateTime> end_time);
+        AnnotationService.Types.Structure[] GetStructureChangeLog(System.Nullable<long> structure_id, System.Nullable<System.DateTime> begin_time, System.Nullable<System.DateTime> end_time);
         
         [System.ServiceModel.OperationContractAttribute(AsyncPattern=true, Action="http://tempuri.org/IAnnotateStructures/GetStructureChangeLog", ReplyAction="http://tempuri.org/IAnnotateStructures/GetStructureChangeLogResponse")]
         System.IAsyncResult BeginGetStructureChangeLog(System.Nullable<long> structure_id, System.Nullable<System.DateTime> begin_time, System.Nullable<System.DateTime> end_time, System.AsyncCallback callback, object asyncState);
         
-        WebAnnotationModel.Service.StructureHistory[] EndGetStructureChangeLog(System.IAsyncResult result);
+        AnnotationService.Types.Structure[] EndGetStructureChangeLog(System.IAsyncResult result);
     }
     
     [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
@@ -2775,10 +1386,10 @@ namespace WebAnnotationModel.Service {
             this.results = results;
         }
         
-        public WebAnnotationModel.Service.CreateStructureRetval Result {
+        public AnnotationService.Types.CreateStructureRetval Result {
             get {
                 base.RaiseExceptionIfNecessary();
-                return ((WebAnnotationModel.Service.CreateStructureRetval)(this.results[0]));
+                return ((AnnotationService.Types.CreateStructureRetval)(this.results[0]));
             }
         }
     }
@@ -2794,10 +1405,10 @@ namespace WebAnnotationModel.Service {
             this.results = results;
         }
         
-        public WebAnnotationModel.Service.Structure[] Result {
+        public AnnotationService.Types.Structure[] Result {
             get {
                 base.RaiseExceptionIfNecessary();
-                return ((WebAnnotationModel.Service.Structure[])(this.results[0]));
+                return ((AnnotationService.Types.Structure[])(this.results[0]));
             }
         }
     }
@@ -2827,10 +1438,10 @@ namespace WebAnnotationModel.Service {
             }
         }
         
-        public WebAnnotationModel.Service.Structure[] Result {
+        public AnnotationService.Types.Structure[] Result {
             get {
                 base.RaiseExceptionIfNecessary();
-                return ((WebAnnotationModel.Service.Structure[])(this.results[2]));
+                return ((AnnotationService.Types.Structure[])(this.results[2]));
             }
         }
     }
@@ -2860,10 +1471,10 @@ namespace WebAnnotationModel.Service {
             }
         }
         
-        public WebAnnotationModel.Service.Structure[] Result {
+        public AnnotationService.Types.Structure[] Result {
             get {
                 base.RaiseExceptionIfNecessary();
-                return ((WebAnnotationModel.Service.Structure[])(this.results[2]));
+                return ((AnnotationService.Types.Structure[])(this.results[2]));
             }
         }
     }
@@ -2893,10 +1504,10 @@ namespace WebAnnotationModel.Service {
             }
         }
         
-        public WebAnnotationModel.Service.Structure[] Result {
+        public AnnotationService.Types.Structure[] Result {
             get {
                 base.RaiseExceptionIfNecessary();
-                return ((WebAnnotationModel.Service.Structure[])(this.results[2]));
+                return ((AnnotationService.Types.Structure[])(this.results[2]));
             }
         }
     }
@@ -2912,10 +1523,10 @@ namespace WebAnnotationModel.Service {
             this.results = results;
         }
         
-        public WebAnnotationModel.Service.Structure Result {
+        public AnnotationService.Types.Structure Result {
             get {
                 base.RaiseExceptionIfNecessary();
-                return ((WebAnnotationModel.Service.Structure)(this.results[0]));
+                return ((AnnotationService.Types.Structure)(this.results[0]));
             }
         }
     }
@@ -2931,10 +1542,10 @@ namespace WebAnnotationModel.Service {
             this.results = results;
         }
         
-        public WebAnnotationModel.Service.Structure[] Result {
+        public AnnotationService.Types.Structure[] Result {
             get {
                 base.RaiseExceptionIfNecessary();
-                return ((WebAnnotationModel.Service.Structure[])(this.results[0]));
+                return ((AnnotationService.Types.Structure[])(this.results[0]));
             }
         }
     }
@@ -2950,10 +1561,10 @@ namespace WebAnnotationModel.Service {
             this.results = results;
         }
         
-        public WebAnnotationModel.Service.StructureLink Result {
+        public AnnotationService.Types.StructureLink Result {
             get {
                 base.RaiseExceptionIfNecessary();
-                return ((WebAnnotationModel.Service.StructureLink)(this.results[0]));
+                return ((AnnotationService.Types.StructureLink)(this.results[0]));
             }
         }
     }
@@ -2969,10 +1580,10 @@ namespace WebAnnotationModel.Service {
             this.results = results;
         }
         
-        public WebAnnotationModel.Service.StructureLink[] Result {
+        public AnnotationService.Types.StructureLink[] Result {
             get {
                 base.RaiseExceptionIfNecessary();
-                return ((WebAnnotationModel.Service.StructureLink[])(this.results[0]));
+                return ((AnnotationService.Types.StructureLink[])(this.results[0]));
             }
         }
     }
@@ -2988,10 +1599,10 @@ namespace WebAnnotationModel.Service {
             this.results = results;
         }
         
-        public WebAnnotationModel.Service.StructureLink[] Result {
+        public AnnotationService.Types.StructureLink[] Result {
             get {
                 base.RaiseExceptionIfNecessary();
-                return ((WebAnnotationModel.Service.StructureLink[])(this.results[0]));
+                return ((AnnotationService.Types.StructureLink[])(this.results[0]));
             }
         }
     }
@@ -3026,10 +1637,10 @@ namespace WebAnnotationModel.Service {
             this.results = results;
         }
         
-        public WebAnnotationModel.Service.Structure[] Result {
+        public AnnotationService.Types.Structure[] Result {
             get {
                 base.RaiseExceptionIfNecessary();
-                return ((WebAnnotationModel.Service.Structure[])(this.results[0]));
+                return ((AnnotationService.Types.Structure[])(this.results[0]));
             }
         }
     }
@@ -3045,10 +1656,10 @@ namespace WebAnnotationModel.Service {
             this.results = results;
         }
         
-        public WebAnnotationModel.Service.StructureLink[] Result {
+        public AnnotationService.Types.StructureLink[] Result {
             get {
                 base.RaiseExceptionIfNecessary();
-                return ((WebAnnotationModel.Service.StructureLink[])(this.results[0]));
+                return ((AnnotationService.Types.StructureLink[])(this.results[0]));
             }
         }
     }
@@ -3121,10 +1732,10 @@ namespace WebAnnotationModel.Service {
             this.results = results;
         }
         
-        public WebAnnotationModel.Service.LocationPositionOnly[] Result {
+        public AnnotationService.Types.LocationPositionOnly[] Result {
             get {
                 base.RaiseExceptionIfNecessary();
-                return ((WebAnnotationModel.Service.LocationPositionOnly[])(this.results[0]));
+                return ((AnnotationService.Types.LocationPositionOnly[])(this.results[0]));
             }
         }
     }
@@ -3140,10 +1751,10 @@ namespace WebAnnotationModel.Service {
             this.results = results;
         }
         
-        public WebAnnotationModel.Service.Structure[] Result {
+        public AnnotationService.Types.Structure[] Result {
             get {
                 base.RaiseExceptionIfNecessary();
-                return ((WebAnnotationModel.Service.Structure[])(this.results[0]));
+                return ((AnnotationService.Types.Structure[])(this.results[0]));
             }
         }
     }
@@ -3197,10 +1808,10 @@ namespace WebAnnotationModel.Service {
             this.results = results;
         }
         
-        public WebAnnotationModel.Service.StructureHistory[] Result {
+        public AnnotationService.Types.Structure[] Result {
             get {
                 base.RaiseExceptionIfNecessary();
-                return ((WebAnnotationModel.Service.StructureHistory[])(this.results[0]));
+                return ((AnnotationService.Types.Structure[])(this.results[0]));
             }
         }
     }
@@ -3404,28 +2015,28 @@ namespace WebAnnotationModel.Service {
         
         public event System.EventHandler<GetStructureChangeLogCompletedEventArgs> GetStructureChangeLogCompleted;
         
-        public WebAnnotationModel.Service.CreateStructureRetval CreateStructure(WebAnnotationModel.Service.Structure structure, WebAnnotationModel.Service.Location location) {
+        public AnnotationService.Types.CreateStructureRetval CreateStructure(AnnotationService.Types.Structure structure, AnnotationService.Types.Location location) {
             return base.Channel.CreateStructure(structure, location);
         }
         
         [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
-        public System.IAsyncResult BeginCreateStructure(WebAnnotationModel.Service.Structure structure, WebAnnotationModel.Service.Location location, System.AsyncCallback callback, object asyncState) {
+        public System.IAsyncResult BeginCreateStructure(AnnotationService.Types.Structure structure, AnnotationService.Types.Location location, System.AsyncCallback callback, object asyncState) {
             return base.Channel.BeginCreateStructure(structure, location, callback, asyncState);
         }
         
         [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
-        public WebAnnotationModel.Service.CreateStructureRetval EndCreateStructure(System.IAsyncResult result) {
+        public AnnotationService.Types.CreateStructureRetval EndCreateStructure(System.IAsyncResult result) {
             return base.Channel.EndCreateStructure(result);
         }
         
         private System.IAsyncResult OnBeginCreateStructure(object[] inValues, System.AsyncCallback callback, object asyncState) {
-            WebAnnotationModel.Service.Structure structure = ((WebAnnotationModel.Service.Structure)(inValues[0]));
-            WebAnnotationModel.Service.Location location = ((WebAnnotationModel.Service.Location)(inValues[1]));
+            AnnotationService.Types.Structure structure = ((AnnotationService.Types.Structure)(inValues[0]));
+            AnnotationService.Types.Location location = ((AnnotationService.Types.Location)(inValues[1]));
             return this.BeginCreateStructure(structure, location, callback, asyncState);
         }
         
         private object[] OnEndCreateStructure(System.IAsyncResult result) {
-            WebAnnotationModel.Service.CreateStructureRetval retVal = this.EndCreateStructure(result);
+            AnnotationService.Types.CreateStructureRetval retVal = this.EndCreateStructure(result);
             return new object[] {
                     retVal};
         }
@@ -3437,11 +2048,11 @@ namespace WebAnnotationModel.Service {
             }
         }
         
-        public void CreateStructureAsync(WebAnnotationModel.Service.Structure structure, WebAnnotationModel.Service.Location location) {
+        public void CreateStructureAsync(AnnotationService.Types.Structure structure, AnnotationService.Types.Location location) {
             this.CreateStructureAsync(structure, location, null);
         }
         
-        public void CreateStructureAsync(WebAnnotationModel.Service.Structure structure, WebAnnotationModel.Service.Location location, object userState) {
+        public void CreateStructureAsync(AnnotationService.Types.Structure structure, AnnotationService.Types.Location location, object userState) {
             if ((this.onBeginCreateStructureDelegate == null)) {
                 this.onBeginCreateStructureDelegate = new BeginOperationDelegate(this.OnBeginCreateStructure);
             }
@@ -3456,7 +2067,7 @@ namespace WebAnnotationModel.Service {
                         location}, this.onEndCreateStructureDelegate, this.onCreateStructureCompletedDelegate, userState);
         }
         
-        public WebAnnotationModel.Service.Structure[] GetStructures() {
+        public AnnotationService.Types.Structure[] GetStructures() {
             return base.Channel.GetStructures();
         }
         
@@ -3466,7 +2077,7 @@ namespace WebAnnotationModel.Service {
         }
         
         [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
-        public WebAnnotationModel.Service.Structure[] EndGetStructures(System.IAsyncResult result) {
+        public AnnotationService.Types.Structure[] EndGetStructures(System.IAsyncResult result) {
             return base.Channel.EndGetStructures(result);
         }
         
@@ -3475,7 +2086,7 @@ namespace WebAnnotationModel.Service {
         }
         
         private object[] OnEndGetStructures(System.IAsyncResult result) {
-            WebAnnotationModel.Service.Structure[] retVal = this.EndGetStructures(result);
+            AnnotationService.Types.Structure[] retVal = this.EndGetStructures(result);
             return new object[] {
                     retVal};
         }
@@ -3504,7 +2115,7 @@ namespace WebAnnotationModel.Service {
             base.InvokeAsync(this.onBeginGetStructuresDelegate, null, this.onEndGetStructuresDelegate, this.onGetStructuresCompletedDelegate, userState);
         }
         
-        public WebAnnotationModel.Service.Structure[] GetStructuresForSection(out long QueryExecutedTime, out long[] DeletedIDs, long Section, long ModifiedAfterThisTime) {
+        public AnnotationService.Types.Structure[] GetStructuresForSection(out long QueryExecutedTime, out long[] DeletedIDs, long Section, long ModifiedAfterThisTime) {
             return base.Channel.GetStructuresForSection(out QueryExecutedTime, out DeletedIDs, Section, ModifiedAfterThisTime);
         }
         
@@ -3514,7 +2125,7 @@ namespace WebAnnotationModel.Service {
         }
         
         [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
-        public WebAnnotationModel.Service.Structure[] EndGetStructuresForSection(out long QueryExecutedTime, out long[] DeletedIDs, System.IAsyncResult result) {
+        public AnnotationService.Types.Structure[] EndGetStructuresForSection(out long QueryExecutedTime, out long[] DeletedIDs, System.IAsyncResult result) {
             return base.Channel.EndGetStructuresForSection(out QueryExecutedTime, out DeletedIDs, result);
         }
         
@@ -3527,7 +2138,7 @@ namespace WebAnnotationModel.Service {
         private object[] OnEndGetStructuresForSection(System.IAsyncResult result) {
             long QueryExecutedTime = this.GetDefaultValueForInitialization<long>();
             long[] DeletedIDs = this.GetDefaultValueForInitialization<long[]>();
-            WebAnnotationModel.Service.Structure[] retVal = this.EndGetStructuresForSection(out QueryExecutedTime, out DeletedIDs, result);
+            AnnotationService.Types.Structure[] retVal = this.EndGetStructuresForSection(out QueryExecutedTime, out DeletedIDs, result);
             return new object[] {
                     QueryExecutedTime,
                     DeletedIDs,
@@ -3560,23 +2171,23 @@ namespace WebAnnotationModel.Service {
                         ModifiedAfterThisTime}, this.onEndGetStructuresForSectionDelegate, this.onGetStructuresForSectionCompletedDelegate, userState);
         }
         
-        public WebAnnotationModel.Service.Structure[] GetStructuresForSectionInMosaicRegion(out long QueryExecutedTime, out long[] DeletedIDs, long section, WebAnnotationModel.Service.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisTime) {
+        public AnnotationService.Types.Structure[] GetStructuresForSectionInMosaicRegion(out long QueryExecutedTime, out long[] DeletedIDs, long section, AnnotationService.Types.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisTime) {
             return base.Channel.GetStructuresForSectionInMosaicRegion(out QueryExecutedTime, out DeletedIDs, section, bbox, MinRadius, ModifiedAfterThisTime);
         }
         
         [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
-        public System.IAsyncResult BeginGetStructuresForSectionInMosaicRegion(long section, WebAnnotationModel.Service.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisTime, System.AsyncCallback callback, object asyncState) {
+        public System.IAsyncResult BeginGetStructuresForSectionInMosaicRegion(long section, AnnotationService.Types.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisTime, System.AsyncCallback callback, object asyncState) {
             return base.Channel.BeginGetStructuresForSectionInMosaicRegion(section, bbox, MinRadius, ModifiedAfterThisTime, callback, asyncState);
         }
         
         [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
-        public WebAnnotationModel.Service.Structure[] EndGetStructuresForSectionInMosaicRegion(out long QueryExecutedTime, out long[] DeletedIDs, System.IAsyncResult result) {
+        public AnnotationService.Types.Structure[] EndGetStructuresForSectionInMosaicRegion(out long QueryExecutedTime, out long[] DeletedIDs, System.IAsyncResult result) {
             return base.Channel.EndGetStructuresForSectionInMosaicRegion(out QueryExecutedTime, out DeletedIDs, result);
         }
         
         private System.IAsyncResult OnBeginGetStructuresForSectionInMosaicRegion(object[] inValues, System.AsyncCallback callback, object asyncState) {
             long section = ((long)(inValues[0]));
-            WebAnnotationModel.Service.BoundingRectangle bbox = ((WebAnnotationModel.Service.BoundingRectangle)(inValues[1]));
+            AnnotationService.Types.BoundingRectangle bbox = ((AnnotationService.Types.BoundingRectangle)(inValues[1]));
             double MinRadius = ((double)(inValues[2]));
             long ModifiedAfterThisTime = ((long)(inValues[3]));
             return this.BeginGetStructuresForSectionInMosaicRegion(section, bbox, MinRadius, ModifiedAfterThisTime, callback, asyncState);
@@ -3585,7 +2196,7 @@ namespace WebAnnotationModel.Service {
         private object[] OnEndGetStructuresForSectionInMosaicRegion(System.IAsyncResult result) {
             long QueryExecutedTime = this.GetDefaultValueForInitialization<long>();
             long[] DeletedIDs = this.GetDefaultValueForInitialization<long[]>();
-            WebAnnotationModel.Service.Structure[] retVal = this.EndGetStructuresForSectionInMosaicRegion(out QueryExecutedTime, out DeletedIDs, result);
+            AnnotationService.Types.Structure[] retVal = this.EndGetStructuresForSectionInMosaicRegion(out QueryExecutedTime, out DeletedIDs, result);
             return new object[] {
                     QueryExecutedTime,
                     DeletedIDs,
@@ -3599,11 +2210,11 @@ namespace WebAnnotationModel.Service {
             }
         }
         
-        public void GetStructuresForSectionInMosaicRegionAsync(long section, WebAnnotationModel.Service.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisTime) {
+        public void GetStructuresForSectionInMosaicRegionAsync(long section, AnnotationService.Types.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisTime) {
             this.GetStructuresForSectionInMosaicRegionAsync(section, bbox, MinRadius, ModifiedAfterThisTime, null);
         }
         
-        public void GetStructuresForSectionInMosaicRegionAsync(long section, WebAnnotationModel.Service.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisTime, object userState) {
+        public void GetStructuresForSectionInMosaicRegionAsync(long section, AnnotationService.Types.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisTime, object userState) {
             if ((this.onBeginGetStructuresForSectionInMosaicRegionDelegate == null)) {
                 this.onBeginGetStructuresForSectionInMosaicRegionDelegate = new BeginOperationDelegate(this.OnBeginGetStructuresForSectionInMosaicRegion);
             }
@@ -3620,23 +2231,23 @@ namespace WebAnnotationModel.Service {
                         ModifiedAfterThisTime}, this.onEndGetStructuresForSectionInMosaicRegionDelegate, this.onGetStructuresForSectionInMosaicRegionCompletedDelegate, userState);
         }
         
-        public WebAnnotationModel.Service.Structure[] GetStructuresForSectionInVolumeRegion(out long QueryExecutedTime, out long[] DeletedIDs, long section, WebAnnotationModel.Service.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisTime) {
+        public AnnotationService.Types.Structure[] GetStructuresForSectionInVolumeRegion(out long QueryExecutedTime, out long[] DeletedIDs, long section, AnnotationService.Types.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisTime) {
             return base.Channel.GetStructuresForSectionInVolumeRegion(out QueryExecutedTime, out DeletedIDs, section, bbox, MinRadius, ModifiedAfterThisTime);
         }
         
         [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
-        public System.IAsyncResult BeginGetStructuresForSectionInVolumeRegion(long section, WebAnnotationModel.Service.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisTime, System.AsyncCallback callback, object asyncState) {
+        public System.IAsyncResult BeginGetStructuresForSectionInVolumeRegion(long section, AnnotationService.Types.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisTime, System.AsyncCallback callback, object asyncState) {
             return base.Channel.BeginGetStructuresForSectionInVolumeRegion(section, bbox, MinRadius, ModifiedAfterThisTime, callback, asyncState);
         }
         
         [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
-        public WebAnnotationModel.Service.Structure[] EndGetStructuresForSectionInVolumeRegion(out long QueryExecutedTime, out long[] DeletedIDs, System.IAsyncResult result) {
+        public AnnotationService.Types.Structure[] EndGetStructuresForSectionInVolumeRegion(out long QueryExecutedTime, out long[] DeletedIDs, System.IAsyncResult result) {
             return base.Channel.EndGetStructuresForSectionInVolumeRegion(out QueryExecutedTime, out DeletedIDs, result);
         }
         
         private System.IAsyncResult OnBeginGetStructuresForSectionInVolumeRegion(object[] inValues, System.AsyncCallback callback, object asyncState) {
             long section = ((long)(inValues[0]));
-            WebAnnotationModel.Service.BoundingRectangle bbox = ((WebAnnotationModel.Service.BoundingRectangle)(inValues[1]));
+            AnnotationService.Types.BoundingRectangle bbox = ((AnnotationService.Types.BoundingRectangle)(inValues[1]));
             double MinRadius = ((double)(inValues[2]));
             long ModifiedAfterThisTime = ((long)(inValues[3]));
             return this.BeginGetStructuresForSectionInVolumeRegion(section, bbox, MinRadius, ModifiedAfterThisTime, callback, asyncState);
@@ -3645,7 +2256,7 @@ namespace WebAnnotationModel.Service {
         private object[] OnEndGetStructuresForSectionInVolumeRegion(System.IAsyncResult result) {
             long QueryExecutedTime = this.GetDefaultValueForInitialization<long>();
             long[] DeletedIDs = this.GetDefaultValueForInitialization<long[]>();
-            WebAnnotationModel.Service.Structure[] retVal = this.EndGetStructuresForSectionInVolumeRegion(out QueryExecutedTime, out DeletedIDs, result);
+            AnnotationService.Types.Structure[] retVal = this.EndGetStructuresForSectionInVolumeRegion(out QueryExecutedTime, out DeletedIDs, result);
             return new object[] {
                     QueryExecutedTime,
                     DeletedIDs,
@@ -3659,11 +2270,11 @@ namespace WebAnnotationModel.Service {
             }
         }
         
-        public void GetStructuresForSectionInVolumeRegionAsync(long section, WebAnnotationModel.Service.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisTime) {
+        public void GetStructuresForSectionInVolumeRegionAsync(long section, AnnotationService.Types.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisTime) {
             this.GetStructuresForSectionInVolumeRegionAsync(section, bbox, MinRadius, ModifiedAfterThisTime, null);
         }
         
-        public void GetStructuresForSectionInVolumeRegionAsync(long section, WebAnnotationModel.Service.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisTime, object userState) {
+        public void GetStructuresForSectionInVolumeRegionAsync(long section, AnnotationService.Types.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisTime, object userState) {
             if ((this.onBeginGetStructuresForSectionInVolumeRegionDelegate == null)) {
                 this.onBeginGetStructuresForSectionInVolumeRegionDelegate = new BeginOperationDelegate(this.OnBeginGetStructuresForSectionInVolumeRegion);
             }
@@ -3680,7 +2291,7 @@ namespace WebAnnotationModel.Service {
                         ModifiedAfterThisTime}, this.onEndGetStructuresForSectionInVolumeRegionDelegate, this.onGetStructuresForSectionInVolumeRegionCompletedDelegate, userState);
         }
         
-        public WebAnnotationModel.Service.Structure GetStructureByID(long ID, bool IncludeChildren) {
+        public AnnotationService.Types.Structure GetStructureByID(long ID, bool IncludeChildren) {
             return base.Channel.GetStructureByID(ID, IncludeChildren);
         }
         
@@ -3690,7 +2301,7 @@ namespace WebAnnotationModel.Service {
         }
         
         [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
-        public WebAnnotationModel.Service.Structure EndGetStructureByID(System.IAsyncResult result) {
+        public AnnotationService.Types.Structure EndGetStructureByID(System.IAsyncResult result) {
             return base.Channel.EndGetStructureByID(result);
         }
         
@@ -3701,7 +2312,7 @@ namespace WebAnnotationModel.Service {
         }
         
         private object[] OnEndGetStructureByID(System.IAsyncResult result) {
-            WebAnnotationModel.Service.Structure retVal = this.EndGetStructureByID(result);
+            AnnotationService.Types.Structure retVal = this.EndGetStructureByID(result);
             return new object[] {
                     retVal};
         }
@@ -3732,7 +2343,7 @@ namespace WebAnnotationModel.Service {
                         IncludeChildren}, this.onEndGetStructureByIDDelegate, this.onGetStructureByIDCompletedDelegate, userState);
         }
         
-        public WebAnnotationModel.Service.Structure[] GetStructuresByIDs(long[] ID, bool IncludeChildren) {
+        public AnnotationService.Types.Structure[] GetStructuresByIDs(long[] ID, bool IncludeChildren) {
             return base.Channel.GetStructuresByIDs(ID, IncludeChildren);
         }
         
@@ -3742,7 +2353,7 @@ namespace WebAnnotationModel.Service {
         }
         
         [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
-        public WebAnnotationModel.Service.Structure[] EndGetStructuresByIDs(System.IAsyncResult result) {
+        public AnnotationService.Types.Structure[] EndGetStructuresByIDs(System.IAsyncResult result) {
             return base.Channel.EndGetStructuresByIDs(result);
         }
         
@@ -3753,7 +2364,7 @@ namespace WebAnnotationModel.Service {
         }
         
         private object[] OnEndGetStructuresByIDs(System.IAsyncResult result) {
-            WebAnnotationModel.Service.Structure[] retVal = this.EndGetStructuresByIDs(result);
+            AnnotationService.Types.Structure[] retVal = this.EndGetStructuresByIDs(result);
             return new object[] {
                     retVal};
         }
@@ -3784,27 +2395,27 @@ namespace WebAnnotationModel.Service {
                         IncludeChildren}, this.onEndGetStructuresByIDsDelegate, this.onGetStructuresByIDsCompletedDelegate, userState);
         }
         
-        public WebAnnotationModel.Service.StructureLink CreateStructureLink(WebAnnotationModel.Service.StructureLink link) {
+        public AnnotationService.Types.StructureLink CreateStructureLink(AnnotationService.Types.StructureLink link) {
             return base.Channel.CreateStructureLink(link);
         }
         
         [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
-        public System.IAsyncResult BeginCreateStructureLink(WebAnnotationModel.Service.StructureLink link, System.AsyncCallback callback, object asyncState) {
+        public System.IAsyncResult BeginCreateStructureLink(AnnotationService.Types.StructureLink link, System.AsyncCallback callback, object asyncState) {
             return base.Channel.BeginCreateStructureLink(link, callback, asyncState);
         }
         
         [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
-        public WebAnnotationModel.Service.StructureLink EndCreateStructureLink(System.IAsyncResult result) {
+        public AnnotationService.Types.StructureLink EndCreateStructureLink(System.IAsyncResult result) {
             return base.Channel.EndCreateStructureLink(result);
         }
         
         private System.IAsyncResult OnBeginCreateStructureLink(object[] inValues, System.AsyncCallback callback, object asyncState) {
-            WebAnnotationModel.Service.StructureLink link = ((WebAnnotationModel.Service.StructureLink)(inValues[0]));
+            AnnotationService.Types.StructureLink link = ((AnnotationService.Types.StructureLink)(inValues[0]));
             return this.BeginCreateStructureLink(link, callback, asyncState);
         }
         
         private object[] OnEndCreateStructureLink(System.IAsyncResult result) {
-            WebAnnotationModel.Service.StructureLink retVal = this.EndCreateStructureLink(result);
+            AnnotationService.Types.StructureLink retVal = this.EndCreateStructureLink(result);
             return new object[] {
                     retVal};
         }
@@ -3816,11 +2427,11 @@ namespace WebAnnotationModel.Service {
             }
         }
         
-        public void CreateStructureLinkAsync(WebAnnotationModel.Service.StructureLink link) {
+        public void CreateStructureLinkAsync(AnnotationService.Types.StructureLink link) {
             this.CreateStructureLinkAsync(link, null);
         }
         
-        public void CreateStructureLinkAsync(WebAnnotationModel.Service.StructureLink link, object userState) {
+        public void CreateStructureLinkAsync(AnnotationService.Types.StructureLink link, object userState) {
             if ((this.onBeginCreateStructureLinkDelegate == null)) {
                 this.onBeginCreateStructureLinkDelegate = new BeginOperationDelegate(this.OnBeginCreateStructureLink);
             }
@@ -3834,7 +2445,7 @@ namespace WebAnnotationModel.Service {
                         link}, this.onEndCreateStructureLinkDelegate, this.onCreateStructureLinkCompletedDelegate, userState);
         }
         
-        public WebAnnotationModel.Service.StructureLink[] GetLinkedStructures() {
+        public AnnotationService.Types.StructureLink[] GetLinkedStructures() {
             return base.Channel.GetLinkedStructures();
         }
         
@@ -3844,7 +2455,7 @@ namespace WebAnnotationModel.Service {
         }
         
         [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
-        public WebAnnotationModel.Service.StructureLink[] EndGetLinkedStructures(System.IAsyncResult result) {
+        public AnnotationService.Types.StructureLink[] EndGetLinkedStructures(System.IAsyncResult result) {
             return base.Channel.EndGetLinkedStructures(result);
         }
         
@@ -3853,7 +2464,7 @@ namespace WebAnnotationModel.Service {
         }
         
         private object[] OnEndGetLinkedStructures(System.IAsyncResult result) {
-            WebAnnotationModel.Service.StructureLink[] retVal = this.EndGetLinkedStructures(result);
+            AnnotationService.Types.StructureLink[] retVal = this.EndGetLinkedStructures(result);
             return new object[] {
                     retVal};
         }
@@ -3882,7 +2493,7 @@ namespace WebAnnotationModel.Service {
             base.InvokeAsync(this.onBeginGetLinkedStructuresDelegate, null, this.onEndGetLinkedStructuresDelegate, this.onGetLinkedStructuresCompletedDelegate, userState);
         }
         
-        public WebAnnotationModel.Service.StructureLink[] GetLinkedStructuresByID(long ID) {
+        public AnnotationService.Types.StructureLink[] GetLinkedStructuresByID(long ID) {
             return base.Channel.GetLinkedStructuresByID(ID);
         }
         
@@ -3892,7 +2503,7 @@ namespace WebAnnotationModel.Service {
         }
         
         [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
-        public WebAnnotationModel.Service.StructureLink[] EndGetLinkedStructuresByID(System.IAsyncResult result) {
+        public AnnotationService.Types.StructureLink[] EndGetLinkedStructuresByID(System.IAsyncResult result) {
             return base.Channel.EndGetLinkedStructuresByID(result);
         }
         
@@ -3902,7 +2513,7 @@ namespace WebAnnotationModel.Service {
         }
         
         private object[] OnEndGetLinkedStructuresByID(System.IAsyncResult result) {
-            WebAnnotationModel.Service.StructureLink[] retVal = this.EndGetLinkedStructuresByID(result);
+            AnnotationService.Types.StructureLink[] retVal = this.EndGetLinkedStructuresByID(result);
             return new object[] {
                     retVal};
         }
@@ -3984,7 +2595,7 @@ namespace WebAnnotationModel.Service {
                         numHops}, this.onEndGetNetworkedStructuresDelegate, this.onGetNetworkedStructuresCompletedDelegate, userState);
         }
         
-        public WebAnnotationModel.Service.Structure[] GetChildStructuresInNetwork(long[] IDs, int numHops) {
+        public AnnotationService.Types.Structure[] GetChildStructuresInNetwork(long[] IDs, int numHops) {
             return base.Channel.GetChildStructuresInNetwork(IDs, numHops);
         }
         
@@ -3994,7 +2605,7 @@ namespace WebAnnotationModel.Service {
         }
         
         [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
-        public WebAnnotationModel.Service.Structure[] EndGetChildStructuresInNetwork(System.IAsyncResult result) {
+        public AnnotationService.Types.Structure[] EndGetChildStructuresInNetwork(System.IAsyncResult result) {
             return base.Channel.EndGetChildStructuresInNetwork(result);
         }
         
@@ -4005,7 +2616,7 @@ namespace WebAnnotationModel.Service {
         }
         
         private object[] OnEndGetChildStructuresInNetwork(System.IAsyncResult result) {
-            WebAnnotationModel.Service.Structure[] retVal = this.EndGetChildStructuresInNetwork(result);
+            AnnotationService.Types.Structure[] retVal = this.EndGetChildStructuresInNetwork(result);
             return new object[] {
                     retVal};
         }
@@ -4036,7 +2647,7 @@ namespace WebAnnotationModel.Service {
                         numHops}, this.onEndGetChildStructuresInNetworkDelegate, this.onGetChildStructuresInNetworkCompletedDelegate, userState);
         }
         
-        public WebAnnotationModel.Service.StructureLink[] GetStructureLinksInNetwork(long[] IDs, int numHops) {
+        public AnnotationService.Types.StructureLink[] GetStructureLinksInNetwork(long[] IDs, int numHops) {
             return base.Channel.GetStructureLinksInNetwork(IDs, numHops);
         }
         
@@ -4046,7 +2657,7 @@ namespace WebAnnotationModel.Service {
         }
         
         [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
-        public WebAnnotationModel.Service.StructureLink[] EndGetStructureLinksInNetwork(System.IAsyncResult result) {
+        public AnnotationService.Types.StructureLink[] EndGetStructureLinksInNetwork(System.IAsyncResult result) {
             return base.Channel.EndGetStructureLinksInNetwork(result);
         }
         
@@ -4057,7 +2668,7 @@ namespace WebAnnotationModel.Service {
         }
         
         private object[] OnEndGetStructureLinksInNetwork(System.IAsyncResult result) {
-            WebAnnotationModel.Service.StructureLink[] retVal = this.EndGetStructureLinksInNetwork(result);
+            AnnotationService.Types.StructureLink[] retVal = this.EndGetStructureLinksInNetwork(result);
             return new object[] {
                     retVal};
         }
@@ -4138,12 +2749,12 @@ namespace WebAnnotationModel.Service {
                         structureID}, this.onEndNumberOfLocationsForStructureDelegate, this.onNumberOfLocationsForStructureCompletedDelegate, userState);
         }
         
-        public long[] UpdateStructures(WebAnnotationModel.Service.Structure[] structure) {
+        public long[] UpdateStructures(AnnotationService.Types.Structure[] structure) {
             return base.Channel.UpdateStructures(structure);
         }
         
         [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
-        public System.IAsyncResult BeginUpdateStructures(WebAnnotationModel.Service.Structure[] structure, System.AsyncCallback callback, object asyncState) {
+        public System.IAsyncResult BeginUpdateStructures(AnnotationService.Types.Structure[] structure, System.AsyncCallback callback, object asyncState) {
             return base.Channel.BeginUpdateStructures(structure, callback, asyncState);
         }
         
@@ -4153,7 +2764,7 @@ namespace WebAnnotationModel.Service {
         }
         
         private System.IAsyncResult OnBeginUpdateStructures(object[] inValues, System.AsyncCallback callback, object asyncState) {
-            WebAnnotationModel.Service.Structure[] structure = ((WebAnnotationModel.Service.Structure[])(inValues[0]));
+            AnnotationService.Types.Structure[] structure = ((AnnotationService.Types.Structure[])(inValues[0]));
             return this.BeginUpdateStructures(structure, callback, asyncState);
         }
         
@@ -4170,11 +2781,11 @@ namespace WebAnnotationModel.Service {
             }
         }
         
-        public void UpdateStructuresAsync(WebAnnotationModel.Service.Structure[] structure) {
+        public void UpdateStructuresAsync(AnnotationService.Types.Structure[] structure) {
             this.UpdateStructuresAsync(structure, null);
         }
         
-        public void UpdateStructuresAsync(WebAnnotationModel.Service.Structure[] structure, object userState) {
+        public void UpdateStructuresAsync(AnnotationService.Types.Structure[] structure, object userState) {
             if ((this.onBeginUpdateStructuresDelegate == null)) {
                 this.onBeginUpdateStructuresDelegate = new BeginOperationDelegate(this.OnBeginUpdateStructures);
             }
@@ -4188,12 +2799,12 @@ namespace WebAnnotationModel.Service {
                         structure}, this.onEndUpdateStructuresDelegate, this.onUpdateStructuresCompletedDelegate, userState);
         }
         
-        public void UpdateStructureLinks(WebAnnotationModel.Service.StructureLink[] structureLinks) {
+        public void UpdateStructureLinks(AnnotationService.Types.StructureLink[] structureLinks) {
             base.Channel.UpdateStructureLinks(structureLinks);
         }
         
         [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
-        public System.IAsyncResult BeginUpdateStructureLinks(WebAnnotationModel.Service.StructureLink[] structureLinks, System.AsyncCallback callback, object asyncState) {
+        public System.IAsyncResult BeginUpdateStructureLinks(AnnotationService.Types.StructureLink[] structureLinks, System.AsyncCallback callback, object asyncState) {
             return base.Channel.BeginUpdateStructureLinks(structureLinks, callback, asyncState);
         }
         
@@ -4203,7 +2814,7 @@ namespace WebAnnotationModel.Service {
         }
         
         private System.IAsyncResult OnBeginUpdateStructureLinks(object[] inValues, System.AsyncCallback callback, object asyncState) {
-            WebAnnotationModel.Service.StructureLink[] structureLinks = ((WebAnnotationModel.Service.StructureLink[])(inValues[0]));
+            AnnotationService.Types.StructureLink[] structureLinks = ((AnnotationService.Types.StructureLink[])(inValues[0]));
             return this.BeginUpdateStructureLinks(structureLinks, callback, asyncState);
         }
         
@@ -4219,11 +2830,11 @@ namespace WebAnnotationModel.Service {
             }
         }
         
-        public void UpdateStructureLinksAsync(WebAnnotationModel.Service.StructureLink[] structureLinks) {
+        public void UpdateStructureLinksAsync(AnnotationService.Types.StructureLink[] structureLinks) {
             this.UpdateStructureLinksAsync(structureLinks, null);
         }
         
-        public void UpdateStructureLinksAsync(WebAnnotationModel.Service.StructureLink[] structureLinks, object userState) {
+        public void UpdateStructureLinksAsync(AnnotationService.Types.StructureLink[] structureLinks, object userState) {
             if ((this.onBeginUpdateStructureLinksDelegate == null)) {
                 this.onBeginUpdateStructureLinksDelegate = new BeginOperationDelegate(this.OnBeginUpdateStructureLinks);
             }
@@ -4287,7 +2898,7 @@ namespace WebAnnotationModel.Service {
                         structureID}, this.onEndGetUnfinishedLocationsDelegate, this.onGetUnfinishedLocationsCompletedDelegate, userState);
         }
         
-        public WebAnnotationModel.Service.LocationPositionOnly[] GetUnfinishedLocationsWithPosition(long structureID) {
+        public AnnotationService.Types.LocationPositionOnly[] GetUnfinishedLocationsWithPosition(long structureID) {
             return base.Channel.GetUnfinishedLocationsWithPosition(structureID);
         }
         
@@ -4297,7 +2908,7 @@ namespace WebAnnotationModel.Service {
         }
         
         [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
-        public WebAnnotationModel.Service.LocationPositionOnly[] EndGetUnfinishedLocationsWithPosition(System.IAsyncResult result) {
+        public AnnotationService.Types.LocationPositionOnly[] EndGetUnfinishedLocationsWithPosition(System.IAsyncResult result) {
             return base.Channel.EndGetUnfinishedLocationsWithPosition(result);
         }
         
@@ -4307,7 +2918,7 @@ namespace WebAnnotationModel.Service {
         }
         
         private object[] OnEndGetUnfinishedLocationsWithPosition(System.IAsyncResult result) {
-            WebAnnotationModel.Service.LocationPositionOnly[] retVal = this.EndGetUnfinishedLocationsWithPosition(result);
+            AnnotationService.Types.LocationPositionOnly[] retVal = this.EndGetUnfinishedLocationsWithPosition(result);
             return new object[] {
                     retVal};
         }
@@ -4337,7 +2948,7 @@ namespace WebAnnotationModel.Service {
                         structureID}, this.onEndGetUnfinishedLocationsWithPositionDelegate, this.onGetUnfinishedLocationsWithPositionCompletedDelegate, userState);
         }
         
-        public WebAnnotationModel.Service.Structure[] GetStructuresOfType(long typeID) {
+        public AnnotationService.Types.Structure[] GetStructuresOfType(long typeID) {
             return base.Channel.GetStructuresOfType(typeID);
         }
         
@@ -4347,7 +2958,7 @@ namespace WebAnnotationModel.Service {
         }
         
         [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
-        public WebAnnotationModel.Service.Structure[] EndGetStructuresOfType(System.IAsyncResult result) {
+        public AnnotationService.Types.Structure[] EndGetStructuresOfType(System.IAsyncResult result) {
             return base.Channel.EndGetStructuresOfType(result);
         }
         
@@ -4357,7 +2968,7 @@ namespace WebAnnotationModel.Service {
         }
         
         private object[] OnEndGetStructuresOfType(System.IAsyncResult result) {
-            WebAnnotationModel.Service.Structure[] retVal = this.EndGetStructuresOfType(result);
+            AnnotationService.Types.Structure[] retVal = this.EndGetStructuresOfType(result);
             return new object[] {
                     retVal};
         }
@@ -4439,12 +3050,12 @@ namespace WebAnnotationModel.Service {
                         MergeID}, this.onEndMergeDelegate, this.onMergeCompletedDelegate, userState);
         }
         
-        public long Split(long StructureA, WebAnnotationModel.Service.LocationLink locLink) {
+        public long Split(long StructureA, AnnotationService.Types.LocationLink locLink) {
             return base.Channel.Split(StructureA, locLink);
         }
         
         [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
-        public System.IAsyncResult BeginSplit(long StructureA, WebAnnotationModel.Service.LocationLink locLink, System.AsyncCallback callback, object asyncState) {
+        public System.IAsyncResult BeginSplit(long StructureA, AnnotationService.Types.LocationLink locLink, System.AsyncCallback callback, object asyncState) {
             return base.Channel.BeginSplit(StructureA, locLink, callback, asyncState);
         }
         
@@ -4455,7 +3066,7 @@ namespace WebAnnotationModel.Service {
         
         private System.IAsyncResult OnBeginSplit(object[] inValues, System.AsyncCallback callback, object asyncState) {
             long StructureA = ((long)(inValues[0]));
-            WebAnnotationModel.Service.LocationLink locLink = ((WebAnnotationModel.Service.LocationLink)(inValues[1]));
+            AnnotationService.Types.LocationLink locLink = ((AnnotationService.Types.LocationLink)(inValues[1]));
             return this.BeginSplit(StructureA, locLink, callback, asyncState);
         }
         
@@ -4472,11 +3083,11 @@ namespace WebAnnotationModel.Service {
             }
         }
         
-        public void SplitAsync(long StructureA, WebAnnotationModel.Service.LocationLink locLink) {
+        public void SplitAsync(long StructureA, AnnotationService.Types.LocationLink locLink) {
             this.SplitAsync(StructureA, locLink, null);
         }
         
-        public void SplitAsync(long StructureA, WebAnnotationModel.Service.LocationLink locLink, object userState) {
+        public void SplitAsync(long StructureA, AnnotationService.Types.LocationLink locLink, object userState) {
             if ((this.onBeginSplitDelegate == null)) {
                 this.onBeginSplitDelegate = new BeginOperationDelegate(this.OnBeginSplit);
             }
@@ -4491,7 +3102,7 @@ namespace WebAnnotationModel.Service {
                         locLink}, this.onEndSplitDelegate, this.onSplitCompletedDelegate, userState);
         }
         
-        public WebAnnotationModel.Service.StructureHistory[] GetStructureChangeLog(System.Nullable<long> structure_id, System.Nullable<System.DateTime> begin_time, System.Nullable<System.DateTime> end_time) {
+        public AnnotationService.Types.Structure[] GetStructureChangeLog(System.Nullable<long> structure_id, System.Nullable<System.DateTime> begin_time, System.Nullable<System.DateTime> end_time) {
             return base.Channel.GetStructureChangeLog(structure_id, begin_time, end_time);
         }
         
@@ -4501,7 +3112,7 @@ namespace WebAnnotationModel.Service {
         }
         
         [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
-        public WebAnnotationModel.Service.StructureHistory[] EndGetStructureChangeLog(System.IAsyncResult result) {
+        public AnnotationService.Types.Structure[] EndGetStructureChangeLog(System.IAsyncResult result) {
             return base.Channel.EndGetStructureChangeLog(result);
         }
         
@@ -4513,7 +3124,7 @@ namespace WebAnnotationModel.Service {
         }
         
         private object[] OnEndGetStructureChangeLog(System.IAsyncResult result) {
-            WebAnnotationModel.Service.StructureHistory[] retVal = this.EndGetStructureChangeLog(result);
+            AnnotationService.Types.Structure[] retVal = this.EndGetStructureChangeLog(result);
             return new object[] {
                     retVal};
         }
@@ -4551,36 +3162,39 @@ namespace WebAnnotationModel.Service {
     public interface IAnnotateLocations {
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateLocations/CreateLocation", ReplyAction="http://tempuri.org/IAnnotateLocations/CreateLocationResponse")]
-        WebAnnotationModel.Service.Location CreateLocation(WebAnnotationModel.Service.Location obj, long[] LinkedIDs);
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(AnnotationService.Types.LocationHistory))]
+        AnnotationService.Types.Location CreateLocation(AnnotationService.Types.Location obj, long[] LinkedIDs);
         
         [System.ServiceModel.OperationContractAttribute(AsyncPattern=true, Action="http://tempuri.org/IAnnotateLocations/CreateLocation", ReplyAction="http://tempuri.org/IAnnotateLocations/CreateLocationResponse")]
-        System.IAsyncResult BeginCreateLocation(WebAnnotationModel.Service.Location obj, long[] LinkedIDs, System.AsyncCallback callback, object asyncState);
+        System.IAsyncResult BeginCreateLocation(AnnotationService.Types.Location obj, long[] LinkedIDs, System.AsyncCallback callback, object asyncState);
         
-        WebAnnotationModel.Service.Location EndCreateLocation(System.IAsyncResult result);
+        AnnotationService.Types.Location EndCreateLocation(System.IAsyncResult result);
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateLocations/GetLocationByID", ReplyAction="http://tempuri.org/IAnnotateLocations/GetLocationByIDResponse")]
-        WebAnnotationModel.Service.Location GetLocationByID(long ID);
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(AnnotationService.Types.LocationHistory))]
+        AnnotationService.Types.Location GetLocationByID(long ID);
         
         [System.ServiceModel.OperationContractAttribute(AsyncPattern=true, Action="http://tempuri.org/IAnnotateLocations/GetLocationByID", ReplyAction="http://tempuri.org/IAnnotateLocations/GetLocationByIDResponse")]
         System.IAsyncResult BeginGetLocationByID(long ID, System.AsyncCallback callback, object asyncState);
         
-        WebAnnotationModel.Service.Location EndGetLocationByID(System.IAsyncResult result);
+        AnnotationService.Types.Location EndGetLocationByID(System.IAsyncResult result);
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateLocations/GetLocationsByID", ReplyAction="http://tempuri.org/IAnnotateLocations/GetLocationsByIDResponse")]
-        WebAnnotationModel.Service.Location[] GetLocationsByID(long[] IDs);
+        AnnotationService.Types.Location[] GetLocationsByID(long[] IDs);
         
         [System.ServiceModel.OperationContractAttribute(AsyncPattern=true, Action="http://tempuri.org/IAnnotateLocations/GetLocationsByID", ReplyAction="http://tempuri.org/IAnnotateLocations/GetLocationsByIDResponse")]
         System.IAsyncResult BeginGetLocationsByID(long[] IDs, System.AsyncCallback callback, object asyncState);
         
-        WebAnnotationModel.Service.Location[] EndGetLocationsByID(System.IAsyncResult result);
+        AnnotationService.Types.Location[] EndGetLocationsByID(System.IAsyncResult result);
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateLocations/GetLastModifiedLocation", ReplyAction="http://tempuri.org/IAnnotateLocations/GetLastModifiedLocationResponse")]
-        WebAnnotationModel.Service.Location GetLastModifiedLocation();
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(AnnotationService.Types.LocationHistory))]
+        AnnotationService.Types.Location GetLastModifiedLocation();
         
         [System.ServiceModel.OperationContractAttribute(AsyncPattern=true, Action="http://tempuri.org/IAnnotateLocations/GetLastModifiedLocation", ReplyAction="http://tempuri.org/IAnnotateLocations/GetLastModifiedLocationResponse")]
         System.IAsyncResult BeginGetLastModifiedLocation(System.AsyncCallback callback, object asyncState);
         
-        WebAnnotationModel.Service.Location EndGetLastModifiedLocation(System.IAsyncResult result);
+        AnnotationService.Types.Location EndGetLastModifiedLocation(System.IAsyncResult result);
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateLocations/GetLinkedLocations", ReplyAction="http://tempuri.org/IAnnotateLocations/GetLinkedLocationsResponse")]
         long[] GetLinkedLocations(long ID);
@@ -4591,50 +3205,50 @@ namespace WebAnnotationModel.Service {
         long[] EndGetLinkedLocations(System.IAsyncResult result);
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateLocations/GetLocationsForSection", ReplyAction="http://tempuri.org/IAnnotateLocations/GetLocationsForSectionResponse")]
-        WebAnnotationModel.Service.Location[] GetLocationsForSection(out long QueryExecutedTime, long section);
+        AnnotationService.Types.Location[] GetLocationsForSection(out long QueryExecutedTime, long section);
         
         [System.ServiceModel.OperationContractAttribute(AsyncPattern=true, Action="http://tempuri.org/IAnnotateLocations/GetLocationsForSection", ReplyAction="http://tempuri.org/IAnnotateLocations/GetLocationsForSectionResponse")]
         System.IAsyncResult BeginGetLocationsForSection(long section, System.AsyncCallback callback, object asyncState);
         
-        WebAnnotationModel.Service.Location[] EndGetLocationsForSection(out long QueryExecutedTime, System.IAsyncResult result);
+        AnnotationService.Types.Location[] EndGetLocationsForSection(out long QueryExecutedTime, System.IAsyncResult result);
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateLocations/GetLocationsForStructure", ReplyAction="http://tempuri.org/IAnnotateLocations/GetLocationsForStructureResponse")]
-        WebAnnotationModel.Service.Location[] GetLocationsForStructure(long structureID);
+        AnnotationService.Types.Location[] GetLocationsForStructure(long structureID);
         
         [System.ServiceModel.OperationContractAttribute(AsyncPattern=true, Action="http://tempuri.org/IAnnotateLocations/GetLocationsForStructure", ReplyAction="http://tempuri.org/IAnnotateLocations/GetLocationsForStructureResponse")]
         System.IAsyncResult BeginGetLocationsForStructure(long structureID, System.AsyncCallback callback, object asyncState);
         
-        WebAnnotationModel.Service.Location[] EndGetLocationsForStructure(System.IAsyncResult result);
+        AnnotationService.Types.Location[] EndGetLocationsForStructure(System.IAsyncResult result);
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateLocations/GetLocationChangesInMosaicRegion", ReplyAction="http://tempuri.org/IAnnotateLocations/GetLocationChangesInMosaicRegionResponse")]
-        WebAnnotationModel.Service.Location[] GetLocationChangesInMosaicRegion(out long QueryExecutedTime, out long[] DeletedIDs, long section, WebAnnotationModel.Service.BoundingRectangle bbox, double MinRadius, System.Nullable<long> ModifiedAfterThisUtcTime);
+        AnnotationService.Types.Location[] GetLocationChangesInMosaicRegion(out long QueryExecutedTime, out long[] DeletedIDs, long section, AnnotationService.Types.BoundingRectangle bbox, double MinRadius, System.Nullable<long> ModifiedAfterThisUtcTime);
         
         [System.ServiceModel.OperationContractAttribute(AsyncPattern=true, Action="http://tempuri.org/IAnnotateLocations/GetLocationChangesInMosaicRegion", ReplyAction="http://tempuri.org/IAnnotateLocations/GetLocationChangesInMosaicRegionResponse")]
-        System.IAsyncResult BeginGetLocationChangesInMosaicRegion(long section, WebAnnotationModel.Service.BoundingRectangle bbox, double MinRadius, System.Nullable<long> ModifiedAfterThisUtcTime, System.AsyncCallback callback, object asyncState);
+        System.IAsyncResult BeginGetLocationChangesInMosaicRegion(long section, AnnotationService.Types.BoundingRectangle bbox, double MinRadius, System.Nullable<long> ModifiedAfterThisUtcTime, System.AsyncCallback callback, object asyncState);
         
-        WebAnnotationModel.Service.Location[] EndGetLocationChangesInMosaicRegion(out long QueryExecutedTime, out long[] DeletedIDs, System.IAsyncResult result);
+        AnnotationService.Types.Location[] EndGetLocationChangesInMosaicRegion(out long QueryExecutedTime, out long[] DeletedIDs, System.IAsyncResult result);
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateLocations/GetAnnotationsInMosaicRegion", ReplyAction="http://tempuri.org/IAnnotateLocations/GetAnnotationsInMosaicRegionResponse")]
-        WebAnnotationModel.Service.AnnotationSet GetAnnotationsInMosaicRegion(out long QueryExecutedTime, out long[] DeletedIDs, long section, WebAnnotationModel.Service.BoundingRectangle bbox, double MinRadius, System.Nullable<long> ModifiedAfterThisUtcTime);
+        AnnotationService.Types.AnnotationSet GetAnnotationsInMosaicRegion(out long QueryExecutedTime, out long[] DeletedIDs, long section, AnnotationService.Types.BoundingRectangle bbox, double MinRadius, System.Nullable<long> ModifiedAfterThisUtcTime);
         
         [System.ServiceModel.OperationContractAttribute(AsyncPattern=true, Action="http://tempuri.org/IAnnotateLocations/GetAnnotationsInMosaicRegion", ReplyAction="http://tempuri.org/IAnnotateLocations/GetAnnotationsInMosaicRegionResponse")]
-        System.IAsyncResult BeginGetAnnotationsInMosaicRegion(long section, WebAnnotationModel.Service.BoundingRectangle bbox, double MinRadius, System.Nullable<long> ModifiedAfterThisUtcTime, System.AsyncCallback callback, object asyncState);
+        System.IAsyncResult BeginGetAnnotationsInMosaicRegion(long section, AnnotationService.Types.BoundingRectangle bbox, double MinRadius, System.Nullable<long> ModifiedAfterThisUtcTime, System.AsyncCallback callback, object asyncState);
         
-        WebAnnotationModel.Service.AnnotationSet EndGetAnnotationsInMosaicRegion(out long QueryExecutedTime, out long[] DeletedIDs, System.IAsyncResult result);
+        AnnotationService.Types.AnnotationSet EndGetAnnotationsInMosaicRegion(out long QueryExecutedTime, out long[] DeletedIDs, System.IAsyncResult result);
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateLocations/GetLocationChanges", ReplyAction="http://tempuri.org/IAnnotateLocations/GetLocationChangesResponse")]
-        WebAnnotationModel.Service.Location[] GetLocationChanges(out long QueryExecutedTime, out long[] DeletedIDs, long section, long ModifiedAfterThisUtcTime);
+        AnnotationService.Types.Location[] GetLocationChanges(out long QueryExecutedTime, out long[] DeletedIDs, long section, long ModifiedAfterThisUtcTime);
         
         [System.ServiceModel.OperationContractAttribute(AsyncPattern=true, Action="http://tempuri.org/IAnnotateLocations/GetLocationChanges", ReplyAction="http://tempuri.org/IAnnotateLocations/GetLocationChangesResponse")]
         System.IAsyncResult BeginGetLocationChanges(long section, long ModifiedAfterThisUtcTime, System.AsyncCallback callback, object asyncState);
         
-        WebAnnotationModel.Service.Location[] EndGetLocationChanges(out long QueryExecutedTime, out long[] DeletedIDs, System.IAsyncResult result);
+        AnnotationService.Types.Location[] EndGetLocationChanges(out long QueryExecutedTime, out long[] DeletedIDs, System.IAsyncResult result);
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateLocations/Update", ReplyAction="http://tempuri.org/IAnnotateLocations/UpdateResponse")]
-        long[] Update(WebAnnotationModel.Service.Location[] locations);
+        long[] Update(AnnotationService.Types.Location[] locations);
         
         [System.ServiceModel.OperationContractAttribute(AsyncPattern=true, Action="http://tempuri.org/IAnnotateLocations/Update", ReplyAction="http://tempuri.org/IAnnotateLocations/UpdateResponse")]
-        System.IAsyncResult BeginUpdate(WebAnnotationModel.Service.Location[] locations, System.AsyncCallback callback, object asyncState);
+        System.IAsyncResult BeginUpdate(AnnotationService.Types.Location[] locations, System.AsyncCallback callback, object asyncState);
         
         long[] EndUpdate(System.IAsyncResult result);
         
@@ -4655,30 +3269,30 @@ namespace WebAnnotationModel.Service {
         void EndDeleteLocationLink(System.IAsyncResult result);
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateLocations/GetLocationLinksForSection", ReplyAction="http://tempuri.org/IAnnotateLocations/GetLocationLinksForSectionResponse")]
-        WebAnnotationModel.Service.LocationLink[] GetLocationLinksForSection(out long QueryExecutedTime, out WebAnnotationModel.Service.LocationLink[] DeletedLinks, long section, long ModifiedAfterThisTime);
+        AnnotationService.Types.LocationLink[] GetLocationLinksForSection(out long QueryExecutedTime, out AnnotationService.Types.LocationLink[] DeletedLinks, long section, long ModifiedAfterThisTime);
         
         [System.ServiceModel.OperationContractAttribute(AsyncPattern=true, Action="http://tempuri.org/IAnnotateLocations/GetLocationLinksForSection", ReplyAction="http://tempuri.org/IAnnotateLocations/GetLocationLinksForSectionResponse")]
         System.IAsyncResult BeginGetLocationLinksForSection(long section, long ModifiedAfterThisTime, System.AsyncCallback callback, object asyncState);
         
-        WebAnnotationModel.Service.LocationLink[] EndGetLocationLinksForSection(out long QueryExecutedTime, out WebAnnotationModel.Service.LocationLink[] DeletedLinks, System.IAsyncResult result);
+        AnnotationService.Types.LocationLink[] EndGetLocationLinksForSection(out long QueryExecutedTime, out AnnotationService.Types.LocationLink[] DeletedLinks, System.IAsyncResult result);
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateLocations/GetLocationLinksForSectionInMosaicRegion", ReplyAction="http://tempuri.org/IAnnotateLocations/GetLocationLinksForSectionInMosaicRegionRes" +
             "ponse")]
-        WebAnnotationModel.Service.LocationLink[] GetLocationLinksForSectionInMosaicRegion(out long QueryExecutedTime, out WebAnnotationModel.Service.LocationLink[] DeletedLinks, long section, WebAnnotationModel.Service.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisUtcTime);
+        AnnotationService.Types.LocationLink[] GetLocationLinksForSectionInMosaicRegion(out long QueryExecutedTime, out AnnotationService.Types.LocationLink[] DeletedLinks, long section, AnnotationService.Types.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisUtcTime);
         
         [System.ServiceModel.OperationContractAttribute(AsyncPattern=true, Action="http://tempuri.org/IAnnotateLocations/GetLocationLinksForSectionInMosaicRegion", ReplyAction="http://tempuri.org/IAnnotateLocations/GetLocationLinksForSectionInMosaicRegionRes" +
             "ponse")]
-        System.IAsyncResult BeginGetLocationLinksForSectionInMosaicRegion(long section, WebAnnotationModel.Service.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisUtcTime, System.AsyncCallback callback, object asyncState);
+        System.IAsyncResult BeginGetLocationLinksForSectionInMosaicRegion(long section, AnnotationService.Types.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisUtcTime, System.AsyncCallback callback, object asyncState);
         
-        WebAnnotationModel.Service.LocationLink[] EndGetLocationLinksForSectionInMosaicRegion(out long QueryExecutedTime, out WebAnnotationModel.Service.LocationLink[] DeletedLinks, System.IAsyncResult result);
+        AnnotationService.Types.LocationLink[] EndGetLocationLinksForSectionInMosaicRegion(out long QueryExecutedTime, out AnnotationService.Types.LocationLink[] DeletedLinks, System.IAsyncResult result);
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateLocations/GetLocationChangeLog", ReplyAction="http://tempuri.org/IAnnotateLocations/GetLocationChangeLogResponse")]
-        WebAnnotationModel.Service.LocationHistory[] GetLocationChangeLog(System.Nullable<long> structure_id, System.Nullable<System.DateTime> begin_time, System.Nullable<System.DateTime> end_time);
+        AnnotationService.Types.LocationHistory[] GetLocationChangeLog(System.Nullable<long> structure_id, System.Nullable<System.DateTime> begin_time, System.Nullable<System.DateTime> end_time);
         
         [System.ServiceModel.OperationContractAttribute(AsyncPattern=true, Action="http://tempuri.org/IAnnotateLocations/GetLocationChangeLog", ReplyAction="http://tempuri.org/IAnnotateLocations/GetLocationChangeLogResponse")]
         System.IAsyncResult BeginGetLocationChangeLog(System.Nullable<long> structure_id, System.Nullable<System.DateTime> begin_time, System.Nullable<System.DateTime> end_time, System.AsyncCallback callback, object asyncState);
         
-        WebAnnotationModel.Service.LocationHistory[] EndGetLocationChangeLog(System.IAsyncResult result);
+        AnnotationService.Types.LocationHistory[] EndGetLocationChangeLog(System.IAsyncResult result);
     }
     
     [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
@@ -4696,10 +3310,10 @@ namespace WebAnnotationModel.Service {
             this.results = results;
         }
         
-        public WebAnnotationModel.Service.Location Result {
+        public AnnotationService.Types.Location Result {
             get {
                 base.RaiseExceptionIfNecessary();
-                return ((WebAnnotationModel.Service.Location)(this.results[0]));
+                return ((AnnotationService.Types.Location)(this.results[0]));
             }
         }
     }
@@ -4715,10 +3329,10 @@ namespace WebAnnotationModel.Service {
             this.results = results;
         }
         
-        public WebAnnotationModel.Service.Location Result {
+        public AnnotationService.Types.Location Result {
             get {
                 base.RaiseExceptionIfNecessary();
-                return ((WebAnnotationModel.Service.Location)(this.results[0]));
+                return ((AnnotationService.Types.Location)(this.results[0]));
             }
         }
     }
@@ -4734,10 +3348,10 @@ namespace WebAnnotationModel.Service {
             this.results = results;
         }
         
-        public WebAnnotationModel.Service.Location[] Result {
+        public AnnotationService.Types.Location[] Result {
             get {
                 base.RaiseExceptionIfNecessary();
-                return ((WebAnnotationModel.Service.Location[])(this.results[0]));
+                return ((AnnotationService.Types.Location[])(this.results[0]));
             }
         }
     }
@@ -4753,10 +3367,10 @@ namespace WebAnnotationModel.Service {
             this.results = results;
         }
         
-        public WebAnnotationModel.Service.Location Result {
+        public AnnotationService.Types.Location Result {
             get {
                 base.RaiseExceptionIfNecessary();
-                return ((WebAnnotationModel.Service.Location)(this.results[0]));
+                return ((AnnotationService.Types.Location)(this.results[0]));
             }
         }
     }
@@ -4798,10 +3412,10 @@ namespace WebAnnotationModel.Service {
             }
         }
         
-        public WebAnnotationModel.Service.Location[] Result {
+        public AnnotationService.Types.Location[] Result {
             get {
                 base.RaiseExceptionIfNecessary();
-                return ((WebAnnotationModel.Service.Location[])(this.results[1]));
+                return ((AnnotationService.Types.Location[])(this.results[1]));
             }
         }
     }
@@ -4817,10 +3431,10 @@ namespace WebAnnotationModel.Service {
             this.results = results;
         }
         
-        public WebAnnotationModel.Service.Location[] Result {
+        public AnnotationService.Types.Location[] Result {
             get {
                 base.RaiseExceptionIfNecessary();
-                return ((WebAnnotationModel.Service.Location[])(this.results[0]));
+                return ((AnnotationService.Types.Location[])(this.results[0]));
             }
         }
     }
@@ -4850,10 +3464,10 @@ namespace WebAnnotationModel.Service {
             }
         }
         
-        public WebAnnotationModel.Service.Location[] Result {
+        public AnnotationService.Types.Location[] Result {
             get {
                 base.RaiseExceptionIfNecessary();
-                return ((WebAnnotationModel.Service.Location[])(this.results[2]));
+                return ((AnnotationService.Types.Location[])(this.results[2]));
             }
         }
     }
@@ -4883,10 +3497,10 @@ namespace WebAnnotationModel.Service {
             }
         }
         
-        public WebAnnotationModel.Service.AnnotationSet Result {
+        public AnnotationService.Types.AnnotationSet Result {
             get {
                 base.RaiseExceptionIfNecessary();
-                return ((WebAnnotationModel.Service.AnnotationSet)(this.results[2]));
+                return ((AnnotationService.Types.AnnotationSet)(this.results[2]));
             }
         }
     }
@@ -4916,10 +3530,10 @@ namespace WebAnnotationModel.Service {
             }
         }
         
-        public WebAnnotationModel.Service.Location[] Result {
+        public AnnotationService.Types.Location[] Result {
             get {
                 base.RaiseExceptionIfNecessary();
-                return ((WebAnnotationModel.Service.Location[])(this.results[2]));
+                return ((AnnotationService.Types.Location[])(this.results[2]));
             }
         }
     }
@@ -4961,17 +3575,17 @@ namespace WebAnnotationModel.Service {
             }
         }
         
-        public WebAnnotationModel.Service.LocationLink[] DeletedLinks {
+        public AnnotationService.Types.LocationLink[] DeletedLinks {
             get {
                 base.RaiseExceptionIfNecessary();
-                return ((WebAnnotationModel.Service.LocationLink[])(this.results[1]));
+                return ((AnnotationService.Types.LocationLink[])(this.results[1]));
             }
         }
         
-        public WebAnnotationModel.Service.LocationLink[] Result {
+        public AnnotationService.Types.LocationLink[] Result {
             get {
                 base.RaiseExceptionIfNecessary();
-                return ((WebAnnotationModel.Service.LocationLink[])(this.results[2]));
+                return ((AnnotationService.Types.LocationLink[])(this.results[2]));
             }
         }
     }
@@ -4994,17 +3608,17 @@ namespace WebAnnotationModel.Service {
             }
         }
         
-        public WebAnnotationModel.Service.LocationLink[] DeletedLinks {
+        public AnnotationService.Types.LocationLink[] DeletedLinks {
             get {
                 base.RaiseExceptionIfNecessary();
-                return ((WebAnnotationModel.Service.LocationLink[])(this.results[1]));
+                return ((AnnotationService.Types.LocationLink[])(this.results[1]));
             }
         }
         
-        public WebAnnotationModel.Service.LocationLink[] Result {
+        public AnnotationService.Types.LocationLink[] Result {
             get {
                 base.RaiseExceptionIfNecessary();
-                return ((WebAnnotationModel.Service.LocationLink[])(this.results[2]));
+                return ((AnnotationService.Types.LocationLink[])(this.results[2]));
             }
         }
     }
@@ -5020,10 +3634,10 @@ namespace WebAnnotationModel.Service {
             this.results = results;
         }
         
-        public WebAnnotationModel.Service.LocationHistory[] Result {
+        public AnnotationService.Types.LocationHistory[] Result {
             get {
                 base.RaiseExceptionIfNecessary();
-                return ((WebAnnotationModel.Service.LocationHistory[])(this.results[0]));
+                return ((AnnotationService.Types.LocationHistory[])(this.results[0]));
             }
         }
     }
@@ -5179,28 +3793,28 @@ namespace WebAnnotationModel.Service {
         
         public event System.EventHandler<GetLocationChangeLogCompletedEventArgs> GetLocationChangeLogCompleted;
         
-        public WebAnnotationModel.Service.Location CreateLocation(WebAnnotationModel.Service.Location obj, long[] LinkedIDs) {
+        public AnnotationService.Types.Location CreateLocation(AnnotationService.Types.Location obj, long[] LinkedIDs) {
             return base.Channel.CreateLocation(obj, LinkedIDs);
         }
         
         [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
-        public System.IAsyncResult BeginCreateLocation(WebAnnotationModel.Service.Location obj, long[] LinkedIDs, System.AsyncCallback callback, object asyncState) {
+        public System.IAsyncResult BeginCreateLocation(AnnotationService.Types.Location obj, long[] LinkedIDs, System.AsyncCallback callback, object asyncState) {
             return base.Channel.BeginCreateLocation(obj, LinkedIDs, callback, asyncState);
         }
         
         [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
-        public WebAnnotationModel.Service.Location EndCreateLocation(System.IAsyncResult result) {
+        public AnnotationService.Types.Location EndCreateLocation(System.IAsyncResult result) {
             return base.Channel.EndCreateLocation(result);
         }
         
         private System.IAsyncResult OnBeginCreateLocation(object[] inValues, System.AsyncCallback callback, object asyncState) {
-            WebAnnotationModel.Service.Location obj = ((WebAnnotationModel.Service.Location)(inValues[0]));
+            AnnotationService.Types.Location obj = ((AnnotationService.Types.Location)(inValues[0]));
             long[] LinkedIDs = ((long[])(inValues[1]));
             return this.BeginCreateLocation(obj, LinkedIDs, callback, asyncState);
         }
         
         private object[] OnEndCreateLocation(System.IAsyncResult result) {
-            WebAnnotationModel.Service.Location retVal = this.EndCreateLocation(result);
+            AnnotationService.Types.Location retVal = this.EndCreateLocation(result);
             return new object[] {
                     retVal};
         }
@@ -5212,11 +3826,11 @@ namespace WebAnnotationModel.Service {
             }
         }
         
-        public void CreateLocationAsync(WebAnnotationModel.Service.Location obj, long[] LinkedIDs) {
+        public void CreateLocationAsync(AnnotationService.Types.Location obj, long[] LinkedIDs) {
             this.CreateLocationAsync(obj, LinkedIDs, null);
         }
         
-        public void CreateLocationAsync(WebAnnotationModel.Service.Location obj, long[] LinkedIDs, object userState) {
+        public void CreateLocationAsync(AnnotationService.Types.Location obj, long[] LinkedIDs, object userState) {
             if ((this.onBeginCreateLocationDelegate == null)) {
                 this.onBeginCreateLocationDelegate = new BeginOperationDelegate(this.OnBeginCreateLocation);
             }
@@ -5231,7 +3845,7 @@ namespace WebAnnotationModel.Service {
                         LinkedIDs}, this.onEndCreateLocationDelegate, this.onCreateLocationCompletedDelegate, userState);
         }
         
-        public WebAnnotationModel.Service.Location GetLocationByID(long ID) {
+        public AnnotationService.Types.Location GetLocationByID(long ID) {
             return base.Channel.GetLocationByID(ID);
         }
         
@@ -5241,7 +3855,7 @@ namespace WebAnnotationModel.Service {
         }
         
         [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
-        public WebAnnotationModel.Service.Location EndGetLocationByID(System.IAsyncResult result) {
+        public AnnotationService.Types.Location EndGetLocationByID(System.IAsyncResult result) {
             return base.Channel.EndGetLocationByID(result);
         }
         
@@ -5251,7 +3865,7 @@ namespace WebAnnotationModel.Service {
         }
         
         private object[] OnEndGetLocationByID(System.IAsyncResult result) {
-            WebAnnotationModel.Service.Location retVal = this.EndGetLocationByID(result);
+            AnnotationService.Types.Location retVal = this.EndGetLocationByID(result);
             return new object[] {
                     retVal};
         }
@@ -5281,7 +3895,7 @@ namespace WebAnnotationModel.Service {
                         ID}, this.onEndGetLocationByIDDelegate, this.onGetLocationByIDCompletedDelegate, userState);
         }
         
-        public WebAnnotationModel.Service.Location[] GetLocationsByID(long[] IDs) {
+        public AnnotationService.Types.Location[] GetLocationsByID(long[] IDs) {
             return base.Channel.GetLocationsByID(IDs);
         }
         
@@ -5291,7 +3905,7 @@ namespace WebAnnotationModel.Service {
         }
         
         [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
-        public WebAnnotationModel.Service.Location[] EndGetLocationsByID(System.IAsyncResult result) {
+        public AnnotationService.Types.Location[] EndGetLocationsByID(System.IAsyncResult result) {
             return base.Channel.EndGetLocationsByID(result);
         }
         
@@ -5301,7 +3915,7 @@ namespace WebAnnotationModel.Service {
         }
         
         private object[] OnEndGetLocationsByID(System.IAsyncResult result) {
-            WebAnnotationModel.Service.Location[] retVal = this.EndGetLocationsByID(result);
+            AnnotationService.Types.Location[] retVal = this.EndGetLocationsByID(result);
             return new object[] {
                     retVal};
         }
@@ -5331,7 +3945,7 @@ namespace WebAnnotationModel.Service {
                         IDs}, this.onEndGetLocationsByIDDelegate, this.onGetLocationsByIDCompletedDelegate, userState);
         }
         
-        public WebAnnotationModel.Service.Location GetLastModifiedLocation() {
+        public AnnotationService.Types.Location GetLastModifiedLocation() {
             return base.Channel.GetLastModifiedLocation();
         }
         
@@ -5341,7 +3955,7 @@ namespace WebAnnotationModel.Service {
         }
         
         [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
-        public WebAnnotationModel.Service.Location EndGetLastModifiedLocation(System.IAsyncResult result) {
+        public AnnotationService.Types.Location EndGetLastModifiedLocation(System.IAsyncResult result) {
             return base.Channel.EndGetLastModifiedLocation(result);
         }
         
@@ -5350,7 +3964,7 @@ namespace WebAnnotationModel.Service {
         }
         
         private object[] OnEndGetLastModifiedLocation(System.IAsyncResult result) {
-            WebAnnotationModel.Service.Location retVal = this.EndGetLastModifiedLocation(result);
+            AnnotationService.Types.Location retVal = this.EndGetLastModifiedLocation(result);
             return new object[] {
                     retVal};
         }
@@ -5429,7 +4043,7 @@ namespace WebAnnotationModel.Service {
                         ID}, this.onEndGetLinkedLocationsDelegate, this.onGetLinkedLocationsCompletedDelegate, userState);
         }
         
-        public WebAnnotationModel.Service.Location[] GetLocationsForSection(out long QueryExecutedTime, long section) {
+        public AnnotationService.Types.Location[] GetLocationsForSection(out long QueryExecutedTime, long section) {
             return base.Channel.GetLocationsForSection(out QueryExecutedTime, section);
         }
         
@@ -5439,7 +4053,7 @@ namespace WebAnnotationModel.Service {
         }
         
         [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
-        public WebAnnotationModel.Service.Location[] EndGetLocationsForSection(out long QueryExecutedTime, System.IAsyncResult result) {
+        public AnnotationService.Types.Location[] EndGetLocationsForSection(out long QueryExecutedTime, System.IAsyncResult result) {
             return base.Channel.EndGetLocationsForSection(out QueryExecutedTime, result);
         }
         
@@ -5450,7 +4064,7 @@ namespace WebAnnotationModel.Service {
         
         private object[] OnEndGetLocationsForSection(System.IAsyncResult result) {
             long QueryExecutedTime = this.GetDefaultValueForInitialization<long>();
-            WebAnnotationModel.Service.Location[] retVal = this.EndGetLocationsForSection(out QueryExecutedTime, result);
+            AnnotationService.Types.Location[] retVal = this.EndGetLocationsForSection(out QueryExecutedTime, result);
             return new object[] {
                     QueryExecutedTime,
                     retVal};
@@ -5481,7 +4095,7 @@ namespace WebAnnotationModel.Service {
                         section}, this.onEndGetLocationsForSectionDelegate, this.onGetLocationsForSectionCompletedDelegate, userState);
         }
         
-        public WebAnnotationModel.Service.Location[] GetLocationsForStructure(long structureID) {
+        public AnnotationService.Types.Location[] GetLocationsForStructure(long structureID) {
             return base.Channel.GetLocationsForStructure(structureID);
         }
         
@@ -5491,7 +4105,7 @@ namespace WebAnnotationModel.Service {
         }
         
         [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
-        public WebAnnotationModel.Service.Location[] EndGetLocationsForStructure(System.IAsyncResult result) {
+        public AnnotationService.Types.Location[] EndGetLocationsForStructure(System.IAsyncResult result) {
             return base.Channel.EndGetLocationsForStructure(result);
         }
         
@@ -5501,7 +4115,7 @@ namespace WebAnnotationModel.Service {
         }
         
         private object[] OnEndGetLocationsForStructure(System.IAsyncResult result) {
-            WebAnnotationModel.Service.Location[] retVal = this.EndGetLocationsForStructure(result);
+            AnnotationService.Types.Location[] retVal = this.EndGetLocationsForStructure(result);
             return new object[] {
                     retVal};
         }
@@ -5531,23 +4145,23 @@ namespace WebAnnotationModel.Service {
                         structureID}, this.onEndGetLocationsForStructureDelegate, this.onGetLocationsForStructureCompletedDelegate, userState);
         }
         
-        public WebAnnotationModel.Service.Location[] GetLocationChangesInMosaicRegion(out long QueryExecutedTime, out long[] DeletedIDs, long section, WebAnnotationModel.Service.BoundingRectangle bbox, double MinRadius, System.Nullable<long> ModifiedAfterThisUtcTime) {
+        public AnnotationService.Types.Location[] GetLocationChangesInMosaicRegion(out long QueryExecutedTime, out long[] DeletedIDs, long section, AnnotationService.Types.BoundingRectangle bbox, double MinRadius, System.Nullable<long> ModifiedAfterThisUtcTime) {
             return base.Channel.GetLocationChangesInMosaicRegion(out QueryExecutedTime, out DeletedIDs, section, bbox, MinRadius, ModifiedAfterThisUtcTime);
         }
         
         [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
-        public System.IAsyncResult BeginGetLocationChangesInMosaicRegion(long section, WebAnnotationModel.Service.BoundingRectangle bbox, double MinRadius, System.Nullable<long> ModifiedAfterThisUtcTime, System.AsyncCallback callback, object asyncState) {
+        public System.IAsyncResult BeginGetLocationChangesInMosaicRegion(long section, AnnotationService.Types.BoundingRectangle bbox, double MinRadius, System.Nullable<long> ModifiedAfterThisUtcTime, System.AsyncCallback callback, object asyncState) {
             return base.Channel.BeginGetLocationChangesInMosaicRegion(section, bbox, MinRadius, ModifiedAfterThisUtcTime, callback, asyncState);
         }
         
         [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
-        public WebAnnotationModel.Service.Location[] EndGetLocationChangesInMosaicRegion(out long QueryExecutedTime, out long[] DeletedIDs, System.IAsyncResult result) {
+        public AnnotationService.Types.Location[] EndGetLocationChangesInMosaicRegion(out long QueryExecutedTime, out long[] DeletedIDs, System.IAsyncResult result) {
             return base.Channel.EndGetLocationChangesInMosaicRegion(out QueryExecutedTime, out DeletedIDs, result);
         }
         
         private System.IAsyncResult OnBeginGetLocationChangesInMosaicRegion(object[] inValues, System.AsyncCallback callback, object asyncState) {
             long section = ((long)(inValues[0]));
-            WebAnnotationModel.Service.BoundingRectangle bbox = ((WebAnnotationModel.Service.BoundingRectangle)(inValues[1]));
+            AnnotationService.Types.BoundingRectangle bbox = ((AnnotationService.Types.BoundingRectangle)(inValues[1]));
             double MinRadius = ((double)(inValues[2]));
             System.Nullable<long> ModifiedAfterThisUtcTime = ((System.Nullable<long>)(inValues[3]));
             return this.BeginGetLocationChangesInMosaicRegion(section, bbox, MinRadius, ModifiedAfterThisUtcTime, callback, asyncState);
@@ -5556,7 +4170,7 @@ namespace WebAnnotationModel.Service {
         private object[] OnEndGetLocationChangesInMosaicRegion(System.IAsyncResult result) {
             long QueryExecutedTime = this.GetDefaultValueForInitialization<long>();
             long[] DeletedIDs = this.GetDefaultValueForInitialization<long[]>();
-            WebAnnotationModel.Service.Location[] retVal = this.EndGetLocationChangesInMosaicRegion(out QueryExecutedTime, out DeletedIDs, result);
+            AnnotationService.Types.Location[] retVal = this.EndGetLocationChangesInMosaicRegion(out QueryExecutedTime, out DeletedIDs, result);
             return new object[] {
                     QueryExecutedTime,
                     DeletedIDs,
@@ -5570,11 +4184,11 @@ namespace WebAnnotationModel.Service {
             }
         }
         
-        public void GetLocationChangesInMosaicRegionAsync(long section, WebAnnotationModel.Service.BoundingRectangle bbox, double MinRadius, System.Nullable<long> ModifiedAfterThisUtcTime) {
+        public void GetLocationChangesInMosaicRegionAsync(long section, AnnotationService.Types.BoundingRectangle bbox, double MinRadius, System.Nullable<long> ModifiedAfterThisUtcTime) {
             this.GetLocationChangesInMosaicRegionAsync(section, bbox, MinRadius, ModifiedAfterThisUtcTime, null);
         }
         
-        public void GetLocationChangesInMosaicRegionAsync(long section, WebAnnotationModel.Service.BoundingRectangle bbox, double MinRadius, System.Nullable<long> ModifiedAfterThisUtcTime, object userState) {
+        public void GetLocationChangesInMosaicRegionAsync(long section, AnnotationService.Types.BoundingRectangle bbox, double MinRadius, System.Nullable<long> ModifiedAfterThisUtcTime, object userState) {
             if ((this.onBeginGetLocationChangesInMosaicRegionDelegate == null)) {
                 this.onBeginGetLocationChangesInMosaicRegionDelegate = new BeginOperationDelegate(this.OnBeginGetLocationChangesInMosaicRegion);
             }
@@ -5591,23 +4205,23 @@ namespace WebAnnotationModel.Service {
                         ModifiedAfterThisUtcTime}, this.onEndGetLocationChangesInMosaicRegionDelegate, this.onGetLocationChangesInMosaicRegionCompletedDelegate, userState);
         }
         
-        public WebAnnotationModel.Service.AnnotationSet GetAnnotationsInMosaicRegion(out long QueryExecutedTime, out long[] DeletedIDs, long section, WebAnnotationModel.Service.BoundingRectangle bbox, double MinRadius, System.Nullable<long> ModifiedAfterThisUtcTime) {
+        public AnnotationService.Types.AnnotationSet GetAnnotationsInMosaicRegion(out long QueryExecutedTime, out long[] DeletedIDs, long section, AnnotationService.Types.BoundingRectangle bbox, double MinRadius, System.Nullable<long> ModifiedAfterThisUtcTime) {
             return base.Channel.GetAnnotationsInMosaicRegion(out QueryExecutedTime, out DeletedIDs, section, bbox, MinRadius, ModifiedAfterThisUtcTime);
         }
         
         [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
-        public System.IAsyncResult BeginGetAnnotationsInMosaicRegion(long section, WebAnnotationModel.Service.BoundingRectangle bbox, double MinRadius, System.Nullable<long> ModifiedAfterThisUtcTime, System.AsyncCallback callback, object asyncState) {
+        public System.IAsyncResult BeginGetAnnotationsInMosaicRegion(long section, AnnotationService.Types.BoundingRectangle bbox, double MinRadius, System.Nullable<long> ModifiedAfterThisUtcTime, System.AsyncCallback callback, object asyncState) {
             return base.Channel.BeginGetAnnotationsInMosaicRegion(section, bbox, MinRadius, ModifiedAfterThisUtcTime, callback, asyncState);
         }
         
         [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
-        public WebAnnotationModel.Service.AnnotationSet EndGetAnnotationsInMosaicRegion(out long QueryExecutedTime, out long[] DeletedIDs, System.IAsyncResult result) {
+        public AnnotationService.Types.AnnotationSet EndGetAnnotationsInMosaicRegion(out long QueryExecutedTime, out long[] DeletedIDs, System.IAsyncResult result) {
             return base.Channel.EndGetAnnotationsInMosaicRegion(out QueryExecutedTime, out DeletedIDs, result);
         }
         
         private System.IAsyncResult OnBeginGetAnnotationsInMosaicRegion(object[] inValues, System.AsyncCallback callback, object asyncState) {
             long section = ((long)(inValues[0]));
-            WebAnnotationModel.Service.BoundingRectangle bbox = ((WebAnnotationModel.Service.BoundingRectangle)(inValues[1]));
+            AnnotationService.Types.BoundingRectangle bbox = ((AnnotationService.Types.BoundingRectangle)(inValues[1]));
             double MinRadius = ((double)(inValues[2]));
             System.Nullable<long> ModifiedAfterThisUtcTime = ((System.Nullable<long>)(inValues[3]));
             return this.BeginGetAnnotationsInMosaicRegion(section, bbox, MinRadius, ModifiedAfterThisUtcTime, callback, asyncState);
@@ -5616,7 +4230,7 @@ namespace WebAnnotationModel.Service {
         private object[] OnEndGetAnnotationsInMosaicRegion(System.IAsyncResult result) {
             long QueryExecutedTime = this.GetDefaultValueForInitialization<long>();
             long[] DeletedIDs = this.GetDefaultValueForInitialization<long[]>();
-            WebAnnotationModel.Service.AnnotationSet retVal = this.EndGetAnnotationsInMosaicRegion(out QueryExecutedTime, out DeletedIDs, result);
+            AnnotationService.Types.AnnotationSet retVal = this.EndGetAnnotationsInMosaicRegion(out QueryExecutedTime, out DeletedIDs, result);
             return new object[] {
                     QueryExecutedTime,
                     DeletedIDs,
@@ -5630,11 +4244,11 @@ namespace WebAnnotationModel.Service {
             }
         }
         
-        public void GetAnnotationsInMosaicRegionAsync(long section, WebAnnotationModel.Service.BoundingRectangle bbox, double MinRadius, System.Nullable<long> ModifiedAfterThisUtcTime) {
+        public void GetAnnotationsInMosaicRegionAsync(long section, AnnotationService.Types.BoundingRectangle bbox, double MinRadius, System.Nullable<long> ModifiedAfterThisUtcTime) {
             this.GetAnnotationsInMosaicRegionAsync(section, bbox, MinRadius, ModifiedAfterThisUtcTime, null);
         }
         
-        public void GetAnnotationsInMosaicRegionAsync(long section, WebAnnotationModel.Service.BoundingRectangle bbox, double MinRadius, System.Nullable<long> ModifiedAfterThisUtcTime, object userState) {
+        public void GetAnnotationsInMosaicRegionAsync(long section, AnnotationService.Types.BoundingRectangle bbox, double MinRadius, System.Nullable<long> ModifiedAfterThisUtcTime, object userState) {
             if ((this.onBeginGetAnnotationsInMosaicRegionDelegate == null)) {
                 this.onBeginGetAnnotationsInMosaicRegionDelegate = new BeginOperationDelegate(this.OnBeginGetAnnotationsInMosaicRegion);
             }
@@ -5651,7 +4265,7 @@ namespace WebAnnotationModel.Service {
                         ModifiedAfterThisUtcTime}, this.onEndGetAnnotationsInMosaicRegionDelegate, this.onGetAnnotationsInMosaicRegionCompletedDelegate, userState);
         }
         
-        public WebAnnotationModel.Service.Location[] GetLocationChanges(out long QueryExecutedTime, out long[] DeletedIDs, long section, long ModifiedAfterThisUtcTime) {
+        public AnnotationService.Types.Location[] GetLocationChanges(out long QueryExecutedTime, out long[] DeletedIDs, long section, long ModifiedAfterThisUtcTime) {
             return base.Channel.GetLocationChanges(out QueryExecutedTime, out DeletedIDs, section, ModifiedAfterThisUtcTime);
         }
         
@@ -5661,7 +4275,7 @@ namespace WebAnnotationModel.Service {
         }
         
         [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
-        public WebAnnotationModel.Service.Location[] EndGetLocationChanges(out long QueryExecutedTime, out long[] DeletedIDs, System.IAsyncResult result) {
+        public AnnotationService.Types.Location[] EndGetLocationChanges(out long QueryExecutedTime, out long[] DeletedIDs, System.IAsyncResult result) {
             return base.Channel.EndGetLocationChanges(out QueryExecutedTime, out DeletedIDs, result);
         }
         
@@ -5674,7 +4288,7 @@ namespace WebAnnotationModel.Service {
         private object[] OnEndGetLocationChanges(System.IAsyncResult result) {
             long QueryExecutedTime = this.GetDefaultValueForInitialization<long>();
             long[] DeletedIDs = this.GetDefaultValueForInitialization<long[]>();
-            WebAnnotationModel.Service.Location[] retVal = this.EndGetLocationChanges(out QueryExecutedTime, out DeletedIDs, result);
+            AnnotationService.Types.Location[] retVal = this.EndGetLocationChanges(out QueryExecutedTime, out DeletedIDs, result);
             return new object[] {
                     QueryExecutedTime,
                     DeletedIDs,
@@ -5707,12 +4321,12 @@ namespace WebAnnotationModel.Service {
                         ModifiedAfterThisUtcTime}, this.onEndGetLocationChangesDelegate, this.onGetLocationChangesCompletedDelegate, userState);
         }
         
-        public long[] Update(WebAnnotationModel.Service.Location[] locations) {
+        public long[] Update(AnnotationService.Types.Location[] locations) {
             return base.Channel.Update(locations);
         }
         
         [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
-        public System.IAsyncResult BeginUpdate(WebAnnotationModel.Service.Location[] locations, System.AsyncCallback callback, object asyncState) {
+        public System.IAsyncResult BeginUpdate(AnnotationService.Types.Location[] locations, System.AsyncCallback callback, object asyncState) {
             return base.Channel.BeginUpdate(locations, callback, asyncState);
         }
         
@@ -5722,7 +4336,7 @@ namespace WebAnnotationModel.Service {
         }
         
         private System.IAsyncResult OnBeginUpdate(object[] inValues, System.AsyncCallback callback, object asyncState) {
-            WebAnnotationModel.Service.Location[] locations = ((WebAnnotationModel.Service.Location[])(inValues[0]));
+            AnnotationService.Types.Location[] locations = ((AnnotationService.Types.Location[])(inValues[0]));
             return this.BeginUpdate(locations, callback, asyncState);
         }
         
@@ -5739,11 +4353,11 @@ namespace WebAnnotationModel.Service {
             }
         }
         
-        public void UpdateAsync(WebAnnotationModel.Service.Location[] locations) {
+        public void UpdateAsync(AnnotationService.Types.Location[] locations) {
             this.UpdateAsync(locations, null);
         }
         
-        public void UpdateAsync(WebAnnotationModel.Service.Location[] locations, object userState) {
+        public void UpdateAsync(AnnotationService.Types.Location[] locations, object userState) {
             if ((this.onBeginUpdateDelegate == null)) {
                 this.onBeginUpdateDelegate = new BeginOperationDelegate(this.OnBeginUpdate);
             }
@@ -5859,7 +4473,7 @@ namespace WebAnnotationModel.Service {
                         TargetID}, this.onEndDeleteLocationLinkDelegate, this.onDeleteLocationLinkCompletedDelegate, userState);
         }
         
-        public WebAnnotationModel.Service.LocationLink[] GetLocationLinksForSection(out long QueryExecutedTime, out WebAnnotationModel.Service.LocationLink[] DeletedLinks, long section, long ModifiedAfterThisTime) {
+        public AnnotationService.Types.LocationLink[] GetLocationLinksForSection(out long QueryExecutedTime, out AnnotationService.Types.LocationLink[] DeletedLinks, long section, long ModifiedAfterThisTime) {
             return base.Channel.GetLocationLinksForSection(out QueryExecutedTime, out DeletedLinks, section, ModifiedAfterThisTime);
         }
         
@@ -5869,7 +4483,7 @@ namespace WebAnnotationModel.Service {
         }
         
         [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
-        public WebAnnotationModel.Service.LocationLink[] EndGetLocationLinksForSection(out long QueryExecutedTime, out WebAnnotationModel.Service.LocationLink[] DeletedLinks, System.IAsyncResult result) {
+        public AnnotationService.Types.LocationLink[] EndGetLocationLinksForSection(out long QueryExecutedTime, out AnnotationService.Types.LocationLink[] DeletedLinks, System.IAsyncResult result) {
             return base.Channel.EndGetLocationLinksForSection(out QueryExecutedTime, out DeletedLinks, result);
         }
         
@@ -5881,8 +4495,8 @@ namespace WebAnnotationModel.Service {
         
         private object[] OnEndGetLocationLinksForSection(System.IAsyncResult result) {
             long QueryExecutedTime = this.GetDefaultValueForInitialization<long>();
-            WebAnnotationModel.Service.LocationLink[] DeletedLinks = this.GetDefaultValueForInitialization<WebAnnotationModel.Service.LocationLink[]>();
-            WebAnnotationModel.Service.LocationLink[] retVal = this.EndGetLocationLinksForSection(out QueryExecutedTime, out DeletedLinks, result);
+            AnnotationService.Types.LocationLink[] DeletedLinks = this.GetDefaultValueForInitialization<AnnotationService.Types.LocationLink[]>();
+            AnnotationService.Types.LocationLink[] retVal = this.EndGetLocationLinksForSection(out QueryExecutedTime, out DeletedLinks, result);
             return new object[] {
                     QueryExecutedTime,
                     DeletedLinks,
@@ -5915,23 +4529,23 @@ namespace WebAnnotationModel.Service {
                         ModifiedAfterThisTime}, this.onEndGetLocationLinksForSectionDelegate, this.onGetLocationLinksForSectionCompletedDelegate, userState);
         }
         
-        public WebAnnotationModel.Service.LocationLink[] GetLocationLinksForSectionInMosaicRegion(out long QueryExecutedTime, out WebAnnotationModel.Service.LocationLink[] DeletedLinks, long section, WebAnnotationModel.Service.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisUtcTime) {
+        public AnnotationService.Types.LocationLink[] GetLocationLinksForSectionInMosaicRegion(out long QueryExecutedTime, out AnnotationService.Types.LocationLink[] DeletedLinks, long section, AnnotationService.Types.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisUtcTime) {
             return base.Channel.GetLocationLinksForSectionInMosaicRegion(out QueryExecutedTime, out DeletedLinks, section, bbox, MinRadius, ModifiedAfterThisUtcTime);
         }
         
         [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
-        public System.IAsyncResult BeginGetLocationLinksForSectionInMosaicRegion(long section, WebAnnotationModel.Service.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisUtcTime, System.AsyncCallback callback, object asyncState) {
+        public System.IAsyncResult BeginGetLocationLinksForSectionInMosaicRegion(long section, AnnotationService.Types.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisUtcTime, System.AsyncCallback callback, object asyncState) {
             return base.Channel.BeginGetLocationLinksForSectionInMosaicRegion(section, bbox, MinRadius, ModifiedAfterThisUtcTime, callback, asyncState);
         }
         
         [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
-        public WebAnnotationModel.Service.LocationLink[] EndGetLocationLinksForSectionInMosaicRegion(out long QueryExecutedTime, out WebAnnotationModel.Service.LocationLink[] DeletedLinks, System.IAsyncResult result) {
+        public AnnotationService.Types.LocationLink[] EndGetLocationLinksForSectionInMosaicRegion(out long QueryExecutedTime, out AnnotationService.Types.LocationLink[] DeletedLinks, System.IAsyncResult result) {
             return base.Channel.EndGetLocationLinksForSectionInMosaicRegion(out QueryExecutedTime, out DeletedLinks, result);
         }
         
         private System.IAsyncResult OnBeginGetLocationLinksForSectionInMosaicRegion(object[] inValues, System.AsyncCallback callback, object asyncState) {
             long section = ((long)(inValues[0]));
-            WebAnnotationModel.Service.BoundingRectangle bbox = ((WebAnnotationModel.Service.BoundingRectangle)(inValues[1]));
+            AnnotationService.Types.BoundingRectangle bbox = ((AnnotationService.Types.BoundingRectangle)(inValues[1]));
             double MinRadius = ((double)(inValues[2]));
             long ModifiedAfterThisUtcTime = ((long)(inValues[3]));
             return this.BeginGetLocationLinksForSectionInMosaicRegion(section, bbox, MinRadius, ModifiedAfterThisUtcTime, callback, asyncState);
@@ -5939,8 +4553,8 @@ namespace WebAnnotationModel.Service {
         
         private object[] OnEndGetLocationLinksForSectionInMosaicRegion(System.IAsyncResult result) {
             long QueryExecutedTime = this.GetDefaultValueForInitialization<long>();
-            WebAnnotationModel.Service.LocationLink[] DeletedLinks = this.GetDefaultValueForInitialization<WebAnnotationModel.Service.LocationLink[]>();
-            WebAnnotationModel.Service.LocationLink[] retVal = this.EndGetLocationLinksForSectionInMosaicRegion(out QueryExecutedTime, out DeletedLinks, result);
+            AnnotationService.Types.LocationLink[] DeletedLinks = this.GetDefaultValueForInitialization<AnnotationService.Types.LocationLink[]>();
+            AnnotationService.Types.LocationLink[] retVal = this.EndGetLocationLinksForSectionInMosaicRegion(out QueryExecutedTime, out DeletedLinks, result);
             return new object[] {
                     QueryExecutedTime,
                     DeletedLinks,
@@ -5954,11 +4568,11 @@ namespace WebAnnotationModel.Service {
             }
         }
         
-        public void GetLocationLinksForSectionInMosaicRegionAsync(long section, WebAnnotationModel.Service.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisUtcTime) {
+        public void GetLocationLinksForSectionInMosaicRegionAsync(long section, AnnotationService.Types.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisUtcTime) {
             this.GetLocationLinksForSectionInMosaicRegionAsync(section, bbox, MinRadius, ModifiedAfterThisUtcTime, null);
         }
         
-        public void GetLocationLinksForSectionInMosaicRegionAsync(long section, WebAnnotationModel.Service.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisUtcTime, object userState) {
+        public void GetLocationLinksForSectionInMosaicRegionAsync(long section, AnnotationService.Types.BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisUtcTime, object userState) {
             if ((this.onBeginGetLocationLinksForSectionInMosaicRegionDelegate == null)) {
                 this.onBeginGetLocationLinksForSectionInMosaicRegionDelegate = new BeginOperationDelegate(this.OnBeginGetLocationLinksForSectionInMosaicRegion);
             }
@@ -5975,7 +4589,7 @@ namespace WebAnnotationModel.Service {
                         ModifiedAfterThisUtcTime}, this.onEndGetLocationLinksForSectionInMosaicRegionDelegate, this.onGetLocationLinksForSectionInMosaicRegionCompletedDelegate, userState);
         }
         
-        public WebAnnotationModel.Service.LocationHistory[] GetLocationChangeLog(System.Nullable<long> structure_id, System.Nullable<System.DateTime> begin_time, System.Nullable<System.DateTime> end_time) {
+        public AnnotationService.Types.LocationHistory[] GetLocationChangeLog(System.Nullable<long> structure_id, System.Nullable<System.DateTime> begin_time, System.Nullable<System.DateTime> end_time) {
             return base.Channel.GetLocationChangeLog(structure_id, begin_time, end_time);
         }
         
@@ -5985,7 +4599,7 @@ namespace WebAnnotationModel.Service {
         }
         
         [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
-        public WebAnnotationModel.Service.LocationHistory[] EndGetLocationChangeLog(System.IAsyncResult result) {
+        public AnnotationService.Types.LocationHistory[] EndGetLocationChangeLog(System.IAsyncResult result) {
             return base.Channel.EndGetLocationChangeLog(result);
         }
         
@@ -5997,7 +4611,7 @@ namespace WebAnnotationModel.Service {
         }
         
         private object[] OnEndGetLocationChangeLog(System.IAsyncResult result) {
-            WebAnnotationModel.Service.LocationHistory[] retVal = this.EndGetLocationChangeLog(result);
+            AnnotationService.Types.LocationHistory[] retVal = this.EndGetLocationChangeLog(result);
             return new object[] {
                     retVal};
         }
@@ -6035,12 +4649,12 @@ namespace WebAnnotationModel.Service {
     public interface IVolumeMeta {
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IVolumeMeta/GetScale", ReplyAction="http://tempuri.org/IVolumeMeta/GetScaleResponse")]
-        WebAnnotationModel.Service.Scale GetScale();
+        AnnotationService.Types.Scale GetScale();
         
         [System.ServiceModel.OperationContractAttribute(AsyncPattern=true, Action="http://tempuri.org/IVolumeMeta/GetScale", ReplyAction="http://tempuri.org/IVolumeMeta/GetScaleResponse")]
         System.IAsyncResult BeginGetScale(System.AsyncCallback callback, object asyncState);
         
-        WebAnnotationModel.Service.Scale EndGetScale(System.IAsyncResult result);
+        AnnotationService.Types.Scale EndGetScale(System.IAsyncResult result);
     }
     
     [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
@@ -6058,10 +4672,10 @@ namespace WebAnnotationModel.Service {
             this.results = results;
         }
         
-        public WebAnnotationModel.Service.Scale Result {
+        public AnnotationService.Types.Scale Result {
             get {
                 base.RaiseExceptionIfNecessary();
-                return ((WebAnnotationModel.Service.Scale)(this.results[0]));
+                return ((AnnotationService.Types.Scale)(this.results[0]));
             }
         }
     }
@@ -6097,7 +4711,7 @@ namespace WebAnnotationModel.Service {
         
         public event System.EventHandler<GetScaleCompletedEventArgs> GetScaleCompleted;
         
-        public WebAnnotationModel.Service.Scale GetScale() {
+        public AnnotationService.Types.Scale GetScale() {
             return base.Channel.GetScale();
         }
         
@@ -6107,7 +4721,7 @@ namespace WebAnnotationModel.Service {
         }
         
         [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
-        public WebAnnotationModel.Service.Scale EndGetScale(System.IAsyncResult result) {
+        public AnnotationService.Types.Scale EndGetScale(System.IAsyncResult result) {
             return base.Channel.EndGetScale(result);
         }
         
@@ -6116,7 +4730,7 @@ namespace WebAnnotationModel.Service {
         }
         
         private object[] OnEndGetScale(System.IAsyncResult result) {
-            WebAnnotationModel.Service.Scale retVal = this.EndGetScale(result);
+            AnnotationService.Types.Scale retVal = this.EndGetScale(result);
             return new object[] {
                     retVal};
         }

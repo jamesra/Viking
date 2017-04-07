@@ -311,9 +311,9 @@ namespace WebAnnotation.ViewModel
 //            long[] Loc_Ids = Store.Structures.GetUnfinishedBranches(this.ID);
 //            List<LocationObj> listLocations = Store.Locations.GetObjectsByIDs(Loc_Ids, true);
 
-            WebAnnotationModel.Service.LocationPositionOnly[] LocationArray = Store.Structures.GetUnfinishedBranchesWithPosition(this.ID);
+            AnnotationService.Types.LocationPositionOnly[] LocationArray = Store.Structures.GetUnfinishedBranchesWithPosition(this.ID);
 
-            Dictionary<double, List<WebAnnotationModel.Service.LocationPositionOnly>> dictSectionToLocations = this.MapLocationsToSections(LocationArray);
+            Dictionary<double, List<AnnotationService.Types.LocationPositionOnly>> dictSectionToLocations = this.MapLocationsToSections(LocationArray);
 
             List<double> levels = new List<double>(dictSectionToLocations.Keys);
             levels.Sort();
@@ -326,17 +326,17 @@ namespace WebAnnotation.ViewModel
             return levels.Count > 0;
         }
 
-        private string _LocationToString(WebAnnotationModel.Service.LocationPositionOnly loc)
+        private string _LocationToString(AnnotationService.Types.LocationPositionOnly loc)
         {
             return "Radius: " + loc.Radius.ToString("F1") + " X: " + loc.Position.X.ToString("F0") + " Y: " + loc.Position.Y.ToString("F0");
         }
 
-        private MenuItem BuildContextMenusForLevel(long level, List<WebAnnotationModel.Service.LocationPositionOnly> listObjs)
+        private MenuItem BuildContextMenusForLevel(long level, List<AnnotationService.Types.LocationPositionOnly> listObjs)
         {
             MenuItem rootMenuItem = null;
             if (listObjs.Count == 1)
             {
-                WebAnnotationModel.Service.LocationPositionOnly locObj = listObjs[0];
+                AnnotationService.Types.LocationPositionOnly locObj = listObjs[0];
                 //For a single item do not create a submenu
                 string locString = _LocationToString(locObj);
                 rootMenuItem = new MenuItem(level.ToString("D4") + " - " + locString, ContextMenu_SelectUnbranchedLocation);
@@ -345,7 +345,7 @@ namespace WebAnnotation.ViewModel
             else
             {
                 rootMenuItem = new MenuItem(level.ToString("D4"));
-                foreach (WebAnnotationModel.Service.LocationPositionOnly locObj in listObjs)
+                foreach (AnnotationService.Types.LocationPositionOnly locObj in listObjs)
                 {
                     string locString = _LocationToString(locObj);
                     MenuItem subItem = new MenuItem(locString, ContextMenu_SelectUnbranchedLocation);
@@ -357,14 +357,14 @@ namespace WebAnnotation.ViewModel
             return rootMenuItem;
         }
 
-        private Dictionary<double, List<WebAnnotationModel.Service.LocationPositionOnly>> MapLocationsToSections(IEnumerable<WebAnnotationModel.Service.LocationPositionOnly> locations)
+        private Dictionary<double, List<AnnotationService.Types.LocationPositionOnly>> MapLocationsToSections(IEnumerable<AnnotationService.Types.LocationPositionOnly> locations)
         {
-            Dictionary<double, List<WebAnnotationModel.Service.LocationPositionOnly>> dictSectionToLocations = new Dictionary<double, List<WebAnnotationModel.Service.LocationPositionOnly>>();
-            foreach (WebAnnotationModel.Service.LocationPositionOnly loc in locations)
+            Dictionary<double, List<AnnotationService.Types.LocationPositionOnly>> dictSectionToLocations = new Dictionary<double, List<AnnotationService.Types.LocationPositionOnly>>();
+            foreach (AnnotationService.Types.LocationPositionOnly loc in locations)
             {
                 if(!dictSectionToLocations.ContainsKey(loc.Position.Z))
                 {
-                    dictSectionToLocations[loc.Position.Z] = new List<WebAnnotationModel.Service.LocationPositionOnly>();
+                    dictSectionToLocations[loc.Position.Z] = new List<AnnotationService.Types.LocationPositionOnly>();
                 }
 
                 dictSectionToLocations[loc.Position.Z].Add(loc);

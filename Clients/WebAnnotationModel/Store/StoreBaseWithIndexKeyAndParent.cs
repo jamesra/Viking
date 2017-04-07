@@ -20,7 +20,7 @@ namespace WebAnnotationModel
         where KEYGEN : IKeyGenerator<KEY>, new()
         where PROXY : System.ServiceModel.ClientBase<INTERFACE>
         where OBJECT : WCFObjBaseWithParent<KEY, WCFOBJECT, OBJECT>, new()
-        where WCFOBJECT : WebAnnotationModel.Service.DataObjectWithParentOflong, new()
+        where WCFOBJECT : AnnotationService.Types.DataObjectWithParentOfLong, new()
         
     {
 

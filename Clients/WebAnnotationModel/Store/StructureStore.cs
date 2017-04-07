@@ -11,7 +11,7 @@ using System.ServiceModel;
 
 using WebAnnotationModel.Service;
 using WebAnnotationModel.Objects;
-using Geometry;
+using Geometry;using AnnotationService.Types;
 
 namespace WebAnnotationModel
 {

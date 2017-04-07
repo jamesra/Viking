@@ -12,6 +12,7 @@ using WebAnnotationModel.Service;
 using WebAnnotationModel.Objects;
 using SqlGeometryUtils;
 using Geometry;
+using AnnotationService.Types;
 
 namespace WebAnnotationModel
 {

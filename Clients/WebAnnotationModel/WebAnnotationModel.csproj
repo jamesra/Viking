@@ -67,6 +67,10 @@
       <HintPath>..\..\Packages\Microsoft.SqlServer.Types.14.0.314.76\lib\net40\Microsoft.SqlServer.Types.dll</HintPath>
       <Private>True</Private>
     </Reference>
+    <Reference Include="protobuf-net, Version=2.0.0.668, Culture=neutral, PublicKeyToken=257b51d87d2e4d67, processorArchitecture=MSIL">
+      <HintPath>..\..\Packages\protobuf-net.2.0.0.668\lib\net40\protobuf-net.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.DataAnnotations" />
     <Reference Include="System.Core" />
@@ -84,6 +88,11 @@
     <Compile Include="Objects\Attribute.cs" />
     <Compile Include="Objects\LocationLinkObj.cs" />
     <Compile Include="RegionLoader\RegionLoader.cs" />
+    <Compile Include="Service References\Service\Reference.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Reference.svcmap</DependentUpon>
+    </Compile>
     <Compile Include="SqlServerTypes\Loader.cs" />
     <Compile Include="Store\Interfaces.cs" />
     <Compile Include="Store\LocationLinkStore.cs" />
@@ -97,11 +106,6 @@
     <Compile Include="Objects\WCFObjBaseWithLink.cs" />
     <Compile Include="Objects\WCFObjBaseWithParent.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Service References\Service\Reference.cs">
-      <AutoGen>True</AutoGen>
-      <DesignTime>True</DesignTime>
-      <DependentUpon>Reference.svcmap</DependentUpon>
-    </Compile>
     <Compile Include="State.cs" />
     <Compile Include="Store\IKeyGenerator.cs" />
     <Compile Include="Store\LongIndexGenerator.cs" />
@@ -118,67 +122,38 @@
     <WCFMetadata Include="Service References\" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="app.config" />
+    <None Include="app.config">
+      <SubType>Designer</SubType>
+    </None>
     <None Include="packages.config" />
-    <None Include="Service References\Service\Annotation.Service.GraphClasses11.xsd">
+    <None Include="Properties\DataSources\AnnotationService.Types.AnnotationSet.datasource" />
+    <None Include="Properties\DataSources\AnnotationService.Types.CreateStructureRetval.datasource" />
+    <None Include="Properties\DataSources\AnnotationService.Types.Location.datasource" />
+    <None Include="Properties\DataSources\AnnotationService.Types.LocationHistory.datasource" />
+    <None Include="Properties\DataSources\AnnotationService.Types.LocationLink.datasource" />
+    <None Include="Properties\DataSources\AnnotationService.Types.LocationPositionOnly.datasource" />
+    <None Include="Properties\DataSources\AnnotationService.Types.PermittedStructureLink.datasource" />
+    <None Include="Properties\DataSources\AnnotationService.Types.Scale.datasource" />
+    <None Include="Properties\DataSources\AnnotationService.Types.Structure.datasource" />
+    <None Include="Properties\DataSources\AnnotationService.Types.StructureLink.datasource" />
+    <None Include="Properties\DataSources\AnnotationService.Types.StructureType.datasource" />
+    <None Include="Service References\Service\AnnotationService.Types.xsd">
       <SubType>Designer</SubType>
     </None>
-    <None Include="Service References\Service\Annotation11.xsd">
+    <None Include="Service References\Service\Arrays.xsd">
       <SubType>Designer</SubType>
     </None>
-    <None Include="Service References\Service\Arrays11.xsd">
+    <None Include="Service References\Service\service.wsdl" />
+    <None Include="Service References\Service\service.xsd">
       <SubType>Designer</SubType>
     </None>
-    <None Include="Service References\Service\service2.wsdl" />
-    <None Include="Service References\Service\service31.xsd">
-      <SubType>Designer</SubType>
-    </None>
-    <None Include="Service References\Service\service32.xsd">
-      <SubType>Designer</SubType>
-    </None>
-    <None Include="Service References\Service\service33.xsd">
+    <None Include="Service References\Service\service1.xsd">
       <SubType>Designer</SubType>
     </None>
     <None Include="Service References\Service\System.Data.Entity.Spatial.xsd">
       <SubType>Designer</SubType>
     </None>
-    <None Include="Service References\Service\WebAnnotationModel.Service.AnnotationSet.datasource">
-      <DependentUpon>Reference.svcmap</DependentUpon>
-    </None>
-    <None Include="Service References\Service\WebAnnotationModel.Service.CreateStructureRetval.datasource">
-      <DependentUpon>Reference.svcmap</DependentUpon>
-    </None>
     <None Include="Service References\Service\WebAnnotationModel.Service.Graphx.datasource">
-      <DependentUpon>Reference.svcmap</DependentUpon>
-    </None>
-    <None Include="Service References\Service\WebAnnotationModel.Service.Location.datasource">
-      <DependentUpon>Reference.svcmap</DependentUpon>
-    </None>
-    <None Include="Service References\Service\WebAnnotationModel.Service.LocationHistory.datasource">
-      <DependentUpon>Reference.svcmap</DependentUpon>
-    </None>
-    <None Include="Service References\Service\WebAnnotationModel.Service.LocationLink.datasource">
-      <DependentUpon>Reference.svcmap</DependentUpon>
-    </None>
-    <None Include="Service References\Service\WebAnnotationModel.Service.LocationPositionOnly.datasource">
-      <DependentUpon>Reference.svcmap</DependentUpon>
-    </None>
-    <None Include="Service References\Service\WebAnnotationModel.Service.PermittedStructureLink.datasource">
-      <DependentUpon>Reference.svcmap</DependentUpon>
-    </None>
-    <None Include="Service References\Service\WebAnnotationModel.Service.Scale.datasource">
-      <DependentUpon>Reference.svcmap</DependentUpon>
-    </None>
-    <None Include="Service References\Service\WebAnnotationModel.Service.Structure.datasource">
-      <DependentUpon>Reference.svcmap</DependentUpon>
-    </None>
-    <None Include="Service References\Service\WebAnnotationModel.Service.StructureHistory.datasource">
-      <DependentUpon>Reference.svcmap</DependentUpon>
-    </None>
-    <None Include="Service References\Service\WebAnnotationModel.Service.StructureLink.datasource">
-      <DependentUpon>Reference.svcmap</DependentUpon>
-    </None>
-    <None Include="Service References\Service\WebAnnotationModel.Service.StructureType.datasource">
       <DependentUpon>Reference.svcmap</DependentUpon>
     </None>
     <None Include="Service References\Service\WebAnnotationModel.Service.SynapseObject.datasource">
@@ -186,21 +161,10 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <WCFMetadataStorage Include="Service References\Service\" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Service References\Service\configuration91.svcinfo" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Service References\Service\configuration.svcinfo" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Service References\Service\Reference.svcmap">
-      <Generator>WCF Proxy Generator</Generator>
-      <LastGenOutput>Reference.cs</LastGenOutput>
-    </None>
-  </ItemGroup>
-  <ItemGroup>
+    <ProjectReference Include="..\..\AnnotationServiceTypes\AnnotationServiceTypes.csproj">
+      <Project>{55ff8936-d9bc-4ac6-aa29-fc0d7a7640ec}</Project>
+      <Name>AnnotationServiceTypes</Name>
+    </ProjectReference>
     <ProjectReference Include="..\..\Geometry\Geometry.csproj">
       <Project>{EACB87E8-A5E3-417E-A9EF-B80C2A68C020}</Project>
       <Name>Geometry</Name>
@@ -221,11 +185,20 @@
     <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="Service References\Service\configuration91.svcinfo" />
+    <None Include="Service References\Service\configuration.svcinfo" />
+    <None Include="Service References\Service\Reference.svcmap">
+      <Generator>WCF Proxy Generator</Generator>
+      <LastGenOutput>Reference.cs</LastGenOutput>
+    </None>
     <Content Include="SqlServerTypes\readme.htm" />
     <Content Include="SqlServerTypes\x64\msvcr120.dll" />
     <Content Include="SqlServerTypes\x64\SqlServerSpatial140.dll" />
     <Content Include="SqlServerTypes\x86\msvcr120.dll" />
     <Content Include="SqlServerTypes\x86\SqlServerSpatial140.dll" />
+  </ItemGroup>
+  <ItemGroup>
+    <WCFMetadataStorage Include="Service References\Service\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>

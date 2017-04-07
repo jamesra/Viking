@@ -9,6 +9,7 @@ using System.ServiceModel;
 
 using WebAnnotationModel.Service;
 using WebAnnotationModel.Objects;
+using AnnotationService.Types;
 
 namespace WebAnnotationModel
 {
