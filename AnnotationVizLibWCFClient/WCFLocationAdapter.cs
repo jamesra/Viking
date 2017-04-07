@@ -5,7 +5,8 @@ using System.Text;
 using Microsoft.SqlServer.Types;
 using SqlGeometryUtils;
 using Geometry;
-using AnnotationVizLib.WCFClient.AnnotationService;
+using AnnotationVizLib.WCFClient.AnnotationClient;
+using AnnotationService.Types;
 
 namespace AnnotationVizLib.WCFClient
 {

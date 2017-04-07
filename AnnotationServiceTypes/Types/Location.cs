@@ -11,7 +11,7 @@ namespace AnnotationService.Types
 {
     [ProtoContract]
     [DataContract]
-    public class LocationPositionOnly : DataObjectWithKey<long>
+    public class LocationPositionOnly : DataObjectWithKeyOfLong
     {
         AnnotationPoint _Position;
         private double _Radius;
@@ -40,7 +40,7 @@ namespace AnnotationService.Types
     [ProtoContract]
     [DataContract]
     [ProtoInclude(1000, typeof(LocationHistory))]
-    public class Location : DataObjectWithKey<long>
+    public class Location : DataObjectWithKeyOfLong
     {
         protected long _ParentID;
         protected long _Section;
@@ -302,11 +302,13 @@ namespace AnnotationService.Types
         
     }
 
+    [ProtoContract]
     [DataContract]
     public class LocationHistory : Location
     {
         protected ulong  _ChangedColumnMask = 0;
 
+        [ProtoMember(1)]
         [DataMember]
         [Column("ChangedColumnMask")]
         public ulong ChangedColumnMask

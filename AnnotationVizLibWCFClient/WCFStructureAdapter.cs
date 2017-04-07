@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using AnnotationVizLib.WCFClient.AnnotationService;
+using AnnotationService.Types;
 
 namespace AnnotationVizLib.WCFClient
 {

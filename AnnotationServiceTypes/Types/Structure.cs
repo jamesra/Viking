@@ -38,7 +38,7 @@ namespace AnnotationService.Types
 
     [ProtoContract]
     [DataContract]
-    public class Structure : DataObjectWithParent<long>
+    public class Structure : DataObjectWithParentOfLong
     {
         protected long _Type;
         protected string _Notes;

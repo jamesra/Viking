@@ -4,8 +4,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using AnnotationVizLib;
-using AnnotationVizLib.WCFClient.AnnotationService;
-using AnnotationVizLib.WCFClient;
+using AnnotationVizLib.WCFClient.AnnotationClient;
+using AnnotationService.Types;
 using System.Diagnostics;
 
 namespace AnnotationVizLib.WCFClient

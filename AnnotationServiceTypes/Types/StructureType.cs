@@ -10,7 +10,7 @@ namespace AnnotationService.Types
 {
     [DataContract]
     [ProtoContract]
-    public class StructureType : DataObjectWithParent<long>
+    public class StructureType : DataObjectWithParentOfLong
     {
         private string _Name;
         private string _Notes;

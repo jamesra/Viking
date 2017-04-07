@@ -5,7 +5,7 @@
   <xs:import namespace="http://schemas.datacontract.org/2004/07/System.Data.Entity.Spatial" />
   <xs:complexType name="StructureType">
     <xs:complexContent mixed="false">
-      <xs:extension base="tns:DataObjectWithParentOflong">
+      <xs:extension base="tns:DataObjectWithParentOfLong">
         <xs:sequence>
           <xs:element minOccurs="0" name="Abstract" type="xs:boolean" />
           <xs:element minOccurs="0" name="Code" nillable="true" type="xs:string" />
@@ -22,31 +22,17 @@
     </xs:complexContent>
   </xs:complexType>
   <xs:element name="StructureType" nillable="true" type="tns:StructureType" />
-  <xs:complexType name="DataObjectWithParentOflong">
-    <xs:annotation>
-      <xs:appinfo>
-        <GenericType Name="DataObjectWithParentOf{0}{#}" Namespace="http://schemas.datacontract.org/2004/07/AnnotationService.Types" xmlns="http://schemas.microsoft.com/2003/10/Serialization/">
-          <GenericParameter Name="long" Namespace="http://www.w3.org/2001/XMLSchema" />
-        </GenericType>
-      </xs:appinfo>
-    </xs:annotation>
+  <xs:complexType name="DataObjectWithParentOfLong">
     <xs:complexContent mixed="false">
-      <xs:extension base="tns:DataObjectWithKeyOflong">
+      <xs:extension base="tns:DataObjectWithKeyOfLong">
         <xs:sequence>
           <xs:element minOccurs="0" name="ParentID" nillable="true" type="xs:long" />
         </xs:sequence>
       </xs:extension>
     </xs:complexContent>
   </xs:complexType>
-  <xs:element name="DataObjectWithParentOflong" nillable="true" type="tns:DataObjectWithParentOflong" />
-  <xs:complexType name="DataObjectWithKeyOflong">
-    <xs:annotation>
-      <xs:appinfo>
-        <GenericType Name="DataObjectWithKeyOf{0}{#}" Namespace="http://schemas.datacontract.org/2004/07/AnnotationService.Types" xmlns="http://schemas.microsoft.com/2003/10/Serialization/">
-          <GenericParameter Name="long" Namespace="http://www.w3.org/2001/XMLSchema" />
-        </GenericType>
-      </xs:appinfo>
-    </xs:annotation>
+  <xs:element name="DataObjectWithParentOfLong" nillable="true" type="tns:DataObjectWithParentOfLong" />
+  <xs:complexType name="DataObjectWithKeyOfLong">
     <xs:complexContent mixed="false">
       <xs:extension base="tns:DataObject">
         <xs:sequence>
@@ -55,7 +41,7 @@
       </xs:extension>
     </xs:complexContent>
   </xs:complexType>
-  <xs:element name="DataObjectWithKeyOflong" nillable="true" type="tns:DataObjectWithKeyOflong" />
+  <xs:element name="DataObjectWithKeyOfLong" nillable="true" type="tns:DataObjectWithKeyOfLong" />
   <xs:complexType name="DataObject">
     <xs:sequence>
       <xs:element minOccurs="0" name="DBAction" type="tns:DBACTION" />
@@ -97,7 +83,7 @@
   <xs:element name="ArrayOfStructureType" nillable="true" type="tns:ArrayOfStructureType" />
   <xs:complexType name="Structure">
     <xs:complexContent mixed="false">
-      <xs:extension base="tns:DataObjectWithParentOflong">
+      <xs:extension base="tns:DataObjectWithParentOfLong">
         <xs:sequence>
           <xs:element minOccurs="0" name="AttributesXml" nillable="true" type="xs:string" />
           <xs:element xmlns:q3="http://schemas.microsoft.com/2003/10/Serialization/Arrays" minOccurs="0" name="ChildIDs" nillable="true" type="q3:ArrayOflong" />
@@ -135,7 +121,7 @@
   <xs:element name="StructureLink" nillable="true" type="tns:StructureLink" />
   <xs:complexType name="Location">
     <xs:complexContent mixed="false">
-      <xs:extension base="tns:DataObjectWithKeyOflong">
+      <xs:extension base="tns:DataObjectWithKeyOfLong">
         <xs:sequence>
           <xs:element minOccurs="0" name="AttributesXml" nillable="true" type="xs:string" />
           <xs:element minOccurs="0" name="Closed" type="xs:boolean" />
@@ -206,7 +192,7 @@
   <xs:element name="ArrayOfLocationPositionOnly" nillable="true" type="tns:ArrayOfLocationPositionOnly" />
   <xs:complexType name="LocationPositionOnly">
     <xs:complexContent mixed="false">
-      <xs:extension base="tns:DataObjectWithKeyOflong">
+      <xs:extension base="tns:DataObjectWithKeyOfLong">
         <xs:sequence>
           <xs:element minOccurs="0" name="Position" type="tns:AnnotationPoint" />
           <xs:element minOccurs="0" name="Radius" type="xs:double" />

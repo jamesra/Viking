@@ -88,7 +88,7 @@
     <Compile Include="Extensions.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Queries.cs" />
-    <Compile Include="Service References\AnnotationService\Reference.cs">
+    <Compile Include="Service References\AnnotationClient\Reference.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
       <DependentUpon>Reference.svcmap</DependentUpon>
@@ -104,6 +104,10 @@
     <Compile Include="WCFStructureTypeAdapter.cs" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\AnnotationServiceTypes\AnnotationServiceTypes.csproj">
+      <Project>{55ff8936-d9bc-4ac6-aa29-fc0d7a7640ec}</Project>
+      <Name>AnnotationServiceTypes</Name>
+    </ProjectReference>
     <ProjectReference Include="..\AnnotationVizLib\AnnotationVizLib.csproj">
       <Project>{a89a628b-3ffa-4271-b99a-e45c3d72d3e3}</Project>
       <Name>AnnotationVizLib</Name>
@@ -124,93 +128,71 @@
   <ItemGroup>
     <None Include="app.config" />
     <None Include="packages.config" />
-    <None Include="Service References\AnnotationService\AnnotationService.Types.xsd">
+    <None Include="Properties\DataSources\AnnotationService.Types.AnnotationSet.datasource" />
+    <None Include="Properties\DataSources\AnnotationService.Types.CreateStructureRetval.datasource" />
+    <None Include="Properties\DataSources\AnnotationService.Types.Location.datasource" />
+    <None Include="Properties\DataSources\AnnotationService.Types.LocationHistory.datasource" />
+    <None Include="Properties\DataSources\AnnotationService.Types.LocationLink.datasource" />
+    <None Include="Properties\DataSources\AnnotationService.Types.LocationPositionOnly.datasource" />
+    <None Include="Properties\DataSources\AnnotationService.Types.PermittedStructureLink.datasource" />
+    <None Include="Properties\DataSources\AnnotationService.Types.Scale.datasource" />
+    <None Include="Properties\DataSources\AnnotationService.Types.Structure.datasource" />
+    <None Include="Properties\DataSources\AnnotationService.Types.StructureLink.datasource" />
+    <None Include="Properties\DataSources\AnnotationService.Types.StructureType.datasource" />
+    <None Include="Service References\AnnotationClient\AnnotationService.Types.xsd">
       <SubType>Designer</SubType>
     </None>
-    <None Include="Service References\AnnotationService\AnnotationVizLib.WCFClient.AnnotationService.AnnotationSet.datasource">
+    <None Include="Service References\AnnotationClient\AnnotationVizLib.WCFClient.AnnotationClient.GetAnnotationsInMosaicRegionResponse.datasource">
       <DependentUpon>Reference.svcmap</DependentUpon>
     </None>
-    <None Include="Service References\AnnotationService\AnnotationVizLib.WCFClient.AnnotationService.CreateStructureRetval.datasource">
+    <None Include="Service References\AnnotationClient\AnnotationVizLib.WCFClient.AnnotationClient.GetLocationChangesInMosaicRegionResponse.datasource">
       <DependentUpon>Reference.svcmap</DependentUpon>
     </None>
-    <None Include="Service References\AnnotationService\AnnotationVizLib.WCFClient.AnnotationService.GetAnnotationsInMosaicRegionResponse.datasource">
+    <None Include="Service References\AnnotationClient\AnnotationVizLib.WCFClient.AnnotationClient.GetLocationChangesResponse.datasource">
       <DependentUpon>Reference.svcmap</DependentUpon>
     </None>
-    <None Include="Service References\AnnotationService\AnnotationVizLib.WCFClient.AnnotationService.GetLocationChangesInMosaicRegionResponse.datasource">
+    <None Include="Service References\AnnotationClient\AnnotationVizLib.WCFClient.AnnotationClient.GetLocationLinksForSectionInMosaicRegionResponse.datasource">
       <DependentUpon>Reference.svcmap</DependentUpon>
     </None>
-    <None Include="Service References\AnnotationService\AnnotationVizLib.WCFClient.AnnotationService.GetLocationChangesResponse.datasource">
+    <None Include="Service References\AnnotationClient\AnnotationVizLib.WCFClient.AnnotationClient.GetLocationLinksForSectionResponse.datasource">
       <DependentUpon>Reference.svcmap</DependentUpon>
     </None>
-    <None Include="Service References\AnnotationService\AnnotationVizLib.WCFClient.AnnotationService.GetLocationLinksForSectionInMosaicRegionResponse.datasource">
+    <None Include="Service References\AnnotationClient\AnnotationVizLib.WCFClient.AnnotationClient.GetLocationsForSectionResponse.datasource">
       <DependentUpon>Reference.svcmap</DependentUpon>
     </None>
-    <None Include="Service References\AnnotationService\AnnotationVizLib.WCFClient.AnnotationService.GetLocationLinksForSectionResponse.datasource">
+    <None Include="Service References\AnnotationClient\AnnotationVizLib.WCFClient.AnnotationClient.GetStructuresForSectionInMosaicRegionResponse.datasource">
       <DependentUpon>Reference.svcmap</DependentUpon>
     </None>
-    <None Include="Service References\AnnotationService\AnnotationVizLib.WCFClient.AnnotationService.GetLocationsForSectionResponse.datasource">
+    <None Include="Service References\AnnotationClient\AnnotationVizLib.WCFClient.AnnotationClient.GetStructuresForSectionInVolumeRegionResponse.datasource">
       <DependentUpon>Reference.svcmap</DependentUpon>
     </None>
-    <None Include="Service References\AnnotationService\AnnotationVizLib.WCFClient.AnnotationService.GetStructuresForSectionInMosaicRegionResponse.datasource">
+    <None Include="Service References\AnnotationClient\AnnotationVizLib.WCFClient.AnnotationClient.GetStructuresForSectionResponse.datasource">
       <DependentUpon>Reference.svcmap</DependentUpon>
     </None>
-    <None Include="Service References\AnnotationService\AnnotationVizLib.WCFClient.AnnotationService.GetStructuresForSectionInVolumeRegionResponse.datasource">
+    <None Include="Service References\AnnotationClient\AnnotationVizLib.WCFClient.AnnotationClient.Graphx.datasource">
       <DependentUpon>Reference.svcmap</DependentUpon>
     </None>
-    <None Include="Service References\AnnotationService\AnnotationVizLib.WCFClient.AnnotationService.GetStructuresForSectionResponse.datasource">
+    <None Include="Service References\AnnotationClient\AnnotationVizLib.WCFClient.AnnotationClient.SynapseObject.datasource">
       <DependentUpon>Reference.svcmap</DependentUpon>
     </None>
-    <None Include="Service References\AnnotationService\AnnotationVizLib.WCFClient.AnnotationService.Graphx.datasource">
-      <DependentUpon>Reference.svcmap</DependentUpon>
-    </None>
-    <None Include="Service References\AnnotationService\AnnotationVizLib.WCFClient.AnnotationService.Location.datasource">
-      <DependentUpon>Reference.svcmap</DependentUpon>
-    </None>
-    <None Include="Service References\AnnotationService\AnnotationVizLib.WCFClient.AnnotationService.LocationHistory.datasource">
-      <DependentUpon>Reference.svcmap</DependentUpon>
-    </None>
-    <None Include="Service References\AnnotationService\AnnotationVizLib.WCFClient.AnnotationService.LocationLink.datasource">
-      <DependentUpon>Reference.svcmap</DependentUpon>
-    </None>
-    <None Include="Service References\AnnotationService\AnnotationVizLib.WCFClient.AnnotationService.LocationPositionOnly.datasource">
-      <DependentUpon>Reference.svcmap</DependentUpon>
-    </None>
-    <None Include="Service References\AnnotationService\AnnotationVizLib.WCFClient.AnnotationService.PermittedStructureLink.datasource">
-      <DependentUpon>Reference.svcmap</DependentUpon>
-    </None>
-    <None Include="Service References\AnnotationService\AnnotationVizLib.WCFClient.AnnotationService.Scale.datasource">
-      <DependentUpon>Reference.svcmap</DependentUpon>
-    </None>
-    <None Include="Service References\AnnotationService\AnnotationVizLib.WCFClient.AnnotationService.Structure.datasource">
-      <DependentUpon>Reference.svcmap</DependentUpon>
-    </None>
-    <None Include="Service References\AnnotationService\AnnotationVizLib.WCFClient.AnnotationService.StructureLink.datasource">
-      <DependentUpon>Reference.svcmap</DependentUpon>
-    </None>
-    <None Include="Service References\AnnotationService\AnnotationVizLib.WCFClient.AnnotationService.StructureType.datasource">
-      <DependentUpon>Reference.svcmap</DependentUpon>
-    </None>
-    <None Include="Service References\AnnotationService\AnnotationVizLib.WCFClient.AnnotationService.SynapseObject.datasource">
-      <DependentUpon>Reference.svcmap</DependentUpon>
-    </None>
-    <None Include="Service References\AnnotationService\Arrays.xsd">
+    <None Include="Service References\AnnotationClient\Arrays.xsd">
       <SubType>Designer</SubType>
     </None>
-    <None Include="Service References\AnnotationService\service.wsdl" />
-    <None Include="Service References\AnnotationService\service.xsd">
+    <None Include="Service References\AnnotationClient\service.wsdl" />
+    <None Include="Service References\AnnotationClient\service.xsd">
       <SubType>Designer</SubType>
     </None>
-    <None Include="Service References\AnnotationService\service1.xsd">
+    <None Include="Service References\AnnotationClient\service1.xsd">
       <SubType>Designer</SubType>
     </None>
-    <None Include="Service References\AnnotationService\System.Data.Entity.Spatial.xsd">
+    <None Include="Service References\AnnotationClient\System.Data.Entity.Spatial.xsd">
       <SubType>Designer</SubType>
     </None>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Service References\AnnotationService\configuration91.svcinfo" />
-    <None Include="Service References\AnnotationService\configuration.svcinfo" />
-    <None Include="Service References\AnnotationService\Reference.svcmap">
+    <None Include="Service References\AnnotationClient\configuration91.svcinfo" />
+    <None Include="Service References\AnnotationClient\configuration.svcinfo" />
+    <None Include="Service References\AnnotationClient\Reference.svcmap">
       <Generator>WCF Proxy Generator</Generator>
       <LastGenOutput>Reference.cs</LastGenOutput>
     </None>
@@ -232,7 +214,7 @@
     <WCFMetadata Include="Service References\" />
   </ItemGroup>
   <ItemGroup>
-    <WCFMetadataStorage Include="Service References\AnnotationService\" />
+    <WCFMetadataStorage Include="Service References\AnnotationClient\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="..\Packages\Microsoft.Bcl.Build.1.0.21\build\Microsoft.Bcl.Build.targets" Condition="Exists('..\Packages\Microsoft.Bcl.Build.1.0.21\build\Microsoft.Bcl.Build.targets')" />

@@ -2,7 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Web;
-using AnnotationVizLib.WCFClient.AnnotationService;
+using AnnotationVizLib.WCFClient.AnnotationClient;
+using AnnotationService.Types;
 
 namespace AnnotationVizLib.WCFClient
 {
@@ -32,13 +33,13 @@ namespace AnnotationVizLib.WCFClient
 
         public static SortedList<string, List<Structure>> LabelToStructuresMap()
         {              
-            using (AnnotationService.AnnotateStructuresClient client = ConnectionFactory.CreateStructuresClient())
+            using (AnnotateStructuresClient client = ConnectionFactory.CreateStructuresClient())
             {
                 return LabelToStructuresMap(client);
             }
         }
 
-        public  static SortedList<string, List<Structure>> LabelToStructuresMap(AnnotationService.AnnotateStructuresClient client)
+        public  static SortedList<string, List<Structure>> LabelToStructuresMap(AnnotateStructuresClient client)
         {
             long typeID =1;
             Structure[] structures = client.GetStructuresOfType(typeID);
@@ -196,7 +197,7 @@ namespace AnnotationVizLib.WCFClient
 
         public static SortedDictionary<long, List<StructureLink>> GetLinkedStructures()
         {
-            using (AnnotationService.AnnotateStructuresClient client = ConnectionFactory.CreateStructuresClient())
+            using (AnnotateStructuresClient client = ConnectionFactory.CreateStructuresClient())
             {
                 return GetLinkedStructures(client);
             }
@@ -205,7 +206,7 @@ namespace AnnotationVizLib.WCFClient
 
         public static ICollection<long> GetLinkedStructureParentIDs()
         {
-            using (AnnotationService.AnnotateStructuresClient client = ConnectionFactory.CreateStructuresClient())
+            using (AnnotateStructuresClient client = ConnectionFactory.CreateStructuresClient())
             {
                 return GetLinkedStructureParentIDs(client); 
             }

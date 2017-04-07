@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using AnnotationVizLib.WCFClient.AnnotationService;
-
+using AnnotationService.Types;
+using AnnotationVizLib.WCFClient.AnnotationClient;
 
 namespace AnnotationVizLib.WCFClient
 {
@@ -62,7 +62,7 @@ namespace AnnotationVizLib.WCFClient
 
             using (AnnotateLocationsClient proxy = ConnectionFactory.CreateLocationsClient())
             {
-                Location[] struct_locations = proxy.GetLocationsForStructure((long)s.ID);
+                Location[] struct_locations = proxy.GetLocationsForStructure(s.ID);
 
                 root_graph = BuildGraphFromLocations(s, struct_locations, scale);
             }

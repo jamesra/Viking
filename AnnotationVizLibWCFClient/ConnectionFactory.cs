@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Diagnostics;
-using AnnotationVizLib.WCFClient.AnnotationService;
+using AnnotationVizLib.WCFClient.AnnotationClient;
 
 namespace AnnotationVizLib.WCFClient
 {
@@ -36,40 +36,40 @@ namespace AnnotationVizLib.WCFClient
             ConnectionFactory._userCredentials = userCredentials; 
         }
 
-        public static AnnotationService.AnnotateStructureTypesClient CreateStructureTypesClient()
+        public static AnnotateStructureTypesClient CreateStructureTypesClient()
         {
             Debug.Assert(_Endpoint != null, "SetConnection(endpoint, userCredentials) has not been called");
-            AnnotationService.AnnotateStructureTypesClient proxy = new AnnotationService.AnnotateStructureTypesClient();
+            AnnotateStructureTypesClient proxy = new AnnotateStructureTypesClient();
             proxy.Endpoint.Address = new System.ServiceModel.EndpointAddress(ConnectionFactory.Endpoint);
             proxy.ClientCredentials.UserName.UserName = ConnectionFactory.userCredentials.UserName;
             proxy.ClientCredentials.UserName.Password = ConnectionFactory.userCredentials.Password;
             return proxy;
         }
 
-        public static AnnotationService.AnnotateStructuresClient CreateStructuresClient()
+        public static AnnotateStructuresClient CreateStructuresClient()
         {
             Debug.Assert(_Endpoint != null, "SetConnection(endpoint, userCredentials) has not been called");
-            AnnotationService.AnnotateStructuresClient proxy = new AnnotationService.AnnotateStructuresClient();
+            AnnotateStructuresClient proxy = new AnnotateStructuresClient();
             proxy.Endpoint.Address = new System.ServiceModel.EndpointAddress(ConnectionFactory.Endpoint);
             proxy.ClientCredentials.UserName.UserName = ConnectionFactory.userCredentials.UserName;
             proxy.ClientCredentials.UserName.Password = ConnectionFactory.userCredentials.Password;
             return proxy;
         }
 
-        public static AnnotationService.AnnotateLocationsClient CreateLocationsClient()
+        public static AnnotateLocationsClient CreateLocationsClient()
         {
             Debug.Assert(_Endpoint != null, "SetConnection(endpoint, userCredentials) has not been called");
-            AnnotationService.AnnotateLocationsClient proxy = new AnnotationService.AnnotateLocationsClient();
+            AnnotateLocationsClient proxy = new AnnotateLocationsClient();
             proxy.Endpoint.Address = new System.ServiceModel.EndpointAddress(ConnectionFactory.Endpoint);
             proxy.ClientCredentials.UserName.UserName = ConnectionFactory.userCredentials.UserName;
             proxy.ClientCredentials.UserName.Password = ConnectionFactory.userCredentials.Password;
             return proxy;
         }
 
-        public static AnnotationService.VolumeMetaClient CreateVolumeMetaClient()
+        public static VolumeMetaClient CreateVolumeMetaClient()
         {
             Debug.Assert(_Endpoint != null, "SetConnection(endpoint, userCredentials) has not been called");
-            AnnotationService.VolumeMetaClient proxy = new AnnotationService.VolumeMetaClient();
+            VolumeMetaClient proxy = new VolumeMetaClient();
             proxy.Endpoint.Address = new System.ServiceModel.EndpointAddress(ConnectionFactory.Endpoint);
             proxy.ClientCredentials.UserName.UserName = ConnectionFactory.userCredentials.UserName;
             proxy.ClientCredentials.UserName.Password = ConnectionFactory.userCredentials.Password;
