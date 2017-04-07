@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Microsoft.SqlServer.Types;
-using AnnotationVizLib.WCFClient.AnnotationService;
 using SqlGeometryUtils;
 using Geometry;
+using AnnotationVizLib.WCFClient.AnnotationService;
 
 namespace AnnotationVizLib.WCFClient
 {

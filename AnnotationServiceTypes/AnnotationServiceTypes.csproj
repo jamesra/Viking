@@ -56,19 +56,24 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="AnnotationSet.cs" />
+    <Compile Include="Types\AnnotationSet.cs" />
     <Compile Include="Attributes.cs" />
-    <Compile Include="DataObject.cs" />
-    <Compile Include="Enums.cs" />
-    <Compile Include="Geometry.cs" />
-    <Compile Include="Location.cs" />
-    <Compile Include="LocationLink.cs" />
-    <Compile Include="PermittedStructureLink.cs" />
+    <Compile Include="Types\DataObject.cs" />
+    <Compile Include="Types\Enums.cs" />
+    <Compile Include="Types\Geometry.cs" />
+    <Compile Include="Interfaces\IAnnotateLocations.cs" />
+    <Compile Include="Interfaces\IAnnotateStructures.cs" />
+    <Compile Include="Interfaces\IAnnotateStructureTypes.cs" />
+    <Compile Include="Interfaces\ICredentials.cs" />
+    <Compile Include="Interfaces\IVolumeMeta.cs" />
+    <Compile Include="Types\Location.cs" />
+    <Compile Include="Types\LocationLink.cs" />
+    <Compile Include="Types\PermittedStructureLink.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Scale.cs" />
-    <Compile Include="Structure.cs" />
-    <Compile Include="StructureLink.cs" />
-    <Compile Include="StructureType.cs" />
+    <Compile Include="Types\Scale.cs" />
+    <Compile Include="Types\Structure.cs" />
+    <Compile Include="Types\StructureLink.cs" />
+    <Compile Include="Types\StructureType.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

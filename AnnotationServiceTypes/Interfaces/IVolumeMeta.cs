@@ -1,7 +1,8 @@
 ﻿using System;
 using System.ServiceModel;
+using AnnotationService.Types;
 
-namespace Annotation.Service.Interfaces
+namespace AnnotationService.Interfaces
 {
     [ServiceContract]
     interface IVolumeMeta

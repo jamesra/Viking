@@ -1,7 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <xs:schema xmlns:tns="http://schemas.microsoft.com/2003/10/Serialization/Arrays" elementFormDefault="qualified" targetNamespace="http://schemas.microsoft.com/2003/10/Serialization/Arrays" xmlns:xs="http://www.w3.org/2001/XMLSchema">
-  <xs:import namespace="http://schemas.datacontract.org/2004/07/Annotation" />
-  <xs:import namespace="http://schemas.datacontract.org/2004/07/" />
+  <xs:import namespace="http://schemas.datacontract.org/2004/07/AnnotationService.Types" />
   <xs:complexType name="ArrayOfstring">
     <xs:sequence>
       <xs:element minOccurs="0" maxOccurs="unbounded" name="string" nillable="true" type="xs:string" />
@@ -14,42 +13,42 @@
     </xs:sequence>
   </xs:complexType>
   <xs:element name="ArrayOflong" nillable="true" type="tns:ArrayOflong" />
-  <xs:complexType name="ArrayOfKeyValueOflongStructuredeM9q2VH">
+  <xs:complexType name="ArrayOfKeyValueOflongStructure_SH5kPQko">
     <xs:annotation>
       <xs:appinfo>
         <IsDictionary xmlns="http://schemas.microsoft.com/2003/10/Serialization/">true</IsDictionary>
       </xs:appinfo>
     </xs:annotation>
     <xs:sequence>
-      <xs:element minOccurs="0" maxOccurs="unbounded" name="KeyValueOflongStructuredeM9q2VH">
+      <xs:element minOccurs="0" maxOccurs="unbounded" name="KeyValueOflongStructure_SH5kPQko">
         <xs:complexType>
           <xs:sequence>
             <xs:element name="Key" type="xs:long" />
-            <xs:element xmlns:q1="http://schemas.datacontract.org/2004/07/Annotation" name="Value" nillable="true" type="q1:Structure" />
+            <xs:element xmlns:q1="http://schemas.datacontract.org/2004/07/AnnotationService.Types" name="Value" nillable="true" type="q1:Structure" />
           </xs:sequence>
         </xs:complexType>
       </xs:element>
     </xs:sequence>
   </xs:complexType>
-  <xs:element name="ArrayOfKeyValueOflongStructuredeM9q2VH" nillable="true" type="tns:ArrayOfKeyValueOflongStructuredeM9q2VH" />
-  <xs:complexType name="ArrayOfKeyValueOflongLocationInfolLTIrbuF">
+  <xs:element name="ArrayOfKeyValueOflongStructure_SH5kPQko" nillable="true" type="tns:ArrayOfKeyValueOflongStructure_SH5kPQko" />
+  <xs:complexType name="ArrayOfKeyValueOflongLocationInfo_SH5kPQko">
     <xs:annotation>
       <xs:appinfo>
         <IsDictionary xmlns="http://schemas.microsoft.com/2003/10/Serialization/">true</IsDictionary>
       </xs:appinfo>
     </xs:annotation>
     <xs:sequence>
-      <xs:element minOccurs="0" maxOccurs="unbounded" name="KeyValueOflongLocationInfolLTIrbuF">
+      <xs:element minOccurs="0" maxOccurs="unbounded" name="KeyValueOflongLocationInfo_SH5kPQko">
         <xs:complexType>
           <xs:sequence>
             <xs:element name="Key" type="xs:long" />
-            <xs:element xmlns:q2="http://schemas.datacontract.org/2004/07/" name="Value" nillable="true" type="q2:LocationInfo" />
+            <xs:element xmlns:q2="http://schemas.datacontract.org/2004/07/AnnotationService.Types" name="Value" nillable="true" type="q2:LocationInfo" />
           </xs:sequence>
         </xs:complexType>
       </xs:element>
     </xs:sequence>
   </xs:complexType>
-  <xs:element name="ArrayOfKeyValueOflongLocationInfolLTIrbuF" nillable="true" type="tns:ArrayOfKeyValueOflongLocationInfolLTIrbuF" />
+  <xs:element name="ArrayOfKeyValueOflongLocationInfo_SH5kPQko" nillable="true" type="tns:ArrayOfKeyValueOflongLocationInfo_SH5kPQko" />
   <xs:complexType name="ArrayOfKeyValueOflonglong">
     <xs:annotation>
       <xs:appinfo>

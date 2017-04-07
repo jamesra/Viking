@@ -13,19 +13,21 @@ using System.Xml.Linq;
 using Annotation;
 using System.Runtime.Serialization;
 
+namespace AnnotationService.Types
+{
     [DataContract]
     public class Graphx
     {
         // Contains all edges
         [DataMember]
-        public List<Edgex> EdgeList{ get; set; }
+        public List<Edgex> EdgeList { get; set; }
 
 
         //Contains all cells among nodes
         [DataMember]
         public List<long> InvolvedCells { get; set; }
         [DataMember]
-        private List<long> _FrontierNodes{ get; set; }
+        private List<long> _FrontierNodes { get; set; }
 
         /// <summary>
         /// This is a list of node IDs which may have additional edges not included in the graph.  If the graph
@@ -49,7 +51,7 @@ using System.Runtime.Serialization;
 
 
         [DataMember]
-        public SortedDictionary<long, long> zLocationForSynapses; 
+        public SortedDictionary<long, long> zLocationForSynapses;
 
         public Graphx()
         {
@@ -67,4 +69,5 @@ using System.Runtime.Serialization;
         }
 
     }
+}
 

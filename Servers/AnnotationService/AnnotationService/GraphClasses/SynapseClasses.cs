@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace Annotation.Service.GraphClasses
+namespace AnnotationService.Types
 {
     public class SynapseObject
     {

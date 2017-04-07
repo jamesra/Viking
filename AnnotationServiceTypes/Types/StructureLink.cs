@@ -4,12 +4,12 @@ using System.Linq;
 using System.Text;
 using System.ServiceModel;
 using System.Runtime.Serialization;
+using ProtoBuf;
 
-using ConnectomeDataModel;
-
-namespace Annotation
+namespace AnnotationService.Types
 {
     
+    [ProtoContract]
     [DataContract]
     public class StructureLink : DataObject
     {
@@ -27,6 +27,7 @@ namespace Annotation
         string _Tags;
         string _Username;
 
+        [ProtoMember(1)]
         [DataMember]
         public long SourceID
         {
@@ -34,6 +35,7 @@ namespace Annotation
          set{_SourceID = value;}
         }
 
+        [ProtoMember(2)]
         [DataMember]
         public long TargetID
         {
@@ -41,6 +43,7 @@ namespace Annotation
             set { _TargetID = value; }
         }
 
+        [ProtoMember(3)]
         [DataMember]
         public bool Bidirectional
         {
@@ -48,6 +51,7 @@ namespace Annotation
             set { _Bidirectional = value; }
         }
 
+        [ProtoMember(4)]
         [DataMember]
         public string Tags
         {
@@ -55,6 +59,7 @@ namespace Annotation
             set { _Tags = value; }
         }
 
+        [ProtoMember(5)]
         [DataMember]
         public string Username
         {
@@ -64,26 +69,6 @@ namespace Annotation
 
         public StructureLink()
         {
-        }
-
-        public StructureLink(ConnectomeDataModel.StructureLink obj)
-        {
-            ConnectomeDataModel.StructureLink db = obj;
-
-            this.SourceID = db.SourceID;
-            this.TargetID = db.TargetID;
-            this.Bidirectional = db.Bidirectional;
-            this.Tags = db.Tags;
-            this.Username = db.Username; 
-        }
-
-        public void Sync(ConnectomeDataModel.StructureLink db)
-        {
-            db.SourceID = this.SourceID;
-            db.TargetID = this.TargetID;
-            db.Bidirectional = this.Bidirectional;
-            db.Tags = this.Tags;
-            db.Username = ServiceModelUtil.GetUserForCall();
-        }
+        } 
     }
 }

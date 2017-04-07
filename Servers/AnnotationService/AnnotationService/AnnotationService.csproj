@@ -12,7 +12,7 @@
     <AssemblyName>AnnotationService</AssemblyName>
     <ProjectTypeGuids>{3D9AD99F-2412-4246-B90B-4EAA41C64699};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
     <StartArguments>/client:"WcfTestClient.exe"</StartArguments>
-    <TargetFrameworkVersion>v4.6</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
     <RunPostBuildEvent>OnBuildSuccess</RunPostBuildEvent>
     <FileUpgradeFlags>
     </FileUpgradeFlags>
@@ -62,6 +62,10 @@
     </Reference>
     <Reference Include="EntityFramework.SqlServer">
       <HintPath>..\..\packages\EntityFramework.6.1.3\lib\net45\EntityFramework.SqlServer.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.SqlServer.Types, Version=14.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91, processorArchitecture=MSIL">
+      <HintPath>..\..\..\Packages\Microsoft.SqlServer.Types.14.0.314.76\lib\net40\Microsoft.SqlServer.Types.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="Newtonsoft.Json, Version=9.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <HintPath>..\..\packages\Newtonsoft.Json.9.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
@@ -114,24 +118,15 @@
       <DesignTimeSharedInput>True</DesignTimeSharedInput>
       <DependentUpon>Settings.settings</DependentUpon>
     </Compile>
-    <Compile Include="Service\Attributes.cs" />
-    <Compile Include="Service\Interfaces\IAnnotateLocations.cs" />
-    <Compile Include="Service\Interfaces\IAnnotateStructures.cs" />
-    <Compile Include="Service\Interfaces\IAnnotateStructureTypes.cs" />
-    <Compile Include="Service\Interfaces\ICircuit.cs" />
-    <Compile Include="Service\Interfaces\ICredentials.cs" />
-    <Compile Include="Service\Interfaces\IVolumeMeta.cs" />
-    <Compile Include="Service\Types\AnnotationSet.cs" />
-    <Compile Include="Service\Types\DataObject.cs" />
-    <Compile Include="Service\Types\Enums.cs" />
-    <Compile Include="Service\Types\Location.cs" />
-    <Compile Include="Service\Types\LocationLink.cs" />
-    <Compile Include="Service\Types\PermittedStructureLink.cs" />
-    <Compile Include="Service\Types\Scale.cs" />
-    <Compile Include="Service\Types\Structure.cs" />
-    <Compile Include="Service\Types\StructureLink.cs" />
-    <Compile Include="Service\Types\StructureType.cs" />
     <Compile Include="ServiceModelUtil.cs" />
+    <Compile Include="Service\Interfaces\ICircuit.cs" />
+    <Compile Include="Service\Types\LocationExtensions.cs" />
+    <Compile Include="Service\Types\LocationLinkExtensions.cs" />
+    <Compile Include="Service\Types\PermittedStructureLinkExtensions.cs" />
+    <Compile Include="Service\Types\StructureExtensions.cs" />
+    <Compile Include="Service\Types\StructureLinkExtensions.cs" />
+    <Compile Include="Service\Types\StructureTypeExtensions.cs" />
+    <Compile Include="SqlServerTypes\Loader.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Installation.rst" />
@@ -154,6 +149,19 @@
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
     </None>
+    <Content Include="SqlServerTypes\readme.htm" />
+    <Content Include="SqlServerTypes\x64\msvcr120.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="SqlServerTypes\x64\SqlServerSpatial140.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="SqlServerTypes\x86\msvcr120.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="SqlServerTypes\x86\SqlServerSpatial140.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="web.config">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <SubType>Designer</SubType>
@@ -168,6 +176,14 @@
     <Folder Include="GraphClasses\.svn\tmp\text-base\" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\..\AnnotationServiceTypes\AnnotationServiceTypes.csproj">
+      <Project>{55ff8936-d9bc-4ac6-aa29-fc0d7a7640ec}</Project>
+      <Name>AnnotationServiceTypes</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\SqlGeometryUtils\SqlGeometryUtils.csproj">
+      <Project>{6702adda-3f8f-43d0-9c7e-1e7fdbbe983f}</Project>
+      <Name>SqlGeometryUtils</Name>
+    </ProjectReference>
     <ProjectReference Include="..\..\ConnectomeDataModel\ConnectomeDataModel.csproj">
       <Project>{9599f439-7526-4c45-a1eb-fde32648cfcd}</Project>
       <Name>ConnectomeDataModel</Name>

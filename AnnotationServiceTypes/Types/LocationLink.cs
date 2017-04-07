@@ -3,19 +3,20 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.ServiceModel;
-using System.Runtime.Serialization; 
-using ConnectomeDataModel;
+using System.Runtime.Serialization;  
+using ProtoBuf;
 
-namespace Annotation
+namespace AnnotationService.Types
 {
     
+    [ProtoContract]
     [DataContract]
     public class LocationLink : DataObject
     {
         long _SourceID;
         long _TargetID;
-        string _Username; 
 
+        [ProtoMember(1)]
         [DataMember]
         public long SourceID
         {
@@ -23,6 +24,7 @@ namespace Annotation
             set { _SourceID = value; }
         }
 
+        [ProtoMember(2)]
         [DataMember]
         public long TargetID
         {
@@ -39,12 +41,6 @@ namespace Annotation
         }
         */
 
-        public LocationLink(ConnectomeDataModel.LocationLink link)
-        {
-            _SourceID = link.A;
-            _TargetID = link.B;
-            _Username = link.Username;
-        }
     }
      
 }

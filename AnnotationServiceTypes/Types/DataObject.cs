@@ -3,10 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.ServiceModel;
-using System.Runtime.Serialization; 
+using System.Runtime.Serialization;
+using ProtoBuf;
 
 
-namespace Annotation
+namespace AnnotationService.Types
 {
     // I can't use straight inheritance because the relationships do not marshal.  So use interfaces instead
 
@@ -14,11 +15,16 @@ namespace Annotation
     /// A generic database object
     /// </summary>
     [DataContract]
+    [ProtoContract]
+    [ProtoInclude(1, typeof(LocationLink))]
+    [ProtoInclude(2, typeof(StructureLink))]
+    [ProtoInclude(3, typeof(PermittedStructureLink))]
     public abstract class DataObject
     {
         protected DBACTION _DBAction = DBACTION.NONE;
 
         [DataMember]
+        [ProtoMember(10)]
         public DBACTION DBAction
         {
             get { return _DBAction; }
@@ -29,11 +35,16 @@ namespace Annotation
     /// <summary>
     /// A generic database object that exposes a key value
     /// </summary>
-    [DataContract]
+    [DataContract] 
+    [ProtoContract]
+    [ProtoInclude(1, typeof(DataObjectWithParent<long>))]
+    [ProtoInclude(2, typeof(Location))]
+    [ProtoInclude(3, typeof(LocationPositionOnly))]
     public class DataObjectWithKey<T>  : DataObject where T : struct
     {
         protected T _ID; 
 
+        [ProtoMember(10)]
         [DataMember]
         public T ID
         {
@@ -47,10 +58,14 @@ namespace Annotation
     /// the same type referring to a row in the same table
     /// </summary>
     [DataContract]
+    [ProtoContract]
+    [ProtoInclude(1, typeof(Structure))]
+    [ProtoInclude(2, typeof(StructureType))] 
     public class DataObjectWithParent<IDTYPE> : DataObjectWithKey<IDTYPE> where IDTYPE : struct
     {
         protected Nullable<IDTYPE> _ParentID;
 
+        [ProtoMember(10)]
         [DataMember]
         public Nullable<IDTYPE> ParentID
         {

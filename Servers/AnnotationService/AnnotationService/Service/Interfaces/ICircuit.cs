@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.ServiceModel;
-using Annotation.Service.GraphClasses;
+using AnnotationService.Types;
 
-namespace Annotation.Service.Interfaces
+namespace AnnotationService.Interfaces
 {
     [ServiceContract]
     interface ICircuit

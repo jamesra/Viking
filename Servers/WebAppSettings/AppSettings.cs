@@ -109,7 +109,6 @@ namespace VikingWebAppSettings
         {
             get
             {
-                Uri uri = null;
                 return VolumeURI.Append("OData");
             }
         }

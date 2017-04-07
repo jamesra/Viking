@@ -12,17 +12,19 @@ using System.Xml.Linq;
 using Annotation;
 using System.Runtime.Serialization;
 
+namespace AnnotationService.Types
+{
     [DataContract]
     public class Edgex
     {
         [DataMember]
-        public  long SourceParentID;
+        public long SourceParentID;
         [DataMember]
-        public  long TargetParentID;
+        public long TargetParentID;
         [DataMember]
-        public  StructureLink Link;
+        public StructureLink Link;
         [DataMember]
-        public  string SourceTypeName;
+        public string SourceTypeName;
 
         [DataMember]
         public long SourceID
@@ -37,7 +39,7 @@ using System.Runtime.Serialization;
             get { return Link.TargetID; }
             set { }
         }
-      
+
 
         public Edgex(long SourceParentID, long TargetParentID, StructureLink link, string SourceTypeName)
         {
@@ -51,20 +53,20 @@ using System.Runtime.Serialization;
         /// <summary>
         /// This string lists the parent structures connected, i.e. cells
         /// </summary>
-       
+
         public string KeyString
         {
             get
             {
                 return SourceParentID + "-" + TargetParentID + "," + SourceTypeName;
             }
-            
+
         }
 
         /// <summary>
         /// This string lists the actual structures connection, i.e. synapses and gap junction ID's
         /// </summary>
-      
+
         public string ConnectionString
         {
             get
@@ -74,9 +76,9 @@ using System.Runtime.Serialization;
                     linkstring = "<->";
                 return SourceID + linkstring + TargetID;
             }
-            
+
         }
-      
+
         public override int GetHashCode()
         {
             return System.Convert.ToInt32(SourceID);
@@ -92,3 +94,4 @@ using System.Runtime.Serialization;
                    TargetID == E.TargetID;
         }
     }
+}

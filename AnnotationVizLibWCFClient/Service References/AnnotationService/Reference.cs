@@ -15,7 +15,7 @@ namespace AnnotationVizLib.WCFClient.AnnotationService {
     
     [System.Diagnostics.DebuggerStepThroughAttribute()]
     [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Runtime.Serialization", "4.0.0.0")]
-    [System.Runtime.Serialization.DataContractAttribute(Name="DataObject", Namespace="http://schemas.datacontract.org/2004/07/Annotation")]
+    [System.Runtime.Serialization.DataContractAttribute(Name="DataObject", Namespace="http://schemas.datacontract.org/2004/07/AnnotationService.Types")]
     [System.SerializableAttribute()]
     [System.Runtime.Serialization.KnownTypeAttribute(typeof(AnnotationVizLib.WCFClient.AnnotationService.PermittedStructureLink))]
     [System.Runtime.Serialization.KnownTypeAttribute(typeof(AnnotationVizLib.WCFClient.AnnotationService.StructureLink))]
@@ -26,7 +26,6 @@ namespace AnnotationVizLib.WCFClient.AnnotationService {
     [System.Runtime.Serialization.KnownTypeAttribute(typeof(AnnotationVizLib.WCFClient.AnnotationService.LocationPositionOnly))]
     [System.Runtime.Serialization.KnownTypeAttribute(typeof(AnnotationVizLib.WCFClient.AnnotationService.DataObjectWithParentOflong))]
     [System.Runtime.Serialization.KnownTypeAttribute(typeof(AnnotationVizLib.WCFClient.AnnotationService.Structure))]
-    [System.Runtime.Serialization.KnownTypeAttribute(typeof(AnnotationVizLib.WCFClient.AnnotationService.StructureHistory))]
     [System.Runtime.Serialization.KnownTypeAttribute(typeof(AnnotationVizLib.WCFClient.AnnotationService.StructureType))]
     public partial class DataObject : object, System.Runtime.Serialization.IExtensibleDataObject, System.ComponentModel.INotifyPropertyChanged {
         
@@ -71,7 +70,7 @@ namespace AnnotationVizLib.WCFClient.AnnotationService {
     
     [System.Diagnostics.DebuggerStepThroughAttribute()]
     [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Runtime.Serialization", "4.0.0.0")]
-    [System.Runtime.Serialization.DataContractAttribute(Name="PermittedStructureLink", Namespace="http://schemas.datacontract.org/2004/07/Annotation")]
+    [System.Runtime.Serialization.DataContractAttribute(Name="PermittedStructureLink", Namespace="http://schemas.datacontract.org/2004/07/AnnotationService.Types")]
     [System.SerializableAttribute()]
     public partial class PermittedStructureLink : AnnotationVizLib.WCFClient.AnnotationService.DataObject {
         
@@ -126,7 +125,7 @@ namespace AnnotationVizLib.WCFClient.AnnotationService {
     
     [System.Diagnostics.DebuggerStepThroughAttribute()]
     [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Runtime.Serialization", "4.0.0.0")]
-    [System.Runtime.Serialization.DataContractAttribute(Name="StructureLink", Namespace="http://schemas.datacontract.org/2004/07/Annotation")]
+    [System.Runtime.Serialization.DataContractAttribute(Name="StructureLink", Namespace="http://schemas.datacontract.org/2004/07/AnnotationService.Types")]
     [System.SerializableAttribute()]
     public partial class StructureLink : AnnotationVizLib.WCFClient.AnnotationService.DataObject {
         
@@ -213,7 +212,7 @@ namespace AnnotationVizLib.WCFClient.AnnotationService {
     
     [System.Diagnostics.DebuggerStepThroughAttribute()]
     [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Runtime.Serialization", "4.0.0.0")]
-    [System.Runtime.Serialization.DataContractAttribute(Name="LocationLink", Namespace="http://schemas.datacontract.org/2004/07/Annotation")]
+    [System.Runtime.Serialization.DataContractAttribute(Name="LocationLink", Namespace="http://schemas.datacontract.org/2004/07/AnnotationService.Types")]
     [System.SerializableAttribute()]
     public partial class LocationLink : AnnotationVizLib.WCFClient.AnnotationService.DataObject {
         
@@ -252,14 +251,13 @@ namespace AnnotationVizLib.WCFClient.AnnotationService {
     
     [System.Diagnostics.DebuggerStepThroughAttribute()]
     [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Runtime.Serialization", "4.0.0.0")]
-    [System.Runtime.Serialization.DataContractAttribute(Name="DataObjectWithKeyOflong", Namespace="http://schemas.datacontract.org/2004/07/Annotation")]
+    [System.Runtime.Serialization.DataContractAttribute(Name="DataObjectWithKeyOflong", Namespace="http://schemas.datacontract.org/2004/07/AnnotationService.Types")]
     [System.SerializableAttribute()]
     [System.Runtime.Serialization.KnownTypeAttribute(typeof(AnnotationVizLib.WCFClient.AnnotationService.Location))]
     [System.Runtime.Serialization.KnownTypeAttribute(typeof(AnnotationVizLib.WCFClient.AnnotationService.LocationHistory))]
     [System.Runtime.Serialization.KnownTypeAttribute(typeof(AnnotationVizLib.WCFClient.AnnotationService.LocationPositionOnly))]
     [System.Runtime.Serialization.KnownTypeAttribute(typeof(AnnotationVizLib.WCFClient.AnnotationService.DataObjectWithParentOflong))]
     [System.Runtime.Serialization.KnownTypeAttribute(typeof(AnnotationVizLib.WCFClient.AnnotationService.Structure))]
-    [System.Runtime.Serialization.KnownTypeAttribute(typeof(AnnotationVizLib.WCFClient.AnnotationService.StructureHistory))]
     [System.Runtime.Serialization.KnownTypeAttribute(typeof(AnnotationVizLib.WCFClient.AnnotationService.StructureType))]
     public partial class DataObjectWithKeyOflong : AnnotationVizLib.WCFClient.AnnotationService.DataObject {
         
@@ -282,7 +280,7 @@ namespace AnnotationVizLib.WCFClient.AnnotationService {
     
     [System.Diagnostics.DebuggerStepThroughAttribute()]
     [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Runtime.Serialization", "4.0.0.0")]
-    [System.Runtime.Serialization.DataContractAttribute(Name="Location", Namespace="http://schemas.datacontract.org/2004/07/Annotation")]
+    [System.Runtime.Serialization.DataContractAttribute(Name="Location", Namespace="http://schemas.datacontract.org/2004/07/AnnotationService.Types")]
     [System.SerializableAttribute()]
     [System.Runtime.Serialization.KnownTypeAttribute(typeof(AnnotationVizLib.WCFClient.AnnotationService.LocationHistory))]
     public partial class Location : AnnotationVizLib.WCFClient.AnnotationService.DataObjectWithKeyOflong {
@@ -546,7 +544,7 @@ namespace AnnotationVizLib.WCFClient.AnnotationService {
     
     [System.Diagnostics.DebuggerStepThroughAttribute()]
     [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Runtime.Serialization", "4.0.0.0")]
-    [System.Runtime.Serialization.DataContractAttribute(Name="LocationHistory", Namespace="http://schemas.datacontract.org/2004/07/Annotation")]
+    [System.Runtime.Serialization.DataContractAttribute(Name="LocationHistory", Namespace="http://schemas.datacontract.org/2004/07/AnnotationService.Types")]
     [System.SerializableAttribute()]
     public partial class LocationHistory : AnnotationVizLib.WCFClient.AnnotationService.Location {
         
@@ -569,7 +567,7 @@ namespace AnnotationVizLib.WCFClient.AnnotationService {
     
     [System.Diagnostics.DebuggerStepThroughAttribute()]
     [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Runtime.Serialization", "4.0.0.0")]
-    [System.Runtime.Serialization.DataContractAttribute(Name="LocationPositionOnly", Namespace="http://schemas.datacontract.org/2004/07/Annotation")]
+    [System.Runtime.Serialization.DataContractAttribute(Name="LocationPositionOnly", Namespace="http://schemas.datacontract.org/2004/07/AnnotationService.Types")]
     [System.SerializableAttribute()]
     public partial class LocationPositionOnly : AnnotationVizLib.WCFClient.AnnotationService.DataObjectWithKeyOflong {
         
@@ -608,10 +606,9 @@ namespace AnnotationVizLib.WCFClient.AnnotationService {
     
     [System.Diagnostics.DebuggerStepThroughAttribute()]
     [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Runtime.Serialization", "4.0.0.0")]
-    [System.Runtime.Serialization.DataContractAttribute(Name="DataObjectWithParentOflong", Namespace="http://schemas.datacontract.org/2004/07/Annotation")]
+    [System.Runtime.Serialization.DataContractAttribute(Name="DataObjectWithParentOflong", Namespace="http://schemas.datacontract.org/2004/07/AnnotationService.Types")]
     [System.SerializableAttribute()]
     [System.Runtime.Serialization.KnownTypeAttribute(typeof(AnnotationVizLib.WCFClient.AnnotationService.Structure))]
-    [System.Runtime.Serialization.KnownTypeAttribute(typeof(AnnotationVizLib.WCFClient.AnnotationService.StructureHistory))]
     [System.Runtime.Serialization.KnownTypeAttribute(typeof(AnnotationVizLib.WCFClient.AnnotationService.StructureType))]
     public partial class DataObjectWithParentOflong : AnnotationVizLib.WCFClient.AnnotationService.DataObjectWithKeyOflong {
         
@@ -634,9 +631,8 @@ namespace AnnotationVizLib.WCFClient.AnnotationService {
     
     [System.Diagnostics.DebuggerStepThroughAttribute()]
     [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Runtime.Serialization", "4.0.0.0")]
-    [System.Runtime.Serialization.DataContractAttribute(Name="Structure", Namespace="http://schemas.datacontract.org/2004/07/Annotation")]
+    [System.Runtime.Serialization.DataContractAttribute(Name="Structure", Namespace="http://schemas.datacontract.org/2004/07/AnnotationService.Types")]
     [System.SerializableAttribute()]
-    [System.Runtime.Serialization.KnownTypeAttribute(typeof(AnnotationVizLib.WCFClient.AnnotationService.StructureHistory))]
     public partial class Structure : AnnotationVizLib.WCFClient.AnnotationService.DataObjectWithParentOflong {
         
         [System.Runtime.Serialization.OptionalFieldAttribute()]
@@ -786,14 +782,7 @@ namespace AnnotationVizLib.WCFClient.AnnotationService {
     
     [System.Diagnostics.DebuggerStepThroughAttribute()]
     [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Runtime.Serialization", "4.0.0.0")]
-    [System.Runtime.Serialization.DataContractAttribute(Name="StructureHistory", Namespace="http://schemas.datacontract.org/2004/07/Annotation")]
-    [System.SerializableAttribute()]
-    public partial class StructureHistory : AnnotationVizLib.WCFClient.AnnotationService.Structure {
-    }
-    
-    [System.Diagnostics.DebuggerStepThroughAttribute()]
-    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Runtime.Serialization", "4.0.0.0")]
-    [System.Runtime.Serialization.DataContractAttribute(Name="StructureType", Namespace="http://schemas.datacontract.org/2004/07/Annotation")]
+    [System.Runtime.Serialization.DataContractAttribute(Name="StructureType", Namespace="http://schemas.datacontract.org/2004/07/AnnotationService.Types")]
     [System.SerializableAttribute()]
     public partial class StructureType : AnnotationVizLib.WCFClient.AnnotationService.DataObjectWithParentOflong {
         
@@ -959,7 +948,7 @@ namespace AnnotationVizLib.WCFClient.AnnotationService {
     }
     
     [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Runtime.Serialization", "4.0.0.0")]
-    [System.Runtime.Serialization.DataContractAttribute(Name="DBACTION", Namespace="http://schemas.datacontract.org/2004/07/Annotation")]
+    [System.Runtime.Serialization.DataContractAttribute(Name="DBACTION", Namespace="http://schemas.datacontract.org/2004/07/AnnotationService.Types")]
     public enum DBACTION : int {
         
         [System.Runtime.Serialization.EnumMemberAttribute()]
@@ -977,7 +966,7 @@ namespace AnnotationVizLib.WCFClient.AnnotationService {
     
     [System.Diagnostics.DebuggerStepThroughAttribute()]
     [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Runtime.Serialization", "4.0.0.0")]
-    [System.Runtime.Serialization.DataContractAttribute(Name="AnnotationPoint", Namespace="http://schemas.datacontract.org/2004/07/Annotation")]
+    [System.Runtime.Serialization.DataContractAttribute(Name="AnnotationPoint", Namespace="http://schemas.datacontract.org/2004/07/AnnotationService.Types")]
     [System.SerializableAttribute()]
     public partial struct AnnotationPoint : System.Runtime.Serialization.IExtensibleDataObject, System.ComponentModel.INotifyPropertyChanged {
         
@@ -1053,7 +1042,7 @@ namespace AnnotationVizLib.WCFClient.AnnotationService {
     
     [System.Diagnostics.DebuggerStepThroughAttribute()]
     [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Runtime.Serialization", "4.0.0.0")]
-    [System.Runtime.Serialization.DataContractAttribute(Name="CreateStructureRetval", Namespace="http://schemas.datacontract.org/2004/07/Annotation")]
+    [System.Runtime.Serialization.DataContractAttribute(Name="CreateStructureRetval", Namespace="http://schemas.datacontract.org/2004/07/AnnotationService.Types")]
     [System.SerializableAttribute()]
     public partial class CreateStructureRetval : object, System.Runtime.Serialization.IExtensibleDataObject, System.ComponentModel.INotifyPropertyChanged {
         
@@ -1114,7 +1103,7 @@ namespace AnnotationVizLib.WCFClient.AnnotationService {
     
     [System.Diagnostics.DebuggerStepThroughAttribute()]
     [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Runtime.Serialization", "4.0.0.0")]
-    [System.Runtime.Serialization.DataContractAttribute(Name="BoundingRectangle", Namespace="http://schemas.datacontract.org/2004/07/Annotation")]
+    [System.Runtime.Serialization.DataContractAttribute(Name="BoundingRectangle", Namespace="http://schemas.datacontract.org/2004/07/AnnotationService.Types")]
     [System.SerializableAttribute()]
     public partial struct BoundingRectangle : System.Runtime.Serialization.IExtensibleDataObject, System.ComponentModel.INotifyPropertyChanged {
         
@@ -1206,7 +1195,7 @@ namespace AnnotationVizLib.WCFClient.AnnotationService {
     
     [System.Diagnostics.DebuggerStepThroughAttribute()]
     [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Runtime.Serialization", "4.0.0.0")]
-    [System.Runtime.Serialization.DataContractAttribute(Name="AnnotationSet", Namespace="http://schemas.datacontract.org/2004/07/Annotation")]
+    [System.Runtime.Serialization.DataContractAttribute(Name="AnnotationSet", Namespace="http://schemas.datacontract.org/2004/07/AnnotationService.Types")]
     [System.SerializableAttribute()]
     public partial class AnnotationSet : object, System.Runtime.Serialization.IExtensibleDataObject, System.ComponentModel.INotifyPropertyChanged {
         
@@ -1267,7 +1256,7 @@ namespace AnnotationVizLib.WCFClient.AnnotationService {
     
     [System.Diagnostics.DebuggerStepThroughAttribute()]
     [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Runtime.Serialization", "4.0.0.0")]
-    [System.Runtime.Serialization.DataContractAttribute(Name="Scale", Namespace="http://schemas.datacontract.org/2004/07/Annotation")]
+    [System.Runtime.Serialization.DataContractAttribute(Name="Scale", Namespace="http://schemas.datacontract.org/2004/07/AnnotationService.Types")]
     [System.SerializableAttribute()]
     public partial class Scale : object, System.Runtime.Serialization.IExtensibleDataObject, System.ComponentModel.INotifyPropertyChanged {
         
@@ -1344,7 +1333,7 @@ namespace AnnotationVizLib.WCFClient.AnnotationService {
     
     [System.Diagnostics.DebuggerStepThroughAttribute()]
     [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Runtime.Serialization", "4.0.0.0")]
-    [System.Runtime.Serialization.DataContractAttribute(Name="AxisUnits", Namespace="http://schemas.datacontract.org/2004/07/Annotation")]
+    [System.Runtime.Serialization.DataContractAttribute(Name="AxisUnits", Namespace="http://schemas.datacontract.org/2004/07/AnnotationService.Types")]
     [System.SerializableAttribute()]
     public partial class AxisUnits : object, System.Runtime.Serialization.IExtensibleDataObject, System.ComponentModel.INotifyPropertyChanged {
         
@@ -1405,7 +1394,7 @@ namespace AnnotationVizLib.WCFClient.AnnotationService {
     
     [System.Diagnostics.DebuggerStepThroughAttribute()]
     [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Runtime.Serialization", "4.0.0.0")]
-    [System.Runtime.Serialization.DataContractAttribute(Name="Graphx", Namespace="http://schemas.datacontract.org/2004/07/")]
+    [System.Runtime.Serialization.DataContractAttribute(Name="Graphx", Namespace="http://schemas.datacontract.org/2004/07/AnnotationService.Types")]
     [System.SerializableAttribute()]
     public partial class Graphx : object, System.Runtime.Serialization.IExtensibleDataObject, System.ComponentModel.INotifyPropertyChanged {
         
@@ -1562,7 +1551,7 @@ namespace AnnotationVizLib.WCFClient.AnnotationService {
     
     [System.Diagnostics.DebuggerStepThroughAttribute()]
     [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Runtime.Serialization", "4.0.0.0")]
-    [System.Runtime.Serialization.DataContractAttribute(Name="Edgex", Namespace="http://schemas.datacontract.org/2004/07/")]
+    [System.Runtime.Serialization.DataContractAttribute(Name="Edgex", Namespace="http://schemas.datacontract.org/2004/07/AnnotationService.Types")]
     [System.SerializableAttribute()]
     public partial class Edgex : object, System.Runtime.Serialization.IExtensibleDataObject, System.ComponentModel.INotifyPropertyChanged {
         
@@ -1687,7 +1676,7 @@ namespace AnnotationVizLib.WCFClient.AnnotationService {
     
     [System.Diagnostics.DebuggerStepThroughAttribute()]
     [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Runtime.Serialization", "4.0.0.0")]
-    [System.Runtime.Serialization.DataContractAttribute(Name="LocationInfo", Namespace="http://schemas.datacontract.org/2004/07/")]
+    [System.Runtime.Serialization.DataContractAttribute(Name="LocationInfo", Namespace="http://schemas.datacontract.org/2004/07/AnnotationService.Types")]
     [System.SerializableAttribute()]
     public partial class LocationInfo : object, System.Runtime.Serialization.IExtensibleDataObject, System.ComponentModel.INotifyPropertyChanged {
         
@@ -1780,7 +1769,7 @@ namespace AnnotationVizLib.WCFClient.AnnotationService {
     
     [System.Diagnostics.DebuggerStepThroughAttribute()]
     [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Runtime.Serialization", "4.0.0.0")]
-    [System.Runtime.Serialization.DataContractAttribute(Name="SynapseObject", Namespace="http://schemas.datacontract.org/2004/07/Annotation.Service.GraphClasses")]
+    [System.Runtime.Serialization.DataContractAttribute(Name="SynapseObject", Namespace="http://schemas.datacontract.org/2004/07/AnnotationService.Types")]
     [System.SerializableAttribute()]
     public partial class SynapseObject : object, System.Runtime.Serialization.IExtensibleDataObject, System.ComponentModel.INotifyPropertyChanged {
         
@@ -1825,7 +1814,7 @@ namespace AnnotationVizLib.WCFClient.AnnotationService {
     
     [System.Diagnostics.DebuggerStepThroughAttribute()]
     [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Runtime.Serialization", "4.0.0.0")]
-    [System.Runtime.Serialization.DataContractAttribute(Name="SynapseStats", Namespace="http://schemas.datacontract.org/2004/07/Annotation.Service.GraphClasses")]
+    [System.Runtime.Serialization.DataContractAttribute(Name="SynapseStats", Namespace="http://schemas.datacontract.org/2004/07/AnnotationService.Types")]
     [System.SerializableAttribute()]
     public partial class SynapseStats : object, System.Runtime.Serialization.IExtensibleDataObject, System.ComponentModel.INotifyPropertyChanged {
         
@@ -2169,10 +2158,10 @@ namespace AnnotationVizLib.WCFClient.AnnotationService {
         System.Threading.Tasks.Task<long> SplitAsync(long StructureA, AnnotationVizLib.WCFClient.AnnotationService.LocationLink locLink);
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/GetStructureChangeLog", ReplyAction="http://tempuri.org/IAnnotateStructures/GetStructureChangeLogResponse")]
-        AnnotationVizLib.WCFClient.AnnotationService.StructureHistory[] GetStructureChangeLog(System.Nullable<long> structure_id, System.Nullable<System.DateTime> begin_time, System.Nullable<System.DateTime> end_time);
+        AnnotationVizLib.WCFClient.AnnotationService.Structure[] GetStructureChangeLog(System.Nullable<long> structure_id, System.Nullable<System.DateTime> begin_time, System.Nullable<System.DateTime> end_time);
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/GetStructureChangeLog", ReplyAction="http://tempuri.org/IAnnotateStructures/GetStructureChangeLogResponse")]
-        System.Threading.Tasks.Task<AnnotationVizLib.WCFClient.AnnotationService.StructureHistory[]> GetStructureChangeLogAsync(System.Nullable<long> structure_id, System.Nullable<System.DateTime> begin_time, System.Nullable<System.DateTime> end_time);
+        System.Threading.Tasks.Task<AnnotationVizLib.WCFClient.AnnotationService.Structure[]> GetStructureChangeLogAsync(System.Nullable<long> structure_id, System.Nullable<System.DateTime> begin_time, System.Nullable<System.DateTime> end_time);
     }
     
     [System.Diagnostics.DebuggerStepThroughAttribute()]
@@ -2555,11 +2544,11 @@ namespace AnnotationVizLib.WCFClient.AnnotationService {
             return base.Channel.SplitAsync(StructureA, locLink);
         }
         
-        public AnnotationVizLib.WCFClient.AnnotationService.StructureHistory[] GetStructureChangeLog(System.Nullable<long> structure_id, System.Nullable<System.DateTime> begin_time, System.Nullable<System.DateTime> end_time) {
+        public AnnotationVizLib.WCFClient.AnnotationService.Structure[] GetStructureChangeLog(System.Nullable<long> structure_id, System.Nullable<System.DateTime> begin_time, System.Nullable<System.DateTime> end_time) {
             return base.Channel.GetStructureChangeLog(structure_id, begin_time, end_time);
         }
         
-        public System.Threading.Tasks.Task<AnnotationVizLib.WCFClient.AnnotationService.StructureHistory[]> GetStructureChangeLogAsync(System.Nullable<long> structure_id, System.Nullable<System.DateTime> begin_time, System.Nullable<System.DateTime> end_time) {
+        public System.Threading.Tasks.Task<AnnotationVizLib.WCFClient.AnnotationService.Structure[]> GetStructureChangeLogAsync(System.Nullable<long> structure_id, System.Nullable<System.DateTime> begin_time, System.Nullable<System.DateTime> end_time) {
             return base.Channel.GetStructureChangeLogAsync(structure_id, begin_time, end_time);
         }
     }

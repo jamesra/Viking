@@ -4,9 +4,10 @@ using System.Linq;
 using System.Text;
 using System.Runtime.Serialization;
 using System.ServiceModel;
-using Annotation; 
+using Annotation;
+using AnnotationService.Types;
 
-namespace Annotation.Service.Interfaces
+namespace AnnotationService.Interfaces
 {
     
     [ServiceContract]
@@ -193,7 +194,7 @@ namespace Annotation.Service.Interfaces
         /// <param name="end_time">Optional end time</param>
         /// <returns></returns>
         [OperationContract]
-        StructureHistory[] GetStructureChangeLog(long? structure_id, DateTime? begin_time, DateTime? end_time);
+        Structure[] GetStructureChangeLog(long? structure_id, DateTime? begin_time, DateTime? end_time);
     }
      
 }

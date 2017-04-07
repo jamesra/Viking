@@ -31,7 +31,7 @@ namespace AnnotationVizLib.WCFClient
         private static SortedDictionary<long, StructureType> _IDToStructureType = null;
 
         public static SortedList<string, List<Structure>> LabelToStructuresMap()
-        {
+        {              
             using (AnnotationService.AnnotateStructuresClient client = ConnectionFactory.CreateStructuresClient())
             {
                 return LabelToStructuresMap(client);
@@ -41,7 +41,7 @@ namespace AnnotationVizLib.WCFClient
         public  static SortedList<string, List<Structure>> LabelToStructuresMap(AnnotationService.AnnotateStructuresClient client)
         {
             long typeID =1;
-            AnnotationService.Structure[] structures = client.GetStructuresOfType(typeID);
+            Structure[] structures = client.GetStructuresOfType(typeID);
 
             return LabelToStructuresMap(structures); 
         }

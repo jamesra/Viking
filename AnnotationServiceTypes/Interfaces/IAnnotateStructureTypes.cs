@@ -4,8 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Runtime.Serialization;
 using System.ServiceModel;
+using AnnotationService.Types;
 
-namespace Annotation.Service.Interfaces
+namespace AnnotationService.Interfaces
 {
     [ServiceContract]
     public interface IAnnotateStructureTypes

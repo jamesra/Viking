@@ -5,9 +5,11 @@ using System.Text;
 using System.Runtime.Serialization;
 
 
+namespace AnnotationService.Types
+{
     [DataContract]
-	public class LocationInfo
-	{
+    public class LocationInfo
+    {
         [DataMember]
         public double X;
         [DataMember]
@@ -27,6 +29,7 @@ using System.Runtime.Serialization;
 
             this.Radius = rad;
         }
-	}
+    }
 
 
+}

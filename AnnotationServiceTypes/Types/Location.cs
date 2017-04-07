@@ -5,8 +5,9 @@ using System.Text;
 using System.ServiceModel;
 using System.Runtime.Serialization; 
 using ProtoBuf;
+using Annotation;
 
-namespace Annotation
+namespace AnnotationService.Types
 {
     [ProtoContract]
     [DataContract]

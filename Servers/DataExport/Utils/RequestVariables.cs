@@ -125,7 +125,7 @@ namespace DataExport.Controllers
             }
             catch(Simple.OData.Client.WebRequestException e)
             {
-                System.Diagnostics.Trace.WriteLine(string.Format("Exception requesting OData\n{0}", query));
+                System.Diagnostics.Trace.WriteLine(string.Format("Exception requesting OData\n{0}\n{1}", query, e.ToString()));
                 return new List<long>();
             }
 

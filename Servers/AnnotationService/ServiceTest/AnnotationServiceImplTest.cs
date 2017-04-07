@@ -5,6 +5,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Security;
 using System.Security.Principal;
 using System.Collections.Generic;
+using AnnotationService.Types;
 //using System.Diagnostics;
 
 namespace ServiceTest
