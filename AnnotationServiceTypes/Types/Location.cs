@@ -58,6 +58,8 @@ namespace AnnotationService.Types
         protected string _Xml;
         protected System.Data.Entity.Spatial.DbGeometry _MosaicShape;
         protected System.Data.Entity.Spatial.DbGeometry _VolumeShape;
+        protected byte[] _MosaicShapeWKB;
+        protected byte[] _VolumeShapeWKB;
 
         [ProtoMember(1)]
         [DataMember]
@@ -92,37 +94,59 @@ namespace AnnotationService.Types
             get { return _VolumePosition; }
             set { _VolumePosition = value; }
         }
-
-        [ProtoMember(5)]
-        [DataMember]
+        
+        //[ProtoMember(5)]
+        //[DataMember]
         public System.Data.Entity.Spatial.DbGeometry MosaicShape
         {
-            get { return _MosaicShape; }
-            set { _MosaicShape = value; }
+            get
+            {
+                if (_MosaicShape == null && _MosaicShapeWKB != null)
+                {
+                    _MosaicShape = System.Data.Entity.Spatial.DbGeometry.FromBinary(_MosaicShapeWKB);
+                }
+                return _MosaicShape;
+            }
+            //set { _MosaicShape = value; }
         }
 
-        [ProtoMember(6)]
-        [DataMember]
+       // [ProtoMember(6)]
+        //[DataMember]
         public System.Data.Entity.Spatial.DbGeometry VolumeShape
         {
-            get { return _VolumeShape; }
-            set { _VolumeShape = value; }
+            get {
+                if (_VolumeShape == null && _VolumeShapeWKB != null)
+                {
+                    _VolumeShape = System.Data.Entity.Spatial.DbGeometry.FromBinary(_VolumeShapeWKB);
+                }
+                return _VolumeShape;
+            }
+            //set { _VolumeShape = value; }
+            
         }
 
         [ProtoMember(7)]
         [DataMember]
         public byte[] MosaicShapeWKB
         {
-            get { return _MosaicShape.AsBinary(); }
-            set { _MosaicShape = System.Data.Entity.Spatial.DbGeometry.FromBinary(value); }
+            get { return _MosaicShapeWKB; }
+            set
+            {
+                _MosaicShapeWKB = value;
+                _MosaicShape = null;
+            }
         }
 
         [ProtoMember(8)]
         [DataMember]
         public byte[] VolumeShapeWKB
         {
-            get { return _VolumeShape.AsBinary(); }
-            set { _VolumeShape = System.Data.Entity.Spatial.DbGeometry.FromBinary(value); }
+            get { return _VolumeShapeWKB; }
+            set
+            {
+                _VolumeShapeWKB = value;
+                _VolumeShape = null;
+            }
         }
 
         [ProtoMember(9)]
