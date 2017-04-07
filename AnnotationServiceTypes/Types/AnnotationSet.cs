@@ -26,5 +26,10 @@ namespace AnnotationService.Types
             this.Structures = structs;
             this.Locations = locs;
         }
+
+        public AnnotationSet()
+        {
+
+        }
     }
 }
