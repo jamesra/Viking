@@ -86,6 +86,12 @@ namespace SqlGeometryUtils
                                                                Math.Round(p.Y, RoundingDigits), 0);
         }
 
+        public static Microsoft.SqlServer.Types.SqlGeometry ToGeometryPoint(double X, double Y)
+        {
+            return Microsoft.SqlServer.Types.SqlGeometry.Point(Math.Round(X, RoundingDigits),
+                                                               Math.Round(Y, RoundingDigits), 0);
+        }
+
         public static GridVector2 Centroid(this System.Data.Entity.Spatial.DbGeometry geometry)
         {
             System.Data.Entity.Spatial.DbGeometry centroid = geometry.Centroid;
