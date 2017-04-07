@@ -109,6 +109,22 @@ namespace AnnotationService.Types
             set { _VolumeShape = value; }
         }
 
+        [ProtoMember(7)]
+        [DataMember]
+        public byte[] MosaicShapeWKB
+        {
+            get { return _MosaicShape.AsBinary(); }
+            set { _MosaicShape = System.Data.Entity.Spatial.DbGeometry.FromBinary(value); }
+        }
+
+        [ProtoMember(8)]
+        [DataMember]
+        public byte[] VolumeShapeWKB
+        {
+            get { return _VolumeShape.AsBinary(); }
+            set { _VolumeShape = System.Data.Entity.Spatial.DbGeometry.FromBinary(value); }
+        }
+
         [ProtoMember(9)]
         [DataMember]
         [Column("Closed")]
