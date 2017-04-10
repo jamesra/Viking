@@ -41,8 +41,8 @@ namespace AnnotationService.Types
             loc.Section = (long)db.Z;
             loc.Position = new AnnotationPoint(db.X, db.Y, (int)db.Z);
             loc.VolumePosition = new AnnotationPoint(db.VolumeX, db.VolumeY, (int)db.Z);
-            loc.MosaicShape = db.MosaicShape;
-            loc.VolumeShape = db.VolumeShape;
+            loc.MosaicShapeWKB = db.MosaicShape.AsBinary();
+            loc.VolumeShapeWKB = db.VolumeShape.AsBinary();
             loc.Closed = db.Closed;
             if (LoadLinks)
                 loc.PopulateLinks(db);

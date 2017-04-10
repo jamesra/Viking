@@ -142,37 +142,37 @@
     <None Include="Service References\AnnotationClient\AnnotationService.Types.xsd">
       <SubType>Designer</SubType>
     </None>
-    <None Include="Service References\AnnotationClient\AnnotationVizLib.WCFClient.AnnotationClient.GetAnnotationsInMosaicRegionResponse.datasource">
+    <None Include="Service References\AnnotationClient\AnnotationVizLib.WCFClient.AnnotationClient.GetAnnotationsInMosaicRegionResponse1.datasource">
       <DependentUpon>Reference.svcmap</DependentUpon>
     </None>
-    <None Include="Service References\AnnotationClient\AnnotationVizLib.WCFClient.AnnotationClient.GetLocationChangesInMosaicRegionResponse.datasource">
+    <None Include="Service References\AnnotationClient\AnnotationVizLib.WCFClient.AnnotationClient.GetLocationChangesInMosaicRegionResponse1.datasource">
       <DependentUpon>Reference.svcmap</DependentUpon>
     </None>
-    <None Include="Service References\AnnotationClient\AnnotationVizLib.WCFClient.AnnotationClient.GetLocationChangesResponse.datasource">
+    <None Include="Service References\AnnotationClient\AnnotationVizLib.WCFClient.AnnotationClient.GetLocationChangesResponse1.datasource">
       <DependentUpon>Reference.svcmap</DependentUpon>
     </None>
-    <None Include="Service References\AnnotationClient\AnnotationVizLib.WCFClient.AnnotationClient.GetLocationLinksForSectionInMosaicRegionResponse.datasource">
+    <None Include="Service References\AnnotationClient\AnnotationVizLib.WCFClient.AnnotationClient.GetLocationLinksForSectionInMosaicRegionResponse1.datasource">
       <DependentUpon>Reference.svcmap</DependentUpon>
     </None>
-    <None Include="Service References\AnnotationClient\AnnotationVizLib.WCFClient.AnnotationClient.GetLocationLinksForSectionResponse.datasource">
+    <None Include="Service References\AnnotationClient\AnnotationVizLib.WCFClient.AnnotationClient.GetLocationLinksForSectionResponse1.datasource">
       <DependentUpon>Reference.svcmap</DependentUpon>
     </None>
-    <None Include="Service References\AnnotationClient\AnnotationVizLib.WCFClient.AnnotationClient.GetLocationsForSectionResponse.datasource">
+    <None Include="Service References\AnnotationClient\AnnotationVizLib.WCFClient.AnnotationClient.GetLocationsForSectionResponse1.datasource">
       <DependentUpon>Reference.svcmap</DependentUpon>
     </None>
-    <None Include="Service References\AnnotationClient\AnnotationVizLib.WCFClient.AnnotationClient.GetStructuresForSectionInMosaicRegionResponse.datasource">
+    <None Include="Service References\AnnotationClient\AnnotationVizLib.WCFClient.AnnotationClient.GetStructuresForSectionInMosaicRegionResponse1.datasource">
       <DependentUpon>Reference.svcmap</DependentUpon>
     </None>
-    <None Include="Service References\AnnotationClient\AnnotationVizLib.WCFClient.AnnotationClient.GetStructuresForSectionInVolumeRegionResponse.datasource">
+    <None Include="Service References\AnnotationClient\AnnotationVizLib.WCFClient.AnnotationClient.GetStructuresForSectionInVolumeRegionResponse1.datasource">
       <DependentUpon>Reference.svcmap</DependentUpon>
     </None>
-    <None Include="Service References\AnnotationClient\AnnotationVizLib.WCFClient.AnnotationClient.GetStructuresForSectionResponse.datasource">
+    <None Include="Service References\AnnotationClient\AnnotationVizLib.WCFClient.AnnotationClient.GetStructuresForSectionResponse1.datasource">
       <DependentUpon>Reference.svcmap</DependentUpon>
     </None>
-    <None Include="Service References\AnnotationClient\AnnotationVizLib.WCFClient.AnnotationClient.Graphx.datasource">
+    <None Include="Service References\AnnotationClient\AnnotationVizLib.WCFClient.AnnotationClient.Graphx1.datasource">
       <DependentUpon>Reference.svcmap</DependentUpon>
     </None>
-    <None Include="Service References\AnnotationClient\AnnotationVizLib.WCFClient.AnnotationClient.SynapseObject.datasource">
+    <None Include="Service References\AnnotationClient\AnnotationVizLib.WCFClient.AnnotationClient.SynapseObject1.datasource">
       <DependentUpon>Reference.svcmap</DependentUpon>
     </None>
     <None Include="Service References\AnnotationClient\Arrays.xsd">
@@ -183,9 +183,6 @@
       <SubType>Designer</SubType>
     </None>
     <None Include="Service References\AnnotationClient\service1.xsd">
-      <SubType>Designer</SubType>
-    </None>
-    <None Include="Service References\AnnotationClient\System.Data.Entity.Spatial.xsd">
       <SubType>Designer</SubType>
     </None>
   </ItemGroup>

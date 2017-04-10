@@ -38,7 +38,6 @@
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="AnnotationVizLib.WCFClient, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL" />
     <Reference Include="EntityFramework, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
       <HintPath>..\Packages\EntityFramework.6.1.3\lib\net45\EntityFramework.dll</HintPath>
       <Private>True</Private>
@@ -82,6 +81,10 @@
     <Reference Include="Microsoft.VisualStudio.QualityTools.UnitTestFramework, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL" />
     <Reference Include="Newtonsoft.Json, Version=9.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <HintPath>..\Packages\Newtonsoft.Json.9.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="protobuf-net, Version=2.0.0.668, Culture=neutral, PublicKeyToken=257b51d87d2e4d67, processorArchitecture=MSIL">
+      <HintPath>..\Packages\protobuf-net.2.0.0.668\lib\net40\protobuf-net.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="Simple.OData.Client.Core, Version=4.25.5.0, Culture=neutral, processorArchitecture=MSIL">
@@ -141,11 +144,6 @@
     <Compile Include="MotifGraphTest.cs" />
     <Compile Include="NeuronGraphTest.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Service References\AnnotationService\Reference.cs">
-      <AutoGen>True</AutoGen>
-      <DesignTime>True</DesignTime>
-      <DependentUpon>Reference.svcmap</DependentUpon>
-    </Compile>
     <Compile Include="SqlServerTypes\Loader.cs" />
     <Compile Include="TestUtils.cs" />
   </ItemGroup>
@@ -157,6 +155,8 @@
       <SubType>Designer</SubType>
     </None>
     <None Include="packages.config" />
+    <None Include="Properties\DataSources\AnnotationVizLib.WCFClient.AnnotationClient.Graphx.datasource" />
+    <None Include="Properties\DataSources\AnnotationVizLib.WCFClient.AnnotationClient.SynapseObject.datasource" />
     <None Include="Properties\DataSources\AnnotationVizLib.WCFClient.AnnotationService.AnnotationSet.datasource" />
     <None Include="Properties\DataSources\AnnotationVizLib.WCFClient.AnnotationService.AnnotationSet1.datasource" />
     <None Include="Properties\DataSources\AnnotationVizLib.WCFClient.AnnotationService.CreateStructureRetval.datasource" />
@@ -185,55 +185,6 @@
     <None Include="Properties\DataSources\AnnotationVizLib.WCFClient.AnnotationService.StructureType1.datasource" />
     <None Include="Properties\DataSources\AnnotationVizLib.WCFClient.AnnotationService.SynapseObject.datasource" />
     <None Include="Properties\DataSources\AnnotationVizLib.WCFClient.AnnotationService.SynapseObject1.datasource" />
-    <None Include="Service References\AnnotationService\Annotation.Service.GraphClasses.xsd">
-      <SubType>Designer</SubType>
-    </None>
-    <None Include="Service References\AnnotationService\Annotation.xsd">
-      <SubType>Designer</SubType>
-    </None>
-    <None Include="Service References\AnnotationService\AnnotationVizLibTests.AnnotationService.GetAnnotationsInMosaicRegionResponse.datasource">
-      <DependentUpon>Reference.svcmap</DependentUpon>
-    </None>
-    <None Include="Service References\AnnotationService\AnnotationVizLibTests.AnnotationService.GetLocationChangesInMosaicRegionResponse.datasource">
-      <DependentUpon>Reference.svcmap</DependentUpon>
-    </None>
-    <None Include="Service References\AnnotationService\AnnotationVizLibTests.AnnotationService.GetLocationChangesResponse.datasource">
-      <DependentUpon>Reference.svcmap</DependentUpon>
-    </None>
-    <None Include="Service References\AnnotationService\AnnotationVizLibTests.AnnotationService.GetLocationLinksForSectionInMosaicRegionResponse.datasource">
-      <DependentUpon>Reference.svcmap</DependentUpon>
-    </None>
-    <None Include="Service References\AnnotationService\AnnotationVizLibTests.AnnotationService.GetLocationLinksForSectionResponse.datasource">
-      <DependentUpon>Reference.svcmap</DependentUpon>
-    </None>
-    <None Include="Service References\AnnotationService\AnnotationVizLibTests.AnnotationService.GetLocationsForSectionResponse.datasource">
-      <DependentUpon>Reference.svcmap</DependentUpon>
-    </None>
-    <None Include="Service References\AnnotationService\AnnotationVizLibTests.AnnotationService.GetStructuresForSectionInMosaicRegionResponse.datasource">
-      <DependentUpon>Reference.svcmap</DependentUpon>
-    </None>
-    <None Include="Service References\AnnotationService\AnnotationVizLibTests.AnnotationService.GetStructuresForSectionInVolumeRegionResponse.datasource">
-      <DependentUpon>Reference.svcmap</DependentUpon>
-    </None>
-    <None Include="Service References\AnnotationService\AnnotationVizLibTests.AnnotationService.GetStructuresForSectionResponse.datasource">
-      <DependentUpon>Reference.svcmap</DependentUpon>
-    </None>
-    <None Include="Service References\AnnotationService\Arrays.xsd">
-      <SubType>Designer</SubType>
-    </None>
-    <None Include="Service References\AnnotationService\service.wsdl" />
-    <None Include="Service References\AnnotationService\service.xsd">
-      <SubType>Designer</SubType>
-    </None>
-    <None Include="Service References\AnnotationService\service1.xsd">
-      <SubType>Designer</SubType>
-    </None>
-    <None Include="Service References\AnnotationService\service2.xsd">
-      <SubType>Designer</SubType>
-    </None>
-    <None Include="Service References\AnnotationService\System.Data.Entity.Spatial.xsd">
-      <SubType>Designer</SubType>
-    </None>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\AnnotationVizLibODataClient\AnnotationVizLibODataClient.csproj">
@@ -264,9 +215,6 @@
       <Project>{9ddb7c0e-1f00-4efc-8d11-4ba6a00fb9b4}</Project>
       <Name>ODataClient</Name>
     </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
-    <WCFMetadataStorage Include="Service References\AnnotationService\" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Resources\ColorMap12x8.png">
@@ -314,12 +262,6 @@
     <Content Include="Resources\StructureTypeColors.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <None Include="Service References\AnnotationService\configuration91.svcinfo" />
-    <None Include="Service References\AnnotationService\configuration.svcinfo" />
-    <None Include="Service References\AnnotationService\Reference.svcmap">
-      <Generator>WCF Proxy Generator</Generator>
-      <LastGenOutput>Reference.cs</LastGenOutput>
-    </None>
     <Content Include="SqlServerTypes\readme.htm" />
     <Content Include="SqlServerTypes\x64\msvcr120.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

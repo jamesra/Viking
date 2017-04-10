@@ -27,7 +27,6 @@
     <MetadataFile FileName="service1.xsd" MetadataType="Schema" ID="da89b089-dbe4-4b91-9a69-dfc1e9c8ff54" SourceId="1" SourceUrl="https://webdev.connectomes.utah.edu/RC1Test/Annotation/Service.svc/Mex" />
     <MetadataFile FileName="AnnotationService.Types.xsd" MetadataType="Schema" ID="b8d54b9c-aea8-4d69-a1d0-ab6d5f2a9539" SourceId="1" SourceUrl="https://webdev.connectomes.utah.edu/RC1Test/Annotation/Service.svc/Mex" />
     <MetadataFile FileName="Arrays.xsd" MetadataType="Schema" ID="ce028502-eea5-4fda-b2b7-16c8bb4fe9a4" SourceId="1" SourceUrl="https://webdev.connectomes.utah.edu/RC1Test/Annotation/Service.svc/Mex" />
-    <MetadataFile FileName="System.Data.Entity.Spatial.xsd" MetadataType="Schema" ID="ff7133ca-7614-4acf-bc96-3fa4b6d409d1" SourceId="1" SourceUrl="https://webdev.connectomes.utah.edu/RC1Test/Annotation/Service.svc/Mex" />
   </Metadata>
   <Extensions>
     <ExtensionFile FileName="configuration91.svcinfo" Name="configuration91.svcinfo" />
