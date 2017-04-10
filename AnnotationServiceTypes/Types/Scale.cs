@@ -23,6 +23,8 @@ namespace AnnotationService.Types
             Value = value;
             Units = units; 
         }
+
+        public AxisUnits() { }
     }
 
     [ProtoContract]
@@ -45,5 +47,8 @@ namespace AnnotationService.Types
             this.Y = Y;
             this.Z = Z; 
         }
+
+        public Scale()
+        { }
     }
 }
