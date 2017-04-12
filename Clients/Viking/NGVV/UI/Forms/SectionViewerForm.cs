@@ -55,7 +55,7 @@ namespace Viking.UI.Forms
 
         public void GoToLocation(Vector2 location, int Z, bool InputInSectionSpace)
         {
-            this.SectionControl.GoToLocation(location, Z, InputInSectionSpace, SectionControl.Downsample);
+            this.SectionControl.GoToLocation(location, Z, InputInSectionSpace);
         }
 
         public void GoToLocation(Vector2 location, int Z, bool InputInSectionSpace, double Downsample)

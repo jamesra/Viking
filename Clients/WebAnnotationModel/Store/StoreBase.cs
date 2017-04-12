@@ -171,7 +171,9 @@ namespace WebAnnotationModel
 
         protected void InvokeEventAction(Action a, [System.Runtime.CompilerServices.CallerMemberName] string memberName = "")
         {
+#if DEBUG
             System.Diagnostics.Trace.WriteLine(string.Format("{0}.{1} Invoking Event Action", this.GetType().FullName, memberName));
+#endif
             if(State.UseAsynchEvents)
             {
                 System.Threading.Tasks.Task.Run(a);
@@ -293,7 +295,7 @@ namespace WebAnnotationModel
         }*/
 
 
-        #endregion 
+#endregion
 
         protected void ShowStandardExceptionMessage(Exception e)
         {
@@ -302,12 +304,12 @@ namespace WebAnnotationModel
             //System.Windows.Forms.MessageBox.Show("An error occurred:\n" + e.Message, "WebAnnotation");
         }
 
-        #region Proxy Calls
+#region Proxy Calls
 
 
-        #endregion
+#endregion
 
-        #region INotifyCollectionChanged Members
+#region INotifyCollectionChanged Members
 
 
         public event NotifyCollectionChangedEventHandler OnCollectionChanged;
@@ -317,7 +319,7 @@ namespace WebAnnotationModel
             remove { OnCollectionChanged -= value;  }
         }
 
-        #endregion
+#endregion
 
         
     }

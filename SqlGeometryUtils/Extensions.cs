@@ -80,6 +80,15 @@ namespace SqlGeometryUtils
             return new SqlChars(str.ToCharArray());
         }
 
+        public static bool SpatialEquals(this SqlGeometry geom, SqlGeometry other)
+        {
+            if (object.ReferenceEquals(geom, other))
+                return true;
+
+            return geom.STEquals(other).Value;
+        }
+        
+
         public static Microsoft.SqlServer.Types.SqlGeometry ToGeometryPoint(this GridVector2 p)
         {
             return Microsoft.SqlServer.Types.SqlGeometry.Point(Math.Round(p.X, RoundingDigits),
@@ -100,6 +109,11 @@ namespace SqlGeometryUtils
             else
                 return geometry.ToSqlGeometry().Centroid();
             //throw new ArgumentException("Calling centroid on geometry type without centroid, dimension is " + geometry.Dimension.ToString() + " shape is " + geometry.ToString());
+        }
+
+        public static SqlGeometry ToSqlGeometry(this byte[] WellKnownBinary, int SRID = 0)
+        {
+            return SqlGeometry.STGeomFromWKB(new SqlBytes(WellKnownBinary), SRID);
         }
 
         public static Microsoft.SqlServer.Types.SqlGeometry ToSqlGeometry(this System.Data.Entity.Spatial.DbGeometry geometry)
@@ -124,6 +138,11 @@ namespace SqlGeometryUtils
                             circle.Center.Y,
                             Z,
                             circle.Radius);
+        }
+
+        public static byte[] AsBinary(this SqlGeometry geom)
+        {
+            return geom.STAsBinary().Value;
         }
 
         public static SqlGeometry ToPolyLine(this GridLineSegment line)

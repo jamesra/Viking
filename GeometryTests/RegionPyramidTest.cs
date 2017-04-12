@@ -278,7 +278,7 @@ namespace GeometryTests
             double LevelForOneToOnePixelMappingRadius = 3.0;
             double LevelForOneToTwoPixelMappingRadius = LevelForOneToOnePixelMappingRadius - 1;
 
-            Geometry.BoundlessRegionPyramid<string> pyramid = new BoundlessRegionPyramid<string>(cellDimensions);
+            Geometry.BoundlessRegionPyramid<string> pyramid = new BoundlessRegionPyramid<string>(cellDimensions, 2);
 
             BoundlessRegionPyramidLevel<string> level0;
             BoundlessRegionPyramidLevel<string> level1;
@@ -318,7 +318,7 @@ namespace GeometryTests
         public void TestBoundlessRegionPyramidLevel()
         {
             GridCellDimensions cellDimensions = new GridCellDimensions(100, 100);
-            Geometry.BoundlessRegionPyramid<string> pyramid = new BoundlessRegionPyramid<string>(cellDimensions);
+            Geometry.BoundlessRegionPyramid<string> pyramid = new BoundlessRegionPyramid<string>(cellDimensions,2 );
  
             GridRectangle ScreenBounds = new GridRectangle(0, 64, 0, 257); //A 64x128 pixel screen
             GridRectangle VisibleVolumeBounds = new GridRectangle(512, 512 + ScreenBounds.Width, 512, 512 + ScreenBounds.Height); //A 64x128 pixel screen

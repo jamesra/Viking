@@ -9,7 +9,6 @@ using Geometry;
 
 namespace WebAnnotationModel
 {
-
     /// <summary>
     /// Stores information about location queries for this region in the volume
     /// </summary>
@@ -17,6 +16,18 @@ namespace WebAnnotationModel
         where OBJECT : class
     {
         public DateTime? LastQuery = new DateTime?();
+
+#if DEBUG
+        private static int NumOutstandingQueries = 0;
+
+        /// <summary>
+        /// Optional message for debugging
+        /// </summary>
+        public string debug_message;
+
+        static ConcurrentDictionary<string, string> active_requests = new ConcurrentDictionary<string, string>();
+#endif
+
 
         public bool HasBeenQueried
         {
@@ -52,6 +63,17 @@ namespace WebAnnotationModel
         {
             this.AsyncResult = result;
             this.LastQuery = DateTime.UtcNow;
+            
+            
+#if DEBUG
+            System.Threading.Interlocked.Increment(ref RegionRequestData<OBJECT>.NumOutstandingQueries);
+            active_requests.TryAdd(debug_message, debug_message);
+
+            if (RegionRequestData<OBJECT>.NumOutstandingQueries > 30)
+            {
+                Trace.WriteLine(string.Format("{0} Outstanding queries", RegionRequestData<OBJECT>.NumOutstandingQueries));
+            }
+#endif 
         }
 
         public void AddCallback(Action<ICollection<OBJECT>> callback)
@@ -69,6 +91,18 @@ namespace WebAnnotationModel
         {
             lock (this)
             {
+
+
+#if DEBUG
+                System.Threading.Interlocked.Decrement(ref RegionRequestData<OBJECT>.NumOutstandingQueries);
+                string removed_message;
+                active_requests.TryRemove(debug_message, out removed_message);
+
+                if (this.OnCompletionCallbacks.Count > 1)
+                {
+                    Trace.WriteLine(string.Format("{0} callbacks registered in region", this.OnCompletionCallbacks.Count));
+                }
+#endif
                 foreach (Action<ICollection<OBJECT>> a in this.OnCompletionCallbacks)
                 {
                     Task.Run(() => { a(objects); });
@@ -89,8 +123,8 @@ namespace WebAnnotationModel
         /// </summary>
         public bool CancelRunningOperations = false;
 
-        public AnnotationRegions(GridCellDimensions cellDimensions)
-            : base(cellDimensions)
+        public AnnotationRegions(GridCellDimensions cellDimensions, double PowerScale)
+            : base(cellDimensions, PowerScale)
         { }
     }
 
@@ -101,30 +135,11 @@ namespace WebAnnotationModel
     /// <typeparam name="OBJECT"></typeparam>
     public class RegionPyramid<OBJECT>: BoundlessRegionPyramid<RegionRequestData<OBJECT>>
         where OBJECT : class
-    {
-        public RegionPyramid(GridCellDimensions cellDimensions) : base(cellDimensions)
+    { 
+        public RegionPyramid(GridCellDimensions cellDimensions, double PowerScale) : base(cellDimensions, PowerScale)
         {
 
         }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="SinglePixelRadius"></param>
-        /// <returns></returns>
-        protected override int PixelDimensionToLevel(double SinglePixelRadius)
-        {
-            int Level = (int)Math.Floor(Math.Log(SinglePixelRadius, 6));
-            if (Level < 0)
-                Level = 0;
-            return Level;
-        }
-
-        protected override double LevelToPixelDimension(int Level)
-        {
-            return Math.Pow(6.0, Level);
-        }
-
     }
 
     /// <summary>
@@ -134,16 +149,33 @@ namespace WebAnnotationModel
         where KEY : struct
         where OBJECT : class
     {
-        static GridCellDimensions CellDimensions = new GridCellDimensions(7500, 7500);
+        readonly GridCellDimensions CellDimensions;
+        readonly double PowerScale;
         static double RegionUpdateInterval = 180;
         IRegionQuery<KEY, OBJECT> objectStore;
 
         ConcurrentDictionary<int, RegionPyramid<OBJECT>> sectionPyramids = new ConcurrentDictionary<int, RegionPyramid<OBJECT>>();
         
-        public RegionLoader(IRegionQuery<KEY, OBJECT> store)
+        public RegionLoader(IRegionQuery<KEY, OBJECT> store) : this(store, new GridCellDimensions(2000, 2000), 3)
         {
+            
             this.objectStore = store;
         }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="store"></param>
+        /// <param name="CellSize">Size of full-resolution region at level 0.</param>
+        /// <param name="LevelPowerScalar">The exponent we use to map a request to a pyramid level</param>
+        public RegionLoader(IRegionQuery<KEY, OBJECT> store, GridCellDimensions CellSize, double LevelPowerScalar)
+        {
+            this.objectStore = store;
+            this.CellDimensions = CellSize;
+            this.PowerScale = LevelPowerScalar;
+        }
+
+
 
         private static bool RegionIsDueForRefresh(RegionRequestData<OBJECT> cell)
         {
@@ -180,13 +212,16 @@ namespace WebAnnotationModel
                 int iY = iCell.Y;
 
                 //Trace.WriteLine(string.Format("Grid Region Loading Z:{0} L:{1} X:{2} Y:{3}", SectionNumber, level.Level, iX, iY));
-
-                RegionRequestData <OBJECT> cell = level.GetOrAddCell(iCell, (key) => { return CreateRegionRequest(level, key, SectionNumber, OnServerObjectsLoadedCallback); });
+                //Something I learned debugging why multiple requests for the same region being launched is that the delegate for GetOrAddCell can
+                //be called multiple times if no value is in the dictionary and multiple threads all attempt to add a value before a thread inserts 
+                //a value.  So make GetOrAdd calls cheap.
+                RegionRequestData <OBJECT> cell = level.GetOrAddCell(iCell, (icell) => new RegionRequestData<OBJECT>());
                 lock(cell)
                 {
                     //If we are waiting on results, add our callback to the list of functions to call when the request is complete
                     if (RegionIsDueForRefresh(cell))
                     {
+                        //Trace.WriteLine(string.Format("Grid Region Loading Z:{0} L:{1} X:{2} Y:{3}", SectionNumber, level.Level, iX, iY));
                         AttachRequestForRegion(cell, level, iCell, SectionNumber, OnServerObjectsLoadedCallback);
                     }
                     else
@@ -216,7 +251,7 @@ namespace WebAnnotationModel
 
         private RegionPyramid<OBJECT> GetOrAddRegionPyramidForSection(int SectionNumber)
         {
-            return this.sectionPyramids.GetOrAdd(SectionNumber, (Number) => new RegionPyramid<OBJECT>(CellDimensions));
+            return this.sectionPyramids.GetOrAdd(SectionNumber, (Number) => new RegionPyramid<OBJECT>(CellDimensions, PowerScale));
         }
 
 
@@ -235,6 +270,10 @@ namespace WebAnnotationModel
             GridRectangle cellBounds = level.CellBounds(iCell.X, iCell.Y);
             DateTime? LastQueryUtc = cell.LastQuery;
 
+#if DEBUG
+            cell.debug_message = string.Format("S:{0} L:{1} {2}", SectionNumber, level.Level, iCell);
+#endif
+
             if (OnLoadCompletedCallback != null)
                 cell.AddCallback(OnLoadCompletedCallback);
 
@@ -246,8 +285,10 @@ namespace WebAnnotationModel
             /*if (localObjects.KnownObjects.Count > 0 && OnLoadCompletedCallback != null)
                 OnLoadCompletedCallback(localObjects.KnownObjects);*/
 
-            string TraceString = string.Format("CreateRegionRequest: {0} ({1},{2}) Level:{3} MinRadius:{4}", SectionNumber, iCell.X, iCell.Y, level.Level, level.MinRadius);
-            Trace.WriteLine(TraceString, "WebAnnotation");
+#if DEBUG
+            //string TraceString = string.Format("CreateRegionRequest: {0} ({1},{2}) Level:{3} MinRadius:{4}", SectionNumber, iCell.X, iCell.Y, level.Level, level.MinRadius);
+            //Trace.WriteLine(TraceString, "WebAnnotation");
+#endif
         }
 
         //How do we handle the CRUD of locations?

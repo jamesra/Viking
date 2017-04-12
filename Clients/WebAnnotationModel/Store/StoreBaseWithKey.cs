@@ -575,9 +575,11 @@ namespace WebAnnotationModel
 
             DateTime TraceParseEnd = DateTime.UtcNow;
 
-            Trace.WriteLine("Sxn " + state.SectionNumber.ToString() + " finished " + typeof(OBJECT).ToString() + " query.  " + inventory.ObjectsInStore.Count + " returned");
-            Trace.WriteLine("\tQuery Time: " + new TimeSpan(TraceQueryEnd.Ticks - StartTime.Ticks).TotalSeconds.ToString() + " (sec) elapsed");
-            Trace.WriteLine("\tParse Time: " + new TimeSpan(TraceParseEnd.Ticks - TraceQueryEnd.Ticks).TotalSeconds.ToString() + " (sec) elapsed");
+#if DEBUG
+            TraceQueryDetails(SectionNumber, inventory.ObjectsInStore.Count, StartTime, TraceQueryEnd, TraceParseEnd);
+#endif
+
+            //Trace.WriteLine(sb.ToString());
 
             CallOnCollectionChanged(inventory);
 
@@ -666,16 +668,17 @@ namespace WebAnnotationModel
         private string PrepareQueryDetails(long SectionNumber, long numObjects, DateTime StartTime, DateTime QueryEndTime, DateTime ParseEndTime)
         {
             StringBuilder sb = new StringBuilder();
-            sb.AppendLine("Sxn " + SectionNumber.ToString() + " finished " + typeof(OBJECT).ToString() + " query.  " + numObjects.ToString() + " returned");
-            sb.AppendLine("\tQuery Time: " + new TimeSpan(QueryEndTime.Ticks - StartTime.Ticks).TotalSeconds.ToString() + " (sec) elapsed");
-            sb.AppendLine("\tParse Time: " + new TimeSpan(ParseEndTime.Ticks - QueryEndTime.Ticks).TotalSeconds.ToString() + " (sec) elapsed");
+            sb.AppendFormat("Sxn {0} finished {1} query, {2} returned\n", SectionNumber, typeof(OBJECT), numObjects);
+            sb.AppendFormat("\tQuery time: {0} (sec)\n", new TimeSpan(QueryEndTime.Ticks - StartTime.Ticks).TotalSeconds);
+            sb.AppendFormat("\tParse time: {0} (sec)\n", new TimeSpan(ParseEndTime.Ticks - QueryEndTime.Ticks).TotalSeconds);
+             
             return sb.ToString();
         }
 
         private string PrepareQueryDetails(long SectionNumber, long numObjects, DateTime StartTime, DateTime QueryEndTime, DateTime ParseEndTime, DateTime EventsEndTime)
         {
             StringBuilder sb = new StringBuilder(PrepareQueryDetails(SectionNumber, numObjects, StartTime, QueryEndTime, ParseEndTime));
-            sb.AppendLine("\tEvents Time: " + new TimeSpan(EventsEndTime.Ticks - ParseEndTime.Ticks).TotalSeconds.ToString() + " (sec) elapsed");
+            sb.AppendFormat("\tEvents Time: {0} (sec)\n", new TimeSpan(EventsEndTime.Ticks - ParseEndTime.Ticks).TotalSeconds);
             return sb.ToString();
         }
 
@@ -846,6 +849,9 @@ namespace WebAnnotationModel
         /// <param name="serverDeletedObjects">Objects which have been deleted since the last query</param>
         public virtual ChangeInventory<OBJECT> ParseQuery(WCFOBJECT[] serverObjects, KEY[] serverDeletedObjects, GetObjectBySectionCallbackState<PROXY, OBJECT> state)
         {
+            if (serverObjects == null)
+                return new ChangeInventory<OBJECT>();
+
             OBJECT[] listObj = new OBJECT[0];
             List<OBJECT> deleted = new List<OBJECT>(serverDeletedObjects.Length);
             if (serverDeletedObjects != null)

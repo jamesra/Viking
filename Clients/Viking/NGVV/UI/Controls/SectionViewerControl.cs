@@ -2134,6 +2134,11 @@ namespace Viking.UI.Controls
             GoToLocation(location, Z, false, newDownsample);
         }
 
+        public void GoToLocation(Vector2 location, int Z, bool InputInSectionSpace)
+        {
+            GoToLocation(location, Z, InputInSectionSpace, this.Camera.Downsample);
+        }
+
         public void GoToLocation(Vector2 location, int Z, bool InputInSectionSpace, double newDownsample)
         {
             if (UI.State.volume.SectionViewModels.ContainsKey(Z) == false)

@@ -93,7 +93,7 @@ namespace WebAnnotation.View
             _ControlPointRadius = Global.DefaultClosedLineWidth / 2.0;
             VolumePolygon = mapper.TryMapShapeSectionToVolume(obj.MosaicShape).ToPolygon();
             //_ControlPointRadius = GetRadiusFromPolygonArea(VolumePolygon, 0.01);
-            SmoothedVolumePolygon = obj.VolumeShape.ToPolygon();
+            SmoothedVolumePolygon = VolumePolygon.Smooth(Global.NumClosedCurveInterpolationPoints);
             this.Color = obj.Parent == null ? Color.Gray.SetAlpha(0.5f) : obj.Parent.Type.Color.ToXNAColor(0.5f);
             polygonMesh = TriangleNetExtensions.CreateMeshForPolygon2D(SmoothedVolumePolygon, this.HSLColor);
             CreateLabelObjects();

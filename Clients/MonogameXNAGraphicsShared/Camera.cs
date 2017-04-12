@@ -109,8 +109,12 @@ namespace VikingXNA
                 Debug.Assert(!double.IsNaN(value));
                 if (value < 0)
                     return;
-                _Downsample = value;
-                CallOnPropertyChanged(new PropertyChangedEventArgs("Downsample"));
+
+                if (_Downsample != value)
+                {
+                    _Downsample = value;
+                    CallOnPropertyChanged(new PropertyChangedEventArgs("Downsample"));
+                }
             }
             get
             {
