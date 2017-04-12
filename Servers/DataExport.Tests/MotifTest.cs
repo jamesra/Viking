@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Web;
 using System.Web.Mvc;
+using System.Collections.Specialized;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using AnnotationVizLib;
+using Moq; 
 
 namespace DataExport.Tests
 {
@@ -53,11 +55,21 @@ namespace DataExport.Tests
 
         [TestMethod]
         public void TestMorphologyGraphs()
-        {  
-            HttpContext.Current = new HttpContext(new HttpRequest("", "http://tempuri.org", "id=180,476"), new HttpResponse(new System.IO.StringWriter()));
+        {
+            NameValueCollection queryParams = new NameValueCollection();
+            queryParams.Add("id", "180;476");
+
+            // Create mocks
+            var mockedhttpContext = new Mock<HttpContextBase>();
+            var mockedHttpRequest = new Mock<HttpRequestBase>();
+
+            mockedHttpRequest.SetupGet(x => x.QueryString).Returns(queryParams);
+            mockedhttpContext.SetupGet(x => x.Request).Returns(mockedHttpRequest.Object);
+             
+            HttpContext.Current = new HttpContext(new HttpRequest("", "http://tempuri.org", "id=180;476"), new HttpResponse(new System.IO.StringWriter()));
             DataExport.Controllers.MorphologyController controller = new Controllers.MorphologyController();
-
-
+            controller.ControllerContext = new ControllerContext(mockedhttpContext.Object, new System.Web.Routing.RouteData(), controller);
+            
             ActionResult result = controller.GetTLP();
             Assert.IsTrue(result.GetType() == typeof(FilePathResult));
 

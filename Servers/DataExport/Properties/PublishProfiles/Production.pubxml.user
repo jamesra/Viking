@@ -9,8 +9,14 @@ by editing this MSBuild file. In order to learn more about this please visit htt
     <_PublishTargetUrl>C:\src\git\Viking\Servers\Deployment\Release\Export</_PublishTargetUrl>
   </PropertyGroup>
   <ItemGroup>
+    <File Include="bin/AnnotationServiceTypes.dll">
+      <publishTime>04/10/2017 18:24:44</publishTime>
+    </File>
     <File Include="bin/AnnotationVizLib.dll">
-      <publishTime>02/20/2017 14:15:11</publishTime>
+      <publishTime>04/10/2017 18:24:50</publishTime>
+    </File>
+    <File Include="bin/AnnotationVizLib.WCFClient.dll">
+      <publishTime>04/10/2017 18:24:51</publishTime>
     </File>
     <File Include="bin/Antlr3.Runtime.dll">
       <publishTime>08/31/2015 16:54:16</publishTime>
@@ -19,7 +25,7 @@ by editing this MSBuild file. In order to learn more about this please visit htt
       <publishTime>09/14/2016 14:52:28</publishTime>
     </File>
     <File Include="bin/DataExport.dll">
-      <publishTime>02/20/2017 14:15:15</publishTime>
+      <publishTime>04/10/2017 23:14:26</publishTime>
     </File>
     <File Include="bin/de/Microsoft.Data.Edm.resources.dll">
       <publishTime>03/28/2016 17:17:55</publishTime>
@@ -100,10 +106,10 @@ by editing this MSBuild file. In order to learn more about this please visit htt
       <publishTime>03/28/2016 17:17:58</publishTime>
     </File>
     <File Include="bin/Geometry.dll">
-      <publishTime>02/20/2017 14:15:05</publishTime>
+      <publishTime>04/10/2017 18:24:47</publishTime>
     </File>
     <File Include="bin/GraphLib.dll">
-      <publishTime>12/07/2016 11:51:15</publishTime>
+      <publishTime>04/07/2017 17:03:03</publishTime>
     </File>
     <File Include="bin/it/Microsoft.Data.Edm.resources.dll">
       <publishTime>03/28/2016 17:17:55</publishTime>
@@ -169,7 +175,7 @@ by editing this MSBuild file. In order to learn more about this please visit htt
       <publishTime>03/28/2016 17:17:58</publishTime>
     </File>
     <File Include="bin/log4net.dll">
-      <publishTime>12/10/2015 16:55:06</publishTime>
+      <publishTime>01/02/2017 06:32:48</publishTime>
     </File>
     <File Include="bin/MathNet.Numerics.dll">
       <publishTime>01/15/2017 17:09:16</publishTime>
@@ -193,7 +199,7 @@ by editing this MSBuild file. In order to learn more about this please visit htt
       <publishTime>03/28/2016 17:18:23</publishTime>
     </File>
     <File Include="bin/Microsoft.SqlServer.Types.dll">
-      <publishTime>08/13/2015 17:00:26</publishTime>
+      <publishTime>12/10/2016 15:26:34</publishTime>
     </File>
     <File Include="bin/Microsoft.Threading.Tasks.dll">
       <publishTime>04/07/2014 12:26:14</publishTime>
@@ -213,6 +219,9 @@ by editing this MSBuild file. In order to learn more about this please visit htt
     <File Include="bin/ODataClient.dll">
       <publishTime>02/20/2017 14:15:06</publishTime>
     </File>
+    <File Include="bin/protobuf-net.dll">
+      <publishTime>09/30/2013 09:20:50</publishTime>
+    </File>
     <File Include="bin/Resources/ColorMapping/DefaultLocationColorMap.txt">
       <publishTime>06/09/2015 12:08:50</publishTime>
     </File>
@@ -223,7 +232,7 @@ by editing this MSBuild file. In order to learn more about this please visit htt
       <publishTime>06/09/2015 12:08:50</publishTime>
     </File>
     <File Include="bin/RTree.dll">
-      <publishTime>10/07/2016 13:39:31</publishTime>
+      <publishTime>04/10/2017 18:24:44</publishTime>
     </File>
     <File Include="bin/ru/Microsoft.Data.Edm.resources.dll">
       <publishTime>03/28/2016 17:17:55</publishTime>
@@ -247,31 +256,43 @@ by editing this MSBuild file. In order to learn more about this please visit htt
       <publishTime>03/28/2016 17:17:58</publishTime>
     </File>
     <File Include="bin/Simple.OData.Client.Core.dll">
-      <publishTime>08/19/2016 15:19:38</publishTime>
+      <publishTime>02/28/2017 21:46:32</publishTime>
     </File>
     <File Include="bin/Simple.OData.Client.Dynamic.dll">
-      <publishTime>08/19/2016 15:19:38</publishTime>
+      <publishTime>02/28/2017 21:46:32</publishTime>
     </File>
     <File Include="bin/Simple.OData.Client.Net40.dll">
       <publishTime>08/19/2016 15:19:36</publishTime>
     </File>
     <File Include="bin/Simple.OData.Client.V4.Adapter.dll">
-      <publishTime>08/19/2016 15:19:38</publishTime>
+      <publishTime>02/28/2017 21:46:32</publishTime>
     </File>
     <File Include="bin/SqlGeometryUtils.dll">
-      <publishTime>02/20/2017 14:15:07</publishTime>
+      <publishTime>04/10/2017 18:24:48</publishTime>
     </File>
     <File Include="bin/SqlServerTypes/x64/msvcr100.dll">
       <publishTime>08/13/2015 17:00:26</publishTime>
     </File>
+    <File Include="bin/SqlServerTypes/x64/msvcr120.dll">
+      <publishTime>04/10/2017 23:13:50</publishTime>
+    </File>
     <File Include="bin/SqlServerTypes/x64/SqlServerSpatial110.dll">
       <publishTime>08/13/2015 17:00:26</publishTime>
+    </File>
+    <File Include="bin/SqlServerTypes/x64/SqlServerSpatial140.dll">
+      <publishTime>04/10/2017 23:13:51</publishTime>
     </File>
     <File Include="bin/SqlServerTypes/x86/msvcr100.dll">
       <publishTime>08/13/2015 17:00:26</publishTime>
     </File>
+    <File Include="bin/SqlServerTypes/x86/msvcr120.dll">
+      <publishTime>04/10/2017 23:13:48</publishTime>
+    </File>
     <File Include="bin/SqlServerTypes/x86/SqlServerSpatial110.dll">
       <publishTime>08/13/2015 17:00:26</publishTime>
+    </File>
+    <File Include="bin/SqlServerTypes/x86/SqlServerSpatial140.dll">
+      <publishTime>04/10/2017 23:13:49</publishTime>
     </File>
     <File Include="bin/System.Net.Http.dll">
       <publishTime>08/13/2013 01:19:06</publishTime>
@@ -321,11 +342,14 @@ by editing this MSBuild file. In order to learn more about this please visit htt
     <File Include="bin/System.Web.WebPages.Razor.dll">
       <publishTime>08/31/2015 16:44:09</publishTime>
     </File>
+    <File Include="bin/Triangle.dll">
+      <publishTime>04/07/2017 17:03:03</publishTime>
+    </File>
     <File Include="bin/Utils.dll">
-      <publishTime>10/07/2016 13:20:31</publishTime>
+      <publishTime>04/07/2017 17:03:03</publishTime>
     </File>
     <File Include="bin/VikingWebAppSettings.dll">
-      <publishTime>02/20/2017 14:15:07</publishTime>
+      <publishTime>04/10/2017 18:24:48</publishTime>
     </File>
     <File Include="bin/WebGrease.dll">
       <publishTime>08/31/2015 16:53:53</publishTime>
@@ -559,7 +583,7 @@ by editing this MSBuild file. In order to learn more about this please visit htt
       <publishTime>06/09/2015 12:08:50</publishTime>
     </File>
     <File Include="packages.config">
-      <publishTime>02/20/2017 14:12:43</publishTime>
+      <publishTime>04/10/2017 23:13:41</publishTime>
     </File>
     <File Include="Resources/ColorMapping/DefaultLocationColorMap.txt">
       <publishTime>06/09/2015 12:08:50</publishTime>
@@ -577,37 +601,37 @@ by editing this MSBuild file. In order to learn more about this please visit htt
       <publishTime>07/27/2016 17:33:42</publishTime>
     </File>
     <File Include="Scripts/jquery-2.1.4.js">
-      <publishTime>08/31/2015 16:42:47</publishTime>
+      <publishTime>04/05/2017 18:45:23</publishTime>
     </File>
     <File Include="Scripts/jquery-2.1.4.min.js">
-      <publishTime>08/31/2015 16:42:47</publishTime>
+      <publishTime>04/05/2017 18:45:23</publishTime>
     </File>
     <File Include="Scripts/jquery-2.1.4.min.map">
       <publishTime>08/31/2015 16:42:47</publishTime>
     </File>
     <File Include="Scripts/jquery-3.1.0.js">
-      <publishTime>07/28/2016 12:54:50</publishTime>
+      <publishTime>04/05/2017 18:45:23</publishTime>
     </File>
     <File Include="Scripts/jquery-3.1.0.min.js">
-      <publishTime>07/28/2016 12:54:50</publishTime>
+      <publishTime>04/05/2017 18:45:23</publishTime>
     </File>
     <File Include="Scripts/jquery-3.1.0.min.map">
       <publishTime>07/28/2016 12:54:50</publishTime>
     </File>
     <File Include="Scripts/jquery-3.1.0.slim.js">
-      <publishTime>07/28/2016 12:54:50</publishTime>
+      <publishTime>04/05/2017 18:45:23</publishTime>
     </File>
     <File Include="Scripts/jquery-3.1.0.slim.min.js">
-      <publishTime>07/28/2016 12:54:50</publishTime>
+      <publishTime>04/05/2017 18:45:23</publishTime>
     </File>
     <File Include="Scripts/jquery-3.1.0.slim.min.map">
       <publishTime>07/28/2016 12:54:50</publishTime>
     </File>
     <File Include="Scripts/jquery-ui-1.11.4.js">
-      <publishTime>08/31/2015 16:50:11</publishTime>
+      <publishTime>04/05/2017 18:45:23</publishTime>
     </File>
     <File Include="Scripts/jquery-ui-1.11.4.min.js">
-      <publishTime>08/31/2015 16:50:11</publishTime>
+      <publishTime>04/05/2017 18:45:23</publishTime>
     </File>
     <File Include="Scripts/jquery-ui-1.8.20.js">
       <publishTime>09/06/2016 15:13:50</publishTime>
@@ -619,19 +643,19 @@ by editing this MSBuild file. In order to learn more about this please visit htt
       <publishTime>08/31/2015 16:54:35</publishTime>
     </File>
     <File Include="Scripts/jquery.unobtrusive-ajax.min.js">
-      <publishTime>08/31/2015 16:54:35</publishTime>
+      <publishTime>04/05/2017 18:45:23</publishTime>
     </File>
     <File Include="Scripts/jquery.validate.js">
-      <publishTime>08/31/2015 16:50:34</publishTime>
+      <publishTime>04/05/2017 18:45:23</publishTime>
     </File>
     <File Include="Scripts/jquery.validate.min.js">
-      <publishTime>08/31/2015 16:50:34</publishTime>
+      <publishTime>04/05/2017 18:45:23</publishTime>
     </File>
     <File Include="Scripts/jquery.validate.unobtrusive.js">
       <publishTime>08/31/2015 16:55:00</publishTime>
     </File>
     <File Include="Scripts/jquery.validate.unobtrusive.min.js">
-      <publishTime>08/31/2015 16:55:00</publishTime>
+      <publishTime>04/05/2017 18:45:23</publishTime>
     </File>
     <File Include="Scripts/knockout-2.1.0.debug.js">
       <publishTime>07/27/2016 17:33:42</publishTime>
@@ -640,22 +664,37 @@ by editing this MSBuild file. In order to learn more about this please visit htt
       <publishTime>07/27/2016 17:33:42</publishTime>
     </File>
     <File Include="Scripts/knockout-3.3.0.debug.js">
-      <publishTime>08/31/2015 16:51:12</publishTime>
+      <publishTime>04/05/2017 18:45:23</publishTime>
     </File>
     <File Include="Scripts/knockout-3.3.0.js">
-      <publishTime>08/31/2015 16:51:12</publishTime>
+      <publishTime>04/05/2017 18:45:23</publishTime>
     </File>
     <File Include="Scripts/knockout-3.4.0.debug.js">
-      <publishTime>07/28/2016 12:54:51</publishTime>
+      <publishTime>04/05/2017 18:45:23</publishTime>
     </File>
     <File Include="Scripts/knockout-3.4.0.js">
-      <publishTime>07/28/2016 12:54:51</publishTime>
+      <publishTime>04/05/2017 18:45:23</publishTime>
     </File>
     <File Include="Scripts/modernizr-2.5.3.js">
       <publishTime>07/27/2016 17:33:42</publishTime>
     </File>
     <File Include="Scripts/modernizr-2.8.3.js">
-      <publishTime>07/28/2016 12:54:56</publishTime>
+      <publishTime>04/05/2017 18:45:23</publishTime>
+    </File>
+    <File Include="SqlServerTypes/readme.htm">
+      <publishTime>04/10/2017 23:13:41</publishTime>
+    </File>
+    <File Include="SqlServerTypes/x64/msvcr120.dll">
+      <publishTime>04/10/2017 23:13:50</publishTime>
+    </File>
+    <File Include="SqlServerTypes/x64/SqlServerSpatial140.dll">
+      <publishTime>04/10/2017 23:13:51</publishTime>
+    </File>
+    <File Include="SqlServerTypes/x86/msvcr120.dll">
+      <publishTime>04/10/2017 23:13:48</publishTime>
+    </File>
+    <File Include="SqlServerTypes/x86/SqlServerSpatial140.dll">
+      <publishTime>04/10/2017 23:13:49</publishTime>
     </File>
     <File Include="Views/Shared/Error.aspx">
       <publishTime>06/09/2015 12:08:50</publishTime>
@@ -664,7 +703,7 @@ by editing this MSBuild file. In order to learn more about this please visit htt
       <publishTime>09/14/2016 14:52:06</publishTime>
     </File>
     <File Include="Web.config">
-      <publishTime>02/20/2017 14:17:02</publishTime>
+      <publishTime>04/10/2017 23:14:45</publishTime>
     </File>
   </ItemGroup>
 </Project>

@@ -29,6 +29,9 @@ namespace DataExport.Controllers
 
         public static ICollection<long> GetIDsFromRequestFiles(HttpFileCollectionBase files)
         {
+            if (files == null)
+                return new long[0];
+
             List<long> ids = new List<long>();
 
             for (int i = 0; i < files.Count; i++)
@@ -45,31 +48,34 @@ namespace DataExport.Controllers
             return ids;
         }
 
+        /// <summary>
+        /// A query can specify IDs using either the IDs
+        /// </summary>
+        /// <param name="QueryData"></param>
+        /// <returns></returns>
         public static ICollection<long> GetIDsFromQueryData(NameValueCollection  QueryData)
         {
             //A hack, but should only occur in unit testing
             if (QueryData == null)
                 return new long[] { 180, 476, 514 };
 
-            List<long> IDs = new List<long>();
+            SortedSet<long> IDs = new SortedSet<long>();
 
-            string idListstr = QueryData["id"];
-            if (idListstr == null)
-            {
-                idListstr = QueryData["ids"];
-                if (idListstr == null)
-                {
-                    return new long[0];
-                }
-            }
-
-            if (idListstr != null)
-                IDs.AddRange(ParseIDString(idListstr));
+            IDs.UnionWith(ParseIDString(QueryData["id"]));
+            IDs.UnionWith(ParseIDString(QueryData["ids"]));
+            IDs.UnionWith(ParseIDString(QueryData["$id"]));
+            IDs.UnionWith(ParseIDString(QueryData["$ids"]));
 
             string query_string = QueryData["query"];
             if (query_string != null)
             {
-                IDs.AddRange(GetIDsFromQuery(VikingWebAppSettings.AppSettings.ODataURL, query_string));
+                IDs.UnionWith(GetIDsFromQuery(VikingWebAppSettings.AppSettings.ODataURL, query_string));
+            }
+
+            query_string = QueryData["$query"];
+            if (query_string != null)
+            {
+                IDs.UnionWith(GetIDsFromQuery(VikingWebAppSettings.AppSettings.ODataURL, query_string));
             }
 
             return IDs;
@@ -77,13 +83,20 @@ namespace DataExport.Controllers
 
         public static ICollection<long> ParseIDString(string idListstr)
         {
+            if (idListstr == null)
+                return new long[0]; 
+
             string[] parts = idListstr.Split(new char[] {';', '\n'}, StringSplitOptions.RemoveEmptyEntries);
             List<long> ids = new List<long>(parts.Length);
             var query_tasks = new List<Task<ICollection<long>>>();
             foreach (string id in parts)
             {
+                if (id == null)
+                    continue;
+
                 try
                 {
+                    
                     //Do not allow a negative id
                     ids.Add(Convert.ToInt64(Convert.ToUInt64(id)));
                 }
@@ -113,7 +126,7 @@ namespace DataExport.Controllers
         }
         
         public static ICollection<long> GetIDsFromQuery(Uri ODataURI, string query)
-        {
+        {  
             ODataClient client = new ODataClient(ODataURI);
             IEnumerable<IDictionary<string, object>> packages = null;
 

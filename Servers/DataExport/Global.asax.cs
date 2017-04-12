@@ -86,7 +86,8 @@ namespace DataExport
 
         protected void Application_Start()
         {
-            
+            SqlServerTypes.Utilities.LoadNativeAssemblies(Server.MapPath("~/bin"));
+
             RegisterRoutes(RouteTable.Routes);
 
             AreaRegistration.RegisterAllAreas();

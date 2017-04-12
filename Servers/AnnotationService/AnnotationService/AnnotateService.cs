@@ -17,28 +17,36 @@ using AnnotationService.Types;
 
 namespace Annotation
 {
-    [ServiceBehavior(InstanceContextMode = InstanceContextMode.PerCall)]
+    [ServiceBehavior(InstanceContextMode = InstanceContextMode.Single, ConcurrencyMode = ConcurrencyMode.Multiple)]
     [AspNetCompatibilityRequirements(RequirementsMode = AspNetCompatibilityRequirementsMode.Required)]
-    public class AnnotateService : IAnnotateStructureTypes, IAnnotateStructures, IAnnotateLocations, IDisposable, ICircuit, ICredentials, IVolumeMeta
+    public class AnnotateService : IAnnotateStructureTypes, IAnnotateStructures, IAnnotateLocations, ICircuit, ICredentials, IVolumeMeta
     {
         static bool _isSqlTypesLoaded = false;
+
+        static object lockObject = new object();
 
         public static void TryLoadSqlServerTypes()
         {
             if (_isSqlTypesLoaded)
                 return;
 
-            try
+            lock (lockObject)
             {
-                SqlServerTypes.Utilities.LoadNativeAssemblies(System.Web.HttpContext.Current.Server.MapPath("~"));
-                _isSqlTypesLoaded = true;
-                return;
-            }
-            catch (NullReferenceException)
-            {
-                SqlServerTypes.Utilities.LoadNativeAssemblies(AppDomain.CurrentDomain.BaseDirectory);
-                _isSqlTypesLoaded = true;
-                return;
+                if (_isSqlTypesLoaded)
+                    return;
+
+                try
+                {
+                    SqlServerTypes.Utilities.LoadNativeAssemblies(System.Web.HttpContext.Current.Server.MapPath("~"));
+                    _isSqlTypesLoaded = true;
+                    return;
+                }
+                catch (NullReferenceException)
+                {
+                    SqlServerTypes.Utilities.LoadNativeAssemblies(AppDomain.CurrentDomain.BaseDirectory);
+                    _isSqlTypesLoaded = true;
+                    return;
+                }
             }
         }
 
@@ -121,9 +129,7 @@ namespace Annotation
 
             return _db;*/
         }
-
-        ConnectomeDataModel.ConnectomeEntities _db;
-
+        
         public ConnectomeDataModel.ConnectomeEntities GetOrCreateReadOnlyContext()
         {
             ConnectomeEntities db = GetOrCreateDatabaseContext();
@@ -2324,20 +2330,7 @@ namespace Annotation
 
 
         #endregion
-
-
-        #region IDisposable Members
-
-        void IDisposable.Dispose()
-        {
-            if (_db != null)
-            {
-                _db.Dispose();
-                _db = null;
-            }
-        }
-
-        #endregion
+        
 
         #region ICircuit Members
 

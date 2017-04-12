@@ -89,14 +89,15 @@ namespace AnnotationVizLibTests
             ColorMapWithImages mapping = ColorMapWithImages.Create(config, "Resources");
 
             //We expect the two identical images to be averaged using the color scalars in the text file
+            double ImageScale = 4;
 
-            Microsoft.VisualStudio.TestTools.UnitTesting.Assert.IsTrue(ColorsMatch(mapping.GetColor(0, 1, 1), Color.FromArgb(127, 255, 127)));
-            Microsoft.VisualStudio.TestTools.UnitTesting.Assert.IsTrue(ColorsMatch(mapping.GetColor(0, 0, 1), Color.Black));
+            Microsoft.VisualStudio.TestTools.UnitTesting.Assert.IsTrue(ColorsMatch(mapping.GetColor(0 * ImageScale, 1 * ImageScale, 1), Color.FromArgb(127, 255, 127)));
+            Microsoft.VisualStudio.TestTools.UnitTesting.Assert.IsTrue(ColorsMatch(mapping.GetColor(0 * ImageScale, 0 * ImageScale, 1), Color.Black));
 
-            Microsoft.VisualStudio.TestTools.UnitTesting.Assert.IsTrue(ColorsMatch(mapping.GetColor(3, 0, 1), Color.Empty));
-            Microsoft.VisualStudio.TestTools.UnitTesting.Assert.IsTrue(ColorsMatch(mapping.GetColor(0, 2, 1), Color.Empty));
-            Microsoft.VisualStudio.TestTools.UnitTesting.Assert.IsTrue(ColorsMatch(mapping.GetColor(-1, 0,1), Color.Empty));
-            Microsoft.VisualStudio.TestTools.UnitTesting.Assert.IsTrue(ColorsMatch(mapping.GetColor(0, -1,1), Color.Empty));
+            Microsoft.VisualStudio.TestTools.UnitTesting.Assert.IsTrue(ColorsMatch(mapping.GetColor(3 * ImageScale, 0 * ImageScale, 1), Color.Empty));
+            Microsoft.VisualStudio.TestTools.UnitTesting.Assert.IsTrue(ColorsMatch(mapping.GetColor(0 * ImageScale, 2 * ImageScale, 1), Color.Empty));
+            Microsoft.VisualStudio.TestTools.UnitTesting.Assert.IsTrue(ColorsMatch(mapping.GetColor(-1 * ImageScale, 0 * ImageScale, 1), Color.Empty));
+            Microsoft.VisualStudio.TestTools.UnitTesting.Assert.IsTrue(ColorsMatch(mapping.GetColor(0 * ImageScale, -1 * ImageScale, 1), Color.Empty));
         }
 
         /// <summary>
