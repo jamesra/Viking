@@ -7,7 +7,7 @@ namespace Geometry
 {
 
     [Serializable]
-    public struct GridVector2 : IPoint, ICloneable, IComparable, IComparable<GridVector2>, IComparer<GridVector2>
+    public struct GridVector2 : IPoint, ICloneable, IComparable, IComparable<GridVector2>, IComparer<GridVector2>, IShape2D
     {
         public double X;
         public double Y;
@@ -317,9 +317,24 @@ namespace Geometry
             return new GridRectangle(minX, maxX, minY, maxY);
         }
 
+        bool IShape2D.Contains(IPoint2D p)
+        {
+            return p.X == this.X && p.Y == this.Y;
+        }
+
+        bool IShape2D.Intersects(IShape2D shape)
+        {
+            return shape.Contains(this);
+        }
+
+        IShape2D IShape2D.Translate(IPoint2D offset)
+        {
+            return this + offset.Convert();
+        }
+
         #region IPoint Members
 
-        double IPoint.X
+        double IPoint2D.X
         {
             get
             {
@@ -331,7 +346,7 @@ namespace Geometry
             }
         }
 
-        double IPoint.Y
+        double IPoint2D.Y
         {
             get
             {
@@ -355,8 +370,32 @@ namespace Geometry
             }
         }
 
+        GridRectangle IShape2D.BoundingBox
+        {
+            get
+            {
+                return new GridRectangle(this, 0, 0);
+            }
+        }
+
+        double IShape2D.Area
+        {
+            get
+            {
+                return 0;
+            }
+        }
+
+        ShapeType2D IShape2D.ShapeType
+        {
+            get
+            {
+                return ShapeType2D.POINT;
+            }
+        }
+
         #endregion
 
-        
+
     }
 }

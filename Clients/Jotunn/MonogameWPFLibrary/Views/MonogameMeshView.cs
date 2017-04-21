@@ -16,12 +16,7 @@ using MonogameWPFLibrary.ViewModels;
 using System.Collections.ObjectModel;
 
 using MonogameWPFLibrary;
-
-using VikingXNA;
-using VikingXNAGraphics;
-
-
-
+ 
 
 namespace MonogameWPFLibrary.Views
 {

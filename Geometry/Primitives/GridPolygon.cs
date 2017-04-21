@@ -12,7 +12,7 @@ namespace Geometry
     /// Rings are described by points.  The first and last point should match
     /// </summary>
     [Serializable()]
-    public class GridPolygon : IShape2D, ICloneable
+    public class GridPolygon : IShape2D, ICloneable, IPolygon2D
     {
         double _Area;
         GridVector2[] _ExteriorRing;
@@ -98,7 +98,11 @@ namespace Geometry
                 return _InteriorPolygons.Count > 0;
             }
         }
-        
+
+        public GridPolygon(ICollection<IPoint2D> exteriorRing) : this (exteriorRing.Select(p => p.Convert()).ToArray())
+        {}
+
+
         public GridPolygon(GridVector2[] exteriorRing)
         {
             if(!exteriorRing.IsValidClosedRing())
@@ -114,7 +118,12 @@ namespace Geometry
             ExteriorRing = exteriorRing;
         }
 
-        
+
+        public GridPolygon(ICollection<IPoint2D> exteriorRing, ICollection<IPoint2D[]> interiorRings) 
+            : this(exteriorRing.Select(p => p.Convert()).ToArray(), 
+                   interiorRings.Select(inner_ring => inner_ring.Select(p => p.Convert() ).ToArray()).ToArray())
+        { 
+        }
 
         public GridPolygon(GridVector2[] exteriorRing, ICollection<GridVector2[]> interiorRings)
         {
@@ -145,6 +154,30 @@ namespace Geometry
             }
         }
 
+        public ShapeType2D ShapeType
+        {
+            get
+            {
+                return ShapeType2D.POLYGON;
+            }
+        }
+
+        ICollection<IPoint2D> IPolygon2D.ExteriorRing
+        {
+            get
+            {
+                return this.ExteriorRing.Select(p => p as IPoint2D).ToArray();
+            }
+        }
+
+        ICollection<IPoint2D[]> IPolygon2D.InteriorRings
+        {
+            get
+            {
+                return this.InteriorRings.Select(ir => ir.Select(p => p as IPoint2D).ToArray()).ToArray(); 
+            }
+        }
+         
         public void AddInteriorRing(GridVector2[] interiorRing)
         {
             GridPolygon innerPoly = new Geometry.GridPolygon(interiorRing);
@@ -205,13 +238,14 @@ namespace Geometry
             this.ExteriorRing = updatedLineSegments.Verticies();
         }
 
-        public bool Contains(GridVector2 p)
+        public bool Contains(IPoint2D point_param)
         {
-            if (!_BoundingRect.Contains(p))
-                return false; 
+            if (!_BoundingRect.Contains(point_param))
+                return false;
 
+            GridVector2 p = new GridVector2(point_param.X, point_param.Y);
             //Create a line we know must pass outside the polygon
-            GridLineSegment test_line = new Geometry.GridLineSegment(p, p + new GridVector2(BoundingBox.Width*2, 0));
+            GridLineSegment test_line = new Geometry.GridLineSegment(p, new GridVector2(p.X + (BoundingBox.Width*2), p.Y));
 
             bool pointInOuterRing = IsInsidePolygon(_ExteriorSegments, test_line);
             if (pointInOuterRing)
@@ -416,6 +450,68 @@ namespace Geometry
             }
 
             return clone;
+        }
+          
+        public bool Intersects(IShape2D shape)
+        {
+            return ShapeExtensions.PolygonIntersects(this, shape);
+        }
+
+
+        public bool Intersects(ICircle2D c)
+        {
+            GridCircle circle = c.Convert();
+            return this.Intersects(circle);
+        }
+
+        public bool Intersects(GridCircle circle)
+        {
+            return PolygonIntersectionExtensions.Intersects(this, circle);
+        }
+
+
+        public bool Intersects(ILineSegment2D l)
+        {
+            GridLineSegment line = l.Convert();
+            return this.Intersects(line);
+        }
+
+        public bool Intersects(GridLineSegment line)
+        {
+            return PolygonIntersectionExtensions.Intersects(this, line);
+        }
+
+        public bool Intersects(ITriangle2D t)
+        {
+            GridTriangle tri = t.Convert();
+            return this.Intersects(tri);
+        }
+
+        public bool Intersects(GridTriangle tri)
+        {
+            return PolygonIntersectionExtensions.Intersects(this, tri);
+        }
+
+        public bool Intersects(IPolygon2D p)
+        {
+            GridPolygon poly = p.Convert();
+            return this.Intersects(poly);
+        }
+
+        public bool Intersects(GridPolygon poly)
+        {
+            return PolygonIntersectionExtensions.Intersects(this, poly);
+        }
+
+        bool IShape2D.Contains(IPoint2D p)
+        {
+            return this.Contains(p.Convert());
+        }
+         
+        IShape2D IShape2D.Translate(IPoint2D offset)
+        {
+            GridVector2 v = offset.Convert();
+            return this.Translate(v);
         }
     }
 }

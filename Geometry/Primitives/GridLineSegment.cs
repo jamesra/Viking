@@ -7,10 +7,26 @@ using System.Text;
 namespace Geometry
 {
     [Serializable]
-    public struct GridLineSegment : IComparable, ICloneable, IComparer<GridLineSegment>
+    public struct GridLineSegment : IComparable, ICloneable, IComparer<GridLineSegment>, ILineSegment2D
     {
         public readonly GridVector2 A;
         public readonly GridVector2 B;
+
+        public GridLineSegment(IPoint2D A, IPoint2D B)
+        {
+            /* This is a bad idea because callers expect A and B to maintain position
+            int diff = A.Compare(A, B);
+            this.A = diff <= 0 ? A : B;
+            this.B = diff <= 0 ? B : A;
+            */
+            this.A = A.Convert();
+            this.B = B.Convert();
+
+            if (A == B)
+            {
+                throw new ArgumentException("Can't create line with two identical points");
+            }
+        }
 
         public GridLineSegment(GridVector2 A, GridVector2 B)
         {
@@ -267,6 +283,12 @@ namespace Geometry
             }
         }
 
+
+        public bool Contains(GridVector2 p)
+        {
+            return Math.Abs(this.DistanceToPoint(p)) < Global.Epsilon;
+        }
+
         public double DistanceToPoint(GridVector2 point)
         {
             GridVector2 temp;
@@ -455,6 +477,53 @@ namespace Geometry
             return seg.Any(ls => line.Intersects(ls));
         }
 
+
+        public bool Intersects(IShape2D shape)
+        {
+            return ShapeExtensions.LineIntersects(this, shape);
+        }
+
+
+        public bool Intersects(ICircle2D c)
+        {
+            GridCircle circle = c.Convert();
+            return this.Intersects(circle);
+        }
+
+        public bool Intersects(GridCircle circle)
+        {
+            return LineIntersectionExtensions.Intersects(this, circle);
+        }
+
+
+        public bool Intersects(ILineSegment2D l)
+        {
+            GridLineSegment line = l.Convert();
+            return this.Intersects(line);
+        }
+         
+        public bool Intersects(ITriangle2D t)
+        {
+            GridTriangle tri = t.Convert();
+            return this.Intersects(tri);
+        }
+
+        public bool Intersects(GridTriangle tri)
+        {
+            return LineIntersectionExtensions.Intersects(this, tri);
+        }
+
+        public bool Intersects(IPolygon2D p)
+        {
+            GridPolygon poly = p.Convert();
+            return this.Intersects(poly);
+        }
+
+        public bool Intersects(GridPolygon poly)
+        {
+            return LineIntersectionExtensions.Intersects(this, poly);
+        }
+
         public double MinX
         {
             get
@@ -495,9 +564,56 @@ namespace Geometry
             }
         }
 
+        IPoint2D ILineSegment2D.A
+        {
+            get
+            {
+                return this.A;
+            }
+        }
+
+        IPoint2D ILineSegment2D.B
+        {
+            get
+            {
+                return this.B;
+            }
+        }
+
+        public double Area
+        {
+            get
+            {
+                throw new NotImplementedException();
+            }
+        }
+
+        public ShapeType2D ShapeType
+        {
+            get
+            {
+                throw new NotImplementedException();
+            }
+        }
+
         public GridLine ToLine()
         {
             return new GridLine(this.A, this.Direction);
+        }
+
+        public bool Contains(IPoint2D p)
+        {
+            return this.Contains(p.Convert());
+        }
+
+        public IShape2D Translate(IPoint2D offset)
+        {
+            return this.Translate(offset.Convert());
+        }
+
+        public GridLineSegment Translate(GridVector2 offset)
+        {
+            return new GridLineSegment(this.A + offset, this.B + offset);
         }
     }
 }

@@ -17,7 +17,7 @@ namespace SqlGeometryUtils
         POINT,
         CURVEPOLYGON,
         POLYGON,
-        LINE
+        POLYLINE
     };
 
     public static class SqlToMyGeometryConverters
@@ -36,6 +36,50 @@ namespace SqlGeometryUtils
         public static SqlGeometry ToSqlGeometry(this GridPolygon shape)
         {
             return shape.ExteriorRing.ToPolygon(shape.InteriorRings);
+        }
+
+        public static IShapeCollection2D ToPolyLine(this SqlGeometry shape)
+        {
+            if (shape.GeometryType() != SupportedGeometryType.POLYLINE)
+                throw new ArgumentException("SqlGeometry must be a polygon type");
+
+            GridVector2[] points = shape.ToPoints();
+            Shape2DCollection collection = new Shape2DCollection(points.Length);
+            for (int i = 0; i < points.Length-1; i++)
+            {
+                GridLineSegment line = new GridLineSegment(points[i], points[i + 1]);
+                collection.Add(line);
+            }
+
+            return collection;
+        }
+
+        public static GridCircle ToCircle(this SqlGeometry shape)
+        {
+            if (shape.GeometryType() != SupportedGeometryType.CURVEPOLYGON)
+                throw new ArgumentException("SqlGeometry must be a polygon type");
+
+            GridRectangle bbox = shape.BoundingBox();
+            System.Diagnostics.Debug.Assert(Math.Floor(bbox.Width) == Math.Floor(bbox.Height)); //Make sure our optimization is really getting a circle
+            return new GridCircle(bbox.Center, bbox.Width);
+        }
+
+        
+        public static IShape2D ToShape2D(this SqlGeometry shape)
+        {
+            switch(shape.GeometryType())
+            {
+                case SupportedGeometryType.POINT:
+                    return new GridVector2(shape.STX.Value, shape.STY.Value);
+                case SupportedGeometryType.POLYGON:
+                    return shape.ToPolygon();
+                case SupportedGeometryType.POLYLINE:
+                    return shape.ToPolyLine();
+                case SupportedGeometryType.CURVEPOLYGON:
+                    return shape.ToCircle();
+                default:
+                    throw new ArgumentException("Unknown SQL Geometry Type");
+            }
         }
     }
 
@@ -62,7 +106,7 @@ namespace SqlGeometryUtils
                 case "CURVEPOLYGON":
                     return SupportedGeometryType.CURVEPOLYGON;
                 case "LINESTRING":
-                    return SupportedGeometryType.LINE;
+                    return SupportedGeometryType.POLYLINE;
                 case "POLYGON":
                     return SupportedGeometryType.POLYGON;
                 default:
@@ -574,7 +618,7 @@ namespace SqlGeometryUtils
                 case SupportedGeometryType.POINT:
                     System.Diagnostics.Debug.Assert(points.Length == 1, "Only expect one point when converting to geometry point type");
                     return ToGeometryPoint(points.First());
-                case SupportedGeometryType.LINE:
+                case SupportedGeometryType.POLYLINE:
                     return ToPolyLine(points);
                 case SupportedGeometryType.CURVEPOLYGON:
                     return ToCircle(points);

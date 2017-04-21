@@ -122,6 +122,7 @@
     <Compile Include="BitmapFile.cs" />
     <Compile Include="ChannelOverlayEffect.cs" />
     <Compile Include="Camera.cs" />
+    <Compile Include="IScene.cs" />
     <Compile Include="MeshModel.cs" />
     <Compile Include="Extensions.cs" />
     <Compile Include="MergeHSVEffect.cs" />
@@ -148,6 +149,7 @@
     <Compile Include="Views\Interfaces\IColorView.cs" />
     <Compile Include="Views\Interfaces\IScale.cs" />
     <Compile Include="Views\Interfaces\IText.cs" />
+    <Compile Include="Views\Interfaces\IViewPosition.cs" />
     <Compile Include="Views\LabelView.cs" />
     <Compile Include="Views\LineView.cs" />
     <Compile Include="Views\LinkedLineView.cs" />

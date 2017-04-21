@@ -73,9 +73,7 @@ namespace WebAnnotation.View
             switch (shape.GeometryType())
             {
                 case SupportedGeometryType.CURVEPOLYGON:
-                    GridRectangle bbox = shape.BoundingBox();
-                    System.Diagnostics.Debug.Assert(Math.Floor(bbox.Width) == Math.Floor(bbox.Height)); //Make sure our optimization is really getting a circle
-                    GridCircle circle = new GridCircle(bbox.Center, bbox.Width);
+                    GridCircle circle = shape.ToCircle();
                     return VolumeCircle.Intersects(circle);
                 case SupportedGeometryType.POINT:
                     GridVector2 point = new GridVector2(shape.STX.Value, shape.STY.Value);

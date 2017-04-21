@@ -9,7 +9,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Jotunn.AnnotationView</RootNamespace>
     <AssemblyName>AnnotationView</AssemblyName>
-    <TargetFrameworkVersion>v4.6</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile />
   </PropertyGroup>
@@ -96,12 +96,10 @@
     <ProjectReference Include="..\JotunnCommon\JotunnUICommon.csproj">
       <Project>{a4e99a73-849c-44d3-8c1a-f0a942c569b4}</Project>
       <Name>JotunnUICommon</Name>
-      <Private>False</Private>
     </ProjectReference>
     <ProjectReference Include="..\JotunnUIControls\JotunnUIControls.csproj">
       <Project>{519c08c8-9a00-40f7-ba8d-7da3ebbb4845}</Project>
       <Name>JotunnUIControls</Name>
-      <Private>False</Private>
     </ProjectReference>
     <ProjectReference Include="..\JotunnVolumeView\VolumeView.csproj">
       <Project>{b9eb1204-0656-4004-b295-b7df0718e326}</Project>

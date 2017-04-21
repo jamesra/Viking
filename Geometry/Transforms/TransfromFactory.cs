@@ -173,21 +173,21 @@ namespace Geometry.Transforms
             string[] controlDims = lines[4].Split(new char[] { ' ','\t'}, StringSplitOptions.RemoveEmptyEntries);
             string[] mappedDims = lines[5].Split(new char[] { ' ','\t' }, StringSplitOptions.RemoveEmptyEntries);
 
-            GridRectangle ControlBounds = new GridRectangle();
-            GridRectangle MappedBounds= new GridRectangle();
-
-            ControlBounds.Left = (System.Convert.ToDouble(controlDims[0]) * pixelSpacing);
-            ControlBounds.Bottom = (System.Convert.ToDouble(controlDims[1]) * pixelSpacing);
-            ControlBounds.Right = ControlBounds.Left + (System.Convert.ToDouble(controlDims[2]) * pixelSpacing);
-            ControlBounds.Top = ControlBounds.Bottom + (System.Convert.ToDouble(controlDims[3]) * pixelSpacing);
-
-            MappedBounds.Left = (int)(System.Convert.ToDouble(mappedDims[0]) * pixelSpacing);
-            MappedBounds.Bottom = (int)(System.Convert.ToDouble(mappedDims[1]) * pixelSpacing);
-            MappedBounds.Right = ControlBounds.Left + (int)(System.Convert.ToDouble(mappedDims[2]) * pixelSpacing);
-            MappedBounds.Top = ControlBounds.Bottom + (int)(System.Convert.ToDouble(mappedDims[3]) * pixelSpacing);
-                        
             
-            
+
+            double ControlLeft = (System.Convert.ToDouble(controlDims[0]) * pixelSpacing);
+            double ControlBottom = (System.Convert.ToDouble(controlDims[1]) * pixelSpacing);
+            double ControlRight = ControlLeft + (System.Convert.ToDouble(controlDims[2]) * pixelSpacing);
+            double ControlTop = ControlBottom + (System.Convert.ToDouble(controlDims[3]) * pixelSpacing);
+
+            double MappedLeft = (int)(System.Convert.ToDouble(mappedDims[0]) * pixelSpacing);
+            double MappedBottom = (int)(System.Convert.ToDouble(mappedDims[1]) * pixelSpacing);
+            double MappedRight = MappedLeft + (int)(System.Convert.ToDouble(mappedDims[2]) * pixelSpacing);
+            double MappedTop = MappedBottom + (int)(System.Convert.ToDouble(mappedDims[3]) * pixelSpacing);
+
+            GridRectangle ControlBounds = new GridRectangle(ControlLeft, ControlRight, ControlBottom, ControlTop);
+            GridRectangle MappedBounds = new GridRectangle(MappedLeft, MappedRight, MappedBottom, MappedTop);
+
             //Check the parts to make sure they are actually numbers
             TransformParameters transform_parts = TransformParameters.Parse(lines[6]);
 

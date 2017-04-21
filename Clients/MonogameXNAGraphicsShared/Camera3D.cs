@@ -6,21 +6,29 @@ using System.Diagnostics;
 using System.ComponentModel;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using System.Runtime.CompilerServices;
 
 
-namespace Monographics
+namespace VikingXNA
 {
     public class Camera3D : INotifyPropertyChanged
     {
+        public event PropertyChangedEventHandler PropertyChanged;
+
+        private static Vector3 DefaultPositionVector = -Vector3.UnitZ * 5;
+        private static Vector3 DefaultLookAtVector = Vector3.Zero;
+        private static Vector3 DefaultUpVector = Vector3.UnitZ;
+        public static Vector3 DefaultRotationVector = Vector3.Zero;
+        
         private Vector3 _LookAt = new Vector3(0, 0, 0);
-        private Vector3 _CameraPosition = Vector3.Backward;
+        private Vector3 _Position = Vector3.Backward;
+        private Vector3 _Up = DefaultUpVector;
+        private Vector3 _Rotation = Vector3.Zero;
 
         private float _Pan = MathHelper.ToRadians(0f);
         private float _Tilt = MathHelper.ToRadians(0f);
-        private float _Rotation = MathHelper.ToRadians(0f);
-
-        private double _Downsample = 256.0;
-
+        
+        
         /// <summary>
         /// View Matrix is only worth updating when the LookAt parameter changes.
         /// </summary>
@@ -28,18 +36,44 @@ namespace Monographics
         public Matrix View { get { return _View; } }
 
         private void UpdateViewMatrix()
-        {  
-            _View = Matrix.CreateLookAt(_CameraPosition, _LookAt, Vector3.UnitY);
+        {
+            Vector3 LineOfSightUnitVector = CalculateLineOfSightUnitVector(Rotation.X, Rotation.Y);
+            Vector3 OffsetLookAtVector = Position + LineOfSightUnitVector;
+            if (LineOfSightUnitVector == _Up)
+            {
+                _View = Matrix.CreateLookAt(Position, OffsetLookAtVector, Vector3.UnitY);
+            }
+            else
+            {
+                _View = Matrix.CreateLookAt(Position, OffsetLookAtVector, Up);
+            }
+
+            //_View = Matrix.CreateLookAt(Position, _LookAt, Up);
+            
         }
 
-        
+        /// <summary>
+        /// Calculate the lookat vector based on the rotation parameters
+        /// </summary>
+        /// <returns></returns>
+        private Vector3 CalculateLineOfSightUnitVector(float yaw, float pitch)
+        {
+            Vector3 LineOfSightUnitVector = new Vector3(
+                (float)(Math.Cos(yaw) * Math.Sin(pitch)),
+                (float)(Math.Sin(yaw) * Math.Sin(pitch)),
+                (float)(Math.Cos(pitch)));
+
+            return LineOfSightUnitVector;
+
+        }
+
         public float Pan
         {
             get { return MathHelper.ToDegrees(_Pan); }
             set
             {
                 _Pan = MathHelper.ToRadians(value);
-                CallOnPropertyChanged(new PropertyChangedEventArgs("Pan"));
+                CallOnPropertyChanged();
             }
         }
 
@@ -55,7 +89,7 @@ namespace Monographics
 
                 _Tilt = MathHelper.ToRadians(value);
 
-                CallOnPropertyChanged(new PropertyChangedEventArgs("Tilt"));
+                CallOnPropertyChanged();
 
             }
         }
@@ -70,7 +104,7 @@ namespace Monographics
             {
                 _LookAt = value;
                 UpdateViewMatrix();
-                CallOnPropertyChanged(new PropertyChangedEventArgs("LookAt"));
+                CallOnPropertyChanged();
             }
         }
 
@@ -78,64 +112,79 @@ namespace Monographics
         {
             get
             {
-                return _CameraPosition;
+                return _Position;
             }
             set
             {
-                _CameraPosition = value;
+                _Position = value;
                 UpdateViewMatrix();
-                CallOnPropertyChanged(new PropertyChangedEventArgs("Position"));
+                CallOnPropertyChanged();
             }
         }
 
-        public float Rotation
+        public Vector3 Rotation
         {
             get
             {
-                return MathHelper.ToDegrees(_Rotation);
+                return _Rotation;
             }
             set
             {
-                if (float.IsNaN(value))
-                    return;
-
-                float val = MathHelper.ToRadians(value);
-
-                if (float.IsNaN(val))
-                    val = 0.0f;
-
-                _Rotation = val;
-                CallOnPropertyChanged(new PropertyChangedEventArgs("Rotation"));
+                _Rotation = value;
+                UpdateViewMatrix();
+                CallOnPropertyChanged();
             }
         }
-
-       
-        public virtual double Downsample
+         
+        public double Yaw
         {
+            get { return Rotation.X; }
             set
             {
-                Debug.Assert(!double.IsInfinity(value));
-                Debug.Assert(!double.IsNegativeInfinity(value));
-                Debug.Assert(!double.IsNaN(value));
+                if (double.IsNaN(value) || double.IsInfinity(value))
+                    return;
+
                 if (value < 0)
-                    return;
-                _Downsample = value;
-                CallOnPropertyChanged(new PropertyChangedEventArgs("Downsample"));
-            }
-            get
-            {
-                return _Downsample;
+                    value += Math.PI * 2;
+                else if (value > Math.PI * 2)
+                    value -= Math.PI * 2;
+
+
+                Rotation = new Vector3((float)value, Rotation.Y, Rotation.Z);
             }
         }
 
-        public event PropertyChangedEventHandler PropertyChanged;
-
-        public void CallOnPropertyChanged(PropertyChangedEventArgs e)
+        public double Pitch
         {
-            if (PropertyChanged != null)
+            get { return Rotation.Y; }
+            set
             {
-                PropertyChanged(this, e);
+                if (double.IsNaN(value) || double.IsInfinity(value))
+                    return;
+
+                if (value < 0)
+                    value += Math.PI * 2;
+                else if (value > Math.PI * 2)
+                    value -= Math.PI * 2;
+
+                Rotation = new Vector3(Rotation.X, (float)value, Rotation.Z);
             }
+        }
+
+
+        public Vector3 Up
+        {
+            get { return _Up; }
+        } 
+
+        public Camera3D()
+        {
+            UpdateViewMatrix();
+        }
+
+        protected void CallOnPropertyChanged([CallerMemberName] string propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
     }
 }

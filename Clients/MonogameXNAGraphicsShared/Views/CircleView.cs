@@ -111,7 +111,7 @@ namespace VikingXNAGraphics
     }
      
 
-    public class CircleView : IColorView
+    public class CircleView : IColorView, IViewPosition2D
     {
         #region static
 
@@ -257,6 +257,19 @@ namespace VikingXNAGraphics
                 }
 
                 return _BackgroundVerts;
+            }
+        }
+
+        GridVector2 IViewPosition2D.Position
+        {
+            get
+            {
+                return this.VolumePosition;
+            }
+
+            set
+            {
+                Circle = new GridCircle(value, this.Radius);
             }
         }
 

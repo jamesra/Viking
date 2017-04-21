@@ -60,7 +60,7 @@ namespace Geometry
     /// </summary>
     /// 
     [Serializable]
-    public struct GridTriangle : ICloneable, IShape2D
+    public struct GridTriangle : ICloneable, IShape2D, ITriangle2D
     {
         readonly GridVector2 _p1;
         readonly GridVector2 _p2;
@@ -77,7 +77,15 @@ namespace Geometry
         public GridTriangle(GridVector2 p1, GridVector2 p2, GridVector2 p3)
             : this(p1, p2, p3, Color.Blue)
         {
-            _HashCode = new int?();   
+            _HashCode = new int?();
+            _Segments = null;
+        }
+
+        public GridTriangle(GridVector2[] points)
+            : this(points[0], points[1], points[2])
+        {
+            if (points.Length != 3)
+                throw new ArgumentException("GridTriangle must have three points in array");
         }
 
         public override bool Equals(object obj)
@@ -141,6 +149,7 @@ namespace Geometry
         public GridTriangle(GridVector2 p1, GridVector2 p2, GridVector2 p3, Color color)
         {
             _BarycentricCoefficients = null;
+            _Segments = null;
 
             if (GridVector2.Distance(p1, p2) <= Global.Epsilon ||
                GridVector2.Distance(p2, p3) <= Global.Epsilon ||
@@ -234,7 +243,7 @@ namespace Geometry
         /// </summary>
         /// <param name="test"></param>
         /// <returns></returns>
-        public bool Contains(GridVector2 point)
+        public bool Contains(IPoint2D point)
         {                
             GridVector2 uv = Barycentric(point);
 
@@ -268,6 +277,11 @@ namespace Geometry
             }
         }
 
+        public GridVector2 Barycentric(IPoint2D p)
+        {
+            return Barycentric(p.Convert());
+        }
+
         /// <summary>
         /// Returns u,v coordinate of point in triangle.  Calculates areas and returns fractions of area.  This can return 0,0 if the point is well outside the 
         /// triangle because the math hits the limit of the double data-type
@@ -276,7 +290,7 @@ namespace Geometry
         /// <returns></returns>
         public GridVector2 Barycentric(GridVector2 point)
         {
-            BaryCoefs CachedCoefs = this.BarycentricCoefficients;
+            BaryCoefs CachedCoefs = this.BarycentricCoefficients; 
             GridVector2 vPA = point - _p1;
 
             double dotCAPA = GridVector2.Dot(CachedCoefs.vCA, vPA);
@@ -306,5 +320,104 @@ namespace Geometry
 
             return uv;
         } 
+          
+        public bool Intersects(IShape2D shape)
+        {
+            return ShapeExtensions.TriangleIntersects(this, shape);
+        }
+
+        public bool Intersects(ICircle2D c)
+        {
+            GridCircle circle = c.Convert();
+            return this.Intersects(circle);
+        }
+
+        public bool Intersects(GridCircle circle)
+        {
+            return TriangleIntersectionExtensions.Intersects(this, circle);
+        }
+
+
+        public bool Intersects(ILineSegment2D l)
+        {
+            GridLineSegment line = l.Convert();
+            return this.Intersects(line);
+        }
+
+        public bool Intersects(GridLineSegment line)
+        {
+            return TriangleIntersectionExtensions.Intersects(this, line);
+        }
+
+        public bool Intersects(ITriangle2D t)
+        {
+            GridTriangle tri = t.Convert();
+            return this.Intersects(tri);
+        }
+
+        public bool Intersects(GridTriangle other)
+        {
+            if (false == other.BoundingBox.Intersects(this.BoundingBox))
+                return false;
+
+            foreach (GridVector2 p in this.Points)
+            {
+                if (other.Contains(p))
+                    return true;
+            }
+
+            foreach (GridVector2 p in other.Points)
+            {
+                if (this.Contains(p))
+                    return true;
+            }
+
+            return false;
+        }
+
+        public bool Intersects(IPolygon2D p)
+        {
+            GridPolygon poly = p.Convert();
+            return this.Intersects(poly);
+        }
+
+        public bool Intersects(GridPolygon poly)
+        {
+            return TriangleIntersectionExtensions.Intersects(this, poly);
+        }
+
+        public IShape2D Translate(IPoint2D offset)
+        {
+            GridVector2 vector = offset.Convert();
+            return new GridTriangle(this.Points.Select(p => p + vector).ToArray());
+        }
+
+        public ShapeType2D ShapeType
+        {
+            get { return ShapeType2D.TRIANGLE; }
+        }
+
+        ICollection<IPoint2D> ITriangle2D.Points
+        {
+            get
+            {
+                return new IPoint2D[] { p1, p2, p3 };
+            }
+        }
+
+        private GridLineSegment[] _Segments;
+        public GridLineSegment[] Segments
+        {
+            get
+            {
+                if(_Segments == null)
+                {
+                    _Segments = new GridLineSegment[] { new GridLineSegment(p1,p2),
+                                                        new GridLineSegment(p2,p3),
+                                                        new GridLineSegment(p3,p1)};
+                }
+                return _Segments;
+            }
+        }
     }
 }

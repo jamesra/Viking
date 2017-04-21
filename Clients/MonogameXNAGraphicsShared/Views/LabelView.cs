@@ -8,7 +8,7 @@ using VikingXNAGraphics;
 
 namespace VikingXNAGraphics
 {
-    public class LabelView : IText, IColorView
+    public class LabelView : IText, IColorView, IViewPosition2D
     {
         /// <summary>
         /// Label must be this large to render
@@ -126,7 +126,7 @@ namespace VikingXNAGraphics
                 _Position = value;
             }
         }
-
+        
         private static bool IsLabelTooSmallToSee(double fontSizeInScreenPixels)
         {
             return fontSizeInScreenPixels < 6.0;

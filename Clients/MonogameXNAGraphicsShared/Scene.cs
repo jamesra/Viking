@@ -11,7 +11,7 @@ namespace VikingXNA
     /// <summary>
     /// Combines a viewport and a camera to produce world, projection, and view matricies and mappings from the scene to the screen
     /// </summary>
-    public class Scene : IDisposable
+    public class Scene : IScene, IDisposable
     {
         public event PropertyChangedEventHandler OnSceneChanged;
 
@@ -48,8 +48,12 @@ namespace VikingXNA
         {
             get { return this.Camera.View * this.Projection; }
         }
-        
 
+        public Matrix View
+        {
+            get { return this.Camera.View; }
+        }
+         
         private PropertyChangedEventHandler cameraPropertyChangedEventHandler = null;
 
         private Camera _camera;
@@ -108,14 +112,10 @@ namespace VikingXNA
             if (_camera != null)
                 _camera.PropertyChanged += cameraPropertyChangedEventHandler;
 
-            _Viewport = v;
-            
+            _Viewport = v; 
             _World = Matrix.Identity;
 
             UpdateProjectionMatrix();
-            _WorldViewProj = (_World * Camera.View) * _Projection;
-
-            
         }
 
         private void UpdateProjectionMatrix()

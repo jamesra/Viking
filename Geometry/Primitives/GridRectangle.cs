@@ -8,19 +8,20 @@ using Geometry;
 namespace Geometry
 {
     [Serializable]
-    public struct GridRectangle : IShape2D
+    public struct GridRectangle : IRectangle
     {
-        public double Left;
-        public double Right;
+        public double Left { get; private set; }
+        public double Right { get; private set; }
         /// <summary>
         /// Top has a larger value than bottom
         /// </summary>
-        public double Top;
+        public double Top { get; private set; }
 
         /// <summary>
         /// Bottom has a smaller value than top
         /// </summary>
-        public double Bottom;
+        public double Bottom { get; private set; }
+
 
         public override string ToString()
         {
@@ -137,9 +138,72 @@ namespace Geometry
             }
         }
 
+        public ShapeType2D ShapeType
+        {
+            get
+            {
+                return ShapeType2D.RECTANGLE;
+            }
+        }
+
+        double IRectangle.Left
+        {
+            get
+            {
+                return Left;
+            }
+        }
+
+        double IRectangle.Right
+        {
+            get
+            {
+                return Right;
+            }
+        }
+
+        double IRectangle.Top
+        {
+            get
+            {
+                return Top;
+            }
+        }
+
+        double IRectangle.Bottom
+        {
+            get
+            {
+                return Bottom;
+            }
+        }
+
+        private GridVector2[] _Corners;
+
+
+        public GridVector2[] Corners
+        {
+            get
+            {
+                if (_Corners == null)
+                {
+                    _Corners = new GridVector2[] { LowerLeft, UpperLeft, UpperRight, LowerRight };
+                }
+
+                return _Corners;
+            }
+        }
+         
+        private void ResetCache()
+        {
+            _Corners = null;
+            _Segments = null;
+        }
+
         public GridRectangle(GridVector2 corner, GridVector2 oppositeCorner)
         {
-
+            _Corners = null;
+            _Segments = null;
             GridVector2 RectOrigin = new GridVector2(Math.Min(corner.X, oppositeCorner.X), Math.Min(corner.Y, oppositeCorner.Y));
             double Width = Math.Abs(corner.X - oppositeCorner.X);
             double Height = Math.Abs(corner.Y - oppositeCorner.Y);
@@ -158,7 +222,8 @@ namespace Geometry
 
         public GridRectangle(double left, double right,  double bottom, double top)
         {
-            
+            _Corners = null;
+            _Segments = null;
             Left = left;
             Bottom = bottom;
             Top = top;
@@ -177,6 +242,8 @@ namespace Geometry
 
         public GridRectangle(GridVector2 position, double width, double height)
         {
+            _Corners = null;
+            _Segments = null;
             Left = position.X;
             Bottom = position.Y;
             Top = Bottom + height;
@@ -191,6 +258,8 @@ namespace Geometry
 
         public GridRectangle(GridVector2 position, double radius)
         {
+            _Corners = null;
+            _Segments = null;
             Left = position.X - radius;
             Bottom = position.Y - radius;
             Top = position.Y + radius;
@@ -202,7 +271,9 @@ namespace Geometry
 
         public GridRectangle(IPoint position, double width, double height)
         {
-            if(position == null)
+            _Corners = null;
+            _Segments = null;
+            if (position == null)
                 throw new ArgumentNullException("points");
 
             Left = position.X;
@@ -220,7 +291,9 @@ namespace Geometry
 
         public GridRectangle(IPoint position, double radius)
         {
-            if(position == null)
+            _Corners = null;
+            _Segments = null;
+            if (position == null)
                 throw new ArgumentNullException("position");
 
             Left = position.X - radius;
@@ -253,6 +326,8 @@ namespace Geometry
             this.Right = TopRight.X;
             this.Top = TopRight.Y;
 
+            ResetCache();
+
             Debug.Assert(Left <= Right && Bottom <= Top, "Grid Rectable argument error"); 
         }
 
@@ -283,6 +358,57 @@ namespace Geometry
             return true;
         }
 
+        public bool Intersects(IShape2D shape)
+        {
+            return ShapeExtensions.RectangleIntersects(this, shape);
+        }
+
+
+        public bool Intersects(ICircle2D c)
+        {
+            GridCircle circle = c.Convert();
+            return this.Intersects(circle);
+        }
+
+        public bool Intersects(GridCircle circle)
+        {
+            return RectangleIntersectionExtensions.Intersects(this, circle);
+        }
+
+
+        public bool Intersects(ILineSegment2D l)
+        {
+            GridLineSegment line = l.Convert();
+            return this.Intersects(line);
+        }
+
+        public bool Intersects(GridLineSegment line)
+        {
+            return RectangleIntersectionExtensions.Intersects(this, line);
+        }
+
+        public bool Intersects(ITriangle2D t)
+        {
+            GridTriangle tri = t.Convert();
+            return this.Intersects(tri);
+        }
+
+        public bool Intersects(GridTriangle tri)
+        {
+            return RectangleIntersectionExtensions.Intersects(this, tri);
+        }
+
+        public bool Intersects(IPolygon2D p)
+        {
+            GridPolygon poly = p.Convert();
+            return this.Intersects(poly);
+        }
+
+        public bool Intersects(GridPolygon poly)
+        {
+            return RectangleIntersectionExtensions.Intersects(this, poly);
+        }
+
         /// <summary>
         /// Expands the rectange to contain the specified point.
         /// Returns true if the rectangle expands, otherwise false.
@@ -291,6 +417,8 @@ namespace Geometry
         /// <returns></returns>
         public bool Union(GridVector2 point)
         {
+            ResetCache();
+
             if (double.IsNaN(this.Left))
             {
                 this.Left = point.X;
@@ -299,7 +427,7 @@ namespace Geometry
                 this.Top = point.Y;
                 return true;
             }
-            
+
             bool RetVal = false;
             if (point.Y < Bottom)
             {
@@ -318,11 +446,11 @@ namespace Geometry
             }
             if (point.X > Right)
             {
-                this.Right = point.X; 
+                this.Right = point.X;
                 RetVal = true;
             }
 
-            return RetVal; 
+            return RetVal;
         }
 
         public bool Union(GridRectangle rect)
@@ -333,7 +461,27 @@ namespace Geometry
             return llExpand || urExpand; //Cannot combine these or short-circuit execution will cancel one.
         }
 
-        
+        /// <summary>
+        /// Expands the rectange to contain the specified point.
+        /// Returns true if the rectangle expands, otherwise false.
+        /// </summary>
+        /// <param name="point"></param>
+        /// <returns></returns>
+        public static GridRectangle Union(GridRectangle rect, GridVector2 point)
+        {
+            if (double.IsNaN(rect.Left))
+            {
+                return new GridRectangle(point, point);
+            }
+
+            double newBottom = rect.Bottom < point.Y ? rect.Bottom : point.Y;
+            double newTop = rect.Top > point.Y ? rect.Top : point.Y;
+            double newLeft = rect.Left < point.X ? rect.Left : point.X;
+            double newRight = rect.Right > point.X ? rect.Right : point.X;
+
+            return new GridRectangle(newLeft, newRight, newBottom, newTop);
+        }
+          
         /// <summary>
         /// Returns true if the passed rectangle is entirely inside this rectangle
         /// </summary>
@@ -351,7 +499,7 @@ namespace Geometry
             return false;
         }
         
-        public bool Contains(GridVector2 pos)
+        public bool Contains(IPoint2D pos)
         {
             //Find out if the rectangles can't possibly intersect
             if (pos.X >= this.Left &&
@@ -449,6 +597,32 @@ namespace Geometry
             double MaxY = points.Max(v => v.Y);
 
             return new GridRectangle(MinX, MaxX, MinY, MaxY);
+        }
+
+        public IShape2D Translate(IPoint2D offset)
+        {
+            return this.Translate(offset.Convert());
+        }
+
+        public GridRectangle Translate(GridVector2 offset)
+        {
+            return new GridRectangle(this.LowerLeft + offset, this.UpperRight + offset);
+        }
+
+        private GridLineSegment[] _Segments;
+        public GridLineSegment[] Segments
+        {
+            get
+            {
+                if (_Segments == null)
+                {
+                    _Segments = new GridLineSegment[] { new GridLineSegment(LowerLeft, UpperLeft),
+                                                        new GridLineSegment(UpperLeft, UpperRight),
+                                                        new GridLineSegment(UpperRight, LowerRight),
+                                                        new GridLineSegment(LowerRight, LowerLeft)};
+                }
+                return _Segments;
+            }
         }
 
         #endregion

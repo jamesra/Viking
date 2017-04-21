@@ -56,6 +56,7 @@
     <Compile Include="DeviceEffectStore.cs" />
     <Compile Include="DrawExtensions.cs" />
     <Compile Include="Extensions.cs" />
+    <Compile Include="Interfaces\IScene.cs" />
     <Compile Include="MergeHSVEffect.cs" />
     <Compile Include="MeshModel.cs" />
     <Compile Include="PolygonOverlayEffect.cs" />
@@ -64,10 +65,12 @@
     <Compile Include="RoundInterfaces.cs" />
     <Compile Include="RoundLine.cs" />
     <Compile Include="Scene.cs" />
+    <Compile Include="Scene3D.cs" />
     <Compile Include="ServiceContainer.cs" />
     <Compile Include="TileBlendEffect.cs" />
     <Compile Include="TriangleNetExtensions.cs" />
     <Compile Include="Views\CircleView.cs" />
+    <Compile Include="Views\CurveLabel.cs" />
     <Compile Include="Views\CurveView.cs" />
     <Compile Include="Views\CurveViewControlPoints.cs" />
     <Compile Include="Views\DeviceStateManager.cs" />
@@ -76,6 +79,7 @@
     <Compile Include="Views\Interfaces\IColorView.cs" />
     <Compile Include="Views\Interfaces\IScale.cs" />
     <Compile Include="Views\Interfaces\IText.cs" />
+    <Compile Include="Views\Interfaces\IViewPosition.cs" />
     <Compile Include="Views\LabelView.cs" />
     <Compile Include="Views\LineView.cs" />
     <Compile Include="Views\LinkedLineView.cs" />

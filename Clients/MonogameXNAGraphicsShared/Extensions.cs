@@ -363,7 +363,14 @@ namespace VikingXNAGraphics
         public static void SetScene(this BasicEffect basicEffect, VikingXNA.Scene scene)
         {
             basicEffect.Projection = scene.Projection;
-            basicEffect.View = scene.Camera.View;
+            basicEffect.View = scene.View;
+            basicEffect.World = scene.World;
+        }
+
+        public static void SetScene(this BasicEffect basicEffect, VikingXNA.IScene scene)
+        {
+            basicEffect.Projection = scene.Projection;
+            basicEffect.View = scene.View;
             basicEffect.World = scene.World;
         }
     }

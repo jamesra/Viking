@@ -6,7 +6,7 @@ using VikingXNAGraphics;
 
 namespace VikingXNAGraphics
 {
-    public class LineView : IColorView
+    public class LineView : IColorView, IViewPosition2D
     {
         public static double time = 0;
         RoundLineCode.RoundLine line;
@@ -39,6 +39,25 @@ namespace VikingXNAGraphics
             set { _Color = _Color.SetAlpha(value); }
         }
 
+        /// <summary>
+        /// Returns Center of lineView
+        /// </summary>
+        public GridVector2 Position
+        {
+            get
+            {
+                Microsoft.Xna.Framework.Vector2 v = line.P0 + line.P1;
+                return new GridVector2(v.X / 2.0, v.Y / 2.0);
+            }
+
+            set
+            {
+                GridVector2 offset = value - Position;
+                line.P0 += offset.ToXNAVector2();
+                line.P1 += offset.ToXNAVector2();
+            }
+        }
+
         private Microsoft.Xna.Framework.Color _HSLColor;
 
         public LineView(GridVector2 source, GridVector2 destination, double width, Microsoft.Xna.Framework.Color color, LineStyle lineStyle)
@@ -59,7 +78,7 @@ namespace VikingXNAGraphics
             {
                 lineManager.Draw(group.Select(l => l.line).ToArray(),
                              group.Select(l => l.LineWidth / 2.0f).ToArray(),
-                             group.Select(l => l._HSLColor).ToArray(),
+                             group.Select(l => l.Color).ToArray(),
                              scene.Camera.View * scene.Projection,
                              (float)(DateTime.UtcNow.Millisecond / 1000.0),
                              group.Key.ToString());

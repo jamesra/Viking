@@ -33,15 +33,7 @@ namespace Viking.UI.Commands
             }
             else if (e.Button.Left())
             {
-                if (WorldPosition.Y < this.rectangle.Bottom)
-                    this.rectangle.Bottom = WorldPosition.Y;
-                else
-                    this.rectangle.Top = WorldPosition.Y;
-
-                if (WorldPosition.X < this.rectangle.Left)
-                    this.rectangle.Left = WorldPosition.X;
-                else
-                    this.rectangle.Right = WorldPosition.X; 
+                this.rectangle.Union(WorldPosition);
             }
             //If the mouse was released we stop drawing rectangle
             else if (!e.Button.Left() && oldMouse.Button.Left())

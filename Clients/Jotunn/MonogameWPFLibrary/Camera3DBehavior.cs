@@ -7,7 +7,8 @@ using System.Windows;
 using System.Windows.Data;
 using System.Windows.Interactivity;
 using MonogameWPFLibrary.Views;
-using MathNet.Numerics.LinearAlgebra; 
+using MathNet.Numerics.LinearAlgebra;
+using VikingXNAGraphics;
 
 namespace MonogameWPFLibrary.Views
 {
@@ -54,7 +55,7 @@ namespace MonogameWPFLibrary.Views
 
                 if (e.LeftButton == System.Windows.Input.MouseButtonState.Pressed)
                 {
-                    Microsoft.Xna.Framework.Vector3 translation = TranslateRelativeToCameraView((-Delta.X / AssociatedObject.ActualWidth) * BoundingBox.dimensions.Max(), (Delta.Y / AssociatedObject.ActualHeight) * BoundingBox.dimensions.Max(), 0.0);
+                    Microsoft.Xna.Framework.Vector3 translation = this.camera.View.TranslateRelativeToViewMatrix((-Delta.X / AssociatedObject.ActualWidth) * BoundingBox.dimensions.Max(), (Delta.Y / AssociatedObject.ActualHeight) * BoundingBox.dimensions.Max(), 0.0);
 
                     camera.Position += translation;
                 }
@@ -78,7 +79,7 @@ namespace MonogameWPFLibrary.Views
                 double percentOfVolume = lineDelta / LinesToScrollEntireBoundingBox;
                 double totalDelta = percentOfVolume * BoundingBox.dimensions.Max();
 
-                Microsoft.Xna.Framework.Vector3 translation = TranslateRelativeToCameraView(0, 0, totalDelta);
+                Microsoft.Xna.Framework.Vector3 translation = this.camera.View.TranslateRelativeToViewMatrix(0, 0, totalDelta);
                 camera.Position += translation;
             };
 
@@ -86,23 +87,6 @@ namespace MonogameWPFLibrary.Views
             {
                 mouseDown = false;
             };
-        }
-
-        /// <summary>
-        /// Translate the provided difference vector according to the current view direction of the camera
-        /// </summary>
-        /// <param name="X">Left/Right Yaw</param>
-        /// <param name="Y">Up/Down Pitch</param>
-        /// <param name="Z">In/Out of screen</param>
-        /// <returns></returns>
-        private Microsoft.Xna.Framework.Vector3 TranslateRelativeToCameraView(double X, double Y, double Z)
-        {
-            Vector<double> oDelta = Vector<double>.Build.DenseOfArray(new double[] { X,Y,Z, 1.0 });
-            Matrix<double> view = camera.View.ToMathnetMatrix();
-            Vector<double> tDelta = view * oDelta;
-
-            Microsoft.Xna.Framework.Vector3 translation = tDelta.ToXNAVector3();
-            return translation;
         }
     }
 }

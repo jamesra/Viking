@@ -11,6 +11,7 @@ namespace Geometry
         public readonly static GridVector3 UnitX = new GridVector3(1, 0, 0);
         public readonly static GridVector3 UnitY = new GridVector3(0, 1, 0);
         public readonly static GridVector3 UnitZ = new GridVector3(0, 0, 1);
+        public readonly static GridVector3 Zero  = new GridVector3(0, 0, 0);
 
         public double[] coords;
 
@@ -232,7 +233,7 @@ namespace Geometry
         
         #region IPoint Members
 
-        double IPoint.X
+        double IPoint2D.X
         {
             get
             {
@@ -244,7 +245,7 @@ namespace Geometry
             }
         }
 
-        double IPoint.Y
+        double IPoint2D.Y
         {
             get
             {

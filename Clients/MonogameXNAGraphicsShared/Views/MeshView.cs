@@ -6,11 +6,12 @@ using System.Threading.Tasks;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System.Collections.ObjectModel;
+using VikingXNA;
 
 namespace VikingXNAGraphics
 {
     //Displays a mesh
-    public class MeshView<VERTEXTYPE>
+    public class MeshView<VERTEXTYPE>  
         where VERTEXTYPE : struct, IVertexType
     {
         public bool WireFrame { get; set; }
@@ -20,7 +21,7 @@ namespace VikingXNAGraphics
         {
         }
         
-        public void Draw(GraphicsDevice device, VikingXNA.Scene scene)
+        public void Draw(GraphicsDevice device, IScene scene)
         {
             if (models == null)
                 return;
@@ -30,24 +31,32 @@ namespace VikingXNAGraphics
                 RasterizerState rstate = new RasterizerState();
                 rstate.CullMode = CullMode.None;
                 rstate.FillMode = FillMode.WireFrame;
-
+                device.RasterizerState = rstate;
+            }
+            else
+            {
+                RasterizerState rstate = new RasterizerState();
+                rstate.CullMode = CullMode.None;
+                rstate.FillMode = FillMode.Solid;
                 device.RasterizerState = rstate;
             }
 
-            using (BasicEffect effect = new BasicEffect(device))
+            foreach (MeshModel<VERTEXTYPE> model in models)
             {
-                effect.View = scene.Camera.View;
-                effect.World = scene.World;
-                effect.Projection = scene.Projection;
-                effect.AmbientLightColor = Color.White.ToVector3();
-                effect.VertexColorEnabled = true;
-                effect.LightingEnabled = false;
-
-                foreach (EffectPass pass in effect.CurrentTechnique.Passes)
+                
+                using (BasicEffect effect = new BasicEffect(device))
                 {
-                    pass.Apply();
-                    foreach (MeshModel<VERTEXTYPE> model in models)
-                    {   
+                    effect.SetScene(scene);
+                    effect.World = model.ModelMatrix;
+                    effect.AmbientLightColor = Color.White.ToVector3();
+                    effect.VertexColorEnabled = true;
+                    effect.LightingEnabled = false;
+                    effect.CurrentTechnique = effect.Techniques[0];
+
+                    foreach (EffectPass pass in effect.CurrentTechnique.Passes)
+                    {
+                        pass.Apply();
+                      
                         device.DrawUserIndexedPrimitives<VERTEXTYPE>(PrimitiveType.TriangleList, model.Verticies, 0, model.Verticies.Length, model.Edges, 0, model.Edges.Length / 3);
                     }
                 }
@@ -73,17 +82,23 @@ namespace VikingXNAGraphics
             if (effect == null)
                 return;
 
-            effect.InputLumaAlphaValue = 0.0f; 
+            effect.InputLumaAlphaValue = 0.0f;
 
-            foreach (EffectPass pass in effect.effect.CurrentTechnique.Passes)
+            Matrix WorldViewProjOriginal = effect.WorldViewProjMatrix;
+
+            foreach (MeshModel<VERTEXTYPE> model in meshmodels)
             {
-                pass.Apply();
+                effect.WorldViewProjMatrix = scene.ViewProj * model.ModelMatrix;                
 
-                foreach (MeshModel<VERTEXTYPE> model in meshmodels)
+                foreach (EffectPass pass in effect.effect.CurrentTechnique.Passes)
                 {
+                     pass.Apply();
+
                     device.DrawUserIndexedPrimitives<VERTEXTYPE>(PrimitiveType.TriangleList, model.Verticies, 0, model.Verticies.Length, model.Edges, 0, model.Edges.Length / 3);
                 }
             }
+
+            effect.WorldViewProjMatrix = WorldViewProjOriginal;
             
         }
     }
