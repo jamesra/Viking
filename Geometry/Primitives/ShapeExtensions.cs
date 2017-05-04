@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Geometry
 {
-    static class ShapeExtensions
+    public static class ShapeExtensions
     {
         public static GridVector2 Convert(this IPoint2D p)
         {

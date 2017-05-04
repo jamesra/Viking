@@ -15,13 +15,17 @@ namespace Geometry.Meshing
         {
             Data = data;
         }
+
+        public Vertex(GridVector3 p, GridVector3 n) : base(p, n)
+        {
+        }
     }
 
     public class Vertex : IVertex 
     {
         public GridVector3 _Position;
         public GridVector3 _Normal;
-        public SortedSet<Edge> _Edges;
+        public SortedSet<EdgeKey> _Edges;
 
         public GridVector3 Position
         {
@@ -47,7 +51,7 @@ namespace Geometry.Meshing
             }
         }
 
-        public SortedSet<Edge> Edges
+        public SortedSet<EdgeKey> Edges
         {
             get
             {
@@ -59,19 +63,24 @@ namespace Geometry.Meshing
         {
             _Position = p;
             _Normal = n;
-            _Edges = new SortedSet<Edge>();
+            _Edges = new SortedSet<EdgeKey>();
         }
         
-        public void AddEdge(Edge e)
+        public void AddEdge(EdgeKey e)
         {
             Debug.Assert(_Edges.Contains(e) == false);
             _Edges.Add(e);
         }
 
-        public void RemoveEdge(Edge e)
+        public void RemoveEdge(EdgeKey e)
         {
             Debug.Assert(_Edges.Contains(e));
             _Edges.Remove(e);
+        }
+
+        public override string ToString()
+        {
+            return string.Format("P: {0} N: {1}", Position, Normal);
         }
     }
 

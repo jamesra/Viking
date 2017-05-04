@@ -12,6 +12,6 @@ namespace Geometry.Meshing
         GridVector3 Position { get; set;  }
         GridVector3 Normal { get; set; }
 
-        SortedSet<Edge> Edges { get; }
+        SortedSet<EdgeKey> Edges { get; }
     }
 }

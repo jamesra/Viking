@@ -123,6 +123,7 @@
     <Compile Include="Meshing\DynamicRenderMesh.cs" />
     <Compile Include="Meshing\Face.cs" />
     <Compile Include="Meshing\Edge.cs" />
+    <Compile Include="Meshing\IndexSets.cs" />
     <Compile Include="Meshing\MeshInterfaces.cs" />
     <Compile Include="Meshing\Vertex.cs" />
     <Compile Include="Primitives\Interfaces.cs" />

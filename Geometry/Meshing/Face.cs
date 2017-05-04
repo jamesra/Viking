@@ -6,10 +6,14 @@ using System.Threading.Tasks;
 
 namespace Geometry.Meshing
 {
+    /// <summary>
+    /// A face in a mesh.  Should be perimeter around the face in order.  Each consecutive index is connected by an edge
+    /// </summary>
     public struct Face : IComparable<Face>, IEquatable<Face>
     {
         public readonly int[] iVerts;
-
+         
+        /*
         public int A
         {
             get { return iVerts[0]; }
@@ -39,31 +43,60 @@ namespace Geometry.Meshing
             get { return new Edge(C,A); }
         }
 
-        public Edge[] Edges
+        */
+
+        public EdgeKey[] Edges
         {
-            get { return new Edge[] { AB, BC, CA }; }
+            get
+            {
+                EdgeKey[] _edges = new EdgeKey[iVerts.Length];
+                for(int i = 0; i < iVerts.Length; i++)
+                { 
+                    if (i < iVerts.Length - 1)
+                        _edges[i] = new EdgeKey(iVerts[i], iVerts[i + 1]);
+                    else
+                        _edges[i] = new EdgeKey(iVerts[i], iVerts[0]); 
+                }
+
+                return _edges;
+            }
         }
 
         public Face(int A, int B, int C)
         {
-            SortedSet<int> vertList = new SortedSet<int>(new int[] { A, B, C }); 
-            iVerts = vertList.ToArray(); 
+            iVerts = new int[] { A, B, C };
         }
+
+        public Face(int A, int B, int C, int D)
+        {
+            iVerts = new int[] { A, B, C, D };
+        }
+
 
         public Face(IEnumerable<int> vertex_indicies)
         {
-            SortedSet<int> vertList = new SortedSet<int>(vertex_indicies); 
-            iVerts = vertList.ToArray();
+            iVerts = vertex_indicies.ToArray();
+            if (iVerts.Length < 3 || iVerts.Length > 4)
+                throw new ArgumentException("A face must have at least 3 verticies and currently no more than 4.  The 4 limit is negiotiable."); 
         }
 
         public override int GetHashCode()
         {
-            return System.Convert.ToInt32(((long)A * (long)B * (long)C));
+            return iVerts.Sum();
         }
 
         public override string ToString()
         {
-            return string.Format("{0},{1},{2}", iVerts[0], iVerts[1], iVerts[2]);
+            return string.Join(",", this.iVerts);
+        }
+
+        /// <summary>
+        /// Reverse the order of verticies to flip the orientation of the face
+        /// </summary>
+        /// <returns></returns>
+        public Face Flip()
+        {
+            return new Face(this.iVerts.Reverse());
         }
 
         public static bool operator ==(Face A, Face B)
@@ -87,11 +120,31 @@ namespace Geometry.Meshing
             return this.Equals(E);
         }
 
+        public bool IsTriangle
+        {
+            get
+            {
+                return iVerts.Length == 3;
+            }
+        }
+
+        public bool IsQuad
+        {
+            get
+            {
+                return iVerts.Length == 4;
+            }
+        }
+
         public int CompareTo(Face other)
         {
+            int compareVal = this.iVerts.Length.CompareTo(other.iVerts.Length);
+            if (compareVal != 0)
+                return compareVal;
+
             for (int i = 0; i < iVerts.Length; i++)
             {
-                int compareVal = this.iVerts[i].CompareTo(other.iVerts[i]);
+                compareVal = this.iVerts[i].CompareTo(other.iVerts[i]);
                 if (compareVal != 0)
                     return compareVal;
             }
@@ -101,6 +154,11 @@ namespace Geometry.Meshing
 
         public bool Equals(Face other)
         {
+            if (object.ReferenceEquals(other, null))
+            {
+                return false;
+            }
+
             if (other.iVerts.Length != this.iVerts.Length)
                 return false;
 
