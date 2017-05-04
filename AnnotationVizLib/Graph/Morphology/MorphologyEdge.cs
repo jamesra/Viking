@@ -14,6 +14,7 @@ namespace AnnotationVizLib
     {
         //Structure this edge is part of
         public MorphologyGraph Graph;
+
         public override bool Directional
         {
             get
@@ -40,6 +41,11 @@ namespace AnnotationVizLib
         /// <returns></returns>
         public ulong OtherNode(ulong key)
         {
+            if(key != SourceNodeKey && key != TargetNodeKey)
+            {
+                throw new ArgumentException("Key must match a node ID connected by the edge");
+            }
+
             return SourceNodeKey == key ? TargetNodeKey : SourceNodeKey;
         }
 
