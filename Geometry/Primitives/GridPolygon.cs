@@ -177,7 +177,37 @@ namespace Geometry
                 return this.InteriorRings.Select(ir => ir.Select(p => p as IPoint2D).ToArray()).ToArray(); 
             }
         }
-         
+
+        /// <summary>
+        /// Total verticies, minus the duplicate verticies at the end of each ring
+        /// </summary>
+        public int TotalVerticies
+        {
+            get
+            { 
+                return ExteriorRing.Length + InteriorRings.Sum(ir => ir.Length);
+            }
+        }
+
+        /// <summary>
+        /// Total verticies, minus the duplicate verticies at the end of each ring
+        /// </summary>
+        public int TotalUniqueVerticies
+        {
+            get
+            {
+                return TotalVerticies - (1 + InteriorRings.Count);
+            }
+        }
+
+        IPoint2D IPolygon2D.Centroid
+        {
+            get
+            {
+                return this.Centroid;
+            }
+        }
+
         public void AddInteriorRing(GridVector2[] interiorRing)
         {
             GridPolygon innerPoly = new Geometry.GridPolygon(interiorRing);
@@ -287,6 +317,8 @@ namespace Geometry
 
             return false;
         }
+
+        
 
         public GridCircle InscribedCircle()
         {
@@ -438,6 +470,14 @@ namespace Geometry
             }
 
             throw new NotImplementedException();
+        }
+
+        public int[] VerticiesOnConvexHull()
+        {
+            int[] indicies; 
+            GridVector2[] convex_hull_verts = this.ExteriorRing.ConvexHull(out indicies);
+
+            return indicies;
         }
 
         public object Clone()

@@ -9,6 +9,10 @@ namespace Geometry
     [Serializable]
     public struct GridVector2 : IPoint, ICloneable, IComparable, IComparable<GridVector2>, IComparer<GridVector2>, IShape2D
     {
+        public readonly static GridVector2 UnitX = new GridVector2(1, 0);
+        public readonly static GridVector2 UnitY = new GridVector2(0, 1);
+        public readonly static GridVector2 Zero = new GridVector2(0, 0);
+
         public double X;
         public double Y;
         
@@ -62,7 +66,7 @@ namespace Geometry
             return 0; 
         }
 
-        int IComparable.CompareTo(Object Obj)
+        public int CompareTo(Object Obj)
         {
             GridVector2 B = (GridVector2)Obj;
 
@@ -230,7 +234,7 @@ namespace Geometry
         static public double Angle(GridVector2 A, GridVector2 B)
         {
             GridVector2 delta = B - A;
-            return Math.Atan2(delta.Y, delta.X); 
+            return Math.Atan2(delta.Y, delta.X);
         }
         
         static public GridVector2 operator -(GridVector2 A)

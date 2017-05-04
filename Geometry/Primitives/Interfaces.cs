@@ -55,7 +55,13 @@ namespace Geometry
     {
         ICollection<IPoint2D> ExteriorRing { get; }
 
-        ICollection<IPoint2D[]> InteriorRings { get; } 
+        ICollection<IPoint2D[]> InteriorRings { get; }
+        
+        int TotalVerticies { get; }
+
+        int TotalUniqueVerticies { get; }
+
+        IPoint2D Centroid { get; }
     }
 
     public interface ICircle2D : IShape2D

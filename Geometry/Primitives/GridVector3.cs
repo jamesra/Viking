@@ -82,7 +82,7 @@ namespace Geometry
             sb.Append('[');
             for (int i = 0; i < array.Length; i++)
             {
-                sb.Append(array[i].coords.ToCSV(' '));
+                sb.Append(array[i].coords.ToCSV(" "));
                 sb.AppendLine(";");
             }
             sb.Append(']');
@@ -113,7 +113,7 @@ namespace Geometry
         static public double Distance(GridVector3 A, GridVector3 B)
         {
             double[] diff = A.coords.Select((Aval, i) => Aval - B.coords[i]).ToArray();
-            return Math.Sqrt(diff.Aggregate((accumulator, val) => accumulator + (val * val)));
+            return Math.Sqrt(diff.Sum((val) => (val * val)));
         }
 
         static public double Distance(IPoint A, IPoint B)
@@ -149,23 +149,63 @@ namespace Geometry
             return (AX * BX) + (AY * BY) + (AZ * BZ);
             */
         }
-        
-        /*
-        static public double Angle(GridVector2 Origin, GridVector2 A, GridVector2 B)
+
+        /// <summary>
+        /// Return the cross product of (B - A) X (C - A)
+        /// </summary>
+        /// <param name="A"></param>
+        /// <param name="C"></param>
+        /// <param name="B"></param>
+        /// <returns></returns>
+        static public GridVector3 Cross(GridVector3 A, GridVector3 B, GridVector3 C)
+        {
+            /*
+            double[,] m = new double[,] { { 1,1,1},
+                                          { AB.coords[0], AB.coords[1], AB.coords[2] },
+                                          { AC.coords[0], AC.coords[1], AC.coords[2]} };
+
+            var matrix = MathNet.Numerics.LinearAlgebra.Matrix<double>.Build.DenseOfArray(m);
+            */
+
+            GridVector3 AB = B - A;
+            GridVector3 AC = C - A;
+
+            return Cross(AB, AC);
+        }
+
+        static public GridVector3 Cross(GridVector3 AB, GridVector3 AC)
+        { 
+            double X = (AB.Y * AC.Z) - (AC.Y * AB.Z);
+            double Y = (AB.Z * AC.X) - (AC.Z * AB.X);
+            double Z = (AB.X * AC.Y) - (AC.X * AB.Y);
+
+            return new GridVector3(X, Y, Z);
+        }
+          
+        /// <summary>
+        /// Angle to B from A
+        /// </summary>
+        /// <param name="A"></param>
+        /// <param name="B"></param>
+        /// <returns></returns>
+        static public double Angle(GridVector3 VectorA, GridVector3 VectorB)
+        {
+            double dot = Dot(VectorA, VectorB);
+            return Math.Acos(dot / (Magnitude(VectorA) * Magnitude(VectorB)));
+        }
+
+        /// <summary>
+        /// Angle to B from A
+        /// </summary>
+        /// <param name="A"></param>
+        /// <param name="B"></param>
+        /// <returns></returns>
+        static public double ArcAngle(GridVector3 Origin, GridVector3 A, GridVector3 B)
         {
             A = A - Origin;
             B = B - Origin;
-            return Angle(A, B); 
+            return Angle(A, B);
         }
-
-        static public double Angle(GridVector2 A, GridVector2 B)
-        {
-            double AngleA = Math.Atan2(A.Y, A.X);
-            double AngleB = Math.Atan2(B.Y, B.X);
-
-            return AngleB - AngleA; 
-        }
-        */
 
         static public GridVector3 operator -(GridVector3 A)
         {

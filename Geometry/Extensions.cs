@@ -10,8 +10,10 @@ namespace Geometry
 {
     public static class ArrayToStringExtensions
     {
-        public static string ToCSV(this double[] array, char delimiter = ',', string format = "F2")
+        public static string ToCSV(this double[] array, string delimiter = ", ", string format = "F2")
         {
+            return string.Join(delimiter, array.Select(v => v.ToString(format)) );
+            /*
             StringBuilder sb = new StringBuilder();
             for (int i = 0; i < array.Count(); i++)
             {
@@ -21,13 +23,14 @@ namespace Geometry
             }
 
             return sb.ToString();
+            */
         }
 
         public static string ToMatlab(this double[] array, string format = "F2")
         {
             StringBuilder sb = new StringBuilder();
             sb.Append("[");
-            sb.Append(array.ToCSV(' '));
+            sb.Append(array.ToCSV(" "));
             sb.Append("]");
 
             return sb.ToString();
@@ -88,9 +91,19 @@ namespace Geometry
             return (new GridVector2[] { point }).ToMatrix();
         }
 
+        public static Matrix<double> ToMatrix(this GridVector3 point)
+        {
+            return (new GridVector3[] { point }).ToMatrix();
+        }
+
         public static Vector<double> ToVector(this GridVector2 point)
         {
             return Vector<double>.Build.Dense(new double[] { point.X, point.Y, 0 });
+        }
+
+        public static Vector<double> ToVector(this GridVector3 point)
+        {
+            return Vector<double>.Build.Dense(new double[] { point.X, point.Y, point.Z });
         }
 
         public static Matrix<double> ToMatrix(this ICollection<GridVector2> points)
@@ -98,9 +111,19 @@ namespace Geometry
             return Matrix<double>.Build.DenseOfColumns(points.Select(p => new double[] { p.X, p.Y, 0, 1 }));
         }
 
+        public static Matrix<double> ToMatrix(this ICollection<GridVector3> points)
+        {
+            return Matrix<double>.Build.DenseOfColumns(points.Select(p => new double[] { p.X, p.Y, p.Z, 1 }));
+        }
+
         public static GridVector2 ToGridVector2(this Vector<double> m)
         {
             return new GridVector2(m[0], m[1]);
+        }
+
+        public static GridVector3 ToGridVector3(this Vector<double> m)
+        {
+            return new GridVector3(m[0], m[1], m[2]);
         }
 
         public static GridVector2[] ToGridVector2(this Matrix<double> m)
@@ -116,11 +139,34 @@ namespace Geometry
             return points;
         }
 
+        public static GridVector3[] ToGridVector3(this Matrix<double> m)
+        {
+            GridVector3[] points = new GridVector3[m.ColumnCount];
+            int icol = 0;
+            foreach (Vector<double> col in m.EnumerateColumns())
+            {
+                points[icol] = new GridVector3(col[0], col[1], col[2]);
+                icol++;
+            }
+
+            return points;
+        }
+
         public static Matrix<double> CreateTranslationMatrix(this GridVector2 p)
         {
             double[,] translation = {{1, 0, 0, p.X },
                                      {0, 1, 0, p.Y },
                                      {0, 0, 1, 0   },
+                                     {0, 0, 0, 1   } };
+
+            return Matrix<double>.Build.DenseOfArray(translation);
+        }
+
+        public static Matrix<double> CreateTranslationMatrix(this GridVector3 p)
+        {
+            double[,] translation = {{1, 0, 0, p.X },
+                                     {0, 1, 0, p.Y },
+                                     {0, 0, 1, p.Z },
                                      {0, 0, 0, 1   } };
 
             return Matrix<double>.Build.DenseOfArray(translation);
@@ -253,6 +299,8 @@ namespace Geometry
 
             throw new ArgumentException("Could not find point on convex hull!");
         }
+
+    
 
         /// <summary>
         /// Return true if the first and last point in the set are the same
@@ -426,6 +474,26 @@ namespace Geometry
             MinDistance = minDistance;
             return iNearestPoint;
         }
+    }
+
+    public static class GridVector3Extensions
+    {
+        public static GridVector3 Centroid(this ICollection<GridVector3> points)
+        {
+            double mX = 0;
+            double mY = 0;
+            double mZ = 0;
+
+            foreach (GridVector3 p in points)
+            {
+                mX += p.X;
+                mY += p.Y;
+                mZ += p.Z;
+            }
+
+            return new GridVector3(mX / (double)points.Count, mY / (double)points.Count, mZ / (double)points.Count);
+        }
+
     }
 
     public static class GridLineSegmentExtensions

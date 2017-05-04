@@ -5,105 +5,134 @@ using System.Text;
 
 namespace Geometry
 {
-    public static class ConvexHull
-    {
-
-        public static int[] Hull(GridVector2[] points)
+    public static class ConvexHullExtension
+    { 
+        public static GridVector2[] ConvexHull(this IReadOnlyList<GridVector2> points, out int[] original_indicies)
         {
-            if (points == null)
+            int[] ordered_idx = points.Select((p, i) => i).ToArray();
+
+            if (points.Count <= 3)
             {
-                throw new ArgumentNullException("points");
+                original_indicies = ordered_idx;
+                return points.ToArray(); //All points are on convex hull
             }
 
-            //Find the points we know are on the hull
-            List<int> BorderIndicies = FindExtremes(points);
+            //Sort and return the index of original points
+            Array.Sort<int>(ordered_idx, (a, b) => points[a].CompareTo(points[b]));
 
-            List<GridVector2> BorderPoints = new List<GridVector2>(4);
-            for (int iPoint = 0; iPoint < points.Length; iPoint++)
+            GridVector2[] ordered_verts = ordered_idx.Select(i => points[i]).ToArray();
+
+            List<GridVector2> upper_convex_hull = new List<Geometry.GridVector2>(points.Count);
+            List<int> upper_convex_hull_idx = new List<int>(points.Count);
+
+            List<GridVector2> lower_convex_hull = new List<Geometry.GridVector2>(points.Count);
+            List<int> lower_convex_hull_idx = new List<int>(points.Count);
+
+            int iTestVert = 1;
+            upper_convex_hull.Add(ordered_verts[0]);
+            upper_convex_hull_idx.Add(ordered_idx[0]);
+
+            lower_convex_hull.Add(ordered_verts[0]);
+            lower_convex_hull_idx.Add(ordered_idx[0]);
+
+            //Our Starting vertex for the top hull is the highest point, but they are sorted so Y is the smallest value if there are two X's at the minimum value
+            while (ordered_verts[iTestVert - 1].X == ordered_verts[iTestVert].X)
             {
-                BorderPoints.Add(points[iPoint]); 
-            }
+                upper_convex_hull.Add(ordered_verts[iTestVert]);
+                upper_convex_hull_idx.Add(ordered_idx[iTestVert]);
+                iTestVert++;
 
-            //A list of points we know are not on the hull
-            bool[] PointsToExclude = new bool[points.Length];
-
-            List<GridTriangle> listBoundingTriangles = new List<GridTriangle>(0);
-            if (BorderPoints.Count > 3)
-            {
-                GridTriangle tri = new GridTriangle(BorderPoints[2],
-                                                    BorderPoints[3],
-                                                    BorderPoints[4]);
-                listBoundingTriangles.Add(tri);
-            }
-
-            if (BorderPoints.Count > 2)
-            {
-                GridTriangle tri = new GridTriangle(BorderPoints[1],
-                                                    BorderPoints[2],
-                                                    BorderPoints[3]);
-                listBoundingTriangles.Add(tri);
-            }
-
-            //If we can make a polygon then exclude all points inside the region from consideration
-            if (BorderPoints.Count > 2)
-            {
-                for (int iPoint = 0; iPoint < points.Length; iPoint++)
+                if (iTestVert >= points.Count)
                 {
-                    
-                    if (BorderIndicies.Contains(iPoint))
-                        continue;
-
-                    GridVector2 Point = points[iPoint];
-
-                    for (int iTriangle = 0; iTriangle < listBoundingTriangles.Count; iTriangle++)
-                    {
-                        if (listBoundingTriangles[iTriangle].Contains(Point))
-                        {
-                            PointsToExclude[iPoint] = true; 
-                        }
-                    }
+                    original_indicies = ordered_idx;
+                    return upper_convex_hull.ToArray();
                 }
             }
 
-            //
+            int iStartVert = iTestVert;
 
-            return new int[0];
-
-        }
-
-        private static List<int> FindExtremes(GridVector2[] points)
-        {
-            int iMinX = 0;
-            int iMinY = 0; 
-            int iMaxX = 0;
-            int iMaxY = 0;
-
-            for(int iPoint = 0; iPoint < points.Length; iPoint++)
+            //OK, build triangles and determine orientation
+            while (true)
             {
-                GridVector2 point = points[iPoint];
-                if (point.X < points[iMinX].X)
-                    iMinX = iPoint;
-                if (point.X > points[iMaxX].X)
-                    iMaxX = iPoint;
-                if (point.Y < points[iMinY].Y)
-                    iMinX = iPoint;
-                if (point.Y > points[iMaxY].Y)
-                    iMaxY = iPoint; 
-            }
-
-            List<int> ListExtremes = new List<int>( new int[]{ iMinX, iMinY, iMaxX, iMaxY} ); 
-            ListExtremes.Sort(); 
-            for(int iPoint = 1; iPoint < ListExtremes.Count; iPoint++)
-            {
-                if(ListExtremes[iPoint] == ListExtremes[iPoint-1])
+                if (TryAddVertexToHull(iTestVert, true, ordered_verts, ordered_idx, ref upper_convex_hull, ref upper_convex_hull_idx))
                 {
-                    ListExtremes.RemoveAt(iPoint); 
-                    iPoint--; 
+                    iTestVert++;
+                    if (iTestVert >= points.Count)
+                        break;
                 }
             }
 
-            return ListExtremes;
+            iTestVert = iStartVert;
+
+            //OK, build triangles and determine orientation
+            while (true)
+            {
+                if (TryAddVertexToHull(iTestVert, false, ordered_verts, ordered_idx, ref lower_convex_hull, ref lower_convex_hull_idx))
+                {
+                    iTestVert++;
+                    if (iTestVert >= points.Count)
+                        break;
+                }
+            }
+
+            //Remove the last point added to the upper hull.  It will be duplicated on the lower hull
+            upper_convex_hull.RemoveAt(upper_convex_hull.Count - 1);
+            upper_convex_hull_idx.RemoveAt(upper_convex_hull_idx.Count - 1);
+
+            //Reverse the lower hull so the counter-clockwise order is preserved
+            lower_convex_hull.Reverse();
+            lower_convex_hull_idx.Reverse();
+
+            upper_convex_hull.AddRange(lower_convex_hull);
+            upper_convex_hull_idx.AddRange(lower_convex_hull_idx);
+
+            original_indicies = upper_convex_hull_idx.ToArray();
+            return upper_convex_hull.ToArray();
         }
-         
+
+        /// <summary>
+        /// Return true if the point was added to the convex hull.  Return false if the point before was removed from the convex hull and iTestVert needs to be tested again
+        /// </summary>
+        /// <param name="iTestVert"></param>
+        /// <param name="TestUpperHull">True if we are adding points to the upper hull.  False if adding to lower hull</param>
+        /// <param name="ordered_verts"></param>
+        /// <param name="ordered_idx"></param>
+        /// <param name="convex_hull"></param>
+        /// <param name="convex_hull_idx"></param>
+        /// <returns></returns>
+        private static bool TryAddVertexToHull(int iTestVert, bool TestUpperHull, GridVector2[] ordered_verts, int[] ordered_idx, ref List<GridVector2> convex_hull, ref List<int> convex_hull_idx)
+        {
+            if (convex_hull.Count >= 2)
+            {
+                GridVector2 v0 = ordered_verts[iTestVert];
+                GridVector2 v1 = convex_hull.Last();
+                GridVector2 v2 = convex_hull[convex_hull.Count - 2];
+
+                GridTriangle tri = new Geometry.GridTriangle(v0, v1, v2);
+
+                bool ConvexTriangleForUpperHull = tri.VectorProducts > 0;
+                bool ConvexTriangle = TestUpperHull ? ConvexTriangleForUpperHull : !ConvexTriangleForUpperHull;
+
+                if (ConvexTriangle)
+                {
+                    convex_hull.Add(ordered_verts[iTestVert]);
+                    convex_hull_idx.Add(ordered_idx[iTestVert]);
+                    return true;
+                }
+                else
+                {
+                    convex_hull.RemoveAt(convex_hull.Count - 1);
+                    convex_hull_idx.RemoveAt(convex_hull_idx.Count - 1);
+                    return false;
+                }
+            }
+            else
+            {
+                convex_hull.Add(ordered_verts[iTestVert]);
+                convex_hull_idx.Add(ordered_idx[iTestVert]);
+                return true;
+            }
+        }
+
     }
 }
