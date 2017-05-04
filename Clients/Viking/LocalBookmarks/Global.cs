@@ -75,48 +75,29 @@ namespace LocalBookmarks
         {
             try
             {
-                //If we are low on memory try to save something.  If it fails then we know we shouldn't replace bookmark file.
-                string newXMLFile = BookmarkXMLDoc.XDocument.ToString();
-          //      StringBuilder sb = new StringBuilder(newXMLFile);
+                //If we are low on memory we could fail at any point.  Ensure that the original file is preserved until the new file is written.
+                string newXMLFile = BookmarkXMLDoc.XDocument.ToString(); 
+                
+                //Create a backup in case this was a horrible mistake
+                if (System.IO.File.Exists(BookmarkUndoFilePath))
+                {
+                    System.IO.File.Delete(BookmarkUndoFilePath);
+                }
 
-                using (StreamWriter saveFile = new StreamWriter(BookmarkSaveTestFilePath))
+                try
+                {
+                    if(System.IO.File.Exists(BookmarkFilePath))
+                        System.IO.File.Move(BookmarkFilePath, BookmarkUndoFilePath);
+                }
+                catch (System.IO.FileNotFoundException )
+                {
+                    System.Windows.Forms.MessageBox.Show("Tell James Viking told you it could not create undo file for bookmarks.");
+                }
+
+                //Save the Bookmark file
+                using (StreamWriter saveFile = new StreamWriter(BookmarkFilePath))
                 {
                     saveFile.Write(newXMLFile);
-                }
-                
-                
-            //    BookmarkXMLDoc.Save(BookmarkSaveTestFilePath);
-                if (System.IO.File.Exists(BookmarkSaveTestFilePath) == false)
-                {
-                    System.Windows.Forms.MessageBox.Show("For some reason Viking can't find: " + BookmarkSaveTestFileName + "\nViking just tried to save this file.  You should probably use the \"Export->XML\" menu option from the bookmarks tab to create a backup just in case. This is an unexplained bug we're working on.");
-                }
-                else
-                {
-
-                    //Create a backup in case this was a horrible mistake
-                    if (System.IO.File.Exists(BookmarkUndoFilePath))
-                    {
-                        System.IO.File.Delete(BookmarkUndoFilePath);
-                    }
-
-                    try
-                    {
-                        if(System.IO.File.Exists(BookmarkFilePath))
-                            System.IO.File.Move(BookmarkFilePath, BookmarkUndoFilePath);
-                    }
-                    catch (System.IO.FileNotFoundException )
-                    {
-                        System.Windows.Forms.MessageBox.Show("Tell James Viking told you it could not create undo file for bookmarks.");
-                    }
-
-                    try
-                    {
-                        System.IO.File.Move(BookmarkSaveTestFilePath, BookmarkFilePath);
-                    }
-                    catch (System.IO.FileNotFoundException )
-                    {
-                        System.Windows.Forms.MessageBox.Show("Tell James Viking told you it could not move the savetest file to the bookmark file.");
-                    }
                 }
             }
             catch(Exception e)
@@ -137,7 +118,7 @@ namespace LocalBookmarks
 
             if (System.IO.File.Exists(BookmarkFilePath) == false)
             {
-                System.Windows.Forms.MessageBox.Show("For some reason Viking can't find: " + BookmarkFilePath + "\nViking just tried to save this file.  You should probably use the \"Export->XML\" menu option from the bookmarks tab to create a backup just in case. This is an unexplained bug we're working on.  The last change was not saved.");
+                System.Windows.Forms.MessageBox.Show("For some reason Viking can't find: " + BookmarkFilePath + "\nViking just tried to save this file.  You should  use the \"Export->XML\" menu option from the bookmarks tab to create a backup just in case. This is an unexplained bug we're working on.  The last change was not saved.");
                 System.IO.File.Move(BookmarkUndoFilePath, BookmarkFilePath); 
             }
 
@@ -268,6 +249,13 @@ namespace LocalBookmarks
                 if (System.IO.File.Exists(BookmarkFileName))
                 {
                     BookmarkXMLDoc = XRoot.Load(BookmarkFileName);
+                    FolderUIObjRoot = new FolderUIObj(null, FolderRoot);
+                    SelectedFolder = FolderUIObjRoot;
+                    return true;
+                }
+                else if(System.IO.File.Exists(BookmarkUndoFilePath)) //Check for an undo file
+                {
+                    BookmarkXMLDoc = XRoot.Load(BookmarkUndoFilePath);
                     FolderUIObjRoot = new FolderUIObj(null, FolderRoot);
                     SelectedFolder = FolderUIObjRoot;
                     return true;
