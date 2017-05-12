@@ -62,7 +62,7 @@ namespace Geometry
                 }
             }
 
-            iTestVert = iStartVert;
+            iTestVert = 1;
 
             //OK, build triangles and determine orientation
             while (true)
@@ -110,7 +110,8 @@ namespace Geometry
 
                 GridTriangle tri = new Geometry.GridTriangle(v0, v1, v2);
 
-                bool ConvexTriangleForUpperHull = tri.VectorProducts > 0;
+                //bool ConvexTriangleForUpperHull = tri.VectorProducts > 0;
+                bool ConvexTriangleForUpperHull = GridVector2Extensions.AreClockwise(new GridVector2[] { v0, v1, v2 });
                 bool ConvexTriangle = TestUpperHull ? ConvexTriangleForUpperHull : !ConvexTriangleForUpperHull;
 
                 if (ConvexTriangle)
