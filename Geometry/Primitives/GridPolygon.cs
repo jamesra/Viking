@@ -146,6 +146,14 @@ namespace Geometry
             }
         }
 
+        public double Perimeter
+        {
+            get
+            {
+                return ExteriorRing.PerimeterLength();
+            }
+        }
+
         public GridRectangle BoundingBox
         {
             get

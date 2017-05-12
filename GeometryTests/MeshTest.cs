@@ -67,9 +67,9 @@ namespace GeometryTests
 
             foreach (Face f in faces)
             {
-                foreach (Edge e in f.Edges)
+                foreach (EdgeKey e in f.Edges)
                 {
-                    if(!mesh.Edges.Contains(e))
+                    if(!mesh.Edges.ContainsKey(e))
                         mesh.AddEdge(e);
                 }
             }
@@ -101,9 +101,9 @@ namespace GeometryTests
 
             foreach(Face f in faces)
             {
-                foreach(Edge e in f.Edges)
+                foreach(EdgeKey e in f.Edges)
                 {
-                    Assert.IsTrue(mesh.Edges.Contains(e));
+                    Assert.IsTrue(mesh.Edges.ContainsKey(e));
                 }
             }
         }

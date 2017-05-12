@@ -13,6 +13,9 @@ namespace Geometry
         public double Radius;
         public double RadiusSquared;
 
+        public GridCircle(double X, double Y, double radius) : this(new GridVector2(X, Y), radius)
+        { }
+
         public GridCircle(GridVector2 center, double radius)
         {
             this.Center = center;

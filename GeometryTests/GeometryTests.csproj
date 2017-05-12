@@ -96,6 +96,8 @@
     <Compile Include="GridRectangle.cs" />
     <Compile Include="CurveFitting.cs" />
     <Compile Include="GridVector2Test.cs" />
+    <Compile Include="GridVector3Test.cs" />
+    <Compile Include="IndexSetTest.cs" />
     <Compile Include="LineSearchGridTest.cs" />
     <Compile Include="LineTest.cs" />
     <Compile Include="MeshTest.cs" />

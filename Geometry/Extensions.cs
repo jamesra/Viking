@@ -266,14 +266,59 @@ namespace Geometry
 
     public static class GridVector2Extensions
     {
+        /// <summary>
+        /// If the first and last elements are not the same we add an element at the end equal to the first elements value
+        /// This is because Polygons and several algorithms expect arrays to be closed loops of points.
+        /// </summary>
+        /// <param name="points"></param>
+        /// <returns></returns>
+        public static ICollection<GridVector2> EnsureClosedRing(this ICollection<GridVector2> points)
+        {
+            if (points.First() != points.Last())
+            {
+                List<GridVector2> newPoints = new List<Geometry.GridVector2>(points);
+                newPoints.Add(points.First());
+                return newPoints;
+            }
+
+            return points;
+        }
+
+        /// <summary>
+        /// If the first and last elements are not the same we add an element at the end equal to the first elements value
+        /// This is because Polygons and several algorithms expect arrays to be closed loops of points.
+        /// </summary>
+        /// <param name="points"></param>
+        /// <returns></returns>
+        public static GridVector2[] EnsureClosedRing(this GridVector2[] points)
+        {
+            if (points.First() != points.Last())
+            {
+                GridVector2[] newPoints = new GridVector2[points.Length + 1];
+                Array.Copy(points, newPoints, points.Length);
+                newPoints[points.Length] = points[0];
+                return newPoints;
+            }
+
+            return points;
+        }
+
         public static GridVector2 Centroid(this ICollection<GridVector2> points)
         {
             double mX = 0;
             double mY = 0;
+
             foreach (GridVector2 p in points)
             {
                 mX += p.X;
                 mY += p.Y;
+            }
+            
+            //In case we are passed a closed loop of points we should remove the duplicate
+            if(points.First() == points.Last())
+            {
+                mX -= points.First().X;
+                mY -= points.First().Y;
             }
 
             return new GridVector2(mX / (double)points.Count, mY / (double)points.Count);
@@ -395,6 +440,9 @@ namespace Geometry
         /// <returns></returns>
         public static double PolygonArea(this GridVector2[] points)
         {
+            //System.Diagnostics.Debug.Assert(points.First() == points.Last(), "First and last point must be identical to determine area of polygon");
+            points = points.EnsureClosedRing();
+
             double accumulator = 0;
 
             for (int i = 0; i < points.Length - 1; i++)
@@ -474,6 +522,18 @@ namespace Geometry
             MinDistance = minDistance;
             return iNearestPoint;
         }
+
+        static public double PerimeterLength(this GridVector2[] points)
+        {
+            points = points.EnsureClosedRing();
+            double length = 0; 
+            for(int i = 0; i < points.Length-1; i++)
+            {
+                length += GridVector2.Distance(points[i], points[i + 1]);
+            }
+
+            return length;
+        }
     }
 
     public static class GridVector3Extensions
@@ -494,6 +554,39 @@ namespace Geometry
             return new GridVector3(mX / (double)points.Count, mY / (double)points.Count, mZ / (double)points.Count);
         }
 
+        public static GridBox BoundingBox(this IReadOnlyList<GridVector3> points)
+        {
+            if (points == null)
+                throw new ArgumentNullException("points");
+
+            if (points.Count == 0)
+                throw new ArgumentException("GridRectangle Border is empty", "points");
+
+            double minX = double.MaxValue;
+            double minY = double.MaxValue;
+            double minZ = double.MaxValue;
+            double maxX = double.MinValue;
+            double maxY = double.MinValue;
+            double maxZ = double.MinValue;
+
+            for (int i = 0; i < points.Count; i++)
+            {
+                minX = Math.Min(minX, points[i].X);
+                maxX = Math.Max(maxX, points[i].X);
+                minY = Math.Min(minY, points[i].Y);
+                maxY = Math.Max(maxY, points[i].Y);
+                minZ = Math.Min(minY, points[i].Z);
+                maxZ = Math.Max(maxY, points[i].Z);
+            }
+
+            return new GridBox( new double[] { minX, minY, minZ }, 
+                                new double[] { maxX, maxY, maxZ });
+        }
+
+        public static GridVector2 XY(this GridVector3 point)
+        {
+            return new GridVector2(point.X, point.Y);
+        }
     }
 
     public static class GridLineSegmentExtensions

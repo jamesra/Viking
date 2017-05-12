@@ -29,6 +29,8 @@ namespace Geometry.Meshing
         public readonly SortedList<EdgeKey, Edge> Edges = new SortedList<EdgeKey, Edge>();
         public readonly SortedSet<Face> Faces = new SortedSet<Face>();
 
+        public GridBox BoundingBox = null;
+
         public virtual Vertex this[int key]
         {
             get
@@ -41,14 +43,47 @@ namespace Geometry.Meshing
             }
         }
 
+        public virtual Vertex this[long key]
+        {
+            get
+            {
+                return Verticies[(int)key] as Vertex;
+            }
+            set
+            {
+                Verticies[(int)key] = value;
+            }
+        }
+
         public DynamicRenderMesh()
         {
 
         }
 
+        private void UpdateBoundingBox(GridVector3 point)
+        {
+            if (BoundingBox == null)
+                BoundingBox = new GridBox(point, 0);
+            else
+            {
+                BoundingBox.Union(point);
+            }
+        }
+
+        private void UpdateBoundingBox(GridVector3[] points)
+        {
+            if (BoundingBox == null)
+                BoundingBox = points.BoundingBox();
+            else
+            {
+                BoundingBox.Union(points);
+            }
+        }
+
         public int AddVertex(Vertex v)
         {
             Verticies.Add(v);
+            UpdateBoundingBox(v.Position);
             return Verticies.Count - 1; 
         }
 
@@ -57,10 +92,11 @@ namespace Geometry.Meshing
         /// </summary>
         /// <param name="v"></param>
         /// <returns>The index the first element was inserted at</returns>
-        public int AddVertex(ICollection<Vertex> v)
+        public int AddVertex(ICollection<Vertex> verts)
         {
             int iStart = Verticies.Count;
-            Verticies.AddRange(v);
+            Verticies.AddRange(verts);
+            UpdateBoundingBox(verts.Select(v => v.Position).ToArray());
             return iStart;
         }
 
@@ -84,8 +120,8 @@ namespace Geometry.Meshing
             Edge newEdge = new Meshing.Edge(e); 
             Edges.Add(e, newEdge);
 
-            Verticies[e.A].AddEdge(e);
-            Verticies[e.B].AddEdge(e);
+            Verticies[(int)e.A].AddEdge(e);
+            Verticies[(int)e.B].AddEdge(e);
         }
 
         public void AddEdge(Edge e)
@@ -101,8 +137,8 @@ namespace Geometry.Meshing
 
             Edges.Add(e.Key, e);
 
-            Verticies[e.A].AddEdge(e.Key);
-            Verticies[e.B].AddEdge(e.Key);
+            Verticies[(int)e.A].AddEdge(e.Key);
+            Verticies[(int)e.B].AddEdge(e.Key);
         }
 
         /// <summary>
@@ -174,6 +210,11 @@ namespace Geometry.Meshing
         public IEnumerable<Vertex> GetVerts(ICollection<int> vertIndicies)
         {
             return vertIndicies.Select(i => this.Verticies[i]);
+        }
+
+        public IEnumerable<Vertex> GetVerts(ICollection<long> vertIndicies)
+        {
+            return vertIndicies.Select(i => this.Verticies[(int)i]);
         }
 
         public void ConvertAllFacesToTriangles()
@@ -257,5 +298,27 @@ namespace Geometry.Meshing
                 v.Normal = avgNormal;                
             }
         }
+
+        public int Append(DynamicRenderMesh other)
+        {
+            int startingAppendIndex = this.Verticies.Count;
+            this.AddVertex(other.Verticies);
+
+            foreach(EdgeKey e in other.Edges.Keys)
+            {
+                EdgeKey key = new Meshing.EdgeKey(e.A + startingAppendIndex, e.B + startingAppendIndex);
+                this.AddEdge(key);
+            }
+
+            foreach(Face f in other.Faces)
+            {
+                Face newFace = new Face(f.iVerts.Select(VertIndex => VertIndex + startingAppendIndex));
+                this.AddFace(newFace);
+            }
+
+            return startingAppendIndex;
+        }
+
+        
     }
 }

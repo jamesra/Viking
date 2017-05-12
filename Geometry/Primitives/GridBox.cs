@@ -254,6 +254,18 @@ namespace Geometry
             return Union(point.coords);
         }
 
+        /// <summary>
+        /// Expands the rectange to contain the specified point.
+        /// Returns true if the rectangle expands, otherwise false.
+        /// </summary>
+        /// <param name="point"></param>
+        /// <returns></returns>
+        public bool Union(IReadOnlyList<GridVector3> points)
+        {
+            GridBox bbox = points.BoundingBox();
+            return Union(bbox);
+        }
+
         public bool Union(double[] coords)
         {
             bool updated_minVals = this.minVals.Where((val, i) => coords[i] < val).Any();

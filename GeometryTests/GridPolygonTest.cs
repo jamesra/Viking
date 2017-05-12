@@ -3,6 +3,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Linq; 
 using Geometry;
 using System.Diagnostics;
+using System.Collections.Generic;
 
 namespace GeometryTests
 {
@@ -57,6 +58,20 @@ namespace GeometryTests
             return new GridPolygon(ExteriorPointsScaled);
         }
 
+        GridPolygon CreateTrianglePolygon(double scale)
+        {
+            GridVector2[] ExteriorPoints =
+            {
+                new GridVector2(-1, -1),
+                new GridVector2(-1, 1),
+                new GridVector2(1, -1),
+                new GridVector2(-1,-1)
+            };
+
+            return new GridPolygon(ExteriorPoints);
+
+        }
+
         GridPolygon CreateUPolygon(double scale)
         {
             GridVector2[] ExteriorPointsScaled = ConcaveUVerticies(scale);
@@ -92,6 +107,20 @@ namespace GeometryTests
             GridPolygon box = CreateBoxPolygon(10);
             Assert.AreEqual(box.Area, box.BoundingBox.Area);
             Assert.AreEqual(box.Area, 400);
+
+            GridPolygon translated_box = box.Translate(new GridVector2(10, 10));
+            Assert.AreEqual(translated_box.Area, translated_box.BoundingBox.Area);
+            Assert.AreEqual(translated_box.Area, 400);
+            Assert.AreEqual(translated_box.Area, box.Area);
+
+            GridPolygon tri = CreateTrianglePolygon(10);
+            Assert.AreEqual(tri.Area, tri.BoundingBox.Area / 2.0);
+            Assert.AreEqual(tri.Area, 2);
+
+            GridPolygon translated_tri = tri.Translate(new GridVector2(10, -10));
+            Assert.AreEqual(translated_tri.Area, translated_tri.BoundingBox.Area / 2.0);
+            Assert.AreEqual(translated_tri.Area, 2);
+            Assert.AreEqual(translated_tri.Area, tri.Area);
         }
 
         [TestMethod]

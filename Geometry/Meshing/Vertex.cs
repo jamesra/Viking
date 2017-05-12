@@ -68,8 +68,8 @@ namespace Geometry.Meshing
         
         public void AddEdge(EdgeKey e)
         {
-            Debug.Assert(_Edges.Contains(e) == false);
-            _Edges.Add(e);
+            if(!_Edges.Contains(e))
+                _Edges.Add(e);
         }
 
         public void RemoveEdge(EdgeKey e)
