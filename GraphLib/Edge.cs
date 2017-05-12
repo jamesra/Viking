@@ -159,5 +159,13 @@ namespace GraphLib
 
             return true;
         }
+
+        public override string ToString()
+        {
+            if(this.Directional)
+                return string.Format("{0}  -> {1}", this.SourceNodeKey, this.TargetNodeKey);
+            else
+                return string.Format("{0} <-> {1}", this.SourceNodeKey, this.TargetNodeKey);
+        }
     }
 }
