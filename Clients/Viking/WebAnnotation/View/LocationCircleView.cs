@@ -364,7 +364,7 @@ namespace WebAnnotation.View
         public StructureCircleLabels structureLabels;
 
         static float RadiusToResizeCircle = 7.0f / 8.0f;
-        static float RadiusToLinkCircle = 1.0f / 4.0f;
+        static float RadiusToLinkCircle = 1.75f / 4.0f;
         static double BeginFadeCutoff = 0.1;
         static double InvisibleCutoff = 1f;
 
