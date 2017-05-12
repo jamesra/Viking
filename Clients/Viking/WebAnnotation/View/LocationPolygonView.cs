@@ -14,6 +14,7 @@ using Microsoft.Xna.Framework;
 using VikingXNA;
 using System.ComponentModel;
 using WebAnnotation;
+using Viking.VolumeModel;
 
 namespace WebAnnotation.View
 {

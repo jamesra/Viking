@@ -8,7 +8,7 @@ using System.Text;
 using System.Threading.Tasks;
 using CommandLine;
 using CommandLine.Text;
-using Viking.VolumeModel;
+using Viking.VolumeModel; 
 using System.Diagnostics;
 using WebAnnotationModel; 
 using Geometry;
@@ -158,10 +158,7 @@ namespace Viking.AU
 
             System.Data.Entity.SqlServer.SqlProviderServices.SqlServerTypesAssemblyName = "Microsoft.SqlServer.Types, Version=14.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91";
             SqlServerTypes.Utilities.LoadNativeAssemblies(AppDomain.CurrentDomain.BaseDirectory);
-
-            //TODO: DO NOT RUN THIS CODE UNTIL IT SUPPORTS INTERNAL POLYGONS!
-            return; 
-
+            
             ConsoleProgressReporter progressReporter = new AU.ConsoleProgressReporter();
 
             State.Volume = new Volume(Program.options.VolumeURL, State.CachePath, progressReporter);
@@ -307,43 +304,9 @@ namespace Viking.AU
 
         static SqlGeometry VolumeShapeForLocation(LocationObj loc, MappingBase mapper)
         {
-            GridVector2[] MosaicControlPoints = MosaicPointsForLocation(loc);
-            GridVector2[] VolumeControlPoints;
-
-            bool mapped = mapper.TrySectionToVolume(MosaicControlPoints, out VolumeControlPoints).All(result => result == true);
-            if (!mapped)
-                return null;
- 
-            switch (loc.TypeCode)
-            {
-                case LocationType.POINT:
-                    return VolumeControlPoints[0].ToGeometryPoint();
-                case LocationType.CIRCLE:
-                    return SqlGeometryUtils.Extensions.ToCircle(VolumeControlPoints[0].X,
-                                   VolumeControlPoints[0].Y,
-                                   loc.Z,
-                                   loc.Radius); 
-                case LocationType.POLYGON:
-                case LocationType.POLYLINE:
-                    return SqlGeometryUtils.Extensions.ToGeometry(loc.MosaicShape.GeometryType(), VolumeControlPoints);
-                case LocationType.OPENCURVE:
-                    {
-                        GridVector2[] curvePoints = VolumeControlPoints.CalculateCurvePoints((uint)options.NumOpenInterpolationPoints, false).ToArray();
-                        return SqlGeometryUtils.Extensions.ToGeometry(loc.MosaicShape.GeometryType(), curvePoints);
-                    }
-                case LocationType.CLOSEDCURVE:
-                    {
-                        GridVector2[] curvePoints = VolumeControlPoints.CalculateCurvePoints((uint)options.NumOpenInterpolationPoints, true).ToArray();
-                        return SqlGeometryUtils.Extensions.ToGeometry(loc.MosaicShape.GeometryType(), curvePoints);
-                    }
-                case LocationType.CURVEPOLYGON:
-                    {
-                        throw new NotImplementedException();
-                        //return SqlGeometryUtils.Extensions.ToS
-                    }
-                default:
-                    return SqlGeometryUtils.Extensions.ToGeometry(loc.MosaicShape.GeometryType(), VolumeControlPoints);
-            }
+            SqlGeometry UnsmoothedVolumeShape = mapper.TryMapShapeSectionToVolume(loc.MosaicShape);
+            SqlGeometry SmoothedVolumeShape = loc.TypeCode.GetSmoothedShape(UnsmoothedVolumeShape);
+            return SmoothedVolumeShape;
         }
          
 

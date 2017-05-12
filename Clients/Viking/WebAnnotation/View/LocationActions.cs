@@ -24,6 +24,7 @@ namespace WebAnnotation.View
         ADJUST,    //Adjust a specific control point
         ADDCONTROLPOINT, //Add a control point
         REMOVECONTROLPOINT, //Remove a control point
+        CREATESTRUCTURE, //Create a structure and add the first location for that structure
         CREATELINK, //Create a link to an adjacent location or structure,
         CREATELINKEDLOCATION, //Create a new location and link to it
         CUTHOLE, //Cut a hole from the interior of an annotation
@@ -78,7 +79,7 @@ namespace WebAnnotation.View
                                                                GridVector2 volumePosition)
         {
             Viking.UI.State.SelectedObject = null;
-            CreateNewLinkedLocationCommand.LastEditedLocation = null; 
+//            CreateNewLinkedLocationCommand.LastEditedLocation = null; 
 
             switch (loc.TypeCode)
             {
@@ -106,25 +107,31 @@ namespace WebAnnotation.View
                                                                          LocationObj loc,
                                                                          GridVector2 volumePosition)
         {
+            //I had to calculate this on the fly because if the databases VolumeShape was out of date it could cause large movements of the annotation during the command.
+            IVolumeToSectionTransform section_mapper = Parent.Volume.GetSectionToVolumeTransform((int)Parent.Section.Number);
+            GridVector2 VolumeCircleCenter = section_mapper.SectionToVolume(loc.Position);
+
             switch (action)
             {
                 case LocationAction.NONE:
                     return null;
                 case LocationAction.TRANSLATE:
                     return new TranslateCircleLocationCommand(Parent,
-                                                              new GridCircle(loc.VolumePosition, loc.Radius),
+                                                              new GridCircle(VolumeCircleCenter, loc.Radius),
                                                               loc.Parent.Type.Color.ToXNAColor(1f),
                                                               (NewVolumePosition, NewMosaicPosition, NewRadius) => UpdateCircleLocationCallback(loc, NewVolumePosition, NewMosaicPosition, NewRadius));
                 case LocationAction.SCALE: 
                     return new ResizeCircleCommand(Parent,
                             System.Drawing.Color.FromArgb(loc.Parent.Type.Color).SetAlpha(0.5f),
-                            loc.VolumePosition,
+                            VolumeCircleCenter,
                             (radius) => 
                             {
                                 WebAnnotation.View.LocationActions.UpdateCircleLocationCallback(loc, loc.VolumePosition, loc.Position, radius);
                             });
                 case LocationAction.ADJUST:
                     return null;
+                case LocationAction.CREATESTRUCTURE:
+
                 case LocationAction.CREATELINK:
                     return new LinkAnnotationsCommand(Parent, loc);
                 case LocationAction.CREATELINKEDLOCATION:
@@ -146,7 +153,7 @@ namespace WebAnnotation.View
                                                                             Parent.Section.Number,
                                                                             loc.TypeCode);
                                                                          
-                                                                       IVolumeToSectionTransform section_mapper = Parent.Volume.GetSectionToVolumeTransform((int)Parent.Section.Number);
+                                                                       //IVolumeToSectionTransform section_mapper = Parent.Volume.GetSectionToVolumeTransform((int)Parent.Section.Number);
                                                                        NewMosaicPosition = section_mapper.VolumeToSection(NewVolumePosition);
                                                                        UpdateCircleLocationNoSaveCallback(newLoc, NewVolumePosition, NewMosaicPosition, NewRadius);
 

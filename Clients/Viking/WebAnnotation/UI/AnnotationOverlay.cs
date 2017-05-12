@@ -22,6 +22,7 @@ using VikingXNAGraphics;
 using WebAnnotation.Actions;
 using System.ComponentModel;
 using VikingXNAWinForms;
+using Viking.VolumeModel;
 
 namespace WebAnnotation
 {

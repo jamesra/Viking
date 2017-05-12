@@ -148,6 +148,7 @@
     <Compile Include="SqlServerTypes\Loader.cs" />
     <Content Include="Modules\WebAnnotation\AnnotationServiceTypes.dll" />
     <Content Include="Modules\WebAnnotation\protobuf-net.dll" />
+    <Content Include="Modules\WebAnnotation\SqlGeometryAnnotationExtensions.cs.dll" />
     <Content Include="x86\libiomp5md.dll" />
     <Content Include="x86\MathNet.Numerics.MKL.dll" />
     <EmbeddedResource Include="Properties\Resources.resx">
