@@ -16,7 +16,9 @@ namespace VikingXNAGraphics
     {
         public bool WireFrame { get; set; }
         public ObservableCollection<MeshModel<VERTEXTYPE>> models = new ObservableCollection<MeshModel<VERTEXTYPE>>();
-         
+
+        BasicEffect effect; 
+
         public MeshView()
         {
         }
@@ -26,41 +28,63 @@ namespace VikingXNAGraphics
             if (models == null)
                 return;
 
+            if(effect == null || effect.IsDisposed)
+            {
+                effect = new BasicEffect(device);
+            }
+
             if (WireFrame)
             {
                 RasterizerState rstate = new RasterizerState();
-                rstate.CullMode = CullMode.None;
+                rstate.CullMode = CullMode.CullClockwiseFace;
                 rstate.FillMode = FillMode.WireFrame;
                 device.RasterizerState = rstate;
             }
             else
             {
                 RasterizerState rstate = new RasterizerState();
-                rstate.CullMode = CullMode.None;
+                rstate.CullMode = CullMode.CullClockwiseFace;
                 rstate.FillMode = FillMode.Solid;
                 device.RasterizerState = rstate;
             }
 
-            foreach (MeshModel<VERTEXTYPE> model in models)
-            {
-                
-                using (BasicEffect effect = new BasicEffect(device))
-                {
-                    effect.SetScene(scene);
-                    effect.World = model.ModelMatrix;
-                    effect.AmbientLightColor = Color.White.ToVector3();
-                    effect.VertexColorEnabled = true;
-                    effect.LightingEnabled = false;
-                    effect.CurrentTechnique = effect.Techniques[0];
+            effect.SetScene(scene);
+            effect.AmbientLightColor = Color.White.ToVector3();
+            effect.VertexColorEnabled = true;
+            //effect.CurrentTechnique = effect.Techniques[0];
 
-                    foreach (EffectPass pass in effect.CurrentTechnique.Passes)
-                    {
-                        pass.Apply();
-                      
-                        device.DrawUserIndexedPrimitives<VERTEXTYPE>(PrimitiveType.TriangleList, model.Verticies, 0, model.Verticies.Length, model.Edges, 0, model.Edges.Length / 3);
-                    }
+            foreach (MeshModel<VERTEXTYPE> model in models)
+            {  
+                effect.World = model.ModelMatrix;
+                if (model.Edges.Length == 0)
+                    continue; 
+
+                if (VertexHasNormals(model.Verticies))
+                {
+                    effect.EnableDefaultLighting();
                 }
+                else
+                {
+                    effect.LightingEnabled = false; 
+                } 
+
+                foreach (EffectPass pass in effect.CurrentTechnique.Passes)
+                {
+                    pass.Apply();
+                      
+                    device.DrawUserIndexedPrimitives<VERTEXTYPE>(PrimitiveType.TriangleList, model.Verticies, 0, model.Verticies.Length, model.Edges, 0, model.Edges.Length / 3);
+                } 
             } 
+        }
+
+        public static bool VertexHasNormals(VERTEXTYPE[] verticies)
+        {
+            if (verticies.Length == 0)
+                return false;
+
+            VertexElement[] elements = verticies[0].VertexDeclaration.GetVertexElements();
+
+            return elements.Any(e => e.VertexElementUsage == VertexElementUsage.Normal);
         }
 
         public static void Draw(GraphicsDevice device, VikingXNA.Scene scene, ICollection<MeshView<VERTEXTYPE>> meshViews)
@@ -81,6 +105,11 @@ namespace VikingXNAGraphics
             PolygonOverlayEffect effect = DeviceEffectsStore<PolygonOverlayEffect>.TryGet(device); 
             if (effect == null)
                 return;
+
+            RasterizerState rstate = new RasterizerState();
+            rstate.CullMode = CullMode.CullClockwiseFace;
+            rstate.FillMode = FillMode.Solid;
+            device.RasterizerState = rstate;
 
             effect.InputLumaAlphaValue = 0.0f;
 

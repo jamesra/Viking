@@ -14,6 +14,7 @@ namespace MonogameTestbed
         [STAThread]
         static void Main()
         {
+            SqlServerTypes.Utilities.LoadNativeAssemblies(AppDomain.CurrentDomain.BaseDirectory);
             using (var game = new MonoTestbed())
                 game.Run();
         }

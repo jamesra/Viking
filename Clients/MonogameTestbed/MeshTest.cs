@@ -11,18 +11,58 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 using Geometry.Meshing;
 using MathNet.Numerics.LinearAlgebra;
+using MorphologyMesh;
 
 namespace MonogameTestbed
 {
     class MeshTest : IGraphicsTest
     {
-        VikingXNAGraphics.MeshView<VertexPositionColor> meshView;        
+        VikingXNAGraphics.MeshView<VertexPositionColor> meshView;
+        VikingXNAGraphics.MeshView<VertexPositionNormalColor> meshViewWithLighting;
 
-        DynamicRenderMesh mesh = new DynamicRenderMesh();
+        DynamicRenderMesh tetraMesh = new DynamicRenderMesh();
+        DynamicRenderMesh cubeMesh =  new DynamicRenderMesh();
 
         Scene3D Scene;
 
         LabelView labelCamera;
+
+
+        bool _initialized = false;
+        public bool Initialized { get { return _initialized; } }
+
+        /*
+        private Vertex[] CreateCubeVerts(GridVector3 offset)
+        {
+            Vertex[] verts = new Vertex[] {new Vertex(new GridVector3(-5, -5, -5), new GridVector3(0, 0, 0)),
+                                           new Vertex(new GridVector3(5, -5, -5), new GridVector3(0, 1, 0)),
+                                           new Vertex(new GridVector3(-5, -5, 5), new GridVector3(0, 0, 1)),
+                                           new Vertex(new GridVector3(5, -5, 5), new GridVector3(1, 0, 0)),
+                                           new Vertex(new GridVector3(-5, 5, -5), new GridVector3(0, 0, 0)),
+                                           new Vertex(new GridVector3(5, 5, -5), new GridVector3(0, 1, 0)),
+                                           new Vertex(new GridVector3(-5, 5, 5), new GridVector3(0, 0, 1)),
+                                           new Vertex(new GridVector3(5, 5, 5), new GridVector3(1, 0, 0))};
+
+            for (int i = 0; i < verts.Length; i++)
+            {
+                verts[i].Position += offset;
+            }
+
+            return verts;
+        }
+
+        private Face[] CreateCubeFaces()
+        {
+            return new Face[] {
+                         new Face(0, 2, 3, 1), //Bottom
+                         new Face(0, 1, 5, 4), //Front
+                         new Face(4, 6, 7, 5), //Top
+                         new Face(2, 6, 7, 3), //Back
+                         //new Face(2, 7, 3), //Back
+                         new Face(1, 3, 7, 5), //Right
+                         new Face(0, 4, 6, 2) }; //Left
+        }
+        */
 
         private Vertex[] CreateTetrahedronVerts(GridVector3 offset)
         {
@@ -47,85 +87,150 @@ namespace MonogameTestbed
                                new Face(1,3,2) };
         }
 
-        public void Init(MonoTestbed window)
+        private DynamicRenderMesh CreateTetrahedronMeshModel(GridVector3 offset)
         {
-            this.Scene = new Scene3D(window.GraphicsDevice.Viewport, new Camera3D());
-            this.meshView = new MeshView<VertexPositionColor>();
-
-            this.Scene.Camera.LookAt = Vector3.Zero;
-            this.Scene.Camera.Position = new Vector3(0, 10, 0);
-             
-            mesh.AddVertex(CreateTetrahedronVerts(new GridVector3(0,0,0)));
+            DynamicRenderMesh mesh = new DynamicRenderMesh();
+            mesh.AddVertex(CreateTetrahedronVerts(new GridVector3(0, 0, 0)));
             Face[] faces = CreateTetrahedronFaces();
-            foreach(Face f in faces)
+            foreach (Face f in faces)
             {
                 mesh.AddFace(f);
             }
 
-            Color[] colors = new Color[] { Color.Red, Color.Blue, Color.Green, Color.Yellow };
+            return mesh;
+        }
 
-            MeshModel<VertexPositionColor> model = new MeshModel<VertexPositionColor>();
-            model.Verticies = mesh.Verticies.Select((v, i) => new VertexPositionColor(v.Position.ToXNAVector3(), colors[i])).ToArray();
-            model.Edges = mesh.Faces.SelectMany(f => f.iVerts).ToArray();
+        /*
+        private DynamicRenderMesh CreateCubeMeshModel(GridVector3 offset)
+        {
+            DynamicRenderMesh mesh = new DynamicRenderMesh();
+            mesh.AddVertex(CreateCubeVerts(new GridVector3(0, 0, 0)));
+            Face[] faces = CreateCubeFaces();
+            foreach (Face f in faces)
+            {
+                mesh.AddFace(f);
+            }
 
-            meshView.models.Add(model);
+            return mesh;
+        }*/
 
-            labelCamera = new LabelView("", new GridVector2(0, 50));
+        public void Init(MonoTestbed window)
+        {
+            _initialized = true;
+            this.Scene = new Scene3D(window.GraphicsDevice.Viewport, new Camera3D());
+            this.meshView = new MeshView<VertexPositionColor>();
+            this.meshViewWithLighting = new MeshView<VertexPositionNormalColor>();
+
+            this.Scene.Camera.LookAt = Vector3.Zero;
+            this.Scene.Camera.Position = new Vector3(0, -0, -65);
+
+            this.Scene.MaxDrawDistance = 10000;
+              /*
+            Color[] tetra_colors = new Color[] { Color.Red, Color.Blue, Color.Green, Color.Yellow };
+            Color[] cube_colors  = new Color[] { Color.White, Color.Blue, Color.Green, Color.Yellow, Color.Red, Color.Orange, Color.Purple, Color.Black };
+             
+            tetraMesh = CreateTetrahedronMeshModel(new GridVector3(-20, 0, 0));
+
+            MeshModel<VertexPositionNormalColor> cubeModel = MorphologyMesh.ShapeMeshGenerator<object>.CreateMeshForBox(new GridBox(new double[] { -5, -5, -5 }, new double[] { 5, 5, 5 }), null, new GridVector3(20, 0, 0)).ToVertexPositionNormalColorMeshModel(cube_colors);
+            meshViewWithLighting.models.Add(cubeModel);
+
+            //cubeMesh = CreateCubeMeshModel(new GridVector3(20, 0, 0));
+
+            MeshModel<VertexPositionColor> tetraModel = tetraMesh.ToVertexPositionColorMeshModel(tetra_colors);
+            meshView.models.Add(tetraModel);
+
+            //MeshModel<VertexPositionColor> cubeModel = cubeMesh.ToVertexPositionColorMeshModel(cube_colors);
+            //meshView.models.Add(cubeModel);
+
+            MeshModel<VertexPositionNormalColor> discModel = MorphologyMesh.ShapeMeshGenerator<object>.CreateMeshForDisc(new GridCircle( new GridVector2(20, 20), 10), 0, 10, 16, null, GridVector3.Zero).ToVertexPositionNormalColorMeshModel(Color.Red);
+            meshViewWithLighting.models.Add(discModel);
+
+            DynamicRenderMesh boxMesh = MorphologyMesh.ShapeMeshGenerator<object>.CreateMeshForBox(new GridBox(new double[] { 10, 0, 20 }, new double[] { 15, 5, 27 }), null, GridVector3.Zero);
+            boxMesh.RecalculateNormals(); //Make sure it looks the same as the cube model above
+
+            MeshModel<VertexPositionNormalColor> boxModel = boxMesh.ToVertexPositionNormalColorMeshModel(cube_colors);
+            meshViewWithLighting.models.Add(boxModel);
+
+            MeshModel<VertexPositionNormalColor> polyModel = MorphologyMesh.ShapeMeshGenerator<object>.CreateMeshForPolygonSlab(StandardGeometryModels.CreateTestPolygon(new GridVector2(20, -40)), -5, 3, null, GridVector3.Zero).ToVertexPositionNormalColorMeshModel(Color.Aqua);
+            meshViewWithLighting.models.Add(polyModel);
+
+            MeshModel<VertexPositionNormalColor> circleModel = BuildCircleConvexHull(new GridCircle(new GridVector2(20, -20), 5));
+            meshViewWithLighting.models.Add(circleModel);
+            */
+            foreach(MeshModel<VertexPositionNormalColor> model in BuildSmoothMesh(new GridVector3(0, 0, 0)))
+            {
+                meshViewWithLighting.models.Add(model);
+            }
+
+            labelCamera = new LabelView("", new GridVector2(-70, 0));
         } 
+
+        private ICollection<MeshModel<VertexPositionNormalColor>> BuildSmoothMesh(GridVector3 translate)
+        {
+            MeshGraph graph = new MeshGraph();
+
+            //Create three simple polygons and add them to the graph
+            IShape2D[] shapes = {new GridCircle(0,0,10),
+                                 new GridCircle(-2,0,11),
+                                 
+                                 new GridPolygon(new GridVector2[] {
+                                                    new GridVector2(-10,-10),
+                                                    new GridVector2(-10,10),
+                                                    new GridVector2(10,10),
+                                                    new GridVector2(10,-10),
+                                                    new GridVector2(-10,-10)}),
+                                 new GridCircle(0,7, 5),
+                                 new GridCircle(-5, -5, 5)
+                                };
+            double[] ZLevels = new double[] { 0, 5, 10, 15, 15 };
+
+            MeshEdge[] edges = new MeshEdge[] {
+                                         new MeshEdge(0, 1),
+                                         new MeshEdge(1, 2),
+                                         new MeshEdge(2, 3),
+                                         new MeshEdge(2, 4)};
+
+            for (int i = 0; i < shapes.Length; i++)
+            {
+                MorphologyMesh.MeshNode node = new MeshNode((ulong)i);
+                node.PopulateNode(shapes[i].Translate(translate), ZLevels[i], (ulong)i);
+                graph.AddNode(node);
+            }
+
+            foreach(MeshEdge edge in edges)
+            {
+                graph.AddEdge(edge);
+            }
+            
+            ICollection<DynamicRenderMesh<ulong>> meshes = SmoothMeshGenerator.Generate(graph);
+            List<MeshModel<VertexPositionNormalColor>> listMeshModels = new List<MeshModel<VertexPositionNormalColor>>();
+            return meshes.Select(m => m.ToVertexPositionNormalColorMeshModel(Color.Yellow)).ToArray();
+        }
+
+
+        private MeshModel<VertexPositionNormalColor> BuildCircleConvexHull(ICircle2D circle)
+        {
+
+            Vertex<object>[] verticies = MorphologyMesh.ShapeMeshGenerator<object>.CreateVerticiesForCircle(circle, 0, 16, null, GridVector3.Zero);
+
+            GridVector2[] verts2D = verticies.Select(v => new GridVector2(v.Position.X, v.Position.Y)).ToArray();
+
+            int[] cv_idx;
+            GridVector2[] cv_verticies = verts2D.ConvexHull(out cv_idx);
+
+            GridPolygon poly = new GridPolygon(cv_verticies);
+            return MorphologyMesh.ShapeMeshGenerator<object>.CreateMeshForPolygon(poly, 0, null, GridVector3.Zero).ToVertexPositionNormalColorMeshModel(Color.Gold);
+        }
 
         public void Update()
         {
+            StandardCameraManipulator.Update(this.Scene.Camera);
             GamePadState state = GamePad.GetState(PlayerIndex.One);
-
-            if(state.ThumbSticks.Right.Y != 0)
-                this.Scene.Camera.Pitch += state.ThumbSticks.Right.Y / (Math.PI * 2);
-            if (state.ThumbSticks.Right.X != 0)
-                this.Scene.Camera.Yaw -= state.ThumbSticks.Right.X / (Math.PI * 2);
-
-            if (state.ThumbSticks.Left.Y != 0 || state.ThumbSticks.Left.X != 0 ||
-                state.Triggers.Left != 0 || state.Triggers.Right != 0)
-            {
-                Vector3 translated = Scene.Camera.View.TranslateRelativeToViewMatrix(state.ThumbSticks.Left.X,
-                                                                                     state.ThumbSticks.Left.Y,
-                                                                                     state.Triggers.Right - state.Triggers.Left);
-                this.Scene.Camera.Position += translated;
-            }
-
-            if (state.DPad.Left == ButtonState.Pressed)
-            {
-                Scene.Camera.Position = new Vector3(-10, 0, 0);
-            }
-            else if (state.DPad.Right == ButtonState.Pressed)
-            {
-                Scene.Camera.Position = new Vector3(10, 0, 0);
-            }
-            else if (state.DPad.Up == ButtonState.Pressed)
-            {
-                Scene.Camera.Position = new Vector3(0, -10,  0);
-            }
-            else if (state.DPad.Down == ButtonState.Pressed)
-            {
-                Scene.Camera.Position = new Vector3(0, 10, 0);
-            }
-            else if(state.Buttons.B == ButtonState.Pressed)
-            {
-                Scene.Camera.Position = new Vector3(0, 0, -10);
-            }
-            else if (state.Buttons.X == ButtonState.Pressed)
-            {
-                Scene.Camera.Position = new Vector3(0, 0, 10);
-            }
-
-
+            
             if (state.Buttons.Y == ButtonState.Pressed)
             {
                 meshView.WireFrame = !meshView.WireFrame;
-            }
-
-            if (state.Buttons.A == ButtonState.Pressed)
-            {
-                this.Scene.Camera.Rotation = Vector3.Zero;
-                this.Scene.Camera.Position = new Vector3(0, -10, 0);
+                meshViewWithLighting.WireFrame = meshView.WireFrame;
             }
 
             labelCamera.Text = string.Format("{0} {1} {2}", Scene.Camera.Position, Scene.Camera.LookAt, Scene.Camera.Rotation);
@@ -143,7 +248,8 @@ namespace MonogameTestbed
 
             window.GraphicsDevice.DepthStencilState = dstate;
             //window.GraphicsDevice.BlendState = BlendState.Opaque;
-            meshView.Draw(window.GraphicsDevice, this.Scene); 
+            meshView.Draw(window.GraphicsDevice, this.Scene);
+            meshViewWithLighting.Draw(window.GraphicsDevice, this.Scene);
 
             
             window.spriteBatch.Begin();

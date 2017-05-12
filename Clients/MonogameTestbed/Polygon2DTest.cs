@@ -12,6 +12,10 @@ namespace MonogameTestbed
 {
     public class Polygon2DTest : IGraphicsTest
     {
+
+        bool _initialized = false;
+        public bool Initialized { get { return _initialized; } }
+
         public static GridVector2[] CreateTestPolygon(GridVector2? offset = new GridVector2?())
         {
             GridVector2[] output = new GridVector2[] {new GridVector2(10,10),
@@ -46,6 +50,7 @@ namespace MonogameTestbed
 
         public void Init(MonoTestbed window)
         {
+            _initialized = true; 
             GridVector2[] cps = CreateTestPolygon(new GridVector2(-50, 0));
 
             //GridVector2[] ordered_cps = cps.OrderBy((v) => v).ToArray();
@@ -63,8 +68,40 @@ namespace MonogameTestbed
             MeshModel<VertexPositionColor> holy_model = TriangleNetExtensions.CreateMeshForPolygon2D(holy_cps, listInnerRings, Color.Aquamarine);
             this.meshView.models.Add(holy_model);
 
-            meshView.WireFrame = false;
 
+            int[] Convex_hull_idx;
+            GridVector2[] cv_output_points = holy_cps.ConvexHull(out Convex_hull_idx);
+
+            List<GridVector2> listCvPoints = new List<GridVector2>(Convex_hull_idx.Select(i => holy_cps[i]));
+            GridPolygon convex_hull_poly = new GridPolygon(listCvPoints.ToArray());
+
+            convex_hull_poly = convex_hull_poly.Translate(new GridVector2(0, 40));
+
+            MeshModel<VertexPositionColor> cv_model = TriangleNetExtensions.CreateMeshForPolygon2D(convex_hull_poly, Color.Blue);
+            this.meshView.models.Add(cv_model);
+            
+            MeshModel<VertexPositionColor> circle_cv_model = BuildCircleConvexHull(new GridCircle(new GridVector2(35, -35), 25));
+            this.meshView.models.Add(circle_cv_model);
+
+            MeshModel<VertexPositionColor> circle_cv_model2 = BuildCircleConvexHull(new GridCircle(new GridVector2(70, -15), 10));
+            this.meshView.models.Add(circle_cv_model2);
+            
+            MeshModel<VertexPositionColor> circle_cv_model3 = BuildCircleConvexHull(new GridCircle(new GridVector2(-100, 0), 40));
+            this.meshView.models.Add(circle_cv_model3);
+
+            meshView.WireFrame = false;
+        }
+
+        private MeshModel<VertexPositionColor> BuildCircleConvexHull(ICircle2D circle)
+        {
+
+            GridVector2[] verts2D = MorphologyMesh.ShapeMeshGenerator<object>.CreateVerticiesForCircle(circle, 0, 16, null, GridVector3.Zero).Select(v => new GridVector2(v.Position.X, v.Position.Y)).ToArray();
+              
+            int[] cv_idx;
+            GridVector2[] cv_verticies = verts2D.ConvexHull(out cv_idx);
+
+            GridPolygon convex_hull_poly = new GridPolygon(cv_verticies);
+            return TriangleNetExtensions.CreateMeshForPolygon2D(convex_hull_poly, Color.Blue);
         }
 
         public void Update()

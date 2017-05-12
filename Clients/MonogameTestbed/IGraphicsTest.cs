@@ -8,6 +8,8 @@ namespace MonogameTestbed
 {
     interface IGraphicsTest
     {
+        bool Initialized { get; }
+
         void Init(MonoTestbed window);
 
         void Update();

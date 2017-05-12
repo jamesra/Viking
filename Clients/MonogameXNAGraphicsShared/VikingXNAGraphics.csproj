@@ -138,6 +138,7 @@
     <Compile Include="RoundLine.cs" />
     <Compile Include="ServiceContainer.cs" />
     <Compile Include="TriangleNetExtensions.cs" />
+    <Compile Include="VertexPositionNormalColor.cs" />
     <Compile Include="Views\CircleView.cs" />
     <Compile Include="Views\CurveLabel.cs" />
     <Compile Include="Views\CurveView.cs" />
@@ -213,6 +214,10 @@
     <ProjectReference Include="..\..\Triangle.NET\Triangle\Triangle.csproj">
       <Project>{f7907a0a-b75f-400b-9e78-bfad00db4d6b}</Project>
       <Name>Triangle</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\TriangleNetGeometryExtensions\TriangleNetGeometryExtensions.csproj">
+      <Project>{2b2e3c2e-be56-466c-98f3-6f9bfa82b213}</Project>
+      <Name>TriangleNetGeometryExtensions</Name>
     </ProjectReference>
     <ProjectReference Include="XNAContent\VikingXNAGraphicsContent.contentproj">
       <Project>{3B195345-13D5-4E0A-95EC-FC95501FD066}</Project>

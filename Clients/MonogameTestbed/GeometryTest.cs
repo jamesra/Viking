@@ -30,39 +30,11 @@ namespace MonogameTestbed
 
         GamePadState LastGamepadState;
 
-        public static GridVector2[] CreateTestPolygon(GridVector2? offset = new GridVector2?())
-        {
-            GridVector2[] output = new GridVector2[] {new GridVector2(10,10),
-                                      new GridVector2(5, 20),
-                                      new GridVector2(15, 30),
-                                      new GridVector2(30, 30),
-                                      new GridVector2(25, 15),
-                                      new GridVector2(45, 15),
-                                      new GridVector2(45, 10),
-                                      new GridVector2(55, 0),
-                                      new GridVector2(25, 5),
-                                      new GridVector2(10, 10)};
 
-            if (offset.HasValue)
-                output = output.Select(p => p + offset.Value).ToArray();
+        bool _initialized = false;
+        public bool Initialized { get { return _initialized; } }
 
-            return output;
-        }
-
-        public static GridVector2[] CreateInteriorRing(GridVector2? offset = new GridVector2?())
-        {
-            GridVector2[] output = new GridVector2[] {new GridVector2(12.5,12.5),
-                                      new GridVector2(22.5, 12.5),
-                                      new GridVector2(24.5, 17.5),
-                                      new GridVector2(17.5, 25.5),
-                                      new GridVector2(12.5, 17.5),
-                                     new GridVector2(12.5, 12.5)};
-
-            if (offset.HasValue)
-                output = output.Select(p => p + offset.Value).ToArray();
-
-            return output;
-        }
+       
 
         public void InitGeometry()
         { 
@@ -73,18 +45,14 @@ namespace MonogameTestbed
 
             lineSegment = new GridLineSegment(new GridVector2(0, 0), new GridVector2(5, 5));
             circle = new GridCircle(new GridVector2(-10, -10), 4);
-
-            GridVector2[] holy_cps = CreateTestPolygon();
-            GridVector2[] holy_hole = CreateInteriorRing();
-            List<GridVector2[]> listInnerRings = new List<GridVector2[]>();
-            listInnerRings.Add(holy_hole);
-
+            
+            polygon = StandardGeometryModels.CreateTestPolygon(); 
 
             triangle = new GridTriangle(new GridVector2(-10, 10),
                                                 new GridVector2(-15, 10),
                                                 new GridVector2(-12, 20));
 
-            polygon = new GridPolygon(holy_cps, listInnerRings);
+            
 
             shapes.Add(lineSegment);
             shapes.Add(circle);
@@ -94,6 +62,7 @@ namespace MonogameTestbed
 
         public void Init(MonoTestbed window)
         {
+            _initialized = true;
             InitGeometry();
               
             ShapeViews = CreateViewsForGeometries(shapes);

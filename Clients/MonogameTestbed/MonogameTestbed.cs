@@ -10,6 +10,7 @@ using Geometry;
 using System.Collections.Generic;
 using MonoGame.Framework;
 using MonoGame;
+using System.Diagnostics;
 
 namespace MonogameTestbed
 {
@@ -23,7 +24,8 @@ namespace MonogameTestbed
         CLOSEDCURVE,
         POLYGON2D, 
         MESH,
-        GEOMETRY
+        GEOMETRY,
+        MORPHOLOGY
     };
 
     /// <summary>
@@ -51,10 +53,11 @@ namespace MonogameTestbed
         Polygon2DTest polygon2DTest = new Polygon2DTest();
         MeshTest meshTest = new MeshTest();
         GeometryTest geometryTest = new GeometryTest();
+        MorphologyTest morphologyTest = new MorphologyTest();
 
         SortedDictionary<TestMode, IGraphicsTest> listTests = new SortedDictionary<TestMode, IGraphicsTest>();
 
-        TestMode Mode = TestMode.GEOMETRY;
+        TestMode Mode = TestMode.MESH;
 
         public static uint NumCurveInterpolations = 10;
 
@@ -127,11 +130,9 @@ namespace MonogameTestbed
             listTests.Add(TestMode.POLYGON2D, polygon2DTest);
             listTests.Add(TestMode.MESH, meshTest);
             listTests.Add(TestMode.GEOMETRY, geometryTest);
+            listTests.Add(TestMode.MORPHOLOGY, morphologyTest);
 
-            foreach (IGraphicsTest test in listTests.Values)
-            {
-                test.Init(this);
-            }
+            
         }
 
         /// <summary>
@@ -185,6 +186,14 @@ namespace MonogameTestbed
                 this.Mode = TestMode.MESH;
             if (Keyboard.GetState().IsKeyDown(Keys.F9))
                 this.Mode = TestMode.GEOMETRY;
+            if (Keyboard.GetState().IsKeyDown(Keys.F10))
+                this.Mode = TestMode.MORPHOLOGY;
+
+            if (!listTests[Mode].Initialized)
+            {
+                listTests[Mode].Init(this);
+                Debug.Assert(listTests[Mode].Initialized);
+            }
         }
 
         private void UpdateEffectMatricies(Scene drawnScene)
@@ -212,7 +221,13 @@ namespace MonogameTestbed
         /// <param name="gameTime">Provides a snapshot of timing values.</param>
         protected override void Update(GameTime gameTime)
         {
-            if(GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Microsoft.Xna.Framework.Input.Keyboard.GetState().IsKeyDown(Keys.Escape))
+            if (!listTests[Mode].Initialized)
+            {
+                listTests[Mode].Init(this);
+                Debug.Assert(listTests[Mode].Initialized);
+            }
+
+            if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Microsoft.Xna.Framework.Input.Keyboard.GetState().IsKeyDown(Keys.Escape))
             {
                 //Close the game, but Monogame won't allow it?
             }
@@ -255,6 +270,11 @@ namespace MonogameTestbed
             GraphicsDevice.RasterizerState = state;
             
            // spriteBatch.Begin();
+           if(!listTests[Mode].Initialized)
+           {
+                listTests[Mode].Init(this);
+                Debug.Assert(listTests[Mode].Initialized);
+            }
 
             listTests[Mode].Draw(this); 
 
@@ -286,8 +306,13 @@ namespace MonogameTestbed
 
         double CurveAngle = 3.14159 / 4.0;
 
+
+        bool _initialized = false;
+        public bool Initialized { get { return _initialized; } }
+
         public void Init(MonoTestbed window)
         {
+            _initialized = true;
             labelTexture = CreateTextureForLabel("The quick brown fox jumps over the lazy dog", window.GraphicsDevice, window.spriteBatch, window.fontArial);
         }
 
@@ -360,8 +385,13 @@ namespace MonogameTestbed
         CurveLabel rightCurveLabel;
 
 
+        bool _initialized = false;
+        public bool Initialized { get { return _initialized; } }
+
         public void Init(MonoTestbed window)
         {
+            _initialized = true;
+
             GridVector2[] cps = CreateTestCurve3(0, 100);
             curveView = new CurveView(cps, Color.Red, false, MonoTestbed.NumCurveInterpolations);
             leftCurveLabel = new CurveLabel("The quick brown fox jumps over the lazy dog", cps, Color.Black, false);
@@ -423,8 +453,14 @@ namespace MonogameTestbed
         CurveLabel curveLabel;
         LabelView labelView;
 
+
+        bool _initialized = false;
+        public bool Initialized { get { return _initialized; } }
+
         public void Init(MonoTestbed window)
         {
+            _initialized = true;
+
             GridVector2[] cps = CreateTestCurve3(0, 100);
             curveLabel = new CurveLabel("CurveLabel", cps, Color.Black, false);
             labelView = new LabelView("LabelView", new GridVector2(0, 0));
@@ -486,8 +522,14 @@ namespace MonogameTestbed
         List<LineView> listLineViews = new List<LineView>();
         List<LabelView> listLabelViews = new List<LabelView>();
 
+
+        bool _initialized = false;
+        public bool Initialized { get { return _initialized; } }
+
         public void Init(MonoTestbed window)
         {
+            _initialized = true;
+
             double MinX = -100;
             double MaxX = 100;
 
@@ -534,8 +576,14 @@ namespace MonogameTestbed
         List<CurveView> listLineViews = new List<CurveView>();
         List<LabelView> listLabelViews = new List<LabelView>();
 
+
+        bool _initialized = false;
+        public bool Initialized { get { return _initialized; } }
+
         public void Init(MonoTestbed window)
         {
+            _initialized = true;
+
             double MinX = -100;
             double MaxX = 100;
 
@@ -584,9 +632,13 @@ namespace MonogameTestbed
     {
         CurveView curveView;
         CurveLabel curveLabel;
+        bool _initialized = false; 
+        public bool Initialized { get { return _initialized; } }
 
         public void Init(MonoTestbed window)
         {
+            _initialized = true;
+
             GridVector2[] cps = CreateTestCurve(90, 190);
             curveView = new CurveView(cps, Color.Red, true, 10, lineWidth: 64, controlPointRadius: 16, lineStyle: LineStyle.HalfTube);
             curveLabel = new CurveLabel("The quick brown fox jumps over the lazy dog", cps, Color.Black, true);
