@@ -26,7 +26,10 @@ namespace MonogameWPFLibrary.ViewModels
             DependencyProperty.Register("Verticies", typeof(VertexPositionColor[]), typeof(MeshViewModel), new PropertyMetadata( new VertexPositionColor[0], OnVerticiesChanged));
 
 
-        public int[] Edges
+        /// <summary>
+        /// Flat array of triangle verticies
+        /// </summary>
+        public int[] Faces
         {
             get { return (int[])GetValue(EdgesProperty); }
             set { SetValue(EdgesProperty, value); }
@@ -94,7 +97,7 @@ namespace MonogameWPFLibrary.ViewModels
         public MeshViewModel(VertexPositionColor[] verts, int[] edges)
         {
             this.Verticies = verts;
-            this.Edges = edges;
+            this.Faces = edges;
         }
         public MeshViewModel(VertexPositionColor[] verts, int[] edges, Vector3 translate) : this(verts, edges)
         {

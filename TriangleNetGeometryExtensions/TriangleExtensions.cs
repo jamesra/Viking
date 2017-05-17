@@ -92,6 +92,36 @@ namespace TriangleNet
             return mesh;
         }
 
+        /// <summary>
+        /// Return the indicies for the array of points in the mesh.  If the point is not in the mesh return -1
+        /// </summary>
+        /// <param name="mesh"></param>
+        /// <param name="points"></param>
+        /// <returns></returns>
+        public static int[] IndiciesForPointsXY(this IMesh mesh, GridVector2[] points)
+        {
+            GridVector2[] mesh_points = mesh.Vertices.Select(v => new GridVector2(v.X, v.Y)).ToArray();
+              
+            ///Create a map of position to index
+            Dictionary<GridVector2, int> lookup = mesh_points.Select((p, i) => i).ToArray().ToDictionary(i => mesh_points[i]);
+
+            int[] output_map = new int[mesh_points.Length];
+
+            for(int i = 0; i < points.Length; i++)
+            {
+                if(lookup.ContainsKey(points[i]))
+                {
+                    output_map[i] = lookup[points[i]];
+                }
+                else
+                {
+                    output_map[i] = -1; 
+                }
+            }
+
+            return output_map;
+        }
+
         public static IMesh Triangulate(this IPolygon2D input)
         {
             TriangleNet.Geometry.IPolygon polygon = input.CreatePolygon();

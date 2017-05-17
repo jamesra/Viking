@@ -101,7 +101,7 @@ namespace MorphologyMesh
                 verts[i].Position += translationVector;
             }
 
-            verts[NumPointsOnCircle] = new Vertex<T>(new GridVector3(0, 0, Z),
+            verts[NumPointsOnCircle] = new Vertex<T>(new GridVector3(0, 0, 0),
                                                      new GridVector3(0, 0, Z > 0 ? 1 : -1),
                                                      locationID);
             verts[NumPointsOnCircle].Position += translationVector;

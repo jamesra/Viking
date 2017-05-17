@@ -64,11 +64,22 @@ namespace Geometry.Meshing
 
         public Face(int A, int B, int C)
         {
+            if(A == B || A == C || B == C)
+            {
+                throw new ArgumentException("Vertex indicies must be unique");
+            }
             iVerts = new int[] { A, B, C };
         }
 
         public Face(int A, int B, int C, int D)
         {
+            if (A == B || A == C || A == D || 
+                B == C || B == D ||
+                C == D)
+            {
+                throw new ArgumentException("Vertex indicies must be unique");
+            }
+
             iVerts = new int[] { A, B, C, D };
         }
 
@@ -76,6 +87,12 @@ namespace Geometry.Meshing
         public Face(IEnumerable<int> vertex_indicies)
         {
             iVerts = vertex_indicies.ToArray();
+            SortedSet<int> s = new SortedSet<int>(iVerts);
+            if(s.Count != iVerts.Length)
+            {
+                throw new ArgumentException("Vertex indicies must be unique");
+            }
+
             if (iVerts.Length < 3 || iVerts.Length > 4)
                 throw new ArgumentException("A face must have at least 3 verticies and currently no more than 4.  The 4 limit is negiotiable."); 
         }

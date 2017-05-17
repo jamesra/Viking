@@ -71,6 +71,8 @@ namespace MorphologyMesh
         {
             MeshGraph meshGraph = new MeshGraph();
 
+            meshGraph.SectionThickness = graph.SectionThickness;
+
             //Create a graph where each node is a set of verticies.
             foreach (MorphologyNode node in graph.Nodes.Values)
             {
@@ -171,14 +173,92 @@ namespace MorphologyMesh
         /// <param name="node"></param>
         private static void CapPorts(MeshNode node)
         {
-            GridPolygon UpperPoly = PolygonForPort(node.Mesh, node.UpperPort);
-            IMesh triangulate = UpperPoly.Triangulate();
-            
-            
-            
+            CapPort(node.Mesh, node.UpperPort, true);
+            CapPort(node.Mesh, node.LowerPort, false);
         }
 
-        
+        private static void CapPort(DynamicRenderMesh mesh, ConnectionVerticies Port, bool UpperFace)
+        {
+            GridPolygon UpperPoly = PolygonForPort(mesh, Port);
+            IMesh triangulate = UpperPoly.Triangulate();
+
+            //double HalfSectionThickness = SectionThickness / 2.0; 
+
+            double Z = mesh[Port.ExternalBorder.First()].Position.Z;
+            /*
+            Z += UpperFace ? HalfSectionThickness : -HalfSectionThickness;
+
+            foreach(int i in Port.ExternalBorder)
+            {
+                GridVector3 p = mesh[i].Position; 
+                mesh[i].Position = new GridVector3(p.X, p.Y, p.Z + (UpperFace ? HalfSectionThickness : -HalfSectionThickness));
+            }
+            */
+
+            //Triangulation could add new verticies, and when I tested attributes in triangle I could not store the original index in the triangulation.  So go back and figure it out...
+            Dictionary<GridVector2, long> VertToMeshIndex = PointToMeshIndex(mesh, Port);
+
+            //Create a map of triangle index to mesh index
+            Dictionary<int, long> Tri_to_Mesh = new Dictionary<int, long>();
+            for (int iTri = 0; iTri < triangulate.Vertices.Count; iTri++)
+            {
+                TriangleNet.Geometry.Vertex v = triangulate.Vertices.ElementAt(iTri);
+                GridVector2 tri_vert = new GridVector2(v.X, v.Y);
+                if (VertToMeshIndex.ContainsKey(tri_vert))
+                {
+                    Tri_to_Mesh[iTri] = VertToMeshIndex[tri_vert];
+                }
+                else
+                {
+                    //Create a new vertex
+                    Tri_to_Mesh[iTri] = mesh.AddVertex(new Geometry.Meshing.Vertex(new GridVector3(v.X, v.Y, Z), GridVector3.UnitZ));
+                    VertToMeshIndex.Add(new GridVector2(v.X, v.Y), iTri);
+                }
+            }
+             
+            foreach (var tri in triangulate.Triangles)
+            {
+                TriangleNet.Geometry.Vertex v1 = tri.GetVertex(0);
+                TriangleNet.Geometry.Vertex v2 = tri.GetVertex(1);
+                TriangleNet.Geometry.Vertex v3 = tri.GetVertex(2);
+
+                int iA = (int)VertToMeshIndex[new GridVector2(v1.X, v1.Y)];
+                int iB = (int)VertToMeshIndex[new GridVector2(v2.X, v2.Y)];
+                int iC = (int)VertToMeshIndex[new GridVector2(v3.X, v3.Y)];
+
+                Face f;
+                if (UpperFace)
+                    f = new Face(iA, iB, iC);
+                else
+                    f = new Face(iC, iB, iA);
+
+                mesh.AddFace(f);
+            }
+
+            return;
+        }
+
+        private static Dictionary<GridVector2, long> PointToMeshIndex(DynamicRenderMesh mesh, ConnectionVerticies port)
+        {
+            Dictionary<GridVector2, long> VertToMeshIndex = new Dictionary<GridVector2, long>(port.ExternalBorder.Count + port.InternalBorders.Sum(ib=>ib.Count));
+            
+            foreach(long index in port.ExternalBorder)
+            {
+                GridVector2 XY = new GridVector2(mesh[index].Position.X, mesh[index].Position.Y);
+                VertToMeshIndex.Add(XY, index); 
+            }
+             
+            foreach (IIndexSet internalRing in port.InternalBorders)
+            {
+                foreach (long index in port.ExternalBorder)
+                {
+                    GridVector2 XY = new GridVector2(mesh[index].Position.X, mesh[index].Position.Y);
+                    VertToMeshIndex.Add(XY, index);
+                }
+            }
+
+            return VertToMeshIndex;
+        }
 
         private static GridPolygon PolygonForPort(DynamicRenderMesh mesh, ConnectionVerticies port)
         {
@@ -268,8 +348,8 @@ namespace MorphologyMesh
 
                 double UpperToLower = NextLowerVertex - UpperVertex;
                 double LowerToUpper = NextUpperVertex - LowerVertex;
-                bool LinkToUpper = GridVector2.Distance(LV1, UV2) < GridVector2.Distance(UV1, LV2);
-                //bool LinkToUpper = LowerToUpper < UpperToLower;
+                //bool LinkToUpper = GridVector2.Distance(LV1, UV2) < GridVector2.Distance(UV1, LV2);
+                bool LinkToUpper = LowerToUpper < UpperToLower;
 
                 int iUpperIndex = (int)UpperIndexArray[iUpper];
                 int iMiddleIndex;
@@ -362,7 +442,7 @@ namespace MorphologyMesh
             IShape2D shape = node.Geometry.ToShape2D();
             Vertex<ulong>[] v;
             MeshNode mNode = new MorphologyMesh.MeshNode(node.Key);
-            mNode.PopulateNode(shape, node.Z, node.ID);
+            mNode.PopulateNode(shape, -node.Z, node.ID);
             return mNode;
         }
 

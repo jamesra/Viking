@@ -58,7 +58,7 @@ namespace MorphologyView
             //Create verticies for each point 
             mesh.Verticies = allPoints.Select(p => new VertexPositionColor(p.ToXNAVector3(node.Z), Color.Red)).ToArray();
             
-            mesh.Edges = CreateEdgesForPointsAroundCenterVertex(points.Length);
+            mesh.Faces = CreateEdgesForPointsAroundCenterVertex(points.Length);
 
             return mesh;
         }
@@ -85,7 +85,7 @@ namespace MorphologyView
 
             mesh.Verticies = points.Select(p => new VertexPositionColor(p.ToXNAVector3(), Color.Blue)).ToArray();
 
-            mesh.Edges = CreateEdgesForPointsAroundCenterVertex(NumPointsOnCircle);
+            mesh.Faces = CreateEdgesForPointsAroundCenterVertex(NumPointsOnCircle);
 
             return mesh;
         }

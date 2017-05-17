@@ -196,14 +196,13 @@ namespace MonogameWPFLibrary.Views
 
                 foreach (MeshViewModel meshViewModel in Models)
                 {
-
                     effect.World = meshViewModel.World;
 
                     foreach (EffectPass pass in effect.CurrentTechnique.Passes)
                     {
                         pass.Apply();
 
-                        device.DrawUserIndexedPrimitives<VertexPositionColor>(PrimitiveType.TriangleList, meshViewModel.Verticies, 0, meshViewModel.Verticies.Length, meshViewModel.Edges, 0, meshViewModel.Edges.Length / 3);
+                        device.DrawUserIndexedPrimitives<VertexPositionColor>(PrimitiveType.TriangleList, meshViewModel.Verticies, 0, meshViewModel.Verticies.Length, meshViewModel.Faces, 0, meshViewModel.Faces.Length / 3);
                     }
                 }
                 /*

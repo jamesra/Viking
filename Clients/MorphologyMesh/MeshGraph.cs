@@ -11,6 +11,7 @@ namespace MorphologyMesh
 {
     public class MeshGraph : GraphLib.Graph<ulong, MeshNode, MeshEdge>
     {
+        public double SectionThickness = 0;
 
     }
 
@@ -29,6 +30,7 @@ namespace MorphologyMesh
 
         public ConnectionVerticies UpperPort; //Connection point if attaching geometry above this node in Z
         public ConnectionVerticies LowerPort; //Connection point if attaching geometry below this node in Z
+
 
         //public GridVector3 UpperCentroid;
         //public GridVector3 LowerCentroid;

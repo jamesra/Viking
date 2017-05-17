@@ -47,6 +47,9 @@ namespace MonogameTestbed
 
             this.Scene.Camera.Position = (meshes.First().BoundingBox.CenterPoint * 0.9).ToXNAVector3();
             this.Scene.Camera.LookAt = Vector3.Zero;
+
+            this.Scene.Camera.Position = new Vector3(120429, 111534, -20798);
+            this.Scene.Camera.Rotation = new Vector3(4.986171f, 1.67181f, 0);
             //this.Scene.Camera.LookAt = meshes.First().BoundingBox.CenterPoint.ToXNAVector3();
 
             foreach (DynamicRenderMesh<ulong> mesh in meshes)

@@ -42,9 +42,7 @@ namespace MorphologyView.Views
 
         private static void OnMorphologyGraphChanged(DependencyObject o, DependencyPropertyChangedEventArgs e)
         {
-            MorphologyStickView sv = o as MorphologyStickView; 
-
-            
+            MorphologyStickView sv = o as MorphologyStickView;  
         }
 
         private void CreateMeshForGraph()

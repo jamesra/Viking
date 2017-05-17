@@ -144,5 +144,38 @@ namespace GeometryTests
 
             Assert.IsTrue(boxA.minVals.Select((val, i) => (original_mins[i]) == val).All(b => b));
         }
+
+        [TestMethod]
+        public void TestGridBoxUnion()
+        {
+            GridVector3 BotLeftA = new GridVector3(-10, -10, -10);
+            GridVector3 TopRightA = new GridVector3(10, 10, 10);
+            GridBox boxA = new GridBox(BotLeftA, TopRightA);
+
+            GridVector3 BotLeftB = new GridVector3(-10, -100, 900);
+            GridVector3 TopRightB = new GridVector3(10, 100, 1000);
+            GridBox boxB = new GridBox(BotLeftB, TopRightB);
+
+            GridVector3 BotLeftAB = new GridVector3(-10, -100, -10);
+            GridVector3 TopRightAB = new GridVector3(10, 100, 1000);
+            GridBox boxAB = new GridBox(BotLeftAB, TopRightAB);
+
+            bool expanded = boxA.Union(boxB);
+            Assert.IsTrue(expanded);
+            Assert.AreEqual(boxA, boxAB);
+        }
+
+        [TestMethod]
+        public void TestGridBoxOfPoints()
+        {
+            GridVector3 BotLeftA = new GridVector3(-10, -10, -10);
+            GridVector3 TopRightA = new GridVector3(10, 10, 10);
+            GridBox boxA = new GridBox(BotLeftA, TopRightA);
+
+            GridVector3[] points = { BotLeftA, TopRightA, GridVector3.Zero };
+            GridBox pointsBox = points.BoundingBox();
+            
+            Assert.AreEqual(boxA, pointsBox);
+        }
     }
 }

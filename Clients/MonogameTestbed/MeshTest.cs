@@ -125,49 +125,61 @@ namespace MonogameTestbed
             this.Scene.Camera.Position = new Vector3(0, -0, -65);
 
             this.Scene.MaxDrawDistance = 10000;
-              /*
-            Color[] tetra_colors = new Color[] { Color.Red, Color.Blue, Color.Green, Color.Yellow };
-            Color[] cube_colors  = new Color[] { Color.White, Color.Blue, Color.Green, Color.Yellow, Color.Red, Color.Orange, Color.Purple, Color.Black };
-             
-            tetraMesh = CreateTetrahedronMeshModel(new GridVector3(-20, 0, 0));
+            /*
+          Color[] tetra_colors = new Color[] { Color.Red, Color.Blue, Color.Green, Color.Yellow };
+          Color[] cube_colors  = new Color[] { Color.White, Color.Blue, Color.Green, Color.Yellow, Color.Red, Color.Orange, Color.Purple, Color.Black };
 
-            MeshModel<VertexPositionNormalColor> cubeModel = MorphologyMesh.ShapeMeshGenerator<object>.CreateMeshForBox(new GridBox(new double[] { -5, -5, -5 }, new double[] { 5, 5, 5 }), null, new GridVector3(20, 0, 0)).ToVertexPositionNormalColorMeshModel(cube_colors);
-            meshViewWithLighting.models.Add(cubeModel);
+          tetraMesh = CreateTetrahedronMeshModel(new GridVector3(-20, 0, 0));
 
-            //cubeMesh = CreateCubeMeshModel(new GridVector3(20, 0, 0));
+          MeshModel<VertexPositionNormalColor> cubeModel = MorphologyMesh.ShapeMeshGenerator<object>.CreateMeshForBox(new GridBox(new double[] { -5, -5, -5 }, new double[] { 5, 5, 5 }), null, new GridVector3(20, 0, 0)).ToVertexPositionNormalColorMeshModel(cube_colors);
+          meshViewWithLighting.models.Add(cubeModel);
 
-            MeshModel<VertexPositionColor> tetraModel = tetraMesh.ToVertexPositionColorMeshModel(tetra_colors);
-            meshView.models.Add(tetraModel);
+          //cubeMesh = CreateCubeMeshModel(new GridVector3(20, 0, 0));
 
-            //MeshModel<VertexPositionColor> cubeModel = cubeMesh.ToVertexPositionColorMeshModel(cube_colors);
-            //meshView.models.Add(cubeModel);
+          MeshModel<VertexPositionColor> tetraModel = tetraMesh.ToVertexPositionColorMeshModel(tetra_colors);
+          meshView.models.Add(tetraModel);
 
-            MeshModel<VertexPositionNormalColor> discModel = MorphologyMesh.ShapeMeshGenerator<object>.CreateMeshForDisc(new GridCircle( new GridVector2(20, 20), 10), 0, 10, 16, null, GridVector3.Zero).ToVertexPositionNormalColorMeshModel(Color.Red);
-            meshViewWithLighting.models.Add(discModel);
+          //MeshModel<VertexPositionColor> cubeModel = cubeMesh.ToVertexPositionColorMeshModel(cube_colors);
+          //meshView.models.Add(cubeModel);
 
-            DynamicRenderMesh boxMesh = MorphologyMesh.ShapeMeshGenerator<object>.CreateMeshForBox(new GridBox(new double[] { 10, 0, 20 }, new double[] { 15, 5, 27 }), null, GridVector3.Zero);
-            boxMesh.RecalculateNormals(); //Make sure it looks the same as the cube model above
+          MeshModel<VertexPositionNormalColor> discModel = MorphologyMesh.ShapeMeshGenerator<object>.CreateMeshForDisc(new GridCircle( new GridVector2(20, 20), 10), 0, 10, 16, null, GridVector3.Zero).ToVertexPositionNormalColorMeshModel(Color.Red);
+          meshViewWithLighting.models.Add(discModel);
 
-            MeshModel<VertexPositionNormalColor> boxModel = boxMesh.ToVertexPositionNormalColorMeshModel(cube_colors);
-            meshViewWithLighting.models.Add(boxModel);
+          DynamicRenderMesh boxMesh = MorphologyMesh.ShapeMeshGenerator<object>.CreateMeshForBox(new GridBox(new double[] { 10, 0, 20 }, new double[] { 15, 5, 27 }), null, GridVector3.Zero);
+          boxMesh.RecalculateNormals(); //Make sure it looks the same as the cube model above
 
-            MeshModel<VertexPositionNormalColor> polyModel = MorphologyMesh.ShapeMeshGenerator<object>.CreateMeshForPolygonSlab(StandardGeometryModels.CreateTestPolygon(new GridVector2(20, -40)), -5, 3, null, GridVector3.Zero).ToVertexPositionNormalColorMeshModel(Color.Aqua);
-            meshViewWithLighting.models.Add(polyModel);
+          MeshModel<VertexPositionNormalColor> boxModel = boxMesh.ToVertexPositionNormalColorMeshModel(cube_colors);
+          meshViewWithLighting.models.Add(boxModel);
 
-            MeshModel<VertexPositionNormalColor> circleModel = BuildCircleConvexHull(new GridCircle(new GridVector2(20, -20), 5));
-            meshViewWithLighting.models.Add(circleModel);
-            */
-            foreach(MeshModel<VertexPositionNormalColor> model in BuildSmoothMesh(new GridVector3(0, 0, 0)))
+          MeshModel<VertexPositionNormalColor> polyModel = MorphologyMesh.ShapeMeshGenerator<object>.CreateMeshForPolygonSlab(StandardGeometryModels.CreateTestPolygon(new GridVector2(20, -40)), -5, 3, null, GridVector3.Zero).ToVertexPositionNormalColorMeshModel(Color.Aqua);
+          meshViewWithLighting.models.Add(polyModel);
+
+          MeshModel<VertexPositionNormalColor> circleModel = BuildCircleConvexHull(new GridCircle(new GridVector2(20, -20), 5));
+          meshViewWithLighting.models.Add(circleModel);
+          */
+
+            this.Scene.Camera.Position = new Vector3(29, -13.5f, 24.75f);
+            this.Scene.Camera.Rotation = new Vector3(2.5f, 2.055f, 0);
+/*
+            foreach (MeshModel<VertexPositionNormalColor> model in BuildSmoothMeshTwoNonOverlappingCircles(new GridVector3(0, 0, 0)))
             {
                 meshViewWithLighting.models.Add(model);
             }
+            */
+
+            foreach (MeshModel<VertexPositionNormalColor> model in BuildSmoothMeshCircleBranchOfOneOverlapping(new GridVector3(0, 0, 0)))
+            {
+                meshViewWithLighting.models.Add(model);
+            }
+             
 
             labelCamera = new LabelView("", new GridVector2(-70, 0));
         } 
 
-        private ICollection<MeshModel<VertexPositionNormalColor>> BuildSmoothMesh(GridVector3 translate)
+        private ICollection<MeshModel<VertexPositionNormalColor>> BuildSmoothMesh1(GridVector3 translate)
         {
             MeshGraph graph = new MeshGraph();
+            graph.SectionThickness = 5.0;
 
             //Create three simple polygons and add them to the graph
             IShape2D[] shapes = {new GridCircle(0,0,10),
@@ -180,15 +192,18 @@ namespace MonogameTestbed
                                                     new GridVector2(10,-10),
                                                     new GridVector2(-10,-10)}),
                                  new GridCircle(0,7, 5),
-                                 new GridCircle(-5, -5, 5)
+                                 new GridCircle(-5, -5, 5),
+                                 new GridCircle(-15, -15, 5)
                                 };
-            double[] ZLevels = new double[] { 0, 5, 10, 15, 15 };
+            double[] ZLevels = new double[] { 0, 5, 10, 15, 15, 20 };
 
             MeshEdge[] edges = new MeshEdge[] {
                                          new MeshEdge(0, 1),
                                          new MeshEdge(1, 2),
-                                         new MeshEdge(2, 3),
-                                         new MeshEdge(2, 4)};
+                  new MeshEdge(2, 3),
+                  new MeshEdge(2, 4),
+                  new MeshEdge(4,5)
+            };
 
             for (int i = 0; i < shapes.Length; i++)
             {
@@ -207,6 +222,71 @@ namespace MonogameTestbed
             return meshes.Select(m => m.ToVertexPositionNormalColorMeshModel(Color.Yellow)).ToArray();
         }
 
+        private ICollection<MeshModel<VertexPositionNormalColor>> BuildSmoothMeshTwoNonOverlappingCircles(GridVector3 translate)
+        {
+            MeshGraph graph = new MeshGraph();
+            graph.SectionThickness = 5.0;
+
+            //Create three simple polygons and add them to the graph
+            IShape2D[] shapes = { new GridCircle(-5, -5, 5),
+                                  new GridCircle(-15, -15, 5)
+                                };
+            double[] ZLevels = new double[] { 0, 5, 10, 15, 15, 20 };
+
+            MeshEdge[] edges = new MeshEdge[] {
+                                         new MeshEdge(0, 1)
+            };
+
+            for (int i = 0; i < shapes.Length; i++)
+            {
+                MorphologyMesh.MeshNode node = new MeshNode((ulong)i);
+                node.PopulateNode(shapes[i].Translate(translate), ZLevels[i], (ulong)i);
+                graph.AddNode(node);
+            }
+
+            foreach (MeshEdge edge in edges)
+            {
+                graph.AddEdge(edge);
+            }
+
+            ICollection<DynamicRenderMesh<ulong>> meshes = SmoothMeshGenerator.Generate(graph);
+            List<MeshModel<VertexPositionNormalColor>> listMeshModels = new List<MeshModel<VertexPositionNormalColor>>();
+            return meshes.Select(m => m.ToVertexPositionNormalColorMeshModel(Color.Yellow)).ToArray();
+        }
+
+        private ICollection<MeshModel<VertexPositionNormalColor>> BuildSmoothMeshCircleBranchOfOneOverlapping(GridVector3 translate)
+        {
+            MeshGraph graph = new MeshGraph();
+            graph.SectionThickness = 5.0;
+
+            //Create three simple polygons and add them to the graph
+            IShape2D[] shapes = { new GridCircle(-5, -5, 5),
+                                  new GridCircle(-15, -15, 5),
+                                  new GridCircle(0, 0, 5)
+                                };
+            double[] ZLevels = new double[] { 0, 5, 5, 15, 15, 20 };
+
+            MeshEdge[] edges = new MeshEdge[] {
+                                         new MeshEdge(0, 1),
+                                         new MeshEdge(0,2)
+            };
+
+            for (int i = 0; i < shapes.Length; i++)
+            {
+                MorphologyMesh.MeshNode node = new MeshNode((ulong)i);
+                node.PopulateNode(shapes[i].Translate(translate), ZLevels[i], (ulong)i);
+                graph.AddNode(node);
+            }
+
+            foreach (MeshEdge edge in edges)
+            {
+                graph.AddEdge(edge);
+            }
+
+            ICollection<DynamicRenderMesh<ulong>> meshes = SmoothMeshGenerator.Generate(graph);
+            List<MeshModel<VertexPositionNormalColor>> listMeshModels = new List<MeshModel<VertexPositionNormalColor>>();
+            return meshes.Select(m => m.ToVertexPositionNormalColorMeshModel(Color.Yellow)).ToArray();
+        }
 
         private MeshModel<VertexPositionNormalColor> BuildCircleConvexHull(ICircle2D circle)
         {
@@ -233,7 +313,7 @@ namespace MonogameTestbed
                 meshViewWithLighting.WireFrame = meshView.WireFrame;
             }
 
-            labelCamera.Text = string.Format("{0} {1} {2}", Scene.Camera.Position, Scene.Camera.LookAt, Scene.Camera.Rotation);
+            labelCamera.Text = string.Format("{0} {2}", Scene.Camera.Position, Scene.Camera.LookAt, Scene.Camera.Rotation);
         }
 
         public void Draw(MonoTestbed window)

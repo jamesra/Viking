@@ -575,8 +575,8 @@ namespace Geometry
                 maxX = Math.Max(maxX, points[i].X);
                 minY = Math.Min(minY, points[i].Y);
                 maxY = Math.Max(maxY, points[i].Y);
-                minZ = Math.Min(minY, points[i].Z);
-                maxZ = Math.Max(maxY, points[i].Z);
+                minZ = Math.Min(minZ, points[i].Z);
+                maxZ = Math.Max(maxZ, points[i].Z);
             }
 
             return new GridBox( new double[] { minX, minY, minZ }, 
