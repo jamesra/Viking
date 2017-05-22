@@ -21,6 +21,10 @@ namespace MorphologyMesh
         {            
         }
 
+        public override string ToString()
+        {
+            return string.Format("{0}-{1}", SourceNodeKey, TargetNodeKey);
+        }
     }
 
 
@@ -31,6 +35,8 @@ namespace MorphologyMesh
         public ConnectionVerticies UpperPort; //Connection point if attaching geometry above this node in Z
         public ConnectionVerticies LowerPort; //Connection point if attaching geometry below this node in Z
 
+        public bool UpperPortCapped = false; //True if faces have been generated
+        public bool LowerPortCapped = false; //True if faces have been generated
 
         //public GridVector3 UpperCentroid;
         //public GridVector3 LowerCentroid;

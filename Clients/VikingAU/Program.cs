@@ -186,12 +186,23 @@ namespace Viking.AU
             }
 
             //OK.  Figure out which command we are executing.
-            UpdateVolumePositions(SectionsToProcess);
+            UpdateVolumePositionsAsync(SectionsToProcess);
 
             System.GC.Collect();
         }
 
         static void UpdateVolumePositions(IList<long> SectionNumbers)
+        {
+            SortedDictionary<long, Task<string>> tasks = new SortedDictionary<long, Task<string>>();
+            foreach (long sectionNumber in SectionNumbers)
+            {
+                string result = UpdateVolumePositions(sectionNumber);
+                Console.WriteLine(result);
+                State.MappingsManager.SectionMappingCache.Remove((int)sectionNumber);
+            }
+        }
+
+        static void UpdateVolumePositionsAsync(IList<long> SectionNumbers)
         {
             SortedDictionary<long, Task<string>> tasks = new SortedDictionary<long, Task<string>>();
             foreach (long sectionNumber in SectionNumbers)
@@ -226,7 +237,7 @@ namespace Viking.AU
 
             int NumUpdated = 0;
             foreach (LocationObj loc in LocDict.Values)
-            {
+            {  
                 bool result = UpdateVolumeShape(loc, mapper);
                 if (result)
                     NumUpdated++;
@@ -305,6 +316,9 @@ namespace Viking.AU
         static SqlGeometry VolumeShapeForLocation(LocationObj loc, MappingBase mapper)
         {
             SqlGeometry UnsmoothedVolumeShape = mapper.TryMapShapeSectionToVolume(loc.MosaicShape);
+            if (UnsmoothedVolumeShape == null)
+                return null; 
+
             SqlGeometry SmoothedVolumeShape = loc.TypeCode.GetSmoothedShape(UnsmoothedVolumeShape);
             return SmoothedVolumeShape;
         }

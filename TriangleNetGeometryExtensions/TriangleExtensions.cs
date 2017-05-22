@@ -27,14 +27,7 @@ namespace TriangleNet
             TriangleNet.Geometry.Vertex[] points = Verticies.Select((v, i) => new TriangleNet.Geometry.Vertex(v.X, v.Y)).ToArray();
 
             TriangleNet.Geometry.Contour contour = new TriangleNet.Geometry.Contour(points);
-
-            /*
-            foreach (TriangleNet.Geometry.Vertex p in points)
-            {
-                poly.Add(p);
-            }
-            */
-
+             
             poly.Add(contour);
 
             if (InteriorPolygons != null)
@@ -77,9 +70,23 @@ namespace TriangleNet
             return contour;
         }
 
-        public static IMesh Triangulate(this GridPolygon input)
+        /// <summary>
+        /// Triangulate the polygon.
+        /// </summary>
+        /// <param name="input">Polygon to generate faces for</param>
+        /// <param name="internalPoints">Additional points inside the polygon which should be included in the triangulation</param>
+        /// <returns></returns>
+        public static IMesh Triangulate(this GridPolygon input, ICollection<IPoint2D> internalPoints = null)
         {
             TriangleNet.Geometry.IPolygon polygon = input.CreatePolygon();
+
+            if (internalPoints != null)
+            {
+                foreach (IPoint2D p in internalPoints)
+                {
+                    polygon.Add(new Vertex(p.X, p.Y));
+                }
+            }
 
             ConstraintOptions constraints = new ConstraintOptions();
             constraints.ConformingDelaunay = false;

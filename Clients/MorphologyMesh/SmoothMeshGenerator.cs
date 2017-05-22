@@ -21,23 +21,45 @@ namespace MorphologyMesh
     /// </summary>
     public class ConnectionVerticies
     {
+        /// <summary>
+        /// Points on the external border
+        /// </summary>
         public IIndexSet ExternalBorder;
 
+        /// <summary>
+        /// Verticies known to be internal to the annotation. Not on any internal or external border
+        /// </summary>
+        public IIndexSet InternalVerticies;
+
+        /// <summary>
+        /// Points on an internal border
+        /// </summary>
         public IIndexSet[] InternalBorders;
         
-        public ConnectionVerticies(long[] exteriorRing, ICollection<long[]> interiorRings)
+        public ConnectionVerticies(long[] exteriorRing, long[] internalVerticies, ICollection<long[]> interiorRings)
         {
             ExternalBorder = new IndexSet(exteriorRing);
 
-            if(InternalBorders != null)
+            if (internalVerticies != null)
+                InternalVerticies = new IndexSet(internalVerticies);
+            else
+                InternalVerticies = new IndexSet(new long[0]);
+
+            if (InternalBorders != null)
                 InternalBorders = interiorRings.Select(ir => new IndexSet(ir)).ToArray();
             else
                 InternalBorders = new IIndexSet[0];
         }
 
-        public ConnectionVerticies(IIndexSet exteriorRing, IIndexSet[] interiorRings)
+        public ConnectionVerticies(IIndexSet exteriorRing, IIndexSet internalVerticies, IIndexSet[] interiorRings)
         {
             ExternalBorder = exteriorRing;
+            InternalVerticies = internalVerticies;
+
+            if (internalVerticies != null)
+                InternalVerticies = internalVerticies;
+            else
+                InternalVerticies = new IndexSet(new long[0]);
 
             if (interiorRings != null)
                 InternalBorders = interiorRings;
@@ -53,10 +75,19 @@ namespace MorphologyMesh
         public ConnectionVerticies IncrementStartingIndex(int value)
         {
             IIndexSet external = ExternalBorder.IncrementStartingIndex(value);
+            IIndexSet internalVerts = InternalVerticies.IncrementStartingIndex(value);
             IIndexSet[] internalSets = InternalBorders.Select(ib => ib.IncrementStartingIndex(value)).ToArray();
 
-            return new ConnectionVerticies(external, internalSets);
-        } 
+            return new ConnectionVerticies(external, internalVerts, internalSets);
+        }  
+
+        public int TotalVerticies
+        {
+            get
+            {
+                return ExternalBorder.Count + InternalBorders.Sum(ib => ib.Count) + InternalVerticies.Count;
+            }
+        }
     }
   
     
@@ -151,8 +182,24 @@ namespace MorphologyMesh
                         MergeMeshNodes(meshGraph, A, B);
                         EdgesProcessed++;
                     }
+                    else
+                    { 
+                    }
 
                     //TODO: Merge the nodes in the graph 
+                }
+            }
+
+            foreach(MeshNode node in meshGraph.Nodes.Values)
+            {
+                if(node.GetEdgesAbove(meshGraph).Length >= 1)
+                {
+                    SimpleMergeBranchNode(node, true);
+                }
+
+                if (node.GetEdgesBelow(meshGraph).Length >= 1)
+                {
+                    SimpleMergeBranchNode(node, false);
                 }
             }
 
@@ -160,11 +207,67 @@ namespace MorphologyMesh
             foreach(MeshNode node in meshGraph.Nodes.Values)
             {
                 CapPorts(node);
+                node.Mesh.RecalculateNormals();
             }
 
             //Todo: Not all nodes may be merged.  For these nodes just merge the meshes so we return a single mesh.
 
             return meshGraph.Nodes.Select(n => n.Value.Mesh).ToArray();
+        }
+
+        private static GridVector3[] AllPointsInConnection(DynamicRenderMesh mesh, ConnectionVerticies port)
+        {
+            List<GridVector3> listPoints = new List<GridVector3>(port.TotalVerticies);
+
+            listPoints.AddRange(port.ExternalBorder.Select(i => mesh.Verticies[(int)i].Position));
+            listPoints.AddRange(port.InternalBorders.SelectMany(ib => ib.Select(i => mesh.Verticies[(int)i].Position)));
+            listPoints.AddRange(port.InternalVerticies.Select(i => mesh.Verticies[(int)i].Position));
+
+            return listPoints.ToArray();
+        }
+
+        private static void SimpleMergeBranchNode(MeshNode branchNode, bool BranchAbove)
+        {
+            //We have a node with two edges above or below the node. 
+            //This function handles the simple solution where we create a 3D slab from the 2D outline of the annotation.
+
+            double ZAdjustment = branchNode.MeshGraph.SectionThickness / 2.0;
+            if (!BranchAbove)
+                ZAdjustment = -ZAdjustment;
+
+            ulong[] ConnectedNodes;
+            ConnectionVerticies branch_node_port; 
+            if(BranchAbove)
+            {
+                ConnectedNodes = branchNode.GetEdgesAbove(branchNode.MeshGraph);
+                branch_node_port = branchNode.UpperPort;
+            }
+            else
+            {
+                ConnectedNodes = branchNode.GetEdgesBelow(branchNode.MeshGraph);
+                branch_node_port = branchNode.LowerPort;
+            }
+
+            //Create a copy of the verticies at the border where the sections meet.
+            GridVector3[] points = AllPointsInConnection(branchNode.Mesh, branch_node_port);
+
+            Geometry.Meshing.Vertex[] verts = points.Select(p => new Geometry.Meshing.Vertex( new GridVector3(p.X, p.Y, p.Z + ZAdjustment), GridVector3.Zero)).ToArray();
+            long iOriginalFirstIndex = branch_node_port.ExternalBorder.Min();
+            long iFirstIndex = branchNode.Mesh.AddVertex(verts);
+
+            ConnectionVerticies new_port = branch_node_port.IncrementStartingIndex((int)(-iOriginalFirstIndex + iFirstIndex));
+
+            ConnectionVerticies upper_node_port = BranchAbove ? new_port : branch_node_port;
+            ConnectionVerticies lower_node_port = BranchAbove ? branch_node_port : new_port;
+
+            AttachPorts(branchNode.Mesh, upper_node_port, lower_node_port);
+
+            CapPort(branchNode.Mesh, new_port, BranchAbove);
+
+            if (BranchAbove)
+                branchNode.UpperPortCapped = true;
+            else
+                branchNode.LowerPortCapped = true; 
         }
 
         /// <summary>
@@ -173,27 +276,26 @@ namespace MorphologyMesh
         /// <param name="node"></param>
         private static void CapPorts(MeshNode node)
         {
-            CapPort(node.Mesh, node.UpperPort, true);
-            CapPort(node.Mesh, node.LowerPort, false);
+            if (node.UpperPortCapped == false)
+            {
+                CapPort(node.Mesh, node.UpperPort, true);
+                node.UpperPortCapped = true;
+            }
+
+            if (node.LowerPortCapped == false)
+            {
+                CapPort(node.Mesh, node.LowerPort, false);
+                node.LowerPortCapped = true;
+            }
         }
 
         private static void CapPort(DynamicRenderMesh mesh, ConnectionVerticies Port, bool UpperFace)
         {
             GridPolygon UpperPoly = PolygonForPort(mesh, Port);
-            IMesh triangulate = UpperPoly.Triangulate();
+            IPoint2D[] internal_points = Port.InternalVerticies.Select(iv => mesh.Verticies[(int)iv].Position.Convert() as IPoint2D).ToArray();
+            IMesh triangulate = UpperPoly.Triangulate(internal_points);
 
-            //double HalfSectionThickness = SectionThickness / 2.0; 
-
-            double Z = mesh[Port.ExternalBorder.First()].Position.Z;
-            /*
-            Z += UpperFace ? HalfSectionThickness : -HalfSectionThickness;
-
-            foreach(int i in Port.ExternalBorder)
-            {
-                GridVector3 p = mesh[i].Position; 
-                mesh[i].Position = new GridVector3(p.X, p.Y, p.Z + (UpperFace ? HalfSectionThickness : -HalfSectionThickness));
-            }
-            */
+            double Z = mesh[Port.ExternalBorder.First()].Position.Z; 
 
             //Triangulation could add new verticies, and when I tested attributes in triangle I could not store the original index in the triangulation.  So go back and figure it out...
             Dictionary<GridVector2, long> VertToMeshIndex = PointToMeshIndex(mesh, Port);
@@ -247,7 +349,13 @@ namespace MorphologyMesh
                 GridVector2 XY = new GridVector2(mesh[index].Position.X, mesh[index].Position.Y);
                 VertToMeshIndex.Add(XY, index); 
             }
-             
+
+            foreach (long index in port.InternalVerticies)
+            {
+                GridVector2 XY = new GridVector2(mesh[index].Position.X, mesh[index].Position.Y);
+                VertToMeshIndex.Add(XY, index);
+            }
+
             foreach (IIndexSet internalRing in port.InternalBorders)
             {
                 foreach (long index in port.ExternalBorder)
@@ -284,12 +392,38 @@ namespace MorphologyMesh
             LowerNode.UpperPort = LowerNode.UpperPort.IncrementStartingIndex(NewStartingIndex);
             LowerNode.LowerPort = LowerNode.LowerPort.IncrementStartingIndex(NewStartingIndex);
 
-            DynamicRenderMesh<ulong> CompositeMesh = UpperNode.Mesh; 
+            DynamicRenderMesh<ulong> CompositeMesh = UpperNode.Mesh;
+            AttachPorts(CompositeMesh, UpperNode.LowerPort, LowerNode.UpperPort);
+             
+            //Remove the nodes and replace with the new nodes and edges
+            MeshGraph meshGraph = UpperNode.MeshGraph;
 
-            //We keep the upper node and discard the lower node
-            ConnectionVerticies UpperPort = UpperNode.LowerPort;
-            ConnectionVerticies LowerPort = LowerNode.UpperPort;
-                        
+            UpperNode.Mesh = CompositeMesh;
+            UpperNode.LowerPort = LowerNode.LowerPort;
+
+            MeshEdge removedEdge = new MeshEdge(UpperNode.Key, LowerNode.Key);
+            graph.RemoveEdge(removedEdge);
+
+            foreach (var Edge in LowerNode.Edges.Keys)
+            {
+                MeshEdge newEdge = new MeshEdge(UpperNode.Key, Edge);
+                //Do not add the edge if it exists, this can happen if the graph has a cycle
+                if (!graph.Edges.ContainsKey(newEdge))
+                    graph.AddEdge(newEdge);
+            }
+
+            graph.RemoveNode(LowerNode.Key);
+        }
+
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="CompositeMesh">A mesh containing the verticies from both halves that need to be joined</param>
+        /// <param name="UpperPort">Indicies that describe which verticies are part of the upper connection port</param>
+        /// <param name="LowerPort">Indicies that describe which verticies are part of the lower connection port</param>
+        private static void AttachPorts(DynamicRenderMesh<ulong> CompositeMesh, ConnectionVerticies UpperPort, ConnectionVerticies LowerPort)
+        {   
             //OK, find the nearest two verticies between the ports, and walk counter-clockwise (incrementing the index) around the shapes.  Creating faces until we are finished.
             //Find the verticies on the exterior ring
             GridVector2[] ExternalVerticiesUpper = UpperPort.ExternalBorder.Select(i => new GridVector2(CompositeMesh.Verticies[(int)i].Position.X, CompositeMesh.Verticies[(int)i].Position.Y)).ToArray();
@@ -378,27 +512,6 @@ namespace MorphologyMesh
                     break;
             }
              
-            //Remove the nodes and replace with the new nodes and edges
-            MeshNode newNode = new MeshNode(UpperNode.Key);
-
-            newNode.Mesh = CompositeMesh;
-            MeshGraph meshGraph = UpperNode.MeshGraph;
-
-            UpperNode.Mesh = CompositeMesh; 
-            UpperNode.LowerPort = LowerNode.LowerPort;
-
-            MeshEdge removedEdge = new MeshEdge(UpperNode.Key, LowerNode.Key);
-            graph.RemoveEdge(removedEdge);
-            
-            foreach(var Edge in LowerNode.Edges.Keys)
-            {
-                MeshEdge newEdge = new MeshEdge(UpperNode.Key, Edge);
-                //Do not add the edge if it exists, this can happen if the graph has a cycle
-                if(!graph.Edges.ContainsKey(newEdge))
-                    graph.AddEdge(newEdge);
-            }
-             
-            graph.RemoveNode(LowerNode.Key); 
         }
 
         /// <summary>
@@ -478,7 +591,9 @@ namespace MorphologyMesh
         private static ConnectionVerticies CreatePort(ICircle2D shape)
         {
             ContinuousIndexSet ExternalBorder = new ContinuousIndexSet(0, TopologyMeshGenerator.NumPointsAroundCircle);
-            return new ConnectionVerticies(ExternalBorder, null);
+            //Add one internal point for the vertex at the center of the circle
+            ContinuousIndexSet InternalPoints = new ContinuousIndexSet(TopologyMeshGenerator.NumPointsAroundCircle, 1);
+            return new ConnectionVerticies(ExternalBorder, InternalPoints, null);
         }
 
         private static ConnectionVerticies CreatePort(IPolygon2D shape)
@@ -493,7 +608,7 @@ namespace MorphologyMesh
                 InternalBorders[i] = new ContinuousIndexSet(iStartVertex, shape.InteriorRings.ElementAt(i).Length-1);
             }
 
-            return new ConnectionVerticies(ExternalBorder, InternalBorders);
+            return new ConnectionVerticies(ExternalBorder, null, InternalBorders);
         }
 
         /// <summary>

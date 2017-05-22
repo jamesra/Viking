@@ -73,6 +73,11 @@ namespace Geometry.Meshing
         {
             return System.Convert.ToInt32(((long)A * (long)B));
         }
+
+        public override string ToString()
+        {
+            return string.Format("{0}-{1}", A, B);
+        }
     }
 
     public struct Edge : IComparable<Edge>, IEquatable<Edge>
@@ -153,6 +158,11 @@ namespace Geometry.Meshing
         public override int GetHashCode()
         {
             return Key.GetHashCode();
+        }
+
+        public override string ToString()
+        {
+            return Key.ToString();
         }
 
     }

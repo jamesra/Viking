@@ -302,7 +302,7 @@ namespace Geometry.Meshing
         public int Append(DynamicRenderMesh other)
         {
             int startingAppendIndex = this.Verticies.Count;
-            this.AddVertex(other.Verticies);
+            this.AddVertex(other.Verticies.Select(v => new Vertex(v.Position, v.Normal)).ToList());
 
             foreach(EdgeKey e in other.Edges.Keys)
             {
