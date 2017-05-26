@@ -11,8 +11,11 @@ namespace Neo4JGenerator
 
     class CommandLineOptions
     {
-        [Option('u', "URL", Required = true, HelpText = "URL of JSON Exporter")]
+        [Option('w', "URL", Required = false, HelpText = "URL of JSON Exporter")]
         public string JsonURL { get; set; }
+
+        [Option('f', "File", Required = false, HelpText = "JSON File")]
+        public string JsonFilename { get; set; }
 
         [Option('s', "Neo4JDatabase", Required =true, HelpText ="Neo4J Database to update/create")]
         public string Neo4JDatabase { get; set; }

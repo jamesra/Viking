@@ -8,6 +8,7 @@ using System.Web;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using Newtonsoft.Json.Converters;
+using CommandLine; 
 
 namespace Neo4JGenerator
 {
@@ -23,9 +24,23 @@ namespace Neo4JGenerator
                 return;
             }
 
-            using (var driver = GraphDatabase.Driver("bolt://localhost:7687", AuthTokens.Basic("neo4j", "neo4j")))
+            Newtonsoft.Json.Linq.JObject json;
+            if (Program.options.JsonFilename != null)
+            {
+                json = DeserializeFromStream(System.IO.File.OpenRead(Program.options.JsonFilename));
+            }
+            else if(Program.options.JsonURL != null)
+            {
+                System.Net.WebClient client = new System.Net.WebClient();
+                System.IO.Stream response = client.OpenRead(Program.options.JsonURL);
+
+                json = DeserializeFromStream(response); 
+            }
+             
+            using (var driver = GraphDatabase.Driver(Program.options.Neo4JDatabase, AuthTokens.Basic(Program.options.Username, Program.options.Password)))
             using (var session = driver.Session())
             {
+                /*
                 session.Run("CREATE (a:Person {name: {name}, title: {title}})",
                             new Dictionary<string, object> { { "name", "Arthur" }, { "title", "King" } });
 
@@ -37,9 +52,21 @@ namespace Neo4JGenerator
                 {
                     Console.WriteLine($"{record["title"].As<string>()} {record["name"].As<string>()}");
                 }
+                */
             }
 
             Console.WriteLine("All done!");
+        }
+
+        public static Newtonsoft.Json.Linq.JObject DeserializeFromStream(System.IO.Stream stream)
+        {
+            var serializer = new JsonSerializer();
+
+            using (var sr = new System.IO.StreamReader(stream))
+            using (var jsonTextReader = new JsonTextReader(sr))
+            {
+                return (Newtonsoft.Json.Linq.JObject)serializer.Deserialize(jsonTextReader);
+            }
         }
     }
 }
