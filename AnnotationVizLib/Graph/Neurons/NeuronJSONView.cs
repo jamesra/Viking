@@ -55,14 +55,30 @@ namespace AnnotationVizLib
                     TargetStructureID = TargetNode.Key,
                     Label = KeyString,
                     Type = edge.SynapseType,
-                    Directional = edge.Directional
+                    Directional = edge.Directional,
+                    Links = AddEdgeLinks(edge)
                 });
 
                 edgeCount++; 
             }
              
-
             return JSONView;
+        }
+
+        private static List<object> AddEdgeLinks(NeuronEdge edge)
+        {
+            List<object> listLinks = new List<object>();
+            foreach(var link in edge.Links)
+            {
+                listLinks.Add(new
+                {
+                    SourceID = link.SourceID,
+                    TargetID = link.TargetID,
+                    Directional = link.Directional
+                });
+            }
+
+            return listLinks;
         }
 
         public override string ToString()
