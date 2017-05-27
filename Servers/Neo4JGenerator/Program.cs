@@ -46,19 +46,24 @@ namespace Neo4JGenerator
             using (var driver = GraphDatabase.Driver(Program.options.Neo4JDatabase, AuthTokens.Basic(Program.options.Username, Program.options.Password)))
             using (var session = driver.Session())
             {
-                JProperty nodes = json.Property("nodes");
-
-                ClearDatabase(session);
                 
+                JProperty nodes = json.Property("nodes");
+                
+                ClearDatabase(session);
+                /*
                 foreach(JToken token in nodes.First)
                 {
                     AddCellToGraph(session, token as JObject);
                 }
-                
-                JProperty edges = json.Property("edges");
+                */
 
+                BulkAddCellsToGraph(session, nodes.First);
+
+                JProperty edges = json.Property("edges");
+                
                 foreach(JToken edge in edges.First)
                 {
+                    AddAggregateEdgeToGraph(session, edge as JObject);
                     AddEdgesToGraph(session, edge as JObject);
                 }
             }
@@ -75,26 +80,76 @@ namespace Neo4JGenerator
 
         private static void AddCellToGraph(ISession session, JObject node)
         {
+            string neo4Jcmd = CreateAddCellCmd(session, node);
+            Console.WriteLine(neo4Jcmd);
+            session.Run(neo4Jcmd);
+        }
+
+        /// <summary>
+        /// Add all nodes in a single command
+        /// </summary>
+        /// <param name="session"></param>
+        /// <param name="nodes"></param>
+        private static void BulkAddCellsToGraph(ISession session, JToken nodes, int BulkSize = 100)
+        {
             StringBuilder sb = new StringBuilder();
-            sb.Append("CREATE (c:Cell ");
+
+            int count = 0;
+            string neo4Jcmd = null;
+            foreach (JToken node in nodes)
+            {
+                sb.Append(CreateAddCellCmd(session, node as JObject));
+                sb.Append(" ");
+                count++; 
+                if(count >= BulkSize)
+                {
+                    neo4Jcmd = sb.ToString();
+                    Console.WriteLine(neo4Jcmd);
+                    session.Run(neo4Jcmd);
+                    sb.Clear();
+                }
+            }
+
+            neo4Jcmd = sb.ToString();
+            Console.WriteLine(neo4Jcmd);
+            session.Run(neo4Jcmd);
+        }
+
+        private static string CreateAddCellCmd(ISession session, JObject node)
+        {
+            StringBuilder sb = new StringBuilder();
+            sb.AppendFormat("CREATE (c{0}:Cell ", GetIDForCell(node));
 
             sb.Append(EncodePropertySet(node.Children()));
 
             sb.Append(")");
 
-            string neo4Jcmd = sb.ToString();
-            Console.WriteLine(neo4Jcmd);
-            session.Run(neo4Jcmd);
+            return sb.ToString();
         }
 
-        private static void AddAggregateEdgeToGraph(ISession session, JObject edge, bool ReverseDirection)
+        private static long GetIDForCell(JObject node)
+        {
+            return node["StructureID"].Value<long>();
+        }
+
+        private static void AddAggregateEdgeToGraph(ISession session, JObject edge)
         {
             StringBuilder sb = new StringBuilder();
-            string neo4Jcmd = sb.AppendLine(AddAggregateEdgeToGraph2(edge, false, 0);
+
+            sb.AppendLine(BuildNodeQueryForEdge(edge));
+
+            sb.AppendLine(CreateAggregateEdgeCommand(edge, false, 0));
+            if (IsEdgeBidirectional(edge))
+            {
+                sb.AppendLine(CreateAggregateEdgeCommand(edge, true, 1));
+            }
+
+            string neo4Jcmd = sb.ToString();
+            Console.WriteLine(neo4Jcmd);
             session.Run(neo4Jcmd); 
         }
 
-        private static void AddAggregateEdgeToGraph2(JObject edge, bool ReverseDirection, int iVarNumber)
+        private static string CreateAggregateEdgeCommand(JObject edge, bool ReverseDirection, int iVarNumber)
         {
             StringBuilder sb = new StringBuilder();
             sb.Append("\tCREATE (s)");
@@ -108,6 +163,15 @@ namespace Neo4JGenerator
             
             List<JToken> listTokens = new List<JToken>();
             listTokens.AddRange(edge.Children());
+            listTokens.Add(new JProperty("LinkCount", LinkCount(edge)));
+
+            //Do not include the links as properties
+            RemoveToken(listTokens, "Links");
+            RemoveToken(listTokens, "ID");
+            RemoveToken(listTokens, "SourceStructureID");
+            RemoveToken(listTokens, "TargetStructureID");
+            RemoveToken(listTokens, "Directional");
+
             sb.Append(EncodePropertySet(listTokens));
 
             sb.Append("]");
@@ -121,11 +185,38 @@ namespace Neo4JGenerator
 
             return sb.ToString();
         }
+
+        /// <summary>
+        /// This list should be a dictionary, but time constrained before a flight.  Jamesan
+        /// </summary>
+        /// <param name="listTokens"></param>
+        /// <param name="name"></param>
+        private static  bool RemoveToken(List<JToken> listTokens, string name)
+        {
+            int iLinks = listTokens.FindIndex((t) => ((JProperty)t).Name == name);
+            if (iLinks >= 0)
+            {
+                listTokens.RemoveAt(iLinks);
+                return true;
+            }
+            return false;
+        }
         
         private static string BuildNodeQueryForEdge(JObject edge)
         {
             return "MATCH(s:Cell { StructureID: " + edge["SourceStructureID"] +
                             " }), (t:Cell { StructureID: " + edge["TargetStructureID"] + " })";
+        }
+
+        private static bool IsEdgeBidirectional(JObject edge)
+        {
+            return edge["Directional"].Value<bool>() == false;
+        }
+
+        private static int LinkCount(JObject edge)
+        {
+            JProperty Links = edge.Property("Links");
+            return Links.First.Count();
         }
 
         private static void AddEdgesToGraph(ISession session, JObject edge)
@@ -135,7 +226,7 @@ namespace Neo4JGenerator
 
             int iFirstVarNumber = 0;
             sb.AppendLine(CreateEdgesForLinks(edge, false, ref iFirstVarNumber));
-            if (edge["Directional"].Value<bool>() == false)
+            if (IsEdgeBidirectional(edge))
             {
                 sb.AppendLine(CreateEdgesForLinks(edge, true, ref iFirstVarNumber));
             }
