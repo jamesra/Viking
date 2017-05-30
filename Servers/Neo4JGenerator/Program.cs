@@ -73,9 +73,42 @@ namespace Neo4JGenerator
 
         private static void ClearDatabase(ISession session)
         {
+            ClearRelationships(session);
+            ClearNodes(session);
+        }
+
+        private static int ClearRelationships(ISession session)
+        {
+            bool AllDeleted = false;
+            int TotalDeleted = 0;
             //Delete all the things!
-            session.Run("MATCH ()-[r]->() delete r");
-            session.Run("MATCH (n) delete n");
+            while (!AllDeleted)
+            {
+                IStatementResult result = session.Run("MATCH() -[r]->() WITH r LIMIT 5000 DELETE r RETURN count(r) as deletedCount");
+                int NumDeleted = System.Convert.ToInt32(result.First()["deletedCount"]);
+                TotalDeleted += NumDeleted;
+                AllDeleted = NumDeleted == 0;
+            }
+
+            return TotalDeleted;
+            
+        }
+
+        private static int ClearNodes(ISession session)
+        {
+            bool AllDeleted = false;
+            int TotalDeleted = 0;
+            //Delete all the things!
+            while (!AllDeleted)
+            {
+                IStatementResult result = session.Run("MATCH (n) WITH n LIMIT 5000 DELETE n RETURN count(n) as deletedCount");
+                int NumDeleted = System.Convert.ToInt32(result.First()["deletedCount"]);
+                TotalDeleted += NumDeleted;
+                AllDeleted = NumDeleted == 0;
+            }
+
+            return TotalDeleted;
+
         }
 
         private static void AddCellToGraph(ISession session, JObject node)
