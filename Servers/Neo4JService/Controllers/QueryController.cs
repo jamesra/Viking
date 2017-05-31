@@ -28,8 +28,14 @@ namespace Neo4JService.Controllers
         // POST api/values 
         [System.Web.Mvc.HttpPost]
         [System.Web.Mvc.AcceptVerbs(HttpVerbs.Post)]
-        public string Post([FromBody]string value)
+        public string Post([FromBody]string query)
         {
+            string FoundKeywords; 
+            if(ContainsWritableKeywords(query, out FoundKeywords))
+            {
+                throw new ArgumentException("Found write-capable keywords in query.  Please submit only readonly queries:\n" + FoundKeywords);
+            }
+
             string Neo4JDatabase = VikingWebAppSettings.AppSettings.GetApplicationSetting("Neo4JDatabase");
             string username = VikingWebAppSettings.AppSettings.GetApplicationSetting("Neo4JUser");
             string password = VikingWebAppSettings.AppSettings.GetApplicationSetting("Neo4JPassword");
@@ -37,7 +43,7 @@ namespace Neo4JService.Controllers
             using (var driver = GraphDatabase.Driver(Neo4JDatabase, AuthTokens.Basic(username, password)))
             using (var session = driver.Session())
             {
-                IStatementResult result = session.Run(value);
+                IStatementResult result = session.Run(query);
 
                 string json = EncodeResult(result);
 
@@ -56,6 +62,35 @@ namespace Neo4JService.Controllers
             }
                 
             return sb.ToString();
+        }
+
+
+        /// <summary>
+        /// Check the query passed to Neo4J and remove any commands that would not be read-only
+        /// </summary>
+        /// <param name="query"></param>
+        /// <returns></returns>
+        private bool ContainsWritableKeywords(string query, out string FoundKeywords)
+        {
+            FoundKeywords = null;
+
+            StringBuilder sb = new StringBuilder();
+
+            string upper_query = query.ToUpper(); 
+
+            string[] Keywords =new string[] { "%", "CALL", "CREATE", "DELETE", "DETACH", "SET", "REMOVE", "DROP", "FOREACH", "LOAD" };
+
+            foreach (string keyword in Keywords)
+            {
+                if (upper_query.Contains(keyword))
+                {
+                    sb.AppendLine(keyword);
+                }
+            }
+
+            FoundKeywords = sb.ToString();
+
+            return FoundKeywords.Length > 0;
         }
     }
 }

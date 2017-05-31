@@ -11,7 +11,7 @@ using Neo4JService.Controllers;
 namespace Neo4JService.Tests.Controllers
 {
     [TestClass]
-    public class ValuesControllerTest
+    public class QueryControllerTest
     {
         [TestMethod]
         public void Get()
@@ -37,13 +37,26 @@ namespace Neo4JService.Tests.Controllers
 
             // Act
             string result = controller.Post("MATCH p=()-[r:AggregateLink]->() RETURN p LIMIT 10");
-
             Console.WriteLine(result);
+            Assert.IsTrue(result.Length > 0, "No result for valid MATCH query");
 
+            // Act
+            bool ExceptionThrown = false;
+            try
+            {
+                string failResult = controller.Post("CALL dbms.security.createUser(\"Neo4JWebService\", \"4%w%o06\", false)");
+            }
+            catch (ArgumentException e)
+            {
+                ExceptionThrown = true;
+            }
+
+            Assert.IsTrue(ExceptionThrown, "Writable keyword not detected in query");
 
 
             // Assert
-        }
-        
+            }
+
+
     }
 }
