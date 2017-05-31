@@ -11,12 +11,14 @@ using Neo4j.Driver.V1;
 using System.IO;
 using Newtonsoft.Json.Converters;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace Neo4JService.Controllers
 {
     //[Authorize]
     public class QueryController : ApiController
     {
+        /*
         // GET api/values
         [System.Web.Mvc.HttpGet]
         [System.Web.Mvc.AcceptVerbs(HttpVerbs.Get)]
@@ -24,12 +26,22 @@ namespace Neo4JService.Controllers
         {
             return new string[] { "value1", "value2" };
         }
-
+        */
         // POST api/values 
         [System.Web.Mvc.HttpPost]
         [System.Web.Mvc.AcceptVerbs(HttpVerbs.Post)]
-        public string Post([FromBody]string query)
+        [System.Web.Mvc.ActionName("PostQuery")]
+        public string PostQuery()
         {
+            Task<string> content = Request.Content.ReadAsStringAsync();
+            content.Wait();
+            string query = content.Result;
+            
+            if(query == null || query.Length == 0)
+            {
+                throw new ArgumentException("No query found in post");
+            }
+
             string FoundKeywords; 
             if(ContainsWritableKeywords(query, out FoundKeywords))
             {

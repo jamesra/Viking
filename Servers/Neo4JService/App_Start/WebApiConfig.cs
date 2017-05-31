@@ -23,7 +23,7 @@ namespace Neo4JService
             config.Routes.MapHttpRoute(
                 name: "DefaultApi",
                 routeTemplate: "{controller}/{id}",
-                defaults: new { id = RouteParameter.Optional }
+                defaults: new { controller="Query", id = RouteParameter.Optional, action = "PostQuery" }
             );
         }
     }
