@@ -25,7 +25,16 @@ namespace Neo4JGenerator
 
         [Option('p', "password", DefaultValue = "connectome", Required = false, HelpText = "URL of VolumeXML file")]
         public string Password { get; set; }
+
+        [Option('v', "verbose", DefaultValue = false, Required = false, HelpText = "Provide more detailed output")]
+        public bool Verbose { get; set; }
+         
+        [Option('q', "quiet", DefaultValue = false, Required = false, HelpText = "Provide no console output")]
+        public bool Quiet { get; set; }
         
+        [Option('o', "odata", DefaultValue = null, Required = false, HelpText = "OData Endpoint for update.  This should be an OData URL that can be filtered by both StructureID and ParentID")]
+        public string ODataEndpoint { get; set; }
+
         [ParserState]
         public IParserState LastParsertState { get; set; }
 

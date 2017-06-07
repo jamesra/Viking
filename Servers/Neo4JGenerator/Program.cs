@@ -15,10 +15,35 @@ namespace Neo4JGenerator
 {
     class Program
     {
-        static CommandLineOptions options = new CommandLineOptions();
+        public static CommandLineOptions options = new CommandLineOptions();
+
+        public static void WriteProgress(string output)
+        {
+            if(Program.options.Verbose)
+            {
+                Console.Write(output);
+            }
+            else if(!Program.options.Quiet)
+            {
+                Console.Write('.');
+            }
+        }
+
+        public static void WriteLineProgress(string output)
+        {
+            if (Program.options.Verbose)
+            {
+                Console.WriteLine(output);
+            }
+            else if (!Program.options.Quiet)
+            {
+                Console.Write('.');
+            }
+        }
 
         static void Main(string[] args)
         {
+            Simple.OData.Client.V4Adapter.Reference();
             if (!CommandLine.Parser.Default.ParseArguments(args, Program.options))
             {
                 System.Console.WriteLine("Unable to parse command line arguments, aborting");
@@ -42,13 +67,27 @@ namespace Neo4JGenerator
             {
                 Console.WriteLine("Unable to load JSON data");
             }
-             
+
+            if (Program.options.ODataEndpoint == null)
+            {
+                ClearAndImportDatabase(json);
+            }
+            else
+            {
+                SpatialAdapter.AddSpatialProperties(Program.options.ODataEndpoint);
+            }
+
+            Console.WriteLine("All done!");
+        }
+
+        public static void ClearAndImportDatabase(JObject json)
+        {
             using (var driver = GraphDatabase.Driver(Program.options.Neo4JDatabase, AuthTokens.Basic(Program.options.Username, Program.options.Password)))
             using (var session = driver.Session())
             {
-                
+
                 JProperty nodes = json.Property("nodes");
-                
+
                 ClearDatabase(session);
                 /*
                 foreach(JToken token in nodes.First)
@@ -60,15 +99,13 @@ namespace Neo4JGenerator
                 BulkAddCellsToGraph(session, nodes.First);
 
                 JProperty edges = json.Property("edges");
-                
-                foreach(JToken edge in edges.First)
+
+                foreach (JToken edge in edges.First)
                 {
                     AddAggregateEdgeToGraph(session, edge as JObject);
                     AddEdgesToGraph(session, edge as JObject);
                 }
             }
-
-            Console.WriteLine("All done!");
         }
 
         private static void ClearDatabase(ISession session)
@@ -90,8 +127,7 @@ namespace Neo4JGenerator
                 AllDeleted = NumDeleted == 0;
             }
 
-            return TotalDeleted;
-            
+            return TotalDeleted; 
         }
 
         private static int ClearNodes(ISession session)
@@ -107,14 +143,22 @@ namespace Neo4JGenerator
                 AllDeleted = NumDeleted == 0;
             }
 
-            return TotalDeleted;
+            return TotalDeleted; 
+        }
 
+        private static void CreateIDIndex(ISession session)
+        {
+            //Key constraints only work in enterprise edition
+            //session.Run('CREATE CONSTRAINT ON (n:Cell) ASSERT (n.StructureID) IS NODE KEY');
+
+            session.Run("CREATE INDEX ON :Cell(StructureID)");
+            session.Run("CREATE INDEX ON :Cell(Label)");
         }
 
         private static void AddCellToGraph(ISession session, JObject node)
         {
             string neo4Jcmd = CreateAddCellCmd(session, node);
-            Console.WriteLine(neo4Jcmd);
+            Program.WriteLineProgress(neo4Jcmd);
             session.Run(neo4Jcmd);
         }
 
@@ -137,14 +181,14 @@ namespace Neo4JGenerator
                 if(count >= BulkSize)
                 {
                     neo4Jcmd = sb.ToString();
-                    Console.WriteLine(neo4Jcmd);
+                    Program.WriteLineProgress(neo4Jcmd);
                     session.Run(neo4Jcmd);
                     sb.Clear();
                 }
             }
 
             neo4Jcmd = sb.ToString();
-            Console.WriteLine(neo4Jcmd);
+            Program.WriteLineProgress(neo4Jcmd);
             session.Run(neo4Jcmd);
         }
 
@@ -178,7 +222,7 @@ namespace Neo4JGenerator
             }
 
             string neo4Jcmd = sb.ToString();
-            Console.WriteLine(neo4Jcmd);
+            Program.WriteLineProgress(neo4Jcmd);
             session.Run(neo4Jcmd); 
         }
 
@@ -361,5 +405,7 @@ namespace Neo4JGenerator
                 return (Newtonsoft.Json.Linq.JObject)serializer.Deserialize(jsonTextReader);
             }
         }
+        
+        
     }
 }
