@@ -164,7 +164,7 @@ namespace UtilitiesTests
 
             GridVector2[] points = new GridVector2[] { N, S, E, W };
 
-            GridVector2 calculatedCentroid = points.Centroid();
+            GridVector2 calculatedCentroid = points.Average();
 
             Assert.AreEqual(Centroid ,  calculatedCentroid);
 
@@ -245,7 +245,7 @@ namespace UtilitiesTests
             GridPolygon poly = new GridPolygon(ConvexHullPoints);
             Assert.IsTrue(poly.BoundingBox == points.BoundingBox());
 
-            GridVector2 Centroid = ConvexHullPoints.Centroid();
+            GridVector2 Centroid = ConvexHullPoints.Average();
             Assert.IsTrue(Centroid == new GridVector2(0, 0));
 
             points = points.Translate(new GridVector2(-20, 20));

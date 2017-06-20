@@ -103,7 +103,7 @@ namespace VikingXNAGraphics
             LineView[] lineViews = new LineView[CurvePoints.Length - 1];
             for (int i = 1; i < CurvePoints.Length; i++)
             {
-                lineViews[i - 1] = new LineView(CurvePoints[i - 1], CurvePoints[i], LineWidth, color, style);
+                lineViews[i - 1] = new LineView(CurvePoints[i - 1], CurvePoints[i], LineWidth, color, style, false);
             }
 
             return lineViews;

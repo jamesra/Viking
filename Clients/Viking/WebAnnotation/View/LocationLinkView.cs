@@ -241,7 +241,7 @@ namespace WebAnnotation.ViewModel
             //GridVector2 sourceVolumePosition = sourceMapper.SectionToVolume(A.Position);
             //GridVector2 targetVolumePosition = targetMapper.SectionToVolume(B.Position); 
 
-            LineView line = new LineView(A.Center, B.Center, this.LineWidth, this.Color, LineStyle.Standard);
+            LineView line = new LineView(A.Center, B.Center, this.LineWidth, this.Color, LineStyle.Standard, true);
             return line;
         }
 

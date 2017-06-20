@@ -376,7 +376,7 @@ namespace WebAnnotation.ViewModel
             GridVector2 targetVolumePosition = mapper.SectionToVolume(target.Position);
         
             lineView = new LineView(sourceVolumePosition, targetVolumePosition, Math.Min(source.Radius, target.Radius), DefaultColor,
-                                    link.Bidirectional ? LineStyle.AnimatedBidirectional : LineStyle.AnimatedLinear);
+                                    link.Bidirectional ? LineStyle.AnimatedBidirectional : LineStyle.AnimatedLinear, false);
             lineSegment = new GridLineSegment(sourceVolumePosition, targetVolumePosition);
         }
 

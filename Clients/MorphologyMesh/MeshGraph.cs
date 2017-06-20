@@ -38,6 +38,8 @@ namespace MorphologyMesh
         public bool UpperPortCapped = false; //True if faces have been generated
         public bool LowerPortCapped = false; //True if faces have been generated
 
+        public bool AdjacentToPolygon = false; 
+
         //public GridVector3 UpperCentroid;
         //public GridVector3 LowerCentroid;
 

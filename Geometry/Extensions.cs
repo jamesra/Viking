@@ -303,7 +303,7 @@ namespace Geometry
             return points;
         }
 
-        public static GridVector2 Centroid(this ICollection<GridVector2> points)
+        public static GridVector2 Average(this ICollection<GridVector2> points)
         {
             double mX = 0;
             double mY = 0;
@@ -581,6 +581,30 @@ namespace Geometry
 
             return new GridBox( new double[] { minX, minY, minZ }, 
                                 new double[] { maxX, maxY, maxZ });
+        }
+
+        public static GridVector3 Average(this ICollection<GridVector3> points)
+        {
+            double mX = 0;
+            double mY = 0;
+            double mZ = 0;
+
+            foreach (GridVector3 p in points)
+            {
+                mX += p.X;
+                mY += p.Y;
+                mZ += p.Z;
+            }
+
+            //In case we are passed a closed loop of points we should remove the duplicate
+            if (points.First() == points.Last())
+            {
+                mX -= points.First().X;
+                mY -= points.First().Y;
+                mZ -= points.First().Z;
+            }
+
+            return new GridVector3(mX / (double)points.Count, mY / (double)points.Count, mZ / (double)points.Count);
         }
 
         public static GridVector2 XY(this GridVector3 point)

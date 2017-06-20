@@ -9,8 +9,10 @@ namespace VikingXNAGraphics
     public class LineView : IColorView, IViewPosition2D
     {
         public static double time = 0;
-        RoundLineCode.RoundLine line;
-        public LineStyle Style; 
+        protected RoundLineCode.RoundLine line;
+        public LineStyle Style;
+
+        public bool UseHSLColor = false; 
 
         public GridVector2 Source
         {
@@ -26,7 +28,7 @@ namespace VikingXNAGraphics
 
         public float LineWidth;
 
-        private Microsoft.Xna.Framework.Color _Color;
+        protected Microsoft.Xna.Framework.Color _Color;
         public Microsoft.Xna.Framework.Color Color
         {
             get { return _Color; }
@@ -58,14 +60,15 @@ namespace VikingXNAGraphics
             }
         }
 
-        private Microsoft.Xna.Framework.Color _HSLColor;
+        protected Microsoft.Xna.Framework.Color _HSLColor;
 
-        public LineView(GridVector2 source, GridVector2 destination, double width, Microsoft.Xna.Framework.Color color, LineStyle lineStyle)
+        public LineView(GridVector2 source, GridVector2 destination, double width, Microsoft.Xna.Framework.Color color, LineStyle lineStyle, bool UseHSLColor)
         {
             line = new RoundLineCode.RoundLine(source.ToXNAVector2(), destination.ToXNAVector2());
             this.LineWidth = (float)width;
             this.Color = color; 
             this.Style = lineStyle;
+            this.UseHSLColor = UseHSLColor;
         }
 
         public static void Draw(GraphicsDevice device,
@@ -78,7 +81,7 @@ namespace VikingXNAGraphics
             {
                 lineManager.Draw(group.Select(l => l.line).ToArray(),
                              group.Select(l => l.LineWidth / 2.0f).ToArray(),
-                             group.Select(l => l.Color).ToArray(),
+                             group.Select(l => l.UseHSLColor ? l._HSLColor : l.Color).ToArray(),
                              scene.Camera.View * scene.Projection,
                              (float)(DateTime.UtcNow.Millisecond / 1000.0),
                              group.Key.ToString());
