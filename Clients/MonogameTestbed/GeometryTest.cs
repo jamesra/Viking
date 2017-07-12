@@ -81,7 +81,7 @@ namespace MonogameTestbed
                 if(shape is GridLineSegment)
                 {
                     GridLineSegment lineSegment = (GridLineSegment)shape;
-                    view = new LineView(lineSegment.A, lineSegment.B, 1, Color.Red, LineStyle.Standard);
+                    view = new LineView(lineSegment.A, lineSegment.B, 1, Color.Red, LineStyle.Standard, false);
                 }
                 else if(shape is GridCircle)
                 {

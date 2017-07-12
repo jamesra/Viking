@@ -544,7 +544,7 @@ namespace MonogameTestbed
             {
                 GridVector2 source = new GridVector2(MinX, Y);
                 GridVector2 dest = new GridVector2(MaxX, Y);
-                listLineViews.Add(new LineView(source, dest, YStep / 1.5, Color.Blue, style));
+                listLineViews.Add(new LineView(source, dest, YStep / 1.5, Color.Blue, style, false));
 
                 Y += YStep;
 
