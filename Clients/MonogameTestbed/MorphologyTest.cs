@@ -11,6 +11,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 using Geometry.Meshing;
 using MathNet.Numerics.LinearAlgebra;
+using AnnotationVizLib.SimpleOData;
 
 namespace MonogameTestbed
 {
@@ -24,9 +25,22 @@ namespace MonogameTestbed
 
         LabelView labelCamera;
 
+        public enum ENDPOINT
+        {
+            TEST,
+            RC1,
+            RC2,
+            TEMPORALMONKEY
+        }
+
 
         bool _initialized = false;
         public bool Initialized { get { return _initialized; } }
+
+        private static Dictionary<ENDPOINT, Uri> EndpointMap = new Dictionary<ENDPOINT, Uri> { { ENDPOINT.TEST, new Uri("http://webdev.connectomes.utah.edu/RC1Test/OData") },
+                                                                                               { ENDPOINT.RC1, new Uri("http://websvc1.connectomes.utah.edu/RC1/OData") },
+                                                                                               { ENDPOINT.RC2, new Uri("http://websvc1.connectomes.utah.edu/RC2/OData") },
+                                                                                               { ENDPOINT.TEMPORALMONKEY, new Uri("http://websvc1.connectomes.utah.edu/NeitzTemporalMonkey/OData") }};
 
         public void Init(MonoTestbed window)
         {
@@ -39,32 +53,35 @@ namespace MonogameTestbed
              
             labelCamera = new LabelView("", new GridVector2(0, 100));
 
-            //meshes = InitSmallSmoothModelFromOData(8883);
-            //meshes = InitSmallSmoothModelFromOData(1);
-            meshes = InitSmallSmoothModelFromOData(180);
+            //meshes = InitSmallSmoothModelFromOData(144287, ENDPOINT.TEST);
+            //meshes = InitSmallSmoothModelFromOData(1, ENDPOINT.RC2);
+            meshes = InitSmallSmoothModelFromOData(180, ENDPOINT.TEST);
+            //meshes = InitSmallSmoothModelFromOData(207, ENDPOINT.TEMPORALMONKEY);
             //meshes = InitSmallModelFromOData(476);
             //meshes = InitSmallModelFromOData(1);
 
-            this.Scene.Camera.Position = (meshes.First().BoundingBox.CenterPoint * 0.9).ToXNAVector3();
+            GridBox bbox = meshes.First().BoundingBox;
+
+            this.Scene.Camera.Position = (bbox.CenterPoint * 0.9).ToXNAVector3();
             this.Scene.Camera.LookAt = Vector3.Zero;
 
-            this.Scene.Camera.Position = new Vector3(120429, 111534, -20798);
-            this.Scene.Camera.Rotation = new Vector3(4.986171f, 1.67181f, 0);
-            //this.Scene.Camera.LookAt = meshes.First().BoundingBox.CenterPoint.ToXNAVector3();
-
+            this.Scene.Camera.Position += new Vector3((float)bbox.Width, (float)bbox.Height, (float)bbox.Depth);
+            //this.Scene.Camera.Rotation = new Vector3(4.986171f, 1.67181f, 0);
+            //this.Scene.Camera.LookAt = meshes.First().BoundingBox.CenterPoint.ToXNAVector3();            
+             
+            System.Random r = new Random();
             foreach (DynamicRenderMesh<ulong> mesh in meshes)
             {
-                meshView.models.Add(mesh.ToVertexPositionNormalColorMeshModel(Color.Purple));
+                meshView.models.Add(mesh.ToVertexPositionNormalColorMeshModel(new Color((float)r.NextDouble(), (float)r.NextDouble(), (float)r.NextDouble())));
             }
         }
 
         /// <summary>
         /// Create a tube of circles offset slighty each section
         /// </summary>
-        public ICollection<DynamicRenderMesh<ulong>> InitSmallTopologyModelFromOData(int CellID)
+        public ICollection<DynamicRenderMesh<ulong>> InitSmallTopologyModelFromOData(int CellID, ENDPOINT endpoint)
         {
-            AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromOData(new long[] { CellID }, true, new Uri("http://webdev.connectomes.utah.edu/RC1Test/OData"));
-            //AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromOData(new long[] { CellID }, true, new Uri("http://websvc1.connectomes.utah.edu/RC2/OData"));
+            AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromOData(new long[] { CellID }, true, EndpointMap[endpoint]); 
 
             MorphologyMesh.TopologyMeshGenerator generator = new MorphologyMesh.TopologyMeshGenerator();
             return generator.Generate(graph.Subgraphs.Values.First()); 
@@ -73,14 +90,26 @@ namespace MonogameTestbed
         /// <summary>
         /// Create a tube of circles offset slighty each section
         /// </summary>
-        public ICollection<DynamicRenderMesh<ulong>> InitSmallSmoothModelFromOData(int CellID)
-        {
-            //AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromOData(new long[] { CellID }, true, new Uri("http://webdev.connectomes.utah.edu/RC1Test/OData"));
-            //AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromOData(new long[] { CellID }, true, new Uri("http://websvc1.connectomes.utah.edu/RC2/OData"));
-            AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromOData(new long[] { CellID }, true, new Uri("http://websvc1.connectomes.utah.edu/RC1/OData"));
+        public ICollection<DynamicRenderMesh<ulong>> InitSmallSmoothModelFromOData(int CellID, ENDPOINT endpoint)
+        { 
+            AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromOData(new long[] { CellID }, true, EndpointMap[endpoint]);
 
             //MorphologyMesh.TopologyMeshGenerator generator = new MorphologyMesh.TopologyMeshGenerator();
-            return MorphologyMesh.SmoothMeshGenerator.Generate(graph.Subgraphs.Values.First());
+            return RecursivelyGenerateMeshes(graph);
+        }
+
+        private ICollection<DynamicRenderMesh<ulong>> RecursivelyGenerateMeshes(AnnotationVizLib.MorphologyGraph graph)
+        {
+            List<DynamicRenderMesh<ulong>> listMeshes = new List<DynamicRenderMesh<ulong>>();
+
+            listMeshes.AddRange(MorphologyMesh.SmoothMeshGenerator.Generate(graph));
+
+            foreach(var subgraph in graph.Subgraphs.Values)
+            {
+                listMeshes.AddRange( RecursivelyGenerateMeshes(subgraph) );
+            }
+
+            return listMeshes;
         }
 
         public void Update()
