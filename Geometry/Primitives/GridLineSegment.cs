@@ -592,7 +592,7 @@ namespace Geometry
         {
             get
             {
-                throw new NotImplementedException();
+                return ShapeType2D.LINE;
             }
         }
 

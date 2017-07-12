@@ -421,10 +421,15 @@ namespace Geometry
             double accumulator_X = 0;
             double accumulator_Y = 0;
 
+            //To prevent rounding errors we subtract the average value and add it again
+            GridVector2 Average = ExteriorRing.Average();
+
+            GridVector2[] translated_Points = ExteriorRing.Translate(-Average);
+
             for (int i = 0; i < ExteriorRing.Length - 1; i++)
             {
-                GridVector2 p0 = ExteriorRing[i];
-                GridVector2 p1 = ExteriorRing[i + 1];
+                GridVector2 p0 = translated_Points[i];
+                GridVector2 p1 = translated_Points[i + 1];
                 double SharedTerm = (p0.X * p1.Y - p1.X * p0.Y);
                 accumulator_X += (p0.X + p1.X) * SharedTerm;
                 accumulator_Y += (p0.Y + p1.Y) * SharedTerm;
@@ -433,7 +438,7 @@ namespace Geometry
             double ExteriorArea = ExteriorRing.PolygonArea();
             double scalar = ExteriorArea * 6;
 
-            return new GridVector2(accumulator_X / scalar, accumulator_Y / scalar);
+            return new GridVector2((accumulator_X / scalar) + Average.X, (accumulator_Y / scalar) + Average.Y);
         }
 
         public static GridPolygon Smooth(GridPolygon poly, uint NumInterpolationPoints)

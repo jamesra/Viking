@@ -19,7 +19,8 @@ namespace Geometry
         RECTANGLE = 8,
         TRIANGLE = 9,
         LINE = 10,
-        COLLECTION = 11 //A collection of many geometry objects
+        COLLECTION = 11, //A collection of many geometry objects
+        POLYLINE = 12
     };
 
     public interface IPoint2D
@@ -74,6 +75,12 @@ namespace Geometry
     public interface IShapeCollection2D : IShape2D
     {
         ICollection<IShape2D> Geometries { get; }
+    }
+
+    public interface IPolyLine2D : IShape2D
+    {
+        ICollection<IPoint2D> Points { get; }
+        ICollection<ILineSegment2D> LineSegments { get; }
     }
 
     public interface ITriangle2D : IShape2D

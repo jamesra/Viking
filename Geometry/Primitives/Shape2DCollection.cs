@@ -65,7 +65,7 @@ namespace Geometry
             }
         }
 
-        public ShapeType2D ShapeType
+        public virtual ShapeType2D ShapeType
         {
             get
             {
