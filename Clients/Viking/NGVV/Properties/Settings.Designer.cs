@@ -29,7 +29,7 @@ namespace Viking.Properties {
 <ArrayOfString xmlns:xsi=""http://www.w3.org/2001/XMLSchema-instance"" xmlns:xsd=""http://www.w3.org/2001/XMLSchema"">
   <string>http://connectomes.utah.edu/Rabbit</string>
   <string>http://internal.connectomes.utah.edu/RC2/SliceToVolume.VikingXML</string>
-  <string>http://storage1.connectomes.utah.edu/RPC1/SliceToVolume.VikingXML</string>
+  <string>http://storage1.connectomes.utah.edu/Volumes/RPC1/SliceToVolume.VikingXML</string>
 </ArrayOfString>")]
         public global::System.Collections.Specialized.StringCollection VolumeURLs {
             get {
