@@ -109,18 +109,20 @@ namespace WebAnnotation.View
         {
             //I had to calculate this on the fly because if the databases VolumeShape was out of date it could cause large movements of the annotation during the command.
             IVolumeToSectionTransform section_mapper = Parent.Volume.GetSectionToVolumeTransform((int)Parent.Section.Number);
-            GridVector2 VolumeCircleCenter = section_mapper.SectionToVolume(loc.Position);
+            GridVector2 VolumeCircleCenter;
 
             switch (action)
             {
                 case LocationAction.NONE:
                     return null;
                 case LocationAction.TRANSLATE:
+                    VolumeCircleCenter = section_mapper.SectionToVolume(loc.Position);
                     return new TranslateCircleLocationCommand(Parent,
                                                               new GridCircle(VolumeCircleCenter, loc.Radius),
                                                               loc.Parent.Type.Color.ToXNAColor(1f),
                                                               (NewVolumePosition, NewMosaicPosition, NewRadius) => UpdateCircleLocationCallback(loc, NewVolumePosition, NewMosaicPosition, NewRadius));
-                case LocationAction.SCALE: 
+                case LocationAction.SCALE:
+                    VolumeCircleCenter = section_mapper.SectionToVolume(loc.Position);
                     return new ResizeCircleCommand(Parent,
                             System.Drawing.Color.FromArgb(loc.Parent.Type.Color).SetAlpha(0.5f),
                             VolumeCircleCenter,
