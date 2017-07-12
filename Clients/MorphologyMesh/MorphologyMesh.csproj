@@ -45,6 +45,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ConnectionVerticies.cs" />
     <Compile Include="MeshGraph.cs" />
     <Compile Include="MorphologyMeshGenerator.cs" />
     <Compile Include="ShapeMeshGenerator.cs" />

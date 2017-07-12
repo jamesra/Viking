@@ -69,7 +69,7 @@ namespace MorphologyMesh
         /// </summary>
         public ulong[] GetEdgesAbove(MeshGraph graph)
         {
-            return this.Edges.Where(e => graph.Nodes[e.Key].Z > this.Z).Select(e => e.Key).ToArray();
+            return this.Edges.Where(e => this.IsNodeAbove(graph.Nodes[e.Key])).Select(e => e.Key).ToArray();
         }
 
         /// <summary>
@@ -77,7 +77,17 @@ namespace MorphologyMesh
         /// </summary>
         public ulong[] GetEdgesBelow(MeshGraph graph)
         {
-            return this.Edges.Where(e => graph.Nodes[e.Key].Z < this.Z).Select(e => e.Key).ToArray();
+            return this.Edges.Where(e => this.IsNodeBelow(graph.Nodes[e.Key])).Select(e => e.Key).ToArray();
+        }
+
+        public bool IsNodeAbove(MeshNode other)
+        {
+            return other.Z > this.Z;
+        }
+
+        public bool IsNodeBelow(MeshNode other)
+        {
+            return other.Z < this.Z;
         }
 
 
@@ -89,7 +99,7 @@ namespace MorphologyMesh
 
         public override string ToString()
         {
-            return Key.ToString();
+            return Key.ToString() + " Z: " + Z.ToString();
         }
     }
 }

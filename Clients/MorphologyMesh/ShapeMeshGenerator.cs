@@ -316,5 +316,21 @@ namespace MorphologyMesh
 
             return drmesh;
         }
+
+        public static Vertex<T>[] CreateVerticiesForPolyline(IPolyLine2D polyline, double Z, T locationID, GridVector3 translate)
+        {
+            Vertex<T>[] verticies = new Vertex<T>[polyline.Points.Count];
+
+            int iVert = 0;
+            foreach (IPoint2D p in polyline.Points)
+            {
+                Geometry.Meshing.Vertex<T> vertex = new Geometry.Meshing.Vertex<T>(new GridVector3(p.X, p.Y, Z) + translate,
+                                                                              new GridVector3(0, 0, 1), locationID);
+                verticies[iVert] = vertex;
+                iVert++;
+            }
+
+            return verticies;
+        }
     }
 }
