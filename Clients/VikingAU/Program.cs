@@ -72,21 +72,32 @@ namespace Viking.AU
         /// <returns></returns>
         private static List<long> NumberRangeToList(string input)
         {
-            
-            Regex regex = new Regex(@"(\d+)\-(\d+)");
-            Match m = regex.Match(input);
+            List<long> listNumbers;
 
-            long start = System.Convert.ToInt64(m.Groups[1].Value);
-            long end = System.Convert.ToInt64(m.Groups[2].Value);
-
-            List<long> listNumbers = new List<long>((int)(end - start)+1);
-
-            for (long val = start; val <= end; val++)
+            try
             {
-                listNumbers.Add(val);
+                long SectionNumber = System.Convert.ToInt64(input);
+                listNumbers = new List<long>();
+                listNumbers.Add(SectionNumber);
+                return listNumbers;
             }
+            catch(FormatException e)
+            {
+                Regex regex = new Regex(@"(\d+)\-(\d+)");
+                Match m = regex.Match(input);
 
-            return listNumbers;
+                long start = System.Convert.ToInt64(m.Groups[1].Value);
+                long end = System.Convert.ToInt64(m.Groups[2].Value);
+
+                listNumbers = new List<long>((int)(end - start) + 1);
+
+                for (long val = start; val <= end; val++)
+                {
+                    listNumbers.Add(val);
+                }
+
+                return listNumbers;
+            }
         }
 
         private static List<long> NumberStringToList(string input)
@@ -205,27 +216,62 @@ namespace Viking.AU
         static void UpdateVolumePositionsAsync(IList<long> SectionNumbers)
         {
             SortedDictionary<long, Task<string>> tasks = new SortedDictionary<long, Task<string>>();
+
+
+
+            TaskFactory taskFactory = new TaskFactory(TaskCreationOptions.LongRunning, TaskContinuationOptions.None);
             foreach (long sectionNumber in SectionNumbers)
             {
-                //UpdateVolumePositions(sectionNumber);
+                //    UpdateVolumePositions(sectionNumber);
+
+                var task = taskFactory.StartNew(() => UpdateVolumePositions(sectionNumber));
             
-                var task = System.Threading.Tasks.Task.Run(() => UpdateVolumePositions(sectionNumber));
+                //var task = System.Threading.Tasks.Task.Run();
                 tasks.Add(sectionNumber, task);
+
+                while(tasks.Keys.Count > 16)
+                {
+                    RemoveCompletedTasks(tasks);
+                } 
             }
 
-            foreach(long sectionNumber in tasks.Keys)
+            foreach (long sectionNumber in tasks.Keys.ToArray())
             {
                 var task = tasks[sectionNumber];
                 task.Wait();
                 Console.WriteLine(task.Result);
-                
+                tasks.Remove(sectionNumber);
+                    
                 State.MappingsManager.SectionMappingCache.Remove((int)sectionNumber);
+            }
+        }
+
+        private static void RemoveCompletedTasks(SortedDictionary<long, Task<string>> tasks)
+        {
+            bool AnyCompleted = false;
+            foreach (long sectionNumber in tasks.Keys.ToArray())
+            {
+                var task = tasks[sectionNumber];
+                if (task.IsCompleted)
+                {
+                    Console.WriteLine(task.Result);
+                    tasks.Remove(sectionNumber);
+                    AnyCompleted = true;
+                    State.MappingsManager.SectionMappingCache.Remove((int)sectionNumber);
+                }
+            }
+
+            if(!AnyCompleted)
+            {
+                System.Threading.Thread.Sleep(500);
             }
         }
 
         static string UpdateVolumePositions(long SectionNumber)
         {
-            var LocDict = WebAnnotationModel.Store.Locations.GetObjectsForSection(SectionNumber);
+            LocationStore threadLocationStore = new LocationStore();
+
+            var LocDict = threadLocationStore.GetObjectsForSection(SectionNumber);
 
             Viking.VolumeModel.Section section = State.Volume.Sections[(int)SectionNumber];
 
@@ -246,13 +292,13 @@ namespace Viking.AU
 
             if (NumUpdated > 0)
             {
-                Store.Locations.Save(); 
+                threadLocationStore.Save(); 
                 //Console.Write("...Locations updated");
             }
 
             string Result = string.Format("Section {0} : {1} / {2} locations needed updates", SectionNumber, NumUpdated, LocDict.Count);
 
-            Store.Locations.RemoveSection((int)SectionNumber);
+            threadLocationStore.RemoveSection((int)SectionNumber);
 
             return Result;
         }
@@ -265,6 +311,14 @@ namespace Viking.AU
         /// <returns></returns>
         static bool UpdateVolumeShape(LocationObj loc, MappingBase mapper)
         { 
+            if(!IsLocationTypeValid(loc))
+            {
+                if(TryRepairLocationType(loc))
+                    Console.WriteLine(string.Format("Repaired Type for Location {0}", loc.ID));
+                else
+                    Console.WriteLine(string.Format("Unable to repair type for Location {0}", loc.ID));
+            }
+
             SqlGeometry updatedVolumeShape = VolumeShapeForLocation(loc, mapper);
             if(updatedVolumeShape == null)
             {
@@ -280,7 +334,8 @@ namespace Viking.AU
             GridVector2[] OriginalVolumeControlPoints = loc.VolumeShape.ToPoints();
             GridVector2[] UpdatedVolumeControlPoints = updatedVolumeShape.ToPoints();
              
-            if (AnyPointsAreDifferent(OriginalVolumeControlPoints, UpdatedVolumeControlPoints))
+            if (AnyPointsAreDifferent(OriginalVolumeControlPoints, UpdatedVolumeControlPoints) ||
+                updatedVolumeShape.GeometryType() != loc.VolumeShape.GeometryType())
             {
                 loc.VolumeShape = updatedVolumeShape;
                 return true;
@@ -319,9 +374,107 @@ namespace Viking.AU
             if (UnsmoothedVolumeShape == null)
                 return null; 
 
+            //Check a rare case where points are stored as circles
+            
+
             SqlGeometry SmoothedVolumeShape = loc.TypeCode.GetSmoothedShape(UnsmoothedVolumeShape);
             return SmoothedVolumeShape;
         }
+
+        /// <summary>
+        /// Returns true if the MosaicShape geometry can represent the location's typecode
+        /// </summary>
+        /// <returns></returns>
+        static bool IsLocationTypeValid(LocationObj loc)
+        {
+            switch (loc.MosaicShape.GeometryType())
+            {
+                case SupportedGeometryType.POINT:
+                    if (loc.TypeCode != LocationType.POINT) 
+                        return false;
+                    break; 
+                case SupportedGeometryType.CURVEPOLYGON:
+                    if (loc.TypeCode != LocationType.CIRCLE) 
+                        return false;
+                    break;
+                case SupportedGeometryType.POLYLINE:
+                    if (loc.TypeCode != LocationType.POLYLINE &&
+                       loc.TypeCode != LocationType.OPENCURVE &&
+                       loc.TypeCode != LocationType.CLOSEDCURVE)
+                        return false;
+                    break;
+                case SupportedGeometryType.POLYGON:
+                    if (loc.TypeCode != LocationType.POLYGON &&
+                        loc.TypeCode != LocationType.CURVEPOLYGON)
+                        return false;
+                    break;
+                default:
+                    return false;
+            }
+
+            return true; 
+        }
+
+        /// <summary>
+        /// Return true if the location type was repaired
+        /// </summary>
+        /// <param name="loc"></param>
+        /// <returns></returns>
+        static bool TryRepairLocationType(LocationObj loc)
+        {
+            switch (loc.MosaicShape.GeometryType())
+            {
+                case SupportedGeometryType.POINT:
+                    if(loc.TypeCode !=  LocationType.POINT)
+                    {
+                        loc.TypeCode = LocationType.POINT;
+                        return true; 
+                    }
+                    break;
+                case SupportedGeometryType.CURVEPOLYGON:
+                    if(loc.TypeCode != LocationType.CIRCLE)
+                    {
+                        loc.TypeCode = LocationType.CIRCLE;
+                        return true;
+                    }
+                    break;
+                case SupportedGeometryType.POLYLINE:
+                    //Convert a polyline to a polygon to match the location typecode
+                    if(loc.TypeCode == LocationType.POLYGON || loc.TypeCode == LocationType.CURVEPOLYGON)
+                    {
+                        SqlGeometry newShape = loc.MosaicShape.ToPoints().ToPolygon();
+                        if (newShape.STIsValid().IsTrue)
+                        {
+                            loc.MosaicShape = newShape;
+                            loc.Width = new long?();
+                            return true;
+                        }
+
+                        return false; 
+                        
+                    }
+                    break;
+                case SupportedGeometryType.POLYGON:
+                    if(loc.TypeCode == LocationType.CLOSEDCURVE || loc.TypeCode == LocationType.POLYLINE)
+                    {
+                        SqlGeometry newShape = loc.MosaicShape.ToPoints().ToPolyLine();
+                        if (newShape.STIsValid().IsTrue)
+                        {
+                            loc.MosaicShape = newShape;
+                            loc.Width = 8;
+                            return true;
+                        }
+
+                        return false; 
+                    }
+                    break;
+                default:
+                    return false;  
+            }
+
+            return false; 
+        }
+         
          
 
         static bool AnyPointsAreDifferent(GridVector2[] Original, GridVector2[] New, double epsilonSquared = 0.25)
