@@ -191,7 +191,7 @@ namespace WebAnnotation.UI.Commands
 
         protected override GridVector2[] CalculateTranslatedMosaicControlPoints()
         {
-            GridVector2 centroid = OriginalVolumeControlPoints.Centroid();
+            GridVector2 centroid = OriginalVolumeControlPoints.Average();
             ICollection<GridVector2> rotatedPoints = OriginalVolumeControlPoints.Rotate(this.Angle, centroid);
             ICollection<GridVector2> scaledPoints = rotatedPoints.Scale(this.SizeScale, centroid);
             ICollection<GridVector2> translatedPoints = scaledPoints.Translate(this.VolumePositionDeltaSum);
@@ -272,7 +272,7 @@ namespace WebAnnotation.UI.Commands
         {
             get
             {
-                return curveView.ControlPoints.Centroid();
+                return curveView.ControlPoints.Average();
             }
         }
 
@@ -314,7 +314,7 @@ namespace WebAnnotation.UI.Commands
                 LocationOpenCurveView curveToCopy = listCurves.First().obj as LocationOpenCurveView;
                 this.OriginalVolumeControlPoints = curveToCopy.VolumeControlPoints;
                 GridVector2 translatedPosition = this.TranslatedVolumePosition;
-                this.OriginalVolumePosition = OriginalVolumeControlPoints.Centroid();
+                this.OriginalVolumePosition = OriginalVolumeControlPoints.Average();
                 this.VolumePositionDeltaSum = new GridVector2(0, 0);
                 CreateView(OriginalVolumeControlPoints, curveView.Color);
             }
