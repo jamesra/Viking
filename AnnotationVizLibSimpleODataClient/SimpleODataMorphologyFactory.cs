@@ -34,7 +34,70 @@ namespace AnnotationVizLib.SimpleOData
             
             return rootGraph;
         }
-        
+
+        public static MorphologyGraph FromODataLocationIDs(ICollection<long> LocationIDs, Uri Endpoint)
+        {
+            var client = new Simple.OData.Client.ODataClient(Endpoint);
+
+            var scale = client.GetScale();
+            Debug.Assert(scale != null);
+
+            MorphologyGraph rootGraph = new MorphologyGraph(0, scale);
+            if (LocationIDs == null)
+            {
+                //TODO: Retrieve the full network if no structureID's are passed
+                return rootGraph;
+            }
+
+            List<Task<Location>> listTasks = new List<Task<SimpleOData.Location>>();
+
+            foreach (long ID in LocationIDs)
+            {
+                Task<Location> t = client.For<Location>().Filter(l => (long)l.ID == ID).FindEntryAsync();
+
+                listTasks.Add(t);
+            }
+
+            long StructureID = 0;
+
+            List<Location> listLocations = new List<Location>();
+            foreach (Task<Location> t in listTasks)
+            {
+                t.Wait();
+                Location l = t.Result;
+                if (l != null)
+                {
+                    l.scale = scale;
+
+                    listLocations.Add(l);
+
+                    StructureID = (long)l.ParentID;
+                }
+            }
+
+            //Get a structure
+            Task<Structure> st = client.For<Structure>().Filter(s => (long)s.ID == StructureID).FindEntryAsync();
+            st.Wait();
+
+
+            Structure Parent = st.Result;
+
+            MorphologyGraph graph = new MorphologyGraph((ulong)Parent.ID, scale, Parent);
+
+            LoadStructureLocationLinks(client, new Structure[] { Parent });
+
+            foreach (Location loc in listLocations)
+            {
+                //TODO: REMOVE Z * 10
+                //loc.Z *= 10;
+                graph.AddNode(new MorphologyNode((ulong)loc.ID, loc, graph));
+            }
+
+            AddLocationEdges(graph, Parent.LocationLinks.ToArray());
+
+            return graph;
+        }
+
         private static List<Structure> LoadStructures(Simple.OData.Client.ODataClient client, ICollection<long> StructureIDs, Geometry.Scale scale)
         {
             List<Task<Structure>> listTasks = new List<Task<SimpleOData.Structure>>();
@@ -173,7 +236,6 @@ namespace AnnotationVizLib.SimpleOData
             Location[] locations = s.Locations.ToArray();
             LocationLink[] location_links = s.LocationLinks.ToArray();
 
-
             if (locations.Length <= 0)
             {
                 return null;
@@ -182,10 +244,12 @@ namespace AnnotationVizLib.SimpleOData
             MorphologyGraph graph = new MorphologyGraph((ulong)s.ID, scale, s);
 
             foreach (Location loc in locations)
-            { 
+            {
+                //TODO: REMOVE Z * 10
+             //   loc.Z *= 10;
                 graph.AddNode(new MorphologyNode((ulong)loc.ID, loc, graph));
             }
-            
+
             AddLocationEdges(graph, location_links);
 
             return graph;
@@ -198,8 +262,11 @@ namespace AnnotationVizLib.SimpleOData
 
             foreach (LocationLink loc_link in location_links)
             {
-                //Only add the links with ID's less than ours to prevent duplicate links in the graph
-                graph.AddEdge(new MorphologyEdge(graph, loc_link.A, loc_link.B)); 
+                if (graph.Nodes.ContainsKey(loc_link.A) && graph.Nodes.ContainsKey(loc_link.B))
+                {
+                    //Only add the links with ID's less than ours to prevent duplicate links in the graph
+                    graph.AddEdge(new MorphologyEdge(graph, loc_link.A, loc_link.B));
+                }
             }
 
             return;

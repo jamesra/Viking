@@ -110,6 +110,35 @@ namespace MorphologyMesh
             GridPolygon polygon = new GridPolygon(externalBorder, internalBorders);
             return polygon;
         }
+
+        public static ConnectionVerticies CreatePort(ICircle2D shape, long NumPointsAroundCircle)
+        {
+            ContinuousIndexSet ExternalBorder = new ContinuousIndexSet(0, NumPointsAroundCircle);
+            //Add one internal point for the vertex at the center of the circle
+            ContinuousIndexSet InternalPoints = new ContinuousIndexSet(NumPointsAroundCircle, 1);
+            return new ConnectionVerticies(ExternalBorder, InternalPoints, null);
+        }
+
+        public static ConnectionVerticies CreatePort(IPolygon2D shape)
+        {
+            ContinuousIndexSet ExternalBorder = new ContinuousIndexSet(0, shape.ExteriorRing.Count - 1);
+
+            ContinuousIndexSet[] InternalBorders = new ContinuousIndexSet[shape.InteriorRings.Count];
+
+            int iStartVertex = shape.ExteriorRing.Count;
+            for (int i = 0; i < shape.InteriorRings.Count; i++)
+            {
+                InternalBorders[i] = new ContinuousIndexSet(iStartVertex, shape.InteriorRings.ElementAt(i).Length - 1);
+            }
+
+            return new ConnectionVerticies(ExternalBorder, null, InternalBorders);
+        }
+
+        public static ConnectionVerticies CreatePort(IPolyLine2D shape)
+        {
+            ContinuousIndexSet ExternalBorder = new ContinuousIndexSet(0, shape.Points.Count);
+            return new ConnectionVerticies(ExternalBorder);
+        }
     }
 
 }

@@ -17,8 +17,19 @@ namespace MorphologyMesh
 
     public class MeshEdge : GraphLib.Edge<ulong>
     {
+        public ConnectionVerticies SourcePort;
+        public ConnectionVerticies TargetPort; 
+
+        public MeshEdge(ulong SourceNode, ulong TargetNode, ConnectionVerticies sourcePort, ConnectionVerticies targetPort) : base(SourceNode, TargetNode, false)
+        {
+            this.SourcePort = sourcePort;
+            this.TargetPort = targetPort;
+        }
+
         public MeshEdge(ulong SourceNode, ulong TargetNode) : base(SourceNode, TargetNode, false)
-        {            
+        {
+            this.SourcePort = null;
+            this.TargetPort = null;
         }
 
         public override string ToString()
@@ -30,13 +41,12 @@ namespace MorphologyMesh
 
     public class MeshNode : GraphLib.Node<ulong, MeshEdge>
     {
-        public DynamicRenderMesh<ulong> Mesh = null;
-
-        public ConnectionVerticies UpperPort; //Connection point if attaching geometry above this node in Z
-        public ConnectionVerticies LowerPort; //Connection point if attaching geometry below this node in Z
+        public DynamicRenderMesh<ulong> Mesh = null; 
 
         public bool UpperPortCapped = false; //True if faces have been generated
         public bool LowerPortCapped = false; //True if faces have been generated
+
+        public ConnectionVerticies CapPort;
 
         public bool AdjacentToPolygon = false; 
 
@@ -67,16 +77,26 @@ namespace MorphologyMesh
         /// <summary>
         /// Return edges conneted to nodes above this node in Z
         /// </summary>
-        public ulong[] GetEdgesAbove(MeshGraph graph)
+        public ulong[] GetEdgesAbove(MeshGraph graph = null)
         {
+            if(graph == null)
+            {
+                graph = this.MeshGraph;
+            }
+
             return this.Edges.Where(e => this.IsNodeAbove(graph.Nodes[e.Key])).Select(e => e.Key).ToArray();
         }
 
         /// <summary>
         /// Return edges conneted to nodes above this node in Z
         /// </summary>
-        public ulong[] GetEdgesBelow(MeshGraph graph)
+        public ulong[] GetEdgesBelow(MeshGraph graph = null)
         {
+            if (graph == null)
+            {
+                graph = this.MeshGraph;
+            }
+
             return this.Edges.Where(e => this.IsNodeBelow(graph.Nodes[e.Key])).Select(e => e.Key).ToArray();
         }
 
@@ -93,8 +113,6 @@ namespace MorphologyMesh
 
         public MeshNode(ulong key) : base(key)
         {
-            UpperPort = null;
-            LowerPort = null;
         }
 
         public override string ToString()

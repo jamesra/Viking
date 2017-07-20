@@ -29,13 +29,10 @@ namespace MonogameTestbed
         bool ShowGroundTruth = false; 
 
         GamePadState LastGamepadState;
-
-
+         
         bool _initialized = false;
         public bool Initialized { get { return _initialized; } }
-
-       
-
+         
         public void InitGeometry()
         { 
             GridLineSegment lineSegment;
@@ -49,8 +46,9 @@ namespace MonogameTestbed
             polygon = StandardGeometryModels.CreateTestPolygon(); 
 
             triangle = new GridTriangle(new GridVector2(-10, 10),
-                                                new GridVector2(-15, 10),
-                                                new GridVector2(-12, 20));
+                                                new GridVector2(-12, 20),
+                                                 new GridVector2(-15, 10)
+                                                );
 
             
 
@@ -221,8 +219,28 @@ namespace MonogameTestbed
         */
         }
 
+        private void DrawCentroidsAndIndicies(MonoTestbed window)
+        {
+            foreach (IShape2D shape in shapes)
+            {
+                GridPolygon poly = shape as GridPolygon;
+
+                if (poly != null)
+                {
+                    GridVector2 convexHullCentroid;
+                    long FirstIndex = MorphologyMesh.SmoothMeshGenerator.FirstIndex(poly.ExteriorRing, out convexHullCentroid);
+
+                    CircleView firstIndexView = new CircleView(new GridCircle(poly.ExteriorRing[FirstIndex], Math.Sqrt(poly.Area) / 10), Color.Black);
+                    CircleView centroidView = new CircleView(new GridCircle(poly.Centroid, Math.Sqrt(poly.Area) / 20), Color.Yellow);
+                    CircleView.Draw(window.GraphicsDevice, window.Scene, window.basicEffect, window.overlayEffect, new CircleView[] { firstIndexView, centroidView });
+                }
+            }
+        }
+
         public void DrawViews(MonoTestbed window, ICollection<IColorView> listViews)
         {
+            DrawCentroidsAndIndicies(window);
+
             MeshView<VertexPositionColor> meshView = new MeshView<VertexPositionColor>();
             foreach(IColorView view in listViews)
             {

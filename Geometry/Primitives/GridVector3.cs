@@ -227,9 +227,19 @@ namespace Geometry
             return new GridVector3(A.coords.Select((val, i) => val * scalar).ToArray());
         }
 
+        static public GridVector3 operator *(GridVector3 A, GridVector3 B)
+        {
+            return new GridVector3(A.coords.Select((a, i) => a * B.coords[i]).ToArray());
+        }
+
         static public GridVector3 operator /(GridVector3 A, double scalar)
         {
             return new GridVector3(A.coords.Select((val, i) => val / scalar).ToArray());
+        }
+
+        static public GridVector3 operator /(GridVector3 A, GridVector3 B)
+        {
+            return new GridVector3(A.coords.Select((a, i) => a / B.coords[i]).ToArray());
         }
 
         static public bool operator ==(GridVector3 A, GridVector3 B)

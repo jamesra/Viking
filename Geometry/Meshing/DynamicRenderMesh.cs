@@ -261,6 +261,13 @@ namespace Geometry.Meshing
             }
         }
 
+        public GridVector3 Normal(Face f)
+        {
+            Vertex[] verticies = GetVerts(f.iVerts).ToArray();
+            GridVector3 normal = GridVector3.Cross(verticies[0].Position, verticies[1].Position, verticies[2].Position);
+            return normal;
+        }
+
         /// <summary>
         /// Recalculate normals based on the faces touching each vertex
         /// </summary>
@@ -269,13 +276,21 @@ namespace Geometry.Meshing
             //Calculate normals for all faces
             Dictionary<Face, GridVector3> normals = new Dictionary<Meshing.Face, Geometry.GridVector3>(this.Faces.Count);
 
+            foreach(Face f in this.Faces)
+            {
+                GridVector3 normal = Normal(f);
+                normals.Add(f, normal);
+            }
+
+            /*
+             * Profiling showed this implementation to be much slower
             for(int i = 0; i < Faces.Count; i++)
             {
                 Face f = this.Faces.ElementAt(i);
-                Vertex[] verticies = GetVerts(f.iVerts).ToArray();
-                GridVector3 normal = GridVector3.Cross(verticies[0].Position, verticies[1].Position, verticies[2].Position);
+                GridVector3 normal = Normal(f);
                 normals.Add(f, normal);
             }
+            */
 
             for(int i = 0; i < Verticies.Count; i++)
             {

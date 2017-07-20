@@ -42,6 +42,18 @@ namespace MonogameTestbed
                                                                                                { ENDPOINT.RC2, new Uri("http://websvc1.connectomes.utah.edu/RC2/OData") },
                                                                                                { ENDPOINT.TEMPORALMONKEY, new Uri("http://websvc1.connectomes.utah.edu/NeitzTemporalMonkey/OData") }};
 
+        long[] TroubleIDS = new long[] {
+            //5868, //Z: 231
+            //5872, //Z: 232
+//            6085,   //Z: 235
+            //1333634, //Z: 235
+            1026126, //Z: 234
+            1026127, //Z: 233
+            //1026128,  //Z: 232
+            //1026129, //Z: 231
+            };
+                             
+
         public void Init(MonoTestbed window)
         {
             _initialized = true;
@@ -55,17 +67,25 @@ namespace MonogameTestbed
 
             //meshes = InitSmallSmoothModelFromOData(144287, ENDPOINT.TEST);
             //meshes = InitSmallSmoothModelFromOData(1, ENDPOINT.RC2);
+            //meshes = InitSmallSmoothModelFromOData(5554, ENDPOINT.RC2);
+
+            //Bad polygon Location #1026126.  Position X: 62134.0	Y: 51034.8	Z: 234	DS: 1.97
             meshes = InitSmallSmoothModelFromOData(180, ENDPOINT.TEST);
+            //            meshes = InitSmallSmoothModelFromODataLocations(TroubleIDS, ENDPOINT.TEST);
+
             //meshes = InitSmallSmoothModelFromOData(207, ENDPOINT.TEMPORALMONKEY);
             //meshes = InitSmallModelFromOData(476);
             //meshes = InitSmallModelFromOData(1);
 
             GridBox bbox = meshes.First().BoundingBox;
 
-            this.Scene.Camera.Position = (bbox.CenterPoint * 0.9).ToXNAVector3();
+            this.Scene.Camera.Position = (bbox.CenterPoint - new GridVector3(bbox.Width / 2.0, bbox.Height / 2.0, 0)).ToXNAVector3();
+            //this.Scene.Camera.Position = (bbox.CenterPoint * 0.9).ToXNAVector3();
+            //this.Scene.Camera.Position = new Vector3(this.Scene.Camera.Position.X, this.Scene.Camera.Position.Y, -this.Scene.Camera.Position.Z);
+            //            this.Scene.Camera.Position = bbox.CenterPoint.ToXNAVector3();
             this.Scene.Camera.LookAt = Vector3.Zero;
 
-            this.Scene.Camera.Position += new Vector3((float)bbox.Width, (float)bbox.Height, (float)bbox.Depth);
+            //this.Scene.Camera.Position += new Vector3((float)bbox.Width, (float)bbox.Height, (float)bbox.Depth);
             //this.Scene.Camera.Rotation = new Vector3(4.986171f, 1.67181f, 0);
             //this.Scene.Camera.LookAt = meshes.First().BoundingBox.CenterPoint.ToXNAVector3();            
              
@@ -94,9 +114,58 @@ namespace MonogameTestbed
         { 
             AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromOData(new long[] { CellID }, true, EndpointMap[endpoint]);
 
+            //SelectZRange(graph, 231, 235);
+            //SelectSubsetOfIDs(graph, TroubleIDS);
+
             //MorphologyMesh.TopologyMeshGenerator generator = new MorphologyMesh.TopologyMeshGenerator();
             return RecursivelyGenerateMeshes(graph);
         }
+
+        /// <summary>
+        /// Create a tube of circles offset slighty each section
+        /// </summary>
+        public ICollection<DynamicRenderMesh<ulong>> InitSmallSmoothModelFromODataLocations(long[] LocationIDs, ENDPOINT endpoint)
+        {
+            AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromODataLocationIDs(LocationIDs, EndpointMap[endpoint]);
+             
+            //MorphologyMesh.TopologyMeshGenerator generator = new MorphologyMesh.TopologyMeshGenerator();
+            return RecursivelyGenerateMeshes(graph);
+        }
+
+        private void SelectZRange(AnnotationVizLib.MorphologyGraph graph, int StartZ, int EndZ)
+        {
+            AnnotationVizLib.MorphologyNode[] nodes = graph.Nodes.Values.Where(n => n.UnscaledZ < StartZ || n.UnscaledZ > EndZ).ToArray();
+            
+            for(int i = 0; i < nodes.Length; i++)
+            {
+                graph.RemoveNode(nodes[i].Key);
+            }
+
+            foreach(AnnotationVizLib.MorphologyGraph subgraph in graph.Subgraphs.Values)
+            {
+                SelectZRange(subgraph, StartZ, EndZ);
+            }
+
+            return;
+        }
+
+        private void SelectSubsetOfIDs(AnnotationVizLib.MorphologyGraph graph, long[] IDs)
+        {
+            AnnotationVizLib.MorphologyNode[] nodes = graph.Nodes.Values.Where(n => !IDs.Contains((long)n.Key)).ToArray();
+
+            for (int i = 0; i < nodes.Length; i++)
+            {
+                graph.RemoveNode(nodes[i].Key);
+            }
+
+            foreach (AnnotationVizLib.MorphologyGraph subgraph in graph.Subgraphs.Values)
+            {
+                SelectSubsetOfIDs(subgraph, IDs); 
+            }
+            
+            return;
+        }
+
 
         private ICollection<DynamicRenderMesh<ulong>> RecursivelyGenerateMeshes(AnnotationVizLib.MorphologyGraph graph)
         {
@@ -129,7 +198,10 @@ namespace MonogameTestbed
                 this.Scene.Camera.Position = new Vector3(0, -10, 0);
             }
 
-            labelCamera.Text = string.Format("{0}\n{1}\n{2}", Scene.Camera.Position, Scene.Camera.LookAt, Scene.Camera.Rotation);
+            GridVector3 VolumePosition = Scene.Camera.Position.ToGridVector3();
+            VolumePosition /= new GridVector3(2.18, 2.18, -90);
+
+            labelCamera.Text = string.Format("{0}\n{1}\n{2}", Scene.Camera.Position, VolumePosition, Scene.Camera.Rotation);
         }
 
         public void Draw(MonoTestbed window)
@@ -144,15 +216,12 @@ namespace MonogameTestbed
 
             window.GraphicsDevice.DepthStencilState = dstate;
             //window.GraphicsDevice.BlendState = BlendState.Opaque;
-            meshView.Draw(window.GraphicsDevice, this.Scene); 
+            meshView.Draw(window.GraphicsDevice, this.Scene, CullMode.None); 
 
             
             window.spriteBatch.Begin();
             labelCamera.Draw(window.spriteBatch, window.fontArial, window.Scene);
             window.spriteBatch.End(); 
         }
-
-
-
     }
 }

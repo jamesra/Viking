@@ -23,7 +23,7 @@ namespace VikingXNAGraphics
         {
         }
         
-        public void Draw(GraphicsDevice device, IScene scene)
+        public void Draw(GraphicsDevice device, IScene scene, CullMode cullmode = CullMode.CullCounterClockwiseFace)
         {
             if (models == null)
                 return;
@@ -36,14 +36,14 @@ namespace VikingXNAGraphics
             if (WireFrame)
             {
                 RasterizerState rstate = new RasterizerState();
-                rstate.CullMode = CullMode.CullClockwiseFace;
+                rstate.CullMode = cullmode;
                 rstate.FillMode = FillMode.WireFrame;
                 device.RasterizerState = rstate;
             }
             else
             {
                 RasterizerState rstate = new RasterizerState();
-                rstate.CullMode = CullMode.CullClockwiseFace;
+                rstate.CullMode = cullmode;
                 rstate.FillMode = FillMode.Solid;
                 device.RasterizerState = rstate;
             }

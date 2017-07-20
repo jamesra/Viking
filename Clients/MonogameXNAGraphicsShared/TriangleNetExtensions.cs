@@ -43,15 +43,29 @@ namespace VikingXNAGraphics
         public static PositionColorMeshModel CreateMeshModel(this TriangleNet.Meshing.IMesh mesh, Color color)
         {
             PositionColorMeshModel meshModel = new PositionColorMeshModel();
-            meshModel.Verticies = mesh.Vertices.Select(v => new VertexPositionColor(new Vector3((float)v.X, (float)v.Y, 0), color)).ToArray();
+            VertexPositionColor[] vertArray = mesh.Vertices.Select(v => new VertexPositionColor(new Vector3((float)v.X, (float)v.Y, 0), color)).ToArray();
+            meshModel.Verticies = vertArray;
 
             List<int> edges = new List<int>(mesh.Vertices.Count * 3);
 
             foreach (TriangleNet.Topology.Triangle tri in mesh.Triangles)
             {
-                edges.Add(tri.GetVertexID(0));
-                edges.Add(tri.GetVertexID(1));
-                edges.Add(tri.GetVertexID(2));
+                GridVector2[] verts = new GridVector2[] { vertArray[tri.GetVertexID(0)].Position.ToGridVector3().XY(),
+                                                  vertArray[tri.GetVertexID(1)].Position.ToGridVector3().XY(),
+                                                  vertArray[tri.GetVertexID(2)].Position.ToGridVector3().XY()};
+
+                if (verts.AreClockwise())
+                {
+                    edges.Add(tri.GetVertexID(0));
+                    edges.Add(tri.GetVertexID(1));
+                    edges.Add(tri.GetVertexID(2));
+                }
+                else
+                {
+                    edges.Add(tri.GetVertexID(1));
+                    edges.Add(tri.GetVertexID(0));
+                    edges.Add(tri.GetVertexID(2));
+                }
             }
 
             meshModel.Edges = edges.ToArray(); 

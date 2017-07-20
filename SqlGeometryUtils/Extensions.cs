@@ -38,20 +38,13 @@ namespace SqlGeometryUtils
             return shape.ExteriorRing.ToPolygon(shape.InteriorRings);
         }
 
-        public static IShapeCollection2D ToPolyLine(this SqlGeometry shape)
+        public static IPolyLine2D ToPolyLine(this SqlGeometry shape)
         {
             if (shape.GeometryType() != SupportedGeometryType.POLYLINE)
                 throw new ArgumentException("SqlGeometry must be a polygon type");
 
             GridVector2[] points = shape.ToPoints();
-            Shape2DCollection collection = new Shape2DCollection(points.Length);
-            for (int i = 0; i < points.Length-1; i++)
-            {
-                GridLineSegment line = new GridLineSegment(points[i], points[i + 1]);
-                collection.Add(line);
-            }
-
-            return collection;
+            return new GridPolyline(points.Cast<IPoint2D>());
         }
 
         public static GridCircle ToCircle(this SqlGeometry shape)
@@ -131,6 +124,14 @@ namespace SqlGeometryUtils
 
             return geom.STEquals(other).Value;
         }
+
+        public static void ThrowIfInvalid(this SqlGeometry geom)
+        {
+            if(geom.STIsValid().IsFalse)
+            {
+                throw new ArgumentException(string.Format("Geometry invalid\n{0}\n{1}", geom.ToString(), geom.IsValidDetailed()));
+            }
+        }
         
 
         public static Microsoft.SqlServer.Types.SqlGeometry ToGeometryPoint(this GridVector2 p)
@@ -206,7 +207,10 @@ namespace SqlGeometryUtils
             }
             builder.EndFigure();
             builder.EndGeometry();
+            builder.ConstructedGeometry.ThrowIfInvalid();
             return builder.ConstructedGeometry;
+
+
             /*
             StringBuilder PolyStringBuilder = new StringBuilder();
             PolyStringBuilder.Append("LINESTRING");
@@ -233,7 +237,11 @@ namespace SqlGeometryUtils
             }
 
             builder.EndGeometry();
-            return builder.ConstructedGeometry;
+
+            SqlGeometry polygon = builder.ConstructedGeometry;
+            polygon.ThrowIfInvalid();
+
+            return polygon;
 
             /*
             StringBuilder PolyStringBuilder = new StringBuilder();

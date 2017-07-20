@@ -11,11 +11,30 @@ namespace Geometry
         {
             int[] ordered_idx = points.Select((p, i) => i).ToArray();
 
+            if(points.Count == 1)
+            {
+                original_indicies = ordered_idx;
+                return points.ToArray();
+            }
+
+            //If the points are a cycle, then make each point unique
+            if (points.First() == points.Last())
+            {
+                GridVector2[] newArray = new GridVector2[points.Count - 1];
+                Array.Copy(points.ToArray(), newArray, newArray.Length);
+                points = newArray;
+                ordered_idx = points.Select((p, i) => i).ToArray();
+            }
+
             if (points.Count <= 3)
             {
                 original_indicies = ordered_idx;
                 return points.ToArray(); //All points are on convex hull
             }
+
+            //I've seen bugs with this code for very large numbers.  So I center the points on the centroid
+
+
 
             //Sort and return the index of original points
             Array.Sort<int>(ordered_idx, (a, b) => points[a].CompareTo(points[b]));

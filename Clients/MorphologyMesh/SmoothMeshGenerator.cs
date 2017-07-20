@@ -13,6 +13,7 @@ using TriangleNet;
 using TriangleNet.Meshing;
 using TriangleNet.Geometry;
 using System.Collections;
+using System.Diagnostics;
 
 namespace MorphologyMesh
 {
@@ -24,48 +25,13 @@ namespace MorphologyMesh
         static public int NumPointsAroundCircleAdjacentToPolygon = 64;
 
         /// <summary>
-        /// Convert a morphology graph to an unprocessed mesh graph
-        /// </summary>
-        /// <param name="graph"></param>
-        /// <returns></returns>
-        public static MeshGraph ConvertToMeshGraph(this MorphologyGraph graph)
-        {
-            MeshGraph meshGraph = new MeshGraph();
-
-            meshGraph.SectionThickness = graph.SectionThickness;
-
-            //Create a graph where each node is a set of verticies.
-            ConcurrentBag<MeshNode> nodes = new ConcurrentBag<MeshNode>();
-
-            graph.Nodes.Values.AsParallel().ForAll(node =>
-           {
-               MeshNode newNode = SmoothMeshGenerator.CreateNode(node);
-               newNode.MeshGraph = meshGraph;
-               nodes.Add(newNode);
-           });
-
-           MeshNode meshNode = null;
-           while (nodes.TryTake(out meshNode))
-           {
-                meshGraph.AddNode(meshNode);
-           }
-               
-            foreach (MorphologyEdge edge in graph.Edges.Values)
-            {
-                meshGraph.AddEdge(new MeshEdge(edge.SourceNodeKey, edge.TargetNodeKey));
-            }
-
-            return meshGraph;
-        }
-
-        /// <summary>
         /// Generate a mesh for a cell
         /// </summary>
         /// <param name="graph"></param>
         /// <returns></returns>
         public static ICollection<DynamicRenderMesh<ulong>> Generate(MorphologyGraph graph)
         {
-            MeshGraph mGraph = ConvertToMeshGraph(graph);
+            MeshGraph mGraph = MeshGraphBuilder.ConvertToMeshGraph(graph);
             return Generate(mGraph);
         }
 
@@ -78,6 +44,44 @@ namespace MorphologyMesh
         {
             //Adjust the verticies so the models are centered on zero
             //GridVector3 translate = -meshGraph.BoundingBox.CenterPoint;
+
+            //Cap the terminal ports so they are not lost when we merge branches.  Since nodes can only have one upper and lower port we lose one branches port if we don't cap in advance.
+
+            List<DynamicRenderMesh<ulong>> listMeshes = new List<DynamicRenderMesh<ulong>>();
+
+#if DEBUG
+            foreach (var Node in meshGraph.Nodes.Values)
+            {
+                CapTerminalPorts(Node);
+            }
+#else
+            meshGraph.Nodes.Values.AsParallel().ForAll((node) => { CapTerminalPorts(node); });
+#endif
+
+#if DEBUG
+            /*
+            foreach (MeshNode node in meshGraph.Nodes.Values)
+            {
+                
+                GridPolygon poly = PolygonForPort(node.Mesh, node.CapPort);
+                GridVector2 convexHullCentroid;
+                long FirstIndex = SmoothMeshGenerator.FirstIndex(poly.ExteriorRing, out convexHullCentroid);
+                long SecondIndex = FirstIndex + 1 > poly.ExteriorRing.Length ? 0 : FirstIndex + 1; 
+
+                DynamicRenderMesh<ulong> centroidMesh = ShapeMeshGenerator<ulong>.CreateMeshForCircle(new GridCircle(poly.Centroid, 16), node.Z, 16, node.Key, GridVector3.Zero);
+                listMeshes.Add(centroidMesh);
+
+                DynamicRenderMesh<ulong> convexHullCentroidMesh = ShapeMeshGenerator<ulong>.CreateMeshForBox(new GridBox(new GridRectangle(convexHullCentroid, 8), node.Z - 1, node.Z + 1), node.Key, GridVector3.Zero);
+                listMeshes.Add(convexHullCentroidMesh);
+
+                DynamicRenderMesh<ulong> firstIndexMesh = ShapeMeshGenerator<ulong>.CreateMeshForCircle(new GridCircle(poly.ExteriorRing[FirstIndex], 8), node.Z, 16, node.Key, GridVector3.Zero);
+                listMeshes.Add(firstIndexMesh);
+
+                DynamicRenderMesh<ulong> secondIndexMesh = ShapeMeshGenerator<ulong>.CreateMeshForBox(new GridBox(new GridRectangle(poly.ExteriorRing[SecondIndex], 8), node.Z-1, node.Z + 1), node.Key, GridVector3.Zero);
+                listMeshes.Add(secondIndexMesh);
+            }
+            */
+#endif
 
             int EdgesProcessed = 1;
 
@@ -92,7 +96,8 @@ namespace MorphologyMesh
                     if (!(meshGraph.Nodes.ContainsKey(edge.SourceNodeKey) &&
                        meshGraph.Nodes.ContainsKey(edge.TargetNodeKey)))
                         continue;
-
+                     
+                    /*
                     MeshNode A = meshGraph.Nodes[edge.SourceNodeKey];
                     MeshNode B = meshGraph.Nodes[edge.TargetNodeKey];
 
@@ -123,45 +128,108 @@ namespace MorphologyMesh
                     {
 
                     }
+                    */
+
+                    MergeMeshEdge(meshGraph, edge);
+                    EdgesProcessed++;
 
                     //TODO: Merge the nodes in the graph 
                 }
             }
 
-            //Cap the terminal ports so they are not lost when we merge branches.  Since nodes can only have one upper and lower port we lose one branches port if we don't cap in advance.
-            meshGraph.Nodes.Values.AsParallel().ForAll((node) => { CapTerminalPorts(node); });
 
-            foreach (MeshNode node in meshGraph.Nodes.Values.ToArray())
+            List<MeshNode> nodesToMerge = meshGraph.Nodes.Values.Where(n => IsValidBranchToMerge(n)).ToList();
+
+            /*
+            while (nodesToMerge.Count > 0)
             {
-                if (node.GetEdgesAbove(meshGraph).Length > 1)
+                foreach (MeshNode node in nodesToMerge)
                 {
-                    //SimpleMergeBranchNode(node, true);
-                    UglyMergeBranchNode(node, true);
+                    if (node.GetEdgesAbove(meshGraph).Length > 1)
+                    {
+                        //SimpleMergeBranchNode(node, true);
+                        UglyMergeBranchNode(node, true);
+                    }
+
+                    if (node.GetEdgesBelow(meshGraph).Length > 1)
+                    {
+                        //SimpleMergeBranchNode(node, false);
+                        UglyMergeBranchNode(node, false);
+                    }
                 }
 
-                if (node.GetEdgesBelow(meshGraph).Length > 1)
-                {
-                    //SimpleMergeBranchNode(node, false);
-                    UglyMergeBranchNode(node, false);
-                }
+                nodesToMerge = meshGraph.Nodes.Values.Where(n => IsValidBranchToMerge(n)).ToList();
             }
+            */
 
+            meshGraph.Nodes.Values.AsParallel().ForAll((node) => { node.Mesh.RecalculateNormals(); });
+
+            /*
 #if DEBUG
+
             //OK, the remaining nodes need to have caps put on thier faces
             foreach (MeshNode node in meshGraph.Nodes.Values)
             {
-                CapPorts(node);
                 node.Mesh.RecalculateNormals();
             }
 #else
 
-            meshGraph.Nodes.Values.AsParallel().ForAll((node) => { CapPorts(node); node.Mesh.RecalculateNormals(); });
+            meshGraph.Nodes.Values.AsParallel().ForAll((node) => { node.Mesh.RecalculateNormals(); });
 #endif
-
+*/
 
             //Todo: Not all nodes may be merged.  For these nodes just merge the meshes so we return a single mesh.
 
-            return meshGraph.Nodes.Select(n => n.Value.Mesh).ToArray();
+            listMeshes.AddRange(meshGraph.Nodes.Select(n => n.Value.Mesh).ToArray());
+            return listMeshes.ToArray();
+        }
+
+        /// <summary>
+        /// When we merge branches we remove the merged nodes.  However if there are merges that occur on the deleted nodes we do not get the updates.
+        /// As a result we need to only merge branches whose branches are terminals or have already had all downstream branches merges.
+        /// 
+        /// Ex:
+        /// E   F   G
+        /// |    \ /
+        /// C     D
+        ///  \   /
+        ///   \ /
+        ///    B
+        ///    |
+        ///    A
+        ///    
+        /// If we merge BCD first then C&D have incomplete models.  When DFG is merged that model update is not incorporated into the ABCD mesh.
+        /// Instead we should merge DFG, then merge BCD.
+        /// This function returns true if all branches are terminal
+        /// </summary>
+        /// <param name="node"></param>
+        /// <returns></returns>
+        private static bool IsValidBranchToMerge(MeshNode node)
+        {
+            ulong[] branchesAbove = node.GetEdgesAbove(node.MeshGraph);
+            ulong[] branchesBelow = node.GetEdgesBelow(node.MeshGraph);
+
+            //Return false if there is no branch
+            if (branchesAbove.Length <= 1 && branchesBelow.Length <= 1)
+                return false; 
+
+            for (int i = 0; i < branchesAbove.Length; i++)
+            {
+                ulong ID = branchesAbove[i];
+                MeshNode branchNode = node.MeshGraph.Nodes[ID];                
+                if (branchNode.GetEdgesAbove().Length > 1)
+                    return false;  
+            }
+
+            for (int i = 0; i < branchesBelow.Length; i++)
+            {
+                ulong ID = branchesBelow[i];
+                MeshNode branchNode = node.MeshGraph.Nodes[ID];
+                if (branchNode.GetEdgesBelow().Length > 1)
+                    return false;
+            }
+
+            return true;
         }
 
         private static GridVector3[] AllPointsInConnection(DynamicRenderMesh mesh, ConnectionVerticies port)
@@ -175,6 +243,7 @@ namespace MorphologyMesh
             return listPoints.ToArray();
         }
 
+        /*
         private static void SimpleMergeBranchNode(MeshNode branchNode, bool BranchAbove)
         {
             //We have a node with two edges above or below the node. 
@@ -218,7 +287,8 @@ namespace MorphologyMesh
             else
                 branchNode.LowerPortCapped = true; 
         }
-
+        */
+        /*
         /// <summary>
         /// Create a branch by creating faces that intersect
         /// </summary>
@@ -267,7 +337,9 @@ namespace MorphologyMesh
             }
 
         }
+        */
 
+            /*
         /// <summary>
         /// Create a branch by dividing the port into multiple parts according to which branch is closest and merge the ports
         /// </summary>
@@ -331,9 +403,8 @@ namespace MorphologyMesh
             }*/
 
             //Divide the branch node's port into sub-ports for each branch.
-            //How???? 
-            
-        }
+            //How????  
+       // }
 
         /// <summary>
         /// Place faces over the ports of a node. Done when no further joins are expected
@@ -372,7 +443,7 @@ namespace MorphologyMesh
         {
             if (node.UpperPortCapped == false)
             {
-                CapPort(node.Mesh, node.UpperPort, true);
+                CapPort(node.Mesh, node.CapPort, true);
                 node.UpperPortCapped = true;
             } 
         }
@@ -385,7 +456,7 @@ namespace MorphologyMesh
         {
             if (node.LowerPortCapped == false)
             {
-                CapPort(node.Mesh, node.LowerPort, false);
+                CapPort(node.Mesh, node.CapPort, false);
                 node.LowerPortCapped = true;
             }
         }
@@ -492,13 +563,105 @@ namespace MorphologyMesh
             DynamicRenderMesh<ulong> CompositeMesh;
              
             int NewStartingIndex = KeepNode.Mesh.Append(RemoveNode.Mesh);
-            RemoveNode.UpperPort = RemoveNode.UpperPort.IncrementStartingIndex(NewStartingIndex);
-            RemoveNode.LowerPort = RemoveNode.LowerPort.IncrementStartingIndex(NewStartingIndex);
-            CompositeMesh = KeepNode.Mesh;
 
+            foreach(var OtherNodeKey in RemoveNode.Edges.Keys)
+            {
+                foreach(MeshEdge edge in RemoveNode.Edges[OtherNodeKey])
+                {
+                    bool RemoveNodeIsSource = RemoveNode.Key == edge.SourceNodeKey;
+                    if(RemoveNodeIsSource)
+                    {
+                        edge.SourcePort = edge.SourcePort.IncrementStartingIndex(NewStartingIndex);
+                    }
+                    else
+                    {
+                        edge.TargetPort = edge.TargetPort.IncrementStartingIndex(NewStartingIndex);
+                    }
+                }
+            }
+
+            CompositeMesh = KeepNode.Mesh;
             return CompositeMesh;
         }
 
+        private static void MergeMeshEdge(MeshGraph graph, MeshEdge edge)
+        {
+            DynamicRenderMesh<ulong> CompositeMesh = null;
+            MeshNode KeepNode = null;
+            MeshNode RemoveNode = null;
+            ConnectionVerticies KeepPort;
+            ConnectionVerticies RemovePort;
+
+            bool KeepTarget = graph.Nodes[edge.SourceNodeKey].Mesh.Verticies.Count < graph.Nodes[edge.TargetNodeKey].Mesh.Verticies.Count;
+
+            if (KeepTarget)
+            {
+                KeepNode = graph.Nodes[edge.TargetNodeKey];
+                RemoveNode = graph.Nodes[edge.SourceNodeKey];
+            }
+            else
+            {
+                KeepNode = graph.Nodes[edge.SourceNodeKey];
+                RemoveNode = graph.Nodes[edge.TargetNodeKey];
+            }
+
+#if DEBUG
+            System.Diagnostics.Trace.WriteLine(string.Format("Merge {0} - {1}", KeepNode.Key, RemoveNode.Key));
+#endif
+
+
+            CompositeMesh = MergeMeshes(KeepNode, RemoveNode);
+
+            if (KeepTarget)
+            {
+                KeepPort = edge.TargetPort;
+                RemovePort = edge.SourcePort;
+            }
+            else
+            {
+                KeepPort = edge.SourcePort;
+                RemovePort = edge.TargetPort;
+            }
+
+            bool KeepIsUpper = KeepNode.IsNodeBelow(RemoveNode);
+
+            AttachPorts(CompositeMesh, 
+                        KeepIsUpper ? KeepPort : RemovePort,
+                        KeepIsUpper ? RemovePort : KeepPort);
+
+            RemoveMergedEdge(KeepNode, RemoveNode);
+        }
+
+        private static void RemoveMergedEdge(MeshNode KeepNode, MeshNode RemoveNode)
+        {
+            MeshGraph graph = KeepNode.MeshGraph;
+            MeshEdge removedEdge = new MeshEdge(KeepNode.Key, RemoveNode.Key);
+            graph.RemoveEdge(removedEdge);
+
+            foreach (var OtherNodeID in RemoveNode.Edges.Keys)
+            {
+                //Don't keep the edges that we just merged
+                if (OtherNodeID == KeepNode.Key)
+                {
+                    continue;
+                }
+
+                foreach (MeshEdge EdgeToNode in RemoveNode.Edges[OtherNodeID])
+                {
+                    bool RemovedNodeIsSource = EdgeToNode.SourceNodeKey == RemoveNode.Key;
+                    ulong SourceKey = RemovedNodeIsSource ? KeepNode.Key : OtherNodeID;
+                    ulong TargetKey = RemovedNodeIsSource ? OtherNodeID : KeepNode.Key;
+                    MeshEdge newEdge = new MeshEdge(SourceKey, TargetKey, EdgeToNode.SourcePort, EdgeToNode.TargetPort);
+
+                    //Do not add the edge if it exists, this can happen if the graph has a cycle
+                    if (!graph.Edges.ContainsKey(newEdge))
+                        graph.AddEdge(newEdge);
+                }
+            }
+
+            graph.RemoveNode(RemoveNode.Key);
+        }
+        /*
         private static void MergeMeshNodes(MeshGraph graph, MeshNode A, MeshNode B)
         {
             MeshNode UpperNode = A.IsNodeAbove(B) ? B : A;
@@ -520,29 +683,47 @@ namespace MorphologyMesh
                 MergedNode = LowerNode;
                 RemoveNode = UpperNode;
             }
-
+            
             AttachPorts(CompositeMesh, UpperNode.LowerPort, LowerNode.UpperPort);
-             
+
             //Remove the nodes and replace with the new nodes and edges
             MeshGraph meshGraph = MergedNode.MeshGraph;
 
             MergedNode.Mesh = CompositeMesh;
             UpperNode.LowerPort = LowerNode.LowerPort;
-            LowerNode.UpperPort = UpperNode.UpperPort; 
+            LowerNode.UpperPort = UpperNode.UpperPort;
 
+            RemoveMergedEdge(MergedNode, RemoveNode);
+            */
+            /*
             MeshEdge removedEdge = new MeshEdge(MergedNode.Key, RemoveNode.Key);
             graph.RemoveEdge(removedEdge);
 
-            foreach (var Edge in RemoveNode.Edges.Keys)
+            foreach (var OtherNodeID in RemoveNode.Edges.Keys)
             {
-                MeshEdge newEdge = new MeshEdge(MergedNode.Key, Edge);
-                //Do not add the edge if it exists, this can happen if the graph has a cycle
-                if (!graph.Edges.ContainsKey(newEdge))
-                    graph.AddEdge(newEdge);
+                //Don't keep the edges that we just merged
+                if(OtherNodeID == MergedNode.Key)
+                {
+                    continue;
+                }
+
+                foreach(MeshEdge EdgeToNode in RemoveNode.Edges[OtherNodeID])
+                {
+                    bool RemovedNodeIsSource = EdgeToNode.SourceNodeKey == RemoveNode.Key;
+                    ulong SourceKey = RemovedNodeIsSource ? MergedNode.Key : OtherNodeID;
+                    ulong TargetKey = RemovedNodeIsSource ? OtherNodeID : MergedNode.Key;
+                    MeshEdge newEdge = new MeshEdge(SourceKey, TargetKey, EdgeToNode.SourcePort, EdgeToNode.TargetPort);
+
+                    //Do not add the edge if it exists, this can happen if the graph has a cycle
+                    if (!graph.Edges.ContainsKey(newEdge))
+                        graph.AddEdge(newEdge);
+                }
             }
 
             graph.RemoveNode(RemoveNode.Key);
-        }
+
+            */
+    //    }
 
 
         /// <summary>
@@ -576,25 +757,49 @@ namespace MorphologyMesh
         private static void AttachClosedPorts(DynamicRenderMesh<ulong> CompositeMesh, IIndexSet UpperIndexArray, IIndexSet LowerIndexArray)
         {
 
-            System.Diagnostics.Debug.Assert(CompositeMesh[UpperIndexArray.First()].Position.Z >= CompositeMesh[LowerIndexArray.First()].Position.Z,
-                string.Format("Upper and lower ports have incorrect Z relationship Upper: {0} Lower: {1}", CompositeMesh[UpperIndexArray.First()].Position.Z, CompositeMesh[LowerIndexArray.First()].Position.Z));
+            //System.Diagnostics.Debug.Assert(CompositeMesh[UpperIndexArray.First()].Position.Z >= CompositeMesh[LowerIndexArray.First()].Position.Z,
+            //    string.Format("Upper and lower ports have incorrect Z relationship Upper: {0} Lower: {1}", CompositeMesh[UpperIndexArray.First()].Position.Z, CompositeMesh[LowerIndexArray.First()].Position.Z));
+           
             //OK, find the nearest two verticies between the ports, and walk counter-clockwise (incrementing the index) around the shapes.  Creating faces until we are finished.
             //Find the verticies on the exterior ring
             GridVector2[] UpperVerticies = UpperIndexArray.Select(i => new GridVector2(CompositeMesh.Verticies[(int)i].Position.X, CompositeMesh.Verticies[(int)i].Position.Y)).ToArray();
             GridVector2[] LowerVerticies = LowerIndexArray.Select(i => new GridVector2(CompositeMesh.Verticies[(int)i].Position.X, CompositeMesh.Verticies[(int)i].Position.Y)).ToArray();
 
+            List<GridVector2> UpperPolyVertList = UpperVerticies.ToList();
+            UpperPolyVertList.Add(UpperPolyVertList.First());
 
-            GridVector2 LowerPortCentroid = GridPolygon.CalculateCentroid(LowerVerticies);
-            GridVector2 UpperPortCentroid = GridPolygon.CalculateCentroid(UpperVerticies);
+            List<GridVector2> LowerPolyVertList = LowerVerticies.ToList();
+            LowerPolyVertList.Add(LowerPolyVertList.First());
 
-            LowerVerticies = LowerVerticies.Translate(-LowerPortCentroid);
-            UpperVerticies = UpperVerticies.Translate(-UpperPortCentroid);
+            /*
+            GridPolygon upperPoly = new GridPolygon(UpperPolyVertList.ToArray());
+            GridPolygon lowerPoly = new GridPolygon(LowerPolyVertList.ToArray());
 
-            long UpperStart = FirstIndex(UpperVerticies);
-            long LowerStart = FirstIndex(LowerVerticies);
+            GridVector2 LowerPortCentroid = lowerPoly.Centroid;
+            GridVector2 UpperPortCentroid = upperPoly.Centroid;
+            */
+
+            //Debug.Assert(lowerPoly.Contains(LowerPortCentroid));
+            //Debug.Assert(upperPoly.Contains(UpperPortCentroid));
+
             
+
+            GridVector2 LowerPortConvexHullCentroid;
+            GridVector2 UpperPortConvexHullCentroid;
+
+            long UpperStart = FirstIndex(UpperVerticies, out UpperPortConvexHullCentroid);
+            long LowerStart = FirstIndex(LowerVerticies, out LowerPortConvexHullCentroid);
+
+            LowerVerticies = LowerVerticies.Translate(-LowerPortConvexHullCentroid);
+            UpperVerticies = UpperVerticies.Translate(-UpperPortConvexHullCentroid);
+
+            //    long UpperStart;
+            //    long LowerStart;
+
+            //  FirstIndexByDistance(LowerVerticies, UpperVerticies, out LowerStart, out UpperStart);
+
             //Create faces for the rim.
-             
+
             //Determine the normalized distance along the perimeter for each point
             double[] PerimeterDistanceA = CalculateNormalizedPerimeterDistance(UpperVerticies, UpperStart);
             double[] PerimeterDistanceB = CalculateNormalizedPerimeterDistance(LowerVerticies, LowerStart);
@@ -604,7 +809,11 @@ namespace MorphologyMesh
             int iLower = (int)LowerStart;
 
             int UpperAddedCount = 0;
-            int LowerAddedCount = 0; 
+            int LowerAddedCount = 0;
+
+            //We make sure the normal of the face we create is facing away from the shape.  
+            //This value is the same for all faces so it is only calculated once.
+            bool? FlipFaces = new bool?();
               
             while (true)
             {
@@ -637,38 +846,95 @@ namespace MorphologyMesh
 
                 GridVector2 UV2 = UpperVerticies[iNextUpper];
                 GridVector2 LV2 = LowerVerticies[iNextLower];
-                                
-                //double UpperToNextLower = Math.Abs(NextLowerVertex - UpperVertex);
-                //double LowerToNextUpper = Math.Abs(NextUpperVertex - LowerVertex);
-                bool LinkToUpper = GridVector2.Distance(LV1, UV2) < GridVector2.Distance(UV1, LV2);
-                //bool LinkToUpper = LowerToNextUpper < UpperToNextLower;
 
+                double UpperToNextLower = Math.Abs(NextLowerVertex - UpperVertex);
+                double LowerToNextUpper = Math.Abs(NextUpperVertex - LowerVertex);
+                double distLowerToNextUpper = GridVector2.Distance(LV1, UV2);
+                double distUpperToNextLower = GridVector2.Distance(UV1, LV2);
+                double distNextUpperToNextLower = GridVector2.Distance(UV2, LV2);
+                //bool LinkToUpper = distLowerToNextUpper < distUpperToNextLower;
+                bool LinkToUpper = LowerToNextUpper < UpperToNextLower;
+
+                //If the next vertex would be closer to the opposite side then merge the opposite side
                 int iUpperIndex = (int)UpperIndexArray[iUpper];
                 int iMiddleIndex;
                 int iLowerIndex = (int)LowerIndexArray[iLower];
 
+                Face f;
+
                 if ((LinkToUpper && !(UpperAddedCount == UpperIndexArray.Count)) ||
-                    LowerAddedCount == LowerIndexArray.Count) 
+                    LowerAddedCount == LowerIndexArray.Count)
                 {
                     iMiddleIndex = (int)UpperIndexArray[iNextUpper];
-                    iUpper = iNextUpper;
+                    
+                    f = new Face(iLowerIndex, iMiddleIndex, iUpperIndex);
+
+                    if (!FlipFaces.HasValue)
+                    {
+                        FlipFaces = !IsNormalCorrect(CompositeMesh.Normal(f),
+                                        new GridLineSegment(UpperVerticies[iUpper],
+                                                            UpperVerticies[iNextUpper]));
+                    }
                     UpperAddedCount++;
+                    iUpper = iNextUpper;
                 }
                 else
                 {
                     iMiddleIndex = (int)LowerIndexArray[iNextLower];
-                    iLower = iNextLower;
+                    
+                    f = new Face(iLowerIndex, iMiddleIndex, iUpperIndex);
+
+                    if (!FlipFaces.HasValue)
+                    {
+                        FlipFaces = !IsNormalCorrect(CompositeMesh.Normal(f),
+                                    new GridLineSegment(LowerVerticies[iLower],
+                                                        LowerVerticies[iNextLower]));
+                    }
+
                     LowerAddedCount++;
+                    iLower = iNextLower;
                 }
+                
+                if (FlipFaces.HasValue && FlipFaces.Value)
+                    f = f.Flip();
 
-                Face f = new Face(iLowerIndex, iMiddleIndex, iUpperIndex);
+                //Debug.Assert(FaceCorrect);
+
+                //Face f = new Face(iLowerIndex, iMiddleIndex, iUpperIndex);
                 CompositeMesh.AddFace(f);
-
+                
                 if (UpperAddedCount == UpperIndexArray.Count && LowerAddedCount == LowerIndexArray.Count)
                     break;
             }
-             
         }
+
+        public static bool IsNormalCorrect(DynamicRenderMesh<ulong> CompositeMesh, Face face, GridPolygon p, int iStartSegment)
+        {
+            GridVector3 normal = CompositeMesh.Normal(face);
+            int iEndSegment = iStartSegment + 1; 
+            if(iEndSegment >= p.ExteriorRing.Length)
+            {
+                iEndSegment = 0; 
+            }
+
+            //Get the line segment our face is part of.  
+            GridLineSegment l = new GridLineSegment(p.ExteriorRing[iStartSegment], p.ExteriorRing[iEndSegment]);
+            return false;
+        }
+
+        ///
+        public static bool IsNormalCorrect(GridVector3 normal, GridLineSegment ExteriorLineSegment)
+        {
+            normal.Normalize();
+            //We use counter - clockwise winding.  So if the normal points to the 
+            //left side of the line the normal is pointing inside the polygon. 
+            GridVector2 l = ExteriorLineSegment.B - ExteriorLineSegment.A;
+            l.Normalize();
+            
+            double side = Math.Sin((l.X * (normal.Y - 0)) - (l.Y * (normal.X - 0)));
+            return side < 0;
+        }
+
 
         private static void AttachOpenPorts(DynamicRenderMesh<ulong> CompositeMesh, IIndexSet UpperIndexArray, IIndexSet LowerIndexArray)
         {
@@ -795,60 +1061,7 @@ namespace MorphologyMesh
               
             return PerimeterDistance.Select(d => d / distance_accumulator).ToArray();
         }
-
-
-        private static MeshNode CreateNode(MorphologyNode node)
-        {
-            IShape2D shape = node.Geometry.ToShape2D();
-            Vertex<ulong>[] v;
-            MeshNode mNode = new MorphologyMesh.MeshNode(node.Key);
-            mNode.PopulateNode(shape, -node.Z, node.ID);
-            mNode.AdjacentToPolygon = IsAdjacentToPolygon(node);
-            return mNode;
-        }
-
-        private static bool IsAdjacentToPolygon(MorphologyNode node)
-        {
-            return node.Edges.Keys.Select((nodeKey) => node.Graph.Nodes[nodeKey].Location.TypeCode).Any((code) => code != LocationType.CIRCLE);
-        }
-
-        /// <summary>
-        /// Create a mesh of verticies only for the specified shape
-        /// </summary>
-        /// <param name="mNode"></param>
-        /// <param name="shape"></param>
-        /// <param name="Z"></param>
-        public static void PopulateNode(this MeshNode mNode, IShape2D shape, double Z, ulong NodeData)
-        {
-            mNode.Mesh = new DynamicRenderMesh<ulong>();
-
-            switch (shape.ShapeType)
-            {
-                case ShapeType2D.CIRCLE:
-                    ICircle2D circle = shape as ICircle2D;
-                    //TODO: Check if adjacent mesh nodes are polygons and add more points in a circle if they are.
-                    int NumPointsOnCircle = mNode.AdjacentToPolygon ? SmoothMeshGenerator.NumPointsAroundCircleAdjacentToPolygon : SmoothMeshGenerator.NumPointsAroundCircle;
-                    mNode.Mesh.AddVertex(ShapeMeshGenerator<ulong>.CreateVerticiesForCircle(circle, Z, NumPointsOnCircle, NodeData, GridVector3.Zero));
-                    mNode.UpperPort = CreatePort(circle);
-                    mNode.LowerPort = CreatePort(circle); 
-                    break;
-                case ShapeType2D.POLYGON:
-                    IPolygon2D poly = shape as IPolygon2D;
-                    mNode.Mesh.AddVertex(ShapeMeshGenerator<ulong>.CreateVerticiesForPolygon(poly, Z, NodeData, GridVector3.Zero));
-                    mNode.UpperPort = CreatePort(poly);
-                    mNode.LowerPort = CreatePort(poly); 
-                    break;
-                case ShapeType2D.POLYLINE:
-                    IPolyLine2D polyline = shape as IPolyLine2D;
-                    mNode.Mesh.AddVertex(ShapeMeshGenerator<ulong>.CreateVerticiesForPolyline(polyline, Z, NodeData, GridVector3.Zero));
-                    mNode.UpperPort = CreatePort(polyline);
-                    mNode.LowerPort = CreatePort(polyline);
-                    break; 
-                default:
-                    throw new ArgumentException("Unexpected shape type");
-            }
-        }
-
+          
         /*
         //TODO: Check if adjacent mesh nodes are polygons and add more points in a circle if they are.
         public static bool IsNodeAdjacentToPolygon(MeshNode mNode)
@@ -858,35 +1071,29 @@ namespace MorphologyMesh
         }
         */
 
-        private static ConnectionVerticies CreatePort(ICircle2D shape)
+        private static void FirstIndexByDistance(GridVector2[] LowerVerticies, GridVector2[] UpperVerticies, out long LowerStart, out long UpperStart)
         {
-            ContinuousIndexSet ExternalBorder = new ContinuousIndexSet(0, SmoothMeshGenerator.NumPointsAroundCircle);
-            //Add one internal point for the vertex at the center of the circle
-            ContinuousIndexSet InternalPoints = new ContinuousIndexSet(SmoothMeshGenerator.NumPointsAroundCircle, 1);
-            return new ConnectionVerticies(ExternalBorder, InternalPoints, null);
-        }
+            LowerStart = -1;
+            UpperStart = -1; 
 
-        private static ConnectionVerticies CreatePort(IPolygon2D shape)
-        {
-            ContinuousIndexSet ExternalBorder = new ContinuousIndexSet(0, shape.ExteriorRing.Count-1);
-
-            ContinuousIndexSet[] InternalBorders = new ContinuousIndexSet[shape.InteriorRings.Count];
-
-            int iStartVertex = shape.ExteriorRing.Count;
-            for(int i = 0; i < shape.InteriorRings.Count; i++)
+            double minDistance = double.MaxValue;
+            for(int i = 0; i < LowerVerticies.Length; i++)
             {
-                InternalBorders[i] = new ContinuousIndexSet(iStartVertex, shape.InteriorRings.ElementAt(i).Length-1);
+                for(int j = i+1; j < UpperVerticies.Length; j++)
+                {
+                    double distance = GridVector2.Distance(LowerVerticies[i], UpperVerticies[j]);
+                    if(distance < minDistance)
+                    {
+                        minDistance = distance; 
+                        LowerStart = i;
+                        UpperStart = j;
+                    }
+                }
             }
 
-            return new ConnectionVerticies(ExternalBorder, null, InternalBorders);
+            return;
         }
-
-        private static ConnectionVerticies CreatePort(IPolyLine2D shape)
-        {
-            ContinuousIndexSet ExternalBorder = new ContinuousIndexSet(0, shape.Points.Count);
-            return new ConnectionVerticies(ExternalBorder);
-        }
-
+ 
         /// <summary>
         /// Find the first point on the convex hull whose angle is positive to the X axis.
         /// Written for 3 component vector, but expects input to be in X/Y plane.
@@ -895,11 +1102,11 @@ namespace MorphologyMesh
         /// <param name="Centroid"></param>
         /// <param name="Positions"></param>
         /// <returns></returns>
-        private static long FirstIndex(ConnectionVerticies verticies, GridVector3[] Positions)
+        private static long FirstIndex(ConnectionVerticies verticies, GridVector3[] Positions, out GridVector2 convexHullCentroid)
         { 
             GridVector2[] Positions2D = Positions.Select(p => new GridVector2(p.X, p.Y)).ToArray();
 
-            return FirstIndex(Positions2D);
+            return FirstIndex(Positions2D, out convexHullCentroid);
         }
 
         /// <summary>
@@ -910,13 +1117,19 @@ namespace MorphologyMesh
         /// <param name="Centroid"></param>
         /// <param name="ConvexHullPoints"></param>
         /// <returns></returns>
-        private static long FirstIndex( GridVector2[] Positions2D)
+        public static long FirstIndex( GridVector2[] Positions2D, out GridVector2 convexHullCentroid)
         {
-            int[] original_idx; 
-            GridVector2[] ConvexHullPoints = Positions2D.ConvexHull(out original_idx);
+            int[] original_idx;
 
-            GridVector2 center = GridPolygon.CalculateCentroid(ConvexHullPoints);
-            GridVector2[] PositionRelativeToCenter2D = ConvexHullPoints.Select(p => p - center).ToArray();
+            GridVector2 center = GridPolygon.CalculateCentroid(Positions2D);
+            GridVector2[] adjustedPositions = Positions2D.Translate(-center);
+            GridVector2[] ConvexHullPoints = adjustedPositions.ConvexHull(out original_idx);
+
+            //GridVector2[] ConvexHullPoints = Positions2D.ConvexHull(out original_idx);
+
+            GridVector2 convexHullCenter = GridPolygon.CalculateCentroid(ConvexHullPoints);
+            //GridVector2[]  PositionRelativeToCenter2D = adjustedPositions;
+            GridVector2[] PositionRelativeToCenter2D = ConvexHullPoints.Translate(-center);
             GridVector2[] AngleAndDistance = new GridVector2[ConvexHullPoints.Length];
             GridVector3 Axis = GridVector3.UnitX;
 
@@ -947,6 +1160,7 @@ namespace MorphologyMesh
                 }
             }
 
+            convexHullCentroid = center;
             //Convert the convex hull index to the original index in the array
             return original_idx[iBestVertex];
         }

@@ -443,6 +443,10 @@ namespace Geometry
             //System.Diagnostics.Debug.Assert(points.First() == points.Last(), "First and last point must be identical to determine area of polygon");
             points = points.EnsureClosedRing();
 
+            //Ensure the points do not have large values.
+            GridVector2 avg = points.Average();
+            points = points.Translate(-avg);
+
             double accumulator = 0;
 
             for (int i = 0; i < points.Length - 1; i++)

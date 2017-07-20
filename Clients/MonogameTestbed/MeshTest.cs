@@ -64,6 +64,17 @@ namespace MonogameTestbed
         }
         */
 
+        private GridPolygon CreateBoxPolygon(GridRectangle rect)
+        {
+            GridVector2[] points = new GridVector2[6];
+
+            Array.Copy(rect.Corners, points, 4);
+            points[4] = rect.Center;
+            points[5] = points[0];
+
+            return new GridPolygon(points);
+        }
+
         private Vertex[] CreateTetrahedronVerts(GridVector3 offset)
         {
             Vertex[] verts = new Vertex[] {new Vertex(new GridVector3(0, 0, 0), new GridVector3(0, 0, 0)),
@@ -173,12 +184,19 @@ namespace MonogameTestbed
                         }
 
                         */
+            /*
+            foreach (MeshModel<VertexPositionNormalColor> model in BuildSmoothMeshLine(GridVector3.Zero))
+            {
+                meshViewWithLighting.models.Add(model);
+            }
+            */
 
-            foreach (MeshModel<VertexPositionNormalColor> model in BuildSmoothMeshCircleBranchOfOneOverlappingButTall(new GridVector3(0, 0, 0)))
+            
+            foreach (MeshModel<VertexPositionNormalColor> model in BuildPolygonBranchCenter(GridVector3.Zero))
             {                
                 meshViewWithLighting.models.Add(model);
             }
-             
+            
 
             labelCamera = new LabelView("", new GridVector2(-70, 0));
         } 
@@ -191,14 +209,20 @@ namespace MonogameTestbed
             for (int i = 0; i < shapes.Length; i++)
             {
                 MorphologyMesh.MeshNode node = new MeshNode((ulong)i);
-                node.PopulateNode(shapes[i].Translate(translate), ZLevels[i], (ulong)i);
+                node.Mesh = SmoothMeshGraphGenerator.CreateNodeMesh(shapes[i].Translate(translate), ZLevels[i], (ulong)i);
                 graph.AddNode(node);
                 node.MeshGraph = graph;
+                node.CapPort = SmoothMeshGraphGenerator.CreatePort(shapes[i]);
             }
 
             foreach (MeshEdge edge in edges)
             {
-                graph.AddEdge(edge);
+                if (graph.Nodes.ContainsKey(edge.SourceNodeKey) && graph.Nodes.ContainsKey(edge.TargetNodeKey))
+                {
+                    edge.SourcePort = SmoothMeshGraphGenerator.CreatePort(shapes[edge.SourceNodeKey], false);
+                    edge.TargetPort = SmoothMeshGraphGenerator.CreatePort(shapes[edge.TargetNodeKey], false);
+                    graph.AddEdge(edge);
+                }
             }
 
             return graph;
@@ -281,25 +305,146 @@ namespace MonogameTestbed
         private ICollection<MeshModel<VertexPositionNormalColor>> BuildSmoothMeshCircleBranchOfOneOverlappingButTall(GridVector3 translate)
         {
             //Create three simple polygons and add them to the graph
-            IShape2D[] shapes = { new GridCircle(-5, -5, 5),
-                                  new GridCircle(-5, -5, 5),
-                                  new GridCircle(-15, -15, 5),
+            IShape2D[] shapes = { new GridCircle(0, 0, 10),
                                   new GridCircle(0, 0, 5),
-                                  new GridCircle(-15, -15, 5),
-                                  new GridCircle(0, 0, 5),
+                                  new GridCircle(-15, 0, 5),
+                                  new GridCircle(0, 15, 5),
+                                  new GridCircle(-15, -20, 5),
+                                  new GridCircle(0, 17.5, 5),
+                                  new GridCircle(0, 17.5, 5)
 
                                 };
-            double[] ZLevels = new double[] { 0, 5, 10, 10, 15, 15 };
+            double[] ZLevels = new double[] { 0, 10, 20, 20, 30, 30, 40 };
 
             MeshEdge[] edges = new MeshEdge[] {
                                          new MeshEdge(0, 1),
                                          new MeshEdge(1,2),
                                          new MeshEdge(1,3),
                                          new MeshEdge(2,4),
-                                         new MeshEdge(3,5)
+                                         new MeshEdge(3,5),
+                                         new MeshEdge(5,6)
             };
 
             MeshGraph graph = BuildMeshGraph(shapes, ZLevels, edges, 5.0, translate);
+            ICollection<DynamicRenderMesh<ulong>> meshes = SmoothMeshGenerator.Generate(graph);
+            List<MeshModel<VertexPositionNormalColor>> listMeshModels = new List<MeshModel<VertexPositionNormalColor>>();
+            return meshes.Select(m => m.ToVertexPositionNormalColorMeshModel(Color.Yellow)).ToArray();
+        }
+
+        private ICollection<MeshModel<VertexPositionNormalColor>> BuildSmoothMeshCircleXBranchOfOneOverlappingButTall(GridVector3 translate)
+        {
+            //Create three simple polygons and add them to the graph
+            IShape2D[] shapes = { new GridCircle(0, 0, 10), //
+                                  new GridCircle(0, 0, 5), //Center
+                                  new GridCircle(-15, 0, 5),
+                                  new GridCircle(0, 15, 5),
+                                  new GridCircle(-15, -20, 5),
+                                  new GridCircle(0, 17.5, 5),
+                                  new GridCircle(0, 17.5, 5),
+                                  new GridCircle(-10, -10, 5)
+
+                                };
+            double[] ZLevels = new double[] { 0, 10, 20, 20, 30, 30, 40, 0 };
+
+            MeshEdge[] edges = new MeshEdge[] {
+                                         new MeshEdge(0, 1),
+                                         new MeshEdge(1,2),
+                                         new MeshEdge(1,3),
+                                         new MeshEdge(2,4),
+                                         new MeshEdge(3,5),
+                                         new MeshEdge(5,6),
+                                         new MeshEdge(1,7)
+            };
+
+            MeshGraph graph = BuildMeshGraph(shapes, ZLevels, edges, 5.0, translate);
+            ICollection<DynamicRenderMesh<ulong>> meshes = SmoothMeshGenerator.Generate(graph);
+            List<MeshModel<VertexPositionNormalColor>> listMeshModels = new List<MeshModel<VertexPositionNormalColor>>();
+            return meshes.Select(m => m.ToVertexPositionNormalColorMeshModel(Color.Yellow)).ToArray();
+        }
+
+        private ICollection<MeshModel<VertexPositionNormalColor>> BuildSmoothMeshCircleDoubleBranchOfOneOverlappingButTall(GridVector3 translate)
+        {
+            //Create three simple polygons and add them to the graph
+            IShape2D[] shapes = { new GridCircle(0, 0, 10), //
+                                  new GridCircle(0, 0, 5), //Center
+                                  new GridCircle(-15, 0, 5), //Branch A
+                                  new GridCircle(0, 15, 5), //Branch B
+                                  new GridCircle(-15, -20, 5), 
+                                  new GridCircle(0, 17.5, 5), //Branch B Upper Cap
+                                  new GridCircle(0, 17.5, 5),
+                                  new GridCircle(-15, 20, 5),
+                                  new GridCircle(0, 17.5, 5) //Branch B Lower Cap
+
+                                };
+            double[] ZLevels = new double[] { 0, 10, 20, 20, 30, 30, 40, 40, 0 };
+
+            MeshEdge[] edges = new MeshEdge[] {
+                                         new MeshEdge(0, 1),
+                                         new MeshEdge(1,2),
+                                         new MeshEdge(1,3),
+                                         new MeshEdge(2,4),
+                                         new MeshEdge(3,5),
+                                         new MeshEdge(5,6),
+                                         new MeshEdge(2,7),
+                                         new MeshEdge(3,8)
+            };
+
+            MeshGraph graph = BuildMeshGraph(shapes, ZLevels, edges, 5.0, translate);
+            ICollection<DynamicRenderMesh<ulong>> meshes = SmoothMeshGenerator.Generate(graph);
+            List<MeshModel<VertexPositionNormalColor>> listMeshModels = new List<MeshModel<VertexPositionNormalColor>>();
+            return meshes.Select(m => m.ToVertexPositionNormalColorMeshModel(Color.Yellow)).ToArray();
+        }
+
+        private ICollection<MeshModel<VertexPositionNormalColor>> BuildSmoothMeshLine(GridVector3 translate)
+        {
+            //Create three simple polygons and add them to the graph
+            IShape2D[] shapes = { new GridPolyline(new GridVector2[] { new GridVector2(0, 0), new GridVector2(0, 10) }),
+                                  new GridPolyline(new GridVector2[] { new GridVector2(0, 0), new GridVector2(5, 5), new GridVector2(1, 15) })            
+                                };
+
+            double[] ZLevels = new double[] { 0, 10, 20, 20, 30, 30, 40 };
+
+            MeshEdge[] edges = new MeshEdge[] {
+                                         new MeshEdge(0, 1) //,
+                                         //new MeshEdge(1,2),
+                                         //new MeshEdge(1,3),
+                                         //new MeshEdge(2,4),
+                                         //new MeshEdge(3,5),
+                                         //new MeshEdge(5,6)
+            };
+
+            MeshGraph graph = BuildMeshGraph(shapes, ZLevels, edges, 5.0, translate);
+            ICollection<DynamicRenderMesh<ulong>> meshes = SmoothMeshGenerator.Generate(graph);
+            List<MeshModel<VertexPositionNormalColor>> listMeshModels = new List<MeshModel<VertexPositionNormalColor>>();
+            return meshes.Select(m => m.ToVertexPositionNormalColorMeshModel(Color.Yellow)).ToArray();
+        }
+
+        private ICollection<MeshModel<VertexPositionNormalColor>> BuildPolygonBranchCenter(GridVector3 translate)
+        {
+            //Create three simple polygons and add them to the graph
+            IShape2D[] shapes = { CreateBoxPolygon(new GridRectangle(new GridVector2(0, 0), new GridVector2(4,6))), //Center
+                                  new GridCircle(-15, -15, 5), //Upper A
+                                  new GridCircle(0, 0, 5),     //Upper B
+                                  CreateBoxPolygon(new GridRectangle(new GridVector2(-10, 0), new GridVector2(-4,4))), 
+                                  CreateBoxPolygon(new GridRectangle(new GridVector2(-10, 0), new GridVector2(-4,4))),
+                                  CreateBoxPolygon(new GridRectangle(new GridVector2(20, 20), new GridVector2(24,30))),
+                                  CreateBoxPolygon(new GridRectangle(new GridVector2(-15, -15), new GridVector2(-10,-10))),
+                                  CreateBoxPolygon(new GridRectangle(new GridVector2(-25, -25), new GridVector2(-20,-20)))
+                                };
+            double[] ZLevels = new double[] { 0, 5, 5, -15, -25,-25, 15, 15};
+
+            MeshEdge[] edges = new MeshEdge[] {
+                                         new MeshEdge(0, 1),
+                                         new MeshEdge(0,2),
+                                         new MeshEdge(0,3),
+                                      //   new MeshEdge(3,4),
+                                         new MeshEdge(0,5),
+                                         new MeshEdge(1,6),
+                                         new MeshEdge(1,7)
+            };
+
+            MeshGraph graph = BuildMeshGraph(shapes, ZLevels, edges, 5.0, translate);
+
             ICollection<DynamicRenderMesh<ulong>> meshes = SmoothMeshGenerator.Generate(graph);
             List<MeshModel<VertexPositionNormalColor>> listMeshModels = new List<MeshModel<VertexPositionNormalColor>>();
             return meshes.Select(m => m.ToVertexPositionNormalColorMeshModel(Color.Yellow)).ToArray();
@@ -327,7 +472,7 @@ namespace MonogameTestbed
             {
                 meshView.WireFrame = !meshView.WireFrame;
                 meshViewWithLighting.WireFrame = meshView.WireFrame;
-            }
+            }            
 
             labelCamera.Text = string.Format("{0} {2}", Scene.Camera.Position, Scene.Camera.LookAt, Scene.Camera.Rotation);
         }

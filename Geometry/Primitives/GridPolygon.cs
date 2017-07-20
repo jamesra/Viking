@@ -10,6 +10,7 @@ namespace Geometry
     /// <summary>
     /// A polygon with interior rings representing holes
     /// Rings are described by points.  The first and last point should match
+    /// Uses Counter-Clockwise winding order
     /// </summary>
     [Serializable()]
     public class GridPolygon : IShape2D, ICloneable, IPolygon2D
@@ -416,26 +417,26 @@ namespace Geometry
             return GridPolygon.Smooth(this, NumInterpolationPoints);
         }
 
-        public static GridVector2 CalculateCentroid(GridVector2[] ExteriorRing)
+        public static GridVector2 CalculateCentroid(GridVector2[] ExteriorRing, bool ValidateRing = true)
         {
             double accumulator_X = 0;
             double accumulator_Y = 0;
 
-            //To prevent rounding errors we subtract the average value and add it again
+            //To prevent precision errors we subtract the average value and add it again
+            ExteriorRing = ExteriorRing.EnsureClosedRing().ToArray();
             GridVector2 Average = ExteriorRing.Average();
-
             GridVector2[] translated_Points = ExteriorRing.Translate(-Average);
 
-            for (int i = 0; i < ExteriorRing.Length - 1; i++)
+            for (int i = 0; i < translated_Points.Length - 1; i++)
             {
                 GridVector2 p0 = translated_Points[i];
                 GridVector2 p1 = translated_Points[i + 1];
-                double SharedTerm = (p0.X * p1.Y - p1.X * p0.Y);
+                double SharedTerm = ((p0.X * p1.Y) - (p1.X * p0.Y));
                 accumulator_X += (p0.X + p1.X) * SharedTerm;
                 accumulator_Y += (p0.Y + p1.Y) * SharedTerm;
             }
 
-            double ExteriorArea = ExteriorRing.PolygonArea();
+            double ExteriorArea = translated_Points.PolygonArea();
             double scalar = ExteriorArea * 6;
 
             return new GridVector2((accumulator_X / scalar) + Average.X, (accumulator_Y / scalar) + Average.Y);
