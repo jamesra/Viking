@@ -50,6 +50,10 @@ namespace WebAnnotation.ViewModel
             //If we cannot map any points we shouldn't bother with the request.
 
             GridRectangle? VisibleMosaicBounds = scene.VisibleWorldBounds.ApproximateVisibleMosaicBounds(this.mapper);
+
+            if (!VisibleMosaicBounds.HasValue)
+                return;
+
             Store.LocationsByRegion.LoadSectionAnnotationsInRegion(VisibleMosaicBounds, scene.ScreenPixelSizeInVolume, this.SectionNumber, null, AddLocationsInLocalCache); // this.AddLocations, null);
         }
 

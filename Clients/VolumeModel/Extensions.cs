@@ -35,7 +35,8 @@ namespace Viking.VolumeModel
             } 
             else
             {
-                return mapper.SectionBounds;
+                return new GridRectangle?();
+                //return mapper.SectionBounds;
             }
         }
 

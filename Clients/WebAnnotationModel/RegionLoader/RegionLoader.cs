@@ -198,6 +198,11 @@ namespace WebAnnotationModel
                                                     Action<ICollection<OBJECT>> OnServerObjectsLoadedCallback,
                                                     Action<ICollection<OBJECT>> FoundCachedLocalObjectsCallback)
         {
+            if(!VolumeBounds.HasValue)
+            {
+                return; 
+            }
+
             RegionPyramid<OBJECT> RegionPyramid = GetOrAddRegionPyramidForSection(SectionNumber);
             //If we change the magnification factor we should stop loading regions
 
