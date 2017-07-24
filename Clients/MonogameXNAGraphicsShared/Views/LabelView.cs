@@ -253,6 +253,21 @@ namespace VikingXNAGraphics
 
         #endregion
 
+        public static void Draw(SpriteBatch spriteBatch, SpriteFont font, VikingXNA.Scene scene, ICollection<LabelView> Labels)
+        {
+            if (Labels == null)
+                return;
+
+            spriteBatch.Begin();
+
+            foreach(LabelView label in Labels)
+            {
+                label.Draw(spriteBatch, font, scene);
+            }
+
+            spriteBatch.End();
+        }
+
         public void Draw(Microsoft.Xna.Framework.Graphics.SpriteBatch spriteBatch,
                               Microsoft.Xna.Framework.Graphics.SpriteFont font,
                               VikingXNA.Scene scene)
