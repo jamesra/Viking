@@ -25,7 +25,8 @@ namespace MonogameTestbed
         POLYGON2D, 
         MESH,
         GEOMETRY,
-        MORPHOLOGY
+        MORPHOLOGY,
+        TRIANGLEALGORITHM
     };
 
     /// <summary>
@@ -54,10 +55,11 @@ namespace MonogameTestbed
         MeshTest meshTest = new MeshTest();
         GeometryTest geometryTest = new GeometryTest();
         MorphologyTest morphologyTest = new MorphologyTest();
+        TriangleAlgorithmTest triangleTest = new TriangleAlgorithmTest();
 
         SortedDictionary<TestMode, IGraphicsTest> listTests = new SortedDictionary<TestMode, IGraphicsTest>();
 
-        TestMode Mode = TestMode.MESH;
+        TestMode Mode = TestMode.TRIANGLEALGORITHM;
 
         public static uint NumCurveInterpolations = 10;
 
@@ -131,8 +133,7 @@ namespace MonogameTestbed
             listTests.Add(TestMode.MESH, meshTest);
             listTests.Add(TestMode.GEOMETRY, geometryTest);
             listTests.Add(TestMode.MORPHOLOGY, morphologyTest);
-
-            
+            listTests.Add(TestMode.TRIANGLEALGORITHM, triangleTest);
         }
 
         /// <summary>
@@ -188,6 +189,8 @@ namespace MonogameTestbed
                 this.Mode = TestMode.GEOMETRY;
             if (Keyboard.GetState().IsKeyDown(Keys.F10))
                 this.Mode = TestMode.MORPHOLOGY;
+            if (Keyboard.GetState().IsKeyDown(Keys.F11))
+                this.Mode = TestMode.TRIANGLEALGORITHM;
 
             if (!listTests[Mode].Initialized)
             {
