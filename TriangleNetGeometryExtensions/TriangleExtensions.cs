@@ -12,6 +12,35 @@ namespace TriangleNet
 {
     public static class TriangleExtensions
     {
+        public static GridVector2 ToGridVector2(this Vertex v)
+        {
+            return new GridVector2(v.X, v.Y);
+        }
+
+        public static GridVector2 ToGridVector2(this TriangleNet.Topology.DCEL.Vertex v)
+        {
+            return new GridVector2(v.X, v.Y);
+        }
+
+         
+        public static List<GridLineSegment> ToLines(this TriangleNet.Topology.DCEL.DcelMesh mesh)
+        {
+            if (mesh == null)
+                return null;
+
+            List<GridLineSegment> listLines = new List<GridLineSegment>();
+            //Create a map of Vertex ID's to DRMesh ID's
+            int[] IndexMap = mesh.Vertices.Select(v => v.ID).ToArray();
+
+            foreach (var e in mesh.Edges)
+            {
+                listLines.Add(new GridLineSegment(mesh.Vertices[e.P0].ToGridVector2(),
+                                           mesh.Vertices[e.P1].ToGridVector2()));
+            }
+
+            return listLines;
+        }
+
         public static TriangleNet.Geometry.IPolygon CreatePolygon(this ICollection<GridVector2> Verticies, ICollection<GridVector2[]> InteriorPolygons = null)
         {
             IPoint2D[] v = Verticies.Select(p => p as IPoint2D).ToArray();
@@ -142,6 +171,55 @@ namespace TriangleNet
 
             IMesh mesh = polygon.Triangulate(constraints, quality); 
             return mesh;
+        }
+
+        public static TriangleNet.Voronoi.VoronoiBase Voronoi(this ICollection<IPoint2D> points)
+        {
+            return points.Select(p => new GridVector2(p.X, p.Y)).ToList().Voronoi();
+        }
+
+        public static TriangleNet.Voronoi.VoronoiBase Voronoi(this ICollection<GridVector2> input)
+        {
+            TriangleNet.Geometry.Vertex[] verticies = input.Select(p => new Vertex(p.X, p.Y)).ToArray();
+
+            return verticies.Voronoi();
+        }
+
+        public static TriangleNet.Voronoi.VoronoiBase Voronoi(this ICollection<Vertex> verticies)
+        { 
+            Polygon polygon = new Polygon();
+            foreach (Vertex v in verticies)
+            {
+                polygon.Add(v);
+            }
+
+            ConstraintOptions constraints = new ConstraintOptions();
+            constraints.ConformingDelaunay = false;
+            constraints.Convex = false;
+
+            QualityOptions quality = new QualityOptions();
+            quality.SteinerPoints = (polygon.Points.Count / 2) + 1;
+            Mesh mesh = (Mesh)polygon.Triangulate(constraints, quality);
+
+            TriangleNet.Voronoi.VoronoiBase voronoi = null;
+
+            if (mesh.IsPolygon)
+            {
+                try
+                {
+                    voronoi = new TriangleNet.Voronoi.BoundedVoronoi(mesh);
+                }
+                catch (Exception ex)
+                {
+                    return null;
+                }
+            }
+            else
+            {
+                voronoi = new TriangleNet.Voronoi.StandardVoronoi(mesh);
+            }
+
+            return voronoi;
         }
     }
 }
