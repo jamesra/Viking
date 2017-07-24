@@ -391,6 +391,12 @@ namespace Geometry
         /// <returns></returns>
         public static GridLineSegment[] ToLineSegments(this ICollection<GridVector2> points)
         {
+            if (points == null)
+                return null;
+
+            if (points.Count <= 1)
+                throw new ArgumentException("Must have two points to create line segments");
+
             GridLineSegment[] segments = new GridLineSegment[points.Count - 1];
             for(int iPoint = 0; iPoint < points.Count-1; iPoint++)
             {

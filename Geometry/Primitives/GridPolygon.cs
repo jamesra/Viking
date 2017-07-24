@@ -457,6 +457,58 @@ namespace Geometry
             return smoothed_poly;
         }
 
+        public double Distance(GridVector2 p)
+        {
+            return this.ExteriorSegments.Min(line => line.DistanceToPoint(p));
+        }
+
+        public double Distance(GridVector2 p, out GridLineSegment nearestLine)
+        {
+            double minDistance = double.MaxValue;
+            nearestLine = ExteriorSegments.First();
+
+            for (int i = 0; i < ExteriorSegments.Length; i++)
+            {
+                double dist = ExteriorSegments[i].DistanceToPoint(p);
+                if(dist < minDistance)
+                {
+                    nearestLine = ExteriorSegments[i];
+                }
+            }
+
+            return minDistance;
+        }
+
+        /// <summary>
+        /// Brute force search for distance
+        /// </summary>
+        /// <param name="p"></param>
+        /// <returns></returns>
+        public double Distance(GridLineSegment p)
+        {
+            double minDistanceA = Distance(p.A);
+            double minDistanceB = Distance(p.B);
+            double minDistanceLine = ExteriorRing.Min(es => p.DistanceToPoint(es));
+
+            return new double[] { minDistanceA, minDistanceB, minDistanceLine }.Min();
+        }
+
+        /// <summary>
+        /// Brute force search for distance
+        /// </summary>
+        /// <param name="p"></param>
+        /// <returns></returns>
+        public double Distance(GridPolygon other)
+        {
+            if (this.Intersects(other))
+                return 0; 
+
+            double minDistanceToOtherLineSegment = this.ExteriorRing.Min(p => other.Distance(p));
+            double minDistanceToThisLineSegment = other.ExteriorRing.Min(p => this.Distance(p));
+
+            return Math.Min(minDistanceToOtherLineSegment, minDistanceToThisLineSegment);
+        }
+
         /// <summary>
         /// Given a point inside the polygon return the normalized distance.
         /// Create a line passing through the centroid and the point. 
