@@ -117,7 +117,12 @@ namespace VikingXNAGraphics
 
             foreach (MeshModel<VERTEXTYPE> model in meshmodels)
             {
-                effect.WorldViewProjMatrix = scene.ViewProj * model.ModelMatrix;                
+                effect.WorldViewProjMatrix = scene.ViewProj * model.ModelMatrix;    
+                
+                if(model.Verticies.Length == 0 || model.Edges.Length == 0)
+                {
+                    continue; 
+                }            
 
                 foreach (EffectPass pass in effect.effect.CurrentTechnique.Passes)
                 {
