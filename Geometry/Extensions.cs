@@ -303,6 +303,48 @@ namespace Geometry
             return points;
         }
 
+        /// <summary>
+        /// If the first and last elements are not the same we add an element at the end equal to the first elements value
+        /// This is because Polygons and several algorithms expect arrays to be closed loops of points and other expect open
+        /// </summary>
+        /// <param name="points"></param>
+        /// <returns></returns>
+        public static ICollection<GridVector2> EnsureOpenRing(this ICollection<GridVector2> points)
+        {
+            if (points.Count < 2)
+                return points.ToList();
+
+            if (points.First() == points.Last())
+            {
+                List<GridVector2> newPoints = new List<Geometry.GridVector2>(points);
+                newPoints.RemoveAt(newPoints.Count - 1);
+                return newPoints;
+            }
+
+            return points;
+        }
+
+        /// <summary>
+        /// If the first and last elements are not the same we remove the last element
+        /// This is because Polygons and several algorithms expect arrays to be closed loops of points and other expect open
+        /// </summary>
+        /// <param name="points"></param>
+        /// <returns></returns>
+        public static GridVector2[] EnsureOpenRing(this GridVector2[] points)
+        {
+            if (points.Length < 2)
+                return points.ToArray();
+
+            if (points.First() == points.Last())
+            {
+                GridVector2[] newPoints = new GridVector2[points.Length - 1];
+                Array.Copy(points, newPoints, points.Length - 1);
+                return newPoints;
+            }
+
+            return points;
+        }
+
         public static GridVector2 Average(this ICollection<GridVector2> points)
         {
             double mX = 0;

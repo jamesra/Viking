@@ -29,7 +29,7 @@ namespace TriangleNet.Topology.DCEL
         internal int id;
         internal int mark;
 
-        internal Point generator;
+        public Point generator;
 
         internal HalfEdge edge;
         internal bool bounded;

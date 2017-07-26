@@ -43,7 +43,7 @@ namespace AnnotationVizLibTests
             //Find the nearest synapse
             foreach (var desmosome in nodes_with_desmosome_subgraphs)
             {
-                IList<ulong> path_to_synapse = MorphologyGraph.Path(cell_graph, desmosome.Node, (n) => n.NodeContainsStructureOfType(TypesToMatch));
+                IList<ulong> path_to_synapse = MorphologyGraph.ShortestPath(cell_graph, desmosome.Node, (n) => n.NodeContainsStructureOfType(TypesToMatch));
                 if (path_to_synapse == null)
                     continue;
 

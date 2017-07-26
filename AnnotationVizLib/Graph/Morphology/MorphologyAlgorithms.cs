@@ -334,7 +334,7 @@ namespace AnnotationVizLib
             //Find the nearest synapse
             foreach (var node_with_sourceType in nodes_with_sourceType_subgraphs)
             {
-                IList<ulong> path_to_targetType = MorphologyGraph.Path(cell_graph, node_with_sourceType.Node, (n) => n.NodeContainsStructureOfType(TargetTypeIDs));
+                IList<ulong> path_to_targetType = MorphologyGraph.ShortestPath(cell_graph, node_with_sourceType.Node, (n) => n.NodeContainsStructureOfType(TargetTypeIDs));
                 if (path_to_targetType == null)
                     continue;
 

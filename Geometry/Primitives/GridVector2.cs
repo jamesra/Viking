@@ -7,7 +7,7 @@ namespace Geometry
 {
 
     [Serializable]
-    public struct GridVector2 : IPoint, ICloneable, IComparable, IComparable<GridVector2>, IComparer<GridVector2>, IShape2D
+    public struct GridVector2 : IPoint, ICloneable, IComparable, IComparable<GridVector2>, IComparer<GridVector2>, IShape2D, IEquatable<GridVector2>
     {
         public readonly static GridVector2 UnitX = new GridVector2(1, 0);
         public readonly static GridVector2 UnitY = new GridVector2(0, 1);
@@ -334,6 +334,11 @@ namespace Geometry
         IShape2D IShape2D.Translate(IPoint2D offset)
         {
             return this + offset.Convert();
+        }
+
+        bool IEquatable<GridVector2>.Equals(GridVector2 other)
+        {
+            return this.X == other.X && this.Y == other.Y;
         }
 
         #region IPoint Members

@@ -41,7 +41,26 @@ namespace TriangleNet
             return listLines;
         }
 
-        public static TriangleNet.Geometry.IPolygon CreatePolygon(this ICollection<GridVector2> Verticies, ICollection<GridVector2[]> InteriorPolygons = null)
+        public static List<GridLineSegment> ToLines(this TriangleNet.Meshing.IMesh mesh)
+        {
+            if (mesh == null)
+                return null;
+
+            List<GridLineSegment> listLines = new List<GridLineSegment>();
+            //Create a map of Vertex ID's to DRMesh ID's
+            int[] IndexMap = mesh.Vertices.Select(v => v.ID).ToArray();
+            Vertex[] verticies = mesh.Vertices.ToArray();
+
+            foreach (var e in mesh.Edges)
+            {
+                listLines.Add(new GridLineSegment(verticies[e.P0].ToGridVector2(),
+                                           verticies[e.P1].ToGridVector2()));
+            }
+
+            return listLines;
+        }
+
+        public static TriangleNet.Geometry.Polygon CreatePolygon(this ICollection<GridVector2> Verticies, ICollection<GridVector2[]> InteriorPolygons = null)
         {
             IPoint2D[] v = Verticies.Select(p => p as IPoint2D).ToArray();
             IPoint2D[][] ip = null;
@@ -50,7 +69,7 @@ namespace TriangleNet
             return CreatePolygon(v, ip );
         }
 
-        public static TriangleNet.Geometry.IPolygon CreatePolygon(this ICollection<IPoint2D> Verticies, ICollection<IPoint2D[]> InteriorPolygons = null)
+        public static TriangleNet.Geometry.Polygon CreatePolygon(this ICollection<IPoint2D> Verticies, ICollection<IPoint2D[]> InteriorPolygons = null)
         {
             TriangleNet.Geometry.Polygon poly = new TriangleNet.Geometry.Polygon(Verticies.Count);
             TriangleNet.Geometry.Vertex[] points = Verticies.Select((v, i) => new TriangleNet.Geometry.Vertex(v.X, v.Y)).ToArray();
@@ -72,6 +91,44 @@ namespace TriangleNet
 
             return poly;
         }
+
+        /// <summary>
+        /// Append the exterior ring to the polygon as new points with a contraint around the exterior ring
+        /// </summary>
+        /// <param name="polygon"></param>
+        /// <param name="other"></param>
+        public static void Append(this Polygon polygon, GridPolygon other)
+        {
+            TriangleNet.Geometry.Contour contour = new TriangleNet.Geometry.Contour(other.ExteriorRing.Select(p => new Vertex(p.X, p.Y)));
+            polygon.Add(contour); 
+        }
+
+        /// <summary>
+        /// Append the exterior ring to the polygon as new points with a contraint around the exterior ring
+        /// </summary>
+        /// <param name="polygon"></param>
+        /// <param name="other"></param>
+        public static void Append(this Polygon polygon, ICollection<GridVector2> points)
+        {
+            points = points.EnsureOpenRing();
+
+            foreach (Vertex v in points.Select(p => new Vertex(p.X, p.Y)))
+            {
+                polygon.Add(v);
+            }
+        }
+
+        /// <summary>
+        /// Append the exterior ring to the polygon as new points with a contraint around the exterior ring
+        /// </summary>
+        /// <param name="polygon"></param>
+        /// <param name="other"></param>
+        public static void AppendCountour(this Polygon polygon, ICollection<GridVector2> points)
+        {
+            TriangleNet.Geometry.Contour contour = new TriangleNet.Geometry.Contour(points.Select(p => new Vertex(p.X, p.Y)));
+            polygon.Add(contour, true);
+        }
+        
 
         public static TriangleNet.Geometry.IPolygon CreatePolygon(this GridPolygon input)
         {
@@ -98,6 +155,28 @@ namespace TriangleNet
 
             return contour;
         }
+
+        /// <summary>
+        /// Triangulate the polygon.
+        /// </summary>
+        /// <param name="input">Polygon to generate faces for</param>
+        /// <param name="internalPoints">Additional points inside the polygon which should be included in the triangulation</param>
+        /// <returns></returns>
+        public static IMesh Triangulate(this ICollection<IPoint2D> points)
+        {
+            TriangleNet.Geometry.IPolygon polygon = points.CreatePolygon();
+
+            ConstraintOptions constraints = new ConstraintOptions();
+            constraints.ConformingDelaunay = false;
+            constraints.Convex = false;
+
+            QualityOptions quality = new QualityOptions();
+            quality.SteinerPoints = 0;
+
+            IMesh mesh = polygon.Triangulate(constraints, quality);
+            return mesh;
+        }
+
 
         /// <summary>
         /// Triangulate the polygon.
@@ -136,12 +215,14 @@ namespace TriangleNet
         /// <returns></returns>
         public static int[] IndiciesForPointsXY(this IMesh mesh, GridVector2[] points)
         {
+            points = points.EnsureOpenRing();
+
             GridVector2[] mesh_points = mesh.Vertices.Select(v => new GridVector2(v.X, v.Y)).ToArray();
-              
+
             ///Create a map of position to index
             Dictionary<GridVector2, int> lookup = mesh_points.Select((p, i) => i).ToArray().ToDictionary(i => mesh_points[i]);
 
-            int[] output_map = new int[mesh_points.Length];
+            int[] output_map = new int[points.Length];
 
             for(int i = 0; i < points.Length; i++)
             {

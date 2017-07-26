@@ -25,13 +25,13 @@ namespace GraphLib
             }
         }
 
-        public static IList<KEY> Path(Graph<KEY, NODETYPE, EDGETYPE> graph, KEY Origin, Func<NODETYPE, bool> IsMatch)
+        public static IList<KEY> ShortestPath(Graph<KEY, NODETYPE, EDGETYPE> graph, KEY Origin, Func<NODETYPE, bool> IsMatch)
         {
             SortedSet<KEY> testedNodes = new SortedSet<KEY>();
             return RecursePath(ref testedNodes, graph, Origin, IsMatch);
         }
 
-        public static IList<KEY> Path(Graph<KEY, NODETYPE, EDGETYPE> graph, KEY Origin, KEY Destination)
+        public static IList<KEY> ShortestPath(Graph<KEY, NODETYPE, EDGETYPE> graph, KEY Origin, KEY Destination)
         {
             SortedSet<KEY> testedNodes = new SortedSet<KEY>();
             return RecursePath(ref testedNodes, graph, Origin, (node) => node.Key.Equals(Destination));
@@ -142,6 +142,68 @@ namespace GraphLib
             }
 
             return false;
+        }
+
+        /// <summary>
+        /// Return the set of nodes we can reach that match the condition without passing over a node that matches.
+        /// </summary>
+        /// <param name="graph"></param>
+        /// <param name="Origin"></param>
+        /// <param name="IsMatch"></param>
+        /// <returns></returns>
+        public static SortedSet<KEY> FindReachableMatches(Graph<KEY, NODETYPE, EDGETYPE> graph, KEY Origin, Func<NODETYPE, bool> IsMatch)
+        {
+            SortedSet<KEY> testedNodes = new SortedSet<KEY>();
+            SortedSet<KEY> matchingNodes = new SortedSet<KEY>();
+            RecurseReachableNodes(ref testedNodes, ref matchingNodes, graph, Origin, IsMatch);
+            return matchingNodes;
+        }
+
+        /// <summary>
+        /// Return the path to the nearest node matching the predicate
+        /// </summary>
+        /// <param name="graph"></param>
+        /// <param name="Origin"></param>
+        /// <param name="predicate"></param>
+        /// <returns></returns>
+        private static void RecurseReachableNodes(ref SortedSet<KEY> testedNodes, ref SortedSet<KEY> matchingNodes, Graph<KEY, NODETYPE, EDGETYPE> graph, KEY Origin, Func<NODETYPE, bool> IsMatch)
+        {
+            testedNodes.Add(Origin);
+            
+            if (IsMatch(graph.Nodes[Origin]))
+            {
+                matchingNodes.Add(Origin);
+                return;
+            }
+
+            NODETYPE origin_node = graph.Nodes[Origin];
+
+            //If there are no nodes, then the destination cannot be reached from here.
+            if (origin_node.Edges.Keys.Count == 0)
+                return;
+
+            //Remove the nodes we've already checked
+            SortedSet<KEY> linked_Keys = new SortedSet<KEY>(origin_node.Edges.Keys);
+            linked_Keys.ExceptWith(testedNodes);
+
+            //If no linked nodes left, there is no path here
+            if (linked_Keys.Count == 0)
+            {
+                return;
+            }
+            else
+            {
+                foreach (KEY linked_node in linked_Keys)
+                {
+                    //Is the edge directional?
+                    if (false == CanTravelPath(Origin, origin_node.Edges[linked_Keys.First()]))
+                        return;
+
+                    RecurseReachableNodes(ref testedNodes, ref matchingNodes, graph, linked_node, IsMatch);
+                }
+
+                return;
+            }
         }
     }
 }
