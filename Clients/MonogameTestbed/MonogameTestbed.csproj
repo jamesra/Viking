@@ -41,9 +41,11 @@
     <ApplicationIcon>Icon.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="BoundaryFinder.cs" />
     <Compile Include="GamePadStateTracker.cs" />
     <Compile Include="GeometryTest.cs" />
     <Compile Include="IGraphicsTest.cs" />
+    <Compile Include="MeshingExperimentExtensions.cs" />
     <Compile Include="MorphologyTest.cs" />
     <Compile Include="MeshTest.cs" />
     <Compile Include="MonogameTestbed.cs" />

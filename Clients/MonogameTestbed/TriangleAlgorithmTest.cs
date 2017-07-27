@@ -116,6 +116,18 @@ namespace MonogameTestbed
             }
         }
 
+        public void UpdateViews(GridPolygon polygon)
+        {
+            if(polygon == null)
+            {
+                LineViews = new List<LineView>();
+            }
+            else
+            {
+                LineViews = polygon.ExteriorSegments.Select(l => new LineView(l.A, l.B, LineRadius, color, LineStyle.Standard, false)).ToList();
+            }
+        }
+
         private List<LineView> ToLines(TriangleNet.Topology.DCEL.DcelMesh mesh, Color color)
         {
             List<LineView> listLines = new List<LineView>();
@@ -217,138 +229,21 @@ namespace MonogameTestbed
             if (PointsView.LabelViews != null)
                 LabelView.Draw(window.spriteBatch, window.fontArial, scene, PointsView.LabelViews);
 
-            if (CVView.LineViews != null)
-                LineView.Draw(window.GraphicsDevice, scene, window.lineManager, CVView.LineViews.ToArray());
+     //       if (CVView.LineViews != null)
+     //           LineView.Draw(window.GraphicsDevice, scene, window.lineManager, CVView.LineViews.ToArray());
         }
     }
-
-
-    class PolygonDividerView
-    {
-        public List<PointSet> Sets = new List<PointSet>();
-
-        public List<GridVector2[]> ConvexHulls = new List<GridVector2[]>();
-
-        public TriangleNet.Voronoi.VoronoiBase Voronoi;
-
-        public LineSetView VoronoiView = new LineSetView();
-        public LineSetView BoundaryView = new LineSetView();
-
-        public List<LabelView> listLabels = new List<LabelView>();
-
-        public Color Color
-        {
-            get { return BoundaryView.color; }
-            set
-            {
-                BoundaryView.color = value;
-                VoronoiView.color = value;
-            }
-        }
-
-        public int AddSet(PointSet set)
-        {
-            Sets.Add(set);
-            ConvexHulls.Add(new GridVector2[0]);
-            UpdateSet(set, Sets.Count - 1);
-            return Sets.Count - 1; 
-        }
-
-        /// <summary>
-        /// When a pointset changes we need to recalculate the dividing line between convex hulls
-        /// </summary>
-        public void UpdateSet(PointSet ps, int i)
-        {
-            int[] original_indicies; 
-            ConvexHulls[i] = ConvexHullExtension.ConvexHull(ps.Points.ToArray(), out original_indicies);
-            Voronoi = MeshingExperimentExtensions.ConvexHullVoronoi(ConvexHulls);
-
-            List<GridLineSegment> listBoundaryLines = StripNonBoundaryLines(Voronoi);
-            VoronoiView.UpdateViews(Voronoi.ToLines());
-            VoronoiView.color = Color.Gray;
-            BoundaryView.UpdateViews(listBoundaryLines);
-            listLabels = LabelDistances();
-        }
-         
-        private List<LabelView> LabelDistances()
-        {
-            List<LabelView> labels = new List<LabelView>();
-            for(int i = 0; i < ConvexHulls.Count; i++)
-            {
-                if (ConvexHulls[i] == null || ConvexHulls[i].Length <= 3)
-                    continue;
-
-                GridPolygon iPoly = new GridPolygon(ConvexHulls[i]);
-
-                for(int j = i+1; j < ConvexHulls.Count; j++)
-                {
-                    if (ConvexHulls[j] == null || ConvexHulls[j].Length <= 3)
-                        continue;
-
-                    GridPolygon jPoly = new GridPolygon(ConvexHulls[j]);
-
-                    double minDistance = iPoly.Distance(jPoly);
-
-                    LabelView newLabel = new LabelView(minDistance.ToString(), (iPoly.Centroid + jPoly.Centroid) / 2.0);
-                    newLabel.FontSize /= 4.0;
-
-                    labels.Add(newLabel);
-                }
-            }
-
-            return labels; 
-        }
-        
-        private List<GridLineSegment> StripNonBoundaryLines(TriangleNet.Voronoi.VoronoiBase voronoi)
-        {
-            if (voronoi == null)
-                return null;
-
-            //Build a set of LineSegments
-            List<GridLineSegment> lines = voronoi.ToLines();
-            if (lines == null) 
-                return null;
-
-            if (lines.Count == 0)
-                return new List<GridLineSegment>();
-
-            for (int i = 0; i < ConvexHulls.Count; i++)
-            {
-                GridVector2[] cv_points = ConvexHulls[i];
-                if (cv_points == null || cv_points.Length <= 1)
-                    continue;
-
-                GridPolygon convexhull = new GridPolygon(cv_points);
-                
-                lines.RemoveAll(voronoi_line => voronoi_line.Intersects(convexhull));
-                lines.RemoveAll(voronoi_line => convexhull.Contains(voronoi_line.A) || convexhull.Contains(voronoi_line.B));
-            }
-
-            return lines;
-        }
-
-        public void Draw(MonoTestbed window, Scene scene)
-        {
-            if (VoronoiView.LineViews != null)
-                LineView.Draw(window.GraphicsDevice, scene, window.lineManager, VoronoiView.LineViews.ToArray());
-
-            if (BoundaryView.LineViews != null)
-                LineView.Draw(window.GraphicsDevice, scene, window.lineManager, BoundaryView.LineViews.ToArray());
-
-            if (listLabels != null)
-                LabelView.Draw(window.spriteBatch, window.fontArial, scene, listLabels);
-        }
-    }
-
+     
 
     class PolygonBorderView
     {
         public List<PointSet> Sets = new List<PointSet>();
 
-        public List<GridVector2[]> ConvexHulls = new List<GridVector2[]>();
+        public List<GridPolygon> Shapes = new List<GridPolygon>();
 
         public TriangleNet.Voronoi.VoronoiBase Voronoi;
 
+        public List<LineSetView> PolygonViews = new List<LineSetView>();
         public LineSetView VoronoiView = new LineSetView();
         public LineSetView DelaunayView = new LineSetView();
         public LineSetView BoundaryView = new LineSetView();
@@ -368,7 +263,10 @@ namespace MonogameTestbed
         public int AddSet(PointSet set)
         {
             Sets.Add(set);
-            ConvexHulls.Add(new GridVector2[0]);
+            Shapes.Add(null);
+            LineSetView newView = new MonogameTestbed.LineSetView();
+            newView.color = new Color().Random();
+            PolygonViews.Add(newView);
             UpdateSet(set, Sets.Count - 1);
             return Sets.Count - 1;
         }
@@ -380,8 +278,8 @@ namespace MonogameTestbed
         {
             int[] original_indicies;
 
-            Sets[i] = ps; 
-            
+            Sets[i] = ps;
+
             //Algorithm:
             //1. Triangulate and remove points that do not have an edge to the other polygon.
             //2. Create a voronoi diagram of the remaining points
@@ -391,24 +289,52 @@ namespace MonogameTestbed
             //    and the voronoi edge
             // c. ??? 
 
-            ConvexHulls[i] = ConvexHullExtension.ConvexHull(ps.Points.ToArray(), out original_indicies);
-            TriangleNet.Meshing.IMesh mesh = TriangulatePolygons(ConvexHulls);
+            if (ps.Points.Count >= 3)
+            {
+                Shapes[i] = new GridPolygon(ps.Points.EnsureClosedRing().ToArray());//ConvexHullExtension.ConvexHull(ps.Points.ToArray(), out original_indicies);
+            }
+            else
+            {
+                Shapes[i] = null;
+            }
 
-            List<GridLineSegment> LinesBetweenShapes = SelectLinesBetweenShapes(mesh, ConvexHulls);
+            PolygonViews[i].UpdateViews(Shapes[i]);
+
+            GridPolygon[] ShapeArray = Shapes.Where(s => s != null).ToArray();
+
+            TriangleNet.Meshing.IMesh mesh = null;
+            try
+            {
+                mesh = ShapeArray.Triangulate();
+            }
+            catch (ArgumentException)
+            {
+
+            }
+
+            //List<GridLineSegment> LinesBetweenShapes = SelectLinesBetweenShapes(mesh, Shapes);
 
             if (mesh == null)
                 DelaunayView.UpdateViews(new GridVector2[0]);
             else
                 DelaunayView.UpdateViews(mesh.ToLines());
 
-            Voronoi = MeshingExperimentExtensions.ConvexHullVoronoi(ConvexHulls);
+            Voronoi = Shapes.Voronoi();
 
-            List<GridLineSegment> listVoronoiLines = StripNonBoundaryLines(Voronoi);
+            List<GridLineSegment> listVoronoiLines = BoundaryFinder.StripNonBoundaryLines(Voronoi, ShapeArray);
             VoronoiView.UpdateViews(listVoronoiLines);
 
             //DetermineBoundary
-            List<GridLineSegment> listBoundaryLines = BoundaryFinder.DetermineBoundary(LinesBetweenShapes, Voronoi, ConvexHulls.Where(cv => cv.Length > 3).Select(cv => new GridPolygon(cv)).ToArray());
+            List<GridLineSegment> listBoundaryLines = BoundaryFinder.DetermineBoundary(ShapeArray);
             BoundaryView.UpdateViews(listBoundaryLines);
+
+            listLabels = listBoundaryLines.Select(line => new LabelView(line.A.ToLabel(), line.A)).ToList();
+            listLabels.ForEach(label =>
+            {
+                label.FontSize = 2;
+                label.Color = Color.Green;
+            });
+
         }
 
         
@@ -445,22 +371,20 @@ namespace MonogameTestbed
             return mesh; 
         }
         
-        private List<LabelView> LabelDistances()
+        private List<LabelView> LabelDistances(IReadOnlyList<GridPolygon> shapes)
         {
             List<LabelView> labels = new List<LabelView>();
-            for (int i = 0; i < ConvexHulls.Count; i++)
+            for (int i = 0; i < shapes.Count; i++)
             {
-                if (ConvexHulls[i] == null || ConvexHulls[i].Length <= 3)
-                    continue;
+                GridPolygon iPoly = shapes[i];
+                if (iPoly == null)
+                    continue; 
 
-                GridPolygon iPoly = new GridPolygon(ConvexHulls[i]);
-
-                for (int j = i + 1; j < ConvexHulls.Count; j++)
+                for (int j = i + 1; j < shapes.Count; j++)
                 {
-                    if (ConvexHulls[j] == null || ConvexHulls[j].Length <= 3)
-                        continue;
-
-                    GridPolygon jPoly = new GridPolygon(ConvexHulls[j]);
+                    GridPolygon jPoly = shapes[j];
+                    if (jPoly == null)
+                        continue; 
 
                     double minDistance = iPoly.Distance(jPoly);
 
@@ -474,109 +398,15 @@ namespace MonogameTestbed
             return labels;
         }
 
-        /// <summary>
-        /// Given a triangulation, remove all lines that are not between verticies from seperate shapes
-        /// </summary>
-        /// <param name="mesh"></param>
-        /// <param name="PolygonRings"></param>
-        /// <returns></returns>
-        private List<GridLineSegment> SelectLinesBetweenShapes(TriangleNet.Meshing.IMesh mesh, List<GridVector2[]> PolygonRings)
-        {
-            if (mesh == null)
-                return null;
-
-            List<GridLineSegment> lines = mesh.ToLines();
-            if (lines == null)
-                return null;
-
-            if (lines.Count == 0)
-                return new List<GridLineSegment>();
-
-            //Create an index map of points
-
-            Dictionary<GridVector2, int> PointToShapeIndex = CreatePointToShapeIndexLookup(PolygonRings);
-            
-            for(int i = lines.Count-1; i >= 0; i--)
-            {
-                GridLineSegment line = lines[i];
-                if (!(PointToShapeIndex.ContainsKey(line.A) && PointToShapeIndex.ContainsKey(line.B)))
-                    continue;
-
-                int HullA = PointToShapeIndex[line.A];
-                int HullB = PointToShapeIndex[line.B];
-                if (HullA == HullB)
-                    lines.RemoveAt(i);
-            }
-
-            return lines; 
-        }
-
-        private Dictionary<GridVector2, int> CreatePointToShapeIndexLookup(List<GridVector2[]> shapeVerticies)
-        {
-            Dictionary<GridVector2, int> PointToShapeIndex = new Dictionary<GridVector2, int>();
-            //Create an index map of points
-            List<GridVector2> listPoints = new List<GridVector2>();
-            List<int> listIndicies = new List<int>();
-
-            for (int iShape = 0; iShape < shapeVerticies.Count; iShape++)
-            {
-                GridVector2[] points = shapeVerticies[iShape];
-                if (points == null || points.Length == 0)
-                    continue;
-
-                points = shapeVerticies[iShape].EnsureOpenRing();
-
-                foreach (GridVector2 point in points)
-                {
-                    PointToShapeIndex[point] = iShape;
-                }
-            }
-
-            return PointToShapeIndex;
-        }
-
-        /// <summary>
-        /// Remove edges of the voronoi graph that do not divide verticies from different shapes.
-        /// </summary>
-        /// <param name="voronoi"></param>
-        /// <returns></returns>
-        private List<GridLineSegment> StripNonBoundaryLines(TriangleNet.Voronoi.VoronoiBase voronoi)
-        {
-            if (voronoi == null)
-                return null;
-
-            //Build a set of LineSegments
-            List<GridLineSegment> lines = new List<GridLineSegment>();
-
-            Dictionary<GridVector2, int> PointToShapeIndex = CreatePointToShapeIndexLookup(this.ConvexHulls);
-
-            foreach(TriangleNet.Topology.DCEL.HalfEdge halfEdge in voronoi.HalfEdges)
-            {
-                GridVector2 FaceA = new GridVector2(halfEdge.Face.generator.X,
-                                                    halfEdge.Face.generator.Y);
-                GridVector2 FaceB = new GridVector2(halfEdge.Twin.Face.generator.X,
-                                                    halfEdge.Twin.Face.generator.Y);
-
-                if (!(PointToShapeIndex.ContainsKey(FaceA) && PointToShapeIndex.ContainsKey(FaceB)))
-                    continue;
-
-                if(PointToShapeIndex[FaceA] != PointToShapeIndex[FaceB])
-                {
-                    lines.Add(new GridLineSegment(halfEdge.Origin.ToGridVector2(),
-                                                  halfEdge.Twin.Origin.ToGridVector2()));
-                }
-            }
-
-            return lines;
-        }
-
         public void Draw(MonoTestbed window, Scene scene)
         {
-            if (DelaunayView.LineViews != null)
-                LineView.Draw(window.GraphicsDevice, scene, window.lineManager, DelaunayView.LineViews.ToArray());
+                        if (DelaunayView.LineViews != null)
+                            LineView.Draw(window.GraphicsDevice, scene, window.lineManager, DelaunayView.LineViews.ToArray());
 
-            if (VoronoiView.LineViews != null)
-                LineView.Draw(window.GraphicsDevice, scene, window.lineManager, VoronoiView.LineViews.ToArray());
+                      if (VoronoiView.LineViews != null)
+                          LineView.Draw(window.GraphicsDevice, scene, window.lineManager, VoronoiView.LineViews.ToArray());
+
+            LineView.Draw(window.GraphicsDevice, scene, window.lineManager, PolygonViews.Where(poly => poly.LineViews != null).SelectMany(poly => poly.LineViews).ToArray());
 
             if (BoundaryView.LineViews != null)
                 LineView.Draw(window.GraphicsDevice, scene, window.lineManager, BoundaryView.LineViews.ToArray());

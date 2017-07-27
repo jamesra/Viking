@@ -288,6 +288,15 @@ namespace VikingXNAGraphics
             return ARGB;
         }
 
+        public static Microsoft.Xna.Framework.Color Random(this Color color)
+        {
+            System.Random rgen = new System.Random();
+            Color c = new Color((float)rgen.NextDouble(),
+                                (float)rgen.NextDouble(),
+                                (float)rgen.NextDouble());
+            return c;
+        }
+
         public static Microsoft.Xna.Framework.Color ToXNAColor(this int color, float alpha)
         {
             int[] ARGB = GetColorComponents(color);
