@@ -7,7 +7,7 @@ using System.Text;
 namespace Geometry
 {
     [Serializable]
-    public struct GridLineSegment : IComparable, ICloneable, IComparer<GridLineSegment>, ILineSegment2D
+    public struct GridLineSegment : IComparable, ICloneable, IComparer<GridLineSegment>, ILineSegment2D, IEquatable<GridLineSegment>
     {
         public readonly GridVector2 A;
         public readonly GridVector2 B;
@@ -130,16 +130,16 @@ namespace Geometry
         }
 
         public override bool Equals(object obj)
-        {
+        { 
             GridLineSegment ls;
 //            try
 //            {
                 ls = (GridLineSegment)obj;
-//            }
-//            catch(System.InvalidCastException e)
-//            {
-//                return false; 
-//            }
+            //            }
+            //            catch(System.InvalidCastException e)
+            //            {
+            //                return false; 
+            //            }
             /*
             if (A.X == ls.A.X &&
                 A.Y == ls.A.Y &&
@@ -147,31 +147,40 @@ namespace Geometry
                 B.Y == ls.B.Y)
                 return true;
             */
+            if (object.ReferenceEquals(obj, null))
+                return false;
+
+            if (this.A == ls.A && this.B == ls.B)
+                return true;
+
+            if (this.A == ls.B && this.B == ls.A)
+                return true;
+
+            /*
                 if (MaxX == ls.MaxX &&
                    MaxY == ls.MaxY &&
                    MinX == ls.MinX &&
                    MinY == ls.MinY)
                     return true; 
+                    */
 
             return false; 
         }
 
         static public bool operator ==(GridLineSegment A, GridLineSegment B)
         {
-//            if (A.A == B.A && A.B == B.B)
-//                    return true;
-            if (A.MaxX == B.MaxX &&
-                   A.MaxY == B.MaxY &&
-                   A.MinX == B.MinX &&
-                   A.MinY == B.MinY)
-                return true; 
-            /*
-            if (A.A.X == B.A.X &&
-                A.A.Y == B.A.Y &&
-                A.B.X == B.B.X &&
-                A.B.Y == B.B.Y)
+            if (object.ReferenceEquals(A, B))
                 return true;
-            */
+
+            if (object.ReferenceEquals(A, null) || object.ReferenceEquals(B, null))
+                return false;
+
+            if (A.A == B.A && A.B == B.B)
+                return true;
+
+            if (A.A == B.B && A.B == B.A)
+                return true;
+            
             return false; 
         }
 
@@ -614,6 +623,11 @@ namespace Geometry
         public GridLineSegment Translate(GridVector2 offset)
         {
             return new GridLineSegment(this.A + offset, this.B + offset);
+        }
+
+        bool IEquatable<GridLineSegment>.Equals(GridLineSegment other)
+        {
+            return this == other;
         }
     }
 }

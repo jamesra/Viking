@@ -60,7 +60,7 @@ namespace Geometry
     /// </summary>
     /// 
     [Serializable]
-    public struct GridTriangle : ICloneable, IShape2D, ITriangle2D
+    public struct GridTriangle : ICloneable, IShape2D, ITriangle2D, IEquatable<GridTriangle>
     {
         readonly GridVector2 _p1;
         readonly GridVector2 _p2;
@@ -390,6 +390,16 @@ namespace Geometry
         {
             GridVector2 vector = offset.Convert();
             return new GridTriangle(this.Points.Select(p => p + vector).ToArray());
+        }
+
+        bool IEquatable<GridTriangle>.Equals(GridTriangle other)
+        {
+            if (object.ReferenceEquals(other, null))
+                return false;
+
+            return this.p1 == other.p1 &&
+                   this.p2 == other.p2 &&
+                   this.p3 == other.p3;
         }
 
         public ShapeType2D ShapeType

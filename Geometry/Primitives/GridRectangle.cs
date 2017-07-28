@@ -8,7 +8,7 @@ using Geometry;
 namespace Geometry
 {
     [Serializable]
-    public struct GridRectangle : IRectangle
+    public struct GridRectangle : IRectangle, ICloneable
     {
         public double Left { get; private set; }
         public double Right { get; private set; }
@@ -607,6 +607,11 @@ namespace Geometry
         public GridRectangle Translate(GridVector2 offset)
         {
             return new GridRectangle(this.LowerLeft + offset, this.UpperRight + offset);
+        }
+
+        public object Clone()
+        {
+            return new GridRectangle(this.LowerLeft, this.Width, this.Height);
         }
 
         private GridLineSegment[] _Segments;
