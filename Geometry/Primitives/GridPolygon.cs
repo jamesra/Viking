@@ -338,10 +338,23 @@ namespace Geometry
 
         private static bool IsInsidePolygon(ICollection<GridLineSegment> polygonSegments, GridLineSegment test_line)
         {
-            int numIntersections = polygonSegments.Where(es => es.Intersects(test_line)).Count();
+            //int numIntersections = polygonSegments.Where(es => es.Intersects(test_line)).Count();
+
+            //In cases where our test line passes exactly through a vertex on the other polygon we double count the line.  
+            //This code removes duplicate intersection points to prevent duplicates
+            SortedSet<GridVector2> intersectionPoints = new SortedSet<GridVector2>();
+
+            foreach(GridLineSegment line in polygonSegments)
+            {
+                GridVector2 Intersection;
+                if (line.Intersects(test_line, out Intersection))
+                {
+                    intersectionPoints.Add(Intersection);
+                }
+            }
 
             //Inside the polygon if we intersect an odd number of times
-            return numIntersections % 2 == 1;
+            return intersectionPoints.Count % 2 == 1;
         }
 
         private GridLineSegment[] CreateLineSegments(GridVector2[] ring_points)
@@ -619,5 +632,7 @@ namespace Geometry
             GridVector2 v = offset.Convert();
             return this.Translate(v);
         }
+
+        
     }
 }

@@ -233,6 +233,33 @@ namespace Geometry
                     throw new NotImplementedException();
             }
         }
+
+        /// <summary>
+        /// Return true if any Polygons in the set intersect
+        /// </summary>
+        /// <param name="Polygons"></param>
+        /// <returns></returns>
+        public static bool AnyIntersect(this IReadOnlyList<GridPolygon> Polygons)
+        {
+            for (int i = 0; i < Polygons.Count; i++)
+            {
+                GridPolygon iPoly = Polygons[i];
+                if (iPoly == null)
+                    continue;
+
+                for (int j = i + 1; j < Polygons.Count; j++)
+                {
+                    GridPolygon jPoly = Polygons[j];
+                    if (jPoly == null)
+                        continue;
+
+                    if (iPoly.Intersects(jPoly))
+                        return true;
+                }
+            }
+
+            return false;
+        }
     }
 
     public static class CircleIntersectionExtensions

@@ -6,7 +6,30 @@ using System.Text;
 namespace Geometry
 {
     public static class ConvexHullExtension
-    { 
+    {
+        /// <summary>
+        /// Return the Convex Hull of a set of Polygons
+        /// </summary>
+        /// <param name="Polygons"></param>
+        /// <returns></returns>
+        public static GridPolygon ConvexHull(this GridPolygon[] Polygons)
+        {
+            GridVector2[] AllPoints = Polygons.Where(poly => poly != null).SelectMany(poly => poly.ExteriorRing.EnsureOpenRing()).ToArray();
+
+            if (AllPoints.Length < 3)
+                return null;
+
+            int[] original_indicies;
+            GridVector2[] EntireSetConvexHull = AllPoints.ConvexHull(out original_indicies);
+            return new GridPolygon(EntireSetConvexHull);
+        }
+
+        /// <summary>
+        /// Return the convex hull of a set of points
+        /// </summary>
+        /// <param name="points"></param>
+        /// <param name="original_indicies"></param>
+        /// <returns></returns>
         public static GridVector2[] ConvexHull(this IReadOnlyList<GridVector2> points, out int[] original_indicies)
         {
             int[] ordered_idx = points.Select((p, i) => i).ToArray();
