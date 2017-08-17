@@ -231,7 +231,7 @@ namespace AnnotationVizLib
         /// </summary>
         /// <param name="locations"></param>
         /// <returns></returns>
-        public Color GetColor(List<ILocation> locations)
+        public Color GetColor(ICollection<ILocation> locations)
         {
             //Remove locations with Z values not in our lookup list to save a lot of time
             List<GridVector3> listPoints = locations.Where(l => ColorMapTable.ContainsKey((int)l.UnscaledZ)).ToList().ConvertAll(loc => loc.Geometry.Centroid().ToGridVector3(loc.UnscaledZ));
@@ -244,7 +244,7 @@ namespace AnnotationVizLib
         /// </summary>
         /// <param name="locations"></param>
         /// <returns></returns>
-        public Color GetColor(IList<GridVector3> points)
+        public Color GetColor(ICollection<GridVector3> points)
         {
             if (points.Count == 0)
                 return Color.Empty;
@@ -254,13 +254,13 @@ namespace AnnotationVizLib
             return AverageColors(colors);
         }
 
-        public Color AverageColors(IList<Color> colors)
+        public Color AverageColors(ICollection<Color> colors)
         {
             if (colors.Count == 0)
                 return Color.Empty;
 
             if (colors.Count == 1)
-                return colors[0]; 
+                return colors.First();
 
             int R = 0; 
             int G = 0;
@@ -376,9 +376,14 @@ namespace AnnotationVizLib
 
             using (System.IO.Stream stream = System.IO.File.OpenRead(Filename))
             {
-                ColorMapImageData image = new ColorMapImageData(stream, SectionNumber, scale, scalars, offset);
-                return image; 
+                if (stream != null)
+                {
+                    ColorMapImageData image = new ColorMapImageData(stream, SectionNumber, scale, scalars, offset);
+                    return image;
+                }
             }
+
+            throw new ArgumentException("Could not open file: " + Filename);
         }  
     }
 
