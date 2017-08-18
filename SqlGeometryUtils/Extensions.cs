@@ -54,7 +54,7 @@ namespace SqlGeometryUtils
 
             GridRectangle bbox = shape.BoundingBox();
             System.Diagnostics.Debug.Assert(Math.Floor(bbox.Width) == Math.Floor(bbox.Height)); //Make sure our optimization is really getting a circle
-            return new GridCircle(bbox.Center, bbox.Width);
+            return new GridCircle(bbox.Center, bbox.Width / 2.0);
         }
 
         
