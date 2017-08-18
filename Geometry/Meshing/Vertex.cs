@@ -19,6 +19,11 @@ namespace Geometry.Meshing
         public Vertex(GridVector3 p, GridVector3 n) : base(p, n)
         {
         }
+
+        public Vertex(GridVector3 p, T data) : base(p)
+        {
+            Data = data;
+        }
     }
 
     public class Vertex : IVertex 
@@ -65,7 +70,14 @@ namespace Geometry.Meshing
             _Normal = n;
             _Edges = new SortedSet<EdgeKey>();
         }
-        
+
+        public Vertex(GridVector3 p)
+        {
+            _Position = p;
+            _Normal = GridVector3.Zero;
+            _Edges = new SortedSet<EdgeKey>();
+        }
+
         public void AddEdge(EdgeKey e)
         {
             if(!_Edges.Contains(e))

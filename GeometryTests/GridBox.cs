@@ -177,5 +177,22 @@ namespace GeometryTests
             
             Assert.AreEqual(boxA, pointsBox);
         }
+
+        [TestMethod]
+        public void TestGridBoxTranslate()
+        {
+            GridVector3 BotLeftA = new GridVector3(-10, -10, -10);
+            GridVector3 TopRightA = new GridVector3(10, 10, 10);
+            GridBox boxA = new GridBox(BotLeftA, TopRightA);
+
+            GridVector3 translation = new GridVector3(1, 5, 10);
+
+            GridBox translatedBox = boxA.Translate(translation);
+
+            Assert.AreEqual(translatedBox.MinCorner, boxA.MinCorner + translation);
+            Assert.AreEqual(translatedBox.MaxCorner.coords[0], 11);
+            Assert.AreEqual(translatedBox.MaxCorner.coords[1], 15);
+            Assert.AreEqual(translatedBox.MaxCorner.coords[2], 20);
+        }
     }
 }

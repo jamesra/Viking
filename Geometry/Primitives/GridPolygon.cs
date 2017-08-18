@@ -392,16 +392,21 @@ namespace Geometry
 
         public GridPolygon Scale(double scalar, GridVector2? origin = null)
         {
-            if(!origin.HasValue)
+            return this.Scale(new GridVector2(scalar, scalar), origin);
+        }
+
+        public GridPolygon Scale(GridVector2 scalar, GridVector2? origin = null)
+        {
+            if (!origin.HasValue)
             {
                 origin = this.Centroid;
-            } 
-            
+            }
+
             GridVector2[] ScaledRing = this.ExteriorRing.Scale(scalar, origin.Value);
 
             GridPolygon poly = new GridPolygon(ScaledRing);
 
-            foreach(GridPolygon innerRing in this._InteriorPolygons)
+            foreach (GridPolygon innerRing in this._InteriorPolygons)
             {
                 GridPolygon scaled_inner = innerRing.Scale(scalar, origin);
                 poly.AddInteriorRing(scaled_inner);
@@ -486,6 +491,7 @@ namespace Geometry
                 if(dist < minDistance)
                 {
                     nearestLine = ExteriorSegments[i];
+                    minDistance = dist;
                 }
             }
 

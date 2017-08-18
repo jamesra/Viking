@@ -60,6 +60,38 @@ namespace Geometry.Meshing
 
         }
 
+        protected void ValidateBoundingBox()
+        {
+            Debug.Assert(BoundingBox.MinCorner.X == this.Verticies.Select(v => v.Position.X).Min());
+            Debug.Assert(BoundingBox.MinCorner.Y == this.Verticies.Select(v => v.Position.Y).Min());
+            Debug.Assert(BoundingBox.MinCorner.Z == this.Verticies.Select(v => v.Position.Z).Min());
+        }
+
+        public void Scale(double scalar)
+        {
+            GridVector3 minCorner = BoundingBox.MinCorner;
+            GridVector3 scaledCorner = minCorner.Scale(scalar);
+
+            this.Verticies.ForEach(v => v.Position = v.Position.Scale(scalar));
+            BoundingBox.Scale(scalar);
+
+            BoundingBox = new GridBox(scaledCorner, BoundingBox.dimensions);
+
+            ValidateBoundingBox();
+        }
+
+        public void Translate(GridVector3 translate)
+        {
+            foreach(Vertex v in Verticies)
+            {
+                v.Position += translate;
+            }
+
+            BoundingBox = BoundingBox.Translate(translate);
+
+            ValidateBoundingBox();
+        }
+
         private void UpdateBoundingBox(GridVector3 point)
         {
             if (BoundingBox == null)

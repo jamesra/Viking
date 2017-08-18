@@ -24,6 +24,12 @@ namespace Geometry
             return new GridPolygon(EntireSetConvexHull);
         }
 
+        public static GridVector2[] ConvexHull(this IReadOnlyList<GridVector2> points)
+        {
+            int[] original_indicies;
+            return ConvexHull(points, out original_indicies);
+        }
+
         /// <summary>
         /// Return the convex hull of a set of points
         /// </summary>

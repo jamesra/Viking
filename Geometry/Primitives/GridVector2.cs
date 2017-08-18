@@ -103,7 +103,12 @@ namespace Geometry
 
         public override string ToString()
         {
-            return "X: " + X.ToString("F2") + "\t Y: " + Y.ToString("F2");
+            return string.Format("X: {0:F2} Y: {1:F2}", X, Y);
+        }
+
+        public string ToLabel()
+        {
+            return string.Format("{0:F2} {1:F2}", X, Y);
         }
 
         public static string ToMatlab(GridVector2[] array)

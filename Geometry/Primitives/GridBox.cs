@@ -86,6 +86,22 @@ namespace Geometry
             }
         }
 
+        public GridVector3 MinCorner
+        {
+            get
+            { 
+                return new GridVector3(minVals[0], minVals[1], minVals[2]);
+            }
+        }
+
+        public GridVector3 MaxCorner
+        {
+            get
+            { 
+                return new GridVector3(maxVals[0], maxVals[1], maxVals[2]);
+            }
+        }
+
         public double Volume
         {
             get
@@ -212,6 +228,17 @@ namespace Geometry
 
             ThrowOnNegativeDimensions();
             ThrowOnMinGreaterThanMax();
+        }
+
+        public GridBox Translate(GridVector3 vector)
+        { 
+            double[] translation = vector.coords;
+            Debug.Assert(translation.Length == this.numDims, "Expecting 3D shape for translation with 3D vector");
+
+            double[] translatedMins = this.minVals.Select((min, i) => min + translation[i]).ToArray();
+            double[] translatedMaxs = this.maxVals.Select((max, i) => max + translation[i]).ToArray();
+
+            return new GridBox(translatedMins, translatedMaxs);
         }
 
         /// <summary>

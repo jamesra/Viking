@@ -271,9 +271,9 @@ namespace Geometry
             return new GridVector3(A.coords.Select((val,i) => val * scalar).ToArray());
         }
 
-        public void Scale(double scalar)
+        public GridVector3 Scale(double scalar)
         {
-            this.coords = this.coords.Select(val => val * scalar).ToArray();
+            return new GridVector3(this.coords.Select(val => val * scalar).ToArray());
         }
         
         public static GridBox BoundingBox(GridVector3[] points)

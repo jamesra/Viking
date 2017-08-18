@@ -232,9 +232,21 @@ namespace Geometry
         /// <returns></returns>
         public static GridVector2[] Scale(this ICollection<GridVector2> points, double scale, GridVector2 origin)
         {
+            return points.Scale(new GridVector2(scale, scale), origin);
+        }
+
+        /// <summary>
+        /// Scale distance of points from a centerpoint by a scalar value
+        /// </summary>
+        /// <param name="points"></param>
+        /// <param name="scale"></param>
+        /// <param name="centerOfScale"></param>
+        /// <returns></returns>
+        public static GridVector2[] Scale(this ICollection<GridVector2> points, GridVector2 scale, GridVector2 origin)
+        {
             Matrix<double> pointMatrix = points.ToMatrix();
 
-            Matrix<double> scaleMatrix = CreateScaleMatrix(scale, scale, 1);
+            Matrix<double> scaleMatrix = CreateScaleMatrix(scale.X, scale.Y, 1);
 
             Matrix<double> translationMatrix = (-origin).CreateTranslationMatrix();
             Matrix<double> inverseTranslationMatrix = (origin).CreateTranslationMatrix();

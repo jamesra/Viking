@@ -38,14 +38,14 @@ namespace Geometry.Meshing
 
         public int CompareTo(EdgeKey other)
         {
-            if (this.A == other.A)
+            for(int i = 0; i < Verticies.Length; i++)
             {
-                return this.B.CompareTo(other.B);
+                int comparison = this.Verticies[i].CompareTo(other.Verticies[i]);
+                if (comparison != 0)
+                    return comparison;
             }
-            else
-            {
-                return this.A.CompareTo(other.A);
-            }
+
+            return 0;
         }
 
         public bool Equals(EdgeKey other)
