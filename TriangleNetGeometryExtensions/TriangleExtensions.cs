@@ -41,6 +41,26 @@ namespace TriangleNet
             return listLines;
         }
 
+        public static GridPolygon ToPolygon(this TriangleNet.Topology.DCEL.Face face)
+        {
+            if (face == null)
+                return null;
+
+            GridVector2[] verts = face.EnumerateEdges().Select(edge => edge.Origin.ToGridVector2()).ToArray();
+
+            GridPolygon polygon = new GridPolygon(verts.EnsureClosedRing());
+            return polygon;
+        }
+
+        public static List<GridPolygon> ToPolygons(this TriangleNet.Topology.DCEL.DcelMesh mesh)
+        {
+            if (mesh == null)
+                return null;
+
+            List<GridPolygon> listTriangles = new List<GridPolygon>();
+            return mesh.Faces.Select(face => face.ToPolygon()).ToList();
+        }
+
         public static List<GridLineSegment> ToLines(this TriangleNet.Meshing.IMesh mesh)
         {
             if (mesh == null)
@@ -58,6 +78,26 @@ namespace TriangleNet
             }
 
             return listLines;
+        }
+         
+        public static List<GridTriangle> ToTriangles(this TriangleNet.Meshing.IMesh mesh)
+        {
+            if (mesh == null)
+                return null;
+
+            List<GridTriangle> listTriangles = new List<GridTriangle>();
+            //Create a map of Vertex ID's to DRMesh ID's
+            int[] IndexMap = mesh.Vertices.Select(v => v.ID).ToArray();
+            Vertex[] verticies = mesh.Vertices.ToArray();
+
+            foreach (var tri in mesh.Triangles)
+            {
+                listTriangles.Add(new GridTriangle(tri.GetVertex(0).ToGridVector2(),
+                                                   tri.GetVertex(1).ToGridVector2(),
+                                                   tri.GetVertex(2).ToGridVector2()));
+            }
+
+            return listTriangles;
         }
 
         public static TriangleNet.Geometry.Polygon CreatePolygon(this ICollection<GridVector2> Verticies, ICollection<GridVector2[]> InteriorPolygons = null)
@@ -130,12 +170,12 @@ namespace TriangleNet
         }
         
 
-        public static TriangleNet.Geometry.IPolygon CreatePolygon(this GridPolygon input)
+        public static TriangleNet.Geometry.Polygon CreatePolygon(this GridPolygon input)
         {
             return CreatePolygon(input.ExteriorRing, input.InteriorRings);
         }
 
-        public static TriangleNet.Geometry.IPolygon CreatePolygon(this IPolygon2D input)
+        public static TriangleNet.Geometry.Polygon CreatePolygon(this IPolygon2D input)
         {
             return CreatePolygon(input.ExteriorRing, input.InteriorRings);
         }
@@ -207,6 +247,41 @@ namespace TriangleNet
             return mesh;
         }
 
+
+        /// <summary>
+        /// This function creates the triangulation of a set of polygons returning the set of edges between polygons and the external polygon borders.
+        /// This function is undefined if the input polygons overlap
+        /// </summary>
+        /// <param name="Polygons"></param>
+        /// <returns></returns>
+        public static TriangleNet.Meshing.IMesh Triangulate(this GridPolygon[] Polygons)
+        {
+            if (Polygons.AnyIntersect())
+                throw new ArgumentException("TriangulatePolygons expects non overlapping polygons as input");
+
+            GridPolygon EntireSetConvexHull = Polygons.ConvexHull();
+            if (EntireSetConvexHull == null)
+                return null;
+
+            TriangleNet.Geometry.Polygon EntireSetConvexHullPoly = TriangleExtensions.CreatePolygon(EntireSetConvexHull);
+
+            foreach (GridVector2[] points in Polygons.Select(poly => poly.ExteriorRing))
+            {
+                if (points == null || points.Length < 4)
+                    continue;
+
+                //Record the borders of each polygon in the aggregate polygon.  These restrict the delaunay triangulation to keep those edges
+                EntireSetConvexHullPoly.AppendCountour(points);
+            }
+
+            //If there are not enough points to triangulate return null
+            if (EntireSetConvexHullPoly.Count < 3)
+                return null;
+
+            TriangleNet.Meshing.IMesh mesh = TriangleNet.Geometry.ExtensionMethods.Triangulate(EntireSetConvexHullPoly);
+            return mesh;
+        }
+
         /// <summary>
         /// Return the indicies for the array of points in the mesh.  If the point is not in the mesh return -1
         /// </summary>
@@ -264,6 +339,39 @@ namespace TriangleNet
             TriangleNet.Geometry.Vertex[] verticies = input.Select(p => new Vertex(p.X, p.Y)).ToArray();
 
             return verticies.Voronoi();
+        }
+
+        /// <summary>
+        /// Construct the Voronoi domain for a set of shapes.
+        /// </summary>
+        /// <param name="Shapes"></param>
+        /// <returns></returns>
+        public static TriangleNet.Voronoi.VoronoiBase Voronoi(this IReadOnlyList<GridPolygon> Shapes)
+        {
+            List<TriangleNet.Geometry.Vertex> verts = new List<TriangleNet.Geometry.Vertex>();
+         
+            for (int i = 0; i < Shapes.Count; i++)
+            {
+                GridPolygon shape = Shapes[i];
+                if (shape == null)
+                    continue;
+
+                GridVector2[] points = shape.ExteriorRing.EnsureOpenRing();
+                verts.AddRange(points.Select(p =>
+                {
+                    var v = new TriangleNet.Geometry.Vertex(p.X, p.Y, i, 1);
+                    v.Attributes[0] = i;
+                    return v;
+                }));
+            }
+
+            if (verts.Count >= 3)
+            {
+                var Voronoi = verts.Voronoi();
+                return Voronoi;
+            }
+
+            return null;
         }
 
         public static TriangleNet.Voronoi.VoronoiBase Voronoi(this ICollection<Vertex> verticies)
