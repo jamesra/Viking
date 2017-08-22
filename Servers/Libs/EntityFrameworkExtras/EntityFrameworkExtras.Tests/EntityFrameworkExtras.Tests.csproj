@@ -1,0 +1,144 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>
+    </ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{8522B7EB-3D2D-4E43-BA3D-3F16095B8EFB}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>EntityFrameworkExtras.Tests</RootNamespace>
+    <AssemblyName>EntityFrameworkExtras.Tests</AssemblyName>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <ProjectTypeGuids>{3AC096D0-A1C2-E12C-1390-A8335801FDAB};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
+    <TargetFrameworkProfile />
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="EntityFramework, Version=4.3.1.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\EntityFramework.4.3.1\lib\net40\EntityFramework.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.VisualStudio.QualityTools.UnitTestFramework, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL" />
+    <Reference Include="nunit.framework">
+      <HintPath>..\packages\NUnit.2.6.3\lib\nunit.framework.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.ComponentModel.DataAnnotations" />
+    <Reference Include="System.Core">
+      <RequiredTargetFramework>3.5</RequiredTargetFramework>
+    </Reference>
+    <Reference Include="System.Data" />
+    <Reference Include="System.Data.Entity" />
+  </ItemGroup>
+  <ItemGroup>
+    <CodeAnalysisDependentAssemblyPaths Condition=" '$(VS100COMNTOOLS)' != '' " Include="$(VS100COMNTOOLS)..\IDE\PrivateAssemblies">
+      <Visible>False</Visible>
+    </CodeAnalysisDependentAssemblyPaths>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Integration\DatabaseIntegrationTests.cs" />
+    <Compile Include="Integration\ParameterBigIntTests.cs" />
+    <Compile Include="Integration\ParameterBinaryTests.cs" />
+    <Compile Include="Integration\ParameterBitTests.cs" />
+    <Compile Include="Integration\ParameterCharTests.cs" />
+    <Compile Include="Integration\ParameterDateTests.cs" />
+    <Compile Include="Integration\ParameterDateTime2Tests.cs" />
+    <Compile Include="Integration\ParameterDateTimeOffsetTests.cs" />
+    <Compile Include="Integration\ParameterDateTimeTests.cs" />
+    <Compile Include="Integration\ParameterDecimalTests.cs" />
+    <Compile Include="Integration\ParameterDirectionTests.DirectionReturn.cs" />
+    <Compile Include="Integration\ParameterDirectionTests.DirectionOutput.cs" />
+    <Compile Include="Integration\ParameterDirectionTests.DirectionInputOutput.cs" />
+    <Compile Include="Integration\ParameterDirectionTests.DirectionInput.cs" />
+    <Compile Include="Integration\ParameterFloatTests.cs" />
+    <Compile Include="Integration\ParameterImageTests.cs" />
+    <Compile Include="Integration\ParameterIntTests.cs" />
+    <Compile Include="Integration\ParameterMoneyTests.cs" />
+    <Compile Include="Integration\ParameterNCharTests.cs" />
+    <Compile Include="Integration\ParameterNTextTests.cs" />
+    <Compile Include="Integration\ParameterNvarCharTests.cs" />
+    <Compile Include="Integration\ParameterRealTests.cs" />
+    <Compile Include="Integration\ParameterSizeTests.cs" />
+    <Compile Include="Integration\ParameterSizeTests.OutputParameters.cs" />
+    <Compile Include="Integration\ParameterSmallDateTimeTests.cs" />
+    <Compile Include="Integration\ParameterSmallIntTests.cs" />
+    <Compile Include="Integration\ParameterSmallMoneyTests.cs" />
+    <Compile Include="Integration\ParameterTextTests.cs" />
+    <Compile Include="Integration\ParameterTimeTests.cs" />
+    <Compile Include="Integration\ParameterTinyIntTests.cs" />
+    <Compile Include="Integration\ParameterVarBinaryTests.cs" />
+    <Compile Include="Integration\ParameterVarCharTests.cs" />
+    <Compile Include="Integration\ParameterXmlTests.cs" />
+    <Compile Include="Integration\ParameteUniqueIdentifier​​Tests.cs" />
+    <Compile Include="Integration\StoredProcedures\AllTypesParameterOutputStoredProcedure.cs" />
+    <Compile Include="Integration\StoredProcedures\ExplicitySetColumnNamesUserDefinedTable.cs" />
+    <Compile Include="Integration\StoredProcedures\InvalidColumnCountUserDefinedTable.cs" />
+    <Compile Include="Integration\StoredProcedures\OutputParameterSizeNotSetStoredProcedure.cs" />
+    <Compile Include="Integration\StoredProcedures\OutputParameterSizeSetStoredProcedure.cs" />
+    <Compile Include="Integration\StoredProcedures\UserDefinedTableInvalidColumnCountStoredProcedure.cs" />
+    <Compile Include="Integration\StoredProcedures\UserDefinedTableExplicitlySetColumnNameStoredProcedure.cs" />
+    <Compile Include="Integration\StoredProcedures\UserDefinedTableStoredProcedureReturn.cs" />
+    <Compile Include="Integration\StoredProcedures\AllTypesUserDefinedTable.cs" />
+    <Compile Include="Integration\StoredProcedures\UserDefinedTableStoredProcedure.cs" />
+    <Compile Include="Integration\StoredProcedures\AllTypesStoredProcedure.cs" />
+    <Compile Include="Integration\StoredProcedures\NoneExistingStoredProcedure.cs" />
+    <Compile Include="Integration\StoredProcedures\AllTypesStoredProcedureReturn.cs" />
+    <Compile Include="Integration\StoredProcedures\NoParametersStoredProcedure.cs" />
+    <Compile Include="Integration\ParameterDirectionTests.DirectionDefault.cs" />
+    <Compile Include="Integration\StoredProcedures\ParameterDirectionStoredProcedure.cs" />
+    <Compile Include="Integration\StoredProcedures\ParameterDirectionStoredProcedureReturn.cs" />
+    <Compile Include="Integration\StoredProcedures\ParameterSizeStoredProcedure.cs" />
+    <Compile Include="Integration\StoredProcedures\ParameterSizeStoredProcedureReturn.cs" />
+    <Compile Include="Integration\StoredProcedureTests.cs" />
+    <Compile Include="Integration\UserDefinedTableTypeColumnTests.cs" />
+    <Compile Include="Integration\UserDefinedTableParameterTests.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\EntityFrameworkExtras\EntityFrameworkExtras.csproj">
+      <Project>{7a59ae4f-751f-4be0-ba70-020072f1409e}</Project>
+      <Name>EntityFrameworkExtras</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="App.config">
+      <SubType>Designer</SubType>
+    </None>
+    <None Include="packages.config">
+      <SubType>Designer</SubType>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Integration\IntegrationSqlScript.sql" />
+  </ItemGroup>
+  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>
