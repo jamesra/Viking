@@ -946,17 +946,26 @@ namespace ConnectomeDataModel
             return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction("SelectNetworkStructureIDs", hopsParameter);
         }
     
-        public virtual int SplitStructure(Nullable<long> keepStructureID, Nullable<long> firstLocationIDOfSplitStructure, ObjectParameter splitStructureID)
+        public virtual int SplitStructure(Nullable<long> locationIDOfSplitStructure, ObjectParameter splitStructureID)
         {
-            var keepStructureIDParameter = keepStructureID.HasValue ?
-                new ObjectParameter("KeepStructureID", keepStructureID) :
-                new ObjectParameter("KeepStructureID", typeof(long));
+            var locationIDOfSplitStructureParameter = locationIDOfSplitStructure.HasValue ?
+                new ObjectParameter("LocationIDOfSplitStructure", locationIDOfSplitStructure) :
+                new ObjectParameter("LocationIDOfSplitStructure", typeof(long));
     
-            var firstLocationIDOfSplitStructureParameter = firstLocationIDOfSplitStructure.HasValue ?
-                new ObjectParameter("FirstLocationIDOfSplitStructure", firstLocationIDOfSplitStructure) :
-                new ObjectParameter("FirstLocationIDOfSplitStructure", typeof(long));
+            return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction("SplitStructure", locationIDOfSplitStructureParameter, splitStructureID);
+        }
     
-            return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction("SplitStructure", keepStructureIDParameter, firstLocationIDOfSplitStructureParameter, splitStructureID);
+        public virtual int SplitStructureByLocationLink(Nullable<long> locationIDOfKeepStructure, Nullable<long> locationIDOfSplitStructure, ObjectParameter splitStructureID)
+        {
+            var locationIDOfKeepStructureParameter = locationIDOfKeepStructure.HasValue ?
+                new ObjectParameter("LocationIDOfKeepStructure", locationIDOfKeepStructure) :
+                new ObjectParameter("LocationIDOfKeepStructure", typeof(long));
+    
+            var locationIDOfSplitStructureParameter = locationIDOfSplitStructure.HasValue ?
+                new ObjectParameter("LocationIDOfSplitStructure", locationIDOfSplitStructure) :
+                new ObjectParameter("LocationIDOfSplitStructure", typeof(long));
+    
+            return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction("SplitStructureByLocationLink", locationIDOfKeepStructureParameter, locationIDOfSplitStructureParameter, splitStructureID);
         }
     }
 }

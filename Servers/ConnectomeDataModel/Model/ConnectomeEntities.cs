@@ -279,6 +279,21 @@ namespace ConnectomeDataModel
             return retval;
         }
 
+        public virtual int SplitStructureAtLocationLink(long LocationIDOfKeepStructure, long LocationIDOfSplitStructure, out long NewStructureID)
+        {
+            var LocationIDOfKeepStructureParameter = new ObjectParameter("LocationIDOfKeepStructure", LocationIDOfKeepStructure);
+            var LocationIDOfSplitStructureParameter = new ObjectParameter("LocationIDOfSplitStructure", LocationIDOfSplitStructure);
+            var NewStructureIDParam = new ObjectParameter("SplitStructureID", typeof(long));
+
+            int retval = ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction("SplitStructureByLocationLink", LocationIDOfKeepStructureParameter, LocationIDOfSplitStructureParameter, NewStructureIDParam);
+            if (retval != 0)
+                NewStructureID = -1;
+            else
+                NewStructureID = (long)NewStructureIDParam.Value;
+
+            return retval;
+        }
+
 
         public SortedSet<long> SelectNetworkStructureIDs(IEnumerable<long> IDs, int numHops)
         {

@@ -175,8 +175,9 @@ namespace AnnotationService.Interfaces
         long Merge(long KeepID, long MergeID);
 
         /// <summary>
-        /// Split the specified structure into two new structures at the specified link
-        /// return an exception if the structure has a cycle in the graph.
+        /// Split the specified structure into two new structures at the specified location.
+        /// Function requires there be two subgraphs of locations in the structure and
+        /// returns an exception if the structure has a cycle in the graph.
         /// Child objects are assigned to the nearest location on the same section
         /// </summary>
         /// <param name="StructureA">Structure to split</param>
@@ -184,6 +185,17 @@ namespace AnnotationService.Interfaces
         /// <returns>ID of new structure</returns>
         [OperationContract]
         long Split(long StructureA, long LocationIDInSplitStructure);
+
+        /// <summary>
+        /// Split the specified structure into two new structures at the specified link
+        /// Deletes the location link.  Returns an exception if the structure has a cycle in the graph.
+        /// Child objects are assigned to the nearest location on the same section
+        /// </summary>
+        /// <param name="StructureA">Structure to split</param>
+        /// <param name="locLink">Location Link to split structure at</param>
+        /// <returns>ID of new structure</returns>
+        [OperationContract]
+        long SplitAtLocationLink(long LocationIDOfKeepStructure, long LocationIDOfSplitStructure);
 
 
         /// <summary>

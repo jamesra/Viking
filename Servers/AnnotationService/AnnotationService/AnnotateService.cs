@@ -1343,6 +1343,25 @@ namespace Annotation
             }
         }
 
+        /// <summary>
+        /// Split the specified structure into two new structures at the specified link
+        /// return an exception if the structure has a cycle in the graph.
+        /// Child objects are assigned to the nearest location on the same section
+        /// </summary>
+        /// <param name="StructureA">Structure to split</param>
+        /// <param name="locLink">Location Link to split structure at</param>
+        /// <returns>ID of new structure</returns>
+        [PrincipalPermission(SecurityAction.Demand, Role = "Admin")]
+        public long SplitAtLocationLink(long LocationIDOfKeepStructure, long LocationIDOfSplitStructure)
+        {
+            using (ConnectomeEntities db = GetOrCreateDatabaseContext())
+            {
+                long NewStructureID;
+                int retval = db.SplitStructureAtLocationLink(LocationIDOfKeepStructure, LocationIDOfSplitStructure, out NewStructureID);
+                return NewStructureID;
+            }
+        }
+        
         [PrincipalPermission(SecurityAction.Demand, Role = "Read")]
         public AnnotationService.Types.Structure[] GetStructureChangeLog(long? structure_id, DateTime? begin_time, DateTime? end_time)
         {
