@@ -263,7 +263,22 @@ namespace ConnectomeDataModel
 
             return new AnnotationCollection(dictStructures, dictLocations);
         }
-        
+
+        public virtual int SplitStructure(long keepStructureID, long firstLocationIDOfSplitStructure, out long NewStructureID)
+        {
+            var keepStructureIDParameter = new ObjectParameter("KeepStructureID", keepStructureID);
+            var firstLocationIDOfSplitStructureParameter = new ObjectParameter("FirstLocationIDOfSplitStructure", firstLocationIDOfSplitStructure);
+            var NewStructureIDParam = new ObjectParameter("SplitStructureID", typeof(long));
+
+            int retval = ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction("SplitStructure", keepStructureIDParameter, firstLocationIDOfSplitStructureParameter, NewStructureIDParam);
+            if (retval != 0)
+                NewStructureID = -1;
+            else
+                NewStructureID = (long)NewStructureIDParam.Value;
+
+            return retval;
+        }
+
 
         public SortedSet<long> SelectNetworkStructureIDs(IEnumerable<long> IDs, int numHops)
         {

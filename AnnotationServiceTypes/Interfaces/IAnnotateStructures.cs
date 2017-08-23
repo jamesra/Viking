@@ -183,7 +183,7 @@ namespace AnnotationService.Interfaces
         /// <param name="locLink">Location Link to split structure at</param>
         /// <returns>ID of new structure</returns>
         [OperationContract]
-        long Split(long StructureA, LocationLink locLink);
+        long Split(long StructureA, long LocationIDInSplitStructure);
 
 
         /// <summary>

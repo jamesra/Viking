@@ -945,5 +945,18 @@ namespace ConnectomeDataModel
     
             return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction("SelectNetworkStructureIDs", hopsParameter);
         }
+    
+        public virtual int SplitStructure(Nullable<long> keepStructureID, Nullable<long> firstLocationIDOfSplitStructure, ObjectParameter splitStructureID)
+        {
+            var keepStructureIDParameter = keepStructureID.HasValue ?
+                new ObjectParameter("KeepStructureID", keepStructureID) :
+                new ObjectParameter("KeepStructureID", typeof(long));
+    
+            var firstLocationIDOfSplitStructureParameter = firstLocationIDOfSplitStructure.HasValue ?
+                new ObjectParameter("FirstLocationIDOfSplitStructure", firstLocationIDOfSplitStructure) :
+                new ObjectParameter("FirstLocationIDOfSplitStructure", typeof(long));
+    
+            return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction("SplitStructure", keepStructureIDParameter, firstLocationIDOfSplitStructureParameter, splitStructureID);
+        }
     }
 }

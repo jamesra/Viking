@@ -484,6 +484,11 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
         <Function Name="SelectUnfinishedStructureBranchesWithPosition" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="false" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo">
           <Parameter Name="StructureID" Type="bigint" Mode="In" />
         </Function>
+        <Function Name="SplitStructure" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="false" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo">
+          <Parameter Name="KeepStructureID" Type="bigint" Mode="In" />
+          <Parameter Name="FirstLocationIDOfSplitStructure" Type="bigint" Mode="In" />
+          <Parameter Name="SplitStructureID" Type="bigint" Mode="InOut" />
+        </Function>
         <Function Name="StructureLocationLinks" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="true" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo">
           <Parameter Name="StructureID" Type="bigint" Mode="In" />
           <ReturnType>
@@ -502,9 +507,9 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
           <Parameter Name="TypeID" Type="bigint" Mode="In" />
         </Function>
         <Function Name="XYScale" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="true" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo" ReturnType="float" />
-        <Function Name="XYScaleUnits" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="true" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo" ReturnType="varchar" />
+        <Function Name="XYScaleUnits" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="true" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo" ReturnType="varchar(max)" />
         <Function Name="ZScale" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="true" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo" ReturnType="float" />
-        <Function Name="ZScaleUnits" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="true" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo" ReturnType="varchar" />
+        <Function Name="ZScaleUnits" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="true" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo" ReturnType="varchar(max)" />
         <EntityContainer Name="ConnectomeModelStoreContainer">
           <EntitySet Name="DeletedLocations" EntityType="Self.DeletedLocations" Schema="dbo" store:Type="Tables" />
           <EntitySet Name="Location" EntityType="Self.Location" Schema="dbo" store:Type="Tables" />
@@ -1008,10 +1013,15 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
           <Parameter Name="Hops" Mode="In" Type="Int32" />
           </FunctionImport>
           <FunctionImport Name="SelectNetworkChildStructureIDs">
-            <Parameter Name="Hops" Mode="In" Type="Int32" />
+          <Parameter Name="Hops" Mode="In" Type="Int32" />
           </FunctionImport>
           <FunctionImport Name="SelectNetworkStructureIDs">
-            <Parameter Name="Hops" Mode="In" Type="Int32" />
+          <Parameter Name="Hops" Mode="In" Type="Int32" />
+          </FunctionImport>
+          <FunctionImport Name="SplitStructure">
+            <Parameter Name="KeepStructureID" Mode="In" Type="Int64" />
+            <Parameter Name="FirstLocationIDOfSplitStructure" Mode="In" Type="Int64" />
+            <Parameter Name="SplitStructureID" Mode="InOut" Type="Int64" />
           </FunctionImport>
         </EntityContainer>
         <ComplexType Name="ApproximateStructureLocation_Result">
@@ -2044,6 +2054,7 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
           <FunctionImportMapping FunctionImportName="SelectNetworkChildStructures" FunctionName="ConnectomeModel.Store.SelectNetworkChildStructures" />
           <FunctionImportMapping FunctionImportName="SelectNetworkChildStructureIDs" FunctionName="ConnectomeModel.Store.SelectNetworkChildStructureIDs" />
           <FunctionImportMapping FunctionImportName="SelectNetworkStructureIDs" FunctionName="ConnectomeModel.Store.SelectNetworkStructureIDs" />
+          <FunctionImportMapping FunctionImportName="SplitStructure" FunctionName="ConnectomeModel.Store.SplitStructure" />
         </EntityContainerMapping>
       </Mapping>
     </edmx:Mappings>

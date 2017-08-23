@@ -1333,9 +1333,14 @@ namespace Annotation
         /// <param name="locLink">Location Link to split structure at</param>
         /// <returns>ID of new structure</returns>
         [PrincipalPermission(SecurityAction.Demand, Role = "Admin")]
-        public long Split(long StructureA, AnnotationService.Types.LocationLink locLink)
+        public long Split(long KeepStructureID, long LocationIDInSplitStructure)
         {
-            return 0;
+            using (ConnectomeEntities db = GetOrCreateDatabaseContext())
+            {
+                long NewStructureID;
+                int retval = db.SplitStructure(KeepStructureID, LocationIDInSplitStructure,  out NewStructureID);
+                return NewStructureID;
+            }
         }
 
         [PrincipalPermission(SecurityAction.Demand, Role = "Read")]
