@@ -6083,6 +6083,45 @@ end
 	 COMMIT TRANSACTION sixtyfour
 	end
 
+	if(not(exists(select (1) from DBVersion where DBVersionID = 65)))
+	begin
+     print N'Create view for spatial data of structures'
+	 BEGIN TRANSACTION sixtyfive
+		
+		IF OBJECT_ID (N'dbo.StructureSpatialView', N'V') IS NOT NULL
+			DROP VIEW dbo.StructureSpatialView; 
+		EXEC(' ALTER VIEW dbo.StructureSpatialView
+				AS
+				SELECT        S.ID as ID,
+							  S.TypeID as TypeID,
+							  S.ParentID as ParentID,
+							  dbo.ufnStructureArea(S.ID) as Area, 
+							  dbo.ufnStructureVolume(S.ID) as Volume, 
+							  L.ConvexHull as ConvexHull,
+							  L.BoundingBox as BoundingBox,
+							  L.MinZ as MinZ, 
+							  L.MaxZ as MaxZ
+				FROM            [dbo].[Structure] S
+				INNER JOIN 
+					(select L.ParentID, 
+					   Geometry::ConvexHullAggregate(L.VolumeShape) as ConvexHull,
+					   Geometry::EnvelopeAggregate(L.VolumeShape) as BoundingBox,
+					   min(L.Z) as MinZ, 
+					   max(L.Z) as MaxZ
+				FROM Location L group by L.ParentID) L  ON L.ParentID = S.ID
+				go   ')
+
+		if(@@error <> 0)
+		 begin
+			ROLLBACK TRANSACTION 
+			RETURN
+		 end 
+
+		 INSERT INTO DBVersion values (65, N'Create view for spatial data of structures' ,getDate(),User_ID())
+
+	 COMMIT TRANSACTION sixtyfive
+	end
+
 
 	 
 --from here on, continually add steps in the previous manner as needed.
