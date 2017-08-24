@@ -71,10 +71,11 @@ namespace MorphologyMesh
             }
 
             //Create multiple ports for branches
-        /*    foreach(MeshNode node in meshGraph.Nodes.Values.Where(n => n.GetEdgesAbove().Length > 1).ToArray())
+            foreach(MeshNode node in meshGraph.Nodes.Values.Where(n => n.GetEdgesAbove().Length > 1).ToArray())
             {
-                CreatePortsForBranch(node, node.GetEdgesAbove().SelectMany(e => node.Edges[e]).ToArray() );
-            }*/
+                CreatePortsForBranch(node, node.GetEdgesAbove().SelectMany(e => node.Edges[e]).ToArray());
+                CreatePortsForBranch(node, node.GetEdgesBelow().SelectMany(e => node.Edges[e]).ToArray());
+            }
              
             return meshGraph;
         }
@@ -86,8 +87,8 @@ namespace MorphologyMesh
             //OK, Voronoi diagram the shapes.  Create new ports.
             MeshNode[] other_nodes;
             other_nodes = edges.Select(e => graph.Nodes[e.SourceNodeKey == node.Key ? e.TargetNodeKey : e.SourceNodeKey]).ToArray();
-
-
+            
+            
         }
     }
 }

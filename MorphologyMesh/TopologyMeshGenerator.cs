@@ -13,9 +13,7 @@ using TriangleNet.Meshing;
 using TriangleNet.Geometry;
 
 namespace MorphologyMesh
-{ 
-    
-
+{  
     public class TopologyMeshGenerator
     {
         static public int NumPointsAroundCircle = 16;

@@ -113,7 +113,7 @@ namespace Viking.VolumeView
                         endpoint = new EndpointAddress(EndpointAttribute.Value);
                         //                        WebAnnotationModel.State.EndpointAddress = new EndpointAddress("https://connectomes.utah.edu/Services/TestBinary/Annotate.svc");
 #else
-                        WebAnnotationModel.State.EndpointAddress = new EndpointAddress(EndpointAttribute.Value);                       
+                        endpoint = new EndpointAddress(EndpointAttribute.Value);                       
 #endif
                         return endpoint;
                     default:

@@ -94,6 +94,7 @@
     <Compile Include="AttributeMapping\GMLAttributes.cs" />
     <Compile Include="AttributeMapping\DOTAttributes.cs" />
     <Compile Include="AttributeMapping\TLPAttributes.cs" />
+    <Compile Include="ColorMapping\Color.cs" />
     <Compile Include="ColorMapping\ColorMapping.cs" />
     <Compile Include="ColorMapping\StructureColorMap.cs" />
     <Compile Include="Extensions.cs" />
@@ -153,6 +154,14 @@
     <ProjectReference Include="..\SqlGeometryUtils\SqlGeometryUtils.csproj">
       <Project>{6702adda-3f8f-43d0-9c7e-1e7fdbbe983f}</Project>
       <Name>SqlGeometryUtils</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Triangle.NET\Triangle\Triangle.csproj">
+      <Project>{f7907a0a-b75f-400b-9e78-bfad00db4d6b}</Project>
+      <Name>Triangle</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\TriangleNetGeometryExtensions\TriangleNetGeometryExtensions.csproj">
+      <Project>{2b2e3c2e-be56-466c-98f3-6f9bfa82b213}</Project>
+      <Name>TriangleNetGeometryExtensions</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

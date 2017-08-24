@@ -14,7 +14,7 @@ namespace MorphologyMesh
     {
         public static MeshNode CreateNode(MorphologyNode node)
         {
-            MeshNode mNode = new MorphologyMesh.MeshNode(node.Key); 
+            MeshNode mNode = new MeshNode(node.Key); 
             mNode.Mesh = CreateNodeMesh(node);
             mNode.CapPort = CreatePort(node); //Create a port we can use to cap off the node if needed
             return mNode;
@@ -100,7 +100,7 @@ namespace MorphologyMesh
 
         public static MeshEdge CreateEdge(MorphologyNode Source, MorphologyNode Target)
         {
-            return new MorphologyMesh.MeshEdge(Source.ID, Target.ID, CreatePort(Source), CreatePort(Target));
+            return new MeshEdge(Source.ID, Target.ID, CreatePort(Source), CreatePort(Target));
         }
     }
 }

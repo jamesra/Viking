@@ -29,7 +29,7 @@ namespace MorphologyMesh
         /// </summary>
         /// <param name="graph"></param>
         /// <returns></returns>
-        public static ICollection<DynamicRenderMesh<ulong>> Generate(MorphologyGraph graph)
+        public static DynamicRenderMesh<ulong> Generate(MorphologyGraph graph)
         {
             MeshGraph mGraph = MeshGraphBuilder.ConvertToMeshGraph(graph);
             return Generate(mGraph);
@@ -40,7 +40,7 @@ namespace MorphologyMesh
         /// </summary>
         /// <param name="graph"></param>
         /// <returns></returns>
-        public static ICollection<DynamicRenderMesh<ulong>> Generate(MeshGraph meshGraph)
+        public static DynamicRenderMesh<ulong> Generate(MeshGraph meshGraph)
         {
             //Adjust the verticies so the models are centered on zero
             //GridVector3 translate = -meshGraph.BoundingBox.CenterPoint;
@@ -180,8 +180,21 @@ namespace MorphologyMesh
 
             //Todo: Not all nodes may be merged.  For these nodes just merge the meshes so we return a single mesh.
 
-            listMeshes.AddRange(meshGraph.Nodes.Select(n => n.Value.Mesh).ToArray());
-            return listMeshes.ToArray();
+            MeshNode[] nodes = meshGraph.Nodes.Values.OrderByDescending(n => n.Mesh.Verticies.Count).ToArray();
+            if (nodes.Length == 0)
+                return null;
+
+            MeshNode keepNode = nodes[0];
+            for(int i = 1; i < nodes.Length; i++)  
+            {
+                MergeMeshes(keepNode, nodes[i]);
+            }
+
+
+            //listMeshes.AddRange(meshGraph.Nodes.Select(n => n.Value.Mesh).ToArray());
+            //return listMeshes.ToArray();
+
+            return keepNode.Mesh;
         }
 
         /// <summary>
