@@ -122,21 +122,26 @@ PS_Output MyPSAnimatedBidirectionalHSV(PS_Input input)
 
 	float modulation = sin(offset * 3.14159) / 2;
 	finalColor.rgb = lineColor.rgb;
-	finalColor.a = lineColor.a * BlurEdge(input.polar.x, blurThreshold) * modulation + 0.5;
-	clip(finalColor.a);
+	finalColor.a = lineColor.a * BlurEdge(input.polar.x, blurThreshold) * (modulation + 0.5);
+    //finalColor.a = lineColor.a * (modulation + 0.5);
+	//clip(finalColor.a);
+    finalColor.a = clamp(finalColor.a, 0, 1);
 
 	output.Color = finalColor;
 	float depth = (input.polar.z * 2) > 1 ? 1 - ((1 - input.polar.z) * 2) : 1 - (input.polar.z * 2);
 	output.Depth = 0;//(polar.z * 2) > 1 ? 1-((1-polar.z)*2) : 1-(polar.z * 2);
 	finalColor.a = (1 - depth) * finalColor.a;
 
+    clip(finalColor.a);
+
 	float AlphaBlend = lineColor.a * lineColor.r;
 
 	//This is a greyscale+Alpha image.  Greyscale indicates the degree of color, alpha indicates degree to which we use Overlay Luma or Background Luma
 
-	float4 RGBBackgroundColor = tex2D(BackgroundTextureSampler, ((input.ScreenTexCoord.xy) / (RenderTargetSize.xy - 1)));
-	output.Color = BlendHSLColorOverBackground(finalColor, RGBBackgroundColor, 1);
-	output.Color.a = (1 - depth) * finalColor.a;
+    //TODO: The gap junctions are not as transparent as they should be, but the code below causes strange flickers from white to black.
+	//float4 RGBBackgroundColor = tex2D(BackgroundTextureSampler, ((input.ScreenTexCoord.xy) / (RenderTargetSize.xy - 1)));
+	//output.Color = BlendHSLColorOverBackground(finalColor, RGBBackgroundColor, 1);
+	//output.Color.a = (1 - depth) * finalColor.a;
 
 	return output;
 }
