@@ -40,6 +40,12 @@ namespace VikingXNAGraphics
             return CreateMeshModel(mesh, color);
         }
 
+        /// <summary>
+        /// Returns a model with counter-clockwise faces
+        /// </summary>
+        /// <param name="mesh"></param>
+        /// <param name="color"></param>
+        /// <returns></returns>
         public static PositionColorMeshModel CreateMeshModel(this TriangleNet.Meshing.IMesh mesh, Color color)
         {
             PositionColorMeshModel meshModel = new PositionColorMeshModel();
@@ -56,14 +62,14 @@ namespace VikingXNAGraphics
 
                 if (verts.AreClockwise())
                 {
-                    edges.Add(tri.GetVertexID(0));
                     edges.Add(tri.GetVertexID(1));
+                    edges.Add(tri.GetVertexID(0));
                     edges.Add(tri.GetVertexID(2));
                 }
                 else
                 {
-                    edges.Add(tri.GetVertexID(1));
                     edges.Add(tri.GetVertexID(0));
+                    edges.Add(tri.GetVertexID(1));
                     edges.Add(tri.GetVertexID(2));
                 }
             }
