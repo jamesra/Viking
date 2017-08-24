@@ -191,13 +191,9 @@ namespace MonogameTestbed
             }
             */
 
-            
-            foreach (MeshModel<VertexPositionNormalColor> model in BuildPolygonBranchCenter(GridVector3.Zero))
-            {                
-                meshViewWithLighting.models.Add(model);
-            }
-            
-
+             
+            meshViewWithLighting.models.Add(BuildPolygonBranchCenter(GridVector3.Zero));
+          
             labelCamera = new LabelView("", new GridVector2(-70, 0));
         } 
 
@@ -228,7 +224,7 @@ namespace MonogameTestbed
             return graph;
         }
 
-        private ICollection<MeshModel<VertexPositionNormalColor>> BuildSmoothMesh1(GridVector3 translate)
+        private MeshModel<VertexPositionNormalColor> BuildSmoothMesh1(GridVector3 translate)
         {
             //Create three simple polygons and add them to the graph
             IShape2D[] shapes = {new GridCircle(0,0,10),
@@ -256,12 +252,12 @@ namespace MonogameTestbed
 
             MeshGraph graph = BuildMeshGraph(shapes, ZLevels, edges, 5.0, translate);
 
-            ICollection<DynamicRenderMesh<ulong>> meshes = SmoothMeshGenerator.Generate(graph);
+            DynamicRenderMesh<ulong> mesh = SmoothMeshGenerator.Generate(graph);
             List<MeshModel<VertexPositionNormalColor>> listMeshModels = new List<MeshModel<VertexPositionNormalColor>>();
-            return meshes.Select(m => m.ToVertexPositionNormalColorMeshModel(Color.Yellow)).ToArray();
+            return mesh.ToVertexPositionNormalColorMeshModel(Color.Yellow);
         }
 
-        private ICollection<MeshModel<VertexPositionNormalColor>> BuildSmoothMeshTwoNonOverlappingCircles(GridVector3 translate)
+        private MeshModel<VertexPositionNormalColor> BuildSmoothMeshTwoNonOverlappingCircles(GridVector3 translate)
         {  
             //Create three simple polygons and add them to the graph
             IShape2D[] shapes = { new GridCircle(-5, -5, 5),
@@ -276,12 +272,12 @@ namespace MonogameTestbed
 
             MeshGraph graph = BuildMeshGraph(shapes, ZLevels, edges, 5.0, translate);
 
-            ICollection<DynamicRenderMesh<ulong>> meshes = SmoothMeshGenerator.Generate(graph);
+            DynamicRenderMesh<ulong> mesh = SmoothMeshGenerator.Generate(graph);
             List<MeshModel<VertexPositionNormalColor>> listMeshModels = new List<MeshModel<VertexPositionNormalColor>>();
-            return meshes.Select(m => m.ToVertexPositionNormalColorMeshModel(Color.Yellow)).ToArray();
+            return mesh.ToVertexPositionNormalColorMeshModel(Color.Yellow);
         }
 
-        private ICollection<MeshModel<VertexPositionNormalColor>> BuildSmoothMeshCircleBranchOfOneOverlapping(GridVector3 translate)
+        private MeshModel<VertexPositionNormalColor> BuildSmoothMeshCircleBranchOfOneOverlapping(GridVector3 translate)
         {
             //Create three simple polygons and add them to the graph
             IShape2D[] shapes = { new GridCircle(-5, -5, 5),
@@ -297,12 +293,12 @@ namespace MonogameTestbed
             
             MeshGraph graph = BuildMeshGraph(shapes, ZLevels, edges, 5.0, translate);
 
-            ICollection<DynamicRenderMesh<ulong>> meshes = SmoothMeshGenerator.Generate(graph);
+            DynamicRenderMesh<ulong> mesh = SmoothMeshGenerator.Generate(graph);
             List<MeshModel<VertexPositionNormalColor>> listMeshModels = new List<MeshModel<VertexPositionNormalColor>>();
-            return meshes.Select(m => m.ToVertexPositionNormalColorMeshModel(Color.Yellow)).ToArray();
+            return mesh.ToVertexPositionNormalColorMeshModel(Color.Yellow);
         }
 
-        private ICollection<MeshModel<VertexPositionNormalColor>> BuildSmoothMeshCircleBranchOfOneOverlappingButTall(GridVector3 translate)
+        private MeshModel<VertexPositionNormalColor> BuildSmoothMeshCircleBranchOfOneOverlappingButTall(GridVector3 translate)
         {
             //Create three simple polygons and add them to the graph
             IShape2D[] shapes = { new GridCircle(0, 0, 10),
@@ -326,12 +322,12 @@ namespace MonogameTestbed
             };
 
             MeshGraph graph = BuildMeshGraph(shapes, ZLevels, edges, 5.0, translate);
-            ICollection<DynamicRenderMesh<ulong>> meshes = SmoothMeshGenerator.Generate(graph);
+            DynamicRenderMesh<ulong> mesh = SmoothMeshGenerator.Generate(graph);
             List<MeshModel<VertexPositionNormalColor>> listMeshModels = new List<MeshModel<VertexPositionNormalColor>>();
-            return meshes.Select(m => m.ToVertexPositionNormalColorMeshModel(Color.Yellow)).ToArray();
+            return mesh.ToVertexPositionNormalColorMeshModel(Color.Yellow);
         }
 
-        private ICollection<MeshModel<VertexPositionNormalColor>> BuildSmoothMeshCircleXBranchOfOneOverlappingButTall(GridVector3 translate)
+        private MeshModel<VertexPositionNormalColor> BuildSmoothMeshCircleXBranchOfOneOverlappingButTall(GridVector3 translate)
         {
             //Create three simple polygons and add them to the graph
             IShape2D[] shapes = { new GridCircle(0, 0, 10), //
@@ -357,12 +353,12 @@ namespace MonogameTestbed
             };
 
             MeshGraph graph = BuildMeshGraph(shapes, ZLevels, edges, 5.0, translate);
-            ICollection<DynamicRenderMesh<ulong>> meshes = SmoothMeshGenerator.Generate(graph);
+            DynamicRenderMesh<ulong> mesh = SmoothMeshGenerator.Generate(graph);
             List<MeshModel<VertexPositionNormalColor>> listMeshModels = new List<MeshModel<VertexPositionNormalColor>>();
-            return meshes.Select(m => m.ToVertexPositionNormalColorMeshModel(Color.Yellow)).ToArray();
+            return mesh.ToVertexPositionNormalColorMeshModel(Color.Yellow);
         }
 
-        private ICollection<MeshModel<VertexPositionNormalColor>> BuildSmoothMeshCircleDoubleBranchOfOneOverlappingButTall(GridVector3 translate)
+        private MeshModel<VertexPositionNormalColor> BuildSmoothMeshCircleDoubleBranchOfOneOverlappingButTall(GridVector3 translate)
         {
             //Create three simple polygons and add them to the graph
             IShape2D[] shapes = { new GridCircle(0, 0, 10), //
@@ -390,12 +386,12 @@ namespace MonogameTestbed
             };
 
             MeshGraph graph = BuildMeshGraph(shapes, ZLevels, edges, 5.0, translate);
-            ICollection<DynamicRenderMesh<ulong>> meshes = SmoothMeshGenerator.Generate(graph);
+            DynamicRenderMesh<ulong> mesh = SmoothMeshGenerator.Generate(graph);
             List<MeshModel<VertexPositionNormalColor>> listMeshModels = new List<MeshModel<VertexPositionNormalColor>>();
-            return meshes.Select(m => m.ToVertexPositionNormalColorMeshModel(Color.Yellow)).ToArray();
+            return mesh.ToVertexPositionNormalColorMeshModel(Color.Yellow);
         }
 
-        private ICollection<MeshModel<VertexPositionNormalColor>> BuildSmoothMeshLine(GridVector3 translate)
+        private MeshModel<VertexPositionNormalColor> BuildSmoothMeshLine(GridVector3 translate)
         {
             //Create three simple polygons and add them to the graph
             IShape2D[] shapes = { new GridPolyline(new GridVector2[] { new GridVector2(0, 0), new GridVector2(0, 10) }),
@@ -414,12 +410,12 @@ namespace MonogameTestbed
             };
 
             MeshGraph graph = BuildMeshGraph(shapes, ZLevels, edges, 5.0, translate);
-            ICollection<DynamicRenderMesh<ulong>> meshes = SmoothMeshGenerator.Generate(graph);
+            DynamicRenderMesh<ulong> mesh = SmoothMeshGenerator.Generate(graph);
             List<MeshModel<VertexPositionNormalColor>> listMeshModels = new List<MeshModel<VertexPositionNormalColor>>();
-            return meshes.Select(m => m.ToVertexPositionNormalColorMeshModel(Color.Yellow)).ToArray();
+            return mesh.ToVertexPositionNormalColorMeshModel(Color.Yellow);
         }
 
-        private ICollection<MeshModel<VertexPositionNormalColor>> BuildPolygonBranchCenter(GridVector3 translate)
+        private MeshModel<VertexPositionNormalColor> BuildPolygonBranchCenter(GridVector3 translate)
         {
             //Create three simple polygons and add them to the graph
             IShape2D[] shapes = { CreateBoxPolygon(new GridRectangle(new GridVector2(0, 0), new GridVector2(4,6))), //Center
@@ -445,9 +441,9 @@ namespace MonogameTestbed
 
             MeshGraph graph = BuildMeshGraph(shapes, ZLevels, edges, 5.0, translate);
 
-            ICollection<DynamicRenderMesh<ulong>> meshes = SmoothMeshGenerator.Generate(graph);
+            DynamicRenderMesh<ulong> mesh = SmoothMeshGenerator.Generate(graph);
             List<MeshModel<VertexPositionNormalColor>> listMeshModels = new List<MeshModel<VertexPositionNormalColor>>();
-            return meshes.Select(m => m.ToVertexPositionNormalColorMeshModel(Color.Yellow)).ToArray();
+            return mesh.ToVertexPositionNormalColorMeshModel(Color.Yellow);
         }
 
         private MeshModel<VertexPositionNormalColor> BuildCircleConvexHull(ICircle2D circle)

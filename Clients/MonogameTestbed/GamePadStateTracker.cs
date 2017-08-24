@@ -18,6 +18,21 @@ namespace MonogameTestbed
             CurrentState = state; 
         }
 
+        public bool Start_Clicked
+        {
+            get
+            {
+                return CurrentState.Buttons.Start == ButtonState.Pressed && (LastState.Buttons.Start != CurrentState.Buttons.Start);
+            }
+        }
+
+        public bool Back_Clicked
+        {
+            get
+            {
+                return CurrentState.Buttons.Back == ButtonState.Pressed && (LastState.Buttons.Back != CurrentState.Buttons.Back);
+            }
+        }
 
         public bool A_Clicked
         {

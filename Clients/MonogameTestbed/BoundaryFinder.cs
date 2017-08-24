@@ -36,6 +36,11 @@ namespace MonogameTestbed
         {
             InsidePolygon = inside;
         }
+
+        public override string ToString()
+        {
+            return Key.ToString();
+        }
     }
 
     internal class BorderGraph : GraphLib.Graph<GridVector2, BorderVertex, BorderEdge>
@@ -58,7 +63,7 @@ namespace MonogameTestbed
             TriangleNet.Meshing.IMesh triangulationMesh = null;
             try
             {
-                triangulationMesh = TriangulatePolygons(shapes);
+                triangulationMesh = shapes.Triangulate();
             }
             catch(ArgumentException)
             {
@@ -67,12 +72,17 @@ namespace MonogameTestbed
 
             List<GridLineSegment> LinesBetweenShapes = SelectLinesBetweenShapes(triangulationMesh, shapes);
 
+            List<GridTriangle> TrianglesBetweenShapes = SelectTrianglesBetweenShapes(triangulationMesh, shapes);
+
             TriangleNet.Voronoi.VoronoiBase voronoi = shapes.Voronoi();
             if (voronoi == null)
                 return new List<GridLineSegment>(0);
 
             List<GridLineSegment> listVoronoiBetweenShapes = StripNonBoundaryLines(voronoi, shapes);
 
+            BorderGraph graph = BuildGraphFromTriangles(TrianglesBetweenShapes.ToArray(), shapes);
+            
+            /*
             //Find all the intersections between the remaining Delaunay and Voronoi lines  
             //DynamicRenderMesh mesh = CreateMesh(KnownGoodLines, out PointToIndex);
             BorderGraph graph = CreateGraph(listVoronoiBetweenShapes, shapes);
@@ -83,6 +93,10 @@ namespace MonogameTestbed
                 AddVertexAtDelaunayIntercepts(graph, edge, LinesBetweenShapes, shapes);
             }
 
+            
+
+            */
+            /*
             //OK, the graph is populated.  Walk the edges and find any intersections with shapes
             //When we intersect with a shape delete the edge but record the point outside of the shapes.
             //The search all paths from the node inside the shape for the first nodes outside of the shape.
@@ -91,7 +105,8 @@ namespace MonogameTestbed
             //Make sure our starting point is outside any of the shapes.
             //int iSearchStart = FindStartForBoundarySearch(mesh, shapes);
 
-            List<BorderVertex> StartCandidates = graph.Nodes.Where(n => !n.Value.InsidePolygon).Select(n => n.Value).ToList();
+            //TODO: Find the nodes with only one edge and use them as a starting point
+            List<BorderVertex> StartCandidates = graph.Nodes.Where(n => !n.Value.InsidePolygon && n.Value.Edges.Count == 1).Select(n => n.Value).ToList();
 
             while (StartCandidates.Count > 0)
             {
@@ -101,11 +116,17 @@ namespace MonogameTestbed
                 foreach (GridVector2 TargetNode in vert.Edges.Keys.ToArray())
                 {
                     GridLineSegment line = new GridLineSegment(vert.Key, TargetNode);
-                    if (shapes.Any(shape => shape.Intersects(line)))
+                    if (!IsValidBorderLine(line, shapes))
                     {
                         MoveBorder(graph, vert.Edges[TargetNode].First(), vert, graph.Nodes[TargetNode], shapes);
                     }
                 }
+            }
+
+            List<BorderEdge> KnownBadEdges = graph.Edges.Where(e => !IsValidBorderLine(e.Value.Line, shapes)).Select(e => e.Value).ToList();
+            foreach(BorderEdge badEdge in KnownBadEdges)
+            {
+                graph.RemoveEdge(badEdge);
             }
 
             //Remove any edges that are entirely within a shape
@@ -115,7 +136,99 @@ namespace MonogameTestbed
                 graph.RemoveNode(v);
             }
 
+            //Remove any nodes with no edges
+            KnownBad = graph.Nodes.Where(n => n.Value.Edges.Count == 0).Select(v => v.Key).ToList();
+            foreach (GridVector2 v in KnownBad)
+            {
+                graph.RemoveNode(v);
+            }
+            */
+
             return graph.Edges.Select(edge => edge.Value.Line).ToList();
+        }
+
+        private static GridLineSegment LineForEdge(DynamicRenderMesh mesh, EdgeKey edge)
+        {
+            return new GridLineSegment(mesh[edge.A].Position.XY(), mesh[edge.B].Position.XY());
+        }
+
+        private static GridLineSegment LineForEdge(DynamicRenderMesh mesh, Edge edge)
+        {
+            return new GridLineSegment(mesh[edge.A].Position.XY(), mesh[edge.B].Position.XY());
+        } 
+
+        private static bool LineConnectsShapes(GridLineSegment line, Dictionary<GridVector2, int> PointToShapeIndex)
+        {
+            return PointToShapeIndex[line.A] != PointToShapeIndex[line.B];
+        }
+
+        private static List<Edge> LinesOfFaceBetweenShapes(DynamicRenderMesh mesh, Face face, Dictionary<GridVector2, int> PointToShapeIndex)
+        {
+            List<Edge> edges = new List<Edge>(); 
+            foreach(var edge in face.Edges)
+            {
+                GridLineSegment line = LineForEdge(mesh, edge);
+                if(LineConnectsShapes(line, PointToShapeIndex))
+                {
+                    edges.Add(mesh.Edges[edge]);
+                }
+            }
+
+            return edges;
+        }
+
+        private static BorderVertex GetOrAddLineBisectorVertex(BorderGraph graph, GridLineSegment line)
+        {
+            GridVector2 midpoint = line.Bisect();
+            if (!graph.Nodes.ContainsKey(midpoint))
+            { 
+                BorderVertex node = new BorderVertex(midpoint, false);
+                graph.AddNode(node);
+            }
+
+            return graph.Nodes[midpoint];
+        }
+
+        private static BorderGraph BuildGraphFromTriangles(GridTriangle[] triangles, GridPolygon[] shapes)
+        {
+            BorderGraph graph = new BorderGraph();
+
+            //Create an index map of points 
+            Dictionary<GridVector2, SortedSet<int>> PointToTrianglesIndex = CreatePointToConnectedTrianglesIndexLookup(triangles);
+            Dictionary<GridVector2, int> PointToShapeIndex = CreatePointToShapeIndexLookup(shapes);
+
+            DynamicRenderMesh mesh = triangles.ToDynamicRenderMesh();
+
+            foreach(var edge in mesh.Edges.Values)
+            {
+                //Create a vertex at the edge midpoint
+                GridLineSegment line = LineForEdge(mesh, edge);
+
+                //If the line is between two different shapes we add a node to the graph
+                if (LineConnectsShapes(line, PointToShapeIndex))
+                {
+                    BorderVertex node = GetOrAddLineBisectorVertex(graph, line);
+
+                    //Check the faces of this edge for lines to connect to.
+                    foreach (var AdjacentEdge in edge.Faces.SelectMany(f => LinesOfFaceBetweenShapes(mesh, f, PointToShapeIndex)).Where(foundEdge => foundEdge != edge))
+                    {
+                        GridLineSegment ConnectedLine = LineForEdge(mesh, AdjacentEdge);
+                        BorderVertex otherNode = GetOrAddLineBisectorVertex(graph, ConnectedLine);
+
+                        BorderEdge borderEdge = new BorderEdge(node.Key, otherNode.Key);
+                        if(!graph.Edges.ContainsKey(borderEdge))
+                            graph.AddEdge(borderEdge); 
+                    }
+                }
+            }
+
+            return graph;
+            
+        } 
+
+        private static bool IsValidBorderLine(GridLineSegment line, GridPolygon[] shapes)
+        {
+            return !shapes.Any(shape => shape.Intersects(line));
         }
          
         /// <summary>
@@ -220,8 +333,8 @@ namespace MonogameTestbed
 
                 int[] ShapeIndicies = tri.Points.Select(p => PointToShapeIndex[p]).Distinct().ToArray();
 
-                //If the verticies of the triangle connect two or more shapes add it to the list
-                if (ShapeIndicies.Length >= 2)
+                //If the verticies of the triangle do not connect two or more shapes remove it from the list
+                if (ShapeIndicies.Length < 2)
                     triangles.RemoveAt(i);
             }
 
@@ -261,27 +374,84 @@ namespace MonogameTestbed
             return PointToShapeIndex;
         }
 
+
+        /// <summary>
+        /// Return a dictionary mapped each vertex to the index of the triangles using that vertex in the passed array
+        /// </summary>
+        /// <param name="Shapes"></param>
+        /// <returns></returns>
+        private static Dictionary<GridVector2, SortedSet<int>> CreatePointToConnectedTrianglesIndexLookup(GridTriangle[] Shapes)
+        {
+            Dictionary<GridVector2, SortedSet<int>> PointToShapeIndex = new Dictionary<GridVector2, SortedSet<int>>();
+            //Create an index map of points
+            List<GridVector2> listPoints = new List<GridVector2>();
+            List<int> listIndicies = new List<int>();
+
+            for (int iShape = 0; iShape < Shapes.Length; iShape++)
+            {
+                if (Shapes[iShape] == null)
+                    continue;
+
+                GridVector2[] points = Shapes[iShape].Points;
+                if (points == null || points.Length == 0)
+                    continue;
+                  
+                foreach (GridVector2 point in points)
+                {
+                    if(!PointToShapeIndex.ContainsKey(point))
+                    {
+                        PointToShapeIndex[point] = new SortedSet<int>();
+                    }
+
+                    PointToShapeIndex[point].Add(iShape);
+                }
+            }
+
+            return PointToShapeIndex;
+        }
+
         private static void MoveBorder(BorderGraph graph, BorderEdge edge, BorderVertex StartingVertex, BorderVertex InvalidVertex, GridPolygon[] shapes)
         {
             //Remove the edge that we know is invalid
-            graph.RemoveEdge(edge);
 
             //Find all verticies the invalid node can reach that are valid
-            SortedSet<GridVector2> validDestinations = BorderGraph.FindReachableMatches(graph, InvalidVertex.Key, v => v.InsidePolygon == false && v != StartingVertex);
+            SortedSet<GridVector2> validDestinations = BorderGraph.FindReachableMatches(graph, StartingVertex.Key,
+                 v => {
+                     if (v == StartingVertex || v == InvalidVertex || v.InsidePolygon)
+                         return false;
+
+                     GridLineSegment line = new GridLineSegment(StartingVertex.Key, v.Key);
+                     return !shapes.Any(shape => shape.Intersects(line));
+                     });
             if (validDestinations == null)
-                return; 
+                return;
+
+            bool EdgeAdded = false; 
 
             //Create lines between our source and destination.  If they do not intersect any shapes create a new edge
             foreach(GridVector2 validTarget in validDestinations)
             {
                 GridLineSegment newLine = new GridLineSegment(StartingVertex.Key, validTarget);
+                IList<GridVector2> path = BorderGraph.ShortestPath(graph, StartingVertex.Key, validTarget);
+
+                //Make sure there is not a valid node further down the path.  This would create a duplicate or an extra branch in the border
+                if (IsValidBorderLine(new GridLineSegment(StartingVertex.Key, path[1]), shapes))
+                    continue;
 
                 if(!shapes.Any(shape => shape.Intersects(newLine)))
                 {
                     BorderEdge newEdge = new BorderEdge(StartingVertex.Key, validTarget);
-                    graph.AddEdge(newEdge);
+                    if (!graph.Edges.ContainsKey(newEdge))
+                    {
+                        graph.AddEdge(newEdge);
+                        EdgeAdded = true;
+                    }
                 }
             }
+
+            if (EdgeAdded)
+                graph.RemoveEdge(edge);
+
         }
         
         /// <summary>
@@ -396,9 +566,7 @@ namespace MonogameTestbed
             Vertex vert = mesh.Verticies.First(v => shapes.All(shape => !shape.Contains(v.Position.XY())));
             return mesh.Verticies.IndexOf(vert);
         }
-
         
-
         private static Dictionary<GridVector2, int> CreatePointToShapeIndexLookup(List<GridVector2[]> shapeVerticies)
         {
             Dictionary<GridVector2, int> PointToShapeIndex = new Dictionary<GridVector2, int>();

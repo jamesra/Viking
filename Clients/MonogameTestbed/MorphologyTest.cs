@@ -17,6 +17,8 @@ namespace MonogameTestbed
 {
     class MorphologyTest : IGraphicsTest
     {
+        GamePadStateTracker Gamepad = new GamePadStateTracker();
+
         VikingXNAGraphics.MeshView<VertexPositionNormalColor> meshView;
 
         ICollection<DynamicRenderMesh<ulong>> meshes;
@@ -30,7 +32,8 @@ namespace MonogameTestbed
             TEST,
             RC1,
             RC2,
-            TEMPORALMONKEY
+            TEMPORALMONKEY,
+            INFERIORMONKEY
         }
 
 
@@ -40,7 +43,8 @@ namespace MonogameTestbed
         private static Dictionary<ENDPOINT, Uri> EndpointMap = new Dictionary<ENDPOINT, Uri> { { ENDPOINT.TEST, new Uri("http://webdev.connectomes.utah.edu/RC1Test/OData") },
                                                                                                { ENDPOINT.RC1, new Uri("http://websvc1.connectomes.utah.edu/RC1/OData") },
                                                                                                { ENDPOINT.RC2, new Uri("http://websvc1.connectomes.utah.edu/RC2/OData") },
-                                                                                               { ENDPOINT.TEMPORALMONKEY, new Uri("http://websvc1.connectomes.utah.edu/NeitzTemporalMonkey/OData") }};
+                                                                                               { ENDPOINT.TEMPORALMONKEY, new Uri("http://websvc1.connectomes.utah.edu/NeitzTemporalMonkey/OData") },
+                                                                                               { ENDPOINT.INFERIORMONKEY, new Uri("http://websvc1.connectomes.utah.edu/NeitzInferiorMonkey/OData") }};
 
         long[] TroubleIDS = new long[] {
             //5868, //Z: 231
@@ -67,10 +71,13 @@ namespace MonogameTestbed
 
             //meshes = InitSmallSmoothModelFromOData(144287, ENDPOINT.TEST);
             //meshes = InitSmallSmoothModelFromOData(1, ENDPOINT.RC2);
+            //meshes = InitSmallSmoothModelFromOData(476, ENDPOINT.RC1);
+            //meshes = InitSmallSmoothModelFromOData(476, ENDPOINT.RC1);
             //meshes = InitSmallSmoothModelFromOData(5554, ENDPOINT.RC2);
+            meshes = InitSmallSmoothModelFromOData(new long[] { 1650, 858 }, ENDPOINT.INFERIORMONKEY);
 
             //Bad polygon Location #1026126.  Position X: 62134.0	Y: 51034.8	Z: 234	DS: 1.97
-            meshes = InitSmallSmoothModelFromOData(180, ENDPOINT.TEST);
+            //meshes = InitSmallSmoothModelFromOData(180, ENDPOINT.TEST);
             //            meshes = InitSmallSmoothModelFromODataLocations(TroubleIDS, ENDPOINT.TEST);
 
             //meshes = InitSmallSmoothModelFromOData(207, ENDPOINT.TEMPORALMONKEY);
@@ -110,9 +117,9 @@ namespace MonogameTestbed
         /// <summary>
         /// Create a tube of circles offset slighty each section
         /// </summary>
-        public ICollection<DynamicRenderMesh<ulong>> InitSmallSmoothModelFromOData(int CellID, ENDPOINT endpoint)
+        public ICollection<DynamicRenderMesh<ulong>> InitSmallSmoothModelFromOData(long[] CellIDs, ENDPOINT endpoint)
         { 
-            AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromOData(new long[] { CellID }, true, EndpointMap[endpoint]);
+            AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromOData(CellIDs, true, EndpointMap[endpoint]);
 
             //SelectZRange(graph, 231, 235);
             //SelectSubsetOfIDs(graph, TroubleIDS);
@@ -131,7 +138,7 @@ namespace MonogameTestbed
             //MorphologyMesh.TopologyMeshGenerator generator = new MorphologyMesh.TopologyMeshGenerator();
             return RecursivelyGenerateMeshes(graph);
         }
-
+         
         private void SelectZRange(AnnotationVizLib.MorphologyGraph graph, int StartZ, int EndZ)
         {
             AnnotationVizLib.MorphologyNode[] nodes = graph.Nodes.Values.Where(n => n.UnscaledZ < StartZ || n.UnscaledZ > EndZ).ToArray();
@@ -171,7 +178,9 @@ namespace MonogameTestbed
         {
             List<DynamicRenderMesh<ulong>> listMeshes = new List<DynamicRenderMesh<ulong>>();
 
-            listMeshes.AddRange(MorphologyMesh.SmoothMeshGenerator.Generate(graph));
+            DynamicRenderMesh<ulong> structureMesh = MorphologyMesh.SmoothMeshGenerator.Generate(graph);
+            if(structureMesh != null)
+                listMeshes.Add(structureMesh);
 
             foreach(var subgraph in graph.Subgraphs.Values)
             {
@@ -186,13 +195,14 @@ namespace MonogameTestbed
             StandardCameraManipulator.Update(this.Scene.Camera);
 
             GamePadState state = GamePad.GetState(PlayerIndex.One);
-            
-            if (state.Buttons.Y == ButtonState.Pressed)
+            Gamepad.Update(state);
+
+            if (Gamepad.Y_Clicked)
             {
                 meshView.WireFrame = !meshView.WireFrame;
             }
 
-            if (state.Buttons.A == ButtonState.Pressed)
+            if (Gamepad.A_Clicked)
             {
                 this.Scene.Camera.Rotation = Vector3.Zero;
                 this.Scene.Camera.Position = new Vector3(0, -10, 0);
@@ -202,6 +212,7 @@ namespace MonogameTestbed
             VolumePosition /= new GridVector3(2.18, 2.18, -90);
 
             labelCamera.Text = string.Format("{0}\n{1}\n{2}", Scene.Camera.Position, VolumePosition, Scene.Camera.Rotation);
+              
         }
 
         public void Draw(MonoTestbed window)

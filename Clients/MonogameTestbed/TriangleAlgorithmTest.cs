@@ -17,136 +17,6 @@ using TriangleNet;
 
 namespace MonogameTestbed
 {
-    public static class GridVector2LabelExtensions
-    {
-        public static string ToLabel(this GridVector2 p)
-        {
-            return string.Format("{0:F2} {1:F2}", p.X, p.Y);
-        }
-    }
-    class PointSet
-    {
-        public double PointRadius = 2.0;
-        public List<GridCircle> Circles = new List<GridCircle>();
-        public ICollection<GridVector2> Points
-        {
-            get
-            {
-               return Circles.Select(c => c.Center).ToList();
-            }
-        }
-
-        /// <summary>
-        /// Add or remove a point from the list
-        /// </summary>
-        /// <param name="p"></param>
-        public void Toggle(GridVector2 p)
-        {
-            GridCircle newCircle = new GridCircle(p, PointRadius);
-            if (Circles.Any(c => c.Intersects(newCircle)))
-            {
-                Circles.RemoveAll(c => c.Intersects(newCircle));
-            }
-            else
-            {
-                Circles.Add(newCircle);
-            }
-        }
-    }
-
-    class PointSetView
-    {
-        public CircleView[] PointViews = new CircleView[0];
-        public LabelView[] LabelViews = new LabelView[0];
-        public Color color;
-      
-        public void UpdateViews(ICollection<GridCircle> Points)
-        {
-            PointViews = Points.Select(c => new CircleView(c, color)).ToArray();
-            LabelViews = Points.Select(c => new LabelView(c.Center.ToLabel(), c.Center)).ToArray();
-
-            foreach(LabelView label in LabelViews)
-            {
-                label.FontSize = 2; 
-            }
-        } 
-    }
-    
-    class LineSetView
-    {
-        public List<LineView> LineViews = new List<LineView>();
-        public double LineRadius = 1;
-        public Color color;
-
-        public void UpdateViews(ICollection<GridVector2> Points)
-        {
-            if (Points.Count >= 3)
-            {
-                TriangleNet.Voronoi.VoronoiBase v = Points.Voronoi();
-                UpdateViews(v);
-            }
-            else
-            {
-                LineViews = new List<LineView>();
-            }
-        }
-
-        public void UpdateViews(TriangleNet.Voronoi.VoronoiBase v)
-        {
-            if (v != null)
-            { 
-                LineViews = ToLines(v, color);
-            }
-            else
-            {
-                LineViews = new List<LineView>();
-            }
-        }
-
-        public void UpdateViews(ICollection<GridLineSegment> lines)
-        {
-            if (lines != null)
-            {
-                LineViews = lines.Select(l => new LineView(l.A, l.B, LineRadius, color, LineStyle.Standard, false)).ToList();
-
-            }
-            else
-            {
-                LineViews = new List<LineView>();
-            }
-        }
-
-        public void UpdateViews(GridPolygon polygon)
-        {
-            if(polygon == null)
-            {
-                LineViews = new List<LineView>();
-            }
-            else
-            {
-                LineViews = polygon.ExteriorSegments.Select(l => new LineView(l.A, l.B, LineRadius, color, LineStyle.Standard, false)).ToList();
-            }
-        }
-
-        private List<LineView> ToLines(TriangleNet.Topology.DCEL.DcelMesh mesh, Color color)
-        {
-            List<LineView> listLines = new List<LineView>();
-            //Create a map of Vertex ID's to DRMesh ID's
-            int[] IndexMap = mesh.Vertices.Select(v => v.ID).ToArray();
-
-            foreach (var e in mesh.Edges)
-            {
-                listLines.Add(new LineView(mesh.Vertices[e.P0].ToGridVector2(),
-                                           mesh.Vertices[e.P1].ToGridVector2(),
-                                           LineRadius,
-                                           color,
-                                           LineStyle.Standard,
-                                           false));
-            }
-
-            return listLines;
-        }
-    }
 
     class ConvexHullView
     {
@@ -204,7 +74,7 @@ namespace MonogameTestbed
 
         public PointSetViewCollection(Color PointColor, Color VoronoiColor, Color CVViewColor)
         {
-            PointsView.color = PointColor;
+            PointsView.Color = PointColor;
             VoronoiView.color = VoronoiColor;
             CVView.color = CVViewColor;
         }
@@ -213,24 +83,21 @@ namespace MonogameTestbed
         {
             Points.Toggle(p);
 
-            PointsView.UpdateViews(Points.Circles);
+            PointsView.UpdateViews();
             VoronoiView.UpdateViews(Points.Points);
             CVView.UpdateViews(Points.Points.ToArray());
         }
 
         public void Draw(MonoTestbed window, Scene scene)
         {
-  //          if(VoronoiView.LineViews != null)
-  //              LineView.Draw(window.GraphicsDevice, scene, window.lineManager, VoronoiView.LineViews.ToArray());
 
-            if(PointsView.PointViews != null)
-                CircleView.Draw(window.GraphicsDevice, scene, window.basicEffect, window.overlayEffect, PointsView.PointViews);
+            //          if(VoronoiView.LineViews != null)
+            //              LineView.Draw(window.GraphicsDevice, scene, window.lineManager, VoronoiView.LineViews.ToArray());
 
-            if (PointsView.LabelViews != null)
-                LabelView.Draw(window.spriteBatch, window.fontArial, scene, PointsView.LabelViews);
+            PointsView.Draw(window, scene);
 
-     //       if (CVView.LineViews != null)
-     //           LineView.Draw(window.GraphicsDevice, scene, window.lineManager, CVView.LineViews.ToArray());
+            //       if (CVView.LineViews != null)
+            //           LineView.Draw(window.GraphicsDevice, scene, window.lineManager, CVView.LineViews.ToArray());
         }
     }
      
@@ -269,6 +136,13 @@ namespace MonogameTestbed
             PolygonViews.Add(newView);
             UpdateSet(set, Sets.Count - 1);
             return Sets.Count - 1;
+        }
+
+        public PolygonBorderView()
+        {
+            VoronoiView.LineRadius = 1;
+            DelaunayView.LineRadius = 1;
+            BoundaryView.LineRadius = 2;
         }
 
         /// <summary>
@@ -400,16 +274,18 @@ namespace MonogameTestbed
 
         public void Draw(MonoTestbed window, Scene scene)
         {
-                        if (DelaunayView.LineViews != null)
-                            LineView.Draw(window.GraphicsDevice, scene, window.lineManager, DelaunayView.LineViews.ToArray());
+            if (BoundaryView.LineViews != null)
+                LineView.Draw(window.GraphicsDevice, scene, window.lineManager, BoundaryView.LineViews.ToArray());
 
-                      if (VoronoiView.LineViews != null)
-                          LineView.Draw(window.GraphicsDevice, scene, window.lineManager, VoronoiView.LineViews.ToArray());
+            if (DelaunayView.LineViews != null)
+                LineView.Draw(window.GraphicsDevice, scene, window.lineManager, DelaunayView.LineViews.ToArray());
+
+            if (VoronoiView.LineViews != null)
+                LineView.Draw(window.GraphicsDevice, scene, window.lineManager, VoronoiView.LineViews.ToArray());
 
             LineView.Draw(window.GraphicsDevice, scene, window.lineManager, PolygonViews.Where(poly => poly.LineViews != null).SelectMany(poly => poly.LineViews).ToArray());
 
-            if (BoundaryView.LineViews != null)
-                LineView.Draw(window.GraphicsDevice, scene, window.lineManager, BoundaryView.LineViews.ToArray());
+           
 
             if (listLabels != null)
                 LabelView.Draw(window.spriteBatch, window.fontArial, scene, listLabels);
@@ -533,7 +409,7 @@ namespace MonogameTestbed
             Points_C.Draw(window, scene);
 
             if(cursorLabel != null)
-                LabelView.Draw(window.spriteBatch, window.fontArial, window.Scene, new LabelView[] { cursorLabel });
+                LabelView.Draw(window.spriteBatch, window.fontArial, this.scene, new LabelView[] { cursorLabel });
         }
 
         /*
