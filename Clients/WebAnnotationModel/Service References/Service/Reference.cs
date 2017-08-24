@@ -1355,12 +1355,20 @@ namespace WebAnnotationModel.Service {
         long EndMerge(System.IAsyncResult result);
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/Split", ReplyAction="http://tempuri.org/IAnnotateStructures/SplitResponse")]
-        long Split(long StructureA, AnnotationService.Types.LocationLink locLink);
+        long Split(long StructureA, long LocationIDInSplitStructure);
         
         [System.ServiceModel.OperationContractAttribute(AsyncPattern=true, Action="http://tempuri.org/IAnnotateStructures/Split", ReplyAction="http://tempuri.org/IAnnotateStructures/SplitResponse")]
-        System.IAsyncResult BeginSplit(long StructureA, AnnotationService.Types.LocationLink locLink, System.AsyncCallback callback, object asyncState);
+        System.IAsyncResult BeginSplit(long StructureA, long LocationIDInSplitStructure, System.AsyncCallback callback, object asyncState);
         
         long EndSplit(System.IAsyncResult result);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/SplitAtLocationLink", ReplyAction="http://tempuri.org/IAnnotateStructures/SplitAtLocationLinkResponse")]
+        long SplitAtLocationLink(long LocationIDOfKeepStructure, long LocationIDOfSplitStructure);
+        
+        [System.ServiceModel.OperationContractAttribute(AsyncPattern=true, Action="http://tempuri.org/IAnnotateStructures/SplitAtLocationLink", ReplyAction="http://tempuri.org/IAnnotateStructures/SplitAtLocationLinkResponse")]
+        System.IAsyncResult BeginSplitAtLocationLink(long LocationIDOfKeepStructure, long LocationIDOfSplitStructure, System.AsyncCallback callback, object asyncState);
+        
+        long EndSplitAtLocationLink(System.IAsyncResult result);
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/GetStructureChangeLog", ReplyAction="http://tempuri.org/IAnnotateStructures/GetStructureChangeLogResponse")]
         AnnotationService.Types.Structure[] GetStructureChangeLog(System.Nullable<long> structure_id, System.Nullable<System.DateTime> begin_time, System.Nullable<System.DateTime> end_time);
@@ -1799,6 +1807,25 @@ namespace WebAnnotationModel.Service {
     
     [System.Diagnostics.DebuggerStepThroughAttribute()]
     [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
+    public partial class SplitAtLocationLinkCompletedEventArgs : System.ComponentModel.AsyncCompletedEventArgs {
+        
+        private object[] results;
+        
+        public SplitAtLocationLinkCompletedEventArgs(object[] results, System.Exception exception, bool cancelled, object userState) : 
+                base(exception, cancelled, userState) {
+            this.results = results;
+        }
+        
+        public long Result {
+            get {
+                base.RaiseExceptionIfNecessary();
+                return ((long)(this.results[0]));
+            }
+        }
+    }
+    
+    [System.Diagnostics.DebuggerStepThroughAttribute()]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
     public partial class GetStructureChangeLogCompletedEventArgs : System.ComponentModel.AsyncCompletedEventArgs {
         
         private object[] results;
@@ -1946,6 +1973,12 @@ namespace WebAnnotationModel.Service {
         
         private System.Threading.SendOrPostCallback onSplitCompletedDelegate;
         
+        private BeginOperationDelegate onBeginSplitAtLocationLinkDelegate;
+        
+        private EndOperationDelegate onEndSplitAtLocationLinkDelegate;
+        
+        private System.Threading.SendOrPostCallback onSplitAtLocationLinkCompletedDelegate;
+        
         private BeginOperationDelegate onBeginGetStructureChangeLogDelegate;
         
         private EndOperationDelegate onEndGetStructureChangeLogDelegate;
@@ -2012,6 +2045,8 @@ namespace WebAnnotationModel.Service {
         public event System.EventHandler<MergeCompletedEventArgs> MergeCompleted;
         
         public event System.EventHandler<SplitCompletedEventArgs> SplitCompleted;
+        
+        public event System.EventHandler<SplitAtLocationLinkCompletedEventArgs> SplitAtLocationLinkCompleted;
         
         public event System.EventHandler<GetStructureChangeLogCompletedEventArgs> GetStructureChangeLogCompleted;
         
@@ -3050,13 +3085,13 @@ namespace WebAnnotationModel.Service {
                         MergeID}, this.onEndMergeDelegate, this.onMergeCompletedDelegate, userState);
         }
         
-        public long Split(long StructureA, AnnotationService.Types.LocationLink locLink) {
-            return base.Channel.Split(StructureA, locLink);
+        public long Split(long StructureA, long LocationIDInSplitStructure) {
+            return base.Channel.Split(StructureA, LocationIDInSplitStructure);
         }
         
         [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
-        public System.IAsyncResult BeginSplit(long StructureA, AnnotationService.Types.LocationLink locLink, System.AsyncCallback callback, object asyncState) {
-            return base.Channel.BeginSplit(StructureA, locLink, callback, asyncState);
+        public System.IAsyncResult BeginSplit(long StructureA, long LocationIDInSplitStructure, System.AsyncCallback callback, object asyncState) {
+            return base.Channel.BeginSplit(StructureA, LocationIDInSplitStructure, callback, asyncState);
         }
         
         [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
@@ -3066,8 +3101,8 @@ namespace WebAnnotationModel.Service {
         
         private System.IAsyncResult OnBeginSplit(object[] inValues, System.AsyncCallback callback, object asyncState) {
             long StructureA = ((long)(inValues[0]));
-            AnnotationService.Types.LocationLink locLink = ((AnnotationService.Types.LocationLink)(inValues[1]));
-            return this.BeginSplit(StructureA, locLink, callback, asyncState);
+            long LocationIDInSplitStructure = ((long)(inValues[1]));
+            return this.BeginSplit(StructureA, LocationIDInSplitStructure, callback, asyncState);
         }
         
         private object[] OnEndSplit(System.IAsyncResult result) {
@@ -3083,11 +3118,11 @@ namespace WebAnnotationModel.Service {
             }
         }
         
-        public void SplitAsync(long StructureA, AnnotationService.Types.LocationLink locLink) {
-            this.SplitAsync(StructureA, locLink, null);
+        public void SplitAsync(long StructureA, long LocationIDInSplitStructure) {
+            this.SplitAsync(StructureA, LocationIDInSplitStructure, null);
         }
         
-        public void SplitAsync(long StructureA, AnnotationService.Types.LocationLink locLink, object userState) {
+        public void SplitAsync(long StructureA, long LocationIDInSplitStructure, object userState) {
             if ((this.onBeginSplitDelegate == null)) {
                 this.onBeginSplitDelegate = new BeginOperationDelegate(this.OnBeginSplit);
             }
@@ -3099,7 +3134,59 @@ namespace WebAnnotationModel.Service {
             }
             base.InvokeAsync(this.onBeginSplitDelegate, new object[] {
                         StructureA,
-                        locLink}, this.onEndSplitDelegate, this.onSplitCompletedDelegate, userState);
+                        LocationIDInSplitStructure}, this.onEndSplitDelegate, this.onSplitCompletedDelegate, userState);
+        }
+        
+        public long SplitAtLocationLink(long LocationIDOfKeepStructure, long LocationIDOfSplitStructure) {
+            return base.Channel.SplitAtLocationLink(LocationIDOfKeepStructure, LocationIDOfSplitStructure);
+        }
+        
+        [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
+        public System.IAsyncResult BeginSplitAtLocationLink(long LocationIDOfKeepStructure, long LocationIDOfSplitStructure, System.AsyncCallback callback, object asyncState) {
+            return base.Channel.BeginSplitAtLocationLink(LocationIDOfKeepStructure, LocationIDOfSplitStructure, callback, asyncState);
+        }
+        
+        [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
+        public long EndSplitAtLocationLink(System.IAsyncResult result) {
+            return base.Channel.EndSplitAtLocationLink(result);
+        }
+        
+        private System.IAsyncResult OnBeginSplitAtLocationLink(object[] inValues, System.AsyncCallback callback, object asyncState) {
+            long LocationIDOfKeepStructure = ((long)(inValues[0]));
+            long LocationIDOfSplitStructure = ((long)(inValues[1]));
+            return this.BeginSplitAtLocationLink(LocationIDOfKeepStructure, LocationIDOfSplitStructure, callback, asyncState);
+        }
+        
+        private object[] OnEndSplitAtLocationLink(System.IAsyncResult result) {
+            long retVal = this.EndSplitAtLocationLink(result);
+            return new object[] {
+                    retVal};
+        }
+        
+        private void OnSplitAtLocationLinkCompleted(object state) {
+            if ((this.SplitAtLocationLinkCompleted != null)) {
+                InvokeAsyncCompletedEventArgs e = ((InvokeAsyncCompletedEventArgs)(state));
+                this.SplitAtLocationLinkCompleted(this, new SplitAtLocationLinkCompletedEventArgs(e.Results, e.Error, e.Cancelled, e.UserState));
+            }
+        }
+        
+        public void SplitAtLocationLinkAsync(long LocationIDOfKeepStructure, long LocationIDOfSplitStructure) {
+            this.SplitAtLocationLinkAsync(LocationIDOfKeepStructure, LocationIDOfSplitStructure, null);
+        }
+        
+        public void SplitAtLocationLinkAsync(long LocationIDOfKeepStructure, long LocationIDOfSplitStructure, object userState) {
+            if ((this.onBeginSplitAtLocationLinkDelegate == null)) {
+                this.onBeginSplitAtLocationLinkDelegate = new BeginOperationDelegate(this.OnBeginSplitAtLocationLink);
+            }
+            if ((this.onEndSplitAtLocationLinkDelegate == null)) {
+                this.onEndSplitAtLocationLinkDelegate = new EndOperationDelegate(this.OnEndSplitAtLocationLink);
+            }
+            if ((this.onSplitAtLocationLinkCompletedDelegate == null)) {
+                this.onSplitAtLocationLinkCompletedDelegate = new System.Threading.SendOrPostCallback(this.OnSplitAtLocationLinkCompleted);
+            }
+            base.InvokeAsync(this.onBeginSplitAtLocationLinkDelegate, new object[] {
+                        LocationIDOfKeepStructure,
+                        LocationIDOfSplitStructure}, this.onEndSplitAtLocationLinkDelegate, this.onSplitAtLocationLinkCompletedDelegate, userState);
         }
         
         public AnnotationService.Types.Structure[] GetStructureChangeLog(System.Nullable<long> structure_id, System.Nullable<System.DateTime> begin_time, System.Nullable<System.DateTime> end_time) {

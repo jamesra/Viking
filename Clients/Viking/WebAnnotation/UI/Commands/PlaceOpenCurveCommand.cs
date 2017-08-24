@@ -92,7 +92,14 @@ namespace WebAnnotation.UI.Commands
             if (this.Verticies.Length < 3 || curve_verticies == null || this.curve_verticies.ControlPoints.Length < 3)
                 return false;
 
-            return this.curve_verticies.ControlPoints.ToPolygon().STIsValid().IsTrue;
+            try
+            {
+                return this.curve_verticies.ControlPoints.ToPolygon().STIsValid().IsTrue;
+            }
+            catch(ArgumentException e)
+            {
+                return false;
+            }
         }
 
         /// <summary>

@@ -98,6 +98,11 @@ namespace WebAnnotationModel
             return new ConcurrentDictionary<long, LocationObj>();
         }
 
+        public LocationObj[] GetLocalObjectsForStructure(long StructureID)
+        {
+            return IDToObject.Values.Where(l => l.ParentID.HasValue && l.ParentID.Value == StructureID).ToArray();
+        }
+
         protected override Location[] ProxyGetBySection(AnnotateLocationsClient proxy, long SectionNumber, DateTime LastQuery, out long TicksAtQueryExecute, out long[] deleted_objs)
         {
             return proxy.GetLocationChanges(out TicksAtQueryExecute, out deleted_objs, SectionNumber, LastQuery.Ticks);

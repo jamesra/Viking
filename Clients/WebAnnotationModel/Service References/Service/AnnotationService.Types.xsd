@@ -200,17 +200,6 @@
     </xs:complexContent>
   </xs:complexType>
   <xs:element name="LocationPositionOnly" nillable="true" type="tns:LocationPositionOnly" />
-  <xs:complexType name="LocationLink">
-    <xs:complexContent mixed="false">
-      <xs:extension base="tns:DataObject">
-        <xs:sequence>
-          <xs:element minOccurs="0" name="SourceID" type="xs:long" />
-          <xs:element minOccurs="0" name="TargetID" type="xs:long" />
-        </xs:sequence>
-      </xs:extension>
-    </xs:complexContent>
-  </xs:complexType>
-  <xs:element name="LocationLink" nillable="true" type="tns:LocationLink" />
   <xs:complexType name="ArrayOfLocation">
     <xs:sequence>
       <xs:element minOccurs="0" maxOccurs="unbounded" name="Location" nillable="true" type="tns:Location" />
@@ -230,6 +219,17 @@
     </xs:sequence>
   </xs:complexType>
   <xs:element name="ArrayOfLocationLink" nillable="true" type="tns:ArrayOfLocationLink" />
+  <xs:complexType name="LocationLink">
+    <xs:complexContent mixed="false">
+      <xs:extension base="tns:DataObject">
+        <xs:sequence>
+          <xs:element minOccurs="0" name="SourceID" type="xs:long" />
+          <xs:element minOccurs="0" name="TargetID" type="xs:long" />
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:element name="LocationLink" nillable="true" type="tns:LocationLink" />
   <xs:complexType name="ArrayOfLocationHistory">
     <xs:sequence>
       <xs:element minOccurs="0" maxOccurs="unbounded" name="LocationHistory" nillable="true" type="tns:LocationHistory" />

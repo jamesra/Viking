@@ -1285,10 +1285,62 @@ namespace WebAnnotationModel
             return added; 
         }
 
-        
+        /// <summary>
+        /// Delete data for an object from our client and request new data from the server
+        /// </summary>
+        /// <param name="key"></param>
+        /// <returns></returns>
+        public virtual OBJECT Refresh(KEY key)
+        {
+            List<OBJECT> listForgotten = Refresh(new KEY[] { key });
+            return listForgotten.First();
+        }
 
         /// <summary>
-        /// Remove an object from IDToObject.  Delete event subscriptions on the object.
+        /// Delete data for an object from our client and request new data from the server
+        /// </summary>
+        /// <param name="key"></param>
+        /// <returns></returns>
+        public virtual List<OBJECT> Refresh(KEY[] keys)
+        {
+           
+            List<OBJECT> listForgotten = InternalDelete(keys);
+            CallOnCollectionChangedForDelete(listForgotten);
+
+            return this.GetObjectsByIDs(keys, true);
+        }
+
+        /// <summary>
+        /// Forget everything we know on the client about an object.  This will force a refresh from the
+        /// server for the next request.
+        /// </summary>
+        /// <param name="key"></param>
+        /// <returns></returns>
+        public virtual OBJECT ForgetLocally(KEY key)
+        {
+            List<OBJECT> listForgotten = ForgetLocally(new KEY[] { key });
+            if (listForgotten.Count == 0)
+                return null;
+
+            return listForgotten.First();
+        }
+
+        /// <summary>
+        /// Forget everything we know on the client about an object.  This will force a refresh from the
+        /// server for the next request.
+        /// </summary>
+        /// <param name="key"></param>
+        /// <returns></returns>
+        public virtual List<OBJECT> ForgetLocally(KEY[] keys)
+        {
+
+            List<OBJECT> listForgotten = InternalDelete(keys);
+            CallOnCollectionChangedForDelete(listForgotten);
+            return listForgotten;
+        }
+
+        /// <summary>
+        /// Remove our local cache for an object.  Delete event subscriptions on the object.
         /// Return object reference if the object was found an removed.
         /// </summary>
         protected virtual OBJECT TryRemoveObject(KEY key)

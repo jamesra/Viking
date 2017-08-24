@@ -348,6 +348,12 @@ namespace WebAnnotationModel
                 proxy.Open();
 
                 KeepID = proxy.Merge(KeepID, MergeID);
+
+                LocationObj[] locations = Store.Locations.GetLocalObjectsForStructure(MergeID);
+                Store.Locations.Refresh(locations.Select(l => l.ID).ToArray());
+
+                this.ForgetLocally(MergeID);
+
                 return 0;
             }
             catch (Exception e)
@@ -362,6 +368,39 @@ namespace WebAnnotationModel
             }
 
             return 0; 
+        }
+
+        public long SplitAtLocationLink(long KeepLocID, long SplitLocID)
+        {
+            AnnotateStructuresClient proxy = null;
+            try
+            {
+                proxy = CreateProxy();
+                proxy.Open();
+
+                long SplitStructureID = proxy.SplitAtLocationLink(KeepLocID, SplitLocID);
+
+                LocationObj keepLoc = Store.Locations.GetObjectByID(KeepLocID);
+                LocationObj[] locations = Store.Locations.GetLocalObjectsForStructure(keepLoc.ParentID.Value);
+                Store.Locations.Refresh(locations.Select(l => l.ID).ToArray());
+
+                LocationObj[] SplitLocations = Store.Locations.GetLocalObjectsForStructure(SplitStructureID);
+                Store.Locations.Refresh(SplitLocations.Select(l => l.ID).ToArray());
+                 
+                Store.LocationLinks.ForgetLocally(new LocationLinkKey(KeepLocID, SplitLocID));
+                 
+                return SplitStructureID;
+            }
+            catch (Exception e)
+            {
+                ShowStandardExceptionMessage(e);
+                throw e;
+            }
+            finally
+            {
+                if (proxy != null)
+                    proxy.Close();
+            }
         }
 
 
