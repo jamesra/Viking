@@ -258,6 +258,14 @@ namespace VikingXNAGraphics
             if (Labels == null)
                 return;
 
+            if (Labels.Count == 0)
+                return;
+
+            BlendState originalBlendState = spriteBatch.GraphicsDevice.BlendState;
+            DepthStencilState originalDepthState = spriteBatch.GraphicsDevice.DepthStencilState;
+            RasterizerState originalRasterizerState = spriteBatch.GraphicsDevice.RasterizerState;
+            SamplerState originalSamplerState = spriteBatch.GraphicsDevice.SamplerStates[0];
+
             spriteBatch.Begin();
 
             foreach(LabelView label in Labels)
@@ -266,6 +274,11 @@ namespace VikingXNAGraphics
             }
 
             spriteBatch.End();
+
+            spriteBatch.GraphicsDevice.BlendState = originalBlendState;
+            spriteBatch.GraphicsDevice.DepthStencilState = originalDepthState;
+            spriteBatch.GraphicsDevice.RasterizerState = originalRasterizerState;
+            spriteBatch.GraphicsDevice.SamplerStates[0] = originalSamplerState;
         }
 
         public void Draw(Microsoft.Xna.Framework.Graphics.SpriteBatch spriteBatch,
