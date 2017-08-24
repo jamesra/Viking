@@ -285,7 +285,7 @@ namespace ConnectomeDataModel
             var LocationIDOfSplitStructureParameter = new ObjectParameter("LocationIDOfSplitStructure", LocationIDOfSplitStructure);
             var NewStructureIDParam = new ObjectParameter("SplitStructureID", typeof(long));
 
-            int retval = ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction("SplitStructureByLocationLink", LocationIDOfKeepStructureParameter, LocationIDOfSplitStructureParameter, NewStructureIDParam);
+            int retval = ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction("SplitStructureAtLocationLink", LocationIDOfKeepStructureParameter, LocationIDOfSplitStructureParameter, NewStructureIDParam);
             if (retval != 0)
                 NewStructureID = -1;
             else

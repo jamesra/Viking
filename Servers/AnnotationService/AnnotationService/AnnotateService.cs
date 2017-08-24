@@ -1445,15 +1445,16 @@ namespace Annotation
 
                     try
                     {
-                        IQueryable<ConnectomeDataModel.Location> locObjs = from s in db.Locations
+                        IQueryable<ConnectomeDataModel.Location> locObjs = from s in db.Locations.Include("LocationLinksA").Include("LocationLinksB")
                                                                            where s.ID >= minIDValue &&
                                                                                    s.ID <= maxIDValue &&
-                                                                                   ShorterListIDs.Contains(s.ID)
+                                                                                   ShorterListIDs.Contains(s.ID)                                                                                   
                                                                            select s;
+                        
                         if (locObjs == null)
                             return null;
 
-                        ListLocations.AddRange(locObjs.ToList().Select(loc => loc.Create()));
+                        ListLocations.AddRange(locObjs.ToList().Select(loc => loc.Create(true)));
                     }
                     catch (System.ArgumentNullException)
                     {

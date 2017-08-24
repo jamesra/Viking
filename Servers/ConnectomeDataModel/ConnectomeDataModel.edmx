@@ -488,7 +488,7 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
           <Parameter Name="LocationIDOfSplitStructure" Type="bigint" Mode="In" />
           <Parameter Name="SplitStructureID" Type="bigint" Mode="InOut" />
         </Function>
-        <Function Name="SplitStructureByLocationLink" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="false" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo">
+        <Function Name="SplitStructureAtLocationLink" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="false" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo">
           <Parameter Name="LocationIDOfKeepStructure" Type="bigint" Mode="In" />
           <Parameter Name="LocationIDOfSplitStructure" Type="bigint" Mode="In" />
           <Parameter Name="SplitStructureID" Type="bigint" Mode="InOut" />
@@ -1027,6 +1027,11 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
             <Parameter Name="SplitStructureID" Mode="InOut" Type="Int64" />
           </FunctionImport>
           <FunctionImport Name="SplitStructureByLocationLink">
+            <Parameter Name="LocationIDOfKeepStructure" Mode="In" Type="Int64" />
+            <Parameter Name="LocationIDOfSplitStructure" Mode="In" Type="Int64" />
+            <Parameter Name="SplitStructureID" Mode="InOut" Type="Int64" />
+          </FunctionImport>
+          <FunctionImport Name="SplitStructureAtLocationLink">
             <Parameter Name="LocationIDOfKeepStructure" Mode="In" Type="Int64" />
             <Parameter Name="LocationIDOfSplitStructure" Mode="In" Type="Int64" />
             <Parameter Name="SplitStructureID" Mode="InOut" Type="Int64" />
@@ -2063,7 +2068,7 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
           <FunctionImportMapping FunctionImportName="SelectNetworkChildStructureIDs" FunctionName="ConnectomeModel.Store.SelectNetworkChildStructureIDs" />
           <FunctionImportMapping FunctionImportName="SelectNetworkStructureIDs" FunctionName="ConnectomeModel.Store.SelectNetworkStructureIDs" />
           <FunctionImportMapping FunctionImportName="SplitStructure" FunctionName="ConnectomeModel.Store.SplitStructure" />
-          <FunctionImportMapping FunctionImportName="SplitStructureByLocationLink" FunctionName="ConnectomeModel.Store.SplitStructureByLocationLink" />
+          <FunctionImportMapping FunctionImportName="SplitStructureAtLocationLink" FunctionName="ConnectomeModel.Store.SplitStructureAtLocationLink" />
         </EntityContainerMapping>
       </Mapping>
     </edmx:Mappings>
