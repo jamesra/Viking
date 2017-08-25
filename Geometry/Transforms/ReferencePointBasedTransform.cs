@@ -212,12 +212,22 @@ namespace Geometry.Transforms
             return new GridRectangle(minX, maxX, minY, maxY);
         }
 
+        /// <summary>
+        /// Return Control points intersecting the rectangle
+        /// </summary>
+        /// <param name="gridRect"></param>
+        /// <returns></returns>
         public List<MappingGridVector2> IntersectingControlRectangle(GridRectangle gridRect)
         {
             List<MappingGridVector2> foundPoints = this.controlPointsRTree.Intersects(gridRect.ToRTreeRect(0)).ToList();
             return foundPoints;
         }
 
+        /// <summary>
+        /// Return mapped control points intersecting the rectangle
+        /// </summary>
+        /// <param name="gridRect"></param>
+        /// <returns></returns>
         public List<MappingGridVector2> IntersectingMappedRectangle(GridRectangle gridRect)
         {
             List<MappingGridVector2> foundPoints = this.mappedPointsRTree.Intersects(gridRect.ToRTreeRect(0)).ToList();

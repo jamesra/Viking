@@ -35,8 +35,17 @@ namespace Viking.VolumeModel
             } 
             else
             {
-                return new GridRectangle?();
-                //return mapper.SectionBounds;
+                //All four points are outside the control points.  Return the bounding box of the mapped space.
+                if (VisibleWorldBounds.Intersects(mapper.VolumeBounds.Value))
+                {
+                    return mapper.SectionBounds;
+                }
+                else
+                {
+                    //We must be past the convex hull with no overlap
+                    return new GridRectangle?();
+                    //return mapper.SectionBounds;
+                }
             }
         }
 

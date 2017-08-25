@@ -127,38 +127,18 @@ namespace Viking.VolumeModel
             double AdjustedDownSample = AdjustDownsampleForScale(DownSample);
             int roundedDownsample = NearestAvailableLevel(AdjustedDownSample);
 
-            GridQuad VisibleQuad = null; 
-
-            //Add any corners of the VisibleBounds that we can transform to the list of points
-            List<MappingGridVector2> VisiblePoints = VisibleBoundsCorners(VisibleBounds);
-            if (VisiblePoints.Count != 4)
-            {
-                //If we can't map all four corners then add all the points from the transform falling inside the visible rectangle or 
-                //connected to those points by an edge
-                if (VolumeTransform as ITransformControlPoints != null)
-                {
-                    List<MappingGridVector2> listTransformPoints = ((ITransformControlPoints)this.VolumeTransform).IntersectingControlRectangle(VisibleBounds);
-                    VisiblePoints.AddRange(listTransformPoints);
-                }
-            }
-            else
-            {
-                VisiblePoints.Sort(new MappingGridVector2SortByMapPoints());
-                VisibleQuad = new GridQuad(VisiblePoints[0].MappedPoint,
-                                           VisiblePoints[1].MappedPoint,
-                                           VisiblePoints[2].MappedPoint,
-                                           VisiblePoints[3].MappedPoint); 
-            }
-
-            //OK, transform all points falling inside the section border
-            //Starting with low-res tiles, add tiles to the list until we reach desired resolution
-            //List<Tile> TilesToDraw = new List<Tile>();
             TilePyramid TilesToDraw = new TilePyramid(VisibleBounds);
-
-            if (VisiblePoints.Count < 3)
+            GridQuad VisibleQuad; 
+            GridRectangle? visibleSection = VisibleBounds.ApproximateVisibleMosaicBounds(this);
+            if(!visibleSection.HasValue)
+            { 
+                //Nothing to draw
                 return TilesToDraw;
+            }
 
-            GridRectangle SectionBorder = MappingGridVector2.CalculateMappedBounds(VisiblePoints.ToArray());
+            VisibleQuad = visibleSection.Value.ToQuad();
+
+            GridRectangle SectionBorder = visibleSection.Value;
 
             int iLevel = AvailableLevels.Length - 1;
             int level = AvailableLevels[iLevel];
