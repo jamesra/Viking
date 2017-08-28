@@ -13,6 +13,8 @@ set @KeepStructureID = 5107
 set @SplitStructureID = 0
 set @FirstLocationIDOfSplitStructure = 645523
 
+set @KeepStructureID = select top 1 ParentID from Location where ID = @FirstLocationIDOfSplitStructure
+
 SELECT A,B into #LocationLinkPool from dbo.StructureLocationLinks(@KeepStructureID) order by A
 
 --select * from #LocationLinkPool where A = @FirstLocationIDOfSplitStructure OR B = @FirstLocationIDOfSplitStructure
