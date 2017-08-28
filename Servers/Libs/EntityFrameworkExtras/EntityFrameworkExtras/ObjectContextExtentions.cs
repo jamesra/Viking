@@ -49,7 +49,6 @@ namespace EntityFrameworkExtras
             return result;
         }
 
-
         private static PropertyInfo GetMatchingProperty(object storedProcedure, SqlParameter parameter)
         {
             foreach (PropertyInfo propertyInfo in storedProcedure.GetType().GetProperties().Where(p => p.HasAttribute<StoredProcedureParameterAttribute>()))

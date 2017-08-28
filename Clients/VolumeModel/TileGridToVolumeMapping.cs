@@ -136,7 +136,7 @@ namespace Viking.VolumeModel
                 return TilesToDraw;
             }
 
-            VisibleQuad = visibleSection.Value.ToQuad();
+            VisibleQuad = new GridQuad(visibleSection.Value);
 
             GridRectangle SectionBorder = visibleSection.Value;
 
