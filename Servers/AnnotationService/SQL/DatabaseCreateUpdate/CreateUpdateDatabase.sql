@@ -6194,6 +6194,225 @@ end
 	 COMMIT TRANSACTION sixtysix
 	end
 
+	if(not(exists(select (1) from DBVersion where DBVersionID = 67)))
+	begin
+     print N'SplitStructure procedure'
+	 BEGIN TRANSACTION sixtyseven
+		
+		IF OBJECT_ID (N'dbo.SplitStructure', N'P') IS NOT NULL
+		begin
+			DROP PROCEDURE dbo.SplitStructure
+		end
+
+		EXEC(' CREATE PROCEDURE SplitStructure
+			-- Add the parameters for the stored procedure here
+			@LocationIDOfSplitStructure bigint,
+			@SplitStructureID bigint OUTPUT
+		AS
+		BEGIN
+			-- SET NOCOUNT ON added to prevent extra result sets from
+			-- interfering with SELECT statements.
+			SET NOCOUNT ON;
+
+			IF OBJECT_ID(''tempdb..#LocationLinkPool'') IS NOT NULL DROP TABLE #LocationLinkPool
+			IF OBJECT_ID(''tempdb..#LocationsInKeepSubGraph'') IS NOT NULL DROP TABLE #LocationsInKeepSubGraph
+			IF OBJECT_ID(''tempdb..#LocationsInSplitSubGraph'') IS NOT NULL DROP TABLE #LocationsInSplitSubGraph
+			IF OBJECT_ID(''tempdb..#ChildStructureLocations'') IS NOT NULL DROP TABLE #ChildStructureLocations
+			IF OBJECT_ID(''tempdb..#StructureLocations'') IS NOT NULL DROP TABLE #StructureLocations
+			IF OBJECT_ID(''tempdb..#DistanceToEachStructure'') IS NOT NULL DROP TABLE #DistanceToEachStructure
+			IF OBJECT_ID(''tempdb..#DistanceToNearestStructure'') IS NOT NULL DROP TABLE #DistanceToNearestStructure
+			IF OBJECT_ID(''tempdb..#ParentIDForChildStructure'') IS NOT NULL DROP TABLE #ParentIDForChildStructure
+
+			set @SplitStructureID = 0 
+			DECLARE @KeepStructureID bigint 
+
+			set @KeepStructureID = (select ParentID from Location where ID = @LocationIDOfSplitStructure)
+	
+			SELECT A,B into #LocationLinkPool from dbo.StructureLocationLinks(@KeepStructureID) order by A
+
+			--select * from #LocationLinkPool where A = @LocationIDOfSplitStructure OR B = @LocationIDOfSplitStructure
+
+			CREATE TABLE #LocationsInSplitSubGraph(ID bigint)
+			insert into #LocationsInSplitSubGraph (ID) values (@LocationIDOfSplitStructure)
+	  
+			--Loop over the pool adding to the subgraph until we cannot find any more locations
+			DECLARE @RowsAddedToSubgraph bigint
+			set @RowsAddedToSubgraph = 1
+			While @RowsAddedToSubgraph > 0
+			BEGIN
+			--insert into #GAggregate (SParentID, Shape) Select SParentID, TMosaicShape from #StructureLinks where TMosaicShape is NOT NULL
+
+				insert into #LocationsInSplitSubGraph (ID) 
+					Select B as ID from #LocationLinkPool where A in (select ID from #LocationsInSplitSubGraph)
+					union 
+					Select A as ID from #LocationLinkPool where B in (select ID from #LocationsInSplitSubGraph)
+
+				set @RowsAddedToSubgraph = @@ROWCOUNT
+
+				--select distinct(ID) from #LocationsInSplitSubGraph
+
+				--Remove links we have already added
+				delete LLP from #LocationLinkPool LLP
+				join #LocationsInSplitSubGraph SA ON SA.ID = LLP.A
+				join #LocationsInSplitSubGraph SB ON SB.ID = LLP.B
+			END
+
+			select ID into #LocationsInKeepSubGraph from Location where ParentID = @KeepStructureID AND ID not in (select ID from #LocationsInSplitSubGraph)
+
+			IF ((select COUNT(ID) from #LocationsInKeepSubGraph) = 0)
+				THROW 50000, N''The split structure is connected to the entire keep cell.  Break a location link to create two subgraphs and try again'', 1;
+
+			--We have built the list of annotations to be used for the old and new structure.  Create a new structure for the split and capture the ID
+			INSERT INTO Structure (TypeID, Notes, Verified, Tags, Confidence, ParentID, Created, Label, Username, LastModified)
+				SELECT TypeID, Notes, Verified, Tags, Confidence, ParentID, Created, Label, Username, LastModified from Structure S where
+					S.ID = @KeepStructureID
+			set @SplitStructureID = SCOPE_IDENTITY()
+
+			select VolumeShape, Z, KL.ID, @KeepStructureID as ParentID into  #StructureLocations
+			FROM Location L 
+			JOIN #LocationsInKeepSubGraph KL ON KL.ID = L.ID
+			UNION ALL
+			select VolumeShape, Z, SL.ID, @SplitStructureID as ParentID FROM Location L 
+			JOIN #LocationsInSplitSubGraph SL ON SL.ID = L.ID
+
+			select ParentID as StructureID, geometry::ConvexHullAggregate(VolumeShape) as Shape, AVG(Z) as Z 
+				into #ChildStructureLocations from Location
+				where ParentID in (select ID from Structure where ParentID = @KeepStructureID)
+				group by ParentID
+
+			--Find the nearest location in either the keep or split structure
+			select CSL.StructureID as StructureID, SL.ParentID as NewParentID, MIN(SL.VolumeShape.STDistance(CSL.Shape)) as Distance
+				INTO #DistanceToEachStructure from #ChildStructureLocations CSL
+				join #StructureLocations SL ON SL.Z = CSL.Z
+				Group By CSL.StructureID, SL.ParentID 
+				order by CSL.StructureID
+
+			select SL.StructureID as StructureID, MIN(SL.Distance) as Distance 
+			INTO #DistanceToNearestStructure from #DistanceToEachStructure SL
+			group by SL.StructureID 
+
+			select SD.StructureID as StructureID, SD.NewParentID as NewParentID, SD.Distance as Distance
+			into #ParentIDForChildStructure from #DistanceToEachStructure SD
+			join #DistanceToNearestStructure SN ON SN.StructureID = SD.StructureID AND SN.Distance = SD.Distance
+
+			update Location set ParentID = @SplitStructureID
+			FROM Location L
+				INNER JOIN #LocationsInSplitSubGraph LS ON LS.ID = L.ID
+
+			update Structure set ParentID = PCS.NewParentID 
+			FROM Structure S
+				JOIN #ParentIDForChildStructure PCS ON S.ID = PCS.StructureID
+
+			IF OBJECT_ID(''tempdb..#LocationLinkPool'') IS NOT NULL DROP TABLE #LocationLinkPool
+			IF OBJECT_ID(''tempdb..#LocationsInKeepSubGraph'') IS NOT NULL DROP TABLE #LocationsInKeepSubGraph
+			IF OBJECT_ID(''tempdb..#LocationsInSplitSubGraph'') IS NOT NULL DROP TABLE #LocationsInSplitSubGraph
+			IF OBJECT_ID(''tempdb..#ChildStructureLocations'') IS NOT NULL DROP TABLE #ChildStructureLocations
+			IF OBJECT_ID(''tempdb..#StructureLocations'') IS NOT NULL DROP TABLE #StructureLocations
+			IF OBJECT_ID(''tempdb..#DistanceToEachStructure'') IS NOT NULL DROP TABLE #DistanceToEachStructure
+			IF OBJECT_ID(''tempdb..#DistanceToNearestStructure'') IS NOT NULL DROP TABLE #DistanceToNearestStructure
+			IF OBJECT_ID(''tempdb..#ParentIDForChildStructure'') IS NOT NULL DROP TABLE #ParentIDForChildStructure 
+
+			RETURN 0
+			END   ')
+
+		if(@@error <> 0)
+		 begin
+			ROLLBACK TRANSACTION 
+			RETURN
+		 end 
+
+		 
+		IF OBJECT_ID (N'dbo.SplitStructureAtLocationLink', N'P') IS NOT NULL
+		begin
+			DROP PROCEDURE dbo.SplitStructureAtLocationLink
+		end
+
+		 EXEC('   
+			CREATE PROCEDURE SplitStructureAtLocationLink
+				@LocationIDOfKeepStructure bigint,
+				@LocationIDOfSplitStructure bigint,
+				@SplitStructureID bigint OUTPUT
+			AS
+			BEGIN
+				-- SET NOCOUNT ON added to prevent extra result sets from
+				-- interfering with SELECT statements.
+				SET NOCOUNT ON;
+	
+				set @SplitStructureID = 0
+
+				--Ensure that the location IDs of the keep and split locations are a location link.  Remove the link and continue;
+				IF (0 = (select COUNT(A) from LocationLink where (A = @LocationIDOfKeepStructure AND B = @LocationIDOfSplitStructure) OR 
+														  (B = @LocationIDOfKeepStructure AND A = @LocationIDOfSplitStructure)))
+					THROW 50000, N''The Split and Keep Location IDs must be linked'', 1;
+
+				BEGIN TRANSACTION split
+
+					Delete LocationLink where (A = @LocationIDOfKeepStructure AND B = @LocationIDOfSplitStructure) OR 
+												   (B = @LocationIDOfKeepStructure AND A = @LocationIDOfSplitStructure)
+					Exec SplitStructure @LocationIDOfSplitStructure, @SplitStructureID
+
+					if(@@error <> 0)
+					 begin
+						ROLLBACK TRANSACTION 
+						RETURN
+					 end 
+
+				COMMIT TRANSACTION split
+
+			END ')
+
+
+		 INSERT INTO DBVersion values (67, N'SplitStructure procedure' ,getDate(),User_ID())
+
+	 COMMIT TRANSACTION sixtyseven
+	end
+
+	if(not(exists(select (1) from DBVersion where DBVersionID = 68)))
+	begin
+     print N'Fix ScaleUnits functions to return multiple characters instead of one' 
+	 BEGIN TRANSACTION sixtyeight
+		IF OBJECT_ID (N'dbo.XYScaleUnits', N'FN') IS NOT NULL
+		    DROP FUNCTION XYScaleUnits;
+		IF OBJECT_ID (N'dbo.ZScaleUnits', N'FN') IS NOT NULL
+			DROP FUNCTION ZScaleUnits;
+		 		
+		Exec('
+			CREATE FUNCTION dbo.XYScaleUnits()
+			RETURNS varchar(MAX)
+			AS 
+			-- Returns the scale in the Z axis
+			BEGIN
+				RETURN ''nm''
+			END
+		')
+
+		if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
+		 		
+		Exec('
+			CREATE FUNCTION dbo.ZScaleUnits()
+			RETURNS varchar(MAX)
+			AS 
+			-- Returns the scale in the Z axis
+			BEGIN
+				RETURN ''nm''
+			END
+		')
+
+		if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
+	 INSERT INTO DBVersion values (68, 
+		       N'Fix ScaleUnits functions to return multiple characters instead of one'  ,getDate(),User_ID())
+	 COMMIT TRANSACTION sixtyeight
+	end
 
 	 
 --from here on, continually add steps in the previous manner as needed.
