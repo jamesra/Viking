@@ -1,0 +1,1 @@
+xsd.exe collada_schema_1_5_fixed.xsd /classes /enableLinqDataSet /namespace:ColladaIO  
