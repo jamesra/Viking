@@ -304,7 +304,9 @@
     <Content Include="SqlServerTypes\x86\SqlServerSpatial140.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="Web.config" />
+    <Content Include="Web.config">
+      <SubType>Designer</SubType>
+    </Content>
     <Content Include="Web.Debug.config">
       <DependentUpon>Web.config</DependentUpon>
     </Content>
@@ -320,7 +322,9 @@
     <Folder Include="Models\" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="packages.config" />
+    <Content Include="packages.config">
+      <SubType>Designer</SubType>
+    </Content>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\AnnotationVizLibWCFClient\AnnotationVizLibWCFClient.csproj">
@@ -331,6 +335,10 @@
       <Project>{A89A628B-3FFA-4271-B99A-E45C3D72D3E3}</Project>
       <Name>AnnotationVizLib</Name>
     </ProjectReference>
+    <ProjectReference Include="..\..\ColladaIO\ColladaIO.csproj">
+      <Project>{09b914fb-7176-48e1-9b32-d84c8223cbcc}</Project>
+      <Name>ColladaIO</Name>
+    </ProjectReference>
     <ProjectReference Include="..\..\Geometry\Geometry.csproj">
       <Project>{eacb87e8-a5e3-417e-a9ef-b80c2a68c020}</Project>
       <Name>Geometry</Name>
@@ -338,6 +346,10 @@
     <ProjectReference Include="..\..\GraphLib\GraphLib.csproj">
       <Project>{d6f219fc-733b-481f-bf78-d34a7cb893ec}</Project>
       <Name>GraphLib</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\MorphologyMesh\MorphologyMesh.csproj">
+      <Project>{6df25a4d-1930-4c7b-8a6e-4aac68e4a7ba}</Project>
+      <Name>MorphologyMesh</Name>
     </ProjectReference>
     <ProjectReference Include="..\WebAppSettings\VikingWebAppSettings.csproj">
       <Project>{cd19dfb6-2201-431d-9db3-c8ad6ad629bf}</Project>

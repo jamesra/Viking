@@ -78,6 +78,14 @@ namespace DataExport
                             new { controller = "Morphology", action = "PostJSON" },
                             new { controller = "Morphology", httpMethod = new HttpMethodConstraint("POST") });
 
+            routes.MapRoute("Morphology_GetDAE", "Morphology/DAE",
+                            new { controller = "Morphology", action = "GetDAE" },
+                            new { controller = "Morphology", httpMethod = new HttpMethodConstraint("GET") });
+
+            routes.MapRoute("Morphology_PostDAE", "Morphology/DAE",
+                            new { controller = "Morphology", action = "PostDAE" },
+                            new { controller = "Morphology", httpMethod = new HttpMethodConstraint("POST") });
+
             routes.IgnoreRoute("Output");
 
             //Ignore the root level so we can load our static index.html file

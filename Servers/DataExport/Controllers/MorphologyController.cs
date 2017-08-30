@@ -93,6 +93,29 @@ namespace DataExport.Controllers
             return RedirectToFile(OutputFile);
         }
 
+        [HttpPost()]
+        [AcceptVerbs(HttpVerbs.Post)]
+        public ActionResult PostDAE()
+        {
+            ICollection<long> requestIDs = RequestVariables.GetIDsFromQueryData(Request.QueryString);
+
+            string OutputFile = GetOutputFilename(requestIDs, "dae");
+            string userOutputDirectory = GetAndCreateOutputDirectories();
+            string userOutputFileFullPath = System.IO.Path.Combine(userOutputDirectory, OutputFile); 
+
+            StructureMorphologyColorMap colorMap = new StructureMorphologyColorMap(GetStructureTypeColorMap(),
+                                                                                   GetStructureColorMap(),
+                                                                                   GetColorMapImage());
+
+            MorphologyGraph structure_graph = GetGraph(requestIDs);
+            
+            MorphologyMesh.MorphologyColladaView view = new MorphologyMesh.MorphologyColladaView(structure_graph.scale, colorMap);
+            view.Add(structure_graph);
+            ColladaIO.DynamicRenderMeshColladaSerializer.SerializeToFile(view, userOutputFileFullPath);
+            
+            return RedirectToFile(OutputFile);
+        }
+
 
         [ActionName("GetTLP")]
         public ActionResult GetTLP()
@@ -102,14 +125,13 @@ namespace DataExport.Controllers
             string OutputFile = GetOutputFilename(requestIDs, "tlp");
             string userOutputDirectory = GetAndCreateOutputDirectories();
             string userOutputFileFullPath = System.IO.Path.Combine(userOutputDirectory, OutputFile);
-            Scale scale = AppSettings.GetScale();
              
             StructureMorphologyColorMap colorMap = new StructureMorphologyColorMap(GetStructureTypeColorMap(),
                                                                                    GetStructureColorMap(),
                                                                                    GetColorMapImage());
 
             MorphologyGraph structure_graph = GetGraph(requestIDs);
-            MorphologyTLPView TlpGraph = MorphologyTLPView.ToTLP(structure_graph, scale, colorMap, AppSettings.VolumeURL);
+            MorphologyTLPView TlpGraph = MorphologyTLPView.ToTLP(structure_graph, structure_graph.scale, colorMap, AppSettings.VolumeURL);
             TlpGraph.SaveTLP(userOutputFileFullPath);
 
             return File(userOutputFileFullPath, "text/plain", OutputFile); 
@@ -124,13 +146,35 @@ namespace DataExport.Controllers
             string OutputFile = GetOutputFilename(requestIDs, "json");
             string userOutputDirectory = GetAndCreateOutputDirectories();
             string userOutputFileFullPath = System.IO.Path.Combine(userOutputDirectory, OutputFile);
-            Scale scale = AppSettings.GetScale();
 
             MorphologyGraph structure_graph = GetGraph(requestIDs);
             MorphologyJSONView JSONGraph = MorphologyJSONView.ToJSON(structure_graph);
             JSONGraph.SaveJSON(userOutputFileFullPath);
 
-            return File(userOutputFileFullPath, "text/plain", OutputFile);
+            return File(userOutputFileFullPath, "application/json", OutputFile);
+        }
+
+        [ActionName("GetDAE")]
+        public ActionResult GetDAE()
+        { 
+            ICollection<long> requestIDs = RequestVariables.GetIDsFromQueryData(Request.QueryString);
+
+            string OutputFile = GetOutputFilename(requestIDs, "dae");
+            string userOutputDirectory = GetAndCreateOutputDirectories();
+            string userOutputFileFullPath = System.IO.Path.Combine(userOutputDirectory, OutputFile);
+            Scale scale = AppSettings.GetScale();
+
+            StructureMorphologyColorMap colorMap = new StructureMorphologyColorMap(GetStructureTypeColorMap(),
+                                                                                   GetStructureColorMap(),
+                                                                                   GetColorMapImage());
+
+            MorphologyGraph structure_graph = GetGraph(requestIDs);
+
+            MorphologyMesh.MorphologyColladaView view = new MorphologyMesh.MorphologyColladaView(structure_graph.scale, colorMap);
+            view.Add(structure_graph);
+            ColladaIO.DynamicRenderMeshColladaSerializer.SerializeToFile(view, userOutputFileFullPath);
+            
+            return File(userOutputFileFullPath, "model/vnd.collada+xml", OutputFile);
         }
 
         private ColorMapWithImages GetColorMapImage()
