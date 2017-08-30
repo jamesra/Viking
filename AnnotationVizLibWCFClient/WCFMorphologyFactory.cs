@@ -59,9 +59,12 @@ namespace AnnotationVizLib.WCFClient
         private static MorphologyGraph MorphologyForStructure(Structure s, Geometry.Scale scale)
         {
             MorphologyGraph root_graph = null;
+            System.Diagnostics.Debug.Assert(s != null);
 
             using (AnnotateLocationsClient proxy = ConnectionFactory.CreateLocationsClient())
             {
+                System.Diagnostics.Debug.Assert(proxy != null);
+
                 Location[] struct_locations = proxy.GetLocationsForStructure(s.ID);
 
                 root_graph = BuildGraphFromLocations(s, struct_locations, scale);
@@ -72,6 +75,9 @@ namespace AnnotationVizLib.WCFClient
 
         private static MorphologyGraph BuildGraphFromLocations(Structure s, Location[] locations, Geometry.Scale scale)
         {
+            if (locations == null)
+                return null; 
+
             if (locations.Length <= 0)
             {
                 return null;

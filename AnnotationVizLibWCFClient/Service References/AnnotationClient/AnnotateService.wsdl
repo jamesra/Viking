@@ -1,5 +1,5 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<wsdl:definitions xmlns:wsap="http://schemas.xmlsoap.org/ws/2004/08/addressing/policy" xmlns:wsa10="http://www.w3.org/2005/08/addressing" xmlns:tns="http://tempuri.org/" xmlns:msc="http://schemas.microsoft.com/ws/2005/12/wsdl/contract" xmlns:soapenc="http://schemas.xmlsoap.org/soap/encoding/" xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/" xmlns:wsp="http://schemas.xmlsoap.org/ws/2004/09/policy" xmlns:wsam="http://www.w3.org/2007/05/addressing/metadata" xmlns:wsa="http://schemas.xmlsoap.org/ws/2004/08/addressing" xmlns:wsaw="http://www.w3.org/2006/05/addressing/wsdl" xmlns:soap12="http://schemas.xmlsoap.org/wsdl/soap12/" xmlns:wsu="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd" xmlns:xsd="http://www.w3.org/2001/XMLSchema" name="AnnotateService" targetNamespace="http://tempuri.org/" xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/">
+<?xml version="1.0" encoding="utf-8"?>
+<wsdl:definitions xmlns:wsap="http://schemas.xmlsoap.org/ws/2004/08/addressing/policy" xmlns:wsa10="http://www.w3.org/2005/08/addressing" xmlns:tns="http://tempuri.org/" xmlns:msc="http://schemas.microsoft.com/ws/2005/12/wsdl/contract" xmlns:soapenc="http://schemas.xmlsoap.org/soap/encoding/" xmlns:wsx="http://schemas.xmlsoap.org/ws/2004/09/mex" xmlns:wsp="http://schemas.xmlsoap.org/ws/2004/09/policy" xmlns:wsam="http://www.w3.org/2007/05/addressing/metadata" xmlns:wsa="http://schemas.xmlsoap.org/ws/2004/08/addressing" xmlns:wsaw="http://www.w3.org/2006/05/addressing/wsdl" xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/" xmlns:soap12="http://schemas.xmlsoap.org/wsdl/soap12/" xmlns:wsu="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd" xmlns:xsd="http://www.w3.org/2001/XMLSchema" name="AnnotateService" targetNamespace="http://tempuri.org/" xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/">
   <wsp:Policy wsu:Id="Annotation.Service.Interfaces.IAnnotateStructureTypes-Binary_policy">
     <wsp:ExactlyOne>
       <wsp:All>
@@ -237,10 +237,10 @@
   </wsp:Policy>
   <wsdl:types>
     <xsd:schema targetNamespace="http://tempuri.org/Imports">
-      <xsd:import namespace="http://tempuri.org/" />
-      <xsd:import namespace="http://schemas.microsoft.com/2003/10/Serialization/" />
-      <xsd:import namespace="http://schemas.datacontract.org/2004/07/AnnotationService.Types" />
-      <xsd:import namespace="http://schemas.microsoft.com/2003/10/Serialization/Arrays" />
+      <xsd:import schemaLocation="https://webdev.connectomes.utah.edu/RC1Test/Annotation/service.svc?xsd=xsd0" namespace="http://tempuri.org/" />
+      <xsd:import schemaLocation="https://webdev.connectomes.utah.edu/RC1Test/Annotation/service.svc?xsd=xsd1" namespace="http://schemas.microsoft.com/2003/10/Serialization/" />
+      <xsd:import schemaLocation="https://webdev.connectomes.utah.edu/RC1Test/Annotation/service.svc?xsd=xsd2" namespace="http://schemas.datacontract.org/2004/07/AnnotationService.Types" />
+      <xsd:import schemaLocation="https://webdev.connectomes.utah.edu/RC1Test/Annotation/service.svc?xsd=xsd3" namespace="http://schemas.microsoft.com/2003/10/Serialization/Arrays" />
     </xsd:schema>
   </wsdl:types>
   <wsdl:message name="IAnnotateStructureTypes_CreateStructureType_InputMessage">
@@ -416,6 +416,12 @@
   </wsdl:message>
   <wsdl:message name="IAnnotateStructures_Split_OutputMessage">
     <wsdl:part name="parameters" element="tns:SplitResponse" />
+  </wsdl:message>
+  <wsdl:message name="IAnnotateStructures_SplitAtLocationLink_InputMessage">
+    <wsdl:part name="parameters" element="tns:SplitAtLocationLink" />
+  </wsdl:message>
+  <wsdl:message name="IAnnotateStructures_SplitAtLocationLink_OutputMessage">
+    <wsdl:part name="parameters" element="tns:SplitAtLocationLinkResponse" />
   </wsdl:message>
   <wsdl:message name="IAnnotateStructures_GetStructureChangeLog_InputMessage">
     <wsdl:part name="parameters" element="tns:GetStructureChangeLog" />
@@ -679,6 +685,10 @@
     <wsdl:operation name="Split">
       <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateStructures/Split" message="tns:IAnnotateStructures_Split_InputMessage" />
       <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateStructures/SplitResponse" message="tns:IAnnotateStructures_Split_OutputMessage" />
+    </wsdl:operation>
+    <wsdl:operation name="SplitAtLocationLink">
+      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateStructures/SplitAtLocationLink" message="tns:IAnnotateStructures_SplitAtLocationLink_InputMessage" />
+      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateStructures/SplitAtLocationLinkResponse" message="tns:IAnnotateStructures_SplitAtLocationLink_OutputMessage" />
     </wsdl:operation>
     <wsdl:operation name="GetStructureChangeLog">
       <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateStructures/GetStructureChangeLog" message="tns:IAnnotateStructures_GetStructureChangeLog_InputMessage" />
@@ -1044,6 +1054,15 @@
     </wsdl:operation>
     <wsdl:operation name="Split">
       <soap12:operation soapAction="http://tempuri.org/IAnnotateStructures/Split" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="SplitAtLocationLink">
+      <soap12:operation soapAction="http://tempuri.org/IAnnotateStructures/SplitAtLocationLink" style="document" />
       <wsdl:input>
         <soap12:body use="literal" />
       </wsdl:input>

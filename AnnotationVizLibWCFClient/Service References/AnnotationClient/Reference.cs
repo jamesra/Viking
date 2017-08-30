@@ -774,10 +774,16 @@ namespace AnnotationVizLib.WCFClient.AnnotationClient {
         System.Threading.Tasks.Task<long> MergeAsync(long KeepID, long MergeID);
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/Split", ReplyAction="http://tempuri.org/IAnnotateStructures/SplitResponse")]
-        long Split(long StructureA, AnnotationService.Types.LocationLink locLink);
+        long Split(long StructureA, long LocationIDInSplitStructure);
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/Split", ReplyAction="http://tempuri.org/IAnnotateStructures/SplitResponse")]
-        System.Threading.Tasks.Task<long> SplitAsync(long StructureA, AnnotationService.Types.LocationLink locLink);
+        System.Threading.Tasks.Task<long> SplitAsync(long StructureA, long LocationIDInSplitStructure);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/SplitAtLocationLink", ReplyAction="http://tempuri.org/IAnnotateStructures/SplitAtLocationLinkResponse")]
+        long SplitAtLocationLink(long LocationIDOfKeepStructure, long LocationIDOfSplitStructure);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/SplitAtLocationLink", ReplyAction="http://tempuri.org/IAnnotateStructures/SplitAtLocationLinkResponse")]
+        System.Threading.Tasks.Task<long> SplitAtLocationLinkAsync(long LocationIDOfKeepStructure, long LocationIDOfSplitStructure);
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructures/GetStructureChangeLog", ReplyAction="http://tempuri.org/IAnnotateStructures/GetStructureChangeLogResponse")]
         AnnotationService.Types.Structure[] GetStructureChangeLog(System.Nullable<long> structure_id, System.Nullable<System.DateTime> begin_time, System.Nullable<System.DateTime> end_time);
@@ -1158,12 +1164,20 @@ namespace AnnotationVizLib.WCFClient.AnnotationClient {
             return base.Channel.MergeAsync(KeepID, MergeID);
         }
         
-        public long Split(long StructureA, AnnotationService.Types.LocationLink locLink) {
-            return base.Channel.Split(StructureA, locLink);
+        public long Split(long StructureA, long LocationIDInSplitStructure) {
+            return base.Channel.Split(StructureA, LocationIDInSplitStructure);
         }
         
-        public System.Threading.Tasks.Task<long> SplitAsync(long StructureA, AnnotationService.Types.LocationLink locLink) {
-            return base.Channel.SplitAsync(StructureA, locLink);
+        public System.Threading.Tasks.Task<long> SplitAsync(long StructureA, long LocationIDInSplitStructure) {
+            return base.Channel.SplitAsync(StructureA, LocationIDInSplitStructure);
+        }
+        
+        public long SplitAtLocationLink(long LocationIDOfKeepStructure, long LocationIDOfSplitStructure) {
+            return base.Channel.SplitAtLocationLink(LocationIDOfKeepStructure, LocationIDOfSplitStructure);
+        }
+        
+        public System.Threading.Tasks.Task<long> SplitAtLocationLinkAsync(long LocationIDOfKeepStructure, long LocationIDOfSplitStructure) {
+            return base.Channel.SplitAtLocationLinkAsync(LocationIDOfKeepStructure, LocationIDOfSplitStructure);
         }
         
         public AnnotationService.Types.Structure[] GetStructureChangeLog(System.Nullable<long> structure_id, System.Nullable<System.DateTime> begin_time, System.Nullable<System.DateTime> end_time) {

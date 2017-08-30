@@ -1,7 +1,7 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <xs:schema xmlns:tns="http://tempuri.org/" elementFormDefault="qualified" targetNamespace="http://tempuri.org/" xmlns:xs="http://www.w3.org/2001/XMLSchema">
-  <xs:import namespace="http://schemas.datacontract.org/2004/07/AnnotationService.Types" />
-  <xs:import namespace="http://schemas.microsoft.com/2003/10/Serialization/Arrays" />
+  <xs:import schemaLocation="https://webdev.connectomes.utah.edu/RC1Test/Annotation/service.svc?xsd=xsd2" namespace="http://schemas.datacontract.org/2004/07/AnnotationService.Types" />
+  <xs:import schemaLocation="https://webdev.connectomes.utah.edu/RC1Test/Annotation/service.svc?xsd=xsd3" namespace="http://schemas.microsoft.com/2003/10/Serialization/Arrays" />
   <xs:element name="CreateStructureType">
     <xs:complexType>
       <xs:sequence>
@@ -406,7 +406,7 @@
     <xs:complexType>
       <xs:sequence>
         <xs:element minOccurs="0" name="StructureA" type="xs:long" />
-        <xs:element xmlns:q43="http://schemas.datacontract.org/2004/07/AnnotationService.Types" minOccurs="0" name="locLink" nillable="true" type="q43:LocationLink" />
+        <xs:element minOccurs="0" name="LocationIDInSplitStructure" type="xs:long" />
       </xs:sequence>
     </xs:complexType>
   </xs:element>
@@ -414,6 +414,21 @@
     <xs:complexType>
       <xs:sequence>
         <xs:element minOccurs="0" name="SplitResult" type="xs:long" />
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="SplitAtLocationLink">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element minOccurs="0" name="LocationIDOfKeepStructure" type="xs:long" />
+        <xs:element minOccurs="0" name="LocationIDOfSplitStructure" type="xs:long" />
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="SplitAtLocationLinkResponse">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element minOccurs="0" name="SplitAtLocationLinkResult" type="xs:long" />
       </xs:sequence>
     </xs:complexType>
   </xs:element>
@@ -429,22 +444,22 @@
   <xs:element name="GetStructureChangeLogResponse">
     <xs:complexType>
       <xs:sequence>
-        <xs:element xmlns:q44="http://schemas.datacontract.org/2004/07/AnnotationService.Types" minOccurs="0" name="GetStructureChangeLogResult" nillable="true" type="q44:ArrayOfStructure" />
+        <xs:element xmlns:q43="http://schemas.datacontract.org/2004/07/AnnotationService.Types" minOccurs="0" name="GetStructureChangeLogResult" nillable="true" type="q43:ArrayOfStructure" />
       </xs:sequence>
     </xs:complexType>
   </xs:element>
   <xs:element name="CreateLocation">
     <xs:complexType>
       <xs:sequence>
-        <xs:element xmlns:q45="http://schemas.datacontract.org/2004/07/AnnotationService.Types" minOccurs="0" name="obj" nillable="true" type="q45:Location" />
-        <xs:element xmlns:q46="http://schemas.microsoft.com/2003/10/Serialization/Arrays" minOccurs="0" name="LinkedIDs" nillable="true" type="q46:ArrayOflong" />
+        <xs:element xmlns:q44="http://schemas.datacontract.org/2004/07/AnnotationService.Types" minOccurs="0" name="obj" nillable="true" type="q44:Location" />
+        <xs:element xmlns:q45="http://schemas.microsoft.com/2003/10/Serialization/Arrays" minOccurs="0" name="LinkedIDs" nillable="true" type="q45:ArrayOflong" />
       </xs:sequence>
     </xs:complexType>
   </xs:element>
   <xs:element name="CreateLocationResponse">
     <xs:complexType>
       <xs:sequence>
-        <xs:element xmlns:q47="http://schemas.datacontract.org/2004/07/AnnotationService.Types" minOccurs="0" name="CreateLocationResult" nillable="true" type="q47:Location" />
+        <xs:element xmlns:q46="http://schemas.datacontract.org/2004/07/AnnotationService.Types" minOccurs="0" name="CreateLocationResult" nillable="true" type="q46:Location" />
       </xs:sequence>
     </xs:complexType>
   </xs:element>
@@ -458,21 +473,21 @@
   <xs:element name="GetLocationByIDResponse">
     <xs:complexType>
       <xs:sequence>
-        <xs:element xmlns:q48="http://schemas.datacontract.org/2004/07/AnnotationService.Types" minOccurs="0" name="GetLocationByIDResult" nillable="true" type="q48:Location" />
+        <xs:element xmlns:q47="http://schemas.datacontract.org/2004/07/AnnotationService.Types" minOccurs="0" name="GetLocationByIDResult" nillable="true" type="q47:Location" />
       </xs:sequence>
     </xs:complexType>
   </xs:element>
   <xs:element name="GetLocationsByID">
     <xs:complexType>
       <xs:sequence>
-        <xs:element xmlns:q49="http://schemas.microsoft.com/2003/10/Serialization/Arrays" minOccurs="0" name="IDs" nillable="true" type="q49:ArrayOflong" />
+        <xs:element xmlns:q48="http://schemas.microsoft.com/2003/10/Serialization/Arrays" minOccurs="0" name="IDs" nillable="true" type="q48:ArrayOflong" />
       </xs:sequence>
     </xs:complexType>
   </xs:element>
   <xs:element name="GetLocationsByIDResponse">
     <xs:complexType>
       <xs:sequence>
-        <xs:element xmlns:q50="http://schemas.datacontract.org/2004/07/AnnotationService.Types" minOccurs="0" name="GetLocationsByIDResult" nillable="true" type="q50:ArrayOfLocation" />
+        <xs:element xmlns:q49="http://schemas.datacontract.org/2004/07/AnnotationService.Types" minOccurs="0" name="GetLocationsByIDResult" nillable="true" type="q49:ArrayOfLocation" />
       </xs:sequence>
     </xs:complexType>
   </xs:element>
@@ -484,7 +499,7 @@
   <xs:element name="GetLastModifiedLocationResponse">
     <xs:complexType>
       <xs:sequence>
-        <xs:element xmlns:q51="http://schemas.datacontract.org/2004/07/AnnotationService.Types" minOccurs="0" name="GetLastModifiedLocationResult" nillable="true" type="q51:Location" />
+        <xs:element xmlns:q50="http://schemas.datacontract.org/2004/07/AnnotationService.Types" minOccurs="0" name="GetLastModifiedLocationResult" nillable="true" type="q50:Location" />
       </xs:sequence>
     </xs:complexType>
   </xs:element>
@@ -498,7 +513,7 @@
   <xs:element name="GetLinkedLocationsResponse">
     <xs:complexType>
       <xs:sequence>
-        <xs:element xmlns:q52="http://schemas.microsoft.com/2003/10/Serialization/Arrays" minOccurs="0" name="GetLinkedLocationsResult" nillable="true" type="q52:ArrayOflong" />
+        <xs:element xmlns:q51="http://schemas.microsoft.com/2003/10/Serialization/Arrays" minOccurs="0" name="GetLinkedLocationsResult" nillable="true" type="q51:ArrayOflong" />
       </xs:sequence>
     </xs:complexType>
   </xs:element>
@@ -512,7 +527,7 @@
   <xs:element name="GetLocationsForSectionResponse">
     <xs:complexType>
       <xs:sequence>
-        <xs:element xmlns:q53="http://schemas.datacontract.org/2004/07/AnnotationService.Types" minOccurs="0" name="GetLocationsForSectionResult" nillable="true" type="q53:ArrayOfLocation" />
+        <xs:element xmlns:q52="http://schemas.datacontract.org/2004/07/AnnotationService.Types" minOccurs="0" name="GetLocationsForSectionResult" nillable="true" type="q52:ArrayOfLocation" />
         <xs:element minOccurs="0" name="QueryExecutedTime" type="xs:long" />
       </xs:sequence>
     </xs:complexType>
@@ -527,7 +542,7 @@
   <xs:element name="GetLocationsForStructureResponse">
     <xs:complexType>
       <xs:sequence>
-        <xs:element xmlns:q54="http://schemas.datacontract.org/2004/07/AnnotationService.Types" minOccurs="0" name="GetLocationsForStructureResult" nillable="true" type="q54:ArrayOfLocation" />
+        <xs:element xmlns:q53="http://schemas.datacontract.org/2004/07/AnnotationService.Types" minOccurs="0" name="GetLocationsForStructureResult" nillable="true" type="q53:ArrayOfLocation" />
       </xs:sequence>
     </xs:complexType>
   </xs:element>
@@ -535,7 +550,7 @@
     <xs:complexType>
       <xs:sequence>
         <xs:element minOccurs="0" name="section" type="xs:long" />
-        <xs:element xmlns:q55="http://schemas.datacontract.org/2004/07/AnnotationService.Types" minOccurs="0" name="bbox" type="q55:BoundingRectangle" />
+        <xs:element xmlns:q54="http://schemas.datacontract.org/2004/07/AnnotationService.Types" minOccurs="0" name="bbox" type="q54:BoundingRectangle" />
         <xs:element minOccurs="0" name="MinRadius" type="xs:double" />
         <xs:element minOccurs="0" name="ModifiedAfterThisUtcTime" nillable="true" type="xs:long" />
       </xs:sequence>
@@ -544,9 +559,9 @@
   <xs:element name="GetLocationChangesInMosaicRegionResponse">
     <xs:complexType>
       <xs:sequence>
-        <xs:element xmlns:q56="http://schemas.datacontract.org/2004/07/AnnotationService.Types" minOccurs="0" name="GetLocationChangesInMosaicRegionResult" nillable="true" type="q56:ArrayOfLocation" />
+        <xs:element xmlns:q55="http://schemas.datacontract.org/2004/07/AnnotationService.Types" minOccurs="0" name="GetLocationChangesInMosaicRegionResult" nillable="true" type="q55:ArrayOfLocation" />
         <xs:element minOccurs="0" name="QueryExecutedTime" type="xs:long" />
-        <xs:element xmlns:q57="http://schemas.microsoft.com/2003/10/Serialization/Arrays" minOccurs="0" name="DeletedIDs" nillable="true" type="q57:ArrayOflong" />
+        <xs:element xmlns:q56="http://schemas.microsoft.com/2003/10/Serialization/Arrays" minOccurs="0" name="DeletedIDs" nillable="true" type="q56:ArrayOflong" />
       </xs:sequence>
     </xs:complexType>
   </xs:element>
@@ -554,7 +569,7 @@
     <xs:complexType>
       <xs:sequence>
         <xs:element minOccurs="0" name="section" type="xs:long" />
-        <xs:element xmlns:q58="http://schemas.datacontract.org/2004/07/AnnotationService.Types" minOccurs="0" name="bbox" type="q58:BoundingRectangle" />
+        <xs:element xmlns:q57="http://schemas.datacontract.org/2004/07/AnnotationService.Types" minOccurs="0" name="bbox" type="q57:BoundingRectangle" />
         <xs:element minOccurs="0" name="MinRadius" type="xs:double" />
         <xs:element minOccurs="0" name="ModifiedAfterThisUtcTime" nillable="true" type="xs:long" />
       </xs:sequence>
@@ -563,9 +578,9 @@
   <xs:element name="GetAnnotationsInMosaicRegionResponse">
     <xs:complexType>
       <xs:sequence>
-        <xs:element xmlns:q59="http://schemas.datacontract.org/2004/07/AnnotationService.Types" minOccurs="0" name="GetAnnotationsInMosaicRegionResult" nillable="true" type="q59:AnnotationSet" />
+        <xs:element xmlns:q58="http://schemas.datacontract.org/2004/07/AnnotationService.Types" minOccurs="0" name="GetAnnotationsInMosaicRegionResult" nillable="true" type="q58:AnnotationSet" />
         <xs:element minOccurs="0" name="QueryExecutedTime" type="xs:long" />
-        <xs:element xmlns:q60="http://schemas.microsoft.com/2003/10/Serialization/Arrays" minOccurs="0" name="DeletedIDs" nillable="true" type="q60:ArrayOflong" />
+        <xs:element xmlns:q59="http://schemas.microsoft.com/2003/10/Serialization/Arrays" minOccurs="0" name="DeletedIDs" nillable="true" type="q59:ArrayOflong" />
       </xs:sequence>
     </xs:complexType>
   </xs:element>
@@ -580,23 +595,23 @@
   <xs:element name="GetLocationChangesResponse">
     <xs:complexType>
       <xs:sequence>
-        <xs:element xmlns:q61="http://schemas.datacontract.org/2004/07/AnnotationService.Types" minOccurs="0" name="GetLocationChangesResult" nillable="true" type="q61:ArrayOfLocation" />
+        <xs:element xmlns:q60="http://schemas.datacontract.org/2004/07/AnnotationService.Types" minOccurs="0" name="GetLocationChangesResult" nillable="true" type="q60:ArrayOfLocation" />
         <xs:element minOccurs="0" name="QueryExecutedTime" type="xs:long" />
-        <xs:element xmlns:q62="http://schemas.microsoft.com/2003/10/Serialization/Arrays" minOccurs="0" name="DeletedIDs" nillable="true" type="q62:ArrayOflong" />
+        <xs:element xmlns:q61="http://schemas.microsoft.com/2003/10/Serialization/Arrays" minOccurs="0" name="DeletedIDs" nillable="true" type="q61:ArrayOflong" />
       </xs:sequence>
     </xs:complexType>
   </xs:element>
   <xs:element name="Update">
     <xs:complexType>
       <xs:sequence>
-        <xs:element xmlns:q63="http://schemas.datacontract.org/2004/07/AnnotationService.Types" minOccurs="0" name="locations" nillable="true" type="q63:ArrayOfLocation" />
+        <xs:element xmlns:q62="http://schemas.datacontract.org/2004/07/AnnotationService.Types" minOccurs="0" name="locations" nillable="true" type="q62:ArrayOfLocation" />
       </xs:sequence>
     </xs:complexType>
   </xs:element>
   <xs:element name="UpdateResponse">
     <xs:complexType>
       <xs:sequence>
-        <xs:element xmlns:q64="http://schemas.microsoft.com/2003/10/Serialization/Arrays" minOccurs="0" name="UpdateResult" nillable="true" type="q64:ArrayOflong" />
+        <xs:element xmlns:q63="http://schemas.microsoft.com/2003/10/Serialization/Arrays" minOccurs="0" name="UpdateResult" nillable="true" type="q63:ArrayOflong" />
       </xs:sequence>
     </xs:complexType>
   </xs:element>
@@ -637,9 +652,9 @@
   <xs:element name="GetLocationLinksForSectionResponse">
     <xs:complexType>
       <xs:sequence>
-        <xs:element xmlns:q65="http://schemas.datacontract.org/2004/07/AnnotationService.Types" minOccurs="0" name="GetLocationLinksForSectionResult" nillable="true" type="q65:ArrayOfLocationLink" />
+        <xs:element xmlns:q64="http://schemas.datacontract.org/2004/07/AnnotationService.Types" minOccurs="0" name="GetLocationLinksForSectionResult" nillable="true" type="q64:ArrayOfLocationLink" />
         <xs:element minOccurs="0" name="QueryExecutedTime" type="xs:long" />
-        <xs:element xmlns:q66="http://schemas.datacontract.org/2004/07/AnnotationService.Types" minOccurs="0" name="DeletedLinks" nillable="true" type="q66:ArrayOfLocationLink" />
+        <xs:element xmlns:q65="http://schemas.datacontract.org/2004/07/AnnotationService.Types" minOccurs="0" name="DeletedLinks" nillable="true" type="q65:ArrayOfLocationLink" />
       </xs:sequence>
     </xs:complexType>
   </xs:element>
@@ -647,7 +662,7 @@
     <xs:complexType>
       <xs:sequence>
         <xs:element minOccurs="0" name="section" type="xs:long" />
-        <xs:element xmlns:q67="http://schemas.datacontract.org/2004/07/AnnotationService.Types" minOccurs="0" name="bbox" type="q67:BoundingRectangle" />
+        <xs:element xmlns:q66="http://schemas.datacontract.org/2004/07/AnnotationService.Types" minOccurs="0" name="bbox" type="q66:BoundingRectangle" />
         <xs:element minOccurs="0" name="MinRadius" type="xs:double" />
         <xs:element minOccurs="0" name="ModifiedAfterThisUtcTime" type="xs:long" />
       </xs:sequence>
@@ -656,9 +671,9 @@
   <xs:element name="GetLocationLinksForSectionInMosaicRegionResponse">
     <xs:complexType>
       <xs:sequence>
-        <xs:element xmlns:q68="http://schemas.datacontract.org/2004/07/AnnotationService.Types" minOccurs="0" name="GetLocationLinksForSectionInMosaicRegionResult" nillable="true" type="q68:ArrayOfLocationLink" />
+        <xs:element xmlns:q67="http://schemas.datacontract.org/2004/07/AnnotationService.Types" minOccurs="0" name="GetLocationLinksForSectionInMosaicRegionResult" nillable="true" type="q67:ArrayOfLocationLink" />
         <xs:element minOccurs="0" name="QueryExecutedTime" type="xs:long" />
-        <xs:element xmlns:q69="http://schemas.datacontract.org/2004/07/AnnotationService.Types" minOccurs="0" name="DeletedLinks" nillable="true" type="q69:ArrayOfLocationLink" />
+        <xs:element xmlns:q68="http://schemas.datacontract.org/2004/07/AnnotationService.Types" minOccurs="0" name="DeletedLinks" nillable="true" type="q68:ArrayOfLocationLink" />
       </xs:sequence>
     </xs:complexType>
   </xs:element>
@@ -674,7 +689,7 @@
   <xs:element name="GetLocationChangeLogResponse">
     <xs:complexType>
       <xs:sequence>
-        <xs:element xmlns:q70="http://schemas.datacontract.org/2004/07/AnnotationService.Types" minOccurs="0" name="GetLocationChangeLogResult" nillable="true" type="q70:ArrayOfLocationHistory" />
+        <xs:element xmlns:q69="http://schemas.datacontract.org/2004/07/AnnotationService.Types" minOccurs="0" name="GetLocationChangeLogResult" nillable="true" type="q69:ArrayOfLocationHistory" />
       </xs:sequence>
     </xs:complexType>
   </xs:element>
@@ -686,7 +701,7 @@
   <xs:element name="GetScaleResponse">
     <xs:complexType>
       <xs:sequence>
-        <xs:element xmlns:q71="http://schemas.datacontract.org/2004/07/AnnotationService.Types" minOccurs="0" name="GetScaleResult" nillable="true" type="q71:Scale" />
+        <xs:element xmlns:q70="http://schemas.datacontract.org/2004/07/AnnotationService.Types" minOccurs="0" name="GetScaleResult" nillable="true" type="q70:Scale" />
       </xs:sequence>
     </xs:complexType>
   </xs:element>
@@ -701,7 +716,7 @@
   <xs:element name="getGraphResponse">
     <xs:complexType>
       <xs:sequence>
-        <xs:element xmlns:q72="http://schemas.datacontract.org/2004/07/AnnotationService.Types" minOccurs="0" name="getGraphResult" nillable="true" type="q72:Graphx" />
+        <xs:element xmlns:q71="http://schemas.datacontract.org/2004/07/AnnotationService.Types" minOccurs="0" name="getGraphResult" nillable="true" type="q71:Graphx" />
       </xs:sequence>
     </xs:complexType>
   </xs:element>
@@ -715,7 +730,7 @@
   <xs:element name="getStructuresByTypeIDResponse">
     <xs:complexType>
       <xs:sequence>
-        <xs:element xmlns:q73="http://schemas.microsoft.com/2003/10/Serialization/Arrays" minOccurs="0" name="getStructuresByTypeIDResult" nillable="true" type="q73:ArrayOflong" />
+        <xs:element xmlns:q72="http://schemas.microsoft.com/2003/10/Serialization/Arrays" minOccurs="0" name="getStructuresByTypeIDResult" nillable="true" type="q72:ArrayOflong" />
       </xs:sequence>
     </xs:complexType>
   </xs:element>
@@ -729,7 +744,7 @@
   <xs:element name="getSynapsesResponse">
     <xs:complexType>
       <xs:sequence>
-        <xs:element xmlns:q74="http://schemas.microsoft.com/2003/10/Serialization/Arrays" minOccurs="0" name="getSynapsesResult" nillable="true" type="q74:ArrayOfstring" />
+        <xs:element xmlns:q73="http://schemas.microsoft.com/2003/10/Serialization/Arrays" minOccurs="0" name="getSynapsesResult" nillable="true" type="q73:ArrayOfstring" />
       </xs:sequence>
     </xs:complexType>
   </xs:element>
@@ -741,7 +756,7 @@
   <xs:element name="getSynapseStatsResponse">
     <xs:complexType>
       <xs:sequence>
-        <xs:element xmlns:q75="http://schemas.datacontract.org/2004/07/AnnotationService.Types" minOccurs="0" name="getSynapseStatsResult" nillable="true" type="q75:SynapseObject" />
+        <xs:element xmlns:q74="http://schemas.datacontract.org/2004/07/AnnotationService.Types" minOccurs="0" name="getSynapseStatsResult" nillable="true" type="q74:SynapseObject" />
       </xs:sequence>
     </xs:complexType>
   </xs:element>
@@ -755,7 +770,7 @@
   <xs:element name="getTopConnectedStructuresResponse">
     <xs:complexType>
       <xs:sequence>
-        <xs:element xmlns:q76="http://schemas.microsoft.com/2003/10/Serialization/Arrays" minOccurs="0" name="getTopConnectedStructuresResult" nillable="true" type="q76:ArrayOfstring" />
+        <xs:element xmlns:q75="http://schemas.microsoft.com/2003/10/Serialization/Arrays" minOccurs="0" name="getTopConnectedStructuresResult" nillable="true" type="q75:ArrayOfstring" />
       </xs:sequence>
     </xs:complexType>
   </xs:element>
@@ -767,7 +782,7 @@
   <xs:element name="getTopConnectedCellsResponse">
     <xs:complexType>
       <xs:sequence>
-        <xs:element xmlns:q77="http://schemas.microsoft.com/2003/10/Serialization/Arrays" minOccurs="0" name="getTopConnectedCellsResult" nillable="true" type="q77:ArrayOfstring" />
+        <xs:element xmlns:q76="http://schemas.microsoft.com/2003/10/Serialization/Arrays" minOccurs="0" name="getTopConnectedCellsResult" nillable="true" type="q76:ArrayOfstring" />
       </xs:sequence>
     </xs:complexType>
   </xs:element>

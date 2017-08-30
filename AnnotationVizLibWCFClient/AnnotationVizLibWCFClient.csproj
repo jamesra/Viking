@@ -57,6 +57,10 @@
       <HintPath>..\Packages\Microsoft.Bcl.Async.1.0.168\lib\net40\Microsoft.Threading.Tasks.Extensions.Desktop.dll</HintPath>
       <Private>True</Private>
     </Reference>
+    <Reference Include="protobuf-net, Version=2.0.0.668, Culture=neutral, PublicKeyToken=257b51d87d2e4d67, processorArchitecture=MSIL">
+      <HintPath>..\Packages\protobuf-net.2.0.0.668\lib\net40\protobuf-net.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.DataAnnotations" />
     <Reference Include="System.Core" />
@@ -139,9 +143,7 @@
     <None Include="Properties\DataSources\AnnotationService.Types.Structure.datasource" />
     <None Include="Properties\DataSources\AnnotationService.Types.StructureLink.datasource" />
     <None Include="Properties\DataSources\AnnotationService.Types.StructureType.datasource" />
-    <None Include="Service References\AnnotationClient\AnnotationService.Types.xsd">
-      <SubType>Designer</SubType>
-    </None>
+    <None Include="Service References\AnnotationClient\AnnotateService.wsdl" />
     <None Include="Service References\AnnotationClient\AnnotationVizLib.WCFClient.AnnotationClient.GetAnnotationsInMosaicRegionResponse1.datasource">
       <DependentUpon>Reference.svcmap</DependentUpon>
     </None>
@@ -175,14 +177,16 @@
     <None Include="Service References\AnnotationClient\AnnotationVizLib.WCFClient.AnnotationClient.SynapseObject1.datasource">
       <DependentUpon>Reference.svcmap</DependentUpon>
     </None>
-    <None Include="Service References\AnnotationClient\Arrays.xsd">
+    <None Include="Service References\AnnotationClient\service2.xsd">
       <SubType>Designer</SubType>
     </None>
-    <None Include="Service References\AnnotationClient\service.wsdl" />
-    <None Include="Service References\AnnotationClient\service.xsd">
+    <None Include="Service References\AnnotationClient\service21.xsd">
       <SubType>Designer</SubType>
     </None>
-    <None Include="Service References\AnnotationClient\service1.xsd">
+    <None Include="Service References\AnnotationClient\service22.xsd">
+      <SubType>Designer</SubType>
+    </None>
+    <None Include="Service References\AnnotationClient\service23.xsd">
       <SubType>Designer</SubType>
     </None>
   </ItemGroup>
@@ -193,6 +197,7 @@
       <Generator>WCF Proxy Generator</Generator>
       <LastGenOutput>Reference.cs</LastGenOutput>
     </None>
+    <None Include="Service References\AnnotationClient\service.disco" />
     <Content Include="SqlServerTypes\readme.htm" />
     <Content Include="SqlServerTypes\x64\msvcr120.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
