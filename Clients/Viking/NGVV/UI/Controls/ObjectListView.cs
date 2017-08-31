@@ -304,6 +304,17 @@ namespace Viking.UI.BaseClasses
 			return;
 		}
 
+        public void RemoveAllObjects()
+        {
+            IUIObject[] objects = this.Objects;
+            foreach(IUIObject obj in objects)
+            {
+                RemoveObjectEvents(obj); 
+            }
+            
+            this.Clear();
+        }
+
         public void DisplayObjects(object[] Objects)
 		{
             
@@ -707,15 +718,10 @@ namespace Viking.UI.BaseClasses
 		protected void parentForm_Closing(object sender, CancelEventArgs e)
 		{
 			SaveColumnVisibilitySettings();
-
-            IUIObject[] objects = this.Objects;
-
+            
             //Remove all objects from our list so we aren't listening to events anymore
-            foreach (IUIObject obj in objects)
-            {
-                RemoveObject(obj); 
-            }
-		}
+            RemoveAllObjects();
+        }
 
 	
 		private CancelEventHandler OnParentFormClosing = null;
