@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using Viking.Common;
 using LocalBookmarks;
-using connectomes.utah.edu.XSD.BookmarkSchema.xsd;
+using connectomes.utah.edu.XSD.BookmarkSchemaV2.xsd;
 using Viking.UI.Controls;
 using System.Windows.Forms;
 using Viking.Common.UI;
@@ -87,12 +87,12 @@ namespace LocalBookmarks
 
         public override string Name
         {
-            get { return Data.name; }
+            get { return Data.Name; }
             set 
             {
-                Data.name = value;
-                if (Data.name == null)
-                    Data.name = ""; 
+                Data.Name = value;
+                if (Data.Name == null)
+                    Data.Name = ""; 
                 ValueChangedEvent("Name");
             }
         }
@@ -213,7 +213,7 @@ namespace LocalBookmarks
 
         public override string ToolTip
         {
-            get { return Data.name; }
+            get { return Data.Name; }
         }
 
 

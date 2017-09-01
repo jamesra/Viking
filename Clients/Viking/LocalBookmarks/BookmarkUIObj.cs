@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Viking.Common;
-using connectomes.utah.edu.XSD.BookmarkSchema.xsd;
+using connectomes.utah.edu.XSD.BookmarkSchemaV2.xsd;
 using LocalBookmarks;
 using Geometry;
 using Viking.UI.Controls;
@@ -47,27 +47,39 @@ namespace LocalBookmarks
 
         public override string Name
         {
-            get { return Data.name; }
+            get { return Data.Name; }
             set
             {
-                Data.name = value;
-                if (Data.name == null)
-                    Data.name = ""; 
+                Data.Name = value;
+                if (Data.Name == null)
+                    Data.Name = ""; 
 
                 _LabelSizeMeasured = false; 
                 ValueChangedEvent("Name"); 
             }
         }
 
-        public Position Position
+        public Point2D Position
         {
-            get { if(Data.Position == null)
-                    Data.Position = new Position();
-                  return Data.Position;
+            get { if(Data.VolumePosition == null)
+                    Data.VolumePosition = new Point2D();
+                  return Data.VolumePosition;
             }
             set
             {
-                Data.Position = value; 
+                Data.VolumePosition = value; 
+            }
+        }
+
+        public Point2D MosaicPosition
+        {
+            get
+            {
+                return Data.MosaicPosition;
+            }
+            set
+            {
+                Data.MosaicPosition = value;
             }
         }
 
@@ -92,7 +104,7 @@ namespace LocalBookmarks
 
         public double X
         {
-            get { return System.Convert.ToDouble(Data.Position.X); }
+            get { return System.Convert.ToDouble(Data.VolumePosition.X); }
             set
             {
                 Position.X = (float)value;
@@ -102,7 +114,7 @@ namespace LocalBookmarks
 
         public double Y
         {
-            get { return System.Convert.ToDouble(Data.Position.Y); }
+            get { return System.Convert.ToDouble(Data.VolumePosition.Y); }
             set
             {
                 Position.Y = (float)value;
@@ -112,10 +124,10 @@ namespace LocalBookmarks
 
         public int Z
         {
-            get { return System.Convert.ToInt32(Math.Round(Data.Position.Z)); }
+            get { return System.Convert.ToInt32(Math.Round(Data.Z)); }
             set
             {
-                Position.Z = (float)value;
+                Data.Z = (float)value;
                 ValueChangedEvent("Z");
             }
         }
@@ -233,6 +245,5 @@ namespace LocalBookmarks
             _LabelSizeMeasured = true;
             return _LabelSize;
         }
-
     }
 }

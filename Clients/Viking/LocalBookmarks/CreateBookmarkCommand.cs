@@ -11,8 +11,9 @@ namespace LocalBookmarks
     class CreateBookmarkCommand : Viking.UI.Commands.Command
     {
         GridVector2 bookmarkPosition;
+        FolderUIObj ParentFolder;
 
-        FolderUIObj ParentFolder; 
+        VikingXNAGraphics.TextureCircleView circleView;
 
         public CreateBookmarkCommand(Viking.UI.Controls.SectionViewerControl parent, FolderUIObj parentFolder)
             : base(parent)
@@ -30,6 +31,7 @@ namespace LocalBookmarks
         {
             this.CommandActive = true;
             base.OnMouseMove(sender,e);
+
             Parent.Invalidate();
         }
 
@@ -51,7 +53,12 @@ namespace LocalBookmarks
         {
             BookmarkUIObj bookmark = new BookmarkUIObj(ParentFolder);
             System.Drawing.Point ControlPostion = Viking.UI.State.ViewerForm.PointToClient(Cursor.Position);
-            Geometry.GridVector2 WorldPosition = Viking.UI.State.ViewerControl.ScreenToWorld(ControlPostion.X, ControlPostion.Y);
+            GridVector2 WorldPosition = Viking.UI.State.ViewerControl.ScreenToWorld(ControlPostion.X, ControlPostion.Y);
+
+            Viking.VolumeModel.IVolumeToSectionTransform mapping = Parent.Section.ActiveSectionToVolumeTransform;
+
+            GridVector2 SectionPosition;
+            bool mappedToSection = mapping.TryVolumeToSection(WorldPosition, out SectionPosition);
 
             bookmark.X = WorldPosition.X;
             bookmark.Y = WorldPosition.Y;
@@ -60,6 +67,11 @@ namespace LocalBookmarks
             bookmark.Name = "X:" + bookmark.X.ToString("F0") +
                             " Y:" + bookmark.Y.ToString("F0") +
                             " Z:" + bookmark.Z.ToString();
+
+            if(mappedToSection)
+            {
+                bookmark.MosaicPosition = new connectomes.utah.edu.XSD.BookmarkSchemaV2.xsd.Point2D(SectionPosition);
+            }
 
             bookmark.Save(); 
 
@@ -89,12 +101,21 @@ namespace LocalBookmarks
         }
 
         public override void OnDraw(Microsoft.Xna.Framework.Graphics.GraphicsDevice graphicsDevice, VikingXNA.Scene scene, Microsoft.Xna.Framework.Graphics.BasicEffect basicEffect)
-        {
+        { 
+            circleView = new VikingXNAGraphics.TextureCircleView(BookmarkOverlay.StarTexture, new GridCircle(this.oldWorldPosition, Global.DefaultBookmarkRadius), Microsoft.Xna.Framework.Color.Gold);
+            circleView.Alpha = (float)(DateTime.UtcNow.Second % 6) / 6f;  
+
+            if(circleView != null)
+            {
+                VikingXNAGraphics.TextureCircleView.Draw(graphicsDevice, scene, basicEffect, Parent.AnnotationOverlayEffect, new VikingXNAGraphics.CircleView[] { circleView });
+            }
+            /*
             BookmarkOverlay.DrawCircle(graphicsDevice, basicEffect, this.oldWorldPosition, Global.DefaultBookmarkRadius * scene.Camera.Downsample, 
                 new Microsoft.Xna.Framework.Color(Microsoft.Xna.Framework.Color.Gold.R, 
                                                   Microsoft.Xna.Framework.Color.Gold.G,
                                                   Microsoft.Xna.Framework.Color.Gold.B,
                                                   0.5f));
+                                                  */
         }
     }
 }

@@ -5,8 +5,9 @@ using System.Text;
 using Viking.Common;
 using System.Xml.Linq;
 using System.IO; 
-using connectomes.utah.edu.XSD.BookmarkSchema.xsd;
+using connectomes.utah.edu.XSD.BookmarkSchemaV2.xsd;
 using System.Diagnostics;
+using Geometry;
 
 namespace LocalBookmarks
 {
@@ -176,6 +177,7 @@ namespace LocalBookmarks
             //Check if there is a local favorites XML file, if it does not exist, create it, we always return true
 
             try
+
             {
                 if (false == System.IO.Directory.Exists(BookmarkPath))
                 {
@@ -187,7 +189,7 @@ namespace LocalBookmarks
                     bool Restored = LoadBookmarksFromBackup();
                     if (!Restored)
                     {
-                        CreateNewBookmarkFile();
+                        BookmarkXMLDoc = CreateNewBookmarkFile();
                     }
                 }
                 else
@@ -197,13 +199,33 @@ namespace LocalBookmarks
             }
             catch (System.IO.FileNotFoundException )
             {
-                CreateNewBookmarkFile();
+                BookmarkXMLDoc = CreateNewBookmarkFile();
             }
             catch (Xml.Schema.Linq.LinqToXsdException )
             {
-                //We found it, but could not parse it
-                HandleIncorrectXSDMessage();
-                LoadBookmarksFromBackup();
+                //We found it, but could not parse it.  Check if it is an old file that needs an upgrade
+                try
+                {
+                    connectomes.utah.edu.XSD.BookmarkSchema.xsd.XRoot oldRoot = connectomes.utah.edu.XSD.BookmarkSchema.xsd.XRoot.Load(BookmarkFilePath);
+                    BookmarkXMLDoc = MigrateV1ToV2.Migrate(BookmarkFilePath);
+                    if (BookmarkXMLDoc == null)
+                    {
+                        BookmarkXMLDoc = CreateNewBookmarkFile();
+                    }
+                    else
+                    {
+                        Save();
+                    }
+
+                    FolderUIObjRoot = new FolderUIObj(null, FolderRoot);
+                    SelectedFolder = FolderUIObjRoot;
+                }
+                catch(Xml.Schema.Linq.LinqToXsdException)
+                {
+                    //OK, could not load with the old schema.
+                    HandleIncorrectXSDMessage();
+                    LoadBookmarksFromBackup();
+                } 
             }
             catch (System.Xml.XmlException )
             {
@@ -224,12 +246,15 @@ namespace LocalBookmarks
             return true; 
         }
 
-        private static void CreateNewBookmarkFile()
+        
+
+        public static XRoot CreateNewBookmarkFile()
         {
             Folder newFolderRoot = new Folder();
-            newFolderRoot.name = "root";
-            BookmarkXMLDoc = new XRoot(newFolderRoot);
-            BookmarkXMLDoc.Save(BookmarkFilePath);
+            newFolderRoot.Name = "root";
+            XRoot root = new XRoot(newFolderRoot);
+            root.Save(BookmarkFilePath);
+            return root;
         }
 
         private static void HandleIncorrectXSDMessage()
@@ -249,6 +274,7 @@ namespace LocalBookmarks
                 if (System.IO.File.Exists(BookmarkFileName))
                 {
                     BookmarkXMLDoc = XRoot.Load(BookmarkFileName);
+                    RecursivelyUpdateVolumePositions(FolderRoot);
                     FolderUIObjRoot = new FolderUIObj(null, FolderRoot);
                     SelectedFolder = FolderUIObjRoot;
                     return true;
@@ -256,6 +282,7 @@ namespace LocalBookmarks
                 else if(System.IO.File.Exists(BookmarkUndoFilePath)) //Check for an undo file
                 {
                     BookmarkXMLDoc = XRoot.Load(BookmarkUndoFilePath);
+                    RecursivelyUpdateVolumePositions(FolderRoot);
                     FolderUIObjRoot = new FolderUIObj(null, FolderRoot);
                     SelectedFolder = FolderUIObjRoot;
                     return true;
@@ -263,8 +290,19 @@ namespace LocalBookmarks
             }
             catch (Xml.Schema.Linq.LinqToXsdException)
             {
-                //We found it, but could not parse it
-                HandleIncorrectXSDMessage();
+                //We found it, but could not parse it.  Check if it needs to be migrated.
+                try
+                {
+                    connectomes.utah.edu.XSD.BookmarkSchema.xsd.XRoot oldRoot = connectomes.utah.edu.XSD.BookmarkSchema.xsd.XRoot.Load(BookmarkFileName);
+                    BookmarkXMLDoc = MigrateV1ToV2.Migrate(BookmarkFileName);
+                    FolderUIObjRoot = new FolderUIObj(null, FolderRoot);
+                    SelectedFolder = FolderUIObjRoot;
+                }
+                catch (Xml.Schema.Linq.LinqToXsdException)
+                {
+                    //OK, could not load with the old schema.
+                    HandleIncorrectXSDMessage(); 
+                }
             }
             catch
             {
@@ -284,10 +322,47 @@ namespace LocalBookmarks
             }
             else
             {
-                CreateNewBookmarkFile();
+                BookmarkXMLDoc = CreateNewBookmarkFile();
                 return false; 
             }
         }
+
+        /// <summary>
+        /// Recursively update all bookmark positions with the new transform
+        /// </summary>
+        /// <param name="folder"></param>
+        /// <param name="transform"></param>
+        public static void RecursivelyUpdateVolumePositions(Folder folder)
+        {
+            foreach(var bookmark in folder.Bookmarks)
+            {
+                GridVector2 sectionPosition;
+                Viking.VolumeModel.IVolumeToSectionTransform transform = Viking.UI.State.volume.GetSectionToVolumeTransform((int)bookmark.Z);
+                if (transform.TrySectionToVolume(bookmark.MosaicPosition.ToGridVector2(), out sectionPosition))
+                {
+                    bookmark.VolumePosition = new Point2D(sectionPosition);
+                }
+            }
+
+            foreach(var subfolder in folder.Folders)
+            {
+                RecursivelyUpdateVolumePositions(subfolder);
+            }
+
+            return;
+        }
+
+        /// <summary>
+        /// When this occurs we should update the positions we draw the locations at. 
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        public static void OnVolumeTransformChanged(object sender, TransformChangedEventArgs e)
+        {
+            Global.RecursivelyUpdateVolumePositions(FolderRoot);
+        }
+
+        
 
         #endregion
     }

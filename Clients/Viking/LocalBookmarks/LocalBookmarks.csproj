@@ -127,6 +127,9 @@
     <Compile Include="bookmarkschema.cs">
       <DependentUpon>BookmarkSchema.xsd</DependentUpon>
     </Compile>
+    <Compile Include="BookmarkSchemaV2.cs">
+      <DependentUpon>BookmarkSchemaV2.xsd</DependentUpon>
+    </Compile>
     <Compile Include="BookmarkUIObj.cs" />
     <Compile Include="CreateBookmarkCommand.cs" />
     <Compile Include="FolderGeneralPage.cs">
@@ -142,6 +145,9 @@
     <Compile Include="FolderUIObj.cs" />
     <Compile Include="Global.cs" />
     <Compile Include="HTMLExporter.cs" />
+    <Compile Include="MigrateV1ToV2.cs" />
+    <Compile Include="Position.cs" />
+    <Compile Include="Point2D.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="UIObjTemplate.cs" />
   </ItemGroup>
@@ -209,6 +215,11 @@
       <Name>VikingXNAGraphics</Name>
       <Private>False</Private>
     </ProjectReference>
+    <ProjectReference Include="..\..\VolumeModel\VolumeModel.csproj">
+      <Project>{2eba2a77-f7f0-4efc-ac06-a12fe249388f}</Project>
+      <Name>VolumeModel</Name>
+      <Private>False</Private>
+    </ProjectReference>
     <ProjectReference Include="..\NGVV\VikingCore.csproj">
       <Project>{AEB1B24B-C968-40F9-B9F5-5C1FCE2EFD6D}</Project>
       <Name>VikingCore</Name>
@@ -226,7 +237,12 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <None Include="BookmarkSchema.xsd" />
+    <None Include="BookmarkSchema.xsd">
+      <SubType>Designer</SubType>
+    </None>
+    <None Include="BookmarkSchemaV2.xsd">
+      <SubType>Designer</SubType>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="BookmarkGeneralPage.resx">

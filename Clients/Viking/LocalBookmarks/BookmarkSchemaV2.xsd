@@ -1,0 +1,72 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<xs:schema id="BookmarkSchemaV2"
+    targetNamespace="http://connectomes.utah.edu/XSD/BookmarkSchemaV2.xsd"
+    elementFormDefault="qualified"
+    xmlns="http://connectomes.utah.edu/XSD/BookmarkSchemaV2.xsd"
+    xmlns:mstns="http://connectomes.utah.edu/XSD/BookmarkSchemaV2.xsd"
+    xmlns:xs="http://www.w3.org/2001/XMLSchema"
+>
+ 
+  <xs:complexType name="Point2D">
+    <xs:attribute name="X" type ="xs:double" use="required">
+      <xs:annotation>
+        <xs:documentation>
+          X Coordinate
+        </xs:documentation>
+      </xs:annotation>
+    </xs:attribute>
+    <xs:attribute name="Y" type ="xs:double" use="required">
+      <xs:annotation>
+        <xs:documentation>
+          Y Coordinate
+        </xs:documentation>
+      </xs:annotation>
+    </xs:attribute>
+  </xs:complexType>
+ 
+  <xs:complexType name="View">
+    <xs:attribute name="Downsample" type ="xs:double" use="required"/>
+  </xs:complexType> 
+ 
+  <xs:complexType name="Bookmark">
+    <xs:sequence>
+      <xs:element name="VolumePosition" type="Point2D" minOccurs="1" maxOccurs ="1">
+        <xs:annotation>
+          <xs:documentation>
+            Position in volume coordinates.
+          </xs:documentation>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="MosaicPosition" type="Point2D" minOccurs="1" maxOccurs ="1" >
+        <xs:annotation>
+          <xs:documentation>
+            Position in mosiac coordinates.  If present the volume coordinates may be ignored and recalculated from this value using the appropriate slice-to-volume transform.
+          </xs:documentation>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="View" type="View" minOccurs="1" maxOccurs ="1"/>
+      <xs:element name="Comment" type ="xs:string" maxOccurs ="1"/>
+    </xs:sequence>
+    <xs:attribute name="Name" type ="xs:string" use="required"/>
+    <xs:attribute name="Z" type ="xs:double" use="required">
+      <xs:annotation>
+        <xs:documentation>
+          Section number in the volume
+        </xs:documentation>
+      </xs:annotation>
+    </xs:attribute>
+  </xs:complexType> 
+
+  <xs:element name="Folder" >
+    <xs:complexType>
+      <xs:sequence minOccurs ="0" maxOccurs ="unbounded">
+        <xs:element ref="Folder" minOccurs ="0"/>
+        <xs:element name="Bookmark" type="Bookmark" minOccurs ="0" />
+        <xs:element name="Comment" type ="xs:string" maxOccurs ="1"/>
+      </xs:sequence>
+      <xs:attribute name="Name" type ="xs:string" use="required"/>
+    </xs:complexType>
+  </xs:element>
+
+</xs:schema>
+

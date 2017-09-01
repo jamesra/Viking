@@ -6,14 +6,17 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Geometry;
 using VikingXNAGraphics;
+using Viking.Common;
 
 namespace LocalBookmarks
 {
     [Viking.Common.SectionOverlay("Local Bookmarks")]
     class BookmarkOverlay : Viking.Common.ISectionOverlayExtension
     {
-        
         #region XNA
+
+        protected TransformChangedEventHandler VolumeTransformChangedEventHandler;
+        
 
         static public Texture2D StarTexture;
 
@@ -33,9 +36,14 @@ namespace LocalBookmarks
 
         private Viking.UI.Controls.SectionViewerControl _parent = null;
 
+        public BookmarkOverlay()
+        {
+            VolumeTransformChangedEventHandler = new TransformChangedEventHandler(Global.OnVolumeTransformChanged);
+        }
+
         string Viking.Common.ISectionOverlayExtension.Name()
         {
-            return null;
+            return "Bookmarks";
         }
 
         int Viking.Common.ISectionOverlayExtension.DrawOrder()
@@ -47,7 +55,10 @@ namespace LocalBookmarks
         {
             _parent = parent; 
             StarTexture = parent.Content.Load<Texture2D>("Star");
-        }
+
+
+            Viking.UI.State.volume.TransformChanged += VolumeTransformChangedEventHandler;
+        } 
 
         object Viking.Common.ISectionOverlayExtension.ObjectAtPosition(Geometry.GridVector2 WorldPosition, out double distance)
         {
@@ -136,10 +147,7 @@ namespace LocalBookmarks
                 if (alpha < 0.00)
                     alpha = 0.00f; 
             }
-
-            
-
-            
+                        
             double ScreenPixelRadius = BookmarkRadius / Downsample;
             
             //What is the absolute smallest size a bookmark should have?
@@ -177,8 +185,7 @@ namespace LocalBookmarks
 
             //Walk the bookmark tree and draw every bookmark
             foreach (FolderUIObj folder in ParentFolder.Folders)
-            {
-                
+            { 
                 RecursiveDrawBookmarks(folder, graphicsDevice, basicEffect, scene); 
             }
         }
