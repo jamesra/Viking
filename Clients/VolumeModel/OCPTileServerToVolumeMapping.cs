@@ -154,7 +154,7 @@ namespace Viking.VolumeModel
                     
                     //                   Trace.WriteLine(TextureFileName, "VolumeModel"); 
                     Tile tile = Global.TileCache.Fetch(UniqueID);
-                    if (tile == null)
+                    if (tile == null && Global.TileCache.ContainsKey(UniqueID) == false)
                     {
                         //First create a new tile
                         int MipMapLevels = 1; //No mip maps
@@ -183,7 +183,8 @@ namespace Viking.VolumeModel
                                                             MipMapLevels);
                     }
                     
-                    TilesToDraw.Add(tile);
+                    if(tile != null)
+                        TilesToDraw.Add(tile);
                 }
             }
 

@@ -278,7 +278,10 @@ namespace VikingXNAGraphics
             spriteBatch.GraphicsDevice.BlendState = originalBlendState;
             spriteBatch.GraphicsDevice.DepthStencilState = originalDepthState;
             spriteBatch.GraphicsDevice.RasterizerState = originalRasterizerState;
-            spriteBatch.GraphicsDevice.SamplerStates[0] = originalSamplerState;
+
+            if(originalSamplerState != null)
+                spriteBatch.GraphicsDevice.SamplerStates[0] = originalSamplerState;
+            
         }
 
         public void Draw(Microsoft.Xna.Framework.Graphics.SpriteBatch spriteBatch,

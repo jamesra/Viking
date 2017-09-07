@@ -51,26 +51,7 @@ namespace WebAnnotation
         {
             return ModifierKeys == System.Windows.Forms.Keys.Control;
         }
-    }
-
-    public static class ColorExtensions
-    {
-        public static Microsoft.Xna.Framework.Color ToXNAColor(this System.Drawing.Color color)
-        {
-            return new Microsoft.Xna.Framework.Color((int)color.R,
-                                                    (int)color.G,
-                                                    (int)color.B,
-                                                    (int)color.A);
-        }
-
-        public static Microsoft.Xna.Framework.Color ToXNAColor(this System.Drawing.Color color, float alpha)
-        {
-            return new Microsoft.Xna.Framework.Color((int)color.R,
-                                                    (int)color.G,
-                                                    (int)color.B,
-                                                    (int)(255f * alpha));
-        }
-    }
+    } 
 
     public static class HitTestResultExtensions
     {
@@ -262,6 +243,17 @@ namespace WebAnnotation
                 System.Windows.MessageBox.Show(parent, e.Message, "Could not save Polygon", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
             } 
         }  
+
+        public static bool IsLastEditedAnnotation(this WebAnnotationModel.LocationObj loc)
+        { 
+            if (!Global.LastEditedAnnotationID.HasValue)
+            {
+                return false;
+            }
+
+            return Global.LastEditedAnnotationID.Value == loc.ID;
+        }
+
     }
 
 

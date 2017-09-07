@@ -157,6 +157,8 @@ namespace Viking.ViewModels
         /// <returns></returns>
         private static VertexBuffer CreateVertexBuffer(GraphicsDevice device, VolumeModel.PositionNormalTextureVertex[] Verticies)
         {
+            if (Verticies.Length == 0)
+                return null;
 
             VertexPositionNormalTexture[] vertArray = new VertexPositionNormalTexture[Verticies.Length];
 

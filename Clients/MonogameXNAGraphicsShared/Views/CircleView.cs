@@ -82,6 +82,9 @@ namespace VikingXNAGraphics
 
             TextureCircleView.SetupGraphicsDevice(device, basicEffect, overlayEffect);
 
+            BlendState originalState = device.BlendState;
+            device.BlendState = BlendState.NonPremultiplied;
+
             var textureGroups = listToDraw.GroupBy(l => l.Texture);
             foreach(var textureGroup in textureGroups)
             {
@@ -106,6 +109,8 @@ namespace VikingXNAGraphics
                 }
             }
 
+            device.BlendState = originalState;
+
             //TextureCircleView.RestoreGraphicsDevice(device, basicEffect);
         }
     }
@@ -116,7 +121,7 @@ namespace VikingXNAGraphics
         #region static
 
         static double BeginFadeCutoff = 0.1;
-        static double InvisibleCutoff = 1f;
+        static double InvisibleCutoff = 1.5f;
 
         #endregion
 
@@ -146,11 +151,6 @@ namespace VikingXNAGraphics
         public double Radius
         {
             get { return _Circle.Radius; }
-        }
-
-        public double OffSectionRadius
-        {
-            get { return this.Radius / 2.0; }
         }
 
         public float Alpha
@@ -206,12 +206,12 @@ namespace VikingXNAGraphics
         public bool IsVisible(VikingXNA.Scene scene)
         {
             double maxDimension = Math.Max(scene.VisibleWorldBounds.Width, scene.VisibleWorldBounds.Height);
-            double LocToScreenRatio = Radius * 2 / maxDimension;
+            double LocToScreenRatio = Radius * 2.0 / maxDimension;
             if (LocToScreenRatio > InvisibleCutoff)
                 return false;
 
             double maxPixelDimension = Math.Max(scene.DevicePixelWidth, scene.DevicePixelHeight);
-            if (Radius * 2 <= maxPixelDimension)
+            if (Radius * 2.0 <= maxPixelDimension)
                 return false;
 
             return true;
@@ -271,47 +271,6 @@ namespace VikingXNAGraphics
             {
                 Circle = new GridCircle(value, this.Radius);
             }
-        }
-
-        public static float BaseSaturationScalar(bool MouseOver, bool OnVisibleSection)
-        {
-            if (MouseOver)
-            {
-                return 0.25f;
-            }
-            else if (!OnVisibleSection)
-            {
-                return 0.5f;
-            }
-
-            return 1.0f;
-        }
-
-        public static float BaseAlpha(bool MouseOver, bool OnVisibleSection)
-        {
-            if (MouseOver)
-            {
-                return 0.125f;
-            }
-            else if (!OnVisibleSection)
-            {
-                return 0.25f;
-            }
-
-            return 0.5f;
-        }
-
-        public static Microsoft.Xna.Framework.Color AdjustHSLColorForStatus(Microsoft.Xna.Framework.Color HSLColor, GridRectangle VisibleBounds, double Radius, bool MouseOver, bool OnVisibleSection)
-        {
-
-            float SatScalar = BaseSaturationScalar(MouseOver, OnVisibleSection);//HSLColor.B / 255.0f;
-            double maxDimension = Math.Max(VisibleBounds.Width, VisibleBounds.Height);
-            double LocToScreenRatio = Radius * 2 / maxDimension;
-            SatScalar *= SharedEffectFunctions.GetFadeFactor(LocToScreenRatio, BeginFadeCutoff, InvisibleCutoff);
-
-            HSLColor.A = (Byte)((float)BaseAlpha(MouseOver, OnVisibleSection));
-            HSLColor.G = (Byte)((float)HSLColor.G * SatScalar);
-            return HSLColor;
         }
 
         /// <summary>

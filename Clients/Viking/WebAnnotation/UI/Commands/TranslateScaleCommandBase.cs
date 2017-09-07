@@ -22,8 +22,8 @@ namespace WebAnnotation.UI.Commands
         public new static string[] DefaultMouseHelpStrings = new String[] {
            "Hold Left+Click Drag to move",
            "Release Left button to place",
-           "Scroll wheel: Scale annotation size",
-           "SHIFT + Scroll wheel: Scale annotation size slowly"
+           "Scroll wheel: Change size",
+           "SHIFT + Scroll wheel: Change size slowly"
         };
          
         protected Viking.VolumeModel.IVolumeToSectionTransform mapping;

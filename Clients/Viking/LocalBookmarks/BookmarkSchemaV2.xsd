@@ -55,7 +55,16 @@
         </xs:documentation>
       </xs:annotation>
     </xs:attribute>
-  </xs:complexType> 
+  </xs:complexType>
+
+  <xs:simpleType name="ShapeType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="Arrow"/>
+      <xs:enumeration value="Ring"/>
+      <xs:enumeration value="Star"/>
+      <xs:enumeration value="Inherit"/>
+    </xs:restriction>
+  </xs:simpleType>
 
   <xs:element name="Folder" >
     <xs:complexType>
@@ -65,6 +74,9 @@
         <xs:element name="Comment" type ="xs:string" maxOccurs ="1"/>
       </xs:sequence>
       <xs:attribute name="Name" type ="xs:string" use="required"/>
+      <xs:attribute name="Color" type="xs:string" use="optional"/>
+      <xs:attribute name="Shape" type="ShapeType" default="Inherit" use="optional">
+      </xs:attribute>
     </xs:complexType>
   </xs:element>
 

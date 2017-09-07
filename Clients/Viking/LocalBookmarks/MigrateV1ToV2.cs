@@ -14,6 +14,8 @@ namespace LocalBookmarks
                 return null;
 
             XRoot newRoot = new XRoot(MigrateFolder(oldRoot.Folder));
+            newRoot.Folder.Shape = ShapeType.STAR.ToShapeString();
+
             return newRoot; 
         }
 
@@ -21,6 +23,7 @@ namespace LocalBookmarks
         {
             Folder newFolder = new Folder();
             newFolder.Name = oldFolder.name;
+            newFolder.Shape = ShapeType.INHERIT.ToShapeString();
 
             foreach(var oldBookmark in oldFolder.Bookmarks)
             {
@@ -69,8 +72,16 @@ namespace LocalBookmarks
             string baseDir = System.IO.Path.GetDirectoryName(BookmarkPath);
             string filename = System.IO.Path.GetFileName(BookmarkPath);
 
-            string migratedFilename = "PreMigration" + filename;
+            int BackupNumber = 0;
+            string migratedFilename = "PreMigration" + BackupNumber + "_" +  filename;
             string migratedFullPath = System.IO.Path.Combine(baseDir, migratedFilename);
+
+            while(System.IO.File.Exists(migratedFullPath))
+            {
+                BackupNumber++;
+                migratedFilename = "PreMigration" + BackupNumber + "_" + filename;
+                migratedFullPath = System.IO.Path.Combine(baseDir, migratedFilename);
+            }
 
             try
             {

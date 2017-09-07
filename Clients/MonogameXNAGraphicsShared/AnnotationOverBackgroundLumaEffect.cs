@@ -37,8 +37,8 @@ namespace VikingXNAGraphics
     {
         public enum Techniques
         {
-            RGBOverBackgroundValueOverlayEffect,
-            RGBCircleOverBackgroundValueOverlayEffect
+            RGBCircleOverBackgroundValueOverlayEffect,
+            RGBTextureOverBackgroundValueOverlayEffect
         };
 
         public Effect effect;
@@ -89,11 +89,11 @@ namespace VikingXNAGraphics
             {
                 switch (value)
                 {
-                    case Techniques.RGBOverBackgroundValueOverlayEffect:
-                        effect.CurrentTechnique = effect.Techniques["RGBOverBackgroundValueOverlayEffect"];
-                        break;
                     case Techniques.RGBCircleOverBackgroundValueOverlayEffect:
                         effect.CurrentTechnique = effect.Techniques["RGBCircleOverBackgroundValueOverlayEffect"];
+                        break;
+                    case Techniques.RGBTextureOverBackgroundValueOverlayEffect:
+                        effect.CurrentTechnique = effect.Techniques["RGBTextureOverBackgroundValueOverlayEffect"];
                         break;
                     default:
                         throw new ArgumentException("Unknown technique");
@@ -113,7 +113,7 @@ namespace VikingXNAGraphics
         public void AnnotateWithTexture(Texture2D AnnotationTexture)
         {            
             _AnnotationTexture.SetValue(AnnotationTexture);
-            effect.CurrentTechnique = effect.Techniques["RGBOverBackgroundValueOverlayEffect"];
+            Technique = Techniques.RGBTextureOverBackgroundValueOverlayEffect;
         }
 
         public float InputLumaAlphaValue
@@ -139,14 +139,14 @@ namespace VikingXNAGraphics
             */
 
             _InputLumaAlpha.SetValue(inputLumaAlphaValue);
-            effect.CurrentTechnique = effect.Techniques["RGBCircleOverBackgroundValueOverlayEffect"]; 
+            Technique = Techniques.RGBCircleOverBackgroundValueOverlayEffect;
         }
 
         public void Init(GraphicsDevice device, ContentManager content)
         {
             this.effect = content.Load<Effect>("AnnotationOverlayShader");
             LoadParameters(this.effect);
-            this.Technique = Techniques.RGBOverBackgroundValueOverlayEffect;
+            this.Technique = Techniques.RGBTextureOverBackgroundValueOverlayEffect;
         }
 
         private void LoadParameters(Effect effect)

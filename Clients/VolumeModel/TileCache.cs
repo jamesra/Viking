@@ -14,7 +14,7 @@ namespace Viking.VolumeModel
         {
             Tile = T;
             LastAccessed = DateTime.UtcNow;
-            Size = T.Size; 
+            Size = T == null ? 1 : T.Size;
         }
 
         public override sealed void Dispose()
@@ -58,17 +58,27 @@ namespace Viking.VolumeModel
         {
             //Check to see if this tile is already loaded
             string key = TileUniqueKey;
+            Tile tile;
 
-            Tile tile = new Tile(TileUniqueKey, 
-                verticies,
-                TriangleIndicies,
-                textureFullPath,
-                cacheFilePath,
-                //PORT cachedTextureFileName,
-                downsample
-                //PORT: MipMapLevels
-                );
-
+            if (verticies.Length < 3)
+            {
+                //Not enough verticies for a tile.  Return null
+                tile = null;
+            }
+            else
+            {
+                tile = new Tile(TileUniqueKey,
+                    verticies,
+                    TriangleIndicies,
+                    textureFullPath,
+                    cacheFilePath,
+                    //PORT cachedTextureFileName,
+                    downsample
+                    //PORT: MipMapLevels
+                    );
+            }
+            
+            //We can add a null tile to the cache to indicate it has been calculated and we do not have valid data for it.
             Add(key, tile);
 
             return tile;

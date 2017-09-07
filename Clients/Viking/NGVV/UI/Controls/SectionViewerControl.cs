@@ -400,7 +400,6 @@ namespace Viking.UI.Controls
                     CurrentCommand = Command.CreateFor(this, null);
                 }
 
-                Volume.ActiveVolumeTransform = UI.State.volume.DefaultVolumeTransform;
                 this.CurrentChannel = Section.DefaultChannel;
 
                 this.listOverlays = ExtensionManager.CreateSectionOverlays(this);

@@ -159,6 +159,9 @@ namespace VikingXNAGraphics
             verts = CircleVerticies(Pos, (float)Radius, color);
             indicies = GlobalPrimitives.SquareIndicies;
 
+            BlendState originalState = graphicsDevice.BlendState;
+            graphicsDevice.BlendState = BlendState.NonPremultiplied;
+
             basicEffect.Texture = GlobalPrimitives.CircleTexture;
             basicEffect.TextureEnabled = true;
             basicEffect.VertexColorEnabled = true;
@@ -179,6 +182,8 @@ namespace VikingXNAGraphics
 
              basicEffect.TextureEnabled = false;
              basicEffect.VertexColorEnabled = false;
+
+            graphicsDevice.BlendState = originalState; 
         }
          
 

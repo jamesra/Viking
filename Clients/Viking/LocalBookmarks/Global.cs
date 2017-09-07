@@ -41,21 +41,35 @@ namespace LocalBookmarks
         /// </summary>
         static string BookmarkUndoFilePath = BookmarkPath + System.IO.Path.DirectorySeparatorChar + BookmarkUndoFileName;
 
-        static internal readonly string XSDUri = "http://connectomes.utah.edu/XSD/BookmarkSchema.xsd"; 
+        static internal readonly string XSDUri = "http://connectomes.utah.edu/XSD/BookmarkSchema.xsd";
 
         /// <summary>
         /// The number of undo files to maintain
         /// </summary>
         //static readonly int UndoDepth = 16;
 
-        internal static XRoot BookmarkXMLDoc;
-        
-        private static Folder FolderRoot
+        private static XRoot _BookmarkXMLDoc = null; 
+        internal static XRoot BookmarkXMLDoc {
+            get { return _BookmarkXMLDoc; }
+            set
+            {
+                _BookmarkXMLDoc = value;
+                if (RootBookmarkChanged != null)
+                {
+                    RootBookmarkChanged(null, new System.ComponentModel.PropertyChangedEventArgs("BookmarkXMLDoc"));
+                } 
+            }
+        }
+
+        public static event System.ComponentModel.PropertyChangedEventHandler RootBookmarkChanged;
+         
+        internal static Folder FolderRoot
         {
             get { return BookmarkXMLDoc.Folder;}
         }
 
         static public double DefaultBookmarkRadius = 128;
+        static public Microsoft.Xna.Framework.Color DefaultColor = Microsoft.Xna.Framework.Color.Gold;
         static public double BookmarkArea = DefaultBookmarkRadius * DefaultBookmarkRadius * Math.PI; 
 
         private static FolderUIObj _SelectedFolder;
@@ -65,13 +79,24 @@ namespace LocalBookmarks
             set { _SelectedFolder = value; }
         }
 
-        internal static FolderUIObj FolderUIObjRoot = null;
+        private static FolderUIObj _FolderUIObjRoot = null;
+        internal static FolderUIObj FolderUIObjRoot
+        {
+            get { return _FolderUIObjRoot; }
+            set
+            {
+                _FolderUIObjRoot = value;
+                if(RootBookmarkChanged != null)
+                {
+                    RootBookmarkChanged(null, new System.ComponentModel.PropertyChangedEventArgs("FolderUIObjRoot"));
+                }
+            }
+        }
 
         internal static bool BookmarksVisible = true; 
 
         public static event EventHandler AfterUndo; 
-
-
+         
         internal static void Save()
         {
             try
@@ -123,8 +148,12 @@ namespace LocalBookmarks
                 System.IO.File.Move(BookmarkUndoFilePath, BookmarkFilePath); 
             }
 
-            Viking.UI.State.ViewerForm.Invalidate();
-            Viking.UI.State.ViewerControl.Invalidate();
+            if(Viking.UI.State.ViewerForm != null)
+                Viking.UI.State.ViewerForm.Invalidate();
+
+            if(Viking.UI.State.ViewerControl != null)
+                Viking.UI.State.ViewerControl.Invalidate();
+
         }
 
         internal static void Save(string SavePath)
@@ -217,8 +246,6 @@ namespace LocalBookmarks
                         Save();
                     }
 
-                    FolderUIObjRoot = new FolderUIObj(null, FolderRoot);
-                    SelectedFolder = FolderUIObjRoot;
                 }
                 catch(Xml.Schema.Linq.LinqToXsdException)
                 {
@@ -239,9 +266,6 @@ namespace LocalBookmarks
               //  HandleIncorrectXSDMessage();
               //  LoadBookmarksFromBackup();
             }
-
-            FolderUIObjRoot = new FolderUIObj(null, FolderRoot);
-            SelectedFolder = FolderUIObjRoot; 
             
             return true; 
         }

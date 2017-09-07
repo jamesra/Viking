@@ -227,6 +227,16 @@ namespace VikingXNAGraphics
             BLUE = 0
         };
 
+        public static byte[] ToBytes(this Color color)
+        {
+            return new byte[] { color.R, color.G, color.B, color.A };
+        }
+
+        public static string ToHexString(this Color color)
+        {
+            return "0x" + BitConverter.ToString(color.ToBytes()).Replace("-",string.Empty);
+        }
+
         private static int GetColorComponent(int color, ColorComponent comp)
         {
             int mask = 0x000000FF;

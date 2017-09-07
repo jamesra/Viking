@@ -56,7 +56,9 @@ float4 MyPSStandardHSV(PS_Input input) : COLOR0
 	clip(finalColor.a);
 	//This is a greyscale+Alpha image.  Greyscale indicates the degree of color, alpha indicates degree to which we use Overlay Luma or Background Luma
 	float4 RGBBackgroundColor = tex2D(BackgroundTextureSampler, ((input.ScreenTexCoord.xy) / (RenderTargetSize.xy - 1)));
-	return BlendHSLColorOverBackground(lineColor, RGBBackgroundColor, lineColor.a);
+	return BlendHSLColorOverBackground(lineColor, RGBBackgroundColor, 1.0f - lineColor.a);
+    finalColor.a = lineColor.a; 
+    return finalColor;
 
 	/*
 	float Hue = lineColor.r;

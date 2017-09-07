@@ -132,6 +132,7 @@
     </Compile>
     <Compile Include="BookmarkUIObj.cs" />
     <Compile Include="CreateBookmarkCommand.cs" />
+    <Compile Include="Extensions.cs" />
     <Compile Include="FolderGeneralPage.cs">
       <SubType>UserControl</SubType>
     </Compile>

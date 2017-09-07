@@ -157,6 +157,8 @@
     <Compile Include="Views\MeshView.cs" />
     <Compile Include="Views\PolyLineView.cs" />
     <Compile Include="Views\SharedEffectFunctions.cs" />
+    <Compile Include="Views\TextureOverlayView.cs" />
+    <Compile Include="Views\BillboardViewBase.cs" />
   </ItemGroup>
   <ItemGroup>
     <NestedContentProject Include="XNAContent\Content.contentproj">

@@ -60,6 +60,8 @@ namespace Viking.ViewModels
                 SectionViewModel sectionViewModel = new SectionViewModel(this, s);
                 SectionViewModels.Add(s.Number, sectionViewModel);
             }
+
+            _ActiveVolumeTransform = this.DefaultVolumeTransform;
         }
 
         public string Host { get { return _Volume.Host; } }

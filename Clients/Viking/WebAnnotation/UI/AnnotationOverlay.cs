@@ -143,7 +143,7 @@ namespace WebAnnotation
             //BUG: This is because the way I handle commands changed dramatically between Plantmap and Viking.  I need to
             //set selected object to null to keep the UI from doing strange things
             Viking.UI.State.SelectedObject = null;
-            CreateNewLinkedLocationCommand.LastEditedLocation = null;
+            Global.LastEditedAnnotationID = null;
         }
 
         public int CurrentSectionNumber
@@ -529,13 +529,14 @@ namespace WebAnnotation
                     OnContinueLastTrace();
                     return; 
                 case Keys.Back:
-                    if (CreateNewLinkedLocationCommand.LastEditedLocation != null)
+                    if (Global.LastEditedAnnotationID.HasValue)
                     {
-                        Parent.GoToLocation(new Microsoft.Xna.Framework.Vector2((float)CreateNewLinkedLocationCommand.LastEditedLocation.Position.X,
-                                                                                (float)CreateNewLinkedLocationCommand.LastEditedLocation.Position.Y),
-                                            (int)CreateNewLinkedLocationCommand.LastEditedLocation.Z,
+                        LocationObj loc = Store.Locations.GetObjectByID(Global.LastEditedAnnotationID.Value);
+                        Parent.GoToLocation(new Microsoft.Xna.Framework.Vector2((float)loc.Position.X,
+                                                                                (float)loc.Position.Y),
+                                            (int)loc.Z,
                                             true,
-                                            (double)((CreateNewLinkedLocationCommand.LastEditedLocation.VolumeShape.BoundingBox().Width) / Parent.Width) * 2);
+                                            (double)((loc.VolumeShape.BoundingBox().Width) / Parent.Width) * 2);
 
                     }
                     else
@@ -928,18 +929,21 @@ namespace WebAnnotation
 
         protected void OnContinueLastTrace(GridVector2 WorldPos)
         {
-            if (CreateNewLinkedLocationCommand.LastEditedLocation != null)
+            if (!Global.LastEditedAnnotationID.HasValue)
+                return;
+
+            LocationObj lastLoc = Store.Locations.GetObjectByID(Global.LastEditedAnnotationID.Value);
             {
-                if (CreateNewLinkedLocationCommand.LastEditedLocation.Z != this.CurrentSectionNumber && IsCommandDefault())
+                if (lastLoc.Z != this.CurrentSectionNumber && IsCommandDefault())
                 {
-                    Viking.UI.Commands.Command command = LocationAction.CREATELINKEDLOCATION.CreateCommand(this.Parent, CreateNewLinkedLocationCommand.LastEditedLocation, WorldPos);
+                    Viking.UI.Commands.Command command = LocationAction.CREATELINKEDLOCATION.CreateCommand(this.Parent, lastLoc, WorldPos);
                     if (command != null)
                     {
                         _Parent.CurrentCommand = command;
                     }
 
                     Viking.UI.State.SelectedObject = null;
-                    CreateNewLinkedLocationCommand.LastEditedLocation = null;
+                    Global.LastEditedAnnotationID = null;
                 }
             }
         }

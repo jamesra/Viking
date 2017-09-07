@@ -20,17 +20,28 @@ namespace WebAnnotation.View
         public LabelView StructureIDLabelView;
         public LabelView StructureLabelView;
         public LabelView ParentStructureLabelView;
-         
+
         LocationObj locationObj = null;
 
         GridCircle VolumeCircle;
 
         readonly bool ShowAttributeLabels = true;
 
+        public double DesiredRowsOfText { get; set; } = 4.0;
+
+        public double DefaultFontSize
+        {
+            get
+            {
+                return (this.Radius * 2.0) / DesiredRowsOfText;
+            }
+        }
+
         public double Radius
         {
             get { return VolumeCircle.Radius; }
-            set {
+            set
+            {
                 VolumeCircle.Radius = value;
                 CreateLabelObjects();
             }
@@ -67,7 +78,7 @@ namespace WebAnnotation.View
 
             return fullLabel;
         }
-         
+
         protected string TagLabel()
         {
             if (locationObj.Parent == null)
@@ -110,7 +121,7 @@ namespace WebAnnotation.View
                 StructureLabelView = new LabelView(this.FullLabelText(), this.VolumeCircle.Center + new GridVector2(0, this.Radius / 3.0f));
                 StructureLabelView.MaxLineWidth = this.Radius * 2;
             }
-            
+
             if (locationObj.Parent != null && locationObj.Parent.ParentID.HasValue)
             {
                 ParentStructureLabelView = new LabelView(locationObj.Parent.ParentID.ToString(), this.VolumeCircle.Center + new GridVector2(0, this.Radius / 2.0f));
@@ -147,10 +158,20 @@ namespace WebAnnotation.View
                 throw new ArgumentNullException("spriteBatch");
 
             //Scale the label alpha based on the zoom factor 
+            bool OscillateSize = this.locationObj.IsLastEditedAnnotation();
 
-            double DesiredRowsOfText = 4.0;
-            double DefaultFontSize = (this.Radius * 2.0) / DesiredRowsOfText;
             StructureIDLabelView.FontSize = DefaultFontSize; //We only desire one line of text
+
+            if(OscillateSize)
+            {
+                double Scalar = GetOscillationFactor;
+                StructureIDLabelView.FontSize *= Scalar;
+                StructureIDLabelView.MaxLineWidth *= Scalar > 1 ? Scalar : 1.0;
+            }
+            else
+            {
+                StructureIDLabelView.MaxLineWidth = this.Radius * 2.0;
+            }
 
             StructureIDLabelView.Draw(spriteBatch, font, scene);
 
@@ -168,8 +189,25 @@ namespace WebAnnotation.View
                 ParentStructureLabelView.FontSize = DefaultFontSize / 2.0f;
                 ParentStructureLabelView.Draw(spriteBatch, font, scene);
             }
-             
+
             return;
         }
+
+        /// <summary>
+        /// Returns a number from .9 to 1.1 on a 1Hz wave
+        /// </summary>
+        private static double GetOscillationFactor 
+        {
+            get
+            {
+                double SecondsPerCycle = 3;
+                double Hz = 1.0 / SecondsPerCycle;
+                double ms = (double)DateTime.UtcNow.Ticks / TimeSpan.TicksPerSecond;
+                ms %= SecondsPerCycle;
+                ms /= SecondsPerCycle; 
+                ms *= Math.PI * 2; 
+                return (Math.Sin(ms) / 20.0) + 1.0; 
+            }
+    }
     }
 }

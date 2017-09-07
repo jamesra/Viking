@@ -27,7 +27,7 @@
     <TargetFrameworkProfile />
     <NuGetPackageImportStamp>
     </NuGetPackageImportStamp>
-    <PublishUrl>X:\Volumes\Software\Viking4\</PublishUrl>
+    <PublishUrl>C:\Src\git\Viking\Publish\</PublishUrl>
     <Install>true</Install>
     <InstallFrom>Web</InstallFrom>
     <UpdateEnabled>true</UpdateEnabled>
@@ -45,7 +45,7 @@
     <CreateWebPageOnPublish>true</CreateWebPageOnPublish>
     <WebPage>Viking.html</WebPage>
     <TrustUrlParameters>true</TrustUrlParameters>
-    <ApplicationRevision>252</ApplicationRevision>
+    <ApplicationRevision>256</ApplicationRevision>
     <ApplicationVersion>1.1.0.%2a</ApplicationVersion>
     <UseApplicationTrust>false</UseApplicationTrust>
     <CreateDesktopShortcut>true</CreateDesktopShortcut>
@@ -182,6 +182,8 @@
     <Content Include="Content\RoundCurve.xnb" />
     <Content Include="Content\RoundCurveHSV.xnb" />
     <Content Include="Content\PolygonOverlayShader.xnb" />
+    <Content Include="Content\Arrow.xnb" />
+    <Content Include="Content\Ring.xnb" />
     <None Include="packages.config" />
     <None Include="Properties\app.manifest" />
     <None Include="Properties\Settings.settings">

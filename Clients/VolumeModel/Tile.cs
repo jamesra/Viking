@@ -123,6 +123,8 @@ namespace Viking.VolumeModel
             //PORT: this.MipMapLevels = mipMapLevels;
 
             this.Verticies = verticies;
+            Debug.Assert(verticies != null);
+            Debug.Assert(verticies.Length > 0, "Tile must have verticies");
             this.TriangleIndicies = TriangleIndicies;
 
             

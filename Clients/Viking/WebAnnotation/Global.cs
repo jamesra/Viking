@@ -119,6 +119,8 @@ namespace WebAnnotation
         
         }
 
+        public static long? LastEditedAnnotationID;
+
         #region IInitExtensions Members
 
         /*

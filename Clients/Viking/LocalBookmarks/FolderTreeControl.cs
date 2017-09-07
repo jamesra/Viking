@@ -22,13 +22,11 @@ namespace LocalBookmarks
             BookmarkUIObj.Create += OnCreate;
             FolderUIObj.Create += OnCreate;
             this.Title = "Bookmarks";
-
             
-
             InitializeComponent();
 
-            Global.AfterUndo += this.OnAfterUndo; 
-
+            Global.AfterUndo += this.OnAfterUndo;
+            Global.RootBookmarkChanged += this.OnRootChanged;
         }
 
         protected void OnCreate(object sender, EventArgs e)
@@ -51,10 +49,37 @@ namespace LocalBookmarks
             this.InitializeTree(); 
         }
 
+        public void OnRootChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == "FolderUIObjRoot")
+            {
+                this.SetRootFolder(Global.FolderUIObjRoot);
+            }
+        }
+
+        public void SetRootFolder(FolderUIObj root)
+        {
+            Tree.ClearObjects();
+
+            if(root != null)
+            {
+                List<IUIObject> TreeObjectList = new List<IUIObject>(root.Folders.Length + root.Bookmarks.Length);
+                TreeObjectList.AddRange(root.Folders);
+                TreeObjectList.AddRange(root.Bookmarks);
+
+                Tree.AddObjects(TreeObjectList.ToArray());
+
+                Global.FolderUIObjRoot.ChildChanged += OnRootChildChanged;
+            }
+        }
+
         protected void OnRootChildChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
         {
             switch (e.Action)
             {
+                case NotifyCollectionChangedAction.Reset:
+                    Tree.ClearObjects();
+                    break;
                 case NotifyCollectionChangedAction.Add:
                     this.Tree.AddObjects(e.NewItems.Cast<IUIObject>());
                     break; 
@@ -81,13 +106,7 @@ namespace LocalBookmarks
         {
             Tree.ClearObjects();
 
-            List<IUIObject> TreeObjectList = new List<IUIObject>(Global.FolderUIObjRoot.Folders.Length + Global.FolderUIObjRoot.Bookmarks.Length);
-            TreeObjectList.AddRange(Global.FolderUIObjRoot.Folders);
-            TreeObjectList.AddRange(Global.FolderUIObjRoot.Bookmarks); 
-
-            Tree.AddObjects( TreeObjectList.ToArray() );
-
-            Global.FolderUIObjRoot.ChildChanged += OnRootChildChanged;
+            SetRootFolder(Global.FolderUIObjRoot);
         }
 
         /// <summary>

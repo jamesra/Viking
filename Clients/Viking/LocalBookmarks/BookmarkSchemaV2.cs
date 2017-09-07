@@ -22,7 +22,7 @@ namespace connectomes.utah.edu.XSD.BookmarkSchemaV2.xsd {
     
     /// <summary>
     /// <para>
-    /// Regular expression: (Folder1?, Bookmark?)*
+    /// Regular expression: (Folder1?, Bookmark?, Comment)*
     /// </para>
     /// </summary>
     public partial class Folder : XTypedElement, IXMetaData {
@@ -32,6 +32,12 @@ namespace connectomes.utah.edu.XSD.BookmarkSchemaV2.xsd {
         
         [DebuggerBrowsable(DebuggerBrowsableState.Never)]
         private XTypedList<Bookmark> BookmarkField;
+        
+        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
+        private XSimpleList<string> CommentField;
+        
+        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
+        private static string ShapeDefaultValue = "Inherit";
         
         [DebuggerBrowsable(DebuggerBrowsableState.Never)]
         static Dictionary<XName, System.Type> localElementDictionary = new Dictionary<XName, System.Type>();
@@ -44,7 +50,7 @@ namespace connectomes.utah.edu.XSD.BookmarkSchemaV2.xsd {
         
         /// <summary>
         /// <para>
-        /// Regular expression: (Folder1?, Bookmark?)*
+        /// Regular expression: (Folder1?, Bookmark?, Comment)*
         /// </para>
         /// </summary>
         public Folder() {
@@ -55,7 +61,7 @@ namespace connectomes.utah.edu.XSD.BookmarkSchemaV2.xsd {
         /// Occurrence: optional
         /// </para>
         /// <para>
-        /// Regular expression: (Folder1?, Bookmark?)*
+        /// Regular expression: (Folder1?, Bookmark?, Comment)*
         /// </para>
         /// </summary>
         public IList<Folder> Folders {
@@ -85,7 +91,7 @@ namespace connectomes.utah.edu.XSD.BookmarkSchemaV2.xsd {
         /// Occurrence: optional
         /// </para>
         /// <para>
-        /// Regular expression: (Folder1?, Bookmark?)*
+        /// Regular expression: (Folder1?, Bookmark?, Comment)*
         /// </para>
         /// </summary>
         public IList<Bookmark> Bookmarks {
@@ -114,6 +120,36 @@ namespace connectomes.utah.edu.XSD.BookmarkSchemaV2.xsd {
         /// <para>
         /// Occurrence: required
         /// </para>
+        /// <para>
+        /// Regular expression: (Folder1?, Bookmark?, Comment)*
+        /// </para>
+        /// </summary>
+        public IList<string> Comment {
+            get {
+                if ((this.CommentField == null)) {
+                    this.CommentField = new XSimpleList<string>(this, XmlSchemaType.GetBuiltInSimpleType(XmlTypeCode.String).Datatype, XName.Get("Comment", "http://connectomes.utah.edu/XSD/BookmarkSchemaV2.xsd"));
+                }
+                return this.CommentField;
+            }
+            set {
+                if ((value == null)) {
+                    this.CommentField = null;
+                }
+                else {
+                    if ((this.CommentField == null)) {
+                        this.CommentField = XSimpleList<string>.Initialize(this, XmlSchemaType.GetBuiltInSimpleType(XmlTypeCode.String).Datatype, value, XName.Get("Comment", "http://connectomes.utah.edu/XSD/BookmarkSchemaV2.xsd"));
+                    }
+                    else {
+                        XTypedServices.SetList<System.String>(this.CommentField, value);
+                    }
+                }
+            }
+        }
+        
+        /// <summary>
+        /// <para>
+        /// Occurrence: required
+        /// </para>
         /// </summary>
         public string Name {
             get {
@@ -122,6 +158,36 @@ namespace connectomes.utah.edu.XSD.BookmarkSchemaV2.xsd {
             }
             set {
                 this.SetAttribute(XName.Get("Name", ""), value, XmlSchemaType.GetBuiltInSimpleType(XmlTypeCode.String).Datatype);
+            }
+        }
+        
+        /// <summary>
+        /// <para>
+        /// Occurrence: optional
+        /// </para>
+        /// </summary>
+        public string Color {
+            get {
+                XAttribute x = this.Attribute(XName.Get("Color", ""));
+                return XTypedServices.ParseValue<string>(x, XmlSchemaType.GetBuiltInSimpleType(XmlTypeCode.String).Datatype);
+            }
+            set {
+                this.SetAttribute(XName.Get("Color", ""), value, XmlSchemaType.GetBuiltInSimpleType(XmlTypeCode.String).Datatype);
+            }
+        }
+        
+        /// <summary>
+        /// <para>
+        /// Occurrence: optional
+        /// </para>
+        /// </summary>
+        public string Shape {
+            get {
+                XAttribute x = this.Attribute(XName.Get("Shape", ""));
+                return XTypedServices.ParseValue<string>(x, XmlSchemaType.GetBuiltInSimpleType(XmlTypeCode.String).Datatype, ShapeDefaultValue);
+            }
+            set {
+                this.SetAttribute(XName.Get("Shape", ""), value, XmlSchemaType.GetBuiltInSimpleType(XmlTypeCode.String).Datatype);
             }
         }
         
@@ -184,6 +250,7 @@ namespace connectomes.utah.edu.XSD.BookmarkSchemaV2.xsd {
         private static void BuildElementDictionary() {
             localElementDictionary.Add(XName.Get("Folder", "http://connectomes.utah.edu/XSD/BookmarkSchemaV2.xsd"), typeof(Folder));
             localElementDictionary.Add(XName.Get("Bookmark", "http://connectomes.utah.edu/XSD/BookmarkSchemaV2.xsd"), typeof(Bookmark));
+            localElementDictionary.Add(XName.Get("Comment", "http://connectomes.utah.edu/XSD/BookmarkSchemaV2.xsd"), typeof(string));
         }
         
         ContentModelEntity IXMetaData.GetContentModel() {
@@ -506,6 +573,19 @@ namespace connectomes.utah.edu.XSD.BookmarkSchemaV2.xsd {
         
         ContentModelEntity IXMetaData.GetContentModel() {
             return contentModel;
+        }
+    }
+    
+    public sealed class ShapeType {
+        
+        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
+        public static Xml.Schema.Linq.SimpleTypeValidator TypeDefinition = new Xml.Schema.Linq.AtomicSimpleTypeValidator(XmlSchemaType.GetBuiltInSimpleType(XmlTypeCode.String), new Xml.Schema.Linq.RestrictionFacets(((Xml.Schema.Linq.RestrictionFlags)(16)), new object[] {
+                        "Arrow",
+                        "Ring",
+                        "Star",
+                        "Inherit"}, 0, 0, null, null, 0, null, null, 0, null, 0, XmlSchemaWhiteSpace.Preserve));
+        
+        private ShapeType() {
         }
     }
     

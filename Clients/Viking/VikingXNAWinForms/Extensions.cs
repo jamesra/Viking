@@ -28,7 +28,12 @@ namespace VikingXNAWinForms
                                                     (int)color.B,
                                                     (int)(alpha * 255.0f));
         }
+        
 
+        public static System.Drawing.Color ToSystemColor(this Microsoft.Xna.Framework.Color color)
+        {
+            return System.Drawing.Color.FromArgb((int)color.A, (int)color.R, (int)color.G, (int)color.B);
+        }
 
     }
 

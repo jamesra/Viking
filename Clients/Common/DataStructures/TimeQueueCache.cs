@@ -89,6 +89,17 @@ namespace Viking.Common
         }
 
         /// <summary>
+        /// Returns true if the cache contains the key at the time of calling. 
+        /// The cache is concurrent so the result may change with later calls
+        /// </summary>
+        /// <param name="key"></param>
+        /// <returns></returns>
+        public bool ContainsKey(KEY key)
+        {
+            return dictEntries.ContainsKey(key);
+        }
+
+        /// <summary>
         /// Creates a file for the texture passed.
         /// </summary>
         /// <param name="filename"></param>

@@ -8,25 +8,74 @@ using LocalBookmarks;
 using Geometry;
 using Viking.UI.Controls;
 using Viking.Common.UI;
+using VikingXNAGraphics;
 
 namespace LocalBookmarks
 {
     [TreeViewVisible()]
     partial class BookmarkUIObj : UIObjTemplate<Bookmark>
     {
-        internal static float LabelScaleFactor = 2.25f; 
+        internal static float LabelScaleFactor = 2.25f;
+
+        public VikingXNAGraphics.TextureOverlayView _shapeView;
+        public VikingXNAGraphics.LabelView _labelView;
 
         public BookmarkUIObj(FolderUIObj parent)
         {
             Data = new Bookmark();
             Parent = parent;
+                        
             this.CallOnCreate();
+        }
+
+        public void UpdateView()
+        {
+            _labelView = new VikingXNAGraphics.LabelView(this.Name, this.GridPosition);
+            _labelView.FontSize = Global.DefaultBookmarkRadius / 2.5;
+            GridRectangle boundingRect = new GridRectangle(GridPosition, Global.DefaultBookmarkRadius);
+            _shapeView = new VikingXNAGraphics.TextureOverlayView(Parent.ShapeTexture, boundingRect, Parent.Color.SetAlpha(0.75f));
         }
 
         public BookmarkUIObj(FolderUIObj parent, Bookmark bookmark)
         {
             Data = bookmark;
             _Parent = parent;
+
+            UpdateView();
+        }
+
+        public VikingXNAGraphics.TextureOverlayView ShapeView
+        {
+            get
+            {
+                if(_shapeView == null)
+                {
+                    UpdateView();
+                }
+                return _shapeView;
+            }
+        }
+
+        public VikingXNAGraphics.LabelView LabelView
+        {
+            get
+            {
+                if(_labelView == null)
+                {
+                    UpdateView();
+                }
+
+                return _labelView; 
+            }
+            
+        }
+
+        public GridRectangle BoundingRect
+        {
+            get
+            {
+                return new GridRectangle(GridPosition, Global.DefaultBookmarkRadius);
+            }
         }
 
         protected static event EventHandler OnCreate;
@@ -54,7 +103,8 @@ namespace LocalBookmarks
                 if (Data.Name == null)
                     Data.Name = ""; 
 
-                _LabelSizeMeasured = false; 
+                _LabelSizeMeasured = false;
+                LabelView.Text = value; 
                 ValueChangedEvent("Name"); 
             }
         }

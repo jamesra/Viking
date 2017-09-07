@@ -369,7 +369,7 @@ namespace Viking.VolumeModel
                     string UniqueID = Tile.CreateUniqueKey(Section.Number, Name, Name, roundedDownsample, this.TileTextureFileName(iX, iY));
                     string TextureFileName = TileFullPath(iX, iY, roundedDownsample);
                     Tile tile = Global.TileCache.Fetch(UniqueID);
-                    if (tile == null)
+                    if (tile == null && Global.TileCache.ContainsKey(UniqueID) == false)
                     {
                         //First create a new tile
                         //PORT: string TextureCacheFileName = TileCacheName(iX, iY, roundedDownsample);
@@ -399,7 +399,10 @@ namespace Viking.VolumeModel
 
                     }
 
-                    TilesToDraw.Add(tile);
+                    if (tile != null)
+                    {
+                        TilesToDraw.Add(tile);
+                    }
                 }
             }
 

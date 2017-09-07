@@ -276,7 +276,7 @@ namespace Viking.VolumeModel
                      */
                     string UniqueID = Tile.CreateUniqueKey(Section.Number, Name, CurrentPyramid.Name, roundedScaledDownsample, info.TileFileName);
                     Tile tile = Global.TileCache.Fetch(UniqueID);
-                    if(tile == null)
+                    if(tile == null && Global.TileCache.ContainsKey(UniqueID) == false)
                     {
                         int MipMapLevels = 1; //No mip maps
                         if (roundedScaledDownsample == this.AvailableLevels[AvailableLevels.Length - 1])

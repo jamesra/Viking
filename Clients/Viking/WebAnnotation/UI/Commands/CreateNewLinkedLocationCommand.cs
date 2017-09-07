@@ -20,9 +20,7 @@ namespace WebAnnotation.UI.Commands
     {
         LocationObj NewLoc;
         LocationObj ExistingLoc;
-
-        public static LocationObj LastEditedLocation = null; 
-
+          
         public CreateNewLinkedLocationCommand(Viking.UI.Controls.SectionViewerControl parent,
                                                LocationObj existingLoc,
                                                LocationObj newLoc)
@@ -42,7 +40,7 @@ namespace WebAnnotation.UI.Commands
             try
             {
                 LocationObj NewLocation = Store.Locations.Create(NewLoc, new long[] { ExistingLoc.ID });
-                LastEditedLocation = NewLocation; 
+                Global.LastEditedAnnotationID = NewLocation.ID; 
             }
             catch (ArgumentOutOfRangeException )
             {

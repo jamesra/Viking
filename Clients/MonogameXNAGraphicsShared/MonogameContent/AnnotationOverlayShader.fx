@@ -95,7 +95,7 @@ float CenterDistanceSquared(float2 CenterDistance)
 
 
 
-PixelShaderOutput RGBOverBackgroundLumaPixelShaderFunction(VertexShaderOutput input)
+PixelShaderOutput RGBATextureOverBackgroundLumaPixelShaderFunction(VertexShaderOutput input)
 {
 	PixelShaderOutput output; 
 	output.Depth = CenterDistanceSquared(input.CenterDistance);
@@ -105,33 +105,11 @@ PixelShaderOutput RGBOverBackgroundLumaPixelShaderFunction(VertexShaderOutput in
 	float4 RGBColor = tex2D(AnnotationTextureSampler, input.TexCoord) ;
 	//RGBColor.a = input.Color.a * RGBColor.a;
 	//This is a greyscale+Alpha image.  Greyscale indicates the degree of color, alpha indicates degree to which we use Overlay Luma or Background Luma
-	clip(all(RGBColor.rgb) <= 0 ? -1 : 1);
-
-	float4 RGBBackgroundColor = tex2D(BackgroundTextureSampler, ((ScreenTexCoord.xy) / (RenderTargetSize.xy-1)));
-	output.Color = BlendHSLColorOverBackground(input.HSLColor, RGBBackgroundColor, InputLumaAlpha);
-	output.Color.a = RGBColor.a;
-
-    return output;
-}
-
-PixelShaderOutput RGBCircleTextureOverBackgroundLumaPixelShaderFunction(VertexShaderOutput input)
-{
-	//Blends a greyscale texture, where the grey value indicates luma.
-	PixelShaderOutput output; 
-	output.Depth = CenterDistanceSquared(input.CenterDistance);
-
-    float2 ScreenTexCoord = input.Position.xy / input.Position.w;
-
-	clip(output.Depth > radiusSquared ? -1 : 1); //remove pixels outside the circle
-
-	float4 RGBColor = tex2D(AnnotationTextureSampler, input.TexCoord) ; 
-	//clip(RGBColor.r <= 0.0 ? -1.0 : 1.0);
-	
-	//This is a greyscale+Alpha image.  Greyscale indicates the degree of color, alpha indicates degree to which we use Overlay Luma or Background Luma
+    clip(RGBColor.a <= 0.0 ? -1.0 : 1.0);
 
 	float4 RGBBackgroundColor = tex2D(BackgroundTextureSampler, ((ScreenTexCoord.xy) / (RenderTargetSize.xy)));
-	output.Color = BlendHSLColorOverBackground(input.HSLColor, RGBBackgroundColor, 0);
-	output.Color.a = RGBColor.r * input.HSLColor.a;
+    output.Color = BlendHSLColorOverBackground(input.HSLColor, RGBBackgroundColor, 1.0f - RGBColor.a);
+    output.Color.a = RGBColor.r * input.HSLColor.a;
 
     return output;
 }
@@ -166,12 +144,12 @@ PixelShaderOutput RGBCircleOverBackgroundLumaPixelShaderFunction(CircleVertexSha
     return output;
 }
 
-technique RGBOverBackgroundValueOverlayEffect
+technique RGBTextureOverBackgroundValueOverlayEffect
 {
     pass
     {
 		VertexShader = compile vs_4_0 VertexShaderFunction();
-        PixelShader = compile ps_4_0 RGBCircleTextureOverBackgroundLumaPixelShaderFunction();
+        PixelShader = compile ps_4_0 RGBATextureOverBackgroundLumaPixelShaderFunction();
     }
 
 }

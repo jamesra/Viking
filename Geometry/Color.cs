@@ -13,6 +13,36 @@ namespace Geometry.Graphics
         public Byte B;
         public Byte A;
 
+        /// <summary>
+        /// Returns the color from a string which may be encoded as 0xFFFFFFFF #FFFFFFFF, or an integer
+        /// </summary>
+        /// <param name="input"></param>
+        public static Color FromInteger(string Color)
+        {
+            int ColorValue; 
+             
+            if (Color.StartsWith("#"))
+            {
+                Color = Color.Substring(1);
+                ColorValue = Int32.Parse(Color, System.Globalization.NumberStyles.HexNumber);
+            }
+            else if (Color.StartsWith("0x"))
+            {
+                Color = Color.Substring(2);
+                ColorValue = Int32.Parse(Color, System.Globalization.NumberStyles.HexNumber);
+            }
+            else
+            {
+                ColorValue = Int32.Parse(Color, System.Globalization.NumberStyles.Integer);
+            }
+
+            return new Geometry.Graphics.Color((Byte)(ColorValue >> 16),
+                                                (Byte)(ColorValue >> 8),
+                                                (Byte)(ColorValue),
+                                                (Byte)(255 - (ColorValue >> 24)));
+
+        }
+
         public Color(Byte r, Byte g, Byte b, Byte a)
         {
             R = r;

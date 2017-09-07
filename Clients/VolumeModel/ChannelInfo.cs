@@ -160,51 +160,11 @@ namespace Viking.VolumeModel
 
                         //Convert the color to a valid value
                         Geometry.Graphics.Color ChannelColor;
-                        System.Drawing.Color FromNameColor = System.Drawing.Color.FromName(Color);
-                        //If the color is unknown we have all zeros in the color
-                        if (FromNameColor.A == 0 &&
-                            FromNameColor.B == 0 &&
-                            FromNameColor.G == 0 &&
-                            FromNameColor.R == 0)
+                        if(!TryParseColor(Color, out ChannelColor))
                         {
-                            int ColorValue = 0;
-                            try
-                            {
-
-                                if (Color.StartsWith("#"))
-                                {
-                                    Color = Color.Substring(1);
-                                    ColorValue = Int32.Parse(Color, System.Globalization.NumberStyles.HexNumber);
-                                }
-                                else if (Color.StartsWith("0x"))
-                                {
-                                    Color = Color.Substring(2);
-                                    ColorValue = Int32.Parse(Color, System.Globalization.NumberStyles.HexNumber);
-                                }
-                                else
-                                {
-                                    ColorValue = Int32.Parse(Color, System.Globalization.NumberStyles.Integer);
-                                }
-                            }
-                            catch (FormatException )
-                            {
-                                Trace.WriteLine("Cannot format Color attribute of ChannelInfo: " + elem.ToString(), "VolumeModel");
-                                CreateChannel = false;
-                            }
-
-                            ChannelColor = new Geometry.Graphics.Color((Byte)(ColorValue >> 16),
-                                                                                  (Byte)(ColorValue >> 8),
-                                                                                  (Byte)(ColorValue),
-                                                                                  (Byte)(255 - (ColorValue >> 24)));
-
+                            CreateChannel = false;
                         }
-                        else
-                        {
-                            ChannelColor = new Geometry.Graphics.Color(FromNameColor.R,
-                                                                                  FromNameColor.G,
-                                                                                  FromNameColor.B,
-                                                                                  FromNameColor.A);
-                        }
+                        
                         if (CreateChannel)
                         {
                             ChannelInfo newChannel = new ChannelInfo();
@@ -219,6 +179,37 @@ namespace Viking.VolumeModel
             }
 
             return channels.ToArray();
+        }
+
+        public static bool TryParseColor(string Color, out Geometry.Graphics.Color Output)
+        { 
+            System.Drawing.Color FromNameColor = System.Drawing.Color.FromName(Color);
+            //If the color name is unknown we have all zeros in the color
+            if (FromNameColor.A == 0 &&
+                FromNameColor.B == 0 &&
+                FromNameColor.G == 0 &&
+                FromNameColor.R == 0)
+            {
+                try
+                {
+                    Output = Geometry.Graphics.Color.FromInteger(Color);
+                }
+                catch (FormatException)
+                {
+                    Trace.WriteLine("Cannot format Color attribute of ChannelInfo: " + Color, "VolumeModel");
+                    Output = new Geometry.Graphics.Color();
+                    return false; 
+                }
+            }
+            else
+            {
+                Output = new Geometry.Graphics.Color(FromNameColor.R,
+                                                    FromNameColor.G,
+                                                    FromNameColor.B,
+                                                    FromNameColor.A);
+            }
+
+            return true;
         }
     }
 }

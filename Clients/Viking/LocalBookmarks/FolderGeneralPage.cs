@@ -7,6 +7,8 @@ using System.Linq;
 using System.Text;
 using System.Windows.Forms;
 using connectomes.utah.edu.XSD.BookmarkSchema.xsd;
+using VikingXNAGraphics;
+using VikingXNAWinForms;
 
 namespace LocalBookmarks
 {
@@ -25,17 +27,23 @@ namespace LocalBookmarks
         protected override void OnShowObject(object Object)
         {
             folder = Object as FolderUIObj;
-            textName.Text = folder.Name; 
+            textName.Text = folder.Name;
+            btnColor.BackColor = folder.Color.ToSystemColor();
+            comboShape.Text = folder.Shape.ToShapeString();
         }
 
         protected override void OnInitPage()
         {
-            textName.Text = folder.Name; 
+            textName.Text = folder.Name;
+            btnColor.BackColor = folder.Color.ToSystemColor();
+            comboShape.Text = folder.Shape.ToShapeString();
         }
 
         protected override void OnSaveChanges()
         {
             folder.Name = textName.Text;
+            folder.Color = btnColor.BackColor.ToXNAColor();
+            folder.Shape = comboShape.Text.ToShape();
         }
 
         protected override void OnCancelChanges()
@@ -43,6 +51,15 @@ namespace LocalBookmarks
             return;
         }
 
+        private void btnColor_Click(object sender, EventArgs e)
+        {
+            colorDialog.Color = btnColor.BackColor;
 
+            DialogResult result = colorDialog.ShowDialog();
+            if (result == DialogResult.OK)
+            {
+                btnColor.BackColor = colorDialog.Color;
+            }
+        }
     }
 }
