@@ -75,11 +75,11 @@ namespace AnnotationVizLibTests
         public static void TestBranchAndTerminalProcessSelection(MorphologyGraph graph)
         {
             //Find all of the terminals
-            SortedSet<ulong> branchIDs = new SortedSet<ulong>(graph.GetBranchPoints());
+            SortedSet<ulong> branchIDs = new SortedSet<ulong>(graph.GetBranchPointIDs());
             Assert.IsTrue(branchIDs.Count > 0);
-            SortedSet<ulong> terminalIDs = new SortedSet<ulong>(graph.GetTerminals());
+            SortedSet<ulong> terminalIDs = new SortedSet<ulong>(graph.GetTerminalIDs());
             Assert.IsTrue(terminalIDs.Count > 0);
-            SortedSet<ulong> processIDs = new SortedSet<ulong>(graph.GetProcess());
+            SortedSet<ulong> processIDs = new SortedSet<ulong>(graph.GetProcessIDs());
             Assert.IsTrue(processIDs.Count > 0);
 
             SortedSet<ulong> intersection = new SortedSet<ulong>(branchIDs.Intersect(terminalIDs));
@@ -96,6 +96,10 @@ namespace AnnotationVizLibTests
             Assert.IsTrue(intersection.Count == 0);
             intersection = new SortedSet<ulong>(processIDs.Intersect(branchIDs));
             Assert.IsTrue(intersection.Count == 0);
+
+            List<ulong[]> processes = graph.Processes();
+            Assert.IsTrue(processes.Count > 1);
+            Assert.IsTrue(processes.Select(p => p.Length).Sum() >= processIDs.Count + terminalIDs.Count);
         }
 
         public static void TestMorphologyGraphBoundingBox(MorphologyGraph graph)
@@ -190,7 +194,6 @@ namespace AnnotationVizLibTests
         [ClassInitialize()]
         public static void InitializeSharedGraph(TestContext testContext)
         {
-
             
         }
 
@@ -459,9 +462,9 @@ namespace AnnotationVizLibTests
             tlpGraph.SaveTLP(TLPFileFullPath);
 
             //Ensure the graph only has endpoints and branches
-            SortedSet<ulong> branchIDs = new SortedSet<ulong>(graph.Subgraphs.First().Value.GetBranchPoints());
-            SortedSet<ulong> terminalIDs = new SortedSet<ulong>(graph.Subgraphs.First().Value.GetTerminals());
-            SortedSet<ulong> processIDs = new SortedSet<ulong>(graph.Subgraphs.First().Value.GetProcess());
+            SortedSet<ulong> branchIDs = new SortedSet<ulong>(graph.Subgraphs.First().Value.GetBranchPointIDs());
+            SortedSet<ulong> terminalIDs = new SortedSet<ulong>(graph.Subgraphs.First().Value.GetTerminalIDs());
+            SortedSet<ulong> processIDs = new SortedSet<ulong>(graph.Subgraphs.First().Value.GetProcessIDs());
             Assert.IsTrue(terminalIDs.Count + branchIDs.Count == graph.Subgraphs.First().Value.Nodes.Count);
             Assert.IsTrue(processIDs.Count  == 0);
         }

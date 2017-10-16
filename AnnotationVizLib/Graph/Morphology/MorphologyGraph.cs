@@ -249,7 +249,7 @@ namespace AnnotationVizLib
         /// Locations with 3 or more edges, branch points in a process
         /// </summary>
         /// <returns></returns>
-        public ulong[] GetBranchPoints()
+        public ulong[] GetBranchPointIDs()
         {
             return this.Nodes.Values.Where(n => n.Edges.Count > 2).Select(n => n.Key).ToArray();
         }
@@ -258,7 +258,7 @@ namespace AnnotationVizLib
         /// Locations with 1 or fewer links, the tip of a process
         /// </summary>
         /// <returns></returns>
-        public ulong[] GetTerminals()
+        public ulong[] GetTerminalIDs()
         {
             return this.Nodes.Values.Where(n => n.Edges.Count == 1 && !n.Location.IsVericosityCap).Select(n => n.Key).ToArray();
         }
@@ -267,9 +267,100 @@ namespace AnnotationVizLib
         /// Locations with 2 links, the middle of a process
         /// </summary>
         /// <returns></returns>
-        public ulong[] GetProcess()
+        public ulong[] GetProcessIDs()
         {
             return this.Nodes.Values.Where(n => n.Edges.Count == 2).Select(n => n.Key).ToArray();
+        }
+
+        public List<ulong[]> Processes()
+        {
+            SortedSet<ulong> allProcessIDs = new SortedSet<ulong>(this.GetProcessIDs());
+
+            if(allProcessIDs.Count == 0)
+            {
+                return new List<ulong[]>();
+            }
+
+            SortedSet<ulong> DoNotTraverse = new SortedSet<ulong>();
+
+            //Do not traverse branches or terminals
+            DoNotTraverse.UnionWith(this.Nodes.Values.Where(n => n.Edges.Count != 2).Select(n => n.ID));
+
+            //Find a starting point
+            MorphologyNode seed = this.Nodes[allProcessIDs.First()];
+
+            List<ulong[]> listOutput = new List<ulong[]>();
+            while (true)
+            {
+                ulong[] process = TraverseEntireProcess(seed);
+                listOutput.Add(process);
+
+                allProcessIDs.ExceptWith(process);
+
+                if (allProcessIDs.Count == 0)
+                    break;
+
+                seed = this.Nodes[allProcessIDs.First()];
+            }
+
+            return listOutput;
+        }
+
+        private static ulong[] TraverseEntireProcess(MorphologyNode seed)
+        {
+            Debug.Assert(seed.Edges.Count == 2);
+
+            MorphologyGraph graph = seed.Graph;
+
+            List<ulong> listOutput = new List<ulong>();
+            listOutput.Add(seed.ID);
+
+            ulong[] linkedIDs = seed.Edges.Keys.ToArray();
+            MorphologyNode rightOfSeed = graph.Nodes[linkedIDs[0]];
+            if (rightOfSeed.Edges.Count == 2)
+            {
+                listOutput.Add(rightOfSeed.ID);
+                TraverseProcessRecursively(ref listOutput, rightOfSeed, 1, false);
+            }
+
+            MorphologyNode leftOfSeed = graph.Nodes[linkedIDs[1]];
+            if (leftOfSeed.Edges.Count == 2)
+            {
+                listOutput.Insert(0, leftOfSeed.ID);
+                TraverseProcessRecursively(ref listOutput, leftOfSeed, 0,true);
+            }
+
+            return listOutput.ToArray();
+        }
+
+        private static void TraverseProcessRecursively(ref List<ulong> output, MorphologyNode seed, int iSeedIndex, bool InsertBefore)
+        {
+            int iLastAdded = InsertBefore ? iSeedIndex + 1 : iSeedIndex - 1;
+            ulong LastAddedID = output[iLastAdded];
+            Debug.Assert(output[iSeedIndex] == seed.ID);
+
+            //This function does not tolerate cycles
+            MorphologyGraph graph = seed.Graph;
+            foreach(ulong linkedID in seed.Edges.Keys)
+            {
+                //Don't add the seed node again
+                if (linkedID == LastAddedID)
+                    continue;
+
+                Debug.Assert(output.Contains(linkedID) == false);
+
+                MorphologyNode candidate = graph.Nodes[linkedID];
+
+                int InsertionIndex = InsertBefore ? iSeedIndex : iSeedIndex + 1;
+                int iNewSeedIndex = InsertBefore ? iSeedIndex : iSeedIndex + 1;
+
+                output.Insert(InsertionIndex, candidate.ID);
+
+                if (candidate.Edges.Count == 2)
+                {
+                    TraverseProcessRecursively(ref output, candidate, iNewSeedIndex, InsertBefore);
+                } 
+            }
         }
     }
 }

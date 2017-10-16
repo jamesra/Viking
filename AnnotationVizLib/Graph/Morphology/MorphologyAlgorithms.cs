@@ -215,7 +215,7 @@ namespace AnnotationVizLib
 
         private static void ToStickFigure(MorphologyGraph graph)
         {
-            var nodes_to_remove = graph.GetProcess();
+            var nodes_to_remove = graph.GetProcessIDs();
 
             foreach (ulong key in nodes_to_remove)
             {
@@ -223,7 +223,7 @@ namespace AnnotationVizLib
             }
 
             //Once in a while, we have a branch attached to a cycle.  This allows the cycle to be removed, and then the branch to be removed in a second-pass if needed
-            if (graph.GetProcess().Length > 0)
+            if (graph.GetProcessIDs().Length > 0)
                 ToStickFigure(graph);
         }
 
@@ -398,6 +398,41 @@ namespace AnnotationVizLib
             ulong nearest_node_to_target = graph.NearestNode(graph.Subgraphs[TargetStructureID], out TargetToPathDistance);
 
             return path_distance + SourceToPathDistance + TargetToPathDistance;
+        }
+
+        /// <summary>
+        /// Apply a smoothing function to nodes with two edges.  Leaves branch points and terminals in place.
+        /// </summary>
+        /// <param name="graph"></param>
+        public static void SmoothProcesses(MorphologyGraph graph)
+        {
+            //Iterate over each process
+            List<ulong[]> listProcesses = graph.Processes();
+
+            foreach(ulong[] process in listProcesses)
+            {
+                MorphologyNode[] process_nodes = process.Select(p => graph.Nodes[p]).ToArray();
+
+                GridVector2[] center_of_mass = process_nodes.Select(n => n.Center.XY()).ToArray();
+
+                GridVector2[] smoothed_points = Geometry.Smoothing.Gaussian(center_of_mass);
+
+                GridVector2[] translation_vectors = center_of_mass.Select((c, i) => smoothed_points[i] - c).ToArray();
+
+                Parallel.For(0, process_nodes.Length, (i) => process_nodes[i].Geometry = process_nodes[i].Geometry.Translate(translation_vectors[i]));
+
+                /*
+                for (int i = 0; i < process_nodes.Length; i++)
+                {
+                    process_nodes[i].Geometry = process_nodes[i].Geometry.Translate(translation_vectors[i]);
+                }
+                */
+            }
+
+            foreach(MorphologyGraph subgraph in graph.Subgraphs.Values)
+            {
+                SmoothProcesses(subgraph);
+            }
         }
     }
 }
