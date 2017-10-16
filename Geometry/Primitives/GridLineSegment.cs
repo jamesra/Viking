@@ -303,6 +303,19 @@ namespace Geometry
             GridVector2 temp;
             return DistanceToPoint(point, out temp);
         }
+
+        /// <summary>
+        /// The point on the segment at a fractional distance between A & B
+        /// </summary>
+        /// <param name="fraction"></param>
+        /// <returns></returns>
+        public GridVector2 PointAlongLine(double fraction)
+        {
+            GridVector2 delta = B - A;
+            delta *= fraction;
+
+            return A + delta;
+        }
           
         internal static bool NearlyZero(double value)
         {
