@@ -110,6 +110,7 @@
     <Compile Include="CurveFitting\CatmullRom.cs" />
     <Compile Include="CurveFitting\CurveExtensions.cs" />
     <Compile Include="CurveFitting\Lagrange.cs" />
+    <Compile Include="CurveFitting\Smoothing.cs" />
     <Compile Include="DataStructures\BoundlessRegionPyramid.cs" />
     <Compile Include="DataStructures\Coord.cs" />
     <Compile Include="DataStructures\IndexedGridVector2.cs" />

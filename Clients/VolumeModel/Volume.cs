@@ -276,7 +276,7 @@ namespace Viking.VolumeModel
 
         private List<TileServerInfo> TileServerList = new List<TileServerInfo>();
 
-
+        
 
         /// <summary>
         /// 
@@ -290,8 +290,14 @@ namespace Viking.VolumeModel
             //            ChannelInfo DefaultChannel = new ChannelInfo();
             DefaultChannels = new ChannelInfo[0];
 
+            XDocument VolumeXML = LoadXDocument(path, null, workerThread);
+            if(IsVolumePathLocal(path))
+            {
+                //This code remains, but the value is replaced if a value is found in the XML file
+                this._Host = RemoveXMLExtension(path);
+                this._IsLocal = false;
+            }
 
-            XDocument VolumeXML = Load(path, workerThread);
             this._VolumeElement = GetVolumeElement(VolumeXML);
             LoadDefaultsFromVolumeElement(_VolumeElement);
 
@@ -375,27 +381,36 @@ namespace Viking.VolumeModel
 
         #endregion
 
+        public static bool IsVolumePathLocal(string path)
+        {
+            Uri uri = new Uri(path);
+            if (uri.Scheme == "http" || uri.Scheme == "https")
+                return false;
+
+            return true; 
+        }
+
         /// <summary>
         /// Loads a path, determines whether path refers to XML file or a local directory
         /// </summary>
         /// <param name="path"></param>
-        protected XDocument Load(string path, Viking.Common.IProgressReporter workerThread)
+        public static XDocument LoadXDocument(string path, System.Net.NetworkCredential UserCredentials = null, Viking.Common.IProgressReporter workerThread = null)
         {
             Uri uri = new Uri(path);
 
-            workerThread.ReportProgress(0, "Requesting " + path);
+            if(workerThread != null)
+                workerThread.ReportProgress(0, "Requesting " + path);
 
             XDocument XMLInitData;
             if (uri.Scheme == "http" || uri.Scheme == "https")
-                XMLInitData = LoadHTTP(path);
+                XMLInitData = LoadHTTP(path, UserCredentials);
             else
                 XMLInitData = LoadLocal(uri.LocalPath);
 
             return XMLInitData;
         }
-        
 
-        protected XDocument LoadHTTP(string path)
+        protected static string RemoveXMLExtension(string path)
         {
             //Remove the .xml file from the path
             int iRemove = path.LastIndexOf('/');
@@ -405,30 +420,33 @@ namespace Viking.VolumeModel
                 VolumePath = VolumePath.Remove(iRemove);
             }
 
-            //This code remains, but the value is replaced if a value is found in the XML file
-            this._Host = VolumePath;
+            return VolumePath;
+        }
+        
 
-            this._IsLocal = false;
+        protected static XDocument LoadHTTP(string path, System.Net.NetworkCredential UserCredentials)
+        { 
             Uri pathURI = new Uri(path);
 
             HttpWebRequest request = WebRequest.Create(pathURI) as HttpWebRequest;
             if (pathURI.Scheme.ToLower() == "https")
-                request.Credentials = this.UserCredentials;
+                request.Credentials = UserCredentials;
 
             request.CachePolicy = new System.Net.Cache.RequestCachePolicy(System.Net.Cache.RequestCacheLevel.Revalidate);
-
-            WebResponse response = null;
+             
             XDocument reader = null;
             try
             {
-                response = request.GetResponse();
-
-                Stream responseStream = response.GetResponseStream();
-
-                using (StreamReader XMLStream = new StreamReader(responseStream))
+                using (WebResponse response = request.GetResponse())
                 {
 
-                    reader = XDocument.Parse(XMLStream.ReadToEnd());
+                    Stream responseStream = response.GetResponseStream();
+
+                    using (StreamReader XMLStream = new StreamReader(responseStream))
+                    {
+
+                        reader = XDocument.Parse(XMLStream.ReadToEnd());
+                    }
                 }
             }
             catch (WebException e)
@@ -436,12 +454,7 @@ namespace Viking.VolumeModel
                 /*PORT: Don't have forms, throw a better exception*/
                 throw new WebException("Error connecting to volume server: \n" + path + "\n" + e.Message, e);
             }
-            finally
-            {
-                if (response != null)
-                    response.Close();
-            }
-
+            
             return reader;
         }
 
