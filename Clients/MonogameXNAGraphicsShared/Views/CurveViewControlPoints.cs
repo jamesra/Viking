@@ -92,8 +92,26 @@ namespace VikingXNAGraphics
             if (!iEnd.HasValue)
                 iEnd = ControlPoints.Length - 1;
 
-            int iCurveStart = iStart.Value * (int)_NumInterpolations;
-            int iCurveEnd = iEnd.Value * (int)_NumInterpolations;
+            bool EndAtLastVertex = false;
+            while(iEnd.Value >= ControlPoints.Length)
+            {
+                EndAtLastVertex = true;
+                iEnd -= ControlPoints.Length;
+            }
+
+            GridVector2 startControlPoint = ControlPoints[iStart.Value];
+            GridVector2 endControlPoint = ControlPoints[iEnd.Value];
+
+            // int iCurveStart = iStart.Value * (int)_NumInterpolations;
+            // int iCurveEnd = iEnd.Value * (int)_NumInterpolations;
+
+            int iCurveStart = FindIndex(_CurvePoints, startControlPoint);
+            int iCurveEnd = FindIndex(_CurvePoints, endControlPoint);
+
+            if(EndAtLastVertex)
+            {
+                iCurveEnd = _CurvePoints.Length;
+            }
 
             if (iCurveStart > iCurveEnd)
                 throw new ArgumentException("Start index greater than end index");
@@ -102,6 +120,53 @@ namespace VikingXNAGraphics
 
             Array.Copy(_CurvePoints, iCurveStart, destArray, 0, destArray.Length);
             return destArray;
+        }
+
+        /// <summary>
+        /// Return the interpolated points between the two control point indicies
+        /// </summary>
+        /// <param name="iStart"></param>
+        /// <param name="iEnd"></param>
+        /// <returns></returns>
+        public GridVector2[] CurvePointsBetweenControlPoints(GridVector2 startControlPoint, GridVector2 endControlPoint)
+        { 
+            int iCurveStart = FindIndex(_CurvePoints, startControlPoint);
+            int iCurveEnd = FindIndex(_CurvePoints, endControlPoint);
+
+            //If our end curve is less than our start point we may be dealing with a closed curve where the start and end verticies are the same.
+            //If we are not then FindIndex throws an ArgumentException
+            if(iCurveEnd < iCurveStart)
+            {
+                iCurveEnd = FindIndex(_CurvePoints, endControlPoint, iCurveEnd + 1);
+            }
+
+            if (iCurveStart > iCurveEnd)
+                throw new ArgumentException("Start index greater than end index");
+
+            GridVector2[] destArray = new GridVector2[iCurveEnd - iCurveStart];
+
+            Array.Copy(_CurvePoints, iCurveStart, destArray, 0, destArray.Length);
+            return destArray;
+        }
+
+        /// <summary>
+        /// Find the index of the point at or above the SearchStart index
+        /// </summary>
+        /// <param name="array"></param>
+        /// <param name="value"></param>
+        /// <param name="SearchStart"></param>
+        /// <returns></returns>
+        private static int FindIndex(GridVector2[] array, GridVector2 value, int SearchStart = 0)
+        {
+            for(int i = SearchStart; i < array.Length; i++)
+            {
+                if(array[i] == value)
+                {
+                    return i;
+                }
+            }
+
+            throw new ArgumentException("Value not found");
         }
 
         private uint _NumInterpolations = 1;
@@ -124,6 +189,11 @@ namespace VikingXNAGraphics
             RecalculateCurvePoints();
         }
 
+        /// <summary>
+        /// Remove the last entry from the array
+        /// </summary>
+        /// <param name="array"></param>
+        /// <returns></returns>
         private static GridVector2[] RemoveLastEntry(GridVector2[] array)
         {
             GridVector2[] cps = new GridVector2[array.Length - 1];
