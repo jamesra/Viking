@@ -109,7 +109,29 @@ namespace UtilitiesTests
             Assert.AreEqual(Degree0, 0); 
 
             Degree90 = GridVector2.Angle(Origin, B);
-            Assert.AreEqual(Degree90, Pi2); 
+            Assert.AreEqual(Degree90, Pi2);
+
+            //Translate the vectors slightly and ensure angles are unchanged
+            GridVector2 offset = new GridVector2(5, 2.5);
+            Origin += offset;
+            A += offset;
+            B += offset;
+            C += offset;
+
+            Degree90 = GridVector2.ArcAngle(Origin, A, B);
+            Assert.AreEqual(Degree90, Pi2);
+
+            Degree90 = GridVector2.ArcAngle(Origin, B, A);
+            Assert.AreEqual(Degree90, -Pi2);
+
+            Degree180 = GridVector2.ArcAngle(Origin, A, C);
+            Assert.AreEqual(Degree180, Math.PI);
+
+            Degree0 = GridVector2.Angle(Origin, A);
+            Assert.AreEqual(Degree0, 0);
+
+            Degree90 = GridVector2.Angle(Origin, B);
+            Assert.AreEqual(Degree90, Pi2);
         }
 
         [TestMethod]
