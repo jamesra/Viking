@@ -188,6 +188,8 @@ namespace MorphologyMesh
             for(int i = 1; i < nodes.Length; i++)  
             {
                 MergeMeshes(keepNode, nodes[i]);
+                meshGraph.RemoveNode(nodes[i].Key);
+                nodes[i] = null; 
             }
 
 
