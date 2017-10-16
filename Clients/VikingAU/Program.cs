@@ -229,7 +229,7 @@ namespace Viking.AU
                 //var task = System.Threading.Tasks.Task.Run();
                 tasks.Add(sectionNumber, task);
 
-                while(tasks.Keys.Count > 16)
+                while(tasks.Keys.Count > 2)
                 {
                     RemoveCompletedTasks(tasks);
                 } 
@@ -254,7 +254,11 @@ namespace Viking.AU
                 var task = tasks[sectionNumber];
                 if (task.IsCompleted)
                 {
-                    Console.WriteLine(task.Result);
+                    if (task.Result != null)
+                        Console.WriteLine(task.Result);
+                    else
+                        Console.WriteLine("Task had null result");
+
                     tasks.Remove(sectionNumber);
                     AnyCompleted = true;
                     State.MappingsManager.SectionMappingCache.Remove((int)sectionNumber);
@@ -310,11 +314,15 @@ namespace Viking.AU
         /// <param name="mapping"></param>
         /// <returns></returns>
         static bool UpdateVolumeShape(LocationObj loc, MappingBase mapper)
-        { 
+        {
+            bool TypeUpdated = false;
             if(!IsLocationTypeValid(loc))
             {
-                if(TryRepairLocationType(loc))
+                if (TryRepairLocationType(loc))
+                {
                     Console.WriteLine(string.Format("Repaired Type for Location {0}", loc.ID));
+                    TypeUpdated = true;
+                }
                 else
                     Console.WriteLine(string.Format("Unable to repair type for Location {0}", loc.ID));
             }
@@ -341,7 +349,7 @@ namespace Viking.AU
                 return true;
             }
 
-            return false;
+            return TypeUpdated;
         }
         
         static GridVector2[] MosaicPointsForLocation(LocationObj loc)
@@ -439,6 +447,12 @@ namespace Viking.AU
                     }
                     break;
                 case SupportedGeometryType.POLYLINE:
+                    if(loc.TypeCode == LocationType.CIRCLE)
+                    {
+                        loc.TypeCode = LocationType.POLYLINE;
+                        loc.Width = 8.0;
+                        return true; 
+                    }
                     //Convert a polyline to a polygon to match the location typecode
                     if(loc.TypeCode == LocationType.POLYGON || loc.TypeCode == LocationType.CURVEPOLYGON)
                     {
