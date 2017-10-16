@@ -76,6 +76,13 @@ namespace WebAnnotation
             _CurrentOverlay = this;
         }
 
+        public void InvalidateParent()
+        {
+            //Invalidate can always be called from any thread
+            if (Parent.IsHandleCreated)
+                Parent.BeginInvoke(new System.Action(() => Parent.Invalidate()));
+        }
+
         string Viking.Common.ISectionOverlayExtension.Name()
         {
             return Global.EndpointName; 
@@ -397,8 +404,8 @@ namespace WebAnnotation
             if (NextMouseOverObject != LastMouseOverObject)
             {
                 mouseOverEffect.viewObj = NextMouseOverObject;
-                
-                Parent.Invalidate();
+
+                InvalidateParent();
             }   
 
             LastMouseOverObject = NextMouseOverObject;
@@ -678,7 +685,7 @@ namespace WebAnnotation
 
                     //Only load the annotations for any section once so we can't fire multiple requests by pounding the spacebar
                     LoadSectionAnnotations();
-                    this._Parent.Invalidate();
+                    InvalidateParent();
 
                     break;
                 case Keys.ControlKey:
@@ -969,7 +976,7 @@ namespace WebAnnotation
         protected void OnAnnotationChanged(object sender, EventArgs e)
         {
             //Trigger redraw of screen
-            _Parent.Invalidate(); 
+            InvalidateParent();
         }
 
         private static SortedSet<int> ChangedSectionsInLocationCollection(NotifyCollectionChangedEventArgs e)
@@ -1106,9 +1113,9 @@ namespace WebAnnotation
                     }
                 }
             }
-            
+
             //Invalidate can always be called from any thread
-            Parent.BeginInvoke(new System.Action( () => Parent.Invalidate()));
+            InvalidateParent();
         }
 
         /// <summary>
