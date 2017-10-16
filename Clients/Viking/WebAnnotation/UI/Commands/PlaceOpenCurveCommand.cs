@@ -117,9 +117,13 @@ namespace WebAnnotation.UI.Commands
             if (worldPos != vert_stack.Peek())
             {
                 CurveViewControlPoints curveVerticies = AppendControlPointToCurve(worldPos);
-                GridLineSegment[] proposed_back_curve_segments = GridLineSegment.SegmentsFromPoints(curveVerticies.CurvePointsBetweenControlPoints(NumVerticies , NumVerticies+1));
-                GridLineSegment[] proposed_front_curve_segments = GridLineSegment.SegmentsFromPoints(curveVerticies.CurvePointsBetweenControlPoints(0,1));
-                GridLineSegment[] existing_curve_segments = GridLineSegment.SegmentsFromPoints(curveVerticies.CurvePointsBetweenControlPoints(1, NumVerticies));
+                GridVector2[] controlPoints = Verticies;
+                GridLineSegment[] proposed_back_curve_segments = GridLineSegment.SegmentsFromPoints(curveVerticies.CurvePointsBetweenControlPoints(controlPoints.Last() , worldPos));
+                GridLineSegment[] proposed_front_curve_segments = GridLineSegment.SegmentsFromPoints(curveVerticies.CurvePointsBetweenControlPoints(controlPoints[0], controlPoints[1]));
+                GridLineSegment[] existing_curve_segments = GridLineSegment.SegmentsFromPoints(curveVerticies.CurvePointsBetweenControlPoints(controlPoints[1], controlPoints.Last()));
+
+                proposed_front_curve_segments = proposed_front_curve_segments.ShortenLastVertex();
+                existing_curve_segments = existing_curve_segments.ShortenLastVertex();
 
                 GridVector2[] intersections = proposed_front_curve_segments.Select(pcs => existing_curve_segments.IntersectionPoint(pcs)).Where(p => p.HasValue).Select(p => p.Value).ToArray();
                 if (intersections.Length > 0)
@@ -235,13 +239,25 @@ namespace WebAnnotation.UI.Commands
 
             if (worldPos != vert_stack.Peek())
             {
-                CurveViewControlPoints curveVerticies = AppendControlPointToCurve(worldPos);
-                GridLineSegment[] proposed_curve_segments = GridLineSegment.SegmentsFromPoints(curveVerticies.CurvePointsBetweenControlPoints(NumVerticies, NumVerticies+1));
-                GridLineSegment[] existing_curve_segments = GridLineSegment.SegmentsFromPoints(curveVerticies.CurvePointsBetweenControlPoints(0, NumVerticies - 1));
+                //try
+                //{
+                    CurveViewControlPoints curveVerticies = AppendControlPointToCurve(worldPos);
+                    GridVector2[] controlPoints = Verticies;
+                    GridLineSegment[] proposed_curve_segments = GridLineSegment.SegmentsFromPoints(curveVerticies.CurvePointsBetweenControlPoints(controlPoints.Last(), worldPos));
+                    GridLineSegment[] existing_curve_segments = GridLineSegment.SegmentsFromPoints(curveVerticies.CurvePointsBetweenControlPoints(controlPoints[0], controlPoints.Last()));
 
-                GridVector2[] intersections = proposed_curve_segments.Select(pcs => existing_curve_segments.IntersectionPoint(pcs)).Where(p => p.HasValue).Select(p => p.Value).ToArray();
-                if (intersections.Length > 0)
-                    retval = intersections.First();
+                    existing_curve_segments = existing_curve_segments.ShortenLastVertex();
+
+                    GridVector2[] intersections = proposed_curve_segments.Select(pcs => existing_curve_segments.IntersectionPoint(pcs)).Where(p => p.HasValue).Select(p => p.Value).ToArray();
+                    if (intersections.Length > 0)
+                        retval = intersections.First();
+                //}
+                /*
+                catch(ArgumentException)
+                {
+                    return new GridVector2?();
+                }*/
+                
             }
 
             return retval;
@@ -407,6 +423,7 @@ namespace WebAnnotation.UI.Commands
             return OverlapsAnyVertex(WorldPos);
         }
 
+        
         
 
         protected override void OnMouseMove(object sender, MouseEventArgs e)
