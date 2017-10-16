@@ -82,9 +82,6 @@ namespace VikingXNAGraphics
 
             TextureCircleView.SetupGraphicsDevice(device, basicEffect, overlayEffect);
 
-            BlendState originalState = device.BlendState;
-            device.BlendState = BlendState.NonPremultiplied;
-
             var textureGroups = listToDraw.GroupBy(l => l.Texture);
             foreach(var textureGroup in textureGroups)
             {
@@ -108,9 +105,7 @@ namespace VikingXNAGraphics
                                                                                          indicies.Length / 3);
                 }
             }
-
-            device.BlendState = originalState;
-
+            
             //TextureCircleView.RestoreGraphicsDevice(device, basicEffect);
         }
     }
