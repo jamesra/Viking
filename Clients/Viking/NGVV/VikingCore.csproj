@@ -540,6 +540,10 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\..\Utils\Utils.csproj">
+      <Project>{49f7dda5-1634-49ed-99fa-74962e43f2d2}</Project>
+      <Name>Utils</Name>
+    </ProjectReference>
     <ProjectReference Include="..\..\Common\Common.csproj">
       <Project>{B35B0C61-EC9C-425A-846D-F160D5B12158}</Project>
       <Name>Common</Name>

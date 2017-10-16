@@ -33,6 +33,7 @@ namespace Viking.UI.Forms
         /// </summary>
         private void InitializeComponent()
         {
+            this.components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Logon));
             this.pictureBox1 = new System.Windows.Forms.PictureBox();
             this.marclabLink = new System.Windows.Forms.LinkLabel();
@@ -54,6 +55,7 @@ namespace Viking.UI.Forms
             this.textUsername = new System.Windows.Forms.TextBox();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
             this.btnFindOCPVolume = new System.Windows.Forms.Button();
+            this.SubmitURLChangedTimer = new System.Windows.Forms.Timer(this.components);
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
             this.groupCredentials.SuspendLayout();
             this.groupBox1.SuspendLayout();
@@ -125,6 +127,7 @@ namespace Viking.UI.Forms
             this.comboVolumeURL.Size = new System.Drawing.Size(479, 21);
             this.comboVolumeURL.TabIndex = 7;
             this.comboVolumeURL.SelectedIndexChanged += new System.EventHandler(this.comboVolumeURL_SelectedIndexChanged);
+            this.comboVolumeURL.TextUpdate += new System.EventHandler(this.comboVolumeURL_TextUpdate);
             this.comboVolumeURL.Validating += new System.ComponentModel.CancelEventHandler(this.comboVolumeURL_Validating);
             // 
             // linkVersionHistory
@@ -288,6 +291,11 @@ namespace Viking.UI.Forms
             this.btnFindOCPVolume.UseVisualStyleBackColor = true;
             this.btnFindOCPVolume.Click += new System.EventHandler(this.btnFindOCPVolume_Click);
             // 
+            // SubmitURLChangedTimer
+            // 
+            this.SubmitURLChangedTimer.Interval = 1000;
+            this.SubmitURLChangedTimer.Tick += new System.EventHandler(this.SubmitURLChangedTimer_Tick);
+            // 
             // Logon
             // 
             this.AcceptButton = this.btnAnonymous;
@@ -368,5 +376,6 @@ namespace Viking.UI.Forms
         private System.Windows.Forms.TextBox textUsername;
         private System.Windows.Forms.GroupBox groupBox1;
         private System.Windows.Forms.Button btnFindOCPVolume;
+        private System.Windows.Forms.Timer SubmitURLChangedTimer;
     }
 }

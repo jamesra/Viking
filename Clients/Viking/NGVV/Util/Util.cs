@@ -48,5 +48,38 @@ namespace Viking.Common
 
             return null;
         }
+
+        public static string AppendDefaultVolumeFilenameIfMissing(string url)
+        {
+            if (url == null)
+                return null;
+
+            Uri WebsiteURI = new Uri(url);
+            string path = WebsiteURI.GetComponents(UriComponents.Path, UriFormat.SafeUnescaped);
+            if (!path.Contains('.'))
+            {
+                if (url.EndsWith("/") == false)
+                    url = url + "/";
+
+                url = url + "volume.vikingxml";
+            }
+
+            return url;
+        }
+
+        private string TryAddVikingXMLExtension(string URL)
+        {
+            string NewURL = URL;
+
+            if (!NewURL.ToLower().EndsWith(".vikingxml"))
+            {
+                if (NewURL.EndsWith("/") == false)
+                    NewURL = NewURL + '/';
+
+                NewURL += "volume.vikingxml";
+            }
+
+            return NewURL;
+        }
     }
 }

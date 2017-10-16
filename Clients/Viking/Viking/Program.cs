@@ -158,7 +158,7 @@ namespace Viking
             //  Viking/UI/forms
 
 
-            using (Logon vikingLogon = new Logon("https://connectomes.utah.edu/Viz/Account/Authenticate", website))
+            using (Logon vikingLogon = new Logon("https://connectomes.utah.edu/Viz/", website))
             {
                 vikingLogon.ShowDialog();
 
@@ -173,15 +173,7 @@ namespace Viking
             }
 
             //Make sure the website includes a file, if it does not then include Volume.VikingXML by default
-            Uri WebsiteURI = new Uri(website);
-            string path = WebsiteURI.GetComponents(UriComponents.Path, UriFormat.SafeUnescaped);
-            if (path.Contains(".") == false)
-            {
-                if (website.EndsWith("/") == false)
-                    website = website + "/";
-
-                website = website + "volume.vikingxml";
-            }
+            website = Viking.Common.Util.AppendDefaultVolumeFilenameIfMissing(website);
 
             // --------------------------------------------------------------------------------------
 
@@ -207,6 +199,8 @@ namespace Viking
             if (DebugLogFile != null)
                 DebugLogFile.Close(); 
         }
+
+       
 
         [Conditional("DEBUG")]
         private static void CreateDebugListener()
