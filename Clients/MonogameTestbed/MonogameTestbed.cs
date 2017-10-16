@@ -340,10 +340,16 @@ namespace MonogameTestbed
                                            new Vector2((float)(50.0f * Math.Cos(CurveAngle)), (float)(50.0f * Math.Sin(CurveAngle)) + 50.0f));
             window.lineManager.Draw(new RoundLine[] { line }, 16, Color.Red, ViewProjMatrix, time, labelTexture);
 
-            GridVector2[] cps = CreateTestCurve2(CurveAngle, 100);
+            GridVector2[] cps = CreateTestCurveLagrange(CurveAngle, 100, new GridVector2(-150, 0));
             RoundCurve.RoundCurve curve = new RoundCurve.RoundCurve(cps, false);
             window.curveManager.Draw(new RoundCurve.RoundCurve[] { curve }, 16, Color.Blue, ViewProjMatrix, time, labelTexture);
             window.curveManager.Draw(new RoundCurve.RoundCurve[] { curve }, 16, Color.Blue, ViewProjMatrix, time, TechniqueName);
+
+            GridVector2[] cpsCatmull = CreateTestCurveCatmull(CurveAngle, 100, new GridVector2(150, 0));
+            RoundCurve.RoundCurve CatmullCurve = new RoundCurve.RoundCurve(cpsCatmull, false);
+            window.curveManager.Draw(new RoundCurve.RoundCurve[] { CatmullCurve }, 16, Color.Blue, ViewProjMatrix, time, labelTexture);
+            window.curveManager.Draw(new RoundCurve.RoundCurve[] { CatmullCurve }, 16, Color.Blue, ViewProjMatrix, time, TechniqueName);
+             
         }
 
         public Texture2D CreateTextureForLabel(string label, GraphicsDevice device,
@@ -375,22 +381,37 @@ namespace MonogameTestbed
             return cps;
         }
 
-        private static GridVector2[] CreateTestCurve2(double angle, double width)
+        private static GridVector2[] CreateTestCurveLagrange(double angle, double width, GridVector2 origin)
         {
             GridVector2[] cps = new GridVector2[] {new GridVector2(width,width),
                                                    new GridVector2(0, width),
                                                    new GridVector2(0,0),
                                                    new GridVector2(width,0) };
-            return Geometry.Lagrange.FitCurve(cps, 30);
+            GridVector2[] curvePoints = Geometry.Lagrange.FitCurve(cps, 30);
+            return curvePoints.Translate(origin);
+        }
+
+        private static GridVector2[] CreateTestCurveCatmull(double angle, double width, GridVector2 origin)
+        {
+            GridVector2[] cps = new GridVector2[] {new GridVector2(width,width),
+                                                   new GridVector2(0, width),
+                                                   new GridVector2(0,0),
+                                                   new GridVector2(width,0) };
+
+            GridVector2[] curvePoints = cps.CalculateCurvePoints(30, true);
+            return curvePoints.Translate(origin);
         }
     }
 
 
     public class CurveViewTest : IGraphicsTest
     {
-        CurveView curveView;
-        CurveLabel leftCurveLabel;
-        CurveLabel rightCurveLabel;
+        CurveView curveViewLagrange;
+        CurveView curveViewCatmull;
+        CurveLabel leftLagrangeCurveLabel;
+        CurveLabel rightLagrangeCurveLabel;
+        CurveLabel leftCatmullCurveLabel;
+        CurveLabel rightCatmullCurveLabel;
 
 
         bool _initialized = false;
@@ -400,10 +421,15 @@ namespace MonogameTestbed
         {
             _initialized = true;
 
-            GridVector2[] cps = CreateTestCurve3(0, 100);
-            curveView = new CurveView(cps, Color.Red, false, MonoTestbed.NumCurveInterpolations);
-            leftCurveLabel = new CurveLabel("The quick brown fox jumps over the lazy dog", cps, Color.Black, false);
-            rightCurveLabel = new CurveLabel("C 1485", cps, Color.PaleGoldenrod, false);
+            GridVector2[] cps = CreateTestCurveLagrange(0, 100, new GridVector2(-100,0));
+            curveViewLagrange = new CurveView(cps, Color.Red, false, 2);
+            leftLagrangeCurveLabel = new CurveLabel("The quick brown fox jumps over the lazy dog", cps, Color.Black, false);
+            rightLagrangeCurveLabel = new CurveLabel("C 1485", cps, Color.PaleGoldenrod, false);
+
+            GridVector2[] cpsCatmull = CreateTestCurveCatmull(0, 100, new GridVector2(100, 0));
+            curveViewCatmull = new CurveView(cpsCatmull, Color.Red, true, 2);
+            leftCatmullCurveLabel = new CurveLabel("The quick brown fox jumps over the lazy dog", cpsCatmull, Color.Black, false);
+            rightCatmullCurveLabel = new CurveLabel("C 1485", cpsCatmull, Color.PaleGoldenrod, false);
         }
 
         public void Update()
@@ -417,14 +443,14 @@ namespace MonogameTestbed
             string TechniqueName = "AnimatedLinear";
             float time = DateTime.Now.Millisecond / 1000.0f;
 
-            double totalLabelLength = (double)(leftCurveLabel.Text.Length + rightCurveLabel.Text.Length);
-            leftCurveLabel.Alignment = RoundCurve.HorizontalAlignment.Left;
-            rightCurveLabel.Alignment = RoundCurve.HorizontalAlignment.Right;
-            leftCurveLabel.Max_Curve_Length_To_Use_Normalized = (float)(leftCurveLabel.Text.Length / totalLabelLength);
-            rightCurveLabel.Max_Curve_Length_To_Use_Normalized = (float)(rightCurveLabel.Text.Length / totalLabelLength);
+            double totalLabelLength = (double)(leftLagrangeCurveLabel.Text.Length + rightLagrangeCurveLabel.Text.Length);
+            leftLagrangeCurveLabel.Alignment = RoundCurve.HorizontalAlignment.Left;
+            rightLagrangeCurveLabel.Alignment = RoundCurve.HorizontalAlignment.Right;
+            leftLagrangeCurveLabel.Max_Curve_Length_To_Use_Normalized = (float)(leftLagrangeCurveLabel.Text.Length / totalLabelLength);
+            rightLagrangeCurveLabel.Max_Curve_Length_To_Use_Normalized = (float)(rightLagrangeCurveLabel.Text.Length / totalLabelLength);
 
-            CurveView.Draw(window.GraphicsDevice, scene, window.curveManager, window.basicEffect, window.overlayEffect, time, new CurveView[] { curveView });
-            CurveLabel.Draw(window.GraphicsDevice, scene, window.spriteBatch, window.fontArial, window.curveManager, new CurveLabel[] { leftCurveLabel, rightCurveLabel });
+            CurveView.Draw(window.GraphicsDevice, scene, window.curveManager, window.basicEffect, window.overlayEffect, time, new CurveView[] { curveViewLagrange, curveViewCatmull });
+            CurveLabel.Draw(window.GraphicsDevice, scene, window.spriteBatch, window.fontArial, window.curveManager, new CurveLabel[] { leftLagrangeCurveLabel, rightLagrangeCurveLabel, leftCatmullCurveLabel, rightCatmullCurveLabel});
 
         }
 
@@ -453,6 +479,25 @@ namespace MonogameTestbed
                                                    new GridVector2(0,100),
                                                    new GridVector2(100,0) };
             return cps;
+        }
+
+        private static GridVector2[] CreateTestCurveLagrange(double angle, double width, GridVector2 origin)
+        {
+            GridVector2[] cps = new GridVector2[] {new GridVector2(width,width),
+                                                   new GridVector2(0, width),
+                                                   new GridVector2(0,0),
+                                                   new GridVector2(width,0) };
+            return cps.Translate(origin);
+        }
+
+        private static GridVector2[] CreateTestCurveCatmull(double angle, double width, GridVector2 origin)
+        {
+            GridVector2[] cps = new GridVector2[] {new GridVector2(width,width),
+                                                   new GridVector2(0, width),
+                                                   new GridVector2(0,0),
+                                                   new GridVector2(width,0) };
+            
+            return cps.Translate(origin);
         }
     }
 

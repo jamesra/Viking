@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PipelineBuildEvent xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <SourceFile>C:/Src/Git/Viking/Clients/MonogameTestbed/Content/../../MonogameXNAGraphicsShared/MonogameContent/AnnotationOverlayShader.fx</SourceFile>
-  <SourceTime>2017-03-24T18:29:31.1443806-07:00</SourceTime>
+  <SourceTime>2017-09-07T14:05:52.3547117-07:00</SourceTime>
   <DestFile>C:/Src/Git/Viking/Clients/MonogameTestbed/Content/bin/Windows/../../MonogameXNAGraphicsShared/MonogameContent/AnnotationOverlayShader.xnb</DestFile>
-  <DestTime>2017-04-25T17:23:28.5333666-07:00</DestTime>
+  <DestTime>2017-09-29T16:01:38.2191839-07:00</DestTime>
   <Importer>EffectImporter</Importer>
   <ImporterTime>2016-03-29T23:36:08-07:00</ImporterTime>
   <Processor>EffectProcessor</Processor>

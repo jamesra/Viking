@@ -70,15 +70,15 @@ namespace MonogameTestbed
             labelCamera = new LabelView("", new GridVector2(0, 100));
 
             //meshes = InitSmallSmoothModelFromOData(144287, ENDPOINT.TEST);
-            //meshes = InitSmallSmoothModelFromOData(1, ENDPOINT.RC2);
+            meshes = InitSmallSmoothModelFromOData(new long[] { 1 }, ENDPOINT.RC2);
             //meshes = InitSmallSmoothModelFromOData(476, ENDPOINT.RC1);
             //meshes = InitSmallSmoothModelFromOData(476, ENDPOINT.RC1);
             //meshes = InitSmallSmoothModelFromOData(5554, ENDPOINT.RC2);
-            meshes = InitSmallSmoothModelFromOData(new long[] { 1650, 858 }, ENDPOINT.INFERIORMONKEY);
+            //meshes = InitSmallSmoothModelFromOData(new long[] { 1650, 858 }, ENDPOINT.INFERIORMONKEY);
 
             //Bad polygon Location #1026126.  Position X: 62134.0	Y: 51034.8	Z: 234	DS: 1.97
-            //meshes = InitSmallSmoothModelFromOData(180, ENDPOINT.TEST);
-            //            meshes = InitSmallSmoothModelFromODataLocations(TroubleIDS, ENDPOINT.TEST);
+            //meshes = InitSmallSmoothModelFromOData(new long[] { 180 }, ENDPOINT.TEST);
+            //meshes = InitSmallSmoothModelFromODataLocations(TroubleIDS, ENDPOINT.TEST);
 
             //meshes = InitSmallSmoothModelFromOData(207, ENDPOINT.TEMPORALMONKEY);
             //meshes = InitSmallModelFromOData(476);
@@ -124,6 +124,8 @@ namespace MonogameTestbed
             //SelectZRange(graph, 231, 235);
             //SelectSubsetOfIDs(graph, TroubleIDS);
 
+            AnnotationVizLib.MorphologyGraph.SmoothProcesses(graph);
+            
             //MorphologyMesh.TopologyMeshGenerator generator = new MorphologyMesh.TopologyMeshGenerator();
             return RecursivelyGenerateMeshes(graph);
         }
