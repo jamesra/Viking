@@ -54,10 +54,8 @@ namespace LocalBookmarks
             set
             {
                 _BookmarkXMLDoc = value;
-                if (RootBookmarkChanged != null)
-                {
-                    RootBookmarkChanged(null, new System.ComponentModel.PropertyChangedEventArgs("BookmarkXMLDoc"));
-                } 
+                RecursivelyUpdateVolumePositions(FolderRoot);
+                FolderUIObjRoot = new FolderUIObj(null, FolderRoot);
             }
         }
 
@@ -88,7 +86,9 @@ namespace LocalBookmarks
                 _FolderUIObjRoot = value;
                 if(RootBookmarkChanged != null)
                 {
-                    RootBookmarkChanged(null, new System.ComponentModel.PropertyChangedEventArgs("FolderUIObjRoot"));
+                    Viking.UI.State.MainThreadDispatcher.BeginInvoke( 
+                        RootBookmarkChanged,
+                        new object[] { null, new System.ComponentModel.PropertyChangedEventArgs("FolderUIObjRoot") });
                 }
             }
         }
@@ -206,7 +206,6 @@ namespace LocalBookmarks
             //Check if there is a local favorites XML file, if it does not exist, create it, we always return true
 
             try
-
             {
                 if (false == System.IO.Directory.Exists(BookmarkPath))
                 {
@@ -298,16 +297,12 @@ namespace LocalBookmarks
                 if (System.IO.File.Exists(BookmarkFileName))
                 {
                     BookmarkXMLDoc = XRoot.Load(BookmarkFileName);
-                    RecursivelyUpdateVolumePositions(FolderRoot);
-                    FolderUIObjRoot = new FolderUIObj(null, FolderRoot);
                     SelectedFolder = FolderUIObjRoot;
                     return true;
                 }
                 else if(System.IO.File.Exists(BookmarkUndoFilePath)) //Check for an undo file
                 {
                     BookmarkXMLDoc = XRoot.Load(BookmarkUndoFilePath);
-                    RecursivelyUpdateVolumePositions(FolderRoot);
-                    FolderUIObjRoot = new FolderUIObj(null, FolderRoot);
                     SelectedFolder = FolderUIObjRoot;
                     return true;
                 }
@@ -319,7 +314,6 @@ namespace LocalBookmarks
                 {
                     connectomes.utah.edu.XSD.BookmarkSchema.xsd.XRoot oldRoot = connectomes.utah.edu.XSD.BookmarkSchema.xsd.XRoot.Load(BookmarkFileName);
                     BookmarkXMLDoc = MigrateV1ToV2.Migrate(BookmarkFileName);
-                    FolderUIObjRoot = new FolderUIObj(null, FolderRoot);
                     SelectedFolder = FolderUIObjRoot;
                 }
                 catch (Xml.Schema.Linq.LinqToXsdException)

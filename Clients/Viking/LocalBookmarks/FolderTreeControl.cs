@@ -104,9 +104,7 @@ namespace LocalBookmarks
 
         protected override void InitializeTree()
         {
-            Tree.ClearObjects();
-
-            SetRootFolder(Global.FolderUIObjRoot);
+            //SetRootFolder(Global.FolderUIObjRoot);
         }
 
         /// <summary>
@@ -219,7 +217,7 @@ namespace LocalBookmarks
                 Global.FolderUIObjRoot.ChildChanged -= OnRootChildChanged;
                 Global.Load(fileDialog.FileName);
 
-                InitializeTree(); 
+                //Tree should be initialized by root change event
             }
         }
 
