@@ -460,6 +460,26 @@ namespace Geometry
             return segments;
         }
 
+        /// <summary>
+        /// Remove all of the adjacent duplicate points and return as a new array
+        /// </summary>
+        /// <param name="points"></param>
+        /// <returns></returns>
+        public static GridVector2[] RemoveDuplicates(this IReadOnlyList<GridVector2> points)
+        {
+            List<GridVector2> nonDuplicatePoints = new List<GridVector2>();
+            for (int i = 0; i < points.Count - 1; i++)
+            {
+                if (points[i] != points[i + 1])
+                {
+                    nonDuplicatePoints.Add(points[i]);
+                }
+            }
+
+            //                System.Diagnostics.Trace.WriteLine("Originally " + (ControlPoints.Count * NumInterpolations).ToString() + " now " + nonDuplicatePoints.Count.ToString());
+            return nonDuplicatePoints.ToArray();
+        }
+
         /*
         /// <summary>
         /// Return true if the points are placed in clockwise order.  Assumes points do not cross over themselves.
@@ -783,6 +803,27 @@ namespace Geometry
             }
 
             return newControlPoints.ToLineSegments();
+        }
+        
+        /// <summary>
+        /// Shorten the last segment in a collection to be 99% of the original length.  This is used to prevent false positives in self-intersection tests, often for closed rings
+        /// </summary>
+        /// <param name="points"></param>
+        /// <returns></returns>
+        public static GridLineSegment[] ShortenLastVertex(this IReadOnlyList<GridLineSegment> src)
+        {
+            GridLineSegment[] dest = new GridLineSegment[src.Count];
+
+            for(int i = 0; i < src.Count; i++)
+            {
+                dest[i] = src[i];
+            }
+
+            GridLineSegment lastSegment = src.Last();
+            GridVector2 newEndpoint = lastSegment.PointAlongLine(0.99);
+            dest[src.Count - 1] = new GridLineSegment(lastSegment.A, newEndpoint);
+
+            return dest;
         }
     }
 
