@@ -24,7 +24,14 @@ namespace Geometry
             if(closed)
                 PrepareControlPointsForClosedCurve(cp);
 
-            return cp.Where((p, i) => i + 3 < cp.Count).SelectMany((p, i) => FitCurveSegment(cp[i], cp[i + 1], cp[i + 2], cp[i + 3], NumInterpolations)).ToArray();
+            //return cp.Where((p, i) => i + 3 < cp.Count).SelectMany((p, i) => FitCurveSegment(cp[i], cp[i + 1], cp[i + 2], cp[i + 3], NumInterpolations)).ToArray();
+            GridVector2[] points = cp.Where((p, i) => i + 3 < cp.Count).SelectMany((p, i) => RecursivelyFitCurveSegment(cp[i], cp[i + 1], cp[i + 2], cp[i + 3], null, 0)).ToArray();
+            if(closed)
+            {
+                points = points.RemoveDuplicates();
+            }
+
+            return points; 
         }
 
         /// <summary>
@@ -45,9 +52,36 @@ namespace Geometry
             double t1 = tj(t0, p0, p1, alpha);
             double t2 = tj(t1, p1, p2, alpha);
             double t3 = tj(t2, p2, p3, alpha);
-            
+
             double[] tvalues = new double[NumInterpolations];
-            tvalues = tvalues.Select((t, i) => t1 + ((double)i / (double)(NumInterpolations)) * (t2- t1)).ToArray();
+            SortedSet<double> tPoints = new SortedSet<double>(tvalues.Select((t, i) => ((double)i / ((double)NumInterpolations - 1.0))));
+
+            double[] tPointsArray = tPoints.ToArray();
+            
+            tvalues = tPointsArray.Select((t, i) => t1 + tPointsArray[i] * (t2 - t1)).ToArray();
+
+            GridVector2[] output = FitCurveSegment(p0, p1, p2, p3, tvalues);
+            return output;
+        }
+
+        /// <summary>
+        /// Returns a curve over a range, does not return the final value which should match the control point
+        /// </summary>
+        /// <param name="p0"></param>
+        /// <param name="p1"></param>
+        /// <param name="p2"></param>
+        /// <param name="p3"></param>
+        /// <param name="NumInterpolations"></param>
+        /// <returns></returns>
+        private static GridVector2[] FitCurveSegment(GridVector2 p0, GridVector2 p1,
+                                                    GridVector2 p2, GridVector2 p3,
+                                                    double[] tvalues)
+        {
+            double alpha = 0.5;
+            double t0 = 0;
+            double t1 = tj(t0, p0, p1, alpha);
+            double t2 = tj(t1, p1, p2, alpha);
+            double t3 = tj(t2, p2, p3, alpha);
 
             double[] A1X = tvalues.Select(t => (t1 - t) / (t1 - t0) * p0.X + (t - t0) / (t1 - t0) * p1.X).ToArray();
             double[] A1Y = tvalues.Select(t => (t1 - t) / (t1 - t0) * p0.Y + (t - t0) / (t1 - t0) * p1.Y).ToArray();
@@ -64,12 +98,46 @@ namespace Geometry
             double[] B2X = tvalues.Select((t, i) => ((t3 - t) / (t3 - t1)) * A2X[i] + ((t - t1) / (t3 - t1)) * A3X[i]).ToArray();
             double[] B2Y = tvalues.Select((t, i) => ((t3 - t) / (t3 - t1)) * A2Y[i] + ((t - t1) / (t3 - t1)) * A3Y[i]).ToArray();
 
-            double[] CX =  tvalues.Select((t, i) => ((t2 - t) / (t2 - t1)) * B1X[i] + ((t - t1) / (t2 - t1)) * B2X[i]).ToArray();
-            double[] CY =  tvalues.Select((t, i) => ((t2 - t) / (t2 - t1)) * B1Y[i] + ((t - t1) / (t2 - t1)) * B2Y[i]).ToArray(); 
+            double[] CX = tvalues.Select((t, i) => ((t2 - t) / (t2 - t1)) * B1X[i] + ((t - t1) / (t2 - t1)) * B2X[i]).ToArray();
+            double[] CY = tvalues.Select((t, i) => ((t2 - t) / (t2 - t1)) * B1Y[i] + ((t - t1) / (t2 - t1)) * B2Y[i]).ToArray();
 
             return CX.Select((cx, i) => new GridVector2(cx, CY[i])).ToArray();
         }
-        
+
+        public static GridVector2[] RecursivelyFitCurveSegment(GridVector2 p0, GridVector2 p1,
+                                                    GridVector2 p2, GridVector2 p3,
+                                                    SortedSet<double> tPoints, double epsilon)
+        {
+            double alpha = 0.5;
+            double t0 = 0;
+            double t1 = tj(t0, p0, p1, alpha);
+            double t2 = tj(t1, p1, p2, alpha);
+            double t3 = tj(t2, p2, p3, alpha);
+
+            double[] tvalues;
+
+            if (tPoints == null)
+            {
+                int NumInterpolations = 5;
+                tvalues = new double[NumInterpolations];
+                tPoints = new SortedSet<double>(tvalues.Select((t, i) => ((double)i / ((double)NumInterpolations-1.0))));
+            } 
+
+            double[] tPointsArray = tPoints.ToArray();
+            tvalues = new double[tPointsArray.Length];
+
+            tvalues = tPointsArray.Select((t, i) => t1 + tPointsArray[i] * (t2 - t1)).ToArray();
+
+            GridVector2[] output = FitCurveSegment(p0, p1, p2, p3, tvalues);
+            
+            if(!CurveExtensions.TryAddTPointsAboveThreshold(output, ref tPoints))
+            {
+                return output;
+            }
+
+            return RecursivelyFitCurveSegment(p0, p1, p2, p3, tPoints, epsilon);
+        }
+
         private static double tj(double ti, GridVector2 Pi, GridVector2 Pj, double Alpha=0.5)
         {
             return Math.Pow(GridVector2.Distance(Pi, Pj), Alpha) + ti;

@@ -12,6 +12,60 @@ namespace Geometry
     /// </summary>
     public class Lagrange
     {
+        public static GridVector2[] RecursivelyFitCurve(GridVector2[] cp, SortedSet<double> TPoints = null)
+        {
+            int nPoints = cp.Length;
+            int NumInterpolations;
+
+            double[] TValues = cp.Select((p, i) => (double)i / ((double)nPoints - 1)).ToArray();
+            double[] XValues = cp.Select(p => p.X).ToArray();
+            double[] YValues = cp.Select(p => p.Y).ToArray();
+
+            //Linearly space space the t values along the array
+            if (TPoints == null)
+            {
+                TPoints = GenerateTPoints(TValues, TValues.Length * 2);
+            }
+
+            NumInterpolations = TPoints.Count;
+             
+            double[] TPointsArray = new double[NumInterpolations];
+            TPointsArray = TPoints.ToArray();
+
+            double[] XOutput = ValuesAtTPoints(TPointsArray, TValues, XValues);
+            double[] YOutput = ValuesAtTPoints(TPointsArray, TValues, YValues);
+
+            GridVector2[] output = XOutput.Select((x, i) => new GridVector2(x, YOutput[i])).ToArray();
+
+            if (!CurveExtensions.TryAddTPointsAboveThreshold(output, ref TPoints))
+                return output;
+
+            return RecursivelyFitCurve(cp, TPoints).RemoveDuplicates();
+        }
+
+
+        /// <summary>
+        /// Return TPoints for the control points and points spaced evenly along the interval of 0 to 1
+        /// </summary>
+        /// <param name="cp"></param>
+        /// <param name="NumInterpolations"></param>
+        /// <returns></returns>
+        private static SortedSet<double> GenerateTPoints(double[] ControlPointTValues, int NumInterpolations)
+        {
+            //The TValues for control points
+            double[] TValues = ControlPointTValues;//ControlPointTValues.Select((p, i) => (double)i / ((double)ControlPointTValues.Length - 1)).ToArray();
+            double[] TPointsInterpolated = new double[NumInterpolations];
+
+            //The TValues for interpolated points
+            TPointsInterpolated = TPointsInterpolated.Select((t, i) => (double)i / (double)(NumInterpolations - 1)).ToArray();
+            SortedSet<double> TPoints = new SortedSet<double>(TPointsInterpolated);
+
+            //Add the points at the actual control points
+            TPoints.UnionWith(TValues);
+            return TPoints;
+        }
+
+
         /// <summary>
         /// Return points along a curve described by three points
         /// </summary>
@@ -24,20 +78,24 @@ namespace Geometry
             double[] TValues = cp.Select((p, i) => (double)i / ((double)nPoints-1)).ToArray();
             double[] XValues = cp.Select(p => p.X).ToArray();
             double[] YValues = cp.Select(p => p.Y).ToArray();
+             
+            SortedSet<double> TPoints = GenerateTPoints(TValues, NumInterpolations);
 
-            double[] TPoints = new double[NumInterpolations];
-            TPoints = TPoints.Select((t,i) => (double)i / (double)(NumInterpolations-1)).ToArray();
+            double[] TPointsArray = TPoints.ToArray();
 
-            double[] XOutput = ValuesAtTPoints(TPoints, TValues, XValues);
-            double[] YOutput = ValuesAtTPoints(TPoints, TValues, YValues);
+            double[] XOutput = ValuesAtTPoints(TPointsArray, TValues, XValues);
+            double[] YOutput = ValuesAtTPoints(TPointsArray, TValues, YValues);
 
-            return XOutput.Select((x, i) => new GridVector2(x, YOutput[i])).ToArray();
+            GridVector2[] output = XOutput.Select((x, i) => new GridVector2(x, YOutput[i])).ToArray();
+
+            double[] degreees = output.MeasureCurvature();
+            return output;
         }
 
-        private static double[] ValuesAtTPoints(double[] TPoints, double[] TArray, double[] InputValues)
+        private static double[] ValuesAtTPoints(double[] TPoints, IReadOnlyList<double> TArray, double[] InputValues)
         {
-            Debug.Assert(TArray.Length == InputValues.Length);
-            int nPoints = TArray.Length;
+            Debug.Assert(TArray.Count == InputValues.Length);
+            int nPoints = TArray.Count;
 
             double[] Product = new double[TPoints.Length];
             Product = Product.Select(v => 0.0).ToArray();
@@ -59,9 +117,8 @@ namespace Geometry
         /// <param name="TArray">1-D distance along curve as a 0 to 1.0 scalar</param>
         /// <param name="InputValues"></param>
         /// <returns></returns>
-        private static double WeightForT(double T, double[] TArray, int j)
-        {
-            int nPoints = TArray.Length;
+        private static double WeightForT(double T, IReadOnlyList<double> TArray, int j)
+        { 
             double Numerator = TArray.Select((t,k) => T - TArray[k]).Where((t, k) => j != k).Aggregate(1.0, (prod, next) => prod * next);
             double Denominator = TArray.Select((t,k) => TArray[j] - TArray[k]).Where((t, k) => j != k).Aggregate(1.0, (prod, next) => prod * next);
 

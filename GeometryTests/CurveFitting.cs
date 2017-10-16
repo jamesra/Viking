@@ -66,5 +66,11 @@ namespace GeometryTests
             Assert.IsTrue(GridVector2.Distance(Output[28], new GridVector2(-2.13, 7.32)) <= 0.01);
             Assert.IsTrue(GridVector2.Distance(Output[29], new GridVector2(-0.88, 7.21)) <= 0.01);
         }
+
+        [TestMethod]
+        public void RecursivelyFitPointsWithCatmull()
+        {
+
+        }
     }
 }
