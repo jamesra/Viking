@@ -96,7 +96,6 @@ namespace DataExport.Controllers
 
                 try
                 {
-                    
                     //Do not allow a negative id
                     ids.Add(Convert.ToInt64(Convert.ToUInt64(id)));
                 }
