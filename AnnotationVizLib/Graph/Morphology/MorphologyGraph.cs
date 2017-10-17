@@ -347,7 +347,11 @@ namespace AnnotationVizLib
                 if (linkedID == LastAddedID)
                     continue;
 
-                Debug.Assert(output.Contains(linkedID) == false);
+                //Debug.Assert(output.Contains(linkedID) == false);
+
+                //I shouldn't have to do this, but cycles can occur and this check is needed to prevent them.
+                if (output.Contains(linkedID))
+                    continue;
 
                 MorphologyNode candidate = graph.Nodes[linkedID];
 
