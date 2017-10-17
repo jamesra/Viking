@@ -477,6 +477,7 @@ namespace Viking
                         if (stream == null)
                         {
                             this.SetTexture(null);
+                            data = null;
                             return;
                         }
 
@@ -496,6 +497,7 @@ namespace Viking
                     //state.Dispose();
                     Debug.Assert(graphicsDevice != null);
                     TextureFromStreamAsync(graphicsDevice, data);
+                    data = null;
                 }
                 catch (WebException e)
                 {

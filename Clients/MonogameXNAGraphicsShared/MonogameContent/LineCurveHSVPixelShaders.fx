@@ -59,18 +59,6 @@ float4 MyPSStandardHSV(PS_Input input) : COLOR0
     finalColor = BlendHSLColorOverBackground(lineColor, RGBBackgroundColor, 1.0f - lineColor.a);
     finalColor.a = lineColor.a;
     return finalColor;
-
-	/*
-	float Hue = lineColor.r;
-	float BackgroundLuma = mul(LumaColor, LumaWeights);
-	float Saturation = lineColor.g;
-	float Luma = BlendLumaWithBackground(BackgroundLuma, lineColor.b, AlphaBlend);
-
-	float4 hsv = { Hue, Saturation, Luma, lineColor.a };
-	finalColor = lineColor.b > 0 ? HCLToRGB(hsv) : BackgroundColor;
-
-	return finalColor;
-	*/
 }
 
 float4 MyPSAlphaGradientHSV(PS_Input input) : COLOR0
