@@ -332,5 +332,15 @@ namespace MorphologyMesh
 
             return verticies;
         }
+
+        public static Vertex<T>[] CreateVerticiesForPoint(IPoint2D p, double Z, T locationID, GridVector3 translate)
+        {
+            Vertex<T>[] verticies = new Vertex<T>[1];
+
+            verticies[0] = new Geometry.Meshing.Vertex<T>(new GridVector3(p.X, p.Y, Z) + translate,
+                                                              new GridVector3(0, 0, 1), locationID);
+
+            return verticies;
+        }
     }
 }

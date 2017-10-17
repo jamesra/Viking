@@ -139,6 +139,12 @@ namespace MorphologyMesh
             ContinuousIndexSet ExternalBorder = new ContinuousIndexSet(0, shape.Points.Count);
             return new ConnectionVerticies(ExternalBorder);
         }
+
+        public static ConnectionVerticies CreatePort(IPoint2D shape)
+        {
+            ContinuousIndexSet ExternalBorder = new ContinuousIndexSet(0, 1);
+            return new ConnectionVerticies(ExternalBorder);
+        }
     }
 
 }

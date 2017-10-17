@@ -66,6 +66,10 @@ namespace MorphologyMesh
                     IPolyLine2D polyline = shape as IPolyLine2D;
                     Mesh.AddVertex(ShapeMeshGenerator<ulong>.CreateVerticiesForPolyline(polyline, Z, NodeData, GridVector3.Zero));
                     break;
+                case ShapeType2D.POINT:
+                    IPoint2D point = shape as IPoint2D;
+                    Mesh.AddVertex(ShapeMeshGenerator<ulong>.CreateVerticiesForPoint(point, Z, NodeData, GridVector3.Zero));
+                    break;
                 default:
                     throw new ArgumentException("Unexpected shape type");
             }
@@ -93,6 +97,9 @@ namespace MorphologyMesh
                 case ShapeType2D.POLYLINE:
                     IPolyLine2D polyline = shape as IPolyLine2D;
                     return ConnectionVerticies.CreatePort(polyline);
+                case ShapeType2D.POINT:
+                    IPoint2D point = shape as IPoint2D;
+                    return ConnectionVerticies.CreatePort(point);
                 default:
                     throw new ArgumentException("Unexpected shape type");
             }
