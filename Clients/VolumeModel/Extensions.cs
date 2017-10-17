@@ -35,8 +35,13 @@ namespace Viking.VolumeModel
             } 
             else
             {
+                if(VisibleWorldBounds.Contains(mapper.VolumeBounds.Value))
+                {
+                    return mapper.SectionBounds;
+                }
                 //All four points are outside the control points.  Return the bounding box of the mapped space.
-                if (VisibleWorldBounds.Intersects(mapper.VolumeBounds.Value))
+                //This check is a hack.  When we are zoomed out and can only see a sliver of the volume we need a way to load the visible tiles.
+                else if (VisibleWorldBounds.Intersects(mapper.VolumeBounds.Value) && ((VisibleWorldBounds.Width  > mapper.VolumeBounds.Value.Width / 2.0) || (VisibleWorldBounds.Height > mapper.VolumeBounds.Value.Height / 2.0)))
                 {
                     return mapper.SectionBounds;
                 }
