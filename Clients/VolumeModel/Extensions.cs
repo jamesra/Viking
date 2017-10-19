@@ -72,6 +72,11 @@ namespace Viking.VolumeModel
             //We don't know the rotation of the rectangle.  We assume the worst case of a 45 degree angle so we multiply width or height by 1.44
             //So we create a grid circle at the point with the radius of Max(Width,Height).  Then we return the bounding box of the GridCircle
 
+            if(IsMapped.Count(b => b) == 3)
+            {
+                return GridCircle.CircleFromThreePoints(ValidPoints).BoundingBox;
+            }
+
             if(OppositeCornersMapped(IsMapped))
             {
                 //Find the center of the opposite corners and the distance.  Create a circle and return the bounding box.
@@ -107,8 +112,8 @@ namespace Viking.VolumeModel
         private static GridCircle CircleFromTwoPoints(GridVector2 A, GridVector2 B)
         {
             double Distance = GridVector2.Distance(A,B);
-            double X = (A.X + A.X) / 2.0;
-            double Y = (B.Y + B.Y) / 2.0;
+            double X = (A.X + B.X) / 2.0;
+            double Y = (A.Y + B.Y) / 2.0;
 
             return new GridCircle(new GridVector2(X, Y), Distance / 2.0);
         }
