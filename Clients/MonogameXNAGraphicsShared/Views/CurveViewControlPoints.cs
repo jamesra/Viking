@@ -10,6 +10,11 @@ namespace VikingXNAGraphics
 
     public class CurveViewControlPoints
     {
+        /// <summary>
+        /// Set to true if the order of control points was reversed during processing
+        /// </summary>
+        /// 
+        bool ReversedOrder = false;
         public CurveViewControlPoints(ICollection<GridVector2> cps, uint NumInterpolations, bool TryToClose)
         {
             if (cps.Count < 2)
@@ -20,18 +25,25 @@ namespace VikingXNAGraphics
             this._TryCloseCurve = TryToClose;
 
             if (TryCloseCurve && cps.Count > 2)
-                this.ControlPoints = cps.ToArray().AreClockwise() ? cps.Reverse().ToArray() : cps.ToArray();
+            {
+                bool Reverse = cps.ToArray().AreClockwise();
+                ReversedOrder = Reverse;
+                this.ControlPoints = Reverse ? cps.Reverse().ToArray() : cps.ToArray();
+            }
             else
-                this.ControlPoints = ReverseControlPointsIfTextUpsideDown(cps);
+                this.ControlPoints = ReverseControlPointsIfTextUpsideDown(cps, out ReversedOrder);
         }
 
-        private static GridVector2[] ReverseControlPointsIfTextUpsideDown(ICollection<GridVector2> cps)
+        private static GridVector2[] ReverseControlPointsIfTextUpsideDown(ICollection<GridVector2> cps, out bool Reversed)
         {
+            Reversed = false;
+
             if (cps.First().X > cps.Last().X)
             {
+                Reversed = true;
                 return cps.Reverse().ToArray();
             }
-
+            
             return cps.ToArray();
         }
 
@@ -129,23 +141,35 @@ namespace VikingXNAGraphics
         /// <param name="iEnd"></param>
         /// <returns></returns>
         public GridVector2[] CurvePointsBetweenControlPoints(GridVector2 startControlPoint, GridVector2 endControlPoint)
-        { 
-            int iCurveStart = FindIndex(_CurvePoints, startControlPoint);
-            int iCurveEnd = FindIndex(_CurvePoints, endControlPoint);
+        {
+            //If we reversed the order of the input array we need to reverse the start and end points
+            GridVector2[] Points = new GridVector2[_CurvePoints.Length];
+
+            if(ReversedOrder)
+            {
+                Points = _CurvePoints.Reverse().ToArray();
+            }
+            else
+            {
+                Array.Copy(_CurvePoints, Points, Points.Length);
+            }
+
+            int iCurveStart = FindIndex(Points, startControlPoint);
+            int iCurveEnd = FindIndex(Points, endControlPoint);
 
             //If our end curve is less than our start point we may be dealing with a closed curve where the start and end verticies are the same.
             //If we are not then FindIndex throws an ArgumentException
             if(iCurveEnd < iCurveStart)
             {
-                iCurveEnd = FindIndex(_CurvePoints, endControlPoint, iCurveEnd + 1);
+                iCurveEnd = FindIndex(Points, endControlPoint, iCurveEnd + 1);
             }
 
             if (iCurveStart > iCurveEnd)
                 throw new ArgumentException("Start index greater than end index");
 
-            GridVector2[] destArray = new GridVector2[iCurveEnd - iCurveStart];
+            GridVector2[] destArray = new GridVector2[(iCurveEnd - iCurveStart) + 1];
 
-            Array.Copy(_CurvePoints, iCurveStart, destArray, 0, destArray.Length);
+            Array.Copy(Points, iCurveStart, destArray, 0, destArray.Length);
             return destArray;
         }
 

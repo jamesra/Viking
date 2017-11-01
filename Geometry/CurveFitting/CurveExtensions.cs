@@ -36,12 +36,19 @@ namespace Geometry
             }
             else if (ControlPoints.Count >= 3)
             {
-                GridVector2[] SmoothedCurvePoints = Geometry.CatmullRom.FitCurve(ControlPoints.ToArray(), (int)NumInterpolations, true);
-                CurvePoints = new GridVector2[SmoothedCurvePoints.Length + 1];
-                SmoothedCurvePoints.CopyTo(CurvePoints, 0);
+                CurvePoints = Geometry.CatmullRom.FitCurve(ControlPoints.ToArray(), (int)NumInterpolations, true);
+
+                System.Diagnostics.Debug.Assert(CurvePoints[0] == CurvePoints.Last(), "First and last point should be identical in closed curve");
+                System.Diagnostics.Debug.Assert(CurvePoints[CurvePoints.Length - 2] != CurvePoints[CurvePoints.Length - 1], "The last and second last points should not match, probable bug.");
+
+                //The SQL Spatial types are more sensitive than our geometry epsilon, so explicitly set the first and last points equal.
+                CurvePoints[CurvePoints.Length - 1] = CurvePoints[0];
+
+                //CurvePoints = new GridVector2[SmoothedCurvePoints.Length + 1];
+                //SmoothedCurvePoints.CopyTo(CurvePoints, 0);
 
                 //Ensure the first and last point are identical in a closed curve
-                CurvePoints[CurvePoints.Length-1] = SmoothedCurvePoints[0];
+                //CurvePoints[CurvePoints.Length-1] = SmoothedCurvePoints[0];
             }
 
             return CurvePoints;
@@ -85,6 +92,12 @@ namespace Geometry
             {
                 //CurvePoints = Geometry.Lagrange.FitCurve(ControlPoints.ToArray(), (int)NumInterpolations * ControlPoints.Count);
                 CurvePoints = Geometry.Lagrange.RecursivelyFitCurve(ControlPoints.ToArray());
+#if DEBUG
+                foreach(GridVector2 p in ControlPoints)
+                {
+                    System.Diagnostics.Debug.Assert(CurvePoints.Contains(p));
+                }
+#endif
             }
 
             return CurvePoints;

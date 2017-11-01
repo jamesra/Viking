@@ -476,6 +476,8 @@ namespace Geometry
                 }
             }
 
+            nonDuplicatePoints.Add(points.Last());
+
             //                System.Diagnostics.Trace.WriteLine("Originally " + (ControlPoints.Count * NumInterpolations).ToString() + " now " + nonDuplicatePoints.Count.ToString());
             return nonDuplicatePoints.ToArray();
         }

@@ -22,9 +22,7 @@ namespace Geometry
         }
 
         public bool Intersects(GridLine seg, out GridVector2 Intersection)
-        {
-            
-
+        { 
             //Function for each line
             //Ax + By = C
             Intersection = new GridVector2();
@@ -53,8 +51,7 @@ namespace Geometry
             double det = A1 * B2 - A2 * B1;
             //Check if lines are parallel
             if (det == 0)
-            {
-                
+            { 
                 return false;
             }
             else
@@ -65,6 +62,11 @@ namespace Geometry
                 Intersection = new GridVector2(x, y);
                 return true;
             }
+        }
+
+        public GridLine Perpendicular()
+        {
+            return new GridLine(this.Origin, GridVector2.Rotate90(Direction));
         }
 
         public bool Intersects(GridLineSegment seg, out GridVector2 Intersection)
@@ -110,6 +112,7 @@ namespace Geometry
                 return seg.BoundingBox.Contains(Intersection);
             }
         }
+         
 
 
     }

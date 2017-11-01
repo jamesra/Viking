@@ -37,6 +37,13 @@ namespace Geometry
 
             GridVector2[] output = XOutput.Select((x, i) => new GridVector2(x, YOutput[i])).ToArray();
 
+#if DEBUG
+            foreach(GridVector2 p in cp)
+            {
+                Debug.Assert(output.Contains(p));
+            }
+#endif
+
             if (!CurveExtensions.TryAddTPointsAboveThreshold(output, ref TPoints))
                 return output;
 
@@ -106,7 +113,7 @@ namespace Geometry
                 Product = Product.Select((p, i) => Weights[i] + Product[i]).ToArray();
             }
 
-            return Product.ToArray();
+            return Product;
         }
     
 
