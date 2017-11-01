@@ -24,6 +24,7 @@ namespace Viking.VolumeModel
             : base(ToWarp, section, name)
         {
             this.VolumeTransform = Transform;
+            this._XYScale = ToWarp.XYScale;
             
             /*
             //Create a single grid transform for all tiles
@@ -172,11 +173,11 @@ namespace Viking.VolumeModel
                                                  GridQuad VisibleQuad, 
                                                  int roundedDownsample)
         {
-            GridInfo gridInfo = LevelToGridInfo[roundedDownsample];
 
-            
-            int ScaledTileSizeX = this.TileSizeX * roundedDownsample;
-            int ScaledTileSizeY = this.TileSizeX * roundedDownsample;
+            GridInfo gridInfo = LevelToGridInfo[roundedDownsample];
+              
+            int ScaledTileSizeX = this.TileSizeX * (int)roundedDownsample;
+            int ScaledTileSizeY = this.TileSizeY * (int)roundedDownsample;
 
             //Figure out which grid locations are visible
             int iMinX = (int)Math.Floor(SectionVisibleBounds.Left / ScaledTileSizeX);
@@ -202,7 +203,7 @@ namespace Viking.VolumeModel
                 for (int iY = iMinY; iY < iMaxY; iY++)
                 {
                     //Figure out if the tile would be visible
-                    GridRectangle tileBorder = TileBoundingBox(iX, iY, roundedDownsample);
+                    GridRectangle tileBorder = TileBoundingBox(iX, iY, (int)roundedDownsample);
                     if (tileBorder.Intersects(SectionVisibleBounds) == false)
                         continue; 
 
@@ -242,7 +243,7 @@ namespace Viking.VolumeModel
                                                             this.TileFullPath(iX, iY, roundedDownsample),
                                                             //PORT: TextureCacheFileName,
                                                             this.Name,
-                                                            roundedDownsample,
+                                                            (int)roundedDownsample,
                                                             MipMapLevels);
                     }
                     
