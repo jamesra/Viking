@@ -270,8 +270,8 @@ namespace WebAnnotation.View
                 {
                     if (this.VolumePolygon.PointIntersectsAnyPolygonVertex(WorldPosition, ControlPointRadius, out intersectingPoly))
                     {
-                        //Cannot have a polygon with fewer than 3 verticies
-                        if (intersectingPoly.ExteriorRing.Length > 3)
+                        //Cannot have a polygon with fewer than 4 verticies, We check for 4 because first and last vertex are the same.
+                        if (intersectingPoly.ExteriorRing.Length > 4)
                             return LocationAction.REMOVECONTROLPOINT;
                         else
                             return LocationAction.NONE;

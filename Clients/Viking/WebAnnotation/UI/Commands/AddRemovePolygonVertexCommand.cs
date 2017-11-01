@@ -106,8 +106,12 @@ namespace WebAnnotation.UI.Commands
         {
             GridPolygon intersectingPolygon;
             polygon.PointIntersectsAnyPolygonSegment(RemovedControlPointPosition, Global.DefaultClosedLineWidth, out intersectingPolygon);
-            if (intersectingPolygon.ExteriorRing.Length <= 3) //Cannot remove
+            if (intersectingPolygon == null)
                 return null;
+
+            if (intersectingPolygon.ExteriorRing.Length <= 4) //Closed rings in polygons mean 3 point poly's have 4 points
+                return null;
+
             intersectingPolygon.RemoveVertex(RemovedControlPointPosition);
 
             return polygon.Clone() as GridPolygon;
@@ -124,6 +128,12 @@ namespace WebAnnotation.UI.Commands
         protected override void Execute()
         {
             GridPolygon mosaic_polygon;
+            if(UpdatedVolumePolygon == null)
+            {
+                base.Execute();
+                return;
+            }
+
             try
             {
                 mosaic_polygon = mapping.TryMapShapeVolumeToSection(UpdatedVolumePolygon);

@@ -271,9 +271,15 @@ namespace Geometry
 
         public void RemoveVertex(int iVertex)
         {
+            //We must have at least 3 points to create a polygon
+            if(ExteriorSegments.Length <= 3)
+            {
+                throw new ArgumentException("Cannot remove vertex.  Polygon's must have three verticies.");
+            }
+
             //Find the line segment the NewControlPoint intersects
             GridLineSegment[] updatedLineSegments = ExteriorSegments.Remove(iVertex);
-
+            
             this.ExteriorRing = updatedLineSegments.Verticies();
         }
 
