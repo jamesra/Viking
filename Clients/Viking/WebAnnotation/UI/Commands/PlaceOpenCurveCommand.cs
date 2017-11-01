@@ -119,8 +119,8 @@ namespace WebAnnotation.UI.Commands
                 CurveViewControlPoints curveVerticies = AppendControlPointToCurve(worldPos);
                 GridVector2[] controlPoints = Verticies;
                 GridLineSegment[] proposed_back_curve_segments = GridLineSegment.SegmentsFromPoints(curveVerticies.CurvePointsBetweenControlPoints(controlPoints.Last() , worldPos));
-                GridLineSegment[] proposed_front_curve_segments = GridLineSegment.SegmentsFromPoints(curveVerticies.CurvePointsBetweenControlPoints(controlPoints[0], controlPoints[1]));
-                GridLineSegment[] existing_curve_segments = GridLineSegment.SegmentsFromPoints(curveVerticies.CurvePointsBetweenControlPoints(controlPoints[1], controlPoints.Last()));
+                GridLineSegment[] proposed_front_curve_segments = GridLineSegment.SegmentsFromPoints(curveVerticies.CurvePointsBetweenControlPoints(worldPos, controlPoints[0]));
+                GridLineSegment[] existing_curve_segments = GridLineSegment.SegmentsFromPoints(curveVerticies.CurvePointsBetweenControlPoints(controlPoints[0], controlPoints.Last()));
 
                 proposed_front_curve_segments = proposed_front_curve_segments.ShortenLastVertex();
                 existing_curve_segments = existing_curve_segments.ShortenLastVertex();
@@ -239,8 +239,8 @@ namespace WebAnnotation.UI.Commands
 
             if (worldPos != vert_stack.Peek())
             {
-                //try
-                //{
+                try
+                {
                     CurveViewControlPoints curveVerticies = AppendControlPointToCurve(worldPos);
                     GridVector2[] controlPoints = Verticies;
                     GridLineSegment[] proposed_curve_segments = GridLineSegment.SegmentsFromPoints(curveVerticies.CurvePointsBetweenControlPoints(controlPoints.Last(), worldPos));
@@ -251,13 +251,12 @@ namespace WebAnnotation.UI.Commands
                     GridVector2[] intersections = proposed_curve_segments.Select(pcs => existing_curve_segments.IntersectionPoint(pcs)).Where(p => p.HasValue).Select(p => p.Value).ToArray();
                     if (intersections.Length > 0)
                         retval = intersections.First();
-                //}
-                /*
+                }
+                
                 catch(ArgumentException)
                 {
                     return new GridVector2?();
-                }*/
-                
+                }                
             }
 
             return retval;
