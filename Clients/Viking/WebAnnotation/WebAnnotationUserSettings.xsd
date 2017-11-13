@@ -77,6 +77,7 @@
     <xs:complexType>
       <xs:attribute name="Name" type="xs:string" use="required"/>
       <xs:attribute name="Tag" type="xs:string" use="required"/>
+      <xs:attribute name="SetValueToUsername" type="xs:boolean" default="0"/>
     </xs:complexType>
   </xs:element>
 
@@ -84,6 +85,7 @@
     <xs:complexType>
       <xs:attribute name="Name" type="xs:string" use="required"/>
       <xs:attribute name="Tag" type="xs:string" use="required"/>
+      <xs:attribute name="SetValueToUsername" type="xs:boolean" default="0"/>
     </xs:complexType>
   </xs:element>
 

@@ -41,4 +41,43 @@ namespace WebAnnotationModel
             throw new ArgumentException(string.Format("Unknown location type {0}", type));
         }
     }
+
+
+    public static class AttributeExtensions
+    {
+        /// <summary>
+        /// Remove tag if it is in the attribute list or add tag if it is not
+        /// </summary>
+        /// <param name="listAttributes"></param>
+        /// <param name="tag"></param>
+        /// <param name="value"></param>
+        /// <returns>True if the tag exists in the attributes after the function has completed.</returns>
+        public static bool ToggleAttribute(this List<WebAnnotationModel.ObjAttribute> listAttributes, string tag, string value = null)
+        {  
+            if (listAttributes.Contains(tag))
+            {
+                listAttributes.RemoveAll(tag);
+                return false;
+            }
+            else
+            {
+                ObjAttribute attrib = new ObjAttribute(tag, value);
+                listAttributes.Add(attrib);
+                return true;
+            }
+        }
+
+        public static bool Contains(this List<WebAnnotationModel.ObjAttribute> listAttributes, string tag)
+        {
+            //We cannot use the built-in contains function because ObjAttribute equality comparer also checks the value of the attribute
+            return listAttributes.Exists(a => a.Name == tag);
+        }
+
+        public static int RemoveAll(this List<WebAnnotationModel.ObjAttribute> listAttributes, string tag)
+        {
+            //We cannot use the built-in contains function because ObjAttribute equality comparer also checks the value of the attribute
+            return listAttributes.RemoveAll(a => a.Name == tag);
+        }
+    }
+
 }

@@ -326,6 +326,16 @@ namespace Geometry
             return !(A == B);
         }
 
-        
+        /// <summary>
+        /// Given a normalized height in the range -1,1 on the Y-axis return how wide the circle is in the X-axis
+        /// </summary>
+        /// <param name=""></param>
+        /// <returns></returns>
+        public static double WidthAtHeight(double n)
+        {
+            double angle = Math.Asin(n);
+            double width = Math.Cos(angle);
+            return Math.Abs(width);
+        }
     }
 }

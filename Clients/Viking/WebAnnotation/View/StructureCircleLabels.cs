@@ -19,6 +19,7 @@ namespace WebAnnotation.View
     {
         public LabelView StructureIDLabelView;
         public LabelView StructureLabelView;
+        public LabelView StructureAttributeView;
         public LabelView ParentStructureLabelView;
 
         LocationObj locationObj = null;
@@ -112,21 +113,46 @@ namespace WebAnnotation.View
 
         private void CreateLabelObjects()
         {
-            StructureIDLabelView = new LabelView(StructureIDLabelWithTypeCode(this.locationObj.Parent), this.VolumeCircle.Center - new GridVector2(0, this.VolumeCircle.Radius / 3.0f));
-            StructureIDLabelView.MaxLineWidth = this.Radius * 2.0;
-            StructureIDLabelView._Color = this.locationObj.IsUnverifiedTerminal ? Color.Yellow : Color.Black;
+            {
+                double Height = this.VolumeCircle.Radius / 3.0f;
+                StructureIDLabelView = new LabelView(StructureIDLabelWithTypeCode(this.locationObj.Parent), this.VolumeCircle.Center - new GridVector2(0, Height));
+                StructureIDLabelView.MaxLineWidth = GridCircle.WidthAtHeight(Height / this.Radius) * (this.Radius * 2.0);
+                StructureIDLabelView._Color = this.locationObj.IsUnverifiedTerminal ? Color.Yellow : Color.Black;
+            }
 
             if (ShowAttributeLabels)
             {
-                StructureLabelView = new LabelView(this.FullLabelText(), this.VolumeCircle.Center + new GridVector2(0, this.Radius / 3.0f));
-                StructureLabelView.MaxLineWidth = this.Radius * 2;
+                string Label = this.StructureLabel();
+                if (Label == null || Label?.Length == 0)
+                {
+                    StructureLabelView = null;
+                }
+                else
+                {
+                    double height = this.Radius / 2.0f;
+                    StructureLabelView = new LabelView(Label, this.VolumeCircle.Center + new GridVector2(0, height));
+                    StructureLabelView.MaxLineWidth = GridCircle.WidthAtHeight(height / this.Radius) * (this.Radius * 2.0);
+                }
+
+                string Tags = this.TagLabel();
+                if (Tags == null || Tags?.Length == 0)
+                {
+                    StructureAttributeView = null;
+                }
+                else
+                {
+                    double height = this.Radius / 4.0f;
+                    StructureAttributeView = new LabelView(Tags, this.VolumeCircle.Center + new GridVector2(0, height));
+                    StructureAttributeView.MaxLineWidth = GridCircle.WidthAtHeight(height / this.Radius) * (this.Radius * 2.0);
+                }
             }
 
             if (locationObj.Parent != null && locationObj.Parent.ParentID.HasValue)
             {
-                ParentStructureLabelView = new LabelView(locationObj.Parent.ParentID.ToString(), this.VolumeCircle.Center + new GridVector2(0, this.Radius / 2.0f));
+                double height = this.Radius / 2.0f;
+                ParentStructureLabelView = new LabelView(locationObj.Parent.ParentID.ToString(), this.VolumeCircle.Center + new GridVector2(0, height));
                 ParentStructureLabelView._Color = Color.Red; //locationObj.Parent.Parent.Type.Color.ToXNAColor(0.75f);
-                ParentStructureLabelView.MaxLineWidth = this.Radius * 2.0;
+                ParentStructureLabelView.MaxLineWidth = GridCircle.WidthAtHeight(height / this.Radius) * (this.Radius * 2.0);
             }
             else
             {
@@ -177,11 +203,20 @@ namespace WebAnnotation.View
 
             if (ShowAttributeLabels)
             {
-                StructureLabelView.FontSize = DefaultFontSize / 2.0f;
+                if (StructureLabelView != null)
+                {
+                    StructureLabelView.FontSize = DefaultFontSize / 2.0f;
 
-                //StructureIDLabelView.Position = modelObj.VolumePosition - new GridVector2(0.0, this.Radius / 3.0f);
+                    //StructureIDLabelView.Position = modelObj.VolumePosition - new GridVector2(0.0, this.Radius / 3.0f);
 
-                StructureLabelView.Draw(spriteBatch, font, scene);
+                    StructureLabelView.Draw(spriteBatch, font, scene);
+                }
+
+                if(StructureAttributeView != null)
+                {
+                    StructureAttributeView.FontSize = DefaultFontSize / 4.0f;
+                    StructureAttributeView.Draw(spriteBatch, font, scene);
+                }
             }
 
             if (ParentStructureLabelView != null)

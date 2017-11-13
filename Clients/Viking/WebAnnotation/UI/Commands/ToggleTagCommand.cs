@@ -12,13 +12,15 @@ namespace WebAnnotation.UI.Commands
     {
         StructureObj target;
         string tag;
+        bool SetValueToUsername = false;
         public ToggleStructureTag(Viking.UI.Controls.SectionViewerControl parent, 
                                          StructureObj structure,
-                                         string Tag)
+                                         string Tag, bool setValueToUsername)
             : base(parent)
         {
             this.target = structure;
             this.tag = Tag;
+            this.SetValueToUsername = setValueToUsername;
         }
 
         public override void OnActivate()
@@ -28,7 +30,15 @@ namespace WebAnnotation.UI.Commands
 
         protected override void Execute()
         {
-            target.ToggleAttribute(this.tag);
+            if (this.SetValueToUsername)
+            {
+                target.ToggleAttribute(this.tag, WebAnnotationModel.State.UserCredentials.UserName);
+            }
+            else
+            {
+                target.ToggleAttribute(this.tag);
+            }
+
             Store.Structures.Save();
             base.Execute();
         }
@@ -38,13 +48,15 @@ namespace WebAnnotation.UI.Commands
     {
         LocationObj target;
         string tag;
+        bool SetValueToUsername = false;
         public ToggleLocationTag(Viking.UI.Controls.SectionViewerControl parent,
                                          LocationObj loc,
-                                         string Tag)
+                                         string Tag, bool setValueToUsername)
             : base(parent)
         {
             this.target = loc;
             this.tag = Tag;
+            this.SetValueToUsername = setValueToUsername;
         }
 
         public override void OnActivate()
@@ -54,7 +66,15 @@ namespace WebAnnotation.UI.Commands
 
         protected override void Execute()
         {
-            target.ToggleAttribute(this.tag);
+            if(this.SetValueToUsername)
+            {
+                target.ToggleAttribute(this.tag, WebAnnotationModel.State.UserCredentials.UserName);
+            }
+            else
+            {
+                target.ToggleAttribute(this.tag);
+            }
+            
             Store.Locations.Save();
             base.Execute();
         }

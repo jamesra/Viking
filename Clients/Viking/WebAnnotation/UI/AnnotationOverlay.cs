@@ -607,7 +607,7 @@ namespace WebAnnotation
                         ToggleStructureTagCommandAction tagStructureAction = Global.UserSettings.Actions.ToggleStructureTagCommandAction.Where(action => action.Name == h.Action).SingleOrDefault();
                         if (tagStructureAction != null)
                         {
-                            OnToggleStructureTag(tagStructureAction.Tag);
+                            OnToggleStructureTag(tagStructureAction.Tag, tagStructureAction.SetValueToUsername);
 
                             return;
                         }
@@ -615,7 +615,7 @@ namespace WebAnnotation
                         ToggleLocationTagCommandAction tagLocationAction = Global.UserSettings.Actions.ToggleLocationTagCommandAction.Where(action => action.Name == h.Action).SingleOrDefault();
                         if (tagLocationAction != null)
                         {
-                            OnToggleLocationTag(tagLocationAction.Tag);
+                            OnToggleLocationTag(tagLocationAction.Tag, tagStructureAction.SetValueToUsername);
 
                             return;
                         }
@@ -822,11 +822,9 @@ namespace WebAnnotation
                                                                         Store.Locations.Save();
                                                             }) });
         }
+         
 
-
-
-
-        protected void OnToggleStructureTag(string tag)
+        protected void OnToggleStructureTag(string tag, bool SetValueToUsername)
         {
             if(LastMouseOverObject == null)
             {
@@ -841,12 +839,12 @@ namespace WebAnnotation
                 return;
             }
                
-            Viking.UI.Commands.Command.EnqueueCommand(typeof(ToggleStructureTag), new object[] { this.Parent, Store.Structures[loc.ParentID.Value], tag});
+            Viking.UI.Commands.Command.EnqueueCommand(typeof(ToggleStructureTag), new object[] { this.Parent, Store.Structures[loc.ParentID.Value], tag, SetValueToUsername });
 
             return; 
         }
 
-        protected void OnToggleLocationTag(string tag)
+        protected void OnToggleLocationTag(string tag, bool SetValueToUsername)
         {
             if (LastMouseOverObject == null)
             {
@@ -861,7 +859,7 @@ namespace WebAnnotation
                 return;
             }
 
-            Viking.UI.Commands.Command.EnqueueCommand(typeof(ToggleLocationTag), new object[] { this.Parent, Store.Locations[loc.ID], tag });
+            Viking.UI.Commands.Command.EnqueueCommand(typeof(ToggleLocationTag), new object[] { this.Parent, Store.Locations[loc.ID], tag, SetValueToUsername });
 
             return;
         }

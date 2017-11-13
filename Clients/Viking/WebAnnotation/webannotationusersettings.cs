@@ -560,6 +560,9 @@ namespace connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd {
     
     public partial class ToggleStructureTagCommandAction : XTypedElement, IXMetaData {
         
+        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
+        private static bool SetValueToUsernameDefaultValue = System.Xml.XmlConvert.ToBoolean("0");
+        
          public static explicit operator ToggleStructureTagCommandAction(XElement xe) { return XTypedServices.ToXTypedElement<ToggleStructureTagCommandAction>(xe,LinqToXsdTypeManager.Instance as ILinqToXsdTypeManager); }
         
         public ToggleStructureTagCommandAction() {
@@ -592,6 +595,21 @@ namespace connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd {
             }
             set {
                 this.SetAttribute(XName.Get("Tag", ""), value, XmlSchemaType.GetBuiltInSimpleType(XmlTypeCode.String).Datatype);
+            }
+        }
+        
+        /// <summary>
+        /// <para>
+        /// Occurrence: optional
+        /// </para>
+        /// </summary>
+        public bool SetValueToUsername {
+            get {
+                XAttribute x = this.Attribute(XName.Get("SetValueToUsername", ""));
+                return XTypedServices.ParseValue<bool>(x, XmlSchemaType.GetBuiltInSimpleType(XmlTypeCode.Boolean).Datatype, SetValueToUsernameDefaultValue);
+            }
+            set {
+                this.SetAttribute(XName.Get("SetValueToUsername", ""), value, XmlSchemaType.GetBuiltInSimpleType(XmlTypeCode.Boolean).Datatype);
             }
         }
         
@@ -651,6 +669,9 @@ namespace connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd {
     
     public partial class ToggleLocationTagCommandAction : XTypedElement, IXMetaData {
         
+        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
+        private static bool SetValueToUsernameDefaultValue = System.Xml.XmlConvert.ToBoolean("0");
+        
          public static explicit operator ToggleLocationTagCommandAction(XElement xe) { return XTypedServices.ToXTypedElement<ToggleLocationTagCommandAction>(xe,LinqToXsdTypeManager.Instance as ILinqToXsdTypeManager); }
         
         public ToggleLocationTagCommandAction() {
@@ -683,6 +704,21 @@ namespace connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd {
             }
             set {
                 this.SetAttribute(XName.Get("Tag", ""), value, XmlSchemaType.GetBuiltInSimpleType(XmlTypeCode.String).Datatype);
+            }
+        }
+        
+        /// <summary>
+        /// <para>
+        /// Occurrence: optional
+        /// </para>
+        /// </summary>
+        public bool SetValueToUsername {
+            get {
+                XAttribute x = this.Attribute(XName.Get("SetValueToUsername", ""));
+                return XTypedServices.ParseValue<bool>(x, XmlSchemaType.GetBuiltInSimpleType(XmlTypeCode.Boolean).Datatype, SetValueToUsernameDefaultValue);
+            }
+            set {
+                this.SetAttribute(XName.Get("SetValueToUsername", ""), value, XmlSchemaType.GetBuiltInSimpleType(XmlTypeCode.Boolean).Datatype);
             }
         }
         

@@ -9,7 +9,7 @@ using System.IO;
 namespace WebAnnotationModel
 {
     
-    public class ObjAttribute : Object, IComparable<ObjAttribute>
+    public class ObjAttribute : Object, IComparable<ObjAttribute>, IComparable<String>, IEquatable<String>
     {
         public string Name { get; set; }
         public string Value { get; set; }
@@ -38,7 +38,7 @@ namespace WebAnnotationModel
             if (this.Value.Trim().Length == 0)
                 return Name;
 
-            return Name + '=' + Value;
+            return Name + ": " + Value;
         }
 
         public static string ToXml(IEnumerable<ObjAttribute> attributes)
@@ -178,6 +178,11 @@ namespace WebAnnotationModel
                 return compval;
         }
 
+        public int CompareTo(string other)
+        {
+            return String.Compare(this.Name, other);
+        }
+
         public static bool operator ==(ObjAttribute A, ObjAttribute B)
         {
             bool ANull = object.ReferenceEquals(null, A);
@@ -211,6 +216,10 @@ namespace WebAnnotationModel
             return Other.Name == this.Name;
         }
 
+        public bool Equals(string other)
+        {
+            return this.Name == other;
+        }
     }
 
 }
