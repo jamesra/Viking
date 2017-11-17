@@ -196,6 +196,12 @@ namespace TriangleNet
             return contour;
         }
 
+        public static IMesh Triangulate(this ICollection<GridVector2> points)
+        {
+
+            return Triangulate(points.Select(p => (IPoint2D)p).ToList());
+        }
+
         /// <summary>
         /// Triangulate the polygon.
         /// </summary>
@@ -204,15 +210,23 @@ namespace TriangleNet
         /// <returns></returns>
         public static IMesh Triangulate(this ICollection<IPoint2D> points)
         {
-            TriangleNet.Geometry.IPolygon polygon = points.CreatePolygon();
+            //TriangleNet.Geometry.IPolygon polygon = points.CreatePolygon();
 
+            TriangleNet.Geometry.Polygon polygon = new TriangleNet.Geometry.Polygon(points.Count);
+            TriangleNet.Geometry.Vertex[] verticies = points.Select((v, i) => new TriangleNet.Geometry.Vertex(v.X, v.Y)).ToArray();
+
+            foreach(Vertex v in verticies)
+            {
+                polygon.Add(v);
+            }
+             
             ConstraintOptions constraints = new ConstraintOptions();
             constraints.ConformingDelaunay = false;
             constraints.Convex = false;
 
             QualityOptions quality = new QualityOptions();
             quality.SteinerPoints = 0;
-
+              
             IMesh mesh = polygon.Triangulate(constraints, quality);
             return mesh;
         }

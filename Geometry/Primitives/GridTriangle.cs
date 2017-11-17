@@ -237,6 +237,56 @@ namespace Geometry
                 return Math.Abs(this.VectorProducts) / 2.0;
             }
         }
+        
+        public double[] Angles
+        {
+            get
+            {
+                double[] Angles = new double[3];
+
+                //c^2 = a^2 + b^2 - 2ab cos(theta)
+                double a = GridVector2.Distance(p1, p2);
+                double b = GridVector2.Distance(p2, p3);
+                double c = GridVector2.Distance(p3, p1);
+
+                double asqr = Math.Pow(a, 2);
+                double bsqr = Math.Pow(b, 2);
+                double csqr = Math.Pow(c, 2);
+
+                Angles[0] = Math.Acos((asqr + bsqr - csqr) / (2 * a * b));
+                Angles[1] = Math.Acos((bsqr + csqr - asqr) / (2 * b * c));
+                Angles[2] = Math.Acos((csqr + asqr - bsqr) / (2 * c * a));
+
+                return Angles; 
+            }
+        }
+        
+        /*
+        public double[] Angles
+        {
+            get
+            {
+                double[] Angles = new double[3];
+
+                Angles[0] = Math.Abs(GridVector2.ArcAngle(p1, p2, p3));
+                Angles[1] = Math.Abs(GridVector2.ArcAngle(p2, p1, p3));
+                Angles[2] = Math.Abs(GridVector2.ArcAngle(p3, p1, p2));
+
+                if (Angles[0] > Math.PI)
+                    Angles[0] = (Math.PI * 2) - Angles[0];
+
+                if (Angles[1] > Math.PI)
+                    Angles[1] = (Math.PI * 2) - Angles[1];
+
+                if (Angles[2] > Math.PI)
+                    Angles[2] = (Math.PI * 2) - Angles[2];
+
+                Debug.Assert(Math.Round(Angles.Sum(), 6) == Math.Round(Math.PI, 6));
+
+                return Angles;
+            }
+        }
+        */
 
         /// <summary>
         /// Returns true if the Point is inside the triangle

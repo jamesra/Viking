@@ -33,7 +33,8 @@ namespace MonogameTestbed
             RC1,
             RC2,
             TEMPORALMONKEY,
-            INFERIORMONKEY
+            INFERIORMONKEY,
+            RPC1
         }
 
 
@@ -44,19 +45,43 @@ namespace MonogameTestbed
                                                                                                { ENDPOINT.RC1, new Uri("http://websvc1.connectomes.utah.edu/RC1/OData") },
                                                                                                { ENDPOINT.RC2, new Uri("http://websvc1.connectomes.utah.edu/RC2/OData") },
                                                                                                { ENDPOINT.TEMPORALMONKEY, new Uri("http://websvc1.connectomes.utah.edu/NeitzTemporalMonkey/OData") },
-                                                                                               { ENDPOINT.INFERIORMONKEY, new Uri("http://websvc1.connectomes.utah.edu/NeitzInferiorMonkey/OData") }};
+                                                                                               { ENDPOINT.INFERIORMONKEY, new Uri("http://websvc1.connectomes.utah.edu/NeitzInferiorMonkey/OData") },
+                                                                                                { ENDPOINT.RPC1, new Uri("http://websvc1.connectomes.utah.edu/RPC1/OData") }};
+
+        //        long[] TroubleIDS = new long[] {
+        //            //5868, //Z: 231
+        //            //5872, //Z: 232
+        ////            6085,   //Z: 235
+        //            //1333634, //Z: 235
+        //            1026126, //Z: 234
+        //            1026127, //Z: 233
+        //            //1026128,  //Z: 232
+        //            //1026129, //Z: 231
+        //            };
+
+        /// <summary>
+        /// RPC1 Glial cell 
+        /// </summary>
+        /*long[] TroubleIDS = new long[] {
+            100075, //Z: 234
+            100076, //Z: 233
+            };
+            */
+
+        /*
+        long[] TroubleIDS = new long[] {
+            //58691, //Z: 234
+            58692, //Z: 233
+            58694
+            };
+        */
 
         long[] TroubleIDS = new long[] {
-            //5868, //Z: 231
-            //5872, //Z: 232
-//            6085,   //Z: 235
-            //1333634, //Z: 235
-            1026126, //Z: 234
-            1026127, //Z: 233
-            //1026128,  //Z: 232
-            //1026129, //Z: 231
+            82701, //Z: 234
+            82881, //Z: 233
+            82882,
+            82883
             };
-                             
 
         public void Init(MonoTestbed window)
         {
@@ -70,15 +95,17 @@ namespace MonogameTestbed
             labelCamera = new LabelView("", new GridVector2(0, 100));
 
             //meshes = InitSmallSmoothModelFromOData(144287, ENDPOINT.TEST);
-            meshes = InitSmallSmoothModelFromOData(new long[] { 1 }, ENDPOINT.RC2);
+            //meshes = InitSmallSmoothModelFromOData(new long[] { 1 }, ENDPOINT.RC2);
             //meshes = InitSmallSmoothModelFromOData(476, ENDPOINT.RC1);
+            //meshes = InitSmallSmoothModelFromOData(new long[] { 476 }, ENDPOINT.TEST);
             //meshes = InitSmallSmoothModelFromOData(476, ENDPOINT.RC1);
+            //meshes = InitSmallSmoothModelFromOData(new long[] { 2628 }, ENDPOINT.RPC1);
             //meshes = InitSmallSmoothModelFromOData(5554, ENDPOINT.RC2);
             //meshes = InitSmallSmoothModelFromOData(new long[] { 1650, 858 }, ENDPOINT.INFERIORMONKEY);
 
             //Bad polygon Location #1026126.  Position X: 62134.0	Y: 51034.8	Z: 234	DS: 1.97
             //meshes = InitSmallSmoothModelFromOData(new long[] { 180 }, ENDPOINT.TEST);
-            //meshes = InitSmallSmoothModelFromODataLocations(TroubleIDS, ENDPOINT.TEST);
+            meshes = InitSmallSmoothModelFromODataLocations(TroubleIDS, ENDPOINT.RPC1);
 
             //meshes = InitSmallSmoothModelFromOData(207, ENDPOINT.TEMPORALMONKEY);
             //meshes = InitSmallModelFromOData(476);
@@ -136,7 +163,7 @@ namespace MonogameTestbed
         public ICollection<DynamicRenderMesh<ulong>> InitSmallSmoothModelFromODataLocations(long[] LocationIDs, ENDPOINT endpoint)
         {
             AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromODataLocationIDs(LocationIDs, EndpointMap[endpoint]);
-             
+                         
             //MorphologyMesh.TopologyMeshGenerator generator = new MorphologyMesh.TopologyMeshGenerator();
             return RecursivelyGenerateMeshes(graph);
         }

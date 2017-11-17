@@ -136,11 +136,10 @@ namespace MorphologyMesh
                     //TODO: Merge the nodes in the graph 
                 }
             }
-
-
-            List<MeshNode> nodesToMerge = meshGraph.Nodes.Values.Where(n => IsValidBranchToMerge(n)).ToList();
+             
 
             /*
+            List<MeshNode> nodesToMerge = meshGraph.Nodes.Values.Where(n => IsValidBranchToMerge(n)).ToList();
             while (nodesToMerge.Count > 0)
             {
                 foreach (MeshNode node in nodesToMerge)
@@ -573,7 +572,8 @@ namespace MorphologyMesh
             return new GridPolygon(ExternalVerts, listInternalRings);
         }
 
-        private static DynamicRenderMesh<ulong> MergeMeshes(MeshNode KeepNode, MeshNode RemoveNode)
+        
+        internal static DynamicRenderMesh<ulong> MergeMeshes(MeshNode KeepNode, MeshNode RemoveNode)
         {
             DynamicRenderMesh<ulong> CompositeMesh;
              
@@ -747,20 +747,23 @@ namespace MorphologyMesh
         /// <param name="CompositeMesh">A mesh containing the verticies from both halves that need to be joined</param>
         /// <param name="UpperPort">Indicies that describe which verticies are part of the upper connection port</param>
         /// <param name="LowerPort">Indicies that describe which verticies are part of the lower connection port</param>
-        private static void AttachPorts(DynamicRenderMesh<ulong> CompositeMesh, ConnectionVerticies UpperPort, ConnectionVerticies LowerPort)
+        internal static List<GridLineSegment> AttachPorts(DynamicRenderMesh<ulong> CompositeMesh, ConnectionVerticies UpperPort, ConnectionVerticies LowerPort)
         {
             //We need to center the verticies so both ports have the same centroid.  If we do not do this the GridVector2 distance measurement latches onto a single vertex on the convex hull when the shapes do not overlap.
             //TODO: Only works on the XY axis, not for truly 3D ports
 
             if (UpperPort.Type == ConnectionPortType.CLOSED && LowerPort.Type == ConnectionPortType.CLOSED)
-                AttachClosedPorts(CompositeMesh, UpperPort, LowerPort);
+                return AttachClosedPorts(CompositeMesh, UpperPort, LowerPort);
             else if (UpperPort.Type == ConnectionPortType.OPEN && LowerPort.Type == ConnectionPortType.OPEN)
-                AttachOpenPorts(CompositeMesh, UpperPort.ExternalBorder, LowerPort.ExternalBorder); 
+                return AttachOpenPorts(CompositeMesh, UpperPort.ExternalBorder, LowerPort.ExternalBorder);
+
+            //throw new ArgumentException("Unsupported port types");
+            return new List<GridLineSegment>();
         }
 
-        private static void AttachClosedPorts(DynamicRenderMesh<ulong> CompositeMesh, ConnectionVerticies UpperPort, ConnectionVerticies LowerPort)
+        private static List<GridLineSegment> AttachClosedPorts(DynamicRenderMesh<ulong> CompositeMesh, ConnectionVerticies UpperPort, ConnectionVerticies LowerPort)
         {
-            AttachClosedPorts(CompositeMesh, UpperPort.ExternalBorder, LowerPort.ExternalBorder);
+            return AttachClosedPorts(CompositeMesh, UpperPort.ExternalBorder, LowerPort.ExternalBorder);
 
             //OK, if there are interior borders we need to figure out which ones overlap and connect the ports
             //GridPolygon[] UpperInteriorPolys = UpperPort.InternalBorders.Select(index_set => new GridPolygon(index_set.Select(i => CompositeMesh.Verticies[(int)i].Position.XY()).ToArray())).ToArray();
@@ -768,8 +771,8 @@ namespace MorphologyMesh
 
             //Interior Polys that do not have an overlapping interior poly on the other annotation need to be capped off 
         }
-
-        private static void AttachClosedPorts(DynamicRenderMesh<ulong> CompositeMesh, IIndexSet UpperIndexArray, IIndexSet LowerIndexArray)
+        
+        private static List<GridLineSegment> AttachClosedPorts(DynamicRenderMesh<ulong> CompositeMesh, IIndexSet UpperIndexArray, IIndexSet LowerIndexArray)
         {
 
             //System.Diagnostics.Debug.Assert(CompositeMesh[UpperIndexArray.First()].Position.Z >= CompositeMesh[LowerIndexArray.First()].Position.Z,
@@ -796,9 +799,7 @@ namespace MorphologyMesh
 
             //Debug.Assert(lowerPoly.Contains(LowerPortCentroid));
             //Debug.Assert(upperPoly.Contains(UpperPortCentroid));
-
-            
-
+             
             GridVector2 LowerPortConvexHullCentroid;
             GridVector2 UpperPortConvexHullCentroid;
 
@@ -829,6 +830,10 @@ namespace MorphologyMesh
             //We make sure the normal of the face we create is facing away from the shape.  
             //This value is the same for all faces so it is only calculated once.
             bool? FlipFaces = new bool?();
+
+            List<GridLineSegment> CreatedLines = new List<GridLineSegment>(UpperVerticies.Length + 1);
+
+            bool HeadsOrTails = false; 
               
             while (true)
             {
@@ -862,13 +867,39 @@ namespace MorphologyMesh
                 GridVector2 UV2 = UpperVerticies[iNextUpper];
                 GridVector2 LV2 = LowerVerticies[iNextLower];
 
-                double UpperToNextLower = Math.Abs(NextLowerVertex - UpperVertex);
-                double LowerToNextUpper = Math.Abs(NextUpperVertex - LowerVertex);
-                double distLowerToNextUpper = GridVector2.Distance(LV1, UV2);
-                double distUpperToNextLower = GridVector2.Distance(UV1, LV2);
-                double distNextUpperToNextLower = GridVector2.Distance(UV2, LV2);
+                //double UpperToNextLower = Math.Abs(NextLowerVertex - UpperVertex);
+                //double LowerToNextUpper = Math.Abs(NextUpperVertex - LowerVertex);
+                //double distLowerToNextUpper = GridVector2.Distance(LV1, UV2);
+                //double distUpperToNextLower = GridVector2.Distance(UV1, LV2);
+                //double distNextUpperToNextLower = GridVector2.Distance(UV2, LV2);
+
+                //GridTriangle TwoUpper = new GridTriangle(UV1, UV2, LV1);
+                //GridTriangle TwoLower = new GridTriangle(UV1, LV1, LV2);
+
+                GridCircle UpperCircle = GridCircle.CircleFromThreePoints(UV1, UV2, LV1);
+                GridCircle LowerCircle = GridCircle.CircleFromThreePoints(UV1, LV1, LV2);
+
+                bool LinkToUpper; 
+                if(UpperCircle.Contains(LV2) && !LowerCircle.Contains(UV2))
+                {
+                    LinkToUpper = false; 
+                }
+                else if(!UpperCircle.Contains(LV2) && LowerCircle.Contains(UV2))
+                {
+                    LinkToUpper = true;
+                }
+                else
+                {
+                    //LinkToUpper = TwoUpper.Angles.Min() >= TwoLower.Angles.Min();
+                    LinkToUpper = HeadsOrTails; //Alternate which line to add
+                    HeadsOrTails = !HeadsOrTails; 
+                }
+
+                //We want to choose the triangle with the largest internal angles
+                //bool LinkToUpper = TwoUpper.Angles.Min() >= TwoLower.Angles.Min();
+                //bool LinkToUpper = TwoUpper.Area < TwoLower.Area;
                 //bool LinkToUpper = distLowerToNextUpper < distUpperToNextLower;
-                bool LinkToUpper = LowerToNextUpper < UpperToNextLower;
+                //bool LinkToUpper = LowerToNextUpper < UpperToNextLower;
 
                 //If the next vertex would be closer to the opposite side then merge the opposite side
                 int iUpperIndex = (int)UpperIndexArray[iUpper];
@@ -881,7 +912,14 @@ namespace MorphologyMesh
                     LowerAddedCount == LowerIndexArray.Count)
                 {
                     iMiddleIndex = (int)UpperIndexArray[iNextUpper];
-                    
+
+                    try
+                    {
+                        CreatedLines.Add(new GridLineSegment(UV2, LV1));
+                    }
+                    catch(Exception)
+                    { }
+
                     f = new Face(iLowerIndex, iMiddleIndex, iUpperIndex);
 
                     if (!FlipFaces.HasValue)
@@ -896,7 +934,14 @@ namespace MorphologyMesh
                 else
                 {
                     iMiddleIndex = (int)LowerIndexArray[iNextLower];
-                    
+
+                    try
+                    {
+                        CreatedLines.Add(new GridLineSegment(LV2, UV1));
+                    }
+                    catch (Exception)
+                    { }
+
                     f = new Face(iLowerIndex, iMiddleIndex, iUpperIndex);
 
                     if (!FlipFaces.HasValue)
@@ -921,6 +966,8 @@ namespace MorphologyMesh
                 if (UpperAddedCount == UpperIndexArray.Count && LowerAddedCount == LowerIndexArray.Count)
                     break;
             }
+
+            return CreatedLines;
         }
 
         public static bool IsNormalCorrect(DynamicRenderMesh<ulong> CompositeMesh, Face face, GridPolygon p, int iStartSegment)
@@ -951,7 +998,7 @@ namespace MorphologyMesh
         }
 
 
-        private static void AttachOpenPorts(DynamicRenderMesh<ulong> CompositeMesh, IIndexSet UpperIndexArray, IIndexSet LowerIndexArray)
+        private static List<GridLineSegment> AttachOpenPorts(DynamicRenderMesh<ulong> CompositeMesh, IIndexSet UpperIndexArray, IIndexSet LowerIndexArray)
         {
             //Used to combine two lines.  Find the starting point by locating which endpoints are closest to each other.  
             GridVector2[] UpperVerticies = UpperIndexArray.Select(i => new GridVector2(CompositeMesh.Verticies[(int)i].Position.X, CompositeMesh.Verticies[(int)i].Position.Y)).ToArray();
@@ -983,6 +1030,8 @@ namespace MorphologyMesh
 
             int UpperAddedCount = 0;
             int LowerAddedCount = 0;
+
+            List<GridLineSegment> CreatedLines = new List<GridLineSegment>(UpperVerticies.Length + 1);
 
             //OK, create faces between indicies until we reach the end of both lists of verticies
             while (true)
@@ -1020,12 +1069,18 @@ namespace MorphologyMesh
                     LowerAddedCount == LowerIndexArray.Count)
                 {
                     iMiddleIndex = (int)UpperIndexArray[iNextUpper];
+
+                    CreatedLines.Add(new GridLineSegment(UpperVerticies[iNextUpper], LowerVerticies[iLower]));
+
                     iUpper = iNextUpper;
                     UpperAddedCount++;
                 }
                 else
                 {
                     iMiddleIndex = (int)lowerIndicies[iNextLower];
+
+                    CreatedLines.Add(new GridLineSegment(UpperVerticies[iUpper], LowerVerticies[iNextLower]));
+
                     iLower = iNextLower;
                     LowerAddedCount++;
                 }
@@ -1039,6 +1094,8 @@ namespace MorphologyMesh
                 if (UpperAddedCount == UpperIndexArray.Count - 1 && LowerAddedCount == LowerIndexArray.Count - 1)
                     break;
             }
+
+            return CreatedLines;
         }
 
         /// <summary>
@@ -1142,10 +1199,10 @@ namespace MorphologyMesh
 
             //GridVector2[] ConvexHullPoints = Positions2D.ConvexHull(out original_idx);
 
-            GridVector2 convexHullCenter = GridPolygon.CalculateCentroid(ConvexHullPoints);
+           // GridVector2 convexHullCenter = GridPolygon.CalculateCentroid(ConvexHullPoints);
             //GridVector2[]  PositionRelativeToCenter2D = adjustedPositions;
-            GridVector2[] PositionRelativeToCenter2D = ConvexHullPoints.Translate(-center);
-            GridVector2[] AngleAndDistance = new GridVector2[ConvexHullPoints.Length];
+            GridVector2[] PositionRelativeToCenter2D = Positions2D.Translate(-center);
+            GridVector2[] AngleAndDistance = new GridVector2[PositionRelativeToCenter2D.Length];
             GridVector3 Axis = GridVector3.UnitX;
 
             //TODO: Optimization, look for verticies where the X axis is positive
@@ -1177,7 +1234,7 @@ namespace MorphologyMesh
 
             convexHullCentroid = center;
             //Convert the convex hull index to the original index in the array
-            return original_idx[iBestVertex];
+            return iBestVertex; //original_idx[iBestVertex];
         }
     }
 }

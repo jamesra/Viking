@@ -18,6 +18,8 @@ namespace MonogameTestbed
         public LabelView[] LabelViews = new LabelView[0]; 
         private double _PointRadius = 2.0;
 
+        public bool LabelIndex = false; 
+
         public double PointRadius
         {
             get { return _PointRadius; }
@@ -38,7 +40,11 @@ namespace MonogameTestbed
             }
 
             PointViews = Points.Select(p => new CircleView( new GridCircle(p, PointRadius), Color)).ToArray();
-            LabelViews = Points.Select(p => new LabelView(p.ToLabel(), p)).ToArray();
+
+            if(!LabelIndex)
+                LabelViews = Points.Select(p => new LabelView(p.ToLabel(), p)).ToArray();
+            else
+                LabelViews = Points.Select((p,i) => new LabelView(i.ToString() + " " + p.ToLabel(), p)).ToArray();
 
             foreach (LabelView label in LabelViews)
             {

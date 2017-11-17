@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -67,7 +68,32 @@ namespace MonogameTestbed
 
     class PointSetViewCollection
     {
-        public PointSet Points = new PointSet();
+        public PointSet Points
+        {
+            get
+            {
+                return _Points; 
+            }
+            set
+            {
+                if (_Points != null)
+                {
+                    _Points.CollectionChanged -= this.OnPointCollectionChanged;
+                }
+
+                _Points = value;
+
+                if (_Points != null)
+                {
+                    _Points.CollectionChanged += this.OnPointCollectionChanged;                   
+                }
+
+                PointsView.Points = _Points;
+                UpdateViews();
+            }
+        }
+            
+        PointSet _Points = new PointSet();
         private PointSetView PointsView = new PointSetView();
         private LineSetView VoronoiView = new LineSetView();
         ConvexHullView CVView = new ConvexHullView();
@@ -79,13 +105,29 @@ namespace MonogameTestbed
             CVView.color = CVViewColor;
         }
 
+        public PointSetViewCollection(PointSet points, Color PointColor, Color VoronoiColor, Color CVViewColor)
+        {
+            Points = points;
+            PointsView.Color = PointColor;
+            VoronoiView.color = VoronoiColor;
+            CVView.color = CVViewColor;
+        }
+
         public void TogglePoint(GridVector2 p)
         {
             Points.Toggle(p);
+        }
 
+        private void UpdateViews()
+        {
             PointsView.UpdateViews();
             VoronoiView.UpdateViews(Points.Points);
             CVView.UpdateViews(Points.Points.ToArray());
+        }
+
+        public void OnPointCollectionChanged(object obj, NotifyCollectionChangedEventArgs e)
+        {
+            UpdateViews();
         }
 
         public void Draw(MonoTestbed window, Scene scene)
@@ -284,9 +326,7 @@ namespace MonogameTestbed
                 LineView.Draw(window.GraphicsDevice, scene, window.lineManager, VoronoiView.LineViews.ToArray());
 
             LineView.Draw(window.GraphicsDevice, scene, window.lineManager, PolygonViews.Where(poly => poly.LineViews != null).SelectMany(poly => poly.LineViews).ToArray());
-
-           
-
+              
             if (listLabels != null)
                 LabelView.Draw(window.spriteBatch, window.fontArial, scene, listLabels);
         }
@@ -304,6 +344,7 @@ namespace MonogameTestbed
         PolygonBorderView PolyBorderView = new PolygonBorderView();
 
         GamePadStateTracker Gamepad = new GamePadStateTracker();
+        Cursor2DCameraManipulator CameraManipulator = new Cursor2DCameraManipulator();
 
         GridVector2 Cursor;
         CircleView cursorView;
@@ -334,10 +375,10 @@ namespace MonogameTestbed
         public void Update()
         {
             GamePadState state = GamePad.GetState(PlayerIndex.One);
-            Gamepad.Update(state);
+            Gamepad.Update(state); 
 
-            //StandardCameraManipulator.Update(this.Scene.Camera);
-
+            CameraManipulator.Update(scene.Camera);
+             
             if (state.ThumbSticks.Left != Vector2.Zero)
             {
                 Cursor += state.ThumbSticks.Left.ToGridVector2();
@@ -345,37 +386,6 @@ namespace MonogameTestbed
                 cursorLabel = new LabelView(Cursor.ToLabel(), Cursor);
                 cursorLabel.FontSize = 2;
                 cursorLabel.Color = Color.Yellow;
-            }
-
-            if (state.ThumbSticks.Right != Vector2.Zero)
-            {
-                scene.Camera.LookAt += state.ThumbSticks.Right;
-            }
-
-            if(state.Triggers.Left > 0)
-            {
-                scene.Camera.Downsample *= 1.0 - (state.Triggers.Left / 10);
-
-                if(scene.Camera.Downsample <= 0.1)
-                {
-                    scene.Camera.Downsample = 0.1;
-                }
-            }
-
-            if (state.Triggers.Right > 0)
-            {
-                scene.Camera.Downsample *= 1.0 + (state.Triggers.Right / 10);
-
-                if (scene.Camera.Downsample >= 100)
-                {
-                    scene.Camera.Downsample = 100;
-                }
-            }
-
-            if(Gamepad.RightStick_Clicked)
-            {
-                scene.Camera.Downsample = 1;
-                scene.Camera.LookAt = Vector2.Zero;
             }
 
             if (Gamepad.A_Clicked)

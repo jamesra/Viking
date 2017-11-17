@@ -27,7 +27,8 @@ namespace MonogameTestbed
         GEOMETRY,
         MORPHOLOGY,
         TRIANGLEALGORITHM, 
-        BRANCHPORT
+        BRANCHPORT,
+        POLYWRAPPING
     };
 
     /// <summary>
@@ -58,10 +59,11 @@ namespace MonogameTestbed
         MorphologyTest morphologyTest = new MorphologyTest();
         TriangleAlgorithmTest triangleTest = new TriangleAlgorithmTest();
         BranchPointTest branchTest = new BranchPointTest();
+        PolywrappingTest polyWrapTest = new PolywrappingTest();
 
         SortedDictionary<TestMode, IGraphicsTest> listTests = new SortedDictionary<TestMode, IGraphicsTest>();
 
-        TestMode Mode = TestMode.BRANCHPORT;
+        TestMode Mode = TestMode.POLYWRAPPING;
 
         public static uint NumCurveInterpolations = 10;
 
@@ -137,6 +139,7 @@ namespace MonogameTestbed
             listTests.Add(TestMode.MORPHOLOGY, morphologyTest);
             listTests.Add(TestMode.TRIANGLEALGORITHM, triangleTest);
             listTests.Add(TestMode.BRANCHPORT, branchTest);
+            listTests.Add(TestMode.POLYWRAPPING, polyWrapTest);
         }
 
         /// <summary>
@@ -195,6 +198,8 @@ namespace MonogameTestbed
             if (Keyboard.GetState().IsKeyDown(Keys.F11))
                 this.Mode = TestMode.TRIANGLEALGORITHM;
             if (Keyboard.GetState().IsKeyDown(Keys.F12))
+                this.Mode = TestMode.BRANCHPORT;
+            if (Keyboard.GetState().IsKeyDown(Keys.NumPad1))
                 this.Mode = TestMode.BRANCHPORT;
 
             if (!listTests[Mode].Initialized)

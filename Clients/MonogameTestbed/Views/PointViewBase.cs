@@ -13,7 +13,7 @@ namespace MonogameTestbed
 {
     abstract class PointViewBase : IColorView
     {
-        private ICollection<GridVector2> _Points;
+        private ICollection<GridVector2> _Points = new List<GridVector2>();
         private Color _Color;
 
         public ICollection<GridVector2> Points
@@ -36,6 +36,8 @@ namespace MonogameTestbed
                 {
                     collection.CollectionChanged += this.OnCollectionChanged;
                 }
+
+                UpdateViews();
             }
         }
 

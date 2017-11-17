@@ -20,6 +20,14 @@ namespace MorphologyMesh
             return mNode;
         }
 
+        public static MeshNode CreateNode(ulong ID, IShape2D shape, double Z, bool AdjacentToPolygon)
+        {
+            MeshNode mNode = new MorphologyMesh.MeshNode(ID);
+            mNode.Mesh = CreateNodeMesh(shape, Z, ID, AdjacentToPolygon);
+            mNode.CapPort = CreatePort(shape, AdjacentToPolygon);
+            return mNode; 
+        }
+
         private static bool IsAdjacentToPolygon(MorphologyNode node)
         {
             return node.Edges.Keys.Select((nodeKey) => node.Graph.Nodes[nodeKey].Location.TypeCode).Any((code) => code != LocationType.CIRCLE);
@@ -108,6 +116,6 @@ namespace MorphologyMesh
         public static MeshEdge CreateEdge(MorphologyNode Source, MorphologyNode Target)
         {
             return new MeshEdge(Source.ID, Target.ID, CreatePort(Source), CreatePort(Target));
-        }
+        } 
     }
 }

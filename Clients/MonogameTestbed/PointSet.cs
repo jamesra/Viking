@@ -16,6 +16,15 @@ namespace MonogameTestbed
 
         public event NotifyCollectionChangedEventHandler CollectionChanged;
 
+        public PointSet()
+        {
+        }
+
+        public PointSet(IEnumerable<GridVector2> input)
+        {
+            Circles.AddRange(input.Select(p => new GridCircle(p, PointRadius)));
+        }
+
         public ICollection<GridVector2> Points
         {
             get
@@ -68,7 +77,8 @@ namespace MonogameTestbed
 
         public void Add(GridVector2 item)
         {
-            Points.Add(item);
+            GridCircle newCircle = new GridCircle(item, PointRadius);
+            Circles.Add(newCircle);
         }
 
         public void Clear()
@@ -88,7 +98,7 @@ namespace MonogameTestbed
 
         public bool Remove(GridVector2 item)
         {
-            return Points.Remove(item);
+            return Circles.RemoveAll(c => c.Contains(item)) > 0;
         }
 
         public IEnumerator<GridVector2> GetEnumerator()
