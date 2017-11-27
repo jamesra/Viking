@@ -36,12 +36,29 @@ namespace Geometry
 
                 _Centroid = null;
                 _BoundingRect = _ExteriorRing.BoundingBox();
-                _ExteriorSegments = CreateLineSegments(_ExteriorRing); 
+                _ExteriorSegments = CreateLineSegments(_ExteriorRing);
+                _ExteriorSegmentRTree = null;
             }
         }
 
         GridRectangle _BoundingRect; 
         GridLineSegment[] _ExteriorSegments;
+
+        RTree.RTree<GridLineSegment> _ExteriorSegmentRTree = null;
+
+        public RTree.RTree<GridLineSegment> ExteriorSegmentRTree
+        {
+            get
+            {
+                if(_ExteriorSegmentRTree == null)
+                {
+                    _ExteriorSegmentRTree = CreateSegmentBoundingBoxRTree(_ExteriorSegments);
+                }
+
+                return _ExteriorSegmentRTree;
+            }
+        }
+
 
         /// <summary>
         /// Read only please
@@ -292,7 +309,20 @@ namespace Geometry
             //Create a line we know must pass outside the polygon
             GridLineSegment test_line = new Geometry.GridLineSegment(p, new GridVector2(p.X + (BoundingBox.Width*2), p.Y));
 
-            bool pointInOuterRing = IsInsidePolygon(_ExteriorSegments, test_line);
+            ICollection<GridLineSegment> segmentsToTest;
+            
+            if(_ExteriorSegments.Length > 64)
+            {
+                segmentsToTest = ExteriorSegmentRTree.Intersects(test_line.BoundingBox.ToRTreeRect(0));
+                if (!segmentsToTest.Any())
+                    return false; 
+            }
+            else
+            {
+                segmentsToTest = _ExteriorSegments; 
+            }
+
+            bool pointInOuterRing = IsInsidePolygon(segmentsToTest, test_line);
             if (pointInOuterRing)
             {
                 //Check that our point is not inside an interior hole
@@ -348,8 +378,18 @@ namespace Geometry
 
             //In cases where our test line passes exactly through a vertex on the other polygon we double count the line.  
             //This code removes duplicate intersection points to prevent duplicates
+
+            return polygonSegments.Where(line =>
+            {
+                GridVector2 Intersection;
+                return line.Intersects(test_line, out Intersection);
+            }).AsParallel().Count() % 2 == 1;
+
+            /*
             SortedSet<GridVector2> intersectionPoints = new SortedSet<GridVector2>();
 
+            
+            
             foreach(GridLineSegment line in polygonSegments)
             {
                 GridVector2 Intersection;
@@ -358,9 +398,10 @@ namespace Geometry
                     intersectionPoints.Add(Intersection);
                 }
             }
+            */
 
             //Inside the polygon if we intersect an odd number of times
-            return intersectionPoints.Count % 2 == 1;
+            //return intersectionPoints.Count % 2 == 1;
         }
 
         private GridLineSegment[] CreateLineSegments(GridVector2[] ring_points)
@@ -374,6 +415,18 @@ namespace Geometry
             }
 
             return lines;
+        }
+
+        private static RTree.RTree<GridLineSegment> CreateSegmentBoundingBoxRTree(GridLineSegment[] segments)
+        {
+            RTree.RTree<GridLineSegment> R = new RTree.RTree<GridLineSegment>();
+
+            foreach(GridLineSegment l in segments)
+            {
+                R.Add(l.BoundingBox.ToRTreeRect(0), l);
+            }
+              
+            return R;
         }
 
         public GridPolygon Rotate(double angle, GridVector2? origin = null)

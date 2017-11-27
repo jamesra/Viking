@@ -32,6 +32,36 @@ namespace MorphologyMesh
             this.TargetPort = null;
         }
 
+        public ConnectionVerticies GetPortForNode(ulong NodeID)
+        {
+            if(NodeID == this.SourceNodeKey)
+            {
+                return SourcePort;
+            }
+
+            if(NodeID == this.TargetNodeKey)
+            {
+                return TargetPort; 
+            }
+
+            throw new ArgumentException("Node ID not part of edge");
+        }
+
+        public ConnectionVerticies GetOppositePortForNode(ulong NodeID)
+        {
+            if (NodeID == this.SourceNodeKey)
+            {
+                return TargetPort;
+            }
+
+            if (NodeID == this.TargetNodeKey)
+            {
+                return SourcePort;
+            }
+
+            throw new ArgumentException("Node ID not part of edge");
+        }
+
         public override string ToString()
         {
             return string.Format("{0}-{1}", SourceNodeKey, TargetNodeKey);

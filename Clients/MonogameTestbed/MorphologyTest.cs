@@ -27,26 +27,12 @@ namespace MonogameTestbed
 
         LabelView labelCamera;
 
-        public enum ENDPOINT
-        {
-            TEST,
-            RC1,
-            RC2,
-            TEMPORALMONKEY,
-            INFERIORMONKEY,
-            RPC1
-        }
+        
 
 
         bool _initialized = false;
         public bool Initialized { get { return _initialized; } }
 
-        private static Dictionary<ENDPOINT, Uri> EndpointMap = new Dictionary<ENDPOINT, Uri> { { ENDPOINT.TEST, new Uri("http://webdev.connectomes.utah.edu/RC1Test/OData") },
-                                                                                               { ENDPOINT.RC1, new Uri("http://websvc1.connectomes.utah.edu/RC1/OData") },
-                                                                                               { ENDPOINT.RC2, new Uri("http://websvc1.connectomes.utah.edu/RC2/OData") },
-                                                                                               { ENDPOINT.TEMPORALMONKEY, new Uri("http://websvc1.connectomes.utah.edu/NeitzTemporalMonkey/OData") },
-                                                                                               { ENDPOINT.INFERIORMONKEY, new Uri("http://websvc1.connectomes.utah.edu/NeitzInferiorMonkey/OData") },
-                                                                                                { ENDPOINT.RPC1, new Uri("http://websvc1.connectomes.utah.edu/RPC1/OData") }};
 
         //        long[] TroubleIDS = new long[] {
         //            //5868, //Z: 231
@@ -75,13 +61,40 @@ namespace MonogameTestbed
             58694
             };
         */
-
+        /*
         long[] TroubleIDS = new long[] {
             82701, //Z: 234
             82881, //Z: 233
             82882,
             82883
-            };
+            };*/
+        
+            /*
+        long[] TroubleIDS = new long[] {
+          //  58664,
+            58666,
+            58668,
+
+        };*/
+        /*
+        //Polygons with internal polygon
+        long[] TroubleIDS = new long[] {
+          //  58664,
+            82612, //Z: 756
+            82617, //Z: 757 Small Branch
+            82647, //Z: 757
+            82679, //Z: 758
+            82620, //Z: 758 Small Branch
+
+        };
+        */
+        //Polygons with internal polygon merging with external concavity
+        long[] TroubleIDS = new long[] {
+          //  58664,
+            82884, //Z: 767
+            82908, //Z: 768
+
+        };
 
         public void Init(MonoTestbed window)
         {
@@ -105,6 +118,7 @@ namespace MonogameTestbed
 
             //Bad polygon Location #1026126.  Position X: 62134.0	Y: 51034.8	Z: 234	DS: 1.97
             //meshes = InitSmallSmoothModelFromOData(new long[] { 180 }, ENDPOINT.TEST);
+            
             meshes = InitSmallSmoothModelFromODataLocations(TroubleIDS, ENDPOINT.RPC1);
 
             //meshes = InitSmallSmoothModelFromOData(207, ENDPOINT.TEMPORALMONKEY);
@@ -135,7 +149,7 @@ namespace MonogameTestbed
         /// </summary>
         public ICollection<DynamicRenderMesh<ulong>> InitSmallTopologyModelFromOData(int CellID, ENDPOINT endpoint)
         {
-            AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromOData(new long[] { CellID }, true, EndpointMap[endpoint]); 
+            AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromOData(new long[] { CellID }, true, DataSource.EndpointMap[endpoint]); 
 
             MorphologyMesh.TopologyMeshGenerator generator = new MorphologyMesh.TopologyMeshGenerator();
             return generator.Generate(graph.Subgraphs.Values.First()); 
@@ -146,7 +160,7 @@ namespace MonogameTestbed
         /// </summary>
         public ICollection<DynamicRenderMesh<ulong>> InitSmallSmoothModelFromOData(long[] CellIDs, ENDPOINT endpoint)
         { 
-            AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromOData(CellIDs, true, EndpointMap[endpoint]);
+            AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromOData(CellIDs, true, DataSource.EndpointMap[endpoint]);
 
             //SelectZRange(graph, 231, 235);
             //SelectSubsetOfIDs(graph, TroubleIDS);
@@ -162,7 +176,7 @@ namespace MonogameTestbed
         /// </summary>
         public ICollection<DynamicRenderMesh<ulong>> InitSmallSmoothModelFromODataLocations(long[] LocationIDs, ENDPOINT endpoint)
         {
-            AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromODataLocationIDs(LocationIDs, EndpointMap[endpoint]);
+            AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromODataLocationIDs(LocationIDs, DataSource.EndpointMap[endpoint]);
                          
             //MorphologyMesh.TopologyMeshGenerator generator = new MorphologyMesh.TopologyMeshGenerator();
             return RecursivelyGenerateMeshes(graph);

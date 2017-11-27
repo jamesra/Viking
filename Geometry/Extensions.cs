@@ -76,6 +76,11 @@ namespace Geometry
             return new RTree.Rectangle((float)p.X, (float)p.Y, (float)p.X, (float)p.Y, (float)Z, (float)Z);
         }
 
+        public static RTree.Rectangle ToRTreeRect(this IPoint2D p, int Z)
+        {
+            return new RTree.Rectangle((float)p.X, (float)p.Y, (float)p.X, (float)p.Y, (float)Z, (float)Z);
+        }
+
         public static RTree.Rectangle ToRTreeRect(this GridBox bbox)
         {
             return new RTree.Rectangle(bbox.minVals,
