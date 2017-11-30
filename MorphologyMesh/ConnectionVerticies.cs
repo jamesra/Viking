@@ -106,7 +106,8 @@ namespace MorphologyMesh
         public Geometry.GridPolygon ToPolygon(DynamicRenderMesh mesh)
         {
             GridVector2[] externalBorder = this.ExternalBorder.Select(i => mesh.Verticies[(int)i].Position.XY()).ToArray();
-            List<GridVector2[]> internalBorders = this.InternalBorders.Select(ib => ib.Select(i => mesh.Verticies[(int)i].Position.XY()).ToArray()).ToList();
+            externalBorder = externalBorder.EnsureClosedRing();
+            List<GridVector2[]> internalBorders = this.InternalBorders.Select(ib => ib.Select(i => mesh.Verticies[(int)i].Position.XY()).ToArray().EnsureClosedRing()).ToList();
             GridPolygon polygon = new GridPolygon(externalBorder, internalBorders);
             return polygon;
         }
@@ -125,10 +126,12 @@ namespace MorphologyMesh
 
             ContinuousIndexSet[] InternalBorders = new ContinuousIndexSet[shape.InteriorRings.Count];
 
-            int iStartVertex = shape.ExteriorRing.Count;
+            int iStartVertex = shape.ExteriorRing.Count-1;
             for (int i = 0; i < shape.InteriorRings.Count; i++)
             {
-                InternalBorders[i] = new ContinuousIndexSet(iStartVertex, shape.InteriorRings.ElementAt(i).Length - 1);
+                ICollection<IPoint2D> interiorRing = shape.InteriorRings.ElementAt(i);
+                InternalBorders[i] = new ContinuousIndexSet(iStartVertex, interiorRing.Count - 1);
+                iStartVertex += interiorRing.Count - 1; 
             }
 
             return new ConnectionVerticies(ExternalBorder, null, InternalBorders);

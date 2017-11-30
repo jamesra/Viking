@@ -667,9 +667,37 @@ namespace SqlGeometryUtils
         /// <returns></returns>
         public static SqlGeometry Scale(this SqlGeometry geometry, Scale scale)
         {
-            GridVector2[] points = geometry.ToPoints();
-            GridVector2[] scaled_p = points.Select(p => new GridVector2(p.X * scale.X.Value, p.Y * scale.Y.Value)).ToArray();
-            return ToGeometry(geometry.GeometryType(), scaled_p);
+            if(geometry.HasInteriorRings())
+            {
+                return ScaleShapeWithInnerRings(geometry, scale);
+            }
+            else
+            {
+                GridVector2[] points = geometry.ToPoints();
+                GridVector2[] scaled_p = points.Select(p => new GridVector2(p.X * scale.X.Value, p.Y * scale.Y.Value)).ToArray();
+                return ToGeometry(geometry.GeometryType(), scaled_p);
+            }
+            
+        }
+
+        private static SqlGeometry ScaleShapeWithInnerRings(this SqlGeometry geometry, Scale scale)
+        {
+            System.Diagnostics.Debug.Assert(geometry.GeometryType() == SupportedGeometryType.POLYGON);
+
+            int NumInteriorRings = geometry.NumInteriorRings();
+            List<GridVector2[]> InteriorRings = new List<GridVector2[]>(NumInteriorRings);
+            GridVector2[] ExteriorRing = geometry.ToPoints();
+
+            GridVector2[] ScaledExteriorRing = ExteriorRing.Select(p => new GridVector2(p.X * scale.X.Value, p.Y * scale.Y.Value)).ToArray();
+
+            for (int iRing = 0; iRing < NumInteriorRings; iRing++)
+            {
+                GridVector2[] InteriorRing = geometry.GetInteriorRing(iRing).ToPoints();
+                GridVector2[] ScaledInteriorRing = InteriorRing.Select(p => new GridVector2(p.X * scale.X.Value, p.Y * scale.Y.Value)).ToArray();
+                InteriorRings.Add(ScaledInteriorRing);
+            }
+
+            return ToGeometry(geometry.GeometryType(), ScaledExteriorRing, InteriorRings);
         }
 
         /// <summary>

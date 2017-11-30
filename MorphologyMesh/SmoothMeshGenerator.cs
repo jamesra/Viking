@@ -548,7 +548,7 @@ namespace MorphologyMesh
 
             foreach (IIndexSet internalRing in port.InternalBorders)
             {
-                foreach (long index in port.ExternalBorder)
+                foreach (long index in internalRing)
                 {
                     GridVector2 XY = new GridVector2(mesh[index].Position.X, mesh[index].Position.Y);
                     VertToMeshIndex.Add(XY, index);
@@ -561,11 +561,12 @@ namespace MorphologyMesh
         private static GridPolygon PolygonForPort(DynamicRenderMesh mesh, ConnectionVerticies port)
         {
             GridVector2[] ExternalVerts = port.ExternalBorder.Select(i => mesh.Verticies[(int)i].Position.XY()).ToArray();
+            ExternalVerts = ExternalVerts.EnsureClosedRing();
 
             List<GridVector2[]> listInternalRings = new List<GridVector2[]>(port.InternalBorders.Length);
             foreach(IIndexSet internalRing in port.InternalBorders)
             {
-                GridVector2[] InternalVerts = internalRing.Select(i => mesh.Verticies[(int)i].Position.XY()).ToArray();
+                GridVector2[] InternalVerts = internalRing.Select(i => mesh.Verticies[(int)i].Position.XY()).ToArray().EnsureClosedRing();
                 listInternalRings.Add(InternalVerts);
             }
 
@@ -890,6 +891,7 @@ namespace MorphologyMesh
                 }
                 else
                 {
+                    //We can't decide which triangle is more ideal, so consume a vertex from the shape with the most verticies unassigned
                     //LinkToUpper = TwoUpper.Angles.Min() >= TwoLower.Angles.Min();
                     LinkToUpper = HeadsOrTails; //Alternate which line to add
                     HeadsOrTails = !HeadsOrTails; 
