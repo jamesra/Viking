@@ -7,6 +7,120 @@ using System.Collections.ObjectModel;
 
 namespace Geometry
 {
+    [Serializable()]
+    public struct PointIndex : IComparable<PointIndex>
+    {
+        public readonly GridVector2 Point;
+
+        /// <summary>
+        /// The index of the polygon 
+        /// </summary>
+        public readonly int iPoly;
+
+        /// <summary>
+        /// The index of the inner polygon, or no value if part of the external border
+        /// </summary>
+        public readonly int? iInnerPoly;
+
+        /// <summary>
+        /// The index of the vertex
+        /// </summary>
+        public readonly int iVertex;
+
+        public bool IsInner
+        {
+            get
+            {
+                return iInnerPoly.HasValue;
+            }
+        }
+
+        public PointIndex(GridVector2 p, int poly, int iV)
+        {
+            Point = p;
+            iPoly = poly;
+            iInnerPoly = new int?();
+            this.iVertex = iV;
+        }
+
+        public PointIndex(GridVector2 p, int poly, int? innerPoly, int iV)
+        {
+            Point = p;
+            iPoly = poly;
+            iInnerPoly = innerPoly;
+            this.iVertex = iV;
+        }
+
+        // override object.Equals
+        public override bool Equals(object obj)
+        {
+            //       
+            // See the full list of guidelines at
+            //   http://go.microsoft.com/fwlink/?LinkID=85237  
+            // and also the guidance for operator== at
+            //   http://go.microsoft.com/fwlink/?LinkId=85238
+            //
+
+            if (object.ReferenceEquals(obj, null) || GetType() != obj.GetType())
+            {
+                return false;
+            }
+
+            PointIndex other = (PointIndex)obj;
+
+            if(other.iPoly != this.iPoly)
+            {
+                return false;
+            }
+
+            if(other.iVertex != this.iVertex)
+            {
+                return false; 
+            }
+
+            if(other.Point != this.Point)
+            {
+                return false;
+            }
+
+            if(other.iInnerPoly != this.iInnerPoly)
+            {
+                return false;
+            }
+
+            return true; 
+        }
+
+        // override object.GetHashCode
+        public override int GetHashCode()
+        { 
+            return this.iVertex;
+        }
+
+        public int CompareTo(PointIndex other)
+        {
+            if (this.iPoly != other.iPoly)
+                return this.iPoly.CompareTo(other.iPoly);
+
+            if (this.iInnerPoly != other.iInnerPoly)
+            {
+                if(this.iInnerPoly.HasValue && other.iInnerPoly.HasValue)
+                {
+                    return this.iInnerPoly.Value.CompareTo(other.iInnerPoly.Value);
+                }
+
+                return this.iInnerPoly.HasValue ? 1 : -1;
+            }
+
+            if(this.iVertex != other.iVertex)
+            {
+                return this.iVertex.CompareTo(other.iVertex);
+            }
+
+            return this.Point.CompareTo(other.Point);
+        }
+    }
+
     /// <summary>
     /// A polygon with interior rings representing holes
     /// Rings are described by points.  The first and last point should match
@@ -46,7 +160,7 @@ namespace Geometry
 
         RTree.RTree<GridLineSegment> _ExteriorSegmentRTree = null;
 
-        public RTree.RTree<GridLineSegment> ExteriorSegmentRTree
+        internal RTree.RTree<GridLineSegment> ExteriorSegmentRTree
         {
             get
             {
@@ -698,6 +812,42 @@ namespace Geometry
             return this.Translate(v);
         }
 
-        
+        public static Dictionary<GridVector2, PointIndex> CreatePointToPolyMap(GridPolygon[] Polygons)
+        {
+            Dictionary<GridVector2, PointIndex> pointToPoly = new Dictionary<GridVector2, PointIndex>();
+            for (int iPoly = 0; iPoly < Polygons.Length; iPoly++)
+            {
+                GridPolygon poly = Polygons[iPoly];
+                GridVector2[] polyPoints = poly.ExteriorRing;
+                for(int iVertex = 0; iVertex < poly.ExteriorRing.Length; iVertex++)
+                {
+                    GridVector2 p = poly.ExteriorRing[iVertex];
+
+                    if (pointToPoly.ContainsKey(p))
+                        continue;
+
+                    PointIndex value = new PointIndex(p, iPoly, iVertex);
+                    pointToPoly.Add(p, value);
+                }
+
+                for (int iInnerPoly = 0; iInnerPoly < poly.InteriorPolygons.Count; iInnerPoly++)
+                {
+                    GridPolygon innerPolygon = poly.InteriorPolygons.ElementAt(iInnerPoly);
+
+                    for (int iVertex = 0; iVertex < innerPolygon.ExteriorRing.Length; iVertex++)
+                    {
+                        GridVector2 p = innerPolygon.ExteriorRing[iVertex];
+
+                        if (pointToPoly.ContainsKey(p))
+                            continue;
+
+                        PointIndex value = new PointIndex(p, iPoly, iInnerPoly, iVertex);
+                        pointToPoly.Add(p, value);
+                    }
+                }
+            }
+
+            return pointToPoly;
+        }
     }
 }

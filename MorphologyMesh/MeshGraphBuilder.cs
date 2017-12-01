@@ -72,7 +72,7 @@ namespace MorphologyMesh
                 MeshEdge mEdge = SmoothMeshGraphGenerator.CreateEdge(graph.Nodes[edge.SourceNodeKey], graph.Nodes[edge.TargetNodeKey]);
                 meshGraph.AddEdge(mEdge);
             }
-
+             
             foreach (MeshNode node in meshGraph.Nodes.Values.Where(n => n.GetEdgesAbove().Length > 0).ToArray())
             {
                 CreatePortsForBranch(node, node.GetEdgesAbove().SelectMany(e => node.Edges[e]).ToArray());
@@ -108,14 +108,7 @@ namespace MorphologyMesh
             other_nodes = edges.Select(e => graph.Nodes[e.SourceNodeKey == node.Key ? e.TargetNodeKey : e.SourceNodeKey]).ToArray();
 
             ulong[] nodeKeys = other_nodes.Select(n => n.Key).ToArray();
-            /*
-            //Temp
-            foreach (MeshNode other in other_nodes)
-            {
-                node.MeshGraph.RemoveEdge(node.Edges[other.Key].First());
-            }
-            */
-                        
+                                   
             //Build a set of all points in the polygons
             List<GridPolygon> Polygons = new List<GridPolygon>();
              
@@ -127,6 +120,8 @@ namespace MorphologyMesh
                 Polygons.Add(branchNode.CapPort.ToPolygon(branchNode.Mesh));
             }
 
+            Dictionary<GridVector2, PointIndex> pointToPoly = GridPolygon.CreatePointToPolyMap(Polygons.ToArray());
+
             ulong[] PolygonToNodeKey = new ulong[other_nodes.Length + 1];
             PolygonToNodeKey[0] = node.Key;
 
@@ -134,8 +129,7 @@ namespace MorphologyMesh
             {
                 PolygonToNodeKey[iNode + 1] = other_nodes[iNode].Key;
             }
-
-
+             
             List <GridVector2> points = new List<GridVector2>(Polygons.Select(p => p.ExteriorRing.Length).Sum());
             foreach (GridPolygon p in Polygons)
             {
@@ -145,10 +139,8 @@ namespace MorphologyMesh
             IMesh mesh = points.Triangulate();
 
             GridLineSegment[] lines = mesh.ToLines().ToArray();
-
-            Dictionary<GridVector2, int> pointToPoly = CreatePointToPolyMap(Polygons);
-
-            Dictionary<GridVector2, SortedSet<int>> pointToConnectedPolys = new Dictionary<GridVector2, SortedSet<int>>();
+             
+            Dictionary<GridVector2, SortedSet<PointIndex>> pointToConnectedPolys = new Dictionary<GridVector2, SortedSet<PointIndex>>();
 
             GridVector2[] midpoints = lines.Select(l => l.PointAlongLine(0.5)).AsParallel().ToArray();
             
@@ -161,14 +153,23 @@ namespace MorphologyMesh
                 if (!pointToPoly.ContainsKey(l.A) || !pointToPoly.ContainsKey(l.B))
                     continue;
 
-                int APoly = pointToPoly[l.A];
-                int BPoly = pointToPoly[l.B];
+                PointIndex APolyIndex = pointToPoly[l.A];
+                PointIndex BPolyIndex = pointToPoly[l.B];
+
+                int APoly = APolyIndex.iPoly;
+                int BPoly = APolyIndex.iPoly;
 
                 //Line between the same polygon.  We can ignore but add it to the list for that vertex (Right thing to do?)
                 if (APoly == BPoly)
                 {
-                    CreateOrAddToSet(pointToConnectedPolys, l.A, APoly); 
-                    CreateOrAddToSet(pointToConnectedPolys, l.B, APoly);
+                    if(APolyIndex.IsInner ^ BPolyIndex.IsInner)
+                    {
+                        CreateOrAddToSet(pointToConnectedPolys, l.A, BPolyIndex);
+                        CreateOrAddToSet(pointToConnectedPolys, l.B, APolyIndex);
+                    }
+
+                    CreateOrAddToSet(pointToConnectedPolys, l.A, APolyIndex); 
+                    CreateOrAddToSet(pointToConnectedPolys, l.B, BPolyIndex);
                     continue; 
                 }
 
@@ -185,52 +186,67 @@ namespace MorphologyMesh
                     continue;
                 }
                 
-                CreateOrAddToSet(pointToConnectedPolys, l.A, APoly);
-                CreateOrAddToSet(pointToConnectedPolys, l.A, BPoly);
-                CreateOrAddToSet(pointToConnectedPolys, l.B, APoly);
-                CreateOrAddToSet(pointToConnectedPolys, l.B, BPoly);
+                CreateOrAddToSet(pointToConnectedPolys, l.A, APolyIndex);
+                CreateOrAddToSet(pointToConnectedPolys, l.A, BPolyIndex);
+                CreateOrAddToSet(pointToConnectedPolys, l.B, APolyIndex);
+                CreateOrAddToSet(pointToConnectedPolys, l.B, BPolyIndex);
             }
             
-
             for (int iEdge = 0; iEdge < edges.Length; iEdge++)
             {
                 MeshEdge edge = edges[iEdge];
-                ConnectionVerticies port = edge.GetPortForNode(node.Key);
                 
-                bool[] VertexInPort = new bool[port.ExternalBorder.Count];
-                for(int iVertex = 0; iVertex < port.ExternalBorder.Count; iVertex++)
-                { 
-                    GridVector2 v = node.Mesh.Verticies[(int)port.ExternalBorder[iVertex]].Position.XY();
-                    if (!pointToConnectedPolys.ContainsKey(v))
-                    {
-                        VertexInPort[iVertex] = iVertex > 0 ? VertexInPort[iVertex - 1] : false;
-                        continue;
-                    }
-
-                    SortedSet<int> Connected = pointToConnectedPolys[v];
-
-                    SortedSet<ulong> ConnectedKeys = new SortedSet<ulong>(Connected.Select(i => PolygonToNodeKey[i]));
-
-                    VertexInPort[iVertex] = ConnectedKeys.Contains(edge.SourceNodeKey) && ConnectedKeys.Contains(edge.TargetNodeKey);
-                }
-
-                long[] PortIndices = new long[VertexInPort.Sum(b => b ? 1 : 0)];
-                int iAdded = 0; 
-                for(int iVertex = 0; iVertex < port.ExternalBorder.Count; iVertex++)
-                {
-                    if (!VertexInPort[iVertex])
-                        continue;
-
-                    PortIndices[iAdded] = port.ExternalBorder[iVertex];
-                    iAdded += 1; 
-                }
-
-                PortIndices = PortIndices.Distinct().ToArray();
-                if (PortIndices.Length >= 3)
-                {
-                    port.ExternalBorder = new Geometry.Meshing.IndexSet(PortIndices);
-                }
+                GeneratePortFromTriangulation(node, edge, pointToConnectedPolys, PolygonToNodeKey);
             }
+        }
+
+        /// <summary>
+        /// Replace the external port for the node connected to the edge using data provided by triangulating the exterior and interior polygons of shapes on both sides of the edge
+        /// </summary>
+        /// <param name="node"></param>
+        /// <param name="edge"></param>
+        /// <param name="pointToConnectedPolys">A map indicating which polygon verticies each vertex is connected to in the triangulation</param>
+        /// <returns></returns>
+        private static void GeneratePortFromTriangulation(MeshNode node, MeshEdge edge, Dictionary<GridVector2, SortedSet<PointIndex>> pointToConnectedPolys, ulong[] PolygonToNodeKey)
+        {
+            ConnectionVerticies port = edge.GetPortForNode(node.Key);
+            ConnectionVerticies other_port = edge.GetOppositePortForNode(node.Key);
+
+            bool[] VertexInPort = new bool[port.ExternalBorder.Count];
+            for (int iVertex = 0; iVertex < port.ExternalBorder.Count; iVertex++)
+            {
+                GridVector2 v = node.Mesh.Verticies[(int)port.ExternalBorder[iVertex]].Position.XY();
+                if (!pointToConnectedPolys.ContainsKey(v))
+                {
+                    VertexInPort[iVertex] = iVertex > 0 ? VertexInPort[iVertex - 1] : false;
+                    continue;
+                }
+
+                SortedSet<PointIndex> Connected = pointToConnectedPolys[v];
+
+                SortedSet<ulong> ConnectedKeys = new SortedSet<ulong>(Connected.Select(i => PolygonToNodeKey[i.iPoly]));
+
+                VertexInPort[iVertex] = ConnectedKeys.Contains(edge.SourceNodeKey) && ConnectedKeys.Contains(edge.TargetNodeKey);
+            }
+
+            long[] PortIndices = new long[VertexInPort.Sum(b => b ? 1 : 0)];
+            int iAdded = 0;
+            for (int iVertex = 0; iVertex < port.ExternalBorder.Count; iVertex++)
+            {
+                if (!VertexInPort[iVertex])
+                    continue;
+
+                PortIndices[iAdded] = port.ExternalBorder[iVertex];
+                iAdded += 1;
+            }
+
+            PortIndices = PortIndices.Distinct().ToArray();
+            if (PortIndices.Length >= 3)
+            {
+                port.ExternalBorder = new Geometry.Meshing.IndexSet(PortIndices);
+            }
+
+            
         }
 
         /// <summary>
@@ -239,11 +255,11 @@ namespace MorphologyMesh
         /// <param name="dict"></param>
         /// <param name="key"></param>
         /// <param name="iPoly"></param>
-        private static void CreateOrAddToSet(Dictionary<GridVector2, SortedSet<int>> dict, GridVector2 key, int iPoly)
+        private static void CreateOrAddToSet(Dictionary<GridVector2, SortedSet<PointIndex>> dict, GridVector2 key, PointIndex iPoly)
         {
             if(!dict.ContainsKey(key))
             {
-                dict[key] = new SortedSet<int>();
+                dict[key] = new SortedSet<PointIndex>();
             }
 
             dict[key].Add(iPoly);

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using RTree;
 
 namespace Geometry
 {
@@ -338,7 +339,8 @@ namespace Geometry
                 return true;
 
             //Do any exterior line segments intersect our circle?
-            foreach (GridLineSegment line in poly.ExteriorSegments)
+            List<GridLineSegment> Candidates = poly.ExteriorSegmentRTree.Intersects(circle.BoundingBox.ToRTreeRect(0));
+            foreach (GridLineSegment line in Candidates)
             {
                 if (circle.Intersects(line))
                     return true;
@@ -349,7 +351,8 @@ namespace Geometry
             GridPolygon inner_poly = null;
             if (poly.InteriorPolygonContains(circle.Center, out inner_poly))
             {
-                foreach (GridLineSegment line in inner_poly.ExteriorSegments)
+                Candidates = inner_poly.ExteriorSegmentRTree.Intersects(circle.BoundingBox.ToRTreeRect(0));
+                foreach (GridLineSegment line in Candidates)
                 {
                     if (circle.Intersects(line))
                         return true;
@@ -418,7 +421,8 @@ namespace Geometry
                     return true;
             }
 
-            foreach (GridLineSegment line in poly.ExteriorSegments)
+            List<GridLineSegment> Candidates = poly.ExteriorSegmentRTree.Intersects(rect.ToRTreeRect(0));
+            foreach (GridLineSegment line in Candidates)
             {
                 if (rect.Intersects(line))
                     return true;
@@ -507,16 +511,18 @@ namespace Geometry
             if (false == line.BoundingBox.Intersects(poly.BoundingBox))
                 return false;
 
-            if (poly.Contains(line.A) || poly.Contains(line.B))
-                return true; 
+            List<GridLineSegment> listCandidates = poly.ExteriorSegmentRTree.Intersects(line.BoundingBox.ToRTreeRect(0));
 
-            foreach(GridLineSegment poly_line in poly.ExteriorSegments)
+            foreach(GridLineSegment poly_line in listCandidates)
             {
                 if (line.Intersects(poly_line))
                     return true; 
             }
 
-            return false; 
+            if (poly.Contains(line.A) || poly.Contains(line.B))
+                return true;
+
+            return false;
         }
     }
 
@@ -553,7 +559,7 @@ namespace Geometry
             if (other.ExteriorRing.Where(p => poly.Contains(p)).Any())
                 return true;
 
-            foreach(GridLineSegment line in poly.ExteriorSegments)
+            foreach (GridLineSegment line in poly.ExteriorSegments)
             {
                 if (other.Intersects(line))
                     return true;
@@ -561,5 +567,79 @@ namespace Geometry
 
             return false;
         }
+
+        /*
+        public static bool Intersections(GridPolygon A, GridPolygon B, out GridLineSegment[] AIntersections, out GridLineSegment[] BIntersections)
+        {
+            if (false == A.BoundingBox.Intersects(B.BoundingBox))
+            {
+                AIntersections = new GridLineSegment[0];
+                BIntersections = new GridLineSegment[0];
+                return false;
+            }
+
+            List<GridLineSegment> AMatches = new List<Geometry.GridLineSegment>();
+            List<GridLineSegment> BMatches = new List<Geometry.GridLineSegment>();
+
+            foreach(GridLineSegment ALine in A.ExteriorSegments)
+            {
+                bool AAdded = false;
+                List<GridLineSegment> BCandidates = B.ExteriorSegmentRTree.Intersects(ALine.BoundingBox.ToRTreeRect(0));
+                foreach (GridLineSegment BLine in BCandidates)
+                {
+                    if(ALine.Intersects(BLine))
+                    {
+                        BMatches.Add(BLine);
+                        if (!AAdded)
+                        {
+                            AMatches.Add(ALine);
+                            AAdded = true;
+                        }   
+                    }
+                }
+            }
+
+            AIntersections = AMatches.ToArray();
+            BIntersections = BMatches.ToArray();
+
+            return AIntersections.Length > 0 || BIntersections.Length > 0;
+        }
+
+        public static bool NonIntersectingSegments(GridPolygon A, GridPolygon B, out GridLineSegment[] AIntersections, out GridLineSegment[] BIntersections)
+        {
+            if (false == A.BoundingBox.Intersects(B.BoundingBox))
+            {
+                AIntersections = new GridLineSegment[0];
+                BIntersections = new GridLineSegment[0];
+                return false;
+            }
+
+            List<GridLineSegment> AMatches = new List<Geometry.GridLineSegment>();
+            List<GridLineSegment> BMatches = new List<Geometry.GridLineSegment>();
+
+            foreach (GridLineSegment ALine in A.ExteriorSegments)
+            {
+                bool AAdded = false;
+                List<GridLineSegment> BCandidates = B.ExteriorSegmentRTree.Intersects(ALine.BoundingBox.ToRTreeRect(0));
+                foreach (GridLineSegment BLine in BCandidates)
+                {
+                    if (ALine.Intersects(BLine))
+                    {
+                        BMatches.Add(BLine);
+                        if (!AAdded)
+                        {
+                            AMatches.Add(ALine);
+                            AAdded = true;
+                        }
+                    }
+                }
+            }
+
+            AIntersections = AMatches.ToArray();
+            BIntersections = BMatches.ToArray();
+
+            return AIntersections.Length > 0 || BIntersections.Length > 0;
+        }
+        */
     }
 }
