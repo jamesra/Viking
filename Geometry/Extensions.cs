@@ -8,6 +8,25 @@ using MathNet.Numerics.LinearAlgebra;
 
 namespace Geometry
 {
+
+    public static class SortingExtensions
+    {
+        /// sort array 'rg', returning the original index positions
+        public static int[] SortAndIndex<T>(this T[] rg)
+        {
+            int i, c = rg.Length;
+            var keys = new int[c];
+            if (c > 1)
+            {
+                for (i = 0; i < c; i++)
+                    keys[i] = i;
+
+                System.Array.Sort(rg, keys /*, ... */);
+            }
+            return keys;
+        }
+    }
+
     public static class ArrayToStringExtensions
     {
         public static string ToCSV(this double[] array, string delimiter = ", ", string format = "F2")
@@ -85,6 +104,17 @@ namespace Geometry
         {
             return new RTree.Rectangle(bbox.minVals,
                                        bbox.maxVals);
+        }
+
+        public static RTree.RTree<GridLineSegment> ToRTree(this IEnumerable<GridLineSegment> lines)
+        {
+            RTree.RTree<GridLineSegment> rTree = new RTree<Geometry.GridLineSegment>();
+            foreach(GridLineSegment l in lines)
+            {
+                rTree.Add(l.BoundingBox.ToRTreeRect(0), l);
+            }
+
+            return rTree;
         }
 
     }
@@ -593,7 +623,7 @@ namespace Geometry
         static public GridVector2? IntersectionPoint(this ICollection<GridVector2> Verticies, GridLineSegment testSeg)
         {
             GridLineSegment[] segments = GridLineSegment.SegmentsFromPoints(Verticies.ToArray());
-            return segments.IntersectionPoint(testSeg);
+            return segments.IntersectionPoint(testSeg, false);
         }
 
 
@@ -711,10 +741,16 @@ namespace Geometry
         /// Return the intersection point with a value if the provided line intersects any segment of our polyline.
         /// </summary>
         /// <param name="position"></param>
+        /// <param name="IgnoreEndpoints">Ignore line segments where the endpoints are identical</param>
         /// <returns></returns>
-        static public GridVector2? IntersectionPoint(this ICollection<GridLineSegment> segments, GridLineSegment testSeg)
+        static public GridVector2? IntersectionPoint(this ICollection<GridLineSegment> segments, GridLineSegment testSeg, bool IgnoreEndpoints)
         {
             GridVector2 intersection;
+
+            if (IgnoreEndpoints)
+            {
+                segments = segments.Where(s => !s.SharedEndPoint(testSeg)).ToList();
+            }
 
             foreach (GridLineSegment existingLine in segments)
             {
