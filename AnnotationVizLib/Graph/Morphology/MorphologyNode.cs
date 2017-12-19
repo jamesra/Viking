@@ -87,5 +87,41 @@ namespace AnnotationVizLib
                 return _Subgraphs.Select(sid => Graph.Subgraphs[sid]).ToList();
             }
         }
+
+        public bool IsNodeAbove(MorphologyNode other)
+        {
+            return other.Z > this.Z;
+        }
+
+        public bool IsNodeBelow(MorphologyNode other)
+        {
+            return other.Z < this.Z;
+        }
+
+        /// <summary>
+        /// Return edges conneted to nodes above this node in Z
+        /// </summary>
+        public ulong[] GetEdgesAbove(MorphologyGraph graph = null)
+        {
+            if (graph == null)
+            {
+                graph = this.Graph;
+            }
+
+            return this.Edges.Where(e => this.IsNodeAbove(graph.Nodes[e.Key])).Select(e => e.Key).ToArray();
+        }
+
+        /// <summary>
+        /// Return edges conneted to nodes above this node in Z
+        /// </summary>
+        public ulong[] GetEdgesBelow(MorphologyGraph graph = null)
+        {
+            if (graph == null)
+            {
+                graph = this.Graph;
+            }
+
+            return this.Edges.Where(e => this.IsNodeBelow(graph.Nodes[e.Key])).Select(e => e.Key).ToArray();
+        }
     }
 }
