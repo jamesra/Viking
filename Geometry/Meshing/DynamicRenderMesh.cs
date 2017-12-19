@@ -239,6 +239,11 @@ namespace Geometry.Meshing
             }
         }
 
+        public IEnumerable<Vertex> GetVerts(IIndexSet vertIndicies)
+        {
+            return vertIndicies.Select(i => this.Verticies[(int)i]);
+        }
+
         public IEnumerable<Vertex> GetVerts(ICollection<int> vertIndicies)
         {
             return vertIndicies.Select(i => this.Verticies[i]);
