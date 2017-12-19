@@ -270,9 +270,45 @@ namespace Geometry
         /// <param name="seg"></param>
         /// <param name="Endpoint"></param>
         /// <returns></returns>
+        public bool SharedEndPoint(GridLineSegment seg)
+        {
+            bool AMatch = A == seg.A || A == seg.B;
+            bool BMatch = B == seg.A || B == seg.B;
+
+            return AMatch || BMatch;
+        }
+
+        /// <summary>
+        /// Return true if either point at each end of the line matches an endpoint of the passed segment
+        /// </summary>
+        /// <param name="seg"></param>
+        /// <param name="Endpoint"></param>
+        /// <returns></returns>
         public bool SharedEndPoint(GridLineSegment seg, out GridVector2 Endpoint)
         {
-            throw new NotImplementedException("SharedEndPoint not implemented");
+            bool AMatch = A == seg.A || A == seg.B;
+            bool BMatch = B == seg.A || B == seg.B;
+             
+            if(AMatch || BMatch)
+            {
+                Endpoint = AMatch ? A : B;
+                return true;
+            }
+            else
+            {
+                Endpoint = GridVector2.Zero;
+                return false;
+            }
+        }
+
+        public bool IsEndpoint(GridVector2 p)
+        {
+            return A == p || B == p;
+        }
+
+        public GridVector2 OppositeEndpoint(GridVector2 p)
+        {
+            return A == p ? B : A;
         }
 
         public GridVector2 Bisect()
@@ -296,6 +332,16 @@ namespace Geometry
         public bool Contains(GridVector2 p)
         {
             return Math.Abs(this.DistanceToPoint(p)) < Global.Epsilon;
+        }
+
+        /// <summary>
+        /// Project the point p onto the line
+        /// </summary>
+        /// <param name="p"></param>
+        /// <returns></returns>
+        public double Dot(GridVector2 p)
+        {
+            return GridVector2.Dot(p - A, B - A);
         }
 
         public double DistanceToPoint(GridVector2 point)
@@ -493,7 +539,7 @@ namespace Geometry
             }
         }
 
-        public bool Intersects(GridLineSegment[] seg)
+        public bool Intersects(IEnumerable<GridLineSegment> seg)
         {
             GridLineSegment line = this;
             return seg.Any(ls => line.Intersects(ls));
