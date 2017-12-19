@@ -131,7 +131,7 @@ namespace GeometryTests
         }
 
         [TestMethod]
-        public void ContainsTest()
+        public void ConvexContainsTest()
         {
             GridPolygon box = CreateBoxPolygon(10);
             Assert.IsFalse(box.Contains(new GridVector2(-15, 5)));
@@ -139,11 +139,15 @@ namespace GeometryTests
             Assert.IsTrue(box.Contains(new GridVector2(0, 0)));
 
             GridPolygon inner_box = CreateBoxPolygon(5);
-
+            Assert.IsTrue(box.Contains(inner_box));
+            
+            //OK, add an inner ring and make sure contains works
             box.AddInteriorRing(inner_box.ExteriorRing);
 
             Assert.IsFalse(box.Contains(new GridVector2(-15, 5)));
             Assert.IsFalse(box.Contains(new GridVector2(0, 0)));
+            
+            
         }
 
         [TestMethod]
@@ -153,7 +157,15 @@ namespace GeometryTests
             Assert.IsFalse(box.Contains(new GridVector2(-15, 5)));
             Assert.IsTrue(box.Contains(new GridVector2(-6.6, -6.6)));
             Assert.IsFalse(box.Contains(new GridVector2(0, 0)));
+            Assert.IsTrue(box.Contains(box.ExteriorRing.First()));
+
+            GridPolygon outside = CreateUPolygon(1);
+            Assert.IsFalse(box.Contains(outside));
+
+            GridPolygon inside = outside.Translate(new GridVector2(0, -7.5));
+            Assert.IsTrue(box.Contains(inside));
         }
+        
 
         [TestMethod]
         public void AddRemoveVertexTest()
@@ -178,6 +190,52 @@ namespace GeometryTests
             box.RemoveVertex(newVertex - new GridVector2(1,1));
             Assert.AreEqual(box.ExteriorRing.Length, numOriginalVerticies);
             Assert.IsTrue(box.ExteriorRing.All(p => p != newVertex));
+        }
+
+        [TestMethod]
+        public void AddPointsAtIntersectionsTest()
+        {
+            GridPolygon box = CreateBoxPolygon(10);
+            GridPolygon U = CreateUPolygon(10);
+
+            //Move the box so the top line is along Y=0 
+            box = box.Translate(new GridVector2(0, -10));
+
+            //This should add four verticies
+            int OriginalVertCount = U.ExteriorRing.Length;
+            U.AddPointsAtIntersections(box);
+
+            Assert.IsTrue(OriginalVertCount + 4 == U.ExteriorRing.Length);
+            Assert.IsTrue(U.ExteriorRing.Contains(new GridVector2(-10, 0)));
+            Assert.IsTrue(U.ExteriorRing.Contains(new GridVector2(10, 0)));
+            Assert.IsTrue(U.ExteriorRing.Contains(new GridVector2(-5, 0)));
+            Assert.IsTrue(U.ExteriorRing.Contains(new GridVector2(5, 0)));   
+        }
+
+        [TestMethod]
+        public void AddPointsAtIntersectionsTest2()
+        {
+            GridPolygon box = CreateBoxPolygon(10);
+            GridPolygon OuterBox = CreateBoxPolygon(15);
+            GridPolygon U = CreateUPolygon(10);
+
+            //Add the U polygon as an interior polygon
+            OuterBox.AddInteriorRing(U);
+
+            //Move the box so the top line is along Y=0 
+            box = box.Translate(new GridVector2(0, -10));
+
+            //This should add four verticies
+            int OriginalVertCount = U.ExteriorRing.Length;
+            U.AddPointsAtIntersections(box);
+
+            GridPolygon NewU = OuterBox.InteriorPolygons.First();
+
+            Assert.IsTrue(OriginalVertCount + 4 == NewU.ExteriorRing.Length);
+            Assert.IsTrue(NewU.ExteriorRing.Contains(new GridVector2(-10, 0)));
+            Assert.IsTrue(NewU.ExteriorRing.Contains(new GridVector2(10, 0)));
+            Assert.IsTrue(NewU.ExteriorRing.Contains(new GridVector2(-5, 0)));
+            Assert.IsTrue(NewU.ExteriorRing.Contains(new GridVector2(5, 0)));
         }
     }
 }

@@ -508,6 +508,14 @@ namespace Geometry
 
         public static bool Intersects(GridLineSegment line, GridPolygon poly)
         {
+            GridVector2 intersection; 
+            return Intersects(line, poly, out intersection);
+        }
+
+        public static bool Intersects(GridLineSegment line, GridPolygon poly, out GridVector2 intersection)
+        {
+            intersection = GridVector2.Zero;
+
             if (false == line.BoundingBox.Intersects(poly.BoundingBox))
                 return false;
 
@@ -515,14 +523,120 @@ namespace Geometry
 
             foreach(GridLineSegment poly_line in listCandidates)
             {
-                if (line.Intersects(poly_line))
+                if (line.Intersects(poly_line, out intersection))
                     return true; 
             }
 
+            //If the point is inside the polygon return 
             if (poly.Contains(line.A) || poly.Contains(line.B))
                 return true;
 
             return false;
+        }
+
+        /// <summary>
+        /// Add a new point where line intersects any other line
+        /// </summary>
+        /// <param name="line">Line we add points to</param>
+        /// <param name="lines">Lines we are testing for intersection</param>
+        /// <param name="AddedPoints">The points added to line, in increasing order of distance from line.A to line.B</param>
+        /// <returns></returns>
+        public static List<GridLineSegment> SplitLineAtIntersections(this GridLineSegment line, IReadOnlyList<GridLineSegment> lines, out GridVector2[] AddedPoints)
+        {
+            RTree.RTree<GridLineSegment> rTree = lines.ToRTree();
+
+            //Cannot use an out parameter in the anonymous method I use below, so I have a bit of redundancy in tracking added points
+            List<GridVector2> NewPoints = new List<Geometry.GridVector2>();
+
+            foreach(GridLineSegment testLine in lines)
+            {
+                GridVector2 intersection;
+                if(line.Intersects(testLine,  out intersection))
+                {
+                    if(!line.IsEndpoint(intersection))
+                        NewPoints.Add(intersection);
+                }
+            }
+            
+            double[] dotValues = NewPoints.Select(p => line.Dot(p)).ToArray();
+            int[] sortedIndicies = dotValues.SortAndIndex();
+
+            AddedPoints = sortedIndicies.Select(i => NewPoints[i]).ToArray();
+
+            return sortedIndicies.Select(i => lines[i]).ToList();
+        }
+
+        /// <summary>
+        /// Given a set of lines, return a new set of lines where line-line intersections only occur at line endpoints by splitting lines at intersections.
+        /// </summary>
+        /// <param name="lines"></param>
+        /// <returns></returns>
+        public static SortedSet<GridLineSegment> SplitLinesAtIntersections(this IEnumerable<GridLineSegment> lines, out SortedSet<GridVector2> AddedPoints)
+        { 
+            RTree.RTree<GridLineSegment> rTree = lines.ToRTree();
+
+            IList<GridLineSegment> sortedLines;
+            if(lines as IList<GridLineSegment> != null)
+            {
+                sortedLines = (IList<GridLineSegment>)lines;
+            }
+            else
+            {
+                sortedLines = new List<Geometry.GridLineSegment>(lines);
+            }
+
+            SortedSet<GridLineSegment> output = new SortedSet<Geometry.GridLineSegment>();
+
+            Stack<GridLineSegment> linesToTest = new Stack<Geometry.GridLineSegment>(lines);
+
+            AddedPoints = new SortedSet<Geometry.GridVector2>();
+
+            while (linesToTest.Count > 0)
+            {
+                GridLineSegment A = linesToTest.Pop();
+
+                ///Find lines that intersect A, but not on an endpoint of A
+                IEnumerable<GridLineSegment> intersections = rTree.Intersects(A.BoundingBox.ToRTreeRect(0)).Where(B => 
+                    { 
+                        if (B == A)
+                            return false;
+
+                        if (B.SharedEndPoint(A))
+                            return false;
+                           
+                        GridVector2 intersection;
+                        if (B.Intersects(A, out intersection))
+                        {
+                            
+
+                            return !(A.A == intersection || A.B == intersection);
+                        }
+                        else
+                        {
+                            return false; 
+                        }
+                    });
+
+                if (!intersections.Any())
+                {
+                    output.Add(A);
+                }
+                else
+                {
+                    //Find the first line we do not intersect on an endpoint of our line
+                    GridLineSegment B = intersections.First();
+
+                    GridVector2 intersection;
+                    if (B.Intersects(A, out intersection))
+                    {
+                        AddedPoints.Add(intersection);
+                        linesToTest.Push(new GridLineSegment(A.A, intersection));
+                        linesToTest.Push(new GridLineSegment(A.B, intersection));
+                    }
+                }
+            }
+
+            return output; 
         }
     }
 
@@ -546,29 +660,8 @@ namespace Geometry
         public static bool Intersects(GridPolygon poly, GridLineSegment line)
         {
             return LineIntersectionExtensions.Intersects(line, poly);
-        }
-
-        public static bool Intersects(GridPolygon poly, GridPolygon other)
-        {
-            if (false == poly.BoundingBox.Intersects(other.BoundingBox))
-                return false;
-
-            if (poly.ExteriorRing.Where(p => other.Contains(p)).Any())
-                return true;
-
-            if (other.ExteriorRing.Where(p => poly.Contains(p)).Any())
-                return true;
-
-            foreach (GridLineSegment line in poly.ExteriorSegments)
-            {
-                if (other.Intersects(line))
-                    return true;
-            }
-
-            return false;
-        }
-
-        /*
+        } 
+         
         public static bool Intersections(GridPolygon A, GridPolygon B, out GridLineSegment[] AIntersections, out GridLineSegment[] BIntersections)
         {
             if (false == A.BoundingBox.Intersects(B.BoundingBox))
@@ -605,41 +698,171 @@ namespace Geometry
             return AIntersections.Length > 0 || BIntersections.Length > 0;
         }
 
-        public static bool NonIntersectingSegments(GridPolygon A, GridPolygon B, out GridLineSegment[] AIntersections, out GridLineSegment[] BIntersections)
+        /// <summary>
+        /// Create an RTree containing all segments from the borders of the polygon
+        /// </summary>
+        /// <param name="rTree"></param>
+        /// <param name="poly"></param>
+        private static void AddPolygonSegmentsToRTree(RTree.RTree<GridLineSegment> rTree, GridPolygon poly)
         {
-            if (false == A.BoundingBox.Intersects(B.BoundingBox))
+            foreach (GridLineSegment l in poly.ExteriorSegments)
             {
-                AIntersections = new GridLineSegment[0];
-                BIntersections = new GridLineSegment[0];
-                return false;
+                rTree.Add(l.BoundingBox.ToRTreeRect(0), l);
             }
 
-            List<GridLineSegment> AMatches = new List<Geometry.GridLineSegment>();
-            List<GridLineSegment> BMatches = new List<Geometry.GridLineSegment>();
-
-            foreach (GridLineSegment ALine in A.ExteriorSegments)
+            foreach(GridPolygon innerPoly in poly.InteriorPolygons)
             {
-                bool AAdded = false;
-                List<GridLineSegment> BCandidates = B.ExteriorSegmentRTree.Intersects(ALine.BoundingBox.ToRTreeRect(0));
-                foreach (GridLineSegment BLine in BCandidates)
-                {
-                    if (ALine.Intersects(BLine))
-                    {
-                        BMatches.Add(BLine);
-                        if (!AAdded)
-                        {
-                            AMatches.Add(ALine);
-                            AAdded = true;
-                        }
-                    }
-                }
+                AddPolygonSegmentsToRTree(rTree, innerPoly);
             }
-
-            AIntersections = AMatches.ToArray();
-            BIntersections = BMatches.ToArray();
-
-            return AIntersections.Length > 0 || BIntersections.Length > 0;
         }
-        */
+
+        /// <summary>
+        /// Find all the line segments on the polygon borders that intersect line segments in the rTree 
+        /// </summary>
+        /// <param name="rTree"></param>
+        /// <param name="poly"></param>
+        /// <returns></returns>
+        private static List<GridLineSegment> FindIntersectingSegments(RTree.RTree<GridLineSegment> rTree, GridPolygon poly)
+        {
+            List<GridLineSegment> Intersecting;
+
+            Intersecting = FindIntersectingSegments(rTree, poly.ExteriorSegments);
+
+            foreach (GridPolygon innerPoly in poly.InteriorPolygons)
+            {
+                Intersecting.AddRange(FindIntersectingSegments(rTree, innerPoly));
+            }
+
+            return Intersecting;
+        }
+
+        private static List<GridLineSegment> FindIntersectingSegments(RTree.RTree<GridLineSegment> rTree, ICollection<GridLineSegment> segments)
+        {
+            List<GridLineSegment> Intersecting = new List<Geometry.GridLineSegment>();
+
+            foreach (GridLineSegment l in segments)
+            {
+                List<GridLineSegment> Candidates = rTree.Intersects(l.BoundingBox.ToRTreeRect(0));
+
+                //Find out if there is a segment that we aren't sharing an endpoint with (part of same polygon border) and is not ourselves
+                Intersecting.AddRange(Candidates.Where(c => c != l && !c.SharedEndPoint(l) && c.Intersects(l)));
+            }
+
+            return Intersecting;
+        }
+
+        /// <summary>
+        /// Find all line segments that do not intersect the line segments in the RTree
+        /// </summary>
+        /// <param name="rTree"></param>
+        /// <param name="poly"></param>
+        /// <returns></returns>
+        private static List<GridLineSegment> FindNonIntersectingSegments(RTree.RTree<GridLineSegment> rTree, GridPolygon poly)
+        {
+            List<GridLineSegment> NonIntersecting;
+
+            NonIntersecting = FindNonIntersectingSegments(rTree, poly.ExteriorSegments);
+
+            foreach(GridPolygon innerPoly in poly.InteriorPolygons)
+            {
+                NonIntersecting.AddRange(FindNonIntersectingSegments(rTree, innerPoly));
+            }
+
+            return NonIntersecting;
+        }
+
+        /// <summary>
+        /// Find all segments that do not intersect the line segments in the rTree
+        /// </summary>
+        /// <param name="rTree"></param>
+        /// <param name="segments"></param>
+        /// <returns></returns>
+        private static List<GridLineSegment> FindNonIntersectingSegments(RTree.RTree<GridLineSegment> rTree, ICollection<GridLineSegment> segments)
+        {
+            List<GridLineSegment> NonIntersecting = new List<Geometry.GridLineSegment>();
+
+            foreach(GridLineSegment l in segments)
+            {
+                List<GridLineSegment> Candidates = rTree.Intersects(l.BoundingBox.ToRTreeRect(0));
+
+                //Find out if there is a segment that we aren't sharing an endpoint with (part of same polygon border) and is not ourselves
+                if(Candidates.Where(c => c != l && !c.SharedEndPoint(l) && c.Intersects(l)).Any())
+                {
+                    continue;
+                }
+
+                NonIntersecting.Add(l);
+            }
+
+            return NonIntersecting;
+        }
+         
+        /// <summary>
+        /// Return all segments of the polygons that do not intersect any border of the other polygons
+        /// </summary>
+        /// <param name="Polygons"></param>
+        /// <param name="B"></param>
+        /// <param name="AIntersections"></param>
+        /// <param name="BIntersections"></param>
+        /// <returns></returns>
+        public static List<GridLineSegment> NonIntersectingSegments(this GridPolygon[] Polygons)
+        {
+            RTree.RTree<GridLineSegment> SegmentRTree = new RTree<GridLineSegment>();
+
+            foreach(GridPolygon poly in Polygons)
+            {
+                AddPolygonSegmentsToRTree(SegmentRTree, poly);
+            }
+
+            List<GridLineSegment> NonIntersecting = new List<Geometry.GridLineSegment>();
+              
+            //Identify which line segments do not intersect with segments in the RTree
+            foreach(GridPolygon poly in Polygons)
+            {
+                NonIntersecting.AddRange(FindNonIntersectingSegments(SegmentRTree, poly)); 
+            }
+
+            return NonIntersecting;
+        }
+
+        /// <summary>
+        /// Return all segments of the polygons that do not intersect any border of the other polygons
+        /// </summary>
+        /// <param name="Polygons">Input array</param>
+        /// <param name="AddPointsAtIntersections">True if points should be added where the polygons intersect and the resulting line segments added to the result set</param>
+        /// <param name="AddedPoints">List the points added at intersection points</param>
+        /// <returns></returns>
+        public static SortedSet<GridLineSegment> NonIntersectingSegments(this GridPolygon[] Polygons, bool AddPointsAtIntersections, out SortedSet<GridVector2> AddedPoints)
+        {
+            RTree.RTree<GridLineSegment> SegmentRTree = new RTree<GridLineSegment>();
+
+            foreach (GridPolygon poly in Polygons)
+            {
+                AddPolygonSegmentsToRTree(SegmentRTree, poly);
+            }
+
+            SortedSet<GridLineSegment> NonIntersecting = new SortedSet<Geometry.GridLineSegment>();
+            AddedPoints = new SortedSet<Geometry.GridVector2>();
+
+            //Identify which line segments do not intersect with segments in the RTree
+            foreach (GridPolygon poly in Polygons)
+            {
+                NonIntersecting.Union(FindNonIntersectingSegments(SegmentRTree, poly));
+            }
+
+            if(!AddPointsAtIntersections)
+            {
+                return NonIntersecting;
+            }
+
+            SortedSet<GridLineSegment> IntersectingLines = new SortedSet<GridLineSegment>(SegmentRTree.Items);
+            IntersectingLines.ExceptWith(NonIntersecting);
+
+            SortedSet<GridLineSegment> SplitIntersectionLines = IntersectingLines.SplitLinesAtIntersections(out AddedPoints);
+
+            NonIntersecting.UnionWith(SplitIntersectionLines);
+
+            return NonIntersecting;
+        }
     }
 }

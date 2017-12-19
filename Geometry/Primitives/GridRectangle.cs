@@ -410,6 +410,24 @@ namespace Geometry
         }
 
         /// <summary>
+        /// Returns the region of overlap between two rectangles
+        /// </summary>
+        /// <param name="other"></param>
+        /// <returns></returns>
+        public GridRectangle? Intersection(GridRectangle other)
+        {
+            if (!this.Intersects(other))
+                return new GridRectangle?();
+
+            double minx = Math.Max(this.Left, other.Left);
+            double maxx = Math.Min(this.Right, other.Right);
+            double miny = Math.Max(this.Bottom, other.Bottom);
+            double maxy = Math.Min(this.Top, other.Top);
+
+            return new GridRectangle(minx, maxx, miny, maxy);
+        }
+
+        /// <summary>
         /// Expands the rectange to contain the specified point.
         /// Returns true if the rectangle expands, otherwise false.
         /// </summary>
