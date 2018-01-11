@@ -15,11 +15,11 @@ namespace Geometry
 
         public double X;
         public double Y;
-        
+
         public GridVector2(double x, double y)
         {
             this.X = x;
-            this.Y = y; 
+            this.Y = y;
         }
 
         public GridVector3 ToGridVector3(double Z)
@@ -49,8 +49,18 @@ namespace Geometry
             return (DistanceSquared(A, B) <= EpsilonSquared);
         }
 
+        bool IEquatable<GridVector2>.Equals(GridVector2 B)
+        {
+            const double EpsilonSquared = 0.00001;
+            return (DistanceSquared(this, B) <= EpsilonSquared);
+        }
+
         public int Compare(GridVector2 A, GridVector2 B)
         {
+            //We need to use the same equality test as our epsilon value
+            if (A.Equals(B))
+                return 0;
+
             double diff = A.X - B.X;
 
             if (diff == 0.0)
@@ -341,10 +351,7 @@ namespace Geometry
             return this + offset.Convert();
         }
 
-        bool IEquatable<GridVector2>.Equals(GridVector2 other)
-        {
-            return this.X == other.X && this.Y == other.Y;
-        }
+        
 
         #region IPoint Members
 
@@ -407,6 +414,7 @@ namespace Geometry
                 return ShapeType2D.POINT;
             }
         }
+         
 
         #endregion
 

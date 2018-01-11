@@ -6,8 +6,10 @@ using System.Text;
 namespace Geometry
 {
     [Serializable]
-    public struct GridVector3 : IPoint, ICloneable, IComparable
+    public struct GridVector3 : IPoint, ICloneable, IComparable, IEquatable<GridVector3>
     {
+        public static double EpsilonSquared = 0.00001;
+
         public readonly static GridVector3 UnitX = new GridVector3(1, 0, 0);
         public readonly static GridVector3 UnitY = new GridVector3(0, 1, 0);
         public readonly static GridVector3 UnitZ = new GridVector3(0, 0, 1);
@@ -32,6 +34,10 @@ namespace Geometry
         int IComparable.CompareTo(object Obj)
         {
             GridVector3 B = (GridVector3)Obj;
+
+            //Check for direct equality to account for epsilon scale differences
+            if (this.Equals(B))
+                return 0; 
 
             double[] axisdiff = this.coords.Select((val, i) => val - B.coords[i]).ToArray();
 
@@ -68,7 +74,12 @@ namespace Geometry
         {
             GridVector3 B = (GridVector3)obj;
 
-            return this == B;
+            return GridVector3.Distance(this, B) <= EpsilonSquared;
+        }
+
+        bool IEquatable<GridVector3>.Equals(GridVector3 B)
+        {
+            return GridVector3.Distance(this, B) <= EpsilonSquared;
         }
 
         public override string ToString()
@@ -244,12 +255,12 @@ namespace Geometry
 
         static public bool operator ==(GridVector3 A, GridVector3 B)
         {
-            return A.coords.Select((val, i) => val == B.coords[i]).All(result => result);
+            return A.Equals(B);
         }
 
         static public bool operator !=(GridVector3 A, GridVector3 B)
         {
-            return !A.coords.Select((val, i) => val == B.coords[i]).All(result => result);
+            return !A.Equals(B);
         }
 
         static public GridVector3 FromBarycentric(GridVector3 v1, GridVector3 v2, GridVector3 v3, double u, double v)
@@ -320,5 +331,6 @@ namespace Geometry
         }
 
         #endregion
+          
     }
 }
