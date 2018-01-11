@@ -71,7 +71,10 @@ namespace Viking.UI.Forms
                         try
                         {
                             document = VolumeModel.Volume.LoadXDocument(_VolumeURL);
-                            this.BeginInvoke(new System.Action(() => comboVolumeURL.Text = _VolumeURL));
+                            if (this.IsHandleCreated)
+                            {
+                                this.BeginInvoke(new System.Action(() => comboVolumeURL.Text = _VolumeURL));
+                            }
                         }
                         catch(WebException except)
                         {
@@ -85,8 +88,11 @@ namespace Viking.UI.Forms
                                     Settings.Default.VolumeURLs.Remove(_VolumeURL);
                             } 
                         }
-                        
-                        this.Invoke(new System.Action(() => VolumeDocument = document));
+
+                        if (this.IsHandleCreated)
+                        {
+                            this.Invoke(new System.Action(() => VolumeDocument = document));
+                        }
                     });  
                 }
                 else
