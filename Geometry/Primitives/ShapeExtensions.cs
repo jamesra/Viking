@@ -551,9 +551,10 @@ namespace Geometry
             foreach(GridLineSegment testLine in lines)
             {
                 GridVector2 intersection;
-                if(line.Intersects(testLine,  out intersection))
+                if(line.Intersects(testLine, out intersection))
                 {
-                    if(!line.IsEndpoint(intersection))
+                    //Check that NewPoints does not contain the point.  This can occur when the test line intersects exactly over the endpoint of two lines.
+                    if(!line.IsEndpoint(intersection) && !NewPoints.Contains(intersection))
                         NewPoints.Add(intersection);
                 }
             }
