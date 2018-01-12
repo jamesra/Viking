@@ -234,5 +234,113 @@ namespace GeometryTests
             Debug.Assert(result == true);
             Debug.Assert(intersect.X == 0 && intersect.Y == 0);
         }
+
+        [TestMethod]
+        public void LineSetIntersectionsTest()
+        {
+            //Create a line mostly along the X axis.  Split it at x=2.5 and x=7.5.  Ensure we get three line segments and two intersection points
+            GridVector2 A = new GridVector2(0, 0);
+            GridVector2 B = new GridVector2(10, 1);
+
+            GridLineSegment line = new GridLineSegment(A,B);
+
+            GridLineSegment[] OtherLines = new GridLineSegment[] { new GridLineSegment(new GridVector2(2.5, 0), new GridVector2(2.5, 10)),
+                                                                   new GridLineSegment(new GridVector2(0, 11), new GridVector2(10,11)), //A line that doesn't intersect
+                                                                   new GridLineSegment(new GridVector2(7.5, 0), new GridVector2(7.5, 10)) };
+
+            GridVector2[] splitPoints; 
+            List<GridLineSegment> intersectingLines = line.Intersections(OtherLines, out splitPoints);
+
+            GridVector2 ExpectedIntersectionA = new GridVector2(2.5, 0.25);
+            GridVector2 ExpectedIntersectionB = new GridVector2(7.5, 0.75);
+
+            Assert.AreEqual(splitPoints.Length, 2);
+            Assert.AreEqual(splitPoints[0], ExpectedIntersectionA);
+            Assert.AreEqual(splitPoints[1], ExpectedIntersectionB);
+
+            /*
+            GridLineSegment[] expectedLines = new GridLineSegment[] { new GridLineSegment(A, ExpectedIntersectionA),
+                                                                           new GridLineSegment(ExpectedIntersectionA, ExpectedIntersectionB),
+                                                                           new GridLineSegment(ExpectedIntersectionB, B) };
+                                                                           */
+            GridLineSegment[] expectedLines = new GridLineSegment[] { OtherLines[0], OtherLines[2] };
+
+            Assert.AreEqual(intersectingLines.Count, 2);
+
+            for(int i = 0; i < intersectingLines.Count; i++)
+            {
+                Assert.AreEqual(intersectingLines[i], expectedLines[i]);
+            }
+        }
+
+        /// <summary>
+        /// Divide a line at two points in the middle and ensure the results are in order.
+        /// </summary>
+        [TestMethod]
+        public void SubdivideLineTest()
+        {
+            //Create a line mostly along the X axis.  Split it at x=2.5 and x=7.5.  Ensure we get three line segments and two intersection points
+            GridVector2 A = new GridVector2(0, 0);
+            GridVector2 B = new GridVector2(10, 1);
+
+            GridLineSegment line = new GridLineSegment(A, B);
+
+            GridLineSegment[] OtherLines = new GridLineSegment[] { new GridLineSegment(new GridVector2(2.5, 0), new GridVector2(2.5, 10)),
+                                                                   new GridLineSegment(new GridVector2(0, 11), new GridVector2(10,11)), //A line that doesn't intersect
+                                                                   new GridLineSegment(new GridVector2(7.5, 0), new GridVector2(7.5, 10)) };
+
+            GridVector2[] splitPoints;
+            List<GridLineSegment> dividedLines = line.SubdivideAtIntersections(OtherLines, out splitPoints);
+
+            GridVector2 ExpectedIntersectionA = new GridVector2(2.5, 0.25);
+            GridVector2 ExpectedIntersectionB = new GridVector2(7.5, 0.75);
+
+            Assert.AreEqual(splitPoints.Length, 2);
+            Assert.AreEqual(splitPoints[0], ExpectedIntersectionA);
+            Assert.AreEqual(splitPoints[1], ExpectedIntersectionB);
+
+            
+            GridLineSegment[] expectedLines = new GridLineSegment[] { new GridLineSegment(A, ExpectedIntersectionA),
+                                                                           new GridLineSegment(ExpectedIntersectionA, ExpectedIntersectionB),
+                                                                           new GridLineSegment(ExpectedIntersectionB, B) };
+                                                                           
+            Assert.AreEqual(dividedLines.Count, 3);
+
+            for (int i = 0; i < dividedLines.Count; i++)
+            {
+                Assert.AreEqual(dividedLines[i], expectedLines[i]);
+            }
+        }
+        
+        /// <summary>
+        /// Ensure that if we intersect at the endpoint we do not get an extra line
+        /// </summary>
+        [TestMethod]
+        public void SubdivideLineTestAtEndpoints()
+        {
+            //Create a line mostly along the X axis.  Split it at x=2.5 and x=7.5.  Ensure we get three line segments and two intersection points
+            GridVector2 A = new GridVector2(0, 0);
+            GridVector2 B = new GridVector2(10, 1);
+
+            GridLineSegment line = new GridLineSegment(A, B);
+
+            GridLineSegment[] OtherLines = new GridLineSegment[] { new GridLineSegment(new GridVector2(0, -1), new GridVector2(0, 10)),
+                                                                   new GridLineSegment(new GridVector2(0, 11), new GridVector2(10,11)), //A line that doesn't intersect
+                                                                   new GridLineSegment(new GridVector2(10, 0), new GridVector2(10, 10)) };
+
+            GridVector2[] splitPoints;
+            List<GridLineSegment> dividedLines = line.SubdivideAtIntersections(OtherLines, out splitPoints);
+            
+            Assert.AreEqual(splitPoints.Length, 0);
+
+            GridLineSegment[] expectedLines = new GridLineSegment[] { new GridLineSegment(A, B) };
+
+            Assert.AreEqual(dividedLines.Count, 1);
+
+            for (int i = 0; i < dividedLines.Count; i++)
+            {
+                Assert.AreEqual(dividedLines[i], expectedLines[i]);
+            }
+        }
     }
 }

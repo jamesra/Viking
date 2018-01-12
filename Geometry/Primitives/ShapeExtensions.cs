@@ -539,32 +539,57 @@ namespace Geometry
         /// </summary>
         /// <param name="line">Line we add points to</param>
         /// <param name="lines">Lines we are testing for intersection</param>
-        /// <param name="AddedPoints">The points added to line, in increasing order of distance from line.A to line.B</param>
-        /// <returns></returns>
-        public static List<GridLineSegment> SplitLineAtIntersections(this GridLineSegment line, IReadOnlyList<GridLineSegment> lines, out GridVector2[] AddedPoints)
+        /// <param name="IntersectionPoints">The intersection points on the line, in increasing order of distance from line.A to line.B</param>
+        /// <returns>The lines that intersect the line parameter</returns>
+        public static List<GridLineSegment> Intersections(this GridLineSegment line, IReadOnlyList<GridLineSegment> lines, out GridVector2[] IntersectionPoints)
         {
             RTree.RTree<GridLineSegment> rTree = lines.ToRTree();
 
             //Cannot use an out parameter in the anonymous method I use below, so I have a bit of redundancy in tracking added points
-            List<GridVector2> NewPoints = new List<Geometry.GridVector2>();
+            List<GridVector2> NewPoints = new List<Geometry.GridVector2>(lines.Count);
+            List<GridLineSegment> IntersectingLines = new List<GridLineSegment>(lines.Count);
 
-            foreach(GridLineSegment testLine in lines)
+            foreach (GridLineSegment testLine in lines)
             {
                 GridVector2 intersection;
-                if(line.Intersects(testLine, out intersection))
+                if (line.Intersects(testLine, out intersection))
                 {
                     //Check that NewPoints does not contain the point.  This can occur when the test line intersects exactly over the endpoint of two lines.
-                    if(!line.IsEndpoint(intersection) && !NewPoints.Contains(intersection))
+                    if (!line.IsEndpoint(intersection) && !NewPoints.Contains(intersection))
+                    {
                         NewPoints.Add(intersection);
+                        IntersectingLines.Add(testLine);
+                    }
                 }
             }
             
             double[] dotValues = NewPoints.Select(p => line.Dot(p)).ToArray();
             int[] sortedIndicies = dotValues.SortAndIndex();
 
-            AddedPoints = sortedIndicies.Select(i => NewPoints[i]).ToArray();
+            IntersectionPoints = sortedIndicies.Select(i => NewPoints[i]).ToArray();
 
-            return sortedIndicies.Select(i => lines[i]).ToList();
+            return sortedIndicies.Select(i => IntersectingLines[i]).ToList();
+        }
+
+        public static List<GridLineSegment> SubdivideAtIntersections(this GridLineSegment line, IReadOnlyList<GridLineSegment> lines, out GridVector2[] IntersectionPoints)
+        { 
+            List<GridLineSegment> Unused = line.Intersections(lines, out IntersectionPoints);
+
+            List<GridLineSegment> DividedLines = new List<Geometry.GridLineSegment>(IntersectionPoints.Length + 2);
+            if(IntersectionPoints.Length == 0)
+            {
+                DividedLines.Add(line);
+                return DividedLines;
+            }
+
+            DividedLines.Add(new GridLineSegment(line.A, IntersectionPoints[0]));
+            for(int i=0; i < IntersectionPoints.Length - 1; i++)
+            {
+                DividedLines.Add(new GridLineSegment(IntersectionPoints[i], IntersectionPoints[i + 1]));
+            }
+            DividedLines.Add(new GridLineSegment(IntersectionPoints.Last(), line.B));
+
+            return DividedLines;
         }
 
         /// <summary>
