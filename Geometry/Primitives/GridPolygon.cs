@@ -4,9 +4,13 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Collections.ObjectModel;
+using System.Collections;
 
 namespace Geometry
 {
+    /// <summary>
+    /// Records the index of a vertex in a polygon
+    /// </summary>
     [Serializable()]
     public struct PointIndex : IComparable<PointIndex>
     {
@@ -27,6 +31,9 @@ namespace Geometry
         /// </summary>
         public readonly int iVertex;
 
+        /// <summary>
+        /// True if the vertex is part of an inner polygon
+        /// </summary>
         public bool IsInner
         {
             get
@@ -50,6 +57,59 @@ namespace Geometry
             iInnerPoly = innerPoly;
             this.iVertex = iV;
         }
+
+        public PointIndex(GridPolygon polygon, int iPolygon, int iV)
+        {
+            iPoly = iPolygon;
+            iInnerPoly = new int?();
+            this.iVertex = iV;
+
+            Point = polygon.ExteriorRing[iVertex];
+        }
+
+        public PointIndex(GridPolygon polygon, int iPolygon, int? innerPoly, int iV)
+        {
+            iPoly = iPolygon;
+            iInnerPoly = innerPoly;
+            this.iVertex = iV;
+
+            if (!innerPoly.HasValue)
+            {
+                Point = polygon.ExteriorRing[iVertex];
+            }
+            else
+            {
+                Point = polygon.InteriorPolygons[iInnerPoly.Value].ExteriorRing[iVertex];
+            }
+        }
+
+        /*
+        private GridVector2 FetchPoint(GridPolygon poly)
+        {
+            if(!IsInner)
+            {
+                return poly.ExteriorRing[iVertex];
+            }
+            else
+            {
+                return poly.InteriorPolygons[iInnerPoly.Value].ExteriorRing[iInnerPoly.Value];
+            }
+        }
+
+        private GridVector2 FetchPoint(IReadOnlyList<GridPolygon> polygons)
+        {
+            GridPolygon poly = polygons[this.iPoly];
+
+            if (!IsInner)
+            {
+                return poly.ExteriorRing[iVertex];
+            }
+            else
+            {
+                return poly.InteriorPolygons[iInnerPoly.Value].ExteriorRing[iInnerPoly.Value];
+            }
+        }
+        */
 
         // override object.Equals
         public override bool Equals(object obj)
@@ -120,6 +180,29 @@ namespace Geometry
             return this.Point.CompareTo(other.Point);
         }
 
+        /*
+        //Return true if the index is adjacent to the other index
+        public bool IsAdjacent(PointIndex other)
+        {
+            if (this.iPoly != other.iPoly)
+                return false;
+
+            if (this.iInnerPoly != other.iInnerPoly)
+                return false;
+
+            if(this.iVertex == other.iVertex)
+                return false;
+
+            if(Math.Abs(this.iVertex - other.iVertex) == 1)
+            {
+                return true;
+            }
+
+
+        }
+        */
+
+
         /// <summary>
         /// Return True if the vertices A and B are a line on the internal or external border of the polygon
         /// </summary>
@@ -177,9 +260,165 @@ namespace Geometry
 
             return diff == RingLength - 2;
         }
-        
+
+        public override string ToString()
+        {
+            if(IsInner)
+                return string.Format("P:{0} I:{1} iVert:{2} {3}", this.iPoly, this.iInnerPoly, this.iVertex, this.Point);
+            else
+                return string.Format("P:{0} iVert:{1} {2}", this.iPoly, this.iVertex, this.Point);
+        }
     }
-     
+         
+
+    public class PolyVertexEnum : IEnumerator<PointIndex>, IEnumerator, IEnumerable<PointIndex>, IEnumerable
+    {
+        PointIndex? curIndex;
+
+        IReadOnlyList<GridPolygon> polygons;
+
+        public PolyVertexEnum(IReadOnlyList<GridPolygon> polys)
+        {
+            this.polygons = polys;
+            curIndex = new Geometry.PointIndex?();
+        }
+
+        public PointIndex Current
+        {
+            get
+            {
+                if(!curIndex.HasValue)
+                {
+                    throw new IndexOutOfRangeException("Current Index is undefined");
+                }
+
+                return curIndex.Value;
+            }
+        }
+
+        object IEnumerator.Current
+        {
+            get
+            {
+                if (curIndex.HasValue)
+                {
+                    throw new IndexOutOfRangeException("Current Index is undefined");
+                }
+
+                return curIndex.Value;
+            }
+        }
+
+        public void Dispose() { }
+
+        /// <summary>
+        /// Go to the next index, if the shape is closed we do not return the closed index twice. 
+        /// </summary>
+        /// <returns></returns>
+        public bool MoveNext()
+        {
+            if(!curIndex.HasValue)
+            {
+                if (polygons.Count == 0)
+                    return false;
+
+                if (polygons[0].ExteriorRing.Length == 0)
+                    return false;
+
+                curIndex = new PointIndex(polygons[0], 0, 0);
+                return true;
+            }
+
+            PointIndex? next = NextIndex(polygons, curIndex.Value);
+
+            curIndex = next;
+            return curIndex.HasValue;
+        }
+
+        private GridVector2[] GetRing(GridPolygon polygon, PointIndex current)
+        {
+            if(current.IsInner)
+            {
+                return polygon.InteriorPolygons[current.iInnerPoly.Value].ExteriorRing;
+            }
+
+            return polygon.ExteriorRing;
+        }
+
+        private PointIndex? NextIndex(IReadOnlyList<GridPolygon> polygons, PointIndex current)
+        {
+            GridPolygon poly = polygons[current.iPoly];
+
+            int iNextVert = current.iVertex + 1;
+            GridVector2[] ring = GetRing(poly, current);
+
+            if(iNextVert < ring.Length-1) //-1 because we do not want to report a duplicate vertex for a closed ring
+            {
+                //Move along the ring we are iterating
+                return new PointIndex(poly, current.iPoly, current.iInnerPoly, iNextVert);
+            }
+            
+            if(iNextVert == ring.Length - 1) //-1 because we do not want to report a duplicate vertex for a closed ring
+            {
+                //Move along the ring we are iterating and hit the last vertex in a closed loop that equals the first vertex
+                if (ring[0] != ring[iNextVert])
+                    return new PointIndex(poly, current.iPoly, current.iInnerPoly, iNextVert);
+            }
+            
+            //OK, handle case where we are out of indicies on the current ring            
+            { 
+                //Find the next ring
+                if(current.IsInner)
+                {   
+                    if(current.iInnerPoly.Value + 1 < poly.InteriorRings.Count)
+                    {
+                        //Move to the next inner polygon
+                        return new PointIndex(poly, current.iPoly, current.iInnerPoly.Value + 1, 0);
+                    }
+                    else
+                    {
+                        //No more polygons, move to the next polygon, handled below
+                    }
+                }
+                else
+                {
+                    if(poly.HasInteriorRings)
+                    {
+                        return new PointIndex(poly, current.iPoly, 0, 0); //Go to the first vertex of the first inner polygon
+                    }
+                }
+
+                //OK, we need to move on and could not move to an inner ring.  Go to the next polygon
+
+                int iNextPoly = current.iPoly + 1;
+                if (iNextPoly >= polygons.Count)
+                {
+                    return new PointIndex?();
+                }
+                else
+                {
+                    return new Geometry.PointIndex(polygons[iNextPoly], iNextPoly, 0);
+                }
+            }
+        }        
+
+        public void Reset()
+        {
+            curIndex = new PointIndex?();
+        }
+
+        public IEnumerator GetEnumerator()
+        {
+            return (IEnumerator<PointIndex>)this;
+        }
+
+        IEnumerator<PointIndex> IEnumerable<PointIndex>.GetEnumerator()
+        {
+            return (IEnumerator<PointIndex>)this;
+        }
+    }
+
+
     /// <summary>
     /// A polygon with interior rings representing holes
     /// Rings are described by points.  The first and last point should match
@@ -262,7 +501,7 @@ namespace Geometry
         /// <summary>
         /// Read only please
         /// </summary>
-        public IReadOnlyCollection<GridPolygon> InteriorPolygons
+        public IReadOnlyList<GridPolygon> InteriorPolygons
         {
             get
             {
@@ -971,6 +1210,10 @@ namespace Geometry
         {
             GridRectangle? overlap = this.BoundingBox.Intersection(other.BoundingBox);
 
+            //No work to do if there is no overlap
+            if (!overlap.HasValue)
+                return; 
+
             List<GridVector2> newRing = new List<Geometry.GridVector2>();
 
             for(int i = 0; i < ExteriorRing.Length-1; i++)
@@ -980,10 +1223,14 @@ namespace Geometry
                 newRing.Add(ExteriorRing[i]);
 
                 GridVector2[] IntersectionPoints; 
-                List<GridLineSegment> candidates = ls.SplitLineAtIntersections(other.GetIntersectingSegments(ls.BoundingBox), out IntersectionPoints);
+                List<GridLineSegment> candidates = ls.Intersections(other.GetIntersectingSegments(ls.BoundingBox), out IntersectionPoints);
                  
                 //Remove any duplicates of the existing endpoints 
-                newRing.AddRange(IntersectionPoints); 
+                foreach(GridVector2 p in IntersectionPoints)
+                {
+                    System.Diagnostics.Debug.Assert(!newRing.Contains(p));
+                    newRing.Add(p);
+                } 
             }
 
             newRing.Add(ExteriorRing[ExteriorRing.Length - 1]);
@@ -993,11 +1240,17 @@ namespace Geometry
 
             this.ExteriorRing = newRing.ToArray();
 
-            foreach(GridPolygon innerPolygon in this._InteriorPolygons)
+            foreach (GridPolygon otherInnerPolygon in other.InteriorPolygons)
+            {
+                this.AddPointsAtIntersections(otherInnerPolygon);
+            }
+
+            foreach (GridPolygon innerPolygon in this._InteriorPolygons)
             {
                 innerPolygon.AddPointsAtIntersections(other);
-            }
+            } 
         }
+         
 
         /// <summary>
         /// 
@@ -1010,7 +1263,74 @@ namespace Geometry
             
         }
         */
-       
+
+        public Dictionary<GridVector2, PointIndex> CreatePointToPolyMap()
+        {
+            var map = CreatePointToPolyMap(new GridPolygon[] { this });
+            Dictionary<GridVector2, PointIndex> flatMap = new Dictionary<Geometry.GridVector2, Geometry.PointIndex>(); //The map without the possibility of multiple verticies at the same position
+
+            foreach (GridVector2 p in map.Keys)
+            {
+                flatMap.Add(p, map[p].First());
+            }
+
+            return flatMap;
+        }
+
+        /// <summary>
+        /// Creates a lookup table for verticies to a polygon index.  Polygons may not share verticies.
+        /// </summary>
+        /// <param name="Polygons"></param>
+        /// <returns></returns>
+        public static Dictionary<GridVector2, PointIndex> CreatePointToPolyMap2D(GridPolygon[] Polygons)
+        {
+            Dictionary<GridVector2, PointIndex> pointToPoly = new Dictionary<GridVector2, PointIndex>();
+            for (int iPoly = 0; iPoly < Polygons.Length; iPoly++)
+            {
+                GridPolygon poly = Polygons[iPoly];
+                GridVector2[] polyPoints = poly.ExteriorRing;
+                for (int iVertex = 0; iVertex < poly.ExteriorRing.Length; iVertex++)
+                {
+                    GridVector2 p = poly.ExteriorRing[iVertex];
+                    PointIndex value = new PointIndex(p, iPoly, iVertex);
+
+                    if (pointToPoly.ContainsKey(p))
+                    {
+                        throw new ArgumentException(string.Format("Duplicate vertex {0}", p));
+                    }
+
+                    pointToPoly.Add(p, value);
+                }
+
+                for (int iInnerPoly = 0; iInnerPoly < poly.InteriorPolygons.Count; iInnerPoly++)
+                {
+                    GridPolygon innerPolygon = poly.InteriorPolygons.ElementAt(iInnerPoly);
+
+                    for (int iVertex = 0; iVertex < innerPolygon.ExteriorRing.Length; iVertex++)
+                    {
+                        GridVector2 p = innerPolygon.ExteriorRing[iVertex];
+
+                        PointIndex value = new PointIndex(p, iPoly, iInnerPoly, iVertex);
+                        if (pointToPoly.ContainsKey(p))
+                        {
+                            throw new ArgumentException(string.Format("Duplicate inner polygon vertex {0}", p));
+                        }
+
+                        List<PointIndex> indexList = new List<Geometry.PointIndex>();
+                        indexList.Add(value);
+                        pointToPoly.Add(p, value);
+                    }
+                }
+            }
+
+            return pointToPoly;
+        }
+
+        /// <summary>
+        /// Creates a lookup table for verticies to a polygon index.  Polygons may share verticies.
+        /// </summary>
+        /// <param name="Polygons"></param>
+        /// <returns></returns>
         public static Dictionary<GridVector2, List<PointIndex>> CreatePointToPolyMap(GridPolygon[] Polygons)
         {
             Dictionary<GridVector2, List<PointIndex>> pointToPoly = new Dictionary<GridVector2, List<PointIndex>>();

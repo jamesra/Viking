@@ -351,7 +351,74 @@ namespace Geometry
             return this + offset.Convert();
         }
 
-        
+        /// <summary>
+        /// Return true if t is on the left side of two half lines described by pqr
+        /// 
+        ///               p
+        ///              /
+        /// Right-Side  q  Left-Side
+        ///             |
+        ///             r
+        ///             
+        /// </summary>
+        /// <param name="t"></param>
+        /// <param name="pqr"></param>
+        /// <returns>1 if left
+        ///          0 if on a line
+        ///          -1 if right</returns>
+        public static int IsLeftSide(GridVector2 t, GridVector2[] pqr)
+        {
+            System.Diagnostics.Debug.Assert(pqr.Length == 3);
+
+            //Figure out which line the point projects to.
+            GridLineSegment QP = new GridLineSegment(pqr[1], pqr[0]);
+            GridLineSegment QR = new GridLineSegment(pqr[1], pqr[2]);
+
+            bool OnQP = QP.Dot(t) >= 0;
+            bool OnQR = QR.Dot(t) >= 0;
+
+            int LeftQP = -QP.IsLeft(t); //Use negative QP.IsLeft because we reversed line order
+            int LeftQR = QR.IsLeft(t); //Use not QP because we reversed line order
+
+
+            if (OnQP && OnQR)
+            {
+                //
+                //    p     r
+                //     \ t /
+                //      \ /
+                //       q
+                //
+
+                //Use not QP because we reversed line order
+                if (LeftQP == 0 || LeftQR == 0)
+                    return 0;
+
+                return LeftQP > 0 && LeftQR > 0 ? 1 : -1;
+            }
+            else if (OnQR)
+            {
+                return LeftQR;
+            }
+            else if (OnQP)
+            {
+                //Use not QP because we reversed line order
+                return LeftQP;
+            }
+            else
+            {
+                //
+                //    p     r
+                //     \   /
+                //      \ /
+                //       q
+                //
+                //    t
+                //
+
+                return -1;
+            }
+        } 
 
         #region IPoint Members
 

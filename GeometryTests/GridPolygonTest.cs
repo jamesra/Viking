@@ -10,6 +10,11 @@ namespace GeometryTests
     [TestClass]
     public class GridPolygonTest
     {
+        /// <summary>
+        /// Create a box, note I've added an extra vertex on the X:-1 vertical line
+        /// </summary>
+        /// <param name="scale"></param>
+        /// <returns></returns>
         GridVector2[] BoxVerticies(double scale)
         {
             GridVector2[] ExteriorPoints =
@@ -75,7 +80,7 @@ namespace GeometryTests
         GridPolygon CreateUPolygon(double scale)
         {
             GridVector2[] ExteriorPointsScaled = ConcaveUVerticies(scale);
-            
+
             return new GridPolygon(ExteriorPointsScaled);
         }
 
@@ -140,14 +145,14 @@ namespace GeometryTests
 
             GridPolygon inner_box = CreateBoxPolygon(5);
             Assert.IsTrue(box.Contains(inner_box));
-            
+
             //OK, add an inner ring and make sure contains works
             box.AddInteriorRing(inner_box.ExteriorRing);
 
             Assert.IsFalse(box.Contains(new GridVector2(-15, 5)));
             Assert.IsFalse(box.Contains(new GridVector2(0, 0)));
-            
-            
+
+
         }
 
         [TestMethod]
@@ -165,7 +170,7 @@ namespace GeometryTests
             GridPolygon inside = outside.Translate(new GridVector2(0, -7.5));
             Assert.IsTrue(box.Contains(inside));
         }
-        
+
 
         [TestMethod]
         public void AddRemoveVertexTest()
@@ -176,7 +181,7 @@ namespace GeometryTests
             GridVector2 newVertex = new GridVector2(-10, -5);
             box.AddVertex(newVertex);
             Assert.AreEqual(box.ExteriorRing.Length, numOriginalVerticies + 1);
-            Assert.AreEqual(box.ExteriorRing[box.ExteriorRing.Length-2], newVertex);
+            Assert.AreEqual(box.ExteriorRing[box.ExteriorRing.Length - 2], newVertex);
 
             box.RemoveVertex(newVertex);
             Assert.AreEqual(box.ExteriorRing.Length, numOriginalVerticies);
@@ -187,7 +192,7 @@ namespace GeometryTests
             Assert.AreEqual(box.ExteriorRing.Length, numOriginalVerticies + 1);
             Assert.AreEqual(box.ExteriorRing[1], newVertex);
 
-            box.RemoveVertex(newVertex - new GridVector2(1,1));
+            box.RemoveVertex(newVertex - new GridVector2(1, 1));
             Assert.AreEqual(box.ExteriorRing.Length, numOriginalVerticies);
             Assert.IsTrue(box.ExteriorRing.All(p => p != newVertex));
         }
@@ -209,7 +214,7 @@ namespace GeometryTests
             Assert.IsTrue(U.ExteriorRing.Contains(new GridVector2(-10, 0)));
             Assert.IsTrue(U.ExteriorRing.Contains(new GridVector2(10, 0)));
             Assert.IsTrue(U.ExteriorRing.Contains(new GridVector2(-5, 0)));
-            Assert.IsTrue(U.ExteriorRing.Contains(new GridVector2(5, 0)));   
+            Assert.IsTrue(U.ExteriorRing.Contains(new GridVector2(5, 0)));
         }
 
         [TestMethod]
@@ -226,16 +231,87 @@ namespace GeometryTests
             box = box.Translate(new GridVector2(0, -10));
 
             //This should add four verticies
-            int OriginalVertCount = U.ExteriorRing.Length;
-            U.AddPointsAtIntersections(box);
+            int OriginalExteriorVertCount = OuterBox.ExteriorRing.Length;
+            int OriginalInnerVertCount = U.ExteriorRing.Length;
+            OuterBox.AddPointsAtIntersections(box);
 
             GridPolygon NewU = OuterBox.InteriorPolygons.First();
 
-            Assert.IsTrue(OriginalVertCount + 4 == NewU.ExteriorRing.Length);
+            //Check that the interior ring was correctly appended
+            Assert.IsTrue(OriginalInnerVertCount + 4 == NewU.ExteriorRing.Length);
             Assert.IsTrue(NewU.ExteriorRing.Contains(new GridVector2(-10, 0)));
             Assert.IsTrue(NewU.ExteriorRing.Contains(new GridVector2(10, 0)));
             Assert.IsTrue(NewU.ExteriorRing.Contains(new GridVector2(-5, 0)));
             Assert.IsTrue(NewU.ExteriorRing.Contains(new GridVector2(5, 0)));
+
+            //Check that the exterior ring was correctly appended
+            Assert.IsTrue(OriginalExteriorVertCount + 2 == OuterBox.ExteriorRing.Length);
+            Assert.IsTrue(OuterBox.ExteriorRing.Contains(new GridVector2(-10, -15)));
+            Assert.IsTrue(OuterBox.ExteriorRing.Contains(new GridVector2(10, -15)));
+
+            //OK, now test from the other direction 
+
+            OriginalExteriorVertCount = box.ExteriorRing.Length;
+            box.AddPointsAtIntersections(OuterBox);
+
+            //We should add 5 new verticies since the box had an extra vertex at -1,0 originally.  See CreateBoxPolygon
+            Assert.IsTrue(OriginalExteriorVertCount + 5 == box.ExteriorRing.Length);
+            Assert.IsTrue(box.ExteriorRing.Contains(new GridVector2(-10, -15)));
+            Assert.IsTrue(box.ExteriorRing.Contains(new GridVector2(10, -15)));
+            Assert.IsTrue(box.ExteriorRing.Contains(new GridVector2(-10, -10)));
+            Assert.IsTrue(box.ExteriorRing.Contains(new GridVector2(-5, 0)));
+            Assert.IsTrue(box.ExteriorRing.Contains(new GridVector2(5, 0)));
+            Assert.IsTrue(box.ExteriorRing.Contains(new GridVector2(10, -10)));
+        }
+
+        [TestMethod]
+        public void EnumeratePolygonIndiciesTest()
+        {
+            GridPolygon box = CreateBoxPolygon(10);
+            GridPolygon OuterBox = CreateBoxPolygon(15);
+            GridPolygon U = CreateUPolygon(10);
+            GridPolygon U2 = CreateBoxPolygon(1);
+
+            //Move the box so it doesn't overlap
+            box = box.Translate(new GridVector2(50, 0));
+            
+            //Check a single polygon with no interior verticies
+            PolyVertexEnum enumerator = new PolyVertexEnum(new GridPolygon[] { box });
+
+            PointIndex[] indicies = enumerator.ToArray();
+            Assert.IsTrue(indicies.Length == box.ExteriorRing.Length-1);
+            Assert.IsTrue(indicies.Select(p => p.Point).Distinct().Count() == box.ExteriorRing.Length - 1); //Make sure all indicies are unique and not repeating
+
+            for(int i = 0; i < indicies.Length; i++)
+            {
+                Assert.AreEqual(i, indicies[i].iVertex);
+            }
+
+            //Check a polygon with interior polygon
+            OuterBox.AddInteriorRing(U);
+
+            enumerator = new PolyVertexEnum(new GridPolygon[] { OuterBox });
+            indicies = enumerator.ToArray();
+            int numUniqueVerticies = (OuterBox.ExteriorRing.Length - 1) + OuterBox.InteriorPolygons.Sum(ip => ip.ExteriorRing.Length - 1);
+            Assert.IsTrue(indicies.Length == numUniqueVerticies);
+            Assert.IsTrue(indicies.Select(p => p.Point).Distinct().Count() == numUniqueVerticies); //Make sure all indicies are unique and not repeating
+
+            //Check a polygon with two interior polygon
+            OuterBox.AddInteriorRing(U2);
+
+            enumerator = new PolyVertexEnum(new GridPolygon[] { OuterBox });
+            indicies = enumerator.ToArray();
+            numUniqueVerticies = (OuterBox.ExteriorRing.Length - 1) + OuterBox.InteriorPolygons.Sum(ip => ip.ExteriorRing.Length - 1);
+            Assert.IsTrue(indicies.Length == numUniqueVerticies);
+            Assert.IsTrue(indicies.Select(p => p.Point).Distinct().Count() == numUniqueVerticies); //Make sure all indicies are unique and not repeating
+
+            //Check a polygon with two interior polygons and two polygons in the array
+
+            enumerator = new PolyVertexEnum(new GridPolygon[] { OuterBox, box });
+            indicies = enumerator.ToArray();
+            numUniqueVerticies = (box.ExteriorRing.Length -1) + (OuterBox.ExteriorRing.Length - 1) + OuterBox.InteriorPolygons.Sum(ip => ip.ExteriorRing.Length - 1);
+            Assert.IsTrue(indicies.Length == numUniqueVerticies);
+            Assert.IsTrue(indicies.Select(p => p.Point).Distinct().Count() == numUniqueVerticies); //Make sure all indicies are unique and not repeating
         }
     }
 }

@@ -1031,6 +1031,29 @@ namespace Geometry
             GridRectangle padded_bbox = polygon.BoundingBox.Pad(padding);
             return padded_bbox.Contains(Position);
         }
+
+        public static GridRectangle BoundingBox(this IReadOnlyList<GridPolygon> polygons)
+        {
+            if(!polygons.Any())
+            {
+                throw new ArgumentException("No polygons in array to calculate bounding box");
+            }
+
+            GridRectangle? bbox = new Geometry.GridRectangle?();
+            foreach(GridPolygon p in polygons)
+            {
+                if(!bbox.HasValue)
+                {
+                    bbox = p.BoundingBox;
+                }
+                else
+                {
+                    bbox.Value.Union(p.BoundingBox);
+                }
+            }
+
+            return bbox.Value;
+        }
     }
 
     public static class MappingGridVector2Extensions

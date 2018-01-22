@@ -342,5 +342,41 @@ namespace GeometryTests
                 Assert.AreEqual(dividedLines[i], expectedLines[i]);
             }
         }
+
+        [TestMethod]
+        public void TestIsLeft()
+        {
+            //Is a point to the left when standing at A looking at B
+            GridVector2 A = new GridVector2(0, 0);
+            GridVector2 B = new GridVector2(10, 0);
+            GridLineSegment line = new GridLineSegment(A, B);
+
+            GridVector2 left = new GridVector2(0, 1);
+            GridVector2 right = new GridVector2(0, -1);
+            GridVector2 on = A;
+
+            Assert.AreEqual(line.IsLeft(left), 1);
+            Assert.AreEqual(line.IsLeft(right), -1);
+            Assert.AreEqual(line.IsLeft(on), 0);
+
+            left = new GridVector2(-1, 1);
+            right = new GridVector2(-1, -1);
+            on = new GridVector2(5, 0);
+
+            Assert.AreEqual(line.IsLeft(left),1);
+            Assert.AreEqual(line.IsLeft(right),-1);
+            Assert.AreEqual(line.IsLeft(on), 0);
+
+            left = new GridVector2(11, 1);
+            right = new GridVector2(11, -1);
+            on = new GridVector2(11, 0);
+
+            Assert.AreEqual(line.IsLeft(left),1);
+            Assert.AreEqual(line.IsLeft(right),-1);
+            Assert.AreEqual(line.IsLeft(on), 0);
+
+            on = new GridVector2(-1, 0);
+            Assert.AreEqual(line.IsLeft(on), 0);
+        }
     }
 }

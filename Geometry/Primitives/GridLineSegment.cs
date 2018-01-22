@@ -306,6 +306,19 @@ namespace Geometry
             return A == p || B == p;
         }
 
+        /// <summary>
+        /// Return true if point p is to left when standing at A looking towards B
+        /// </summary>
+        /// <param name="p"></param>
+        /// <returns> 1 for left
+        ///           0 for on the line
+        ///           -1 for right
+        /// </returns>
+        public int IsLeft(GridVector2 p)
+        {
+            return Math.Sign((B.X - A.X) * (p.Y - A.Y) - (B.Y - A.Y) * (p.X - A.X));
+        }
+
         public GridVector2 OppositeEndpoint(GridVector2 p)
         {
             return A == p ? B : A;

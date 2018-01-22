@@ -276,5 +276,86 @@ namespace UtilitiesTests
             Assert.IsTrue(ConvexHullPoints.Length == 5);
         }
 
+
+        [TestMethod]
+        public void TestIsLeft()
+        {
+            //Is a point to the left when standing at A looking at B 
+
+            //
+            //    p     r
+            //     \   /
+            //      \ /
+            //       q
+
+            GridVector2 p = new GridVector2(0, 10);
+            GridVector2 q = new GridVector2(5, 0);
+            GridVector2 r = new GridVector2(10, 10);
+            
+            GridVector2 left = new GridVector2(5, 5);
+            GridVector2 right = new GridVector2(5, -5);
+
+            GridVector2[] pqr = new GridVector2[] { p, q, r };
+
+            Assert.AreEqual(GridVector2.IsLeftSide(left, pqr), 1);
+            Assert.AreEqual(GridVector2.IsLeftSide(right, pqr), -1);
+
+            right = new GridVector2(-5, 0);
+            Assert.AreEqual(GridVector2.IsLeftSide(right, pqr), -1);
+
+            right = new GridVector2(-5, 1);
+            Assert.AreEqual(GridVector2.IsLeftSide(right, pqr), -1);
+
+            right = new GridVector2(15, 1);
+            Assert.AreEqual(GridVector2.IsLeftSide(right, pqr), -1);
+        }
+
+
+        [TestMethod]
+        public void TestIsLeft2()
+        {
+            //Is a point to the left when standing at A looking at B 
+            //
+            //         r
+            //        /
+            //       /
+            // p----q
+            //
+            GridVector2 p = new GridVector2(0, 0);
+            GridVector2 q = new GridVector2(5, 0);
+            GridVector2 r = new GridVector2(10, 10);
+
+            GridVector2 left = new GridVector2(1, 1);
+            GridVector2 right = new GridVector2(1, -1);
+            GridVector2 on = q; 
+
+            GridVector2[] pqr = new GridVector2[] { p, q, r };
+
+            Assert.AreEqual(GridVector2.IsLeftSide(left, pqr), 1);
+            Assert.AreEqual(GridVector2.IsLeftSide(right, pqr), -1);
+            Assert.AreEqual(GridVector2.IsLeftSide(on, pqr), 0);
+
+            left = new GridVector2(6, 7);
+            right = new GridVector2(-5, -1);
+            on = new GridVector2(-5, 0);
+             
+            Assert.AreEqual(GridVector2.IsLeftSide(left, pqr), 1);
+            Assert.AreEqual(GridVector2.IsLeftSide(right, pqr), -1);
+            Assert.AreEqual(GridVector2.IsLeftSide(on, pqr), 0);
+
+            left = new GridVector2(-5, 1);
+            right = new GridVector2(7.5, 1);
+            on = new GridVector2(7.5, 5);
+            Assert.AreEqual(GridVector2.IsLeftSide(left, pqr), 1);
+            Assert.AreEqual(GridVector2.IsLeftSide(right, pqr), -1);
+            Assert.AreEqual(GridVector2.IsLeftSide(on, pqr), 0);
+
+            left = new GridVector2(5, 2);
+            right = new GridVector2(25, 1);
+            on = r;
+            Assert.AreEqual(GridVector2.IsLeftSide(left, pqr), 1);
+            Assert.AreEqual(GridVector2.IsLeftSide(right, pqr), -1);
+            Assert.AreEqual(GridVector2.IsLeftSide(on, pqr), 0);
+        }
     }
 }
