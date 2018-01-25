@@ -351,6 +351,11 @@ namespace Geometry
             return this + offset.Convert();
         }
 
+        public int IsLeftSide(GridVector2[] pqr)
+        {
+            return GridVector2.IsLeftSide(this, pqr);
+        }
+
         /// <summary>
         /// Return true if t is on the left side of two half lines described by pqr
         /// 

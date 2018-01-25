@@ -117,11 +117,11 @@ namespace GeometryTests
             Debug.Assert(intersectValues.Contains(1));
             Debug.Assert(intersectValues.Contains(7));
 
-            Debug.Assert(false == intersectValues.Contains(2));
-            Debug.Assert(false == intersectValues.Contains(3));
-            Debug.Assert(false == intersectValues.Contains(4));
-            Debug.Assert(false == intersectValues.Contains(5));
-            Debug.Assert(false == intersectValues.Contains(6));
+            Assert.AreEqual(false, intersectValues.Contains(2));
+            Assert.AreEqual(false, intersectValues.Contains(3));
+            Assert.AreEqual(false, intersectValues.Contains(4));
+            Assert.AreEqual(false, intersectValues.Contains(5));
+            Assert.AreEqual(false, intersectValues.Contains(6));
 
         }
 
@@ -151,7 +151,7 @@ namespace GeometryTests
             {
                 
                 int iFound = Tree.FindNearest(points[i], out distance);
-                Debug.Assert(iFound == i, "Could not find previously inserted point"); 
+                Assert.AreEqual(iFound, i, "Could not find previously inserted point"); 
             }
 
             //Remove half the points
@@ -159,11 +159,11 @@ namespace GeometryTests
             {
                 int Value; 
                 bool Success = Tree.TryRemove(i, out Value);
-                Debug.Assert(Success, "Could not remove previously inserted point");
+                Assert.IsTrue(Success, "Could not remove previously inserted point");
 
                 //Make sure if we look for the removed point we get an index higher than the ones we've already removed
                 int iFound = Tree.FindNearest(points[i], out distance);
-                Debug.Assert(iFound > i, "Found previously deleted point"); 
+                Assert.IsTrue(iFound > i, "Found previously deleted point"); 
             }
 
             //Look for the remaining points
@@ -171,7 +171,7 @@ namespace GeometryTests
             {
                 //Make sure if we look for the removed point we get an index higher than the ones we've already removed
                 int iFound = Tree.FindNearest(points[i], out distance);
-                Debug.Assert(iFound == i, "Could not find previously inserted point after deletes"); 
+                Assert.AreEqual(iFound, i, "Could not find previously inserted point after deletes"); 
             }
 
             //Re-insert the removed points
@@ -181,7 +181,7 @@ namespace GeometryTests
 
                 //Make sure if we look for the removed point we get an index higher than the ones we've already removed
                 int iFound = Tree.FindNearest(points[i], out distance);
-                Debug.Assert(iFound == i, "Could not find newly inserted point after deletes");
+                Assert.AreEqual(iFound, i, "Could not find newly inserted point after deletes");
             }
 
             //Look for the remaining points
@@ -189,7 +189,7 @@ namespace GeometryTests
             {
                 //Make sure if we look for the removed point we get an index higher than the ones we've already removed
                 int iFound = Tree.FindNearest(points[i], out distance);
-                Debug.Assert(iFound == i, "Could not find previously inserted point after delete and insert");
+                Assert.AreEqual(iFound, i, "Could not find previously inserted point after delete and insert");
             }
 
             //Delete all the points
@@ -203,7 +203,7 @@ namespace GeometryTests
                 if (i < numPoints - 1)
                 {
                     int iFound = Tree.FindNearest(points[i], out distance);
-                    Debug.Assert(iFound > i, "Found previously deleted point");
+                    Assert.IsTrue(iFound > i, "Found previously deleted point");
                 }
             }
 
@@ -219,8 +219,14 @@ namespace GeometryTests
             {
 
                 int iFound = Tree.FindNearest(points[i], out distance);
-                Debug.Assert(iFound == i, "Could not find previously inserted point");
+                Assert.AreEqual(iFound, i, "Could not find previously inserted point");
             }
+
+            SortedList<double, int> foundPoints = Tree.FindNearestPoints(new GridVector2(BoundarySize * -2, BoundarySize * -2), Tree.Count * 2);
+            Assert.AreEqual(Tree.Count, foundPoints.Count);
+
+            foundPoints = Tree.FindNearestPoints(GridVector2.Zero, Tree.Count * 2);
+            Assert.AreEqual(Tree.Count, foundPoints.Count);
 
             //The end
 

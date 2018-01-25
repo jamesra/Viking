@@ -79,8 +79,23 @@ namespace Geometry
                 {
                     rwLock.ExitReadLock();
                 }
-            }
+            } 
+        }
 
+        public int Count
+        {
+            get
+            {
+                try
+                {
+                    rwLock.EnterReadLock();
+                    return ValueToNodeTable.Count;
+                }
+                finally
+                {
+                    rwLock.ExitReadLock();
+                }
+            }
         }
         
         /// <summary>

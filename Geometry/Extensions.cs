@@ -962,7 +962,7 @@ namespace Geometry
             foreach (GridPolygon innerPoly in polygon.InteriorPolygons)
             {
                 GridPolygon foundPolygon;
-                int foundIndex; 
+                int foundIndex;
                 double distance = innerPoly.NearestPolygonVertex(WorldPosition, out foundPolygon, out foundIndex);
                 if (distance < nearestPolyDistance)
                 {
@@ -971,9 +971,9 @@ namespace Geometry
                     ringIndex = foundIndex;
                 }
             }
-            
+
             double[] distances = polygon.ExteriorRing.Select(p => GridVector2.Distance(p, WorldPosition)).ToArray();
-            double MinDistance = distances.Min(); 
+            double MinDistance = distances.Min();
 
             if (MinDistance < nearestPolyDistance)
             {
@@ -995,13 +995,13 @@ namespace Geometry
         public static double NearestPolygonSegment(this GridPolygon polygon, GridVector2 WorldPosition, out GridPolygon nearestPoly)
         {
             nearestPoly = null;
-            double nearestPolyDistance = double.MaxValue; 
-            
+            double nearestPolyDistance = double.MaxValue;
+
             foreach (GridPolygon innerPoly in polygon.InteriorPolygons)
             {
                 GridPolygon foundPolygon;
                 double distance = innerPoly.NearestPolygonSegment(WorldPosition, out foundPolygon);
-                if(distance < nearestPolyDistance)
+                if (distance < nearestPolyDistance)
                 {
                     nearestPoly = innerPoly;
                     nearestPolyDistance = distance;
@@ -1015,7 +1015,7 @@ namespace Geometry
                 nearestPoly = polygon;
                 nearestPolyDistance = MinDistance;
             }
-             
+
             return nearestPolyDistance;
         }
 
@@ -1034,25 +1034,24 @@ namespace Geometry
 
         public static GridRectangle BoundingBox(this IReadOnlyList<GridPolygon> polygons)
         {
-            if(!polygons.Any())
+            if (!polygons.Any())
             {
                 throw new ArgumentException("No polygons in array to calculate bounding box");
             }
 
-            GridRectangle? bbox = new Geometry.GridRectangle?();
-            foreach(GridPolygon p in polygons)
-            {
-                if(!bbox.HasValue)
-                {
-                    bbox = p.BoundingBox;
-                }
-                else
-                {
-                    bbox.Value.Union(p.BoundingBox);
-                }
+            GridRectangle bbox = polygons[0].BoundingBox;
+            for(int i = 1; i < polygons.Count; i++)
+            { 
+                bbox.Union(polygons[i].BoundingBox);
+                
             }
 
-            return bbox.Value;
+            return bbox;
+        }
+
+        public static bool AreIndiciesAdjacent(this IReadOnlyList<GridPolygon> polygons, PointIndex A, PointIndex B)
+        {
+            return A.AreAdjacent(B, polygons);
         }
     }
 

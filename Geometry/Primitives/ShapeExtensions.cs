@@ -514,6 +514,11 @@ namespace Geometry
 
         public static bool Intersects(GridLineSegment line, GridPolygon poly, out GridVector2 intersection)
         {
+            return Intersects(line, poly, false, out intersection);
+        }
+
+        public static bool Intersects(GridLineSegment line, GridPolygon poly, bool EndpointsOnRingDoNotIntersect, out GridVector2 intersection)
+        {
             intersection = GridVector2.Zero;
 
             if (false == line.BoundingBox.Intersects(poly.BoundingBox))
@@ -524,12 +529,30 @@ namespace Geometry
             foreach(GridLineSegment poly_line in listCandidates)
             {
                 if (line.Intersects(poly_line, out intersection))
-                    return true; 
+                {
+                    if (EndpointsOnRingDoNotIntersect) //If we are on an endpoint and we are ignoring endpoints continue the search
+                    {
+                        if (!(line.IsEndpoint(intersection) || poly_line.IsEndpoint(intersection)))
+                        {
+                            return true;
+                        }
+                    }
+                    else
+                        return true;
+                }
+            }
+
+            foreach(GridPolygon inner in poly.InteriorPolygons)
+            {
+                if(Intersects(line, inner, EndpointsOnRingDoNotIntersect, out intersection))
+                {
+                    return true;
+                }
             }
 
             //If the point is inside the polygon return 
-            if (poly.Contains(line.A) || poly.Contains(line.B))
-                return true;
+//            if (poly.Contains(line.A) || poly.Contains(line.B))
+//                return true;
 
             return false;
         }

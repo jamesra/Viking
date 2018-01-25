@@ -114,5 +114,21 @@ namespace GeometryTests
 
 
         }
+
+
+        [TestMethod]
+        public void TestGridRectangleUnion()
+        {
+            GridRectangle rectA = new GridRectangle(10, 20, 10, 30);
+            GridRectangle rectB = new GridRectangle(-20, -10, -15, -5);
+
+            rectA.Union(rectB);
+
+            Assert.AreEqual(rectA, new GridRectangle(-20, 20, -15, 30));
+
+            rectB.Union(rectA);
+
+            Assert.AreEqual(rectB, new GridRectangle(-20, 20, -15, 30));
+        }
     }
 }

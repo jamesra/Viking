@@ -114,9 +114,9 @@ namespace GeometryTests
             Assert.AreEqual(box.Area, 400);
 
             GridPolygon translated_box = box.Translate(new GridVector2(10, 10));
-            Assert.AreEqual(translated_box.Area, translated_box.BoundingBox.Area);
-            Assert.AreEqual(translated_box.Area, 400);
-            Assert.AreEqual(translated_box.Area, box.Area);
+            Assert.AreEqual(Math.Round(translated_box.Area), translated_box.BoundingBox.Area);
+            Assert.AreEqual(Math.Round(translated_box.Area), 400);
+            Assert.AreEqual(Math.Round(translated_box.Area), box.Area);
 
             GridPolygon tri = CreateTrianglePolygon(10);
             Assert.AreEqual(tri.Area, tri.BoundingBox.Area / 2.0);
@@ -169,6 +169,34 @@ namespace GeometryTests
 
             GridPolygon inside = outside.Translate(new GridVector2(0, -7.5));
             Assert.IsTrue(box.Contains(inside));
+        }
+
+        [TestMethod]
+        public void TestLineIntersection()
+        {
+            GridPolygon OuterBox = CreateBoxPolygon(15);
+            GridPolygon U = CreateUPolygon(10);
+            OuterBox.AddInteriorRing(U);
+
+            //Line entirely outside outer polygon
+            GridLineSegment line = new GridLineSegment(new GridVector2(-16, -16), new GridVector2(16, -16));
+            Assert.IsFalse(OuterBox.Intersects(line));
+            
+            //Line entirely inside polygon
+            line = new GridLineSegment(new GridVector2(-14, -14), new GridVector2(14, 14));
+            Assert.IsTrue(OuterBox.Intersects(line));
+
+            //Line falls exactly over outside polygon segment
+            line = new GridLineSegment(new GridVector2(-14, -15), new GridVector2(14, -15));
+            Assert.IsTrue(OuterBox.Intersects(line));
+
+            //Line falls exactly over inner polygon segment
+            line = new GridLineSegment(new GridVector2(-10, -10), new GridVector2(10, -10));
+            Assert.IsTrue(OuterBox.Intersects(line));
+            
+            //Line inside inner polygon
+            line = new GridLineSegment(new GridVector2(-7.5, -7.5), new GridVector2(7.5, -7.5));
+            Assert.IsFalse(OuterBox.Intersects(line));
         }
 
 
@@ -274,13 +302,14 @@ namespace GeometryTests
 
             //Move the box so it doesn't overlap
             box = box.Translate(new GridVector2(50, 0));
-            
+
             //Check a single polygon with no interior verticies
-            PolyVertexEnum enumerator = new PolyVertexEnum(new GridPolygon[] { box });
+            GridPolygon[] polyArray = new GridPolygon[] { box };
+            PolyVertexEnum enumerator = new PolyVertexEnum(polyArray);
 
             PointIndex[] indicies = enumerator.ToArray();
             Assert.IsTrue(indicies.Length == box.ExteriorRing.Length-1);
-            Assert.IsTrue(indicies.Select(p => p.Point).Distinct().Count() == box.ExteriorRing.Length - 1); //Make sure all indicies are unique and not repeating
+            Assert.IsTrue(indicies.Select(p => p.Point(polyArray)).Distinct().Count() == box.ExteriorRing.Length - 1); //Make sure all indicies are unique and not repeating
 
             for(int i = 0; i < indicies.Length; i++)
             {
@@ -290,28 +319,66 @@ namespace GeometryTests
             //Check a polygon with interior polygon
             OuterBox.AddInteriorRing(U);
 
-            enumerator = new PolyVertexEnum(new GridPolygon[] { OuterBox });
+            polyArray = new GridPolygon[] { OuterBox };
+            enumerator = new PolyVertexEnum(polyArray);
             indicies = enumerator.ToArray();
             int numUniqueVerticies = (OuterBox.ExteriorRing.Length - 1) + OuterBox.InteriorPolygons.Sum(ip => ip.ExteriorRing.Length - 1);
             Assert.IsTrue(indicies.Length == numUniqueVerticies);
-            Assert.IsTrue(indicies.Select(p => p.Point).Distinct().Count() == numUniqueVerticies); //Make sure all indicies are unique and not repeating
+            Assert.IsTrue(indicies.Select(p => p.Point(polyArray)).Distinct().Count() == numUniqueVerticies); //Make sure all indicies are unique and not repeating
 
             //Check a polygon with two interior polygon
             OuterBox.AddInteriorRing(U2);
 
-            enumerator = new PolyVertexEnum(new GridPolygon[] { OuterBox });
+            polyArray = new GridPolygon[] { OuterBox };
+            enumerator = new PolyVertexEnum(polyArray);
             indicies = enumerator.ToArray();
             numUniqueVerticies = (OuterBox.ExteriorRing.Length - 1) + OuterBox.InteriorPolygons.Sum(ip => ip.ExteriorRing.Length - 1);
             Assert.IsTrue(indicies.Length == numUniqueVerticies);
-            Assert.IsTrue(indicies.Select(p => p.Point).Distinct().Count() == numUniqueVerticies); //Make sure all indicies are unique and not repeating
+            Assert.IsTrue(indicies.Select(p => p.Point(polyArray)).Distinct().Count() == numUniqueVerticies); //Make sure all indicies are unique and not repeating
 
             //Check a polygon with two interior polygons and two polygons in the array
 
-            enumerator = new PolyVertexEnum(new GridPolygon[] { OuterBox, box });
+            polyArray = new GridPolygon[] { OuterBox, box };
+            enumerator = new PolyVertexEnum(polyArray);
             indicies = enumerator.ToArray();
             numUniqueVerticies = (box.ExteriorRing.Length -1) + (OuterBox.ExteriorRing.Length - 1) + OuterBox.InteriorPolygons.Sum(ip => ip.ExteriorRing.Length - 1);
             Assert.IsTrue(indicies.Length == numUniqueVerticies);
-            Assert.IsTrue(indicies.Select(p => p.Point).Distinct().Count() == numUniqueVerticies); //Make sure all indicies are unique and not repeating
+            Assert.IsTrue(indicies.Select(p => p.Point(polyArray)).Distinct().Count() == numUniqueVerticies); //Make sure all indicies are unique and not repeating
         }
+        
+        [TestMethod]
+        public void Theorem4Test()
+        {
+            GridLineSegment line;
+            GridPolygon U = CreateUPolygon(10);
+
+            //Line passes along the entire length of exterior ring
+            line = new GridLineSegment(new GridVector2(-11, -10), new GridVector2(11, -10));
+            Assert.IsTrue(Theorem4(U, line));
+
+            //Line passes through part of the lenght of exterior ring
+            line = new GridLineSegment(new GridVector2(-9, -10), new GridVector2(11, -10));
+            Assert.IsTrue(Theorem4(U, line));
+
+            //Line crosses the exterior ring
+            line = new GridLineSegment(new GridVector2(-9, -11), new GridVector2(-9, -9));
+            Assert.IsFalse(Theorem4(U, line));
+        }
+
+
+        /// <summary>
+        /// Theorem 4 requries that a line segment does not occupy space both internal and external to the polygon.
+        /// Lines that fall over a polygon segment are acceptable as long as the rest of the line qualifies.
+        /// </summary>
+        /// <param name="poly"></param>
+        /// <param name="line"></param>
+        /// <returns></returns>
+        public bool Theorem4(GridPolygon poly, GridLineSegment line)
+        {
+            GridVector2 intersection;
+
+            return !LineIntersectionExtensions.Intersects(line, poly, true, out intersection);
+        }
+        
     }
 }
