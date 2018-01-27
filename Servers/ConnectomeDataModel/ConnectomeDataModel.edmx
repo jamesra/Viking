@@ -506,6 +506,15 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
             </CollectionType>
           </ReturnType>
         </Function>
+        <Function Name="ufnLastNetworkModification" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="true" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo" ReturnType="datetime">
+          <Parameter Name="Hops" Type="int" Mode="In" />
+        </Function>
+        <Function Name="ufnLastStructureMorphologyModification" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="true" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo" ReturnType="datetime">
+          <Parameter Name="ID" Type="bigint" Mode="In" />
+        </Function>
+        <Function Name="ufnLastStructureMorphologyModificationRecursive" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="true" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo" ReturnType="datetime">
+          <Parameter Name="ID" Type="bigint" Mode="In" />
+        </Function>
         <Function Name="UpdateStructureType" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="false" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo">
           <Parameter Name="StructureID" Type="bigint" Mode="In" />
           <Parameter Name="TypeID" Type="bigint" Mode="In" />

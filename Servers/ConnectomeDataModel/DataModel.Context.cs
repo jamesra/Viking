@@ -954,7 +954,20 @@ namespace ConnectomeDataModel
     
             return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction("SplitStructure", locationIDOfSplitStructureParameter, splitStructureID);
         }
-        
+    
+        public virtual int SplitStructureByLocationLink(Nullable<long> locationIDOfKeepStructure, Nullable<long> locationIDOfSplitStructure, ObjectParameter splitStructureID)
+        {
+            var locationIDOfKeepStructureParameter = locationIDOfKeepStructure.HasValue ?
+                new ObjectParameter("LocationIDOfKeepStructure", locationIDOfKeepStructure) :
+                new ObjectParameter("LocationIDOfKeepStructure", typeof(long));
+    
+            var locationIDOfSplitStructureParameter = locationIDOfSplitStructure.HasValue ?
+                new ObjectParameter("LocationIDOfSplitStructure", locationIDOfSplitStructure) :
+                new ObjectParameter("LocationIDOfSplitStructure", typeof(long));
+    
+            return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction("SplitStructureByLocationLink", locationIDOfKeepStructureParameter, locationIDOfSplitStructureParameter, splitStructureID);
+        }
+    
         public virtual int SplitStructureAtLocationLink(Nullable<long> locationIDOfKeepStructure, Nullable<long> locationIDOfSplitStructure, ObjectParameter splitStructureID)
         {
             var locationIDOfKeepStructureParameter = locationIDOfKeepStructure.HasValue ?
