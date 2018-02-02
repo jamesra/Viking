@@ -35,10 +35,10 @@ Neuron connectivity network
    Requests the connectivity graph for the neurons specified in the query string.
       
    **Format:**
-      * *TLP* - Tulip file format
-      * *DOT* - Graphviz DOT file format
-      * *GraphML* - GraphML file format
-      * *JSON* - Java script object notation
+      * **TLP** - Tulip file format
+      * **DOT** - Graphviz DOT file format
+      * **GraphML** - GraphML file format
+      * **JSON** - Java script object notation
         
    :query id: ID numbers of cells to include in connectivity graph.  Commas separate multiple IDs.
    :query hops: Degrees of seperation to include additional neurons in graph
@@ -69,10 +69,10 @@ Motif connectivity
    Connectivity between classes of neurons based on label.  Includes all neurons.  Nodes represent the set of all structures that share a label.  Edges indicate at least one connection between cells with those labels.
    
    **Format:**
-      * *TLP* - Tulip file format
-      * *DOT* - Graphviz DOT file format
-      * *GraphML* - GraphML file format
-      * *JSON* - Java script object notation
+      * **TLP** - Tulip file format
+      * **DOT** - Graphviz DOT file format
+      * **GraphML** - GraphML file format
+      * **JSON** - Java script object notation
      
    :resheader Content-Type: text/plain
    
@@ -86,30 +86,32 @@ Motif connectivity
          
       .. figure::  Motif_Export1.png 
       
-	**Motif Node Properties:**
-		* *NumberOfCells* - Total number of cells with this label that have an edge in the database
-		* *InputTypeCount* - Total distinct types of inputs, i.e. { CB1 -> X, CB2 -> X} X has 2 Input types
-		* *OutputTypeCount* - Total distinct types of outputs, i.e {X => CB1, X=> CB2, X => CB3} X has 3 output types
-		* *BidirectionTypeCount* - Total distinct types of bidirectional outputs, i.e { X <=> A2} X has 1 bidirectional output type
-		* *StructureIDs* - A list of StructureIDs that share this label
-		* *StructureURL* - A URL to load the structure from the ODATA server
-		* *MorphologyURL* - A URL to load morphology for cells with this label
+   **Motif Node Properties:**
+   
+		* **NumberOfCells** - Total number of cells with this label that have an edge in the database
+		* **InputTypeCount** - Total distinct types of inputs, i.e. { CB1 -> X, CB2 -> X} X has 2 Input types
+		* **OutputTypeCount** - Total distinct types of outputs, i.e {X => CB1, X=> CB2, X => CB3} X has 3 output types
+		* **BidirectionTypeCount** - Total distinct types of bidirectional outputs, i.e { X <=> A2} X has 1 bidirectional output type
+		* **StructureIDs** - A list of StructureIDs that share this label
+		* **StructureURL** - A URL to load the structure from the ODATA server
+		* **MorphologyURL** - A URL to load morphology for cells with this label
 		
-	**Motif Edge Properties:**
-		*SourceParentStructures* - The parent structures of the edges source structures. i.e, the cell that contains the synapse
-		*ConnectionSourceStructures* - The structures that are sources of the edge, i.e. The synapses
-		*TargetParentStructures* - The parent structures of the edges target structures. i.e, the cell that contains the post-synaptic density
-		*ConnectionTargetStructures* - The structures that are targets of the edge, i.e. The post-synaptic density
-		*%OccurenceInSourceCells* - How many of the source node's cells originate this connection
-		*%OccurenceInTargetCells* - How many of the target node's cells receive this connection
-		*%ofSourceTypeOutput* - How much of the total output of the source node does this edge represent
-		*%ofTargetTypeOutput* - How much of the total input of the target node does this edge represent
-		*%ofSourceTypeBidirectionalOutput* - How much of the bidirectional connections to the source node does this edge represent 
-		*%ofTargetTypeBidirectionalOutput* - How much of the bidirectional connections to the target node does this edge represent
-		*Avg#OfOutputsPerSource* - Average number of outgoing connections an individual cell makes to the target type
-		*Avg#OfInputsPerTarget* - Average number of incoming connections an individual cell receives from the source type
-		*StdDevOfOutputsPerSource* - The standard deviation of outgoing connections an individual cell makes to the target type
-		*StdDevOfInputsPerTarget* - The standard deviation of incoming connections an individual cell receives from the source type
+   **Motif Edge Properties:**
+   
+		* **SourceParentStructures** - The parent structures of the edges source structures. i.e, the cell that contains the synapse
+		* **ConnectionSourceStructures** - The structures that are sources of the edge, i.e. The synapses
+		* **TargetParentStructures** - The parent structures of the edges target structures. i.e, the cell that contains the post-synaptic density
+		* **ConnectionTargetStructures** - The structures that are targets of the edge, i.e. The post-synaptic density
+		* **%OccurenceInSourceCells** - How many of the source node's cells originate this connection
+		* **%OccurenceInTargetCells** - How many of the target node's cells receive this connection
+		* **%ofSourceTypeOutput** - How much of the total output of the source node does this edge represent
+		* **%ofTargetTypeInput** - How much of the total input of the target node does this edge represent
+		* **%ofSourceTypeBidirectional** - How much of the bidirectional connections to the source node does this edge represent 
+		* **%ofTargetTypeBidirectional** - How much of the bidirectional connections to the target node does this edge represent
+		* **Avg#OfOutputsPerSource** - Average number of outgoing connections an individual cell makes to the target type
+		* **Avg#OfInputsPerTarget** - Average number of incoming connections an individual cell receives from the source type
+		* **StdDevOfOutputsPerSource** - The standard deviation of outgoing connections an individual cell makes to the target type
+		* **StdDevOfInputsPerTarget** - The standard deviation of incoming connections an individual cell receives from the source type
 		 
 
 Morphology
@@ -122,8 +124,8 @@ Morphology
    Nodes with a glowing effect are involved in a structure link.
    
    **Format:**
-      * *TLP* - Tulip file format
-      * *JSON* - Java script object notation
+      * **TLP** - Tulip file format
+      * **JSON** - Java script object notation
      
    :query id: ID numbers of cells to include in connectivity graph.  Commas separate multiple IDs.
    
