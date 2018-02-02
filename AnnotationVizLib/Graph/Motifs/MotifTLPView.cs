@@ -28,6 +28,11 @@ namespace AnnotationVizLib
                 NodeAttribs.Add("viewLabel", node.Key);
 
             NodeAttribs.Add("StructureIDs", SourceStructures(node));
+            NodeAttribs.Add("NumberOfCells", node.Structures.Count.ToString());
+            NodeAttribs.Add("InputTypeCount", node.InputEdgesCount.ToString());
+            NodeAttribs.Add("OutputTypeCount", node.OutputEdgesCount.ToString());
+            NodeAttribs.Add("BidirectionalTypeCount", node.BidirectionalEdgesCount.ToString());
+            
 
             if (VolumeURL != null)
                 NodeAttribs.Add("StructureURL", StructureLabelUrl(node));
@@ -40,19 +45,87 @@ namespace AnnotationVizLib
             return tlpnode;
         }
 
-        public TLPViewEdge CreateTLPEdge(MotifEdge edge)
+        public TLPViewEdge CreateTLPEdge(MotifGraph graph, MotifEdge edge)
         {
             TLPViewEdge tlpedge = this.addEdge(edge.SourceNodeKey, edge.TargetNodeKey);
             IDictionary<string, string> EdgeAttribs = AttributeMapper.AttribsForLabel(edge.SynapseType, TLPAttributes.StandardEdgeSourceLabelToTLPAppearance);
-
-            EdgeAttribs.Add("SourceStructures", EdgeStructuresString(edge.SourceStructIDs));
-            EdgeAttribs.Add("TargetStructures", EdgeStructuresString(edge.TargetStructIDs));
+                        
+            EdgeAttribs.Add("SourceParentStructures", EdgeStructuresString(edge.SourceStructIDs.Keys));
+            EdgeAttribs.Add("ConnectionSourceStructures", EdgeStructuresString(edge.SourceStructIDs.SelectMany(s => s.Value)));
+            EdgeAttribs.Add("TargetParentStructures", EdgeStructuresString(edge.TargetStructIDs.Keys));
+            EdgeAttribs.Add("ConnectionTargetStructures", EdgeStructuresString(edge.TargetStructIDs.SelectMany(s => s.Value)));
+              
             EdgeAttribs.Add("viewLabel", EdgeLabel(edge));
             EdgeAttribs.Add("edgeType", edge.SynapseType);
-              
+
+            EdgeAttribs.Add("SourceLabel", edge.SourceNodeKey);
+            EdgeAttribs.Add("TargetLabel", edge.TargetNodeKey);
+
+            AppendEdgeStatistics(graph, edge, ref EdgeAttribs);
+
             tlpedge.AddAttributes(EdgeAttribs);
 
             return tlpedge;
+        }
+        
+        /// <summary>
+        /// Append statistics about the edge to edge attributes
+        /// </summary>
+        /// <param name="edge"></param>
+        private void AppendEdgeStatistics(MotifGraph graph, MotifEdge edge, ref IDictionary<string, string> EdgeAttribs)
+        {
+            MotifNode sourceNode = graph.Nodes[edge.SourceNodeKey];
+            MotifNode targetNode = graph.Nodes[edge.TargetNodeKey];
+
+            double PercentOccurenceInSourceCells = ((double)edge.SourceCellCount / (double)sourceNode.StructureCount) * 100.0;
+            EdgeAttribs.Add("%OccurenceInSourceCells", PercentOccurenceInSourceCells.ToString());
+
+            double PercentOccurenceInTargetCells = ((double)edge.TargetCellCount / (double)targetNode.StructureCount) * 100.0;
+            EdgeAttribs.Add("%OccurenceInTargetCells", PercentOccurenceInTargetCells.ToString());
+             
+            if (edge.Directional)
+            {
+                double PercentOfSourceOutput = ((double)edge.SourceConnectionCount / (double)sourceNode.OutputEdgesCount) * 100.0;
+                double PercentOfTargetInput = ((double)edge.TargetConnectionCount / (double)targetNode.InputEdgesCount) * 100.0;
+
+                EdgeAttribs.Add("%ofSourceTypeOutput", PercentOfSourceOutput.ToString());
+                EdgeAttribs.Add("%ofTargetTypeInput", PercentOfTargetInput.ToString()); 
+            }
+            else
+            {
+                double PercentOfSourceBidirectionalOutput = ((double)edge.SourceConnectionCount / (double)sourceNode.BidirectionalEdgesCount) * 100.0;
+                double PercentOfTargetBidirectionalOutput = ((double)edge.TargetConnectionCount / (double)targetNode.BidirectionalEdgesCount) * 100.0;
+
+                EdgeAttribs.Add("%ofSourceTypeBidirectional", PercentOfSourceBidirectionalOutput.ToString());
+                EdgeAttribs.Add("%ofTargetTypeBidirectional", PercentOfTargetBidirectionalOutput.ToString());
+            }
+
+            double AvgSourceLinks = edge.SourceStructIDs.Average(source => source.Value.Count);
+            double AvgTargetLinks = edge.TargetStructIDs.Average(target => target.Value.Count);
+
+            EdgeAttribs.Add("Avg#OfOutputsPerSource", AvgSourceLinks.ToString());
+            EdgeAttribs.Add("Avg#OfInputsPerTarget", AvgTargetLinks.ToString());
+
+            if (edge.SourceCellCount > 1)
+            { 
+
+                double StdDevSourceLinks = StdDev(edge.SourceStructIDs.Select(source => (double)source.Value.Count).ToList());
+                EdgeAttribs.Add("StdDevOfOutputsPerSource", StdDevSourceLinks.ToString());
+            }
+
+            if (edge.TargetCellCount > 1)
+            {
+                double StdDevTargetLinks = StdDev(edge.TargetStructIDs.Select(target => (double)target.Value.Count).ToList());
+                EdgeAttribs.Add("StdDevOfInputsPerTarget", StdDevTargetLinks.ToString());
+            } 
+        }
+
+        private double StdDev(IReadOnlyList<double> values)
+        {
+            double average = values.Average();
+            double sumOfSquaresOfDifferences = values.Select(val => (val - average) * (val - average)).Sum();
+            double sd = Math.Sqrt(sumOfSquaresOfDifferences / values.Count);
+            return sd; 
         }
 
         public string StructureLabelUrl(MotifNode node)
@@ -93,7 +166,7 @@ namespace AnnotationVizLib
             return sb.ToString(); 
         }
 
-        private string EdgeStructuresString(IList<long> structIDs)
+        private string EdgeStructuresString(IEnumerable<long> structIDs)
         {
             StringBuilder sb = new StringBuilder();
             bool first = false; 
@@ -138,7 +211,7 @@ namespace AnnotationVizLib
                 if (edge.SourceNodeKey == "Unlabeled" || edge.TargetNodeKey == "Unlabeled")
                     continue;
 
-                view.CreateTLPEdge(edge);
+                view.CreateTLPEdge(graph, edge);
             }
 
             return view; 

@@ -98,6 +98,11 @@ namespace AnnotationVizLib.WCFClient
                         StructureType type = TypeIDToType[SourceStructure.TypeID];
                         string ConnectionLabel = type.Name;
 
+                        if (!ChildIDToParent.ContainsKey(link.SourceID))
+                            continue;
+                        if (!ChildIDToParent.ContainsKey(link.TargetID))
+                            continue; 
+
                         Structure ParentOfSource = ChildIDToParent[link.SourceID];
                         Structure ParentOfTarget = ChildIDToParent[link.TargetID];
 
@@ -111,7 +116,7 @@ namespace AnnotationVizLib.WCFClient
                         else
                             edge = dictEdges[edge];
 
-                        edge.AddEdgeInstance(ParentOfSource.ID, ParentOfTarget.ID);
+                        edge.AddEdgeInstance(ParentOfSource.ID, link.SourceID, ParentOfTarget.ID, link.TargetID);
                     }
 
                     catch (System.Collections.Generic.KeyNotFoundException e)

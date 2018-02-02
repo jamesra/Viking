@@ -62,6 +62,14 @@ namespace DataExport
                             new { controller = "Motif", action = "GetJSON" },
                             new { controller = "Motif" });
 
+            routes.MapRoute("Motif_GetTLP", "Motif/TLP",
+                            new { controller = "Motif", action = "GetTLP" },
+                            new { controller = "Motif" });
+
+            routes.MapRoute("Motif_GetJSON", "Motif/JSON",
+                            new { controller = "Motif", action = "GetJSON" },
+                            new { controller = "Motif" });
+
             routes.MapRoute("Morphology_GetTLP", "Morphology/TLP",
                             new { controller = "Morphology", action = "GetTLP" },
                             new { controller = "Morphology", httpMethod = new HttpMethodConstraint("GET") });
