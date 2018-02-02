@@ -180,7 +180,7 @@ namespace AnnotationVizLib.SimpleOData
                 {
                     t.Wait();
                     Structure s = t.Result;
-                    if (s != null)
+                    if (s != null && s.Locations != null)
                     {
                         foreach (Location l in s.Locations)
                         {
