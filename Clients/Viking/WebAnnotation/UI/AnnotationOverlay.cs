@@ -937,7 +937,7 @@ namespace WebAnnotation
             if (!Global.LastEditedAnnotationID.HasValue)
                 return;
 
-            LocationObj lastLoc = Store.Locations.GetObjectByID(Global.LastEditedAnnotationID.Value);
+            LocationObj lastLoc = Store.Locations.GetObjectByID(Global.LastEditedAnnotationID.Value, true);
             {
                 if (lastLoc.Z != this.CurrentSectionNumber && IsCommandDefault())
                 {
