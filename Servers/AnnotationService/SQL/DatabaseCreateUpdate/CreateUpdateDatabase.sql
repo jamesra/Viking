@@ -6414,6 +6414,113 @@ end
 	 COMMIT TRANSACTION sixtyeight
 	end
 
+	if(not(exists(select (1) from DBVersion where DBVersionID = 69)))
+	begin
+     print N'Add user-defined functions to determine the last time a structure morphology was modified' 
+	 BEGIN TRANSACTION sixtynine
+		IF OBJECT_ID (N'dbo.ufnLastStructureModification', N'FN') IS NOT NULL
+		    DROP FUNCTION ufnLastStructureModification;
+		IF OBJECT_ID (N'dbo.ufnLastStructureModificationRecursive', N'FN') IS NOT NULL
+			DROP FUNCTION ufnLastStructureModificationRecursive;
+		 		
+		Exec('
+			CREATE FUNCTION [dbo].[ufnLastStructureMorphologyModification]
+			(
+				-- Add the parameters for the function here
+				@ID bigint
+			)
+			RETURNS DateTime
+			AS
+			BEGIN
+				-- Declare the return variable here
+				DECLARE @ResultVar DateTime
+
+				-- Add the T-SQL statements to compute the return value here
+				select @ResultVar = max(Q.LastModified) from (
+					select L.LastModified as LastModified from Location L where L.ParentID = @ID
+					union
+					select LLA.Created as LastModified from Location L 
+						inner join LocationLink LLA ON LLA.A = L.ID
+						where L.ParentID = @ID
+					union
+					select S.LastModified as LastModified from Structure S where S.ID = @ID
+					) Q
+		
+				RETURN @ResultVar
+			END
+		')
+
+		if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
+		 		
+		Exec('
+			CREATE FUNCTION ufnLastStructureMorphologyModificationRecursive
+			(
+				-- Add the parameters for the function here
+				@ID bigint
+			)
+			RETURNS DateTime
+			AS
+			BEGIN
+				-- Declare the return variable here
+				DECLARE @ResultVar DateTime
+
+				select @ResultVar = max(dbo.ufnLastStructureModification(S.ID)) from Structure S where S.ID = @ID or S.ParentID = @ID
+	 
+				RETURN @ResultVar
+			END
+		')
+		
+		if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
+		 Exec('
+			CREATE FUNCTION [dbo].[ufnLastNetworkModification]
+			(
+				-- Add the parameters for the function here
+				@IDs integer_list READONLY,
+				@Hops int
+			)
+			RETURNS DateTime
+			AS
+			BEGIN
+				-- Declare the return variable here
+				DECLARE @ResultVar DateTime
+				declare @Network_IDs integer_list
+
+				insert into @Network_IDs 
+				select ID from NetworkStructureIDs ( @IDs, @Hops )
+				union 
+				select ID from NetworkChildStructureIDs( @IDs, @Hops)
+	    
+				declare @Result DateTime
+ 
+				select @ResultVar = MAX(S.LastModified) from Structure S
+									inner join @Network_IDs N on N.ID = S.ID
+
+				RETURN @ResultVar
+			END
+
+		')
+
+		if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
+	 INSERT INTO DBVersion values (69, 
+		      N'Add user-defined functions to determine the last time a structure morphology was modified',getDate(),User_ID())
+	 COMMIT TRANSACTION sixtynine
+	end
+
 	 
 --from here on, continually add steps in the previous manner as needed.
 COMMIT TRANSACTION main
