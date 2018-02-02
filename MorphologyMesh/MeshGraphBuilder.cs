@@ -120,7 +120,7 @@ namespace MorphologyMesh
                 Polygons.Add(branchNode.CapPort.ToPolygon(branchNode.Mesh));
             }
 
-            Dictionary<GridVector2, PointIndex> pointToPoly = GridPolygon.CreatePointToPolyMap(Polygons.ToArray());
+            Dictionary<GridVector2, PointIndex> pointToPoly = GridPolygon.CreatePointToPolyMap2D(Polygons.ToArray());
 
             ulong[] PolygonToNodeKey = new ulong[other_nodes.Length + 1];
             PolygonToNodeKey[0] = node.Key;

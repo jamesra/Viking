@@ -1309,7 +1309,9 @@ namespace Geometry
             {
                 GridPolygon poly = Polygons[iPoly];
                 GridVector2[] polyPoints = poly.ExteriorRing;
-                for (int iVertex = 0; iVertex < poly.ExteriorRing.Length; iVertex++)
+
+                //Subtract one from ring length to prevent duplicate point key insertion since they are closed rings
+                for (int iVertex = 0; iVertex < poly.ExteriorRing.Length-1; iVertex++)
                 {
                     GridVector2 p = poly.ExteriorRing[iVertex];
                     PointIndex value = new PointIndex(iPoly, iVertex);
@@ -1322,11 +1324,13 @@ namespace Geometry
                     pointToPoly.Add(p, value);
                 }
 
+                
                 for (int iInnerPoly = 0; iInnerPoly < poly.InteriorPolygons.Count; iInnerPoly++)
                 {
                     GridPolygon innerPolygon = poly.InteriorPolygons.ElementAt(iInnerPoly);
 
-                    for (int iVertex = 0; iVertex < innerPolygon.ExteriorRing.Length; iVertex++)
+                    //Subtract one from ring length to prevent duplicate point key insertion since they are closed rings
+                    for (int iVertex = 0; iVertex < innerPolygon.ExteriorRing.Length-1; iVertex++)
                     {
                         GridVector2 p = innerPolygon.ExteriorRing[iVertex];
 

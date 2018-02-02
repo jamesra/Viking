@@ -1072,7 +1072,10 @@ namespace MorphologyMesh
                 {
                     iMiddleIndex = (int)UpperIndexArray[iNextUpper];
 
-                    CreatedLines.Add(new GridLineSegment(UpperVerticies[iNextUpper], LowerVerticies[iLower]));
+                    if (UpperVerticies[iNextUpper] != LowerVerticies[iLower])
+                    {
+                        CreatedLines.Add(new GridLineSegment(UpperVerticies[iNextUpper], LowerVerticies[iLower]));
+                    }
 
                     iUpper = iNextUpper;
                     UpperAddedCount++;
@@ -1081,7 +1084,10 @@ namespace MorphologyMesh
                 {
                     iMiddleIndex = (int)lowerIndicies[iNextLower];
 
-                    CreatedLines.Add(new GridLineSegment(UpperVerticies[iUpper], LowerVerticies[iNextLower]));
+                    if (UpperVerticies[iUpper] != LowerVerticies[iNextLower])
+                    {
+                        CreatedLines.Add(new GridLineSegment(UpperVerticies[iUpper], LowerVerticies[iNextLower]));
+                    }
 
                     iLower = iNextLower;
                     LowerAddedCount++;
