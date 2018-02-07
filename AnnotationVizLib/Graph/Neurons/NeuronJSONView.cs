@@ -5,14 +5,15 @@ using System.Text;
 using GraphLib;
 using System.IO;
 using System.Web;
+using Newtonsoft.Json.Linq;
 using System.Web.Script.Serialization;
 
 namespace AnnotationVizLib
 {
     public class NeuronJSONView
     {
-        List<object> edgesJSON = null;
-        List<object> nodesJSON = null;
+        JArray edgesJSON = null;
+        JArray nodesJSON = null;
 
         static NeuronJSONView()
         {
@@ -21,22 +22,24 @@ namespace AnnotationVizLib
          
         static public NeuronJSONView ToJSON(NeuronGraph graph)
         {
-            
             int edgeCount = 0;
-            NeuronJSONView JSONView = new NeuronJSONView();
+            NeuronJSONView JSONView = new NeuronJSONView(); 
 
-            JSONView.nodesJSON = new List<object>(graph.Nodes.Count);
-            JSONView.edgesJSON = new List<object>(graph.Edges.Count);
+            JSONView.nodesJSON = new JArray();
+            JSONView.edgesJSON = new JArray();
+
 
             foreach (NeuronNode node in graph.Nodes.Values)
             {
-                JSONView.nodesJSON.Add(new
-                {
-                    StructureID = node.Key,
-                    TypeID = node.Structure.TypeID,
-                    Label = node.Structure.Label,
-                    Tags = node.Structure.TagsXML
-                });
+                dynamic obj = new JObject();
+                obj.StructureID = node.Key;
+                obj.TypeID = node.Structure.TypeID;
+                obj.Label = node.Structure.Label;
+                obj.Tags = node.Structure.TagsXML;
+                
+                AddAttributes(obj, node.Attributes);
+
+                JSONView.nodesJSON.Add(obj);
             }
 
             foreach (NeuronEdge edge in graph.Edges.Values)
@@ -48,52 +51,68 @@ namespace AnnotationVizLib
                 NeuronNode TargetNode = graph.Nodes[edge.TargetNodeKey];
                 string KeyString = SourceNode.Structure.ID.ToString() + "-" + TargetNode.Structure.ID.ToString() + " via " + edge.SynapseType + " from " + edge.PrintChildLinks() ;
 
-                JSONView.edgesJSON.Add(new
-                {
-                    ID = edgeCount,
-                    SourceStructureID = SourceNode.Key,
-                    TargetStructureID = TargetNode.Key,
-                    Label = KeyString,
-                    Type = edge.SynapseType,
-                    Directional = edge.Directional,
-                    Links = AddEdgeLinks(edge)
-                });
+                dynamic obj = new JObject();
+                obj.ID = edgeCount;
+                obj.SourceStructureID = SourceNode.Key;
+                obj.TargetStructureID = TargetNode.Key;
+                obj.Label = KeyString;
+                obj.Type = edge.SynapseType;
+                obj.Directional = edge.Directional;
+                obj.Links = AddEdgeLinks(edge);
 
+                AddAttributes(obj, edge.Attributes);
+
+                JSONView.edgesJSON.Add(obj);
                 edgeCount++; 
             }
              
             return JSONView;
         }
 
-        private static List<object> AddEdgeLinks(NeuronEdge edge)
+        private static JArray AddEdgeLinks(NeuronEdge edge)
         {
-            List<object> listLinks = new List<object>();
+
+            dynamic listLinks = new JArray();
             foreach(var link in edge.Links)
             {
-                listLinks.Add(new
-                {
-                    SourceID = link.SourceID,
-                    TargetID = link.TargetID,
-                    Directional = link.Directional
-                });
+                dynamic obj = new JObject();
+
+                obj.SourceID = link.SourceID;
+                obj.TargetID = link.TargetID;
+                obj.Directional = link.Directional;
+
+                listLinks.Add(obj);
             }
 
             return listLinks;
         }
 
+        private static void AddAttributes(JObject obj, IDictionary<string, object> attribs)
+        {
+            foreach(string key in attribs.Keys)
+            {
+                object value = attribs[key];
+                JToken token;
+                if(value as JToken != null)
+                {
+                    token = (JToken)value;
+                }
+                else
+                {
+                    token = JToken.FromObject(value);
+                }
+
+                obj[key] = token;
+            }
+        }
+
         public override string ToString()
         {
-            StringBuilder sb = new StringBuilder();
+            dynamic graph = new JObject();
+            graph.nodes = this.nodesJSON;
+            graph.edges = this.edgesJSON;
 
-            using (StringWriter fs = new StringWriter(sb))
-            {
-                System.Web.Script.Serialization.JavaScriptSerializer oSerializer = new JavaScriptSerializer();
-                oSerializer.MaxJsonLength = 268435456;
-                fs.Write(oSerializer.Serialize(new { nodes = this.nodesJSON, edges = this.edgesJSON }));
-                fs.Close();
-            }
-
-            return sb.ToString();
+            return graph.ToString();
         }
 
         public void SaveJSON(string JSONFileFullPath)
@@ -107,7 +126,6 @@ namespace AnnotationVizLib
                 }
                 fl.Close();
             }
-        }
-
+        } 
     }
 }

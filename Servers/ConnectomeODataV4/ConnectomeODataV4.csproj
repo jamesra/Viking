@@ -148,6 +148,7 @@
     <Compile Include="Controllers\LocationsController.cs" />
     <Compile Include="Controllers\SelectStructureLocationsController.cs" />
     <Compile Include="Controllers\StructureLinksController.cs" />
+    <Compile Include="Controllers\StructureSpatialViewController.cs" />
     <Compile Include="Controllers\StructuresController.cs" />
     <Compile Include="Controllers\StructureTypesController.cs" />
     <Compile Include="Global.asax.cs">

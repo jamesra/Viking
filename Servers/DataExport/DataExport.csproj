@@ -328,6 +328,10 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\AnnotationVizLibSimpleODataClient\AnnotationVizLibSimpleODataClient.csproj">
+      <Project>{b3a4f95d-a8ac-4094-9dda-22dc972d7e5d}</Project>
+      <Name>AnnotationVizLibSimpleODataClient</Name>
+    </ProjectReference>
     <ProjectReference Include="..\..\AnnotationVizLibWCFClient\AnnotationVizLibWCFClient.csproj">
       <Project>{902d95b5-10a9-4ebe-9dbd-ddb78375551b}</Project>
       <Name>AnnotationVizLibWCFClient</Name>

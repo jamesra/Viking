@@ -168,7 +168,10 @@ namespace DataExport.Controllers
             string outputFileFullPath = System.IO.Path.Combine(GetAndCreateOutputDirectory(), outputFilename);
 
             NeuronGraph neuronGraph = GetGraph(requestIDs);
+            AnnotationVizLib.SimpleODataClient.SimpleODataSpatialDataFactory.AppendSpatialDataFromOData(neuronGraph, VikingWebAppSettings.AppSettings.ODataURL);
+
             NeuronJSONView JsonGraph = NeuronJSONView.ToJSON(neuronGraph);
+
             JsonGraph.SaveJSON(outputFileFullPath);
 
             return File(outputFileFullPath, "text/plain", outputFilename);

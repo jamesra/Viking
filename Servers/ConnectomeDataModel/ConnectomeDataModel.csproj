@@ -184,6 +184,9 @@
     <Compile Include="StructureLink.cs">
       <DependentUpon>DataModel.tt</DependentUpon>
     </Compile>
+    <Compile Include="StructureSpatialView.cs">
+      <DependentUpon>DataModel.tt</DependentUpon>
+    </Compile>
     <Compile Include="StructureType.cs">
       <DependentUpon>DataModel.tt</DependentUpon>
     </Compile>

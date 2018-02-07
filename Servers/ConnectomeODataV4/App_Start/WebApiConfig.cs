@@ -68,8 +68,10 @@ namespace ConnectomeODataV4
 
             builder.EntitySet<StructureType>("StructureTypes");
             builder.EntitySet<Structure>("Structures");
-            builder.EntitySet<Location>("Locations");
-            
+            builder.EntitySet<Location>("Locations"); 
+
+            AddStructureSpatialView(builder);
+             
             AddScaleType(builder);
             AddStructureLinks(builder);
             AddPermittedStructureLinks(builder);
@@ -82,6 +84,12 @@ namespace ConnectomeODataV4
             AddLocation(edmModel);
 
             return edmModel;
+        }
+
+        private static void AddStructureSpatialView(ODataConventionModelBuilder builder)
+        {
+            var entitySet = builder.EntitySet<StructureSpatialView>("StructureSpatialView");
+            entitySet.EntityType.HasKey(entity => entity.ID);
         }
 
         private static void AddScaleType(ODataConventionModelBuilder builder)

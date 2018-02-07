@@ -113,6 +113,22 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
           <Property Name="LastModified" Type="datetime" Nullable="false" StoreGeneratedPattern="Computed" />
           <Property Name="Created" Type="datetime" Nullable="false" StoreGeneratedPattern="Computed" />
         </EntityType>
+        <!--Errors Found During Generation:
+warning 6002: The table/view 'Test.dbo.StructureSpatialView' does not have a primary key defined. The key has been inferred and the definition was created as a read-only table/view.-->
+        <EntityType Name="StructureSpatialView">
+          <Key>
+            <PropertyRef Name="ID" />
+          </Key>
+          <Property Name="ID" Type="bigint" Nullable="false" StoreGeneratedPattern="Identity" />
+          <Property Name="TypeID" Type="bigint" Nullable="false" />
+          <Property Name="ParentID" Type="bigint" />
+          <Property Name="Area" Type="float" />
+          <Property Name="Volume" Type="float" />
+          <Property Name="ConvexHull" Type="geometry" />
+          <Property Name="BoundingBox" Type="geometry" />
+          <Property Name="MinZ" Type="bigint" />
+          <Property Name="MaxZ" Type="bigint" />
+        </EntityType>
         <Association Name="FK_Location_StructureBase1">
           <End Role="Structure" Type="Self.Structure" Multiplicity="1">
             <OnDelete Action="Cascade" />
@@ -530,7 +546,21 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
           <EntitySet Name="PermittedStructureLink" EntityType="Self.PermittedStructureLink" Schema="dbo" store:Type="Tables" />
           <EntitySet Name="Structure" EntityType="Self.Structure" Schema="dbo" store:Type="Tables" />
           <EntitySet Name="StructureType" EntityType="Self.StructureType" Schema="dbo" store:Type="Tables" />
-          <EntitySet Name="StructureLink" EntityType="Self.StructureLink" store:Type="Tables" Schema="dbo"/>
+          <EntitySet Name="StructureLink" EntityType="Self.StructureLink" store:Type="Tables" Schema="dbo">
+          </EntitySet>
+          <EntitySet Name="StructureSpatialView" EntityType="Self.StructureSpatialView" store:Type="Views" store:Schema="dbo">
+            <DefiningQuery>SELECT 
+    [StructureSpatialView].[ID] AS [ID], 
+    [StructureSpatialView].[TypeID] AS [TypeID], 
+    [StructureSpatialView].[ParentID] AS [ParentID], 
+    [StructureSpatialView].[Area] AS [Area], 
+    [StructureSpatialView].[Volume] AS [Volume], 
+    [StructureSpatialView].[ConvexHull] AS [ConvexHull], 
+    [StructureSpatialView].[BoundingBox] AS [BoundingBox], 
+    [StructureSpatialView].[MinZ] AS [MinZ], 
+    [StructureSpatialView].[MaxZ] AS [MaxZ]
+    FROM [dbo].[StructureSpatialView] AS [StructureSpatialView]</DefiningQuery> 
+          </EntitySet>
           <AssociationSet Name="FK_Location_StructureBase1" Association="Self.FK_Location_StructureBase1">
             <End Role="Structure" EntitySet="Structure" />
             <End Role="Location" EntitySet="Location" />
@@ -1045,6 +1075,7 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
             <Parameter Name="LocationIDOfSplitStructure" Mode="In" Type="Int64" />
             <Parameter Name="SplitStructureID" Mode="InOut" Type="Int64" />
           </FunctionImport>
+          <EntitySet Name="StructureSpatialView" EntityType="ConnectomeModel.StructureSpatialView" />
         </EntityContainer>
         <ComplexType Name="ApproximateStructureLocation_Result">
           <Property Type="Double" Name="X" Nullable="true" />
@@ -1423,6 +1454,20 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
             </Dependent>
           </ReferentialConstraint>
         </Association>
+        <EntityType Name="StructureSpatialView">
+          <Key>
+            <PropertyRef Name="ID" />
+          </Key>
+          <Property Name="ID" Type="Int64" Nullable="false" a:SetterAccess="Private" xmlns:a="http://schemas.microsoft.com/ado/2006/04/codegeneration" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="TypeID" Type="Int64" Nullable="false" a:SetterAccess="Public" xmlns:a="http://schemas.microsoft.com/ado/2006/04/codegeneration" />
+          <Property Name="ParentID" Type="Int64" a:SetterAccess="Public" xmlns:a="http://schemas.microsoft.com/ado/2006/04/codegeneration" />
+          <Property Name="Area" Type="Double" a:SetterAccess="Public" xmlns:a="http://schemas.microsoft.com/ado/2006/04/codegeneration" Nullable="false" />
+          <Property Name="Volume" Type="Double" a:SetterAccess="Public" xmlns:a="http://schemas.microsoft.com/ado/2006/04/codegeneration" Nullable="false" />
+          <Property Name="ConvexHull" Type="Geometry" a:SetterAccess="Public" xmlns:a="http://schemas.microsoft.com/ado/2006/04/codegeneration" />
+          <Property Name="BoundingBox" Type="Geometry" a:SetterAccess="Public" xmlns:a="http://schemas.microsoft.com/ado/2006/04/codegeneration" />
+          <Property Name="MinZ" Type="Int64" a:SetterAccess="Public" xmlns:a="http://schemas.microsoft.com/ado/2006/04/codegeneration" />
+          <Property Name="MaxZ" Type="Int64" a:SetterAccess="Public" xmlns:a="http://schemas.microsoft.com/ado/2006/04/codegeneration" />
+        </EntityType>
       </Schema>
     </edmx:ConceptualModels>
     <!-- C-S mapping content -->
@@ -2078,6 +2123,21 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
           <FunctionImportMapping FunctionImportName="SelectNetworkStructureIDs" FunctionName="ConnectomeModel.Store.SelectNetworkStructureIDs" />
           <FunctionImportMapping FunctionImportName="SplitStructure" FunctionName="ConnectomeModel.Store.SplitStructure" />
           <FunctionImportMapping FunctionImportName="SplitStructureAtLocationLink" FunctionName="ConnectomeModel.Store.SplitStructureAtLocationLink" />
+          <EntitySetMapping Name="StructureSpatialView">
+            <EntityTypeMapping TypeName="ConnectomeModel.StructureSpatialView">
+              <MappingFragment StoreEntitySet="StructureSpatialView">
+                <ScalarProperty Name="MaxZ" ColumnName="MaxZ" />
+                <ScalarProperty Name="MinZ" ColumnName="MinZ" />
+                <ScalarProperty Name="BoundingBox" ColumnName="BoundingBox" />
+                <ScalarProperty Name="ConvexHull" ColumnName="ConvexHull" />
+                <ScalarProperty Name="Volume" ColumnName="Volume" />
+                <ScalarProperty Name="Area" ColumnName="Area" />
+                <ScalarProperty Name="ParentID" ColumnName="ParentID" />
+                <ScalarProperty Name="TypeID" ColumnName="TypeID" />
+                <ScalarProperty Name="ID" ColumnName="ID" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
         </EntityContainerMapping>
       </Mapping>
     </edmx:Mappings>

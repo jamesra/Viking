@@ -43,6 +43,14 @@ namespace AnnotationVizLib
         /// </summary>
         public SortedSet<IStructureLink> Links = new SortedSet<IStructureLink>(new StructureLinkComparer());
 
+        /// <summary>
+        /// A collection of additional attributes that have been added to the node
+        /// </summary>
+        public Dictionary<string, object> Attributes = new Dictionary<string, object>();
+
+        public double TotalSourceArea;
+        public double TotalTargetArea;
+
         public override float Weight
         {
             get
@@ -134,6 +142,11 @@ namespace AnnotationVizLib
     {
         //Structure this node represents
         public IStructure Structure;
+
+        /// <summary>
+        /// A collection of additional attributes that have been added to the node
+        /// </summary>
+        public Dictionary<string, object> Attributes = new Dictionary<string, object>();
 
         public NeuronNode(long key, IStructure value)
             : base(key)
