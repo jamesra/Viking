@@ -16,26 +16,91 @@ namespace AnnotationVizLib.SimpleODataClient
             ODataClientSettings s = new ODataClientSettings();
             Simple.OData.Client.ODataClient client = new Simple.OData.Client.ODataClient(Endpoint);
             var scale = client.GetScale();
-            /*
+            
             System.Threading.Tasks.Parallel.ForEach(graph.Nodes.Values, node =>
             {
-                Simple.OData.Client.ODataClient taskclient = new Simple.OData.Client.ODataClient(Endpoint);
-                AppendAreaToConnections(node, taskclient);
-                AppendNeuronSpatialData(node, taskclient);
+                try
+                {
+                    Simple.OData.Client.ODataClient taskclient = new Simple.OData.Client.ODataClient(Endpoint);
+                    AppendAreaToConnections(node, taskclient);
+                    AppendNeuronSpatialData(node, taskclient);
+                }
+                catch(System.AggregateException e)
+                {
+                    System.Diagnostics.Trace.WriteLine(string.Format("OData spatial cache Aggregate exception StructureID:{0}\n{1}", node.Key, e.ToString()));
+                    if (e.InnerException as Simple.OData.Client.WebRequestException == null)
+                    {
+                        throw e;
+                    }
+
+                    Simple.OData.Client.WebRequestException inner = e.InnerException as Simple.OData.Client.WebRequestException;
+                    if (inner.Code == System.Net.HttpStatusCode.NotFound)
+                        return;
+                }
+                catch(Simple.OData.Client.WebRequestException e)
+                {
+                    System.Diagnostics.Trace.WriteLine(string.Format("OData spatial cache exception StructureID:{0}", node.Key));
+                    if (e.Code == System.Net.HttpStatusCode.NotFound)
+                        return;
+
+                    throw e;
+
+                }
             });
-            */
+            /*
             foreach (NeuronNode node in graph.Nodes.Values)
-            { 
-                AppendAreaToConnections(node, client);
-                AppendNeuronSpatialData(node, client);
-            } 
+            {
+                try
+                {
+                    AppendAreaToConnections(node, client);
+                    AppendNeuronSpatialData(node, client);
+                }
+                catch(System.AggregateException e)
+                {
+                    System.Diagnostics.Trace.WriteLine(string.Format("OData spatial cache Aggregate exception StructureID:{0}\n{1}", node.Key, e.ToString()));
+                    if (e.InnerException as Simple.OData.Client.WebRequestException == null)
+                    {
+                        throw e;
+                    }
+
+                    Simple.OData.Client.WebRequestException inner = e.InnerException as Simple.OData.Client.WebRequestException;
+                    if (inner.Code == System.Net.HttpStatusCode.NotFound)
+                        continue;
+                }
+                catch(Simple.OData.Client.WebRequestException e)
+                {
+                    System.Diagnostics.Trace.WriteLine(string.Format("OData spatial cache exception StructureID:{0}", node.Key));
+                    if (e.Code == System.Net.HttpStatusCode.NotFound)
+                        continue;
+
+                }
+                catch(System.AggregateException e)
+                {
+                    System.Diagnostics.Trace.WriteLine(string.Format("OData spatial cache Aggregate exception StructureID:{0}\n{1}", node.Key, e.ToString()));
+                    if (e.InnerException as Simple.OData.Client.WebRequestException == null)
+                    {
+                        throw e;
+                    }
+
+                    Simple.OData.Client.WebRequestException inner = e.InnerException as Simple.OData.Client.WebRequestException;
+                    if (inner.Code == System.Net.HttpStatusCode.NotFound)
+                        continue;
+                }
+                catch(Simple.OData.Client.WebRequestException e)
+                {
+                    System.Diagnostics.Trace.WriteLine(string.Format("OData spatial cache exception StructureID:{0}", node.Key));
+                    if (e.Code == System.Net.HttpStatusCode.NotFound)
+                        continue;
+
+                }
+            } */
             
         }
 
         public static void AppendNeuronSpatialData(NeuronNode node, ODataClient client)
         {
             var annotations = new ODataFeedAnnotations();
-            string queryString = string.Format("StructureSpatialView({0})", node.Key);
+            string queryString = string.Format("StructureSpatialCaches({0})", node.Key);
             Task<IDictionary<string, object>> taskStructureDicts = client.FindEntryAsync(queryString);
             Debug.Assert(taskStructureDicts != null);
             taskStructureDicts.Wait();
@@ -61,11 +126,14 @@ namespace AnnotationVizLib.SimpleODataClient
         public static void AppendAreaToConnections(NeuronNode node, ODataClient client)
         {
             var annotations = new ODataFeedAnnotations();
-            string queryString = string.Format("StructureSpatialView?$filter=ParentID eq {0}&$select=ID,Area", node.Key);
-            Task<IEnumerable<IDictionary<string, object>>> taskStructureDicts = client.FindEntriesAsync(queryString, annotations);
+            //string queryString = string.Format("StructureSpatialCaches?$filter=ParentID eq {0}&$select=ID,Area", node.Key);
+
+            //string queryString = string.Format("Structures{0}/Children?$expand=StructureSpatialCache&$select=ID,Area", node.Key);
+            string queryString = string.Format("Structures?$filter=ParentID eq {0}&$select=StructureSpatialCache&$expand=StructureSpatialCache&($select=Area,Volume)", node.Key);
+            Task <IEnumerable<IDictionary<string, object>>> taskStructureDicts = client.FindEntriesAsync(queryString, annotations);
             Debug.Assert(taskStructureDicts != null);
             taskStructureDicts.Wait();
-            IEnumerable<IDictionary<string, object>> StructuresDicts = taskStructureDicts.Result;
+            IEnumerable<IDictionary<string, object>> StructuresDicts = taskStructureDicts.Result.Where(r => r.ContainsKey("StructureSpatialCache")).Select(r => r["StructureSpatialCache"] as Dictionary<string, object>);
 
             AppendNeuronEdgeArea(node, StructuresDicts);
 
@@ -73,7 +141,7 @@ namespace AnnotationVizLib.SimpleODataClient
             {
                 taskStructureDicts = client.FindEntriesAsync(annotations.NextPageLink.ToString(), annotations);
                 taskStructureDicts.Wait();
-                StructuresDicts = taskStructureDicts.Result;
+                StructuresDicts = taskStructureDicts.Result.Where(r => r.ContainsKey("StructureSpatialCache")).Select(r => r["StructureSpatialCache"] as Dictionary<string, object>);
 
                 AppendNeuronEdgeArea(node, StructuresDicts);
             }
@@ -81,8 +149,10 @@ namespace AnnotationVizLib.SimpleODataClient
 
         private static void AppendNeuronEdgeArea(NeuronNode node, IEnumerable<IDictionary<string, object>> nodeData)
         {
+            
             foreach (IDictionary<string, object> dict in nodeData)
             {
+
                 Debug.Assert(dict.ContainsKey("ID"));
                 if (!dict.ContainsKey("ID"))
                     continue;
