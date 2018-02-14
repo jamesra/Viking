@@ -17,6 +17,11 @@ namespace GraphLib
         /// Keys are the ID of the other node in the edge, or our iD if it is a circular reference
         /// </summary>
         public SortedDictionary<KEY, SortedSet<EDGETYPE>> Edges = new SortedDictionary<KEY, SortedSet<EDGETYPE>>();
+         
+        /// <summary>
+        /// A collection of additional attributes that have been added to the node
+        /// </summary>
+        public Dictionary<string, object> Attributes = new Dictionary<string, object>();
 
         public Node(KEY k)
         {

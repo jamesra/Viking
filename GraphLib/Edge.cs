@@ -20,6 +20,13 @@ namespace GraphLib
 
         public bool IsLoop {  get { return SourceNodeKey.Equals(TargetNodeKey); } }
 
+
+        /// <summary>
+        /// A collection of additional attributes that have been added to the node
+        /// </summary>
+        public Dictionary<string, object> Attributes = new Dictionary<string, object>();
+
+
         public Edge(NODEKEY SourceNode, NODEKEY TargetNode, bool Directional)
         {
             Debug.Assert(SourceNode != null);
