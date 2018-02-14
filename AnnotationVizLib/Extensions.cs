@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text; 
+using System.Text;
 
 namespace AnnotationVizLib
 {
@@ -16,9 +16,9 @@ namespace AnnotationVizLib
             StringBuilder sb = new StringBuilder();
             List<string> keys = dict.Keys.ToList();
             keys.Sort();
-             
+
             foreach (string key in keys)
-            { 
+            {
                 sb.AppendFormat(" {0} : {1}", key, dict[key].ToString());
             }
 
@@ -26,5 +26,22 @@ namespace AnnotationVizLib
         }
     }
 
+    public static class MathStatsExtensions
+    {
+        public static double StdDev(this IEnumerable<double> values)
+        {
+            double average = values.Average();
+            double sumOfSquaresOfDifferences = values.Select(val => (val - average) * (val - average)).Sum();
+            double sd = Math.Sqrt(sumOfSquaresOfDifferences / values.Count());
+            return sd;
+        }
 
+        public static double StdDev(this ICollection<double> values)
+        {
+            double average = values.Average();
+            double sumOfSquaresOfDifferences = values.Select(val => (val - average) * (val - average)).Sum();
+            double sd = Math.Sqrt(sumOfSquaresOfDifferences / values.Count);
+            return sd;
+        }
+    }
 }
