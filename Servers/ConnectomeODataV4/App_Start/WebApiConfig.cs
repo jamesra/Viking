@@ -15,6 +15,7 @@ namespace ConnectomeODataV4
 
         public static void Register(HttpConfiguration config)
         {
+            
             // Web API configuration and services
             var json = GlobalConfiguration.Configuration.Formatters.JsonFormatter;
             json.UseDataContractJsonSerializer = true;
@@ -88,7 +89,7 @@ namespace ConnectomeODataV4
 
         private static void AddStructureSpatialView(ODataConventionModelBuilder builder)
         {
-            var entitySet = builder.EntitySet<StructureSpatialView>("StructureSpatialView");
+            var entitySet = builder.EntitySet<StructureSpatialCache>("StructureSpatialCaches");
             entitySet.EntityType.HasKey(entity => entity.ID);
         }
 
@@ -216,6 +217,18 @@ namespace ConnectomeODataV4
             StructuresLocationLinkFuncConfig.Parameter<long>("StructureID");
             StructuresLocationLinkFuncConfig.ReturnsCollectionFromEntitySet<LocationLink>("LocationLinks");
             StructuresLocationLinkFuncConfig.Namespace = null;
+
+            var NetworkChildStructuresSpatialDataFuncConfig = builder.Function("NetworkEdgeSpatialData");
+            NetworkChildStructuresSpatialDataFuncConfig.CollectionParameter<long>("IDs");
+            NetworkChildStructuresSpatialDataFuncConfig.Parameter<int>("Hops");
+            NetworkChildStructuresSpatialDataFuncConfig.ReturnsCollectionFromEntitySet<StructureSpatialCache>("StructureSpatialCaches");
+            NetworkChildStructuresSpatialDataFuncConfig.Namespace = null;
+
+            var NetworkStructuresSpatialDataFuncConfig = builder.Function("NetworkSpatialData");
+            NetworkStructuresSpatialDataFuncConfig.CollectionParameter<long>("IDs");
+            NetworkStructuresSpatialDataFuncConfig.Parameter<int>("Hops");
+            NetworkStructuresSpatialDataFuncConfig.ReturnsCollectionFromEntitySet<StructureSpatialCache>("StructureSpatialCaches");
+            NetworkStructuresSpatialDataFuncConfig.Namespace = null;
         }
     }
 }

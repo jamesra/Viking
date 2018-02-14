@@ -39,7 +39,7 @@ namespace ConnectomeDataModel
         public virtual DbSet<StructureType> StructureTypes { get; set; }
         public virtual DbSet<StructureLink> StructureLinks { get; set; }
         public virtual DbSet<PermittedStructureLink> PermittedStructureLink { get; set; }
-        public virtual DbSet<StructureSpatialView> StructureSpatialView { get; set; }
+        public virtual DbSet<StructureSpatialCache> StructureSpatialCaches { get; set; }
     
         public virtual ObjectResult<ApproximateStructureLocation_Result> ApproximateStructureLocation(Nullable<int> structureID)
         {
@@ -980,6 +980,24 @@ namespace ConnectomeDataModel
                 new ObjectParameter("LocationIDOfSplitStructure", typeof(long));
     
             return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction("SplitStructureAtLocationLink", locationIDOfKeepStructureParameter, locationIDOfSplitStructureParameter, splitStructureID);
+        }
+    
+        public virtual int SelectNetworkChildStructureSpatialData(Nullable<int> hops)
+        {
+            var hopsParameter = hops.HasValue ?
+                new ObjectParameter("Hops", hops) :
+                new ObjectParameter("Hops", typeof(int));
+    
+            return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction("SelectNetworkChildStructureSpatialData", hopsParameter);
+        }
+    
+        public virtual int SelectNetworkStructureSpatialData(Nullable<int> hops)
+        {
+            var hopsParameter = hops.HasValue ?
+                new ObjectParameter("Hops", hops) :
+                new ObjectParameter("Hops", typeof(int));
+    
+            return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction("SelectNetworkStructureSpatialData", hopsParameter);
         }
     }
 }

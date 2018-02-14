@@ -41,5 +41,6 @@ namespace ConnectomeDataModel
         public virtual StructureType Type { get; set; }
         public virtual ICollection<StructureLink> SourceOfLinks { get; set; }
         public virtual ICollection<StructureLink> TargetOfLinks { get; set; }
+        public virtual StructureSpatialCache StructureSpatialCache { get; set; }
     }
 }

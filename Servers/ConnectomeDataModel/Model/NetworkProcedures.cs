@@ -54,10 +54,22 @@ namespace ConnectomeDataModel
        
     }
 
+    [StoredProcedure("SelectNetworkStructureSpatialData")]
+    class SelectNetworkStructureSpatialData : NetworkQueryParameters
+    {
+
+    }
+
+    [StoredProcedure("SelectNetworkChildStructureSpatialData")]
+    class SelectNetworkChildStructureSpatialData : NetworkQueryParameters
+    {
+
+    }
+
     [UserDefinedTableType("integer_list")]
     struct udt_integer_list
     {
-        [UserDefinedTableTypeColumn(1, "ID")]
+        [UserDefinedTableTypeColumn(0, "ID")]
         public long ID { get; set; }
 
         public udt_integer_list(long id)

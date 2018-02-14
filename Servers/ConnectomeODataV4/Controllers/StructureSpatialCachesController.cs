@@ -24,22 +24,22 @@ namespace ConnectomeODataV4.Controllers
     builder.EntitySet<StructureLink>("StructureLinks"); 
     config.Routes.MapODataServiceRoute("odata", "odata", builder.GetEdmModel());
     */
-    public class StructureSpatialViewController : ODataController
+    public class StructureSpatialCachesController : ODataController
     {
         private ConnectomeEntities db = new ConnectomeEntities();
 
-        // GET: odata/Structures
+        // GET: odata/StructureSpatialCaches
         [EnableQuery(PageSize = 2048)]
-        public IQueryable<StructureSpatialView> GetStructureSpatialView()
+        public IQueryable<StructureSpatialCache> GetStructureSpatialCaches()
         {
-            return db.StructureSpatialView;
+            return db.StructureSpatialCaches;
         }
 
-        // GET: odata/Structures(5)
+        // GET: odata/StructureSpatialCaches(5)
         [EnableQuery]
-        public SingleResult<StructureSpatialView> GetStructureSpatialView([FromODataUri] long key)
+        public SingleResult<StructureSpatialCache> GetStructureSpatialCache([FromODataUri] long key)
         {
-            return SingleResult.Create(db.StructureSpatialView.Where(structure => structure.ID == key));
+            return SingleResult.Create(db.StructureSpatialCaches.Where(structure => structure.ID == key));
         }
 
         /// <summary>
@@ -49,7 +49,7 @@ namespace ConnectomeODataV4.Controllers
         private ODataPath GetRequestPath()
         {
             return new DefaultODataPathHandler().Parse(System.Web.HttpContext.Current.Request.Url.GetLeftPart(System.UriPartial.Path),
-                                                                 "StructureSpatialView",
+                                                                 "StructureSpatialCaches",
                                                                  Request.GetRequestContainer());
         }
         
@@ -134,12 +134,12 @@ namespace ConnectomeODataV4.Controllers
 
         [HttpGet]
         [EnableQuery()]
-        [ODataRoute("Network(IDs={IDs},Hops={Hops})")]
-        public IQueryable<Structure> GetNetwork([FromODataUri] ICollection<long> IDs, [FromODataUri] int Hops)
+        [ODataRoute("NetworkSpatialData(IDs={IDs},Hops={Hops})")]
+        public IQueryable<StructureSpatialCache> GetNetwork([FromODataUri] ICollection<long> IDs, [FromODataUri] int Hops)
         {
             db.ConfigureAsReadOnly();
             Request.ODataProperties().Path = GetRequestPath();
-            return db.SelectNetworkStructures(IDs, Hops);
+            return db.SelectNetworkStructureSpatialData(IDs, Hops);
         }
 
         /*
@@ -177,12 +177,12 @@ namespace ConnectomeODataV4.Controllers
 
         [HttpGet]
         [EnableQuery()]
-        [ODataRoute("NetworkChildStructures(IDs={IDs},Hops={Hops})")]
-        public IQueryable<Structure> GetNetworkChildren([FromODataUri] long[] IDs, [FromODataUri] int Hops)
+        [ODataRoute("NetworkEdgeSpatialData(IDs={IDs},Hops={Hops})")]
+        public IQueryable<StructureSpatialCache> GetNetworkChildren([FromODataUri] long[] IDs, [FromODataUri] int Hops)
         {
             db.ConfigureAsReadOnly();
             Request.ODataProperties().Path = GetRequestPath();
-            return db.SelectNetworkChildStructures(IDs, Hops);
+            return db.SelectNetworkChildStructureSpatialData(IDs, Hops);
 
             // https://github.com/OData/WebApi/issues/255 
              

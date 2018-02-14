@@ -93,6 +93,20 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
           <Property Name="Created" Type="datetime" Nullable="false" StoreGeneratedPattern="Computed" />
           <Property Name="LastModified" Type="datetime" Nullable="false" StoreGeneratedPattern="Computed" />
         </EntityType>
+        <EntityType Name="StructureSpatialCache">
+          <Key>
+            <PropertyRef Name="ID" />
+          </Key>
+          <Property Name="ID" Type="bigint" Nullable="false" />
+          <Property Name="BoundingRect" Type="geometry" Nullable="false" />
+          <Property Name="Area" Type="float" Nullable="false" />
+          <Property Name="Volume" Type="float" Nullable="false" />
+          <Property Name="MaxDimension" Type="int" Nullable="false" />
+          <Property Name="MinZ" Type="float" Nullable="false" />
+          <Property Name="MaxZ" Type="float" Nullable="false" />
+          <Property Name="ConvexHull" Type="geometry" />
+          <Property Name="LastModified" Type="datetime" Nullable="false" />
+        </EntityType>
         <EntityType Name="StructureType">
           <Key>
             <PropertyRef Name="ID" />
@@ -113,22 +127,20 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
           <Property Name="LastModified" Type="datetime" Nullable="false" StoreGeneratedPattern="Computed" />
           <Property Name="Created" Type="datetime" Nullable="false" StoreGeneratedPattern="Computed" />
         </EntityType>
-        <!--Errors Found During Generation:
-warning 6002: The table/view 'Test.dbo.StructureSpatialView' does not have a primary key defined. The key has been inferred and the definition was created as a read-only table/view.-->
-        <EntityType Name="StructureSpatialView">
-          <Key>
-            <PropertyRef Name="ID" />
-          </Key>
-          <Property Name="ID" Type="bigint" Nullable="false" StoreGeneratedPattern="Identity" />
-          <Property Name="TypeID" Type="bigint" Nullable="false" />
-          <Property Name="ParentID" Type="bigint" />
-          <Property Name="Area" Type="float" />
-          <Property Name="Volume" Type="float" />
-          <Property Name="ConvexHull" Type="geometry" />
-          <Property Name="BoundingBox" Type="geometry" />
-          <Property Name="MinZ" Type="bigint" />
-          <Property Name="MaxZ" Type="bigint" />
-        </EntityType>
+        <Association Name="FK__Structure__LastM__1F959DAB">
+          <End Role="Structure" Type="Self.Structure" Multiplicity="1">
+            <OnDelete Action="Cascade" />
+          </End>
+          <End Role="StructureSpatialCache" Type="Self.StructureSpatialCache" Multiplicity="0..1" />
+          <ReferentialConstraint>
+            <Principal Role="Structure">
+              <PropertyRef Name="ID" />
+            </Principal>
+            <Dependent Role="StructureSpatialCache">
+              <PropertyRef Name="ID" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
         <Association Name="FK_Location_StructureBase1">
           <End Role="Structure" Type="Self.Structure" Multiplicity="1">
             <OnDelete Action="Cascade" />
@@ -383,7 +395,13 @@ warning 6002: The table/view 'Test.dbo.StructureSpatialView' does not have a pri
         <Function Name="SelectNetworkChildStructures" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="false" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo">
           <Parameter Name="Hops" Type="int" Mode="In" />
         </Function>
+        <Function Name="SelectNetworkChildStructureSpatialData" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="false" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo">
+          <Parameter Name="Hops" Type="int" Mode="In" />
+        </Function>
         <Function Name="SelectNetworkStructureIDs" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="false" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo">
+          <Parameter Name="Hops" Type="int" Mode="In" />
+        </Function>
+        <Function Name="SelectNetworkStructureSpatialData" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="false" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo">
           <Parameter Name="Hops" Type="int" Mode="In" />
         </Function>
         <Function Name="SelectNumConnectionsPerStructure" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="false" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo" />
@@ -545,22 +563,13 @@ warning 6002: The table/view 'Test.dbo.StructureSpatialView' does not have a pri
           <EntitySet Name="LocationLink" EntityType="Self.LocationLink" Schema="dbo" store:Type="Tables" />
           <EntitySet Name="PermittedStructureLink" EntityType="Self.PermittedStructureLink" Schema="dbo" store:Type="Tables" />
           <EntitySet Name="Structure" EntityType="Self.Structure" Schema="dbo" store:Type="Tables" />
+          <EntitySet Name="StructureSpatialCache" EntityType="Self.StructureSpatialCache" Schema="dbo" store:Type="Tables" />
           <EntitySet Name="StructureType" EntityType="Self.StructureType" Schema="dbo" store:Type="Tables" />
-          <EntitySet Name="StructureLink" EntityType="Self.StructureLink" store:Type="Tables" Schema="dbo">
-          </EntitySet>
-          <EntitySet Name="StructureSpatialView" EntityType="Self.StructureSpatialView" store:Type="Views" store:Schema="dbo">
-            <DefiningQuery>SELECT 
-    [StructureSpatialView].[ID] AS [ID], 
-    [StructureSpatialView].[TypeID] AS [TypeID], 
-    [StructureSpatialView].[ParentID] AS [ParentID], 
-    [StructureSpatialView].[Area] AS [Area], 
-    [StructureSpatialView].[Volume] AS [Volume], 
-    [StructureSpatialView].[ConvexHull] AS [ConvexHull], 
-    [StructureSpatialView].[BoundingBox] AS [BoundingBox], 
-    [StructureSpatialView].[MinZ] AS [MinZ], 
-    [StructureSpatialView].[MaxZ] AS [MaxZ]
-    FROM [dbo].[StructureSpatialView] AS [StructureSpatialView]</DefiningQuery> 
-          </EntitySet>
+          <EntitySet Name="StructureLink" EntityType="Self.StructureLink" store:Type="Tables" Schema="dbo"/>
+          <AssociationSet Name="FK__Structure__LastM__1F959DAB" Association="Self.FK__Structure__LastM__1F959DAB">
+            <End Role="Structure" EntitySet="Structure" />
+            <End Role="StructureSpatialCache" EntitySet="StructureSpatialCache" />
+          </AssociationSet>
           <AssociationSet Name="FK_Location_StructureBase1" Association="Self.FK_Location_StructureBase1">
             <End Role="Structure" EntitySet="Structure" />
             <End Role="Location" EntitySet="Location" />
@@ -676,6 +685,7 @@ warning 6002: The table/view 'Test.dbo.StructureSpatialView' does not have a pri
           <NavigationProperty Name="Type" Relationship="Self.FK_StructureBase_StructureType" FromRole="Structure" ToRole="StructureType" />
           <NavigationProperty Name="SourceOfLinks" Relationship="Self.FK_StructureLinkSource_StructureBaseID" FromRole="Structure" ToRole="StructureLink" />
           <NavigationProperty Name="TargetOfLinks" Relationship="Self.FK_StructureLinkTarget_StructureBaseID" FromRole="Structure" ToRole="StructureLink" />
+          <NavigationProperty Name="StructureSpatialCache" Relationship="ConnectomeModel.FK__Structure__LastM__1F959DAB" FromRole="Structure" ToRole="StructureSpatialCache" />
         </EntityType>
         <EntityType Name="StructureType">
           <Key>
@@ -1075,7 +1085,17 @@ warning 6002: The table/view 'Test.dbo.StructureSpatialView' does not have a pri
             <Parameter Name="LocationIDOfSplitStructure" Mode="In" Type="Int64" />
             <Parameter Name="SplitStructureID" Mode="InOut" Type="Int64" />
           </FunctionImport>
-          <EntitySet Name="StructureSpatialView" EntityType="ConnectomeModel.StructureSpatialView" />
+          <EntitySet Name="StructureSpatialCaches" EntityType="ConnectomeModel.StructureSpatialCache" />
+          <AssociationSet Name="FK__Structure__LastM__1F959DAB" Association="ConnectomeModel.FK__Structure__LastM__1F959DAB">
+            <End Role="Structure" EntitySet="Structures" />
+            <End Role="StructureSpatialCache" EntitySet="StructureSpatialCaches" />
+          </AssociationSet>
+          <FunctionImport Name="SelectNetworkChildStructureSpatialData">
+            <Parameter Name="Hops" Mode="In" Type="Int32" />
+          </FunctionImport>
+          <FunctionImport Name="SelectNetworkStructureSpatialData">
+            <Parameter Name="Hops" Mode="In" Type="Int32" />
+          </FunctionImport>
         </EntityContainer>
         <ComplexType Name="ApproximateStructureLocation_Result">
           <Property Type="Double" Name="X" Nullable="true" />
@@ -1454,20 +1474,35 @@ warning 6002: The table/view 'Test.dbo.StructureSpatialView' does not have a pri
             </Dependent>
           </ReferentialConstraint>
         </Association>
-        <EntityType Name="StructureSpatialView">
+        <EntityType Name="StructureSpatialCache">
           <Key>
             <PropertyRef Name="ID" />
           </Key>
-          <Property Name="ID" Type="Int64" Nullable="false" a:SetterAccess="Private" xmlns:a="http://schemas.microsoft.com/ado/2006/04/codegeneration" annotation:StoreGeneratedPattern="Identity" />
-          <Property Name="TypeID" Type="Int64" Nullable="false" a:SetterAccess="Public" xmlns:a="http://schemas.microsoft.com/ado/2006/04/codegeneration" />
-          <Property Name="ParentID" Type="Int64" a:SetterAccess="Public" xmlns:a="http://schemas.microsoft.com/ado/2006/04/codegeneration" />
-          <Property Name="Area" Type="Double" a:SetterAccess="Public" xmlns:a="http://schemas.microsoft.com/ado/2006/04/codegeneration" Nullable="false" />
-          <Property Name="Volume" Type="Double" a:SetterAccess="Public" xmlns:a="http://schemas.microsoft.com/ado/2006/04/codegeneration" Nullable="false" />
-          <Property Name="ConvexHull" Type="Geometry" a:SetterAccess="Public" xmlns:a="http://schemas.microsoft.com/ado/2006/04/codegeneration" />
-          <Property Name="BoundingBox" Type="Geometry" a:SetterAccess="Public" xmlns:a="http://schemas.microsoft.com/ado/2006/04/codegeneration" />
-          <Property Name="MinZ" Type="Int64" a:SetterAccess="Public" xmlns:a="http://schemas.microsoft.com/ado/2006/04/codegeneration" />
-          <Property Name="MaxZ" Type="Int64" a:SetterAccess="Public" xmlns:a="http://schemas.microsoft.com/ado/2006/04/codegeneration" />
+          <Property Name="ID" Type="Int64" Nullable="false" />
+          <Property Name="BoundingRect" Type="Geometry" Nullable="false" />
+          <Property Name="Area" Type="Double" Nullable="false" />
+          <Property Name="Volume" Type="Double" Nullable="false" />
+          <Property Name="MaxDimension" Type="Int32" Nullable="false" />
+          <Property Name="MinZ" Type="Double" Nullable="false" />
+          <Property Name="MaxZ" Type="Double" Nullable="false" />
+          <Property Name="ConvexHull" Type="Geometry" />
+          <Property Name="LastModified" Type="DateTime" Nullable="false" Precision="3" />
+          <NavigationProperty Name="Structure" Relationship="ConnectomeModel.FK__Structure__LastM__1F959DAB" FromRole="StructureSpatialCache" ToRole="Structure" />
         </EntityType>
+        <Association Name="FK__Structure__LastM__1F959DAB">
+          <End Type="ConnectomeModel.Structure" Role="Structure" Multiplicity="1">
+            <OnDelete Action="Cascade" />
+          </End>
+          <End Type="ConnectomeModel.StructureSpatialCache" Role="StructureSpatialCache" Multiplicity="0..1" />
+          <ReferentialConstraint>
+            <Principal Role="Structure">
+              <PropertyRef Name="ID" />
+            </Principal>
+            <Dependent Role="StructureSpatialCache">
+              <PropertyRef Name="ID" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
       </Schema>
     </edmx:ConceptualModels>
     <!-- C-S mapping content -->
@@ -2123,21 +2158,23 @@ warning 6002: The table/view 'Test.dbo.StructureSpatialView' does not have a pri
           <FunctionImportMapping FunctionImportName="SelectNetworkStructureIDs" FunctionName="ConnectomeModel.Store.SelectNetworkStructureIDs" />
           <FunctionImportMapping FunctionImportName="SplitStructure" FunctionName="ConnectomeModel.Store.SplitStructure" />
           <FunctionImportMapping FunctionImportName="SplitStructureAtLocationLink" FunctionName="ConnectomeModel.Store.SplitStructureAtLocationLink" />
-          <EntitySetMapping Name="StructureSpatialView">
-            <EntityTypeMapping TypeName="ConnectomeModel.StructureSpatialView">
-              <MappingFragment StoreEntitySet="StructureSpatialView">
+          <EntitySetMapping Name="StructureSpatialCaches">
+            <EntityTypeMapping TypeName="ConnectomeModel.StructureSpatialCache">
+              <MappingFragment StoreEntitySet="StructureSpatialCache">
+                <ScalarProperty Name="LastModified" ColumnName="LastModified" />
+                <ScalarProperty Name="ConvexHull" ColumnName="ConvexHull" />
                 <ScalarProperty Name="MaxZ" ColumnName="MaxZ" />
                 <ScalarProperty Name="MinZ" ColumnName="MinZ" />
-                <ScalarProperty Name="BoundingBox" ColumnName="BoundingBox" />
-                <ScalarProperty Name="ConvexHull" ColumnName="ConvexHull" />
+                <ScalarProperty Name="MaxDimension" ColumnName="MaxDimension" />
                 <ScalarProperty Name="Volume" ColumnName="Volume" />
                 <ScalarProperty Name="Area" ColumnName="Area" />
-                <ScalarProperty Name="ParentID" ColumnName="ParentID" />
-                <ScalarProperty Name="TypeID" ColumnName="TypeID" />
+                <ScalarProperty Name="BoundingRect" ColumnName="BoundingRect" />
                 <ScalarProperty Name="ID" ColumnName="ID" />
               </MappingFragment>
             </EntityTypeMapping>
           </EntitySetMapping>
+          <FunctionImportMapping FunctionImportName="SelectNetworkChildStructureSpatialData" FunctionName="ConnectomeModel.Store.SelectNetworkChildStructureSpatialData" />
+          <FunctionImportMapping FunctionImportName="SelectNetworkStructureSpatialData" FunctionName="ConnectomeModel.Store.SelectNetworkStructureSpatialData" />
         </EntityContainerMapping>
       </Mapping>
     </edmx:Mappings>

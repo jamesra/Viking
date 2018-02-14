@@ -12,16 +12,18 @@ namespace ConnectomeDataModel
     using System;
     using System.Collections.Generic;
     
-    public partial class StructureSpatialView
+    public partial class StructureSpatialCache
     {
-        public long ID { get; private set; }
-        public long TypeID { get; set; }
-        public Nullable<long> ParentID { get; set; }
+        public long ID { get; set; }
+        public System.Data.Entity.Spatial.DbGeometry BoundingRect { get; set; }
         public double Area { get; set; }
         public double Volume { get; set; }
+        public int MaxDimension { get; set; }
+        public double MinZ { get; set; }
+        public double MaxZ { get; set; }
         public System.Data.Entity.Spatial.DbGeometry ConvexHull { get; set; }
-        public System.Data.Entity.Spatial.DbGeometry BoundingBox { get; set; }
-        public Nullable<long> MinZ { get; set; }
-        public Nullable<long> MaxZ { get; set; }
+        public System.DateTime LastModified { get; set; }
+    
+        public virtual Structure Structure { get; set; }
     }
 }

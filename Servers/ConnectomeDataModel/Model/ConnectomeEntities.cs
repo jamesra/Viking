@@ -373,6 +373,88 @@ namespace ConnectomeDataModel
                    select s;
         }
 
+        public IQueryable<StructureSpatialCache> SelectNetworkStructureSpatialData(IEnumerable<long> IDs, int numHops)
+        {
+            var proc = new SelectNetworkStructureSpatialData()
+            {
+                Hops = numHops,
+                IDs = udt_integer_list.Create(IDs)
+            };
+
+            if (this.Database.Connection.State != System.Data.ConnectionState.Open)
+                this.Database.Connection.Open();
+
+            List<StructureSpatialCache> NodeObjects;
+            using (System.Data.Common.DbDataReader reader = EntityFrameworkExtras.EF6.DatabaseExtensions.ExecuteReader(this.Database, proc))
+            {
+                NodeObjects = ConvertReaderToList(reader);
+                //NodeObjects = ((IObjectContextAdapter)this).ObjectContext.Translate<StructureSpatialCache>(reader, "StructureSpatialCaches", MergeOption.NoTracking).ToArray();
+            }
+
+            this.Database.Connection.Close();
+
+            return NodeObjects.AsQueryable<StructureSpatialCache>();
+            /*
+            SortedSet<long> ChildStructureIDs = new SortedSet<long>(EntityFrameworkExtras.EF6.DatabaseExtensions.ExecuteStoredProcedure<long>(this.Database, proc));
+
+            return from s in this.StructureSpatialCaches
+                   where ChildStructureIDs.Contains(s.ID)
+                   select s;*/
+        }
+
+        public IQueryable<StructureSpatialCache> SelectNetworkChildStructureSpatialData(IEnumerable<long> IDs, int numHops)
+        {
+            var proc = new SelectNetworkChildStructureSpatialData()
+            {
+                Hops = numHops,
+                IDs = udt_integer_list.Create(IDs)
+            };
+
+            if (this.Database.Connection.State != System.Data.ConnectionState.Open)
+                this.Database.Connection.Open();
+
+            List<StructureSpatialCache> NodeObjects = new List<StructureSpatialCache>();
+            using (System.Data.Common.DbDataReader reader = EntityFrameworkExtras.EF6.DatabaseExtensions.ExecuteReader(this.Database, proc))
+            {
+                NodeObjects = ConvertReaderToList(reader);
+               // NodeObjects = ((IObjectContextAdapter)this).ObjectContext.Translate<StructureSpatialCache>(reader, "StructureSpatialCaches", MergeOption.NoTracking).ToArray();
+            }
+
+            this.Database.Connection.Close();
+
+            return NodeObjects.AsQueryable<StructureSpatialCache>();
+            /*
+            SortedSet<long> ChildStructureIDs = new SortedSet<long>(EntityFrameworkExtras.EF6.DatabaseExtensions.ExecuteStoredProcedure<long>(this.Database, proc));
+
+            return from s in this.StructureSpatialCaches
+                   where ChildStructureIDs.Contains(s.ID)
+                   select s;
+                   */
+        }
+
+        public List<StructureSpatialCache> ConvertReaderToList(System.Data.Common.DbDataReader reader)
+        {
+            List<StructureSpatialCache> NodeObjects = new List<StructureSpatialCache>();
+
+            while (reader.Read())
+            {
+                StructureSpatialCache row = new StructureSpatialCache();
+                row.ID = reader.GetInt64(0); 
+                row.BoundingRect = System.Data.Entity.Spatial.DbGeometry.FromBinary(reader.GetFieldValue<Microsoft.SqlServer.Types.SqlGeometry>(1).STAsBinary().Buffer);
+                row.Area = reader.GetDouble(2);
+                row.Volume = reader.GetDouble(3);
+                row.MaxDimension = reader.GetInt32(4);
+                row.MinZ = reader.GetDouble(5);
+                row.MaxZ = reader.GetDouble(6);
+                row.ConvexHull = System.Data.Entity.Spatial.DbGeometry.FromBinary(reader.GetFieldValue<Microsoft.SqlServer.Types.SqlGeometry>(7).STAsBinary().Buffer);
+                row.LastModified = reader.GetDateTime(8);
+
+                NodeObjects.Add(row);
+            }
+
+            return NodeObjects;
+        }
+
         public IQueryable<Structure> SelectNetworkChildStructures(IEnumerable<long> IDs, int numHops)
         {
             var proc = new SelectNetworkChildStructuresProcedure()

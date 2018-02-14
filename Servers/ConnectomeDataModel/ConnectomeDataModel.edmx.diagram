@@ -22,7 +22,8 @@
         <AssociationConnector Association="ConnectomeModel.FK_StructureType_StructureType" ManuallyRouted="false" />
         <AssociationConnector Association="ConnectomeModel.FK_PermittedStructureLink_SourceType1" />
         <AssociationConnector Association="ConnectomeModel.FK_PermittedStructureLink_TargetType1" />
-        <EntityTypeShape EntityType="ConnectomeModel.StructureSpatialView" Width="1.5" PointX="7.375" PointY="5.75" /> 
+        <EntityTypeShape EntityType="ConnectomeModel.StructureSpatialCache" Width="1.5" PointX="3" PointY="9.125" />
+        <AssociationConnector Association="ConnectomeModel.FK__Structure__LastM__1F959DAB" /> 
       </Diagram>
     </edmx:Diagrams>
   </edmx:Designer>
