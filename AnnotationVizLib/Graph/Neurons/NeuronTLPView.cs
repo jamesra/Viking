@@ -35,7 +35,15 @@ namespace AnnotationVizLib
             NodeAttribs.Add("ID", string.Format("{0}", node.Key));
             NodeAttribs.Add("Tags", ObjAttribute.AttributesToString(node.Structure.TagsXML));
 
-            tlpnode.AddAttributes(NodeAttribs);
+            foreach(string attrib in node.Attributes.Keys)
+            {
+                if(!NodeAttribs.ContainsKey(attrib) && !TLPAttributes.AttributesExcludedFromTLP.Contains(attrib))
+                {
+                    NodeAttribs.Add(attrib, node.Attributes[attrib].ToString());
+                }
+            }
+
+            tlpnode.AddStandardizedAttributes(NodeAttribs);
 
             return tlpnode;
         }
@@ -106,12 +114,12 @@ namespace AnnotationVizLib
 
             IDictionary<string, string> EdgeAttribs = AttributesForEdge(edge);
 
-            tlpedge.AddAttributes(EdgeAttribs);
+            tlpedge.AddStandardizedAttributes(EdgeAttribs);
             if (tlp_reverse_edge != null)
             {
                 EdgeAttribs["Source"] = edge.TargetNodeKey.ToString();
                 EdgeAttribs["Target"] = edge.SourceNodeKey.ToString();
-                tlp_reverse_edge.AddAttributes(EdgeAttribs);
+                tlp_reverse_edge.AddStandardizedAttributes(EdgeAttribs);
             }
         }
 
@@ -132,6 +140,14 @@ namespace AnnotationVizLib
             EdgeAttribs.Add("LinkedStructures", LinkedStructures(edge));
             EdgeAttribs.Add("IsLoop", edge.IsLoop.ToString());
             EdgeAttribs.Add("Directional", edge.Directional.ToString());
+
+            foreach (string attrib in edge.Attributes.Keys)
+            {
+                if (!EdgeAttribs.ContainsKey(attrib) && !TLPAttributes.AttributesExcludedFromTLP.Contains(attrib))
+                {
+                    EdgeAttribs.Add(attrib, edge.Attributes[attrib].ToString());
+                }
+            }
 
             return EdgeAttribs;
         }

@@ -147,9 +147,21 @@ namespace AnnotationVizLib
             {"Avg#OfInputsPerTarget", "metric" },
             {"StdDevOfInputsPerTarget", "metric" },
             {"StdDevOfOutputsPerSource", "metric" },
-            {"edgeType", "string" }
-
+            {"edgeType", "string" },
+            {"MinZ", "metric" },
+            {"MaxZ", "metric" },
+            {"MaxDimension", "metric"},
+            {"Area", "metric" },
+            {"Volume", "metric" },
+            {"TotalSourceArea", "metric" },
+            {"TotalTargetArea", "metric" }
         };
+
+        public static SortedSet<string> AttributesExcludedFromTLP = new SortedSet<string>(new string[]
+        {
+            "ConvexHull",
+            "BoundingRect"
+        });
 
         public static SortedDictionary<string, string> DefaultForAttribute = new SortedDictionary<string, string>()
         {

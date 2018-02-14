@@ -1,17 +1,20 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections;
 using System.Linq;
 using System.Text;
 
 using System.IO;
 using System.Web;
+using Newtonsoft.Json.Linq;
 using System.Web.Script.Serialization;
 
 namespace AnnotationVizLib 
 {
     public class MotifJSONView
     {
-        List<object> edgesJSON = null;
+        JArray edgesJSON = null;
+        JArray nodesJSON = null;
 
         static MotifJSONView()
         {
@@ -23,7 +26,22 @@ namespace AnnotationVizLib
             int edgeCount = 0;
             MotifJSONView JSONView = new MotifJSONView();
 
-            JSONView.edgesJSON = new List<object>(graph.Edges.Count);
+            JSONView.nodesJSON = new JArray();
+            JSONView.edgesJSON = new JArray();
+
+            foreach (MotifNode node in graph.Nodes.Values)
+            {
+                dynamic obj = new JObject();
+                obj.Label = node.Key;
+                obj.Structures = node.Structures.ToJArray();
+                obj.InputCount = node.InputEdgesCount;
+                obj.OutputCount = node.OutputEdgesCount;
+                obj.BidirectionalCount = node.BidirectionalEdgesCount;
+
+                NewtonsoftJSONExtensions.AddAttributes(obj, node.Attributes);
+
+                JSONView.nodesJSON.Add(obj);
+            }
 
             foreach (MotifEdge edge in graph.Edges.Values)
             {
@@ -34,15 +52,20 @@ namespace AnnotationVizLib
                 MotifNode TargetNode = graph.Nodes[edge.TargetNodeKey];
                 string KeyString = SourceNode.Key.ToString() + "-" + TargetNode.Key.ToString() + "," + edge.SynapseType;
 
-                JSONView.edgesJSON.Add(new
-                {
-                    id = edgeCount,
-                    source = SourceNode.Key.ToString(),
-                    target = TargetNode.Key.ToString(), 
-                    label = KeyString,
-                    type = edge.SynapseType
-                });
+                dynamic obj = new JObject();
+                obj.ID = KeyString;
+                obj.SourceNode = SourceNode.Key;
+                obj.TargetNode = TargetNode.Key;
+                obj.Directional = edge.Directional;
+                obj.IsLoop = edge.IsLoop;
+                obj.Type = edge.SynapseType;
+                 
+                obj.Sources = JObject.FromObject(edge.SourceStructIDs);
+                obj.Targets = JObject.FromObject(edge.TargetStructIDs);
+                
+                NewtonsoftJSONExtensions.AddAttributes(obj, edge.Attributes);
 
+                JSONView.edgesJSON.Add(obj); 
                 edgeCount++; 
             }
              
@@ -52,17 +75,11 @@ namespace AnnotationVizLib
 
         public override string ToString()
         {
-            StringBuilder sb = new StringBuilder();
+            dynamic graph = new JObject();
+            graph.nodes = this.nodesJSON;
+            graph.edges = this.edgesJSON;
 
-            using (StringWriter fs = new StringWriter(sb))
-            {
-                System.Web.Script.Serialization.JavaScriptSerializer oSerializer = new JavaScriptSerializer();
-                oSerializer.MaxJsonLength = 268435456;
-                fs.Write(oSerializer.Serialize(new { page = "1", total = (this.edgesJSON.Count % 10 + 1), records = this.edgesJSON.Count.ToString(), rows = this.edgesJSON }));
-                fs.Close();
-            }
-
-            return sb.ToString(); 
+            return graph.ToString();
         }
 
         public void SaveJSON(string JSONFileFullPath)

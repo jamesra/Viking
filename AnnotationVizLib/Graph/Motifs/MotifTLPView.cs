@@ -33,14 +33,21 @@ namespace AnnotationVizLib
             NodeAttribs.Add("OutputTypeCount", node.OutputEdgesCount.ToString());
             NodeAttribs.Add("BidirectionalTypeCount", node.BidirectionalEdgesCount.ToString());
             
-
             if (VolumeURL != null)
                 NodeAttribs.Add("StructureURL", StructureLabelUrl(node));
 
             if (VolumeURL != null)
                 NodeAttribs.Add("MorphologyURL", MorphologyUrl(node));
 
-            tlpnode.AddAttributes(NodeAttribs);
+            foreach (string attrib in node.Attributes.Keys)
+            {
+                if (!NodeAttribs.ContainsKey(attrib) && !TLPAttributes.AttributesExcludedFromTLP.Contains(attrib))
+                {
+                    NodeAttribs.Add(attrib, node.Attributes[attrib].ToString());
+                }
+            }
+
+            tlpnode.AddStandardizedAttributes(NodeAttribs);
 
             return tlpnode;
         }
@@ -61,9 +68,17 @@ namespace AnnotationVizLib
             EdgeAttribs.Add("SourceLabel", edge.SourceNodeKey);
             EdgeAttribs.Add("TargetLabel", edge.TargetNodeKey);
 
-            AppendEdgeStatistics(graph, edge, ref EdgeAttribs);
+            //AppendEdgeStatistics(graph, edge, ref EdgeAttribs);
 
-            tlpedge.AddAttributes(EdgeAttribs);
+            foreach (string attrib in edge.Attributes.Keys)
+            {
+                if (!EdgeAttribs.ContainsKey(attrib) && !TLPAttributes.AttributesExcludedFromTLP.Contains(attrib))
+                {
+                    EdgeAttribs.Add(attrib, edge.Attributes[attrib].ToString());
+                }
+            }
+
+            tlpedge.AddStandardizedAttributes(EdgeAttribs);
 
             return tlpedge;
         }
@@ -109,24 +124,18 @@ namespace AnnotationVizLib
             if (edge.SourceCellCount > 1)
             { 
 
-                double StdDevSourceLinks = StdDev(edge.SourceStructIDs.Select(source => (double)source.Value.Count).ToList());
+                double StdDevSourceLinks = edge.SourceStructIDs.Select(source => (double)source.Value.Count).StdDev();
                 EdgeAttribs.Add("StdDevOfOutputsPerSource", StdDevSourceLinks.ToString());
             }
 
             if (edge.TargetCellCount > 1)
             {
-                double StdDevTargetLinks = StdDev(edge.TargetStructIDs.Select(target => (double)target.Value.Count).ToList());
+                double StdDevTargetLinks = edge.TargetStructIDs.Select(target => (double)target.Value.Count).StdDev();
                 EdgeAttribs.Add("StdDevOfInputsPerTarget", StdDevTargetLinks.ToString());
             } 
         }
 
-        private double StdDev(IReadOnlyList<double> values)
-        {
-            double average = values.Average();
-            double sumOfSquaresOfDifferences = values.Select(val => (val - average) * (val - average)).Sum();
-            double sd = Math.Sqrt(sumOfSquaresOfDifferences / values.Count);
-            return sd; 
-        }
+        
 
         public string StructureLabelUrl(MotifNode node)
         {

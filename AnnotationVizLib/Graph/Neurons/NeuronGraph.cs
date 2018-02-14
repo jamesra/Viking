@@ -42,20 +42,96 @@ namespace AnnotationVizLib
         /// List of child structures involved in the link
         /// </summary>
         public SortedSet<IStructureLink> Links = new SortedSet<IStructureLink>(new StructureLinkComparer());
+        
+        public double TotalSourceArea
+        {
+            get
+            {
+                if (!Attributes.ContainsKey("TotalSourceArea"))
+                {
+                    return 0;
+                }
 
-        /// <summary>
-        /// A collection of additional attributes that have been added to the node
-        /// </summary>
-        public Dictionary<string, object> Attributes = new Dictionary<string, object>();
+                return System.Convert.ToDouble(Attributes["TotalSourceArea"]);
+            }
+            set
+            {
+                Attributes["TotalSourceArea"] = value;
+            }
+        }
 
-        public double TotalSourceArea;
-        public double TotalTargetArea;
+        public double TotalTargetArea
+        {
+            get
+            {
+                if (!Attributes.ContainsKey("TotalTargetArea"))
+                {
+                    return 0;
+                }
+
+                return System.Convert.ToDouble(Attributes["TotalTargetArea"]);
+            }
+            set
+            {
+                Attributes["TotalTargetArea"] = value;
+            }
+        }
+
+        public double MinZ
+        {
+            get
+            {
+                if (!Attributes.ContainsKey("MinZ"))
+                {
+                    return double.MaxValue;
+                }
+
+                return System.Convert.ToDouble(Attributes["MinZ"]);
+            }
+            set
+            { 
+                Attributes["MinZ"] = value;
+            }
+        }
+
+        public double MaxZ
+        {
+            get
+            {
+                if (!Attributes.ContainsKey("MaxZ"))
+                {
+                    return double.MinValue;
+                }
+
+                return System.Convert.ToDouble(Attributes["MaxZ"]);
+            }
+            set
+            { 
+                Attributes["MaxZ"] = value;
+            }
+        }
 
         public override float Weight
         {
             get
             {
                 return (float)Links.Count();
+            }
+        }
+
+        public ulong[] SourceIDs
+        {
+            get
+            {
+                return Links.Select(l => l.SourceID).ToArray();
+            }
+        }
+
+        public ulong[] TargetIDs
+        {
+            get
+            {
+                return Links.Select(l => l.TargetID).ToArray();
             }
         }
 
@@ -142,11 +218,9 @@ namespace AnnotationVizLib
     {
         //Structure this node represents
         public IStructure Structure;
-
-        /// <summary>
-        /// A collection of additional attributes that have been added to the node
-        /// </summary>
-        public Dictionary<string, object> Attributes = new Dictionary<string, object>();
+        
+        public IEnumerable<ulong> EdgeSourceChildStructureIDs { get { return this.Edges.Values.SelectMany(e => e.SelectMany(s => s.SourceIDs)); } }
+        public IEnumerable<ulong> EdgeTargetChildStructureIDs { get { return this.Edges.Values.SelectMany(e => e.SelectMany(s => s.TargetIDs)); } }
 
         public NeuronNode(long key, IStructure value)
             : base(key)

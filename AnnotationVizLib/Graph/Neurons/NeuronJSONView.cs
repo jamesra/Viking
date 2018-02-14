@@ -27,8 +27,7 @@ namespace AnnotationVizLib
 
             JSONView.nodesJSON = new JArray();
             JSONView.edgesJSON = new JArray();
-
-
+            
             foreach (NeuronNode node in graph.Nodes.Values)
             {
                 dynamic obj = new JObject();
@@ -36,8 +35,8 @@ namespace AnnotationVizLib
                 obj.TypeID = node.Structure.TypeID;
                 obj.Label = node.Structure.Label;
                 obj.Tags = node.Structure.TagsXML;
-                
-                AddAttributes(obj, node.Attributes);
+
+                NewtonsoftJSONExtensions.AddAttributes(obj, node.Attributes);
 
                 JSONView.nodesJSON.Add(obj);
             }
@@ -60,7 +59,7 @@ namespace AnnotationVizLib
                 obj.Directional = edge.Directional;
                 obj.Links = AddEdgeLinks(edge);
 
-                AddAttributes(obj, edge.Attributes);
+                NewtonsoftJSONExtensions.AddAttributes(obj, edge.Attributes);
 
                 JSONView.edgesJSON.Add(obj);
                 edgeCount++; 

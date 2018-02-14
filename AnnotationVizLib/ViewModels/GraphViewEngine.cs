@@ -28,7 +28,7 @@ namespace AnnotationVizLib
         /// <param name="node"></param>
         /// <param name="attribs"></param>
         /// <returns></returns>
-        public void AddAttributes(System.Collections.Generic.IDictionary<string, string> attribs)
+        public void AddStandardizedAttributes(System.Collections.Generic.IDictionary<string, string> attribs)
         {
             if (attribs == null)
                 return;

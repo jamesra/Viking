@@ -21,7 +21,7 @@ namespace AnnotationVizLib
             
             NodeAttribs.Add("StructureURL", string.Format("{0}/OData/ConnectomeData.svc/Structures({1}L)", this.VolumeURL, node.Key));
 
-            GMLnode.AddAttributes(NodeAttribs);
+            GMLnode.AddStandardizedAttributes(NodeAttribs);
 
             return GMLnode;
         }
@@ -75,10 +75,10 @@ namespace AnnotationVizLib
             }
 
             IDictionary<string, string> EdgeAttribs = AttributesForEdge(edge);
-            GMLedge.AddAttributes(EdgeAttribs);
+            GMLedge.AddStandardizedAttributes(EdgeAttribs);
 
             if (GMLReverseEdge != null)
-                GMLReverseEdge.AddAttributes(EdgeAttribs);
+                GMLReverseEdge.AddStandardizedAttributes(EdgeAttribs);
 
             return;
         }

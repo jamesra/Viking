@@ -41,9 +41,9 @@ namespace AnnotationVizLib
         /// </summary>
         public TLPViewNode CreateTLPSubgraphNode(MorphologyNode node)
         {
-            return createNode(node.Key); 
+            return createNode(node.Key);
         }
-          
+
         public TLPViewNode CreateTLPNode(MorphologyNode node, System.Drawing.Color color)
         {
             TLPViewNode tlpnode = createNode(node.Key);
@@ -85,7 +85,7 @@ namespace AnnotationVizLib
                 NodeAttribs.Add("NumLinkedStructures", node.Graph.structure.Links.Count().ToString());
             } 
 
-            tlpnode.AddAttributes(NodeAttribs);
+            tlpnode.AddStandardizedAttributes(NodeAttribs);
 
             return tlpnode;
         }

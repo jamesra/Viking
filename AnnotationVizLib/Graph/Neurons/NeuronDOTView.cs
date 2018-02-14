@@ -11,7 +11,7 @@ namespace AnnotationVizLib
         {
             NeuronDOTView DotGraph = new NeuronDOTView();
 
-            DotGraph.AddAttributes(DOTAttributes.StandardGraphDOTAttributes);
+            DotGraph.AddStandardizedAttributes(DOTAttributes.StandardGraphDOTAttributes);
 
             foreach (NeuronNode node in graph.Nodes.Values)
             {
@@ -43,7 +43,7 @@ namespace AnnotationVizLib
 
             DotNode.label = nodelabel; 
 
-            DotNode.AddAttributes(DOTAttributes.StandardNodeDOTAttributes);
+            DotNode.AddStandardizedAttributes(DOTAttributes.StandardNodeDOTAttributes);
 
             IDictionary<string, string> AttribsForLabel = AttributeMapper.AttribsForLabel(nodelabel, DOTAttributes.StandardLabelToNodeDOTAppearance);
 
@@ -60,7 +60,7 @@ namespace AnnotationVizLib
             }
             else
             {
-                DotNode.AddAttributes(AttribsForLabel);
+                DotNode.AddStandardizedAttributes(AttribsForLabel);
             }
 
             DotNode.Attributes.Add("label", label);
@@ -92,7 +92,7 @@ namespace AnnotationVizLib
             }
             else
             {
-                DotEdge.AddAttributes(EdgeAttribs);
+                DotEdge.AddStandardizedAttributes(EdgeAttribs);
             }
 
             arrowsize = arrowsize * (float)(Math.Sqrt(edge.Weight) * mulFactor);
