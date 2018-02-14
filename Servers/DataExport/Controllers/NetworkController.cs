@@ -140,6 +140,7 @@ namespace DataExport.Controllers
             string outputFileFullPath = System.IO.Path.Combine(GetAndCreateOutputDirectory(), outputFilename);
 
             NeuronGraph neuronGraph = GetGraph(requestIDs);
+            AnnotationVizLib.SimpleODataClient.SimpleODataSpatialDataFactory.AppendSpatialDataFromOData(neuronGraph, VikingWebAppSettings.AppSettings.ODataURL, requestIDs, GetNumHops());
             NeuronTLPView TlpGraph = NeuronTLPView.ToTLP(neuronGraph, AppSettings.VolumeURL);
             TlpGraph.SaveTLP(outputFileFullPath);
 
@@ -168,7 +169,7 @@ namespace DataExport.Controllers
             string outputFileFullPath = System.IO.Path.Combine(GetAndCreateOutputDirectory(), outputFilename);
 
             NeuronGraph neuronGraph = GetGraph(requestIDs);
-            AnnotationVizLib.SimpleODataClient.SimpleODataSpatialDataFactory.AppendSpatialDataFromOData(neuronGraph, VikingWebAppSettings.AppSettings.ODataURL);
+            AnnotationVizLib.SimpleODataClient.SimpleODataSpatialDataFactory.AppendSpatialDataFromOData(neuronGraph, VikingWebAppSettings.AppSettings.ODataURL, requestIDs, GetNumHops());
 
             NeuronJSONView JsonGraph = NeuronJSONView.ToJSON(neuronGraph);
 

@@ -45,6 +45,7 @@ namespace DataExport.Controllers
             string userDotFileFullPath = System.IO.Path.Combine(userDotDirectory, outputFilename);
 
             MotifGraph motifGraph = WCFMotifFactory.BuildGraph(EndpointURL, AppSettings.EndpointCredentials);
+            motifGraph.AddEdgeStatistics();
             MotifDOTView DotGraph = MotifDOTView.ToDOT(motifGraph);
             DotGraph.SaveDOT(userDotFileFullPath);
 
@@ -66,6 +67,7 @@ namespace DataExport.Controllers
             string userDotFileFullPath = System.IO.Path.Combine(userDotDirectory, outputFilename);
              
             MotifGraph motifGraph = WCFMotifFactory.BuildGraph(EndpointURL, AppSettings.EndpointCredentials);
+            motifGraph.AddEdgeStatistics();
             MotifTLPView TlpGraph = MotifTLPView.ToTLP(motifGraph, VolumeURL);
             TlpGraph.SaveTLP(userDotFileFullPath);
 
@@ -87,6 +89,7 @@ namespace DataExport.Controllers
             string userJSONFullPath = System.IO.Path.Combine(userDotDirectory, outputFilename);
 
             MotifGraph motifGraph = WCFMotifFactory.BuildGraph(EndpointURL, AppSettings.EndpointCredentials);
+            motifGraph.AddEdgeStatistics();
             MotifJSONView JsonGraph = MotifJSONView.ToJSON(motifGraph);
             JsonGraph.SaveJSON(userJSONFullPath);
 

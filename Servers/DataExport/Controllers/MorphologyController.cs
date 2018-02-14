@@ -69,6 +69,8 @@ namespace DataExport.Controllers
                                                                                    GetColorMapImage());
 
             MorphologyGraph structure_graph = GetGraph(requestIDs);
+            if (RequestedStickFigure())
+                structure_graph.ToStickFigure();
             MorphologyTLPView TlpGraph = MorphologyTLPView.ToTLP(structure_graph, scale, colorMap, AppSettings.VolumeURL);
             TlpGraph.SaveTLP(userOutputFileFullPath);
 
@@ -87,6 +89,8 @@ namespace DataExport.Controllers
             Scale scale = AppSettings.GetScale();
 
             MorphologyGraph structure_graph = GetGraph(requestIDs);
+            if (RequestedStickFigure())
+                structure_graph.ToStickFigure();
             MorphologyJSONView JSONGraph = MorphologyJSONView.ToJSON(structure_graph);
             JSONGraph.SaveJSON(userOutputFileFullPath);
 
@@ -108,7 +112,8 @@ namespace DataExport.Controllers
                                                                                    GetColorMapImage());
 
             MorphologyGraph structure_graph = GetGraph(requestIDs);
-            
+            if (RequestedStickFigure())
+                structure_graph.ToStickFigure();
             MorphologyMesh.MorphologyColladaView view = new MorphologyMesh.MorphologyColladaView(structure_graph.scale, colorMap);
             view.Add(structure_graph);
             ColladaIO.DynamicRenderMeshColladaSerializer.SerializeToFile(view, userOutputFileFullPath);
@@ -131,6 +136,8 @@ namespace DataExport.Controllers
                                                                                    GetColorMapImage());
 
             MorphologyGraph structure_graph = GetGraph(requestIDs);
+            if (RequestedStickFigure())
+                structure_graph.ToStickFigure();
             MorphologyTLPView TlpGraph = MorphologyTLPView.ToTLP(structure_graph, structure_graph.scale, colorMap, AppSettings.VolumeURL);
             TlpGraph.SaveTLP(userOutputFileFullPath);
 
@@ -148,6 +155,9 @@ namespace DataExport.Controllers
             string userOutputFileFullPath = System.IO.Path.Combine(userOutputDirectory, OutputFile);
 
             MorphologyGraph structure_graph = GetGraph(requestIDs);
+            if (RequestedStickFigure())
+                structure_graph.ToStickFigure();
+
             MorphologyJSONView JSONGraph = MorphologyJSONView.ToJSON(structure_graph);
             JSONGraph.SaveJSON(userOutputFileFullPath);
 
@@ -169,6 +179,8 @@ namespace DataExport.Controllers
                                                                                    GetColorMapImage());
 
             MorphologyGraph structure_graph = GetGraph(requestIDs);
+            if (RequestedStickFigure())
+                structure_graph.ToStickFigure();
 
             MorphologyMesh.MorphologyColladaView view = new MorphologyMesh.MorphologyColladaView(structure_graph.scale, colorMap);
             view.Add(structure_graph);
@@ -241,6 +253,28 @@ namespace DataExport.Controllers
                 requestIDs = Queries.GetLinkedStructureParentIDs();
 
             return WCFMorphologyFactory.FromWCF(requestIDs, true, AppSettings.WebServiceURL, AppSettings.EndpointCredentials);
+        }
+
+        private bool RequestedStickFigure()
+        {
+            string hopstr = Request.RequestContext.HttpContext.Request.QueryString["stick"];
+            if (hopstr == null)
+            {
+                hopstr = Request.RequestContext.HttpContext.Request.QueryString["Stick"];
+                if (hopstr == null)
+                {
+                    return false;
+                }
+            }
+
+            try
+            {
+                return Convert.ToUInt32(hopstr) > 0;
+            }
+            catch (FormatException)
+            {
+                return false;
+            }
         }
     }
 }
