@@ -32,14 +32,16 @@ namespace AnnotationVizLib.WCFClient
         {
             if (StructureIDs == null)
                 return;
-
-
+            
             Structure[] structures = Queries.GetStructuresByIDs(StructureIDs.ToArray(), include_children);
 
             Queries.PopulateStructureTypes();
 
+            System.Threading.Tasks.ParallelOptions o = new System.Threading.Tasks.ParallelOptions();
+            o.MaxDegreeOfParallelism = 8;
+            
             // Get the nodes and build graph for numHops            
-            System.Threading.Tasks.Parallel.ForEach<Structure>(structures, s =>
+            System.Threading.Tasks.Parallel.ForEach<Structure>(structures, o, s =>
             //foreach(Structure s in structures)
             {
                 MorphologyGraph graph = MorphologyForStructure(s, scale);
