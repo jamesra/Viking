@@ -76,9 +76,27 @@ namespace MorphologyMesh
         public bool UpperPortCapped = false; //True if faces have been generated
         public bool LowerPortCapped = false; //True if faces have been generated
 
-        public ConnectionVerticies CapPort;
+        public Dictionary<ulong, ConnectionVerticies> IDToCrossSection = new Dictionary<ulong, ConnectionVerticies>();
+
+        
+        private ConnectionVerticies _CapPort;
+        public ConnectionVerticies CapPort
+        {
+            get
+            {
+                return _CapPort;
+            }
+            set
+            {
+                _CapPort = value;
+                this.IDToCrossSection[this.Key] = value;
+            }
+        }
+        
+        //public ConnectionVerticies CapPort;
 
         public bool AdjacentToPolygon = false; 
+
 
         //public GridVector3 UpperCentroid;
         //public GridVector3 LowerCentroid;
@@ -103,6 +121,23 @@ namespace MorphologyMesh
                 return BoundingBox.CenterPoint.Z;
             }
         }
+
+        /// <summary>
+        /// Z level of the cap port connection
+        /// </summary>
+        public double CapPortZ;
+
+        /*
+        private GridPolygon _ShapeAsPolygon;
+
+        public GridPolygon ShapeAsPolygon
+        {
+            get
+            {
+                return _ShapeAsPolygon;
+            }
+        }
+        */
 
         /// <summary>
         /// Return edges conneted to nodes above this node in Z

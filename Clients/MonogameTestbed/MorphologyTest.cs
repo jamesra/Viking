@@ -88,11 +88,21 @@ namespace MonogameTestbed
 
         };
         */
+        /*
         //Polygons with internal polygon merging with external concavity
         long[] TroubleIDS = new long[] {
           //  58664,
             82884, //Z: 767
             82908, //Z: 768
+
+        };
+        */
+
+        //Polygons with internal polygon merging with external concavity
+        long[] TroubleIDS = new long[] {
+          1333661, //Z = 2
+          1333662, //Z = 3
+          1333665 //Z =2
 
         };
 
@@ -111,15 +121,17 @@ namespace MonogameTestbed
             //meshes = InitSmallSmoothModelFromOData(new long[] { 1 }, ENDPOINT.RC2);
             //meshes = InitSmallSmoothModelFromOData(476, ENDPOINT.RC1);
             //meshes = InitSmallSmoothModelFromOData(new long[] { 476 }, ENDPOINT.TEST);
+            //meshes = InitSmallSmoothModelFromOData(new long[] { 144302 }, ENDPOINT.TEST);
             //meshes = InitSmallSmoothModelFromOData(476, ENDPOINT.RC1);
-            //meshes = InitSmallSmoothModelFromOData(new long[] { 2628 }, ENDPOINT.RPC1);
+            meshes = InitSmallSmoothModelFromOData(new long[] { 192 }, ENDPOINT.RPC1);
             //meshes = InitSmallSmoothModelFromOData(5554, ENDPOINT.RC2);
             //meshes = InitSmallSmoothModelFromOData(new long[] { 1650, 858 }, ENDPOINT.INFERIORMONKEY);
 
             //Bad polygon Location #1026126.  Position X: 62134.0	Y: 51034.8	Z: 234	DS: 1.97
             //meshes = InitSmallSmoothModelFromOData(new long[] { 180 }, ENDPOINT.TEST);
-            
-            meshes = InitSmallSmoothModelFromODataLocations(TroubleIDS, ENDPOINT.RPC1);
+
+            //meshes = InitSmallSmoothModelFromODataLocations(TroubleIDS, ENDPOINT.RPC1);
+            //meshes = InitSmallSmoothModelFromODataLocations(TroubleIDS, ENDPOINT.TEST);
 
             //meshes = InitSmallSmoothModelFromOData(207, ENDPOINT.TEMPORALMONKEY);
             //meshes = InitSmallModelFromOData(476);

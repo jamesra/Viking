@@ -30,6 +30,8 @@ namespace MonogameTestbed
         BRANCHPORT,
         POLYWRAPPING,
         BRANCHASSIGNMENT,
+        DELAUNAY3D,
+        BAJAJTEST
     };
 
     /// <summary>
@@ -62,10 +64,12 @@ namespace MonogameTestbed
         BranchPointTest branchTest = new BranchPointTest();
         PolywrappingTest polyWrapTest = new PolywrappingTest();
         BranchAssignmentTest brachAssignmentTest = new BranchAssignmentTest();
+        Delaunay3DTest delaunay3DTest = new Delaunay3DTest();
+        BajajAssignmentTest bajajTest = new BajajAssignmentTest();
 
         SortedDictionary<TestMode, IGraphicsTest> listTests = new SortedDictionary<TestMode, IGraphicsTest>();
 
-        TestMode Mode = TestMode.BRANCHASSIGNMENT;
+        TestMode Mode = TestMode.MORPHOLOGY;
 
         public static uint NumCurveInterpolations = 10;
 
@@ -78,8 +82,8 @@ namespace MonogameTestbed
 
         private void graphics_PreparingDeviceSettings(object sender, PreparingDeviceSettingsEventArgs e)
         {  
-            graphics.PreferredBackBufferWidth = 1024;
-            graphics.PreferredBackBufferHeight = 600;
+            graphics.PreferredBackBufferWidth = 1280;
+            graphics.PreferredBackBufferHeight = 800;
             graphics.PreferMultiSampling = true;
             graphics.GraphicsProfile = GraphicsProfile.HiDef;
             graphics.SynchronizeWithVerticalRetrace = true;
@@ -143,6 +147,8 @@ namespace MonogameTestbed
             listTests.Add(TestMode.BRANCHPORT, branchTest);
             listTests.Add(TestMode.POLYWRAPPING, polyWrapTest);
             listTests.Add(TestMode.BRANCHASSIGNMENT, brachAssignmentTest);
+            listTests.Add(TestMode.DELAUNAY3D, delaunay3DTest);
+            listTests.Add(TestMode.BAJAJTEST, bajajTest);
         }
 
         /// <summary>
@@ -206,6 +212,10 @@ namespace MonogameTestbed
                 this.Mode = TestMode.POLYWRAPPING;
             if (Keyboard.GetState().IsKeyDown(Keys.NumPad2))
                 this.Mode = TestMode.BRANCHASSIGNMENT;
+            if (Keyboard.GetState().IsKeyDown(Keys.NumPad3))
+                this.Mode = TestMode.DELAUNAY3D;
+            if (Keyboard.GetState().IsKeyDown(Keys.NumPad4))
+                this.Mode = TestMode.BAJAJTEST;
 
             if (!listTests[Mode].Initialized)
             {

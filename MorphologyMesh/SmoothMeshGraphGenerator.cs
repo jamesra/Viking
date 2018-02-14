@@ -17,6 +17,7 @@ namespace MorphologyMesh
             MeshNode mNode = new MeshNode(node.Key); 
             mNode.Mesh = CreateNodeMesh(node);
             mNode.CapPort = CreatePort(node); //Create a port we can use to cap off the node if needed
+            mNode.CapPortZ = node.Z;
             return mNode;
         }
 
@@ -25,6 +26,7 @@ namespace MorphologyMesh
             MeshNode mNode = new MorphologyMesh.MeshNode(ID);
             mNode.Mesh = CreateNodeMesh(shape, Z, ID, AdjacentToPolygon);
             mNode.CapPort = CreatePort(shape, AdjacentToPolygon);
+            mNode.CapPortZ = Z; 
             return mNode; 
         }
 

@@ -68,7 +68,6 @@ namespace MonogameTestbed
             MeshModel<VertexPositionColor> holy_model = TriangleNetExtensions.CreateMeshForPolygon2D(holy_cps, listInnerRings, Color.Aquamarine);
             this.meshView.models.Add(holy_model);
 
-
             int[] Convex_hull_idx;
             GridVector2[] cv_output_points = holy_cps.ConvexHull(out Convex_hull_idx);
 
@@ -110,7 +109,7 @@ namespace MonogameTestbed
 
         public void Draw(MonoTestbed window)
         {
-            meshView.Draw(window.GraphicsDevice, window.Scene);
+            meshView.Draw(window.GraphicsDevice, window.Scene, CullMode.None);
         }
     }
 }

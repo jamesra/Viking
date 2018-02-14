@@ -105,6 +105,12 @@ namespace MorphologyMesh
 
         public Geometry.GridPolygon ToPolygon(DynamicRenderMesh mesh)
         {
+            System.Diagnostics.Debug.Assert(ExternalBorder.Max() < mesh.Verticies.Count);
+#if DEBUG
+            if(InternalBorders.Length > 0)
+                System.Diagnostics.Debug.Assert(InternalBorders.Max(ib => ib.Max()) < mesh.Verticies.Count);
+#endif
+
             GridVector2[] externalBorder = this.ExternalBorder.Select(i => mesh.Verticies[(int)i].Position.XY()).ToArray();
             externalBorder = externalBorder.EnsureClosedRing();
             List<GridVector2[]> internalBorders = this.InternalBorders.Select(ib => ib.Select(i => mesh.Verticies[(int)i].Position.XY()).ToArray().EnsureClosedRing()).ToList();

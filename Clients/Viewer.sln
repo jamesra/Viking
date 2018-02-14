@@ -88,7 +88,12 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MorphologyMesh", "..\Morpho
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MorphologyMeshTest", "..\MorphologyMeshTest\MorphologyMeshTest.csproj", "{51B26A96-109D-49A7-8219-636D4BAA146B}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MIConvexHullExtensions", "..\MIConvexHullExtensions\MIConvexHullExtensions.csproj", "{F89734AB-4604-45FA-B17E-B6D040FA51B6}"
+EndProject
 Global
+	GlobalSection(Performance) = preSolution
+		HasPerformanceSessions = true
+	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Debug|x64 = Debug|x64
@@ -339,6 +344,7 @@ Global
 		{4085BA67-60D7-4679-886E-457AAF37EC7B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4085BA67-60D7-4679-886E-457AAF37EC7B}.Debug|x64.ActiveCfg = Debug|Any CPU
 		{4085BA67-60D7-4679-886E-457AAF37EC7B}.Debug|x64.Build.0 = Debug|Any CPU
+		{4085BA67-60D7-4679-886E-457AAF37EC7B}.Debug|x64.Deploy.0 = Debug|Any CPU
 		{4085BA67-60D7-4679-886E-457AAF37EC7B}.Debug|x86.ActiveCfg = Debug|Any CPU
 		{4085BA67-60D7-4679-886E-457AAF37EC7B}.Debug|x86.Build.0 = Debug|Any CPU
 		{4085BA67-60D7-4679-886E-457AAF37EC7B}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -782,6 +788,24 @@ Global
 		{51B26A96-109D-49A7-8219-636D4BAA146B}.ReleaseWithSymbols|x64.Build.0 = Release|Any CPU
 		{51B26A96-109D-49A7-8219-636D4BAA146B}.ReleaseWithSymbols|x86.ActiveCfg = Release|Any CPU
 		{51B26A96-109D-49A7-8219-636D4BAA146B}.ReleaseWithSymbols|x86.Build.0 = Release|Any CPU
+		{F89734AB-4604-45FA-B17E-B6D040FA51B6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F89734AB-4604-45FA-B17E-B6D040FA51B6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F89734AB-4604-45FA-B17E-B6D040FA51B6}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{F89734AB-4604-45FA-B17E-B6D040FA51B6}.Debug|x64.Build.0 = Debug|Any CPU
+		{F89734AB-4604-45FA-B17E-B6D040FA51B6}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{F89734AB-4604-45FA-B17E-B6D040FA51B6}.Debug|x86.Build.0 = Debug|Any CPU
+		{F89734AB-4604-45FA-B17E-B6D040FA51B6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F89734AB-4604-45FA-B17E-B6D040FA51B6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F89734AB-4604-45FA-B17E-B6D040FA51B6}.Release|x64.ActiveCfg = Release|Any CPU
+		{F89734AB-4604-45FA-B17E-B6D040FA51B6}.Release|x64.Build.0 = Release|Any CPU
+		{F89734AB-4604-45FA-B17E-B6D040FA51B6}.Release|x86.ActiveCfg = Release|Any CPU
+		{F89734AB-4604-45FA-B17E-B6D040FA51B6}.Release|x86.Build.0 = Release|Any CPU
+		{F89734AB-4604-45FA-B17E-B6D040FA51B6}.ReleaseWithSymbols|Any CPU.ActiveCfg = Release|Any CPU
+		{F89734AB-4604-45FA-B17E-B6D040FA51B6}.ReleaseWithSymbols|Any CPU.Build.0 = Release|Any CPU
+		{F89734AB-4604-45FA-B17E-B6D040FA51B6}.ReleaseWithSymbols|x64.ActiveCfg = Release|Any CPU
+		{F89734AB-4604-45FA-B17E-B6D040FA51B6}.ReleaseWithSymbols|x64.Build.0 = Release|Any CPU
+		{F89734AB-4604-45FA-B17E-B6D040FA51B6}.ReleaseWithSymbols|x86.ActiveCfg = Release|Any CPU
+		{F89734AB-4604-45FA-B17E-B6D040FA51B6}.ReleaseWithSymbols|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

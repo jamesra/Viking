@@ -260,7 +260,7 @@ namespace MonogameTestbed
                 }
             }
 
-            meshView.Draw(window.GraphicsDevice, window.Scene);
+            meshView.Draw(window.GraphicsDevice, window.Scene, CullMode.None);
         }
     }
 }

@@ -18,7 +18,7 @@ using System.Diagnostics;
 namespace MorphologyMesh
 {
 
-    public static class SmoothMeshGenerator
+    public static class SmootherMeshGenerator
     {
 
         static public int NumPointsAroundCircle = 16;
@@ -580,11 +580,14 @@ namespace MorphologyMesh
              
             int NewStartingIndex = KeepNode.Mesh.Append(RemoveNode.Mesh);
 
-            foreach(var OtherNodeKey in RemoveNode.Edges.Keys)
+            //if (RemoveNode.CapPort != null)
+                //RemoveNode.CapPort = RemoveNode.CapPort.IncrementStartingIndex(NewStartingIndex);
+
+            foreach (var OtherNodeKey in RemoveNode.Edges.Keys)
             {
-                foreach(MeshEdge edge in RemoveNode.Edges[OtherNodeKey])
+                foreach (MeshEdge edge in RemoveNode.Edges[OtherNodeKey])
                 {
-                    bool RemoveNodeIsSource = RemoveNode.Key == edge.SourceNodeKey;
+                    bool RemoveNodeIsSource = RemoveNode.Key == edge.SourceNodeKey; 
                     if(RemoveNodeIsSource)
                     {
                         edge.SourcePort = edge.SourcePort.IncrementStartingIndex(NewStartingIndex);
@@ -596,7 +599,10 @@ namespace MorphologyMesh
                 }
             }
 
+            //RemoveNode.Mesh = KeepNode.Mesh;
             CompositeMesh = KeepNode.Mesh;
+            //Record the key of the node we are merging with in case we need the cross section later
+            KeepNode.IDToCrossSection[RemoveNode.Key] = RemoveNode.CapPort.IncrementStartingIndex(NewStartingIndex);
             return CompositeMesh;
         }
 
@@ -677,6 +683,7 @@ namespace MorphologyMesh
 
             graph.RemoveNode(RemoveNode.Key);
         }
+
         /*
         private static void MergeMeshNodes(MeshGraph graph, MeshNode A, MeshNode B)
         {
@@ -778,11 +785,11 @@ namespace MorphologyMesh
 
             //System.Diagnostics.Debug.Assert(CompositeMesh[UpperIndexArray.First()].Position.Z >= CompositeMesh[LowerIndexArray.First()].Position.Z,
             //    string.Format("Upper and lower ports have incorrect Z relationship Upper: {0} Lower: {1}", CompositeMesh[UpperIndexArray.First()].Position.Z, CompositeMesh[LowerIndexArray.First()].Position.Z));
-
+           
             //OK, find the nearest two verticies between the ports, and walk counter-clockwise (incrementing the index) around the shapes.  Creating faces until we are finished.
             //Find the verticies on the exterior ring
-            GridVector2[] UpperVerticies = UpperIndexArray.Select(i => CompositeMesh.Verticies[(int)i].Position.XY()).ToArray();
-            GridVector2[] LowerVerticies = LowerIndexArray.Select(i => CompositeMesh.Verticies[(int)i].Position.XY()).ToArray();
+            GridVector2[] UpperVerticies = UpperIndexArray.Select(i => new GridVector2(CompositeMesh.Verticies[(int)i].Position.X, CompositeMesh.Verticies[(int)i].Position.Y)).ToArray();
+            GridVector2[] LowerVerticies = LowerIndexArray.Select(i => new GridVector2(CompositeMesh.Verticies[(int)i].Position.X, CompositeMesh.Verticies[(int)i].Position.Y)).ToArray();
 
             List<GridVector2> UpperPolyVertList = UpperVerticies.ToList();
             UpperPolyVertList.Add(UpperPolyVertList.First());
@@ -1072,10 +1079,7 @@ namespace MorphologyMesh
                 {
                     iMiddleIndex = (int)UpperIndexArray[iNextUpper];
 
-                    if (UpperVerticies[iNextUpper] != LowerVerticies[iLower])
-                    {
-                        CreatedLines.Add(new GridLineSegment(UpperVerticies[iNextUpper], LowerVerticies[iLower]));
-                    }
+                    CreatedLines.Add(new GridLineSegment(UpperVerticies[iNextUpper], LowerVerticies[iLower]));
 
                     iUpper = iNextUpper;
                     UpperAddedCount++;
@@ -1084,10 +1088,7 @@ namespace MorphologyMesh
                 {
                     iMiddleIndex = (int)lowerIndicies[iNextLower];
 
-                    if (UpperVerticies[iUpper] != LowerVerticies[iNextLower])
-                    {
-                        CreatedLines.Add(new GridLineSegment(UpperVerticies[iUpper], LowerVerticies[iNextLower]));
-                    }
+                    CreatedLines.Add(new GridLineSegment(UpperVerticies[iUpper], LowerVerticies[iNextLower]));
 
                     iLower = iNextLower;
                     LowerAddedCount++;

@@ -282,10 +282,10 @@ namespace TriangleNet
         public static TriangleNet.Meshing.IMesh Triangulate(this GridPolygon[] Polygons)
         {
             SortedSet<GridVector2> AddedPoints;
-            SortedSet<GridLineSegment> NonIntersectingSegments = Polygons.NonIntersectingSegments(true, out AddedPoints);
+            //SortedSet<GridLineSegment> NonIntersectingSegments = Polygons.NonIntersectingSegments(true, out AddedPoints);
 
             Dictionary<GridVector2, List<PointIndex>> pointToPolyMap = GridPolygon.CreatePointToPolyMap(Polygons);
-            List<GridVector2> points = pointToPolyMap.Keys.ToList();
+            List<GridVector2> points = pointToPolyMap.Keys.Distinct().ToList();
 
             TriangleNet.Geometry.Polygon polygon = new TriangleNet.Geometry.Polygon(points.Count);
 
@@ -293,17 +293,18 @@ namespace TriangleNet
             {
                 polygon.Add(new Vertex(p.X, p.Y));
             }
+            /*
             foreach (GridVector2 p in AddedPoints)
             {
                 polygon.Add(new Vertex(p.X, p.Y));
             }
-
+            
             //Add constraints for the non-intersecting line segments
             foreach (GridLineSegment line in NonIntersectingSegments)
             {
                 Segment seg = new Segment(new Vertex(line.A.X, line.A.Y), new Vertex(line.B.X, line.B.Y));
                 polygon.Add(seg, false);
-            }
+            }*/
             
             //If there are not enough points to triangulate return null
             if (polygon.Points.Count < 3)

@@ -14,198 +14,18 @@ using TriangleNet;
 using TriangleNet.Meshing;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
-using MorphologyMesh; 
+using MorphologyMesh;
+using MIConvexHull;
+using MIConvexHullExtensions;
+
 
 namespace MonogameTestbed
 {
-    /*
-    class TriangulationShapeWrapView
-    {
-        public GridPolygon A;
-        public GridPolygon B;
-
-        MeshNode NodeA;
-        MeshNode NodeB;
-
-        private LineSetView TrianglesView = new LineSetView();
-
-        private PointSetView StartingIndexView = null;
-
-        private PointSetView PolyA = new PointSetView();
-        private PointSetView PolyB = new PointSetView();
-
-        private LineView StartingLine = null;
-
-        public bool ShowFinalLines = false;
-
-        public int NumLinesToDraw
-        {
-            get { return _NumLinesToDraw; }
-            set
-            {
-                _NumLinesToDraw = value;
-                UpdateLinesToDraw();
-            }
-        }
-
-        private int _NumLinesToDraw = 1;
-        private LineView[] lineViewsToDraw = null;
-
-        public Color Color
-        {
-            get { return TrianglesView.color; }
-            set
-            {
-                TrianglesView.color = value;
-            }
-        }
-
-        public TriangulationShapeWrapView(GridPolygon a, GridPolygon b)
-        {
-            this.A = a;
-            this.B = b;
-            this.Color = Color.Blue;
-            
-            UpdateWrapping();
-        }
-
-        public void UpdateWrapping()
-        {
-            StartingIndexView = new PointSetView();
-            StartingIndexView.Color = Color.Yellow;
-            StartingIndexView.PointRadius = 7.5;
-
-            PolyA = new PointSetView();
-            PolyA.Color = Color.AliceBlue;
-            PolyA.LabelIndex = true;
-
-            PolyB = new PointSetView();
-            PolyB.Color = Color.Green;
-            PolyB.LabelIndex = true;
-
-            TrianglesView.color = Color.Gray;
-
-            NodeA = MorphologyMesh.SmoothMeshGraphGenerator.CreateNode(0, A, 0, true);
-            NodeB = MorphologyMesh.SmoothMeshGraphGenerator.CreateNode(1, B, 1, true);
-
-            ConnectionVerticies PortA = MorphologyMesh.SmoothMeshGraphGenerator.CreatePort(A, true);
-            ConnectionVerticies PortB = MorphologyMesh.SmoothMeshGraphGenerator.CreatePort(B, true);
-
-            MeshEdge edge = new MeshEdge(0, 1, PortA, PortB);
-
-            MeshGraph graph = new MeshGraph();
-
-            graph.AddNode(NodeA);
-            graph.AddNode(NodeB);
-            graph.AddEdge(edge);
-
-            MeshNode Source = graph.Nodes[edge.SourceNodeKey];
-            MeshNode Target = graph.Nodes[edge.TargetNodeKey];
-
-            DynamicRenderMesh<ulong> CompositeMesh = MorphologyMesh.SmoothMeshGenerator.MergeMeshes(Source, Target);
-
-            bool SourceIsUpper = Source.IsNodeBelow(Target);
-
-            GridVector2[] UpperVerticies = edge.SourcePort.ExternalBorder.Select(i => new GridVector2(CompositeMesh.Verticies[(int)i].Position.X, CompositeMesh.Verticies[(int)i].Position.Y)).ToArray();
-            GridVector2[] LowerVerticies = edge.TargetPort.ExternalBorder.Select(i => new GridVector2(CompositeMesh.Verticies[(int)i].Position.X, CompositeMesh.Verticies[(int)i].Position.Y)).ToArray();
-
-            GridVector2 UpperPortConvexHullCentroid;
-            GridVector2 LowerPortConvexHullCentroid; 
-            long UpperStart = SmoothMeshGenerator.FirstIndex(UpperVerticies, out UpperPortConvexHullCentroid);
-            long LowerStart = SmoothMeshGenerator.FirstIndex(LowerVerticies, out LowerPortConvexHullCentroid);
-
-            UpperVerticies = UpperVerticies.Translate(-UpperPortConvexHullCentroid);
-            LowerVerticies = LowerVerticies.Translate(-LowerPortConvexHullCentroid);
-
-            PolyA.Points = UpperVerticies;
-            PolyB.Points = LowerVerticies;
-
-            Trace.WriteLine("Upper Start " + UpperStart.ToString());
-            Trace.WriteLine("Lower Start " + LowerStart.ToString());
-
-            List<GridVector2> startingPoints = new List<GridVector2>();
-            long UpperStartVertex = edge.SourcePort.ExternalBorder[(int)UpperStart];
-            long LowerStartVertex = edge.TargetPort.ExternalBorder[(int)LowerStart];
-
-            Trace.WriteLine("Upper Start Mesh Index " + UpperStartVertex.ToString());
-            Trace.WriteLine("Lower Start Mesh Index " + LowerStartVertex.ToString());
-
-            startingPoints.Add(CompositeMesh.Verticies[(int)UpperStartVertex].Position.XY());
-            startingPoints.Add(CompositeMesh.Verticies[(int)LowerStartVertex].Position.XY());
-
-            StartingIndexView.Points = startingPoints; 
-
-            List<GridLineSegment> CreatedLines = MorphologyMesh.SmoothMeshGenerator.AttachPorts(CompositeMesh,
-                        SourceIsUpper ? edge.TargetPort : edge.SourcePort,
-                        SourceIsUpper ? edge.SourcePort : edge.TargetPort);
-
-            //GridLineSegment[] lines = CompositeMesh.Edges.Values.Select(e => new GridLineSegment(CompositeMesh.Verticies[e.A].Position, CompositeMesh.Verticies[e.B].Position)).ToArray();
-
-            StartingLine = new LineView(UpperVerticies[UpperStart], LowerVerticies[LowerStart], 2, Color.Red, LineStyle.Standard, false);
-             
-            TrianglesView.UpdateViews(CreatedLines);
-            UpdateLinesToDraw();
-        }
-
-        private void UpdateLinesToDraw()
-        {
-            if (TrianglesView == null)
-            {
-                lineViewsToDraw = null;
-            }
-
-            if (_NumLinesToDraw < 0)
-                _NumLinesToDraw = TrianglesView.LineViews.Count;
-
-            if (_NumLinesToDraw > TrianglesView.LineViews.Count)
-            {
-                _NumLinesToDraw = 0;
-            } 
-
-            lineViewsToDraw = new LineView[_NumLinesToDraw];
-            TrianglesView.LineViews.CopyTo(0, lineViewsToDraw, 0, NumLinesToDraw);
-
-            TrianglesView.color = Color.Gray;
-
-            foreach (LineView view in lineViewsToDraw)
-            {
-                view.Color = Color.Yellow;
-            }
-        }
-
-
-        public void Draw(MonoTestbed window, Scene scene)
-        { 
-            if(TrianglesView != null && ShowFinalLines)
-            {
-                LineView.Draw(window.GraphicsDevice, scene, window.lineManager, TrianglesView.LineViews.ToArray());
-            }
-
-            if (lineViewsToDraw != null)
-            {  
-                LineView.Draw(window.GraphicsDevice, scene, window.lineManager, lineViewsToDraw);
-            }
-
-            if (PolyA != null)
-                PolyA.Draw(window, scene);
-
-            if (PolyB != null)
-                PolyB.Draw(window, scene); 
-
-            if(StartingLine != null)
-            {
-                LineView.Draw(window.GraphicsDevice, scene, window.lineManager, new LineView[] { StartingLine });
-            }
-
-            //if (StartingIndexView != null)
-            //    StartingIndexView.Draw(window, scene);
-        }
-    }
-    */
-
+     
     class PolyBranchAssignmentView
     {
         public GridPolygon[] Polygons = null;
+        public double[] PolyZ = null;
         public PointSetView[] PolyPointsView = null;
         private LineSetView TrianglesView = new LineSetView();
 
@@ -220,13 +40,14 @@ namespace MonogameTestbed
             }
         }
 
-        public PolyBranchAssignmentView(GridPolygon[] polys)
+        public PolyBranchAssignmentView(GridPolygon[] polys, double[] Z)
         {
             Polygons = polys;
+            PolyZ = Z;
 
             UpdatePolyViews();
 
-            UpdateTriangulation();
+            UpdateTriangulation3D();
         }
 
         public void UpdatePolyViews()
@@ -236,53 +57,205 @@ namespace MonogameTestbed
             foreach(GridPolygon p in Polygons)
             {
                 PointSetView psv = new PointSetView();
-                psv.Points = p.ExteriorRing;
+
+                List<GridVector2> points = p.ExteriorRing.ToList();
+                foreach(GridPolygon innerPoly in p.InteriorPolygons)
+                {
+                    points.AddRange(innerPoly.ExteriorRing);
+                }
+
+                psv.Points = points; 
+                
                 psv.Color = Color.Random();
                 psv.LabelIndex = true; 
 
                 listPointSetView.Add(psv);
+
+                
             }
 
             PolyPointsView = listPointSetView.ToArray();
         }
 
-        private static Dictionary<GridVector2, int> CreatePointToPolyMap(GridPolygon[] Polygons)
+        private void BuildAPort(IMesh mesh, Dictionary<GridVector2, PointIndex> pointToPoly)
         {
-            Dictionary<GridVector2, int> pointToPoly = new Dictionary<GridVector2, int>();
-            for (int iPoly = 0; iPoly < Polygons.Length; iPoly++)
+            List<GridVector2> points = pointToPoly.Keys.ToList();
+            Debug.Assert(mesh.Vertices.Select(v => v.ToGridVector2()).SequenceEqual(points));
+
+            DynamicRenderMesh<PointIndex> SearchMesh = new DynamicRenderMesh<PointIndex>();
+
+            SearchMesh.AddVertex(pointToPoly.Keys.Select(v => new Vertex<PointIndex>(v.ToGridVector3(0), pointToPoly[v])).ToArray());
+            SearchMesh.AddFaces(mesh.Triangles.Select(t => new Face(t.GetVertexID(0), t.GetVertexID(1), t.GetVertexID(2))).ToArray()); 
+        }
+
+        public void UpdateTriangulation3D()
+        {
+            List<MIVector3> listPoints = new List<MIVector3>();
+            for(int iPoly = 0; iPoly < Polygons.Length; iPoly++)
             {
-                GridPolygon poly = Polygons[iPoly];
-                GridVector2[] polyPoints = poly.ExteriorRing;
-                foreach (GridVector2 p in poly.ExteriorRing)
-                {
-                    if(!pointToPoly.ContainsKey(p))
-                        pointToPoly.Add(p, iPoly);
-                }
+                var map = Polygons[iPoly].CreatePointToPolyMap();
+                double Z = PolyZ[iPoly];  
+                listPoints.AddRange(map.Keys.Select(k => new MIVector3(k.ToGridVector3(Z), new PointIndex(iPoly, map[k].iInnerPoly, map[k].iVertex))));
             }
 
-            return pointToPoly;
+            var tri = MIConvexHull.DelaunayTriangulation<MIConvexHullExtensions.MIVector3, DefaultTriangulationCell<MIVector3>>.Create(listPoints, 1e-10);
+
+            List<DefaultTriangulationCell<MIVector3>> listCells = new List<DefaultTriangulationCell<MIVector3>>(tri.Cells.Count());
+            //DynamicRenderMesh<GridVector3> mesh = new DynamicRenderMesh<GridVector3>();
+
+            List<GridLineSegment> surfaceLines = new List<GridLineSegment>();
+            List<Color> Colors = new List<Color>();
+
+            //mesh.AddVertex(listPoints.Select(p => new Vertex(p.P)));
+
+            foreach(var cell in tri.Cells)
+            {
+                //For each face, determine if any of the edges are invalid lines.  If all lines are valid then add the face to the output
+                bool AllOnSurface = true;
+                List<GridLineSegment> FaceLines = new List<GridLineSegment>();
+                List<Color> FaceColors = new List<Color>();
+
+                List<GridLineSegment> tetraLines = new List<GridLineSegment>(6);
+                bool SkipCell = false; 
+                foreach(Combo<MIVector3> combo in cell.Vertices.CombinationPairs())
+                {
+                    GridLineSegment line = new GridLineSegment(combo.A.P, combo.B.P);
+
+                    PointIndex A = cell.Vertices[combo.iA].PolyIndex;
+                    PointIndex B = cell.Vertices[combo.iB].PolyIndex;
+
+                    tetraLines.Add(line);
+
+                    if(DelaunayTetrahedronView.LineCrossesEmptySpace(A,B, Polygons, line.PointAlongLine(0.5), PolyZ))
+                    {
+                        SkipCell = true;
+                        break;
+                    }
+                }
+
+                if(SkipCell)
+                {
+                    continue; 
+                }
+
+                int[][] faceIndicies = new int[][] { new int[] {0, 1, 2},
+                                             new int[] {0, 1, 3},
+                                             new int[] {0, 2, 3},
+                                             new int[] {1, 2, 3}};
+
+                bool NeedBreak = false;
+
+                foreach(int[] face in faceIndicies)
+                {
+                    //All edges of the triangle must be on the surface or we ignore the face.
+                    
+                    bool FaceOnSurface = true; 
+                    foreach (Combo<int> combo in face.CombinationPairs())
+                    {
+                        var line = new GridLineSegment(cell.Vertices[combo.A].P, cell.Vertices[combo.B].P);
+                        PointIndex A = cell.Vertices[combo.A].PolyIndex;
+                        PointIndex B = cell.Vertices[combo.B].PolyIndex;
+
+                        bool OnSurface = MeshGraphBuilder.IsLineOnSurface(A, B, Polygons, line.PointAlongLine(0.5));
+                        if (!surfaceLines.Contains(line))
+                        {
+                            surfaceLines.Add(line);
+                            Colors.Add(GetColorForLine(A, B, Polygons, line.PointAlongLine(0.5)));
+                        }
+                        FaceOnSurface &= OnSurface;
+                    }
+                    /*
+                    if(!FaceOnSurface)
+                    {
+                        NeedBreak = true; 
+
+                        foreach (Combo<int> combo in face.CombinationPairs())
+                        {
+                            var line = new GridLineSegment(cell.Vertices[combo.A].P, cell.Vertices[combo.B].P);
+                            PointIndex A = cell.Vertices[combo.A].PolyIndex;
+                            PointIndex B = cell.Vertices[combo.B].PolyIndex;
+
+                            if (!surfaceLines.Contains(line))
+                            {
+                                surfaceLines.Add(line);
+                                Colors.Add(GetColorForLine(A, B, Polygons, line.PointAlongLine(0.5)));
+                            }
+                        }    
+                    } 
+                    */
+                }
+
+                //if(NeedBreak)
+//                    break;
+                                                        
+                 
+                 /*
+                        //Wraparound to zero to close the cycle for the face
+                        //int next = i + 1 == cell.Vertices.Length ? 0 : i + 1;
+
+                        var line = new GridLineSegment(cell.Vertices[i].P, cell.Vertices[j].P);
+                        PointIndex A = cell.Vertices[i].PolyIndex;
+                        PointIndex B = cell.Vertices[j].PolyIndex;
+
+                        bool OnSurface = MeshGraphBuilder.IsLineOnSurface(A, B, Polygons, line.PointAlongLine(0.5));
+
+                        //AllOnSurface &= OnSurface;
+
+                        //if (!AllOnSurface)
+                        //{
+                        //    //No need to check any other parts of the face
+                        //    break;
+                        //}
+
+                        //Only add the line if the entire face is on the surface
+                        if (!surfaceLines.Contains(line))
+                        {
+                            surfaceLines.Add(line);
+                            Colors.Add(GetColorForLine(A, B, Polygons, line.PointAlongLine(0.5)));
+                        }
+                    }
+
+                    
+                    
+                }
+
+                break;
+
+                //if(AllOnSurface)
+                //{
+                //    surfaceLines.AddRange(FaceLines);
+                //    Colors.AddRange(FaceColors);
+                //}
+                */
+            }
+            
+            TrianglesView.color = Color.Red;
+            TrianglesView.UpdateViews(surfaceLines);
+            lineViews = TrianglesView.LineViews.ToArray();
+
+            for(int iLine = 0; iLine < lineViews.Length;iLine++)
+            {
+                lineViews[iLine].Color = Colors[iLine];
+            }
         }
 
         public void UpdateTriangulation()
         {
-            List<GridVector2> points = new List<GridVector2>(Polygons.Select(p=>p.ExteriorRing.Length).Sum());
-            foreach (GridPolygon p in Polygons)
-            {
-                points.AddRange(p.ExteriorRing);
-            }
+            Dictionary<GridVector2, List<PointIndex>> pointToPoly = GridPolygon.CreatePointToPolyMap(Polygons);
 
+            List<GridVector2> points = pointToPoly.Keys.ToList();
+            
             //IMesh mesh = points.Triangulate(points.Count);
-            IMesh mesh = points.Triangulate();
+            //IMesh mesh = points.Triangulate();
+            IMesh mesh = Polygons.Triangulate();
 
             List<GridLineSegment> lines = mesh.ToLines();
-
-            Dictionary<GridVector2, int> pointToPoly = CreatePointToPolyMap(Polygons);
 
             GridVector2[] midpoints = lines.Select(l => l.PointAlongLine(0.5)).AsParallel().ToArray();
 
             TrianglesView.color = Color.Red;
             TrianglesView.UpdateViews(lines);
-            lineViews = TrianglesView.LineViews.ToArray();
+            lineViews = TrianglesView.LineViews.ToArray(); 
 
             //Figure out which verticies are included in the port
             //Verticies of a line between two shapes are included
@@ -291,31 +264,27 @@ namespace MonogameTestbed
                 GridLineSegment l = lines[i];
 
                 if (!pointToPoly.ContainsKey(l.A) || !pointToPoly.ContainsKey(l.B))
-                    continue; 
+                    continue;
 
-                int APoly = pointToPoly[l.A];
-                int BPoly = pointToPoly[l.B];
+                PointIndex APoly;// = pointToPoly[l.A];
+                PointIndex BPoly;// = pointToPoly[l.B];
 
-                if(APoly != BPoly)
-                {
-                    lineViews[i].Color = Color.Blue;
-                }
-                else if (APoly == BPoly)
-                {
-                    lineViews[i].Color = Color.Gray;
-                }
+                //if(pointToPoly[l.A].Count == 1)
+                //{
+                    APoly = pointToPoly[l.A].First();
+                //}
 
-                GridPolygon A = Polygons[APoly];
-                GridPolygon B = Polygons[BPoly];
+                //if (pointToPoly[l.B].Count == 1)
+                //{
+                    BPoly = pointToPoly[l.B].First();
+                //}
+                  
+                
 
                 GridVector2 midpoint = midpoints[i];//l.PointAlongLine(0.5);
-                bool midInA = A.Contains(midpoint);
-                bool midInB = B.Contains(midpoint);
 
-                if (!(midInA ^ midInB))
-                {
-                    lineViews[i].Color = Color.Gold;
-                }
+                lineViews[i].Color = GetColorForLine(APoly, BPoly, Polygons, midpoint);
+
                 /*
                 if (A.ExteriorSegments.Contains(l) || B.ExteriorSegments.Contains(l))
                     continue;                
@@ -333,6 +302,125 @@ namespace MonogameTestbed
                 }
                 */
             }
+        }
+         
+
+        private Color GetColorForLine(PointIndex APoly, PointIndex BPoly, GridPolygon[] Polygons, GridVector2 midpoint)
+        {
+            GridPolygon A = Polygons[APoly.iPoly];
+            GridPolygon B = Polygons[BPoly.iPoly];
+
+            if (APoly.iPoly != BPoly.iPoly)
+            {
+                bool midInA = A.Contains(midpoint);
+                bool midInB = B.Contains(midpoint);
+
+                //lineViews[i].Color = Color.Blue;
+
+                if (!(midInA ^ midInB)) //Midpoint in both or neither polygon. Line may be on exterior surface
+                {
+                    if (!midInA && !midInB) //Midpoing not in either polygon.  Passes through empty space that cannot be on the surface
+                    {
+                        return Color.Black.SetAlpha(0.1f); //Exclude from port.  Line covers empty space.  If the triangle contains an intersection point we may need to adjust faces
+                                                                         /*
+                                                                         if (A.InteriorPolygonContains(midpoint) ^ B.InteriorPolygonContains(midpoint))
+                                                                         {
+                                                                             //Include in port.
+                                                                             //Line runs from exterior ring to the far side of an overlapping interior hole
+                                                                             lineViews[i].Color = Color.Black.SetAlpha(0.25f); //exclude from port, line covers empty space
+                                                                         }
+                                                                         else
+                                                                         {
+                                                                             lineViews[i].Color = Color.White.SetAlpha(0.25f); //Exclude from port.  Line covers empty space
+                                                                         }
+                                                                         */
+                    }
+                    else //Midpoing in both polygons.  The line passes through solid space
+                    {
+                        if (APoly.IsInner ^ BPoly.IsInner) //One or the other vertex is on an interior polygon, but not both
+                        {
+                            return Color.White.SetAlpha(0.25f); //Exclude. Line from interior polygon to exterior ring through solid space
+                        }
+                        else
+                        {
+                            return Color.Orange.SetAlpha(0.25f);  //Exclude. Two interior polygons connected and inside the cells.  Consider using this to vote for branch connection for interior polys
+                        }
+                    }
+                }
+                else //Midpoint in one or the other polygon, but not both
+                {
+                    if (APoly.IsInner ^ BPoly.IsInner) //One or the other is an interior polygon, but not both
+                    {
+                        if (A.InteriorPolygonContains(midpoint) ^ B.InteriorPolygonContains(midpoint))
+                        {
+                            //Include in port.
+                            //Line runs from exterior ring to the near side of an overlapping interior hole
+                            return Color.RoyalBlue;
+                        }
+                        else //Find out if the midpoint is contained by the same polygon with the inner polygon
+                        {
+                            if ((midInA && APoly.IsInner) || (midInB && BPoly.IsInner))
+                            {
+                                return Color.Gold;
+                            }
+                            else
+                            {
+                                return Color.Pink;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        return Color.Blue;
+                    }
+                }
+            }
+            else if (APoly.iPoly == BPoly.iPoly)
+            {
+                bool midInA = A.Contains(midpoint);
+                bool midInB = midInA;
+
+                if (PointIndex.IsBorderLine(APoly, BPoly, Polygons[APoly.iPoly]))
+                {
+                    return PolyPointsView[APoly.iPoly].Color;
+                    
+                }
+
+                if (!midInA)
+                {
+                    return Color.Black.SetAlpha(0.1f); //Exclude
+                }
+                else
+                {
+                    bool LineIntersectsAnyOtherPoly = Polygons.Where((p, iP) => iP != APoly.iPoly).Any(p => p.Contains(midpoint));
+                    if (APoly.IsInner ^ BPoly.IsInner)
+                    {
+                        //Two options, the line is outside other shapes or inside other shapes.
+                        //If outside other shapes we want to keep this edge, otherwise it is discarded
+                        if (!LineIntersectsAnyOtherPoly)
+                        {
+                            return Color.Green; //Include, standalone faces
+                        }
+                        else
+                        {
+                            return Color.Green.SetAlpha(0.1f); //Exclude
+                        }
+                    }
+                    else
+                    {
+                        if (!LineIntersectsAnyOtherPoly)
+                        {
+                            return Color.Turquoise;  //Include, standalone faces
+                        }
+                        else
+                        {
+                            return Color.Turquoise.SetAlpha(0.1f); //Exclude
+                        }
+                    }
+                }
+            }
+
+            return Color.Blue;
         }
         
         
@@ -375,14 +463,14 @@ namespace MonogameTestbed
             82882,
             82883
             };*/
-            /*
-        long[] TroubleIDS = new long[] {
-          //  58664,
-            58666,
-            58668
-        };
-        */
-
+        /*
+    long[] TroubleIDS = new long[] {
+      //  58664,
+        58666,
+        58668
+    };
+    */
+        /*
         //Polygons with internal polygon
         long[] TroubleIDS = new long[] {
           //  58664,
@@ -391,7 +479,38 @@ namespace MonogameTestbed
             82679,
 
         };
+        */
 
+
+        /*
+        //Polygons with internal polygon merging with external concavity
+        long[] TroubleIDS = new long[] {
+          //  58664,
+            82884, //Z: 767
+            82908, //Z: 768
+
+        };
+        */
+        /*
+        //Polygons with internal polygon
+        long[] TroubleIDS = new long[] {
+          //  58664,
+            82612, //Z: 756
+            82617, //Z: 757 Small Branch
+            82647, //Z: 757
+            //82679, //Z: 758
+            //82620, //Z: 758 Small Branch
+
+        };
+        */
+
+        //Polygons with internal polygon merging with external concavity
+        long[] TroubleIDS = new long[] {
+          1333661, //Z = 2
+          1333662, //Z = 3
+          1333665 //Z =2
+
+        };
         Scene scene;
         GamePadStateTracker Gamepad = new GamePadStateTracker();
 
@@ -415,10 +534,12 @@ namespace MonogameTestbed
             this.scene = new Scene(window.GraphicsDevice.Viewport, window.Camera);
 
             Gamepad.Update(GamePad.GetState(PlayerIndex.One));
-             
-            AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromODataLocationIDs(TroubleIDS, DataSource.EndpointMap[ENDPOINT.RPC1]);
 
-            wrapView = new MonogameTestbed.PolyBranchAssignmentView(graph.Nodes.Values.Select(n => n.Geometry.ToPolygon()).ToArray());
+            //AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromODataLocationIDs(TroubleIDS, DataSource.EndpointMap[ENDPOINT.RPC1]);
+            AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromODataLocationIDs(TroubleIDS, DataSource.EndpointMap[ENDPOINT.TEST]);
+
+            AnnotationVizLib.MorphologyNode[] nodes = graph.Nodes.Values.ToArray();
+            wrapView = new MonogameTestbed.PolyBranchAssignmentView(nodes.Select(n => n.Geometry.ToPolygon()).ToArray(), nodes.Select(n=> n.Z).ToArray());
 
             window.Scene.Camera.LookAt = graph.BoundingBox.CenterPoint.XY().ToXNAVector2();
             

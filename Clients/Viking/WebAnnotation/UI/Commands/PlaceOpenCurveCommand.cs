@@ -125,14 +125,14 @@ namespace WebAnnotation.UI.Commands
                 proposed_front_curve_segments = proposed_front_curve_segments.ShortenLastVertex();
                 existing_curve_segments = existing_curve_segments.ShortenLastVertex();
 
-                GridVector2[] intersections = proposed_front_curve_segments.Select(pcs => existing_curve_segments.IntersectionPoint(pcs)).Where(p => p.HasValue).Select(p => p.Value).ToArray();
+                GridVector2[] intersections = proposed_front_curve_segments.Select(pcs => existing_curve_segments.IntersectionPoint(pcs, false)).Where(p => p.HasValue).Select(p => p.Value).ToArray();
                 if (intersections.Length > 0)
                 {
                     retval = intersections.First();
                     return retval;
                 }
 
-                intersections = proposed_back_curve_segments.Select(pcs => existing_curve_segments.IntersectionPoint(pcs)).Where(p => p.HasValue).Select(p => p.Value).ToArray();
+                intersections = proposed_back_curve_segments.Select(pcs => existing_curve_segments.IntersectionPoint(pcs, false)).Where(p => p.HasValue).Select(p => p.Value).ToArray();
                 if (intersections.Length > 0)
                 {
                     retval = intersections.First();
@@ -248,7 +248,7 @@ namespace WebAnnotation.UI.Commands
 
                     existing_curve_segments = existing_curve_segments.ShortenLastVertex();
 
-                    GridVector2[] intersections = proposed_curve_segments.Select(pcs => existing_curve_segments.IntersectionPoint(pcs)).Where(p => p.HasValue).Select(p => p.Value).ToArray();
+                    GridVector2[] intersections = proposed_curve_segments.Select(pcs => existing_curve_segments.IntersectionPoint(pcs, false)).Where(p => p.HasValue).Select(p => p.Value).ToArray();
                     if (intersections.Length > 0)
                         retval = intersections.First();
                 }

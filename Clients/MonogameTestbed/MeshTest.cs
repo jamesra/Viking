@@ -208,6 +208,7 @@ namespace MonogameTestbed
                 node.Mesh = SmoothMeshGraphGenerator.CreateNodeMesh(shapes[i].Translate(translate), ZLevels[i], (ulong)i);
                 graph.AddNode(node);
                 node.MeshGraph = graph;
+                node.CapPortZ = ZLevels[i];
                 node.CapPort = SmoothMeshGraphGenerator.CreatePort(shapes[i]);
             }
 
