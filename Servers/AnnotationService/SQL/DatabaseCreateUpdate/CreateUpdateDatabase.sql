@@ -1,9 +1,9 @@
 /**** You need to replace the following templates to use this script ****/
-/**** NeitzInferiorMonkey = Name of the database  */
+/**** Rabbit = Name of the database  */
 /**** {DATABASE_DIRECTORY} = Directory Datbase lives in if it needs to be created, with the trailing slash i.e. C:\Database\
 */
 DECLARE @DATABASE_NAME VARCHAR(50)
-SET @DATABASE_NAME = 'NeitzInferiorMonkey'
+SET @DATABASE_NAME = 'Rabbit'
 DECLARE @DATABASE_DIRECTORY VARCHAR(50)
 SET @DATABASE_DIRECTORY = 'C:\Database\'
 
@@ -29,7 +29,7 @@ BEGIN
 END
 	
 CREATE TABLE #UpdateVars ([Version] VARCHAR(100));
-INSERT INTO #UpdateVars Values (N'NeitzInferiorMonkey');
+INSERT INTO #UpdateVars Values (N'Rabbit');
 
 DECLARE @db_id VARCHAR(100);
 SET @db_id = db_id(@DATABASE_NAME)
@@ -42,50 +42,50 @@ BEGIN
 	print N'Database does not exist, creating...' 
 	
 	declare @Path varchar(100)
-	set @Path = N'C:\Database\NeitzInferiorMonkey\'
+	set @Path = N'C:\Database\Rabbit\'
 	EXEC master.dbo.xp_create_subdir @Path
 	
-	/****** Object:  Database [NeitzInferiorMonkey]    Script Date: 06/14/2011 13:13:50 ******/
-	CREATE DATABASE [NeitzInferiorMonkey] ON  PRIMARY 
-		( NAME = N'NeitzInferiorMonkey', FILENAME = N'C:\Database\NeitzInferiorMonkey\NeitzInferiorMonkey.mdf' , SIZE = 4096KB , MAXSIZE = UNLIMITED, FILEGROWTH = 1024KB )
+	/****** Object:  Database [Rabbit]    Script Date: 06/14/2011 13:13:50 ******/
+	CREATE DATABASE [Rabbit] ON  PRIMARY 
+		( NAME = N'Rabbit', FILENAME = N'C:\Database\Rabbit\Rabbit.mdf' , SIZE = 4096KB , MAXSIZE = UNLIMITED, FILEGROWTH = 1024KB )
 		 LOG ON 
-		( NAME = N'NEITZTEMPORALMONKEY_log', FILENAME = N'C:\Database\NeitzInferiorMonkey\NEITZTEMPORALMONKEY_log.ldf' , SIZE = 4096KB , MAXSIZE = 2048GB , FILEGROWTH = 10%)
+		( NAME = N'Rabbit_log', FILENAME = N'C:\Database\Rabbit\Rabbit_log.ldf' , SIZE = 4096KB , MAXSIZE = 2048GB , FILEGROWTH = 10%)
 		
-	ALTER DATABASE [NeitzInferiorMonkey] SET COMPATIBILITY_LEVEL = 100
+	ALTER DATABASE [Rabbit] SET COMPATIBILITY_LEVEL = 100
 	
 	IF (1 = FULLTEXTSERVICEPROPERTY('IsFullTextInstalled'))
 	begin
-		EXEC [NeitzInferiorMonkey].[dbo].[sp_fulltext_database] @action = 'enable'
+		EXEC [Rabbit].[dbo].[sp_fulltext_database] @action = 'enable'
 	end
 	
-	ALTER DATABASE [NeitzInferiorMonkey] SET ANSI_NULL_DEFAULT OFF
-	ALTER DATABASE [NeitzInferiorMonkey] SET ANSI_NULLS OFF
-	ALTER DATABASE [NeitzInferiorMonkey] SET ANSI_PADDING ON
-	ALTER DATABASE [NeitzInferiorMonkey] SET ANSI_WARNINGS OFF
-	ALTER DATABASE [NeitzInferiorMonkey] SET ARITHABORT OFF
-	ALTER DATABASE [NeitzInferiorMonkey] SET AUTO_CLOSE OFF
-	ALTER DATABASE [NeitzInferiorMonkey] SET AUTO_CREATE_STATISTICS ON
-	ALTER DATABASE [NeitzInferiorMonkey] SET AUTO_SHRINK OFF
-	ALTER DATABASE [NeitzInferiorMonkey] SET AUTO_UPDATE_STATISTICS ON
-	ALTER DATABASE [NeitzInferiorMonkey] SET CURSOR_CLOSE_ON_COMMIT OFF
-	ALTER DATABASE [NeitzInferiorMonkey] SET CURSOR_DEFAULT  GLOBAL
-	ALTER DATABASE [NeitzInferiorMonkey] SET CONCAT_NULL_YIELDS_NULL OFF
-	ALTER DATABASE [NeitzInferiorMonkey] SET NUMERIC_ROUNDABORT OFF
-	ALTER DATABASE [NeitzInferiorMonkey] SET QUOTED_IDENTIFIER OFF
-	ALTER DATABASE [NeitzInferiorMonkey] SET RECURSIVE_TRIGGERS OFF
-	ALTER DATABASE [NeitzInferiorMonkey] SET  DISABLE_BROKER
-	ALTER DATABASE [NeitzInferiorMonkey] SET AUTO_UPDATE_STATISTICS_ASYNC OFF
-	ALTER DATABASE [NeitzInferiorMonkey] SET DATE_CORRELATION_OPTIMIZATION OFF
-	ALTER DATABASE [NeitzInferiorMonkey] SET TRUSTWORTHY OFF
-	ALTER DATABASE [NeitzInferiorMonkey] SET ALLOW_SNAPSHOT_ISOLATION OFF
-	ALTER DATABASE [NeitzInferiorMonkey] SET PARAMETERIZATION SIMPLE
-	ALTER DATABASE [NeitzInferiorMonkey] SET READ_COMMITTED_SNAPSHOT OFF
-	ALTER DATABASE [NeitzInferiorMonkey] SET HONOR_BROKER_PRIORITY OFF
-	ALTER DATABASE [NeitzInferiorMonkey] SET  READ_WRITE
-	ALTER DATABASE [NeitzInferiorMonkey] SET RECOVERY SIMPLE
-	ALTER DATABASE [NeitzInferiorMonkey] SET  MULTI_USER
-	ALTER DATABASE [NeitzInferiorMonkey] SET PAGE_VERIFY CHECKSUM
-	ALTER DATABASE [NeitzInferiorMonkey] SET DB_CHAINING OFF
+	ALTER DATABASE [Rabbit] SET ANSI_NULL_DEFAULT OFF
+	ALTER DATABASE [Rabbit] SET ANSI_NULLS OFF
+	ALTER DATABASE [Rabbit] SET ANSI_PADDING ON
+	ALTER DATABASE [Rabbit] SET ANSI_WARNINGS OFF
+	ALTER DATABASE [Rabbit] SET ARITHABORT OFF
+	ALTER DATABASE [Rabbit] SET AUTO_CLOSE OFF
+	ALTER DATABASE [Rabbit] SET AUTO_CREATE_STATISTICS ON
+	ALTER DATABASE [Rabbit] SET AUTO_SHRINK OFF
+	ALTER DATABASE [Rabbit] SET AUTO_UPDATE_STATISTICS ON
+	ALTER DATABASE [Rabbit] SET CURSOR_CLOSE_ON_COMMIT OFF
+	ALTER DATABASE [Rabbit] SET CURSOR_DEFAULT  GLOBAL
+	ALTER DATABASE [Rabbit] SET CONCAT_NULL_YIELDS_NULL OFF
+	ALTER DATABASE [Rabbit] SET NUMERIC_ROUNDABORT OFF
+	ALTER DATABASE [Rabbit] SET QUOTED_IDENTIFIER OFF
+	ALTER DATABASE [Rabbit] SET RECURSIVE_TRIGGERS OFF
+	ALTER DATABASE [Rabbit] SET  DISABLE_BROKER
+	ALTER DATABASE [Rabbit] SET AUTO_UPDATE_STATISTICS_ASYNC OFF
+	ALTER DATABASE [Rabbit] SET DATE_CORRELATION_OPTIMIZATION OFF
+	ALTER DATABASE [Rabbit] SET TRUSTWORTHY OFF
+	ALTER DATABASE [Rabbit] SET ALLOW_SNAPSHOT_ISOLATION OFF
+	ALTER DATABASE [Rabbit] SET PARAMETERIZATION SIMPLE
+	ALTER DATABASE [Rabbit] SET READ_COMMITTED_SNAPSHOT OFF
+	ALTER DATABASE [Rabbit] SET HONOR_BROKER_PRIORITY OFF
+	ALTER DATABASE [Rabbit] SET  READ_WRITE
+	ALTER DATABASE [Rabbit] SET RECOVERY SIMPLE
+	ALTER DATABASE [Rabbit] SET  MULTI_USER
+	ALTER DATABASE [Rabbit] SET PAGE_VERIFY CHECKSUM
+	ALTER DATABASE [Rabbit] SET DB_CHAINING OFF
 	
 	print N'Created Database...' 
 	INSERT INTO #UpdateVars Values (DB_ID(N'CreateTables'));
@@ -93,7 +93,7 @@ END
 
 GO
 
-USE [NeitzInferiorMonkey]
+USE [Rabbit]
 GO
 
 --Need to specify database owner before enabling change tracking
@@ -1106,15 +1106,15 @@ END
 */  
 GO
 
-Use [NeitzInferiorMonkey]
+Use [Rabbit]
 GO
   
 DECLARE @compat_level int
-SET @compat_level = (SELECT compatibility_level FROM sys.databases WHERE name = 'NeitzInferiorMonkey')
+SET @compat_level = (SELECT compatibility_level FROM sys.databases WHERE name = 'Rabbit')
 IF(@compat_level < 120)
 BEGIN
 	print N'Setting the database compatability level to SQL 2014'
-	ALTER DATABASE [NeitzInferiorMonkey] SET COMPATIBILITY_LEVEL = 120  
+	ALTER DATABASE [Rabbit] SET COMPATIBILITY_LEVEL = 120  
 END
 GO
 
@@ -5682,12 +5682,13 @@ end
      print N'Add unique constraint to PermittedStructureLink table'
      BEGIN TRANSACTION fiftyeight
 	  
+	   EXEC('
 	 ALTER TABLE [dbo].[PermittedStructureLink] ADD  CONSTRAINT [PermittedStructureLink_source_target_unique] UNIQUE NONCLUSTERED 
 	 (
 		[SourceTypeID] ASC,
 		[TargetTypeID] ASC
 	 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
-	 
+	 ')
 	  if(@@error <> 0)
 		 begin
 		   ROLLBACK TRANSACTION 
@@ -6519,6 +6520,281 @@ end
 	 INSERT INTO DBVersion values (69, 
 		      N'Add user-defined functions to determine the last time a structure morphology was modified',getDate(),User_ID())
 	 COMMIT TRANSACTION sixtynine
+	end
+
+	if(not(exists(select (1) from DBVersion where DBVersionID = 70)))
+	begin
+     print N'Modified Area and Volume calulations to account for geometry dimensionality' 
+	 BEGIN TRANSACTION seventy
+		IF OBJECT_ID (N'dbo.ufnLastStructureModification', N'FN') IS NOT NULL
+		    DROP FUNCTION ufnLastStructureModification;
+		IF OBJECT_ID (N'dbo.ufnLastStructureModificationRecursive', N'FN') IS NOT NULL
+			DROP FUNCTION ufnLastStructureModificationRecursive;
+		IF OBJECT_ID (N'dbo.ufnLastStructureMorphologyModification', N'FN') IS NOT NULL
+			DROP FUNCTION ufnLastStructureMorphologyModification;
+		IF OBJECT_ID (N'dbo.ufnLastStructureMorphologyModificationRecursive', N'FN') IS NOT NULL
+			DROP FUNCTION ufnLastStructureMorphologyModificationRecursive;
+		IF OBJECT_ID (N'dbo.ufnLastNetworkModification', N'FN') IS NOT NULL
+			DROP FUNCTION ufnLastNetworkModification;
+		 		
+		 		
+		Exec('
+			CREATE FUNCTION [dbo].[ufnLastStructureMorphologyModification]
+			(
+				-- Add the parameters for the function here
+				@ID bigint
+			)
+			RETURNS DateTime
+			AS
+			BEGIN
+				-- Declare the return variable here
+				DECLARE @ResultVar DateTime
+
+				-- Add the T-SQL statements to compute the return value here
+				select @ResultVar = max(Q.LastModified) from (
+					select L.LastModified as LastModified from Location L where L.ParentID = @ID
+					union
+					select LLA.Created as LastModified from Location L 
+						inner join LocationLink LLA ON LLA.A = L.ID
+						where L.ParentID = @ID
+					union
+					select S.LastModified as LastModified from Structure S where S.ID = @ID
+					) Q
+		
+				RETURN @ResultVar
+			END
+		')
+
+		if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
+		 		
+		Exec('
+			CREATE FUNCTION ufnLastStructureMorphologyModificationRecursive
+			(
+				-- Add the parameters for the function here
+				@ID bigint
+			)
+			RETURNS DateTime
+			AS
+			BEGIN
+				-- Declare the return variable here
+				DECLARE @ResultVar DateTime
+
+				select @ResultVar = max(dbo.ufnLastStructureModification(S.ID)) from Structure S where S.ID = @ID or S.ParentID = @ID
+	 
+				RETURN @ResultVar
+			END
+		')
+		
+		if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
+		 Exec('
+			CREATE FUNCTION [dbo].[ufnLastNetworkModification]
+			(
+				-- Add the parameters for the function here
+				@IDs integer_list READONLY,
+				@Hops int
+			)
+			RETURNS DateTime
+			AS
+			BEGIN
+				-- Declare the return variable here
+				DECLARE @ResultVar DateTime
+				declare @Network_IDs integer_list
+
+				insert into @Network_IDs 
+				select ID from NetworkStructureIDs ( @IDs, @Hops )
+				union 
+				select ID from NetworkChildStructureIDs( @IDs, @Hops)
+	    
+				declare @Result DateTime
+ 
+				select @ResultVar = MAX(S.LastModified) from Structure S
+									inner join @Network_IDs N on N.ID = S.ID
+
+				RETURN @ResultVar
+			END
+
+		')
+
+		if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
+	 INSERT INTO DBVersion values (70, 
+		      N'Modified Area and Volume calulations to account for geometry dimensionality' ,getDate(),User_ID())
+	 COMMIT TRANSACTION seventy
+	end
+
+	if(not(exists(select (1) from DBVersion where DBVersionID = 71)))
+	begin
+     print N'Create StructureSpatialCache' 
+	 BEGIN TRANSACTION seventyone
+		 		
+		Exec('
+			CREATE TABLE StructureSpatialCache
+			(
+				ID bigint NOT NULL PRIMARY KEY CLUSTERED,
+				BoundingRect Geometry NOT NULL,
+				Area float NOT NULL CONSTRAINT StructureSpatialCache_Area_Default DEFAULT 0,
+				Volume float NOT NULL CONSTRAINT StructureSpatialCache_Volume_Default DEFAULT 0,
+				MaxDimension int NOT NULL CONSTRAINT StructureSpatialCache_MaxDimension_Default DEFAULT 0,
+				MinZ float NOT NULL,
+				MaxZ float NOT NULL,
+				ConvexHull Geometry NOT NULL,
+				LastModified DateTime NOT NULL
+				FOREIGN KEY (ID) REFERENCES [Structure] (ID) ON UPDATE NO ACTION ON DELETE CASCADE
+			)
+
+		')
+
+		if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
+		 		
+		Exec('
+
+			INSERT INTO StructureSpatialCache
+			SELECT        S.ID as ID, 
+						  L.BoundingRect as BoundingRect,
+						  [dbo].ufnStructureArea(S.ID) as Area, 
+						  [dbo].ufnStructureVolume(S.ID) as Volume, 
+						  L.MaxDim as MaxDimension,
+						  L.MinZ as MinZ, 
+						  L.MaxZ as MaxZ,
+						  L.ConvexHull as ConvexHull,
+						  [dbo].ufnLastStructureMorphologyModification(S.ID) as LastModified
+
+			FROM Structure S
+			INNER JOIN 
+				(select L.ParentID, 
+				   --Geometry::UnionAggregate(L.VolumeShape) as AggregateShape,
+				   Geometry::ConvexHullAggregate(L.VolumeShape) as ConvexHull,
+				   Geometry::EnvelopeAggregate(L.VolumeShape) as BoundingRect,
+				   max(L.VolumeShape.STDimension()) as MaxDim,
+				   min(L.Z) as MinZ, 
+				   max(L.Z) as MaxZ
+			FROM Location L group by L.ParentID) L  ON L.ParentID = S.ID
+
+		')
+
+		if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
+		 		
+		Exec('
+			CREATE TRIGGER UpdateStructureSpatialCache
+			  ON Location
+			  AFTER INSERT, UPDATE, DELETE
+			as
+			BEGIN
+				if @@ROWCOUNT = 0
+					return
+
+				SET NOCOUNT ON
+
+				DELETE StructureSpatialCache 
+				WHERE StructureSpatialCache.ID IN (SELECT ParentID FROM DELETED Group By ParentID)
+
+				DELETE StructureSpatialCache 
+				WHERE StructureSpatialCache.ID IN (SELECT ParentID FROM INSERTED Group By ParentID)	
+
+				INSERT INTO StructureSpatialCache
+				SELECT        S.ID as ID,  
+							  L.BoundingRect as BoundingRect,
+							  [dbo].ufnStructureArea(S.ID) as Area, 
+							  [dbo].ufnStructureVolume(S.ID) as Volume, 
+							  L.MaxDim as MaxDimension,
+							  L.MinZ as MinZ, 
+							  L.MaxZ as MaxZ,
+							  L.ConvexHull as ConvexHull,
+							  [dbo].ufnLastStructureMorphologyModification(S.ID) as LastModified
+
+				FROM Structure S
+				INNER JOIN 
+					(select L.ParentID, 
+					   --Geometry::UnionAggregate(L.VolumeShape) as AggregateShape,
+					   Geometry::ConvexHullAggregate(L.VolumeShape) as ConvexHull,
+					   Geometry::EnvelopeAggregate(L.VolumeShape) as BoundingRect,
+					   max(L.VolumeShape.STDimension()) as MaxDim,
+					   min(L.Z) as MinZ,
+					   max(L.Z) as MaxZ
+				FROM Location L group by L.ParentID) L  ON L.ParentID = S.ID
+				INNER JOIN INSERTED I ON I.ParentID = S.ID
+			END
+		')
+		
+		if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
+		 Exec('
+			DROP VIEW STRUCTURESPATIALVIEW
+		')
+
+		if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
+		 Exec('
+			  CREATE PROCEDURE [dbo].[SelectNetworkStructureSpatialData]
+				-- Add the parameters for the stored procedure here
+				@IDs integer_list READONLY,
+				@Hops int
+			AS
+			BEGIN
+				select S.* from StructureSpatialCache S 
+					inner join NetworkStructureIDs(@IDs, @Hops) N ON N.ID = S.ID
+			END
+		')
+
+		if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
+		 Exec('
+			CREATE PROCEDURE [dbo].[SelectNetworkChildStructureSpatialData]
+						-- Add the parameters for the stored procedure here
+						@IDs integer_list READONLY,
+						@Hops int
+			AS
+			BEGIN
+				select S.* from StructureSpatialCache S 
+					inner join NetworkChildStructureIDs(@IDs, @Hops) N ON N.ID = S.ID
+			END
+		')
+
+		if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
+	 INSERT INTO DBVersion values (71, 
+		      N'Create StructureSpatialCache' ,getDate(),User_ID())
+	 COMMIT TRANSACTION seventyone
 	end
 
 	 

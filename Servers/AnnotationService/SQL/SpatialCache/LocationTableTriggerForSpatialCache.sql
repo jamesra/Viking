@@ -3,12 +3,19 @@ ALTER TRIGGER UpdateStructureSpatialCache
   AFTER INSERT, UPDATE, DELETE
 as
 BEGIN
+    if @@ROWCOUNT = 0
+		return
+
+	SET NOCOUNT ON
+
 	DELETE StructureSpatialCache 
 	WHERE StructureSpatialCache.ID IN (SELECT ParentID FROM DELETED Group By ParentID)
 
+	DELETE StructureSpatialCache 
+	WHERE StructureSpatialCache.ID IN (SELECT ParentID FROM INSERTED Group By ParentID)
+
 	INSERT INTO StructureSpatialCache
-	SELECT        S.ID as ID, 
-			      S.ParentID as ParentID,
+	SELECT        S.ID as ID,  
 				  L.BoundingRect as BoundingRect,
 				  dbo.ufnStructureArea(S.ID) as Area, 
 				  dbo.ufnStructureVolume(S.ID) as Volume, 
