@@ -39,7 +39,6 @@ namespace ConnectomeDataModel
 
     public partial class ConnectomeEntities
     {
-
         public void ConfigureAsReadOnly()
         {
             //Note, disabling LazyLoading breaks loading of children and links unless they have been populated previously.

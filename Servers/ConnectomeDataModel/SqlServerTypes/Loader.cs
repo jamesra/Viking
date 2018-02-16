@@ -2,6 +2,19 @@
 using System.IO;
 using System.Runtime.InteropServices;
 
+namespace ConnectomeDataModel
+{
+    public static class Configuration
+    {
+        public static void LoadNativeAssemblies(string rootApplicationPath)
+        {
+            SqlServerTypes.Utilities.LoadNativeAssemblies(rootApplicationPath);
+        }
+    }
+
+}
+
+
 namespace SqlServerTypes
 {
     /// <summary>

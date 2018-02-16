@@ -37,13 +37,15 @@ namespace Annotation
 
                 try
                 {
-                    SqlServerTypes.Utilities.LoadNativeAssemblies(System.Web.HttpContext.Current.Server.MapPath("~"));
+                    ConnectomeDataModel.Configuration.LoadNativeAssemblies(System.Web.HttpContext.Current.Server.MapPath("~"));
+                //    SqlServerTypes.Utilities.LoadNativeAssemblies(System.Web.HttpContext.Current.Server.MapPath("~"));
                     _isSqlTypesLoaded = true;
                     return;
                 }
                 catch (NullReferenceException)
                 {
-                    SqlServerTypes.Utilities.LoadNativeAssemblies(AppDomain.CurrentDomain.BaseDirectory);
+                    //    SqlServerTypes.Utilities.LoadNativeAssemblies(AppDomain.CurrentDomain.BaseDirectory);
+                    ConnectomeDataModel.Configuration.LoadNativeAssemblies(AppDomain.CurrentDomain.BaseDirectory);
                     _isSqlTypesLoaded = true;
                     return;
                 }

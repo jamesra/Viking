@@ -10,25 +10,28 @@ by editing this MSBuild file. In order to learn more about this please visit htt
   </PropertyGroup>
   <ItemGroup>
     <File Include="bin/AnnotationServiceTypes.dll">
-      <publishTime>01/26/2018 17:44:33</publishTime>
+      <publishTime>02/14/2018 23:03:34</publishTime>
     </File>
     <File Include="bin/AnnotationVizLib.dll">
-      <publishTime>02/01/2018 17:58:05</publishTime>
+      <publishTime>02/14/2018 23:02:57</publishTime>
+    </File>
+    <File Include="bin/AnnotationVizLib.SimpleODataClient.dll">
+      <publishTime>02/14/2018 23:03:37</publishTime>
     </File>
     <File Include="bin/AnnotationVizLib.WCFClient.dll">
-      <publishTime>02/01/2018 17:58:17</publishTime>
+      <publishTime>02/14/2018 23:03:37</publishTime>
     </File>
     <File Include="bin/Antlr3.Runtime.dll">
       <publishTime>08/31/2015 16:54:16</publishTime>
     </File>
     <File Include="bin/ColladaIO.dll">
-      <publishTime>02/01/2018 19:03:19</publishTime>
+      <publishTime>02/14/2018 23:03:38</publishTime>
     </File>
     <File Include="bin/Content/Index.html">
       <publishTime>08/30/2017 14:56:42</publishTime>
     </File>
     <File Include="bin/DataExport.dll">
-      <publishTime>02/01/2018 19:03:21</publishTime>
+      <publishTime>02/15/2018 15:51:54</publishTime>
     </File>
     <File Include="bin/de/Microsoft.Data.Edm.resources.dll">
       <publishTime>03/28/2016 17:17:55</publishTime>
@@ -61,10 +64,10 @@ by editing this MSBuild file. In order to learn more about this please visit htt
       <publishTime>04/16/2013 14:44:48</publishTime>
     </File>
     <File Include="bin/EntityFramework.dll">
-      <publishTime>08/25/2015 14:10:35</publishTime>
+      <publishTime>10/23/2017 13:15:18</publishTime>
     </File>
     <File Include="bin/EntityFramework.SqlServer.dll">
-      <publishTime>08/25/2015 14:10:35</publishTime>
+      <publishTime>10/23/2017 13:15:20</publishTime>
     </File>
     <File Include="bin/es/Microsoft.Data.Edm.resources.dll">
       <publishTime>03/28/2016 17:17:55</publishTime>
@@ -109,10 +112,10 @@ by editing this MSBuild file. In order to learn more about this please visit htt
       <publishTime>03/28/2016 17:17:58</publishTime>
     </File>
     <File Include="bin/Geometry.dll">
-      <publishTime>02/01/2018 17:58:02</publishTime>
+      <publishTime>02/14/2018 23:02:54</publishTime>
     </File>
     <File Include="bin/GraphLib.dll">
-      <publishTime>01/26/2018 17:44:33</publishTime>
+      <publishTime>02/14/2018 23:02:35</publishTime>
     </File>
     <File Include="bin/it/Microsoft.Data.Edm.resources.dll">
       <publishTime>03/28/2016 17:17:55</publishTime>
@@ -178,7 +181,7 @@ by editing this MSBuild file. In order to learn more about this please visit htt
       <publishTime>03/28/2016 17:17:58</publishTime>
     </File>
     <File Include="bin/log4net.dll">
-      <publishTime>01/02/2017 06:32:48</publishTime>
+      <publishTime>03/08/2017 19:26:22</publishTime>
     </File>
     <File Include="bin/MathNet.Numerics.dll">
       <publishTime>01/15/2017 17:09:16</publishTime>
@@ -217,10 +220,10 @@ by editing this MSBuild file. In order to learn more about this please visit htt
       <publishTime>07/25/2012 11:48:56</publishTime>
     </File>
     <File Include="bin/MorphologyMesh.dll">
-      <publishTime>02/01/2018 19:03:18</publishTime>
+      <publishTime>02/14/2018 23:03:36</publishTime>
     </File>
     <File Include="bin/Newtonsoft.Json.dll">
-      <publishTime>06/13/2016 23:06:14</publishTime>
+      <publishTime>06/18/2017 13:57:10</publishTime>
     </File>
     <File Include="bin/ODataClient.dll">
       <publishTime>02/20/2017 14:15:06</publishTime>
@@ -238,7 +241,7 @@ by editing this MSBuild file. In order to learn more about this please visit htt
       <publishTime>06/09/2015 12:08:50</publishTime>
     </File>
     <File Include="bin/RTree.dll">
-      <publishTime>01/26/2018 17:44:33</publishTime>
+      <publishTime>02/14/2018 23:02:35</publishTime>
     </File>
     <File Include="bin/ru/Microsoft.Data.Edm.resources.dll">
       <publishTime>03/28/2016 17:17:55</publishTime>
@@ -274,7 +277,7 @@ by editing this MSBuild file. In order to learn more about this please visit htt
       <publishTime>02/28/2017 21:46:32</publishTime>
     </File>
     <File Include="bin/SqlGeometryUtils.dll">
-      <publishTime>02/01/2018 17:58:03</publishTime>
+      <publishTime>02/14/2018 23:02:55</publishTime>
     </File>
     <File Include="bin/SqlServerTypes/x64/msvcr100.dll">
       <publishTime>08/13/2015 17:00:26</publishTime>
@@ -349,7 +352,7 @@ by editing this MSBuild file. In order to learn more about this please visit htt
       <publishTime>08/31/2015 16:44:09</publishTime>
     </File>
     <File Include="bin/TriangeNetGeometryExtensions.dll">
-      <publishTime>02/01/2018 17:58:03</publishTime>
+      <publishTime>02/14/2018 23:02:55</publishTime>
     </File>
     <File Include="bin/Triangle.dll">
       <publishTime>01/26/2018 17:44:33</publishTime>
@@ -358,7 +361,7 @@ by editing this MSBuild file. In order to learn more about this please visit htt
       <publishTime>01/26/2018 17:44:33</publishTime>
     </File>
     <File Include="bin/VikingWebAppSettings.dll">
-      <publishTime>02/01/2018 17:58:03</publishTime>
+      <publishTime>02/14/2018 23:02:55</publishTime>
     </File>
     <File Include="bin/WebGrease.dll">
       <publishTime>08/31/2015 16:53:53</publishTime>
@@ -592,7 +595,7 @@ by editing this MSBuild file. In order to learn more about this please visit htt
       <publishTime>06/09/2015 12:08:50</publishTime>
     </File>
     <File Include="packages.config">
-      <publishTime>08/30/2017 14:30:42</publishTime>
+      <publishTime>02/13/2018 18:05:28</publishTime>
     </File>
     <File Include="Resources/ColorMapping/DefaultLocationColorMap.txt">
       <publishTime>06/09/2015 12:08:50</publishTime>
@@ -712,7 +715,7 @@ by editing this MSBuild file. In order to learn more about this please visit htt
       <publishTime>09/14/2016 14:52:06</publishTime>
     </File>
     <File Include="Web.config">
-      <publishTime>01/26/2018 17:45:13</publishTime>
+      <publishTime>02/14/2018 23:03:41</publishTime>
     </File>
   </ItemGroup>
 </Project>

@@ -11,6 +11,9 @@ namespace ConnectomeODataV4
     {
         protected void Application_Start()
         {
+            //SqlServerTypes.Utilities.LoadNativeAssemblies(Server.MapPath("~/bin"));
+            ConnectomeDataModel.Configuration.LoadNativeAssemblies(Server.MapPath("~/bin"));
+             
             GlobalConfiguration.Configure(WebApiConfig.Register);
             GlobalConfiguration.DefaultServer.Configuration.EnsureInitialized();
         }
