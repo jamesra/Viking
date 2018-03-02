@@ -54,7 +54,10 @@ namespace VikingXNAGraphics
             //effect.CurrentTechnique = effect.Techniques[0];
 
             foreach (MeshModel<VERTEXTYPE> model in models)
-            {  
+            {
+                if (model == null)
+                    continue; 
+
                 effect.World = model.ModelMatrix;
                 if (model.Edges.Length == 0)
                     continue; 
