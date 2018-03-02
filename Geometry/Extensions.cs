@@ -872,6 +872,32 @@ namespace Geometry
 
     public static class GridPolygonExtensions
     {
+        public static void AddPointsAtAllIntersections(this GridPolygon[] polygons)
+        {
+            foreach (Combo<GridPolygon> combo in polygons.CombinationPairs())
+            {
+                combo.A.AddPointsAtIntersections(combo.B);
+                combo.B.AddPointsAtIntersections(combo.A);
+            }
+        }
+
+        public static void AddPointsAtAllIntersections(this GridPolygon[] polygons, double[] polyZ)
+        { 
+            if(polygons.Length != polyZ.Length)
+            {
+                throw new ArgumentException("polyZ must have same length as polygons");
+            }
+
+            foreach (Combo<GridPolygon> combo in polygons.CombinationPairs())
+            {
+                if (polyZ[combo.iA] == polyZ[combo.iB])
+                    continue;
+
+                combo.A.AddPointsAtIntersections(combo.B);
+                combo.B.AddPointsAtIntersections(combo.A);
+            }
+        }
+
         /// <summary>
         /// Returns the Polygon vertex which intersects the point, if any.  May return interior polygons
         /// </summary>
