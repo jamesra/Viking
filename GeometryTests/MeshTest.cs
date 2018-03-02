@@ -60,7 +60,7 @@ namespace GeometryTests
 
             Vertex[] verts = CreateTetrahedronVerts();
 
-            int iFirstIndex = mesh.AddVertex(verts);
+            int iFirstIndex = mesh.AddVerticies(verts);
             Assert.AreEqual(0, iFirstIndex);
 
             Face[] faces = CreateTetrahedronFaces();

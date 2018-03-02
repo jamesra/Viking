@@ -66,19 +66,19 @@ namespace MorphologyMesh
                     ICircle2D circle = shape as ICircle2D;
                     //TODO: Check if adjacent mesh nodes are polygons and add more points in a circle if they are.
                     int NumPointsOnCircle = AdjacentToPolygon  ? SmoothMeshGenerator.NumPointsAroundCircleAdjacentToPolygon : SmoothMeshGenerator.NumPointsAroundCircle;
-                    Mesh.AddVertex(ShapeMeshGenerator<ulong>.CreateVerticiesForCircle(circle, Z, NumPointsOnCircle, NodeData, GridVector3.Zero));
+                    Mesh.AddVerticies(ShapeMeshGenerator<ulong>.CreateVerticiesForCircle(circle, Z, NumPointsOnCircle, NodeData, GridVector3.Zero));
                     break;
                 case ShapeType2D.POLYGON:
                     IPolygon2D poly = shape as IPolygon2D;
-                    Mesh.AddVertex(ShapeMeshGenerator<ulong>.CreateVerticiesForPolygon(poly, Z, NodeData, GridVector3.Zero));
+                    Mesh.AddVerticies(ShapeMeshGenerator<ulong>.CreateVerticiesForPolygon(poly, Z, NodeData, GridVector3.Zero));
                     break;
                 case ShapeType2D.POLYLINE:
                     IPolyLine2D polyline = shape as IPolyLine2D;
-                    Mesh.AddVertex(ShapeMeshGenerator<ulong>.CreateVerticiesForPolyline(polyline, Z, NodeData, GridVector3.Zero));
+                    Mesh.AddVerticies(ShapeMeshGenerator<ulong>.CreateVerticiesForPolyline(polyline, Z, NodeData, GridVector3.Zero));
                     break;
                 case ShapeType2D.POINT:
                     IPoint2D point = shape as IPoint2D;
-                    Mesh.AddVertex(ShapeMeshGenerator<ulong>.CreateVerticiesForPoint(point, Z, NodeData, GridVector3.Zero));
+                    Mesh.AddVerticies(ShapeMeshGenerator<ulong>.CreateVerticiesForPoint(point, Z, NodeData, GridVector3.Zero));
                     break;
                 default:
                     throw new ArgumentException("Unexpected shape type");

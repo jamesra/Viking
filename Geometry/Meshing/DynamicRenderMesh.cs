@@ -7,9 +7,23 @@ using System.Threading.Tasks;
 
 namespace Geometry.Meshing
 {
+    /*
+    public class DynamicRenderMesh : DynamicRenderMesh<Vertex, Edge, Face>
+    {
+        public int Append(DynamicRenderMesh other)
+        {
+            return base.Append(other, Vertex.Duplicate, Edge.Duplicate, Face.Duplicate);
+        }
+
+        public void ConvertAllFacesToTriangles()
+        {
+            base.ConvertAllFacesToTriangles(Face.Duplicate);
+        }
+    }*/
+
     public class DynamicRenderMesh<T> : DynamicRenderMesh
     {
-        
+
         public new Vertex<T> this[int key]
         {
             get
@@ -22,20 +36,26 @@ namespace Geometry.Meshing
             }
         }
     }
+    
 
-    public class DynamicRenderMesh
+    public class DynamicRenderMesh 
     {
-        public readonly List<Vertex> Verticies = new List<Vertex>();
-        public readonly SortedList<EdgeKey, Edge> Edges = new SortedList<EdgeKey, Edge>();
-        public readonly SortedSet<Face> Faces = new SortedSet<Face>();
+        public readonly List<IVertex> Verticies = new List<IVertex>();
+        public readonly SortedList<IEdgeKey, IEdge> Edges = new SortedList<IEdgeKey, IEdge>();
+        public readonly SortedSet<IFace> Faces = new SortedSet<IFace>();
+
+        public Func<IVertex,int,IVertex> DuplicateVertex { get; set; }
+        public Func<IEdge, int, int, IEdge> DuplicateEdge { get; set; }
+
+        public Func<IFace, IEnumerable<int>, IFace> DuplicateFace { get; set; }
 
         public GridBox BoundingBox = null;
 
-        public virtual Vertex this[int key]
+        public virtual IVertex this[int key]
         {
             get
             {
-                return Verticies[key] as Vertex;
+                return Verticies[key];
             }
             set
             {
@@ -43,11 +63,11 @@ namespace Geometry.Meshing
             }
         }
 
-        public virtual Vertex this[long key]
+        public virtual IVertex this[long key]
         {
             get
             {
-                return Verticies[(int)key] as Vertex;
+                return Verticies[(int)key];
             }
             set
             {
@@ -57,7 +77,9 @@ namespace Geometry.Meshing
 
         public DynamicRenderMesh()
         {
-
+            DuplicateVertex = Vertex.Duplicate;
+            DuplicateEdge = Edge.Duplicate;
+            DuplicateFace = Face.Duplicate;
         }
 
         protected void ValidateBoundingBox()
@@ -82,7 +104,7 @@ namespace Geometry.Meshing
 
         public void Translate(GridVector3 translate)
         {
-            foreach(Vertex v in Verticies)
+            foreach(IVertex v in Verticies)
             {
                 v.Position += translate;
             }
@@ -112,9 +134,11 @@ namespace Geometry.Meshing
             }
         }
 
-        public int AddVertex(Vertex v)
+        public int AddVertex(IVertex v)
         {
+            v.Index = Verticies.Count; 
             Verticies.Add(v);
+
             UpdateBoundingBox(v.Position);
             return Verticies.Count - 1; 
         }
@@ -124,22 +148,33 @@ namespace Geometry.Meshing
         /// </summary>
         /// <param name="v"></param>
         /// <returns>The index the first element was inserted at</returns>
-        public int AddVertex(ICollection<Vertex> verts)
+        public int AddVerticies(ICollection<IVertex> verts)
         {
+            
             int iStart = Verticies.Count;
+            int Offset = 0;
+            foreach (IVertex v in verts)
+            {
+                v.Index = iStart + Offset;
+                Offset += 1;
+            }
+
             Verticies.AddRange(verts);
             UpdateBoundingBox(verts.Select(v => v.Position).ToArray());
             return iStart;
         }
-
+        
         public void AddEdge(int A, int B)
         {
             EdgeKey e = new EdgeKey(A, B);
             AddEdge(e);
         }
 
-        public void AddEdge(EdgeKey e)
+        public void AddEdge(IEdgeKey e)
         {
+            if (DuplicateEdge == null)
+                throw new InvalidOperationException("DuplicateEdge function not specified for DynamicRenderMesh");
+
             if (Edges.ContainsKey(e))
                 return;
 
@@ -149,14 +184,15 @@ namespace Geometry.Meshing
             if (e.B >= Verticies.Count || e.B < 0)
                 throw new ArgumentException(string.Format("Edge vertex B references non-existent vertex {0}", e));
 
-            Edge newEdge = new Meshing.Edge(e); 
+            IEdge newEdge = DuplicateEdge(null, e.A, e.B);
             Edges.Add(e, newEdge);
 
             Verticies[(int)e.A].AddEdge(e);
             Verticies[(int)e.B].AddEdge(e);
         }
+        
 
-        public void AddEdge(Edge e)
+        public void AddEdge(IEdge e)
         {
             if (Edges.ContainsKey(e.Key))
                 return;
@@ -174,17 +210,33 @@ namespace Geometry.Meshing
         }
 
         /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="e"></param>
+        public void Update(IEdge e)
+        {
+            if(Edges.ContainsKey(e.Key))
+            {
+                Edges[e.Key] = e; 
+            }
+            else
+            {
+                throw new KeyNotFoundException("The edge to be updated was not present in the mesh:" + e.ToString());
+            }
+        }
+
+        /// <summary>
         /// Add a face. Creates edges if they aren't in the face
         /// </summary>
         /// <param name="face"></param>
-        public void AddFace(Face face)
+        public void AddFace(IFace face)
         {
-            Debug.Assert(Faces.Contains(face) == false);
+            //Debug.Assert(Faces.Contains(face) == false);
               
-            foreach(EdgeKey e in face.Edges)
+            foreach(IEdgeKey e in face.Edges)
             {
                 AddEdge(e);
-                Edges[e].Faces.Add(face);
+                Edges[e].AddFace(face);
             }
 
             Faces.Add(face);
@@ -192,73 +244,86 @@ namespace Geometry.Meshing
 
         public void AddFace(int A, int B, int C)
         {
-            Face face = new Face(A, B, C);
+            IFace face = DuplicateFace(null, new int[] { A, B, C });
             Debug.Assert(Faces.Contains(face) == false);
-              
-            foreach (EdgeKey e in face.Edges)
-            {
-                AddEdge(e);
-                Edges[e].Faces.Add(face);
-            }
 
-            Faces.Add(face);
+            AddFace(face);
         }
 
-        public void AddFaces(ICollection<Face> faces)
+        public void AddFaces(ICollection<IFace> faces)
         {
-            foreach(Face f in faces)
+            foreach(IFace f in faces)
             {
                 AddFace(f);
             }
         }
 
-        public void RemoveFace(Face f)
+        public void RemoveFace(IFace f)
         {
             if(Faces.Contains(f))
             {
                 Faces.Remove(f);
             }
 
-            foreach(EdgeKey e in f.Edges)
+            foreach(IEdgeKey e in f.Edges)
             {
-                Edge existing = Edges[e];
+                IEdge existing = Edges[e];
                 existing.RemoveFace(f);
             }
         }
-
-        public void RemoveEdge(EdgeKey e)
+        
+        public void RemoveEdge(IEdgeKey e)
         {
             if(Edges.ContainsKey(e))
             {
-                Edge removedEdge = Edges[e];
+                IEdge removedEdge = Edges[e];
+
+                foreach(IFace f in removedEdge.Faces)
+                {
+                    this.RemoveFace(f);
+                }
 
                 Edges.Remove(e);
 
                 this[removedEdge.A].RemoveEdge(e);
                 this[removedEdge.B].RemoveEdge(e);
+
+                
             }
         }
 
-        public IEnumerable<Vertex> GetVerts(IIndexSet vertIndicies)
+        public IEnumerable<IVertex> GetVerts(IIndexSet vertIndicies)
         {
             return vertIndicies.Select(i => this.Verticies[(int)i]);
         }
 
-        public IEnumerable<Vertex> GetVerts(ICollection<int> vertIndicies)
+        public IEnumerable<IVertex> GetVerts(ICollection<int> vertIndicies)
         {
             return vertIndicies.Select(i => this.Verticies[i]);
         }
 
-        public IEnumerable<Vertex> GetVerts(ICollection<long> vertIndicies)
+        public IEnumerable<IVertex> GetVerts(ICollection<long> vertIndicies)
         {
             return vertIndicies.Select(i => this.Verticies[(int)i]);
         }
 
+        public GridLineSegment ToSegment(IEdgeKey e)
+        {
+            return new GridLineSegment(Verticies[e.A].Position, Verticies[e.B].Position);
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="FaceDuplicator">Constructor to use when replacing the original face with the new split face</param>
         public void ConvertAllFacesToTriangles()
         {
-            IEnumerable<Face> quadFaces = this.Faces.Where(f => !f.IsTriangle).ToList();
+            if (DuplicateFace == null)
+                throw new InvalidOperationException("No duplication method in DynamicRenderMesh specified for faces");
+
+            IEnumerable<IFace> quadFaces = this.Faces.Where(f => !f.IsTriangle()).ToList();
             
-            foreach (Face f in quadFaces)
+            foreach (IFace f in quadFaces)
             {
                 this.SplitFace(f);
             }
@@ -268,39 +333,44 @@ namespace Geometry.Meshing
         /// Given a face that is not a triangle, return an array of triangles describing the face.
         /// For now this assumes convex faces...
         /// </summary>
+        /// <param name="Duplicator">A constructor that can copy attributes of a face object</param>
         /// <returns></returns>
-        public void SplitFace(Face face)
+        public void SplitFace(IFace face)
         {
-            if (face.IsTriangle)
+            if (face.IsTriangle())
                 return;
 
-            if(face.IsQuad)
+            if(face.IsQuad())
             {
                 Faces.Remove(face);
 
                 GridVector3[] positions = GetVerts(face.iVerts).Select(v => v.Position).ToArray();
                 if(GridVector3.Distance(positions[0], positions[2]) < GridVector3.Distance(positions[1], positions[3]))
                 {
-                    Face ABC = new Face(face.iVerts[0], face.iVerts[1], face.iVerts[2]);
-                    Face ACD = new Face(face.iVerts[0], face.iVerts[2], face.iVerts[3]);
+                    //Face ABC = new Face(face.iVerts[0], face.iVerts[1], face.iVerts[2]);
+                    //Face ACD = new Face(face.iVerts[0], face.iVerts[2], face.iVerts[3]);
 
+                    IFace ABC = DuplicateFace(face, new int[] { face.iVerts[0], face.iVerts[1], face.iVerts[2] });
+                    IFace ACD = DuplicateFace(face, new int[] { face.iVerts[0], face.iVerts[2], face.iVerts[3] });
                     Faces.Add(ABC);
                     Faces.Add(ACD);
                 }
                 else
                 {
-                    Face ABD = new Face(face.iVerts[0], face.iVerts[1], face.iVerts[3]);
-                    Face BCD = new Face(face.iVerts[1], face.iVerts[2], face.iVerts[3]);
+                    //Face ABD = new Face(face.iVerts[0], face.iVerts[1], face.iVerts[3]);
+                    //Face BCD = new Face(face.iVerts[1], face.iVerts[2], face.iVerts[3]);
 
+                    IFace ABD = DuplicateFace(face, new int[] { face.iVerts[0], face.iVerts[1], face.iVerts[3] });
+                    IFace BCD = DuplicateFace(face, new int[] { face.iVerts[1], face.iVerts[2], face.iVerts[3] });
                     Faces.Add(ABD);
                     Faces.Add(BCD);
                 }
             }
         }
 
-        public GridVector3 Normal(Face f)
+        public GridVector3 Normal(IFace f)
         {
-            Vertex[] verticies = GetVerts(f.iVerts).ToArray();
+            IVertex[] verticies = GetVerts(f.iVerts).ToArray();
             GridVector3 normal = GridVector3.Cross(verticies[0].Position, verticies[1].Position, verticies[2].Position);
             return normal;
         }
@@ -311,9 +381,9 @@ namespace Geometry.Meshing
         public void RecalculateNormals()
         {
             //Calculate normals for all faces
-            Dictionary<Face, GridVector3> normals = new Dictionary<Meshing.Face, Geometry.GridVector3>(this.Faces.Count);
+            Dictionary<IFace, GridVector3> normals = new Dictionary<Meshing.IFace, Geometry.GridVector3>(this.Faces.Count);
 
-            foreach(Face f in this.Faces)
+            foreach(IFace f in this.Faces)
             {
                 GridVector3 normal = Normal(f);
                 normals.Add(f, normal);
@@ -331,16 +401,16 @@ namespace Geometry.Meshing
 
             for(int i = 0; i < Verticies.Count; i++)
             {
-                SortedSet<Face> vertFaces = new SortedSet<Meshing.Face>();
-                Vertex v = Verticies[i];
+                SortedSet<IFace> vertFaces = new SortedSet<Meshing.IFace>();
+                IVertex v = Verticies[i];
                 
-                foreach(EdgeKey ek in v.Edges)
+                foreach(IEdgeKey ek in v.Edges)
                 {
                     vertFaces.UnionWith(Edges[ek].Faces);
                 }
 
                 GridVector3 avgNormal = GridVector3.Zero;
-                foreach(Face f in vertFaces)
+                foreach(IFace f in vertFaces)
                 {
                     avgNormal += normals[f];
                 }
@@ -351,26 +421,32 @@ namespace Geometry.Meshing
             }
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="other"></param>
+        /// <param name="VertexDuplicator">Takes a VERTEX and offset and returns a new VERTEX</param>
+        /// <param name="EdgeDuplicator">Takes a EDGE and offset and returns a new EDGE, retaining all pertinent data from the original EDGE</param>
+        /// <param name="FaceDuplicator">Takes a FACE and offset and returns a new FACE, retaining all pertinent data from the original FACE</param>
+        /// <returns></returns>
         public int Append(DynamicRenderMesh other)
         {
             int startingAppendIndex = this.Verticies.Count;
-            this.AddVertex(other.Verticies.Select(v => new Vertex(v.Position, v.Normal)).ToList());
+            this.AddVerticies(other.Verticies.Select(v => DuplicateVertex(v, startingAppendIndex)).ToList());
 
-            foreach(EdgeKey e in other.Edges.Keys)
+            foreach(IEdge e in other.Edges.Values)
             {
-                EdgeKey key = new Meshing.EdgeKey(e.A + startingAppendIndex, e.B + startingAppendIndex);
-                this.AddEdge(key);
+                IEdge newEdge = DuplicateEdge(e, e.A + startingAppendIndex, e.B + startingAppendIndex);
+                this.AddEdge(newEdge);
             }
 
-            foreach(Face f in other.Faces)
+            foreach(IFace f in other.Faces)
             {
-                Face newFace = new Face(f.iVerts.Select(VertIndex => VertIndex + startingAppendIndex));
+                IFace newFace = DuplicateFace(f, f.iVerts.Select(i => i + startingAppendIndex));
                 this.AddFace(newFace);
             }
 
             return startingAppendIndex;
         }
-
-        
     }
 }

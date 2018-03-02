@@ -147,12 +147,12 @@ namespace MonogameTestbed
             return graph.Edges.Select(edge => edge.Value.Line).ToList();
         }
 
-        private static GridLineSegment LineForEdge(DynamicRenderMesh mesh, EdgeKey edge)
+        private static GridLineSegment LineForEdge(DynamicRenderMesh mesh, IEdgeKey edge)
         {
             return new GridLineSegment(mesh[edge.A].Position.XY(), mesh[edge.B].Position.XY());
         }
 
-        private static GridLineSegment LineForEdge(DynamicRenderMesh mesh, Edge edge)
+        private static GridLineSegment LineForEdge(DynamicRenderMesh mesh, IEdge edge)
         {
             return new GridLineSegment(mesh[edge.A].Position.XY(), mesh[edge.B].Position.XY());
         } 
@@ -162,9 +162,9 @@ namespace MonogameTestbed
             return PointToShapeIndex[line.A] != PointToShapeIndex[line.B];
         }
 
-        private static List<Edge> LinesOfFaceBetweenShapes(DynamicRenderMesh mesh, Face face, Dictionary<GridVector2, int> PointToShapeIndex)
+        private static List<IEdge> LinesOfFaceBetweenShapes(DynamicRenderMesh mesh, IFace face, Dictionary<GridVector2, int> PointToShapeIndex)
         {
-            List<Edge> edges = new List<Edge>(); 
+            List<IEdge> edges = new List<IEdge>(); 
             foreach(var edge in face.Edges)
             {
                 GridLineSegment line = LineForEdge(mesh, edge);
@@ -563,7 +563,7 @@ namespace MonogameTestbed
 
         private static int FindStartForBoundarySearch(DynamicRenderMesh mesh, GridPolygon[] shapes)
         {
-            Vertex vert = mesh.Verticies.First(v => shapes.All(shape => !shape.Contains(v.Position.XY())));
+            IVertex vert = mesh.Verticies.First(v => shapes.All(shape => !shape.Contains(v.Position.XY())));
             return mesh.Verticies.IndexOf(vert);
         }
         

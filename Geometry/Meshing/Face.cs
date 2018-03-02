@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -9,10 +10,27 @@ namespace Geometry.Meshing
     /// <summary>
     /// A face in a mesh.  Should be perimeter around the face in order.  Each consecutive index is connected by an edge
     /// </summary>
-    public struct Face : IComparable<Face>, IEquatable<Face>
+    public class Face : IComparable<Face>, IEquatable<Face>, IFace
     {
-        public readonly int[] iVerts;
-         
+        private readonly ImmutableArray<int> _iVerts;
+        private readonly ImmutableArray<IEdgeKey> _Edges; 
+
+        public ImmutableArray<int> iVerts
+        {
+            get
+            {
+                return this._iVerts;
+            }
+        }
+
+        public ImmutableArray<IEdgeKey> Edges
+        {
+            get
+            {
+                return this._Edges;
+            }
+        }
+
         /*
         public int A
         {
@@ -44,22 +62,44 @@ namespace Geometry.Meshing
         }
 
         */
-
-        public EdgeKey[] Edges
+          
+        private IEdgeKey[] CalculateEdges()
         {
-            get
+            IEdgeKey[] _edges = new IEdgeKey[iVerts.Length];
+            for (int i = 0; i < iVerts.Length; i++)
             {
-                EdgeKey[] _edges = new EdgeKey[iVerts.Length];
-                for(int i = 0; i < iVerts.Length; i++)
-                { 
-                    if (i < iVerts.Length - 1)
-                        _edges[i] = new EdgeKey(iVerts[i], iVerts[i + 1]);
-                    else
-                        _edges[i] = new EdgeKey(iVerts[i], iVerts[0]); 
-                }
-
-                return _edges;
+                if (i < iVerts.Length - 1)
+                    _edges[i] = new EdgeKey(iVerts[i], iVerts[i + 1]);
+                else
+                    _edges[i] = new EdgeKey(iVerts[i], iVerts[0]);
             }
+
+            return _edges;
+        }
+
+        /// <summary>
+        /// Duplicate functions are used to create a copy of the face, with index numbers adjusted by the offset, without any edge data.
+        /// This method is used to merge meshes
+        /// </summary>
+        /// <param name="oldVertex"></param>
+        /// <param name="offset"></param>
+        /// <returns></returns>
+        public static Face Duplicate(Face oldFace, int offset)
+        {
+            Face newFace = new Meshing.Face(oldFace.iVerts.Select(VertIndex => VertIndex + offset));
+            return newFace;
+        }
+
+        public static Face Duplicate(Face oldFace, IEnumerable<int> vertex_indicies)
+        {
+            Face newFace = new Meshing.Face(vertex_indicies);
+            return newFace;
+        }
+
+        public static IFace Duplicate(IFace oldFace, IEnumerable<int> vertex_indicies)
+        {
+            Face newFace = new Meshing.Face(vertex_indicies);
+            return newFace;
         }
 
         public Face(int A, int B, int C)
@@ -68,7 +108,8 @@ namespace Geometry.Meshing
             {
                 throw new ArgumentException("Vertex indicies must be unique");
             }
-            iVerts = new int[] { A, B, C };
+            _iVerts = (new int[] { A, B, C}).ToImmutableArray();
+            _Edges = CalculateEdges().ToImmutableArray();
         }
 
         public Face(int A, int B, int C, int D)
@@ -80,13 +121,14 @@ namespace Geometry.Meshing
                 throw new ArgumentException("Vertex indicies must be unique");
             }
 
-            iVerts = new int[] { A, B, C, D };
+            _iVerts = (new int[] { A, B, C, D }).ToImmutableArray();
+            _Edges = CalculateEdges().ToImmutableArray();
         }
 
 
         public Face(IEnumerable<int> vertex_indicies)
         {
-            iVerts = vertex_indicies.ToArray();
+            _iVerts = vertex_indicies.ToImmutableArray();
             SortedSet<int> s = new SortedSet<int>(iVerts);
             if(s.Count != iVerts.Length)
             {
@@ -94,7 +136,9 @@ namespace Geometry.Meshing
             }
 
             if (iVerts.Length < 3 || iVerts.Length > 4)
-                throw new ArgumentException("A face must have at least 3 verticies and currently no more than 4.  The 4 limit is negiotiable."); 
+                throw new ArgumentException("A face must have at least 3 verticies and currently no more than 4.  The 4 limit is negiotiable.");
+
+            _Edges = CalculateEdges().ToImmutableArray();
         }
 
         public override int GetHashCode()
@@ -152,8 +196,13 @@ namespace Geometry.Meshing
                 return iVerts.Length == 4;
             }
         }
-
+          
         public int CompareTo(Face other)
+        {
+            return CompareTo(other as IFace);
+        }
+
+        public int CompareTo(IFace other)
         {
             int compareVal = this.iVerts.Length.CompareTo(other.iVerts.Length);
             if (compareVal != 0)
@@ -170,6 +219,11 @@ namespace Geometry.Meshing
         }
 
         public bool Equals(Face other)
+        {
+            return Equals(other as IFace);
+        }
+         
+        public bool Equals(IFace other)
         {
             if (object.ReferenceEquals(other, null))
             {
@@ -189,5 +243,6 @@ namespace Geometry.Meshing
 
             return true;
         }
+        
     }
 }

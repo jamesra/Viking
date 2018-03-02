@@ -98,7 +98,7 @@ namespace ColladaIO
             return new param_type[] { X, Y, Z };
         }
 
-        private static triangles_type CreateTriangles(ICollection<Face> faces, string id, string MaterialName)
+        private static triangles_type CreateTriangles(ICollection<IFace> faces, string id, string MaterialName)
         {
             triangles_type triangles = new ColladaIO.triangles_type();
             triangles.count = (ulong)faces.Count;

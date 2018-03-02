@@ -48,7 +48,7 @@ namespace MorphologyMesh
                 v.Normal.Normalize();
             }
 
-            mesh.AddVertex(verts);
+            mesh.AddVerticies(verts);
 
             Face[] faces = new Face[] {
                          new Face(1,3,2,0), //Bottom
@@ -58,7 +58,7 @@ namespace MorphologyMesh
                          new Face(5,7,3,1), //Right
                          new Face(2,6,4,0) }; //Left
 
-            mesh.AddFaces(faces);
+            mesh.AddFaces(faces.Select(f => f as IFace).ToArray());
 
             return mesh;
         }
@@ -66,7 +66,7 @@ namespace MorphologyMesh
         public static DynamicRenderMesh<T> CreateMeshForCircle(ICircle2D circle, double Z, int NumPointsOnCircle, T locationData, GridVector3 translate)
         {
             DynamicRenderMesh<T> mesh = new DynamicRenderMesh<T>();
-            mesh.AddVertex(CreateVerticiesForCircle(circle, Z, TopologyMeshGenerator.NumPointsAroundCircle, locationData, translate));
+            mesh.AddVerticies(CreateVerticiesForCircle(circle, Z, TopologyMeshGenerator.NumPointsAroundCircle, locationData, translate));
             AddFacesToCircle(mesh, TopologyMeshGenerator.NumPointsAroundCircle);
 
             return mesh;
@@ -76,9 +76,9 @@ namespace MorphologyMesh
         {
             DynamicRenderMesh<T> mesh = new DynamicRenderMesh<T>();
             double halfHeight = Height / 2.0;
-            mesh.AddVertex(CreateVerticiesForCircle(circle, Z - halfHeight, TopologyMeshGenerator.NumPointsAroundCircle, locationData, translate));
+            mesh.AddVerticies(CreateVerticiesForCircle(circle, Z - halfHeight, TopologyMeshGenerator.NumPointsAroundCircle, locationData, translate));
             AddFacesToCircle(mesh, TopologyMeshGenerator.NumPointsAroundCircle, 0, CCWNormalHasPositiveZ: false);
-            mesh.AddVertex(CreateVerticiesForCircle(circle, Z + halfHeight, TopologyMeshGenerator.NumPointsAroundCircle, locationData, translate));
+            mesh.AddVerticies(CreateVerticiesForCircle(circle, Z + halfHeight, TopologyMeshGenerator.NumPointsAroundCircle, locationData, translate));
             AddFacesToCircle(mesh, TopologyMeshGenerator.NumPointsAroundCircle, NumPointsOnDisc + 1, CCWNormalHasPositiveZ: true);
 
             AddFacesToDiscRim(mesh, TopologyMeshGenerator.NumPointsAroundCircle);
@@ -169,8 +169,8 @@ namespace MorphologyMesh
             Vertex<T>[] bottom_verticies = CreateVerticiesForPolygon(triangulation, Z - HalfHeight, locationData, translate);
             Vertex<T>[] top_verticies = CreateVerticiesForPolygon(triangulation, Z + HalfHeight, locationData, translate);
             
-            mesh.AddVertex(bottom_verticies);
-            mesh.AddVertex(top_verticies);
+            mesh.AddVerticies(bottom_verticies);
+            mesh.AddVerticies(top_verticies);
 
             AddFacesToPolygon(mesh, triangulation, 0, false);
             AddFacesToPolygon(mesh, triangulation, bottom_verticies.Length, true);

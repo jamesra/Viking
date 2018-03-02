@@ -101,7 +101,7 @@ namespace MonogameTestbed
         private DynamicRenderMesh CreateTetrahedronMeshModel(GridVector3 offset)
         {
             DynamicRenderMesh mesh = new DynamicRenderMesh();
-            mesh.AddVertex(CreateTetrahedronVerts(new GridVector3(0, 0, 0)));
+            mesh.AddVerticies(CreateTetrahedronVerts(new GridVector3(0, 0, 0)));
             Face[] faces = CreateTetrahedronFaces();
             foreach (Face f in faces)
             {
@@ -191,9 +191,13 @@ namespace MonogameTestbed
             }
             */
 
-             
+
+            //meshViewWithLighting.models.Add(BuildPolygonBranchCenter(GridVector3.Zero));
+            //Add a simple shape that should always be correct to test simple process and terminal rendering
+            meshViewWithLighting.models.Add(BuildSmoothMeshTwoNonOverlappingCircles(new GridVector3(50,0,0)));
+
             meshViewWithLighting.models.Add(BuildPolygonBranchCenter(GridVector3.Zero));
-          
+
             labelCamera = new LabelView("", new GridVector2(-70, 0));
         } 
 

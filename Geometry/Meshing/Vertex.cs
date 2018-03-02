@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -28,9 +29,10 @@ namespace Geometry.Meshing
 
     public class Vertex : IVertex 
     {
-        public GridVector3 _Position;
-        public GridVector3 _Normal;
-        public SortedSet<EdgeKey> _Edges;
+        private GridVector3 _Position;
+        private GridVector3 _Normal;
+        private SortedSet<IEdgeKey> _Edges;
+        public int Index { get;  set; }
 
         public GridVector3 Position
         {
@@ -56,43 +58,93 @@ namespace Geometry.Meshing
             }
         }
 
-        public SortedSet<EdgeKey> Edges
+        private ImmutableSortedSet<IEdgeKey> _ImmutableEdges;
+        public ImmutableSortedSet<IEdgeKey> Edges
         {
             get
             {
-                return _Edges;
+                if (_ImmutableEdges == null)
+                {
+                    _ImmutableEdges = _Edges.ToImmutableSortedSet();
+                }
+                return _ImmutableEdges;
             }
+        }
+
+        /// <summary>
+        /// Duplicate functions are used to create a copy of the vertex without any edge or face data.
+        /// </summary>
+        /// <param name="oldVertex"></param>
+        /// <param name="offset"></param>
+        /// <returns></returns>
+        public static Vertex Duplicate(Vertex oldVertex, int offset)
+        {
+            Vertex newVertex = new Meshing.Vertex(oldVertex.Position, oldVertex.Normal);
+            return newVertex;
+        }
+
+        public static IVertex Duplicate(IVertex oldVertex, int offset)
+        {
+            Vertex newVertex = new Meshing.Vertex(oldVertex.Position, oldVertex.Normal);
+            return newVertex;
         }
 
         public Vertex(GridVector3 p, GridVector3 n)
         {
             _Position = p;
             _Normal = n;
-            _Edges = new SortedSet<EdgeKey>();
+            _Edges = new SortedSet<IEdgeKey>();
+            _ImmutableEdges = null;
         }
 
         public Vertex(GridVector3 p)
         {
             _Position = p;
             _Normal = GridVector3.Zero;
-            _Edges = new SortedSet<EdgeKey>();
+            _Edges = new SortedSet<IEdgeKey>();
+            _ImmutableEdges = null;
         }
 
-        public void AddEdge(EdgeKey e)
+        public bool AddEdge(IEdgeKey e)
         {
-            if(!_Edges.Contains(e))
+            if (!_Edges.Contains(e))
+            {
                 _Edges.Add(e);
+                _ImmutableEdges = null;
+
+                return true;
+            }
+
+            return false;
         }
 
-        public void RemoveEdge(EdgeKey e)
+        public void RemoveEdge(IEdgeKey e)
         {
             Debug.Assert(_Edges.Contains(e));
             _Edges.Remove(e);
+            _ImmutableEdges = null;
         }
 
         public override string ToString()
         {
             return string.Format("P: {0} N: {1}", Position, Normal);
+        }
+
+        public IVertex ShallowCopy()
+        {
+            Vertex v = new Vertex(this.Position, this.Normal);
+
+            return v;
+        }
+
+        public int CompareTo(IVertex other)
+        {
+            return this.Index.CompareTo(other.Index);
+        }
+
+        public bool Equals(IVertex other)
+        {
+            return this.Index == other.Index;
         }
     }
 

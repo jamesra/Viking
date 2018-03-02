@@ -44,7 +44,7 @@ namespace MorphologyMesh
 
             //Create a graph where each node is a set of verticies.
             ConcurrentBag<MeshNode> nodes = new ConcurrentBag<MeshNode>();
-            
+
 #if !DEBUG
             graph.Nodes.Values.AsParallel().ForAll(node =>
             {
@@ -74,7 +74,7 @@ namespace MorphologyMesh
                 MeshEdge mEdge = SmoothMeshGraphGenerator.CreateEdge(graph.Nodes[edge.SourceNodeKey], graph.Nodes[edge.TargetNodeKey]);
                 meshGraph.AddEdge(mEdge);
             }
-             
+
             foreach (MeshNode node in meshGraph.Nodes.Values.Where(n => n.GetEdgesAbove().Length > 0).ToArray())
             {
                 CreatePortsForBranch(node, node.GetEdgesAbove().SelectMany(e => node.Edges[e]).ToArray());
@@ -103,7 +103,7 @@ namespace MorphologyMesh
 
         private static void AddIndexSetToMeshIndexMap(SortedList<GridVector3, long> map, Geometry.Meshing.DynamicRenderMesh<ulong> mesh, Geometry.Meshing.IIndexSet set)
         {
-            Geometry.Meshing.Vertex[] verts = mesh.GetVerts(set).ToArray();
+            IVertex[] verts = mesh.GetVerts(set).ToArray();
             long[] mesh_indicies = set.ToArray();
 
             for (int iVert = 0; iVert < mesh_indicies.Length; iVert++)
@@ -143,6 +143,7 @@ namespace MorphologyMesh
             MeshNode[] other_nodes;
             other_nodes = edges.Select(e => graph.Nodes[e.SourceNodeKey == node.Key ? e.TargetNodeKey : e.SourceNodeKey]).ToArray();
 
+
             //Build a set of all polygons in the nodes
             GridPolygon[] Polygons;
             {
@@ -157,7 +158,7 @@ namespace MorphologyMesh
 
                 Polygons = Polylist.ToArray();
             }
-            
+
             //Build a single mesh with all components of the branch
             foreach (MeshNode other_node in other_nodes)
             {
@@ -224,12 +225,12 @@ namespace MorphologyMesh
                
             }
             */
-            
+
             //GridLineSegment[] lines = mesh.ToLines().ToArray();
 
             Dictionary<GridVector2, SortedSet<PointIndex>> pointToConnectedPolys = new Dictionary<GridVector2, SortedSet<PointIndex>>();
 
-            
+
             GridVector2[] midpoints = lines.Select(l => l.PointAlongLine(0.5)).AsParallel().ToArray();
 
             //Figure out which verticies are included in the port
@@ -281,7 +282,7 @@ namespace MorphologyMesh
                 CreateOrAddToSet(pointToConnectedPolys, l.B, APolyIndex);
                 CreateOrAddToSet(pointToConnectedPolys, l.B, BPolyIndex);
             }
-            
+
 
             for (int iEdge = 0; iEdge < edges.Length; iEdge++)
             {
@@ -340,7 +341,7 @@ namespace MorphologyMesh
             }
         }
 
-        
+
         /// <summary>
         /// Replace the external port for the node connected to the edge using data provided by triangulating the exterior and interior polygons of shapes on both sides of the edge
         /// </summary>
@@ -352,7 +353,7 @@ namespace MorphologyMesh
         {
             ConnectionVerticies port = edge.GetPortForNode(node.Key);
             ConnectionVerticies other_port = edge.GetOppositePortForNode(node.Key);
-             
+
             bool[] VertexInPort = new bool[port.ExternalBorder.Count];
             for (int iVertex = 0; iVertex < port.ExternalBorder.Count; iVertex++)
             {
@@ -360,7 +361,7 @@ namespace MorphologyMesh
 
                 //A hack, this shouldn't occur. 
                 if (iMeshVertex >= node.Mesh.Verticies.Count)
-                    continue; 
+                    continue;
 
                 GridVector2 v = node.Mesh.Verticies[iMeshVertex].Position.XY();
                 if (!pointToConnectedPolys.ContainsKey(v))
@@ -486,12 +487,12 @@ namespace MorphologyMesh
                 else
                 {
                     GridPolygon[] connectedPolys = new GridPolygon[] { polygons[APolyIndex.iPoly], polygons[BPolyIndex.iPoly] };
-                    
+
                 }
             }
 
             return triangles.Where((t, i) => KeepTriangle[i]).ToArray();
-        } 
+        }
 
         /// <summary>
         /// Add an integer to the dictionary for the key.  Creates the SortedSet if needed
@@ -501,7 +502,7 @@ namespace MorphologyMesh
         /// <param name="iPoly"></param>
         private static void CreateOrAddToSet(Dictionary<GridVector2, SortedSet<PointIndex>> dict, GridVector2 key, PointIndex iPoly)
         {
-            if(!dict.ContainsKey(key))
+            if (!dict.ContainsKey(key))
             {
                 dict[key] = new SortedSet<PointIndex>();
             }

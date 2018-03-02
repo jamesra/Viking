@@ -37,10 +37,20 @@ namespace Geometry.Meshing
                 int vertexB = PointToVertexIndex[tri.p2];
                 int vertexC = PointToVertexIndex[tri.p3];
 
-                mesh.AddFace(vertexA, vertexB, vertexC);
+                mesh.AddFace(new Face(vertexA, vertexB, vertexC));
             }
 
             return mesh;
+        }
+
+        public static bool IsTriangle(this IFace face)
+        {
+            return face.iVerts.Length == 3;
+        }
+
+        public static bool IsQuad(this IFace face)
+        {
+            return face.iVerts.Length == 4;
         }
     }
 }

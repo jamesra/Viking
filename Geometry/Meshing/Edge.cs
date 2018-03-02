@@ -1,29 +1,37 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace Geometry.Meshing
 {
-    public struct EdgeKey : IComparable<EdgeKey>, IEquatable<EdgeKey>
+    public struct EdgeKey : IComparable<EdgeKey>, IEquatable<EdgeKey>, IComparable<IEdgeKey>, IEquatable<IEdgeKey>, IEdgeKey
     {
-        readonly int[] Verticies; //The two verticies defining the edge
-
+        public int[] Verticies //The two verticies defining the edge
+        {
+            get { return new int[] { A, B }; }
+        }
+                
         public int A
         {
-            get { return Verticies[0]; }
+            get;
+            private set;
         }
 
         public int B
         {
-            get { return Verticies[1]; }
+            get;
+            private set;
         }
 
         public EdgeKey(int a, int b)
         { 
-            Verticies = a < b ? new int[] { a, b } : new int[] { b, a };
+            int[] ordered = a < b ? new int[] { a, b } : new int[] { b, a };
+            this.A = ordered[0];
+            this.B = ordered[1];
         }
 
         public static bool operator ==(EdgeKey A, EdgeKey B)
@@ -32,6 +40,16 @@ namespace Geometry.Meshing
         }
 
         public static bool operator !=(EdgeKey A, EdgeKey B)
+        {
+            return !A.Equals(B);
+        }
+
+        public static bool operator ==(EdgeKey A, IEdgeKey B)
+        {
+            return A.Equals(B);
+        }
+
+        public static bool operator !=(EdgeKey A, IEdgeKey B)
         {
             return !A.Equals(B);
         }
@@ -48,7 +66,28 @@ namespace Geometry.Meshing
             return 0;
         }
 
+        public int CompareTo(IEdgeKey other)
+        {
+            int comparison = this.A.CompareTo(other.A);
+            if(comparison == 0)
+            {
+                comparison = this.B.CompareTo(other.B); 
+            }
+
+            return comparison;
+        }
+
         public bool Equals(EdgeKey other)
+        {
+            if (object.ReferenceEquals(null, other))
+            {
+                return false;
+            }
+
+            return this.A == other.A && this.B == other.B;
+        }
+
+        public bool Equals(IEdgeKey other)
         {
             if (object.ReferenceEquals(null, other))
             {
@@ -60,7 +99,7 @@ namespace Geometry.Meshing
 
         public override bool Equals(object obj)
         {
-            EdgeKey E = (EdgeKey)obj;
+            IEdgeKey E = (IEdgeKey)obj;
             if (object.ReferenceEquals(E, null))
             {
                 return false;
@@ -80,10 +119,10 @@ namespace Geometry.Meshing
         }
     }
 
-    public struct Edge : IComparable<Edge>, IEquatable<Edge>
+    public class Edge : IComparable<IEdge>, IEquatable<IEdge>, IEdge
     {
-        readonly public SortedSet<Face> Faces; //The two faces adjacent to the edge
-        readonly public EdgeKey Key;
+        readonly private SortedSet<IFace> Faces; //The two faces adjacent to the edge
+        readonly public IEdgeKey Key;
 
         public int A
         {
@@ -94,44 +133,141 @@ namespace Geometry.Meshing
         {
             get { return Key.B; }
         }
+         
+        IEdgeKey IEdge.Key
+        {
+            get { return this.Key; }
+        }
+
+        private ImmutableSortedSet<IFace> _ImmutableFaces; 
+
+        ImmutableSortedSet<IFace> IEdge.Faces
+        {
+            get
+            {
+                if(_ImmutableFaces == null)
+                {
+                    _ImmutableFaces = Faces.ToImmutableSortedSet();
+                }
+
+                return this._ImmutableFaces;
+            }
+        }
+
+        /// <summary>
+        /// Duplicate functions are used to create a copy of the edge, with index numbers adjusted by the offset, without any face data.
+        /// This method is used to merge meshes
+        /// </summary>
+        /// <param name="oldVertex"></param>
+        /// <param name="offset"></param>
+        /// <returns></returns>
+        public static Edge Duplicate(Edge oldEdge, int offset)
+        {
+            Edge newEdge = new Meshing.Edge(oldEdge.A + offset, oldEdge.B + offset);
+            return newEdge;
+        }
+
+        public static IEdge Duplicate(IEdge oldEdge, int A, int B)
+        {
+            Edge newEdge = new Meshing.Edge(A,B);
+            return newEdge;
+        }
 
         public Edge(int a, int b)
         {
-            Faces = new SortedSet<Face>();
+            Faces = new SortedSet<IFace>();
+            _ImmutableFaces = null;
             Key = new EdgeKey(a, b);
         }
 
         public Edge(EdgeKey key)
         {
-            Faces = new SortedSet<Face>();
+            Faces = new SortedSet<IFace>();
+            _ImmutableFaces = null;
             Key = key;
         }
 
-        public void AddFace(Face f)
+        public Edge(IEdgeKey key)
         {
-            Debug.Assert(Faces.Contains(f) == false);
-            Faces.Add(f); 
+            Faces = new SortedSet<IFace>();
+            _ImmutableFaces = null;
+            Key = key;
         }
 
-        public void RemoveFace(Face f)
+        public IEdge DeepCopyWithOffset(int VertexIndexOffset)
+        {
+            Edge e = new Meshing.Edge(A + VertexIndexOffset, B + VertexIndexOffset);
+
+            return e;
+        }
+
+        public void AddFace(IFace f)
+        {
+            //Debug.Assert(Faces.Contains(f) == false);
+            Faces.Add(f);
+            _ImmutableFaces = null;
+        }
+
+        public void RemoveFace(IFace f)
         {
             Debug.Assert(Faces.Contains(f));
             Faces.Remove(f);
+            _ImmutableFaces = null;
         }
 
         public static bool operator ==(Edge A, Edge B)
         {
+            if (object.ReferenceEquals(A, null))
+            {
+                return object.ReferenceEquals(B, null);
+            }
+
             return A.Equals(B);
-        }
+        } 
 
         public static bool operator !=(Edge A, Edge B)
         {
+            if (object.ReferenceEquals(A, null))
+            {
+                return !object.ReferenceEquals(B, null);
+            }
+
+            return !A.Equals(B);
+        }
+
+        public static bool operator ==(Edge A, IEdge B)
+        {
+            if (object.ReferenceEquals(A,null))
+            {
+                return object.ReferenceEquals(B, null);
+            }
+
+            return A.Equals(B);
+        }
+
+        public static bool operator !=(Edge A, IEdge B)
+        {
+            if (object.ReferenceEquals(A, null))
+            {
+                return !object.ReferenceEquals(B, null);
+            }
+
             return !A.Equals(B);
         }
 
         public int CompareTo(Edge other)
         {
             return this.Key.CompareTo(other.Key);
+        }
+
+        public int CompareTo(IEdge other)
+        {
+            return this.Key.CompareTo(other.Key);
+        }
+
+        public int CompareTo(IEdgeKey other)
+        {
+            return this.Key.CompareTo(other);
         }
 
         public bool Equals(Edge other)
@@ -144,9 +280,34 @@ namespace Geometry.Meshing
             return this.Key.Equals(other.Key);
         }
 
+        public bool Equals(IEdge other)
+        {
+            if (object.ReferenceEquals(null, other))
+            {
+                return false;
+            }
+
+            return this.Key.Equals(other.Key);
+        }
+
+        public bool Equals(IEdgeKey other)
+        {
+            if (object.ReferenceEquals(null, other))
+            {
+                return false;
+            }
+
+            return this.Key.Equals(other);
+        }
+           
         public override bool Equals(object obj)
         {
-            Edge E = (Edge)obj;
+            if (object.ReferenceEquals(obj, null) || GetType() != obj.GetType())
+            {
+                return false;
+            }
+
+            Edge E = obj as Edge;
             if (object.ReferenceEquals(E, null))
             {
                 return false;
@@ -165,5 +326,6 @@ namespace Geometry.Meshing
             return Key.ToString();
         }
 
+        
     }
 }
