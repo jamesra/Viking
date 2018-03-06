@@ -28,13 +28,14 @@ Viking requires the following:
 `Click here to install the Viking client`_
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Contents
+Contents 
 ========
 
 .. toctree::
    User Documentation <client/toctree>
    Exporting Data <export/toctree>
    Developer Documentation <server/toctree>
+   Deployment <deployment/toctree>
    About <about>
    :maxdepth: 2
    

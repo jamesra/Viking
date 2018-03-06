@@ -34,7 +34,7 @@ Libraries shared by Viking and Jotunn
 Servers
 -------
 
-Servers are built from the *Connectome Project.sln* solution.  We use Visual Studio 2013 at this time.
+Servers are built from the *Connectome Project.sln* solution.  We use Visual Studio 2017 for all projects except for the WebVisualization site.
 
 **Annotation Service:** Windows Communication Foundation service which is used to provide authenticated read/writes to an annotation database
 
@@ -44,7 +44,7 @@ Servers are built from the *Connectome Project.sln* solution.  We use Visual Stu
 
 **WebAppSettings:** A package shared across all web services containing application settings.
 
-**WebVisualization:** The Visualization website.  This also contains the authentication service that Viking uses to ensure users have logged in correctly.
+**WebVisualization:** The Visualization website.  This also contains the authentication service that Viking uses to ensure users have logged in correctly.  This project must be built with Visual Studio 2010.
     
 Libraries
 ---------
