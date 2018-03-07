@@ -71,6 +71,10 @@ namespace VikingXNAGraphics
             this.UseHSLColor = UseHSLColor;
         }
 
+        public LineView(GridLineSegment line, double width, Microsoft.Xna.Framework.Color color, LineStyle lineStyle, bool UseHSLColor) : this(line.A, line.B, width, color, lineStyle, UseHSLColor)
+        {
+        }
+
         public static void Draw(GraphicsDevice device,
                           VikingXNA.Scene scene,
                           RoundLineCode.RoundLineManager lineManager,
