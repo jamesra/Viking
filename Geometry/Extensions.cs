@@ -1074,11 +1074,7 @@ namespace Geometry
 
             return bbox;
         }
-
-        public static bool AreIndiciesAdjacent(this IReadOnlyList<GridPolygon> polygons, PointIndex A, PointIndex B)
-        {
-            return A.AreAdjacent(B, polygons);
-        }
+        
     }
 
     public static class MappingGridVector2Extensions

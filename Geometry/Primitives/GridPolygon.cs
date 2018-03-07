@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Collections.ObjectModel;
 using System.Collections;
+using System.Diagnostics;
 
 namespace Geometry
 {
@@ -29,6 +30,8 @@ namespace Geometry
         /// </summary>
         public readonly int iVertex;
 
+        private readonly int NumUniqueInRing; //The total number of verticies in the ring iVertex indexes into
+
         /// <summary>
         /// True if the vertex is part of an inner polygon
         /// </summary>
@@ -40,20 +43,43 @@ namespace Geometry
             }
         }
 
-        public PointIndex(int poly, int iV)
+        public PointIndex(int poly, int iV, int ringLength)
         {
             iPoly = poly;
             iInnerPoly = new int?();
             this.iVertex = iV;
+            this.NumUniqueInRing = ringLength;
+            Debug.Assert(iVertex <= NumUniqueInRing); //Can be equal if this is the index of the last point in the ring which is a duplicate
         }
 
-        public PointIndex(int poly, int? innerPoly, int iV)
+        public PointIndex(int poly, int iV, IReadOnlyList<GridPolygon> Polygons)
+        {
+            iPoly = poly;
+            iInnerPoly = new int?();
+            this.iVertex = iV;
+            this.NumUniqueInRing = Polygons[poly].ExteriorRing.Length-1;
+            Debug.Assert(iVertex <= NumUniqueInRing);
+        }
+
+        public PointIndex(int poly, int? innerPoly, int iV, int ringLength)
         {
             iPoly = poly;
             iInnerPoly = innerPoly;
             this.iVertex = iV;
+            this.NumUniqueInRing = ringLength;
+            Debug.Assert(iVertex <= NumUniqueInRing);
         }
-         
+
+        public PointIndex(int poly, int? innerPoly, int iV, IReadOnlyList<GridPolygon> Polygons)
+        {
+            iPoly = poly;
+            iInnerPoly = innerPoly;
+            this.iVertex = iV;
+            this.NumUniqueInRing = 0; //Temp assignment so we can call GetRing
+            this.NumUniqueInRing = this.GetRing(Polygons).Length-1;
+            Debug.Assert(iVertex <= NumUniqueInRing);
+        }
+
 
         // override object.Equals
         public override bool Equals(object obj)
@@ -87,6 +113,9 @@ namespace Geometry
                 return false;
             }
 
+            if (other.NumUniqueInRing != this.NumUniqueInRing)
+                return false;
+
             return true; 
         }
 
@@ -105,7 +134,7 @@ namespace Geometry
             {
                 if(this.iInnerPoly.HasValue && other.iInnerPoly.HasValue)
                 {
-                    return this.iInnerPoly.Value.CompareTo(other.iInnerPoly.Value);
+                    return this.iInnerPoly.Value.CompareTo(other.iInnerPoly.Value); 
                 }
 
                 return this.iInnerPoly.HasValue ? 1 : -1;
@@ -114,10 +143,9 @@ namespace Geometry
             return this.iVertex.CompareTo(other.iVertex);  
         }
 
-        public bool IsLastIndexInRing(IReadOnlyList<GridPolygon> Polygons)
+        public bool IsLastIndexInRing()
         {
-            GridVector2[] ring = this.GetRing(Polygons[this.iPoly]);
-            return this.iVertex == ring.Length - 1;
+            return this.iVertex == this.NumUniqueInRing - 1;
         }
 
         public GridVector2 Point(IReadOnlyList<GridPolygon> Polygons)
@@ -138,7 +166,7 @@ namespace Geometry
         /// <param name="other"></param>
         /// <param name="Polygons"></param>
         /// <returns></returns>
-        public bool AreAdjacent(PointIndex other, IReadOnlyList<GridPolygon> Polygons)
+        public bool AreAdjacent(PointIndex other)
         {
             if (this.iPoly != other.iPoly)
                 return false;
@@ -154,7 +182,8 @@ namespace Geometry
                 return true;
             }
 
-            return (other.IsLastIndexInRing(Polygons) && this.iVertex == 0) || (other.iVertex == 0 && this.IsLastIndexInRing(Polygons));
+            return (other.IsLastIndexInRing() && this.iVertex == 0) ||
+                   (other.iVertex == 0 && this.IsLastIndexInRing());
         }
 
         /// <summary>
@@ -166,8 +195,8 @@ namespace Geometry
         {
             GridVector2[] ring = GetRing(polygons);
 
-            int iPrevious = PreviousVertexInRing(ring);
-            int iNext = PreviousVertexInRing(ring);
+            int iPrevious = PreviousVertexInRing();
+            int iNext = PreviousVertexInRing();
 
             //Should I reverse the order for interior polygons?
             return new GridVector2[] { ring[iPrevious], ring[iNext] };
@@ -177,8 +206,8 @@ namespace Geometry
         {
             GridVector2[] ring = GetRing(polygons);
 
-            int iPrevious = PreviousVertexInRing(ring);
-            int iNext = PreviousVertexInRing(ring);
+            int iPrevious = PreviousVertexInRing();
+            int iNext = PreviousVertexInRing();
 
             //Should I reverse the order for interior polygons?
             return new GridLineSegment[] {
@@ -186,10 +215,10 @@ namespace Geometry
                 new GridLineSegment(ring[iVertex], ring[iNext]) };
         }
 
-        private int NextVertexInRing(GridVector2[] ring)
+        private int NextVertexInRing()
         {
             int iNext = iVertex + 1;
-            if(iVertex >= ring.Length)
+            if(iVertex >= this.NumUniqueInRing)
             {
                 return 0;
             }
@@ -197,12 +226,12 @@ namespace Geometry
             return iNext;
         }
 
-        private int PreviousVertexInRing(GridVector2[] ring)
+        private int PreviousVertexInRing()
         {
             int iPrevious = iVertex - 1;
             if (iPrevious < 0)
             {
-                return ring.Length - 2;
+                return this.NumUniqueInRing - 1;
             }
 
             return iPrevious;
@@ -288,6 +317,55 @@ namespace Geometry
             else
                 return string.Format("P:{0} iVert:{1}", this.iPoly, this.iVertex);
         }
+
+        public static PointIndex[] SortByRing(PointIndex[] verts)
+        {
+            Array.Sort(verts);
+            List<PointIndex> listIndex = new List<PointIndex>(verts.Length);
+
+            foreach(var poly in verts.GroupBy(v => v.iPoly))
+            {
+                foreach(var ring in verts.GroupBy(v => v.iInnerPoly))
+                {
+                    PointIndex[] ringArray = ring.ToArray();
+                    Array.Sort(ringArray);
+
+                    //If this is not the complete ring make sure our sort is not breaking the ring at the wraparound point
+                    if (ringArray.Length < ringArray[0].NumUniqueInRing)
+                    {
+                        if (ringArray.First().AreAdjacent(ringArray.Last()))
+                        {
+                            //Walk the items until we find the first index that is not adjacent. 
+                            //Then add the indicies after that point.
+                            int iStart = 0;
+                            for (int iVert = 1; iVert < ringArray.Length; iVert++)
+                            {
+                                if (!ringArray[iVert].AreAdjacent(ringArray[iVert - 1]))
+                                {
+                                    iStart = iVert;
+                                    break;
+                                }
+                            }
+
+                            listIndex.AddRange(ringArray.Skip(iStart));
+                            listIndex.AddRange(ringArray.Take(iStart));
+                        }
+                        else
+                        {
+                            listIndex.AddRange(ringArray);
+                        }
+
+                    }
+                    else
+                    {
+                        listIndex.AddRange(ringArray);
+                    }
+                }
+            }
+
+            return listIndex.ToArray();
+        }
+        
     }
          
 
@@ -345,7 +423,7 @@ namespace Geometry
                 if (polygons[0].ExteriorRing.Length == 0)
                     return false;
 
-                curIndex = new PointIndex(0, 0);
+                curIndex = new PointIndex(0, 0, polygons[0].ExteriorRing.Length-1);
                 return true;
             }
 
@@ -375,14 +453,14 @@ namespace Geometry
             if(iNextVert < ring.Length-1) //-1 because we do not want to report a duplicate vertex for a closed ring
             {
                 //Move along the ring we are iterating
-                return new PointIndex(current.iPoly, current.iInnerPoly, iNextVert);
+                return new PointIndex(current.iPoly, current.iInnerPoly, iNextVert, ring.Length-1);
             }
             
             if(iNextVert == ring.Length - 1) //-1 because we do not want to report a duplicate vertex for a closed ring
             {
                 //Move along the ring we are iterating and hit the last vertex in a closed loop that equals the first vertex
                 if (ring[0] != ring[iNextVert])
-                    return new PointIndex(current.iPoly, current.iInnerPoly, iNextVert);
+                    return new PointIndex(current.iPoly, current.iInnerPoly, iNextVert, ring.Length-1);
             }
             
             //OK, handle case where we are out of indicies on the current ring            
@@ -392,8 +470,9 @@ namespace Geometry
                 {   
                     if(current.iInnerPoly.Value + 1 < poly.InteriorRings.Count)
                     {
+                        int iNextInner = current.iInnerPoly.Value + 1; 
                         //Move to the next inner polygon
-                        return new PointIndex(current.iPoly, current.iInnerPoly.Value + 1, 0);
+                        return new PointIndex(current.iPoly, iNextInner, 0, poly.InteriorRings.ElementAt(iNextInner).Length - 1);
                     }
                     else
                     {
@@ -404,7 +483,7 @@ namespace Geometry
                 {
                     if(poly.HasInteriorRings)
                     {
-                        return new PointIndex(current.iPoly, 0, 0); //Go to the first vertex of the first inner polygon
+                        return new PointIndex(current.iPoly, 0, 0, poly.InteriorRings.First().Length - 1); //Go to the first vertex of the first inner polygon
                     }
                 }
 
@@ -417,7 +496,7 @@ namespace Geometry
                 }
                 else
                 {
-                    return new Geometry.PointIndex(iNextPoly, 0);
+                    return new Geometry.PointIndex(iNextPoly, 0, polygons[iNextPoly].ExteriorRing.Length-1);
                 }
             }
         }        
@@ -1314,7 +1393,7 @@ namespace Geometry
                 for (int iVertex = 0; iVertex < poly.ExteriorRing.Length-1; iVertex++)
                 {
                     GridVector2 p = poly.ExteriorRing[iVertex];
-                    PointIndex value = new PointIndex(iPoly, iVertex);
+                    PointIndex value = new PointIndex(iPoly, iVertex, Polygons);
 
                     if (pointToPoly.ContainsKey(p))
                     {
@@ -1334,7 +1413,7 @@ namespace Geometry
                     {
                         GridVector2 p = innerPolygon.ExteriorRing[iVertex];
 
-                        PointIndex value = new PointIndex(iPoly, iInnerPoly, iVertex);
+                        PointIndex value = new PointIndex(iPoly, iInnerPoly, iVertex, Polygons);
                         if (pointToPoly.ContainsKey(p))
                         {
                             throw new ArgumentException(string.Format("Duplicate inner polygon vertex {0}", p));
@@ -1365,7 +1444,7 @@ namespace Geometry
                 for(int iVertex = 0; iVertex < poly.ExteriorRing.Length; iVertex++)
                 {
                     GridVector2 p = poly.ExteriorRing[iVertex];
-                    PointIndex value = new PointIndex(iPoly, iVertex);
+                    PointIndex value = new PointIndex(iPoly, iVertex, Polygons);
 
                     if (pointToPoly.ContainsKey(p))
                     {
@@ -1386,7 +1465,7 @@ namespace Geometry
                     {
                         GridVector2 p = innerPolygon.ExteriorRing[iVertex];
 
-                        PointIndex value = new PointIndex(iPoly, iInnerPoly, iVertex);
+                        PointIndex value = new PointIndex(iPoly, iInnerPoly, iVertex, Polygons);
                         if (pointToPoly.ContainsKey(p))
                         {
                             pointToPoly[p].Add(value);

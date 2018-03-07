@@ -309,6 +309,7 @@ namespace GeometryTests
 
             PointIndex[] indicies = enumerator.ToArray();
             Assert.IsTrue(indicies.Length == box.ExteriorRing.Length-1);
+            Assert.IsTrue(indicies.Last().IsLastIndexInRing());
             Assert.IsTrue(indicies.Select(p => p.Point(polyArray)).Distinct().Count() == box.ExteriorRing.Length - 1); //Make sure all indicies are unique and not repeating
 
             for(int i = 0; i < indicies.Length; i++)
@@ -345,7 +346,80 @@ namespace GeometryTests
             Assert.IsTrue(indicies.Length == numUniqueVerticies);
             Assert.IsTrue(indicies.Select(p => p.Point(polyArray)).Distinct().Count() == numUniqueVerticies); //Make sure all indicies are unique and not repeating
         }
-        
+
+        [TestMethod]
+        public void SortPointIndexTest1()
+        {
+            //Test sorting when we need to prevent breaks at the wraparound at the 0 index..
+
+            //Create an array where the first and last index are adjacent, but there is a gap in the center
+            PointIndex[] points = new PointIndex[] {new PointIndex(0,0,6),
+                                                    new PointIndex(0,1,6),
+                                                    new PointIndex(0,2,6),
+                                                    new PointIndex(0,4,6),
+                                                    new PointIndex(0,5,6)};
+            PointIndex[] sorted = PointIndex.SortByRing(points);
+
+            Assert.IsTrue(sorted.First().iVertex == 4);
+            Assert.IsTrue(sorted[1].iVertex == 5);
+            Assert.IsTrue(sorted.Last().iVertex == 2);
+        }
+
+        [TestMethod]
+        public void SortPointIndexTest2()
+        {
+            //Test sorting when we need to prevent breaks at the wraparound at the 0 index..
+
+            //Create an array where the first and last index are adjacent, but there is a gap in the center
+            PointIndex[] points = new PointIndex[] {new PointIndex(0,0,8),
+                                                    new PointIndex(0,1,8),
+                                                    new PointIndex(0,2,8),
+                                                    new PointIndex(0,4,8),
+                                                    new PointIndex(0,5,8),
+                                                    new PointIndex(0,7,8)};
+            PointIndex[] sorted = PointIndex.SortByRing(points);
+
+            Assert.IsTrue(sorted.First().iVertex == 4);
+            Assert.IsTrue(sorted[1].iVertex == 5);
+            Assert.IsTrue(sorted[2].iVertex == 7);
+            Assert.IsTrue(sorted.Last().iVertex == 2);
+        }
+
+        [TestMethod]
+        public void SortPointIndexTest3()
+        {
+            //Test sorting when we need to prevent breaks at the wraparound at the 0 index..
+
+            //Create an array where the first and last index are adjacent, but there is a gap in the center
+            PointIndex[] points = new PointIndex[] {new PointIndex(0,0,8),
+                                                    new PointIndex(0,1,8),
+                                                    new PointIndex(0,2,8),
+                                                    new PointIndex(0,4,8),
+                                                    new PointIndex(0,5,8),
+                                                    new PointIndex(0,7,8),
+
+                                                    new PointIndex(0, 1, 0,8),
+                                                    new PointIndex(0, 1, 1,8),
+                                                    new PointIndex(0,1,2,8),
+                                                    new PointIndex(0,1,4,8),
+                                                    new PointIndex(0,1,5,8),
+                                                    new PointIndex(0,1,7,8),};
+            PointIndex[] sorted = PointIndex.SortByRing(points);
+
+            Assert.IsTrue(sorted.Take(6).All(p => p.IsInner == false));
+            Assert.IsTrue(sorted.Skip(6).All(p => p.IsInner));
+            Assert.IsTrue(sorted.First().iVertex == 4);
+            Assert.IsTrue(sorted[1].iVertex == 5);
+            Assert.IsTrue(sorted[2].iVertex == 7);
+            Assert.IsTrue(sorted[5].iVertex == 2);
+
+            Assert.IsTrue(sorted[6].iVertex == 4);
+            Assert.IsTrue(sorted[7].iVertex == 5);
+            Assert.IsTrue(sorted[8].iVertex == 7);
+            Assert.IsTrue(sorted[11].iVertex == 2);
+
+        }
+
         [TestMethod]
         public void Theorem4Test()
         {
