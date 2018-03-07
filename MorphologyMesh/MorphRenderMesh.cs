@@ -21,7 +21,7 @@ namespace MorphologyMesh
         UNKNOWN = 0x00,
         INVALID = 0x10, //An edge that cannot be part of the final surface
         VALID = 0x01,
-        
+
         CONTOUR = 0x11, //An edge along the contour, part of either the exterior or inner ring
         SURFACE = 0x21, //An edge that crosses from one Z-LEVEL to another and is part of the surface
         FLAT = 0x20, //An edge that connects two verticies on the same shape
@@ -57,7 +57,7 @@ namespace MorphologyMesh
 
             return new Vertex(old.Position, old.Normal);
         }
-        
+
     }
 
 
@@ -84,7 +84,7 @@ namespace MorphologyMesh
 
     public class MorphMeshFace : Face
     {
-        
+
         public MorphMeshFace(int A, int B, int C) : base(A, B, C)
         {
         }
@@ -176,21 +176,21 @@ namespace MorphologyMesh
                 case EdgeType.SURFACE:
                     return true;
                 default:
-                    return false; 
+                    return false;
             }
 
         }
 
         public bool IsSurface(MorphRenderMesh mesh)
-        { 
-                var edges = this.Edges.Select(e => (MorphMeshEdge)mesh.Edges[e]);
-                return edges.All(e => IsSurfaceEdge(e.Type)); 
+        {
+            var edges = this.Edges.Select(e => (MorphMeshEdge)mesh.Edges[e]);
+            return edges.All(e => IsSurfaceEdge(e.Type));
         }
 
         public static IFace Duplicate(IFace old, int[] iVerts)
         {
             MorphMeshFace newFace = new MorphMeshFace(iVerts);
-            return newFace; 
+            return newFace;
         }
     }
 
@@ -199,6 +199,8 @@ namespace MorphologyMesh
     /// </summary>
     public class MorphMeshRegion
     {
+        private MorphRenderMesh ParentMesh;
+
         private SortedSet<MorphMeshFace> _Faces;
         public SortedSet<MorphMeshFace> Faces
         {
@@ -207,10 +209,176 @@ namespace MorphologyMesh
 
         public RegionType Type { get; private set; }
 
-        public MorphMeshRegion(IEnumerable<MorphMeshFace> faces, RegionType type)
+        public MorphMeshRegion(MorphRenderMesh mesh, IEnumerable<MorphMeshFace> faces, RegionType type)
         {
+            ParentMesh = mesh;
             _Faces = new SortedSet<MorphMeshFace>(faces);
             Type = type;
+        }
+
+        public double Z
+        {
+            get
+            {
+                if (Faces.Count == 0)
+                    throw new ArgumentException("No faces in region");
+
+                return ParentMesh[Faces.First().iVerts.First()].Position.Z;
+            }
+        }
+
+        private GridPolygon _Polygon = null;
+
+        public GridPolygon Polygon
+        {
+            get
+            {
+                if (_Polygon != null)
+                    return _Polygon;
+                 
+
+                PointIndex[] polyIndicies = Verticies.Select(v => ((MorphMeshVertex)ParentMesh.Verticies[v]).PolyIndex).ToArray();
+
+
+                //If the polygon verticies contact both segments of inner and outer verticies we must
+                //determine how to connect the segments without creating a self-intersecting polygon
+                bool IsFirstInner = polyIndicies[0].IsInner;
+                if (polyIndicies.Any(pi => pi.IsInner != IsFirstInner))
+                {
+                    Dictionary<PointIndex, int> PolyIndexToMeshIndex = new Dictionary<PointIndex, int>();
+                    for (int i = 0; i < polyIndicies.Length; i++)
+                    {
+                        PolyIndexToMeshIndex.Add(polyIndicies[i], Verticies[i]);
+                    }
+
+
+                    //Identify the poly-lines and determine how they connect
+                    List<PointIndex[]> contours = IdentifyContours(polyIndicies);
+                    PointIndex[] finalIndicies = ConnectContours(contours, PolyIndexToMeshIndex);
+                    int[] debugMeshIndicies = finalIndicies.Select(i => PolyIndexToMeshIndex[i]).ToArray();
+                    GridVector2[] points = finalIndicies.Select(i => ParentMesh.Verticies[PolyIndexToMeshIndex[i]].Position.XY()).ToArray();
+                    _Polygon = new GridPolygon(points.EnsureClosedRing());
+                }
+                else
+                {
+                    //Sort the polyIndices
+                    int[] sorted_polyIndicies = polyIndicies.SortAndIndex();
+                    int[] mesh_indicies = sorted_polyIndicies.Select(i => Verticies[i]).ToArray();
+
+
+                    //Simple case, all verticies are on the same ring
+                    GridVector2[] points = mesh_indicies.Select(i => ParentMesh.Verticies[i].Position.XY()).ToArray();
+                    _Polygon = new GridPolygon(points.EnsureClosedRing());
+                }
+
+                return _Polygon;
+            }
+        }
+
+        private static List<PointIndex[]> IdentifyContours(PointIndex[] polyIndicies)
+        {
+            //Make sure we don't have artificial jumps in the array at 0 indicies. i.e. A line that wraps around the end to the beginning of the ring
+            polyIndicies = PointIndex.SortByRing(polyIndicies); 
+
+            List<PointIndex[]> listContours = new List<PointIndex[]>();
+
+            List<PointIndex> contour = new List<PointIndex>();
+            contour.Add(polyIndicies[0]);
+            for(int i = 1; i < polyIndicies.Length; i++)
+            {
+                PointIndex lastCountourPoint = contour.Last();
+                PointIndex pi = polyIndicies[i];
+                //if (pi.iInnerPoly != lastCountourPoint.iInnerPoly || pi.iPoly != lastCountourPoint.iPoly)
+                if(!lastCountourPoint.AreAdjacent(pi))
+                {
+                    listContours.Add(contour.ToArray());
+                    contour = new List<PointIndex>();
+                    contour.Add(pi);
+                }
+                else
+                {
+                    contour.Add(pi);
+                }
+            }
+
+            //If we started in the middle of a contour due to the indicies wrapping around we prepend the last contour
+            //to the first contour in the list
+            if (contour.Last().AreAdjacent(listContours.First()[0]))
+                listContours.First().Union(contour);
+            else
+                listContours.Add(contour.ToArray());
+
+            return listContours;
+        }
+
+        private PointIndex[] ConnectContours(List<PointIndex[]> contours, Dictionary<PointIndex, int> PolyIndexToMeshIndex)
+        {
+            List<PointIndex> AssembledContour = new List<PointIndex>(); 
+            
+            PointIndex[] lastContour = contours[0];
+            AssembledContour.AddRange(lastContour);
+
+            GridVector2[] lastContourEndpoints = ContourEndpoints(lastContour, PolyIndexToMeshIndex);
+            
+            for (int i = 1; i < contours.Count; i++)
+            {
+                PointIndex[] Contour = contours[i];
+                GridVector2[] Endpoints = ContourEndpoints(Contour, PolyIndexToMeshIndex);
+
+                GridLineSegment B = new GridLineSegment(lastContourEndpoints[1], Endpoints[0]);
+                GridLineSegment A = new GridLineSegment(lastContourEndpoints[0], Endpoints[1]);
+
+                //If the line crosses then we need to reverse the contour before adding it to the output
+                if (A.Intersects(B))
+                {
+                    lastContour = Contour.Reverse().ToArray();
+                }
+                else
+                {
+                    lastContour = Contour; 
+                }
+
+                AssembledContour.AddRange(lastContour);
+                lastContourEndpoints = ContourEndpoints(AssembledContour, PolyIndexToMeshIndex);
+            }
+
+            return AssembledContour.ToArray();
+        }
+
+        GridVector2[] ContourEndpoints(IReadOnlyList<PointIndex> contour, Dictionary<PointIndex, int> PolyIndexToMeshIndex)
+        {
+            int iStart = PolyIndexToMeshIndex[contour[0]];
+            int iEnd = PolyIndexToMeshIndex[contour.Last()];
+
+            return new GridVector2[]
+                { this.ParentMesh.Verticies[iStart].Position.XY(),
+                  this.ParentMesh.Verticies[iEnd].Position.XY() };
+        }
+        
+        /// <summary>
+        /// Return region verticies in no particular order
+        /// </summary>
+        public int[] Verticies
+        {
+            get
+            {
+                return Faces.SelectMany(f => f.iVerts).Distinct().ToArray();
+            }
+        }
+
+        public GridVector3[] VertPositions
+        {
+            get
+            {
+                return Verticies.Select(v => ParentMesh.Verticies[v].Position).ToArray();
+            }
+        }
+
+
+
+        public double NearestDistance(MorphMeshRegion other)
+        {
+            return this.Polygon.Distance(other.Polygon);
         }
     }
 
@@ -282,7 +450,7 @@ namespace MorphologyMesh
 
                 if(face.IsInExposedRegion(mesh))
                 {
-                    MorphMeshRegion region = new MorphMeshRegion(mesh.FloodFillRegion(face, MorphMeshFace.IsInExposedRegion, ref CheckedFaces), RegionType.EXPOSED);
+                    MorphMeshRegion region = new MorphMeshRegion(mesh, mesh.FloodFillRegion(face, MorphMeshFace.IsInExposedRegion, ref CheckedFaces), RegionType.EXPOSED);
                     listRegions.Add(region);
                     CheckedFaces.UnionWith(region.Faces);
                     continue;
@@ -290,7 +458,7 @@ namespace MorphologyMesh
 
                 if (face.IsInHoleRegion(mesh))
                 {
-                    MorphMeshRegion region = new MorphMeshRegion(mesh.FloodFillRegion(face, MorphMeshFace.IsInHoleRegion, ref CheckedFaces), RegionType.HOLE);
+                    MorphMeshRegion region = new MorphMeshRegion(mesh, mesh.FloodFillRegion(face, MorphMeshFace.IsInHoleRegion, ref CheckedFaces), RegionType.HOLE);
                     listRegions.Add(region);
                     CheckedFaces.UnionWith(region.Faces);
                     continue;
@@ -298,7 +466,7 @@ namespace MorphologyMesh
 
                 if (face.IsInInvaginatedRegion(mesh))
                 {
-                    MorphMeshRegion region = new MorphMeshRegion(mesh.FloodFillRegion(face, MorphMeshFace.IsInInvaginatedRegion, ref CheckedFaces), RegionType.INVAGINATION);
+                    MorphMeshRegion region = new MorphMeshRegion(mesh, mesh.FloodFillRegion(face, MorphMeshFace.IsInInvaginatedRegion, ref CheckedFaces), RegionType.INVAGINATION);
                     listRegions.Add(region);
                     CheckedFaces.UnionWith(region.Faces);
                     continue;
