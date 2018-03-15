@@ -136,12 +136,16 @@ namespace GeometryTests
         }
 
         [TestMethod]
-        public void ConvexContainsTest()
+        public void PolygonConvexContainsTest()
         {
             GridPolygon box = CreateBoxPolygon(10);
             Assert.IsFalse(box.Contains(new GridVector2(-15, 5)));
             Assert.IsTrue(box.Contains(new GridVector2(-5, 5)));
             Assert.IsTrue(box.Contains(new GridVector2(0, 0)));
+            Assert.IsTrue(box.Contains(new GridVector2(-10, 0))); //Point exactly on the line
+            Assert.IsTrue(box.Contains(new GridVector2(10, 0))); //Point exactly on the line
+            Assert.IsTrue(box.Contains(new GridVector2(0, 10))); //Point exactly on the line
+            Assert.IsTrue(box.Contains(new GridVector2(0, -10))); //Point exactly on the line
 
             GridPolygon inner_box = CreateBoxPolygon(5);
             Assert.IsTrue(box.Contains(inner_box));
@@ -152,11 +156,17 @@ namespace GeometryTests
             Assert.IsFalse(box.Contains(new GridVector2(-15, 5)));
             Assert.IsFalse(box.Contains(new GridVector2(0, 0)));
 
+            //Test points exactly on the inner ring
+            Assert.IsTrue(box.Contains(new GridVector2(-5, 0)));
+            Assert.IsTrue(box.Contains(new GridVector2(5, 0)));
+            Assert.IsTrue(box.Contains(new GridVector2(0, -5)));
+            Assert.IsTrue(box.Contains(new GridVector2(0, 5)));
+
 
         }
 
         [TestMethod]
-        public void ConcaveContainsTest()
+        public void PolygonConcaveContainsTest()
         {
             GridPolygon box = CreateUPolygon(10);
             Assert.IsFalse(box.Contains(new GridVector2(-15, 5)));
@@ -172,7 +182,7 @@ namespace GeometryTests
         }
 
         [TestMethod]
-        public void TestLineIntersection()
+        public void PolygonTestLineIntersection()
         {
             GridPolygon OuterBox = CreateBoxPolygon(15);
             GridPolygon U = CreateUPolygon(10);
@@ -189,19 +199,80 @@ namespace GeometryTests
             //Line falls exactly over outside polygon segment
             line = new GridLineSegment(new GridVector2(-14, -15), new GridVector2(14, -15));
             Assert.IsTrue(OuterBox.Intersects(line));
+            Assert.IsTrue(line.Intersects(OuterBox, false));
+            Assert.IsFalse(line.Intersects(OuterBox, true));
 
             //Line falls exactly over inner polygon segment
             line = new GridLineSegment(new GridVector2(-10, -10), new GridVector2(10, -10));
             Assert.IsTrue(OuterBox.Intersects(line));
-            
+            Assert.IsTrue(line.Intersects(OuterBox, false));
+            Assert.IsFalse(line.Intersects(OuterBox, true));
+
             //Line inside inner polygon
             line = new GridLineSegment(new GridVector2(-7.5, -7.5), new GridVector2(7.5, -7.5));
             Assert.IsFalse(OuterBox.Intersects(line));
+            Assert.IsFalse(line.Intersects(OuterBox));
+
+            //Line is outside the polygon, but touches a vertex
+            line = new GridLineSegment(new GridVector2(-20, -15), new GridVector2(-15, -15));
+            Assert.IsTrue(OuterBox.Intersects(line));
+            Assert.IsTrue(line.Intersects(OuterBox));
+            Assert.IsFalse(line.Intersects(OuterBox, true));
+
+            //Line inside inner polygon but touches a vertex
+            line = new GridLineSegment(new GridVector2(-10, -10), new GridVector2(-7.5, -7.5));
+            Assert.IsTrue(OuterBox.Intersects(line));
+            Assert.IsTrue(line.Intersects(OuterBox));
+            Assert.IsFalse(line.Intersects(OuterBox, true));
+        }
+
+        [TestMethod]
+        public void PolygonTestLineCrossesPolygon()
+        {
+            GridPolygon OuterBox = CreateBoxPolygon(15);
+            GridPolygon U = CreateUPolygon(10);
+            OuterBox.AddInteriorRing(U);
+
+            //Line entirely outside outer polygon
+            GridLineSegment line = new GridLineSegment(new GridVector2(-16, -16), new GridVector2(16, -16));
+            Assert.IsFalse(line.Crosses(OuterBox));
+
+            //Line entirely inside polygon
+            line = new GridLineSegment(new GridVector2(-14, -14), new GridVector2(14, 14));
+            Assert.IsTrue(line.Crosses(OuterBox));
+
+            //Line falls exactly over outside polygon segment
+            line = new GridLineSegment(new GridVector2(-14, -15), new GridVector2(14, -15));
+            Assert.IsFalse(line.Crosses(OuterBox));
+
+            //Line falls exactly over inner polygon segment
+            line = new GridLineSegment(new GridVector2(-10, -10), new GridVector2(10, -10));
+            Assert.IsFalse(line.Crosses(OuterBox));
+
+            //Line falls exactly over part of the inner polygon segment, then enters the polygon
+            line = new GridLineSegment(new GridVector2(-12.5, -10), new GridVector2(10, -10));
+            Assert.IsTrue(line.Crosses(OuterBox));
+
+            //Line inside inner polygon
+            line = new GridLineSegment(new GridVector2(-7.5, -7.5), new GridVector2(7.5, -7.5));
+            Assert.IsFalse(line.Crosses(OuterBox));
+
+            //Line is outside the polygon, but touches a vertex
+            line = new GridLineSegment(new GridVector2(-20, -15), new GridVector2(-15, -15));
+            Assert.IsFalse(line.Crosses(OuterBox));  
+
+            //Line inside inner polygon but touches a vertex
+            line = new GridLineSegment(new GridVector2(-10, -10), new GridVector2(-7.5, -7.5));
+            Assert.IsFalse(line.Crosses(OuterBox));
+
+            //Line touches two segments of the exterior ring
+            line = new GridLineSegment(new GridVector2(-15, -14), new GridVector2(15, -14));
+            Assert.IsTrue(line.Crosses(OuterBox));
         }
 
 
         [TestMethod]
-        public void AddRemoveVertexTest()
+        public void PolygonAddRemoveVertexTest()
         {
             GridPolygon original_box = CreateBoxPolygon(10);
             GridPolygon box = CreateBoxPolygon(10);
@@ -226,7 +297,7 @@ namespace GeometryTests
         }
 
         [TestMethod]
-        public void AddPointsAtIntersectionsTest()
+        public void PolygonAddPointsAtIntersectionsTest()
         {
             GridPolygon box = CreateBoxPolygon(10);
             GridPolygon U = CreateUPolygon(10);
@@ -246,7 +317,7 @@ namespace GeometryTests
         }
 
         [TestMethod]
-        public void AddPointsAtIntersectionsTest2()
+        public void PolygonAddPointsAtIntersectionsTest2()
         {
             GridPolygon box = CreateBoxPolygon(10);
             GridPolygon OuterBox = CreateBoxPolygon(15);
@@ -449,9 +520,9 @@ namespace GeometryTests
         /// <returns></returns>
         public bool Theorem4(GridPolygon poly, GridLineSegment line)
         {
-            GridVector2 intersection;
+            List<GridVector2> intersections;
 
-            return !LineIntersectionExtensions.Intersects(line, poly, true, out intersection);
+            return !LineIntersectionExtensions.Intersects(line, poly, true, out intersections);
         }
         
     }

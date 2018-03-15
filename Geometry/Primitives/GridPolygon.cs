@@ -846,10 +846,41 @@ namespace Geometry
             }
 
             //Test all of the line segments for both interior and exterior polygons
-            return IsInsidePolygon(segmentsToTest, test_line); 
+            return IsPointInsidePolygon(segmentsToTest, test_line); 
         }
-        
 
+        public bool Contains(GridLineSegment line)
+        {
+            if (!(this.Contains(line.A) && this.Contains(line.B)))
+                return false;
+
+            List<GridLineSegment> segmentsToTest;
+
+            if (_ExteriorSegments.Length > 32 || HasInteriorRings)
+            {
+                segmentsToTest = this.GetIntersectingSegments(line.BoundingBox);
+            }
+            else
+            {
+                segmentsToTest = _ExteriorSegments.ToList();
+            }
+
+            GridVector2 intersection;
+            bool intersects = line.Intersects(segmentsToTest, false);
+            if(intersects)
+            {
+                return false; //Line is not entirely inside the polygon
+            }
+
+            foreach(GridPolygon innerPoly in this.InteriorPolygons)
+            {
+                if (innerPoly.Contains(line))
+                    return false;
+            }
+
+            return true;
+        }
+         
         /// <summary>
         /// Return true if the polygon is completely inside the other
         /// </summary>
@@ -909,7 +940,7 @@ namespace Geometry
             return new GridCircle(center, Radius);
         }
 
-        private static bool IsInsidePolygon(ICollection<GridLineSegment> polygonSegments, GridLineSegment test_line)
+        private static bool IsPointInsidePolygon(ICollection<GridLineSegment> polygonSegments, GridLineSegment test_line)
         {
             //In cases where our test line passes exactly through a vertex on the other polygon we double count the line.  
             //This code removes duplicate intersection points to prevent duplicates
@@ -925,20 +956,25 @@ namespace Geometry
                 GridVector2 Intersection;
                 bool intersected = line.Intersects(test_line, out Intersection);
                 if (intersected)
-                {
+                { 
                     intersections.Add(Intersection);
                 }
 
                 return intersected;
             }).AsParallel().ToList(); //Need ToList here to ensure the query executes fully
-
+            
             //Ensure the line doesn't pass through on a line endpoint
             SortedSet<GridVector2> intersectionPoints = new SortedSet<GridVector2>();
             intersectionPoints.UnionWith(intersections);
 
+            if (intersectionPoints.Any(p => test_line.IsEndpoint(p)))
+                return true; //If the point is exactly on the line then we can often have two intersections as the line leaves the polygon which results in a false negative.
+                             //This test short-circuits that problem
+            
             //Inside the polygon if we intersect line segments of the border an odd number of times
             return intersectionPoints.Count % 2 == 1; 
         }
+
 
         private GridLineSegment[] CreateLineSegments(GridVector2[] ring_points)
         {
