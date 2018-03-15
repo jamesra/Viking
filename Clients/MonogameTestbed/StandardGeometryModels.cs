@@ -4,11 +4,24 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Geometry;
+using VikingXNA;
+using MorphologyMesh; 
 
 namespace MonogameTestbed
 {
     public static class StandardGeometryModels
     {
+        public static GridPolygon CreateBoxPolygon(GridRectangle rect)
+        {
+            GridVector2[] points = new GridVector2[6];
+
+            Array.Copy(rect.Corners, points, 4);
+            points[4] = rect.Center;
+            points[5] = points[0];
+
+            return new GridPolygon(points);
+        }
+
         public static GridVector2[] CreateTestPolygonExteriorVerticies(GridVector2? offset = new GridVector2?())
         {
             GridVector2[] output = new GridVector2[] {new GridVector2(10,10),
@@ -21,7 +34,7 @@ namespace MonogameTestbed
                                       new GridVector2(55, 0),
                                       new GridVector2(25, 5),
                                       new GridVector2(10, 10)};
-             
+
             return output;
         }
 
@@ -33,16 +46,20 @@ namespace MonogameTestbed
                                       new GridVector2(17.5, 25.5),
                                       new GridVector2(12.5, 17.5),
                                      new GridVector2(12.5, 12.5)};
-             
+
             return output;
         }
 
-        public static GridPolygon CreateTestPolygon(GridVector2? offset = new GridVector2?())
+        public static GridPolygon CreateTestPolygon(bool IncludeHole, GridVector2? offset = new GridVector2?())
         {
             GridVector2[] holy_cps = CreateTestPolygonExteriorVerticies();
-            GridVector2[] holy_hole = CreateTestPolygonInteriorRingVerticies();
             List<GridVector2[]> listInnerRings = new List<GridVector2[]>();
-            listInnerRings.Add(holy_hole);
+
+            if (IncludeHole)
+            {
+                GridVector2[] holy_hole = CreateTestPolygonInteriorRingVerticies();
+                listInnerRings.Add(holy_hole);
+            }
 
             //When I made this I did not center polygon on 0,0, so just recenter after creation for now
             GridPolygon uncentered_poly = new GridPolygon(holy_cps, listInnerRings);
@@ -52,7 +69,144 @@ namespace MonogameTestbed
                 return centered_poly.Translate(offset.Value);
             else
                 return centered_poly;
-            
+
         }
     }
+
+    public enum StandardModel
+    {
+        PolyOverNotchedBox,
+        PolyOverNotchedBoxOffset
+    }
+
+
+    public static class StandardModels
+    {
+        static StandardModels()
+        {
+            SharedModel = StandardModel.PolyOverNotchedBoxOffset;
+        }
+
+        private static StandardModel _SharedModel;
+
+        public static StandardModel SharedModel
+        {
+            get { return _SharedModel; }
+            set
+            {
+                _SharedModel = value;
+                UpdateSharedModel(_SharedModel);
+            }
+        }
+
+        private static GridPolygon[] _SharedModelPolygons;
+
+        public static GridPolygon[] SharedModelPolygons
+        {
+            get{
+                return _SharedModelPolygons;
+            }
+        }
+
+        private static double[] _SharedModelZ;
+
+        public static double[] SharedModelZ
+        {
+            get
+            {
+                return _SharedModelZ;
+            }
+        }
+
+        private static MeshEdge[] _SharedModelEdges;
+
+        public static MeshEdge[] SharedModelEdges
+        {
+            get
+            {
+                return _SharedModelEdges;
+            }
+        }
+
+        private static MeshGraph _sharedGraph;
+
+        public static MeshGraph SharedGraph
+        {
+            get
+            {
+                return _sharedGraph;
+            }
+
+        }
+
+        private static void UpdateSharedModel(StandardModel selection)
+        {
+            switch(selection)
+            {
+                case StandardModel.PolyOverNotchedBox:
+                    _SharedModelPolygons = PolygonOverNotchedBox(out _SharedModelZ, out _SharedModelEdges);
+                    break;
+                case StandardModel.PolyOverNotchedBoxOffset:
+                    _SharedModelPolygons = PolygonOverNotchedBoxOffset(out _SharedModelZ, out _SharedModelEdges);
+                    break;
+            }
+
+            _sharedGraph = BuildMeshGraph(_SharedModelPolygons, _SharedModelZ, _SharedModelEdges, 10, GridVector3.Zero);
+        } 
+
+
+        public static GridPolygon[] PolygonOverNotchedBox(out double[] Z, out MeshEdge[] edges)
+        {
+            GridPolygon SimpleA = StandardGeometryModels.CreateTestPolygon(false); 
+            GridPolygon SimpleB = StandardGeometryModels.CreateBoxPolygon(new GridRectangle(-5, 5, -10, 10));
+
+            Z = new double[] { 0, 10 };
+
+            edges = new MeshEdge[] { new MeshEdge(0, 1) };
+
+            return new GridPolygon[] { SimpleA, SimpleB };
+        }
+
+        public static GridPolygon[] PolygonOverNotchedBoxOffset(out double[] Z, out MeshEdge[] edges)
+        {
+            GridPolygon SimpleA = StandardGeometryModels.CreateTestPolygon(false);
+            GridPolygon SimpleB = StandardGeometryModels.CreateBoxPolygon(new GridRectangle(-35, -25, -10, 10));
+
+            Z = new double[] { 0, 10 };
+
+            edges = new MeshEdge[] { new MeshEdge(0, 1) };
+
+            return new GridPolygon[] { SimpleA, SimpleB };
+        }
+
+        public static MeshGraph BuildMeshGraph(IShape2D[] shapes, double[] ZLevels, MeshEdge[] edges, double SectionThickness, GridVector3 translate)
+        {
+            MeshGraph graph = new MeshGraph();
+            graph.SectionThickness = SectionThickness;
+
+            for (int i = 0; i < shapes.Length; i++)
+            {
+                MorphologyMesh.MeshNode node = new MeshNode((ulong)i);
+                node.Mesh = SmoothMeshGraphGenerator.CreateNodeMesh(shapes[i].Translate(translate), ZLevels[i], (ulong)i);
+                graph.AddNode(node);
+                node.MeshGraph = graph;
+                node.CapPortZ = ZLevels[i];
+                node.CapPort = SmoothMeshGraphGenerator.CreatePort(shapes[i]);
+            }
+
+            foreach (MeshEdge edge in edges)
+            {
+                if (graph.Nodes.ContainsKey(edge.SourceNodeKey) && graph.Nodes.ContainsKey(edge.TargetNodeKey))
+                {
+                    edge.SourcePort = SmoothMeshGraphGenerator.CreatePort(shapes[edge.SourceNodeKey], false);
+                    edge.TargetPort = SmoothMeshGraphGenerator.CreatePort(shapes[edge.TargetNodeKey], false);
+                    graph.AddEdge(edge);
+                }
+            }
+
+            return graph;
+        }
+    }
+
+     
 }

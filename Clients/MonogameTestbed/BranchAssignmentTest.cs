@@ -39,7 +39,11 @@ namespace MonogameTestbed
         MeshView<VertexPositionColor> meshView = null;
         MeshModel<VertexPositionColor> meshViewModel = null;
 
-        public bool ShowFaces = false; 
+        List<LineSetView> RegionPolygonViews;
+
+        public bool ShowFaces = false;
+        public bool ShowPolygons = true;
+        public bool ShowRegionPolygons = false; 
 
         public Color Color
         {
@@ -116,6 +120,9 @@ namespace MonogameTestbed
             SearchMesh.AddVerticies(pointToPoly.Keys.Select(v => new Vertex<PointIndex>(v.ToGridVector3(0), pointToPoly[v])).ToArray());
             SearchMesh.AddFaces(mesh.Triangles.Select(t => new Face(t.GetVertexID(0), t.GetVertexID(1), t.GetVertexID(2)) as IFace).ToArray()); 
         }
+        
+        //Returns the line type for a line with a given midpoint.  The Polygons A & B must be different
+        
 
         public static EdgeType GetEdgeType(PointIndex APoly, PointIndex BPoly, GridPolygon[] Polygons, GridVector2 midpoint)
         {
@@ -283,7 +290,7 @@ namespace MonogameTestbed
             {
                 var map = Polygons[iPoly].CreatePointToPolyMap();
                 double Z = PolyZ[iPoly];  
-                listPoints.AddRange(map.Keys.Select(k => new MIVector3(k.ToGridVector3(Z), new PointIndex(iPoly, map[k].iInnerPoly, map[k].iVertex))));
+                listPoints.AddRange(map.Keys.Select(k => new MIVector3(k.ToGridVector3(Z), new PointIndex(iPoly, map[k].iInnerPoly, map[k].iVertex, Polygons))));
             }
 
             var tri = MIConvexHull.DelaunayTriangulation<MIConvexHullExtensions.MIVector3, DefaultTriangulationCell<MIVector3>>.Create(listPoints, 1e-10);
@@ -433,11 +440,14 @@ namespace MonogameTestbed
             FirstPassTriangulation = PolyBranchAssignmentView.ToMorphRenderMesh(mesh, Polygons, PolyZ);
             UpdateMeshVertView(FirstPassTriangulation);
             ClassifyMeshEdges(FirstPassTriangulation);
+            //ReclassifyMeshEdges(FirstPassTriangulation);
             UpdateMeshLines(FirstPassTriangulation);
             lineViews = TrianglesView.LineViews.ToArray();
 
             FirstPassTriangulation.IdentifyRegions();
+            PairOffRegions(FirstPassTriangulation);
             meshViewModel = CreateRegionView(FirstPassTriangulation);
+            CreateRegionPolygonViews(FirstPassTriangulation);
             //meshViewModel = CreateFaceView(FirstPassTriangulation);
             meshView = new MeshView<VertexPositionColor>();
             meshView.models.Add(meshViewModel);
@@ -478,7 +488,6 @@ namespace MonogameTestbed
 
             foreach(MorphMeshRegion region in mesh.Regions)
             {
-
                 int[] edgeVerts = region.Faces.SelectMany(f => f.iVerts).ToArray();
                 model.AppendEdges(edgeVerts);
 
@@ -487,10 +496,26 @@ namespace MonogameTestbed
                 {
                     model.Verticies[iVert].Color = regionColor;
                 }
-                
             }
 
             return model;
+        }
+
+        public void CreateRegionPolygonViews(MorphRenderMesh mesh)
+        {
+            List<LineSetView> views = new List<LineSetView>();
+
+            foreach(MorphMeshRegion region in mesh.Regions)
+            {
+                GridPolygon poly = region.Polygon;
+                LineSetView lineView = new LineSetView();
+                Color c = Color.Random();
+                c.A = 128;
+                lineView.LineViews = poly.ExteriorSegments.Select(l => new LineView(l, 1, c, LineStyle.Standard, false)).ToList();
+                views.Add(lineView);
+            }
+
+            this.RegionPolygonViews = views; 
         }
 
         public void UpdateTriangulation()
@@ -563,7 +588,48 @@ namespace MonogameTestbed
             return;
         }
 
-        private void UpdateMeshLines(MorphRenderMesh mesh)
+        //Pair off nearby regions on adjacent sections to create meshes between
+        private static Dictionary<MorphMeshRegion, List<MorphMeshRegion>> PairOffRegions(MorphRenderMesh mesh)
+        {
+            MorphMeshRegion[] AllRegions = mesh.Regions.Where(r => r.Type == RegionType.EXPOSED).ToArray();
+            SortedSet<double> ZLevels = new SortedSet<double>(AllRegions.Select(r => r.Z).Distinct());
+            Dictionary<MorphMeshRegion, List<MorphMeshRegion>> RegionToCandidates = new Dictionary<MorphMeshRegion, List<MorphMeshRegion>>();
+            
+            //Identify which regions each region could be matched to
+            foreach(MorphMeshRegion region in AllRegions)
+            {
+                List<MorphMeshRegion> Candidates = AllRegions.Where(r => r.Z != region.Z).OrderBy(c => c.Polygon.Distance(region.Polygon)).ToList();
+                RegionToCandidates[region] = Candidates;
+            }
+
+            return RegionToCandidates;
+        }
+
+        /*
+        private static void ReclassifyMeshEdges(MorphRenderMesh mesh)
+        {
+            GridPolygon[] Polygons = mesh.Polygons;
+
+            foreach (MorphMeshEdge edge in mesh.MorphEdges)
+            {
+                if((edge.Type & EdgeType.VALID) == 0)
+                {
+                    continue;
+                }
+
+                MorphMeshVertex A = mesh.GetVertex(edge.A);
+                MorphMeshVertex B = mesh.GetVertex(edge.B);
+
+                if(!BajajMeshGenerator.Theorem2(Polygons, A.PolyIndex, B.Position.XY()))
+                {
+                    edge.Type = EdgeType.FLIPPED_DIRECTION;
+                }
+            }
+
+            return;
+        }*/
+
+            private void UpdateMeshLines(MorphRenderMesh mesh)
         {
             List<LineView> lineViews = new List<LineView>();
 
@@ -698,7 +764,9 @@ namespace MonogameTestbed
                     return Color.Orange.SetAlpha(0.5f);
                 case EdgeType.HOLE:
                     return Color.Purple.SetAlpha(0.5f);
-                    
+                case EdgeType.FLIPPED_DIRECTION:
+                    return Color.Black.SetAlpha(0.5f);
+
                 default:
                     throw new ArgumentException("Unknown line type " + type.ToString());
             }
@@ -841,20 +909,14 @@ namespace MonogameTestbed
         
         public void Draw(MonoTestbed window, Scene scene)
         {
-            if (PolyPointsView != null && !ShowFaces)
-            {
-                foreach(PointSetView psv in PolyPointsView)
-                {
-                    psv.Draw(window, scene);
-                }
-            }
+            
 
-            if(lineViews != null)
+            if(lineViews != null && ShowPolygons)
             {
                 LineView.Draw(window.GraphicsDevice, window.Scene, window.lineManager, lineViews);
             }
 
-            if(polyRingViews != null)
+            if(polyRingViews != null && ShowPolygons)
             {
                 LineView.Draw(window.GraphicsDevice, window.Scene, window.lineManager, polyRingViews.ToArray());
             }
@@ -867,6 +929,19 @@ namespace MonogameTestbed
             if(MeshVertsView != null && ShowFaces)
             {
                 MeshVertsView.Draw(window, scene);
+            }
+
+            if(RegionPolygonViews != null && ShowRegionPolygons)
+            {
+                LineView.Draw(window.GraphicsDevice, window.Scene, window.lineManager, RegionPolygonViews.SelectMany(rpv => rpv.LineViews).ToArray());
+            }
+
+            if (PolyPointsView != null && ShowPolygons)
+            {
+                foreach (PointSetView psv in PolyPointsView)
+                {
+                    psv.Draw(window, scene);
+                }
             }
         }
     }
@@ -1017,7 +1092,17 @@ namespace MonogameTestbed
             {
                 wrapView.ShowFaces = !wrapView.ShowFaces;
             }
-            
+
+            if(Gamepad.B_Clicked)
+            {
+                wrapView.ShowPolygons = !wrapView.ShowPolygons;
+            }
+
+            if (Gamepad.Y_Clicked)
+            {
+                wrapView.ShowRegionPolygons = !wrapView.ShowRegionPolygons;
+            }
+
             /*
             if(Gamepad.RightShoulder_Clicked)
             {

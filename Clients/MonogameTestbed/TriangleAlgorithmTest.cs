@@ -250,7 +250,6 @@ namespace MonogameTestbed
                 label.FontSize = 2;
                 label.Color = Color.Green;
             });
-
         }
 
         

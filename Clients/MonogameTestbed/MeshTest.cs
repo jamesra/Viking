@@ -64,16 +64,7 @@ namespace MonogameTestbed
         }
         */
 
-        private GridPolygon CreateBoxPolygon(GridRectangle rect)
-        {
-            GridVector2[] points = new GridVector2[6];
-
-            Array.Copy(rect.Corners, points, 4);
-            points[4] = rect.Center;
-            points[5] = points[0];
-
-            return new GridPolygon(points);
-        }
+        
 
         private Vertex[] CreateTetrahedronVerts(GridVector3 offset)
         {
@@ -194,40 +185,16 @@ namespace MonogameTestbed
 
             //meshViewWithLighting.models.Add(BuildPolygonBranchCenter(GridVector3.Zero));
             //Add a simple shape that should always be correct to test simple process and terminal rendering
-            meshViewWithLighting.models.Add(BuildSmoothMeshTwoNonOverlappingCircles(new GridVector3(50,0,0)));
+            //meshViewWithLighting.models.Add(BuildSmoothMeshTwoNonOverlappingCircles(new GridVector3(50,0,0)));
 
-            meshViewWithLighting.models.Add(BuildPolygonBranchCenter(GridVector3.Zero));
+            //meshViewWithLighting.models.Add(BuildSmoothMeshTwoPolygons(GridVector3.Zero));
+            //meshViewWithLighting.models.Add(BuildPolygonBranchCenter(GridVector3.Zero));
+            meshViewWithLighting.models.Add(BuildSmoothMeshFromSharedModel(GridVector3.Zero));
 
             labelCamera = new LabelView("", new GridVector2(-70, 0));
         } 
 
-        public MeshGraph BuildMeshGraph(IShape2D[] shapes, double[] ZLevels, MeshEdge[] edges, double SectionThickness, GridVector3 translate)
-        {
-            MeshGraph graph = new MeshGraph();
-            graph.SectionThickness = SectionThickness;
-
-            for (int i = 0; i < shapes.Length; i++)
-            {
-                MorphologyMesh.MeshNode node = new MeshNode((ulong)i);
-                node.Mesh = SmoothMeshGraphGenerator.CreateNodeMesh(shapes[i].Translate(translate), ZLevels[i], (ulong)i);
-                graph.AddNode(node);
-                node.MeshGraph = graph;
-                node.CapPortZ = ZLevels[i];
-                node.CapPort = SmoothMeshGraphGenerator.CreatePort(shapes[i]);
-            }
-
-            foreach (MeshEdge edge in edges)
-            {
-                if (graph.Nodes.ContainsKey(edge.SourceNodeKey) && graph.Nodes.ContainsKey(edge.TargetNodeKey))
-                {
-                    edge.SourcePort = SmoothMeshGraphGenerator.CreatePort(shapes[edge.SourceNodeKey], false);
-                    edge.TargetPort = SmoothMeshGraphGenerator.CreatePort(shapes[edge.TargetNodeKey], false);
-                    graph.AddEdge(edge);
-                }
-            }
-
-            return graph;
-        }
+        
 
         private MeshModel<VertexPositionNormalColor> BuildSmoothMesh1(GridVector3 translate)
         {
@@ -255,7 +222,41 @@ namespace MonogameTestbed
                   new MeshEdge(4,5)
             };
 
-            MeshGraph graph = BuildMeshGraph(shapes, ZLevels, edges, 5.0, translate);
+            MeshGraph graph = StandardModels.BuildMeshGraph(shapes, ZLevels, edges, 5.0, translate);
+
+            DynamicRenderMesh<ulong> mesh = SmoothMeshGenerator.Generate(graph);
+            List<MeshModel<VertexPositionNormalColor>> listMeshModels = new List<MeshModel<VertexPositionNormalColor>>();
+            return mesh.ToVertexPositionNormalColorMeshModel(Color.Yellow);
+        }
+
+        private MeshModel<VertexPositionNormalColor> BuildSmoothMeshFromSharedModel(GridVector3 translate)
+        {
+            //Create three simple polygons and add them to the graph
+            MeshGraph graph = StandardModels.BuildMeshGraph(StandardModels.SharedModelPolygons, StandardModels.SharedModelZ, StandardModels.SharedModelEdges, 5.0, translate);
+
+            DynamicRenderMesh<ulong> mesh = SmoothMeshGenerator.Generate(graph);
+            List<MeshModel<VertexPositionNormalColor>> listMeshModels = new List<MeshModel<VertexPositionNormalColor>>();
+            return mesh.ToVertexPositionNormalColorMeshModel(Color.Yellow);
+        }
+
+        private MeshModel<VertexPositionNormalColor> BuildSmoothMeshTwoPolygons(GridVector3 translate)
+        {
+            //Create three simple polygons and add them to the graph
+            IShape2D[] shapes = {new GridPolygon(new GridVector2[] {
+                                                    new GridVector2(-10,-10),
+                                                    new GridVector2(-10,10),
+                                                    new GridVector2(10,10),
+                                                    new GridVector2(10,-10),
+                                                    new GridVector2(-10,-10)}),
+                                 StandardGeometryModels.CreateTestPolygon(false)
+                                };
+            double[] ZLevels = new double[] { 0, 5, 10, 15, 15, 20 };
+
+            MeshEdge[] edges = new MeshEdge[] {
+                                         new MeshEdge(0, 1)
+            };
+
+            MeshGraph graph = StandardModels.BuildMeshGraph(shapes, ZLevels, edges, 5.0, translate);
 
             DynamicRenderMesh<ulong> mesh = SmoothMeshGenerator.Generate(graph);
             List<MeshModel<VertexPositionNormalColor>> listMeshModels = new List<MeshModel<VertexPositionNormalColor>>();
@@ -275,7 +276,7 @@ namespace MonogameTestbed
             };
 
 
-            MeshGraph graph = BuildMeshGraph(shapes, ZLevels, edges, 5.0, translate);
+            MeshGraph graph = StandardModels.BuildMeshGraph(shapes, ZLevels, edges, 5.0, translate);
 
             DynamicRenderMesh<ulong> mesh = SmoothMeshGenerator.Generate(graph);
             List<MeshModel<VertexPositionNormalColor>> listMeshModels = new List<MeshModel<VertexPositionNormalColor>>();
@@ -296,7 +297,7 @@ namespace MonogameTestbed
                                          new MeshEdge(0,2)
             };
             
-            MeshGraph graph = BuildMeshGraph(shapes, ZLevels, edges, 5.0, translate);
+            MeshGraph graph = StandardModels.BuildMeshGraph(shapes, ZLevels, edges, 5.0, translate);
 
             DynamicRenderMesh<ulong> mesh = SmoothMeshGenerator.Generate(graph);
             List<MeshModel<VertexPositionNormalColor>> listMeshModels = new List<MeshModel<VertexPositionNormalColor>>();
@@ -326,7 +327,7 @@ namespace MonogameTestbed
                                          new MeshEdge(5,6)
             };
 
-            MeshGraph graph = BuildMeshGraph(shapes, ZLevels, edges, 5.0, translate);
+            MeshGraph graph = StandardModels.BuildMeshGraph(shapes, ZLevels, edges, 5.0, translate);
             DynamicRenderMesh<ulong> mesh = SmoothMeshGenerator.Generate(graph);
             List<MeshModel<VertexPositionNormalColor>> listMeshModels = new List<MeshModel<VertexPositionNormalColor>>();
             return mesh.ToVertexPositionNormalColorMeshModel(Color.Yellow);
@@ -357,7 +358,7 @@ namespace MonogameTestbed
                                          new MeshEdge(1,7)
             };
 
-            MeshGraph graph = BuildMeshGraph(shapes, ZLevels, edges, 5.0, translate);
+            MeshGraph graph = StandardModels.BuildMeshGraph(shapes, ZLevels, edges, 5.0, translate);
             DynamicRenderMesh<ulong> mesh = SmoothMeshGenerator.Generate(graph);
             List<MeshModel<VertexPositionNormalColor>> listMeshModels = new List<MeshModel<VertexPositionNormalColor>>();
             return mesh.ToVertexPositionNormalColorMeshModel(Color.Yellow);
@@ -390,7 +391,7 @@ namespace MonogameTestbed
                                          new MeshEdge(3,8)
             };
 
-            MeshGraph graph = BuildMeshGraph(shapes, ZLevels, edges, 5.0, translate);
+            MeshGraph graph = StandardModels.BuildMeshGraph(shapes, ZLevels, edges, 5.0, translate);
             DynamicRenderMesh<ulong> mesh = SmoothMeshGenerator.Generate(graph);
             List<MeshModel<VertexPositionNormalColor>> listMeshModels = new List<MeshModel<VertexPositionNormalColor>>();
             return mesh.ToVertexPositionNormalColorMeshModel(Color.Yellow);
@@ -414,7 +415,7 @@ namespace MonogameTestbed
                                          //new MeshEdge(5,6)
             };
 
-            MeshGraph graph = BuildMeshGraph(shapes, ZLevels, edges, 5.0, translate);
+            MeshGraph graph = StandardModels.BuildMeshGraph(shapes, ZLevels, edges, 5.0, translate);
             DynamicRenderMesh<ulong> mesh = SmoothMeshGenerator.Generate(graph);
             List<MeshModel<VertexPositionNormalColor>> listMeshModels = new List<MeshModel<VertexPositionNormalColor>>();
             return mesh.ToVertexPositionNormalColorMeshModel(Color.Yellow);
@@ -423,14 +424,14 @@ namespace MonogameTestbed
         private MeshModel<VertexPositionNormalColor> BuildPolygonBranchCenter(GridVector3 translate)
         {
             //Create three simple polygons and add them to the graph
-            IShape2D[] shapes = { CreateBoxPolygon(new GridRectangle(new GridVector2(0, 0), new GridVector2(4,6))), //Center
+            IShape2D[] shapes = { StandardGeometryModels.CreateBoxPolygon(new GridRectangle(new GridVector2(0, 0), new GridVector2(4,6))), //Center
                                   new GridCircle(-15, -15, 5), //Upper A
                                   new GridCircle(0, 0, 5),     //Upper B
-                                  CreateBoxPolygon(new GridRectangle(new GridVector2(-10, 0), new GridVector2(-4,4))), 
-                                  CreateBoxPolygon(new GridRectangle(new GridVector2(-10, 0), new GridVector2(-4,4))),
-                                  CreateBoxPolygon(new GridRectangle(new GridVector2(20, 20), new GridVector2(24,30))),
-                                  CreateBoxPolygon(new GridRectangle(new GridVector2(-15, -15), new GridVector2(-10,-10))),
-                                  CreateBoxPolygon(new GridRectangle(new GridVector2(-25, -25), new GridVector2(-20,-20)))
+                                  StandardGeometryModels.CreateBoxPolygon(new GridRectangle(new GridVector2(-10, 0), new GridVector2(-4,4))),
+                                  StandardGeometryModels.CreateBoxPolygon(new GridRectangle(new GridVector2(-10, 0), new GridVector2(-4,4))),
+                                  StandardGeometryModels.CreateBoxPolygon(new GridRectangle(new GridVector2(20, 20), new GridVector2(24,30))),
+                                  StandardGeometryModels.CreateBoxPolygon(new GridRectangle(new GridVector2(-15, -15), new GridVector2(-10,-10))),
+                                  StandardGeometryModels.CreateBoxPolygon(new GridRectangle(new GridVector2(-25, -25), new GridVector2(-20,-20)))
                                 };
             double[] ZLevels = new double[] { 0, 5, 5, -15, -25,-25, 15, 15};
 
@@ -444,7 +445,7 @@ namespace MonogameTestbed
                                          new MeshEdge(1,7)
             };
 
-            MeshGraph graph = BuildMeshGraph(shapes, ZLevels, edges, 5.0, translate);
+            MeshGraph graph = StandardModels.BuildMeshGraph(shapes, ZLevels, edges, 5.0, translate);
 
             DynamicRenderMesh<ulong> mesh = SmoothMeshGenerator.Generate(graph);
             List<MeshModel<VertexPositionNormalColor>> listMeshModels = new List<MeshModel<VertexPositionNormalColor>>();

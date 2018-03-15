@@ -43,7 +43,7 @@ namespace MonogameTestbed
             lineSegment = new GridLineSegment(new GridVector2(0, 0), new GridVector2(5, 5));
             circle = new GridCircle(new GridVector2(-10, -10), 4);
             
-            polygon = StandardGeometryModels.CreateTestPolygon(); 
+            polygon = StandardGeometryModels.CreateTestPolygon(true); 
 
             triangle = new GridTriangle(new GridVector2(-10, 10),
                                                 new GridVector2(-12, 20),
