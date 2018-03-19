@@ -506,20 +506,29 @@ namespace Geometry
             return TriangleIntersectionExtensions.Intersects(tri, line);
         }
 
-        public static bool Intersects(GridLineSegment line, GridPolygon poly)
-        {
-            GridVector2 intersection; 
-            return Intersects(line, poly, out intersection);
-        }
-
-        public static bool Intersects(GridLineSegment line, GridPolygon poly, out GridVector2 intersection)
-        {
-            return Intersects(line, poly, false, out intersection);
-        }
-
-        public static bool Intersects(GridLineSegment line, GridPolygon poly, bool EndpointsOnRingDoNotIntersect, out GridVector2 intersection)
+        public static bool Intersects(this GridLineSegment line, GridPolygon poly, out GridVector2 intersection)
         {
             intersection = GridVector2.Zero;
+            List<GridVector2> intersections; 
+            bool intersected = Intersects(line, poly, false, out intersections);
+            if(intersected)
+            {
+                intersection = intersections.First();
+            }
+
+            return intersected;
+        }
+
+        public static bool Intersects(this GridLineSegment line, GridPolygon poly, bool EndpointsOnRingDoNotIntersect=false)
+        {
+            List<GridVector2> intersections;
+            return Intersects(line, poly, EndpointsOnRingDoNotIntersect, out intersections);
+        }
+
+        
+        public static bool Intersects(this GridLineSegment line, GridPolygon poly, bool EndpointsOnRingDoNotIntersect, out List<GridVector2> intersections)
+        {
+            intersections = new List<GridVector2>();
 
             if (false == line.BoundingBox.Intersects(poly.BoundingBox))
                 return false;
@@ -528,34 +537,91 @@ namespace Geometry
 
             foreach(GridLineSegment poly_line in listCandidates)
             {
+                GridVector2 intersection; 
                 if (line.Intersects(poly_line, out intersection))
                 {
-                    if (EndpointsOnRingDoNotIntersect) //If we are on an endpoint and we are ignoring endpoints continue the search
-                    {
-                        if (!(line.IsEndpoint(intersection) || poly_line.IsEndpoint(intersection)))
-                        {
-                            return true;
-                        }
-                    }
-                    else
-                        return true;
+                    intersections.Add(intersection);
                 }
             }
 
             foreach(GridPolygon inner in poly.InteriorPolygons)
             {
-                if(Intersects(line, inner, EndpointsOnRingDoNotIntersect, out intersection))
+                List<GridVector2> listInnerIntersections;
+                if(Intersects(line, inner, EndpointsOnRingDoNotIntersect, out listInnerIntersections))
                 {
-                    return true;
+                    intersections.AddRange(listInnerIntersections);
                 }
             }
 
-            //If the point is inside the polygon return 
-//            if (poly.Contains(line.A) || poly.Contains(line.B))
-//                return true;
+            intersections = intersections.Distinct().ToList();
+            if(EndpointsOnRingDoNotIntersect)
+            {
+                intersections = intersections.Where(i => !line.IsEndpoint(i)).ToList();
+            }
 
-            return false;
+            return intersections.Count > 0;
         }
+
+        /// <summary>
+        /// Returns true if any portion of the line is inside the polygon
+        /// </summary>
+        /// <param name="line"></param>
+        /// <param name="poly"></param>
+        /// <param name="Intersections"></param>
+        /// <returns></returns>
+        public static bool Crosses(this GridLineSegment line, GridPolygon poly)
+        {
+            List<GridVector2> Intersections; 
+            return line.Crosses(poly, out Intersections);
+        }
+         
+        /// <summary>
+        /// Returns true if any portion of the line is inside the polygon
+        /// </summary>
+        /// <param name="line"></param>
+        /// <param name="poly"></param>
+        /// <param name="Intersections"></param>
+        /// <returns></returns>
+        public static bool Crosses(this GridLineSegment line, GridPolygon poly, out List<GridVector2> Intersections)
+        { 
+             Intersections = new List<GridVector2>();
+
+            if (false == line.BoundingBox.Intersects(poly.BoundingBox))
+                return false;
+
+            List<GridLineSegment> listCandidates = poly.ExteriorSegmentRTree.Intersects(line.BoundingBox.ToRTreeRect(0));
+                          
+            foreach (GridLineSegment poly_line in listCandidates)
+            {
+                GridVector2 intersection;
+                if (line.Intersects(poly_line, out intersection))
+                { 
+                        Intersections.Add(intersection);
+                }
+            }
+
+            GridVector2[] NonEndpointIntersections = Intersections.Where(i => !line.IsEndpoint(i)).ToArray();
+            if (NonEndpointIntersections.Length > 0)
+                return true; 
+
+            //Now we find out if the line is entirely inside the polygon
+            if (poly.Contains(line))
+                return true; 
+            
+            //Now check to see if the line intersects an inner polygon
+            foreach (GridPolygon inner in poly.InteriorPolygons)
+            {
+                List<GridVector2> InnerIntersections = new List<GridVector2>();
+                if (line.Intersects(inner, true, out InnerIntersections))
+                {
+                    Intersections.AddRange(InnerIntersections);
+                }                
+            }
+
+            NonEndpointIntersections = Intersections.Where(i => !line.IsEndpoint(i)).ToArray();
+            return NonEndpointIntersections.Length > 0; 
+        }
+        
 
         /// <summary>
         /// Add a new point where line intersects any other line
@@ -564,10 +630,39 @@ namespace Geometry
         /// <param name="lines">Lines we are testing for intersection</param>
         /// <param name="IntersectionPoints">The intersection points on the line, in increasing order of distance from line.A to line.B</param>
         /// <returns>The lines that intersect the line parameter</returns>
+        public static bool Intersects(this GridLineSegment line, IReadOnlyList<GridLineSegment> lines, bool EndpointsOnRingDoNotIntersect = false)
+        {
+            //Cannot use an out parameter in the anonymous method I use below, so I have a bit of redundancy in tracking added points
+            List<GridVector2> NewPoints = new List<Geometry.GridVector2>(lines.Count);
+            List<GridLineSegment> IntersectingLines = new List<GridLineSegment>(lines.Count);
+
+            foreach (GridLineSegment testLine in lines)
+            {
+                GridVector2 intersection;
+                if (line.Intersects(testLine, EndpointsOnRingDoNotIntersect, out intersection))
+                {
+                    return true; 
+                }
+            }
+
+            return false;
+        }
+        
         public static List<GridLineSegment> Intersections(this GridLineSegment line, IReadOnlyList<GridLineSegment> lines, out GridVector2[] IntersectionPoints)
         {
-            RTree.RTree<GridLineSegment> rTree = lines.ToRTree();
+            return Intersections(line, lines, true, out IntersectionPoints);
+        }
+        
 
+        /// <summary>
+        /// Add a new point where line intersects any other line
+        /// </summary>
+        /// <param name="line">Line we add points to</param>
+        /// <param name="lines">Lines we are testing for intersection</param>
+        /// <param name="IntersectionPoints">The intersection points on the line, in increasing order of distance from line.A to line.B</param>
+        /// <returns>The lines that intersect the line parameter</returns>
+        public static List<GridLineSegment> Intersections(this GridLineSegment line, IReadOnlyList<GridLineSegment> lines, bool EndpointsOnRingDoNotIntersect, out GridVector2[] IntersectionPoints)
+        {
             //Cannot use an out parameter in the anonymous method I use below, so I have a bit of redundancy in tracking added points
             List<GridVector2> NewPoints = new List<Geometry.GridVector2>(lines.Count);
             List<GridLineSegment> IntersectingLines = new List<GridLineSegment>(lines.Count);
@@ -578,7 +673,12 @@ namespace Geometry
                 if (line.Intersects(testLine, out intersection))
                 {
                     //Check that NewPoints does not contain the point.  This can occur when the test line intersects exactly over the endpoint of two lines.
-                    if (!line.IsEndpoint(intersection) && !NewPoints.Contains(intersection))
+                    if (EndpointsOnRingDoNotIntersect && line.IsEndpoint(intersection))
+                    {
+                        continue; 
+                    }
+
+                    if(!NewPoints.Contains(intersection))
                     {
                         NewPoints.Add(intersection);
                         IntersectingLines.Add(testLine);
