@@ -5,7 +5,8 @@ using System.Text;
 using System.Threading.Tasks;
 using Geometry;
 using VikingXNA;
-using MorphologyMesh; 
+using MorphologyMesh;
+using SqlGeometryUtils;
 
 namespace MonogameTestbed
 {
@@ -76,7 +77,9 @@ namespace MonogameTestbed
     public enum StandardModel
     {
         PolyOverNotchedBox,
-        PolyOverNotchedBoxOffset
+        PolyOverNotchedBoxOffset, 
+        PolyFourLevelStraightProcess,
+        Custom
     }
 
 
@@ -84,7 +87,7 @@ namespace MonogameTestbed
     {
         static StandardModels()
         {
-            SharedModel = StandardModel.PolyOverNotchedBoxOffset;
+            SharedModel = StandardModel.PolyFourLevelStraightProcess;
         }
 
         private static StandardModel _SharedModel;
@@ -118,9 +121,9 @@ namespace MonogameTestbed
             }
         }
 
-        private static MeshEdge[] _SharedModelEdges;
+        private static GraphLib.Edge<ulong>[] _SharedModelEdges;
 
-        public static MeshEdge[] SharedModelEdges
+        public static GraphLib.Edge<ulong>[] SharedModelEdges
         {
             get
             {
@@ -141,6 +144,7 @@ namespace MonogameTestbed
 
         private static void UpdateSharedModel(StandardModel selection)
         {
+            _sharedGraph = null; 
             switch(selection)
             {
                 case StandardModel.PolyOverNotchedBox:
@@ -149,13 +153,20 @@ namespace MonogameTestbed
                 case StandardModel.PolyOverNotchedBoxOffset:
                     _SharedModelPolygons = PolygonOverNotchedBoxOffset(out _SharedModelZ, out _SharedModelEdges);
                     break;
+                case StandardModel.PolyFourLevelStraightProcess:
+                    _SharedModelPolygons = PolygonFourLevelProcess(out _SharedModelZ, out _SharedModelEdges);
+                    break;
+                case StandardModel.Custom:
+                    _SharedModelPolygons = PolygonFromServer(out _SharedModelZ, out _SharedModelEdges, out _sharedGraph);
+                    break; 
             }
 
-            _sharedGraph = BuildMeshGraph(_SharedModelPolygons, _SharedModelZ, _SharedModelEdges, 10, GridVector3.Zero);
+            if(_sharedGraph == null)
+                _sharedGraph = BuildMeshGraph(_SharedModelPolygons, _SharedModelZ, _SharedModelEdges, 10, GridVector3.Zero);
         } 
 
 
-        public static GridPolygon[] PolygonOverNotchedBox(out double[] Z, out MeshEdge[] edges)
+        public static GridPolygon[] PolygonOverNotchedBox(out double[] Z, out GraphLib.Edge<ulong>[] edges)
         {
             GridPolygon SimpleA = StandardGeometryModels.CreateTestPolygon(false); 
             GridPolygon SimpleB = StandardGeometryModels.CreateBoxPolygon(new GridRectangle(-5, 5, -10, 10));
@@ -167,7 +178,7 @@ namespace MonogameTestbed
             return new GridPolygon[] { SimpleA, SimpleB };
         }
 
-        public static GridPolygon[] PolygonOverNotchedBoxOffset(out double[] Z, out MeshEdge[] edges)
+        public static GridPolygon[] PolygonOverNotchedBoxOffset(out double[] Z, out GraphLib.Edge<ulong>[] edges)
         {
             GridPolygon SimpleA = StandardGeometryModels.CreateTestPolygon(false);
             GridPolygon SimpleB = StandardGeometryModels.CreateBoxPolygon(new GridRectangle(-35, -25, -10, 10));
@@ -178,8 +189,57 @@ namespace MonogameTestbed
 
             return new GridPolygon[] { SimpleA, SimpleB };
         }
+        
+        public static GridPolygon[] PolygonFourLevelProcess(out double[] Z, out GraphLib.Edge<ulong>[] edges)
+        {
+            GridPolygon A = StandardGeometryModels.CreateBoxPolygon(new GridRectangle(-5, 5, -10, 10));
+            GridPolygon B = StandardGeometryModels.CreateBoxPolygon(new GridRectangle(-5, 5, -10, 10));
+            GridPolygon C = StandardGeometryModels.CreateBoxPolygon(new GridRectangle(-5, 5, -10, 10));
+            GridPolygon D = StandardGeometryModels.CreateBoxPolygon(new GridRectangle(-5, 5, -10, 10));
 
-        public static MeshGraph BuildMeshGraph(IShape2D[] shapes, double[] ZLevels, MeshEdge[] edges, double SectionThickness, GridVector3 translate)
+            Z = new double[] { 0, 10, 20, 30 };
+            edges = new GraphLib.Edge<ulong>[] { new MeshEdge(0,1),
+                                                 new MeshEdge(1,2),
+                                                 new MeshEdge(2,3) };
+
+            return new GridPolygon[] { A, B, C, D };
+        }
+
+        public static GridPolygon[] PolygonFromServer(out double[] Z, out GraphLib.Edge<ulong>[] edges, out MeshGraph mGraph)
+        {
+            long[] TroubleIDS = new long[] {
+              1333661, //Z = 2
+              1333662, //Z = 3
+              1333665 //Z =2
+
+            };
+            AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromODataLocationIDs(TroubleIDS, DataSource.EndpointMap[ENDPOINT.TEST]);
+
+            GridVector2[] centers = graph.Nodes.Values.Select(n => n.Geometry.Centroid()).ToArray();
+
+            foreach(AnnotationVizLib.MorphologyNode node in graph.Nodes.Values)
+            {
+                node.Geometry = node.Geometry.Translate(-centers[0]);
+            }
+            
+            mGraph = MeshGraphBuilder.ConvertToMeshGraph(graph);
+            AnnotationVizLib.MorphologyNode[] nodes = graph.Nodes.Values.ToArray();
+            Dictionary<ulong, ulong> NodeIDtoArrayID = new Dictionary<ulong, ulong>();
+            for(int i = 0; i < nodes.Length; i++)
+            {
+                NodeIDtoArrayID.Add(nodes[i].ID, (ulong)i);
+            }
+
+            GridPolygon[] Polygons = nodes.Select(n => n.Geometry.ToPolygon()).ToArray();
+            Z = nodes.Select(n => n.Z).ToArray();
+            edges = mGraph.Edges.Values.Select(e => new MeshEdge(NodeIDtoArrayID[e.SourceNodeKey],
+                                                                 NodeIDtoArrayID[e.TargetNodeKey],
+                                                                 e.SourcePort,
+                                                                 e.TargetPort)).ToArray();
+            return Polygons;
+        }
+
+        public static MeshGraph BuildMeshGraph(IShape2D[] shapes, double[] ZLevels, GraphLib.Edge<ulong>[] edges, double SectionThickness, GridVector3 translate)
         {
             MeshGraph graph = new MeshGraph();
             graph.SectionThickness = SectionThickness;

@@ -35,12 +35,18 @@ namespace MorphologyMesh
             return Generate(mGraph);
         }
 
+        public static DynamicRenderMesh<ulong> Generate(MeshGraph meshGraph )
+        {
+            List<GridLineSegment> newMeshLines;
+            return Generate(meshGraph, out newMeshLines);
+        }
+
         /// <summary>
         /// Generate a mesh for a cell
         /// </summary>
         /// <param name="graph"></param>
         /// <returns></returns>
-        public static DynamicRenderMesh<ulong> Generate(MeshGraph meshGraph)
+        public static DynamicRenderMesh<ulong> Generate(MeshGraph meshGraph, out List<GridLineSegment> newMeshEdges)
         {
             //Adjust the verticies so the models are centered on zero
             //GridVector3 translate = -meshGraph.BoundingBox.CenterPoint;
@@ -83,6 +89,10 @@ namespace MorphologyMesh
             */
 #endif
 
+#if DEBUG
+            newMeshEdges = new List<GridLineSegment>();
+#endif
+
             int EdgesProcessed = 1;
 
             while (EdgesProcessed > 0)
@@ -96,7 +106,7 @@ namespace MorphologyMesh
                     if (!(meshGraph.Nodes.ContainsKey(edge.SourceNodeKey) &&
                        meshGraph.Nodes.ContainsKey(edge.TargetNodeKey)))
                         continue;
-                     
+
                     /*
                     MeshNode A = meshGraph.Nodes[edge.SourceNodeKey];
                     MeshNode B = meshGraph.Nodes[edge.TargetNodeKey];
@@ -129,8 +139,11 @@ namespace MorphologyMesh
 
                     }
                     */
-
+#if DEBUG 
+                    newMeshEdges.AddRange(MergeMeshEdge(meshGraph, edge));
+#else
                     MergeMeshEdge(meshGraph, edge);
+#endif
                     EdgesProcessed++;
 
                     //TODO: Merge the nodes in the graph 
@@ -519,7 +532,7 @@ namespace MorphologyMesh
                 int iC = (int)VertToMeshIndex[new GridVector2(v3.X, v3.Y)];
 
                 Face f;
-                if (UpperFace)
+                if (!UpperFace)
                     f = new Face(iA, iB, iC);
                 else
                     f = new Face(iC, iB, iA);
@@ -597,10 +610,11 @@ namespace MorphologyMesh
             }
 
             CompositeMesh = KeepNode.Mesh;
+            KeepNode.IDToCrossSection[RemoveNode.Key] = RemoveNode.CapPort.IncrementStartingIndex(NewStartingIndex);
             return CompositeMesh;
         }
 
-        private static void MergeMeshEdge(MeshGraph graph, MeshEdge edge)
+        private static List<GridLineSegment> MergeMeshEdge(MeshGraph graph, MeshEdge edge)
         {
             DynamicRenderMesh<ulong> CompositeMesh = null;
             MeshNode KeepNode = null;
@@ -625,7 +639,6 @@ namespace MorphologyMesh
             System.Diagnostics.Trace.WriteLine(string.Format("Merge {0} - {1}", KeepNode.Key, RemoveNode.Key));
 #endif
 
-
             CompositeMesh = MergeMeshes(KeepNode, RemoveNode);
 
             if (KeepTarget)
@@ -641,11 +654,13 @@ namespace MorphologyMesh
 
             bool KeepIsUpper = KeepNode.IsNodeBelow(RemoveNode);
 
-            AttachPorts(CompositeMesh, 
+            List<GridLineSegment> newMeshLines = AttachPorts(CompositeMesh, 
                         KeepIsUpper ? KeepPort : RemovePort,
                         KeepIsUpper ? RemovePort : KeepPort);
 
             RemoveMergedEdge(KeepNode, RemoveNode);
+
+            return newMeshLines;
         }
 
         private static void RemoveMergedEdge(MeshNode KeepNode, MeshNode RemoveNode)
@@ -781,8 +796,17 @@ namespace MorphologyMesh
 
             //OK, find the nearest two verticies between the ports, and walk counter-clockwise (incrementing the index) around the shapes.  Creating faces until we are finished.
             //Find the verticies on the exterior ring
-            GridVector2[] UpperVerticies = UpperIndexArray.Select(i => CompositeMesh.Verticies[(int)i].Position.XY()).ToArray();
-            GridVector2[] LowerVerticies = LowerIndexArray.Select(i => CompositeMesh.Verticies[(int)i].Position.XY()).ToArray();
+            GridVector2[] UpperVerticies;
+            GridVector2[] LowerVerticies;
+            //try
+            //{
+                UpperVerticies = UpperIndexArray.Select(i => CompositeMesh.Verticies[(int)i].Position.XY()).ToArray();
+                LowerVerticies = LowerIndexArray.Select(i => CompositeMesh.Verticies[(int)i].Position.XY()).ToArray();
+            /*}
+            catch(ArgumentException)
+            {
+                return new List<GridLineSegment>();
+            }*/
 
             List<GridVector2> UpperPolyVertList = UpperVerticies.ToList();
             UpperPolyVertList.Add(UpperPolyVertList.First());
@@ -790,10 +814,10 @@ namespace MorphologyMesh
             List<GridVector2> LowerPolyVertList = LowerVerticies.ToList();
             LowerPolyVertList.Add(LowerPolyVertList.First());
 
-            /*
+            
             GridPolygon upperPoly = new GridPolygon(UpperPolyVertList.ToArray());
             GridPolygon lowerPoly = new GridPolygon(LowerPolyVertList.ToArray());
-
+            /*
             GridVector2 LowerPortCentroid = lowerPoly.Centroid;
             GridVector2 UpperPortCentroid = upperPoly.Centroid;
             */
@@ -807,8 +831,8 @@ namespace MorphologyMesh
             long UpperStart = FirstIndex(UpperVerticies, out UpperPortConvexHullCentroid);
             long LowerStart = FirstIndex(LowerVerticies, out LowerPortConvexHullCentroid);
 
-            LowerVerticies = LowerVerticies.Translate(-LowerPortConvexHullCentroid);
-            UpperVerticies = UpperVerticies.Translate(-UpperPortConvexHullCentroid);
+            //LowerVerticies = LowerVerticies.Translate(-LowerPortConvexHullCentroid);
+            //UpperVerticies = UpperVerticies.Translate(-UpperPortConvexHullCentroid);
 
             //    long UpperStart;
             //    long LowerStart;
@@ -877,26 +901,96 @@ namespace MorphologyMesh
                 //GridTriangle TwoUpper = new GridTriangle(UV1, UV2, LV1);
                 //GridTriangle TwoLower = new GridTriangle(UV1, LV1, LV2);
 
-                GridCircle UpperCircle = GridCircle.CircleFromThreePoints(UV1, UV2, LV1);
-                GridCircle LowerCircle = GridCircle.CircleFromThreePoints(UV1, LV1, LV2);
+                //We can't decide which triangle is more ideal, so consume a vertex from the shape with the most verticies unassigned
+                //LinkToUpper = TwoUpper.Angles.Min() >= TwoLower.Angles.Min();
 
-                bool LinkToUpper; 
-                if(UpperCircle.Contains(LV2) && !LowerCircle.Contains(UV2))
-                {
-                    LinkToUpper = false; 
-                }
-                else if(!UpperCircle.Contains(LV2) && LowerCircle.Contains(UV2))
-                {
+                //TODO, if upper and lower verticies are equal they always link
+                bool LinkToUpper;
+
+                if (UV1 == LV2)
+                    LinkToUpper = false;
+                else if (LV1 == UV2)
                     LinkToUpper = true;
-                }
                 else
                 {
-                    //We can't decide which triangle is more ideal, so consume a vertex from the shape with the most verticies unassigned
-                    //LinkToUpper = TwoUpper.Angles.Min() >= TwoLower.Angles.Min();
-                    LinkToUpper = HeadsOrTails; //Alternate which line to add
-                    HeadsOrTails = !HeadsOrTails; 
-                }
+                    GridLineSegment UV1LV2 = new GridLineSegment(UV1, LV2);
+                    GridLineSegment LV1UV2 = new GridLineSegment(LV1, UV2);
 
+                    GridVector2 UV1LV2_mid = UV1LV2.PointAlongLine(0.5);
+                    GridVector2 LV1UV2_mid = LV1UV2.PointAlongLine(0.5);
+
+                    EdgeType UV1LV2Type = UV1LV2.GetEdgeType(upperPoly, lowerPoly);
+                    EdgeType LV1UV2Type = LV1UV2.GetEdgeType(upperPoly, lowerPoly);
+
+                    if (!(UV1LV2Type == LV1UV2Type))
+                    {
+                        if (UV1LV2Type.IsValid() && !LV1UV2Type.IsValid())
+                        {
+                            LinkToUpper = false;
+                        }
+                        else if (!UV1LV2Type.IsValid() && LV1UV2Type.IsValid())
+                        {
+                            LinkToUpper = true;
+                        }
+                        else if (UV1LV2Type.CouldBeSliceChord() && !LV1UV2Type.CouldBeSliceChord())
+                        {
+                            LinkToUpper = false;
+                        }
+                        else if (!UV1LV2Type.CouldBeSliceChord() && LV1UV2Type.CouldBeSliceChord())
+                        {
+                            LinkToUpper = true;
+                        }
+                        else
+                        {
+                            throw new ArgumentException("Unhandled case for line type");
+                        }
+                    }
+                    else if (UV1LV2Type.IsValid() && LV1UV2Type.IsValid())
+                    {
+                        LinkToUpper = LV1UV2.Length < UV1LV2.Length;
+                    }
+                    else if (UV1LV2Type.CouldBeSliceChord() && LV1UV2Type.CouldBeSliceChord())
+                    {
+                        LinkToUpper = LV1UV2.Length < UV1LV2.Length;
+                    }
+                    else
+                    {
+                        try
+                        {
+                            GridCircle UpperCircle = GridCircle.CircleFromThreePoints(UV1, UV2, LV1);
+                            GridCircle LowerCircle = GridCircle.CircleFromThreePoints(UV1, LV1, LV2);
+
+                            if (UpperCircle.Contains(LV2) && !LowerCircle.Contains(UV2))
+                            {
+                                LinkToUpper = false;
+                            }
+                            else if (!UpperCircle.Contains(LV2) && LowerCircle.Contains(UV2))
+                            {
+                                LinkToUpper = true;
+                            }
+                            else
+                            {
+                                //We can't decide which triangle is more ideal, so consume a vertex from the shape with the most verticies unassigned
+                                //LinkToUpper = TwoUpper.Angles.Min() >= TwoLower.Angles.Min();
+
+                                LinkToUpper = HeadsOrTails; //Alternate which line to add
+                                HeadsOrTails = !HeadsOrTails;
+
+                            }
+                        }
+                        catch (ArgumentException e)
+                        {
+                            //double distLowerToNextUpper = GridVector2.Distance(LV1, UV2);
+                            //double distUpperToNextLower = GridVector2.Distance(UV1, LV2);
+
+                            //This can occur when all three verticies are in a perfect line.  In this case choose the nearest.
+                            //LinkToUpper = distLowerToNextUpper < distUpperToNextLower;
+                            LinkToUpper = HeadsOrTails; //Alternate which line to add
+                            HeadsOrTails = !HeadsOrTails;
+                        }
+                    }
+                }
+                 
                 //We want to choose the triangle with the largest internal angles
                 //bool LinkToUpper = TwoUpper.Angles.Min() >= TwoLower.Angles.Min();
                 //bool LinkToUpper = TwoUpper.Area < TwoLower.Area;
@@ -926,7 +1020,7 @@ namespace MorphologyMesh
 
                     if (!FlipFaces.HasValue)
                     {
-                        FlipFaces = !IsNormalCorrect(CompositeMesh.Normal(f),
+                        FlipFaces = IsNormalCorrect(CompositeMesh.Normal(f),
                                         new GridLineSegment(UpperVerticies[iUpper],
                                                             UpperVerticies[iNextUpper]));
                     }
@@ -948,7 +1042,7 @@ namespace MorphologyMesh
 
                     if (!FlipFaces.HasValue)
                     {
-                        FlipFaces = !IsNormalCorrect(CompositeMesh.Normal(f),
+                        FlipFaces = IsNormalCorrect(CompositeMesh.Normal(f),
                                     new GridLineSegment(LowerVerticies[iLower],
                                                         LowerVerticies[iNextLower]));
                     }

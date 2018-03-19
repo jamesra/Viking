@@ -9,29 +9,7 @@ using Geometry;
 
 namespace MorphologyMesh
 {
-    public enum RegionType
-    {
-        EXPOSED,
-        HOLE,
-        INVAGINATION
-    }
-
-    public enum EdgeType
-    {
-        UNKNOWN = 0x00,
-        INVALID = 0x10, //An edge that cannot be part of the final surface
-        VALID = 0x01,
-
-        CONTOUR = 0x11, //An edge along the contour, part of either the exterior or inner ring
-        SURFACE = 0x21, //An edge that crosses from one Z-LEVEL to another and is part of the surface
-        FLAT = 0x20, //An edge that connects two verticies on the same shape
-        FLYING = 0x40, //An edge that crosses empty space, not a valid surface edge                
-        INTERNAL = 0x80, //An edge that runs between two sections but is known to be inside the mesh
-        INVAGINATION = 0x100, //An edge that spans between the same shape outside of that shape, but passes over a shape on an adjacent section
-        HOLE = 0x200, //An edge that spans a hole in a shape
-        CORRESPONDING = 0x41,  //An edge that shares XY coordinates with a vertex on a shape on an adjacent section
-        FLIPPED_DIRECTION = 0x400 //An edge that would be valid, but the orientation is wrong.  For example, the line has solid material to the left on one vertex and the right on another
-    }
+    
 
     public class MorphMeshVertex : Vertex
     {
@@ -119,6 +97,9 @@ namespace MorphologyMesh
             int countValid = EdgeTypes.Count(e => (e & EdgeType.VALID) > 0);
             if (countValid > 1)
                 return false;
+
+            //if (EdgeTypes.Count(e => e == EdgeType.CONTOUR) == 1 && EdgeTypes.Count(e => e == EdgeType.FLYING) == 2)
+            //    return false; 
 
             //return EdgeTypes.Any(e => e == EdgeType.INTERNAL) && (EdgeTypes.Count(e => (e & EdgeType.VALID) > 0) == 2);
             return countInternal + countValid == 3;

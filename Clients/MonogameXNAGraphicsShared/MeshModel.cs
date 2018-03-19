@@ -35,6 +35,18 @@ namespace VikingXNAGraphics
             get;set;
         }
 
+        public void AppendEdges(ICollection<int> newEdges)
+        {
+            if (Edges == null)
+            {
+                Edges = newEdges.ToArray();
+            }
+            else
+            {
+                Edges = Edges.Concat(newEdges).ToArray();
+            }
+        }
+
         public GridVector3 Position
         {
             get

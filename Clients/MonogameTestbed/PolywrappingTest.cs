@@ -18,6 +18,133 @@ using MorphologyMesh;
 
 namespace MonogameTestbed
 {
+
+    class MeshMergeIncrementalView
+    {
+        public GridPolygon[] Polys;
+        public GraphLib.Edge<ulong>[] Edges;
+        public double[] ZLevels;
+
+        private PolygonSetView PolyViews; 
+
+        private LineSetView TrianglesView = new LineSetView();
+
+        private PointSetView StartingIndexView = null;
+        
+        private LineView StartingLine = null;
+
+        public bool ShowFinalLines = false;
+
+        public int NumLinesToDraw
+        {
+            get { return _NumLinesToDraw; }
+            set
+            {
+                _NumLinesToDraw = value;
+                UpdateLinesToDraw();
+            }
+        }
+
+        private int _NumLinesToDraw = 1;
+        private LineView[] lineViewsToDraw = null;
+
+        List<LineView> polyRingViews;
+
+        public Color Color
+        {
+            get { return TrianglesView.color; }
+            set
+            {
+                TrianglesView.color = value;
+            }
+        }
+
+        public MeshMergeIncrementalView(GridPolygon[] polys, GraphLib.Edge<ulong>[] edges, double[] Z)
+        {
+            this.Polys = polys;
+            this.Edges = edges;
+            this.ZLevels = Z; 
+            this.Color = Color.Blue;
+
+            PolyViews = new PolygonSetView(Polys); 
+
+            UpdateWrapping();
+        }
+
+        public void UpdateWrapping()
+        {
+            StartingIndexView = new PointSetView();
+            StartingIndexView.Color = Color.Yellow;
+            StartingIndexView.PointRadius = 7.5;
+
+            MeshGraph graph = StandardModels.BuildMeshGraph(this.Polys, this.ZLevels, this.Edges, 10, GridVector3.Zero);
+
+            List<GridLineSegment> addedMeshEdges;
+            DynamicRenderMesh<ulong> CompositeMesh = SmoothMeshGenerator.Generate(graph, out addedMeshEdges); 
+
+            //GridLineSegment[] lines = CompositeMesh.Edges.Values.Select(e => new GridLineSegment(CompositeMesh.Verticies[e.A].Position, CompositeMesh.Verticies[e.B].Position)).ToArray();
+
+            StartingLine = new LineView(addedMeshEdges[0], 2, Color.Red, LineStyle.Standard, false);
+
+            TrianglesView.UpdateViews(addedMeshEdges);
+            UpdateLinesToDraw();
+        }
+
+        private void UpdateLinesToDraw()
+        {
+            if (TrianglesView == null)
+            {
+                lineViewsToDraw = null;
+            }
+
+            if (_NumLinesToDraw < 0)
+                _NumLinesToDraw = TrianglesView.LineViews.Count;
+
+            if (_NumLinesToDraw > TrianglesView.LineViews.Count)
+            {
+                _NumLinesToDraw = 0;
+            }
+
+            lineViewsToDraw = new LineView[_NumLinesToDraw];
+            TrianglesView.LineViews.CopyTo(0, lineViewsToDraw, 0, NumLinesToDraw);
+
+            TrianglesView.color = Color.Gray;
+
+            foreach (LineView view in lineViewsToDraw)
+            {
+                view.Color = Color.Yellow;
+            }
+        }
+
+
+        public void Draw(MonoTestbed window, Scene scene)
+        {
+            if(PolyViews != null)
+            {
+                PolyViews.Draw(window, scene);
+            }
+
+            if (TrianglesView != null && ShowFinalLines)
+            {
+                LineView.Draw(window.GraphicsDevice, scene, window.lineManager, TrianglesView.LineViews.ToArray());
+            }
+
+            if (lineViewsToDraw != null)
+            {
+                LineView.Draw(window.GraphicsDevice, scene, window.lineManager, lineViewsToDraw);
+            }
+
+            if (StartingLine != null)
+            {
+                LineView.Draw(window.GraphicsDevice, scene, window.lineManager, new LineView[] { StartingLine });
+            }
+
+            //if (StartingIndexView != null)
+            //    StartingIndexView.Draw(window, scene);
+        }
+    }
+
+
     class TriangulationShapeWrapView
     {
         public GridPolygon A;
@@ -304,7 +431,8 @@ namespace MonogameTestbed
 
         Cursor2DCameraManipulator CameraManipulator = new Cursor2DCameraManipulator();
 
-        TriangulationShapeWrapView wrapView = null;
+        //TriangulationShapeWrapView wrapView = null;
+        MeshMergeIncrementalView wrapView = null; 
 
         bool _initialized = false;
         public bool Initialized { get { return _initialized; } }
@@ -332,7 +460,8 @@ namespace MonogameTestbed
             GridPolygon SimpleB = StandardGeometryModels.CreateBoxPolygon(new GridRectangle(-30, -20, -10, 10));
 
             //wrapView = new TriangulationShapeWrapView(A, B);
-            wrapView = new TriangulationShapeWrapView(StandardModels.SharedModelPolygons[0], StandardModels.SharedModelPolygons[1]);
+            //wrapView = new TriangulationShapeWrapView(StandardModels.SharedModelPolygons[0], StandardModels.SharedModelPolygons[1]);
+            wrapView = new MeshMergeIncrementalView(StandardModels.SharedModelPolygons, StandardModels.SharedModelEdges, StandardModels.SharedModelZ); 
         }
 
         public void Update()

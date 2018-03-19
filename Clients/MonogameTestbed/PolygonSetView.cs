@@ -88,7 +88,7 @@ namespace MonogameTestbed
             }
 
             PolyPointsView = listPointSetView.ToArray();
-            PolyRingViews = PolyRingViews.ToArray();
+            PolyRingViews = polyRingViews.ToArray();
         }
 
         public void Draw(MonoTestbed window, Scene scene)
