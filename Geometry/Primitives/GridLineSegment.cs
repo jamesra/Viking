@@ -489,6 +489,18 @@ namespace Geometry
             return this.Intersects(seg, out intersection);
         }
 
+        public bool Intersects(GridLineSegment seg, bool EndpointsOnRingDoNotIntersect, out GridVector2 Intersection)
+        {
+            bool intersects = this.Intersects(seg, out Intersection); 
+
+            if(intersects)
+            {
+                return !seg.IsEndpoint(Intersection);
+            }
+
+            return intersects;
+        }
+
         public bool Intersects(GridLineSegment seg, out GridVector2 Intersection)
         {
             //Don't do the full check if the bounding boxes don't overlap
@@ -514,7 +526,44 @@ namespace Geometry
             //Check if lines are parallel
             if (det == 0)
             {
-                Intersection = new GridVector2();
+                Intersection = GridVector2.Zero;
+
+                //Check if the distance to the endpoint of the other line is zero
+                GridRectangle? overlapRect = this.BoundingBox.Intersection(seg.BoundingBox);
+                if (!overlapRect.HasValue)
+                {
+                   
+                    return false;
+                }
+
+                //Check if the lines perfectly overlap
+                GridVector2[] endpoints = new GridVector2[] { this.A, this.B, seg.A, seg.B };
+                bool[] CouldBeOnTheLine = endpoints.Select(e => overlapRect.Value.Contains(e)).ToArray();
+
+                if (CouldBeOnTheLine[0] && seg.DistanceToPoint(endpoints[0]) == 0)
+                {
+                    Intersection = endpoints[0];
+                    return true;
+                }
+
+                if (CouldBeOnTheLine[1] && seg.DistanceToPoint(endpoints[1]) == 0)
+                {
+                    Intersection = endpoints[1];
+                    return true;
+                }
+
+                if (CouldBeOnTheLine[2] && this.DistanceToPoint(endpoints[2]) == 0)
+                {
+                    Intersection = endpoints[2];
+                    return true;
+                }
+
+                if (CouldBeOnTheLine[3] && this.DistanceToPoint(endpoints[3]) == 0)
+                {
+                    Intersection = endpoints[3];
+                    return true;
+                }
+                 
                 return false;
             }
             else

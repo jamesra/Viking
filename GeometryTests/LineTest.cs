@@ -218,6 +218,66 @@ namespace GeometryTests
         }
 
         [TestMethod]
+        public void GridLineSegmentInParallelIntersects()
+        {
+            //
+            // TODO: Add test logic	here
+            //
+
+            GridLineSegment lineA = new GridLineSegment(new GridVector2(-5, 5),
+                                                        new GridVector2(5, 5));
+            GridLineSegment lineB = new GridLineSegment(new GridVector2(-7, 5),  //Total overlap, beyond both endpoints
+                                                        new GridVector2(7, 5));
+            GridLineSegment lineC = new GridLineSegment(new GridVector2(-3, 5),  //Overlap, but not entirely
+                                                        new GridVector2(3, 5));
+            GridLineSegment lineD = new GridLineSegment(new GridVector2(-10, 5),  //Endpoint Overlaps
+                                                        new GridVector2(-5, 5));
+            GridLineSegment lineE = new GridLineSegment(new GridVector2(5, 5),    //Endpoint Overlaps
+                                                        new GridVector2(10, 5));
+            GridLineSegment lineF = new GridLineSegment(new GridVector2(-5, 4), //Parrallel, but slightly above
+                                                        new GridVector2(5, 4));
+            GridLineSegment lineG = new GridLineSegment(new GridVector2(-5, 6), //Parallel, but slightly below
+                                                        new GridVector2(5, 6));
+
+            GridLineSegment[] IntersectingLines = new GridLineSegment[] { lineB, lineC, lineD, lineE };
+            GridLineSegment[] NonIntersectingLines = new GridLineSegment[] { lineF, lineG };
+
+
+            foreach (GridLineSegment other in IntersectingLines)
+            {
+                GridVector2 intersection;
+                bool result = lineA.Intersects(other, out intersection);
+                Assert.IsTrue(result);
+            }
+
+            foreach (GridLineSegment other in NonIntersectingLines)
+            {
+                GridVector2 intersection;
+                bool result = lineA.Intersects(other, out intersection);
+                Assert.IsFalse(result);
+            }
+
+            GridLineSegment vertLine = new GridLineSegment(new GridVector2(lineA.A.Y, lineA.A.X), new GridVector2(lineA.B.Y, lineA.B.X));
+
+            GridLineSegment[] IntersectingVertical = IntersectingLines.Select(l => new GridLineSegment(new GridVector2(l.A.Y, l.A.X), new GridVector2(l.B.Y, l.B.X))).ToArray();
+            GridLineSegment[] NonIntersectingVertical = NonIntersectingLines.Select(l => new GridLineSegment(new GridVector2(l.A.Y, l.A.X), new GridVector2(l.B.Y, l.B.X))).ToArray();
+
+            foreach (GridLineSegment other in IntersectingVertical)
+            {
+                GridVector2 intersection;
+                bool result = vertLine.Intersects(other, out intersection);
+                Assert.IsTrue(result);
+            }
+
+            foreach (GridLineSegment other in NonIntersectingVertical)
+            {
+                GridVector2 intersection;
+                bool result = vertLine.Intersects(other, out intersection);
+                Assert.IsFalse(result);
+            }
+        }
+
+        [TestMethod]
         public void GridLineIntersects()
         {
             //
