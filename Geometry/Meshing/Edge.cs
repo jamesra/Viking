@@ -121,7 +121,7 @@ namespace Geometry.Meshing
 
     public class Edge : IComparable<IEdge>, IEquatable<IEdge>, IEdge
     {
-        readonly private SortedSet<IFace> Faces; //The two faces adjacent to the edge
+        readonly protected SortedSet<IFace> _Faces; //The two faces adjacent to the edge
         readonly public IEdgeKey Key;
 
         public int A
@@ -147,7 +147,7 @@ namespace Geometry.Meshing
             {
                 if(_ImmutableFaces == null)
                 {
-                    _ImmutableFaces = Faces.ToImmutableSortedSet();
+                    _ImmutableFaces = _Faces.ToImmutableSortedSet();
                 }
 
                 return this._ImmutableFaces;
@@ -175,21 +175,24 @@ namespace Geometry.Meshing
 
         public Edge(int a, int b)
         {
-            Faces = new SortedSet<IFace>();
+            if (a == b)
+                throw new ArgumentException("Edges cannot have the same start and end point");
+
+            _Faces = new SortedSet<IFace>();
             _ImmutableFaces = null;
             Key = new EdgeKey(a, b);
         }
 
         public Edge(EdgeKey key)
         {
-            Faces = new SortedSet<IFace>();
+            _Faces = new SortedSet<IFace>();
             _ImmutableFaces = null;
             Key = key;
         }
 
         public Edge(IEdgeKey key)
         {
-            Faces = new SortedSet<IFace>();
+            _Faces = new SortedSet<IFace>();
             _ImmutableFaces = null;
             Key = key;
         }
@@ -204,14 +207,14 @@ namespace Geometry.Meshing
         public void AddFace(IFace f)
         {
             //Debug.Assert(Faces.Contains(f) == false);
-            Faces.Add(f);
+            _Faces.Add(f);
             _ImmutableFaces = null;
         }
 
         public void RemoveFace(IFace f)
         {
-            Debug.Assert(Faces.Contains(f));
-            Faces.Remove(f);
+            Debug.Assert(_Faces.Contains(f));
+            _Faces.Remove(f);
             _ImmutableFaces = null;
         }
 
@@ -326,6 +329,11 @@ namespace Geometry.Meshing
             return Key.ToString();
         }
 
-        
+        public int OppositeEnd(int end)
+        {
+            Debug.Assert(this.A == end || this.B == end);
+
+            return end == A ? B : A;
+        }
     }
 }
