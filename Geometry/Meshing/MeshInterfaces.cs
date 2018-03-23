@@ -35,6 +35,13 @@ namespace Geometry.Meshing
 
         void AddFace(IFace f);
         void RemoveFace(IFace f);
+        
+        /// <summary>
+        /// Return the endpoint opposite the paramter
+        /// </summary>
+        /// <param name="A"></param>
+        /// <returns></returns>
+        int OppositeEnd(int A);
     }
 
     public interface IFace : IComparable<IFace>, IEquatable<IFace>
