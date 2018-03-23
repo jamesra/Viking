@@ -376,7 +376,7 @@ namespace GeometryTests
 
             //Check a single polygon with no interior verticies
             GridPolygon[] polyArray = new GridPolygon[] { box };
-            PolyVertexEnum enumerator = new PolyVertexEnum(polyArray);
+            PolySetVertexEnum enumerator = new PolySetVertexEnum(polyArray);
 
             PointIndex[] indicies = enumerator.ToArray();
             Assert.IsTrue(indicies.Length == box.ExteriorRing.Length-1);
@@ -392,7 +392,7 @@ namespace GeometryTests
             OuterBox.AddInteriorRing(U);
 
             polyArray = new GridPolygon[] { OuterBox };
-            enumerator = new PolyVertexEnum(polyArray);
+            enumerator = new PolySetVertexEnum(polyArray);
             indicies = enumerator.ToArray();
             int numUniqueVerticies = (OuterBox.ExteriorRing.Length - 1) + OuterBox.InteriorPolygons.Sum(ip => ip.ExteriorRing.Length - 1);
             Assert.IsTrue(indicies.Length == numUniqueVerticies);
@@ -402,7 +402,7 @@ namespace GeometryTests
             OuterBox.AddInteriorRing(U2);
 
             polyArray = new GridPolygon[] { OuterBox };
-            enumerator = new PolyVertexEnum(polyArray);
+            enumerator = new PolySetVertexEnum(polyArray);
             indicies = enumerator.ToArray();
             numUniqueVerticies = (OuterBox.ExteriorRing.Length - 1) + OuterBox.InteriorPolygons.Sum(ip => ip.ExteriorRing.Length - 1);
             Assert.IsTrue(indicies.Length == numUniqueVerticies);
@@ -411,7 +411,7 @@ namespace GeometryTests
             //Check a polygon with two interior polygons and two polygons in the array
 
             polyArray = new GridPolygon[] { OuterBox, box };
-            enumerator = new PolyVertexEnum(polyArray);
+            enumerator = new PolySetVertexEnum(polyArray);
             indicies = enumerator.ToArray();
             numUniqueVerticies = (box.ExteriorRing.Length -1) + (OuterBox.ExteriorRing.Length - 1) + OuterBox.InteriorPolygons.Sum(ip => ip.ExteriorRing.Length - 1);
             Assert.IsTrue(indicies.Length == numUniqueVerticies);

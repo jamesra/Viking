@@ -119,6 +119,42 @@ namespace Geometry
             return true; 
         }
 
+        public static bool  operator ==(PointIndex A, PointIndex B)
+        {
+            bool ANull = object.ReferenceEquals(A, null);
+            bool BNull = object.ReferenceEquals(B, null);
+
+            if (ANull == BNull)
+                return true;
+            else if (ANull ^ BNull)
+                return false;
+
+            if (A.iPoly != B.iPoly)
+            {
+                return false;
+            }
+
+            if (A.iVertex != B.iVertex)
+            {
+                return false;
+            }
+
+            if (A.iInnerPoly != B.iInnerPoly)
+            {
+                return false;
+            }
+
+            if (A.NumUniqueInRing != B.NumUniqueInRing)
+                return false;
+
+            return true;  
+        }
+
+        public static bool operator !=(PointIndex A, PointIndex B)
+        {
+            return !(A == B);
+        }
+
         // override object.GetHashCode
         public override int GetHashCode()
         { 
@@ -146,6 +182,23 @@ namespace Geometry
         public bool IsLastIndexInRing()
         {
             return this.iVertex == this.NumUniqueInRing - 1;
+        }
+
+        /// <summary>
+        /// Return the specified point, ignoring the iPoly attribute
+        /// </summary>
+        /// <param name="Polygon"></param>
+        /// <returns></returns>
+        public GridVector2 Point(GridPolygon Polygon)
+        {
+            if (IsInner)
+            {
+                return Polygon.InteriorPolygons[this.iInnerPoly.Value].ExteriorRing[iVertex];
+            }
+            else
+            {
+                return Polygon.ExteriorRing[iVertex];
+            }
         }
 
         public GridVector2 Point(IReadOnlyList<GridPolygon> Polygons)
@@ -196,7 +249,7 @@ namespace Geometry
             GridVector2[] ring = GetRing(polygons);
 
             int iPrevious = PreviousVertexInRing();
-            int iNext = PreviousVertexInRing();
+            int iNext = NextVertexInRing();
 
             //Should I reverse the order for interior polygons?
             return new GridVector2[] { ring[iPrevious], ring[iNext] };
@@ -215,10 +268,28 @@ namespace Geometry
                 new GridLineSegment(ring[iVertex], ring[iNext]) };
         }
 
+        /// <summary>
+        /// Return the next index after this one, staying within the same ring
+        /// </summary>
+        /// <returns></returns>
+        public PointIndex Next()
+        {
+            return new PointIndex(this.iPoly, this.iInnerPoly, this.NextVertexInRing(), this.NumUniqueInRing);
+        }
+        
+        /// <summary>
+        /// Return the previous index after this one, staying within the same ring
+        /// </summary>
+        /// <returns></returns>
+        public PointIndex Previous()
+        {
+            return new PointIndex(this.iPoly, this.iInnerPoly, this.PreviousVertexInRing(), this.NumUniqueInRing);
+        }
+
         private int NextVertexInRing()
         {
             int iNext = iVertex + 1;
-            if(iVertex >= this.NumUniqueInRing)
+            if(iNext >= this.NumUniqueInRing)
             {
                 return 0;
             }
@@ -367,15 +438,158 @@ namespace Geometry
         }
         
     }
-         
 
-    public class PolyVertexEnum : IEnumerator<PointIndex>, IEnumerator, IEnumerable<PointIndex>, IEnumerable
+    public class PolygonVertexEnum : IEnumerator<PointIndex>, IEnumerator, IEnumerable<PointIndex>, IEnumerable
+    {
+        PointIndex? curIndex; 
+        readonly GridPolygon polygon;
+
+        /// <summary>
+        /// If set indicies returned by this enumerator will use this value for the iPoly field of the polygon index
+        /// </summary>
+        public int? PolyIndex = new int?();
+
+        public PolygonVertexEnum(GridPolygon poly)
+        {
+            this.polygon = poly;
+            curIndex = new Geometry.PointIndex?();
+        }
+
+        public PolygonVertexEnum(GridPolygon poly, int ForceiPoly)
+        {
+            this.polygon = poly;
+            curIndex = new Geometry.PointIndex?();
+            PolyIndex = ForceiPoly;
+        }
+
+        public PointIndex Current
+        {
+            get
+            {
+                if (!curIndex.HasValue)
+                {
+                    throw new IndexOutOfRangeException("Current Index is undefined");
+                }
+
+                return curIndex.Value;
+            }
+        }
+
+        object IEnumerator.Current
+        {
+            get
+            {
+                if (!curIndex.HasValue)
+                {
+                    throw new IndexOutOfRangeException("Current Index is undefined");
+                }
+
+                return curIndex.Value;
+            }
+        }
+
+        public void Dispose() { }
+
+        /// <summary>
+        /// Go to the next index, if the shape is closed we do not return the closed index twice. 
+        /// </summary>
+        /// <returns></returns>
+        public bool MoveNext()
+        {
+            if (!curIndex.HasValue)
+            {
+                if (polygon == null)
+                    return false;
+
+                if (polygon.ExteriorRing.Length == 0)
+                    return false;
+
+                curIndex = new PointIndex(PolyIndex.HasValue ? PolyIndex.Value : 0, 0, polygon.ExteriorRing.Length - 1);
+                return true;
+            }
+
+            PointIndex? next = NextIndex(polygon, curIndex.Value);
+
+            curIndex = next;
+            return curIndex.HasValue;
+        }
+
+        private PointIndex? NextIndex(GridPolygon poly, PointIndex current)
+        {
+            int iNextVert = current.iVertex + 1;
+            GridVector2[] ring = current.GetRing(poly);
+
+            if (iNextVert < ring.Length - 1) //-1 because we do not want to report a duplicate vertex for a closed ring
+            {
+                //Move along the ring we are iterating
+                return new PointIndex(current.iPoly, current.iInnerPoly, iNextVert, ring.Length - 1);
+            }
+
+            if (iNextVert == ring.Length - 1) //-1 because we do not want to report a duplicate vertex for a closed ring
+            {
+                //Move along the ring we are iterating and hit the last vertex in a closed loop that equals the first vertex
+                if (ring[0] != ring[iNextVert])
+                    return new PointIndex(current.iPoly, current.iInnerPoly, iNextVert, ring.Length - 1);
+            }
+
+            //OK, handle case where we are out of indicies on the current ring            
+            {
+                //Find the next ring
+                if (current.IsInner)
+                {
+                    if (current.iInnerPoly.Value + 1 < poly.InteriorRings.Count)
+                    {
+                        int iNextInner = current.iInnerPoly.Value + 1;
+                        //Move to the next inner polygon
+                        return new PointIndex(current.iPoly, iNextInner, 0, poly.InteriorRings.ElementAt(iNextInner).Length - 1);
+                    }
+                    else
+                    {
+                        //No more polygons, move to the next polygon, handled below
+                    }
+                }
+                else
+                {
+                    if (poly.HasInteriorRings)
+                    {
+                        return new PointIndex(current.iPoly, 0, 0, poly.InteriorRings.First().Length - 1); //Go to the first vertex of the first inner polygon
+                    }
+                }
+
+                //OK, we need to move on and could not move to an inner ring.  Normally this is where we go to the next polygon but since this enumerator only covers a single polygon we are done.
+                return new PointIndex?();
+            }
+        }
+
+        public void Reset()
+        {
+            curIndex = new PointIndex?();
+        }
+
+        public IEnumerator GetEnumerator()
+        {
+            return (IEnumerator<PointIndex>)this;
+        }
+
+        IEnumerator<PointIndex> IEnumerable<PointIndex>.GetEnumerator()
+        {
+            return (IEnumerator<PointIndex>)this;
+        }
+    }
+
+
+
+    /// <summary>
+    /// Enumerate all verticies for a collection of polygons
+    /// </summary>
+    public class PolySetVertexEnum : IEnumerator<PointIndex>, IEnumerator, IEnumerable<PointIndex>, IEnumerable
     {
         PointIndex? curIndex;
 
         IReadOnlyList<GridPolygon> polygons;
+         
 
-        public PolyVertexEnum(IReadOnlyList<GridPolygon> polys)
+        public PolySetVertexEnum(IReadOnlyList<GridPolygon> polys)
         {
             this.polygons = polys;
             curIndex = new Geometry.PointIndex?();
@@ -432,17 +646,7 @@ namespace Geometry
             curIndex = next;
             return curIndex.HasValue;
         }
-
-        private GridVector2[] GetRing(GridPolygon polygon, PointIndex current)
-        {
-            if(current.IsInner)
-            {
-                return polygon.InteriorPolygons[current.iInnerPoly.Value].ExteriorRing;
-            }
-
-            return polygon.ExteriorRing;
-        }
-
+         
         private PointIndex? NextIndex(IReadOnlyList<GridPolygon> polygons, PointIndex current)
         {
             GridPolygon poly = polygons[current.iPoly];
