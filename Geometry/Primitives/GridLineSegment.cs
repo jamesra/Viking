@@ -5,8 +5,8 @@ using System.Linq;
 using System.Text;
 
 namespace Geometry
-{
-    [Serializable]
+{ 
+        [Serializable]
     public struct GridLineSegment : IComparable, ICloneable, IComparer<GridLineSegment>, ILineSegment2D, IEquatable<GridLineSegment>
     {
         public readonly GridVector2 A;
@@ -487,6 +487,12 @@ namespace Geometry
         {
             GridVector2 intersection;
             return this.Intersects(seg, out intersection);
+        }
+
+        public bool Intersects(GridLineSegment seg, bool EndpointsOnRingDoNotIntersect)
+        {
+            GridVector2 intersection;
+            return this.Intersects(seg, EndpointsOnRingDoNotIntersect, out intersection);
         }
 
         public bool Intersects(GridLineSegment seg, bool EndpointsOnRingDoNotIntersect, out GridVector2 Intersection)
