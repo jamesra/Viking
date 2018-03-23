@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -39,7 +40,7 @@ namespace MorphologyMesh
     }
 
 
-    public class MorphMeshEdge : Edge
+    public class MorphMeshEdge : Edge, IEquatable<MorphMeshEdge>
     {
         public EdgeType Type;
 
@@ -50,6 +51,14 @@ namespace MorphologyMesh
             Type = type;
         }
 
+        public ImmutableSortedSet<MorphMeshFace> Faces
+        {
+            get
+            {
+                return new SortedSet<MorphMeshFace>(this._Faces.Select(f => (MorphMeshFace)f)).ToImmutableSortedSet();
+            }
+        }
+
         public static new IEdge Duplicate(IEdge old, int A, int B)
         {
             MorphMeshEdge edge = old as MorphMeshEdge;
@@ -57,6 +66,11 @@ namespace MorphologyMesh
                 return new MorphMeshEdge(edge.Type, A, B);
 
             return new MorphMeshEdge(EdgeType.UNKNOWN, A, B);
+        }
+
+        public bool Equals(MorphMeshEdge other)
+        {
+            return base.Equals(other);
         }
     }
 
@@ -363,22 +377,47 @@ namespace MorphologyMesh
         }
     }
 
-
+    /// <summary>
+    /// A 3D mesh that records the polygons used to construct the mesh and tracks the original polygonal index of every vertex and the type of edge connecting verticies.
+    /// </summary>
     public class MorphRenderMesh : DynamicRenderMesh
     {
         public GridPolygon[] Polygons { get; private set; }
+
+        public double[] PolyZ { get; private set; }
 
         private List<MorphMeshRegion> _Regions = new List<MorphMeshRegion>();
 
         public List<MorphMeshRegion> Regions { get; private set; }
 
-
-        public MorphRenderMesh(GridPolygon[] polygons)
+        private Dictionary<PointIndex, long> PolyIndexToVertex = new Dictionary<PointIndex, long>();
+         
+        public MorphRenderMesh(GridPolygon[] polygons, double[] ZLevels)
         {
+            Debug.Assert(polygons.Length == ZLevels.Length);
             Polygons = polygons;
+            PolyZ = ZLevels;
             this.DuplicateVertex = MorphMeshVertex.Duplicate;
             this.DuplicateEdge = MorphMeshEdge.Duplicate;
             this.DuplicateFace = MorphMeshFace.Duplicate;
+
+            PopulateMesh(this);
+        }
+
+        private static void PopulateMesh(MorphRenderMesh mesh)
+        {
+            foreach (PointIndex i1 in new PolySetVertexEnum(mesh.Polygons))
+            {
+                MorphMeshVertex v = new MorphMeshVertex(i1, i1.Point(mesh.Polygons).ToGridVector3(mesh.PolyZ[i1.iPoly]));
+                mesh.AddVertex(v);
+            }
+
+            foreach (PointIndex i1 in new PolySetVertexEnum(mesh.Polygons))
+            {
+                PointIndex next = i1.Next();
+                MorphMeshEdge edge = new MorphMeshEdge(EdgeType.CONTOUR, mesh[i1].Index, mesh[next].Index);
+                mesh.AddEdge(edge);
+            }
         }
 
         public new MorphMeshVertex this[int key]
@@ -386,9 +425,45 @@ namespace MorphologyMesh
             get { return (MorphMeshVertex)this.Verticies[key]; }
         }
 
+        public virtual IVertex this[PointIndex key]
+        {
+            get
+            {
+                return Verticies[(int)PolyIndexToVertex[key]];
+            }
+            set
+            {
+                Verticies[(int)PolyIndexToVertex[key]] = value;
+            }
+        }
+
+        public virtual bool Contains(PointIndex key)
+        {
+            return PolyIndexToVertex.ContainsKey(key);
+        }
+
         public MorphMeshVertex GetVertex(int key)
         {
             return (MorphMeshVertex)Verticies[key];
+        }
+
+        public int AddVertex(MorphMeshVertex v)
+        {
+            int iVert = base.AddVertex(v);
+            PolyIndexToVertex.Add(v.PolyIndex, iVert);
+            return iVert; 
+        }
+
+        public int AddVerticies(ICollection<MorphMeshVertex> verts)
+        {
+            int iStartVert = base.AddVerticies(verts.Select(v => (IVertex)v).ToArray());
+
+            foreach (MorphMeshVertex v in verts)
+            {
+                PolyIndexToVertex.Add(v.PolyIndex, v.Index);
+            }
+
+            return iStartVert;
         }
 
         public MorphMeshEdge GetEdge(IEdgeKey key)
@@ -405,6 +480,46 @@ namespace MorphologyMesh
                     yield return (MorphMeshEdge)edge;
                 }
             }
+        }
+
+        public override int Append(DynamicRenderMesh other)
+        {
+            int iStartVertex = base.Append(other);
+            for(int i = iStartVertex; i < this.Verticies.Count; i++)
+            {
+                MorphMeshVertex v = this[i];
+                PolyIndexToVertex.Add(v.PolyIndex, i); 
+            }
+
+            return iStartVertex;
+        }
+         
+        /// <summary>
+        /// Assign a type to each edge based on the rules specified in EdgeTypeExtensions
+        /// </summary>
+        public void ClassifyMeshEdges()
+        { 
+            GridPolygon[] Polygons = this.Polygons;
+
+            foreach (MorphMeshEdge edge in this.MorphEdges)
+            {
+                if (edge.Type != EdgeType.UNKNOWN)
+                    continue;
+
+                MorphMeshVertex A = this.GetVertex(edge.A);
+                MorphMeshVertex B = this.GetVertex(edge.B);
+
+                if (A.Position.XY() == B.Position.XY())
+                {
+                    edge.Type = EdgeType.CORRESPONDING;
+                    continue;
+                }
+
+                GridLineSegment L = this.ToSegment(edge.Key);
+                edge.Type = EdgeTypeExtensions.GetEdgeType(A.PolyIndex, B.PolyIndex, Polygons, L.PointAlongLine(0.5));
+            }
+
+            return;
         }
 
         public void IdentifyRegions()
