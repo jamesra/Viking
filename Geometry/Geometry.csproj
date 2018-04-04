@@ -126,6 +126,7 @@
     <Compile Include="Extensions.cs" />
     <Compile Include="GlobalSuppressions.cs" />
     <Compile Include="IndexingExtensions.cs" />
+    <Compile Include="Meshing\Algorithms\MeshPathing.cs" />
     <Compile Include="Meshing\DynamicRenderMesh.cs" />
     <Compile Include="Meshing\Face.cs" />
     <Compile Include="Meshing\Edge.cs" />

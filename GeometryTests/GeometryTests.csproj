@@ -99,6 +99,7 @@
     <Compile Include="GridPolygonTest.cs" />
     <Compile Include="GridRectangle.cs" />
     <Compile Include="CurveFitting.cs" />
+    <Compile Include="GridTriangleTests.cs" />
     <Compile Include="GridVector2Test.cs" />
     <Compile Include="GridVector3Test.cs" />
     <Compile Include="IndexSetTest.cs" />
