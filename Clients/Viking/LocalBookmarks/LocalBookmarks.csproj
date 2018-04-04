@@ -111,8 +111,12 @@
     <Reference Include="WindowsBase">
       <RequiredTargetFramework>3.0</RequiredTargetFramework>
     </Reference>
-    <Reference Include="Xml.Schema.Linq">
+    <Reference Include="Xml.Schema.Linq, Version=2.0.2.56002, Culture=neutral, PublicKeyToken=47d0c84d0ebb13e5, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\Libs\LinqToXSD\2.0.2\Xml.Schema.Linq.dll</HintPath>
+    </Reference>
+    <Reference Include="XOTask">
+      <HintPath>..\..\Libs\LinqToXSD\2.0.2\XOTask.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
