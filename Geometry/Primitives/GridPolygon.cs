@@ -272,18 +272,24 @@ namespace Geometry
         /// Return the next index after this one, staying within the same ring
         /// </summary>
         /// <returns></returns>
-        public PointIndex Next()
+        public PointIndex Next
         {
-            return new PointIndex(this.iPoly, this.iInnerPoly, this.NextVertexInRing(), this.NumUniqueInRing);
+            get
+            {
+                return new PointIndex(this.iPoly, this.iInnerPoly, this.NextVertexInRing(), this.NumUniqueInRing);
+            }
         }
         
         /// <summary>
         /// Return the previous index after this one, staying within the same ring
         /// </summary>
         /// <returns></returns>
-        public PointIndex Previous()
+        public PointIndex Previous
         {
-            return new PointIndex(this.iPoly, this.iInnerPoly, this.PreviousVertexInRing(), this.NumUniqueInRing);
+            get
+            {
+                return new PointIndex(this.iPoly, this.iInnerPoly, this.PreviousVertexInRing(), this.NumUniqueInRing);
+            }
         }
 
         private int NextVertexInRing()
@@ -396,7 +402,7 @@ namespace Geometry
 
             foreach(var poly in verts.GroupBy(v => v.iPoly))
             {
-                foreach(var ring in verts.GroupBy(v => v.iInnerPoly))
+                foreach(var ring in poly.GroupBy(v => v.iInnerPoly))
                 {
                     PointIndex[] ringArray = ring.ToArray();
                     Array.Sort(ringArray);

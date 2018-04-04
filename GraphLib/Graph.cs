@@ -39,6 +39,11 @@ namespace GraphLib
             }
         }
 
+        public NODETYPE this[KEY key]
+        {
+            get { return this.Nodes[key]; }
+        }
+        
         public void GetObjectData(SerializationInfo info, StreamingContext context)
         {
             info.AddValue("Edges", Edges, typeof(SortedList<EDGETYPE, EDGETYPE>));

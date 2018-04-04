@@ -308,6 +308,21 @@ namespace VikingXNAGraphics
             return c;
         }
 
+        /// <summary>
+        /// Return a shade of grey matching the value.  0 is black. 1 is white.
+        /// </summary>
+        /// <param name="value"></param>
+        /// <returns></returns>
+        public static Microsoft.Xna.Framework.Color CreateGrayscale(double value)
+        {
+            System.Diagnostics.Debug.Assert(value >= 0 && value <= 1.0);
+
+            Color c = new Color((float)value,
+                                (float)value,
+                                (float)value);
+            return c;
+        }
+
         public static Microsoft.Xna.Framework.Color ToXNAColor(this int color, float alpha)
         {
             int[] ARGB = GetColorComponents(color);

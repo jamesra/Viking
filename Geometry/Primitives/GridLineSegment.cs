@@ -357,6 +357,21 @@ namespace Geometry
             return GridVector2.Dot(p - A, B - A);
         }
 
+        /// <summary>
+        /// Return a normal to the line, the returned vector is normalized
+        /// </summary>
+        public GridVector2 Normal
+        {
+            get
+            {
+                GridVector2 delta = B - A;
+
+                GridVector2 normal = new GridVector2(-delta.Y, delta.X);
+                normal.Normalize();
+                return normal;
+            }
+        }
+
         public double DistanceToPoint(GridVector2 point)
         {
             GridVector2 temp;

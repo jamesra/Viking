@@ -81,10 +81,10 @@ namespace Geometry
             _Segments = null;
         }
 
-        public GridTriangle(GridVector2[] points)
+        public GridTriangle(IReadOnlyList<GridVector2> points)
             : this(points[0], points[1], points[2])
         {
-            if (points.Length != 3)
+            if (points.Count != 3)
                 throw new ArgumentException("GridTriangle must have three points in array");
         }
 
@@ -370,7 +370,12 @@ namespace Geometry
 
             return uv;
         } 
-          
+
+        public GridVector2 BaryToVector(GridVector2 bary)
+        {
+            return GridVector2.FromBarycentric(p1, p2, p3, bary.X, bary.Y);
+        }
+        
         public bool Intersects(IShape2D shape)
         {
             return ShapeExtensions.TriangleIntersects(this, shape);

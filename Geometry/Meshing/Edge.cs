@@ -335,5 +335,10 @@ namespace Geometry.Meshing
 
             return end == A ? B : A;
         }
+
+        public bool Contains(int endpoint)
+        {
+            return endpoint == A || endpoint == B;
+        }
     }
 }

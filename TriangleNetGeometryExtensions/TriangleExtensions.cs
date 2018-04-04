@@ -272,7 +272,17 @@ namespace TriangleNet
             return mesh;
         }
 
+        /// <summary>
+        /// Triangulate only the exterior rings of the polygons
+        /// </summary>
+        /// <param name="Polygons"></param>
+        /// <returns></returns>
+        public static TriangleNet.Meshing.IMesh TriangulateExterior(this GridPolygon[] Polygons)
+        {
+            GridPolygon[] ExteriorPolygons = Polygons.Select(p => new GridPolygon(p.ExteriorRing)).ToArray();
 
+            return Triangulate(ExteriorPolygons); 
+        }
         /// <summary>
         /// This function creates the triangulation of a set of polygons.  Internal and external borders are preserved. Where borders overlapped new
         /// points are added at the point of overlap.

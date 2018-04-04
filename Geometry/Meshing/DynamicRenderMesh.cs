@@ -75,6 +75,11 @@ namespace Geometry.Meshing
             }
         }
 
+        public virtual IEdge this[IEdgeKey key]
+        {
+            get { return this.Edges[key]; }
+        }
+
         public DynamicRenderMesh()
         {
             DuplicateVertex = Vertex.Duplicate;
@@ -172,6 +177,9 @@ namespace Geometry.Meshing
 
         public void AddEdge(IEdgeKey e)
         {
+            if(e.A == e.B)
+                throw new ArgumentException("Edges cannot have the same start and end point");
+
             if (DuplicateEdge == null)
                 throw new InvalidOperationException("DuplicateEdge function not specified for DynamicRenderMesh");
 
@@ -194,6 +202,9 @@ namespace Geometry.Meshing
 
         public void AddEdge(IEdge e)
         {
+            if (e.A == e.B)
+                throw new ArgumentException("Edges cannot have the same start and end point");
+
             if (Edges.ContainsKey(e.Key))
                 return;
 
@@ -207,6 +218,20 @@ namespace Geometry.Meshing
 
             Verticies[(int)e.A].AddEdge(e.Key);
             Verticies[(int)e.B].AddEdge(e.Key);
+        }
+
+        /// <summary>
+        /// Return true if an edge exists between the two verticies
+        /// </summary>
+        /// <param name="A"></param>
+        /// <param name="B"></param>
+        /// <returns></returns>
+        public bool IsAnEdge(int A, int B)
+        {
+            EdgeKey AB = new EdgeKey(A, B);
+            EdgeKey BA = new EdgeKey(B, A);
+
+            return Edges.ContainsKey(AB) || Edges.ContainsKey(BA);
         }
 
         /// <summary>
@@ -429,7 +454,7 @@ namespace Geometry.Meshing
         /// <param name="EdgeDuplicator">Takes a EDGE and offset and returns a new EDGE, retaining all pertinent data from the original EDGE</param>
         /// <param name="FaceDuplicator">Takes a FACE and offset and returns a new FACE, retaining all pertinent data from the original FACE</param>
         /// <returns></returns>
-        public int Append(DynamicRenderMesh other)
+        public virtual int Append(DynamicRenderMesh other)
         {
             int startingAppendIndex = this.Verticies.Count;
             this.AddVerticies(other.Verticies.Select(v => DuplicateVertex(v, startingAppendIndex)).ToList());
@@ -447,6 +472,84 @@ namespace Geometry.Meshing
             }
 
             return startingAppendIndex;
+        }
+
+        /// <summary>
+        /// Find all edges that enclose triangles or quads and create faces if they don't exist
+        /// </summary>
+        public void CloseFaces()
+        {
+            foreach (var v in Verticies)
+            {
+                //Identify edges missing faces
+                List<IEdge> edges = v.Edges.Select(key => Edges[key]).Where(e => e.Faces.Count < 2).ToList();
+
+                foreach (var edge in edges)
+                {
+                    Stack<int> searchHistory = new Stack<int>();
+                    searchHistory.Push(v.Index);
+                    List<int> Face = FindCloseableFace(v.Index, this[edge.OppositeEnd(v.Index)], edge, new SortedSet<IEdgeKey>(), searchHistory);
+                    if (Face != null)
+                    {
+                        Debug.Assert(Face.Count == 3 || Face.Count == 4);
+
+                        Face f = new Face(Face);
+                        IFace typedFace = DuplicateFace(f, Face);
+                        this.Faces.Add(typedFace);
+
+                        if (typedFace.iVerts.Length == 4)
+                            this.SplitFace(typedFace);
+                    }
+                }
+            } 
+        }
+
+        /// <summary>
+        /// If there are verticies with two edges that have a missing face, and the opposite end of the edges are on different shapes, and we can create a face that does not contain any other verticies then do so.
+        /// </summary>
+        public void CloseShapeCrossings()
+        {
+            
+        }
+
+        /// <summary>
+        /// Identify if there are faces that could be created using the specified verticies
+        /// </summary>
+        /// <param name="TargetVert"></param>
+        /// <param name="current"></param>
+        /// <param name="testEdge"></param>
+        /// <param name="CheckedEdges"></param>
+        /// <param name="Path"></param>
+        /// <returns></returns>
+        private List<int> FindCloseableFace(int TargetVert, IVertex current, IEdge testEdge, SortedSet<IEdgeKey> CheckedEdges, Stack<int> Path)
+        {
+            CheckedEdges.Add(testEdge.Key);
+            if (Path.Count > 4) //We must return only triangles or quads, and we return closed loops
+                return null;
+
+            if(current.Index == TargetVert)
+            {
+                return Path.ToList();
+            }
+            else
+            {
+                Path.Push(current.Index);
+            }
+            
+            //Test all of the edges we have not examined yet who do not have two faces already
+            foreach(IEdge edge in current.Edges.Where(e => !CheckedEdges.Contains(e)).Select(e => this.Edges[e]).Where(e => e.Faces.Count < 2))
+            {
+                List<int> Face = FindCloseableFace(TargetVert, this[edge.OppositeEnd(current.Index)], edge, new SortedSet<IEdgeKey>(CheckedEdges), Path);
+
+                if (Face != null)
+                    return Face;
+                
+            }
+
+            //Take this index off the stack since we did not locate a path
+            Path.Pop();
+
+            return null; 
         }
     }
 }

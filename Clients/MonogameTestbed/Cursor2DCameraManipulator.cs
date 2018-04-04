@@ -81,9 +81,9 @@ namespace MonogameTestbed
             {
                 Camera.Downsample *= 1.0 - (state.Triggers.Left / 10);
 
-                if (Camera.Downsample <= 0.1)
+                if (Camera.Downsample <= 0.01)
                 {
-                    Camera.Downsample = 0.1;
+                    Camera.Downsample = 0.01;
                 }
             }
 
