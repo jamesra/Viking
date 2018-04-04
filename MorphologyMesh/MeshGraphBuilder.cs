@@ -74,7 +74,8 @@ namespace MorphologyMesh
                 MeshEdge mEdge = SmoothMeshGraphGenerator.CreateEdge(graph.Nodes[edge.SourceNodeKey], graph.Nodes[edge.TargetNodeKey]);
                 meshGraph.AddEdge(mEdge);
             }
-
+              
+            /*
             foreach (MeshNode node in meshGraph.Nodes.Values.Where(n => n.GetEdgesAbove().Length > 0).ToArray())
             {
                 CreatePortsForBranch(node, node.GetEdgesAbove().SelectMany(e => node.Edges[e]).ToArray());
@@ -84,6 +85,7 @@ namespace MorphologyMesh
             {
                 CreatePortsForBranch(node, node.GetEdgesBelow().SelectMany(e => node.Edges[e]).ToArray());
             }
+            */
 
             /*
             //Create multiple ports for branches
@@ -162,7 +164,7 @@ namespace MorphologyMesh
             //Build a single mesh with all components of the branch
             foreach (MeshNode other_node in other_nodes)
             {
-                SmootherMeshGenerator.MergeMeshes(node, other_node);
+                SmoothMeshGenerator.MergeMeshes(node, other_node);
             }
 
             List<MeshNode> AllNodes = new List<MorphologyMesh.MeshNode>();
