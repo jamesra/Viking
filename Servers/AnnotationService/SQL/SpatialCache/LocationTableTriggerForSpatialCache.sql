@@ -6,6 +6,9 @@ BEGIN
     if @@ROWCOUNT = 0
 		return
 
+	IF TRIGGER_NESTLEVEL() > 1/*this update is coming from some other trigger*/
+		return
+
 	SET NOCOUNT ON
 
 	DELETE StructureSpatialCache 
@@ -35,7 +38,8 @@ BEGIN
 		   min(L.Z) as MinZ,
 		   max(L.Z) as MaxZ
 	FROM Location L group by L.ParentID) L  ON L.ParentID = S.ID
-	INNER JOIN INSERTED I ON I.ParentID = S.ID
+	INNER JOIN (Select ParentID from INSERTED I group by ParentID) I ON I.ParentID = S.ID /*Must use Group by in the inner join or we create many rows and re-run expensive functions calculating columns for all of them*/
+	
 	
 
 	/*

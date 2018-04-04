@@ -6797,6 +6797,209 @@ end
 	 COMMIT TRANSACTION seventyone
 	end
 
-	 
+	if(not(exists(select (1) from DBVersion where DBVersionID = 72)))
+	begin
+     print N'Fix StructureSpatialCache performance problems' 
+	 BEGIN TRANSACTION seventytwo
+		
+		Exec('
+			ALTER TRIGGER UpdateStructureSpatialCache
+			  ON Location
+			  AFTER INSERT, UPDATE, DELETE
+			as
+			BEGIN
+				SET NOCOUNT ON
+
+				if @@ROWCOUNT = 0
+					return
+
+				IF TRIGGER_NESTLEVEL() > 1/*this update is coming from some other trigger*/
+					return
+
+				DELETE StructureSpatialCache 
+				WHERE StructureSpatialCache.ID IN (SELECT ParentID FROM DELETED Group By ParentID)
+
+				DELETE StructureSpatialCache 
+				WHERE StructureSpatialCache.ID IN (SELECT ParentID FROM INSERTED Group By ParentID)	
+
+				INSERT INTO StructureSpatialCache
+				SELECT        S.ID as ID,  
+							  L.BoundingRect as BoundingRect,
+							  [dbo].ufnStructureArea(S.ID) as Area, 
+							  [dbo].ufnStructureVolume(S.ID) as Volume, 
+							  L.MaxDim as MaxDimension,
+							  L.MinZ as MinZ, 
+							  L.MaxZ as MaxZ,
+							  L.ConvexHull as ConvexHull,
+							  [dbo].ufnLastStructureMorphologyModification(S.ID) as LastModified
+
+				FROM Structure S
+				INNER JOIN 
+					(select L.ParentID, 
+					   --Geometry::UnionAggregate(L.VolumeShape) as AggregateShape,
+					   Geometry::ConvexHullAggregate(L.VolumeShape) as ConvexHull,
+					   Geometry::EnvelopeAggregate(L.VolumeShape) as BoundingRect,
+					   max(L.VolumeShape.STDimension()) as MaxDim,
+					   min(L.Z) as MinZ,
+					   max(L.Z) as MaxZ
+				FROM Location L group by L.ParentID) L  ON L.ParentID = S.ID
+				INNER JOIN (Select ParentID from INSERTED I group by ParentID) I ON I.ParentID = S.ID /*Must use Group by in the inner join or we create many rows and re-run expensive functions calculating columns for all of them*/
+			END
+		')
+		
+		if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
+		 Exec('
+			exec sp_settriggerorder @triggername= ''UpdateStructureSpatialCache'', @order=''Last'', @stmttype = ''UPDATE'';  
+		')
+
+		if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
+	 INSERT INTO DBVersion values (72, 
+		      N'Fix StructureSpatialCache performance problems'  ,getDate(),User_ID())
+	 COMMIT TRANSACTION seventytwo
+	end
+
+	if(not(exists(select (1) from DBVersion where DBVersionID = 73)))
+	begin
+     print N'Create helper functions for querying the existence of tags' 
+	 BEGIN TRANSACTION seventythree
+		
+		Exec('
+			ALTER FUNCTION LocationHasTag 
+			(
+				-- Add the parameters for the function here
+				@ID bigint,
+				@TagName nvarchar(128)
+			)
+			RETURNS bit
+			AS
+			BEGIN
+				-- Add the T-SQL statements to compute the return value here
+				RETURN
+					(SELECT MAX( CASE 
+							WHEN N.value(''.'',''nvarchar(128)'') LIKE @Tagname THEN 1
+							ELSE 0
+						END)
+						FROM Location
+							cross apply Tags.nodes(''Structure/Attrib/@Name'') as T(N)
+							WHERE ID = @ID) 
+			END
+		')
+		
+		if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
+		 Grant EXECUTE on LocationHasTag to public
+
+		 Exec('
+			ALTER FUNCTION StructureHasTag 
+			(
+				-- Add the parameters for the function here
+				@StructureID bigint,
+				@TagName nvarchar(128)
+			)
+			RETURNS bit
+			AS
+			BEGIN
+				-- Add the T-SQL statements to compute the return value here
+				RETURN
+					(SELECT MAX( CASE 
+						WHEN N.value(''.'',''nvarchar(128)'') LIKE @Tagname THEN 1
+						ELSE 0
+					END)
+					FROM Structure
+						cross apply Tags.nodes(''Structure/Attrib/@Name'') as T(N)
+						WHERE ID = @StructureID)  
+			END
+		')
+
+		if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
+		 Grant EXECUTE on StructureHasTag to public
+
+	 INSERT INTO DBVersion values (73, 
+		      N'Create helper functions for querying the existence of tags'   ,getDate(),User_ID())
+	 COMMIT TRANSACTION seventythree
+	end
+
+	if(not(exists(select (1) from DBVersion where DBVersionID = 74)))
+	begin
+     print N'Create helper functions for querying the existence of tags' 
+	 BEGIN TRANSACTION seventyfour
+		
+	 EXEC('
+		CREATE PROCEDURE DeepDeleteStructure
+		-- Add the parameters for the stored procedure here
+		@DeleteID bigint
+		AS
+		BEGIN
+		-- SET NOCOUNT ON added to prevent extra result sets from
+		-- interfering with SELECT statements.
+		SET NOCOUNT ON;
+	
+		if OBJECT_ID(''tempdb..#StructuresToDelete'') is not null
+		BEGIN
+			DROP Table #StructuresToDelete
+		END
+
+		select ID into #StructuresToDelete from (Select ID from Structure where ID = @DeleteID or ParentID = @DeleteID) as ID
+
+		delete from LocationLink
+		where A in 
+		(
+		Select ID from Location 
+		where ParentID in (Select ID From #StructuresToDelete) ) 
+
+		delete from LocationLink
+		where B in 
+		(
+		Select ID from Location where ParentID in (Select ID From #StructuresToDelete) ) 
+
+		delete from Location
+		where ParentID in (Select ID From #StructuresToDelete)
+
+		delete from StructureLink where SourceID in (Select ID From #StructuresToDelete) or TargetID in (Select ID From #StructuresToDelete)
+
+		delete from Structure
+		where ParentID=@DeleteID
+
+		delete from Structure
+		where ID=@DeleteID
+
+		if OBJECT_ID(''tempdb..#StructuresToDelete'') is not null
+		BEGIN
+			DROP Table #StructuresToDelete
+		END
+	END
+	 ')
+
+	 if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
+	INSERT INTO DBVersion values (74, 
+		      N'Add stored procedure to delete structures'   ,getDate(),User_ID())
+	 COMMIT TRANSACTION seventyfour
+	end
+END
+
 --from here on, continually add steps in the previous manner as needed.
 COMMIT TRANSACTION main
