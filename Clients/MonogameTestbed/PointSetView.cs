@@ -16,10 +16,37 @@ namespace MonogameTestbed
     { 
         public CircleView[] PointViews = new CircleView[0];
         public LabelView[] LabelViews = new LabelView[0]; 
-        private double _PointRadius = 2.0;
+        private double _PointRadius = 1.0;
 
-        public bool LabelIndex = false;
-        public bool LabelPosition = true; 
+        private bool _LabelIndex = false;
+        public bool LabelIndex
+        {
+            get
+            {
+                return _LabelIndex;
+            }
+            set
+            {
+                _LabelIndex = value;
+                UpdateViews();
+            }
+        }
+
+        private bool _LabelPosition = true;
+
+        public bool LabelPosition
+        {
+            get
+            {
+                return _LabelPosition;
+            }
+            set
+            {
+                _LabelPosition = value;
+                UpdateViews();
+            }
+        }
+
 
         public double PointRadius
         {
@@ -30,27 +57,27 @@ namespace MonogameTestbed
                 UpdateViews();
             }
         }
-         
+
         public override void UpdateViews()
         {
-            if(Points == null)
+            if (Points == null)
             {
                 PointViews = new CircleView[0];
                 LabelViews = new LabelView[0];
-                return; 
+                return;
             }
 
-            PointViews = Points.Select(p => new CircleView( new GridCircle(p, PointRadius), Color)).ToArray();
+            PointViews = Points.Select(p => new CircleView(new GridCircle(p, PointRadius), Color)).ToArray();
 
-            if(!LabelIndex && !LabelPosition)
+            if (!LabelIndex && !LabelPosition)
             {
                 LabelViews = null;
             }
-            else if(LabelIndex && !LabelPosition)
+            else if (LabelIndex && !LabelPosition)
             {
                 LabelViews = Points.Select((p, i) => new LabelView(i.ToString(), p)).ToArray();
             }
-            else if(!LabelIndex && LabelPosition)
+            else if (!LabelIndex && LabelPosition)
             {
                 LabelViews = Points.Select(p => new LabelView(p.ToLabel(), p)).ToArray();
             }
@@ -58,10 +85,13 @@ namespace MonogameTestbed
             {
                 LabelViews = Points.Select((p, i) => new LabelView(i.ToString() + " " + p.ToLabel(), p)).ToArray();
             }
-            
-            foreach (LabelView label in LabelViews)
+
+            if (LabelViews != null)
             {
-                label.FontSize = _PointRadius;
+                foreach (LabelView label in LabelViews)
+                {
+                    label.FontSize = _PointRadius;
+                }
             }
         }
 

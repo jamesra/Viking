@@ -60,6 +60,7 @@
     <Compile Include="PointSetView.cs" />
     <Compile Include="Polygon2DTest.cs" />
     <Compile Include="BranchAssignmentTest.cs" />
+    <Compile Include="PolygonSetView.cs" />
     <Compile Include="PolywrappingTest.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -195,6 +196,10 @@
     <ProjectReference Include="..\..\MorphologyMesh\MorphologyMesh.csproj">
       <Project>{6df25a4d-1930-4c7b-8a6e-4aac68e4a7ba}</Project>
       <Name>MorphologyMesh</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\RTree\RTree.csproj">
+      <Project>{4085ba67-60d7-4679-886e-457aaf37ec7b}</Project>
+      <Name>RTree</Name>
     </ProjectReference>
     <ProjectReference Include="..\..\SqlGeometryUtils\SqlGeometryUtils.csproj">
       <Project>{6702adda-3f8f-43d0-9c7e-1e7fdbbe983f}</Project>

@@ -14,6 +14,7 @@ namespace MonogameTestbed
     {
         private PointSetView[] PolyPointsView = null;
         private LineView[] PolyRingViews = null;
+        private LabelView[] PolyIndexLabels = new LabelView[0];
 
         private List<GridPolygon> _Polygons = new List<GridPolygon>();
 
@@ -32,6 +33,12 @@ namespace MonogameTestbed
                 {
                     psv.LabelIndex = value;
                 }
+
+                if(value)
+                {
+                    this.LabelPosition = false;
+                    this.LabelPolygonIndex = false; 
+                }
             }
         }
 
@@ -47,8 +54,53 @@ namespace MonogameTestbed
                 {
                     psv.LabelPosition = value;
                 }
+
+                if (value)
+                {
+                    this.LabelIndex = false;
+                    this.LabelPolygonIndex = false;
+                }
             }
         }
+
+        private bool _LabelPolygonIndex = false;
+        public bool LabelPolygonIndex
+        {
+            get
+            {
+                return _LabelPolygonIndex;
+            }
+            set
+            {
+                _LabelPolygonIndex = value;
+                if(value)
+                {
+                    PolyIndexLabels = CreatePolyIndexLabels(_Polygons).ToArray();
+                }
+
+                if (value)
+                {
+                    this.LabelIndex = false;
+                    this.LabelPosition = false;
+                }
+            }
+        }
+
+        private static List<LabelView> CreatePolyIndexLabels(List<GridPolygon> Polygons)
+        {
+            List<LabelView> listPointLabels = new List<LabelView>();
+
+            foreach(PointIndex pi in new PolySetVertexEnum(Polygons))
+            {
+                GridVector2 point = pi.Point(Polygons);
+                LabelView label = new LabelView(pi.ToString(), point);
+                listPointLabels.Add(label);
+                label.FontSize = 1;
+            }
+
+            return listPointLabels;
+        }
+
 
         public PolygonSetView(IEnumerable<GridPolygon> polys)
         {
@@ -104,6 +156,11 @@ namespace MonogameTestbed
                 {
                     psv.Draw(window, scene);
                 }
+            }
+
+            if(this.LabelPolygonIndex && this.PolyIndexLabels != null)
+            {
+                LabelView.Draw(window.spriteBatch, window.fontArial, scene, this.PolyIndexLabels);
             }
         }
     }
