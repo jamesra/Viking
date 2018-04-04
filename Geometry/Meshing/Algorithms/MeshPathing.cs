@@ -10,17 +10,25 @@ namespace Geometry.Meshing
     public static class DynamicRenderMeshExtensions
     {
 
-        public static List<IFace> FindFacesInPath(this DynamicRenderMesh mesh, IFace start, Func<IFace, bool> MeetsCriteriaFunc)
+        /// <summary>
+        /// Returns the shortest path between the starting face and a face meeting a criteria function
+        /// </summary>
+        /// <param name="mesh"></param>
+        /// <param name="start">Starting Face</param>
+        /// <param name="CanBePartOfPath">Returns true if the tested face can be part of the path.</param>
+        /// <param name="MeetsCriteriaFunc">Returns true if the face is the desired destination</param>
+        /// <returns></returns>
+        public static List<IFace> FindFacesInPath(this DynamicRenderMesh mesh, IFace start, Func<IFace, bool> CanBePartOfPath, Func<IFace, bool> MeetsCriteriaFunc)
         {
             SortedSet<IFace> testedFaces = new SortedSet<IFace>();
             Dictionary<IFace, List<IFace>> PathCache = new Dictionary<IFace, List<IFace>>();
-            return RecursePath(ref testedFaces, mesh, start, MeetsCriteriaFunc, PathCache);
+            return RecursePath(ref testedFaces, mesh, start, CanBePartOfPath, MeetsCriteriaFunc, PathCache);
         }
 
-        public static List<IFace> FindFacesInPath(this DynamicRenderMesh mesh, IFace start, Func<IFace, bool> MeetsCriteriaFunc, ref SortedSet<IFace> CheckedFaces)
+        public static List<IFace> FindFacesInPath(this DynamicRenderMesh mesh, IFace start, Func<IFace, bool> CanBePartOfPath, Func<IFace, bool> MeetsCriteriaFunc, ref SortedSet<IFace> CheckedFaces)
         {
             Dictionary<IFace, List<IFace>> PathCache = new Dictionary<IFace, List<IFace>>();
-            return RecursePath(ref CheckedFaces, mesh, start, MeetsCriteriaFunc, PathCache);
+            return RecursePath(ref CheckedFaces, mesh, start, CanBePartOfPath, MeetsCriteriaFunc, PathCache);
         }
 
         /// <summary>
@@ -32,7 +40,7 @@ namespace Geometry.Meshing
         /// <param name="IsMatch"></param>
         /// <param name="PathCache">Contains a lookup table of the shortest route to the target for each face</param>
         /// <returns></returns>
-        private static List<IFace> RecursePath(ref SortedSet<IFace> testedFaces, DynamicRenderMesh mesh, IFace Origin, Func<IFace, bool> IsMatch, Dictionary<IFace, List<IFace>> PathCache)
+        private static List<IFace> RecursePath(ref SortedSet<IFace> testedFaces, DynamicRenderMesh mesh, IFace Origin, Func<IFace, bool> CanBePartOfPath, Func<IFace, bool> IsMatch, Dictionary<IFace, List<IFace>> PathCache)
         {
             //System.Diagnostics.Trace.WriteLine(Origin.ToString());
             testedFaces.Add(Origin);
@@ -48,14 +56,23 @@ namespace Geometry.Meshing
             }
 
             SortedSet<IFace> untestedFaces = new SortedSet<IFace>(AdjacentFaces(Origin, mesh));
-            untestedFaces.ExceptWith(testedFaces);
-
+            untestedFaces.ExceptWith(testedFaces); 
 
             if (untestedFaces.Count == 0)
                 return null;
             else if (untestedFaces.Count == 1)
             {
-                List<IFace> result = RecursePath(ref testedFaces, mesh, untestedFaces.First(), IsMatch, PathCache);
+
+                IFace adjacentFace = untestedFaces.First();
+
+                //Check if the face can be part of the path, if not don't bother investigating this route
+                if(!CanBePartOfPath(adjacentFace))
+                {
+                    testedFaces.Add(adjacentFace);
+                    return null;
+                }
+
+                List<IFace> result = RecursePath(ref testedFaces, mesh, adjacentFace, CanBePartOfPath, IsMatch, PathCache);
                 if (result == null)
                     return null;
 
@@ -67,13 +84,20 @@ namespace Geometry.Meshing
             {
                 List<List<IFace>> listPotentialPaths = new List<List<IFace>>(untestedFaces.Count);
                 SortedSet<IFace> AllBranchesTested = new SortedSet<IFace>();
-                foreach (IFace linked_face in untestedFaces)
+                foreach (IFace adjacentFace in untestedFaces)
                 {
-                    if (testedFaces.Contains(linked_face))
+                    if (testedFaces.Contains(adjacentFace))
+                        continue;
+
+                    //Check if the face can be part of the path, if not don't bother investigating this route
+                    if (!CanBePartOfPath(adjacentFace))
+                    {
+                        testedFaces.Add(adjacentFace);
                         continue; 
+                    }
 
                     SortedSet<IFace> testedFacesCopy = new SortedSet<IFace>(testedFaces);
-                    List<IFace> result = RecursePath(ref testedFacesCopy, mesh, linked_face, IsMatch, PathCache);
+                    List<IFace> result = RecursePath(ref testedFacesCopy, mesh, adjacentFace, CanBePartOfPath, IsMatch, PathCache);
                     if (result == null)
                     {
                         //We know none of the faces lead to the target so don't bother checking them again
