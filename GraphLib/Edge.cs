@@ -8,7 +8,7 @@ using System.Runtime.Serialization;
 namespace GraphLib
 {
     [Serializable]
-    public abstract class Edge<NODEKEY> : IComparer<Edge<NODEKEY>>, IComparable<Edge<NODEKEY>>, IEquatable<Edge<NODEKEY>>, ISerializable
+    public class Edge<NODEKEY> : IComparer<Edge<NODEKEY>>, IComparable<Edge<NODEKEY>>, IEquatable<Edge<NODEKEY>>, ISerializable
         where NODEKEY : IComparable<NODEKEY>, IEquatable<NODEKEY>
     {
         public readonly NODEKEY SourceNodeKey;
@@ -16,7 +16,7 @@ namespace GraphLib
 
         public virtual bool Directional { get; set; }
 
-        public virtual float Weight  { get { return 1.0f; } }
+        public virtual double Weight { get; set; } = 1.0;
 
         public bool IsLoop {  get { return SourceNodeKey.Equals(TargetNodeKey); } }
 

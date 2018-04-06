@@ -49,6 +49,7 @@ namespace Geometry
             iInnerPoly = new int?();
             this.iVertex = iV;
             this.NumUniqueInRing = ringLength;
+            Debug.Assert(NumUniqueInRing > 0, "Must have at least 1 element in a ring");
             Debug.Assert(iVertex <= NumUniqueInRing); //Can be equal if this is the index of the last point in the ring which is a duplicate
         }
 
@@ -58,6 +59,7 @@ namespace Geometry
             iInnerPoly = new int?();
             this.iVertex = iV;
             this.NumUniqueInRing = Polygons[poly].ExteriorRing.Length-1;
+            Debug.Assert(NumUniqueInRing > 0, "Must have at least 1 element in a ring");
             Debug.Assert(iVertex <= NumUniqueInRing);
         }
 
@@ -67,6 +69,7 @@ namespace Geometry
             iInnerPoly = innerPoly;
             this.iVertex = iV;
             this.NumUniqueInRing = ringLength;
+            Debug.Assert(NumUniqueInRing > 0, "Must have at least 1 element in a ring");
             Debug.Assert(iVertex <= NumUniqueInRing);
         }
 
@@ -77,6 +80,7 @@ namespace Geometry
             this.iVertex = iV;
             this.NumUniqueInRing = 0; //Temp assignment so we can call GetRing
             this.NumUniqueInRing = this.GetRing(Polygons).Length-1;
+            Debug.Assert(NumUniqueInRing > 0, "Must have at least 1 element in a ring");
             Debug.Assert(iVertex <= NumUniqueInRing);
         }
 
@@ -124,7 +128,7 @@ namespace Geometry
             bool ANull = object.ReferenceEquals(A, null);
             bool BNull = object.ReferenceEquals(B, null);
 
-            if (ANull == BNull)
+            if (ANull && BNull)
                 return true;
             else if (ANull ^ BNull)
                 return false;
@@ -1061,7 +1065,9 @@ namespace Geometry
 
         public bool Contains(GridLineSegment line)
         {
-            if (!(this.Contains(line.A) && this.Contains(line.B)))
+            //Ensure both endpoints are inside and a point in the center.
+            //Test the center because if the line crosses a concave region with both endpoints exactly on the exterior ring we'd not have any intersections but the poly would not contain the line.
+            if (!(this.Contains(line.A) && this.Contains(line.B) && this.Contains(line.PointAlongLine(0.5))))
                 return false;
 
             List<GridLineSegment> segmentsToTest;
@@ -1075,10 +1081,10 @@ namespace Geometry
                 segmentsToTest = _ExteriorSegments.ToList();
             }
 
-            GridVector2 intersection;
-            bool intersects = line.Intersects(segmentsToTest, false);
+            bool intersects = line.Intersects(segmentsToTest, true); //It is OK for endpoints to be on the exterior ring.
             if(intersects)
             {
+                //The line intersects some of the polygon segments, but was it just the endpoint?
                 return false; //Line is not entirely inside the polygon
             }
 

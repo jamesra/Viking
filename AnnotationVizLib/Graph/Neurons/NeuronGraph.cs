@@ -111,11 +111,11 @@ namespace AnnotationVizLib
             }
         }
 
-        public override float Weight
+        public override double Weight
         {
             get
             {
-                return (float)Links.Count();
+                return (double)Links.Count();
             }
         }
 

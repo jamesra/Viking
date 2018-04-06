@@ -7,7 +7,9 @@ namespace Geometry
 {
 
     [Serializable]
-    public struct GridVector2 : IPoint, ICloneable, IComparable, IComparable<GridVector2>, IComparer<GridVector2>, IShape2D, IEquatable<GridVector2>
+    public struct GridVector2 : IShape2D, IPoint, ICloneable, IComparable, 
+                                IComparable<GridVector2>, IComparer<GridVector2>, IEquatable<GridVector2>,
+                                IComparable<IPoint2D>, IComparer<IPoint2D>, IEquatable<IPoint2D>
     {
         public readonly static GridVector2 UnitX = new GridVector2(1, 0);
         public readonly static GridVector2 UnitY = new GridVector2(0, 1);
@@ -55,6 +57,13 @@ namespace Geometry
             return (DistanceSquared(this, B) <= EpsilonSquared);
         }
 
+        bool IEquatable<IPoint2D>.Equals(IPoint2D B)
+        {
+            const double EpsilonSquared = 0.00001;
+            return (DistanceSquared(this, B) <= EpsilonSquared);
+        }
+
+        
         public int Compare(GridVector2 A, GridVector2 B)
         {
             //We need to use the same equality test as our epsilon value
@@ -75,18 +84,44 @@ namespace Geometry
 
             return 0; 
         }
+        
+        public int Compare(IPoint2D A, IPoint2D B)
+        {
+            //We need to use the same equality test as our epsilon value
+            if (A.Equals(B))
+                return 0;
+
+            double diff = A.X - B.X;
+
+            if (diff == 0.0)
+            {
+                diff = A.Y - B.Y;
+            }
+
+            if (diff > 0)
+                return 1;
+            if (diff < 0)
+                return -1;
+
+            return 0;
+        }
 
         public int CompareTo(Object Obj)
         {
-            GridVector2 B = (GridVector2)Obj;
+            IPoint2D B = (IPoint2D)Obj;
 
-            return this.Compare(this, B);
+            return Compare(this, B);
         }
 
         int IComparable<GridVector2>.CompareTo(GridVector2 B)
         {
-            return this.Compare(this, B);
+            return Compare(this, B);
         }
+         
+        public int CompareTo(IPoint2D other)
+        {
+            return Compare(this, other);
+        } 
 
         object ICloneable.Clone()
         {
@@ -188,6 +223,14 @@ namespace Geometry
             return (dX * dX) + (dY * dY);
         }
 
+        static public double DistanceSquared(IPoint2D A, IPoint2D B)
+        {
+            double dX = A.X - B.X;
+            double dY = A.Y - B.Y;
+
+            return (dX * dX) + (dY * dY);
+        }
+
         static public double DistanceSquared(IPoint A, IPoint B)
         {
             if (A == null)
@@ -267,6 +310,16 @@ namespace Geometry
             return new GridVector2(A.X + B.X, A.Y + B.Y); 
         }
 
+        static public GridVector2 operator -(GridVector2 A, IPoint2D B)
+        {
+            return new GridVector2(A.X - B.X, A.Y - B.Y);
+        }
+
+        static public GridVector2 operator +(GridVector2 A, IPoint2D B)
+        {
+            return new GridVector2(A.X + B.X, A.Y + B.Y);
+        }
+
         static public GridVector2 operator *(GridVector2 A, double scalar)
         {
             return new GridVector2(A.X * scalar, A.Y * scalar);
@@ -285,6 +338,16 @@ namespace Geometry
         static public bool operator !=(GridVector2 A, GridVector2 B)
         {
             return !GridVector2.Equals(A, B); 
+        }
+
+        static public bool operator ==(GridVector2 A, IPoint2D B)
+        {
+            return GridVector2.Equals(A, B);
+        }
+
+        static public bool operator !=(GridVector2 A, IPoint2D B)
+        {
+            return !GridVector2.Equals(A, B);
         }
 
         static public GridVector2 FromBarycentric(GridVector2 v1, GridVector2 v2, GridVector2 v3, double u, double v)
@@ -423,7 +486,7 @@ namespace Geometry
 
                 return -1;
             }
-        } 
+        }
 
         #region IPoint Members
 

@@ -208,9 +208,13 @@ namespace Geometry.Meshing
             if (compareVal != 0)
                 return compareVal;
 
+            
+            ImmutableArray<int> A = this.iVerts.Sort();
+            ImmutableArray<int> B = other.iVerts.Sort();
+
             for (int i = 0; i < iVerts.Length; i++)
             {
-                compareVal = this.iVerts[i].CompareTo(other.iVerts[i]);
+                compareVal = A[i].CompareTo(B[i]);
                 if (compareVal != 0)
                     return compareVal;
             }
@@ -223,6 +227,11 @@ namespace Geometry.Meshing
             return Equals(other as IFace);
         }
          
+        /// <summary>
+        /// Equals ignores clockwise or counter-clockwise at this time
+        /// </summary>
+        /// <param name="other"></param>
+        /// <returns></returns>
         public bool Equals(IFace other)
         {
             if (object.ReferenceEquals(other, null))
@@ -233,15 +242,10 @@ namespace Geometry.Meshing
             if (other.iVerts.Length != this.iVerts.Length)
                 return false;
 
-            for (int i = 0; i < iVerts.Length; i++)
-            {
-                if (this.iVerts[i] != other.iVerts[i])
-                {
-                    return false;
-                }
-            }
+            SortedSet<int> A = new SortedSet<int>(this.iVerts);
+            SortedSet<int> B = new SortedSet<int>(other.iVerts);
 
-            return true;
+            return A.SetEquals(B);
         }
         
     }

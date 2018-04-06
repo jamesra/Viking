@@ -199,9 +199,16 @@ namespace GeometryTests
             GridLineSegment lineE = new GridLineSegment(new GridVector2(-9, 8),
                                                         new GridVector2(1, -2));
 
+            IShape2D intersectShape;
+            bool result = lineA.Intersects(lineA, out intersectShape);
+            Debug.Assert(result == true);
+            Debug.Assert(intersectShape.ShapeType == ShapeType2D.LINE);
+            GridLineSegment intersectionLine = (GridLineSegment)intersectShape;
+            Debug.Assert(intersectionLine == lineA);
 
-            GridVector2 intersect = new GridVector2(); 
-            bool result = lineA.Intersects(lineB, out intersect);
+            GridVector2 intersect;
+            intersect = new GridVector2(); 
+            result = lineA.Intersects(lineB, out intersect);
             Debug.Assert(result == true);
             Debug.Assert(intersect.X == 3 && intersect.Y == 3);
 
@@ -245,7 +252,7 @@ namespace GeometryTests
 
             foreach (GridLineSegment other in IntersectingLines)
             {
-                GridVector2 intersection;
+                IShape2D intersection;
                 bool result = lineA.Intersects(other, out intersection);
                 Assert.IsTrue(result);
             }

@@ -301,7 +301,7 @@ namespace Geometry
             }
         }
 
-        public bool IsEndpoint(GridVector2 p)
+        public bool IsEndpoint(IPoint2D p)
         {
             return A == p || B == p;
         }
@@ -500,29 +500,64 @@ namespace Geometry
 
         public bool Intersects(GridLineSegment seg)
         {
-            GridVector2 intersection;
+            IShape2D intersection;
             return this.Intersects(seg, out intersection);
         }
 
         public bool Intersects(GridLineSegment seg, bool EndpointsOnRingDoNotIntersect)
         {
-            GridVector2 intersection;
+            IShape2D intersection;
             return this.Intersects(seg, EndpointsOnRingDoNotIntersect, out intersection);
         }
 
-        public bool Intersects(GridLineSegment seg, bool EndpointsOnRingDoNotIntersect, out GridVector2 Intersection)
-        {
+        public bool Intersects(GridLineSegment seg, bool EndpointsOnRingDoNotIntersect, out IShape2D Intersection)
+        { 
             bool intersects = this.Intersects(seg, out Intersection); 
 
-            if(intersects)
+            if(intersects && EndpointsOnRingDoNotIntersect)
             {
-                return !seg.IsEndpoint(Intersection);
+                if (Intersection.ShapeType == ShapeType2D.POINT)
+                { 
+                    return !seg.IsEndpoint((IPoint2D)Intersection);
+                }
+                else if(Intersection.ShapeType == ShapeType2D.LINE)
+                {
+                    return true;
+                }
+
+                Debug.Fail("We should not be able to reach this case, a line intersection is either a point or a line");
+                return true;
             }
 
             return intersects;
         }
 
         public bool Intersects(GridLineSegment seg, out GridVector2 Intersection)
+        {
+            IShape2D shape;  
+            Intersection = new GridVector2();
+            bool intersects = this.Intersects(seg, out shape);
+            if(intersects)
+            {
+                if (shape.ShapeType == ShapeType2D.POINT)
+                {
+                    Intersection = (GridVector2)shape;
+                    return true;
+                }
+                else if (shape.ShapeType == ShapeType2D.LINE)
+                {
+                    Intersection = (GridVector2)(((ILineSegment2D)shape).A);
+                    return true;
+                }
+
+                Debug.Fail("We should not be able to reach this case, a line intersection is either a point or a line");
+                return true;
+            }
+
+            return intersects;
+        }
+
+        public bool Intersects(GridLineSegment seg, out IShape2D Intersection)
         {
             //Don't do the full check if the bounding boxes don't overlap
             if (!this.BoundingBox.Intersects(seg.BoundingBox))
@@ -558,34 +593,30 @@ namespace Geometry
                 }
 
                 //Check if the lines perfectly overlap
-                GridVector2[] endpoints = new GridVector2[] { this.A, this.B, seg.A, seg.B };
-                bool[] CouldBeOnTheLine = endpoints.Select(e => overlapRect.Value.Contains(e)).ToArray();
+                GridVector2[] endpoints = new GridVector2[] { seg.A, seg.B, this.A, this.B }.Distinct().ToArray();
+                GridVector2[] endpointsOnLine = endpoints.Where(e => overlapRect.Value.Contains(e) && seg.DistanceToPoint(e) < Global.Epsilon).ToArray();
 
-                if (CouldBeOnTheLine[0] && seg.DistanceToPoint(endpoints[0]) == 0)
+                Debug.Assert(endpointsOnLine.Length > 0, "Must have intersecting points if the bounding boxes overlap for parallel line intersection test");
+                if(endpointsOnLine.Length == 0)
                 {
-                    Intersection = endpoints[0];
+                    return false;
+                }
+                else if(endpointsOnLine.Length == 1)
+                {
+                    Intersection = endpointsOnLine[0];
                     return true;
                 }
-
-                if (CouldBeOnTheLine[1] && seg.DistanceToPoint(endpoints[1]) == 0)
+                else if(endpointsOnLine.Length == 2)
                 {
-                    Intersection = endpoints[1];
+                    Intersection = new GridLineSegment(endpointsOnLine[0], endpointsOnLine[1]);
                     return true;
                 }
-
-                if (CouldBeOnTheLine[2] && this.DistanceToPoint(endpoints[2]) == 0)
+                else
                 {
-                    Intersection = endpoints[2];
+                    GridVector2[] endpointsOnOverlapRect = endpointsOnLine.Where(e => overlapRect.Value.Corners.Contains(e)).ToArray();
+                    Intersection = new GridLineSegment(endpointsOnOverlapRect[0], endpointsOnOverlapRect[1]);
                     return true;
                 }
-
-                if (CouldBeOnTheLine[3] && this.DistanceToPoint(endpoints[3]) == 0)
-                {
-                    Intersection = endpoints[3];
-                    return true;
-                }
-                 
-                return false;
             }
             else
             {

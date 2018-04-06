@@ -638,8 +638,7 @@ namespace Geometry
 
             foreach (GridLineSegment testLine in lines)
             {
-                GridVector2 intersection;
-                if (line.Intersects(testLine, EndpointsOnRingDoNotIntersect, out intersection))
+                if (line.Intersects(testLine, EndpointsOnRingDoNotIntersect))
                 {
                     return true; 
                 }
