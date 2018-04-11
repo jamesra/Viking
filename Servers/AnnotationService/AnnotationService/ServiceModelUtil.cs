@@ -31,7 +31,7 @@ namespace Annotation
             if(Username == null)
                 return GetIPForCall();
 
-            if (Username.Length == 0)
+            if (Username.Length == 0 || Username.ToLower() == "anonymous")
                 return GetIPForCall();
 
             return Username;
