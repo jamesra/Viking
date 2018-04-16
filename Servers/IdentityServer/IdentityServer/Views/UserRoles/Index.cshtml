@@ -1,0 +1,39 @@
+﻿@model IEnumerable<IdentityServer.Models.UserViewModels.UserRolesViewModel>
+
+@{
+    ViewData["Title"] = "View";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<h2>User Role Assignments</h2>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>
+                @Html.DisplayNameFor(model => model.Username)
+            </th>
+            @{
+                IdentityServer.Models.UserViewModels.UserRolesViewModel firstModel = Model.FirstOrDefault();
+                if (firstModel != null)
+                {
+                    foreach (var role in firstModel.AvailableRoles)
+                    {
+                        <th>
+                            @role.Name
+                        </th> 
+                    }
+                }
+            }
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model)
+        {
+            <tr>
+                @Html.Partial("View", item)
+            </tr>
+        }
+    </tbody>
+</table>

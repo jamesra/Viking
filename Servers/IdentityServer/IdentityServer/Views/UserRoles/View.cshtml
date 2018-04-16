@@ -1,0 +1,29 @@
+﻿@model IdentityServer.Models.UserViewModels.UserRolesViewModel
+
+<div>
+
+    @using (Html.BeginForm("Edit", "UserRoles", FormMethod.Post))
+    {
+        @Html.AntiForgeryToken()
+        <div hidden="hidden">
+            @Html.EditorForModel()
+            @Html.EditorFor(model => model.Username)
+        </div>
+
+        <td>
+            @Html.DisplayFor(model => model.Username)
+        </td> 
+
+        @foreach (var role in Model.AvailableRoles)
+        {
+            <td>
+                            
+                    @Html.CheckBox(@role.Id, Model.Roles.Contains(role.Id), new { onclick = "this.form.submit();" })
+                            
+            </td>
+        } 
+    }
+</div>
+<div>
+    @Html.ActionLink("Edit", "Edit", new { id = Model.Username}) |
+</div>
