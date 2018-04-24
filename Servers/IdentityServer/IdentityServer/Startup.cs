@@ -11,6 +11,8 @@ using Microsoft.Extensions.DependencyInjection;
 using IdentityServer.Data;
 using IdentityServer.Models;
 using IdentityServer.Services;
+using Serilog;
+using Serilog.Extensions.Logging;
 
 namespace IdentityServer
 {
@@ -19,6 +21,11 @@ namespace IdentityServer
         public Startup(IConfiguration configuration)
         {
             Configuration = configuration;
+
+            Log.Logger = new LoggerConfiguration()
+              .Enrich.FromLogContext()
+              .WriteTo.File("IDServerLogs.json", Serilog.Events.LogEventLevel.Verbose)
+              .CreateLogger();
         }
 
         public IConfiguration Configuration { get; }
@@ -27,11 +34,14 @@ namespace IdentityServer
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddDbContext<ApplicationDbContext>(options =>
-                options.UseSqlServer(Configuration.GetConnectionString("DefaultConnection")));
+                options.UseSqlServer(Configuration.GetConnectionString("IdentityConnection")));
 
             services.AddIdentity<ApplicationUser, ApplicationRole>()
                 .AddEntityFrameworkStores<ApplicationDbContext>()
                 .AddDefaultTokenProviders();
+
+            services.AddLogging(loggingBuilder =>
+                loggingBuilder.AddSerilog(dispose: true));
 
             // Add application services.
             services.AddTransient<IEmailSender, EmailSender>();
@@ -62,7 +72,7 @@ namespace IdentityServer
                 app.UseExceptionHandler("/Home/Error");
             }
 
-            app.UseStaticFiles();
+            app.UseStaticFiles();            
 
             app.UseIdentityServer();
 

@@ -2,6 +2,7 @@
 using IdentityServer4.Models;
 using System.Collections.Generic;
 using System.Security.Claims;
+using IdentityModel;
 
 namespace IdentityServer
 {
@@ -13,7 +14,7 @@ namespace IdentityServer
             return new List<IdentityResource>
             {
                 new IdentityResources.OpenId(),
-                new IdentityResources.Profile(),
+                new IdentityResources.Profile()
             };
         }
 
@@ -21,7 +22,13 @@ namespace IdentityServer
         {
             return new List<ApiResource>
             {
-                new ApiResource("api1", "My API")
+                new ApiResource("Viking.Annotation", "Viking.Annotation")
+                {
+                    UserClaims = { JwtClaimTypes.Role, JwtClaimTypes.Id, JwtClaimTypes.Name},
+                    ApiSecrets = { new Secret("secret".Sha256())}
+
+                    
+                }
             };
         }
 
@@ -33,7 +40,7 @@ namespace IdentityServer
             {
                 new Client
                 {
-                    ClientId = "client",
+                    ClientId = "Viking",
                     AllowedGrantTypes = GrantTypes.ClientCredentials,
 
                     ClientSecrets =
@@ -41,19 +48,23 @@ namespace IdentityServer
                         new Secret("secret".Sha256())
                     },
                     AllowedScopes = { "api1" }
+                    
                 },
 
                 // resource owner password grant client
                 new Client
                 {
-                    ClientId = "ro.client",
+                    ClientId = "ro.viking",
                     AllowedGrantTypes = GrantTypes.ResourceOwnerPassword,
-
+                     
                     ClientSecrets =
                     {
                         new Secret("secret".Sha256())
                     },
-                    AllowedScopes = { "api1" }
+                    AllowedScopes = { "Viking.Annotation",
+                                      IdentityServerConstants.StandardScopes.OpenId,
+                                      IdentityServerConstants.StandardScopes.Profile},
+                     
                 },
 
                 // OpenID Connect hybrid flow and client credentials client (MVC)

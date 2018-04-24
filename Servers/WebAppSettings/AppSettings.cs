@@ -48,10 +48,17 @@ namespace VikingWebAppSettings
             return GetApplicationSetting("DatabaseConnectionName");
         }
 
+        public static string GetIdentityServerURLString()
+        {
+            return GetApplicationSetting("IdentityServer");
+        }
+
         public static string GetDefaultConnectionString()
         {
             return GetConnectionString(GetDefaultDatabaseConnectionStringName());
         }
+
+        
 
         public static string GetConnectionString(string name)
         { 
