@@ -17,13 +17,9 @@
         @foreach (var role in Model.AvailableRoles)
         {
             <td>
-                            
                     @Html.CheckBox(@role.Id, Model.Roles.Contains(role.Id), new { onclick = "this.form.submit();" })
                             
             </td>
         } 
     }
-</div>
-<div>
-    @Html.ActionLink("Edit", "Edit", new { id = Model.Username}) |
 </div>

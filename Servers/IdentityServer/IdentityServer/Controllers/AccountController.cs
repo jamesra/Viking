@@ -220,10 +220,11 @@ namespace IdentityServer.Controllers
             ViewData["ReturnUrl"] = returnUrl;
             if (ModelState.IsValid)
             {
-                var user = new ApplicationUser { UserName = model.Email, Email = model.Email };
+                var user = new ApplicationUser { UserName = model.Email, Email = model.Email, Organization = model.Organization};
                 var result = await _userManager.CreateAsync(user, model.Password);
                 if (result.Succeeded)
                 {
+                    await _userManager.AddClaimAsync(user, new Claim("Organization", model.Organization));
                     _logger.LogInformation("User created a new account with password.");
 
                     var code = await _userManager.GenerateEmailConfirmationTokenAsync(user);
@@ -238,6 +239,7 @@ namespace IdentityServer.Controllers
             }
 
             // If we got this far, something failed, redisplay form
+            
             return View(model);
         }
 
