@@ -22,13 +22,22 @@
         </dt>
         <dd>
             @Html.DisplayFor(model => model.NormalizedUserName)
-        </dd>
-        
+        </dd> 
         <dt>
-            @Html.DisplayNameFor(model => model.Organization)
+            @Html.DisplayNameFor(model => model.Organizations)
         </dt>
         <dd>
-            @Html.DisplayFor(model => model.Organization)
+            <ul>
+                @foreach (var org in Model.Organizations)
+                {
+                   <li>
+                       @org.Name;
+                   </li>
+
+
+                }
+            </ul>
+            
         </dd>
         <dt>
             @Html.DisplayNameFor(model => model.Email)

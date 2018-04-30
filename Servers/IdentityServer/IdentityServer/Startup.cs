@@ -22,6 +22,8 @@ namespace IdentityServer
         {
             Configuration = configuration;
 
+            
+
             Log.Logger = new LoggerConfiguration()
               .Enrich.FromLogContext()
               .WriteTo.File("IDServerLogs.json", Serilog.Events.LogEventLevel.Verbose)
@@ -37,7 +39,7 @@ namespace IdentityServer
                 options.UseSqlServer(Configuration.GetConnectionString("IdentityConnection")));
 
             services.AddIdentity<ApplicationUser, ApplicationRole>(config =>
-             { config.SignIn.RequireConfirmedEmail = false; })
+             { config.SignIn.RequireConfirmedEmail = true; })
                 .AddEntityFrameworkStores<ApplicationDbContext>()
                 .AddDefaultTokenProviders();
 

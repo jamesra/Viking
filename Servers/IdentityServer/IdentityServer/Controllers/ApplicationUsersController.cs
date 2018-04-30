@@ -25,7 +25,7 @@ namespace IdentityServer.Controllers
         // GET: ApplicationUsers
         public async Task<IActionResult> Index()
         {
-            return View(await _context.ApplicationUser.ToListAsync());
+            return View(await _context.ApplicationUser.Include("OrganizationAssignments").ToListAsync());
         }
 
         // GET: ApplicationUsers/Details/5
@@ -36,7 +36,7 @@ namespace IdentityServer.Controllers
                 return NotFound();
             }
 
-            var applicationUser = await _context.ApplicationUser
+            var applicationUser = await _context.ApplicationUser.Include("OrganizationAssignments")
                 .SingleOrDefaultAsync(m => m.Id == id);
             if (applicationUser == null)
             {
@@ -76,7 +76,7 @@ namespace IdentityServer.Controllers
                 return NotFound();
             }
 
-            var applicationUser = await _context.ApplicationUser.SingleOrDefaultAsync(m => m.Id == id);
+            var applicationUser = await _context.ApplicationUser.Include("OrganizationAssignments").SingleOrDefaultAsync(m => m.Id == id);
             if (applicationUser == null)
             {
                 return NotFound();

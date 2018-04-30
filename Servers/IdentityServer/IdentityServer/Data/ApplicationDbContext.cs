@@ -2,7 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore; 
+using System.ComponentModel.DataAnnotations;
 using Microsoft.EntityFrameworkCore;
 using IdentityServer.Models;
 
@@ -21,10 +22,20 @@ namespace IdentityServer.Data
             // Customize the ASP.NET Identity model and override the defaults if needed.
             // For example, you can rename the ASP.NET Identity table names and more.
             // Add your customizations after calling base.OnModelCreating(builder);
+
+            builder.Entity<OrganizationAssignment>().HasKey(oa => new { oa.OrganizationId, oa.UserId});
+            builder.Entity<OrganizationAssignment>().HasOne(oa => oa.Organization).WithMany("OrganizationAssignments");
+            builder.Entity<OrganizationAssignment>().HasOne(oa => oa.User).WithMany("OrganizationAssignments");
+
+
         }
 
         public DbSet<IdentityServer.Models.ApplicationRole> ApplicationRole { get; set; }
 
         public DbSet<IdentityServer.Models.ApplicationUser> ApplicationUser { get; set; }
+
+        public DbSet<Organization> Organization { get; set; }
+
+        public DbSet<OrganizationAssignment> OrganizationAssignments { get; set; }
     }
 }

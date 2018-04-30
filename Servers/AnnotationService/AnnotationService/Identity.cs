@@ -100,10 +100,6 @@ namespace Annotation.Identity
             {
                 operationContext.ServiceSecurityContext.AuthorizationContext.Properties["Principal"] = operationContext.IncomingMessageProperties["Principal"];
             }
-            
-
-            
-
             return true; 
         }
 
