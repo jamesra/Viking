@@ -48,6 +48,7 @@ namespace IdentityServer
 
             // Add application services.
             services.AddTransient<IEmailSender, EmailSender>();
+            
 
             services.AddMvc();
 
@@ -59,6 +60,9 @@ namespace IdentityServer
                 .AddInMemoryApiResources(Config.GetApiResources())
                 .AddInMemoryClients(Config.GetClients())
                 .AddAspNetIdentity<ApplicationUser>();
+
+            services.AddTransient<IdentityServer4.Services.IProfileService, IdentityServer.Extensions.IdentityWithExtendedClaimsProfileService>();
+
 
             services.Configure<SMTPOptions>(Configuration.GetSection("SMTP"));
         }

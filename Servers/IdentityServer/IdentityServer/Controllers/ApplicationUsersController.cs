@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using IdentityServer.Data;
 using IdentityServer.Models;
 using Microsoft.AspNetCore.Authorization;
+using IdentityServer.Models.UserViewModels;
 
 namespace IdentityServer.Controllers
 {
@@ -36,7 +37,7 @@ namespace IdentityServer.Controllers
                 return NotFound();
             }
 
-            var applicationUser = await _context.ApplicationUser.Include("OrganizationAssignments")
+            var applicationUser = await _context.ApplicationUser.Include("OrganizationAssignments.Organization")
                 .SingleOrDefaultAsync(m => m.Id == id);
             if (applicationUser == null)
             {
@@ -76,7 +77,7 @@ namespace IdentityServer.Controllers
                 return NotFound();
             }
 
-            var applicationUser = await _context.ApplicationUser.Include("OrganizationAssignments").SingleOrDefaultAsync(m => m.Id == id);
+            var applicationUser = await _context.ApplicationUser.Include("OrganizationAssignments.Organization").SingleOrDefaultAsync(m => m.Id == id);
             if (applicationUser == null)
             {
                 return NotFound();
@@ -89,7 +90,7 @@ namespace IdentityServer.Controllers
         // more details see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(string id, [Bind("Id,Organization,UserName,NormalizedUserName,Email,NormalizedEmail,EmailConfirmed,PasswordHash,SecurityStamp,ConcurrencyStamp,PhoneNumber,PhoneNumberConfirmed,TwoFactorEnabled,LockoutEnd,LockoutEnabled,AccessFailedCount")] ApplicationUser applicationUser)
+        public async Task<IActionResult> Edit(string id, [Bind("Id,FamilyName,GivenName,UserName,NormalizedUserName,Email,NormalizedEmail,EmailConfirmed,PasswordHash,SecurityStamp,ConcurrencyStamp,PhoneNumber,PhoneNumberConfirmed,TwoFactorEnabled,LockoutEnd,LockoutEnabled,AccessFailedCount")] ApplicationUser applicationUser)
         {
             if (id != applicationUser.Id)
             {
@@ -117,6 +118,80 @@ namespace IdentityServer.Controllers
                 return RedirectToAction(nameof(Index));
             }
             return View(applicationUser);
+        }
+
+        public async Task<IActionResult> EditOrganizations(string id, IEnumerable<OrganizationSelectedViewModel> Organizations)
+        {
+            if (id == null)
+            {
+                return NotFound();
+            }
+
+            var applicationUser = await _context.ApplicationUser.Include("OrganizationAssignments").SingleOrDefaultAsync(m => m.Id == id);
+            if (applicationUser == null)
+            {
+                return NotFound();
+            }
+             
+             
+            var organizationEditDetails = await _context.Organization.Include("OrganizationAssignments").Select(org => new OrganizationSelectedViewModel
+            {
+                Name = org.Name,
+                Id = org.Id,
+                Selected = applicationUser.OrganizationAssignments.Any(oa => oa.OrganizationId == org.Id)
+            }).ToListAsync();
+
+            var UserOrganizations = new UserOrganizationsViewModel { Id = id, Name = applicationUser.UserName, Organizations = organizationEditDetails };
+
+            if (organizationEditDetails == null)
+            {
+                return NotFound();
+            }
+
+            return View(UserOrganizations);
+        }
+
+        // POST: ApplicationUsers/Edit/5
+        // To protect from overposting attacks, please enable the specific properties you want to bind to, for 
+        // more details see http://go.microsoft.com/fwlink/?LinkId=317598.
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EditOrganizations(string id, [Bind("Id, Name")] UserOrganizationsViewModel applicationUser, [Bind] IEnumerable<OrganizationSelectedViewModel> UserOrganizations)
+        {
+            if (id != applicationUser.Id)
+            {
+                return NotFound();
+            }
+
+            var user = await _context.ApplicationUser.Include("OrganizationAssignments").SingleOrDefaultAsync(u => u.Id == id);
+            if (user == null)
+            {
+                return NotFound();
+            }
+
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    user.UpdateOrganizationUsers(UserOrganizations);
+
+                    _context.Update(user);
+                    await _context.SaveChangesAsync();
+                }
+                catch (DbUpdateConcurrencyException)
+                {
+                    if (!ApplicationUserExists(applicationUser.Id))
+                    {
+                        return NotFound();
+                    }
+                    else
+                    {
+                        throw;
+                    }
+                }
+                return RedirectToAction(nameof(Index));
+            }
+            return View(user);
         }
 
         // GET: ApplicationUsers/Delete/5

@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
 using Microsoft.EntityFrameworkCore;
 using IdentityServer.Models;
+using IdentityServer.Models.UserViewModels;
 
 namespace IdentityServer.Data
 {
@@ -24,8 +25,8 @@ namespace IdentityServer.Data
             // Add your customizations after calling base.OnModelCreating(builder);
 
             builder.Entity<OrganizationAssignment>().HasKey(oa => new { oa.OrganizationId, oa.UserId});
-            builder.Entity<OrganizationAssignment>().HasOne(oa => oa.Organization).WithMany("OrganizationAssignments");
-            builder.Entity<OrganizationAssignment>().HasOne(oa => oa.User).WithMany("OrganizationAssignments");
+            builder.Entity<OrganizationAssignment>().HasOne(oa => oa.Organization).WithMany("OrganizationAssignments").HasForeignKey(oa => oa.OrganizationId);
+            builder.Entity<OrganizationAssignment>().HasOne(oa => oa.User).WithMany("OrganizationAssignments").HasForeignKey(oa => oa.UserId);
 
 
         }
@@ -37,5 +38,7 @@ namespace IdentityServer.Data
         public DbSet<Organization> Organization { get; set; }
 
         public DbSet<OrganizationAssignment> OrganizationAssignments { get; set; }
+
+        public DbSet<IdentityServer.Models.UserViewModels.UserSelectedViewModel> UserSelectedViewModel { get; set; }
     }
 }

@@ -15,10 +15,18 @@ namespace IdentityServer.Models
     {
         public ICollection<OrganizationAssignment> OrganizationAssignments { get; set; }
         [NotMapped]
-        public virtual IEnumerable<Organization> Organizations => OrganizationAssignments.Select(oa => oa.Organization);
+        public virtual List<Organization> Organizations => OrganizationAssignments?.Select(oa => oa.Organization).ToList();
 
         [Display(Name="Registration Date", Description ="Date of registration")]
         [DisplayFormat(DataFormatString = "{0:yyyy-MM-dd}", ApplyFormatInEditMode = true)]
         public DateTime RegistrationDate { get; set; }
+
+        [Required(AllowEmptyStrings =false)]
+        [Display(Name = "First Name", Description = "Given Name")]
+        public string GivenName { get; set; }
+
+        [Required(AllowEmptyStrings = false)]
+        [Display(Name = "Last Name", Description = "Family Name")]
+        public string FamilyName { get; set; }
     }
 }

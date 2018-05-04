@@ -12,8 +12,8 @@ using System;
 namespace IdentityServer.Data.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20180428002509_AddOrgTable")]
-    partial class AddOrgTable
+    [Migration("20180502001519_AddOrgAssignments")]
+    partial class AddOrgAssignments
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
@@ -90,19 +90,30 @@ namespace IdentityServer.Data.Migrations
 
             modelBuilder.Entity("IdentityServer.Models.OrganizationAssignment", b =>
                 {
-                    b.Property<int>("OrganizationId");
+                    b.Property<long>("OrganizationId");
 
                     b.Property<string>("UserId");
 
-                    b.Property<long?>("OrganizationId1");
-
                     b.HasKey("OrganizationId", "UserId");
-
-                    b.HasIndex("OrganizationId1");
 
                     b.HasIndex("UserId");
 
                     b.ToTable("OrganizationAssignments");
+                });
+
+            modelBuilder.Entity("IdentityServer.Models.UserViewModels.UserSelectedViewModel", b =>
+                {
+                    b.Property<string>("Id")
+                        .ValueGeneratedOnAdd();
+
+                    b.Property<string>("Name")
+                        .IsRequired();
+
+                    b.Property<bool>("Selected");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("UserSelectedViewModel");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
@@ -232,7 +243,8 @@ namespace IdentityServer.Data.Migrations
                 {
                     b.HasOne("IdentityServer.Models.Organization", "Organization")
                         .WithMany("OrganizationAssignments")
-                        .HasForeignKey("OrganizationId1");
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Cascade);
 
                     b.HasOne("IdentityServer.Models.ApplicationUser", "User")
                         .WithMany("OrganizationAssignments")

@@ -14,7 +14,7 @@ namespace IdentityServer
             return new List<IdentityResource>
             {
                 new IdentityResources.OpenId(),
-                new IdentityResources.Profile()
+                new IdentityResources.Profile()                
             };
         }
 
@@ -24,7 +24,7 @@ namespace IdentityServer
             {
                 new ApiResource("Viking.Annotation", "Viking.Annotation")
                 {
-                    UserClaims = { JwtClaimTypes.Role, JwtClaimTypes.Id, JwtClaimTypes.Name},
+                    UserClaims = { JwtClaimTypes.Role, JwtClaimTypes.Id, JwtClaimTypes.Name, "Affiliation"},
                     ApiSecrets = { new Secret("secret".Sha256())}
                 }
             };

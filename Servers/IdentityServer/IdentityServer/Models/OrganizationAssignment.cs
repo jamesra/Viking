@@ -17,7 +17,7 @@ namespace IdentityServer.Models
 
         [Key]
         [ForeignKey("Id")]
-        public int OrganizationId { get; set; }
+        public long OrganizationId { get; set; }
 
         public virtual Organization Organization { get; set; } 
     }

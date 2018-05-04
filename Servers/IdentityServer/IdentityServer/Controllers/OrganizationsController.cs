@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using IdentityServer.Data;
 using IdentityServer.Models;
+using IdentityServer.Models.UserViewModels;
 
 namespace IdentityServer.Controllers
 {
@@ -22,7 +23,7 @@ namespace IdentityServer.Controllers
         // GET: Organizations
         public async Task<IActionResult> Index()
         {
-            return View(await _context.Organization.Include("OrganizationAssignment").ToListAsync());
+            return View(await _context.Organization.Include("OrganizationAssignments").ToListAsync());
         }
 
         // GET: Organizations/Details/5
@@ -33,8 +34,9 @@ namespace IdentityServer.Controllers
                 return NotFound();
             }
 
-            var organization = await _context.Organization.Include("OrganizationAssignments")
-                .SingleOrDefaultAsync(m => m.Id == id);
+            var organization = await _context.Organization.Include("OrganizationAssignments.User")
+               .SingleOrDefaultAsync(m => m.Id == id);
+
             if (organization == null)
             {
                 return NotFound();
@@ -73,12 +75,25 @@ namespace IdentityServer.Controllers
                 return NotFound();
             }
 
-            var organization = await _context.Organization.SingleOrDefaultAsync(m => m.Id == id);
-            if (organization == null)
+            var organizationEditDetails = await _context.Organization.Include("OrganizationAssignments").Select(org => new OrganizationDetailsViewModel
+                {
+                    Name = org.Name,
+                    Id = org.Id,
+                    UserList = _context.Users.Select(u => new UserSelectedViewModel
+                    {
+                        Id = u.Id,
+                        Name = u.UserName,
+                        Selected = org.OrganizationAssignments.Any(oa => oa.UserId == u.Id)
+                    }).ToList()
+                })
+                .SingleOrDefaultAsync(m => m.Id == id);
+             
+            if (organizationEditDetails == null)
             {
                 return NotFound();
             }
-            return View(organization);
+
+            return View(organizationEditDetails);
         }
 
         // POST: Organizations/Edit/5
@@ -86,19 +101,57 @@ namespace IdentityServer.Controllers
         // more details see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(long id, [Bind("Id,Name")] Organization organization)
+        public async Task<IActionResult> Edit(long id, [Bind("Id,Name")] OrganizationDetailsViewModel organizationDetails, [Bind] IEnumerable<UserSelectedViewModel> usersSelected)
         {
-            if (id != organization.Id)
+            if (id != organizationDetails.Id)
             {
                 return NotFound();
             }
+
+            var organization = await _context.Organization.Include("OrganizationAssignments").SingleOrDefaultAsync(m => m.Id == id);
+
+            if (organization == null)
+            {
+                return NotFound();
+            }
+
 
             if (ModelState.IsValid)
             {
                 try
                 {
+                    if (organization.Name != organizationDetails.Name)
+                    {
+                        organization.Name = organizationDetails.Name;
+                    }
+
+                    organization.UpdateUserOrganizations(usersSelected);
+                    /*
+                    foreach(UserSelectedViewModel user in usersSelected)
+                    {
+                        var ExistingMapping = organization.OrganizationAssignments.FirstOrDefault(u => u.UserId == user.Id);
+
+                        if (user.Selected)
+                        {
+                            if (ExistingMapping == null)
+                            {
+                                //Create the mapping
+                                OrganizationAssignment oa = new OrganizationAssignment() { OrganizationId = organization.Id, UserId = user.Id };
+                                organization.OrganizationAssignments.Add(oa);
+                            }
+                        }
+                        else
+                        {
+                            if(ExistingMapping != null)
+                            {
+                                //Remove the mapping
+                                organization.OrganizationAssignments.Remove(ExistingMapping);
+                            }
+                        }
+                    }*/
+                    
                     _context.Update(organization);
-                    await _context.SaveChangesAsync();
+                    await _context.SaveChangesAsync(); 
                 }
                 catch (DbUpdateConcurrencyException)
                 {
@@ -110,10 +163,12 @@ namespace IdentityServer.Controllers
                     {
                         throw;
                     }
-                }
+                } 
+
                 return RedirectToAction(nameof(Index));
             }
-            return View(organization);
+
+            return View(organizationDetails);
         }
 
         // GET: Organizations/Delete/5

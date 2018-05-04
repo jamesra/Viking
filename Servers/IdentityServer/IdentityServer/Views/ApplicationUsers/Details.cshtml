@@ -12,6 +12,18 @@
     <hr />
     <dl class="dl-horizontal">
         <dt>
+            @Html.DisplayNameFor(model => model.FamilyName)
+        </dt>
+        <dd>
+            @Html.DisplayFor(model => model.FamilyName)
+        </dd>
+        <dt>
+            @Html.DisplayNameFor(model => model.GivenName)
+        </dt>
+        <dd>
+            @Html.DisplayFor(model => model.GivenName)
+        </dd>
+        <dt>
             @Html.DisplayNameFor(model => model.UserName)
         </dt>
         <dd>
@@ -22,22 +34,22 @@
         </dt>
         <dd>
             @Html.DisplayFor(model => model.NormalizedUserName)
-        </dd> 
+        </dd>
         <dt>
             @Html.DisplayNameFor(model => model.Organizations)
         </dt>
         <dd>
-            <ul>
+            <a asp-action="EditOrganizations" asp-route-id="@Model.Id">Edit</a>
+            <table>
                 @foreach (var org in Model.Organizations)
-                {
-                   <li>
-                       @org.Name;
-                   </li>
-
-
-                }
-            </ul>
-            
+            {
+                <tr>
+                    <td>
+                        @org.Name;
+                    </td>
+                </tr>
+        }
+            </table>
         </dd>
         <dt>
             @Html.DisplayNameFor(model => model.Email)

@@ -7,21 +7,20 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace IdentityServer.Models.UserViewModels
 {
-    public class OrganizationDetailsViewModel
+    public class UserOrganizationsViewModel
     {
         [Required]
         [Display(Name = "ID")]
-        public long Id { get; set; }
+        public string Id { get; set; }
 
-        [Required]
-        [DataType(DataType.Text)]
-        [Display(Name = "Organization")]
+        [Required] 
+        [Display(Name = "Name")]
         public string Name { get; set; }
 
         /// <summary>
         /// All users in the database, the selected property is true if they are a member of the organization
         /// </summary>
-        [Display(Name = "Users")]
-        public List<UserSelectedViewModel> UserList { get; set; }
+        [Display(Name = "Organizations")]
+        public List<OrganizationSelectedViewModel> Organizations { get; set; }
     }
 }

@@ -17,16 +17,24 @@
         <dd>
             @Html.DisplayFor(model => model.Name)
         </dd>
-    </dl>
-    <list>
-    @foreach (var user in Model.Users)
-    {
-        <li>
-            @user.Id
-        </li>
+        <dt>
+            @Html.DisplayNameFor(model => Model.Users)
+        </dt>
+        <dd>
+            <table>
+                @for (int i = 0; i < Model.Users.Count(); i++)
+                {
+                    <tr>
+                        <td>
+                            @Html.DisplayFor(x => Model.OrganizationAssignments.ElementAt(i).User.UserName)
+                        </td>
+                    </tr>
 
-     }
-     </list>
+                }
+            </table>
+        </dd>
+    </dl>
+
 </div>
 <div>
     <a asp-action="Edit" asp-route-id="@Model.Id">Edit</a> |

@@ -18,10 +18,11 @@ namespace IdentityServer.Models
         public long Id { get; set; }
 
         [Required(AllowEmptyStrings = false)]
+        [MaxLength(450)] 
         public string Name { get; set; }
 
         public ICollection<OrganizationAssignment> OrganizationAssignments { get; } = new List<OrganizationAssignment>();
         [NotMapped]
-        public virtual IEnumerable<ApplicationUser> Users => OrganizationAssignments.Select(oa => oa.User); 
+        public virtual List<ApplicationUser> Users => OrganizationAssignments.Select(oa => oa.User).ToList();
     }
 }
