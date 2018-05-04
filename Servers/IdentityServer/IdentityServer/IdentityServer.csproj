@@ -5,6 +5,10 @@
     <UserSecretsId>aspnet-IdentityServer-5FE82F6F-0884-4871-829E-BCFE700497A2</UserSecretsId>
   </PropertyGroup>
 
+  <ItemGroup>
+    <Content Remove="Views\Shared\UserSelected.cshtml" />
+  </ItemGroup>
+
 
   <ItemGroup>
     <PackageReference Include="IdentityModel" Version="3.6.1" />

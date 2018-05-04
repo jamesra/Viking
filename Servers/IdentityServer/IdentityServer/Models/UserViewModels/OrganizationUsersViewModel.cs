@@ -9,14 +9,20 @@ namespace IdentityServer.Models.UserViewModels
 {
     public class OrganizationDetailsViewModel
     {
+        [Key]
         [Required]
-        [Display(Name = "ID")]
+        [Display(Name = "ID", Description ="Database generated ID")]
         public long Id { get; set; }
 
-        [Required]
-        [DataType(DataType.Text)]
+        [Required(AllowEmptyStrings = false)]
         [Display(Name = "Organization")]
+        [MaxLength(450)]
         public string Name { get; set; }
+
+        [Required(AllowEmptyStrings = false)]
+        [Display(Name = "Short Unique Identifier", Description = "A unique short identifier for the organization.  This value is used for affiliation claims placed in tokens.")]
+        [MaxLength(64)]
+        public string ShortName { get; set; }
 
         /// <summary>
         /// All users in the database, the selected property is true if they are a member of the organization

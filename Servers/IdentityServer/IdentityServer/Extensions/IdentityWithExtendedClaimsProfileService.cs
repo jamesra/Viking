@@ -49,7 +49,7 @@ namespace IdentityServer.Extensions
                         var OrgAssignments = _Dbcontext.OrganizationAssignments.Include("Organization").Where(oa => oa.UserId == user.Id).ToList();
                         foreach(OrganizationAssignment oa in OrgAssignments)
                         {
-                            claims.Add(new Claim("Affiliation", oa.Organization.Name));
+                            claims.Add(new Claim("Affiliation", oa.Organization.ShortName));
                         }
                     }
                     break;

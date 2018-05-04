@@ -101,7 +101,7 @@ namespace IdentityServer.Controllers
         // more details see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(long id, [Bind("Id,Name")] OrganizationDetailsViewModel organizationDetails, [Bind] IEnumerable<UserSelectedViewModel> usersSelected)
+        public async Task<IActionResult> Edit(long id, [Bind("Id,Name,ShortName")] OrganizationDetailsViewModel organizationDetails, [Bind] IEnumerable<UserSelectedViewModel> usersSelected)
         {
             if (id != organizationDetails.Id)
             {
@@ -120,10 +120,8 @@ namespace IdentityServer.Controllers
             {
                 try
                 {
-                    if (organization.Name != organizationDetails.Name)
-                    {
-                        organization.Name = organizationDetails.Name;
-                    }
+                    organization.Name = organizationDetails.Name;
+                    organization.ShortName = organizationDetails.ShortName;
 
                     organization.UpdateUserOrganizations(usersSelected);
                     /*
