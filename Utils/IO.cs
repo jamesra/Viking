@@ -12,7 +12,17 @@ namespace Utils
     {
         public static XAttribute GetAttributeCaseInsensitive(this XElement element, string AttribName)
         {
-            return element.Attributes().SingleOrDefault(a => string.Compare(a.Name.ToString().ToLower(), AttribName.ToLower()) == 0);
+            try
+            {
+                return element.Attributes().SingleOrDefault(a => string.Compare(a.Name.ToString().ToLower(), AttribName.ToLower()) == 0);
+            }
+            catch (Exception e)
+            {
+                System.Diagnostics.Trace.WriteLine(string.Format("Could not get {0} attribute from <{1}> Element", AttribName, element.Name));
+                System.Diagnostics.Trace.WriteLine(e.Message);
+
+                throw e;
+            }
         }
 
         public static bool HasAttributeCaseInsensitive(this XElement element, string AttribName)
