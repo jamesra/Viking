@@ -28,7 +28,7 @@
           <Property Name="TypeCode" Type="smallint" Nullable="false" />
           <Property Name="LastModified" Type="datetime" Nullable="false" StoreGeneratedPattern="Computed" />
           <Property Name="Created" Type="datetime" Nullable="false" StoreGeneratedPattern="Computed" />
-          <Property Name="Username" Type="nchar" MaxLength="16" Nullable="false" />
+          <Property Name="Username" Type="nvarchar" MaxLength="254" />
           <Property Name="MosaicShape" Type="geometry" Nullable="false" />
           <Property Name="VolumeShape" Type="geometry" Nullable="false" />
           <Property Name="X" Type="float" StoreGeneratedPattern="Computed" Nullable="false" />
@@ -45,7 +45,7 @@
           </Key>
           <Property Name="A" Type="bigint" Nullable="false" />
           <Property Name="B" Type="bigint" Nullable="false" />
-          <Property Name="Username" Type="nchar" MaxLength="16" Nullable="false" />
+          <Property Name="Username" Type="nvarchar" MaxLength="254" />
           <Property Name="Created" Type="datetime" Nullable="false" StoreGeneratedPattern="Computed" />
         </EntityType>
         <EntityType Name="PermittedStructureLink">
@@ -71,7 +71,7 @@
           <Property Name="ParentID" Type="bigint" />
           <Property Name="Created" Type="datetime" Nullable="false" StoreGeneratedPattern="Computed" />
           <Property Name="Label" Type="varchar" MaxLength="64" />
-          <Property Name="Username" Type="nchar" MaxLength="16" Nullable="false" />
+          <Property Name="Username" Type="nvarchar" MaxLength="254" />
           <Property Name="LastModified" Type="datetime" Nullable="false" StoreGeneratedPattern="Computed" />
         </EntityType>
         <!--Errors Found During Generation:
@@ -83,13 +83,12 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
             
             
             
-            
           </Key>
           <Property Name="SourceID" Type="bigint" Nullable="false" />
           <Property Name="TargetID" Type="bigint" Nullable="false" />
           <Property Name="Bidirectional" Type="bit" Nullable="false" />
           <Property Name="Tags" Type="xml" />
-          <Property Name="Username" Type="nchar" MaxLength="16" Nullable="false" />
+          <Property Name="Username" Type="nvarchar" MaxLength="254" />
           <Property Name="Created" Type="datetime" Nullable="false" StoreGeneratedPattern="Computed" />
           <Property Name="LastModified" Type="datetime" Nullable="false" StoreGeneratedPattern="Computed" />
         </EntityType>
@@ -123,7 +122,7 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
           <Property Name="Version" Type="timestamp" StoreGeneratedPattern="Computed" Nullable="false" />
           <Property Name="Code" Type="nchar" MaxLength="16" Nullable="false" />
           <Property Name="HotKey" Type="char" MaxLength="1" Nullable="false" />
-          <Property Name="Username" Type="nchar" MaxLength="16" Nullable="false" />
+          <Property Name="Username" Type="nvarchar" MaxLength="254" />
           <Property Name="LastModified" Type="datetime" Nullable="false" StoreGeneratedPattern="Computed" />
           <Property Name="Created" Type="datetime" Nullable="false" StoreGeneratedPattern="Computed" />
         </EntityType>
@@ -643,7 +642,7 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
           <Property Name="TypeCode" Type="Int16" Nullable="false" />
           <Property Name="LastModified" Type="DateTime" Nullable="false" Precision="3" annotation:StoreGeneratedPattern="Computed" />
           <Property Name="Created" Type="DateTime" Nullable="false" Precision="3" annotation:StoreGeneratedPattern="Computed" />
-          <Property Name="Username" Type="String" MaxLength="16" FixedLength="true" Unicode="true" Nullable="false" />
+          <Property Name="Username" Type="String" MaxLength="254" FixedLength="false" Unicode="true" />
           <NavigationProperty Name="Parent" Relationship="Self.FK_Location_Structure" FromRole="Location" ToRole="Structure" />
           <NavigationProperty Name="LocationLinksA" Relationship="Self.FK_LocationLink_Location" FromRole="Location" ToRole="LocationLink" />
           <NavigationProperty Name="LocationLinksB" Relationship="Self.FK_LocationLink_Location1" FromRole="Location" ToRole="LocationLink" />
@@ -658,7 +657,7 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
           </Key>
           <Property Name="A" Type="Int64" Nullable="false" />
           <Property Name="B" Type="Int64" Nullable="false" />
-          <Property Name="Username" Type="String" MaxLength="16" FixedLength="true" Unicode="true" Nullable="false" />
+          <Property Name="Username" Type="String" MaxLength="254" FixedLength="false" Unicode="true" />
           <Property Name="Created" Type="DateTime" Nullable="false" Precision="3" annotation:StoreGeneratedPattern="Computed" />
           <NavigationProperty Name="LocationA" Relationship="Self.FK_LocationLink_Location" FromRole="LocationLink" ToRole="Location" />
           <NavigationProperty Name="LocationB" Relationship="Self.FK_LocationLink_Location1" FromRole="LocationLink" ToRole="Location" />
@@ -677,7 +676,7 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
           <Property Name="ParentID" Type="Int64" />
           <Property Name="Created" Type="DateTime" Nullable="false" Precision="3" annotation:StoreGeneratedPattern="Computed" />
           <Property Name="Label" Type="String" MaxLength="64" FixedLength="false" Unicode="false" />
-          <Property Name="Username" Type="String" MaxLength="16" FixedLength="true" Unicode="true" Nullable="false" />
+          <Property Name="Username" Type="String" MaxLength="254" FixedLength="false" Unicode="true" />
           <Property Name="LastModified" Type="DateTime" Nullable="false" Precision="3" annotation:StoreGeneratedPattern="Computed" />
           <NavigationProperty Name="Locations" Relationship="Self.FK_Location_Structure" FromRole="Structure" ToRole="Location" />
           <NavigationProperty Name="Children" Relationship="Self.FK_Structure_Structure" FromRole="Structure" ToRole="Structure1" />
@@ -703,7 +702,7 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
           <Property Name="Version" Type="Binary" MaxLength="8" FixedLength="true" Nullable="false" annotation:StoreGeneratedPattern="Computed" />
           <Property Name="Code" Type="String" MaxLength="16" FixedLength="true" Unicode="true" Nullable="false" />
           <Property Name="HotKey" Type="String" MaxLength="1" FixedLength="true" Unicode="false" Nullable="false" />
-          <Property Name="Username" Type="String" MaxLength="16" FixedLength="true" Unicode="true" Nullable="false" />
+          <Property Name="Username" Type="String" MaxLength="254" FixedLength="false" Unicode="true" />
           <Property Name="LastModified" Type="DateTime" Nullable="false" Precision="3" annotation:StoreGeneratedPattern="Computed" />
           <Property Name="Created" Type="DateTime" Nullable="false" Precision="3" annotation:StoreGeneratedPattern="Computed" />
           <NavigationProperty Name="Structures" Relationship="Self.FK_StructureBase_StructureType" FromRole="StructureType" ToRole="Structure" />
@@ -721,7 +720,7 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
           <Property Name="TargetID" Type="Int64" Nullable="false" annotation:StoreGeneratedPattern="None" />
           <Property Name="Bidirectional" Type="Boolean" Nullable="false" />
           <Property Name="Tags" Type="String" MaxLength="Max" FixedLength="false" Unicode="true" />
-          <Property Name="Username" Type="String" MaxLength="16" FixedLength="true" Unicode="true" Nullable="false" />
+          <Property Name="Username" Type="String" MaxLength="254" FixedLength="false" Unicode="true" />
           <Property Name="Created" Type="DateTime" Nullable="false" Precision="3" annotation:StoreGeneratedPattern="Computed" />
           <Property Name="LastModified" Type="DateTime" Nullable="false" Precision="3" annotation:StoreGeneratedPattern="Computed" />
           <NavigationProperty Name="Source" Relationship="Self.FK_StructureLinkSource_StructureBaseID" FromRole="StructureLink" ToRole="Structure" />
@@ -1091,10 +1090,10 @@ warning 6002: The table/view 'Test.dbo.StructureLink' does not have a primary ke
             <End Role="StructureSpatialCache" EntitySet="StructureSpatialCaches" />
           </AssociationSet>
           <FunctionImport Name="SelectNetworkChildStructureSpatialData">
-            <Parameter Name="Hops" Mode="In" Type="Int32" />
+          <Parameter Name="Hops" Mode="In" Type="Int32" />
           </FunctionImport>
           <FunctionImport Name="SelectNetworkStructureSpatialData">
-            <Parameter Name="Hops" Mode="In" Type="Int32" />
+          <Parameter Name="Hops" Mode="In" Type="Int32" />
           </FunctionImport>
         </EntityContainer>
         <ComplexType Name="ApproximateStructureLocation_Result">

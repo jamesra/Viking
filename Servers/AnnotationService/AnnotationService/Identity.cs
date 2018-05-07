@@ -70,10 +70,38 @@ namespace Annotation.Identity
                     return new ReadOnlyCollection<IAuthorizationPolicy>(new List<IAuthorizationPolicy>());
                 }
 
-                string[] Roles = validation.Claims.Where(c => c.Type == "role").Select(r => r.Value).ToArray();
+                var IsActive = validation.Claims.FirstOrDefault(c => c.Type == "active");
+                if(IsActive?.Value != "True")
+                {
+                    message.Properties["Principal"] = CreateAnonymousUser();
+                    return authPolicy;
+                }
 
-                var userNameClaim = validation.Claims.FirstOrDefault(c => c.Type == "name").Value;
+                var userNameClaim = validation.Claims.FirstOrDefault(c => c.Type == "name")?.Value;
+                if (userNameClaim == null)
+                {
+                    message.Properties["Principal"] = CreateAnonymousUser();
+                    return authPolicy;
+                }
 
+                string[] Roles;
+                string[] AllowedOrgs = VikingWebAppSettings.AppSettings.GetAllowedOrganizations();
+                if(AllowedOrgs.Length == 0)
+                {
+                    //If the organizations are not specified then use the default role assigned to the user
+                    Roles = validation.Claims.Where(c => c.Type == "role").Select(r => r.Value).ToArray();
+                }
+                else if (IsUserInAllowedOrganization(AllowedOrgs, validation.Claims))
+                {
+                    //Users have the normal permissions if they are in an allowed organization
+                    Roles = validation.Claims.Where(c => c.Type == "role").Select(r => r.Value).ToArray();
+                }
+                else
+                {
+                    //Users not in an allowed organization can only read
+                    Roles = new string[] {"Reader"};
+                }
+                
                 GenericIdentity genericIdentity = new GenericIdentity(userNameClaim);
                 GenericPrincipal principal = new GenericPrincipal(genericIdentity, Roles);
                 message.Properties["Principal"] = principal;
@@ -82,8 +110,28 @@ namespace Annotation.Identity
 
             return authPolicy;
         }
-         
+
+        private static GenericPrincipal CreateAnonymousUser()
+        {
+            GenericIdentity genericIdentity = new GenericIdentity("anonymous");
+            GenericPrincipal principal = new GenericPrincipal(genericIdentity, new string[] { "Reader" });
+            return principal;
+        }
+
+        private static bool IsUserInAllowedOrganization(string[] AllowedOrgs, IEnumerable<System.Security.Claims.Claim> claims)
+        {
+            List<string> organizationClaims = claims.Where(c => c.Type == "affiliation").Select(c => c.Value).ToList();
+            foreach(string orgClaim in organizationClaims)
+            {
+                if (AllowedOrgs.Contains(orgClaim))
+                    return true;
+            }
+
+            return false;
+        }
     }
+
+
 
 
     public class RoleAuthorizationManager : ServiceAuthorizationManager

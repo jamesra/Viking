@@ -18,7 +18,6 @@ using IdentityServer.Services;
 
 namespace IdentityServer.Controllers
 {
-    [Authorize(Roles = "Admin")]
     [Route("[controller]/[action]")]
     public class ApplicationRolesController : Controller
     {
@@ -64,6 +63,7 @@ namespace IdentityServer.Controllers
         // more details see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Access Manager")]
         public async Task<IActionResult> Create([Bind("Id,Name,NormalizedName,ConcurrencyStamp")] ApplicationRole applicationRole)
         {
             if (ModelState.IsValid)
@@ -96,6 +96,7 @@ namespace IdentityServer.Controllers
         // more details see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Access Manager")]
         public async Task<IActionResult> Edit(string id, [Bind("Id,Name,NormalizedName,ConcurrencyStamp")] ApplicationRole applicationRole)
         {
             if (id != applicationRole.Id)
@@ -147,6 +148,7 @@ namespace IdentityServer.Controllers
         // POST: ApplicationRoles/Delete/5
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Access Manager")]
         public async Task<IActionResult> DeleteConfirmed(string id)
         {
             var applicationRole = await _context.ApplicationRole.SingleOrDefaultAsync(m => m.Id == id);

@@ -11,8 +11,7 @@ using Microsoft.AspNetCore.Authorization;
 using IdentityServer.Models.UserViewModels;
 
 namespace IdentityServer.Controllers
-{
-    [Authorize(Roles = "Admin")]
+{ 
     [Route("[controller]/[action]")]
     public class ApplicationUsersController : Controller
     {
@@ -90,6 +89,7 @@ namespace IdentityServer.Controllers
         // more details see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Access Manager")]
         public async Task<IActionResult> Edit(string id, [Bind("Id,FamilyName,GivenName,UserName,NormalizedUserName,Email,NormalizedEmail,EmailConfirmed,PasswordHash,SecurityStamp,ConcurrencyStamp,PhoneNumber,PhoneNumberConfirmed,TwoFactorEnabled,LockoutEnd,LockoutEnabled,AccessFailedCount")] ApplicationUser applicationUser)
         {
             if (id != applicationUser.Id)
@@ -156,6 +156,7 @@ namespace IdentityServer.Controllers
         // more details see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Access Manager")]
         public async Task<IActionResult> EditOrganizations(string id, [Bind("Id, Name")] UserOrganizationsViewModel applicationUser, [Bind] IEnumerable<OrganizationSelectedViewModel> UserOrganizations)
         {
             if (id != applicationUser.Id)
@@ -215,6 +216,7 @@ namespace IdentityServer.Controllers
         // POST: ApplicationUsers/Delete/5
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Access Manager")]
         public async Task<IActionResult> DeleteConfirmed(string id)
         {
             var applicationUser = await _context.ApplicationUser.SingleOrDefaultAsync(m => m.Id == id);

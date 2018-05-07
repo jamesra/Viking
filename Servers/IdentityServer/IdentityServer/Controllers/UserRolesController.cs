@@ -20,7 +20,7 @@ using IdentityServer.Models.UserViewModels;
 
 namespace IdentityServer.Controllers
 {
-    [Authorize(Roles = "Admin")]
+ 
     [Route("[controller]/[action]")]
     public class UserRolesController : Controller
     {
@@ -101,6 +101,7 @@ namespace IdentityServer.Controllers
         // POST: UserRoles/Edit/5
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Access Manager")]
         public ActionResult Edit(UserRolesViewModel id, IFormCollection collection)
         {
             try

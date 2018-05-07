@@ -58,7 +58,19 @@ namespace VikingWebAppSettings
             return GetConnectionString(GetDefaultDatabaseConnectionStringName());
         }
 
-        
+        public static string[] GetAllowedOrganizations()
+        {
+            return GetStringList("AllowedOrganizations");
+        }
+
+        public static string[] GetStringList(string name)
+        {
+            string setting = GetApplicationSetting(name);
+            if (setting == null)
+                return new string[0];
+
+            return setting.Split(';').Select(s => s.Trim()).Where(s => s.Length > 0).ToArray();
+        }
 
         public static string GetConnectionString(string name)
         { 

@@ -44,7 +44,7 @@ namespace IdentityServer.Extensions
             {
                 switch (claimType)
                 {
-                    case "Affiliation":
+                    case "affiliation":
                     {
                         var OrgAssignments = _Dbcontext.OrganizationAssignments.Include("Organization").Where(oa => oa.UserId == user.Id).ToList();
                         foreach(OrganizationAssignment oa in OrgAssignments)

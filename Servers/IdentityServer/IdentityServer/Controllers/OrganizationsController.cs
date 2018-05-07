@@ -8,6 +8,8 @@ using Microsoft.EntityFrameworkCore;
 using IdentityServer.Data;
 using IdentityServer.Models;
 using IdentityServer.Models.UserViewModels;
+using Microsoft.AspNetCore.Authorization;
+
 
 namespace IdentityServer.Controllers
 {
@@ -56,6 +58,7 @@ namespace IdentityServer.Controllers
         // more details see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Access Manager")]
         public async Task<IActionResult> Create([Bind("Id,Name")] Organization organization)
         {
             if (ModelState.IsValid)
@@ -101,6 +104,7 @@ namespace IdentityServer.Controllers
         // more details see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Access Manager")]
         public async Task<IActionResult> Edit(long id, [Bind("Id,Name,ShortName")] OrganizationDetailsViewModel organizationDetails, [Bind] IEnumerable<UserSelectedViewModel> usersSelected)
         {
             if (id != organizationDetails.Id)
@@ -190,6 +194,7 @@ namespace IdentityServer.Controllers
         // POST: Organizations/Delete/5
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Access Manager")]
         public async Task<IActionResult> DeleteConfirmed(long id)
         {
             var organization = await _context.Organization.SingleOrDefaultAsync(m => m.Id == id);
