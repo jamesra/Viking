@@ -12,13 +12,14 @@
 
         <td>
             @Html.DisplayFor(model => model.Username)
-        </td> 
+        </td>
 
         @foreach (var role in Model.AvailableRoles)
         {
-            <td>
-                    @Html.CheckBox(@role.Id, Model.Roles.Contains(role.Id), new { onclick = "this.form.submit();" })          
-            </td>
-        } 
+        <td> 
+            @Html.CheckBox(@role.Id, Model.Roles.Contains(role.Id), new { onclick = "this.form.submit();", @disabled = "disabled" })
+
+        </td>
+        }
     }
 </div>

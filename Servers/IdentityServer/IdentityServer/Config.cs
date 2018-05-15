@@ -8,6 +8,7 @@ namespace IdentityServer
 {
     public static class Config
     {
+        public static string AdminRoleName = "Access Manager";
         // scopes define the resources in your system
         public static IEnumerable<IdentityResource> GetIdentityResources()
         { 

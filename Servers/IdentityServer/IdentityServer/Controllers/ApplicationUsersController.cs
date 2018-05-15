@@ -84,14 +84,33 @@ namespace IdentityServer.Controllers
             return View(applicationUser);
         }
 
+        private bool IsUserAnAdminOrSelf(string UserId)
+        {
+            if (!this.User.IsInRole("Access Manager"))
+            {
+                var originalUsername = _context.ApplicationUser.Where(u => u.Id == UserId).Select(u => u.Email).FirstOrDefault();
+                if (!(this.User.Identity.Name == originalUsername))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
         // POST: ApplicationUsers/Edit/5
         // To protect from overposting attacks, please enable the specific properties you want to bind to, for 
         // more details see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Roles = "Access Manager")]
         public async Task<IActionResult> Edit(string id, [Bind("Id,FamilyName,GivenName,UserName,NormalizedUserName,Email,NormalizedEmail,EmailConfirmed,PasswordHash,SecurityStamp,ConcurrencyStamp,PhoneNumber,PhoneNumberConfirmed,TwoFactorEnabled,LockoutEnd,LockoutEnabled,AccessFailedCount")] ApplicationUser applicationUser)
         {
+            //Ensure the user is in the Access manager role or the owner of the account
+            if(!this.User.Identity.IsAuthenticated)
+            {
+                return Unauthorized();
+            }
+              
             if (id != applicationUser.Id)
             {
                 return NotFound();
@@ -99,6 +118,12 @@ namespace IdentityServer.Controllers
 
             if (ModelState.IsValid)
             {
+                //Ensure that only admins can edit, and that users can edit their own page
+                if(!IsUserAnAdminOrSelf(id))
+                {
+                    return Unauthorized();
+                }
+
                 try
                 {
                     _context.Update(applicationUser);

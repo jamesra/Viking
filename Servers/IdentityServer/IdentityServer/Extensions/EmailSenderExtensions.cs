@@ -11,8 +11,14 @@ namespace IdentityServer.Services
     {
         public static Task SendEmailConfirmationAsync(this IEmailSender emailSender, string email, string link)
         {
-            return emailSender.SendEmailAsync(email, "Confirm your email",
+            return emailSender.SendEmailAsync(new string[] { email }, "Confirm your email",
                 $"Please confirm your account by clicking this link: <a href='{HtmlEncoder.Default.Encode(link)}'>link</a>");
+        }
+
+        public static Task SendUserRegistrationAdminNotificationAsync(this IEmailSender emailSender, string[] emails, string NewUsername, string[] RequestedOrganizations)
+        {
+            return emailSender.SendEmailAsync(emails, "Viking User registration",
+                $"Please confirm your account by clicking this link:");
         }
     }
 }

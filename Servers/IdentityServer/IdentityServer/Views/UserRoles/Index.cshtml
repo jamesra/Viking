@@ -21,7 +21,7 @@
                     {
                         <th>
                             @role.Name
-                        </th> 
+                        </th>
                     }
                 }
             }
@@ -31,8 +31,16 @@
     <tbody>
         @foreach (var item in Model)
         {
+
             <tr>
-                @Html.Partial("View", item)
+                @if (User.IsInRole("Access Manager"))
+                {
+                    @Html.Partial("View", item)
+                }
+                else
+                {
+                    @Html.Partial("ReadOnlyUserRolesView", item)
+                }
             </tr>
         }
     </tbody>

@@ -129,9 +129,16 @@
                     @Html.DisplayFor(modelItem => item.AccessFailedCount)
                 </td>
                 <td>
-                    <a asp-action="Edit" asp-route-id="@item.Id">Edit</a> |
-                    <a asp-action="Details" asp-route-id="@item.Id">Details</a> |
-                    <a asp-action="Delete" asp-route-id="@item.Id">Delete</a>
+                    @if (this.User.IsInRole("Access Manager") || this.User.Identity.Name == item.UserName)
+                    {
+                        <a asp-action="Edit" asp-route-id="@item.Id">Edit</a> @Html.Raw("|")
+                    }
+                    <a asp-action="Details" asp-route-id="@item.Id"> Details </a>
+                    @if (this.User.IsInRole("Access Manager") || this.User.Identity.Name == item.UserName)
+                    {
+                        <a asp-action="Delete" asp-route-id="@item.Id"> Delete </a>
+                    }
+
                 </td>
             </tr>
         }

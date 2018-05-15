@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Net.Mail;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Logging;
 
 namespace IdentityServer.Services
 {
@@ -25,15 +26,37 @@ namespace IdentityServer.Services
     // For more details see https://go.microsoft.com/fwlink/?LinkID=532713
     public class EmailSender : IEmailSender
     {
-        public EmailSender(IOptions<SMTPOptions> optionsAccessor)
+        ILogger<EmailSender> Log; 
+
+        public EmailSender(IOptions<SMTPOptions> optionsAccessor, ILogger<EmailSender> logger)
         {
             Options = optionsAccessor.Value;
+
+            if (string.IsNullOrEmpty(Options.SourceEmail))
+            {
+                logger.LogError("SMTP.SourceEmail configuration parameter not specified.");
+            }
+
+            if(string.IsNullOrEmpty(Options.Server))
+            {
+                logger.LogError("SMTP.Server configuration parameter not specified.");
+            }
+
+            Log = logger;
         }
 
         public SMTPOptions Options { get; }
 
-        public Task SendEmailAsync(string emailAddress, string subject, string message)
+        public Task SendEmailAsync(string[] emailAddresses, string subject, string message)
         {
+            if (emailAddresses == null || emailAddresses.Length == 0)
+                return Task.CompletedTask;
+
+            if(string.IsNullOrEmpty(Options.SourceEmail) || string.IsNullOrEmpty(Options.Server))
+            {
+                throw new ArgumentException("Required SMTP parameters not configured.  Check the log.");
+            }
+
             using (SmtpClient ss2 = new SmtpClient(Options.Server))
             {
 
@@ -63,14 +86,17 @@ namespace IdentityServer.Services
 
                 using (MailMessage madmin = new MailMessage())
                 {
-
+                    
                     madmin.From = new MailAddress(Options.SourceEmail, Options.SourceDisplayName);
 
                     madmin.Subject = subject;
 
                     madmin.Body = message;
 
-                    madmin.To.Add(new MailAddress(emailAddress));
+                    foreach (string email in emailAddresses)
+                    {
+                        madmin.To.Add(new MailAddress(email));
+                    }
 
                     madmin.IsBodyHtml = Options.UseHTML;
 

@@ -9,10 +9,14 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using IdentityServer.Models;
 using IdentityServer.Models.ManageViewModels;
 using IdentityServer.Services;
+using IdentityServer.Models.UserViewModels;
+using IdentityServer.Data;
+using IdentityServer.Extensions;
 
 namespace IdentityServer.Controllers
 {
@@ -25,6 +29,7 @@ namespace IdentityServer.Controllers
         private readonly IEmailSender _emailSender;
         private readonly ILogger _logger;
         private readonly UrlEncoder _urlEncoder;
+        private readonly ApplicationDbContext _context;
 
         private const string AuthenticatorUriFormat = "otpauth://totp/{0}:{1}?secret={2}&issuer={0}&digits=6";
         private const string RecoveryCodesKey = nameof(RecoveryCodesKey);
@@ -33,6 +38,7 @@ namespace IdentityServer.Controllers
           UserManager<ApplicationUser> userManager,
           SignInManager<ApplicationUser> signInManager,
           IEmailSender emailSender,
+          ApplicationDbContext context,
           ILogger<ManageController> logger,
           UrlEncoder urlEncoder)
         {
@@ -41,6 +47,7 @@ namespace IdentityServer.Controllers
             _emailSender = emailSender;
             _logger = logger;
             _urlEncoder = urlEncoder;
+            _context = context;
         }
 
         [TempData]
@@ -103,6 +110,95 @@ namespace IdentityServer.Controllers
             }
 
             StatusMessage = "Your profile has been updated";
+            return RedirectToAction(nameof(Index));
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> RequestClaims()
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+            {
+                throw new ApplicationException($"Unable to load user with ID '{_userManager.GetUserId(User)}'.");
+            }
+
+            UserClaimRequestViewModel claimsRequest = user.CreateUserClaimsRequest(_context);
+
+            return View(claimsRequest);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> RequestClaims([Bind("UserId, AvailableRoles, AvailableOrganizations")] UserClaimRequestViewModel requestor)
+        {
+            //Send an E-mail to the admins requesting new claims
+            var User = _context.ApplicationUser.FirstOrDefault(u => u.Id == requestor.UserId);
+
+            var Roles = requestor.AvailableRoles;
+            var Organizations = requestor.AvailableOrganizations;
+
+
+            var AdminUsers = _context.GetAdminUsers();
+
+            UserClaimRequestViewModel ExistingClaims = User.CreateUserClaimsRequest(_context);
+
+            var ExistingOrganziationClaims = ExistingClaims.AvailableOrganizations.Where(o => o.Selected).ToList();
+            var ExistingRoleClaims = ExistingClaims.AvailableRoles.Where(r => r.Selected).ToList();
+
+            List<string> InvolvedAdmins = new List<string>();
+
+            Dictionary<long, List<ApplicationUser>> OrgAdmins = _context.GetOrganizationAdminMap();
+
+            //Create the message
+            string message = string.Format("{0} is requesting additional claims\n\n", User.UserName);
+            string RoleMessage = "";
+            string OrgMessage = "";
+
+            if (Roles.Any(r => r.Selected))
+            {
+                RoleMessage = "Roles:\n";
+                foreach (var role in Roles.Where(r => r.Selected && !ExistingRoleClaims.Any(erc => erc.Id == r.Id)))
+                {
+                    RoleMessage += string.Format("\t{0}\n", role.Name);
+                }
+            }
+
+            if(Organizations.Any(o => o.Selected))
+            {
+                OrgMessage = "Organizations:\n";
+                foreach (var org in Organizations.Where(o => o.Selected && !ExistingOrganziationClaims.Any(oa => oa.Id == o.Id)))
+                {
+                    InvolvedAdmins.AddRange(OrgAdmins[org.Id].Select(u => u.Email));
+                    OrgMessage += string.Format("\t{0}\n", org.Name);
+                }
+            }
+
+            message += RoleMessage + OrgMessage;
+
+            try
+            {
+                if (InvolvedAdmins.Count > 0)
+                {
+                    await this._emailSender.SendEmailAsync(InvolvedAdmins.ToArray(), string.Format("{0} claim request", User.UserName), message);
+                }
+                else
+                {
+                    await this._emailSender.SendEmailAsync(AdminUsers.Select(a => a.Email).ToArray(), string.Format("{0} claim request", User.UserName), message);
+                }
+            }
+            catch(System.Net.Mail.SmtpException smtpException)
+            {
+                StatusMessage = "Error sending message.  Please contact an administrator:\n";
+                foreach(var admin in AdminUsers)
+                {
+                    StatusMessage += "\t" + admin.Email + "\n";
+                }
+
+                return RedirectToAction(nameof(Index));
+            }
+
+            StatusMessage = "Your request has been sent";
+
             return RedirectToAction(nameof(Index));
         }
 

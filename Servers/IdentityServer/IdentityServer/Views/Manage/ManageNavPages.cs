@@ -17,6 +17,8 @@ namespace IdentityServer.Views.Manage
 
         public static string ExternalLogins => "ExternalLogins";
 
+        public static string RequestClaims => "RequestClaims";
+
         public static string TwoFactorAuthentication => "TwoFactorAuthentication";
 
         public static string IndexNavClass(ViewContext viewContext) => PageNavClass(viewContext, Index);
@@ -26,7 +28,9 @@ namespace IdentityServer.Views.Manage
         public static string ExternalLoginsNavClass(ViewContext viewContext) => PageNavClass(viewContext, ExternalLogins);
 
         public static string TwoFactorAuthenticationNavClass(ViewContext viewContext) => PageNavClass(viewContext, TwoFactorAuthentication);
-    
+
+        public static string RequestClaimsNavClass(ViewContext viewContext) => PageNavClass(viewContext, RequestClaims);
+
         public static string PageNavClass(ViewContext viewContext, string page)
         {
             var activePage = viewContext.ViewData["ActivePage"] as string;
