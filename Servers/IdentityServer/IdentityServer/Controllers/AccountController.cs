@@ -14,6 +14,7 @@ using IdentityServer.Models;
 using IdentityServer.Models.AccountViewModels;
 using IdentityServer.Services;
 using IdentityServer.Data;
+using Microsoft.AspNetCore.Hosting;
 
 namespace IdentityServer.Controllers
 {
@@ -26,13 +27,15 @@ namespace IdentityServer.Controllers
         private readonly IEmailSender _emailSender;
         private readonly ILogger _logger;
         private readonly ApplicationDbContext _context;
+        private readonly IHostingEnvironment _env;
 
         public AccountController(
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
             IEmailSender emailSender,
             ApplicationDbContext context,
-            ILogger<AccountController> logger)
+            ILogger<AccountController> logger,
+            IHostingEnvironment env)
         {
             _userManager = userManager;
             _signInManager = signInManager;
@@ -65,7 +68,7 @@ namespace IdentityServer.Controllers
             {
                 // This doesn't count login failures towards account lockout
                 // To enable password failures to trigger account lockout, set lockoutOnFailure: true
-                var result = await _signInManager.PasswordSignInAsync(model.Email, model.Password, model.RememberMe, lockoutOnFailure: false);
+                var result = await _signInManager.PasswordSignInAsync(model.Username, model.Password, model.RememberMe, lockoutOnFailure: false);
                 if (result.Succeeded)
                 {
                     _logger.LogInformation("User logged in.");
@@ -224,16 +227,18 @@ namespace IdentityServer.Controllers
             ViewData["ReturnUrl"] = returnUrl;
             if (ModelState.IsValid)
             {
-                var user = new ApplicationUser { UserName = model.Email, Email = model.Email};
+                var user = new ApplicationUser { UserName = model.Username, Email = model.Email, GivenName = model.GivenName, FamilyName = model.FamilyName};
                 var result = await _userManager.CreateAsync(user, model.Password);
                 if (result.Succeeded)
                 {
-                    await _userManager.AddClaimAsync(user, new Claim("Organization", model.Organization));
                     _logger.LogInformation("User created a new account with password.");
 
-                    var code = await _userManager.GenerateEmailConfirmationTokenAsync(user);
-                    var callbackUrl = Url.EmailConfirmationLink(user.Id, code, Request.Scheme);
-                    await _emailSender.SendEmailConfirmationAsync(model.Email, callbackUrl);
+                    if (!_env.IsDevelopment())
+                    {
+                        var code = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+                        var callbackUrl = Url.EmailConfirmationLink(user.Id, code, Request.Scheme);
+                        await _emailSender.SendEmailConfirmationAsync(model.Email, callbackUrl);
+                    }
 
                     await _signInManager.SignInAsync(user, isPersistent: false);
                     _logger.LogInformation("User created a new account with password.");

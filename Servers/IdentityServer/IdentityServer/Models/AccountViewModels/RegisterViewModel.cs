@@ -9,6 +9,11 @@ namespace IdentityServer.Models.AccountViewModels
     public class RegisterViewModel
     {
         [Required]
+        [StringLength(100, ErrorMessage = "The {0} must be at least {2} and at max {1} characters long.", MinimumLength = 6)]
+        [Display(Name = "Username")]
+        public string Username { get; set; }
+
+        [Required]
         [EmailAddress]
         [Display(Name = "Email")]
         public string Email { get; set; }
@@ -24,9 +29,14 @@ namespace IdentityServer.Models.AccountViewModels
         [Compare("Password", ErrorMessage = "The password and confirmation password do not match.")]
         public string ConfirmPassword { get; set; }
 
-        [Required]
-        [StringLength(100, ErrorMessage = "The {0} must be at least {2} and at max {1} characters long.", MinimumLength = 1)]
-        [Display(Name = "Organization")]
-        public string Organization { get; set; }
+        [DataType(DataType.Text)]
+        [Required(AllowEmptyStrings = false)]
+        [Display(Name = "First Name", Description = "Given Name")]
+        public string GivenName { get; set; }
+
+        [DataType(DataType.Text)]
+        [Required(AllowEmptyStrings = false)]
+        [Display(Name = "Last Name", Description = "Family Name")]
+        public string FamilyName { get; set; }
     }
 }
