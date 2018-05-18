@@ -233,11 +233,18 @@ namespace IdentityServer.Controllers
                 {
                     _logger.LogInformation("User created a new account with password.");
 
-                    if (!_env.IsDevelopment())
+                    try
                     {
-                        var code = await _userManager.GenerateEmailConfirmationTokenAsync(user);
-                        var callbackUrl = Url.EmailConfirmationLink(user.Id, code, Request.Scheme);
-                        await _emailSender.SendEmailConfirmationAsync(model.Email, callbackUrl);
+                        if (_env == null || !_env.IsDevelopment())
+                        {
+                            var code = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+                            var callbackUrl = Url.EmailConfirmationLink(user.Id, code, Request.Scheme);
+                            await _emailSender.SendEmailConfirmationAsync(model.Email, callbackUrl);
+                        }
+                    }
+                    catch (System.Net.Mail.SmtpException e)
+                    {
+                        _logger.LogError("SMTP Error sending confirmation E-mail.\n" + e.ToString());
                     }
 
                     await _signInManager.SignInAsync(user, isPersistent: false);
@@ -346,6 +353,7 @@ namespace IdentityServer.Controllers
         {
             if (userId == null || code == null)
             {
+                _logger.LogInformation("Confirm E-mail response for missing user {name}.", userId);
                 return RedirectToAction(nameof(HomeController.Index), "Home");
             }
             var user = await _userManager.FindByIdAsync(userId);
@@ -359,7 +367,7 @@ namespace IdentityServer.Controllers
             if(result.Succeeded)
             {
                 //Ask the user what organization and roles they'd like
-
+                return RedirectToAction(nameof(ManageController.RequestClaims), "Manage");
             }
 
             return View(result.Succeeded ? "ConfirmEmail" : "Error");

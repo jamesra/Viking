@@ -150,27 +150,29 @@ namespace IdentityServer.Controllers
             Dictionary<long, List<ApplicationUser>> OrgAdmins = _context.GetOrganizationAdminMap();
 
             //Create the message
-            string message = string.Format("{0} is requesting additional claims\n\n", User.UserName);
+            string message = string.Format("<p>{0} is requesting additional claims</p>", User.UserName);
             string RoleMessage = "";
             string OrgMessage = "";
 
             if (Roles.Any(r => r.Selected))
             {
-                RoleMessage = "Roles:\n";
+                RoleMessage = "<p>Roles:</p><list>";
                 foreach (var role in Roles.Where(r => r.Selected && !ExistingRoleClaims.Any(erc => erc.Id == r.Id)))
                 {
-                    RoleMessage += string.Format("\t{0}\n", role.Name);
+                    RoleMessage += string.Format("<li>{0}</li>", role.Name);
                 }
+                RoleMessage += "</list>";
             }
 
             if(Organizations.Any(o => o.Selected))
             {
-                OrgMessage = "Organizations:\n";
+                OrgMessage = "<p>Organizations:</p><list>";
                 foreach (var org in Organizations.Where(o => o.Selected && !ExistingOrganziationClaims.Any(oa => oa.Id == o.Id)))
                 {
                     InvolvedAdmins.AddRange(OrgAdmins[org.Id].Select(u => u.Email));
-                    OrgMessage += string.Format("\t{0}\n", org.Name);
+                    OrgMessage += string.Format("<li>{0}</li>", org.Name);
                 }
+                RoleMessage += "</list>";
             }
 
             message += RoleMessage + OrgMessage;

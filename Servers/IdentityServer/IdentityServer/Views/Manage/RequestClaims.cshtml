@@ -5,7 +5,7 @@
     ViewData.AddActivePage(ManageNavPages.RequestClaims);
 }
  
-<p> Select the roles and organizations you want to claim.  The request will be sent to the site administrators for review.</p>
+<p> Please select the roles and organization claims you would like to make.  The request will be sent to the site administrators for review.  Your claims are used to determine permissions in the system.</p>
 
 <div class="row">
     <div class="col-md-4">
@@ -15,33 +15,36 @@
             <div asp-validation-summary="ModelOnly" class="text-danger"></div>
             <div class="form-group">
                 <h4> Roles </h4>
-                @for (int i = 0; i < Model.AvailableRoles.Count(); i++)
-                {
-                    <tr>
-                        <td>
-                            @Html.HiddenFor(x => Model.AvailableRoles[i].Id)
-                            @Html.HiddenFor(x => Model.AvailableRoles[i].Name)
-                            @Html.CheckBoxFor(x => Model.AvailableRoles[i].Selected, Model.AvailableRoles[i].Name)
-                            @Html.DisplayFor(x => Model.AvailableRoles[i].Name)
-                        </td>
-                    </tr>
-                }
+                <table>
+                    @for (int i = 0; i < Model.AvailableRoles.Count(); i++)
+                    {
+                        <tr>
+                            <td>
+                                @Html.HiddenFor(x => Model.AvailableRoles[i].Id)
+                                @Html.HiddenFor(x => Model.AvailableRoles[i].Name)
+                                @Html.CheckBoxFor(x => Model.AvailableRoles[i].Selected, Model.AvailableRoles[i].Name)
+                                @Html.DisplayFor(x => Model.AvailableRoles[i].Name)
+                            </td>
+                        </tr>
+                    }
+                </table>
                 <hr />
             </div>
             <div class="form-group">
                 <h4> Organizations </h4>
-
-                @for (int i = 0; i < Model.AvailableOrganizations.Count(); i++)
-                {
-                    <tr>
-                        <td>
-                            @Html.HiddenFor(x => Model.AvailableOrganizations[i].Id)
-                            @Html.HiddenFor(x => Model.AvailableOrganizations[i].Name)
-                            @Html.CheckBoxFor(x => Model.AvailableOrganizations[i].Selected, Model.AvailableOrganizations[i].Name)
-                            @Html.DisplayFor(x => Model.AvailableOrganizations[i].Name)
-                        </td>
-                    </tr>
-                }
+                <table>
+                    @for (int i = 0; i < Model.AvailableOrganizations.Count(); i++)
+                    {
+                        <tr>
+                            <td>
+                                @Html.HiddenFor(x => Model.AvailableOrganizations[i].Id)
+                                @Html.HiddenFor(x => Model.AvailableOrganizations[i].Name)
+                                @Html.CheckBoxFor(x => Model.AvailableOrganizations[i].Selected, Model.AvailableOrganizations[i].Name)
+                                @Html.DisplayFor(x => Model.AvailableOrganizations[i].Name)
+                            </td>
+                        </tr>
+                    }
+                </table>
                 <hr />
             </div>
             <input type="submit" value="Request Claims" class="btn btn-default" />

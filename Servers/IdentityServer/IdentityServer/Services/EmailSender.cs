@@ -67,7 +67,7 @@ namespace IdentityServer.Services
 
                 if (Options.Timeout.HasValue)
                 {
-                    ss2.Timeout = Options.Timeout.Value;
+                    ss2.Timeout = Options.Timeout.Value * 1000;
                 }
 
                 ss2.DeliveryMethod = SmtpDeliveryMethod.Network;
@@ -104,6 +104,8 @@ namespace IdentityServer.Services
 
                     ss2.Send(madmin);
                 }
+
+                ss2.Dispose(); 
             }
 
             return Task.CompletedTask;
