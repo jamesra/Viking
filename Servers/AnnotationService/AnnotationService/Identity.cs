@@ -53,7 +53,7 @@ namespace Annotation.Identity
             string IdentityServerEndpoint = VikingWebAppSettings.AppSettings.GetIdentityServerURLString();
             int iBearer = message.Headers.FindHeader("Bearer", IdentityServerEndpoint);
 
-             
+
             if (iBearer >= 0 && iBearer <= 5)
             {
                 var AccessToken = message.Headers.GetHeader<string>(iBearer);
@@ -71,7 +71,7 @@ namespace Annotation.Identity
                 }
 
                 var IsActive = validation.Claims.FirstOrDefault(c => c.Type == "active");
-                if(IsActive?.Value != "True")
+                if (IsActive?.Value != "True")
                 {
                     message.Properties["Principal"] = CreateAnonymousUser();
                     return authPolicy;
@@ -86,7 +86,7 @@ namespace Annotation.Identity
 
                 string[] Roles;
                 string[] AllowedOrgs = VikingWebAppSettings.AppSettings.GetAllowedOrganizations();
-                if(AllowedOrgs.Length == 0)
+                if (AllowedOrgs.Length == 0)
                 {
                     //If the organizations are not specified then use the default role assigned to the user
                     Roles = validation.Claims.Where(c => c.Type == "role").Select(r => r.Value).ToArray();
@@ -99,13 +99,17 @@ namespace Annotation.Identity
                 else
                 {
                     //Users not in an allowed organization can only read
-                    Roles = new string[] {"Reader"};
+                    Roles = new string[] { "Reader" };
                 }
-                
+
                 GenericIdentity genericIdentity = new GenericIdentity(userNameClaim);
                 GenericPrincipal principal = new GenericPrincipal(genericIdentity, Roles);
                 message.Properties["Principal"] = principal;
-           //     Thread.CurrentPrincipal = principal;
+                //     Thread.CurrentPrincipal = principal;
+            }
+            else
+            {
+                message.Properties["Principal"] = CreateAnonymousUser();
             }
 
             return authPolicy;
