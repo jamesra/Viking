@@ -16,7 +16,7 @@
   </PropertyGroup>
   <PropertyGroup>
     <PublishUrlHistory>C:\Src\git\Viking\Publish\|X:\Volumes\Software\Viking4\|C:\Src\Viking\Publish\|D:\Src\Viking\Publish\|X:\Volumes\SoftwareTest\</PublishUrlHistory>
-    <InstallUrlHistory>http://connectomes.utah.edu/Software/Viking4/|http://connectomes.utah.edu/SoftwareTest/|http://connectomes.utah.edu/Software/|http://localhost/Software/|http://localhost/</InstallUrlHistory>
+    <InstallUrlHistory>https://connectomes.utah.edu/Software/Viking4/|http://connectomes.utah.edu/Software/Viking4/|http://connectomes.utah.edu/SoftwareTest/|http://connectomes.utah.edu/Software/|http://localhost/Software/</InstallUrlHistory>
     <SupportUrlHistory>http://connectomes.utah.edu/</SupportUrlHistory>
     <UpdateUrlHistory>
     </UpdateUrlHistory>
