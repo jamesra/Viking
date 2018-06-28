@@ -11,6 +11,8 @@ using System.Diagnostics;
 using System.Collections.Specialized;
 using System.Collections.Concurrent;
 using System.ComponentModel;
+using AnnotationService.Types;
+using Microsoft.SqlServer.Types;
 
 
 namespace WebAnnotationModelTest
@@ -37,7 +39,7 @@ namespace WebAnnotationModelTest
 
         private LocationObj NewPopulatedLocation(StructureObj parent)
         {
-            return  new LocationObj(parent, new Geometry.GridVector2(0, 0), new Geometry.GridVector2(0, 0), 0);
+            return  new LocationObj(parent, SqlGeometry.Point(0, 0, 0), SqlGeometry.Point(0, 0, 0), 0, LocationType.POINT);
         }
 
         [TestMethod]
@@ -302,7 +304,7 @@ namespace WebAnnotationModelTest
 
             StructureTypeObj cellType = Store.StructureTypes.GetObjectByID(1);
             StructureObj structObj = new StructureObj(cellType); 
-            LocationObj locObj = new LocationObj(structObj, new Geometry.GridVector2(0,0), new Geometry.GridVector2(0,0), 1);
+            LocationObj locObj = new LocationObj(structObj, SqlGeometry.Point(0,0,0), SqlGeometry.Point(0,0,0), 1, LocationType.POINT);
             try
             {
                 structObj = Store.Structures.Create(structObj, locObj, out locObj);
@@ -315,7 +317,7 @@ namespace WebAnnotationModelTest
                 TestLocationPropertyEvents(locObj); 
 
                 //
-                LocationObj linkedLoc = new LocationObj(structObj, new Geometry.GridVector2(1, 1), new Geometry.GridVector2(1, 1), 2);
+                LocationObj linkedLoc = new LocationObj(structObj, SqlGeometry.Point(1, 1, 0), SqlGeometry.Point(1, 1, 0), 2, LocationType.POINT);
                 linkedLoc = Store.Locations.Create(linkedLoc, new long[] { locObj.ID });
 
                 LocationEventLog.PopObjectAddedEvent(linkedLoc);
