@@ -153,7 +153,6 @@
     <ProjectReference Include="..\..\MonogameXNAGraphicsShared\VikingXNAGraphics.csproj">
       <Project>{7ede0b00-89f9-4ef5-a629-2ed66cee273b}</Project>
       <Name>VikingXNAGraphics</Name>
-      <Private>False</Private>
     </ProjectReference>
     <ProjectReference Include="..\..\VolumeModel\VolumeModel.csproj">
       <Project>{2eba2a77-f7f0-4efc-ac06-a12fe249388f}</Project>
