@@ -901,6 +901,12 @@ namespace WebAnnotation
                 return;
             }
 
+            if(loc.Z != this.CurrentSectionNumber)
+            {
+                Trace.WriteLine("Mouse over object on incorrect section to convert type");
+                return;
+            }
+
             GridVector2 SectionPos;
             bool success = Parent.Section.ActiveSectionToVolumeTransform.TryVolumeToSection(LastMouseMoveVolumeCoords, out SectionPos);
             Debug.Assert(success);
@@ -948,6 +954,7 @@ namespace WebAnnotation
                     }
 
                     Viking.UI.State.SelectedObject = null;
+                    LastMouseOverObject = null; 
                     Global.LastEditedAnnotationID = null;
                 }
             }
