@@ -39,7 +39,7 @@ namespace MorphologyMesh
     {
         UNKNOWN = 0x00,
         INVALID = 0x10, //An edge that cannot be part of the final surface
-        VALID = 0x01,
+        VALID = 0x01,   //An edge that could be a valid slice chord
 
         CONTOUR = 0x11, //An edge along the contour, part of either the exterior or inner ring
         SURFACE = 0x21, //An edge that crosses from one Z-LEVEL to another and is part of the surface
@@ -88,12 +88,17 @@ namespace MorphologyMesh
 
         public static EdgeType GetEdgeType(this GridLineSegment line, GridPolygon A, GridPolygon B)
         {
-            bool midInA = line.Crosses(A);
-            bool midInB = line.Crosses(B);
+            GridVector2 midpoint = line.PointAlongLine(0.5);
+           // bool midInA = A.Contains(midpoint);
+           // bool midInB = B.Contains(midpoint);
+            bool lineCrossesA = line.Crosses(A);
+            bool lineCrossesB = line.Crosses(B);
+           // bool lineInA = A.Contains(line);
+           // bool lineInB = B.Contains(line);
 
-            if (!(midInA ^ midInB)) //Midpoint in both or neither polygon. Line may be on exterior surface
+            if (!(lineCrossesA ^ lineCrossesB)) //Midpoint in both or neither polygon. Line may be on exterior surface
             {
-                if (midInA && midInB)
+                if (lineCrossesA && lineCrossesB)
                     return EdgeType.INTERNAL; //Line is inside the final mesh. Cannot be on surface.
                 else
                 {
@@ -105,48 +110,7 @@ namespace MorphologyMesh
                 return EdgeType.SURFACE;
             }
         }
-
-        public static bool OrientationsAreMatched(PointIndex APoly, PointIndex BPoly, IReadOnlyList<GridPolygon> Polygons)
-        {
-            GridVector2 p1 = APoly.Point(Polygons);
-            GridVector2 p2 = BPoly.Point(Polygons);
-
-            GridVector2[] adjacent1 = APoly.ConnectedVerticies(Polygons);
-            GridLineSegment ALine = new GridLineSegment(adjacent1[0], adjacent1[1]);
-
-            GridVector2[] adjacent2 = BPoly.ConnectedVerticies(Polygons);
-            GridLineSegment BLine = new GridLineSegment(adjacent2[0], adjacent2[1]);
-
-            //If the normals are more than 90 degrees apart then we consider them to have different orientations
-            double arcAngle = GridVector2.ArcAngle(GridVector2.Zero, ALine.Normal, BLine.Normal);
-            bool AngleMatched = Math.Abs(arcAngle) < Math.PI / 2.0;
-            if (APoly.IsInner ^ BPoly.IsInner)
-            {
-                AngleMatched = !AngleMatched;
-            }
-
-            return AngleMatched;
-        }
-
-        public static EdgeType GetEdgeTypeWithOrientation(PointIndex APoly, PointIndex BPoly, IReadOnlyList<GridPolygon> Polygons, GridVector2 midpoint)
-        {
-            EdgeType type = GetEdgeType(APoly, BPoly, Polygons, midpoint); 
-            if(((type & EdgeType.VALID) > 0) &&
-               type != EdgeType.CONTOUR)
-            {
-                bool OrientationsMatch = OrientationsAreMatched(APoly, BPoly, Polygons);
-                
-
-                if(!OrientationsMatch)
-                {
-                    type = EdgeType.FLIPPED_DIRECTION;
-                }
-            }
-
-            return type;
-        }
-
-
+        
         /// <summary>
         /// Determines the type of edge.
         /// </summary>
@@ -274,5 +238,76 @@ namespace MorphologyMesh
 
             throw new ArgumentException("Unhandled case in IsLineOnSurface");
         }
+
+
+        public static double Orientation(this PointIndex APoly, PointIndex BPoly, IReadOnlyList<GridPolygon> Polygons)
+        {
+            GridVector2 p1 = APoly.Point(Polygons);
+            GridVector2 p2 = BPoly.Point(Polygons);
+
+            GridVector2[] adjacent1 = APoly.ConnectedVerticies(Polygons);
+            GridLineSegment ALine = new GridLineSegment(adjacent1[0], adjacent1[1]);
+
+            GridVector2[] adjacent2 = BPoly.ConnectedVerticies(Polygons);
+            GridLineSegment BLine = new GridLineSegment(adjacent2[0], adjacent2[1]);
+
+            //If the normals are more than 90 degrees apart then we consider them to have different orientations
+            double arcAngle = GridVector2.ArcAngle(GridVector2.Zero, ALine.Normal, BLine.Normal);
+            if (APoly.IsInner ^ BPoly.IsInner)
+            {
+                if(arcAngle < 0)
+                    arcAngle += Math.PI;
+                else
+                    arcAngle -= Math.PI;
+            }
+
+            return arcAngle;
+        }
+
+        public static bool OrientationsAreMatched(PointIndex APoly, PointIndex BPoly, IReadOnlyList<GridPolygon> Polygons)
+        {
+            double arcAngle = Orientation(APoly, BPoly, Polygons);
+            return Math.Abs(arcAngle) < Math.PI / 2.0;
+
+            /*
+            GridVector2 p1 = APoly.Point(Polygons);
+            GridVector2 p2 = BPoly.Point(Polygons);
+
+            GridVector2[] adjacent1 = APoly.ConnectedVerticies(Polygons);
+            GridLineSegment ALine = new GridLineSegment(adjacent1[0], adjacent1[1]);
+
+            GridVector2[] adjacent2 = BPoly.ConnectedVerticies(Polygons);
+            GridLineSegment BLine = new GridLineSegment(adjacent2[0], adjacent2[1]);
+
+            //If the normals are more than 90 degrees apart then we consider them to have different orientations
+            double arcAngle = GridVector2.ArcAngle(GridVector2.Zero, ALine.Normal, BLine.Normal);
+            bool AngleMatched = Math.Abs(arcAngle) < Math.PI / 2.0;
+            if (APoly.IsInner ^ BPoly.IsInner)
+            {
+                AngleMatched = !AngleMatched;
+            }
+
+            return AngleMatched;
+            */
+        }
+
+        public static EdgeType GetEdgeTypeWithOrientation(PointIndex APoly, PointIndex BPoly, IReadOnlyList<GridPolygon> Polygons, GridVector2 midpoint)
+        {
+            EdgeType type = GetEdgeType(APoly, BPoly, Polygons, midpoint); 
+            if(((type & EdgeType.VALID) > 0) &&
+               type != EdgeType.CONTOUR)
+            {
+                bool OrientationsMatch = OrientationsAreMatched(APoly, BPoly, Polygons);
+                
+
+                if(!OrientationsMatch)
+                {
+                    type = EdgeType.FLIPPED_DIRECTION;
+                }
+            }
+
+            return type;
+        }
+
     }
 }

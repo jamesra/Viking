@@ -20,6 +20,7 @@ using MorphologyMesh;
 using MIConvexHull;
 using MIConvexHullExtensions;
 using GraphLib;
+using OTVTable = System.Collections.Concurrent.ConcurrentDictionary<Geometry.PointIndex, Geometry.PointIndex>;
 
 
 namespace MonogameTestbed
@@ -114,19 +115,18 @@ namespace MonogameTestbed
             PolyViews.LabelPolygonIndex = true; 
             //UpdatePolyViews();
 
-            Dictionary<MorphMeshRegion, MorphMeshRegion> RegionPairings = FirstPassDelaunay(FirstPassTriangulation);
+            var RegionPairingGraph = FirstPassDelaunay(FirstPassTriangulation);
 
             var IncompleteVerticies = IdentifyIncompleteVerticies(FirstPassTriangulation);
             IncompletedVertexView = CreateCompletedVertexView(IncompleteVerticies);
             IncompletedVertexView.LabelIndex = false;
             IncompletedVertexView.LabelPosition = false;
+             
+            RTree.RTree<SliceChord> rTree = FirstPassTriangulation.CreateChordTree();
 
+            List<OTVTable> listOTVTables = RegionPairingGraph.MergeAndCloseRegionsPass(FirstPassTriangulation, rTree);
 
-            RTree.RTree<SliceChord> rTree = CreateChordTree(FirstPassTriangulation);
-            foreach (MorphMeshRegion r in RegionPairings.Keys)
-            {
-                CreateChordsForRegionPair(FirstPassTriangulation, r, RegionPairings[r], rTree);
-            }
+            CreateChordViews(FirstPassTriangulation, listOTVTables); 
 
             //CloseRegions(FirstPassTriangulation);
             //FirstPassSliceChordGeneration(FirstPassTriangulation);
@@ -248,7 +248,7 @@ namespace MonogameTestbed
         /// Add all edges from a delaunay triangulation to the mesh which are valid
         /// </summary>
         /// <param name="mesh"></param>
-        public static Dictionary<MorphMeshRegion, MorphMeshRegion> FirstPassDelaunay(MorphRenderMesh mesh)
+        public static MorphMeshRegionGraph FirstPassDelaunay(MorphRenderMesh mesh)
         {
             IMesh triMesh = mesh.Polygons.Triangulate();
 
@@ -256,60 +256,113 @@ namespace MonogameTestbed
 
             mesh.ClassifyMeshEdges();
 
-            /*
-            //Identify VALID edges with orientation problems, ignore CONTOUR and CORRESPONDING edges
-            foreach (MorphMeshEdge e in mesh.Edges.Values.Where(e => ((((MorphMeshEdge)e).Type & EdgeType.VALID) > 0) && 
-                                                                     (((MorphMeshEdge)e).Type != EdgeType.CONTOUR)
-                                                                     //&& (((MorphMeshEdge)e).Type != EdgeType.CORRESPONDING)
-                                                                     ).ToArray())
-            {
-                if(!BajajMeshGenerator.Theorem2(mesh.Polygons, mesh[e.A].PolyIndex, mesh[e.B].PolyIndex))
-                {
-                    e.Type = EdgeType.FLIPPED_DIRECTION;
-                }
-            }*/
-
             //Identify our trouble areas. 
             mesh.IdentifyRegions();
 
             //Identify probable mappings between regions
-            Dictionary<MorphMeshRegion, MorphMeshRegion> RegionPairings = PairRegions(mesh);
+            MorphMeshRegionGraph RegionPairingGraph = GenerateRegionConnectionGraph(mesh);
+           
+            //Remove invalid edges
+            RemoveInvalidEdges(mesh);
+
+            //Close the nodes with no edges
+            //CloseRegionsFirstPass(mesh, RegionPairingGraph.Nodes.Values.Where(v => v.Edges.Count == 0).Select(v => v.Key).ToList());
             /*
-            //Identify edges with orientation problems
-            foreach (MorphMeshEdge e in mesh.Edges.Values.Where(e => (((MorphMeshEdge)e).Type & EdgeType.VALID) == 1).ToArray())
+            List<MorphMeshRegion> regions = RegionPairingGraph.Nodes.Where(n => n.Value.Edges.Count == 0).Select(n => n.Key).ToList();
+            foreach(MorphMeshRegion unconnectedRegion in regions)
             {
-                e.
+                RegionPairingGraph.RemoveNode(unconnectedRegion);
             }
             */
-            //Remove invalid edges
+
+            return RegionPairingGraph;
+        }
+
+        public static void RemoveInvalidEdges(MorphRenderMesh mesh)
+        {
             foreach (MorphMeshEdge e in mesh.Edges.Values.Where(e => (((MorphMeshEdge)e).Type & EdgeType.VALID) == 0).ToArray())
             {
                 mesh.RemoveEdge(e);
             }
-
-            CloseRegionsFirstPass(mesh, mesh.Regions.Where(r => !RegionPairings.ContainsKey(r)).ToList());
-
-            return RegionPairings;
         }
 
-        public static void CloseRegionsFirstPass(MorphRenderMesh mesh, IList<MorphMeshRegion> regions)
+
+
+        public static MorphMeshRegionGraph GenerateRegionConnectionGraph(MorphRenderMesh mesh)
         {
-            //Build the lookup tree for slice-chords
-            RTree.RTree<SliceChord> rTree = CreateChordTree(mesh);
-            foreach (MorphMeshRegion unpaired in regions)
-            {
-                if (unpaired.Type == RegionType.EXPOSED || unpaired.Type == RegionType.INVAGINATION)
-                    TryCloseRegion(mesh, unpaired, rTree);
+            MorphMeshRegionGraph graph = new MorphMeshRegionGraph();
 
-                if (unpaired.Type == RegionType.HOLE)
+            ///----------- Create data structures ---------- 
+            SortedDictionary<int, MorphMeshRegion> VertToRegion = new SortedDictionary<int, MorphMeshRegion>();
+            SortedSet<int> AllRegionVerts = new SortedSet<int>();
+            var RegionToEdges = new Dictionary<MorphMeshRegion, SortedSet<MorphMeshEdge>>();
+
+            foreach (MorphMeshRegion region in mesh.Regions)
+            { 
+                foreach (int vert in region.Verticies)
                 {
-                    if (!unpaired.IsExposed(mesh))
-                        TryClosingHole(mesh, unpaired, rTree);
+                    //TODO: How to handle a vertex shared by two regions?
+                    if(!VertToRegion.ContainsKey(vert))
+                        VertToRegion.Add(vert, region);
                 }
+
+                AllRegionVerts.UnionWith(region.Verticies);
+                graph.AddNode(new Node<MorphMeshRegion, MorphMeshRegionGraphEdge>(region));
+                RegionToEdges.Add(region, new SortedSet<MorphMeshEdge>());
             }
+
+            //-------------------------------------------------
+            //Find all edges that connect regions
+            IEdgeKey[] EdgesConnectingRegions = mesh.Edges.Keys.Where(e => AllRegionVerts.Contains(e.A) && AllRegionVerts.Contains(e.B)).ToArray();
+
+            //Create edges in the graph
+            foreach (IEdgeKey edge in EdgesConnectingRegions)
+            {
+                var RegionA = VertToRegion[edge.A];
+                var RegionB = VertToRegion[edge.B];
+
+                if (RegionA == RegionB)
+                    continue;
+
+                if (!RegionA.Type.IsValidPair(RegionB.Type))
+                    continue;
+
+                if (RegionA.Z == RegionB.Z)
+                    continue; 
+
+                MorphMeshRegionGraphEdge graphEdge = new MorphMeshRegionGraphEdge(RegionA, RegionB);
+                if (!graph.Edges.ContainsKey(graphEdge))
+                {
+                    graph.AddEdge(graphEdge);
+                }
+
+                MorphMeshEdge mme = mesh[edge];
+                RegionToEdges[RegionA].Add(mme);
+                RegionToEdges[RegionB].Add(mme);
+            }
+
+            //----------------------------------------------------
+
+            //Add weights to the edges based on the average distance between the edges
+            foreach (MorphMeshRegionGraphEdge edge in graph.Edges.Values)
+            {
+                var AllAEdges = RegionToEdges[edge.SourceNodeKey];
+                var AllBEdges = RegionToEdges[edge.TargetNodeKey];
+
+                SortedSet<MorphMeshEdge> EdgeSet = new SortedSet<MorphMeshEdge>(AllAEdges);
+                EdgeSet.IntersectWith(AllBEdges);
+
+                //The weight is the mean length of all edges
+                Debug.Assert(EdgeSet.Count > 0); //How are we an edge in the graph if there are no edges in the mesh?
+                double avgLength = EdgeSet.Average(e => mesh.ToSegment(e.Key).Length);
+
+                edge.Weight = avgLength;
+            }
+
+            return graph;
         }
 
-
+        /*
         /// <summary>
         /// Find a partner for all regions
         /// </summary>
@@ -317,7 +370,6 @@ namespace MonogameTestbed
         /// <returns></returns>
         public static Dictionary<MorphMeshRegion, MorphMeshRegion> PairRegions(MorphRenderMesh mesh)
         {
-            //var graph = new Graph<MorphMeshRegion, Node<MorphMeshRegion, Edge<MorphMeshRegion>>, Edge<MorphMeshRegion>>();
             Dictionary<MorphMeshRegion, MorphMeshRegion> Pairs = new Dictionary<MorphMeshRegion, MorphMeshRegion>();
 
             foreach (MorphMeshRegion region in mesh.Regions)
@@ -367,33 +419,33 @@ namespace MonogameTestbed
 
             return BestLink;
         }
+        */
 
-
-        private void CreateChordsForRegionPair(MorphRenderMesh mesh, MorphMeshRegion source, MorphMeshRegion target, RTree.RTree<SliceChord> rTree = null)
+        public static OTVTable IdentifyChordCandidatesForRegionPair(MorphRenderMesh mesh, MorphMeshRegion source, MorphMeshRegion target, SliceChordTestType Tests, RTree.RTree<SliceChord> rTree = null)
         {
             if(rTree == null)
             {
-                rTree = CreateChordTree(mesh);
+                rTree = mesh.CreateChordTree();
             }
 
             ConcurrentDictionary<PointIndex, PointIndex> OTVTable = new ConcurrentDictionary<PointIndex, PointIndex>(); 
 
             //TODO: Add flags to this call to select which tests are used to built the OTV table
-            BajajMeshGenerator.CreateOptimalTilingVertexTable(source.Verticies.Select(i => ((MorphMeshVertex)mesh[i]).PolyIndex.Value), target.Verticies.Select(i => ((MorphMeshVertex)mesh[i]).PolyIndex.Value), mesh.Polygons, mesh.PolyZ, 
-                                                                                            SliceChordTestType.LineOrientation, out OTVTable, ref rTree);
+            BajajMeshGenerator.CreateOptimalTilingVertexTable(source.Verticies.Select(i => ((MorphMeshVertex)mesh[i]).PolyIndex.Value), target.Verticies.Select(i => ((MorphMeshVertex)mesh[i]).PolyIndex.Value), mesh.Polygons, mesh.PolyZ,
+                                                                                            Tests, out OTVTable, ref rTree);
+             
+            return OTVTable;
+        }
 
+        private void CreateChordViews(MorphRenderMesh mesh, List<OTVTable> OTVTables)
+        {
             if (this.OTVTableView == null)
                 this.OTVTableView = new List<LineView>();
 
-            List<LineView> ChordView = CreateChordView(mesh, OTVTable, Color.Random());
-            this.OTVTableView.AddRange(ChordView);
-
-            RTree.RTree < SliceChord > emptyRTree = new RTree.RTree<SliceChord>();
-            int numAdded = TryAddOTVTable(mesh, OTVTable, emptyRTree);
-
-            if(numAdded == 0)
+            foreach (var OTVTable in OTVTables)
             {
-                TryCloseRegion(mesh, source, rTree); 
+                List<LineView> ChordView = CreateChordView(mesh, OTVTable, Color.Random());
+                this.OTVTableView.AddRange(ChordView);
             }
         }
 
@@ -407,23 +459,7 @@ namespace MonogameTestbed
             return mesh.Verticies.Where(v => v as MorphMeshVertex != null && !((MorphMeshVertex)v).IsFaceSurfaceComplete(mesh)).Select(v => (MorphMeshVertex)v).ToList();
         }
 
-        /// <summary>
-        /// Build an RTree using SliceChords in the mesh
-        /// </summary>
-        /// <param name="mesh"></param>
-        /// <returns></returns>
-        public static RTree.RTree<SliceChord> CreateChordTree(MorphRenderMesh mesh)
-        {
-            RTree.RTree<SliceChord> rTree = new RTree.RTree<SliceChord>();
-            ///Create a list of all slice chords.  Contours are valid but are not slice chords since they don't cross sections
-            foreach (MorphMeshEdge e in mesh.Edges.Values.Where(e => (((MorphMeshEdge)e).Type != EdgeType.CONTOUR) && (((MorphMeshEdge)e).Type != EdgeType.ARTIFICIAL)))
-            {
-                SliceChord chord = new SliceChord(mesh[e.A].PolyIndex.Value, mesh[e.B].PolyIndex.Value, mesh.ToSegment(e));
-                rTree.Add(chord.Line.BoundingBox.ToRTreeRect(0), chord);
-            }
-
-            return rTree;
-        } 
+        
 
         /// <summary>
         /// Convert the OTV table into a set of slice chord candidates
@@ -431,7 +467,7 @@ namespace MonogameTestbed
         /// <param name="mesh"></param>
         /// <param name="OTVTable"></param>
         /// <returns></returns>
-        private static List<SliceChord> CreateChordCandidateList(MorphRenderMesh mesh, ConcurrentDictionary<PointIndex, PointIndex> OTVTable)
+        private static List<SliceChord> CreateChordCandidateList(MorphRenderMesh mesh, OTVTable OTVTable)
         {
             List<SliceChord> CandidateChords = new List<SliceChord>();
 
@@ -446,7 +482,7 @@ namespace MonogameTestbed
 
                     if (p1 != p2)
                     {
-                        SliceChord sc = new SliceChord(i1, i2, new GridLineSegment(p1, p2));
+                        SliceChord sc = new SliceChord(i1, i2, mesh.Polygons);
                         CandidateChords.Add(sc);
                     }
                     else
@@ -460,104 +496,23 @@ namespace MonogameTestbed
 
             return CandidateChords;
         }
+                 
 
-        /// <summary>
-        /// Take the exposed regions in our graph.  Attempt to create slice-chords to the adjacent shape.  If all of the verticies cannot be mapped create flat faces for the remaining faces in the region
-        /// </summary>
-        /// <param name="mesh"></param>
-        public static void CloseRegions(MorphRenderMesh mesh)
-        {
-            RTree.RTree<SliceChord> rTree = CreateChordTree(mesh);
-             
-            //If we can map all of the verticies of the the region that have no valid faces then the region can be removed
-            foreach (MorphMeshRegion r in mesh.Regions.Where(r => r.Type == RegionType.EXPOSED))
-            {
-                
-                ConcurrentDictionary<PointIndex, PointIndex> OTVTable = TryCloseRegion(mesh, r, rTree);
-                if(OTVTable != null)
-                {
-                    //OK, check if there is another exposed region we can link to
-
-                }
-            } 
-        }
-
-        /// <summary>
-        /// Try to see if the region can be closed.  If a slice chord can be created for every vertex in the region then it is considered closeable. 
-        /// This function creates the chords if it is closeable.  Otherwise the OTV table for the region is returned.
-        /// </summary>
-        /// <param name="mesh"></param>
-        /// <param name="region">Region we are trying to close</param>
-        /// <param name="rTree">RTree of all existing chords</param>
-        public static ConcurrentDictionary<PointIndex, PointIndex> TryCloseRegion(MorphRenderMesh mesh, MorphMeshRegion region, RTree.RTree<SliceChord> rTree)
-        {
-            ConcurrentDictionary<PointIndex, PointIndex> OTVTable;
-            List<int> vertsWithoutFaces = region.Verticies.Where(v => mesh[v].Edges.SelectMany(e => mesh[e].Faces).Count() == 0).ToList();
-
-            BajajMeshGenerator.CreateOptimalTilingVertexTable(vertsWithoutFaces.Select(v => mesh[v].PolyIndex.Value), mesh.Polygons, mesh.PolyZ, 
-                                                              SliceChordTestType.Correspondance | SliceChordTestType.ChordIntersection | SliceChordTestType.Theorem2 | SliceChordTestType.Theorem4,
-                                                              out OTVTable, ref rTree);
-
-            //If we can't map every vertex in the region it needs to be mapped to another region before being capped off
-            if (OTVTable.Count < vertsWithoutFaces.Count)
-            {
-                //Temporary, add faces in the same plane since we couldn't map the entire region.
-                //mesh.AddFaces(r.Faces.Select(f => (IFace)f).ToArray());
-                return OTVTable;
-            }
-
-            TryAddOTVTable(mesh, OTVTable, rTree);
-
-            return null;
-        }
-
-        /// <summary>
-        /// Try to see if the region can be closed.  If a slice chord can be created for every vertex in the region then it is considered closeable. 
-        /// This function creates the chords if it is closeable.  Otherwise the OTV table for the region is returned.
-        /// </summary>
-        /// <param name="mesh"></param>
-        /// <param name="region">Region we are trying to close</param>
-        /// <param name="rTree">RTree of all existing chords</param>
-        public static void TryClosingHole(MorphRenderMesh mesh, MorphMeshRegion region, RTree.RTree<SliceChord> rTree)
-        {
-            ConcurrentDictionary<PointIndex, PointIndex> OTVTable;
-            List<int> vertsWithoutFaces = region.Verticies.Where(v => mesh[v].Edges.SelectMany(e => mesh[e].Faces).Count() == 0).ToList();
-
-            GridVector2 center = region.Polygon.Centroid;
-            double CenterZ = mesh.PolyZ.Average(); //Put it halfway between the sections
-
-            int NewVertexIndex = mesh.AddVertex(new MorphMeshVertex(new PointIndex?(), center.ToGridVector3(CenterZ)));
-
-            MorphMeshVertex[] Perimeter = region.RegionPerimeter;
-            for(int iVert = 0; iVert < Perimeter.Length; iVert++)
-            {
-
-                MorphMeshVertex origin = Perimeter[iVert];
-                ///Create the first edge, then create the next edge for the face as we advance around the perimeter
-                if (iVert == 0)
-                {
-                    MorphMeshEdge edge = new MorphMeshEdge(EdgeType.ARTIFICIAL, origin.Index, NewVertexIndex);
-                    mesh.AddEdge(edge);
-                }
-
-                if(iVert + 1 < Perimeter.Length)
-                {
-
-                    MorphMeshEdge edge = new MorphMeshEdge(EdgeType.ARTIFICIAL, Perimeter[iVert + 1].Index, NewVertexIndex);
-                    mesh.AddEdge(edge);
-
-
-                    //I should perhaps create a new edge type "Artificial" for the edges connected to the new verticies I add that aren't part of the polygon
-                    MorphMeshFace face = new MorphMeshFace(origin.Index, Perimeter[iVert + 1].Index, NewVertexIndex);
-                    mesh.AddFace(face);
-                }
-            } 
-        }
-
-        private static int TryAddOTVTable(MorphRenderMesh mesh, ConcurrentDictionary<PointIndex, PointIndex> OTVTable, RTree.RTree<SliceChord> rTree)
+        public static int TryAddOTVTable(MorphRenderMesh mesh, OTVTable OTVTable, RTree.RTree<SliceChord> rTree, SliceChordTestType Tests, SliceChordPriority priority)
         {
             List<SliceChord> CandidateChords = CreateChordCandidateList(mesh, OTVTable);
-            CandidateChords = CandidateChords.OrderBy(sc => sc.Line.Length).ToList();
+
+            switch (priority)
+            {
+                case SliceChordPriority.Distance:
+                    CandidateChords = CandidateChords.OrderBy(sc => sc.Line.Length).ToList();
+                    break;
+                case SliceChordPriority.Orientation:
+                    CandidateChords = CandidateChords.OrderBy(sc => EdgeTypeExtensions.Orientation(sc.Origin, sc.Target, mesh.Polygons)).ToList();
+                    break;
+                default:
+                    throw new ArgumentException("Unexpected slice chord priority");
+            }
 
             //List<SliceChord> NovelCandidateChords = CandidateChords.Where(sc => !mesh.IsAnEdge(mesh[sc.Origin].Index, mesh[sc.Target].Index)).ToList();
 
@@ -565,7 +520,7 @@ namespace MonogameTestbed
             foreach (SliceChord sc in CandidateChords)
             {
                 //TODO: Probably need to check that the chords are all created
-                count += TryAddSliceChord(mesh, sc, rTree) ? 1 : 0;
+                count += TryAddSliceChord(mesh, sc, rTree, Tests) ? 1 : 0;
             }
 
             return count;
@@ -579,24 +534,9 @@ namespace MonogameTestbed
         /// <param name="sc"></param>
         /// <param name="ChordRTree"></param>
         /// <returns></returns>
-        private static bool CouldAddSliceChord(MorphRenderMesh mesh, SliceChord sc, RTree.RTree<SliceChord> ChordRTree)
+        private static bool CouldAddSliceChord(MorphRenderMesh mesh, SliceChord sc, RTree.RTree<SliceChord> ChordRTree, SliceChordTestType Tests)
         {
-            List<SliceChord> possibleConflicts = ChordRTree.Intersects(sc.Line.BoundingBox.ToRTreeRect(0));
-            if (possibleConflicts.Count > 0)
-            {
-                //The line intersects an existing chord, skip it.
-                if (possibleConflicts.Any(pc => pc.Line.Intersects(sc.Line, true)))
-                    return false;
-            }
-
-            var edge = new MorphMeshEdge(EdgeTypeExtensions.GetEdgeType(sc.Line, mesh.Polygons[sc.Origin.iPoly], mesh.Polygons[sc.Target.iPoly]), mesh[sc.Origin].Index, mesh[sc.Target].Index);
-
-            if ((edge.Type & EdgeType.VALID) > 0)
-            { 
-                return true;
-            }
-
-            return false;
+            return BajajMeshGenerator.IsSliceChordValid(sc.Origin, mesh.Polygons, mesh.GetSameLevelPolygons(sc.Origin), mesh.GetAdjacentLevelPolygons(sc.Origin), sc.Target, ChordRTree, Tests);
         }
 
         /// <summary>
@@ -606,16 +546,16 @@ namespace MonogameTestbed
         /// <param name="sc"></param>
         /// <param name="ChordRTree"></param>
         /// <returns></returns>
-        private static bool TryAddSliceChord(MorphRenderMesh mesh, SliceChord sc, RTree.RTree<SliceChord> ChordRTree)
+        private static bool TryAddSliceChord(MorphRenderMesh mesh, SliceChord sc, RTree.RTree<SliceChord> ChordRTree, SliceChordTestType Tests)
         {
-            if(CouldAddSliceChord(mesh, sc, ChordRTree))
+            if(BajajMeshGenerator.IsSliceChordValid(sc.Origin, mesh.Polygons, mesh.GetSameLevelPolygons(sc.Origin), mesh.GetAdjacentLevelPolygons(sc.Origin), sc.Target, ChordRTree, Tests))
             {
                 var edge = new MorphMeshEdge(EdgeTypeExtensions.GetEdgeType(sc.Line, mesh.Polygons[sc.Origin.iPoly], mesh.Polygons[sc.Target.iPoly]), mesh[sc.Origin].Index, mesh[sc.Target].Index);
                 ChordRTree.Add(sc.Line.BoundingBox.ToRTreeRect(0), sc);
                 mesh.AddEdge(edge);
                 return true;
             }
-
+              
             return false;
         }
 
@@ -626,7 +566,7 @@ namespace MonogameTestbed
         public static void FirstPassSliceChordGeneration(MorphRenderMesh mesh)
         {
             ConcurrentDictionary<PointIndex, PointIndex> OTVTable;
-            RTree.RTree<SliceChord> rTree = CreateChordTree(mesh); 
+            RTree.RTree<SliceChord> rTree = mesh.CreateChordTree();
 
             BajajMeshGenerator.CreateOptimalTilingVertexTable(new PolySetVertexEnum(mesh.Polygons), mesh.Polygons, mesh.PolyZ,
                                                               SliceChordTestType.Correspondance | SliceChordTestType.ChordIntersection | SliceChordTestType.Theorem2 | SliceChordTestType.Theorem4, 
@@ -640,7 +580,7 @@ namespace MonogameTestbed
             
             foreach (SliceChord sc in CandidateChords)
             {
-                TryAddSliceChord(mesh, sc, AddedChords);
+                TryAddSliceChord(mesh, sc, AddedChords, SliceChordTestType.ChordIntersection | SliceChordTestType.Correspondance | SliceChordTestType.EdgeType | SliceChordTestType.Theorem2);
             }
         }
         
@@ -657,7 +597,11 @@ namespace MonogameTestbed
         {
             List<SliceChord> CandidateChords = CreateChordCandidateList(mesh, OTVTable);
 
-            List<LineView> lineViews = CandidateChords.Select(sc => new LineView(sc.Line, 1.0, color, LineStyle.Ladder, false)).ToList();
+            var RejectedChords = CandidateChords.Where(sc => !mesh.ContainsEdge(sc.Origin, sc.Target));
+            var AcceptedChords = CandidateChords.Where(sc => mesh.ContainsEdge(sc.Origin, sc.Target));
+
+            List<LineView> lineViews = RejectedChords.Select(sc => new LineView(sc.Line, 1.0, color, LineStyle.Ladder, false)).ToList();
+            lineViews.AddRange(AcceptedChords.Select(sc => new LineView(sc.Line, 1.0, color, LineStyle.Glow, false)));
 
             return lineViews;
         }

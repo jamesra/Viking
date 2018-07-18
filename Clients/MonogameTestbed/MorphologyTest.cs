@@ -123,15 +123,19 @@ namespace MonogameTestbed
             //meshes = InitSmallSmoothModelFromOData(new long[] { 476 }, ENDPOINT.TEST);
             //meshes = InitSmallSmoothModelFromOData(new long[] { 144302 }, ENDPOINT.TEST);
             //meshes = InitSmallSmoothModelFromOData(476, ENDPOINT.RC1);
-            meshes = InitSmallSmoothModelFromOData(new long[] { 192 }, ENDPOINT.RPC1);
+            //meshes = InitSmallSmoothModelFromOData(new long[] { 192 }, ENDPOINT.RPC1);
             //meshes = InitSmallSmoothModelFromOData(5554, ENDPOINT.RC2);
             //meshes = InitSmallSmoothModelFromOData(new long[] { 1650, 858 }, ENDPOINT.INFERIORMONKEY);
 
             //Bad polygon Location #1026126.  Position X: 62134.0	Y: 51034.8	Z: 234	DS: 1.97
             //meshes = InitSmallSmoothModelFromOData(new long[] { 180 }, ENDPOINT.TEST);
+            //meshes = InitSmallSmoothModelFromOData(new long[] { 1228 }, ENDPOINT.RPC1); //Bipolor cell that crashes current live exporter 2/15/18
+            //meshes = InitSmallSmoothModelFromOData(new long[] { 2628 }, ENDPOINT.RPC1); //Glial cell
+            //meshes = InitSmallSmoothModelFromOData(new long[] { 192 }, ENDPOINT.RPC1); //Bipolar with circle->Poly problems
+
 
             //meshes = InitSmallSmoothModelFromODataLocations(TroubleIDS, ENDPOINT.RPC1);
-            //meshes = InitSmallSmoothModelFromODataLocations(TroubleIDS, ENDPOINT.TEST);
+            meshes = InitSmallSmoothModelFromODataLocations(TroubleIDS, ENDPOINT.TEST);
 
             //meshes = InitSmallSmoothModelFromOData(207, ENDPOINT.TEMPORALMONKEY);
             //meshes = InitSmallModelFromOData(476);

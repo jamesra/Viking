@@ -69,7 +69,7 @@ namespace MonogameTestbed
 
         SortedDictionary<TestMode, IGraphicsTest> listTests = new SortedDictionary<TestMode, IGraphicsTest>();
 
-        TestMode Mode = TestMode.MORPHOLOGY;
+        TestMode Mode = TestMode.BAJAJTEST;
 
         public static uint NumCurveInterpolations = 10;
 

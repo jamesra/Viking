@@ -595,8 +595,25 @@ namespace MorphologyMesh
         {
             return this.Faces.SetEquals(other.Faces);
         }
+
+        public override string ToString()
+        {
+            return string.Format("Reg: {0} {1}", this.Faces.First(), this.Faces.Count);
+        }
     }
-    
+
+    public class MorphMeshRegionGraph : GraphLib.Graph<MorphMeshRegion, GraphLib.Node<MorphMeshRegion, MorphMeshRegionGraphEdge>, MorphMeshRegionGraphEdge>
+    { }
+
+    public class MorphMeshRegionGraphEdge : GraphLib.Edge<MorphMeshRegion>
+    {
+        public MorphMeshRegionGraphEdge(MorphMeshRegion SourceNode, MorphMeshRegion TargetNode) : base(SourceNode, TargetNode, false)
+        {
+        } 
+    }
+
+
+
     /// <summary>
     /// A 3D mesh that records the polygons used to construct the mesh and tracks the original polygonal index of every vertex and the type of edge connecting verticies.
     /// </summary>
@@ -611,6 +628,8 @@ namespace MorphologyMesh
         public List<MorphMeshRegion> Regions { get; private set; }
 
         private Dictionary<PointIndex, long> PolyIndexToVertex = new Dictionary<PointIndex, long>();
+
+        private Dictionary<double, List<GridPolygon>> PolygonsByZ = new Dictionary<double, List<GridPolygon>>();
          
         public MorphRenderMesh(GridPolygon[] polygons, double[] ZLevels)
         {
@@ -620,6 +639,16 @@ namespace MorphologyMesh
             this.DuplicateVertex = MorphMeshVertex.Duplicate;
             this.DuplicateEdge = MorphMeshEdge.Duplicate;
             this.DuplicateFace = MorphMeshFace.Duplicate;
+
+            foreach(double Z in PolyZ.Distinct())
+            {
+                PolygonsByZ.Add(Z, new List<GridPolygon>());
+            }
+
+            for(int i = 0; i < PolyZ.Length; i++)
+            {
+                PolygonsByZ[PolyZ[i]].Add(Polygons[i]);
+            }
 
             PopulateMesh(this);
         }
@@ -638,6 +667,19 @@ namespace MorphologyMesh
                 MorphMeshEdge edge = new MorphMeshEdge(EdgeType.CONTOUR, mesh[i1].Index, mesh[next].Index);
                 mesh.AddEdge(edge);
             }
+        }
+
+        public List<GridPolygon> GetSameLevelPolygons(PointIndex key)
+        {
+            double PointZ = PolyZ[key.iPoly];
+            return PolygonsByZ[PointZ];
+        }
+
+        public List<GridPolygon> GetAdjacentLevelPolygons(PointIndex key)
+        {
+            double PointZ = PolyZ[key.iPoly];
+            double OtherZ = PolyZ.Where(z => z != PointZ).First();
+            return PolygonsByZ[OtherZ];
         }
 
         public new MorphMeshVertex this[int key]
@@ -665,6 +707,26 @@ namespace MorphologyMesh
         public virtual bool Contains(PointIndex key)
         {
             return PolyIndexToVertex.ContainsKey(key);
+        }
+
+        public virtual bool Contains(IEdgeKey key)
+        {
+            return Edges.ContainsKey(key);
+        }
+
+        /// <summary>
+        /// Returns true if an edge exists between the two points
+        /// </summary>
+        /// <param name="A"></param>
+        /// <param name="B"></param>
+        /// <returns></returns>
+        public virtual bool ContainsEdge(PointIndex A, PointIndex B)
+        {
+            if (!this.Contains(A) || !this.Contains(B))
+                return false;
+
+            EdgeKey key = new EdgeKey(this[A].Index, this[B].Index);
+            return this.Contains(key);
         }
 
         public MorphMeshVertex GetVertex(int key)
@@ -841,6 +903,25 @@ namespace MorphologyMesh
             }
 
             return listRegions; 
+        }
+
+        /// <summary>
+        /// Build an RTree using SliceChords in the mesh.  
+        /// Note that slice-chords cross Z levels so CONTOUR and ARTIFICIAL edges are not included
+        /// </summary>
+        /// <param name="mesh"></param>
+        /// <returns></returns>
+        public RTree.RTree<SliceChord> CreateChordTree()
+        {
+            RTree.RTree<SliceChord> rTree = new RTree.RTree<SliceChord>();
+            ///Create a list of all slice chords.  Contours are valid but are not slice chords since they don't cross sections
+            foreach (MorphMeshEdge e in this.Edges.Values.Where(e => (((MorphMeshEdge)e).Type != EdgeType.CONTOUR) && (((MorphMeshEdge)e).Type != EdgeType.ARTIFICIAL)))
+            {
+                SliceChord chord = new SliceChord(this[e.A].PolyIndex.Value, this[e.B].PolyIndex.Value, this.Polygons);
+                rTree.Add(chord.Line.BoundingBox.ToRTreeRect(0), chord);
+            }
+
+            return rTree;
         }
 
         /// <summary>

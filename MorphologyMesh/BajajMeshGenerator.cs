@@ -33,7 +33,15 @@ namespace MorphologyMesh
         ChordIntersection = 2,  //Allow the chord if it does not intersect an existing chord
         Theorem2 = 4,           //Allow the chord if the endpoints are on the correct side of the contours
         Theorem4 = 8,           //Allow the chord if the chord is only entirely inside or outside the polygons but not both
-        LineOrientation = 16    //Allow the chord if the contours are not more than 90 degrees different in orientation
+        LineOrientation = 16,    //Allow the chord if the contours are not more than 90 degrees different in orientation
+        EdgeType = 32,          //Allow the chord if the edge is considered valid according to EdgeType criteria
+    }
+
+    [Flags]
+    public enum SliceChordPriority
+    {
+        Distance = 1, //Add chords shortest to longest
+        Orientation = 2, //Add chords with the closest orientation of contours first
     }
 
     public static class BajajMeshGenerator
@@ -266,7 +274,7 @@ namespace MorphologyMesh
             return !LineIntersectionExtensions.Intersects(line, poly, true, out intersections);
         }
 
-        private static bool TestOptimalTilingForVertex(PointIndex vertex, GridPolygon[] Polygons, IReadOnlyList<GridPolygon> SameLevelPolys, IReadOnlyList<GridPolygon> AdjacentLevelPolys, 
+        public static bool IsSliceChordValid(PointIndex vertex, GridPolygon[] Polygons, IReadOnlyList<GridPolygon> SameLevelPolys, IReadOnlyList<GridPolygon> AdjacentLevelPolys, 
                                                        PointIndex candidate, RTree<SliceChord> chordTree, SliceChordTestType TestsToRun)
         {
             GridVector2 p1 = vertex.Point(Polygons);
@@ -278,10 +286,15 @@ namespace MorphologyMesh
 
             if ((TestsToRun & SliceChordTestType.ChordIntersection) > 0)
             {
-                
-
                 List<SliceChord> existingChords = chordTree.Intersects(ChordLine.BoundingBox.ToRTreeRect(0));
                 if (existingChords.Any(c => c.Line.Intersects(ChordLine, true)))
+                    return false;
+            }
+
+            if((TestsToRun & SliceChordTestType.EdgeType) > 0)
+            {
+                EdgeType edgeType = EdgeTypeExtensions.GetEdgeType(vertex, candidate, Polygons, ChordLine.PointAlongLine(0.5));
+                if ((edgeType & EdgeType.VALID) == 0)
                     return false;
             }
 
@@ -322,7 +335,7 @@ namespace MorphologyMesh
             return AngleOrientation && T2 && T2Opp && T4 && T4Opp;
             //return Theorem2(OppositeContours, candidate, p) && Theorem4(OppositeContours, ContourLine) && Theorem4(Contours, ContourLine);
         }
-        
+
         /// <summary>
         /// Locate the best slice chord partner for a given vertex
         /// </summary>
@@ -333,14 +346,43 @@ namespace MorphologyMesh
         /// <param name="OppositeVertexTree">Lookup data structure for verticies on different Z levels</param>
         /// <param name="chordTree">Lookup data structure for existing slice chords</param>
         /// <returns></returns>
-        private static PointIndex? FindOptimalTilingForVertex(PointIndex vertex, GridPolygon[] Polygons, IReadOnlyList<GridPolygon> SameLevelPolys, IReadOnlyList<GridPolygon> AdjacentLevelPolys,
+        public static List<SliceChord> FindAllSliceChords(PointIndex vertex, PointIndex[] OppositeVerticies, GridPolygon[] Polygons, IReadOnlyList<GridPolygon> SameLevelPolys, IReadOnlyList<GridPolygon> AdjacentLevelPolys,
+                                                              RTree<SliceChord> chordTree, SliceChordTestType TestsToRun)
+        {
+            GridVector2 p = vertex.Point(Polygons);
+
+            List<SliceChord> listValid = new List<SliceChord>();
+
+            foreach(PointIndex opposite in OppositeVerticies)
+            {
+                if (IsSliceChordValid(vertex, Polygons, SameLevelPolys, AdjacentLevelPolys, opposite, chordTree, TestsToRun))
+                {
+                    SliceChord sc = new SliceChord(vertex, opposite, Polygons);
+                    listValid.Add(sc);
+                }
+            }
+
+            return listValid;
+        }
+
+        /// <summary>
+        /// Locate the best slice chord partner for a given vertex
+        /// </summary>
+        /// <param name="vertex">Vertex we are testing</param>
+        /// <param name="Polygons">Polygon array verticies refer to</param>
+        /// <param name="SameLevelPolys">Polygons in the array at the same Z level as the vertex</param>
+        /// <param name="AdjacentLevelPolys">Polygons in the array at a different Z level as the vertex</param>
+        /// <param name="OppositeVertexTree">Lookup data structure for verticies on different Z levels</param>
+        /// <param name="chordTree">Lookup data structure for existing slice chords</param>
+        /// <returns></returns>
+        private static PointIndex? FindOptimalTilingForVertexByDistance(PointIndex vertex, GridPolygon[] Polygons, IReadOnlyList<GridPolygon> SameLevelPolys, IReadOnlyList<GridPolygon> AdjacentLevelPolys,
                                                               QuadTree<PointIndex> OppositeVertexTree, RTree<SliceChord> chordTree, SliceChordTestType TestsToRun)
         {
             double distance;
             GridVector2 p = vertex.Point(Polygons);
             PointIndex NearestPoint = OppositeVertexTree.FindNearest(p, out distance);
 
-            if(TestOptimalTilingForVertex(vertex, Polygons, SameLevelPolys, AdjacentLevelPolys, NearestPoint, chordTree, TestsToRun))
+            if(IsSliceChordValid(vertex, Polygons, SameLevelPolys, AdjacentLevelPolys, NearestPoint, chordTree, TestsToRun))
             {
                 return NearestPoint;
             }
@@ -371,7 +413,7 @@ namespace MorphologyMesh
                 {
                     PointIndex testPoint = NearestList.Values[iNextTest];
 
-                    if (TestOptimalTilingForVertex(vertex, Polygons, SameLevelPolys, AdjacentLevelPolys, testPoint, chordTree, TestsToRun))
+                    if (IsSliceChordValid(vertex, Polygons, SameLevelPolys, AdjacentLevelPolys, testPoint, chordTree, TestsToRun))
                         return testPoint;
                 }
 
@@ -423,6 +465,48 @@ namespace MorphologyMesh
             CreateOptimalTilingVertexTable(VerticiesToMap, polygons, PolyZ, LevelTree, TestsToRun, out OTVTable, ref chordTree);
         }
 
+        public static ConcurrentDictionary<PointIndex, List<SliceChord>> CreateFullOptimalTilingVertexTable(IEnumerable<PointIndex> VerticiesToMap, IEnumerable<PointIndex> MatchCandidates, GridPolygon[] polygons, double[] PolyZ, SortedList<int, QuadTree<PointIndex>> CandidateTreeByLevel, SliceChordTestType TestsToRun,
+                                                         ref RTree<SliceChord> chordTree)
+        {
+            SortedList<int, List<GridPolygon>> levels = PolyByLevel(polygons, PolyZ);
+            Debug.Assert(levels.Keys.Count == 2);
+
+            ConcurrentDictionary<PointIndex, List<SliceChord>> OTVTable = new ConcurrentDictionary<PointIndex, List<SliceChord>>();
+
+            SortedList<double, PointIndex[]> CandidatesByLevel = new SortedList<double, PointIndex[]>();
+
+
+            foreach( var ZLevel  in MatchCandidates.GroupBy(v => PolyZ[v.iPoly]))
+            {
+                CandidatesByLevel.Add(ZLevel.Key, MatchCandidates.ToArray());
+            }
+             
+            foreach (var polygroup in VerticiesToMap.GroupBy(v => v.iPoly))
+            {
+                int iPoly = polygroup.Key;
+                GridPolygon poly = polygons[iPoly];
+                int Z = (int)PolyZ[iPoly];
+                int AdjacentZ = (int)PolyZ.Where(adjz => adjz != Z).First();
+
+                //QuadTree<PointIndex> tree = CandidateTreeByLevel[AdjacentZ];
+
+                List<GridPolygon> SameLevelPolys = levels[Z];
+                List<GridPolygon> AdjacentLevelPolys = levels[AdjacentZ];
+
+                foreach (PointIndex i in polygroup)
+                {
+                    GridVector2 p1 = i.Point(poly);
+                    List<SliceChord> listChords = FindAllSliceChords(i, CandidatesByLevel[AdjacentZ], polygons, SameLevelPolys, AdjacentLevelPolys, chordTree, TestsToRun);
+                    if (listChords.Count > 0)
+                    {
+                        OTVTable.TryAdd(i, listChords);
+                    }
+                }
+            }
+
+            return OTVTable;
+        }
+
         public static void CreateOptimalTilingVertexTable(IEnumerable<PointIndex> VerticiesToMap, GridPolygon[] polygons, double[] PolyZ, SortedList<int, QuadTree<PointIndex>> CandidateTreeByLevel, SliceChordTestType TestsToRun,
                                                           out ConcurrentDictionary<PointIndex, PointIndex> OTVTable, ref RTree<SliceChord> chordTree)
         {
@@ -447,7 +531,7 @@ namespace MorphologyMesh
                 foreach (PointIndex i in polygroup)
                 {
                     GridVector2 p1 = i.Point(poly);
-                    PointIndex? NearestOnOtherLevel = FindOptimalTilingForVertex(i, polygons, SameLevelPolys, AdjacentLevelPolys, tree, chordTree, TestsToRun);
+                    PointIndex? NearestOnOtherLevel = FindOptimalTilingForVertexByDistance(i, polygons, SameLevelPolys, AdjacentLevelPolys, tree, chordTree, TestsToRun);
                     if (NearestOnOtherLevel.HasValue)
                     {
                         OTVTable.TryAdd(i, NearestOnOtherLevel.Value);
@@ -489,7 +573,7 @@ namespace MorphologyMesh
             SortedList<int, QuadTree<PointIndex>> LevelTree = new SortedList<int, QuadTree<PointIndex>>();
 
             //Build a quad tree of all points at a given level
-            foreach (double Z in PolyZ.Distinct())
+            foreach (double Z in Candidates.Select(pi => PolyZ[pi.iPoly]).Distinct())
             {
                 LevelTree.Add((int)Z, new QuadTree<PointIndex>(polygons.Where((p, i) => PolyZ[i] == Z).ToArray().BoundingBox()));
             }
@@ -504,6 +588,12 @@ namespace MorphologyMesh
                     tree.Add(p1, i);
                 }
             }
+#if DEBUG
+            foreach(int level in LevelTree.Keys)
+            {
+                Debug.Assert(LevelTree[level].Count > 0, "We need at least one vertex in the tree for each level.");
+            }
+#endif
 
             return LevelTree;
         }
@@ -883,83 +973,6 @@ namespace MorphologyMesh
             }
 
             return pointToPoly;
-        }
-
-        public static bool IsLineOnSurface(PointIndex APoly, PointIndex BPoly, GridPolygon[] Polygons, GridVector2 midpoint)
-        {
-            GridPolygon A = Polygons[APoly.iPoly];
-            GridPolygon B = Polygons[BPoly.iPoly];
-
-            if (APoly.iPoly != BPoly.iPoly)
-            {
-                bool midInA = A.Contains(midpoint);
-                bool midInB = B.Contains(midpoint);
-
-                if (!(midInA ^ midInB)) //Midpoint in both or neither polygon. Line may be on exterior surface
-                {
-                    return false; //Exclude from port.  Line covers empty space
-                }
-                else //Midpoint in one or the other polygon, but not both
-                {
-                    if (APoly.IsInner ^ BPoly.IsInner) //One or the other is an interior polygon, but not both
-                    {
-                        if (A.InteriorPolygonContains(midpoint) ^ B.InteriorPolygonContains(midpoint))
-                        {
-                            //Include in port.
-                            //Line runs from exterior ring to the near side of an overlapping interior hole
-                            return true;
-                        }
-                        else //Find out if the midpoint is contained by the same polygon with the inner polygon
-                        {
-                            if ((midInA && APoly.IsInner) || (midInB && BPoly.IsInner))
-                            {
-                                return true;// lineViews[i].Color = Color.Gold;
-                            }
-                            else
-                            {
-                                return false; //Not sure if this is correct.  Never saw it in testing. //lineViews[i].Color = Color.Pink;
-                            }
-                        }
-                    }
-                    else
-                    {
-                        return true;
-                    }
-                }
-            }
-            else if (APoly.iPoly == BPoly.iPoly)
-            {
-                bool midInA = A.Contains(midpoint);
-                bool midInB = midInA;
-
-                if (PointIndex.IsBorderLine(APoly, BPoly, Polygons[APoly.iPoly]))
-                {
-                    //Line is part of the border, either internal or external
-                    return true;
-                }
-
-                if (!midInA)
-                {
-                    //Line does not pass through solid space
-                    return false;
-                }
-                else
-                {
-                    //Two options, the line is outside other shapes or inside other shapes.
-                    //If outside other shapes we want to keep this edge, otherwise it is discarded
-                    bool LineIntersectsAnyOtherPoly = Polygons.Where((p, iP) => iP != APoly.iPoly).Any(p => p.Contains(midpoint));
-                    if (APoly.IsInner ^ BPoly.IsInner)
-                    {
-                        return !LineIntersectsAnyOtherPoly;
-                    }
-                    else
-                    {
-                        return !LineIntersectsAnyOtherPoly;
-                    }
-                }
-            }
-
-            throw new ArgumentException("Unhandled case in IsLineOnSurface");
         }
     }
 } 
