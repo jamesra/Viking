@@ -27,8 +27,6 @@ namespace IdentityServer.Data
             builder.Entity<OrganizationAssignment>().HasKey(oa => new { oa.OrganizationId, oa.UserId});
             builder.Entity<OrganizationAssignment>().HasOne(oa => oa.Organization).WithMany("OrganizationAssignments").HasForeignKey(oa => oa.OrganizationId);
             builder.Entity<OrganizationAssignment>().HasOne(oa => oa.User).WithMany("OrganizationAssignments").HasForeignKey(oa => oa.UserId);
-
-
         }
 
         public DbSet<IdentityServer.Models.ApplicationRole> ApplicationRole { get; set; }

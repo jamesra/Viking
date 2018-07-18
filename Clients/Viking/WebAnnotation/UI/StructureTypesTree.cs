@@ -71,11 +71,11 @@ namespace WebAnnotation.UI
                 } 
             }
 
-            Tree.AddObjects(listRoots); 
+            Tree.Invoke(new Action(() => Tree.AddObjects(listRoots)));
 
             foreach(StructureType parent in listParents.Values)
             {
-                UpdateNodeChildren(parent); 
+                Tree.Invoke(new Action(() => UpdateNodeChildren(parent)));
             }
         }
 
@@ -129,7 +129,7 @@ namespace WebAnnotation.UI
                                 Viking.UI.Controls.GenericTreeNode[] nodes = Tree.GetNodesForObject(oldType);
                                 foreach (Viking.UI.Controls.GenericTreeNode node in nodes)
                                 {
-                                    Tree.RemoveNode(node);
+                                    Tree.Invoke(new Action(() => Tree.RemoveNode(node)));
                                 }
                             }
                         }
