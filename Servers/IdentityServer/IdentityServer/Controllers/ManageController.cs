@@ -150,29 +150,27 @@ namespace IdentityServer.Controllers
             Dictionary<long, List<ApplicationUser>> OrgAdmins = _context.GetOrganizationAdminMap();
 
             //Create the message
-            string message = string.Format("<p>{0} is requesting additional claims</p>", User.UserName);
+            string message = string.Format("{0} is requesting additional claims\n\n", User.UserName);
             string RoleMessage = "";
             string OrgMessage = "";
 
             if (Roles.Any(r => r.Selected))
             {
-                RoleMessage = "<p>Roles:</p><list>";
+                RoleMessage = "Roles:\n";
                 foreach (var role in Roles.Where(r => r.Selected && !ExistingRoleClaims.Any(erc => erc.Id == r.Id)))
                 {
-                    RoleMessage += string.Format("<li>{0}</li>", role.Name);
+                    RoleMessage += string.Format("\t{0}\n", role.Name);
                 }
-                RoleMessage += "</list>";
             }
 
             if(Organizations.Any(o => o.Selected))
             {
-                OrgMessage = "<p>Organizations:</p><list>";
+                OrgMessage = "Organizations:\n";
                 foreach (var org in Organizations.Where(o => o.Selected && !ExistingOrganziationClaims.Any(oa => oa.Id == o.Id)))
                 {
                     InvolvedAdmins.AddRange(OrgAdmins[org.Id].Select(u => u.Email));
-                    OrgMessage += string.Format("<li>{0}</li>", org.Name);
+                    OrgMessage += string.Format("\t{0}\n", org.Name);
                 }
-                RoleMessage += "</list>";
             }
 
             message += RoleMessage + OrgMessage;
@@ -188,7 +186,7 @@ namespace IdentityServer.Controllers
                     await this._emailSender.SendEmailAsync(AdminUsers.Select(a => a.Email).ToArray(), string.Format("{0} claim request", User.UserName), message);
                 }
             }
-            catch(System.Net.Mail.SmtpException smtpException)
+            catch(System.Net.Mail.SmtpException)
             {
                 StatusMessage = "Error sending message.  Please contact an administrator:\n";
                 foreach(var admin in AdminUsers)
