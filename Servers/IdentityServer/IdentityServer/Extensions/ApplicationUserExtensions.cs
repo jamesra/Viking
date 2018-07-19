@@ -38,9 +38,7 @@ namespace IdentityServer.Extensions
                 Selected = _context.UserRoles.Any(ur => ur.RoleId == role.Id && ur.UserId == user.Id)
             }).OrderBy(r => r.Name).ToListAsync();
 
-            return new UserClaimRequestViewModel() { UserId = user.Id, AvailableOrganizations = orgs.Result, AvailableRoles = roles.Result };
+            return new UserClaimRequestViewModel() { UserId = user.Id, AvailableOrganizations = orgs.Result, AvailableRoles = roles.Result, NewOrganization="" };
         }
-
-       
     }
 }

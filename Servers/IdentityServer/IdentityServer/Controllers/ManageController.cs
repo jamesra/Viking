@@ -129,7 +129,7 @@ namespace IdentityServer.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> RequestClaims([Bind("UserId, AvailableRoles, AvailableOrganizations")] UserClaimRequestViewModel requestor)
+        public async Task<IActionResult> RequestClaims([Bind("UserId, AvailableRoles, AvailableOrganizations, NewOrganization")] UserClaimRequestViewModel requestor)
         {
             //Send an E-mail to the admins requesting new claims
             var User = _context.ApplicationUser.FirstOrDefault(u => u.Id == requestor.UserId);
@@ -153,6 +153,7 @@ namespace IdentityServer.Controllers
             string message = string.Format("{0} is requesting additional claims\n\n", User.UserName);
             string RoleMessage = "";
             string OrgMessage = "";
+            string NewOrgMessage = "";
 
             if (Roles.Any(r => r.Selected))
             {
@@ -173,7 +174,12 @@ namespace IdentityServer.Controllers
                 }
             }
 
-            message += RoleMessage + OrgMessage;
+            if(!string.IsNullOrWhiteSpace(requestor.NewOrganization))
+            {
+                NewOrgMessage = string.Format("<p>New Organization: {0}</p>", requestor.NewOrganization);
+            }
+
+            message += RoleMessage + OrgMessage + NewOrgMessage;
 
             try
             {

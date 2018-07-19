@@ -76,8 +76,9 @@
       <HintPath>..\..\Packages\Neo4j.Driver.1.3.0\lib\net46\Neo4j.Driver.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Newtonsoft.Json, Version=11.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <HintPath>..\..\Packages\Newtonsoft.Json.11.0.2\lib\net45\Newtonsoft.Json.dll</HintPath>
+    <Reference Include="Newtonsoft.Json, Version=10.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\..\Packages\Newtonsoft.Json.10.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="Simple.OData.Client.Core, Version=4.26.0.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\..\Packages\Simple.OData.V4.Client.4.26.0\lib\portable-net45+win8+wp8+wpa81\Simple.OData.Client.Core.dll</HintPath>

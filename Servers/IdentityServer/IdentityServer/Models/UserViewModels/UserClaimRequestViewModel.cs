@@ -15,5 +15,7 @@ namespace IdentityServer.Models.UserViewModels
         public List<OrganizationSelectedViewModel> AvailableOrganizations { get; set; }
 
         public List<RoleSelectedViewModel> AvailableRoles { get; set; }
+
+        public string NewOrganization { get; set; }
     }
 }
