@@ -11,7 +11,7 @@ using Geometry;
 
 namespace LocalBookmarks
 {
-    class Global : IInitExtensions
+    public class Global : IInitExtensions
     {
         static string BookmarkPath = Viking.UI.State.VolumeCachePath + System.IO.Path.DirectorySeparatorChar + "Bookmarks";
 
@@ -71,7 +71,7 @@ namespace LocalBookmarks
         static public double BookmarkArea = DefaultBookmarkRadius * DefaultBookmarkRadius * Math.PI; 
 
         private static FolderUIObj _SelectedFolder;
-        public static FolderUIObj SelectedFolder
+        internal static FolderUIObj SelectedFolder
         {
             get { return _SelectedFolder; }
             set { _SelectedFolder = value; }

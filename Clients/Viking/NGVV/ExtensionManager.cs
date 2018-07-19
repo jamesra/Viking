@@ -298,7 +298,7 @@ namespace Viking.Common
             System.Type[] types = null;
             try
             {
-                types = A.GetTypes();
+                types = A.GetExportedTypes();
             }
             catch (ReflectionTypeLoadException except)
             {
