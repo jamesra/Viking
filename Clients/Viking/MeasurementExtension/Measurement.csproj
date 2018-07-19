@@ -150,6 +150,11 @@
       <Name>Geometry</Name>
       <Private>False</Private>
     </ProjectReference>
+    <ProjectReference Include="..\..\Common\Common.csproj">
+      <Project>{b35b0c61-ec9c-425a-846d-f160d5b12158}</Project>
+      <Name>Common</Name>
+      <Private>False</Private>
+    </ProjectReference>
     <ProjectReference Include="..\..\MonogameXNAGraphicsShared\VikingXNAGraphics.csproj">
       <Project>{7ede0b00-89f9-4ef5-a629-2ed66cee273b}</Project>
       <Name>VikingXNAGraphics</Name>

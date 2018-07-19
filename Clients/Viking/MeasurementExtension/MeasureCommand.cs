@@ -58,9 +58,32 @@ namespace MeasurementExtension
     }
 
     [Viking.Common.CommandAttribute()]
-    class MeasureCommand : Viking.UI.Commands.Command
+    class MeasureCommand : Viking.UI.Commands.Command, Viking.Common.IObservableHelpStrings
     {
         GridVector2 Origin;
+
+        private static string[] DefaultHelpStrings = new string[]
+        {
+            "Hold SHIFT: Force horizontal measurement line"
+        };
+
+        public virtual string[] HelpStrings
+        {
+            get
+            {
+                List<string> s = new List<string>(MeasureCommand.DefaultHelpStrings); 
+                s.AddRange(Viking.UI.Commands.Command.DefaultKeyHelpStrings); 
+                return s.ToArray();
+            }
+        }
+
+        public System.Collections.ObjectModel.ObservableCollection<string> ObservableHelpStrings
+        {
+            get
+            {
+                return new System.Collections.ObjectModel.ObservableCollection<string>(this.HelpStrings);
+            }
+        }
 
         public MeasureCommand(Viking.UI.Controls.SectionViewerControl parent)
             : base(parent)
@@ -132,7 +155,6 @@ namespace MeasurementExtension
             Color lineColor = new Color(Color.YellowGreen.R, Color.YellowGreen.G, Color.YellowGreen.B, 0.75f);
 
             double VolumeDistance = GridVector2.Distance(Origin, this.oldWorldPosition) * MeasurementExtension.Global.UnitsPerPixel;
-
 
             string mosaic_space_string =  "No mosaic transform";
 
