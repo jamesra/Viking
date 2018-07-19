@@ -611,7 +611,7 @@ namespace Geometry.Transforms
         /// <summary>
         /// This call removes cached data from the transform to reduce memory footprint.  Called when we only expect Transform and Inverse transform calls in the future
         /// </summary>
-        public virtual void MinimizeMemory()
+        public override void MinimizeMemory()
         {
             
             try

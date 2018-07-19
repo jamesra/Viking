@@ -410,7 +410,7 @@ namespace Geometry.Transforms
             return Weights; 
         }
 
-        public void MinimizeMemory()
+        public override void MinimizeMemory()
         {
             _MappedToControlSpaceWeights = null;
             _ControlToMappedSpaceWeights = null;

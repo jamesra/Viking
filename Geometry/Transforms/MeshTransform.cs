@@ -340,7 +340,7 @@ namespace Geometry.Transforms
             return nearestIntersect;
         }
 
-       public void MinimizeMemory()
+        public override void  MinimizeMemory()
        {
            base.MinimizeMemory();
 

@@ -34,5 +34,15 @@ namespace Geometry
             A = a;
             B = b;
         }
+
+        public override bool Equals(object obj)
+        {
+            if (object.ReferenceEquals(obj, null))
+                return false;
+
+
+            Combo<T> other = (Combo<T>)obj;
+            return other.iA == this.iA && other.iB == this.iB;
+        }
     }
 }

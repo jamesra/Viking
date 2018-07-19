@@ -113,7 +113,6 @@ namespace Geometry
         public static GridRange<T> ToSubGrid(ConcurrentDictionary<GridIndex, T> grid, GridIndicies iGrid)
         {
             T[,] output = new T[iGrid.Width, iGrid.Height];
-            int i = 0;
             for (int iY = iGrid.iMinY; iY < iGrid.iMaxY; iY++)
             {
                 for (int iX = iGrid.iMinX; iX < iGrid.iMaxX; iX++)
