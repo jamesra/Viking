@@ -21,7 +21,7 @@
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|x86' ">
     <StartArguments>http://155.100.105.9/RABBIT/Volume.xml</StartArguments>
-    <StartAction>Program</StartAction>
+    <StartAction>Project</StartAction>
     <StartProgram>D:\Src\Viking\Viking\bin\Debug\Viking.exe</StartProgram>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|x86' ">

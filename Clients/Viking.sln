@@ -1,12 +1,11 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 14
-VisualStudioVersion = 14.0.25420.1
+# Visual Studio 15
+VisualStudioVersion = 15.0.27703.2042
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{137D9922-6FFD-4872-AA8A-D0B26B83BCA0}"
 	ProjectSection(SolutionItems) = preProject
 		LocalTestRun.testrunconfig = LocalTestRun.testrunconfig
-		NGVV.vsmdi = NGVV.vsmdi
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VikingCore", "Viking\NGVV\VikingCore.csproj", "{AEB1B24B-C968-40F9-B9F5-5C1FCE2EFD6D}"
@@ -94,10 +93,9 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TriangleNetGeometryExtensio
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SqlGeometryAnnotationExtensions", "..\SqlGeometryAnnotationExtensions\SqlGeometryAnnotationExtensions.csproj", "{6B29CF4C-107E-444C-9FB0-76F1981ED6C0}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WCFTokenInjector", "WCFTokenInjector\WCFTokenInjector.csproj", "{61452F17-CA41-4BBE-8D20-3C6339CD4626}"
+EndProject
 Global
-	GlobalSection(Performance) = preSolution
-		HasPerformanceSessions = true
-	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Debug|Mixed Platforms = Debug|Mixed Platforms
@@ -707,9 +705,33 @@ Global
 		{6B29CF4C-107E-444C-9FB0-76F1981ED6C0}.ReleaseWithSymbols|Mixed Platforms.Build.0 = Release|Any CPU
 		{6B29CF4C-107E-444C-9FB0-76F1981ED6C0}.ReleaseWithSymbols|x86.ActiveCfg = Release|Any CPU
 		{6B29CF4C-107E-444C-9FB0-76F1981ED6C0}.ReleaseWithSymbols|x86.Build.0 = Release|Any CPU
+		{61452F17-CA41-4BBE-8D20-3C6339CD4626}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{61452F17-CA41-4BBE-8D20-3C6339CD4626}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{61452F17-CA41-4BBE-8D20-3C6339CD4626}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{61452F17-CA41-4BBE-8D20-3C6339CD4626}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{61452F17-CA41-4BBE-8D20-3C6339CD4626}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{61452F17-CA41-4BBE-8D20-3C6339CD4626}.Debug|x86.Build.0 = Debug|Any CPU
+		{61452F17-CA41-4BBE-8D20-3C6339CD4626}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{61452F17-CA41-4BBE-8D20-3C6339CD4626}.Release|Any CPU.Build.0 = Release|Any CPU
+		{61452F17-CA41-4BBE-8D20-3C6339CD4626}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{61452F17-CA41-4BBE-8D20-3C6339CD4626}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{61452F17-CA41-4BBE-8D20-3C6339CD4626}.Release|x86.ActiveCfg = Release|Any CPU
+		{61452F17-CA41-4BBE-8D20-3C6339CD4626}.Release|x86.Build.0 = Release|Any CPU
+		{61452F17-CA41-4BBE-8D20-3C6339CD4626}.ReleaseWithSymbols|Any CPU.ActiveCfg = Release|Any CPU
+		{61452F17-CA41-4BBE-8D20-3C6339CD4626}.ReleaseWithSymbols|Any CPU.Build.0 = Release|Any CPU
+		{61452F17-CA41-4BBE-8D20-3C6339CD4626}.ReleaseWithSymbols|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{61452F17-CA41-4BBE-8D20-3C6339CD4626}.ReleaseWithSymbols|Mixed Platforms.Build.0 = Release|Any CPU
+		{61452F17-CA41-4BBE-8D20-3C6339CD4626}.ReleaseWithSymbols|x86.ActiveCfg = Release|Any CPU
+		{61452F17-CA41-4BBE-8D20-3C6339CD4626}.ReleaseWithSymbols|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {2DD168FC-9E13-40C7-9B26-01B0BAAA1761}
+	EndGlobalSection
+	GlobalSection(Performance) = preSolution
+		HasPerformanceSessions = true
 	EndGlobalSection
 	GlobalSection(TestCaseManagementSettings) = postSolution
 		CategoryFile = NGVV.vsmdi

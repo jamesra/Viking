@@ -205,14 +205,14 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\Common\Common.csproj">
-      <Project>{B35B0C61-EC9C-425A-846D-F160D5B12158}</Project>
-      <Name>Common</Name>
+    <ProjectReference Include="..\..\..\Geometry\Geometry.csproj">
+      <Project>{eacb87e8-a5e3-417e-a9ef-b80c2a68c020}</Project>
+      <Name>Geometry</Name>
       <Private>False</Private>
     </ProjectReference>
-    <ProjectReference Include="..\..\..\Geometry\Geometry.csproj">
-      <Project>{EACB87E8-A5E3-417E-A9EF-B80C2A68C020}</Project>
-      <Name>Geometry</Name>
+    <ProjectReference Include="..\..\Common\Common.csproj">
+      <Project>{b35b0c61-ec9c-425a-846d-f160d5b12158}</Project>
+      <Name>Common</Name>
       <Private>False</Private>
     </ProjectReference>
     <ProjectReference Include="..\..\MonogameXNAGraphicsShared\VikingXNAGraphics.csproj">
@@ -226,9 +226,10 @@
       <Private>False</Private>
     </ProjectReference>
     <ProjectReference Include="..\NGVV\VikingCore.csproj">
-      <Project>{AEB1B24B-C968-40F9-B9F5-5C1FCE2EFD6D}</Project>
+      <Project>{aeb1b24b-c968-40f9-b9f5-5c1fce2efd6d}</Project>
       <Name>VikingCore</Name>
       <Private>False</Private>
+      <EmbedInteropTypes>False</EmbedInteropTypes>
     </ProjectReference>
     <ProjectReference Include="..\VikingXNAWinForms\VikingXNAWinForms.csproj">
       <Project>{8e2f9eac-3b70-46fe-b8d6-7a04b9d183b9}</Project>
@@ -242,6 +243,7 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <None Include="app.config" />
     <None Include="BookmarkSchema.xsd">
       <SubType>Designer</SubType>
     </None>

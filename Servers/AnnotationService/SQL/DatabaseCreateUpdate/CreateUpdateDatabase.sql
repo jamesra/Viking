@@ -1,9 +1,9 @@
 /**** You need to replace the following templates to use this script ****/
-/**** Rabbit = Name of the database  */
+/**** RPC1 = Name of the database  */
 /**** {DATABASE_DIRECTORY} = Directory Datbase lives in if it needs to be created, with the trailing slash i.e. C:\Database\
 */
 DECLARE @DATABASE_NAME VARCHAR(50)
-SET @DATABASE_NAME = 'Rabbit'
+SET @DATABASE_NAME = 'RPC1'
 DECLARE @DATABASE_DIRECTORY VARCHAR(50)
 SET @DATABASE_DIRECTORY = 'C:\Database\'
 
@@ -29,7 +29,7 @@ BEGIN
 END
 	
 CREATE TABLE #UpdateVars ([Version] VARCHAR(100));
-INSERT INTO #UpdateVars Values (N'Rabbit');
+INSERT INTO #UpdateVars Values (N'RPC1');
 
 DECLARE @db_id VARCHAR(100);
 SET @db_id = db_id(@DATABASE_NAME)
@@ -42,50 +42,50 @@ BEGIN
 	print N'Database does not exist, creating...' 
 	
 	declare @Path varchar(100)
-	set @Path = N'C:\Database\Rabbit\'
+	set @Path = N'C:\Database\RPC1\'
 	EXEC master.dbo.xp_create_subdir @Path
 	
-	/****** Object:  Database [Rabbit]    Script Date: 06/14/2011 13:13:50 ******/
-	CREATE DATABASE [Rabbit] ON  PRIMARY 
-		( NAME = N'Rabbit', FILENAME = N'C:\Database\Rabbit\Rabbit.mdf' , SIZE = 4096KB , MAXSIZE = UNLIMITED, FILEGROWTH = 1024KB )
+	/****** Object:  Database [RPC1]    Script Date: 06/14/2011 13:13:50 ******/
+	CREATE DATABASE [RPC1] ON  PRIMARY 
+		( NAME = N'RPC1', FILENAME = N'C:\Database\RPC1\RPC1.mdf' , SIZE = 4096KB , MAXSIZE = UNLIMITED, FILEGROWTH = 1024KB )
 		 LOG ON 
-		( NAME = N'Rabbit_log', FILENAME = N'C:\Database\Rabbit\Rabbit_log.ldf' , SIZE = 4096KB , MAXSIZE = 2048GB , FILEGROWTH = 10%)
+		( NAME = N'RPC1_log', FILENAME = N'C:\Database\RPC1\RPC1_log.ldf' , SIZE = 4096KB , MAXSIZE = 2048GB , FILEGROWTH = 10%)
 		
-	ALTER DATABASE [Rabbit] SET COMPATIBILITY_LEVEL = 100
+	ALTER DATABASE [RPC1] SET COMPATIBILITY_LEVEL = 100
 	
 	IF (1 = FULLTEXTSERVICEPROPERTY('IsFullTextInstalled'))
 	begin
-		EXEC [Rabbit].[dbo].[sp_fulltext_database] @action = 'enable'
+		EXEC [RPC1].[dbo].[sp_fulltext_database] @action = 'enable'
 	end
 	
-	ALTER DATABASE [Rabbit] SET ANSI_NULL_DEFAULT OFF
-	ALTER DATABASE [Rabbit] SET ANSI_NULLS OFF
-	ALTER DATABASE [Rabbit] SET ANSI_PADDING ON
-	ALTER DATABASE [Rabbit] SET ANSI_WARNINGS OFF
-	ALTER DATABASE [Rabbit] SET ARITHABORT OFF
-	ALTER DATABASE [Rabbit] SET AUTO_CLOSE OFF
-	ALTER DATABASE [Rabbit] SET AUTO_CREATE_STATISTICS ON
-	ALTER DATABASE [Rabbit] SET AUTO_SHRINK OFF
-	ALTER DATABASE [Rabbit] SET AUTO_UPDATE_STATISTICS ON
-	ALTER DATABASE [Rabbit] SET CURSOR_CLOSE_ON_COMMIT OFF
-	ALTER DATABASE [Rabbit] SET CURSOR_DEFAULT  GLOBAL
-	ALTER DATABASE [Rabbit] SET CONCAT_NULL_YIELDS_NULL OFF
-	ALTER DATABASE [Rabbit] SET NUMERIC_ROUNDABORT OFF
-	ALTER DATABASE [Rabbit] SET QUOTED_IDENTIFIER OFF
-	ALTER DATABASE [Rabbit] SET RECURSIVE_TRIGGERS OFF
-	ALTER DATABASE [Rabbit] SET  DISABLE_BROKER
-	ALTER DATABASE [Rabbit] SET AUTO_UPDATE_STATISTICS_ASYNC OFF
-	ALTER DATABASE [Rabbit] SET DATE_CORRELATION_OPTIMIZATION OFF
-	ALTER DATABASE [Rabbit] SET TRUSTWORTHY OFF
-	ALTER DATABASE [Rabbit] SET ALLOW_SNAPSHOT_ISOLATION OFF
-	ALTER DATABASE [Rabbit] SET PARAMETERIZATION SIMPLE
-	ALTER DATABASE [Rabbit] SET READ_COMMITTED_SNAPSHOT OFF
-	ALTER DATABASE [Rabbit] SET HONOR_BROKER_PRIORITY OFF
-	ALTER DATABASE [Rabbit] SET  READ_WRITE
-	ALTER DATABASE [Rabbit] SET RECOVERY SIMPLE
-	ALTER DATABASE [Rabbit] SET  MULTI_USER
-	ALTER DATABASE [Rabbit] SET PAGE_VERIFY CHECKSUM
-	ALTER DATABASE [Rabbit] SET DB_CHAINING OFF
+	ALTER DATABASE [RPC1] SET ANSI_NULL_DEFAULT OFF
+	ALTER DATABASE [RPC1] SET ANSI_NULLS OFF
+	ALTER DATABASE [RPC1] SET ANSI_PADDING ON
+	ALTER DATABASE [RPC1] SET ANSI_WARNINGS OFF
+	ALTER DATABASE [RPC1] SET ARITHABORT OFF
+	ALTER DATABASE [RPC1] SET AUTO_CLOSE OFF
+	ALTER DATABASE [RPC1] SET AUTO_CREATE_STATISTICS ON
+	ALTER DATABASE [RPC1] SET AUTO_SHRINK OFF
+	ALTER DATABASE [RPC1] SET AUTO_UPDATE_STATISTICS ON
+	ALTER DATABASE [RPC1] SET CURSOR_CLOSE_ON_COMMIT OFF
+	ALTER DATABASE [RPC1] SET CURSOR_DEFAULT  GLOBAL
+	ALTER DATABASE [RPC1] SET CONCAT_NULL_YIELDS_NULL OFF
+	ALTER DATABASE [RPC1] SET NUMERIC_ROUNDABORT OFF
+	ALTER DATABASE [RPC1] SET QUOTED_IDENTIFIER OFF
+	ALTER DATABASE [RPC1] SET RECURSIVE_TRIGGERS OFF
+	ALTER DATABASE [RPC1] SET  DISABLE_BROKER
+	ALTER DATABASE [RPC1] SET AUTO_UPDATE_STATISTICS_ASYNC OFF
+	ALTER DATABASE [RPC1] SET DATE_CORRELATION_OPTIMIZATION OFF
+	ALTER DATABASE [RPC1] SET TRUSTWORTHY OFF
+	ALTER DATABASE [RPC1] SET ALLOW_SNAPSHOT_ISOLATION OFF
+	ALTER DATABASE [RPC1] SET PARAMETERIZATION SIMPLE
+	ALTER DATABASE [RPC1] SET READ_COMMITTED_SNAPSHOT OFF
+	ALTER DATABASE [RPC1] SET HONOR_BROKER_PRIORITY OFF
+	ALTER DATABASE [RPC1] SET  READ_WRITE
+	ALTER DATABASE [RPC1] SET RECOVERY SIMPLE
+	ALTER DATABASE [RPC1] SET  MULTI_USER
+	ALTER DATABASE [RPC1] SET PAGE_VERIFY CHECKSUM
+	ALTER DATABASE [RPC1] SET DB_CHAINING OFF
 	
 	print N'Created Database...' 
 	INSERT INTO #UpdateVars Values (DB_ID(N'CreateTables'));
@@ -93,7 +93,7 @@ END
 
 GO
 
-USE [Rabbit]
+USE [RPC1]
 GO
 
 --Need to specify database owner before enabling change tracking
@@ -1106,15 +1106,15 @@ END
 */  
 GO
 
-Use [Rabbit]
+Use [RPC1]
 GO
   
 DECLARE @compat_level int
-SET @compat_level = (SELECT compatibility_level FROM sys.databases WHERE name = 'Rabbit')
+SET @compat_level = (SELECT compatibility_level FROM sys.databases WHERE name = 'RPC1')
 IF(@compat_level < 120)
 BEGIN
 	print N'Setting the database compatability level to SQL 2014'
-	ALTER DATABASE [Rabbit] SET COMPATIBILITY_LEVEL = 120  
+	ALTER DATABASE [RPC1] SET COMPATIBILITY_LEVEL = 120  
 END
 GO
 
@@ -2528,7 +2528,7 @@ end
  					Select * from LocationLink
 						 WHERE (A in 
 						(SELECT L.ID
-						  FROM [Rabbit].[dbo].[Location] L
+						  FROM [RPC1].[dbo].[Location] L
 						  INNER JOIN 
 						   (SELECT ID, TYPEID
 							FROM Structure
@@ -2537,7 +2537,7 @@ end
 						  OR
 						  (B in 
 						(SELECT L.ID
-						  FROM [Rabbit].[dbo].[Location] L
+						  FROM [RPC1].[dbo].[Location] L
 						  INNER JOIN 
 						   (SELECT ID, TYPEID
 							FROM Structure
@@ -6998,6 +6998,124 @@ end
 	INSERT INTO DBVersion values (74, 
 		      N'Add stored procedure to delete structures'   ,getDate(),User_ID())
 	 COMMIT TRANSACTION seventyfour
+	end
+
+	if(not(exists(select (1) from DBVersion where DBVersionID = 75)))
+	begin
+     print N'Make username fields long enough to hold E-mail addresses' 
+	 BEGIN TRANSACTION seventyfive
+		
+	EXEC sp_fulltext_column
+		@tabname =  'Location' , 
+		@colname =  'Username' , 
+		@action =  'drop'
+
+	 ALTER TABLE Location DROP CONSTRAINT [DF_Location_Username] 
+	 ALTER TABLE Location ALTER COLUMN Username nvarchar(254) NOT NULL
+	 ALTER TABLE [dbo].[Location] ADD  CONSTRAINT [DF_Location_Username]  DEFAULT (N'') FOR [Username]
+	 
+	 EXEC sp_fulltext_column  
+		@tabname =  'Location', 
+		@colname =  'Username', 
+		@action =  'add' 
+
+	 if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+		
+	 DROP INDEX IF EXISTS [LocationLink_A_B_Username_Created] ON [dbo].[LocationLink]
+	 DROP INDEX IF EXISTS [LocationLink_B_A_Username_Created] ON [dbo].[LocationLink]
+	 ALTER TABLE [dbo].[LocationLink] DROP CONSTRAINT [DF_LocationLink_Username]
+	 ALTER TABLE LocationLink ALTER COLUMN Username nvarchar(254) NOT NULL
+	 ALTER TABLE [dbo].[LocationLink] ADD  CONSTRAINT [DF_LocationLink_Username]  DEFAULT (N'') FOR [Username]
+
+	 CREATE NONCLUSTERED INDEX [LocationLink_A_B_Username_Created] ON [dbo].[LocationLink]
+	(
+		[A] ASC,
+		[B] ASC
+		)
+	 WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
+
+	 CREATE NONCLUSTERED INDEX [LocationLink_B_A_Username_Created] ON [dbo].[LocationLink]
+	(
+		[B] ASC,
+		[A] ASC
+		)
+	 WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
+
+
+	if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
+	EXEC sp_fulltext_column
+		@tabname =  'Structure' , 
+		@colname =  'Username' , 
+		@action =  'drop'
+
+	 ALTER TABLE Structure DROP CONSTRAINT [DF_Structure_Username] 
+	 ALTER TABLE Structure ALTER COLUMN Username nvarchar(254) NOT NULL
+	 ALTER TABLE [dbo].[Structure] ADD  CONSTRAINT [DF_Structure_Username]  DEFAULT (N'') FOR [Username]
+	 
+	 EXEC sp_fulltext_column  
+		@tabname =  'Structure', 
+		@colname =  'Username', 
+		@action =  'add' 
+
+	if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+		 
+	 ALTER TABLE StructureLink DROP CONSTRAINT [DF_StructureLink_Username] 
+	 ALTER TABLE StructureLink ALTER COLUMN Username nvarchar(254) NOT NULL
+	 ALTER TABLE [dbo].[StructureLink] ADD  CONSTRAINT [DF_StructureLink_Username]  DEFAULT (N'') FOR [Username]
+	 
+
+	if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
+	 ALTER TABLE StructureType DROP CONSTRAINT [DF_StructureType_Username] 
+	 ALTER TABLE StructureType ALTER COLUMN Username nvarchar(254) NOT NULL
+	 ALTER TABLE [dbo].[StructureType] ADD  CONSTRAINT [DF_StructureType_Username]  DEFAULT (N'') FOR [Username]
+	 
+
+	if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
+	INSERT INTO DBVersion values (75, 
+		      N'Make username fields long enough to hold E-mail addresses'    ,getDate(),User_ID())
+	 COMMIT TRANSACTION seventyfive
+	end
+
+	if(not(exists(select (1) from DBVersion where DBVersionID = 76)))
+	begin
+     print N'Fix potential Azure Migration Issues' 
+	 BEGIN TRANSACTION seventysix
+		
+	
+
+	 if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+		
+
+	INSERT INTO DBVersion values (76, 
+		      N'Fix potential Azure Migration Issues' ,getDate(),User_ID())
+	 COMMIT TRANSACTION seventysix
 	end
 END
 
