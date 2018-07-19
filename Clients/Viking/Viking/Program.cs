@@ -168,8 +168,12 @@ namespace Viking
                 }
 
                 website = vikingLogon.VolumeURL;
+
+                UI.State.UserBearerToken = vikingLogon.BearerToken;
                 UI.State.UserCredentials = vikingLogon.Credentials;
 
+                Viking.Tokens.TokenInjector.BearerToken = vikingLogon.BearerToken;
+                Viking.Tokens.TokenInjector.BearerTokenAuthority = "https://webdev.connectomes.utah.edu/identityserver";
             }
 
             //Make sure the website includes a file, if it does not then include Volume.VikingXML by default

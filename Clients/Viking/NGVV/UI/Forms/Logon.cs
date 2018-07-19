@@ -19,6 +19,7 @@ using System.Xml.Linq;
 using System.Windows.Threading;
 using System.Threading.Tasks;
 using Utils;
+using IdentityModel.Client;
 
 namespace Viking.UI.Forms
 {
@@ -56,16 +57,40 @@ namespace Viking.UI.Forms
 
         private string _VolumeURL;
 
+        private Task _LoadVolumeTask = null;
+
+        CancellationTokenSource source = null;
+
         public string VolumeURL
         {
             get { return _VolumeURL; }
             set
             {
+                if (_VolumeURL == Viking.Common.Util.AppendDefaultVolumeFilenameIfMissing(value))
+                    return;
+
                 _VolumeURL = Viking.Common.Util.AppendDefaultVolumeFilenameIfMissing(value);
+
+                if(_LoadVolumeTask != null)
+                {
+                    if(_LoadVolumeTask.Status != TaskStatus.RanToCompletion)
+                    {
+                        source.Cancel();
+                    }
+
+                    _LoadVolumeTask = null;
+
+                    if (source != null)
+                    {
+                        source = null;
+                    }
+                }
+
+                source = new CancellationTokenSource();
                 
                 if(_VolumeURL != null)
                 {
-                    Task.Run(() => 
+                    _LoadVolumeTask = Task.Run(() => 
                     {
                         XDocument document = null;
                         try
@@ -93,7 +118,7 @@ namespace Viking.UI.Forms
                         {
                             this.Invoke(new System.Action(() => VolumeDocument = document));
                         }
-                    });  
+                    }, source.Token);  
                 }
                 else
                 {
@@ -129,6 +154,8 @@ namespace Viking.UI.Forms
 
         public DialogResult Result = DialogResult.Cancel;
 
+        public TokenResponse BearerToken; 
+
         protected string KeyFileFolderPath
         {
             get { return System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Viking");}
@@ -151,7 +178,7 @@ namespace Viking.UI.Forms
 
             keyFile = "usrcrd.vkg";
              
-            State.UserCredentials = new NetworkCredential(userName, password);
+            //State.UserCredentials = new NetworkCredential(userName, password);
             
             State.userAccessLevel = "Exit";
 
@@ -241,6 +268,40 @@ namespace Viking.UI.Forms
             System.Diagnostics.Process.Start("https://connectomes.utah.edu/Viz/Account/Register");
         }      
 
+        private TokenResponse RetrieveBearerToken(string username, string password)
+        {
+            //The url must match and is case-sensitive
+            //var discoTask = DiscoveryClient.GetAsync("http://localhost:5000");
+            var discoTask = DiscoveryClient.GetAsync("https://webdev.connectomes.utah.edu/identityserver");
+            discoTask.Wait();
+
+            var disco = discoTask.Result;
+
+            if (disco.IsError)
+            {
+                SetUpdateText(disco.Error);
+                return null;
+            }
+
+            // request token
+            var tokenClient = new TokenClient(disco.TokenEndpoint, "ro.viking", "secret");
+            var tokenResponseTask = tokenClient.RequestResourceOwnerPasswordAsync(username, password, "Viking.Annotation openid");
+            tokenResponseTask.Wait();
+
+            TokenResponse tokenResponse = tokenResponseTask.Result;
+
+            if (tokenResponse.IsError)
+            {
+                Console.WriteLine(tokenResponse.Error);
+                SetUpdateText(tokenResponse.Error);
+                return null;
+            }
+
+            Console.WriteLine("Bearer Token: " + tokenResponse.Json);
+
+            return tokenResponse;
+        }
+
         void login_handle(object sender, System.EventArgs e)
         {
             SetUpdateText("Authenticating...");
@@ -248,76 +309,62 @@ namespace Viking.UI.Forms
             userName = this.textUsername.Text;
 
             password = this.textPassword.Text;
-
-
+             
             if (String.IsNullOrEmpty(userName))
                 SetUpdateText("Enter Username");
 
             if (String.IsNullOrEmpty(password))
                 SetUpdateText("Enter Password");
 
-            this.Credentials = new NetworkCredential(userName, password); 
+            this.BearerToken = RetrieveBearerToken(userName, password);
 
-            string responseData = createConnection();
-
-            if (responseData == "Exit")
+            if(BearerToken == null)
             {
-                SetUpdateText("Oops! Server Error, try again");
                 return;
             }
 
+            this.Credentials = new NetworkCredential(userName, password);
+            //this.Credentials = new NetworkCredential("jamesan", "4%w%o06");
 
-            if (responseData == "Invalid")
+            State.userAccessLevel = "Admin";
+            
+            if (this.textUsername.Text != readUserName)
+                System.IO.File.Delete(this.KeyFileFullPath);
+
+            if (remember_me_check_box.Checked)
             {
-                counter++;
-
-                if (counter == 3)
-                    this.Close();
-
-
-                SetUpdateText("Sorry: Invalid credentials, try again " + counter + "/3");
-            }
-            else //Login successful
-            {
-                if (this.textUsername.Text != readUserName)
-                    System.IO.File.Delete(this.KeyFileFullPath);
-
-                if (remember_me_check_box.Checked)
+                try
                 {
-                    try
-                    {
 #if DEBUG
-                        WriteCredentialsInFile(new NetworkCredential(userName, password));
+                    WriteCredentialsInFile(new NetworkCredential(userName, password));
 #else
-                        WriteCredentialsInEncryptedFile(new NetworkCredential(userName, password));
+                    WriteCredentialsInEncryptedFile(new NetworkCredential(userName, password));
 #endif
-                    }
-                    catch(IOException except)
-                    {
-                        MessageBox.Show("An exception occured saving your credentials. Viking will continue but your credentials will not be saved for the next login.\nException message:\n" + except.Message);
-                        if (System.IO.File.Exists(this.KeyFileFullPath))
-                        {
-                            System.IO.File.Delete(this.KeyFileFullPath);
-                        }
-                    }
                 }
-
-                else
+                catch(IOException except)
                 {
+                    MessageBox.Show("An exception occured saving your credentials. Viking will continue but your credentials will not be saved for the next login.\nException message:\n" + except.Message);
                     if (System.IO.File.Exists(this.KeyFileFullPath))
                     {
                         System.IO.File.Delete(this.KeyFileFullPath);
                     }
                 }
-
-                SetUpdateText("Login Successful! -- Access Level: " + responseData.ToUpper());
-
-                State.userAccessLevel = responseData;
-
-                this.Result = DialogResult.OK;
-
-                this.Close();
             }
+
+            else
+            {
+                if (System.IO.File.Exists(this.KeyFileFullPath))
+                {
+                    System.IO.File.Delete(this.KeyFileFullPath);
+                }
+            }
+
+            SetUpdateText("Login Successful! -- Access Level: ");
+            
+            this.Result = DialogResult.OK;
+
+            this.Close();
+            
 
         }
 
@@ -460,23 +507,24 @@ namespace Viking.UI.Forms
                 userName = "anonymous";
 
                 password = "connectome";
-
+                /*
                 string responseData = createConnection();
 
                 if (responseData == "Read")
                 {
                     SetUpdateText("Anonymous Login Successful! -- Access Level: " + responseData.ToUpper());
+                    */
+                State.userAccessLevel = "Read";
 
-                    State.userAccessLevel = responseData;
+                this.Result = DialogResult.OK;
 
-                    this.Result = DialogResult.OK;
-
-                    this.Close();
-                }
+                this.Close();
+                /*
 
                 else
 
                     SetUpdateText("Oops! Server Error, try again");
+                */
             }
             else
             {
@@ -489,6 +537,8 @@ namespace Viking.UI.Forms
         string createConnection()
         { 
             string postdata = string.Format("userName={0}&password={1}", userName, password);
+            if(userName == "anonymous")
+                return "Exit";
 
             Uri AuthenticationURI;
             try

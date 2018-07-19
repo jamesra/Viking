@@ -56,8 +56,9 @@ namespace Viking.UI
 
         //Stores userAccessLevel for the profided credentials: Include: Admin, Modify, Read
         static public string userAccessLevel;
-        
+
         //User credentials used during authentication
+        static public IdentityModel.Client.TokenResponse UserBearerToken = null;
 
         static public System.Net.NetworkCredential UserCredentials = new System.Net.NetworkCredential("anonymous", "connectome");
 
