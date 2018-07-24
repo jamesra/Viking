@@ -1,7 +1,8 @@
 /PublishJotunn/
 /Publish/
-obj
-bin
+**/obj/
+**/bin/
+**/packages/
 *.vsp
 *.suo
 *.dgml
@@ -14,4 +15,4 @@ bin
 TestResults
 /Packages/
 /Papers/
-/.vs/
+**/.vs/
