@@ -21,7 +21,7 @@ namespace AnnotationService.Types
     [ProtoInclude(3, typeof(PermittedStructureLink))]
     public abstract class DataObject
     {
-        protected DBACTION _DBAction = DBACTION.NONE;
+        private DBACTION _DBAction = DBACTION.NONE;
 
         [DataMember]
         [ProtoMember(10)]
@@ -38,7 +38,7 @@ namespace AnnotationService.Types
     /// </summary>
     [DataContract] 
     [ProtoContract]
-    [ProtoInclude(1, typeof(DataObjectWithParent<long>))]
+    [ProtoInclude(1, typeof(DataObjectWithParent<Int64>))]
     [ProtoInclude(2, typeof(Location))]
     [ProtoInclude(3, typeof(LocationPositionOnly))]
     public class DataObjectWithKey<T>  : DataObject where T : struct, IComparable, IEquatable<T>, IComparable<T>
@@ -92,11 +92,11 @@ namespace AnnotationService.Types
     [ProtoInclude(3, typeof(LocationPositionOnly))]
     public class DataObjectWithKeyOfLong : DataObject
     {
-        protected long _ID;
+        private Int64 _ID;
 
         [ProtoMember(10)]
         [DataMember]
-        public long ID
+        public Int64 ID
         {
             get { return _ID; }
             set { _ID = value; }
@@ -113,11 +113,11 @@ namespace AnnotationService.Types
     [ProtoInclude(2, typeof(StructureType))]
     public class DataObjectWithParentOfLong : DataObjectWithKeyOfLong
     {
-        protected long? _ParentID;
+        private Int64? _ParentID;
 
         [ProtoMember(10)]
         [DataMember]
-        public long? ParentID
+        public Int64? ParentID
         {
             get
             {
@@ -125,7 +125,7 @@ namespace AnnotationService.Types
                     return _ParentID;
                 else
                 {
-                    return new long?();
+                    return new Int64?();
                 }
             }
             set { _ParentID = value; }

@@ -20,13 +20,13 @@ namespace AnnotationService.Types
             return result;
         }
 
-        long _SourceTypeID;
-        long _TargetTypeID;
+        Int64 _SourceTypeID;
+        Int64 _TargetTypeID;
         bool _Bidirectional;
 
         [DataMember]
         [ProtoMember(1)]
-        public long SourceTypeID
+        public Int64 SourceTypeID
         {
             get { return _SourceTypeID; }
             set { _SourceTypeID = value; }
@@ -34,7 +34,7 @@ namespace AnnotationService.Types
 
         [DataMember]
         [ProtoMember(2)]
-        public long TargetTypeID
+        public Int64 TargetTypeID
         {
             get { return _TargetTypeID; }
             set { _TargetTypeID = value; }

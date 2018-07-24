@@ -21,15 +21,15 @@ namespace AnnotationService.Types
             return result;
         }
 
-        long _SourceID;
-        long _TargetID;
+        Int64 _SourceID;
+        Int64 _TargetID;
         bool _Bidirectional;
         string _Tags;
         string _Username;
 
         [ProtoMember(1)]
         [DataMember]
-        public long SourceID
+        public Int64 SourceID
         {
          get{return _SourceID;}
          set{_SourceID = value;}
@@ -37,7 +37,7 @@ namespace AnnotationService.Types
 
         [ProtoMember(2)]
         [DataMember]
-        public long TargetID
+        public Int64 TargetID
         {
             get { return _TargetID; }
             set { _TargetID = value; }

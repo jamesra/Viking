@@ -21,7 +21,7 @@ namespace AnnotationService.Types
         private int _Color;
         private string _Code;
         private char _HotKey;
-        protected PermittedStructureLink[] _Links;
+        private PermittedStructureLink[] _Links;
 
         [DataMember]
         [ProtoMember(1)]

@@ -42,28 +42,28 @@ namespace AnnotationService.Types
     [ProtoInclude(1000, typeof(LocationHistory))]
     public class Location : DataObjectWithKeyOfLong
     {
-        protected long _ParentID;
-        protected long _Section;
-        protected AnnotationPoint _Position;
-        protected AnnotationPoint _VolumePosition;
-        protected bool _Closed;
-        protected SortedSet<long> _Links = null;
-        protected bool _Terminal;
-        protected bool _OffEdge;
-        protected double _Radius;
-        protected double? _Width;
-        protected short _TypeCode;
-        protected long _LastModified;
-        protected string _Username;
-        protected string _Xml;
-        protected System.Data.Entity.Spatial.DbGeometry _MosaicShape;
-        protected System.Data.Entity.Spatial.DbGeometry _VolumeShape;
-        protected byte[] _MosaicShapeWKB;
-        protected byte[] _VolumeShapeWKB;
+        private Int64 _ParentID;
+        private Int64 _Section;
+        private AnnotationPoint _Position;
+        private AnnotationPoint _VolumePosition;
+        private bool _Closed;
+        private SortedSet<Int64> _Links = null;
+        private bool _Terminal;
+        private bool _OffEdge;
+        private double _Radius;
+        private double? _Width;
+        private short _TypeCode;
+        private Int64 _LastModified;
+        private string _Username;
+        private string _Xml;
+        private System.Data.Entity.Spatial.DbGeometry _MosaicShape;
+        private System.Data.Entity.Spatial.DbGeometry _VolumeShape;
+        private byte[] _MosaicShapeWKB;
+        private byte[] _VolumeShapeWKB;
 
         [ProtoMember(1)]
         [DataMember]
-        public long ParentID
+        public Int64 ParentID
         {
             get { return _ParentID; }
             set { _ParentID = value; }
@@ -71,7 +71,7 @@ namespace AnnotationService.Types
 
         [ProtoMember(2)]
         [DataMember]
-        public long Section
+        public Int64 Section
         {
             get { return _Section; }
             set { _Section = value;
@@ -169,7 +169,7 @@ namespace AnnotationService.Types
         [ProtoMember(11)]
         [DataMember]
         [Column("Links")]
-        public long[] Links
+        public Int64[] Links
         {
             get {
                 if (_Links == null)
@@ -187,7 +187,7 @@ namespace AnnotationService.Types
                 }
                 else
                 {
-                    _Links = new SortedSet<long>(value);
+                    _Links = new SortedSet<Int64>(value);
                 } 
             }
         }
@@ -240,7 +240,7 @@ namespace AnnotationService.Types
         [ProtoMember(17)]
         [DataMember]
         [Column("LastModified")]
-        public long LastModified
+        public Int64 LastModified
         {
             get { return _LastModified; }
             set { _LastModified = value; }
@@ -255,10 +255,10 @@ namespace AnnotationService.Types
             set { _Username = value; }
         }
 
-        public void AddLink(long linkedID)
+        public void AddLink(Int64 linkedID)
         {
             if (this._Links == null)
-                _Links = new SortedSet<long>();
+                _Links = new SortedSet<Int64>();
             if(linkedID == this.ID)
             {
                 throw new ArgumentException("Cannot link location to itself: ID = " + this.ID.ToString());
@@ -267,10 +267,10 @@ namespace AnnotationService.Types
             _Links.Add(linkedID);
         }
 
-        public void AddLinks(SortedSet<long> linkIDs)
+        public void AddLinks(SortedSet<Int64> linkIDs)
         {
             if (this._Links == null)
-                _Links = new SortedSet<long>();
+                _Links = new SortedSet<Int64>();
 
             if (linkIDs.Contains(this.ID))
             {
@@ -287,7 +287,7 @@ namespace AnnotationService.Types
 
 
          
-        public static long MeasureEncodedObjectSize(Location loc)
+        public static Int64 MeasureEncodedObjectSize(Location loc)
         {
             DataContractSerializer ds = new DataContractSerializer(loc.GetType());
 
@@ -304,7 +304,7 @@ namespace AnnotationService.Types
             }
         }
 
-        public static long MeasureProtobufEncodedObjectSize(Location loc)
+        public static Int64 MeasureProtobufEncodedObjectSize(Location loc)
         {  
             using (System.IO.MemoryStream ms = new System.IO.MemoryStream())
             {
@@ -346,12 +346,12 @@ namespace AnnotationService.Types
     [DataContract]
     public class LocationHistory : Location
     {
-        protected ulong  _ChangedColumnMask = 0;
+        private Int64 _ChangedColumnMask = 0;
 
         [ProtoMember(1)]
         [DataMember]
         [Column("ChangedColumnMask")]
-        public ulong ChangedColumnMask
+        public Int64 ChangedColumnMask
         {
             get
             {

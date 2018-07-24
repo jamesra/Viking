@@ -18,21 +18,21 @@ namespace AnnotationService.Interfaces
         /// <param name="LinkedIDs"></param>
         /// <returns>Return new Location object with Database generated ID</returns>
         [OperationContract]
-        Location CreateLocation(Location obj, long[] LinkedIDs);
+        Location CreateLocation(Location obj, Int64[] LinkedIDs);
 
         /// <summary>
         /// Return a single location from the Database
         /// </summary>
         /// <returns></returns>
         [OperationContract]
-        Location GetLocationByID(long ID);
+        Location GetLocationByID(Int64 ID);
 
         /// <summary>
         /// Return multiple locations from the Database
         /// </summary>
         /// <returns></returns>
         [OperationContract]
-        Location[] GetLocationsByID(long[] IDs);
+        Location[] GetLocationsByID(Int64[] IDs);
 
         /// <summary>
         /// Return the last location modified by the calling user
@@ -48,7 +48,7 @@ namespace AnnotationService.Interfaces
         /// <param name="IDs"></param>
         /// <returns></returns>
         [OperationContract]
-        long[] GetLinkedLocations(long ID);
+        Int64[] GetLinkedLocations(Int64 ID);
 
         /// <summary>
         /// Find all locations in a given section.  Returns time query executed so GetLocationChanges can be called i
@@ -56,47 +56,47 @@ namespace AnnotationService.Interfaces
         /// </summary>
         /// <returns></returns>
         [OperationContract]
-        Location[] GetLocationsForSection(long section, out long QueryExecutedTime);
+        Location[] GetLocationsForSection(Int64 section, out Int64 QueryExecutedTime);
           
         /// <summary>
         /// Return all locations for this structure
         /// </summary>
         /// <returns></returns>
         [OperationContract]
-        Location[] GetLocationsForStructure(long structureID);
+        Location[] GetLocationsForStructure(Int64 structureID);
 
         /// <summary>
         /// Returns all locations modified after a set date within the requested region
         /// The passed tick count needs to be in the same timezone as the server
         /// </summary>
         /// <param name="section"></param>
-        /// <param name="ModifiedAfterThisTime">A Datetime converted to a long. Clients should use server time</param>
+        /// <param name="ModifiedAfterThisTime">A Datetime converted to a Int64. Clients should use server time</param>
         /// <param name="IDs"></param>
         /// <returns></returns>
         [OperationContract]
-        Location[] GetLocationChangesInMosaicRegion(long section, BoundingRectangle bbox, double MinRadius, long? ModifiedAfterThisUtcTime, out long QueryExecutedTime, out long[] DeletedIDs);
+        Location[] GetLocationChangesInMosaicRegion(Int64 section, BoundingRectangle bbox, double MinRadius, Int64? ModifiedAfterThisUtcTime, out Int64 QueryExecutedTime, out Int64[] DeletedIDs);
 
         /// <summary>
         /// Returns all Structures, StructureLinks, Locations, and LocationLinks in a region. 
         /// The passed tick count needs to be in the same timezone as the server
         /// </summary>
         /// <param name="section"></param>
-        /// <param name="ModifiedAfterThisTime">A Datetime converted to a long. Clients should use server time</param>
+        /// <param name="ModifiedAfterThisTime">A Datetime converted to a Int64. Clients should use server time</param>
         /// <param name="IDs"></param>
         /// <returns></returns>
         [OperationContract]
-        AnnotationSet GetAnnotationsInMosaicRegion(long section, BoundingRectangle bbox, double MinRadius, long? ModifiedAfterThisUtcTime, out long QueryExecutedTime, out long[] DeletedIDs);
+        AnnotationSet GetAnnotationsInMosaicRegion(Int64 section, BoundingRectangle bbox, double MinRadius, Int64? ModifiedAfterThisUtcTime, out Int64 QueryExecutedTime, out Int64[] DeletedIDs);
         
         /// <summary>
         /// Returns all locations modified after a set date.  
         /// The passed tick count needs to be in the same timezone as the server
         /// </summary>
         /// <param name="section"></param>
-        /// <param name="ModifiedAfterThisTime">A Datetime converted to a long. Clients should use server time</param>
+        /// <param name="ModifiedAfterThisTime">A Datetime converted to a Int64. Clients should use server time</param>
         /// <param name="IDs"></param>
         /// <returns></returns>
         [OperationContract]
-        Location[] GetLocationChanges(long section, long ModifiedAfterThisUtcTime, out long QueryExecutedTime, out long[] DeletedIDs);
+        Location[] GetLocationChanges(Int64 section, Int64 ModifiedAfterThisUtcTime, out Int64 QueryExecutedTime, out Int64[] DeletedIDs);
         
         /// <summary>
         /// Updates or creates a new structure
@@ -104,7 +104,7 @@ namespace AnnotationService.Interfaces
         /// <param name="structType"></param>
         /// <returns>ID's of updated locations</returns.
         [OperationContract]
-        long[] Update(Location[] locations);
+        Int64[] Update(Location[] locations);
 
         /// <summary>
         /// Creates a link between two locations
@@ -113,7 +113,7 @@ namespace AnnotationService.Interfaces
         /// <param name="To"></param>
         /// <returns></returns>
         [OperationContract]
-        void CreateLocationLink(long SourceID, long TargetID);
+        void CreateLocationLink(Int64 SourceID, Int64 TargetID);
 
         /// <summary>
         /// Deletes a link between two locations
@@ -122,7 +122,7 @@ namespace AnnotationService.Interfaces
         /// <param name="To"></param>
         /// <returns></returns>
         [OperationContract]
-        void DeleteLocationLink(long SourceID, long TargetID);
+        void DeleteLocationLink(Int64 SourceID, Int64 TargetID);
 
         /// <summary>
         /// Get all location links that intersect the section
@@ -131,10 +131,10 @@ namespace AnnotationService.Interfaces
         /// <param name="To"></param>
         /// <returns></returns>
         [OperationContract]
-        LocationLink[] GetLocationLinksForSection(long section, long ModifiedAfterThisTime, out long QueryExecutedTime, out LocationLink[] DeletedLinks);
+        LocationLink[] GetLocationLinksForSection(Int64 section, Int64 ModifiedAfterThisTime, out Int64 QueryExecutedTime, out LocationLink[] DeletedLinks);
 
         [OperationContract]
-        LocationLink[] GetLocationLinksForSectionInMosaicRegion(long section, BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisUtcTime, out long QueryExecutedTime, out LocationLink[] DeletedLinks);
+        LocationLink[] GetLocationLinksForSectionInMosaicRegion(Int64 section, BoundingRectangle bbox, double MinRadius, Int64 ModifiedAfterThisUtcTime, out Int64 QueryExecutedTime, out LocationLink[] DeletedLinks);
 
         /// <summary>
         /// Return a list of location objects that have changed in the time interval
@@ -144,7 +144,7 @@ namespace AnnotationService.Interfaces
         /// <param name="end_time">Optional end time</param>
         /// <returns></returns>
         [OperationContract]
-        LocationHistory[] GetLocationChangeLog(long? structure_id, DateTime? begin_time, DateTime? end_time);
+        LocationHistory[] GetLocationChangeLog(Int64? structure_id, DateTime? begin_time, DateTime? end_time);
 
     }
          

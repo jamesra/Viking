@@ -32,14 +32,14 @@ namespace AnnotationService.Interfaces
         /// </summary>
         /// <returns></returns>
         [OperationContract]
-        StructureType GetStructureTypeByID(long ID);
+        StructureType GetStructureTypeByID(Int64 ID);
 
         /// <summary>
         /// Return a single structure type in the database
         /// </summary>
         /// <returns></returns>
         [OperationContract]
-        StructureType[] GetStructureTypesByIDs(long[] IDs);
+        StructureType[] GetStructureTypesByIDs(Int64[] IDs);
 
         /// <summary>
         /// Returns all structures with the given typeID
@@ -48,7 +48,7 @@ namespace AnnotationService.Interfaces
         /// <param name="typeID"></param>
         /// <returns></returns>
         //[OperationContract]
-        //Structure[] GetStructuresForType(long typeID);
+        //Structure[] GetStructuresForType(Int64 typeID);
 
         /// <summary>
         /// Updates or creates a new structure type 
@@ -56,7 +56,7 @@ namespace AnnotationService.Interfaces
         /// <param name="structType"></param>
         /// <returns></returns>
         [OperationContract]
-        long[] UpdateStructureTypes(StructureType[] structType);
+        Int64[] UpdateStructureTypes(StructureType[] structType);
 
 
         [OperationContract]

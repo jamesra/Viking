@@ -11,19 +11,19 @@ namespace AnnotationService.Types
 {
     [DataContract]
     [ProtoContract]
-    public enum DBACTION
+    public enum DBACTION : Int32
     {
         [EnumMember]
         [ProtoEnum]
-        NONE,
+        NONE = 0,
         [EnumMember]
         [ProtoEnum]
-        INSERT,
+        INSERT = 1,
         [EnumMember]
         [ProtoEnum]
-        UPDATE,
+        UPDATE = 2,
         [EnumMember]
         [ProtoEnum]
-        DELETE
+        DELETE = 3
     };
 }

@@ -40,19 +40,19 @@ namespace AnnotationService.Types
     [DataContract]
     public class Structure : DataObjectWithParentOfLong
     {
-        protected long _Type;
-        protected string _Notes;
-        protected bool _Verified; 
-        protected double _Confidence;
-        protected StructureLink[] _Links;
-        protected long[] _ChildIDs;
-        protected string _Label;
-        protected string _Username;
-        protected string _Xml;
+        private Int64 _Type;
+        private string _Notes;
+        private bool _Verified;
+        private double _Confidence;
+        private StructureLink[] _Links;
+        private Int64[] _ChildIDs;
+        private string _Label;
+        private string _Username;
+        private string _Xml;
         
         [DataMember]
         [ProtoMember(1)]
-        public long TypeID
+        public Int64 TypeID
         {
             get { return _Type; }
             set { _Type = value; }
@@ -109,7 +109,7 @@ namespace AnnotationService.Types
 
         [DataMember]
         [ProtoMember(7)]
-        public long[] ChildIDs
+        public Int64[] ChildIDs
         {
             get { return _ChildIDs; }
             set { _ChildIDs = value; }

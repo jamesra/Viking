@@ -34,7 +34,7 @@ namespace AnnotationService.Interfaces
         /// </summary>
         /// <returns></returns>
         [OperationContract]
-        Structure[] GetStructuresForSection(long Section, long ModifiedAfterThisTime, out long QueryExecutedTime, out long[] DeletedIDs);
+        Structure[] GetStructuresForSection(Int64 Section, Int64 ModifiedAfterThisTime, out Int64 QueryExecutedTime, out Int64[] DeletedIDs);
 
         /// <summary>
         /// Returns all locations modified after a set date within the requested region
@@ -45,7 +45,7 @@ namespace AnnotationService.Interfaces
         /// <param name="IDs"></param>
         /// <returns></returns>
         [OperationContract]
-        Structure[] GetStructuresForSectionInMosaicRegion(long section, BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisTime, out long QueryExecutedTime, out long[] DeletedIDs);
+        Structure[] GetStructuresForSectionInMosaicRegion(Int64 section, BoundingRectangle bbox, double MinRadius, Int64 ModifiedAfterThisTime, out Int64 QueryExecutedTime, out Int64[] DeletedIDs);
 
         /// <summary>
         /// Returns all locations modified after a set date within the requested region
@@ -56,14 +56,14 @@ namespace AnnotationService.Interfaces
         /// <param name="IDs"></param>
         /// <returns></returns>
         [OperationContract]
-        Structure[] GetStructuresForSectionInVolumeRegion(long section, BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisTime, out long QueryExecutedTime, out long[] DeletedIDs);
+        Structure[] GetStructuresForSectionInVolumeRegion(Int64 section, BoundingRectangle bbox, double MinRadius, Int64 ModifiedAfterThisTime, out Int64 QueryExecutedTime, out Int64[] DeletedIDs);
         
         /// <summary>
         /// Return a single structure from the Database
         /// </summary>
         /// <returns></returns>
         [OperationContract]
-        Structure GetStructureByID(long ID, bool IncludeChildren);
+        Structure GetStructureByID(Int64 ID, bool IncludeChildren);
 
         /// <summary>
         /// Returns all linked structures
@@ -72,7 +72,7 @@ namespace AnnotationService.Interfaces
         /// <param name="IncludeChildren">Set to false if you do not want a list of child structures included for size reasons</param>
         /// <returns></returns>
         [OperationContract]
-        Structure[] GetStructuresByIDs(long[] ID, bool IncludeChildren);
+        Structure[] GetStructuresByIDs(Int64[] ID, bool IncludeChildren);
 
         /// <summary>
         /// Creates a link between two strcutures
@@ -98,7 +98,7 @@ namespace AnnotationService.Interfaces
         StructureLink[] GetLinkedStructuresByID(long ID);
 
         [OperationContract]
-        long[] GetNetworkedStructures(long[] IDs, int numHops);
+        Int64[] GetNetworkedStructures(long[] IDs, int numHops);
 
         [OperationContract]
         Structure[] GetChildStructuresInNetwork(long[] IDs, int numHops);
@@ -119,7 +119,7 @@ namespace AnnotationService.Interfaces
         /// <param name="structureID"></param>
         /// <returns></returns>
         [OperationContract]
-        long NumberOfLocationsForStructure(long structureID); 
+        Int64 NumberOfLocationsForStructure(Int64 structureID); 
 
         
 
@@ -129,7 +129,7 @@ namespace AnnotationService.Interfaces
         /// <param name="structType"></param>
         /// <returns>IDs of updated</returns.
         [OperationContract]
-        long[] UpdateStructures(Structure[] structure);
+        Int64[] UpdateStructures(Structure[] structure);
          
 
         /// <summary>
@@ -146,7 +146,7 @@ namespace AnnotationService.Interfaces
         /// <param name="structureID"></param>
         /// <returns></returns>
         [OperationContract]
-        long[] GetUnfinishedLocations(long structureID);
+        Int64[] GetUnfinishedLocations(Int64 structureID);
 
 
         /// <summary>
@@ -155,7 +155,7 @@ namespace AnnotationService.Interfaces
         /// <param name="structureID"></param>
         /// <returns></returns>
         [OperationContract]
-        LocationPositionOnly[] GetUnfinishedLocationsWithPosition(long structureID);
+        LocationPositionOnly[] GetUnfinishedLocationsWithPosition(Int64 structureID);
 
         /// <summary>
         /// Returns all structures with the given typeID 
@@ -163,7 +163,7 @@ namespace AnnotationService.Interfaces
         /// <param name="typeID"></param>
         /// <returns></returns>
         [OperationContract]
-        Structure[] GetStructuresOfType(long typeID);
+        Structure[] GetStructuresOfType(Int64 typeID);
 
         /// <summary>
         /// Merges the specified structures into a single structure. Structures must be of the same type.
@@ -172,7 +172,7 @@ namespace AnnotationService.Interfaces
         /// <param name="MergeID"></param>
         /// <returns>ID of new structure</returns>
         [OperationContract]
-        long Merge(long KeepID, long MergeID);
+        Int64 Merge(Int64 KeepID, Int64 MergeID);
 
         /// <summary>
         /// Split the specified structure into two new structures at the specified location.
@@ -184,7 +184,7 @@ namespace AnnotationService.Interfaces
         /// <param name="locLink">Location Link to split structure at</param>
         /// <returns>ID of new structure</returns>
         [OperationContract]
-        long Split(long StructureA, long LocationIDInSplitStructure);
+        Int64 Split(Int64 StructureA, Int64 LocationIDInSplitStructure);
 
         /// <summary>
         /// Split the specified structure into two new structures at the specified link
@@ -195,7 +195,7 @@ namespace AnnotationService.Interfaces
         /// <param name="locLink">Location Link to split structure at</param>
         /// <returns>ID of new structure</returns>
         [OperationContract]
-        long SplitAtLocationLink(long LocationIDOfKeepStructure, long LocationIDOfSplitStructure);
+        Int64 SplitAtLocationLink(Int64 LocationIDOfKeepStructure, Int64 LocationIDOfSplitStructure);
 
 
         /// <summary>
@@ -206,7 +206,7 @@ namespace AnnotationService.Interfaces
         /// <param name="end_time">Optional end time</param>
         /// <returns></returns>
         [OperationContract]
-        Structure[] GetStructureChangeLog(long? structure_id, DateTime? begin_time, DateTime? end_time);
+        Structure[] GetStructureChangeLog(Int64? structure_id, DateTime? begin_time, DateTime? end_time);
     }
      
 }
