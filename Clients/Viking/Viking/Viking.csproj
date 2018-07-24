@@ -36,17 +36,19 @@
     <UpdateInterval>7</UpdateInterval>
     <UpdateIntervalUnits>Days</UpdateIntervalUnits>
     <UpdatePeriodically>false</UpdatePeriodically>
-    <UpdateRequired>false</UpdateRequired>
+    <UpdateRequired>true</UpdateRequired>
     <MapFileExtensions>true</MapFileExtensions>
-    <InstallUrl>http://connectomes.utah.edu/Software/Viking4/</InstallUrl>
+    <InstallUrl>https://connectomes.utah.edu/Software/Viking4/</InstallUrl>
     <SupportUrl>http://connectomes.utah.edu/</SupportUrl>
+    <ErrorReportUrl>http://connectomes.utah.edu/client/versionhistory.html</ErrorReportUrl>
     <TargetCulture>en</TargetCulture>
     <ProductName>Viking</ProductName>
     <PublisherName>Marc Lab</PublisherName>
+    <MinimumRequiredVersion>1.1.0.270</MinimumRequiredVersion>
     <CreateWebPageOnPublish>true</CreateWebPageOnPublish>
     <WebPage>Viking.html</WebPage>
     <TrustUrlParameters>true</TrustUrlParameters>
-    <ApplicationRevision>270</ApplicationRevision>
+    <ApplicationRevision>271</ApplicationRevision>
     <ApplicationVersion>1.1.0.%2a</ApplicationVersion>
     <UseApplicationTrust>false</UseApplicationTrust>
     <CreateDesktopShortcut>true</CreateDesktopShortcut>
