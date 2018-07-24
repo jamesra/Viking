@@ -1,11 +1,15 @@
-﻿using System;
+﻿#define USEASPMEMBERSHIP
+
+using System;
 using System.Resources;
 using System.Collections.Generic;
 using System.Windows.Forms;
 using System.IO;
 using System.Diagnostics;
 using System.Reflection;
-using Viking.UI.Forms; 
+using Viking.UI.Forms;
+
+
 
 namespace Viking
 {
@@ -157,7 +161,7 @@ namespace Viking
             //   Logon nag screen, I've only added this tiny code here, and made a logon form in 
             //  Viking/UI/forms
 
-
+#if !USEASPMEMBERSHIP
             using (Logon vikingLogon = new Logon("https://connectomes.utah.edu/Viz/", website))
             {
                 vikingLogon.ShowDialog();
@@ -175,6 +179,21 @@ namespace Viking
                 Viking.Tokens.TokenInjector.BearerToken = vikingLogon.BearerToken;
                 Viking.Tokens.TokenInjector.BearerTokenAuthority = "https://webdev.connectomes.utah.edu/identityserver";
             }
+#else
+            using (LogonASPMembership vikingLogon = new LogonASPMembership("https://connectomes.utah.edu/Viz/", website))
+            {
+                vikingLogon.ShowDialog();
+
+                if (vikingLogon.Result == DialogResult.Cancel)
+                {
+                    return;
+                }
+
+                website = vikingLogon.VolumeURL;
+                UI.State.UserCredentials = vikingLogon.Credentials;
+            }
+
+#endif 
 
             //Make sure the website includes a file, if it does not then include Volume.VikingXML by default
             website = Viking.Common.Util.AppendDefaultVolumeFilenameIfMissing(website);

@@ -344,6 +344,12 @@
     <Compile Include="UI\Forms\Logon.Designer.cs">
       <DependentUpon>Logon.cs</DependentUpon>
     </Compile>
+    <Compile Include="UI\Forms\LogonASPMembership.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="UI\Forms\LogonASPMembership.Designer.cs">
+		<DependentUpon>LogonASPMembership.cs</DependentUpon>
+	</Compile>
     <Compile Include="UI\Forms\PropertySheetForm.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -461,6 +467,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="UI\Forms\Logon.resx">
       <DependentUpon>Logon.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UI\Forms\LogonASPMembership.resx">
+		<DependentUpon>LogonASPMembership.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="UI\Forms\ScreenshotForm.resx">
       <DependentUpon>ScreenshotForm.cs</DependentUpon>
