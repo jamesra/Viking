@@ -81,9 +81,8 @@
     <Reference Include="EntityFramework.SqlServer, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
       <HintPath>..\..\Packages\EntityFramework.6.2.0\lib\net45\EntityFramework.SqlServer.dll</HintPath>
     </Reference>
-    <Reference Include="MathNet.Numerics, Version=3.18.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\..\Packages\MathNet.Numerics.3.18.0\lib\net40\MathNet.Numerics.dll</HintPath>
-      <Private>True</Private>
+    <Reference Include="MathNet.Numerics, Version=4.5.1.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\..\Packages\MathNet.Numerics.4.5.1\lib\net461\MathNet.Numerics.dll</HintPath>
     </Reference>
     <Reference Include="MIConvexHull, Version=1.0.17.1019, Culture=neutral, PublicKeyToken=bdc96d69606221fd, processorArchitecture=MSIL">
       <HintPath>..\..\Packages\MIConvexHull.1.1.17.1019\lib\netstandard1.0\MIConvexHull.dll</HintPath>
@@ -133,9 +132,8 @@
       <Private>True</Private>
     </Reference>
     <Reference Include="System" />
-    <Reference Include="System.Collections.Immutable, Version=1.2.2.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-      <HintPath>..\..\Packages\System.Collections.Immutable.1.4.0\lib\portable-net45+win8+wp8+wpa81\System.Collections.Immutable.dll</HintPath>
-      <Private>True</Private>
+    <Reference Include="System.Collections.Immutable, Version=1.2.3.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\..\Packages\System.Collections.Immutable.1.5.0\lib\netstandard2.0\System.Collections.Immutable.dll</HintPath>
     </Reference>
     <Reference Include="System.ComponentModel.DataAnnotations" />
     <Reference Include="System.Data" />
@@ -150,6 +148,8 @@
       <Private>True</Private>
     </Reference>
     <Reference Include="System.Net.Http.WebRequest" />
+    <Reference Include="System.Numerics" />
+    <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>

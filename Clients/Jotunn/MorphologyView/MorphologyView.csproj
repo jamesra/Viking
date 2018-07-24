@@ -43,9 +43,8 @@
       <HintPath>..\..\..\Packages\EntityFramework.6.2.0\lib\net45\EntityFramework.SqlServer.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="MathNet.Numerics, Version=3.17.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\..\..\Packages\MathNet.Numerics.3.17.0\lib\net40\MathNet.Numerics.dll</HintPath>
-      <Private>True</Private>
+    <Reference Include="MathNet.Numerics, Version=4.5.1.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\..\..\Packages\MathNet.Numerics.4.5.1\lib\net461\MathNet.Numerics.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.Expression.Interactions, Version=4.5.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <HintPath>..\..\..\Packages\Expression.Interaction.3.0.40218.0\lib\net45\Microsoft.Expression.Interactions.dll</HintPath>
@@ -82,13 +81,14 @@
       <Private>False</Private>
     </Reference>
     <Reference Include="System" />
-    <Reference Include="System.Collections.Immutable, Version=1.2.2.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-      <HintPath>..\..\..\Packages\System.Collections.Immutable.1.4.0\lib\portable-net45+win8+wp8+wpa81\System.Collections.Immutable.dll</HintPath>
-      <Private>True</Private>
+    <Reference Include="System.Collections.Immutable, Version=1.2.3.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\..\..\Packages\System.Collections.Immutable.1.5.0\lib\netstandard2.0\System.Collections.Immutable.dll</HintPath>
     </Reference>
     <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.ComponentModel.DataAnnotations" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Numerics" />
+    <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Windows.Interactivity, Version=4.5.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <HintPath>..\..\..\Packages\Expression.Interaction.3.0.40218.0\lib\net45\System.Windows.Interactivity.dll</HintPath>
       <Private>True</Private>
@@ -191,12 +191,12 @@
 copy $(TargetDir)\*.dll "$(SolutionDir)Jotunn\Jotunn\Modules\$(TargetName)"
 copy $(TargetDir)\*.pdb "$(SolutionDir)Jotunn\Jotunn\Modules\$(TargetName)"</PostBuildEvent>
   </PropertyGroup>
-  <Import Project="..\..\..\Packages\MathNet.Numerics.MKL.Win.2.2.0\build\MathNet.Numerics.MKL.Win.targets" Condition="Exists('..\..\..\Packages\MathNet.Numerics.MKL.Win.2.2.0\build\MathNet.Numerics.MKL.Win.targets')" />
+  <Import Project="..\..\..\Packages\MathNet.Numerics.MKL.Win.2.3.0\build\MathNet.Numerics.MKL.Win.targets" Condition="Exists('..\..\..\Packages\MathNet.Numerics.MKL.Win.2.3.0\build\MathNet.Numerics.MKL.Win.targets')" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
       <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
     </PropertyGroup>
-    <Error Condition="!Exists('..\..\..\Packages\MathNet.Numerics.MKL.Win.2.2.0\build\MathNet.Numerics.MKL.Win.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\..\Packages\MathNet.Numerics.MKL.Win.2.2.0\build\MathNet.Numerics.MKL.Win.targets'))" />
+    <Error Condition="!Exists('..\..\..\Packages\MathNet.Numerics.MKL.Win.2.3.0\build\MathNet.Numerics.MKL.Win.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\..\Packages\MathNet.Numerics.MKL.Win.2.3.0\build\MathNet.Numerics.MKL.Win.targets'))" />
   </Target>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
