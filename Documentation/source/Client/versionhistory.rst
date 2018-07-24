@@ -6,6 +6,8 @@ Version Information
 1.1.270
 -------
 
+	**2018-07-23**
+	
 	**Existing installations will see an error when upgrading to this version.  Users must uninstall and reinstall Viking.  Security improvements broke the auto-upgrade ability of previously installed versions.  Future versions should upgrade normally.**
 	 
 

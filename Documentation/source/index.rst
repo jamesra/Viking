@@ -24,6 +24,9 @@ Viking requires the following:
    * `XNA 4.0 Framework Redistributable`_
    * A dedicated GPU.  Intel chips with embedded graphics also work.
    * An internet connection
+   
+**Note for IT Administrators:** Viking's installer is signed by the University of Utah. 
+Adding Viking's `public key`_ as a trusted publisher allows users to install Viking without administrator rights.
 
 `Click here to install the Viking client`_
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -65,3 +68,4 @@ Indices and tables
 .. _original visualization site: http://connectomes.utah.edu/viz/
 .. _.NET Framework 4.6: https://www.microsoft.com/en-us/download/details.aspx?id=48130
 .. _XNA 4.0 Framework Redistributable: https://www.microsoft.com/en-us/download/details.aspx?id=27598
+.. _public key: https://connectomes.utah.edu/Software/Viking4/VikingPublicKey.cer
