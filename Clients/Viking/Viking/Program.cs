@@ -229,7 +229,7 @@ namespace Viking
         private static void CreateDebugListener()
         {
             return; 
-
+            /*
             string LogPath = System.Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData) + "\\Viking\\Logs";
             if (!Directory.Exists(LogPath))
                 Directory.CreateDirectory(LogPath);
@@ -250,6 +250,7 @@ namespace Viking
             Debug.Listeners.Add(DebugOutputListener);
 
             Trace.UseGlobalLock = true; 
+            */
         }
     }
 }

@@ -144,7 +144,7 @@ namespace Geometry.Transforms
                     return null;
 
                 //Fetch a list of triangles from the nearest point
-                double distance;
+                //double distance;
                 List<MappingGridTriangle> triangles = mapTrianglesRTree.Intersects(Point.ToRTreeRect(0));//mapTriangles.FindNearest(Point, out distance);
 
                 if (triangles == null)

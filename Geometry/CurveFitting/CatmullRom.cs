@@ -51,7 +51,7 @@ namespace Geometry
             double t0 = 0;
             double t1 = tj(t0, p0, p1, alpha);
             double t2 = tj(t1, p1, p2, alpha);
-            double t3 = tj(t2, p2, p3, alpha); //TODO: Check why this is calculated but not used
+            //double t3 = tj(t2, p2, p3, alpha); //TODO: Check why this is calculated but not used
 
             double[] tvalues = new double[NumInterpolations];
             SortedSet<double> tPoints = new SortedSet<double>(tvalues.Select((t, i) => ((double)i / ((double)NumInterpolations - 1.0))));

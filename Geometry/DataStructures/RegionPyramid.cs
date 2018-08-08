@@ -202,7 +202,7 @@ namespace Geometry
         }
     }
 
-    public class GridIndexEnumerator : IEnumerator<GridIndex>
+    public sealed class GridIndexEnumerator : IEnumerator<GridIndex>
     {
         GridIndicies Indicies;
         int iX;
@@ -233,7 +233,7 @@ namespace Geometry
             }
         }
 
-        void IDisposable.Dispose()
+        public void Dispose()
         {
         }
 
@@ -369,7 +369,6 @@ namespace Geometry
         protected static GridRange<T> ToSubGrid(T[,] grid, GridIndicies iGrid)
         {
             T[,] output = new T[iGrid.Width, iGrid.Height];
-            int i = 0;
             for (int iY = iGrid.iMinY; iY < iGrid.iMaxY; iY++)
             {
                 for (int iX = iGrid.iMinX; iX < iGrid.iMaxX; iX++)

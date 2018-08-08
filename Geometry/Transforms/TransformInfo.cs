@@ -102,7 +102,7 @@ namespace Geometry.Transforms
     [Serializable]
     public class TransformCacheInfo : ITransformCacheInfo
     {
-        private readonly string _CacheDirectory;
+        private readonly string cacheDirectory;
         private string _FilenameBase = null;
         private string _Extension = null;
 
@@ -110,14 +110,15 @@ namespace Geometry.Transforms
         {
             _Extension = ".stos_bin";
             _FilenameBase = System.IO.Path.GetFileNameWithoutExtension(Filename);
-            _Extension = System.IO.Path.GetExtension(Filename); 
+            _Extension = System.IO.Path.GetExtension(Filename);
+            cacheDirectory = CacheDirectory;
         }
          
         public string CacheDirectory
         {
             get
             {
-                return _CacheDirectory;
+                return cacheDirectory;
             }
         }
 

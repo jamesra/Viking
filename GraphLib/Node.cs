@@ -61,7 +61,6 @@ namespace GraphLib
 
         internal void RemoveEdge(KEY other)
         {
-            SortedSet<EDGETYPE> edgeList = null;
             if (Edges.ContainsKey(other))
             {
                 Edges.Remove(other);

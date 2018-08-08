@@ -44,5 +44,10 @@ namespace Geometry
             Combo<T> other = (Combo<T>)obj;
             return other.iA == this.iA && other.iB == this.iB;
         }
+
+        public override int GetHashCode()
+        {
+            return (iA * 23) + iB;
+        }
     }
 }

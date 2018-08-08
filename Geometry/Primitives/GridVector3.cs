@@ -274,7 +274,7 @@ namespace Geometry
             double y = (v1.Y * (1 - u - v)) + (v2.Y * u) + (v3.Y * v);
             double z = (v1.Y * (1 - u - v)) + (v2.Y * u) + (v3.Y * v);
             */
-            return new GridVector3(coords); 
+            //return new GridVector3(coords); 
         }
 
         public static GridVector3 Scale(GridVector3 A, double scalar)

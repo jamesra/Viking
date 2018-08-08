@@ -1120,9 +1120,7 @@ namespace Viking.VolumeModel
                                     {
                                         trans = TList[childSection];
                                     }
-
-                                    StreamWriter fs = null;
-
+                                    
                                     IITKSerialization itkTransform = TList[childSection] as IITKSerialization;
                                     if (itkTransform != null)
                                     {
