@@ -49,4 +49,18 @@ namespace WebAnnotation
             return x.Distance.CompareTo(y.Distance);
         }
     }
+
+    public class HitTest_Distance_Sorter : IComparer<HitTestResult>
+    {
+        public int Compare(HitTestResult x, HitTestResult y)
+        {
+            int compareVal = x.Distance.CompareTo(y.Distance);
+            if (compareVal != 0)
+                return compareVal;
+
+            //Higher visualHeight numbers sort earlier.  They are closer to the user because they are taller I guess.
+            compareVal = -x.obj.VisualHeight.CompareTo(y.obj.VisualHeight);
+            return compareVal; 
+        }
+    }
 }

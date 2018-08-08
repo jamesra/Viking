@@ -197,6 +197,9 @@ namespace WebAnnotation.View
             if (this.SmoothedVolumePolygon.Contains(Position))
                 return true;
 
+            //If the UI doesn't detect a hole as part of the annotation then it becomes impossible to close holes in the UI.  
+            //On the other hand, a location link inside the hole is unselectable. 
+            //The workaround was to assign a distance > 1 when the point falls outside the polygon.
             if (this.SmoothedVolumePolygon.InteriorPolygonContains(Position))
                 return true;
 
