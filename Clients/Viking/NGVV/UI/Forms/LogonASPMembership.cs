@@ -533,7 +533,7 @@ namespace Viking.UI.Forms
             }
             catch (WebException e)
             {
-                SetUpdateText("Failure communicating with authentication server.");
+                SetUpdateText("Failure communicating with authentication server.\n" + e.Message);
                 return "Exit";
             }
 
