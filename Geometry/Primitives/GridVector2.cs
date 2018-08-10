@@ -325,9 +325,19 @@ namespace Geometry
             return new GridVector2(A.X * scalar, A.Y * scalar);
         }
 
+        static public GridVector2 operator *(GridVector2 A, GridVector2 B)
+        {
+            return new GridVector2(A.X * B.X, A.Y * B.Y);
+        }
+
         static public GridVector2 operator /(GridVector2 A, double scalar)
         {
             return new GridVector2(A.X / scalar, A.Y / scalar);
+        }
+
+        static public GridVector2 operator /(GridVector2 A, GridVector2 B)
+        {
+            return new GridVector2(A.X / B.X, A.Y / B.Y);
         }
 
         static public bool operator ==(GridVector2 A, GridVector2 B)
