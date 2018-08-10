@@ -68,7 +68,6 @@ namespace VikingXNAGraphics
         public TextureOverlayView(Texture2D texture, GridRectangle boundingRect, Color color) : base(color)
         {
             this.Texture = texture;
-            GridVector2 offset = new GridVector2(Texture.Width / 2.0, Texture.Height / 2.0);
             this.BoundingRect = boundingRect;
         }
 
