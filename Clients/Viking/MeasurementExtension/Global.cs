@@ -32,7 +32,9 @@ namespace MeasurementExtension
         {
             get{ return new LengthMeasurement(Global.UnitOfMeasure, Global.UnitsPerPixel); }
         }
-        
+
+        public static bool ShowScaleBar = true;
+
         #region IInitExtensions Members
 
         /// <summary>

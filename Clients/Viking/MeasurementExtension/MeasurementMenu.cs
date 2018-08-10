@@ -27,6 +27,14 @@ namespace MeasurementExtension
             }
         }
 
+        [Viking.Common.MenuItem("Show Scale Bar")]
+        static public void OnMenuShowScaleBar(object sender, EventArgs e)
+        {
+            Debug.Print("Show Scale Bar");
+
+            Global.ShowScaleBar = !Global.ShowScaleBar;
+        }
+
         [Viking.Common.MenuItem("Measure Line")]
         static public void OnMenuMeasureLine(object sender, EventArgs e)
         {

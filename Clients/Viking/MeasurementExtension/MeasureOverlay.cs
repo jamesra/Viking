@@ -23,10 +23,17 @@ namespace MeasurementExtension
         public static double ScaleBarStartXFraction = 0.01;
         public static double ScaleBarStartYFraction = 0.05;
 
+        public static GridVector2 CornerOffsetFractions = new GridVector2(0.01, 0.05);
+
         private static double log5 = Math.Log(5);
+
+        
 
         public void Draw(GraphicsDevice graphicsDevice, Scene scene, Texture BackgroundLuma, Texture BackgroundColors, ref int NextStencilValue)
         {
+            if (!Global.ShowScaleBar)
+                return; 
+
             double ViewWidthInPixels = scene.VisibleWorldBounds.Width;
             double ViewWidthInUnits = ViewWidthInPixels / Global.UnitsPerPixel;
 
@@ -49,10 +56,15 @@ namespace MeasurementExtension
             FinalBarWidth = FinalBarWidth.ConvertTo(SILengthUnits.nm);
             //Determine how large our scale bar is in screen pixels
             double BarWidthInPixels = FinalBarWidth / Global.PixelWidth;
-            double BarHeightInPixels = Parent.fontArial.LineSpacing * Parent.Downsample / 3;
+            double BarHeightInPixels = (Parent.fontArial.LineSpacing * Parent.Downsample) / 3;
 
-            double BarStartX = scene.VisibleWorldBounds.Left + (ViewWidthInPixels * ScaleBarStartXFraction);
-            double BarStartY = scene.VisibleWorldBounds.Top - (1 * (scene.VisibleWorldBounds.Height * ScaleBarStartYFraction));
+            GridVector2 CornerOffset = new GridVector2(scene.VisibleWorldBounds.Width * CornerOffsetFractions.X, scene.VisibleWorldBounds.Height * CornerOffsetFractions.Y);
+
+            //double BarStartX = scene.VisibleWorldBounds.Left + CornerOffset.X;
+            double BarStartY = scene.VisibleWorldBounds.Bottom + (CornerOffset.Y + (2 * BarHeightInPixels));
+
+            double BarEndX = scene.VisibleWorldBounds.Right - CornerOffset.X;
+            double BarStartX = BarEndX - BarWidthInPixels;
 
             GridRectangle scaleBarRect = new GridRectangle(new GridVector2(BarStartX, BarStartY), BarWidthInPixels, BarHeightInPixels);
 
