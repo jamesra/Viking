@@ -25,6 +25,7 @@ namespace MeasurementExtension
         private void ScaleForm_Load(object sender, EventArgs e)
         {
             this.comboUnits.Text = UnitsOfMeasure;
+            //TODO: Populate combo box?
             this.numUnitsPerPixel.Value = System.Convert.ToDecimal(UnitsPerPixel);
         }
 

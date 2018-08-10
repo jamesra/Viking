@@ -111,6 +111,7 @@
     <Compile Include="Global.cs" />
     <Compile Include="MeasureCommand.cs" />
     <Compile Include="MeasurementMenu.cs" />
+    <Compile Include="MeasureOverlay.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ScaleForm.cs">
       <SubType>Form</SubType>
@@ -148,6 +149,11 @@
     <ProjectReference Include="..\..\..\Geometry\Geometry.csproj">
       <Project>{EACB87E8-A5E3-417E-A9EF-B80C2A68C020}</Project>
       <Name>Geometry</Name>
+      <Private>False</Private>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\SIMeasurement\SIMeasurement.csproj">
+      <Project>{0b489584-5d3e-4fb4-8a3d-77b7030e2994}</Project>
+      <Name>SIMeasurement</Name>
       <Private>False</Private>
     </ProjectReference>
     <ProjectReference Include="..\..\Common\Common.csproj">

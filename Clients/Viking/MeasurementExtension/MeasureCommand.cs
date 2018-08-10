@@ -7,56 +7,10 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Geometry;
 using VikingXNAGraphics;
+using SIMeasurement;
 
 namespace MeasurementExtension
 {
-   
-    struct UnitsAndScale
-    {
-        static string[] MetricUnits = { "nm", "um", "mm", "cm", "m", "km" };
-        public string Units;
-        public double Scalar;
-
-        public UnitsAndScale(string units, double scalar)
-        {
-            this.Units = units;
-            this.Scalar = scalar;
-        }
-
-        /// <summary>
-        /// Given a starting distance and measurement we return a unit and scalar that will result in a distance of less than 1,000 
-        /// </summary>
-        /// <param name="UnitOfMeasure"></param>
-        /// <param name="distance"></param>
-        /// <returns></returns>
-        public static UnitsAndScale ConvertToReadableUnits(string UnitOfMeasure, double distance)
-        {
-            if(distance <= 0)
-                return new UnitsAndScale(UnitOfMeasure, 1.0);
-
-            double numDigits = Convert.ToInt32(Math.Ceiling(Math.Log10(distance)));
-
-            if(numDigits <= 3)
-            {
-                return new UnitsAndScale(UnitOfMeasure, 1.0);
-            }
-
-            int iStartUnit = Array.IndexOf(MetricUnits, UnitOfMeasure.ToLower());
-
-            //Figure out how many 1,000 sized steps we make
-            int numUnitHops = Convert.ToInt32(Math.Floor(numDigits / 3.0));
-            
-            if(numUnitHops + iStartUnit > MetricUnits.Length)
-            {
-                numUnitHops = MetricUnits.Length - iStartUnit;
-            }
-
-            int iUnit = numUnitHops + iStartUnit;
-
-            return new UnitsAndScale(MetricUnits[iUnit], 1.0 / Math.Pow(1000, numUnitHops));
-        }
-    }
-
     [Viking.Common.CommandAttribute()]
     class MeasureCommand : Viking.UI.Commands.Command, Viking.Common.IObservableHelpStrings
     {
@@ -119,9 +73,9 @@ namespace MeasurementExtension
 
         private string DistanceToString(double distance)
         {
-            UnitsAndScale us = UnitsAndScale.ConvertToReadableUnits(Global.UnitOfMeasure, distance);
+            LengthMeasurement us = LengthMeasurement.ConvertToReadableUnits(Global.UnitOfMeasure, distance);
 
-            double scaledDistance = distance * us.Scalar;
+            double scaledDistance = distance * us.Length;
             return scaledDistance.ToString("#0.000") + " " + us.Units;
         }
 

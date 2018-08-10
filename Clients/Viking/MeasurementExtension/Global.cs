@@ -9,7 +9,8 @@ using System.Net;
 using System.Diagnostics;
 using System.IO;
 using System.Xml.Linq;
-using Viking.ViewModels; 
+using Viking.ViewModels;
+using SIMeasurement;
 
 namespace MeasurementExtension
 {
@@ -21,10 +22,15 @@ namespace MeasurementExtension
             get { return _UnitsPerPixel; }
         }
 
-        internal static string _UnitOfMeasure = "Scale not specified";
-        public static string UnitOfMeasure
+        internal static SILengthUnits _UnitOfMeasure;
+        public static SILengthUnits UnitOfMeasure
         {
             get { return _UnitOfMeasure; }
+        }
+
+        public static LengthMeasurement PixelWidth
+        {
+            get{ return new LengthMeasurement(Global.UnitOfMeasure, Global.UnitsPerPixel); }
         }
         
         #region IInitExtensions Members
@@ -114,13 +120,31 @@ namespace MeasurementExtension
                     if (EndpointAttribute == null)
                         break;
 
-                    Global._UnitOfMeasure = EndpointAttribute.Value;
+                    try
+                    {
+                        Global._UnitOfMeasure = (SIMeasurement.SILengthUnits)Enum.Parse(typeof(SIMeasurement.SILengthUnits), EndpointAttribute.Value);
+                    }
+                    catch (ArgumentNullException)
+                    {
+                        Trace.WriteLine("Null unit of measure", "Measurement");
+                        return false;
+                    }
+                    catch (ArgumentException)
+                    {
+                        Trace.WriteLine(string.Format("Non SI unit of measure {0}, disabling WebAnnotations.",EndpointAttribute.Value), "Measurement");
+                        return false;
+                    }
+                    catch (OverflowException)
+                    {
+                        Trace.WriteLine(string.Format("{0} is outside the range of the underlying type of SI Length Units", EndpointAttribute.Value), "Measurement");
+                        return false; 
+                    }
 
-                    return true; 
+                    return true;
 
-                default:
+                    default:
                     break;
-            }
+                    }
 
             //Even if we couldn't load the default values, the user can set them.  Go ahead and load up.
             //If this module could not function we should return false which would tell Viking to unload it
