@@ -9,3 +9,4 @@ Viking Client Usage
    useage
    versionhistory
    movies
+   installationerror

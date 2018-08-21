@@ -3,6 +3,17 @@
 Version Information
 ###################
 
+1.1.271
+-------
+
+	2018-08-20
+	
+	* Added a scale bar:
+		* Display can be toggled in the measurement overlay.
+		* **Use the measure tool if the exact length must be known because the scale bar does not account for local distortion.**
+	* Fixed a bug preventing selection of an annotation on an adjacent section that was drawn in the hole of a polygonal annotation
+	* Possibly improved error messages when authentication server is down
+	
 1.1.270
 -------
 

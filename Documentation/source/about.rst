@@ -3,19 +3,32 @@
 About
 #####
 
-The majority of Viking was developed at the `Marc Lab`_ by James Anderson.
+Viking began at the `Marc Lab`_ as part of James Anderson's Ph.D. dissertation.
 
-Programmers
------------
+Viking programmers and contributors
+-----------------------------------
 
-Shoeb Mohammed - Visualization website
+James Anderson:
 
-Drew Ferrell - Pyre and Quality Assurance
+	* Architect and primary developer
 
-Scientific Computing Insitute - Image registration
+Shoeb Mohammed:
 
-   * Brad Grimm
-   * Joel Spaltenstein
-   * Paul Koshevoy 
+	* Created the original Visualization and ASP.Net Membership website as part of his C.S. Masters work.
+
+Drew Ferrell:
+	
+	* Considerable quality assurance contributions
+
+
+External Tool Developers
+------------------------
+
+Ethan Kerzner:
+
+	* Graffinity - A visualization/data analysis tool for connectomes.
+	* `TulipPaths`_ -  Tulip extensions for searching graphs for specific pathways 
    
 .. _Marc Lab: http://marclab.org/
+.. _Nornir: http://nornir.github.io/
+.. _TulipPaths: https://github.com/visdesignlab/TulipPaths
