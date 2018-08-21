@@ -21,7 +21,7 @@
     <UpdateUrlHistory>https://connectomes.utah.edu/Software/Viking4/</UpdateUrlHistory>
     <BootstrapperUrlHistory>
     </BootstrapperUrlHistory>
-    <ErrorReportUrlHistory>http://connectomes.utah.edu/</ErrorReportUrlHistory>
+    <ErrorReportUrlHistory>http://connectomes.utah.edu/client/versionhistory.html|http://connectomes.utah.edu/</ErrorReportUrlHistory>
     <FallbackCulture>en-US</FallbackCulture>
     <VerifyUploadedFiles>true</VerifyUploadedFiles>
     <ProjectView>ShowAllFiles</ProjectView>

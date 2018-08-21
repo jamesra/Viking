@@ -369,6 +369,7 @@ namespace Viking.UI.Controls
             commandHelpTextScrollerHost.TabStop = false;
             commandHelpTextScrollerHost.Dock = DockStyle.Bottom;
             commandHelpTextScrollerHost.Visible = Viking.Properties.Settings.Default.ShowCommandHelp;
+            commandHelpTextScrollerHost.Parent = this;
             menuShowCommandHelp.Checked = Viking.Properties.Settings.Default.ShowCommandHelp;
             timerHelpTextChange.Enabled = Viking.Properties.Settings.Default.ShowCommandHelp;
 
