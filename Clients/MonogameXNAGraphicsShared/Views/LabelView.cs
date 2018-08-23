@@ -284,6 +284,13 @@ namespace VikingXNAGraphics
             
         }
 
+        /// <summary>
+        /// Draw a single label. 
+        /// The caller is expected to call Begin and End on the sprite batch.  They should also preserve all state on the graphics device. 
+        /// </summary>
+        /// <param name="spriteBatch"></param>
+        /// <param name="font"></param>
+        /// <param name="scene"></param>
         public void Draw(Microsoft.Xna.Framework.Graphics.SpriteBatch spriteBatch,
                               Microsoft.Xna.Framework.Graphics.SpriteFont font,
                               VikingXNA.Scene scene)

@@ -41,7 +41,7 @@ namespace SIMeasurement
 
         public override string ToString()
         {
-            return string.Format("{0} {1}", Length, Units.ToString());
+            return Length.ToString("#0.000") + " " + Units.ToString();
         }
 
         /// <summary>

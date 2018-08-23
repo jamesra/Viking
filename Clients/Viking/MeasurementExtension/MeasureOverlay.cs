@@ -76,12 +76,8 @@ namespace MeasurementExtension
             LabelView label = new LabelView(LengthMeasurement.ConvertToReadableUnits(FinalBarWidth).ToString(), scaleBarRect.Center);
             label.Color = Microsoft.Xna.Framework.Color.White;
             label.FontSize = BarHeightInPixels * 0.9;
-
             
-
-            Parent.spriteBatch.Begin();
-            label.Draw(Parent.spriteBatch, Parent.fontArial, scene);
-            Parent.spriteBatch.End();
+            LabelView.Draw(Parent.spriteBatch, Parent.fontArial, scene, new LabelView[] { label });
         }
 
         public int DrawOrder()

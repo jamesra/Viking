@@ -74,9 +74,7 @@ namespace MeasurementExtension
         private string DistanceToString(double distance)
         {
             LengthMeasurement us = LengthMeasurement.ConvertToReadableUnits(Global.UnitOfMeasure, distance);
-
-            double scaledDistance = distance * us.Length;
-            return scaledDistance.ToString("#0.000") + " " + us.Units;
+            return us.Length.ToString("#0.000") + " " + us.Units;
         }
 
         private double? GetMosaicDistance()
@@ -147,7 +145,7 @@ namespace MeasurementExtension
             string output_string = null;
             if(mosaic_space_string != null)
             {
-                output_string = "Mosaic " + mosaic_space_string + "\n" + "Volume " + volume_space_string;
+                output_string = mosaic_space_string + " Mosaic\n" + volume_space_string + " Volume";
             }
             else
             {
@@ -160,7 +158,7 @@ namespace MeasurementExtension
                 lineColor,
                 0,
                 new Vector2(0,0),
-                0.5f,
+                0.25f,
                 SpriteEffects.None,
                 0);          
 
