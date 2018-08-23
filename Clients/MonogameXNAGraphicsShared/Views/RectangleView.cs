@@ -118,6 +118,8 @@ namespace VikingXNAGraphics
 
             device.BlendState = originalState;
 
+            BillboardViewBase.RestoreGraphicsDevice(device, basicEffect); 
+
             //TextureCircleView.RestoreGraphicsDevice(device, basicEffect);
         }
     }
