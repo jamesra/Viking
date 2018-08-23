@@ -881,7 +881,6 @@ namespace Viking.UI.Forms
                     Uri volumeURI = new Uri(NewURL);
 
                     this.VolumeURL = NewURL;
-                    this.comboVolumeURL.Text = NewURL;
                     SubmitURLChangedTimer.Stop();
                 }
                 catch (UriFormatException)
