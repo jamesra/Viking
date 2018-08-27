@@ -31,7 +31,7 @@ namespace MeasurementExtension
 
         public void Draw(GraphicsDevice graphicsDevice, Scene scene, Texture BackgroundLuma, Texture BackgroundColors, ref int NextStencilValue)
         {
-            if (!Global.ShowScaleBar)
+            if (!Measurement.Properties.Settings.Default.ShowScaleBar)
                 return; 
 
             double ViewWidthInPixels = scene.VisibleWorldBounds.Width;

@@ -74,7 +74,8 @@ namespace MeasurementExtension
         private string DistanceToString(double distance)
         {
             LengthMeasurement us = LengthMeasurement.ConvertToReadableUnits(Global.UnitOfMeasure, distance);
-            return us.Length.ToString("#0.000") + " " + us.Units;
+            return us.ToString(3, true);
+            //return us.Length.ToString("#0.000") + " " + us.Units;
         }
 
         private double? GetMosaicDistance()

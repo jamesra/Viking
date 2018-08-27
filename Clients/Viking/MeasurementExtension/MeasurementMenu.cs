@@ -32,7 +32,8 @@ namespace MeasurementExtension
         {
             Debug.Print("Show Scale Bar");
 
-            Global.ShowScaleBar = !Global.ShowScaleBar;
+            Measurement.Properties.Settings.Default.ShowScaleBar = !Measurement.Properties.Settings.Default.ShowScaleBar;
+            Measurement.Properties.Settings.Default.Save();
         }
 
         [Viking.Common.MenuItem("Measure Line")]
