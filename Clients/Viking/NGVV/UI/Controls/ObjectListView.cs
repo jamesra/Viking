@@ -266,9 +266,16 @@ namespace Viking.UI.BaseClasses
 
 				SubItems[iColumn + 1] = new ListViewItem.ListViewSubItem();
 				SubItems[iColumn + 1].Text = "";
-				
-				if(Value != null)
-					SubItems[iColumn + 1].Text = Value.ToString();
+
+                if (Value != null)
+                {
+                    SubItems[iColumn + 1].Text = Value.ToString();
+
+                    if(Property.PropertyType.IsValueType)
+                    {
+                        SubItems[iColumn + 1].Tag = Value;
+                    }
+                }
 			}
 
             //Removed until I add images again
@@ -501,10 +508,15 @@ namespace Viking.UI.BaseClasses
 
 		protected override void OnColumnClick( System.Windows.Forms.ColumnClickEventArgs e)
 		{
-			ListViewColumnSorter Sorter = this.ListViewItemSorter as ListViewColumnSorter; 
-			if(Sorter == null)
+            ListViewColumnSorter Sorter = this.ListViewItemSorter as ListViewColumnSorter;
+            Type ColumnType = null;
+            if (e.Column > 0)
+                ColumnType = this.ColumnProperties[e.Column - 1]?.PropertyType;
+
+            if (Sorter == null)
 			{
-				Sorter = new ListViewColumnSorter(e.Column);
+                
+				Sorter = new ListViewColumnSorter(e.Column, ColumnType);
 				this.ListViewItemSorter = Sorter as System.Collections.IComparer; 
 			}
 			else
@@ -513,9 +525,10 @@ namespace Viking.UI.BaseClasses
 					Sorter.AscendingSort = !Sorter.AscendingSort;
 
 				Sorter.SortIndex = e.Column;
+                Sorter.ColumnType = ColumnType;
 
-				this.Sort();
-			}
+                this.Sort();
+			}            
 
 			base.OnColumnClick(e);
 		}

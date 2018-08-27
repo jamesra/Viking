@@ -1,10 +1,44 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Windows.Forms;
+
 namespace Viking.Common
 {
+    public static class GetTypeExtensions
+    {
+        public static HashSet<Type> NumericTypes = new HashSet<Type>
+        {
+            typeof(Byte),
+            typeof(SByte),
+            typeof(UInt16),
+            typeof(UInt32),
+            typeof(UInt64),
+            typeof(Int16),
+            typeof(Int32),
+            typeof(Int64),
+            typeof(Double),
+            typeof(Single),
+            typeof(Decimal)
+        }; 
+
+        public static bool IsNumericType(this Type t)
+        {
+            if (t == null)
+                return false;
+
+            if (GetTypeExtensions.NumericTypes.Contains(t))
+                return true;
+
+            if(Nullable.GetUnderlyingType(t) != null)
+                return GetTypeExtensions.NumericTypes.Contains(Nullable.GetUnderlyingType(t));
+
+            return false;
+        }
+    }
+    
     /// <summary>
     /// Summary description for ListViewColumnSorter.
     /// </summary>
@@ -12,10 +46,12 @@ namespace Viking.Common
     {
         public int SortIndex = 0;
         public bool AscendingSort = true;
+        public Type ColumnType = null;
 
-        public ListViewColumnSorter(int SortOnIndex)
+        public ListViewColumnSorter(int SortOnIndex, Type ColumnType)
         {
             this.SortIndex = SortOnIndex;
+            this.ColumnType = ColumnType;
         }
 
         int IComparer.Compare(object A, object B)
@@ -43,9 +79,34 @@ namespace Viking.Common
             if (SubB == null)
                 return -1;
 
-            string TextA = SubA.ToString();
-            string TextB = SubB.ToString();
+            if(ColumnType.IsNumericType())
+            {
+                IConvertible convA = SubA.Tag as IConvertible;
+                IConvertible convB = SubB.Tag as IConvertible;
 
+                if (convA != null && convB != null)
+                {
+                    Decimal ValA = convA.ToDecimal(null);
+                    Decimal ValB = convB.ToDecimal(null);
+
+                    return AscendingSort ? ValA.CompareTo(ValB) : ValB.CompareTo(ValA);
+                }
+            }
+
+            string TextA;
+            string TextB;
+
+            if (SubA.Tag != null && SubB.Tag != null)
+            {
+                TextA = SubA.Tag.ToString();
+                TextB = SubB.Tag.ToString();
+            }
+            else
+            {
+                TextA = SubA.Text;
+                TextB = SubB.Text;
+            }
+            
             if (AscendingSort)
                 return TextA.CompareTo(TextB);
             else
