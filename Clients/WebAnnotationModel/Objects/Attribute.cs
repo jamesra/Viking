@@ -11,7 +11,7 @@ namespace WebAnnotationModel
     
     public class ObjAttribute : Object, IComparable<ObjAttribute>, IComparable<String>, IEquatable<String>
     {
-        public string Name { get; protected set; }
+        public string Name { get;  set; }
         public string Value { get; set; }
 
         public ObjAttribute()
