@@ -94,9 +94,9 @@ namespace WebAnnotation.UI
             if (e.KeyCode == Keys.Delete)
             {
                 List<int> iDeleteRowList = new List<int>(dataGridTags.SelectedCells.Count);
-                foreach(DataGridViewCell cell in dataGridTags.SelectedCells)
+                foreach (DataGridViewCell cell in dataGridTags.SelectedCells)
                 {
-                    if(iDeleteRowList.Contains(cell.RowIndex))
+                    if (iDeleteRowList.Contains(cell.RowIndex))
                         continue;
 
                     iDeleteRowList.Add(cell.RowIndex);
@@ -105,15 +105,22 @@ namespace WebAnnotation.UI
                 iDeleteRowList.Sort();
                 iDeleteRowList.Reverse();
 
-                foreach(int iDelRow in iDeleteRowList)
+                foreach (int iDelRow in iDeleteRowList)
                 {
                     //Don't delete the new row, it is an invalid operation.
                     if (dataGridTags.Rows[iDelRow].IsNewRow)
-                        continue; 
+                        continue;
 
                     dataGridTags.Rows.RemoveAt(iDelRow);
                 }
-            } 
+
+                e.Handled = true;
+            }
+            else
+            {
+                e.Handled = false; 
+            }
+            
         }
 
         private void dataGridTags_CellValidating(object sender, DataGridViewCellValidatingEventArgs e)
