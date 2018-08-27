@@ -41,7 +41,27 @@ namespace SIMeasurement
 
         public override string ToString()
         {
-            return Length.ToString("#0.000") + " " + Units.ToString();
+            return Length.ToString("#0.###") + " " + Units.ToString();
+        }
+
+        public string ToString(uint scale, bool PreserveNonSignificant = true)
+        {
+            if (PreserveNonSignificant)
+            {
+                return Length.ToString($"F{scale}") + " " + Units.ToString();
+            }
+
+            if (scale > 32)
+                throw new ArgumentException("Scale must be between 0 and 64");
+
+
+            string format = "#0."; 
+            while(scale > 0)
+            {
+                format += '0';
+            }
+            
+            return Length.ToString(format) + " " + Units.ToString();
         }
 
         /// <summary>
