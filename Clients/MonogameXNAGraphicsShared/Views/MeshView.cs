@@ -109,6 +109,8 @@ namespace VikingXNAGraphics
             if (effect == null)
                 return;
 
+            RasterizerState originalRasterizerState = device.RasterizerState;
+
             RasterizerState rstate = new RasterizerState();
             rstate.CullMode = CullMode.CullClockwiseFace;
             rstate.FillMode = FillMode.Solid;
@@ -136,7 +138,8 @@ namespace VikingXNAGraphics
             }
 
             effect.WorldViewProjMatrix = WorldViewProjOriginal;
-            
+
+            device.RasterizerState = originalRasterizerState;
         }
     }
 }
