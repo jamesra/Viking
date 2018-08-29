@@ -31,6 +31,7 @@ Requirements:
   .mosaic    plain/text
   .stos      plain/text
   .vikingxml application/xhtml+xml
+  ========== =========
   
 Marc Lab Setup:
 

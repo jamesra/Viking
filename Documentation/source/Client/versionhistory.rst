@@ -3,6 +3,23 @@
 Version Information
 ###################
 
+1.1.274
+-------
+
+	2018-08-28
+	
+	* Preserve scale bar visibility across Viking restarts
+	* Fixed polygonal annotations not being rendered when control points were translated or resized if the scale bar was visible.  
+	
+1.1.273
+-------
+
+	2018-08-23
+	
+	* Fixed Volume URL rapidly changing values on logon dialog in certain circumstances.
+	* Fixed incorrect measurement with measurement tool introduced in 1.1.271 
+	* Fixed annotations not being rendered when translated or resized if the scale bar was visible.  
+	
 1.1.271
 -------
 
@@ -12,7 +29,7 @@ Version Information
 		* Display can be toggled in the measurement overlay.
 		* **Use the measure tool if the exact length must be known because the scale bar does not account for local distortion.**
 	* Fixed a bug preventing selection of an annotation on an adjacent section that was drawn in the hole of a polygonal annotation
-	* Possibly improved error messages when authentication server is down
+	* Possibly improved error messages when authentication server is down 
 	
 1.1.270
 -------

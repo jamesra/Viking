@@ -6,7 +6,7 @@ Web Services
 Overview
 ========
 
-.. image:: ..\Architecture.png
+.. image:: ../Architecture.png
 
 
 
