@@ -130,10 +130,9 @@ namespace VikingXNAGraphics
 
         public static void SetupGraphicsDevice(GraphicsDevice device, BasicEffect basicEffect, AnnotationOverBackgroundLumaEffect overlayEffect)
         {
-            /*DeviceStateManager.SaveDeviceState(device);
-            DeviceStateManager.SetRenderStateForShapes(device);
-            DeviceStateManager.SetRasterizerStateForShapes(device);
-            */
+            DeviceStateManager.SaveDeviceState(device);
+            //DeviceStateManager.SetRenderStateForShapes(device);
+            //DeviceStateManager.SetRasterizerStateForShapes(device);
 
             basicEffect.TextureEnabled = false;
             basicEffect.VertexColorEnabled = true;

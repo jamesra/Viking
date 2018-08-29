@@ -265,6 +265,8 @@ namespace VikingXNAGraphics
             DepthStencilState originalDepthState = spriteBatch.GraphicsDevice.DepthStencilState;
             RasterizerState originalRasterizerState = spriteBatch.GraphicsDevice.RasterizerState;
             SamplerState originalSamplerState = spriteBatch.GraphicsDevice.SamplerStates[0];
+            SamplerState originalVSamplerState = spriteBatch.GraphicsDevice.VertexSamplerStates[0];
+            
 
             spriteBatch.Begin();
 
@@ -281,6 +283,9 @@ namespace VikingXNAGraphics
 
             if(originalSamplerState != null)
                 spriteBatch.GraphicsDevice.SamplerStates[0] = originalSamplerState;
+
+            if (originalVSamplerState != null)
+                spriteBatch.GraphicsDevice.VertexSamplerStates[0] = originalVSamplerState;
             
         }
 
