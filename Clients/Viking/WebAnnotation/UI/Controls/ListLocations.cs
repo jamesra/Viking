@@ -14,7 +14,7 @@ using WebAnnotation.ViewModel;
 
 namespace WebAnnotation.UI.Controls
 {
-    [Viking.Common.SupportedUITypes(typeof(LocationObj))]
+    [Viking.Common.SupportedUITypes(typeof(Location_PropertyPageViewModel))]
     public partial class ListLocations : Viking.UI.BaseClasses.DockingListControl
     {
         Location_PropertyPageViewModel[] _locations;
