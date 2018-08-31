@@ -1,10 +1,9 @@
-﻿using System;
-using System.Text;
+﻿using Geometry;
+using MathNet.Numerics.LinearAlgebra;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using Microsoft.VisualStudio.TestTools.UnitTesting; 
-using Geometry;
-using MathNet.Numerics.LinearAlgebra;
 
 namespace UtilitiesTests
 {
@@ -87,15 +86,33 @@ namespace UtilitiesTests
 
         [TestMethod]
         public void TestAngle2()
-        {
-            double Pi4 = Math.PI / 4.0;
-            double Pi2 = Math.PI / 2.0;
+        { 
+            const double Pi4 = Math.PI / 4.0;
+            const double Pi2 = Math.PI / 2.0;
 
             GridVector2 Origin = new GridVector2(0, 0);
             GridVector2 A = new GridVector2(1, 0);
             GridVector2 B = new GridVector2(0, 1);
             GridVector2 C = new GridVector2(-1, 0);
+            GridVector2 D = new GridVector2(0, -1);
 
+            //Check angles not on the axis
+            GridVector2 E = new GridVector2(0.5, 0.5);
+            GridVector2 F = new GridVector2(-0.5, 0.5);
+            GridVector2 G = new GridVector2(-0.5, -0.5);
+            GridVector2 H = new GridVector2(0.5, -0.5);
+
+
+            //         B
+            //    F    |    E
+            //         |
+            // C---------------A
+            //         |
+            //    G    |    H
+            //         D
+             
+
+            //Start by testing angles on the axis
             double Degree90 = GridVector2.ArcAngle(Origin, A, B);
             Assert.AreEqual(Degree90, Pi2);
 
@@ -110,6 +127,60 @@ namespace UtilitiesTests
 
             Degree90 = GridVector2.Angle(Origin, B);
             Assert.AreEqual(Degree90, Pi2);
+
+            //Check angles not on the axis
+
+            Degree90 = GridVector2.ArcAngle(Origin, E, F);
+            Assert.AreEqual(Degree90, Pi2);
+
+            Degree90 = GridVector2.ArcAngle(Origin, F, E);
+            Assert.AreEqual(Degree90, -Pi2);
+
+            Degree90 = GridVector2.ArcAngle(Origin, F, G);
+            Assert.AreEqual(Degree90, Pi2);
+
+            Degree90 = GridVector2.ArcAngle(Origin, G, H);
+            Assert.AreEqual(Degree90, Pi2);
+
+            //Check 45 degree angles
+            double Degree45 = GridVector2.ArcAngle(Origin, E, B);
+            Assert.AreEqual(Degree45, Pi4);
+
+            Degree45 = GridVector2.ArcAngle(Origin, E, A);
+            Assert.AreEqual(Degree45, -Pi4);
+
+            Degree45 = GridVector2.ArcAngle(Origin, H, A);
+            Assert.AreEqual(Degree45, Pi4);
+
+            //Check 135 degree angles
+            double Degree135 = GridVector2.ArcAngle(Origin, E, C);
+            Assert.AreEqual(Degree135, Pi4 + Pi2);
+
+            Degree135 = GridVector2.ArcAngle(Origin, C, E);
+            Assert.AreEqual(Degree135, -(Pi4 + Pi2));
+
+            Degree135 = GridVector2.ArcAngle(Origin, G, A);
+            Assert.AreEqual(Degree135, (Pi4 + Pi2));
+
+            Degree135 = GridVector2.ArcAngle(Origin, B, G);
+            Assert.AreEqual(Degree135, (Pi4 + Pi2));
+
+            Degree135 = GridVector2.ArcAngle(Origin, G, B);
+            Assert.AreEqual(Degree135, -(Pi4 + Pi2));
+
+            //Check 180 degree angles off-axis
+
+            Degree180 = GridVector2.ArcAngle(Origin, F, H);
+            Assert.AreEqual(Math.Abs(Degree180), Math.PI);
+
+            Degree180 = GridVector2.ArcAngle(Origin, H, F);
+            Assert.AreEqual(Math.Abs(Degree180), Math.PI);
+
+            Degree180 = GridVector2.ArcAngle(Origin, E, G);
+            Assert.AreEqual(Math.Abs(Degree180), Math.PI);
+
+            Degree180 = GridVector2.ArcAngle(Origin, G, E);
+            Assert.AreEqual(Math.Abs(Degree180), Math.PI);
 
             //Translate the vectors slightly and ensure angles are unchanged
             GridVector2 offset = new GridVector2(5, 2.5);
@@ -131,7 +202,7 @@ namespace UtilitiesTests
             Assert.AreEqual(Degree0, 0);
 
             Degree90 = GridVector2.Angle(Origin, B);
-            Assert.AreEqual(Degree90, Pi2);
+            Assert.AreEqual(Degree90, Pi2); 
         }
 
         [TestMethod]

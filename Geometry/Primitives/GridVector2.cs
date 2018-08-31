@@ -280,7 +280,15 @@ namespace Geometry
             B = B - Origin;
             double AngleA = Math.Atan2(A.Y, A.X);
             double AngleB = Math.Atan2(B.Y, B.X);
-            return AngleB - AngleA; 
+
+            double Angle = AngleB - AngleA;
+
+            if (Angle < -Math.PI)
+                Angle += Math.PI * 2;
+            else if (Angle > Math.PI)
+                Angle -= Math.PI * 2;
+
+            return Angle; 
         }
 
         /// <summary>
