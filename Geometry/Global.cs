@@ -34,7 +34,7 @@ namespace Geometry
             if (System.IO.File.Exists(CacheStosPath))
             {
                 DateTime CacheLastModifiedUtc = System.IO.File.GetLastWriteTimeUtc(CacheStosPath);
-                return times.Any(server_transform_time => server_transform_time <= CacheLastModifiedUtc);
+                return times.All(server_transform_time => server_transform_time <= CacheLastModifiedUtc);
             }
 
             return false;
