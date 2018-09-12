@@ -93,7 +93,7 @@ namespace Viking.ViewModels
 
         internal bool TextureNeedsLoading
         {
-            get { return !(this.ServerTextureNotFound || this.texture != null || this.TexReader != null); }
+            get { return this.ServerTextureNotFound == false && this.texture == null && this.TexReader == null; }
         }
 
         private TextureReader _TexReader;

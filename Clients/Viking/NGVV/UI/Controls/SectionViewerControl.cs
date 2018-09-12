@@ -1396,10 +1396,10 @@ namespace Viking.UI.Controls
                         continue;
 
                     //Request a texture if we need one
-                    if (!tileViewModel.TextureNeedsLoading)
+                    if (tileViewModel.TextureNeedsLoading)
                         listGetTextureTasks.Add(Task<Texture2D>.Run(() => tileViewModel.GetTexture(graphicsDevice)));
-
-                    tileViewsToDraw.Add(tileViewModel);
+                    else if(tileViewModel.TextureReadComplete)
+                        tileViewsToDraw.Add(tileViewModel);
                 }
 
                 foreach(TileViewModel tileViewModel in tileViewsToDraw)
