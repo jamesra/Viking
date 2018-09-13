@@ -117,7 +117,8 @@ namespace Geometry
             degrees = degrees.Select(d => Math.Abs((Math.Abs(d) - Math.PI))).ToArray();
 
             const double onedegree = (Math.PI * 2.0 / 360);
-            double threshold = onedegree * 10.0;
+            const double threshold = onedegree * 10.0;
+            const double distance_threshold = 0.0625; // Math.Pow(0.25,2);
 
             int StartingPoints = TPointsArray.Length;
             bool[] NeedsInterpolation = TPointsArray.Select(t => false).ToArray();
@@ -126,7 +127,8 @@ namespace Geometry
             {
                 if (degrees[i] > threshold)
                 {
-                    NeedsInterpolation[i] = true;
+                    double distance = GridVector2.DistanceSquared(output[i - 1], output[i]) + GridVector2.DistanceSquared(output[i], output[i+1]);
+                    NeedsInterpolation[i] = distance > distance_threshold;
                 }
             }
 
