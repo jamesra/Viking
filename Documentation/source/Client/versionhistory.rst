@@ -3,6 +3,15 @@
 Version Information
 ###################
 
+1.1.276
+-------
+
+	2018-09-13
+	
+	* Fixed a bug where transforms updated on the server would not be detected by the Viking client
+	* Changed the curve calculation code to not overly define curves when points are within 0.25 pixels
+	* Minor optimization to remove tiles without textures from the drawing pipeline earlier.  Useful in rare cases where too many tiles are requested.
+
 1.1.274
 -------
 
