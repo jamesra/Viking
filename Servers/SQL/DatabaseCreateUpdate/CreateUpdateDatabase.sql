@@ -6808,13 +6808,10 @@ end
 			  AFTER INSERT, UPDATE, DELETE
 			as
 			BEGIN
-				SET NOCOUNT ON
-
-				if @@ROWCOUNT = 0
-					return
-
 				IF TRIGGER_NESTLEVEL() > 1/*this update is coming from some other trigger*/
 					return
+
+				SET NOCOUNT ON
 
 				DELETE StructureSpatialCache 
 				WHERE StructureSpatialCache.ID IN (SELECT ParentID FROM DELETED Group By ParentID)

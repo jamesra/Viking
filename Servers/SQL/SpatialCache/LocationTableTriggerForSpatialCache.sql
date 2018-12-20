@@ -3,9 +3,6 @@ ALTER TRIGGER UpdateStructureSpatialCache
   AFTER INSERT, UPDATE, DELETE
 as
 BEGIN
-    if @@ROWCOUNT = 0
-		return
-
 	IF TRIGGER_NESTLEVEL() > 1/*this update is coming from some other trigger*/
 		return
 
