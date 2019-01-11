@@ -119,6 +119,11 @@ namespace WebAnnotation
         
         }
 
+        /// <summary>
+        /// LastEditedAnnotationID can have no value if no location has been editted
+        /// It can also have the ID of a deleted location.  Deleted locations return
+        /// null objects when requested from the server.
+        /// </summary>
         public static long? LastEditedAnnotationID;
 
         #region IInitExtensions Members

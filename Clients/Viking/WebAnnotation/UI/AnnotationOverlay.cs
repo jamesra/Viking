@@ -539,11 +539,13 @@ namespace WebAnnotation
                     if (Global.LastEditedAnnotationID.HasValue)
                     {
                         LocationObj loc = Store.Locations.GetObjectByID(Global.LastEditedAnnotationID.Value);
-                        Parent.GoToLocation(new Microsoft.Xna.Framework.Vector2((float)loc.Position.X,
+                        
+                        if(loc != null)
+                            Parent.GoToLocation(new Microsoft.Xna.Framework.Vector2((float)loc.Position.X,
                                                                                 (float)loc.Position.Y),
-                                            (int)loc.Z,
-                                            true,
-                                            (double)((loc.VolumeShape.BoundingBox().Width) / Parent.Width) * 2);
+                                                                                (int)loc.Z,
+                                                                                true,
+                                                                                (double)((loc.VolumeShape.BoundingBox().Width) / Parent.Width) * 2);
 
                     }
                     else
@@ -945,6 +947,10 @@ namespace WebAnnotation
 
             LocationObj lastLoc = Store.Locations.GetObjectByID(Global.LastEditedAnnotationID.Value, true);
             {
+                //This can occur if we deleted the last location we editted.
+                if (lastLoc == null)
+                    return;
+
                 if (lastLoc.Z != this.CurrentSectionNumber && IsCommandDefault())
                 {
                     Viking.UI.Commands.Command command = LocationAction.CREATELINKEDLOCATION.CreateCommand(this.Parent, lastLoc, WorldPos);
