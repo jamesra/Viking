@@ -355,14 +355,7 @@
       <FileType>File</FileType>
     </PublishFile>
   </ItemGroup>
-  <ItemGroup>
-    <FileAssociation Include=".VikingXML">
-      <Visible>False</Visible>
-      <Description>Volume Description for Viking Viewer</Description>
-      <Progid>Viking.application</Progid>
-      <DefaultIcon>Viking.ico</DefaultIcon>
-    </FileAssociation>
-  </ItemGroup>
+  <ItemGroup />
   <ItemGroup>
     <ProjectReference Include="..\..\..\Geometry\Geometry.csproj">
       <Project>{eacb87e8-a5e3-417e-a9ef-b80c2a68c020}</Project>
