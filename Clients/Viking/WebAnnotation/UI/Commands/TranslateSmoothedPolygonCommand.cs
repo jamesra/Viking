@@ -65,7 +65,6 @@ namespace WebAnnotation.UI.Commands
         {
             OriginalMosaicPolygon = MosaicPolygon;
             Color = color;
-            mapping = parent.Section.ActiveSectionToVolumeTransform;
             TransformedMosaicPolygon = CalculateTransformedPolygon();
             CreateUpdateView();
             this.success_callback = success_callback;

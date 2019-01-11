@@ -283,7 +283,6 @@ namespace WebAnnotation.UI.Commands
                                         double LineWidth, 
                                         OnCommandSuccess success_callback) : base(parent, VolumePosition)
         {
-            mapping = parent.Section.ActiveSectionToVolumeTransform;
             //this.OriginalVolumePosition = mapping.SectionToVolume(MosaicPosition);
             this.OriginalLineWidth = LineWidth;
             this.OriginalVolumeControlPoints = mapping.SectionToVolume(OriginalMosaicControlPoints);

@@ -138,24 +138,25 @@ namespace WebAnnotation.View
                     return new LinkAnnotationsCommand(Parent, loc);
                 case LocationAction.CREATELINKEDLOCATION:
 
-                    IVolumeToSectionTransform mapper = Parent.Volume.GetSectionToVolumeTransform((int)loc.Z);
-                    GridVector2 MosaicPosition = mapper.VolumeToSection(volumePosition);
-
-                    SqlGeometry VolumeShape;
-                    SqlGeometry MosaicShape = TransformMosaicShapeToSection(Parent.Volume, loc.MosaicShape.MoveTo(MosaicPosition), (int)loc.Z, Parent.Section.Number, out VolumeShape);
-                      
+                    
                     return new TranslateCircleLocationCommand(Parent,
-                                                                new GridCircle(VolumeShape.Centroid(), loc.Radius),
+                                                                new GridCircle(loc.VolumePosition, loc.Radius),
                                                                 loc.Parent.Type.Color.ToXNAColor(1f),
                                                                 new TranslateCircleLocationCommand.OnCommandSuccess((NewVolumePosition, NewMosaicPosition, NewRadius) =>
                                                                    {
+                                                                       IVolumeToSectionTransform mapper = Parent.Volume.GetSectionToVolumeTransform((int)loc.Z);
+                                                                       GridVector2 MosaicPosition = mapper.VolumeToSection(volumePosition);
+
+                                                                       SqlGeometry VolumeShape;
+                                                                       SqlGeometry MosaicShape = TransformMosaicShapeToSection(Parent.Volume, loc.MosaicShape.MoveTo(MosaicPosition), (int)loc.Z, Parent.Section.Number, out VolumeShape);
+
                                                                        LocationObj newLoc = new LocationObj(loc.Parent,
                                                                             MosaicShape,
                                                                             VolumeShape,
                                                                             Parent.Section.Number,
                                                                             loc.TypeCode);
                                                                          
-                                                                       //IVolumeToSectionTransform section_mapper = Parent.Volume.GetSectionToVolumeTransform((int)Parent.Section.Number);
+                                                                       section_mapper = Parent.Volume.GetSectionToVolumeTransform((int)Parent.Section.Number);
                                                                        NewMosaicPosition = section_mapper.VolumeToSection(NewVolumePosition);
                                                                        UpdateCircleLocationNoSaveCallback(newLoc, NewVolumePosition, NewMosaicPosition, NewRadius);
 

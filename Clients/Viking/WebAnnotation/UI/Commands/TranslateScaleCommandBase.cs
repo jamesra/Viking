@@ -104,13 +104,19 @@ namespace WebAnnotation.UI.Commands
         /// <param name="OriginalVolumePosition">The point the command started, where the mouse cursor was, in mosaic space</param>
         public TranslateScaleCommandBase(Viking.UI.Controls.SectionViewerControl parent, GridVector2 OriginalVolumePosition) : base(parent)
         {
+            parent.OnSectionChanged += this.OnSectionChanged;
             mapping = parent.Section.ActiveSectionToVolumeTransform;
             ResetCommandVolumeOrigin(OriginalVolumePosition);
+        }
+
+        protected void OnSectionChanged(object sender, Viking.Common.SectionChangedEventArgs e)
+        {
+            mapping = Parent.Section.ActiveSectionToVolumeTransform;
         }
         
         public override void OnDeactivate()
         {
-            Viking.UI.State.SelectedObject = null;
+            Parent.OnSectionChanged -= this.OnSectionChanged;
 
             base.OnDeactivate();
         }
