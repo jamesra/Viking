@@ -105,7 +105,7 @@ namespace WebAnnotation.ViewModel
         /// <summary>
         /// The section that is visible
         /// </summary>
-        public SectionAnnotationsView PrimarySection;
+        public int PrimarySectionNumber;
 
         /// <summary>
         /// The adjacent section this class is storing annotations for
@@ -137,9 +137,9 @@ namespace WebAnnotation.ViewModel
             }
         }
 
-        public AdjacentSectionAnnotationsView(SectionAnnotationsView PrimarySection, SectionViewModel AdjacentSection)
+        public AdjacentSectionAnnotationsView(int primary_section_number, SectionViewModel AdjacentSection)
         {
-            this.PrimarySection = PrimarySection;
+            this.PrimarySectionNumber = primary_section_number;
             this.AdjacentSection = AdjacentSection;
             Init();
         }
@@ -155,7 +155,7 @@ namespace WebAnnotation.ViewModel
 
         private IEnumerable<LocationObj> LinkedLocationsOnPrimary(ICollection<long> LinkedIDs)
         {
-            return Store.Locations.GetObjectsByIDs(LinkedIDs, false).Where(l => (int)l.Z == this.PrimarySection.Section.Number);
+            return Store.Locations.GetObjectsByIDs(LinkedIDs, false).Where(l => (int)l.Z == this.PrimarySectionNumber);
         }
 
         private IEnumerable<LocationObj> LinkedLocationsOnAdjacent(ICollection<long> LinkedIDs)
@@ -190,7 +190,7 @@ namespace WebAnnotation.ViewModel
             {
                 AddLocationOnAdjacent(loc, subscribe);
             }
-            else if(loc.Z == this.PrimarySection.SectionNumber)
+            else if(loc.Z == this.PrimarySectionNumber)
             {
                 //AddLocationOnPrimary(loc, subscribe);
                 return;
@@ -234,7 +234,7 @@ namespace WebAnnotation.ViewModel
             {
                 return RemoveLocationOnAdjacent(loc, unsubscribe);
             }
-            else if (loc.Z == this.PrimarySection.SectionNumber)
+            else if (loc.Z == this.PrimarySectionNumber)
             {
                 //return RemoveLocationOnPrimary(loc, unsubscribe);
                 return false;
@@ -343,7 +343,9 @@ namespace WebAnnotation.ViewModel
             {
                 RemoveLocation(loc, false);
 
-                PrimarySection.SectionLocationLinks.RemoveLocationLinks(new LocationObj[] { loc });
+                SectionAnnotationsView PrimarySectionAnnotationView = AnnotationOverlay.GetAnnotationsForSection(PrimarySectionNumber);
+                if (PrimarySectionAnnotationView != null)
+                    PrimarySectionAnnotationView.SectionLocationLinks.RemoveLocationLinks(new LocationObj[] { loc });
             }
         }
 
@@ -361,7 +363,9 @@ namespace WebAnnotation.ViewModel
                 loc.ResetVolumePositionHasBeenCalculated();
                 AddLocation(loc, false);
 
-                PrimarySection.SectionLocationLinks.AddLocationLinks(new LocationObj[] { loc });
+                SectionAnnotationsView PrimarySectionAnnotationView = AnnotationOverlay.GetAnnotationsForSection(PrimarySectionNumber);
+                if(PrimarySectionAnnotationView != null)
+                    PrimarySectionAnnotationView.SectionLocationLinks.AddLocationLinks(new LocationObj[] { loc });
             }
         }
 
@@ -473,9 +477,9 @@ namespace WebAnnotation.ViewModel
             this.SubmitUpdatedVolumePositions = section.VolumeViewModel.UpdateServerVolumePositions;
               
             if(this.Section.ReferenceSectionAbove != null)
-                this.SectionAbove = new AdjacentSectionAnnotationsView(this, Viking.UI.State.volume.SectionViewModels[this.Section.ReferenceSectionAbove.Number]);
+                this.SectionAbove = new AdjacentSectionAnnotationsView(section.Number, Viking.UI.State.volume.SectionViewModels[this.Section.ReferenceSectionAbove.Number]);
             if(this.Section.ReferenceSectionBelow != null)
-                this.SectionBelow = new AdjacentSectionAnnotationsView(this, Viking.UI.State.volume.SectionViewModels[this.Section.ReferenceSectionBelow.Number]);
+                this.SectionBelow = new AdjacentSectionAnnotationsView(section.Number, Viking.UI.State.volume.SectionViewModels[this.Section.ReferenceSectionBelow.Number]);
 
             CollectionChangedEventManager.AddListener(Store.Structures, this);
             CollectionChangedEventManager.AddListener(Store.StructureLinks, this);
