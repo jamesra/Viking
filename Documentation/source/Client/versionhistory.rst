@@ -3,6 +3,16 @@
 Version Information
 ###################
 
+1.1.276 
+-------
+
+    2019-03-01
+    
+    * Fix: Deleting a location and then continuing a trace would crash Viking
+    * Fix: Starting to add a linked location, changing sections, and placing the annotation resulted in the annotation being in the wrong place
+    * In TileGridToVolumeMapping.MinimizeMapping now also calls the base class's implementation to free up more memory
+    * Removed a circular reference in AdjacentSectionAnnotationsView to help garbage collection
+    
 1.1.276
 -------
 

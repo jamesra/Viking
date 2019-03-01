@@ -30,8 +30,8 @@ Existing installations
 Known issues with specific versions of Viking
 ---------------------------------------------
 
-	1.1.270
-	=======
+1.1.270
+=======
 
   	**2018-07-23**
 	
