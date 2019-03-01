@@ -630,6 +630,7 @@ namespace Geometry.Transforms
 
             Edges = null;
 
+            base.MinimizeMemory();
             //this._LineSegmentGrid = null; 
         }
 
