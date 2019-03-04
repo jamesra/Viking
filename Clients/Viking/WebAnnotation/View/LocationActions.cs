@@ -140,7 +140,7 @@ namespace WebAnnotation.View
 
                     
                     return new TranslateCircleLocationCommand(Parent,
-                                                                new GridCircle(loc.VolumePosition, loc.Radius),
+                                                                new GridCircle(volumePosition, loc.Radius),
                                                                 loc.Parent.Type.Color.ToXNAColor(1f),
                                                                 new TranslateCircleLocationCommand.OnCommandSuccess((NewVolumePosition, NewMosaicPosition, NewRadius) =>
                                                                    {
