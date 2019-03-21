@@ -3,6 +3,13 @@
 Version Information
 ###################
 
+1.1.279
+-------
+
+    2019-03-21
+    
+    * Fix: Do not crash when using F11 to jump to a structure that has an annotation on a section that is no longer in the volume.
+
 1.1.276 
 -------
 
