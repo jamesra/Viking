@@ -1208,6 +1208,9 @@ namespace Viking.UI.Controls
         /// <returns></returns>
         protected bool SceneHasTextures(Scene scene, int Z)
         {
+            if (false == Volume.SectionViewModels.ContainsKey(Z))
+                return false; 
+
             SectionViewModel visibleSection = Volume.SectionViewModels[Z];
             ChannelInfo[] channels = visibleSection.ChannelInfoArray;
             if (channels.Length == 0)
@@ -1239,6 +1242,9 @@ namespace Viking.UI.Controls
         {
             List<Task<Texture2D>> listGetTextureTasks = new List<Task<Texture2D>>();
             List<TileViewModel> listTileViewModels = new List<ViewModels.TileViewModel>();
+
+            if (false == Volume.SectionViewModels.ContainsKey(Z))
+                return;
 
             SectionViewModel visibleSection = Volume.SectionViewModels[Z];
             ChannelInfo[] channels = visibleSection.ChannelInfoArray;
@@ -2263,7 +2269,7 @@ namespace Viking.UI.Controls
                 {
                     return;
                 }
-
+               
                 int FirstExportSection;
                 int LastExportSection;
 

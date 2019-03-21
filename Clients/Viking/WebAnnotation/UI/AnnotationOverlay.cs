@@ -189,8 +189,11 @@ namespace WebAnnotation
             {
                 SectionAnnotationsView SectionAnnotations = cacheSectionAnnotations.Fetch(SectionNumber);
                 if (SectionAnnotations != null)
-                    return SectionAnnotations; 
-                                
+                    return SectionAnnotations;
+
+                if (false == Viking.UI.State.volume.SectionViewModels.ContainsKey(SectionNumber))
+                    return null;
+
                 SectionAnnotations = new SectionAnnotationsView(Viking.UI.State.volume.SectionViewModels[SectionNumber]);
 
                 SectionAnnotationsView retVal = cacheSectionAnnotations.GetOrAdd(SectionNumber, SectionAnnotations);
