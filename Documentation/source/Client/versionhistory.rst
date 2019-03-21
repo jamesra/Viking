@@ -6,6 +6,13 @@ Version Information
 1.1.276 
 -------
 
+    2019-03-04
+    
+    * Fix: Continuing an annotation shows the annotation at the original location when it should show at the mouse cursor position
+    
+1.1.276 
+-------
+
     2019-03-01
     
     * Fix: Deleting a location and then continuing a trace would crash Viking
