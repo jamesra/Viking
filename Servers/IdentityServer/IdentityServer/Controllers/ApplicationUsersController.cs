@@ -25,7 +25,7 @@ namespace IdentityServer.Controllers
         // GET: ApplicationUsers
         public async Task<IActionResult> Index()
         {
-            return View(await _context.ApplicationUser.Include("OrganizationAssignments").ToListAsync());
+            return View(await _context.ApplicationUser.Include("GroupAssignments").ToListAsync());
         }
 
         // GET: ApplicationUsers/Details/5
@@ -76,7 +76,7 @@ namespace IdentityServer.Controllers
                 return NotFound();
             }
 
-            var applicationUser = await _context.ApplicationUser.Include("OrganizationAssignments.Organization").SingleOrDefaultAsync(m => m.Id == id);
+            var applicationUser = await _context.ApplicationUser.Include("GroupAssignments.Organization").SingleOrDefaultAsync(m => m.Id == id);
             if (applicationUser == null)
             {
                 return NotFound();
@@ -145,28 +145,28 @@ namespace IdentityServer.Controllers
             return View(applicationUser);
         }
 
-        public async Task<IActionResult> EditOrganizations(string id, IEnumerable<OrganizationSelectedViewModel> Organizations)
+        public async Task<IActionResult> EditOrganizations(string id, IEnumerable<GroupSelectedViewModel> Organizations)
         {
             if (id == null)
             {
                 return NotFound();
             }
 
-            var applicationUser = await _context.ApplicationUser.Include("OrganizationAssignments").SingleOrDefaultAsync(m => m.Id == id);
+            var applicationUser = await _context.ApplicationUser.Include("GroupAssignments").SingleOrDefaultAsync(m => m.Id == id);
             if (applicationUser == null)
             {
                 return NotFound();
             }
              
              
-            var organizationEditDetails = await _context.Organization.Include("OrganizationAssignments").Select(org => new OrganizationSelectedViewModel
+            var organizationEditDetails = await _context.Group.Include("GroupAssignments").Select(org => new GroupSelectedViewModel
             {
                 Name = org.Name,
                 Id = org.Id,
-                Selected = applicationUser.OrganizationAssignments.Any(oa => oa.OrganizationId == org.Id)
+                Selected = applicationUser.GroupAssignments.Any(oa => oa.GroupId == org.Id)
             }).ToListAsync();
 
-            var UserOrganizations = new UserOrganizationsViewModel { Id = id, Name = applicationUser.UserName, Organizations = organizationEditDetails };
+            var UserOrganizations = new UserGroupsViewModel { Id = id, Name = applicationUser.UserName, Organizations = organizationEditDetails };
 
             if (organizationEditDetails == null)
             {
@@ -182,14 +182,14 @@ namespace IdentityServer.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Roles = "Access Manager")]
-        public async Task<IActionResult> EditOrganizations(string id, [Bind("Id, Name")] UserOrganizationsViewModel applicationUser, [Bind] IEnumerable<OrganizationSelectedViewModel> UserOrganizations)
+        public async Task<IActionResult> EditOrganizations(string id, [Bind("Id, Name")] UserGroupsViewModel applicationUser, [Bind] IEnumerable<GroupSelectedViewModel> UserOrganizations)
         {
             if (id != applicationUser.Id)
             {
                 return NotFound();
             }
 
-            var user = await _context.ApplicationUser.Include("OrganizationAssignments").SingleOrDefaultAsync(u => u.Id == id);
+            var user = await _context.ApplicationUser.Include("GroupAssignments").SingleOrDefaultAsync(u => u.Id == id);
             if (user == null)
             {
                 return NotFound();

@@ -7,7 +7,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace IdentityServer.Models.UserViewModels
 {
-    public class OrganizationDetailsViewModel
+    public class GroupDetailsViewModel
     {
         [Key]
         [Required]

@@ -24,18 +24,18 @@ namespace IdentityServer.Data
             // For example, you can rename the ASP.NET Identity table names and more.
             // Add your customizations after calling base.OnModelCreating(builder);
 
-            builder.Entity<OrganizationAssignment>().HasKey(oa => new { oa.OrganizationId, oa.UserId});
-            builder.Entity<OrganizationAssignment>().HasOne(oa => oa.Organization).WithMany("OrganizationAssignments").HasForeignKey(oa => oa.OrganizationId);
-            builder.Entity<OrganizationAssignment>().HasOne(oa => oa.User).WithMany("OrganizationAssignments").HasForeignKey(oa => oa.UserId);
+            builder.Entity<GroupAssignment>().HasKey(oa => new { oa.GroupId, oa.UserId});
+            builder.Entity<GroupAssignment>().HasOne(oa => oa.Group).WithMany("GroupAssignments").HasForeignKey(oa => oa.GroupId);
+            builder.Entity<GroupAssignment>().HasOne(oa => oa.User).WithMany("GroupAssignments").HasForeignKey(oa => oa.UserId);
         }
 
         public DbSet<IdentityServer.Models.ApplicationRole> ApplicationRole { get; set; }
 
         public DbSet<IdentityServer.Models.ApplicationUser> ApplicationUser { get; set; }
 
-        public DbSet<Organization> Organization { get; set; }
+        public DbSet<Group> Group { get; set; }
 
-        public DbSet<OrganizationAssignment> OrganizationAssignments { get; set; }
+        public DbSet<GroupAssignment> GroupAssignments { get; set; }
 
         public DbSet<IdentityServer.Models.UserViewModels.UserSelectedViewModel> UserSelectedViewModel { get; set; }
     }

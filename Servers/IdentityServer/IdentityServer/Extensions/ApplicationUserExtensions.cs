@@ -14,7 +14,7 @@ namespace IdentityServer.Extensions
         public static UserClaimRequestViewModel CreateUserClaimsRequest(this ApplicationUser user, ApplicationDbContext _context)
         {
             var applicationUser = _context.ApplicationUser
-                                    .Include("OrganizationAssignments")
+                                    .Include("GroupAssignments")
                                     .SingleOrDefault(m => m.Id == user.Id);
 
             if (applicationUser == null)
@@ -23,11 +23,11 @@ namespace IdentityServer.Extensions
             }
 
             //Populate the user's organizations
-            var orgs = _context.Organization.Include("OrganizationAssignments").Select(org => new OrganizationSelectedViewModel
+            var orgs = _context.Group.Include("GroupAssignments").Select(org => new GroupSelectedViewModel
             {
                 Name = org.Name,
                 Id = org.Id,
-                Selected = applicationUser.OrganizationAssignments.Any(oa => oa.OrganizationId == org.Id)
+                Selected = applicationUser.GroupAssignments.Any(oa => oa.GroupId == org.Id)
             }).OrderBy(o => o.Name).ToListAsync();
 
             //Populate the user's roles

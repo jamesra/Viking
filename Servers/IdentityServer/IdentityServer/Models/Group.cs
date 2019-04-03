@@ -10,12 +10,19 @@ namespace IdentityServer.Models
     /// <summary>
     /// Records the lab or organization that the user belongs to.
     /// </summary>
-    public class Organization
+    public class Group
     {
         [Key]
         [Display(Name = "ID", Description = "Database generated ID")]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public long Id { get; set; }
+
+        [ForeignKey("Group")]
+        [Display(Name = "ParentID", Description = "Optional parent group ID")]
+        public long? ParentID { get; set; }
+
+        [ForeignKey("ParentID")]
+        public Group Parent { get; set; }
 
         [Required(AllowEmptyStrings = false)]
         [MaxLength(450)]
@@ -27,8 +34,10 @@ namespace IdentityServer.Models
         [MaxLength(64)]
         public string ShortName { get; set; }
 
-        public ICollection<OrganizationAssignment> OrganizationAssignments { get; } = new List<OrganizationAssignment>();
+        public ICollection<GroupAssignment> GroupAssignments { get; } = new List<GroupAssignment>();
         [NotMapped]
-        public virtual List<ApplicationUser> Users => OrganizationAssignments.Select(oa => oa.User).ToList();
+        public virtual List<ApplicationUser> Users => GroupAssignments.Select(oa => oa.User).ToList();
+
+        public ICollection<Group> Children { get; } = new List<Group>();
     }
 }

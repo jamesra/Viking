@@ -13,11 +13,11 @@ using Microsoft.AspNetCore.Authorization;
 
 namespace IdentityServer.Controllers
 {
-    public class OrganizationsController : Controller
+    public class GroupsController : Controller
     {
         private readonly ApplicationDbContext _context;
 
-        public OrganizationsController(ApplicationDbContext context)
+        public GroupsController(ApplicationDbContext context)
         {
             _context = context;
         }
@@ -25,7 +25,7 @@ namespace IdentityServer.Controllers
         // GET: Organizations
         public async Task<IActionResult> Index()
         {
-            return View(await _context.Organization.Include("OrganizationAssignments").ToListAsync());
+            return View(await _context.Group.Include("GroupAssignments").ToListAsync());
         }
 
         // GET: Organizations/Details/5
@@ -36,7 +36,7 @@ namespace IdentityServer.Controllers
                 return NotFound();
             }
 
-            var organization = await _context.Organization.Include("OrganizationAssignments.User")
+            var organization = await _context.Group.Include("GroupAssignments.User")
                .SingleOrDefaultAsync(m => m.Id == id);
 
             if (organization == null)
@@ -59,7 +59,7 @@ namespace IdentityServer.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Roles = "Access Manager")]
-        public async Task<IActionResult> Create([Bind("Id,Name")] Organization organization)
+        public async Task<IActionResult> Create([Bind("Id,Name")] Group organization)
         {
             if (ModelState.IsValid)
             {
@@ -78,7 +78,7 @@ namespace IdentityServer.Controllers
                 return NotFound();
             }
 
-            var organizationEditDetails = await _context.Organization.Include("OrganizationAssignments").Select(org => new OrganizationDetailsViewModel
+            var organizationEditDetails = await _context.Group.Include("GroupAssignments").Select(org => new GroupDetailsViewModel
                 {
                     Name = org.Name,
                     Id = org.Id,
@@ -86,7 +86,7 @@ namespace IdentityServer.Controllers
                     {
                         Id = u.Id,
                         Name = u.UserName,
-                        Selected = org.OrganizationAssignments.Any(oa => oa.UserId == u.Id)
+                        Selected = org.GroupAssignments.Any(oa => oa.UserId == u.Id)
                     }).ToList()
                 })
                 .SingleOrDefaultAsync(m => m.Id == id);
@@ -105,14 +105,14 @@ namespace IdentityServer.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Roles = "Access Manager")]
-        public async Task<IActionResult> Edit(long id, [Bind("Id,Name,ShortName")] OrganizationDetailsViewModel organizationDetails, [Bind] IEnumerable<UserSelectedViewModel> usersSelected)
+        public async Task<IActionResult> Edit(long id, [Bind("Id,Name,ShortName")] GroupDetailsViewModel organizationDetails, [Bind] IEnumerable<UserSelectedViewModel> usersSelected)
         {
             if (id != organizationDetails.Id)
             {
                 return NotFound();
             }
 
-            var organization = await _context.Organization.Include("OrganizationAssignments").SingleOrDefaultAsync(m => m.Id == id);
+            var organization = await _context.Group.Include("GroupAssignments").SingleOrDefaultAsync(m => m.Id == id);
 
             if (organization == null)
             {
@@ -181,7 +181,7 @@ namespace IdentityServer.Controllers
                 return NotFound();
             }
 
-            var organization = await _context.Organization
+            var organization = await _context.Group
                 .SingleOrDefaultAsync(m => m.Id == id);
             if (organization == null)
             {
@@ -197,15 +197,15 @@ namespace IdentityServer.Controllers
         [Authorize(Roles = "Access Manager")]
         public async Task<IActionResult> DeleteConfirmed(long id)
         {
-            var organization = await _context.Organization.SingleOrDefaultAsync(m => m.Id == id);
-            _context.Organization.Remove(organization);
+            var organization = await _context.Group.SingleOrDefaultAsync(m => m.Id == id);
+            _context.Group.Remove(organization);
             await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
         }
 
         private bool OrganizationExists(long id)
         {
-            return _context.Organization.Any(e => e.Id == id);
+            return _context.Group.Any(e => e.Id == id);
         }
     }
 }

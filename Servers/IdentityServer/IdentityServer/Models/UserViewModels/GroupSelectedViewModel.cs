@@ -8,7 +8,7 @@ using IdentityServer.Models;
 
 namespace IdentityServer.Models.UserViewModels
 {
-    public class OrganizationSelectedViewModel
+    public class GroupSelectedViewModel
     {
         [Required]
         public long Id { get; set; }
@@ -23,19 +23,19 @@ namespace IdentityServer.Models.UserViewModels
     /// </summary>
     public static class OrganizationSelectedViewModelExtensions
     {
-        public static void UpdateOrganizationUsers(this ApplicationUser user, IEnumerable<OrganizationSelectedViewModel> Organizations)
+        public static void UpdateOrganizationUsers(this ApplicationUser user, IEnumerable<GroupSelectedViewModel> Organizations)
         {
-            foreach (OrganizationSelectedViewModel org in Organizations)
+            foreach (GroupSelectedViewModel org in Organizations)
             {
-                var ExistingMapping = user.OrganizationAssignments.FirstOrDefault(o => o.OrganizationId == org.Id);
+                var ExistingMapping = user.GroupAssignments.FirstOrDefault(o => o.GroupId == org.Id);
 
                 if (org.Selected)
                 {
                     if (ExistingMapping == null)
                     {
                         //Create the mapping
-                        OrganizationAssignment oa = new OrganizationAssignment() { OrganizationId = org.Id, UserId = user.Id };
-                        user.OrganizationAssignments.Add(oa);
+                        GroupAssignment oa = new GroupAssignment() { GroupId = org.Id, UserId = user.Id };
+                        user.GroupAssignments.Add(oa);
                     }
                 }
                 else
@@ -43,7 +43,7 @@ namespace IdentityServer.Models.UserViewModels
                     if (ExistingMapping != null)
                     {
                         //Remove the mapping
-                        user.OrganizationAssignments.Remove(ExistingMapping);
+                        user.GroupAssignments.Remove(ExistingMapping);
                     }
                 }
             }

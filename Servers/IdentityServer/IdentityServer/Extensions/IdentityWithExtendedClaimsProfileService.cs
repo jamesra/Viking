@@ -46,10 +46,10 @@ namespace IdentityServer.Extensions
                 {
                     case "affiliation":
                     {
-                        var OrgAssignments = _Dbcontext.OrganizationAssignments.Include("Organization").Where(oa => oa.UserId == user.Id).ToList();
-                        foreach(OrganizationAssignment oa in OrgAssignments)
+                        var OrgAssignments = _Dbcontext.GroupAssignments.Include("Organization").Where(oa => oa.UserId == user.Id).ToList();
+                        foreach(GroupAssignment oa in OrgAssignments)
                         {
-                            claims.Add(new Claim("Affiliation", oa.Organization.ShortName));
+                            claims.Add(new Claim("Affiliation", oa.Group.ShortName));
                         }
                     }
                     break;

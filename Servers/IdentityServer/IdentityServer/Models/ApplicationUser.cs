@@ -13,9 +13,9 @@ namespace IdentityServer.Models
     // Add profile data for application users by adding properties to the ApplicationUser class
     public class ApplicationUser : IdentityUser
     {
-        public ICollection<OrganizationAssignment> OrganizationAssignments { get; set; }
+        public ICollection<GroupAssignment> GroupAssignments { get; set; }
         [NotMapped]
-        public virtual List<Organization> Organizations => OrganizationAssignments?.Select(oa => oa.Organization).ToList();
+        public virtual List<Group> Groups => GroupAssignments?.Select(oa => oa.Group).ToList();
 
         [Display(Name="Registration Date", Description ="Date of registration")]
         [DisplayFormat(DataFormatString = "{0:yyyy-MM-dd}", ApplyFormatInEditMode = true)]

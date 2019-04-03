@@ -1,0 +1,73 @@
+﻿@model IdentityServer.Models.Group
+
+@{
+    ViewData["Title"] = "Details";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<h2>Details</h2>
+
+<div>
+    <h4>Organization</h4>
+    <hr />
+    <dl class="dl-horizontal">
+        <dt>
+            @Html.DisplayNameFor(model => model.Name)
+        </dt>
+        <dd>
+            @Html.DisplayFor(model => model.Name)
+        </dd>
+
+        <dd>
+            @if (Model.ParentID.HasValue)
+            {
+                @Html.DisplayFor(model => model.Parent.Name)
+            }
+            else
+            {
+                @Html.Display("<b>None</b>")
+            }
+
+        </dd>
+        <dt>
+            @Html.DisplayNameFor(model => model.ShortName)
+        </dt>
+        <dd>
+            @Html.DisplayFor(model => model.ShortName)
+        </dd>
+        <dt>
+            @Html.DisplayNameFor(model => Model.Users)
+        </dt>
+        <dd>
+            <table>
+                @for (int i = 0; i < Model.Users.Count(); i++)
+                {
+                    <tr>
+                        <td>
+                            @Html.DisplayFor(x => Model.GroupAssignments.ElementAt(i).User.UserName)
+                        </td>
+                    </tr>
+
+                }
+            </table>
+        </dd>
+        <dd>
+            <table>
+                @for (int i = 0; i < Model.Children.Count(); i++)
+                {
+                    <tr>
+                        <td>
+                            @Html.DisplayFor(x => Model.Children.ElementAt(i).Name)
+                        </td>
+                    </tr>
+
+                }
+            </table>
+        </dd>
+    </dl>
+
+</div>
+<div>
+    <a asp-action="Edit" asp-route-id="@Model.Id">Edit</a> |
+    <a asp-action="Index">Back to List</a>
+</div>

@@ -12,9 +12,10 @@ using System;
 namespace IdentityServer.Data.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20190401232325_AddNestedGroups")]
+    partial class AddNestedGroups
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -104,11 +105,11 @@ namespace IdentityServer.Data.Migrations
 
             modelBuilder.Entity("IdentityServer.Models.GroupAssignment", b =>
                 {
-                    b.Property<long>("GroupId");
+                    b.Property<long>("OrganizationId");
 
                     b.Property<string>("UserId");
 
-                    b.HasKey("GroupId", "UserId");
+                    b.HasKey("OrganizationId", "UserId");
 
                     b.HasIndex("UserId");
 
@@ -256,15 +257,15 @@ namespace IdentityServer.Data.Migrations
             modelBuilder.Entity("IdentityServer.Models.Group", b =>
                 {
                     b.HasOne("IdentityServer.Models.Group", "Parent")
-                        .WithMany("Children")
+                        .WithMany()
                         .HasForeignKey("ParentID");
                 });
 
             modelBuilder.Entity("IdentityServer.Models.GroupAssignment", b =>
                 {
-                    b.HasOne("IdentityServer.Models.Group", "Group")
+                    b.HasOne("IdentityServer.Models.Group", "Organization")
                         .WithMany("GroupAssignments")
-                        .HasForeignKey("GroupId")
+                        .HasForeignKey("OrganizationId")
                         .OnDelete(DeleteBehavior.Cascade);
 
                     b.HasOne("IdentityServer.Models.ApplicationUser", "User")

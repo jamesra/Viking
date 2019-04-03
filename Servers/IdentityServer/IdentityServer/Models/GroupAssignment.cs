@@ -7,7 +7,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace IdentityServer.Models
 {
-    public class OrganizationAssignment
+    public class GroupAssignment
     {
         [Key]
         [ForeignKey("Id")]
@@ -17,8 +17,8 @@ namespace IdentityServer.Models
 
         [Key]
         [ForeignKey("Id")]
-        public long OrganizationId { get; set; }
+        public long GroupId { get; set; }
 
-        public virtual Organization Organization { get; set; } 
+        public virtual Group Group { get; set; } 
     }
 }

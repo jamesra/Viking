@@ -30,20 +30,20 @@ namespace IdentityServer.Extensions
         {
             var AdminUsers = context.GetAdminUsers();
 
-            IQueryable<OrganizationAssignment> AdminOrgAssignments;
+            IQueryable<GroupAssignment> AdminOrgAssignments;
             if (OrgIds != null)
             {
-                AdminOrgAssignments = context.OrganizationAssignments.Include("User").Include("Organization").Where(oa => OrgIds.Contains(oa.OrganizationId) && AdminUsers.Any(a => oa.UserId == a.Id));
+                AdminOrgAssignments = context.GroupAssignments.Include("User").Include("Organization").Where(oa => OrgIds.Contains(oa.GroupId) && AdminUsers.Any(a => oa.UserId == a.Id));
             }
             else
             {
-                AdminOrgAssignments = context.OrganizationAssignments.Include("User").Include("Organization").Where(oa => AdminUsers.Any(a => oa.UserId == a.Id));
+                AdminOrgAssignments = context.GroupAssignments.Include("User").Include("Organization").Where(oa => AdminUsers.Any(a => oa.UserId == a.Id));
             }
 
             Dictionary<long, List<ApplicationUser>> OrgAdminMap = new Dictionary<long, List<ApplicationUser>>();
-            foreach (Organization org in AdminOrgAssignments.Select(oa => oa.Organization).Distinct())
+            foreach (Group org in AdminOrgAssignments.Select(oa => oa.Group).Distinct())
             {
-                var OrgAdmins = AdminOrgAssignments.Where(a => a.OrganizationId == org.Id).Select(oa => oa.User).ToList();
+                var OrgAdmins = AdminOrgAssignments.Where(a => a.GroupId == org.Id).Select(oa => oa.User).ToList();
                 OrgAdminMap.Add(org.Id, OrgAdmins);
             }
 

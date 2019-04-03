@@ -23,19 +23,19 @@ namespace IdentityServer.Models.UserViewModels
     /// </summary>
     public static class UserSelectedViewModelExtensions
     {
-        public static void UpdateUserOrganizations(this Organization organization, IEnumerable<UserSelectedViewModel> Users)
+        public static void UpdateUserOrganizations(this Group organization, IEnumerable<UserSelectedViewModel> Users)
         {
             foreach (UserSelectedViewModel user in Users)
             {
-                var ExistingMapping = organization.OrganizationAssignments.FirstOrDefault(u => u.UserId == user.Id);
+                var ExistingMapping = organization.GroupAssignments.FirstOrDefault(u => u.UserId == user.Id);
 
                 if (user.Selected)
                 {
                     if (ExistingMapping == null)
                     {
                         //Create the mapping
-                        OrganizationAssignment oa = new OrganizationAssignment() { OrganizationId = organization.Id, UserId = user.Id };
-                        organization.OrganizationAssignments.Add(oa);
+                        GroupAssignment oa = new GroupAssignment() { GroupId = organization.Id, UserId = user.Id };
+                        organization.GroupAssignments.Add(oa);
                     }
                 }
                 else
@@ -43,7 +43,7 @@ namespace IdentityServer.Models.UserViewModels
                     if (ExistingMapping != null)
                     {
                         //Remove the mapping
-                        organization.OrganizationAssignments.Remove(ExistingMapping);
+                        organization.GroupAssignments.Remove(ExistingMapping);
                     }
                 }
             }
