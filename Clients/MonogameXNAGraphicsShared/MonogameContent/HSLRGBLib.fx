@@ -27,14 +27,14 @@ const static float4 InverseComponentLumaWeightsMap[] = {{1/0.30, 1/0.59, 1/0.11,
 
 float BlendLumaWithBackground(float BackgroundLuma, float ForegroundLuma, float Alpha)
 {
-	return (BackgroundLuma * (1 - Alpha)) + ((ForegroundLuma * Alpha));
+	return (BackgroundLuma * (1.0 - Alpha)) + ((ForegroundLuma * Alpha));
 }
 
 
 float CalculateHSLLumaFromRGB(float4 RGB)
 {
-    float3 maxval = max(max(RGB.r, RGB.g), RGB.b);
-    float3 minval = min(min(RGB.r, RGB.g), RGB.b);
+    float maxval = max(max(RGB.r, RGB.g), RGB.b);
+    float minval = min(min(RGB.r, RGB.g), RGB.b);
 
     return (maxval + minval) / 2.0;
 }
