@@ -32,30 +32,7 @@ namespace WebAnnotationModel
         {
             return keyGenerator.NextKey(); 
         }
-
-       public virtual bool Save()
-        {
-            List<OBJECT> changed = new List<OBJECT>(ChangedObjects.Count);
-
-            while (ChangedObjects.Count > 0)
-            {
-                KeyValuePair<KEY, OBJECT> KeyValue = ChangedObjects.FirstOrDefault();
-
-                OBJECT obj = null;
-                bool success = ChangedObjects.TryRemove(KeyValue.Key, out obj);
-                if (!success)
-                    continue; 
-
-                if (obj.DBAction == DBACTION.NONE)
-                    continue;
-
-                changed.Add(obj);
-            }
-
-            return Save(changed);
-        }
-
-        
+                      
 
         /// <summary>
         /// Save all changes to locations, returns true if the method completed without errors, otherwise false
