@@ -94,23 +94,32 @@ namespace WebAnnotation.ViewModel
                 return;
             }
 
-            KnownLinks.TryAdd(key, () =>
+            try
             {
-                LocationLinkView lv = new LocationLinkView(key, this.Section.Number, this.Section.VolumeViewModel);
-                bool added = LocationLinks.TryAdd(key, lv);
-                Debug.Assert(added);
+                KnownLinks.TryAdd(key, () =>
+                {
+                    LocationLinkView lv = new LocationLinkView(key, this.Section.Number, this.Section.VolumeViewModel);
+                    bool added = LocationLinks.TryAdd(key, lv);
+                    Debug.Assert(added);
 
-                if (lv.LinksOverlap())
-                {
-                    OverlappedLinkKeys.Add(key);
-                    OverlappedAdjacentLocationIDs.AddRef(key.A);
-                    OverlappedAdjacentLocationIDs.AddRef(key.B);
-                }
-                else
-                {
-                    NonOverlappedLinksSearch.Add(lv.BoundingBox.ToRTreeRect(lv.Z), key);
-                }
-            });
+                    if (lv.LinksOverlap())
+                    {
+                        OverlappedLinkKeys.Add(key);
+                        OverlappedAdjacentLocationIDs.AddRef(key.A);
+                        OverlappedAdjacentLocationIDs.AddRef(key.B);
+                    }
+                    else
+                    {
+                        NonOverlappedLinksSearch.Add(lv.BoundingBox.ToRTreeRect(lv.Z), key);
+                    }
+                });
+            }
+            catch (System.ArgumentOutOfRangeException e)
+            {
+                //This can occur when the point cannot be mapped
+                System.Diagnostics.Trace.WriteLine(string.Format("Exception adding location link {0}\n{1}", key.ToString(), e.ToString()));
+            }
+            
         }
 
         protected void RemoveLocationLink(LocationLinkKey key, bool unsubscribe)
