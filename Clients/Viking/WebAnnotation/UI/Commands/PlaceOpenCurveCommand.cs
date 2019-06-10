@@ -44,10 +44,17 @@ namespace WebAnnotation.UI.Commands
         {
             get
             {
-               return Global.DefaultClosedLineWidth / 2.0;
+                return Global.DefaultClosedLineWidth / 2.0;
             }
         }
 
+        public float PointIntervalOnDrag
+        {
+            get
+            {
+                return 100;
+            }
+        }
 
         public PlaceClosedCurveCommand(Viking.UI.Controls.SectionViewerControl parent,
                                         Microsoft.Xna.Framework.Color color,
@@ -65,6 +72,51 @@ namespace WebAnnotation.UI.Commands
                                         OnCommandSuccess success_callback)
             : base(parent, color, origin, LineWidth, false, success_callback)
         {
+        }
+
+        protected override void OnMouseMove(object sender, MouseEventArgs e)
+        {
+
+            //If current pen is not touching pad
+            if(e.Button.Left() == false)
+            {
+                OnMouseDoubleClick(sender, e);
+                return;
+            }
+
+            //If pen is not touching pad, don't drawing
+            if(this.oldMouse?.Button.Left() == false)
+            {
+                return;
+            }
+
+            GridVector2 cursor_position = Parent.ScreenToWorld(e.X, e.Y);
+
+            if(this.Verticies.Length == 0)
+            {
+                return;
+            }
+
+            double distanceToLast = GridVector2.Distance(cursor_position, this.Verticies.Last());
+            double distanceToFirst = GridVector2.Distance(cursor_position, this.Verticies[0]);
+
+            if(OverlapsFirstVertex(cursor_position) && this.Verticies.Length > 2)
+            {
+                if (CanCommandComplete(cursor_position))
+                {
+                    this.Execute();
+                    return;
+                }
+            }
+
+            // Console.WriteLine(distanceToLast.ToString());
+
+            if(distanceToLast > this.PointIntervalOnDrag && CanControlPointBePlaced(cursor_position))
+            {
+                this.PushVertex(cursor_position);
+            }
+
+            base.OnMouseMove(sender, e);
         }
 
         /// <summary>
