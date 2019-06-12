@@ -121,7 +121,10 @@ namespace UtilitiesTests
              
             double Degree180 = GridVector2.ArcAngle(Origin, A, C);
             Assert.AreEqual(Degree180, Math.PI);
-             
+
+            double BD_Degree180 = GridVector2.ArcAngle(Origin, D, B);
+            Assert.AreEqual(BD_Degree180, Math.PI);
+
             double Degree0 = GridVector2.Angle(Origin, A);
             Assert.AreEqual(Degree0, 0); 
 
