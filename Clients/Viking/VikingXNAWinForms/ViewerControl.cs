@@ -437,7 +437,7 @@ namespace VikingXNAWinForms
                 }
             }
 
-            UpdateEffectMatricies(this.Scene);
+            UpdateEffectMatricies(drawnScene);
 
             if (this.spriteBatch == null || this.spriteBatch.GraphicsDevice.IsDisposed)
             {
