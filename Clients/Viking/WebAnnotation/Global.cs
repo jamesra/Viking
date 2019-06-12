@@ -47,6 +47,8 @@ namespace WebAnnotation
 
         static public double MinRadius = 0.5;
 
+        static public WebAnnotation.UI.Forms.PenAnnotationViewForm PenAnnotationForm = null;
+
         /// <summary>
         /// Number of interpolations to place between curve control points, determines distance between control points
         /// </summary>
