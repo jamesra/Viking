@@ -132,24 +132,26 @@ namespace WebAnnotationModel
         {
             return object.Equals(A, B);
 
-            if (object.Equals(A, B))
+            /*if (object.Equals(A, B))
                 return true;
             if (object.Equals(A, null) || object.Equals(B, null))
                 return false;  
 
             return (A.ID == B.ID);
+            */
         }
 
         public static bool operator !=(LocationLinkObj A, LocationLinkObj B)
         {
             return !object.Equals(A, B);
-
+            /*
             if (object.Equals(A, B))
                 return false;
             if(object.Equals(A,null) || object.Equals(B,null))                
                 return true; 
 
             return !((A.ID == B.ID));
+            */
         }
 
         public int CompareTo(LocationLinkKey other)
@@ -158,7 +160,7 @@ namespace WebAnnotationModel
                 return (int)(other.A - A);
             else
                 return (int)(other.B - B);
-        }   
+        }
 
         public long A
         {
