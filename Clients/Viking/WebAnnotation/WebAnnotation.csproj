@@ -186,8 +186,11 @@
     <Compile Include="UI\Commands\AdjustControlPointCommand.cs" />
     <Compile Include="UI\Commands\AdjustPolygonVertexCommand.cs" />
     <Compile Include="UI\Commands\CutHoleCommand.cs" />
+    <Compile Include="UI\Commands\PenInputHelper.cs" />
+    <Compile Include="UI\Commands\PlaceCurvesWithPenCommands.cs" />
     <Compile Include="UI\Commands\PlaceOpenCurveCommand.cs" />
     <Compile Include="UI\Commands\RemovePolygonHoleCommand.cs" />
+    <Compile Include="UI\Commands\RetraceAndReplacePathCommand.cs" />
     <Compile Include="UI\Commands\TranslateLocationCommand.cs" />
     <Compile Include="UI\Commands\TranslateScaleCommandBase.cs" />
     <Compile Include="UI\Commands\RotateTranslateScaleCommand.cs" />
