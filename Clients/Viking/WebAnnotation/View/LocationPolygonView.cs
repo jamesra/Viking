@@ -256,8 +256,17 @@ namespace WebAnnotation.View
 
         public override LocationAction GetMouseClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID)
         {
+
             LocationID = this.ID;
             GridPolygon intersectingPoly; //Could be our polygon or an interior polygon
+
+            if (Viking.UI.State.PenMode)
+            {
+                if (this.SmoothedVolumePolygon.PointIntersectsAnyPolygonSegment(WorldPosition, ControlPointRadius, out intersectingPoly))
+                {
+                    return LocationAction.RETRACEANDREPLACE;
+                }
+            }
 
             if(ModifierKeys.ShiftPressed())
             {
@@ -324,7 +333,6 @@ namespace WebAnnotation.View
 
             return LocationAction.NONE;
         }
-
 
         internal override void OnParentPropertyChanged(object o, PropertyChangedEventArgs args)
         {

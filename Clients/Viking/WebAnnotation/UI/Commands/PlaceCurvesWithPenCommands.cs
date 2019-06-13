@@ -13,7 +13,7 @@ using VikingXNAWinForms;
 
 namespace WebAnnotation.UI.Commands
 {
-    class PlaceClosedCurveCommand : PlaceCurveCommand
+    class PlaceClosedCurveWithPenCommand : PlaceCurveWithPenCommand
     {
         public override LineStyle Style
         {
@@ -43,7 +43,7 @@ namespace WebAnnotation.UI.Commands
         {
             get
             {
-                return Global.DefaultClosedLineWidth / 2.0;
+                return Global.DefaultClosedLineWidth / 2.0; //Change possibly
             }
         }
 
@@ -51,20 +51,28 @@ namespace WebAnnotation.UI.Commands
         {
             get
             {
-                return 100;
+                return 90;
             }
         }
 
-        public PlaceClosedCurveCommand(Viking.UI.Controls.SectionViewerControl parent,
+        public float PenAngleThreshold
+        {
+            get
+            {
+                return .3f;
+            }
+        }
+
+        public PlaceClosedCurveWithPenCommand(Viking.UI.Controls.SectionViewerControl parent,
                                         Microsoft.Xna.Framework.Color color,
                                         GridVector2 origin,
-                                        double LineWidth, 
+                                        double LineWidth,
                                         OnCommandSuccess success_callback)
             : base(parent, color, origin, LineWidth, false, success_callback)
         {
         }
 
-        public PlaceClosedCurveCommand(Viking.UI.Controls.SectionViewerControl parent,
+        public PlaceClosedCurveWithPenCommand(Viking.UI.Controls.SectionViewerControl parent,
                                         System.Drawing.Color color,
                                         GridVector2 origin,
                                         double LineWidth,
@@ -73,8 +81,91 @@ namespace WebAnnotation.UI.Commands
         {
         }
 
-        
+        PenInputHelper pen = new PenInputHelper();
 
+        protected override void OnMouseMove(object sender, MouseEventArgs e)
+        {
+            if (e.Button.Middle())
+            {
+                //if (!ShapeisCompleteAlready)
+                    //return;
+
+
+                if (OverlapsAnyVertex(pen.cursor_position) && e.Button.Left())
+                {
+                    IndexOfOverlappedVertex(pen.cursor_position);
+                    
+                }
+
+            }
+
+
+            //If current pen is not touching pad
+            if (e.Button.Left() == false)
+            {
+                if (Verticies.Length >= 3)
+                {
+                    GridVector2 WorldPos = Parent.ScreenToWorld(e.X, e.Y);
+                    if (CanControlPointBePlaced(WorldPos))
+                    {
+                        PushVertex(WorldPos);
+                        if (CanCommandComplete(WorldPos))
+                        {
+
+                            this.Execute();
+                        }
+                    }
+                }
+                //PenInputHelper.Clear();
+                return;
+            }
+
+            //If pen is not touching pad, don't draw
+            if (this.oldMouse?.Button.Left() == false)
+            {
+                return;
+            }
+
+            //Checks to make sure the polygon has a starting vertex
+            if (this.Verticies.Length == 0)
+            {
+                return;
+            }
+
+            
+
+            //Completes the polygon
+            if (OverlapsFirstVertex(pen.cursor_position) && this.Verticies.Length > 2)
+            {
+                if (CanCommandComplete(pen.cursor_position))
+                {
+                    this.Execute();
+                    return;
+                }
+            }
+
+            // Console.WriteLine(distanceToLast.ToString());
+            
+
+            int placeVertex = pen.GetNextVertex(e, Parent, Verticies);
+            if (CanControlPointBePlaced(pen.cursor_position))
+            {
+                if (placeVertex == -1)
+                {
+                    PopVertex();
+                    PushVertex(pen.cursor_position);
+                }
+                else if (placeVertex == 1)
+                {
+                    PushVertex(pen.cursor_position);
+                }
+            }
+
+
+            base.OnMouseMove(sender, e);
+        }
+
+        
         /// <summary>
         /// Can a control point be placed or the command completed by clicking the mouse at this position?
         /// </summary>
@@ -82,8 +173,8 @@ namespace WebAnnotation.UI.Commands
         /// <returns></returns>
         protected override bool CanControlPointBePlaced(GridVector2 WorldPos)
         {
-            return (!OverlapsAnyVertex(WorldPos) );
-        }        
+            return (!OverlapsAnyVertex(WorldPos));
+        }
 
         /// <summary>
         /// Can the command be completed by clicking this point?
@@ -104,11 +195,13 @@ namespace WebAnnotation.UI.Commands
             {
                 return this.curve_verticies.ControlPoints.ToPolygon().STIsValid().IsTrue;
             }
-            catch(ArgumentException e)
+            catch (ArgumentException e)
             {
                 return false;
             }
         }
+
+
 
         /// <summary>
         /// Return true if a line to the world position from the last vertex will intersect our curve
@@ -117,7 +210,7 @@ namespace WebAnnotation.UI.Commands
         /// <returns></returns>
         protected override GridVector2? ProposedControlPointSelfIntersection(GridVector2 worldPos)
         {
-            GridVector2? retval = new GridVector2?();   
+            GridVector2? retval = new GridVector2?();
 
             if (NumVerticies < 3)
                 return retval;
@@ -126,7 +219,7 @@ namespace WebAnnotation.UI.Commands
             {
                 CurveViewControlPoints curveVerticies = AppendControlPointToCurve(worldPos);
                 GridVector2[] controlPoints = Verticies;
-                GridLineSegment[] proposed_back_curve_segments = GridLineSegment.SegmentsFromPoints(curveVerticies.CurvePointsBetweenControlPoints(controlPoints.Last() , worldPos));
+                GridLineSegment[] proposed_back_curve_segments = GridLineSegment.SegmentsFromPoints(curveVerticies.CurvePointsBetweenControlPoints(controlPoints.Last(), worldPos));
                 GridLineSegment[] proposed_front_curve_segments = GridLineSegment.SegmentsFromPoints(curveVerticies.CurvePointsBetweenControlPoints(worldPos, controlPoints[0]));
                 GridLineSegment[] existing_curve_segments = GridLineSegment.SegmentsFromPoints(curveVerticies.CurvePointsBetweenControlPoints(controlPoints[0], controlPoints.Last()));
 
@@ -149,10 +242,10 @@ namespace WebAnnotation.UI.Commands
             }
 
             return retval;
-        } 
+        }
     }
 
-    class PlaceOpenCurveCommand : PlaceCurveCommand
+    class PlaceOpenCurveWithPenCommand : PlaceCurveWithPenCommand
     {
         public override LineStyle Style
         {
@@ -170,7 +263,7 @@ namespace WebAnnotation.UI.Commands
             }
         }
 
-        public PlaceOpenCurveCommand(Viking.UI.Controls.SectionViewerControl parent,
+        public PlaceOpenCurveWithPenCommand(Viking.UI.Controls.SectionViewerControl parent,
                                         Microsoft.Xna.Framework.Color color,
                                         GridVector2 origin,
                                         double LineWidth,
@@ -179,7 +272,7 @@ namespace WebAnnotation.UI.Commands
         {
         }
 
-        public PlaceOpenCurveCommand(Viking.UI.Controls.SectionViewerControl parent,
+        public PlaceOpenCurveWithPenCommand(Viking.UI.Controls.SectionViewerControl parent,
                                         System.Drawing.Color color,
                                         GridVector2 origin,
                                         double LineWidth,
@@ -197,7 +290,7 @@ namespace WebAnnotation.UI.Commands
         {
             return !OverlapsAnyVertex(WorldPos) && !ProposedSegmentSelfIntersects(WorldPos);
         }
-         
+
         /// <summary>
         /// Can the command be completed by clicking this point?
         /// </summary>
@@ -260,18 +353,18 @@ namespace WebAnnotation.UI.Commands
                     if (intersections.Length > 0)
                         retval = intersections.First();
                 }
-                
-                catch(ArgumentException)
+
+                catch (ArgumentException)
                 {
                     return new GridVector2?();
-                }                
+                }
             }
 
             return retval;
         }
     }
 
-    
+
 
     /// <summary>
     /// Left-click once to create a new vertex in the poly line
@@ -279,8 +372,8 @@ namespace WebAnnotation.UI.Commands
     /// Double left-click to complete polyline creation
     /// Right-click to remove the last polyline vertex
     /// </summary> 
-    abstract class PlaceCurveCommand : ControlPointCommandBase, Viking.Common.IHelpStrings, Viking.Common.IObservableHelpStrings
-    { 
+    abstract class PlaceCurveWithPenCommand : ControlPointCommandBase, Viking.Common.IHelpStrings, Viking.Common.IObservableHelpStrings
+    {
         public abstract uint NumCurveInterpolations
         {
             get;
@@ -306,7 +399,7 @@ namespace WebAnnotation.UI.Commands
 
                 return s.ToArray();
             }
-                
+
         }
 
 
@@ -340,7 +433,7 @@ namespace WebAnnotation.UI.Commands
             return output;
         }
 
-        
+
 
         /// <summary>
         /// Verticies placed along the curve
@@ -348,9 +441,9 @@ namespace WebAnnotation.UI.Commands
         protected CurveViewControlPoints curve_verticies;
 
         bool IsOpen = true; //False if the curves last point is connected to its first
-        /// <summary>
-        /// Returns the stack with the bottomost entry first in the array
-        /// </summary>
+                            /// <summary>
+                            /// Returns the stack with the bottomost entry first in the array
+                            /// </summary>
         public override GridVector2[] Verticies
         {
             get { return vert_stack.ToArray().Reverse().ToArray(); }
@@ -366,12 +459,12 @@ namespace WebAnnotation.UI.Commands
 
         public int NumVerticies
         {
-           get { return this.vert_stack.Count; }
+            get { return this.vert_stack.Count; }
         }
 
-        
 
-        public PlaceCurveCommand(Viking.UI.Controls.SectionViewerControl parent,
+
+        public PlaceCurveWithPenCommand(Viking.UI.Controls.SectionViewerControl parent,
                                         Microsoft.Xna.Framework.Color color,
                                         GridVector2 origin,
                                         double LineWidth,
@@ -385,7 +478,7 @@ namespace WebAnnotation.UI.Commands
             this.IsOpen = IsOpen;
         }
 
-        public PlaceCurveCommand(Viking.UI.Controls.SectionViewerControl parent,
+        public PlaceCurveWithPenCommand(Viking.UI.Controls.SectionViewerControl parent,
                                         System.Drawing.Color color,
                                         GridVector2 origin,
                                         double LineWidth,
@@ -406,7 +499,7 @@ namespace WebAnnotation.UI.Commands
             List<GridVector2> listControlPoints = new List<GridVector2>(this.Verticies);
             listControlPoints.Add(worldPos);
             return new CurveViewControlPoints(listControlPoints, this.NumCurveInterpolations, !IsOpen);
-        } 
+        }
 
         /// <summary>
         /// Return true if a line to the world position from the last vertex will intersect our curve
@@ -418,7 +511,7 @@ namespace WebAnnotation.UI.Commands
             GridVector2? intersection = ProposedControlPointSelfIntersection(worldPos);
             return intersection.HasValue;
         }
-         
+
         protected override GridVector2? IntersectsSelf(GridLineSegment lineSeg)
         {
             return this.curve_verticies.CurvePoints.IntersectionPoint(lineSeg);
@@ -430,9 +523,6 @@ namespace WebAnnotation.UI.Commands
             return OverlapsAnyVertex(WorldPos);
         }
 
-        
-        
-
         protected override void OnMouseMove(object sender, MouseEventArgs e)
         {
             GridVector2 WorldPos = Parent.ScreenToWorld(e.X, e.Y);
@@ -441,53 +531,12 @@ namespace WebAnnotation.UI.Commands
             {
                 Parent.Cursor = CanControlPointBePlaced(WorldPos) ? Cursors.Hand : Cursors.No;
 
-                Parent.Cursor = CanCommandComplete(WorldPos) ? Cursors.Arrow : Parent.Cursor; 
+                Parent.Cursor = CanCommandComplete(WorldPos) ? Cursors.Arrow : Parent.Cursor;
             }
 
             base.OnMouseMove(sender, e);
         }
 
-        protected override void OnMouseDown(object sender, MouseEventArgs e)
-        {
-            if(e.Button.Left())
-            {
-                GridVector2 WorldPos = Parent.ScreenToWorld(e.X, e.Y);
-                if (CanCommandComplete(WorldPos))
-                {
-                    this.Execute();
-                    return;
-                }
-                else if(CanControlPointBePlaced(WorldPos))
-                {
-                    PushVertex(WorldPos);
-                    Parent.Invalidate();
-                    return;
-                }
-                else if (OverlapsAnyVertex(WorldPos))
-                {
-                    //Drag the vertex under the cursor
-                    int? iOverlapped = IndexOfOverlappedVertex(WorldPos);
-                    if (iOverlapped.HasValue)
-                    {
-                        Viking.UI.Commands.Command.InjectCommand(new AdjustPolylineCommand(this.Parent,
-                                                                                            this.LineColor,
-                                                                                            this.Verticies,
-                                                                                            this.LineWidth,
-                                                                                            iOverlapped.Value,
-                                                                                            !this.IsOpen,
-                                                                                            new OnCommandSuccess((line_verticies) =>
-                                                                                            {
-                                                                                                this.Verticies = line_verticies;
-                                                                                            //Update oldWorldPosition to keep the line we draw to our cursor from jumping on the first draw when we are reactivated and user hasn't used the mouse yet
-                                                                                            this.oldWorldPosition = line_verticies[iOverlapped.Value];
-                                                                                            })));
-                        return;
-                    }
-                }
-            }
-            base.OnMouseDown(sender, e);
-        }
-        
         protected override void OnMouseDoubleClick(object sender, MouseEventArgs e)
         {
             if (e.Button.Right())
@@ -524,7 +573,7 @@ namespace WebAnnotation.UI.Commands
         {
             GridVector2? SelfIntersection = ProposedControlPointSelfIntersection(this.oldWorldPosition);
 
-            if(SelfIntersection.HasValue || CanControlPointBePlaced(this.oldWorldPosition))
+            if (SelfIntersection.HasValue || CanControlPointBePlaced(this.oldWorldPosition))
             {
                 bool pushed_point = true;
 
@@ -537,10 +586,10 @@ namespace WebAnnotation.UI.Commands
 
                 CurveView curveView = new CurveView(vert_stack.ToArray(), this.LineColor, !this.IsOpen, Global.NumCurveInterpolationPoints(!this.IsOpen), lineWidth: this.LineWidth, lineStyle: Style, controlPointRadius: this.ControlPointRadius);
                 curveView.Color.SetAlpha(this.ShapeIsValid() ? 1 : 0.25f);
-                CurveView.Draw(graphicsDevice, scene, Parent.LumaOverlayCurveManager, basicEffect, Parent.AnnotationOverlayEffect, 0, new CurveView[] { curveView } );
+                CurveView.Draw(graphicsDevice, scene, Parent.LumaOverlayCurveManager, basicEffect, Parent.AnnotationOverlayEffect, 0, new CurveView[] { curveView });
                 //GlobalPrimitives.DrawPolyline(Parent.LineManager, basicEffect, DrawnLineVerticies, this.LineWidth, this.LineColor);
 
-                if(pushed_point)
+                if (pushed_point)
                     this.vert_stack.Pop();
 
                 base.OnDraw(graphicsDevice, scene, basicEffect);
@@ -557,8 +606,8 @@ namespace WebAnnotation.UI.Commands
                 {
                     CircleView view = new CircleView(new GridCircle(this.Verticies.First(), this.LineWidth / 2.0), this.LineColor);
                     CircleView.Draw(graphicsDevice, scene, basicEffect, this.Parent.AnnotationOverlayEffect, new CircleView[] { view });
-                } 
-            } 
+                }
+            }
         }
     }
 }

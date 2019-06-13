@@ -28,7 +28,8 @@ namespace WebAnnotation.View
         CREATELINK, //Create a link to an adjacent location or structure,
         CREATELINKEDLOCATION, //Create a new location and link to it
         CUTHOLE, //Cut a hole from the interior of an annotation
-        REMOVEHOLE //Remove a hole from the interior of an annotation
+        REMOVEHOLE, //Remove a hole from the interior of an annotation
+        RETRACEANDREPLACE //Trace a new path from the perimeter of an annotation to another point on the perimeter and replace points in between with the new path
     }
 
     /// <summary>
@@ -60,6 +61,8 @@ namespace WebAnnotation.View
                     return new Cursor(Viking.Properties.Resources.Scissors2.Handle);
                 case LocationAction.REMOVEHOLE: 
                     return new Cursor(Viking.Properties.Resources.PaintBucketFill.Handle);
+                case LocationAction.RETRACEANDREPLACE:
+                    return Cursors.Cross;
                 default:
                     return Cursors.Default;
             }
@@ -468,6 +471,8 @@ namespace WebAnnotation.View
                                                                  }
                                                              }
                                                              );
+                case LocationAction.RETRACEANDREPLACE:
+                    
                 default:
                     return null;
             }
