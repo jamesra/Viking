@@ -260,13 +260,16 @@ namespace WebAnnotation.View
             LocationID = this.ID;
             GridPolygon intersectingPoly; //Could be our polygon or an interior polygon
 
-            if (Viking.UI.State.PenMode)
+            //TODO: Detect if the View is on a touch/pen capable display
+            /*if(Global.PenMode)
+            //if (Viking.UI.State.PenMode)
             {
                 if (this.SmoothedVolumePolygon.PointIntersectsAnyPolygonSegment(WorldPosition, ControlPointRadius, out intersectingPoly))
                 {
                     return LocationAction.RETRACEANDREPLACE;
                 }
             }
+            */
 
             if(ModifierKeys.ShiftPressed())
             {
@@ -304,25 +307,22 @@ namespace WebAnnotation.View
             }
             else if (!ModifierKeys.ShiftOrCtrlPressed())
             {
-                if (this.SmoothedVolumePolygon.Contains(WorldPosition))
+                if (VisibleSectionNumber == (int)this.modelObj.Z)
                 {
-                    if (VisibleSectionNumber == (int)this.modelObj.Z)
+                    if (this.VolumePolygon.PointIntersectsAnyPolygonVertex(WorldPosition, ControlPointRadius, out intersectingPoly))
                     {
-                        if (this.VolumePolygon.PointIntersectsAnyPolygonVertex(WorldPosition, ControlPointRadius, out intersectingPoly))
+                        return LocationAction.ADJUST;
+                    }
+                    else if (this.SmoothedVolumePolygon.Contains(WorldPosition))
+                    {
+                        GridCircle TranslateTargetCircle = new GridCircle(this.InscribedCircle.Center, this.InscribedCircle.Radius / 2.0);
+                        if (TranslateTargetCircle.Contains(WorldPosition))
                         {
-                            return LocationAction.ADJUST;
+                            LocationID = this.ID;
+                            return LocationAction.TRANSLATE;
                         }
-                        else
-                        {
-                            GridCircle TranslateTargetCircle = new GridCircle(this.InscribedCircle.Center, this.InscribedCircle.Radius / 2.0);
-                            if (TranslateTargetCircle.Contains(WorldPosition))
-                            {
-                                LocationID = this.ID;
-                                return LocationAction.TRANSLATE;
-                            }
 
-                            return LocationAction.CREATELINK;
-                        }
+                        return LocationAction.CREATELINK;
                     }
                     else
                     {
