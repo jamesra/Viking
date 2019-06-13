@@ -46,6 +46,22 @@ namespace WebAnnotation
             Global.Export.OpenMotif();
         }
 
+        [MenuItem("Show Pen Input Window")]
+        static public void OnShowPenInputWindow(object sender, EventArgs e)
+        {
+            Debug.Print("OnShowPenInputWindow");
+
+            if(Global.PenAnnotationForm == null || Global.PenAnnotationForm.IsDisposed)
+            {
+                Global.PenAnnotationForm = new UI.Forms.PenAnnotationViewForm(Viking.UI.State.ViewerForm.Section);
+                Global.PenAnnotationForm.Show();
+            }
+            else
+            {
+                Global.PenAnnotationForm.Visible = !Global.PenAnnotationForm.Visible;
+            }
+        }
+
         [MenuItem("Open Last Modified Location")]
         static public void GoToLastModifiedLocation(object sender, EventArgs e)
         {

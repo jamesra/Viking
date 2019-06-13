@@ -304,15 +304,17 @@ namespace Viking.UI.Controls
         /// <summary>
         /// Currently selected tileset 
         /// </summary>
+        [System.ComponentModel.Browsable(false)]
         public string CurrentChannel
         {
-            get { return Section.ActiveChannel; }
+            get { return Section?.ActiveChannel; }
             set { Section.ActiveChannel = value; }
         }
 
+        [System.ComponentModel.Browsable(false)]
         public string CurrentTransform
         {
-            get { return Section.ActiveTileTransform; }
+            get { return Section?.ActiveTileTransform; }
             set { Section.ActiveTileTransform = value; }
         }
 
@@ -320,6 +322,9 @@ namespace Viking.UI.Controls
         {
             get
             {
+                if (Section == null)
+                    return new ChannelInfo[0];
+
                 ChannelInfo[] Channelset = Section.ChannelInfoArray;
                 if (Channelset.Length == 0)
                 {

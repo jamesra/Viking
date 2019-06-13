@@ -213,6 +213,12 @@
       <DependentUpon>GoToStructureForm.xaml</DependentUpon>
     </Compile>
     <Compile Include="UI\Forms\GoToLocationForm.xaml.cs" />
+    <Compile Include="UI\Forms\PenAnnotationViewForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="UI\Forms\PenAnnotationViewForm.Designer.cs">
+      <DependentUpon>PenAnnotationViewForm.cs</DependentUpon>
+    </Compile>
     <Compile Include="UI\HitTestResult.cs" />
     <Compile Include="UI\SplitStructuresForm.cs">
       <SubType>Form</SubType>
@@ -368,6 +374,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="UI\FindStructureNumberForm.resx">
       <DependentUpon>FindStructureNumberForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UI\Forms\PenAnnotationViewForm.resx">
+      <DependentUpon>PenAnnotationViewForm.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="UI\MergeStructuresForm.resx">
       <DependentUpon>MergeStructuresForm.cs</DependentUpon>

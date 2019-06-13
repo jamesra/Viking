@@ -3,6 +3,13 @@
 Version Information
 ###################
 
+1.1.280
+-------
+
+    2019-04-23
+    
+    * Fix: Updated the server URL's used by the "Find Volumes" button on the login page
+
 1.1.279
 -------
 
