@@ -34,7 +34,6 @@ namespace Viking.UI.Controls
             get { return _CurrentCommand; }
             set
             {
-
                 if (_CurrentCommand != value && _CurrentCommand != null)
                 {
                     _CurrentCommand.OnCommandCompleteHandler -= this.OnCommandCompleteHandler;
@@ -66,6 +65,8 @@ namespace Viking.UI.Controls
                 }
             }
         }
+
+        public Viking.UI.Commands.CommandQueue CommandQueue = new CommandQueue();
 
         static short[] indicies = { 0, 1, 2, 2, 1, 3 };
 
@@ -363,8 +364,6 @@ namespace Viking.UI.Controls
             InternalReferenceSectionChanged = new ReferenceSectionChangedEventHandler(this.OnInternalReferenceSectionChanged);
             State.ItemSelected += ObjectSelectedHandler;
 
-
-
             ExtensionManager.AddMenuItems(this.menuStrip);
         }
 
@@ -399,11 +398,11 @@ namespace Viking.UI.Controls
 
                 if (State.SelectedObject != null)
                 {
-                    CurrentCommand = Command.CreateFor(this, State.SelectedObject.GetType());
+                    CurrentCommand = this.CommandQueue.CreateFor(this, State.SelectedObject.GetType());
                 }
                 else
                 {
-                    CurrentCommand = Command.CreateFor(this, null);
+                    CurrentCommand = this.CommandQueue.CreateFor(this, null);
                 }
 
                 this.CurrentChannel = Section.DefaultChannel;
@@ -473,9 +472,20 @@ namespace Viking.UI.Controls
         private void OnCommandCompleted(object sender, System.EventArgs e)
         {
             this.Cursor = Cursors.Default;
-            CurrentCommand = Command.CreateFor(this, UI.State.SelectedObject);
+            CurrentCommand = CommandQueue.CreateFor(this, UI.State.SelectedObject);
             this.Invalidate();
         }
+        /*
+        private void OnCommandQueueChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+        {
+            if(e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Add)
+            {
+                if(this.CurrentCommand == null || this.CurrentCommand is DefaultCommand)
+                {
+
+                }
+            }
+        }*/
 
         #endregion
 

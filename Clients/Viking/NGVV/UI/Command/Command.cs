@@ -37,6 +37,143 @@ namespace Viking.UI.Commands
         }
     }
 
+    public class CommandQueue
+    {
+        private Queue<CommandQueueEntry> _CommandQueue = new Queue<CommandQueueEntry>();
+        System.Collections.Specialized.NotifyCollectionChangedEventHandler OnQueueChanged;
+
+        public void EnqueueCommand(System.Type CommandType)
+        {
+            EnqueueCommand(CommandType, new Object[] { Viking.UI.State.ViewerControl });
+            OnQueueChanged(this, new System.Collections.Specialized.NotifyCollectionChangedEventArgs(System.Collections.Specialized.NotifyCollectionChangedAction.Add, _CommandQueue.Peek(), 0));
+        }
+
+        /// <summary>
+        /// We enqueue commands that we want to run immediately after completing the current command
+        /// If the default command is active, then set the passed command as the current command, otherwise add to queue.
+        /// </summary>
+        /// <param name="CommandType"></param>
+        /// <param name="Args"></param>
+        public void EnqueueCommand(System.Type CommandType, Object[] Args)
+        {
+            if (QueueDepth == 0 && Viking.UI.State.ViewerControl.CurrentCommand.GetType() == typeof(DefaultCommand))
+                Viking.UI.State.ViewerControl.CurrentCommand = Activator.CreateInstance(CommandType, Args) as Command;
+            else
+                _CommandQueue.Enqueue(new CommandQueueEntry(CommandType, Args));
+        }
+
+        /// <summary>
+        /// Replace our current command with a new one.  By default the existing command will return to being the current command when the new command executes.
+        /// </summary>
+        /// <param name="replacementCommand"></param>
+        /// <param name="SaveCurrentCommand"></param>
+        public void InjectCommand(Command replacementCommand, bool SaveCurrentCommand = true)
+        {
+            if (QueueDepth == 0 && Viking.UI.State.ViewerControl.CurrentCommand.GetType() == typeof(DefaultCommand))
+                Viking.UI.State.ViewerControl.CurrentCommand = replacementCommand;
+            else
+            {
+                List<CommandQueueEntry> existingQueue = new List<CommandQueueEntry>(_CommandQueue.ToArray());
+                existingQueue.Insert(0, new CommandQueueEntry(Viking.UI.State.ViewerControl.CurrentCommand));
+                Viking.UI.State.ViewerControl.CurrentCommand = replacementCommand;
+                _CommandQueue.Clear();
+                foreach (CommandQueueEntry e in existingQueue)
+                {
+                    _CommandQueue.Enqueue(e);
+                }
+            }
+        }
+
+        public void ClearQueue()
+        {
+            _CommandQueue.Clear();
+        }
+
+        public int QueueDepth
+        {
+            get { return _CommandQueue.Count; }
+        }
+
+        /*
+        /// <summary>
+        /// Pop the next command of the queue.  If the queue is empty, return the default command
+        /// </summary>
+        /// <returns></returns>
+        public Command TryPop(Viking.UI.Controls.SectionViewerControl parent)
+        {
+            Command newCommand = null;
+
+            //Check if there is a command in the queue
+            if (_CommandQueue.Count != 0)
+            {
+                CommandQueueEntry nextCommand = _CommandQueue.Dequeue();
+
+                if (nextCommand.commandObj != null)
+                    newCommand = nextCommand.commandObj;
+                else
+                    newCommand = Activator.CreateInstance(nextCommand.CommandType, nextCommand.Args) as Command;
+            }
+            
+            if (newCommand == null)
+            {
+                newCommand = new DefaultCommand(parent);
+            }
+            
+
+
+
+            return newCommand;
+        }
+        */
+
+        /// <summary>
+        /// OK, the normal state of the UI is that the default command is active.  When the current command dies we 
+        /// check for two things
+        /// 1) Are there any commands queued to become active when the current command is dead
+        /// 2) Are there any commands registered to handle the current selected object
+        /// 3) If not, we activate the default command
+        /// </summary>
+        /// <param name="Parent"></param>
+        /// <param name="Obj"></param>
+        /// <returns></returns>
+        public Command CreateFor(Viking.UI.Controls.SectionViewerControl Parent, object Obj)
+        {
+            Command newCommand = null;
+
+            //Check if there is a command in the queue
+            if (_CommandQueue.Count != 0)
+            {
+                CommandQueueEntry nextCommand = _CommandQueue.Dequeue();
+
+                if (nextCommand.commandObj != null)
+                    newCommand = nextCommand.commandObj;
+                else
+                    newCommand = Activator.CreateInstance(nextCommand.CommandType, nextCommand.Args) as Command;
+            }
+
+            if (Obj != null && newCommand == null)
+            {
+                System.Type[] Commands = Viking.Common.ExtensionManager.GetCommandsForType(Obj.GetType());
+
+                //TODO: Figure out how to handle multiple commands
+                if (Commands.Length > 0)
+                {
+                    newCommand = Activator.CreateInstance(Commands[0], new object[] { Parent }) as Command;
+                }
+            }
+
+            if (newCommand == null)
+            {
+                newCommand = new DefaultCommand(Parent);
+            }
+
+
+
+            return newCommand;
+        }
+
+    }
+
     public abstract class Command : DependencyObject
     {
         protected Viking.UI.Controls.SectionViewerControl Parent; //Control the command is listening to
@@ -411,7 +548,7 @@ namespace Viking.UI.Commands
             if (e.KeyChar == (char)Keys.Escape)
             {
                 //On escape kill the current command, and any active queues
-                UI.Commands.Command.ClearQueue(); 
+                this.Parent.CommandQueue.ClearQueue(); 
                 UI.State.SelectedObject = null;
 
                 //This will probably already be set by adjusting the selected object, but to be safe...
@@ -525,110 +662,7 @@ namespace Viking.UI.Commands
             return; 
         }
 
-        #region Static
-
-        private static Queue<CommandQueueEntry> _CommandQueue = new Queue<CommandQueueEntry>();
         
-        public static void EnqueueCommand(System.Type CommandType)
-        {
-            EnqueueCommand(CommandType, new Object[] { Viking.UI.State.ViewerControl });
-        }
-
-        /// <summary>
-        /// We enqueue commands that we want to run immediately after completing the current command
-        /// If the default command is active, then set the passed command as the current command, otherwise add to queue.
-        /// </summary>
-        /// <param name="CommandType"></param>
-        /// <param name="Args"></param>
-        public static void EnqueueCommand(System.Type CommandType, Object[] Args)
-        {
-            if (QueueDepth == 0 && Viking.UI.State.ViewerControl.CurrentCommand.GetType() == typeof(DefaultCommand))
-                Viking.UI.State.ViewerControl.CurrentCommand = Activator.CreateInstance(CommandType, Args) as Command;
-            else
-                _CommandQueue.Enqueue(new CommandQueueEntry(CommandType, Args));
-        }
-
-        /// <summary>
-        /// Replace our current command with a new one.  By default the existing command will return to being the current command when the new command executes.
-        /// </summary>
-        /// <param name="replacementCommand"></param>
-        /// <param name="SaveCurrentCommand"></param>
-        public static void InjectCommand(Command replacementCommand, bool SaveCurrentCommand=true)
-        {
-            if (QueueDepth == 0 && Viking.UI.State.ViewerControl.CurrentCommand.GetType() == typeof(DefaultCommand))
-                Viking.UI.State.ViewerControl.CurrentCommand = replacementCommand;
-            else
-            {
-                List<CommandQueueEntry> existingQueue = new List<CommandQueueEntry>(_CommandQueue.ToArray());
-                existingQueue.Insert(0, new CommandQueueEntry(Viking.UI.State.ViewerControl.CurrentCommand));
-                Viking.UI.State.ViewerControl.CurrentCommand = replacementCommand;
-                _CommandQueue.Clear(); 
-                foreach(CommandQueueEntry e in existingQueue)
-                {
-                    _CommandQueue.Enqueue(e);
-                }
-            }
-        }
-
-        public static void ClearQueue()
-        {
-            _CommandQueue.Clear(); 
-        }
-
-        public static int QueueDepth
-        {
-            get { return _CommandQueue.Count; }
-        }
-
-        
-
-        /// <summary>
-        /// OK, the normal state of the UI is that the default command is active.  When the current command dies we 
-        /// check for two things
-        /// 1) Are there any commands queued to become active when the current command is dead
-        /// 2) Are there any commands registered to handle the current selected object
-        /// 3) If not, we activate the default command
-        /// </summary>
-        /// <param name="Parent"></param>
-        /// <param name="Obj"></param>
-        /// <returns></returns>
-        public static Command CreateFor(Viking.UI.Controls.SectionViewerControl Parent, object Obj)
-        {
-            Command newCommand = null;
-
-            //Check if there is a command in the queue
-            if (_CommandQueue.Count != 0)
-            {
-                CommandQueueEntry nextCommand = _CommandQueue.Dequeue();
-
-                if (nextCommand.commandObj != null)
-                    newCommand = nextCommand.commandObj;
-                else
-                    newCommand =  Activator.CreateInstance(nextCommand.CommandType, nextCommand.Args) as Command;
-            }
-
-            if (Obj != null && newCommand == null)
-            {
-                System.Type[] Commands = Viking.Common.ExtensionManager.GetCommandsForType(Obj.GetType());
-
-                //TODO: Figure out how to handle multiple commands
-                if (Commands.Length > 0)
-                {
-                    newCommand = Activator.CreateInstance(Commands[0], new object[] { Parent }) as Command;
-                }
-            }
-            
-            if (newCommand == null)
-            {
-                newCommand = new DefaultCommand(Parent); 
-            }
-
-            
-
-            return newCommand; 
-        }
-        
-        #endregion
 
 
     }

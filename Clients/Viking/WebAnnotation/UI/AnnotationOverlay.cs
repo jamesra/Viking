@@ -375,7 +375,7 @@ namespace WebAnnotation
         {
             //Check if there is a non-default command. we don't want to mess with another active command
             return _Parent.CurrentCommand.GetType() == typeof(Viking.UI.Commands.DefaultCommand) &&
-             Viking.UI.Commands.Command.QueueDepth == 0;
+             this.Parent.CommandQueue.QueueDepth == 0;
         }
                  
         protected void OnMouseMove(object sender, MouseEventArgs e)
@@ -595,7 +595,7 @@ namespace WebAnnotation
                             a.ExecuteAction(out commandType, out parameters);
                             if (commandType != null)
                             {
-                                Viking.UI.Commands.Command.EnqueueCommand(commandType, parameters);
+                                this.Parent.CommandQueue.EnqueueCommand(commandType, parameters);
                             }
 
                             return;
@@ -758,10 +758,10 @@ namespace WebAnnotation
                 if (StructureNeedsParent)
                 {
                     //Enqueue extra command to select a parent
-                    Viking.UI.Commands.Command.EnqueueCommand(typeof(LinkStructureToParentCommand), new object[] { Parent, newStruct, newLocation });
+                    this.Parent.CommandQueue.EnqueueCommand(typeof(LinkStructureToParentCommand), new object[] { Parent, newStruct, newLocation });
                 }
 
-                Viking.UI.Commands.Command.EnqueueCommand(typeof(CreateNewStructureCommand), new object[] { Parent, newStruct, newLocation });
+                this.Parent.CommandQueue.EnqueueCommand(typeof(CreateNewStructureCommand), new object[] { Parent, newStruct, newLocation });
             }
             else
                 Trace.WriteLine("Could not find hotkey ID for type: " + TypeID.ToString()); 
@@ -769,7 +769,7 @@ namespace WebAnnotation
         
         public static void QueuePlacementCommandForCircleStructure(Viking.UI.Controls.SectionViewerControl Parent, LocationObj newLocation, GridVector2 worldPos, GridVector2 sectionPos, System.Drawing.Color typecolor, bool SaveToStore)
         {
-            Viking.UI.Commands.Command.EnqueueCommand(typeof(ResizeCircleCommand), new object[] { Parent,
+            Parent.CommandQueue.EnqueueCommand(typeof(ResizeCircleCommand), new object[] { Parent,
                     typecolor,
                     worldPos,
                     new ResizeCircleCommand.OnCommandSuccess((double radius) => {
@@ -793,7 +793,7 @@ namespace WebAnnotation
         public static void QueuePlacementCommandForOpenCurveStructure(Viking.UI.Controls.SectionViewerControl Parent, LocationObj newLocation, GridVector2 origin, System.Drawing.Color typecolor, LocationType typecode, bool SaveToStore)
         {
             double LineWidth = 16.0;
-            Viking.UI.Commands.Command.EnqueueCommand(typeof(PlaceOpenCurveCommand), new object[] { Parent, typecolor, origin,  LineWidth,
+            Parent.CommandQueue.EnqueueCommand(typeof(PlaceOpenCurveCommand), new object[] { Parent, typecolor, origin,  LineWidth,
                                                             new ControlPointCommandBase.OnCommandSuccess((GridVector2[] points) => {
                                                                     newLocation.TypeCode = typecode;
                                                                     newLocation.Width = LineWidth;
@@ -805,8 +805,8 @@ namespace WebAnnotation
 
         public static void QueuePlacementCommandForClosedCurveStructure(Viking.UI.Controls.SectionViewerControl Parent, LocationObj newLocation, GridVector2 origin, System.Drawing.Color typecolor, LocationType typecode, bool SaveToStore)
         {
-            double LineWidth = 16.0; 
-            Viking.UI.Commands.Command.EnqueueCommand(typeof(PlaceClosedCurveCommand), new object[] { Parent, typecolor, origin, LineWidth,
+            double LineWidth = 16.0;
+            Parent.CommandQueue.EnqueueCommand(typeof(PlaceClosedCurveCommand), new object[] { Parent, typecolor, origin, LineWidth,
                                                             new ControlPointCommandBase.OnCommandSuccess((GridVector2[] points) => {
                                                                     newLocation.TypeCode = typecode;
                                                                     newLocation.Width = LineWidth;
@@ -819,7 +819,7 @@ namespace WebAnnotation
         public static void QueuePlacementCommandForPolygonStructure(Viking.UI.Controls.SectionViewerControl Parent, LocationObj newLocation, GridVector2 origin, System.Drawing.Color typecolor, LocationType typecode, bool SaveToStore)
         {
             double LineWidth = 16.0;
-            Viking.UI.Commands.Command.EnqueueCommand(typeof(PlaceClosedCurveCommand), new object[] { Parent, typecolor, origin, LineWidth,
+            Parent.CommandQueue.EnqueueCommand(typeof(PlaceClosedCurveCommand), new object[] { Parent, typecolor, origin, LineWidth,
                                                             new ControlPointCommandBase.OnCommandSuccess((GridVector2[] points) => {
                                                                     newLocation.TypeCode = typecode; 
                                                                     newLocation.SetShapeFromPointsInVolume(Parent.Section.ActiveSectionToVolumeTransform, points, null);
@@ -843,8 +843,8 @@ namespace WebAnnotation
                 Trace.WriteLine("No mouse over location to toggle tag");
                 return;
             }
-               
-            Viking.UI.Commands.Command.EnqueueCommand(typeof(ToggleStructureTag), new object[] { this.Parent, Store.Structures[loc.ParentID.Value], tag, SetValueToUsername });
+
+            Parent.CommandQueue.EnqueueCommand(typeof(ToggleStructureTag), new object[] { this.Parent, Store.Structures[loc.ParentID.Value], tag, SetValueToUsername });
 
             return; 
         }
@@ -864,7 +864,7 @@ namespace WebAnnotation
                 return;
             }
 
-            Viking.UI.Commands.Command.EnqueueCommand(typeof(ToggleLocationTag), new object[] { this.Parent, Store.Locations[loc.ID], tag, SetValueToUsername });
+            Parent.CommandQueue.EnqueueCommand(typeof(ToggleLocationTag), new object[] { this.Parent, Store.Locations[loc.ID], tag, SetValueToUsername });
 
             return;
         }
@@ -886,7 +886,7 @@ namespace WebAnnotation
 
             //ToggleLocationIsTerminalCommand command = new ToggleLocationIsTerminalCommand(this.Parent, loc.modelObj);
 
-            Viking.UI.Commands.Command.EnqueueCommand(typeof(ToggleLocationIsTerminalCommand), new object[] { this.Parent, Store.Locations[loc.ID] });
+            Parent.CommandQueue.EnqueueCommand(typeof(ToggleLocationIsTerminalCommand), new object[] { this.Parent, Store.Locations[loc.ID] });
 
             return;
         }
