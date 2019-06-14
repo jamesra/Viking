@@ -373,6 +373,9 @@ namespace WebAnnotation
 
         protected bool IsCommandDefault()
         {
+            if (_Parent.CurrentCommand == null)
+                return true;
+
             //Check if there is a non-default command. we don't want to mess with another active command
             return _Parent.CurrentCommand.GetType() == typeof(Viking.UI.Commands.DefaultCommand) &&
              this.Parent.CommandQueue.QueueDepth == 0;

@@ -37,11 +37,28 @@ namespace Viking.UI.Commands
         }
     }
 
+    public class CommandInjectedEventHandler : System.EventArgs
+    {
+        public Command injectedCommand;
+        public bool SaveCurrentCommand;
+
+        public CommandInjectedEventHandler(Command injectedCommand, bool SaveCurrentCommand)
+        {
+            this.injectedCommand = injectedCommand;
+            this.SaveCurrentCommand = SaveCurrentCommand;
+        }
+    }
+
+
     public class CommandQueue
     {
         private Queue<CommandQueueEntry> _CommandQueue = new Queue<CommandQueueEntry>();
-        System.Collections.Specialized.NotifyCollectionChangedEventHandler OnQueueChanged;
 
+        public System.Collections.Specialized.NotifyCollectionChangedEventHandler OnQueueChanged;
+        public delegate void CommandInjectedHandler(object sender, CommandInjectedEventHandler e);
+
+        public event CommandInjectedHandler OnCommandInjected;
+                
         public void EnqueueCommand(System.Type CommandType)
         {
             EnqueueCommand(CommandType, new Object[] { Viking.UI.State.ViewerControl });
@@ -56,10 +73,9 @@ namespace Viking.UI.Commands
         /// <param name="Args"></param>
         public void EnqueueCommand(System.Type CommandType, Object[] Args)
         {
-            if (QueueDepth == 0 && Viking.UI.State.ViewerControl.CurrentCommand.GetType() == typeof(DefaultCommand))
-                Viking.UI.State.ViewerControl.CurrentCommand = Activator.CreateInstance(CommandType, Args) as Command;
-            else
-                _CommandQueue.Enqueue(new CommandQueueEntry(CommandType, Args));
+            CommandQueueEntry entry = new CommandQueueEntry(CommandType, Args);
+            _CommandQueue.Enqueue(entry);
+            OnQueueChanged(this, new System.Collections.Specialized.NotifyCollectionChangedEventArgs(System.Collections.Specialized.NotifyCollectionChangedAction.Add, entry));
         }
 
         /// <summary>
@@ -69,19 +85,7 @@ namespace Viking.UI.Commands
         /// <param name="SaveCurrentCommand"></param>
         public void InjectCommand(Command replacementCommand, bool SaveCurrentCommand = true)
         {
-            if (QueueDepth == 0 && Viking.UI.State.ViewerControl.CurrentCommand.GetType() == typeof(DefaultCommand))
-                Viking.UI.State.ViewerControl.CurrentCommand = replacementCommand;
-            else
-            {
-                List<CommandQueueEntry> existingQueue = new List<CommandQueueEntry>(_CommandQueue.ToArray());
-                existingQueue.Insert(0, new CommandQueueEntry(Viking.UI.State.ViewerControl.CurrentCommand));
-                Viking.UI.State.ViewerControl.CurrentCommand = replacementCommand;
-                _CommandQueue.Clear();
-                foreach (CommandQueueEntry e in existingQueue)
-                {
-                    _CommandQueue.Enqueue(e);
-                }
-            }
+            OnCommandInjected(this, new CommandInjectedEventHandler(replacementCommand, SaveCurrentCommand)); 
         }
 
         public void ClearQueue()
@@ -94,12 +98,12 @@ namespace Viking.UI.Commands
             get { return _CommandQueue.Count; }
         }
 
-        /*
+
         /// <summary>
         /// Pop the next command of the queue.  If the queue is empty, return the default command
         /// </summary>
         /// <returns></returns>
-        public Command TryPop(Viking.UI.Controls.SectionViewerControl parent)
+        public Command Pop()
         {
             Command newCommand = null;
 
@@ -113,19 +117,26 @@ namespace Viking.UI.Commands
                 else
                     newCommand = Activator.CreateInstance(nextCommand.CommandType, nextCommand.Args) as Command;
             }
-            
-            if (newCommand == null)
-            {
-                newCommand = new DefaultCommand(parent);
-            }
-            
-
-
 
             return newCommand;
         }
-        */
 
+        /// <summary>
+        /// Push the passed command to the front of the queue
+        /// </summary>
+        /// <returns></returns>
+        public void Push(Command command)
+        {
+            List<CommandQueueEntry> existingQueue = new List<CommandQueueEntry>(_CommandQueue.ToArray());
+            existingQueue.Insert(0, new CommandQueueEntry(command)); 
+            _CommandQueue.Clear();
+            foreach (CommandQueueEntry e in existingQueue)
+            {
+                _CommandQueue.Enqueue(e);
+            }
+        }
+
+        /*
         /// <summary>
         /// OK, the normal state of the UI is that the default command is active.  When the current command dies we 
         /// check for two things
@@ -171,7 +182,7 @@ namespace Viking.UI.Commands
 
             return newCommand;
         }
-
+        */
     }
 
     public abstract class Command : DependencyObject
