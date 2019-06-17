@@ -175,7 +175,6 @@ namespace MorphologyMesh
                 Colormap = new StructureMorphologyColorMap(null, null, null);
 
             Scale = scale;
-
         }
 
         /// <summary>

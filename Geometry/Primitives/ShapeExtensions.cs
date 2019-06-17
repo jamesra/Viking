@@ -273,6 +273,7 @@ namespace Geometry
             if (circle.Contains(line.A) || circle.Contains(line.B))
                 return true;
 
+            //TODO: I'm not sure we need the IsNearestPointWithinLineSegment check because the bounding boxes intersect.
             if (line.IsNearestPointWithinLineSegment(circle.Center))
             {
                 double distanceToLine = line.DistanceToPoint(circle.Center);
@@ -292,9 +293,21 @@ namespace Geometry
             if (rect.Contains(circle.Center))
                 return true;
 
+            
             if (circle.Contains(rect.LowerLeft) || circle.Contains(rect.LowerRight) ||
                 circle.Contains(rect.UpperLeft) || circle.Contains(rect.UpperRight))
                 return true;
+
+            foreach(GridLineSegment border in rect.Edges)
+            {
+                //TODO: I'm not sure we need the IsNearestPointWithinLineSegment check because the bounding boxes intersect.
+                if (border.IsNearestPointWithinLineSegment(circle.Center))
+                {
+                    double distanceToLine = border.DistanceToPoint(circle.Center);
+                    if (distanceToLine <= circle.Radius)
+                        return true;
+                }
+            }
 
             return false;
         }

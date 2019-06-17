@@ -16,6 +16,8 @@ namespace VikingXNAGraphics
     public static class GlobalPrimitives
     {
         static public Texture2D CircleTexture;
+        static public Texture2D PlusTexture;
+        static public Texture2D MinusTexture;
         static public Texture2D UpArrowTexture;
         static public Texture2D DownArrowTexture;
 

@@ -281,6 +281,18 @@ namespace Geometry
             return CircleIntersectionExtensions.Intersects(this, rect);
         }
 
+        /// <summary>
+        /// Distance to the nearest point on circle if outside, otherwise zero if anywhere inside the circle
+        /// </summary>
+        /// <param name="Position"></param>
+        /// <returns></returns>
+        public double Distance(GridVector2 Position)
+        {
+            double Distance = GridVector2.Distance(Position, this.Center) - Radius;
+            Distance = Distance < 0 ? 0 : Distance;
+            return Distance;
+        }
+
 
         public override bool Equals(object obj)
         {

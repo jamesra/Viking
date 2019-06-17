@@ -130,6 +130,15 @@ namespace Geometry
             }
         }
 
+        public GridLineSegment[] Edges
+        {
+            get
+            {
+                return new GridLineSegment[] { TopEdge, BottomEdge, LeftEdge, RightEdge };
+            }
+        }
+
+
         public GridRectangle BoundingBox
         {
             get

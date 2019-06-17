@@ -186,11 +186,11 @@ namespace WebAnnotation.View
             curveLabels.DrawLabel(spriteBatch, font, scene);
         }
 
-        public ICanvasView GetAnnotationAtPosition(GridVector2 position)
+        public ICanvasGeometryView GetAnnotationAtPosition(GridVector2 position)
         {
             if (OverlappedLinkView != null)
             {
-                ICanvasView containedAnnotation = OverlappedLinkView.GetAnnotationAtPosition(position);
+                ICanvasGeometryView containedAnnotation = OverlappedLinkView.GetAnnotationAtPosition(position);
                 if (containedAnnotation != null)
                     return containedAnnotation;
             }

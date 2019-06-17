@@ -22,7 +22,7 @@ namespace WebAnnotation.View
 {
     public delegate ContextMenu ContextMenuGeneratorDelegate(IViewLocation locationID);
 
-    abstract public class LocationCanvasView : IComparable<LocationCanvasView>,  IUIObjectBasic, ICanvasView, IEquatable<LocationCanvasView>, IMouseActionSupport, IViewLocation, IHelpStrings
+    abstract public class LocationCanvasView : IComparable<LocationCanvasView>,  IUIObjectBasic, ICanvasGeometryView, IEquatable<LocationCanvasView>, IMouseActionSupport, IViewLocation, IHelpStrings
     {
         protected readonly LocationObj modelObj;
          
@@ -37,7 +37,7 @@ namespace WebAnnotation.View
          
         public ContextMenuGeneratorDelegate ContextMenuGenerator = null;
 
-        int ICanvasView.VisualHeight
+        int VikingXNAGraphics.ICanvasView.VisualHeight
         { get { return this.ParentDepth; } }
         
         /// <summary>

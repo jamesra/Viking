@@ -54,7 +54,7 @@ namespace WebAnnotation
         /// <summary>
         /// The last object the mouse was over, if any
         /// </summary>
-        internal static ICanvasView LastMouseOverObject = null;
+        internal static ICanvasGeometryView LastMouseOverObject = null;
 
         private MouseOverLocationCanvasViewEffect mouseOverEffect = new MouseOverLocationCanvasViewEffect();
 
@@ -289,7 +289,7 @@ namespace WebAnnotation
             if (locView == null)
                 return null; 
             
-            ICanvasView bestObj = null; 
+            ICanvasGeometryView bestObj = null; 
            
             List<HitTestResult> listObjects = locView.GetAnnotationsAtPosition(position);
 
@@ -406,7 +406,7 @@ namespace WebAnnotation
             GridVector2 WorldPosition = _Parent.ScreenToWorld(e.X, e.Y);
             this.LastMouseMoveVolumeCoords = WorldPosition;
 
-            ICanvasView NextMouseOverObject = ObjectAtPosition(WorldPosition, out distance) as ICanvasView;
+            ICanvasGeometryView NextMouseOverObject = ObjectAtPosition(WorldPosition, out distance) as ICanvasGeometryView;
             if (NextMouseOverObject != LastMouseOverObject)
             {
                 mouseOverEffect.viewObj = NextMouseOverObject;

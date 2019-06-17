@@ -128,6 +128,7 @@
     <Compile Include="BitmapFile.cs" />
     <Compile Include="ChannelOverlayEffect.cs" />
     <Compile Include="Camera.cs" />
+    <Compile Include="Controls\CircularButton.cs" />
     <Compile Include="IScene.cs" />
     <Compile Include="MeshModel.cs" />
     <Compile Include="Extensions.cs" />
@@ -153,6 +154,7 @@
     <Compile Include="Views\Extensions.cs" />
     <Compile Include="Views\FilledClosedCurveView.cs" />
     <Compile Include="Views\Global.cs" />
+    <Compile Include="Views\Interfaces\ICanvasView.cs" />
     <Compile Include="Views\Interfaces\IColorView.cs" />
     <Compile Include="Views\Interfaces\IScale.cs" />
     <Compile Include="Views\Interfaces\IText.cs" />

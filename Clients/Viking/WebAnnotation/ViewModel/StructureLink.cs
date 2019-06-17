@@ -75,7 +75,7 @@ namespace WebAnnotation.ViewModel
 
     public delegate ContextMenu StructureLinkContextMenuGeneratorDelegate(IViewStructureLink key);
     
-    abstract class StructureLinkViewModelBase : Viking.Objects.UIObjBase, ICanvasView, IViewStructureLink
+    abstract class StructureLinkViewModelBase : Viking.Objects.UIObjBase, ICanvasGeometryView, IViewStructureLink
     {
         WebAnnotationModel.StructureLinkObj modelObj;
 

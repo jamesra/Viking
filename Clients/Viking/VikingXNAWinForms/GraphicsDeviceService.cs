@@ -83,6 +83,8 @@ namespace VikingXNAWinForms
 
             // AnnotationCache.parent = parent;
             GlobalPrimitives.CircleTexture = Content.LoadTextureWithAlpha("Circle", "CircleMask"); //parent.Content.Load<Texture2D>("Circle");
+            GlobalPrimitives.MinusTexture = Content.LoadTextureWithAlpha("CircleMinus", "CircleMask"); //parent.Content.Load<Texture2D>("Circle");
+            GlobalPrimitives.PlusTexture = Content.LoadTextureWithAlpha("CirclePlus", "CircleMask"); //parent.Content.Load<Texture2D>("Circle");
             GlobalPrimitives.UpArrowTexture = Content.LoadTextureWithAlpha("UpArrowV2", "UpArrowMask"); //parent.Content.Load<Texture2D>("Circle");
             GlobalPrimitives.DownArrowTexture = Content.LoadTextureWithAlpha("DownArrowV2", "UpArrowMask"); //parent.Content.Load<Texture2D>("Circle");
 
