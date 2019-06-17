@@ -439,40 +439,72 @@ namespace WebAnnotation.View
                                                         }
                                                         );
                 case LocationAction.CREATELINKEDLOCATION:
+                    {
+                        //The section we are linking from is on another section, so we have to:
+                        // 0. Position the mosaic shape where we want the command to begin
+                        // 1. Warp the mosaic using the correct transform for the source section
+                        // 2. Warp the volume shape back to our section using the current transform
 
-                    //The section we are linking from is on another section, so we have to:
-                    // 0. Position the mosaic shape where we want the command to begin
-                    // 1. Warp the mosaic using the correct transform for the source section
-                    // 2. Warp the volume shape back to our section using the current transform
+                        IVolumeToSectionTransform mapper = Parent.Volume.GetSectionToVolumeTransform((int)loc.Z);
+                        GridVector2 MosaicPosition = mapper.VolumeToSection(volumePosition);
 
-                    IVolumeToSectionTransform mapper = Parent.Volume.GetSectionToVolumeTransform((int)loc.Z);
-                    GridVector2 MosaicPosition = mapper.VolumeToSection(volumePosition);
+                        SqlGeometry VolumeShape;
+                        SqlGeometry MosaicShape = TransformMosaicShapeToSection(Parent.Volume, loc.MosaicShape.MoveTo(MosaicPosition), (int)loc.Z, Parent.Section.Number, out VolumeShape);
 
-                    SqlGeometry VolumeShape;
-                    SqlGeometry MosaicShape = TransformMosaicShapeToSection(Parent.Volume, loc.MosaicShape.MoveTo(MosaicPosition), (int)loc.Z, Parent.Section.Number, out VolumeShape);
-                    
-                    return new TranslatePolygonCommand(Parent,
-                                                             MosaicShape.ToPolygon(),
-                                                             volumePosition,
-                                                             loc.Parent.Type.Color.ToXNAColor(0.5f),
-                                                             (MosaicPolygon) =>
-                                                             {
-                                                                 LocationObj newLoc = new LocationObj(loc.Parent, 
-                                                                    Parent.Section.Number,
-                                                                    loc.TypeCode);
-                                                                 try
+                        return new TranslatePolygonCommand(Parent,
+                                                                 MosaicShape.ToPolygon(),
+                                                                 volumePosition,
+                                                                 loc.Parent.Type.Color.ToXNAColor(0.5f),
+                                                                 (MosaicPolygon) =>
                                                                  {
-                                                                     newLoc.SetShapeFromGeometryInSection(Parent.Section.ActiveSectionToVolumeTransform, MosaicPolygon.ToSqlGeometry());
-                                                                     Viking.UI.Commands.Command.EnqueueCommand(typeof(CreateNewLinkedLocationCommand), new object[] { Parent, loc, newLoc });
+                                                                     LocationObj newLoc = new LocationObj(loc.Parent,
+                                                                        Parent.Section.Number,
+                                                                        loc.TypeCode);
+                                                                     try
+                                                                     {
+                                                                         newLoc.SetShapeFromGeometryInSection(Parent.Section.ActiveSectionToVolumeTransform, MosaicPolygon.ToSqlGeometry());
+                                                                         Viking.UI.Commands.Command.EnqueueCommand(typeof(CreateNewLinkedLocationCommand), new object[] { Parent, loc, newLoc });
+                                                                     }
+                                                                     catch (ArgumentException e)
+                                                                     {
+                                                                         MessageBox.Show(Parent, e.Message, "Could not save Polygon", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                                                     }
                                                                  }
-                                                                 catch (ArgumentException e)
-                                                                 {
-                                                                     MessageBox.Show(Parent, e.Message, "Could not save Polygon", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                                                                 }
-                                                             }
-                                                             );
+                                                                 );
+                    }
                 case LocationAction.RETRACEANDREPLACE:
-                    
+                    {
+                        IVolumeToSectionTransform mapper = Parent.Volume.GetSectionToVolumeTransform((int)loc.Z);
+                        GridVector2 MosaicPosition = mapper.VolumeToSection(volumePosition);
+
+                        SqlGeometry VolumeShape;
+                        SqlGeometry MosaicShape = TransformMosaicShapeToSection(Parent.Volume, loc.MosaicShape.MoveTo(MosaicPosition), (int)loc.Z, Parent.Section.Number, out VolumeShape);
+
+                        return new RetraceAndReplacePathCommand(Parent,
+                                                                 MosaicShape.ToPolygon(),
+                                                                 loc.Parent.Type.Color.ToXNAColor(0.5f),
+                                                                 volumePosition, 
+                                                                 loc.Width.HasValue ? loc.Width.Value : Global.DefaultClosedLineWidth,
+                                                                 (mosaic_verticies) =>
+                                                                 {
+                                                                  /*   GridVector2[] mosaic_points = Parent.Section.ActiveSectionToVolumeTransform.VolumeToSection(volume_points);
+                                                                     SqlGeometry updatedMosaicShape = loc.MosaicShape.AddInteriorPolygon(mosaic_points);
+
+                                                                     try
+                                                                     {
+                                                                         loc.SetShapeFromGeometryInSection(Parent.Section.ActiveSectionToVolumeTransform, updatedMosaicShape);
+                                                                     }
+                                                                     catch (ArgumentException e)
+                                                                     {
+                                                                         MessageBox.Show(Parent, e.Message, "Could not save Polygon", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                                                     }
+
+                                                                     Store.Locations.Save();
+                                                                   */
+                                                                 }
+                                                                 );
+                    }
+
                 default:
                     return null;
             }

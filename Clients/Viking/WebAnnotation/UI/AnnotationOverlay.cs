@@ -806,9 +806,12 @@ namespace WebAnnotation
         public static void QueuePlacementCommandForClosedCurveStructure(Viking.UI.Controls.SectionViewerControl Parent, LocationObj newLocation, GridVector2 origin, System.Drawing.Color typecolor, LocationType typecode, bool SaveToStore)
         {
             double LineWidth = 16.0;
-            if (!Viking.UI.State.PenMode)
+
+            //if (Parent.FindForm() is WebAnnotation.UI.Forms.PenAnnotationViewForm)
+            if(Global.PenMode)
             {
-                Viking.UI.Commands.Command.EnqueueCommand(typeof(PlaceClosedCurveCommand), new object[] { Parent, typecolor, origin, LineWidth,
+
+                Viking.UI.Commands.Command.EnqueueCommand(typeof(PlaceClosedCurveWithPenCommand), new object[] { Parent, typecolor, origin, LineWidth,
                                                             new ControlPointCommandBase.OnCommandSuccess((GridVector2[] points) => {
                                                                     newLocation.TypeCode = typecode;
                                                                     newLocation.Width = LineWidth;
@@ -819,7 +822,7 @@ namespace WebAnnotation
             }
             else
             {
-                Viking.UI.Commands.Command.EnqueueCommand(typeof(PlaceClosedCurveWithPenCommand), new object[] { Parent, typecolor, origin, LineWidth,
+                Viking.UI.Commands.Command.EnqueueCommand(typeof(PlaceClosedCurveCommand), new object[] { Parent, typecolor, origin, LineWidth,
                                                             new ControlPointCommandBase.OnCommandSuccess((GridVector2[] points) => {
                                                                     newLocation.TypeCode = typecode;
                                                                     newLocation.Width = LineWidth;
@@ -835,9 +838,10 @@ namespace WebAnnotation
         {
             double LineWidth = 16.0;
             
-            if (!Viking.UI.State.PenMode)
+            //if (Parent.FindForm() is WebAnnotation.UI.Forms.PenAnnotationViewForm)
+            if(Global.PenMode)
             {
-                Viking.UI.Commands.Command.EnqueueCommand(typeof(PlaceClosedCurveCommand), new object[] { Parent, typecolor, origin, LineWidth,
+                Viking.UI.Commands.Command.EnqueueCommand(typeof(PlaceClosedCurveWithPenCommand), new object[] { Parent, typecolor, origin, LineWidth,
                                                             new ControlPointCommandBase.OnCommandSuccess((GridVector2[] points) => {
                                                                     newLocation.TypeCode = typecode;
                                                                     newLocation.SetShapeFromPointsInVolume(Parent.Section.ActiveSectionToVolumeTransform, points, null);
@@ -847,7 +851,7 @@ namespace WebAnnotation
             }
             else
             {
-                Viking.UI.Commands.Command.EnqueueCommand(typeof(PlaceClosedCurveWithPenCommand), new object[] { Parent, typecolor, origin, LineWidth,
+                Viking.UI.Commands.Command.EnqueueCommand(typeof(PlaceClosedCurveCommand), new object[] { Parent, typecolor, origin, LineWidth,
                                                             new ControlPointCommandBase.OnCommandSuccess((GridVector2[] points) => {
                                                                     newLocation.TypeCode = typecode;
                                                                     newLocation.SetShapeFromPointsInVolume(Parent.Section.ActiveSectionToVolumeTransform, points, null);

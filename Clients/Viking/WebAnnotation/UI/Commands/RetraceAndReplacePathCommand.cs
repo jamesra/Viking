@@ -10,132 +10,99 @@ using WebAnnotation.View;
 using VikingXNAGraphics;
 using SqlGeometryUtils;
 using VikingXNAWinForms;
+using Viking.VolumeModel;
 
 namespace WebAnnotation.UI.Commands
 {
     class RetraceAndReplacePathCommand : PlaceCurveWithPenCommand
     {
-        public override LineStyle Style
-        {
-            get
-            {
-                return LineStyle.HalfTube;
-            }
-        }
+        GridPolygon OriginalMosaicPolygon;
+        GridPolygon OriginalVolumePolygon;
 
-        public override uint NumCurveInterpolations
+        public override  uint NumCurveInterpolations
         {
             get
             {
                 return Global.NumClosedCurveInterpolationPoints;
             }
         }
+         
+        PenInputHelper PenInput;
 
-        public override double LineWidth
-        {
-            get
-            {
-                return this.curve_verticies == null ? Global.DefaultClosedLineWidth : this.curve_verticies.ControlPoints.MinDistanceBetweenPoints();
-            }
-        }
+        Viking.VolumeModel.IVolumeToSectionTransform mapping;
 
-        public override double ControlPointRadius
-        {
-            get
-            {
-                return Global.DefaultClosedLineWidth / 2.0; //Change possibly
-            }
-        }
+        /// <summary>
+        /// Returns unsmoothed mosaic and volume polygons with the new point
+        /// </summary>
+        /// <param name="MosaicPolygon"></param>
+        /// <param name="VolumePolygon"></param>
+        //public delegate void OnCommandSuccess(GridPolygon MosaicPolygon, GridPolygon VolumePolygon);
+        //OnCommandSuccess success_callback;
+
 
         public RetraceAndReplacePathCommand(Viking.UI.Controls.SectionViewerControl parent,
+                                        GridPolygon mosaic_polygon,
                                         Microsoft.Xna.Framework.Color color,
                                         GridVector2 origin,
                                         double LineWidth,
                                         OnCommandSuccess success_callback)
             : base(parent, color, origin, LineWidth, false, success_callback)
         {
+            mapping = parent.Section.ActiveSectionToVolumeTransform;
+            this.OriginalMosaicPolygon = mosaic_polygon;
+            this.OriginalVolumePolygon = mapping.TryMapShapeSectionToVolume(mosaic_polygon);
+
+            PenInput = new PenInputHelper(parent);
+            PenInput.Push(origin);
+            PenInput.OnPathChanged += this.OnPathChanged;
         }
 
         public RetraceAndReplacePathCommand(Viking.UI.Controls.SectionViewerControl parent,
+                                        GridPolygon mosaic_polygon,
                                         System.Drawing.Color color,
                                         GridVector2 origin,
                                         double LineWidth,
                                         OnCommandSuccess success_callback)
-            : base(parent, color, origin, LineWidth, false, success_callback)
+            : base(parent, color.ToXNAColor(), origin, LineWidth, false, success_callback)
         {
+            mapping = parent.Section.ActiveSectionToVolumeTransform;
+            this.OriginalMosaicPolygon = mosaic_polygon;
+            this.OriginalVolumePolygon = mapping.TryMapShapeSectionToVolume(mosaic_polygon);
+
+            PenInput = new PenInputHelper(parent);
+            PenInput.Push(origin);
+            PenInput.OnPathChanged += this.OnPathChanged;
         }
 
-        PenInputHelper pen = new PenInputHelper();
-
-        protected override void OnMouseMove(object sender, MouseEventArgs e)
+        protected void OnPathChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
         {
+            this.Parent.Invalidate();
 
-            //If current pen is not touching pad
-            if (e.Button.Left() == false)
-            {
-                if (Verticies.Length >= 3)
-                {
-                    GridVector2 WorldPos = Parent.ScreenToWorld(e.X, e.Y);
-                    if (CanControlPointBePlaced(WorldPos))
-                    {
-                        PushVertex(WorldPos);
-                        if (CanCommandComplete(WorldPos))
-                        {
-
-                            this.Execute();
-                        }
-                    }
-                }
-                //PenInputHelper.Clear();
-                return;
-            }
-
-            //If pen is not touching pad, don't draw
-            if (this.oldMouse?.Button.Left() == false)
-            {
-                return;
-            }
-
-            //Checks to make sure the polygon has a starting vertex
-            if (this.Verticies.Length == 0)
-            {
-                return;
-            }
-
-
-
-            //Completes the polygon
-            if (OverlapsFirstVertex(pen.cursor_position) && this.Verticies.Length > 2)
-            {
-                //OverlapsAnyVertex(pen.cursor_position);
-                if (CanCommandComplete(pen.cursor_position))
-                {
-                    this.Execute();
-                    return;
-                }
-            }
-
-            // Console.WriteLine(distanceToLast.ToString());
-
-
-            int placeVertex = pen.GetNextVertex(e, Parent, Verticies);
-            if (CanControlPointBePlaced(pen.cursor_position))
-            {
-                if (placeVertex == -1)
-                {
-                    PopVertex();
-                    PushVertex(pen.cursor_position);
-                }
-                else if (placeVertex == 1)
-                {
-                    PushVertex(pen.cursor_position);
-                }
-            }
-
-
-            base.OnMouseMove(sender, e);
+            //TODO: Check if the pen intersects with another edge of the polygon
+            bool CarveComplete = false;
+            // if CarveComplete
+            //    newPolyVerts = Replace(...)
+            //    Execute
+            //
+            //
+            //
         }
 
+
+        //Will return orignal array with values from A to B removed and add array is inserted where the values were removed.
+        //Both arrays must contain points A and B.
+        protected GridVector2[] Replace(GridVector2 A, GridVector2 B, GridVector2[] original, GridVector2[] add)
+        {
+            int indexA = Array.IndexOf(original, A);
+            int indexB = Array.IndexOf(original, B);
+            for(int i = indexA; i <= indexB; i++)
+            {
+                original.SetValue(null, i);
+            }
+            original = original.Where(val => !val.Equals(null)).ToArray();
+            add.CopyTo(original, indexA);
+            return original;
+        }
 
         /// <summary>
         /// Can a control point be placed or the command completed by clicking the mouse at this position?
@@ -213,6 +180,56 @@ namespace WebAnnotation.UI.Commands
             }
 
             return retval;
+        }
+
+        public override void OnDraw(Microsoft.Xna.Framework.Graphics.GraphicsDevice graphicsDevice, VikingXNA.Scene scene, Microsoft.Xna.Framework.Graphics.BasicEffect basicEffect)
+        {
+            if (PenInput.Path.Count > 1)
+            {
+                CurveView curveView = new CurveView(PenInput.Path, this.LineColor, false, Global.NumCurveInterpolationPoints(false), lineWidth: this.LineWidth, lineStyle: this.Style, controlPointRadius: this.ControlPointRadius);
+                CurveView.Draw(graphicsDevice, scene, Parent.LumaOverlayCurveManager, basicEffect, Parent.AnnotationOverlayEffect, 0, new CurveView[] { curveView });
+            }
+
+            /*
+            GridVector2? SelfIntersection = ProposedControlPointSelfIntersection(this.oldWorldPosition);
+
+            
+            if (SelfIntersection.HasValue || CanControlPointBePlaced(this.oldWorldPosition))
+            {
+                bool pushed_point = true;
+
+                if (SelfIntersection.HasValue)
+                    vert_stack.Push(SelfIntersection.Value);
+                else if (!OverlapsLastVertex(this.oldWorldPosition))
+                    vert_stack.Push(this.oldWorldPosition);
+                else
+                    pushed_point = false;
+
+                CurveView curveView = new CurveView(vert_stack.ToArray(), this.LineColor, !this.IsOpen, Global.NumCurveInterpolationPoints(!this.IsOpen), lineWidth: this.LineWidth, lineStyle: Style, controlPointRadius: this.ControlPointRadius);
+                curveView.Color.SetAlpha(this.ShapeIsValid() ? 1 : 0.25f);
+                CurveView.Draw(graphicsDevice, scene, Parent.LumaOverlayCurveManager, basicEffect, Parent.AnnotationOverlayEffect, 0, new CurveView[] { curveView });
+                //GlobalPrimitives.DrawPolyline(Parent.LineManager, basicEffect, DrawnLineVerticies, this.LineWidth, this.LineColor);
+
+                if (pushed_point)
+                    this.vert_stack.Pop();
+
+                base.OnDraw(graphicsDevice, scene, basicEffect);
+            }
+            else
+            {
+                if (this.Verticies.Length > 1)
+                {
+                    CurveView curveView = new CurveView(this.Verticies.ToArray(), this.LineColor, !this.IsOpen, Global.NumCurveInterpolationPoints(!this.IsOpen), lineWidth: this.LineWidth, lineStyle: Style, controlPointRadius: this.ControlPointRadius);
+                    curveView.Color.SetAlpha(this.ShapeIsValid() ? 1 : 0.25f);
+                    CurveView.Draw(graphicsDevice, scene, Parent.LumaOverlayCurveManager, basicEffect, Parent.AnnotationOverlayEffect, 0, new CurveView[] { curveView });
+                }
+                else
+                {
+                    CircleView view = new CircleView(new GridCircle(this.Verticies.First(), this.LineWidth / 2.0), this.LineColor);
+                    CircleView.Draw(graphicsDevice, scene, basicEffect, this.Parent.AnnotationOverlayEffect, new CircleView[] { view });
+                }
+            }
+            */
         }
     }
 }

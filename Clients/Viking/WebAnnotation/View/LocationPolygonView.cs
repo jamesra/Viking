@@ -261,7 +261,7 @@ namespace WebAnnotation.View
             GridPolygon intersectingPoly; //Could be our polygon or an interior polygon
 
             //TODO: Detect if the View is on a touch/pen capable display
-            /*if(Global.PenMode)
+            if(Global.PenMode)
             //if (Viking.UI.State.PenMode)
             {
                 if (this.SmoothedVolumePolygon.PointIntersectsAnyPolygonSegment(WorldPosition, ControlPointRadius, out intersectingPoly))
@@ -269,7 +269,6 @@ namespace WebAnnotation.View
                     return LocationAction.RETRACEANDREPLACE;
                 }
             }
-            */
 
             if(ModifierKeys.ShiftPressed())
             {
