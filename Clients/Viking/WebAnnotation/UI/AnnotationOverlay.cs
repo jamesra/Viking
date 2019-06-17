@@ -817,7 +817,7 @@ namespace WebAnnotation
                                                                     if(SaveToStore)
                                                                         Store.Locations.Save();
                                                             }) });
-            }
+            
             
         }
 
@@ -831,7 +831,7 @@ namespace WebAnnotation
                                                                     if(SaveToStore)
                                                                         Store.Locations.Save();
                                                             }) });
-            }
+            
         }
          
 
