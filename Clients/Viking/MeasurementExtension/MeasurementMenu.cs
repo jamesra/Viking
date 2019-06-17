@@ -41,7 +41,10 @@ namespace MeasurementExtension
         {
             Debug.Print("Measure Line");
 
-            Viking.UI.Commands.Command.EnqueueCommand(typeof(MeasureCommand));
+            var menuItem = sender as System.Windows.Forms.ToolStripItem;
+            Viking.UI.Controls.SectionViewerControl viewer = menuItem.GetCurrentParent().Parent as Viking.UI.Controls.SectionViewerControl;
+             
+            viewer.CommandQueue.EnqueueCommand(typeof(MeasureCommand));
         } 
     }
 }

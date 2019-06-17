@@ -344,7 +344,7 @@ namespace LocalBookmarks
         /// <param name="e"></param>
         protected void OnPlaceBookmark(object sender, EventArgs e)
         {
-            Viking.UI.Commands.Command.EnqueueCommand(typeof(CreateBookmarkCommand), new object[]{ Viking.UI.State.ViewerControl, 
+            Viking.UI.State.ViewerControl.CommandQueue.EnqueueCommand(typeof(CreateBookmarkCommand), new object[]{ Viking.UI.State.ViewerControl, 
                                                                                                     this});
         }
 

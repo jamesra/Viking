@@ -34,7 +34,6 @@ namespace Viking.UI.Controls
             get { return _CurrentCommand; }
             set
             {
-
                 if (_CurrentCommand != value && _CurrentCommand != null)
                 {
                     _CurrentCommand.OnCommandCompleteHandler -= this.OnCommandCompleteHandler;
@@ -66,6 +65,8 @@ namespace Viking.UI.Controls
                 }
             }
         }
+
+        public Viking.UI.Commands.CommandQueue CommandQueue = new CommandQueue();
 
         static short[] indicies = { 0, 1, 2, 2, 1, 3 };
 
@@ -363,9 +364,9 @@ namespace Viking.UI.Controls
             InternalReferenceSectionChanged = new ReferenceSectionChangedEventHandler(this.OnInternalReferenceSectionChanged);
             State.ItemSelected += ObjectSelectedHandler;
 
-
-
             ExtensionManager.AddMenuItems(this.menuStrip);
+            CommandQueue.OnCommandInjected += this.OnCommandInjected;
+            CommandQueue.OnQueueChanged += this.OnCommandQueueChanged;
         }
 
         private void CreateWPFControls()
@@ -397,14 +398,7 @@ namespace Viking.UI.Controls
 
                 OnCommandCompleteHandler = new Viking.Common.CommandCompleteEventHandler(this.OnCommandCompleted);
 
-                if (State.SelectedObject != null)
-                {
-                    CurrentCommand = Command.CreateFor(this, State.SelectedObject.GetType());
-                }
-                else
-                {
-                    CurrentCommand = Command.CreateFor(this, null);
-                }
+                ActivateNextCommandFromQueue();
 
                 this.CurrentChannel = Section.DefaultChannel;
 
@@ -473,8 +467,53 @@ namespace Viking.UI.Controls
         private void OnCommandCompleted(object sender, System.EventArgs e)
         {
             this.Cursor = Cursors.Default;
-            CurrentCommand = Command.CreateFor(this, UI.State.SelectedObject);
+            this.CurrentCommand = null;
+            this.ActivateNextCommandFromQueue();
             this.Invalidate();
+        }
+
+        /// <summary>
+        /// Activates when the user adds a command to the command queue
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void OnCommandQueueChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+        {
+            if(e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Add)
+            {
+                if(this.CurrentCommand == null || this.CurrentCommand is DefaultCommand)
+                {
+                    this.ActivateNextCommandFromQueue();
+                }
+            } 
+        }
+
+        /// <summary>
+        /// Activates when the user injects a new command to the front of the command queue
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void OnCommandInjected(object sender, CommandInjectedEventHandler e)
+        {
+            Command ActiveCommand = this.CurrentCommand;
+            CurrentCommand = e.injectedCommand;
+
+            if(e.SaveCurrentCommand == true && !(ActiveCommand is DefaultCommand) && ActiveCommand != null)
+            {
+                CommandQueue.Push(ActiveCommand);
+            }
+        }
+
+        private void ActivateNextCommandFromQueue()
+        {
+            Command nextCommand = this.CommandQueue.Pop();
+            if(nextCommand == null)
+            {
+                nextCommand = new DefaultCommand(this);
+            }
+
+            this.CurrentCommand = nextCommand;
+            
         }
 
         #endregion

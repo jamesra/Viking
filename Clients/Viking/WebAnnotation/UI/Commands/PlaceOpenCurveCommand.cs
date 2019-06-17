@@ -469,7 +469,7 @@ namespace WebAnnotation.UI.Commands
                     int? iOverlapped = IndexOfOverlappedVertex(WorldPos);
                     if (iOverlapped.HasValue)
                     {
-                        Viking.UI.Commands.Command.InjectCommand(new AdjustPolylineCommand(this.Parent,
+                        Parent.CommandQueue.InjectCommand(new AdjustPolylineCommand(this.Parent,
                                                                                             this.LineColor,
                                                                                             this.Verticies,
                                                                                             this.LineWidth,

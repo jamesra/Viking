@@ -241,7 +241,7 @@ namespace WebAnnotation.UI.Commands
                     //Drag the vertex under the cursor
                     int? iOverlapped = IndexOfOverlappedVertex(WorldPos);
                    
-                    Viking.UI.Commands.Command.InjectCommand(new AdjustPolylineCommand(this.Parent,
+                    Parent.CommandQueue.InjectCommand(new AdjustPolylineCommand(this.Parent,
                                                                                         this.LineColor,
                                                                                         this.Verticies,
                                                                                         this.LineWidth,
