@@ -142,6 +142,17 @@ namespace ConnectomeODataV4.Controllers
             return db.SelectNetworkStructureSpatialData(IDs, Hops);
         }
 
+        [HttpGet]
+        [EnableQuery()]
+        [ODataRoute("NetworkSpatialData()")]
+        public IQueryable<StructureSpatialCache> GetNetwork()
+        {
+            db.ConfigureAsReadOnly();
+            Request.ODataProperties().Path = GetRequestPath();
+            long[] IDs = db.GetLinkedStructureParentIDs().ToArray();
+            return db.SelectNetworkStructureSpatialData(IDs, 0);
+        }
+
         /*
         [HttpGet]
         [EnableQuery()]
@@ -173,7 +184,7 @@ namespace ConnectomeODataV4.Controllers
             return Structures;
         }
         */
-    
+
 
         [HttpGet]
         [EnableQuery()]
