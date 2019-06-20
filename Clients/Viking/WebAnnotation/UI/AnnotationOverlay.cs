@@ -797,7 +797,7 @@ namespace WebAnnotation
         {
             double LineWidth = 16.0;
             Parent.CommandQueue.EnqueueCommand(typeof(PlaceOpenCurveCommand), new object[] { Parent, typecolor, origin,  LineWidth,
-                                                            new ControlPointCommandBase.OnCommandSuccess((GridVector2[] points) => {
+                                                            new ControlPointCommandBase.OnCommandSuccess((ControlPointCommandBase sender, GridVector2[] points) => {
                                                                     newLocation.TypeCode = typecode;
                                                                     newLocation.Width = LineWidth;
                                                                     newLocation.SetShapeFromPointsInVolume(Parent.Section.ActiveSectionToVolumeTransform, points, null);
@@ -809,29 +809,58 @@ namespace WebAnnotation
         public static void QueuePlacementCommandForClosedCurveStructure(Viking.UI.Controls.SectionViewerControl Parent, LocationObj newLocation, GridVector2 origin, System.Drawing.Color typecolor, LocationType typecode, bool SaveToStore)
         {
             double LineWidth = 16.0;
-            Parent.CommandQueue.EnqueueCommand(typeof(PlaceClosedCurveCommand), new object[] { Parent, typecolor, origin, LineWidth,
-                                                            new ControlPointCommandBase.OnCommandSuccess((GridVector2[] points) => {
+            if (Global.PenMode)//Parent.FindForm() is WebAnnotation.UI.Forms.PenAnnotationViewForm)
+            {
+                Parent.CommandQueue.EnqueueCommand(typeof(PlaceClosedCurveWithPenCommand), new object[] { Parent, typecolor, origin, LineWidth,
+                                                            new ControlPointCommandBase.OnCommandSuccess((ControlPointCommandBase sender, GridVector2[] points) => {
                                                                     newLocation.TypeCode = typecode;
                                                                     newLocation.Width = LineWidth;
                                                                     newLocation.SetShapeFromPointsInVolume(Parent.Section.ActiveSectionToVolumeTransform, points, null);
                                                                     if(SaveToStore)
                                                                         Store.Locations.Save();
                                                             }) });
-            
+            }
+            else
+            {
+
+
+                Parent.CommandQueue.EnqueueCommand(typeof(PlaceClosedCurveCommand), new object[] { Parent, typecolor, origin, LineWidth,
+                                                            new ControlPointCommandBase.OnCommandSuccess((ControlPointCommandBase sender, GridVector2[] points) => {
+                                                                    newLocation.TypeCode = typecode;
+                                                                    newLocation.Width = LineWidth;
+                                                                    newLocation.SetShapeFromPointsInVolume(Parent.Section.ActiveSectionToVolumeTransform, points, null);
+                                                                    if(SaveToStore)
+                                                                        Store.Locations.Save();
+                                                            }) });
+            }
             
         }
 
         public static void QueuePlacementCommandForPolygonStructure(Viking.UI.Controls.SectionViewerControl Parent, LocationObj newLocation, GridVector2 origin, System.Drawing.Color typecolor, LocationType typecode, bool SaveToStore)
         {
             double LineWidth = 16.0;
-            Parent.CommandQueue.EnqueueCommand(typeof(PlaceClosedCurveCommand), new object[] { Parent, typecolor, origin, LineWidth,
-                                                            new ControlPointCommandBase.OnCommandSuccess((GridVector2[] points) => {
+            if (Global.PenMode)//Parent.FindForm() is WebAnnotation.UI.Forms.PenAnnotationViewForm)
+            {
+                Parent.CommandQueue.EnqueueCommand(typeof(PlaceClosedCurveWithPenCommand), new object[] { Parent, typecolor, origin, LineWidth,
+                                                            new ControlPointCommandBase.OnCommandSuccess((ControlPointCommandBase sender, GridVector2[] points) => {
                                                                     newLocation.TypeCode = typecode;
                                                                     newLocation.SetShapeFromPointsInVolume(Parent.Section.ActiveSectionToVolumeTransform, points, null);
                                                                     if(SaveToStore)
                                                                         Store.Locations.Save();
                                                             }) });
-            
+            }
+            else
+            {
+
+
+                Parent.CommandQueue.EnqueueCommand(typeof(PlaceClosedCurveCommand), new object[] { Parent, typecolor, origin, LineWidth,
+                                                            new ControlPointCommandBase.OnCommandSuccess((ControlPointCommandBase sender, GridVector2[] points) => {
+                                                                    newLocation.TypeCode = typecode;
+                                                                    newLocation.SetShapeFromPointsInVolume(Parent.Section.ActiveSectionToVolumeTransform, points, null);
+                                                                    if(SaveToStore)
+                                                                        Store.Locations.Save();
+                                                            }) });
+            }
         }
          
 

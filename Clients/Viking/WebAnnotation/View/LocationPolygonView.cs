@@ -262,7 +262,6 @@ namespace WebAnnotation.View
 
             //TODO: Detect if the View is on a touch/pen capable display
             if(Global.PenMode)
-            //if (Viking.UI.State.PenMode)
             {
                 if (this.SmoothedVolumePolygon.PointIntersectsAnyPolygonSegment(WorldPosition, ControlPointRadius, out intersectingPoly))
                 {

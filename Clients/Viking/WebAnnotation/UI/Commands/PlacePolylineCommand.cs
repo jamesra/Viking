@@ -41,7 +41,7 @@ namespace WebAnnotation.UI.Commands
             protected set;
         }
 
-        public delegate void OnCommandSuccess(GridVector2[] control_points);
+        public delegate void OnCommandSuccess(ControlPointCommandBase sender, GridVector2[] control_points);
         protected OnCommandSuccess success_callback;
 
         public ControlPointCommandBase(Viking.UI.Controls.SectionViewerControl parent, 
@@ -90,7 +90,7 @@ namespace WebAnnotation.UI.Commands
         protected override void Execute()
         {
             if (this.success_callback != null)
-                this.success_callback(this.Verticies);
+                this.success_callback(this, this.Verticies);
 
             base.Execute();
         }
@@ -247,7 +247,7 @@ namespace WebAnnotation.UI.Commands
                                                                                         this.LineWidth,
                                                                                         iOverlapped.Value,
                                                                                         false,
-                                                                                        new OnCommandSuccess((line_verticies) =>
+                                                                                        new OnCommandSuccess((ControlPointCommandBase, line_verticies) =>
                                                                                             {
                                                                                                 this.Verticies = line_verticies;
                                                                                             //Update oldWorldPosition to keep the line we draw to our cursor from jumping on the first draw when we are reactivated and user hasn't used the mouse yet
@@ -316,7 +316,7 @@ namespace WebAnnotation.UI.Commands
 
                 vert_stack.Push(this.oldWorldPosition);
 
-                CurveView curveView = new CurveView(vert_stack.ToArray(), this.LineColor, false, Global.NumOpenCurveInterpolationPoints,  lineWidth: this.LineWidth);
+                CurveView curveView = new CurveView(vert_stack.ToArray(), this.LineColor, false, Global.NumOpenCurveInterpolationPoints,  lineWidth: this.LineWidth, controlPointRadius: this.LineWidth / 2.0);
 
                 CurveView.Draw(graphicsDevice, scene, Parent.LumaOverlayCurveManager, basicEffect, Parent.AnnotationOverlayEffect, 0, new CurveView[] { curveView });
                 //GlobalPrimitives.DrawPolyline(Parent.LineManager, basicEffect, DrawnLineVerticies, this.LineWidth, this.LineColor);

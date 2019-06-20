@@ -19,6 +19,9 @@ namespace WebAnnotation.UI.Commands
         GridPolygon OriginalMosaicPolygon;
         GridPolygon OriginalVolumePolygon;
 
+        public GridPolygon OutputMosaicPolygon;
+        public GridPolygon OutputVolumePolygon;
+
         public override  uint NumCurveInterpolations
         {
             get
@@ -51,10 +54,7 @@ namespace WebAnnotation.UI.Commands
             mapping = parent.Section.ActiveSectionToVolumeTransform;
             this.OriginalMosaicPolygon = mosaic_polygon;
             this.OriginalVolumePolygon = mapping.TryMapShapeSectionToVolume(mosaic_polygon);
-
-            PenInput = new PenInputHelper(parent);
-            PenInput.Push(origin);
-            PenInput.OnPathChanged += this.OnPathChanged;
+         
         }
 
         public RetraceAndReplacePathCommand(Viking.UI.Controls.SectionViewerControl parent,
@@ -69,23 +69,28 @@ namespace WebAnnotation.UI.Commands
             this.OriginalMosaicPolygon = mosaic_polygon;
             this.OriginalVolumePolygon = mapping.TryMapShapeSectionToVolume(mosaic_polygon);
 
-            PenInput = new PenInputHelper(parent);
-            PenInput.Push(origin);
-            PenInput.OnPathChanged += this.OnPathChanged;
         }
 
-        protected void OnPathChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+        protected override void OnPenPathChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
         {
             this.Parent.Invalidate();
 
             //TODO: Check if the pen intersects with another edge of the polygon
             bool CarveComplete = false;
+
+            this.curve_verticies = new CurveViewControlPoints(Verticies, NumInterpolations: 0, TryToClose: false);
+
+            GridLineSegment mostRecentSegment = new GridLineSegment(PenInput.Path.Last(), PenInput.Path[PenInput.Path.Count - 2]);
+            
             // if CarveComplete
             //    newPolyVerts = Replace(...)
             //    Execute
             //
             //
-            //
+            //\
+            
+            
+            
         }
 
 
@@ -93,15 +98,25 @@ namespace WebAnnotation.UI.Commands
         //Both arrays must contain points A and B.
         protected GridVector2[] Replace(GridVector2 A, GridVector2 B, GridVector2[] original, GridVector2[] add)
         {
-            int indexA = Array.IndexOf(original, A);
-            int indexB = Array.IndexOf(original, B);
-            for(int i = indexA; i <= indexB; i++)
+            List<GridVector2> polygon = original.ToList();
+
+            int i = polygon.IndexOf(A);
+            do
             {
-                original.SetValue(null, i);
+                polygon.RemoveAt(i);
             }
-            original = original.Where(val => !val.Equals(null)).ToArray();
-            add.CopyTo(original, indexA);
-            return original;
+            while (!polygon[i].Equals(B));
+            polygon.InsertRange(i, add);
+            return polygon.ToArray();
+        }
+
+        private bool IsNull(Object val)
+        {
+            if(Object.ReferenceEquals(val, null))
+            {
+                return true;
+            }
+            return false;
         }
 
         /// <summary>
@@ -139,49 +154,19 @@ namespace WebAnnotation.UI.Commands
             }
         }
 
-
-
-        /// <summary>
-        /// Return true if a line to the world position from the last vertex will intersect our curve
-        /// </summary>
-        /// <param name="worldPos"></param>
-        /// <returns></returns>
-        protected override GridVector2? ProposedControlPointSelfIntersection(GridVector2 worldPos)
+        public static GridVector2[] AddControlPoint(GridVector2[] OriginalControlPoints, GridVector2 NewControlPointPosition, out int iNewControlPoint)
         {
-            GridVector2? retval = new GridVector2?();
+            iNewControlPoint = -1;
+            GridLineSegment[] lineSegs = GridLineSegment.SegmentsFromPoints(OriginalControlPoints);
 
-            if (NumVerticies < 3)
-                return retval;
+            //Find the line segment the NewControlPoint intersects
+            double MinDistance;
+            int iNearestSegment = lineSegs.NearestSegment(NewControlPointPosition, out MinDistance);
+            GridLineSegment[] updatedSegments = lineSegs.Insert(NewControlPointPosition, iNearestSegment);
 
-            if (worldPos != vert_stack.Peek())
-            {
-                CurveViewControlPoints curveVerticies = AppendControlPointToCurve(worldPos);
-                GridVector2[] controlPoints = Verticies;
-                GridLineSegment[] proposed_back_curve_segments = GridLineSegment.SegmentsFromPoints(curveVerticies.CurvePointsBetweenControlPoints(controlPoints.Last(), worldPos));
-                GridLineSegment[] proposed_front_curve_segments = GridLineSegment.SegmentsFromPoints(curveVerticies.CurvePointsBetweenControlPoints(worldPos, controlPoints[0]));
-                GridLineSegment[] existing_curve_segments = GridLineSegment.SegmentsFromPoints(curveVerticies.CurvePointsBetweenControlPoints(controlPoints[0], controlPoints.Last()));
-
-                proposed_front_curve_segments = proposed_front_curve_segments.ShortenLastVertex();
-                existing_curve_segments = existing_curve_segments.ShortenLastVertex();
-
-                GridVector2[] intersections = proposed_front_curve_segments.Select(pcs => existing_curve_segments.IntersectionPoint(pcs, false)).Where(p => p.HasValue).Select(p => p.Value).ToArray();
-                if (intersections.Length > 0)
-                {
-                    retval = intersections.First();
-                    return retval;
-                }
-
-                intersections = proposed_back_curve_segments.Select(pcs => existing_curve_segments.IntersectionPoint(pcs, false)).Where(p => p.HasValue).Select(p => p.Value).ToArray();
-                if (intersections.Length > 0)
-                {
-                    retval = intersections.First();
-                    return retval;
-                }
-            }
-
-            return retval;
+            return updatedSegments.Verticies();
         }
-
+        
         public override void OnDraw(Microsoft.Xna.Framework.Graphics.GraphicsDevice graphicsDevice, VikingXNA.Scene scene, Microsoft.Xna.Framework.Graphics.BasicEffect basicEffect)
         {
             if (PenInput.Path.Count > 1)

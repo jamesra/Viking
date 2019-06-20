@@ -411,7 +411,7 @@ namespace WebAnnotation.View
                                                           }
                                                       });
                 case LocationAction.CUTHOLE:
-                    return new PlaceClosedCurveCommand(Parent, Microsoft.Xna.Framework.Color.White, volumePosition, Global.DefaultClosedLineWidth, (volume_points) =>
+                    return new PlaceClosedCurveCommand(Parent, Microsoft.Xna.Framework.Color.White, volumePosition, Global.DefaultClosedLineWidth, (sender, volume_points) =>
                         {
                             GridVector2[] mosaic_points = Parent.Section.ActiveSectionToVolumeTransform.VolumeToSection(volume_points);
                             SqlGeometry updatedMosaicShape = loc.MosaicShape.AddInteriorPolygon(mosaic_points);
@@ -485,8 +485,10 @@ namespace WebAnnotation.View
                                                                  loc.Parent.Type.Color.ToXNAColor(0.5f),
                                                                  volumePosition, 
                                                                  loc.Width.HasValue ? loc.Width.Value : Global.DefaultClosedLineWidth,
-                                                                 (mosaic_verticies) =>
+                                                                 (sender, mosaic_verticies) =>
                                                                  {
+                                                                     var cmd = (RetraceAndReplacePathCommand)sender;
+                                                                                                                                          
                                                                   /*   GridVector2[] mosaic_points = Parent.Section.ActiveSectionToVolumeTransform.VolumeToSection(volume_points);
                                                                      SqlGeometry updatedMosaicShape = loc.MosaicShape.AddInteriorPolygon(mosaic_points);
 

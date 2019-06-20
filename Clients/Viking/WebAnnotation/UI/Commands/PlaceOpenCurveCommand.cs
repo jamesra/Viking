@@ -475,7 +475,7 @@ namespace WebAnnotation.UI.Commands
                                                                                             this.LineWidth,
                                                                                             iOverlapped.Value,
                                                                                             !this.IsOpen,
-                                                                                            new OnCommandSuccess((line_verticies) =>
+                                                                                            new OnCommandSuccess((command  ,line_verticies) =>
                                                                                             {
                                                                                                 this.Verticies = line_verticies;
                                                                                             //Update oldWorldPosition to keep the line we draw to our cursor from jumping on the first draw when we are reactivated and user hasn't used the mouse yet

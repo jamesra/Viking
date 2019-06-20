@@ -10,6 +10,7 @@ using WebAnnotation.View;
 using VikingXNAGraphics;
 using SqlGeometryUtils;
 using VikingXNAWinForms;
+using System.Collections.Specialized;
 
 namespace WebAnnotation.UI.Commands
 {
@@ -81,45 +82,46 @@ namespace WebAnnotation.UI.Commands
         {
         }
 
-        PenInputHelper pen = new PenInputHelper();
 
-        protected override void OnMouseMove(object sender, MouseEventArgs e)
+
+
+        protected override void OnPenPathChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
         {
-            if (e.Button.Middle())
-            {
-                //if (!ShapeisCompleteAlready)
-                    //return;
-
-
-                if (OverlapsAnyVertex(pen.cursor_position) && e.Button.Left())
-                {
-                    IndexOfOverlappedVertex(pen.cursor_position);
-                    
-                }
-
-            }
-
-
             //If current pen is not touching pad
-            if (e.Button.Left() == false)
-            {
-                if (Verticies.Length >= 3)
-                {
-                    GridVector2 WorldPos = Parent.ScreenToWorld(e.X, e.Y);
-                    if (CanControlPointBePlaced(WorldPos))
-                    {
-                        PushVertex(WorldPos);
-                        if (CanCommandComplete(WorldPos))
-                        {
-
-                            this.Execute();
-                        }
-                    }
-                }
-                //PenInputHelper.Clear();
+            if (PenInput.Path.Count <= 2)
                 return;
-            }
 
+            this.curve_verticies = new CurveViewControlPoints(Verticies, NumInterpolations: 0, TryToClose: false);
+
+            this.Parent.Invalidate();
+        }
+
+        protected override void OnPenProposedNextSegmentChanged(object sender, GridLineSegment? segment)
+        {
+            if (segment.HasValue == false)
+                return;
+
+            GridLineSegment? intersectedSegment;
+            GridVector2? intersection = PenInput.Segments.IntersectionPoint(segment.Value, true, out intersectedSegment);
+
+            if (intersection.HasValue == false)
+                return;
+
+            //List<GridLineSegment> segments = PenInput.Segments;
+            //for (int i = 0; i < segments.0; )
+        }
+
+
+        protected override void OnPenPathComplete(object sender, GridVector2[] Path)
+        { 
+            if (Verticies.Length >= 3)
+            {
+                this.Execute();
+            }
+            //PenInputHelper.Clear();
+            return;
+            
+            /*
             //If pen is not touching pad, don't draw
             if (this.oldMouse?.Button.Left() == false)
             {
@@ -131,38 +133,22 @@ namespace WebAnnotation.UI.Commands
             {
                 return;
             }
-
-            
+            */
 
             //Completes the polygon
-            if (OverlapsFirstVertex(pen.cursor_position) && this.Verticies.Length > 2)
+            /*
+            if (OverlapsFirstVertex(PenInput.Peek()) && this.PenInput.Path.Count > 2)
             {
-                if (CanCommandComplete(pen.cursor_position))
+                if (CanCommandComplete(PenInput.Peek()))
                 {
                     this.Execute();
                     return;
                 }
-            }
+            }*/
 
             // Console.WriteLine(distanceToLast.ToString());
+
             
-
-            int placeVertex = pen.GetNextVertex(e, Parent, Verticies);
-            if (CanControlPointBePlaced(pen.cursor_position))
-            {
-                if (placeVertex == -1)
-                {
-                    PopVertex();
-                    PushVertex(pen.cursor_position);
-                }
-                else if (placeVertex == 1)
-                {
-                    PushVertex(pen.cursor_position);
-                }
-            }
-
-
-            base.OnMouseMove(sender, e);
         }
 
         
@@ -199,49 +185,6 @@ namespace WebAnnotation.UI.Commands
             {
                 return false;
             }
-        }
-
-
-
-        /// <summary>
-        /// Return true if a line to the world position from the last vertex will intersect our curve
-        /// </summary>
-        /// <param name="worldPos"></param>
-        /// <returns></returns>
-        protected override GridVector2? ProposedControlPointSelfIntersection(GridVector2 worldPos)
-        {
-            GridVector2? retval = new GridVector2?();
-
-            if (NumVerticies < 3)
-                return retval;
-
-            if (worldPos != vert_stack.Peek())
-            {
-                CurveViewControlPoints curveVerticies = AppendControlPointToCurve(worldPos);
-                GridVector2[] controlPoints = Verticies;
-                GridLineSegment[] proposed_back_curve_segments = GridLineSegment.SegmentsFromPoints(curveVerticies.CurvePointsBetweenControlPoints(controlPoints.Last(), worldPos));
-                GridLineSegment[] proposed_front_curve_segments = GridLineSegment.SegmentsFromPoints(curveVerticies.CurvePointsBetweenControlPoints(worldPos, controlPoints[0]));
-                GridLineSegment[] existing_curve_segments = GridLineSegment.SegmentsFromPoints(curveVerticies.CurvePointsBetweenControlPoints(controlPoints[0], controlPoints.Last()));
-
-                proposed_front_curve_segments = proposed_front_curve_segments.ShortenLastVertex();
-                existing_curve_segments = existing_curve_segments.ShortenLastVertex();
-
-                GridVector2[] intersections = proposed_front_curve_segments.Select(pcs => existing_curve_segments.IntersectionPoint(pcs, false)).Where(p => p.HasValue).Select(p => p.Value).ToArray();
-                if (intersections.Length > 0)
-                {
-                    retval = intersections.First();
-                    return retval;
-                }
-
-                intersections = proposed_back_curve_segments.Select(pcs => existing_curve_segments.IntersectionPoint(pcs, false)).Where(p => p.HasValue).Select(p => p.Value).ToArray();
-                if (intersections.Length > 0)
-                {
-                    retval = intersections.First();
-                    return retval;
-                }
-            }
-
-            return retval;
         }
     }
 
@@ -281,6 +224,24 @@ namespace WebAnnotation.UI.Commands
         {
         }
 
+        protected override void OnPenPathChanged(object sender, NotifyCollectionChangedEventArgs e)
+        {
+            this.curve_verticies = new CurveViewControlPoints(Verticies, NumInterpolations: 0, TryToClose: false);
+
+            GridVector2? IntersectPoint = this.PenInput.Segments.IntersectionPoint(this.PenInput.LastSegment);
+            if(IntersectPoint.HasValue)
+            {
+
+            }
+            this.PenInput.LastSegment
+            this.Parent.Invalidate();
+        }
+
+        protected override void OnPenPathComplete(object sender, GridVector2[] Path)
+        {
+        }
+
+
         /// <summary>
         /// Can a control point be placed or the command completed by clicking the mouse at this position?
         /// </summary>
@@ -288,7 +249,7 @@ namespace WebAnnotation.UI.Commands
         /// <returns></returns>
         protected override bool CanControlPointBePlaced(GridVector2 WorldPos)
         {
-            return !OverlapsAnyVertex(WorldPos) && !ProposedSegmentSelfIntersects(WorldPos);
+            return !OverlapsAnyVertex(WorldPos);// && !ProposedSegmentSelfIntersects(WorldPos);
         }
 
         /// <summary>
@@ -298,12 +259,14 @@ namespace WebAnnotation.UI.Commands
         /// <returns></returns>
         protected override bool CanCommandComplete(GridVector2 WorldPos)
         {
-            return OverlapsLastVertex(WorldPos) && this.NumVerticies >= 2 && !ProposedSegmentSelfIntersects(WorldPos);
+            //return OverlapsLastVertex(WorldPos) && this.PenInput.Path.Count >= 2 && !ProposedSegmentSelfIntersects(WorldPos);
+            return true;
         }
+        
 
         protected override bool ShapeIsValid()
         {
-            if (NumVerticies < 2 || curve_verticies == null)
+            if (this.PenInput.Path.Count < 2 || curve_verticies == null)
                 return false;
 
             return this.curve_verticies.ControlPoints.ToPolyLine().STIsValid().IsTrue;
@@ -326,42 +289,42 @@ namespace WebAnnotation.UI.Commands
             return newSegment.Intersects(existingSegments);
         }
 
-        /// <summary>
-        /// Return true if a line to the world position from the last vertex will intersect our curve
-        /// </summary>
-        /// <param name="worldPos"></param>
-        /// <returns></returns>
-        protected override GridVector2? ProposedControlPointSelfIntersection(GridVector2 worldPos)
-        {
-            GridVector2? retval = new GridVector2?();
+        ///// <summary>
+        ///// Return true if a line to the world position from the last vertex will intersect our curve
+        ///// </summary>
+        ///// <param name="worldPos"></param>
+        ///// <returns></returns>
+        //protected override GridVector2? ProposedControlPointSelfIntersection(GridVector2 worldPos)
+        //{
+        //    GridVector2? retval = new GridVector2?();
 
-            if (NumVerticies < 3)
-                return retval;
+        //    if (this.PenInput.Path.Count < 3)
+        //        return retval;
 
-            if (worldPos != vert_stack.Peek())
-            {
-                try
-                {
-                    CurveViewControlPoints curveVerticies = AppendControlPointToCurve(worldPos);
-                    GridVector2[] controlPoints = Verticies;
-                    GridLineSegment[] proposed_curve_segments = GridLineSegment.SegmentsFromPoints(curveVerticies.CurvePointsBetweenControlPoints(controlPoints.Last(), worldPos));
-                    GridLineSegment[] existing_curve_segments = GridLineSegment.SegmentsFromPoints(curveVerticies.CurvePointsBetweenControlPoints(controlPoints[0], controlPoints.Last()));
+        //    if (worldPos != Peek())
+        //    {
+        //        try
+        //        {
+        //            CurveViewControlPoints curveVerticies = AppendControlPointToCurve(worldPos);
+        //            GridVector2[] controlPoints = Verticies;
+        //            GridLineSegment[] proposed_curve_segments = GridLineSegment.SegmentsFromPoints(curveVerticies.CurvePointsBetweenControlPoints(controlPoints.Last(), worldPos));
+        //            GridLineSegment[] existing_curve_segments = GridLineSegment.SegmentsFromPoints(curveVerticies.CurvePointsBetweenControlPoints(controlPoints[0], controlPoints.Last()));
 
-                    existing_curve_segments = existing_curve_segments.ShortenLastVertex();
+        //            existing_curve_segments = existing_curve_segments.ShortenLastVertex();
 
-                    GridVector2[] intersections = proposed_curve_segments.Select(pcs => existing_curve_segments.IntersectionPoint(pcs, false)).Where(p => p.HasValue).Select(p => p.Value).ToArray();
-                    if (intersections.Length > 0)
-                        retval = intersections.First();
-                }
+        //            GridVector2[] intersections = proposed_curve_segments.Select(pcs => existing_curve_segments.IntersectionPoint(pcs, false)).Where(p => p.HasValue).Select(p => p.Value).ToArray();
+        //            if (intersections.Length > 0)
+        //                retval = intersections.First();
+        //        }
 
-                catch (ArgumentException)
-                {
-                    return new GridVector2?();
-                }
-            }
+        //        catch (ArgumentException)
+        //        {
+        //            return new GridVector2?();
+        //        }
+        //    }
 
-            return retval;
-        }
+        //    return retval;
+        //}
     }
 
 
@@ -418,21 +381,23 @@ namespace WebAnnotation.UI.Commands
             "Home key: Round magnification to whole number"
             };
 
-        protected Stack<GridVector2> vert_stack = new Stack<GridVector2>();
+        //protected List<GridVector2> vert_stack = new List<GridVector2>();
+        protected PenInputHelper PenInput;
 
+        /*
         protected void PushVertex(GridVector2 p)
         {
-            vert_stack.Push(p);
+            Push(p);
             curve_verticies = new CurveViewControlPoints(Verticies, NumCurveInterpolations, !this.IsOpen);
         }
 
         protected GridVector2 PopVertex()
         {
-            GridVector2 output = vert_stack.Pop();
+            GridVector2 output = Pop();
             curve_verticies = new CurveViewControlPoints(Verticies, NumCurveInterpolations, !this.IsOpen);
             return output;
         }
-
+        */
 
 
         /// <summary>
@@ -444,23 +409,21 @@ namespace WebAnnotation.UI.Commands
                             /// <summary>
                             /// Returns the stack with the bottomost entry first in the array
                             /// </summary>
+
         public override GridVector2[] Verticies
         {
-            get { return vert_stack.ToArray().Reverse().ToArray(); }
+            get { return PenInput.Path.ToArray(); }
             protected set
             {
-                vert_stack.Clear();
-                foreach (GridVector2 v in value)
-                {
-                    vert_stack.Push(v);
-                }
+                throw new NotImplementedException("PenInput helper should be handling set");
             }
         }
+        
 
-        public int NumVerticies
-        {
-            get { return this.vert_stack.Count; }
-        }
+        //public int NumVerticies
+        //{
+        //    get { return this.vert_stack.Count; }
+        //}
 
 
 
@@ -473,7 +436,10 @@ namespace WebAnnotation.UI.Commands
             : base(parent, color, LineWidth, success_callback)
         {
             parent.Cursor = Cursors.Cross;
-            vert_stack.Push(origin);
+            PenInput = new PenInputHelper(parent);
+            PenInput.Push(origin);
+            PenInput.OnPathChanged += this.OnPenPathChanged;
+            PenInput.OnPathCompleted += this.OnPenPathComplete;
             this.success_callback = success_callback;
             this.IsOpen = IsOpen;
         }
@@ -491,26 +457,49 @@ namespace WebAnnotation.UI.Commands
                     IsOpen,
                     success_callback)
         {
+            PenInput = new PenInputHelper(parent);
+            PenInput.Push(origin);
+            PenInput.OnPathChanged += this.OnPenPathChanged;
+            PenInput.OnPathCompleted += this.OnPenPathComplete;
+    }
+        
+        /*
+        public void Push(GridVector2 p)
+        {
+            vert_stack.Insert(0, p);
+            PenInput.Path.Insert(0, p);
         }
 
+        public GridVector2 Pop()
+        {
+            GridVector2 p = vert_stack.First();
+            vert_stack.RemoveAt(0);
+            PenInput.Path.RemoveAt(0);
+            return p;
+        }
 
+        public GridVector2 Peek()
+        {
+            return vert_stack.First();
+        }
+        
         protected CurveViewControlPoints AppendControlPointToCurve(GridVector2 worldPos)
         {
             List<GridVector2> listControlPoints = new List<GridVector2>(this.Verticies);
             listControlPoints.Add(worldPos);
             return new CurveViewControlPoints(listControlPoints, this.NumCurveInterpolations, !IsOpen);
         }
-
-        /// <summary>
-        /// Return true if a line to the world position from the last vertex will intersect our curve
-        /// </summary>
-        /// <param name="worldPos"></param>
-        /// <returns></returns>
-        protected bool ProposedSegmentSelfIntersects(GridVector2 worldPos)
-        {
-            GridVector2? intersection = ProposedControlPointSelfIntersection(worldPos);
-            return intersection.HasValue;
-        }
+        */
+        ///// <summary>
+        ///// Return true if a line to the world position from the last vertex will intersect our curve
+        ///// </summary>
+        ///// <param name="worldPos"></param>
+        ///// <returns></returns>
+        //protected bool ProposedSegmentSelfIntersects(GridVector2 worldPos)
+        //{
+        //    GridVector2? intersection = ProposedControlPointSelfIntersection(worldPos);
+        //    return intersection.HasValue;
+        //}
 
         protected override GridVector2? IntersectsSelf(GridLineSegment lineSeg)
         {
@@ -523,6 +512,13 @@ namespace WebAnnotation.UI.Commands
             return OverlapsAnyVertex(WorldPos);
         }
 
+        abstract protected void OnPenPathChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e);
+
+        abstract protected void OnPenPathComplete(object sender, GridVector2[] Path);
+
+        abstract protected void OnPenProposedNextSegmentChanged(object sender, GridLineSegment? segment);
+
+        /*
         protected override void OnMouseMove(object sender, MouseEventArgs e)
         {
             GridVector2 WorldPos = Parent.ScreenToWorld(e.X, e.Y);
@@ -536,14 +532,15 @@ namespace WebAnnotation.UI.Commands
 
             base.OnMouseMove(sender, e);
         }
-
+        */
+        /*
         protected override void OnMouseDoubleClick(object sender, MouseEventArgs e)
         {
             if (e.Button.Right())
             {
                 if (vert_stack.Count > 1)
                 {
-                    vert_stack.Pop();
+                    Pop();
                     Parent.Invalidate();
                     return;
                 }
@@ -564,50 +561,62 @@ namespace WebAnnotation.UI.Commands
 
             base.OnMouseDown(sender, e);
         }
+        */
 
-        protected abstract GridVector2? ProposedControlPointSelfIntersection(GridVector2 worldPos);
+        //protected abstract GridVector2? ProposedControlPointSelfIntersection(GridVector2 worldPos);
 
         protected abstract bool ShapeIsValid();
 
         public override void OnDraw(Microsoft.Xna.Framework.Graphics.GraphicsDevice graphicsDevice, VikingXNA.Scene scene, Microsoft.Xna.Framework.Graphics.BasicEffect basicEffect)
         {
-            GridVector2? SelfIntersection = ProposedControlPointSelfIntersection(this.oldWorldPosition);
-
-            if (SelfIntersection.HasValue || CanControlPointBePlaced(this.oldWorldPosition))
+            if (PenInput.Path.Count > 1)
             {
-                bool pushed_point = true;
-
-                if (SelfIntersection.HasValue)
-                    vert_stack.Push(SelfIntersection.Value);
-                else if (!OverlapsLastVertex(this.oldWorldPosition))
-                    vert_stack.Push(this.oldWorldPosition);
-                else
-                    pushed_point = false;
-
-                CurveView curveView = new CurveView(vert_stack.ToArray(), this.LineColor, !this.IsOpen, Global.NumCurveInterpolationPoints(!this.IsOpen), lineWidth: this.LineWidth, lineStyle: Style, controlPointRadius: this.ControlPointRadius);
-                curveView.Color.SetAlpha(this.ShapeIsValid() ? 1 : 0.25f);
+                CurveView curveView = new CurveView(PenInput.Path, this.LineColor, false, numInterpolations: 0, lineWidth: this.LineWidth, lineStyle: LineStyle.Standard, controlPointRadius: null);
                 CurveView.Draw(graphicsDevice, scene, Parent.LumaOverlayCurveManager, basicEffect, Parent.AnnotationOverlayEffect, 0, new CurveView[] { curveView });
-                //GlobalPrimitives.DrawPolyline(Parent.LineManager, basicEffect, DrawnLineVerticies, this.LineWidth, this.LineColor);
 
-                if (pushed_point)
-                    this.vert_stack.Pop();
-
-                base.OnDraw(graphicsDevice, scene, basicEffect);
-            }
-            else
-            {
-                if (this.Verticies.Length > 1)
+                if (PenInput.ProposedNextSegment.HasValue)
                 {
-                    CurveView curveView = new CurveView(this.Verticies.ToArray(), this.LineColor, !this.IsOpen, Global.NumCurveInterpolationPoints(!this.IsOpen), lineWidth: this.LineWidth, lineStyle: Style, controlPointRadius: this.ControlPointRadius);
-                    curveView.Color.SetAlpha(this.ShapeIsValid() ? 1 : 0.25f);
-                    CurveView.Draw(graphicsDevice, scene, Parent.LumaOverlayCurveManager, basicEffect, Parent.AnnotationOverlayEffect, 0, new CurveView[] { curveView });
-                }
-                else
-                {
-                    CircleView view = new CircleView(new GridCircle(this.Verticies.First(), this.LineWidth / 2.0), this.LineColor);
-                    CircleView.Draw(graphicsDevice, scene, basicEffect, this.Parent.AnnotationOverlayEffect, new CircleView[] { view });
+                    LineView unofficialPath = new LineView(PenInput.ProposedNextSegment.Value, width: this.LineWidth, color: this.LineColor, lineStyle: LineStyle.Standard, UseHSLColor: true);
+                    LineView.Draw(graphicsDevice, scene, Parent.LumaOverlayLineManager, new LineView[] { unofficialPath });
                 }
             }
+            //GridVector2? SelfIntersection = ProposedControlPointSelfIntersection(this.oldWorldPosition);
+
+            //if (SelfIntersection.HasValue || CanControlPointBePlaced(this.oldWorldPosition))
+            //{
+            //    bool pushed_point = true;
+
+            //    if (SelfIntersection.HasValue)
+            //        Push(SelfIntersection.Value);
+            //    else if (!OverlapsLastVertex(this.oldWorldPosition))
+            //        Push(this.oldWorldPosition);
+            //    else
+            //        pushed_point = false;
+
+            //    CurveView curveView = new CurveView(vert_stack.ToArray(), this.LineColor, !this.IsOpen, Global.NumCurveInterpolationPoints(!this.IsOpen), lineWidth: this.LineWidth, lineStyle: Style, controlPointRadius: this.ControlPointRadius);
+            //    curveView.Color.SetAlpha(this.ShapeIsValid() ? 1 : 0.25f);
+            //    CurveView.Draw(graphicsDevice, scene, Parent.LumaOverlayCurveManager, basicEffect, Parent.AnnotationOverlayEffect, 0, new CurveView[] { curveView });
+            //    //GlobalPrimitives.DrawPolyline(Parent.LineManager, basicEffect, DrawnLineVerticies, this.LineWidth, this.LineColor);
+
+            //    if (pushed_point)
+            //        Pop();
+
+            //    base.OnDraw(graphicsDevice, scene, basicEffect);
+            //}
+            //else
+            //{
+            //    if (this.Verticies.Length > 1)
+            //    {
+            //        CurveView curveView = new CurveView(this.Verticies.ToArray(), this.LineColor, !this.IsOpen, Global.NumCurveInterpolationPoints(!this.IsOpen), lineWidth: this.LineWidth, lineStyle: Style, controlPointRadius: this.ControlPointRadius);
+            //        curveView.Color.SetAlpha(this.ShapeIsValid() ? 1 : 0.25f);
+            //        CurveView.Draw(graphicsDevice, scene, Parent.LumaOverlayCurveManager, basicEffect, Parent.AnnotationOverlayEffect, 0, new CurveView[] { curveView });
+            //    }
+            //    else
+            //    {
+            //        CircleView view = new CircleView(new GridCircle(this.Verticies.First(), this.LineWidth / 2.0), this.LineColor);
+            //        CircleView.Draw(graphicsDevice, scene, basicEffect, this.Parent.AnnotationOverlayEffect, new CircleView[] { view });
+            //    }
+            //}
         }
     }
 }
