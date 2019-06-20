@@ -17,7 +17,7 @@ namespace WebAnnotation.View
     /// <summary>
     /// Renders arrows for location links that are overlapped by an annotation on the section
     /// </summary>
-    class OverlappedLocationLinkView : ICanvasView, IColorView, ILabelView, Viking.Common.IContextMenu, IMouseActionSupport, IViewLocationLink, IViewLocation, Viking.Common.IHelpStrings
+    class OverlappedLocationLinkView : ICanvasGeometryView, IColorView, ILabelView, Viking.Common.IContextMenu, IMouseActionSupport, IViewLocationLink, IViewLocation, Viking.Common.IHelpStrings
     {
         public TextureCircleView circleView;
         public LabelView label;

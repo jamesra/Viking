@@ -121,6 +121,9 @@
       <HintPath>..\..\..\Packages\IdentityModel.2.12.0\lib\net452\IdentityModel.dll</HintPath>
       <Private>True</Private>
     </Reference>
+    <Reference Include="MathNet.Numerics, Version=4.5.1.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\..\..\Packages\MathNet.Numerics.4.5.1\lib\net461\MathNet.Numerics.dll</HintPath>
+    </Reference>
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="Microsoft.Xna.Framework, Version=4.0.0.0, Culture=neutral, PublicKeyToken=842cf8be1de50553, processorArchitecture=x86" />
     <Reference Include="Microsoft.Xna.Framework.Graphics, Version=4.0.0.0, Culture=neutral, PublicKeyToken=842cf8be1de50553, processorArchitecture=x86" />
@@ -141,6 +144,8 @@
       <HintPath>..\..\..\Packages\System.Net.Http.4.3.3\lib\net46\System.Net.Http.dll</HintPath>
       <Private>True</Private>
     </Reference>
+    <Reference Include="System.Numerics" />
+    <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Security.Cryptography.Algorithms, Version=4.1.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <HintPath>..\..\..\Packages\System.Security.Cryptography.Algorithms.4.3.1\lib\net461\System.Security.Cryptography.Algorithms.dll</HintPath>
       <Private>True</Private>
@@ -348,8 +353,8 @@
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="UI\Forms\LogonASPMembership.Designer.cs">
-		<DependentUpon>LogonASPMembership.cs</DependentUpon>
-	</Compile>
+      <DependentUpon>LogonASPMembership.cs</DependentUpon>
+    </Compile>
     <Compile Include="UI\Forms\PropertySheetForm.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -469,7 +474,7 @@
       <DependentUpon>Logon.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="UI\Forms\LogonASPMembership.resx">
-		<DependentUpon>LogonASPMembership.cs</DependentUpon>
+      <DependentUpon>LogonASPMembership.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="UI\Forms\ScreenshotForm.resx">
       <DependentUpon>ScreenshotForm.cs</DependentUpon>

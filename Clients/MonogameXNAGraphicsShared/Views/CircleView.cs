@@ -29,6 +29,16 @@ namespace VikingXNAGraphics
             return view;
         }
 
+        public static TextureCircleView CreatePlusCircle(GridCircle circle, Color color)
+        {
+            return new TextureCircleView(GlobalPrimitives.PlusTexture, circle, color);
+        }
+
+        public static TextureCircleView CreateMinusCircle(GridCircle circle, Color color)
+        {
+            return new TextureCircleView(GlobalPrimitives.MinusTexture, circle, color);
+        }
+
         public static TextureCircleView CreateCircle(GridCircle circle, Color color)
         {
             TextureCircleView view = new TextureCircleView(GlobalPrimitives.CircleTexture, circle, color);
@@ -119,7 +129,7 @@ namespace VikingXNAGraphics
         static double InvisibleCutoff = 1.5f;
 
         #endregion
-
+          
         private GridCircle _Circle;
         public GridCircle Circle
         {
@@ -200,6 +210,9 @@ namespace VikingXNAGraphics
         /// <returns></returns>
         public bool IsVisible(VikingXNA.Scene scene)
         {
+            if (!scene.VisibleWorldBounds.Intersects(this.Circle))
+                return false; 
+
             double maxDimension = Math.Max(scene.VisibleWorldBounds.Width, scene.VisibleWorldBounds.Height);
             double LocToScreenRatio = Radius * 2.0 / maxDimension;
             if (LocToScreenRatio > InvisibleCutoff)

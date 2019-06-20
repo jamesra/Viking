@@ -126,7 +126,7 @@ namespace WebAnnotation
                     if (container == null)
                         return lc; 
 
-                    ICanvasView nestedObj = container.GetAnnotationAtPosition(WorldPos);
+                    ICanvasGeometryView nestedObj = container.GetAnnotationAtPosition(WorldPos);
                     if (nestedObj != lc.obj)
                     {
                         return new HitTestResult(nestedObj, lc.Z, nestedObj.DistanceFromCenterNormalized(WorldPos));

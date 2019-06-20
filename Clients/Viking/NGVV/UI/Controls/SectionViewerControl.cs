@@ -346,6 +346,7 @@ namespace Viking.UI.Controls
 
             CreateWPFControls();
 
+
             StatusBar = new System.Windows.Forms.StatusStrip();
             StatusBar.Parent = this;
             StatusBar.Dock = System.Windows.Forms.DockStyle.Bottom;
@@ -1071,8 +1072,63 @@ namespace Viking.UI.Controls
             }
         }
 
-        protected override void Draw(Scene scene)
+        VikingXNAGraphics.Controls.CircularButton upSectionButton;
+        VikingXNAGraphics.Controls.CircularButton downSectionButton;
+
+        protected void CreateSectionButtons()
         {
+            if (upSectionButton == null)
+            {
+                TextureCircleView plusView = TextureCircleView.CreatePlusCircle(new GridCircle(GridVector2.Zero, 1.0),
+                                                Microsoft.Xna.Framework.Color.White);
+
+                upSectionButton = new VikingXNAGraphics.Controls.CircularButton(plusView);
+                upSectionButton.OnClick += this.OnUpSectionButtonClicked;
+            }
+
+            if (downSectionButton == null)
+            {
+                TextureCircleView minusView = TextureCircleView.CreateMinusCircle(new GridCircle(GridVector2.Zero, 1.0),
+                                                Microsoft.Xna.Framework.Color.White);
+
+                downSectionButton = new VikingXNAGraphics.Controls.CircularButton(minusView);
+                downSectionButton.OnClick += this.OnDownSectionButtonClicked;
+                //                downSectionButton.OnClick += th
+            }
+        }
+
+        protected void DrawXNAControls(Scene scene)
+        {
+            CreateSectionButtons();
+
+            //TODO: Position the buttons
+            /*
+            Camera C = new Camera();
+
+            Scene SimpleScene = new Scene()
+            
+            GraphicsDevice graphicsDevice = Device;
+            */
+
+            //TODO: These coordinates on the screen should be from 0 to 1 with a seperate worldviewproj matrix.  However to get this running I'm just
+            //calculating in volume spce. 
+
+            GridVector2 TopLeft = scene.ScreenToWorld(0, scene.Viewport.Height);
+            GridVector2 BottomRight = scene.ScreenToWorld(scene.Viewport.Width, 0);
+            GridVector2 BottomLeft = scene.ScreenToWorld(0, 0);
+
+            GridVector2 Tenth = new GridVector2(scene.VisibleWorldBounds.Width / 15.0, -scene.VisibleWorldBounds.Height / 15.0);
+
+            double radius = Math.Min(Tenth.X, -Tenth.Y);
+            upSectionButton.Circle = new GridCircle(BottomLeft + Tenth, radius);
+            downSectionButton.Circle = new GridCircle((BottomLeft + Tenth) + new GridVector2(0, Tenth.Y * 2.5), radius);
+
+            VikingXNAGraphics.TextureCircleView.Draw(Device, scene, basicEffect, this.AnnotationOverlayEffect,
+                new VikingXNAGraphics.CircleView[] { upSectionButton.circleView, downSectionButton.circleView });
+        }
+
+        protected override void Draw(Scene scene)
+        {  
             //graphicsDevice.Clear(Microsoft.Xna.Framework.Color.Black);
             if (Section == null)
                 return;
@@ -1194,6 +1250,8 @@ namespace Viking.UI.Controls
                     }
                 }
             }
+
+            DrawXNAControls(scene);
 
             graphicsDevice.Textures[0] = null;
             graphicsDevice.Textures[1] = null;
@@ -1943,6 +2001,30 @@ namespace Viking.UI.Controls
         private void SectionViewerControl_MouseDown(object sender, MouseEventArgs e)
         {
             this.Focus();
+
+            if (e.Button == MouseButtons.Left)
+            {
+                GridVector2 worldPosition = this.ScreenToWorld(e.X, e.Y);
+
+                upSectionButton.TestClick(worldPosition, VikingXNAGraphics.Controls.MouseButton.LEFT);
+                downSectionButton.TestClick(worldPosition, VikingXNAGraphics.Controls.MouseButton.LEFT);
+            }
+        }
+
+        private void OnDownSectionButtonClicked(object sender, VikingXNAGraphics.Controls.MouseButton button)
+        {
+            if (button == VikingXNAGraphics.Controls.MouseButton.LEFT)
+            {
+                this.StepDownNSections(1);
+            }
+        }
+
+        private void OnUpSectionButtonClicked(object sender, VikingXNAGraphics.Controls.MouseButton button)
+        {
+            if (button == VikingXNAGraphics.Controls.MouseButton.LEFT)
+            {
+                this.StepUpNSections(1);
+            }
         }
 
         private void timerTileCacheCheckpoint_Tick(object sender, EventArgs e)

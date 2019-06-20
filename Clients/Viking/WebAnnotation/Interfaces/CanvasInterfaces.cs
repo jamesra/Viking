@@ -70,41 +70,17 @@ namespace WebAnnotation
         long ID { get; }
     }
 
-    public interface ICanvasView
+    /// <summary>
+    /// This interface is implemented by objects that require hit-testing
+    /// </summary>
+    public interface ICanvasGeometryView : VikingXNAGraphics.ICanvasView
     {
-        bool IsVisible(Scene scene);
-
         /// <summary>
-        /// Indicates what level the CanvasViewObject occupies for selection and rendering purposes
-        /// </summary>
-        int VisualHeight { get; }
-
-        /// <summary>
-        /// Bounding box of the annotation
-        /// </summary>
-        GridRectangle BoundingBox
-        {
-            get;
-        }
-
-        bool Intersects(GridVector2 Position);
-
-        /// <summary>
-        /// Returns the distance from the position to the nearest point on the annotation, or 0 if the position is inside the annotation
+        /// Distance from our view to the nearest point on the passed geometry
         /// </summary>
         /// <param name="Position"></param>
         /// <returns></returns>
-        double Distance(GridVector2 Position);
-
-
         double Distance(Microsoft.SqlServer.Types.SqlGeometry Position);
-
-        /// <summary>
-        /// Assumes Position is within the annotation.  Returns a number from 0 to 1 indicating how close the position is between the center and edge of the annotation.
-        /// </summary>
-        /// <param name="Position"></param>
-        /// <returns></returns>
-        double DistanceFromCenterNormalized(GridVector2 Position);
     }
 
     /// <summary>
@@ -119,6 +95,6 @@ namespace WebAnnotation
         /// <param name="position"></param>
         /// <param name="distanceToCenterNormalized"></param>
         /// <returns></returns>
-        ICanvasView GetAnnotationAtPosition(GridVector2 position);
+        ICanvasGeometryView GetAnnotationAtPosition(GridVector2 position);
     }
 }

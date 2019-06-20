@@ -90,9 +90,7 @@ namespace WebAnnotation.View
         /// <returns></returns>
         public override double Distance(GridVector2 Position)
         {
-            double Distance = GridVector2.Distance(Position, this.VolumeCircle.Center) - Radius;
-            Distance = Distance < 0 ? 0 : Distance;
-            return Distance;
+            return this.VolumeCircle.Distance(Position);
         }
 
         public override double DistanceFromCenterNormalized(GridVector2 Position)
@@ -510,9 +508,9 @@ namespace WebAnnotation.View
         #region Linked Locations
 
 
-        public ICanvasView GetAnnotationAtPosition(GridVector2 position)
+        public ICanvasGeometryView GetAnnotationAtPosition(GridVector2 position)
         {
-            ICanvasView annotation = null;
+            ICanvasGeometryView annotation = null;
 
             if (this.Intersects(position))
             {

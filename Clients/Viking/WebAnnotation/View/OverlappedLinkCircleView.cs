@@ -17,7 +17,7 @@ namespace WebAnnotation.View
     /// <summary>
     /// Draw overlapped links as a set of circles inscribed in a larger circle
     /// </summary>
-    class OverlappedLinkCircleView : ICanvasView, ICanvasViewContainer, IColorView, ILabelView
+    class OverlappedLinkCircleView : ICanvasGeometryView, ICanvasViewContainer, IColorView, ILabelView
     {
         ICollection<OverlappedLocationLinkView> linkViews = new List<OverlappedLocationLinkView>();
 
@@ -126,16 +126,16 @@ namespace WebAnnotation.View
             return linkViews.Any(l => l.IsLabelVisible(scene));
         }
 
-        public ICanvasView GetAnnotationAtPosition(GridVector2 position)
+        public ICanvasGeometryView GetAnnotationAtPosition(GridVector2 position)
         {
-            ICanvasView annotation = linkViews.Where(l => l.Intersects(position) == true).FirstOrDefault() as ICanvasView;
+            ICanvasGeometryView annotation = linkViews.Where(l => l.Intersects(position) == true).FirstOrDefault() as ICanvasGeometryView;
             if (annotation == null)
                 return null;
             
             return annotation;
         }
 
-        int ICanvasView.VisualHeight
+        int VikingXNAGraphics.ICanvasView.VisualHeight
         {
             get
             {

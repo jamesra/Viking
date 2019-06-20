@@ -10,9 +10,9 @@ namespace WebAnnotation
     {
         public readonly double Distance;
         public readonly int Z;
-        public readonly ICanvasView obj;
+        public readonly ICanvasGeometryView obj;
 
-        public HitTestResult(ICanvasView o, int z, double dist)
+        public HitTestResult(ICanvasGeometryView o, int z, double dist)
         {
             this.obj = o;
             this.Z = z;
