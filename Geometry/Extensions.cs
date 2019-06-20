@@ -745,7 +745,20 @@ namespace Geometry
         /// <returns></returns>
         static public GridVector2? IntersectionPoint(this ICollection<GridLineSegment> segments, GridLineSegment testSeg, bool IgnoreEndpoints)
         {
+            GridLineSegment? intersectedSegment;
+            return IntersectionPoint(segments, testSeg, IgnoreEndpoints, out intersectedSegment);
+        }
+
+        /// <summary>
+        /// Return the intersection point with a value if the provided line intersects any segment of our polyline.
+        /// </summary>
+        /// <param name="position"></param>
+        /// <param name="IgnoreEndpoints">Ignore line segments where the endpoints are identical</param>
+        /// <returns></returns>
+        static public GridVector2? IntersectionPoint(this ICollection<GridLineSegment> segments, GridLineSegment testSeg, bool IgnoreEndpoints, out GridLineSegment? intersectedSegment)
+        {
             GridVector2 intersection;
+            intersectedSegment = new GridLineSegment?();
 
             if (IgnoreEndpoints)
             {
@@ -756,6 +769,7 @@ namespace Geometry
             {
                 if (existingLine.Intersects(testSeg, out intersection))
                 {
+                    intersectedSegment = existingLine;
                     return new GridVector2?(intersection);
                 }
             }
