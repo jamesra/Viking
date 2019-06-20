@@ -1,10 +1,9 @@
 ﻿using System.Data;
 using System.Linq;
 using System.Web.Http;
-using System.Web.OData;
-using System.Web.OData.Extensions;
-using Microsoft.OData.Edm;
-using System.Web.OData.Routing;
+using Microsoft.AspNet.OData;
+using Microsoft.AspNet.OData.Extensions;
+using Microsoft.AspNet.OData.Routing;
 using ConnectomeDataModel;
 using System.Collections.Generic;
 
@@ -31,9 +30,11 @@ namespace ConnectomeODataV4.Controllers
         /// <returns></returns>
         private ODataPath GetRequestPath()
         {
-            return new DefaultODataPathHandler().Parse(System.Web.HttpContext.Current.Request.Url.GetLeftPart(System.UriPartial.Path),
+            return Request.ODataProperties().Path;
+            /*return new DefaultODataPathHandler().Parse(System.Web.HttpContext.Current.Request.Url.GetLeftPart(System.UriPartial.Path),
                                                                  "StructureLinks",
                                                                  Request.GetRequestContainer());
+                                                                 */
         }
 
         // GET: odata/StructureLinks

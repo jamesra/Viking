@@ -2,9 +2,9 @@
 using System.Data.Entity.Infrastructure;
 using System.Linq;
 using System.Threading.Tasks;
-using System.Web.Http;
-using System.Web.OData;
+using System.Web.Http; 
 using ConnectomeDataModel;
+using Microsoft.AspNet.OData;
 
 namespace ConnectomeODataV4.Controllers
 {

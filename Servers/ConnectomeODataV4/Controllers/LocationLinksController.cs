@@ -1,7 +1,8 @@
 ﻿using System.Data;
 using System.Linq;
 using System.Web.Http;
-using System.Web.OData;
+using Microsoft.AspNet.OData;
+using Microsoft.AspNet.OData.Extensions;
 using ConnectomeDataModel;
 
 namespace ConnectomeODataV4.Controllers

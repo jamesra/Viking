@@ -1,11 +1,10 @@
 ﻿using System.Web.Http;
-using System.Web.Http.Batch;
-using System.Web.OData.Builder;
-using System.Web.OData.Extensions;
-using System.Web.OData.Batch;
+using Microsoft.AspNet.OData.Builder;
+using Microsoft.AspNet.OData.Extensions;
+using Microsoft.AspNet.OData.Batch;
+//using System.Web.Http.Batch;
 using ConnectomeDataModel;
 using Microsoft.OData.Edm;
- 
 
 namespace ConnectomeODataV4
 {
@@ -32,7 +31,6 @@ namespace ConnectomeODataV4
             //config.EnableUnqualifiedNameCall(true);
 
             config.MapHttpAttributeRoutes();
-
             config.Count().Filter().OrderBy().Expand().Select().MaxTop(null);
 
             Microsoft.OData.Edm.IEdmModel edmModel = GetModel();
