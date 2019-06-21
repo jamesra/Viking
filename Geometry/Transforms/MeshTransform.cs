@@ -180,7 +180,6 @@ namespace Geometry.Transforms
                     return null;
 
                 //Fetch a list of triangles from the nearest point
-                double distance;
                 List<MappingGridTriangle> triangles = controlTrianglesRTree.Intersects(Point.ToRTreeRect(0));
 
                 if (triangles == null)
