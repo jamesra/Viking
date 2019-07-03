@@ -859,6 +859,8 @@ namespace Geometry
         public GridPolygon(ICollection<IPoint2D> exteriorRing) : this (exteriorRing.Select(p => p.Convert()).ToArray())
         {}
 
+        public GridPolygon(ICollection<GridVector2> exteriorRing) : this(exteriorRing.ToArray())
+        {}
 
         public GridPolygon(GridVector2[] exteriorRing)
         {

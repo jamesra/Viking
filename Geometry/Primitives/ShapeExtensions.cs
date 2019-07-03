@@ -7,6 +7,19 @@ using RTree;
 
 namespace Geometry
 {
+    public static class ShapeDecomposition
+    {
+        /// <summary>
+        /// Returns the unique edges of the set of triangles
+        /// </summary>
+        /// <param name="triangles"></param>
+        /// <returns></returns>
+        public static GridLineSegment[] Edges(this ICollection<GridTriangle> triangles)
+        {
+            return triangles.SelectMany(t => t.Segments).Distinct().ToArray();
+        }
+    }
+
     public static class ShapeExtensions
     {
         public static GridVector2 Convert(this IPoint2D p)
