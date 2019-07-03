@@ -11,7 +11,8 @@ namespace MorphologyMesh
     {
         EXPOSED,
         HOLE,
-        INVAGINATION
+        INVAGINATION,
+        UNTILED, //A Region that covers an untiled area of a polygon
     }
 
     public static class RegionTypeExtensions
@@ -38,7 +39,7 @@ namespace MorphologyMesh
     public enum EdgeType
     {
         UNKNOWN = 0x00,
-        INVALID = 0x10, //An edge that cannot be part of the final surface
+        INVALID = 0x10000000, //An edge that cannot be part of the final surface
         VALID = 0x01,   //An edge that could be a valid slice chord
 
         CONTOUR = 0x11, //An edge along the contour, part of either the exterior or inner ring
@@ -49,9 +50,9 @@ namespace MorphologyMesh
         INTERNAL = 0x80, //An edge that runs between two sections but is known to be inside the mesh
         INVAGINATION = 0x100, //An edge that spans between the same shape outside of that shape, but passes over a shape on an adjacent section
         HOLE = 0x200, //An edge that spans a hole in a shape
-        CORRESPONDING = 0x41,  //An edge that shares XY coordinates with a vertex on a shape on an adjacent section
-        FLIPPED_DIRECTION = 0x400 //An edge that would be valid, but the orientation is wrong.  For example, the line has solid material to the left on one vertex and the right on another
-        
+        CORRESPONDING = 0x81,  //An edge that shares XY coordinates with a vertex on a shape on an adjacent section
+        FLIPPED_DIRECTION = 0x400, //An edge that would be valid, but the orientation is wrong.  For example, the line has solid material to the left on one vertex and the right on another 
+        UNTILED = 0x800, //An edge that crosses an untiled region of a polygon on an adjacent section
     }
 
     public static class EdgeTypeExtensions
@@ -135,7 +136,14 @@ namespace MorphologyMesh
                         return EdgeType.INTERNAL; //Line is inside the final mesh. Cannot be on surface.
                     else
                     {
-                        return EdgeType.FLYING; //Line covers empty space, could be on surface
+                        //return EdgeType.FLYING; //Line covers empty space, could be on surface
+                        bool LineIntersectsAnyOtherPoly = Polygons.Where((p, iP) => iP != APoly.iPoly && iP != BPoly.iPoly).Any(p => p.Contains(midpoint));
+                        if (!LineIntersectsAnyOtherPoly)
+                            return EdgeType.FLYING;
+                        else
+                        {
+                            return EdgeType.UNTILED;
+                        }
                     }
                 }
                 else //Midpoint in one or the other polygon, but not both

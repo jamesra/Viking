@@ -45,6 +45,7 @@
     <Compile Include="BoundaryFinder.cs" />
     <Compile Include="BajajTest.cs" />
     <Compile Include="BranchPortTest.cs" />
+    <Compile Include="ColorExtensions.cs" />
     <Compile Include="Cursor2DCameraManipulator.cs" />
     <Compile Include="DataSources.cs" />
     <Compile Include="Delaunay3DTest.cs" />
