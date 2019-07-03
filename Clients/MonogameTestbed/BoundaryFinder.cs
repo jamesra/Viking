@@ -51,7 +51,7 @@ namespace MonogameTestbed
         }
     }
 
-    class BoundaryFinder
+    public class BoundaryFinder
     {
         /// <summary>
         /// Approximate the boundary that is equidistant from all shapes
@@ -70,7 +70,7 @@ namespace MonogameTestbed
                 return new List<GridLineSegment>();
             }
 
-            List<GridLineSegment> LinesBetweenShapes = SelectLinesBetweenShapes(triangulationMesh, shapes);
+            //List<GridLineSegment> LinesBetweenShapes = SelectLinesBetweenShapes(triangulationMesh, shapes);
 
             List<GridTriangle> TrianglesBetweenShapes = SelectTrianglesBetweenShapes(triangulationMesh, shapes);
 
@@ -78,7 +78,7 @@ namespace MonogameTestbed
             if (voronoi == null)
                 return new List<GridLineSegment>(0);
 
-            List<GridLineSegment> listVoronoiBetweenShapes = StripNonBoundaryLines(voronoi, shapes);
+            //List<GridLineSegment> listVoronoiBetweenShapes = StripNonBoundaryLines(voronoi, shapes);
 
             BorderGraph graph = BuildGraphFromTriangles(TrianglesBetweenShapes.ToArray(), shapes);
             
@@ -202,7 +202,7 @@ namespace MonogameTestbed
             foreach(var edge in mesh.Edges.Values)
             {
                 //Create a vertex at the edge midpoint
-                GridLineSegment line = LineForEdge(mesh, edge);
+                GridLineSegment line = mesh.ToSegment(edge);
 
                 //If the line is between two different shapes we add a node to the graph
                 if (LineConnectsShapes(line, PointToShapeIndex))
@@ -217,13 +217,12 @@ namespace MonogameTestbed
 
                         BorderEdge borderEdge = new BorderEdge(node.Key, otherNode.Key);
                         if(!graph.Edges.ContainsKey(borderEdge))
-                            graph.AddEdge(borderEdge); 
+                            graph.AddEdge(borderEdge);
                     }
                 }
             }
 
-            return graph;
-            
+            return graph; 
         } 
 
         private static bool IsValidBorderLine(GridLineSegment line, GridPolygon[] shapes)

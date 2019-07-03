@@ -1,39 +1,31 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Collections.Specialized;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Geometry;
-using VikingXNAGraphics;
-using VikingXNA;
-using Microsoft.Xna.Framework.Graphics;
+﻿using Geometry;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
-using Geometry.Meshing;
-using MathNet.Numerics.LinearAlgebra;
-using AnnotationVizLib.SimpleOData;
 using TriangleNet;
+using VikingXNA;
+using VikingXNAGraphics;
 
 
 namespace MonogameTestbed
 {
-
-    class TriangleAlgorithmTest : IGraphicsTest
+    
+    class Delaunay2DTest : IGraphicsTest
     {
         Scene scene;
         PointSetViewCollection Points_A = new PointSetViewCollection(Color.Blue, Color.BlueViolet, Color.PowderBlue);
         PointSetViewCollection Points_B = new PointSetViewCollection(Color.Red, Color.Pink, Color.Plum);
         PointSetViewCollection Points_C = new PointSetViewCollection(Color.Red, Color.Pink, Color.GreenYellow);
 
-        UntiledRegionView PolyBorderView = new UntiledRegionView();
+        PolygonView PolyAView = new PolygonView();
+        PolygonView PolyBView = new PolygonView();
+        PolygonView PolyCView = new PolygonView();
 
         GamePadStateTracker Gamepad = new GamePadStateTracker();
         Cursor2DCameraManipulator CameraManipulator = new Cursor2DCameraManipulator();
 
         GridVector2 Cursor;
         CircleView cursorView;
-        LabelView cursorLabel; 
+        LabelView cursorLabel;
 
         public double PointRadius = 2.0;
 
@@ -46,24 +38,21 @@ namespace MonogameTestbed
 
             this.scene = new Scene(window.GraphicsDevice.Viewport, window.Camera);
 
+            PolyAView.Color = Color.Red;
+            PolyBView.Color = Color.Blue;
+            PolyCView.Color = Color.Green;
+
             Gamepad.Update(GamePad.GetState(PlayerIndex.One));
 
-            PolyBorderView.AddSet(Points_A.Points);
-            PolyBorderView.AddSet(Points_B.Points);
-            PolyBorderView.AddSet(Points_C.Points);
-            PolyBorderView.Color = Color.Yellow;
-            PolyBorderView.DelaunayView.color = Color.Gray;
-            PolyBorderView.BoundaryView.color = Color.Yellow;
-            PolyBorderView.VoronoiView.color = Color.DarkRed;
         }
 
         public void Update()
         {
             GamePadState state = GamePad.GetState(PlayerIndex.One);
-            Gamepad.Update(state); 
+            Gamepad.Update(state);
 
             CameraManipulator.Update(scene.Camera);
-             
+
             if (state.ThumbSticks.Left != Vector2.Zero)
             {
                 Cursor += state.ThumbSticks.Left.ToGridVector2();
@@ -85,34 +74,45 @@ namespace MonogameTestbed
             if (Gamepad.A_Clicked)
             {
                 Points_A.TogglePoint(Cursor);
-                PolyBorderView.UpdateSet(Points_A.Points, 0);
+                if (Points_A.Points.Count >= 3)
+                {
+                    PolyAView.Polygon = new GridPolygon(Points_A.Points.Points.EnsureClosedRing());
+                }
             }
 
             if (Gamepad.B_Clicked)
             {
                 Points_B.TogglePoint(Cursor);
-                PolyBorderView.UpdateSet(Points_B.Points, 1);
+                if (Points_B.Points.Count >= 3)
+                {
+                    PolyBView.Polygon = new GridPolygon(Points_B.Points.Points.EnsureClosedRing());
+                }
             }
 
             if (Gamepad.Y_Clicked)
             {
                 Points_C.TogglePoint(Cursor);
-                PolyBorderView.UpdateSet(Points_C.Points, 2);
+                if (Points_C.Points.Count >= 3)
+                {
+                    PolyCView.Polygon = new GridPolygon(Points_C.Points.Points.EnsureClosedRing());
+                }
             }
         }
 
         public void Draw(MonoTestbed window)
         {
-            if(cursorView != null)
+            if (cursorView != null)
                 CircleView.Draw(window.GraphicsDevice, this.scene, window.basicEffect, window.overlayEffect, new CircleView[] { cursorView });
              
-            PolyBorderView.Draw(window, scene);
-
             Points_A.Draw(window, scene);
             Points_B.Draw(window, scene);
             Points_C.Draw(window, scene);
 
-            if(cursorLabel != null)
+            PolyAView.Draw(window);
+            PolyBView.Draw(window);
+            PolyCView.Draw(window);
+
+            if (cursorLabel != null)
                 LabelView.Draw(window.spriteBatch, window.fontArial, this.scene, new LabelView[] { cursorLabel });
         }
 
@@ -146,6 +146,6 @@ namespace MonogameTestbed
         }
         */
 
-        
+
     }
 }

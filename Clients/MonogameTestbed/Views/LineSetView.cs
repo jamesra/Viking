@@ -12,7 +12,7 @@ using TriangleNet;
 namespace MonogameTestbed
 {
 
-    class LineSetView
+    public class LineSetView
     {
         public List<LineView> LineViews = new List<LineView>();
         public double LineRadius = 1;

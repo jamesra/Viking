@@ -362,42 +362,6 @@ namespace MorphologyMesh
                 _Polygon = new GridPolygon(poly_verts.EnsureClosedRing().ToArray());
 
                 return _Polygon;
-                /*
-                PointIndex[] polyIndicies = Verticies.Select(v => ((MorphMeshVertex)ParentMesh.Verticies[v]).PolyIndex.Value).ToArray();
-
-
-                //If the polygon verticies contact both segments of inner and outer verticies we must
-                //determine how to connect the segments without creating a self-intersecting polygon
-                bool IsFirstInner = polyIndicies[0].IsInner;
-                if (polyIndicies.Any(pi => pi.IsInner != IsFirstInner))
-                {
-                    Dictionary<PointIndex, int> PolyIndexToMeshIndex = new Dictionary<PointIndex, int>();
-                    for (int i = 0; i < polyIndicies.Length; i++)
-                    {
-                        PolyIndexToMeshIndex.Add(polyIndicies[i], Verticies[i]);
-                    }
-
-                    //Identify the poly-lines and determine how they connect
-                    List<PointIndex[]> contours = IdentifyContours(polyIndicies);
-                    PointIndex[] finalIndicies = ConnectContours(contours, PolyIndexToMeshIndex);
-                    int[] debugMeshIndicies = finalIndicies.Select(i => PolyIndexToMeshIndex[i]).ToArray();
-                    GridVector2[] points = finalIndicies.Select(i => ParentMesh.Verticies[PolyIndexToMeshIndex[i]].Position.XY()).ToArray();
-                    _Polygon = new GridPolygon(points.EnsureClosedRing());
-                }
-                else
-                {
-                    //Sort the polyIndices
-                    int[] sorted_polyIndicies = polyIndicies.SortAndIndex();
-                    int[] mesh_indicies = sorted_polyIndicies.Select(i => Verticies[i]).ToArray();
-
-
-                    //Simple case, all verticies are on the same ring
-                    GridVector2[] points = mesh_indicies.Select(i => ParentMesh.Verticies[i].Position.XY()).ToArray();
-                    _Polygon = new GridPolygon(points.EnsureClosedRing());
-                }
-
-                return _Polygon;
-                */
             }
         }
 

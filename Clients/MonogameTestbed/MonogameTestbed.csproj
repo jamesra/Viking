@@ -48,6 +48,7 @@
     <Compile Include="ColorExtensions.cs" />
     <Compile Include="Cursor2DCameraManipulator.cs" />
     <Compile Include="DataSources.cs" />
+    <Compile Include="Delaunay2DTest.cs" />
     <Compile Include="Delaunay3DTest.cs" />
     <Compile Include="Extensions.cs" />
     <Compile Include="GamePadStateTracker.cs" />
@@ -69,9 +70,12 @@
     <Compile Include="SqlServerTypes\Loader.cs" />
     <Compile Include="StandardCameraManipulator.cs" />
     <Compile Include="StandardGeometryModels.cs" />
+    <Compile Include="Views\ConvexHullView.cs" />
     <Compile Include="Views\LineSetView.cs" />
+    <Compile Include="Views\PointSetViewCollection.cs" />
     <Compile Include="Views\PointViewBase.cs" />
     <Compile Include="Views\PolygonView.cs" />
+    <Compile Include="Views\UntiledRegionView.cs" />
     <None Include="_PointPlacementTestTemplate.cs" />
     <Compile Include="TriangleAlgorithmTest.cs" />
   </ItemGroup>
