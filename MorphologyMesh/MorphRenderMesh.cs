@@ -420,8 +420,20 @@ namespace MorphologyMesh
                         int FirstVertIndex = OrderedBoundaryVerts.First();
                         int LastVertIndex = OrderedBoundaryVerts.Last();
 
-                        IEdgeKey connected_edge = all_exterior_edges.First(e => e.A == LastVertIndex || e.B == LastVertIndex);
-                        OrderedBoundaryVerts.Add(connected_edge.OppositeEnd(LastVertIndex));
+                        IEdgeKey connected_edge = all_exterior_edges.FirstOrDefault(e => e.A == LastVertIndex || e.B == LastVertIndex || e.A == FirstVertIndex || e.B == FirstVertIndex);
+                        if(connected_edge == null)
+                        {
+                            continue;
+                        }
+                        else if (connected_edge.A == LastVertIndex || connected_edge.B == LastVertIndex)
+                        {
+                            OrderedBoundaryVerts.Add(connected_edge.OppositeEnd(LastVertIndex));
+                        }
+                        else
+                        {
+                            OrderedBoundaryVerts.Insert(0,connected_edge.OppositeEnd(FirstVertIndex));
+                        }
+
                         all_exterior_edges.Remove(connected_edge);
                     }
 
@@ -614,7 +626,7 @@ namespace MorphologyMesh
 
         public override string ToString()
         {
-            return string.Format("Reg: {0} {1}", this.Faces.First(), this.Faces.Count);
+            return string.Format("Reg: {0} {1} {2}", this.Faces.First(), this.Faces.Count, this.Type.ToString());
         }
     }
 
@@ -728,6 +740,11 @@ namespace MorphologyMesh
         public virtual bool Contains(IEdgeKey key)
         {
             return Edges.ContainsKey(key);
+        }
+
+        public virtual bool Contains(int A, int B)
+        {
+            return Edges.ContainsKey(new EdgeKey(A,B));
         }
 
         /// <summary>
@@ -866,11 +883,11 @@ namespace MorphologyMesh
         public static List<MorphMeshRegion> IdentifyRegions(MorphRenderMesh mesh)
         {
             List<MorphMeshRegion> listRegions = new List<MorphMeshRegion>();
-            SortedSet<IFace> CheckedFaces = new SortedSet<IFace>();
+            SortedSet<IFace> FacesAssignedToRegions = new SortedSet<IFace>();
 
             foreach(IFace f in mesh.Faces)
             {
-                if(CheckedFaces.Contains(f))
+                if(FacesAssignedToRegions.Contains(f))
                 {
                     continue; 
                 }
@@ -879,44 +896,43 @@ namespace MorphologyMesh
 
                 MorphMeshVertex[] faceVerts = face.iVerts.Select(i => (MorphMeshVertex)mesh.Verticies[i]).ToArray();
                 double? FaceZ;
-                if(!face.AllVertsAtSameZ(mesh, out FaceZ))
-                {
-                    if (!face.IsInUntiledRegion(mesh))
-                    {
-                        continue;
-                    }
-                    else
-                    {
-                        MorphMeshRegion region = new MorphMeshRegion(mesh, mesh.FloodFillRegion(face, (m, foundFace) => IsInRegion(m, foundFace, MorphMeshFace.IsInUntiledRegion, new double?()), ref CheckedFaces), RegionType.EXPOSED);
-                        listRegions.Add(region);
-                        CheckedFaces.UnionWith(region.Faces);
-                        continue;
-                    }
-                }
                 
-                if(face.IsInExposedRegion(mesh))
+                if (face.IsInUntiledRegion(mesh))
                 {
-                    MorphMeshRegion region = new MorphMeshRegion(mesh, mesh.FloodFillRegion(face, (m, foundFace) => IsInRegion(m, foundFace, MorphMeshFace.IsInExposedRegion, FaceZ.Value), ref CheckedFaces), RegionType.EXPOSED);
+                    MorphMeshRegion region = new MorphMeshRegion(mesh, mesh.FloodFillRegion(face, (m, foundFace) => IsInRegion(m, foundFace, MorphMeshFace.IsInUntiledRegion, new double?()), FacesAssignedToRegions), RegionType.UNTILED);
                     listRegions.Add(region);
-                    CheckedFaces.UnionWith(region.Faces);
+                    FacesAssignedToRegions.UnionWith(region.Faces);
+                    continue;
+                }
+                if (!face.AllVertsAtSameZ(mesh, out FaceZ))
+                {
+                    FacesAssignedToRegions.Add(face);
+                    continue;
+                }
+
+                if (face.IsInExposedRegion(mesh))
+                {
+                    MorphMeshRegion region = new MorphMeshRegion(mesh, mesh.FloodFillRegion(face, (m, foundFace) => IsInRegion(m, foundFace, MorphMeshFace.IsInExposedRegion, FaceZ.Value), FacesAssignedToRegions), RegionType.EXPOSED);
+                    listRegions.Add(region);
+                    FacesAssignedToRegions.UnionWith(region.Faces);
                     continue;
                 }
 
                 if (face.IsInHoleRegion(mesh))
                 {
-                    MorphMeshRegion region = new MorphMeshRegion(mesh, mesh.FloodFillRegion(face, (m, foundFace) => IsInRegion(m, foundFace, MorphMeshFace.IsInHoleRegion, FaceZ.Value), ref CheckedFaces), RegionType.HOLE);
+                    MorphMeshRegion region = new MorphMeshRegion(mesh, mesh.FloodFillRegion(face, (m, foundFace) => IsInRegion(m, foundFace, MorphMeshFace.IsInHoleRegion, FaceZ.Value), FacesAssignedToRegions), RegionType.HOLE);
                     listRegions.Add(region);
-                    CheckedFaces.UnionWith(region.Faces);
+                    FacesAssignedToRegions.UnionWith(region.Faces);
                     
                     continue;
                 }
 
                 if (face.IsInInvaginatedRegion(mesh))
                 {
-                    MorphMeshRegion region = new MorphMeshRegion(mesh, mesh.FloodFillRegion(face, (m, foundFace) => IsInRegion(m, foundFace, MorphMeshFace.IsInInvaginatedRegion, FaceZ.Value), ref CheckedFaces), RegionType.INVAGINATION);
+                    MorphMeshRegion region = new MorphMeshRegion(mesh, mesh.FloodFillRegion(face, (m, foundFace) => IsInRegion(m, foundFace, MorphMeshFace.IsInInvaginatedRegion, FaceZ.Value), FacesAssignedToRegions), RegionType.INVAGINATION);
 
                     //Whether or not the region is valid we mark it as checked so we don't repeat the floodfill for every face in the region.
-                    CheckedFaces.UnionWith(region.Faces);
+                    FacesAssignedToRegions.UnionWith(region.Faces);
                     
 
                     //Invaginated regions can sometimes be bridges between two seperate ares of the same cell.  Test if the region is valid by examing the entire region for two open exits.
@@ -928,7 +944,7 @@ namespace MorphologyMesh
                 }
 
 
-                CheckedFaces.Add(face);
+                FacesAssignedToRegions.Add(face);
             }
 
             return listRegions; 
@@ -962,7 +978,7 @@ namespace MorphologyMesh
         /// <param name="MeetsCriteriaFunc"></param>
         /// <param name="CheckedFaces"></param>
         /// <returns></returns>
-        public SortedSet<MorphMeshFace> FloodFillRegion(MorphMeshFace f, Func<MorphRenderMesh, MorphMeshFace, bool> MeetsCriteriaFunc, ref SortedSet<IFace> CheckedFaces)
+        public SortedSet<MorphMeshFace> FloodFillRegion(MorphMeshFace f, Func<MorphRenderMesh, MorphMeshFace, bool> MeetsCriteriaFunc, IEnumerable<IFace> CheckedFaces)
         {
             SortedSet<IFace> checkedRegionFaces = new SortedSet<IFace>(CheckedFaces); 
             
@@ -986,7 +1002,7 @@ namespace MorphologyMesh
                     continue;
                 }
 
-                region.UnionWith(FloodFillRegion(adjacent, MeetsCriteriaFunc, ref CheckedFaces));
+                region.UnionWith(FloodFillRegionRecurse(adjacent, MeetsCriteriaFunc, ref CheckedFaces));
             }
 
             return region; 
