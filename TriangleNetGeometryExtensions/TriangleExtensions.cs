@@ -242,6 +242,10 @@ namespace TriangleNet
             return mesh;
         }
 
+        public static IMesh Triangulate(this GridPolygon input, ICollection<GridVector2> internalPoints)
+        {
+            return input.Triangulate(internalPoints: internalPoints.Select(p => p as IPoint2D).ToArray());
+        }
 
         /// <summary>
         /// Triangulate the polygon.

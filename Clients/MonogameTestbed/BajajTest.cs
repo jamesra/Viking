@@ -125,7 +125,7 @@ namespace MonogameTestbed
             PolyViews.LabelPolygonIndex = true;
             //UpdatePolyViews();
 
-            this.MeshVertsView = PointSetView.CreateFor(FirstPassTriangulation);
+            
             
             var RegionPairingGraph = FirstPassDelaunay(FirstPassTriangulation);
 
@@ -146,6 +146,8 @@ namespace MonogameTestbed
 
             RTree.RTree<SliceChord> rTree = FirstPassTriangulation.CreateChordTree();
             List<OTVTable> listOTVTables = RegionPairingGraph.MergeAndCloseRegionsPass(FirstPassTriangulation, rTree);
+
+            this.MeshVertsView = PointSetView.CreateFor(FirstPassTriangulation);
 
             CreateChordViews(FirstPassTriangulation, listOTVTables); 
 
@@ -172,7 +174,7 @@ namespace MonogameTestbed
             {
                 GridPolygon poly = region.Polygon;
                 LineSetView lineView = new LineSetView();
-                Color c = Color.Random();
+                Color c = region.Type.GetColor();
                 c.A = 128;
                 lineView.LineViews = poly.ExteriorSegments.Select(l => new LineView(l, 4, c, LineStyle.Standard, false)).ToList();
                 views.Add(lineView);
@@ -812,8 +814,8 @@ namespace MonogameTestbed
 
             Gamepad.Update(GamePad.GetState(PlayerIndex.One));
 
-            AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromODataLocationIDs(BasicBranchTroubleIDS, DataSource.EndpointMap[ENDPOINT.RPC1]);
-            //AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromODataLocationIDs(NightmareTroubleIDS, DataSource.EndpointMap[ENDPOINT.TEST]);
+            //AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromODataLocationIDs(BasicBranchTroubleIDS, DataSource.EndpointMap[ENDPOINT.RPC1]);
+            AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromODataLocationIDs(NightmareTroubleIDS, DataSource.EndpointMap[ENDPOINT.TEST]);
 
             AnnotationVizLib.MorphologyNode[] nodes = graph.Nodes.Values.ToArray();
             wrapView = new MonogameTestbed.BajajOTVAssignmentView(nodes.Select(n => n.Geometry.ToPolygon()).ToArray(), nodes.Select(n=> n.Z).ToArray());

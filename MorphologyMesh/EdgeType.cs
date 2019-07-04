@@ -21,7 +21,8 @@ namespace MorphologyMesh
         {
             { RegionType.EXPOSED, new RegionType[]{RegionType.EXPOSED} },
             { RegionType.HOLE, new RegionType[] {RegionType.HOLE, RegionType.INVAGINATION } },
-            { RegionType.INVAGINATION, new RegionType[] {RegionType.HOLE, RegionType.INVAGINATION } }
+            { RegionType.INVAGINATION, new RegionType[] {RegionType.HOLE, RegionType.INVAGINATION } },
+            { RegionType.UNTILED, new RegionType[] {} },
         };
 
         /// <summary>
@@ -53,6 +54,7 @@ namespace MorphologyMesh
         CORRESPONDING = 0x81,  //An edge that shares XY coordinates with a vertex on a shape on an adjacent section
         FLIPPED_DIRECTION = 0x400, //An edge that would be valid, but the orientation is wrong.  For example, the line has solid material to the left on one vertex and the right on another 
         UNTILED = 0x800, //An edge that crosses an untiled region of a polygon on an adjacent section
+        MEDIALAXIS = 0x1001, //An edge that was added as part of an untiled regions medial axis and is known to be part of the final mesh
     }
 
     public static class EdgeTypeExtensions

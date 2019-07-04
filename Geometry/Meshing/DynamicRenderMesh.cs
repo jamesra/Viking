@@ -337,6 +337,34 @@ namespace Geometry.Meshing
             return new GridLineSegment(Verticies[e.A].Position, Verticies[e.B].Position);
         }
 
+        public GridTriangle ToTriangle(IFace f)
+        {
+            if (false == f.IsTriangle())
+                throw new InvalidOperationException("Face is not a triangle: " + f.iVerts.ToString());
+
+            return new GridTriangle(f.iVerts.Select(v => this.Verticies[v].Position.XY()).ToArray()); 
+        }
+
+        public GridVector2 GetCentroid(IFace f)
+        {
+            GridVector2[] verts = f.iVerts.Select(v => this.Verticies[v].Position.XY()).ToArray();
+            if (f.IsQuad())
+            {
+                GridPolygon poly = new GridPolygon(verts);
+                return poly.Centroid;
+            }
+            else if (f.IsTriangle())
+            {
+                GridTriangle tri = new GridTriangle(f.iVerts.Select(v => this.Verticies[v].Position.XY()).ToArray());
+                return tri.BaryToVector(new GridVector2(1 / 3.0, 1 / 3.0));
+
+            }
+            else
+            {
+                throw new InvalidOperationException("Face is not a triangle or quad: " + f.iVerts.ToString());
+            }
+        }
+
         /// <summary>
         /// 
         /// </summary>

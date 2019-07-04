@@ -37,7 +37,11 @@ namespace MonogameTestbed
                 case EdgeType.FLIPPED_DIRECTION:
                     return Color.Black.SetAlpha(0.5f);
                 case EdgeType.UNTILED:
-                    return Color.Black.SetAlpha(0.5f);
+                    return Color.Black.SetAlpha(1.0f);
+                case EdgeType.MEDIALAXIS:
+                    return Color.DarkBlue.SetAlpha(0.5f);
+                case EdgeType.ARTIFICIAL:
+                    return Color.YellowGreen.SetAlpha(0.5f);
 
                 default:
                     throw new ArgumentException("Unknown line type " + type.ToString());
@@ -54,6 +58,8 @@ namespace MonogameTestbed
                     return Color.GhostWhite.SetAlpha(0.5f);
                 case RegionType.INVAGINATION:
                     return Color.Purple.SetAlpha(0.5f);
+                case RegionType.UNTILED:
+                    return Color.Green.SetAlpha(0.5f);
                 default:
                     throw new ArgumentException("Unknown region type " + type.ToString());
             }
