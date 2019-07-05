@@ -10,7 +10,12 @@ using Geometry;
 
 namespace MorphologyMesh
 {
-    
+    public enum VertexOrigin
+    {
+        EXTERIOR, //The vertex is on the exterior of the polygon
+        INTERIOR, //The vertex is on an interior ring of the polygon
+        MEDIALAXIS //The vertex is on the medial axis of the polygon
+    }
 
     public class MorphMeshVertex : Vertex
     {
@@ -51,7 +56,7 @@ namespace MorphologyMesh
         /// <param name="mesh"></param>
         public bool IsFaceSurfaceComplete(MorphRenderMesh mesh)
         {
-            if (!PolyIndex.HasValue)
+            if (!PolyIndex.HasValue) //Not part of the contour of a polygon, we need to ensure we can walk faces from one of the verticies edges around in a circle back to the same edge
                 return true;
 
             if (FacesAreComplete)
@@ -188,9 +193,9 @@ namespace MorphologyMesh
             if (countInternal + countDirection == 0)
                 return false;
 
-            
 
-            int countValid = EdgeTypes.Count(e => (e & EdgeType.VALID) > 0);
+
+            int countValid = EdgeTypes.Count(e => e.IsValid());
             if (countValid > 1)
                 return false;
 
@@ -210,7 +215,7 @@ namespace MorphologyMesh
             if (countUntiled == 0)
                 return false;
              
-            int countValid = EdgeTypes.Count(e => (e & EdgeType.VALID) > 0);
+            int countValid = EdgeTypes.Count(e => e.IsValid());
             if (countValid == 0)
                 return false;
 
@@ -233,7 +238,7 @@ namespace MorphologyMesh
             int countValid = EdgeTypes.Count(e => e == EdgeType.CONTOUR);
             if (countValid != 2)
             {
-                countValid = EdgeTypes.Count(e => (e & EdgeType.VALID) > 0);
+                countValid = EdgeTypes.Count(e => e.IsValid());
                 if (countValid > 1)
                     return false;
             }
@@ -255,7 +260,7 @@ namespace MorphologyMesh
             if (countInternal == 0)
                 return false;
 
-            int countValid = EdgeTypes.Count(e => (e & EdgeType.VALID) > 0);
+            int countValid = EdgeTypes.Count(e => e.IsValid());
             if (countValid > 1)
                 return false;
 
@@ -269,8 +274,9 @@ namespace MorphologyMesh
             {
                 case EdgeType.CONTOUR:
                 case EdgeType.CORRESPONDING:
-                case EdgeType.VALID:
+                //case EdgeType.VALID:
                 case EdgeType.SURFACE:
+                case EdgeType.MEDIALAXIS:
                     return true;
                 default:
                     return false;
@@ -366,79 +372,57 @@ namespace MorphologyMesh
         }
 
         private MorphMeshVertex[] _RegionPerimeter = null; //The region indicies organized so they progress in order around the perimeter of the region
+        /// <summary>
+        /// Returns a closed loop of verticies that define the region's perimeter
+        /// </summary>
         public MorphMeshVertex[] RegionPerimeter
         {
             get
             {
                 if (_RegionPerimeter != null)
                     return _RegionPerimeter;
-
+                
                 PointIndex[] polyIndicies = Verticies.Select(v => ((MorphMeshVertex)ParentMesh.Verticies[v]).PolyIndex.Value).ToArray();
+                
+                //var all_exterior_edges = this.Faces.SelectMany(f => f.Edges).Distinct().Where(e => this.ParentMesh[e].Faces.Count == 1).Select(e => ParentMesh[e]).ToList();
+                var all_region_face_edges = this.Faces.SelectMany(f => f.Edges).ToList();
+                var all_possible_edges = all_region_face_edges.Distinct().ToList();
+                var counts = all_possible_edges.Select(e => all_region_face_edges.Count(fe => e.Equals(fe))).ToList();
+                var all_exterior_edges = all_possible_edges.Where(e => all_region_face_edges.Count(fe => fe.Equals(e)) == 1).ToList();
 
-                if (polyIndicies.All(p => p.iPoly == polyIndicies[0].iPoly))
+                //Identify all of the edges that are already in the mesh as 
+                //var all_exterior_edges = all_possible_edges.Where(e => this.ParentMesh.Contains(e) && ParentMesh[e].Faces.Intersect(this.Faces).Count == 1).ToList();
+                var startingedge = all_exterior_edges.First();
+
+                List<int> OrderedBoundaryVerts = new List<int>(all_exterior_edges.Count+1);
+                OrderedBoundaryVerts.Add(all_exterior_edges[0].A);
+                OrderedBoundaryVerts.Add(all_exterior_edges[0].B);
+                all_exterior_edges.RemoveAt(0);
+
+                    
+                while (all_exterior_edges.Count > 0)
                 {
-                    //If the polygon verticies contact both segments of inner and outer verticies we must
-                    //determine how to connect the segments without creating a self-intersecting polygon
-                    bool IsFirstInner = polyIndicies[0].IsInner;
-                    if (polyIndicies.Any(pi => pi.IsInner != IsFirstInner))
-                    {
-                        Dictionary<PointIndex, int> PolyIndexToMeshIndex = new Dictionary<PointIndex, int>();
-                        for (int i = 0; i < polyIndicies.Length; i++)
-                        {
-                            PolyIndexToMeshIndex.Add(polyIndicies[i], Verticies[i]);
-                        }
+                    int FirstVertIndex = OrderedBoundaryVerts.First();
+                    int LastVertIndex = OrderedBoundaryVerts.Last();
 
-                        //Identify the poly-lines and determine how they connect
-                        List<PointIndex[]> contours = IdentifyContours(polyIndicies);
-                        _RegionPerimeter = ConnectContours(contours, PolyIndexToMeshIndex).Select(pi => ParentMesh[pi]).ToArray();
+                    IEdgeKey connected_edge = all_exterior_edges.FirstOrDefault(e => e.A == LastVertIndex || e.B == LastVertIndex || e.A == FirstVertIndex || e.B == FirstVertIndex);
+                    if(connected_edge == null)
+                    {
+                        throw new InvalidOperationException("We should always be able to find an edge to add to our perimeter until we exhaust the list of unassigned perimeter edges");
+                    }
+                    else if (connected_edge.A == LastVertIndex || connected_edge.B == LastVertIndex)
+                    {
+                        OrderedBoundaryVerts.Add(connected_edge.OppositeEnd(LastVertIndex));
                     }
                     else
                     {
-                        //Simple case, all verticies are on the same ring
-
-                        //Sort the polyIndices
-                        int[] sorted_polyIndicies = polyIndicies.SortAndIndex();
-                        int[] mesh_indicies = sorted_polyIndicies.Select(i => Verticies[i]).ToArray();
-
-                        _RegionPerimeter = mesh_indicies.Select(i => (MorphMeshVertex)ParentMesh.Verticies[i]).ToArray();
-                    }
-                }
-                else
-                {
-                    //var all_exterior_edges = this.Faces.SelectMany(f => f.Edges).Distinct().Where(e => this.ParentMesh[e].Faces.Count == 1).Select(e => ParentMesh[e]).ToList();
-                    var all_exterior_edges = this.Faces.SelectMany(f => f.Edges).Distinct().Where(e => this.ParentMesh.Contains(e)).ToList();
-                    var startingedge = all_exterior_edges.First();
-
-                    List<int> OrderedBoundaryVerts = new List<int>(all_exterior_edges.Count+1);
-                    OrderedBoundaryVerts.Add(all_exterior_edges[0].A);
-                    OrderedBoundaryVerts.Add(all_exterior_edges[0].B);
-                    all_exterior_edges.RemoveAt(0);
-
-                    
-                    while (all_exterior_edges.Count > 0)
-                    {
-                        int FirstVertIndex = OrderedBoundaryVerts.First();
-                        int LastVertIndex = OrderedBoundaryVerts.Last();
-
-                        IEdgeKey connected_edge = all_exterior_edges.FirstOrDefault(e => e.A == LastVertIndex || e.B == LastVertIndex || e.A == FirstVertIndex || e.B == FirstVertIndex);
-                        if(connected_edge == null)
-                        {
-                            continue;
-                        }
-                        else if (connected_edge.A == LastVertIndex || connected_edge.B == LastVertIndex)
-                        {
-                            OrderedBoundaryVerts.Add(connected_edge.OppositeEnd(LastVertIndex));
-                        }
-                        else
-                        {
-                            OrderedBoundaryVerts.Insert(0,connected_edge.OppositeEnd(FirstVertIndex));
-                        }
-
-                        all_exterior_edges.Remove(connected_edge);
+                        OrderedBoundaryVerts.Insert(0,connected_edge.OppositeEnd(FirstVertIndex));
                     }
 
-                    _RegionPerimeter = OrderedBoundaryVerts.Select(i => (MorphMeshVertex)ParentMesh.Verticies[i]).ToArray();
+                    all_exterior_edges.Remove(connected_edge);
                 }
+
+                _RegionPerimeter = OrderedBoundaryVerts.Select(i => (MorphMeshVertex)ParentMesh.Verticies[i]).ToArray();
 
                 return _RegionPerimeter;
             }
@@ -480,6 +464,12 @@ namespace MorphologyMesh
             return listContours;
         }
 
+        /// <summary>
+        /// Returns an open ring of points.
+        /// </summary>
+        /// <param name="contours"></param>
+        /// <param name="PolyIndexToMeshIndex"></param>
+        /// <returns></returns>
         private PointIndex[] ConnectContours(List<PointIndex[]> contours, Dictionary<PointIndex, int> PolyIndexToMeshIndex)
         {
             List<PointIndex> AssembledContour = new List<PointIndex>(); 
@@ -643,7 +633,8 @@ namespace MorphologyMesh
 
 
     /// <summary>
-    /// A 3D mesh that records the polygons used to construct the mesh and tracks the original polygonal index of every vertex and the type of edge connecting verticies.
+    /// A 3D mesh that records the polygons used to construct the mesh.  Tracks the original polygonal index
+    /// of every vertex and the type of edge connecting verticies.
     /// </summary>
     public class MorphRenderMesh : DynamicRenderMesh
     {
@@ -1010,7 +1001,7 @@ namespace MorphologyMesh
 
         public static void RemoveInvalidEdges(MorphRenderMesh mesh)
         {
-            foreach (MorphMeshEdge e in mesh.Edges.Values.Where(e => (((MorphMeshEdge)e).Type & EdgeType.VALID) == 0).ToArray())
+            foreach (MorphMeshEdge e in mesh.Edges.Values.Where(e => ((MorphMeshEdge)e).Type.IsValid() == false).ToArray())
             {
                 mesh.RemoveEdge(e);
             }
@@ -1018,7 +1009,7 @@ namespace MorphologyMesh
 
         public void RemoveInvalidEdges()
         {
-            foreach (MorphMeshEdge e in this.Edges.Values.Where(e => (((MorphMeshEdge)e).Type & EdgeType.VALID) == 0).ToArray())
+            foreach (MorphMeshEdge e in this.Edges.Values.Where(e => ((MorphMeshEdge)e).Type.IsValid() == false).ToArray())
             {
                 this.RemoveEdge(e);
             }

@@ -12,8 +12,6 @@ namespace MonogameTestbed
         {
             switch (type)
             {
-                case EdgeType.VALID:
-                    return Color.LightBlue.SetAlpha(0.5f);
                 case EdgeType.INVALID:
                     return Color.GhostWhite.SetAlpha(0.25f);
                 case EdgeType.UNKNOWN:
@@ -39,7 +37,7 @@ namespace MonogameTestbed
                 case EdgeType.UNTILED:
                     return Color.Black.SetAlpha(1.0f);
                 case EdgeType.MEDIALAXIS:
-                    return Color.DarkBlue.SetAlpha(0.5f);
+                    return Color.LightCyan.SetAlpha(0.5f);
                 case EdgeType.ARTIFICIAL:
                     return Color.YellowGreen.SetAlpha(0.5f);
 
