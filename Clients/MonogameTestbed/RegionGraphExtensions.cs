@@ -22,7 +22,24 @@ namespace MonogameTestbed
         /// <returns>A list of the OTV tables generated when attempting to merge the regions.  Used for debugging</returns>
         public static List<OTVTable> MergeAndCloseRegionsPass(this MorphMeshRegionGraph graph, MorphRenderMesh mesh, RTree.RTree<SliceChord> rTree = null)
         {
-            int NumClosedAndMerged = 0;
+            while (true)
+            {
+                var regionNode = graph.Nodes.Values.FirstOrDefault(n => n.Edges.Count == 0 && n.Key.Type == RegionType.UNTILED);
+                if (regionNode == null)
+                    break;
+
+                TryClosingUntiledRegion(mesh, regionNode.Key, rTree);
+                /*
+                OTVTable table = 
+                if (table != null)
+                {
+                    OTVTables.Add(table);
+                }
+                */
+                graph.RemoveNode(regionNode.Key);
+
+            }
+
             if (rTree == null)
             {
                 rTree = mesh.CreateChordTree();
@@ -218,7 +235,9 @@ namespace MonogameTestbed
             GridPolygon regionPolygon = region.Polygon;
             var MedialAxis = MedialAxisFinder.ApproximateMedialAxis(regionPolygon);
             GridVector2[] NewVerts = MedialAxis.Points;
-            int iNewVerts = mesh.AddVerticies(NewVerts.Select(p => new MorphMeshVertex(new PointIndex?(), p.ToGridVector3(region.Z))).ToArray());
+            double MinZ = region.VertPositions.Min(v => v.Z);
+            double MaxZ = region.VertPositions.Max(v => v.Z);
+            int iNewVerts = mesh.AddVerticies(NewVerts.Select(p => new MorphMeshVertex(new PointIndex?(), p.ToGridVector3((MinZ + MaxZ) / 2.0))).ToArray());
 
             Dictionary<GridVector2, int> VertexLookup = new Dictionary<GridVector2, int>(NewVerts.Length);
             for(int i = 0; i < NewVerts.Length; i++)
@@ -251,6 +270,15 @@ namespace MonogameTestbed
                 {
                     mesh.AddEdge(new MorphMeshEdge(EdgeType.SURFACE, iA, iB));
                 }
+            }
+
+            foreach(var t in triangulation.Triangles)
+            {
+                int iA = VertexLookup[t.GetVertex(0).ToGridVector2()];
+                int iB = VertexLookup[t.GetVertex(1).ToGridVector2()];
+                int iC = VertexLookup[t.GetVertex(2).ToGridVector2()];
+
+                mesh.AddFace(iA, iB, iC);
             }
         }
     }
