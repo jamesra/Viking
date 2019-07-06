@@ -393,19 +393,32 @@ namespace MonogameTestbed
 
         public static LineSetView UpdateMeshLines(MorphRenderMesh mesh)
         {
+            IEdgeKey[] edgeKeys = mesh.Edges.Keys.ToArray();
             LineSetView TrianglesView = new LineSetView();
-            List<LineView> lineViews = new List<LineView>();
+            List<LineView> lineViews = new List<LineView>(edgeKeys.Length);
+            List<CurveLabel> lineLabels = new List<CurveLabel>(edgeKeys.Length);
 
-            foreach(IEdgeKey edgeKey in mesh.Edges.Keys)
+            const double lineWidth = 1.0;
+
+            foreach(IEdgeKey edgeKey in edgeKeys)
             {
                 MorphMeshEdge edge = mesh.GetEdge(edgeKey);
-                LineView lineView = new LineView(mesh.ToSegment(edgeKey), 0.5, edge.Type.GetColor(), LineStyle.Standard, false);
+
+                if (edge.Type == EdgeType.CORRESPONDING) //Avoid creating perfectly vertical lines with the same start and end points
+                    continue; 
+
+                GridLineSegment segment = mesh.ToSegment(edgeKey);
+                LineView lineView = new LineView(segment, lineWidth, edge.Type.GetColor(), LineStyle.Standard, false);
                 lineViews.Add(lineView);
+
+                CurveLabel lineLabel = CurveLabel.CreateLineLabel(edge.Type.ToString(), segment, Color.White, lineWidth: lineWidth);
+                lineLabels.Add(lineLabel);
             }
             
 
             TrianglesView.color = Color.Red;
             TrianglesView.LineViews = lineViews;
+            TrianglesView.LineLables = lineLabels;
             return TrianglesView;
         }
 

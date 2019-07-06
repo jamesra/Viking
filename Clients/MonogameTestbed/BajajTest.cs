@@ -21,7 +21,7 @@ using MIConvexHull;
 using MIConvexHullExtensions;
 using GraphLib;
 using OTVTable = System.Collections.Concurrent.ConcurrentDictionary<Geometry.PointIndex, Geometry.PointIndex>;
-
+using SliceChordRTree = RTree.RTree<MorphologyMesh.SliceChord>;
 
 namespace MonogameTestbed
 {
@@ -153,7 +153,7 @@ namespace MonogameTestbed
 
             //CloseRegions(FirstPassTriangulation);
             //FirstPassSliceChordGeneration(FirstPassTriangulation);
-            IdentifyIncompleteVerticies(FirstPassTriangulation);
+            //IdentifyIncompleteVerticies(FirstPassTriangulation);
             
             FirstPassFaceGeneration(FirstPassTriangulation);
             FirstPassTriangulation.RecalculateNormals();
@@ -656,11 +656,13 @@ namespace MonogameTestbed
             if (lineViews != null && ShowPolygons && !ShowRegionPolygons)
             { 
                 LineView.Draw(window.GraphicsDevice, window.Scene, window.lineManager, lineViews.LineViews.ToArray());
+                CurveLabel.Draw(window.GraphicsDevice, window.Scene, window.spriteBatch, window.fontArial, window.curveManager, lineViews.LineLables.ToArray());
             }
 
             if (unfiltered_lineViews != null && ShowAllEdges)
             {
                 LineView.Draw(window.GraphicsDevice, window.Scene, window.lineManager, unfiltered_lineViews.LineViews.ToArray());
+                CurveLabel.Draw(window.GraphicsDevice, window.Scene, window.spriteBatch, window.fontArial, window.curveManager, unfiltered_lineViews.LineLables.ToArray());
             }
 
             if (IncompletedVertexView != null && ShowCompletedVerticies)
@@ -783,6 +785,12 @@ namespace MonogameTestbed
 
         };
 
+        long[] BasicBranchInteriorHole = new long[] {
+          236909, //Z = 1
+          236910, //Z = 1
+          236911 //Z =2
+        };
+
         Scene scene;
         Scene3D scene3D;
         GamePadStateTracker Gamepad = new GamePadStateTracker();
@@ -814,8 +822,10 @@ namespace MonogameTestbed
 
             Gamepad.Update(GamePad.GetState(PlayerIndex.One));
 
+
+            AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromODataLocationIDs(BasicBranchInteriorHole, DataSource.EndpointMap[ENDPOINT.RPC1]);
             //AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromODataLocationIDs(BasicBranchTroubleIDS, DataSource.EndpointMap[ENDPOINT.RPC1]);
-            AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromODataLocationIDs(NightmareTroubleIDS, DataSource.EndpointMap[ENDPOINT.TEST]);
+            //AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromODataLocationIDs(NightmareTroubleIDS, DataSource.EndpointMap[ENDPOINT.TEST]);
 
             AnnotationVizLib.MorphologyNode[] nodes = graph.Nodes.Values.ToArray();
             wrapView = new MonogameTestbed.BajajOTVAssignmentView(nodes.Select(n => n.Geometry.ToPolygon()).ToArray(), nodes.Select(n=> n.Z).ToArray());
