@@ -21,14 +21,16 @@ using MIConvexHull;
 using MIConvexHullExtensions;
 using GraphLib;
 using OTVTable = System.Collections.Concurrent.ConcurrentDictionary<Geometry.PointIndex, Geometry.PointIndex>;
-
+using SliceChordRTree = RTree.RTree<MorphologyMesh.SliceChord>;
 
 namespace MonogameTestbed
 {
 
+
+
+
     
 
-     
     class BajajOTVAssignmentView
     {
         public GridPolygon[] Polygons = null;
@@ -36,7 +38,11 @@ namespace MonogameTestbed
         //public PointSetView[] PolyPointsView = null;
         public PointSetView IncompletedVertexView = null;
         private LineSetView lineViews = new LineSetView();
+        private LineSetView unfiltered_lineViews = new LineSetView();
         //List<LineView> polyRingViews = null;
+        public PointSetView MeshVertsView = null;
+
+        public PolygonSetView RegionViews;
 
         PolygonSetView PolyViews;
         List<LineView> OTVTableView = null;
@@ -49,20 +55,31 @@ namespace MonogameTestbed
 
         //LineView[] lineViews = null;
 
+        List<LineSetView> RegionPolygonViews;
+
         public bool ShowFaces = false;
         public bool ShowPolygons = true;
         public bool ShowRegionPolygons = false;
         public bool ShowCompletedVerticies = true;
+        public bool ShowAllEdges = false; 
 
+        public IndexLabelType VertexLabelType
+        {
+            get
+            {
+                return PolyViews.PointLabelType;
+            }
+            set
+            {
+                PolyViews.PointLabelType = value;
+            }
+        }
+        
         public bool ShowPolyIndexLabels
         {
             get
             {
                 return PolyViews.LabelPolygonIndex;
-            }
-            set
-            {
-                PolyViews.LabelPolygonIndex = value;
             }
         }
 
@@ -71,10 +88,6 @@ namespace MonogameTestbed
             get
             {
                 return PolyViews.LabelIndex;
-            }
-            set
-            {
-                PolyViews.LabelIndex = value;
             }
         }
 
@@ -85,12 +98,7 @@ namespace MonogameTestbed
             {
                 return PolyViews.LabelPosition;
             }
-            set
-            {
-                PolyViews.LabelPosition = value;
-            }
         }
-
 
         public Color Color
         {
@@ -103,7 +111,9 @@ namespace MonogameTestbed
 
         public BajajOTVAssignmentView(GridPolygon[] polys, double[] Z)
         {
+            ///Takes a set of polygons and Z values and generates a meshView
             Polygons = polys;
+            //Bajaj Step 3
             Polygons.AddPointsAtAllIntersections(Z);
             PolyZ = Z;
 
@@ -112,35 +122,65 @@ namespace MonogameTestbed
 
             //Create our mesh with only the verticies
             PolyViews = new PolygonSetView(polys);
-            PolyViews.LabelPolygonIndex = true; 
+            PolyViews.LabelPolygonIndex = true;
             //UpdatePolyViews();
 
+            
+            
             var RegionPairingGraph = FirstPassDelaunay(FirstPassTriangulation);
 
+            unfiltered_lineViews = PolyBranchAssignmentView.UpdateMeshLines(FirstPassTriangulation);
+
+            FirstPassTriangulation.RemoveInvalidEdges();
+
+            CreateRegionPolygonViews(FirstPassTriangulation);
+
+
+            //RegionViews = new PolygonSetView(RegionPairingGraph.Nodes.Select(n => n.Value.Polygon));
+            //RegionViews.LabelPolygonIndex = true;
+             
             var IncompleteVerticies = IdentifyIncompleteVerticies(FirstPassTriangulation);
             IncompletedVertexView = CreateCompletedVertexView(IncompleteVerticies);
             IncompletedVertexView.LabelIndex = false;
             IncompletedVertexView.LabelPosition = false;
-             
-            RTree.RTree<SliceChord> rTree = FirstPassTriangulation.CreateChordTree();
 
+            RTree.RTree<SliceChord> rTree = FirstPassTriangulation.CreateChordTree();
             List<OTVTable> listOTVTables = RegionPairingGraph.MergeAndCloseRegionsPass(FirstPassTriangulation, rTree);
+
+            this.MeshVertsView = PointSetView.CreateFor(FirstPassTriangulation);
 
             CreateChordViews(FirstPassTriangulation, listOTVTables); 
 
             //CloseRegions(FirstPassTriangulation);
             //FirstPassSliceChordGeneration(FirstPassTriangulation);
-            IdentifyIncompleteVerticies(FirstPassTriangulation); 
-
+            //IdentifyIncompleteVerticies(FirstPassTriangulation);
+            
             FirstPassFaceGeneration(FirstPassTriangulation);
             FirstPassTriangulation.RecalculateNormals();
 
             lineViews = PolyBranchAssignmentView.UpdateMeshLines(FirstPassTriangulation);
-              
+
             meshViewModel = CreateFaceView(FirstPassTriangulation);
             meshView = new MeshView<VertexPositionColor>();
             meshView.models.Add(meshViewModel);
             //UpdateMeshView();
+        }
+
+        public void CreateRegionPolygonViews(MorphRenderMesh mesh)
+        {
+            List<LineSetView> views = new List<LineSetView>();
+
+            foreach (MorphMeshRegion region in mesh.Regions)
+            {
+                GridPolygon poly = region.Polygon;
+                LineSetView lineView = new LineSetView();
+                Color c = region.Type.GetColor();
+                c.A = 128;
+                lineView.LineViews = poly.ExteriorSegments.Select(l => new LineView(l, 4, c, LineStyle.Standard, false)).ToList();
+                views.Add(lineView);
+            }
+
+            this.RegionPolygonViews = views;
         }
 
         public void UpdateMeshView()
@@ -263,7 +303,7 @@ namespace MonogameTestbed
             MorphMeshRegionGraph RegionPairingGraph = GenerateRegionConnectionGraph(mesh);
            
             //Remove invalid edges
-            RemoveInvalidEdges(mesh);
+            //RemoveInvalidEdges(mesh);
 
             //Close the nodes with no edges
             //CloseRegionsFirstPass(mesh, RegionPairingGraph.Nodes.Values.Where(v => v.Edges.Count == 0).Select(v => v.Key).ToList());
@@ -278,15 +318,8 @@ namespace MonogameTestbed
             return RegionPairingGraph;
         }
 
-        public static void RemoveInvalidEdges(MorphRenderMesh mesh)
-        {
-            foreach (MorphMeshEdge e in mesh.Edges.Values.Where(e => (((MorphMeshEdge)e).Type & EdgeType.VALID) == 0).ToArray())
-            {
-                mesh.RemoveEdge(e);
-            }
-        }
-
-
+        
+         
 
         public static MorphMeshRegionGraph GenerateRegionConnectionGraph(MorphRenderMesh mesh)
         {
@@ -608,29 +641,51 @@ namespace MonogameTestbed
 
         public void Draw(MonoTestbed window, Scene scene)
         {
-            
+            window.GraphicsDevice.Clear(ClearOptions.DepthBuffer | ClearOptions.Stencil | ClearOptions.Target, Color.DarkGray, float.MaxValue, 0);
+
+            if (RegionViews != null && ShowRegionPolygons)
+            {
+                RegionViews.Draw(window, scene);
+            }
              
-            if (meshView != null && ShowFaces)
+            if (meshView != null && ShowFaces && !ShowRegionPolygons)
             {
                 meshView.Draw(window.GraphicsDevice, window.Scene, CullMode.None);
             }
 
-            if (lineViews != null && ShowPolygons)
+            if (lineViews != null && ShowPolygons && !ShowRegionPolygons)
             { 
                 LineView.Draw(window.GraphicsDevice, window.Scene, window.lineManager, lineViews.LineViews.ToArray());
+                CurveLabel.Draw(window.GraphicsDevice, window.Scene, window.spriteBatch, window.fontArial, window.curveManager, lineViews.LineLables.ToArray());
             }
 
-            if(IncompletedVertexView != null && ShowCompletedVerticies)
+            if (unfiltered_lineViews != null && ShowAllEdges)
+            {
+                LineView.Draw(window.GraphicsDevice, window.Scene, window.lineManager, unfiltered_lineViews.LineViews.ToArray());
+                CurveLabel.Draw(window.GraphicsDevice, window.Scene, window.spriteBatch, window.fontArial, window.curveManager, unfiltered_lineViews.LineLables.ToArray());
+            }
+
+            if (IncompletedVertexView != null && ShowCompletedVerticies)
             {
                 IncompletedVertexView.Draw(window, scene); 
             }
+            
+            if (MeshVertsView != null && (this.VertexLabelType & IndexLabelType.MESH) > 0)
+            {
+                MeshVertsView.Draw(window, scene);
+            }
+            
+            if (RegionPolygonViews != null && ShowRegionPolygons)
+            {
+                LineView.Draw(window.GraphicsDevice, window.Scene, window.lineManager, RegionPolygonViews.SelectMany(rpv => rpv.LineViews).ToArray());
+            }
 
-            if(OTVTableView != null)
+            if (OTVTableView != null)
             {
                 LineView.Draw(window.GraphicsDevice, window.Scene, window.lineManager, OTVTableView.ToArray());
             }
 
-            if (this.PolyViews != null)
+            if (this.PolyViews != null && !ShowRegionPolygons &&  ((this.VertexLabelType & IndexLabelType.MESH) == 0))
             {
                 PolyViews.Draw(window, scene);
             }
@@ -716,12 +771,26 @@ namespace MonogameTestbed
         */
 
         //Polygons with internal polygon merging with external concavity
-        long[] TroubleIDS = new long[] {
+        long[] NightmareTroubleIDS = new long[] {
           1333661, //Z = 2
           1333662, //Z = 3
           1333665 //Z =2
 
         };
+
+        long[] BasicBranchTroubleIDS = new long[] {
+          233992, //Z = 2
+          233993, //Z = 3
+          233994 //Z =2
+
+        };
+
+        long[] BasicBranchInteriorHole = new long[] {
+          236909, //Z = 1
+          236910, //Z = 1
+          236911 //Z =2
+        };
+
         Scene scene;
         Scene3D scene3D;
         GamePadStateTracker Gamepad = new GamePadStateTracker();
@@ -753,8 +822,10 @@ namespace MonogameTestbed
 
             Gamepad.Update(GamePad.GetState(PlayerIndex.One));
 
-            //AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromODataLocationIDs(TroubleIDS, DataSource.EndpointMap[ENDPOINT.RPC1]);
-            AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromODataLocationIDs(TroubleIDS, DataSource.EndpointMap[ENDPOINT.TEST]);
+
+            AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromODataLocationIDs(BasicBranchInteriorHole, DataSource.EndpointMap[ENDPOINT.RPC1]);
+            //AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromODataLocationIDs(BasicBranchTroubleIDS, DataSource.EndpointMap[ENDPOINT.RPC1]);
+            //AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromODataLocationIDs(NightmareTroubleIDS, DataSource.EndpointMap[ENDPOINT.TEST]);
 
             AnnotationVizLib.MorphologyNode[] nodes = graph.Nodes.Values.ToArray();
             wrapView = new MonogameTestbed.BajajOTVAssignmentView(nodes.Select(n => n.Geometry.ToPolygon()).ToArray(), nodes.Select(n=> n.Z).ToArray());
@@ -798,6 +869,7 @@ namespace MonogameTestbed
             if (Gamepad.B_Clicked)
             {
                 wrapView.ShowPolygons = !wrapView.ShowPolygons;
+                wrapView.ShowAllEdges = !wrapView.ShowAllEdges;
             }
 
             if (Gamepad.Y_Clicked)
@@ -810,20 +882,31 @@ namespace MonogameTestbed
                 wrapView.ShowCompletedVerticies = !wrapView.ShowCompletedVerticies;
             }
 
-            if(Gamepad.RightShoulder_Clicked)
+            if (Gamepad.RightShoulder_Clicked)
             {
-                if(wrapView.ShowPolyIndexLabels)
+                if ((wrapView.VertexLabelType & (IndexLabelType.MESH | IndexLabelType.POLYGON)) == 0)
                 {
-                    wrapView.ShowMeshIndexLabels = true;
+                    wrapView.VertexLabelType = wrapView.VertexLabelType | IndexLabelType.MESH;
                 }
-                else if(wrapView.ShowPolyPositionLabels)
+                else if ((wrapView.VertexLabelType & IndexLabelType.POLYGON) > 0)
                 {
-                    wrapView.ShowPolyIndexLabels = true;
+                    wrapView.VertexLabelType = IndexLabelType.NONE;
                 }
-                else 
+                else if ((wrapView.VertexLabelType & IndexLabelType.MESH) == 0)
                 {
-                    wrapView.ShowPolyPositionLabels = true; 
+                    wrapView.VertexLabelType = wrapView.VertexLabelType | IndexLabelType.MESH;
+                    wrapView.VertexLabelType = wrapView.VertexLabelType ^ IndexLabelType.POLYGON;
                 }
+                else if ((wrapView.VertexLabelType & IndexLabelType.POLYGON) == 0)
+                {
+                    wrapView.VertexLabelType = wrapView.VertexLabelType | IndexLabelType.POLYGON;
+                    wrapView.VertexLabelType = wrapView.VertexLabelType ^ IndexLabelType.MESH;
+                }
+            }
+
+            if(Gamepad.RightStick_Clicked)
+            {
+                wrapView.VertexLabelType = wrapView.VertexLabelType ^ IndexLabelType.POSITION;
             }
 
             if(Gamepad.LeftShoulder_Clicked)

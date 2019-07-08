@@ -596,7 +596,7 @@ namespace Geometry
                 GridVector2[] endpoints = new GridVector2[] { seg.A, seg.B, this.A, this.B }.Distinct().ToArray();
                 GridVector2[] endpointsOnLine = endpoints.Where(e => overlapRect.Value.Contains(e) && seg.DistanceToPoint(e) < Global.Epsilon).ToArray();
 
-                Debug.Assert(endpointsOnLine.Length > 0, "Must have intersecting points if the bounding boxes overlap for parallel line intersection test");
+                //Debug.Assert(endpointsOnLine.Length > 0, "Must have intersecting points if the bounding boxes overlap for parallel line intersection test");
                 if(endpointsOnLine.Length == 0)
                 {
                     return false;

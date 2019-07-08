@@ -294,7 +294,7 @@ namespace MorphologyMesh
             if((TestsToRun & SliceChordTestType.EdgeType) > 0)
             {
                 EdgeType edgeType = EdgeTypeExtensions.GetEdgeType(vertex, candidate, Polygons, ChordLine.PointAlongLine(0.5));
-                if ((edgeType & EdgeType.VALID) == 0)
+                if (!edgeType.IsValid())
                     return false;
             }
 

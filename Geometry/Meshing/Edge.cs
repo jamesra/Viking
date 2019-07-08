@@ -117,6 +117,18 @@ namespace Geometry.Meshing
         {
             return string.Format("{0}-{1}", A, B);
         }
+
+        public int OppositeEnd(int value)
+        {
+            if (value == this.A)
+                return B;
+            else if(value == this.B)
+                return A;
+            else
+            {
+                throw new ArgumentException("Parameter to OppositeEnd must match one of the ends of the edge");
+            }
+        }
     }
 
     public class Edge : IComparable<IEdge>, IEquatable<IEdge>, IEdge

@@ -795,6 +795,36 @@ namespace Geometry
             }
         }
 
+        /// <summary>
+        /// Test if a line segment is one of the polygons exterior segments
+        /// </summary>
+        /// <param name="segment"></param>
+        /// <returns></returns>
+        public bool IsExteriorSegment(GridLineSegment segment)
+        {
+            if(_ExteriorSegments.Length < 20)
+            {
+                return _ExteriorSegments.Contains(segment);
+            }
+            else
+            {
+                return ExteriorSegmentRTree.Intersects(segment.BoundingBox.ToRTreeRect(0)).Contains(segment);
+            }
+        }
+
+        /// <summary>
+        /// Test if a line segment is one of the polygons exterior or interior segments
+        /// </summary>
+        /// <param name="segment"></param>
+        /// <returns></returns>
+        public bool IsExteriorOrInteriorSegment(GridLineSegment segment)
+        {
+            if (IsExteriorSegment(segment))
+                return true;
+
+            return this.InteriorPolygons.Any(p => p.IsExteriorSegment(segment));
+        }
+
         GridVector2? _Centroid;
         public GridVector2 Centroid
         {
@@ -859,6 +889,8 @@ namespace Geometry
         public GridPolygon(ICollection<IPoint2D> exteriorRing) : this (exteriorRing.Select(p => p.Convert()).ToArray())
         {}
 
+        public GridPolygon(ICollection<GridVector2> exteriorRing) : this(exteriorRing.ToArray())
+        {}
 
         public GridPolygon(GridVector2[] exteriorRing)
         {

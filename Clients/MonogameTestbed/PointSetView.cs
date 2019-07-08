@@ -12,6 +12,7 @@ using VikingXNA;
 
 namespace MonogameTestbed
 {
+
     class PointSetView : PointViewBase
     { 
         public CircleView[] PointViews = new CircleView[0];
@@ -102,6 +103,19 @@ namespace MonogameTestbed
 
             if (LabelViews != null)
                 LabelView.Draw(window.spriteBatch, window.fontArial, scene, LabelViews);
+        }
+
+        public static PointSetView CreateFor(MorphologyMesh.MorphRenderMesh mesh)
+        {    
+            PointSetView psv = new PointSetView();
+
+            psv.PointRadius = 0.5;
+            psv.Points = mesh.Verticies.Select(p => p.Position.XY()).ToArray();
+            psv.LabelIndex = true;
+            psv.LabelPosition = false;
+            psv.UpdateViews();
+
+            return psv;
         }
     }
 }

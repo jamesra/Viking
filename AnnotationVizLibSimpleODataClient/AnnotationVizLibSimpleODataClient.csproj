@@ -41,13 +41,14 @@
       <HintPath>..\Packages\EntityFramework.6.2.0\lib\net45\EntityFramework.SqlServer.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Microsoft.OData.Core, Version=6.15.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <HintPath>..\Packages\Microsoft.OData.Core.6.15.0\lib\portable-net45+win+wpa81\Microsoft.OData.Core.dll</HintPath>
-      <Private>True</Private>
+    <Reference Include="Microsoft.OData.Core, Version=7.6.0.30605, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\Packages\Microsoft.OData.Core.7.6.0\lib\portable-net45+win8+wpa81\Microsoft.OData.Core.dll</HintPath>
     </Reference>
-    <Reference Include="Microsoft.OData.Edm, Version=6.15.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <HintPath>..\Packages\Microsoft.OData.Edm.6.15.0\lib\portable-net45+win+wpa81\Microsoft.OData.Edm.dll</HintPath>
-      <Private>True</Private>
+    <Reference Include="Microsoft.OData.Edm, Version=7.6.0.30605, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\Packages\Microsoft.OData.Edm.7.6.0\lib\portable-net45+win8+wpa81\Microsoft.OData.Edm.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Spatial, Version=7.6.0.30605, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\Packages\Microsoft.Spatial.7.6.0\lib\portable-net45+win8+wpa81\Microsoft.Spatial.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.SqlServer.Types, Version=14.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91, processorArchitecture=MSIL">
       <HintPath>..\Packages\Microsoft.SqlServer.Types.14.0.314.76\lib\net40\Microsoft.SqlServer.Types.dll</HintPath>
@@ -65,17 +66,14 @@
       <HintPath>..\Packages\Microsoft.Bcl.Async.1.0.168\lib\net40\Microsoft.Threading.Tasks.Extensions.Desktop.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Simple.OData.Client.Core, Version=4.25.5.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\Packages\Simple.OData.V4.Client.4.25.5\lib\portable-net45+win8+wp8+wpa81\Simple.OData.Client.Core.dll</HintPath>
-      <Private>True</Private>
+    <Reference Include="Simple.OData.Client.Core, Version=4.27.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\Packages\Simple.OData.V4.Client.4.27.0\lib\portable-net45+win8+wp8+wpa81\Simple.OData.Client.Core.dll</HintPath>
     </Reference>
-    <Reference Include="Simple.OData.Client.Dynamic, Version=4.25.5.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\Packages\Simple.OData.V4.Client.4.25.5\lib\portable-net45+win8+wp8+wpa81\Simple.OData.Client.Dynamic.dll</HintPath>
-      <Private>True</Private>
+    <Reference Include="Simple.OData.Client.Dynamic, Version=4.27.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\Packages\Simple.OData.V4.Client.4.27.0\lib\portable-net45+win8+wp8+wpa81\Simple.OData.Client.Dynamic.dll</HintPath>
     </Reference>
-    <Reference Include="Simple.OData.Client.V4.Adapter, Version=4.25.5.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\Packages\Simple.OData.V4.Client.4.25.5\lib\portable-net45+win8+wp8+wpa81\Simple.OData.Client.V4.Adapter.dll</HintPath>
-      <Private>True</Private>
+    <Reference Include="Simple.OData.Client.V4.Adapter, Version=4.27.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\Packages\Simple.OData.V4.Client.4.27.0\lib\portable-net45+win8+wp8+wpa81\Simple.OData.Client.V4.Adapter.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.DataAnnotations" />

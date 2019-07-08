@@ -21,9 +21,19 @@ namespace VikingXNAGraphics
             {
                 throw new ArgumentException("Cannot create a curve with fewer than two control points");
             }
+            else if(cps.Count == 2 && TryToClose)
+            {
+                throw new ArgumentException("Cannot close a curve with only two points");
+            }
+
             this._NumInterpolations = NumInterpolations;
             this._TryCloseCurve = TryToClose;
 
+            if (NumInterpolations == 0)
+            {
+                this.ControlPoints = cps.ToArray();
+            }
+            
             if (TryCloseCurve && cps.Count > 2)
             {
                 bool Reverse = cps.ToArray().AreClockwise();

@@ -3,6 +3,8 @@ using MorphologyMesh;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using TriangleNet;
+using TriangleNet.Meshing;
 using OTVTable = System.Collections.Concurrent.ConcurrentDictionary<Geometry.PointIndex, Geometry.PointIndex>;
 
 namespace MonogameTestbed
@@ -20,8 +22,25 @@ namespace MonogameTestbed
         /// <returns>A list of the OTV tables generated when attempting to merge the regions.  Used for debugging</returns>
         public static List<OTVTable> MergeAndCloseRegionsPass(this MorphMeshRegionGraph graph, MorphRenderMesh mesh, RTree.RTree<SliceChord> rTree = null)
         {
-            int NumClosedAndMerged = 0; 
-            if(rTree == null)
+            while (true)
+            {
+                var regionNode = graph.Nodes.Values.FirstOrDefault(n => n.Edges.Count == 0 && n.Key.Type == RegionType.UNTILED);
+                if (regionNode == null)
+                    break;
+
+                TryClosingUntiledRegion(mesh, regionNode.Key, rTree);
+                /*
+                OTVTable table = 
+                if (table != null)
+                {
+                    OTVTables.Add(table);
+                }
+                */
+                graph.RemoveNode(regionNode.Key);
+
+            }
+
+            if (rTree == null)
             {
                 rTree = mesh.CreateChordTree();
             }
@@ -32,8 +51,8 @@ namespace MonogameTestbed
             {
                 var regionNode = graph.Nodes.Values.FirstOrDefault(n => n.Edges.Count == 1);
                 if (regionNode == null)
-                    break; 
-                 
+                    break;
+
                 MorphMeshRegionGraphEdge edge = regionNode.Edges.First().Value.First();
 
                 OTVTable otvTable = BajajOTVAssignmentView.IdentifyChordCandidatesForRegionPair(mesh, edge.SourceNodeKey, edge.TargetNodeKey, SliceChordTestType.ChordIntersection | SliceChordTestType.LineOrientation | SliceChordTestType.Theorem4, rTree);
@@ -41,7 +60,7 @@ namespace MonogameTestbed
 
                 int ChordsAdded = BajajOTVAssignmentView.TryAddOTVTable(mesh, otvTable, rTree, SliceChordTestType.ChordIntersection | SliceChordTestType.LineOrientation | SliceChordTestType.Theorem4, SliceChordPriority.Orientation);
 
-                if(ChordsAdded > 0)
+                if (ChordsAdded > 0)
                     ChordsAdded += BajajOTVAssignmentView.TryAddOTVTable(mesh, otvTable, rTree, SliceChordTestType.ChordIntersection | SliceChordTestType.LineOrientation, SliceChordPriority.Orientation);
 
                 //Handling how to prune the graph in the various cases of all edges added, some edges added, and no edges added isn't fully worked out in my head yet.
@@ -51,7 +70,7 @@ namespace MonogameTestbed
                     graph.RemoveEdge(edge);
                     graph.RemoveNode(regionNode.Key);
                 }
-                else if(ChordsAdded == 0)
+                else if (ChordsAdded == 0)
                 {
                     graph.RemoveEdge(edge);
                 }
@@ -65,15 +84,15 @@ namespace MonogameTestbed
             //At this point we've merged all of the nodes with one edge.  THere may be triangles of connections but we'll punt on those for the moment.
 
             //Identify regions with no edges and attempt to close them
-            
-            while(true)
+
+            while (true)
             {
                 var regionNode = graph.Nodes.Values.FirstOrDefault(n => n.Edges.Count == 0);
                 if (regionNode == null)
                     break;
 
                 OTVTable table = TryClosingRegion(mesh, regionNode.Key, rTree);
-                if(table != null)
+                if (table != null)
                 {
                     OTVTables.Add(table);
                 }
@@ -82,7 +101,7 @@ namespace MonogameTestbed
 
             }
 
-            return OTVTables; 
+            return OTVTables;
         }
 
 
@@ -109,7 +128,7 @@ namespace MonogameTestbed
         {
             if (region.Type == RegionType.EXPOSED || region.Type == RegionType.INVAGINATION)
             {
-                return TryClosingSolidRegion(mesh, region, rTree); 
+                return TryClosingSolidRegion(mesh, region, rTree);
             }
 
             if (region.Type == RegionType.HOLE)
@@ -121,7 +140,13 @@ namespace MonogameTestbed
                 }
             }
 
-            return null; 
+            if (region.Type == RegionType.UNTILED)
+            {
+                //Generate the medial axis of the region and repeat the tiling
+                TryClosingUntiledRegion(mesh, region, rTree);
+            }
+
+            return null;
         }
 
         /// <summary>
@@ -149,7 +174,7 @@ namespace MonogameTestbed
             }
 
             int added = BajajOTVAssignmentView.TryAddOTVTable(mesh, OTVTable, rTree, SliceChordTestType.ChordIntersection | SliceChordTestType.LineOrientation, SliceChordPriority.Orientation);
-            if(added == OTVTable.Count)
+            if (added == OTVTable.Count)
             {
                 return null;
             }
@@ -196,6 +221,64 @@ namespace MonogameTestbed
                     MorphMeshFace face = new MorphMeshFace(origin.Index, Perimeter[iVert + 1].Index, NewVertexIndex);
                     mesh.AddFace(face);
                 }
+            }
+        }
+
+        /// <summary>
+        /// Adds verticies and mesh edges for the medial axis of the untiled region.  The untiled region should be contained inside a single polygonal annotation
+        /// </summary>
+        /// <param name="mesh"></param>
+        /// <param name="region"></param>
+        /// <param name="rTree"></param>
+        private static void TryClosingUntiledRegion(MorphRenderMesh mesh, MorphMeshRegion region, RTree.RTree<SliceChord> rTree)
+        {
+            GridPolygon regionPolygon = region.Polygon;
+            var MedialAxis = MedialAxisFinder.ApproximateMedialAxis(regionPolygon);
+            GridVector2[] NewVerts = MedialAxis.Points;
+            double MinZ = region.VertPositions.Min(v => v.Z);
+            double MaxZ = region.VertPositions.Max(v => v.Z);
+            int iNewVerts = mesh.AddVerticies(NewVerts.Select(p => new MorphMeshVertex(new PointIndex?(), p.ToGridVector3((MinZ + MaxZ) / 2.0))).ToArray());
+
+            Dictionary<GridVector2, int> VertexLookup = new Dictionary<GridVector2, int>(NewVerts.Length);
+            for(int i = 0; i < NewVerts.Length; i++)
+            {
+                VertexLookup.Add(NewVerts[i], iNewVerts + i);
+            }
+            
+            foreach(var edge in MedialAxis.Edges)
+            {
+                int iMeshVertA = VertexLookup[edge.Key.SourceNodeKey];
+                int iMeshVertB = VertexLookup[edge.Key.TargetNodeKey];
+
+                mesh.AddEdge(new MorphMeshEdge(EdgeType.MEDIALAXIS, iMeshVertA, iMeshVertB));
+            }
+
+            GridVector2[] regionVertPositions = region.VertPositions.Select(v => v.XY()).ToArray();
+            for(int i = 0; i < region.Verticies.Length; i++)
+            {
+                VertexLookup.Add(regionVertPositions[i], region.Verticies[i]);
+            }
+
+            IMesh triangulation = regionPolygon.Triangulate(internalPoints: NewVerts);
+
+            foreach(var e in triangulation.ToLines())
+            {
+                int iA = VertexLookup[e.A];
+                int iB = VertexLookup[e.B];
+
+                if (mesh.Contains(iA, iB) == false)
+                {
+                    mesh.AddEdge(new MorphMeshEdge(EdgeType.SURFACE, iA, iB));
+                }
+            }
+
+            foreach(var t in triangulation.Triangles)
+            {
+                int iA = VertexLookup[t.GetVertex(0).ToGridVector2()];
+                int iB = VertexLookup[t.GetVertex(1).ToGridVector2()];
+                int iC = VertexLookup[t.GetVertex(2).ToGridVector2()];
+
+                mesh.AddFace(iA, iB, iC);
             }
         }
     }

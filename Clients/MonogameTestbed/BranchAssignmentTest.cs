@@ -65,20 +65,7 @@ namespace MonogameTestbed
             //UpdateTriangulation();
             UpdateMeshView();
         }
-
-        public void UpdateMeshVertView(MorphRenderMesh mesh)
-        {
-            PointSetView psv = new PointSetView();
-
-            psv.PointRadius = 0.5;
-            psv.Points = mesh.Verticies.Select(p => p.Position.XY()).ToArray();
-            psv.LabelIndex = true;
-            psv.LabelPosition = false;
-            psv.UpdateViews();
-
-            MeshVertsView = psv;
-        }
-
+        
         public void UpdatePolyViews()
         {
             List<PointSetView> listPointSetView = new List<PointSetView>();
@@ -280,7 +267,7 @@ namespace MonogameTestbed
         { 
             IMesh mesh = Polygons.Triangulate();
             FirstPassTriangulation = PolyBranchAssignmentView.ToMorphRenderMesh(mesh, Polygons, PolyZ);
-            UpdateMeshVertView(FirstPassTriangulation);
+            MeshVertsView = PointSetView.CreateFor(FirstPassTriangulation);
             FirstPassTriangulation.ClassifyMeshEdges();
             //ReclassifyMeshEdges(FirstPassTriangulation);
             TrianglesView = UpdateMeshLines(FirstPassTriangulation);
@@ -336,7 +323,7 @@ namespace MonogameTestbed
                 int[] edgeVerts = region.Faces.SelectMany(f => f.iVerts).ToArray();
                 model.AppendEdges(edgeVerts);
 
-                Color regionColor = GetColorForType(region.Type);
+                Color regionColor = region.Type.GetColor();
                 foreach(int iVert in edgeVerts)
                 {
                     model.Verticies[iVert].Color = regionColor;
@@ -406,19 +393,32 @@ namespace MonogameTestbed
 
         public static LineSetView UpdateMeshLines(MorphRenderMesh mesh)
         {
+            IEdgeKey[] edgeKeys = mesh.Edges.Keys.ToArray();
             LineSetView TrianglesView = new LineSetView();
-            List<LineView> lineViews = new List<LineView>();
+            List<LineView> lineViews = new List<LineView>(edgeKeys.Length);
+            List<CurveLabel> lineLabels = new List<CurveLabel>(edgeKeys.Length);
 
-            foreach(IEdgeKey edgeKey in mesh.Edges.Keys)
+            const double lineWidth = 1.0;
+
+            foreach(IEdgeKey edgeKey in edgeKeys)
             {
                 MorphMeshEdge edge = mesh.GetEdge(edgeKey);
-                LineView lineView = new LineView(mesh.ToSegment(edgeKey), 0.5, GetColorForType(edge.Type), LineStyle.Standard, false);
+
+                if (edge.Type == EdgeType.CORRESPONDING) //Avoid creating perfectly vertical lines with the same start and end points
+                    continue; 
+
+                GridLineSegment segment = mesh.ToSegment(edgeKey);
+                LineView lineView = new LineView(segment, lineWidth, edge.Type.GetColor(), LineStyle.Standard, false);
                 lineViews.Add(lineView);
+
+                CurveLabel lineLabel = CurveLabel.CreateLineLabel(edge.Type.ToString(), segment, Color.White, lineWidth: lineWidth);
+                lineLabels.Add(lineLabel);
             }
             
 
             TrianglesView.color = Color.Red;
             TrianglesView.LineViews = lineViews;
+            TrianglesView.LineLables = lineLabels;
             return TrianglesView;
         }
 
@@ -553,54 +553,6 @@ namespace MonogameTestbed
             return;
         }
         
-        internal static Color GetColorForType(EdgeType type)
-        {
-            switch (type)
-            {
-                case EdgeType.VALID:
-                    return Color.LightBlue.SetAlpha(0.5f);
-                case EdgeType.INVALID:
-                    return Color.GhostWhite.SetAlpha(0.25f); 
-                case EdgeType.UNKNOWN:
-                    return Color.Black;
-                case EdgeType.FLYING:
-                    return Color.Pink.SetAlpha(0.5f);
-                case EdgeType.CONTOUR:
-                    return Color.Cyan.SetAlpha(0.5f);
-                case EdgeType.SURFACE:
-                    return Color.Blue.SetAlpha(0.5f);
-                case EdgeType.CORRESPONDING:
-                    return Color.Gold.SetAlpha(0.5f);
-                case EdgeType.INTERNAL:
-                    return Color.Red.SetAlpha(0.5f);
-                case EdgeType.FLAT:
-                    return Color.Brown.SetAlpha(0.5f);
-                case EdgeType.INVAGINATION:
-                    return Color.Orange.SetAlpha(0.5f);
-                case EdgeType.HOLE:
-                    return Color.Purple.SetAlpha(0.5f);
-                case EdgeType.FLIPPED_DIRECTION:
-                    return Color.Black.SetAlpha(0.5f);
-
-                default:
-                    throw new ArgumentException("Unknown line type " + type.ToString());
-            }
-        }
-
-        internal static Color GetColorForType(RegionType type)
-        {
-            switch (type)
-            {
-                case RegionType.EXPOSED:
-                    return Color.Blue.SetAlpha(0.5f);
-                case RegionType.HOLE:
-                    return Color.GhostWhite.SetAlpha(0.5f);
-                case RegionType.INVAGINATION:
-                    return Color.Purple.SetAlpha(0.5f);  
-                default:
-                    throw new ArgumentException("Unknown region type " + type.ToString());
-            }
-        }
 
 
         private Color GetColorForLine(PointIndex APoly, PointIndex BPoly, GridPolygon[] Polygons, GridVector2 midpoint)

@@ -30,6 +30,7 @@ namespace MonogameTestbed
         BRANCHPORT,
         POLYWRAPPING,
         BRANCHASSIGNMENT,
+        DELAUNAY2D,
         DELAUNAY3D,
         BAJAJTEST
     };
@@ -64,12 +65,13 @@ namespace MonogameTestbed
         BranchPointTest branchTest = new BranchPointTest();
         PolywrappingTest polyWrapTest = new PolywrappingTest();
         BranchAssignmentTest brachAssignmentTest = new BranchAssignmentTest();
+        Delaunay2DTest delaunay2DTest = new Delaunay2DTest();
         Delaunay3DTest delaunay3DTest = new Delaunay3DTest();
         BajajAssignmentTest bajajTest = new BajajAssignmentTest();
 
         SortedDictionary<TestMode, IGraphicsTest> listTests = new SortedDictionary<TestMode, IGraphicsTest>();
 
-        TestMode Mode = TestMode.BAJAJTEST;
+        TestMode Mode = TestMode.DELAUNAY2D;
 
         public static uint NumCurveInterpolations = 10;
 
@@ -147,6 +149,7 @@ namespace MonogameTestbed
             listTests.Add(TestMode.BRANCHPORT, branchTest);
             listTests.Add(TestMode.POLYWRAPPING, polyWrapTest);
             listTests.Add(TestMode.BRANCHASSIGNMENT, brachAssignmentTest);
+            listTests.Add(TestMode.DELAUNAY2D, delaunay2DTest);
             listTests.Add(TestMode.DELAUNAY3D, delaunay3DTest);
             listTests.Add(TestMode.BAJAJTEST, bajajTest);
         }
@@ -216,6 +219,8 @@ namespace MonogameTestbed
                 this.Mode = TestMode.DELAUNAY3D;
             if (Keyboard.GetState().IsKeyDown(Keys.NumPad4))
                 this.Mode = TestMode.BAJAJTEST;
+            if (Keyboard.GetState().IsKeyDown(Keys.NumPad5))
+                this.Mode = TestMode.DELAUNAY2D;
 
             if (!listTests[Mode].Initialized)
             {

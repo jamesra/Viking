@@ -10,6 +10,15 @@ using Microsoft.Xna.Framework;
 
 namespace MonogameTestbed
 {
+    [Flags]
+    public enum IndexLabelType
+    {
+        NONE = 0x0,
+        MESH = 0x01, //The index of the vertex inside the mesh.
+        POSITION = 0x02, //The position of the vertex
+        POLYGON = 0x04, //The polygon indicies, with polygon index and vertex inside the polygon index
+    }
+
     class PolygonSetView
     {
         private PointSetView[] PolyPointsView = null;
@@ -20,6 +29,24 @@ namespace MonogameTestbed
 
         public Color[] PolyLineColors;
         public Color[] PolyVertexColors;
+
+        public IndexLabelType PointLabelType
+        {
+            get
+            {
+                IndexLabelType flags = IndexLabelType.NONE;
+                flags |= this.LabelPosition ? IndexLabelType.POSITION : IndexLabelType.NONE;
+                flags |= this.LabelIndex ? IndexLabelType.MESH : IndexLabelType.NONE;
+                flags |= this.LabelPolygonIndex ? IndexLabelType.POLYGON : IndexLabelType.NONE;
+                return flags; 
+            }
+            set
+            {
+                this.LabelIndex = (value & IndexLabelType.MESH) > 0;
+                this.LabelPolygonIndex = (value & IndexLabelType.POLYGON) > 0;
+                this.LabelPosition = (value & IndexLabelType.POSITION) > 0;
+            }
+        }
 
         public bool LabelIndex
         {
@@ -158,7 +185,7 @@ namespace MonogameTestbed
                 }
             }
 
-            if(this.LabelPolygonIndex && this.PolyIndexLabels != null)
+            if(((this.PointLabelType & (IndexLabelType.POLYGON)) > 0) && this.PolyIndexLabels != null)
             {
                 LabelView.Draw(window.spriteBatch, window.fontArial, scene, this.PolyIndexLabels);
             }

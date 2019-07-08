@@ -874,13 +874,13 @@ namespace Geometry
             return UniqueItems<GridLineSegment>(LineList);
         }
 
-        protected List<T> UniqueItems<T>(List<T> LineList)
+        protected List<U> UniqueItems<U>(List<U> LineList)
         {
             //Only return unique values
-            List<T> unique_list = new List<T>(LineList.Count);
+            List<U> unique_list = new List<U>(LineList.Count);
             LineList.Sort();
-            T lastItem = default(T);
-            foreach (T item in LineList)
+            U lastItem = default(U);
+            foreach (U item in LineList)
             {
                 if (item.Equals(lastItem))
                     continue;

@@ -10,9 +10,9 @@ using GraphLib;
 
 namespace MonogameTestbed
 {
-    internal class BorderEdge : GraphLib.Edge<GridVector2>
+    public class MedialAxisEdge : GraphLib.Edge<GridVector2>
     {
-        public BorderEdge(GridVector2 SourceNode, GridVector2 TargetNode) : base(SourceNode, TargetNode, false)
+        public MedialAxisEdge(GridVector2 SourceNode, GridVector2 TargetNode) : base(SourceNode, TargetNode, false)
         {
         }
 
@@ -25,14 +25,14 @@ namespace MonogameTestbed
         }
     }
 
-    internal class BorderVertex : GraphLib.Node<GridVector2, BorderEdge>
+    public class MedialAxisVertex : GraphLib.Node<GridVector2, MedialAxisEdge>
     {
         /// <summary>
         /// True if the vertex is inside a shape and cannot be part of the border
         /// </summary>
         public bool InsidePolygon;
 
-        public BorderVertex(GridVector2 k, bool inside) : base(k)
+        public MedialAxisVertex(GridVector2 k, bool inside) : base(k)
         {
             InsidePolygon = inside;
         }
@@ -43,16 +43,158 @@ namespace MonogameTestbed
         }
     }
 
-    internal class BorderGraph : GraphLib.Graph<GridVector2, BorderVertex, BorderEdge>
+    public class MedialAxisGraph : GraphLib.Graph<GridVector2, MedialAxisVertex, MedialAxisEdge>
     {
         public GridVector2 FindStartForBoundarySearch(GridPolygon[] shapes)
         {
             return Nodes.First(v => shapes.All(shape => !shape.Contains(v.Key))).Key;
         }
+
+        public GridLineSegment[] Segments
+        {
+            get
+            {
+                return this.Edges.Select(edge => edge.Value.Line).ToArray();
+            }
+        }
+
+        public GridVector2[] Points
+        {
+            get
+            {
+                return this.Nodes.Select(n=> n.Key).ToArray();
+            }
+        }
+
     }
 
-    class BoundaryFinder
+    public static class MedialAxisFinder
     {
+        /// <summary>
+        /// Approximate the boundary that is equidistant from all shapes
+        /// </summary>
+        /// <param name="shapes"></param>
+        /// <returns></returns>
+        static public MedialAxisGraph ApproximateMedialAxis(GridPolygon shape)
+        {
+            TriangleNet.Meshing.IMesh triangulationMesh = null;
+            try
+            {
+                triangulationMesh = shape.Triangulate();
+            }
+            catch (ArgumentException)
+            {
+                return new MedialAxisGraph();
+            }
+
+            //List<GridLineSegment> LinesBetweenShapes = SelectLinesBetweenShapes(triangulationMesh, shapes);
+
+            List<GridTriangle> triangles = triangulationMesh.ToTriangles();
+
+            MedialAxisGraph graph = BuildGraphFromTriangles(triangles.ToArray(), shape);
+            return graph;
+        }
+
+        private static MedialAxisGraph BuildGraphFromTriangles(GridTriangle[] triangles, GridPolygon boundary)
+        {
+            MedialAxisGraph graph = new MedialAxisGraph();
+
+            //Create an index map of points 
+            //Dictionary<GridVector2, SortedSet<int>> PointToTrianglesIndex = CreatePointToConnectedTrianglesIndexLookup(triangles);
+
+            DynamicRenderMesh mesh = triangles.ToDynamicRenderMesh();
+
+            foreach (var edge in mesh.Edges.Values)
+            {
+                //Create a vertex at the edge midpoint
+                GridLineSegment line = mesh.ToSegment(edge);
+
+                //If the line is between two different shapes we add a node to the graph
+                if (false == boundary.IsExteriorOrInteriorSegment(line))
+                {
+                    MedialAxisVertex node = GetOrAddLineBisectorVertex(graph, line);
+
+                    foreach (IFace AdjacentFace in edge.Faces)
+                    {
+                        MedialAxisVertex otherNode = null;
+
+                        var edgeCandidates = AdjacentFace.Edges.Where(e => e.Equals(edge) == false && boundary.IsExteriorOrInteriorSegment(mesh.ToSegment(e)) == false).ToList();
+                        if (edgeCandidates.Count == 1)
+                        {
+                            GridLineSegment ConnectedLine = mesh.ToSegment(edgeCandidates.First());
+                            GridLineSegment ProposedMedialLine = new GridLineSegment(node.Key, ConnectedLine.Bisect());
+                            if (boundary.Intersects(ProposedMedialLine) == false)
+                            {
+                                otherNode = GetOrAddLineBisectorVertex(graph, ConnectedLine);
+                            }
+                            else
+                            {
+                                GridVector2 face_centroid = mesh.GetCentroid(AdjacentFace);
+                                otherNode = GetOrAddVertex(graph, face_centroid);
+                            }
+                        }
+                        else if (edgeCandidates.Count == 2 || edgeCandidates.Count == 0) ////All edges of the face are part of the medial axis.  Add a vertex at the centroid and connect them all to the centroid
+                        {
+                            GridVector2 face_centroid = mesh.GetCentroid(AdjacentFace);
+                            otherNode = GetOrAddVertex(graph, face_centroid);
+                        }
+
+                        if (otherNode != null)
+                        {
+                            MedialAxisEdge e = new MedialAxisEdge(node.Key, otherNode.Key);
+                            if (!graph.Edges.ContainsKey(e))
+                                graph.AddEdge(e);
+                        }
+                    }
+
+                    /*
+                    //Check the faces of this edge for lines to connect to.
+                    foreach (var AdjacentEdge in edge.Faces.SelectMany(f => f.Edges.Where(e => e != edge && boundary.IsExteriorOrInteriorSegment(mesh.ToSegment(e)) == false)))
+                    {
+                        GridLineSegment ConnectedLine = mesh.ToSegment(AdjacentEdge);
+                        BorderVertex otherNode = GetOrAddLineBisectorVertex(graph, ConnectedLine);
+
+                        BorderEdge borderEdge = new BorderEdge(node.Key, otherNode.Key);
+                        if (!graph.Edges.ContainsKey(borderEdge))
+                            graph.AddEdge(borderEdge);
+                    }*/
+                }
+            }
+
+            return graph;
+        }
+
+        private static MedialAxisVertex GetOrAddVertex(MedialAxisGraph graph, GridVector2 p)
+        {
+            if (!graph.Nodes.ContainsKey(p))
+            {
+                MedialAxisVertex node = new MedialAxisVertex(p, false);
+                graph.AddNode(node);
+            }
+
+            return graph.Nodes[p];
+        }
+
+        private static MedialAxisVertex GetOrAddLineBisectorVertex(MedialAxisGraph graph, GridLineSegment line)
+        {
+            GridVector2 midpoint = line.Bisect();
+            if (!graph.Nodes.ContainsKey(midpoint))
+            {
+                MedialAxisVertex node = new MedialAxisVertex(midpoint, false);
+                graph.AddNode(node);
+            }
+
+            return graph.Nodes[midpoint];
+        }
+    }
+
+
+    public class BoundaryFinder
+    {
+        
+
+        
+
         /// <summary>
         /// Approximate the boundary that is equidistant from all shapes
         /// </summary>
@@ -70,7 +212,9 @@ namespace MonogameTestbed
                 return new List<GridLineSegment>();
             }
 
-            List<GridLineSegment> LinesBetweenShapes = SelectLinesBetweenShapes(triangulationMesh, shapes);
+            
+
+            //List<GridLineSegment> LinesBetweenShapes = SelectLinesBetweenShapes(triangulationMesh, shapes);
 
             List<GridTriangle> TrianglesBetweenShapes = SelectTrianglesBetweenShapes(triangulationMesh, shapes);
 
@@ -78,9 +222,9 @@ namespace MonogameTestbed
             if (voronoi == null)
                 return new List<GridLineSegment>(0);
 
-            List<GridLineSegment> listVoronoiBetweenShapes = StripNonBoundaryLines(voronoi, shapes);
+            //List<GridLineSegment> listVoronoiBetweenShapes = StripNonBoundaryLines(voronoi, shapes);
 
-            BorderGraph graph = BuildGraphFromTriangles(TrianglesBetweenShapes.ToArray(), shapes);
+            MedialAxisGraph graph = BuildGraphFromTriangles(TrianglesBetweenShapes.ToArray(), shapes);
             
             /*
             //Find all the intersections between the remaining Delaunay and Voronoi lines  
@@ -147,16 +291,6 @@ namespace MonogameTestbed
             return graph.Edges.Select(edge => edge.Value.Line).ToList();
         }
 
-        private static GridLineSegment LineForEdge(DynamicRenderMesh mesh, IEdgeKey edge)
-        {
-            return new GridLineSegment(mesh[edge.A].Position.XY(), mesh[edge.B].Position.XY());
-        }
-
-        private static GridLineSegment LineForEdge(DynamicRenderMesh mesh, IEdge edge)
-        {
-            return new GridLineSegment(mesh[edge.A].Position.XY(), mesh[edge.B].Position.XY());
-        } 
-
         private static bool LineConnectsShapes(GridLineSegment line, Dictionary<GridVector2, int> PointToShapeIndex)
         {
             return PointToShapeIndex[line.A] != PointToShapeIndex[line.B];
@@ -167,7 +301,7 @@ namespace MonogameTestbed
             List<IEdge> edges = new List<IEdge>(); 
             foreach(var edge in face.Edges)
             {
-                GridLineSegment line = LineForEdge(mesh, edge);
+                GridLineSegment line = mesh.ToSegment(edge);
                 if(LineConnectsShapes(line, PointToShapeIndex))
                 {
                     edges.Add(mesh.Edges[edge]);
@@ -177,21 +311,32 @@ namespace MonogameTestbed
             return edges;
         }
 
-        private static BorderVertex GetOrAddLineBisectorVertex(BorderGraph graph, GridLineSegment line)
+        private static MedialAxisVertex GetOrAddVertex(MedialAxisGraph graph, GridVector2 p)
+        {
+            if (!graph.Nodes.ContainsKey(p))
+            {
+                MedialAxisVertex node = new MedialAxisVertex(p, false);
+                graph.AddNode(node);
+            }
+
+            return graph.Nodes[p];
+        }
+
+        private static MedialAxisVertex GetOrAddLineBisectorVertex(MedialAxisGraph graph, GridLineSegment line)
         {
             GridVector2 midpoint = line.Bisect();
             if (!graph.Nodes.ContainsKey(midpoint))
             { 
-                BorderVertex node = new BorderVertex(midpoint, false);
+                MedialAxisVertex node = new MedialAxisVertex(midpoint, false);
                 graph.AddNode(node);
             }
 
             return graph.Nodes[midpoint];
         }
 
-        private static BorderGraph BuildGraphFromTriangles(GridTriangle[] triangles, GridPolygon[] shapes)
+        private static MedialAxisGraph BuildGraphFromTriangles(GridTriangle[] triangles, GridPolygon[] shapes)
         {
-            BorderGraph graph = new BorderGraph();
+            MedialAxisGraph graph = new MedialAxisGraph();
 
             //Create an index map of points 
             Dictionary<GridVector2, SortedSet<int>> PointToTrianglesIndex = CreatePointToConnectedTrianglesIndexLookup(triangles);
@@ -202,28 +347,27 @@ namespace MonogameTestbed
             foreach(var edge in mesh.Edges.Values)
             {
                 //Create a vertex at the edge midpoint
-                GridLineSegment line = LineForEdge(mesh, edge);
+                GridLineSegment line = mesh.ToSegment(edge);
 
                 //If the line is between two different shapes we add a node to the graph
                 if (LineConnectsShapes(line, PointToShapeIndex))
                 {
-                    BorderVertex node = GetOrAddLineBisectorVertex(graph, line);
+                    MedialAxisVertex node = GetOrAddLineBisectorVertex(graph, line);
 
                     //Check the faces of this edge for lines to connect to.
                     foreach (var AdjacentEdge in edge.Faces.SelectMany(f => LinesOfFaceBetweenShapes(mesh, f, PointToShapeIndex)).Where(foundEdge => foundEdge != edge))
                     {
-                        GridLineSegment ConnectedLine = LineForEdge(mesh, AdjacentEdge);
-                        BorderVertex otherNode = GetOrAddLineBisectorVertex(graph, ConnectedLine);
+                        GridLineSegment ConnectedLine = mesh.ToSegment(AdjacentEdge);
+                        MedialAxisVertex otherNode = GetOrAddLineBisectorVertex(graph, ConnectedLine);
 
-                        BorderEdge borderEdge = new BorderEdge(node.Key, otherNode.Key);
+                        MedialAxisEdge borderEdge = new MedialAxisEdge(node.Key, otherNode.Key);
                         if(!graph.Edges.ContainsKey(borderEdge))
-                            graph.AddEdge(borderEdge); 
+                            graph.AddEdge(borderEdge);
                     }
                 }
             }
 
-            return graph;
-            
+            return graph; 
         } 
 
         private static bool IsValidBorderLine(GridLineSegment line, GridPolygon[] shapes)
@@ -410,12 +554,12 @@ namespace MonogameTestbed
             return PointToShapeIndex;
         }
 
-        private static void MoveBorder(BorderGraph graph, BorderEdge edge, BorderVertex StartingVertex, BorderVertex InvalidVertex, GridPolygon[] shapes)
+        private static void MoveBorder(MedialAxisGraph graph, MedialAxisEdge edge, MedialAxisVertex StartingVertex, MedialAxisVertex InvalidVertex, GridPolygon[] shapes)
         {
             //Remove the edge that we know is invalid
 
             //Find all verticies the invalid node can reach that are valid
-            SortedSet<GridVector2> validDestinations = BorderGraph.FindReachableMatches(graph, StartingVertex.Key,
+            SortedSet<GridVector2> validDestinations = MedialAxisGraph.FindReachableMatches(graph, StartingVertex.Key,
                  v => {
                      if (v == StartingVertex || v == InvalidVertex || v.InsidePolygon)
                          return false;
@@ -432,7 +576,7 @@ namespace MonogameTestbed
             foreach(GridVector2 validTarget in validDestinations)
             {
                 GridLineSegment newLine = new GridLineSegment(StartingVertex.Key, validTarget);
-                IList<GridVector2> path = BorderGraph.ShortestPath(graph, StartingVertex.Key, validTarget);
+                IList<GridVector2> path = MedialAxisGraph.ShortestPath(graph, StartingVertex.Key, validTarget);
 
                 //Make sure there is not a valid node further down the path.  This would create a duplicate or an extra branch in the border
                 if (IsValidBorderLine(new GridLineSegment(StartingVertex.Key, path[1]), shapes))
@@ -440,7 +584,7 @@ namespace MonogameTestbed
 
                 if(!shapes.Any(shape => shape.Intersects(newLine)))
                 {
-                    BorderEdge newEdge = new BorderEdge(StartingVertex.Key, validTarget);
+                    MedialAxisEdge newEdge = new MedialAxisEdge(StartingVertex.Key, validTarget);
                     if (!graph.Edges.ContainsKey(newEdge))
                     {
                         graph.AddEdge(newEdge);
@@ -463,7 +607,7 @@ namespace MonogameTestbed
         /// <param name="edgeToTest"></param>
         /// <param name="linesBetweenShapes"></param>
         /// <param name="LineOrigin"></param>
-        private static void AddVertexAtDelaunayIntercepts(BorderGraph graph, BorderEdge edgeToTest, List<GridLineSegment> linesBetweenShapes, GridPolygon[] shapes)
+        private static void AddVertexAtDelaunayIntercepts(MedialAxisGraph graph, MedialAxisEdge edgeToTest, List<GridLineSegment> linesBetweenShapes, GridPolygon[] shapes)
         {
             GridLineSegment boundaryLine = edgeToTest.Line;
 
@@ -486,12 +630,12 @@ namespace MonogameTestbed
 
                 graph.RemoveEdge(edgeToTest);
                 
-                graph.AddNode(new BorderVertex(IntersectionPoint, false)); //No need to check if the point is inside a shape because by definition a line between shapes is outside the shapes
+                graph.AddNode(new MedialAxisVertex(IntersectionPoint, false)); //No need to check if the point is inside a shape because by definition a line between shapes is outside the shapes
 
                 //Create a new vertex
-                BorderEdge sourceToDelaunay = new BorderEdge(boundaryLine.A, IntersectionPoint);
+                MedialAxisEdge sourceToDelaunay = new MedialAxisEdge(boundaryLine.A, IntersectionPoint);
                 graph.AddEdge(sourceToDelaunay);
-                BorderEdge DelaunayToTarget = new BorderEdge(IntersectionPoint, boundaryLine.B);
+                MedialAxisEdge DelaunayToTarget = new MedialAxisEdge(IntersectionPoint, boundaryLine.B);
                 graph.AddEdge(DelaunayToTarget);
 
                 //Continue searching down the line for more intercepts
@@ -591,23 +735,23 @@ namespace MonogameTestbed
             return PointToShapeIndex;
         }
         
-        private static BorderGraph CreateGraph(List<GridLineSegment> KnownGoodLines, GridPolygon[] shapes)
+        private static MedialAxisGraph CreateGraph(List<GridLineSegment> KnownGoodLines, GridPolygon[] shapes)
         {
-            BorderGraph graph = new MonogameTestbed.BorderGraph();
+            MedialAxisGraph graph = new MonogameTestbed.MedialAxisGraph();
 
             foreach (var line in KnownGoodLines)
             {
                 if(!graph.Nodes.ContainsKey(line.A))
                 {
-                    graph.AddNode(new BorderVertex(line.A, shapes.Any(shape => shape.Contains(line.A))));
+                    graph.AddNode(new MedialAxisVertex(line.A, shapes.Any(shape => shape.Contains(line.A))));
                 }
 
                 if(!graph.Nodes.ContainsKey(line.B))
                 {
-                    graph.AddNode(new BorderVertex(line.B, shapes.Any(shape => shape.Contains(line.B))));
+                    graph.AddNode(new MedialAxisVertex(line.B, shapes.Any(shape => shape.Contains(line.B))));
                 }
 
-                graph.AddEdge(new BorderEdge(line.A, line.B));
+                graph.AddEdge(new MedialAxisEdge(line.A, line.B));
             }
 
             return graph;

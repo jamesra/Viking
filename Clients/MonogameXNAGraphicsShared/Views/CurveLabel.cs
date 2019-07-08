@@ -142,6 +142,22 @@ namespace VikingXNAGraphics
             return _LabelTexture;
         }
 
+        /// <summary>
+        /// Helper function to create a label for single line
+        /// </summary>
+        /// <param name="label"></param>
+        /// <param name="line"></param>
+        /// <param name="color"></param>
+        /// <param name="texture"></param>
+        /// <param name="lineWidth"></param>
+        /// <returns></returns>
+        public static CurveLabel CreateLineLabel(string label, GridLineSegment line, Microsoft.Xna.Framework.Color color,
+                            Texture2D texture = null, double lineWidth = 16.0)
+        {
+            CurveLabel labelView = new CurveLabel(label, new GridVector2[] { line.A, line.B }, color, false, texture: texture, lineWidth: lineWidth, numInterpolations: 0);
+            return labelView;
+        }
+
 
         public CurveLabel(string label, ICollection<GridVector2> controlPoints, Microsoft.Xna.Framework.Color color,
                             bool TryToClose, Texture2D texture = null, double lineWidth = 16.0, uint numInterpolations = 5)

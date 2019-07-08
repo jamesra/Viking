@@ -117,6 +117,34 @@ namespace ConnectomeDataModel
             return param;
         }
 
+        /// <summary>
+        /// Return parents of all structures which have a link.  Used to identify every node required to construct the complete connectivity network
+        /// </summary>
+        /// <param name="proxy"></param>
+        /// <returns></returns>
+        public IQueryable<long> GetLinkedStructureParentIDs()
+        {
+            IQueryable<long> LinkedStructureIDs = this.StructureLinks.Select(L => L.SourceID).
+                                                    Union(this.StructureLinks.Select(L => L.TargetID)).Distinct();
+
+            IQueryable<long> LinkedStructureParentIDs = this.Structures.Join<Structure, StructureLink, long, long?>(this.StructureLinks,
+                                                                             s => s.ID,
+                                                                             sls => sls.SourceID,
+                                                                             (s, sls) => s.ParentID)
+                                                                             .Distinct()
+                                                        .Union(
+                                                            this.Structures.Join<Structure, StructureLink, long, long?>(this.StructureLinks,
+                                                                             s => s.ID,
+                                                                             sls => sls.TargetID,
+                                                                             (s, sls) => s.ParentID)
+                                                        //.Distinct()
+                                                        ).Distinct()
+                                                        .Where(ParentID => ParentID.HasValue)
+                                                        .Select(ParentID => ParentID.Value);
+
+            return LinkedStructureParentIDs;
+        }
+
 
         public IQueryable<Location> ReadSectionLocations(long section, DateTime? LastModified)
         {
