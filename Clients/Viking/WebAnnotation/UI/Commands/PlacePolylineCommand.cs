@@ -95,6 +95,14 @@ namespace WebAnnotation.UI.Commands
             base.Execute();
         }
 
+        protected virtual void Execute(GridVector2[] updated_verticies)
+        {
+            if (this.success_callback != null)
+                this.success_callback(this, updated_verticies);
+
+            base.Execute();
+        }
+
         protected bool OverlapsFirstVertex(GridVector2 position)
         {
             return GridVector2.Distance(Verticies.First(), position) <= ControlPointRadius;

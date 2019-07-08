@@ -411,23 +411,48 @@ namespace WebAnnotation.View
                                                           }
                                                       });
                 case LocationAction.CUTHOLE:
-                    return new PlaceClosedCurveCommand(Parent, Microsoft.Xna.Framework.Color.White, volumePosition, Global.DefaultClosedLineWidth, (sender, volume_points) =>
+                    {
+                        if (Global.PenMode)
                         {
-                            GridVector2[] mosaic_points = Parent.Section.ActiveSectionToVolumeTransform.VolumeToSection(volume_points);
-                            SqlGeometry updatedMosaicShape = loc.MosaicShape.AddInteriorPolygon(mosaic_points);
+                            return new PlaceClosedCurveWithPenCommand(Parent, Microsoft.Xna.Framework.Color.White, volumePosition, Global.DefaultClosedLineWidth, (sender, volume_points) =>
+                            {
+                                GridVector2[] mosaic_points = Parent.Section.ActiveSectionToVolumeTransform.VolumeToSection(volume_points);
+                                SqlGeometry updatedMosaicShape = loc.MosaicShape.AddInteriorPolygon(mosaic_points);
 
-                            try
-                            {
-                                loc.SetShapeFromGeometryInSection(Parent.Section.ActiveSectionToVolumeTransform, updatedMosaicShape);
-                            } 
-                            catch (ArgumentException e)
-                            {
-                                MessageBox.Show(Parent, e.Message, "Could not save Polygon", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                try
+                                {
+                                    loc.SetShapeFromGeometryInSection(Parent.Section.ActiveSectionToVolumeTransform, updatedMosaicShape);
+                                }
+                                catch (ArgumentException e)
+                                {
+                                    MessageBox.Show(Parent, e.Message, "Could not save Polygon", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                }
+
+                                Store.Locations.Save();
                             }
-
-                    Store.Locations.Save();
+                           );
                         }
-                        );
+                        else
+                        {
+                            return new PlaceClosedCurveCommand(Parent, Microsoft.Xna.Framework.Color.White, volumePosition, Global.DefaultClosedLineWidth, (sender, volume_points) =>
+                            {
+                                GridVector2[] mosaic_points = Parent.Section.ActiveSectionToVolumeTransform.VolumeToSection(volume_points);
+                                SqlGeometry updatedMosaicShape = loc.MosaicShape.AddInteriorPolygon(mosaic_points);
+
+                                try
+                                {
+                                    loc.SetShapeFromGeometryInSection(Parent.Section.ActiveSectionToVolumeTransform, updatedMosaicShape);
+                                }
+                                catch (ArgumentException e)
+                                {
+                                    MessageBox.Show(Parent, e.Message, "Could not save Polygon", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                }
+
+                                Store.Locations.Save();
+                            }
+                            );
+                        }
+                    }
                 case LocationAction.REMOVEHOLE:
                     return new RemovePolygonHoleCommand(Parent,
                                                         loc.MosaicShape.ToPolygon(),
@@ -485,16 +510,16 @@ namespace WebAnnotation.View
                                                                  loc.Parent.Type.Color.ToXNAColor(0.5f),
                                                                  volumePosition, 
                                                                  loc.Width.HasValue ? loc.Width.Value : Global.DefaultClosedLineWidth,
-                                                                 (sender, mosaic_verticies) =>
+                                                                 (sender, mosaic_points) =>
                                                                  {
                                                                      var cmd = (RetraceAndReplacePathCommand)sender;
-                                                                                                                                          
-                                                                  /*   GridVector2[] mosaic_points = Parent.Section.ActiveSectionToVolumeTransform.VolumeToSection(volume_points);
-                                                                     SqlGeometry updatedMosaicShape = loc.MosaicShape.AddInteriorPolygon(mosaic_points);
+
+                                                                     //GridVector2[] mosaic_points = Parent.Section.ActiveSectionToVolumeTransform.VolumeToSection(volume_points);
+                                                                     //SqlGeometry updatedMosaicShape = loc.MosaicShape.AddInteriorPolygon(mosaic_points);
 
                                                                      try
                                                                      {
-                                                                         loc.SetShapeFromGeometryInSection(Parent.Section.ActiveSectionToVolumeTransform, updatedMosaicShape);
+                                                                         loc.SetShapeFromGeometryInSection(Parent.Section.ActiveSectionToVolumeTransform, cmd.OutputMosaicPolygon.ToSqlGeometry());
                                                                      }
                                                                      catch (ArgumentException e)
                                                                      {
@@ -502,7 +527,6 @@ namespace WebAnnotation.View
                                                                      }
 
                                                                      Store.Locations.Save();
-                                                                   */
                                                                  }
                                                                  );
                     }

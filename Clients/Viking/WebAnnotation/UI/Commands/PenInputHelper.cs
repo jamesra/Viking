@@ -83,13 +83,19 @@ namespace WebAnnotation.UI.Commands
         {
             lastAngle = 0;
             PenIsComplete = false;
-            PointIntervalOnDrag = Parent.Downsample * 16;
+            PointIntervalOnDrag = 6; //Parent.Downsample * 16;
             PenAngleThreshold = Math.PI / 36;//.36f;
             this.Parent = Parent;
             NumCurveInterpolations = Global.NumCurveInterpolationPoints(false);
 
             Parent.MouseMove += this.OnMouseMove;
             Parent.MouseUp += this.OnMouseUp;
+        }
+
+        public void UnsubscribeEvents()
+        {
+            Parent.MouseMove -= this.OnMouseMove;
+            Parent.MouseUp -= this.OnMouseUp;
         }
 
         private bool CanControlPointBePlaced(GridVector2 position)
@@ -132,7 +138,16 @@ namespace WebAnnotation.UI.Commands
 
         public void OnMouseMove(object sender, MouseEventArgs e)
         {
-            if (e.Button.LeftOnly())
+            if(e.Button.Middle())
+            {
+                GridVector2 cursor_position = Parent.ScreenToWorld(e.X, e.Y);
+                LastPenPosition = cursor_position;
+                if(GridVector2.Distance(Path[0], cursor_position) < 20)
+                {
+                    Pop();
+                }
+            }
+            else if (e.Button.LeftOnly())
             {
                 GridVector2 cursor_position = Parent.ScreenToWorld(e.X, e.Y);
                 LastPenPosition = cursor_position;
@@ -167,11 +182,7 @@ namespace WebAnnotation.UI.Commands
         {
             if(e.Button.LeftOnly())
             {
-                GridVector2 oldValue = this.Pop();
-                GridVector2 cursor_position = Parent.ScreenToWorld(e.X, e.Y);
-                this.Push(cursor_position);
-                PenIsComplete = true;
-                if (OnPathCompleted != null)
+                if(Path[0] == Path[Path.Count - 1] && OnPathCompleted != null)
                 {
                     OnPathCompleted(this, this.Path.ToArray());
                 }
@@ -232,33 +243,33 @@ namespace WebAnnotation.UI.Commands
             double distanceToLast = GridVector2.Distance(cursor_position, Path[0]);
 
             //Creates a new verticie when the mouse moves set distance away
-            //if (distanceToLast > this.PointIntervalOnDrag)
+            if (distanceToLast > this.PointIntervalOnDrag)
             {
-                double angle;
+                //double angle;
 
                 //Measure the slope between the two most recent vertices
-                if (Path.Count >= 3)
+                //if (Path.Count >= 3)
                 {
-                    angle = GridVector2.ArcAngle(Path[0], cursor_position, Path[1]);
+                    //angle = GridVector2.ArcAngle(Path[0], cursor_position, Path[1]);
 
-                    if (Math.Abs(angle) >= PenAngleThreshold)
+                    //if (Math.Abs(angle) >= PenAngleThreshold)
                     {
                         //Remove the last vertex
                         //return VERTEXACTION.REPLACE;
-                        HasPenTravelledAwayFromLastControlPoint = false;
-                        return VERTEXACTION.ADD;
+                        //HasPenTravelledAwayFromLastControlPoint = false;
+                       // return VERTEXACTION.ADD;
 
                     }
 
                     //Set new slope to be between this point and the NEW last vertice (should be the one that came before the one we just removed)
                     //lastAngle = GridVector2.ArcAngle(Path[0], cursor_position, Path[1]);
                 }
-                else if(distanceToLast > this.PointIntervalOnDrag)
+                //else if(distanceToLast > this.PointIntervalOnDrag)
                 {
-                    return VERTEXACTION.ADD;
+                   // return VERTEXACTION.ADD;
                 }
 
-                //return VERTEXACTION.ADD;
+                return VERTEXACTION.ADD;
                 //this.PushVertex(cursor_position);
             }
 
@@ -314,7 +325,6 @@ namespace WebAnnotation.UI.Commands
 
             return retval;
         }
-
 
     }
 

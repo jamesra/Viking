@@ -22,6 +22,7 @@ namespace WebAnnotation.UI.Commands
         public GridPolygon OutputMosaicPolygon;
         public GridPolygon OutputVolumePolygon;
 
+
         public override  uint NumCurveInterpolations
         {
             get
@@ -54,7 +55,10 @@ namespace WebAnnotation.UI.Commands
             mapping = parent.Section.ActiveSectionToVolumeTransform;
             this.OriginalMosaicPolygon = mosaic_polygon;
             this.OriginalVolumePolygon = mapping.TryMapShapeSectionToVolume(mosaic_polygon);
-         
+            PenInput.OnPathChanged += OnPenPathChanged;
+            PenInput.OnPathCompleted += OnPenPathComplete;
+            PenInput.OnProposedNextSegmentChanged += OnPenProposedNextSegmentChanged;
+
         }
 
         public RetraceAndReplacePathCommand(Viking.UI.Controls.SectionViewerControl parent,
@@ -73,24 +77,51 @@ namespace WebAnnotation.UI.Commands
 
         protected override void OnPenPathChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
         {
-            this.Parent.Invalidate();
-
-            //TODO: Check if the pen intersects with another edge of the polygon
-            bool CarveComplete = false;
-
+            //Update the curve
             this.curve_verticies = new CurveViewControlPoints(Verticies, NumInterpolations: 0, TryToClose: false);
 
-            GridLineSegment mostRecentSegment = new GridLineSegment(PenInput.Path.Last(), PenInput.Path[PenInput.Path.Count - 2]);
-            
-            // if CarveComplete
-            //    newPolyVerts = Replace(...)
-            //    Execute
-            //
-            //
-            //\
-            
-            
-            
+            //Find a possible intersection point
+            GridVector2? IntersectionPoint = PenInput.Segments.IntersectionPoint(PenInput.LastSegment, true, out GridLineSegment? IntersectedSegment);
+            OriginalMosaicPolygon.AddVertex(IntersectionPoint.Value);
+            //If the intersection exists
+            if (IntersectionPoint.HasValue)
+            {
+                GridVector2 IntersectedSegmentEndpoint = IntersectedSegment.Value.A;
+                int intersection_index = PenInput.Path.FindIndex(val => val == IntersectedSegmentEndpoint);
+
+                List<GridVector2> cropped_path = new List<GridVector2>(PenInput.Path);
+
+                cropped_path.RemoveRange(intersection_index, PenInput.Path.Count - intersection_index);
+
+                cropped_path.Add(IntersectionPoint.Value);
+                cropped_path.RemoveAt(0); 
+                //Remove the endpoint that was just added which intersected our path and replace it with the intersection point
+                cropped_path[0] = IntersectionPoint.Value;
+
+                //PenInput.Pop();
+                //PenInput.Push(IntersectionPoint.Value);
+
+                PenInput.SimplifiedPath = cropped_path.DouglasPeuckerReduction(15);
+                //PenInput.Push(IntersectionPoint.Value);3
+
+                this.Execute(PenInput.SimplifiedPath.ToArray());
+            }
+
+
+            this.Parent.Invalidate();
+
+
+
+        }
+
+        protected override void OnPenPathComplete(object sender, GridVector2[] Path)
+        {
+
+        }
+
+        protected override void OnPenProposedNextSegmentChanged(object sender, GridLineSegment? segment)
+        {
+
         }
 
 

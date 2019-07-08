@@ -843,6 +843,7 @@ namespace WebAnnotation
             {
                 Parent.CommandQueue.EnqueueCommand(typeof(PlaceClosedCurveWithPenCommand), new object[] { Parent, typecolor, origin, LineWidth,
                                                             new ControlPointCommandBase.OnCommandSuccess((ControlPointCommandBase sender, GridVector2[] points) => {
+                                                                    PlaceClosedCurveWithPenCommand cmd = sender as PlaceClosedCurveWithPenCommand;
                                                                     newLocation.TypeCode = typecode;
                                                                     newLocation.SetShapeFromPointsInVolume(Parent.Section.ActiveSectionToVolumeTransform, points, null);
                                                                     if(SaveToStore)

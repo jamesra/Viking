@@ -87,28 +87,49 @@ namespace WebAnnotation.UI.Commands
 
         protected override void OnPenPathChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
         {
-            //If current pen is not touching pad
+            //No Intersections are possible
             if (PenInput.Path.Count <= 2)
                 return;
 
+            //Update the curve
             this.curve_verticies = new CurveViewControlPoints(Verticies, NumInterpolations: 0, TryToClose: false);
+
+            //Find a possible intersection point
+            GridVector2? IntersectionPoint = PenInput.Segments.IntersectionPoint(PenInput.LastSegment, true, out GridLineSegment? IntersectedSegment);
+
+            //If the intersection exists
+            if (IntersectionPoint.HasValue)
+            {
+                GridVector2 IntersectedSegmentEndpoint = IntersectedSegment.Value.A;
+                int intersection_index = PenInput.Path.FindIndex(val => val == IntersectedSegmentEndpoint);
+
+                List<GridVector2> cropped_path = new List<GridVector2>(PenInput.Path);
+
+                cropped_path.RemoveRange(intersection_index, PenInput.Path.Count - intersection_index);
+
+                cropped_path.Add(IntersectionPoint.Value);
+                cropped_path.RemoveAt(0);
+                //Remove the endpoint that was just added which intersected our path and replace it with the intersection point
+                cropped_path[0] = IntersectionPoint.Value;
+
+                //PenInput.Pop();
+                //PenInput.Push(IntersectionPoint.Value);
+
+                PenInput.SimplifiedPath = cropped_path.DouglasPeuckerReduction(15);
+                //PenInput.Push(IntersectionPoint.Value);3
+                  
+                this.Execute(PenInput.SimplifiedPath.ToArray());
+
+            }
+
 
             this.Parent.Invalidate();
         }
 
+
         protected override void OnPenProposedNextSegmentChanged(object sender, GridLineSegment? segment)
         {
-            if (segment.HasValue == false)
-                return;
-
-            GridLineSegment? intersectedSegment;
-            GridVector2? intersection = PenInput.Segments.IntersectionPoint(segment.Value, true, out intersectedSegment);
-
-            if (intersection.HasValue == false)
-                return;
-
-            //List<GridLineSegment> segments = PenInput.Segments;
-            //for (int i = 0; i < segments.0; )
+            
         }
 
 
@@ -116,9 +137,8 @@ namespace WebAnnotation.UI.Commands
         { 
             if (Verticies.Length >= 3)
             {
-                this.Execute();
+                //this.Execute();
             }
-            //PenInputHelper.Clear();
             return;
             
             /*
@@ -228,13 +248,13 @@ namespace WebAnnotation.UI.Commands
         {
             this.curve_verticies = new CurveViewControlPoints(Verticies, NumInterpolations: 0, TryToClose: false);
 
-            GridVector2? IntersectPoint = this.PenInput.Segments.IntersectionPoint(this.PenInput.LastSegment);
-            if(IntersectPoint.HasValue)
-            {
-
-            }
-            this.PenInput.LastSegment
+            
             this.Parent.Invalidate();
+        }
+
+        protected override void OnPenProposedNextSegmentChanged(object sender, GridLineSegment? segment)
+        {
+            
         }
 
         protected override void OnPenPathComplete(object sender, GridVector2[] Path)
@@ -457,12 +477,20 @@ namespace WebAnnotation.UI.Commands
                     IsOpen,
                     success_callback)
         {
-            PenInput = new PenInputHelper(parent);
-            PenInput.Push(origin);
-            PenInput.OnPathChanged += this.OnPenPathChanged;
-            PenInput.OnPathCompleted += this.OnPenPathComplete;
-    }
-        
+        }
+
+        protected override void Execute()
+        {
+            this.PenInput.UnsubscribeEvents();
+            base.Execute();
+        }
+
+        protected override void Execute(GridVector2[] output)
+        {
+            this.PenInput.UnsubscribeEvents();
+            base.Execute(output);
+        }
+
         /*
         public void Push(GridVector2 p)
         {
