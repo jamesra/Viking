@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Geometry.Meshing;
 using Geometry;
+using SliceChordRTree = RTree.RTree<MorphologyMesh.SliceChord>;
 
 namespace MorphologyMesh
 {
@@ -28,6 +29,23 @@ namespace MorphologyMesh
         /// Set to true if this vertex has a continuous wall of faces to the adjacent verticies in the shape
         /// </summary>
         public bool FacesAreComplete = false;
+
+        public VertexOrigin Type
+        {
+            get{
+                if (PolyIndex.HasValue)
+                {
+                    if (PolyIndex.Value.IsInner)
+                        return VertexOrigin.INTERIOR;
+
+                    return VertexOrigin.EXTERIOR;
+                }
+                else
+                {
+                    return VertexOrigin.MEDIALAXIS;
+                }
+            }
+        }
 
         public MorphMeshVertex(PointIndex? polyIndex, GridVector3 p) : base(p)
         {
@@ -895,9 +913,10 @@ namespace MorphologyMesh
                     FacesAssignedToRegions.UnionWith(region.Faces);
                     continue;
                 }
+                
                 if (!face.AllVertsAtSameZ(mesh, out FaceZ))
                 {
-                    FacesAssignedToRegions.Add(face);
+                    //FacesAssignedToRegions.Add(face);
                     continue;
                 }
 
@@ -947,16 +966,17 @@ namespace MorphologyMesh
         /// </summary>
         /// <param name="mesh"></param>
         /// <returns></returns>
-        public RTree.RTree<SliceChord> CreateChordTree()
+        public SliceChordRTree CreateChordTree()
         {
-            RTree.RTree<SliceChord> rTree = new RTree.RTree<SliceChord>();
+            SliceChordRTree rTree = new SliceChordRTree();
             ///Create a list of all slice chords.  Contours are valid but are not slice chords since they don't cross sections
             foreach (MorphMeshEdge e in this.Edges.Values.Where(e => (((MorphMeshEdge)e).Type != EdgeType.CONTOUR) &&
                                                                      (((MorphMeshEdge)e).Type != EdgeType.ARTIFICIAL) &&
                                                                      (((MorphMeshEdge)e).Type != EdgeType.CORRESPONDING)))
             {
+                
                 SliceChord chord = new SliceChord(this[e.A].PolyIndex.Value, this[e.B].PolyIndex.Value, this.Polygons);
-                rTree.Add(chord.Line.BoundingBox.ToRTreeRect(0), chord);
+                rTree.Add(this.ToSegment(e).BoundingBox.ToRTreeRect(0), e);
             }
 
             return rTree;
