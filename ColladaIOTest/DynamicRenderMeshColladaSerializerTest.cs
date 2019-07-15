@@ -13,6 +13,7 @@ namespace ColladaIOTest
         TEST,
         RC1,
         RC2,
+        RPC1,
         TEMPORALMONKEY,
         INFERIORMONKEY
     }
@@ -23,9 +24,23 @@ namespace ColladaIOTest
         private static Dictionary<ENDPOINT, Uri> EndpointMap = new Dictionary<ENDPOINT, Uri> { { ENDPOINT.TEST, new Uri("http://webdev.connectomes.utah.edu/RC1Test/OData") },
                                                                                                { ENDPOINT.RC1, new Uri("http://websvc1.connectomes.utah.edu/RC1/OData") },
                                                                                                { ENDPOINT.RC2, new Uri("http://websvc1.connectomes.utah.edu/RC2/OData") },
+                                                                                               { ENDPOINT.RPC1, new Uri("http://websvc1.connectomes.utah.edu/RPC1/OData") },
                                                                                                { ENDPOINT.TEMPORALMONKEY, new Uri("http://websvc1.connectomes.utah.edu/NeitzTemporalMonkey/OData") },
                                                                                                { ENDPOINT.INFERIORMONKEY, new Uri("http://websvc1.connectomes.utah.edu/NeitzInferiorMonkey/OData") }};
 
+        /// <summary>
+        /// This test is a workaround to generate meshes for specific cells on request from the lab
+        /// </summary>
+        [TestMethod]
+        public void TestDAESerializationForSpecificCell()
+        {
+            MorphologyMesh.MorphologyColladaView view = CreateView(new long[] { 2713 }, ENDPOINT.RPC1);
+            //MorphologyMesh.MorphologyColladaView view = CreateView(new long[] { 142, 180}, ENDPOINT.INFERIORMONKEY);
+
+            ColladaIO.DynamicRenderMeshColladaSerializer.SerializeToFile(view, "TestDAESerialization.dae");
+
+            ColladaIO.DynamicRenderMeshColladaSerializer.SerializeToFolder(view, "Output");
+        }
 
         [TestMethod]
         public void TestDAESerialization()
