@@ -1168,7 +1168,7 @@ namespace TriangleNet.Meshing
                 // Search for the segment's second endpoint by point location.
                 if (locator.Locate(endpoint2, ref searchtri2) != LocateResult.OnVertex)
                 {
-                    logger.Error("Unable to locate PSLG vertex in triangulation.", "Mesh.InsertSegment().2");
+                    logger.Error("Unable to locate PSLG vertex in triangulation. " + endpoint2.ToString(), "Mesh.InsertSegment().2");
                     throw new Exception("Unable to locate PSLG vertex in triangulation.");
                 }
             }

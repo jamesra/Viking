@@ -26,14 +26,8 @@ namespace MorphologyMesh
 
     public class MedialAxisVertex : GraphLib.Node<GridVector2, MedialAxisEdge>
     {
-        /// <summary>
-        /// True if the vertex is inside a shape and cannot be part of the border
-        /// </summary>
-        public bool InsidePolygon;
-
-        public MedialAxisVertex(GridVector2 k, bool inside) : base(k)
+        public MedialAxisVertex(GridVector2 k) : base(k)
         {
-            InsidePolygon = inside;
         }
 
         public override string ToString()
@@ -167,7 +161,7 @@ namespace MorphologyMesh
         {
             if (!graph.Nodes.ContainsKey(p))
             {
-                MedialAxisVertex node = new MedialAxisVertex(p, false);
+                MedialAxisVertex node = new MedialAxisVertex(p);
                 graph.AddNode(node);
             }
 
@@ -179,7 +173,7 @@ namespace MorphologyMesh
             GridVector2 midpoint = line.Bisect();
             if (!graph.Nodes.ContainsKey(midpoint))
             {
-                MedialAxisVertex node = new MedialAxisVertex(midpoint, false);
+                MedialAxisVertex node = new MedialAxisVertex(midpoint);
                 graph.AddNode(node);
             }
 

@@ -134,7 +134,7 @@ namespace MonogameTestbed
         {
             if (!graph.Nodes.ContainsKey(p))
             {
-                MedialAxisVertex node = new MedialAxisVertex(p, false);
+                MedialAxisVertex node = new MedialAxisVertex(p);
                 graph.AddNode(node);
             }
 
@@ -146,7 +146,7 @@ namespace MonogameTestbed
             GridVector2 midpoint = line.Bisect();
             if (!graph.Nodes.ContainsKey(midpoint))
             { 
-                MedialAxisVertex node = new MedialAxisVertex(midpoint, false);
+                MedialAxisVertex node = new MedialAxisVertex(midpoint);
                 graph.AddNode(node);
             }
 
@@ -372,7 +372,8 @@ namespace MonogameTestbed
 
             return PointToShapeIndex;
         }
-
+        
+        /*
         private static void MoveBorder(MedialAxisGraph graph, MedialAxisEdge edge, MedialAxisVertex StartingVertex, MedialAxisVertex InvalidVertex, GridPolygon[] shapes)
         {
             //Remove the edge that we know is invalid
@@ -416,7 +417,8 @@ namespace MonogameTestbed
                 graph.RemoveEdge(edge);
 
         }
-        
+        */
+
         /// <summary>
         /// We are checking the edge in the mesh to determine if it crosses a Delaunay lines.
         /// Wherever it crosses a line we add a vertex and create two new edges.
@@ -449,7 +451,7 @@ namespace MonogameTestbed
 
                 graph.RemoveEdge(edgeToTest);
                 
-                graph.AddNode(new MedialAxisVertex(IntersectionPoint, false)); //No need to check if the point is inside a shape because by definition a line between shapes is outside the shapes
+                graph.AddNode(new MedialAxisVertex(IntersectionPoint)); //No need to check if the point is inside a shape because by definition a line between shapes is outside the shapes
 
                 //Create a new vertex
                 MedialAxisEdge sourceToDelaunay = new MedialAxisEdge(boundaryLine.A, IntersectionPoint);
@@ -554,6 +556,7 @@ namespace MonogameTestbed
             return PointToShapeIndex;
         }
         
+        /*
         private static MedialAxisGraph CreateGraph(List<GridLineSegment> KnownGoodLines, GridPolygon[] shapes)
         {
             MedialAxisGraph graph = new MorphologyMesh.MedialAxisGraph();
@@ -574,6 +577,6 @@ namespace MonogameTestbed
             }
 
             return graph;
-        }
+        }*/
     }
 }

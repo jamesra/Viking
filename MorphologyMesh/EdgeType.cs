@@ -59,6 +59,7 @@ namespace MorphologyMesh
         ARTIFICIAL = 1 << 4, //An edge that is connected to a non-polygon vertex that we added to the mesh
         CORRESPONDING = 1 << 5,  //An edge that shares XY coordinates with a vertex on a shape on an adjacent section
         MEDIALAXIS = 1 << 6, //An edge that was added as part of an untiled regions medial axis and is known to be part of the final mesh
+        CONTOUR_TO_MEDIALAXIS = 1 << 7, //An edge that was added as part of an untiled region that runs from a contour boundary to the medial axis and is known to be part of the final mesh
     }
 
     public static class EdgeTypeExtensions
@@ -306,7 +307,15 @@ namespace MorphologyMesh
             */
         }
 
-        public static EdgeType GetEdgeTypeWithOrientation(PointIndex APoly, PointIndex BPoly, IReadOnlyList<GridPolygon> Polygons, GridVector2 midpoint)
+        /// <summary>
+        /// Determines the edge type for two verticies that are both on a contour
+        /// </summary>
+        /// <param name="APoly"></param>
+        /// <param name="BPoly"></param>
+        /// <param name="midpoint"></param>
+        /// <param name="Polygons"></param>
+        /// <returns></returns>
+        public static EdgeType GetContourEdgeTypeWithOrientation(PointIndex APoly, PointIndex BPoly, IReadOnlyList<GridPolygon> Polygons, GridVector2 midpoint)
         {
             EdgeType type = GetEdgeType(APoly, BPoly, Polygons, midpoint); 
             if((type.IsValid() &&
@@ -322,6 +331,46 @@ namespace MorphologyMesh
             }
 
             return type;
+        }
+
+        /// <summary>
+        /// Determines the edge type for any two verticies in the mesh
+        /// </summary>
+        /// <param name="A"></param>
+        /// <param name="B"></param>
+        /// <param name="Polygons"></param>
+        /// <param name="midpoint"></param>
+        /// <returns></returns>
+        public static EdgeType GetEdgeTypeWithOrientation(MorphMeshVertex A, MorphMeshVertex B, IReadOnlyList<GridPolygon> Polygons, GridVector2? midpoint=new GridVector2?())
+        {
+            if (A.Type == VertexOrigin.CONTOUR && B.Type == VertexOrigin.CONTOUR)
+            {
+                if(!midpoint.HasValue)
+                {
+                    midpoint = ((A.Position + B.Position) / 2.0).XY();
+                }
+
+                return GetContourEdgeTypeWithOrientation(A.PolyIndex.Value, B.PolyIndex.Value, Polygons, midpoint.Value);
+            }
+            else if ((A.Type == VertexOrigin.CONTOUR && B.Type == VertexOrigin.MEDIALAXIS) ||
+                    (B.Type == VertexOrigin.CONTOUR && A.Type == VertexOrigin.MEDIALAXIS))
+            {
+                return EdgeType.CONTOUR_TO_MEDIALAXIS;
+            }
+            else
+            {
+                return EdgeType.MEDIALAXIS;
+            }
+        }
+
+        public static EdgeType GetEdgeTypeWithOrientation(this MorphRenderMesh mesh, MorphMeshVertex A, MorphMeshVertex B, GridVector2? midpoint = new GridVector2?())
+        {
+            return  GetEdgeTypeWithOrientation(A, B, mesh.Polygons, midpoint); 
+        }
+
+        public static EdgeType GetEdgeTypeWithOrientation(this MorphRenderMesh mesh, int iA, int iB, GridVector2? midpoint = new GridVector2?())
+        {
+            return GetEdgeTypeWithOrientation(mesh[iA], mesh[iB], mesh.Polygons, midpoint);
         }
 
     }
