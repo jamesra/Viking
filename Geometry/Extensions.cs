@@ -58,46 +58,46 @@ namespace Geometry
 
     public static class GeometryRTreeExtensions
     {
-        public static RTree.Point ToRTreePoint(this GridVector2 p, float Z)
+        public static RTree.Point ToRTreePoint(this GridVector2 p, double Z)
         {
-            return new RTree.Point((float)p.X, (float)p.Y, Z);
+            return new RTree.Point(p.X, p.Y, Z);
         }
 
         public static RTree.Point ToRTreePoint(this GridVector3 p)
         {
-            return new RTree.Point((float)p.coords[0],
-                                   (float)p.coords[1],
-                                   (float)p.coords[2]);
+            return new RTree.Point(p.coords[0],
+                                   p.coords[1],
+                                   p.coords[2]);
         }
 
-        public static RTree.Rectangle ToRTreeRect(this GridRectangle rect, float MinZ, float MaxZ)
+        public static RTree.Rectangle ToRTreeRect(this GridRectangle rect, double MinZ, double MaxZ)
         {
-            return new RTree.Rectangle((float)rect.Left, (float)rect.Bottom, (float)rect.Right, (float)rect.Top, MinZ, MaxZ);
+            return new RTree.Rectangle(rect.Left, rect.Bottom, rect.Right, rect.Top, MinZ, MaxZ);
         }
 
-        public static RTree.Rectangle ToRTreeRect(this GridRectangle rect, float Z)
+        public static RTree.Rectangle ToRTreeRect(this GridRectangle rect, double Z)
         {
-            return new RTree.Rectangle((float)rect.Left, (float)rect.Bottom, (float)rect.Right, (float)rect.Top, Z, Z);
+            return new RTree.Rectangle(rect.Left, rect.Bottom, rect.Right, rect.Top, Z, Z);
         }
 
         public static RTree.Rectangle ToRTreeRect(this GridRectangle rect, int Z)
         {
-            return new RTree.Rectangle((float)rect.Left, (float)rect.Bottom, (float)rect.Right, (float)rect.Top, (float)Z, (float)Z);
+            return new RTree.Rectangle(rect.Left, rect.Bottom, rect.Right, rect.Top, (double)Z, (double)Z);
         }
 
-        public static RTree.Rectangle ToRTreeRect(this GridVector2 p, float Z)
+        public static RTree.Rectangle ToRTreeRect(this GridVector2 p, double Z)
         {
-            return new RTree.Rectangle((float)p.X, (float)p.Y, (float)p.X, (float)p.Y, Z, Z);
+            return new RTree.Rectangle(p.X, p.Y, p.X, p.Y, Z, Z);
         }
 
         public static RTree.Rectangle ToRTreeRect(this GridVector2 p, int Z)
         {
-            return new RTree.Rectangle((float)p.X, (float)p.Y, (float)p.X, (float)p.Y, (float)Z, (float)Z);
+            return new RTree.Rectangle(p.X, p.Y, p.X, p.Y, (double)Z, (double)Z);
         }
 
         public static RTree.Rectangle ToRTreeRect(this IPoint2D p, int Z)
         {
-            return new RTree.Rectangle((float)p.X, (float)p.Y, (float)p.X, (float)p.Y, (float)Z, (float)Z);
+            return new RTree.Rectangle(p.X, p.Y, p.X, p.Y, (double)Z, (double)Z);
         }
 
         public static RTree.Rectangle ToRTreeRect(this GridBox bbox)
