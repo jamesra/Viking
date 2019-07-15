@@ -597,12 +597,18 @@ namespace Geometry
         PointIndex? curIndex;
 
         IReadOnlyList<GridPolygon> polygons;
+
+        /// <summary>
+        /// The index to use for the first polygon in the list, defaults to zero
+        /// </summary>
+        private int StartingPolyIndex;
          
 
-        public PolySetVertexEnum(IReadOnlyList<GridPolygon> polys)
+        public PolySetVertexEnum(IReadOnlyList<GridPolygon> polys, int iStartingPolyIndex = 0)
         {
             this.polygons = polys;
             curIndex = new Geometry.PointIndex?();
+            StartingPolyIndex = iStartingPolyIndex;
         }
 
         public PointIndex Current
@@ -647,7 +653,7 @@ namespace Geometry
                 if (polygons[0].ExteriorRing.Length == 0)
                     return false;
 
-                curIndex = new PointIndex(0, 0, polygons[0].ExteriorRing.Length-1);
+                curIndex = new PointIndex(StartingPolyIndex, 0, polygons[0].ExteriorRing.Length-1);
                 return true;
             }
 
@@ -659,10 +665,11 @@ namespace Geometry
          
         private PointIndex? NextIndex(IReadOnlyList<GridPolygon> polygons, PointIndex current)
         {
-            GridPolygon poly = polygons[current.iPoly];
+            int iPoly = current.iPoly - StartingPolyIndex;
+            GridPolygon poly = polygons[iPoly];
 
             int iNextVert = current.iVertex + 1;
-            GridVector2[] ring = current.GetRing(polygons);
+            GridVector2[] ring = current.GetRing(poly);
 
             if(iNextVert < ring.Length-1) //-1 because we do not want to report a duplicate vertex for a closed ring
             {
@@ -703,14 +710,14 @@ namespace Geometry
 
                 //OK, we need to move on and could not move to an inner ring.  Go to the next polygon
 
-                int iNextPoly = current.iPoly + 1;
+                int iNextPoly = iPoly + 1;
                 if (iNextPoly >= polygons.Count)
                 {
                     return new PointIndex?();
                 }
                 else
                 {
-                    return new Geometry.PointIndex(iNextPoly, 0, polygons[iNextPoly].ExteriorRing.Length-1);
+                    return new Geometry.PointIndex(current.iPoly + 1, 0, polygons[iNextPoly].ExteriorRing.Length-1);
                 }
             }
         }        
