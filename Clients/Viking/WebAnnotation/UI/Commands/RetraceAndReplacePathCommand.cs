@@ -19,9 +19,12 @@ namespace WebAnnotation.UI.Commands
         GridPolygon OriginalMosaicPolygon;
         GridPolygon OriginalVolumePolygon;
 
+        List<GridLineSegment> ExteriorSegments;
+        List<GridVector2> ExteriorPoints;
+
         public GridPolygon OutputMosaicPolygon;
         public GridPolygon OutputVolumePolygon;
-
+        public GridPolygon SmoothedVolumePolygon;
 
         public override  uint NumCurveInterpolations
         {
@@ -30,9 +33,7 @@ namespace WebAnnotation.UI.Commands
                 return Global.NumClosedCurveInterpolationPoints;
             }
         }
-         
-        PenInputHelper PenInput;
-
+        
         Viking.VolumeModel.IVolumeToSectionTransform mapping;
 
         /// <summary>
@@ -40,8 +41,6 @@ namespace WebAnnotation.UI.Commands
         /// </summary>
         /// <param name="MosaicPolygon"></param>
         /// <param name="VolumePolygon"></param>
-        //public delegate void OnCommandSuccess(GridPolygon MosaicPolygon, GridPolygon VolumePolygon);
-        //OnCommandSuccess success_callback;
 
 
         public RetraceAndReplacePathCommand(Viking.UI.Controls.SectionViewerControl parent,
@@ -55,9 +54,10 @@ namespace WebAnnotation.UI.Commands
             mapping = parent.Section.ActiveSectionToVolumeTransform;
             this.OriginalMosaicPolygon = mosaic_polygon;
             this.OriginalVolumePolygon = mapping.TryMapShapeSectionToVolume(mosaic_polygon);
-            PenInput.OnPathChanged += OnPenPathChanged;
-            PenInput.OnPathCompleted += OnPenPathComplete;
-            PenInput.OnProposedNextSegmentChanged += OnPenProposedNextSegmentChanged;
+            //SmoothedVolumePolygon = OriginalVolumePolygon.Smooth(Global.NumClosedCurveInterpolationPoints);
+            ExteriorPoints = OriginalVolumePolygon.ExteriorRing.ToList();
+            ExteriorSegments = OriginalVolumePolygon.ExteriorSegments.ToList();
+            //PenInput.Push(origin);
 
         }
 
@@ -72,46 +72,118 @@ namespace WebAnnotation.UI.Commands
             mapping = parent.Section.ActiveSectionToVolumeTransform;
             this.OriginalMosaicPolygon = mosaic_polygon;
             this.OriginalVolumePolygon = mapping.TryMapShapeSectionToVolume(mosaic_polygon);
+            SmoothedVolumePolygon = OriginalVolumePolygon.Smooth(Global.NumClosedCurveInterpolationPoints);
 
         }
 
         protected override void OnPenPathChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
         {
+            if(PenInput == null || PenInput.Path.Count < 3)
+            {
+                return;
+            }
+            
             //Update the curve
             this.curve_verticies = new CurveViewControlPoints(Verticies, NumInterpolations: 0, TryToClose: false);
 
             //Find a possible intersection point
-            GridVector2? IntersectionPoint = PenInput.Segments.IntersectionPoint(PenInput.LastSegment, true, out GridLineSegment? IntersectedSegment);
-            OriginalMosaicPolygon.AddVertex(IntersectionPoint.Value);
+            GridVector2? IntersectionPoint = ExteriorSegments.IntersectionPoint(PenInput.LastSegment, false, out GridLineSegment? IntersectedSegment);
             //If the intersection exists
             if (IntersectionPoint.HasValue)
             {
-                GridVector2 IntersectedSegmentEndpoint = IntersectedSegment.Value.A;
-                int intersection_index = PenInput.Path.FindIndex(val => val == IntersectedSegmentEndpoint);
+                //Find the Origin of the path's intersection point and add it too the Exterior Points
+                GridVector2 OriginIndexAPoint = ExteriorSegments[ExteriorSegments.NearestSegment(PenInput.Path[PenInput.Path.Count - 1], out double MinDistance)].B;
+                int OriginIndexA = ExteriorPoints.FindIndex(val => val == OriginIndexAPoint);
+                ExteriorPoints.Insert(OriginIndexA, PenInput.Path[PenInput.Path.Count - 1]);
 
-                List<GridVector2> cropped_path = new List<GridVector2>(PenInput.Path);
+                //Add the second intersect endpoint of our drawn path into the polygon
+                int indexA = ExteriorPoints.FindIndex(val => val == IntersectedSegment.Value.B);
+                ExteriorPoints.Insert(indexA, IntersectionPoint.Value);
 
-                cropped_path.RemoveRange(intersection_index, PenInput.Path.Count - intersection_index);
+                //Add in logic for all other path points. Includes all values except first and last.
+                int RetraceEndpointA = ExteriorPoints.FindIndex(val => val == PenInput.Path[PenInput.Path.Count - 1]);
+                GridVector2 PointA = PenInput.Path[PenInput.Path.Count - 1];
+                int RetraceEndpointB = ExteriorPoints.FindIndex(val => val == IntersectionPoint.Value);
+                GridVector2 PointB = IntersectionPoint.Value;
+                PenInput.Path.RemoveAt(0);
+                PenInput.Path.RemoveAt(PenInput.Path.Count - 1);
 
-                cropped_path.Add(IntersectionPoint.Value);
-                cropped_path.RemoveAt(0); 
-                //Remove the endpoint that was just added which intersected our path and replace it with the intersection point
-                cropped_path[0] = IntersectionPoint.Value;
+                //If the crossed out section contains our origin we need to relocate the origin somewhere else
 
-                //PenInput.Pop();
-                //PenInput.Push(IntersectionPoint.Value);
+                double distanceAB = DistanceBetweenPointsOnPolygon(RetraceEndpointA, RetraceEndpointB, ExteriorPoints);
+                double distanceBA = DistanceBetweenPointsOnPolygon(RetraceEndpointB, RetraceEndpointA, ExteriorPoints);
+                int distance = Math.Abs(RetraceEndpointA - RetraceEndpointB);
 
-                PenInput.SimplifiedPath = cropped_path.DouglasPeuckerReduction(15);
-                //PenInput.Push(IntersectionPoint.Value);3
+                if (distanceAB < distanceBA)
+                {
+                    //If the crossed out section contains our origin we need to relocate the origin somewhere else
+                    RotatePolygon(RetraceEndpointA - 1);
+                    RetraceEndpointA = 0;
 
-                this.Execute(PenInput.SimplifiedPath.ToArray());
+                    ExteriorPoints.RemoveRange(RetraceEndpointA + 1, distance);
+                    PenInput.Path.Reverse();
+                    ExteriorPoints.InsertRange(RetraceEndpointA + 1, PenInput.Path);
+                }
+                else if(distanceBA < distanceAB)
+                {
+                    //If the crossed out section contains our origin we need to relocate the origin somewhere else
+                    RotatePolygon(RetraceEndpointB - 1);
+                    RetraceEndpointB = 0;
+
+                    ExteriorPoints.RemoveRange(RetraceEndpointB + 1, distance);
+                    ExteriorPoints.InsertRange(RetraceEndpointB + 1, PenInput.Path);
+                }
+
+                //Rebuild the new polygon
+                ExteriorPoints = ExteriorPoints.DouglasPeuckerReduction(15);
+                OutputVolumePolygon = new GridPolygon(ExteriorPoints);
+                List<GridVector2[]> interiorRings = OriginalVolumePolygon.InteriorRings.ToList();
+
+                foreach(GridVector2[] interiorRing in interiorRings)
+                {
+                    OutputVolumePolygon.AddInteriorRing(interiorRing);
+                }
+
+                try
+                {
+                    OutputMosaicPolygon = mapping.TryMapShapeVolumeToSection(OutputVolumePolygon);
+                }
+                catch (ArgumentOutOfRangeException)
+                {
+                    Console.WriteLine("TranslateLocationCommand: Could not map polygon to section on Execute", "Command");
+                    return;
+                }
+
+                this.Execute();
             }
 
-
             this.Parent.Invalidate();
+        }
 
+        private void RotatePolygon(int valuesToRotate)
+        {
+            ExteriorPoints.RemoveAt(0);
+            for (int i = 0; i < valuesToRotate; i++)
+            {
+                ExteriorPoints.Add(ExteriorPoints[0]);
+                ExteriorPoints.RemoveAt(0);
+            }
+            ExteriorPoints.Add(ExteriorPoints[0]);
+        }
 
-
+        private double DistanceBetweenPointsOnPolygon(int indexA, int indexB, List<GridVector2> points)
+        {
+            double distance = 0;
+            for (int i = indexA; i != indexB; i++)
+            {
+                if(i == points.Count - 1)
+                {
+                    distance += GridVector2.Distance(points[i], points[0]);
+                    i = 0;
+                }
+                distance += GridVector2.Distance(points[i], points[i + 1]);
+            }
+            return distance;
         }
 
         protected override void OnPenPathComplete(object sender, GridVector2[] Path)
@@ -122,32 +194,6 @@ namespace WebAnnotation.UI.Commands
         protected override void OnPenProposedNextSegmentChanged(object sender, GridLineSegment? segment)
         {
 
-        }
-
-
-        //Will return orignal array with values from A to B removed and add array is inserted where the values were removed.
-        //Both arrays must contain points A and B.
-        protected GridVector2[] Replace(GridVector2 A, GridVector2 B, GridVector2[] original, GridVector2[] add)
-        {
-            List<GridVector2> polygon = original.ToList();
-
-            int i = polygon.IndexOf(A);
-            do
-            {
-                polygon.RemoveAt(i);
-            }
-            while (!polygon[i].Equals(B));
-            polygon.InsertRange(i, add);
-            return polygon.ToArray();
-        }
-
-        private bool IsNull(Object val)
-        {
-            if(Object.ReferenceEquals(val, null))
-            {
-                return true;
-            }
-            return false;
         }
 
         /// <summary>
@@ -183,69 +229,6 @@ namespace WebAnnotation.UI.Commands
             {
                 return false;
             }
-        }
-
-        public static GridVector2[] AddControlPoint(GridVector2[] OriginalControlPoints, GridVector2 NewControlPointPosition, out int iNewControlPoint)
-        {
-            iNewControlPoint = -1;
-            GridLineSegment[] lineSegs = GridLineSegment.SegmentsFromPoints(OriginalControlPoints);
-
-            //Find the line segment the NewControlPoint intersects
-            double MinDistance;
-            int iNearestSegment = lineSegs.NearestSegment(NewControlPointPosition, out MinDistance);
-            GridLineSegment[] updatedSegments = lineSegs.Insert(NewControlPointPosition, iNearestSegment);
-
-            return updatedSegments.Verticies();
-        }
-        
-        public override void OnDraw(Microsoft.Xna.Framework.Graphics.GraphicsDevice graphicsDevice, VikingXNA.Scene scene, Microsoft.Xna.Framework.Graphics.BasicEffect basicEffect)
-        {
-            if (PenInput.Path.Count > 1)
-            {
-                CurveView curveView = new CurveView(PenInput.Path, this.LineColor, false, Global.NumCurveInterpolationPoints(false), lineWidth: this.LineWidth, lineStyle: this.Style, controlPointRadius: this.ControlPointRadius);
-                CurveView.Draw(graphicsDevice, scene, Parent.LumaOverlayCurveManager, basicEffect, Parent.AnnotationOverlayEffect, 0, new CurveView[] { curveView });
-            }
-
-            /*
-            GridVector2? SelfIntersection = ProposedControlPointSelfIntersection(this.oldWorldPosition);
-
-            
-            if (SelfIntersection.HasValue || CanControlPointBePlaced(this.oldWorldPosition))
-            {
-                bool pushed_point = true;
-
-                if (SelfIntersection.HasValue)
-                    vert_stack.Push(SelfIntersection.Value);
-                else if (!OverlapsLastVertex(this.oldWorldPosition))
-                    vert_stack.Push(this.oldWorldPosition);
-                else
-                    pushed_point = false;
-
-                CurveView curveView = new CurveView(vert_stack.ToArray(), this.LineColor, !this.IsOpen, Global.NumCurveInterpolationPoints(!this.IsOpen), lineWidth: this.LineWidth, lineStyle: Style, controlPointRadius: this.ControlPointRadius);
-                curveView.Color.SetAlpha(this.ShapeIsValid() ? 1 : 0.25f);
-                CurveView.Draw(graphicsDevice, scene, Parent.LumaOverlayCurveManager, basicEffect, Parent.AnnotationOverlayEffect, 0, new CurveView[] { curveView });
-                //GlobalPrimitives.DrawPolyline(Parent.LineManager, basicEffect, DrawnLineVerticies, this.LineWidth, this.LineColor);
-
-                if (pushed_point)
-                    this.vert_stack.Pop();
-
-                base.OnDraw(graphicsDevice, scene, basicEffect);
-            }
-            else
-            {
-                if (this.Verticies.Length > 1)
-                {
-                    CurveView curveView = new CurveView(this.Verticies.ToArray(), this.LineColor, !this.IsOpen, Global.NumCurveInterpolationPoints(!this.IsOpen), lineWidth: this.LineWidth, lineStyle: Style, controlPointRadius: this.ControlPointRadius);
-                    curveView.Color.SetAlpha(this.ShapeIsValid() ? 1 : 0.25f);
-                    CurveView.Draw(graphicsDevice, scene, Parent.LumaOverlayCurveManager, basicEffect, Parent.AnnotationOverlayEffect, 0, new CurveView[] { curveView });
-                }
-                else
-                {
-                    CircleView view = new CircleView(new GridCircle(this.Verticies.First(), this.LineWidth / 2.0), this.LineColor);
-                    CircleView.Draw(graphicsDevice, scene, basicEffect, this.Parent.AnnotationOverlayEffect, new CircleView[] { view });
-                }
-            }
-            */
         }
     }
 }

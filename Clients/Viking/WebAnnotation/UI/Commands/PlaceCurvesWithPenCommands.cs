@@ -14,6 +14,40 @@ using System.Collections.Specialized;
 
 namespace WebAnnotation.UI.Commands
 {
+    /*
+    class PlaceInteriorHoleWithPenCommand : PlaceClosedCurveWithPenCommand
+    {
+        public GridPolygon ExistingShape;
+
+        public PlaceInteriorHoleWithPenCommand(Viking.UI.Controls.SectionViewerControl parent,
+                                        Microsoft.Xna.Framework.Color color,
+                                        GridVector2 origin,
+                                        double LineWidth,
+                                        OnCommandSuccess success_callback)
+            : base(parent, color, origin, LineWidth, false, success_callback)
+        {
+        }
+
+        public PlaceInteriorHoleWithPenCommand(Viking.UI.Controls.SectionViewerControl parent,
+                                        System.Drawing.Color color,
+                                        GridVector2 origin,
+                                        double LineWidth,
+                                        OnCommandSuccess success_callback)
+            : base(parent, color, origin, LineWidth, false, success_callback)
+        {
+        }
+
+        protected override bool ShapeIsValid()
+        {
+            bool baseValid = base.ShapeIsValid();
+            if (false == baseValid)
+                return false;
+
+
+        }
+    }
+    */
+
     class PlaceClosedCurveWithPenCommand : PlaceCurveWithPenCommand
     {
         public override LineStyle Style
@@ -71,6 +105,7 @@ namespace WebAnnotation.UI.Commands
                                         OnCommandSuccess success_callback)
             : base(parent, color, origin, LineWidth, false, success_callback)
         {
+
         }
 
         public PlaceClosedCurveWithPenCommand(Viking.UI.Controls.SectionViewerControl parent,
@@ -92,10 +127,12 @@ namespace WebAnnotation.UI.Commands
                 return;
 
             //Update the curve
-            this.curve_verticies = new CurveViewControlPoints(Verticies, NumInterpolations: 0, TryToClose: false);
+            this.curve_verticies = new CurveViewControlPoints(PenInput.Path, NumInterpolations: 0, TryToClose: false);
 
             //Find a possible intersection point
             GridVector2? IntersectionPoint = PenInput.Segments.IntersectionPoint(PenInput.LastSegment, true, out GridLineSegment? IntersectedSegment);
+
+            
 
             //If the intersection exists
             if (IntersectionPoint.HasValue)
@@ -117,8 +154,9 @@ namespace WebAnnotation.UI.Commands
 
                 PenInput.SimplifiedPath = cropped_path.DouglasPeuckerReduction(15);
                 //PenInput.Push(IntersectionPoint.Value);3
-                  
-                this.Execute(PenInput.SimplifiedPath.ToArray());
+
+                //if (this.ShapeIsValid())
+                    this.Execute(PenInput.SimplifiedPath.ToArray());
 
             }
 
@@ -458,8 +496,11 @@ namespace WebAnnotation.UI.Commands
             parent.Cursor = Cursors.Cross;
             PenInput = new PenInputHelper(parent);
             PenInput.Push(origin);
+            //Ensure any pen subscriptions are released in the OnDeactivate call
+            System.Diagnostics.Trace.WriteLine(string.Format("PlaceCurveWithPenCommand {0} Subscribed to events", this.ID));
             PenInput.OnPathChanged += this.OnPenPathChanged;
             PenInput.OnPathCompleted += this.OnPenPathComplete;
+            PenInput.OnProposedNextSegmentChanged += this.OnPenProposedNextSegmentChanged;
             this.success_callback = success_callback;
             this.IsOpen = IsOpen;
         }
@@ -478,17 +519,16 @@ namespace WebAnnotation.UI.Commands
                     success_callback)
         {
         }
-
-        protected override void Execute()
+        
+        protected override void OnDeactivate()
         {
+            System.Diagnostics.Trace.WriteLine(string.Format("PlaceCurveWithPenCommand {0} Unubscribed to events", this.ID));
+            PenInput.OnPathChanged -= this.OnPenPathChanged;
+            PenInput.OnPathCompleted -= this.OnPenPathComplete;
+            PenInput.OnProposedNextSegmentChanged -= this.OnPenProposedNextSegmentChanged;
             this.PenInput.UnsubscribeEvents();
-            base.Execute();
-        }
-
-        protected override void Execute(GridVector2[] output)
-        {
-            this.PenInput.UnsubscribeEvents();
-            base.Execute(output);
+            this.PenInput = null;
+            base.OnDeactivate();
         }
 
         /*

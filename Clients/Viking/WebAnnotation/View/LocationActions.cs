@@ -414,23 +414,30 @@ namespace WebAnnotation.View
                     {
                         if (Global.PenMode)
                         {
-                            return new PlaceClosedCurveWithPenCommand(Parent, Microsoft.Xna.Framework.Color.White, volumePosition, Global.DefaultClosedLineWidth, (sender, volume_points) =>
-                            {
-                                GridVector2[] mosaic_points = Parent.Section.ActiveSectionToVolumeTransform.VolumeToSection(volume_points);
-                                SqlGeometry updatedMosaicShape = loc.MosaicShape.AddInteriorPolygon(mosaic_points);
+                            
+                            return new CutHoleWithPenCommand(Parent,
+                                                                 loc.MosaicShape.ToPolygon(),
+                                                                 Microsoft.Xna.Framework.Color.White.SetAlpha(0.5f),//loc.Parent.Type.Color.ToXNAColor(0.5f),
+                                                                 volumePosition,
+                                                                 loc.Width.HasValue ? loc.Width.Value : Global.DefaultClosedLineWidth,
+                                                                 (sender, volume_points) =>
+                                                                 {
+                                                                     GridVector2[] mosaic_points = Parent.Section.ActiveSectionToVolumeTransform.VolumeToSection(volume_points);
+                                                                     SqlGeometry updatedMosaicShape = loc.MosaicShape.AddInteriorPolygon(mosaic_points);
 
-                                try
-                                {
-                                    loc.SetShapeFromGeometryInSection(Parent.Section.ActiveSectionToVolumeTransform, updatedMosaicShape);
-                                }
-                                catch (ArgumentException e)
-                                {
-                                    MessageBox.Show(Parent, e.Message, "Could not save Polygon", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                                }
+                                                                     try
+                                                                     {
+                                                                         loc.SetShapeFromGeometryInSection(Parent.Section.ActiveSectionToVolumeTransform, updatedMosaicShape);
+                                                                     }
+                                                                     catch (ArgumentException e)
+                                                                     {
+                                                                         MessageBox.Show(Parent, e.Message, "Could not save Polygon", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                                                     }
 
-                                Store.Locations.Save();
-                            }
-                           );
+                                                                     Store.Locations.Save();
+                                                                 }
+                                                                 );
+
                         }
                         else
                         {
@@ -503,15 +510,16 @@ namespace WebAnnotation.View
                         GridVector2 MosaicPosition = mapper.VolumeToSection(volumePosition);
 
                         SqlGeometry VolumeShape;
-                        SqlGeometry MosaicShape = TransformMosaicShapeToSection(Parent.Volume, loc.MosaicShape.MoveTo(MosaicPosition), (int)loc.Z, Parent.Section.Number, out VolumeShape);
+                        //SqlGeometry MosaicShape = TransformMosaicShapeToSection(Parent.Volume, loc.MosaicShape.MoveTo(MosaicPosition), (int)loc.Z, Parent.Section.Number, out VolumeShape);
 
                         return new RetraceAndReplacePathCommand(Parent,
-                                                                 MosaicShape.ToPolygon(),
+                                                                 loc.MosaicShape.ToPolygon(),
                                                                  loc.Parent.Type.Color.ToXNAColor(0.5f),
                                                                  volumePosition, 
                                                                  loc.Width.HasValue ? loc.Width.Value : Global.DefaultClosedLineWidth,
-                                                                 (sender, mosaic_points) =>
+                                                                 (sender, MosaicPolygon) =>
                                                                  {
+
                                                                      var cmd = (RetraceAndReplacePathCommand)sender;
 
                                                                      //GridVector2[] mosaic_points = Parent.Section.ActiveSectionToVolumeTransform.VolumeToSection(volume_points);
@@ -527,6 +535,8 @@ namespace WebAnnotation.View
                                                                      }
 
                                                                      Store.Locations.Save();
+
+
                                                                  }
                                                                  );
                     }

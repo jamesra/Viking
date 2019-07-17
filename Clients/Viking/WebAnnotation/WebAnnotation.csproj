@@ -195,6 +195,7 @@
     <Compile Include="UI\Commands\PlaceCurvesWithPenCommands.cs" />
     <Compile Include="UI\Commands\PlaceOpenCurveCommand.cs" />
     <Compile Include="UI\Commands\RemovePolygonHoleCommand.cs" />
+    <Compile Include="UI\Commands\CutHoleWithPenCommand.cs" />
     <Compile Include="UI\Commands\RetraceAndReplacePathCommand.cs" />
     <Compile Include="UI\Commands\TranslateLocationCommand.cs" />
     <Compile Include="UI\Commands\TranslateScaleCommandBase.cs" />

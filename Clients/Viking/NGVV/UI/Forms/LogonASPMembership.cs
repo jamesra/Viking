@@ -89,7 +89,14 @@ namespace Viking.UI.Forms
 
                         if (this.IsHandleCreated)
                         {
-                            this.Invoke(new System.Action(() => VolumeDocument = document));
+                            try
+                            {
+                                this.Invoke(new System.Action(() => VolumeDocument = document));
+                            }
+                            catch(System.ObjectDisposedException)
+                            {
+                                System.Diagnostics.Trace.WriteLine("Invoking action on disposed object in LogonASPMembership");
+                            }
                         }
                     });
                 }

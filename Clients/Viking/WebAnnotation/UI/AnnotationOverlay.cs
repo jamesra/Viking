@@ -49,7 +49,7 @@ namespace WebAnnotation
         public static WebAnnotation.UI.Forms.GoToStructureForm GoToStructureForm;
 
         GridVector2 LastMouseDownCoords;
-        GridVector2 LastMouseMoveVolumeCoords;
+        GridVector2? LastMouseMoveVolumeCoords;
 
         /// <summary>
         /// The last object the mouse was over, if any
@@ -277,7 +277,7 @@ namespace WebAnnotation
         }
 
         /// <summary>
-        /// Find the location nearest the provided point on the section, using annotation locations on the screen, not anatomical positions
+        /// Find the annotations intersecting the provided point on the section, using annotation locations on the screen, not anatomical positions
         /// </summary>
         /// <param name="position"></param>
         /// <returns></returns>
@@ -361,7 +361,7 @@ namespace WebAnnotation
             if (loc != null)
             {
                 long locID; 
-                GridVector2 WorldPosition = this.LastMouseMoveVolumeCoords;
+                GridVector2 WorldPosition = this.LastMouseMoveVolumeCoords.Value;
                 LocationAction action = loc.GetMouseClickActionForPositionOnAnnotation(WorldPosition, this.CurrentSectionNumber, Control.ModifierKeys, out locID);
                 _Parent.Cursor = action.GetCursor();
             }
@@ -380,7 +380,8 @@ namespace WebAnnotation
             return _Parent.CurrentCommand.GetType() == typeof(Viking.UI.Commands.DefaultCommand) &&
              this.Parent.CommandQueue.QueueDepth == 0;
         }
-                 
+
+        private bool RetraceAndReplaceDisabled = false;
         protected void OnMouseMove(object sender, MouseEventArgs e)
         {
             if (_Parent.CurrentCommand == null)
@@ -389,10 +390,12 @@ namespace WebAnnotation
             //Check if there is a non-default command. we don't want to mess with another active command
             if (!IsCommandDefault())
                 return;
-            
+
+            if(RetraceAndReplaceDisabled)
+                RetraceAndReplaceDisabled = e.Button.Left();
 
             //Buttons being pushed means we are in the middle of a default command, probably scrolling, which won't affect the selection
-            if (e.Button != MouseButtons.None)
+            if (e.Button != MouseButtons.Left && e.Button != MouseButtons.None)
                 return; 
 
             //If locations aren't visible they can't be selected
@@ -404,17 +407,65 @@ namespace WebAnnotation
 
             double distance;
             GridVector2 WorldPosition = _Parent.ScreenToWorld(e.X, e.Y);
-            this.LastMouseMoveVolumeCoords = WorldPosition;
 
-            ICanvasGeometryView NextMouseOverObject = ObjectAtPosition(WorldPosition, out distance) as ICanvasGeometryView;
-            if (NextMouseOverObject != LastMouseOverObject)
+            ICanvasGeometryView MouseOverAnnotation = ObjectAtPosition(WorldPosition, out distance) as ICanvasGeometryView;
+            System.Diagnostics.Trace.WriteLine(string.Format("{0}", MouseOverAnnotation == null ? "NULL" :MouseOverAnnotation.ToString()));
+            if (MouseOverAnnotation != LastMouseOverObject)
             {
-                mouseOverEffect.viewObj = NextMouseOverObject;
+                
+                //Check if we are in pen mode, if we are check if the line segment from the current and last point intersected an annotion.  If so start Retrace&Replace command.
+                //If the objects changed that means we intersected the boundary of the object.  If we are in pen mode and the intersected object qualifies we should start a retrace and replace command...
+                if (e.Button.Left() && Global.PenMode && (LastMouseOverObject == null || MouseOverAnnotation == null) && RetraceAndReplaceDisabled == false)
+                {
+                    ICanvasGeometryView intersectedobject = LastMouseOverObject == null ? MouseOverAnnotation : LastMouseOverObject;
+                    LocationPolygonView intersectedPolyView = intersectedobject as LocationPolygonView;
+                    if(intersectedPolyView != null)
+                    {
+                        //intersectedPolyView.
+                        LocationObj Loc = Store.Locations.GetObjectByID(intersectedPolyView.ID, true);
+                        GridLineSegment segment = new GridLineSegment(WorldPosition, this.LastMouseMoveVolumeCoords);
+                        GridVector2 intersection_point;
+                        segment.Intersects(intersectedPolyView.VolumeShapeAsRendered.ToPolygon(), out intersection_point);
+                        RetraceAndReplacePathCommand retraceCmd = new RetraceAndReplacePathCommand(Parent, Loc.MosaicShape.ToPolygon(), intersectedPolyView.Color, intersection_point, Loc.Width.HasValue ? Loc.Width.Value : Global.DefaultClosedLineWidth, (sending_cmd, MosaicPolygon) =>
+                        { 
+                            var cmd = (RetraceAndReplacePathCommand)sending_cmd;
+
+                            //GridVector2[] mosaic_points = Parent.Section.ActiveSectionToVolumeTransform.VolumeToSection(volume_points);
+                            //SqlGeometry updatedMosaicShape = loc.MosaicShape.AddInteriorPolygon(mosaic_points);
+
+                            try
+                            {
+                                Loc.SetShapeFromGeometryInSection(Parent.Section.ActiveSectionToVolumeTransform, cmd.OutputMosaicPolygon.ToSqlGeometry());
+                            }
+                            catch (ArgumentException excpt)
+                            {
+                                MessageBox.Show(Parent, excpt.Message, "Could not save Polygon", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            }
+
+                            Store.Locations.Save();
+
+                            RetraceAndReplaceDisabled = true; //Used to prevent a 2nd retrace command from firing because we've ended this command when we intersect the polygons other boundary.
+                        }
+                        );
+
+                        Parent.CurrentCommand = retraceCmd;
+                    }
+                    /*else { }
+                    LocationLineView intersectedLineView = intersectedobject as LocationLineView;
+                    if (intersectedLineView != null)
+                    {
+                    //    intersectedLineView.
+                    }
+                    */
+                }
+
+                mouseOverEffect.viewObj = MouseOverAnnotation;
 
                 InvalidateParent();
-            }   
-
-            LastMouseOverObject = NextMouseOverObject;
+            }
+             
+            LastMouseOverObject = MouseOverAnnotation;
+            this.LastMouseMoveVolumeCoords = WorldPosition;
 
             UpdateMouseCursor();
         }
@@ -460,7 +511,7 @@ namespace WebAnnotation
                 }
                 else
                 {
-                    //Check if we can continue another annotation
+                    //Check if we can continue another annotation, if not, check if we are in pen mode.  If we are start a new place polygon command.
                     OnContinueLastTrace(LastMouseDownCoords);
                 }
             }
@@ -949,7 +1000,7 @@ namespace WebAnnotation
             }
 
             GridVector2 SectionPos;
-            bool success = Parent.Section.ActiveSectionToVolumeTransform.TryVolumeToSection(LastMouseMoveVolumeCoords, out SectionPos);
+            bool success = Parent.Section.ActiveSectionToVolumeTransform.TryVolumeToSection(LastMouseMoveVolumeCoords.Value, out SectionPos);
             Debug.Assert(success);
             if (!success)
                 return;
@@ -957,17 +1008,17 @@ namespace WebAnnotation
             switch (newLocType)
             {
                 case LocationType.CIRCLE:
-                    QueuePlacementCommandForCircleStructure(Parent, Store.Locations[loc.ID], LastMouseMoveVolumeCoords, SectionPos, loc.Parent.Type.Color, true);
+                    QueuePlacementCommandForCircleStructure(Parent, Store.Locations[loc.ID], LastMouseMoveVolumeCoords.Value, SectionPos, loc.Parent.Type.Color, true);
                     break;
                 case LocationType.OPENCURVE: 
-                    QueuePlacementCommandForOpenCurveStructure(Parent, Store.Locations[loc.ID], LastMouseMoveVolumeCoords, loc.Parent.Type.Color, newLocType, true);
+                    QueuePlacementCommandForOpenCurveStructure(Parent, Store.Locations[loc.ID], LastMouseMoveVolumeCoords.Value, loc.Parent.Type.Color, newLocType, true);
                     break;
                 case LocationType.CLOSEDCURVE:
-                    QueuePlacementCommandForClosedCurveStructure(Parent, Store.Locations[loc.ID], LastMouseMoveVolumeCoords, loc.Parent.Type.Color, LocationType.CLOSEDCURVE, true);
+                    QueuePlacementCommandForClosedCurveStructure(Parent, Store.Locations[loc.ID], LastMouseMoveVolumeCoords.Value, loc.Parent.Type.Color, LocationType.CLOSEDCURVE, true);
                     break;
                 case LocationType.CURVEPOLYGON:
                     //TODO: Update the hotkeys at publish so we don't hardcode CURVEPOLYGON
-                    QueuePlacementCommandForPolygonStructure(Parent, Store.Locations[loc.ID], LastMouseMoveVolumeCoords, loc.Parent.Type.Color, LocationType.CURVEPOLYGON, true);
+                    QueuePlacementCommandForPolygonStructure(Parent, Store.Locations[loc.ID], LastMouseMoveVolumeCoords.Value, loc.Parent.Type.Color, LocationType.CURVEPOLYGON, true);
                     break; 
             }
         }

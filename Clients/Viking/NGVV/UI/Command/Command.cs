@@ -261,8 +261,18 @@ namespace Viking.UI.Commands
         /// </summary>
         public event CommandCompleteEventHandler OnCommandCompleteHandler;
 
+        public static int _NextID = 0;
+        public int ID;
+
+        private void AssignID()
+        {
+            this.ID = _NextID;
+            _NextID = _NextID + 1;
+        }
+
         public Command(Viking.UI.Controls.SectionViewerControl parent)
         {
+            AssignID();
             this.Parent = parent; 
         }
 
@@ -378,7 +388,7 @@ namespace Viking.UI.Commands
 
         virtual public void OnActivate() { }
 
-        virtual public void OnDeactivate() { }
+        virtual protected void OnDeactivate() { }
 
         virtual public void Undo() { }
 

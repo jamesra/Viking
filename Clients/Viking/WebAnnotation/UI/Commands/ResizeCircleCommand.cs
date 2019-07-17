@@ -42,7 +42,7 @@ namespace WebAnnotation.UI.Commands
             base.OnMouseMove(sender, e);
         }
 
-        public override void OnDeactivate()
+        protected override void OnDeactivate()
         {
             //A bit of a hack.  We null the selected object so the viewer control doesn't decide to start the default
             //command for the selected object when it creates the next command.  It should launch the default command instead.

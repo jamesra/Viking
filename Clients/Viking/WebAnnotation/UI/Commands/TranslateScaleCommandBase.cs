@@ -114,7 +114,7 @@ namespace WebAnnotation.UI.Commands
             mapping = Parent.Section.ActiveSectionToVolumeTransform;
         }
         
-        public override void OnDeactivate()
+        protected override void OnDeactivate()
         {
             Parent.OnSectionChanged -= this.OnSectionChanged;
 

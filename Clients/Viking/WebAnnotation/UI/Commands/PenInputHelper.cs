@@ -30,14 +30,30 @@ namespace WebAnnotation.UI.Commands
 
         public bool CanPathSelfIntersect = false;
 
+        /// <summary>
+        /// The user has stopped drawing
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="Path"></param>
         public delegate void OnPathCompleteEventHandler(object sender, GridVector2[] Path);
         public event OnPathCompleteEventHandler OnPathCompleted;
 
         public event System.Collections.Specialized.NotifyCollectionChangedEventHandler OnPathChanged;
 
+        /// <summary>
+        /// The path has been extended
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="segment"></param>
         public delegate void OnProposedNextSegmentChangedHandler(object sender, GridLineSegment? segment);
         public event OnProposedNextSegmentChangedHandler OnProposedNextSegmentChanged;
-          
+
+        /// <summary>
+        /// The path has self-intersected itself
+        /// </summary>
+        //public delegate void OnPathClosedHandler(object sender, GridLineSegment? segment);
+        //public event OnPathClosedHandler OnPathClosed;
+
         public List<GridVector2> Path = new List<GridVector2>();
 
         public List<GridVector2> SimplifiedPath = new List<GridVector2>();
@@ -79,23 +95,36 @@ namespace WebAnnotation.UI.Commands
             }
         }
 
+        public static int _NextID = 0;
+        public int ID;
+
+        private void AssignID()
+        {
+            this.ID = _NextID;
+            _NextID = _NextID + 1;
+        }
+
+
         public PenInputHelper(Viking.UI.Controls.SectionViewerControl Parent)
         {
+            AssignID();
             lastAngle = 0;
             PenIsComplete = false;
-            PointIntervalOnDrag = 6; //Parent.Downsample * 16;
+            PointIntervalOnDrag = Parent.Downsample * 16;
             PenAngleThreshold = Math.PI / 36;//.36f;
             this.Parent = Parent;
             NumCurveInterpolations = Global.NumCurveInterpolationPoints(false);
 
             Parent.MouseMove += this.OnMouseMove;
             Parent.MouseUp += this.OnMouseUp;
+            System.Diagnostics.Trace.WriteLine(string.Format("PenInputHelper {0} Subscribed to events", this.ID));
         }
 
         public void UnsubscribeEvents()
         {
             Parent.MouseMove -= this.OnMouseMove;
             Parent.MouseUp -= this.OnMouseUp;
+            System.Diagnostics.Trace.WriteLine(string.Format("PenInputHelper {0} Unsubscribed from events", this.ID));
         }
 
         private bool CanControlPointBePlaced(GridVector2 position)
@@ -138,14 +167,37 @@ namespace WebAnnotation.UI.Commands
 
         public void OnMouseMove(object sender, MouseEventArgs e)
         {
-            if(e.Button.Middle())
+            if(e.Button.Middle() && Path.Count > 1)
             {
                 GridVector2 cursor_position = Parent.ScreenToWorld(e.X, e.Y);
                 LastPenPosition = cursor_position;
-                if(GridVector2.Distance(Path[0], cursor_position) < 20)
+
+                double delete_distance = Parent.Scene.Camera.Downsample * 20.0;
+                /*
+                bool PathChanged = false;
+                while(Path.Count > 1)
                 {
-                    Pop();
+                    GridVector2 top = Path[0];
+                    
+                    if (GridVector2.Distance(top, cursor_position) < delete_distance)
+                    {
+                        PathChanged = true;
+                        Path.RemoveAt(0);
+                    }
+                    else
+                    {
+                        break;
+                    }
                 }
+                */
+                int iDeletePoint = Path.FindIndex(v => GridVector2.Distance(v, cursor_position) < delete_distance);
+
+                if (iDeletePoint >= 0)
+                {
+                    Path.RemoveRange(0, iDeletePoint + 1);
+                    FireOnPathChangedEvent(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, cursor_position, 0));
+                }                
+
             }
             else if (e.Button.LeftOnly())
             {
@@ -196,84 +248,19 @@ namespace WebAnnotation.UI.Commands
                 return VERTEXACTION.ADD;
 
             double distanceToLast = GridVector2.Distance(pen_position, Path[0]);
-            double ControlPointSelectionRadius = this.PointIntervalOnDrag / 4.0;
-            HasPenTravelledAwayFromLastControlPoint |= distanceToLast > ControlPointSelectionRadius;
+            
 
-            if(HasPenTravelledAwayFromLastControlPoint && distanceToLast < ControlPointSelectionRadius)
-            {
-                return VERTEXACTION.REMOVE;
-            }
-
-            if (Path.Count == 1)
-            {
-                
-                if(distanceToLast >= this.PointIntervalOnDrag)
-                {
-                    return VERTEXACTION.ADD;
-                }
-            }
-            else
-            {
-                if (distanceToLast >= this.PointIntervalOnDrag)
-                {
-                    return VERTEXACTION.ADD;
-                }
-            }
-
-            return VERTEXACTION.NONE;
-        }
-
-        private bool HasPenTravelledAwayFromLastControlPoint = false; 
-
-        //Returns whether the next vertex will be added, removed, or replaced.
-        public VERTEXACTION GetNextVertex(GridVector2 cursor_position)
-        {
-            if (Path.Count == 0)
-                return VERTEXACTION.ADD;
-
-            if(CanPathSelfIntersect == true)
-            {
-                GridVector2? SelfIntersectionPoint = this.ProposedControlPointSelfIntersection(cursor_position);
-                if(SelfIntersectionPoint.HasValue)
-                {
-                    return VERTEXACTION.NONE;
-                }
-            }
-
-            double distanceToLast = GridVector2.Distance(cursor_position, Path[0]);
-
-            //Creates a new verticie when the mouse moves set distance away
-            if (distanceToLast > this.PointIntervalOnDrag)
-            {
-                //double angle;
-
-                //Measure the slope between the two most recent vertices
-                //if (Path.Count >= 3)
-                {
-                    //angle = GridVector2.ArcAngle(Path[0], cursor_position, Path[1]);
-
-                    //if (Math.Abs(angle) >= PenAngleThreshold)
-                    {
-                        //Remove the last vertex
-                        //return VERTEXACTION.REPLACE;
-                        //HasPenTravelledAwayFromLastControlPoint = false;
-                       // return VERTEXACTION.ADD;
-
-                    }
-
-                    //Set new slope to be between this point and the NEW last vertice (should be the one that came before the one we just removed)
-                    //lastAngle = GridVector2.ArcAngle(Path[0], cursor_position, Path[1]);
-                }
-                //else if(distanceToLast > this.PointIntervalOnDrag)
-                {
-                   // return VERTEXACTION.ADD;
-                }
-
-                return VERTEXACTION.ADD;
-                //this.PushVertex(cursor_position);
-            }
+            //if(HasPenTravelledAwayFromLastControlPoint && distanceToLast < ControlPointSelectionRadius)
+            //{
+            //    return VERTEXACTION.REMOVE;
+            //}
 
             
+            if (distanceToLast >= this.PointIntervalOnDrag)
+            {
+                if(pen_position != Path[0])
+                    return VERTEXACTION.ADD;
+            }
 
             return VERTEXACTION.NONE;
         }
@@ -324,6 +311,12 @@ namespace WebAnnotation.UI.Commands
             }
 
             return retval;
+        }
+
+        public void Clear()
+        {
+            Path = new List<GridVector2>();
+
         }
 
     }
