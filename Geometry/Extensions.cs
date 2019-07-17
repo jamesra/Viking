@@ -993,22 +993,18 @@ namespace Geometry
         /// <param name="nearestPoly">Nearest polygon</param>
         /// <param name="intersectingPoly">Index of vertex in the ring</param>
         /// <returns></returns>
-        public static double NearestPolygonVertex(this GridPolygon polygon, GridVector2 WorldPosition, out GridPolygon nearestPoly, out int ringIndex)
+        public static double NearestVertex(this GridPolygon polygon, GridVector2 WorldPosition, out PointIndex nearestVertex)
         {
-            nearestPoly = null;
-            ringIndex = -1;
+            nearestVertex = new PointIndex();
             double nearestPolyDistance = double.MaxValue;
-
-            foreach (GridPolygon innerPoly in polygon.InteriorPolygons)
+            for(int iRing = 0; iRing < polygon.InteriorPolygons.Count; iRing++)
             {
-                GridPolygon foundPolygon;
-                int foundIndex;
-                double distance = innerPoly.NearestPolygonVertex(WorldPosition, out foundPolygon, out foundIndex);
+                GridPolygon innerPoly = polygon.InteriorPolygons[iRing];
+                double distance = innerPoly.NearestVertex(WorldPosition, out PointIndex foundIndex);
                 if (distance < nearestPolyDistance)
                 {
-                    nearestPoly = innerPoly;
+                    nearestVertex = new PointIndex(0, iRing, foundIndex.iVertex, innerPoly.ExteriorRing.Length - 1);
                     nearestPolyDistance = distance;
-                    ringIndex = foundIndex;
                 }
             }
 
@@ -1017,12 +1013,83 @@ namespace Geometry
 
             if (MinDistance < nearestPolyDistance)
             {
-                ringIndex = Array.IndexOf(distances, distances.Min());
-                nearestPoly = polygon;
+                int iVert = Array.IndexOf(distances, distances.Min());
+                nearestVertex = new PointIndex(0, iVert, polygon.ExteriorRing.Length - 1);
                 nearestPolyDistance = MinDistance;
             }
 
             return nearestPolyDistance;
+        }
+
+        /// <summary>
+        /// Returns the nearest segment to the point and the PointIndex of the line, use the Next function to obtain the vertex after the line
+        /// </summary>
+        /// <param name="polygon"></param>
+        /// <param name="WorldPosition"></param>
+        /// <param name="A"></param>
+        /// <param name="B"></param>
+        /// <returns></returns>
+        public static double NearestSegment(this GridPolygon polygon, GridVector2 WorldPosition, out PointIndex nearestVertex)
+        {
+            nearestVertex = new PointIndex();
+            double nearestPolyDistance = double.MaxValue;
+
+            for (int iRing = 0; iRing < polygon.InteriorPolygons.Count; iRing++)
+            {
+                GridPolygon innerPoly = polygon.InteriorPolygons[iRing];  
+                double distance = innerPoly.NearestSegment(WorldPosition, out PointIndex foundVertex);
+                if (distance < nearestPolyDistance)
+                {
+                    nearestVertex = new PointIndex(0, iRing, foundVertex.iVertex, innerPoly.ExteriorRing.Length - 1);
+                    nearestPolyDistance = distance;
+                }
+            }
+
+            double MinDistance;
+            int iSegmentIndex = polygon.ExteriorSegments.NearestSegment(WorldPosition, out MinDistance);
+            if (MinDistance < nearestPolyDistance)
+            {
+                nearestVertex = new PointIndex(0, iSegmentIndex, polygon.ExteriorRing.Length - 1);
+                nearestPolyDistance = MinDistance;
+            }
+
+            return nearestPolyDistance;
+        }
+
+        /// <summary>
+        /// Returns the nearest segment to the point and the PointIndex of the line, use the Next function to obtain the vertex after the line
+        /// </summary>
+        /// <param name="polygon"></param>
+        /// <param name="WorldPosition"></param>
+        /// <param name="A"></param>
+        /// <param name="B"></param>
+        /// <returns></returns>
+        public static SortedDictionary<double, PointIndex> IntersectingSegments(this GridPolygon polygon, GridLineSegment line)
+        {
+            SortedDictionary<double, PointIndex> output = new SortedDictionary<double, PointIndex>();
+            double nearestPolyDistance = double.MaxValue;
+
+            for (int iRing = 0; iRing < polygon.InteriorPolygons.Count; iRing++)
+            {
+                GridPolygon innerPoly = polygon.InteriorPolygons[iRing];
+                SortedDictionary<double, PointIndex> ring_intersections = innerPoly.IntersectingSegments(line);
+                foreach (var item in ring_intersections)
+                {
+                    output.Add(item.Key, new PointIndex(0, iRing, item.Value.iVertex, innerPoly.ExteriorRing.Length - 1));
+                }
+            }
+              
+            for(int iSegment = 0; iSegment < polygon.ExteriorSegments.Length; iSegment++)
+            {
+                GridLineSegment segment = polygon.ExteriorSegments[iSegment];
+                if (segment.Intersects(line, out GridVector2 intersection))
+                { 
+                    double distance = GridVector2.Distance(line.A, intersection);
+                    output.Add(distance, new PointIndex(0, iSegment, polygon.ExteriorSegments.Length));
+                }
+            } 
+
+            return output;
         }
 
         /// <summary>

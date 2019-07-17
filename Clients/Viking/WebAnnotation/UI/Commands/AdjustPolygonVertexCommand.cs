@@ -82,7 +82,8 @@ namespace WebAnnotation.UI.Commands
         {
             if (iAdjustedControlPoint < 0)
             {
-                OriginalVolumePolygon.NearestPolygonVertex(WorldPosition, out this.AdjustedPolygon, out this.iAdjustedControlPoint);
+                OriginalVolumePolygon.NearestVertex(WorldPosition, out PointIndex adjustedVertex);
+                this.iAdjustedControlPoint = adjustedVertex.iVertex;
             }
         } 
 

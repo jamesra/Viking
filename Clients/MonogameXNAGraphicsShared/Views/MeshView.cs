@@ -139,7 +139,8 @@ namespace VikingXNAGraphics
 
             effect.WorldViewProjMatrix = WorldViewProjOriginal;
 
-            device.RasterizerState = originalRasterizerState;
+            if(originalRasterizerState != null)
+                device.RasterizerState = originalRasterizerState;
         }
     }
 }
