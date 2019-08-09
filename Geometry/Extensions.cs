@@ -319,6 +319,24 @@ namespace Geometry
         /// </summary>
         /// <param name="points"></param>
         /// <returns></returns>
+        public static ICollection<int> EnsureClosedRing(this ICollection<int> points)
+        {
+            if (points.First() != points.Last())
+            {
+                List<int> newPoints = new List<int>(points);
+                newPoints.Add(points.First());
+                return newPoints;
+            }
+
+            return points;
+        }
+
+        /// <summary>
+        /// If the first and last elements are not the same we add an element at the end equal to the first elements value
+        /// This is because Polygons and several algorithms expect arrays to be closed loops of points.
+        /// </summary>
+        /// <param name="points"></param>
+        /// <returns></returns>
         public static ICollection<GridVector2> EnsureClosedRing(this ICollection<GridVector2> points)
         {
             if (points.First() != points.Last())
@@ -500,7 +518,7 @@ namespace Geometry
         /// </summary>
         /// <param name="points"></param>
         /// <returns></returns>
-        public static GridVector2[] RemoveDuplicates(this IReadOnlyList<GridVector2> points)
+        public static GridVector2[] RemoveAdjacentDuplicates(this IReadOnlyList<GridVector2> points)
         {
             List<GridVector2> nonDuplicatePoints = new List<GridVector2>();
             for (int i = 0; i < points.Count - 1; i++)
@@ -512,6 +530,25 @@ namespace Geometry
             }
 
             nonDuplicatePoints.Add(points.Last());
+
+            //                System.Diagnostics.Trace.WriteLine("Originally " + (ControlPoints.Count * NumInterpolations).ToString() + " now " + nonDuplicatePoints.Count.ToString());
+            return nonDuplicatePoints.ToArray();
+        }
+
+        /// <summary>
+        /// Remove all of the duplicate points and return as a new array
+        /// </summary>
+        /// <param name="points"></param>
+        /// <returns></returns>
+        public static GridVector2[] RemoveDuplicates(this IReadOnlyList<GridVector2> points)
+        {
+            List<GridVector2> nonDuplicatePoints = new List<GridVector2>();
+            for (int i = 0; i < points.Count; i++)
+            {
+                if (false == nonDuplicatePoints.Contains(points[i]))
+                    nonDuplicatePoints.Add(points[i]);
+            }
+
 
             //                System.Diagnostics.Trace.WriteLine("Originally " + (ControlPoints.Count * NumInterpolations).ToString() + " now " + nonDuplicatePoints.Count.ToString());
             return nonDuplicatePoints.ToArray();
