@@ -127,7 +127,7 @@ namespace Geometry.Meshing
 
         public override string ToString()
         {
-            return string.Format("P: {0} N: {1}", Position, Normal);
+            return string.Format("I: {0} P: {1} N: {2}", this.Index, Position, Normal);
         }
 
         public IVertex ShallowCopy()
