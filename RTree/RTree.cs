@@ -542,6 +542,17 @@ namespace RTree
             }
         }
 
+        /// <summary>
+        /// Retrieve items which intersect with Rectangle whose opposite corners are points A,B
+        /// </summary>
+        /// <param name="r"></param>
+        /// <returns></returns>
+        public List<T> Intersects(Point A, Point B)
+        {
+            Rectangle r = new Rectangle(A, B);
+            return this.Intersects(r);
+        }
+
 
         private void intersects(Rectangle r, intproc v)
         {

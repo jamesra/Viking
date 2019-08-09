@@ -63,6 +63,31 @@ namespace RTree
             set(x1, y1, x2, y2, z1, z2);
         }
 
+        /// <summary>
+        /// Create a rectangle by providing the opposite corners
+        /// </summary>
+        /// <param name="A"></param>
+        /// <param name="B"></param>
+        public Rectangle(Point A, Point B)
+        {
+            min = new double[DIMENSIONS];
+            max = new double[DIMENSIONS];
+
+            for(int i = 0; i < DIMENSIONS; i++)
+            {
+                if(A.coordinates[i] < B.coordinates[i])
+                {
+                    min[i] = A.coordinates[i];
+                    max[i] = B.coordinates[i];
+                }
+                else
+                {
+                    min[i] = B.coordinates[i];
+                    max[i] = A.coordinates[i];
+                }
+            }
+        }
+
         /**
          * Constructor.
          * 
