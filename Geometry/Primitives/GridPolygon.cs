@@ -906,10 +906,19 @@ namespace Geometry
                 throw new ArgumentException("Exterior polygon ring must be valid");
             }
 
+            //The only duplicate point should be the first and the last.  If not throw an exception
+            var nonDuplicatedPoints = exteriorRing.RemoveDuplicates();
+            if(nonDuplicatedPoints.Length != exteriorRing.Length -1)
+            {                 
+                throw new ArgumentException("Duplicate point found in exterior ring");
+            }
+
             if(exteriorRing.AreClockwise())
             {
                 exteriorRing = exteriorRing.Reverse().ToArray();
             }
+
+
 
             ExteriorRing = exteriorRing;
         }
@@ -1077,6 +1086,36 @@ namespace Geometry
             
             this.ExteriorRing = updatedLineSegments.Verticies();
         }
+
+        /// <summary>
+        /// Return true if the point is one of the polygon verticies
+        /// </summary>
+        /// <param name="point"></param>
+        /// <returns></returns>
+        public bool IsVertex(GridVector2 point)
+        {
+            if(!this.BoundingBox.Contains(point))
+            {
+                return false;
+            }
+
+            if (this.ExteriorRing.Contains(point))
+                return true;
+            
+            foreach(GridPolygon inner in this.InteriorPolygons)
+            {
+                if(!inner.BoundingBox.Contains(point))
+                {
+                    continue;
+                }
+
+                if (inner.IsVertex(point))
+                    return true;
+            }
+
+            return false;
+        }
+
 
         public bool Contains(IPoint2D point_param)
         {
