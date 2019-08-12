@@ -719,6 +719,25 @@ namespace Geometry
             return sortedIndicies.Select(i => IntersectingLines[i]).ToList();
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="lines"></param>
+        /// <returns></returns>
+        public static bool SelfIntersects(this IReadOnlyList<GridLineSegment> lines)
+        {
+            for(int iLine = 0; iLine < lines.Count; iLine++)
+            {
+                for(int jLine = iLine + 1; jLine < lines.Count; jLine++)
+                {
+                    if (lines[iLine].Intersects(lines[jLine], EndpointsOnRingDoNotIntersect: iLine + 1 == jLine ? true : false))
+                        return true;
+                }
+            }
+
+            return false;
+        }
+            
         public static List<GridLineSegment> SubdivideAtIntersections(this GridLineSegment line, IReadOnlyList<GridLineSegment> lines, out GridVector2[] IntersectionPoints)
         { 
             List<GridLineSegment> Unused = line.Intersections(lines, out IntersectionPoints);

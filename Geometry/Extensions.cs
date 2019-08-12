@@ -1067,25 +1067,31 @@ namespace Geometry
         public static SortedDictionary<double, PointIndex> IntersectingSegments(this GridPolygon polygon, GridLineSegment line)
         {
             SortedDictionary<double, PointIndex> output = new SortedDictionary<double, PointIndex>();
-            double nearestPolyDistance = double.MaxValue;
 
-            for (int iRing = 0; iRing < polygon.InteriorPolygons.Count; iRing++)
+            for (int iRing = 0; iRing < polygon.InteriorRings.Count; iRing++)
             {
-                GridPolygon innerPoly = polygon.InteriorPolygons[iRing];
+                GridPolygon innerPoly = new GridPolygon(polygon.InteriorRings.ToArray()[iRing]);
+                
+                
+
                 SortedDictionary<double, PointIndex> ring_intersections = innerPoly.IntersectingSegments(line);
                 foreach (var item in ring_intersections)
                 {
                     output.Add(item.Key, new PointIndex(0, iRing, item.Value.iVertex, innerPoly.ExteriorRing.Length - 1));
                 }
             }
-              
+            
             for(int iSegment = 0; iSegment < polygon.ExteriorSegments.Length; iSegment++)
             {
                 GridLineSegment segment = polygon.ExteriorSegments[iSegment];
                 if (segment.Intersects(line, out GridVector2 intersection))
-                { 
+                {
                     double distance = GridVector2.Distance(line.A, intersection);
-                    output.Add(distance, new PointIndex(0, iSegment, polygon.ExteriorSegments.Length));
+                    if(!output.ContainsKey(distance))
+                    {
+                        output.Add(distance, new PointIndex(0, iSegment, polygon.ExteriorSegments.Length));
+                    }
+
                 }
             } 
 
