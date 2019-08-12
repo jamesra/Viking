@@ -336,12 +336,12 @@ namespace Geometry
         public bool AreOnSameRing(PointIndex B)
         {
             if (this.iPoly != B.iPoly)
-                return false; 
-
+                return false;
+            
             if (this.IsInner != B.IsInner)
                 return false;
 
-            if(this.IsInner)
+            if(this.IsInner && B.IsInner)
             {
                 return this.iInnerPoly.Value == B.iInnerPoly.Value;
             }
@@ -1405,6 +1405,8 @@ namespace Geometry
         public static GridPolygon Smooth(GridPolygon poly, uint NumInterpolationPoints)
         {
             GridVector2[] smoothedCurve = poly.ExteriorRing.CalculateCurvePoints(NumInterpolationPoints, true);
+
+            //GridVector2[] simplifiedCurve = smoothedCurve.DouglasPeuckerReduction(.5, poly.ExteriorRing).EnsureClosedRing().ToArray();
 
             GridPolygon smoothed_poly = new GridPolygon(smoothedCurve);
 
