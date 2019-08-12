@@ -330,13 +330,13 @@ namespace WebAnnotation.UI.Commands
         protected void PushVertex(GridVector2 p)
         {
             vert_stack.Push(p);
-            curve_verticies = new CurveViewControlPoints(Verticies, NumCurveInterpolations, !this.IsOpen);
+            curve_verticies = vert_stack.Count > 2 || this.IsOpen ? new CurveViewControlPoints(Verticies, NumCurveInterpolations, !this.IsOpen) : null;
         }
 
         protected GridVector2 PopVertex()
         {
             GridVector2 output = vert_stack.Pop();
-            curve_verticies = new CurveViewControlPoints(Verticies, NumCurveInterpolations, !this.IsOpen);
+            curve_verticies = vert_stack.Count > 2 || this.IsOpen ? new CurveViewControlPoints(Verticies, NumCurveInterpolations, !this.IsOpen) : null;
             return output;
         }
 
@@ -524,7 +524,7 @@ namespace WebAnnotation.UI.Commands
         {
             GridVector2? SelfIntersection = ProposedControlPointSelfIntersection(this.oldWorldPosition);
 
-            if(SelfIntersection.HasValue || CanControlPointBePlaced(this.oldWorldPosition))
+            if((SelfIntersection.HasValue || CanControlPointBePlaced(this.oldWorldPosition)))
             {
                 bool pushed_point = true;
 
@@ -535,10 +535,19 @@ namespace WebAnnotation.UI.Commands
                 else
                     pushed_point = false;
 
-                CurveView curveView = new CurveView(vert_stack.ToArray(), this.LineColor, !this.IsOpen, Global.NumCurveInterpolationPoints(!this.IsOpen), lineWidth: this.LineWidth, lineStyle: Style, controlPointRadius: this.ControlPointRadius);
-                curveView.Color.SetAlpha(this.ShapeIsValid() ? 1 : 0.25f);
-                CurveView.Draw(graphicsDevice, scene, Parent.LumaOverlayCurveManager, basicEffect, Parent.AnnotationOverlayEffect, 0, new CurveView[] { curveView } );
-                //GlobalPrimitives.DrawPolyline(Parent.LineManager, basicEffect, DrawnLineVerticies, this.LineWidth, this.LineColor);
+                if (vert_stack.Count > 2)
+                {
+                    CurveView curveView = new CurveView(vert_stack.ToArray(), this.LineColor, !this.IsOpen, Global.NumCurveInterpolationPoints(!this.IsOpen), lineWidth: this.LineWidth, lineStyle: Style, controlPointRadius: this.ControlPointRadius);
+                    curveView.Color.SetAlpha(this.ShapeIsValid() ? 1 : 0.25f);
+                    CurveView.Draw(graphicsDevice, scene, Parent.LumaOverlayCurveManager, basicEffect, Parent.AnnotationOverlayEffect, 0, new CurveView[] { curveView });
+                    //GlobalPrimitives.DrawPolyline(Parent.LineManager, basicEffect, DrawnLineVerticies, this.LineWidth, this.LineColor);
+                }
+                else
+                {
+                    LineView lineView = new LineView(new GridLineSegment(vert_stack.First(), vert_stack.Last()), Global.NumCurveInterpolationPoints(!this.IsOpen), this.LineColor, lineStyle: Style, UseHSLColor: true);
+                    lineView.Color.SetAlpha(this.ShapeIsValid() ? 1 : 0.25f);
+                    LineView.Draw(graphicsDevice, scene, Parent.LumaOverlayLineManager, new LineView[] { lineView });
+                }
 
                 if(pushed_point)
                     this.vert_stack.Pop();
@@ -547,11 +556,17 @@ namespace WebAnnotation.UI.Commands
             }
             else
             {
-                if (this.Verticies.Length > 1)
+                if (this.Verticies.Length > 2)
                 {
                     CurveView curveView = new CurveView(this.Verticies.ToArray(), this.LineColor, !this.IsOpen, Global.NumCurveInterpolationPoints(!this.IsOpen), lineWidth: this.LineWidth, lineStyle: Style, controlPointRadius: this.ControlPointRadius);
                     curveView.Color.SetAlpha(this.ShapeIsValid() ? 1 : 0.25f);
                     CurveView.Draw(graphicsDevice, scene, Parent.LumaOverlayCurveManager, basicEffect, Parent.AnnotationOverlayEffect, 0, new CurveView[] { curveView });
+                }
+                if (this.Verticies.Length == 2)
+                {
+                    LineView lineView = new LineView(new GridLineSegment(vert_stack.First(), vert_stack.Last()), Global.NumCurveInterpolationPoints(!this.IsOpen), this.LineColor, lineStyle: Style, UseHSLColor: true);
+                    lineView.Color.SetAlpha(this.ShapeIsValid() ? 1 : 0.25f);
+                    LineView.Draw(graphicsDevice, scene, Parent.LumaOverlayLineManager, new LineView[] { lineView });
                 }
                 else
                 {

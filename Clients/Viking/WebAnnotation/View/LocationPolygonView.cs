@@ -186,10 +186,14 @@ namespace WebAnnotation.View
         public override bool Intersects(GridVector2 Position)
         {
             if (!this.BoundingBox.Contains(Position))
-                return false; 
+                return false;
 
-            if (this.SmoothedVolumePolygon.ExteriorRing.Any(p => new GridCircle(p, lineWidth / 2.0).Contains(Position)))
-                return true;
+            //Test if we are over a control point
+            if (Global.PenMode == false)
+            {
+                if (this.SmoothedVolumePolygon.ExteriorRing.Any(p => new GridCircle(p, lineWidth / 2.0).Contains(Position)))
+                    return true;
+            }
 
             if (this.OverlappedLinkView != null && this.OverlappedLinkView.Intersects(Position))
                 return true;
@@ -263,7 +267,9 @@ namespace WebAnnotation.View
             //TODO: Detect if the View is on a touch/pen capable display
             if(Global.PenMode)
             {
-                if (this.SmoothedVolumePolygon.PointIntersectsAnyPolygonSegment(WorldPosition, ControlPointRadius, out intersectingPoly))
+                double RetraceDetectionThreshold = this.lineWidth * 1.5;
+                if(this.SmoothedVolumePolygon.NearestPolygonSegment(WorldPosition, out GridPolygon nearestPoly) < RetraceDetectionThreshold)
+                //if (this.SmoothedVolumePolygon.PointIntersectsAnyPolygonSegment(WorldPosition, ControlPointRadius, out intersectingPoly))
                 {
                     return LocationAction.RETRACEANDREPLACE;
                 }

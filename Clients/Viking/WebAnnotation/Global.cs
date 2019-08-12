@@ -43,6 +43,8 @@ namespace WebAnnotation
             return Closed ? NumClosedCurveInterpolationPoints : NumOpenCurveInterpolationPoints;
         }
 
+        static public int PenSimplifyThreshold = 30;
+
         static public double DefaultClosedLineWidth = 24.0;
 
         static public double MinRadius = 0.5;

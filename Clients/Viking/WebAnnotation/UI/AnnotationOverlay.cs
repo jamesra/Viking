@@ -23,6 +23,7 @@ using WebAnnotation.Actions;
 using System.ComponentModel;
 using VikingXNAWinForms;
 using Viking.VolumeModel;
+using Microsoft.SqlServer.Types;
 
 namespace WebAnnotation
 {
@@ -425,22 +426,23 @@ namespace WebAnnotation
                         LocationObj Loc = Store.Locations.GetObjectByID(intersectedPolyView.ID, true);
                         GridLineSegment segment = new GridLineSegment(WorldPosition, this.LastMouseMoveVolumeCoords);
                         GridVector2 intersection_point;
-                        segment.Intersects(intersectedPolyView.VolumeShapeAsRendered.ToPolygon(), out intersection_point);
-                        RetraceAndReplacePathCommand retraceCmd = new RetraceAndReplacePathCommand(Parent, Loc.MosaicShape.ToPolygon(), intersectedPolyView.Color, intersection_point, Loc.Width.HasValue ? Loc.Width.Value : Global.DefaultClosedLineWidth, (sending_cmd, MosaicPolygon) =>
-                        { 
-                            var cmd = (RetraceAndReplacePathCommand)sending_cmd;
+                        bool Intersection_found = segment.Intersects(intersectedPolyView.VolumeShapeAsRendered.ToPolygon(), out intersection_point);
+                        System.Diagnostics.Debug.Assert(Intersection_found, "Expected to find an intersection with the object boundary.");
+                        RetraceAndReplacePathCommand retraceCmd = new RetraceAndReplacePathCommand(Parent, Loc.MosaicShape.ToPolygon(), intersectedPolyView.Color, intersection_point, Loc.Width.HasValue ? Loc.Width.Value : Global.DefaultClosedLineWidth, (senderCmd, MosaicPolygon) =>
+                        {
+                            //Drawing from outside to inside:
 
-                            //GridVector2[] mosaic_points = Parent.Section.ActiveSectionToVolumeTransform.VolumeToSection(volume_points);
-                            //SqlGeometry updatedMosaicShape = loc.MosaicShape.AddInteriorPolygon(mosaic_points);
-
-                            try
-                            {
-                                Loc.SetShapeFromGeometryInSection(Parent.Section.ActiveSectionToVolumeTransform, cmd.OutputMosaicPolygon.ToSqlGeometry());
-                            }
-                            catch (ArgumentException excpt)
-                            {
-                                MessageBox.Show(Parent, excpt.Message, "Could not save Polygon", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                            }
+                            var cmd = (RetraceAndReplacePathCommand)senderCmd;
+                            
+                                try
+                                {
+                                    Loc.SetShapeFromGeometryInSection(Parent.Section.ActiveSectionToVolumeTransform, cmd.OutputMosaicPolygon.ToSqlGeometry());
+                                }
+                                catch (ArgumentException r)
+                                {
+                                    MessageBox.Show(Parent, r.Message, "Could not save Polygon", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                }
+                            
 
                             Store.Locations.Save();
 
@@ -847,7 +849,9 @@ namespace WebAnnotation
         public static void QueuePlacementCommandForOpenCurveStructure(Viking.UI.Controls.SectionViewerControl Parent, LocationObj newLocation, GridVector2 origin, System.Drawing.Color typecolor, LocationType typecode, bool SaveToStore)
         {
             double LineWidth = 16.0;
-            Parent.CommandQueue.EnqueueCommand(typeof(PlaceOpenCurveCommand), new object[] { Parent, typecolor, origin,  LineWidth,
+            if (Global.PenMode)
+            {
+                Parent.CommandQueue.EnqueueCommand(typeof(PlaceOpenCurveWithPenCommand), new object[] { Parent, typecolor, origin,  LineWidth,
                                                             new ControlPointCommandBase.OnCommandSuccess((ControlPointCommandBase sender, GridVector2[] points) => {
                                                                     newLocation.TypeCode = typecode;
                                                                     newLocation.Width = LineWidth;
@@ -855,6 +859,18 @@ namespace WebAnnotation
                                                                     if(SaveToStore)
                                                                         Store.Locations.Save();
                                                             }) });
+            }
+            else
+            {
+                Parent.CommandQueue.EnqueueCommand(typeof(PlaceOpenCurveCommand), new object[] { Parent, typecolor, origin,  LineWidth,
+                                                            new ControlPointCommandBase.OnCommandSuccess((ControlPointCommandBase sender, GridVector2[] points) => {
+                                                                    newLocation.TypeCode = typecode;
+                                                                    newLocation.Width = LineWidth;
+                                                                    newLocation.SetShapeFromPointsInVolume(Parent.Section.ActiveSectionToVolumeTransform, points, null);
+                                                                    if(SaveToStore)
+                                                                        Store.Locations.Save();
+                                                            }) });
+            }
         }
 
         public static void QueuePlacementCommandForClosedCurveStructure(Viking.UI.Controls.SectionViewerControl Parent, LocationObj newLocation, GridVector2 origin, System.Drawing.Color typecolor, LocationType typecode, bool SaveToStore)

@@ -21,9 +21,14 @@ namespace WebAnnotation.UI.Commands
 
     class PenInputHelper
     {
-        private double lastAngle;
-        private double PointIntervalOnDrag;
-        private double PenAngleThreshold;
+        private double PointIntervalOnDrag
+        {
+            get
+            {
+                return Parent.Downsample * 4.0;
+            }
+        }
+
         public bool PenIsComplete;
         Viking.UI.Controls.SectionViewerControl Parent;
         // GridVector2[] Verticies;
@@ -57,6 +62,8 @@ namespace WebAnnotation.UI.Commands
         public List<GridVector2> Path = new List<GridVector2>();
 
         public List<GridVector2> SimplifiedPath = new List<GridVector2>();
+
+        public GridVector2 cursor_position;
 
         public GridVector2? LastPenPosition;
 
@@ -108,10 +115,8 @@ namespace WebAnnotation.UI.Commands
         public PenInputHelper(Viking.UI.Controls.SectionViewerControl Parent)
         {
             AssignID();
-            lastAngle = 0;
             PenIsComplete = false;
-            PointIntervalOnDrag = Parent.Downsample * 16;
-            PenAngleThreshold = Math.PI / 36;//.36f;
+            
             this.Parent = Parent;
             NumCurveInterpolations = Global.NumCurveInterpolationPoints(false);
 
@@ -167,9 +172,10 @@ namespace WebAnnotation.UI.Commands
 
         public void OnMouseMove(object sender, MouseEventArgs e)
         {
-            if(e.Button.Middle() && Path.Count > 1)
+            this.cursor_position = Parent.ScreenToWorld(e.X, e.Y);
+
+            if (e.Button.Middle() && Path.Count > 1)
             {
-                GridVector2 cursor_position = Parent.ScreenToWorld(e.X, e.Y);
                 LastPenPosition = cursor_position;
 
                 double delete_distance = Parent.Scene.Camera.Downsample * 20.0;

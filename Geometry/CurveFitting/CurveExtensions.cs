@@ -8,6 +8,8 @@ namespace Geometry
 {
     public static class CurveExtensions
     {
+        public static double CurveSmoothingEpsilon = 1.0;
+
         public static GridVector2[] CalculateCurvePoints(this GridVector2 ControlPoints, uint NumInterpolations, bool closeCurve)
         {
             return ControlPoints.CalculateCurvePoints(NumInterpolations, closeCurve);
@@ -151,7 +153,6 @@ namespace Geometry
 
     public static class CurveSimplificationExtensions
     {
-
         /// <summary>
         /// Uses the Douglas Peucker algorithm to reduce the number of points.
         /// </summary>
@@ -159,18 +160,23 @@ namespace Geometry
         /// <param name="Tolerance">The tolerance.</param>
         /// <returns></returns>
         public static List<GridVector2> DouglasPeuckerReduction
-            (this List<GridVector2> Points, Double Tolerance)
-        {
+        (this IList<GridVector2> Points, Double Tolerance, ICollection<GridVector2> PointsToPreserve = null)
+        {  
             if (Points == null || Points.Count < 3)
-                return Points;
+                return Points.ToList();
 
             Int32 firstPoint = 0;
             Int32 lastPoint = Points.Count - 1;
-            List<Int32> pointIndexsToKeep = new List<Int32>();
+            SortedSet<Int32> pointIndexsToKeep = new SortedSet<Int32>();
 
             //Add the first and last index to the keepers
             pointIndexsToKeep.Add(firstPoint);
             pointIndexsToKeep.Add(lastPoint);
+            if (PointsToPreserve != null)
+            {
+                IEnumerable<int> PointsToPreserveIndicies = PointsToPreserve.Where(p => Points.Contains(p)).Select(p => Points.IndexOf(p));
+                pointIndexsToKeep.UnionWith(PointsToPreserveIndicies);
+            }
 
             //The first and the last point cannot be the same
             while (Points[firstPoint].Equals(Points[lastPoint]))
@@ -182,7 +188,6 @@ namespace Geometry
             Tolerance, ref pointIndexsToKeep);
 
             List<GridVector2> returnPoints = new List<GridVector2>();
-            pointIndexsToKeep.Sort();
             foreach (Int32 index in pointIndexsToKeep)
             {
                 returnPoints.Add(Points[index]);
@@ -199,9 +204,7 @@ namespace Geometry
         /// <param name="lastPoint">The last point.</param>
         /// <param name="tolerance">The tolerance.</param>
         /// <param name="pointIndexsToKeep">The point index to keep.</param>
-        private static void DouglasPeuckerReduction(List<GridVector2>
-            points, Int32 firstPoint, Int32 lastPoint, Double tolerance,
-            ref List<Int32> pointIndexsToKeep)
+        private static void DouglasPeuckerReduction(IList<GridVector2> points, Int32 firstPoint, Int32 lastPoint, Double tolerance, ref SortedSet<Int32> pointIndexsToKeep)
         {
             Double maxDistance = 0;
             Int32 indexFarthest = 0;

@@ -152,7 +152,7 @@ namespace WebAnnotation.UI.Commands
                 //PenInput.Pop();
                 //PenInput.Push(IntersectionPoint.Value);
 
-                PenInput.SimplifiedPath = cropped_path.DouglasPeuckerReduction(15);
+                PenInput.SimplifiedPath = cropped_path.DouglasPeuckerReduction(Global.PenSimplifyThreshold);
                 //PenInput.Push(IntersectionPoint.Value);3
 
                 //if (this.ShapeIsValid())
@@ -281,13 +281,37 @@ namespace WebAnnotation.UI.Commands
             : base(parent, color, origin, LineWidth, true, success_callback)
         {
         }
+        
+        protected override void OnMouseDown(object sender, MouseEventArgs e)
+        {
+            PenInput.Path.Clear();
+            PenInput.Push(Parent.ScreenToWorld(e.X, e.Y));
+            base.OnMouseDown(sender, e);
+        }
 
         protected override void OnPenPathChanged(object sender, NotifyCollectionChangedEventArgs e)
         {
+            if(PenInput.Path.Count < 2)
+            {
+                return;
+            }
+
+            //Update the Curve
             this.curve_verticies = new CurveViewControlPoints(Verticies, NumInterpolations: 0, TryToClose: false);
 
-            
             this.Parent.Invalidate();
+        }
+
+        protected override void OnMouseUp(object sender, MouseEventArgs e)
+        {
+            if(PenInput.Path.Count < 2)
+            {
+                return;
+            }
+            //Simplify the curve
+            PenInput.Path = PenInput.Path.DouglasPeuckerReduction(Global.PenSimplifyThreshold);
+            Execute();
+            base.OnMouseUp(sender, e);
         }
 
         protected override void OnPenProposedNextSegmentChanged(object sender, GridLineSegment? segment)

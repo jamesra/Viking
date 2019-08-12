@@ -519,23 +519,20 @@ namespace WebAnnotation.View
                                                                  loc.Width.HasValue ? loc.Width.Value : Global.DefaultClosedLineWidth,
                                                                  (sender, MosaicPolygon) =>
                                                                  {
-
+                                                                     //Drawing from inside to outside:
                                                                      var cmd = (RetraceAndReplacePathCommand)sender;
-
-                                                                     //GridVector2[] mosaic_points = Parent.Section.ActiveSectionToVolumeTransform.VolumeToSection(volume_points);
-                                                                     //SqlGeometry updatedMosaicShape = loc.MosaicShape.AddInteriorPolygon(mosaic_points);
-
-                                                                     try
-                                                                     {
-                                                                         loc.SetShapeFromGeometryInSection(Parent.Section.ActiveSectionToVolumeTransform, cmd.OutputMosaicPolygon.ToSqlGeometry());
-                                                                     }
-                                                                     catch (ArgumentException e)
-                                                                     {
-                                                                         MessageBox.Show(Parent, e.Message, "Could not save Polygon", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                                                                     }
+                                                                     
+                                                                         try
+                                                                         {
+                                                                             loc.SetShapeFromGeometryInSection(Parent.Section.ActiveSectionToVolumeTransform, cmd.OutputMosaicPolygon.ToSqlGeometry());
+                                                                         }
+                                                                         catch (ArgumentException e)
+                                                                         {
+                                                                             MessageBox.Show(Parent, e.Message, "Could not save Polygon", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                                                         }
+                                                                     
 
                                                                      Store.Locations.Save();
-
 
                                                                  }
                                                                  );

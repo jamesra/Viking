@@ -113,7 +113,7 @@ namespace WebAnnotation.UI.Commands
                 //Remove the endpoint that was just added which intersected our path and replace it with the intersection point
                 cropped_path[0] = IntersectionPoint.Value;
 
-                PenInput.SimplifiedPath = cropped_path.DouglasPeuckerReduction(15);
+                PenInput.SimplifiedPath = cropped_path.DouglasPeuckerReduction(Global.PenSimplifyThreshold);
                 
                 this.Execute(PenInput.SimplifiedPath.ToArray());
             }
