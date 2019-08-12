@@ -94,7 +94,7 @@ namespace LocalBookmarks
             base.OnMouseEnter(sender, e);
         }
 
-        public override void OnDeactivate()
+        protected override void OnDeactivate()
         {
             Cursor.Show();
             base.OnDeactivate();

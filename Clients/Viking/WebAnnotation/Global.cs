@@ -25,7 +25,7 @@ namespace WebAnnotation
         /// </summary>
         internal static int NumSectionsLoading = 5;
 
-        internal static Export Export = null; 
+        internal static Export Export = null;
 
 #if DEBUG
         internal static int NumSectionsInMemory = 10;
@@ -42,6 +42,8 @@ namespace WebAnnotation
         {
             return Closed ? NumClosedCurveInterpolationPoints : NumOpenCurveInterpolationPoints;
         }
+
+        static public int PenSimplifyThreshold = 30;
 
         static public double DefaultClosedLineWidth = 24.0;
 
@@ -77,6 +79,19 @@ namespace WebAnnotation
         static string UserSettingsFilePath = WebAnnotationPath + System.IO.Path.DirectorySeparatorChar + UserSettingsFileName;
 
         static XElement UserSettingsElement = null;
+
+        public static bool PenMode
+        {
+            get
+            {
+                return WebAnnotation.Properties.Settings.Default.PenMode;
+            }
+            set
+            {
+                WebAnnotation.Properties.Settings.Default.PenMode = value;
+                WebAnnotation.Properties.Settings.Default.Save();
+            }
+        }
 
         static Uri UserSettingsUri
         {

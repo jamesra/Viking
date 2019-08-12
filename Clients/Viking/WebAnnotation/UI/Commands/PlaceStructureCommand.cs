@@ -45,7 +45,7 @@ namespace WebAnnotation.UI.Commands
             mapping = parent.Section.ActiveSectionToVolumeTransform;
         }
 
-        public override void OnDeactivate()
+        protected override void OnDeactivate()
         {
            Parent.Cursor = Cursors.Default; 
            base.OnDeactivate();

@@ -121,7 +121,8 @@ namespace Viking.UI.Commands
 
         protected override void OnMouseDoubleClick(object sender, MouseEventArgs e)
         {
-            if (e.Button == MouseButtons.Right)
+            //Middle mouse button is for Wacom Pen Support
+            if (e.Button == MouseButtons.Right || e.Button == MouseButtons.Middle)
             {
                 GridVector2 WorldPosition = Parent.ScreenToWorld(e.X, e.Y);
                 double distance = double.MaxValue;

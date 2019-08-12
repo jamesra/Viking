@@ -28,7 +28,8 @@ namespace WebAnnotation.View
         CREATELINK, //Create a link to an adjacent location or structure,
         CREATELINKEDLOCATION, //Create a new location and link to it
         CUTHOLE, //Cut a hole from the interior of an annotation
-        REMOVEHOLE //Remove a hole from the interior of an annotation
+        REMOVEHOLE, //Remove a hole from the interior of an annotation
+        RETRACEANDREPLACE //Trace a new path from the perimeter of an annotation to another point on the perimeter and replace points in between with the new path
     }
 
     /// <summary>
@@ -60,6 +61,8 @@ namespace WebAnnotation.View
                     return new Cursor(Viking.Properties.Resources.Scissors2.Handle);
                 case LocationAction.REMOVEHOLE: 
                     return new Cursor(Viking.Properties.Resources.PaintBucketFill.Handle);
+                case LocationAction.RETRACEANDREPLACE:
+                    return Cursors.Cross;
                 default:
                     return Cursors.Default;
             }
@@ -408,23 +411,55 @@ namespace WebAnnotation.View
                                                           }
                                                       });
                 case LocationAction.CUTHOLE:
-                    return new PlaceClosedCurveCommand(Parent, Microsoft.Xna.Framework.Color.White, volumePosition, Global.DefaultClosedLineWidth, (volume_points) =>
+                    {
+                        if (Global.PenMode)
                         {
-                            GridVector2[] mosaic_points = Parent.Section.ActiveSectionToVolumeTransform.VolumeToSection(volume_points);
-                            SqlGeometry updatedMosaicShape = loc.MosaicShape.AddInteriorPolygon(mosaic_points);
+                            
+                            return new CutHoleWithPenCommand(Parent,
+                                                                 loc.MosaicShape.ToPolygon(),
+                                                                 Microsoft.Xna.Framework.Color.White.SetAlpha(0.5f),//loc.Parent.Type.Color.ToXNAColor(0.5f),
+                                                                 volumePosition,
+                                                                 loc.Width.HasValue ? loc.Width.Value : Global.DefaultClosedLineWidth,
+                                                                 (sender, volume_points) =>
+                                                                 {
+                                                                     GridVector2[] mosaic_points = Parent.Section.ActiveSectionToVolumeTransform.VolumeToSection(volume_points);
+                                                                     SqlGeometry updatedMosaicShape = loc.MosaicShape.AddInteriorPolygon(mosaic_points);
 
-                            try
-                            {
-                                loc.SetShapeFromGeometryInSection(Parent.Section.ActiveSectionToVolumeTransform, updatedMosaicShape);
-                            } 
-                            catch (ArgumentException e)
-                            {
-                                MessageBox.Show(Parent, e.Message, "Could not save Polygon", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                            }
+                                                                     try
+                                                                     {
+                                                                         loc.SetShapeFromGeometryInSection(Parent.Section.ActiveSectionToVolumeTransform, updatedMosaicShape);
+                                                                     }
+                                                                     catch (ArgumentException e)
+                                                                     {
+                                                                         MessageBox.Show(Parent, e.Message, "Could not save Polygon", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                                                     }
 
-                    Store.Locations.Save();
+                                                                     Store.Locations.Save();
+                                                                 }
+                                                                 );
+
                         }
-                        );
+                        else
+                        {
+                            return new PlaceClosedCurveCommand(Parent, Microsoft.Xna.Framework.Color.White, volumePosition, Global.DefaultClosedLineWidth, (sender, volume_points) =>
+                            {
+                                GridVector2[] mosaic_points = Parent.Section.ActiveSectionToVolumeTransform.VolumeToSection(volume_points);
+                                SqlGeometry updatedMosaicShape = loc.MosaicShape.AddInteriorPolygon(mosaic_points);
+
+                                try
+                                {
+                                    loc.SetShapeFromGeometryInSection(Parent.Section.ActiveSectionToVolumeTransform, updatedMosaicShape);
+                                }
+                                catch (ArgumentException e)
+                                {
+                                    MessageBox.Show(Parent, e.Message, "Could not save Polygon", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                }
+
+                                Store.Locations.Save();
+                            }
+                            );
+                        }
+                    }
                 case LocationAction.REMOVEHOLE:
                     return new RemovePolygonHoleCommand(Parent,
                                                         loc.MosaicShape.ToPolygon(),
@@ -436,38 +471,73 @@ namespace WebAnnotation.View
                                                         }
                                                         );
                 case LocationAction.CREATELINKEDLOCATION:
+                    {
+                        //The section we are linking from is on another section, so we have to:
+                        // 0. Position the mosaic shape where we want the command to begin
+                        // 1. Warp the mosaic using the correct transform for the source section
+                        // 2. Warp the volume shape back to our section using the current transform
 
-                    //The section we are linking from is on another section, so we have to:
-                    // 0. Position the mosaic shape where we want the command to begin
-                    // 1. Warp the mosaic using the correct transform for the source section
-                    // 2. Warp the volume shape back to our section using the current transform
+                        IVolumeToSectionTransform mapper = Parent.Volume.GetSectionToVolumeTransform((int)loc.Z);
+                        GridVector2 MosaicPosition = mapper.VolumeToSection(volumePosition);
 
-                    IVolumeToSectionTransform mapper = Parent.Volume.GetSectionToVolumeTransform((int)loc.Z);
-                    GridVector2 MosaicPosition = mapper.VolumeToSection(volumePosition);
+                        SqlGeometry VolumeShape;
+                        SqlGeometry MosaicShape = TransformMosaicShapeToSection(Parent.Volume, loc.MosaicShape.MoveTo(MosaicPosition), (int)loc.Z, Parent.Section.Number, out VolumeShape);
 
-                    SqlGeometry VolumeShape;
-                    SqlGeometry MosaicShape = TransformMosaicShapeToSection(Parent.Volume, loc.MosaicShape.MoveTo(MosaicPosition), (int)loc.Z, Parent.Section.Number, out VolumeShape);
-                    
-                    return new TranslatePolygonCommand(Parent,
-                                                             MosaicShape.ToPolygon(),
-                                                             volumePosition,
-                                                             loc.Parent.Type.Color.ToXNAColor(0.5f),
-                                                             (MosaicPolygon) =>
-                                                             {
-                                                                 LocationObj newLoc = new LocationObj(loc.Parent, 
-                                                                    Parent.Section.Number,
-                                                                    loc.TypeCode);
-                                                                 try
+                        return new TranslatePolygonCommand(Parent,
+                                                                 MosaicShape.ToPolygon(),
+                                                                 volumePosition,
+                                                                 loc.Parent.Type.Color.ToXNAColor(0.5f),
+                                                                 (MosaicPolygon) =>
                                                                  {
-                                                                     newLoc.SetShapeFromGeometryInSection(Parent.Section.ActiveSectionToVolumeTransform, MosaicPolygon.ToSqlGeometry());
-                                                                     Parent.CommandQueue.EnqueueCommand(typeof(CreateNewLinkedLocationCommand), new object[] { Parent, loc, newLoc });
+                                                                     LocationObj newLoc = new LocationObj(loc.Parent,
+                                                                        Parent.Section.Number,
+                                                                        loc.TypeCode);
+                                                                     try
+                                                                     {
+                                                                         newLoc.SetShapeFromGeometryInSection(Parent.Section.ActiveSectionToVolumeTransform, MosaicPolygon.ToSqlGeometry());
+                                                                         Parent.CommandQueue.EnqueueCommand(typeof(CreateNewLinkedLocationCommand), new object[] { Parent, loc, newLoc });
+                                                                     }
+                                                                     catch (ArgumentException e)
+                                                                     {
+                                                                         MessageBox.Show(Parent, e.Message, "Could not save Polygon", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                                                     }
                                                                  }
-                                                                 catch (ArgumentException e)
+                                                                 );
+                    }
+                case LocationAction.RETRACEANDREPLACE:
+                    {
+                        IVolumeToSectionTransform mapper = Parent.Volume.GetSectionToVolumeTransform((int)loc.Z);
+                        GridVector2 MosaicPosition = mapper.VolumeToSection(volumePosition);
+
+                        SqlGeometry VolumeShape;
+                        //SqlGeometry MosaicShape = TransformMosaicShapeToSection(Parent.Volume, loc.MosaicShape.MoveTo(MosaicPosition), (int)loc.Z, Parent.Section.Number, out VolumeShape);
+
+                        return new RetraceAndReplacePathCommand(Parent,
+                                                                 loc.MosaicShape.ToPolygon(),
+                                                                 loc.Parent.Type.Color.ToXNAColor(0.5f),
+                                                                 volumePosition, 
+                                                                 loc.Width.HasValue ? loc.Width.Value : Global.DefaultClosedLineWidth,
+                                                                 (sender, MosaicPolygon) =>
                                                                  {
-                                                                     MessageBox.Show(Parent, e.Message, "Could not save Polygon", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                                                     //Drawing from inside to outside:
+                                                                     var cmd = (RetraceAndReplacePathCommand)sender;
+                                                                     
+                                                                         try
+                                                                         {
+                                                                             loc.SetShapeFromGeometryInSection(Parent.Section.ActiveSectionToVolumeTransform, cmd.OutputMosaicPolygon.ToSqlGeometry());
+                                                                         }
+                                                                         catch (ArgumentException e)
+                                                                         {
+                                                                             MessageBox.Show(Parent, e.Message, "Could not save Polygon", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                                                         }
+                                                                     
+
+                                                                     Store.Locations.Save();
+
                                                                  }
-                                                             }
-                                                             );
+                                                                 );
+                    }
+
                 default:
                     return null;
             }

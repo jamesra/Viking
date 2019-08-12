@@ -186,10 +186,14 @@ namespace WebAnnotation.View
         public override bool Intersects(GridVector2 Position)
         {
             if (!this.BoundingBox.Contains(Position))
-                return false; 
+                return false;
 
-            if (this.SmoothedVolumePolygon.ExteriorRing.Any(p => new GridCircle(p, lineWidth / 2.0).Contains(Position)))
-                return true;
+            //Test if we are over a control point
+            if (Global.PenMode == false)
+            {
+                if (this.SmoothedVolumePolygon.ExteriorRing.Any(p => new GridCircle(p, lineWidth / 2.0).Contains(Position)))
+                    return true;
+            }
 
             if (this.OverlappedLinkView != null && this.OverlappedLinkView.Intersects(Position))
                 return true;
@@ -256,8 +260,20 @@ namespace WebAnnotation.View
 
         public override LocationAction GetMouseClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID)
         {
+
             LocationID = this.ID;
             GridPolygon intersectingPoly; //Could be our polygon or an interior polygon
+
+            //TODO: Detect if the View is on a touch/pen capable display
+            if(Global.PenMode)
+            {
+                double RetraceDetectionThreshold = this.lineWidth * 1.5;
+                if(this.SmoothedVolumePolygon.NearestPolygonSegment(WorldPosition, out GridPolygon nearestPoly) < RetraceDetectionThreshold)
+                //if (this.SmoothedVolumePolygon.PointIntersectsAnyPolygonSegment(WorldPosition, ControlPointRadius, out intersectingPoly))
+                {
+                    return LocationAction.RETRACEANDREPLACE;
+                }
+            }
 
             if(ModifierKeys.ShiftPressed())
             {
@@ -295,25 +311,22 @@ namespace WebAnnotation.View
             }
             else if (!ModifierKeys.ShiftOrCtrlPressed())
             {
-                if (this.SmoothedVolumePolygon.Contains(WorldPosition))
+                if (VisibleSectionNumber == (int)this.modelObj.Z)
                 {
-                    if (VisibleSectionNumber == (int)this.modelObj.Z)
+                    if (this.VolumePolygon.PointIntersectsAnyPolygonVertex(WorldPosition, ControlPointRadius, out intersectingPoly))
                     {
-                        if (this.VolumePolygon.PointIntersectsAnyPolygonVertex(WorldPosition, ControlPointRadius, out intersectingPoly))
+                        return LocationAction.ADJUST;
+                    }
+                    else if (this.SmoothedVolumePolygon.Contains(WorldPosition))
+                    {
+                        GridCircle TranslateTargetCircle = new GridCircle(this.InscribedCircle.Center, this.InscribedCircle.Radius / 2.0);
+                        if (TranslateTargetCircle.Contains(WorldPosition))
                         {
-                            return LocationAction.ADJUST;
+                            LocationID = this.ID;
+                            return LocationAction.TRANSLATE;
                         }
-                        else
-                        {
-                            GridCircle TranslateTargetCircle = new GridCircle(this.InscribedCircle.Center, this.InscribedCircle.Radius / 2.0);
-                            if (TranslateTargetCircle.Contains(WorldPosition))
-                            {
-                                LocationID = this.ID;
-                                return LocationAction.TRANSLATE;
-                            }
 
-                            return LocationAction.CREATELINK;
-                        }
+                        return LocationAction.CREATELINK;
                     }
                     else
                     {
@@ -324,7 +337,6 @@ namespace WebAnnotation.View
 
             return LocationAction.NONE;
         }
-
 
         internal override void OnParentPropertyChanged(object o, PropertyChangedEventArgs args)
         {

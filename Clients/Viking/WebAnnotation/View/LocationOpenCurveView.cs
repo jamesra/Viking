@@ -59,7 +59,7 @@ namespace WebAnnotation.View
             //RegisterForStructureChangeEvents();
 
             Color color = obj.Parent == null ? Color.Gray.SetAlpha(0.5f) : obj.Parent.Type.Color.ToXNAColor(0.5f);
-            curveView = new CurveView(VolumeControlPoints, color, false, Global.NumOpenCurveInterpolationPoints, lineWidth: lineWidth, lineStyle: LineStyle.Tubular);
+            curveView = new CurveView(VolumeControlPoints, color, false, Global.NumOpenCurveInterpolationPoints, lineWidth: lineWidth, lineStyle: LineStyle.Tubular, controlPointRadius: lineWidth / 2.0);
             CreateLabelViews(VolumeControlPoints, obj.ParentID);
         }
 
@@ -69,7 +69,7 @@ namespace WebAnnotation.View
             //RegisterForStructureChangeEvents();
 
             Color color = obj.Parent == null ? Color.Gray.SetAlpha(0.5f) : obj.Parent.Type.Color.ToXNAColor(0.5f);
-            curveView = new CurveView(VolumeControlPoints, color, false, Global.NumOpenCurveInterpolationPoints, lineWidth: obj.Width.Value, lineStyle: LineStyle.Tubular);
+            curveView = new CurveView(VolumeControlPoints, color, false, Global.NumOpenCurveInterpolationPoints, lineWidth: obj.Width.Value, lineStyle: LineStyle.Tubular, controlPointRadius: obj.Width.Value / 2.0);
             CreateLabelViews(VolumeControlPoints, obj.ParentID);
         }
 

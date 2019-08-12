@@ -333,6 +333,22 @@ namespace Geometry
             return polygon.ExteriorRing;
         }
 
+        public bool AreOnSameRing(PointIndex B)
+        {
+            if (this.iPoly != B.iPoly)
+                return false;
+            
+            if (this.IsInner != B.IsInner)
+                return false;
+
+            if(this.IsInner && B.IsInner)
+            {
+                return this.iInnerPoly.Value == B.iInnerPoly.Value;
+            }
+
+            return true;
+        }
+
         /// <summary>
         /// Return True if the vertices A and B are a line on the internal or external border of the polygon
         /// </summary>
@@ -747,7 +763,7 @@ namespace Geometry
     [Serializable()]
     public class GridPolygon : IShape2D, ICloneable, IPolygon2D
     {
-        double _Area;
+        double _ExteriorRingArea;
         GridVector2[] _ExteriorRing;
          
         public GridVector2[] ExteriorRing
@@ -755,10 +771,10 @@ namespace Geometry
             get { return _ExteriorRing; }
             set
             {
-                _Area = value.PolygonArea();
-                if (_Area < 0) //Negative area indicates Clockwise orientation, we use counter-clockwise
+                _ExteriorRingArea = value.PolygonArea();
+                if (_ExteriorRingArea < 0) //Negative area indicates Clockwise orientation, we use counter-clockwise
                 {
-                    _Area = -_Area;
+                    _ExteriorRingArea = -_ExteriorRingArea;
                     _ExteriorRing = value.Reverse().ToArray();
                 }
                 else
@@ -954,7 +970,7 @@ namespace Geometry
         {
             get
             {
-                double area = _Area;
+                double area = _ExteriorRingArea;
                 double inner_area = _InteriorPolygons.Sum(ip => ip.Area);
                 area -= inner_area;
                 return area;
@@ -1042,8 +1058,32 @@ namespace Geometry
         public void AddInteriorRing(GridPolygon innerPoly)
         {
             //TODO: Make sure the inner poly does not intersect the outer ring or any existing inner ring
-            
-            this._InteriorPolygons.Add(innerPoly);
+
+            if (this._InteriorPolygons.Any(p => p.Intersects(innerPoly)))
+                throw new ArgumentException("Cannot add interior polygon that intersects and existing interior polygon");
+
+            if (this.ExteriorSegments.Any(line => line.Intersects(innerPoly)))
+                throw new ArgumentException("Cannot add interior polygon that intersects a polygon's exterior boundary");
+             
+            this._InteriorPolygons.Add(innerPoly);  
+        }
+
+        public void RemoveInteriorRing(int iInner)
+        {
+            this._InteriorPolygons.RemoveAt(iInner);
+        }
+
+        public void ReplaceInteriorRing(int iInner, GridPolygon replacement)
+        {
+            this._InteriorPolygons.RemoveAt(iInner);
+
+            if (this._InteriorPolygons.Any(p => p.Intersects(replacement)))
+                throw new ArgumentException("Cannot add interior polygon that intersects and existing interior polygon");
+
+            if(this.ExteriorSegments.Any(line => line.Intersects(replacement)))
+                throw new ArgumentException("Cannot add interior polygon that intersects a polygon's exterior boundary");
+
+            this._InteriorPolygons.Insert(iInner, replacement);
         }
 
         /// <summary>
@@ -1052,9 +1092,9 @@ namespace Geometry
         /// <param name="holePosition"></param>
         public bool TryRemoveInteriorRing(GridVector2 holePosition)
         {
-            for(int iPoly = 0; iPoly < _InteriorPolygons.Count; iPoly++)
+            for (int iPoly = 0; iPoly < _InteriorPolygons.Count; iPoly++)
             {
-                if(_InteriorPolygons[iPoly].Contains(holePosition))
+                if (_InteriorPolygons[iPoly].Contains(holePosition))
                 {
                     _InteriorPolygons.RemoveAt(iPoly);
                     return true;
@@ -1063,7 +1103,7 @@ namespace Geometry
 
             return false;
         }
-
+        
         public void AddVertex(GridVector2 NewControlPointPosition)
         {
             //Find the line segment the NewControlPoint intersects
@@ -1071,7 +1111,7 @@ namespace Geometry
             int iNearestSegment = this.ExteriorSegments.NearestSegment(NewControlPointPosition, out MinDistance);
             GridLineSegment[] updatedSegments = this.ExteriorSegments.Insert(NewControlPointPosition, iNearestSegment);
 
-            this.ExteriorRing = updatedSegments.Verticies(); 
+            this.ExteriorRing = updatedSegments.Verticies();
         }
 
         public void RemoveVertex(GridVector2 RemovedControlPointPosition)
@@ -1233,9 +1273,7 @@ namespace Geometry
             }
 
             return false;
-        }
-
-        
+        }        
 
         public GridCircle InscribedCircle()
         {
@@ -1423,6 +1461,8 @@ namespace Geometry
         public static GridPolygon Smooth(GridPolygon poly, uint NumInterpolationPoints)
         {
             GridVector2[] smoothedCurve = poly.ExteriorRing.CalculateCurvePoints(NumInterpolationPoints, true);
+
+            //GridVector2[] simplifiedCurve = smoothedCurve.DouglasPeuckerReduction(.5, poly.ExteriorRing).EnsureClosedRing().ToArray();
 
             GridPolygon smoothed_poly = new GridPolygon(smoothedCurve);
 

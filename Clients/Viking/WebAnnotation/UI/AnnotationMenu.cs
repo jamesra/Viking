@@ -15,6 +15,8 @@ namespace WebAnnotation
         static FindStructureNumberForm _FindStructureNumberForm = null;
         static MergeStructuresForm _MergeStructuresForm = null;
 
+        static ToolStripMenuItem menuPenMode;
+
         System.Windows.Forms.ToolStripItem Viking.Common.IMenuFactory.CreateMenuItem()
         {
             //Create a menu containing each of our bookmarks
@@ -31,9 +33,15 @@ namespace WebAnnotation
                 ToolStripMenuItem menuExportMotifTLP = new ToolStripMenuItem("To Tulip Format");
                 menuExportMotifTLP.Click += OnExportMotifsTLP;
 
+                menuPenMode = new ToolStripMenuItem("Pen Mode");
+                menuPenMode.Checked = WebAnnotation.Global.PenMode;
+                menuPenMode.Click += OnPenMode;
+
+
                 menuExportMotifs.DropDownItems.Add(menuExportMotifTLP);
                 menuExport.DropDownItems.Add(menuExportMotifs);
                 menuRoot.DropDownItems.Add(menuExport);
+                menuRoot.DropDownItems.Add(menuPenMode);
             }
 
             return menuRoot as ToolStripItem; 
@@ -66,6 +74,12 @@ namespace WebAnnotation
         static public void GoToLastModifiedLocation(object sender, EventArgs e)
         {
             AnnotationOverlay.GotoLastModifiedLocation();
+        }
+          
+        static public void OnPenMode(object sender, EventArgs e)
+        {
+            Global.PenMode = !Global.PenMode;
+            menuPenMode.Checked = Global.PenMode;
         }
 
         [MenuItem("Open Structure")]

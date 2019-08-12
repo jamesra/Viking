@@ -235,10 +235,11 @@ namespace SqlGeometryUtils
                     builder.AddPolygon(innerRing);
                 }
             }
-
+            
             builder.EndGeometry();
 
             SqlGeometry polygon = builder.ConstructedGeometry;
+
             polygon.ThrowIfInvalid();
 
             return polygon;

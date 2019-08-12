@@ -178,6 +178,11 @@
     <Compile Include="Extensions.cs" />
     <Compile Include="Global.cs" />
     <Compile Include="Interfaces\CanvasInterfaces.cs" />
+    <Compile Include="Properties\Settings.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTimeSharedInput>True</DesignTimeSharedInput>
+      <DependentUpon>Settings.settings</DependentUpon>
+    </Compile>
     <Compile Include="Sorters.cs" />
     <Compile Include="SqlServerTypes\Loader.cs" />
     <Compile Include="UI\Actions\MouseOverLocationCanvasViewEffect.cs" />
@@ -186,8 +191,12 @@
     <Compile Include="UI\Commands\AdjustControlPointCommand.cs" />
     <Compile Include="UI\Commands\AdjustPolygonVertexCommand.cs" />
     <Compile Include="UI\Commands\CutHoleCommand.cs" />
+    <Compile Include="UI\Commands\PenInputHelper.cs" />
+    <Compile Include="UI\Commands\PlaceCurvesWithPenCommands.cs" />
     <Compile Include="UI\Commands\PlaceOpenCurveCommand.cs" />
     <Compile Include="UI\Commands\RemovePolygonHoleCommand.cs" />
+    <Compile Include="UI\Commands\CutHoleWithPenCommand.cs" />
+    <Compile Include="UI\Commands\RetraceAndReplacePathCommand.cs" />
     <Compile Include="UI\Commands\TranslateLocationCommand.cs" />
     <Compile Include="UI\Commands\TranslateScaleCommandBase.cs" />
     <Compile Include="UI\Commands\RotateTranslateScaleCommand.cs" />
@@ -413,6 +422,11 @@
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
+    <None Include="App.config" />
+    <None Include="Properties\Settings.settings">
+      <Generator>SettingsSingleFileGenerator</Generator>
+      <LastGenOutput>Settings.Designer.cs</LastGenOutput>
+    </None>
     <None Include="WeakEvents\app.config" />
     <None Include="packages.config" />
     <None Include="Properties\DataSources\WebAnnotation.UI.Tag.datasource" />

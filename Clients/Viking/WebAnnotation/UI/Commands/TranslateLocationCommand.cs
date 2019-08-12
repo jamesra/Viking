@@ -186,7 +186,8 @@ namespace WebAnnotation.UI.Commands
 
         protected override CurveView CreateView(GridVector2[] ControlPoints, Microsoft.Xna.Framework.Color color)
         {
-            return new CurveView(ControlPoints.ToList(), color, false, Global.NumOpenCurveInterpolationPoints, lineWidth: CalculateFinalLineWidth(), lineStyle: LineStyle.Tubular);
+            double lineWidth = CalculateFinalLineWidth();
+            return new CurveView(ControlPoints.ToList(), color, false, Global.NumOpenCurveInterpolationPoints, lineWidth: lineWidth, lineStyle: LineStyle.Tubular, controlPointRadius: lineWidth / 2.0);
         }
 
         protected override GridVector2[] CalculateTranslatedMosaicControlPoints()

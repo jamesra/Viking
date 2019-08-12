@@ -64,9 +64,9 @@ namespace VikingXNAGraphics
             }
         }
 
-        private double _ControlPointRadius;
+        private double? _ControlPointRadius;
 
-        public double ControlPointRadius
+        public double? ControlPointRadius
         {
             get { return _ControlPointRadius; }
             set
@@ -136,7 +136,7 @@ namespace VikingXNAGraphics
             this._ControlPointTexture = texture;
             this._LineWidth = lineWidth;
             if (!controlPointRadius.HasValue)
-                this.ControlPointRadius = lineWidth / 2.0;
+                this.ControlPointRadius = 0;
             else
                 this.ControlPointRadius = controlPointRadius.Value;
 
@@ -149,12 +149,19 @@ namespace VikingXNAGraphics
             this.Curve = CreateCurveView(this.CurvePoints.ToArray(), this.LineWidth, this.Color, _CurveControlPoints.TryCloseCurve);
         }
 
-        private static CircleView[] CreateControlPointViews(ICollection<GridVector2> ControlPoints, double Radius, Microsoft.Xna.Framework.Color color, Texture2D texture)
+        private static CircleView[] CreateControlPointViews(ICollection<GridVector2> ControlPoints, double? Radius, Microsoft.Xna.Framework.Color color, Texture2D texture)
         {
-            if(texture != null)
-                return ControlPoints.Select(cp => new TextureCircleView(texture, new GridCircle(cp, Radius), color)).ToArray();
+            if (Radius.HasValue)
+            {
+                if (texture != null)
+                    return ControlPoints.Select(cp => new TextureCircleView(texture, new GridCircle(cp, Radius.Value), color)).ToArray();
+                else
+                    return ControlPoints.Select(cp => new CircleView(new GridCircle(cp, Radius.Value), color)).ToArray();
+            }
             else
-                return ControlPoints.Select(cp => new CircleView(new GridCircle(cp, Radius), color)).ToArray();   
+            {
+                return new CircleView[0];
+            }
         }
 
 
@@ -236,9 +243,12 @@ namespace VikingXNAGraphics
             Microsoft.Xna.Framework.Color pointColor = ControlPointColor(Color);
             //GlobalPrimitives.DrawPoints(LineManager, basicEffect, ControlPoints, LineWidth, pointColor);
 
-            foreach (GridVector2 cp in ControlPoints)
+            if (this.ControlPointRadius.HasValue)
             {
-                GlobalPrimitives.DrawCircle(device, basicEffect, cp, LineWidth, pointColor);
+                foreach (GridVector2 cp in ControlPoints)
+                {
+                    GlobalPrimitives.DrawCircle(device, basicEffect, cp, LineWidth, pointColor);
+                }
             }
 
             GlobalPrimitives.DrawPolyline(LineManager, basicEffect, CurvePoints, this.LineWidth, this.Color);

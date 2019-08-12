@@ -65,7 +65,7 @@ namespace WebAnnotation.UI.Commands
             base.OnMouseMove(sender, e);
         }
 
-        public override void OnDeactivate()
+        protected override void OnDeactivate()
         {
             Viking.UI.State.SelectedObject = null; 
 
