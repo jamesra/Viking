@@ -30,6 +30,7 @@ namespace Viking.Properties {
   <string>http://connectomes.utah.edu/Rabbit</string>
   <string>http://internal.connectomes.utah.edu/RC2/SliceToVolume.VikingXML</string>
   <string>http://storage1.connectomes.utah.edu/RPC1/SliceToVolume.VikingXML</string>
+  <string>http://storage1.connectomes.utah.edu/RPC1/Testing.VikingXML</string>
 </ArrayOfString>")]
         public global::System.Collections.Specialized.StringCollection VolumeURLs {
             get {
