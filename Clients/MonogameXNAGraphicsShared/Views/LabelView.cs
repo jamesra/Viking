@@ -8,8 +8,25 @@ using VikingXNAGraphics;
 
 namespace VikingXNAGraphics
 {
+    public enum HorizontalAlignment
+    {
+        CENTER,
+        LEFT,
+        RIGHT
+    };
+
+    public enum VerticalAlignment
+    {
+        CENTER,
+        TOP,
+        BOTTOM
+    };
+
     public class LabelView : IText, IColorView, IViewPosition2D
     {
+        public HorizontalAlignment HorzAlign = HorizontalAlignment.CENTER;
+        public VerticalAlignment VertAlign = VerticalAlignment.CENTER;
+
         /// <summary>
         /// Label must be this large to render
         /// </summary>
@@ -76,7 +93,7 @@ namespace VikingXNAGraphics
             get { return _FontSize; }
             set
             {
-                
+
                 _IsMeasured = _IsMeasured && _FontSize == value;
                 _FontSize = value;
             }
@@ -96,10 +113,19 @@ namespace VikingXNAGraphics
         private string[] _Rows = null; //The label text divided across rows
         private Vector2[] _RowMeasurements; // Measurements for each row
 
-        public LabelView(string Text, GridVector2 VolumePosition)
+        /// <summary>
+        /// True if the label should change size as the user zooms in and out.  Used to keep the label proportional to other objects rendered in a scene.
+        /// False if the label is a constant size regarless of the scene.  Used for informational labels that aren't attached to objects in the scene.
+        /// </summary>
+        public bool ScaleFontWithScene {get; set;} 
+
+        public LabelView(string Text, GridVector2 VolumePosition, HorizontalAlignment hAlign = HorizontalAlignment.CENTER, VerticalAlignment vAlign = VerticalAlignment.CENTER, bool scaleFontWithScene = true)
         {
             this.Text = Text;
             this.Position = VolumePosition;
+            this.VertAlign = vAlign;
+            this.HorzAlign = hAlign;
+            this.ScaleFontWithScene = scaleFontWithScene;
         }
 
         private string _Text;
@@ -188,7 +214,7 @@ namespace VikingXNAGraphics
             Vector2 FullLabelMeasurement = font.MeasureString(label);
             int MaxRows = (int)Math.Ceiling((double)(FullLabelMeasurement.X * fontScale) / LineWidth) + NumberOfNewlines(label);
             //string[] labelParts = label.Split();
-            Stack<string> labelStack = new Stack<string>(label.Split().Reverse());
+            Stack<string> labelStack = new Stack<string>(label.Split(new char[] { ' ', '\r' }, StringSplitOptions.RemoveEmptyEntries).Reverse());
 
             //Shortcut the case where the label fits on one line
             if (FullLabelMeasurement.X * fontScale <= LineWidth && !label.Contains('\n'))
@@ -289,6 +315,75 @@ namespace VikingXNAGraphics
             
         }
 
+        private Vector2 AdjustPositionForHorzAlignment(Vector2 v, Vector2 row_measurement)
+        {
+            switch (this.HorzAlign)
+            {
+                case HorizontalAlignment.CENTER:
+                    return v;
+                case HorizontalAlignment.LEFT:
+                    return new Vector2(v.X - (row_measurement.X / 2.0f), v.Y);
+                case HorizontalAlignment.RIGHT:
+                    return new Vector2(v.X + (row_measurement.X / 2.0f), v.Y);
+                default:
+                    throw new InvalidOperationException(string.Format("Unexpected horizontal alignment {0}", this.HorzAlign)); 
+            } 
+        }
+
+        private Vector2 AdjustPositionForVertAlignment(Vector2 v, Vector2 row_measurement)
+        {
+            switch (this.VertAlign)
+            {
+                case VerticalAlignment.CENTER:
+                    return v;
+                case VerticalAlignment.TOP:
+                    return new Vector2(v.X, v.Y - (row_measurement.Y / 2.0f));
+                case VerticalAlignment.BOTTOM:
+                    return new Vector2(v.X, v.Y + (row_measurement.Y / 2.0f));
+                default:
+                    throw new InvalidOperationException(string.Format("Unexpected vertical alignment {0}", this.VertAlign));
+
+            } 
+        }
+
+        private static Vector2 OriginForRow(Vector2 row_measurement, Vector2 max_row_size, HorizontalAlignment hAlign, VerticalAlignment vAlign)
+        {
+            Vector2 origin = new Vector2();
+
+            switch (hAlign)
+            {
+                case HorizontalAlignment.CENTER:
+                    origin.X = row_measurement.X / 2.0f;
+                    break;
+                case HorizontalAlignment.LEFT:
+                    origin.X = 0;
+                    break;
+                case HorizontalAlignment.RIGHT:
+                    origin.X = -(max_row_size.X - row_measurement.X);
+                    break;
+                default:
+                    throw new InvalidOperationException(string.Format("Unexpected horizontal alignment {0}", hAlign));
+            }
+
+            switch (vAlign)
+            {
+                case VerticalAlignment.CENTER:
+                    origin.Y = row_measurement.Y / 2.0f;
+                    break;
+                case VerticalAlignment.TOP:
+                    origin.Y = 0;
+                    break;
+                case VerticalAlignment.BOTTOM:
+                    origin.Y = -(max_row_size.Y - row_measurement.Y);
+                    break;
+                default:
+                    throw new InvalidOperationException(string.Format("Unexpected vertical alignment {0}", vAlign));
+            }
+
+            return origin;
+
+        }
+
         /// <summary>
         /// Draw a single label. 
         /// The caller is expected to call Begin and End on the sprite batch.  They should also preserve all state on the graphics device. 
@@ -302,10 +397,9 @@ namespace VikingXNAGraphics
         {
             double fontSizeInScreenPixels = ScaleFontSizeForMagnification(this.FontSize, scene);
 
-            if (IsLabelTooSmallToSee(fontSizeInScreenPixels))
+            if (this.ScaleFontWithScene && IsLabelTooSmallToSee(fontSizeInScreenPixels))
                 return;
 
-            Vector2 LocationCenterScreenPosition = scene.WorldToScreen(this.Position).ToXNAVector2();
             if (font == null)
                 throw new ArgumentNullException("font");
 
@@ -318,29 +412,40 @@ namespace VikingXNAGraphics
             //offsets must be multiplied by scale before use
             double FontScaleForVolume = ScaleFontSizeToVolume(font, this.FontSize);
              
-            if (true)////!_IsMeasured)
+            if (!_IsMeasured)////!_IsMeasured)
             {
                 this._Rows = WrapText(this.Text, this.font, FontScaleForVolume, this.MaxLineWidth, out this._RowMeasurements);
                 _IsMeasured = true;
             }
 
-            float fontScale = (float)ScaleFontSizeForMagnification(FontScaleForVolume, scene);
+            if (this._Rows == null || this._Rows.Length == 0)
+                return; 
+
+            Vector2 LocationCenterScreenPosition = scene.WorldToScreen(this.Position).ToXNAVector2();
+
+            float fontScale = this.ScaleFontWithScene ? (float)ScaleFontSizeForMagnification(FontScaleForVolume, scene) : (float)FontScaleForVolume;
 
             float LineStep = (float)font.LineSpacing * fontScale;  //How much do we increment Y to move down a line?
             float yOffset = -((float)font.LineSpacing) * fontScale;  //What is the offset to draw the line at the correct position?  We have to draw below label if it exists
-                                                              //However we only need to drop half a line since the label straddles the center
+                                                                     //However we only need to drop half a line since the label straddles the center
+
+            Vector2 max_row_size = new Vector2(_RowMeasurements.Max(r => r.X), _RowMeasurements.Max(r => r.Y));
 
             for (int iRow = 0; iRow < _Rows.Length; iRow++)
             {
                 Vector2 DrawPosition = LocationCenterScreenPosition;
-                DrawPosition.Y += LineStep * iRow;
 
+                //DrawPosition = AdjustPositionForHorzAlignment(DrawPosition, _RowMeasurements[iRow]);
+                //DrawPosition = AdjustPositionForVertAlignment(DrawPosition, _RowMeasurements[iRow]);
+                DrawPosition.Y += LineStep * iRow;
+                Vector2 origin = OriginForRow(_RowMeasurements[iRow], max_row_size, HorzAlign, VertAlign);
+                
                 spriteBatch.DrawString(font,
                     _Rows[iRow],
                     DrawPosition,
                     this._Color,
                     0,
-                    _RowMeasurements[iRow] / 2.0f, //The string is centered on the drawing position, instead of starting at the top left
+                    origin, //_RowMeasurements[iRow] / 2.0f, //The string is centered on the drawing position, instead of starting at the top left
                     fontScale,
                     SpriteEffects.None,
                     0);
