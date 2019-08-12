@@ -893,10 +893,10 @@ namespace Geometry
             }
         }
 
-        public GridPolygon(ICollection<IPoint2D> exteriorRing) : this (exteriorRing.Select(p => p.Convert()).ToArray())
+        public GridPolygon(IEnumerable<IPoint2D> exteriorRing) : this (exteriorRing.Select(p => p.Convert()).ToArray())
         {}
 
-        public GridPolygon(ICollection<GridVector2> exteriorRing) : this(exteriorRing.ToArray())
+        public GridPolygon(IEnumerable<GridVector2> exteriorRing) : this(exteriorRing.ToArray())
         {}
 
         public GridPolygon(GridVector2[] exteriorRing)
@@ -924,17 +924,27 @@ namespace Geometry
         }
 
 
-        public GridPolygon(ICollection<IPoint2D> exteriorRing, ICollection<IPoint2D[]> interiorRings) 
+        public GridPolygon(IEnumerable<IPoint2D> exteriorRing, IEnumerable<IPoint2D[]> interiorRings) 
             : this(exteriorRing.Select(p => p.Convert()).ToArray(), 
                    interiorRings.Select(inner_ring => inner_ring.Select(p => p.Convert() ).ToArray()).ToArray())
         { 
         }
 
-        public GridPolygon(GridVector2[] exteriorRing, ICollection<GridVector2[]> interiorRings)
+        public GridPolygon(IEnumerable<GridVector2> exteriorRing, IEnumerable<ICollection<GridVector2>> interiorRings)
+        {
+            ExteriorRing = exteriorRing.ToArray();
+
+            foreach(ICollection<GridVector2> interiorRing in interiorRings)
+            {
+                AddInteriorRing(interiorRing);
+            }
+        }
+
+        public GridPolygon(GridVector2[] exteriorRing, IEnumerable<GridVector2[]> interiorRings)
         {
             ExteriorRing = exteriorRing;
 
-            foreach(GridVector2[] interiorRing in interiorRings)
+            foreach (GridVector2[] interiorRing in interiorRings)
             {
                 AddInteriorRing(interiorRing);
             }
@@ -1021,11 +1031,11 @@ namespace Geometry
             }
         }
 
-        public void AddInteriorRing(GridVector2[] interiorRing)
+        public void AddInteriorRing(IEnumerable<GridVector2> interiorRing)
         {
             GridPolygon innerPoly = new Geometry.GridPolygon(interiorRing);
 
-            //TODO: Make sure the inner poly does not intersect the outer ring or any existing inner ring
+            //TODO: Make sure the inner poly does not  intersect the outer ring or any existing inner ring
             AddInteriorRing(innerPoly);
         }
 
