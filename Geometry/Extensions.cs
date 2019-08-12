@@ -58,46 +58,46 @@ namespace Geometry
 
     public static class GeometryRTreeExtensions
     {
-        public static RTree.Point ToRTreePoint(this GridVector2 p, float Z)
+        public static RTree.Point ToRTreePoint(this GridVector2 p, double Z)
         {
-            return new RTree.Point((float)p.X, (float)p.Y, Z);
+            return new RTree.Point(p.X, p.Y, Z);
         }
 
         public static RTree.Point ToRTreePoint(this GridVector3 p)
         {
-            return new RTree.Point((float)p.coords[0],
-                                   (float)p.coords[1],
-                                   (float)p.coords[2]);
+            return new RTree.Point(p.coords[0],
+                                   p.coords[1],
+                                   p.coords[2]);
         }
 
-        public static RTree.Rectangle ToRTreeRect(this GridRectangle rect, float MinZ, float MaxZ)
+        public static RTree.Rectangle ToRTreeRect(this GridRectangle rect, double MinZ, double MaxZ)
         {
-            return new RTree.Rectangle((float)rect.Left, (float)rect.Bottom, (float)rect.Right, (float)rect.Top, MinZ, MaxZ);
+            return new RTree.Rectangle(rect.Left, rect.Bottom, rect.Right, rect.Top, MinZ, MaxZ);
         }
 
-        public static RTree.Rectangle ToRTreeRect(this GridRectangle rect, float Z)
+        public static RTree.Rectangle ToRTreeRect(this GridRectangle rect, double Z)
         {
-            return new RTree.Rectangle((float)rect.Left, (float)rect.Bottom, (float)rect.Right, (float)rect.Top, Z, Z);
+            return new RTree.Rectangle(rect.Left, rect.Bottom, rect.Right, rect.Top, Z, Z);
         }
 
         public static RTree.Rectangle ToRTreeRect(this GridRectangle rect, int Z)
         {
-            return new RTree.Rectangle((float)rect.Left, (float)rect.Bottom, (float)rect.Right, (float)rect.Top, (float)Z, (float)Z);
+            return new RTree.Rectangle(rect.Left, rect.Bottom, rect.Right, rect.Top, (double)Z, (double)Z);
         }
 
-        public static RTree.Rectangle ToRTreeRect(this GridVector2 p, float Z)
+        public static RTree.Rectangle ToRTreeRect(this GridVector2 p, double Z)
         {
-            return new RTree.Rectangle((float)p.X, (float)p.Y, (float)p.X, (float)p.Y, Z, Z);
+            return new RTree.Rectangle(p.X, p.Y, p.X, p.Y, Z, Z);
         }
 
         public static RTree.Rectangle ToRTreeRect(this GridVector2 p, int Z)
         {
-            return new RTree.Rectangle((float)p.X, (float)p.Y, (float)p.X, (float)p.Y, (float)Z, (float)Z);
+            return new RTree.Rectangle(p.X, p.Y, p.X, p.Y, (double)Z, (double)Z);
         }
 
         public static RTree.Rectangle ToRTreeRect(this IPoint2D p, int Z)
         {
-            return new RTree.Rectangle((float)p.X, (float)p.Y, (float)p.X, (float)p.Y, (float)Z, (float)Z);
+            return new RTree.Rectangle(p.X, p.Y, p.X, p.Y, (double)Z, (double)Z);
         }
 
         public static RTree.Rectangle ToRTreeRect(this GridBox bbox)
@@ -319,6 +319,24 @@ namespace Geometry
         /// </summary>
         /// <param name="points"></param>
         /// <returns></returns>
+        public static ICollection<int> EnsureClosedRing(this ICollection<int> points)
+        {
+            if (points.First() != points.Last())
+            {
+                List<int> newPoints = new List<int>(points);
+                newPoints.Add(points.First());
+                return newPoints;
+            }
+
+            return points;
+        }
+
+        /// <summary>
+        /// If the first and last elements are not the same we add an element at the end equal to the first elements value
+        /// This is because Polygons and several algorithms expect arrays to be closed loops of points.
+        /// </summary>
+        /// <param name="points"></param>
+        /// <returns></returns>
         public static ICollection<GridVector2> EnsureClosedRing(this ICollection<GridVector2> points)
         {
             if (points.First() != points.Last())
@@ -500,7 +518,7 @@ namespace Geometry
         /// </summary>
         /// <param name="points"></param>
         /// <returns></returns>
-        public static GridVector2[] RemoveDuplicates(this IReadOnlyList<GridVector2> points)
+        public static GridVector2[] RemoveAdjacentDuplicates(this IReadOnlyList<GridVector2> points)
         {
             List<GridVector2> nonDuplicatePoints = new List<GridVector2>();
             for (int i = 0; i < points.Count - 1; i++)
@@ -512,6 +530,25 @@ namespace Geometry
             }
 
             nonDuplicatePoints.Add(points.Last());
+
+            //                System.Diagnostics.Trace.WriteLine("Originally " + (ControlPoints.Count * NumInterpolations).ToString() + " now " + nonDuplicatePoints.Count.ToString());
+            return nonDuplicatePoints.ToArray();
+        }
+
+        /// <summary>
+        /// Remove all of the duplicate points and return as a new array
+        /// </summary>
+        /// <param name="points"></param>
+        /// <returns></returns>
+        public static GridVector2[] RemoveDuplicates(this IReadOnlyList<GridVector2> points)
+        {
+            List<GridVector2> nonDuplicatePoints = new List<GridVector2>();
+            for (int i = 0; i < points.Count; i++)
+            {
+                if (false == nonDuplicatePoints.Contains(points[i]))
+                    nonDuplicatePoints.Add(points[i]);
+            }
+
 
             //                System.Diagnostics.Trace.WriteLine("Originally " + (ControlPoints.Count * NumInterpolations).ToString() + " now " + nonDuplicatePoints.Count.ToString());
             return nonDuplicatePoints.ToArray();

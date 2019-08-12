@@ -6,6 +6,7 @@ using System.Linq;
 using TriangleNet;
 using TriangleNet.Meshing;
 using OTVTable = System.Collections.Concurrent.ConcurrentDictionary<Geometry.PointIndex, Geometry.PointIndex>;
+using SliceChordRTree = RTree.RTree<MorphologyMesh.SliceChord>;
 
 namespace MonogameTestbed
 {
@@ -20,7 +21,7 @@ namespace MonogameTestbed
         /// <param name="mesh"></param>
         /// <param name="rTree"></param>
         /// <returns>A list of the OTV tables generated when attempting to merge the regions.  Used for debugging</returns>
-        public static List<OTVTable> MergeAndCloseRegionsPass(this MorphMeshRegionGraph graph, MorphRenderMesh mesh, RTree.RTree<SliceChord> rTree = null)
+        public static List<OTVTable> MergeAndCloseRegionsPass(this MorphMeshRegionGraph graph, MorphRenderMesh mesh, SliceChordRTree rTree = null)
         {
             while (true)
             {
@@ -105,7 +106,7 @@ namespace MonogameTestbed
         }
 
 
-        public static List<OTVTable> CloseRegions(this MorphRenderMesh mesh, IList<MorphMeshRegion> regions, RTree.RTree<SliceChord> rTree = null)
+        public static List<OTVTable> CloseRegions(this MorphRenderMesh mesh, IList<MorphMeshRegion> regions, SliceChordRTree rTree = null)
         {
             //Build the lookup tree for slice-chords
             if (rTree == null)
@@ -124,7 +125,7 @@ namespace MonogameTestbed
             return listOTVTables;
         }
 
-        public static OTVTable TryClosingRegion(MorphRenderMesh mesh, MorphMeshRegion region, RTree.RTree<SliceChord> rTree)
+        public static OTVTable TryClosingRegion(MorphRenderMesh mesh, MorphMeshRegion region, SliceChordRTree rTree)
         {
             if (region.Type == RegionType.EXPOSED || region.Type == RegionType.INVAGINATION)
             {
@@ -156,7 +157,7 @@ namespace MonogameTestbed
         /// <param name="mesh"></param>
         /// <param name="region">Region we are trying to close</param>
         /// <param name="rTree">RTree of all existing chords</param>
-        private static OTVTable TryClosingSolidRegion(this MorphRenderMesh mesh, MorphMeshRegion region, RTree.RTree<SliceChord> rTree)
+        private static OTVTable TryClosingSolidRegion(this MorphRenderMesh mesh, MorphMeshRegion region, SliceChordRTree rTree)
         {
             OTVTable OTVTable;
             List<int> vertsWithoutFaces = region.Verticies.Where(v => mesh[v].Edges.SelectMany(e => mesh[e].Faces).Count() == 0).ToList();
@@ -189,7 +190,7 @@ namespace MonogameTestbed
         /// <param name="mesh"></param>
         /// <param name="region">Region we are trying to close</param>
         /// <param name="rTree">RTree of all existing chords</param>
-        private static void TryClosingHole(MorphRenderMesh mesh, MorphMeshRegion region, RTree.RTree<SliceChord> rTree)
+        private static void TryClosingHole(MorphRenderMesh mesh, MorphMeshRegion region, SliceChordRTree rTree)
         {
             List<int> vertsWithoutFaces = region.Verticies.Where(v => mesh[v].Edges.SelectMany(e => mesh[e].Faces).Count() == 0).ToList();
 
@@ -230,7 +231,7 @@ namespace MonogameTestbed
         /// <param name="mesh"></param>
         /// <param name="region"></param>
         /// <param name="rTree"></param>
-        private static void TryClosingUntiledRegion(MorphRenderMesh mesh, MorphMeshRegion region, RTree.RTree<SliceChord> rTree)
+        private static void TryClosingUntiledRegion(MorphRenderMesh mesh, MorphMeshRegion region, SliceChordRTree rTree)
         {
             GridPolygon regionPolygon = region.Polygon;
             var MedialAxis = MedialAxisFinder.ApproximateMedialAxis(regionPolygon);

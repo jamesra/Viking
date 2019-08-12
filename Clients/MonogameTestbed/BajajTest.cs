@@ -24,12 +24,7 @@ using OTVTable = System.Collections.Concurrent.ConcurrentDictionary<Geometry.Poi
 using SliceChordRTree = RTree.RTree<MorphologyMesh.SliceChord>;
 
 namespace MonogameTestbed
-{
-
-
-
-
-    
+{ 
 
     class BajajOTVAssignmentView
     {
@@ -144,7 +139,7 @@ namespace MonogameTestbed
             IncompletedVertexView.LabelIndex = false;
             IncompletedVertexView.LabelPosition = false;
 
-            RTree.RTree<SliceChord> rTree = FirstPassTriangulation.CreateChordTree();
+            SliceChordRTree rTree = FirstPassTriangulation.CreateChordTree();
             List<OTVTable> listOTVTables = RegionPairingGraph.MergeAndCloseRegionsPass(FirstPassTriangulation, rTree);
 
             this.MeshVertsView = PointSetView.CreateFor(FirstPassTriangulation);
@@ -454,7 +449,7 @@ namespace MonogameTestbed
         }
         */
 
-        public static OTVTable IdentifyChordCandidatesForRegionPair(MorphRenderMesh mesh, MorphMeshRegion source, MorphMeshRegion target, SliceChordTestType Tests, RTree.RTree<SliceChord> rTree = null)
+        public static OTVTable IdentifyChordCandidatesForRegionPair(MorphRenderMesh mesh, MorphMeshRegion source, MorphMeshRegion target, SliceChordTestType Tests, SliceChordRTree rTree = null)
         {
             if(rTree == null)
             {
@@ -531,7 +526,7 @@ namespace MonogameTestbed
         }
                  
 
-        public static int TryAddOTVTable(MorphRenderMesh mesh, OTVTable OTVTable, RTree.RTree<SliceChord> rTree, SliceChordTestType Tests, SliceChordPriority priority)
+        public static int TryAddOTVTable(MorphRenderMesh mesh, OTVTable OTVTable, SliceChordRTree rTree, SliceChordTestType Tests, SliceChordPriority priority)
         {
             List<SliceChord> CandidateChords = CreateChordCandidateList(mesh, OTVTable);
 
@@ -567,7 +562,7 @@ namespace MonogameTestbed
         /// <param name="sc"></param>
         /// <param name="ChordRTree"></param>
         /// <returns></returns>
-        private static bool CouldAddSliceChord(MorphRenderMesh mesh, SliceChord sc, RTree.RTree<SliceChord> ChordRTree, SliceChordTestType Tests)
+        private static bool CouldAddSliceChord(MorphRenderMesh mesh, SliceChord sc, SliceChordRTree ChordRTree, SliceChordTestType Tests)
         {
             return BajajMeshGenerator.IsSliceChordValid(sc.Origin, mesh.Polygons, mesh.GetSameLevelPolygons(sc.Origin), mesh.GetAdjacentLevelPolygons(sc.Origin), sc.Target, ChordRTree, Tests);
         }
@@ -579,7 +574,7 @@ namespace MonogameTestbed
         /// <param name="sc"></param>
         /// <param name="ChordRTree"></param>
         /// <returns></returns>
-        private static bool TryAddSliceChord(MorphRenderMesh mesh, SliceChord sc, RTree.RTree<SliceChord> ChordRTree, SliceChordTestType Tests)
+        private static bool TryAddSliceChord(MorphRenderMesh mesh, SliceChord sc, SliceChordRTree ChordRTree, SliceChordTestType Tests)
         {
             if(BajajMeshGenerator.IsSliceChordValid(sc.Origin, mesh.Polygons, mesh.GetSameLevelPolygons(sc.Origin), mesh.GetAdjacentLevelPolygons(sc.Origin), sc.Target, ChordRTree, Tests))
             {
@@ -599,7 +594,7 @@ namespace MonogameTestbed
         public static void FirstPassSliceChordGeneration(MorphRenderMesh mesh)
         {
             ConcurrentDictionary<PointIndex, PointIndex> OTVTable;
-            RTree.RTree<SliceChord> rTree = mesh.CreateChordTree();
+            SliceChordRTree rTree = mesh.CreateChordTree();
 
             BajajMeshGenerator.CreateOptimalTilingVertexTable(new PolySetVertexEnum(mesh.Polygons), mesh.Polygons, mesh.PolyZ,
                                                               SliceChordTestType.Correspondance | SliceChordTestType.ChordIntersection | SliceChordTestType.Theorem2 | SliceChordTestType.Theorem4, 
@@ -608,7 +603,7 @@ namespace MonogameTestbed
             List<SliceChord> CandidateChords = CreateChordCandidateList(mesh, OTVTable);
 
             ///Starting with the shortest chord, add all of the slice chords that do not intersect an existing chord
-            RTree.RTree<SliceChord> AddedChords = rTree;//new RTree.RTree<SliceChord>();
+            SliceChordRTree AddedChords = rTree;//new RTree.RTree<SliceChord>();
             CandidateChords = CandidateChords.OrderBy(sc => sc.Line.Length).ToList();
             
             foreach (SliceChord sc in CandidateChords)

@@ -38,6 +38,8 @@ namespace MonogameTestbed
                     return Color.Black.SetAlpha(1.0f);
                 case EdgeType.MEDIALAXIS:
                     return Color.LightCyan.SetAlpha(0.5f);
+                case EdgeType.CONTOUR_TO_MEDIALAXIS:
+                    return Color.DarkCyan.SetAlpha(0.5f);
                 case EdgeType.ARTIFICIAL:
                     return Color.YellowGreen.SetAlpha(0.5f);
 

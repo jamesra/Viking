@@ -28,7 +28,7 @@ namespace Geometry
             GridVector2[] points = cp.Where((p, i) => i + 3 < cp.Count).SelectMany((p, i) => RecursivelyFitCurveSegment(cp[i], cp[i + 1], cp[i + 2], cp[i + 3], null, 0)).ToArray();
             if(closed)
             {
-                points = points.RemoveDuplicates();
+                points = points.RemoveAdjacentDuplicates();
             }
 
             return points; 

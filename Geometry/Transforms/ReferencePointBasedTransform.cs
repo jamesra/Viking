@@ -168,7 +168,7 @@ namespace Geometry.Transforms
             double maxX = double.MinValue;
             double maxY = double.MinValue;
 
-            foreach (ReferencePointBasedTransform T in transforms)
+            foreach (ITransformControlPoints T in transforms)
             {
                 GridRectangle R = T.ControlBounds;
 
@@ -195,7 +195,7 @@ namespace Geometry.Transforms
             double maxX = double.MinValue;
             double maxY = double.MinValue;
 
-            foreach (ReferencePointBasedTransform T in transforms)
+            foreach (ITransformControlPoints T in transforms)
             {
                 GridRectangle R = T.MappedBounds;
 

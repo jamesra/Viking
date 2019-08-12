@@ -75,7 +75,7 @@ namespace MonogameTestbed
             InteriorEdgeView.LineViews = lines.Where(l => !Polygon.ExteriorSegments.Contains(l)).Select(s => new LineView(s, this.width, this.Color, LineStyle.Ladder, false)).ToList();
 
             MedialAxisView = new LineSetView();
-            GridLineSegment[] MedialAxis = MedialAxisFinder.ApproximateMedialAxis(_Polygon).Segments;
+            GridLineSegment[] MedialAxis = MorphologyMesh.MedialAxisFinder.ApproximateMedialAxis(_Polygon).Segments;
             MedialAxisView.LineViews = MedialAxis.Select(s => new LineView(s, this.width, this.Color, LineStyle.Glow, false)).ToList();
         }
 

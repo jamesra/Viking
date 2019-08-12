@@ -7,36 +7,82 @@ using System.Text;
 using System.Threading.Tasks;
 using Geometry.Meshing;
 using Geometry;
+using SliceChordRTree = RTree.RTree<MorphologyMesh.SliceChord>;
 
 namespace MorphologyMesh
 {
     public enum VertexOrigin
     {
-        EXTERIOR, //The vertex is on the exterior of the polygon
-        INTERIOR, //The vertex is on an interior ring of the polygon
+        CONTOUR, //The vertex is on the exterior or Interior contour of a polygon
         MEDIALAXIS //The vertex is on the medial axis of the polygon
     }
+
+
+    /// <summary>
+    /// Represents where in an medial axis graph the vertex originated
+    /// </summary>
+    public struct MedialAxisIndex
+    {
+        public readonly MedialAxisGraph MedialAxisGraph;
+        public readonly MedialAxisVertex Vertex; 
+
+        public MedialAxisIndex(MedialAxisGraph graph, MedialAxisVertex v)
+        {
+            this.MedialAxisGraph = graph;
+            this.Vertex = v;
+        }
+
+    }
+
 
     public class MorphMeshVertex : Vertex
     {
         /// <summary>
-        /// Verticies we add to close holes will not have a poly index
+        /// Verticies we add to close holes will not have a poly index.  The medial axis verticies must have faces added because at this point they will not autocomplete.
         /// </summary>
-        public PointIndex? PolyIndex;
+        public readonly PointIndex? PolyIndex;
+
+        public readonly MedialAxisIndex? MedialAxisIndex;
 
         /// <summary>
         /// Set to true if this vertex has a continuous wall of faces to the adjacent verticies in the shape
         /// </summary>
         public bool FacesAreComplete = false;
 
-        public MorphMeshVertex(PointIndex? polyIndex, GridVector3 p) : base(p)
+        public VertexOrigin Type
+        {
+            get{
+                if (PolyIndex.HasValue)
+                {
+                    return VertexOrigin.CONTOUR;
+                }
+                else if(MedialAxisIndex.HasValue)
+                {
+                    return VertexOrigin.MEDIALAXIS;
+                }
+
+                throw new InvalidOperationException("Vertex must be either part of a contour or on a medial axis");
+            }
+        }
+
+        public MorphMeshVertex(PointIndex polyIndex, GridVector3 p) : base(p)
         {
             PolyIndex = polyIndex;
         }
 
-        public MorphMeshVertex(PointIndex? polyIndex, GridVector3 p, GridVector3 n) : base(p, n)
+        public MorphMeshVertex(PointIndex polyIndex, GridVector3 p, GridVector3 n) : base(p, n)
         {
             PolyIndex = polyIndex;
+        }
+
+        public MorphMeshVertex(MedialAxisIndex medialIndex, GridVector3 p) : base(p)
+        {
+            MedialAxisIndex = medialIndex;
+        }
+
+        public MorphMeshVertex(MedialAxisIndex medialIndex, GridVector3 p, GridVector3 n) : base(p, n)
+        {
+            MedialAxisIndex = medialIndex;
         }
 
         public static IVertex Duplicate(IVertex old)
@@ -44,7 +90,15 @@ namespace MorphologyMesh
             MorphMeshVertex vert = old as MorphMeshVertex;
             if (vert != null)
             {
-                return new MorphMeshVertex(vert.PolyIndex, vert.Position, vert.Normal);
+                switch (vert.Type)
+                {
+                    case VertexOrigin.MEDIALAXIS:
+                        return new MorphMeshVertex(vert.MedialAxisIndex.Value, vert.Position, vert.Normal);
+                    case VertexOrigin.CONTOUR:
+                        return new MorphMeshVertex(vert.PolyIndex.Value, vert.Position, vert.Normal);
+                    default:
+                        throw new InvalidOperationException("Vertex must be either part of a contour or on a medial axis");
+                }
             }
 
             return new Vertex(old.Position, old.Normal);
@@ -103,7 +157,7 @@ namespace MorphologyMesh
     {
         public EdgeType Type;
 
-        public bool MatchingOrientation = false; //True if this edge outside of one shape and inside another
+        public bool MatchingOrientation = false; //True if this edge is outside of one shape and inside another
 
         public MorphMeshEdge(EdgeType type, int A, int B) : base(A, B)
         {
@@ -277,6 +331,7 @@ namespace MorphologyMesh
                 //case EdgeType.VALID:
                 case EdgeType.SURFACE:
                 case EdgeType.MEDIALAXIS:
+                case EdgeType.CONTOUR_TO_MEDIALAXIS:
                     return true;
                 default:
                     return false;
@@ -621,7 +676,8 @@ namespace MorphologyMesh
     }
 
     public class MorphMeshRegionGraph : GraphLib.Graph<MorphMeshRegion, GraphLib.Node<MorphMeshRegion, MorphMeshRegionGraphEdge>, MorphMeshRegionGraphEdge>
-    { }
+    {
+    }
 
     public class MorphMeshRegionGraphEdge : GraphLib.Edge<MorphMeshRegion>
     {
@@ -630,8 +686,7 @@ namespace MorphologyMesh
         } 
     }
 
-
-
+    
     /// <summary>
     /// A 3D mesh that records the polygons used to construct the mesh.  Tracks the original polygonal index
     /// of every vertex and the type of edge connecting verticies.
@@ -671,7 +726,20 @@ namespace MorphologyMesh
 
             PopulateMesh(this);
         }
+        /*
+        public int AddContour(GridPolygon poly, double Z)
+        {
+            this.Polygons.Add(poly);
+            this.PolyZ.Add(Z);
 
+            return Polygons.Count - 1;
+        }
+
+        public void AddPointsAtAllContourIntersections()
+        {
+            
+        }
+        */
         private static void PopulateMesh(MorphRenderMesh mesh)
         {
             foreach (PointIndex i1 in new PolySetVertexEnum(mesh.Polygons))
@@ -815,10 +883,10 @@ namespace MorphologyMesh
         { 
             GridPolygon[] Polygons = this.Polygons;
 
-            foreach (MorphMeshEdge edge in this.MorphEdges)
+            foreach (MorphMeshEdge edge in this.MorphEdges.Where(e => e.Type == EdgeType.UNKNOWN))
             {
-                if (edge.Type != EdgeType.UNKNOWN)
-                    continue;
+                //if (edge.Type != EdgeType.UNKNOWN)
+                    //continue;
 
                 MorphMeshVertex A = this.GetVertex(edge.A);
                 MorphMeshVertex B = this.GetVertex(edge.B);
@@ -830,7 +898,7 @@ namespace MorphologyMesh
                 }
 
                 GridLineSegment L = this.ToSegment(edge.Key);
-                edge.Type = EdgeTypeExtensions.GetEdgeTypeWithOrientation(A.PolyIndex.Value, B.PolyIndex.Value, Polygons, L.PointAlongLine(0.5));
+                edge.Type = EdgeTypeExtensions.GetEdgeTypeWithOrientation(A, B, Polygons, L.PointAlongLine(0.5));
             }
 
             return;
@@ -880,7 +948,7 @@ namespace MorphologyMesh
             {
                 if(FacesAssignedToRegions.Contains(f))
                 {
-                    continue; 
+                    continue;
                 }
 
                 MorphMeshFace face = (MorphMeshFace)f;
@@ -895,9 +963,10 @@ namespace MorphologyMesh
                     FacesAssignedToRegions.UnionWith(region.Faces);
                     continue;
                 }
+                
                 if (!face.AllVertsAtSameZ(mesh, out FaceZ))
                 {
-                    FacesAssignedToRegions.Add(face);
+                    //FacesAssignedToRegions.Add(face);
                     continue;
                 }
 
@@ -914,7 +983,6 @@ namespace MorphologyMesh
                     MorphMeshRegion region = new MorphMeshRegion(mesh, mesh.FloodFillRegion(face, (m, foundFace) => IsInRegion(m, foundFace, MorphMeshFace.IsInHoleRegion, FaceZ.Value), FacesAssignedToRegions), RegionType.HOLE);
                     listRegions.Add(region);
                     FacesAssignedToRegions.UnionWith(region.Faces);
-                    
                     continue;
                 }
 
@@ -947,16 +1015,19 @@ namespace MorphologyMesh
         /// </summary>
         /// <param name="mesh"></param>
         /// <returns></returns>
-        public RTree.RTree<SliceChord> CreateChordTree()
+        public SliceChordRTree CreateChordTree()
         {
-            RTree.RTree<SliceChord> rTree = new RTree.RTree<SliceChord>();
+            SliceChordRTree rTree = new SliceChordRTree();
             ///Create a list of all slice chords.  Contours are valid but are not slice chords since they don't cross sections
             foreach (MorphMeshEdge e in this.Edges.Values.Where(e => (((MorphMeshEdge)e).Type != EdgeType.CONTOUR) &&
                                                                      (((MorphMeshEdge)e).Type != EdgeType.ARTIFICIAL) &&
                                                                      (((MorphMeshEdge)e).Type != EdgeType.CORRESPONDING)))
             {
+                
                 SliceChord chord = new SliceChord(this[e.A].PolyIndex.Value, this[e.B].PolyIndex.Value, this.Polygons);
-                rTree.Add(chord.Line.BoundingBox.ToRTreeRect(0), chord);
+                double AZ = this.Verticies[e.A].Position.Z;
+                double BZ = this.Verticies[e.B].Position.Z;
+                rTree.Add(this.ToSegment(e).BoundingBox.ToRTreeRect(MinZ: Math.Min(AZ,BZ), MaxZ: Math.Max(AZ,BZ)), chord);
             }
 
             return rTree;

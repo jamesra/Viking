@@ -613,12 +613,18 @@ namespace Geometry
         PointIndex? curIndex;
 
         IReadOnlyList<GridPolygon> polygons;
+
+        /// <summary>
+        /// The index to use for the first polygon in the list, defaults to zero
+        /// </summary>
+        private int StartingPolyIndex;
          
 
-        public PolySetVertexEnum(IReadOnlyList<GridPolygon> polys)
+        public PolySetVertexEnum(IReadOnlyList<GridPolygon> polys, int iStartingPolyIndex = 0)
         {
             this.polygons = polys;
             curIndex = new Geometry.PointIndex?();
+            StartingPolyIndex = iStartingPolyIndex;
         }
 
         public PointIndex Current
@@ -663,7 +669,7 @@ namespace Geometry
                 if (polygons[0].ExteriorRing.Length == 0)
                     return false;
 
-                curIndex = new PointIndex(0, 0, polygons[0].ExteriorRing.Length-1);
+                curIndex = new PointIndex(StartingPolyIndex, 0, polygons[0].ExteriorRing.Length-1);
                 return true;
             }
 
@@ -675,10 +681,11 @@ namespace Geometry
          
         private PointIndex? NextIndex(IReadOnlyList<GridPolygon> polygons, PointIndex current)
         {
-            GridPolygon poly = polygons[current.iPoly];
+            int iPoly = current.iPoly - StartingPolyIndex;
+            GridPolygon poly = polygons[iPoly];
 
             int iNextVert = current.iVertex + 1;
-            GridVector2[] ring = current.GetRing(polygons);
+            GridVector2[] ring = current.GetRing(poly);
 
             if(iNextVert < ring.Length-1) //-1 because we do not want to report a duplicate vertex for a closed ring
             {
@@ -719,14 +726,14 @@ namespace Geometry
 
                 //OK, we need to move on and could not move to an inner ring.  Go to the next polygon
 
-                int iNextPoly = current.iPoly + 1;
+                int iNextPoly = iPoly + 1;
                 if (iNextPoly >= polygons.Count)
                 {
                     return new PointIndex?();
                 }
                 else
                 {
-                    return new Geometry.PointIndex(iNextPoly, 0, polygons[iNextPoly].ExteriorRing.Length-1);
+                    return new Geometry.PointIndex(current.iPoly + 1, 0, polygons[iNextPoly].ExteriorRing.Length-1);
                 }
             }
         }        
@@ -915,10 +922,19 @@ namespace Geometry
                 throw new ArgumentException("Exterior polygon ring must be valid");
             }
 
+            //The only duplicate point should be the first and the last.  If not throw an exception
+            var nonDuplicatedPoints = exteriorRing.RemoveDuplicates();
+            if(nonDuplicatedPoints.Length != exteriorRing.Length -1)
+            {                 
+                throw new ArgumentException("Duplicate point found in exterior ring");
+            }
+
             if(exteriorRing.AreClockwise())
             {
                 exteriorRing = exteriorRing.Reverse().ToArray();
             }
+
+
 
             ExteriorRing = exteriorRing;
         }
@@ -1110,6 +1126,36 @@ namespace Geometry
             
             this.ExteriorRing = updatedLineSegments.Verticies();
         }
+
+        /// <summary>
+        /// Return true if the point is one of the polygon verticies
+        /// </summary>
+        /// <param name="point"></param>
+        /// <returns></returns>
+        public bool IsVertex(GridVector2 point)
+        {
+            if(!this.BoundingBox.Contains(point))
+            {
+                return false;
+            }
+
+            if (this.ExteriorRing.Contains(point))
+                return true;
+            
+            foreach(GridPolygon inner in this.InteriorPolygons)
+            {
+                if(!inner.BoundingBox.Contains(point))
+                {
+                    continue;
+                }
+
+                if (inner.IsVertex(point))
+                    return true;
+            }
+
+            return false;
+        }
+
 
         public bool Contains(IPoint2D point_param)
         {

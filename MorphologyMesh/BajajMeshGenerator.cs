@@ -15,6 +15,8 @@ using TriangleNet.Geometry;
 using System.Collections;
 using System.Diagnostics;
 using RTree;
+using SliceChordRTree = RTree.RTree<MorphologyMesh.SliceChord>;
+using OTVTable = System.Collections.Concurrent.ConcurrentDictionary<Geometry.PointIndex, Geometry.PointIndex>;
 
 namespace MorphologyMesh
 {
@@ -275,7 +277,7 @@ namespace MorphologyMesh
         }
 
         public static bool IsSliceChordValid(PointIndex vertex, GridPolygon[] Polygons, IReadOnlyList<GridPolygon> SameLevelPolys, IReadOnlyList<GridPolygon> AdjacentLevelPolys, 
-                                                       PointIndex candidate, RTree<SliceChord> chordTree, SliceChordTestType TestsToRun)
+                                                       PointIndex candidate, SliceChordRTree chordTree, SliceChordTestType TestsToRun)
         {
             GridVector2 p1 = vertex.Point(Polygons);
             GridVector2 p2 = candidate.Point(Polygons);
@@ -347,7 +349,7 @@ namespace MorphologyMesh
         /// <param name="chordTree">Lookup data structure for existing slice chords</param>
         /// <returns></returns>
         public static List<SliceChord> FindAllSliceChords(PointIndex vertex, PointIndex[] OppositeVerticies, GridPolygon[] Polygons, IReadOnlyList<GridPolygon> SameLevelPolys, IReadOnlyList<GridPolygon> AdjacentLevelPolys,
-                                                              RTree<SliceChord> chordTree, SliceChordTestType TestsToRun)
+                                                              SliceChordRTree chordTree, SliceChordTestType TestsToRun)
         {
             GridVector2 p = vertex.Point(Polygons);
 
@@ -376,7 +378,7 @@ namespace MorphologyMesh
         /// <param name="chordTree">Lookup data structure for existing slice chords</param>
         /// <returns></returns>
         private static PointIndex? FindOptimalTilingForVertexByDistance(PointIndex vertex, GridPolygon[] Polygons, IReadOnlyList<GridPolygon> SameLevelPolys, IReadOnlyList<GridPolygon> AdjacentLevelPolys,
-                                                              QuadTree<PointIndex> OppositeVertexTree, RTree<SliceChord> chordTree, SliceChordTestType TestsToRun)
+                                                              QuadTree<PointIndex> OppositeVertexTree, SliceChordRTree chordTree, SliceChordTestType TestsToRun)
         {
             double distance;
             GridVector2 p = vertex.Point(Polygons);
@@ -436,7 +438,7 @@ namespace MorphologyMesh
             return levels;
         }
 
-        public static void CreateOptimalTilingVertexTable(GridPolygon[] polygons, double[] PolyZ, SliceChordTestType TestsToRun, out ConcurrentDictionary<PointIndex, PointIndex> OTVTable)
+        public static void CreateOptimalTilingVertexTable(GridPolygon[] polygons, double[] PolyZ, SliceChordTestType TestsToRun, out OTVTable OTVTable)
         {
             RTree<SliceChord> chordTree = new RTree<SliceChord>();
             CreateOptimalTilingVertexTable(new PolySetVertexEnum(polygons), polygons, PolyZ, TestsToRun, out OTVTable, ref chordTree);
