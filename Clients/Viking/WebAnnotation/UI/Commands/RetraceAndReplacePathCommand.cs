@@ -11,11 +11,7 @@ using VikingXNAWinForms;
 
 namespace WebAnnotation.UI.Commands
 {
-    public enum RotationDirection
-    {
-        CLOCKWISE,
-        COUNTERCLOCKWISE
-    }
+    
     public enum DrawWhichPoly
     {
         PREVPOLY,
@@ -83,7 +79,7 @@ namespace WebAnnotation.UI.Commands
             this.OriginalMosaicPolygon = mosaic_polygon;
             this.OriginalVolumePolygon = mapping.TryMapShapeSectionToVolume(mosaic_polygon);
             
-            this.OriginIndex = AddOriginToPolygon(this.OriginalVolumePolygon, origin, out this.VolumePolygonPlusOrigin);
+            this.OriginIndex = GridPolygon.AddPointToPolygon(this.OriginalVolumePolygon, origin, out this.VolumePolygonPlusOrigin);
             
             if (VolumePolygonPlusOrigin.ExteriorRing.Contains(origin))
             {
@@ -93,8 +89,8 @@ namespace WebAnnotation.UI.Commands
                 }
             }
             SmoothedVolumePolygon = VolumePolygonPlusOrigin.Smooth(Global.NumClosedCurveInterpolationPoints);
-
         }
+
         public RetraceAndReplacePathCommand(Viking.UI.Controls.SectionViewerControl parent,
                                         GridPolygon mosaic_polygon,
                                         System.Drawing.Color color,
@@ -107,9 +103,8 @@ namespace WebAnnotation.UI.Commands
             this.OriginalMosaicPolygon = mosaic_polygon;
             this.OriginalVolumePolygon = mapping.TryMapShapeSectionToVolume(mosaic_polygon);
 
-            this.OriginIndex = AddOriginToPolygon(this.OriginalVolumePolygon, origin, out this.VolumePolygonPlusOrigin);
+            this.OriginIndex = GridPolygon.AddPointToPolygon(this.OriginalVolumePolygon, origin, out this.VolumePolygonPlusOrigin);
             SmoothedVolumePolygon = VolumePolygonPlusOrigin.Smooth(Global.NumClosedCurveInterpolationPoints);
-
         }
         
         /// <summary>
@@ -223,8 +218,7 @@ namespace WebAnnotation.UI.Commands
                 WrongIntersectionPoint = -1;
                 LineColor = LineColor = Microsoft.Xna.Framework.Color.Blue;
             }
-
-
+             
             //Does the path self intersect? Does the path cross another ring it shouldn't?
             if (((IntersectingVerts.Count > 0 && !this.OriginIndex.AreOnSameRing(IntersectingVerts.Values.First())) || PenInput.Segments.IntersectionPoint(PenInput.LastSegment, true, out GridLineSegment? IntersectedSegment).HasValue) && WrongIntersectionPoint == -1)
             {
@@ -277,7 +271,7 @@ namespace WebAnnotation.UI.Commands
         {
             if (false == intersect_index.AreOnSameRing(start_index))
             {
-                //throw new ArgumentException("Cut must run between the same ring of the polygon without intersecting other rings");
+                throw new ArgumentException("Cut must run between the same ring of the polygon without intersecting other rings");
             }
 
             //Walk the ring using Next to find perimeter on one side, the walk using prev to find perimeter on the other
@@ -300,6 +294,7 @@ namespace WebAnnotation.UI.Commands
 
             do
             {
+                Debug.Assert(walkedPoints.Contains(current.Point(originPolygon)) == false);
                 walkedPoints.Add(current.Point(originPolygon));
                 if (direction == RotationDirection.COUNTERCLOCKWISE)
                     current = current.Next;
@@ -314,6 +309,7 @@ namespace WebAnnotation.UI.Commands
             //Add the intersection point of where we crossed the boundary
             if (GridVector2.DistanceSquared(PolyIntersectionPoint, walkedPoints.Last()) > Geometry.Global.EpsilonSquared)
             {
+                Debug.Assert(walkedPoints.Contains(PolyIntersectionPoint) == false);
                 walkedPoints.Add(PolyIntersectionPoint);
             }
             else
@@ -327,8 +323,9 @@ namespace WebAnnotation.UI.Commands
             //Add the PenInput.Path 
 
             //Temp for debugging ///////////////
-            for (int iCut = 1; iCut < SimplifiedPath.Count; iCut++)
+            for (int iCut = 0; iCut < SimplifiedPath.Count; iCut++)
             {
+                Debug.Assert(walkedPoints.Contains(SimplifiedPath[iCut]) == false);
                 if (GridVector2.DistanceSquared(SimplifiedPath[iCut], walkedPoints.Last()) <= Geometry.Global.EpsilonSquared) 
                 {
                     int i = 5; //Temp for debugging
@@ -341,14 +338,14 @@ namespace WebAnnotation.UI.Commands
             ///
             //walkedPoints.AddRange(cutLine);
 
+            Debug.Assert(walkedPoints.RemoveDuplicates().Length == walkedPoints.Count-1);
+
             if(direction == RotationDirection.CLOCKWISE)
             {
                 walkedPoints.Reverse();
             }
 
             return new GridPolygon(walkedPoints.EnsureClosedRing());
-
-            
         }
 
         /// <summary>
@@ -390,49 +387,6 @@ namespace WebAnnotation.UI.Commands
 
         }
 
-        
-
-        /// <summary>
-        /// Identify which polygon we are retracing, add a vertex to the polygon at the origin of the command
-        /// </summary>
-        /// <param name="polygon"></param>
-        /// <param name="point"></param>
-        /// <param name="updated_poly"></param>
-        /// <param name="iVerex"></param>
-        /// <returns></returns>
-        protected static PointIndex AddOriginToPolygon(GridPolygon original_polygon, GridVector2 point, out GridPolygon updated_poly)
-        {
-            original_polygon.NearestPolygonSegment(point, out updated_poly);
-
-            //Find the Origin of the path's intersection point and add it too the Exterior Points
-            List<GridLineSegment> ExteriorSegments = updated_poly.ExteriorSegments.ToList();
-            int iInsertionPoint = ExteriorSegments.NearestSegment(point, out double MinDistance);
-            GridLineSegment A_To_B = ExteriorSegments[iInsertionPoint];
-
-            //Find out which verticies the endpoints are
-            original_polygon.NearestVertex(A_To_B.A, out PointIndex AIndex);
-            original_polygon.NearestVertex(A_To_B.B, out PointIndex BIndex);
-
-            ExteriorSegments.RemoveAt(iInsertionPoint);
-            GridLineSegment A_To_Origin = new GridLineSegment(A_To_B.A, point);
-            GridLineSegment Origin_To_B = new GridLineSegment(point, A_To_B.B);
-            ExteriorSegments.InsertRange(iInsertionPoint, new GridLineSegment[] { A_To_Origin, Origin_To_B });
-
-            GridPolygon poly_with_origin = new GridPolygon(ExteriorSegments.Select(l => l.A).ToArray().EnsureClosedRing());
-
-            if (AIndex.IsInner == false)
-            {
-                updated_poly = poly_with_origin;
-            }
-            else
-            {
-                updated_poly = (GridPolygon)original_polygon.Clone();
-                updated_poly.ReplaceInteriorRing(AIndex.iInnerPoly.Value, poly_with_origin);
-            }
-
-            updated_poly.NearestVertex(point, out PointIndex origin_index);
-            return origin_index;
-        }
 
         protected GridPolygon AddInteriorToCutPolygon(GridPolygon originalPoly, GridPolygon cutPoly)
         {
