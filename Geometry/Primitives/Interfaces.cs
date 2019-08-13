@@ -6,7 +6,11 @@ using System.Threading.Tasks;
 
 namespace Geometry
 {
-
+    public enum RotationDirection
+    {
+        CLOCKWISE,
+        COUNTERCLOCKWISE
+    }
     public enum ShapeType2D
     {
         POINT = 0,

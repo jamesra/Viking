@@ -12,6 +12,13 @@ namespace GeometryTests
     {
         /// <summary>
         /// Create a box, note I've added an extra vertex on the X:-1 vertical line
+        /// 
+        ///  * - - - *
+        ///  |       |
+        ///  *       |
+        ///  |       |
+        ///  * - * - *
+        /// 
         /// </summary>
         /// <param name="scale"></param>
         /// <returns></returns>
@@ -508,6 +515,316 @@ namespace GeometryTests
             //Line crosses the exterior ring
             line = new GridLineSegment(new GridVector2(-9, -11), new GridVector2(-9, -9));
             Assert.IsFalse(Theorem4(U, line));
+        }
+
+        /// <summary>
+        ///
+        ///     Test cutting the box polygon along the equals line:
+        ///     
+        ///     * - - - - - - - *
+        ///     |               |
+        /// A ======================== B
+        ///     |               |
+        ///     *               |
+        ///     |               |
+        ///     |               |
+        ///     |               |
+        ///     * - - - * - - - *
+        ///  
+        /// </summary>
+        [TestMethod]
+        public void TestPolygonCut_NoInteriorCutPoint()
+        {
+            GridPolygon box = CreateBoxPolygon(10);
+
+            GridVector2 A = new GridVector2(-15, 1);
+            GridVector2 B = new GridVector2(15, 1); 
+
+            GridVector2 expected_start = new GridVector2(-10, 1);
+            GridVector2 expected_end = new GridVector2(10, 1);
+
+            GridVector2[] expected_ring_counterclockwise = new GridVector2[] {expected_start,
+                                                             new GridVector2(-10,0),
+                                                             new GridVector2(-10,-10),
+                                                             new GridVector2(10,-10),
+                                                             expected_end,
+                                                             expected_start};
+
+            GridVector2[] expected_ring_clockwise = new GridVector2[] {expected_start,
+                                                             expected_end,
+                                                             new GridVector2(10,10),
+                                                             new GridVector2(-10,10),
+                                                             expected_start};
+
+            GridPolygon clockwise_output = GridPolygon.WalkPolygonCut(box, RotationDirection.CLOCKWISE, new GridVector2[] { A, B });
+            ValidatePolygonCut(clockwise_output, new GridPolygon(expected_ring_clockwise), expected_start, expected_end);
+
+            GridPolygon counterclockwise_output = GridPolygon.WalkPolygonCut(box, RotationDirection.COUNTERCLOCKWISE, new GridVector2[] { A, B });
+            ValidatePolygonCut(counterclockwise_output, new GridPolygon(expected_ring_counterclockwise), expected_start, expected_end);
+        }
+
+        /// <summary>
+        ///
+        ///     Test cutting the box polygon along the equals line:
+        ///     
+        ///     * - - - - - - - *
+        ///     |               |
+        /// A ======================== B
+        ///     |               |
+        ///     *      *-*      |
+        ///     |      | |      |
+        ///     |      *-*      |
+        ///     |               |
+        ///     * - - - * - - - *
+        ///  
+        /// </summary>
+        [TestMethod]
+        public void TestPolygonCut_NoInteriorCutPoint_InnerPoly()
+        {
+            GridPolygon box = CreateBoxPolygon(10);
+
+            GridPolygon inner = CreateBoxPolygon(1).Translate(new GridVector2(0, -2));
+
+            box.AddInteriorRing(inner);
+
+            GridVector2 A = new GridVector2(-15, 1);
+            GridVector2 B = new GridVector2(15, 1);
+
+            GridVector2 expected_start = new GridVector2(-10, 1);
+            GridVector2 expected_end = new GridVector2(10, 1);
+
+            GridVector2[] expected_ring_counterclockwise = new GridVector2[] {expected_start,
+                                                             new GridVector2(-10,0),
+                                                             new GridVector2(-10,-10),
+                                                             new GridVector2(10,-10),
+                                                             expected_end,
+                                                             expected_start};
+
+            GridVector2[] expected_ring_clockwise = new GridVector2[] {expected_start,
+                                                             expected_end,
+                                                             new GridVector2(10,10),
+                                                             new GridVector2(-10,10),
+                                                             expected_start};
+
+            GridPolygon clockwise_output = GridPolygon.WalkPolygonCut(box, RotationDirection.CLOCKWISE, new GridVector2[] { A, B });
+            ValidatePolygonCut(clockwise_output, new GridPolygon(expected_ring_clockwise), expected_start, expected_end);
+
+            GridPolygon counterclockwise_output = GridPolygon.WalkPolygonCut(box, RotationDirection.COUNTERCLOCKWISE, new GridVector2[] { A, B });
+            ValidatePolygonCut(counterclockwise_output, new GridPolygon(expected_ring_counterclockwise), expected_start, expected_end);
+
+            Assert.IsTrue(counterclockwise_output.InteriorPolygons.Count == 1);
+        }
+
+        /// <summary>
+        ///
+        ///     Test cutting the box polygon along the equals line:
+        ///     
+        ///     * - - - - - - - *
+        ///     |               |
+        /// A ===========B============ C
+        ///     |               |
+        ///     *               |
+        ///     |               |
+        ///     |               |
+        ///     |               |
+        ///     * - - - * - - - *
+        ///  
+        /// </summary>
+        [TestMethod]
+        public void TestPolygonCut_OneInteriorCutPoint()
+        {
+            GridPolygon box = CreateBoxPolygon(10);
+
+            GridVector2 A = new GridVector2(-15, 1);
+            GridVector2 B = new GridVector2(0, 1);
+            GridVector2 C = new GridVector2(15, 1); 
+
+            GridVector2 expected_start = new GridVector2(-10, 1);
+            GridVector2 expected_end = new GridVector2(10, 1);
+
+            GridVector2[] expected_ring_counterclockwise = new GridVector2[] {expected_start,
+                                                             new GridVector2(-10,0),
+                                                             new GridVector2(-10,-10),
+                                                             new GridVector2(10,-10),
+                                                             expected_end,
+                                                             B,
+                                                             expected_start};
+
+            GridVector2[] expected_ring_clockwise = new GridVector2[] {expected_start,
+                                                             B,
+                                                             expected_end,
+                                                             new GridVector2(10,10),
+                                                             new GridVector2(-10,10),
+                                                             expected_start};
+
+            GridPolygon clockwise_output = GridPolygon.WalkPolygonCut(box, RotationDirection.CLOCKWISE, new GridVector2[] { A, B, C});
+            ValidatePolygonCut(clockwise_output, new GridPolygon(expected_ring_clockwise), expected_start, expected_end);
+
+            GridPolygon counterclockwise_output = GridPolygon.WalkPolygonCut(box, RotationDirection.COUNTERCLOCKWISE, new GridVector2[] { A, B, C });
+            ValidatePolygonCut(counterclockwise_output, new GridPolygon(expected_ring_counterclockwise), expected_start, expected_end);
+        }
+
+        /// <summary>
+        ///
+        ///     Test cutting the box polygon along the equals line:
+        ///     
+        ///     * - - - - - - - *
+        ///     |               |
+        /// A ===========B      |
+        ///     |       ||      |
+        ///     *       ||      |
+        ///     |       ||      |
+        ///     |        C =========== D
+        ///     |               |
+        ///     * - - - * - - - *
+        ///  
+        /// </summary>
+        [TestMethod]
+        public void TestPolygonCut_TwoInteriorCutPoints()
+        {
+            GridPolygon box = CreateBoxPolygon(10);
+
+            GridVector2 A = new GridVector2(-15, 1);
+            GridVector2 B = new GridVector2(0, 1);
+            GridVector2 C = new GridVector2(0, -5);
+            GridVector2 D = new GridVector2(15,-5); 
+
+            GridVector2 expected_start = new GridVector2(-10, 1);
+            GridVector2 expected_end = new GridVector2(10, -5);
+
+            GridVector2[] expected_ring_counterclockwise = new GridVector2[] {expected_start,
+                                                             new GridVector2(-10,0),
+                                                             new GridVector2(-10,-10),
+                                                             new GridVector2(10,-10),
+                                                             expected_end,
+                                                             C,
+                                                             B,
+                                                             expected_start};
+
+            GridVector2[] expected_ring_clockwise = new GridVector2[] {expected_start,
+                                                             B,
+                                                             C,
+                                                             expected_end,
+                                                             new GridVector2(10,10),
+                                                             new GridVector2(-10,10),
+                                                             expected_start};
+
+            GridPolygon counterclockwise_output = GridPolygon.WalkPolygonCut(box, RotationDirection.COUNTERCLOCKWISE, new GridVector2[] { A, B, C, D });
+            ValidatePolygonCut(counterclockwise_output, new GridPolygon(expected_ring_counterclockwise), expected_start, expected_end);
+
+            GridPolygon clockwise_output = GridPolygon.WalkPolygonCut(box, RotationDirection.CLOCKWISE, new GridVector2[] { A, B, C, D });
+            ValidatePolygonCut(clockwise_output, new GridPolygon(expected_ring_clockwise), expected_start, expected_end);
+
+        }
+
+        /// <summary>
+        ///
+        ///     Test cutting the box polygon along the equals line:
+        ///     
+        ///  A
+        ///   \
+        ///     * - - - - - - - *
+        ///     | \             |
+        ///     |   \            |
+        ///     |     \          |
+        ///     *       \        |
+        ///     |         \      |
+        ///     |           \    |
+        ///     |             \  |
+        ///     * - - - * - - - *
+        ///                       \
+        ///                         B
+        /// </summary>
+        [TestMethod]
+        public void TestPolygonCut_NoInteriorCutPointsThroughPolygonVerts()
+        {
+            GridPolygon box = CreateBoxPolygon(10);
+
+            GridVector2 A = new GridVector2(-15, 15); 
+            GridVector2 B = new GridVector2(15, -15);
+
+            GridVector2 expected_start = new GridVector2(-10, 10);
+            GridVector2 expected_end = new GridVector2(10, -10);
+
+            GridVector2[] expected_ring_counterclockwise = new GridVector2[] {expected_start,
+                                                             new GridVector2(-10,0),
+                                                             new GridVector2(-10,-10),
+                                                             expected_end,
+                                                             expected_start};
+
+            GridVector2[] expected_ring_clockwise = new GridVector2[] {expected_start,
+                                                             new GridVector2(10,10),
+                                                             expected_end,
+                                                             expected_start};
+
+            GridPolygon counterclockwise_output = GridPolygon.WalkPolygonCut(box, RotationDirection.COUNTERCLOCKWISE, new GridVector2[] { A, B});
+            ValidatePolygonCut(counterclockwise_output, new GridPolygon(expected_ring_counterclockwise), expected_start, expected_end);
+
+            GridPolygon clockwise_output = GridPolygon.WalkPolygonCut(box, RotationDirection.CLOCKWISE, new GridVector2[] { A, B});
+            ValidatePolygonCut(clockwise_output, new GridPolygon(expected_ring_clockwise), expected_start, expected_end); 
+        }
+
+        /// <summary>
+        ///
+        ///     Test cutting the box polygon along the equals line:
+        ///     
+        ///  A
+        ///   \
+        ///     * - - - - - - - *
+        ///     | \             |
+        ///     |   \            |
+        ///     |     \          |
+        ///     *       \        |
+        ///     |         \      |
+        ///     |           \    |
+        ///     |             \  |
+        ///     * - - - * - - - *
+        ///                       \
+        ///                         B
+        /// </summary>
+        [TestMethod]
+        public void TestPolygonCut_OneInteriorCutPointsThroughPolygonVerts()
+        {
+            GridPolygon box = CreateBoxPolygon(10);
+
+            GridVector2 A = new GridVector2(-15, 15);
+            GridVector2 B = new GridVector2(0, 0);
+            GridVector2 C = new GridVector2(15, -15);
+
+            GridVector2 expected_start = new GridVector2(-10, 10);
+            GridVector2 expected_end = new GridVector2(10, -10);
+
+            GridVector2[] expected_ring_counterclockwise = new GridVector2[] {expected_start,
+                                                             new GridVector2(-10,0),
+                                                             new GridVector2(-10,-10),
+                                                             expected_end,
+                                                             B,
+                                                             expected_start};
+
+            GridVector2[] expected_ring_clockwise = new GridVector2[] {expected_start,
+                                                             new GridVector2(10,10),
+                                                             expected_end,
+                                                             B,
+                                                             expected_start};
+
+            GridPolygon counterclockwise_output = GridPolygon.WalkPolygonCut(box, RotationDirection.COUNTERCLOCKWISE, new GridVector2[] { A, B, C });
+            ValidatePolygonCut(counterclockwise_output, new GridPolygon(expected_ring_counterclockwise), expected_start, expected_end);
+
+            GridPolygon clockwise_output = GridPolygon.WalkPolygonCut(box, RotationDirection.CLOCKWISE, new GridVector2[] { A, B, C });
+            ValidatePolygonCut(clockwise_output, new GridPolygon(expected_ring_clockwise), expected_start, expected_end);
+        }
+
+        private void ValidatePolygonCut(GridPolygon cut, GridPolygon expected_cut, GridVector2 expected_start, GridVector2 expected_end)
+        {
+            Assert.IsTrue(cut.Contains(expected_start));
+            Assert.IsTrue(cut.Contains(expected_end));
+
+            Assert.IsTrue(expected_cut.ExteriorRing.SequenceEqual(cut.ExteriorRing));
+             
+            for(int iRing = 0; iRing < expected_cut.InteriorRings.Count; iRing++)
+            {
+                Assert.IsTrue(expected_cut.InteriorRings[iRing].SequenceEqual(cut.InteriorRings[iRing]));
+            }
         }
 
 

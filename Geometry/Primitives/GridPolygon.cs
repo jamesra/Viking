@@ -878,7 +878,7 @@ namespace Geometry
         /// <summary>
         /// Read only please
         /// </summary>
-        public ICollection<GridVector2[]> InteriorRings
+        public IList<GridVector2[]> InteriorRings
         {
             get
             {
@@ -1729,7 +1729,103 @@ namespace Geometry
                 innerPolygon.AddPointsAtIntersections(other);
             } 
         }
-         
+
+        /// <summary>
+        /// Add a vertex to our rings everywhere the other polygon intersects one of our segments
+        /// </summary>
+        /// <param name="other"></param>
+        public void AddPointsAtIntersections(GridLineSegment other)
+        {
+            GridRectangle? overlap = this.BoundingBox.Intersection(other.BoundingBox);
+
+            //No work to do if there is no overlap
+            if (!overlap.HasValue)
+                return;
+
+            List<GridVector2> newRing = new List<Geometry.GridVector2>();
+
+            for (int i = 0; i < ExteriorRing.Length - 1; i++)
+            {
+                GridLineSegment ls = new GridLineSegment(ExteriorRing[i], ExteriorRing[i + 1]);
+
+                newRing.Add(ExteriorRing[i]);
+
+                IShape2D intersection;
+                
+                var intersects = ls.Intersects(other, true, out intersection); //Don't check the endpoints of the segment because we are already adding them
+
+                if(intersects)
+                {
+                    //The intersection could be a line, which we can't really add an infinite number of points for... we could add internal endpoints, but for now we add point intersections only.
+                    IPoint2D point = intersection as IPoint2D;
+                    if(point != null)
+                    {
+                        GridVector2 p = new GridVector2(point.X, point.Y);
+                        System.Diagnostics.Debug.Assert(!newRing.Contains(p));
+                        newRing.Add(p);
+                    }
+                }
+            }
+
+            newRing.Add(ExteriorRing[ExteriorRing.Length - 1]);
+
+            //Ensure we are not accidentally adding duplicate points, other than to close the ring
+            System.Diagnostics.Debug.Assert(newRing.Count == newRing.Distinct().Count() + 1);
+
+            this.ExteriorRing = newRing.ToArray();
+
+            foreach (GridPolygon innerPolygon in this._InteriorPolygons)
+            {
+                innerPolygon.AddPointsAtIntersections(other);
+            }
+        }
+
+
+        /// <summary>
+        /// Add a vertex to our rings everywhere the other polygon intersects one of the passed segments
+        /// </summary>
+        /// <param name="other"></param>
+        public void AddPointsAtIntersections(GridLineSegment[] other)
+        {
+            //Only check the lines that could intersect our polygon
+            other = other.Where(o => this.BoundingBox.Intersects(o.BoundingBox)).ToArray();
+
+            List<GridVector2> newRing = new List<Geometry.GridVector2>();
+
+            for (int i = 0; i < ExteriorRing.Length - 1; i++)
+            {
+                GridLineSegment ls = new GridLineSegment(ExteriorRing[i], ExteriorRing[i + 1]);
+
+                //Don't add the point if it is too close
+                if(newRing.Count == 0 || GridVector2.DistanceSquared(newRing.Last(), ExteriorRing[i]) > Global.EpsilonSquared)
+                    newRing.Add(ExteriorRing[i]);
+
+                GridVector2[] IntersectionPoints;
+                List<GridLineSegment> candidates = ls.Intersections(other, out IntersectionPoints);
+
+                //Remove any duplicates of the existing endpoints 
+                foreach (GridVector2 p in IntersectionPoints)
+                {
+                    System.Diagnostics.Debug.Assert(!newRing.Contains(p));
+                    //Don't add the point if it is too close
+                    if (newRing.Count == 0 || GridVector2.DistanceSquared(newRing.Last(), p) > Global.EpsilonSquared)
+                        newRing.Add(p);
+                }
+            }
+
+            if (newRing.Count == 0 || GridVector2.DistanceSquared(newRing.Last(), ExteriorRing[ExteriorRing.Length - 1]) > Global.EpsilonSquared)
+                newRing.Add(ExteriorRing[ExteriorRing.Length - 1]);
+
+            //Ensure we are not accidentally adding duplicate points, other than to close the ring
+            System.Diagnostics.Debug.Assert(newRing.Count == newRing.Distinct().Count() + 1);
+
+            this.ExteriorRing = newRing.ToArray();
+
+            foreach (GridPolygon innerPolygon in this._InteriorPolygons)
+            {
+                innerPolygon.AddPointsAtIntersections(other);
+            }
+        }
 
         /// <summary>
         /// 
@@ -1860,6 +1956,211 @@ namespace Geometry
             }
 
             return pointToPoly;
+        }
+
+
+        /// <summary>
+        /// Given a polyline, find two locations where it intersects the polygon and walk the polygon in either clockwise/counter-clockwise direction from the first intersection of the cutline to the second, add the cutline to close the ring, and return the resulting polygon.
+        /// </summary>
+        /// <param name="start_index"></param>
+        /// <param name="input">The polygon to cut/extend</param>
+        /// <param name="direction">The direction we will walk to connect the starting and ending cut points</param>
+        /// <param name="cutLine">The line cutting the polygon.  It should intersect the same polygonal ring in two locations without intersecting any others</param>
+        /// <param name="FirstIntersect">The polygon vertex before the intersected segment, use intersect_index.next to get the endpoint of the intersected segment of the polygon</param>
+        /// <returns></returns>
+        public static GridPolygon WalkPolygonCut(GridPolygon input, RotationDirection direction, IList<GridVector2> cutLine)
+        {
+            
+            //Find a possible intersection point for the retrace
+            GridLineSegment[] cutLines = cutLine.ToLineSegments();
+            List<GridVector2> intersecting_cutline_verts = new List<GridVector2>(); //Every vert in the path that crosses the two polygon
+            List<PointIndex> IntersectingPointIndicies = new List<PointIndex>();
+            bool FirstCutIntersectionFound = false;
+
+            //Add the intersection points to the polygon
+            GridPolygon output = input.Clone() as GridPolygon;
+            output.AddPointsAtIntersections(cutLines);
+
+            //Identify where the cut crosses the polygon rings
+            double total_line_distance = 0;
+            for(int iVert = 0; iVert < cutLine.Count-1; iVert++)
+            {
+                GridLineSegment segment = new GridLineSegment(cutLine[iVert], cutLine[iVert + 1]);
+                
+                var intersections = output.IntersectingSegments(segment);
+                FirstCutIntersectionFound = intersections.Count > 0 || FirstCutIntersectionFound;
+
+                if (FirstCutIntersectionFound)
+                {
+                    intersecting_cutline_verts.Add(cutLine[iVert]);
+                }
+
+                IntersectingPointIndicies.AddRange(intersections.Values);
+
+                if(IntersectingPointIndicies.Count > 2)
+                {
+                    intersecting_cutline_verts.Add(cutLine[iVert + 1]);
+                    break;
+                }
+
+                total_line_distance += segment.Length;
+            }
+
+            if (IntersectingPointIndicies.Count == 0)
+            {
+                throw new ArgumentException("cutLine must intersect a polygon ring");
+            }
+            else if(IntersectingPointIndicies.Count == 1)
+            {
+                throw new ArgumentException("cutline must intersect a polygon ring a second time.");
+            }
+             
+            //Identify the first vertex of the segment of the polygon that intersects the cut line
+            PointIndex firstPoint = IntersectingPointIndicies[0];
+            PointIndex lastPoint = IntersectingPointIndicies[1];
+
+            if (false == firstPoint.AreOnSameRing(lastPoint))
+            {
+                throw new ArgumentException("Cut line must cross segments on the same ring of the polygon");
+            }
+
+            //Drop the first cut intersection because it will be on the wrong side of the polygon border
+            intersecting_cutline_verts.RemoveAt(0);
+             
+            return WalkPolygonCut(firstPoint,
+                                  lastPoint,
+                                  output,
+                                  direction,
+                                  intersecting_cutline_verts);
+        }
+
+
+        /// <summary>
+        /// Given a polyline that crosses the same ring of the polygon at two points on the same ring, returns the polygon that results from walking the polygon either clockwise-or-counter clockwise around the cut line. 
+        /// This can be used to cut a polygon into arbitrary parts.
+        /// </summary>
+        /// <param name="start_index">The vertex of the polygon the cut begins at</param>
+        /// <param name="intersect_index">The vertex of the polygon the cut ends at</param>
+        /// <param name="originPolygon">Polygon we are cutting</param>
+        /// <param name="direction">Build the polygon with a clockwise or counterclockwise rotation order from the start_index</param>
+        /// <param name="cutLine">The verticies of the cutline.  Must be entirely inside or outside the polygon and not intersect any rings</param>
+        /// <returns></returns>
+        protected static GridPolygon WalkPolygonCut(PointIndex start_index, PointIndex end_index, GridPolygon originPolygon, RotationDirection direction, IList<GridVector2> cutLine)
+        {
+            if (false == end_index.AreOnSameRing(start_index))
+            {
+                throw new ArgumentException("Cut must run between the same ring of the polygon without intersecting other rings");
+            }
+
+            //Walk the ring using Next to find perimeter on one side, the walk using prev to find perimeter on the other
+            List<GridVector2> walkedPoints = new List<GridVector2>();
+            PointIndex current = start_index;
+
+            //Add the points from the polygon
+            do
+            {
+                Debug.Assert(walkedPoints.Contains(current.Point(originPolygon)) == false);
+                walkedPoints.Add(current.Point(originPolygon));
+                if (direction == RotationDirection.COUNTERCLOCKWISE)
+                    current = current.Next;
+                else
+                    current = current.Previous;
+
+            }
+            while (current != end_index);
+
+            walkedPoints.Add(end_index.Point(originPolygon));
+
+            //Add the intersection point of where we crossed the boundary 
+            //List<GridVector2> SimplifiedPath = CurveSimplificationExtensions.DouglasPeuckerReduction(cutLine, Global.PenSimplifyThreshold);
+            //Since we start walking the polygon from the first intersection point we always add the cutline in reverse order to return to the cirst intersection point.
+            List<GridVector2> SimplifiedPath = cutLine.Reverse().ToList();
+
+            //The intersection point marks where we enter the polygon.  The first point in the path is not added because it indicates where the line exited the cut region. 
+            //Add the PenInput.Path 
+
+            //Temp for debugging ///////////////
+            for (int iCut = 0; iCut < SimplifiedPath.Count; iCut++)
+            {
+                Debug.Assert(walkedPoints.Contains(SimplifiedPath[iCut]) == false);
+                if (GridVector2.DistanceSquared(SimplifiedPath[iCut], walkedPoints.Last()) <= Geometry.Global.EpsilonSquared)
+                {
+                    int i = 5; //Temp for debugging
+                    continue;
+                }
+
+                walkedPoints.Add(SimplifiedPath[iCut]);
+            }
+            /////////////////////////////////////
+            ///
+            //walkedPoints.AddRange(cutLine);
+#if DEBUG
+            //Ensure we do not have duplicates in our list
+            GridVector2[] walkedPoints_noduplicates = walkedPoints.RemoveDuplicates();
+            Debug.Assert(walkedPoints_noduplicates.Length == walkedPoints.Count);
+#endif
+
+            //Close the ring
+            walkedPoints.Add(start_index.Point(originPolygon));
+
+            if (direction == RotationDirection.CLOCKWISE)
+            {
+                walkedPoints.Reverse();
+            }
+
+            GridPolygon output = new GridPolygon(walkedPoints.EnsureClosedRing());
+
+            //Add any interior polygons contained within our cut
+            for (int iRing=0; iRing < originPolygon.InteriorRings.Count; iRing++)
+            {
+                //We should be safe quickly testing a single point of each interior polygon because we test that the cut intersects the same ring only
+                if (output.Contains(originPolygon.InteriorRings[iRing].First()))
+                    output.AddInteriorRing(originPolygon.InteriorPolygons[iRing]);
+            }
+
+            return output;
+        }
+
+        /// <summary>
+        /// Add a polygon vertex, added by splitting the nearest ring segment into two parts.
+        /// </summary>
+        /// <param name="polygon"></param>
+        /// <param name="point"></param>
+        /// <param name="updated_poly"></param>
+        /// <param name="iVerex"></param>
+        /// <returns></returns>
+        public static PointIndex AddPointToPolygon(GridPolygon original_polygon, GridVector2 point, out GridPolygon updated_poly)
+        {
+            original_polygon.NearestPolygonSegment(point, out updated_poly);
+
+            //Find the Origin of the path's intersection point and add it too the Exterior Points
+            List<GridLineSegment> ExteriorSegments = updated_poly.ExteriorSegments.ToList();
+            int iInsertionPoint = ExteriorSegments.NearestSegment(point, out double MinDistance);
+            GridLineSegment A_To_B = ExteriorSegments[iInsertionPoint];
+
+            //Find out which verticies the endpoints are
+            original_polygon.NearestVertex(A_To_B.A, out PointIndex AIndex);
+            original_polygon.NearestVertex(A_To_B.B, out PointIndex BIndex);
+
+            ExteriorSegments.RemoveAt(iInsertionPoint);
+            GridLineSegment A_To_Origin = new GridLineSegment(A_To_B.A, point);
+            GridLineSegment Origin_To_B = new GridLineSegment(point, A_To_B.B);
+            ExteriorSegments.InsertRange(iInsertionPoint, new GridLineSegment[] { A_To_Origin, Origin_To_B });
+
+            GridPolygon poly_with_origin = new GridPolygon(ExteriorSegments.Select(l => l.A).ToArray().EnsureClosedRing());
+
+            if (AIndex.IsInner == false)
+            {
+                updated_poly = poly_with_origin;
+            }
+            else
+            {
+                updated_poly = (GridPolygon)original_polygon.Clone();
+                updated_poly.ReplaceInteriorRing(AIndex.iInnerPoly.Value, poly_with_origin);
+            }
+
+            updated_poly.NearestVertex(point, out PointIndex origin_index);
+            return origin_index;
         }
     }
 }
