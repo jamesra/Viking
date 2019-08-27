@@ -648,11 +648,23 @@ namespace Geometry
             {
                 if (_Segments == null)
                 {
-                    _Segments = new GridLineSegment[] { new GridLineSegment(LowerLeft, UpperLeft),
-                                                        new GridLineSegment(UpperLeft, UpperRight),
-                                                        new GridLineSegment(UpperRight, LowerRight),
-                                                        new GridLineSegment(LowerRight, LowerLeft)};
+                    if (this.Width != 0 && this.Height != 0)
+                    {
+                        _Segments = new GridLineSegment[] { new GridLineSegment(LowerLeft, UpperLeft),
+                                                            new GridLineSegment(UpperLeft, UpperRight),
+                                                            new GridLineSegment(UpperRight, LowerRight),
+                                                            new GridLineSegment(LowerRight, LowerLeft)};
+                    }
+                    else if (this.Width == 0 && this.Height == 0)
+                    {
+                        _Segments = new GridLineSegment[0];
+                    }
+                    else
+                    {
+                        _Segments = new GridLineSegment[] { new GridLineSegment(LowerLeft, UpperRight) };
+                    }
                 }
+
                 return _Segments;
             }
         }
