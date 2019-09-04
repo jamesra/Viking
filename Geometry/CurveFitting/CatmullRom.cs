@@ -18,11 +18,36 @@ namespace Geometry
             cp.AddRange(cp.GetRange(1, 2));
         }
 
+        /// <summary>
+        /// Extrapolate a point using a straight line from the last two points, half the distance between the two control points
+        /// </summary>
+        /// <param name="cp"></param>
+        private static void PrepareControlPointsForOpenCurve(List<GridVector2> cp)
+        {
+            GridLineSegment start = new GridLineSegment(cp[0], cp[1]);
+            GridVector2 zeroPoint = start.PointAlongLine(-0.5);
+
+            cp.Insert(0, zeroPoint);
+
+            GridLineSegment end = new GridLineSegment(cp[cp.Count-1], cp[cp.Count - 2]);
+            GridVector2 lastPoint = end.PointAlongLine(1.5);
+
+            cp.Add(lastPoint);
+        }
+
         public static GridVector2[] FitCurve(ICollection<GridVector2> ControlPoints, int NumInterpolations, bool closed)
         {
+            //Two points are a straight line, so don't bother interpolating
+            if(ControlPoints.Count <= 2)
+            {
+                return ControlPoints.ToArray();
+            }
+
             List<GridVector2> cp = new List<GridVector2>(ControlPoints);
-            if(closed)
+            if (closed)
                 PrepareControlPointsForClosedCurve(cp);
+            else
+                PrepareControlPointsForOpenCurve(cp);
 
             //return cp.Where((p, i) => i + 3 < cp.Count).SelectMany((p, i) => FitCurveSegment(cp[i], cp[i + 1], cp[i + 2], cp[i + 3], NumInterpolations)).ToArray();
             GridVector2[] points = cp.Where((p, i) => i + 3 < cp.Count).SelectMany((p, i) => RecursivelyFitCurveSegment(cp[i], cp[i + 1], cp[i + 2], cp[i + 3], null, 0)).ToArray();
@@ -31,7 +56,7 @@ namespace Geometry
                 points = points.RemoveAdjacentDuplicates();
             }
 
-            return points; 
+            return points;
         }
 
         /// <summary>
