@@ -95,7 +95,6 @@ namespace Geometry
 
             GridVector2[] output = XOutput.Select((x, i) => new GridVector2(x, YOutput[i])).ToArray();
 
-            double[] degreees = output.MeasureCurvature();
             return output;
         }
 
