@@ -296,7 +296,7 @@ namespace VikingXNAGraphics
 
             spriteBatch.Begin();
 
-            foreach(LabelView label in Labels)
+            foreach(LabelView label in Labels.Where(l => l != null))
             {
                 label.Draw(spriteBatch, font, scene);
             }

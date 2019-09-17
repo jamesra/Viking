@@ -54,7 +54,7 @@ namespace VikingXNAGraphics.Controls
         
         public void TestClick(GridVector2 point, MouseButton button)
         {
-            if(this.Intersects(point))
+            if(this.Contains(point))
             {
                 OnClick(this, button);
             }
@@ -75,9 +75,14 @@ namespace VikingXNAGraphics.Controls
             return GridVector2.Distance(Position, this.Circle.Center);
         }
 
-        public bool Intersects(GridVector2 Position)
+        public bool Contains(GridVector2 Position)
         {
             return Circle.Intersects(Position);
+        }
+
+        public bool Intersects(GridLineSegment line)
+        {
+            return Circle.Intersects(line);
         }
 
         public bool IsVisible(Scene scene)

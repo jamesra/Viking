@@ -19,19 +19,25 @@ namespace VikingXNAGraphics
             }
         }
 
+        public bool ShowControlPoints { get; set; } = true;
+
         private List<GridVector2> _ControlPoints;
 
-        public List<GridVector2> ControlPoints
+        public IList<GridVector2> ControlPoints
         {
             get { return _ControlPoints; }
             set
             {
-                _ControlPoints = new List<GridVector2>(value);
-                if (_ControlPoints.First() == _ControlPoints.Last())
-                    _ControlPoints.RemoveAt(_ControlPoints.Count - 1);
+                if (value == null)
+                {
+                    _ControlPoints = null;
+                }
+                else
+                {
+                    _ControlPoints = new List<GridVector2>(value);
+                }
 
-                this.ControlPointViews = CreateControlPointViews(this.ControlPoints, this.LineWidth, this.Color, this.ControlPointTexture);
-                this.LineViews = CreateLineViews(this.ControlPoints.ToArray(), this.LineWidth, this.Color, this.Style);
+                UpdateAllViews();
             }
         }
 
@@ -42,17 +48,56 @@ namespace VikingXNAGraphics
             this.LineViews = CreateLineViews(this.ControlPoints.ToArray(), this.LineWidth, this.Color, this.Style);
         }
 
+        private LineStyle _Style; 
         public LineStyle Style
         {
-            get;
-            set;
+            get { return _Style; }
+            set
+            {
+                if(value != _Style)
+                {
+                    _Style = value;
+                    UpdateAllViews();
+                }
+            }
         }
 
         private LineView[] LineViews;
 
         private CircleView[] ControlPointViews;
 
-        public double LineWidth;
+        private double _LineWidth;
+        public double LineWidth
+        {
+            get { return _LineWidth; }
+            set
+            {
+                if(value != _LineWidth)
+                {
+                    _LineWidth = value;
+
+                    UpdateAllViews();
+                }
+            }
+        }
+
+        private double? _ControlPointRadius;
+        public double ControlPointRadius
+        {
+            get {
+                return _ControlPointRadius.HasValue ? _ControlPointRadius.Value : _LineWidth;
+                }
+            set
+            {
+                if (value != _ControlPointRadius)
+                {
+                    _ControlPointRadius = value;
+
+                    UpdateAllViews();
+                }
+            }
+        }
+
 
         private Color _Color;
         public Color Color
@@ -79,29 +124,72 @@ namespace VikingXNAGraphics
             set { Color = _Color.SetAlpha(value); }
         }
 
-        public PolyLineView(ICollection<GridVector2> controlPoints, Microsoft.Xna.Framework.Color color, Texture2D texture = null, double lineWidth = 16.0, LineStyle lineStyle = LineStyle.Standard)
+        public PolyLineView(Microsoft.Xna.Framework.Color color, 
+                            Texture2D texture = null,
+                            double lineWidth = 16.0,
+                            LineStyle lineStyle = LineStyle.Standard) 
+            : this(null, color, texture, lineWidth, lineStyle)
+        {
+        }
+
+        public PolyLineView(IReadOnlyList<GridVector2> controlPoints, Microsoft.Xna.Framework.Color color, Texture2D texture = null, double lineWidth = 16.0, LineStyle lineStyle = LineStyle.Standard)
         {
             this._ControlPointTexture = texture;
             this.LineWidth = lineWidth;
-            this._ControlPoints = controlPoints.ToList();
+            this._ControlPoints = controlPoints == null ? null : controlPoints.ToList();
             this._Color = color;
             this.Style = lineStyle;
-            this.ControlPointViews = CreateControlPointViews(this.ControlPoints, lineWidth, color, texture);
-            this.LineViews = CreateLineViews(this.ControlPoints.ToArray(), lineWidth, color, lineStyle);
+            this.ControlPointViews = CreateControlPointViews(this.ControlPoints, this.ControlPointRadius, color, texture);
+            this.LineViews = CreateLineViews(this.ControlPoints, lineWidth, color, lineStyle);
         }
 
-        private static CircleView[] CreateControlPointViews(ICollection<GridVector2> ControlPoints, double Radius, Microsoft.Xna.Framework.Color color, Texture2D texture)
+        /// <summary>
+        /// Recreate all views used by this object
+        /// </summary>
+        private void UpdateAllViews()
         {
+            if (_ControlPoints == null || _ControlPoints.Count == 0)
+            {
+                this.ControlPointViews = null;
+                this.LineViews = null;
+            }
+            else if (_ControlPoints.Count == 1)
+            {
+                this.ControlPointViews = CreateControlPointViews(this.ControlPoints, this.ControlPointRadius, this.Color, this.ControlPointTexture);
+                this.LineViews = null;
+            }
+            else
+            {
+                if (_ControlPoints.First() == _ControlPoints.Last())
+                    _ControlPoints.RemoveAt(_ControlPoints.Count - 1);
+
+                this.ControlPointViews = CreateControlPointViews(this.ControlPoints, this.ControlPointRadius, this.Color, this.ControlPointTexture);
+                this.LineViews = CreateLineViews(this.ControlPoints.ToArray(), this.LineWidth, this.Color, this.Style);
+            }
+        }
+
+        private static CircleView[] CreateControlPointViews(IList<GridVector2> ControlPoints, double Radius, Microsoft.Xna.Framework.Color color, Texture2D texture)
+        {
+            if(ControlPoints == null)
+            {
+                return new CircleView[0];
+            }
+
             if (texture != null)
                 return ControlPoints.Select(cp => new TextureCircleView(texture, new GridCircle(cp, Radius), color)).ToArray();
             else
                 return ControlPoints.Select(cp => new CircleView(new GridCircle(cp, Radius), color)).ToArray();
         }
 
-        private static LineView[] CreateLineViews(GridVector2[] CurvePoints, double LineWidth, Color color, LineStyle style)
+        private static LineView[] CreateLineViews(IList<GridVector2> CurvePoints, double LineWidth, Color color, LineStyle style)
         {
-            LineView[] lineViews = new LineView[CurvePoints.Length - 1];
-            for (int i = 1; i < CurvePoints.Length; i++)
+            if (CurvePoints == null || CurvePoints.Count < 2)
+            {
+                return new LineView[0];
+            }
+
+            LineView[] lineViews = new LineView[CurvePoints.Count - 1];
+            for (int i = 1; i < CurvePoints.Count; i++)
             {
                 lineViews[i - 1] = new LineView(CurvePoints[i - 1], CurvePoints[i], LineWidth, color, style, false);
             }
@@ -129,15 +217,16 @@ namespace VikingXNAGraphics
         {
             int OriginalStencilValue = DeviceStateManager.GetDepthStencilValue(device);
             CompareFunction originalStencilFunction = device.DepthStencilState.StencilFunction;
-
+             
             DeviceStateManager.SetDepthStencilValue(device, OriginalStencilValue + 1);
 
-            IEnumerable<CircleView> controlPointViews = listToDraw.SelectMany(cv => cv.ControlPointViews);
+            IEnumerable<CircleView> controlPointViews = listToDraw.Where(cv => cv.ShowControlPoints && cv.ControlPointViews != null).SelectMany(cv => cv.ControlPointViews);
             CircleView.Draw(device, scene, basicEffect, overlayEffect, controlPointViews.ToArray());
 
             DeviceStateManager.SetDepthStencilValue(device, OriginalStencilValue);
+             
 
-            IEnumerable<LineView> lineViews = listToDraw.SelectMany(cv => cv.LineViews);
+            IEnumerable<LineView> lineViews = listToDraw.Where(cv => cv.LineViews != null).SelectMany(cv => cv.LineViews);
             LineView.Draw(device, scene, lineManager, lineViews.ToArray());
 
             //DeviceStateManager.SetDepthStencilValue(device, OriginalStencilValue, originalStencilFunction);

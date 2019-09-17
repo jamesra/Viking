@@ -345,6 +345,9 @@ namespace VikingXNAGraphics
             for (int iObj = 0; iObj < listToDraw.Length; iObj++)
             {
                 CircleView locToDraw = listToDraw[iObj];
+                if (locToDraw == null)
+                    continue; 
+
                 int[] locIndicies;
                 VertexPositionColorTexture[] objVerts = locToDraw.GetCircleBackgroundVerts(locToDraw.HSLColor, out locIndicies);
 

@@ -38,7 +38,14 @@ namespace VikingXNAGraphics
         /// </summary>
         /// <param name="Position"></param>
         /// <returns></returns>
-        bool Intersects(GridVector2 Position);
+        bool Contains(GridVector2 Position);
+
+        /// <summary>
+        /// True if the passed line intersects the view, a hit-testing function
+        /// </summary>
+        /// <param name="Position"></param>
+        /// <returns></returns>
+        bool Intersects(GridLineSegment Position);
 
         /// <summary>
         /// Returns the distance from the position to the nearest point on the annotation, or 0 if the position is inside the annotation
