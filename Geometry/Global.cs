@@ -57,5 +57,14 @@ namespace Geometry
 
             return false;
         }
+
+        public static uint NumCurveInterpolationPoints(bool Closed)
+        {
+            return Closed ? NumClosedCurveInterpolationPoints : NumOpenCurveInterpolationPoints;
+        }
+
+        //TODO: Choose number of points based on distance between control points
+        static public readonly uint NumOpenCurveInterpolationPoints = 3;
+        static public readonly uint NumClosedCurveInterpolationPoints = 10;
     }
 }
