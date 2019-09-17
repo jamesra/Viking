@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Diagnostics;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -55,7 +56,8 @@ namespace Geometry
 
             return CurvePoints;
         }
-
+        
+        /*
         /// <summary>
         /// Return an array with the curvature of each point in the array
         /// </summary>
@@ -74,6 +76,35 @@ namespace Geometry
             {
                 GridVector2 Origin = ControlPoints[i];
                 GridVector2 A = ControlPoints[i - 1];
+                GridVector2 B = ControlPoints[i + 1];
+
+                Angles[i] = GridVector2.ArcAngle(Origin, A, B);
+            }
+
+            return Angles;
+        }*/
+
+
+        /// <summary>
+        /// Return an array with the curvature of each point in the array.
+        /// </summary>
+        /// <param name="ControlPoints"></param>
+        /// <returns>A list of angles, showing how many degrees the next vertex deviates from travelling from a straight line</returns>
+        public static double[] MeasureCurvature(this IReadOnlyList<GridVector2> ControlPoints)
+        {
+            //System.Diagnostics.Debug.Assert(ControlPoints.Count == 3, "Curve requires three points to measure");
+
+            double[] Angles = new double[ControlPoints.Count];
+
+            Angles[0] = 0;
+            Angles[ControlPoints.Count - 1] = 0;
+
+            for (int i = 1; i < ControlPoints.Count - 1; i++)
+            {
+                //Extrapolate a line past the control point, and measure how much we deviate from it
+                GridLineSegment line = new GridLineSegment(ControlPoints[i - 1], ControlPoints[i]);
+                GridVector2 Origin = ControlPoints[i];
+                GridVector2 A = line.PointAlongLine(2.0);//ControlPoints[i - 1];
                 GridVector2 B = ControlPoints[i + 1];
 
                 Angles[i] = GridVector2.ArcAngle(Origin, A, B);
@@ -105,21 +136,20 @@ namespace Geometry
             return CurvePoints;
         }
 
-
         /// <summary>
         /// Add more TPoints where the angle is too high
         /// </summary>
         /// <param name="TPoints">The positions where we evaluate the curve, from 0 to 1</param>
         /// <returns>False if no points were added</returns>
-        public static bool TryAddTPointsAboveThreshold(GridVector2[] output, ref SortedSet<double> TPoints)
+        public static bool TryAddTPointsAboveThreshold(GridVector2[] output, ref SortedSet<double> TPoints, double angleThresholdInDegrees=10.0)
         {
             double[] TPointsArray = TPoints.ToArray();
             double[] degrees = output.MeasureCurvature();
 
-            degrees = degrees.Select(d => Math.Abs((Math.Abs(d) - Math.PI))).ToArray();
+            degrees = degrees.Select(d => Math.Abs(d)).ToArray();
 
             const double onedegree = (Math.PI * 2.0 / 360);
-            const double threshold = onedegree * 10.0;
+            double threshold = onedegree * angleThresholdInDegrees;
             const double distance_threshold = 0.0625; // Math.Pow(0.25,2);
 
             int StartingPoints = TPointsArray.Length;
@@ -153,6 +183,127 @@ namespace Geometry
 
     public static class CurveSimplificationExtensions
     {
+        public static double[] ApplyKernel(this double[] values, double[] kernel)
+        {
+            Debug.Assert(kernel.Length % 2 == 1); //For now I want odd size kernels
+            Debug.Assert(kernel.Sum() == 1.0); //I expect the kernel to sum to 1 so we don't change amplitude of signal.
+            int HalfKernelLength = kernel.Length / 2;  //Rounds down
+            int iStart = HalfKernelLength;
+            int iStop = values.Length - HalfKernelLength;
+
+            double[] window = new double[kernel.Length];
+
+            double[] output = new double[values.Length];
+
+            for(int iCenter = iStart; iCenter < iStop; iCenter++)
+            {
+                Array.Copy(values, iCenter - HalfKernelLength, window, 0, kernel.Length);
+
+                double updated_value = window.Select((v,i) => v * kernel[i]).Sum();
+                output[iCenter] = updated_value;
+            }
+
+            for(int i=0; i < iStart; i++)
+            {
+                output[i] = values[i];
+            }
+
+            for (int i = iStop; i < values.Length; i++)
+            {
+                output[i] = values[i];
+            }
+
+            return output;
+        }
+
+        public static double[] TakeDerivative(this double[] input)
+        {
+            return input.Select((value, i) => i == 0 ? 0 : value - input[i - 1]).ToArray();
+        }
+
+        public static int[] InflectionPointIndicies(this IList<GridVector2> input)
+        {
+            if (input == null)
+                return null;
+
+            if (input.Count == 1)
+            {
+                return new int[] { 0 };
+            }
+            else if (input.Count < 2)
+                return new int[] { 0, 1 };
+
+            GridVector2[] points = input.ToArray();
+
+            double[] angles = points.MeasureCurvature();
+            return angles.InflectionPointIndicies(); //TODO: Angle is a measure of change, so we should probably take the first derivative instead of a 2nd in InflectionPointIndicies
+        }
+
+
+        /// <summary>
+        /// Identify the inflection points in a list of values.  Obtained by taking the second derivative and looking for zero-crossings
+        /// </summary>
+        /// <param name="input"></param>
+        /// <returns></returns>
+        private static int[] InflectionPointIndicies(this double[] input)
+        {
+            if (input == null)
+                return null;
+
+            if (input.Length == 1)
+            {
+                return new int[] { 0 };
+            }
+            else if (input.Length < 2)
+                return new int[] { 0, 1 };
+
+            double[] first_diff = input.TakeDerivative();
+            double[] second_diff = first_diff.TakeDerivative();
+            //double[] second_diff = first_diff;
+
+            //Identify all zero-crossings, max/min values in the list of angles 
+
+            SortedSet<int> inflection_points = new SortedSet<int>();
+            inflection_points.Add(0);
+            inflection_points.Add(input.Length - 1);
+            int last_sign = 0; //-1, 0, or 1 to indicate direction of change in the last datapoint
+            //double total_change = 0;
+            //const double one_degree = Math.PI / 180.0;
+            for (int iPoint = 0; iPoint < input.Length; iPoint++)
+            {
+                //total_change += first_diff[iPoint];
+                int this_sign = second_diff[iPoint] == 0 ? 0 : second_diff[iPoint] < 0 ? -1 : 1;
+
+                if (this_sign != last_sign)
+                {
+                    if (last_sign == 0)
+                        inflection_points.Add(iPoint - 1);
+
+                    inflection_points.Add(iPoint);
+                }
+
+                    //}
+                //total_change = 0;
+
+                last_sign = this_sign;
+            }
+
+            return inflection_points.ToArray();
+        }
+
+        /// <summary>
+        /// Uses the Douglas Peucker algorithm to reduce the number of points.
+        /// </summary>
+        /// <param name="Points">The points.</param>
+        /// <param name="Tolerance">The tolerance.</param>
+        /// <returns></returns>
+        public static List<GridVector2> DouglasPeuckerReduction(this IList<GridVector2> Points, Double Tolerance, ICollection<GridVector2> PointsToPreserve)
+        {
+            IEnumerable<int> PointsToPreserveIndicies = PointsToPreserve.Where(p => Points.Contains(p)).Select(p => Points.IndexOf(p));
+
+            return DouglasPeuckerReduction(Points, Tolerance, PointsToPreserveIndicies);
+        }
+
         /// <summary>
         /// Uses the Douglas Peucker algorithm to reduce the number of points.
         /// </summary>
@@ -160,8 +311,8 @@ namespace Geometry
         /// <param name="Tolerance">The tolerance.</param>
         /// <returns></returns>
         public static List<GridVector2> DouglasPeuckerReduction
-        (this IList<GridVector2> Points, Double Tolerance, ICollection<GridVector2> PointsToPreserve = null)
-        {  
+        (this IList<GridVector2> Points, Double Tolerance, IEnumerable<int> PointsToPreserveIndicies = null)
+        {
             if (Points == null || Points.Count < 3)
                 return Points.ToList();
 
@@ -172,9 +323,8 @@ namespace Geometry
             //Add the first and last index to the keepers
             pointIndexsToKeep.Add(firstPoint);
             pointIndexsToKeep.Add(lastPoint);
-            if (PointsToPreserve != null)
-            {
-                IEnumerable<int> PointsToPreserveIndicies = PointsToPreserve.Where(p => Points.Contains(p)).Select(p => Points.IndexOf(p));
+            if (PointsToPreserveIndicies != null)
+            { 
                 pointIndexsToKeep.UnionWith(PointsToPreserveIndicies);
             }
 
@@ -197,7 +347,7 @@ namespace Geometry
         }
 
         /// <summary>
-        /// Douglases the peucker reduction.
+        /// Douglas Peucker reduction.
         /// </summary>
         /// <param name="points">The points.</param>
         /// <param name="firstPoint">The first point.</param>
@@ -208,11 +358,13 @@ namespace Geometry
         {
             Double maxDistance = 0;
             Int32 indexFarthest = 0;
-
-            for (Int32 index = firstPoint; index < lastPoint; index++)
-            {
-                Double distance = PerpendicularDistance
-                    (points[firstPoint], points[lastPoint], points[index]);
+              
+            //Reference line 
+            GridLineSegment reference_line = new GridLineSegment(points[firstPoint], points[lastPoint]);
+            
+            for (Int32 index = firstPoint+1; index < lastPoint; index++)
+            { 
+                Double distance = reference_line.DistanceToPoint(points[index]);
                 if (distance > maxDistance)
                 {
                     maxDistance = distance;
@@ -231,61 +383,5 @@ namespace Geometry
                 lastPoint, tolerance, ref pointIndexsToKeep);
             }
         }
-
-        /// <summary>
-        /// The distance of a point from a line made from point1 and point2.
-        /// </summary>
-        /// <param name="pt1">The PT1.</param>
-        /// <param name="pt2">The PT2.</param>
-        /// <param name="p">The p.</param>
-        /// <returns></returns>
-        public static Double PerpendicularDistance
-            (GridVector2 Point1, GridVector2 Point2, GridVector2 Point)
-        {
-            //Area = |(1/2)(x1y2 + x2y3 + x3y1 - x2y1 - x3y2 - x1y3)|   *Area of triangle
-            //Base = v((x1-x2)²+(x1-x2)²)                               *Base of Triangle*
-            //Area = .5*Base*H                                          *Solve for height
-            //Height = Area/.5/Base
-
-            Double area = Math.Abs(.5 * (Point1.X * Point2.Y + Point2.X *
-            Point.Y + Point.X * Point1.Y - Point2.X * Point1.Y - Point.X *
-            Point2.Y - Point1.X * Point.Y));
-            Double bottom = Math.Sqrt(Math.Pow(Point1.X - Point2.X, 2) +
-            Math.Pow(Point1.Y - Point2.Y, 2));
-            Double height = area / bottom * 2;
-
-            return height;
-
-            //Another option
-            //Double A = Point.X - Point1.X;
-            //Double B = Point.Y - Point1.Y;
-            //Double C = Point2.X - Point1.X;
-            //Double D = Point2.Y - Point1.Y;
-
-            //Double dot = A * C + B * D;
-            //Double len_sq = C * C + D * D;
-            //Double param = dot / len_sq;
-
-            //Double xx, yy;
-
-            //if (param < 0)
-            //{
-            //    xx = Point1.X;
-            //    yy = Point1.Y;
-            //}
-            //else if (param > 1)
-            //{
-            //    xx = Point2.X;
-            //    yy = Point2.Y;
-            //}
-            //else
-            //{
-            //    xx = Point1.X + param * C;
-            //    yy = Point1.Y + param * D;
-            //}
-
-            //Double d = DistanceBetweenOn2DPlane(Point, new Point(xx, yy));
-        }
-
     }
 }
