@@ -66,7 +66,7 @@ namespace MorphologyMesh
     {
         public static bool IsValid(this EdgeType edge)
         {
-            const EdgeType ValidMask = EdgeType.CONTOUR | EdgeType.SURFACE | EdgeType.ARTIFICIAL | EdgeType.CORRESPONDING | EdgeType.MEDIALAXIS;
+            const EdgeType ValidMask = EdgeType.CONTOUR | EdgeType.SURFACE | EdgeType.ARTIFICIAL | EdgeType.CORRESPONDING | EdgeType.MEDIALAXIS | EdgeType.CONTOUR_TO_MEDIALAXIS;
             return (edge & ValidMask) > 0;
         }
 
@@ -160,6 +160,14 @@ namespace MorphologyMesh
                     {
                         if (A.InteriorPolygonContains(midpoint) ^ B.InteriorPolygonContains(midpoint))
                         {
+                            //Verify the line is not exactly over the contour line of a corresponding edge
+                            
+                            if(A.IsVertex(BPoly.Point(Polygons)) || B.IsVertex(APoly.Point(Polygons)))
+                            {
+                                //This means we are connecting to a corresponding vertex/edge.  
+                                return EdgeType.FLYING;
+                            }
+
                             //Include in port.
                             //Line runs from exterior ring to the near side of an overlapping interior hole
                             return EdgeType.SURFACE;
