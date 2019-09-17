@@ -36,6 +36,33 @@ namespace GeometryTests
             Assert.IsTrue(A1.CompareTo(B) < 0);
         }
 
+        [TestMethod]
+        public void TestFaceAdjacenyOperations()
+        {
+            DynamicRenderMesh mesh = new DynamicRenderMesh();
+
+            Vertex[] verts = CreateTetrahedronVerts();
+
+            foreach (Vertex v in verts)
+            {
+                mesh.AddVertex(v);
+            }
+
+            Face A = new Face(0, 1, 2);
+            Face B = new Face(0, 2, 3);
+            Assert.AreNotEqual(A, B);
+
+            mesh.AddFace(A);
+            mesh.AddFace(B);
+            EdgeKey zero_two_key = new EdgeKey(0, 2);
+            Assert.IsTrue(mesh.Contains(zero_two_key));
+
+            IEdge zero_two = mesh.Edges[zero_two_key];
+            Assert.AreEqual(zero_two.Faces.Count, 2); //After adding both faces the edge count should be 2 for the shared edge
+        }
+
+
+
         private Vertex[] CreateTetrahedronVerts()
         {
             return new Vertex[] {new Vertex(new GridVector3(0, 0, 0), new GridVector3(0, 0, 0)),

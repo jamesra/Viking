@@ -365,26 +365,13 @@ namespace Geometry
                 return true;
 
             //Do any exterior line segments intersect our circle?
-            List<GridLineSegment> Candidates = poly.ExteriorSegmentRTree.Intersects(circle.BoundingBox.ToRTreeRect(0));
+            List<GridLineSegment> Candidates = poly.SegmentRTree.Intersects(circle.BoundingBox.ToRTreeRect()).Select(p => p.Segment(poly)).Where(segment => circle.Intersects(segment)).ToList();
             foreach (GridLineSegment line in Candidates)
             {
                 if (circle.Intersects(line))
                     return true;
             }
-
-            //Do any interior line segments intersect our circle?
-            //Doesn't work with nested inner polygons...
-            GridPolygon inner_poly = null;
-            if (poly.InteriorPolygonContains(circle.Center, out inner_poly))
-            {
-                Candidates = inner_poly.ExteriorSegmentRTree.Intersects(circle.BoundingBox.ToRTreeRect(0));
-                foreach (GridLineSegment line in Candidates)
-                {
-                    if (circle.Intersects(line))
-                        return true;
-                }                
-            }
-
+             
             return false;
         }
     }
@@ -447,6 +434,8 @@ namespace Geometry
                     return true;
             }
 
+            return poly.SegmentRTree.Intersects(rect.ToRTreeRect(0)).Any(p => rect.Intersects(p.Segment(poly)));
+                /*
             List<GridLineSegment> Candidates = poly.ExteriorSegmentRTree.Intersects(rect.ToRTreeRect(0));
             foreach (GridLineSegment line in Candidates)
             {
@@ -455,6 +444,7 @@ namespace Geometry
             }
 
             return false;
+            */
         }
     }
 
@@ -515,6 +505,13 @@ namespace Geometry
         }
     }
 
+    public enum LineSetOrdering
+    {
+        NONE, //A list lines with no spatial relationship to each other
+        POLYLINE, //An ordered list where the Endpoint of an entry is the start of the next line in the list
+        CLOSED, //A Polyline, where the endpoint of the last line in the list is the starting point of the first line in the list
+    }
+
     public static class LineIntersectionExtensions
     {
         public static bool Intersects(GridLineSegment line, GridCircle circle)
@@ -551,7 +548,14 @@ namespace Geometry
             return Intersects(line, poly, EndpointsOnRingDoNotIntersect, out intersections);
         }
 
-        
+        /// <summary>
+        /// Return true if any of the segments of the polygon intersect the line
+        /// </summary>
+        /// <param name="line"></param>
+        /// <param name="poly"></param>
+        /// <param name="EndpointsOnRingDoNotIntersect"></param>
+        /// <param name="intersections"></param>
+        /// <returns></returns>
         public static bool Intersects(this GridLineSegment line, GridPolygon poly, bool EndpointsOnRingDoNotIntersect, out List<GridVector2> intersections)
         {
             intersections = new List<GridVector2>();
@@ -559,6 +563,16 @@ namespace Geometry
             if (false == line.BoundingBox.Intersects(poly.BoundingBox))
                 return false;
 
+            List<GridLineSegment> listCandidates = poly.SegmentRTree.Intersects(line.BoundingBox.ToRTreeRect(0)).Select(p => p.Segment(poly)).ToList();
+
+            foreach (GridLineSegment poly_line in listCandidates)
+            {
+                if (line.Intersects(poly_line, out GridVector2 intersection))
+                {
+                    intersections.Add(intersection);
+                }
+            }
+            /*
             List<GridLineSegment> listCandidates = poly.ExteriorSegmentRTree.Intersects(line.BoundingBox.ToRTreeRect(0));
 
             foreach(GridLineSegment poly_line in listCandidates)
@@ -578,14 +592,15 @@ namespace Geometry
                     intersections.AddRange(listInnerIntersections);
                 }
             }
-
-            intersections = intersections.Distinct().ToList();
+            */
+            intersections = intersections.Distinct().ToList(); //Remove duplicates if our line happens to pass directly through a vertex
             if(EndpointsOnRingDoNotIntersect)
             {
                 intersections = intersections.Where(i => !line.IsEndpoint(i)).ToList();
             }
 
             return intersections.Count > 0;
+            
         }
 
         /// <summary>
@@ -615,6 +630,16 @@ namespace Geometry
             if (false == line.BoundingBox.Intersects(poly.BoundingBox))
                 return false;
 
+            bool Intersects = line.Intersects(poly, true, out Intersections);
+            if(Intersects)
+            {
+                return true;
+            }
+
+            //Now check if the line is entirely inside the polygon without crossing a ring
+            return poly.Contains(line);
+
+            /*
             List<GridLineSegment> listCandidates = poly.ExteriorSegmentRTree.Intersects(line.BoundingBox.ToRTreeRect(0));
                           
             foreach (GridLineSegment poly_line in listCandidates)
@@ -646,6 +671,7 @@ namespace Geometry
 
             NonEndpointIntersections = Intersections.Where(i => !line.IsEndpoint(i)).ToArray();
             return NonEndpointIntersections.Length > 0; 
+            */
         }
         
 
@@ -719,18 +745,43 @@ namespace Geometry
             return sortedIndicies.Select(i => IntersectingLines[i]).ToList();
         }
 
+        public static bool IsEndpointIntersectionExpected(this LineSetOrdering order, int iLine, int jLine, int list_length)
+        {
+            switch (order)
+            {
+                case LineSetOrdering.NONE:
+                    return false;
+                case LineSetOrdering.POLYLINE:
+                    return iLine + 1 == jLine;
+                case LineSetOrdering.CLOSED:
+                    return iLine + 1 == jLine || (iLine == 0 && jLine == (list_length - 1));
+                default:
+                    throw new ArgumentException("Unexpected LineSetOrdering provided to IsEndpointInteresectionExpected");
+            }
+        }
+
         /// <summary>
-        /// 
+        /// Return true if the passed Polyline intersects itself. 
         /// </summary>
         /// <param name="lines"></param>
+        /// <param name="IsClosedRing">True if the polyline forms a closed ring, in which case the first and last points are allowed to overlap</param>
         /// <returns></returns>
-        public static bool SelfIntersects(this IReadOnlyList<GridLineSegment> lines)
-        {
-            for(int iLine = 0; iLine < lines.Count; iLine++)
+        public static bool SelfIntersects(this IReadOnlyList<GridLineSegment> lines, LineSetOrdering order)
+        {   
+            for (int iLine = 0; iLine < lines.Count; iLine++)
             {
                 for(int jLine = iLine + 1; jLine < lines.Count; jLine++)
                 {
-                    if (lines[iLine].Intersects(lines[jLine], EndpointsOnRingDoNotIntersect: iLine + 1 == jLine ? true : false))
+                    //For polyline and closed loops for adjacent lines we only need to check that the endpoints aren't equal to know that the lines do not overlap
+                    if (iLine + 1 == jLine && (order == LineSetOrdering.POLYLINE || order == LineSetOrdering.CLOSED))
+                    {
+                        if (lines[iLine].A != lines[jLine].B)
+                            continue; 
+                    }
+
+                    bool EndpointsOnRingDoNotIntersect = order.IsEndpointIntersectionExpected(iLine, jLine, lines.Count);
+
+                    if (lines[iLine].Intersects(lines[jLine], EndpointsOnRingDoNotIntersect: EndpointsOnRingDoNotIntersect))
                         return true;
                 }
             }
@@ -866,11 +917,11 @@ namespace Geometry
 
             List<GridLineSegment> AMatches = new List<Geometry.GridLineSegment>();
             List<GridLineSegment> BMatches = new List<Geometry.GridLineSegment>();
-
+  
             foreach(GridLineSegment ALine in A.ExteriorSegments)
             {
                 bool AAdded = false;
-                List<GridLineSegment> BCandidates = B.ExteriorSegmentRTree.Intersects(ALine.BoundingBox.ToRTreeRect(0));
+                IEnumerable<GridLineSegment> BCandidates = B.SegmentRTree.Intersects(ALine.BoundingBox.ToRTreeRect(0)).Select(p => p.Segment(B));
                 foreach (GridLineSegment BLine in BCandidates)
                 {
                     if(ALine.Intersects(BLine))

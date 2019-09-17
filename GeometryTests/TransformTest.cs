@@ -70,7 +70,14 @@ namespace GeometryTests
             //
 
             
- 
+            //
+            //      *
+            //      | \
+            //      |  \
+            //      *---*
+            //
+            
+            
             GridVector2 fixedV1 = new GridVector2(0,0); 
             GridVector2 fixedV2 = new GridVector2(10,0); 
             GridVector2 fixedV3 = new GridVector2(0,10); 
@@ -79,6 +86,13 @@ namespace GeometryTests
                                                                          new MappingGridVector2(fixedV2, fixedV2), 
                                                                          new MappingGridVector2(fixedV3, fixedV3)};
 
+            //
+            //     3----1
+            //      \   |
+            //       \  |
+            //        \ |
+            //          2
+            //
             GridVector2 movingV1 = new GridVector2(2.5, 2.5);
             GridVector2 movingV2 = new GridVector2(2.5, -7.5);
             GridVector2 movingV3 = new GridVector2(-7.5, 2.5);
