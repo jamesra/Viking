@@ -244,6 +244,23 @@ namespace Geometry.Meshing
         }
 
         /// <summary>
+        /// Merge the other mesh into our mesh
+        /// </summary>
+        /// <param name="other"></param>
+        /// <returns>The merged index number of the first vertex from the mesh merged into this mesh</returns>
+        public long Merge(DynamicRenderMesh other)
+        {
+            long iVertMergeStart = this.Verticies.Count;
+
+            this.AddVerticies(other.Verticies);
+
+            IFace[] duplicateFaces = other.Faces.Select(f => other.DuplicateFace(f, f.iVerts.Select(v => v + (int)iVertMergeStart))).ToArray();
+            this.AddFaces(duplicateFaces);
+
+            return iVertMergeStart;
+        }
+
+        /// <summary>
         /// Return true if an edge exists between the two verticies
         /// </summary>
         /// <param name="A"></param>
