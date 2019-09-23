@@ -94,6 +94,10 @@ namespace Viking.VolumeModel
                 GridTileFormat = TileGridMapping.GridTileFormatStringFromPythonString(GridTileFormatAttribute.Value.ToString());
             }
 
+            //If the tileset node has no entries, then don't create a TileGridMapping
+            if (TilesetNode.Nodes().Count() == 0)
+                return null;
+
             TileGridMapping mapping = new TileGridMapping(section, Name, TilePrefix, TilePostfix,
                                                           TileSizeX, TileSizeY, TileGridPath, GridTileFormat, XYScale);
 
@@ -114,7 +118,6 @@ namespace Viking.VolumeModel
                                        IO.GetAttributeCaseInsensitive(elem, "path").Value);
                         break; 
                 }
-
             }
 
             return mapping;

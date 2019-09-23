@@ -238,7 +238,9 @@ namespace Viking.VolumeModel
                             UI.State.CurrentMode = Pyramidpath;
                         */
 
-                        Pyramid pyramid = new Pyramid(elem);
+                        Pyramid pyramid = Pyramid.CreateFromElement(elem, this);
+                        if (pyramid == null) //Do not add the pyramid if it has no levels or was invalid for some reason
+                            continue;
 
                         if(!this.ImagePyramids.ContainsKey(pyramid.Name))
                             this.ImagePyramids.Add(pyramid.Name, pyramid);
@@ -256,8 +258,12 @@ namespace Viking.VolumeModel
                     case "tileset":
                         //Load a pre-transformed pyramid whose tiles have a fixed size
                         TileGridMapping tilegridmapping = TileGridMapping.CreateFromTilesetElement(elem, this);
+                        if (tilegridmapping == null)
+                            continue; 
+
                         this.AddTileset(tilegridmapping);
                         DefaultTileset = tilegridmapping.Name;
+                        
                         /*PORT: The viewmodel needs to set this
                         if (UI.State.CurrentMode.Length == 0 || UI.State.CurrentMode == "8-bit")
                             UI.State.CurrentMode = mosaicTransformPath;
