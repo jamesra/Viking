@@ -200,8 +200,10 @@ namespace MorphologyMesh
 
         private StructureModel AddModel(MorphologyGraph structure)
         {
-            MeshGraph meshGraph = structure.ConvertToMeshGraph();
-            DynamicRenderMesh<ulong> structureMesh = SmoothMeshGenerator.Generate(meshGraph);
+            //MeshGraph meshGraph = structure.ConvertToMeshGraph();
+            //SmoothMeshGenerator.Generate(meshGraph);
+            //DynamicRenderMesh<ulong> structureMesh = TopologyMeshGenerator.Generate(meshGraph);
+            DynamicRenderMesh<ulong> structureMesh = TopologyMeshGenerator.Generate(structure);
             StructureModel model = null;
 
             if (structureMesh != null)

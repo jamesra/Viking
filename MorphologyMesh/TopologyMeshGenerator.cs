@@ -22,7 +22,7 @@ namespace MorphologyMesh
         /// </summary>
         /// <param name="graph"></param>
         /// <returns></returns>
-        public List<DynamicRenderMesh<ulong>> Generate(MorphologyGraph graph)
+        public static DynamicRenderMesh<ulong> Generate(MorphologyGraph graph)
         {
             List<DynamicRenderMesh<ulong>> listMeshes = new List<DynamicRenderMesh<ulong>>();
             //Adjust the verticies so the models are centered on zero
@@ -47,7 +47,14 @@ namespace MorphologyMesh
                 }
             }
 
-            return listMeshes;
+            DynamicRenderMesh<ulong> output = new DynamicRenderMesh<ulong>();
+
+            foreach(var mesh in listMeshes)
+            {
+                output.Merge(mesh);
+            }
+
+            return output;
         }
     }
 
