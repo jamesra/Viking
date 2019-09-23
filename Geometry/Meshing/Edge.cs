@@ -153,7 +153,7 @@ namespace Geometry.Meshing
 
         private ImmutableSortedSet<IFace> _ImmutableFaces; 
 
-        ImmutableSortedSet<IFace> IEdge.Faces
+        public ImmutableSortedSet<IFace> Faces
         {
             get
             {
@@ -166,6 +166,11 @@ namespace Geometry.Meshing
             }
         }
 
+        public static IEdge Create(int A, int B)
+        {
+            return new Edge(A, B);
+        }
+
         /// <summary>
         /// Duplicate functions are used to create a copy of the edge, with index numbers adjusted by the offset, without any face data.
         /// This method is used to merge meshes
@@ -173,13 +178,13 @@ namespace Geometry.Meshing
         /// <param name="oldVertex"></param>
         /// <param name="offset"></param>
         /// <returns></returns>
-        public static Edge Duplicate(Edge oldEdge, int offset)
+        public static Edge CreateOffsetCopy(Edge oldEdge, int offset)
         {
             Edge newEdge = new Meshing.Edge(oldEdge.A + offset, oldEdge.B + offset);
             return newEdge;
         }
 
-        public static IEdge Duplicate(IEdge oldEdge, int A, int B)
+        public static IEdge CreateOffsetCopy(IEdge oldEdge, int A, int B)
         {
             Edge newEdge = new Meshing.Edge(A,B);
             return newEdge;

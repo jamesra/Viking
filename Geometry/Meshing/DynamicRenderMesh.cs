@@ -44,10 +44,15 @@ namespace Geometry.Meshing
         public readonly SortedList<IEdgeKey, IEdge> Edges = new SortedList<IEdgeKey, IEdge>();
         public readonly SortedSet<IFace> Faces = new SortedSet<IFace>();
 
-        public Func<IVertex,int,IVertex> DuplicateVertex { get; set; }
-        public Func<IEdge, int, int, IEdge> DuplicateEdge { get; set; }
+        public Func<IVertex,int,IVertex> CreateOffsetVertex { get; set; }
+        public Func<IEdge, int, int, IEdge> CreateOffsetEdge { get; set; }
 
-        public Func<IFace, IEnumerable<int>, IFace> DuplicateFace { get; set; }
+        public Func<IFace, IEnumerable<int>, IFace> CreateOffsetFace { get; set; }
+
+        public Func<int, IVertex> CreateVertex { get; set; }
+        public Func<int, int, IEdge> CreateEdge { get; set; }
+
+        public Func<IEnumerable<int>, IFace> CreateFace { get; set; }
 
         public GridBox BoundingBox = null;
 
@@ -82,9 +87,27 @@ namespace Geometry.Meshing
 
         public DynamicRenderMesh()
         {
-            DuplicateVertex = Vertex.Duplicate;
-            DuplicateEdge = Edge.Duplicate;
-            DuplicateFace = Face.Duplicate;
+            CreateOffsetVertex = Vertex.CreateOffsetCopy;
+            CreateOffsetEdge = Edge.CreateOffsetCopy;
+            CreateOffsetFace = Face.CreateOffsetCopy;
+             
+            CreateEdge = Edge.Create;
+            CreateFace = Face.Create;
+        }
+
+        public virtual bool Contains(IEdgeKey key)
+        {
+            return Edges.ContainsKey(key);
+        }
+
+        public virtual bool Contains(IFace face)
+        {
+            return Faces.Contains(face);
+        }
+
+        public virtual bool Contains(int A, int B)
+        {
+            return Edges.ContainsKey(new EdgeKey(A, B));
         }
 
         protected void ValidateBoundingBox()
@@ -180,7 +203,7 @@ namespace Geometry.Meshing
             if(e.A == e.B)
                 throw new ArgumentException("Edges cannot have the same start and end point");
 
-            if (DuplicateEdge == null)
+            if (CreateOffsetEdge == null)
                 throw new InvalidOperationException("DuplicateEdge function not specified for DynamicRenderMesh");
 
             if (Edges.ContainsKey(e))
@@ -192,7 +215,7 @@ namespace Geometry.Meshing
             if (e.B >= Verticies.Count || e.B < 0)
                 throw new ArgumentException(string.Format("Edge vertex B references non-existent vertex {0}", e));
 
-            IEdge newEdge = DuplicateEdge(null, e.A, e.B);
+            IEdge newEdge = CreateOffsetEdge(null, e.A, e.B);
             Edges.Add(e, newEdge);
 
             Verticies[(int)e.A].AddEdge(e);
@@ -269,7 +292,7 @@ namespace Geometry.Meshing
 
         public void AddFace(int A, int B, int C)
         {
-            IFace face = DuplicateFace(null, new int[] { A, B, C });
+            IFace face = CreateFace(new int[] { A, B, C });
             Debug.Assert(Faces.Contains(face) == false);
 
             AddFace(face);
@@ -371,7 +394,7 @@ namespace Geometry.Meshing
         /// <param name="FaceDuplicator">Constructor to use when replacing the original face with the new split face</param>
         public void ConvertAllFacesToTriangles()
         {
-            if (DuplicateFace == null)
+            if (CreateOffsetFace == null)
                 throw new InvalidOperationException("No duplication method in DynamicRenderMesh specified for faces");
 
             IEnumerable<IFace> quadFaces = this.Faces.Where(f => !f.IsTriangle()).ToList();
@@ -384,7 +407,40 @@ namespace Geometry.Meshing
 
         /// <summary>
         /// Given a face that is not a triangle, return an array of triangles describing the face.
-        /// For now this assumes convex faces...
+        /// For now this assumes convex faces with 3 or 4 verticies.  It does not remove or add the face from the mesh
+        /// </summary>
+        /// <param name="Duplicator">A constructor that can copy attributes of a face object</param>
+        /// <returns></returns>
+        public static IFace[] SplitFace(DynamicRenderMesh mesh, IFace face)
+        {
+            if (face.IsTriangle())
+                return new IFace[] { face };
+
+            if (face.IsQuad())
+            {
+                GridVector3[] positions = mesh.GetVerts(face.iVerts).Select(v => v.Position).ToArray();
+                if (GridVector3.Distance(positions[0], positions[2]) < GridVector3.Distance(positions[1], positions[3]))
+                { 
+                    IFace ABC = mesh.CreateFace(new int[] { face.iVerts[0], face.iVerts[1], face.iVerts[2] });
+                    IFace ACD = mesh.CreateFace(new int[] { face.iVerts[0], face.iVerts[2], face.iVerts[3] });
+
+                    return new IFace[] { ABC, ACD };
+                }
+                else
+                {  
+                    IFace ABD = mesh.CreateFace(new int[] { face.iVerts[0], face.iVerts[1], face.iVerts[3] });
+                    IFace BCD = mesh.CreateFace(new int[] { face.iVerts[1], face.iVerts[2], face.iVerts[3] });
+
+                    return new IFace[] { ABD, BCD };
+                }
+            }
+
+            throw new NotImplementedException("Face has too many verticies to split");
+        }
+
+        /// <summary>
+        /// Given a face that is not a triangle, return an array of triangles describing the face.
+        /// For now this assumes convex faces with 3 or 4 verticies.  It removes the face and adds the split faces from the mesh
         /// </summary>
         /// <param name="Duplicator">A constructor that can copy attributes of a face object</param>
         /// <returns></returns>
@@ -395,7 +451,7 @@ namespace Geometry.Meshing
 
             if(face.IsQuad())
             {
-                Faces.Remove(face);
+                RemoveFace(face);
 
                 GridVector3[] positions = GetVerts(face.iVerts).Select(v => v.Position).ToArray();
                 if(GridVector3.Distance(positions[0], positions[2]) < GridVector3.Distance(positions[1], positions[3]))
@@ -403,20 +459,20 @@ namespace Geometry.Meshing
                     //Face ABC = new Face(face.iVerts[0], face.iVerts[1], face.iVerts[2]);
                     //Face ACD = new Face(face.iVerts[0], face.iVerts[2], face.iVerts[3]);
 
-                    IFace ABC = DuplicateFace(face, new int[] { face.iVerts[0], face.iVerts[1], face.iVerts[2] });
-                    IFace ACD = DuplicateFace(face, new int[] { face.iVerts[0], face.iVerts[2], face.iVerts[3] });
-                    Faces.Add(ABC);
-                    Faces.Add(ACD);
+                    IFace ABC = CreateFace(new int[] { face.iVerts[0], face.iVerts[1], face.iVerts[2] });
+                    IFace ACD = CreateFace(new int[] { face.iVerts[0], face.iVerts[2], face.iVerts[3] });
+                    AddFace(ABC);
+                    AddFace(ACD);
                 }
                 else
                 {
                     //Face ABD = new Face(face.iVerts[0], face.iVerts[1], face.iVerts[3]);
                     //Face BCD = new Face(face.iVerts[1], face.iVerts[2], face.iVerts[3]);
 
-                    IFace ABD = DuplicateFace(face, new int[] { face.iVerts[0], face.iVerts[1], face.iVerts[3] });
-                    IFace BCD = DuplicateFace(face, new int[] { face.iVerts[1], face.iVerts[2], face.iVerts[3] });
-                    Faces.Add(ABD);
-                    Faces.Add(BCD);
+                    IFace ABD = CreateFace(new int[] { face.iVerts[0], face.iVerts[1], face.iVerts[3] });
+                    IFace BCD = CreateFace(new int[] { face.iVerts[1], face.iVerts[2], face.iVerts[3] });
+                    AddFace(ABD);
+                    AddFace(BCD);
                 }
             }
         }
@@ -485,17 +541,17 @@ namespace Geometry.Meshing
         public virtual int Append(DynamicRenderMesh other)
         {
             int startingAppendIndex = this.Verticies.Count;
-            this.AddVerticies(other.Verticies.Select(v => DuplicateVertex(v, startingAppendIndex)).ToList());
+            this.AddVerticies(other.Verticies.Select(v => CreateOffsetVertex(v, startingAppendIndex)).ToList());
 
             foreach(IEdge e in other.Edges.Values)
             {
-                IEdge newEdge = DuplicateEdge(e, e.A + startingAppendIndex, e.B + startingAppendIndex);
+                IEdge newEdge = CreateOffsetEdge(e, e.A + startingAppendIndex, e.B + startingAppendIndex);
                 this.AddEdge(newEdge);
             }
 
             foreach(IFace f in other.Faces)
             {
-                IFace newFace = DuplicateFace(f, f.iVerts.Select(i => i + startingAppendIndex));
+                IFace newFace = CreateOffsetFace(f, f.iVerts.Select(i => i + startingAppendIndex));
                 this.AddFace(newFace);
             }
 
@@ -505,31 +561,36 @@ namespace Geometry.Meshing
         /// <summary>
         /// Find all edges that enclose triangles or quads and create faces if they don't exist
         /// </summary>
-        public void CloseFaces()
+        public void CloseFaces(IEnumerable<IVertex> VertsToClose=null)
         {
-            foreach (var v in Verticies)
+            if(VertsToClose == null)
+            {
+                VertsToClose = this.Verticies;
+            }
+
+            foreach (var v in VertsToClose)
             {
                 //Identify edges missing faces
                 List<IEdge> edges = v.Edges.Select(key => Edges[key]).Where(e => e.Faces.Count < 2).ToList();
 
                 foreach (var edge in edges)
                 {
-                    Stack<int> searchHistory = new Stack<int>();
-                    searchHistory.Push(v.Index);
-                    List<int> Face = FindCloseableFace(v.Index, this[edge.OppositeEnd(v.Index)], edge, new SortedSet<IEdgeKey>(), searchHistory);
+                    List<int> Face = FindCloseableFace(v.Index, this[edge.OppositeEnd(v.Index)], edge);
                     if (Face != null)
                     {
                         Debug.Assert(Face.Count == 3 || Face.Count == 4);
+                        if (Face.Count == 4)
+                            continue;
 
-                        Face f = new Face(Face);
-                        IFace typedFace = DuplicateFace(f, Face);
-                        this.Faces.Add(typedFace);
+                        IFace f = this.CreateFace(Face);
+                        if(this.Faces.Contains(f) == false)
+                            this.AddFace(f);
 
-                        if (typedFace.iVerts.Length == 4)
-                            this.SplitFace(typedFace);
+                        if (f.iVerts.Length == 4)
+                            this.SplitFace(f);
                     }
                 }
-            } 
+            }
         }
 
         /// <summary>
@@ -549,8 +610,30 @@ namespace Geometry.Meshing
         /// <param name="CheckedEdges"></param>
         /// <param name="Path"></param>
         /// <returns></returns>
-        private List<int> FindCloseableFace(int TargetVert, IVertex current, IEdge testEdge, SortedSet<IEdgeKey> CheckedEdges, Stack<int> Path)
+        private List<int> FindCloseableFace(int TargetVert, IVertex current, IEdge testEdge, SortedSet<IEdgeKey> CheckedEdges = null, Stack<int> Path = null)
         {
+            if (CheckedEdges == null)
+            {
+                CheckedEdges = new SortedSet<IEdgeKey>();
+            }
+
+            if (Path == null)
+            {
+                Path = new Stack<int>();
+                Path.Push(TargetVert);
+            }
+
+            //Make sure the face formed by the top three entries in the path is not already present in the mesh
+
+            List<int> FaceTest = StackExtensions<int>.Peek(Path, 3);
+            if (FaceTest.Count == 3)
+            {
+                if (this.Contains(new Face(FaceTest)))
+                    return null;
+            }
+
+            /////////////////////////////////////////////////////////////
+
             CheckedEdges.Add(testEdge.Key);
             if (Path.Count > 4) //We must return only triangles or quads, and we return closed loops
                 return null;
@@ -565,13 +648,31 @@ namespace Geometry.Meshing
             }
             
             //Test all of the edges we have not examined yet who do not have two faces already
+            List<int> ShortestFace = null;
             foreach(IEdge edge in current.Edges.Where(e => !CheckedEdges.Contains(e)).Select(e => this.Edges[e]).Where(e => e.Faces.Count < 2))
             {
-                List<int> Face = FindCloseableFace(TargetVert, this[edge.OppositeEnd(current.Index)], edge, new SortedSet<IEdgeKey>(CheckedEdges), Path);
+                List<int> Face = FindCloseableFace(TargetVert, this[edge.OppositeEnd(current.Index)], edge, new SortedSet<IEdgeKey>(CheckedEdges), new Stack<int>(Path));
 
                 if (Face != null)
-                    return Face;
-                
+                {
+                    if (ShortestFace == null)
+                    {
+                        ShortestFace = Face;
+                    }
+                    else
+                    {
+                        if (ShortestFace.Count > Face.Count)
+                        {
+                            ShortestFace = Face;
+                        }
+                    }
+                }
+
+            }
+
+            if (ShortestFace != null)
+            {
+                return ShortestFace;
             }
 
             //Take this index off the stack since we did not locate a path

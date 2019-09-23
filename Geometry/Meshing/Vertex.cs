@@ -77,13 +77,13 @@ namespace Geometry.Meshing
         /// <param name="oldVertex"></param>
         /// <param name="offset"></param>
         /// <returns></returns>
-        public static Vertex Duplicate(Vertex oldVertex, int offset)
+        public static Vertex CreateOffsetCopy(Vertex oldVertex, int offset)
         {
             Vertex newVertex = new Meshing.Vertex(oldVertex.Position, oldVertex.Normal);
             return newVertex;
         }
 
-        public static IVertex Duplicate(IVertex oldVertex, int offset)
+        public static IVertex CreateOffsetCopy(IVertex oldVertex, int offset)
         {
             Vertex newVertex = new Meshing.Vertex(oldVertex.Position, oldVertex.Normal);
             return newVertex;

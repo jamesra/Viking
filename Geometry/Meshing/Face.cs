@@ -77,6 +77,11 @@ namespace Geometry.Meshing
             return _edges;
         }
 
+        public static IFace Create(IEnumerable<int> vertex_indicies)
+        {
+            return new Face(vertex_indicies);
+        }
+
         /// <summary>
         /// Duplicate functions are used to create a copy of the face, with index numbers adjusted by the offset, without any edge data.
         /// This method is used to merge meshes
@@ -84,19 +89,19 @@ namespace Geometry.Meshing
         /// <param name="oldVertex"></param>
         /// <param name="offset"></param>
         /// <returns></returns>
-        public static Face Duplicate(Face oldFace, int offset)
+        public static Face CreateOffsetCopy(Face oldFace, int offset)
         {
             Face newFace = new Meshing.Face(oldFace.iVerts.Select(VertIndex => VertIndex + offset));
             return newFace;
         }
 
-        public static Face Duplicate(Face oldFace, IEnumerable<int> vertex_indicies)
+        public static Face CreateOffsetCopy(Face oldFace, IEnumerable<int> vertex_indicies)
         {
             Face newFace = new Meshing.Face(vertex_indicies);
             return newFace;
         }
 
-        public static IFace Duplicate(IFace oldFace, IEnumerable<int> vertex_indicies)
+        public static IFace CreateOffsetCopy(IFace oldFace, IEnumerable<int> vertex_indicies)
         {
             Face newFace = new Meshing.Face(vertex_indicies);
             return newFace;
