@@ -254,7 +254,7 @@ namespace Geometry.Meshing
 
             this.AddVerticies(other.Verticies);
 
-            IFace[] duplicateFaces = other.Faces.Select(f => other.DuplicateFace(f, f.iVerts.Select(v => v + (int)iVertMergeStart))).ToArray();
+            IFace[] duplicateFaces = other.Faces.Select(f => other.CreateOffsetFace(f, f.iVerts.Select(v => v + (int)iVertMergeStart))).ToArray();
             this.AddFaces(duplicateFaces);
 
             return iVertMergeStart;
