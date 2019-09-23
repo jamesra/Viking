@@ -7,7 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Geometry.Meshing;
 using Geometry;
-using SliceChordRTree = RTree.RTree<MorphologyMesh.SliceChord>;
+using SliceChordRTree = RTree.RTree<MorphologyMesh.ISliceChord>;
 
 namespace MorphologyMesh
 {
@@ -113,6 +113,7 @@ namespace MorphologyMesh
             if (!PolyIndex.HasValue) //Not part of the contour of a polygon, we need to ensure we can walk faces from one of the verticies edges around in a circle back to the same edge
                 return true;
 
+            //Once we know the faces are complete for this vertex we can stop testing it
             if (FacesAreComplete)
                 return true;
 
@@ -164,6 +165,11 @@ namespace MorphologyMesh
             Type = type;
         }
 
+        public static new IEdge Create(int A, int B)
+        {
+            return new MorphMeshEdge(EdgeType.UNKNOWN, A, B);
+        }
+
         public ImmutableSortedSet<MorphMeshFace> Faces
         {
             get
@@ -185,6 +191,11 @@ namespace MorphologyMesh
         {
             return base.Equals(other);
         }
+
+        public override string ToString()
+        {
+            return base.ToString() + " " + this.Type.ToString();
+        }
     }
 
     public class MorphMeshFace : Face
@@ -200,6 +211,11 @@ namespace MorphologyMesh
 
         public MorphMeshFace(IEnumerable<int> verts) : base(verts)
         {
+        }
+
+        public static new IFace Create(IEnumerable<int> vertex_indicies)
+        {
+            return new MorphMeshFace(vertex_indicies);
         }
 
 
@@ -360,8 +376,8 @@ namespace MorphologyMesh
     {
         private MorphRenderMesh ParentMesh;
 
-        private SortedSet<MorphMeshFace> _Faces;
-        public SortedSet<MorphMeshFace> Faces
+        private ImmutableSortedSet<MorphMeshFace> _Faces;
+        public ImmutableSortedSet<MorphMeshFace> Faces
         {
             get { return _Faces; }
         }
@@ -371,7 +387,8 @@ namespace MorphologyMesh
         public MorphMeshRegion(MorphRenderMesh mesh, IEnumerable<MorphMeshFace> faces, RegionType type)
         {
             ParentMesh = mesh;
-            _Faces = new SortedSet<MorphMeshFace>(faces);
+            var f = new SortedSet<MorphMeshFace>(faces);
+            _Faces = f.ToImmutableSortedSet();
             Type = type;
         }
 
@@ -399,14 +416,23 @@ namespace MorphologyMesh
             return true;
         }
 
-        public double Z
+        private ImmutableSortedSet<double> _Z;
+        public ImmutableSortedSet<double> ZLevel
         {
             get
             {
                 if (Faces.Count == 0)
                     throw new ArgumentException("No faces in region");
 
-                return ParentMesh[Faces.First().iVerts.First()].Position.Z;
+                if(_Z == null)
+                {
+                    var builder = new SortedSet<double>();
+                    var Z = this.VertPositions.Select(v => v.Z).Distinct();
+                    builder.UnionWith(Z);
+                    _Z = builder.ToImmutableSortedSet();
+                }
+
+                return _Z;
             }
         }
 
@@ -606,7 +632,7 @@ namespace MorphologyMesh
         /// <returns></returns>
         public bool IsExposed(MorphRenderMesh mesh)
         {
-            GridPolygon[] AdjacentPolys = mesh.Polygons.Where((p, i) => mesh.PolyZ[i] != this.Z).ToArray();
+            GridPolygon[] AdjacentPolys = mesh.Polygons.Where((p, i) => this.ZLevel.Contains(mesh.PolyZ[i]) == false).ToArray();
 
             if(AdjacentPolys.Any(p => p.Contains(this.Polygon)))
             {
@@ -622,7 +648,7 @@ namespace MorphologyMesh
         /// <returns></returns>
         public bool IsPartlyExposed(MorphRenderMesh mesh)
         {
-            GridPolygon[] AdjacentPolys = mesh.Polygons.Where((p, i) => mesh.PolyZ[i] != this.Z).ToArray();
+            GridPolygon[] AdjacentPolys = mesh.Polygons.Where((p, i) => this.ZLevel.Contains(mesh.PolyZ[i]) == false).ToArray();
 
             if (AdjacentPolys.Any(p => p.Intersects(this.Polygon) && !p.Contains(this.Polygon)))
             {
@@ -677,6 +703,19 @@ namespace MorphologyMesh
 
     public class MorphMeshRegionGraph : GraphLib.Graph<MorphMeshRegion, GraphLib.Node<MorphMeshRegion, MorphMeshRegionGraphEdge>, MorphMeshRegionGraphEdge>
     {
+        public ImmutableSortedSet<double> ZLevels
+        {
+            get
+            {
+                var set = new SortedSet<double>(this.Nodes.SelectMany(n => n.Value.Key.ZLevel).Distinct());
+                return set.ToImmutableSortedSet();
+            }
+        }
+
+        public void AddNode(MorphMeshRegion region)
+        {
+            this.AddNode(new GraphLib.Node<MorphMeshRegion, MorphMeshRegionGraphEdge>(region));
+        }
     }
 
     public class MorphMeshRegionGraphEdge : GraphLib.Edge<MorphMeshRegion>
@@ -710,11 +749,14 @@ namespace MorphologyMesh
             Debug.Assert(polygons.Length == ZLevels.Length);
             Polygons = polygons;
             PolyZ = ZLevels;
-            this.DuplicateVertex = MorphMeshVertex.Duplicate;
-            this.DuplicateEdge = MorphMeshEdge.Duplicate;
-            this.DuplicateFace = MorphMeshFace.Duplicate;
+            this.CreateOffsetVertex = MorphMeshVertex.CreateOffsetCopy;
+            this.CreateOffsetEdge = MorphMeshEdge.Duplicate;
+            this.CreateOffsetFace = MorphMeshFace.CreateOffsetCopy;
 
-            foreach(double Z in PolyZ.Distinct())
+            this.CreateFace = MorphMeshFace.Create;
+            this.CreateEdge = MorphMeshEdge.Create;
+
+            foreach (double Z in PolyZ.Distinct())
             {
                 PolygonsByZ.Add(Z, new List<GridPolygon>());
             }
@@ -742,18 +784,19 @@ namespace MorphologyMesh
         */
         private static void PopulateMesh(MorphRenderMesh mesh)
         {
-            foreach (PointIndex i1 in new PolySetVertexEnum(mesh.Polygons))
+            List<PointIndex> PolyVerts = new List<PointIndex>(new PolySetVertexEnum(mesh.Polygons));
+            foreach (PointIndex i1 in PolyVerts)
             {
                 MorphMeshVertex v = new MorphMeshVertex(i1, i1.Point(mesh.Polygons).ToGridVector3(mesh.PolyZ[i1.iPoly]));
                 mesh.AddVertex(v);
             }
 
-            foreach (PointIndex i1 in new PolySetVertexEnum(mesh.Polygons))
+            foreach (PointIndex i1 in PolyVerts)
             {
-                PointIndex next = i1.Next;
+                PointIndex next = i1.Next; //Next returns the next index in the ring, not in the list, so it will close the contour correctly
                 MorphMeshEdge edge = new MorphMeshEdge(EdgeType.CONTOUR, mesh[i1].Index, mesh[next].Index);
                 mesh.AddEdge(edge);
-            }
+            }            
         }
 
         public List<GridPolygon> GetSameLevelPolygons(PointIndex key)
@@ -796,15 +839,6 @@ namespace MorphologyMesh
             return PolyIndexToVertex.ContainsKey(key);
         }
 
-        public virtual bool Contains(IEdgeKey key)
-        {
-            return Edges.ContainsKey(key);
-        }
-
-        public virtual bool Contains(int A, int B)
-        {
-            return Edges.ContainsKey(new EdgeKey(A,B));
-        }
 
         /// <summary>
         /// Returns true if an edge exists between the two points
@@ -859,6 +893,17 @@ namespace MorphologyMesh
                 foreach (IEdge edge in this.Edges.Values)
                 {
                     yield return (MorphMeshEdge)edge;
+                }
+            }
+        }
+
+        public IEnumerable<MorphMeshVertex> MorphVerticies
+        {
+            get
+            {
+                foreach (IVertex v in this.Verticies)
+                {
+                    yield return (MorphMeshVertex)v;
                 }
             }
         }
@@ -1009,25 +1054,206 @@ namespace MorphologyMesh
             return listRegions; 
         }
 
+
+        public List<int> IdentifyIncompleteFace(int iVert)
+        {
+            IVertex origin = this.Verticies[iVert];
+            return IdentifyIncompleteFace(origin);
+        }
+
+        /// <summary>
+        /// Find all edges that enclose a loop of verticies missing faces
+        /// Returns a list of vertex indicies that describe the perimeter of a mesh region without a face, or null if one cannot be found
+        /// </summary>
+        public List<int> IdentifyIncompleteFace(IVertex origin)
+        {
+            //Identify edges missing faces
+            List<IEdge> edges = origin.Edges.Select(key => Edges[key]).Where(e => e.Faces.Count < 2 ).ToList();
+
+            List<int> ShortestFace = null;
+            foreach (var edge in edges)
+            {
+                List<int> Face = FindAnyCloseableFace(origin.Index, this[edge.OppositeEnd(origin.Index)], edge);
+                if (Face != null)
+                {
+                    if (ShortestFace == null)
+                    {
+                        ShortestFace = Face;
+                    }
+                    else
+                    {
+                        if (ShortestFace.Count > Face.Count)
+                        {
+                            ShortestFace = Face;
+                        }
+                    }
+                }
+            }
+
+            if(ShortestFace != null)
+            {
+                return ShortestFace;
+            }
+
+            return null;
+            //Face should be a loop of verticies that connect to our origin point
+        }
+
+        /// <summary>
+        /// Identify if there are faces that could be created using the specified edge
+        /// </summary>
+        /// <param name="TargetVert"></param>
+        /// <param name="current"></param>
+        /// <param name="testEdge"></param>
+        /// <param name="CheckedEdges"></param>
+        /// <param name="Path"></param>
+        /// <returns></returns>
+        public List<int> FindAnyCloseableFace(int TargetVert, IVertex current, IEdge testEdge, SortedSet<IEdgeKey> CheckedEdges = null, Stack<int> Path = null)
+        {
+            if(CheckedEdges == null)
+            {
+                CheckedEdges = new SortedSet<IEdgeKey>();
+            }
+
+            if(Path == null)
+            {
+                Path = new Stack<int>();
+                Path.Push(TargetVert);
+            }
+
+           
+            
+            /////////////////////////////////////////////////////////////
+            
+            CheckedEdges.Add(testEdge.Key);
+            //if (Path.Count > 4) //We must return only triangles or quads, and we return closed loops
+            //return null;
+
+            if (current.Index == TargetVert)
+            {
+                //Destination found
+                return Path.ToList();
+            }
+            else if (Path.Contains(current.Index))
+            {
+                //We've looped into our own stack
+                return null;
+            }
+            else
+            {
+                //Make sure the face formed by the top three entries in the path is not already present in the mesh
+
+                List<int> FaceTest = StackExtensions<int>.Peek(Path, 2);
+                if (FaceTest.Count == 2)
+                {
+                    FaceTest.Insert(0, current.Index);
+                    if (this.Contains(new Face(FaceTest)))
+                    {
+                        return null;
+                    }
+                }
+
+                //If we aren't an existing face then add to the path and continue the search
+                Path.Push(current.Index);
+            }
+
+            List<MorphMeshEdge> EdgesToCheck = new List<MorphMeshEdge>();
+            foreach(IEdgeKey edgekey in current.Edges.Where(e => !CheckedEdges.Contains(e)))
+            {
+                MorphMeshEdge edge = this.Edges[edgekey] as MorphMeshEdge;
+                if(edge.Type == EdgeType.CONTOUR)
+                {
+                    //Contour edges only need one face to be complete
+                    if(edge.Faces.Count == 0)
+                    {
+                        EdgesToCheck.Add(edge);
+                    }
+                }
+                else
+                {
+                    if(edge.Faces.Count < 2)
+                    {
+                        EdgesToCheck.Add(edge);
+                    }
+                }
+            }
+
+            List<int> ShortestFace = null;
+            if (EdgesToCheck.Count == 1)
+            {
+                MorphMeshEdge edge = EdgesToCheck.First();
+                return FindAnyCloseableFace(TargetVert, this[edge.OppositeEnd(current.Index)], edge, CheckedEdges, Path);
+            }
+            else if(EdgesToCheck.Count > 1)
+            {
+                //Test all of the edges we have not examined yet who do not have two faces already
+                //Search the corresponding edges first since they can short-circuit a path
+                
+                foreach (MorphMeshEdge edge in EdgesToCheck.OrderBy(e => e.Type != EdgeType.CORRESPONDING))
+                {                    
+                    List<int> Face = FindAnyCloseableFace(TargetVert, this[edge.OppositeEnd(current.Index)], edge, new SortedSet<IEdgeKey>(CheckedEdges), new Stack<int>(Path));
+
+                    if (Face != null)
+                    {
+                        if (ShortestFace == null)
+                        {
+                            ShortestFace = Face;
+                        }
+                        else
+                        {
+                            if (ShortestFace.Count > Face.Count)
+                            {
+                                ShortestFace = Face;
+                            }
+                        }
+                    }
+                } 
+            }
+
+            if(ShortestFace != null)
+            {
+                return ShortestFace;
+            }
+
+            //Take this index off the stack since we did not locate a path
+            Path.Pop();
+
+            return null;
+        }
+
         /// <summary>
         /// Build an RTree using SliceChords in the mesh.  
         /// Note that slice-chords cross Z levels so CONTOUR and ARTIFICIAL edges are not included
         /// </summary>
         /// <param name="mesh"></param>
         /// <returns></returns>
-        public SliceChordRTree CreateChordTree()
+        public SliceChordRTree CreateChordTree(ICollection<double> ZLevels)
         {
             SliceChordRTree rTree = new SliceChordRTree();
+
+            double MinZ = ZLevels.Min();
+            double MaxZ = ZLevels.Max();
+            
             ///Create a list of all slice chords.  Contours are valid but are not slice chords since they don't cross sections
-            foreach (MorphMeshEdge e in this.Edges.Values.Where(e => (((MorphMeshEdge)e).Type != EdgeType.CONTOUR) &&
+            foreach (MorphMeshEdge e in this.Edges.Values.Where(e => this[e.A].Position.Z >= MinZ && this[e.A].Position.Z <= MaxZ &&
+                                                                     this[e.B].Position.Z >= MinZ && this[e.B].Position.Z <= MaxZ &&
+                                                                     (((MorphMeshEdge)e).Type != EdgeType.CONTOUR) &&
                                                                      (((MorphMeshEdge)e).Type != EdgeType.ARTIFICIAL) &&
                                                                      (((MorphMeshEdge)e).Type != EdgeType.CORRESPONDING)))
             {
-                
-                SliceChord chord = new SliceChord(this[e.A].PolyIndex.Value, this[e.B].PolyIndex.Value, this.Polygons);
-                double AZ = this.Verticies[e.A].Position.Z;
-                double BZ = this.Verticies[e.B].Position.Z;
-                rTree.Add(this.ToSegment(e).BoundingBox.ToRTreeRect(MinZ: Math.Min(AZ,BZ), MaxZ: Math.Max(AZ,BZ)), chord);
+                RTree.Rectangle bbox = this.ToSegment(e).BoundingBox.ToRTreeRect(0);
+                if (this[e.A].PolyIndex.HasValue && this[e.B].PolyIndex.HasValue)
+                {
+                    SliceChord chord = new SliceChord(this[e.A].PolyIndex.Value, this[e.B].PolyIndex.Value, this.Polygons);
+                    double AZ = this.Verticies[e.A].Position.Z;
+                    double BZ = this.Verticies[e.B].Position.Z;
+                    rTree.Add(bbox, chord); //(MinZ: Math.Min(AZ,BZ), MaxZ: Math.Max(AZ,BZ)), e);
+                }
+                else
+                {
+                    MeshChord chord = new MeshChord(this, e.A, e.B);
+                    rTree.Add(bbox, chord);
+                }
             }
 
             return rTree;
