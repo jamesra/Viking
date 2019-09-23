@@ -59,6 +59,9 @@ namespace AnnotationVizLib
                 obj.Directional = edge.Directional;
                 obj.TotalSourceArea = edge.TotalSourceArea;
                 obj.TotalTargetArea = edge.TotalTargetArea;
+                obj.MinZ = edge.MinZ;
+                obj.MaxZ = edge.MaxZ;
+                obj.IsLoop = edge.IsLoop;
                 obj.Links = AddEdgeLinks(edge);
 
                 NewtonsoftJSONExtensions.AddAttributes(obj, edge.Attributes);
