@@ -101,5 +101,21 @@ namespace MonogameTestbed
                     (LastState.Buttons.RightStick != CurrentState.Buttons.RightStick);
             }
         } 
+
+        public bool LeftTriggerPulled
+        {
+            get
+            {
+                return CurrentState.Triggers.Left > 0;
+            }
+        }
+
+        public bool RightTriggerPulled
+        {
+            get
+            {
+                return CurrentState.Triggers.Right > 0;
+            }
+        }
     }
 }

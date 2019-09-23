@@ -19,6 +19,7 @@ namespace MonogameTestbed
         TEXT,
         CURVE_LABEL,
         CURVE,
+        CURVE_SIMPLIFICATION,
         LINESTYLES,
         CURVESTYLES,
         CLOSEDCURVE,
@@ -56,6 +57,7 @@ namespace MonogameTestbed
         LabelViewsTest labelTest = new LabelViewsTest();
         LineViewStylesTest lineStyleTest = new LineViewStylesTest();
         CurveViewStylesTest curveStyleTest = new CurveViewStylesTest();
+        CurveSimplificationTest curveSimplificationTest = new CurveSimplificationTest();
         ClosedCurveViewTest closedCurveTest = new ClosedCurveViewTest();
         Polygon2DTest polygon2DTest = new Polygon2DTest();
         MeshTest meshTest = new MeshTest();
@@ -71,7 +73,7 @@ namespace MonogameTestbed
 
         SortedDictionary<TestMode, IGraphicsTest> listTests = new SortedDictionary<TestMode, IGraphicsTest>();
 
-        TestMode Mode = TestMode.DELAUNAY2D;
+        TestMode Mode = TestMode.CURVE_SIMPLIFICATION;
 
         public static uint NumCurveInterpolations = 10;
 
@@ -137,6 +139,7 @@ namespace MonogameTestbed
 
             listTests.Add(TestMode.CURVE, curveTest);
             listTests.Add(TestMode.CURVE_LABEL, curveViewTest);
+            listTests.Add(TestMode.CURVE_SIMPLIFICATION, curveSimplificationTest);
             listTests.Add(TestMode.TEXT, labelTest);
             listTests.Add(TestMode.LINESTYLES, lineStyleTest);
             listTests.Add(TestMode.CURVESTYLES, curveStyleTest);
@@ -221,6 +224,8 @@ namespace MonogameTestbed
                 this.Mode = TestMode.BAJAJTEST;
             if (Keyboard.GetState().IsKeyDown(Keys.NumPad5))
                 this.Mode = TestMode.DELAUNAY2D;
+            if (Keyboard.GetState().IsKeyDown(Keys.NumPad6))
+                this.Mode = TestMode.CURVE_SIMPLIFICATION;
 
             if (!listTests[Mode].Initialized)
             {
@@ -280,7 +285,7 @@ namespace MonogameTestbed
         /// <param name="gameTime">Provides a snapshot of timing values.</param>
         protected override void Draw(GameTime gameTime)
         {
-            GraphicsDevice.Clear(Color.CornflowerBlue);
+            GraphicsDevice.Clear(Color.DarkGray);
 
             //GraphicsDevice.SetRenderTarget(renderTarget);
             //meshView.Draw(GraphicsDevice);
