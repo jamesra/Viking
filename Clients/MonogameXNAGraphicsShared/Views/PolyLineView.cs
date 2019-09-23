@@ -160,11 +160,14 @@ namespace VikingXNAGraphics
             }
             else
             {
+                this.LineViews = CreateLineViews(this.ControlPoints.ToArray(), this.LineWidth, this.Color, this.Style);
+
+                //Don't create a duplicate circle view if we are drawing a loop
                 if (_ControlPoints.First() == _ControlPoints.Last())
                     _ControlPoints.RemoveAt(_ControlPoints.Count - 1);
 
                 this.ControlPointViews = CreateControlPointViews(this.ControlPoints, this.ControlPointRadius, this.Color, this.ControlPointTexture);
-                this.LineViews = CreateLineViews(this.ControlPoints.ToArray(), this.LineWidth, this.Color, this.Style);
+                
             }
         }
 
