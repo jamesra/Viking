@@ -26,17 +26,17 @@ namespace MorphologyMesh
         /// <summary>
         /// Points on the external border
         /// </summary>
-        public IIndexSet ExternalBorder;
+        public Geometry.IIndexSet ExternalBorder;
 
         /// <summary>
         /// Verticies known to be internal to the annotation. Not on any internal or external border
         /// </summary>
-        public IIndexSet InternalVerticies;
+        public Geometry.IIndexSet InternalVerticies;
 
         /// <summary>
         /// Points on an internal border
         /// </summary>
-        public IIndexSet[] InternalBorders;
+        public Geometry.IIndexSet[] InternalBorders;
 
         public ConnectionVerticies(long[] exteriorRing, long[] internalVerticies, ICollection<long[]> interiorRings)
         {

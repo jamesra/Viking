@@ -5,13 +5,16 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Geometry.Meshing
+namespace Geometry
 {
     public interface IIndexSet : IReadOnlyList<long>
     {
         IIndexSet IncrementStartingIndex(long adjustment);
     }
 
+    /// <summary>
+    /// Returns a list of integers, starting at the provided index, incrementing by 1 until count indicies have been returned.
+    /// </summary>
     public class ContinuousIndexSetEnumerator : IEnumerator<long>
     {
         long position = -1;
@@ -69,6 +72,9 @@ namespace Geometry.Meshing
     }
 
 
+    /// <summary>
+    /// An indexable collection of integers, starting at the provided value, incrementing by 1 for each index value.
+    /// </summary>
     public class ContinuousIndexSet : IIndexSet
     {
         private long StartIndex;
@@ -165,6 +171,9 @@ namespace Geometry.Meshing
         }
     }
 
+    /// <summary>
+    /// Represents a set of indicies with some helper functions added to translate the values.
+    /// </summary>
     public class IndexSet : IIndexSet
     {
         private long[] Indicies;
@@ -208,7 +217,9 @@ namespace Geometry.Meshing
     }
 
 
-
+    /// <summary>
+    /// Represents a set of index values that will loop back to the begining once the last value has been enumerated
+    /// </summary>
     public class ContinuousWrappedIndexSetEnumerator : IEnumerator<long>
     {
         long position = -1;
@@ -281,14 +292,15 @@ namespace Geometry.Meshing
 
     /// <summary>
     /// An index set where the first element may be non-zero, and at some point the enumerator loops around back to zero
-    /// So if we have [1,2,3,4,5] and the start index is 3 this set will index as [4,5,1,2,3]
+    /// So if we have [1,2,3,4,5] and the start index is 3 this set will index as [4,5,1,2,3].
+    /// This set has not limit to the index value, negative or positive.  The sequence loops until the bit-depth limit of the system.
     /// </summary>
-    public class ContinuousWrappedIndexSet : IIndexSet
+    public class InfiniteWrappedIndexSet : IIndexSet
     {
-        private long MinIndex;
-        private long MaxIndex;
-        private long StartIndex;
-        private long _Count;
+        protected long MinIndex;
+        protected long MaxIndex;
+        protected long StartIndex;
+        protected long _Count;
 
         public int Count
         {
@@ -302,9 +314,17 @@ namespace Geometry.Meshing
         {
             get
             {
+                return this[(long)index];
+            }
+        }
+
+        public virtual long this[long index]
+        {
+            get
+            {
                 if (index < 0 || index >= _Count)
                 {
-                    throw new IndexOutOfRangeException();
+                    index = index % _Count; //Force the index into range
                 }
 
                 long value = StartIndex + index;
@@ -324,7 +344,7 @@ namespace Geometry.Meshing
         /// <param name="startIndex"></param>
         /// <param name="wrapIndex">The value we never reach, we wrap before</param>
         /// <param name="count">Total number of values in the sequence</param>
-        public ContinuousWrappedIndexSet(long minIndex, long maxIndex, long startIndex)
+        public InfiniteWrappedIndexSet(long minIndex, long maxIndex, long startIndex)
         {
             if (maxIndex < minIndex)
                 throw new ArgumentException("Max index must be greater or equal to min index");
@@ -337,7 +357,7 @@ namespace Geometry.Meshing
             this.StartIndex = startIndex;
             this._Count = this.MaxIndex - this.MinIndex;
         }
-         
+
         public IEnumerator<long> GetEnumerator()
         {
             return new ContinuousWrappedIndexSetEnumerator(this.MinIndex, this.MaxIndex, this.StartIndex);
@@ -350,11 +370,51 @@ namespace Geometry.Meshing
 
         public IIndexSet IncrementStartingIndex(long adjustment)
         {
-            ContinuousWrappedIndexSet indexSet = new Meshing.ContinuousWrappedIndexSet(MinIndex + adjustment, MaxIndex + adjustment, StartIndex + adjustment);
+            FiniteWrappedIndexSet indexSet = new FiniteWrappedIndexSet(MinIndex + adjustment, MaxIndex + adjustment, StartIndex + adjustment);
             return indexSet;
             //MinIndex += adjustment;
             //MaxIndex += adjustment;
             //StartIndex += adjustment; 
+        }
+    }
+
+    /// <summary>
+    /// An index set where the first element may be non-zero, and at some point the enumerator loops around back to zero
+    /// So if we have [1,2,3,4,5] and the start index is 3 this set will index as [4,5,1,2,3]
+    /// 
+    /// FiniteWrappedIndexSet will throw an exception if it is indexed out of the normal array bounds, ex: this[-1] or this[_Count]
+    /// 
+    /// </summary>
+    public class FiniteWrappedIndexSet : InfiniteWrappedIndexSet
+    { 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="startIndex"></param>
+        /// <param name="wrapIndex">The value we never reach, we wrap before</param>
+        /// <param name="count">Total number of values in the sequence</param>
+        public FiniteWrappedIndexSet(long minIndex, long maxIndex, long startIndex) : base(minIndex, maxIndex, startIndex)
+        {
+        }
+
+        public override long this[long index]
+        {
+            get
+            {
+                if (index < 0 || index >= _Count)
+                {
+                    throw new ArgumentOutOfRangeException();
+                }
+
+                long value = StartIndex + index;
+
+                if (value >= MaxIndex)
+                {
+                    value -= _Count;
+                }
+
+                return value;
+            }
         }
     }
 }

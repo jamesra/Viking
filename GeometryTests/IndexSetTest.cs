@@ -1,6 +1,6 @@
 ﻿using System;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Geometry.Meshing;
+using Geometry;
 using System.Linq;
 
 namespace GeometryTests
@@ -47,7 +47,7 @@ namespace GeometryTests
             int minIndex = 1;
             int maxIndex = 10; 
             
-            ContinuousWrappedIndexSet set = new ContinuousWrappedIndexSet(minIndex, maxIndex, startIndex);
+            FiniteWrappedIndexSet set = new FiniteWrappedIndexSet(minIndex, maxIndex, startIndex);
 
             Assert.AreEqual(set[0], 5);
             Assert.AreEqual(set[set.Count - 1], 4);

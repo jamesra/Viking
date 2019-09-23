@@ -103,7 +103,7 @@ namespace MorphologyMesh
             return meshGraph;
         }
 
-        private static void AddIndexSetToMeshIndexMap(SortedList<GridVector3, long> map, Geometry.Meshing.DynamicRenderMesh<ulong> mesh, Geometry.Meshing.IIndexSet set)
+        private static void AddIndexSetToMeshIndexMap(SortedList<GridVector3, long> map, Geometry.Meshing.DynamicRenderMesh<ulong> mesh, Geometry.IIndexSet set)
         {
             IVertex[] verts = mesh.GetVerts(set).ToArray();
             long[] mesh_indicies = set.ToArray();
@@ -339,7 +339,7 @@ namespace MorphologyMesh
             PortIndices = PortIndices.Distinct().ToArray();
             if (PortIndices.Length >= 3)
             {
-                port.ExternalBorder = new Geometry.Meshing.IndexSet(PortIndices);
+                port.ExternalBorder = new Geometry.IndexSet(PortIndices);
             }
         }
 
@@ -393,7 +393,7 @@ namespace MorphologyMesh
             PortIndices = PortIndices.Distinct().ToArray();
             if (PortIndices.Length >= 3)
             {
-                port.ExternalBorder = new Geometry.Meshing.IndexSet(PortIndices);
+                port.ExternalBorder = new Geometry.IndexSet(PortIndices);
             }
         }
         /*
