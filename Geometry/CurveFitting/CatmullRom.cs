@@ -9,15 +9,61 @@ namespace Geometry
 {
     public class CatmullRom
     {
-        private static void PrepareControlPointsForClosedCurve(List<GridVector2> cp)
+        /// <summary>
+        /// In a closed curve we append some repeating control points to the list so the implementation can index them without special cases.
+        /// </summary>
+        private static List<GridVector2> GetControlPointsForClosedCurve(IList<GridVector2> cp)
         {
-            if (cp.First() != cp.Last())
+            ///
+            /// Catmull rom implementation only returns the points between the middle two points of a set of four. 
+            /// So if our points are A - B - C - D - E 
+            /// We need to input E - A - B - C - D - E - A - B to return a complete curve with the same starting/ending point as the input
+            ///
+
+            List<GridVector2> output = cp.ToList();
+            /*
+            if (output.First() != output.Last())
             {
-                cp.Insert(0, cp.Last());
+                output.Add(output.First());
             }
 
-            cp.AddRange(cp.GetRange(1, 2));
+            output.AddRange(output.GetRange(1, 2));
+
+            
+            */
+
+            if (output.First() != output.Last())
+            {
+                output.Insert(0, output.Last());
+            }
+
+            GridVector2 AfterStart = output[1];
+            GridVector2 BeforeStart = output[output.Count - 2];
+
+            //output.AddRange(output.GetRange(1, 2));
+
+            output.Insert(0, BeforeStart);
+            output.Add(AfterStart);
+
+            return output;
         }
+
+        /// <summary>
+        /// Extrapolate a point using a straight line from the last two points, half the distance between the two control points
+        /// </summary>
+        /// <param name="cp"></param>
+        private static List<GridVector2> GetControlPointsForOpenCurve(IList<GridVector2> cp)
+        {
+            List<GridVector2> output = cp.ToList();
+
+            GridVector2 zeroPoint = GetStartingPointForOpenCurve(output);
+            output.Insert(0, zeroPoint);
+            GridVector2 lastPoint = GetEndingPointForOpenCurve(output);
+            output.Add(lastPoint);
+
+            return output;
+        }
+
 
         internal static GridVector2 GetStartingPointForOpenCurve(IList<GridVector2> cp)
         {
@@ -32,20 +78,9 @@ namespace Geometry
             GridVector2 lastPoint = end.PointAlongLine(1.5);
             return lastPoint;
         }
+         
 
-        /// <summary>
-        /// Extrapolate a point using a straight line from the last two points, half the distance between the two control points
-        /// </summary>
-        /// <param name="cp"></param>
-        private static void PrepareControlPointsForOpenCurve(IList<GridVector2> cp)
-        {
-            GridVector2 zeroPoint = GetStartingPointForOpenCurve(cp);
-            cp.Insert(0, zeroPoint);
-            GridVector2 lastPoint = GetEndingPointForOpenCurve(cp);
-            cp.Add(lastPoint);
-        }
-
-        public static GridVector2[] FitCurve(ICollection<GridVector2> ControlPoints, int NumInterpolations, bool closed)
+        public static GridVector2[] FitCurve(IList<GridVector2> ControlPoints, int NumInterpolations, bool closed)
         {
             //Two points are a straight line, so don't bother interpolating
             if (ControlPoints.Count <= 2 || NumInterpolations == 0)
@@ -55,9 +90,9 @@ namespace Geometry
 
             List<GridVector2> cp = new List<GridVector2>(ControlPoints);
             if (closed)
-                PrepareControlPointsForClosedCurve(cp);
+                cp = GetControlPointsForClosedCurve(cp);
             else
-                PrepareControlPointsForOpenCurve(cp);
+                cp = GetControlPointsForOpenCurve(cp);
 
             //return cp.Where((p, i) => i + 3 < cp.Count).SelectMany((p, i) => FitCurveSegment(cp[i], cp[i + 1], cp[i + 2], cp[i + 3], NumInterpolations)).ToArray();
             GridVector2[] points = cp.Where((p, i) => i + 3 < cp.Count).SelectMany((p, i) => RecursivelyFitCurveSegment(cp[i], cp[i + 1], cp[i + 2], cp[i + 3], null, NumInterpolations: NumInterpolations)).ToArray();
@@ -259,34 +294,92 @@ namespace Geometry
                     ProposedCurveControlPoints[iV] = path[ProposedControlPointIndicies[iV]];
                 }
             }
+            
+            
+            //IIndexSet path_indicies = new Geometry.InfiniteWrappedIndexSet(0, path.Count-1, 0);
+            //return ProposedControlPointIndicies.Select(i => path_indicies[i]).Select(i => path[(int)i]).ToArray();
 
             return ProposedCurveControlPoints;
+        }
+
+        private static List<GridVector2> GenerateStartingSimplifiedLine(this IList<GridVector2> path, bool IsClosed)
+        {
+            if(IsClosed)
+            {
+                return GenerateStartingSimplifiedClosedLine(path);
+            }
+            else
+            {
+                return GenerateStartingSimplifiedOpenLine(path);
+            }
+        }
+
+        /// <summary>
+        /// CatmullRom requires four points to describe a curve. 0
+        /// When fitting an open line we begin using the first and last point.  The curve fitting will extrapolate a point before and after these points for a total of four
+        /// </summary>
+        /// <param name="path"></param>
+        /// <returns></returns>
+        private static List<GridVector2> GenerateStartingSimplifiedOpenLine(this IList<GridVector2> path)
+        {
+            return new List<GridVector2>(new GridVector2[] { path.First(), path.Last() });
+        }
+
+        /// <summary>
+        /// CatmullRom requires four points to describe a curve. 
+        /// When fitting an closed line we use the first/last point as starting and stopping points and the points with the largest change in angle to fill in.
+        /// </summary>
+        /// <param name="path"></param>
+        /// <returns></returns>
+        private static List<GridVector2> GenerateStartingSimplifiedClosedLine(this IList<GridVector2> path)
+        {
+            //Find the two largest changes in angles in the input path
+            double[] angle_change = path.ToArray().MeasureCurvature().TakeDerivative();
+            int[] iSorted = angle_change.SortAndIndex();
+
+            iSorted = iSorted.Where(i => i != 0 && i != path.Count - 1).ToArray(); //Remove the first/last vertex because we know we are including it. 
+
+            int[] firstTwo = new int[] { iSorted[iSorted.Length - 1], iSorted[iSorted.Length - 2] };
+            if(firstTwo[0] > firstTwo[1])
+            {
+                firstTwo = firstTwo.Reverse().ToArray();
+            }
+
+            return new List<GridVector2>(new GridVector2[] { path.First(), path[firstTwo[0]], path[firstTwo[1]], path.Last() });
         }
 
         /// <summary>
         /// Take a high density path, fit a curve to it using catmull rom, and remove control points until we have a smaller number of control points where all points are within a minimum distance from the curve. 
         /// </summary>
         /// <param name="path"></param>
-        static public List<GridVector2> IdentifyControlPoints(this IList<GridVector2> path, double MaxDistanceFromSimplifiedToIdeal, int NumInterpolations = 8)
+        static public List<GridVector2> IdentifyControlPoints(this IList<GridVector2> path, double MaxDistanceFromSimplifiedToIdeal, bool IsClosed, int NumInterpolations = 8)
         {
+            //Copy the path so we don't modify the input
+            path = path.ToList();
+
             //We can't simplify the already simple...
             if (path == null || path.Count <= 2)
                 return path.ToList();
 
-            GridVector2[] curved_path = Geometry.CatmullRom.FitCurve(path, NumInterpolations, false);
+            if(IsClosed && path.First() != path.Last())
+            {
+                path.Add(path.First());
+            }
+
+            GridVector2[] curved_path = Geometry.CatmullRom.FitCurve(path, NumInterpolations, IsClosed);
             GridLineSegment[] curve_segments = curved_path.ToLineSegments();
             Dictionary<GridVector2, int> point_to_ideal_curve_index = new Dictionary<GridVector2, int>(curved_path.Length);
             for (int i = 0; i < curved_path.Length; i++)
             {
-                //if (IsClosedCurve && i == curved_path.Length - 1)
-                //    continue; //Skip the last point which is a duplicate in a closed curve
+                if (IsClosed && i == curved_path.Length - 1)
+                    continue; //Skip the last point which is a duplicate in a closed curve
                 point_to_ideal_curve_index.Add(curved_path[i], i);
             }
 
             //int[] inflectionIndicies = curved_path.InflectionPointIndicies();
             //GridVector2[] inflectionPoints = inflectionIndicies.Select(i => curved_path[i]).ToArray();
             //List<GridVector2> simplified_inflection_points = inflectionPoints.DouglasPeuckerReduction(Tolerance: MaxDistanceFromSimplifiedToIdeal * 10);
-            List<GridVector2> simplified_inflection_points = new List<GridVector2>(new GridVector2[]{ curved_path.First(), curved_path.Last() } );
+            List<GridVector2> simplified_inflection_points = GenerateStartingSimplifiedLine(path, IsClosed);
 
             //Walk subsets of our proposed simplified curve, compare distance to ideal curve, add new control points as needed until distance is below threshold.
             int iProposedVertex = 0;
@@ -295,7 +388,7 @@ namespace Geometry
                 GridVector2[] proposedCurveControlPoints = null;
                 if (simplified_inflection_points.Count >= 2)
                 {
-                    proposedCurveControlPoints = GetControlPointSubsetForCurve(simplified_inflection_points, iProposedVertex, IsClosed: false);
+                    proposedCurveControlPoints = GetControlPointSubsetForCurve(simplified_inflection_points, iProposedVertex, IsClosed);
                 }
                 else
                 {
@@ -313,10 +406,24 @@ namespace Geometry
                 int iIdealStart = point_to_ideal_curve_index[proposedCurve.First()];
                 int iIdealEnd = point_to_ideal_curve_index[proposedCurve.Last()];
 
-                //I believe this is an impossible case, but checking anyway.
-                System.Diagnostics.Debug.Assert(iIdealEnd > iIdealStart);
-                if (iIdealEnd - iIdealStart <= 0)
-                    continue;
+                //I believe this is an impossible case, but checking anyway for debugging. 
+                //If the loop is closed the final vertex could be the first vertex of the loop, so we don't check
+                if (IsClosed == false)
+                {
+                    System.Diagnostics.Debug.Assert(iIdealEnd > iIdealStart);
+                    if (iIdealEnd - iIdealStart <= 0)
+                        continue;
+                }
+                else
+                {
+                    if(iIdealEnd <= iIdealStart) //We are using the first/last vertex
+                    {
+                        System.Diagnostics.Debug.Assert(iIdealEnd == 0);
+                        iIdealEnd = curved_path.Length - 1;
+                    }
+                }
+
+                //InfiniteWrappedIndexSet indicies = new InfiniteWrappedIndexSet(0, curve_segments.Length-1, iIdealStart);
 
                 //Copy the relevant part of the ideal curve into a smaller array to narrow our search
                 int num_ideal_segments = (iIdealEnd) - iIdealStart; // -1 to account for the index into a line array vs a point array
@@ -343,6 +450,12 @@ namespace Geometry
                 }
             }
 
+            if(IsClosed)
+            {
+                Debug.Assert(simplified_inflection_points.First() == simplified_inflection_points.Last());
+
+                //simplified_inflection_points.Add(simplified_inflection_points[0]); //Close the ring
+            }
 
             return simplified_inflection_points;
         }
