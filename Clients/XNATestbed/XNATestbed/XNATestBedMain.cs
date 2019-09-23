@@ -358,8 +358,8 @@ namespace XNATestbed
             float time = DateTime.Now.Millisecond / 1000.0f;
 
             double totalLabelLength = (double)(leftCurveLabel.Text.Length + rightCurveLabel.Text.Length);
-            leftCurveLabel.Alignment = HorizontalAlignment.Left;
-            rightCurveLabel.Alignment = HorizontalAlignment.Right;
+            leftCurveLabel.Alignment = RoundCurve.HorizontalAlignment.Left;
+            rightCurveLabel.Alignment = RoundCurve.HorizontalAlignment.Right;
             leftCurveLabel.Max_Curve_Length_To_Use_Normalized = (float)(leftCurveLabel.Text.Length / totalLabelLength);
             rightCurveLabel.Max_Curve_Length_To_Use_Normalized = (float)(rightCurveLabel.Text.Length / totalLabelLength);
 
@@ -419,7 +419,7 @@ namespace XNATestbed
             string TechniqueName = "AnimatedLinear";
             float time = DateTime.Now.Millisecond / 1000.0f;
             
-            curveLabel.Alignment = HorizontalAlignment.Left;
+            curveLabel.Alignment = RoundCurve.HorizontalAlignment.Left;
             
             CurveLabel.Draw(window.GraphicsDevice, scene, window.spriteBatch, window.fontArial, window.curveManager, new CurveLabel[] { curveLabel});
             labelView.Draw(window.spriteBatch, window.fontArial, window.Scene);
@@ -570,7 +570,7 @@ namespace XNATestbed
             Matrix ViewProjMatrix = scene.ViewProj;
             float time = DateTime.Now.Millisecond / 1000.0f;
             
-            curveLabel.Alignment = HorizontalAlignment.Left;
+            curveLabel.Alignment = RoundCurve.HorizontalAlignment.Left;
 
             CurveView.Draw(window.GraphicsDevice, scene, window.curveManager, window.basicEffect, window.overlayEffect, time, new CurveView[] { curveView });
             //CurveLabel.Draw(window.GraphicsDevice, scene, window.spriteBatch, window.fontArial, window.curveManager, new CurveLabel[] { curveLabel });
