@@ -57,6 +57,8 @@ namespace AnnotationVizLib
                 obj.Label = KeyString;
                 obj.Type = edge.SynapseType;
                 obj.Directional = edge.Directional;
+                obj.TotalSourceArea = edge.TotalSourceArea;
+                obj.TotalTargetArea = edge.TotalTargetArea;
                 obj.Links = AddEdgeLinks(edge);
 
                 NewtonsoftJSONExtensions.AddAttributes(obj, edge.Attributes);
