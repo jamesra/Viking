@@ -39,7 +39,9 @@ namespace DataExport.Controllers
                 }
             }
 
-            return string.Format("nw-{0}_hops_{1}.{2}", ID_List, GetNumHops(), ext);
+            DateTime now = System.DateTime.Now;
+
+            return string.Format("nw-{0}_hops_{1} {2,04:d4}-{3,02:d2}-{4,02:d2} {5,02:d2}{6,02:d2}{7,02:d2}.{8}", ID_List, GetNumHops(), now.Year, now.Month, now.Day, now.Hour, now.Minute, now.Second, ext);
         }
 
         private ActionResult RedirectToFile(string outputFilename)
