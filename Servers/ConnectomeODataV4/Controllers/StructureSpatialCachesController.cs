@@ -198,7 +198,17 @@ namespace ConnectomeODataV4.Controllers
             return db.SelectNetworkChildStructureSpatialData(IDs, Hops);
 
             // https://github.com/OData/WebApi/issues/255 
-             
+        }
+
+        [HttpGet]
+        [EnableQuery()]
+        [ODataRoute("NetworkEdgeSpatialData()")]
+        public IQueryable<StructureSpatialCache> GetNetworkChildren()
+        {
+            db.ConfigureAsReadOnly();
+            Request.ODataProperties().Path = GetRequestPath();
+            long[] IDs = db.GetLinkedStructureParentIDs().ToArray();
+            return db.SelectNetworkChildStructureSpatialData(IDs, 0);
         }
 
         [HttpGet]
