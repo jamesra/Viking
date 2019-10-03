@@ -91,6 +91,8 @@ namespace MorphologyMesh
 
 #if DEBUG
             newMeshEdges = new List<GridLineSegment>();
+#else
+            newMeshEdges = null; 
 #endif
 
             int EdgesProcessed = 1;
