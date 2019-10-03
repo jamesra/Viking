@@ -16,31 +16,42 @@ namespace AnnotationVizLib.SimpleODataClient
         {
             ODataClientSettings s = new ODataClientSettings();
             Simple.OData.Client.ODataClient client = new Simple.OData.Client.ODataClient(Endpoint);
-            var scale = client.GetScale();
-
-            AppendNeuronSpatialData(graph, client, IDs, Hops);
             AppendAreaToConnections(graph, client, IDs, Hops);
+            AppendNeuronSpatialData(graph, client, IDs, Hops);
         }
 
         public static void AppendNeuronSpatialData(NeuronGraph graph, ODataClient client, ICollection<long> IDs, uint Hops)
         {
             var annotations = new ODataFeedAnnotations();
-            string queryString = string.Format("NetworkSpatialData(IDs={0},Hops={1})", IDs.ToODataArrayParameterString(), Hops);
-            Task<IEnumerable<IDictionary<string, object>>> taskStructureDicts = client.FindEntriesAsync(queryString);
+
+            string queryString = null;
+            if ((IDs == null || IDs.Count == 0) && graph.Nodes.Count > 0)
+            {
+                //If no specific ID requested and there are nodes in the graph then request everything
+                queryString = string.Format("NetworkSpatialData", IDs.ToODataArrayParameterString(), Hops);
+            }
+            else
+            {
+                queryString = string.Format("NetworkSpatialData(IDs={0},Hops={1})", IDs.ToODataArrayParameterString(), Hops);
+            }
+            
+            Task<IEnumerable<IDictionary<string, object>>> taskStructureDicts = client.FindEntriesAsync(queryString, annotations);
             Debug.Assert(taskStructureDicts != null);
             taskStructureDicts.Wait();
-            IEnumerable<IDictionary<string, object>> StructureDicts = taskStructureDicts.Result;
-             
-            AppendDictionaryToAttributes(graph, StructureDicts);
+
+            IEnumerable<IDictionary<string, object>> StructureDicts = null;
 
             while (annotations.NextPageLink != null)
             {
-                taskStructureDicts = client.FindEntriesAsync(annotations.NextPageLink.ToString(), annotations);
-                taskStructureDicts.Wait();
                 StructureDicts = taskStructureDicts.Result;
-                 
+                taskStructureDicts = client.FindEntriesAsync(annotations.NextPageLink.ToString(), annotations);
+
                 AppendDictionaryToAttributes(graph, StructureDicts);
+                taskStructureDicts.Wait();
             }
+
+            StructureDicts = taskStructureDicts.Result; 
+            AppendDictionaryToAttributes(graph, StructureDicts);
         }
 
         public static void AppendNeuronSpatialData(NeuronNode node, ODataClient client)
@@ -140,28 +151,37 @@ namespace AnnotationVizLib.SimpleODataClient
         public static void AppendAreaToConnections(NeuronGraph graph, ODataClient client, ICollection<long> IDs, uint Hops)
         {
             var annotations = new ODataFeedAnnotations();
+             
+            string queryString = null;
+            if ((IDs == null || IDs.Count == 0) && graph.Nodes.Count > 0)
+            {
+                //If no specific ID requested and there are nodes in the graph then request everything
+                queryString = string.Format("NetworkEdgeSpatialData", IDs.ToODataArrayParameterString(), Hops);
+            }
+            else
+            {
+                queryString = string.Format("NetworkEdgeSpatialData(IDs={0},Hops={1})", IDs.ToODataArrayParameterString(), Hops);
+            }
+             
+            Task<IEnumerable<IDictionary<string, object>>> taskStructureDicts = client.FindEntriesAsync(queryString, annotations);
+            Debug.Assert(taskStructureDicts != null);
 
             Dictionary<ulong, SortedSet<NeuronEdge>> IDToEdge = BuildChildToEdgeMap(graph);
             Dictionary<ulong, long> ChildToParent = BuildChildToParentMap(graph);
-            
-            string queryString = string.Format("NetworkEdgeSpatialData(IDs={0},Hops={1})", IDs.ToODataArrayParameterString(), Hops);
-            Task<IEnumerable<IDictionary<string, object>>> taskStructureDicts = client.FindEntriesAsync(queryString, annotations);
-            Debug.Assert(taskStructureDicts != null);
+
             taskStructureDicts.Wait();
 
-            IEnumerable<IDictionary<string, object>> StructureEdgeDicts = taskStructureDicts.Result;
-             
-            AddSpatialDataToEdges(graph, StructureEdgeDicts, IDToEdge);
-            
-
+            IEnumerable<IDictionary<string, object>> StructureEdgeDicts = null;
             while (annotations.NextPageLink != null)
             {
-                taskStructureDicts = client.FindEntriesAsync(annotations.NextPageLink.ToString(), annotations);
-                taskStructureDicts.Wait();
                 StructureEdgeDicts = taskStructureDicts.Result;
-
+                taskStructureDicts = client.FindEntriesAsync(annotations.NextPageLink.ToString(), annotations);
                 AddSpatialDataToEdges(graph, StructureEdgeDicts, IDToEdge);
+                taskStructureDicts.Wait();
             }
+
+            StructureEdgeDicts = taskStructureDicts.Result;
+            AddSpatialDataToEdges(graph, StructureEdgeDicts, IDToEdge); 
         }
 
         public static void AddSpatialDataToEdges(NeuronGraph graph, IEnumerable<IDictionary<string, object>> EdgeStructureDicts, Dictionary<ulong, SortedSet<NeuronEdge>> IDToEdge)
