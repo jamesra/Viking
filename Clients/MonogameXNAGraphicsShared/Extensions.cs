@@ -211,6 +211,17 @@ namespace VikingXNAGraphics
             return new Microsoft.Xna.Framework.Color(colorVector.X, colorVector.Y, colorVector.Z, alpha);
         }
 
+        public static Microsoft.Xna.Framework.Color Invert(this Microsoft.Xna.Framework.Color color, float? alpha = new float?())
+        {
+            if(alpha.HasValue == false)
+            {
+                alpha = color.GetAlpha();
+            }
+
+            Vector3 colorVector = Vector3.One - color.ToVector3(); 
+            return new Microsoft.Xna.Framework.Color(colorVector.X, colorVector.Y, colorVector.Z, alpha.Value);
+        }
+
         private static Microsoft.Xna.Framework.Color ToXNAColor(int[] ARGB)
         {
             return new Microsoft.Xna.Framework.Color(ARGB[1],
