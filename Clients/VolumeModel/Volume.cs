@@ -680,7 +680,7 @@ namespace Viking.VolumeModel
                 {
                     case "stos":
                         string StosFileName = IO.GetAttributeCaseInsensitive(elem, "path").Value;
-                        Uri StosPath = new Uri(this.Host + Path.DirectorySeparatorChar + StosFileName);
+                        Uri StosPath = new Uri(this.Host + System.IO.Path.DirectorySeparatorChar + StosFileName);
 
                         //      int pixelSpacing = System.Convert.ToInt32(GetAttributeCaseInsensitive(elem,"pixelSpacing").Value);
                         int ProgressPercent = (countStos * 100) / NumStosFiles;
@@ -855,7 +855,7 @@ namespace Viking.VolumeModel
             if(transform as IContinuousTransform == null)
             {
                 Geometry.Transforms.StosTransformInfo info = ((ITransformInfo)transform).Info as Geometry.Transforms.StosTransformInfo;
-                string SerializerCacheFullPath = Path.Combine(this.Paths.StosCacheDir, info.GetCacheFilename(".stos_bin")); 
+                string SerializerCacheFullPath = System.IO.Path.Combine(this.Paths.StosCacheDir, info.GetCacheFilename(".stos_bin")); 
                 return Serialization.LoadOrCreateContinuousTransform(SerializerCacheFullPath, transform as IDiscreteTransform);
             }
 

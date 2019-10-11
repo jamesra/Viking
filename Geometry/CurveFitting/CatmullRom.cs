@@ -80,7 +80,7 @@ namespace Geometry
         }
          
 
-        public static GridVector2[] FitCurve(IList<GridVector2> ControlPoints, int NumInterpolations, bool closed)
+        public static GridVector2[] FitCurve(IList<GridVector2> ControlPoints, uint NumInterpolations, bool closed)
         {
             //Two points are a straight line, so don't bother interpolating
             if (ControlPoints.Count <= 2 || NumInterpolations == 0)
@@ -173,7 +173,7 @@ namespace Geometry
 
         public static GridVector2[] RecursivelyFitCurveSegment(GridVector2 p0, GridVector2 p1,
                                                     GridVector2 p2, GridVector2 p3,
-                                                    SortedSet<double> tPoints, int NumInterpolations = 5)
+                                                    SortedSet<double> tPoints, uint NumInterpolations = 5)
         {
             double alpha = 0.5;
             double t0 = 0;
@@ -352,13 +352,16 @@ namespace Geometry
         /// Take a high density path, fit a curve to it using catmull rom, and remove control points until we have a smaller number of control points where all points are within a minimum distance from the curve. 
         /// </summary>
         /// <param name="path"></param>
-        static public List<GridVector2> IdentifyControlPoints(this IList<GridVector2> path, double MaxDistanceFromSimplifiedToIdeal, bool IsClosed, int NumInterpolations = 8)
+        static public List<GridVector2> IdentifyControlPoints(this IList<GridVector2> path, double MaxDistanceFromSimplifiedToIdeal, bool IsClosed, uint NumInterpolations = 8)
         {
             //Copy the path so we don't modify the input
             path = path.ToList();
 
             //We can't simplify the already simple...
             if (path == null || path.Count <= 2)
+                return path.ToList();
+
+            if (path.Count <= 4 && IsClosed)
                 return path.ToList();
 
             if(IsClosed && path.First() != path.Last())

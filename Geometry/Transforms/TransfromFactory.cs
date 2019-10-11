@@ -99,7 +99,7 @@ namespace Geometry.Transforms
 
         public static ITransform ParseStos(string stosfile)
         {
-            string filename = Path.GetFileNameWithoutExtension(stosfile);
+            string filename = System.IO.Path.GetFileNameWithoutExtension(stosfile);
 
             int pixelSpacing = 1;
 

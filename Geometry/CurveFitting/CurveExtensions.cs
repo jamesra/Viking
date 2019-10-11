@@ -39,7 +39,7 @@ namespace Geometry
             }
             else if (ControlPoints.Count >= 3)
             {
-                CurvePoints = Geometry.CatmullRom.FitCurve(ControlPoints.ToArray(), (int)NumInterpolations, true);
+                CurvePoints = Geometry.CatmullRom.FitCurve(ControlPoints.ToArray(), NumInterpolations, true);
 
                 System.Diagnostics.Debug.Assert(CurvePoints[0] == CurvePoints.Last(), "First and last point should be identical in closed curve");
                 System.Diagnostics.Debug.Assert(CurvePoints[CurvePoints.Length - 2] != CurvePoints[CurvePoints.Length - 1], "The last and second last points should not match, probable bug.");
@@ -90,7 +90,7 @@ namespace Geometry
         /// </summary>
         /// <param name="ControlPoints"></param>
         /// <returns>A list of angles, showing how many degrees the next vertex deviates from travelling from a straight line</returns>
-        public static double[] MeasureCurvature(this IReadOnlyList<GridVector2> ControlPoints)
+        public static double[] MeasureCurvature(this IList<GridVector2> ControlPoints)
         {
             //System.Diagnostics.Debug.Assert(ControlPoints.Count == 3, "Curve requires three points to measure");
 
@@ -101,6 +101,14 @@ namespace Geometry
 
             for (int i = 1; i < ControlPoints.Count - 1; i++)
             {
+                //Not sure why we have duplicates... consider raising an exception, but consider the angle 0
+                if (ControlPoints[i - 1] == ControlPoints[i])
+                {
+                    throw new ArgumentException("Duplicate points found in MeasureCurvature");
+                    Angles[i] = 0;
+                    continue;
+                }
+
                 //Extrapolate a line past the control point, and measure how much we deviate from it
                 GridLineSegment line = new GridLineSegment(ControlPoints[i - 1], ControlPoints[i]);
                 GridVector2 Origin = ControlPoints[i];
@@ -124,7 +132,7 @@ namespace Geometry
             if (ControlPoints.Count >= 3)
             {
                 //CurvePoints = Geometry.Lagrange.FitCurve(ControlPoints.ToArray(), (int)NumInterpolations * ControlPoints.Count);
-                CurvePoints = Geometry.Lagrange.RecursivelyFitCurve(ControlPoints.ToArray());
+                CurvePoints = Geometry.CatmullRom.FitCurve(ControlPoints.ToArray(), NumInterpolations, false);
 #if DEBUG
                 foreach (GridVector2 p in ControlPoints)
                 {

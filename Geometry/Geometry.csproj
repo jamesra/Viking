@@ -136,6 +136,7 @@
     <Compile Include="Meshing\Vertex.cs" />
     <Compile Include="Primitives\GridPolyline.cs" />
     <Compile Include="Primitives\Interfaces.cs" />
+    <Compile Include="Primitives\Path.cs" />
     <Compile Include="Primitives\Shape2DCollection.cs" />
     <Compile Include="Primitives\ShapeExtensions.cs" />
     <Compile Include="Transforms\Interfaces.cs" />

@@ -283,8 +283,8 @@ namespace LocalBookmarks
         private static void HandleIncorrectXSDMessage()
         {
             //We found it, but could not parse it
-                string BookmarkRefuge = BookmarkPath + Path.DirectorySeparatorChar + "InvalidSchemaBookmark.xml";
-                System.IO.File.Move(BookmarkFilePath, BookmarkPath + Path.DirectorySeparatorChar + "InvalidSchemaBookmark.xml");
+                string BookmarkRefuge = BookmarkPath + System.IO.Path.DirectorySeparatorChar + "InvalidSchemaBookmark.xml";
+                System.IO.File.Move(BookmarkFilePath, BookmarkPath + System.IO.Path.DirectorySeparatorChar + "InvalidSchemaBookmark.xml");
                 System.Windows.Forms.MessageBox.Show("I could not read your bookmark.xml file, so I moved it to: \n" + BookmarkRefuge + "\n"+
                                                 "You can probably recover them by closing Viking and setting/replacing the xmnls attribute on the \"root\" element to:\n"+
                                                 "xmlns=\"http://tempuri.org/BookmarkSchema.xsd\" and replacing the Bookmarks.xml with it.");

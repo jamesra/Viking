@@ -34,16 +34,26 @@ namespace WebAnnotation
 #endif
         public static readonly double AdjacentLocationRadiusScalar = 0.5; //Make radius of annotations on adjacent sections half of the normal value
 
-        //TODO: Choose number of points based on distance between control points
-        static public readonly uint NumOpenCurveInterpolationPoints = 3;
-        static public readonly uint NumClosedCurveInterpolationPoints = 10;
-
         public static uint NumCurveInterpolationPoints(bool Closed)
         {
-            return Closed ? NumClosedCurveInterpolationPoints : NumOpenCurveInterpolationPoints;
+            return Geometry.Global.NumCurveInterpolationPoints(Closed);
         }
 
-        static public int PenSimplifyThreshold = 30;
+        //TODO: Choose number of points based on distance between control points
+        static public uint NumOpenCurveInterpolationPoints
+        {
+            get
+            {
+                return Geometry.Global.NumOpenCurveInterpolationPoints;
+            }
+        }
+        static public uint NumClosedCurveInterpolationPoints {
+            get {
+                return Geometry.Global.NumClosedCurveInterpolationPoints;
+            }
+        }
+
+    static public int PenSimplifyThreshold = 15;
 
         static public double DefaultClosedLineWidth = 24.0;
 
