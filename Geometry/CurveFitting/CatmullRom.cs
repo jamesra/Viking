@@ -498,5 +498,18 @@ namespace Geometry
             return false;
         }
 
+        public static GridPolygon Simplify(this GridPolygon polygon, double MaxDistanceFromSimplifiedToIdeal, uint NumInterpolations = 8)
+        {
+            List<GridVector2> simpleExterior = IdentifyControlPoints(polygon.ExteriorRing, MaxDistanceFromSimplifiedToIdeal, true, NumInterpolations);
+            GridPolygon output = new GridPolygon(simpleExterior.ToArray());
+            foreach (var innerPoly in polygon.InteriorPolygons)
+            {
+                GridPolygon outputInnerPoly = innerPoly.Simplify(MaxDistanceFromSimplifiedToIdeal, NumInterpolations);
+                output.AddInteriorRing(outputInnerPoly);
+            }
+
+            return output;
+        }
+
     }
 }
