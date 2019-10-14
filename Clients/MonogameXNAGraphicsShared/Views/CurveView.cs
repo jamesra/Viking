@@ -50,6 +50,8 @@ namespace VikingXNAGraphics
 
         private CircleView[] ControlPointViews;
 
+        public bool ShowControlPoints;
+
         private double _LineWidth;
 
         public double LineWidth
@@ -80,12 +82,15 @@ namespace VikingXNAGraphics
         }
 
         private Color _Color;
+        private Color _HSLColor;
+
         public Color Color
         {
             get { return _Color; }
             set
             {
                 _Color = value;
+                _HSLColor = value.ConvertToHSL();
                 foreach (CircleView cpv in ControlPointViews)
                 {
                     cpv.Color = value;
@@ -128,13 +133,14 @@ namespace VikingXNAGraphics
         }
 
         public CurveView(ICollection<GridVector2> controlPoints, Microsoft.Xna.Framework.Color color, bool TryToClose, uint numInterpolations,
-                         Texture2D texture = null, double lineWidth = 16.0, double? controlPointRadius = null, LineStyle lineStyle = LineStyle.Standard)
+                         Texture2D texture = null, double lineWidth = 16.0, double? controlPointRadius = null, LineStyle lineStyle = LineStyle.Standard, bool ShowControlPoints = true)
         {
             this._CurveControlPoints = new CurveViewControlPoints(controlPoints, numInterpolations, TryToClose);
             this._Color = color;
             this.Style = lineStyle;
             this._ControlPointTexture = texture;
             this._LineWidth = lineWidth;
+            this.ShowControlPoints = ShowControlPoints;
             if (!controlPointRadius.HasValue)
                 this.ControlPointRadius = 0;
             else
@@ -219,20 +225,26 @@ namespace VikingXNAGraphics
                           AnnotationOverBackgroundLumaEffect overlayEffect,
                           float time,
                           CurveView[] listToDraw)
-        {
-
-            IEnumerable<CircleView> controlPointViews = listToDraw.SelectMany(cv => cv.ControlPointViews);            
+        { 
+            IEnumerable<CircleView> controlPointViews = listToDraw.Where(cv => cv.ShowControlPoints).SelectMany(cv => cv.ControlPointViews);            
             CircleView.Draw(device, scene, basicEffect, overlayEffect, controlPointViews.ToArray());
            
             int OriginalStencilValue = DeviceStateManager.GetDepthStencilValue(device);
             CompareFunction originalStencilFunction = device.DepthStencilState.StencilFunction;
-
-            DeviceStateManager.SetDepthStencilValue(device, OriginalStencilValue - 1, CompareFunction.Greater);
+            
+            DeviceStateManager.SetDepthStencilValue(device, OriginalStencilValue - 1, originalStencilFunction); //Annotation overlay renders twice, so this needs to be greaterequal for second pass
             
             Matrix ViewProj = scene.Camera.View * scene.Projection;
-            foreach (CurveView curve in listToDraw)
+
+            var renderGroups = listToDraw.Where(cv => cv != null).GroupBy(cv => new { color = curveManager.UseHSLColor ? cv._HSLColor : cv.Color, style = cv.Style, width = cv.LineWidth });
+            foreach(var renderGroup in renderGroups)
             {
-                curveManager.Draw(curve.Curve, (float)curve.LineWidth / 2.0f, curve.Color.ConvertToHSL(), ViewProj, time, curve.Style.ToString());
+                curveManager.Draw(renderGroup.Select(cv => cv.Curve), 
+                            (float)(renderGroup.Key.width / 2.0),
+                                  renderGroup.Key.color, 
+                                  ViewProj,
+                                  time,
+                                  renderGroup.Key.style.ToString());
             }
 
             DeviceStateManager.SetDepthStencilValue(device, OriginalStencilValue, originalStencilFunction);
