@@ -249,7 +249,8 @@ namespace Viking.UI.Commands
         EventHandler MyMouseLeave;
         EventHandler MyMouseEnter; 
         KeyPressEventHandler MyKeyPress;
-        KeyEventHandler MyKeyDown; 
+        KeyEventHandler MyKeyDown;
+        KeyEventHandler MyKeyUp;
 
         /* UI Extensions, extensions can register with these delegates to be notified whenever the default command does not process input.  This gives
         * extensions the chance to select objects only they are aware of or provide special behavior for key presses */
@@ -289,9 +290,9 @@ namespace Viking.UI.Commands
             MyMouseLeave = new EventHandler(this.OnMouseLeave);
             MyMouseEnter = new EventHandler(this.OnMouseEnter);
 
-            MyKeyPress = new KeyPressEventHandler(this.OnKeyPress);
-
+            MyKeyPress = new KeyPressEventHandler(this.OnKeyPress); 
             MyKeyDown = new KeyEventHandler(this.OnKeyDown);
+            MyKeyUp = new KeyEventHandler(this.OnKeyUp);
 
             Parent.MouseClick += MyMouseClick;
             Parent.MouseDoubleClick += MyMouseDoubleClick;
@@ -304,6 +305,7 @@ namespace Viking.UI.Commands
             Parent.MouseEnter += MyMouseEnter;
             Parent.KeyPress += MyKeyPress;
             Parent.KeyDown += MyKeyDown;
+            Parent.KeyUp += MyKeyUp;
         }
 
         public void UnsubscribeToInterfaceEvents()
@@ -320,7 +322,8 @@ namespace Viking.UI.Commands
             Parent.MouseEnter -= MyMouseEnter; 
 
             Parent.KeyPress -= MyKeyPress;
-            Parent.KeyDown -= MyKeyDown; 
+            Parent.KeyDown -= MyKeyDown;
+            Parent.KeyUp -= MyKeyUp;
         }
 
         /// <summary>
@@ -611,6 +614,11 @@ namespace Viking.UI.Commands
             }
 
             Parent.Invalidate();
+        }
+
+        protected virtual void OnKeyUp(object sender, KeyEventArgs e)
+        {
+            return;
         }
 
         protected virtual void OnKeyDown(object sender, KeyEventArgs e)
