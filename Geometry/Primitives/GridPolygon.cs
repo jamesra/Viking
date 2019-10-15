@@ -1889,7 +1889,7 @@ namespace Geometry
         /// <param name="poly"></param>
         /// <param name="other"></param>
         /// <returns></returns>
-        private static bool SegmentsIntersect(GridPolygon poly, GridPolygon other)
+        public static bool SegmentsIntersect(GridPolygon poly, GridPolygon other)
         {
             GridRectangle? Intersection = poly.BoundingBox.Intersection(other.BoundingBox);
             if (!Intersection.HasValue)
@@ -2366,8 +2366,7 @@ namespace Geometry
             }
              */
             GridPolygon output = new GridPolygon(walkedPoints.EnsureClosedRing());
-
-
+            
             //Add any interior polygons contained within our cut
             for (int iRing=0; iRing < originPolygon.InteriorRings.Count; iRing++)
             {
@@ -2376,6 +2375,10 @@ namespace Geometry
                     output.AddInteriorRing(originPolygon.InteriorPolygons[iRing]);
             }
 
+            if(output.IsValid() == false)
+            {
+                throw new ArgumentException("Invalid polygon created by cut. (Does the cutting line have loops?)");
+            }
             return output;
         }
 

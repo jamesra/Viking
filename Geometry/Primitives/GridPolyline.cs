@@ -79,7 +79,7 @@ namespace Geometry
             }
         }
 
-        ICollection<IPoint2D> IPolyLine2D.Points
+        public ICollection<IPoint2D> Points
         {
             get
             {

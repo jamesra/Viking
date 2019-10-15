@@ -7,6 +7,9 @@ using System.Threading.Tasks;
 
 namespace Geometry
 {
+    /// <summary>
+    /// Describes a set of points connected sequentially, i.e. a polyline.  Exposes events for changes to the path.
+    /// </summary>
     public class Path : IPolyLine2D, System.Collections.Specialized.INotifyCollectionChanged
     {
 
@@ -54,6 +57,30 @@ namespace Geometry
             get;
         }
 
+        /// <summary>
+        /// Sets how far from the actual path is a simplified path is allowed to stray.
+        /// </summary>
+        private double _SimplifiedPathTolerance = 1.0;
+
+        public double SimplifiedPathTolerance
+        {
+            get
+            {
+                return _SimplifiedPathTolerance;
+            }
+            set
+            {
+                if (value == _SimplifiedPathTolerance)
+                    return;
+
+                _SimplifiedPathTolerance = value;
+                _SimplifiedPath = null;
+                _SimplifiedLoop = null;
+                _SimplifiedLoopSegments = null;
+            }
+        }
+
+
         private GridVector2[] _SimplifiedPath;
         public GridVector2[] SimplifiedPath
         {
@@ -61,7 +88,7 @@ namespace Geometry
             {
                 if (_SimplifiedPath == null)
                 {
-                    _SimplifiedPath = CatmullRomControlPointSimplification.IdentifyControlPoints(this.Points, 1.0, false, 5).ToArray();
+                    _SimplifiedPath = CatmullRomControlPointSimplification.IdentifyControlPoints(this.Points, SimplifiedPathTolerance, false, 5).ToArray();
                 }
 
                 return _SimplifiedPath;
@@ -142,6 +169,14 @@ namespace Geometry
         {
             get
             {
+                if(_SimplifiedLoop == null)
+                {
+                    if (HasSelfIntersection)
+                        this._SimplifiedLoop = CatmullRomControlPointSimplification.IdentifyControlPoints(this._Loop, this.SimplifiedPathTolerance, true).EnsureClosedRing().ToArray();
+                    else
+                        return null; 
+                }
+
                 return _SimplifiedLoop;
             }
         }
@@ -159,6 +194,18 @@ namespace Geometry
         {
             get
             {
+                if(_SimplifiedLoopSegments == null)
+                {
+                    if (HasSelfIntersection)
+                    {
+                        _SimplifiedLoopSegments = this._SimplifiedLoop.ToLineSegments();
+                    }
+                    else
+                    {
+                        return null;
+                    }
+                }
+
                 return _SimplifiedLoopSegments;
             }
         }
@@ -234,7 +281,9 @@ namespace Geometry
             {
                 _Segments.RemoveAt(this._Segments.Count - 1);
             }
-             
+
+            _SimplifiedPath = null;  //TODO: This could be optimized to only calculate the new segment
+
             //Make sure we have the right number of segments for points in the path
             System.Diagnostics.Debug.Assert(_Segments.Count == this.Points.Count - 1);
             return p;
@@ -332,8 +381,8 @@ namespace Geometry
         {
             this._Loop = loopPoints.EnsureClosedRing().ToArray();
             this._LoopSegments = this._Loop.ToLineSegments();
-            this._SimplifiedLoop = CatmullRomControlPointSimplification.IdentifyControlPoints(this._Loop, 1.0, true).EnsureClosedRing().ToArray();
-            this._SimplifiedLoopSegments = this._SimplifiedLoop.ToLineSegments();
+            this._SimplifiedLoop = null; //Recalculated on demand
+            this._SimplifiedLoopSegments = null; //Recalculated on demand
             System.Diagnostics.Debug.Assert(_LoopSegments[0].A == _LoopSegments[_LoopSegments.Length - 1].B);
         }
 

@@ -706,13 +706,14 @@ namespace Geometry
         
 
         /// <summary>
-        /// Add a new point where line intersects any other line
+        /// Return a list of lines the passed line intersects and the intersection points
         /// </summary>
-        /// <param name="line">Line we add points to</param>
+        /// <param name="line">Line we are checking</param>
         /// <param name="lines">Lines we are testing for intersection</param>
+        /// <param name="EndpointsOnLineDoNotIntersect"></param>
         /// <param name="IntersectionPoints">The intersection points on the line, in increasing order of distance from line.A to line.B</param>
         /// <returns>The lines that intersect the line parameter</returns>
-        public static List<GridLineSegment> Intersections(this GridLineSegment line, IReadOnlyList<GridLineSegment> lines, bool EndpointsOnRingDoNotIntersect, out GridVector2[] IntersectionPoints)
+        public static List<GridLineSegment> Intersections(this GridLineSegment line, IReadOnlyList<GridLineSegment> lines, bool EndpointsOnLineDoNotIntersect, out GridVector2[] IntersectionPoints)
         {
             //Cannot use an out parameter in the anonymous method I use below, so I have a bit of redundancy in tracking added points
             List<GridVector2> NewPoints = new List<Geometry.GridVector2>(lines.Count);
@@ -724,7 +725,7 @@ namespace Geometry
                 if (line.Intersects(testLine, out intersection))
                 {
                     //Check that NewPoints does not contain the point.  This can occur when the test line intersects exactly over the endpoint of two lines.
-                    if (EndpointsOnRingDoNotIntersect && line.IsEndpoint(intersection))
+                    if (EndpointsOnLineDoNotIntersect && line.IsEndpoint(intersection))
                     {
                         continue; 
                     }

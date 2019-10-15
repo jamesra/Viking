@@ -66,10 +66,10 @@ namespace Geometry
         public override string ToString()
         {
             
-            if(MinX == A.X)
-                return "A-B: " + A.X.ToString("F") + " " + A.Y.ToString("F2") + " , " + B.X.ToString("F2") + " " + B.Y.ToString("F2");
-            else
-                return "B-A: " + B.X.ToString("F") + " " + B.Y.ToString("F2") + " , " + A.X.ToString("F2") + " " + A.Y.ToString("F2");            
+            //if(MinX == A.X)
+            return "A-B: " + A.X.ToString("F") + " " + A.Y.ToString("F2") + " , " + B.X.ToString("F2") + " " + B.Y.ToString("F2");
+            //else
+            //    return "B-A: " + B.X.ToString("F") + " " + B.Y.ToString("F2") + " , " + A.X.ToString("F2") + " " + A.Y.ToString("F2");            
         }
 
         object ICloneable.Clone()
