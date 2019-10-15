@@ -166,6 +166,14 @@ namespace RoundLineCode
         //public int NumLinesDrawn;
         public float DefaultBlurThreshold = 0.97f;
 
+        /// <summary>
+        /// Indicates if the draw function of this line manager expects HSL colors or RGB colors
+        /// </summary>
+        public virtual bool UseHSLColor
+        {
+            get { return false; }
+        }
+
 
         public virtual void Init(GraphicsDevice device, ContentManager content)
         {
@@ -380,7 +388,7 @@ namespace RoundLineCode
         /// Draw a single RoundLine.  Usually you want to draw a list of RoundLines
         /// at a time instead for better performance.
         /// </summary>
-        public void Draw(RoundLine roundLine, float lineRadius, Color lineColor, Matrix viewProjMatrix,
+        public virtual void Draw(RoundLine roundLine, float lineRadius, Color lineColor, Matrix viewProjMatrix,
             float time, string techniqueName)
         {
             device.SetVertexBuffer(vb);
@@ -435,13 +443,15 @@ namespace RoundLineCode
                                                  roundLine.Rho,
                                                  roundLine.Theta); 
             instanceDataParameter.SetValue(translationData);
-            
-            EffectPass pass = effect.CurrentTechnique.Passes[0];
 
-            pass.Apply();
+            foreach (EffectPass pass in effect.CurrentTechnique.Passes)
+            {
 
-            int numInstancesThisDraw = 1;
-            device.DrawIndexedPrimitives(PrimitiveType.TriangleList, 0, 0, numVertices, 0, numPrimitivesPerInstance * numInstancesThisDraw);
+                pass.Apply();
+
+                int numInstancesThisDraw = 1;
+                device.DrawIndexedPrimitives(PrimitiveType.TriangleList, 0, 0, numVertices, 0, numPrimitivesPerInstance * numInstancesThisDraw);
+            }
             //NumLinesDrawn += numInstancesThisDraw;
         }
 
@@ -489,10 +499,13 @@ namespace RoundLineCode
                 if (numInstancesThisDraw == MaxInstancesPerBatch)
                 {
                     instanceDataParameter.SetValue(translationData);
-                    EffectPass pass = effect.CurrentTechnique.Passes[0];
-                    pass.Apply();
-                    
-                    device.DrawIndexedPrimitives(PrimitiveType.TriangleList, 0, 0, numVertices, 0, numPrimitivesPerInstance * numInstancesThisDraw);
+                    foreach (EffectPass pass in effect.CurrentTechnique.Passes)
+                    {
+                        pass.Apply();
+
+                        device.DrawIndexedPrimitives(PrimitiveType.TriangleList, 0, 0, numVertices, 0, numPrimitivesPerInstance * numInstancesThisDraw);
+                    }
+
                     //NumLinesDrawn += numInstancesThisDraw;
                     numInstancesThisDraw = 0;
                     iData = 0;
@@ -502,10 +515,14 @@ namespace RoundLineCode
             if (numInstancesThisDraw > 0)
             {
                 instanceDataParameter.SetValue(translationData);
-                EffectPass pass = effect.CurrentTechnique.Passes[0];
-                pass.Apply();
-                
-                device.DrawIndexedPrimitives(PrimitiveType.TriangleList, 0, 0, numVertices, 0, numPrimitivesPerInstance * numInstancesThisDraw);
+                foreach (EffectPass pass in effect.CurrentTechnique.Passes)
+                {
+                    pass.Apply();
+
+                    device.DrawIndexedPrimitives(PrimitiveType.TriangleList, 0, 0, numVertices, 0, numPrimitivesPerInstance * numInstancesThisDraw);
+                }
+
+                numInstancesThisDraw = 0;
                 //NumLinesDrawn += numInstancesThisDraw;
             }
             
@@ -514,9 +531,14 @@ namespace RoundLineCode
     }
 
     public class LumaOverlayRoundLineManager : RoundLineManager
-    { 
+    {
         private EffectParameter _BackgroundTexture;
         private EffectParameter _RenderTargetSize;
+
+        public override bool UseHSLColor
+        {
+            get { return true; }
+        }
 
         public Texture LumaTexture
         {

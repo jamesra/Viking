@@ -176,7 +176,15 @@ namespace RoundCurve
 
         //public int NumLinesDrawn;
         public float DefaultBlurThreshold = 0.97f;
-         
+
+
+        /// <summary>
+        /// Indicates if the draw function of this line manager expects HSL colors or RGB colors
+        /// </summary>
+        public virtual bool UseHSLColor
+        {
+            get { return false; }
+        }
 
         public virtual void Init(GraphicsDevice device, ContentManager content)
         {
@@ -455,8 +463,7 @@ namespace RoundCurve
             lineRadiusParameter.SetValue(lineRadius);
             blurThresholdParameter.SetValue(DefaultBlurThreshold);
             lineTotalLengthParameter.SetValue((float)roundLine.TotalDistance);
-
-           
+                       
             int SegmentsAlreadyDrawn = 0;
             int numSegmentsThisDraw = 0;
             int numSegmentsToDraw = roundLine.ControlPoints.Count();
@@ -493,11 +500,12 @@ namespace RoundCurve
 
                 segmentDataParamter.SetValue(translationData);
 
-                EffectPass pass = effect.CurrentTechnique.Passes[0];
+                foreach (EffectPass pass in effect.CurrentTechnique.Passes)
+                {
+                    pass.Apply();
 
-                pass.Apply();
-
-                device.DrawIndexedPrimitives(PrimitiveType.TriangleList, 0, 0, numVertices, 0, numPrimitivesPerInstance * numSegmentsThisDraw);
+                    device.DrawIndexedPrimitives(PrimitiveType.TriangleList, 0, 0, numVertices, 0, numPrimitivesPerInstance * numSegmentsThisDraw);
+                }
 
                 SegmentsAlreadyDrawn += numSegmentsThisDraw;
                          
@@ -621,6 +629,14 @@ namespace RoundCurve
     { 
         private EffectParameter _BackgroundTexture;
         private EffectParameter _RenderTargetSize;
+
+        /// <summary>
+        /// Indicates if the draw function of this line manager expects HSL colors or RGB colors
+        /// </summary>
+        public override bool UseHSLColor
+        {
+            get { return true; }
+        }
 
         public Texture LumaTexture
         {
