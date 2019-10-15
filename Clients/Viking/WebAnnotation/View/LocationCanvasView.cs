@@ -357,9 +357,14 @@ namespace WebAnnotation.View
             throw new NotImplementedException();
         }
 
-        public virtual bool Intersects(GridVector2 Position)
+        public virtual bool Contains(GridVector2 Position)
         {
             return this.VolumeShapeAsRendered.Intersects(Position);
+        }
+
+        public virtual bool Intersects(GridLineSegment line)
+        {
+            return this.VolumeShapeAsRendered.Intersects(line);
         }
 
         public virtual bool Intersects(SqlGeometry shape)

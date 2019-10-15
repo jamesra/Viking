@@ -63,7 +63,9 @@ namespace WebAnnotation.ViewModel
 
         public abstract void RemoveLocations(IEnumerable<LocationObj> locations);
 
-        public abstract List<HitTestResult> GetAnnotationsAtPosition(GridVector2 WorldPosition);
+        public abstract List<HitTestResult> GetIntersectedAnnotations(GridVector2 WorldPosition);
+
+        public abstract List<HitTestResult> GetIntersectedAnnotations(GridLineSegment line);
 
         private KeyTracker<long> SubscribedLocations = new KeyTracker<long>();
 
@@ -304,12 +306,21 @@ namespace WebAnnotation.ViewModel
             return LocationsSearch.Delete(loc.ID, out RemovedID);
         }
         
-        public override List<HitTestResult> GetAnnotationsAtPosition(GridVector2 WorldPosition)
+        public override List<HitTestResult> GetIntersectedAnnotations(GridVector2 WorldPosition)
         { 
             IEnumerable<long> intersecting_IDs = LocationsSearch.Intersects(WorldPosition.ToRTreeRect(this.SectionNumber));
-            IEnumerable<LocationCanvasView> intersecting_locations = intersecting_IDs.Select(id => LocationViews[id]).Where(l => l.Intersects(WorldPosition));
+            IEnumerable<LocationCanvasView> intersecting_locations = intersecting_IDs.Select(id => LocationViews[id]).Where(l => l.Contains(WorldPosition));
 
             List<HitTestResult> listHitResults = intersecting_locations.Select(l => new HitTestResult(l, (int)l.Z, l.DistanceFromCenterNormalized(WorldPosition))).ToList();
+            return listHitResults;
+        }
+
+        public override List<HitTestResult> GetIntersectedAnnotations(GridLineSegment world_line)
+        {
+            IEnumerable<long> intersecting_IDs = LocationsSearch.Intersects(world_line.BoundingBox.ToRTreeRect(this.SectionNumber));
+            IEnumerable<LocationCanvasView> intersecting_locations = intersecting_IDs.Select(id => LocationViews[id]).Where(l => l.Intersects(world_line));
+
+            List<HitTestResult> listHitResults = intersecting_locations.Select(l => new HitTestResult(l, (int)l.Z, l.DistanceFromCenterNormalized(world_line.A))).ToList();
             return listHitResults;
         }
 
@@ -1006,7 +1017,13 @@ namespace WebAnnotation.ViewModel
         public ICollection<LocationCanvasView> GetLocations(GridVector2 point)
         {
             List<long> intersectingIDs = LocationViewSearch.Intersects(point.ToRTreeRect((float)this.Section.Number));
-            return intersectingIDs.Select(id => LocationViews[id]).Where(l => l.Intersects(point)).ToList();
+            return intersectingIDs.Select(id => LocationViews[id]).Where(l => l.Contains(point)).ToList();
+        }
+
+        public ICollection<LocationCanvasView> GetLocations(GridLineSegment line)
+        {
+            List<long> intersectingIDs = LocationViewSearch.Intersects(line.BoundingBox.ToRTreeRect((float)this.Section.Number));
+            return intersectingIDs.Select(id => LocationViews[id]).Where(l => l.Intersects(line)).ToList();
         }
 
         public ICollection<StructureLinkViewModelBase> GetStructureLinks()
@@ -1024,6 +1041,11 @@ namespace WebAnnotation.ViewModel
             return SectionStructureLinks.GetStructureLinks(point);
         }
 
+        public ICollection<StructureLinkViewModelBase> GetStructureLinks(GridLineSegment line)
+        {
+            return SectionStructureLinks.GetStructureLinks(line);
+        }
+
         /// <summary>
         /// Return all the line segments visible in the passed bounds
         /// </summary>
@@ -1034,12 +1056,17 @@ namespace WebAnnotation.ViewModel
             return SectionStructureLinks.VisibleStructureLinks(scene);
         }
 
-        public override List<HitTestResult> GetAnnotationsAtPosition(GridVector2 WorldPosition)
+        /// <summary>
+        /// Return a list of annotations that intersect the provided point
+        /// </summary>
+        /// <param name="WorldPosition"></param>
+        /// <returns></returns>
+        public override List<HitTestResult> GetIntersectedAnnotations(GridVector2 WorldPosition)
         {
             List<HitTestResult> listIntersectingObjects = new List<HitTestResult>();
             listIntersectingObjects.AddRange(GetStructureLinks(WorldPosition).Select(o => new HitTestResult(o, this.SectionNumber, o.DistanceFromCenterNormalized(WorldPosition))));
             listIntersectingObjects.AddRange(GetLocations(WorldPosition).Select(o => new HitTestResult(o, (int)o.Z, o.DistanceFromCenterNormalized(WorldPosition))));
-            listIntersectingObjects.AddRange(GetAdjacentAnnotationsAtPosition(WorldPosition));
+            listIntersectingObjects.AddRange(GetAdjacentIntersectedAnnotations(WorldPosition));
                         
             ICollection<LocationLinkView> listLocLinks = this.SectionLocationLinks.GetLocationLinks(WorldPosition);
 
@@ -1050,21 +1077,24 @@ namespace WebAnnotation.ViewModel
             return listIntersectingObjects;
         }
 
-        
-
-        public List<HitTestResult> GetAdjacentAnnotationsAtPosition(GridVector2 WorldPosition)
+        /// <summary>
+        /// Return a list of annotations on adjacent sections that intersect the provided point
+        /// </summary>
+        /// <param name="WorldPosition"></param>
+        /// <returns></returns>
+        public List<HitTestResult> GetAdjacentIntersectedAnnotations(GridVector2 WorldPosition)
         {
             List<HitTestResult> listAnnotations = new List<HitTestResult>();
 
             //            SortedDictionary<double, ICanvasView> dictNormDistanceToIntersectingObjects = new SortedDictionary<double, ICanvasView>();
             if (SectionAbove!= null)
             {
-                listAnnotations.AddRange(SectionAbove.GetAnnotationsAtPosition(WorldPosition));
+                listAnnotations.AddRange(SectionAbove.GetIntersectedAnnotations(WorldPosition));
             }
             
             if(SectionBelow != null)
             {
-                listAnnotations.AddRange(SectionBelow.GetAnnotationsAtPosition(WorldPosition));
+                listAnnotations.AddRange(SectionBelow.GetIntersectedAnnotations(WorldPosition));
             }
 
             //Remove any Locations that we know are overlapped.
@@ -1077,7 +1107,59 @@ namespace WebAnnotation.ViewModel
                 return !SectionLocationLinks.OverlappedAdjacentLocationIDs.Contains(loc.ID);
             }).ToList();
         }
-               
+
+        /// <summary>
+        /// Return a list of annotations that intersect the provided point.  HitTestResults are ordered by the distance from the origin of the line, A.
+        /// </summary>
+        /// <param name="WorldPosition"></param>
+        /// <returns></returns>
+        public override List<HitTestResult> GetIntersectedAnnotations(GridLineSegment world_line)
+        {
+            List<HitTestResult> listIntersectingObjects = new List<HitTestResult>();
+            listIntersectingObjects.AddRange(GetStructureLinks(world_line).Select(o => new HitTestResult(o, this.SectionNumber, o.Distance(world_line.A))));
+            listIntersectingObjects.AddRange(GetLocations(world_line).Select(o => new HitTestResult(o, (int)o.Z, o.DistanceFromCenterNormalized(world_line.A))));
+            listIntersectingObjects.AddRange(GetAdjacentIntersectedAnnotations(world_line));
+
+            ICollection<LocationLinkView> listLocLinks = this.SectionLocationLinks.GetLocationLinks(world_line);
+
+            listIntersectingObjects.AddRange(listLocLinks.Select(ll => new HitTestResult(ll, this.SectionNumber, ll.DistanceFromCenterNormalized(world_line.A))));
+
+            //Replace any container objects with the nested objects if the mouse is over a nested object
+
+            return listIntersectingObjects;
+        }
+
+        /// <summary>
+        /// Return a list of annotations on adjacent sections that intersect the provided point
+        /// </summary>
+        /// <param name="WorldPosition"></param>
+        /// <returns></returns>
+        public List<HitTestResult> GetAdjacentIntersectedAnnotations(GridLineSegment world_line)
+        {
+            List<HitTestResult> listAnnotations = new List<HitTestResult>();
+
+            //            SortedDictionary<double, ICanvasView> dictNormDistanceToIntersectingObjects = new SortedDictionary<double, ICanvasView>();
+            if (SectionAbove != null)
+            {
+                listAnnotations.AddRange(SectionAbove.GetIntersectedAnnotations(world_line));
+            }
+
+            if (SectionBelow != null)
+            {
+                listAnnotations.AddRange(SectionBelow.GetIntersectedAnnotations(world_line));
+            }
+
+            //Remove any Locations that we know are overlapped.
+            return listAnnotations.Where(o =>
+            {
+                LocationCanvasView loc = o.obj as LocationCanvasView;
+                if (loc == null)
+                    return true;
+
+                return !SectionLocationLinks.OverlappedAdjacentLocationIDs.Contains(loc.ID);
+            }).ToList();
+        }
+
         public ICollection<LocationCanvasView> AdjacentLocationsNotOverlappedInRegion(GridRectangle worldRect)
         { 
             SortedSet<LocationCanvasView> adjacentLocations = new SortedSet<LocationCanvasView>();

@@ -26,8 +26,7 @@ namespace MonogameTestbed
                                            cv_points[i + 1],
                                            LineRadius,
                                            color,
-                                           LineStyle.Standard,
-                                           false));
+                                           LineStyle.Standard));
             }
 
             LineViews = listLines;
@@ -46,8 +45,7 @@ namespace MonogameTestbed
                                            mesh.Vertices[e.P1].ToGridVector2(),
                                            LineRadius,
                                            color,
-                                           LineStyle.Standard,
-                                           false));
+                                           LineStyle.Standard));
             }
 
             return listLines;

@@ -46,11 +46,16 @@ namespace WebAnnotation.UI.Commands
           
         public static GridPolygon AddControlPoint(GridPolygon polygon, GridVector2 NewControlPointPosition)
         {
+            /*
             GridPolygon intersectingPolygon;
             polygon.NearestPolygonSegment(NewControlPointPosition, out intersectingPolygon);
             intersectingPolygon.AddVertex(NewControlPointPosition);
+            */
 
-            return polygon.Clone() as GridPolygon;
+            //return polygon.Clone() as GridPolygon;
+            GridPolygon newPoly = (GridPolygon)polygon.Clone();
+            newPoly.AddVertex(NewControlPointPosition);
+            return newPoly;
         }
 
         protected override void OnMouseMove(object sender, MouseEventArgs e)

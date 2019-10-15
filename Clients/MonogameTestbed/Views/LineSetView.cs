@@ -48,7 +48,7 @@ namespace MonogameTestbed
         {
             if (lines != null)
             {
-                LineViews = lines.Select(l => new LineView(l.A, l.B, LineRadius, color, LineStyle.Standard, false)).ToList();
+                LineViews = lines.Select(l => new LineView(l.A, l.B, LineRadius, color, LineStyle.Standard)).ToList();
 
             }
             else
@@ -65,7 +65,7 @@ namespace MonogameTestbed
             }
             else
             {
-                LineViews = polygon.ExteriorSegments.Select(l => new LineView(l.A, l.B, LineRadius, color, LineStyle.Standard, false)).ToList();
+                LineViews = polygon.ExteriorSegments.Select(l => new LineView(l.A, l.B, LineRadius, color, LineStyle.Standard)).ToList();
             }
         }
 
@@ -81,8 +81,7 @@ namespace MonogameTestbed
                                            mesh.Vertices[e.P1].ToGridVector2(),
                                            LineRadius,
                                            color,
-                                           LineStyle.Standard,
-                                           false));
+                                           LineStyle.Standard));
             }
 
             return listLines;

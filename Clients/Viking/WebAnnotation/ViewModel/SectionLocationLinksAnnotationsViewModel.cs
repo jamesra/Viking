@@ -149,7 +149,7 @@ namespace WebAnnotation.ViewModel
         public List<HitTestResult> GetAnnotationsAtPosition(GridVector2 WorldPosition)
         {
             IEnumerable<LocationLinkKey> intersecting_IDs = NonOverlappedLinksSearch.Intersects(WorldPosition.ToRTreeRect(this.Section.Number));
-            IEnumerable<LocationLinkView> intersecting_objs = intersecting_IDs.Select(id => LocationLinks[id]).Where(l => l.Intersects(WorldPosition));
+            IEnumerable<LocationLinkView> intersecting_objs = intersecting_IDs.Select(id => LocationLinks[id]).Where(l => l.Contains(WorldPosition));
 
             return new List<HitTestResult>(intersecting_objs.Select(l => new HitTestResult(l, this.Section.Number, l.DistanceFromCenterNormalized(WorldPosition)))).ToList();
         }
@@ -192,7 +192,19 @@ namespace WebAnnotation.ViewModel
                     return LocationLinks[id];
                 return null;
             }
-            ).Where(l => l != null && l.Intersects(point)).ToList();
+            ).Where(l => l != null && l.Contains(point)).ToList();
+        }
+
+        public ICollection<LocationLinkView> GetLocationLinks(GridLineSegment line)
+        {
+            List<LocationLinkKey> intersectingIDs = NonOverlappedLinksSearch.Intersects(line.BoundingBox.ToRTreeRect((float)this.Section.Number));
+            return intersectingIDs.Select(id =>
+            {
+                if (LocationLinks.ContainsKey(id))
+                    return LocationLinks[id];
+                return null;
+            }
+            ).Where(l => l != null && l.Intersects(line)).ToList();
         }
     }
 }

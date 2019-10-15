@@ -30,7 +30,15 @@ namespace SqlGeometryUtils
             GridVector2[] ExteriorRing = shape.ToPoints();
             ICollection<GridVector2[]> InteriorRings = shape.InteriorRingPoints();
 
-            return new GridPolygon(ExteriorRing, InteriorRings);
+
+            try
+            {
+                return new GridPolygon(ExteriorRing, InteriorRings);
+            }
+            catch (ArgumentException e)
+            {
+                return new GridPolygon(ExteriorRing.RemoveAdjacentDuplicates(), InteriorRings.Select(ir => ir.RemoveAdjacentDuplicates()));
+            }
         }
 
         public static SqlGeometry ToSqlGeometry(this GridPolygon shape)
@@ -134,7 +142,7 @@ namespace SqlGeometryUtils
         }
         
 
-        public static Microsoft.SqlServer.Types.SqlGeometry ToGeometryPoint(this GridVector2 p)
+        public static Microsoft.SqlServer.Types.SqlGeometry ToSqlGeometry(this GridVector2 p)
         {
             return Microsoft.SqlServer.Types.SqlGeometry.Point(Math.Round(p.X, RoundingDigits),
                                                                Math.Round(p.Y, RoundingDigits), 0);
@@ -190,18 +198,23 @@ namespace SqlGeometryUtils
             return geom.STAsBinary().Value;
         }
 
-        public static SqlGeometry ToPolyLine(this GridLineSegment line)
+        public static SqlGeometry ToSqlGeometry(this GridLineSegment line)
         {
-            return new GridVector2[] { line.A, line.B }.ToPolyLine();
+            return new GridVector2[] { line.A, line.B }.ToSqlGeometry();
         }
 
-        public static SqlGeometry ToPolyLine(this GridVector2[] points)
+        /// <summary>
+        /// Create a LineString from an array of points
+        /// </summary>
+        /// <param name="points"></param>
+        /// <returns></returns>
+        public static SqlGeometry ToSqlGeometry(this IReadOnlyList<GridVector2> points)
         {
             SqlGeometryBuilder builder = new SqlGeometryBuilder();
             builder.SetSrid(0);
             builder.BeginGeometry(OpenGisGeometryType.LineString);
             builder.BeginFigure(points[0].X, points[0].Y);
-            for (int i = 1; i < points.Length; i++)
+            for (int i = 1; i < points.Count; i++)
             {
                 builder.AddLine(points[i].X, points[i].Y);
             }
@@ -487,7 +500,15 @@ namespace SqlGeometryUtils
 
         public static bool Intersects(this SqlGeometry geometry, GridVector2 point)
         {
-            SqlGeometry p = point.ToGeometryPoint();
+            SqlGeometry p = point.ToSqlGeometry();
+            bool intersects = geometry.STIntersects(p).IsTrue;
+            return intersects;
+            //return geometry.STIntersects(point.ToGeometryPoint()).IsTrue;
+        }
+
+        public static bool Intersects(this SqlGeometry geometry, GridLineSegment line)
+        {
+            SqlGeometry p = line.ToSqlGeometry();
             bool intersects = geometry.STIntersects(p).IsTrue;
             return intersects;
             //return geometry.STIntersects(point.ToGeometryPoint()).IsTrue;
@@ -495,7 +516,7 @@ namespace SqlGeometryUtils
 
         public static double Distance(this SqlGeometry geometry, GridVector2 point)
         {
-            return geometry.STDistance(point.ToGeometryPoint()).Value;
+            return geometry.STDistance(point.ToSqlGeometry()).Value;
         }
 
         /// <summary>
@@ -626,9 +647,9 @@ namespace SqlGeometryUtils
             {
                 case SupportedGeometryType.POINT:
                     System.Diagnostics.Debug.Assert(points.Length == 1, "Only expect one point when converting to geometry point type");
-                    return ToGeometryPoint(points.First());
+                    return ToSqlGeometry(points.First());
                 case SupportedGeometryType.POLYLINE:
-                    return ToPolyLine(points);
+                    return ToSqlGeometry(points);
                 case SupportedGeometryType.CURVEPOLYGON:
                     return ToCircle(points);
                 case SupportedGeometryType.POLYGON:

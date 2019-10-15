@@ -252,7 +252,8 @@ namespace WebAnnotation.ViewModel
         }
 
         public abstract bool IsVisible(Scene scene);
-        public abstract bool Intersects(GridVector2 Position);
+        public abstract bool Contains(GridVector2 Position);
+        public abstract bool Intersects(GridLineSegment line);
         public abstract double Distance(GridVector2 Position);
         public abstract double DistanceFromCenterNormalized(GridVector2 Position);
         
@@ -339,7 +340,7 @@ namespace WebAnnotation.ViewModel
          
         public override double Distance(SqlGeometry shape)
         {
-            return lineSegment.ToPolyLine().STDistance(shape).Value;
+            return lineSegment.ToSqlGeometry().STDistance(shape).Value;
         }
 
         public override double DistanceFromCenterNormalized(GridVector2 Position)
@@ -347,9 +348,14 @@ namespace WebAnnotation.ViewModel
             return lineSegment.DistanceToPoint(Position) / (this.LineWidth / 2.0);
         }
 
-        public override bool Intersects(GridVector2 Position)
+        public override bool Contains(GridVector2 Position)
         {
             return lineSegment.DistanceToPoint(Position) < this.LineWidth;
+        }
+
+        public override bool Intersects(GridLineSegment line)
+        {
+            return lineSegment.Intersects(line);
         }
 
         public override bool IsVisible(Scene scene)
@@ -376,7 +382,7 @@ namespace WebAnnotation.ViewModel
             GridVector2 targetVolumePosition = mapper.SectionToVolume(target.Position);
         
             lineView = new LineView(sourceVolumePosition, targetVolumePosition, Math.Min(source.Radius, target.Radius), DefaultColor,
-                                    link.Bidirectional ? LineStyle.AnimatedBidirectional : LineStyle.AnimatedLinear, false);
+                                    link.Bidirectional ? LineStyle.AnimatedBidirectional : LineStyle.AnimatedLinear);
             lineSegment = new GridLineSegment(sourceVolumePosition, targetVolumePosition);
         }
 
@@ -459,7 +465,7 @@ namespace WebAnnotation.ViewModel
 
         public override double Distance(SqlGeometry shape)
         {
-            return lineSegments.Select(l => l.ToPolyLine().STDistance(shape).Value).Min();
+            return lineSegments.Select(l => l.ToSqlGeometry().STDistance(shape).Value).Min();
         }
 
         public override double DistanceFromCenterNormalized(GridVector2 Position)
@@ -467,9 +473,14 @@ namespace WebAnnotation.ViewModel
             return lineSegments.Select(l => l.DistanceToPoint(Position) / (this.LineWidth / 2.0)).Min();
         }
 
-        public override bool Intersects(GridVector2 Position)
+        public override bool Contains(GridVector2 Position)
         {
             return lineSegments.Any(l => l.DistanceToPoint(Position) < this.LineWidth);
+        }
+
+        public override bool Intersects(GridLineSegment line)
+        {
+            return lineSegments.Any(l => l.Intersects(line));
         }
 
         public override bool IsVisible(Scene scene)

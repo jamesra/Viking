@@ -32,7 +32,7 @@ namespace SqlGeometryUtilsTest
             GridVector2[] points = new GridVector2[] { new GridVector2(-10,0),
                                                        new GridVector2(0,0),
                                                        new GridVector2(10,0)};
-            SqlGeometry line = Extensions.ToPolyLine(points);
+            SqlGeometry line = Extensions.ToSqlGeometry(points);
             TestTranslateMoveGeometry(line);
         }
 
@@ -67,7 +67,7 @@ namespace SqlGeometryUtilsTest
         public void TestTranslatePointGeometry()
         {
             GridVector2 point = new GridVector2(0,0);
-            SqlGeometry p = point.ToGeometryPoint();
+            SqlGeometry p = point.ToSqlGeometry();
             TestTranslateMoveGeometry(p);
         }
 

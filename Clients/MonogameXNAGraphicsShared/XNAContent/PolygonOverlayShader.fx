@@ -63,6 +63,11 @@ technique ColorPolygonOverBackgroundLumaEffect
 {
     pass
     {
+		CullMode = CW;
+		AlphaBlendEnable = true;
+		SrcBlend = SrcAlpha;
+		DestBlend = InvSrcAlpha;
+		BlendOp = Add;
         VertexShader = compile vs_3_0 PolygonVertexShaderFunction();
         PixelShader = compile ps_3_0 ColorPolygonOverBackgroundLumaPixelShaderFunction();
     }

@@ -654,15 +654,41 @@ namespace Geometry
             return new GridRectangle(minX, maxX, minY, maxY);
         }
 
-        public static double MinDistanceBetweenPoints(this GridVector2[] points)
+        /// <summary>
+        /// Given a set of points, return the closest distance between any two points
+        /// </summary>
+        /// <param name="points"></param>
+        /// <returns></returns>
+        public static double MinDistanceBetweenAnyPoints(this IReadOnlyList<GridVector2> points)
         {
             double minVal = double.MaxValue;
-            for (int i = 0; i < points.Length; i++)
+            for (int i = 0; i < points.Count; i++)
             {
-                for (int j = i + 1; j < points.Length; j++)
+                for (int j = i + 1; j < points.Count; j++)
                 {
                     if (points[i] != points[j])
                         minVal = Math.Min(minVal, GridVector2.Distance(points[i], points[j]));
+                }
+            }
+
+            return minVal;
+        }
+
+        /// <summary>
+        /// Given a set of points, return the closest distance between any two points
+        /// </summary>
+        /// <param name="points"></param>
+        /// <returns></returns>
+        public static double MinDistanceBetweenSequentialPoints(this IReadOnlyList<GridVector2> points, out int FirstIndex)
+        {
+            FirstIndex = points.Count;
+            double minVal = double.MaxValue;
+            for (int i = 0; i < points.Count-1; i++)
+            {
+                if (points[i] != points[i + 1])
+                {
+                    minVal = Math.Min(minVal, GridVector2.Distance(points[i], points[i + 1]));
+                    FirstIndex = i;
                 }
             }
 

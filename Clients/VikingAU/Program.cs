@@ -471,7 +471,7 @@ namespace Viking.AU
                 case SupportedGeometryType.POLYGON:
                     if(loc.TypeCode == LocationType.CLOSEDCURVE || loc.TypeCode == LocationType.POLYLINE)
                     {
-                        SqlGeometry newShape = loc.MosaicShape.ToPoints().ToPolyLine();
+                        SqlGeometry newShape = loc.MosaicShape.ToPoints().ToSqlGeometry();
                         if (newShape.STIsValid().IsTrue)
                         {
                             loc.MosaicShape = newShape;

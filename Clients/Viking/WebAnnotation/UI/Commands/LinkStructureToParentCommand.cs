@@ -122,6 +122,10 @@ namespace WebAnnotation.UI.Commands
             {
                 nearestParent = Store.Locations[nearest.ID];
             }
+            else
+            {
+                nearestParent = null; 
+            }
            
             base.OnMouseMove(sender, e);
 

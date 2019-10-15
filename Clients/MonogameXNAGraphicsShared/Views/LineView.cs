@@ -9,10 +9,8 @@ namespace VikingXNAGraphics
     public class LineView : IColorView, IViewPosition2D
     {
         public static double time = 0;
-        protected RoundLineCode.RoundLine line;
+        internal RoundLineCode.RoundLine line;
         public LineStyle Style;
-
-        public bool UseHSLColor = false; 
 
         public GridVector2 Source
         {
@@ -27,6 +25,31 @@ namespace VikingXNAGraphics
         }
 
         public float LineWidth;
+
+
+        private float? _DashLength;
+        public float? DashLength
+        {
+            get
+            {
+                //Only return a DashLength for Styles that use it
+                switch (this.Style)
+                {
+                    case LineStyle.Ladder:
+                    case LineStyle.Dashed:
+                        return _DashLength;
+                    default:
+                        return new float?();
+                }
+            }
+            set
+            {
+                if (value != _DashLength)
+                {
+                    _DashLength = value;
+                }
+            }
+        }
 
         protected Microsoft.Xna.Framework.Color _Color;
         public Microsoft.Xna.Framework.Color Color
@@ -62,16 +85,15 @@ namespace VikingXNAGraphics
 
         protected Microsoft.Xna.Framework.Color _HSLColor;
 
-        public LineView(GridVector2 source, GridVector2 destination, double width, Microsoft.Xna.Framework.Color color, LineStyle lineStyle, bool UseHSLColor)
+        public LineView(GridVector2 source, GridVector2 destination, double width, Microsoft.Xna.Framework.Color color, LineStyle lineStyle)
         {
             line = new RoundLineCode.RoundLine(source.ToXNAVector2(), destination.ToXNAVector2());
             this.LineWidth = (float)width;
             this.Color = color; 
             this.Style = lineStyle;
-            this.UseHSLColor = UseHSLColor;
         }
 
-        public LineView(GridLineSegment line, double width, Microsoft.Xna.Framework.Color color, LineStyle lineStyle, bool UseHSLColor) : this(line.A, line.B, width, color, lineStyle, UseHSLColor)
+        public LineView(GridLineSegment line, double width, Microsoft.Xna.Framework.Color color, LineStyle lineStyle) : this(line.A, line.B, width, color, lineStyle)
         {
         }
 
@@ -80,15 +102,23 @@ namespace VikingXNAGraphics
                           RoundLineCode.RoundLineManager lineManager,
                           LineView[] listToDraw)
         {
-            var techniqueGroups = listToDraw.GroupBy(l => l.Style);
-            foreach (var group in techniqueGroups)
+            bool UseHSLColor = lineManager.UseHSLColor;
+
+            var renderGroups = listToDraw.GroupBy(l => new { color = UseHSLColor ? l._HSLColor : l.Color, style = l.Style, width = l.LineWidth, dashLength = l.DashLength });
+
+            foreach(var renderGroup in renderGroups)
             {
-                lineManager.Draw(group.Select(l => l.line).ToArray(),
-                             group.Select(l => l.LineWidth / 2.0f).ToArray(),
-                             group.Select(l => l.UseHSLColor ? l._HSLColor : l.Color).ToArray(),
-                             scene.Camera.View * scene.Projection,
-                             (float)(DateTime.UtcNow.Millisecond / 1000.0),
-                             group.Key.ToString());
+                if(renderGroup.Key.dashLength.HasValue)
+                {
+                    lineManager.DashLength = renderGroup.Key.dashLength.Value;
+                }
+
+                lineManager.Draw(renderGroup.Select(rg => rg.line).ToArray(),
+                                 renderGroup.Key.width / 2.0f,
+                                 renderGroup.Key.color,
+                                 scene.Camera.View * scene.Projection,
+                                 (float)(DateTime.UtcNow.Millisecond / 1000.0),
+                                 renderGroup.Key.style.ToString());
             }
         }
     }

@@ -17,6 +17,7 @@ namespace VikingXNAGraphics
         AnimatedBidirectional,
         AnimatedRadial,
         Ladder,
+        Dashed,
         Tubular,
         HalfTube,
         Glow,

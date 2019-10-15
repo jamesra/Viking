@@ -90,9 +90,14 @@ namespace WebAnnotation.View
             return this.circleView.IsVisible(scene);
         }
 
-        public bool Intersects(GridVector2 Position)
+        public bool Contains(GridVector2 Position)
         {
             return Circle.Contains(Position);
+        }
+
+        public bool Intersects(GridLineSegment line)
+        {
+            return Circle.Intersects(line);
         }
 
         public double Distance(GridVector2 Position)

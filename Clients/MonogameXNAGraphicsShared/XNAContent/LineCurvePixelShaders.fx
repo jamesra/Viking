@@ -3,47 +3,41 @@
 float time;
 float4 lineColor;
 float blurThreshold = 0.95;
+float dashLength = 1.5;
 
-struct PS_Output
+#include "LineCurvePixelShaderShared.fx"
+
+
+
+
+Color_Depth_Output MyPSStandard(float3 polar : TEXCOORD0) 
 {
-	float4 Color : COLOR;
-	float Depth : DEPTH;
-};
-
-uniform const texture Texture;
-
-uniform const sampler TextureSampler : register(s1) = sampler_state
-{
-	Texture = (Texture);
-	MipFilter = LINEAR;
-	MinFilter = LINEAR;
-	MagFilter = LINEAR;
-	AddressU = CLAMP;
-	AddressV = CLAMP;
-	AddressW = CLAMP;
-}; 
-
-float4 MyPSStandard(float3 polar : TEXCOORD0) : COLOR0
-{
+	Color_Depth_Output output;
 	float4 finalColor;
 	finalColor.rgb = lineColor.rgb;
 	finalColor.a = lineColor.a * BlurEdge(polar.x, blurThreshold);
-	return finalColor;
+
+	output.Color = finalColor;
+	output.Depth = polar.x;
+	return output;
 }
 
-float4 MyPSAlphaGradient(float3 polar : TEXCOORD0) : COLOR0
+Color_Depth_Output MyPSAlphaGradient(float3 polar : TEXCOORD0) 
 {
+	Color_Depth_Output output;
 	float4 finalColor;
 	finalColor.rgb = lineColor.rgb;
 	
 	finalColor.a = lineColor.a *  ((polar.z * 2) > 1 ? ((1 - polar.z) * 2) : (polar.z * 2)) * BlurEdge(polar.x, blurThreshold);
 
-	return finalColor;
+	output.Color = finalColor;
+	output.Depth = polar.x;
+	return output;
 }
 
-PS_Output MyPSAlphaDepthGradient(float3 polar : TEXCOORD0)
+Color_Depth_Output MyPSAlphaDepthGradient(float3 polar : TEXCOORD0)
 {
-	PS_Output output;
+	Color_Depth_Output output;
 
 	float4 finalColor;
 	finalColor.r = (polar.z * 2) > 1 ? ((1 - polar.z) * 2) : (polar.z * 2);
@@ -59,15 +53,17 @@ PS_Output MyPSAlphaDepthGradient(float3 polar : TEXCOORD0)
 	return output;
 }
 
-float4 MyPSNoBlur() : COLOR0
+Color_Depth_Output MyPSNoBlur(float3 polar : TEXCOORD0)
 {
-	float4 finalColor = lineColor;
-	return finalColor;
+	Color_Depth_Output output;
+	output.Color = lineColor;
+	output.Depth = polar.x;
+	return output;
 }
 
-PS_Output MyPSAnimatedBidirectional(float3 polar : TEXCOORD0, float2 posModelSpace : TEXCOORD1)
+Color_Depth_Output MyPSAnimatedBidirectional(float3 polar : TEXCOORD0, float2 posModelSpace : TEXCOORD1)
 {
-	PS_Output output;
+	Color_Depth_Output output;
 	float4 finalColor;
 	float bandWidth = 100;
 	float Hz = 1;
@@ -82,16 +78,16 @@ PS_Output MyPSAnimatedBidirectional(float3 polar : TEXCOORD0, float2 posModelSpa
 
 	output.Color = finalColor;
 	float depth = (polar.z * 2) > 1 ? 1 - ((1 - polar.z) * 2) : 1 - (polar.z * 2);
-	output.Depth = 0;//(polar.z * 2) > 1 ? 1-((1-polar.z)*2) : 1-(polar.z * 2);
+	output.Depth = polar.x;//(polar.z * 2) > 1 ? 1-((1-polar.z)*2) : 1-(polar.z * 2);
 	output.Color.a = (1 - depth) * finalColor.a;
 	clip(output.Color.a);
 
 	return output;
 }
 
-PS_Output MyPSAnimatedLinear(float3 polar : TEXCOORD0, float2 posModelSpace : TEXCOORD1)
+Color_Depth_Output MyPSAnimatedLinear(float3 polar : TEXCOORD0, float2 posModelSpace : TEXCOORD1)
 {
-	PS_Output output;
+	Color_Depth_Output output;
 	float4 finalColor;
 	float bandWidth = 100;
 	float Hz = 2;
@@ -107,7 +103,7 @@ PS_Output MyPSAnimatedLinear(float3 polar : TEXCOORD0, float2 posModelSpace : TE
 
 	output.Color = finalColor;
 	float depth = (polar.z * 2) > 1 ? 1 - ((1 - polar.z) * 2) : 1 - (polar.z * 2);
-	output.Depth = 0; //depth;
+	output.Depth = polar.x; //depth;
 
 					  //output.Color.a = lineColor.a * (1-depth) * modulation * (1-polar.x);  //This version stops animation at line origin
 	output.Color.a = lineColor.a * modulation *(1 - polar.x);
@@ -115,33 +111,55 @@ PS_Output MyPSAnimatedLinear(float3 polar : TEXCOORD0, float2 posModelSpace : TE
 }
 
 
-float4 MyPSAnimatedRadial(float3 polar : TEXCOORD0) : COLOR0
+Color_Depth_Output MyPSAnimatedRadial(float3 polar : TEXCOORD0)
 {
+	Color_Depth_Output output;
 	float4 finalColor;
 	float modulation = sin((-polar.x * 0.1 + time * 0.05) * 20 * 3.14159) * 0.5 + 0.5;
 	finalColor.rgb = lineColor.rgb * modulation;
 	finalColor.a = lineColor.a * BlurEdge(polar.x, blurThreshold);
-	return finalColor;
+	output.Color = finalColor;
+	output.Depth = polar.x;
+	return output;
 }
 
-float4 MyPSLadder(float3 polar : TEXCOORD0, float2 posModelSpace : TEXCOORD1) : COLOR0
+Color_Depth_Output MyPSLadder(float3 polar : TEXCOORD0, float2 posModelSpace : TEXCOORD1)
 {
-	float bandWidth = 1.5;
+	Color_Depth_Output output;
 	float4 finalColor;
-	finalColor.rgb = lineColor.rgb;
 
 	float rho = polar.x;
 
-	float modulation = sin(((-posModelSpace.x / bandWidth)) * 3.14159);
+	float modulation = sin(((-posModelSpace.x / dashLength)) * 3.14159);
 	clip(modulation <= 0 ? -1 : 1); //Adds sharp boundary to arrows
-	  
-	finalColor.a = lineColor.a * modulation;
 
-	return finalColor;
+	finalColor.rgb = lineColor.rgb;
+	finalColor.a = lineColor.a * modulation;
+	output.Color = finalColor;
+	output.Depth = polar.x;
+	return output;
 }
 
-float4 MyPSModern(float3 polar : TEXCOORD0) : COLOR0
+/*Dashed doesn't work as expected because each line is independent.  We have no way of measuring length along a polyline*/
+Color_Depth_Output MyPSDashed(float3 polar : TEXCOORD0, float2 posModelSpace : TEXCOORD1)
 {
+	Color_Depth_Output output; 
+	float4 finalColor; 
+
+	float rho = polar.x;
+
+	float modulation = sin(((-posModelSpace.x / dashLength)) * 3.14159);
+	clip(modulation <= 0 ? -1 : 1); //Adds sharp boundary to arrows
+	 
+	output.Color = lineColor;
+	output.Depth = polar.x;
+	return output;
+}
+
+
+Color_Depth_Output MyPSModern(float3 polar : TEXCOORD0)
+{
+	Color_Depth_Output output;
 	float4 finalColor;
 	finalColor.rgb = lineColor.rgb;
 
@@ -162,21 +180,26 @@ float4 MyPSModern(float3 polar : TEXCOORD0) : COLOR0
 
 	finalColor.a = lineColor.a * a;
 
-	return finalColor;
+	output.Color = finalColor;
+	output.Depth = polar.x;
+	return output;
 }
 
 
-float4 MyPSTubular(float3 polar : TEXCOORD0) : COLOR0
+Color_Depth_Output MyPSTubular(float3 polar : TEXCOORD0) 
 {
+	Color_Depth_Output output;
 	float4 finalColor = lineColor;
 	finalColor.a *= polar.x;
 	finalColor.a = finalColor.a * BlurEdge(polar.x, blurThreshold);
-	return finalColor;
+	output.Color = finalColor;
+	output.Depth = polar.x;
+	return output;
 }
 
-PS_Output MyPSHalfTubular(float3 polar : TEXCOORD0)
+Color_Depth_Output MyPSHalfTubular(float3 polar : TEXCOORD0)
 {
-	PS_Output output;
+	Color_Depth_Output output;
 	float4 finalColor = lineColor;
 	//finalColor.a *= polar.x;
 
@@ -214,16 +237,20 @@ PS_Output MyPSHalfTubular(float3 polar : TEXCOORD0)
 }
 
 
-float4 MyPSGlow(float3 polar : TEXCOORD0) : COLOR0
+Color_Depth_Output MyPSGlow(float3 polar : TEXCOORD0)
 {
-	float4 finalColor = lineColor;
-	finalColor.a *= 1 - polar.x;
-	return finalColor;
+	Color_Depth_Output output;
+	output.Color = lineColor;
+	output.Color.a *= 1 - polar.x;
+	output.Depth = polar.x;
+	return output;
 }
 
-float4 MyPSTextured(float3 tex : TEXCOORD2) : COLOR0
+Color_Depth_Output MyPSTextured(float3 polar : TEXCOORD0, float3 tex : TEXCOORD2)
 {
-	float4 foregroundColor = tex2D(TextureSampler, tex);
-	clip(foregroundColor.a <= 0 ? -1 : 1);
-	return foregroundColor;
+	Color_Depth_Output output;
+	output.Color = tex2D(ForegroundTextureSampler, tex);
+	clip(output.Color.a <= 0 ? -1 : 1);
+	output.Depth = polar.x;
+	return output;
 }

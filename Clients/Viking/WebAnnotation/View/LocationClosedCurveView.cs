@@ -63,7 +63,7 @@ namespace WebAnnotation.View
         {
             _ControlPointRadius = Global.DefaultClosedLineWidth / 2.0;
             Color color = obj.Parent == null ? Color.Gray.SetAlpha(0.5f) : obj.Parent.Type.Color.ToXNAColor(0.5f);
-            curveView = new CurveView(this.VolumeControlPoints, color, true, lineWidth: this.VolumeControlPoints.MinDistanceBetweenPoints(), controlPointRadius: ControlPointRadius, lineStyle: LineStyle.HalfTube, numInterpolations: NumInterpolationPoints);
+            curveView = new CurveView(this.VolumeControlPoints, color, true, lineWidth: this.VolumeControlPoints.MinDistanceBetweenAnyPoints(), controlPointRadius: ControlPointRadius, lineStyle: LineStyle.HalfTube, numInterpolations: NumInterpolationPoints);
             CreateLabelObjects();
         }
 
@@ -166,17 +166,28 @@ namespace WebAnnotation.View
             CurveView.Draw(device, scene, lineManager, basicEffect, overlayEffect, 0, listToDraw.Select(l => l.curveView).ToArray());
         }
 
-        public override bool Intersects(GridVector2 Position)
+        public override bool Contains(GridVector2 Position)
         {
             if (this.VolumeControlPoints.Any(p => new GridCircle(p, lineWidth / 2.0).Contains(Position)))
                 return true;
 
-            if (this.OverlappedLinkView != null && this.OverlappedLinkView.Intersects(Position))
+            if (this.OverlappedLinkView != null && this.OverlappedLinkView.Contains(Position))
                 return true;
             
-            return base.Intersects(Position);
+            return base.Contains(Position);
         }
-        
+
+        public override bool Intersects(GridLineSegment line)
+        {
+            if (this.VolumeControlPoints.Any(p => new GridCircle(p, lineWidth / 2.0).Intersects(line)))
+                return true;
+
+            if (this.OverlappedLinkView != null && this.OverlappedLinkView.Intersects(line))
+                return true;
+
+            return base.Intersects(line);
+        }
+
         public void DrawLabel(SpriteBatch spriteBatch, SpriteFont font, Scene scene)
         {
             if (OverlappedLinkView != null)
@@ -195,7 +206,7 @@ namespace WebAnnotation.View
                     return containedAnnotation;
             }
 
-            if (this.Intersects(position))
+            if (this.Contains(position))
                 return this;
 
             return null;

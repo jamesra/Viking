@@ -144,7 +144,7 @@ namespace RoundCurve
                 new VertexElement(5*sizeof(float), VertexElementFormat.Single, VertexElementUsage.TextureCoordinate, 0),
             };
     }
-    
+
 
     /// <summary>
     /// Class to handle drawing a list of RoundLines.
@@ -161,6 +161,7 @@ namespace RoundCurve
         protected EffectParameter lineColorParameter;
         protected EffectParameter blurThresholdParameter;
         protected EffectParameter textureParameter;
+        protected EffectParameter dashLengthParameter;
         protected EffectParameter minTextureCoordinateParameter; //The texture coordinate at the start of the curve
         protected EffectParameter maxTextureCoordinateParameter; //The texture coordinate at the end of the curve
         protected VertexBuffer vb;
@@ -177,6 +178,17 @@ namespace RoundCurve
         //public int NumLinesDrawn;
         public float DefaultBlurThreshold = 0.97f;
 
+        public float DashLength
+        {
+            get
+            {
+                return this.dashLengthParameter.GetValueSingle();
+            }
+            set
+            {
+                this.dashLengthParameter.SetValue(value);
+            }
+        }
 
         /// <summary>
         /// Indicates if the draw function of this line manager expects HSL colors or RGB colors
@@ -204,6 +216,7 @@ namespace RoundCurve
             blurThresholdParameter = e.Parameters["blurThreshold"];
             segmentDataParamter = e.Parameters["CurveSegmentData"];
             textureParameter = e.Parameters["Texture"];
+            dashLengthParameter = e.Parameters["dashLength"];
             lineTotalLengthParameter = e.Parameters["curveTotalLength"];
             minTextureCoordinateParameter = e.Parameters["texture_x_start"];
             maxTextureCoordinateParameter = e.Parameters["texture_x_end"];
@@ -387,7 +400,6 @@ namespace RoundCurve
             ib = new IndexBuffer(device, IndexElementSize.SixteenBits, numIndices * 2, BufferUsage.None);
             ib.SetData<short>(indices);
         }
-
 
 
         /// <summary>

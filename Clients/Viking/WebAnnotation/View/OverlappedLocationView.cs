@@ -84,9 +84,14 @@ namespace WebAnnotation.View
             return label.IsVisible(scene);
         }
 
-        public override bool Intersects(GridVector2 Position)
+        public override bool Contains(GridVector2 Position)
         {
             return Circle.Contains(Position);
+        }
+
+        public override bool Intersects(GridLineSegment line)
+        {
+            return Circle.Intersects(line);
         }
 
         public override bool Intersects(SqlGeometry shape)

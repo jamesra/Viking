@@ -512,10 +512,9 @@ namespace WebAnnotation.View
                         SqlGeometry VolumeShape;
                         //SqlGeometry MosaicShape = TransformMosaicShapeToSection(Parent.Volume, loc.MosaicShape.MoveTo(MosaicPosition), (int)loc.Z, Parent.Section.Number, out VolumeShape);
 
-                        return new RetraceAndReplacePathCommand(Parent,
+                        var retracecmd = new RetraceAndReplacePathCommand(Parent,
                                                                  loc.MosaicShape.ToPolygon(),
                                                                  loc.Parent.Type.Color.ToXNAColor(0.5f),
-                                                                 volumePosition, 
                                                                  loc.Width.HasValue ? loc.Width.Value : Global.DefaultClosedLineWidth,
                                                                  (sender, MosaicPolygon) =>
                                                                  {
@@ -536,6 +535,8 @@ namespace WebAnnotation.View
 
                                                                  }
                                                                  );
+                        retracecmd.InitPath(new GridVector2[] { volumePosition });
+                        return retracecmd;
                     }
 
                 default:

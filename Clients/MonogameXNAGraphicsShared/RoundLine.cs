@@ -150,6 +150,7 @@ namespace RoundLineCode
         protected EffectParameter lineColorParameter;
         protected EffectParameter blurThresholdParameter;
         protected EffectParameter textureParameter;
+        protected EffectParameter dashLengthParameter;
         protected EffectParameter minTextureCoordinateParameter; //The texture coordinate at the start of the curve
         protected EffectParameter maxTextureCoordinateParameter; //The texture coordinate at the end of the curve
         protected VertexBuffer vb;
@@ -166,6 +167,18 @@ namespace RoundLineCode
         //public int NumLinesDrawn;
         public float DefaultBlurThreshold = 0.97f;
 
+        public float DashLength
+        {
+            get
+            {
+                return this.dashLengthParameter.GetValueSingle();
+            }
+            set
+            {
+                this.dashLengthParameter.SetValue(value);
+            }
+        }
+
         /// <summary>
         /// Indicates if the draw function of this line manager expects HSL colors or RGB colors
         /// </summary>
@@ -173,7 +186,6 @@ namespace RoundLineCode
         {
             get { return false; }
         }
-
 
         public virtual void Init(GraphicsDevice device, ContentManager content)
         {
@@ -205,6 +217,7 @@ namespace RoundLineCode
             lineColorParameter = e.Parameters["lineColor"];
             blurThresholdParameter = e.Parameters["blurThreshold"];
             textureParameter = e.Parameters["Texture"];
+            dashLengthParameter = e.Parameters["dashLength"];
             minTextureCoordinateParameter = e.Parameters["texture_x_min"];
             maxTextureCoordinateParameter = e.Parameters["texture_x_max"];
         }
@@ -225,11 +238,6 @@ namespace RoundLineCode
         {
             return TechniqueNames.Contains(name);
         }
-
-        
-
-
-
 
         /// <summary>
         /// Create a mesh for a RoundLine.
@@ -361,7 +369,6 @@ namespace RoundLineCode
             ib = new IndexBuffer(device, IndexElementSize.SixteenBits, numIndices * 2, BufferUsage.None);
             ib.SetData<short>(indices);
         }
-
 
 
         /// <summary>

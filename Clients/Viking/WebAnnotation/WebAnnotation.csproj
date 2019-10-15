@@ -125,8 +125,8 @@
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
     </Reference>
     <Reference Include="System.Drawing" />
-    <Reference Include="System.Net.Http, Version=4.1.1.2, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-      <HintPath>..\..\..\Packages\System.Net.Http.4.3.3\lib\net46\System.Net.Http.dll</HintPath>
+    <Reference Include="System.Net.Http, Version=4.1.1.3, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\..\..\Packages\System.Net.Http.4.3.4\lib\net46\System.Net.Http.dll</HintPath>
     </Reference>
     <Reference Include="System.Numerics" />
     <Reference Include="System.Runtime.Serialization">
@@ -191,7 +191,6 @@
     <Compile Include="UI\Commands\AdjustControlPointCommand.cs" />
     <Compile Include="UI\Commands\AdjustPolygonVertexCommand.cs" />
     <Compile Include="UI\Commands\CutHoleCommand.cs" />
-    <Compile Include="UI\Commands\PenInputHelper.cs" />
     <Compile Include="UI\Commands\PlaceCurvesWithPenCommands.cs" />
     <Compile Include="UI\Commands\PlaceOpenCurveCommand.cs" />
     <Compile Include="UI\Commands\RemovePolygonHoleCommand.cs" />

@@ -76,8 +76,8 @@ namespace VikingXNAGraphics
 
             //Draw triangles from each vertex on source to each vertex on target
             List<LineView> listLines = new List<LineView>(2);
-            LineView lineA = new LineView(source.First(), target.First(), linewidth, color, style, false);
-            LineView lineB = new LineView(source.Last(), target.Last(), linewidth, color, style, false);
+            LineView lineA = new LineView(source.First(), target.First(), linewidth, color, style);
+            LineView lineB = new LineView(source.Last(), target.Last(), linewidth, color, style);
 
             listLines.Add(lineA);
             listLines.Add(lineB);

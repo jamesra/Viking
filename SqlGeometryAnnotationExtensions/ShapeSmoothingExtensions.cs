@@ -21,13 +21,13 @@ namespace Viking.VolumeModel
             switch (shapeType)
             {
                 case WebAnnotationModel.LocationType.POINT:
-                    return points[0].ToGeometryPoint();
+                    return points[0].ToSqlGeometry();
                 case WebAnnotationModel.LocationType.CIRCLE:
                     return points.ToCircle();
                 case WebAnnotationModel.LocationType.OPENCURVE:
                 case WebAnnotationModel.LocationType.POLYLINE:
                 case WebAnnotationModel.LocationType.CLOSEDCURVE:
-                    return points.ToPolyLine();
+                    return points.ToSqlGeometry();
                 case WebAnnotationModel.LocationType.POLYGON:
                 case WebAnnotationModel.LocationType.CURVEPOLYGON:
                     return points.ToPolygon(innerRingPoints);
@@ -43,17 +43,17 @@ namespace Viking.VolumeModel
             switch (shapeType)
             {
                 case WebAnnotationModel.LocationType.POINT:
-                    return points[0].ToGeometryPoint();
+                    return points[0].ToSqlGeometry();
                 case WebAnnotationModel.LocationType.CIRCLE:
                     return points.ToCircle();
                 case WebAnnotationModel.LocationType.OPENCURVE:
-                    return points.CalculateCurvePoints(ShapeSmoothingExtensions.NumOpenCurveInterpolationPoints, false).ToArray().ToPolyLine();
+                    return points.CalculateCurvePoints(ShapeSmoothingExtensions.NumOpenCurveInterpolationPoints, false).ToArray().ToSqlGeometry();
                 case WebAnnotationModel.LocationType.POLYLINE:
-                    return points.ToPolyLine();
+                    return points.ToSqlGeometry();
                 case WebAnnotationModel.LocationType.POLYGON:
                     return points.ToPolygon(shape.InteriorRingPoints());
                 case WebAnnotationModel.LocationType.CLOSEDCURVE:
-                    return points.CalculateCurvePoints(ShapeSmoothingExtensions.NumClosedCurveInterpolationPoints, true).ToArray().ToPolyLine();
+                    return points.CalculateCurvePoints(ShapeSmoothingExtensions.NumClosedCurveInterpolationPoints, true).ToArray().ToSqlGeometry();
                 case WebAnnotationModel.LocationType.CURVEPOLYGON:
                     List<GridVector2[]> curved_innerRingPoints = InnerRingPointsToCurvedRingPoints(shape.InteriorRingPoints());
                     GridVector2[] curved_outerRing = points.CalculateCurvePoints(ShapeSmoothingExtensions.NumClosedCurveInterpolationPoints, true).ToArray();
@@ -70,15 +70,15 @@ namespace Viking.VolumeModel
             switch (shapeType)
             {
                 case WebAnnotationModel.LocationType.POINT:
-                    return points[0].ToGeometryPoint();
+                    return points[0].ToSqlGeometry();
                 case WebAnnotationModel.LocationType.CIRCLE:
                     return points.ToCircle();
                 case WebAnnotationModel.LocationType.OPENCURVE:
-                    return points.CalculateCurvePoints(ShapeSmoothingExtensions.NumOpenCurveInterpolationPoints, false).ToArray().ToPolyLine();
+                    return points.CalculateCurvePoints(ShapeSmoothingExtensions.NumOpenCurveInterpolationPoints, false).ToArray().ToSqlGeometry();
                 case WebAnnotationModel.LocationType.CLOSEDCURVE:
-                    return points.CalculateCurvePoints(ShapeSmoothingExtensions.NumClosedCurveInterpolationPoints, true).ToArray().ToPolyLine();
+                    return points.CalculateCurvePoints(ShapeSmoothingExtensions.NumClosedCurveInterpolationPoints, true).ToArray().ToSqlGeometry();
                 case WebAnnotationModel.LocationType.POLYLINE:
-                    return points.ToPolyLine();
+                    return points.ToSqlGeometry();
                 case WebAnnotationModel.LocationType.POLYGON:
                     return points.ToPolygon(innerRingPoints);
                 case WebAnnotationModel.LocationType.CURVEPOLYGON:

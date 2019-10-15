@@ -116,7 +116,7 @@ namespace VikingXNAGraphics
                 }
             }
             
-            //TextureCircleView.RestoreGraphicsDevice(device, basicEffect);
+            TextureCircleView.RestoreGraphicsDevice(device, basicEffect);
         }
     }
      
@@ -312,8 +312,8 @@ namespace VikingXNAGraphics
 
         public static void SetupGraphicsDevice(GraphicsDevice device, BasicEffect basicEffect, AnnotationOverBackgroundLumaEffect overlayEffect)
         {
-            /*DeviceStateManager.SaveDeviceState(device);
-            DeviceStateManager.SetRenderStateForShapes(device);
+            DeviceStateManager.SaveDeviceState(device);
+            /*DeviceStateManager.SetRenderStateForShapes(device);
             DeviceStateManager.SetRasterizerStateForShapes(device);
             */
 

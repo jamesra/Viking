@@ -241,7 +241,7 @@ namespace WebAnnotation.ViewModel
             //GridVector2 sourceVolumePosition = sourceMapper.SectionToVolume(A.Position);
             //GridVector2 targetVolumePosition = targetMapper.SectionToVolume(B.Position); 
 
-            LineView line = new LineView(A.Center, B.Center, this.LineWidth, this.Color, LineStyle.Standard, true);
+            LineView line = new LineView(A.Center, B.Center, this.LineWidth, this.Color, LineStyle.Standard);
             return line;
         }
 
@@ -383,10 +383,15 @@ namespace WebAnnotation.ViewModel
             return Math.Min(LineSegment.Length, this.LineWidth) / scene.Camera.Downsample > 2.0;
         }
 
-        public bool Intersects(GridVector2 Position)
+        public bool Contains(GridVector2 Position)
         {
             double d = LineSegment.DistanceToPoint(Position);
             return (d - this.LineRadius) <= 0;
+        }
+
+        public bool Intersects(GridLineSegment line)
+        {
+            return this.LineSegment.Intersects(line);
         }
 
         public double Distance(GridVector2 Position)
@@ -399,7 +404,7 @@ namespace WebAnnotation.ViewModel
 
         public double Distance(Microsoft.SqlServer.Types.SqlGeometry shape)
         {
-            return this.LineSegment.ToPolyLine().STDistance(shape).Value;
+            return this.LineSegment.ToSqlGeometry().STDistance(shape).Value;
         }
 
         public double DistanceFromCenterNormalized(GridVector2 Position)

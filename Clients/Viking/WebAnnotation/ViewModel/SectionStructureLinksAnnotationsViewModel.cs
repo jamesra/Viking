@@ -191,7 +191,13 @@ namespace WebAnnotation.ViewModel
         public ICollection<StructureLinkViewModelBase> GetStructureLinks(GridVector2 point)
         {
             List<StructureLinkKey> intersectingIDs = StructureLinksSearch.Intersects(point.ToRTreeRect((float)this.PrimarySection.SectionNumber));
-            return intersectingIDs.Select(id => StructureLinks[id]).Where(sl => sl != null && sl.Intersects(point)).ToList();
+            return intersectingIDs.Select(id => StructureLinks[id]).Where(sl => sl != null && sl.Contains(point)).ToList();
+        }
+
+        public ICollection<StructureLinkViewModelBase> GetStructureLinks(GridLineSegment line)
+        {
+            List<StructureLinkKey> intersectingIDs = StructureLinksSearch.Intersects(line.BoundingBox.ToRTreeRect((float)this.PrimarySection.SectionNumber));
+            return intersectingIDs.Select(id => StructureLinks[id]).Where(sl => sl != null && sl.Intersects(line)).ToList();
         }
     }
 

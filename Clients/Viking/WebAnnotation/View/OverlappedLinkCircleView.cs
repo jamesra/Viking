@@ -111,9 +111,14 @@ namespace WebAnnotation.View
             return linkViews.Min(c => c.DistanceFromCenterNormalized(Position));
         }
 
-        public bool Intersects(GridVector2 Position)
+        public bool Contains(GridVector2 Position)
         {
-            return linkViews.Any(c => c.Intersects(Position));
+            return linkViews.Any(c => c.Contains(Position));
+        }
+
+        public bool Intersects(GridLineSegment line)
+        {
+            return linkViews.Any(c => c.Intersects(line));
         }
 
         public bool IsVisible(Scene scene)
@@ -128,7 +133,7 @@ namespace WebAnnotation.View
 
         public ICanvasGeometryView GetAnnotationAtPosition(GridVector2 position)
         {
-            ICanvasGeometryView annotation = linkViews.Where(l => l.Intersects(position) == true).FirstOrDefault() as ICanvasGeometryView;
+            ICanvasGeometryView annotation = linkViews.Where(l => l.Contains(position) == true).FirstOrDefault() as ICanvasGeometryView;
             if (annotation == null)
                 return null;
             

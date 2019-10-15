@@ -35,7 +35,7 @@ namespace WebAnnotationModel
                     else
                         return SqlGeometryUtils.Extensions.ToCircle(points[0].X, points[1].Y, Z, radius);
                 case LocationType.OPENCURVE:
-                    return points.ToPolyLine();
+                    return points.ToSqlGeometry();
             }
 
             throw new ArgumentException(string.Format("Unknown location type {0}", type));

@@ -62,9 +62,19 @@ namespace WebAnnotation.View
         /// </summary>
         /// <param name="Position"></param>
         /// <returns></returns>
-        public override bool Intersects(GridVector2 Position)
+        public override bool Contains(GridVector2 Position)
         {
             return VolumeCircle.Contains(Position);
+        }
+
+        /// <summary>
+        /// True if the point is on or inside the circle
+        /// </summary>
+        /// <param name="Position"></param>
+        /// <returns></returns>
+        public override bool Intersects(GridLineSegment line)
+        {
+            return VolumeCircle.Intersects(line);
         }
 
         public override bool Intersects(SqlGeometry shape)
@@ -438,7 +448,7 @@ namespace WebAnnotation.View
 
             if (OverlappedLinkView != null)
             {
-                if (OverlappedLinkView.Intersects(WorldPosition))
+                if (OverlappedLinkView.Contains(WorldPosition))
                 {
                     return LocationAction.CREATELINKEDLOCATION;
                 }
@@ -512,7 +522,7 @@ namespace WebAnnotation.View
         {
             ICanvasGeometryView annotation = null;
 
-            if (this.Intersects(position))
+            if (this.Contains(position))
             {
                 if (this.OverlappedLinkView != null)
                 {

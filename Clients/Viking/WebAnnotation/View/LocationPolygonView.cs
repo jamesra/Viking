@@ -35,13 +35,24 @@ namespace WebAnnotation.View
             get
             {
                 List<string> listStrings = new List<string>();
-                listStrings.Add("Hold Left Click and drag the interior: Move shape");
-                listStrings.Add("Hold Left Click and drag near edge: Create link");
-                listStrings.Add("Shift + Left Click and drag: Move shape");
-                listStrings.Add("Left click + CTRL on control point: Remove control point");
-                listStrings.Add("Left click + CTRL on interior hole: Remove interior hole");
-                listStrings.Add("Left click + CTRL off control point: Add a control point");
-                listStrings.Add("Left click + CTRL inside shape: Cut hole in annotation");
+                if (Global.PenMode)
+                {
+                    listStrings.Add("Hold Left Click + SHIFT drag the interior: Move shape");
+                    listStrings.Add("Hold Left Click + SHIFT drag near edge: Create link");
+                    listStrings.Add("Draw path across shape: Replace annotation boundary");
+                }
+                else
+                {
+                    listStrings.Add("SHIFT + Hold Left Button near the interior: Move shape");
+                    listStrings.Add("SHIFT + Hold Left Button near edge: Create link");
+                    listStrings.Add("SHIFT + Left Click and drag: Move shape");
+                    listStrings.Add("CTRL + Left click off control point: Add a control point");
+                    listStrings.Add("CTRL + Left click on control point: Remove control point");
+                }
+
+                listStrings.Add("CTRL + Left click on interior hole: Remove interior hole");
+                listStrings.Add("CTRL + Left click inside shape: Cut hole in annotation");
+
                 return listStrings.ToArray();
             }
         }
@@ -175,15 +186,21 @@ namespace WebAnnotation.View
         {
             OverlappedLinkCircleView[] overlappedLocations = listToDraw.Select(l => l.OverlappedLinkView).Where(l => l != null && l.IsVisible(scene)).ToArray();
             OverlappedLinkCircleView.Draw(device, scene, basicEffect, overlayEffect, overlappedLocations);
-
+#if DEBUG
             CircleView.Draw(device, scene, basicEffect, overlayEffect, listToDraw.SelectMany(lpv => lpv.ControlPointViews).ToArray());
+#else
+            if(!Global.PenMode)
+            {
+                CircleView.Draw(device, scene, basicEffect, overlayEffect, listToDraw.SelectMany(lpv => lpv.ControlPointViews).ToArray());
+            }
+#endif
             //CurveView.Draw(device, scene, lineManager, basicEffect, overlayEffect, 0, listToDraw.Select(l => l.curveView).ToArray());
 
             MeshView<VertexPositionColor>.Draw(device, scene, listToDraw.Select(l => l.polygonMesh));
             //FilledClosedCurvePolygonView.Draw(device, scene, listToDraw.Select(l => l.polyView));
         }
 
-        public override bool Intersects(GridVector2 Position)
+        public override bool Contains(GridVector2 Position)
         {
             if (!this.BoundingBox.Contains(Position))
                 return false;
@@ -195,7 +212,7 @@ namespace WebAnnotation.View
                     return true;
             }
 
-            if (this.OverlappedLinkView != null && this.OverlappedLinkView.Intersects(Position))
+            if (this.OverlappedLinkView != null && this.OverlappedLinkView.Contains(Position))
                 return true;
 
             if (this.SmoothedVolumePolygon.Contains(Position))
@@ -207,7 +224,29 @@ namespace WebAnnotation.View
             if (this.SmoothedVolumePolygon.InteriorPolygonContains(Position))
                 return true;
 
-            return base.Intersects(Position);
+            return false;
+        }
+
+        public override bool Intersects(GridLineSegment line)
+        {
+            if (!this.BoundingBox.Intersects(line.BoundingBox))
+                return false;
+
+            /*
+            //Test if we are over a control point
+            if (Global.PenMode == false)
+            {
+                if (this.SmoothedVolumePolygon.ExteriorRing.Any(p => new GridCircle(p, lineWidth / 2.0).Intersects(line)))
+                    return true;
+            }*/
+
+            if (this.OverlappedLinkView != null && this.OverlappedLinkView.Intersects(line))
+                return true;
+
+            if (this.SmoothedVolumePolygon.Intersects(line))
+                return true;
+
+            return false;
         }
 
         public void DrawLabel(SpriteBatch spriteBatch, SpriteFont font, Scene scene)
@@ -228,7 +267,7 @@ namespace WebAnnotation.View
                     return containedAnnotation;
             }
 
-            if (this.Intersects(position))
+            if (this.Contains(position))
                 return this;
 
             return null;
@@ -258,32 +297,66 @@ namespace WebAnnotation.View
             }
         }
 
-        public override LocationAction GetMouseClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID)
+
+        public LocationAction GetMouseClickActionForPositionOnAnnotationWithPen(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID)
+        {
+            LocationID = this.ID;
+            GridPolygon intersectingPoly; //Could be our polygon or an interior polygon
+
+            if (ModifierKeys.ShiftPressed())
+            {
+                if (VisibleSectionNumber == (int)this.modelObj.Z)
+                {
+                    if (this.SmoothedVolumePolygon.Contains(WorldPosition))
+                    {
+                        GridCircle TranslateTargetCircle = new GridCircle(this.InscribedCircle.Center, this.InscribedCircle.Radius / 2.0);
+                        if (TranslateTargetCircle.Contains(WorldPosition))
+                        {
+                            LocationID = this.ID;
+                            return LocationAction.TRANSLATE;
+                        }
+
+                        return LocationAction.CREATELINK;
+                    }                  
+                }
+            }
+            else if (ModifierKeys.CtrlPressed())
+            {
+                //Check to see if we are on a line segment to add/remove control points.  Otherwise cut a hole
+                if (this.SmoothedVolumePolygon.Contains(WorldPosition))
+                {
+                    LocationID = this.ID;
+                    return LocationAction.CUTHOLE;
+                }
+                else if (this.SmoothedVolumePolygon.InteriorPolygonContains(WorldPosition))
+                {
+                    LocationID = this.ID;
+                    return LocationAction.REMOVEHOLE;
+                }
+            }
+            else if (!ModifierKeys.ShiftOrCtrlPressed())
+            {
+               return LocationAction.RETRACEANDREPLACE;
+            }
+
+            return LocationAction.NONE;
+        }
+
+        public LocationAction GetMouseClickActionForPositionOnAnnotationWithoutPen(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID)
         {
 
             LocationID = this.ID;
             GridPolygon intersectingPoly; //Could be our polygon or an interior polygon
-
-            //TODO: Detect if the View is on a touch/pen capable display
-            if(Global.PenMode)
+            
+            if (ModifierKeys.ShiftPressed())
             {
-                double RetraceDetectionThreshold = this.lineWidth * 1.5;
-                if(this.SmoothedVolumePolygon.NearestPolygonSegment(WorldPosition, out GridPolygon nearestPoly) < RetraceDetectionThreshold)
-                //if (this.SmoothedVolumePolygon.PointIntersectsAnyPolygonSegment(WorldPosition, ControlPointRadius, out intersectingPoly))
-                {
-                    return LocationAction.RETRACEANDREPLACE;
-                }
-            }
-
-            if(ModifierKeys.ShiftPressed())
-            {
-                if(this.SmoothedVolumePolygon.Contains(WorldPosition))
+                if (this.SmoothedVolumePolygon.Contains(WorldPosition))
                 {
                     return LocationAction.TRANSLATE;
                 }
             }
             else if (ModifierKeys.CtrlPressed())
-            { 
+            {
                 //Check to see if we are on a line segment to add/remove control points.  Otherwise cut a hole
                 if (this.SmoothedVolumePolygon.PointIntersectsAnyPolygonSegment(WorldPosition, ControlPointRadius, out intersectingPoly))
                 {
@@ -298,12 +371,12 @@ namespace WebAnnotation.View
                     else
                         return LocationAction.ADDCONTROLPOINT;
                 }
-                else if(this.SmoothedVolumePolygon.Contains(WorldPosition))
+                else if (this.SmoothedVolumePolygon.Contains(WorldPosition))
                 {
                     LocationID = this.ID;
                     return LocationAction.CUTHOLE;
                 }
-                else if(this.SmoothedVolumePolygon.InteriorPolygonContains(WorldPosition))
+                else if (this.SmoothedVolumePolygon.InteriorPolygonContains(WorldPosition))
                 {
                     LocationID = this.ID;
                     return LocationAction.REMOVEHOLE;
@@ -313,7 +386,7 @@ namespace WebAnnotation.View
             {
                 if (VisibleSectionNumber == (int)this.modelObj.Z)
                 {
-                    if (this.VolumePolygon.PointIntersectsAnyPolygonVertex(WorldPosition, ControlPointRadius, out intersectingPoly))
+                    if (!Global.PenMode && this.VolumePolygon.PointIntersectsAnyPolygonVertex(WorldPosition, ControlPointRadius, out intersectingPoly))
                     {
                         return LocationAction.ADJUST;
                     }
@@ -328,6 +401,10 @@ namespace WebAnnotation.View
 
                         return LocationAction.CREATELINK;
                     }
+                    else if (Global.PenMode && this.SmoothedVolumePolygon.InteriorPolygonContains(WorldPosition))
+                    {
+                        return LocationAction.RETRACEANDREPLACE;
+                    }
                     else
                     {
                         return LocationAction.CREATELINKEDLOCATION;
@@ -336,6 +413,19 @@ namespace WebAnnotation.View
             }
 
             return LocationAction.NONE;
+        }
+
+        public override LocationAction GetMouseClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID)
+        {
+            if(Global.PenMode)
+            {
+                return GetMouseClickActionForPositionOnAnnotationWithPen(WorldPosition, VisibleSectionNumber, ModifierKeys, out LocationID);
+            }
+            else
+            {
+                return GetMouseClickActionForPositionOnAnnotationWithoutPen(WorldPosition, VisibleSectionNumber, ModifierKeys, out LocationID);
+            }
+
         }
 
         internal override void OnParentPropertyChanged(object o, PropertyChangedEventArgs args)

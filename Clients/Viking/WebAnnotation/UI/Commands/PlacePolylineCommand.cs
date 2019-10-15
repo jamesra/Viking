@@ -11,17 +11,69 @@ using VikingXNAWinForms;
 namespace WebAnnotation.UI.Commands
 {
     /// <summary>
-    /// Handles callback, drawing, and vertex/color/width properties
+    /// Base class for commands that have the user draw a line to annotate
     /// </summary>
-    abstract class ControlPointCommandBase : Viking.UI.Commands.Command
+    abstract class LineGeometryCommandBase : Viking.UI.Commands.Command
     {
         public virtual double LineWidth
         {
             get;
-        } 
+        }
 
         protected Microsoft.Xna.Framework.Color LineColor;
 
+        public virtual LineStyle Style
+        {
+            get;
+        }
+
+        /// <summary>
+        /// The color passed to our constructor, used to restore graphics color in case we change colors for an invalid state.
+        /// </summary>
+        protected Microsoft.Xna.Framework.Color OriginalColor;
+
+        public delegate void OnCommandSuccess(LineGeometryCommandBase sender, GridVector2[] control_points);
+        protected OnCommandSuccess success_callback;
+
+        public LineGeometryCommandBase(Viking.UI.Controls.SectionViewerControl parent,
+                                     Microsoft.Xna.Framework.Color color,
+                                     double LineWidth,
+                                     OnCommandSuccess success_callback)
+            : base(parent)
+        {
+            this.OriginalColor = color;
+            this.LineColor = color;
+            this.LineWidth = LineWidth;
+            this.success_callback = success_callback;
+        }
+
+        public LineGeometryCommandBase(Viking.UI.Controls.SectionViewerControl parent,
+                                     System.Drawing.Color color,
+                                     double LineWidth,
+                                     OnCommandSuccess success_callback)
+            : this(parent,
+                  color.ToXNAColor(),
+                   LineWidth,
+                   success_callback)
+        {
+        }
+         
+
+        protected virtual void Execute(GridVector2[] updated_verticies)
+        {
+            if (this.success_callback != null)
+                this.success_callback(this, updated_verticies);
+
+            base.Execute();
+        } 
+    }
+
+    /// <summary>
+    /// Handles callback, drawing, and vertex/color/width properties.
+    /// This is the base class for building geometry using manually placed control points
+    /// </summary>
+    abstract class ControlPointCommandBase : LineGeometryCommandBase
+    {   
         public virtual double ControlPointRadius
         {
             get
@@ -30,28 +82,18 @@ namespace WebAnnotation.UI.Commands
             }
         }
 
-        public virtual LineStyle Style
-        {
-            get; 
-        }
-
         public abstract GridVector2[] Verticies
         {
             get;
             protected set;
         }
-
-        public delegate void OnCommandSuccess(ControlPointCommandBase sender, GridVector2[] control_points);
-        protected OnCommandSuccess success_callback;
-
+        
         public ControlPointCommandBase(Viking.UI.Controls.SectionViewerControl parent, 
                                      Microsoft.Xna.Framework.Color color, 
                                      double LineWidth,
                                      OnCommandSuccess success_callback)
-            : base(parent)
+            : base(parent, color, LineWidth, success_callback)
         {
-            this.LineColor = color;
-            this.LineWidth = LineWidth;
             this.success_callback = success_callback;
         }
 
@@ -87,21 +129,6 @@ namespace WebAnnotation.UI.Commands
         /// <returns></returns>
         protected abstract bool CanCommandComplete(GridVector2 WorldPosition);
 
-        protected override void Execute()
-        {
-            if (this.success_callback != null)
-                this.success_callback(this, this.Verticies);
-
-            base.Execute();
-        }
-
-        protected virtual void Execute(GridVector2[] updated_verticies)
-        {
-            if (this.success_callback != null)
-                this.success_callback(this, updated_verticies);
-
-            base.Execute();
-        }
 
         protected bool OverlapsFirstVertex(GridVector2 position)
         {
@@ -128,6 +155,11 @@ namespace WebAnnotation.UI.Commands
             }
 
             return new int?();
+        }
+
+        protected override void Execute()
+        {
+            this.Execute(this.Verticies);
         }
 
         /// <summary>

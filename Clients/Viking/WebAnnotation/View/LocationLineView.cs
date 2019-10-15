@@ -286,7 +286,7 @@ namespace WebAnnotation.View
             {
                 if (_VolumeShape == null)
                 {
-                    _VolumeShape = this.VolumeControlPoints.ToPolyLine().STBuffer(Math.Max(LineWidth, ControlPointRadius));                 
+                    _VolumeShape = this.VolumeControlPoints.ToSqlGeometry().STBuffer(Math.Max(LineWidth, ControlPointRadius));                 
                 }
 
                 return _VolumeShape;

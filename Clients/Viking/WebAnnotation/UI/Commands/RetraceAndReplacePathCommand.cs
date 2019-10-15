@@ -18,7 +18,17 @@ namespace WebAnnotation.UI.Commands
         NEXTPOLY
     }
 
-    class RetraceAndReplacePathCommand : PlaceCurveWithPenCommand
+    internal enum RetraceCommandAction
+    {
+        NONE,
+        GROW_EXTERIOR_RING,
+        SHRINK_EXTERIOR_RING,
+        GROW_INTERNAL_RING,
+        SHRINK_INTERNAL_RING
+    }
+
+
+    class RetraceAndReplacePathCommand : PlaceGeometryWithPenCommandBase
     {
         //Variables:
 
@@ -28,30 +38,85 @@ namespace WebAnnotation.UI.Commands
         //Original Polygons
         GridPolygon OriginalMosaicPolygon;
         GridPolygon OriginalVolumePolygon;
+        public GridPolygon OriginalSmoothedVolumePolygon;
 
         //Our original polygon plus the origin of retrace and replace and the origin point index
         GridPolygon VolumePolygonPlusOrigin;
+
         public PointIndex OriginIndex;
 
-        //Meshes of the individual cut pieces of the retrace and replace
-        PositionColorMeshModel PrevWalkMesh = null;
-        PositionColorMeshModel NextWalkMesh = null;
+        public PointIndex? PolyBeingCut;
 
+        //Meshes of the individual cut pieces of the retrace and replace
+        PositionColorMeshModel ClockwiseWalkMesh = null;
+        PositionColorMeshModel CounterClockwiseWalkMesh = null;
+
+        RetraceCommandAction CutAction = RetraceCommandAction.NONE;
         //Each of the cut pieces in polygon forms
-        private GridPolygon NextWalkPolygon = null;
-        private GridPolygon PrevWalkPolygon = null;
+        private GridPolygon CounterClockwiseCutPolygon = null;
+        private GridPolygon ClockwiseCutPolygon = null;
 
         //The output polygons we create
         public GridPolygon OutputMosaicPolygon;
         public GridPolygon OutputVolumePolygon;
-        public GridPolygon SmoothedVolumePolygon;
+
+        /// <summary>
+        /// True if we want to use the opposite polygon as normal
+        /// </summary>
+        protected bool SwitchSide
+        {
+            get
+            {
+                return Control.ModifierKeys.CtrlPressed();
+            }
+        }
+        
+        public bool IsCutComplete
+        {
+            get
+            {
+                return PolyBeingCut.HasValue;
+            }
+        }
 
         //Is the command ready to finish if we try to?
-        private bool IsReadyToComplete;
+        private bool IsReadyToComplete
+        {
+            get
+            {
+                switch(this.CutAction)
+                {
+                    case RetraceCommandAction.NONE:
+                        return false;
+                    case RetraceCommandAction.GROW_EXTERIOR_RING:
+                    case RetraceCommandAction.GROW_INTERNAL_RING:
+                    case RetraceCommandAction.SHRINK_EXTERIOR_RING:
+                    case RetraceCommandAction.SHRINK_INTERNAL_RING:
+                        return true;
+                    default:
+                        throw new ArgumentException("Unknown state, cannot determine if the command can complete.");
+                }
+            }
+        }
 
         //False draws the PrevWalkPolygon, true draws the NextWalkPolygon
         private DrawWhichPoly DrawPoly;
 
+        private bool? _CommandExpandsArea;
+        private bool CommandExpandsArea
+        {
+            get
+            {
+                if(_CommandExpandsArea.HasValue == false)
+                {
+                    //Check if the first point placed in the path is inside or outside the polygon.  Starting from the inside we can only draw a line that grows the area, and vice versa
+                    _CommandExpandsArea = this.OriginalVolumePolygon.Contains(PenInput.path.Points.Last());
+                }
+
+                return _CommandExpandsArea.Value;
+            }
+
+        } //Set to true if the commands origin will increase the total area of the polygon if the command completes
 
         //Curve Interpolations Variable
         public override uint NumCurveInterpolations
@@ -69,44 +134,43 @@ namespace WebAnnotation.UI.Commands
         public RetraceAndReplacePathCommand(Viking.UI.Controls.SectionViewerControl parent,
                                         GridPolygon mosaic_polygon,
                                         Microsoft.Xna.Framework.Color color,
-                                        GridVector2 origin,
                                         double LineWidth,
                                         OnCommandSuccess success_callback)
-            : base(parent, color, origin, LineWidth, false, success_callback)
+            : base(parent, color, LineWidth, success_callback)
         {
-            IsReadyToComplete = false;
             mapping = parent.Section.ActiveSectionToVolumeTransform;
+
+            if (mosaic_polygon == null)
+                throw new ArgumentException("mosaic_polygon passed to RetraceAndReplaceCommand was null");
+
             this.OriginalMosaicPolygon = mosaic_polygon;
             this.OriginalVolumePolygon = mapping.TryMapShapeSectionToVolume(mosaic_polygon);
+
+            if (OriginalVolumePolygon == null)
+                throw new ArgumentException("mosaic_polygon could not be mapped to volume space");
+
+            this.PathView.Color = Microsoft.Xna.Framework.Color.White;//color.Invert(1.0f);
+             
+            OriginalSmoothedVolumePolygon = OriginalVolumePolygon.Smooth(Global.NumClosedCurveInterpolationPoints);
             
-            this.OriginIndex = GridPolygon.AddPointToPolygon(this.OriginalVolumePolygon, origin, out this.VolumePolygonPlusOrigin);
-            
-            if (VolumePolygonPlusOrigin.ExteriorRing.Contains(origin))
-            {
-                foreach (GridVector2[] ring in OriginalVolumePolygon.InteriorRings)
-                {
-                    VolumePolygonPlusOrigin.AddInteriorRing(ring);
-                }
-            }
-            SmoothedVolumePolygon = VolumePolygonPlusOrigin.Smooth(Global.NumClosedCurveInterpolationPoints);
         }
 
         public RetraceAndReplacePathCommand(Viking.UI.Controls.SectionViewerControl parent,
                                         GridPolygon mosaic_polygon,
                                         System.Drawing.Color color,
-                                        GridVector2 origin,
+                                        IReadOnlyList<GridVector2> path,
                                         double LineWidth,
                                         OnCommandSuccess success_callback)
-            : base(parent, color.ToXNAColor(), origin, LineWidth, false, success_callback)
+            : this(parent, mosaic_polygon, color.ToXNAColor(), LineWidth, success_callback)
         {
-            mapping = parent.Section.ActiveSectionToVolumeTransform;
-            this.OriginalMosaicPolygon = mosaic_polygon;
-            this.OriginalVolumePolygon = mapping.TryMapShapeSectionToVolume(mosaic_polygon);
-
-            this.OriginIndex = GridPolygon.AddPointToPolygon(this.OriginalVolumePolygon, origin, out this.VolumePolygonPlusOrigin);
-            SmoothedVolumePolygon = VolumePolygonPlusOrigin.Smooth(Global.NumClosedCurveInterpolationPoints);
+            
         }
-        
+
+        protected override void OnPathLoop(object sender, bool HasLoop)
+        {
+            return;
+        }
+
         /// <summary>
         /// If the pen path changes
         /// </summary>
@@ -114,41 +178,29 @@ namespace WebAnnotation.UI.Commands
         /// <param name="e"></param>
         protected override void OnPenPathChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
         {
-            if(!PenPathIsValid(out SortedDictionary<double, PointIndex> IntersectingVerts))
+            //List<GridVector2> path = PenInput.Path.InflectionPointIndicies().Select(i => PenInput.Path[i]).ToList();
+            //Update our view of the pen path
+            base.OnPenPathChanged(sender, e);
+
+            if (!this.IsCutComplete && e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Add)
+            {
+                //See if the addition to the path finished the cut
+                this.CutAction = GetRetraceActionForPath(PenInput.SimplifiedPath, out ClockwiseCutPolygon, out CounterClockwiseCutPolygon);
+            }
+            else if(this.IsCutComplete && e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Remove || e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Replace)
+            {
+                this.CutAction = GetRetraceActionForPath(PenInput.SimplifiedPath, out ClockwiseCutPolygon, out CounterClockwiseCutPolygon);
+            }
+             
+            if(CutAction == RetraceCommandAction.NONE)
             {
                 return;
             }
+             
+            //If an expansion, then figure out which is larger, make that the green mesh, and set the smaller poly and mesh to null. Otherwise display the two polygons.
+            UpdateViews();
 
-            //If our intersection was found
-            if(IntersectingVerts.Count > 0)
-            {
-                //Get the location of the intersection
-                PointIndex FirstIntersect = IntersectingVerts.Values.First();
-                
-                //If the intersection found and the origin where we started are on the same ring, allow retrace/replace to take place
-                if(this.OriginIndex.AreOnSameRing(FirstIntersect))
-                {  
-                    
-                    //Chop off the most recently drawn endpoint of the path because it won't be included in final path
-                    //PenInput.Pop();
-
-                    //Simplify our path
-                    //PenInput.SimplifiedPath = CurveSimplificationExtensions.DouglasPeuckerReduction(PenInput.Path, Global.PenSimplifyThreshold);
-
-                    NextWalkPolygon = WalkPolygonCut(this.OriginIndex, FirstIntersect, this.VolumePolygonPlusOrigin, RotationDirection.COUNTERCLOCKWISE, PenInput.Path);
-                    PrevWalkPolygon = WalkPolygonCut(this.OriginIndex, FirstIntersect, this.VolumePolygonPlusOrigin, RotationDirection.CLOCKWISE, PenInput.Path);
-
-
-                    GridPolygon OriginalVolumePolyExterior = new GridPolygon(OriginalVolumePolygon.ExteriorRing);
-                    //If an expansion, then figure out which is larger, make that the green mesh, and set the smaller poly and mesh to null. Otherwise display the two polygons.
-                    SetMeshes(OriginalVolumePolyExterior);
-                    
-                    //The Retrace is finished, allow OnMouseUp to run.
-                    IsReadyToComplete = true;   
-                }
-            }
-
-            this.Parent.Invalidate();
+            
         }
 
         protected override void OnMouseUp(object sender, MouseEventArgs e)
@@ -156,35 +208,11 @@ namespace WebAnnotation.UI.Commands
             //If the command is in a valid state populate the output poly and call execute. Otherwise deactive the command.
             if (IsReadyToComplete)
             {
-                if (!OriginIndex.IsInner)
-                {
-                    if (NextWalkMesh != null && DrawPoly == DrawWhichPoly.NEXTPOLY)
-                    {
-                        OutputVolumePolygon = AddInteriorToCutPolygon(OriginalVolumePolygon, NextWalkPolygon);
-                    }
-                    else if (PrevWalkMesh != null && DrawPoly == DrawWhichPoly.PREVPOLY)
-                    {
-                        OutputVolumePolygon = AddInteriorToCutPolygon(OriginalVolumePolygon, PrevWalkPolygon);
-                    }
-                }
-                else
-                {
-                    OutputVolumePolygon = new GridPolygon(OriginalVolumePolygon.ExteriorRing);
-                    OutputVolumePolygon = AddInteriorToCutPolygon(OriginalVolumePolygon, OutputVolumePolygon);
-
-                    if (NextWalkMesh != null && DrawPoly == DrawWhichPoly.NEXTPOLY)
-                    {
-                        OutputVolumePolygon.AddInteriorRing(NextWalkPolygon);
-                    }
-                    else if (PrevWalkMesh != null && DrawPoly == DrawWhichPoly.PREVPOLY)
-                    {
-                        OutputVolumePolygon.AddInteriorRing(PrevWalkPolygon);
-                    }
-                }
+                OutputVolumePolygon = GenerateOutputVolumePolygon();
 
                 try
                 {
-                    OutputMosaicPolygon = mapping.TryMapShapeVolumeToSection(OutputVolumePolygon);
+                    OutputMosaicPolygon = mapping.TryMapShapeVolumeToSection(OutputVolumePolygon).Simplify(this.PenInput.SimplifiedPathToleranceInPixels * Parent.Downsample);
                 }
                 catch (ArgumentOutOfRangeException)
                 {
@@ -198,182 +226,146 @@ namespace WebAnnotation.UI.Commands
             base.OnMouseUp(sender, e);
         }
 
-        private bool PenPathIsValid(out SortedDictionary<double, PointIndex> IntersectingVerts)
+        private RetraceCommandAction GetRetraceActionForPath(IList<GridVector2> path, out GridPolygon clockwise_poly, out GridPolygon counter_clockwise_poly)
         {
-            IntersectingVerts = VolumePolygonPlusOrigin.IntersectingSegments(PenInput.LastSegment);
+            clockwise_poly = null;
+            counter_clockwise_poly = null;
+            this.PolyBeingCut = null; 
+
+            if(path.Count <= 1)
+            {
+                return RetraceCommandAction.NONE;
+            }
+
+            SortedDictionary<double, PointIndex> intersectedSegments = this.OriginalVolumePolygon.IntersectingSegments(path.ToLineSegments());
+
+            if(intersectedSegments.Count < 2)
+            {
+                return RetraceCommandAction.NONE; 
+            }
+
+            PointIndex FirstIntersection = intersectedSegments.First().Value;
+
+            GridPolygon PolyToCut = OriginalVolumePolygon;
+            if(FirstIntersection.IsInner)
+            {
+                PolyToCut = OriginalVolumePolygon.InteriorPolygons[FirstIntersection.iInnerPoly.Value];
+            }
 
             //Condition Check to make sure pen path exists and is valid
-            if (PenInput == null || PenInput.Path.Count < 3 || OriginalVolumePolygon.TotalVerticies <= 3)
+            if (path == null || path.Count < 2 || OriginalVolumePolygon.TotalVerticies <= 3)
             {
-                return false;
+                return RetraceCommandAction.NONE;
             }
 
-            //If a wrong intersection was made with another polygon or pen path intersected itself make the user return back to the point of the error
-            if (WrongIntersectionPoint > 0 && WrongIntersectionPoint < PenInput.Path.Count)
+            try
             {
-                return false;
+                clockwise_poly = GridPolygon.WalkPolygonCut(PolyToCut, RotationDirection.CLOCKWISE, path);
+                clockwise_poly.ExteriorRing = CatmullRomControlPointSimplification.IdentifyControlPoints(clockwise_poly.ExteriorRing, 1.0, true).ToArray();
+                counter_clockwise_poly = GridPolygon.WalkPolygonCut(PolyToCut, RotationDirection.COUNTERCLOCKWISE, path);
+                counter_clockwise_poly.ExteriorRing = CatmullRomControlPointSimplification.IdentifyControlPoints(counter_clockwise_poly.ExteriorRing, 1.0, true).ToArray();
+                this.PolyBeingCut = FirstIntersection;
             }
-            else
+            catch(ArgumentException e)
             {
-                WrongIntersectionPoint = -1;
-                LineColor = LineColor = Microsoft.Xna.Framework.Color.Blue;
-            }
-             
-            //Does the path self intersect? Does the path cross another ring it shouldn't?
-            if (((IntersectingVerts.Count > 0 && !this.OriginIndex.AreOnSameRing(IntersectingVerts.Values.First())) || PenInput.Segments.IntersectionPoint(PenInput.LastSegment, true, out GridLineSegment? IntersectedSegment).HasValue) && WrongIntersectionPoint == -1)
-            {
-                IsReadyToComplete = false;
-
-                LineColor = Microsoft.Xna.Framework.Color.Red;
-
-                WrongIntersectionPoint = PenInput.Path.Count - 1;
-            }
-            return true;
-        }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="start_index"></param>
-        /// <param name="originPolygon">The polygon to cut</param>
-        /// <param name="direction">The direction we will walk to connect the starting and ending cut points</param>
-        /// <param name="cutLine">The line cutting the polygon.  It should intersect the same polygonal ring in two locations without intersecting any others</param>
-        /// <param name="FirstIntersect">The polygon vertex before the intersected segment, use intersect_index.next to get the endpoint of the intersected segment of the polygon</param>
-        /// <returns></returns>
-        protected static GridPolygon WalkPolygonCut(PointIndex start_index,  GridPolygon originPolygon, RotationDirection direction, IList<GridVector2> cutLine)
-        {
-            //Find a possible intersection point for the retrace
-            GridLineSegment polygonCutLine = new GridLineSegment(cutLine[1], cutLine[0]);
-            SortedDictionary<double, PointIndex> IntersectingVerts = originPolygon.IntersectingSegments(polygonCutLine);
-            
-            //No intersection with the cut line
-            if (IntersectingVerts.Count == 0)
-            {
-                throw new ArgumentException("Last segment of cutLine must intersect a polygon ring");
+                //Thrown when the polygon cannot be cut using the path
+                return RetraceCommandAction.NONE;
             }
 
-            PointIndex intersect_index = IntersectingVerts.Values.First();
-            if (false == intersect_index.AreOnSameRing(start_index))
+            if(FirstIntersection.IsInner)
             {
-                throw new ArgumentException("Cut must run between the same ring of the polygon without intersecting other rings");
-            }
-
-            return WalkPolygonCut(start_index,
-                                  intersect_index,
-                                  originPolygon,
-                                  direction,
-                                  cutLine);
-        }
-
-
-
-        protected static GridPolygon WalkPolygonCut(PointIndex start_index, PointIndex intersect_index, GridPolygon originPolygon, RotationDirection direction, IList<GridVector2> cutLine)
-        {
-            if (false == intersect_index.AreOnSameRing(start_index))
-            {
-                throw new ArgumentException("Cut must run between the same ring of the polygon without intersecting other rings");
-            }
-
-            //Walk the ring using Next to find perimeter on one side, the walk using prev to find perimeter on the other
-            List<GridVector2> walkedPoints = new List<GridVector2>();
-            PointIndex current = start_index;
-            
-            GridVector2 PolyIntersectionPoint;
-            {
-                //Add the intersection point of where we crossed the boundary
-                GridLineSegment polygonCutLine = new GridLineSegment(cutLine[1], cutLine[0]);
-                GridLineSegment intersected_segment = new GridLineSegment(intersect_index.Point(originPolygon), intersect_index.Next.Point(originPolygon));
-                bool intersected = polygonCutLine.Intersects(intersected_segment, out PolyIntersectionPoint);
-                if(false == intersected)
-                {
-                    throw new ArgumentException("Last segment of cutLine must intersect a polygon ring");
-                }
-            }
-
-            PointIndex end_Index = (direction == RotationDirection.COUNTERCLOCKWISE) ? intersect_index : intersect_index.Next;
-
-            do
-            {
-                Debug.Assert(walkedPoints.Contains(current.Point(originPolygon)) == false);
-                walkedPoints.Add(current.Point(originPolygon));
-                if (direction == RotationDirection.COUNTERCLOCKWISE)
-                    current = current.Next;
-                else
-                    current = current.Previous;
-
-            }
-            while (current != end_Index);
-
-            walkedPoints.Add(current.Point(originPolygon));
-
-            //Add the intersection point of where we crossed the boundary
-            if (GridVector2.DistanceSquared(PolyIntersectionPoint, walkedPoints.Last()) > Geometry.Global.EpsilonSquared)
-            {
-                Debug.Assert(walkedPoints.Contains(PolyIntersectionPoint) == false);
-                walkedPoints.Add(PolyIntersectionPoint);
+                return this.CommandExpandsArea ? RetraceCommandAction.SHRINK_INTERNAL_RING : RetraceCommandAction.GROW_INTERNAL_RING;
             }
             else
             {
-                int i = 5; //Temp for debugging
+                return this.CommandExpandsArea ? RetraceCommandAction.GROW_EXTERIOR_RING : RetraceCommandAction.SHRINK_EXTERIOR_RING;
             }
 
-            List<GridVector2> SimplifiedPath = CurveSimplificationExtensions.DouglasPeuckerReduction(cutLine, Global.PenSimplifyThreshold);
-
-            //The intersection point marks where we enter the polygon.  The first point in the path is not added because it indicates where the line exited the cut region. 
-            //Add the PenInput.Path 
-
-            //Temp for debugging ///////////////
-            for (int iCut = 0; iCut < SimplifiedPath.Count; iCut++)
-            {
-                Debug.Assert(walkedPoints.Contains(SimplifiedPath[iCut]) == false);
-                if (GridVector2.DistanceSquared(SimplifiedPath[iCut], walkedPoints.Last()) <= Geometry.Global.EpsilonSquared) 
-                {
-                    int i = 5; //Temp for debugging
-                    continue;
-                }
-
-                walkedPoints.Add(SimplifiedPath[iCut]);
-            }
-            /////////////////////////////////////
-            ///
-            //walkedPoints.AddRange(cutLine);
-
-            Debug.Assert(walkedPoints.RemoveDuplicates().Length == walkedPoints.Count-1);
-
-            if(direction == RotationDirection.CLOCKWISE)
-            {
-                walkedPoints.Reverse();
-            }
-
-            return new GridPolygon(walkedPoints.EnsureClosedRing());
         }
 
+        public GridPolygon GenerateOutputVolumePolygon()
+        {
+            GridPolygon output;
+
+            switch (this.CutAction)
+            {
+                case RetraceCommandAction.NONE:
+                    return null;
+                case RetraceCommandAction.GROW_EXTERIOR_RING:
+                    return this.CounterClockwiseCutPolygon.Area > this.ClockwiseCutPolygon.Area ? this.CounterClockwiseCutPolygon : this.ClockwiseCutPolygon;
+                case RetraceCommandAction.SHRINK_EXTERIOR_RING:
+                    return this.SwitchSide ? this.ClockwiseCutPolygon : this.CounterClockwiseCutPolygon;
+                case RetraceCommandAction.GROW_INTERNAL_RING:
+                    output = (GridPolygon)OriginalVolumePolygon.Clone();
+                    output.ReplaceInteriorRing(this.PolyBeingCut.Value.iInnerPoly.Value, this.CounterClockwiseCutPolygon.Area > this.ClockwiseCutPolygon.Area ? this.CounterClockwiseCutPolygon : this.ClockwiseCutPolygon);
+                    return output;
+                case RetraceCommandAction.SHRINK_INTERNAL_RING:
+                    output = (GridPolygon)OriginalVolumePolygon.Clone();
+                    output.ReplaceInteriorRing(this.PolyBeingCut.Value.iInnerPoly.Value, this.SwitchSide ? this.ClockwiseCutPolygon : this.CounterClockwiseCutPolygon);
+                    return output;
+            }
+
+            return null;
+        }
+
+        protected override void OnKeyUp(object sender, KeyEventArgs e)
+        {
+            if(e.Control)
+            {
+                this.UpdateViews();
+            }
+
+            base.OnKeyUp(sender, e);
+        }
+
+        protected override void OnKeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Control)
+            {
+                this.UpdateViews();
+            }
+
+            base.OnKeyDown(sender, e);
+        }
         /// <summary>
         /// Sets meshes for retrace and replace
         /// </summary>
         /// <returns></returns>
-        private void SetMeshes(GridPolygon OriginalVolumePolyExterior)
+        private void UpdateViews()
         {
-            if ((!OriginIndex.IsInner && (NextWalkPolygon.Area > OriginalVolumePolyExterior.Area || PrevWalkPolygon.Area > OriginalVolumePolyExterior.Area)) || (OriginIndex.IsInner && (NextWalkPolygon.Area > OriginalVolumePolygon.InteriorPolygons[OriginIndex.iInnerPoly.Value].Area || PrevWalkPolygon.Area > OriginalVolumePolygon.InteriorPolygons[OriginIndex.iInnerPoly.Value].Area)))
+            Microsoft.Xna.Framework.Color CCW_Color = SwitchSide ? Microsoft.Xna.Framework.Color.Magenta.ConvertToHSL(0.5f) : Microsoft.Xna.Framework.Color.Green.ConvertToHSL(0.5f);
+            Microsoft.Xna.Framework.Color CW_Color  = SwitchSide ? Microsoft.Xna.Framework.Color.Green.ConvertToHSL(0.5f) : Microsoft.Xna.Framework.Color.Magenta.ConvertToHSL(0.5f);
+            Microsoft.Xna.Framework.Color Grow_Color = Microsoft.Xna.Framework.Color.Green.ConvertToHSL(0.5f);
+            switch (this.CutAction)
             {
-                if (NextWalkPolygon.Area > PrevWalkPolygon.Area)
-                {
-                    NextWalkMesh = TriangleNetExtensions.CreateMeshForPolygon2D(NextWalkPolygon.Smooth(Global.NumClosedCurveInterpolationPoints), Microsoft.Xna.Framework.Color.Green.ConvertToHSL(0.5f));
-                    PrevWalkMesh = null;
-                    DrawPoly = DrawWhichPoly.NEXTPOLY;
-                }
-                else
-                {
-                    PrevWalkMesh = TriangleNetExtensions.CreateMeshForPolygon2D(PrevWalkPolygon.Smooth(Global.NumClosedCurveInterpolationPoints), Microsoft.Xna.Framework.Color.Green.ConvertToHSL(0.5f));
-                    NextWalkMesh = null;
-                    DrawPoly = DrawWhichPoly.PREVPOLY;
-                }
-            }
-            else
-            {
-                NextWalkMesh = TriangleNetExtensions.CreateMeshForPolygon2D(NextWalkPolygon.Smooth(Global.NumClosedCurveInterpolationPoints), Microsoft.Xna.Framework.Color.Green.ConvertToHSL(0.5f));
-                PrevWalkMesh = TriangleNetExtensions.CreateMeshForPolygon2D(PrevWalkPolygon.Smooth(Global.NumClosedCurveInterpolationPoints), Microsoft.Xna.Framework.Color.Red.ConvertToHSL(0.5f));
-                DrawPoly = DrawWhichPoly.NEXTPOLY;
+                case RetraceCommandAction.NONE:
+                    CounterClockwiseWalkMesh = null;
+                    ClockwiseWalkMesh = null;
+                    break;
+                case RetraceCommandAction.GROW_EXTERIOR_RING:
+                    //NextWalkMesh = TriangleNetExtensions.CreateMeshForPolygon2D(this.CounterClockwiseCutPolygon.Smooth(Global.NumClosedCurveInterpolationPoints), Microsoft.Xna.Framework.Color.Green.ConvertToHSL(0.5f));
+                    CounterClockwiseWalkMesh = TriangleNetExtensions.CreateMeshForPolygon2D(this.GenerateOutputVolumePolygon(), Grow_Color);
+                    ClockwiseWalkMesh = null;
+                    break;
+                case RetraceCommandAction.SHRINK_EXTERIOR_RING:
+                    //NextWalkMesh = TriangleNetExtensions.CreateMeshForPolygon2D(CounterClockwiseCutPolygon.Smooth(Global.NumClosedCurveInterpolationPoints), Microsoft.Xna.Framework.Color.Green.ConvertToHSL(0.5f));
+                    //PrevWalkMesh = TriangleNetExtensions.CreateMeshForPolygon2D(ClockwiseCutPolygon.Smooth(Global.NumClosedCurveInterpolationPoints), Microsoft.Xna.Framework.Color.Red.ConvertToHSL(0.5f));
+
+                    CounterClockwiseWalkMesh = TriangleNetExtensions.CreateMeshForPolygon2D(CounterClockwiseCutPolygon, CCW_Color);
+                    ClockwiseWalkMesh = TriangleNetExtensions.CreateMeshForPolygon2D(ClockwiseCutPolygon, CW_Color);
+                    break;
+                case RetraceCommandAction.GROW_INTERNAL_RING:
+                    //NextWalkMesh = TriangleNetExtensions.CreateMeshForPolygon2D(this.CounterClockwiseCutPolygon.Smooth(Global.NumClosedCurveInterpolationPoints), Microsoft.Xna.Framework.Color.Green.ConvertToHSL(0.5f));
+                    CounterClockwiseWalkMesh = TriangleNetExtensions.CreateMeshForPolygon2D(this.GenerateOutputVolumePolygon(), Grow_Color);
+                    ClockwiseWalkMesh = null;
+                    break;
+                case RetraceCommandAction.SHRINK_INTERNAL_RING:
+                    //NextWalkMesh = TriangleNetExtensions.CreateMeshForPolygon2D(CounterClockwiseCutPolygon.Smooth(Global.NumClosedCurveInterpolationPoints), Microsoft.Xna.Framework.Color.Green.ConvertToHSL(0.5f));
+                    //PrevWalkMesh = TriangleNetExtensions.CreateMeshForPolygon2D(ClockwiseCutPolygon.Smooth(Global.NumClosedCurveInterpolationPoints), Microsoft.Xna.Framework.Color.Red.ConvertToHSL(0.5f));
+
+                    CounterClockwiseWalkMesh = TriangleNetExtensions.CreateMeshForPolygon2D(CounterClockwiseCutPolygon, CCW_Color);
+                    ClockwiseWalkMesh = TriangleNetExtensions.CreateMeshForPolygon2D(ClockwiseCutPolygon, CW_Color);
+                    break; 
             }
         }
 
@@ -387,48 +379,16 @@ namespace WebAnnotation.UI.Commands
 
         }
 
-
-        protected GridPolygon AddInteriorToCutPolygon(GridPolygon originalPoly, GridPolygon cutPoly)
-        {
-            int? originRing = OriginIndex.iInnerPoly;
-            int i = 0;
-            foreach (GridVector2[] interiorRing in originalPoly.InteriorRings)
-            {
-                if(cutPoly.Contains(interiorRing[0]))
-                {
-                    if(originRing.HasValue)
-                    {
-                        if(i != originRing)
-                            cutPoly.AddInteriorRing(interiorRing);
-                    }
-                    else
-                        cutPoly.AddInteriorRing(interiorRing);
-                }
-                i++;
-            }
-
-            return cutPoly;
-        }
-
-        /// <summary>
-        /// Can a control point be placed or the command completed by clicking the mouse at this position?
-        /// </summary>
-        /// <param name="WorldPos"></param>
-        /// <returns></returns>
-        protected override bool CanControlPointBePlaced(GridVector2 WorldPos)
-        {
-            return (!OverlapsAnyVertex(WorldPos));
-        }
-
+        
         /// <summary>
         /// Can the command be completed by clicking this point?
         /// </summary>
         /// <param name="WorldPos"></param>
         /// <returns></returns>
-        protected override bool CanCommandComplete(GridVector2 WorldPos)
+        protected override bool CanCommandComplete()
         {
             //Does the path self intersect
-            if (PenInput.Segments.SelfIntersects())
+            if (PenInput.HasSelfIntersection)
                 return false;
             
             return ShapeIsValid();
@@ -436,6 +396,7 @@ namespace WebAnnotation.UI.Commands
 
         protected override bool ShapeIsValid()
         {
+            /*
             if (this.Verticies.Length < 3 || curve_verticies == null || this.curve_verticies.ControlPoints.Length < 3)
                 return false;
 
@@ -447,43 +408,24 @@ namespace WebAnnotation.UI.Commands
             {
                 return false;
             }
+            */
+
+            return true;
         }
 
         public override void OnDraw(Microsoft.Xna.Framework.Graphics.GraphicsDevice graphicsDevice, VikingXNA.Scene scene, Microsoft.Xna.Framework.Graphics.BasicEffect basicEffect)
         {
-            base.OnDraw(graphicsDevice, scene, basicEffect);
-
-            if (PrevWalkMesh != null || NextWalkMesh != null)
+            if (ClockwiseWalkMesh != null || CounterClockwiseWalkMesh != null)
             {
-                if (NextWalkMesh != null && PrevWalkMesh != null) // If control is pressed
-                {
-                    /*
-                    double DistanceA = NextWalkPolygon.Distance(PenInput.cursor_position);
-                    double DistanceB = PrevWalkPolygon.Distance(PenInput.cursor_position);
-                    if(DistanceA < DistanceB)
-                    */
-                    if(Control.ModifierKeys.CtrlPressed())
-                    {
-                        NextWalkMesh.Color = Microsoft.Xna.Framework.Color.Green.ConvertToHSL(0.5f);
-                        PrevWalkMesh.Color = Microsoft.Xna.Framework.Color.Red.ConvertToHSL(0.5f);
-                        DrawPoly = DrawWhichPoly.NEXTPOLY;
-
-                    }
-                    else
-                    {
-                        NextWalkMesh.Color = Microsoft.Xna.Framework.Color.Red.ConvertToHSL(0.5f);
-                        PrevWalkMesh.Color = Microsoft.Xna.Framework.Color.Green.ConvertToHSL(0.5f);
-                        DrawPoly = DrawWhichPoly.PREVPOLY;
-                    }
-                }
-
-                if (NextWalkMesh == null)
-                    MeshView<Microsoft.Xna.Framework.Graphics.VertexPositionColor>.Draw(graphicsDevice, scene, new PositionColorMeshModel[] { PrevWalkMesh });
-                else if (PrevWalkMesh == null)
-                    MeshView<Microsoft.Xna.Framework.Graphics.VertexPositionColor>.Draw(graphicsDevice, scene, new PositionColorMeshModel[] { NextWalkMesh });
+                if (CounterClockwiseWalkMesh == null)
+                    MeshView<Microsoft.Xna.Framework.Graphics.VertexPositionColor>.Draw(graphicsDevice, scene, new PositionColorMeshModel[] { ClockwiseWalkMesh });
+                else if (ClockwiseWalkMesh == null)
+                    MeshView<Microsoft.Xna.Framework.Graphics.VertexPositionColor>.Draw(graphicsDevice, scene, new PositionColorMeshModel[] { CounterClockwiseWalkMesh });
                 else
-                    MeshView<Microsoft.Xna.Framework.Graphics.VertexPositionColor>.Draw(graphicsDevice, scene, new PositionColorMeshModel[] { PrevWalkMesh, NextWalkMesh });
+                    MeshView<Microsoft.Xna.Framework.Graphics.VertexPositionColor>.Draw(graphicsDevice, scene, new PositionColorMeshModel[] { ClockwiseWalkMesh, CounterClockwiseWalkMesh });
             }
+
+            base.OnDraw(graphicsDevice, scene, basicEffect);
         }
     }
 }

@@ -64,7 +64,7 @@ namespace MonogameTestbed
             }
 
             ExteriorRingView = new LineSetView();
-            ExteriorRingView.LineViews = Polygon.ExteriorSegments.Select(s => new LineView(s, this.width, this.Color, LineStyle.Standard, false)).ToList();
+            ExteriorRingView.LineViews = Polygon.ExteriorSegments.Select(s => new LineView(s, this.width, this.Color, LineStyle.Standard)).ToList();
 
             TriangleNet.Meshing.IMesh mesh = _Polygon.Triangulate();
 
@@ -72,11 +72,11 @@ namespace MonogameTestbed
 
             InteriorEdgeView = new LineSetView();
             List<GridLineSegment> lines = mesh.ToLines();
-            InteriorEdgeView.LineViews = lines.Where(l => !Polygon.ExteriorSegments.Contains(l)).Select(s => new LineView(s, this.width, this.Color, LineStyle.Ladder, false)).ToList();
+            InteriorEdgeView.LineViews = lines.Where(l => !Polygon.ExteriorSegments.Contains(l)).Select(s => new LineView(s, this.width, this.Color, LineStyle.Ladder)).ToList();
 
             MedialAxisView = new LineSetView();
             GridLineSegment[] MedialAxis = MorphologyMesh.MedialAxisFinder.ApproximateMedialAxis(_Polygon).Segments;
-            MedialAxisView.LineViews = MedialAxis.Select(s => new LineView(s, this.width, this.Color, LineStyle.Glow, false)).ToList();
+            MedialAxisView.LineViews = MedialAxis.Select(s => new LineView(s, this.width, this.Color, LineStyle.Glow)).ToList();
         }
 
         public void Draw(MonoTestbed window)

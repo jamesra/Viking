@@ -35,7 +35,7 @@ namespace WebAnnotation.UI.Commands
         {
             get
             {
-                return this.curve_verticies == null ? Global.DefaultClosedLineWidth : this.curve_verticies.ControlPoints.MinDistanceBetweenPoints();
+                return this.curve_verticies == null ? Global.DefaultClosedLineWidth : this.curve_verticies.ControlPoints.MinDistanceBetweenAnyPoints();
             }
         }
 
@@ -166,7 +166,7 @@ namespace WebAnnotation.UI.Commands
         {
             get
             {
-                return Global.NumOpenCurveInterpolationPoints;
+                return Geometry.Global.NumOpenCurveInterpolationPoints;
             }
         }
 
@@ -213,7 +213,7 @@ namespace WebAnnotation.UI.Commands
             if (NumVerticies < 2 || curve_verticies == null)
                 return false;
 
-            return this.curve_verticies.ControlPoints.ToPolyLine().STIsValid().IsTrue;
+            return this.curve_verticies.ControlPoints.ToSqlGeometry().STIsValid().IsTrue;
         }
 
         /// <summary>
@@ -274,6 +274,8 @@ namespace WebAnnotation.UI.Commands
     
 
     /// <summary>
+    /// This is the base class for building geometry by tracing a shape on the screen with a pen or mouse.
+    /// 
     /// Left-click once to create a new vertex in the poly line
     /// Left-click an existing vertex to complete polyline creation
     /// Double left-click to complete polyline creation
@@ -544,7 +546,7 @@ namespace WebAnnotation.UI.Commands
                 }
                 else
                 {
-                    LineView lineView = new LineView(new GridLineSegment(vert_stack.First(), vert_stack.Last()), Global.NumCurveInterpolationPoints(!this.IsOpen), this.LineColor, lineStyle: Style, UseHSLColor: true);
+                    LineView lineView = new LineView(new GridLineSegment(vert_stack.First(), vert_stack.Last()), Global.NumCurveInterpolationPoints(!this.IsOpen), this.LineColor, lineStyle: Style);
                     lineView.Color.SetAlpha(this.ShapeIsValid() ? 1 : 0.25f);
                     LineView.Draw(graphicsDevice, scene, Parent.LumaOverlayLineManager, new LineView[] { lineView });
                 }
@@ -564,7 +566,7 @@ namespace WebAnnotation.UI.Commands
                 }
                 if (this.Verticies.Length == 2)
                 {
-                    LineView lineView = new LineView(new GridLineSegment(vert_stack.First(), vert_stack.Last()), Global.NumCurveInterpolationPoints(!this.IsOpen), this.LineColor, lineStyle: Style, UseHSLColor: true);
+                    LineView lineView = new LineView(new GridLineSegment(vert_stack.First(), vert_stack.Last()), Global.NumCurveInterpolationPoints(!this.IsOpen), this.LineColor, lineStyle: Style);
                     lineView.Color.SetAlpha(this.ShapeIsValid() ? 1 : 0.25f);
                     LineView.Draw(graphicsDevice, scene, Parent.LumaOverlayLineManager, new LineView[] { lineView });
                 }
