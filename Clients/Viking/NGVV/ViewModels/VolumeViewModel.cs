@@ -20,6 +20,11 @@ namespace Viking.ViewModels
 
         public bool IsLocal { get { return _Volume.IsLocal; } }
 
+        public Geometry.AxisUnits DefaultXYScale
+        {
+            get { return _Volume.DefaultXYScale; }
+        }
+
         public int DefaultSectionNumber
         {
             get

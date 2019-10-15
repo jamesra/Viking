@@ -53,7 +53,7 @@ namespace WebAnnotation
             }
         }
 
-    static public int PenSimplifyThreshold = 15;
+        static public int PenSimplifyThreshold = 15;
 
         static public double DefaultClosedLineWidth = 24.0;
 
@@ -184,9 +184,12 @@ namespace WebAnnotation
             //Find the server hosting the volume.  Look for an XML file mapping the volume to an endpoint.
             //return true; 
             
-            Scale = new Geometry.GridVector3(2.18, 2.18, 90.0); 
+            
 
             Viking.ViewModels.VolumeViewModel volume = Viking.UI.State.volume;
+
+            //Section Thickness is hard-coded, should be pulled from server.
+            Scale = new Geometry.GridVector3(volume.DefaultXYScale.Value, volume.DefaultXYScale.Value, 90.0);
 
             if (volume == null)
                 return false;
