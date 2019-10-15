@@ -1227,7 +1227,16 @@ namespace Viking.UI.Controls
                     graphicsDevice.Clear(ClearOptions.DepthBuffer, Microsoft.Xna.Framework.Color.Black, float.MaxValue, 0);
 
                     ISectionOverlayExtension overlayObj = listOverlays[i];
+#if DEBUG
+                    BlendState startingBlendState = graphicsDevice.BlendState;
+                    DepthStencilState startingDepthState = graphicsDevice.DepthStencilState;
+#endif
                     overlayObj.Draw(graphicsDevice, scene, backgroundSection, ChannelOverlay, ref NextStencilValue);
+#if DEBUG
+                    System.Diagnostics.Debug.Assert(startingBlendState == graphicsDevice.BlendState, string.Format("Blend state changed by overlay extension draw method {0}", overlayObj.ToString()));
+                    //Stencil reference can change on depthstate, so ignore check for now
+                    //System.Diagnostics.Debug.Assert(startingDepthState == graphicsDevice.DepthStencilState, string.Format("Depth state changed by overlay extension draw method {0}", overlayObj.ToString()));
+#endif
                 }
 
                 ///This is a bad way to know if we are capturing a screenshot, but works for now
@@ -1237,8 +1246,12 @@ namespace Viking.UI.Controls
                     {
                         if (CurrentCommand != null)
                         {
-                            graphicsDevice.DepthStencilState = CreateDepthStateForOverlay(++NextStencilValue, false);
+                            
+                            ++NextStencilValue;
+                            graphicsDevice.DepthStencilState = CreateDepthStateForOverlay(++NextStencilValue, true);
                             graphicsDevice.ReferenceStencil = NextStencilValue;
+
+                            graphicsDevice.Clear(ClearOptions.DepthBuffer, Microsoft.Xna.Framework.Color.Black, float.MaxValue, 0);
 
                             CurrentCommand.OnDraw(graphicsDevice, scene, basicEffect);
                         }
@@ -1820,6 +1833,7 @@ namespace Viking.UI.Controls
                     MergeRGBBlendState.AlphaDestinationBlend = Blend.Zero;
                     MergeRGBBlendState.ColorSourceBlend = Blend.One;
                     MergeRGBBlendState.ColorDestinationBlend = Blend.Zero;
+                    MergeRGBBlendState.Name = "MergeRGBBlendState";
                 }
 
                 graphicsDevice.BlendState = MergeRGBBlendState;
