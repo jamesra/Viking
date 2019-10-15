@@ -13,6 +13,7 @@ namespace VikingXNAGraphics
     {
         static BlendState OriginalBlendState;
         static RasterizerState OriginalRasterState;
+        static DepthStencilState OriginalDepthState;
 
         static BlendState ShapeRendererBlendState = null;
         static RasterizerState ShapeRendererRasterizerState = null;
@@ -26,6 +27,7 @@ namespace VikingXNAGraphics
         {
             OriginalBlendState = graphicsDevice.BlendState;
             OriginalRasterState = graphicsDevice.RasterizerState;
+            OriginalDepthState = graphicsDevice.DepthStencilState;
         }
 
         public static void RestoreDeviceState(GraphicsDevice graphicsDevice)
@@ -35,6 +37,9 @@ namespace VikingXNAGraphics
 
             if (OriginalRasterState != null && !OriginalRasterState.IsDisposed)
                 graphicsDevice.RasterizerState = OriginalRasterState;
+
+            if (OriginalDepthState != null && !OriginalDepthState.IsDisposed)
+                graphicsDevice.DepthStencilState = OriginalDepthState;
         }
 
         public static void SetRenderStateForShapes(GraphicsDevice graphicsDevice, ColorWriteChannels colorWriteChannels = ColorWriteChannels.All)
@@ -53,7 +58,7 @@ namespace VikingXNAGraphics
                 ShapeRendererBlendState.AlphaDestinationBlend = Blend.InverseSourceAlpha;
                 ShapeRendererBlendState.ColorSourceBlend = Blend.SourceAlpha;
                 ShapeRendererBlendState.ColorDestinationBlend = Blend.InverseSourceAlpha;
-
+                ShapeRendererBlendState.Name = "BlendShapes";
                 ShapeRendererBlendState.ColorWriteChannels = colorWriteChannels;
             }
 
@@ -161,6 +166,14 @@ namespace VikingXNAGraphics
 
         private static void CopyDepthSettings(DepthStencilState DestState, DepthStencilState SrcState)
         {
+            if (SrcState == null)
+            {
+                depthstencilState.DepthBufferEnable = true;
+                depthstencilState.DepthBufferWriteEnable = true;
+                depthstencilState.DepthBufferFunction = CompareFunction.LessEqual;
+                return;
+            }
+
             DestState.CounterClockwiseStencilDepthBufferFail = SrcState.CounterClockwiseStencilDepthBufferFail;
             DestState.CounterClockwiseStencilFail = SrcState.CounterClockwiseStencilFail;
             DestState.CounterClockwiseStencilFunction = SrcState.CounterClockwiseStencilFunction;
@@ -172,6 +185,9 @@ namespace VikingXNAGraphics
 
         private static void CopyStencilSettings(DepthStencilState DestState, DepthStencilState SrcState)
         {
+            if (SrcState == null)
+                return;
+
             DestState.StencilDepthBufferFail = SrcState.StencilDepthBufferFail;
             DestState.StencilEnable = SrcState.StencilEnable;
             DestState.StencilFail = SrcState.StencilFail;
