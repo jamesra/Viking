@@ -122,7 +122,7 @@ namespace VikingXNA
         {
             _Projection = Matrix.CreateOrthographic((float)(_Viewport.Width * _camera.Downsample), (float)(_Viewport.Height * _camera.Downsample), MinDrawdistance, MaxDrawDistance);
             _WorldViewProj = (World * Camera.View) * _Projection;
-            _VisibleWorldBounds = new GridRectangle?();
+            ResetVisibleWorldBounds();
         }
 
         private void OnCameraPropertyChanged(object sender, PropertyChangedEventArgs e)
@@ -135,27 +135,59 @@ namespace VikingXNA
             else
             {
                 _WorldViewProj = (_World * Camera.View) * _Projection;
-                _VisibleWorldBounds = new GridRectangle?();
+                ResetVisibleWorldBounds();
             }
 
             OnPropertyChanged("Camera." + e.PropertyName);
         }
 
-        private Geometry.GridRectangle? _VisibleWorldBounds;
+        private System.Threading.ReaderWriterLockSlim rw_lock = new System.Threading.ReaderWriterLockSlim();
+        private Geometry.GridRectangle? _VisibleWorldBounds; //This should only be set by using ResetVisibleWorldBounds
 
         public Geometry.GridRectangle VisibleWorldBounds
         {
             get
             {
-                if(!_VisibleWorldBounds.HasValue)
+                try
                 {
-                    double offset = 0; 
-                    GridRectangle projectedArea = new GridRectangle(new GridVector2(0, 0), ((double)_Viewport.Width * Camera.Downsample), (double)_Viewport.Height * Camera.Downsample); ;
-                    GridVector2 BottomLeft = ScreenToWorld(offset, _Viewport.Height);
-                    _VisibleWorldBounds = new GridRectangle(BottomLeft, projectedArea.Width, projectedArea.Height);
+                    rw_lock.EnterUpgradeableReadLock();
+
+                    if (!_VisibleWorldBounds.HasValue)
+                    {
+                        try
+                        {
+                            rw_lock.EnterWriteLock();
+                            double offset = 0;
+                            GridRectangle projectedArea = new GridRectangle(new GridVector2(0, 0), ((double)_Viewport.Width * Camera.Downsample), (double)_Viewport.Height * Camera.Downsample); ;
+                            GridVector2 BottomLeft = ScreenToWorld(offset, _Viewport.Height);
+                            _VisibleWorldBounds = new GridRectangle(BottomLeft, projectedArea.Width, projectedArea.Height);
+                        }
+                        finally
+                        {
+                            rw_lock.ExitWriteLock();
+                        }
+                    }
+
+                    return _VisibleWorldBounds.Value;
+                }
+                finally
+                {
+                    rw_lock.ExitUpgradeableReadLock();
                 }
 
-                return _VisibleWorldBounds.Value;
+            } 
+        }
+
+        private void ResetVisibleWorldBounds()
+        {
+            try
+            {
+                rw_lock.EnterWriteLock(); 
+                _VisibleWorldBounds = new GridRectangle?();
+            }
+            finally
+            {
+                rw_lock.ExitWriteLock();
             }
         }
 
