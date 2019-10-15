@@ -9,6 +9,7 @@ using System.Windows;
 using Viking.Common;
 using VikingXNAGraphics;
 using VikingXNAWinForms;
+using System.ComponentModel;
 
 namespace Viking.UI.Commands
 {
@@ -252,6 +253,8 @@ namespace Viking.UI.Commands
         KeyEventHandler MyKeyDown;
         KeyEventHandler MyKeyUp;
 
+        PropertyChangedEventHandler MyCameraChanged;
+        
         /* UI Extensions, extensions can register with these delegates to be notified whenever the default command does not process input.  This gives
         * extensions the chance to select objects only they are aware of or provide special behavior for key presses */
         public static event MouseEventHandler OnUnhandledMouseDown;
@@ -294,6 +297,8 @@ namespace Viking.UI.Commands
             MyKeyDown = new KeyEventHandler(this.OnKeyDown);
             MyKeyUp = new KeyEventHandler(this.OnKeyUp);
 
+            MyCameraChanged = new PropertyChangedEventHandler(this.OnCameraChanged);
+
             Parent.MouseClick += MyMouseClick;
             Parent.MouseDoubleClick += MyMouseDoubleClick;
             Parent.MouseDown += MyMouseDown;
@@ -306,6 +311,8 @@ namespace Viking.UI.Commands
             Parent.KeyPress += MyKeyPress;
             Parent.KeyDown += MyKeyDown;
             Parent.KeyUp += MyKeyUp;
+
+            Parent.Camera.PropertyChanged += MyCameraChanged;
         }
 
         public void UnsubscribeToInterfaceEvents()
@@ -324,6 +331,8 @@ namespace Viking.UI.Commands
             Parent.KeyPress -= MyKeyPress;
             Parent.KeyDown -= MyKeyDown;
             Parent.KeyUp -= MyKeyUp;
+
+            Parent.Camera.PropertyChanged -= MyCameraChanged;
         }
 
         /// <summary>
@@ -691,7 +700,9 @@ namespace Viking.UI.Commands
             return; 
         }
 
-        
+        protected virtual void OnCameraChanged(object sender, PropertyChangedEventArgs e)
+        {
+        }
 
 
     }
