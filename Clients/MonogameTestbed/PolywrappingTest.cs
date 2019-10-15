@@ -84,7 +84,7 @@ namespace MonogameTestbed
 
             //GridLineSegment[] lines = CompositeMesh.Edges.Values.Select(e => new GridLineSegment(CompositeMesh.Verticies[e.A].Position, CompositeMesh.Verticies[e.B].Position)).ToArray();
 
-            StartingLine = new LineView(addedMeshEdges[0], 2, Color.Red, LineStyle.Standard, false);
+            StartingLine = new LineView(addedMeshEdges[0], 2, Color.Red, LineStyle.Standard);
 
             TrianglesView.UpdateViews(addedMeshEdges);
             UpdateLinesToDraw();
@@ -197,8 +197,8 @@ namespace MonogameTestbed
             UpdateWrapping();
 
             polyRingViews = new List<LineView>();
-            polyRingViews.AddRange(a.AllSegments.Select(s => new LineView(s, 1, Color.Red.SetAlpha(0.5f), LineStyle.Standard, false)));
-            polyRingViews.AddRange(b.AllSegments.Select(s => new LineView(s, 1, Color.Blue.SetAlpha(0.5f), LineStyle.Standard, false)));
+            polyRingViews.AddRange(a.AllSegments.Select(s => new LineView(s, 1, Color.Red.SetAlpha(0.5f), LineStyle.Standard)));
+            polyRingViews.AddRange(b.AllSegments.Select(s => new LineView(s, 1, Color.Blue.SetAlpha(0.5f), LineStyle.Standard)));
         }
 
         public void UpdateWrapping()
@@ -273,7 +273,7 @@ namespace MonogameTestbed
 
             //GridLineSegment[] lines = CompositeMesh.Edges.Values.Select(e => new GridLineSegment(CompositeMesh.Verticies[e.A].Position, CompositeMesh.Verticies[e.B].Position)).ToArray();
 
-            StartingLine = new LineView(UpperVerticies[UpperStart], LowerVerticies[LowerStart], 2, Color.Red, LineStyle.Standard, false);
+            StartingLine = new LineView(UpperVerticies[UpperStart], LowerVerticies[LowerStart], 2, Color.Red, LineStyle.Standard);
              
             TrianglesView.UpdateViews(CreatedLines);
             UpdateLinesToDraw();

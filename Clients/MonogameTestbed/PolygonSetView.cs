@@ -163,7 +163,7 @@ namespace MonogameTestbed
                 psv.UpdateViews();
                 listPointSetView.Add(psv);
 
-                polyRingViews.AddRange(p.AllSegments.Select(s => new LineView(s, 1, PolyLineColors[iPoly], LineStyle.Standard, false)));
+                polyRingViews.AddRange(p.AllSegments.Select(s => new LineView(s, 1, PolyLineColors[iPoly], LineStyle.Standard)));
             }
 
             PolyPointsView = listPointSetView.ToArray();

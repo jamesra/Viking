@@ -92,7 +92,7 @@ namespace MonogameTestbed
 
                 Color color = Color.Random();
 
-                polyRingViews.AddRange(p.AllSegments.Select(s => new LineView(s, 0.25, color, LineStyle.Standard, false)));
+                polyRingViews.AddRange(p.AllSegments.Select(s => new LineView(s, 0.25, color, LineStyle.Standard)));
             }
 
             PolyPointsView = listPointSetView.ToArray();
@@ -343,24 +343,26 @@ namespace MonogameTestbed
                 LineSetView lineView = new LineSetView();
                 Color c = Color.Random();
                 c.A = 128;
-                lineView.LineViews = poly.ExteriorSegments.Select(l => new LineView(l, 0.5, c, LineStyle.Standard, false)).ToList();
+                lineView.LineViews = poly.ExteriorSegments.Select(l => new LineView(l, 0.5, c, LineStyle.Standard)).ToList();
                 views.Add(lineView);
             }
 
             this.RegionPolygonViews = views; 
         }
-        
-        //Pair off nearby regions on adjacent sections to create meshes between
+
+        /// <summary>
+        /// Pair off nearby regions on adjacent sections to create meshes between
+        /// </summary>
         private static Dictionary<MorphMeshRegion, List<MorphMeshRegion>> PairOffRegions(MorphRenderMesh mesh)
         {
             MorphMeshRegion[] AllRegions = mesh.Regions.Where(r => r.Type == RegionType.EXPOSED).ToArray();
-            SortedSet<double> ZLevels = new SortedSet<double>(AllRegions.Select(r => r.Z).Distinct());
+            SortedSet<double> ZLevels = new SortedSet<double>(AllRegions.SelectMany(r => r.ZLevel).Distinct());
             Dictionary<MorphMeshRegion, List<MorphMeshRegion>> RegionToCandidates = new Dictionary<MorphMeshRegion, List<MorphMeshRegion>>();
             
             //Identify which regions each region could be matched to
             foreach(MorphMeshRegion region in AllRegions)
             {
-                List<MorphMeshRegion> Candidates = AllRegions.Where(r => r.Z != region.Z).OrderBy(c => c.Polygon.Distance(region.Polygon)).ToList();
+                List<MorphMeshRegion> Candidates = AllRegions.Where(r => r.ZLevel.Intersect(region.ZLevel).IsEmpty).OrderBy(c => c.Polygon.Distance(region.Polygon)).ToList();
                 RegionToCandidates[region] = Candidates;
             }
 
@@ -408,7 +410,7 @@ namespace MonogameTestbed
                     continue; 
 
                 GridLineSegment segment = mesh.ToSegment(edgeKey);
-                LineView lineView = new LineView(segment, lineWidth, edge.Type.GetColor(), LineStyle.Standard, false);
+                LineView lineView = new LineView(segment, lineWidth, edge.Type.GetColor(), LineStyle.Standard);
                 lineViews.Add(lineView);
 
                 CurveLabel lineLabel = CurveLabel.CreateLineLabel(edge.Type.ToString(), segment, Color.White, lineWidth: lineWidth);
