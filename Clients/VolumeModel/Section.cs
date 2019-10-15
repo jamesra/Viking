@@ -222,7 +222,7 @@ namespace Viking.VolumeModel
                         else
                             WarpedTo.Add(Name, mapping);
 
-                        if (UseForVolume ||  string.IsNullOrEmpty(DefaultPyramidTransform))
+                        if (UseForVolume || string.IsNullOrEmpty(DefaultPyramidTransform))
                         {
                             DefaultPyramidTransform = Name;
                         }
@@ -231,7 +231,7 @@ namespace Viking.VolumeModel
                     case "pyramid":
                         //Load an image pyramid whose tiles can be warped using a <transform>
                         Name = IO.GetAttributeCaseInsensitive(elem, "name").Value;
-//                        string Pyramidpath = GetAttributeCaseInsensitive(elem,"path").Value;
+                        //                        string Pyramidpath = GetAttributeCaseInsensitive(elem,"path").Value;
 
                         /*PORT: The viewmodel needs to set this
                         if (UI.State.CurrentMode.Length == 0)
@@ -240,9 +240,12 @@ namespace Viking.VolumeModel
 
                         Pyramid pyramid = Pyramid.CreateFromElement(elem, this);
                         if (pyramid == null) //Do not add the pyramid if it has no levels or was invalid for some reason
+                        {
+                            System.Diagnostics.Trace.WriteLine(string.Format("Unable to parse TilePyramid element of Section #{0}", this.Number));
                             continue;
+                        }
 
-                        if(!this.ImagePyramids.ContainsKey(pyramid.Name))
+                        if (!this.ImagePyramids.ContainsKey(pyramid.Name))
                             this.ImagePyramids.Add(pyramid.Name, pyramid);
 
                         if (DefaultPyramid == null || DefaultPyramid.Length == 0)
@@ -253,13 +256,16 @@ namespace Viking.VolumeModel
                                 DefaultPyramid = pyramid.Name;
                         }
 
-                        ChannelNames.Add(pyramid.Name); 
+                        ChannelNames.Add(pyramid.Name);
                         break;
                     case "tileset":
                         //Load a pre-transformed pyramid whose tiles have a fixed size
                         TileGridMapping tilegridmapping = TileGridMapping.CreateFromTilesetElement(elem, this);
                         if (tilegridmapping == null)
-                            continue; 
+                        {
+                            System.Diagnostics.Trace.WriteLine(string.Format("Unable to parse Tileset element of Section #{0}", this.Number));
+                            continue;
+                        } 
 
                         this.AddTileset(tilegridmapping);
                         DefaultTileset = tilegridmapping.Name;
