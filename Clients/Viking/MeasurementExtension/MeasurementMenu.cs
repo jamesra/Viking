@@ -40,9 +40,8 @@ namespace MeasurementExtension
         static public void OnMenuMeasureLine(object sender, EventArgs e)
         {
             Debug.Print("Measure Line");
-
-            var menuItem = sender as System.Windows.Forms.ToolStripItem;
-            Viking.UI.Controls.SectionViewerControl viewer = menuItem.GetCurrentParent().Parent as Viking.UI.Controls.SectionViewerControl;
+             
+            Viking.UI.Controls.SectionViewerControl viewer = Viking.UI.State.ViewerControl;
              
             viewer.CommandQueue.EnqueueCommand(typeof(MeasureCommand));
         } 
