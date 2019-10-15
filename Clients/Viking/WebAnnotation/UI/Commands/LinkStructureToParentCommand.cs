@@ -175,7 +175,7 @@ namespace WebAnnotation.UI.Commands
                 target = this.oldWorldPosition;
             }
             
-            LineView line = new LineView(transformedPos, target, 16.0, Microsoft.Xna.Framework.Color.White, LineStyle.Tubular, false);
+            LineView line = new LineView(transformedPos, target, 16.0, Microsoft.Xna.Framework.Color.White, LineStyle.Tubular);
             
             RoundLineManager lineManager = VikingXNAGraphics.DeviceEffectsStore<LumaOverlayRoundLineManager>.TryGet(graphicsDevice);
             if (lineManager == null)
