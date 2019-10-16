@@ -1,64 +1,43 @@
 // Data shared by all line and curves:
+
 float time;
 float4 lineColor;
 float blurThreshold = 0.95;
+float dashLength = 1.5;
 
-struct PS_Output
+#include "LineCurvePixelShaderShared.fx"
+
+Color_Depth_Output MyPSStandard(LINE_PS_INPUT input)
 {
-	float4 Color : COLOR;
-	float Depth : DEPTH;
-};
-
-
-//NOTE: THIS STRUCTURE MUST MATCH THE OUTPUT OF THE VERTEX SHADER EXACTLY WHEN USING MONOGAME
-struct LINE_PS_INPUT
-{
-    float4 position : POSITION;
-    float3 polar : TEXCOORD0;
-    float2 posModelSpace : TEXCOORD1;
-    float2 tex : TEXCOORD2;
-};
-
-uniform const texture Texture;
-
-uniform const sampler TextureSampler : register(s1) = sampler_state
-{
-	Texture = (Texture);
-	MipFilter = LINEAR;
-	MinFilter = LINEAR;
-	MagFilter = LINEAR;
-	AddressU = CLAMP;
-	AddressV = CLAMP;
-	AddressW = CLAMP;
-}; 
-
-float4 MyPSStandard(LINE_PS_INPUT input) : COLOR0
-{
+	Color_Depth_Output output;
 	float4 finalColor;
 	finalColor.rgb = lineColor.rgb;
-    finalColor.a = lineColor.a * BlurEdge(input.polar.x, blurThreshold);
-	return finalColor; 
+	finalColor.a = lineColor.a * BlurEdge(input.polar.x, blurThreshold);
+
+	output.Color = finalColor;
+	output.Depth = input.polar.x;
+	return output;
 }
 
-float4 MyPSAlphaGradient(LINE_PS_INPUT input) : COLOR0
+Color_Depth_Output MyPSAlphaGradient(LINE_PS_INPUT input)
 {
+	Color_Depth_Output output;
 	float4 finalColor;
+	finalColor.rgb = lineColor.rgb;
 	
-	finalColor.rgb = lineColor.rgb;
-	//finalColor.a = lineColor.a * polar.z * BlurEdge( polar.x );
+	finalColor.a = lineColor.a *  ((input.polar.z * 2) > 1 ? ((1 - input.polar.z) * 2) : (input.polar.z * 2)) * BlurEdge(input.polar.x, blurThreshold);
 
-    finalColor.a = lineColor.a * ((input.polar.z * 2.0) > 1.0 ? ((1.0 - input.polar.z) * 2.0) : (input.polar.z * 2.0)) * BlurEdge(input.polar.x, blurThreshold);
-
-	return finalColor;
+	output.Color = finalColor;
+	output.Depth = input.polar.x;
+	return output;
 }
 
-PS_Output MyPSAlphaDepthGradient(LINE_PS_INPUT input)
+Color_Depth_Output MyPSAlphaDepthGradient(LINE_PS_INPUT input)
 {
-	PS_Output output; 
-    float3 polar = input.polar;
+	Color_Depth_Output output;
 
 	float4 finalColor;
-	finalColor.r = (polar.z * 2) > 1 ? ((1 - polar.z) * 2) : (polar.z * 2);
+	finalColor.r = (input.polar.z * 2) > 1 ? ((1 - input.polar.z) * 2) : (input.polar.z * 2);
 	finalColor.gb = lineColor.gb;
 	//finalColor.gb = ;
 
@@ -66,20 +45,22 @@ PS_Output MyPSAlphaDepthGradient(LINE_PS_INPUT input)
 	finalColor.a = 1;
 
 	output.Color = finalColor;
-	output.Depth = (polar.z * 2) > 1 ? 1 - ((1 - polar.z) * 2) : 1 - (polar.z * 2);
+	output.Depth = (input.polar.z * 2) > 1 ? 1 - ((1 - input.polar.z) * 2) : 1 - (input.polar.z * 2);
 	output.Color.a = 1 - output.Depth;
 	return output;
 }
 
-float4 MyPSNoBlur() : COLOR0
+Color_Depth_Output MyPSNoBlur(LINE_PS_INPUT input)
 {
-	float4 finalColor = lineColor;
-	return finalColor;
+	Color_Depth_Output output;
+	output.Color = lineColor;
+	output.Depth = input.polar.x;
+	return output;
 }
 
-PS_Output MyPSAnimatedBidirectional(LINE_PS_INPUT input)
+Color_Depth_Output MyPSAnimatedBidirectional(LINE_PS_INPUT input)
 {
-	PS_Output output;
+	Color_Depth_Output output;
 	float4 finalColor;
 	float bandWidth = 100;
 	float Hz = 1;
@@ -89,71 +70,93 @@ PS_Output MyPSAnimatedBidirectional(LINE_PS_INPUT input)
 	//	float modulation = sin( ( posModelSpace.x * 100 + (time) ) * 80 * 3.14159) * 0.5 + 0.5;
 	float modulation = sin(offset * 3.14159) / 2;
 	finalColor.rgb = lineColor.rgb;
-    finalColor.a = lineColor.a * BlurEdge(input.polar.x, blurThreshold) * modulation + 0.5;
+	finalColor.a = lineColor.a * BlurEdge(input.polar.x, blurThreshold) * modulation + 0.5;
 	clip(finalColor.a);
 
 	output.Color = finalColor;
-    float depth = (input.polar.z * 2) > 1 ? 1 - ((1 - input.polar.z) * 2) : 1 - (input.polar.z * 2);
-	output.Depth = 0;//(polar.z * 2) > 1 ? 1-((1-polar.z)*2) : 1-(polar.z * 2);
+	float depth = (input.polar.z * 2) > 1 ? 1 - ((1 - input.polar.z) * 2) : 1 - (input.polar.z * 2);
+	output.Depth = input.polar.x;//(polar.z * 2) > 1 ? 1-((1-polar.z)*2) : 1-(polar.z * 2);
 	output.Color.a = (1 - depth) * finalColor.a;
 	clip(output.Color.a);
 
 	return output;
 }
 
-PS_Output MyPSAnimatedLinear(LINE_PS_INPUT input)
+Color_Depth_Output MyPSAnimatedLinear(LINE_PS_INPUT input)
 {
-	PS_Output output;
+	Color_Depth_Output output;
 	float4 finalColor;
 	float bandWidth = 100;
 	float Hz = 2;
 	float offset = (time * Hz);
 
 	//offset += cos(abs(posModelSpace.y) / lineRadius) * 1.5; //Adds chevron arrow effect
-    offset -= (abs(input.posModelSpace.y) / lineRadius) / 1.75; //Adds chevron arrow effect
-    float modulation = sin(((-input.posModelSpace.x / bandWidth) + offset) * 3.14159);
+	offset -= (abs(input.posModelSpace.y) / lineRadius) / 1.75; //Adds chevron arrow effect
+	float modulation = sin(((-input.posModelSpace.x / bandWidth) + offset) * 3.14159);
 	clip(modulation <= 0 ? -1 : 1); //Adds sharp boundary to arrows
 
 	finalColor.rgb = lineColor.rgb;
-    finalColor.a = lineColor.a * BlurEdge(input.polar.x, blurThreshold) * modulation;
+	finalColor.a = lineColor.a * BlurEdge(input.polar.x, blurThreshold) * modulation;
 
 	output.Color = finalColor;
-    float depth = (input.polar.z * 2) > 1 ? 1 - ((1 - input.polar.z) * 2) : 1 - (input.polar.z * 2);
-	output.Depth = 0; //depth;
+	float depth = (input.polar.z * 2) > 1 ? 1 - ((1 - input.polar.z) * 2) : 1 - (input.polar.z * 2);
+	output.Depth = input.polar.x; //depth;
 
 					  //output.Color.a = lineColor.a * (1-depth) * modulation * (1-polar.x);  //This version stops animation at line origin
-    output.Color.a = lineColor.a * modulation * (1 - input.polar.x);
+	output.Color.a = lineColor.a * modulation *(1 - input.polar.x);
 	return output;
 }
 
 
-float4 MyPSAnimatedRadial(LINE_PS_INPUT input) : COLOR0
+Color_Depth_Output MyPSAnimatedRadial(LINE_PS_INPUT input)
 {
+	Color_Depth_Output output;
 	float4 finalColor;
-    float modulation = sin((-input.polar.x * 0.1 + time * 0.05) * 20 * 3.14159) * 0.5 + 0.5;
+	float modulation = sin((-input.polar.x * 0.1 + time * 0.05) * 20 * 3.14159) * 0.5 + 0.5;
 	finalColor.rgb = lineColor.rgb * modulation;
-    finalColor.a = lineColor.a * BlurEdge(input.polar.x, blurThreshold);
-	return finalColor;
+	finalColor.a = lineColor.a * BlurEdge(input.polar.x, blurThreshold);
+	output.Color = finalColor;
+	output.Depth = input.polar.x;
+	return output;
 }
 
-float4 MyPSLadder(LINE_PS_INPUT input) : COLOR0
+Color_Depth_Output MyPSLadder(LINE_PS_INPUT input)
 {
-	float bandWidth = 1.5;
+	Color_Depth_Output output;
 	float4 finalColor;
-	finalColor.rgb = lineColor.rgb;
 
-    float rho = input.polar.x;
+	float rho = input.polar.x;
 
-    float modulation = sin(((-input.posModelSpace.x / bandWidth)) * 3.14159);
+	float modulation = sin(((-input.posModelSpace.x / dashLength)) * 3.14159);
 	clip(modulation <= 0 ? -1 : 1); //Adds sharp boundary to arrows
-	  
-	finalColor.a = lineColor.a * modulation;
 
-	return finalColor;
+	finalColor.rgb = lineColor.rgb;
+	finalColor.a = lineColor.a * modulation;
+	output.Color = finalColor;
+	output.Depth = input.polar.x;
+	return output;
 }
 
-float4 MyPSModern(LINE_PS_INPUT input) : COLOR0
+/*Dashed doesn't work as expected because each line is independent.  We have no way of measuring length along a polyline*/
+Color_Depth_Output MyPSDashed(LINE_PS_INPUT input)
 {
+	Color_Depth_Output output; 
+	float4 finalColor; 
+
+	float rho = input.polar.x;
+
+	float modulation = sin(((-input.posModelSpace.x / dashLength)) * 3.14159);
+	clip(modulation <= 0 ? -1 : 1); //Adds sharp boundary to arrows
+	 
+	output.Color = lineColor;
+	output.Depth = input.polar.x;
+	return output;
+}
+
+
+Color_Depth_Output MyPSModern(LINE_PS_INPUT input)
+{
+	Color_Depth_Output output;
 	float4 finalColor;
 	finalColor.rgb = lineColor.rgb;
 
@@ -174,29 +177,33 @@ float4 MyPSModern(LINE_PS_INPUT input) : COLOR0
 
 	finalColor.a = lineColor.a * a;
 
-	return finalColor;
+	output.Color = finalColor;
+	output.Depth = input.polar.x;
+	return output;
 }
-
-
-float4 MyPSTubular(LINE_PS_INPUT input) : COLOR0
+ 
+Color_Depth_Output MyPSTubular(LINE_PS_INPUT input)
 {
+	Color_Depth_Output output;
 	float4 finalColor = lineColor;
-    finalColor.a *= input.polar.x;
-    finalColor.a = finalColor.a * BlurEdge(input.polar.x, blurThreshold);
-	return finalColor;
+	finalColor.a *= input.polar.x;
+	finalColor.a = finalColor.a * BlurEdge(input.polar.x, blurThreshold);
+	output.Color = finalColor;
+	output.Depth = input.polar.x;
+	return output;
 }
 
-PS_Output MyPSHalfTubular(LINE_PS_INPUT input)
+Color_Depth_Output MyPSHalfTubular(LINE_PS_INPUT input)
 {
-	PS_Output output;
+	Color_Depth_Output output;
 	float4 finalColor = lineColor;
 	//finalColor.a *= polar.x;
 
 	//We need a signed distance from the midline, where one side is positive and the other is negative, so we use
 	//the angle
 	int NumRotations = input.polar.y / TAU; //Number of times we have rotated around the circle
-    input.polar.y += -NumRotations * TAU;
-    float line_side = input.polar.y > PI ? 1 : -1; //Draw the concave side of the line if the points are placed counter-clockwise
+	input.polar.y += -NumRotations * TAU;
+	float line_side = input.polar.y > PI ? 1 : -1; //Draw the concave side of the line if the points are placed counter-clockwise
 	clip(line_side > 0 ? -1 : 1);
 
 	//float polarized_distance = 
@@ -221,21 +228,25 @@ PS_Output MyPSHalfTubular(LINE_PS_INPUT input)
 	finalColor.a = finalColor.a * AngleAlpha; // * BlurEdge(polar.x, blurThreshold)
 	*/
 	output.Color = finalColor;
-    output.Depth = input.polar.x;
+	output.Depth = input.polar.x;
 	return output;
 }
 
 
-float4 MyPSGlow(LINE_PS_INPUT input) : COLOR0
+Color_Depth_Output MyPSGlow(LINE_PS_INPUT input)
 {
-	float4 finalColor = lineColor;
-    finalColor.a *= 1 - input.polar.x;
-	return finalColor;
+	Color_Depth_Output output;
+	output.Color = lineColor;
+	output.Color.a *= 1 - input.polar.x;
+	output.Depth = input.polar.x;
+	return output;
 }
 
-float4 MyPSTextured(LINE_PS_INPUT input) : COLOR0
+Color_Depth_Output MyPSTextured(LINE_PS_INPUT input)
 {
-	float4 foregroundColor = tex2D(TextureSampler, input.tex.xy);
-	clip(foregroundColor.a <= 0 ? -1 : 1);
-	return foregroundColor;
+	Color_Depth_Output output;
+	output.Color = tex2D(ForegroundTextureSampler, input.tex);
+	clip(output.Color.a <= 0 ? -1 : 1);
+	output.Depth = input.polar.x;
+	return output;
 }

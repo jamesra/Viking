@@ -100,14 +100,16 @@ PixelShaderOutput RGBATextureOverBackgroundLumaPixelShaderFunction(VertexShaderO
 	//Blends a greyscale texture, where the grey value indicates luma.
     PixelShaderOutput output;
     output.Depth = CenterDistanceSquared(input.CenterDistance);
-     
+    
+	float2 ScreenTexCoord = input.Position.xy / input.Position.w;
+
     float4 RGBColor = tex2D(AnnotationTextureSampler, input.TexCoord);
     //This is a greyscale+Alpha image.  Greyscale indicates the degree of color, alpha indicates degree to which we use Overlay Luma or Background Luma
     clip(RGBColor.a <= 0.0 ? -1.0 : 1.0);
     
 	//This is a greyscale+Alpha image.  Greyscale indicates the degree of color, alpha indicates degree to which we use Overlay Luma or Background Luma
 
-	float4 RGBBackgroundColor = tex2D(BackgroundTextureSampler, ((input.ScreenTexCoord.xy) / (RenderTargetSize.xy)));
+	float4 RGBBackgroundColor = tex2D(BackgroundTextureSampler, ((ScreenTexCoord.xy) / (RenderTargetSize.xy)));
     output.Color = BlendHSLColorOverBackground(input.HSLColor, RGBBackgroundColor, 1.0f - RGBColor.a);
     output.Color.a = RGBColor.r * input.HSLColor.a;
 

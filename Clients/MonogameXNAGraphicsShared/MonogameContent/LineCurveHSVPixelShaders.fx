@@ -1,38 +1,12 @@
 // Data shared by all line and curves:
 
 #include "HSLRGBLib.fx"
+#include "LineCurvePixelShaderShared.fx"
 
 float time;
 float4 lineColor;
 float blurThreshold = 0.95;
-
-struct PS_Input
-{
-	float4 ScreenTexCoord : SV_Position;
-	float3 polar : TEXCOORD0;
-	float2 posModelSpace: TEXCOORD1;
-	float2 tex   : TEXCOORD2;
-};
-
-struct PS_Output
-{
-	float4 Color : COLOR;
-	float Depth : DEPTH;
-};
-
-uniform const texture Texture;
-
-uniform const sampler ForegroundTextureSampler : register(s1) = sampler_state
-{
-	Texture = (Texture);
-	MipFilter = LINEAR;
-	MinFilter = LINEAR;
-	MagFilter = LINEAR;
-	AddressU = CLAMP;
-	AddressV = CLAMP;
-	AddressW = CLAMP;
-};
-
+float dashLength = 1.5; //Used for the ladder and Dash shaders to determine how large the rungs/dashes are. 
 
 uniform const float2 RenderTargetSize;
 
@@ -47,8 +21,9 @@ uniform const sampler BackgroundTextureSampler : register(s0) = sampler_state
 };
 
 
-float4 MyPSStandardHSV(PS_Input input) : COLOR0
+Color_Depth_Output MyPSStandardHSV(LINE_PS_INPUT input)
 {
+	Color_Depth_Output output;
 	float4 finalColor;
 	finalColor.rgb = lineColor.rgb;
 	finalColor.a = lineColor.a * BlurEdge(input.polar.x, blurThreshold);
@@ -56,13 +31,16 @@ float4 MyPSStandardHSV(PS_Input input) : COLOR0
 	clip(finalColor.a);
 	//This is a greyscale+Alpha image.  Greyscale indicates the degree of color, alpha indicates degree to which we use Overlay Luma or Background Luma
 	float4 RGBBackgroundColor = tex2D(BackgroundTextureSampler, ((input.ScreenTexCoord.xy) / (RenderTargetSize.xy - 1)));
-    finalColor = BlendHSLColorOverBackground(lineColor, RGBBackgroundColor, 1.0f - lineColor.a);
-    finalColor.a = lineColor.a;
-    return finalColor;
+	finalColor =  BlendHSLColorOverBackground(lineColor, RGBBackgroundColor, 1.0f - lineColor.a);
+    finalColor.a = lineColor.a; 
+	output.Color = finalColor;
+	output.Depth = input.polar.x;
+    return output;
 }
 
-float4 MyPSAlphaGradientHSV(PS_Input input) : COLOR0
+Color_Depth_Output MyPSAlphaGradientHSV(LINE_PS_INPUT input)
 {
+	Color_Depth_Output output;
 	float4 finalColor;
 	float3 polar = input.polar;
 
@@ -71,12 +49,14 @@ float4 MyPSAlphaGradientHSV(PS_Input input) : COLOR0
 	finalColor.a = lineColor.a *  ((polar.z * 2) > 1 ? ((1 - polar.z) * 2) : (polar.z * 2)) * BlurEdge(polar.x, blurThreshold);
 
 	float4 RGBBackgroundColor = tex2D(BackgroundTextureSampler, ((input.ScreenTexCoord.xy) / (RenderTargetSize.xy - 1)));
-	return BlendHSLColorOverBackground(finalColor, RGBBackgroundColor, finalColor.a);
+	output.Color = BlendHSLColorOverBackground(finalColor, RGBBackgroundColor, finalColor.a);
+	output.Depth = input.polar.x;
+	return output;
 }
 
-PS_Output MyPSAlphaDepthGradientHSV(PS_Input input)
+Color_Depth_Output MyPSAlphaDepthGradientHSV(LINE_PS_INPUT input)
 {
-	PS_Output output;
+	Color_Depth_Output output;
 	float3 polar = input.polar;
 
 	float4 finalColor;
@@ -93,15 +73,18 @@ PS_Output MyPSAlphaDepthGradientHSV(PS_Input input)
 	return output;
 }
 
-float4 MyPSNoBlurHSV() : COLOR0
+Color_Depth_Output MyPSNoBlurHSV(LINE_PS_INPUT input)
 {
-	float4 finalColor = lineColor;
-	return finalColor;
+	Color_Depth_Output output;
+	float4 RGBBackgroundColor = tex2D(BackgroundTextureSampler, ((input.ScreenTexCoord.xy) / (RenderTargetSize.xy - 1)));
+	output.Color = BlendHSLColorOverBackground(lineColor, RGBBackgroundColor, 1.0f - lineColor.a);
+	output.Depth = input.polar.x;
+	return output;
 }
 
-PS_Output MyPSAnimatedBidirectionalHSV(PS_Input input)
+Color_Depth_Output MyPSAnimatedBidirectionalHSV(LINE_PS_INPUT input)
 {
-	PS_Output output;
+	Color_Depth_Output output;
 	float4 finalColor;
 	float bandWidth = 100;
 	float Hz = 1;
@@ -112,28 +95,33 @@ PS_Output MyPSAnimatedBidirectionalHSV(PS_Input input)
 
 	float modulation = sin(offset * 3.14159) / 2;
 	finalColor.rgb = lineColor.rgb;
-	finalColor.a = lineColor.a * BlurEdge(input.polar.x, blurThreshold) * modulation + 0.5;
-	clip(finalColor.a);
+	finalColor.a = lineColor.a * BlurEdge(input.polar.x, blurThreshold) * (modulation + 0.5);
+    //finalColor.a = lineColor.a * (modulation + 0.5);
+	//clip(finalColor.a);
+    finalColor.a = clamp(finalColor.a, 0, 1);
 
 	output.Color = finalColor;
 	float depth = (input.polar.z * 2) > 1 ? 1 - ((1 - input.polar.z) * 2) : 1 - (input.polar.z * 2);
-	output.Depth = 0;//(polar.z * 2) > 1 ? 1-((1-polar.z)*2) : 1-(polar.z * 2);
+	output.Depth = input.polar.x;//(polar.z * 2) > 1 ? 1-((1-polar.z)*2) : 1-(polar.z * 2);
 	finalColor.a = (1 - depth) * finalColor.a;
+
+    clip(finalColor.a);
 
 	float AlphaBlend = lineColor.a * lineColor.r;
 
 	//This is a greyscale+Alpha image.  Greyscale indicates the degree of color, alpha indicates degree to which we use Overlay Luma or Background Luma
 
-	float4 RGBBackgroundColor = tex2D(BackgroundTextureSampler, ((input.ScreenTexCoord.xy) / (RenderTargetSize.xy - 1)));
-	output.Color = BlendHSLColorOverBackground(finalColor, RGBBackgroundColor, 1);
-	output.Color.a = (1 - depth) * finalColor.a;
+    //TODO: The gap junctions are not as transparent as they should be, but the code below causes strange flickers from white to black.
+	//float4 RGBBackgroundColor = tex2D(BackgroundTextureSampler, ((input.ScreenTexCoord.xy) / (RenderTargetSize.xy - 1)));
+	//output.Color = BlendHSLColorOverBackground(finalColor, RGBBackgroundColor, 1);
+	//output.Color.a = (1 - depth) * finalColor.a;
 
 	return output;
 }
 
-PS_Output MyPSAnimatedLinearHSV(PS_Input input)
+Color_Depth_Output MyPSAnimatedLinearHSV(LINE_PS_INPUT input)
 {
-	PS_Output output;
+	Color_Depth_Output output;
 	float4 lineColorHSV;
 	float bandWidth = 100;
 	float Hz = 2;
@@ -147,9 +135,9 @@ PS_Output MyPSAnimatedLinearHSV(PS_Input input)
 	lineColorHSV.a = lineColor.a * BlurEdge(input.polar.x, blurThreshold) * modulation;
 	clip(lineColorHSV.a);
 
-	output.Color.rgb = lineColorHSV.rgb;
+	output.Color.rgb = lineColorHSV;
 	float depth = (input.polar.z * 2) > 1 ? 1 - ((1 - input.polar.z) * 2) : 1 - (input.polar.z * 2);
-	output.Depth = 0; //depth;
+	output.Depth = input.polar.x; //depth;
 					  //output.Color.a = lineColorHSV.a * (1 - depth) * modulation *(1 - input.polar.x);
 	output.Color.a = lineColorHSV.a * modulation *(1 - input.polar.x);
 	clip(output.Color.a);
@@ -163,8 +151,9 @@ PS_Output MyPSAnimatedLinearHSV(PS_Input input)
 }
 
 
-float4 MyPSAnimatedRadialHSV(PS_Input input) : COLOR0
+Color_Depth_Output MyPSAnimatedRadialHSV(LINE_PS_INPUT input)
 {
+	Color_Depth_Output output;
 	float4 finalColor;
 	float3 polar = input.polar;
 	float modulation = sin((-polar.x * 0.1 + time * 0.05) * 20 * 3.14159) * 0.5 + 0.5;
@@ -173,12 +162,15 @@ float4 MyPSAnimatedRadialHSV(PS_Input input) : COLOR0
 	clip(finalColor.a);
 
 	float4 RGBBackgroundColor = tex2D(BackgroundTextureSampler, ((input.ScreenTexCoord.xy) / (RenderTargetSize.xy - 1)));
-	return BlendHSLColorOverBackground(finalColor, RGBBackgroundColor, finalColor.a);
+	output.Color = BlendHSLColorOverBackground(finalColor, RGBBackgroundColor, finalColor.a);
+	output.Depth = polar.x;
+	return output;
 }
 
 
-float4 MyPSModernHSV(PS_Input input) : COLOR0
+Color_Depth_Output MyPSModernHSV(LINE_PS_INPUT input)
 {
+	Color_Depth_Output output;
 	float3 polar = input.polar;
 	float4 finalColor;
 	finalColor.rgb = lineColor.rgb;
@@ -201,32 +193,56 @@ float4 MyPSModernHSV(PS_Input input) : COLOR0
 	finalColor.a = lineColor.a * a;
 
 	float4 RGBBackgroundColor = tex2D(BackgroundTextureSampler, ((input.ScreenTexCoord.xy) / (RenderTargetSize.xy - 1)));
-	return BlendHSLColorOverBackground(finalColor, RGBBackgroundColor, finalColor.a);
+	output.Color = BlendHSLColorOverBackground(finalColor, RGBBackgroundColor, finalColor.a);
+	output.Depth = rho;
+	return output;
 }
 
-float4 MyPSLadderHSV(PS_Input input) : COLOR0
+Color_Depth_Output MyPSLadderHSV(LINE_PS_INPUT input)
 {
+	Color_Depth_Output output;
 	float3 polar = input.polar;
 
-	float bandWidth = 1.5;
 	float4 finalColor;
-	float4 output;
 	finalColor.rgb = lineColor.rgb;
 
 	float rho = polar.x;
 
-	float modulation = sin(((-input.posModelSpace.x / bandWidth)) * 3.14159);
+	float modulation = sin(((-input.posModelSpace.x / dashLength)) * 3.14159);
 	clip(modulation <= 0 ? -1 : 1); //Adds sharp boundary to arrows
 
 	finalColor.a = lineColor.a * modulation;
 
 	float4 RGBBackgroundColor = tex2D(BackgroundTextureSampler, ((input.ScreenTexCoord.xy) / (RenderTargetSize.xy - 1)));
-	return BlendHSLColorOverBackground(finalColor, RGBBackgroundColor, finalColor.a);
+	output.Color = BlendHSLColorOverBackground(finalColor, RGBBackgroundColor, finalColor.a);
+	output.Depth = input.polar.x;
+	return output;
+}
+
+/*Essentially ladder, but without blurring the rungs*/
+Color_Depth_Output MyPSDashedHSV(LINE_PS_INPUT input)
+{
+	Color_Depth_Output output;
+	float3 polar = input.polar;
+
+	float4 finalColor;
+	finalColor = lineColor;
+
+	float rho = polar.x;
+
+	float modulation = sin(((-input.posModelSpace.x / dashLength)) * 3.14159);
+	clip(modulation <= 0 ? -1 : 1); //Adds sharp boundary to arrows
+	  
+	float4 RGBBackgroundColor = tex2D(BackgroundTextureSampler, ((input.ScreenTexCoord.xy) / (RenderTargetSize.xy - 1)));
+	output.Color = BlendHSLColorOverBackground(finalColor, RGBBackgroundColor, finalColor.a);
+	output.Depth = input.polar.x;
+	return output;
 }
 
 
-float4 MyPSTubularHSV(PS_Input input) : COLOR0
+Color_Depth_Output MyPSTubularHSV(LINE_PS_INPUT input)
 {
+	Color_Depth_Output output;
 	float4 finalColor = lineColor;
 	float3 polar = input.polar;
 
@@ -234,13 +250,15 @@ float4 MyPSTubularHSV(PS_Input input) : COLOR0
 	finalColor.a = finalColor.a * BlurEdge(polar.x, blurThreshold);
 
 	float4 RGBBackgroundColor = tex2D(BackgroundTextureSampler, ((input.ScreenTexCoord.xy) / (RenderTargetSize.xy - 1)));
-	return BlendHSLColorOverBackground(finalColor, RGBBackgroundColor, finalColor.a);
+	output.Color = BlendHSLColorOverBackground(finalColor, RGBBackgroundColor, finalColor.a);
+	output.Depth = input.polar.x;
+	return output;
 }
 
 
-PS_Output MyPSHalfTubularHSV(PS_Input input)
+Color_Depth_Output MyPSHalfTubularHSV(LINE_PS_INPUT input)
 {
-	PS_Output output;
+	Color_Depth_Output output;
 	float4 finalColor = lineColor;
 	float3 polar = input.polar;
 
@@ -282,22 +300,27 @@ PS_Output MyPSHalfTubularHSV(PS_Input input)
 }
 
 
-float4 MyPSGlowHSV(PS_Input input) : COLOR0
+Color_Depth_Output MyPSGlowHSV(LINE_PS_INPUT input)
 {
+	Color_Depth_Output output; 
 	float4 finalColor = lineColor;
 	float3 polar = input.polar;
 	finalColor.a *= 1 - polar.x;
 
 	float4 RGBBackgroundColor = tex2D(BackgroundTextureSampler, ((input.ScreenTexCoord.xy) / (RenderTargetSize.xy - 1)));
-	return BlendHSLColorOverBackground(finalColor, RGBBackgroundColor, finalColor.a);
+	output.Color = BlendHSLColorOverBackground(finalColor, RGBBackgroundColor, finalColor.a);
+	output.Depth = input.polar.x;
+	return output;
 }
 
-float4 MyPSTexturedHSV(PS_Input input) : COLOR0
+Color_Depth_Output MyPSTexturedHSV(LINE_PS_INPUT input)
 { 
+	Color_Depth_Output output;
 	float4 foregroundColor = tex2D(ForegroundTextureSampler, input.tex);
 	clip(foregroundColor.a <= 0 ? -1 : 1);
 	float4 RGBBackgroundColor = tex2D(BackgroundTextureSampler, ((input.ScreenTexCoord.xy) / (RenderTargetSize.xy - 1)));
-	float4 outColor = BlendHSLColorOverBackground(foregroundColor, RGBBackgroundColor, 0);
-	outColor = foregroundColor.a;
-	return outColor;
+	output.Color = BlendHSLColorOverBackground(foregroundColor, RGBBackgroundColor, 0);
+	output.Color = foregroundColor.a;
+	output.Depth = input.polar.x;
+	return output;
 }

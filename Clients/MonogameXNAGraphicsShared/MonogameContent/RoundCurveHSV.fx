@@ -35,6 +35,9 @@ technique AlphaGradient
 		SrcBlend = SrcAlpha;
 		DestBlend = InvSrcAlpha;
 		BlendOp = Add;
+		ZEnable = true;
+		ZFunc = LessEqual;
+		ZWriteEnable = true;
 		vertexShader = compile vs_4_0 CurveVertexShader();
 		pixelShader = compile ps_4_0 MyPSAlphaGradientHSV();
 	}
@@ -50,6 +53,9 @@ technique NoBlur
 		SrcBlend = SrcAlpha;
 		DestBlend = InvSrcAlpha;
 		BlendOp = Add;
+		ZEnable = true;
+		ZFunc = LessEqual;
+		ZWriteEnable = true;
 		vertexShader = compile vs_4_0 CurveVertexShader();
 		pixelShader = compile ps_4_0 MyPSNoBlurHSV();
 	}
@@ -65,6 +71,9 @@ technique AnimatedLinear
 		SrcBlend = SrcAlpha;
 		DestBlend = InvSrcAlpha;
 		BlendOp = Add;
+		ZEnable = true;
+		ZFunc = LessEqual;
+		ZWriteEnable = true;
 		vertexShader = compile vs_4_0 CurveVertexShader();
 		pixelShader = compile ps_4_0 MyPSAnimatedLinearHSV();
 	}
@@ -79,6 +88,9 @@ technique AnimatedBidirectional
 		SrcBlend = SrcAlpha;
 		DestBlend = InvSrcAlpha;
 		BlendOp = Add;
+		ZEnable = true;
+		ZFunc = LessEqual;
+		ZWriteEnable = true;
 		vertexShader = compile vs_4_0 CurveVertexShader();
 		pixelShader = compile ps_4_0 MyPSAnimatedBidirectionalHSV();
 	}
@@ -94,6 +106,9 @@ technique AnimatedRadial
 		SrcBlend = SrcAlpha;
 		DestBlend = InvSrcAlpha;
 		BlendOp = Add;
+		ZEnable = true;
+		ZFunc = LessEqual;
+		ZWriteEnable = true;
 		vertexShader = compile vs_4_0 CurveVertexShader();
 		pixelShader = compile ps_4_0 MyPSAnimatedRadialHSV();
 	}
@@ -109,10 +124,31 @@ technique Ladder
 		SrcBlend = SrcAlpha;
 		DestBlend = InvSrcAlpha;
 		BlendOp = Add;
+		ZEnable = true;
+		ZFunc = LessEqual;
+		ZWriteEnable = true;
 		vertexShader = compile vs_4_0 CurveVertexShader();
 		pixelShader = compile ps_4_0 MyPSLadderHSV();
 	}
 }
+
+
+technique Dashed
+{
+	pass P0
+	{
+		CullMode = CW;
+		AlphaBlendEnable = true;
+		SrcBlend = SrcAlpha;
+		DestBlend = InvSrcAlpha;
+		BlendOp = Add;
+		ZEnable = true;
+		ZFunc = LessEqual;
+		ZWriteEnable = true;
+		vertexShader = compile vs_4_0 CurveVertexShader();
+		pixelShader = compile ps_4_0 MyPSDashedHSV();
+	}
+} 
 
 
 technique Modern
@@ -124,6 +160,9 @@ technique Modern
 		SrcBlend = SrcAlpha;
 		DestBlend = InvSrcAlpha;
 		BlendOp = Add;
+		ZEnable = true;
+		ZFunc = LessEqual;
+		ZWriteEnable = true;
 		vertexShader = compile vs_4_0 CurveVertexShader();
 		pixelShader = compile ps_4_0 MyPSModernHSV();
 	}
@@ -138,7 +177,10 @@ technique Tubular
 		AlphaBlendEnable = true;
 		SrcBlend = SrcAlpha;
 		DestBlend = InvSrcAlpha;
-		BlendOp = Add;
+		BlendOp = Add;/*
+		ZEnable = true;
+		ZFunc = LessEqual;
+		ZWriteEnable = true;*/
 		vertexShader = compile vs_4_0 CurveVertexShader();
 		pixelShader = compile ps_4_0 MyPSTubularHSV();
 	}
@@ -154,6 +196,9 @@ technique HalfTube
 		SrcBlend = SrcAlpha;
 		DestBlend = InvSrcAlpha;
 		BlendOp = Add;
+		ZEnable = true;
+		ZFunc = LessEqual;
+		ZWriteEnable = true;
 		vertexShader = compile vs_4_0 CurveVertexShader();
 		pixelShader = compile ps_4_0 MyPSHalfTubularHSV();
 	}
@@ -169,6 +214,9 @@ technique Glow
 		SrcBlend = SrcAlpha;
 		DestBlend = InvSrcAlpha;
 		BlendOp = Add;
+		ZEnable = true;
+		ZFunc = LessEqual;
+		ZWriteEnable = true;
 		vertexShader = compile vs_4_0 CurveVertexShader();
 		pixelShader = compile ps_4_0 MyPSGlowHSV();
 	}
@@ -184,6 +232,9 @@ technique Textured
 		SrcBlend = SrcAlpha;
 		DestBlend = InvSrcAlpha;
 		BlendOp = Add;
+		ZEnable = true;
+		ZFunc = LessEqual;
+		ZWriteEnable = true;
 		vertexShader = compile vs_4_0 CurveVertexShader();
 		pixelShader = compile ps_4_0 MyPSTexturedHSV();
 	}

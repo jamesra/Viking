@@ -13,6 +13,19 @@
     
 technique Standard
 {
+	pass ZWrite
+	{
+		CullMode = CW;
+		AlphaBlendEnable = true;
+		SrcBlend = Zero;
+		DestBlend = One;
+		BlendOp = Add;
+		ZEnable = true;
+		ZFunc = LessEqual;
+		ZWriteEnable = true;
+		vertexShader = compile vs_4_0 LineVertexShader();
+		pixelShader = compile ps_4_0 DepthOnlyShader();
+	}
 	pass P0
 	{
 		CullMode = CW;
@@ -20,6 +33,9 @@ technique Standard
 		SrcBlend = SrcAlpha;
 		DestBlend = InvSrcAlpha;
 		BlendOp = Add;
+		ZFunc = Equal;
+		ZEnable = true;
+		StencilFunc = Equal;
 		vertexShader = compile vs_4_0 LineVertexShader();
 		pixelShader = compile ps_4_0 MyPSStandardHSV();
 	}
@@ -27,13 +43,25 @@ technique Standard
 
 technique AlphaGradient
 {
+	pass ZWrite
+	{
+		CullMode = CW;
+		AlphaBlendEnable = true;
+		SrcBlend = Zero;
+		DestBlend = One;
+		BlendOp = Add;
+		vertexShader = compile vs_4_0 LineVertexShader();
+		pixelShader = compile ps_4_0 DepthOnlyShader();
+	}
 	pass P0
 	{
 		CullMode = CW;
 		AlphaBlendEnable = true;
 		SrcBlend = SrcAlpha;
 		DestBlend = InvSrcAlpha;
-		BlendOp = Add;
+		BlendOp = Add; 
+		ZFunc = Equal;
+		StencilFunc = Equal;
 		vertexShader = compile vs_4_0 LineVertexShader();
 		pixelShader = compile ps_4_0 MyPSAlphaGradientHSV();
 	}
@@ -42,6 +70,16 @@ technique AlphaGradient
 
 technique NoBlur
 {
+	pass ZWrite
+	{
+		CullMode = CW;
+		AlphaBlendEnable = true;
+		SrcBlend = Zero;
+		DestBlend = One;
+		BlendOp = Add;
+		vertexShader = compile vs_4_0 LineVertexShader();
+		pixelShader = compile ps_4_0 DepthOnlyShader();
+	}
 	pass P0
 	{
 		CullMode = CW;
@@ -49,6 +87,8 @@ technique NoBlur
 		SrcBlend = SrcAlpha;
 		DestBlend = InvSrcAlpha;
 		BlendOp = Add;
+		ZFunc = Equal;
+		StencilFunc = Equal;
 		vertexShader = compile vs_4_0 LineVertexShader();
 		pixelShader = compile ps_4_0 MyPSNoBlurHSV();
 	}
@@ -57,13 +97,25 @@ technique NoBlur
 
 technique AnimatedLinear
 {
+	pass ZWrite
+	{
+		CullMode = CW;
+		AlphaBlendEnable = true;
+		SrcBlend = Zero;
+		DestBlend = One;
+		BlendOp = Add;
+		vertexShader = compile vs_4_0 LineVertexShader();
+		pixelShader = compile ps_4_0 DepthOnlyShader();
+	}
 	pass P0
 	{
 		CullMode = CW;
 		AlphaBlendEnable = true;
 		SrcBlend = SrcAlpha;
 		DestBlend = InvSrcAlpha;
-		BlendOp = Add;
+		BlendOp = Add; 
+		ZFunc = Equal;
+		StencilFunc = Equal;
 		vertexShader = compile vs_4_0 LineVertexShader();
 		pixelShader = compile ps_4_0 MyPSAnimatedLinearHSV();
 	}
@@ -71,6 +123,16 @@ technique AnimatedLinear
 
 technique AnimatedBidirectional
 {
+	pass ZWrite
+	{
+		CullMode = CW;
+		AlphaBlendEnable = true;
+		SrcBlend = Zero;
+		DestBlend = One;
+		BlendOp = Add;
+		vertexShader = compile vs_4_0 LineVertexShader();
+		pixelShader = compile ps_4_0 DepthOnlyShader();
+	}
 	pass P0
 	{
 		CullMode = CW;
@@ -78,6 +140,8 @@ technique AnimatedBidirectional
 		SrcBlend = SrcAlpha;
 		DestBlend = InvSrcAlpha;
 		BlendOp = Add;
+		ZFunc = Equal;
+		StencilFunc = Equal;
 		vertexShader = compile vs_4_0 LineVertexShader();
 		pixelShader = compile ps_4_0 MyPSAnimatedBidirectionalHSV();
 	}
@@ -86,6 +150,16 @@ technique AnimatedBidirectional
 
 technique AnimatedRadial
 {
+	pass ZWrite
+	{
+		CullMode = CW;
+		AlphaBlendEnable = true;
+		SrcBlend = Zero;
+		DestBlend = One;
+		BlendOp = Add;
+		vertexShader = compile vs_4_0 LineVertexShader();
+		pixelShader = compile ps_4_0 DepthOnlyShader();
+	}
 	pass P0
 	{
 		CullMode = CW;
@@ -93,6 +167,8 @@ technique AnimatedRadial
 		SrcBlend = SrcAlpha;
 		DestBlend = InvSrcAlpha;
 		BlendOp = Add;
+		ZFunc = Equal;
+		StencilFunc = Equal;
 		vertexShader = compile vs_4_0 LineVertexShader();
 		pixelShader = compile ps_4_0 MyPSAnimatedRadialHSV();
 	}
@@ -101,6 +177,16 @@ technique AnimatedRadial
 
 technique Ladder
 {
+	pass ZWrite
+	{
+		CullMode = CW;
+		AlphaBlendEnable = true;
+		SrcBlend = Zero;
+		DestBlend = One;
+		BlendOp = Add;
+		vertexShader = compile vs_4_0 LineVertexShader();
+		pixelShader = compile ps_4_0 DepthOnlyShader();
+	}
 	pass P0
 	{
 		CullMode = CW;
@@ -108,21 +194,66 @@ technique Ladder
 		SrcBlend = SrcAlpha;
 		DestBlend = InvSrcAlpha;
 		BlendOp = Add;
+		ZFunc = Equal;
+		StencilFunc = Equal;
 		vertexShader = compile vs_4_0 LineVertexShader();
 		pixelShader = compile ps_4_0 MyPSLadderHSV();
+	}
+}
+
+technique Dashed
+{
+	pass ZWrite
+	{
+		CullMode = CW;
+		AlphaBlendEnable = true;
+		SrcBlend = Zero;
+		DestBlend = One;
+		BlendOp = Add;
+		vertexShader = compile vs_4_0 LineVertexShader();
+		pixelShader = compile ps_4_0 DepthOnlyShader();
+	}
+	pass P0
+	{
+		CullMode = CW;
+		AlphaBlendEnable = true;
+		SrcBlend = SrcAlpha;
+		DestBlend = InvSrcAlpha;
+		BlendOp = Add;
+		ZFunc = Equal;
+		StencilFunc = Equal;
+		vertexShader = compile vs_4_0 LineVertexShader();
+		pixelShader = compile ps_4_0 MyPSDashedHSV();
 	}
 }
 
 
 technique Tubular
 {
-	pass P0
+	pass ZWrite
+	{
+		CullMode = CW;
+		AlphaBlendEnable = true;
+		SrcBlend = Zero;
+		DestBlend = One;
+		BlendOp = Add;
+		ZEnable = true;
+		ZFunc = LessEqual;
+		ZWriteEnable = true;
+		vertexShader = compile vs_4_0 LineVertexShader();
+		pixelShader = compile ps_4_0 DepthOnlyShader();
+	}
+	
+	pass P1
 	{
 		CullMode = CW;
 		AlphaBlendEnable = true;
 		SrcBlend = SrcAlpha;
 		DestBlend = InvSrcAlpha;
 		BlendOp = Add;
+		ZEnable = true;
+		ZFunc = Equal;
+		StencilFunc = Equal;
 		vertexShader = compile vs_4_0 LineVertexShader();
 		pixelShader = compile ps_4_0 MyPSTubularHSV();
 	}
@@ -130,13 +261,25 @@ technique Tubular
 
 technique HalfTube
 {
+	pass ZWrite
+	{
+		CullMode = CW;
+		AlphaBlendEnable = true;
+		SrcBlend = Zero;
+		DestBlend = One;
+		BlendOp = Add;
+		vertexShader = compile vs_4_0 LineVertexShader();
+		pixelShader = compile ps_4_0 DepthOnlyShader();
+	}
 	pass P0
 	{
 		CullMode = CW;
 		AlphaBlendEnable = true;
 		SrcBlend = SrcAlpha;
 		DestBlend = InvSrcAlpha;
-		BlendOp = Add;
+		BlendOp = Add; 
+		ZFunc = Equal;
+		StencilFunc = Equal;
 		vertexShader = compile vs_4_0 LineVertexShader();
 		pixelShader = compile ps_4_0 MyPSHalfTubularHSV();
 	}
@@ -145,13 +288,25 @@ technique HalfTube
 
 technique Glow
 {
+	pass ZWrite
+	{
+		CullMode = CW;
+		AlphaBlendEnable = true;
+		SrcBlend = Zero;
+		DestBlend = One;
+		BlendOp = Add;
+		vertexShader = compile vs_4_0 LineVertexShader();
+		pixelShader = compile ps_4_0 DepthOnlyShader();
+	}
 	pass P0
 	{
 		CullMode = CW;
 		AlphaBlendEnable = true;
 		SrcBlend = SrcAlpha;
 		DestBlend = InvSrcAlpha;
-		BlendOp = Add;
+		BlendOp = Add; 
+		ZFunc = Equal;
+		StencilFunc = Equal;
 		vertexShader = compile vs_4_0 LineVertexShader();
 		pixelShader = compile ps_4_0 MyPSGlowHSV();
 	}

@@ -114,6 +114,20 @@ technique Ladder
 	}
 }
 
+technique Dash
+{
+	pass P0
+	{
+		CullMode = CW;
+		AlphaBlendEnable = true;
+		SrcBlend = SrcAlpha;
+		DestBlend = InvSrcAlpha;
+		BlendOp = Add;
+		vertexShader = compile vs_4_0 CurveVertexShader();
+		pixelShader = compile ps_4_0 MyPSDashed();
+	}
+}
+
 
 
 technique Modern
