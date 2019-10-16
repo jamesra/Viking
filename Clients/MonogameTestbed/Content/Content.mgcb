@@ -47,12 +47,12 @@
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
-/processorParam:ColorKeyEnabled=True
+/processorParam:ColorKeyEnabled=False
 /processorParam:GenerateMipmaps=False
-/processorParam:PremultiplyAlpha=True
+/processorParam:PremultiplyAlpha=False
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
-/processorParam:TextureFormat=Color
+/processorParam:TextureFormat=NoChange
 /build:../../MonogameXNAGraphicsShared/MonogameContent/Circle.png
 
 #begin ../../MonogameXNAGraphicsShared/MonogameContent/CircleMask.png
@@ -150,4 +150,28 @@
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
 /build:../../MonogameXNAGraphicsShared/MonogameContent/UpArrowV2.png
+
+#begin ../../MonogameXNAGraphicsShared/MonogameContent/Circle2Minus.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=False
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=False
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=NoChange
+/build:../../MonogameXNAGraphicsShared/MonogameContent/Circle2Minus.png
+
+#begin ../../MonogameXNAGraphicsShared/MonogameContent/Circle2Plus.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=False
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=False
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=NoChange
+/build:../../MonogameXNAGraphicsShared/MonogameContent/Circle2Plus.png
 
