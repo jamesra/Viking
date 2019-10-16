@@ -21,7 +21,7 @@ uniform const sampler BackgroundTextureSampler : register(s0) = sampler_state
 };
 
 
-Color_Depth_Output MyPSStandardHSV(PS_Input input)
+Color_Depth_Output MyPSStandardHSV(LINE_PS_INPUT input)
 {
 	Color_Depth_Output output;
 	float4 finalColor;
@@ -38,7 +38,7 @@ Color_Depth_Output MyPSStandardHSV(PS_Input input)
     return output;
 }
 
-Color_Depth_Output MyPSAlphaGradientHSV(PS_Input input)
+Color_Depth_Output MyPSAlphaGradientHSV(LINE_PS_INPUT input)
 {
 	Color_Depth_Output output;
 	float4 finalColor;
@@ -54,7 +54,7 @@ Color_Depth_Output MyPSAlphaGradientHSV(PS_Input input)
 	return output;
 }
 
-Color_Depth_Output MyPSAlphaDepthGradientHSV(PS_Input input)
+Color_Depth_Output MyPSAlphaDepthGradientHSV(LINE_PS_INPUT input)
 {
 	Color_Depth_Output output;
 	float3 polar = input.polar;
@@ -73,7 +73,7 @@ Color_Depth_Output MyPSAlphaDepthGradientHSV(PS_Input input)
 	return output;
 }
 
-Color_Depth_Output MyPSNoBlurHSV(PS_Input input)
+Color_Depth_Output MyPSNoBlurHSV(LINE_PS_INPUT input)
 {
 	Color_Depth_Output output;
 	float4 RGBBackgroundColor = tex2D(BackgroundTextureSampler, ((input.ScreenTexCoord.xy) / (RenderTargetSize.xy - 1)));
@@ -82,7 +82,7 @@ Color_Depth_Output MyPSNoBlurHSV(PS_Input input)
 	return output;
 }
 
-Color_Depth_Output MyPSAnimatedBidirectionalHSV(PS_Input input)
+Color_Depth_Output MyPSAnimatedBidirectionalHSV(LINE_PS_INPUT input)
 {
 	Color_Depth_Output output;
 	float4 finalColor;
@@ -119,7 +119,7 @@ Color_Depth_Output MyPSAnimatedBidirectionalHSV(PS_Input input)
 	return output;
 }
 
-Color_Depth_Output MyPSAnimatedLinearHSV(PS_Input input)
+Color_Depth_Output MyPSAnimatedLinearHSV(LINE_PS_INPUT input)
 {
 	Color_Depth_Output output;
 	float4 lineColorHSV;
@@ -151,7 +151,7 @@ Color_Depth_Output MyPSAnimatedLinearHSV(PS_Input input)
 }
 
 
-Color_Depth_Output MyPSAnimatedRadialHSV(PS_Input input)
+Color_Depth_Output MyPSAnimatedRadialHSV(LINE_PS_INPUT input)
 {
 	Color_Depth_Output output;
 	float4 finalColor;
@@ -168,7 +168,7 @@ Color_Depth_Output MyPSAnimatedRadialHSV(PS_Input input)
 }
 
 
-Color_Depth_Output MyPSModernHSV(PS_Input input)
+Color_Depth_Output MyPSModernHSV(LINE_PS_INPUT input)
 {
 	Color_Depth_Output output;
 	float3 polar = input.polar;
@@ -198,7 +198,7 @@ Color_Depth_Output MyPSModernHSV(PS_Input input)
 	return output;
 }
 
-Color_Depth_Output MyPSLadderHSV(PS_Input input)
+Color_Depth_Output MyPSLadderHSV(LINE_PS_INPUT input)
 {
 	Color_Depth_Output output;
 	float3 polar = input.polar;
@@ -220,7 +220,7 @@ Color_Depth_Output MyPSLadderHSV(PS_Input input)
 }
 
 /*Essentially ladder, but without blurring the rungs*/
-Color_Depth_Output MyPSDashedHSV(PS_Input input)
+Color_Depth_Output MyPSDashedHSV(LINE_PS_INPUT input)
 {
 	Color_Depth_Output output;
 	float3 polar = input.polar;
@@ -240,7 +240,7 @@ Color_Depth_Output MyPSDashedHSV(PS_Input input)
 }
 
 
-Color_Depth_Output MyPSTubularHSV(PS_Input input)
+Color_Depth_Output MyPSTubularHSV(LINE_PS_INPUT input)
 {
 	Color_Depth_Output output;
 	float4 finalColor = lineColor;
@@ -256,7 +256,7 @@ Color_Depth_Output MyPSTubularHSV(PS_Input input)
 }
 
 
-Color_Depth_Output MyPSHalfTubularHSV(PS_Input input)
+Color_Depth_Output MyPSHalfTubularHSV(LINE_PS_INPUT input)
 {
 	Color_Depth_Output output;
 	float4 finalColor = lineColor;
@@ -300,7 +300,7 @@ Color_Depth_Output MyPSHalfTubularHSV(PS_Input input)
 }
 
 
-Color_Depth_Output MyPSGlowHSV(PS_Input input)
+Color_Depth_Output MyPSGlowHSV(LINE_PS_INPUT input)
 {
 	Color_Depth_Output output; 
 	float4 finalColor = lineColor;
@@ -313,7 +313,7 @@ Color_Depth_Output MyPSGlowHSV(PS_Input input)
 	return output;
 }
 
-Color_Depth_Output MyPSTexturedHSV(PS_Input input)
+Color_Depth_Output MyPSTexturedHSV(LINE_PS_INPUT input)
 { 
 	Color_Depth_Output output;
 	float4 foregroundColor = tex2D(ForegroundTextureSampler, input.tex);

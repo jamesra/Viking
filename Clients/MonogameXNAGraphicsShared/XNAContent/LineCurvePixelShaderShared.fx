@@ -1,4 +1,5 @@
-struct PS_Input
+//NOTE: THIS STRUCTURE MUST MATCH THE OUTPUT OF THE VERTEX SHADER EXACTLY WHEN USING MONOGAME
+struct LINE_PS_INPUT
 {
 	float2 ScreenTexCoord : SV_Position;
 	float3 polar : TEXCOORD0;
@@ -27,7 +28,7 @@ uniform const sampler ForegroundTextureSampler : register(s1) = sampler_state
 };
 
 /*Intended to only write to the Z-buffer so connected lines do not overlap in an ugly way*/
-Color_Depth_Output DepthOnlyShader(PS_Input input)
+Color_Depth_Output DepthOnlyShader(LINE_PS_INPUT input)
 {
 	Color_Depth_Output output;
 	output.Color.a = 0;
