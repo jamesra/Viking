@@ -534,6 +534,7 @@
     <Compile Include="TextureCache.cs">
     </Compile>
     <Compile Include="Threading\TextureReader.cs" />
+    <Compile Include="UI\TouchSupport.cs" />
     <Compile Include="Util\BmpWriter.cs" />
     <Compile Include="Util\OpenConnectomeProject.cs" />
     <Compile Include="ViewModels\TriangulationViewModel.cs" />
