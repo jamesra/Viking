@@ -7,6 +7,7 @@ using System.Data.Entity.Core.Objects;
 using System.Linq;
 using System.Collections.Generic;
 using System.Data.SqlClient;
+using System.Threading.Tasks;
 using EntityFrameworkExtras;
 
 namespace ConnectomeDataModel
@@ -36,6 +37,55 @@ namespace ConnectomeDataModel
             this.Locations = locs;
         }
     }
+
+    /// <summary>
+    /// User to hold data from a DBReader as SQLGeometry objects are converted on other threads
+    /// </summary>
+    public class UnconvertedStructureSpatialCache
+    {
+        public StructureSpatialCache row = new StructureSpatialCache();
+        public System.Threading.Tasks.Task<System.Data.Entity.Spatial.DbGeometry> ConvexHullTask = null;
+        public System.Threading.Tasks.Task<System.Data.Entity.Spatial.DbGeometry> BBoxTask = null;
+
+        private static System.Data.Entity.Spatial.DbGeometry UnpackSqlGeometry(Microsoft.SqlServer.Types.SqlGeometry input)
+        {
+            //return System.Data.Entity.Spatial.DbGeometry.FromBinary(input.STAsBinary().Buffer);
+            return System.Data.Entity.Spatial.DbGeometry.FromText(input.ToString());
+        }
+          
+        public static UnconvertedStructureSpatialCache PopulateAsync(System.Data.Common.DbDataReader reader)
+        {
+            UnconvertedStructureSpatialCache obj = new UnconvertedStructureSpatialCache();
+            obj.row.ID = reader.GetInt64(0);
+            //row.BoundingRect = System.Data.Entity.Spatial.DbGeometry.FromBinary(reader.GetFieldValue<Microsoft.SqlServer.Types.SqlGeometry>(1).STAsBinary().Buffer);
+            //obj.row.BoundingRect = System.Data.Entity.Spatial.DbGeometry.FromBinary(reader.GetFieldValue<Microsoft.SqlServer.Types.SqlGeometry>(1).STAsBinary().Buffer);
+            Microsoft.SqlServer.Types.SqlGeometry bbox_input = reader.GetFieldValue<Microsoft.SqlServer.Types.SqlGeometry>(1);
+            obj.BBoxTask = Task<System.Data.Entity.Spatial.DbGeometry>.Run(() => { return UnpackSqlGeometry(bbox_input); });
+            obj.row.Area = reader.GetDouble(2);
+            obj.row.Volume = reader.GetDouble(3);
+            obj.row.MaxDimension = reader.GetInt32(4);
+            obj.row.MinZ = reader.GetDouble(5);
+            obj.row.MaxZ = reader.GetDouble(6);
+            //row.ConvexHull = System.Data.Entity.Spatial.DbGeometry.FromBinary(reader.GetFieldValue<Microsoft.SqlServer.Types.SqlGeometry>(7).STAsBinary().Buffer);
+            //row.ConvexHull = System.Data.Entity.Spatial.DbGeometry.FromText(reader.GetFieldValue<Microsoft.SqlServer.Types.SqlGeometry>(7).ToString());
+            Microsoft.SqlServer.Types.SqlGeometry convex_hull_input = reader.GetFieldValue<Microsoft.SqlServer.Types.SqlGeometry>(7);
+            obj.ConvexHullTask = Task<System.Data.Entity.Spatial.DbGeometry>.Run(() => { return UnpackSqlGeometry(convex_hull_input); });
+            obj.row.LastModified = reader.GetDateTime(8);
+
+            return obj;
+        }
+            /// <summary>
+            /// Waits for the tasks to return, returns the final object
+            /// </summary>
+            /// <returns></returns>
+        public StructureSpatialCache WaitReturn()
+        {
+            row.BoundingRect = BBoxTask.Result;
+            row.ConvexHull = ConvexHullTask.Result;
+            return row;
+        }
+    }
+
 
     public partial class ConnectomeEntities
     {
@@ -461,25 +511,30 @@ namespace ConnectomeDataModel
 
         public List<StructureSpatialCache> ConvertReaderToList(System.Data.Common.DbDataReader reader)
         {
-            List<StructureSpatialCache> NodeObjects = new List<StructureSpatialCache>();
+            List<UnconvertedStructureSpatialCache> NodeObjects = new List<UnconvertedStructureSpatialCache>();
 
             while (reader.Read())
             {
+                UnconvertedStructureSpatialCache row = UnconvertedStructureSpatialCache.PopulateAsync(reader);
+                /*
                 StructureSpatialCache row = new StructureSpatialCache();
-                row.ID = reader.GetInt64(0); 
+                row.ID = reader.GetInt64(0);
+                //row.BoundingRect = System.Data.Entity.Spatial.DbGeometry.FromBinary(reader.GetFieldValue<Microsoft.SqlServer.Types.SqlGeometry>(1).STAsBinary().Buffer);
                 row.BoundingRect = System.Data.Entity.Spatial.DbGeometry.FromBinary(reader.GetFieldValue<Microsoft.SqlServer.Types.SqlGeometry>(1).STAsBinary().Buffer);
                 row.Area = reader.GetDouble(2);
                 row.Volume = reader.GetDouble(3);
                 row.MaxDimension = reader.GetInt32(4);
                 row.MinZ = reader.GetDouble(5);
                 row.MaxZ = reader.GetDouble(6);
-                row.ConvexHull = System.Data.Entity.Spatial.DbGeometry.FromBinary(reader.GetFieldValue<Microsoft.SqlServer.Types.SqlGeometry>(7).STAsBinary().Buffer);
+                //row.ConvexHull = System.Data.Entity.Spatial.DbGeometry.FromBinary(reader.GetFieldValue<Microsoft.SqlServer.Types.SqlGeometry>(7).STAsBinary().Buffer);
+                row.ConvexHull = System.Data.Entity.Spatial.DbGeometry.FromText(reader.GetFieldValue<Microsoft.SqlServer.Types.SqlGeometry>(7).ToString());
                 row.LastModified = reader.GetDateTime(8);
+                */
 
                 NodeObjects.Add(row);
             }
 
-            return NodeObjects;
+            return NodeObjects.Select(o => o.WaitReturn()).ToList();
         }
 
         public IQueryable<Structure> SelectNetworkChildStructures(IEnumerable<long> IDs, int numHops)
