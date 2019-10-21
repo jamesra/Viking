@@ -48,10 +48,12 @@ namespace ConnectomeODataV4.Controllers
         /// <returns></returns>
         private ODataPath GetRequestPath()
         {
-            return Request.ODataProperties().Path;
             /*return new DefaultODataPathHandler().Parse(System.Web.HttpContext.Current.Request.Url.GetLeftPart(System.UriPartial.Path),
                                                                  "Structures",
                                                                  Request.ODataProperties().Path);*/
+            return new DefaultODataPathHandler().Parse(System.Web.HttpContext.Current.Request.Url.GetLeftPart(System.UriPartial.Path),
+                                                                 "Structures",
+                                                                 Request.GetRequestContainer());
         }
 
         /*

@@ -47,12 +47,12 @@ namespace ConnectomeODataV4.Controllers
         /// <returns></returns>
         private ODataPath GetRequestPath()
         {
-            return Request.ODataProperties().Path;
-            /*
+            //return Request.ODataProperties().Path;
+            
             return new DefaultODataPathHandler().Parse(System.Web.HttpContext.Current.Request.Url.GetLeftPart(System.UriPartial.Path),
                                                                  "StructureSpatialCaches",
                                                                  Request.GetRequestContainer());
-                                                                 */
+                                                                 
         }
         
         // GET: odata/Structures(5)/Locations
