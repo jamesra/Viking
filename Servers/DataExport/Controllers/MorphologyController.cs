@@ -16,31 +16,10 @@ namespace DataExport.Controllers
     {
 
         public string GetOutputFilename(ICollection<long> requestIDs, string ext)
-        { 
-            string ID_List = "";
-            bool first = true;
-            if (requestIDs.Count == 0)
-                ID_List = "ALL";
-            foreach (long ID in requestIDs)
-            {
-                if (first)
-                {
-                    first = false;
-                }
-                else
-                {
-                    ID_List += "_";
-                }
-
-                ID_List += ID.ToString();
-                if (ID_List.Length > 200)
-                {
-                    ID_List += "etc";
-                    break;
-                }
-            }
-
-            return string.Format("morph-{0}.{1}", ID_List, ext);
+        {
+            string ID_List = OutputNameGenerator.GetFileFriendlyIDList(requestIDs);
+            string date = OutputNameGenerator.GetFileFriendlyDateString();
+            return string.Format("morph-{0} {1}.{2}", ID_List, date, ext);
         }
 
         private ActionResult RedirectToFile(string outputFilename)

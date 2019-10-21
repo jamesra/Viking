@@ -14,34 +14,11 @@ namespace DataExport.Controllers
     public class NetworkController : Controller
     {
         public string GetOutputFilename(ICollection<long> requestIDs, string ext)
-        { 
-            string ID_List = "";
-            bool first = true;
-            if (requestIDs.Count == 0)
-                ID_List = "ALL";
+        {
+            string ID_List = OutputNameGenerator.GetFileFriendlyIDList(requestIDs);
+            string date = OutputNameGenerator.GetFileFriendlyDateString(); 
 
-            foreach (long ID in requestIDs)
-            {
-                if(first)
-                {
-                    first = false;
-                }
-                else
-                {
-                    ID_List += "_";
-                }
-
-                ID_List += ID.ToString();
-                if (ID_List.Length > 140)
-                {
-                    ID_List += "etc";
-                    break;
-                }
-            }
-
-            DateTime now = System.DateTime.Now;
-
-            return string.Format("nw-{0}_hops_{1} {2,04:d4}-{3,02:d2}-{4,02:d2} {5,02:d2}{6,02:d2}{7,02:d2}.{8}", ID_List, GetNumHops(), now.Year, now.Month, now.Day, now.Hour, now.Minute, now.Second, ext);
+            return string.Format("nw-{0}_hops_{1} {2}.{3}", ID_List, GetNumHops(), date, ext);
         }
 
         private ActionResult RedirectToFile(string outputFilename)
@@ -121,6 +98,7 @@ namespace DataExport.Controllers
         //
         // GET: /Network/Dot 
         [ActionName("GetDot")]
+        [HttpGet]
         public ActionResult GetDot()
         {
             ICollection<long> requestIDs = RequestVariables.GetIDs(Request);
@@ -135,6 +113,7 @@ namespace DataExport.Controllers
         }
 
         [ActionName("GetTLP")]
+        [HttpGet]
         public ActionResult GetTLP()
         {
             ICollection<long> requestIDs = RequestVariables.GetIDs(Request);
@@ -150,6 +129,7 @@ namespace DataExport.Controllers
         }
 
         [ActionName("GetGML")]
+        [HttpGet]
         public ActionResult GetGML()
         {
             ICollection<long> requestIDs = RequestVariables.GetIDs(Request);
@@ -164,6 +144,7 @@ namespace DataExport.Controllers
         }
 
         [ActionName("GetJSON")]
+        [HttpGet]
         public ActionResult GetJSON()
         {
             ICollection<long> requestIDs = RequestVariables.GetIDs(Request);

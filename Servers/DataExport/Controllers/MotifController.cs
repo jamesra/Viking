@@ -27,7 +27,7 @@ namespace DataExport.Controllers
 
         public string GetOutputFilename(string ext)
         {
-            return string.Format("{0}{1}.{2}", DefaultOutputFile, NextFilenameID, ext);
+            return string.Format("{0}{1}{2}.{3}", DefaultOutputFile, NextFilenameID, OutputNameGenerator.GetFileFriendlyDateString(),  ext);
         }
 
         //
