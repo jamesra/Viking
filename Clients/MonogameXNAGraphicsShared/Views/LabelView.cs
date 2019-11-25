@@ -83,7 +83,7 @@ namespace VikingXNAGraphics
             }
         }
 
-        private double _FontSize = 16.0f;
+        private double _FontSize;
 
         /// <summary>
         /// Font size should be the size of the font in volume space pixels
@@ -93,7 +93,6 @@ namespace VikingXNAGraphics
             get { return _FontSize; }
             set
             {
-
                 _IsMeasured = _IsMeasured && _FontSize == value;
                 _FontSize = value;
             }
@@ -119,8 +118,9 @@ namespace VikingXNAGraphics
         /// </summary>
         public bool ScaleFontWithScene {get; set;} 
 
-        public LabelView(string Text, GridVector2 VolumePosition, HorizontalAlignment hAlign = HorizontalAlignment.CENTER, VerticalAlignment vAlign = VerticalAlignment.CENTER, bool scaleFontWithScene = true)
+        public LabelView(string Text, GridVector2 VolumePosition, HorizontalAlignment hAlign = HorizontalAlignment.CENTER, VerticalAlignment vAlign = VerticalAlignment.CENTER, bool scaleFontWithScene = true, double fontSize = 16.0)
         {
+            this._FontSize = fontSize;
             this.Text = Text;
             this.Position = VolumePosition;
             this.VertAlign = vAlign;
