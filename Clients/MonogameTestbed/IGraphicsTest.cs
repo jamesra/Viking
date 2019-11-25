@@ -15,5 +15,11 @@ namespace MonogameTestbed
         void Update();
 
         void Draw(MonoTestbed window);
+
+        /// <summary>
+        /// Called once at the end of the test
+        /// </summary>
+        /// <returns></returns>
+        void UnloadContent(MonoTestbed window);
     }
 }

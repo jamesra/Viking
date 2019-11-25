@@ -132,11 +132,12 @@ namespace VikingXNAGraphics
             }
         }
 
-        public CurveView(ICollection<GridVector2> controlPoints, Microsoft.Xna.Framework.Color color, bool TryToClose, uint numInterpolations,
+        public CurveView(ICollection<GridVector2> controlPoints, Microsoft.Xna.Framework.Color color, bool TryToClose, uint numInterpolations=5,
                          Texture2D texture = null, double lineWidth = 16.0, double? controlPointRadius = null, LineStyle lineStyle = LineStyle.Standard, bool ShowControlPoints = true)
         {
             this._CurveControlPoints = new CurveViewControlPoints(controlPoints, numInterpolations, TryToClose);
             this._Color = color;
+            this._HSLColor = color.ConvertToHSL();
             this.Style = lineStyle;
             this._ControlPointTexture = texture;
             this._LineWidth = lineWidth;

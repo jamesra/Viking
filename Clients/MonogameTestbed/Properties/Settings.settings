@@ -1,0 +1,9 @@
+﻿<?xml version='1.0' encoding='utf-8'?>
+<SettingsFile xmlns="http://schemas.microsoft.com/VisualStudio/2004/01/settings" CurrentProfile="(Default)" GeneratedClassNamespace="MonogameTestbed.Properties" GeneratedClassName="Settings">
+  <Profiles />
+  <Settings>
+    <Setting Name="Template" Type="System.String" Scope="User">
+      <Value Profile="(Default)">This property is used as the template to add new properties dynamically at runtime.</Value>
+    </Setting>
+  </Settings>
+</SettingsFile>

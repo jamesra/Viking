@@ -320,6 +320,14 @@ namespace VikingXNAGraphics
             return c;
         }
 
+        public static Microsoft.Xna.Framework.Color Random()
+        {
+            Color c = new Color((float)rgen.NextDouble(),
+                                (float)rgen.NextDouble(),
+                                (float)rgen.NextDouble());
+            return c;
+        }
+
         /// <summary>
         /// Return a shade of grey matching the value.  0 is black. 1 is white.
         /// </summary>

@@ -146,6 +146,17 @@ namespace Geometry.Meshing
             _Edges = CalculateEdges().ToImmutableArray();
         }
 
+        /// <summary>
+        /// Returns the edges this face and another face have in common
+        /// </summary>
+        /// <param name="other"></param>
+        /// <returns></returns>
+        public IEdgeKey[] SharedEdges(Face other)
+        {
+            IEdgeKey[] shared = this.Edges.Intersect(other.Edges).ToArray();
+            return shared;
+        }
+
         public override int GetHashCode()
         {
             return iVerts.Sum();

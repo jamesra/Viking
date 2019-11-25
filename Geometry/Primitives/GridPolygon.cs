@@ -1431,13 +1431,51 @@ namespace Geometry
 
             foreach(GridPolygon innerPoly in this.InteriorPolygons)
             {
-                if (innerPoly.Contains(line))
+                if (innerPoly.Intersects(line) || innerPoly.Contains(line))
                     return false;
             }
 
             return true;
         }
-         
+
+
+        /// <summary>
+        /// Return true if the polygon completely contains the circle
+        /// </summary>
+        /// <param name="other"></param>
+        /// <returns></returns>
+        public bool Contains(GridCircle other)
+        {
+            GridRectangle? overlap = BoundingBox.Intersection(other.BoundingBox);
+            if (!overlap.HasValue)
+                return false;
+
+            //We cannot contain the other shape if the overlapping bounding box is not identical
+            if (overlap.Value != other.BoundingBox)
+                return false;
+
+            //We must contain the center of the circle
+            if (!this.Contains(other.Center))
+            {
+                return false;
+            }
+
+            //If our borders intersect we do not entirely contain the circle
+            if (this.Intersects(other))
+            {
+                return false;
+            }
+
+            //If we have an interior hole inside the circle we don't entirely contain the circle.
+            if(this.InteriorRings.Any(ir => other.Contains(ir[0])))
+            {
+                return false;
+            }
+
+            //Check case of line segment passing through a convex polygon or an interior polygon
+            return true;
+        }
+
         /// <summary>
         /// Return true if the polygon is completely inside the other
         /// </summary>
@@ -1932,24 +1970,28 @@ namespace Geometry
 
             //No work to do if there is no overlap
             if (!overlap.HasValue)
-                return; 
+                return;
 
             List<GridVector2> newRing = new List<Geometry.GridVector2>();
 
-            for(int i = 0; i < ExteriorRing.Length-1; i++)
+            for (int i = 0; i < ExteriorRing.Length - 1; i++)
             {
                 GridLineSegment ls = new GridLineSegment(ExteriorRing[i], ExteriorRing[i + 1]);
 
                 newRing.Add(ExteriorRing[i]);
 
-                GridVector2[] IntersectionPoints; 
+                GridVector2[] IntersectionPoints;
                 List<GridLineSegment> candidates = ls.Intersections(other.GetIntersectingSegments(ls.BoundingBox), out IntersectionPoints);
-                 
+
                 //Remove any duplicates of the existing endpoints 
-                foreach(GridVector2 p in IntersectionPoints)
+                foreach (GridVector2 p in IntersectionPoints)
                 {
                     System.Diagnostics.Debug.Assert(!newRing.Contains(p));
-                    newRing.Add(p);
+                    if (!newRing.Contains(p))
+                    {
+                        newRing.Add(p);
+                    }
+                
                 } 
             }
 
@@ -2153,7 +2195,7 @@ namespace Geometry
             {
                 GridPolygon poly = Polygons[iPoly];
                 GridVector2[] polyPoints = poly.ExteriorRing;
-                for(int iVertex = 0; iVertex < poly.ExteriorRing.Length; iVertex++)
+                for(int iVertex = 0; iVertex < poly.ExteriorRing.Length - 1; iVertex++)
                 {
                     GridVector2 p = poly.ExteriorRing[iVertex];
                     PointIndex value = new PointIndex(iPoly, iVertex, Polygons);
@@ -2173,7 +2215,7 @@ namespace Geometry
                 {
                     GridPolygon innerPolygon = poly.InteriorPolygons.ElementAt(iInnerPoly);
 
-                    for (int iVertex = 0; iVertex < innerPolygon.ExteriorRing.Length; iVertex++)
+                    for (int iVertex = 0; iVertex < innerPolygon.ExteriorRing.Length - 1; iVertex++)
                     {
                         GridVector2 p = innerPolygon.ExteriorRing[iVertex];
 

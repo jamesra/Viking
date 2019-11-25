@@ -23,6 +23,7 @@ technique Standard
 		ZEnable = true;
 		ZFunc = LessEqual;
 		ZWriteEnable = true;
+		StencilFunc = GreaterEqual;
 		vertexShader = compile vs_3_0 LineVertexShader();
 		pixelShader = compile ps_3_0 DepthOnlyShader();
 	}
@@ -50,6 +51,10 @@ technique AlphaGradient
 		SrcBlend = Zero;
 		DestBlend = One;
 		BlendOp = Add;
+		ZEnable = true;
+		ZFunc = LessEqual;
+		ZWriteEnable = true;
+		StencilFunc = GreaterEqual;
 		vertexShader = compile vs_3_0 LineVertexShader();
 		pixelShader = compile ps_3_0 DepthOnlyShader();
 	}
@@ -77,6 +82,10 @@ technique NoBlur
 		SrcBlend = Zero;
 		DestBlend = One;
 		BlendOp = Add;
+		ZEnable = true;
+		ZFunc = LessEqual;
+		ZWriteEnable = true;
+		StencilFunc = GreaterEqual;
 		vertexShader = compile vs_3_0 LineVertexShader();
 		pixelShader = compile ps_3_0 DepthOnlyShader();
 	}
@@ -104,6 +113,10 @@ technique AnimatedLinear
 		SrcBlend = Zero;
 		DestBlend = One;
 		BlendOp = Add;
+		ZEnable = true;
+		ZFunc = LessEqual;
+		ZWriteEnable = true;
+		StencilFunc = GreaterEqual;
 		vertexShader = compile vs_3_0 LineVertexShader();
 		pixelShader = compile ps_3_0 DepthOnlyShader();
 	}
@@ -130,6 +143,10 @@ technique AnimatedBidirectional
 		SrcBlend = Zero;
 		DestBlend = One;
 		BlendOp = Add;
+		ZEnable = true;
+		ZFunc = LessEqual;
+		ZWriteEnable = true;
+		StencilFunc = GreaterEqual;
 		vertexShader = compile vs_3_0 LineVertexShader();
 		pixelShader = compile ps_3_0 DepthOnlyShader();
 	}
@@ -157,6 +174,10 @@ technique AnimatedRadial
 		SrcBlend = Zero;
 		DestBlend = One;
 		BlendOp = Add;
+		ZEnable = true;
+		ZFunc = LessEqual;
+		ZWriteEnable = true;
+		StencilFunc = GreaterEqual;
 		vertexShader = compile vs_3_0 LineVertexShader();
 		pixelShader = compile ps_3_0 DepthOnlyShader();
 	}
@@ -184,6 +205,10 @@ technique Ladder
 		SrcBlend = Zero;
 		DestBlend = One;
 		BlendOp = Add;
+		ZEnable = true;
+		ZFunc = LessEqual;
+		ZWriteEnable = true;
+		StencilFunc = GreaterEqual;
 		vertexShader = compile vs_3_0 LineVertexShader();
 		pixelShader = compile ps_3_0 DepthOnlyShader();
 	}
@@ -210,6 +235,10 @@ technique Dashed
 		SrcBlend = Zero;
 		DestBlend = One;
 		BlendOp = Add;
+		ZEnable = true;
+		ZFunc = LessEqual;
+		ZWriteEnable = true;
+		StencilFunc = GreaterEqual;
 		vertexShader = compile vs_3_0 LineVertexShader();
 		pixelShader = compile ps_3_0 DepthOnlyShader();
 	}
@@ -240,6 +269,7 @@ technique Tubular
 		ZEnable = true;
 		ZFunc = LessEqual;
 		ZWriteEnable = true;
+		StencilFunc = GreaterEqual;
 		vertexShader = compile vs_3_0 LineVertexShader();
 		pixelShader = compile ps_3_0 DepthOnlyShader();
 	}
@@ -268,6 +298,10 @@ technique HalfTube
 		SrcBlend = Zero;
 		DestBlend = One;
 		BlendOp = Add;
+		ZEnable = true;
+		ZFunc = LessEqual;
+		ZWriteEnable = true;
+		StencilFunc = GreaterEqual;
 		vertexShader = compile vs_3_0 LineVertexShader();
 		pixelShader = compile ps_3_0 DepthOnlyShader();
 	}
@@ -295,6 +329,10 @@ technique Glow
 		SrcBlend = Zero;
 		DestBlend = One;
 		BlendOp = Add;
+		ZEnable = true;
+		ZFunc = LessEqual;
+		ZWriteEnable = true;
+		StencilFunc = GreaterEqual;
 		vertexShader = compile vs_3_0 LineVertexShader();
 		pixelShader = compile ps_3_0 DepthOnlyShader();
 	}

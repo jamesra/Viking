@@ -20,41 +20,86 @@ using MorphologyMesh;
 using MIConvexHull;
 using MIConvexHullExtensions;
 using GraphLib;
-using OTVTable = System.Collections.Concurrent.ConcurrentDictionary<Geometry.PointIndex, Geometry.PointIndex>;
-using SliceChordRTree = RTree.RTree<MorphologyMesh.SliceChord>;
+using VikingXNAGraphics;
+//using OTVTable = System.Collections.Concurrent.ConcurrentDictionary<Geometry.PointIndex, Geometry.PointIndex>;
+//using SliceChordRTree = RTree.RTree<MorphologyMesh.ISliceChord>;
+
 
 namespace MonogameTestbed
-{ 
+{
+    class RegionView
+    {
+        public List<LineSetView> PolygonViews;
+        public List<LabelView> LabelViews;
+
+        public void Draw(MonoTestbed window, Scene scene)
+        {
+            LineView.Draw(window.GraphicsDevice, window.Scene, window.lineManager, PolygonViews.SelectMany(rpv => rpv.LineViews).ToArray());
+            DeviceStateManager.SetDepthStencilValue(window.GraphicsDevice, window.GraphicsDevice.DepthStencilState.ReferenceStencil + 1);
+            LabelView.Draw(window.spriteBatch, window.fontArial, scene, LabelViews);
+            DeviceStateManager.SetDepthStencilValue(window.GraphicsDevice, window.GraphicsDevice.DepthStencilState.ReferenceStencil + 1); 
+        }
+    }
+
 
     class BajajOTVAssignmentView
     {
-        public GridPolygon[] Polygons = null;
-        public double[] PolyZ = null;
+        public readonly GridPolygon[] Polygons = null;
+        public readonly double[] PolyZ = null;
         //public PointSetView[] PolyPointsView = null;
         public PointSetView IncompletedVertexView = null;
-        private LineSetView lineViews = new LineSetView();
-        private LineSetView unfiltered_lineViews = new LineSetView();
+
+        public int? iShownLineView = null;
+        public List<LineSetView> listLineViews = new List<LineSetView>();
+        public bool ShowLines
+        {
+            get
+            {
+                return iShownLineView.HasValue;
+            }
+        }
+
+        //private LineSetView lineViews = new LineSetView();
+        //private LineSetView unfiltered_lineViews = new LineSetView();
         //List<LineView> polyRingViews = null;
         public PointSetView MeshVertsView = null;
-
-        public PolygonSetView RegionViews;
-
+          
         PolygonSetView PolyViews;
         List<LineView> OTVTableView = null;
 
 
         MorphRenderMesh FirstPassTriangulation = null;
 
-        MeshView<VertexPositionColor> meshView = null;
+        public List<RegionView> RegionViews = new List<RegionView>();
+
+        public int? iShownMesh = null;
+        public List<MeshView<VertexPositionColor>> MeshViews = new List<MeshView<VertexPositionColor>>();
+        public bool ShowMesh
+        {
+            get
+            {
+                return iShownMesh.HasValue;
+            }
+        } 
+
+
         MeshModel<VertexPositionColor> meshViewModel = null;
 
         //LineView[] lineViews = null;
 
+        public int? iShownRegion = null;
         List<LineSetView> RegionPolygonViews;
+        List<LabelView> RegionLabelViews;
 
         public bool ShowFaces = false;
         public bool ShowPolygons = true;
-        public bool ShowRegionPolygons = false;
+        public bool ShowRegionPolygons {
+            get
+            {
+                return iShownRegion.HasValue;
+            }
+        }
+
         public bool ShowCompletedVerticies = true;
         public bool ShowAllEdges = false; 
 
@@ -95,87 +140,423 @@ namespace MonogameTestbed
             }
         }
 
-        public Color Color
-        {
-            get { return lineViews.color; }
-            set
-            {
-                lineViews.color = value;
-            }
-        }
-
         public BajajOTVAssignmentView(GridPolygon[] polys, double[] Z)
         {
             ///Takes a set of polygons and Z values and generates a meshView
             Polygons = polys;
+            PolyZ = Z;
             //Bajaj Step 3
             Polygons.AddPointsAtAllIntersections(Z);
-            PolyZ = Z;
+
+            GenerateMesh();
+        }
+
+        internal void GenerateMesh()
+        {
+            this.RegionViews.Clear();
+            this.listLineViews.Clear();
+            this.MeshViews.Clear();
 
             //Create our mesh with only the verticies
-            FirstPassTriangulation = new MorphRenderMesh(Polygons, Z);
+            FirstPassTriangulation = new MorphRenderMesh(Polygons, PolyZ);
 
             //Create our mesh with only the verticies
-            PolyViews = new PolygonSetView(polys);
-            PolyViews.LabelPolygonIndex = true;
+            PolyViews = new PolygonSetView(Polygons);
+            PolyViews.PointLabelType = IndexLabelType.MESH;
             //UpdatePolyViews();
 
-            
-            
             var RegionPairingGraph = FirstPassDelaunay(FirstPassTriangulation);
 
-            unfiltered_lineViews = PolyBranchAssignmentView.UpdateMeshLines(FirstPassTriangulation);
+            MeshViews.Add(CreateMeshView(FirstPassTriangulation, "FirstPassDelaunay"));
+
+            listLineViews.Add(PolyBranchAssignmentView.UpdateMeshLines(FirstPassTriangulation, "FirstPassDelaunay"));
 
             FirstPassTriangulation.RemoveInvalidEdges();
 
-            CreateRegionPolygonViews(FirstPassTriangulation);
+            listLineViews.Add(PolyBranchAssignmentView.UpdateMeshLines(FirstPassTriangulation, "Remove Invalid Edges"));
+            MeshViews.Add(CreateMeshView(FirstPassTriangulation, "Remove Invalid Edges"));
 
+            CompleteCorrespondingVertexFaces(FirstPassTriangulation);
+            listLineViews.Add(PolyBranchAssignmentView.UpdateMeshLines(FirstPassTriangulation, "CompleteCorrespondingVertexFaces"));
+
+
+            MeshViews.Add(CreateMeshView(FirstPassTriangulation, "CompleteCorrespondingVertexFaces"));
+            RegionViews.Add(CreateRegionPolygonViews(FirstPassTriangulation));
 
             //RegionViews = new PolygonSetView(RegionPairingGraph.Nodes.Select(n => n.Value.Polygon));
             //RegionViews.LabelPolygonIndex = true;
              
+            SliceChordRTree rTree = FirstPassTriangulation.CreateChordTree(PolyZ);
+            List<OTVTable> listOTVTables = RegionPairingGraph.MergeAndCloseRegionsPass(FirstPassTriangulation, rTree);
+
+            MeshViews.Add(CreateMeshView(FirstPassTriangulation, "MergeAndCloseRegionsPass"));
+            listLineViews.Add(PolyBranchAssignmentView.UpdateMeshLines(FirstPassTriangulation, "MergeAndCloseRegionsPass"));
+
             var IncompleteVerticies = IdentifyIncompleteVerticies(FirstPassTriangulation);
-            IncompletedVertexView = CreateCompletedVertexView(IncompleteVerticies);
+            IncompletedVertexView = CreateCompletedVertexView(IncompleteVerticies, Color.DarkRed);
             IncompletedVertexView.LabelIndex = false;
             IncompletedVertexView.LabelPosition = false;
-
-            SliceChordRTree rTree = FirstPassTriangulation.CreateChordTree();
-            List<OTVTable> listOTVTables = RegionPairingGraph.MergeAndCloseRegionsPass(FirstPassTriangulation, rTree);
 
             this.MeshVertsView = PointSetView.CreateFor(FirstPassTriangulation);
 
             CreateChordViews(FirstPassTriangulation, listOTVTables); 
 
+
             //CloseRegions(FirstPassTriangulation);
-            //FirstPassSliceChordGeneration(FirstPassTriangulation);
+            List<MorphMeshVertex> FirstPassIncompleteVerticies = FirstPassSliceChordGeneration(FirstPassTriangulation, PolyZ);
+
+            MeshViews.Add(CreateMeshView(FirstPassTriangulation, "FirstPassSliceChordGeneration"));
+            listLineViews.Add(PolyBranchAssignmentView.UpdateMeshLines(FirstPassTriangulation, "FirstPassSliceChordGeneration"));
+
+            // IMesh SecondPassMesh = FirstPassTriangulation.Triangulate();
             //IdentifyIncompleteVerticies(FirstPassTriangulation);
-            
+
+
             FirstPassFaceGeneration(FirstPassTriangulation);
+
+            MeshViews.Add(CreateMeshView(FirstPassTriangulation, "FirstPassFaceGeneration"));
+
+
+            MorphMeshRegionGraph SecondPassRegions = SecondPassRegionDetection(FirstPassTriangulation, FirstPassIncompleteVerticies);
+            RegionViews.Add(CreateRegionPolygonViews(FirstPassTriangulation, SecondPassRegions.Nodes.Keys));
+            
+            SecondPassRegions.MergeAndCloseRegionsPass(FirstPassTriangulation, rTree);
+
+            MeshViews.Add(CreateMeshView(FirstPassTriangulation, "Second MergeAndCloseRegionsPass"));
+
             FirstPassTriangulation.RecalculateNormals();
 
-            lineViews = PolyBranchAssignmentView.UpdateMeshLines(FirstPassTriangulation);
+            listLineViews.Add(PolyBranchAssignmentView.UpdateMeshLines(FirstPassTriangulation, "Second MergeAndCloseRegionsPass"));
+             
+            //MeshViews.Add(CreateMeshView(FirstPassTriangulation, "Second MergeAndCloseRegionsPass"));
+            
+            //If we have fewer region views, reset the region view index
+            if(iShownRegion.HasValue && iShownRegion.Value > RegionViews.Count)
+            {
+                iShownRegion = null; 
+            }
 
-            meshViewModel = CreateFaceView(FirstPassTriangulation);
-            meshView = new MeshView<VertexPositionColor>();
-            meshView.models.Add(meshViewModel);
-            //UpdateMeshView();
+            if(iShownLineView == null)
+            {
+                iShownLineView = listLineViews.Count - 1;
+            }
+
+            if (iShownMesh == null)
+            {
+                iShownMesh = MeshViews.Count - 1;
+            }
+        }
+        
+        
+        public static void CompleteCorrespondingVertexFaces(MorphRenderMesh mesh)
+        {
+            //Corresponding edges should have two faces if they are complete
+            
+            MorphMeshEdge[] edges = mesh.MorphEdges.Where(e => e.Type == EdgeType.CORRESPONDING && e.Faces.Count < 2).ToArray();
+
+            foreach(MorphMeshEdge edge in edges)
+            {
+                MorphMeshVertex vA = mesh.GetVertex(edge.A);
+                MorphMeshVertex vB = mesh.GetVertex(edge.B);
+
+                List<MorphMeshVertex> VertsToCheck = new List<MorphMeshVertex>(new MorphMeshVertex[] { vA, vB});
+
+                //TODO: I probably don't need the where statement below because I know the vertex is not face complete because the attached corresponding edge is not complete
+                //I also should probably collect all of the possible faces, then select the option with the smallest perimeter. 
+                foreach(MorphMeshVertex v in VertsToCheck.Where(vT => !vT.IsFaceSurfaceComplete(mesh)))
+                {
+                    if (edge.Faces.Count == 2)
+                        break;
+
+                    List<int> Face = null;
+                    Face = mesh.FindAnyCloseableFace(vA.Index, vB, edge);
+
+
+                    int iVa = Face.IndexOf(vA.Index);
+                    int iVb = Face.IndexOf(vB.Index);
+
+                    if (Face.Count <= 4)
+                    {
+                        MorphMeshFace face = new MorphMeshFace(Face);
+                        mesh.AddFace(face);
+
+                        if (Face.Count == 4)
+                        {
+                            mesh.SplitFace(face);
+                        }
+                    }
+                    else
+                    {
+                        Debug.Assert(Math.Abs(iVa - iVb) == 1 || (Math.Abs(iVa - iVb) == Face.Count - 1));
+
+                        int iOther = iVa - 1;
+                        bool CounterClockwise = true;
+                        if (iOther < 0 || iOther == iVb)
+                        {
+                            iOther = iVa + 1;
+                            CounterClockwise = false;
+                            if (iOther >= Face.Count || iOther == iVb)
+                            {
+                                iOther = iVb - 1;
+                                CounterClockwise = true;
+                                if (iOther < 0 || iOther == iVa)
+                                {
+                                    iOther = iVb + 1;
+                                    CounterClockwise = false;
+                                    if (iOther < 0 || iOther == iVa)
+                                    {
+                                        throw new ArgumentException("Can't find third vertex to create face for corresponding edge");
+                                    }
+                                }
+                            }
+                        }
+
+                        int[] TriFace = CounterClockwise ? new int[] { iOther, iVa, iVb } : new int[] { iVa, iOther, iVb };
+                        MorphMeshFace face = new MorphMeshFace(TriFace.Select(i => Face[i]));
+                        mesh.AddFace(face);
+
+                        
+                    }
+                }
+
+                
+            }
+        }
+        
+
+        
+        /// <summary>
+        /// Take a list of vertex indicies that describe the perimeter of the region.  Triangulate the verticies and return faces for the triangulation
+        /// </summary>
+        public static List<MorphMeshFace> RegionPerimeterToFaces(MorphRenderMesh mesh, List<int> Face)
+        {
+            if (Face == null)
+                return new List<MorphMeshFace>();
+
+            if (Face.Count == 3)
+            {
+                //If the region is only 4 points or less just create a face and region
+                MorphMeshFace newFace = new MorphMeshFace(Face);
+                return new MorphMeshFace[] { newFace }.ToList();
+            }
+            else if (Face.Count == 4)
+            {
+                //If the region is only 4 points or less just create a face and region
+                MorphMeshFace newFace = new MorphMeshFace(Face);
+
+                //Check for a corresponding edge, if it exists split on the corresponding edge
+                for (int iVert = 0; iVert < Face.Count; iVert++)
+                {
+                    MorphMeshVertex vA = mesh[Face[iVert]];
+                    MorphMeshVertex vB = mesh[Face[iVert+1]];
+
+                    EdgeKey key;
+                    if (mesh.IsAnEdge(vA.Index, vB.Index))
+                    {
+                         key = new EdgeKey(vA.Index, vB.Index);
+                    }
+                    else if(mesh.IsAnEdge(vA.Index, vB.Index))
+                    {
+                         key = new EdgeKey(vB.Index, vA.Index);
+                    }
+                    else
+                    {
+                        continue;
+                    }
+
+                    MorphMeshEdge edge = mesh.GetEdge(key);
+                    if (edge.Type == EdgeType.CORRESPONDING)
+                    {
+                        //Split the face along the corresponding edge
+                        int iPrev = iVert - 1 < 0 ? Face.Count - 1 : iVert - 1;
+                        int iNext = iVert + 2 >= Face.Count ? 0 : iVert + 2;
+
+                        List<MorphMeshFace> listFaces = new List<MorphMeshFace>(2);
+                        listFaces.Add(new MorphMeshFace(new int[] { Face[iPrev], Face[iVert], Face[iVert + 1] }));
+                        listFaces.Add(new MorphMeshFace(new int[] { Face[iVert], Face[iVert + 1], Face[iNext]}));
+                        return listFaces;
+                    }
+                    else
+                    {
+                        //TODO: Check for the shortest distance to cut the face along
+                        //Split the face along the corresponding edge
+                        int iPrev = iVert - 1 < 0 ? Face.Count - 1 : iVert - 1;
+                        int iNext = iVert + 2 >= Face.Count ? 0 : iVert + 2;
+
+                        List<MorphMeshFace> listFaces = new List<MorphMeshFace>(2);
+                        listFaces.Add(new MorphMeshFace(new int[] { Face[iPrev], Face[iVert], Face[iVert + 1] }));
+                        listFaces.Add(new MorphMeshFace(new int[] { Face[iVert], Face[iVert + 1], Face[iNext] }));
+                        return listFaces;
+                    }
+                }
+
+                return new List<MorphMeshFace> { newFace };
+            }
+            else
+            {
+                //Triangulate the region border to identify faces of the region
+                GridVector3[] region_border_points = Face.Select(iVert => mesh[iVert].Position).ToArray();
+
+                //Dictionary<GridVector2, long> PointToMeshIndex = new Dictionary<GridVector2, long>();
+                Dictionary<GridVector2, int> PointToMeshIndex = Face.ToDictionary<int, GridVector2>(iVert => mesh[iVert].Position.XY());
+
+                //If there are any duplicate points that indicates a corresponding contour was involved.  In this case we cut the polygon into two halves and triangulate those
+                int[] countDuplicatesInstances = region_border_points.Select(v => region_border_points.Count(v2 => v2.XY() == v.XY())).ToArray();
+
+                //If there are corresponding verticies we can have duplicate points in the set which will break triangulation.
+                if(countDuplicatesInstances.Max() > 1)
+                {
+                    //Break the corresponding verticies into sub-polygons and build triangles for each
+
+                }
+
+                //Create a polygon for the region
+                GridPolygon regionBorder = new GridPolygon(Face.EnsureClosedRing().Select(iVert => mesh[iVert].Position.XY()).ToArray());
+
+                //string json = regionBorder.ToJSON();
+
+                //GridPolygon loadedFromJSON = GeometryJSONExtensions.PolygonFromJSON(json);
+                //Triangulate the region
+                IMesh regionMesh = regionBorder.Triangulate(UseSteiner: false);
+
+                int[] indicies = regionMesh.IndiciesForPointsXY(regionBorder.ExteriorRing);
+
+                List<GridTriangle> listTriangles = regionMesh.ToTriangles();
+                List<MorphMeshFace> listRegionFaces = new List<MorphMeshFace>(listTriangles.Count);
+
+                //Experimental: Handle the case where we had to add new points to the mesh.  It would be better if these points weren't added at all...
+
+                //for(int i = Face.Count; i < regionMesh.Vertices.Count; i++)
+                //{
+                //mesh.AddVertex(regionMesh.Vertices[i])
+                //}
+
+                List<int[]> listXYPointIndicies = listTriangles.Select(t => regionMesh.IndiciesForPointsXY(t.Points)).ToList();
+                List<int[]> listMeshFaces = listXYPointIndicies.Select(iPoints => iPoints.Select(i => Face[i]).ToArray()).ToList();
+
+                List<GridLineSegment> lines = regionMesh.ToLines();
+
+                List<int[]> listLineIndicies = lines.Select(l => regionMesh.IndiciesForPointsXY(new GridVector2[] { l.A, l.B })).ToList();
+
+
+                foreach (GridTriangle tri in listTriangles)
+                {
+
+                    //int[] iMeshVerts = regionMesh.IndiciesForPointsXY(tri.Points);
+                    int[] iMeshVerts = tri.Points.Select(p => PointToMeshIndex[p]).ToArray();
+
+                    //if (iMeshVerts.Any(iVert => iVert >= Face.Count))
+                    //    continue;
+                    /*
+                    MorphMeshEdge AB = new MorphMeshEdge(EdgeType.UNKNOWN, iMeshVerts[0], iMeshVerts[1]);
+                    MorphMeshEdge BC = new MorphMeshEdge(EdgeType.UNKNOWN, iMeshVerts[1], iMeshVerts[2]);
+                    MorphMeshEdge CA = new MorphMeshEdge(EdgeType.UNKNOWN, iMeshVerts[2], iMeshVerts[0]);
+
+                    if (!mesh.Contains(AB))
+                    {
+                        mesh.AddEdge(AB);
+                    }
+
+                    if (!mesh.Contains(BC))
+                    {
+                        mesh.AddEdge(BC);
+                    }
+
+                    if (!mesh.Contains(CA))
+                    {
+                        mesh.AddEdge(CA);
+                    }
+                    */
+                    //MorphMeshFace newFace = new MorphMeshFace(iMeshVerts.Select(i => Face[i]));
+                    MorphMeshFace newFace = new MorphMeshFace(iMeshVerts);
+                    listRegionFaces.Add(newFace);
+                }
+
+                return listRegionFaces;
+            }
+
         }
 
-        public void CreateRegionPolygonViews(MorphRenderMesh mesh)
+        public MorphMeshRegionGraph SecondPassRegionDetection(MorphRenderMesh mesh, List<MorphMeshVertex> IncompleteVerticies)
         {
-            List<LineSetView> views = new List<LineSetView>();
+            MorphMeshRegionGraph graph = new MorphMeshRegionGraph();
 
-            foreach (MorphMeshRegion region in mesh.Regions)
+            SortedSet<MorphMeshVertex> listUnassignedVerticies = new SortedSet<MorphMeshVertex>(IncompleteVerticies);
+            while (listUnassignedVerticies.Count > 0)
+            {
+                var v = listUnassignedVerticies.First();
+                listUnassignedVerticies.Remove(v);
+
+                //Identify edges missing faces
+                List<IEdge> edges = v.Edges.Select(key => mesh.Edges[key]).Where(e => e.Faces.Count < 2).ToList();
+
+                foreach (var edge in edges)
+                {
+                    Stack<int> searchHistory = new Stack<int>();
+                    searchHistory.Push(v.Index);
+                    List<int> Face = mesh.IdentifyIncompleteFace(v);
+                    if (Face != null)
+                    {
+                        listUnassignedVerticies.RemoveWhere(iVert => Face.Contains(iVert.Index));
+                        MorphMeshRegion region = null;
+
+                        List<MorphMeshFace> listRegionFaces = RegionPerimeterToFaces(mesh, Face);
+
+                        region = new MorphMeshRegion(mesh, listRegionFaces, RegionType.UNTILED);
+
+                        foreach(MorphMeshFace rFace in region.Faces)
+                        {
+                            mesh.AddFace(rFace);
+                        }
+
+                        graph.AddNode(region);
+                        break;
+                    }
+
+                    //TODO: Remove edges that now have faces or are in a region
+                }
+            }
+
+            return graph;
+        }
+        
+
+        public static RegionView CreateRegionPolygonViews(MorphRenderMesh mesh, IEnumerable<MorphMeshRegion> regions = null)
+        {
+            if(regions == null)
+            {
+                regions = mesh.Regions;
+            }
+
+            List<LineSetView> views = new List<LineSetView>();
+            List<LabelView> label_views = new List<LabelView>();
+
+            foreach (MorphMeshRegion region in regions)
             {
                 GridPolygon poly = region.Polygon;
                 LineSetView lineView = new LineSetView();
                 Color c = region.Type.GetColor();
                 c.A = 128;
-                lineView.LineViews = poly.ExteriorSegments.Select(l => new LineView(l, 4, c, LineStyle.Standard, false)).ToList();
+                lineView.LineViews = poly.ExteriorSegments.Select(l => new LineView(l, 4, c, LineStyle.Standard)).ToList();
                 views.Add(lineView);
+
+                label_views.Add(new LabelView(region.ToString(), poly.Centroid));
             }
 
-            this.RegionPolygonViews = views;
+            RegionView regionView = new RegionView();
+            regionView.PolygonViews = views;
+            regionView.LabelViews = label_views;
+
+            return regionView;
+        }
+
+        public MeshView<VertexPositionColor> CreateMeshView(MorphRenderMesh mesh, string name)
+        {
+            meshViewModel = CreateFaceView(mesh);
+            var meshView = new MeshView<VertexPositionColor>();
+            meshView.Name = name;
+            meshView.models.Add(meshViewModel);
+            return meshView;
         }
 
         public void UpdateMeshView()
@@ -197,10 +578,10 @@ namespace MonogameTestbed
             */
         }
 
-        public static PointSetView CreateCompletedVertexView(List<MorphMeshVertex> verticies)
+        public static PointSetView CreateCompletedVertexView(List<MorphMeshVertex> verticies, Color color)
         {
             PointSetView psv = new PointSetView();
-            psv.Color = Color.Green;
+            psv.Color = color;
             psv.LabelIndex = true;
             psv.PointRadius = 1.25;
             psv.Points = verticies.Select(v => v.Position.XY()).ToArray();
@@ -255,14 +636,24 @@ namespace MonogameTestbed
 
             foreach (IFace face in mesh.Faces)
             {
-                
                 model.AppendEdges(face.iVerts);
-
+                                
                 /*Color regionColor = Color.Gold;
                 foreach (int iVert in face.iVerts)
                 {
                     model.Verticies[iVert].Color = regionColor;
                 }*/
+            }
+
+            foreach(MorphMeshEdge edge in mesh.MorphEdges)
+            {
+                Color color = edge.Type.GetColor();
+
+                //TEMP
+                color = color.SetAlpha(1.0f);
+
+                model.Verticies[edge.A].Color = color;
+                model.Verticies[edge.B].Color = color;
             }
 
             return model;
@@ -326,7 +717,7 @@ namespace MonogameTestbed
             var RegionToEdges = new Dictionary<MorphMeshRegion, SortedSet<MorphMeshEdge>>();
 
             foreach (MorphMeshRegion region in mesh.Regions)
-            { 
+            {
                 foreach (int vert in region.Verticies)
                 {
                     //TODO: How to handle a vertex shared by two regions?
@@ -355,7 +746,7 @@ namespace MonogameTestbed
                 if (!RegionA.Type.IsValidPair(RegionB.Type))
                     continue;
 
-                if (RegionA.Z == RegionB.Z)
+                if (RegionA.ZLevel.SetEquals(RegionB.ZLevel))
                     continue; 
 
                 MorphMeshRegionGraphEdge graphEdge = new MorphMeshRegionGraphEdge(RegionA, RegionB);
@@ -453,16 +844,16 @@ namespace MonogameTestbed
         {
             if(rTree == null)
             {
-                rTree = mesh.CreateChordTree();
+                rTree = mesh.CreateChordTree(source.ZLevel.Union(target.ZLevel));
             }
 
-            ConcurrentDictionary<PointIndex, PointIndex> OTVTable = new ConcurrentDictionary<PointIndex, PointIndex>(); 
+            OTVTable Table = new OTVTable(); 
 
             //TODO: Add flags to this call to select which tests are used to built the OTV table
             BajajMeshGenerator.CreateOptimalTilingVertexTable(source.Verticies.Select(i => ((MorphMeshVertex)mesh[i]).PolyIndex.Value), target.Verticies.Select(i => ((MorphMeshVertex)mesh[i]).PolyIndex.Value), mesh.Polygons, mesh.PolyZ,
-                                                                                            Tests, out OTVTable, ref rTree);
+                                                                                            Tests, out Table, ref rTree);
              
-            return OTVTable;
+            return Table;
         }
 
         private void CreateChordViews(MorphRenderMesh mesh, List<OTVTable> OTVTables)
@@ -472,7 +863,7 @@ namespace MonogameTestbed
 
             foreach (var OTVTable in OTVTables)
             {
-                List<LineView> ChordView = CreateChordView(mesh, OTVTable, Color.Random());
+                List<LineView> ChordView = CreateChordView(mesh, OTVTable, ColorExtensions.Random());
                 this.OTVTableView.AddRange(ChordView);
             }
         }
@@ -484,7 +875,10 @@ namespace MonogameTestbed
         /// <returns></returns>
         public List<MorphMeshVertex> IdentifyIncompleteVerticies(MorphRenderMesh mesh)
         {
-            return mesh.Verticies.Where(v => v as MorphMeshVertex != null && !((MorphMeshVertex)v).IsFaceSurfaceComplete(mesh)).Select(v => (MorphMeshVertex)v).ToList();
+            return mesh.Verticies.Where(v => v as MorphMeshVertex != null &&
+                                        !((MorphMeshVertex)v).IsFaceSurfaceComplete(mesh))
+                                        .Select(v => (MorphMeshVertex)v)
+                                        .ToList();
         }
 
         
@@ -524,7 +918,43 @@ namespace MonogameTestbed
 
             return CandidateChords;
         }
-                 
+
+        /// <summary>
+        /// Convert the OTV table into a set of slice chord candidates
+        /// </summary>
+        /// <param name="mesh"></param>
+        /// <param name="OTVTable"></param>
+        /// <returns></returns>
+        private static List<SliceChord> CreateChordCandidateList(MorphRenderMesh mesh, ConcurrentDictionary<MorphMeshVertex, MorphMeshVertex> OTVTable)
+        {
+            List<SliceChord> CandidateChords = new List<SliceChord>();
+
+            //Create a sorted list of proposed chord lengths
+            foreach (MorphMeshVertex i1 in OTVTable.Keys)
+            {
+                MorphMeshVertex i2;
+                if (OTVTable.TryGetValue(i1, out i2))
+                {
+                    GridVector2 p1 = i1.Position.XY();
+                    GridVector2 p2 = i2.Position.XY();
+
+                    if (p1 != p2)
+                    {
+                        SliceChord sc = new SliceChord(i1.PolyIndex.Value, i2.PolyIndex.Value, mesh.Polygons);
+                        CandidateChords.Add(sc);
+                    }
+                    else
+                    {
+                        //This is a corresponding contour, both at the same X,Y position, add it to our list.
+                        var edge = new MorphMeshEdge(EdgeType.CORRESPONDING, i1.Index, i2.Index);
+                        mesh.AddEdge(edge);
+                    }
+                }
+            }
+
+            return CandidateChords;
+        }
+
 
         public static int TryAddOTVTable(MorphRenderMesh mesh, OTVTable OTVTable, SliceChordRTree rTree, SliceChordTestType Tests, SliceChordPriority priority)
         {
@@ -579,8 +1009,12 @@ namespace MonogameTestbed
             if(BajajMeshGenerator.IsSliceChordValid(sc.Origin, mesh.Polygons, mesh.GetSameLevelPolygons(sc.Origin), mesh.GetAdjacentLevelPolygons(sc.Origin), sc.Target, ChordRTree, Tests))
             {
                 var edge = new MorphMeshEdge(EdgeTypeExtensions.GetEdgeType(sc.Line, mesh.Polygons[sc.Origin.iPoly], mesh.Polygons[sc.Target.iPoly]), mesh[sc.Origin].Index, mesh[sc.Target].Index);
+                if (mesh.Contains(edge))
+                    return false;
+
+                mesh.AddEdge(edge); 
                 ChordRTree.Add(sc.Line.BoundingBox.ToRTreeRect(0), sc);
-                mesh.AddEdge(edge);
+                
                 return true;
             }
               
@@ -588,48 +1022,192 @@ namespace MonogameTestbed
         }
 
         /// <summary>
-        /// Generate slice chords for the remaining unknown chords
+        /// Generate slice chords for the remaining unknown chords.  Returns a list of incomplete verticies.
         /// </summary>
         /// <param name="mesh">The mesh, which may contain edges we cannot cross</param>
-        public static void FirstPassSliceChordGeneration(MorphRenderMesh mesh)
+        public static List<MorphMeshVertex> FirstPassSliceChordGeneration(MorphRenderMesh mesh, ICollection<double> ZLevels)
         {
-            ConcurrentDictionary<PointIndex, PointIndex> OTVTable;
-            SliceChordRTree rTree = mesh.CreateChordTree();
+            SliceChordRTree rTree = mesh.CreateChordTree(ZLevels);
 
-            BajajMeshGenerator.CreateOptimalTilingVertexTable(new PolySetVertexEnum(mesh.Polygons), mesh.Polygons, mesh.PolyZ,
-                                                              SliceChordTestType.Correspondance | SliceChordTestType.ChordIntersection | SliceChordTestType.Theorem2 | SliceChordTestType.Theorem4, 
+            mesh.CloseFaces();
+            List<MorphMeshVertex> IncompleteVerticies = mesh.MorphVerticies.Where(v => false == v.IsFaceSurfaceComplete(mesh)).ToList();
+
+            SliceChordTestType FirstPassTests = SliceChordTestType.Correspondance | SliceChordTestType.ChordIntersection | SliceChordTestType.Theorem2 | SliceChordTestType.EdgeType | SliceChordTestType.Theorem4;
+            SliceChordTestType SecondPassTests = SliceChordTestType.Correspondance | SliceChordTestType.ChordIntersection | SliceChordTestType.EdgeType | SliceChordTestType.Theorem4;
+            SliceChordTestType ThirdPassTests = SliceChordTestType.Correspondance | SliceChordTestType.ChordIntersection | SliceChordTestType.Theorem2;
+
+            while (SliceChordGenerationPass(mesh, rTree, IncompleteVerticies, FirstPassTests) == true)
+            {
+                //Try to remove any verticies we've completed the faces for from the search
+                mesh.CloseFaces(IncompleteVerticies.Cast<Geometry.Meshing.IVertex>());
+                IncompleteVerticies = IncompleteVerticies.Where(v => false == v.IsFaceSurfaceComplete(mesh)).ToList();
+            }
+            
+            
+            while (SliceChordGenerationPass(mesh, rTree, IncompleteVerticies, SecondPassTests) == true)
+            {
+                //Try to remove any verticies we've completed the faces for from the search
+                mesh.CloseFaces(IncompleteVerticies.Cast<Geometry.Meshing.IVertex>());
+                IncompleteVerticies = IncompleteVerticies.Where(v => false == v.IsFaceSurfaceComplete(mesh)).ToList();
+            }
+            
+            /*
+            
+            while (SliceChordGenerationPass(mesh, rTree, IncompleteVerticies, ThirdPassTests) == true)
+            {
+                //Try to remove any verticies we've completed the faces for from the search
+                mesh.CloseFaces(IncompleteVerticies.Cast<Geometry.Meshing.IVertex>());
+                IncompleteVerticies = IncompleteVerticies.Where(v => false == v.IsFaceSurfaceComplete(mesh)).ToList();
+            }
+            */
+
+            mesh.CloseFaces(IncompleteVerticies.Cast<Geometry.Meshing.IVertex>());
+            return IncompleteVerticies;
+        }
+
+
+        /// <summary>
+        /// Generate slice chords for the remaining unknown chords, returns true if any chords were generated
+        /// </summary>
+        /// <param name="mesh">The mesh, which may contain edges we cannot cross</param>
+        private static bool SliceChordGenerationPass(MorphRenderMesh mesh, SliceChordRTree rTree, List<MorphMeshVertex> IncompleteVerticies, SliceChordTestType TestSuite)
+        {
+            ConcurrentDictionary<MorphMeshVertex, MorphMeshVertex> OTVTable;
+             
+            BajajMeshGenerator.CreateOptimalTilingVertexTable(mesh, IncompleteVerticies,
+                                                              TestSuite,
                                                               out OTVTable, ref rTree);
 
             List<SliceChord> CandidateChords = CreateChordCandidateList(mesh, OTVTable);
 
             ///Starting with the shortest chord, add all of the slice chords that do not intersect an existing chord
-            SliceChordRTree AddedChords = rTree;//new RTree.RTree<SliceChord>();
+            //SliceChordRTree AddedChords = rTree;//new RTree.RTree<SliceChord>();
             CandidateChords = CandidateChords.OrderBy(sc => sc.Line.Length).ToList();
-            
+
+            bool addedChord = false;
+            int numAdded = 0;
             foreach (SliceChord sc in CandidateChords)
             {
-                TryAddSliceChord(mesh, sc, AddedChords, SliceChordTestType.ChordIntersection | SliceChordTestType.Correspondance | SliceChordTestType.EdgeType | SliceChordTestType.Theorem2);
+                bool addedThisChord = TryAddSliceChord(mesh, sc, rTree, TestSuite);
+                addedChord = addedChord || addedThisChord;
+                if(addedThisChord)
+                {
+                    numAdded += 1;
+                    Console.WriteLine(string.Format("Added {0} Remaining: {1}", sc, CandidateChords.Count));
+                }
             }
+
+            Console.WriteLine(string.Format("*** Added {0} Chords this pass ***", numAdded));
+
+            return addedChord;
         }
-        
+
         /// <summary>
         /// Using the existing slice chords determine if any faces can be added using existing edges
         /// </summary>
         public void FirstPassFaceGeneration(MorphRenderMesh mesh)
         {
             //We know that all faces have a contour as part of the triangle
-            mesh.CloseFaces();
+            List<MorphMeshVertex> incompleteVerts = IdentifyIncompleteVerticies(mesh);
+
+            while(incompleteVerts.Count > 0)
+            {
+                MorphMeshVertex v = incompleteVerts[0];
+                incompleteVerts.RemoveAt(0);
+
+                List<int> face_path = mesh.IdentifyIncompleteFace(v);
+                if(face_path != null && face_path.Count <= 4)
+                {
+                    MorphMeshFace face = new MorphMeshFace(face_path);
+                    if (face.IsTriangle)
+                    {
+                        mesh.AddFace(face);
+                    }
+                    else if(face.IsQuad)
+                    {
+                        var verts = mesh.GetVerts(face_path).ToArray();
+                        double[] VertZLevels = verts.Select(vert => vert.Position.Z).Distinct().ToArray();
+                        int NumVertZLevels = verts.Where(vert => vert.Position.Z == VertZLevels[0]).Count();
+                        if (NumVertZLevels == 2)
+                        {
+                            mesh.AddFace(face);
+                            mesh.SplitFace(face);
+                        }
+                        else if (NumVertZLevels == 1 || NumVertZLevels == (verts.Length - 1))
+                        {
+                            //Only one of the verts is on a particular Z Level   
+                            var LevelA = verts.Where(vert => vert.Position.Z == VertZLevels[0]).ToArray();
+                            var LevelB = verts.Where(vert => vert.Position.Z != VertZLevels[0]).ToArray();
+
+                            Geometry.Meshing.IVertex anchor;
+                            Geometry.Meshing.IVertex[] opposite_verts;
+                            if (LevelA.Length == 1)
+                            {
+                                anchor = LevelA[0];
+                                opposite_verts = LevelB;
+                            }
+                            else if (LevelB.Length == 1)
+                            {
+                                anchor = LevelB[0];
+                                opposite_verts = LevelA;
+                            }
+                            else
+                            {
+                                throw new InvalidOperationException("Can't find the anchor vertex for quad face");
+                            }
+
+                            int iFaceAnchor = face_path.IndexOf(anchor.Index);
+
+                            int iA = iFaceAnchor + 1;
+                            int iB = iFaceAnchor + 2;
+                            int iC = iFaceAnchor + 3;
+
+                            if (iA >= face_path.Count)
+                                iA -= face_path.Count;
+
+                            if (iB >= face_path.Count)
+                                iB -= face_path.Count;
+
+                            if (iC >= face_path.Count)
+                                iC -= face_path.Count;
+
+                            int O = face_path[iFaceAnchor];
+                            int A = face_path[iA];
+                            int B = face_path[iB];
+                            int C = face_path[iC];
+
+                            MorphMeshFace XAB = new MorphMeshFace(O, A, B);
+                            MorphMeshFace XBC = new MorphMeshFace(O, B, C);
+
+                            mesh.AddFace(XAB);
+                            mesh.AddFace(XBC);
+                        }
+                        
+                    }
+                }
+                else
+                {
+                    continue; //Skip this vertex since we could not make a face
+                }
+
+                //Check to see if we can add another face if the vertex is not complete yet and we just added a face successfully
+                if(v.IsFaceSurfaceComplete(mesh) == false)
+                {
+                    incompleteVerts.Insert(0, v);
+                }
+            }
+            //mesh.CloseFaces();
         }
 
-        private static List<LineView> CreateChordView(MorphRenderMesh mesh, ConcurrentDictionary<PointIndex, PointIndex> OTVTable, Color color)
+        private static List<LineView> CreateChordView(MorphRenderMesh mesh, OTVTable table, Color color)
         {
-            List<SliceChord> CandidateChords = CreateChordCandidateList(mesh, OTVTable);
+            List<SliceChord> CandidateChords = CreateChordCandidateList(mesh, table);
 
             var RejectedChords = CandidateChords.Where(sc => !mesh.ContainsEdge(sc.Origin, sc.Target));
             var AcceptedChords = CandidateChords.Where(sc => mesh.ContainsEdge(sc.Origin, sc.Target));
 
-            List<LineView> lineViews = RejectedChords.Select(sc => new LineView(sc.Line, 1.0, color, LineStyle.Ladder, false)).ToList();
-            lineViews.AddRange(AcceptedChords.Select(sc => new LineView(sc.Line, 1.0, color, LineStyle.Glow, false)));
+            List<LineView> lineViews = RejectedChords.Select(sc => new LineView(sc.Line, 1.0, color, LineStyle.Ladder)).ToList();
+            lineViews.AddRange(AcceptedChords.Select(sc => new LineView(sc.Line, 1.0, color, LineStyle.Glow)));
 
             return lineViews;
         }
@@ -637,53 +1215,91 @@ namespace MonogameTestbed
         public void Draw(MonoTestbed window, Scene scene)
         {
             window.GraphicsDevice.Clear(ClearOptions.DepthBuffer | ClearOptions.Stencil | ClearOptions.Target, Color.DarkGray, float.MaxValue, 0);
+            StringBuilder ViewLabels = new StringBuilder();
 
             if (RegionViews != null && ShowRegionPolygons)
             {
-                RegionViews.Draw(window, scene);
-            }
-             
-            if (meshView != null && ShowFaces && !ShowRegionPolygons)
-            {
-                meshView.Draw(window.GraphicsDevice, window.Scene, CullMode.None);
+                RegionViews[iShownRegion.Value].Draw(window, scene);
+                ViewLabels.AppendLine("Region Pass #" + iShownRegion.Value);
             }
 
+            if (MeshViews != null && ShowMesh)
+            {
+                MeshViews[iShownMesh.Value].Draw(window.GraphicsDevice, window.Scene, CullMode.None);
+                ViewLabels.AppendLine(MeshViews[iShownMesh.Value].Name);
+            }
+
+
+            if(listLineViews != null && ShowLines)
+            {
+                int iShownLine = iShownLineView.Value;
+                LineSetView lineView = listLineViews[iShownLine];
+
+                DeviceStateManager.SetDepthStencilValue(window.GraphicsDevice, 0);
+                LineView.Draw(window.GraphicsDevice, window.Scene, window.lineManager, lineView.LineViews.ToArray());
+                window.GraphicsDevice.Clear(ClearOptions.DepthBuffer | ClearOptions.Stencil, Color.Black, float.MaxValue, 0);
+                DeviceStateManager.SetDepthStencilValue(window.GraphicsDevice, window.GraphicsDevice.DepthStencilState.ReferenceStencil + 10);
+                CurveLabel.Draw(window.GraphicsDevice, window.Scene, window.spriteBatch, window.fontArial, window.curveManager, lineView.LineLables.ToArray());
+                ViewLabels.AppendLine(lineView.Name);
+            }
+            /*
             if (lineViews != null && ShowPolygons && !ShowRegionPolygons)
-            { 
+            {
+                DeviceStateManager.SetDepthStencilValue(window.GraphicsDevice, 0);
                 LineView.Draw(window.GraphicsDevice, window.Scene, window.lineManager, lineViews.LineViews.ToArray());
+                window.GraphicsDevice.Clear(ClearOptions.DepthBuffer | ClearOptions.Stencil, Color.Black, float.MaxValue, 0);
+                DeviceStateManager.SetDepthStencilValue(window.GraphicsDevice, window.GraphicsDevice.DepthStencilState.ReferenceStencil + 10);
                 CurveLabel.Draw(window.GraphicsDevice, window.Scene, window.spriteBatch, window.fontArial, window.curveManager, lineViews.LineLables.ToArray());
+                ViewLabels.AppendLine("Chords");
             }
 
             if (unfiltered_lineViews != null && ShowAllEdges)
             {
                 LineView.Draw(window.GraphicsDevice, window.Scene, window.lineManager, unfiltered_lineViews.LineViews.ToArray());
+                DeviceStateManager.SetDepthStencilValue(window.GraphicsDevice, window.GraphicsDevice.DepthStencilState.ReferenceStencil + 1);
                 CurveLabel.Draw(window.GraphicsDevice, window.Scene, window.spriteBatch, window.fontArial, window.curveManager, unfiltered_lineViews.LineLables.ToArray());
-            }
+                DeviceStateManager.SetDepthStencilValue(window.GraphicsDevice, window.GraphicsDevice.DepthStencilState.ReferenceStencil + 1);
+                ViewLabels.AppendLine("Triangulation");
+            }*/
 
             if (IncompletedVertexView != null && ShowCompletedVerticies)
             {
-                IncompletedVertexView.Draw(window, scene); 
+                IncompletedVertexView.Draw(window, scene);
+                ViewLabels.AppendLine("Incomplete Verticies");
             }
             
             if (MeshVertsView != null && (this.VertexLabelType & IndexLabelType.MESH) > 0)
             {
                 MeshVertsView.Draw(window, scene);
+                ViewLabels.AppendLine("Mesh verticies");
             }
             
             if (RegionPolygonViews != null && ShowRegionPolygons)
             {
+                
                 LineView.Draw(window.GraphicsDevice, window.Scene, window.lineManager, RegionPolygonViews.SelectMany(rpv => rpv.LineViews).ToArray());
+                DeviceStateManager.SetDepthStencilValue(window.GraphicsDevice, window.GraphicsDevice.DepthStencilState.ReferenceStencil + 1);
+                LabelView.Draw(window.spriteBatch, window.fontArial, scene, RegionLabelViews);
+                DeviceStateManager.SetDepthStencilValue(window.GraphicsDevice, window.GraphicsDevice.DepthStencilState.ReferenceStencil + 1);
+                ViewLabels.AppendLine("Region Polygon Views");
             }
 
             if (OTVTableView != null)
             {
                 LineView.Draw(window.GraphicsDevice, window.Scene, window.lineManager, OTVTableView.ToArray());
+                DeviceStateManager.SetDepthStencilValue(window.GraphicsDevice, window.GraphicsDevice.DepthStencilState.ReferenceStencil + 1);
+                ViewLabels.AppendLine("OTV Table");
             }
 
             if (this.PolyViews != null && !ShowRegionPolygons &&  ((this.VertexLabelType & IndexLabelType.MESH) == 0))
             {
+                DeviceStateManager.SetDepthStencilValue(window.GraphicsDevice, window.GraphicsDevice.DepthStencilState.ReferenceStencil + 1);
                 PolyViews.Draw(window, scene);
+                ViewLabels.AppendLine("Poly Views");
             }
+
+            LabelView label = new LabelView(ViewLabels.ToString(), scene.VisibleWorldBounds.UpperLeft, HorizontalAlignment.LEFT, VerticalAlignment.BOTTOM, scaleFontWithScene: false);
+            LabelView.Draw(window.spriteBatch, window.fontArial, scene, new LabelView[] { label }); 
         }
 
         public void Draw3D(MonoTestbed window, Scene3D scene)
@@ -698,7 +1314,12 @@ namespace MonogameTestbed
 
             window.GraphicsDevice.DepthStencilState = dstate;
             //window.GraphicsDevice.BlendState = BlendState.Opaque;
-            meshView.Draw(window.GraphicsDevice, scene, CullMode.None);
+
+
+            if (iShownMesh.HasValue)
+            {
+                MeshViews[iShownMesh.Value].Draw(window.GraphicsDevice, scene, CullMode.None);
+            }
         }
     }
     
@@ -774,16 +1395,25 @@ namespace MonogameTestbed
         };
 
         long[] BasicBranchTroubleIDS = new long[] {
-          233992, //Z = 2
-          233993, //Z = 3
-          233994 //Z =2
-
+          240719, //Z = 537
+          240720, //Z = 536
+          240721, //Z = 536
         };
 
         long[] BasicBranchInteriorHole = new long[] {
           236909, //Z = 1
           236910, //Z = 1
           236911 //Z =2
+        };
+
+        long[] BasicInteriorHoleOverAdjacentExteriorRing = new long[] {
+          256816, //Z = 1
+          256818
+        };
+
+        long[] HorseshoeInteriorHoleOverAdjacentExteriorRing = new long[] {
+          260138, //Z = 1
+          260139
         };
 
         Scene scene;
@@ -818,14 +1448,26 @@ namespace MonogameTestbed
             Gamepad.Update(GamePad.GetState(PlayerIndex.One));
 
 
-            AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromODataLocationIDs(BasicBranchInteriorHole, DataSource.EndpointMap[ENDPOINT.RPC1]);
+            //AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromODataLocationIDs(BasicBranchInteriorHole, DataSource.EndpointMap[ENDPOINT.RPC1]);
             //AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromODataLocationIDs(BasicBranchTroubleIDS, DataSource.EndpointMap[ENDPOINT.RPC1]);
-            //AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromODataLocationIDs(NightmareTroubleIDS, DataSource.EndpointMap[ENDPOINT.TEST]);
+
+            //AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromODataLocationIDs(BasicInteriorHoleOverAdjacentExteriorRing, DataSource.EndpointMap[ENDPOINT.RPC1]);
+            //AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromODataLocationIDs(HorseshoeInteriorHoleOverAdjacentExteriorRing, DataSource.EndpointMap[ENDPOINT.RPC1]);
+
+            /////////////
+            ///This is the major test of mesh generation that covers as many cases as I could think of
+            AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromODataLocationIDs(NightmareTroubleIDS, DataSource.EndpointMap[ENDPOINT.TEST]);
+            //////////////
 
             AnnotationVizLib.MorphologyNode[] nodes = graph.Nodes.Values.ToArray();
             wrapView = new MonogameTestbed.BajajOTVAssignmentView(nodes.Select(n => n.Geometry.ToPolygon()).ToArray(), nodes.Select(n=> n.Z).ToArray());
 
-            window.Scene.Camera.LookAt = graph.BoundingBox.CenterPoint.XY().ToXNAVector2();
+            if(window.Scene.RestoreCamera(TestMode.BAJAJTEST) == false)
+            {
+                window.Scene.Camera.LookAt = graph.BoundingBox.CenterPoint.XY().ToXNAVector2();
+                window.Scene.Camera.Downsample = graph.BoundingBox.Width / window.GraphicsDevice.Viewport.Width;
+            }
+            
 
             GridBox bbox = new GridBox(wrapView.Polygons.BoundingBox(), nodes.Min(n => n.Z), nodes.Max(n => n.Z));
             scene3D.Camera.Position = (bbox.CenterPoint - new GridVector3(bbox.Width / 2.0, bbox.Height / 2.0, 0)).ToXNAVector3();
@@ -858,23 +1500,49 @@ namespace MonogameTestbed
 
             if (Gamepad.A_Clicked)
             {
-                wrapView.ShowFaces = !wrapView.ShowFaces;
+                wrapView.iShownMesh = wrapView.iShownMesh.HasValue ? wrapView.iShownMesh.Value + 1 : 0;
+                if (wrapView.iShownMesh.HasValue && wrapView.iShownMesh.Value >= wrapView.MeshViews.Count)
+                {
+                    wrapView.iShownMesh = null;
+                } 
             }
 
             if (Gamepad.B_Clicked)
             {
-                wrapView.ShowPolygons = !wrapView.ShowPolygons;
+                wrapView.iShownLineView = wrapView.iShownLineView.HasValue ? wrapView.iShownLineView.Value + 1 : 0;
+                if (wrapView.iShownLineView.HasValue && wrapView.iShownLineView.Value >= wrapView.listLineViews.Count)
+                {
+                    wrapView.iShownLineView = null;
+                }
+
+                Trace.WriteLine(wrapView.iShownLineView.ToString());
+
+                /*wrapView.ShowPolygons = !wrapView.ShowPolygons;
                 wrapView.ShowAllEdges = !wrapView.ShowAllEdges;
+                */
             }
 
             if (Gamepad.Y_Clicked)
             {
-                wrapView.ShowRegionPolygons = !wrapView.ShowRegionPolygons;
+                //Cycle throught the various region passes as Y is clicked
+                wrapView.iShownRegion = wrapView.iShownRegion.HasValue ? wrapView.iShownRegion.Value + 1 : 0;
+                if(wrapView.iShownRegion.HasValue && wrapView.iShownRegion.Value >= wrapView.RegionViews.Count)
+                {
+                    wrapView.iShownRegion = null;
+                }
+
             }
+            
 
             if(Gamepad.X_Clicked)
             {
                 wrapView.ShowCompletedVerticies = !wrapView.ShowCompletedVerticies;
+            }
+             
+            if(Gamepad.Start_Clicked)
+            {
+                //Recalculate the mesh from scratch
+                wrapView.GenerateMesh();
             }
 
             if (Gamepad.RightShoulder_Clicked)
@@ -940,6 +1608,11 @@ namespace MonogameTestbed
                 if (wrapView != null)
                     wrapView.Draw3D(window, scene3D);
             }
+        }
+
+        public void UnloadContent(MonoTestbed window)
+        {
+            this.scene.SaveCamera(TestMode.BAJAJTEST);
         }
     }
 }

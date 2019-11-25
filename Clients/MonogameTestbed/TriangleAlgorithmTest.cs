@@ -57,6 +57,11 @@ namespace MonogameTestbed
             PolyBorderView.VoronoiView.color = Color.DarkRed;
         }
 
+        public void UnloadContent(MonoTestbed window)
+        {
+            this.scene.SaveCamera(TestMode.MESH);
+        }
+
         public void Update()
         {
             GamePadState state = GamePad.GetState(PlayerIndex.One);

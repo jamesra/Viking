@@ -73,7 +73,7 @@ namespace MonogameTestbed
 
         SortedDictionary<TestMode, IGraphicsTest> listTests = new SortedDictionary<TestMode, IGraphicsTest>();
 
-        TestMode Mode = TestMode.CURVE_SIMPLIFICATION;
+        TestMode Mode = TestMode.BAJAJTEST;
 
         public static uint NumCurveInterpolations = 10;
 
@@ -250,6 +250,12 @@ namespace MonogameTestbed
         protected override void UnloadContent()
         {
             // TODO: Unload any non ContentManager content here
+            foreach(var test in listTests.Values)
+            {
+                test.UnloadContent(this);
+            }
+
+            Properties.Settings.Default.Save();
         }
 
         /// <summary>
@@ -354,6 +360,10 @@ namespace MonogameTestbed
             labelTexture = CreateTextureForLabel("The quick brown fox jumps over the lazy dog", window.GraphicsDevice, window.spriteBatch, window.fontArial);
         }
 
+        public void UnloadContent(MonoTestbed window)
+        {
+        }
+
         public void Update()
         {
             CurveAngle += GamePad.GetState(PlayerIndex.One).ThumbSticks.Right.X;
@@ -452,14 +462,18 @@ namespace MonogameTestbed
             _initialized = true;
 
             GridVector2[] cps = CreateTestCurveLagrange(0, 100, new GridVector2(-100,0));
-            curveViewLagrange = new CurveView(cps, Color.Red, false, 2);
+            curveViewLagrange = new CurveView(cps, Color.Red, false);
             leftLagrangeCurveLabel = new CurveLabel("The quick brown fox jumps over the lazy dog", cps, Color.Black, false);
             rightLagrangeCurveLabel = new CurveLabel("C 1485", cps, Color.PaleGoldenrod, false);
 
             GridVector2[] cpsCatmull = CreateTestCurveCatmull(0, 100, new GridVector2(100, 0));
-            curveViewCatmull = new CurveView(cpsCatmull, Color.Red, true, 2);
-            leftCatmullCurveLabel = new CurveLabel("The quick brown fox jumps over the lazy dog", cpsCatmull, Color.Black, false);
-            rightCatmullCurveLabel = new CurveLabel("C 1485", cpsCatmull, Color.PaleGoldenrod, false);
+            curveViewCatmull = new CurveView(cpsCatmull, Color.Red, true);
+            leftCatmullCurveLabel = new CurveLabel("The quick brown fox jumps over the lazy dog", cpsCatmull, Color.Black, true);
+            rightCatmullCurveLabel = new CurveLabel("C 1485", cpsCatmull, Color.PaleGoldenrod, true);
+        }
+
+        public void UnloadContent(MonoTestbed window)
+        {
         }
 
         public void Update()
@@ -549,6 +563,10 @@ namespace MonogameTestbed
             labelView = new LabelView("LabelView", new GridVector2(0, 0));
         }
 
+        public void UnloadContent(MonoTestbed window)
+        {
+        }
+
         public void Update()
         {
         }
@@ -605,7 +623,6 @@ namespace MonogameTestbed
         List<LineView> listLineViews = new List<LineView>();
         List<LabelView> listLabelViews = new List<LabelView>();
 
-
         bool _initialized = false;
         public bool Initialized { get { return _initialized; } }
 
@@ -622,17 +639,22 @@ namespace MonogameTestbed
             double YStep = (MaxY - MinY) / NumLineTypes;
 
             double Y = MinY;
+            double lineWidth = YStep / 1.5;
 
             foreach (LineStyle style in Enum.GetValues(typeof(LineStyle)))
             {
                 GridVector2 source = new GridVector2(MinX, Y);
                 GridVector2 dest = new GridVector2(MaxX, Y);
-                listLineViews.Add(new LineView(source, dest, YStep / 1.5, Color.Blue, style));
+                listLineViews.Add(new LineView(source, dest, lineWidth, Color.Blue, style));
 
                 Y += YStep;
 
-                listLabelViews.Add(new LabelView(style.ToString(), source + new GridVector2(-25, 10)));
+                listLabelViews.Add(new LabelView(style.ToString(), source + new GridVector2(-100, 0), hAlign: VikingXNAGraphics.HorizontalAlignment.RIGHT, vAlign: VerticalAlignment.CENTER));
             }
+        }
+
+        public void UnloadContent(MonoTestbed window)
+        {
         }
 
         public void Update()
@@ -691,6 +713,10 @@ namespace MonogameTestbed
             }
         }
 
+        public void UnloadContent(MonoTestbed window)
+        {
+        }
+
         public void Update()
         {
         }
@@ -725,6 +751,11 @@ namespace MonogameTestbed
             GridVector2[] cps = CreateTestCurve(90, 190);
             curveView = new CurveView(cps, Color.Red, true, 10, lineWidth: 64, controlPointRadius: 16, lineStyle: LineStyle.HalfTube);
             curveLabel = new CurveLabel("The quick brown fox jumps over the lazy dog", cps, Color.Black, true);
+        }
+
+        public void UnloadContent(MonoTestbed window)
+        {
+            window.Scene.SaveCamera(TestMode.CLOSEDCURVE);
         }
 
         public void Update()

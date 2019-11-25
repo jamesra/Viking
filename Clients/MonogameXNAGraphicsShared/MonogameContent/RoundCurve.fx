@@ -114,7 +114,7 @@ technique Ladder
 	}
 }
 
-technique Dash
+technique Dashed
 {
 	pass P0
 	{
@@ -199,6 +199,10 @@ technique Textured
 		SrcBlend = SrcAlpha;
 		DestBlend = InvSrcAlpha;
 		BlendOp = Add;
+		ZEnable = true;
+		ZFunc = LessEqual;
+		StencilEnable = true;
+		StencilFunc = GreaterEqual;
 		vertexShader = compile vs_4_0 CurveVertexShader();
 		pixelShader = compile ps_4_0 MyPSTextured();
 	}

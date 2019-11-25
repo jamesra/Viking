@@ -156,17 +156,28 @@ namespace MorphologyMesh
                 }
                 else //Midpoint in one or the other polygon, but not both
                 {
+                    /*var APoint = APoly.Point(Polygons);
+                    var BPoint = BPoly.Point(Polygons);
+
+                    bool A_Is_Corresponding = A.IsVertex(APoint) && B.IsVertex(APoint);
+                    bool B_Is_Corresponding = A.IsVertex(BPoint) && B.IsVertex(BPoint);
+                    */
+
                     if (APoly.IsInner ^ BPoly.IsInner) //One or the other is an interior polygon, but not both
                     {
                         if (A.InteriorPolygonContains(midpoint) ^ B.InteriorPolygonContains(midpoint))
                         {
                             //Verify the line is not exactly over the contour line of a corresponding edge
-                            
+                            /************
+                             Not considering Corresponding verticies always flying when drawing an edge from an exterior to interior polygon was a change that
+                             unexpectedly fixed creating clean meshes for that same test case of an interior hole overlapping an adjacent exterior segment.
+                             
                             if(A.IsVertex(BPoly.Point(Polygons)) || B.IsVertex(APoly.Point(Polygons)))
                             {
                                 //This means we are connecting to a corresponding vertex/edge.  
-                                return EdgeType.FLYING;
+                                //return EdgeType.FLYING;
                             }
+                            */
 
                             //Include in port.
                             //Line runs from exterior ring to the near side of an overlapping interior hole

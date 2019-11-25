@@ -5,8 +5,6 @@ using System.Collections.Generic;
 using System.Linq;
 using TriangleNet;
 using TriangleNet.Meshing;
-using OTVTable = System.Collections.Concurrent.ConcurrentDictionary<Geometry.PointIndex, Geometry.PointIndex>;
-using SliceChordRTree = RTree.RTree<MorphologyMesh.SliceChord>;
 
 namespace MonogameTestbed
 {
@@ -38,16 +36,18 @@ namespace MonogameTestbed
                 }
                 */
                 graph.RemoveNode(regionNode.Key);
-
             }
 
             if (rTree == null)
             {
-                rTree = mesh.CreateChordTree();
+                rTree = mesh.CreateChordTree(graph.ZLevels);
             }
 
             List<OTVTable> OTVTables = new List<OTVTable>();
 
+            /*
+             *TODO: My original vision here was that some logic would pair off interior holes and invaginations even if they didn't overlap.  This project was hard enough so that effort was abandoned. 
+             * 
             while (true)
             {
                 var regionNode = graph.Nodes.Values.FirstOrDefault(n => n.Edges.Count == 1);
@@ -81,11 +81,11 @@ namespace MonogameTestbed
                     graph.RemoveEdge(edge);
                 }
             }
-
+            */
             //At this point we've merged all of the nodes with one edge.  THere may be triangles of connections but we'll punt on those for the moment.
 
             //Identify regions with no edges and attempt to close them
-
+            /*
             while (true)
             {
                 var regionNode = graph.Nodes.Values.FirstOrDefault(n => n.Edges.Count == 0);
@@ -101,7 +101,7 @@ namespace MonogameTestbed
                 graph.RemoveNode(regionNode.Key);
 
             }
-
+            */
             return OTVTables;
         }
 
@@ -111,7 +111,7 @@ namespace MonogameTestbed
             //Build the lookup tree for slice-chords
             if (rTree == null)
             {
-                rTree = mesh.CreateChordTree();
+                rTree = mesh.CreateChordTree(regions.SelectMany(r => r.ZLevel).Distinct().ToList());
             }
 
             List<OTVTable> listOTVTables = new List<OTVTable>();
@@ -136,7 +136,8 @@ namespace MonogameTestbed
             {
                 if (!region.IsExposed(mesh))
                 {
-                    TryClosingHole(mesh, region, rTree);
+                    //TryClosingHole(mesh, region, rTree);
+                    TryClosingUntiledRegion(mesh, region, rTree);
                     return new OTVTable();
                 }
             }
@@ -183,6 +184,7 @@ namespace MonogameTestbed
             return OTVTable;
         }
 
+        /*
         /// <summary>
         /// Try to see if the region can be closed.  If a slice chord can be created for every vertex in the region then it is considered closeable. 
         /// This function creates the chords if it is closeable.  Otherwise the OTV table for the region is returned.
@@ -223,7 +225,7 @@ namespace MonogameTestbed
                     mesh.AddFace(face);
                 }
             }
-        }
+        }*/
 
         /// <summary>
         /// Adds verticies and mesh edges for the medial axis of the untiled region.  The untiled region should be contained inside a single polygonal annotation
@@ -235,15 +237,21 @@ namespace MonogameTestbed
         {
             GridPolygon regionPolygon = region.Polygon;
             var MedialAxis = MedialAxisFinder.ApproximateMedialAxis(regionPolygon);
-            GridVector2[] NewVerts = MedialAxis.Points;
+            MedialAxisVertex[] NewVerts = MedialAxis.Nodes.Values.ToArray();
+
+            if(NewVerts.Length == 0)
+            {
+                return; 
+            }
+
             double MinZ = region.VertPositions.Min(v => v.Z);
             double MaxZ = region.VertPositions.Max(v => v.Z);
-            int iNewVerts = mesh.AddVerticies(NewVerts.Select(p => new MorphMeshVertex(new PointIndex?(), p.ToGridVector3((MinZ + MaxZ) / 2.0))).ToArray());
-
+            int iNewVerts = mesh.AddVerticies(NewVerts.Select(mv => new MorphMeshVertex(new MedialAxisIndex(MedialAxis, mv), mv.Key.ToGridVector3((MinZ + MaxZ) / 2.0))).ToArray());
+             
             Dictionary<GridVector2, int> VertexLookup = new Dictionary<GridVector2, int>(NewVerts.Length);
             for(int i = 0; i < NewVerts.Length; i++)
             {
-                VertexLookup.Add(NewVerts[i], iNewVerts + i);
+                VertexLookup.Add(NewVerts[i].Key, iNewVerts + i);
             }
             
             foreach(var edge in MedialAxis.Edges)
@@ -260,7 +268,7 @@ namespace MonogameTestbed
                 VertexLookup.Add(regionVertPositions[i], region.Verticies[i]);
             }
 
-            IMesh triangulation = regionPolygon.Triangulate(internalPoints: NewVerts);
+            IMesh triangulation = regionPolygon.Triangulate(internalPoints: NewVerts.Select(v => v.Key).ToArray());
 
             foreach(var e in triangulation.ToLines())
             {
@@ -269,7 +277,10 @@ namespace MonogameTestbed
 
                 if (mesh.Contains(iA, iB) == false)
                 {
-                    mesh.AddEdge(new MorphMeshEdge(EdgeType.SURFACE, iA, iB));
+                    EdgeType type = mesh.GetEdgeTypeWithOrientation(iA, iB);
+                    MorphMeshEdge newEdge = new MorphMeshEdge(type, iA, iB);
+                    mesh.AddEdge(newEdge);
+                    rTree.Add(mesh.ToSegment(newEdge).BoundingBox.ToRTreeRect(0), new MeshChord(mesh, iA, iB));
                 }
             }
 
@@ -279,7 +290,7 @@ namespace MonogameTestbed
                 int iB = VertexLookup[t.GetVertex(1).ToGridVector2()];
                 int iC = VertexLookup[t.GetVertex(2).ToGridVector2()];
 
-                mesh.AddFace(iA, iB, iC);
+                mesh.AddFace(new MorphMeshFace(iA, iB, iC));
             }
         }
     }

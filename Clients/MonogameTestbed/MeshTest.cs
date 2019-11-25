@@ -192,9 +192,12 @@ namespace MonogameTestbed
             meshViewWithLighting.models.Add(BuildSmoothMeshFromSharedModel(GridVector3.Zero));
 
             labelCamera = new LabelView("", new GridVector2(-70, 0));
-        } 
+        }
 
-        
+        public void UnloadContent(MonoTestbed window)
+        {
+            //this.Scene.SaveCamera(TestMode.MESH);
+        }
 
         private MeshModel<VertexPositionNormalColor> BuildSmoothMesh1(GridVector3 translate)
         {

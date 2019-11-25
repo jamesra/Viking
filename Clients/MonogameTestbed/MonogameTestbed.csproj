@@ -53,12 +53,14 @@
     <Compile Include="Delaunay3DTest.cs" />
     <Compile Include="Extensions.cs" />
     <Compile Include="GamePadStateTracker.cs" />
+    <Compile Include="GeometryJSONExtensions.cs" />
     <Compile Include="GeometryTest.cs" />
     <Compile Include="IGraphicsTest.cs" />
     <Compile Include="MeshingExperimentExtensions.cs" />
     <Compile Include="MorphologyTest.cs" />
     <Compile Include="MeshTest.cs" />
     <Compile Include="MonogameTestbed.cs" />
+    <Compile Include="Persistance.cs" />
     <Compile Include="PointSet.cs" />
     <Compile Include="PointSetView.cs" />
     <Compile Include="Polygon2DTest.cs" />
@@ -67,6 +69,11 @@
     <Compile Include="PolywrappingTest.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Properties\Settings.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTimeSharedInput>True</DesignTimeSharedInput>
+      <DependentUpon>Settings.settings</DependentUpon>
+    </Compile>
     <Compile Include="RegionGraphExtensions.cs" />
     <Compile Include="SqlServerTypes\Loader.cs" />
     <Compile Include="StandardCameraManipulator.cs" />
@@ -77,6 +84,10 @@
     <Compile Include="Views\PointViewBase.cs" />
     <Compile Include="Views\PolygonView.cs" />
     <Compile Include="Views\UntiledRegionView.cs" />
+    <None Include="Properties\Settings.settings">
+      <Generator>SettingsSingleFileGenerator</Generator>
+      <LastGenOutput>Settings.Designer.cs</LastGenOutput>
+    </None>
     <None Include="_PointPlacementTestTemplate.cs" />
     <Compile Include="TriangleAlgorithmTest.cs" />
   </ItemGroup>
@@ -94,6 +105,7 @@
       <HintPath>..\..\Packages\MIConvexHull.1.1.17.1019\lib\netstandard1.0\MIConvexHull.dll</HintPath>
       <Private>True</Private>
     </Reference>
+    <Reference Include="Microsoft.CSharp" />
     <Reference Include="Microsoft.OData.Core, Version=6.15.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <HintPath>..\..\Packages\Microsoft.OData.Core.6.15.0\lib\portable-net45+win+wpa81\Microsoft.OData.Core.dll</HintPath>
       <Private>True</Private>
@@ -125,6 +137,9 @@
     <Reference Include="MonoGame.Framework">
       <HintPath>$(MonoGameInstallDirectory)\MonoGame\v3.0\Assemblies\Windows\MonoGame.Framework.dll</HintPath>
     </Reference>
+    <Reference Include="Newtonsoft.Json, Version=12.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\..\Packages\Newtonsoft.Json.12.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
+    </Reference>
     <Reference Include="Simple.OData.Client.Core, Version=4.25.5.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\..\Packages\Simple.OData.V4.Client.4.25.5\lib\portable-net45+win8+wp8+wpa81\Simple.OData.Client.Core.dll</HintPath>
       <Private>True</Private>
@@ -143,6 +158,7 @@
     </Reference>
     <Reference Include="System.ComponentModel.DataAnnotations" />
     <Reference Include="System.Data" />
+    <Reference Include="System.Drawing" />
     <Reference Include="System.Net" />
     <Reference Include="System.Net.Http" />
     <Reference Include="System.Net.Http.Extensions, Version=2.2.29.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">

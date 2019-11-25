@@ -361,10 +361,11 @@ namespace Geometry
             }
 
             //Is the center of our circle inside the triangle?
+            //Todo: This contains test is inconsistent with the idea of an intersection.  I need to clarify when circles and all shapes are considered solid or traces. This old code is prevalent and I don't want to break things until I can fix all of these instances
             if (poly.Contains(circle.Center))
                 return true;
 
-            //Do any exterior line segments intersect our circle?
+            //Do any line segments intersect our circle?
             List<GridLineSegment> Candidates = poly.SegmentRTree.Intersects(circle.BoundingBox.ToRTreeRect()).Select(p => p.Segment(poly)).Where(segment => circle.Intersects(segment)).ToList();
             foreach (GridLineSegment line in Candidates)
             {

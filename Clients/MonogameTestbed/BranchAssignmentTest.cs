@@ -270,7 +270,7 @@ namespace MonogameTestbed
             MeshVertsView = PointSetView.CreateFor(FirstPassTriangulation);
             FirstPassTriangulation.ClassifyMeshEdges();
             //ReclassifyMeshEdges(FirstPassTriangulation);
-            TrianglesView = UpdateMeshLines(FirstPassTriangulation);
+            TrianglesView = UpdateMeshLines(FirstPassTriangulation, "");
             lineViews = TrianglesView.LineViews.ToArray();
 
             FirstPassTriangulation.IdentifyRegions();
@@ -282,7 +282,12 @@ namespace MonogameTestbed
             meshView.models.Add(meshViewModel);
         }
 
-        private MeshModel<VertexPositionColor> CreateFaceView(MorphRenderMesh mesh)
+        /// <summary>
+        /// Creates a MeshModel for the mesh
+        /// </summary>
+        /// <param name="mesh"></param>
+        /// <returns></returns>
+        private static MeshModel<VertexPositionColor> CreateFaceView(MorphRenderMesh mesh)
         {
             MeshModel<VertexPositionColor> model = new MeshModel<VertexPositionColor>();
 
@@ -294,7 +299,7 @@ namespace MonogameTestbed
             { 
                 model.AppendEdges(face.iVerts);
 
-                Color regionColor = Color.Random();
+                Color regionColor = VikingXNAGraphics.ColorExtensions.Random();
                 foreach (int iVert in face.iVerts)
                 {
                     model.Verticies[iVert].Color = regionColor;
@@ -393,7 +398,13 @@ namespace MonogameTestbed
             return;
         }*/
 
-        public static LineSetView UpdateMeshLines(MorphRenderMesh mesh)
+        /// <summary>
+        /// Create a LineSetView that provides a 2D representation of a MorphRenderMesh, showing each line and the line's type.
+        /// </summary>
+        /// <param name="mesh"></param>
+        /// <param name="Name"></param>
+        /// <returns></returns>
+        public static LineSetView UpdateMeshLines(MorphRenderMesh mesh, string Name)
         {
             IEdgeKey[] edgeKeys = mesh.Edges.Keys.ToArray();
             LineSetView TrianglesView = new LineSetView();
@@ -421,6 +432,7 @@ namespace MonogameTestbed
             TrianglesView.color = Color.Red;
             TrianglesView.LineViews = lineViews;
             TrianglesView.LineLables = lineLabels;
+            TrianglesView.Name = Name;
             return TrianglesView;
         }
 
@@ -450,6 +462,11 @@ namespace MonogameTestbed
             return output;
         }
 
+        /// <summary>
+        /// Create edges in our mesh based on a triangulation.  These edges will be categorized later and some discarded.
+        /// </summary>
+        /// <param name="triMesh"></param>
+        /// <param name="output"></param>
         public static void AddTriangulationEdgesToMesh(TriangleNet.Meshing.IMesh triMesh, MorphRenderMesh output)
         { 
             Dictionary<GridVector2, List<PointIndex>> pointToPoly = GridPolygon.CreatePointToPolyMap(output.Polygons);
@@ -475,7 +492,6 @@ namespace MonogameTestbed
                 MorphMeshVertex meshVertex = GetOrAddVertex(output, pIndex, vert3);
 
                 TriIndexToMeshIndex[iVert] = new int[] { meshVertex.Index };
-
 
                 if (listPointIndicies.Count > 1)
                 {
@@ -504,51 +520,60 @@ namespace MonogameTestbed
             foreach (TriangleNet.Topology.Triangle tri in triMesh.Triangles)
             {
                 int[] tri_face = new int[] { tri.GetVertexID(0), tri.GetVertexID(1), tri.GetVertexID(2) };
-                int[] face = tri_face.Select(f => TriIndexToMeshIndex[f].First()).ToArray();
+                int[] face = tri_face.SelectMany(f => TriIndexToMeshIndex[f]).ToArray();
 
-                GridVector2[] verts = tri_face.Select(f => vertArray[f]).ToArray();
-
-                if (verts.AreClockwise())
+                //Here we need to check for a corresponding edge being involved.  If we don't we can get an edge that should not exist in the mesh that face generation can follow to produce an incorrect mesh
+                //A corresponding edge will have two vertex entries in the table, so we check for four or more verticies in the face to go down this special path
+                if (face.Length > 4)
                 {
-                    output.AddFace(new MorphMeshFace(face[1], face[0], face[2]));
+                    throw new NotImplementedException("Unexpected number of faces for Delaunay Triangulation conversion to mesh.  Expected each face to have three edges.");
+                }
+                else if(face.Length == 4)
+                {
+                    /*
+                    This code does generate faces around a corresponding vertex.  However the bajaj code that executes later produces smoother faces around corresponding points so I
+                    do not generate faces for triangles that contain corresponding verticies.
+                    */
+                    /***************
+                    
+                    //We need to make sure the face isn't twisted
+                    List<int> sortedFace = new List<int>(4);
+                    int[] correspondingEdge = tri_face.Where(f => TriIndexToMeshIndex[f].Length > 1).SelectMany(f => TriIndexToMeshIndex[f]).ToArray();
+                    System.Diagnostics.Debug.Assert(correspondingEdge.Length == 2); //I only wrote this for the case of a single corresponding edge.  While possible in theory, the multiple case should not occur in practice
+
+                    EdgeKey correspondingEdgeKey = new EdgeKey(correspondingEdge[0], correspondingEdge[1]);
+
+                    //Once we add two faces to the edge we are done
+                    if (output[correspondingEdgeKey].Faces.Count == 2)
+                        continue;
+
+                    MorphMeshVertex[] CorrespondingVerts = new MorphMeshVertex[] { output.GetVertex(correspondingEdge[0]), output.GetVertex(correspondingEdge[1]) }.OrderBy(v => v.Position.Z).ToArray();
+                    MorphMeshVertex[] OtherVerts = face.Where(f => f != correspondingEdgeKey.A && f != correspondingEdgeKey.B).Select(f => output.GetVertex(f)).OrderBy(f => f.Position.Z).ToArray();
+
+                    int[] vertsA = new int[] { CorrespondingVerts[0].Index, CorrespondingVerts[1].Index, OtherVerts[0].Index };
+                    int[] vertsB = new int[] { OtherVerts[0].Index, CorrespondingVerts[1].Index, OtherVerts[1].Index };
+                    
+                    MorphMeshFace FaceA = new MorphMeshFace(vertsA);
+                    MorphMeshFace FaceB = new MorphMeshFace(vertsB);
+
+                    //output.SplitFace(quadFace);
+                    output.AddFace(FaceA);
+                    output.AddFace(FaceB);
+                    *******************/
+
                 }
                 else
                 {
-                    output.AddFace(new MorphMeshFace(face));
-                }
-            }
-            
-            //Add any corresponding verticies.  Duplicate edges and faces
-            foreach(MorphMeshVertex meshVertex in CorrespondingVerticies.Keys)
-            {
-                MorphMeshVertex correspondingVertex = CorrespondingVerticies[meshVertex];  
-                MorphMeshEdge correspondingEdge = new MorphMeshEdge(EdgeType.CORRESPONDING, meshVertex.Index, correspondingVertex.Index);
-                output.AddEdge(correspondingEdge);
+                    GridVector2[] verts = tri_face.Select(f => vertArray[f]).ToArray();
 
-                //Any edges that connected to the overlapped vertex in the 2D triangulation should have new edges added to the stacked vertex
-                foreach(IEdgeKey edgeKey in meshVertex.Edges.Where(edge => edge != correspondingEdge.Key))
-                {
-                    IEdge edge = output.GetEdge(edgeKey);
-                    int otherEndpoint = edge.A == meshVertex.Index ? edge.B : edge.A;
-                    MorphMeshEdge NewE = new MorphMeshEdge(EdgeType.UNKNOWN, otherEndpoint, correspondingVertex.Index);
-                    output.AddEdge(NewE);
-               
-                    /*
-                     * TODO: Adding faces is non-trivial.  Return to this or let the algorithm handle it
-                     *
-                    foreach(IFace face in edge.Faces)
+                    if (verts.AreClockwise())
                     {
-                        int[] indicies = face.iVerts.ToArray();
-                        for (int i = 0; i < indicies.Length; i++)
-                        {
-                            if (indicies[i] == meshVertex.Index)
-                                indicies[i] = correspondingVertex.Index;
-                        }
-
-                        MorphMeshFace f = new MorphMeshFace(indicies);
-                        output.AddFace(f);
-                    }*/
-
+                        output.AddFace(new MorphMeshFace(face[1], face[0], face[2]));
+                    }
+                    else
+                    {
+                        output.AddFace(new MorphMeshFace(face));
+                    }
                 }
             }
 
@@ -848,6 +873,11 @@ namespace MonogameTestbed
 
             wrapView = new TriangulationShapeWrapView(A, B);
             */
+        }
+
+        public void UnloadContent(MonoTestbed window)
+        {
+            this.scene.SaveCamera(TestMode.BRANCHASSIGNMENT);
         }
 
         public void Update()

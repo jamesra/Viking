@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PipelineBuildEvent xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <SourceFile>C:/src/git/Viking/Clients/MonogameTestbed/Content/../../MonogameXNAGraphicsShared/MonogameContent/RoundLine.fx</SourceFile>
-  <SourceTime>2019-10-16T12:46:27.2559456-07:00</SourceTime>
+  <SourceTime>2019-11-20T15:30:12.0277037-08:00</SourceTime>
   <DestFile>C:/src/git/Viking/Clients/MonogameTestbed/Content/bin/Windows/../../MonogameXNAGraphicsShared/MonogameContent/RoundLine.xnb</DestFile>
-  <DestTime>2019-10-16T12:47:48.9020176-07:00</DestTime>
+  <DestTime>2019-11-21T16:40:35.579512-08:00</DestTime>
   <Importer>EffectImporter</Importer>
   <ImporterTime>2016-03-29T23:36:08-07:00</ImporterTime>
   <Processor>EffectProcessor</Processor>

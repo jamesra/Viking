@@ -273,6 +273,9 @@ namespace MonogameTestbed
 
             UpdateCursorViews(Cursor);
         }
+        public void UnloadContent(MonoTestbed window)
+        {
+        }
 
         private void UpdateCursorViews(GridVector2 position)
         {

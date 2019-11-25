@@ -124,6 +124,7 @@ namespace MonogameTestbed
             //meshes = InitSmallSmoothModelFromOData(new long[] { 144302 }, ENDPOINT.TEST);
             //meshes = InitSmallSmoothModelFromOData(476, ENDPOINT.RC1);
             //meshes = InitSmallSmoothModelFromOData(new long[] { 192 }, ENDPOINT.RPC1);
+            meshes = InitSmallSmoothModelFromOData(new long[] { 2713 }, ENDPOINT.RPC1);
             //meshes = InitSmallSmoothModelFromOData(5554, ENDPOINT.RC2);
             //meshes = InitSmallSmoothModelFromOData(new long[] { 1650, 858 }, ENDPOINT.INFERIORMONKEY);
 
@@ -135,7 +136,7 @@ namespace MonogameTestbed
 
 
             //meshes = InitSmallSmoothModelFromODataLocations(TroubleIDS, ENDPOINT.RPC1);
-            meshes = InitSmallSmoothModelFromODataLocations(TroubleIDS, ENDPOINT.TEST);
+            //meshes = InitSmallSmoothModelFromODataLocations(TroubleIDS, ENDPOINT.TEST);
 
             //meshes = InitSmallSmoothModelFromOData(207, ENDPOINT.TEMPORALMONKEY);
             //meshes = InitSmallModelFromOData(476);
@@ -160,6 +161,11 @@ namespace MonogameTestbed
             }
         }
 
+        public void UnloadContent(MonoTestbed window)
+        {
+            //this.scene.SaveCamera(TestMode.MESH);
+        }
+
         /// <summary>
         /// Create a tube of circles offset slighty each section
         /// </summary>
@@ -168,7 +174,7 @@ namespace MonogameTestbed
             AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromOData(new long[] { CellID }, true, DataSource.EndpointMap[endpoint]); 
 
             MorphologyMesh.TopologyMeshGenerator generator = new MorphologyMesh.TopologyMeshGenerator();
-            return generator.Generate(graph.Subgraphs.Values.First()); 
+            return new DynamicRenderMesh<ulong>[] { MorphologyMesh.TopologyMeshGenerator.Generate(graph.Subgraphs.Values.First()) };
         }
 
         /// <summary>

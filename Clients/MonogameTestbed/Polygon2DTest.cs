@@ -91,6 +91,11 @@ namespace MonogameTestbed
             meshView.WireFrame = false;
         }
 
+        public void UnloadContent(MonoTestbed window)
+        {
+            
+        }
+
         private MeshModel<VertexPositionColor> BuildCircleConvexHull(ICircle2D circle)
         {
 

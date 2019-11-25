@@ -431,8 +431,10 @@ namespace MonogameTestbed
                 meshView.models.Add(mesh.ToVertexPositionNormalColorMeshModel(new Color((float)r.NextDouble(), (float)r.NextDouble(), (float)r.NextDouble())));
             }
         }
-        
 
+        public void UnloadContent(MonoTestbed window)
+        {
+        }
         private ICollection<DynamicRenderMesh<ulong>> RecursivelyGenerateMeshes(AnnotationVizLib.MorphologyGraph graph)
         {
             List<DynamicRenderMesh<ulong>> listMeshes = new List<DynamicRenderMesh<ulong>>();

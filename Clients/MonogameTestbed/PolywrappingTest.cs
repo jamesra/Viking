@@ -464,6 +464,11 @@ namespace MonogameTestbed
             wrapView = new MeshMergeIncrementalView(StandardModels.SharedModelPolygons, StandardModels.SharedModelEdges, StandardModels.SharedModelZ); 
         }
 
+        public void UnloadContent(MonoTestbed window)
+        {
+            this.scene.SaveCamera(TestMode.MESH);
+        }
+
         public void Update()
         {
             GamePadState state = GamePad.GetState(PlayerIndex.One);

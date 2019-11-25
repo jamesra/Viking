@@ -11,6 +11,24 @@ using SliceChordRTree = RTree.RTree<MorphologyMesh.ISliceChord>;
 
 namespace MorphologyMesh
 {
+    /// <summary>
+    /// Return true if a flood fill function can move from the origin face to the candidate face.
+    /// </summary>
+    /// <param name="mesh">Mesh containing the faces and edges</param>
+    /// <param name="face">Face that we are testing to see if it meets criteria</param>
+    /// <returns></returns>
+    public delegate bool FaceMeetsCriteriaFunction(MorphRenderMesh mesh, MorphMeshFace face);
+
+    /// <summary>
+    /// Return true if a flood fill function can move from the origin face to the candidate face.
+    /// </summary>
+    /// <param name="mesh">Mesh containing the faces and edges</param>
+    /// <param name="origin">Face that originated the test</param>
+    /// <param name="candidate">Face that we are testing to see if it meets criteria</param>
+    /// <param name="edge">The edge connecting the faces that must also meet criteria</param>
+    /// <returns></returns>
+    public delegate bool EdgeMeetsCriteriaFunc(MorphRenderMesh mesh, MorphMeshFace origin, MorphMeshFace candidate, MorphMeshEdge edge);
+
     public enum VertexOrigin
     {
         CONTOUR, //The vertex is on the exterior or Interior contour of a polygon
@@ -219,6 +237,11 @@ namespace MorphologyMesh
         }
 
 
+        /// <summary>
+        /// Returns all faces adjacent to this face
+        /// </summary>
+        /// <param name="mesh"></param>
+        /// <returns></returns>
         public IEnumerable<MorphMeshFace> AdjacentFaces(MorphRenderMesh mesh)
         { /*
             IEdge[] edges = this.Edges.Select(e => mesh.Edges[e]).ToArray();
@@ -227,6 +250,26 @@ namespace MorphologyMesh
             return Adjacent.Select(f => (MorphMeshFace)f).ToArray();
             */
             return this.Edges.SelectMany(e => mesh.Edges[e].Faces.Where(f => f != (IFace)this)).Select(f => (MorphMeshFace)f);
+        }
+
+        /// <summary>
+        /// Return all faces sharing an edge with this face who meet the criteria function
+        /// </summary>
+        /// <param name="mesh"></param>
+        /// <param name="EdgeCriteriaFunction"></param>
+        /// <returns></returns>
+        public IEnumerable<MorphMeshFace> AdjacentFaces(MorphRenderMesh mesh, EdgeMeetsCriteriaFunc MeetsEdgeCriteriaFunction )
+        { /*
+            IEdge[] edges = this.Edges.Select(e => mesh.Edges[e]).ToArray();
+            IFace[] Faces = edges.SelectMany(e => mesh.Edges[e].Faces).ToArray();
+            IFace[] Adjacent = Faces.Where(f => f != (IFace)this).ToArray();
+            return Adjacent.Select(f => (MorphMeshFace)f).ToArray();
+            */
+
+            if (MeetsEdgeCriteriaFunction == null)
+                return this.AdjacentFaces(mesh);
+            else 
+                return this.Edges.SelectMany(e => mesh.Edges[e].Faces.Where(f => f != (IFace)this && MeetsEdgeCriteriaFunction(mesh, this, (MorphMeshFace)f, (MorphMeshEdge)mesh.Edges[e]))).Select(f => (MorphMeshFace)f);
         }
 
         /// <summary>
@@ -275,6 +318,23 @@ namespace MorphologyMesh
         public bool IsInUntiledRegion(MorphRenderMesh mesh)
         {
             return IsInUntiledRegion(mesh, this);
+        }
+
+        /// <summary>
+        /// Return true if the origin and adjacent face are not sharing a Contour edge. 
+        /// This check is essential when determining the correct boundaries of regions.
+        /// </summary>
+        /// <param name="mesh"></param>
+        /// <param name="origin"></param>
+        /// <param name="adjacent"></param>
+        /// <param name="edge"></param>
+        /// <returns></returns>
+        public static bool AdjacentFaceDoesNotCrossContour(MorphRenderMesh mesh, MorphMeshFace origin, IFace adjacent, MorphMeshEdge edge)
+        {
+            if (edge.Type == EdgeType.CONTOUR)
+                return false;
+
+            return true;
         }
 
         public static bool IsInUntiledRegion(MorphRenderMesh mesh, IFace face)
@@ -742,10 +802,16 @@ namespace MorphologyMesh
 
         private Dictionary<PointIndex, long> PolyIndexToVertex = new Dictionary<PointIndex, long>();
 
-        private Dictionary<double, List<GridPolygon>> PolygonsByZ = new Dictionary<double, List<GridPolygon>>();
+        private SortedDictionary<double, List<GridPolygon>> PolygonsByZ = new SortedDictionary<double, List<GridPolygon>>();
          
+        /// <summary>
+        /// Generates a MorphRenderMesh for a set of polygons and ZLevels.
+        /// </summary>
+        /// <param name="polygons"></param>
+        /// <param name="ZLevels"></param>
         public MorphRenderMesh(GridPolygon[] polygons, double[] ZLevels)
         {
+            //TODO: I don't add corresponding verticies at overlap points due to how the original MonogameTestbed was written, but I probably should. 
             Debug.Assert(polygons.Length == ZLevels.Length);
             Polygons = polygons;
             PolyZ = ZLevels;
@@ -766,31 +832,64 @@ namespace MorphologyMesh
                 PolygonsByZ[PolyZ[i]].Add(Polygons[i]);
             }
 
+            //Now that we have polygons organized by Z-level, add any corresponding verticies for polygons on adjacent Z levels.
+            AddCorrespondingVerticies(PolygonsByZ);
+
             PopulateMesh(this);
         }
-        /*
-        public int AddContour(GridPolygon poly, double Z)
-        {
-            this.Polygons.Add(poly);
-            this.PolyZ.Add(Z);
 
-            return Polygons.Count - 1;
+        public static void AddCorrespondingVerticies(SortedDictionary<double, List<GridPolygon>> PolygonsByZ)
+        {
+            var ZLevels = PolygonsByZ.Keys.ToArray();
+            for(int iZ = 0; iZ < PolygonsByZ.Count-1; iZ++)
+            {
+                double Z_A = ZLevels[iZ];
+                double Z_B = ZLevels[iZ+1];
+
+                List<GridPolygon> APolys = PolygonsByZ[Z_A];
+                List<GridPolygon> BPolys = PolygonsByZ[Z_B];
+
+                foreach(GridPolygon A in APolys)
+                {
+                    foreach(GridPolygon B in BPolys)
+                    {
+                        A.AddPointsAtIntersections(B);
+                        B.AddPointsAtIntersections(A);
+                    }
+                }
+            }
         }
 
-        public void AddPointsAtAllContourIntersections()
-        {
-            
-        }
-        */
+        /// <summary>
+        /// Creates a mesh without faces.  The mesh contains a vertex for every polygon vertex.  It also contains contour edges and corresponding edges for polygon intersection points
+        /// </summary>
+        /// <param name="mesh"></param>
         private static void PopulateMesh(MorphRenderMesh mesh)
         {
+            //Add verticies
             List<PointIndex> PolyVerts = new List<PointIndex>(new PolySetVertexEnum(mesh.Polygons));
+
+            //This is used to identify corresponding edges
+            //TODO: PositionToIndex does not handle multiple Z Level meshes correctly when generating corresponding edges
+            Dictionary<GridVector2, int> PositionToIndex = new Dictionary<GridVector2, int>();
+
             foreach (PointIndex i1 in PolyVerts)
             {
                 MorphMeshVertex v = new MorphMeshVertex(i1, i1.Point(mesh.Polygons).ToGridVector3(mesh.PolyZ[i1.iPoly]));
-                mesh.AddVertex(v);
-            }
+                int iV = mesh.AddVertex(v);
 
+                if (PositionToIndex.ContainsKey(v.Position.XY()))
+                {
+                    MorphMeshEdge corresponding_edge = new MorphMeshEdge(EdgeType.CORRESPONDING, iV, PositionToIndex[v.Position.XY()]);
+                    mesh.AddEdge(corresponding_edge);
+                }
+                else
+                {
+                    PositionToIndex.Add(v.Position.XY(), iV);
+                }
+            }
+            
+            //Add contours
             foreach (PointIndex i1 in PolyVerts)
             {
                 PointIndex next = i1.Next; //Next returns the next index in the ring, not in the list, so it will close the contour correctly
@@ -1003,7 +1102,7 @@ namespace MorphologyMesh
                 
                 if (face.IsInUntiledRegion(mesh))
                 {
-                    MorphMeshRegion region = new MorphMeshRegion(mesh, mesh.FloodFillRegion(face, (m, foundFace) => IsInRegion(m, foundFace, MorphMeshFace.IsInUntiledRegion, new double?()), FacesAssignedToRegions), RegionType.UNTILED);
+                    MorphMeshRegion region = new MorphMeshRegion(mesh, mesh.FloodFillRegion(face, (m, foundFace) => IsInRegion(m, foundFace, MorphMeshFace.IsInUntiledRegion,  new double?()), MorphMeshFace.AdjacentFaceDoesNotCrossContour, FacesAssignedToRegions), RegionType.UNTILED);
                     listRegions.Add(region);
                     FacesAssignedToRegions.UnionWith(region.Faces);
                     continue;
@@ -1017,7 +1116,7 @@ namespace MorphologyMesh
 
                 if (face.IsInExposedRegion(mesh))
                 {
-                    MorphMeshRegion region = new MorphMeshRegion(mesh, mesh.FloodFillRegion(face, (m, foundFace) => IsInRegion(m, foundFace, MorphMeshFace.IsInExposedRegion, FaceZ.Value), FacesAssignedToRegions), RegionType.EXPOSED);
+                    MorphMeshRegion region = new MorphMeshRegion(mesh, mesh.FloodFillRegion(face, (m, foundFace) => IsInRegion(m, foundFace, MorphMeshFace.IsInExposedRegion, FaceZ.Value), MorphMeshFace.AdjacentFaceDoesNotCrossContour, FacesAssignedToRegions), RegionType.EXPOSED);
                     listRegions.Add(region);
                     FacesAssignedToRegions.UnionWith(region.Faces);
                     continue;
@@ -1025,7 +1124,7 @@ namespace MorphologyMesh
 
                 if (face.IsInHoleRegion(mesh))
                 {
-                    MorphMeshRegion region = new MorphMeshRegion(mesh, mesh.FloodFillRegion(face, (m, foundFace) => IsInRegion(m, foundFace, MorphMeshFace.IsInHoleRegion, FaceZ.Value), FacesAssignedToRegions), RegionType.HOLE);
+                    MorphMeshRegion region = new MorphMeshRegion(mesh, mesh.FloodFillRegion(face, (m, foundFace) => IsInRegion(m, foundFace, MorphMeshFace.IsInHoleRegion,  FaceZ.Value), MorphMeshFace.AdjacentFaceDoesNotCrossContour, FacesAssignedToRegions), RegionType.HOLE);
                     listRegions.Add(region);
                     FacesAssignedToRegions.UnionWith(region.Faces);
                     continue;
@@ -1033,7 +1132,7 @@ namespace MorphologyMesh
 
                 if (face.IsInInvaginatedRegion(mesh))
                 {
-                    MorphMeshRegion region = new MorphMeshRegion(mesh, mesh.FloodFillRegion(face, (m, foundFace) => IsInRegion(m, foundFace, MorphMeshFace.IsInInvaginatedRegion, FaceZ.Value), FacesAssignedToRegions), RegionType.INVAGINATION);
+                    MorphMeshRegion region = new MorphMeshRegion(mesh, mesh.FloodFillRegion(face, (m, foundFace) => IsInRegion(m, foundFace, MorphMeshFace.IsInInvaginatedRegion, FaceZ.Value), MorphMeshFace.AdjacentFaceDoesNotCrossContour, FacesAssignedToRegions), RegionType.INVAGINATION);
 
                     //Whether or not the region is valid we mark it as checked so we don't repeat the floodfill for every face in the region.
                     FacesAssignedToRegions.UnionWith(region.Faces);
@@ -1191,7 +1290,7 @@ namespace MorphologyMesh
                 
                 foreach (MorphMeshEdge edge in EdgesToCheck.OrderBy(e => e.Type != EdgeType.CORRESPONDING))
                 {                    
-                    List<int> Face = FindAnyCloseableFace(TargetVert, this[edge.OppositeEnd(current.Index)], edge, new SortedSet<IEdgeKey>(CheckedEdges), new Stack<int>(Path));
+                    List<int> Face = FindAnyCloseableFace(TargetVert, this[edge.OppositeEnd(current.Index)], edge, new SortedSet<IEdgeKey>(CheckedEdges), new Stack<int>(Path.Reverse()));
 
                     if (Face != null)
                     {
@@ -1204,6 +1303,11 @@ namespace MorphologyMesh
                             if (ShortestFace.Count > Face.Count)
                             {
                                 ShortestFace = Face;
+                            }
+                            else if(ShortestFace.Count == Face.Count)
+                            {
+                                //In this case use the face with the smallest perimeter     
+                                ShortestFace = this.PathDistance(ShortestFace) < this.PathDistance(Face) ? ShortestFace : Face;
                             }
                         }
                     }
@@ -1219,6 +1323,29 @@ namespace MorphologyMesh
             Path.Pop();
 
             return null;
+        }
+
+        /// <summary>
+        /// Return the distance to travel to each of the vertex indicies 
+        /// </summary>
+        /// <param name="iVerts"></param>
+        /// <returns></returns>
+        public double PathDistance(IReadOnlyList<int> iVerts)
+        {
+            if (iVerts.Count < 2)
+                return 0;
+
+            Vertex origin = this[iVerts[0]];
+            double totalDistance = 0;
+            for(int i = 1; i < iVerts.Count; i++)
+            {
+                Vertex next = this[iVerts[i]];
+
+                totalDistance += GridVector3.Distance(origin.Position, next.Position);
+                origin = next; 
+            }
+
+            return totalDistance;
         }
 
         /// <summary>
@@ -1266,31 +1393,38 @@ namespace MorphologyMesh
         /// <param name="MeetsCriteriaFunc"></param>
         /// <param name="CheckedFaces"></param>
         /// <returns></returns>
-        public SortedSet<MorphMeshFace> FloodFillRegion(MorphMeshFace f, Func<MorphRenderMesh, MorphMeshFace, bool> MeetsCriteriaFunc, IEnumerable<IFace> CheckedFaces)
+        public SortedSet<MorphMeshFace> FloodFillRegion(MorphMeshFace f, FaceMeetsCriteriaFunction faceMeetsCriteriaFunc, EdgeMeetsCriteriaFunc EdgeMeetsCriteriaFunc, IEnumerable<IFace> CheckedFaces)
         {
             SortedSet<IFace> checkedRegionFaces = new SortedSet<IFace>(CheckedFaces); 
             
-            return FloodFillRegionRecurse(f, MeetsCriteriaFunc, ref checkedRegionFaces);
+            return FloodFillRegionRecurse(f, faceMeetsCriteriaFunc, EdgeMeetsCriteriaFunc, ref checkedRegionFaces);
         }
 
-        private SortedSet<MorphMeshFace> FloodFillRegionRecurse(MorphMeshFace f, Func<MorphRenderMesh, MorphMeshFace, bool> MeetsCriteriaFunc, ref SortedSet<IFace> CheckedFaces)
+        /// <summary>
+        /// Performs a flood fill that includes all faces that pass the criteria function
+        /// </summary>
+        /// <param name="f"></param>
+        /// <param name="MeetsCriteriaFunc"></param>
+        /// <param name="CheckedFaces"></param>
+        /// <returns></returns>
+        private SortedSet<MorphMeshFace> FloodFillRegionRecurse(MorphMeshFace f, FaceMeetsCriteriaFunction faceMeetsCriteriaFunc, EdgeMeetsCriteriaFunc EdgeMeetsCriteriaFunc, ref SortedSet<IFace> CheckedFaces)
         {
             SortedSet<MorphMeshFace> region = new SortedSet<MorphMeshFace>();
             region.Add(f);
-            CheckedFaces.Add(f); 
+            CheckedFaces.Add(f);
 
-            foreach (MorphMeshFace adjacent in f.AdjacentFaces(this))
+            foreach (MorphMeshFace adjacent in f.AdjacentFaces(this, EdgeMeetsCriteriaFunc))
             {
                 if (CheckedFaces.Contains(adjacent))
                     continue;
 
-                if (!MeetsCriteriaFunc(this, adjacent))
+                if (faceMeetsCriteriaFunc != null && false == faceMeetsCriteriaFunc(this, adjacent))
                 {
                     CheckedFaces.Add(adjacent);
                     continue;
                 }
 
-                region.UnionWith(FloodFillRegionRecurse(adjacent, MeetsCriteriaFunc, ref CheckedFaces));
+                region.UnionWith(FloodFillRegionRecurse(adjacent, faceMeetsCriteriaFunc, EdgeMeetsCriteriaFunc, ref CheckedFaces));
             }
 
             return region; 

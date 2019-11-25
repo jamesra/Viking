@@ -68,6 +68,9 @@ namespace MonogameTestbed
 
             LastGamepadState = GamePad.GetState(PlayerIndex.One);
         }
+        public void UnloadContent(MonoTestbed window)
+        {
+        }
 
         public List<IColorView> CreateViewsForGeometries(ICollection<IShape2D> shapes)
         {

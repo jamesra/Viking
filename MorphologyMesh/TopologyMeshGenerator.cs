@@ -30,7 +30,7 @@ namespace MorphologyMesh
 
             GraphLib.Graph<ulong, MeshNode, MeshEdge> meshGraph = new GraphLib.Graph<ulong, MeshNode, MeshEdge>();
 
-            foreach (MorphologyNode node in graph.Nodes.Values)
+            foreach (MorphologyNode node in graph.Nodes.Values.Where(n => n.Location.TypeCode == LocationType.CIRCLE || n.Location.TypeCode == LocationType.CLOSEDCURVE || n.Location.TypeCode == LocationType.POLYGON))
             {
                 IShape2D shape = node.Geometry.ToShape2D();
 
@@ -41,11 +41,14 @@ namespace MorphologyMesh
                         break;
                     case ShapeType2D.POLYGON:
                         listMeshes.Add(ShapeMeshGenerator<ulong>.CreateMeshForPolygonSlab(shape as IPolygon2D, node.Z, graph.SectionThickness, node.ID, translate));
-                        break;
+                        break; 
                     default:
                         throw new ArgumentException("Unexpected shape type");
                 }
             }
+
+            //Check if any of the nodes are 2D lines, build 2D Faces connecting any linked lines
+
 
             DynamicRenderMesh<ulong> output = new DynamicRenderMesh<ulong>();
 
