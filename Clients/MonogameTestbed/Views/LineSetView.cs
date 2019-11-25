@@ -19,6 +19,11 @@ namespace MonogameTestbed
         public double LineRadius = 1;
         public Color color;
 
+        /// <summary>
+        /// Optional
+        /// </summary>
+        public string Name = "";
+
         public void UpdateViews(ICollection<GridVector2> Points)
         {
             if (Points.Count >= 3)

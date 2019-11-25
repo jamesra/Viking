@@ -7,6 +7,7 @@ using VikingXNAGraphics;
 using VikingXNA; 
 using Geometry;
 using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
 
 namespace MonogameTestbed
 {
@@ -30,18 +31,37 @@ namespace MonogameTestbed
         public Color[] PolyLineColors;
         public Color[] PolyVertexColors;
 
+        private double _PointRadius;
+        public double PointRadius
+        {
+            get
+            {
+                return _PointRadius;
+            }
+            set {
+
+                if (_PointRadius != value)
+                { 
+                    foreach (PointSetView psv in PolyPointsView)
+                    {
+                        psv.PointRadius = value;
+                    }
+
+                    _PointRadius = value;
+                }
+            }
+        }
+
+        private IndexLabelType _PointLabelTypes = IndexLabelType.NONE;
         public IndexLabelType PointLabelType
         {
             get
             {
-                IndexLabelType flags = IndexLabelType.NONE;
-                flags |= this.LabelPosition ? IndexLabelType.POSITION : IndexLabelType.NONE;
-                flags |= this.LabelIndex ? IndexLabelType.MESH : IndexLabelType.NONE;
-                flags |= this.LabelPolygonIndex ? IndexLabelType.POLYGON : IndexLabelType.NONE;
-                return flags; 
+                return _PointLabelTypes;
             }
             set
             {
+                _PointLabelTypes = value; 
                 this.LabelIndex = (value & IndexLabelType.MESH) > 0;
                 this.LabelPolygonIndex = (value & IndexLabelType.POLYGON) > 0;
                 this.LabelPosition = (value & IndexLabelType.POSITION) > 0;
@@ -52,19 +72,13 @@ namespace MonogameTestbed
         {
             get
             {
-                return PolyPointsView[0].LabelIndex;
+                return (_PointLabelTypes & IndexLabelType.MESH) > 0;
             }
-            set
+            private set
             {
                 foreach (PointSetView psv in PolyPointsView)
                 {
                     psv.LabelIndex = value;
-                }
-
-                if(value)
-                {
-                    this.LabelPosition = false;
-                    this.LabelPolygonIndex = false; 
                 }
             }
         }
@@ -73,47 +87,33 @@ namespace MonogameTestbed
         {
             get
             {
-                return PolyPointsView[0].LabelPosition;
+                return (_PointLabelTypes & IndexLabelType.POSITION) > 0;
             }
-            set
+            private set
             {
                 foreach (PointSetView psv in PolyPointsView)
                 {
                     psv.LabelPosition = value;
                 }
-
-                if (value)
-                {
-                    this.LabelIndex = false;
-                    this.LabelPolygonIndex = false;
-                }
             }
         }
 
-        private bool _LabelPolygonIndex = false;
         public bool LabelPolygonIndex
         {
             get
             {
-                return _LabelPolygonIndex;
+                return (_PointLabelTypes & IndexLabelType.POLYGON) > 0;
             }
-            set
+            private set
             {
-                _LabelPolygonIndex = value;
-                if(value)
+                if(true == value)
                 {
-                    PolyIndexLabels = CreatePolyIndexLabels(_Polygons).ToArray();
-                }
-
-                if (value)
-                {
-                    this.LabelIndex = false;
-                    this.LabelPosition = false;
+                    PolyIndexLabels = CreatePolyIndexLabels(_Polygons, this.PointRadius).ToArray();
                 }
             }
         }
 
-        private static List<LabelView> CreatePolyIndexLabels(List<GridPolygon> Polygons)
+        private static List<LabelView> CreatePolyIndexLabels(List<GridPolygon> Polygons, double pointradius)
         {
             List<LabelView> listPointLabels = new List<LabelView>();
 
@@ -122,15 +122,17 @@ namespace MonogameTestbed
                 GridVector2 point = pi.Point(Polygons);
                 LabelView label = new LabelView(pi.ToString(), point);
                 listPointLabels.Add(label);
-                label.FontSize = 1;
+                label.FontSize = pointradius * 2.0;
             }
 
             return listPointLabels;
         }
 
 
-        public PolygonSetView(IEnumerable<GridPolygon> polys)
+        public PolygonSetView(IEnumerable<GridPolygon> polys, double PointRadius=1.0)
         {
+            this._PointRadius = PointRadius;
+
             _Polygons = polys.ToList();
             PolyLineColors = polys.Select(p => Color.Black.Random()).ToArray();
             PolyVertexColors = PolyLineColors.Select(c => c.SetAlpha(0.5f)).ToArray();
@@ -156,9 +158,10 @@ namespace MonogameTestbed
                 }
 
                 psv.Points = points;
-
+                psv.PointRadius = this.PointRadius;
                 psv.Color = PolyVertexColors[iPoly];
                 psv.LabelIndex = false;
+                
 
                 psv.UpdateViews();
                 listPointSetView.Add(psv);
@@ -185,7 +188,9 @@ namespace MonogameTestbed
                 }
             }
 
-            if(((this.PointLabelType & (IndexLabelType.POLYGON)) > 0) && this.PolyIndexLabels != null)
+            window.GraphicsDevice.Clear(ClearOptions.DepthBuffer | ClearOptions.Stencil, Color.Black, float.MaxValue, 0);
+
+            if (((this.PointLabelType & (IndexLabelType.POLYGON)) > 0) && this.PolyIndexLabels != null)
             {
                 LabelView.Draw(window.spriteBatch, window.fontArial, scene, this.PolyIndexLabels);
             }

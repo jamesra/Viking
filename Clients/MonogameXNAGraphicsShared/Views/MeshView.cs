@@ -17,7 +17,9 @@ namespace VikingXNAGraphics
         public bool WireFrame { get; set; }
         public ObservableCollection<MeshModel<VERTEXTYPE>> models = new ObservableCollection<MeshModel<VERTEXTYPE>>();
 
-        BasicEffect effect; 
+        BasicEffect effect;
+
+        public string Name = "";
 
         public MeshView()
         {

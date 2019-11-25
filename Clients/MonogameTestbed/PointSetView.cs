@@ -76,22 +76,22 @@ namespace MonogameTestbed
             }
             else if (LabelIndex && !LabelPosition)
             {
-                LabelViews = Points.Select((p, i) => new LabelView(i.ToString(), p)).ToArray();
+                LabelViews = Points.Select((p, i) => new LabelView(i.ToString(), p, fontSize: this.PointRadius * 2)).ToArray();
             }
             else if (!LabelIndex && LabelPosition)
             {
-                LabelViews = Points.Select(p => new LabelView(p.ToLabel(), p)).ToArray();
+                LabelViews = Points.Select(p => new LabelView(p.ToLabel(), p, fontSize: this.PointRadius * 2)).ToArray();
             }
             else
             {
-                LabelViews = Points.Select((p, i) => new LabelView(i.ToString() + " " + p.ToLabel(), p)).ToArray();
+                LabelViews = Points.Select((p, i) => new LabelView(i.ToString() + "\n" + p.ToLabel(), p, fontSize: this.PointRadius * 2)).ToArray();
             }
 
             if (LabelViews != null)
             {
                 foreach (LabelView label in LabelViews)
                 {
-                    label.FontSize = _PointRadius;
+                    label.FontSize = this.PointRadius * 2.0;
                 }
             }
         }
