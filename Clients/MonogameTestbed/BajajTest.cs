@@ -994,7 +994,7 @@ namespace MonogameTestbed
         /// <returns></returns>
         private static bool CouldAddSliceChord(MorphRenderMesh mesh, SliceChord sc, SliceChordRTree ChordRTree, SliceChordTestType Tests)
         {
-            return BajajMeshGenerator.IsSliceChordValid(sc.Origin, mesh.Polygons, mesh.GetSameLevelPolygons(sc.Origin), mesh.GetAdjacentLevelPolygons(sc.Origin), sc.Target, ChordRTree, Tests);
+            return BajajMeshGenerator.IsSliceChordValid(sc.Origin, mesh.Polygons, mesh.GetSameLevelPolygons(sc), mesh.GetAdjacentLevelPolygons(sc), sc.Target, ChordRTree, Tests);
         }
 
         /// <summary>
@@ -1006,7 +1006,7 @@ namespace MonogameTestbed
         /// <returns></returns>
         private static bool TryAddSliceChord(MorphRenderMesh mesh, SliceChord sc, SliceChordRTree ChordRTree, SliceChordTestType Tests)
         {
-            if(BajajMeshGenerator.IsSliceChordValid(sc.Origin, mesh.Polygons, mesh.GetSameLevelPolygons(sc.Origin), mesh.GetAdjacentLevelPolygons(sc.Origin), sc.Target, ChordRTree, Tests))
+            if(BajajMeshGenerator.IsSliceChordValid(sc.Origin, mesh.Polygons, mesh.GetSameLevelPolygons(sc), mesh.GetAdjacentLevelPolygons(sc), sc.Target, ChordRTree, Tests))
             {
                 var edge = new MorphMeshEdge(EdgeTypeExtensions.GetEdgeType(sc.Line, mesh.Polygons[sc.Origin.iPoly], mesh.Polygons[sc.Target.iPoly]), mesh[sc.Origin].Index, mesh[sc.Target].Index);
                 if (mesh.Contains(edge))

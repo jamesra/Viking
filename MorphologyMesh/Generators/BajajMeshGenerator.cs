@@ -18,7 +18,11 @@ using RTree;
 
 namespace MorphologyMesh
 {
-    public class SliceChordRTree : RTree.RTree<MorphologyMesh.ISliceChord> { }
+    public class SliceChordRTree : RTree.RTree<MorphologyMesh.ISliceChord>
+    {
+
+    }
+
     public class OTVTable : System.Collections.Concurrent.ConcurrentDictionary<Geometry.PointIndex, Geometry.PointIndex> { }
 
     public enum CONTOUR_RELATION
@@ -876,7 +880,7 @@ namespace MorphologyMesh
 
             //Create a map so we can record where every vertex came from in the set of points
             //TODO: Overlapping verticies are not going to be handled...  
-            Dictionary<GridVector2, List<PointIndex>> pointToPoly = GridPolygon.CreatePointToPolyMap(Polygons.ToArray());
+            //Dictionary<GridVector2, List<PointIndex>> pointToPoly = GridPolygon.CreatePointToPolyMap(Polygons.ToArray());
 
             //Create a map from the index into our array of polygons to the actual node ID the polygon came from.
             ulong[] PolygonToNodeKey = new ulong[other_nodes.Length + 1];

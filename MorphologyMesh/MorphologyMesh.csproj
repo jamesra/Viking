@@ -58,22 +58,27 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="BajajMeshGenerator.cs" />
+    <Compile Include="Generators\BajajMeshGenerator.cs" />
     <Compile Include="ConnectionVerticies.cs" />
     <Compile Include="EdgeType.cs" />
     <Compile Include="MedialAxis.cs" />
     <Compile Include="MeshGraph.cs" />
     <Compile Include="MeshGraphBuilder.cs" />
-    <Compile Include="MorphRenderMesh.cs" />
+    <Compile Include="MorphologyMesh\MorphMeshRegion.cs" />
+    <Compile Include="MorphologyMesh\MorphMeshEdge.cs" />
+    <Compile Include="MorphologyMesh\MorphMeshFace.cs" />
+    <Compile Include="MorphologyMesh\MorphMeshRegionGraph.cs" />
+    <Compile Include="MorphologyMesh\MorphMeshVertex.cs" />
+    <Compile Include="MorphologyMesh\MorphRenderMesh.cs" />
     <Compile Include="Serialization\ColladaExtensions.cs" />
     <Compile Include="Serialization\MorphologyColladaView.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="ShapeMeshGenerator.cs" />
+    <Compile Include="Generators\ShapeMeshGenerator.cs" />
     <Compile Include="SliceChord.cs" />
-    <Compile Include="SmootherMeshGenerator.cs" />
-    <Compile Include="SmoothMeshGenerator.cs" />
-    <Compile Include="SmoothMeshGraphGenerator.cs" />
-    <Compile Include="TopologyMeshGenerator.cs" />
+    <Compile Include="Generators\SmootherMeshGenerator.cs" />
+    <Compile Include="Generators\SmoothMeshGenerator.cs" />
+    <Compile Include="Generators\SmoothMeshGraphGenerator.cs" />
+    <Compile Include="Generators\TopologyMeshGenerator.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\AnnotationVizLib\AnnotationVizLib.csproj">

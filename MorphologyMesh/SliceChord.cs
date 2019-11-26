@@ -75,11 +75,29 @@ namespace MorphologyMesh
 
         public bool Equals(SliceChord other)
         {
+            if (object.ReferenceEquals(other, null))
+                return false;
+
             if (other.Origin == this.Origin &&
                other.Target == this.Target)
                 return true;
 
             return false;
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (object.ReferenceEquals(obj, null))
+                return false;
+
+            SliceChord other = obj as SliceChord;
+
+            return this.Equals(other);
+        }
+
+        public override int GetHashCode()
+        {
+            return Origin.GetHashCode() + Target.GetHashCode();
         }
 
         public double Orientation
