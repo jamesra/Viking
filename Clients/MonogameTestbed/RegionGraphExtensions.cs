@@ -244,8 +244,13 @@ namespace MonogameTestbed
                 return; 
             }
 
-            double MinZ = region.VertPositions.Min(v => v.Z);
-            double MaxZ = region.VertPositions.Max(v => v.Z);
+            //double MinZ = region.VertPositions.Min(v => v.Z);
+            //double MaxZ = region.VertPositions.Max(v => v.Z);
+
+            double MinZ = region.ZLevel.Min();
+            double MaxZ = region.ZLevel.Max();
+
+            //TODO: Adjust the Z level of the output based on the type of region and verticies we are connecting to.
             int iNewVerts = mesh.AddVerticies(NewVerts.Select(mv => new MorphMeshVertex(new MedialAxisIndex(MedialAxis, mv), mv.Key.ToGridVector3((MinZ + MaxZ) / 2.0))).ToArray());
              
             Dictionary<GridVector2, int> VertexLookup = new Dictionary<GridVector2, int>(NewVerts.Length);
