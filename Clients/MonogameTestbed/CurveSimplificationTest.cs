@@ -81,6 +81,10 @@ namespace MonogameTestbed
             Gamepad.Update(GamePad.GetState(PlayerIndex.One));
         }
 
+        public void UnloadContent(MonoTestbed window)
+        {
+        }
+
         public void UpdateViews()
         {
             if (path == null || path.Count == 0)
