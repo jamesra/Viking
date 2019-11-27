@@ -12,20 +12,9 @@ namespace Geometry
         public readonly GridVector2 A;
         public readonly GridVector2 B;
 
-        public GridLineSegment(IPoint2D A, IPoint2D B)
+       
+        public GridLineSegment(IPoint2D A, IPoint2D B) : this(A.Convert(), B.Convert())
         {
-            /* This is a bad idea because callers expect A and B to maintain position
-            int diff = A.Compare(A, B);
-            this.A = diff <= 0 ? A : B;
-            this.B = diff <= 0 ? B : A;
-            */
-            this.A = A.Convert();
-            this.B = B.Convert();
-
-            if (A == B)
-            {
-                throw new ArgumentException("Can't create line with two identical points");
-            }
         }
 
         public GridLineSegment(GridVector2 A, GridVector2 B)
@@ -36,7 +25,8 @@ namespace Geometry
             this.B = diff <= 0 ? B : A;
             */
             this.A = A;
-            this.B = B; 
+            this.B = B;
+
 
             if (A == B)
             {
@@ -560,11 +550,26 @@ namespace Geometry
         public bool Intersects(GridLineSegment seg, out IShape2D Intersection)
         {
             //Don't do the full check if the bounding boxes don't overlap
-            if (!this.BoundingBox.Intersects(seg.BoundingBox))
+
+            if (this.MaxX < seg.MinX ||
+                this.MaxY < seg.MinY ||
+                this.MinX > seg.MaxX ||
+                this.MinY > seg.MaxY)
             {
                 Intersection = new GridVector2();
                 return false;
             }
+
+            
+            //****
+            //Profiling showed using BoundingBox implementation was slow because the GridRectangle was being allocated in the property.
+            /*
+            if (!this.BoundingBox.Intersects(seg.BoundingBox))
+            {
+                Intersection = new GridVector2();
+                return false;
+            }*/
+            
 
             //Function for each line
             //Ax + By = C
