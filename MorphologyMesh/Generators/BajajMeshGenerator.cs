@@ -32,6 +32,12 @@ namespace MorphologyMesh
         Intersects
     }
 
+    public enum ZDirection
+    {
+        Increasing,
+        Decreasing
+    }
+
     [Flags]
     public enum SliceChordTestType
     {
@@ -50,6 +56,58 @@ namespace MorphologyMesh
         Orientation = 2, //Add chords with the closest orientation of contours first
     }
 
+    /// <summary>
+    /// This represents a group of connected nodes that need to be meshed together as a single group.  They can 
+    /// span more than two Z levels depending on how annotation occurred but must still branch correctly.  For the 
+    /// meshing we simplify this to the set of annotations above and set of annotations below.
+    /// </summary>
+    class MeshingGroup
+    {
+        /// <summary>
+        /// Shapes on the top of our cross section
+        /// </summary>
+        public SortedSet<ulong> NodesAbove;
+
+        /// <summary>
+        /// Shapes on the bottom of our cross section
+        /// </summary>
+        public SortedSet<ulong> NodesBelow;
+
+
+        /// <summary>
+        /// The set of edges connecting nodes.  These edges can be used to give hints regarding which nodes can connect
+        /// </summary>
+        public SortedSet<MorphologyEdge> Edges; 
+
+        public MeshingGroup(SortedSet<ulong> nodesAbove, SortedSet<ulong> nodesBelow, SortedSet<MorphologyEdge> edges)
+        {
+            this.NodesAbove = nodesAbove;
+            this.NodesBelow = nodesBelow;
+            this.Edges = edges;
+        }
+
+        public override string ToString()
+        {
+            StringBuilder sb = new StringBuilder();
+
+            sb.Append("U:");
+            foreach (ulong ID in NodesAbove)
+            {
+                sb.AppendFormat(" {0}", ID);
+            }
+
+            sb.AppendLine(" D:");
+            foreach (ulong ID in NodesBelow)
+            {
+                sb.AppendFormat(" {0}", ID);
+            }
+
+            return sb.ToString();
+        }
+    }
+
+
+
     public static class BajajMeshGenerator
     {
         /// <summary>
@@ -59,8 +117,12 @@ namespace MorphologyMesh
         /// <returns></returns>
         public static MeshGraph ConvertToMeshGraph(MorphologyGraph graph)
         {
-            MeshGraph meshGraph = new MeshGraph();
 
+            List<MeshingGroup> MeshingGroups = CalculateMeshingGroups(graph); 
+
+            
+            /*MeshGraph meshGraph = new MeshGraph();
+            
             Dictionary<ulong, IShape2D> IDToContour = FindCorrespondences(graph);
 
             meshGraph.SectionThickness = graph.SectionThickness;
@@ -84,48 +146,122 @@ namespace MorphologyMesh
                 nodes.Add(newNode);
             }
 #endif
-
-            MeshNode meshNode = null;
-            while (nodes.TryTake(out meshNode))
-            {
-                meshGraph.AddNode(meshNode);
-            }
-
-            foreach (MorphologyEdge edge in graph.Edges.Values)
-            {
-                //Find correspondences between contours
-
-                MeshEdge mEdge = SmoothMeshGraphGenerator.CreateEdge(graph.Nodes[edge.SourceNodeKey], graph.Nodes[edge.TargetNodeKey]);
-                meshGraph.AddEdge(mEdge);
-            }
-
-            foreach (MeshNode node in meshGraph.Nodes.Values.Where(n => n.GetEdgesAbove().Length > 0).ToArray())
-            {
-                CreatePortsForBranch(node, node.GetEdgesAbove().SelectMany(e => node.Edges[e]).ToArray());
-            }
-
-            foreach (MeshNode node in meshGraph.Nodes.Values.Where(n => n.GetEdgesBelow().Length > 0).ToArray())
-            {
-                CreatePortsForBranch(node, node.GetEdgesBelow().SelectMany(e => node.Edges[e]).ToArray());
-            }
-
-            /*
-            //Create multiple ports for branches
-            foreach (MeshNode node in meshGraph.Nodes.Values.Where(n => n.GetEdgesAbove().Length > 1).ToArray())
-            {
-                CreatePortsForBranch(node, node.GetEdgesAbove().SelectMany(e => node.Edges[e]).ToArray());
-            }
-
-            foreach (MeshNode node in meshGraph.Nodes.Values.Where(n => n.GetEdgesBelow().Length > 1).ToArray())
-            { 
-                CreatePortsForBranch(node, node.GetEdgesBelow().SelectMany(e => node.Edges[e]).ToArray());
-            }
-             */
-
-            return meshGraph;
+*/
+            return null;
         }
-         
 
+        #region MeshingGroups
+        /// <summary>
+        /// We need to group sets of connected nodes so we do not miss any branches in the final mesh.  
+        /// The example belows shows lettered nodes that appear on each of 5 Z-Levels.  
+        ///
+        ///  Z = 1:               I
+        ///                      /|
+        ///  Z = 2:             / J
+        ///                    /    \
+        ///  Z = 3:   A   B   /       C
+        ///            \ / \ /       / \
+        ///  Z = 4:     D   E       /   F
+        ///                  \     /
+        ///  Z = 5:           G   H
+        ///
+        /// In this case we'd want to generate four meshing groups:
+        /// 1: A,B,D,E,I,J
+        /// 2: C,F,H
+        /// 3: E,G
+        /// 4: J,C
+        ///
+        /// To do this we pick a node, E, and a direction.  We build a list of all nodes above E -> B,I.  
+        ///Then we ask B,E for nodes below B,I -> D,J.  Then we ask for nodes above: D,J -> A.  Continuing 
+        ///until no new nodes are added.  These nodes are then combined and sent to the Bajaj generator
+        /// </summary>
+        /// <param name="graph"></param>
+        /// <returns></returns>
+        static List<MeshingGroup> CalculateMeshingGroups(MorphologyGraph graph)
+        {
+            List<MeshingGroup> MeshingGroups = new List<MeshingGroup>();
+            SortedSet<MorphologyEdge> Edges = new SortedSet<MorphologyEdge>(graph.Edges.Values);
+
+            while(Edges.Count > 0)
+            {
+                SortedSet<ulong> MeshGroupNodesAbove;
+                SortedSet<ulong> MeshGroupNodesBelow;
+                SortedSet<MorphologyEdge> MeshGroupEdges;
+
+                MorphologyEdge e = Edges.First();
+
+                MorphologyNode Source = graph[e.SourceNodeKey];
+                MorphologyNode Target = graph[e.TargetNodeKey];
+
+                ZDirection SearchDirection = Source.Z < Target.Z ? ZDirection.Increasing : ZDirection.Decreasing;
+
+                BuildMeshingCrossSection(graph, Source, SearchDirection, out MeshGroupNodesAbove, out MeshGroupNodesBelow, out MeshGroupEdges);
+
+                Debug.Assert(MeshGroupNodesAbove.Count > 0, "Search should have found at least one node above and below.");
+                Debug.Assert(MeshGroupNodesBelow.Count > 0, "Search should have found at least one node above and below.");
+                Debug.Assert(MeshGroupEdges.Contains(e), "The edge we used to start the search is not in the search results.");
+
+                MeshingGroup group = new MeshingGroup(MeshGroupNodesAbove, MeshGroupNodesBelow, MeshGroupEdges);
+                MeshingGroups.Add(group);
+
+                Edges.ExceptWith(MeshGroupEdges);
+            }
+
+            return MeshingGroups;
+        }
+
+        static void BuildMeshingCrossSection(MorphologyGraph graph, MorphologyNode seed, ZDirection CheckDirection, out SortedSet<ulong> NodesAbove, out SortedSet<ulong> NodesBelow, out SortedSet<MorphologyEdge> FollowedEdges)
+        {
+            NodesAbove = new SortedSet<ulong>();
+            NodesBelow = new SortedSet<ulong>();
+            SortedSet<ulong> NewNodesAbove = new SortedSet<ulong>();
+            SortedSet<ulong> NewNodesBelow = new SortedSet<ulong>();
+
+            FollowedEdges = new SortedSet<MorphologyEdge>();
+
+            if (CheckDirection == ZDirection.Increasing)
+            {
+                NodesBelow.Add(seed.ID);
+                NewNodesAbove.UnionWith(seed.GetEdgesAbove(graph));
+                FollowedEdges.UnionWith(NewNodesAbove.Select(n => new MorphologyEdge(graph, n, seed.ID)));
+            }
+            else
+            {
+                NodesAbove.Add(seed.ID);
+                NewNodesBelow.UnionWith(seed.GetEdgesBelow(graph));
+                FollowedEdges.UnionWith(NewNodesBelow.Select(n => new MorphologyEdge(graph, n, seed.ID)));
+            }
+
+            BuildMeshingCrossSection(graph, ref NodesAbove, ref NodesBelow, NewNodesAbove, NewNodesBelow, ref FollowedEdges);
+        }
+
+        private static void BuildMeshingCrossSection(MorphologyGraph graph, ref SortedSet<ulong> NodesAbove, ref SortedSet<ulong> NodesBelow, SortedSet<ulong> NewNodesAbove, SortedSet<ulong> NewNodesBelow, ref SortedSet<MorphologyEdge> FollowedEdges)
+        {
+            NodesAbove.UnionWith(NewNodesAbove);
+            NodesBelow.UnionWith(NewNodesBelow);
+
+            FollowedEdges.UnionWith(NewNodesAbove.SelectMany(n => graph[n].GetEdgesBelow(graph).Select(other => new MorphologyEdge(graph, other, n))));
+            FollowedEdges.UnionWith(NewNodesBelow.SelectMany(n => graph[n].GetEdgesAbove(graph).Select(other => new MorphologyEdge(graph, other, n))));
+
+            NewNodesBelow = new SortedSet<ulong>(NewNodesAbove.SelectMany(n => graph[n].GetEdgesBelow(graph)));
+            NewNodesAbove = new SortedSet<ulong>(NewNodesBelow.SelectMany(n => graph[n].GetEdgesAbove(graph)));
+
+            NewNodesAbove.ExceptWith(NodesAbove);
+            NewNodesBelow.ExceptWith(NodesBelow);
+
+            if (NewNodesAbove.Count == 0 && NewNodesBelow.Count == 0)
+            {
+                return;
+            }
+            else
+            {
+                BuildMeshingCrossSection(graph, ref NodesAbove, ref NodesBelow, NewNodesAbove, NewNodesBelow, ref FollowedEdges);
+                return;
+            } 
+        }
+
+        #endregion
+               
         private static Dictionary<ulong, IShape2D> FindCorrespondences(MorphologyGraph graph)
         {  
             Dictionary<ulong, IShape2D> IDToShape = graph.Nodes.AsParallel().ToDictionary(n => n.Key,  n => n.Value.Geometry.ToShape2D());
