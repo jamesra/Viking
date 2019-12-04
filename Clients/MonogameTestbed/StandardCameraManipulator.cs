@@ -79,7 +79,7 @@ namespace MonogameTestbed
                 Camera.Position = new Vector3(0, 0, 10);
             }
 
-            if (state.Buttons.A == ButtonState.Pressed)
+            if (state.Buttons.RightStick == ButtonState.Pressed)
             {
                 Camera.Rotation = Vector3.Zero;
                 Camera.Position = new Vector3(0, -10, 0);
