@@ -4,9 +4,9 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using TriangleNet;
-using TriangleNet.Meshing;
+//using TriangleNet.Meshing;
 
-namespace MonogameTestbed
+namespace MorphologyMesh
 {
 
     public static class RegionGraphExtensions
@@ -19,7 +19,7 @@ namespace MonogameTestbed
         /// <param name="mesh"></param>
         /// <param name="rTree"></param>
         /// <returns>A list of the OTV tables generated when attempting to merge the regions.  Used for debugging</returns>
-        public static List<OTVTable> MergeAndCloseRegionsPass(this MorphMeshRegionGraph graph, MorphRenderMesh mesh, SliceChordRTree rTree = null)
+        public static List<OTVTable> MergeAndCloseRegionsPass(this MorphMeshRegionGraph graph, BajajGeneratorMesh mesh, SliceChordRTree rTree = null)
         {
             while (true)
             {
@@ -106,7 +106,7 @@ namespace MonogameTestbed
         }
 
 
-        public static List<OTVTable> CloseRegions(this MorphRenderMesh mesh, IList<MorphMeshRegion> regions, SliceChordRTree rTree = null)
+        public static List<OTVTable> CloseRegions(this BajajGeneratorMesh mesh, IList<MorphMeshRegion> regions, SliceChordRTree rTree = null)
         {
             //Build the lookup tree for slice-chords
             if (rTree == null)
@@ -125,7 +125,7 @@ namespace MonogameTestbed
             return listOTVTables;
         }
 
-        public static OTVTable TryClosingRegion(MorphRenderMesh mesh, MorphMeshRegion region, SliceChordRTree rTree)
+        public static OTVTable TryClosingRegion(BajajGeneratorMesh mesh, MorphMeshRegion region, SliceChordRTree rTree)
         {
             if (region.Type == RegionType.EXPOSED || region.Type == RegionType.INVAGINATION)
             {
@@ -158,7 +158,7 @@ namespace MonogameTestbed
         /// <param name="mesh"></param>
         /// <param name="region">Region we are trying to close</param>
         /// <param name="rTree">RTree of all existing chords</param>
-        private static OTVTable TryClosingSolidRegion(this MorphRenderMesh mesh, MorphMeshRegion region, SliceChordRTree rTree)
+        private static OTVTable TryClosingSolidRegion(this BajajGeneratorMesh mesh, MorphMeshRegion region, SliceChordRTree rTree)
         {
             OTVTable OTVTable;
             List<int> vertsWithoutFaces = region.Verticies.Where(v => mesh[v].Edges.SelectMany(e => mesh[e].Faces).Count() == 0).ToList();
@@ -175,7 +175,7 @@ namespace MonogameTestbed
                 return OTVTable;
             }
 
-            int added = BajajOTVAssignmentView.TryAddOTVTable(mesh, OTVTable, rTree, SliceChordTestType.ChordIntersection | SliceChordTestType.LineOrientation, SliceChordPriority.Orientation);
+            int added = BajajMeshGenerator.TryAddOTVTable(mesh, OTVTable, rTree, SliceChordTestType.ChordIntersection | SliceChordTestType.LineOrientation, SliceChordPriority.Orientation);
             if (added == OTVTable.Count)
             {
                 return null;
@@ -233,7 +233,7 @@ namespace MonogameTestbed
         /// <param name="mesh"></param>
         /// <param name="region"></param>
         /// <param name="rTree"></param>
-        private static void TryClosingUntiledRegion(MorphRenderMesh mesh, MorphMeshRegion region, SliceChordRTree rTree)
+        private static void TryClosingUntiledRegion(BajajGeneratorMesh mesh, MorphMeshRegion region, SliceChordRTree rTree)
         {
             GridPolygon regionPolygon = region.Polygon;
             var MedialAxis = MedialAxisFinder.ApproximateMedialAxis(regionPolygon);
@@ -247,8 +247,8 @@ namespace MonogameTestbed
             //double MinZ = region.VertPositions.Min(v => v.Z);
             //double MaxZ = region.VertPositions.Max(v => v.Z);
 
-            double MinZ = region.ZLevel.Min();
-            double MaxZ = region.ZLevel.Max();
+            double MinZ = mesh.LowerPolyIndicies.Max(i => mesh.PolyZ[i]); //Pick the largest of the low-end Z values
+            double MaxZ = mesh.UpperPolyIndicies.Min(i => mesh.PolyZ[i]); //Pick the smallest of the high-end Z values
 
             //TODO: Adjust the Z level of the output based on the type of region and verticies we are connecting to.
             int iNewVerts = mesh.AddVerticies(NewVerts.Select(mv => new MorphMeshVertex(new MedialAxisIndex(MedialAxis, mv), mv.Key.ToGridVector3((MinZ + MaxZ) / 2.0))).ToArray());
@@ -273,7 +273,7 @@ namespace MonogameTestbed
                 VertexLookup.Add(regionVertPositions[i], region.Verticies[i]);
             }
 
-            IMesh triangulation = regionPolygon.Triangulate(internalPoints: NewVerts.Select(v => v.Key).ToArray());
+            TriangleNet.Meshing.IMesh triangulation = regionPolygon.Triangulate(internalPoints: NewVerts.Select(v => v.Key).ToArray());
 
             foreach(var e in triangulation.ToLines())
             {
@@ -291,9 +291,9 @@ namespace MonogameTestbed
 
             foreach(var t in triangulation.Triangles)
             {
-                int iA = VertexLookup[t.GetVertex(0).ToGridVector2()];
-                int iB = VertexLookup[t.GetVertex(1).ToGridVector2()];
-                int iC = VertexLookup[t.GetVertex(2).ToGridVector2()];
+                int iA = VertexLookup[TriangleExtensions.ToGridVector2(t.GetVertex(0))];
+                int iB = VertexLookup[TriangleExtensions.ToGridVector2(t.GetVertex(1))];
+                int iC = VertexLookup[TriangleExtensions.ToGridVector2(t.GetVertex(2))];
 
                 mesh.AddFace(new MorphMeshFace(iA, iB, iC));
             }

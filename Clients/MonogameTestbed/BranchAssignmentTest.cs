@@ -35,7 +35,7 @@ namespace MonogameTestbed
         LineView[] lineViews = null;
         List<LineView> polyRingViews = null;
 
-        MorphRenderMesh FirstPassTriangulation = null;
+        BajajGeneratorMesh FirstPassTriangulation = null;
         MeshView<VertexPositionColor> meshView = null;
         MeshModel<VertexPositionColor> meshViewModel = null;
 
@@ -273,7 +273,7 @@ namespace MonogameTestbed
             TrianglesView = UpdateMeshLines(FirstPassTriangulation, "");
             lineViews = TrianglesView.LineViews.ToArray();
 
-            FirstPassTriangulation.IdentifyRegions();
+            FirstPassTriangulation.IdentifyRegionsViaFaces();
             PairOffRegions(FirstPassTriangulation);
             meshViewModel = CreateRegionView(FirstPassTriangulation);
             CreateRegionPolygonViews(FirstPassTriangulation);
@@ -309,7 +309,7 @@ namespace MonogameTestbed
             return model;
         }
 
-        internal static MeshModel<VertexPositionColor> CreateRegionView(MorphRenderMesh mesh)
+        internal static MeshModel<VertexPositionColor> CreateRegionView(BajajGeneratorMesh mesh)
         {
             if (mesh.Regions == null)
                 return null;
@@ -338,7 +338,7 @@ namespace MonogameTestbed
             return model;
         }
 
-        public void CreateRegionPolygonViews(MorphRenderMesh mesh)
+        public void CreateRegionPolygonViews(BajajGeneratorMesh mesh)
         {
             List<LineSetView> views = new List<LineSetView>();
 
@@ -358,7 +358,7 @@ namespace MonogameTestbed
         /// <summary>
         /// Pair off nearby regions on adjacent sections to create meshes between
         /// </summary>
-        private static Dictionary<MorphMeshRegion, List<MorphMeshRegion>> PairOffRegions(MorphRenderMesh mesh)
+        private static Dictionary<MorphMeshRegion, List<MorphMeshRegion>> PairOffRegions(BajajGeneratorMesh mesh)
         {
             MorphMeshRegion[] AllRegions = mesh.Regions.Where(r => r.Type == RegionType.EXPOSED).ToArray();
             SortedSet<double> ZLevels = new SortedSet<double>(AllRegions.SelectMany(r => r.ZLevel).Distinct());
@@ -437,150 +437,16 @@ namespace MonogameTestbed
         }
 
 
-        private static MorphMeshVertex GetOrAddVertex(MorphRenderMesh mesh, PointIndex pIndex, GridVector3 vert3)
-        {
-            MorphMeshVertex meshVertex;
-            if (!mesh.Contains(pIndex))
-            {
-                meshVertex = new MorphMeshVertex(pIndex, vert3); //TODO: Add normal here?
-                mesh.AddVertex(meshVertex);
-            }
-            else
-            {
-                meshVertex = (MorphMeshVertex)mesh[pIndex];
-                Debug.Assert(meshVertex.Position == vert3); //The mesh version and the version we expect should be in the same position
-            }
-
-            return meshVertex;
-        }
-
-        public static MorphRenderMesh ToMorphRenderMesh(TriangleNet.Meshing.IMesh mesh, GridPolygon[] Polygons, double[] PolyZ)
-        {
-
-            MorphRenderMesh output = new MorphRenderMesh(Polygons, PolyZ);
-            AddTriangulationEdgesToMesh(mesh, output);
-            return output;
-        }
-
-        /// <summary>
-        /// Create edges in our mesh based on a triangulation.  These edges will be categorized later and some discarded.
-        /// </summary>
-        /// <param name="triMesh"></param>
-        /// <param name="output"></param>
-        public static void AddTriangulationEdgesToMesh(TriangleNet.Meshing.IMesh triMesh, MorphRenderMesh output)
-        { 
-            Dictionary<GridVector2, List<PointIndex>> pointToPoly = GridPolygon.CreatePointToPolyMap(output.Polygons);
-
-            GridVector2[] vertArray = triMesh.Vertices.Select(v => v.ToGridVector2()).ToArray();
-            Dictionary<int, int[]> TriIndexToMeshIndex = new Dictionary<int, int[]>();
-
-            SortedList<MorphMeshVertex, MorphMeshVertex> CorrespondingVerticies = new SortedList<MorphMeshVertex, MorphMeshVertex>();
-
-            double[] PolyZ = output.PolyZ;
-
-            /*Ensure all triangulation points are in the mesh*/
-            for(int iVert = 0; iVert < vertArray.Length; iVert++)
-            {
-                GridVector2 vert = vertArray[iVert];
-                List<PointIndex> listPointIndicies = pointToPoly[vert];
-
-                double[] PointZs = listPointIndicies.Select(p => PolyZ[p.iPoly]).ToArray();
-                
-                PointIndex pIndex = listPointIndicies[0];
-                GridVector3 vert3 = vert.ToGridVector3(PolyZ[pIndex.iPoly]);
-
-                MorphMeshVertex meshVertex = GetOrAddVertex(output, pIndex, vert3);
-
-                TriIndexToMeshIndex[iVert] = new int[] { meshVertex.Index };
-
-                if (listPointIndicies.Count > 1)
-                {
-                    //We have a CORRESPONDING pair on two sections
-                    //We need to add these later or they mess up our indexing for faces
-                    List<int> meshIndicies = new List<int>();
-                    meshIndicies.Add(meshVertex.Index);
-                    for (int i = 1; i < listPointIndicies.Count; i++)
-                    {
-                        PointIndex pOtherIndex = listPointIndicies[i];
-                        if (pIndex.iPoly == pOtherIndex.iPoly)
-                            continue; 
-
-                        GridVector3 otherVert3 = vert.ToGridVector3(PolyZ[pOtherIndex.iPoly]);
-                        MorphMeshVertex correspondingVertex = GetOrAddVertex(output, pOtherIndex, otherVert3);
-                        Debug.Assert(CorrespondingVerticies.ContainsKey(meshVertex) == false);
-                        CorrespondingVerticies[meshVertex] = correspondingVertex;
-                        meshIndicies.Add(correspondingVertex.Index);
-                    }
-
-                    TriIndexToMeshIndex[iVert] = meshIndicies.ToArray();
-                }
-            }
-               
-            //Because we took verticies from mesh the indicies should line up
-            foreach (TriangleNet.Topology.Triangle tri in triMesh.Triangles)
-            {
-                int[] tri_face = new int[] { tri.GetVertexID(0), tri.GetVertexID(1), tri.GetVertexID(2) };
-                int[] face = tri_face.SelectMany(f => TriIndexToMeshIndex[f]).ToArray();
-
-                //Here we need to check for a corresponding edge being involved.  If we don't we can get an edge that should not exist in the mesh that face generation can follow to produce an incorrect mesh
-                //A corresponding edge will have two vertex entries in the table, so we check for four or more verticies in the face to go down this special path
-                if (face.Length > 4)
-                {
-                    throw new NotImplementedException("Unexpected number of faces for Delaunay Triangulation conversion to mesh.  Expected each face to have three edges.");
-                }
-                else if(face.Length == 4)
-                {
-                    /*
-                    This code does generate faces around a corresponding vertex.  However the bajaj code that executes later produces smoother faces around corresponding points so I
-                    do not generate faces for triangles that contain corresponding verticies.
-                    */
-                    /***************
-                    
-                    //We need to make sure the face isn't twisted
-                    List<int> sortedFace = new List<int>(4);
-                    int[] correspondingEdge = tri_face.Where(f => TriIndexToMeshIndex[f].Length > 1).SelectMany(f => TriIndexToMeshIndex[f]).ToArray();
-                    System.Diagnostics.Debug.Assert(correspondingEdge.Length == 2); //I only wrote this for the case of a single corresponding edge.  While possible in theory, the multiple case should not occur in practice
-
-                    EdgeKey correspondingEdgeKey = new EdgeKey(correspondingEdge[0], correspondingEdge[1]);
-
-                    //Once we add two faces to the edge we are done
-                    if (output[correspondingEdgeKey].Faces.Count == 2)
-                        continue;
-
-                    MorphMeshVertex[] CorrespondingVerts = new MorphMeshVertex[] { output.GetVertex(correspondingEdge[0]), output.GetVertex(correspondingEdge[1]) }.OrderBy(v => v.Position.Z).ToArray();
-                    MorphMeshVertex[] OtherVerts = face.Where(f => f != correspondingEdgeKey.A && f != correspondingEdgeKey.B).Select(f => output.GetVertex(f)).OrderBy(f => f.Position.Z).ToArray();
-
-                    int[] vertsA = new int[] { CorrespondingVerts[0].Index, CorrespondingVerts[1].Index, OtherVerts[0].Index };
-                    int[] vertsB = new int[] { OtherVerts[0].Index, CorrespondingVerts[1].Index, OtherVerts[1].Index };
-                    
-                    MorphMeshFace FaceA = new MorphMeshFace(vertsA);
-                    MorphMeshFace FaceB = new MorphMeshFace(vertsB);
-
-                    //output.SplitFace(quadFace);
-                    output.AddFace(FaceA);
-                    output.AddFace(FaceB);
-                    *******************/
-
-                }
-                else
-                {
-                    GridVector2[] verts = tri_face.Select(f => vertArray[f]).ToArray();
-
-                    if (verts.AreClockwise())
-                    {
-                        output.AddFace(new MorphMeshFace(face[1], face[0], face[2]));
-                    }
-                    else
-                    {
-                        output.AddFace(new MorphMeshFace(face));
-                    }
-                }
-            }
-
-            return;
-        }
         
 
+        public static BajajGeneratorMesh ToMorphRenderMesh(TriangleNet.Meshing.IMesh mesh, GridPolygon[] Polygons, double[] PolyZ)
+        {
+            double MinZ = PolyZ.Min();
+            BajajGeneratorMesh output = new BajajGeneratorMesh(Polygons, PolyZ, IsUpperPolygon: PolyZ.Select(Z => Z != MinZ).ToArray());
+            BajajMeshGenerator.AddTriangulationEdgesToMesh(mesh, output);
+            return output;
+        }
+         
 
         private Color GetColorForLine(PointIndex APoly, PointIndex BPoly, GridPolygon[] Polygons, GridVector2 midpoint)
         {

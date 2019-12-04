@@ -161,7 +161,7 @@ namespace AnnotationVizLib
             {
                 GridBox bbox = shape_to_check.BoundingBox;
                 bbox.Scale(scale_factor);
-                found_nodes = rtree.Intersects(bbox.ToRTreeRect());
+                found_nodes = rtree.Intersects(bbox.ToRTreeRect()).ToList();
                 scale_factor *= 2.0;
             }
 

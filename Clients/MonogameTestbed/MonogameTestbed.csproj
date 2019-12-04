@@ -42,6 +42,7 @@
     <ApplicationIcon>Icon.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="BajajMultiTest.cs" />
     <Compile Include="BoundaryFinder.cs" />
     <Compile Include="BajajTest.cs" />
     <Compile Include="BranchPortTest.cs" />
@@ -74,7 +75,6 @@
       <DesignTimeSharedInput>True</DesignTimeSharedInput>
       <DependentUpon>Settings.settings</DependentUpon>
     </Compile>
-    <Compile Include="RegionGraphExtensions.cs" />
     <Compile Include="SqlServerTypes\Loader.cs" />
     <Compile Include="StandardCameraManipulator.cs" />
     <Compile Include="StandardGeometryModels.cs" />

@@ -33,7 +33,8 @@ namespace MonogameTestbed
         BRANCHASSIGNMENT,
         DELAUNAY2D,
         DELAUNAY3D,
-        BAJAJTEST
+        BAJAJTEST,
+        BAJAJMULTITEST
     };
 
     /// <summary>
@@ -70,6 +71,7 @@ namespace MonogameTestbed
         Delaunay2DTest delaunay2DTest = new Delaunay2DTest();
         Delaunay3DTest delaunay3DTest = new Delaunay3DTest();
         BajajAssignmentTest bajajTest = new BajajAssignmentTest();
+        BajajMultiAssignmentTest bajajMultiTest = new BajajMultiAssignmentTest();
 
         SortedDictionary<TestMode, IGraphicsTest> listTests = new SortedDictionary<TestMode, IGraphicsTest>();
 
@@ -155,6 +157,7 @@ namespace MonogameTestbed
             listTests.Add(TestMode.DELAUNAY2D, delaunay2DTest);
             listTests.Add(TestMode.DELAUNAY3D, delaunay3DTest);
             listTests.Add(TestMode.BAJAJTEST, bajajTest);
+            listTests.Add(TestMode.BAJAJMULTITEST, bajajMultiTest);
         }
 
         /// <summary>
@@ -226,6 +229,8 @@ namespace MonogameTestbed
                 this.Mode = TestMode.DELAUNAY2D;
             if (Keyboard.GetState().IsKeyDown(Keys.NumPad6))
                 this.Mode = TestMode.CURVE_SIMPLIFICATION;
+            if (Keyboard.GetState().IsKeyDown(Keys.NumPad7))
+                this.Mode = TestMode.BAJAJMULTITEST;
 
             if (!listTests[Mode].Initialized)
             {

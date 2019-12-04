@@ -8,12 +8,13 @@ using VikingMeshing = Geometry.Meshing;
 using TriangleNet;
 using TriangleNet.Meshing;
 using TriangleNet.Geometry;
+using TriVertex = TriangleNet.Geometry.Vertex;
 
 namespace TriangleNet
 {
     public static class TriangleExtensions
     {
-        public static GridVector2 ToGridVector2(this Vertex v)
+        public static GridVector2 ToGridVector2(this TriVertex v)
         {
             return new GridVector2(v.X, v.Y);
         }
@@ -23,7 +24,7 @@ namespace TriangleNet
             return new GridVector2(v.X, v.Y);
         }
 
-        public static GridVector3 ToGridVector3(this Vertex v, double Z)
+        public static GridVector3 ToGridVector3(this TriVertex v, double Z)
         {
             return new GridVector3(v.X, v.Y, Z);
         }
@@ -39,7 +40,7 @@ namespace TriangleNet
                 return null;
 
             List<GridLineSegment> listLines = new List<GridLineSegment>();
-            //Create a map of Vertex ID's to DRMesh ID's
+            //Create a map of TriVertex ID's to DRMesh ID's
             int[] IndexMap = mesh.Vertices.Select(v => v.ID).ToArray();
 
             foreach (var e in mesh.Edges)
@@ -77,9 +78,9 @@ namespace TriangleNet
                 return null;
 
             SortedSet<GridLineSegment> listLines = new SortedSet<GridLineSegment>();
-            //Create a map of Vertex ID's to DRMesh ID's
+            //Create a map of TriVertex ID's to DRMesh ID's
             int[] IndexMap = mesh.Vertices.Select(v => v.ID).ToArray();
-            Vertex[] verticies = mesh.Vertices.ToArray();
+            TriVertex[] verticies = mesh.Vertices.ToArray();
 
             foreach (var t in mesh.Triangles)
             {
@@ -97,9 +98,9 @@ namespace TriangleNet
                 return null;
 
             List<GridTriangle> listTriangles = new List<GridTriangle>();
-            //Create a map of Vertex ID's to DRMesh ID's
+            //Create a map of TriVertex ID's to DRMesh ID's
             int[] IndexMap = mesh.Vertices.Select(v => v.ID).ToArray();
-            Vertex[] verticies = mesh.Vertices.ToArray();
+            TriVertex[] verticies = mesh.Vertices.ToArray();
 
             foreach (var tri in mesh.Triangles)
             {
@@ -150,7 +151,7 @@ namespace TriangleNet
         /// <param name="other"></param>
         public static void Append(this Polygon polygon, GridPolygon other)
         {
-            TriangleNet.Geometry.Contour contour = new TriangleNet.Geometry.Contour(other.ExteriorRing.Select(p => new Vertex(p.X, p.Y)));
+            TriangleNet.Geometry.Contour contour = new TriangleNet.Geometry.Contour(other.ExteriorRing.Select(p => new TriVertex(p.X, p.Y)));
             polygon.Add(contour);
         }
 
@@ -163,7 +164,7 @@ namespace TriangleNet
         {
             points = points.EnsureOpenRing();
 
-            foreach (Vertex v in points.Select(p => new Vertex(p.X, p.Y)))
+            foreach (TriVertex v in points.Select(p => new TriVertex(p.X, p.Y)))
             {
                 polygon.Add(v);
             }
@@ -176,7 +177,7 @@ namespace TriangleNet
         /// <param name="other"></param>
         public static void AppendCountour(this Polygon polygon, ICollection<GridVector2> points)
         {
-            TriangleNet.Geometry.Contour contour = new TriangleNet.Geometry.Contour(points.Select(p => new Vertex(p.X, p.Y)));
+            TriangleNet.Geometry.Contour contour = new TriangleNet.Geometry.Contour(points.Select(p => new TriVertex(p.X, p.Y)));
             polygon.Add(contour, true);
         }
 
@@ -226,7 +227,7 @@ namespace TriangleNet
             TriangleNet.Geometry.Polygon polygon = new TriangleNet.Geometry.Polygon(points.Count);
             TriangleNet.Geometry.Vertex[] verticies = points.Select((v, i) => new TriangleNet.Geometry.Vertex(v.X, v.Y)).ToArray();
 
-            foreach (Vertex v in verticies)
+            foreach (TriVertex v in verticies)
             {
                 polygon.Add(v);
             }
@@ -262,7 +263,7 @@ namespace TriangleNet
             {
                 foreach (IPoint2D p in internalPoints)
                 {
-                    polygon.Add(new Vertex(p.X, p.Y));
+                    polygon.Add(new TriVertex(p.X, p.Y));
                 }
             }
 
@@ -289,18 +290,18 @@ namespace TriangleNet
 
             var mesher = new TriangleNet.Meshing.GenericMesher();
 
-            List<Vertex> tri_verts = input_mesh.Verticies.Select(v => v.ToTriangleNetVertex()).ToList();
+            List<TriVertex> tri_verts = input_mesh.Verticies.Select(v => v.ToTriangleNetVertex()).ToList();
 
-            foreach(Vertex v in tri_verts)
+            foreach(TriVertex v in tri_verts)
             {
                 fake_poly.Add(v);
             }
 
             List<Segment> tri_segments = input_mesh.Edges.Values.Where(seg => input_mesh.Verticies[seg.A].Position.XY() != input_mesh.Verticies[seg.B].Position.XY()).
                                                                             Select(seg => {
-                                                                                Vertex seg_v1 = input_mesh.Verticies[seg.A].ToTriangleNetVertex();
-                                                                                Vertex seg_v2 = input_mesh.Verticies[seg.B].ToTriangleNetVertex();
-                
+                                                                                TriVertex seg_v1 = input_mesh.Verticies[seg.A].ToTriangleNetVertex();
+                                                                                TriVertex seg_v2 = input_mesh.Verticies[seg.B].ToTriangleNetVertex();
+
                                                                                 Segment tri_seg = new Segment(seg_v1, seg_v2);
                                                                                 return tri_seg;
                                                                             }).ToList();
@@ -316,16 +317,16 @@ namespace TriangleNet
             return output_mesh;
         }
 
-        public static Vertex ToTriangleNetVertex(this VikingMeshing.IVertex vert)
+        public static TriVertex ToTriangleNetVertex(this VikingMeshing.IVertex vert)
         {
-            Vertex out_v = new Vertex(vert.Position.X, vert.Position.Y);
+            TriVertex out_v = new TriVertex(vert.Position.X, vert.Position.Y);
             out_v.ID = vert.Index;
             return out_v;
         }
 
-        public static Vertex ToTriangleNetVertex(this GridVector2 vert, int ID)
+        public static TriVertex ToTriangleNetVertex(this GridVector2 vert, int ID)
         {
-            Vertex out_v = new Vertex(vert.X, vert.Y);
+            TriVertex out_v = new TriVertex(vert.X, vert.Y);
             out_v.ID = ID;
             return out_v;
         }
@@ -359,20 +360,20 @@ namespace TriangleNet
 
             foreach (GridVector2 p in points)
             {
-                polygon.Add(new Vertex(p.X, p.Y));
+                polygon.Add(new TriVertex(p.X, p.Y));
                 //System.Diagnostics.Trace.WriteLine(string.Format("ADD POINT {0}x {1}y", p.X, p.Y));
             }
             /*
             foreach (GridVector2 p in AddedPoints)
             {
-                polygon.Add(new Vertex(p.X, p.Y));
+                polygon.Add(new TriVertex(p.X, p.Y));
             }
             */
             /*
             //Add constraints for the non-intersecting line segments
             foreach (GridLineSegment line in NonIntersectingSegments)
             {
-                Segment seg = new Segment(new Vertex(line.A.X, line.A.Y), new Vertex(line.B.X, line.B.Y));
+                Segment seg = new Segment(new TriVertex(line.A.X, line.A.Y), new TriVertex(line.B.X, line.B.Y));
                 System.Diagnostics.Trace.WriteLine(string.Format("ADD SEGMENT {0}x {1}y - {2}x {3}y - ", line.A.X, line.A.Y, line.B.X, line.B.Y));
                  
                 polygon.Add(seg, false);
@@ -444,7 +445,7 @@ namespace TriangleNet
 
         public static TriangleNet.Voronoi.VoronoiBase Voronoi(this ICollection<GridVector2> input)
         {
-            TriangleNet.Geometry.Vertex[] verticies = input.Select(p => new Vertex(p.X, p.Y)).ToArray();
+            TriangleNet.Geometry.Vertex[] verticies = input.Select(p => new TriVertex(p.X, p.Y)).ToArray();
 
             return verticies.Voronoi();
         }
@@ -482,10 +483,10 @@ namespace TriangleNet
             return null;
         }
 
-        public static TriangleNet.Voronoi.VoronoiBase Voronoi(this ICollection<Vertex> verticies)
+        public static TriangleNet.Voronoi.VoronoiBase Voronoi(this ICollection<TriVertex> verticies)
         {
             Polygon polygon = new Polygon();
-            foreach (Vertex v in verticies)
+            foreach (TriVertex v in verticies)
             {
                 polygon.Add(v);
             }

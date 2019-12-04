@@ -123,5 +123,19 @@ namespace AnnotationVizLib
 
             return this.Edges.Where(e => this.IsNodeBelow(graph.Nodes[e.Key])).Select(e => e.Key).ToArray();
         }
+
+        /// <summary>
+        /// Return edges conneted to nodes above this node in Z
+        /// </summary>
+        public IEnumerable<IGrouping<double, MorphologyNode>> GetConnectedNodesGroupedByZ(MorphologyGraph graph = null)
+        {
+            if (graph == null)
+            {
+                graph = this.Graph;
+            }
+
+            return this.Edges.Keys.Select(other => graph.Nodes[other]).GroupBy(other => other.Z);
+        }
+
     }
 }

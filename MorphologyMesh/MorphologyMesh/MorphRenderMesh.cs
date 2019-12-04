@@ -6,7 +6,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Geometry.Meshing;
-using Geometry; 
+using Geometry;
+using TriangleNet;
 
 namespace MorphologyMesh
 {
@@ -51,12 +52,14 @@ namespace MorphologyMesh
 
     }
 
-    
 
 
     /// <summary>
     /// A 3D mesh that records the polygons used to construct the mesh.  Tracks the original polygonal index
     /// of every vertex and the type of edge connecting verticies.
+    /// 
+     
+    /// 
     /// </summary>
     public class MorphRenderMesh : DynamicRenderMesh
     {
@@ -64,9 +67,7 @@ namespace MorphologyMesh
 
         public double[] PolyZ { get; private set; }
 
-        private List<MorphMeshRegion> _Regions = new List<MorphMeshRegion>();
-
-        public List<MorphMeshRegion> Regions { get; private set; }
+       
 
         private Dictionary<PointIndex, long> PolyIndexToVertex = new Dictionary<PointIndex, long>();
 
@@ -80,12 +81,13 @@ namespace MorphologyMesh
         /// </summary>
         /// <param name="polygons"></param>
         /// <param name="ZLevels"></param>
-        public MorphRenderMesh(GridPolygon[] polygons, double[] ZLevels)
+        /// <param name="IsUpperPolygon">True indicates the polygon</param>
+        public MorphRenderMesh(IReadOnlyList<GridPolygon> polygons, IReadOnlyList<double> ZLevels)
         {
             //TODO: I don't add corresponding verticies at overlap points due to how the original MonogameTestbed was written, but I probably should. 
-            Debug.Assert(polygons.Length == ZLevels.Length);
-            Polygons = polygons;
-            PolyZ = ZLevels;
+            Debug.Assert(polygons.Count == ZLevels.Count);
+            Polygons = polygons.ToArray();
+            PolyZ = ZLevels.ToArray();
             this.CreateOffsetVertex = MorphMeshVertex.CreateOffsetCopy;
             this.CreateOffsetEdge = MorphMeshEdge.Duplicate;
             this.CreateOffsetFace = MorphMeshFace.CreateOffsetCopy;
@@ -181,31 +183,7 @@ namespace MorphologyMesh
             throw new NotImplementedException();
         }
 
-        public List<GridPolygon> GetSameLevelPolygons(PointIndex key)
-        {
-            double PointZ = PolyZ[key.iPoly];
-            return PolygonsByZ[PointZ].Values.ToList();
-        }
-
-        public List<GridPolygon> GetAdjacentLevelPolygons(PointIndex key)
-        {
-            double PointZ = PolyZ[key.iPoly];
-            double OtherZ = PolyZ.Where(z => z != PointZ).First();
-            return PolygonsByZ[OtherZ].Values.ToList();
-        }
-
-        public List<GridPolygon> GetSameLevelPolygons(SliceChord sc)
-        {
-            double Z = this.PolyZ[sc.Origin.iPoly];
-            return PolygonsByZ[Z].Values.ToList();
-        }
-
-        public List<GridPolygon> GetAdjacentLevelPolygons(SliceChord sc)
-        {
-            Debug.Assert(PolyZ[sc.Origin.iPoly] != PolyZ[sc.Target.iPoly]);
-            double Z = this.PolyZ[sc.Target.iPoly];
-            return PolygonsByZ[Z].Values.ToList();
-        }
+        
 
         public new MorphMeshVertex this[int key]
         {
@@ -276,6 +254,23 @@ namespace MorphologyMesh
             return iStartVert;
         }
 
+        public MorphMeshVertex GetOrAddVertex(PointIndex pIndex, GridVector3 vert3)
+        {
+            MorphMeshVertex meshVertex;
+            if (!this.Contains(pIndex))
+            {
+                meshVertex = new MorphMeshVertex(pIndex, vert3); //TODO: Add normal here?
+                this.AddVertex(meshVertex);
+            }
+            else
+            {
+                meshVertex = this[pIndex];
+                Debug.Assert(meshVertex.Position == vert3); //The mesh version and the version we expect should be in the same position
+            }
+
+            return meshVertex;
+        }
+
         public MorphMeshEdge GetEdge(IEdgeKey key)
         {
             return (MorphMeshEdge)Edges[key];
@@ -344,11 +339,7 @@ namespace MorphologyMesh
             return;
         }
 
-        public void IdentifyRegions()
-        {
-            this.Regions = IdentifyRegions(this); 
-        }
-
+         
         /// <summary>
         /// A helper function that ensures all faces have the same Z level
         /// </summary>
@@ -376,8 +367,191 @@ namespace MorphologyMesh
             return criteria(mesh, face);
         }
 
+
+        /// <summary>
+        /// Assign all incomplete verticies (verts without a full set of faces) to regions based on connectivity
+        /// </summary>
+        /// <param name="mesh"></param>
+        /// <param name="IncompleteVerticies"></param>
+        /// <returns></returns>
+        public static MorphMeshRegionGraph SecondPassRegionDetection(MorphRenderMesh mesh, List<MorphMeshVertex> IncompleteVerticies)
+        {
+            MorphMeshRegionGraph graph = new MorphMeshRegionGraph();
+
+            SortedSet<MorphMeshVertex> listUnassignedVerticies = new SortedSet<MorphMeshVertex>(IncompleteVerticies);
+            while (listUnassignedVerticies.Count > 0)
+            {
+                var v = listUnassignedVerticies.First();
+                listUnassignedVerticies.Remove(v);
+
+                //Identify edges missing faces
+                List<IEdge> edges = v.Edges.Select(key => mesh.Edges[key]).Where(e => e.Faces.Count < 2).ToList();
+
+                foreach (var edge in edges)
+                {
+                    Stack<int> searchHistory = new Stack<int>();
+                    searchHistory.Push(v.Index);
+                    List<int> Face = mesh.IdentifyIncompleteFace(v);
+                    if (Face != null)
+                    {
+                        listUnassignedVerticies.RemoveWhere(iVert => Face.Contains(iVert.Index));
+                        MorphMeshRegion region = null;
+
+                        List<MorphMeshFace> listRegionFaces = RegionPerimeterToFaces(mesh, Face);
+
+                        region = new MorphMeshRegion(mesh, listRegionFaces, RegionType.UNTILED);
+
+                        foreach (MorphMeshFace rFace in region.Faces)
+                        {
+                            mesh.AddFace(rFace);
+                        }
+
+                        graph.AddNode(region);
+                        break;
+                    }
+
+                    //TODO: Remove edges that now have faces or are in a region
+                }
+            }
+
+            return graph;
+        }
+
+        /// <summary>
+        /// Take a list of vertex indicies that describe the closed perimeter of a region without faces in the mesh.  Triangulate the verticies and insert faces based upon the triangulation
+        /// </summary>
+        public static List<MorphMeshFace> RegionPerimeterToFaces(MorphRenderMesh mesh, List<int> Face)
+        {
+            if (Face == null)
+                return new List<MorphMeshFace>();
+
+            if (Face.Count == 3)
+            {
+                //If the region is only 4 points or less just create a face and region
+                MorphMeshFace newFace = new MorphMeshFace(Face);
+                return new MorphMeshFace[] { newFace }.ToList();
+            }
+            else if (Face.Count == 4)
+            {
+                //If the region is only 4 points or less just create a face and region
+                MorphMeshFace newFace = new MorphMeshFace(Face);
+
+                //Check for a corresponding edge, if it exists split on the corresponding edge
+                for (int iVert = 0; iVert < Face.Count; iVert++)
+                {
+                    MorphMeshVertex vA = mesh[Face[iVert]];
+                    MorphMeshVertex vB = mesh[Face[iVert + 1]];
+
+                    EdgeKey key;
+                    if (mesh.IsAnEdge(vA.Index, vB.Index))
+                    {
+                        key = new EdgeKey(vA.Index, vB.Index);
+                    }
+                    else if (mesh.IsAnEdge(vA.Index, vB.Index))
+                    {
+                        key = new EdgeKey(vB.Index, vA.Index);
+                    }
+                    else
+                    {
+                        continue;
+                    }
+
+                    MorphMeshEdge edge = mesh.GetEdge(key);
+                    if (edge.Type == EdgeType.CORRESPONDING)
+                    {
+                        //Split the face along the corresponding edge
+                        int iPrev = iVert - 1 < 0 ? Face.Count - 1 : iVert - 1;
+                        int iNext = iVert + 2 >= Face.Count ? 0 : iVert + 2;
+
+                        List<MorphMeshFace> listFaces = new List<MorphMeshFace>(2);
+                        listFaces.Add(new MorphMeshFace(new int[] { Face[iPrev], Face[iVert], Face[iVert + 1] }));
+                        listFaces.Add(new MorphMeshFace(new int[] { Face[iVert], Face[iVert + 1], Face[iNext] }));
+                        return listFaces;
+                    }
+                    else
+                    {
+                        //TODO: Check for the shortest distance to cut the face along
+                        //Split the face along the corresponding edge
+                        int iPrev = iVert - 1 < 0 ? Face.Count - 1 : iVert - 1;
+                        int iNext = iVert + 2 >= Face.Count ? 0 : iVert + 2;
+
+                        List<MorphMeshFace> listFaces = new List<MorphMeshFace>(2);
+                        listFaces.Add(new MorphMeshFace(new int[] { Face[iPrev], Face[iVert], Face[iVert + 1] }));
+                        listFaces.Add(new MorphMeshFace(new int[] { Face[iVert], Face[iVert + 1], Face[iNext] }));
+                        return listFaces;
+                    }
+                }
+
+                return new List<MorphMeshFace> { newFace };
+            }
+            else
+            {
+                //Triangulate the region border to identify faces of the region
+                GridVector3[] region_border_points = Face.Select(iVert => mesh[iVert].Position).ToArray();
+
+                //Dictionary<GridVector2, long> PointToMeshIndex = new Dictionary<GridVector2, long>();
+                Dictionary<GridVector2, int> PointToMeshIndex = Face.ToDictionary<int, GridVector2>(iVert => mesh[iVert].Position.XY());
+
+                //If there are any duplicate points that indicates a corresponding contour was involved.  In this case we cut the polygon into two halves and triangulate those
+                int[] countDuplicatesInstances = region_border_points.Select(v => region_border_points.Count(v2 => v2.XY() == v.XY())).ToArray();
+
+                //If there are corresponding verticies we can have duplicate points in the set which will break triangulation.
+                if (countDuplicatesInstances.Max() > 1)
+                {
+                    //Break the corresponding verticies into sub-polygons and build triangles for each
+
+                }
+
+                //Create a polygon for the region
+                GridPolygon regionBorder = new GridPolygon(Face.EnsureClosedRing().Select(iVert => mesh[iVert].Position.XY()).ToArray());
+
+                //string json = regionBorder.ToJSON();
+
+                //GridPolygon loadedFromJSON = GeometryJSONExtensions.PolygonFromJSON(json);
+                //Triangulate the region
+                TriangleNet.Meshing.IMesh regionMesh = regionBorder.Triangulate(UseSteiner: false);
+
+                int[] indicies = regionMesh.IndiciesForPointsXY(regionBorder.ExteriorRing);
+
+                List<GridTriangle> listTriangles = regionMesh.ToTriangles();
+                List<MorphMeshFace> listRegionFaces = new List<MorphMeshFace>(listTriangles.Count);
+
+                //Experimental: Handle the case where we had to add new points to the mesh.  It would be better if these points weren't added at all...
+
+                //for(int i = Face.Count; i < regionMesh.Vertices.Count; i++)
+                //{
+                //mesh.AddVertex(regionMesh.Vertices[i])
+                //}
+
+                List<int[]> listXYPointIndicies = listTriangles.Select(t => regionMesh.IndiciesForPointsXY(t.Points)).ToList();
+                List<int[]> listMeshFaces = listXYPointIndicies.Select(iPoints => iPoints.Select(i => Face[i]).ToArray()).ToList();
+
+                List<GridLineSegment> lines = regionMesh.ToLines();
+
+                List<int[]> listLineIndicies = lines.Select(l => regionMesh.IndiciesForPointsXY(new GridVector2[] { l.A, l.B })).ToList();
+
+
+                foreach (GridTriangle tri in listTriangles)
+                {
+
+                    //int[] iMeshVerts = regionMesh.IndiciesForPointsXY(tri.Points);
+                    int[] iMeshVerts = tri.Points.Select(p => PointToMeshIndex[p]).ToArray();
+
+                    //MorphMeshFace newFace = new MorphMeshFace(iMeshVerts.Select(i => Face[i]));
+                    MorphMeshFace newFace = new MorphMeshFace(iMeshVerts);
+                    listRegionFaces.Add(newFace);
+                }
+
+                return listRegionFaces;
+            }
+
+        }
+
         /// <summary>
         /// Identify all adjacent faces which have an invalid edge in the same plane (Z level)
+        /// 
+        /// I left this function in MorphologyMesh instead of moving to BajajMeshGenerator because
+        /// it should work regardless of the number of Z levels in the mesh. 
         /// </summary>
         public static List<MorphMeshRegion> IdentifyRegions(MorphRenderMesh mesh)
         {
@@ -412,7 +586,10 @@ namespace MorphologyMesh
 
                 if (face.IsInExposedRegion(mesh))
                 {
-                    MorphMeshRegion region = new MorphMeshRegion(mesh, mesh.FloodFillRegion(face, (m, foundFace) => IsInRegion(m, foundFace, MorphMeshFace.IsInExposedRegion, FaceZ.Value), MorphMeshFace.AdjacentFaceDoesNotCrossContour, FacesAssignedToRegions), RegionType.EXPOSED);
+                    MorphMeshRegion region = new MorphMeshRegion(mesh, mesh.FloodFillRegion(face,
+                        (m, foundFace) => IsInRegion(m, foundFace, MorphMeshFace.IsInExposedRegion, FaceZ.Value),
+                        MorphMeshFace.AdjacentFaceDoesNotCrossContour, FacesAssignedToRegions),
+                        RegionType.EXPOSED);
                     listRegions.Add(region);
                     FacesAssignedToRegions.UnionWith(region.Faces);
                     continue;
@@ -420,7 +597,11 @@ namespace MorphologyMesh
 
                 if (face.IsInHoleRegion(mesh))
                 {
-                    MorphMeshRegion region = new MorphMeshRegion(mesh, mesh.FloodFillRegion(face, (m, foundFace) => IsInRegion(m, foundFace, MorphMeshFace.IsInHoleRegion,  FaceZ.Value), MorphMeshFace.AdjacentFaceDoesNotCrossContour, FacesAssignedToRegions), RegionType.HOLE);
+                    MorphMeshRegion region = new MorphMeshRegion(mesh, mesh.FloodFillRegion(face, (m, foundFace) =>
+                        IsInRegion(m, foundFace, MorphMeshFace.IsInHoleRegion,  FaceZ.Value),
+                        MorphMeshFace.AdjacentFaceDoesNotCrossContour,
+                        FacesAssignedToRegions),
+                        RegionType.HOLE);
                     listRegions.Add(region);
                     FacesAssignedToRegions.UnionWith(region.Faces);
                     continue;
@@ -428,7 +609,10 @@ namespace MorphologyMesh
 
                 if (face.IsInInvaginatedRegion(mesh))
                 {
-                    MorphMeshRegion region = new MorphMeshRegion(mesh, mesh.FloodFillRegion(face, (m, foundFace) => IsInRegion(m, foundFace, MorphMeshFace.IsInInvaginatedRegion, FaceZ.Value), MorphMeshFace.AdjacentFaceDoesNotCrossContour, FacesAssignedToRegions), RegionType.INVAGINATION);
+                    MorphMeshRegion region = new MorphMeshRegion(mesh, mesh.FloodFillRegion(face,
+                        (m, foundFace) => IsInRegion(m, foundFace, MorphMeshFace.IsInInvaginatedRegion, FaceZ.Value),
+                        MorphMeshFace.AdjacentFaceDoesNotCrossContour, FacesAssignedToRegions),
+                        RegionType.INVAGINATION);
 
                     //Whether or not the region is valid we mark it as checked so we don't repeat the floodfill for every face in the region.
                     FacesAssignedToRegions.UnionWith(region.Faces);
@@ -456,6 +640,7 @@ namespace MorphologyMesh
             return IdentifyIncompleteFace(origin);
         }
 
+
         /// <summary>
         /// Find all edges that enclose a loop of verticies missing faces
         /// Returns a list of vertex indicies that describe the perimeter of a mesh region without a face, or null if one cannot be found
@@ -481,6 +666,11 @@ namespace MorphologyMesh
                         {
                             ShortestFace = Face;
                         }
+                        else if(ShortestFace.Count == Face.Count)
+                            {
+                                //In this case use the face with the smallest perimeter     
+                                ShortestFace = this.PathDistance(ShortestFace) < this.PathDistance(Face) ? ShortestFace : Face;
+                            }
                     }
                 }
             }
@@ -516,8 +706,6 @@ namespace MorphologyMesh
                 Path.Push(TargetVert);
             }
 
-           
-            
             /////////////////////////////////////////////////////////////
             
             CheckedEdges.Add(testEdge.Key);
@@ -653,13 +841,13 @@ namespace MorphologyMesh
         public SliceChordRTree CreateChordTree(ICollection<double> ZLevels)
         {
             SliceChordRTree rTree = new SliceChordRTree();
-
-            double MinZ = ZLevels.Min();
-            double MaxZ = ZLevels.Max();
+             
+            //double MinZ = ZLevels.Min();
+            //double MaxZ = ZLevels.Max();
             
             ///Create a list of all slice chords.  Contours are valid but are not slice chords since they don't cross sections
-            foreach (MorphMeshEdge e in this.Edges.Values.Where(e => this[e.A].Position.Z >= MinZ && this[e.A].Position.Z <= MaxZ &&
-                                                                     this[e.B].Position.Z >= MinZ && this[e.B].Position.Z <= MaxZ &&
+            foreach (MorphMeshEdge e in this.Edges.Values.Where(e => //this[e.A].Position.Z >= MinZ && this[e.A].Position.Z <= MaxZ &&
+                                                                     //this[e.B].Position.Z >= MinZ && this[e.B].Position.Z <= MaxZ &&
                                                                      (((MorphMeshEdge)e).Type != EdgeType.CONTOUR) &&
                                                                      (((MorphMeshEdge)e).Type != EdgeType.ARTIFICIAL) &&
                                                                      (((MorphMeshEdge)e).Type != EdgeType.CORRESPONDING)))

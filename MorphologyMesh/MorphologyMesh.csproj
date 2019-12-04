@@ -64,12 +64,14 @@
     <Compile Include="MedialAxis.cs" />
     <Compile Include="MeshGraph.cs" />
     <Compile Include="MeshGraphBuilder.cs" />
+    <Compile Include="MorphologyMesh\BajajGeneratorMesh.cs" />
     <Compile Include="MorphologyMesh\MorphMeshRegion.cs" />
     <Compile Include="MorphologyMesh\MorphMeshEdge.cs" />
     <Compile Include="MorphologyMesh\MorphMeshFace.cs" />
     <Compile Include="MorphologyMesh\MorphMeshRegionGraph.cs" />
     <Compile Include="MorphologyMesh\MorphMeshVertex.cs" />
     <Compile Include="MorphologyMesh\MorphRenderMesh.cs" />
+    <Compile Include="RegionGraphExtensions.cs" />
     <Compile Include="Serialization\ColladaExtensions.cs" />
     <Compile Include="Serialization\MorphologyColladaView.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
