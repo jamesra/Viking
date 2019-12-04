@@ -366,9 +366,11 @@ namespace Geometry
                 return true;
 
             //Do any line segments intersect our circle?
-            List<GridLineSegment> Candidates = poly.SegmentRTree.Intersects(circle.BoundingBox.ToRTreeRect()).Select(p => p.Segment(poly)).Where(segment => circle.Intersects(segment)).ToList();
-            foreach (GridLineSegment line in Candidates)
+            //List<GridLineSegment> Candidates = poly.SegmentRTree.Intersects(circle.BoundingBox.ToRTreeRect()).Select(p => p.Segment(poly)).Where(segment => circle.Intersects(segment)).ToList();
+            foreach (PointIndex p in poly.SegmentRTree.IntersectionGenerator(circle.BoundingBox.ToRTreeRect()))
             {
+                GridLineSegment line = p.Segment(poly);
+
                 if (circle.Intersects(line))
                     return true;
             }
