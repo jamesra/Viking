@@ -543,6 +543,28 @@ namespace RTree
         }
 
         /// <summary>
+        /// Retrieve items which intersect with Rectangle r.  Uses a Yield generator so the search can be terminated early if the desired object is found.
+        /// Be careful to not modify the rtree when using the yielded results or a deadlock should occur.
+        /// </summary>
+        /// <param name="r"></param>
+        /// <returns></returns>
+        public IEnumerable<T> IntersectionGenerator(Rectangle r)
+        {
+            try
+            {
+                rwLock.EnterReadLock();
+                foreach (int id in intersects(r))
+                {
+                    yield return IdsToItems[id];
+                }
+            }
+            finally
+            {
+                rwLock.ExitReadLock();
+            }
+        }
+
+        /// <summary>
         /// Retrieve items which intersect with Rectangle whose opposite corners are points A,B
         /// </summary>
         /// <param name="r"></param>
@@ -558,6 +580,12 @@ namespace RTree
         {
             Node<T> rootNode = getNode(rootNodeId);
             intersects(r, v, rootNode);
+        }
+
+        private IEnumerable<int> intersects(Rectangle r)
+        {
+            Node<T> rootNode = getNode(rootNodeId);
+            return intersects(r, rootNode);
         }
 
         public IList<T> Items
@@ -1141,6 +1169,38 @@ namespace RTree
                     {
                         Node<T> childNode = getNode(n.ids[i]);
                         intersects(r, v, childNode);
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Recursively searches the tree for all intersecting entries.
+        /// Immediately calls yield return on the passed IntProcedure when 
+        /// a matching entry is found.
+        /// [x] TODO rewrite this to be non-recursive? Make sure it
+        /// doesn't slow it down.
+        /// </summary>
+        /// <param name="r"></param>
+        /// <param name="v"></param>
+        /// <param name="n"></param>
+        private IEnumerable<int> intersects(Rectangle r, Node<T> n)
+        {
+            for (int i = 0; i < n.entryCount; i++)
+            {
+                if (r.intersects(n.entries[i]))
+                {
+                    if (n.isLeaf())
+                    { 
+                        yield return n.ids[i];
+                    }
+                    else
+                    {
+                        Node<T> childNode = getNode(n.ids[i]);
+                        foreach (int val in intersects(r, childNode))
+                        {
+                            yield return val;
+                        }
                     }
                 }
             }
