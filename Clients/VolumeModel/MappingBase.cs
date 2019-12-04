@@ -160,13 +160,40 @@ namespace Viking.VolumeModel
             get;
         }
 
+        protected AxisUnits _XYScale;
+        public virtual Geometry.AxisUnits XYScale
+        {
+            get
+            {
+                return _XYScale;
+            }
+        }
+
         /// <summary>
-        /// Returns the nearest available downsample level the 
+        /// Adjust a viewer downsample level to match the difference between the scale used in the pyramid/mapping and the maximum resolution scale for the volume
+        /// </summary>
+        /// <param name="input"></param>
+        /// <returns></returns>
+        protected double AdjustDownsampleForScale(double input)
+        {
+            if (this.XYScale == null)
+                return input;
+
+            if (this.Section.XYScale == null)
+                return input;
+
+            double relative_scale = this.XYScale.Value / this.Section.XYScale.Value;
+            return input / relative_scale;
+        }
+
+        /// <summary>
+        /// Returns the nearest available downsample level with a higher resolution than the viewers downsample.  Override when the section does not use the maximum X/Y Resolution of the volume.
         /// </summary>
         /// <param name="DownsampleLevel"></param>
         /// <returns></returns>
-        public int NearestAvailableLevel(double requestedLevel)
+        public virtual int NearestAvailableLevel(double requestedLevel)
         {
+            
             if (double.IsInfinity(requestedLevel))
             {
                 //Return the largest downsample value we have
@@ -174,7 +201,9 @@ namespace Viking.VolumeModel
             }
             else
             {
-                int roundedRequest = (int)Math.Floor(requestedLevel);
+                double scaledRequestedLevel = AdjustDownsampleForScale(requestedLevel);
+
+                int roundedRequest = (int)Math.Floor(scaledRequestedLevel);
                 int[] availableLevels = AvailableLevels;
                 //Debug.Assert(LevelToGridInfo.ContainsKey(roundedDownsample));
                 //We may not have full-res tiles if we are using multi-resolution data

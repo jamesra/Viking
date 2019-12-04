@@ -87,6 +87,11 @@ namespace Viking.VolumeModel
             AxisUnits XYScale = null;
             if (scale_elem != null)
                 XYScale = scale_elem.ParseScale();
+            else
+            {
+                //If we do not have a specific scale, assume the scale matches the section's scale
+                XYScale = section.XYScale; 
+            }
 
             XAttribute GridTileFormatAttribute = TilesetNode.Attribute("CoordFormat"); 
             if(GridTileFormatAttribute != null)

@@ -62,6 +62,14 @@ namespace Viking.VolumeModel
             }
         }
 
+        public override Geometry.AxisUnits XYScale
+        {
+            get
+            {
+                return CurrentPyramid.XYScale;
+            }
+        }
+
         protected ITransform[] _TileTransforms = null;
 
         public virtual ITransform[] TileTransforms

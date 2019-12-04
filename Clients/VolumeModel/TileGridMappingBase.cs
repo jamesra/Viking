@@ -37,28 +37,7 @@ namespace Viking.VolumeModel
         private int _MaxDownsample = int.MinValue;
         private int _MinDownsample = int.MaxValue;
 
-        protected AxisUnits _XYScale;
-        public Geometry.AxisUnits XYScale
-        {
-            get
-            {
-                return _XYScale;
-            }
-        }
-
-        /// <summary>
-        /// Adjust the downsample level to match the difference between the scale used in the pyramid/mapping and the default scale for the volume
-        /// </summary>
-        /// <param name="input"></param>
-        /// <returns></returns>
-        protected double AdjustDownsampleForScale(double input)
-        {
-            if (this.XYScale == null)
-                return input;
-
-            double relative_scale = this.XYScale.Value / this.Section.XYScale.Value;
-            return input / relative_scale;
-        }
+        
 
         public int MaxDownsample
         {
@@ -297,9 +276,9 @@ namespace Viking.VolumeModel
         {
             TilePyramid VisibleTiles = new TilePyramid(VisibleBounds);
 
-            double scaledDownsampleLevel = AdjustDownsampleForScale(DownSample);
+            //double scaledDownsampleLevel = AdjustDownsampleForScale(DownSample);
 
-            int roundedDownsample = NearestAvailableLevel(scaledDownsampleLevel); 
+            int roundedDownsample = NearestAvailableLevel(DownSample); 
 
             //Starting with low-res tiles, add tiles to the list until we reach desired resolution
 //            List<Tile> TilesToDraw = new List<Tile>(); 
