@@ -38,11 +38,16 @@ namespace Geometry.Meshing
     }
     
 
-    public class DynamicRenderMesh
+    public class DynamicRenderMesh : IMesh<IVertex>
     {
-        public readonly List<IVertex> Verticies = new List<IVertex>();
-        public readonly SortedList<IEdgeKey, IEdge> Edges = new SortedList<IEdgeKey, IEdge>();
-        public readonly SortedSet<IFace> Faces = new SortedSet<IFace>();
+        private readonly List<IVertex> _Verticies = new List<IVertex>();
+        private readonly SortedList<IEdgeKey, IEdge> _Edges = new SortedList<IEdgeKey, IEdge>();
+        private readonly SortedSet<IFace> _Faces = new SortedSet<IFace>();
+
+        public List<IVertex> Verticies { get { return _Verticies; } }
+
+        public SortedList<IEdgeKey, IEdge> Edges { get { return _Edges; } }
+        public SortedSet<IFace> Faces { get { return _Faces; } }
 
         public Func<IVertex,int,IVertex> CreateOffsetVertex { get; set; }
         public Func<IEdge, int, int, IEdge> CreateOffsetEdge { get; set; }
@@ -60,11 +65,11 @@ namespace Geometry.Meshing
         {
             get
             {
-                return Verticies[key];
+                return _Verticies[key];
             }
             set
             {
-                Verticies[key] = value;
+                _Verticies[key] = value;
             }
         }
 
@@ -72,17 +77,17 @@ namespace Geometry.Meshing
         {
             get
             {
-                return Verticies[(int)key];
+                return _Verticies[(int)key];
             }
             set
             {
-                Verticies[(int)key] = value;
+                _Verticies[(int)key] = value;
             }
         }
 
         public virtual IEdge this[IEdgeKey key]
         {
-            get { return this.Edges[key]; }
+            get { return this._Edges[key]; }
         }
 
         public DynamicRenderMesh()
@@ -112,9 +117,9 @@ namespace Geometry.Meshing
 
         protected void ValidateBoundingBox()
         {
-            Debug.Assert(BoundingBox.MinCorner.X == this.Verticies.Select(v => v.Position.X).Min());
-            Debug.Assert(BoundingBox.MinCorner.Y == this.Verticies.Select(v => v.Position.Y).Min());
-            Debug.Assert(BoundingBox.MinCorner.Z == this.Verticies.Select(v => v.Position.Z).Min());
+            Debug.Assert(BoundingBox.MinCorner.X == this._Verticies.Select(v => v.Position.X).Min());
+            Debug.Assert(BoundingBox.MinCorner.Y == this._Verticies.Select(v => v.Position.Y).Min());
+            Debug.Assert(BoundingBox.MinCorner.Z == this._Verticies.Select(v => v.Position.Z).Min());
         }
 
         public void Scale(double scalar)
@@ -122,7 +127,7 @@ namespace Geometry.Meshing
             GridVector3 minCorner = BoundingBox.MinCorner;
             GridVector3 scaledCorner = minCorner.Scale(scalar);
 
-            this.Verticies.ForEach(v => v.Position = v.Position.Scale(scalar));
+            this._Verticies.ForEach(v => v.Position = v.Position.Scale(scalar));
             BoundingBox.Scale(scalar);
 
             BoundingBox = new GridBox(scaledCorner, BoundingBox.dimensions);
@@ -132,7 +137,7 @@ namespace Geometry.Meshing
 
         public void Translate(GridVector3 translate)
         {
-            foreach(IVertex v in Verticies)
+            foreach(IVertex v in _Verticies)
             {
                 v.Position += translate;
             }
@@ -164,11 +169,11 @@ namespace Geometry.Meshing
 
         public int AddVertex(IVertex v)
         {
-            v.Index = Verticies.Count; 
-            Verticies.Add(v);
+            v.Index = _Verticies.Count; 
+            _Verticies.Add(v);
 
             UpdateBoundingBox(v.Position);
-            return Verticies.Count - 1; 
+            return _Verticies.Count - 1; 
         }
 
         /// <summary>
@@ -179,7 +184,7 @@ namespace Geometry.Meshing
         public int AddVerticies(ICollection<IVertex> verts)
         {
             
-            int iStart = Verticies.Count;
+            int iStart = _Verticies.Count;
             int Offset = 0;
             foreach (IVertex v in verts)
             {
@@ -187,7 +192,7 @@ namespace Geometry.Meshing
                 Offset += 1;
             }
 
-            Verticies.AddRange(verts);
+            _Verticies.AddRange(verts);
             UpdateBoundingBox(verts.Select(v => v.Position).ToArray());
             return iStart;
         }
@@ -206,20 +211,20 @@ namespace Geometry.Meshing
             if (CreateOffsetEdge == null)
                 throw new InvalidOperationException("DuplicateEdge function not specified for DynamicRenderMesh");
 
-            if (Edges.ContainsKey(e))
+            if (this.Contains(e))
                 return;
 
-            if (e.A >= Verticies.Count || e.A < 0)
+            if (e.A >= _Verticies.Count || e.A < 0)
                 throw new ArgumentException(string.Format("Edge vertex A references non-existent vertex {0}", e));
 
-            if (e.B >= Verticies.Count || e.B < 0)
+            if (e.B >= _Verticies.Count || e.B < 0)
                 throw new ArgumentException(string.Format("Edge vertex B references non-existent vertex {0}", e));
 
             IEdge newEdge = CreateOffsetEdge(null, e.A, e.B);
             Edges.Add(e, newEdge);
 
-            Verticies[(int)e.A].AddEdge(e);
-            Verticies[(int)e.B].AddEdge(e);
+            _Verticies[(int)e.A].AddEdge(e);
+            _Verticies[(int)e.B].AddEdge(e);
         }
         
 
@@ -228,19 +233,19 @@ namespace Geometry.Meshing
             if (e.A == e.B)
                 throw new ArgumentException("Edges cannot have the same start and end point");
 
-            if (Edges.ContainsKey(e.Key))
+            if (this.Contains(e.Key))
                 return;
 
-            if (e.A >= Verticies.Count || e.A < 0)
+            if (e.A >= _Verticies.Count || e.A < 0)
                 throw new ArgumentException(string.Format("Edge vertex A references non-existent vertex {0}", e));
 
-            if (e.B >= Verticies.Count || e.B < 0)
+            if (e.B >= _Verticies.Count || e.B < 0)
                 throw new ArgumentException(string.Format("Edge vertex B references non-existent vertex {0}", e));
 
             Edges.Add(e.Key, e);
 
-            Verticies[(int)e.A].AddEdge(e.Key);
-            Verticies[(int)e.B].AddEdge(e.Key);
+            _Verticies[(int)e.A].AddEdge(e.Key);
+            _Verticies[(int)e.B].AddEdge(e.Key);
         }
 
         /// <summary>
@@ -250,7 +255,7 @@ namespace Geometry.Meshing
         /// <returns>The merged index number of the first vertex from the mesh merged into this mesh</returns>
         public long Merge(DynamicRenderMesh other)
         {
-            long iVertMergeStart = this.Verticies.Count;
+            long iVertMergeStart = this._Verticies.Count;
 
             this.AddVerticies(other.Verticies);
 
@@ -325,29 +330,21 @@ namespace Geometry.Meshing
         
         public void RemoveEdge(IEdgeKey e)
         {
-            if(Edges.ContainsKey(e))
+            if(_Edges.ContainsKey(e))
             {
-                IEdge removedEdge = Edges[e];
+                IEdge removedEdge = _Edges[e];
 
                 foreach(IFace f in removedEdge.Faces)
                 {
                     this.RemoveFace(f);
                 }
 
-                Edges.Remove(e);
+                _Edges.Remove(e);
 
                 this[removedEdge.A].RemoveEdge(e);
                 this[removedEdge.B].RemoveEdge(e);
 
                 
-            }
-        }
-
-        public IEnumerable<IVertex> this[IIndexSet vertIndicies]
-        {
-            get
-            {
-                return vertIndicies.Select(i => this.Verticies[(int)i]);
             }
         }
 
@@ -360,7 +357,7 @@ namespace Geometry.Meshing
         {
             get
             {
-                return vertIndicies.Select(i => this.Verticies[(int)i]);
+                return vertIndicies.Select(i => this._Verticies[(int)i]);
             }
         }
 
@@ -373,13 +370,13 @@ namespace Geometry.Meshing
         {
             get
             {
-                return vertIndicies.Select(i => this.Verticies[(int)i]);
+                return vertIndicies.Select(i => this._Verticies[(int)i]);
             }
         }
 
         public GridLineSegment ToSegment(IEdgeKey e)
         {
-            return new GridLineSegment(Verticies[e.A].Position, Verticies[e.B].Position);
+            return new GridLineSegment(_Verticies[e.A].Position, _Verticies[e.B].Position);
         }
 
         public GridTriangle ToTriangle(IFace f)
@@ -387,12 +384,12 @@ namespace Geometry.Meshing
             if (false == f.IsTriangle())
                 throw new InvalidOperationException("Face is not a triangle: " + f.iVerts.ToString());
 
-            return new GridTriangle(f.iVerts.Select(v => this.Verticies[v].Position.XY()).ToArray()); 
+            return new GridTriangle(this[f.iVerts].Select(v => v.Position.XY()).ToArray()); 
         }
 
         public GridVector2 GetCentroid(IFace f)
         {
-            GridVector2[] verts = f.iVerts.Select(v => this.Verticies[v].Position.XY()).ToArray();
+            GridVector2[] verts = this[f.iVerts].Select(v => v.Position.XY()).ToArray();
             if (f.IsQuad())
             {
                 GridPolygon poly = new GridPolygon(verts);
@@ -400,9 +397,8 @@ namespace Geometry.Meshing
             }
             else if (f.IsTriangle())
             {
-                GridTriangle tri = new GridTriangle(f.iVerts.Select(v => this.Verticies[v].Position.XY()).ToArray());
+                GridTriangle tri = new GridTriangle(this[f.iVerts].Select(v => v.Position.XY()).ToArray());
                 return tri.BaryToVector(new GridVector2(1 / 3.0, 1 / 3.0));
-
             }
             else
             {
@@ -531,10 +527,10 @@ namespace Geometry.Meshing
             }
             */
 
-            for(int i = 0; i < Verticies.Count; i++)
+            for(int i = 0; i < _Verticies.Count; i++)
             {
                 SortedSet<IFace> vertFaces = new SortedSet<Meshing.IFace>();
-                IVertex v = Verticies[i];
+                IVertex v = this[i];
                 
                 foreach(IEdgeKey ek in v.Edges)
                 {
@@ -563,7 +559,7 @@ namespace Geometry.Meshing
         /// <returns></returns>
         public virtual int Append(DynamicRenderMesh other)
         {
-            int startingAppendIndex = this.Verticies.Count;
+            int startingAppendIndex = this._Verticies.Count;
             this.AddVerticies(other.Verticies.Select(v => CreateOffsetVertex(v, startingAppendIndex)).ToList());
 
             foreach(IEdge e in other.Edges.Values)

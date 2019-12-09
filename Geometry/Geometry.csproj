@@ -130,7 +130,8 @@
     <Compile Include="Meshing\Face.cs" />
     <Compile Include="Meshing\Edge.cs" />
     <Compile Include="Meshing\IndexSets.cs" />
-    <Compile Include="Meshing\Mesh.cs" />
+    <Compile Include="Meshing\MeshBase.cs" />
+    <Compile Include="Meshing\Mesh2D.cs" />
     <Compile Include="Meshing\MeshExtensions.cs" />
     <Compile Include="Meshing\MeshInterfaces.cs" />
     <Compile Include="Meshing\Vertex.cs" />

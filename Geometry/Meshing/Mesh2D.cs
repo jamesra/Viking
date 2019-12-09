@@ -6,4 +6,8 @@ using System.Threading.Tasks;
 
 namespace Geometry.Meshing
 {
+    class Mesh2D
+    {
+
+    }
 }
