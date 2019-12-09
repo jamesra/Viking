@@ -66,9 +66,7 @@ namespace MorphologyMesh
         public GridPolygon[] Polygons { get; private set; }
 
         public double[] PolyZ { get; private set; }
-
-       
-
+        
         private Dictionary<PointIndex, long> PolyIndexToVertex = new Dictionary<PointIndex, long>();
 
         /// <summary>
@@ -219,7 +217,7 @@ namespace MorphologyMesh
         /// <param name="A"></param>
         /// <param name="B"></param>
         /// <returns></returns>
-        public virtual bool ContainsEdge(PointIndex A, PointIndex B)
+        public virtual bool Contains(PointIndex A, PointIndex B)
         {
             if (!this.Contains(A) || !this.Contains(B))
                 return false;
@@ -443,13 +441,9 @@ namespace MorphologyMesh
                     MorphMeshVertex vB = mesh[Face[iVert + 1]];
 
                     EdgeKey key;
-                    if (mesh.IsAnEdge(vA.Index, vB.Index))
+                    if (mesh.Contains(vA.Index, vB.Index))
                     {
                         key = new EdgeKey(vA.Index, vB.Index);
-                    }
-                    else if (mesh.IsAnEdge(vA.Index, vB.Index))
-                    {
-                        key = new EdgeKey(vB.Index, vA.Index);
                     }
                     else
                     {
@@ -523,16 +517,17 @@ namespace MorphologyMesh
                 //mesh.AddVertex(regionMesh.Vertices[i])
                 //}
 
-                List<int[]> listXYPointIndicies = listTriangles.Select(t => regionMesh.IndiciesForPointsXY(t.Points)).ToList();
-                List<int[]> listMeshFaces = listXYPointIndicies.Select(iPoints => iPoints.Select(i => Face[i]).ToArray()).ToList();
+                //List<int[]> listXYPointIndicies = listTriangles.Select(t => regionMesh.IndiciesForPointsXY(t.Points)).ToList();
+                //List<int[]> listMeshFaces = listXYPointIndicies.Select(iPoints => iPoints.Select(i => Face[i]).ToArray()).ToList();
 
                 List<GridLineSegment> lines = regionMesh.ToLines();
 
                 List<int[]> listLineIndicies = lines.Select(l => regionMesh.IndiciesForPointsXY(new GridVector2[] { l.A, l.B })).ToList();
-
-
+                 
                 foreach (GridTriangle tri in listTriangles)
                 {
+                    //if (false == tri.Points.All(p => PointToMeshIndex.ContainsKey(p)))
+                    //    continue; 
 
                     //int[] iMeshVerts = regionMesh.IndiciesForPointsXY(tri.Points);
                     int[] iMeshVerts = tri.Points.Select(p => PointToMeshIndex[p]).ToArray();

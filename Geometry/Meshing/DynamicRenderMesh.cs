@@ -38,7 +38,7 @@ namespace Geometry.Meshing
     }
     
 
-    public class DynamicRenderMesh 
+    public class DynamicRenderMesh
     {
         public readonly List<IVertex> Verticies = new List<IVertex>();
         public readonly SortedList<IEdgeKey, IEdge> Edges = new SortedList<IEdgeKey, IEdge>();
@@ -259,21 +259,7 @@ namespace Geometry.Meshing
 
             return iVertMergeStart;
         }
-
-        /// <summary>
-        /// Return true if an edge exists between the two verticies
-        /// </summary>
-        /// <param name="A"></param>
-        /// <param name="B"></param>
-        /// <returns></returns>
-        public bool IsAnEdge(int A, int B)
-        {
-            EdgeKey AB = new EdgeKey(A, B);
-            EdgeKey BA = new EdgeKey(B, A);
-
-            return Edges.ContainsKey(AB) || Edges.ContainsKey(BA);
-        }
-
+        
         /// <summary>
         /// 
         /// </summary>
@@ -357,19 +343,38 @@ namespace Geometry.Meshing
             }
         }
 
-        public IEnumerable<IVertex> GetVerts(IIndexSet vertIndicies)
+        public IEnumerable<IVertex> this[IIndexSet vertIndicies]
         {
-            return vertIndicies.Select(i => this.Verticies[(int)i]);
+            get
+            {
+                return vertIndicies.Select(i => this.Verticies[(int)i]);
+            }
         }
 
-        public IEnumerable<IVertex> GetVerts(ICollection<int> vertIndicies)
+        /// <summary>
+        /// Returns all of the verticies that match the indicies
+        /// </summary>
+        /// <param name="vertIndicies"></param>
+        /// <returns></returns>
+        public IEnumerable<IVertex> this[IEnumerable<int> vertIndicies]
         {
-            return vertIndicies.Select(i => this.Verticies[i]);
+            get
+            {
+                return vertIndicies.Select(i => this.Verticies[(int)i]);
+            }
         }
 
-        public IEnumerable<IVertex> GetVerts(ICollection<long> vertIndicies)
+        /// <summary>
+        /// Returns all of the verticies that match the indicies
+        /// </summary>
+        /// <param name="vertIndicies"></param>
+        /// <returns></returns>
+        public IEnumerable<IVertex> this[IEnumerable<long> vertIndicies]
         {
-            return vertIndicies.Select(i => this.Verticies[(int)i]);
+            get
+            {
+                return vertIndicies.Select(i => this.Verticies[(int)i]);
+            }
         }
 
         public GridLineSegment ToSegment(IEdgeKey e)
@@ -435,7 +440,8 @@ namespace Geometry.Meshing
 
             if (face.IsQuad())
             {
-                GridVector3[] positions = mesh.GetVerts(face.iVerts).Select(v => v.Position).ToArray();
+                
+                GridVector3[] positions = mesh[face.iVerts].Select(v => v.Position).ToArray();
                 if (GridVector3.Distance(positions[0], positions[2]) < GridVector3.Distance(positions[1], positions[3]))
                 { 
                     IFace ABC = mesh.CreateFace(new int[] { face.iVerts[0], face.iVerts[1], face.iVerts[2] });
@@ -470,7 +476,7 @@ namespace Geometry.Meshing
             {
                 RemoveFace(face);
 
-                GridVector3[] positions = GetVerts(face.iVerts).Select(v => v.Position).ToArray();
+                GridVector3[] positions = this[face.iVerts].Select(v => v.Position).ToArray();
                 if(GridVector3.Distance(positions[0], positions[2]) < GridVector3.Distance(positions[1], positions[3]))
                 {
                     //Face ABC = new Face(face.iVerts[0], face.iVerts[1], face.iVerts[2]);
@@ -496,7 +502,7 @@ namespace Geometry.Meshing
 
         public GridVector3 Normal(IFace f)
         {
-            IVertex[] verticies = GetVerts(f.iVerts).ToArray();
+            IVertex[] verticies = this[f.iVerts].ToArray();
             GridVector3 normal = GridVector3.Cross(verticies[0].Position, verticies[1].Position, verticies[2].Position);
             return normal;
         }

@@ -141,13 +141,9 @@ namespace MorphologyMesh
                 IsUpper.AddRange(group.NodesBelow.Select(id => false));
                 PolyZ.AddRange(group.NodesBelow.Select(id => graph[id].Z));
 
-                //var t = Task<BajajGeneratorMesh>.Run(() => new BajajGeneratorMesh(Polygons.Select(p => p.Simplify(1.0)).ToList(), PolyZ, IsUpper));
-                //meshGenTasks.Add(t);
-                //Task t = new Task<BajajGeneratorMesh>(() => new BajajGeneratorMesh(Polygons.Select(p => p.Simplify(1.0)).ToList(), PolyZ, IsUpper));
-                //t.Start();
-                meshGenTasks.Add(Task<BajajGeneratorMesh>.Factory.StartNew(() => new BajajGeneratorMesh(Polygons.Select(p => p.Simplify(2.0)).ToList(), PolyZ, IsUpper, group)));
-//                BajajGeneratorMesh mesh = new BajajGeneratorMesh(Polygons.Select(p => p.Simplify(1.0)).ToList(), PolyZ, IsUpper);
+                meshGenTasks.Add(Task<BajajGeneratorMesh>.Factory.StartNew(() => new BajajGeneratorMesh(Polygons.Select(p => p/*p.Simplify(2.0)*/).ToList(), PolyZ, IsUpper, group)));
 
+//                BajajGeneratorMesh mesh = new BajajGeneratorMesh(Polygons.Select(p => p.Simplify(1.0)).ToList(), PolyZ, IsUpper);
   //              listBajajMeshGenerators.Add(mesh);
             }
 
@@ -160,42 +156,21 @@ namespace MorphologyMesh
             for(int iMesh = 0; iMesh < listBajajMeshGenerators.Count; iMesh++)
             {
                 BajajGeneratorMesh mesh = listBajajMeshGenerators[iMesh];
-                bajajTasks.Add(Task.Factory.StartNew(() =>
+                /*bajajTasks.Add(Task.Factory.StartNew(() =>
                    {
-                       Trace.WriteLine(string.Format("Creating mesh"));
-
-                       AddDelaunayEdges(mesh);
-                       var RegionPairingGraph = GenerateRegionGraph(mesh);
-
-                        //Remove the edges we know are bad
-                        mesh.RemoveInvalidEdges();
-
-                        //Ensure corresponding verticies have a face (Legacy, unused in test case last I checked)
-                        CompleteCorrespondingVertexFaces(mesh);
-
-                       SliceChordRTree rTree = mesh.CreateChordTree(mesh.PolyZ);
-                       List<OTVTable> listOTVTables = RegionPairingGraph.MergeAndCloseRegionsPass(mesh, rTree);
-
-                       var IncompleteVerticies = IdentifyIncompleteVerticies(mesh);
-
-                       List<MorphMeshVertex> FirstPassIncompleteVerticies = FirstPassSliceChordGeneration(mesh, mesh.PolyZ);
-
-                       BajajMeshGenerator.FirstPassFaceGeneration(mesh);
-
-                       try
-                       {
-                            //2nd pass region detection to locate missing faces
-                            MorphMeshRegionGraph SecondPassRegions = MorphRenderMesh.SecondPassRegionDetection(mesh, FirstPassIncompleteVerticies);
-                           SecondPassRegions.MergeAndCloseRegionsPass(mesh, rTree);
-                       }
-                       catch (Exception e)
-                       {
-                           Trace.WriteLine(string.Format("Exception building mesh {0}\n{1}", mesh.ToString(),  e));
-                       }
-
-
-                       mesh.RecalculateNormals();
+                       GenerateFaces(mesh);
                    }));
+                   */
+                try
+                {
+                    GenerateFaces(mesh);
+                }
+                catch (Exception e)
+                {
+                    Trace.WriteLine(string.Format("Exception building mesh {0}:\n{1}", listBajajMeshGenerators[iMesh].ToString(), e));
+                    continue;
+                }
+                
 
             }
 
@@ -246,7 +221,38 @@ namespace MorphologyMesh
 
         public static void GenerateFaces(BajajGeneratorMesh mesh)
         {
+            Trace.WriteLine(string.Format("Creating mesh {0}", mesh.ToString()));
 
+            AddDelaunayEdges(mesh);
+            var RegionPairingGraph = GenerateRegionGraph(mesh);
+
+            //Remove the edges we know are bad
+            mesh.RemoveInvalidEdges();
+
+            //Ensure corresponding verticies have a face (Legacy, unused in test case last I checked)
+            CompleteCorrespondingVertexFaces(mesh);
+
+            SliceChordRTree rTree = mesh.CreateChordTree(mesh.PolyZ);
+            List<OTVTable> listOTVTables = RegionPairingGraph.MergeAndCloseRegionsPass(mesh, rTree);
+
+            var IncompleteVerticies = IdentifyIncompleteVerticies(mesh);
+
+            List<MorphMeshVertex> FirstPassIncompleteVerticies = FirstPassSliceChordGeneration(mesh, mesh.PolyZ);
+
+            BajajMeshGenerator.FirstPassFaceGeneration(mesh);
+
+            try
+            {
+                //2nd pass region detection to locate missing faces
+                MorphMeshRegionGraph SecondPassRegions = MorphRenderMesh.SecondPassRegionDetection(mesh, FirstPassIncompleteVerticies);
+                SecondPassRegions.MergeAndCloseRegionsPass(mesh, rTree);
+            }
+            catch (Exception e)
+            {
+                Trace.WriteLine(string.Format("Exception building mesh {0}\n{1}", mesh.ToString(), e));
+            }
+             
+            mesh.RecalculateNormals();
         }
 
         /// <summary>
@@ -298,7 +304,7 @@ namespace MorphologyMesh
             GridVector2[] vertArray = triMesh.Vertices.Select(v => new GridVector2(v.X, v.Y)).ToArray();
             Dictionary<int, int[]> TriIndexToMeshIndex = new Dictionary<int, int[]>();
 
-            SortedList<MorphMeshVertex, MorphMeshVertex> CorrespondingVerticies = new SortedList<MorphMeshVertex, MorphMeshVertex>();
+            //SortedList<MorphMeshVertex, MorphMeshVertex> CorrespondingVerticies = new SortedList<MorphMeshVertex, MorphMeshVertex>();
 
             double[] PolyZ = output.PolyZ;
 
@@ -331,8 +337,7 @@ namespace MorphologyMesh
 
                         GridVector3 otherVert3 = vert.ToGridVector3(PolyZ[pOtherIndex.iPoly]);
                         MorphMeshVertex correspondingVertex = output.GetOrAddVertex(pOtherIndex, otherVert3);
-                        Debug.Assert(CorrespondingVerticies.ContainsKey(meshVertex) == false);
-                        CorrespondingVerticies[meshVertex] = correspondingVertex;
+                        //CorrespondingVerticies[meshVertex] = correspondingVertex;
                         meshIndicies.Add(correspondingVertex.Index);
                     }
 
@@ -415,8 +420,8 @@ namespace MorphologyMesh
 
             foreach (MorphMeshEdge edge in edges)
             {
-                MorphMeshVertex vA = mesh.GetVertex(edge.A);
-                MorphMeshVertex vB = mesh.GetVertex(edge.B);
+                MorphMeshVertex vA = mesh[edge.A];
+                MorphMeshVertex vB = mesh[edge.B];
 
                 List<MorphMeshVertex> VertsToCheck = new List<MorphMeshVertex>(new MorphMeshVertex[] { vA, vB });
 
@@ -705,7 +710,7 @@ namespace MorphologyMesh
                     }
                     else if (face.IsQuad)
                     {
-                        var verts = mesh.GetVerts(face_path).ToArray();
+                        var verts = mesh[face_path].ToArray();
                         double[] VertZLevels = verts.Select(vert => vert.Position.Z).Distinct().ToArray();
 
                         //This was changed just before I quit for the night
@@ -1036,7 +1041,7 @@ namespace MorphologyMesh
         
         private static void AddIndexSetToMeshIndexMap(Dictionary<GridVector3, long> map, Geometry.Meshing.DynamicRenderMesh<ulong> mesh, Geometry.IIndexSet set)
         {
-            Geometry.Meshing.IVertex[] verts = mesh.GetVerts(set).ToArray();
+            Geometry.Meshing.IVertex[] verts = mesh[set].ToArray();
             long[] mesh_indicies = set.ToArray();
 
             for (int iVert = 0; iVert < mesh_indicies.Length; iVert++)

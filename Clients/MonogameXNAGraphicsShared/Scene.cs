@@ -15,19 +15,33 @@ namespace VikingXNA
     {
         public event PropertyChangedEventHandler OnSceneChanged;
 
+        private Matrix _Projection;
+        private Matrix _World;
+        private Matrix _WorldViewProj;
+
+        private float _MinDrawDistance = -100f;
+        private float _MaxDrawDistance = 10f;
+
         protected void OnPropertyChanged([CallerMemberName] string propertyName = null)
         {
             OnSceneChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
-
-        private Matrix _Projection;
-
+          
         public Matrix Projection
         {
             get { return _Projection; }
         }
 
-        private Matrix _World;
+        public Matrix View
+        {
+            get { return this.Camera.View; }
+        }
+
+        public Matrix ViewProj
+        {
+            get { return this.Camera.View * this.Projection; }
+        }
+
         public Matrix World
         {
             get { return _World; }
@@ -36,23 +50,12 @@ namespace VikingXNA
                   OnPropertyChanged();
             }
         }
-
-        private Matrix _WorldViewProj;
-
+          
         public Matrix WorldViewProj
         {
             get { return _WorldViewProj;}
         }
-
-        public Matrix ViewProj
-        {
-            get { return this.Camera.View * this.Projection; }
-        }
-
-        public Matrix View
-        {
-            get { return this.Camera.View; }
-        }
+         
          
         private PropertyChangedEventHandler cameraPropertyChangedEventHandler = null;
 
@@ -77,10 +80,7 @@ namespace VikingXNA
 
                 OnPropertyChanged();
             }
-        }
-
-        public readonly float MaxDrawDistance = 10f;
-        public readonly float MinDrawdistance = 0.5f;
+        } 
 
         private Viewport _Viewport;  
         /// <summary>
@@ -98,8 +98,35 @@ namespace VikingXNA
                     _Viewport = value;
 
                 UpdateProjectionMatrix();
-
                 OnPropertyChanged();
+            }
+        }
+
+        public float MinDrawDistance
+        {
+            get { return _MinDrawDistance; }
+            set
+            {
+                if (_MinDrawDistance != value)
+                {
+                    _MinDrawDistance = value;
+                    UpdateProjectionMatrix();
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public float MaxDrawDistance
+        {
+            get { return _MaxDrawDistance; }
+            set
+            {
+                if (_MaxDrawDistance != value)
+                {
+                    _MaxDrawDistance = value;
+                    UpdateProjectionMatrix();
+                    OnPropertyChanged();
+                }
             }
         }
 
@@ -120,7 +147,7 @@ namespace VikingXNA
 
         private void UpdateProjectionMatrix()
         {
-            _Projection = Matrix.CreateOrthographic((float)(_Viewport.Width * _camera.Downsample), (float)(_Viewport.Height * _camera.Downsample), MinDrawdistance, MaxDrawDistance);
+            _Projection = Matrix.CreateOrthographic((float)(_Viewport.Width * _camera.Downsample), (float)(_Viewport.Height * _camera.Downsample), MinDrawDistance, MaxDrawDistance);
             _WorldViewProj = (World * Camera.View) * _Projection;
             ResetVisibleWorldBounds();
         }

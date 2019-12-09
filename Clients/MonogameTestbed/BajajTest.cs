@@ -136,10 +136,12 @@ namespace MonogameTestbed
         public BajajOTVAssignmentView(GridPolygon[] polys, double[] Z)
         {
             ///Takes a set of polygons and Z values and generates a meshView
-            Polygons = polys;
-            PolyZ = Z;
+            Polygons = polys.Select(p => p.Simplify(2.0)).ToArray();
+            //Polygons = polys.Select(p => p).ToArray();
+            double MinZ = Z.Min(); //Translate our Z values to an origin of 0 so we can render meshes in 2D easily
+            PolyZ = Z.Select(z => z - MinZ).ToArray();
             //Bajaj Step 3
-            Polygons.AddPointsAtAllIntersections(Z);
+            //Polygons.AddPointsAtAllIntersections(Z);
 
             GenerateMesh();
         }
@@ -159,12 +161,14 @@ namespace MonogameTestbed
             PolyViews.PointLabelType = IndexLabelType.MESH;
             //UpdatePolyViews();
 
-            var RegionPairingGraph = FirstPassDelaunay(FirstPassTriangulation);
+            BajajMeshGenerator.AddDelaunayEdges(FirstPassTriangulation);
 
-            MeshViews.Add(CreateMeshView(FirstPassTriangulation, "FirstPassDelaunay"));
+            //MeshViews.Add(CreateMeshView(FirstPassTriangulation, "FirstPassDelaunay"));
 
             listLineViews.Add(PolyBranchAssignmentView.UpdateMeshLines(FirstPassTriangulation, "FirstPassDelaunay"));
 
+            var RegionPairingGraph = BajajMeshGenerator.GenerateRegionGraph(FirstPassTriangulation);
+            
             FirstPassTriangulation.RemoveInvalidEdges();
 
             listLineViews.Add(PolyBranchAssignmentView.UpdateMeshLines(FirstPassTriangulation, "Remove Invalid Edges"));
@@ -209,14 +213,14 @@ namespace MonogameTestbed
 
             MeshViews.Add(CreateMeshView(FirstPassTriangulation, "FirstPassFaceGeneration"));
 
-
+            
             MorphMeshRegionGraph SecondPassRegions = MorphRenderMesh.SecondPassRegionDetection(FirstPassTriangulation, FirstPassIncompleteVerticies);
             RegionViews.Add(CreateRegionPolygonViews(FirstPassTriangulation, SecondPassRegions.Nodes.Keys));
             
             SecondPassRegions.MergeAndCloseRegionsPass(FirstPassTriangulation, rTree);
-
+            
             MeshViews.Add(CreateMeshView(FirstPassTriangulation, "Second MergeAndCloseRegionsPass"));
-
+            
             FirstPassTriangulation.RecalculateNormals();
 
             listLineViews.Add(PolyBranchAssignmentView.UpdateMeshLines(FirstPassTriangulation, "Second MergeAndCloseRegionsPass"));
@@ -405,43 +409,7 @@ namespace MonogameTestbed
             SearchMesh.AddVerticies(pointToPoly.Keys.Select(v => new Vertex<PointIndex>(v.ToGridVector3(0), pointToPoly[v])).ToArray());
             SearchMesh.AddFaces(mesh.Triangles.Select(t => new Face(t.GetVertexID(0), t.GetVertexID(1), t.GetVertexID(2)) as IFace).ToArray()); 
         }
-
-        /// <summary>
-        /// Add all edges from a delaunay triangulation to the mesh which are valid
-        /// </summary>
-        /// <param name="mesh"></param>
-        public static MorphMeshRegionGraph FirstPassDelaunay(BajajGeneratorMesh mesh)
-        {
-            IMesh triMesh = mesh.Polygons.Triangulate();
-
-            BajajMeshGenerator.AddTriangulationEdgesToMesh(triMesh, mesh);
-
-            mesh.ClassifyMeshEdges();
-
-            //Identify our trouble areas. 
-            mesh.IdentifyRegionsViaFaces();
-
-            //Identify probable mappings between regions
-            MorphMeshRegionGraph RegionPairingGraph = BajajMeshGenerator.GenerateRegionConnectionGraph(mesh);
-           
-            //Remove invalid edges
-            //RemoveInvalidEdges(mesh);
-
-            //Close the nodes with no edges
-            //CloseRegionsFirstPass(mesh, RegionPairingGraph.Nodes.Values.Where(v => v.Edges.Count == 0).Select(v => v.Key).ToList());
-            /*
-            List<MorphMeshRegion> regions = RegionPairingGraph.Nodes.Where(n => n.Value.Edges.Count == 0).Select(n => n.Key).ToList();
-            foreach(MorphMeshRegion unconnectedRegion in regions)
-            {
-                RegionPairingGraph.RemoveNode(unconnectedRegion);
-            }
-            */
-
-            return RegionPairingGraph;
-        }
-
-
-        
+                      
 
         /*
         /// <summary>
@@ -550,8 +518,8 @@ namespace MonogameTestbed
         {
             List<SliceChord> CandidateChords = BajajMeshGenerator.CreateChordCandidateList(mesh, table);
 
-            var RejectedChords = CandidateChords.Where(sc => !mesh.ContainsEdge(sc.Origin, sc.Target));
-            var AcceptedChords = CandidateChords.Where(sc => mesh.ContainsEdge(sc.Origin, sc.Target));
+            var RejectedChords = CandidateChords.Where(sc => !mesh.Contains(sc.Origin, sc.Target));
+            var AcceptedChords = CandidateChords.Where(sc => mesh.Contains(sc.Origin, sc.Target));
 
             List<LineView> lineViews = RejectedChords.Select(sc => new LineView(sc.Line, 1.0, color, LineStyle.Ladder)).ToList();
             lineViews.AddRange(AcceptedChords.Select(sc => new LineView(sc.Line, 1.0, color, LineStyle.Glow)));
@@ -572,8 +540,19 @@ namespace MonogameTestbed
 
             if (MeshViews != null && ShowMesh)
             {
+                DeviceStateManager.SaveDeviceState(window.GraphicsDevice);
+
+                DepthStencilState dstate = new DepthStencilState();
+                dstate.DepthBufferEnable = true;
+                dstate.StencilEnable = false;
+                dstate.DepthBufferWriteEnable = true;
+                dstate.DepthBufferFunction = CompareFunction.LessEqual;
+
+                window.GraphicsDevice.DepthStencilState = dstate;
+
                 MeshViews[iShownMesh.Value].Draw(window.GraphicsDevice, window.Scene, CullMode.None);
                 ViewLabels.AppendLine(MeshViews[iShownMesh.Value].Name);
+                DeviceStateManager.RestoreDeviceState(window.GraphicsDevice);
             }
 
 
@@ -651,6 +630,8 @@ namespace MonogameTestbed
 
         public void Draw3D(MonoTestbed window, Scene3D scene)
         {
+            StringBuilder ViewLabels = new StringBuilder();
+
             window.GraphicsDevice.Clear(ClearOptions.DepthBuffer | ClearOptions.Stencil | ClearOptions.Target, Color.DarkGray, float.MaxValue, 0);
 
             DepthStencilState dstate = new DepthStencilState();
@@ -666,7 +647,12 @@ namespace MonogameTestbed
             if (iShownMesh.HasValue)
             {
                 MeshViews[iShownMesh.Value].Draw(window.GraphicsDevice, scene, CullMode.None);
+
+                ViewLabels.AppendLine(MeshViews[iShownMesh.Value].Name);
             }
+
+            LabelView label = new LabelView(ViewLabels.ToString(), window.Scene.VisibleWorldBounds.UpperLeft, HorizontalAlignment.LEFT, VerticalAlignment.BOTTOM, scaleFontWithScene: false);
+            LabelView.Draw(window.spriteBatch, window.fontArial, window.Scene, new LabelView[] { label });
         }
     }
     
@@ -800,7 +786,7 @@ namespace MonogameTestbed
             Gamepad.Update(GamePad.GetState(PlayerIndex.One));
 
 
-            AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromODataLocationIDs(GlialDebug1, DataSource.EndpointMap[ENDPOINT.RPC1]);
+            //AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromODataLocationIDs(GlialDebug1, DataSource.EndpointMap[ENDPOINT.RPC1]);
             //AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromOData(new long[] { 180 }, false, DataSource.EndpointMap[ENDPOINT.RC1]);
             //AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromOData(new long[] { 40429 }, false, DataSource.EndpointMap[ENDPOINT.RPC1]);
             //graph = graph.Subgraphs.Values.First();
@@ -813,7 +799,7 @@ namespace MonogameTestbed
 
             /////////////
             ///This is the major test of mesh generation that covers as many cases as I could think of
-            //AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromODataLocationIDs(NightmareTroubleIDS, DataSource.EndpointMap[ENDPOINT.TEST]);
+            AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromODataLocationIDs(NightmareTroubleIDS, DataSource.EndpointMap[ENDPOINT.TEST]);
             //////////////
 
             //BajajMeshGenerator.ConvertToMeshGraph(graph);

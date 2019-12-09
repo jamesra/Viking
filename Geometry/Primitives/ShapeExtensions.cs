@@ -1044,7 +1044,30 @@ namespace Geometry
 
             return NonIntersecting;
         }
-         
+
+        /// <summary>
+        /// Return all segments of the polygons that do not intersect any border of the other polygons
+        /// </summary>
+        /// <param name="Polygons"></param>
+        /// <param name="B"></param>
+        /// <param name="AIntersections"></param>
+        /// <param name="BIntersections"></param>
+        /// <returns></returns>
+        public static List<GridLineSegment> Segments(this IEnumerable<GridPolygon> Polygons)
+        {
+            //RTree.RTree<GridLineSegment> SegmentRTree = new RTree<GridLineSegment>();
+
+            List<GridLineSegment> segments = new List<GridLineSegment>();
+
+            foreach (GridPolygon poly in Polygons)
+            {
+                segments.AddRange(poly.AllSegments);
+                //AddPolygonSegmentsToRTree(SegmentRTree, poly);
+            }
+
+            return segments;
+        }
+
         /// <summary>
         /// Return all segments of the polygons that do not intersect any border of the other polygons
         /// </summary>

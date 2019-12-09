@@ -20,13 +20,12 @@ namespace VikingXNA
         Matrix _World;
         Matrix _WorldViewProj;
 
-        public Camera3D _Camera;
-
-        private float _FieldOfView = (float)(Math.PI / 3.0f);
-
         private float _MinDrawDistance = 0.01f;
         private float _MaxDrawDistance = 100f;
 
+        public Camera3D _Camera;
+
+        private float _FieldOfView = (float)(Math.PI / 3.0f);
 
         public Matrix Projection
         {

@@ -135,8 +135,12 @@ namespace GraphLib
 
         public override bool Equals(object obj)
         {
-            if (obj as Edge<NODEKEY> != null)
-                return this.Equals((Edge<NODEKEY>)obj);
+            if (object.ReferenceEquals(obj, null))
+                return false;
+
+            Edge<NODEKEY> other = obj as Edge<NODEKEY>;
+            if (object.ReferenceEquals(other, null) == false)
+                return this.Equals(other);
 
             return base.Equals(obj);
         }
@@ -148,7 +152,7 @@ namespace GraphLib
                 return true;
             }
 
-            if ((object)A != null)
+            if (object.ReferenceEquals(A, null) == false)
                 return A.Equals(B);
 
             return false;
@@ -161,7 +165,7 @@ namespace GraphLib
                 return false;
             }
 
-            if ((object)A != null)
+            if (object.ReferenceEquals(A, null) == false)
                 return !A.Equals(B);
 
             return true;
