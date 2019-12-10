@@ -20,7 +20,7 @@ namespace Geometry.Meshing
 
             foreach (GridVector2 v in triangles.SelectMany(tri => tri.Points).Distinct())
             {
-                int index = mesh.AddVertex(new Vertex(v.ToGridVector3(0)));
+                int index = mesh.AddVertex(new Vertex3D(v.ToGridVector3(0)));
                 PointToVertexIndex.Add(v, index);
             }
 

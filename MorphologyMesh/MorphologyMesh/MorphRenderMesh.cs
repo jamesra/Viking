@@ -241,7 +241,7 @@ namespace MorphologyMesh
 
         public int AddVerticies(ICollection<MorphMeshVertex> verts)
         {
-            int iStartVert = base.AddVerticies(verts.Select(v => (IVertex)v).ToArray());
+            int iStartVert = base.AddVerticies(verts.Select(v => (IVertex3D)v).ToArray());
 
             foreach (MorphMeshVertex v in verts)
             {
@@ -814,11 +814,11 @@ namespace MorphologyMesh
             if (iVerts.Count < 2)
                 return 0;
 
-            Vertex origin = this[iVerts[0]];
+            Vertex3D origin = this[iVerts[0]];
             double totalDistance = 0;
             for(int i = 1; i < iVerts.Count; i++)
             {
-                Vertex next = this[iVerts[i]];
+                Vertex3D next = this[iVerts[i]];
 
                 totalDistance += GridVector3.Distance(origin.Position, next.Position);
                 origin = next; 

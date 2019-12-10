@@ -11,7 +11,7 @@ using Geometry;
 namespace MorphologyMesh
 {
 
-    public class MorphMeshVertex : Vertex
+    public class MorphMeshVertex : Vertex3D
     {
         /// <summary>
         /// Verticies we add to close holes will not have a poly index.  The medial axis verticies must have faces added because at this point they will not autocomplete.
@@ -62,7 +62,7 @@ namespace MorphologyMesh
             MedialAxisIndex = medialIndex;
         }
 
-        public static IVertex Duplicate(IVertex old)
+        public static IVertex Duplicate(IVertex3D old)
         {
             MorphMeshVertex vert = old as MorphMeshVertex;
             if (vert != null)
@@ -78,7 +78,7 @@ namespace MorphologyMesh
                 }
             }
 
-            return new Vertex(old.Position, old.Normal);
+            return new Vertex3D(old.Position, old.Normal);
         }
 
         /// <summary>

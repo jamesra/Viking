@@ -10,9 +10,6 @@ namespace Geometry.Meshing
 {
     public interface IVertex : IComparable<IVertex>, IEquatable<IVertex>
     {
-        GridVector3 Position { get; set; }
-        GridVector3 Normal { get; set; }
-
         int Index { get; set; }
 
         ImmutableSortedSet<IEdgeKey> Edges { get; }
@@ -20,6 +17,18 @@ namespace Geometry.Meshing
         bool AddEdge(IEdgeKey e);
 
         void RemoveEdge(IEdgeKey e);
+    }
+
+    public interface IVertex2D : IVertex, IComparable<IVertex2D>, IEquatable<IVertex2D>
+    {
+        GridVector2 Position { get; set; }
+    }
+    
+
+    public interface IVertex3D : IVertex, IComparable<IVertex3D>, IEquatable<IVertex3D>
+    {
+        GridVector3 Position { get; set; }
+        GridVector3 Normal { get; set; }
     }
 
     public interface IEdgeKey : IComparable<IEdgeKey>, IEquatable<IEdgeKey>

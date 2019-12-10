@@ -7,28 +7,19 @@ using System.Threading.Tasks;
 
 namespace Geometry.Meshing
 {
-    /*
-    public class DynamicRenderMesh : DynamicRenderMesh<Vertex, Edge, Face>
-    {
-        public int Append(DynamicRenderMesh other)
-        {
-            return base.Append(other, Vertex.Duplicate, Edge.Duplicate, Face.Duplicate);
-        }
 
-        public void ConvertAllFacesToTriangles()
-        {
-            base.ConvertAllFacesToTriangles(Face.Duplicate);
-        }
-    }*/
-
+    /// <summary>
+    /// TODO: This class needs to be updated now that MeshBase<T> exists
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
     public class DynamicRenderMesh<T> : DynamicRenderMesh
     {
 
-        public new Vertex<T> this[int key]
+        public new Vertex3D<T> this[int key]
         {
             get
             {
-                return Verticies[key] as Vertex<T>;
+                return Verticies[key] as Vertex3D<T>;
             }
             set
             {
@@ -37,84 +28,23 @@ namespace Geometry.Meshing
         }
     }
     
-
-    public class DynamicRenderMesh : IMesh<IVertex>
-    {
-        private readonly List<IVertex> _Verticies = new List<IVertex>();
-        private readonly SortedList<IEdgeKey, IEdge> _Edges = new SortedList<IEdgeKey, IEdge>();
-        private readonly SortedSet<IFace> _Faces = new SortedSet<IFace>();
-
-        public List<IVertex> Verticies { get { return _Verticies; } }
-
-        public SortedList<IEdgeKey, IEdge> Edges { get { return _Edges; } }
-        public SortedSet<IFace> Faces { get { return _Faces; } }
-
-        public Func<IVertex,int,IVertex> CreateOffsetVertex { get; set; }
-        public Func<IEdge, int, int, IEdge> CreateOffsetEdge { get; set; }
-
-        public Func<IFace, IEnumerable<int>, IFace> CreateOffsetFace { get; set; }
-
-        public Func<int, IVertex> CreateVertex { get; set; }
-        public Func<int, int, IEdge> CreateEdge { get; set; }
-
-        public Func<IEnumerable<int>, IFace> CreateFace { get; set; }
-
+    /// <summary>
+    /// This is a fairly generic 3D Mesh class that supports operations around merging and basic spatial manipulation of meshes
+    /// </summary>
+    public class DynamicRenderMesh : MeshBase<IVertex3D>
+    { 
         public GridBox BoundingBox = null;
-
-        public virtual IVertex this[int key]
-        {
-            get
-            {
-                return _Verticies[key];
-            }
-            set
-            {
-                _Verticies[key] = value;
-            }
-        }
-
-        public virtual IVertex this[long key]
-        {
-            get
-            {
-                return _Verticies[(int)key];
-            }
-            set
-            {
-                _Verticies[(int)key] = value;
-            }
-        }
-
-        public virtual IEdge this[IEdgeKey key]
-        {
-            get { return this._Edges[key]; }
-        }
 
         public DynamicRenderMesh()
         {
-            CreateOffsetVertex = Vertex.CreateOffsetCopy;
+            CreateOffsetVertex = Vertex3D.CreateOffsetCopy;
             CreateOffsetEdge = Edge.CreateOffsetCopy;
             CreateOffsetFace = Face.CreateOffsetCopy;
              
             CreateEdge = Edge.Create;
             CreateFace = Face.Create;
         }
-
-        public virtual bool Contains(IEdgeKey key)
-        {
-            return Edges.ContainsKey(key);
-        }
-
-        public virtual bool Contains(IFace face)
-        {
-            return Faces.Contains(face);
-        }
-
-        public virtual bool Contains(int A, int B)
-        {
-            return Edges.ContainsKey(new EdgeKey(A, B));
-        }
-
+         
         protected void ValidateBoundingBox()
         {
             Debug.Assert(BoundingBox.MinCorner.X == this._Verticies.Select(v => v.Position.X).Min());
@@ -137,7 +67,7 @@ namespace Geometry.Meshing
 
         public void Translate(GridVector3 translate)
         {
-            foreach(IVertex v in _Verticies)
+            foreach(IVertex3D v in _Verticies)
             {
                 v.Position += translate;
             }
@@ -147,18 +77,19 @@ namespace Geometry.Meshing
             ValidateBoundingBox();
         }
 
-        private void UpdateBoundingBox(GridVector3 point)
+        protected override void UpdateBoundingBox(IVertex3D v)
         {
             if (BoundingBox == null)
-                BoundingBox = new GridBox(point, 0);
+                BoundingBox = new GridBox(v.Position, 0);
             else
             {
-                BoundingBox.Union(point);
+                BoundingBox.Union(v.Position);
             }
         }
 
-        private void UpdateBoundingBox(GridVector3[] points)
+        protected override void UpdateBoundingBox(ICollection<IVertex3D> verts)
         {
+            GridVector3[] points = verts.Select(v => v.Position).ToArray();
             if (BoundingBox == null)
                 BoundingBox = points.BoundingBox();
             else
@@ -166,87 +97,7 @@ namespace Geometry.Meshing
                 BoundingBox.Union(points);
             }
         }
-
-        public int AddVertex(IVertex v)
-        {
-            v.Index = _Verticies.Count; 
-            _Verticies.Add(v);
-
-            UpdateBoundingBox(v.Position);
-            return _Verticies.Count - 1; 
-        }
-
-        /// <summary>
-        /// Add a collection of verticies to the mesh
-        /// </summary>
-        /// <param name="v"></param>
-        /// <returns>The index the first element was inserted at</returns>
-        public int AddVerticies(ICollection<IVertex> verts)
-        {
-            
-            int iStart = _Verticies.Count;
-            int Offset = 0;
-            foreach (IVertex v in verts)
-            {
-                v.Index = iStart + Offset;
-                Offset += 1;
-            }
-
-            _Verticies.AddRange(verts);
-            UpdateBoundingBox(verts.Select(v => v.Position).ToArray());
-            return iStart;
-        }
-        
-        public void AddEdge(int A, int B)
-        {
-            EdgeKey e = new EdgeKey(A, B);
-            AddEdge(e);
-        }
-
-        public void AddEdge(IEdgeKey e)
-        {
-            if(e.A == e.B)
-                throw new ArgumentException("Edges cannot have the same start and end point");
-
-            if (CreateOffsetEdge == null)
-                throw new InvalidOperationException("DuplicateEdge function not specified for DynamicRenderMesh");
-
-            if (this.Contains(e))
-                return;
-
-            if (e.A >= _Verticies.Count || e.A < 0)
-                throw new ArgumentException(string.Format("Edge vertex A references non-existent vertex {0}", e));
-
-            if (e.B >= _Verticies.Count || e.B < 0)
-                throw new ArgumentException(string.Format("Edge vertex B references non-existent vertex {0}", e));
-
-            IEdge newEdge = CreateOffsetEdge(null, e.A, e.B);
-            Edges.Add(e, newEdge);
-
-            _Verticies[(int)e.A].AddEdge(e);
-            _Verticies[(int)e.B].AddEdge(e);
-        }
-        
-
-        public void AddEdge(IEdge e)
-        {
-            if (e.A == e.B)
-                throw new ArgumentException("Edges cannot have the same start and end point");
-
-            if (this.Contains(e.Key))
-                return;
-
-            if (e.A >= _Verticies.Count || e.A < 0)
-                throw new ArgumentException(string.Format("Edge vertex A references non-existent vertex {0}", e));
-
-            if (e.B >= _Verticies.Count || e.B < 0)
-                throw new ArgumentException(string.Format("Edge vertex B references non-existent vertex {0}", e));
-
-            Edges.Add(e.Key, e);
-
-            _Verticies[(int)e.A].AddEdge(e.Key);
-            _Verticies[(int)e.B].AddEdge(e.Key);
-        }
+          
 
         /// <summary>
         /// Merge the other mesh into our mesh
@@ -265,114 +116,6 @@ namespace Geometry.Meshing
             return iVertMergeStart;
         }
         
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="e"></param>
-        public void Update(IEdge e)
-        {
-            if(Edges.ContainsKey(e.Key))
-            {
-                Edges[e.Key] = e; 
-            }
-            else
-            {
-                throw new KeyNotFoundException("The edge to be updated was not present in the mesh:" + e.ToString());
-            }
-        }
-
-        /// <summary>
-        /// Add a face. Creates edges if they aren't in the face
-        /// </summary>
-        /// <param name="face"></param>
-        public void AddFace(IFace face)
-        {
-            //Debug.Assert(Faces.Contains(face) == false);
-              
-            foreach(IEdgeKey e in face.Edges)
-            {
-                AddEdge(e);
-                Edges[e].AddFace(face);
-            }
-
-            Faces.Add(face);
-        }
-
-        public void AddFace(int A, int B, int C)
-        {
-            IFace face = CreateFace(new int[] { A, B, C });
-            Debug.Assert(Faces.Contains(face) == false);
-
-            AddFace(face);
-        }
-
-        public void AddFaces(ICollection<IFace> faces)
-        {
-            foreach(IFace f in faces)
-            {
-                AddFace(f);
-            }
-        }
-
-        public void RemoveFace(IFace f)
-        {
-            if(Faces.Contains(f))
-            {
-                Faces.Remove(f);
-            }
-
-            foreach(IEdgeKey e in f.Edges)
-            {
-                IEdge existing = Edges[e];
-                existing.RemoveFace(f);
-            }
-        }
-        
-        public void RemoveEdge(IEdgeKey e)
-        {
-            if(_Edges.ContainsKey(e))
-            {
-                IEdge removedEdge = _Edges[e];
-
-                foreach(IFace f in removedEdge.Faces)
-                {
-                    this.RemoveFace(f);
-                }
-
-                _Edges.Remove(e);
-
-                this[removedEdge.A].RemoveEdge(e);
-                this[removedEdge.B].RemoveEdge(e);
-
-                
-            }
-        }
-
-        /// <summary>
-        /// Returns all of the verticies that match the indicies
-        /// </summary>
-        /// <param name="vertIndicies"></param>
-        /// <returns></returns>
-        public IEnumerable<IVertex> this[IEnumerable<int> vertIndicies]
-        {
-            get
-            {
-                return vertIndicies.Select(i => this._Verticies[(int)i]);
-            }
-        }
-
-        /// <summary>
-        /// Returns all of the verticies that match the indicies
-        /// </summary>
-        /// <param name="vertIndicies"></param>
-        /// <returns></returns>
-        public IEnumerable<IVertex> this[IEnumerable<long> vertIndicies]
-        {
-            get
-            {
-                return vertIndicies.Select(i => this._Verticies[(int)i]);
-            }
-        }
 
         public GridLineSegment ToSegment(IEdgeKey e)
         {
@@ -498,7 +241,7 @@ namespace Geometry.Meshing
 
         public GridVector3 Normal(IFace f)
         {
-            IVertex[] verticies = this[f.iVerts].ToArray();
+            IVertex3D[] verticies = this[f.iVerts].ToArray();
             GridVector3 normal = GridVector3.Cross(verticies[0].Position, verticies[1].Position, verticies[2].Position);
             return normal;
         }
@@ -530,7 +273,7 @@ namespace Geometry.Meshing
             for(int i = 0; i < _Verticies.Count; i++)
             {
                 SortedSet<IFace> vertFaces = new SortedSet<Meshing.IFace>();
-                IVertex v = this[i];
+                IVertex3D v = this[i];
                 
                 foreach(IEdgeKey ek in v.Edges)
                 {
@@ -577,127 +320,5 @@ namespace Geometry.Meshing
             return startingAppendIndex;
         }
 
-        /// <summary>
-        /// Find all edges that enclose triangles or quads and create faces if they don't exist
-        /// </summary>
-        public void CloseFaces(IEnumerable<IVertex> VertsToClose=null)
-        {
-            if(VertsToClose == null)
-            {
-                VertsToClose = this.Verticies;
-            }
-
-            foreach (var v in VertsToClose)
-            {
-                //Identify edges missing faces
-                List<IEdge> edges = v.Edges.Select(key => Edges[key]).Where(e => e.Faces.Count < 2).ToList();
-
-                foreach (var edge in edges)
-                {
-                    List<int> Face = FindCloseableFace(v.Index, this[edge.OppositeEnd(v.Index)], edge);
-                    if (Face != null)
-                    {
-                        Debug.Assert(Face.Count == 3 || Face.Count == 4);
-                        if (Face.Count == 4)
-                            continue;
-
-                        IFace f = this.CreateFace(Face);
-                        if(this.Faces.Contains(f) == false)
-                            this.AddFace(f);
-
-                        if (f.iVerts.Length == 4)
-                            this.SplitFace(f);
-                    }
-                }
-            }
-        }
-
-        /// <summary>
-        /// If there are verticies with two edges that have a missing face, and the opposite end of the edges are on different shapes, and we can create a face that does not contain any other verticies then do so.
-        /// </summary>
-        public void CloseShapeCrossings()
-        {
-            
-        }
-
-        /// <summary>
-        /// Identify if there are faces that could be created using the specified verticies
-        /// </summary>
-        /// <param name="TargetVert"></param>
-        /// <param name="current"></param>
-        /// <param name="testEdge"></param>
-        /// <param name="CheckedEdges"></param>
-        /// <param name="Path"></param>
-        /// <returns></returns>
-        private List<int> FindCloseableFace(int TargetVert, IVertex current, IEdge testEdge, SortedSet<IEdgeKey> CheckedEdges = null, Stack<int> Path = null)
-        {
-            if (CheckedEdges == null)
-            {
-                CheckedEdges = new SortedSet<IEdgeKey>();
-            }
-
-            if (Path == null)
-            {
-                Path = new Stack<int>();
-                Path.Push(TargetVert);
-            }
-
-            //Make sure the face formed by the top three entries in the path is not already present in the mesh
-
-            List<int> FaceTest = StackExtensions<int>.Peek(Path, 3);
-            if (FaceTest.Count == 3)
-            {
-                if (this.Contains(new Face(FaceTest)))
-                    return null;
-            }
-
-            /////////////////////////////////////////////////////////////
-
-            CheckedEdges.Add(testEdge.Key);
-            if (Path.Count > 4) //We must return only triangles or quads, and we return closed loops
-                return null;
-
-            if(current.Index == TargetVert)
-            {
-                return Path.ToList();
-            }
-            else
-            {
-                Path.Push(current.Index);
-            }
-            
-            //Test all of the edges we have not examined yet who do not have two faces already
-            List<int> ShortestFace = null;
-            foreach(IEdge edge in current.Edges.Where(e => !CheckedEdges.Contains(e)).Select(e => this.Edges[e]).Where(e => e.Faces.Count < 2))
-            {
-                List<int> Face = FindCloseableFace(TargetVert, this[edge.OppositeEnd(current.Index)], edge, new SortedSet<IEdgeKey>(CheckedEdges), new Stack<int>(Path));
-
-                if (Face != null)
-                {
-                    if (ShortestFace == null)
-                    {
-                        ShortestFace = Face;
-                    }
-                    else
-                    {
-                        if (ShortestFace.Count > Face.Count)
-                        {
-                            ShortestFace = Face;
-                        }
-                    }
-                }
-
-            }
-
-            if (ShortestFace != null)
-            {
-                return ShortestFace;
-            }
-
-            //Take this index off the stack since we did not locate a path
-            Path.Pop();
-
-            return null; 
-        }
     }
 }

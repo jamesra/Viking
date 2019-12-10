@@ -41,9 +41,9 @@ namespace GeometryTests
         {
             DynamicRenderMesh mesh = new DynamicRenderMesh();
 
-            Vertex[] verts = CreateTetrahedronVerts();
+            Vertex3D[] verts = CreateTetrahedronVerts();
 
-            foreach (Vertex v in verts)
+            foreach (Vertex3D v in verts)
             {
                 mesh.AddVertex(v);
             }
@@ -63,12 +63,12 @@ namespace GeometryTests
 
 
 
-        private Vertex[] CreateTetrahedronVerts()
+        private Vertex3D[] CreateTetrahedronVerts()
         {
-            return new Vertex[] {new Vertex(new GridVector3(0, 0, 0), new GridVector3(0, 0, 0)),
-                                     new Vertex(new GridVector3(0, 1, 0), new GridVector3(0, 1, 0)),
-                                     new Vertex(new GridVector3(0, 0, 1), new GridVector3(0, 0, 1)),
-                                     new Vertex(new GridVector3(1, 0, 0), new GridVector3(1, 0, 0)) };
+            return new Vertex3D[] {new Vertex3D(new GridVector3(0, 0, 0), new GridVector3(0, 0, 0)),
+                                     new Vertex3D(new GridVector3(0, 1, 0), new GridVector3(0, 1, 0)),
+                                     new Vertex3D(new GridVector3(0, 0, 1), new GridVector3(0, 0, 1)),
+                                     new Vertex3D(new GridVector3(1, 0, 0), new GridVector3(1, 0, 0)) };
         }
 
         private Face[] CreateTetrahedronFaces()
@@ -85,7 +85,7 @@ namespace GeometryTests
 
             DynamicRenderMesh mesh = new DynamicRenderMesh();
 
-            Vertex[] verts = CreateTetrahedronVerts();
+            Vertex3D[] verts = CreateTetrahedronVerts();
 
             int iFirstIndex = mesh.AddVerticies(verts);
             Assert.AreEqual(0, iFirstIndex);
@@ -112,9 +112,9 @@ namespace GeometryTests
         {
             DynamicRenderMesh mesh = new DynamicRenderMesh();
 
-            Vertex[] verts = CreateTetrahedronVerts();
+            Vertex3D[] verts = CreateTetrahedronVerts();
 
-            foreach (Vertex v in verts)
+            foreach (Vertex3D v in verts)
             {
                 mesh.AddVertex(v);
             }

@@ -1041,7 +1041,7 @@ namespace MorphologyMesh
         
         private static void AddIndexSetToMeshIndexMap(Dictionary<GridVector3, long> map, Geometry.Meshing.DynamicRenderMesh<ulong> mesh, Geometry.IIndexSet set)
         {
-            Geometry.Meshing.IVertex[] verts = mesh[set].ToArray();
+            Geometry.Meshing.IVertex3D[] verts = mesh[set].ToArray();
             long[] mesh_indicies = set.ToArray();
 
             for (int iVert = 0; iVert < mesh_indicies.Length; iVert++)

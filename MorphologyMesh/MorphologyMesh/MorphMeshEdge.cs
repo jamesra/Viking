@@ -35,6 +35,20 @@ namespace MorphologyMesh
                 return new SortedSet<MorphMeshFace>(this._Faces.Select(f => (MorphMeshFace)f)).ToImmutableSortedSet();
             }
         }
+       
+        /// <summary>
+        /// Returns false if the edge requires additional faces to complete the meshing of the morphology.
+        /// Currently used for Bajaj meshing, where CONTOUR edges require one face, and all others require two.
+        /// </summary>
+        /// <returns></returns>
+        public bool FacesComplete
+        {
+            get
+            {
+                System.Diagnostics.Debug.Assert(this.Faces.Count < 3); // We cannot have more than two faces on an edge when meshing morphology
+                return Type == EdgeType.CONTOUR ? Faces.Count == 1 : Faces.Count == 2;
+            }
+        }
 
         public static new IEdge Duplicate(IEdge old, int A, int B)
         {

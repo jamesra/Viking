@@ -503,7 +503,7 @@ namespace MorphologyMesh
                 else
                 {
                     //Create a new vertex
-                    Tri_to_Mesh[iTri] = mesh.AddVertex(new Geometry.Meshing.Vertex(new GridVector3(v.X, v.Y, Z), GridVector3.UnitZ));
+                    Tri_to_Mesh[iTri] = mesh.AddVertex(new Geometry.Meshing.Vertex3D(new GridVector3(v.X, v.Y, Z), GridVector3.UnitZ));
                     VertToMeshIndex.Add(new GridVector2(v.X, v.Y), iTri);
                 }
             }
