@@ -122,7 +122,7 @@ namespace ColladaIO
             library_geometries_type geomLib = new library_geometries_type();
               
 #if DEBUG
-            geomLib.geometry = listModels.Select(model => MeshSerializer.CreateGeometry(model.Mesh, model.Name, model.Material.Key)).Where(Geom => Geom != null).ToArray();
+            geomLib.geometry = listModels.Select(model => MeshSerializer.CreateGeometry(model.Mesh as Geometry.Meshing.IMesh3D<IVertex3D>, model.Name, model.Material.Key)).Where(Geom => Geom != null).ToArray();
 #else
             geomLib.geometry = listModels.Select(model => MeshSerializer.CreateGeometry(model.Mesh, model.Name, model.Material.Key)).AsParallel().Where(Geom => Geom != null).ToArray();
 #endif

@@ -103,7 +103,7 @@ namespace MorphologyMesh
             return meshGraph;
         }
 
-        private static void AddIndexSetToMeshIndexMap(SortedList<GridVector3, long> map, Geometry.Meshing.DynamicRenderMesh<ulong> mesh, Geometry.IIndexSet set)
+        private static void AddIndexSetToMeshIndexMap(SortedList<GridVector3, long> map, Mesh3D<ulong> mesh, Geometry.IIndexSet set)
         {
             IVertex3D[] verts = mesh[set].ToArray();
             long[] mesh_indicies = set.ToArray();
@@ -120,7 +120,7 @@ namespace MorphologyMesh
         /// <param name="mesh">The mesh all ports in Nodes should index into</param>
         /// <param name="Nodes">All nodes containing cap ports that index into the mesh</param>
         /// <returns></returns>
-        private static SortedList<GridVector3, long> CreateVertexToMeshIndexMap(Geometry.Meshing.DynamicRenderMesh<ulong> mesh, IEnumerable<ConnectionVerticies> ports)
+        private static SortedList<GridVector3, long> CreateVertexToMeshIndexMap(Mesh3D<ulong> mesh, IEnumerable<ConnectionVerticies> ports)
         {
             SortedList<GridVector3, long> map = new SortedList<GridVector3, long>();
 
@@ -150,12 +150,12 @@ namespace MorphologyMesh
             GridPolygon[] Polygons;
             {
                 List<GridPolygon> Polylist = new List<GridPolygon>();
-                Polylist.Add(node.CapPort.ToPolygon(node.Mesh));
+                Polylist.Add(node.CapPort.ToPolygon(node.Mesh.Verticies));
 
                 //Need a map of verticies to Polygon/Index number
                 foreach (MeshNode branchNode in other_nodes)
                 {
-                    Polylist.Add(branchNode.CapPort.ToPolygon(branchNode.Mesh));
+                    Polylist.Add(branchNode.CapPort.ToPolygon(branchNode.Mesh.Verticies));
                 }
 
                 Polygons = Polylist.ToArray();

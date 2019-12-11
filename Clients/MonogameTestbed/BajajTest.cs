@@ -136,8 +136,8 @@ namespace MonogameTestbed
         public BajajOTVAssignmentView(GridPolygon[] polys, double[] Z)
         {
             ///Takes a set of polygons and Z values and generates a meshView
-            Polygons = polys.Select(p => p.Simplify(2.0)).ToArray();
-            //Polygons = polys.Select(p => p).ToArray();
+            //Polygons = polys.Select(p => p.Simplify(2.0)).ToArray();
+            Polygons = polys.Select(p => p).ToArray();
             double MinZ = Z.Min(); //Translate our Z values to an origin of 0 so we can render meshes in 2D easily
             PolyZ = Z.Select(z => z - MinZ).ToArray();
             //Bajaj Step 3
@@ -404,9 +404,9 @@ namespace MonogameTestbed
             List<GridVector2> points = pointToPoly.Keys.ToList();
             Debug.Assert(mesh.Vertices.Select(v => v.ToGridVector2()).SequenceEqual(points));
 
-            DynamicRenderMesh<PointIndex> SearchMesh = new DynamicRenderMesh<PointIndex>();
+            Mesh3D<PointIndex> SearchMesh = new Mesh3D<PointIndex>();
 
-            SearchMesh.AddVerticies(pointToPoly.Keys.Select(v => new Vertex<PointIndex>(v.ToGridVector3(0), pointToPoly[v])).ToArray());
+            SearchMesh.AddVerticies(pointToPoly.Keys.Select(v => new Vertex3D<PointIndex>(v.ToGridVector3(0), pointToPoly[v])).ToArray());
             SearchMesh.AddFaces(mesh.Triangles.Select(t => new Face(t.GetVertexID(0), t.GetVertexID(1), t.GetVertexID(2)) as IFace).ToArray()); 
         }
                       

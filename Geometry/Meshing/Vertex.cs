@@ -64,15 +64,17 @@ namespace Geometry.Meshing
             _Edges.Remove(e);
             _ImmutableEdges = null;
         }
+
+        public abstract IVertex ShallowCopy();
     }
 
     /// <summary>
     /// A templated vertex that stores additional data of type T
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    public class Vertex3D<T> : Vertex3D
+    public class Vertex3D<T> : Vertex3D, IVertex3D<T>
     {
-        public T Data;
+        public T Data { get; set; }
 
         public Vertex3D(GridVector3 p, GridVector3 n, T data) : base(p, n)
         {
@@ -86,6 +88,12 @@ namespace Geometry.Meshing
         public Vertex3D(GridVector3 p, T data) : base(p)
         {
             Data = data;
+        }
+
+        public override IVertex ShallowCopy()
+        {
+            Vertex3D<T> newVertex = new Vertex3D<T>(Position, Normal, Data);
+            return newVertex;
         }
     }
 
@@ -120,26 +128,6 @@ namespace Geometry.Meshing
                 _Normal = value;
             }
         }
-         
-        /// <summary>
-        /// Duplicate functions are used to create a copy of the vertex without any edge or face data.
-        /// </summary>
-        /// <param name="oldVertex"></param>
-        /// <param name="offset"></param>
-        /// <returns></returns>
-        public static Vertex3D CreateOffsetCopy(Vertex3D oldVertex, int offset)
-        {
-            Vertex3D newVertex = new Meshing.Vertex3D(oldVertex.Position, oldVertex.Normal);
-            newVertex.Index = oldVertex.Index + offset;
-            return newVertex;
-        }
-
-        public static IVertex3D CreateOffsetCopy(IVertex3D oldVertex, int offset)
-        {
-            Vertex3D newVertex = new Meshing.Vertex3D(oldVertex.Position, oldVertex.Normal);
-            newVertex.Index = oldVertex.Index + offset;
-            return newVertex;
-        }
 
         public Vertex3D(GridVector3 p, GridVector3 n) : base()
         {
@@ -159,7 +147,7 @@ namespace Geometry.Meshing
             return string.Format("I: {0} P: {1} N: {2}", this.Index, Position, Normal);
         }
 
-        public IVertex ShallowCopy()
+        public override IVertex ShallowCopy()
         {
             Vertex3D v = new Vertex3D(this.Position, this.Normal);
 
@@ -182,9 +170,9 @@ namespace Geometry.Meshing
     /// A templated vertex that stores additional data of type T
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    public class Vertex2D<T> : Vertex2D
+    public class Vertex2D<T> : Vertex2D, IVertex2D<T>
     {
-        public T Data;
+        public T Data { get; set; }
 
         public Vertex2D(GridVector2 p, T data) : base(p)
         {
@@ -193,6 +181,12 @@ namespace Geometry.Meshing
 
         public Vertex2D(GridVector2 p) : base(p)
         {
+        }
+
+        public override IVertex ShallowCopy()
+        {
+            Vertex2D<T> newVertex = new Vertex2D<T>(Position, Data);
+            return newVertex;
         }
     }
 
@@ -216,19 +210,6 @@ namespace Geometry.Meshing
         } 
 
 
-        /// <summary>
-        /// Duplicate functions are used to create a copy of the vertex without any edge or face data.
-        /// </summary>
-        /// <param name="oldVertex"></param>
-        /// <param name="offset"></param>
-        /// <returns></returns>
-        public static IVertex2D CreateOffsetCopy(IVertex2D oldVertex, int offset)
-        {
-            Vertex2D newVertex = new Meshing.Vertex2D(oldVertex.Position);
-            newVertex.Index = oldVertex.Index + offset;
-            return newVertex;
-        }
-
         public Vertex2D(GridVector2 p) : base()
         {
             _Position = p;
@@ -238,14 +219,7 @@ namespace Geometry.Meshing
         {
             return string.Format("I: {0} P: {1}", this.Index, Position);
         }
-
-        public virtual IVertex2D ShallowCopy()
-        {
-            Vertex2D v = new Vertex2D(this.Position);
-
-            return v;
-        }
-
+        
         public int CompareTo(IVertex2D other)
         {
             return this.Index.CompareTo(other.Index);
@@ -254,6 +228,12 @@ namespace Geometry.Meshing
         public bool Equals(IVertex2D other)
         {
             return this.Index == other.Index;
+        }
+
+        public override IVertex ShallowCopy()
+        {
+            Vertex2D newVertex = new Vertex2D(Position);
+            return newVertex;
         }
     }
 

@@ -102,8 +102,22 @@ namespace MorphologyMesh
                 return ExternalBorder.Count + InternalBorders.Sum(ib => ib.Count) + InternalVerticies.Count;
             }
         }
+        public Geometry.GridPolygon ToPolygon(IReadOnlyList<IVertex3D> Verticies)
+        {
+            System.Diagnostics.Debug.Assert(ExternalBorder.Max() < Verticies.Count);
+#if DEBUG
+            if (InternalBorders.Length > 0)
+                System.Diagnostics.Debug.Assert(InternalBorders.Max(ib => ib.Max()) < Verticies.Count);
+#endif
 
-        public Geometry.GridPolygon ToPolygon(DynamicRenderMesh mesh)
+            GridVector2[] externalBorder = this.ExternalBorder.Select(i => Verticies[(int)i].Position.XY()).ToArray();
+            externalBorder = externalBorder.EnsureClosedRing();
+            List<GridVector2[]> internalBorders = this.InternalBorders.Select(ib => ib.Select(i => Verticies[(int)i].Position.XY()).ToArray().EnsureClosedRing()).ToList();
+            GridPolygon polygon = new GridPolygon(externalBorder, internalBorders);
+            return polygon;
+        }
+
+        public Geometry.GridPolygon ToPolygon(IMesh<Vertex3D> mesh)
         {
             System.Diagnostics.Debug.Assert(ExternalBorder.Max() < mesh.Verticies.Count);
 #if DEBUG
@@ -111,9 +125,24 @@ namespace MorphologyMesh
                 System.Diagnostics.Debug.Assert(InternalBorders.Max(ib => ib.Max()) < mesh.Verticies.Count);
 #endif
 
-            GridVector2[] externalBorder = this.ExternalBorder.Select(i => mesh.Verticies[(int)i].Position.XY()).ToArray();
+            GridVector2[] externalBorder = mesh[this.ExternalBorder].Select(v => v.Position.XY()).ToArray();
             externalBorder = externalBorder.EnsureClosedRing();
             List<GridVector2[]> internalBorders = this.InternalBorders.Select(ib => ib.Select(i => mesh.Verticies[(int)i].Position.XY()).ToArray().EnsureClosedRing()).ToList();
+            GridPolygon polygon = new GridPolygon(externalBorder, internalBorders);
+            return polygon;
+        }
+
+        public Geometry.GridPolygon ToPolygon(IMesh<IVertex2D> mesh)
+        {
+            System.Diagnostics.Debug.Assert(ExternalBorder.Max() < mesh.Verticies.Count);
+#if DEBUG
+            if (InternalBorders.Length > 0)
+                System.Diagnostics.Debug.Assert(InternalBorders.Max(ib => ib.Max()) < mesh.Verticies.Count);
+#endif
+
+            GridVector2[] externalBorder = mesh[this.ExternalBorder].Select(v => v.Position).ToArray();
+            externalBorder = externalBorder.EnsureClosedRing();
+            List<GridVector2[]> internalBorders = this.InternalBorders.Select(ib => ib.Select(i => mesh.Verticies[(int)i].Position).ToArray().EnsureClosedRing()).ToList();
             GridPolygon polygon = new GridPolygon(externalBorder, internalBorders);
             return polygon;
         }

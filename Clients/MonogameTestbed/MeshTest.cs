@@ -20,8 +20,8 @@ namespace MonogameTestbed
         VikingXNAGraphics.MeshView<VertexPositionColor> meshView;
         VikingXNAGraphics.MeshView<VertexPositionNormalColor> meshViewWithLighting;
 
-        DynamicRenderMesh tetraMesh = new DynamicRenderMesh();
-        DynamicRenderMesh cubeMesh =  new DynamicRenderMesh();
+        Mesh3D tetraMesh = new Mesh3D();
+        Mesh3D cubeMesh =  new Mesh3D();
 
         Scene3D Scene;
 
@@ -66,12 +66,12 @@ namespace MonogameTestbed
 
         
 
-        private Vertex[] CreateTetrahedronVerts(GridVector3 offset)
+        private Vertex3D[] CreateTetrahedronVerts(GridVector3 offset)
         {
-            Vertex[] verts = new Vertex[] {new Vertex(new GridVector3(0, 0, 0), new GridVector3(0, 0, 0)),
-                                     new Vertex(new GridVector3(0, 1, 0), new GridVector3(0, 1, 0)),
-                                     new Vertex(new GridVector3(0, 0, 1), new GridVector3(0, 0, 1)),
-                                     new Vertex(new GridVector3(1, 0, 0), new GridVector3(1, 0, 0)) };
+            Vertex3D[] verts = new Vertex3D[] {new Vertex3D(new GridVector3(0, 0, 0), new GridVector3(0, 0, 0)),
+                                     new Vertex3D(new GridVector3(0, 1, 0), new GridVector3(0, 1, 0)),
+                                     new Vertex3D(new GridVector3(0, 0, 1), new GridVector3(0, 0, 1)),
+                                     new Vertex3D(new GridVector3(1, 0, 0), new GridVector3(1, 0, 0)) };
 
             for(int i = 0; i < verts.Length; i++)
             {
@@ -89,9 +89,9 @@ namespace MonogameTestbed
                                new Face(1,3,2) };
         }
 
-        private DynamicRenderMesh CreateTetrahedronMeshModel(GridVector3 offset)
+        private Mesh3D CreateTetrahedronMeshModel(GridVector3 offset)
         {
-            DynamicRenderMesh mesh = new DynamicRenderMesh();
+            Mesh3D mesh = new Mesh3D();
             mesh.AddVerticies(CreateTetrahedronVerts(new GridVector3(0, 0, 0)));
             Face[] faces = CreateTetrahedronFaces();
             foreach (Face f in faces)
@@ -227,7 +227,7 @@ namespace MonogameTestbed
 
             MeshGraph graph = StandardModels.BuildMeshGraph(shapes, ZLevels, edges, 5.0, translate);
 
-            DynamicRenderMesh<ulong> mesh = SmoothMeshGenerator.Generate(graph);
+            Mesh3D<ulong> mesh = SmoothMeshGenerator.Generate(graph);
             List<MeshModel<VertexPositionNormalColor>> listMeshModels = new List<MeshModel<VertexPositionNormalColor>>();
             return mesh.ToVertexPositionNormalColorMeshModel(Color.Yellow);
         }
@@ -237,7 +237,7 @@ namespace MonogameTestbed
             //Create three simple polygons and add them to the graph
             MeshGraph graph = StandardModels.BuildMeshGraph(StandardModels.SharedModelPolygons, StandardModels.SharedModelZ, StandardModels.SharedModelEdges, 5.0, translate);
 
-            DynamicRenderMesh<ulong> mesh = SmoothMeshGenerator.Generate(graph);
+            Mesh3D<ulong> mesh = SmoothMeshGenerator.Generate(graph);
             List<MeshModel<VertexPositionNormalColor>> listMeshModels = new List<MeshModel<VertexPositionNormalColor>>();
             return mesh.ToVertexPositionNormalColorMeshModel(Color.Yellow);
         }
@@ -261,7 +261,7 @@ namespace MonogameTestbed
 
             MeshGraph graph = StandardModels.BuildMeshGraph(shapes, ZLevels, edges, 5.0, translate);
 
-            DynamicRenderMesh<ulong> mesh = SmoothMeshGenerator.Generate(graph);
+            Mesh3D<ulong> mesh = SmoothMeshGenerator.Generate(graph);
             List<MeshModel<VertexPositionNormalColor>> listMeshModels = new List<MeshModel<VertexPositionNormalColor>>();
             return mesh.ToVertexPositionNormalColorMeshModel(Color.Yellow);
         }
@@ -281,7 +281,7 @@ namespace MonogameTestbed
 
             MeshGraph graph = StandardModels.BuildMeshGraph(shapes, ZLevels, edges, 5.0, translate);
 
-            DynamicRenderMesh<ulong> mesh = SmoothMeshGenerator.Generate(graph);
+            Mesh3D<ulong> mesh = SmoothMeshGenerator.Generate(graph);
             List<MeshModel<VertexPositionNormalColor>> listMeshModels = new List<MeshModel<VertexPositionNormalColor>>();
             return mesh.ToVertexPositionNormalColorMeshModel(Color.Yellow);
         }
@@ -302,7 +302,7 @@ namespace MonogameTestbed
             
             MeshGraph graph = StandardModels.BuildMeshGraph(shapes, ZLevels, edges, 5.0, translate);
 
-            DynamicRenderMesh<ulong> mesh = SmoothMeshGenerator.Generate(graph);
+            Mesh3D<ulong> mesh = SmoothMeshGenerator.Generate(graph);
             List<MeshModel<VertexPositionNormalColor>> listMeshModels = new List<MeshModel<VertexPositionNormalColor>>();
             return mesh.ToVertexPositionNormalColorMeshModel(Color.Yellow);
         }
@@ -331,7 +331,7 @@ namespace MonogameTestbed
             };
 
             MeshGraph graph = StandardModels.BuildMeshGraph(shapes, ZLevels, edges, 5.0, translate);
-            DynamicRenderMesh<ulong> mesh = SmoothMeshGenerator.Generate(graph);
+            Mesh3D<ulong> mesh = SmoothMeshGenerator.Generate(graph);
             List<MeshModel<VertexPositionNormalColor>> listMeshModels = new List<MeshModel<VertexPositionNormalColor>>();
             return mesh.ToVertexPositionNormalColorMeshModel(Color.Yellow);
         }
@@ -362,7 +362,7 @@ namespace MonogameTestbed
             };
 
             MeshGraph graph = StandardModels.BuildMeshGraph(shapes, ZLevels, edges, 5.0, translate);
-            DynamicRenderMesh<ulong> mesh = SmoothMeshGenerator.Generate(graph);
+            Mesh3D<ulong> mesh = SmoothMeshGenerator.Generate(graph);
             List<MeshModel<VertexPositionNormalColor>> listMeshModels = new List<MeshModel<VertexPositionNormalColor>>();
             return mesh.ToVertexPositionNormalColorMeshModel(Color.Yellow);
         }
@@ -395,7 +395,7 @@ namespace MonogameTestbed
             };
 
             MeshGraph graph = StandardModels.BuildMeshGraph(shapes, ZLevels, edges, 5.0, translate);
-            DynamicRenderMesh<ulong> mesh = SmoothMeshGenerator.Generate(graph);
+            Mesh3D<ulong> mesh = SmoothMeshGenerator.Generate(graph);
             List<MeshModel<VertexPositionNormalColor>> listMeshModels = new List<MeshModel<VertexPositionNormalColor>>();
             return mesh.ToVertexPositionNormalColorMeshModel(Color.Yellow);
         }
@@ -419,7 +419,7 @@ namespace MonogameTestbed
             };
 
             MeshGraph graph = StandardModels.BuildMeshGraph(shapes, ZLevels, edges, 5.0, translate);
-            DynamicRenderMesh<ulong> mesh = SmoothMeshGenerator.Generate(graph);
+            Mesh3D<ulong> mesh = SmoothMeshGenerator.Generate(graph);
             List<MeshModel<VertexPositionNormalColor>> listMeshModels = new List<MeshModel<VertexPositionNormalColor>>();
             return mesh.ToVertexPositionNormalColorMeshModel(Color.Yellow);
         }
@@ -450,14 +450,14 @@ namespace MonogameTestbed
 
             MeshGraph graph = StandardModels.BuildMeshGraph(shapes, ZLevels, edges, 5.0, translate);
 
-            DynamicRenderMesh<ulong> mesh = SmoothMeshGenerator.Generate(graph);
+            Mesh3D<ulong> mesh = SmoothMeshGenerator.Generate(graph);
             List<MeshModel<VertexPositionNormalColor>> listMeshModels = new List<MeshModel<VertexPositionNormalColor>>();
             return mesh.ToVertexPositionNormalColorMeshModel(Color.Yellow);
         }
 
         private MeshModel<VertexPositionNormalColor> BuildCircleConvexHull(ICircle2D circle)
         { 
-            Vertex<object>[] verticies = MorphologyMesh.ShapeMeshGenerator<object>.CreateVerticiesForCircle(circle, 0, 16, null, GridVector3.Zero);
+            Vertex3D<object>[] verticies = MorphologyMesh.ShapeMeshGenerator<object>.CreateVerticiesForCircle(circle, 0, 16, null, GridVector3.Zero);
 
             GridVector2[] verts2D = verticies.Select(v => new GridVector2(v.Position.X, v.Position.Y)).ToArray();
 

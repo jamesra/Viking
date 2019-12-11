@@ -24,7 +24,7 @@ namespace MonogameTestbed
         public GridPolygon[] Polygons = null;
         public double[] PolyZ = null;
 
-        public List<DynamicRenderMesh<ulong>> meshes = new List<DynamicRenderMesh<ulong>>();
+        public List<Mesh3D> meshes = new List<Mesh3D>();
 
         public DelaunayTetrahedronView(GridPolygon[] polys, double[] Z)
         {
@@ -34,7 +34,7 @@ namespace MonogameTestbed
             meshes = UpdateTriangulation3D();
         }
 
-        public List<DynamicRenderMesh<ulong>> UpdateTriangulation3D()
+        public List<Mesh3D> UpdateTriangulation3D()
         {
             List<MIVector3> listPoints = new List<MIVector3>();
             for (int iPoly = 0; iPoly < Polygons.Length; iPoly++)
@@ -48,15 +48,15 @@ namespace MonogameTestbed
 
             List<DefaultTriangulationCell<MIVector3>> listCells = new List<DefaultTriangulationCell<MIVector3>>(tri.Cells.Count());
 
-            List<DynamicRenderMesh<ulong>> listMesh = new List<DynamicRenderMesh<ulong>>();
+            List<Mesh3D> listMesh = new List<Mesh3D>();
 
-            DynamicRenderMesh<ulong> mesh = new DynamicRenderMesh<ulong>();
+            Mesh3D mesh = new Mesh3D();
 
             Dictionary<GridVector3, int> vertexLookup = new Dictionary<GridVector3, int>();
 
             foreach (MIVector3 v in listPoints)
             {
-                int iV = mesh.AddVertex(new Vertex(v.P));
+                int iV = mesh.AddVertex(new Vertex3D(v.P));
                 vertexLookup[v.P] = iV;
             }
 
@@ -64,8 +64,8 @@ namespace MonogameTestbed
 
             foreach (var cell in tri.Cells)
             {
-                DynamicRenderMesh<ulong> faceMesh = new DynamicRenderMesh<ulong>();
-                faceMesh.AddVerticies(cell.Vertices.Select(fv => new Vertex(fv.P)).ToArray());
+                Mesh3D faceMesh = new Mesh3D();
+                faceMesh.AddVerticies(cell.Vertices.Select(fv => new Vertex3D(fv.P)).ToArray());
 
                 //For each face, determine if any of the edges are invalid lines.  If all lines are valid then add the face to the output
                 bool SkipCell = false;
@@ -425,7 +425,7 @@ namespace MonogameTestbed
             
             
             System.Random r = new Random();
-            foreach (DynamicRenderMesh<ulong> mesh in tetraView.meshes)
+            foreach (Mesh3D mesh in tetraView.meshes)
             {
                 mesh.RecalculateNormals();
                 meshView.models.Add(mesh.ToVertexPositionNormalColorMeshModel(new Color((float)r.NextDouble(), (float)r.NextDouble(), (float)r.NextDouble())));
@@ -435,11 +435,11 @@ namespace MonogameTestbed
         public void UnloadContent(MonoTestbed window)
         {
         }
-        private ICollection<DynamicRenderMesh<ulong>> RecursivelyGenerateMeshes(AnnotationVizLib.MorphologyGraph graph)
+        private ICollection<Mesh3D<ulong>> RecursivelyGenerateMeshes(AnnotationVizLib.MorphologyGraph graph)
         {
-            List<DynamicRenderMesh<ulong>> listMeshes = new List<DynamicRenderMesh<ulong>>();
+            List<Mesh3D<ulong>> listMeshes = new List<Mesh3D<ulong>>();
 
-            DynamicRenderMesh<ulong> structureMesh = MorphologyMesh.SmoothMeshGenerator.Generate(graph);
+            Mesh3D<ulong> structureMesh = MorphologyMesh.SmoothMeshGenerator.Generate(graph);
             if (structureMesh != null)
                 listMeshes.Add(structureMesh);
 

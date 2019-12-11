@@ -1039,7 +1039,7 @@ namespace MorphologyMesh
             return IDToShape;
         }
         
-        private static void AddIndexSetToMeshIndexMap(Dictionary<GridVector3, long> map, Geometry.Meshing.DynamicRenderMesh<ulong> mesh, Geometry.IIndexSet set)
+        private static void AddIndexSetToMeshIndexMap(Dictionary<GridVector3, long> map, Geometry.Meshing.Mesh3D<ulong> mesh, Geometry.IIndexSet set)
         {
             Geometry.Meshing.IVertex3D[] verts = mesh[set].ToArray();
             long[] mesh_indicies = set.ToArray();
@@ -1056,7 +1056,7 @@ namespace MorphologyMesh
         /// <param name="mesh">The mesh all ports in Nodes should index into</param>
         /// <param name="Nodes">All nodes containing cap ports that index into the mesh</param>
         /// <returns></returns>
-        private static Dictionary<GridVector3, long> CreateVertexToMeshIndexMap(Geometry.Meshing.DynamicRenderMesh<ulong> mesh, IEnumerable<ConnectionVerticies> ports)
+        private static Dictionary<GridVector3, long> CreateVertexToMeshIndexMap(Geometry.Meshing.Mesh3D<ulong> mesh, IEnumerable<ConnectionVerticies> ports)
         {
             Dictionary<GridVector3, long> map = new Dictionary<GridVector3, long>();
 
@@ -1752,12 +1752,12 @@ namespace MorphologyMesh
 
             //Build a set of all polygons in the nodes
             List<GridPolygon> Polygons = new List<GridPolygon>();
-            Polygons.Add(node.CapPort.ToPolygon(node.Mesh));
+            Polygons.Add(node.CapPort.ToPolygon(node.Mesh.Verticies));
 
             //Need a map of verticies to Polygon/Index number
             foreach (MeshNode branchNode in other_nodes)
             {
-                Polygons.Add(branchNode.CapPort.ToPolygon(branchNode.Mesh));
+                Polygons.Add(branchNode.CapPort.ToPolygon(branchNode.Mesh.Verticies));
             }
 
             //Build a single mesh with all components of the branch

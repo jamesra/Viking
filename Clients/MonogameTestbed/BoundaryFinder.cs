@@ -115,7 +115,7 @@ namespace MonogameTestbed
             return PointToShapeIndex[line.A] != PointToShapeIndex[line.B];
         }
 
-        private static List<IEdge> LinesOfFaceBetweenShapes(DynamicRenderMesh mesh, IFace face, Dictionary<GridVector2, int> PointToShapeIndex)
+        private static List<IEdge> LinesOfFaceBetweenShapes(Mesh3D mesh, IFace face, Dictionary<GridVector2, int> PointToShapeIndex)
         {
             List<IEdge> edges = new List<IEdge>(); 
             foreach(var edge in face.Edges)
@@ -161,7 +161,7 @@ namespace MonogameTestbed
             Dictionary<GridVector2, SortedSet<int>> PointToTrianglesIndex = CreatePointToConnectedTrianglesIndexLookup(triangles);
             Dictionary<GridVector2, int> PointToShapeIndex = CreatePointToShapeIndexLookup(shapes);
 
-            DynamicRenderMesh mesh = triangles.ToDynamicRenderMesh();
+            Mesh3D mesh = triangles.ToDynamicRenderMesh();
 
             foreach(var edge in mesh.Edges.Values)
             {
@@ -526,9 +526,9 @@ namespace MonogameTestbed
             return lines;
         }
 
-        private static int FindStartForBoundarySearch(DynamicRenderMesh mesh, GridPolygon[] shapes)
+        private static int FindStartForBoundarySearch(Mesh3D mesh, GridPolygon[] shapes)
         {
-            IVertex vert = mesh.Verticies.First(v => shapes.All(shape => !shape.Contains(v.Position.XY())));
+            IVertex3D vert = mesh.Verticies.First(v => shapes.All(shape => !shape.Contains(v.Position.XY())));
             return mesh.Verticies.IndexOf(vert);
         }
         

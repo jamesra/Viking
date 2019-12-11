@@ -13,9 +13,9 @@ namespace Geometry.Meshing
         /// </summary>
         /// <param name="triangles"></param>
         /// <returns></returns>
-        public static DynamicRenderMesh ToDynamicRenderMesh(this ICollection<GridTriangle> triangles)
+        public static Mesh3D ToDynamicRenderMesh(this ICollection<GridTriangle> triangles)
         {
-            DynamicRenderMesh mesh = new Meshing.DynamicRenderMesh();
+            Mesh3D mesh = new Meshing.Mesh3D();
             Dictionary<GridVector2, int> PointToVertexIndex = new Dictionary<GridVector2, int>();
 
             foreach (GridVector2 v in triangles.SelectMany(tri => tri.Points).Distinct())

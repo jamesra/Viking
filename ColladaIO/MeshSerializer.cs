@@ -11,7 +11,7 @@ namespace ColladaIO
 {
     class MeshSerializer
     {
-        public static geometry_type CreateGeometry(DynamicRenderMesh mesh, string name, string MaterialName)
+        public static geometry_type CreateGeometry(IMesh3D<IVertex3D> mesh, string name, string MaterialName)
         {
             geometry_type geometry = new geometry_type();
             geometry.id = name + "-geometry";
@@ -26,7 +26,7 @@ namespace ColladaIO
             return geometry;
         }
 
-        private static mesh_type CreateMesh(DynamicRenderMesh mesh, string id, string MaterialName)
+        private static mesh_type CreateMesh(IMesh3D<IVertex3D> mesh, string id, string MaterialName)
         {
             mesh_type dae_mesh = new mesh_type();
 

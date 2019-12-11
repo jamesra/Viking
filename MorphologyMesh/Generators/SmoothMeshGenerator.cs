@@ -29,13 +29,13 @@ namespace MorphologyMesh
         /// </summary>
         /// <param name="graph"></param>
         /// <returns></returns>
-        public static DynamicRenderMesh<ulong> Generate(MorphologyGraph graph)
+        public static Mesh3D<ulong> Generate(MorphologyGraph graph)
         {
             MeshGraph mGraph = MeshGraphBuilder.ConvertToMeshGraph(graph);
             return Generate(mGraph);
         }
 
-        public static DynamicRenderMesh<ulong> Generate(MeshGraph meshGraph )
+        public static Mesh3D<ulong> Generate(MeshGraph meshGraph )
         {
             List<GridLineSegment> newMeshLines;
             return Generate(meshGraph, out newMeshLines);
@@ -46,14 +46,14 @@ namespace MorphologyMesh
         /// </summary>
         /// <param name="graph"></param>
         /// <returns></returns>
-        public static DynamicRenderMesh<ulong> Generate(MeshGraph meshGraph, out List<GridLineSegment> newMeshEdges)
+        public static Mesh3D<ulong> Generate(MeshGraph meshGraph, out List<GridLineSegment> newMeshEdges)
         {
             //Adjust the verticies so the models are centered on zero
             //GridVector3 translate = -meshGraph.BoundingBox.CenterPoint;
 
             //Cap the terminal ports so they are not lost when we merge branches.  Since nodes can only have one upper and lower port we lose one branches port if we don't cap in advance.
 
-            List<DynamicRenderMesh<ulong>> listMeshes = new List<DynamicRenderMesh<ulong>>();
+            List<Mesh3D<ulong>> listMeshes = new List<Mesh3D<ulong>>();
 
 #if DEBUG
             foreach (var Node in meshGraph.Nodes.Values)
@@ -261,7 +261,7 @@ namespace MorphologyMesh
             return true;
         }
 
-        private static GridVector3[] AllPointsInConnection(DynamicRenderMesh mesh, ConnectionVerticies port)
+        private static GridVector3[] AllPointsInConnection(Mesh3D mesh, ConnectionVerticies port)
         {
             List<GridVector3> listPoints = new List<GridVector3>(port.TotalVerticies);
 
@@ -490,7 +490,7 @@ namespace MorphologyMesh
             }
         }
 
-        private static void CapPort(DynamicRenderMesh mesh, ConnectionVerticies Port, bool UpperFace)
+        private static void CapPort(Mesh3D<ulong> mesh, ConnectionVerticies Port, bool UpperFace)
         {
             //Cannot cap an open port
             if (Port.Type == ConnectionPortType.OPEN)
@@ -518,7 +518,7 @@ namespace MorphologyMesh
                 else
                 {
                     //Create a new vertex
-                    Tri_to_Mesh[iTri] = mesh.AddVertex(new Geometry.Meshing.Vertex3D(new GridVector3(v.X, v.Y, Z), GridVector3.UnitZ));
+                    Tri_to_Mesh[iTri] = mesh.AddVertex(new Geometry.Meshing.Vertex3D<ulong>(new GridVector3(v.X, v.Y, Z), GridVector3.UnitZ));
                     VertToMeshIndex.Add(new GridVector2(v.X, v.Y), iTri);
                 }
             }
@@ -545,7 +545,7 @@ namespace MorphologyMesh
             return;
         }
 
-        private static Dictionary<GridVector2, long> PointToMeshIndex(DynamicRenderMesh mesh, ConnectionVerticies port)
+        private static Dictionary<GridVector2, long> PointToMeshIndex(Mesh3D<ulong> mesh, ConnectionVerticies port)
         {
             Dictionary<GridVector2, long> VertToMeshIndex = new Dictionary<GridVector2, long>(port.ExternalBorder.Count + port.InternalBorders.Sum(ib=>ib.Count));
             
@@ -573,7 +573,7 @@ namespace MorphologyMesh
             return VertToMeshIndex;
         }
 
-        private static GridPolygon PolygonForPort(DynamicRenderMesh mesh, ConnectionVerticies port)
+        private static GridPolygon PolygonForPort(Mesh3D<ulong> mesh, ConnectionVerticies port)
         {
             GridVector2[] ExternalVerts = port.ExternalBorder.Select(i => mesh.Verticies[(int)i].Position.XY()).ToArray();
             ExternalVerts = ExternalVerts.EnsureClosedRing();
@@ -589,9 +589,9 @@ namespace MorphologyMesh
         }
 
         
-        internal static DynamicRenderMesh<ulong> MergeMeshes(MeshNode KeepNode, MeshNode RemoveNode)
+        internal static Mesh3D<ulong> MergeMeshes(MeshNode KeepNode, MeshNode RemoveNode)
         {
-            DynamicRenderMesh<ulong> CompositeMesh;
+            Mesh3D<ulong> CompositeMesh;
              
             int NewStartingIndex = KeepNode.Mesh.Append(RemoveNode.Mesh);
 
@@ -618,7 +618,7 @@ namespace MorphologyMesh
 
         private static List<GridLineSegment> MergeMeshEdge(MeshGraph graph, MeshEdge edge)
         {
-            DynamicRenderMesh<ulong> CompositeMesh = null;
+            Mesh3D<ulong> CompositeMesh = null;
             MeshNode KeepNode = null;
             MeshNode RemoveNode = null;
             ConnectionVerticies KeepPort;
@@ -765,7 +765,7 @@ namespace MorphologyMesh
         /// <param name="CompositeMesh">A mesh containing the verticies from both halves that need to be joined</param>
         /// <param name="UpperPort">Indicies that describe which verticies are part of the upper connection port</param>
         /// <param name="LowerPort">Indicies that describe which verticies are part of the lower connection port</param>
-        internal static List<GridLineSegment> AttachPorts(DynamicRenderMesh<ulong> CompositeMesh, ConnectionVerticies UpperPort, ConnectionVerticies LowerPort)
+        internal static List<GridLineSegment> AttachPorts(Mesh3D<ulong> CompositeMesh, ConnectionVerticies UpperPort, ConnectionVerticies LowerPort)
         {
             //We need to center the verticies so both ports have the same centroid.  If we do not do this the GridVector2 distance measurement latches onto a single vertex on the convex hull when the shapes do not overlap.
             //TODO: Only works on the XY axis, not for truly 3D ports
@@ -779,7 +779,7 @@ namespace MorphologyMesh
             return new List<GridLineSegment>();
         }
 
-        private static List<GridLineSegment> AttachClosedPorts(DynamicRenderMesh<ulong> CompositeMesh, ConnectionVerticies UpperPort, ConnectionVerticies LowerPort)
+        private static List<GridLineSegment> AttachClosedPorts(Mesh3D<ulong> CompositeMesh, ConnectionVerticies UpperPort, ConnectionVerticies LowerPort)
         {
             return AttachClosedPorts(CompositeMesh, UpperPort.ExternalBorder, LowerPort.ExternalBorder);
 
@@ -790,7 +790,7 @@ namespace MorphologyMesh
             //Interior Polys that do not have an overlapping interior poly on the other annotation need to be capped off 
         }
         
-        private static List<GridLineSegment> AttachClosedPorts(DynamicRenderMesh<ulong> CompositeMesh, IIndexSet UpperIndexArray, IIndexSet LowerIndexArray)
+        private static List<GridLineSegment> AttachClosedPorts(Mesh3D<ulong> CompositeMesh, IIndexSet UpperIndexArray, IIndexSet LowerIndexArray)
         {
 
             //System.Diagnostics.Debug.Assert(CompositeMesh[UpperIndexArray.First()].Position.Z >= CompositeMesh[LowerIndexArray.First()].Position.Z,
@@ -1068,7 +1068,7 @@ namespace MorphologyMesh
             return CreatedLines;
         }
 
-        public static bool IsNormalCorrect(DynamicRenderMesh<ulong> CompositeMesh, Face face, GridPolygon p, int iStartSegment)
+        public static bool IsNormalCorrect(Mesh3D<ulong> CompositeMesh, Face face, GridPolygon p, int iStartSegment)
         {
             GridVector3 normal = CompositeMesh.Normal(face);
             int iEndSegment = iStartSegment + 1; 
@@ -1096,7 +1096,7 @@ namespace MorphologyMesh
         }
 
 
-        private static List<GridLineSegment> AttachOpenPorts(DynamicRenderMesh<ulong> CompositeMesh, IIndexSet UpperIndexArray, IIndexSet LowerIndexArray)
+        private static List<GridLineSegment> AttachOpenPorts(Mesh3D<ulong> CompositeMesh, IIndexSet UpperIndexArray, IIndexSet LowerIndexArray)
         {
             //Used to combine two lines.  Find the starting point by locating which endpoints are closest to each other.  
             GridVector2[] UpperVerticies = UpperIndexArray.Select(i => new GridVector2(CompositeMesh.Verticies[(int)i].Position.X, CompositeMesh.Verticies[(int)i].Position.Y)).ToArray();

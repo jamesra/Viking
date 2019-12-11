@@ -5,6 +5,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System.Text;
 using System.Threading.Tasks;
+using Geometry.Meshing;
 
 namespace VikingXNAGraphics
 {
@@ -96,7 +97,7 @@ namespace VikingXNAGraphics
 
     public static class MeshExtensions
     {
-        public static MeshModel<VertexPositionColor> ToVertexPositionColorMeshModel(this Geometry.Meshing.DynamicRenderMesh mesh, Color color)
+        public static MeshModel<VertexPositionColor> ToVertexPositionColorMeshModel<T>(this MeshBase3D<IVertex3D<T>> mesh, Color color)
         {
             MeshModel<VertexPositionColor> model = new MeshModel<VertexPositionColor>();
 
@@ -107,7 +108,35 @@ namespace VikingXNAGraphics
             return model;
         }
 
-        public static MeshModel<VertexPositionColor> ToVertexPositionColorMeshModel(this Geometry.Meshing.DynamicRenderMesh mesh, Color[] colors)
+        public static MeshModel<VertexPositionColor> ToVertexPositionColorMeshModel(this MeshBase3D<IVertex3D> mesh, Color color)
+        {
+            MeshModel<VertexPositionColor> model = new MeshModel<VertexPositionColor>();
+
+            mesh.ConvertAllFacesToTriangles();
+
+            model.Verticies = mesh.Verticies.Select((v, i) => new VertexPositionColor(v.Position.ToXNAVector3(), color)).ToArray();
+            model.Edges = mesh.Faces.SelectMany(f => f.iVerts).ToArray();
+            return model;
+        }
+
+        public static MeshModel<VertexPositionColor> ToVertexPositionColorMeshModel<T>(this MeshBase3D<IVertex3D<T>> mesh, Color[] colors)
+        {
+            if (mesh.Verticies.Count != colors.Length)
+            {
+                throw new ArgumentException("Number of colors must match number of verticies");
+            }
+
+            MeshModel<VertexPositionColor> model = new MeshModel<VertexPositionColor>();
+
+            //Convert model to triangles if needed 
+            mesh.ConvertAllFacesToTriangles();
+
+            model.Verticies = mesh.Verticies.Select((v, i) => new VertexPositionColor(v.Position.ToXNAVector3(), colors[i])).ToArray();
+            model.Edges = mesh.Faces.SelectMany(f => f.iVerts).ToArray();
+            return model;
+        }
+
+        public static MeshModel<VertexPositionColor> ToVertexPositionColorMeshModel(this MeshBase3D<IVertex3D> mesh, Color[] colors)
         {
             if(mesh.Verticies.Count != colors.Length)
             {
@@ -124,7 +153,7 @@ namespace VikingXNAGraphics
             return model;
         }
 
-        public static MeshModel<VertexPositionNormalColor> ToVertexPositionNormalColorMeshModel(this Geometry.Meshing.DynamicRenderMesh mesh, Color color)
+        public static MeshModel<VertexPositionNormalColor> ToVertexPositionNormalColorMeshModel<T>(this MeshBase3D<IVertex3D<T>> mesh, Color color)
         {
             MeshModel<VertexPositionNormalColor> model = new MeshModel<VertexPositionNormalColor>();
 
@@ -135,7 +164,35 @@ namespace VikingXNAGraphics
             return model;
         }
 
-        public static MeshModel<VertexPositionNormalColor> ToVertexPositionNormalColorMeshModel(this Geometry.Meshing.DynamicRenderMesh mesh, Color[] colors)
+        public static MeshModel<VertexPositionNormalColor> ToVertexPositionNormalColorMeshModel(this MeshBase3D<IVertex3D> mesh, Color color)
+        {
+            MeshModel<VertexPositionNormalColor> model = new MeshModel<VertexPositionNormalColor>();
+
+            mesh.ConvertAllFacesToTriangles();
+
+            model.Verticies = mesh.Verticies.Select((v, i) => new VertexPositionNormalColor(v.Position.ToXNAVector3(), v.Normal.ToXNAVector3(), color)).ToArray();
+            model.Edges = mesh.Faces.SelectMany(f => f.iVerts).ToArray();
+            return model;
+        }
+
+        public static MeshModel<VertexPositionNormalColor> ToVertexPositionNormalColorMeshModel<T>(this MeshBase3D<IVertex3D<T>> mesh, Color[] colors)
+        {
+            if (mesh.Verticies.Count != colors.Length)
+            {
+                throw new ArgumentException("Number of colors must match number of verticies");
+            }
+
+            MeshModel<VertexPositionNormalColor> model = new MeshModel<VertexPositionNormalColor>();
+
+            //Convert model to triangles if needed 
+            mesh.ConvertAllFacesToTriangles();
+
+            model.Verticies = mesh.Verticies.Select((v, i) => new VertexPositionNormalColor(v.Position.ToXNAVector3(), v.Normal.ToXNAVector3(), colors[i])).ToArray();
+            model.Edges = mesh.Faces.SelectMany(f => f.iVerts).ToArray();
+            return model;
+        }
+
+        public static MeshModel<VertexPositionNormalColor> ToVertexPositionNormalColorMeshModel(this MeshBase3D<IVertex3D> mesh, Color[] colors)
         {
             if (mesh.Verticies.Count != colors.Length)
             {

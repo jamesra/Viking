@@ -18,9 +18,9 @@ namespace MorphologyMesh
 
     public static class ShapeMeshGenerator<T>
     {
-        public static DynamicRenderMesh<T> CreateMeshForBox(GridBox box, T locationData, GridVector3 translate)
+        public static Mesh3D<T> CreateMeshForBox(GridBox box, T locationData, GridVector3 translate)
         {
-            DynamicRenderMesh<T> mesh = new DynamicRenderMesh<T>();
+            Mesh3D<T> mesh = new Mesh3D<T>();
 
             double[] minVals = box.minVals;
             double[] maxVals = box.maxVals;
@@ -63,18 +63,18 @@ namespace MorphologyMesh
             return mesh;
         }
 
-        public static DynamicRenderMesh<T> CreateMeshForCircle(ICircle2D circle, double Z, int NumPointsOnCircle, T locationData, GridVector3 translate)
+        public static Mesh3D<T> CreateMeshForCircle(ICircle2D circle, double Z, int NumPointsOnCircle, T locationData, GridVector3 translate)
         {
-            DynamicRenderMesh<T> mesh = new DynamicRenderMesh<T>();
+            Mesh3D<T> mesh = new Mesh3D<T>();
             mesh.AddVerticies(CreateVerticiesForCircle(circle, Z, TopologyMeshGenerator.NumPointsAroundCircle, locationData, translate));
             AddFacesToCircle(mesh, TopologyMeshGenerator.NumPointsAroundCircle);
 
             return mesh;
         }
 
-        public static DynamicRenderMesh<T> CreateMeshForDisc(ICircle2D circle, double Z, double Height, int NumPointsOnDisc, T locationData, GridVector3 translate)
+        public static Mesh3D<T> CreateMeshForDisc(ICircle2D circle, double Z, double Height, int NumPointsOnDisc, T locationData, GridVector3 translate)
         {
-            DynamicRenderMesh<T> mesh = new DynamicRenderMesh<T>();
+            Mesh3D<T> mesh = new Mesh3D<T>();
             double halfHeight = Height / 2.0;
             mesh.AddVerticies(CreateVerticiesForCircle(circle, Z - halfHeight, TopologyMeshGenerator.NumPointsAroundCircle, locationData, translate));
             AddFacesToCircle(mesh, TopologyMeshGenerator.NumPointsAroundCircle, 0, CCWNormalHasPositiveZ: false);
@@ -109,7 +109,7 @@ namespace MorphologyMesh
             return verts;
         }
 
-        private static void AddFacesToCircle(DynamicRenderMesh<T> mesh, int NumPointsOnCircle, int firstCircleVertex = 0, bool CCWNormalHasPositiveZ = true)
+        private static void AddFacesToCircle(Mesh3D<T> mesh, int NumPointsOnCircle, int firstCircleVertex = 0, bool CCWNormalHasPositiveZ = true)
         {
             int[] edges = new int[NumPointsOnCircle * 3];
             int iCentroid = firstCircleVertex + NumPointsOnCircle;
@@ -134,7 +134,7 @@ namespace MorphologyMesh
         /// <param name="mesh"></param>
         /// <param name="NumPointsOnCircle"></param>
         /// <param name="firstCircleVertex"></param>
-        private static void AddFacesToDiscRim(DynamicRenderMesh<T> mesh, int NumPointsOnCircle, int firstCircleVertex = 0)
+        private static void AddFacesToDiscRim(Mesh3D<T> mesh, int NumPointsOnCircle, int firstCircleVertex = 0)
         {
             int iFirstLowerVertex = firstCircleVertex;
             int iLowerCentroid = iFirstLowerVertex + NumPointsOnCircle;
@@ -153,17 +153,17 @@ namespace MorphologyMesh
             mesh.AddFace(new Face(iFirstLowerVertex + NumPointsOnCircle - 1, iFirstLowerVertex, iFirstUpperVertex, iFirstUpperVertex + NumPointsOnCircle - 1));
         }
 
-        public static DynamicRenderMesh<T> CreateMeshForPolygon(IPolygon2D polygon, double Z, T locationData, GridVector3 translate)
+        public static Mesh3D<T> CreateMeshForPolygon(IPolygon2D polygon, double Z, T locationData, GridVector3 translate)
         {
             IMesh triangulation = polygon.Triangulate();
-            DynamicRenderMesh<T> mesh = ToDynamicRenderMesh(triangulation, Z, locationData, translate);
+            Mesh3D<T> mesh = ToDynamicRenderMesh(triangulation, Z, locationData, translate);
             return mesh;
         }
 
-        public static DynamicRenderMesh<T> CreateMeshForPolygonSlab(IPolygon2D polygon, double Z, double Height, T locationData, GridVector3 translate)
+        public static Mesh3D<T> CreateMeshForPolygonSlab(IPolygon2D polygon, double Z, double Height, T locationData, GridVector3 translate)
         {
             IMesh triangulation = polygon.Triangulate();
-            DynamicRenderMesh<T> mesh = new DynamicRenderMesh<T>();
+            Mesh3D<T> mesh = new Mesh3D<T>();
             double HalfHeight = Height / 2.0;
 
             Vertex3D<T>[] bottom_verticies = CreateVerticiesForPolygon(triangulation, Z - HalfHeight, locationData, translate);
@@ -226,7 +226,7 @@ namespace MorphologyMesh
             return verticies;
         }
 
-        private static void AddFacesToPolygon(DynamicRenderMesh<T> drmesh, IMesh triangulation, int firstPolyVertex = 0, bool CCWNormalHasPositiveZ = true)
+        private static void AddFacesToPolygon(Mesh3D<T> drmesh, IMesh triangulation, int firstPolyVertex = 0, bool CCWNormalHasPositiveZ = true)
         {
             foreach (var t in triangulation.Triangles)
             {
@@ -246,7 +246,7 @@ namespace MorphologyMesh
         /// <param name="mesh"></param>
         /// <param name="NumPointsOnCircle"></param>
         /// <param name="firstCircleVertex"></param>
-        private static void AddFacesToPolygonRim(DynamicRenderMesh<T> mesh, IMesh triangulation, GridPolygon polygon)
+        private static void AddFacesToPolygonRim(Mesh3D<T> mesh, IMesh triangulation, GridPolygon polygon)
         { 
             int VertsInTriangulation = triangulation.Vertices.Count;
 
@@ -274,7 +274,7 @@ namespace MorphologyMesh
         /// <param name="mesh"></param>
         /// <param name="NumPointsOnCircle"></param>
         /// <param name="lowerFaceFirstVertex"></param>
-        private static void AddFacesToPolygonRim(DynamicRenderMesh<T> mesh, int NumPointsInRim, int lowerFaceFirstVertex, int upperFaceFirstVertex, bool FaceOutside)
+        private static void AddFacesToPolygonRim(Mesh3D<T> mesh, int NumPointsInRim, int lowerFaceFirstVertex, int upperFaceFirstVertex, bool FaceOutside)
         {
             int iFirstLowerVertex = lowerFaceFirstVertex;
             int iFirstUpperVertex = upperFaceFirstVertex;
@@ -297,9 +297,9 @@ namespace MorphologyMesh
                 mesh.AddFace(new Face(iFirstUpperVertex + NumPointsInRim - 1, iFirstUpperVertex, iFirstLowerVertex, iFirstLowerVertex + NumPointsInRim - 1));
         }
 
-        private static DynamicRenderMesh<T> ToDynamicRenderMesh(TriangleNet.Meshing.IMesh triangulation, double Z, T locationData, GridVector3 translate)
+        private static Mesh3D<T> ToDynamicRenderMesh(TriangleNet.Meshing.IMesh triangulation, double Z, T locationData, GridVector3 translate)
         {
-            DynamicRenderMesh<T> drmesh = new DynamicRenderMesh<T>();
+            Mesh3D<T> drmesh = new Mesh3D<T>();
 
             foreach (TriangleNet.Geometry.Vertex v in triangulation.Vertices)
             {

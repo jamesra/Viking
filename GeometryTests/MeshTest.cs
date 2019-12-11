@@ -39,7 +39,7 @@ namespace GeometryTests
         [TestMethod]
         public void TestFaceAdjacenyOperations()
         {
-            DynamicRenderMesh mesh = new DynamicRenderMesh();
+            Mesh3D mesh = new Mesh3D();
 
             Vertex3D[] verts = CreateTetrahedronVerts();
 
@@ -83,7 +83,7 @@ namespace GeometryTests
         public void CreateTetrahedronWithPoints()
         {
 
-            DynamicRenderMesh mesh = new DynamicRenderMesh();
+            Mesh3D mesh = new Mesh3D();
 
             Vertex3D[] verts = CreateTetrahedronVerts();
 
@@ -110,7 +110,7 @@ namespace GeometryTests
         [TestMethod]
         public void CreateTetrahedronWithFaces()
         {
-            DynamicRenderMesh mesh = new DynamicRenderMesh();
+            Mesh3D mesh = new Mesh3D();
 
             Vertex3D[] verts = CreateTetrahedronVerts();
 

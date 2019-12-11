@@ -40,13 +40,13 @@ namespace VikingXNAGraphics
             return CreateMeshModel(mesh, color);
         }
 
-        public static Geometry.Meshing.DynamicRenderMesh ToMesh(this TriangleNet.Meshing.IMesh mesh)
+        public static Geometry.Meshing.Mesh3D ToMesh(this TriangleNet.Meshing.IMesh mesh)
         {
             GridVector3[] vertArray = mesh.Vertices.Select(v => v.ToGridVector3(0)).ToArray();
 
-            Geometry.Meshing.DynamicRenderMesh output = new Geometry.Meshing.DynamicRenderMesh();
+            Geometry.Meshing.Mesh3D output = new Geometry.Meshing.Mesh3D();
 
-            output.AddVerticies(vertArray.Select(v => new Geometry.Meshing.Vertex(v)).ToArray());
+            output.AddVerticies(vertArray.Select(v => new Geometry.Meshing.Vertex3D(v)).ToArray());
 
             List<int> edges = new List<int>(mesh.Vertices.Count * 3);
 

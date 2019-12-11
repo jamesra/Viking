@@ -22,9 +22,9 @@ namespace MorphologyMesh
         /// </summary>
         /// <param name="graph"></param>
         /// <returns></returns>
-        public static DynamicRenderMesh<ulong> Generate(MorphologyGraph graph)
+        public static Mesh3D<ulong> Generate(MorphologyGraph graph)
         {
-            List<DynamicRenderMesh<ulong>> listMeshes = new List<DynamicRenderMesh<ulong>>();
+            List<Mesh3D<ulong>> listMeshes = new List<Mesh3D<ulong>>();
             //Adjust the verticies so the models are centered on zero
             GridVector3 translate = -graph.BoundingBox.CenterPoint;
 
@@ -50,7 +50,7 @@ namespace MorphologyMesh
             //Check if any of the nodes are 2D lines, build 2D Faces connecting any linked lines
 
 
-            DynamicRenderMesh<ulong> output = new DynamicRenderMesh<ulong>();
+            Mesh3D<ulong> output = new Mesh3D<ulong>();
 
             foreach(var mesh in listMeshes)
             {

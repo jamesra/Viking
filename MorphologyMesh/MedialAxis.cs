@@ -95,7 +95,7 @@ namespace MorphologyMesh
             //Create an index map of points 
             //Dictionary<GridVector2, SortedSet<int>> PointToTrianglesIndex = CreatePointToConnectedTrianglesIndexLookup(triangles);
 
-            DynamicRenderMesh mesh = triangles.ToDynamicRenderMesh();
+            Mesh3D mesh = triangles.ToDynamicRenderMesh();
 
             foreach (var edge in mesh.Edges.Values)
             {

@@ -18,14 +18,14 @@ namespace Geometry.Meshing
         /// <param name="CanBePartOfPath">Returns true if the tested face can be part of the path.</param>
         /// <param name="MeetsCriteriaFunc">Returns true if the face is the desired destination</param>
         /// <returns></returns>
-        public static List<IFace> FindFacesInPath(this DynamicRenderMesh mesh, IFace start, Func<IFace, bool> CanBePartOfPath, Func<IFace, bool> MeetsCriteriaFunc)
+        public static List<IFace> FindFacesInPath(this Mesh3D mesh, IFace start, Func<IFace, bool> CanBePartOfPath, Func<IFace, bool> MeetsCriteriaFunc)
         {
             SortedSet<IFace> testedFaces = new SortedSet<IFace>();
             Dictionary<IFace, List<IFace>> PathCache = new Dictionary<IFace, List<IFace>>();
             return RecursePath(ref testedFaces, mesh, start, CanBePartOfPath, MeetsCriteriaFunc, PathCache);
         }
 
-        public static List<IFace> FindFacesInPath(this DynamicRenderMesh mesh, IFace start, Func<IFace, bool> CanBePartOfPath, Func<IFace, bool> MeetsCriteriaFunc, ref SortedSet<IFace> CheckedFaces)
+        public static List<IFace> FindFacesInPath(this Mesh3D mesh, IFace start, Func<IFace, bool> CanBePartOfPath, Func<IFace, bool> MeetsCriteriaFunc, ref SortedSet<IFace> CheckedFaces)
         {
             Dictionary<IFace, List<IFace>> PathCache = new Dictionary<IFace, List<IFace>>();
             return RecursePath(ref CheckedFaces, mesh, start, CanBePartOfPath, MeetsCriteriaFunc, PathCache);
@@ -40,7 +40,7 @@ namespace Geometry.Meshing
         /// <param name="IsMatch"></param>
         /// <param name="PathCache">Contains a lookup table of the shortest route to the target for each face</param>
         /// <returns></returns>
-        private static List<IFace> RecursePath(ref SortedSet<IFace> testedFaces, DynamicRenderMesh mesh, IFace Origin, Func<IFace, bool> CanBePartOfPath, Func<IFace, bool> IsMatch, Dictionary<IFace, List<IFace>> PathCache)
+        private static List<IFace> RecursePath(ref SortedSet<IFace> testedFaces, Mesh3D mesh, IFace Origin, Func<IFace, bool> CanBePartOfPath, Func<IFace, bool> IsMatch, Dictionary<IFace, List<IFace>> PathCache)
         {
             //System.Diagnostics.Trace.WriteLine(Origin.ToString());
             testedFaces.Add(Origin);
@@ -125,7 +125,7 @@ namespace Geometry.Meshing
             }
         }
 
-        public static IFace[] AdjacentFaces(this IFace face, DynamicRenderMesh mesh)
+        public static IFace[] AdjacentFaces(this IFace face, Mesh3D mesh)
         {
 
             return face.Edges.SelectMany(e => mesh[e].Faces.Where(f => f != face)).ToArray();

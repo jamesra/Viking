@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Diagnostics;
 using System.Text;
 using System.Threading.Tasks;
 using Geometry;
@@ -284,7 +285,7 @@ namespace TriangleNet
         /// </summary>
         /// <param name="input_mesh"></param>
         /// <returns></returns>
-        public static TriangleNet.Meshing.IMesh Triangulate(this VikingMeshing.DynamicRenderMesh input_mesh)
+        public static TriangleNet.Meshing.IMesh Triangulate(this VikingMeshing.Mesh3D input_mesh)
         {
             TriangleNet.Geometry.IPolygon fake_poly = new TriangleNet.Geometry.Polygon(input_mesh.Verticies.Count);
 
@@ -317,7 +318,14 @@ namespace TriangleNet
             return output_mesh;
         }
 
-        public static TriVertex ToTriangleNetVertex(this VikingMeshing.IVertex vert)
+        public static TriVertex ToTriangleNetVertex(this VikingMeshing.IVertex2D vert)
+        {
+            TriVertex out_v = new TriVertex(vert.Position.X, vert.Position.Y);
+            out_v.ID = vert.Index;
+            return out_v;
+        }
+
+        public static TriVertex ToTriangleNetVertex(this VikingMeshing.IVertex3D vert)
         {
             TriVertex out_v = new TriVertex(vert.Position.X, vert.Position.Y);
             out_v.ID = vert.Index;
@@ -342,7 +350,55 @@ namespace TriangleNet
 
             return Triangulate(ExteriorPolygons); 
         }
+
+        /*
         /// <summary>
+        /// This function creates the triangulation of a set of polygons.  Internal and external borders are preserved. Where borders overlapped new
+        /// points are added at the point of overlap.
+        /// </summary>
+        /// <param name="Polygons"></param>
+        /// <returns></returns>
+        public static TriangleNet.Meshing.IMesh Triangulate(this GridPolygon[] Polygons)
+        {
+            //When using this function with the bajaj mesh generator we must constrain the triangulation to 
+            //include all segments because countour edges have already been added to the mesh.  If we do not
+            //for inclusion of the contour edges in the triangulation it can produce edges that cross contours
+            //which will cause obscure bugs downstream in the mesh generator.
+            List<GridLineSegment> NonIntersectingSegments = Polygons.Segments();
+
+            List<ISegment> input = new List<ISegment>();
+
+            //Add constraints for the non-intersecting line segments
+            foreach (GridLineSegment line in NonIntersectingSegments)
+            {
+                Segment seg = new Segment(new TriVertex(line.A.X, line.A.Y), new TriVertex(line.B.X, line.B.Y));
+                //System.Diagnostics.Trace.WriteLine(string.Format("ADD SEGMENT {0}x {1}y - {2}x {3}y - ", line.A.X, line.A.Y, line.B.X, line.B.Y));
+
+                //polygon.Add(seg, true);
+                input.Add(seg);
+            }
+
+            //If there are not enough points to triangulate return null
+            //if (polygon.Points.Count < 3)
+            //    return null; 
+
+            System.Diagnostics.Debug.Assert(false == NonIntersectingSegments.Any(s => NonIntersectingSegments.Any(ns => ns != s && ns.Intersects(s, EndpointsOnRingDoNotIntersect: true))));
+
+            ConstraintOptions constraints = new ConstraintOptions();
+            constraints.ConformingDelaunay = false;
+            constraints.Convex = true;
+
+            TriangleNet.Meshing.IMesh mesh = TriangleNet.Geometry.ExtensionMethods.Triangulate(input, constraints);
+
+            return mesh;
+        }
+        */
+
+        /// <summary>
+        /// Note: This is where you left off to work on a constrained Delaunay 2D triangulation.  If that is working, use the function
+        /// above and contrain the delauncy to solve the intermittant rendering bugs around corresponding verticies when dumping the
+        /// large glail cell from RPC1.
+        /// 
         /// This function creates the triangulation of a set of polygons.  Internal and external borders are preserved. Where borders overlapped new
         /// points are added at the point of overlap.
         /// </summary>
@@ -357,37 +413,23 @@ namespace TriangleNet
             List<GridVector2> points = pointToPolyMap.Keys.Distinct().ToList();
 
             TriangleNet.Geometry.Polygon polygon = new TriangleNet.Geometry.Polygon(points.Count);
-
+            
             foreach (GridVector2 p in points)
             {
                 polygon.Add(new TriVertex(p.X, p.Y));
                 //System.Diagnostics.Trace.WriteLine(string.Format("ADD POINT {0}x {1}y", p.X, p.Y));
             }
-            /*
-            foreach (GridVector2 p in AddedPoints)
-            {
-                polygon.Add(new TriVertex(p.X, p.Y));
-            }
-            */
-            /*
-            //Add constraints for the non-intersecting line segments
-            foreach (GridLineSegment line in NonIntersectingSegments)
-            {
-                Segment seg = new Segment(new TriVertex(line.A.X, line.A.Y), new TriVertex(line.B.X, line.B.Y));
-                System.Diagnostics.Trace.WriteLine(string.Format("ADD SEGMENT {0}x {1}y - {2}x {3}y - ", line.A.X, line.A.Y, line.B.X, line.B.Y));
-                 
-                polygon.Add(seg, false);
-            }
-            */
+
             //If there are not enough points to triangulate return null
             if (polygon.Points.Count < 3)
-                return null;
+                return null; 
 
             ConstraintOptions constraints = new ConstraintOptions();
             constraints.ConformingDelaunay = false;
             constraints.Convex = true;
 
             TriangleNet.Meshing.IMesh mesh = TriangleNet.Geometry.ExtensionMethods.Triangulate(polygon, constraints);
+            
             return mesh;
         }
 

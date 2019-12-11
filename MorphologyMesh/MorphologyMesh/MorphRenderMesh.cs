@@ -61,7 +61,7 @@ namespace MorphologyMesh
      
     /// 
     /// </summary>
-    public class MorphRenderMesh : DynamicRenderMesh
+    public class MorphRenderMesh : Mesh3D
     {
         public GridPolygon[] Polygons { get; private set; }
 
@@ -86,7 +86,6 @@ namespace MorphologyMesh
             Debug.Assert(polygons.Count == ZLevels.Count);
             Polygons = polygons.ToArray();
             PolyZ = ZLevels.ToArray();
-            this.CreateOffsetVertex = MorphMeshVertex.CreateOffsetCopy;
             this.CreateOffsetEdge = MorphMeshEdge.Duplicate;
             this.CreateOffsetFace = MorphMeshFace.CreateOffsetCopy;
 
@@ -241,7 +240,8 @@ namespace MorphologyMesh
 
         public int AddVerticies(ICollection<MorphMeshVertex> verts)
         {
-            int iStartVert = base.AddVerticies(verts.Select(v => (IVertex3D)v).ToArray());
+            //int iStartVert = base.AddVerticies(verts.Select(v => (IVertex3D)v).ToArray());
+            int iStartVert = base.AddVerticies(verts.ToArray());
 
             foreach (MorphMeshVertex v in verts)
             {
@@ -295,20 +295,7 @@ namespace MorphologyMesh
                 }
             }
         }
-
-        public override int Append(DynamicRenderMesh other)
-        {
-            int iStartVertex = base.Append(other);
-            for(int i = iStartVertex; i < this.Verticies.Count; i++)
-            {
-                MorphMeshVertex v = this[i];
-                if(v.PolyIndex.HasValue)
-                    PolyIndexToVertex.Add(v.PolyIndex.Value, i); 
-            }
-
-            return iStartVertex;
-        }
-
+        
         /// <summary>
         /// Assign a type to each edge based on the rules specified in EdgeTypeExtensions.        
         /// JA: Safe to run with more than 2 Z levels.

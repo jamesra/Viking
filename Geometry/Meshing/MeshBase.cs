@@ -7,7 +7,10 @@ using System.Diagnostics;
 
 namespace Geometry.Meshing
 {
-    
+    public interface IMesh3D<VERTEX> : IMesh<VERTEX>
+        where VERTEX : IVertex3D
+    { }
+
     public interface IMesh<VERTEX>
         where VERTEX : IVertex
     {

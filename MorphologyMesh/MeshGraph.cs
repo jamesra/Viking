@@ -71,7 +71,7 @@ namespace MorphologyMesh
 
     public class MeshNode : GraphLib.Node<ulong, MeshEdge>
     {
-        public DynamicRenderMesh<ulong> Mesh = null; 
+        public Mesh3D<ulong> Mesh = null; 
 
         public bool UpperPortCapped = false; //True if faces have been generated
         public bool LowerPortCapped = false; //True if faces have been generated

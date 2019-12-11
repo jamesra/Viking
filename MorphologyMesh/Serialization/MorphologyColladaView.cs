@@ -91,7 +91,7 @@ namespace MorphologyMesh
         }
 
 
-        public DynamicRenderMesh Mesh;
+        public Mesh3D<ulong> Mesh;
 
         public MaterialLighting Material;
 
@@ -104,7 +104,7 @@ namespace MorphologyMesh
             }
          }
 
-        public StructureModel(ulong id, DynamicRenderMesh mesh, MaterialLighting mat)
+        public StructureModel(ulong id, Mesh3D<ulong> mesh, MaterialLighting mat)
         {
             ID = id;
             Mesh = mesh;
@@ -203,7 +203,7 @@ namespace MorphologyMesh
             //MeshGraph meshGraph = structure.ConvertToMeshGraph();
             //SmoothMeshGenerator.Generate(meshGraph);
             //DynamicRenderMesh<ulong> structureMesh = TopologyMeshGenerator.Generate(meshGraph);
-            DynamicRenderMesh<ulong> structureMesh = TopologyMeshGenerator.Generate(structure);
+            Mesh3D<ulong> structureMesh = TopologyMeshGenerator.Generate(structure);
             StructureModel model = null;
 
             if (structureMesh != null)

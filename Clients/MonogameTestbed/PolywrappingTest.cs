@@ -80,7 +80,7 @@ namespace MonogameTestbed
             MeshGraph graph = StandardModels.BuildMeshGraph(this.Polys, this.ZLevels, this.Edges, 10, GridVector3.Zero);
 
             List<GridLineSegment> addedMeshEdges;
-            DynamicRenderMesh<ulong> CompositeMesh = SmoothMeshGenerator.Generate(graph, out addedMeshEdges); 
+            Mesh3D<ulong> CompositeMesh = SmoothMeshGenerator.Generate(graph, out addedMeshEdges); 
 
             //GridLineSegment[] lines = CompositeMesh.Edges.Values.Select(e => new GridLineSegment(CompositeMesh.Verticies[e.A].Position, CompositeMesh.Verticies[e.B].Position)).ToArray();
 
@@ -234,7 +234,7 @@ namespace MonogameTestbed
             MeshNode Source = graph.Nodes[edge.SourceNodeKey];
             MeshNode Target = graph.Nodes[edge.TargetNodeKey];
 
-            DynamicRenderMesh<ulong> CompositeMesh = MorphologyMesh.SmoothMeshGenerator.MergeMeshes(Source, Target);
+            Mesh3D<ulong> CompositeMesh = MorphologyMesh.SmoothMeshGenerator.MergeMeshes(Source, Target);
 
             bool SourceIsUpper = Source.IsNodeBelow(Target);
 

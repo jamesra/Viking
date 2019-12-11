@@ -41,7 +41,7 @@ namespace MorphologyMesh
         /// <param name="mNode"></param>
         /// <param name="shape"></param>
         /// <param name="Z"></param>
-        public static DynamicRenderMesh<ulong> CreateNodeMesh(MorphologyNode node)
+        public static Mesh3D<ulong> CreateNodeMesh(MorphologyNode node)
         {
             IShape2D shape = node.Geometry.ToShape2D();
             
@@ -56,9 +56,9 @@ namespace MorphologyMesh
         /// <param name="mNode"></param>
         /// <param name="shape"></param>
         /// <param name="Z"></param>
-        public static DynamicRenderMesh<ulong> CreateNodeMesh(IShape2D shape, double Z, ulong NodeData, bool AdjacentToPolygon = false)
+        public static Mesh3D<ulong> CreateNodeMesh(IShape2D shape, double Z, ulong NodeData, bool AdjacentToPolygon = false)
         {
-            DynamicRenderMesh<ulong> Mesh = new DynamicRenderMesh<ulong>();
+            Mesh3D<ulong> Mesh = new Mesh3D<ulong>();
 
             switch (shape.ShapeType)
             {

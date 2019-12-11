@@ -103,9 +103,9 @@ namespace MonogameTestbed
             List<GridVector2> points = pointToPoly.Keys.ToList();
             Debug.Assert(mesh.Vertices.Select(v => v.ToGridVector2()).SequenceEqual(points));
 
-            DynamicRenderMesh<PointIndex> SearchMesh = new DynamicRenderMesh<PointIndex>();
+            Mesh3D<PointIndex> SearchMesh = new Mesh3D<PointIndex>();
 
-            SearchMesh.AddVerticies(pointToPoly.Keys.Select(v => new Vertex<PointIndex>(v.ToGridVector3(0), pointToPoly[v])).ToArray());
+            SearchMesh.AddVerticies(pointToPoly.Keys.Select(v => new Vertex3D<PointIndex>(v.ToGridVector3(0), pointToPoly[v])).ToArray());
             SearchMesh.AddFaces(mesh.Triangles.Select(t => new Face(t.GetVertexID(0), t.GetVertexID(1), t.GetVertexID(2)) as IFace).ToArray()); 
         }
         
