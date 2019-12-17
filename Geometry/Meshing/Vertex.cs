@@ -13,8 +13,23 @@ namespace Geometry.Meshing
     /// </summary>
     public abstract class VertexBase : IVertex
     {
-        public int Index { get; set; }
-        private SortedSet<IEdgeKey> _Edges;
+        public virtual int Index { get; set; }
+
+        public IComparer<IEdgeKey> EdgeComparer {
+            get
+            {
+                return _Edges.Comparer;
+            }
+            set
+            {
+                if (value != _Edges.Comparer)
+                {
+                    _Edges = new SortedSet<IEdgeKey>(_Edges, value);
+                }
+            }
+        }
+          
+        protected SortedSet<IEdgeKey> _Edges;
 
         private ImmutableSortedSet<IEdgeKey> _ImmutableEdges;
         public ImmutableSortedSet<IEdgeKey> Edges
@@ -23,7 +38,7 @@ namespace Geometry.Meshing
             {
                 if (_ImmutableEdges == null)
                 {
-                    _ImmutableEdges = _Edges.ToImmutableSortedSet();
+                    _ImmutableEdges = _Edges.ToImmutableSortedSet(_Edges.Comparer);
                 }
                 return _ImmutableEdges;
             }
@@ -32,6 +47,12 @@ namespace Geometry.Meshing
         public VertexBase()
         {
             _Edges = new SortedSet<IEdgeKey>();
+            _ImmutableEdges = null;
+        }
+
+        public VertexBase(IComparer<IEdgeKey> edgeComparer=null)
+        {
+            _Edges = new SortedSet<IEdgeKey>(edgeComparer);
             _ImmutableEdges = null;
         }
 
@@ -210,7 +231,7 @@ namespace Geometry.Meshing
         } 
 
 
-        public Vertex2D(GridVector2 p) : base()
+        public Vertex2D(GridVector2 p, IComparer<IEdgeKey> edgeComparer=null) : base(edgeComparer)
         {
             _Position = p;
         }

@@ -12,32 +12,30 @@ namespace Geometry.Meshing
     /// TODO: This class needs to be updated now that MeshBase<T> exists
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    public class DynamicRenderMesh<T> : DynamicRenderMesh
+    public class Mesh3D<VERTEX> : MeshBase3D<VERTEX>
+        where VERTEX : IVertex3D
     {
-
-        public new Vertex3D<T> this[int key]
-        {
-            get
-            {
-                return Verticies[key] as Vertex3D<T>;
-            }
-            set
-            {
-                Verticies[key] = value;
-            }
-        }
+        
     }
-    
+
+    /// <summary>
+    /// TODO: This class needs to be updated now that MeshBase<T> exists
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    public class Mesh3D : MeshBase3D<IVertex3D>
+    {
+    }
+
     /// <summary>
     /// This is a fairly generic 3D Mesh class that supports operations around merging and basic spatial manipulation of meshes
     /// </summary>
-    public class DynamicRenderMesh : MeshBase<IVertex3D>
+    public abstract class MeshBase3D<VERTEX> : MeshBase<VERTEX> , IMesh3D<VERTEX>
+        where VERTEX : IVertex3D
     { 
         public GridBox BoundingBox = null;
 
-        public DynamicRenderMesh()
+        public MeshBase3D()
         {
-            CreateOffsetVertex = Vertex3D.CreateOffsetCopy;
             CreateOffsetEdge = Edge.CreateOffsetCopy;
             CreateOffsetFace = Face.CreateOffsetCopy;
              
@@ -77,7 +75,7 @@ namespace Geometry.Meshing
             ValidateBoundingBox();
         }
 
-        protected override void UpdateBoundingBox(IVertex3D v)
+        protected override void UpdateBoundingBox(VERTEX v)
         {
             if (BoundingBox == null)
                 BoundingBox = new GridBox(v.Position, 0);
@@ -87,7 +85,7 @@ namespace Geometry.Meshing
             }
         }
 
-        protected override void UpdateBoundingBox(ICollection<IVertex3D> verts)
+        protected override void UpdateBoundingBox(IEnumerable<VERTEX> verts)
         {
             GridVector3[] points = verts.Select(v => v.Position).ToArray();
             if (BoundingBox == null)
@@ -97,14 +95,13 @@ namespace Geometry.Meshing
                 BoundingBox.Union(points);
             }
         }
-          
-
+        
         /// <summary>
         /// Merge the other mesh into our mesh
         /// </summary>
         /// <param name="other"></param>
         /// <returns>The merged index number of the first vertex from the mesh merged into this mesh</returns>
-        public long Merge(DynamicRenderMesh other)
+        public long Merge(MeshBase3D<VERTEX> other)
         {
             long iVertMergeStart = this._Verticies.Count;
 
@@ -172,7 +169,7 @@ namespace Geometry.Meshing
         /// </summary>
         /// <param name="Duplicator">A constructor that can copy attributes of a face object</param>
         /// <returns></returns>
-        public static IFace[] SplitFace(DynamicRenderMesh mesh, IFace face)
+        public static IFace[] SplitFace(Mesh3D mesh, IFace face)
         {
             if (face.IsTriangle())
                 return new IFace[] { face };
@@ -241,7 +238,7 @@ namespace Geometry.Meshing
 
         public GridVector3 Normal(IFace f)
         {
-            IVertex3D[] verticies = this[f.iVerts].ToArray();
+            VERTEX[] verticies = this[f.iVerts].ToArray();
             GridVector3 normal = GridVector3.Cross(verticies[0].Position, verticies[1].Position, verticies[2].Position);
             return normal;
         }
@@ -300,10 +297,15 @@ namespace Geometry.Meshing
         /// <param name="EdgeDuplicator">Takes a EDGE and offset and returns a new EDGE, retaining all pertinent data from the original EDGE</param>
         /// <param name="FaceDuplicator">Takes a FACE and offset and returns a new FACE, retaining all pertinent data from the original FACE</param>
         /// <returns></returns>
-        public virtual int Append(DynamicRenderMesh other)
+        public virtual int Append(MeshBase3D<VERTEX> other)
         {
             int startingAppendIndex = this._Verticies.Count;
-            this.AddVerticies(other.Verticies.Select(v => CreateOffsetVertex(v, startingAppendIndex)).ToList());
+            this.AddVerticies(other.Verticies.Select(v =>
+            {
+                IVertex copy = v.ShallowCopy();
+                copy.Index += startingAppendIndex;
+                return (VERTEX)copy;
+            }).ToList());
 
             foreach(IEdge e in other.Edges.Values)
             {

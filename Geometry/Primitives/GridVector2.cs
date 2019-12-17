@@ -5,11 +5,117 @@ using System.Text;
 
 namespace Geometry
 {
+    public class GridVectorComparer : IComparer<GridVector2>, IComparer<IPoint2D>
+    {
+        public bool XYOrder = true;
+
+        public GridVectorComparer(bool xyOrder=true)
+        {
+            XYOrder = xyOrder;
+        }
+
+        public int Compare(IPoint2D A, IPoint2D B)
+        {
+            return XYOrder ? GridVectorComparerXY.CompareXY(A, B) : GridVectorComparerYX.CompareYX(A, B);
+        }
+
+        public int Compare(GridVector2 A, GridVector2 B)
+        {
+            return XYOrder ? GridVectorComparerXY.CompareXY(A, B) : GridVectorComparerYX.CompareYX(A, B);
+        }
+    }
+
+    public class GridVectorComparerYX : IComparer<GridVector2>, IComparer<IPoint2D>
+    {
+        public static int CompareYX(IPoint2D A, IPoint2D B)
+        {
+            //We need to use the same equality standard as our epsilon value
+            double diffY = A.Y - B.Y; 
+
+            if (Math.Abs(diffY) <= Global.Epsilon)
+            {
+                double diffX = A.X - B.X;
+                if (diffX * diffX + diffY * diffY < Global.EpsilonSquared)
+                    return 0;
+
+                if (Math.Abs(diffX) <= Global.Epsilon)
+                {
+                    //Edge case. The points aren't equal by our standard, so check again and figure out which axis isn't equal first
+                    if (diffY == 0)
+                    {
+                        return diffX > 0 ? 1 : -1;
+                    }
+                    else
+                    {
+                        return diffY > 0 ? 1 : -1;
+                    }
+                }
+
+                return diffX > 0 ? 1 : -1;
+            }
+
+            return diffY > 0 ? 1 : -1;
+        }
+
+        public int Compare(IPoint2D A, IPoint2D B)
+        {
+            return GridVectorComparerYX.CompareYX(A, B);
+        }
+
+        public int Compare(GridVector2 x, GridVector2 y)
+        {
+            return GridVectorComparerYX.CompareYX((IPoint2D)x, (IPoint2D)y);
+        }
+    }
+
+    public class GridVectorComparerXY : IComparer<GridVector2>, IComparer<IPoint2D>
+    {
+        public static int CompareXY(IPoint2D A, IPoint2D B)
+        {
+            //We need to use the same equality standard as our epsilon value
+            double diffX = A.X - B.X;
+
+            if (Math.Abs(diffX) <= Global.Epsilon)
+            {
+                double diffY = A.Y - B.Y;
+                if (diffX * diffX + diffY * diffY < Global.EpsilonSquared)
+                    return 0;
+
+                if (Math.Abs(diffY) <= Global.Epsilon)
+                {
+                    //Edge case. The points aren't equal by our standard, so check again and figure out which axis isn't equal first
+                    if (diffX == 0)
+                    {
+                        return diffY > 0 ? 1 : -1;
+                    }
+                    else
+                    {
+                        return diffX > 0 ? 1 : -1;
+                    }
+                }
+
+                return diffY > 0 ? 1 : -1;
+            }
+
+            return diffX > 0 ? 1 : -1;
+        }
+
+        public int Compare(IPoint2D A, IPoint2D B)
+        {
+            return GridVectorComparerXY.CompareXY(A, B);
+        }
+
+        public int Compare(GridVector2 x, GridVector2 y)
+        {
+            return GridVectorComparerXY.CompareXY((IPoint2D)x, (IPoint2D)y);
+        }
+    }
+
 
     [Serializable]
-    public struct GridVector2 : IShape2D, IPoint, ICloneable, IComparable, 
-                                IComparable<GridVector2>, IComparer<GridVector2>, IEquatable<GridVector2>,
-                                IComparable<IPoint2D>, IComparer<IPoint2D>, IEquatable<IPoint2D>
+    public struct GridVector2 : IShape2D, IPoint, ICloneable, IComparable,
+                                IComparable<GridVector2>, IEquatable<GridVector2>,
+                                IComparable<IPoint2D>, IEquatable<IPoint2D>, IEquatable<IShape2D>
     {
         public readonly static GridVector2 UnitX = new GridVector2(1, 0);
         public readonly static GridVector2 UnitY = new GridVector2(0, 1);
@@ -17,6 +123,8 @@ namespace Geometry
 
         public double X;
         public double Y;
+
+        public double[] coords { get { return new double[] { X,Y }; } }
 
         public GridVector2(double x, double y)
         {
@@ -35,9 +143,9 @@ namespace Geometry
         /// <param name="B"></param>
         /// <param name="Epsilon"></param>
         /// <returns></returns>
-        public bool Equals(GridVector2 B, double EpsilonSquared = 0.00001)
+        public bool Equals(GridVector2 B)
         {
-            return (DistanceSquared(this, B) <= EpsilonSquared);
+            return DistanceSquared(this, B) <= Global.EpsilonSquared;
         }
 
         /// <summary>
@@ -46,81 +154,84 @@ namespace Geometry
         /// <param name="B"></param>
         /// <param name="Epsilon"></param>
         /// <returns></returns>
-        public static bool Equals(GridVector2 A, GridVector2 B, double EpsilonSquared = 0.00001)
+        public static bool Equals(GridVector2 A, GridVector2 B)
         {
-            return (DistanceSquared(A, B) <= EpsilonSquared);
+            return DistanceSquared(A, B) <= Global.EpsilonSquared;
+        }
+
+        bool IEquatable<IShape2D>.Equals(IShape2D other)
+        {
+            if (object.ReferenceEquals(other, null))
+                return false;
+
+            IPoint2D p = other as IPoint2D;
+            return ((IEquatable<IPoint2D>)this).Equals(p);
         }
 
         bool IEquatable<GridVector2>.Equals(GridVector2 B)
-        {
-            const double EpsilonSquared = 0.00001;
-            return (DistanceSquared(this, B) <= EpsilonSquared);
+        { 
+            return DistanceSquared(this, B) <= Global.EpsilonSquared;
         }
 
         bool IEquatable<IPoint2D>.Equals(IPoint2D B)
         {
-            const double EpsilonSquared = 0.00001;
-            return (DistanceSquared(this, B) <= EpsilonSquared);
+            if (object.ReferenceEquals(B, null))
+                return false;
+             
+            return DistanceSquared((IPoint2D)this, B) <= Global.EpsilonSquared;
         }
 
+        /*
         
         public int Compare(GridVector2 A, GridVector2 B)
         {
-            //We need to use the same equality test as our epsilon value
-            if (A.Equals(B))
-                return 0;
-
-            double diff = A.X - B.X;
-
-            if (diff == 0.0)
-            {
-                diff = A.Y - B.Y;
-            }
-
-            if (diff > 0)
-                return 1;
-            if (diff < 0)
-                return -1;
-
-            return 0; 
+            return this.Compare((IPoint2D)A, (IPoint2D)B);
         }
-        
         public int Compare(IPoint2D A, IPoint2D B)
         {
             //We need to use the same equality test as our epsilon value
-            if (A.Equals(B))
+            double diffX = A.X - B.X;
+            double diffY = A.Y - B.Y;
+            if (diffX * diffX + diffY * diffY < Global.EpsilonSquared)
                 return 0;
 
-            double diff = A.X - B.X;
-
-            if (diff == 0.0)
+            if (Math.Abs(diffX) < Global.Epsilon)
             {
-                diff = A.Y - B.Y;
+                if (Math.Abs(diffY) < Global.Epsilon)
+                {
+                    //Edge case. The points aren't equal by our standard, so check again and figure out which axis isn't equal first
+                    if (diffX == 0)
+                    {
+                        return diffY > 0 ? 1 : -1;
+                    }
+                    else
+                    {
+                        return diffX > 0 ? 1 : -1;
+                    }
+                }
+
+                return diffY > 0 ? 1 : -1;
             }
 
-            if (diff > 0)
-                return 1;
-            if (diff < 0)
-                return -1;
-
-            return 0;
+            return diffX > 0 ? 1 : -1;
         }
+        */
 
         public int CompareTo(Object Obj)
         {
             IPoint2D B = (IPoint2D)Obj;
 
-            return Compare(this, B);
+            return GridVectorComparerXY.CompareXY(this, B);
         }
 
         int IComparable<GridVector2>.CompareTo(GridVector2 B)
         {
-            return Compare(this, B);
+            return GridVectorComparerXY.CompareXY((IPoint2D)this, (IPoint2D)B);
         }
          
         public int CompareTo(IPoint2D other)
         {
-            return Compare(this, other);
+            return GridVectorComparerXY.CompareXY(this, other);
         } 
 
         object ICloneable.Clone()
@@ -141,6 +252,9 @@ namespace Geometry
 
         public override bool Equals(object obj)
         {
+            if (object.ReferenceEquals(obj, null))
+                return false;
+
             GridVector2 B = (GridVector2)obj;
 
             return this == B; 
@@ -222,16 +336,8 @@ namespace Geometry
 
             return (dX * dX) + (dY * dY);
         }
-
+          
         static public double DistanceSquared(IPoint2D A, IPoint2D B)
-        {
-            double dX = A.X - B.X;
-            double dY = A.Y - B.Y;
-
-            return (dX * dX) + (dY * dY);
-        }
-
-        static public double DistanceSquared(IPoint A, IPoint B)
         {
             if (A == null)
                 throw new ArgumentNullException("A");
@@ -289,6 +395,30 @@ namespace Geometry
                 Angle -= Math.PI * 2;
 
             return Angle; 
+        }
+
+        /// <summary>
+        /// Angle of arc between A & B with Origin
+        /// </summary>
+        /// <param name="Origin"></param>
+        /// <param name="A"></param>
+        /// <param name="B"></param>
+        /// <returns></returns>
+        static public double ArcAngle(IPoint2D Origin, IPoint2D A, IPoint2D B)
+        {
+            A = new GridVector2(A.X - Origin.X, A.Y - Origin.Y);
+            B = new GridVector2(B.X - Origin.X, B.Y - Origin.Y);
+            double AngleA = Math.Atan2(A.Y, A.X);
+            double AngleB = Math.Atan2(B.Y, B.X);
+
+            double Angle = AngleB - AngleA;
+
+            if (Angle < -Math.PI)
+                Angle += Math.PI * 2;
+            else if (Angle > Math.PI)
+                Angle -= Math.PI * 2;
+
+            return Angle;
         }
 
         /// <summary>
@@ -505,6 +635,8 @@ namespace Geometry
                 return -1;
             }
         }
+
+       
 
         #region IPoint Members
 

@@ -27,7 +27,17 @@ namespace Geometry
         POLYLINE = 12
     };
 
-    public interface IPoint2D
+    /// <summary>
+    /// Represents an N-dimensional point
+    /// </summary>
+    public interface IPointN
+    {
+        double[] coords { get; }
+
+    }
+
+
+    public interface IPoint2D : IPointN
     {
         double X { get; set; }
         double Y { get; set; }

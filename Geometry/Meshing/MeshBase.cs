@@ -11,10 +11,14 @@ namespace Geometry.Meshing
         where VERTEX : IVertex3D
     { }
 
+    public interface IMesh2D<VERTEX> : IMesh<VERTEX>
+        where VERTEX : IVertex2D
+    { }
+
     public interface IMesh<VERTEX>
         where VERTEX : IVertex
     {
-        List<VERTEX> Verticies { get; }
+        IReadOnlyList<VERTEX> Verticies { get; }
         SortedList<IEdgeKey, IEdge> Edges { get; }
         SortedSet<IFace> Faces { get; }
 
@@ -38,7 +42,7 @@ namespace Geometry.Meshing
         /// <returns>Index of vertex</returns>
         int AddVertex(VERTEX v);
 
-        int AddVerticies(ICollection<VERTEX> verts);
+        int AddVerticies(IEnumerable<VERTEX> verts);
 
         void AddEdge(int A, int B);
 
@@ -57,7 +61,7 @@ namespace Geometry.Meshing
         void RemoveFace(IFace f);
     }
 
-    
+
     /// <summary>
     /// A class that implements the basic mesh operations
     /// </summary>
@@ -69,7 +73,7 @@ namespace Geometry.Meshing
         protected readonly SortedList<IEdgeKey, IEdge> _Edges = new SortedList<IEdgeKey, IEdge>();
         protected readonly SortedSet<IFace> _Faces = new SortedSet<IFace>();
 
-        public List<VERTEX> Verticies { get { return _Verticies; } }
+        public IReadOnlyList<VERTEX> Verticies { get { return _Verticies; } }
         public SortedList<IEdgeKey, IEdge> Edges { get { return _Edges; } }
         public SortedSet<IFace> Faces { get { return _Faces; } }
 
@@ -104,7 +108,7 @@ namespace Geometry.Meshing
                 _Verticies[(int)key] = value;
             }
         }
-         
+
         /// <summary>
         /// Returns all of the verticies that match the indicies
         /// </summary>
@@ -165,7 +169,7 @@ namespace Geometry.Meshing
         /// </summary>
         /// <param name="v"></param>
         /// <returns>The index the first element was inserted at</returns>
-        public virtual int AddVerticies(ICollection<VERTEX> verts)
+        public virtual int AddVerticies(IEnumerable<VERTEX> verts)
         {
 
             int iStart = _Verticies.Count;
@@ -183,7 +187,7 @@ namespace Geometry.Meshing
 
 
         protected abstract void UpdateBoundingBox(VERTEX point);
-        protected abstract void UpdateBoundingBox(ICollection<VERTEX> points);
+        protected abstract void UpdateBoundingBox(IEnumerable<VERTEX> points);
 
         public void AddEdge(int A, int B)
         {
@@ -253,7 +257,7 @@ namespace Geometry.Meshing
                 this[removedEdge.B].RemoveEdge(e);
             }
         }
-         
+
         /// <summary>
         /// Add a face. Creates edges if they aren't in the face
         /// </summary>
@@ -301,6 +305,136 @@ namespace Geometry.Meshing
             }
         }
 
-        
+        #region Path finding along faces
+
+        /// <summary>
+        /// Returns the shortest path of adjacent faces from the starting face to a face meeting a criteria function
+        /// </summary>
+        /// <param name="mesh"></param>
+        /// <param name="start">Starting Face</param>
+        /// <param name="CanBePartOfPath">Returns true if the tested face can be part of the path.</param>
+        /// <param name="MeetsCriteriaFunc">Returns true if the face is the desired destination</param>
+        /// <returns></returns>
+        public List<IFace> FindFacesInPath(IFace start, Func<IFace, bool> CanBePartOfPath, Func<IFace, bool> MeetsCriteriaFunc)
+        {
+            SortedSet<IFace> testedFaces = new SortedSet<IFace>();
+            Dictionary<IFace, List<IFace>> PathCache = new Dictionary<IFace, List<IFace>>();
+            return RecursePath(ref testedFaces, this, start, CanBePartOfPath, MeetsCriteriaFunc, PathCache);
+        }
+
+        public List<IFace> FindFacesInPath(IFace start, Func<IFace, bool> CanBePartOfPath, Func<IFace, bool> MeetsCriteriaFunc, ref SortedSet<IFace> CheckedFaces)
+        {
+            Dictionary<IFace, List<IFace>> PathCache = new Dictionary<IFace, List<IFace>>();
+            return RecursePath(ref CheckedFaces, this, start, CanBePartOfPath, MeetsCriteriaFunc, PathCache);
+        }
+
+        /// <summary>
+        /// Recursively search for the shortest path between two faces by walking adjacent faces whose shared edges meet a criteria function and whose faces meet a criteria function
+        /// </summary>
+        /// <param name="testedFaces"></param>
+        /// <param name="mesh"></param>
+        /// <param name="Origin"></param>
+        /// <param name="IsMatch"></param>
+        /// <param name="PathCache">Contains a lookup table of the shortest route to the target for each face</param>
+        /// <returns></returns>
+        private static List<IFace> RecursePath(ref SortedSet<IFace> testedFaces, MeshBase<VERTEX> mesh, IFace Origin, Func<IFace, bool> CanBePartOfPath, Func<IFace, bool> IsMatch, Dictionary<IFace, List<IFace>> PathCache)
+        {
+            //System.Diagnostics.Trace.WriteLine(Origin.ToString());
+            testedFaces.Add(Origin);
+
+            List<IFace> path = new List<IFace>();
+            path.Add(Origin);
+            if (IsMatch(Origin))
+                return path;
+
+            if (PathCache.ContainsKey(Origin))
+            {
+                return PathCache[Origin];
+            }
+
+            SortedSet<IFace> untestedFaces = new SortedSet<IFace>(mesh.AdjacentFaces(Origin));
+            untestedFaces.ExceptWith(testedFaces);
+
+            if (untestedFaces.Count == 0)
+                return null;
+            else if (untestedFaces.Count == 1)
+            {
+
+                IFace adjacentFace = untestedFaces.First();
+
+                //Check if the face can be part of the path, if not don't bother investigating this route
+                if (!CanBePartOfPath(adjacentFace))
+                {
+                    testedFaces.Add(adjacentFace);
+                    return null;
+                }
+
+                List<IFace> result = RecursePath(ref testedFaces, mesh, adjacentFace, CanBePartOfPath, IsMatch, PathCache);
+                if (result == null)
+                    return null;
+
+                path.AddRange(result);
+                PathCache[Origin] = path;
+                return path;
+            }
+            else
+            {
+                List<List<IFace>> listPotentialPaths = new List<List<IFace>>(untestedFaces.Count);
+                SortedSet<IFace> AllBranchesTested = new SortedSet<IFace>();
+                foreach (IFace adjacentFace in untestedFaces)
+                {
+                    if (testedFaces.Contains(adjacentFace))
+                        continue;
+
+                    //Check if the face can be part of the path, if not don't bother investigating this route
+                    if (!CanBePartOfPath(adjacentFace))
+                    {
+                        testedFaces.Add(adjacentFace);
+                        continue;
+                    }
+
+                    SortedSet<IFace> testedFacesCopy = new SortedSet<IFace>(testedFaces);
+                    List<IFace> result = RecursePath(ref testedFacesCopy, mesh, adjacentFace, CanBePartOfPath, IsMatch, PathCache);
+                    if (result == null)
+                    {
+                        //We know none of the faces lead to the target so don't bother checking them again
+                        testedFaces.UnionWith(testedFacesCopy);
+                        continue;
+                    }
+
+                    AllBranchesTested.UnionWith(testedFacesCopy);
+                    listPotentialPaths.Add(result);
+                }
+
+                //Add the faces we tested so we don't check again
+                testedFaces.UnionWith(AllBranchesTested);
+
+                //If no paths lead to destination, return null. 
+                if (listPotentialPaths.Count == 0)
+                    return null;
+
+                //Otherwise, select the shortest path
+                int MinDistance = listPotentialPaths.Select(L => L.Count).Min();
+                List<IFace> shortestPath = listPotentialPaths.Where(L => L.Count == MinDistance).First();
+                path.AddRange(shortestPath);
+                PathCache[Origin] = path;
+                return path;
+            }
+        }
+         
+        /// <summary>
+        /// Returns a list of faces adjacent to the passed face
+        /// </summary>
+        /// <param name="face"></param>
+        /// <param name="mesh"></param>
+        /// <returns></returns>
+        public IFace[] AdjacentFaces(IFace face)
+        { 
+            return face.Edges.SelectMany(e => this[e].Faces.Where(f => f != face)).ToArray();
+        }
+
+        #endregion
+
+
     }
 }

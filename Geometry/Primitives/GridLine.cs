@@ -6,14 +6,66 @@ using System.Text;
 namespace Geometry
 {
     /// <summary>
+    /// Sorts points in clockwise order around a line from A to B, with A as the origin
+    /// </summary>
+    public class CompareAngle : IComparer<GridVector2>, IComparer<IPoint2D>
+    {
+        /// <summary>
+        /// A line we are ordering points around by angle.  A is the origin.
+        /// </summary>
+        private GridLine Line;
+        private GridVector2 ComparisonPoint;
+
+        public readonly bool ClockwiseOrder = false;
+        
+        public CompareAngle(GridLineSegment line, bool clockwise = false)
+        {
+            Line = new GridLine(line.A, line.Direction);
+            ComparisonPoint = Line.Origin + Line.Direction;
+            ClockwiseOrder = clockwise;
+        }
+
+        public CompareAngle(GridLine line, bool clockwise = false)
+        {
+            Line = line;
+            ComparisonPoint = Line.Origin + Line.Direction;
+            ClockwiseOrder = clockwise;
+        }
+
+        public int Compare(GridVector2 A, GridVector2 B)
+        {
+            double angleA = GridVector2.ArcAngle(Line.Origin, A, ComparisonPoint);
+            double angleB = GridVector2.ArcAngle(Line.Origin, B, ComparisonPoint);
+
+            //We are measuring the angle from the line in one direction, so don't allow negative angles
+            angleA = angleA < 0 ? angleA + (Math.PI * 2.0) : angleA;
+            angleB = angleB < 0 ? angleB + (Math.PI * 2.0) : angleB;
+
+            return ClockwiseOrder ? angleA.CompareTo(angleB) : angleB.CompareTo(angleA);
+        }
+
+        public int Compare(IPoint2D A, IPoint2D B)
+        {
+            double angleA = GridVector2.ArcAngle(Line.Origin, A, ComparisonPoint);
+            double angleB = GridVector2.ArcAngle(Line.Origin, B, ComparisonPoint);
+
+            //We are measuring the angle from the line in one direction, so don't allow negative angles
+            angleA = angleA < 0 ? angleA + (Math.PI * 2.0) : angleA;
+            angleB = angleB < 0 ? angleB + (Math.PI * 2.0) : angleB;
+
+            return ClockwiseOrder ? angleA.CompareTo(angleB) : angleB.CompareTo(angleA);
+        }
+    }
+
+    /// <summary>
     /// A line of infinite length
     /// </summary>
     /// 
     [Serializable]
-    public class GridLine
+    public struct GridLine
     {
-        GridVector2 Origin;
-        GridVector2 Direction;
+        public readonly GridVector2 Origin;
+        public readonly GridVector2 Direction;
 
         public GridLine(GridVector2 O, GridVector2 dir)
         {
@@ -27,8 +79,8 @@ namespace Geometry
             //Ax + By = C
             Intersection = new GridVector2();
 
-            if (seg == null)
-                throw new ArgumentNullException("seg");
+            //if (seg == null)
+            //    throw new ArgumentNullException("seg");
 
             if (this.Direction == seg.Direction)
                 return false; 
@@ -112,8 +164,5 @@ namespace Geometry
                 return seg.BoundingBox.Contains(Intersection);
             }
         }
-         
-
-
     }
 }

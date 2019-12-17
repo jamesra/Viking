@@ -6,7 +6,8 @@ using System.Threading.Tasks;
 
 namespace Geometry.Meshing
 {
-    public class Mesh2D<DATA> : Mesh2DBase<IVertex2D<DATA>>
+    public class Mesh2D<VERTEX> : Mesh2DBase<VERTEX>
+        where VERTEX : IVertex2D
     {
 
     }
@@ -16,7 +17,7 @@ namespace Geometry.Meshing
         
     }
 
-    public abstract class Mesh2DBase<VERTEX> : MeshBase<VERTEX>
+    public abstract class Mesh2DBase<VERTEX> : MeshBase<VERTEX>, IMesh2D<VERTEX>
         where VERTEX : IVertex2D
     {
         public GridRectangle BoundingBox;
@@ -31,7 +32,7 @@ namespace Geometry.Meshing
             }
         }
 
-        protected override void UpdateBoundingBox(ICollection<VERTEX> verts)
+        protected override void UpdateBoundingBox(IEnumerable<VERTEX> verts)
         {
             GridVector2[] points = verts.Select(v => v.Position).ToArray();
             if (BoundingBox == null)

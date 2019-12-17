@@ -13,22 +13,30 @@ namespace Geometry
         public readonly static GridVector3 UnitX = new GridVector3(1, 0, 0);
         public readonly static GridVector3 UnitY = new GridVector3(0, 1, 0);
         public readonly static GridVector3 UnitZ = new GridVector3(0, 0, 1);
-        public readonly static GridVector3 Zero  = new GridVector3(0, 0, 0);
+        public readonly static GridVector3 Zero = new GridVector3(0, 0, 0);
 
-        public double[] coords;
+        public double[] coords { get => _coords; } 
+        private readonly double[] _coords;
 
-        public double X { get { return coords[(int)AXIS.X]; } }
-        public double Y { get { return coords[(int)AXIS.Y]; } }
-        public double Z { get { return coords[(int)AXIS.Z]; } }
+        public double X { get { return _coords[(int)AXIS.X]; } }
+        public double Y { get { return _coords[(int)AXIS.Y]; } }
+        public double Z { get { return _coords[(int)AXIS.Z]; } }
 
-        public GridVector3(double[] new_coords)
+        public GridVector3(double[] input)
         {
-            this.coords = new_coords;
+            _coords = new double[input.Length];
+            input.CopyTo(_coords, 0);
+        }
+
+        public GridVector3(IEnumerable<double> input)
+        {
+            //Make sure we copy so we don't take a reference on the array
+            _coords = input.ToArray();
         }
 
         public GridVector3(double x, double y, double z)
         {
-            this.coords = new double[] { x, y, z };
+            this._coords = new double[] { x, y, z };
         }
 
         int IComparable.CompareTo(object Obj)
@@ -39,11 +47,11 @@ namespace Geometry
             if (this.Equals(B))
                 return 0; 
 
-            double[] axisdiff = this.coords.Select((val, i) => val - B.coords[i]).ToArray();
+            double[] axisdiff = this._coords.Select((val, i) => val - B._coords[i]).ToArray();
 
             for (int iAxis = 0; iAxis < axisdiff.Count(); iAxis++)
             {
-                if (axisdiff[iAxis] == 0.0)
+                if (Math.Abs(axisdiff[iAxis]) <= Global.Epsilon)
                     continue;
                 else
                     return axisdiff[iAxis] > 0 ? 1 : -1;
@@ -53,15 +61,15 @@ namespace Geometry
         }
 
         object ICloneable.Clone()
-        {
-            double[] coord_copy = new double[coords.Count()];
-            coords.CopyTo(coord_copy, 0);
-            return new GridVector3(coord_copy); 
+        { 
+            var newObj = new GridVector3(_coords); //The current constructor will take care of copying the array
+            System.Diagnostics.Debug.Assert(object.ReferenceEquals(this._coords, newObj._coords) == false);
+            return newObj;
         }
 
         public override int GetHashCode()
         {
-            double prod = this.coords.Aggregate((accumulator, val) => accumulator * val);
+            double prod = this._coords.Aggregate((accumulator, val) => accumulator * val);
             double code = Math.Abs(prod);
             if (code < 1)
             {
@@ -84,7 +92,7 @@ namespace Geometry
 
         public override string ToString()
         {
-            return coords.ToCSV();
+            return _coords.ToCSV();
         }
 
         public static string ToMatlab(GridVector3[] array)
@@ -93,7 +101,7 @@ namespace Geometry
             sb.Append('[');
             for (int i = 0; i < array.Length; i++)
             {
-                sb.Append(array[i].coords.ToCSV(" "));
+                sb.Append(array[i]._coords.ToCSV(" "));
                 sb.AppendLine(";");
             }
             sb.Append(']');
@@ -103,40 +111,43 @@ namespace Geometry
 
         static public double Magnitude(GridVector3 A)
         {
-            double[] squares = A.coords.Select(val => val * val).ToArray();
-            return Math.Sqrt(squares.Sum());
+            return GridVectorN.Magnitude(A);
         }
 
         public void Normalize()
         {
             double mag = Magnitude(this);
-            double[] normalized = this.coords.Select(val => val / mag).ToArray();
-            this.coords = normalized;
+            for (int iAxis = 0; iAxis < _coords.Length; iAxis++)
+            {
+                _coords[iAxis] = _coords[iAxis] / mag;
+            }
         }
 
         static public GridVector3 Normalize(GridVector3 A)
         {
-            double mag = Magnitude(A);
-            double[] normalized = A.coords.Select(val => val / mag).ToArray();
-            return new GridVector3(normalized);
+            double mag = Magnitude(A); 
+            return new GridVector3(A._coords.Select(val => val / mag));
         }
 
         static public double Distance(GridVector3 A, GridVector3 B)
         {
-            double[] diff = A.coords.Select((Aval, i) => Aval - B.coords[i]).ToArray();
+            double[] diff = A._coords.Select((Aval, i) => Aval - B._coords[i]).ToArray();
             return Math.Sqrt(diff.Sum((val) => (val * val)));
         }
 
         static public double Distance(IPoint A, IPoint B)
         {
             if (A == null || B == null)
-                throw new ArgumentNullException("A or B"); 
+                throw new ArgumentNullException("A or B");
 
+            return Math.Sqrt(GridVectorN.DistanceSquared(A, B));
+            /*
             double dX = A.X - B.X;
             double dY = A.Y - B.Y;
             double dZ = A.Z - B.Z;
 
             return Math.Sqrt((dX * dX) + (dY * dY) + (dZ * dZ));
+            */
         }
 
         /// <summary>
@@ -147,7 +158,7 @@ namespace Geometry
         /// <returns></returns>
         static public double Dot(GridVector3 A, GridVector3 B)
         {
-            return A.coords.Select((val, i) => val * B.coords[i]).Sum();
+            return A._coords.Select((val, i) => val * B._coords[i]).Sum();
             /*
             double AX = (double)(float)A.X;
             double AY = (double)(float)A.Y;
@@ -220,37 +231,37 @@ namespace Geometry
 
         static public GridVector3 operator -(GridVector3 A)
         {
-            return new GridVector3(A.coords.Select(val => -val).ToArray());
+            return new GridVector3(A._coords.Select(val => -val));
         }
 
         static public GridVector3 operator -(GridVector3 A, GridVector3 B)
         {
-            return new GridVector3(A.coords.Select((val, i) => val - B.coords[i]).ToArray());
+            return new GridVector3(A._coords.Select((val, i) => val - B._coords[i]));
         }
-
+        
         static public GridVector3 operator +(GridVector3 A, GridVector3 B)
         {
-            return new GridVector3(A.coords.Select((val, i) => val + B.coords[i]).ToArray());
+            return new GridVector3(A._coords.Select((val, i) => val + B._coords[i]));
         }
 
         static public GridVector3 operator *(GridVector3 A, double scalar)
         {
-            return new GridVector3(A.coords.Select((val, i) => val * scalar).ToArray());
+            return new GridVector3(A._coords.Select((val, i) => val * scalar));
         }
 
         static public GridVector3 operator *(GridVector3 A, GridVector3 B)
         {
-            return new GridVector3(A.coords.Select((a, i) => a * B.coords[i]).ToArray());
+            return new GridVector3(A._coords.Select((a, i) => a * B._coords[i]));
         }
 
         static public GridVector3 operator /(GridVector3 A, double scalar)
         {
-            return new GridVector3(A.coords.Select((val, i) => val / scalar).ToArray());
+            return new GridVector3(A._coords.Select((val, i) => val / scalar));
         }
 
         static public GridVector3 operator /(GridVector3 A, GridVector3 B)
         {
-            return new GridVector3(A.coords.Select((a, i) => a / B.coords[i]).ToArray());
+            return new GridVector3(A._coords.Select((a, i) => a / B._coords[i]));
         }
 
         static public bool operator ==(GridVector3 A, GridVector3 B)
@@ -265,7 +276,7 @@ namespace Geometry
 
         static public GridVector3 FromBarycentric(GridVector3 v1, GridVector3 v2, GridVector3 v3, double u, double v)
         {
-            double[] coords = v1.coords.Select((v1Val, i) => (v1Val * (1 - u - v)) + (v2.coords[i] * u) + (v3.coords[i] * v)).ToArray();
+            double[] coords = v1._coords.Select((v1Val, i) => (v1Val * (1 - u - v)) + (v2._coords[i] * u) + (v3._coords[i] * v)).ToArray();
 
             throw new NotImplementedException("GridVector3::FromBarycentric");
             /* I think the Z calculation is incorrect */
@@ -279,12 +290,12 @@ namespace Geometry
 
         public static GridVector3 Scale(GridVector3 A, double scalar)
         {
-            return new GridVector3(A.coords.Select((val,i) => val * scalar).ToArray());
+            return new GridVector3(A._coords.Select((val,i) => val * scalar));
         }
 
         public GridVector3 Scale(double scalar)
         {
-            return new GridVector3(this.coords.Select(val => val * scalar).ToArray());
+            return new GridVector3(this._coords.Select(val => val * scalar));
         }
         
         public static GridBox BoundingBox(GridVector3[] points)
@@ -298,11 +309,11 @@ namespace Geometry
         {
             get
             {
-                return coords[(int)AXIS.X];
+                return _coords[(int)AXIS.X];
             }
             set
             {
-                coords[(int)AXIS.X] = value; 
+                _coords[(int)AXIS.X] = value; 
             }
         }
 
@@ -310,11 +321,11 @@ namespace Geometry
         {
             get
             {
-                return coords[(int)AXIS.Y]; 
+                return _coords[(int)AXIS.Y]; 
             }
             set
             {
-                coords[(int)AXIS.Y] = value; 
+                _coords[(int)AXIS.Y] = value; 
             }
         }
 
@@ -322,11 +333,11 @@ namespace Geometry
         {
             get
             {
-                return coords[(int)AXIS.Z];
+                return _coords[(int)AXIS.Z];
             }
             set
             {
-                coords[(int)AXIS.Z] = value;
+                _coords[(int)AXIS.Z] = value;
             }
         }
 
