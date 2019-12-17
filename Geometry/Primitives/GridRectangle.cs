@@ -187,8 +187,8 @@ namespace Geometry
             }
         }
 
+        [NonSerialized]
         private GridVector2[] _Corners;
-
 
         public GridVector2[] Corners
         {
@@ -648,14 +648,14 @@ namespace Geometry
             {
                 if (_Segments == null)
                 {
-                    if (this.Width != 0 && this.Height != 0)
+                    if (this.Width > Global.Epsilon && this.Height > Global.Epsilon)
                     {
                         _Segments = new GridLineSegment[] { new GridLineSegment(LowerLeft, UpperLeft),
                                                             new GridLineSegment(UpperLeft, UpperRight),
                                                             new GridLineSegment(UpperRight, LowerRight),
                                                             new GridLineSegment(LowerRight, LowerLeft)};
                     }
-                    else if (this.Width == 0 && this.Height == 0)
+                    else if (this.Width < Global.Epsilon && this.Height < Global.Epsilon)
                     {
                         _Segments = new GridLineSegment[0];
                     }
