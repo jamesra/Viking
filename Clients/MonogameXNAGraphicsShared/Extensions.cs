@@ -95,9 +95,22 @@ namespace VikingXNAGraphics
         }
     }
 
-    public static class MeshExtensions
+    public static class MeshExtensions 
     {
-        public static MeshModel<VertexPositionColor> ToVertexPositionColorMeshModel<T>(this MeshBase3D<IVertex3D<T>> mesh, Color color)
+        public static MeshModel<VertexPositionColor> ToVertexPositionColorMeshModel<VERTEX,DATA>(this MeshBase3D<VERTEX> mesh, Color color)
+            where VERTEX : IVertex3D<DATA>
+        {
+            MeshModel<VertexPositionColor> model = new MeshModel<VertexPositionColor>();
+
+            mesh.ConvertAllFacesToTriangles();
+
+            model.Verticies = mesh.Verticies.Select((v, i) => new VertexPositionColor(v.Position.ToXNAVector3(), color)).ToArray();
+            model.Edges = mesh.Faces.SelectMany(f => f.iVerts).ToArray();
+            return model;
+        }
+
+        public static MeshModel<VertexPositionColor> ToVertexPositionColorMeshModel<T>(this MeshBase3D<T> mesh, Color color)
+            where T : IVertex3D
         {
             MeshModel<VertexPositionColor> model = new MeshModel<VertexPositionColor>();
 

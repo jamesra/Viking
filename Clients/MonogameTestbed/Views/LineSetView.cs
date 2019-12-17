@@ -18,6 +18,7 @@ namespace MonogameTestbed
         public List<CurveLabel> LineLables = new List<CurveLabel>();
         public double LineRadius = 1;
         public Color color;
+        public LineStyle Style = LineStyle.Standard;
 
         /// <summary>
         /// Optional
@@ -53,7 +54,7 @@ namespace MonogameTestbed
         {
             if (lines != null)
             {
-                LineViews = lines.Select(l => new LineView(l.A, l.B, LineRadius, color, LineStyle.Standard)).ToList();
+                LineViews = lines.Select(l => new LineView(l.A, l.B, LineRadius, color, Style)).ToList();
 
             }
             else
@@ -70,7 +71,7 @@ namespace MonogameTestbed
             }
             else
             {
-                LineViews = polygon.ExteriorSegments.Select(l => new LineView(l.A, l.B, LineRadius, color, LineStyle.Standard)).ToList();
+                LineViews = polygon.ExteriorSegments.Select(l => new LineView(l.A, l.B, LineRadius, color, Style)).ToList();
             }
         }
 
@@ -86,7 +87,7 @@ namespace MonogameTestbed
                                            mesh.Vertices[e.P1].ToGridVector2(),
                                            LineRadius,
                                            color,
-                                           LineStyle.Standard));
+                                           Style));
             }
 
             return listLines;

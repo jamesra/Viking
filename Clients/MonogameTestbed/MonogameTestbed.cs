@@ -34,7 +34,8 @@ namespace MonogameTestbed
         DELAUNAY2D,
         DELAUNAY3D,
         BAJAJTEST,
-        BAJAJMULTITEST
+        BAJAJMULTITEST,
+        CONSTRAINEDDELAUNAY2D
     };
 
     /// <summary>
@@ -72,16 +73,20 @@ namespace MonogameTestbed
         Delaunay3DTest delaunay3DTest = new Delaunay3DTest();
         BajajAssignmentTest bajajTest = new BajajAssignmentTest();
         BajajMultiAssignmentTest bajajMultiTest = new BajajMultiAssignmentTest();
+        VikingDelaunay2DTest constrainedDelaunay2DTest = new VikingDelaunay2DTest();
 
         SortedDictionary<TestMode, IGraphicsTest> listTests = new SortedDictionary<TestMode, IGraphicsTest>();
 
-        TestMode Mode = TestMode.BAJAJTEST;
+        TestMode Mode = TestMode.CONSTRAINEDDELAUNAY2D;
+
+        LabelView testLabel = null;
 
         public static uint NumCurveInterpolations = 10;
 
         public MonoTestbed()
         {
             graphics = new GraphicsDeviceManager(this);
+            VikingXNAGraphics.Global.Content = this.Content;
             graphics.PreparingDeviceSettings += graphics_PreparingDeviceSettings;
             Content.RootDirectory = "Content";
         }
@@ -158,6 +163,8 @@ namespace MonogameTestbed
             listTests.Add(TestMode.DELAUNAY3D, delaunay3DTest);
             listTests.Add(TestMode.BAJAJTEST, bajajTest);
             listTests.Add(TestMode.BAJAJMULTITEST, bajajMultiTest);
+            listTests.Add(TestMode.CONSTRAINEDDELAUNAY2D, constrainedDelaunay2DTest);
+            
         }
 
         /// <summary>
@@ -193,6 +200,7 @@ namespace MonogameTestbed
 
         private void ProcessKeyboard()
         {
+            var StartMode = this.Mode;
             if (Microsoft.Xna.Framework.Input.Keyboard.GetState().IsKeyDown(Keys.F1))
                 this.Mode = TestMode.CURVE;
             if (Microsoft.Xna.Framework.Input.Keyboard.GetState().IsKeyDown(Keys.F2))
@@ -231,11 +239,18 @@ namespace MonogameTestbed
                 this.Mode = TestMode.CURVE_SIMPLIFICATION;
             if (Keyboard.GetState().IsKeyDown(Keys.NumPad7))
                 this.Mode = TestMode.BAJAJMULTITEST;
+            if (Keyboard.GetState().IsKeyDown(Keys.NumPad8))
+                this.Mode = TestMode.CONSTRAINEDDELAUNAY2D;
 
             if (!listTests[Mode].Initialized)
             {
                 listTests[Mode].Init(this);
                 Debug.Assert(listTests[Mode].Initialized);
+            }
+
+            if(StartMode != this.Mode)
+            {
+                testLabel = new LabelView(listTests[Mode].Title, this.Scene.VisibleWorldBounds.UpperRight, hAlign: VikingXNAGraphics.HorizontalAlignment.RIGHT, scaleFontWithScene : true);
             }
         }
 
@@ -273,8 +288,11 @@ namespace MonogameTestbed
             if (!listTests[Mode].Initialized)
             {
                 listTests[Mode].Init(this);
+                testLabel = new LabelView(listTests[Mode].Title, this.Scene.VisibleWorldBounds.UpperLeft, hAlign: VikingXNAGraphics.HorizontalAlignment.RIGHT);
                 Debug.Assert(listTests[Mode].Initialized);
             }
+
+            listTests[Mode].Update();
 
             if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Microsoft.Xna.Framework.Input.Keyboard.GetState().IsKeyDown(Keys.Escape))
             {
@@ -322,12 +340,19 @@ namespace MonogameTestbed
            if(!listTests[Mode].Initialized)
            {
                 listTests[Mode].Init(this);
+                testLabel = new LabelView(listTests[Mode].Title, this.Scene.VisibleWorldBounds.UpperLeft, hAlign: VikingXNAGraphics.HorizontalAlignment.RIGHT, scaleFontWithScene: false);
                 Debug.Assert(listTests[Mode].Initialized);
-            }
+           }
 
-            listTests[Mode].Draw(this); 
+            listTests[Mode].Draw(this);
 
-          //  spriteBatch.End();
+            testLabel.Position = this.Scene.VisibleWorldBounds.UpperRight - new GridVector2(testLabel.BoundingRect.Width/2.0, 0);//testLabel.BoundingRect.Height);
+            testLabel.ScaleFontWithScene = false;
+            testLabel.HorzAlign = VikingXNAGraphics.HorizontalAlignment.LEFT;
+            testLabel.VertAlign = VikingXNAGraphics.VerticalAlignment.BOTTOM;
+            LabelView.Draw(this.spriteBatch, this.fontArial, this.Scene, new LabelView[] { testLabel });
+
+            //  spriteBatch.End();
 
             base.Draw(gameTime);
         }
@@ -351,6 +376,7 @@ namespace MonogameTestbed
 
     public class CurveTest : IGraphicsTest
     {
+        public string Title => this.GetType().Name;
         public Texture2D labelTexture;
 
         double CurveAngle = 3.14159 / 4.0;
@@ -451,6 +477,7 @@ namespace MonogameTestbed
 
     public class CurveViewTest : IGraphicsTest
     {
+        public string Title => this.GetType().Name;
         CurveView curveViewLagrange;
         CurveView curveViewCatmull;
         CurveLabel leftLagrangeCurveLabel;
@@ -552,6 +579,7 @@ namespace MonogameTestbed
 
     public class LabelViewsTest : IGraphicsTest
     {
+        public string Title => this.GetType().Name;
         CurveLabel curveLabel;
         LabelView labelView;
 
@@ -625,6 +653,7 @@ namespace MonogameTestbed
 
     public class LineViewStylesTest : IGraphicsTest
     {
+        public string Title => this.GetType().Name;
         List<LineView> listLineViews = new List<LineView>();
         List<LabelView> listLabelViews = new List<LabelView>();
 
@@ -683,6 +712,7 @@ namespace MonogameTestbed
 
     public class CurveViewStylesTest : IGraphicsTest
     {
+        public string Title => this.GetType().Name;
         List<CurveView> listLineViews = new List<CurveView>();
         List<LabelView> listLabelViews = new List<LabelView>();
 
@@ -744,6 +774,7 @@ namespace MonogameTestbed
 
     public class ClosedCurveViewTest : IGraphicsTest
     {
+        public string Title => this.GetType().Name;
         CurveView curveView;
         CurveLabel curveLabel;
         bool _initialized = false; 

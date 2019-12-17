@@ -12,7 +12,7 @@ namespace MonogameTestbed
 {
     public class Polygon2DTest : IGraphicsTest
     {
-
+        public string Title => this.GetType().Name;
         bool _initialized = false;
         public bool Initialized { get { return _initialized; } }
 
@@ -99,7 +99,7 @@ namespace MonogameTestbed
         private MeshModel<VertexPositionColor> BuildCircleConvexHull(ICircle2D circle)
         {
 
-            GridVector2[] verts2D = MorphologyMesh.ShapeMeshGenerator<object>.CreateVerticiesForCircle(circle, 0, 16, null, GridVector3.Zero).Select(v => new GridVector2(v.Position.X, v.Position.Y)).ToArray();
+            GridVector2[] verts2D = MorphologyMesh.ShapeMeshGenerator<Geometry.Meshing.IVertex3D<object>,object>.CreateVerticiesForCircle(circle, 0, 16, null, GridVector3.Zero).Select(v => new GridVector2(v.Position.X, v.Position.Y)).ToArray();
               
             int[] cv_idx;
             GridVector2[] cv_verticies = verts2D.ConvexHull(out cv_idx);

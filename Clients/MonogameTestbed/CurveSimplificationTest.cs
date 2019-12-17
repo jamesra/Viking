@@ -11,6 +11,7 @@ namespace MonogameTestbed
 {
     class CurveSimplificationTest : IGraphicsTest
     {
+        public string Title => this.GetType().Name;
         Scene scene;
 
         bool _initialized = false;

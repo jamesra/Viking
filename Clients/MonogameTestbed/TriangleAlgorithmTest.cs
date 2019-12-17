@@ -21,6 +21,7 @@ namespace MonogameTestbed
 
     class TriangleAlgorithmTest : IGraphicsTest
     {
+        public string Title => this.GetType().Name;
         Scene scene;
         PointSetViewCollection Points_A = new PointSetViewCollection(Color.Blue, Color.BlueViolet, Color.PowderBlue);
         PointSetViewCollection Points_B = new PointSetViewCollection(Color.Red, Color.Pink, Color.Plum);

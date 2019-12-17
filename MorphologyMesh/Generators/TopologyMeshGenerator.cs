@@ -22,9 +22,9 @@ namespace MorphologyMesh
         /// </summary>
         /// <param name="graph"></param>
         /// <returns></returns>
-        public static Mesh3D<ulong> Generate(MorphologyGraph graph)
+        public static Mesh3D<IVertex3D<ulong>> Generate(MorphologyGraph graph)
         {
-            List<Mesh3D<ulong>> listMeshes = new List<Mesh3D<ulong>>();
+            List<Mesh3D<IVertex3D<ulong>>> listMeshes = new List<Mesh3D<IVertex3D<ulong>>>();
             //Adjust the verticies so the models are centered on zero
             GridVector3 translate = -graph.BoundingBox.CenterPoint;
 
@@ -37,10 +37,10 @@ namespace MorphologyMesh
                 switch (shape.ShapeType)
                 {
                     case ShapeType2D.CIRCLE:
-                        listMeshes.Add(ShapeMeshGenerator<ulong>.CreateMeshForDisc(shape as ICircle2D, node.Z, graph.SectionThickness, TopologyMeshGenerator.NumPointsAroundCircle, node.ID, translate));
+                        listMeshes.Add(ShapeMeshGenerator<IVertex3D<ulong>,ulong>.CreateMeshForDisc(shape as ICircle2D, node.Z, graph.SectionThickness, TopologyMeshGenerator.NumPointsAroundCircle, node.ID, translate));
                         break;
                     case ShapeType2D.POLYGON:
-                        listMeshes.Add(ShapeMeshGenerator<ulong>.CreateMeshForPolygonSlab(shape as IPolygon2D, node.Z, graph.SectionThickness, node.ID, translate));
+                        listMeshes.Add(ShapeMeshGenerator<IVertex3D<ulong>, ulong>.CreateMeshForPolygonSlab(shape as IPolygon2D, node.Z, graph.SectionThickness, node.ID, translate));
                         break; 
                     default:
                         throw new ArgumentException("Unexpected shape type");
@@ -50,7 +50,7 @@ namespace MorphologyMesh
             //Check if any of the nodes are 2D lines, build 2D Faces connecting any linked lines
 
 
-            Mesh3D<ulong> output = new Mesh3D<ulong>();
+            Mesh3D<IVertex3D<ulong>> output = new Mesh3D<IVertex3D<ulong>>();
 
             foreach(var mesh in listMeshes)
             {

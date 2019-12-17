@@ -16,11 +16,13 @@ using TriangleNet.Geometry;
 namespace MorphologyMesh
 {
 
-    public static class ShapeMeshGenerator<T>
+    public static class ShapeMeshGenerator<VERTEX, DATA>
+        where VERTEX : IVertex3D<DATA>
+        
     {
-        public static Mesh3D<T> CreateMeshForBox(GridBox box, T locationData, GridVector3 translate)
+        public static Mesh3D<IVertex3D<DATA>> CreateMeshForBox(GridBox box, DATA locationData, GridVector3 translate)
         {
-            Mesh3D<T> mesh = new Mesh3D<T>();
+            Mesh3D<IVertex3D<DATA>> mesh = new Mesh3D<IVertex3D<DATA>>();
 
             double[] minVals = box.minVals;
             double[] maxVals = box.maxVals;
@@ -33,16 +35,16 @@ namespace MorphologyMesh
             double maxY = maxVals[1];
             double maxZ = maxVals[2];
 
-            Vertex3D<T>[] verts = new Vertex3D<T>[] { new Vertex3D<T>(new GridVector3(minX, minY, minZ), GridVector3.Zero),
-                                                  new Vertex3D<T>(new GridVector3(maxX, minY, minZ), GridVector3.Zero),
-                                                  new Vertex3D<T>(new GridVector3(minX, minY, maxZ), GridVector3.Zero),
-                                                  new Vertex3D<T>(new GridVector3(maxX, minY, maxZ), GridVector3.Zero),
-                                                  new Vertex3D<T>(new GridVector3(minX, maxY, minZ), GridVector3.Zero),
-                                                  new Vertex3D<T>(new GridVector3(maxX, maxY, minZ), GridVector3.Zero),
-                                                  new Vertex3D<T>(new GridVector3(minX, maxY, maxZ), GridVector3.Zero),
-                                                  new Vertex3D<T>(new GridVector3(maxX, maxY, maxZ), GridVector3.Zero)};
+            IVertex3D<DATA>[] verts = new IVertex3D<DATA>[] { new Vertex3D<DATA>(new GridVector3(minX, minY, minZ), GridVector3.Zero),
+                                            new Vertex3D<DATA>(new GridVector3(maxX, minY, minZ), GridVector3.Zero),
+                                            new Vertex3D<DATA>(new GridVector3(minX, minY, maxZ), GridVector3.Zero),
+                                            new Vertex3D<DATA>(new GridVector3(maxX, minY, maxZ), GridVector3.Zero),
+                                            new Vertex3D<DATA>(new GridVector3(minX, maxY, minZ), GridVector3.Zero),
+                                            new Vertex3D<DATA>(new GridVector3(maxX, maxY, minZ), GridVector3.Zero),
+                                            new Vertex3D<DATA>(new GridVector3(minX, maxY, maxZ), GridVector3.Zero),
+                                            new Vertex3D<DATA>(new GridVector3(maxX, maxY, maxZ), GridVector3.Zero)};
 
-            foreach (Vertex3D<T> v in verts)
+            foreach (var v in verts)
             {
                 v.Normal = v.Position - box.CenterPoint;
                 v.Normal.Normalize();
@@ -63,18 +65,18 @@ namespace MorphologyMesh
             return mesh;
         }
 
-        public static Mesh3D<T> CreateMeshForCircle(ICircle2D circle, double Z, int NumPointsOnCircle, T locationData, GridVector3 translate)
+        public static Mesh3D<IVertex3D<DATA>> CreateMeshForCircle(ICircle2D circle, double Z, int NumPointsOnCircle, DATA locationData, GridVector3 translate)
         {
-            Mesh3D<T> mesh = new Mesh3D<T>();
+            Mesh3D<IVertex3D<DATA>> mesh = new Mesh3D<IVertex3D<DATA>>();
             mesh.AddVerticies(CreateVerticiesForCircle(circle, Z, TopologyMeshGenerator.NumPointsAroundCircle, locationData, translate));
             AddFacesToCircle(mesh, TopologyMeshGenerator.NumPointsAroundCircle);
 
             return mesh;
         }
 
-        public static Mesh3D<T> CreateMeshForDisc(ICircle2D circle, double Z, double Height, int NumPointsOnDisc, T locationData, GridVector3 translate)
+        public static Mesh3D<IVertex3D<DATA>> CreateMeshForDisc(ICircle2D circle, double Z, double Height, int NumPointsOnDisc, DATA locationData, GridVector3 translate)
         {
-            Mesh3D<T> mesh = new Mesh3D<T>();
+            Mesh3D<IVertex3D<DATA>> mesh = new Mesh3D<IVertex3D<DATA>>();
             double halfHeight = Height / 2.0;
             mesh.AddVerticies(CreateVerticiesForCircle(circle, Z - halfHeight, TopologyMeshGenerator.NumPointsAroundCircle, locationData, translate));
             AddFacesToCircle(mesh, TopologyMeshGenerator.NumPointsAroundCircle, 0, CCWNormalHasPositiveZ: false);
@@ -86,30 +88,30 @@ namespace MorphologyMesh
             return mesh;
         }
 
-        public static Vertex3D<T>[] CreateVerticiesForCircle(ICircle2D circle, double Z, int NumPointsOnCircle, T locationID, GridVector3 translate)
+        public static IVertex3D<DATA>[] CreateVerticiesForCircle(ICircle2D circle, double Z, int NumPointsOnCircle, DATA locationID, GridVector3 translate)
         {
-            Vertex3D<T>[] verts = new Vertex3D<T>[NumPointsOnCircle + 1];
+            IVertex3D<DATA>[] verts = new IVertex3D<DATA>[NumPointsOnCircle + 1];
             GridVector3 translationVector = new GridVector3(circle.Center.X, circle.Center.Y, Z) + translate;
 
             for (int i = 0; i < NumPointsOnCircle; i++)
             {
                 double angle = ((double)i / (double)NumPointsOnCircle) * Math.PI * 2.0;
                 GridVector3 position = new GridVector3(Math.Cos(angle) * circle.Radius, Math.Sin(angle) * circle.Radius, 0);
-                verts[i] = new Vertex3D<T>(position,
-                                         new GridVector3(Math.Sin(angle), Math.Cos(angle), 0),
-                                         locationID);
+                verts[i] = new Vertex3D<DATA>(position,
+                                             new GridVector3(Math.Sin(angle), Math.Cos(angle), 0),
+                                             locationID);
                 verts[i].Position += translationVector;
             }
 
-            verts[NumPointsOnCircle] = new Vertex3D<T>(new GridVector3(0, 0, 0),
-                                                     new GridVector3(0, 0, Z > 0 ? 1 : -1),
-                                                     locationID);
+            verts[NumPointsOnCircle] = new Vertex3D<DATA>(new GridVector3(0, 0, 0),
+                                                         new GridVector3(0, 0, Z > 0 ? 1 : -1),
+                                                         locationID);
             verts[NumPointsOnCircle].Position += translationVector;
 
             return verts;
         }
 
-        private static void AddFacesToCircle(Mesh3D<T> mesh, int NumPointsOnCircle, int firstCircleVertex = 0, bool CCWNormalHasPositiveZ = true)
+        private static void AddFacesToCircle(Mesh3D<IVertex3D<DATA>> mesh, int NumPointsOnCircle, int firstCircleVertex = 0, bool CCWNormalHasPositiveZ = true)
         {
             int[] edges = new int[NumPointsOnCircle * 3];
             int iCentroid = firstCircleVertex + NumPointsOnCircle;
@@ -134,7 +136,7 @@ namespace MorphologyMesh
         /// <param name="mesh"></param>
         /// <param name="NumPointsOnCircle"></param>
         /// <param name="firstCircleVertex"></param>
-        private static void AddFacesToDiscRim(Mesh3D<T> mesh, int NumPointsOnCircle, int firstCircleVertex = 0)
+        private static void AddFacesToDiscRim(Mesh3D<IVertex3D<DATA>> mesh, int NumPointsOnCircle, int firstCircleVertex = 0)
         {
             int iFirstLowerVertex = firstCircleVertex;
             int iLowerCentroid = iFirstLowerVertex + NumPointsOnCircle;
@@ -153,21 +155,21 @@ namespace MorphologyMesh
             mesh.AddFace(new Face(iFirstLowerVertex + NumPointsOnCircle - 1, iFirstLowerVertex, iFirstUpperVertex, iFirstUpperVertex + NumPointsOnCircle - 1));
         }
 
-        public static Mesh3D<T> CreateMeshForPolygon(IPolygon2D polygon, double Z, T locationData, GridVector3 translate)
+        public static Mesh3D<IVertex3D<DATA>> CreateMeshForPolygon(IPolygon2D polygon, double Z, DATA locationData, GridVector3 translate)
         {
             IMesh triangulation = polygon.Triangulate();
-            Mesh3D<T> mesh = ToDynamicRenderMesh(triangulation, Z, locationData, translate);
+            Mesh3D<IVertex3D<DATA>> mesh = ToDynamicRenderMesh(triangulation, Z, locationData, translate);
             return mesh;
         }
 
-        public static Mesh3D<T> CreateMeshForPolygonSlab(IPolygon2D polygon, double Z, double Height, T locationData, GridVector3 translate)
+        public static Mesh3D<IVertex3D<DATA>> CreateMeshForPolygonSlab(IPolygon2D polygon, double Z, double Height, DATA locationData, GridVector3 translate)
         {
             IMesh triangulation = polygon.Triangulate();
-            Mesh3D<T> mesh = new Mesh3D<T>();
+            Mesh3D<IVertex3D<DATA>> mesh = new Mesh3D<IVertex3D<DATA>>();
             double HalfHeight = Height / 2.0;
 
-            Vertex3D<T>[] bottom_verticies = CreateVerticiesForPolygon(triangulation, Z - HalfHeight, locationData, translate);
-            Vertex3D<T>[] top_verticies = CreateVerticiesForPolygon(triangulation, Z + HalfHeight, locationData, translate);
+            IVertex3D<DATA>[] bottom_verticies = CreateVerticiesForPolygon(triangulation, Z - HalfHeight, locationData, translate);
+            IVertex3D<DATA>[] top_verticies = CreateVerticiesForPolygon(triangulation, Z + HalfHeight, locationData, translate);
             
             mesh.AddVerticies(bottom_verticies);
             mesh.AddVerticies(top_verticies);
@@ -181,14 +183,14 @@ namespace MorphologyMesh
             return mesh;
         }
 
-        public static Vertex3D<T>[] CreateVerticiesForPolygon(IMesh triangulation, double Z, T locationID, GridVector3 translate)
+        public static IVertex3D<DATA>[] CreateVerticiesForPolygon(IMesh triangulation, double Z, DATA locationID, GridVector3 translate)
         {
-            Vertex3D<T>[] verticies = new Vertex3D<T>[triangulation.Vertices.Count];
+            IVertex3D<DATA>[] verticies = new Vertex3D<DATA>[triangulation.Vertices.Count];
             
             int iVert = 0;  
             foreach (TriangleNet.Geometry.Vertex v in triangulation.Vertices)
             {
-                Geometry.Meshing.Vertex3D<T> vertex = new Geometry.Meshing.Vertex3D<T>(new GridVector3(v.X, v.Y, Z) + translate,
+                Geometry.Meshing.IVertex3D<DATA> vertex = new Geometry.Meshing.Vertex3D<DATA>(new GridVector3(v.X, v.Y, Z) + translate,
                                                                               new GridVector3(0,0,1), locationID);
                 verticies[v.ID] = vertex;
                 iVert++;
@@ -197,15 +199,15 @@ namespace MorphologyMesh
             return verticies;
         }
 
-        public static Vertex3D<T>[] CreateVerticiesForPolygon(IPolygon2D polygon, double Z, T locationID, GridVector3 translate)
+        public static IVertex3D<DATA>[] CreateVerticiesForPolygon(IPolygon2D polygon, double Z, DATA locationID, GridVector3 translate)
         {
-            Vertex3D<T>[] verticies = new Vertex3D<T>[polygon.TotalUniqueVerticies];
+            Vertex3D<DATA>[] verticies = new Vertex3D<DATA>[polygon.TotalUniqueVerticies];
 
             int iVert = 0;
             for(int iExterior = 0; iExterior < polygon.ExteriorRing.Count - 1; iExterior++)
             {
                 IPoint2D v = polygon.ExteriorRing.ElementAt(iExterior);
-                Geometry.Meshing.Vertex3D<T> vertex = new Geometry.Meshing.Vertex3D<T>(new GridVector3(v.X, v.Y, Z) + translate,
+                Geometry.Meshing.Vertex3D<DATA> vertex = new Geometry.Meshing.Vertex3D<DATA>(new GridVector3(v.X, v.Y, Z) + translate,
                                                                                    new GridVector3(0, 0, 1), locationID);
                 verticies[iVert] = vertex;
                 iVert++;
@@ -216,7 +218,7 @@ namespace MorphologyMesh
                 for (int iExterior = 0; iExterior < innerPolygon.Length - 1; iExterior++)
                 {
                     IPoint2D v = innerPolygon.ElementAt(iExterior);
-                    Geometry.Meshing.Vertex3D<T> vertex = new Geometry.Meshing.Vertex3D<T>(new GridVector3(v.X, v.Y, Z) + translate,
+                    Geometry.Meshing.Vertex3D<DATA> vertex = new Geometry.Meshing.Vertex3D<DATA>(new GridVector3(v.X, v.Y, Z) + translate,
                                                                                        new GridVector3(0, 0, 1), locationID);
                     verticies[iVert] = vertex;
                     iVert++;
@@ -226,7 +228,7 @@ namespace MorphologyMesh
             return verticies;
         }
 
-        private static void AddFacesToPolygon(Mesh3D<T> drmesh, IMesh triangulation, int firstPolyVertex = 0, bool CCWNormalHasPositiveZ = true)
+        private static void AddFacesToPolygon(IMesh3D<IVertex3D<DATA>> drmesh, IMesh triangulation, int firstPolyVertex = 0, bool CCWNormalHasPositiveZ = true)
         {
             foreach (var t in triangulation.Triangles)
             {
@@ -246,7 +248,7 @@ namespace MorphologyMesh
         /// <param name="mesh"></param>
         /// <param name="NumPointsOnCircle"></param>
         /// <param name="firstCircleVertex"></param>
-        private static void AddFacesToPolygonRim(Mesh3D<T> mesh, IMesh triangulation, GridPolygon polygon)
+        private static void AddFacesToPolygonRim(IMesh3D<IVertex3D<DATA>> mesh, IMesh triangulation, GridPolygon polygon)
         { 
             int VertsInTriangulation = triangulation.Vertices.Count;
 
@@ -274,7 +276,7 @@ namespace MorphologyMesh
         /// <param name="mesh"></param>
         /// <param name="NumPointsOnCircle"></param>
         /// <param name="lowerFaceFirstVertex"></param>
-        private static void AddFacesToPolygonRim(Mesh3D<T> mesh, int NumPointsInRim, int lowerFaceFirstVertex, int upperFaceFirstVertex, bool FaceOutside)
+        private static void AddFacesToPolygonRim(IMesh3D<IVertex3D<DATA>> mesh, int NumPointsInRim, int lowerFaceFirstVertex, int upperFaceFirstVertex, bool FaceOutside)
         {
             int iFirstLowerVertex = lowerFaceFirstVertex;
             int iFirstUpperVertex = upperFaceFirstVertex;
@@ -297,13 +299,13 @@ namespace MorphologyMesh
                 mesh.AddFace(new Face(iFirstUpperVertex + NumPointsInRim - 1, iFirstUpperVertex, iFirstLowerVertex, iFirstLowerVertex + NumPointsInRim - 1));
         }
 
-        private static Mesh3D<T> ToDynamicRenderMesh(TriangleNet.Meshing.IMesh triangulation, double Z, T locationData, GridVector3 translate)
+        private static Mesh3D<IVertex3D<DATA>> ToDynamicRenderMesh(TriangleNet.Meshing.IMesh triangulation, double Z, DATA locationData, GridVector3 translate)
         {
-            Mesh3D<T> drmesh = new Mesh3D<T>();
+            Mesh3D<IVertex3D<DATA>> drmesh = new Mesh3D<IVertex3D<DATA>>();
 
             foreach (TriangleNet.Geometry.Vertex v in triangulation.Vertices)
             {
-                Geometry.Meshing.Vertex3D<T> vertex = new Geometry.Meshing.Vertex3D<T>(new GridVector3(v.X, v.Y, Z) + translate,
+                Geometry.Meshing.Vertex3D<DATA> vertex = new Geometry.Meshing.Vertex3D<DATA>(new GridVector3(v.X, v.Y, Z) + translate,
                                                                               GridVector3.Zero, locationData);
                 drmesh.AddVertex(vertex);
             }
@@ -317,14 +319,14 @@ namespace MorphologyMesh
             return drmesh;
         }
 
-        public static Vertex3D<T>[] CreateVerticiesForPolyline(IPolyLine2D polyline, double Z, T locationID, GridVector3 translate)
+        public static Vertex3D<DATA>[] CreateVerticiesForPolyline(IPolyLine2D polyline, double Z, DATA locationID, GridVector3 translate)
         {
-            Vertex3D<T>[] verticies = new Vertex3D<T>[polyline.Points.Count];
+            Vertex3D<DATA>[] verticies = new Vertex3D<DATA>[polyline.Points.Count];
 
             int iVert = 0;
             foreach (IPoint2D p in polyline.Points)
             {
-                Geometry.Meshing.Vertex3D<T> vertex = new Geometry.Meshing.Vertex3D<T>(new GridVector3(p.X, p.Y, Z) + translate,
+                Geometry.Meshing.Vertex3D<DATA> vertex = new Geometry.Meshing.Vertex3D<DATA>(new GridVector3(p.X, p.Y, Z) + translate,
                                                                               new GridVector3(0, 0, 1), locationID);
                 verticies[iVert] = vertex;
                 iVert++;
@@ -333,11 +335,11 @@ namespace MorphologyMesh
             return verticies;
         }
 
-        public static Vertex3D<T>[] CreateVerticiesForPoint(IPoint2D p, double Z, T locationID, GridVector3 translate)
+        public static Vertex3D<DATA>[] CreateVerticiesForPoint(IPoint2D p, double Z, DATA locationID, GridVector3 translate)
         {
-            Vertex3D<T>[] verticies = new Vertex3D<T>[1];
+            Vertex3D<DATA>[] verticies = new Vertex3D<DATA>[1];
 
-            verticies[0] = new Geometry.Meshing.Vertex3D<T>(new GridVector3(p.X, p.Y, Z) + translate,
+            verticies[0] = new Geometry.Meshing.Vertex3D<DATA>(new GridVector3(p.X, p.Y, Z) + translate,
                                                               new GridVector3(0, 0, 1), locationID);
 
             return verticies;

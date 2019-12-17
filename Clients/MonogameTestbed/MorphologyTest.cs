@@ -17,11 +17,12 @@ namespace MonogameTestbed
 {
     class MorphologyTest : IGraphicsTest
     {
+        public string Title => this.GetType().Name;
         GamePadStateTracker Gamepad = new GamePadStateTracker();
 
         VikingXNAGraphics.MeshView<VertexPositionNormalColor> meshView;
 
-        ICollection<Mesh3D<ulong>> meshes;
+        ICollection<Mesh3D<IVertex3D<ulong>>> meshes;
 
         Scene3D Scene;
 
@@ -155,7 +156,7 @@ namespace MonogameTestbed
             //this.Scene.Camera.LookAt = meshes.First().BoundingBox.CenterPoint.ToXNAVector3();            
              
             System.Random r = new Random();
-            foreach (Mesh3D<ulong> mesh in meshes)
+            foreach (Mesh3D<IVertex3D<ulong>> mesh in meshes)
             {
                 meshView.models.Add(mesh.ToVertexPositionNormalColorMeshModel(new Color((float)r.NextDouble(), (float)r.NextDouble(), (float)r.NextDouble())));
             }
@@ -169,18 +170,18 @@ namespace MonogameTestbed
         /// <summary>
         /// Create a tube of circles offset slighty each section
         /// </summary>
-        public ICollection<Mesh3D<ulong>> InitSmallTopologyModelFromOData(int CellID, ENDPOINT endpoint)
+        public ICollection<Mesh3D<IVertex3D<ulong>>> InitSmallTopologyModelFromOData(int CellID, ENDPOINT endpoint)
         {
             AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromOData(new long[] { CellID }, true, DataSource.EndpointMap[endpoint]); 
 
             MorphologyMesh.TopologyMeshGenerator generator = new MorphologyMesh.TopologyMeshGenerator();
-            return new Mesh3D<ulong>[] { MorphologyMesh.TopologyMeshGenerator.Generate(graph.Subgraphs.Values.First()) };
+            return new Mesh3D<IVertex3D<ulong>>[] { MorphologyMesh.TopologyMeshGenerator.Generate(graph.Subgraphs.Values.First()) };
         }
 
         /// <summary>
         /// Create a tube of circles offset slighty each section
         /// </summary>
-        public ICollection<Mesh3D<ulong>> InitSmallSmoothModelFromOData(long[] CellIDs, ENDPOINT endpoint)
+        public ICollection<Mesh3D<IVertex3D<ulong>>> InitSmallSmoothModelFromOData(long[] CellIDs, ENDPOINT endpoint)
         { 
             AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromOData(CellIDs, true, DataSource.EndpointMap[endpoint]);
 
@@ -196,7 +197,7 @@ namespace MonogameTestbed
         /// <summary>
         /// Create a tube of circles offset slighty each section
         /// </summary>
-        public ICollection<Mesh3D<ulong>> InitSmallSmoothModelFromODataLocations(long[] LocationIDs, ENDPOINT endpoint)
+        public ICollection<Mesh3D<IVertex3D<ulong>>> InitSmallSmoothModelFromODataLocations(long[] LocationIDs, ENDPOINT endpoint)
         {
             AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromODataLocationIDs(LocationIDs, DataSource.EndpointMap[endpoint]);
                          
@@ -239,11 +240,11 @@ namespace MonogameTestbed
         }
 
 
-        private ICollection<Mesh3D<ulong>> RecursivelyGenerateMeshes(AnnotationVizLib.MorphologyGraph graph)
+        private ICollection<Mesh3D<IVertex3D<ulong>>> RecursivelyGenerateMeshes(AnnotationVizLib.MorphologyGraph graph)
         {
-            List<Mesh3D<ulong>> listMeshes = new List<Mesh3D<ulong>>();
+            List<Mesh3D<IVertex3D<ulong>>> listMeshes = new List<Mesh3D<IVertex3D<ulong>>>();
 
-            Mesh3D<ulong> structureMesh = MorphologyMesh.SmoothMeshGenerator.Generate(graph);
+            Mesh3D<IVertex3D<ulong>> structureMesh = MorphologyMesh.SmoothMeshGenerator.Generate(graph);
             if(structureMesh != null)
                 listMeshes.Add(structureMesh);
 

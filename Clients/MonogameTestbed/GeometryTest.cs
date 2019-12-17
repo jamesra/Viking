@@ -16,6 +16,7 @@ namespace MonogameTestbed
 {
     class GeometryTest : IGraphicsTest
     {
+        public string Title => this.GetType().Name;
         List<IShape2D> shapes = new List<IShape2D>();
 
         LineView lineView;

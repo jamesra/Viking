@@ -529,7 +529,8 @@ namespace MonogameTestbed
         private static int FindStartForBoundarySearch(Mesh3D mesh, GridPolygon[] shapes)
         {
             IVertex3D vert = mesh.Verticies.First(v => shapes.All(shape => !shape.Contains(v.Position.XY())));
-            return mesh.Verticies.IndexOf(vert);
+            return vert.Index;
+            //return mesh.Verticies.TIndexOf(vert);
         }
         
         private static Dictionary<GridVector2, int> CreatePointToShapeIndexLookup(List<GridVector2[]> shapeVerticies)

@@ -103,7 +103,7 @@ namespace MorphologyMesh
             return meshGraph;
         }
 
-        private static void AddIndexSetToMeshIndexMap(SortedList<GridVector3, long> map, Mesh3D<ulong> mesh, Geometry.IIndexSet set)
+        private static void AddIndexSetToMeshIndexMap(SortedList<GridVector3, long> map, Mesh3D<IVertex3D<ulong>> mesh, Geometry.IIndexSet set)
         {
             IVertex3D[] verts = mesh[set].ToArray();
             long[] mesh_indicies = set.ToArray();
@@ -120,7 +120,7 @@ namespace MorphologyMesh
         /// <param name="mesh">The mesh all ports in Nodes should index into</param>
         /// <param name="Nodes">All nodes containing cap ports that index into the mesh</param>
         /// <returns></returns>
-        private static SortedList<GridVector3, long> CreateVertexToMeshIndexMap(Mesh3D<ulong> mesh, IEnumerable<ConnectionVerticies> ports)
+        private static SortedList<GridVector3, long> CreateVertexToMeshIndexMap(Mesh3D<IVertex3D<ulong>> mesh, IEnumerable<ConnectionVerticies> ports)
         {
             SortedList<GridVector3, long> map = new SortedList<GridVector3, long>();
 

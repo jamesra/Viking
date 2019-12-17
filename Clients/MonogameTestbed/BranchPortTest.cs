@@ -224,7 +224,8 @@ namespace MonogameTestbed
     }
     
     class BranchPointTest : IGraphicsTest
-    {  
+    {
+        public string Title => this.GetType().Name;
         Scene scene;
 
         List<PointSet> PointSets = new List<PointSet>();

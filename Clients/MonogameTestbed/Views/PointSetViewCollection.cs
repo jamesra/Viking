@@ -33,16 +33,13 @@ namespace MonogameTestbed
             }
         }
 
-        PointSet _Points = new PointSet();
+        PointSet _Points = null;
         private PointSetView PointsView = new PointSetView();
         private LineSetView VoronoiView = new LineSetView();
         ConvexHullView CVView = new ConvexHullView();
 
-        public PointSetViewCollection(Color PointColor, Color VoronoiColor, Color CVViewColor)
+        public PointSetViewCollection(Color PointColor, Color VoronoiColor, Color CVViewColor) : this (new PointSet(), PointColor, VoronoiColor, CVViewColor)
         {
-            PointsView.Color = PointColor;
-            VoronoiView.color = VoronoiColor;
-            CVView.color = CVViewColor;
         }
 
         public PointSetViewCollection(PointSet points, Color PointColor, Color VoronoiColor, Color CVViewColor)

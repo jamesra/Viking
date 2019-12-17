@@ -371,6 +371,7 @@ namespace MonogameTestbed
 
     class Delaunay3DTest : IGraphicsTest
     {
+        public string Title => this.GetType().Name;
         GamePadStateTracker Gamepad = new GamePadStateTracker();
 
         VikingXNAGraphics.MeshView<VertexPositionNormalColor> meshView;
@@ -435,11 +436,11 @@ namespace MonogameTestbed
         public void UnloadContent(MonoTestbed window)
         {
         }
-        private ICollection<Mesh3D<ulong>> RecursivelyGenerateMeshes(AnnotationVizLib.MorphologyGraph graph)
+        private ICollection<Mesh3D<IVertex3D<ulong>>> RecursivelyGenerateMeshes(AnnotationVizLib.MorphologyGraph graph)
         {
-            List<Mesh3D<ulong>> listMeshes = new List<Mesh3D<ulong>>();
+            List<Mesh3D<IVertex3D<ulong>>> listMeshes = new List<Mesh3D<IVertex3D<ulong>>>();
 
-            Mesh3D<ulong> structureMesh = MorphologyMesh.SmoothMeshGenerator.Generate(graph);
+            Mesh3D<IVertex3D<ulong>> structureMesh = MorphologyMesh.SmoothMeshGenerator.Generate(graph);
             if (structureMesh != null)
                 listMeshes.Add(structureMesh);
 

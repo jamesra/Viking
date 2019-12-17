@@ -61,7 +61,7 @@ namespace MorphologyMesh
      
     /// 
     /// </summary>
-    public class MorphRenderMesh : Mesh3D
+    public class MorphRenderMesh : Mesh3D<MorphMeshVertex>
     {
         public GridPolygon[] Polygons { get; private set; }
 
@@ -196,11 +196,11 @@ namespace MorphologyMesh
         {
             get
             {
-                return (MorphMeshVertex)Verticies[(int)PolyIndexToVertex[key]];
+                return _Verticies[(int)PolyIndexToVertex[key]];
             }
             set
             {
-                Verticies[(int)PolyIndexToVertex[key]] = value;
+                _Verticies[(int)PolyIndexToVertex[key]] = value;
             }
         }
 

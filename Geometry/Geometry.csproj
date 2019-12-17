@@ -134,8 +134,10 @@
     <Compile Include="Meshing\Mesh2D.cs" />
     <Compile Include="Meshing\MeshExtensions.cs" />
     <Compile Include="Meshing\MeshInterfaces.cs" />
+    <Compile Include="Meshing\TriangulationMesh.cs" />
     <Compile Include="Meshing\Vertex.cs" />
     <Compile Include="Primitives\GridPolyline.cs" />
+    <Compile Include="Primitives\GridVectorN.cs" />
     <Compile Include="Primitives\Interfaces.cs" />
     <Compile Include="Primitives\Path.cs" />
     <Compile Include="Primitives\Shape2DCollection.cs" />
