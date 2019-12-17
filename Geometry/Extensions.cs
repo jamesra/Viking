@@ -29,7 +29,7 @@ namespace Geometry
     public static class SortingExtensions
     {
         /// sort array 'rg', returning the original index positions
-        public static int[] SortAndIndex<T>(this T[] rg)
+        public static int[] SortAndIndex<T>(this T[] rg, IComparer<T> comparer = null)
         {
             int i, c = rg.Length;
             var keys = new int[c];
@@ -38,7 +38,14 @@ namespace Geometry
                 for (i = 0; i < c; i++)
                     keys[i] = i;
 
-                System.Array.Sort(rg, keys /*, ... */);
+                if(comparer == null)
+                {
+                    System.Array.Sort(rg, keys /*, ... */);
+                }
+                else
+                {
+                    System.Array.Sort<T,int>(rg, keys, comparer);
+                }
             }
             return keys;
         }
@@ -82,9 +89,7 @@ namespace Geometry
 
         public static RTree.Point ToRTreePoint(this GridVector3 p)
         {
-            return new RTree.Point(p.coords[0],
-                                   p.coords[1],
-                                   p.coords[2]);
+            return new RTree.Point(p.coords);
         }
 
         public static RTree.Rectangle ToRTreeRect(this GridRectangle rect, double MinZ, double MaxZ)
@@ -175,7 +180,7 @@ namespace Geometry
 
         public static GridVector3 ToGridVector3(this Vector<double> m)
         {
-            return new GridVector3(m[0], m[1], m[2]);
+            return new GridVector3(m);
         }
 
         public static GridVector2[] ToGridVector2(this Matrix<double> m)

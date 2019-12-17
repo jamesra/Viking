@@ -39,7 +39,7 @@ namespace RTree
         /// <summary>
         /// The (x, y) coordinates of the point.
         /// </summary>
-        internal double[] coordinates;
+        internal readonly double[] coordinates;
 
 
         /// <summary>
@@ -54,6 +54,17 @@ namespace RTree
             coordinates[0] = x;
             coordinates[1] = y;
             coordinates[2] = z;
+        }
+
+        public Point(double[] input)
+        {
+            if(input.Length != DIMENSIONS)
+            {
+                throw new System.ArgumentException(string.Format("Dimension mismatch in RTree Point constructor. Excpected {0} got {1}", DIMENSIONS, input.Length));
+            }
+
+            coordinates = new double[DIMENSIONS];
+            System.Array.Copy(input, coordinates, input.Length);
         }
     }
 }
