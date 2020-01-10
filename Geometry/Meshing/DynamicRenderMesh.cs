@@ -112,8 +112,7 @@ namespace Geometry.Meshing
 
             return iVertMergeStart;
         }
-        
-
+         
         public GridLineSegment ToSegment(IEdgeKey e)
         {
             return new GridLineSegment(_Verticies[e.A].Position, _Verticies[e.B].Position);
