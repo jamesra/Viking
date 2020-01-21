@@ -598,6 +598,11 @@ namespace Geometry
             return !(A == B);
         }
 
+        public static implicit operator RTree.Rectangle(GridRectangle rect)
+        {
+            return new RTree.Rectangle(rect.Left, rect.Bottom, rect.Right, rect.Top, 0, 0);
+        }
+
         #region Static Methods
 
         /// <summary>
