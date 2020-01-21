@@ -119,7 +119,13 @@ namespace VikingXNAGraphics
         public bool ScaleFontWithScene {get; set;} 
 
         public LabelView(string Text, GridVector2 VolumePosition, HorizontalAlignment hAlign = HorizontalAlignment.CENTER, VerticalAlignment vAlign = VerticalAlignment.CENTER, bool scaleFontWithScene = true, double fontSize = 16.0)
+            : this(Text, VolumePosition, Global.DefaultFont, hAlign, vAlign, scaleFontWithScene, fontSize)
         {
+        }
+
+        public LabelView(string Text, GridVector2 VolumePosition, SpriteFont font, HorizontalAlignment hAlign = HorizontalAlignment.CENTER, VerticalAlignment vAlign = VerticalAlignment.CENTER, bool scaleFontWithScene = true, double fontSize = 16.0)
+        {
+            this.font = font;
             this._FontSize = fontSize;
             this.Text = Text;
             this.Position = VolumePosition;
@@ -150,6 +156,26 @@ namespace VikingXNAGraphics
             set
             {
                 _Position = value;
+            }
+        }
+
+        /// <summary>
+        /// Returns the measured bounding box of the text in the label.
+        /// </summary>
+        public GridRectangle BoundingRect
+        {
+            get
+            {
+                if(!_IsMeasured)
+                {
+                    MeasureLabel();
+                }
+
+                double FontScaleForVolume = ScaleFontSizeToVolume(font, this.FontSize);
+
+                double Width = _RowMeasurements.Max(m => m.X);
+                double Height = _RowMeasurements.Sum(m => m.Y);
+                return new GridRectangle(this.Position, Width * FontScaleForVolume, Height * FontScaleForVolume);
             }
         }
         
@@ -235,6 +261,12 @@ namespace VikingXNAGraphics
                 {
                     rows[iRow] = word;
                     rowMeasurements[iRow] = font.MeasureString(word);
+
+                    //Check if we already exceeded the max width of the row with the first string added
+                    if (rowMeasurements[iRow].X * fontScale > LineWidth)
+                    {
+                        RequireNewRow = true;
+                    }
                 }
                 else
                 {
@@ -243,6 +275,9 @@ namespace VikingXNAGraphics
                     if (concatenatedRowMeasurement.X * fontScale > LineWidth)  // The word makes the row too long
                     {
                         RequireNewRow = true;
+
+                        labelStack.Push(word); //Push the word that exceeded the length back on the stack so we don't lose it. 
+
                         //rows[iRow + 1] = word;
                         //rowMeasurements[iRow + 1] = font.MeasureString(word);
                         // rowMeasurement[iRow] = font.MeasureString(rows[iRow]); //Measured the last time we added a word to this row
@@ -257,11 +292,10 @@ namespace VikingXNAGraphics
                 if (RequireNewRow)
                 {
                     iRow++;
-                    labelStack.Push(word);
-
-                    if (iRow >= MaxRows)
+                    if (iRow >= MaxRows && labelStack.Count > 0)
                     {
-                        rows[iRow - 1] = rows[iRow - 1] + "...";
+                        //Replace the last three characters with "..." to indicate there was more text.
+                        rows[iRow - 1] = rows[iRow - 1].Insert(rows[iRow - 1].Length - 3 < 0 ? 0 : rows[iRow - 1].Length - 3, "..."); 
                         break;
                     }
                 }
@@ -384,6 +418,18 @@ namespace VikingXNAGraphics
 
         }
 
+        private void MeasureLabel()
+        { 
+            double FontScaleForVolume = ScaleFontSizeToVolume(font, this.FontSize);
+            this._Rows = WrapText(this.Text, this.font, FontScaleForVolume, this.MaxLineWidth, out this._RowMeasurements);
+            _IsMeasured = true;
+        }
+
+        public void Draw(Microsoft.Xna.Framework.Graphics.SpriteBatch spriteBatch, VikingXNA.Scene scene)
+        {
+            throw new NotImplementedException();
+        }
+
         /// <summary>
         /// Draw a single label. 
         /// The caller is expected to call Begin and End on the sprite batch.  They should also preserve all state on the graphics device. 
@@ -392,8 +438,8 @@ namespace VikingXNAGraphics
         /// <param name="font"></param>
         /// <param name="scene"></param>
         public void Draw(Microsoft.Xna.Framework.Graphics.SpriteBatch spriteBatch,
-                              Microsoft.Xna.Framework.Graphics.SpriteFont font,
-                              VikingXNA.Scene scene)
+                            Microsoft.Xna.Framework.Graphics.SpriteFont font,
+                            VikingXNA.Scene scene)
         {
             double fontSizeInScreenPixels = ScaleFontSizeForMagnification(this.FontSize, scene);
 
@@ -414,8 +460,7 @@ namespace VikingXNAGraphics
              
             if (!_IsMeasured)////!_IsMeasured)
             {
-                this._Rows = WrapText(this.Text, this.font, FontScaleForVolume, this.MaxLineWidth, out this._RowMeasurements);
-                _IsMeasured = true;
+                MeasureLabel();
             }
 
             if (this._Rows == null || this._Rows.Length == 0)
