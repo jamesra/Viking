@@ -289,7 +289,9 @@ namespace WebAnnotationModel
             {
                 ShowStandardExceptionMessage(e);
                 StructureObj deletedObj = InternalDelete(newStruct.ID);
-                CallOnCollectionChangedForDelete(new StructureObj[] {deletedObj});
+                if(deletedObj != null)
+                    CallOnCollectionChangedForDelete(new StructureObj[] {deletedObj});
+
                 return null; 
             }
             finally
