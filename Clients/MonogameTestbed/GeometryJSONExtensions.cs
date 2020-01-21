@@ -24,6 +24,12 @@ namespace MonogameTestbed
             return obj.ToString();
         }
 
+        public static string ToJSON(this IEnumerable<GridVector2> input)
+        {
+            JArray obj = input.ToJArray(); 
+            return obj.ToString();
+        }
+
         public static JObject ToJObject(this GridVector2 p)
         { 
             dynamic jObj = new JObject();
@@ -36,7 +42,17 @@ namespace MonogameTestbed
         {
             return new JArray(points.Select(p => p.ToJObject()));
         }
-        
+
+        public static GridVector2[] PointsFromJSON(string json)
+        {
+            if (json == null)
+                return null;
+
+            JArray obj = JArray.Parse(json);
+            return PointsFromJSON(obj); 
+        }
+
+
         public static GridVector2[] PointsFromJSON(this JToken points)
         {
             GridVector2[] output = points.Select(p => new GridVector2(System.Convert.ToDouble(p["X"]), System.Convert.ToDouble((p["Y"])))).ToArray();
@@ -45,6 +61,9 @@ namespace MonogameTestbed
 
         public static GridPolygon PolygonFromJSON(string json)
         {
+            if (json == null)
+                return null;
+
             JObject obj = JObject.Parse(json);
 
             var ExteriorRing = obj["ExteriorRing"];
