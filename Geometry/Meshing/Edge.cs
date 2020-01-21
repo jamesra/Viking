@@ -34,6 +34,11 @@ namespace Geometry.Meshing
             this.B = ordered[1];
         }
 
+        public EdgeKey(long a, long b) : this((int)a, (int)b)
+        {
+        
+        }
+
         public static bool operator ==(EdgeKey A, EdgeKey B)
         {
             return A.Equals(B);
@@ -110,7 +115,7 @@ namespace Geometry.Meshing
 
         public override int GetHashCode()
         {
-            return System.Convert.ToInt32(((long)A * (long)B));
+            return System.Convert.ToInt32(((long)A * (long)B) & int.MaxValue);
         }
 
         public override string ToString()
@@ -119,6 +124,18 @@ namespace Geometry.Meshing
         }
 
         public int OppositeEnd(int value)
+        {
+            if (value == this.A)
+                return B;
+            else if (value == this.B)
+                return A;
+            else
+            {
+                throw new ArgumentException("Parameter to OppositeEnd must match one of the ends of the edge");
+            }
+        }
+
+        public long OppositeEnd(long value)
         {
             if (value == this.A)
                 return B;
@@ -235,6 +252,24 @@ namespace Geometry.Meshing
             _ImmutableFaces = null;
         }
 
+        /// <summary>
+        /// Return the face that is not the passed face
+        /// Throw an exception if the edge is not part of the passed face
+        /// Return null if the edge only has a single face
+        /// </summary>
+        /// <param name="f"></param>
+        /// <returns></returns>
+        public IFace OppositeFace(IFace f)
+        {
+            if (!this.Faces.Contains(f))
+                throw new ArgumentException(string.Format("{0} is not part of face {1} and cannot return the opposite face", this.ToString(), f.ToString()));
+
+            if (this.Faces.Count == 1)
+                return null;
+
+            return this.Faces.First(face => face != f);
+        }
+
         public static bool operator ==(Edge A, Edge B)
         {
             if (object.ReferenceEquals(A, null))
@@ -347,6 +382,13 @@ namespace Geometry.Meshing
         }
 
         public int OppositeEnd(int end)
+        {
+            Debug.Assert(this.A == end || this.B == end);
+
+            return end == A ? B : A;
+        }
+
+        public long OppositeEnd(long end)
         {
             Debug.Assert(this.A == end || this.B == end);
 

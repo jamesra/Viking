@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -31,37 +32,6 @@ namespace Geometry.Meshing
             }
         }
 
-        /*
-        public int A
-        {
-            get { return iVerts[0]; }
-        }
-
-        public int B
-        {
-            get { return iVerts[1]; }
-        }
-
-        public int C
-        {
-            get { return iVerts[2]; }
-        }
-
-        public Edge AB
-        {
-            get { return new Edge(A, B); }
-        }
-
-        public Edge BC
-        {
-            get { return new Edge(B,C); }
-        }
-        public Edge CA
-        {
-            get { return new Edge(C,A); }
-        }
-
-        */
           
         private IEdgeKey[] CalculateEdges()
         {
@@ -178,6 +148,9 @@ namespace Geometry.Meshing
 
         public static bool operator ==(Face A, Face B)
         {
+            if (object.ReferenceEquals(A, B))
+                return true; 
+
             return A.Equals(B);
         }
 
