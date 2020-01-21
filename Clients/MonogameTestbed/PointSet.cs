@@ -76,11 +76,29 @@ namespace MonogameTestbed
         {
             GridCircle newCircle = new GridCircle(item, PointRadius);
             Circles.Add(newCircle);
+            if (CollectionChanged != null)
+            {
+                CollectionChanged(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, newCircle));
+            }
+        }
+
+        public void AddRange(IEnumerable<GridVector2> items)
+        {
+            IEnumerable<GridCircle> circles = items.Select(i => new GridCircle(i, PointRadius));
+            Circles.AddRange(circles);
+            if (CollectionChanged != null)
+            {
+                CollectionChanged(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, circles));
+            }
         }
 
         public void Clear()
         {
             Points.Clear();
+            if (CollectionChanged != null)
+            {
+                CollectionChanged(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
+            }
         }
 
         public bool Contains(GridVector2 item)
@@ -95,7 +113,14 @@ namespace MonogameTestbed
 
         public bool Remove(GridVector2 item)
         {
-            return Circles.RemoveAll(c => c.Contains(item)) > 0;
+            GridCircle[] remove = Circles.Where(c => c.Contains(item)).ToArray();
+            bool nRemoved = Circles.RemoveAll(c => c.Contains(item)) > 0;
+            if (CollectionChanged != null && remove.Length > 0)
+            {
+                CollectionChanged(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, remove));
+            }
+
+            return nRemoved;
         }
 
         public IEnumerator<GridVector2> GetEnumerator()

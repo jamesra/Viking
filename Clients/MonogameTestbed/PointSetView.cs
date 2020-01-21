@@ -12,39 +12,70 @@ using VikingXNA;
 
 namespace MonogameTestbed
 {
+    [Flags]
+    public enum PointLabelType
+    {
+        NONE = 0x0,
+        INDEX = 0x01, //The index of the point in the collection
+        POSITION = 0x02 //The position of the point
+    }
 
+    /// <summary>
+    /// Draw a collection of points, optionally labeling by position, index, or both
+    /// </summary>
     class PointSetView : PointViewBase
     { 
         public CircleView[] PointViews = new CircleView[0];
         public LabelView[] LabelViews = new LabelView[0]; 
         private double _PointRadius = 1.0;
 
-        private bool _LabelIndex = false;
+        private PointLabelType _LabelType = PointLabelType.NONE;
+        public PointLabelType LabelType
+        {
+            get { return _LabelType; }
+            set {
+                _LabelType = value;
+                UpdateViews();
+            }
+        }
+         
         public bool LabelIndex
         {
             get
             {
-                return _LabelIndex;
+                return (_LabelType & PointLabelType.INDEX) > 0;
             }
             set
             {
-                _LabelIndex = value;
-                UpdateViews();
+                if (value)
+                {
+                    LabelType = _LabelType | PointLabelType.INDEX;
+                }
+                else
+                {
+                    LabelType = _LabelType & ~PointLabelType.INDEX;
+                }
+                 
             }
         }
-
-        private bool _LabelPosition = true;
-
+          
         public bool LabelPosition
         {
             get
             {
-                return _LabelPosition;
+                return (_LabelType & PointLabelType.POSITION) > 0;
             }
             set
             {
-                _LabelPosition = value;
-                UpdateViews();
+                if (value)
+                {
+                    LabelType = _LabelType | PointLabelType.POSITION;
+                }
+                else
+                {
+                    LabelType = _LabelType & ~PointLabelType.POSITION;
+                }
+
             }
         }
 
@@ -57,6 +88,16 @@ namespace MonogameTestbed
                 _PointRadius = value;
                 UpdateViews();
             }
+        }
+
+        public PointSetView(double defaultRadius = 1.0) : this(Color.Gold, defaultRadius)
+        {
+        }
+
+        public PointSetView(Color defaultColor, double defaultRadius=1.0)
+        {
+            base.Color = defaultColor;
+            _PointRadius = defaultRadius;
         }
 
         public override void UpdateViews()
@@ -92,6 +133,7 @@ namespace MonogameTestbed
                 foreach (LabelView label in LabelViews)
                 {
                     label.FontSize = this.PointRadius * 2.0;
+                    label.Color = this.Color.Invert(); 
                 }
             }
         }
@@ -107,7 +149,7 @@ namespace MonogameTestbed
 
         public static PointSetView CreateFor(MorphologyMesh.MorphRenderMesh mesh)
         {    
-            PointSetView psv = new PointSetView();
+            PointSetView psv = new PointSetView(Color.Gray);
 
             psv.PointRadius = 0.5;
             psv.Points = mesh.Verticies.Select(p => p.Position.XY()).ToArray();

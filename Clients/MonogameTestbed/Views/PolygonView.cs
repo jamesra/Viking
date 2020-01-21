@@ -145,10 +145,14 @@ namespace MonogameTestbed
             {
                 ExteriorRingView = null;
                 InteriorEdgeView = null;
+                return;
             }
 
             ExteriorRingView = new LineSetView();
-            ExteriorRingView.LineViews = Polygon.ExteriorSegments.Select(s => new LineView(s, this.width, this.Color, LineStyle.Standard)).ToList();
+            if (Polygon != null)
+            {
+                ExteriorRingView.LineViews = Polygon.ExteriorSegments.Select(s => new LineView(s, this.width, this.Color, LineStyle.Standard)).ToList();
+            }
 
             TriangleNet.Meshing.IMesh mesh = _Polygon.Triangulate();
 
