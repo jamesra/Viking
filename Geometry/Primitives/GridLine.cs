@@ -34,26 +34,23 @@ namespace Geometry
 
         public int Compare(GridVector2 A, GridVector2 B)
         {
-            double angleA = GridVector2.ArcAngle(Line.Origin, A, ComparisonPoint);
-            double angleB = GridVector2.ArcAngle(Line.Origin, B, ComparisonPoint);
-
             //We are measuring the angle from the line in one direction, so don't allow negative angles
-            angleA = angleA < 0 ? angleA + (Math.PI * 2.0) : angleA;
-            angleB = angleB < 0 ? angleB + (Math.PI * 2.0) : angleB;
+            double angleA = GridVector2.AbsArcAngle(Line.Origin, A, ComparisonPoint, ClockwiseOrder);
+            double angleB = GridVector2.AbsArcAngle(Line.Origin, B, ComparisonPoint, ClockwiseOrder);
 
-            return ClockwiseOrder ? angleA.CompareTo(angleB) : angleB.CompareTo(angleA);
+            //return ClockwiseOrder ? angleA.CompareTo(angleB) : angleB.CompareTo(angleA);
+            return angleA.CompareTo(angleB);
         }
 
         public int Compare(IPoint2D A, IPoint2D B)
         {
-            double angleA = GridVector2.ArcAngle(Line.Origin, A, ComparisonPoint);
-            double angleB = GridVector2.ArcAngle(Line.Origin, B, ComparisonPoint);
-
             //We are measuring the angle from the line in one direction, so don't allow negative angles
-            angleA = angleA < 0 ? angleA + (Math.PI * 2.0) : angleA;
-            angleB = angleB < 0 ? angleB + (Math.PI * 2.0) : angleB;
 
-            return ClockwiseOrder ? angleA.CompareTo(angleB) : angleB.CompareTo(angleA);
+            double angleA = GridVector2.AbsArcAngle(Line.Origin, A, ComparisonPoint, ClockwiseOrder);
+            double angleB = GridVector2.AbsArcAngle(Line.Origin, B, ComparisonPoint, ClockwiseOrder);
+
+            //return ClockwiseOrder ? angleA.CompareTo(angleB) : angleB.CompareTo(angleA);
+            return angleA.CompareTo(angleB);
         }
     }
 
