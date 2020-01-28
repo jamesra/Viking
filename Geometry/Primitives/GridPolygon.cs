@@ -9,6 +9,12 @@ using System.Diagnostics;
 
 namespace Geometry
 {
+    public enum Concavity
+    {
+        CONCAVE = -1,
+        PARALLEL = 0,
+        CONVEX = 1
+    }
     /// <summary>
     /// Records the index of a vertex in a polygon
     /// </summary>
@@ -165,8 +171,15 @@ namespace Geometry
 
         // override object.GetHashCode
         public override int GetHashCode()
-        { 
-            return this.iVertex;
+        {
+            if (IsInner)
+            {
+                return this.iVertex + (this.iPoly << 16) + (this.iInnerPoly.Value << 10);
+            }
+            else
+            {
+                return this.iVertex + (this.iPoly << 16);
+            }
         }
 
         public int CompareTo(PointIndex other)
@@ -221,6 +234,18 @@ namespace Geometry
             }
         }
 
+        public GridVector2 Point(IReadOnlyDictionary<int, GridPolygon> Polygons)
+        {
+            if (IsInner)
+            {
+                return Polygons[iPoly].InteriorPolygons[this.iInnerPoly.Value].ExteriorRing[iVertex];
+            }
+            else
+            {
+                return Polygons[iPoly].ExteriorRing[iVertex];
+            }
+        }
+
         /// <summary>
         /// Return the segment, using this point index and the next index in the ring
         /// </summary>
@@ -236,16 +261,25 @@ namespace Geometry
             return new GridLineSegment(Point(Polygons), Next.Point(Polygons));
         }
 
+        public GridLineSegment Segment(IReadOnlyDictionary<int, GridPolygon> Polygons)
+        {
+            return new GridLineSegment(Point(Polygons), Next.Point(Polygons));
+        }
+
         /// <summary>
         /// Returns the polygon the index refers to
         /// </summary>
         /// <param name="poly"></param>
         /// <returns></returns>
-        public GridPolygon Polygon(GridPolygon poly)
+        internal GridPolygon Polygon(GridPolygon poly)
         {
-            if(this.iPoly > 0)
+            if (this.IsInner)
             {
-                throw new ArgumentOutOfRangeException("Cannot use single polygon for an index into an polygon array");
+                return poly.InteriorPolygons[this.iInnerPoly.Value];
+            }
+            else
+            {
+                return poly;
             }
 
             return Polygon(new GridPolygon[] { poly });
@@ -256,17 +290,21 @@ namespace Geometry
         /// </summary>
         /// <param name="poly"></param>
         /// <returns></returns>
-        public GridPolygon Polygon(GridPolygon[] polygons)
+        public GridPolygon Polygon(IReadOnlyList<GridPolygon> polygons)
         {
             GridPolygon poly = polygons[this.iPoly];
-            if (this.IsInner)
-            {
-                return poly.InteriorPolygons[this.iInnerPoly.Value];
-            }
-            else
-            {
-                return poly;
-            }
+            return Polygon(poly);
+        }
+
+        /// <summary>
+        /// Returns the polygon the index refers to
+        /// </summary>
+        /// <param name="poly"></param>
+        /// <returns></returns>
+        public GridPolygon Polygon(IReadOnlyDictionary<int, GridPolygon> polygons)
+        {
+            GridPolygon poly = polygons[this.iPoly];
+            return Polygon(poly);
         }
 
         /// <summary>
@@ -300,10 +338,8 @@ namespace Geometry
         /// </summary>
         /// <param name="polygons"></param>
         /// <returns></returns>
-        public GridVector2[] ConnectedVerticies(IReadOnlyList<GridPolygon> polygons)
-        {
-            GridVector2[] ring = GetRing(polygons);
-
+        private GridVector2[] ConnectedVerticies(GridVector2[] ring)
+        {  
             int iPrevious = PreviousVertexInRing();
             int iNext = NextVertexInRing();
 
@@ -311,10 +347,28 @@ namespace Geometry
             return new GridVector2[] { ring[iPrevious], ring[iNext] };
         }
 
-        public GridLineSegment[] ConnectedSegments(IReadOnlyList<GridPolygon> polygons)
+        /// <summary>
+        /// Returns the verticies before and after this index
+        /// </summary>
+        /// <param name="polygons"></param>
+        /// <returns></returns>
+        public GridVector2[] ConnectedVerticies(IReadOnlyList<GridPolygon> polygons)
         {
-            GridVector2[] ring = GetRing(polygons);
+            return ConnectedVerticies(GetRing(polygons));
+        }
 
+        /// <summary>
+        /// Returns the verticies before and after this index
+        /// </summary>
+        /// <param name="polygons"></param>
+        /// <returns></returns>
+        public GridVector2[] ConnectedVerticies(IReadOnlyDictionary<int, GridPolygon> polygons)
+        {
+            return ConnectedVerticies(GetRing(polygons));
+        }
+
+        public GridLineSegment[] ConnectedSegments(GridVector2[] ring)
+        {  
             int iPrevious = PreviousVertexInRing();
             int iNext = PreviousVertexInRing();
 
@@ -322,6 +376,18 @@ namespace Geometry
             return new GridLineSegment[] {
                 new GridLineSegment(ring[iPrevious], ring[iVertex]),
                 new GridLineSegment(ring[iVertex], ring[iNext]) };
+        }
+
+        public GridLineSegment[] ConnectedSegments(IReadOnlyList<GridPolygon> polygons)
+        {
+            GridVector2[] ring = GetRing(polygons);
+            return ConnectedSegments(ring);
+        }
+
+        public GridLineSegment[] ConnectedSegments(IReadOnlyDictionary<int, GridPolygon> polygons)
+        {
+            GridVector2[] ring = GetRing(polygons);
+            return ConnectedSegments(ring);
         }
 
         /// <summary>
@@ -371,6 +437,11 @@ namespace Geometry
         }
 
         internal GridVector2[] GetRing(IReadOnlyList<GridPolygon> Polygons)
+        {
+            return this.GetRing(Polygons[this.iPoly]);
+        }
+
+        internal GridVector2[] GetRing(IReadOnlyDictionary<int, GridPolygon> Polygons)
         {
             return this.GetRing(Polygons[this.iPoly]);
         }
@@ -822,7 +893,7 @@ namespace Geometry
     /// Uses Counter-Clockwise winding order
     /// </summary>
     [Serializable()]
-    public class GridPolygon : IShape2D, ICloneable, IPolygon2D
+    public class GridPolygon : ICloneable, IPolygon2D
     {
         double _ExteriorRingArea;
         GridVector2[] _ExteriorRing;
@@ -1076,7 +1147,7 @@ namespace Geometry
         }
 
         /// <summary>
-        /// Total verticies, minus the duplicate verticies at the end of each ring
+        /// Total verticies, including the duplicate verticies at the end of each ring
         /// </summary>
         public int TotalVerticies
         {
@@ -1093,7 +1164,7 @@ namespace Geometry
         {
             get
             {
-                return TotalVerticies - (1 + InteriorRings.Count);
+                return (ExteriorRing.Length  - 1) + InteriorRings.Sum(ir => ir.Length - 1);
             }
         }
 
@@ -1240,7 +1311,7 @@ namespace Geometry
         /// Removes the vertex from the exterior ring of a polgon only
         /// </summary>
         /// <param name="iVertex"></param>
-        private void RemoveVertex(int iVertex)
+        public void RemoveVertex(int iVertex)
         { 
             //We must have at least 3 points to create a polygon
             if (ExteriorSegments.Length <= 3)
@@ -1314,6 +1385,53 @@ namespace Geometry
             }
 
             return false;
+        }
+
+        /// <summary>
+        /// Returns true if the vertex on the exterior ring is concave
+        /// </summary>
+        /// <param name="iVert"></param>
+        /// <returns></returns>
+        public Concavity IsVertexConcave(int iVert, out double Angle)
+        {
+            int A = iVert - 1 < 0 ? ExteriorRing.Length - 2 : iVert - 1;
+            int Origin = iVert;
+            int B = iVert + 1 >= ExteriorRing.Length ? 1 : iVert + 1;
+
+            Angle = GridVector2.AbsArcAngle(ExteriorRing[A], ExteriorRing[Origin], ExteriorRing[B], Clockwise: true);
+
+            if (Angle == 0)
+                return Concavity.PARALLEL;
+            else if(Angle > Math.PI)
+            {
+                return Concavity.CONCAVE;
+            }
+            else
+            {
+                return Concavity.CONVEX;
+            }
+        }
+
+        /// <summary>
+        /// Returns true if the vertex on the exterior ring is concave
+        /// </summary>
+        /// <param name="iVert"></param>
+        /// <returns></returns>
+        public Concavity[] VertexConcavity(out double[] Angles)
+        {
+            Concavity[] results = new Concavity[ExteriorRing.Length];
+            Angles = new double[ExteriorRing.Length];
+
+            for(int i = 0; i < ExteriorRing.Length -1; i++)
+            {
+                results[i] = IsVertexConcave(i, out Angles[i]);
+                Trace.WriteLine(string.Format("{0}: {1} {2}", i, results[i], Angles[i]));
+            }
+
+            results[ExteriorRing.Length - 1] = results[0];
+            Angles[ExteriorRing.Length - 1] = Angles[0];
+
+            return results;
         }
 
         /// <summary>
@@ -1566,20 +1684,44 @@ namespace Geometry
             if (polygonSegments.Any(ps => ps.SharedEndPoint(test_line)))
                 return true;
 
-            System.Collections.Concurrent.ConcurrentBag<GridVector2> intersections = new System.Collections.Concurrent.ConcurrentBag<Geometry.GridVector2>();
+            List<GridVector2> intersections;
+            IEnumerable<GridLineSegment> IntersectedSegments;
 
-            IEnumerable<GridLineSegment> IntersectedSegments = polygonSegments.Where(line =>
+            if (polygonSegments.Count > 128)
             {
-                GridVector2 Intersection;
-                bool intersected = line.Intersects(test_line, out Intersection);
-                if (intersected)
-                { 
-                    intersections.Add(Intersection);
-                }
+                System.Collections.Concurrent.ConcurrentBag<GridVector2> intersectionsBag = new System.Collections.Concurrent.ConcurrentBag<Geometry.GridVector2>();
 
-                return intersected;
-            }).AsParallel().ToList(); //Need ToList here to ensure the query executes fully
-            
+                IntersectedSegments = polygonSegments.Where(line =>
+                {
+                    GridVector2 Intersection;
+                    bool intersected = line.Intersects(test_line, out Intersection);
+                    if (intersected)
+                    {
+                        intersectionsBag.Add(Intersection);
+                    }
+
+                    return intersected;
+                }).AsParallel().ToList(); //Need ToList here to ensure the query executes fully
+
+                intersections = new List<GridVector2>(intersectionsBag);
+            }
+            else
+            {
+                intersections = new List<GridVector2>(polygonSegments.Count);
+
+                IntersectedSegments = polygonSegments.Where(line =>
+                {
+                    GridVector2 Intersection;
+                    bool intersected = line.Intersects(test_line, out Intersection);
+                    if (intersected)
+                    {
+                        intersections.Add(Intersection);
+                    }
+
+                    return intersected;
+                }).ToList(); //Need ToList here to ensure the query executes fully
+            }
+
             //Ensure the line doesn't pass through on a line endpoint
             SortedSet<GridVector2> intersectionPoints = new SortedSet<GridVector2>();
             intersectionPoints.UnionWith(intersections);
@@ -2186,19 +2328,28 @@ namespace Geometry
         /// <summary>
         /// Creates a lookup table for verticies to a polygon index.  Polygons may share verticies.
         /// </summary>
-        /// <param name="Polygons"></param>
+        /// <param name="Polygons">An array of N polygons.</param>
+        /// <param name="iPoly">An array of N indicies.  If not null PointIndex values will use the corresponding entry in this array for the
+        /// Polygon index instead of the position in the passed Polygons array.  This is useful when generating a map for a subset of a larger 
+        /// collection of polygons. </param>
         /// <returns></returns>
-        public static Dictionary<GridVector2, List<PointIndex>> CreatePointToPolyMap(GridPolygon[] Polygons)
+        public static Dictionary<GridVector2, List<PointIndex>> CreatePointToPolyMap(GridPolygon[] Polygons, IReadOnlyList<int> PolygonIndicies = null)
         {
             Dictionary<GridVector2, List<PointIndex>> pointToPoly = new Dictionary<GridVector2, List<PointIndex>>();
             for (int iPoly = 0; iPoly < Polygons.Length; iPoly++)
             {
+                int iPolygon = iPoly; //Used to adjust polygon index if PolygonIndicies is remapping those values
+                if(PolygonIndicies != null)
+                { 
+                    iPolygon = PolygonIndicies[iPoly];
+                }
+
                 GridPolygon poly = Polygons[iPoly];
                 GridVector2[] polyPoints = poly.ExteriorRing;
                 for(int iVertex = 0; iVertex < poly.ExteriorRing.Length - 1; iVertex++)
                 {
                     GridVector2 p = poly.ExteriorRing[iVertex];
-                    PointIndex value = new PointIndex(iPoly, iVertex, Polygons);
+                    PointIndex value = new PointIndex(iPolygon, iVertex, Polygons);
 
                     if (pointToPoly.ContainsKey(p))
                     {
@@ -2219,7 +2370,7 @@ namespace Geometry
                     {
                         GridVector2 p = innerPolygon.ExteriorRing[iVertex];
 
-                        PointIndex value = new PointIndex(iPoly, iInnerPoly, iVertex, Polygons);
+                        PointIndex value = new PointIndex(iPolygon, iInnerPoly, iVertex, Polygons);
                         if (pointToPoly.ContainsKey(p))
                         {
                             pointToPoly[p].Add(value);
