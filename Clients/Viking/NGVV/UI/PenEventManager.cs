@@ -1,0 +1,228 @@
+﻿using System;
+using System.Windows.Forms;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace Viking.UI
+{
+
+    public class PenEventArgs : EventArgs
+    {
+        public System.Drawing.Point Location { get; internal set; }
+
+        public int X { get { return Location.X;  } }
+        public int Y { get { return Location.Y; } }
+        /// <summary>
+        /// Raw data for our pen state
+        /// </summary>
+        public PointerPenInfo Pen { get; internal set; }
+
+        public double NormalizedPressure {
+            get
+            {
+                if ((Pen.mask & PenMask.Pressure) == 0)
+                {
+                    return 0;
+                }
+
+                return Touch.Config.NormalizeStylusPressure(Pen.pressure);
+            }
+        }
+
+        public bool Erase { get { return (Pen.flags & PenFlags.Eraser) > 0; } }
+        public bool Inverted { get { return (Pen.flags & PenFlags.Inverted) > 0; } }
+        public bool Barrel { get { return (Pen.flags & PenFlags.Barrel) > 0; } }
+
+        public bool InContact { get { return (Pen.pointerInfo.pointerFlags & PointerFlags.InContact) > 0; } }
+        public bool InRange { get { return (Pen.pointerInfo.pointerFlags & PointerFlags.InRange) > 0; } }
+    }
+
+    public delegate void PenEventHandler(object sender, PenEventArgs e);
+
+    public interface IPenEvents
+    {
+        event PenEventHandler OnPenEnterRange;
+        event PenEventHandler OnPenLeaveRange;
+        event PenEventHandler OnPenContact;
+        event PenEventHandler OnPenLeaveContact;
+        event PenEventHandler OnPenMove;
+    }
+
+
+    /// <summary>
+    /// This class can be used by a control to support Pen Input Events
+    /// </summary>
+    public class PenEventManager : IPenEvents
+    {
+        public event PenEventHandler OnPenEnterRange;
+        public event PenEventHandler OnPenLeaveRange;
+        public event PenEventHandler OnPenContact;
+        public event PenEventHandler OnPenLeaveContact;
+        public event PenEventHandler OnPenMove;
+        //It may appear tempting to add an erase event, but when erase is used the OS messages result in sending LeaveContact and Contact messages with the erase flag set on the latter.
+
+        PointerPenInfo? previousPenState;
+        PointerMessageData? previousPointerState;
+
+        System.Windows.Forms.Control Parent;
+
+        public PenEventManager(Control parent)
+        {
+            Parent = parent;
+        }
+
+        /// <summary>
+        /// This function must be called by the host controls WndProc function to process Pen related input events
+        /// </summary>
+        /// <param name="msg"></param>
+        /// <returns>True if a pen message was processed</returns>
+        public bool ProcessPenMessages(ref Message msg)
+        {
+            switch (msg.Msg)
+            {
+                case Touch.WM_TOUCHHITTESTING:
+                    Touch.LogPenData(msg, "TouchHitTesting");
+                    UpdatePenState(ref msg);
+                    break;
+                case Touch.WM_POINTERDEVICEINRANGE:
+                    Touch.LogPenData(msg, "PointerDeviceInRange");
+                    UpdatePenState(ref msg);
+                    break;
+                case Touch.WM_POINTERDEVICEOUTOFRANGE:
+                    Touch.LogPenData(msg, "PointerDeviceOutOfRange");
+                    UpdatePenState(ref msg);
+                    break;
+                case Touch.WM_POINTERUPDATE:
+                    Touch.LogPenData(msg, "PointerUpdate");
+                    UpdatePenState(ref msg);
+                    break;
+                case Touch.WM_POINTERDOWN:
+                    Touch.LogPenData(msg, "PointerDown");
+                    UpdatePenState(ref msg);
+                    break;
+                case Touch.WM_POINTERUP:
+                    Touch.LogPenData(msg, "PointerUp");
+                    UpdatePenState(ref msg);
+                    break;
+                default:
+
+                    return false;
+            }
+
+            return true;
+        }
+
+        private void UpdatePenState(ref Message msg)
+        {
+            TouchMessageType msgType = (TouchMessageType)msg.Msg;
+            PointerMessageData pointerState = new PointerMessageData(msg);
+            Touch.GetPointerType(pointerState.PointerID, out PointerType type);
+            Touch.IsPenEvent(out uint altID);
+            //System.Diagnostics.Debug.Assert(altID == pointerState.PointerID); //WTF if this is wrong
+            if(type != PointerType.Pen)
+            {
+                return; 
+            }
+
+            PointerPenInfo penState = Touch.GetPenInfo(pointerState.PointerID);
+
+            bool NewPointer = true; //True if we have a new pointer ID than last time.  From what I can tell each time the pen leaves range of the surface a new ID is assigned when moves back into range
+
+            //Reset our previous state if the ID has changed
+            if(previousPointerState.HasValue)
+            {
+                NewPointer = previousPointerState.Value.PointerID != pointerState.PointerID;
+                if (NewPointer)
+                {
+                    previousPointerState = new PointerMessageData?();
+                    previousPenState = new PointerPenInfo?();
+                }
+            }
+
+            PenEventArgs args = new PenEventArgs();
+
+            args.Location = Parent.PointToClient(new System.Drawing.Point(pointerState.X, pointerState.Y));
+            args.Pen = penState;
+
+            if (pointerState.Flags.New)
+            {
+                FireOnPenEnterRange(args);
+            }
+            
+            if(previousPointerState.HasValue)
+            {
+                PointerMessageData previousPointer = previousPointerState.Value;
+                //Rather than writing a ton of if statements I xor the pointer flags.  Bits set to true in the result have changed
+                /*var flagDelta = previousPointer.Flags.Flags ^ pointerState.Flags.Flags;
+                PointerMessageFlags changed = new PointerMessageFlags(flagDelta);
+                if (changed.InContact)
+                {*/
+                    if (msgType == TouchMessageType.WM_POINTERUP && (previousPointer.Flags.InContact || pointerState.Flags.Up))
+                    {
+                        FireOnPenLeaveContact(args);
+                    }
+                    else if (msgType == TouchMessageType.WM_POINTERDOWN && (!previousPointer.Flags.InContact && pointerState.Flags.InContact))
+                    {
+                        FireOnPenContact(args);
+                    }
+                //}
+                //else
+                //{
+                    else if (msgType == TouchMessageType.WM_POINTERUPDATE && previousPenState.Value.PositioningChange(penState))
+                    {
+                        FireOnPenMove(args);
+                    }
+                
+            }
+
+            if(pointerState.Flags.InRange == false)
+            {
+                FireOnPenLeaveRange(args);
+            }
+
+            previousPenState = penState;
+            previousPointerState = pointerState;
+        }
+
+        private void FireOnPenEnterRange(PenEventArgs e)
+        {
+            if(OnPenEnterRange != null)
+            {
+                Parent.BeginInvoke(OnPenEnterRange, Parent, e);
+            }
+        }
+
+        private void FireOnPenLeaveRange(PenEventArgs e)
+        {
+            if (OnPenLeaveRange != null)
+            {
+                Parent.BeginInvoke(OnPenLeaveRange, Parent, e);
+            }
+        }
+
+        private void FireOnPenContact(PenEventArgs e)
+        {
+            if (OnPenContact != null)
+            {
+                Parent.BeginInvoke(OnPenContact, Parent, e);
+            }
+        }
+        private void FireOnPenLeaveContact(PenEventArgs e)
+        {
+            if (OnPenLeaveContact != null)
+            {
+                Parent.BeginInvoke(OnPenLeaveContact, Parent, e);
+            }
+        }
+        private void FireOnPenMove(PenEventArgs e)
+        {
+            if (OnPenMove != null)
+            {
+                Parent.BeginInvoke(OnPenMove, Parent, e);
+            }
+        }
+         
+    }
+} 
