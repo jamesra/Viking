@@ -148,6 +148,95 @@ namespace Geometry
             //return new GridCircle(Center, GridVector2.Distance(Center, One));
         }
 
+        private static double[] CreateDeterminateMatrixRow(GridVector2 p)
+        {
+            return new double[] { p.X, p.Y, (p.X * p.X) + (p.Y * p.Y), 1 };
+        }
+
+        private static double[][] CreateContainsDeterminateMatrixComponents(GridVector2[] cp)
+        {
+            //if (cp.AreClockwise())
+            //    cp = cp.Reverse().ToArray();
+            //Debug.Assert(cp.AreClockwise() == false, "Determinate matrix for circle contains expects circle points to be passed in counter-clockwise order");
+
+            return cp.Select(v => CreateDeterminateMatrixRow(v)).ToArray();
+        }
+
+        /// <summary>
+        /// Given three points on a circle, return true if the p1 is inside the circle.  Exactly on the circle is not 
+        /// </summary>
+        /// <param name="cp"></param>
+        /// <param name="p1"></param>
+        public static OverlapType Contains(GridVector2[] cp, GridVector2 p1)
+        {
+            double[][] cmat = CreateContainsDeterminateMatrixComponents(cp);
+
+            MathNet.Numerics.LinearAlgebra.Matrix<double> matrix = MathNet.Numerics.LinearAlgebra.Matrix<double>.Build.DenseOfRowArrays(
+               new double[][] { cmat[0],
+                                cmat[1],
+                                cmat[2],
+                                CreateDeterminateMatrixRow(p1)});
+
+            double det = matrix.Determinant();
+
+            if (det > Global.EpsilonSquared)
+                return OverlapType.CONTAINED;
+            else if (det >= 0 && det <= Global.EpsilonSquared)
+                return OverlapType.TOUCHING;
+            else
+                return OverlapType.NONE;
+
+        }
+
+        /// <summary>
+        /// Given three points on a circle, return true if the p1 is inside the circle.  Exactly on the circle is not 
+        /// </summary>
+        /// <param name="cp"></param>
+        /// <param name="p1"></param>
+        public static OverlapType[] Contains(GridVector2[] cp, IEnumerable<GridVector2> points)
+        {
+            double[][] cmat = CreateContainsDeterminateMatrixComponents(cp);
+            
+
+            if (points == null)
+                return null;
+
+            int numPoints = points.Count();
+            if (numPoints == 0)
+                return new OverlapType[0];
+
+            OverlapType[] results = new OverlapType[numPoints];
+
+            MathNet.Numerics.LinearAlgebra.Matrix<double> matrix = MathNet.Numerics.LinearAlgebra.Matrix<double>.Build.DenseOfRowArrays(
+                                new double[][] { cmat[0],
+                                cmat[1],
+                                cmat[2],
+                                new double[]{0,0,0,1} });
+
+            int i = 0;  
+            foreach(GridVector2 p in points)
+            { 
+                matrix.SetRow(3, CreateDeterminateMatrixRow(p));
+                double det = matrix.Determinant();
+
+                if (det < 0)
+                    results[i] = OverlapType.NONE;
+                else if (det < Global.EpsilonSquared)
+                    results[i] = OverlapType.TOUCHING;
+                else if (det > 0)
+                    results[i] = OverlapType.CONTAINED;
+
+                i++;
+            }
+
+            return results;
+        }
+
+        public static OverlapType Contains(GridVector2 c1, GridVector2 c2, GridVector2 c3, GridVector2 p1)
+        {
+            return Contains(new GridVector2[] { c1, c2, c3 }, p1);
+        }
+
         public GridRectangle BoundingBox
         {
             get
