@@ -14,14 +14,26 @@ namespace MonogameTestbed
     /// </summary>
     public static class GeometryJSONExtensions
     {
-        public static string ToJSON(this GridPolygon poly)
+        public static JObject ToJObject(this GridPolygon poly)
         {
             dynamic obj = new JObject();
 
             obj.ExteriorRing = poly.ExteriorRing.ToJArray();
 
             obj.InteriorRings = poly.HasInteriorRings ? new JArray(poly.InteriorRings.Select(ir => ir.ToJArray())) : new JArray();
+            return obj;
+        }
+
+        public static string ToJSON(this GridPolygon poly)
+        {
+            dynamic obj = poly.ToJObject();
             return obj.ToString();
+        }
+
+        public static JArray ToJArray(this IEnumerable<GridPolygon> input)
+        {
+            JArray obj = new JArray(input.Select(p => p.ToJObject()));
+            return obj;
         }
 
         public static string ToJSON(this IEnumerable<GridVector2> input)
@@ -76,6 +88,41 @@ namespace MonogameTestbed
             GridPolygon output = new GridPolygon(ERing, IRings);
 
             return output;
+        }
+
+        public static GridPolygon PolygonFromJSON(JObject obj)
+        {
+            if (obj == null)
+                return null;
+             
+            var ExteriorRing = obj["ExteriorRing"];
+
+            GridVector2[] ERing = ExteriorRing.PointsFromJSON();
+
+            var InteriorRings = obj["InteriorRings"];
+            List<GridVector2[]> IRings = InteriorRings.Select(ir => ir.PointsFromJSON()).ToList();
+
+            GridPolygon output = new GridPolygon(ERing, IRings);
+
+            return output;
+        }
+
+        public static GridPolygon[] PolygonsFromJSON(string json)
+        {
+            if (json == null)
+                return null;
+
+            JArray array = JArray.Parse(json);
+
+            List<GridPolygon> polygonList = new List<GridPolygon>();
+
+            foreach(var token in array)
+            {
+                GridPolygon p = PolygonFromJSON(token as JObject);
+                polygonList.Add(p);
+            }
+
+            return polygonList.ToArray();
         }
 
     }
