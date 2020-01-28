@@ -32,23 +32,24 @@ namespace Geometry
             //We need to use the same equality standard as our epsilon value
             double diffY = A.Y - B.Y; 
 
-            if (Math.Abs(diffY) <= Global.Epsilon)
+            if (diffY == 0)//Math.Abs(diffY) <= Global.Epsilon)
             {
                 double diffX = A.X - B.X;
-                if (diffX * diffX + diffY * diffY < Global.EpsilonSquared)
-                    return 0;
+                //if (diffX * diffX + diffY * diffY < Global.EpsilonSquared)
+                    //return 0;
 
-                if (Math.Abs(diffX) <= Global.Epsilon)
+                if (diffX == 0)//Math.Abs(diffX) <= Global.Epsilon)
                 {
+                    return 0; 
                     //Edge case. The points aren't equal by our standard, so check again and figure out which axis isn't equal first
-                    if (diffY == 0)
-                    {
-                        return diffX > 0 ? 1 : -1;
-                    }
+                    /*if (diffY == 0)
+                    {*/
+                    //    return diffX > 0 ? 1 : -1;
+                    /*}
                     else
                     {
                         return diffY > 0 ? 1 : -1;
-                    }
+                    }*/
                 }
 
                 return diffX > 0 ? 1 : -1;
@@ -70,28 +71,45 @@ namespace Geometry
 
     public class GridVectorComparerXY : IComparer<GridVector2>, IComparer<IPoint2D>
     {
+        /// <summary>
+        /// Sorts points on the X-Axis first, then Y-Axis
+        /// 
+        
+        /// </summary>
+        /// <param name="A"></param>
+        /// <param name="B"></param>
+        /// <returns></returns>
         public static int CompareXY(IPoint2D A, IPoint2D B)
         {
+            /// I struggled with how this code should behave.  For now it is the expected behaviour,
+            /// however there is a global.epsilon value that is used to limit the precision of point 
+            /// position to help with rounding errors in equality tests.  However that means two points
+            /// can be equal according to the Viking code but still sort as non-equal.  That can be 
+            /// an issue when using classes such as SortedSet to avoid duplicate points.  If we check 
+            /// for the epsilon based equality first it breaks the delaunay implementation where point
+            /// sets are divided equally into two parts. 
+            /// 
             //We need to use the same equality standard as our epsilon value
             double diffX = A.X - B.X;
 
-            if (Math.Abs(diffX) <= Global.Epsilon)
+            if (diffX == 0)//Math.Abs(diffX) <= Global.Epsilon)
             {
                 double diffY = A.Y - B.Y;
-                if (diffX * diffX + diffY * diffY < Global.EpsilonSquared)
-                    return 0;
+                //if (diffX * diffX + diffY * diffY < Global.EpsilonSquared)
+                //    return 0;
 
-                if (Math.Abs(diffY) <= Global.Epsilon)
+                if (diffY == 0)//Math.Abs(diffY) <= Global.Epsilon)
                 {
+                    return 0;
                     //Edge case. The points aren't equal by our standard, so check again and figure out which axis isn't equal first
-                    if (diffX == 0)
-                    {
-                        return diffY > 0 ? 1 : -1;
-                    }
+                    /*if (diffX == 0)
+                    {*/
+//                        return diffY > 0 ? 1 : -1;
+                    /*}
                     else
                     {
                         return diffX > 0 ? 1 : -1;
-                    }
+                    }*/
                 }
 
                 return diffY > 0 ? 1 : -1;
@@ -380,14 +398,13 @@ namespace Geometry
         /// <param name="A"></param>
         /// <param name="B"></param>
         /// <returns></returns>
-        static public double ArcAngle(GridVector2 Origin, GridVector2 A, GridVector2 B)
+        static public double ArcAngle(GridVector2 Origin, GridVector2 A, GridVector2 B, bool Clockwise = false)
         {
             A = A - Origin;
             B = B - Origin;
             double AngleA = Math.Atan2(A.Y, A.X);
-            double AngleB = Math.Atan2(B.Y, B.X);
-
-            double Angle = AngleB - AngleA;
+            double AngleB = Math.Atan2(B.Y, B.X); 
+            double Angle = Clockwise ? AngleB - AngleA : AngleA - AngleB;
 
             if (Angle < -Math.PI)
                 Angle += Math.PI * 2;
@@ -404,18 +421,86 @@ namespace Geometry
         /// <param name="A"></param>
         /// <param name="B"></param>
         /// <returns></returns>
-        static public double ArcAngle(IPoint2D Origin, IPoint2D A, IPoint2D B)
+        static public double ArcAngle(IPoint2D Origin, IPoint2D A, IPoint2D B, bool Clockwise = false)
+        {
+            A = new GridVector2(A.X - Origin.X, A.Y - Origin.Y);
+            B = new GridVector2(B.X - Origin.X, B.Y - Origin.Y);
+            double AngleA = Math.Atan2(A.Y, A.X);
+            double AngleB = Math.Atan2(B.Y, B.X); 
+            double Angle = Clockwise ? AngleB - AngleA : AngleA - AngleB;
+
+            if (Angle < -Math.PI)
+                Angle += Math.PI * 2;
+            else if (Angle > Math.PI)
+                Angle -= Math.PI * 2;
+
+            return Angle;
+        }
+
+        /// <summary>
+        /// Angle of arc between A & B with Origin.  Measures only in one direction, no neegative angles will be returned
+        /// </summary>
+        /// <param name="Origin"></param>
+        /// <param name="A"></param>
+        /// <param name="B"></param>
+        /// <returns></returns>
+        static public double AbsArcAngle(GridVector2 Origin, GridVector2 A, GridVector2 B, bool Clockwise = false)
         {
             A = new GridVector2(A.X - Origin.X, A.Y - Origin.Y);
             B = new GridVector2(B.X - Origin.X, B.Y - Origin.Y);
             double AngleA = Math.Atan2(A.Y, A.X);
             double AngleB = Math.Atan2(B.Y, B.X);
+            double Angle = Clockwise ? AngleB - AngleA : AngleA - AngleB;
 
-            double Angle = AngleB - AngleA;
-
-            if (Angle < -Math.PI)
+            if (Angle < 0)
                 Angle += Math.PI * 2;
-            else if (Angle > Math.PI)
+            else if (Angle > Math.PI * 2)
+                Angle -= Math.PI * 2;
+
+            return Angle;
+        }
+
+        /// <summary>
+        /// Angle of arc between A & B with Origin.  Measures only in one direction, no neegative angles will be returned
+        /// </summary>
+        /// <param name="Origin"></param>
+        /// <param name="A"></param>
+        /// <param name="B"></param>
+        /// <returns></returns>
+        static public double AbsArcAngle(GridLine BaseLine, GridVector2 P, bool Clockwise=false)
+        {
+            GridVector2 A = new GridVector2(P.X - BaseLine.Origin.X, P.Y - BaseLine.Origin.Y);
+            GridVector2 B = BaseLine.Direction;
+            double AngleA = Math.Atan2(A.Y, A.X);
+            double AngleB = Math.Atan2(B.Y, B.X);
+            double Angle = Clockwise ? AngleB - AngleA : AngleA - AngleB;
+
+            if (Angle < 0)
+                Angle += Math.PI * 2;
+            else if (Angle > Math.PI * 2)
+                Angle -= Math.PI * 2;
+
+            return Angle;
+        }
+
+        /// <summary>
+        /// Angle of arc between A & B with Origin.  Measures only in one direction, no neegative angles will be returned
+        /// </summary>
+        /// <param name="Origin"></param>
+        /// <param name="A"></param>
+        /// <param name="B"></param>
+        /// <returns></returns>
+        static public double AbsArcAngle(IPoint2D Origin, IPoint2D A, IPoint2D B, bool Clockwise = false)
+        {
+            A = new GridVector2(A.X - Origin.X, A.Y - Origin.Y);
+            B = new GridVector2(B.X - Origin.X, B.Y - Origin.Y);
+            double AngleA = Math.Atan2(A.Y, A.X);
+            double AngleB = Math.Atan2(B.Y, B.X);
+            double Angle = Clockwise ? AngleB - AngleA : AngleA - AngleB;
+
+            if (Angle < 0)
+                Angle += Math.PI * 2;
+            else if (Angle > Math.PI * 2)
                 Angle -= Math.PI * 2;
 
             return Angle;

@@ -227,6 +227,36 @@ namespace UtilitiesTests
         }
 
         [TestMethod]
+        public void TestAbsAngle()
+        {
+            GridVector2 A = new GridVector2(0, 0);
+            GridVector2 B = new GridVector2(2.5, 2.5);
+
+            GridLine line = new GridLine(A, GridVector2.UnitX);
+
+            double angle = GridVector2.AbsArcAngle(line, B, false);
+
+            double PI4 = Math.PI / 4;
+            Assert.IsTrue(angle - Global.Epsilon < PI4 &&
+                          angle + Global.Epsilon > PI4);
+            
+            double angle2 = GridVector2.AbsArcAngle(line, B, true);
+            Assert.IsTrue(angle2 - Global.Epsilon < (7.0 * PI4) &&
+                         angle2 + Global.Epsilon > (7.0 * PI4));
+
+            GridLine lineY = new GridLine(A, GridVector2.UnitY);
+
+            double angle3 = GridVector2.AbsArcAngle(lineY, B, true);
+             
+            Assert.IsTrue(angle3 - Global.Epsilon < PI4 &&
+                          angle3 + Global.Epsilon > PI4);
+
+            double angle4 = GridVector2.AbsArcAngle(lineY, B, false);
+            Assert.IsTrue(angle4 - Global.Epsilon < (7.0 * PI4) &&
+                          angle4 + Global.Epsilon > (7.0 * PI4));
+        }
+
+        [TestMethod]
         public void TestTranslate()
         {
             GridVector2 A = new GridVector2(0, 0);
