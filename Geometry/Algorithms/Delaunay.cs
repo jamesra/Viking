@@ -3,15 +3,16 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Diagnostics;
+using Geometry.Meshing;
 
 namespace Geometry
 {
-    public static class Delaunay
+    public static class Delaunay2D
     {
         public static int[] Triangulate(GridVector2[] points)
-        {
+        { 
             GridVector2[] BoundingPoints = GetBounds(points);
-            return Delaunay.Triangulate(points, BoundingPoints); 
+            return Delaunay2D.Triangulate(points, BoundingPoints); 
         }
 
         public static int[] Triangulate(GridVector2[] points, GridRectangle bounds)
@@ -22,7 +23,7 @@ namespace Geometry
                                                                new GridVector2(bounds.Right + WidthMargin, bounds.Bottom - HeightMargin), 
                                                                new GridVector2(bounds.Left - WidthMargin, bounds.Top +  HeightMargin), 
                                                                new GridVector2(bounds.Right + WidthMargin, bounds.Top + HeightMargin)}; 
-            return Delaunay.Triangulate(points, BoundingPoints);
+            return Delaunay2D.Triangulate(points, BoundingPoints);
         }
 
         public static int[] TriangulateLeavingBorders(GridVector2[] points, GridRectangle bounds)
@@ -33,17 +34,17 @@ namespace Geometry
                                                                new GridVector2(bounds.Right + WidthMargin, bounds.Bottom - HeightMargin), 
                                                                new GridVector2(bounds.Left - WidthMargin, bounds.Top +  HeightMargin), 
                                                                new GridVector2(bounds.Right + WidthMargin, bounds.Top + HeightMargin)};
-            return Delaunay.Triangulate(points, BoundingPoints);
+            return Delaunay2D.Triangulate(points, BoundingPoints);
         }
 
-      /// <summary>
-      /// Generates the delaunay triangulation for a list of points. 
-      /// Requires the points to be sorted on the X-axis coordinate!
-      /// Every the integers in the returned array are the indicies in the passes array of triangles. 
+        /// <summary>
+        /// Generates the delaunay triangulation for a list of points. 
+        /// Requires the points to be sorted on the X-axis coordinate!
+        /// Every the integers in the returned array are the indicies in the passes array of triangles. 
         /// Implemented based upon: http://local.wasp.uwa.edu.au/~pbourke/papers/triangulate/
         /// "Triangulate: Efficient Triangulation Algorithm Suitable for Terrain Modelling"
         /// by Paul Bourke
-      /// </summary>
+        /// </summary>
         public static int[] Triangulate(GridVector2[] points, GridVector2[] BoundingPoints)
         {
             if (BoundingPoints == null)
@@ -66,9 +67,8 @@ namespace Geometry
             {
                 Debug.Assert(points[iDebug - 1].X <= points[iDebug].X);
                 Debug.Assert(GridVector2.Distance(points[iDebug - 1], points[iDebug]) >= Global.Epsilon);
-            }
-             
-#endif 
+            } 
+#endif             
 
             List<GridIndexTriangle> triangles = new List<GridIndexTriangle>(points.Length);
 

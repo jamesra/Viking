@@ -9,11 +9,33 @@ namespace Geometry.Meshing
 {
     public interface IMesh3D<VERTEX> : IMesh<VERTEX>
         where VERTEX : IVertex3D
-    { }
+    {
+        new IReadOnlyList<VERTEX> Verticies { get; }
+    }
 
     public interface IMesh2D<VERTEX> : IMesh<VERTEX>
         where VERTEX : IVertex2D
-    { }
+    {
+        new IReadOnlyList<VERTEX> Verticies { get; }
+
+        GridLineSegment ToGridLineSegment(IEdgeKey key);
+
+        GridLineSegment ToGridLineSegment(long A, long B);
+
+        /// <summary>
+        /// Return a normalized vector with origin at A towards B
+        /// </summary> 
+        /// <returns></returns>
+        GridLine ToGridLine(IEdgeKey key);
+
+        /// <summary>
+        /// Return a normalized vector from the Origin towards the Direction vertex
+        /// </summary>
+        /// <param name="Origin"></param>
+        /// <param name="Direction"></param>
+        /// <returns></returns>
+        GridLine ToGridLine(long Origin, long Direction);
+    }
 
     public interface IMesh<VERTEX>
         where VERTEX : IVertex
@@ -73,7 +95,7 @@ namespace Geometry.Meshing
         protected readonly SortedList<IEdgeKey, IEdge> _Edges = new SortedList<IEdgeKey, IEdge>();
         protected readonly SortedSet<IFace> _Faces = new SortedSet<IFace>();
 
-        public IReadOnlyList<VERTEX> Verticies { get { return _Verticies; } }
+        public virtual IReadOnlyList<VERTEX> Verticies { get { return _Verticies; } }
         public SortedList<IEdgeKey, IEdge> Edges { get { return _Edges; } }
         public SortedSet<IFace> Faces { get { return _Faces; } }
 
@@ -135,6 +157,19 @@ namespace Geometry.Meshing
             }
         }
 
+        /// <summary>
+        /// Returns all of the verticies in the face
+        /// </summary>
+        /// <param name="vertIndicies"></param>
+        /// <returns></returns>
+        public IEnumerable<VERTEX> this[IFace face]
+        {
+            get
+            {
+                return face.iVerts.Select(i => this._Verticies[(int)i]);
+            }
+        }
+
         public virtual IEdge this[IEdgeKey key]
         {
             get { return this._Edges[key]; }
@@ -153,6 +188,11 @@ namespace Geometry.Meshing
         public virtual bool Contains(int A, int B)
         {
             return Edges.ContainsKey(new EdgeKey(A, B));
+        }
+
+        public virtual bool Contains(long A, long B)
+        {
+            return Edges.ContainsKey(new EdgeKey((int)A, (int)B));
         }
 
         public virtual int AddVertex(VERTEX v)
@@ -200,19 +240,19 @@ namespace Geometry.Meshing
             if (e.A == e.B)
                 throw new ArgumentException("Edges cannot have the same start and end point");
 
-            if (CreateOffsetEdge == null)
-                throw new InvalidOperationException("DuplicateEdge function not specified for DynamicRenderMesh");
-
             if (this.Contains(e))
                 return;
 
+            if (CreateEdge == null)
+                throw new InvalidOperationException(string.Format("Adding {0}: DuplicateEdge function not specified for DynamicRenderMesh", e));
+            
             if (e.A >= _Verticies.Count || e.A < 0)
                 throw new ArgumentException(string.Format("Edge vertex A references non-existent vertex {0}", e));
 
             if (e.B >= _Verticies.Count || e.B < 0)
                 throw new ArgumentException(string.Format("Edge vertex B references non-existent vertex {0}", e));
 
-            IEdge newEdge = CreateOffsetEdge(null, e.A, e.B);
+            IEdge newEdge = CreateEdge(e.A, e.B);
             Edges.Add(e, newEdge);
 
             _Verticies[(int)e.A].AddEdge(e);
@@ -264,7 +304,7 @@ namespace Geometry.Meshing
         /// <param name="face"></param>
         public void AddFace(IFace face)
         {
-            //Debug.Assert(Faces.Contains(face) == false);
+            Debug.Assert(Faces.Contains(face) == false, string.Format("Mesh already contains {0}", face));
 
             foreach (IEdgeKey e in face.Edges)
             {
@@ -297,12 +337,12 @@ namespace Geometry.Meshing
             {
                 Faces.Remove(f);
             }
-
             foreach (IEdgeKey e in f.Edges)
             {
                 IEdge existing = Edges[e];
                 existing.RemoveFace(f);
             }
+            
         }
 
         #region Path finding along faces

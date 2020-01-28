@@ -173,7 +173,7 @@ namespace GeometryTests
                                                       new GridVector2(150, 150)};
 
 
-            int[] iTriangles = Delaunay.Triangulate(points);
+            int[] iTriangles = Delaunay2D.Triangulate(points);
             int[] iExpected = new int[] {0,1,4,0,3,4,1,2,5,1,4,5};
 
             Trace.WriteLine(iTriangles.ToString(), "Geometry");
@@ -194,7 +194,7 @@ namespace GeometryTests
                                                       new GridVector2(250, 150)};
 
 
-            iTriangles = Delaunay.Triangulate(points);
+            iTriangles = Delaunay2D.Triangulate(points);
             iExpected = new int[] {3,4,7,3,6,7,4,5,8,4,7,8,0,1,4,0,3,4,1,2,5,1,4,5};
 
             Trace.WriteLine(iTriangles.ToString(), "Geometry");

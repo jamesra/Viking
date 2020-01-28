@@ -426,7 +426,7 @@ namespace Viking.VolumeModel
 
             try
             {
-                TriangleEdges = Geometry.Delaunay.Triangulate(DelaunayPoints);//, SectionTileCorners, false);
+                TriangleEdges = Geometry.Delaunay2D.Triangulate(DelaunayPoints);//, SectionTileCorners, false);
                 //MappedPoints.AddRange(TileCornerMappedPoints); 
             }
             catch (ArgumentException )

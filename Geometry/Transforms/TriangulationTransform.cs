@@ -46,7 +46,7 @@ namespace Geometry.Transforms
                 {
                     try
                     {
-                        int[] triangles = Delaunay.Triangulate(MappingGridVector2.MappedPoints(this.MapPoints), MappedBounds);
+                        int[] triangles = Delaunay2D.Triangulate(MappingGridVector2.MappedPoints(this.MapPoints), MappedBounds);
                         _TriangleIndicies = triangles;
                     }
                     catch (ArgumentException )

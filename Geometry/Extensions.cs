@@ -49,6 +49,34 @@ namespace Geometry
             }
             return keys;
         }
+
+        /*
+        /// sort array 'rg', returning the original index positions
+        /// TODO: Need to sort RG after finding the sorted indicies. 
+        public static int[] SortAndIndex<T>(this IEnumerable<T> rg, IComparer<T> comparer = null)
+        {
+            return rg.ToArray().SortAndIndex(comparer);
+        }
+        */
+
+        /// <summary>
+        /// Returns index of the item in the collection.  Returns -1 if the item is not in the collection.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="rg"></param>
+        /// <param name="value"></param>
+        /// <returns></returns>
+        public static int IndexOf<T>(this IEnumerable<T> rg, T value) where T : IEquatable<T>
+        {
+            int i = 0; 
+            foreach(T item in rg)
+            { 
+                if (item.Equals(value))
+                    return i;
+            }
+
+            return -1;
+        }
     }
 
     public static class ArrayToStringExtensions
@@ -659,6 +687,30 @@ namespace Geometry
             return new GridRectangle(minX, maxX, minY, maxY);
         }
 
+        public static GridRectangle BoundingBox(this IEnumerable<GridVector2> points)
+        {
+            if (points == null)
+                throw new ArgumentNullException("points");
+
+            if (points.Any() == false)
+                throw new ArgumentException("GridRectangle Border is empty", "points");
+
+            double minX = double.MaxValue;
+            double minY = double.MaxValue;
+            double maxX = double.MinValue;
+            double maxY = double.MinValue;
+
+            foreach(GridVector2 p in points)
+            {
+                minX = Math.Min(minX, p.X);
+                maxX = Math.Max(maxX, p.X);
+                minY = Math.Min(minY, p.Y);
+                maxY = Math.Max(maxY, p.Y);
+            }
+
+            return new GridRectangle(minX, maxX, minY, maxY);
+        }
+
         /// <summary>
         /// Given a set of points, return the closest distance between any two points
         /// </summary>
@@ -937,16 +989,18 @@ namespace Geometry
             GridVector2[] OriginalControlPoints = lineSegs.Verticies();
             GridVector2[] newControlPoints = new GridVector2[OriginalControlPoints.Length - 1];
 
-            for (int iOldPoint = 0; iOldPoint < iNearestPoint; iOldPoint++)
+            Array.Copy(OriginalControlPoints, newControlPoints, iNearestPoint);
+            Array.Copy(OriginalControlPoints, iNearestPoint + 1, newControlPoints, iNearestPoint, newControlPoints.Length - iNearestPoint);
+            /*for (int iOldPoint = 0; iOldPoint < iNearestPoint; iOldPoint++)
             {
                 newControlPoints[iOldPoint] = OriginalControlPoints[iOldPoint];
             }
-
+            
             for (int iOldPoint = iNearestPoint + 1; iOldPoint < OriginalControlPoints.Length; iOldPoint++)
             {
                 newControlPoints[iOldPoint - 1] = OriginalControlPoints[iOldPoint];
             }
-
+            */
             //The first point in a closed shape is equal to the last point.  If we remove the first point we must update the last point to match the new first point.
             if (lineSegs.IsRing() && iNearestPoint == 0)
             {

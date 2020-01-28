@@ -11,6 +11,20 @@ namespace Geometry
         CLOCKWISE,
         COUNTERCLOCKWISE
     }
+    
+    /// <summary>
+    /// I continually run into issues where shapes are sometimes expected to be solid vs. empty and the results of intersection and contain tests need to be unambiguous.  
+    /// Over time I'd like my contains tests to return more specific results, but that is a large refactor I want to make over time.
+    /// </summary>
+    
+    public enum OverlapType
+    {
+        NONE = 0,    //The tested geometry is entirely outside the shape
+        CONTAINED = 1,     //The tested geometry is entirely inside the shape
+        TOUCHING,          //The tested geometry only touches the borders of the shape, for example, a point that is exactly on a line
+        INTERSECTING       //The tested geometry is both inside and outside the shape
+    }
+
     public enum ShapeType2D
     {
         POINT = 0,
