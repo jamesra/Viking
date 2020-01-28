@@ -41,8 +41,14 @@ namespace MonogameTestbed
                 string lookatXkey = test.ToString() + "_lookat_X";
                 string lookatYkey = test.ToString() + "_lookat_Y";
                 string downsamplekey = test.ToString() + "_downsample";
-                float X = (float)Properties.Settings.Default.Properties[lookatXkey].DefaultValue;
-                float Y = (float)Properties.Settings.Default.Properties[lookatYkey].DefaultValue;
+                var XObj = Properties.Settings.Default.Properties[lookatXkey];
+                var YObj = Properties.Settings.Default.Properties[lookatYkey];
+
+                if (XObj == null || YObj == null)
+                    return false; 
+
+                float X = (float)XObj.DefaultValue;
+                float Y = (float)YObj.DefaultValue;
                 scene.Camera.LookAt = new Vector2(X, Y);
                 scene.Camera.Downsample = (double)Properties.Settings.Default.Properties[downsamplekey].DefaultValue;
                 return true;
@@ -73,6 +79,9 @@ namespace MonogameTestbed
 
             try
             {
+                if (scene == null)
+                    return false; 
+
                 string lookatXkey = test.ToString() + "_lookat_X";
                 string lookatYkey = test.ToString() + "_lookat_Y";
                 string downsamplekey = test.ToString() + "_downsample";
