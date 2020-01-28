@@ -10,6 +10,10 @@ namespace Geometry
     public interface IIndexSet : IReadOnlyList<long>
     {
         IIndexSet IncrementStartingIndex(long adjustment);
+
+        IIndexSet Reverse();
+
+        long this[long index] { get; }
     }
 
     /// <summary>
@@ -21,21 +25,35 @@ namespace Geometry
 
         private long StartIndex;
         private long Count;
+        private bool _Reversed;
 
-        public ContinuousIndexSetEnumerator(long startIndex, long count)
+        public ContinuousIndexSetEnumerator(long startIndex, long count, bool reverse = false)
         {
             this.StartIndex = startIndex;
             this.Count = count;
+            _Reversed = reverse;
         }
 
         public bool MoveNext()
         {
-            if (position < 0)
-                position = StartIndex;
-            else
-                position++;
+            if (false == _Reversed)
+            {
+                if (position < 0)
+                    position = StartIndex;
+                else
+                    position++;
 
-            return position < StartIndex + Count;
+                return position < StartIndex + Count;
+            }
+            else
+            {
+                if (position < 0)
+                    position = Count - 1;
+                else
+                    position--;
+
+                return position >= StartIndex; 
+            }
         }
 
         public void Reset()
@@ -68,7 +86,7 @@ namespace Geometry
 
                 return position;
             }
-        }
+        } 
     }
 
 
@@ -79,6 +97,7 @@ namespace Geometry
     {
         private long StartIndex;
         private long _Count;
+        private bool _Reversed; 
 
         public int Count
         {
@@ -92,34 +111,53 @@ namespace Geometry
         {
             get
             {
+                return this[(long)index];
+            }
+        }
+
+
+        public long this[long index]
+        {
+            get
+            {
                 if (index < 0 || index >= Count)
                 {
                     throw new IndexOutOfRangeException();
                 }
 
-                return StartIndex + index;
+                if (_Reversed == false)
+                    return StartIndex + index;
+                else
+                    return ((_Count-1) + StartIndex) - index; 
             }
         }
 
-        public ContinuousIndexSet(long startIndex, long count)
+        public ContinuousIndexSet(long startIndex, long count, bool reverse=false)
         {
             this.StartIndex = startIndex;
             this._Count = count;
+            this._Reversed = reverse;
+        }
+
+        public IIndexSet Reverse()
+        {
+            ContinuousIndexSet reversed = new ContinuousIndexSet(StartIndex, _Count, !_Reversed);
+            return reversed;
         }
 
         public IEnumerator<long> GetEnumerator()
         {
-            return new ContinuousIndexSetEnumerator(StartIndex, Count);
+            return new ContinuousIndexSetEnumerator(StartIndex, Count, _Reversed);
         }
 
         IEnumerator IEnumerable.GetEnumerator()
         {
-            return new ContinuousIndexSetEnumerator(StartIndex, Count);
+            return new ContinuousIndexSetEnumerator(StartIndex, Count, _Reversed);
         }
 
         public IIndexSet IncrementStartingIndex(long adjustment)
         {
-            return new ContinuousIndexSet(StartIndex + adjustment, _Count);
+            return new ContinuousIndexSet(StartIndex + adjustment, _Count, _Reversed);
         }
     }
 
@@ -188,6 +226,14 @@ namespace Geometry
         {
             get
             {
+                return this[(long)index];
+            }
+        }
+
+        public long this[long index]
+        {
+            get
+            {
                 return Indicies[index];
             }
         }
@@ -198,6 +244,13 @@ namespace Geometry
             {
                 return Indicies.Length;
             }
+        }
+
+        public IIndexSet Reverse()
+        {
+            long[] reversedIndicies = Indicies.Clone() as long[];
+            Array.Reverse(reversedIndicies);
+            return new IndexSet(reversedIndicies);
         }
 
         public IEnumerator<long> GetEnumerator()
@@ -228,8 +281,9 @@ namespace Geometry
         private long MaxIndex;
         private long StartIndex;
         private long _Count;
+        private bool _Reverse;
 
-        public ContinuousWrappedIndexSetEnumerator(long minIndex, long maxIndex, long startIndex)
+        public ContinuousWrappedIndexSetEnumerator(long minIndex, long maxIndex, long startIndex, bool reverse)
         {
             if (maxIndex < minIndex)
                 throw new ArgumentException("Max index must be greater or equal to min index");
@@ -237,6 +291,7 @@ namespace Geometry
             if (startIndex < minIndex || startIndex >= maxIndex)
                 throw new ArgumentException("Start index must fall between min and max index");
 
+            this._Reverse = reverse;
             this.MinIndex = minIndex;
             this.MaxIndex = maxIndex;
             this.StartIndex = startIndex;
@@ -281,9 +336,19 @@ namespace Geometry
                 if (position >= _Count)
                     throw new IndexOutOfRangeException("No more elements in enumerator");
 
-                long value = position + StartIndex;
-                if (value >= MaxIndex)
-                    value -= _Count;
+                long value;
+                if (false == _Reverse)
+                {
+                    value = position + StartIndex;
+                    if (value >= MaxIndex)
+                        value -= _Count;
+                }
+                else
+                {
+                    value = position - StartIndex;
+                    if (value < 0)
+                        value += _Count;
+                }
 
                 return value;
             }
@@ -301,6 +366,13 @@ namespace Geometry
         protected long MaxIndex;
         protected long StartIndex;
         protected long _Count;
+
+        protected bool _Reverse = false; 
+
+        public virtual IIndexSet Reverse()
+        {
+            return new InfiniteWrappedIndexSet(MinIndex, MaxIndex, StartIndex, !this._Reverse);
+        }
 
         public int Count
         {
@@ -327,11 +399,24 @@ namespace Geometry
                     index = index % _Count; //Force the index into range
                 }
 
-                long value = StartIndex + index;
-
-                if (value >= MaxIndex)
+                long value;
+                if (false == this._Reverse)
                 {
-                    value -= _Count;
+                    value = StartIndex + index;
+
+                    if (value >= MaxIndex)
+                    {
+                        value -= _Count;
+                    }
+                }
+                else
+                {
+                    value = StartIndex - index;
+
+                    if (value < 0)
+                    {
+                        value += _Count;
+                    }
                 }
 
                 return value;
@@ -344,7 +429,7 @@ namespace Geometry
         /// <param name="startIndex"></param>
         /// <param name="wrapIndex">The value we never reach, we wrap before</param>
         /// <param name="count">Total number of values in the sequence</param>
-        public InfiniteWrappedIndexSet(long minIndex, long maxIndex, long startIndex)
+        public InfiniteWrappedIndexSet(long minIndex, long maxIndex, long startIndex, bool reverse=false)
         {
             if (maxIndex < minIndex)
                 throw new ArgumentException("Max index must be greater or equal to min index");
@@ -352,6 +437,7 @@ namespace Geometry
             if (startIndex < minIndex || startIndex >= maxIndex)
                 throw new ArgumentException("Start index must fall between min and max index");
 
+            this._Reverse = reverse;
             this.MinIndex = minIndex;
             this.MaxIndex = maxIndex;
             this.StartIndex = startIndex;
@@ -360,17 +446,22 @@ namespace Geometry
 
         public IEnumerator<long> GetEnumerator()
         {
-            return new ContinuousWrappedIndexSetEnumerator(this.MinIndex, this.MaxIndex, this.StartIndex);
+            return new ContinuousWrappedIndexSetEnumerator(this.MinIndex, this.MaxIndex, this.StartIndex, this._Reverse);
         }
 
         IEnumerator IEnumerable.GetEnumerator()
         {
-            return new ContinuousWrappedIndexSetEnumerator(this.MinIndex, this.MaxIndex, this.StartIndex);
+            return new ContinuousWrappedIndexSetEnumerator(this.MinIndex, this.MaxIndex, this.StartIndex, this._Reverse);
         }
 
+        /// <summary>
+        /// Returns a new IIndexSet that increments all indicies by a fixed amount.
+        /// </summary>
+        /// <param name="adjustment"></param>
+        /// <returns></returns>
         public IIndexSet IncrementStartingIndex(long adjustment)
         {
-            FiniteWrappedIndexSet indexSet = new FiniteWrappedIndexSet(MinIndex + adjustment, MaxIndex + adjustment, StartIndex + adjustment);
+            FiniteWrappedIndexSet indexSet = new FiniteWrappedIndexSet(MinIndex + adjustment, MaxIndex + adjustment, StartIndex + adjustment, this._Reverse);
             return indexSet;
             //MinIndex += adjustment;
             //MaxIndex += adjustment;
@@ -386,14 +477,20 @@ namespace Geometry
     /// 
     /// </summary>
     public class FiniteWrappedIndexSet : InfiniteWrappedIndexSet
-    { 
+    {
+
+        public override IIndexSet Reverse()
+        {
+            return new FiniteWrappedIndexSet(MinIndex, MaxIndex, StartIndex, !this._Reverse);
+        }
+
         /// <summary>
         /// 
         /// </summary>
         /// <param name="startIndex"></param>
         /// <param name="wrapIndex">The value we never reach, we wrap before</param>
         /// <param name="count">Total number of values in the sequence</param>
-        public FiniteWrappedIndexSet(long minIndex, long maxIndex, long startIndex) : base(minIndex, maxIndex, startIndex)
+        public FiniteWrappedIndexSet(long minIndex, long maxIndex, long startIndex, bool reverse=false) : base(minIndex, maxIndex, startIndex, reverse)
         {
         }
 
@@ -406,11 +503,24 @@ namespace Geometry
                     throw new ArgumentOutOfRangeException();
                 }
 
-                long value = StartIndex + index;
-
-                if (value >= MaxIndex)
+                long value;
+                if (false == _Reverse)
                 {
-                    value -= _Count;
+                    value = StartIndex + index;
+
+                    if (value >= MaxIndex)
+                    {
+                        value -= _Count;
+                    }
+                }
+                else
+                {
+                    value = StartIndex - index;
+
+                    if (value < 0)
+                    {
+                        value += _Count;
+                    }
                 }
 
                 return value;
