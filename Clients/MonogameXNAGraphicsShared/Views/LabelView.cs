@@ -56,6 +56,11 @@ namespace VikingXNAGraphics
             }
         }
 
+        public float Rotation
+        {
+            get; set;
+        } = 0f;
+
         private double _MaxLineWidth = double.MaxValue;
 
         public double MaxLineWidth
@@ -121,6 +126,14 @@ namespace VikingXNAGraphics
         public LabelView(string Text, GridVector2 VolumePosition, HorizontalAlignment hAlign = HorizontalAlignment.CENTER, VerticalAlignment vAlign = VerticalAlignment.CENTER, bool scaleFontWithScene = true, double fontSize = 16.0)
             : this(Text, VolumePosition, Global.DefaultFont, hAlign, vAlign, scaleFontWithScene, fontSize)
         {
+        }
+
+        public LabelView(string Text, GridLineSegment VolumePosition, HorizontalAlignment hAlign = HorizontalAlignment.CENTER, VerticalAlignment vAlign = VerticalAlignment.CENTER, bool scaleFontWithScene = true, double fontSize = 16.0)
+            : this(Text, VolumePosition.PointAlongLine(0.5), Global.DefaultFont, hAlign, vAlign, scaleFontWithScene, fontSize)
+        {
+            GridVector2 direction = VolumePosition.Direction;
+            this.Rotation = (float)GridVector2.ArcAngle(GridVector2.Zero, GridVector2.UnitX, direction);
+            //this.Rotation = (float)Math.Atan2(direction.X, direction.Y);
         }
 
         public LabelView(string Text, GridVector2 VolumePosition, SpriteFont font, HorizontalAlignment hAlign = HorizontalAlignment.CENTER, VerticalAlignment vAlign = VerticalAlignment.CENTER, bool scaleFontWithScene = true, double fontSize = 16.0)
@@ -489,7 +502,7 @@ namespace VikingXNAGraphics
                     _Rows[iRow],
                     DrawPosition,
                     this._Color,
-                    0,
+                    this.Rotation,
                     origin, //_RowMeasurements[iRow] / 2.0f, //The string is centered on the drawing position, instead of starting at the top left
                     fontScale,
                     SpriteEffects.None,

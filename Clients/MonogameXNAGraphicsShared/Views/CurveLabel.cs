@@ -178,14 +178,14 @@ namespace VikingXNAGraphics
                               Microsoft.Xna.Framework.Graphics.SpriteBatch spriteBatch,
                               Microsoft.Xna.Framework.Graphics.SpriteFont font,
                               Color color,
-                              float scale = 2.0f)
+                              float scale = 1.0f)
         {
             if (string.IsNullOrEmpty(label))
                 return null;
 
             Vector2 labelDimensions = font.MeasureString(label);
             labelDimensions *= scale;
-            RenderTarget2D target = new RenderTarget2D(device, (int)labelDimensions.X, (int)labelDimensions.Y);
+            RenderTarget2D target = new RenderTarget2D(device, (int)labelDimensions.X, (int)labelDimensions.Y, mipMap: true, preferredFormat: SurfaceFormat.Color, preferredDepthFormat: DepthFormat.None);
 
             //RenderTargetBinding[] oldRenderTargets = device.GetRenderTargets();
             //TODO: Setting the render target when the scene is being drawn causes flickering

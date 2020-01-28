@@ -136,7 +136,7 @@ namespace VikingXNAGraphics
         }
         
 
-        public static void SetDepthStencilValue(GraphicsDevice device, int StencilValue, CompareFunction stencilFunction = CompareFunction.GreaterEqual)
+        public static void SetDepthStencilValue(GraphicsDevice device, int StencilValue, CompareFunction stencilFunction = CompareFunction.GreaterEqual, bool stencilEnable = true)
         {
             if (depthstencilState != null)
             {
@@ -149,8 +149,8 @@ namespace VikingXNAGraphics
                 depthstencilState = new DepthStencilState();
 
                 CopyDepthSettings(depthstencilState, device.DepthStencilState);
-                                  
-                depthstencilState.StencilEnable = true;
+
+                depthstencilState.StencilEnable = stencilEnable;
                 depthstencilState.StencilFunction = stencilFunction;
                 depthstencilState.ReferenceStencil = StencilValue;
                 depthstencilState.StencilPass = StencilOperation.Replace;

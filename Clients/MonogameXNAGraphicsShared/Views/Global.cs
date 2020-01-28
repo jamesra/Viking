@@ -11,6 +11,26 @@ namespace VikingXNAGraphics
     public static class Global
     {
         public const uint NumCurveInterpolationsDefault = 5;
+
+        public static Microsoft.Xna.Framework.Content.ContentManager Content {get;set;}
+
+        private static Microsoft.Xna.Framework.Graphics.SpriteFont _DefaultFont = null;
+        /// <summary>
+        /// Users of this library must set te
+        /// </summary>
+        public static Microsoft.Xna.Framework.Graphics.SpriteFont DefaultFont
+        {
+            get
+            {
+                if (_DefaultFont == null)
+                {
+                    _DefaultFont = Content.Load<SpriteFont>(@"Arial");
+                }
+
+                return _DefaultFont;
+            }
+            set { _DefaultFont = value; }
+        }
     }
 
     public static class GlobalPrimitives
