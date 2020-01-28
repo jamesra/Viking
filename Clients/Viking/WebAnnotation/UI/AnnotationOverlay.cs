@@ -274,6 +274,21 @@ namespace WebAnnotation
         /// </summary>
         /// <param name="position"></param>
         /// <returns></returns>
+        public static List<HitTestResult> GetAnnotationsAtPosition(int CurrentSectionNumber, GridVector2 position)
+        {
+            SectionAnnotationsView locView = GetAnnotationsForSection(CurrentSectionNumber);
+            if (locView == null)
+                return null;
+
+            //Get the overlapping locations, filter out non-location annotations
+            return locView.GetIntersectedAnnotations(position).Where(hr => hr.obj as LocationCanvasView != null).ToList();
+        }
+
+        /// <summary>
+        /// Returns the location nearest to the mouse, prefers the locations on the current section
+        /// </summary>
+        /// <param name="position"></param>
+        /// <returns></returns>
         public List<HitTestResult> GetAnnotationsAtPosition(GridVector2 position)
         { 
             SectionAnnotationsView locView = GetAnnotationsForSection(CurrentSectionNumber);
@@ -328,7 +343,7 @@ namespace WebAnnotation
         /// </summary>
         /// <param name="position"></param>
         /// <returns></returns>
-        public ICanvasGeometryView FirstIntersectedObjectOnSection(GridLineSegment line, out double distance)
+        public static ICanvasGeometryView FirstIntersectedObjectOnSection(int CurrentSectionNumber, GridLineSegment line, out double distance)
         {
             distance = double.MaxValue;
             SectionAnnotationsView locView = GetAnnotationsForSection(CurrentSectionNumber);
@@ -339,15 +354,14 @@ namespace WebAnnotation
 
             HitTestResult[] listObjects = locView.GetLocations(line).Select(o => new HitTestResult(o, (int)o.Z, o.DistanceFromCenterNormalized(line.A))).ToArray();
 
-            HitTestResult bestHit = listObjects.NearestObjectOnCurrentSectionThenAdjacent(this.CurrentSectionNumber);
+            HitTestResult bestHit = listObjects.NearestObjectOnCurrentSectionThenAdjacent(CurrentSectionNumber);
 
             if (bestHit == null)
                 return null; 
             //Use objects on our section, then other sections
 
             //This function does not detect contained objects
-
-            
+             
             return bestHit.obj;
         }
 
@@ -371,6 +385,13 @@ namespace WebAnnotation
             this._Parent.MouseUp += new MouseEventHandler(this.OnMouseUp); 
             this._Parent.KeyDown += new KeyEventHandler(this.OnKeyDown);
             this._Parent.KeyUp += new KeyEventHandler(this.OnKeyUp);
+
+            this._Parent.OnPenMove += new Viking.UI.PenEventHandler(this.OnPenMove);
+            this._Parent.OnPenEnterRange += new Viking.UI.PenEventHandler(this.OnPenEnterRange);
+            this._Parent.OnPenContact += new Viking.UI.PenEventHandler(this.OnPenContact);
+            this._Parent.OnPenLeaveContact += new Viking.UI.PenEventHandler(this.OnPenLeaveContact);
+            this._Parent.OnPenLeaveRange += new Viking.UI.PenEventHandler(this.OnPenLeaveRange);
+
 
             this._Parent.Camera.PropertyChanged += new System.ComponentModel.PropertyChangedEventHandler(this.OnCameraPropertyChanged);
             //linksView = new LocationLinksViewModel(parent); 
@@ -412,6 +433,8 @@ namespace WebAnnotation
         private bool RetraceAndReplaceDisabled = false;
         protected void OnMouseMove(object sender, MouseEventArgs e)
         {
+            //Trace.WriteLine("On pen move");
+
             if (_Parent.CurrentCommand == null)
                 return;
 
@@ -508,16 +531,131 @@ namespace WebAnnotation
             }
         }
 
+        protected void OnPenEnterRange(object sender, Viking.UI.PenEventArgs e)
+        { 
+        }
+
+        protected void OnPenLeaveRange(object sender, Viking.UI.PenEventArgs e)
+        {
+        }
+
+        protected void OnPenContact(object sender, Viking.UI.PenEventArgs e)
+        {
+            if (_Parent.CurrentCommand == null)
+                return;
+
+            //Check if there is a non-default command. we don't want to mess with another active command
+            if (!IsCommandDefault())
+                return;
+
+            //If locations aren't visible they can't be selected
+            if (!_Parent.ShowOverlays)
+                return;
+
+            if(e.Erase)
+            {
+                return;
+            }
+
+            GridVector2 WorldPosition = _Parent.ScreenToWorld(e.X, e.Y);
+
+            if (this.PenPath == null)
+            {
+                double distance;
+                object obj = ObjectAtPosition(WorldPosition, out distance);
+                //Figure out if it is resizing a location circle
+                //If the loc is on this section we check if we are close to the edge and we are resizing.  Everyone else gets standard location command
+                Viking.UI.State.SelectedObject = obj as IUIObjectBasic;
+
+                /*If we select a link, find the location off the section and assume we have selected that*/
+                IMouseActionSupport actionSupportedObj = obj as IMouseActionSupport;
+
+                if (actionSupportedObj != null)
+                {
+
+                    long LocationID;
+                    LocationAction action = actionSupportedObj.GetMouseClickActionForPositionOnAnnotation(WorldPosition, this.CurrentSectionNumber, Control.ModifierKeys, out LocationID);
+
+                    var viewObj = actionSupportedObj as LocationCanvasView;
+                    if (viewObj == null)
+                        return;
+
+                    var command = new AnnotationPenFreeDrawCommand(Parent, viewObj, Color.Green, Global.DefaultClosedLineWidth * Parent.Downsample, null);
+                    /*Viking.UI.Commands.Command command = action.CreateCommand(Parent, Store.Locations.GetObjectByID(LocationID), WorldPosition);*/
+                    if (command != null)
+                    {
+                        _Parent.CurrentCommand = command;
+                    }
+                    /*else if (Global.PenMode)
+                    {
+                        //Id we don't have a command to start, begin creating a path
+                        StartPenPath(WorldPosition);
+                    }*/
+                }
+                else
+                {
+                    StartPenPath(WorldPosition);
+                }
+            }
+        }
+
+        protected void OnPenLeaveContact(object sender, Viking.UI.PenEventArgs e)
+        {
+        }
+
+        protected void OnPenMove(object sender, Viking.UI.PenEventArgs e)
+        {
+            //Trace.WriteLine("On pen move");
+
+            if (_Parent.CurrentCommand == null)
+                return;
+
+            //Check if there is a non-default command. we don't want to mess with another active command
+            if (!IsCommandDefault())
+                return;
+
+            
+            GridVector2 WorldPosition = _Parent.ScreenToWorld(e.X, e.Y);
+            this.LastMouseMoveVolumeCoords = WorldPosition;
+
+            if (e.Erase || e.Inverted)
+            {
+                mouseOverEffect.viewObj = null;
+                LastMouseOverObject = null;
+
+                System.Windows.Forms.Cursor.Current = Cursors.Hand;
+                _Parent.Cursor = Cursors.Hand;
+            }
+            else
+            {
+                double distance;
+                ICanvasView NextMouseOverObject = ObjectAtPosition(WorldPosition, out distance) as ICanvasView;
+                if (NextMouseOverObject != LastMouseOverObject)
+                {
+                    mouseOverEffect.viewObj = NextMouseOverObject;
+
+                    InvalidateParent();
+                }
+
+                LastMouseOverObject = NextMouseOverObject;
+
+                UpdateMouseCursor();
+            }
+        }
+
         /// <summary>
         /// Begin recording the path of the cursor
         /// </summary>
         protected void StartPenPath(GridVector2 origin)
         {
+            AnnotationOverlayPenFreeDrawCommand cmd = new AnnotationOverlayPenFreeDrawCommand(this.Parent, Color.Yellow, Global.DefaultClosedLineWidth, (LineGeometryCommandBase sender, GridVector2[] points) => { return; });
+            _Parent.CurrentCommand = cmd;
+            /*
             System.Diagnostics.Debug.Assert(this.PenPath == null);
             this.PenPath = new Viking.UI.PenInputHelper(this.Parent);
             this.PenPath.Push(origin);
             this.PenPath.OnPathChanged += this.OnPenPathChanged;
-            this.PenPath.OnPathCompleted += this.OnPenPathCompleted;
+            this.PenPath.OnPathCompleted += this.OnPenPathCompleted;*/
         }
 
         /// <summary>
@@ -540,63 +678,7 @@ namespace WebAnnotation
 
         protected void OnPenPathChanged(object sender, NotifyCollectionChangedEventArgs e)
         {
-            //This path currently only executes when the user is inside an annotation, but leaves the annotation to fire a retrace and replace command.
-            //In the future we should probably fire OnLeavingAnnotation events to simplify detecting this case
-            if (PenPath.Points.Count <= 1)
-                return;
-
-            if (!IsCommandDefault())
-                return;
-
-            GridLineSegment move_line = this.PenPath.NewestSegent;
-            ICanvasGeometryView IntersectedObject = FirstIntersectedObjectOnSection(move_line, out double distance);
-            //            ICanvasGeometryView MouseOverAnnotation = ObjectAtPosition(WorldPosition, out distance) as ICanvasGeometryView;
-            System.Diagnostics.Trace.WriteLine(string.Format("{0}", IntersectedObject == null ? "NULL" : IntersectedObject.ToString()));
-
-            //If the objects changed that means we intersected the boundary of the object.  If we are in pen mode and the intersected object qualifies we should start a retrace and replace command... 
-            if (IntersectedObject != null && RetraceAndReplaceDisabled == false)
-            {
-                LocationPolygonView intersectedPolyView = IntersectedObject as LocationPolygonView; //TODO: Needs to check for lines as well
-                if (intersectedPolyView != null)
-                {
-                    
-                    //intersectedPolyView.
-                    LocationObj Loc = Store.Locations.GetObjectByID(intersectedPolyView.ID, true);
-                    GridVector2 intersection_point;
-#if DEBUG
-                    bool Intersection_found = move_line.Intersects(intersectedPolyView.VolumeShapeAsRendered.ToPolygon(), out intersection_point);
-                    System.Diagnostics.Debug.Assert(Intersection_found, "Expected to find an intersection with the object boundary.");
-
-                    Loc.VolumeShape.ToPolygon().AddVertex(intersection_point);
-#endif
-                    RetraceAndReplacePathCommand retraceCmd = new RetraceAndReplacePathCommand(Parent, Loc.MosaicShape.ToPolygon(), intersectedPolyView.Color, Loc.Width.HasValue ? Loc.Width.Value : Global.DefaultClosedLineWidth, (senderCmd, MosaicPolygon) =>
-                    {
-                        //Drawing from outside to inside:
-
-                        var cmd = (RetraceAndReplacePathCommand)senderCmd;
-
-                        try
-                        {
-                            Loc.SetShapeFromGeometryInSection(Parent.Section.ActiveSectionToVolumeTransform, cmd.OutputMosaicPolygon.ToSqlGeometry());
-                        }
-                        catch (ArgumentException r)
-                        {
-                            MessageBox.Show(Parent, r.Message, "Could not save Polygon", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                        }
-
-                        Store.Locations.Save();
-
-                        RetraceAndReplaceDisabled = true; //Used to prevent a 2nd retrace command from firing because we've ended this command when we intersect the polygons other boundary.
-                    }
-                    );
-
-                    retraceCmd.InitPath(this.PenPath.Points);
-
-                    StopPenPath(); //Stop listening to the pen, we are launching a pen command
-
-                    Parent.CurrentCommand = retraceCmd;
-                }
-            }
+            
         }
 
         protected void OnPenPathCompleted(object sender, GridVector2[] Path)
@@ -1140,27 +1222,13 @@ namespace WebAnnotation
             }
         }
 
+
+
         protected bool CanContinueLastTrace
         {
             get
             {
-                if(!Global.LastEditedAnnotationID.HasValue)
-                {
-                    return false;
-                }
-
-                LocationObj lastLoc = Store.Locations.GetObjectByID(Global.LastEditedAnnotationID.Value, false);
-                if(lastLoc == null)
-                {
-                    return false;
-                }
-
-                if(lastLoc.Z == this.CurrentSectionNumber)
-                {
-                    return false;
-                }
-
-                return true;
+                return Global.CanContinueLastTrace(this.CurrentSectionNumber);
             }
         }
 

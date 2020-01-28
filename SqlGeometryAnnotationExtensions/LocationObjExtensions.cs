@@ -65,7 +65,27 @@ namespace Viking.VolumeModel
 
             return;
         }
-          
+
+        /// <summary>
+        /// Takes unsmoothed points and sets both the mosaic and volume shape for a locationObj
+        /// </summary>
+        /// <param name="mapper"></param>
+        /// <param name="location"></param>
+        /// <param name="volumePoints"></param>
+        /// <param name="volume_innerRingPoints"></param>
+        public static void SetShapeFromGeometryInVolume(this WebAnnotationModel.LocationObj location, Viking.VolumeModel.IVolumeToSectionTransform mapper, Microsoft.SqlServer.Types.SqlGeometry volume_shape)
+        {
+            if (!volume_shape.STIsValid().Value)
+                throw new ArgumentException("Shape must be valid SQL Geometry " + volume_shape.IsValidDetailed());
+
+            Microsoft.SqlServer.Types.SqlGeometry mosaic_shape = mapper.TryMapShapeVolumeToSection(volume_shape);
+
+            location.VolumeShape = location.TypeCode.GetSmoothedShape(volume_shape);
+            location.MosaicShape = mosaic_shape;
+
+            return;
+        }
+
         private static ICollection<GridVector2[]> VolumeInnerRingPointsToSection(Viking.VolumeModel.IVolumeToSectionTransform mapper, ICollection<GridVector2[]> volume_innerRingPoints)
         {
             if (volume_innerRingPoints == null)

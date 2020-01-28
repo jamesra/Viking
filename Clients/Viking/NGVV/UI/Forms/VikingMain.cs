@@ -23,9 +23,7 @@ namespace Viking
     {
 
         public VikingMain()
-        {
-            
-
+        { 
             InitializeComponent();
             
             TabsModules.TabCategory = TABCATEGORY.ACTION;
@@ -34,6 +32,7 @@ namespace Viking
 
             State.MainThreadDispatcher = System.Windows.Threading.Dispatcher.CurrentDispatcher; 
         }
+
 
         /// <summary>
         /// I only have this in case Asynch file IO completes, in which case I want the screen to refresh
@@ -144,6 +143,16 @@ namespace Viking
             {
                 return;
             }
+
+            //bool RegisteredTouch = Touch.RegisterTouchWindow(this.Handle, TouchRegisterOptions.None);
+            //
+            //bool RegisteredTouchHitTesting = Touch.RegisterTouchHitTestingWindow(this.Handle, TouchHitTesting.Client);
+
+            //Calling EnableMouseInPointer routes mouse inpt to WM_POINT* events.  It was simpler to only have pen inputs send those events.  
+            //However, for some reason setting MouseInPointer allowed the pen buttons to properly set the SecondButtonUp/Down flags in the pointer state.
+            //
+            bool MouseInPointerEnabled = Touch.EnableMouseInPointer(true);
+
 
             this.Text = UI.State.volume.Name;
 

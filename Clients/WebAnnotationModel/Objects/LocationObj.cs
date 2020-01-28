@@ -12,7 +12,7 @@ using SqlGeometryUtils;
 using System.Data.Entity.Spatial;
 using AnnotationService.Types;
 
-using Geometry; 
+using Geometry;
 
 
 namespace WebAnnotationModel
@@ -27,8 +27,47 @@ namespace WebAnnotationModel
         OPENCURVE = 5,   //Line segments with a line width, additional control points created using curve fitting function
         CURVEPOLYGON = 6, //Polygon whose outer and inner verticies are supplimented with a curve fitting function
         CLOSEDCURVE = 7 //Ring of line segments with a line width
-        
     };
+
+    public static class LocationTypeExtensions
+    {
+        public static bool AllowsClosed2DShape(this LocationType value)
+        {
+            switch (value)
+            {
+                case LocationType.POLYGON:
+                case LocationType.CURVEPOLYGON:
+                case LocationType.CLOSEDCURVE:
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        public static bool AllowsInteriorHoles(this LocationType value)
+        {
+            switch (value)
+            {
+                case LocationType.POLYGON:
+                case LocationType.CURVEPOLYGON:
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        public static bool AllowsOpen2DShape(this LocationType value)
+        {
+            switch (value)
+            {
+                case LocationType.POLYLINE:
+                case LocationType.OPENCURVE:
+                    return true;
+                default:
+                    return false;
+            }
+        }
+    }
 
     public class LocationObj : WCFObjBaseWithKey<long, Location>
     {

@@ -1,3 +1,4 @@
+USE [RC2]
 SET IDENTITY_INSERT StructureType ON
 ALTER TABLE [RC2].[dbo].[StructureType] NOCHECK CONSTRAINT FK_StructureType_StructureType
 

@@ -190,6 +190,8 @@
     <Compile Include="UI\Commands\AddRemovePolygonVertexCommand.cs" />
     <Compile Include="UI\Commands\AdjustControlPointCommand.cs" />
     <Compile Include="UI\Commands\AdjustPolygonVertexCommand.cs" />
+    <Compile Include="UI\Commands\AnnotationPenFreeDrawCommand.cs" />
+    <Compile Include="UI\Commands\AnnotationOverlayPenFreeDrawCommand.cs" />
     <Compile Include="UI\Commands\CutHoleCommand.cs" />
     <Compile Include="UI\Commands\PlaceCurvesWithPenCommands.cs" />
     <Compile Include="UI\Commands\PlaceOpenCurveCommand.cs" />

@@ -60,12 +60,12 @@ namespace VikingXNAWinForms
             parameters.BackBufferWidth = Math.Max(width, 1);
             parameters.BackBufferHeight = Math.Max(height, 1);
             parameters.BackBufferFormat = SurfaceFormat.Color;
-            parameters.DepthStencilFormat = DepthFormat.Depth24;
+            parameters.DepthStencilFormat = DepthFormat.Depth24Stencil8;
 
             parameters.DeviceWindowHandle = windowHandle;
             parameters.RenderTargetUsage = RenderTargetUsage.DiscardContents;
             parameters.IsFullScreen = false;
-             
+                         
             /*PORT XNA 4
             parameters.EnableAutoDepthStencil = true;
             parameters.AutoDepthStencilFormat = DepthFormat.Depth24;
@@ -187,6 +187,7 @@ namespace VikingXNAWinForms
                     tempContainer.AddService(typeof(IGraphicsDeviceService), this);
                     //tempContainer.AddService<IGraphicsDeviceService>(this);
                     _Content = new Microsoft.Xna.Framework.Content.ContentManager(tempContainer, "Content");
+                    VikingXNAGraphics.Global.Content = _Content;
                 }
 
                 return _Content;

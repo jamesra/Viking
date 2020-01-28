@@ -61,12 +61,12 @@ namespace VikingXNAWinForms
         {
             get
             {
-                if (_Content == null)
+                /*if (_Content == null)
                 {
                     _Content = new Microsoft.Xna.Framework.Content.ContentManager(this.Services);
                     _Content.RootDirectory = "Content";
-                }
-                return _Content;
+                }*/
+                return graphicsDeviceService.Content;
             }
         }
 

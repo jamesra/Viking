@@ -12,6 +12,7 @@ using SqlGeometryUtils;
 using VikingXNAWinForms;
 using System.Collections.Specialized;
 using System.ComponentModel;
+using Viking.UI;
 
 namespace WebAnnotation.UI.Commands
 {
@@ -396,6 +397,7 @@ namespace WebAnnotation.UI.Commands
                     foreach (object p in e.OldItems)
                     {
                         this.PathView.Remove();
+                        //System.Diagnostics.Debug.Assert(this.PathView.ControlPoints.Last() == PenInput.Points.First());
                     }
 
                     break;
@@ -441,15 +443,32 @@ namespace WebAnnotation.UI.Commands
 
         protected abstract bool CanCommandComplete();
 
+        protected override void OnPenMove(object sender, PenEventArgs e)
+        {
+            //Passing down erase move events will translate the view.  Make sure the pen was placed enough far away from the path that the pen input helper will not process the event.
+            if (PenInput != null && PenInput.IgnoringThisPenContact)
+            {
+                base.OnPenMove(sender, e);
+            }
+            else
+            {
+                GridVector2 NewPosition = Parent.ScreenToWorld(e.X, e.Y);
+                this.Parent.StatusPosition = NewPosition;
+                SaveAsOldPenPosition(e);
+            }
+        }
+
         public override void OnDraw(Microsoft.Xna.Framework.Graphics.GraphicsDevice graphicsDevice, VikingXNA.Scene scene, Microsoft.Xna.Framework.Graphics.BasicEffect basicEffect)
         {
             PolyLineView.Draw(graphicsDevice, scene, Parent.LumaOverlayLineManager, basicEffect, Parent.AnnotationOverlayEffect, new PolyLineView[] { this.PathView });
 
+#if DEBUG
             if (PenInput.ProposedNextSegment.HasValue)
             {
                 LineView unofficialPath = new LineView(PenInput.ProposedNextSegment.Value, width: this.LineWidth, color: this.LineColor, lineStyle: LineStyle.Standard);
                 LineView.Draw(graphicsDevice, scene, Parent.LumaOverlayLineManager, new LineView[] { unofficialPath });
             }
+#endif
         }
     }
 }

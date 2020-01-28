@@ -127,6 +127,7 @@ namespace WebAnnotation.View
                 case LocationType.POLYLINE:
                     return new StructureLinkCurvesView(key, mapper);
                 default:
+                    return new StructureLinkCirclesView(key, mapper);
                     throw new NotImplementedException("StructureLink View for type " + sourceLocation.TypeCode.ToString() + " is not implemented");
             }
         }

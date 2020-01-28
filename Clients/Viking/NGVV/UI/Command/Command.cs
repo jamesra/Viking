@@ -10,6 +10,7 @@ using Viking.Common;
 using VikingXNAGraphics;
 using VikingXNAWinForms;
 using System.ComponentModel;
+using Viking.UI;
 
 namespace Viking.UI.Commands
 {
@@ -192,6 +193,8 @@ namespace Viking.UI.Commands
 
         protected MouseEventArgs oldMouse = null;
 
+        protected PenEventArgs oldPen = null;
+
         /*
         public static readonly DependencyProperty HelpStringsProperty;
 
@@ -312,6 +315,12 @@ namespace Viking.UI.Commands
             Parent.KeyDown += MyKeyDown;
             Parent.KeyUp += MyKeyUp;
 
+            Parent.OnPenEnterRange += OnPenEnterRange;
+            Parent.OnPenLeaveRange += OnPenLeaveRange;
+            Parent.OnPenContact += OnPenContact;
+            Parent.OnPenLeaveContact += OnPenLeaveContact;
+            Parent.OnPenMove += OnPenMove;
+             
             Parent.Camera.PropertyChanged += MyCameraChanged;
         }
 
@@ -332,6 +341,12 @@ namespace Viking.UI.Commands
             Parent.KeyDown -= MyKeyDown;
             Parent.KeyUp -= MyKeyUp;
 
+            Parent.OnPenEnterRange -= OnPenEnterRange;
+            Parent.OnPenLeaveRange -= OnPenLeaveRange;
+            Parent.OnPenContact -= OnPenContact;
+            Parent.OnPenLeaveContact -= OnPenLeaveContact;
+            Parent.OnPenMove -= OnPenMove;
+
             Parent.Camera.PropertyChanged -= MyCameraChanged;
         }
 
@@ -342,7 +357,7 @@ namespace Viking.UI.Commands
 
         /// <summary>
         /// Returns true if the command is in the middle of a user input sequence like
-        /// defining a rectangle
+        /// defining a rectangle.
         /// </summary>
         public bool CommandActive
         {
@@ -350,6 +365,7 @@ namespace Viking.UI.Commands
             {
                 if (_Deactivated)
                     return false;
+
                 return _CommandActive;
             }
             set
@@ -418,7 +434,17 @@ namespace Viking.UI.Commands
         }
 
         protected virtual void OnMouseDown(object sender, MouseEventArgs e)
-        {
+        {               
+            
+            /*if(Touch.IsPenEvent(out uint PointerID))
+            {
+                Trace.WriteLine("Pen button down {0}", e.Button.ToString());
+            }
+            else
+            {
+                Trace.WriteLine("Mouse button down {0}", e.Button.ToString());
+            }*/
+
             if (e.Button == MouseButtons.XButton2)
             {
                 Parent.StepUpNSections(1);
@@ -477,46 +503,22 @@ namespace Viking.UI.Commands
             GridVector2 NewPosition = Parent.ScreenToWorld(e.X, e.Y);
             this.Parent.StatusPosition = NewPosition;
 
-            //Figure out which tile we are over and update the status bar
-            /*
-            if (State.volume != null)
-            {
-                if (State.volume.CurrentSection != null && State.volume.CurrentSection.CurrentTransform != null)
-                {
-                    foreach (TileGridTransform T in Parent.Section.WarpedTo[State.volume.CurrentSection.CurrentTransform].TileTransforms)
-                    {
-                        if (T.CachedControlBounds.Contains(NewPosition))
-                        {
-                            Parent.StatusTileName = T.Number.ToString();
-                            break;
-                        }
-                    }
-                }
-            }
-            */
-
+            bool TranslateButtonDown = e.Button.Right();
+            bool RotateButtonDown = e.Button.Middle();
             if (oldMouse == null)
             {
                 oldMouse = e;
                 return;
             }
 
-            if (e.Button.Right())
+            if (TranslateButtonDown)
             {
                 GridVector2 OldPosition = Parent.ScreenToWorld(oldMouse.X, oldMouse.Y);
-
                 Debug.Assert(double.IsNaN(NewPosition.X) == false);
 
-                GridVector2 delta = NewPosition - OldPosition;
-
-                if (double.IsNaN(delta.X))
-                    return;
-
-                Parent.Camera.LookAt -= new Vector2((float)delta.X, (float)delta.Y);
-
-                this.Parent.Invalidate();
+                OnTranslateInput(NewPosition, OldPosition);
             }
-            else if (e.Button.Middle())
+            else if (RotateButtonDown)
             {
                 //Figure out if the mouse went clockwise or counterclockwise relative to the center of the screen
                 System.Drawing.Rectangle rect = Parent.ClientRectangle;
@@ -552,11 +554,51 @@ namespace Viking.UI.Commands
             SaveAsOldMousePosition(e);            
         }
 
+        protected virtual void OnPenMove(object sender, PenEventArgs e)
+        {
+            GridVector2 NewPosition = Parent.ScreenToWorld(e.X, e.Y);
+            this.Parent.StatusPosition = NewPosition;
+
+            if (e.Erase && e.InContact)
+            {
+                GridVector2 OldPosition = Parent.ScreenToWorld(oldPen.X, oldPen.Y);
+                System.Diagnostics.Debug.Assert(double.IsNaN(NewPosition.X) == false);
+
+                OnTranslateInput(NewPosition, OldPosition);
+            }
+
+            SaveAsOldPenPosition(e);
+
+            return;
+        }
+
+        protected void OnTranslateInput(GridVector2 NewWorldPosition, GridVector2 OldWorldPosition)
+        {
+            
+
+            Debug.Assert(double.IsNaN(NewWorldPosition.X) == false);
+
+            GridVector2 delta = NewWorldPosition - OldWorldPosition;
+
+            if (double.IsNaN(delta.X))
+                return;
+
+            Parent.Camera.LookAt -= new Vector2((float)delta.X, (float)delta.Y);
+
+            this.Parent.Invalidate();
+
+        }
+
         protected void SaveAsOldMousePosition(MouseEventArgs e)
         { 
             this.oldMouse = e;
             this.oldWorldPosition = Parent.ScreenToWorld(e.X, e.Y);
+        }
 
+        protected void SaveAsOldPenPosition(PenEventArgs e)
+        {
+            this.oldPen = e;
+            this.oldWorldPosition = Parent.ScreenToWorld(e.X, e.Y);
         }
 
         protected virtual void OnMouseHover(object sender, EventArgs e)
@@ -704,6 +746,20 @@ namespace Viking.UI.Commands
         {
         }
 
+        protected virtual void OnPenEnterRange(object sender, PenEventArgs e)
+        {  
+        }
+
+        protected virtual void OnPenLeaveRange(object sender, PenEventArgs e)
+        {
+        }
+
+        protected virtual void OnPenContact(object sender, PenEventArgs e)
+        {
+        }
+        protected virtual void OnPenLeaveContact(object sender, PenEventArgs e)
+        {
+        }
 
     }
 }

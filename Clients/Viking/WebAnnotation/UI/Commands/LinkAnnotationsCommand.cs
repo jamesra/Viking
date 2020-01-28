@@ -73,10 +73,9 @@ namespace WebAnnotation.UI.Commands
             return array[i];
         }
 
-        protected IViewLocation NearestLocationToMouse(GridVector2 WorldPos)
+        public static IViewLocation FindBestLinkCandidate(SectionAnnotationsView sectionView,  GridVector2 WorldPos, LocationObj OriginObj)
         {
-            List<HitTestResult> listHitTestResults = Overlay.GetAnnotationsAtPosition(WorldPos);
-
+            List<HitTestResult> listHitTestResults = sectionView.GetIntersectedAnnotations(WorldPos).Where(ht => ht.obj != null).ToList();
             listHitTestResults = listHitTestResults.ExpandICanvasViewContainers(WorldPos);
 
             //Find locations that are not equal to our origin location
@@ -85,7 +84,7 @@ namespace WebAnnotation.UI.Commands
                 IViewLocation loc = hr.obj as IViewLocation;
                 if (loc == null)
                     return false;
-                 
+
                 return loc.ID != OriginObj.ID && !OriginObj.Links.Contains(loc.ID);
             }).ToList();
 
@@ -99,6 +98,15 @@ namespace WebAnnotation.UI.Commands
             return nearestVisible;
         }
 
+        protected IViewLocation FindBestLinkCandidate(GridVector2 WorldPos)
+        {
+            SectionAnnotationsView sectionView = AnnotationOverlay.GetAnnotationsForSection(this.Parent.Section.Number);
+            if (sectionView == null)
+                return null;
+
+            return FindBestLinkCandidate(sectionView, WorldPos, OriginObj);
+        }
+
         protected override void OnMouseMove(object sender, MouseEventArgs e)
         {
             GridVector2 WorldPos = Parent.ScreenToWorld(e.X, e.Y);
@@ -106,7 +114,7 @@ namespace WebAnnotation.UI.Commands
             //Find if we are close enough to a location to "snap" the line to the target
             double distance;
 
-            IViewLocation nearestVisible = NearestLocationToMouse(WorldPos);
+            IViewLocation nearestVisible = FindBestLinkCandidate(WorldPos);
             NearestTarget = nearestVisible != null ? TrySetTarget(Store.Locations[nearestVisible.ID]) : null;
 
             base.OnMouseMove(sender, e);
@@ -142,7 +150,7 @@ namespace WebAnnotation.UI.Commands
                 GridVector2 WorldPos = Parent.ScreenToWorld(e.X, e.Y);
                 
                 //Find if we are close enough to a location to "snap" the line to the target
-                IViewLocation nearest = NearestLocationToMouse(WorldPos);
+                IViewLocation nearest = FindBestLinkCandidate(WorldPos);
                 NearestTarget = nearest != null ? Store.Locations[nearest.ID] : null;
 
                 TrySetTarget(NearestTarget);
@@ -194,6 +202,50 @@ namespace WebAnnotation.UI.Commands
             }
 
             base.OnMouseDown(sender, e);
+        }
+
+        public static bool TryCreateLink(SectionAnnotationsView sectionView, GridVector2 WorldPos, LocationObj OriginObj)
+        {
+            //Find if we are close enough to a location to "snap" the line to the target
+            IViewLocation nearest = FindBestLinkCandidate(sectionView, WorldPos, OriginObj);
+            var NearestTarget = nearest != null ? Store.Locations[nearest.ID] : null;
+            if (NearestTarget == null)
+            {
+                return false;
+            }
+
+            if (LocationLinkView.IsValidLocationLinkTarget(NearestTarget, OriginObj))
+            {
+                try
+                {
+                    Store.LocationLinks.CreateLink(OriginObj.ID, NearestTarget.ID);
+                    return true;
+                }
+                catch (Exception except)
+                {
+                    MessageBox.Show("Could not create link between locations: " + except.Message, "Recoverable Error");
+                }
+            }
+            else if (StructureLinkViewModelBase.IsValidStructureLinkTarget(NearestTarget, OriginObj))
+            {
+                try
+                {
+                    bool Bidirectional = NearestTarget.Parent.Type.ID == OriginObj.Parent.Type.ID;
+                    StructureLinkObj linkStruct = new StructureLinkObj(OriginObj.ParentID.Value, NearestTarget.ParentID.Value, Bidirectional);
+                    linkStruct = Store.StructureLinks.Create(linkStruct);
+                    return true;
+                }
+                catch (Exception except)
+                {
+                    MessageBox.Show("Could not create link between structures: " + except.Message, "Recoverable Error");
+                }
+
+                //HACK: This updates the UI to show the new structure link.  It should be automatic, but force it for now...
+                //sectionAnnotations.AddStructureLinks(OriginObj.Parent);
+                //sectionAnnotations.AddStructureLinks(NearestTarget.Parent);
+            }
+
+            return false;
         }
 
         protected override void Execute()

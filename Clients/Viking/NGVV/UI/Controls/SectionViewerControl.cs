@@ -22,11 +22,12 @@ using VikingXNA;
 using VikingXNAGraphics;
 using System.Threading;
 using System.Threading.Tasks;
+using Viking.UI;
 
 
 namespace Viking.UI.Controls
 {
-    public partial class SectionViewerControl : VikingXNAWinForms.ViewerControl, IHelpStrings
+    public partial class SectionViewerControl : VikingXNAWinForms.ViewerControl, IHelpStrings, IPenEvents
     {
         Viking.UI.Commands.Command _CurrentCommand;
         public Viking.UI.Commands.Command CurrentCommand
@@ -340,6 +341,8 @@ namespace Viking.UI.Controls
         private ElementHost commandHelpTextScrollerHost;
         private Viking.WPF.StringArrayAutoScroller commandHelpText;
 
+        private PenEventManager penEventManager;
+
         public SectionViewerControl()
         {
             InitializeComponent();
@@ -390,12 +393,106 @@ namespace Viking.UI.Controls
 
             commandHelpTextScrollerHost.Height /= 2;
         }
+        /*
+        public override bool PreProcessMessage(ref Message msg)
+        {
+
+            return base.PreProcessMessage(ref msg);
+        }
+        */
+
+        protected override void WndProc(ref Message msg)
+        {
+            /*
+            switch (msg.Msg)
+            {
+                case Touch.WM_TOUCHHITTESTING:
+                    Touch.LogPenData(msg, "TouchHitTesting");
+                    break;
+                case Touch.WM_POINTERDEVICEINRANGE:
+                    Touch.LogPenData(msg, "PointerDeviceInRange");
+                    break;
+                case Touch.WM_POINTERDEVICEOUTOFRANGE:
+                    Touch.LogPenData(msg, "PointerDeviceOutOfRange");
+                    break;
+                case Touch.WM_POINTERUPDATE:
+                    Touch.LogPenData(msg, "PointerUpdate");
+                    break;
+                case Touch.WM_POINTERDOWN:
+                    Touch.LogPenData(msg, "PointerDown");
+                    break;
+                case Touch.WM_POINTERUP:
+                    Touch.LogPenData(msg, "PointerUp");
+                    break; 
+                default:
+                    break;
+            }
+            */
+
+            if (penEventManager != null && penEventManager.ProcessPenMessages(ref msg))
+            {
+                uint pointerID = Touch.GetPointerID(msg.WParam);
+                PointerMessageData pointerState = new PointerMessageData(msg);
+                Touch.GetPointerType((uint)pointerID, out PointerType type);
+                //bool isPen = Touch.IsPenEvent(out uint pointerID);
+                //if(isPen)
+                if(type == PointerType.Pen)
+                { 
+                    //Trace.WriteLine(string.Format("Pen Input {0}", pointerID));
+                    return;
+                }
+                else
+                {
+                    //Trace.WriteLine(string.Format("Mouse Input {0}", pointerID));
+                }
+                //Returning here prevents mouse events being sent for pen actions... this is double edged.  Windows will still 
+                //sends the events but they always appear to come from the mouse.  However duplicate events are not sent.      
+                //return;
+            }
+            else
+            {
+                //Trace.WriteLine(string.Format("{0}", msg.Msg));
+            }
+            
+            if (msg.Msg == Touch.WM_LBUTTONDOWN || msg.Msg == Touch.WM_RBUTTONDOWN)
+            {
+                bool isPen = Touch.IsPenEvent(out uint pointerID);
+                if (Touch.IsPenEvent(out uint PointerID))
+                {
+                    Trace.WriteLine(string.Format("Pen button down {0}", PointerID));
+                }
+                else
+                {
+                    Trace.WriteLine(string.Format("Mouse button down {0}", PointerID));
+                }
+            }
+
+            /*if (msg.Msg == Touch.WM_MOUSEMOVE)
+            {
+                bool isPen = Touch.IsPenEvent(out uint pointerID);
+                if (Touch.IsPenEvent(out uint PointerID))
+                {
+                    Trace.WriteLine(string.Format("Pen move {0}", PointerID));
+                }
+                else
+                {
+                    Trace.WriteLine(string.Format("Mouse move {0}", PointerID));
+                }
+            }*/
+            
+
+            base.WndProc(ref msg);
+            return;
+        } 
+         
 
         protected override void Initialize()
         {
             if (!DesignMode)
             {
                 this.menuStrip.Parent = this.Parent;
+
+                penEventManager = new PenEventManager(this);
 
                 OnCommandCompleteHandler = new Viking.Common.CommandCompleteEventHandler(this.OnCommandCompleted);
 
@@ -404,6 +501,7 @@ namespace Viking.UI.Controls
                 this.CurrentChannel = Section.DefaultChannel;
 
                 this.listOverlays = ExtensionManager.CreateSectionOverlays(this);
+
             }
 
             base.Initialize();
@@ -426,6 +524,14 @@ namespace Viking.UI.Controls
         /// Fires when one of the reference sections has changed
         /// </summary>
         public event ReferenceSectionChangedEventHandler OnReferenceSectionChanged;
+
+        #region IPenEvents
+        public event PenEventHandler OnPenEnterRange { add { penEventManager.OnPenEnterRange += value; } remove { penEventManager.OnPenEnterRange -= value; } }       
+        public event PenEventHandler OnPenLeaveRange { add { penEventManager.OnPenLeaveRange += value; } remove { penEventManager.OnPenLeaveRange -= value; } }
+        public event PenEventHandler OnPenContact { add { penEventManager.OnPenContact += value; } remove { penEventManager.OnPenContact -= value; } }
+        public event PenEventHandler OnPenLeaveContact { add { penEventManager.OnPenLeaveContact += value; } remove { penEventManager.OnPenLeaveContact -= value; } }
+        public event PenEventHandler OnPenMove { add { penEventManager.OnPenMove += value; } remove { penEventManager.OnPenMove -= value; } }
+        #endregion
 
         /// <summary>
         /// Called when the reference section for the current section has changed. 
@@ -1437,8 +1543,7 @@ namespace Viking.UI.Controls
                 return true;
 
             listTiles.Where(t => t.TextureNeedsLoading).Select(t => t.GetTexture(this.graphicsDeviceService.GraphicsDevice)).ToList();
-            return false;
-
+            return false; 
         }
 
 

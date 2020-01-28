@@ -153,6 +153,33 @@ namespace WebAnnotation
         /// </summary>
         public static long? LastEditedAnnotationID;
 
+        /// <summary>
+        /// Return true if the last annotation can be continued on the section number. 
+        /// Continuation creates a new annotation on the section and links to the last.
+        /// </summary>
+        /// <param name="SectionNumber"></param>
+        /// <returns></returns>
+        internal static bool CanContinueLastTrace(int SectionNumber)
+        {
+            if (!Global.LastEditedAnnotationID.HasValue)
+            {
+                return false;
+            }
+
+            WebAnnotationModel.LocationObj lastLoc = WebAnnotationModel.Store.Locations.GetObjectByID(Global.LastEditedAnnotationID.Value, false);
+            if (lastLoc == null)
+            {
+                return false;
+            }
+
+            if (lastLoc.Z == SectionNumber)
+            {
+                return false;
+            }
+
+            return true;
+        }
+
         #region IInitExtensions Members
 
         /*

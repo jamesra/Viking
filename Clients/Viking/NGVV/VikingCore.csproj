@@ -399,6 +399,7 @@
     </Compile>
     <Compile Include="UI\Command\RectangleCommand.cs" />
     <Compile Include="UI\Command\ScreenCaptureCommand.cs" />
+    <Compile Include="UI\PenEventManager.cs" />
     <Compile Include="UI\State.cs" />
     <Compile Include="UI\Forms\VikingMain.cs">
       <SubType>Form</SubType>

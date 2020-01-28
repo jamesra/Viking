@@ -24,12 +24,11 @@ namespace SqlGeometryUtils
     {
         public static GridPolygon ToPolygon(this SqlGeometry shape)
         {
-            if (shape.GeometryType() != SupportedGeometryType.POLYGON)
+            if (shape.GeometryType() != SupportedGeometryType.POLYGON && shape.GeometryType() != SupportedGeometryType.CURVEPOLYGON)
                 throw new ArgumentException("SqlGeometry must be a polygon type");
 
             GridVector2[] ExteriorRing = shape.ToPoints();
             ICollection<GridVector2[]> InteriorRings = shape.InteriorRingPoints();
-
 
             try
             {

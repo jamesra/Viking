@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Windows.Forms;
+using Viking.UI;
 using Viking.VolumeModel;
 using VikingXNAGraphics;
 using VikingXNAWinForms;
@@ -149,7 +150,7 @@ namespace WebAnnotation.UI.Commands
             if (OriginalVolumePolygon == null)
                 throw new ArgumentException("mosaic_polygon could not be mapped to volume space");
 
-            this.PathView.Color = Microsoft.Xna.Framework.Color.White;//color.Invert(1.0f);
+            this.PathView.Color = color.Invert(1.0f);
              
             OriginalSmoothedVolumePolygon = OriginalVolumePolygon.Smooth(Global.NumClosedCurveInterpolationPoints);
             
@@ -168,6 +169,8 @@ namespace WebAnnotation.UI.Commands
 
         protected override void OnPathLoop(object sender, bool HasLoop)
         {
+            //There is never a need for a loop in retrace and replace, and if there is a loop it is guaranteed to produce an invalid shape.  For now just kill the command when it happens
+            this.Deactivated = true;
             return;
         }
 
@@ -224,6 +227,29 @@ namespace WebAnnotation.UI.Commands
             }
 
             base.OnMouseUp(sender, e);
+        }
+
+        protected override void OnPenLeaveRange(object sender, PenEventArgs e)
+        {
+            //If the command is in a valid state populate the output poly and call execute. Otherwise deactive the command.
+            if (IsReadyToComplete)
+            {
+                OutputVolumePolygon = GenerateOutputVolumePolygon();
+
+                try
+                {
+                    OutputMosaicPolygon = mapping.TryMapShapeVolumeToSection(OutputVolumePolygon).Simplify(this.PenInput.SimplifiedPathToleranceInPixels * Parent.Downsample);
+                }
+                catch (ArgumentOutOfRangeException)
+                {
+                    Console.WriteLine("TranslateLocationCommand: Could not map polygon to section on Execute", "Command");
+                    return;
+                }
+
+                this.Execute();
+            }
+
+            base.OnPenLeaveRange(sender, e);
         }
 
         private RetraceCommandAction GetRetraceActionForPath(IList<GridVector2> path, out GridPolygon clockwise_poly, out GridPolygon counter_clockwise_poly)
