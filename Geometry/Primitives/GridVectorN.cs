@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -12,6 +13,7 @@ namespace Geometry
     public class AxisComparer : IComparer<IPointN>
     {
         private int[] AxisCompareOrder = null;
+        private bool[] Ascending = null; //True if the axis should be sorted in ascending order
 
         /// <summary>
         /// Defaults to comparing the axis values in the order they appear in the points coordinate array. i.e. X,Y,Z..
@@ -24,10 +26,20 @@ namespace Geometry
         /// This constructor allows the order that axes are compared in
         /// </summary>
         /// <param name="axisCompareOrder"></param>
-        public AxisComparer(int[] axisCompareOrder)
+        public AxisComparer(int[] axisCompareOrder) : this(axisCompareOrder, axisCompareOrder.Select(a => true).ToArray())
         {
+        }
+
+        public AxisComparer(int[] axisCompareOrder, bool[] axisAscending)
+        {
+            Debug.Assert(AxisCompareOrder.Length == axisAscending.Length);
+
             AxisCompareOrder = new int[axisCompareOrder.LongLength];
             axisCompareOrder.CopyTo(AxisCompareOrder, 0);
+
+            Ascending = new bool[axisAscending.LongLength];
+            axisAscending.CopyTo(Ascending, 0);
+
         }
 
         public int Compare(IPointN A, IPointN B)
@@ -47,7 +59,7 @@ namespace Geometry
             for (long i = 0; i < A.coords.LongLength; i++)
             {
                 long iAxis = AxisCompareOrder != null ? AxisCompareOrder[i] : i;
-                diff[i] = A.coords[iAxis] - B.coords[iAxis];
+                diff[i] = Ascending[iAxis] ? A.coords[iAxis] - B.coords[iAxis] : B.coords[iAxis] - A.coords[iAxis];
 
                 //We need to use the same equality test as our epsilon value, so check against epsilon
                 if (Math.Abs(diff[i]) <= Global.Epsilon)
