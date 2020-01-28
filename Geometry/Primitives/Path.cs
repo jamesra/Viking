@@ -308,32 +308,30 @@ namespace Geometry
                 FireOnLoopChangedEvent(HasLoop: false);
             }
         }
-        
+
         /// <summary>
-        /// Erase the path to the closest vertex to the passed point
+        /// Erase points up to and including the passed index
         /// </summary>
-        /// <param name="p"></param>
+        /// <param name="iDeletePoint"></param>
         /// <returns>True if part of the path was erased</returns>
-        public bool Erase(GridVector2 input)
-        {
-            double[] distances = Points.Select(v => GridVector2.Distance(v, input)).ToArray();
-            double min_distance = distances.Min();
-
-            int iDeletePoint = Array.IndexOf(distances, distances.Min());
-
-
+        public bool Erase(int iDeletePoint)
+        { 
             if (iDeletePoint >= 0)
             {
                 bool HadLoop = this.HasSelfIntersection;
 
-                GridVector2[] removedEntries = new GridVector2[iDeletePoint];
-                Points.CopyTo(0, removedEntries, 0, iDeletePoint);
+                GridVector2[] removedEntries = new GridVector2[iDeletePoint + 1];
+                Points.CopyTo(0, removedEntries, 0, iDeletePoint + 1);
+
+                int NumDeleted = 0;
 
                 while (iDeletePoint >= 0)
                 {
                     this.Pop_NoEvent();
                     iDeletePoint -= 1;
+                    NumDeleted++;
                 }
+                System.Diagnostics.Debug.Assert(NumDeleted == removedEntries.Length);
 
                 FireOnPathChangedEvent(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, removedEntries, 0));
 
@@ -346,6 +344,51 @@ namespace Geometry
             }
 
             return false;
+        }
+
+        /// <summary>
+        /// Erase the path to the closest vertex to the passed point
+        /// </summary>
+        /// <param name="p"></param>
+        /// <returns>True if part of the path was erased</returns>
+        public bool Erase(GridVector2 input)
+        {
+            double[] distances = Points.Select(v => GridVector2.Distance(v, input)).ToArray();
+            double min_distance = distances.Min();
+
+            int iDeletePoint = Array.IndexOf(distances, distances.Min());
+
+            return this.Erase(iDeletePoint);
+
+            /*
+            if (iDeletePoint >= 0)
+            {
+                bool HadLoop = this.HasSelfIntersection;
+
+                GridVector2[] removedEntries = new GridVector2[iDeletePoint+1];
+                Points.CopyTo(0, removedEntries, 0, iDeletePoint+1);
+
+                int NumDeleted = 0;
+
+                while (iDeletePoint >= 0)
+                {
+                    this.Pop_NoEvent();
+                    iDeletePoint -= 1;
+                    NumDeleted++;
+                }
+                System.Diagnostics.Debug.Assert(NumDeleted == removedEntries.Length);
+
+                FireOnPathChangedEvent(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, removedEntries, 0));
+
+                if (HadLoop != this.HasSelfIntersection)
+                {
+                    FireOnLoopChangedEvent(this.HasSelfIntersection);
+                }
+
+                return true;
+            }
+
+            return false;*/
         }
 
         /// <summary>
@@ -554,6 +597,22 @@ namespace Geometry
             }
 
             return false;
+        }
+
+        public double Distance(GridVector2 p)
+        {
+            if(this.Points.Count == 0)
+            {
+                throw new ArgumentException("No points in path to calculate distance");
+            }
+            else if (this.Points.Count == 1)
+            {
+                return GridVector2.Distance(this.Points.First(), p);
+            }
+            else
+            {
+                return this.Segments.Min(seg => seg.DistanceToPoint(p));
+            }
         }
 
         #region IPolyLine2D
