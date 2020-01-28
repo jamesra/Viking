@@ -79,6 +79,22 @@ namespace MonogameTestbed
             }
         }
 
+        private Color _LabelColor = Color.Black;
+
+        public Color LabelColor
+        {
+            get
+            {
+                return _LabelColor;
+            }
+
+            set
+            {
+                _LabelColor = value;
+                UpdateViews();
+            }
+        }
+
 
         public double PointRadius
         {
@@ -133,7 +149,7 @@ namespace MonogameTestbed
                 foreach (LabelView label in LabelViews)
                 {
                     label.FontSize = this.PointRadius * 2.0;
-                    label.Color = this.Color.Invert(); 
+                    label.Color = this.LabelColor;
                 }
             }
         }
