@@ -149,31 +149,40 @@ namespace Viking.UI
 
     public struct PointerMessageFlags
     {
-        public bool New             { get { return (Flags & (int)PointerFlags.New) > 0; } }
-        public bool InRange         { get { return (Flags & (int)PointerFlags.InRange) > 0; } }
-        public bool InContact       { get { return (Flags & (int)PointerFlags.InContact) > 0; } }
-        public bool FirstButton     { get { return (Flags & (int)PointerFlags.FirstButton) > 0; } }
-        public bool SecondButton    { get { return (Flags & (int)PointerFlags.SecondButton) > 0; } }
-        public bool ThirdButton     { get { return (Flags & (int)PointerFlags.ThirdButton) > 0; } }
-        public bool FourthButton    { get { return (Flags & (int)PointerFlags.FourthButton) > 0; } }
-        public bool FifthButton     { get { return (Flags & (int)PointerFlags.FifthButton) > 0; } }
-        public bool Primary         { get { return (Flags & (int)PointerFlags.Primary) > 0; } }
-        public bool Confidence      { get { return (Flags & (int)PointerFlags.Confidence) > 0; } }
-        public bool Cancelled       { get { return (Flags & (int)PointerFlags.Cancelled) > 0; } }
-        public bool Down            { get { return (Flags & (int)PointerFlags.Down) > 0; } }
-        public bool Update          { get { return (Flags & (int)PointerFlags.Update) > 0; } }
-        public bool Up              { get { return (Flags & (int)PointerFlags.Up) > 0; } }
-        public bool Wheel           { get { return (Flags & (int)PointerFlags.Wheel) > 0; } }
-        public bool HWheel          { get { return (Flags & (int)PointerFlags.HWheel) > 0; } }
-        public bool CaptureChanged  { get { return (Flags & (int)PointerFlags.CaptureChanged) > 0; } }
+        public bool New             { get { return (Flags & PointerFlags.New) > 0; } }
+        public bool InRange         { get { return (Flags & PointerFlags.InRange) > 0; } }
+        public bool InContact       { get { return (Flags & PointerFlags.InContact) > 0; } }
+        public bool FirstButton     { get { return (Flags & PointerFlags.FirstButton) > 0; } }
+        public bool SecondButton    { get { return (Flags & PointerFlags.SecondButton) > 0; } }
+        public bool ThirdButton     { get { return (Flags & PointerFlags.ThirdButton) > 0; } }
+        public bool FourthButton    { get { return (Flags & PointerFlags.FourthButton) > 0; } }
+        public bool FifthButton     { get { return (Flags & PointerFlags.FifthButton) > 0; } }
+        public bool Primary         { get { return (Flags & PointerFlags.Primary) > 0; } }
+        public bool Confidence      { get { return (Flags & PointerFlags.Confidence) > 0; } }
+        public bool Cancelled       { get { return (Flags & PointerFlags.Cancelled) > 0; } }
+        public bool Down            { get { return (Flags & PointerFlags.Down) > 0; } }
+        public bool Update          { get { return (Flags & PointerFlags.Update) > 0; } }
+        public bool Up              { get { return (Flags & PointerFlags.Up) > 0; } }
+        public bool Wheel           { get { return (Flags & PointerFlags.Wheel) > 0; } }
+        public bool HWheel          { get { return (Flags & PointerFlags.HWheel) > 0; } }
+        public bool CaptureChanged  { get { return (Flags & PointerFlags.CaptureChanged) > 0; } }
 
-        public readonly int Flags;
+        public readonly PointerFlags Flags;
 
         public PointerMessageFlags(IntPtr wParam)
         {
-            Flags = wParam.LowWord(); 
+            Flags = (PointerFlags)wParam.HiWord(); 
         }
 
+        public PointerMessageFlags(PointerFlags flags)
+        {
+            Flags = flags;
+        }
+
+        public override string ToString()
+        {
+            return string.Format("{0}", Flags);
+        }
     }
 
     public struct PointerMessageData
@@ -195,20 +204,41 @@ namespace Viking.UI
 
         public override string ToString()
         {
-            return string.Format("ID: {0} X: {1} Y: {2} Flags: {3}", this.PointerID, this.X, this.Y, this.Flags.Flags); 
+            return string.Format("ID: {0} X: {1} Y: {2}", this.PointerID, this.X, this.Y); 
         }
     }
 
     [StructLayout(LayoutKind.Sequential)]
-    public struct TouchPoint
+    public struct TouchPoint : IEquatable<TouchPoint> 
     {
         readonly System.Int32 x; //LONG in the C++ definition
         readonly System.Int32 y; //LONG in the C++ definition
+
+        public bool Equals(TouchPoint other)
+        {
+            return other.x == this.x && other.y == this.y;
+        }
+
+        public bool Equals(object other)
+        {
+            IEquatable<TouchPoint> IOther = other as IEquatable<TouchPoint>;
+            if (IOther == null)
+                return false;
+
+            return IOther.Equals(this);
+        }
+
+        public override int GetHashCode()
+        {  
+            return (this.x << 16) + this.y;
+        }
 
         public override string ToString()
         {
             return string.Format("X: {0} Y: {1}", x, y);
         }
+
+        
     }
 
         [StructLayout(LayoutKind.Sequential)]
@@ -242,10 +272,79 @@ namespace Viking.UI
         public readonly System.UInt32 rotation;
         public readonly System.Int32 tiltX;
         public readonly System.Int32 tiltY;
+
+        public bool PositioningChange(PointerPenInfo other)
+        {
+            if (!this.pointerInfo.ptPixelLocationRaw.Equals(other.pointerInfo.ptPixelLocationRaw))
+                return true;
+
+            PenMask changed = this.mask ^ other.mask;
+            PenMask comparable = this.mask & other.mask;
+            if (changed > 0)
+                return true;
+
+            if (this.pressure != other.pressure && (comparable & PenMask.Pressure) > 0)
+                return true;
+
+            if (this.tiltX != other.tiltX && (comparable & PenMask.TiltX) > 0)
+                return true;
+
+            if (this.tiltY != other.tiltY && (comparable & PenMask.TiltY) > 0)
+                return true;
+
+            if (this.rotation != other.rotation && (comparable & PenMask.Rotation) > 0)
+                return true;
+
+            return false;
+        }
     }
+
+    public enum TouchMessageType : int
+    {
+        WM_TOUCHHITTESTING = 0x024D,
+        WM_POINTERDEVICEINRANGE = 0X239,
+        WM_POINTERDEVICEOUTOFRANGE = 0X23A,
+        WM_POINTERUPDATE = 0X245,
+        WM_POINTERDOWN = 0X246,
+        WM_POINTERUP = 0X247,
+
+        WM_POINTERENTER = 0X249,
+        WM_POINTERLEAVE = 0x24A,
+        WM_POINTERWHEEL = 0x24E,
+        WM_POINTERHWHEEL = 0x024F,
+        DM_POINTERHITTEST = 0x0250
+    }
+
+    /// <summary>
+    /// Contains variables that can be adjusted to change user experience
+    /// </summary>
+    public class TouchConfig
+    {
+        /// <summary>
+        /// Used to convert pen pressure from 0 to 1 range
+        /// </summary>
+        public double minPenPressure = 0;
+        public double maxPenPressure = 5000;
+
+        public double NormalizeStylusPressure(double pressure)
+        {
+            if (pressure < 0)
+            {
+                throw new ArgumentException("Stylus Pressure not expected to be negative");
+            }
+
+            double fraction = pressure / maxPenPressure;
+            return fraction > 1.0 ? 1.0 : fraction;
+        }
+    }
+
 
     public static class Touch
     {
+        public const int WM_MOUSEMOVE = 0x0200;
+        public const int WM_LBUTTONDOWN = 0x0201;
+        public const int WM_RBUTTONDOWN = 0x0204;
+
         public const int WM_TOUCHHITTESTING = 0x024D;
         public const int WM_POINTERDEVICEINRANGE = 0X239;
         public const int WM_POINTERDEVICEOUTOFRANGE = 0X23A;
@@ -257,6 +356,9 @@ namespace Viking.UI
         public const int WM_POINTERLEAVE = 0x24A;
         public const int WM_POINTERWHEEL = 0x24E;
         public const int WM_POINTERHWHEEL = 0x024F;
+        public const int DM_POINTERHITTEST = 0x0250;
+
+        public static TouchConfig Config = new TouchConfig();
 
         public static System.UInt16 HiWord(this IntPtr param) { return (System.UInt16)(param.ToInt32() >> 16); } //Shift away the low word
         public static System.UInt16 LowWord(this IntPtr param) { return (System.UInt16)(param.ToInt32() & 0xFFFF); }
@@ -264,25 +366,70 @@ namespace Viking.UI
         public static int HiWord(this int param) { return (int)(param & 0xFFFF0000); }
         public static int LowWord(this int param) { return (int)(param & 0xFFFF); }
 
-        public static int GetPointerID(IntPtr wParam) { return wParam.LowWord(); }
+        public static uint GetPointerID(IntPtr wParam) { return wParam.LowWord(); }
 
-        public static bool IsPenEvent(out System.UInt32 cursorID)
+        public static bool IsPenEvent(out System.UInt32 pointerID)
         {
             uint word = (uint)GetMessageExtraInfo();
             const uint SignatureMask =   0xFFFFFF00;
-            const uint CursorIDMask =    0x0000007F;
+            const uint PointerIDMask =    0x0000007F;
             const uint MI_WP_SIGNATURE = 0xFF515700;
             uint signature = word & SignatureMask;
-            cursorID = word & CursorIDMask;
+            pointerID = word & PointerIDMask;
 
             return signature == MI_WP_SIGNATURE;
         }
 
-        public static PointerPenInfo GetPenState()
+        public static bool IsTouchEvent(out System.UInt32 pointerID)
         {
-            IsPenEvent(out System.UInt32 cursorID);
-            GetPointerPenInfo(cursorID, out PointerPenInfo info);
+            uint word = (uint)GetMessageExtraInfo();
+            const uint PointerIDMask = 0x0000007F;
+            const uint TOUCH_SIGNATURE = 0x80;
+            uint signature = word & TOUCH_SIGNATURE;
+            pointerID = word & PointerIDMask;
+
+            return signature > 0;
+        }
+
+
+        public static PointerPenInfo GetPenInfo(System.UInt32 pointerID)
+        {            //IsPenEvent(out System.UInt32 pointerID);
+            //bool gotCursorID = GetPointerCursorId(pointerID, out System.UInt32 cursorID);
+            //System.Diagnostics.Debug.Assert(gotCursorID);
+            bool gotPenInfo = GetPointerPenInfo(pointerID, out PointerPenInfo info);
+            System.Diagnostics.Debug.Assert(gotPenInfo);
             return info;
+        }
+
+        public static bool GetPenInfo(out PointerPenInfo info)
+        {
+            if(IsPenEvent(out uint pointerID))
+            {
+                info = GetPenInfo(pointerID);
+                return true;
+            }
+
+            info = new PointerPenInfo();
+            return false;
+        }
+
+
+        public static void LogPenData(System.Windows.Forms.Message msg, string Header)
+        {
+            PointerMessageData data = new PointerMessageData(msg);
+            
+            bool success = Touch.GetPointerPenInfo(data.PointerID, out PointerPenInfo info);
+            if (success)
+            {
+                //System.Diagnostics.Trace.WriteLine(string.Format("{0} {1} pen:{2} pointer: {4} pressure:{5} ", Header, data.ToString(), info.flags.ToString(), info.mask.ToString(), info.pointerInfo.pointerFlags, info.pressure));
+                System.Diagnostics.Trace.WriteLine(string.Format("{0} {1} pen:{2} pointer: {3} btn: {4} pressure:{5} ",
+                    Header,
+                    data.ToString(),
+                    info.flags.ToString(),
+                    info.pointerInfo.pointerFlags,
+                    info.pointerInfo.ButtonChange,
+                    info.pressure));
+            }
         }
 
 
@@ -299,7 +446,13 @@ namespace Viking.UI
         public static extern bool GetPointerType(System.UInt32 pPointerID, out PointerType pPointerType);
 
         [DllImport("User32.dll")]
-        public static extern bool GetPointerPenInfo(System.UInt32 pPointerID, out PointerPenInfo info);
+        public static extern bool GetPointerInfo(System.UInt32 pPointerID, out PointerInfo info);
+
+        [DllImport("User32.dll")]
+        public static extern bool GetPointerCursorId(System.UInt32 pPointerID, out System.UInt32 cursorID);
+
+        [DllImport("User32.dll")]
+        private static extern bool GetPointerPenInfo(System.UInt32 pPointerID, out PointerPenInfo info);
 
         [DllImport("User32.dll")]
         public static extern System.IntPtr GetMessageExtraInfo();
