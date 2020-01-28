@@ -239,6 +239,8 @@ namespace MorphologyMesh
             var MedialAxis = MedialAxisFinder.ApproximateMedialAxis(regionPolygon);
             MedialAxisVertex[] NewVerts = MedialAxis.Nodes.Values.ToArray();
 
+            //TODO: Split any edges with an existing face into two parts so we can better merge the medial axis with the existing shape
+
             if(NewVerts.Length == 0)
             {
                 return; 
