@@ -20,11 +20,12 @@ namespace Geometry.Meshing
             {
                 return _Edges.Comparer;
             }
-            set
+            protected set
             {
                 if (value != _Edges.Comparer)
                 {
                     _Edges = new SortedSet<IEdgeKey>(_Edges, value);
+                    _ImmutableEdges = null; 
                 }
             }
         }
@@ -56,7 +57,7 @@ namespace Geometry.Meshing
             _ImmutableEdges = null;
         }
 
-        public bool AddEdge(IEdgeKey e)
+        public virtual bool AddEdge(IEdgeKey e)
         {
             if (!_Edges.Contains(e))
             {
@@ -79,7 +80,7 @@ namespace Geometry.Meshing
             return this.Index == other.Index;
         }
 
-        public void RemoveEdge(IEdgeKey e)
+        public virtual void RemoveEdge(IEdgeKey e)
         {
             Debug.Assert(_Edges.Contains(e));
             _Edges.Remove(e);
@@ -195,18 +196,18 @@ namespace Geometry.Meshing
     {
         public T Data { get; set; }
 
-        public Vertex2D(GridVector2 p, T data) : base(p)
+        public Vertex2D(GridVector2 p, T data, IComparer<IEdgeKey> edgeComparer = null) : base(p, edgeComparer)
         {
             Data = data;
         }
 
-        public Vertex2D(GridVector2 p) : base(p)
+        public Vertex2D(GridVector2 p, IComparer<IEdgeKey> edgeComparer = null) : base(p, edgeComparer)
         {
         }
 
         public override IVertex ShallowCopy()
         {
-            Vertex2D<T> newVertex = new Vertex2D<T>(Position, Data);
+            Vertex2D<T> newVertex = new Vertex2D<T>(Position, Data, this.EdgeComparer);
             return newVertex;
         }
     }

@@ -114,6 +114,8 @@ namespace MonogameTestbed
 
             base.Initialize();
 
+            Window.AllowUserResizing = true;
+
             this.IsMouseVisible = true;
         }
 
@@ -285,6 +287,7 @@ namespace MonogameTestbed
         /// <param name="gameTime">Provides a snapshot of timing values.</param>
         protected override void Update(GameTime gameTime)
         {
+            
             if (!listTests[Mode].Initialized)
             {
                 listTests[Mode].Init(this);
@@ -292,7 +295,9 @@ namespace MonogameTestbed
                 Debug.Assert(listTests[Mode].Initialized);
             }
 
+
             listTests[Mode].Update();
+            Window.Title = listTests[Mode].Title;
 
             if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Microsoft.Xna.Framework.Input.Keyboard.GetState().IsKeyDown(Keys.Escape))
             {

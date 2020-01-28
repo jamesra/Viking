@@ -11,7 +11,7 @@ using Geometry;
 namespace MorphologyMesh
 {
 
-    public class MorphMeshVertex : Vertex3D
+    public class MorphMeshVertex : Vertex3D, IVertex2D
     {
         /// <summary>
         /// Verticies we add to close holes will not have a poly index.  The medial axis verticies must have faces added because at this point they will not autocomplete.
@@ -41,6 +41,8 @@ namespace MorphologyMesh
                 throw new InvalidOperationException("Vertex must be either part of a contour or on a medial axis");
             }
         }
+
+        GridVector2 IVertex2D.Position { get { return this.Position.XY(); } }
 
         public MorphMeshVertex(PointIndex polyIndex, GridVector3 p) : base(p)
         {
@@ -127,6 +129,16 @@ namespace MorphologyMesh
             //Check that every face in the shortest path always includes the vertex we are testing.
             FacesAreComplete = path.All(f => f.iVerts.Contains(this.Index));
             return FacesAreComplete;
+        }
+
+        int IComparable<IVertex2D>.CompareTo(IVertex2D other)
+        {
+            return this.Index.CompareTo(other.Index);
+        }
+
+        bool IEquatable<IVertex2D>.Equals(IVertex2D other)
+        {
+            return this.Index == other.Index;
         }
     }
 

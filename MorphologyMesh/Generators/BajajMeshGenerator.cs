@@ -161,15 +161,15 @@ namespace MorphologyMesh
                        GenerateFaces(mesh);
                    }));
                    */
-                try
-                {
-                    GenerateFaces(mesh);
-                }
+                //try
+                //{
+                GenerateFaces(mesh);
+                /*}
                 catch (Exception e)
                 {
                     Trace.WriteLine(string.Format("Exception building mesh {0}:\n{1}", listBajajMeshGenerators[iMesh].ToString(), e));
                     continue;
-                }
+                }*/
                 
 
             }
@@ -255,6 +255,83 @@ namespace MorphologyMesh
             mesh.RecalculateNormals();
         }
 
+        private static Dictionary<GridVector2, List<int>> CreatePointToIndexMap(BajajGeneratorMesh mesh)
+        {
+            var result = new Dictionary<GridVector2, List<int>>(mesh.Verticies.Count);
+            foreach (MorphMeshVertex v in mesh.Verticies)
+            {
+                GridVector2 p = v.Position.XY();
+                if(result.ContainsKey(p))
+                {
+                    result[p].Add(v.Index);
+                }
+                else
+                {
+                    result.Add(p, new List<int>(new int[] { v.Index }));
+                }
+            }
+
+            return result; 
+        }
+        
+        public static void AddDelaunayEdges(BajajGeneratorMesh mesh)
+        {
+            Geometry.Meshing.TriangulationMesh<Vertex2D<List<int>>> triMesh = null;
+
+            //Copy the array and record the original ID number of each vertex
+
+            Dictionary<GridVector2, List<int>> pointToIndexMap = CreatePointToIndexMap(mesh);
+
+            Dictionary<int, int> MeshToTriMesh = new Dictionary<int, int>(mesh.Verticies.Count);
+            Dictionary<int, List<int>> TriMeshToMesh = new Dictionary<int, List<int>>(mesh.Verticies.Count);
+
+            //Dictionary<GridVector2, List<PointIndex>> pointToPolyMap = GridPolygon.CreatePointToPolyMap(mesh.Polygons);
+            GridVector2[] points = pointToIndexMap.Keys.ToArray();
+
+            //Adjust the points to the average values to avoid floating point precision errors
+            GridVector2 avg = points.Average();
+            GridVector2[] translated_points = points.Select(p => p - avg).ToArray();
+
+            var verts = points.Select((p,i) => new Vertex2D<List<int>>(translated_points[i], pointToIndexMap[p])).ToArray();
+            triMesh = Geometry.GenericDelaunayMeshGenerator2D<Vertex2D<List<int>>>.TriangulateToMesh(verts, null);
+
+            foreach(var v in verts)
+            {
+                List<int> listIndicies = v.Data;//pointToIndexMap[v.Position];
+                foreach(int i in listIndicies)
+                {
+                    MeshToTriMesh[i] = v.Index;
+                }
+
+                TriMeshToMesh[v.Index] = listIndicies;
+            }
+             
+            var ContourEdges = mesh.MorphEdges.Where(e => e.Type == EdgeType.CONTOUR);
+            foreach (var edge in ContourEdges)
+            {
+                int A = MeshToTriMesh[edge.A];
+                int B = MeshToTriMesh[edge.B];
+                triMesh.AddContrainedEdge(new Geometry.Meshing.Edge(A,B));
+            }
+            
+            foreach(Face f in triMesh.Faces)
+            {
+                List<int> A_List = TriMeshToMesh[f.iVerts[0]];
+                List<int> B_List = TriMeshToMesh[f.iVerts[1]];
+                List<int> C_List = TriMeshToMesh[f.iVerts[2]];
+
+                if(A_List.Count == 1 && B_List.Count == 1 && C_List.Count == 1)
+                {
+                    MorphMeshFace mesh_face = new MorphMeshFace(A_List[0], B_List[0], C_List[0]);
+                    mesh.AddFace(mesh_face);
+                }
+            }
+
+            mesh.ClassifyMeshEdges();
+            //BajajGeneratorMesh.AddTriangulationEdgesToMesh(triMesh, mesh);
+        }
+
+        /*
         /// <summary>
         /// Add all edges from a delaunay triangulation to the mesh which are valid
         /// </summary>
@@ -267,6 +344,7 @@ namespace MorphologyMesh
 
             mesh.ClassifyMeshEdges();
         }
+        */
 
         public static MorphMeshRegionGraph GenerateRegionGraph(BajajGeneratorMesh mesh)
         {

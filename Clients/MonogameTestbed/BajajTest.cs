@@ -156,11 +156,16 @@ namespace MonogameTestbed
             //Create our mesh with only the verticies
             FirstPassTriangulation = new BajajGeneratorMesh(Polygons, PolyZ, PolyZ.Select(Z => Z != MinZ).ToArray());
 
+            string JSONPolyString = Polygons.ToJArray().ToString();
+            Trace.WriteLine(JSONPolyString); 
+
             //Create our mesh with only the verticies
             PolyViews = new PolygonSetView(Polygons);
             PolyViews.PointLabelType = IndexLabelType.MESH;
             //UpdatePolyViews();
 
+            string temp = FirstPassTriangulation.Verticies.Select(v => v.Position.XY()).Distinct().ToJSON();
+            Trace.WriteLine(temp);
             BajajMeshGenerator.AddDelaunayEdges(FirstPassTriangulation);
 
             //MeshViews.Add(CreateMeshView(FirstPassTriangulation, "FirstPassDelaunay"));
@@ -754,6 +759,41 @@ namespace MonogameTestbed
           260139
         };
 
+        long[] DelaunayTest = new long[] {
+            133882,
+            133887
+        };
+
+        long[] DelaunayTest2 = new long[] {
+            133888,
+            133883
+        };
+
+        long[] DelaunayTest3 = new long[] {
+            133890,
+            133884
+        };
+
+        long[] DelaunayTest4= new long[] {
+            133917,
+            133912
+        };
+
+        long[] DelaunayTest5 = new long[] {
+            133901,
+            133896
+        };
+
+        long[] DelaunayTest6 = new long[] {
+            133920,
+            133915
+        };
+
+        long[] DelaunayTest7 = new long[] {
+            133923,
+            133917
+        };
+
         Scene scene;
         Scene3D scene3D;
         GamePadStateTracker Gamepad = new GamePadStateTracker();
@@ -799,7 +839,8 @@ namespace MonogameTestbed
 
             /////////////
             ///This is the major test of mesh generation that covers as many cases as I could think of
-            AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromODataLocationIDs(NightmareTroubleIDS, DataSource.EndpointMap[ENDPOINT.TEST]);
+            //AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromODataLocationIDs(NightmareTroubleIDS, DataSource.EndpointMap[ENDPOINT.TEST]);
+            AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromODataLocationIDs(DelaunayTest7, DataSource.EndpointMap[ENDPOINT.RPC1]);
             //////////////
 
             //BajajMeshGenerator.ConvertToMeshGraph(graph);
