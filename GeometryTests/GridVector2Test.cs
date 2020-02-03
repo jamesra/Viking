@@ -4,6 +4,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using FsCheck;
 
 namespace UtilitiesTests
 {
@@ -64,21 +65,21 @@ namespace UtilitiesTests
         public void TestAngle()
         {
             GridVector2 A = new GridVector2(5, 0);
-            GridVector2 B = new GridVector2(2.5, 2.5); 
+            GridVector2 B = new GridVector2(2.5, 2.5);
 
             double PI4 = Math.PI / 4;
 
-            double angle = GridVector2.Angle(A,B);
+            double angle = GridVector2.Angle(A, B);
             Assert.IsTrue(angle - Global.Epsilon < (3.0 * PI4) &&
-                         angle + Global.Epsilon > (3.0 * PI4)); 
+                         angle + Global.Epsilon > (3.0 * PI4));
 
             A = new GridVector2(5, 0);
-            B = new GridVector2(2.5, -2.5); 
+            B = new GridVector2(2.5, -2.5);
 
-            angle = GridVector2.Angle(A,B);
+            angle = GridVector2.Angle(A, B);
             Assert.IsTrue(angle - Global.Epsilon < (-3.0 * PI4) &&
-                         angle + Global.Epsilon > (-3.0 * PI4)); 
-            
+                         angle + Global.Epsilon > (-3.0 * PI4));
+
             //
             // TODO: Add test logic	here
             //
@@ -86,7 +87,7 @@ namespace UtilitiesTests
 
         [TestMethod]
         public void TestAngle2()
-        { 
+        {
             const double Pi4 = Math.PI / 4.0;
             const double Pi2 = Math.PI / 2.0;
 
@@ -110,7 +111,7 @@ namespace UtilitiesTests
             //         |
             //    G    |    H
             //         D
-             
+
 
             //Start by testing angles on the axis
             double Degree90 = GridVector2.ArcAngle(Origin, A, B);
@@ -118,7 +119,7 @@ namespace UtilitiesTests
 
             Degree90 = GridVector2.ArcAngle(Origin, B, A);
             Assert.AreEqual(Degree90, -Pi2);
-             
+
             double Degree180 = GridVector2.ArcAngle(Origin, A, C);
             Assert.AreEqual(Degree180, Math.PI);
 
@@ -126,7 +127,7 @@ namespace UtilitiesTests
             Assert.AreEqual(BD_Degree180, Math.PI);
 
             double Degree0 = GridVector2.Angle(Origin, A);
-            Assert.AreEqual(Degree0, 0); 
+            Assert.AreEqual(Degree0, 0);
 
             Degree90 = GridVector2.Angle(Origin, B);
             Assert.AreEqual(Degree90, Pi2);
@@ -205,7 +206,7 @@ namespace UtilitiesTests
             Assert.AreEqual(Degree0, 0);
 
             Degree90 = GridVector2.Angle(Origin, B);
-            Assert.AreEqual(Degree90, Pi2); 
+            Assert.AreEqual(Degree90, Pi2);
         }
 
         [TestMethod]
@@ -418,7 +419,7 @@ namespace UtilitiesTests
         [TestMethod]
         public void TestIsLeft2()
         {
-            //Is a point to the left when standing at A looking at B 
+            //Is a point to the left of both line segments pq & qr
             //
             //         r
             //        /
@@ -431,7 +432,7 @@ namespace UtilitiesTests
 
             GridVector2 left = new GridVector2(1, 1);
             GridVector2 right = new GridVector2(1, -1);
-            GridVector2 on = q; 
+            GridVector2 on = q;
 
             GridVector2[] pqr = new GridVector2[] { p, q, r };
 
@@ -442,7 +443,7 @@ namespace UtilitiesTests
             left = new GridVector2(6, 7);
             right = new GridVector2(-5, -1);
             on = new GridVector2(-5, 0);
-             
+
             Assert.AreEqual(GridVector2.IsLeftSide(left, pqr), 1);
             Assert.AreEqual(GridVector2.IsLeftSide(right, pqr), -1);
             Assert.AreEqual(GridVector2.IsLeftSide(on, pqr), 0);
@@ -461,5 +462,30 @@ namespace UtilitiesTests
             Assert.AreEqual(GridVector2.IsLeftSide(right, pqr), -1);
             Assert.AreEqual(GridVector2.IsLeftSide(on, pqr), 0);
         }
+        /*
+        static bool IsLeftTest(GridVector2 t, GridVector2[] pqr)
+        {
+            int result = GridVector2.IsLeftSide(t, pqr);
+        }
+
+        [TestMethod]
+        public void FsCheckIsLeft()
+        {
+            //My first experimental foray into fscheck
+            //Is a point to the left when standing at p looking at q
+            //
+            //         r
+            //        /
+            //       /
+            // p----q
+            //
+            //Start with cases where the point is always left of the line
+
+            Func<GridVector2, GridVector2[], int> leftIsLeft = GridVector2.IsLeftSide;
+
+            Prop.GivenleftIsLeft.QuickCheck();
+
+         }
+         */
     }
 }

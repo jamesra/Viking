@@ -4,7 +4,8 @@ using System.Collections.Generic;
 using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Diagnostics;
-using Geometry; 
+using Geometry;
+using FsCheck;
 
 namespace GeometryTests
 {
@@ -410,6 +411,16 @@ namespace GeometryTests
             }
         }
 
+        /*
+        public void TestSubdivideWithFSCheck()
+        {
+            Func<double, GridLineSegment, bool> subdivide_check = (val, line) =>
+            {
+                GridVector2 linePoint = line.PointAlongLine(val);
+
+            };
+        }*/
+
         [TestMethod]
         public void TestIsLeft()
         {
@@ -445,5 +456,42 @@ namespace GeometryTests
             on = new GridVector2(-1, 0);
             Assert.AreEqual(line.IsLeft(on), 0);
         }
+
+        [TestMethod]
+        public void TestIsLeftWithFSCheck()
+        {
+            Arb.Register<GridVector2Generators>();
+
+            Func<GridVector2, GridVector2, GridVector2, bool> IsLeftCheck = (p, q, r) =>
+            {
+                if (p == q || q == r || r == p)
+                    return true; 
+
+                GridLineSegment pq = new GridLineSegment(p, q);
+                GridLineSegment pr = new GridLineSegment(p, r);
+
+                int r_isleft = pq.IsLeft(r);
+                Assert.IsTrue(r_isleft >= -1);
+                Assert.IsTrue(r_isleft <= 1);
+
+                int q_isleft = pr.IsLeft(q);
+                Assert.IsTrue(q_isleft >= -1);
+                Assert.IsTrue(q_isleft <= 1);
+
+                if (r_isleft == 0)
+                {
+                    Assert.AreEqual(q_isleft, r_isleft);
+                    return q_isleft == r_isleft; 
+                }
+                else
+                {
+                    Assert.AreEqual(-q_isleft, r_isleft);
+                    return -q_isleft == r_isleft;
+                }
+            };
+
+            Prop.ForAll<GridVector2, GridVector2, GridVector2>(IsLeftCheck).QuickCheck();
+       }
+        
     }
 }

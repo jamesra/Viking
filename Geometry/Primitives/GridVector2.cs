@@ -150,6 +150,17 @@ namespace Geometry
             this.Y = y;
         }
 
+        static System.Random random = new Random();
+
+        public static GridVector2 Random()
+        {
+            //Todo: Move this to a static global
+            var p = new GridVector2(random.NextDouble(), random.NextDouble());
+            //System.Diagnostics.Trace.WriteLine(string.Format("{0}", p));
+
+            return p;
+        }
+
         public GridVector3 ToGridVector3(double Z)
         {
             return new GridVector3(this.X, this.Y, Z);
