@@ -291,7 +291,8 @@ namespace Geometry
 
         public override string ToString()
         {
-            return string.Format("X: {0:F2} Y: {1:F2}", X, Y);
+            //return string.Format("X: {0:F2} Y: {1:F2}", X, Y);
+            return '{' + string.Format("\"X\":{0:F2},\"Y\":{1:F2}", X, Y) + '}';
         }
 
         public string ToLabel()
@@ -465,7 +466,7 @@ namespace Geometry
 
             if (Angle < 0)
                 Angle += Math.PI * 2;
-            else if (Angle > Math.PI * 2)
+            else if (Angle >= Math.PI * 2)
                 Angle -= Math.PI * 2;
 
             return Angle;
@@ -488,7 +489,7 @@ namespace Geometry
 
             if (Angle < 0)
                 Angle += Math.PI * 2;
-            else if (Angle > Math.PI * 2)
+            else if (Angle >= Math.PI * 2)
                 Angle -= Math.PI * 2;
 
             return Angle;
@@ -511,7 +512,7 @@ namespace Geometry
 
             if (Angle < 0)
                 Angle += Math.PI * 2;
-            else if (Angle > Math.PI * 2)
+            else if (Angle >= Math.PI * 2)
                 Angle -= Math.PI * 2;
 
             return Angle;
