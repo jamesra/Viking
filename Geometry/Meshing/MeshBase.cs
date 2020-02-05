@@ -220,6 +220,10 @@ namespace Geometry.Meshing
                 Offset += 1;
             }
 
+            //If verts was empty just exit;
+            if (Offset == 0)
+                return iStart;
+
             _Verticies.AddRange(verts);
             UpdateBoundingBox(verts);
             return iStart;

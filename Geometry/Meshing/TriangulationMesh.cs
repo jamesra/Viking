@@ -870,7 +870,7 @@ namespace Geometry.Meshing
                         if(intersection as IPoint2D != null && candidateEdgeSeg.IsEndpoint((IPoint2D)intersection))
                         {
                             FindIntersectingEdges(testFace, constrained_edge, constrained_seg, candidate, ref intersected_edges);
-                            throw new ArgumentException("Not implemented: Constrained edge passes directly through vertex"); 
+                            throw new NotImplementedException("Constrained edge passes directly through vertex");
                         }
                         else
                         {
