@@ -1,4 +1,4 @@
-﻿#define TRACEDELAUNAY
+﻿//#define TRACEDELAUNAY
 
 using System;
 using System.Collections.Generic;
@@ -71,11 +71,6 @@ namespace Geometry
                 throw new ArgumentNullException("Verticies must not be null.");
             }
 
-            if (verts.Length < 3)
-            {
-                return null;
-            }
-
             TriangulationMesh<VERTEX> mesh = new TriangulationMesh<VERTEX>();
             mesh.AddVerticies(verts);
 
@@ -83,7 +78,7 @@ namespace Geometry
 
             //try
             //{
-                RecursiveDivideAndConquerDelaunay(mesh, subset, ReportProgress: ReportProgress);
+            RecursiveDivideAndConquerDelaunay(mesh, subset, ReportProgress: ReportProgress);
             //}
             //catch
             //{
@@ -97,13 +92,16 @@ namespace Geometry
                     CheckEdgeFlip(mesh, f, ReportProgress);
                 }
             }
-           
+
 #if DEBUG
+            Debug.Assert(mesh.AnyMeshEdgesIntersect() == false, "Mesh Edges Intersect");
+
             foreach(Face f in mesh.Faces)
             {
                 Debug.Assert(mesh.IsTriangleDelaunay(f), string.Format("{0} is not a delaunay triangle", f));
                 Debug.Assert(mesh.IsClockwise(f) == false);
             }
+            
 #endif
             //return TriangleIndicies;
             return mesh;
@@ -205,108 +203,24 @@ namespace Geometry
 
             SortedSet<IEdgeKey> AddedEdges = new SortedSet<IEdgeKey>();
 
-            VERTEX L, R;
+            // VERTEX L, R;
 
-            //TODO: The first vertex needs to be the index sorted on the opposite axis as the cut. 
-            L = mesh[FirstHalfSet.SortedAlongCutAxisVertSet.First()];
-            R = mesh[SecondHalfSet.SortedAlongCutAxisVertSet.First()];
+            //FindBaselineByAngle(mesh, FirstHalfSet, SecondHalfSet, out VERTEX L, out VERTEX R);
+            FindBaselineByLeftOfLineTest(mesh, FirstHalfSet, SecondHalfSet, out VERTEX L, out VERTEX R);
 
-            //L = mesh[FirstHalfSet.SortedOppositeCutAxisVertSet.First()];
-            //R = mesh[SecondHalfSet.SortedOppositeCutAxisVertSet.First()];
+            Edge baseEdge = new Edge(L.Index, R.Index);
+            mesh.AddEdge(baseEdge);
 
-            //TODO: I changed the above two lines before quitting for the night.  Check if the
-            //loop below is still needed
-
-            //Create the base LR edge
-            while (true)
-            {  
-                //Edge case: Both sets of points are in opposite quadrants:
-                //
-                //Vertical cut:             Horizontal cut:
-                //        
-                //         0                            0
-                //          \                            \
-                //           1                            1
-                //                               3
-                //    _--3                       /
-                // 2--                          2
-                //
-                //In the case above 2-1 is the edge using the smallest Y value from each set (2,3) & (0,1).  However this leaves 3 below the origin line. 
-                //To handle this we check that 2 and 1 do not have verticies clockwise or ccw from the origin line respectively.
-
-                EdgeAngle[] L_CW_Candidates  = EdgesByAngle(mesh, L, R.Index, true);
-                EdgeAngle[] R_CCW_Candidates = EdgesByAngle(mesh, R, L.Index, false);
-
-                //I can't find a case where the correct base LR edge is going to have an angle beyond 90 degrees.  Ideally I should only check for an angle
-                //less than the angle from the origin line to the axis, but that angle is always less than 90.
-
-                //Clockwise is from the testAngleAxisLine to the point.
-#if TRACEDELAUNAY
-                if (FirstHalfSet.CutAxis == CutDirection.HORIZONTAL)
-                {
-                    string s = string.Format("Horizontal: Left | Right reversed {0} | {1}", FirstHalfSet, SecondHalfSet);
-                    Trace.WriteLineIf(L.Position.Y > R.Position.Y, s);
-                    Debug.Assert(L.Position.Y < R.Position.Y, s);
-                }
-                else
-                {
-                    string s = string.Format("Vertical: Left | Right reversed {0} | {1}", FirstHalfSet, SecondHalfSet);
-                    Trace.WriteLineIf(L.Position.X > R.Position.X, s);
-                    Debug.Assert(L.Position.X < R.Position.X, s);
-                }
-#endif
-                /*
-               GridLine testAngleAxisLine = new GridLine(L.Position, FirstHalfSet.CutAxis == CutDirection.VERTICAL ? GridVector2.UnitX : GridVector2.UnitY);
-
-               if(L_CW_Candidates.Length > 0 || R_CCW_Candidates.Length > 0)
-               {
-                   double L_Max_Angle = GridVector2.AbsArcAngle(testAngleAxisLine, R.Position, false);//Check angles from the base line to parallel with the cut axis
-                   Debug.Assert(L_Max_Angle <= Math.PI);
-                   double R_Max_Angle = Math.PI - L_Max_Angle;
-
-                   L_CW_Candidates = L_CW_Candidates.Where(c => L_Max_Angle - c.Angle > Global.Epsilon).ToArray();
-                   R_CCW_Candidates = R_CCW_Candidates.Where(c => R_Max_Angle - c.Angle > Global.Epsilon).ToArray();
-               }
-               */
-
-                L_CW_Candidates = L_CW_Candidates.Where(c => Math.PI - c.Angle > Global.Epsilon).ToArray();
-                R_CCW_Candidates = R_CCW_Candidates.Where(c => Math.PI - c.Angle > Global.Epsilon).ToArray();
-                
-                bool BaselineFound = true;
-                ///If we can find a point below the baseline, use the point from the highest angle from the baseline
-                if(L_CW_Candidates.Length > 0)
-                {
-#if TRACEDELAUNAY
-                    Trace.WriteLine(string.Format("Reject Baseline: {0}-{1} for {2}", L.Index, R.Index, L_CW_Candidates.First().Target));
-#endif
-                    L = mesh[L_CW_Candidates.First().Target];
-                    BaselineFound = false;
-                }
-                
-                if(R_CCW_Candidates.Length > 0)
-                {
-#if TRACEDELAUNAY
-                    Trace.WriteLine(string.Format("Reject Baseline: {0}-{1} for {2}", L.Index, R.Index, R_CCW_Candidates.First().Target));
-#endif
-                    R = mesh[R_CCW_Candidates.First().Target];
-                    BaselineFound = false;
-                }
-
-                if(!BaselineFound)
-                {
-                    continue; 
-                }
-
-                Edge baseEdge = new Edge(L.Index, R.Index);
-                mesh.AddEdge(baseEdge);
-                AddedEdges.Add(baseEdge);
-
-#if TRACEDELAUNAY
-                Trace.WriteLine(string.Format("Add Baseline: {0}-{1}", L.Index, R.Index));
-#endif 
-                break;
+            if (ReportProgress != null)
+            {
+                ReportProgress(mesh);
             }
 
+            AddedEdges.Add(baseEdge);
+
+#if TRACEDELAUNAY
+            Trace.WriteLine(string.Format("Add Baseline: {0}-{1}", L.Index, R.Index));
+#endif 
             //Rotate counter clockwise from the L set, and clockwise from the R set to identify the next candidate points
 
             IVertex2D LOrigin = L;
@@ -501,7 +415,278 @@ namespace Geometry
              
             return null;
         }
-         
+
+        private static void FindBaselineByAngle(TriangulationMesh<VERTEX> mesh, MeshCut LowerHalfSet, MeshCut UpperHalfSet, out VERTEX LowerOrigin, out VERTEX UpperOrigin)
+        {
+
+            //TODO: The first vertex needs to be the index sorted on the opposite axis as the cut. 
+            VERTEX L = mesh[LowerHalfSet.SortedAlongCutAxisVertSet.First()];
+            VERTEX R = mesh[UpperHalfSet.SortedAlongCutAxisVertSet.First()];
+
+            //L = mesh[FirstHalfSet.SortedOppositeCutAxisVertSet.First()];
+            //R = mesh[SecondHalfSet.SortedOppositeCutAxisVertSet.First()];
+
+            //TODO: I changed the above two lines before quitting for the night.  Check if the
+            //loop below is still needed
+
+            //Create the base LR edge
+            while (true)
+            {
+                //Edge case: Both sets of points are in opposite quadrants:
+                //
+                //Vertical cut:             Horizontal cut:
+                //        
+                //         0                            0
+                //          \                            \
+                //           1                            1
+                //                               3
+                //    _--3                       /
+                // 2--                          2
+                //
+                //In the case above 2-1 is the edge using the smallest Y value from each set (2,3) & (0,1).  However this leaves 3 below the origin line. 
+                //To handle this we check that 2 and 1 do not have verticies clockwise or ccw from the origin line respectively.
+
+                EdgeAngle[] L_CW_Candidates = EdgesByAngle(mesh, L, R.Index, true);
+                EdgeAngle[] R_CCW_Candidates = EdgesByAngle(mesh, R, L.Index, false);
+
+                //I can't find a case where the correct base LR edge is going to have an angle beyond 90 degrees.  Ideally I should only check for an angle
+                //less than the angle from the origin line to the axis, but that angle is always less than 90.
+
+                //Clockwise is from the testAngleAxisLine to the point.
+#if TRACEDELAUNAY
+                if (LowerHalfSet.CutAxis == CutDirection.HORIZONTAL)
+                {
+                    string s = string.Format("Horizontal: Left | Right reversed {0} | {1}", LowerHalfSet, UpperHalfSet);
+                    Trace.WriteLineIf(L.Position.Y > R.Position.Y, s);
+                    Debug.Assert(L.Position.Y < R.Position.Y, s);
+                }
+                else
+                {
+                    string s = string.Format("Vertical: Left | Right reversed {0} | {1}", LowerHalfSet, UpperHalfSet);
+                    Trace.WriteLineIf(L.Position.X > R.Position.X, s);
+                    Debug.Assert(L.Position.X < R.Position.X, s);
+                }
+#endif
+                /*
+               GridLine testAngleAxisLine = new GridLine(L.Position, FirstHalfSet.CutAxis == CutDirection.VERTICAL ? GridVector2.UnitX : GridVector2.UnitY);
+
+               if(L_CW_Candidates.Length > 0 || R_CCW_Candidates.Length > 0)
+               {
+                   double L_Max_Angle = GridVector2.AbsArcAngle(testAngleAxisLine, R.Position, false);//Check angles from the base line to parallel with the cut axis
+                   Debug.Assert(L_Max_Angle <= Math.PI);
+                   double R_Max_Angle = Math.PI - L_Max_Angle;
+
+                   L_CW_Candidates = L_CW_Candidates.Where(c => L_Max_Angle - c.Angle > Global.Epsilon).ToArray();
+                   R_CCW_Candidates = R_CCW_Candidates.Where(c => R_Max_Angle - c.Angle > Global.Epsilon).ToArray();
+               }
+               */
+
+                L_CW_Candidates = L_CW_Candidates.Where(c => Math.PI - c.Angle > Global.Epsilon).ToArray();
+                R_CCW_Candidates = R_CCW_Candidates.Where(c => Math.PI - c.Angle > Global.Epsilon).ToArray();
+
+                bool BaselineFound = true;
+                ///If we can find a point below the baseline, use the point from the highest angle from the baseline
+                if (L_CW_Candidates.Length > 0)
+                {
+#if TRACEDELAUNAY
+                    Trace.WriteLine(string.Format("Reject Baseline: {0}-{1} for {2}", L.Index, R.Index, L_CW_Candidates.First().Target));
+#endif
+                    L = mesh[L_CW_Candidates.First().Target];
+                    BaselineFound = false;
+                }
+
+                if (R_CCW_Candidates.Length > 0)
+                {
+#if TRACEDELAUNAY
+                    Trace.WriteLine(string.Format("Reject Baseline: {0}-{1} for {2}", L.Index, R.Index, R_CCW_Candidates.First().Target));
+#endif
+                    R = mesh[R_CCW_Candidates.First().Target];
+                    BaselineFound = false;
+                }
+
+                if (!BaselineFound)
+                {
+                    continue;
+                }
+
+                break;
+            }
+
+            LowerOrigin = L;
+            UpperOrigin = R;
+            return;
+        }
+
+        /// <summary>
+        /// Checks for a baseline vertex by ensuring no vertex is to the left of the Lower and Upper set's first vertex.
+        /// </summary>
+        /// <param name="mesh"></param>
+        /// <param name="LowerHalfSet"></param>
+        /// <param name="UpperHalfSet"></param>
+        /// <param name="LowerOrigin"></param>
+        /// <param name="UpperOrigin"></param>
+        private static void FindBaselineByLeftOfLineTest(TriangulationMesh<VERTEX> mesh, MeshCut LowerHalfSet, MeshCut UpperHalfSet, out VERTEX LowerOrigin, out VERTEX UpperOrigin)
+        {
+
+            //TODO: The first vertex needs to be the index sorted on the opposite axis as the cut. 
+            VERTEX L; 
+            VERTEX R;
+
+            if (LowerHalfSet.CutAxis == CutDirection.HORIZONTAL)
+            {
+                L = mesh[LowerHalfSet.SortedAlongCutAxisVertSet.Last()];
+                R = mesh[UpperHalfSet.SortedAlongCutAxisVertSet.Last()];
+            }
+            else
+            {
+                L = mesh[LowerHalfSet.SortedAlongCutAxisVertSet.First()];
+                R = mesh[UpperHalfSet.SortedAlongCutAxisVertSet.First()];
+            }
+
+            GridLineSegment LR_baseline_candidate;
+            GridLineSegment RL_baseline_candidate;
+
+            //L = mesh[FirstHalfSet.SortedOppositeCutAxisVertSet.First()];
+            //R = mesh[SecondHalfSet.SortedOppositeCutAxisVertSet.First()];
+
+            //TODO: I changed the above two lines before quitting for the night.  Check if the
+            //loop below is still needed
+
+            //Create the base LR edge
+
+            while (true)
+            {
+                //Edge case: Both sets of points are in opposite quadrants:
+                //
+                //Vertical cut:             Horizontal cut:
+                //        
+                //         0                            0
+                //          \                            \
+                //           1                            1
+                //                               3
+                //    _--3                       /
+                // 2--                          2
+                //
+                //In the case above 2-1 is the edge using the smallest Y value from each set (2,3) & (0,1).  However this leaves 3 below the origin line. 
+                //To handle this we check that 2 and 1 do not have verticies clockwise or ccw from the origin line respectively.
+
+                LR_baseline_candidate = mesh.ToGridLineSegment(L.Index, R.Index);
+                RL_baseline_candidate = mesh.ToGridLineSegment(R.Index, L.Index);
+
+                int[] L_Origin_Candidates = mesh[L.Index].Edges.Select(e => e.OppositeEnd(L.Index)).ToArray();
+                int[] R_Origin_Candidates = mesh[R.Index].Edges.Select(e => e.OppositeEnd(R.Index)).ToArray();
+
+                int[] L_Origin_Candidates_IsLeft = L_Origin_Candidates.Select(iVert => LR_baseline_candidate.IsLeft(mesh[iVert].Position)).ToArray();
+                //Reverse the IsLeft result for the Upper->Lower line
+                int[] R_Origin_Candidates_IsLeft = R_Origin_Candidates.Select(iVert => LR_baseline_candidate.IsLeft(mesh[iVert].Position)).ToArray();
+
+                /*
+                if (LowerHalfSet.CutAxis == CutDirection.HORIZONTAL)
+                {
+                    for (int i = 0; i < L_Origin_Candidates_IsLeft.Length; i++)
+                        L_Origin_Candidates_IsLeft[i] = -L_Origin_Candidates_IsLeft[i];
+
+                    for (int i = 0; i < R_Origin_Candidates_IsLeft.Length; i++)
+                        R_Origin_Candidates_IsLeft[i] = -R_Origin_Candidates_IsLeft[i];
+                }
+                */
+
+                bool NewCandidateFound = false;
+
+                for (int i = 0; i < L_Origin_Candidates.Length; i++)
+                { 
+                    //For the case of a point on the line we use the closer point to the R origin
+                    if(L_Origin_Candidates_IsLeft[i] == 0)
+                    {
+                        int L_Candidate = L_Origin_Candidates[i];
+                        double L_R_Distance = GridVector2.DistanceSquared(L.Position, R.Position);
+                        double L_Candidate_Distance = GridVector2.DistanceSquared(mesh[L_Candidate].Position, R.Position);
+                        if(L_R_Distance > L_Candidate_Distance)
+                        {
+                            //OK, the point on the L_R baseline is closer, switch to the new baseline.  Repeat the search.
+#if TRACEDELAUNAY
+                            Trace.WriteLine(string.Format("Reject Left Baseline: {0}-{1} for {2}", L.Index, R.Index, L_Candidate));
+#endif
+                            L = mesh[L_Candidate];
+                            NewCandidateFound = true;
+
+                            break;
+                        }
+                    }
+                    else if(L_Origin_Candidates_IsLeft[i] < 0)
+                    {
+                        int L_Candidate = L_Origin_Candidates[i];
+#if TRACEDELAUNAY
+                        Trace.WriteLine(string.Format("Reject Left Baseline: {0}-{1} for {2}-{1}", L.Index, R.Index, L_Candidate));
+#endif
+                        L = mesh[L_Candidate];
+                        NewCandidateFound = true;
+                        break;
+                    }
+                }
+
+                //If we changed the L Origin, then repeat the search with the new origin
+                if (NewCandidateFound)
+                    continue;
+
+                for (int i = 0; i < R_Origin_Candidates.Length; i++)
+                {
+                    //For the case of a point on the line we use the closer point to the R origin
+                    if (R_Origin_Candidates_IsLeft[i] == 0)
+                    {
+                        int R_Candidate = R_Origin_Candidates[i];
+                        double L_R_Distance = GridVector2.DistanceSquared(L.Position, R.Position);
+                        double R_Candidate_Distance = GridVector2.DistanceSquared(mesh[R_Candidate].Position, L.Position);
+                        if (L_R_Distance > R_Candidate_Distance)
+                        {
+                            //OK, the point on the L_R baseline is closer, switch to the new baseline.  Repeat the search.
+#if TRACEDELAUNAY
+                            Trace.WriteLine(string.Format("Reject Right Baseline: {0}-{1} for {2}", L.Index, R.Index, R_Candidate));
+#endif
+                            R = mesh[R_Candidate];
+                            NewCandidateFound = true;
+                            break;
+                        }
+                    }
+                    else if (R_Origin_Candidates_IsLeft[i] < 0)
+                    {
+                        int R_Candidate = R_Origin_Candidates[i];
+#if TRACEDELAUNAY
+                        Trace.WriteLine(string.Format("Reject Right Baseline: {0}-{1} for {0}-{2}", L.Index, R.Index, R_Candidate));
+#endif
+                        R = mesh[R_Candidate];
+                        NewCandidateFound = true;
+                        break;
+                    }
+                }
+                 
+                if (NewCandidateFound)
+                {
+                    continue;
+                }
+
+                break;
+            }
+
+            /*
+            if (LowerHalfSet.CutAxis == CutDirection.HORIZONTAL)
+            {
+                LowerOrigin = R;
+                UpperOrigin = L;
+            }
+            else
+            {
+                LowerOrigin = L;
+                UpperOrigin = R;
+            }
+            */
+
+            LowerOrigin = L;
+            UpperOrigin = R;
+
+            return;
+        }
+
         /// <summary>
         /// Yields a set of connected verticies in order of rotation from the edge running from origin to target vertex. 
         /// Does not include target vertex in results and does not return edges with an angle 180 degrees or more.
@@ -518,9 +703,13 @@ namespace Geometry
             MeshEdgeAngleComparerFixedIndex<VERTEX> angleComparer = new MeshEdgeAngleComparerFixedIndex<VERTEX>(mesh, Origin.Index, new GridLine(Origin.Position, target - Origin.Position), clockwise);
 
             List<long> edge_list = Origin.Edges.Select(e => e.OppositeEnd((long)Origin.Index)).Where(e => e != origin_edge_target).ToList();
-            EdgeAngle[] edgeAngles = edge_list.Select(edge => new EdgeAngle(Origin.Index, edge, angleComparer.MeasureAngle(edge), clockwise)).Where(edge => edge.Angle > 0 && edge.Angle < Math.PI).ToArray();
 
-            Array.Sort(edgeAngles.Select(e => e.Angle).ToArray(), edgeAngles);
+            //We have to include angle == 0 for the case where points are on a uniform grid.  This allows the baseline finding code to correctly locate the point nearest the cut line.
+            //EdgeAngle[] edgeAngles = edge_list.Select(edge => new EdgeAngle(Origin.Index, edge, angleComparer.MeasureAngle(edge), clockwise)).Where(edge => edge.Angle >= 0 && edge.Angle < Math.PI).ToArray();
+            EdgeAngle[] edgeAngles = edge_list.Select(edge => new EdgeAngle(Origin.Index, edge, angleComparer.MeasureAngle(edge), clockwise)).ToArray();
+            EdgeAngle[] edgeAnglesFiltered = edgeAngles.Where(edge => edge.Angle >= 0 && edge.Angle < Math.PI).ToArray();
+
+            Array.Sort(edgeAnglesFiltered.Select(e => e.Angle).ToArray(), edgeAnglesFiltered);
 
 
             /*
@@ -555,7 +744,7 @@ namespace Geometry
                 edgeAngles[i] = ea; 
             }
              */
-            return edgeAngles;
+            return edgeAnglesFiltered;
         }
 
         private static IVertex2D TryGetNextCandidate(TriangulationMesh<VERTEX> mesh, ref List<EdgeAngle> sortedCandidates, Baseline baseline, bool Clockwise, out double angle, out GridCircle? circle)
@@ -593,7 +782,17 @@ namespace Geometry
                     circle = new GridCircle?();
                     return null;
                 }
-                
+
+                //Check edge cases where we are very near PI to ensure the point is not on the line
+                if (angle >= (Math.PI - Global.Epsilon))
+                {
+                    if (baseline.Segment.IsLeft(candidateVert.Position) == 0)
+                    {
+                        circle = new GridCircle?();
+                        return null;
+                    }
+                }
+
                 //If there are no other candidates, then we can return this vertex
                 if (sortedCandidates.Count == 1)
                 {
@@ -833,381 +1032,4 @@ namespace Geometry
         
     }
 
-    class MeshCut
-    {
-        public GridRectangle BoundingBox;
-
-        public readonly CutDirection CutAxis;
-
-        public long[] XSortedVerts;
-        public long[] YSortedVerts;
-
-        /// <summary>
-        /// Used for quick Contains tests
-        /// </summary>
-        private HashSet<long> _AllVerts;
-
-        /// <summary>
-        /// When set to true, the XSortedVerts with equal X values are sorted by ascending Y value, otherwise by descending Y value
-        /// </summary>
-        public bool XSecondAxisAscending = true;
-
-        /// <summary>
-        /// When set to true, the YSortedVerts with equal Y values are sorted by ascending X value, otherwise by descending X value
-        /// </summary>
-        public bool YSecondAxisAscending = true;
-
-        public long Count { get { return XSortedVerts.LongLength; } }
-
-        public bool Contains(long value)
-        {
-            return _AllVerts.Contains(value);
-        }
-
-        public IReadOnlyList<long> Verticies { get { return CutAxis == CutDirection.HORIZONTAL ? XSortedVerts : YSortedVerts; } }
-
-        public long[] SortedAlongCutAxisVertSet
-        {
-            get { return CutAxis == CutDirection.VERTICAL ? YSortedVerts : XSortedVerts; }
-            set
-            {
-                if (CutAxis == CutDirection.VERTICAL)
-                {
-                    YSortedVerts = value;
-                }
-                else
-                {
-                    XSortedVerts = value;
-                }
-            }
-        }
-
-        public long[] SortedOppositeCutAxisVertSet
-        {
-            get { return CutAxis == CutDirection.VERTICAL ? XSortedVerts : YSortedVerts; }
-            set
-            {
-                if (CutAxis == CutDirection.VERTICAL)
-                {
-                    XSortedVerts = value;
-                }
-                else
-                {
-                    YSortedVerts = value;
-                }
-            }
-        }
-
-        public long this[long key]
-        {
-            get
-            {
-                return SortedOppositeCutAxisVertSet[key];
-            }
-            set
-            {
-                SortedOppositeCutAxisVertSet[key] = value;
-            }
-        }
-
-        public int this[int key]
-        {
-            get
-            {
-                return (int)SortedOppositeCutAxisVertSet[key];
-            }
-            set
-            {
-                SortedOppositeCutAxisVertSet[key] = value;
-            }
-        }
-
-        public MeshCut(long[] SortedAlongAxis, long[] SortedOppositeAxis, CutDirection cutAxis, GridRectangle boundingRect)
-        {
-            CutAxis = cutAxis;
-            XSortedVerts = cutAxis == CutDirection.HORIZONTAL ? SortedAlongAxis : SortedOppositeAxis;
-            YSortedVerts = cutAxis == CutDirection.HORIZONTAL ? SortedOppositeAxis : SortedAlongAxis;
-            BoundingBox = boundingRect;
-
-            _AllVerts = new HashSet<long>(SortedAlongAxis);
-        }
-
-        public override string ToString()
-        {
-            StringBuilder sb = new StringBuilder();
-            foreach(long index in SortedAlongCutAxisVertSet)
-            {
-                sb.AppendFormat("{0} ", index);
-            }
-
-            return sb.ToString();
-        }
-
-
-        public void SplitIntoHalves(IReadOnlyList<IVertex2D> mesh, out MeshCut LowerSubset, out MeshCut UpperSubset)
-        {
-            //Split the verticies into smaller groups and then merge the resulting triangulations
-            CutDirection cutDirection = BoundingBox.Width > BoundingBox.Height ? CutDirection.VERTICAL : CutDirection.HORIZONTAL;
-
-            long[] NewSortedAlongCutAxisVertSet;
-            long[] NewSortedOppositeCutAxisVertSet;
-
-            bool AxisAscending; 
-
-            //Sort our verticies according to the new direction
-            if (cutDirection == CutDirection.HORIZONTAL)
-            {
-                //Use the mesh's ordering arrays to determine the new sorted vertex order
-                NewSortedAlongCutAxisVertSet = XSortedVerts;
-                NewSortedOppositeCutAxisVertSet = YSortedVerts;
-                AxisAscending = XSecondAxisAscending;
-            }
-            else
-            {
-                NewSortedAlongCutAxisVertSet = YSortedVerts;
-                NewSortedOppositeCutAxisVertSet = XSortedVerts;
-                AxisAscending = YSecondAxisAscending;
-            }
-
-            
-
-            //TODO: I'm 99% certain there is a way to get the verts sorted on the new axis just by indexing the arrays, but it is late and I'm not seeing it.  
-            //These are the notes I wrote trying to figure it out:
-            //A,B,C,D,E,F X Values
-            //0,1,2,3,4,5 Y Values
-
-            //B3,A2,C5,D1,F4,E0 Mesh Verts
-
-            // 1, 0, 2, 3, 5, 4 Verts SortedOnX
-            // 3, 2, 5, 1, 4, 0 Verts SortedOnY
-
-            // 0, 3, 4, 5(B3, D1, F4, E0) Sample Index Set
-
-            //XSorted Indices for Set
-            //    1, 3, 5, 4       XSorted Indicies
-            //   B3, D1, E0, F4   XSorted Set
-
-            //YSorted Indicies for Set
-            // 3, 1, 4, 0      YSorted Indicies            
-            //E0, D1, B3, F4, YSorted Set
-
-
-            //Divide verticies into two groups along the axis
-            long nLowerHalf = NewSortedAlongCutAxisVertSet.LongLength / 2;
-            long nUpperHalf = NewSortedAlongCutAxisVertSet.LongLength - nLowerHalf;
-                        
-            long[] LowerHalfAlongAxis = new long[nLowerHalf];
-            long[] UpperHalfAlongAxis = new long[nUpperHalf];
-            long[] LowerHalfOppAxis = new long[LowerHalfAlongAxis.LongLength];
-            long[] UpperHalfOppAxis = new long[UpperHalfAlongAxis.LongLength];
-
-            Array.Copy(NewSortedOppositeCutAxisVertSet, LowerHalfOppAxis, LowerHalfOppAxis.LongLength);
-            Array.Copy(NewSortedOppositeCutAxisVertSet, LowerHalfOppAxis.LongLength, UpperHalfOppAxis, 0, UpperHalfOppAxis.LongLength);
-
-            //GridVector2 DivisionPoint = (mesh[(int)FirstHalfOppAxis.Last()].Position + mesh[(int)SecondHalfAlongAxis.First()].Position) / 2.0;
-            GridVector2 DivisionPoint = mesh[(int)LowerHalfOppAxis.Last()].Position;
-
-            //Divide the opposite axis sorted set into two groups as well
-            long iLowerHalfAdd = 0;
-            long iUpperHalfAdd = 0;
-
-#if TRACEDELAUNAY
-            Debug.WriteLine(string.Format("{0}--------{1}-------",cutDirection, DivisionPoint));
-#endif
-            GridVector2[] vertPosArray = NewSortedAlongCutAxisVertSet.Select(i => mesh[(int)i].Position).ToArray();
-            for (long i = 0; i < NewSortedAlongCutAxisVertSet.LongLength; i++)
-            {
-                long iVert = NewSortedAlongCutAxisVertSet[i];
-                GridVector2 vertPos = vertPosArray[i];//mesh[(int)iVert].Position;
-                bool AssignToLower = false; 
-                if (cutDirection == CutDirection.HORIZONTAL)
-                {
-                    if (vertPos.Y < DivisionPoint.Y)
-                    {
-                        AssignToLower = true;
-                    }
-                    else if (vertPos.Y == DivisionPoint.Y)
-                    {
-                        AssignToLower = iVert == LowerHalfOppAxis.Last() || LowerHalfOppAxis.Contains(iVert);
-                    }
-                    else
-                    {
-                        AssignToLower = false;
-                    }
-                }
-                else
-                {
-                    if (vertPos.X < DivisionPoint.X)
-                    {
-                        AssignToLower = true;
-                    }
-                    else if(vertPos.X == DivisionPoint.X)
-                    {
-                        AssignToLower = iVert == LowerHalfOppAxis.Last() || LowerHalfOppAxis.Contains(iVert);
-                    }
-                    else
-                    {
-                        AssignToLower = false;
-                    }
-                }
-
-                if(AssignToLower)
-                {
-#if TRACEDELAUNAY
-                    Debug.WriteLine(string.Format("1st <- {0}: {1}", iVert, vertPos));
-#endif
-
-                    LowerHalfAlongAxis[iLowerHalfAdd] = iVert;
-                    iLowerHalfAdd += 1;
-                }
-                else
-                {
-
-#if TRACEDELAUNAY
-                    Debug.WriteLine(string.Format("2nd <- {0}: {1}", iVert, vertPos));
-#endif
-
-                    UpperHalfAlongAxis[iUpperHalfAdd] = iVert;
-                    iUpperHalfAdd += 1;
-                }
-            }
-             
-            GridRectangle LowerHalfBBox;
-            GridRectangle UpperHalfBBox;
-            if (cutDirection == CutDirection.HORIZONTAL)
-            {
-                LowerHalfBBox = new GridRectangle(BoundingBox.Left, BoundingBox.Right, mesh[(int)LowerHalfOppAxis[0]].Position.Y, mesh[(int)LowerHalfOppAxis.Last()].Position.Y);
-                UpperHalfBBox = new GridRectangle(BoundingBox.Left, BoundingBox.Right, mesh[(int)UpperHalfOppAxis[0]].Position.Y, mesh[(int)UpperHalfOppAxis.Last()].Position.Y);
-
-                LowerSubset = new MeshCut(LowerHalfAlongAxis, LowerHalfOppAxis, cutDirection, LowerHalfBBox);
-                UpperSubset = new MeshCut(UpperHalfAlongAxis, UpperHalfOppAxis, cutDirection, UpperHalfBBox);
-            }
-            else
-            {
-                LowerHalfBBox = new GridRectangle(mesh[(int)LowerHalfOppAxis[0]].Position.X, mesh[(int)LowerHalfOppAxis.Last()].Position.X, BoundingBox.Bottom, BoundingBox.Top);
-                UpperHalfBBox = new GridRectangle(mesh[(int)UpperHalfOppAxis[0]].Position.X, mesh[(int)UpperHalfOppAxis.Last()].Position.X, BoundingBox.Bottom, BoundingBox.Top);
-
-                LowerSubset = new MeshCut(LowerHalfAlongAxis, LowerHalfOppAxis, cutDirection, LowerHalfBBox);
-                UpperSubset = new MeshCut(UpperHalfAlongAxis, UpperHalfOppAxis, cutDirection, UpperHalfBBox);
-            }
-#if DEBUG
-            if (cutDirection == CutDirection.HORIZONTAL)
-            {
-                string s = string.Format("Horizontal: Left | Right reversed {0} | {1}", LowerSubset, UpperSubset);
-                Trace.WriteLineIf(mesh[(int)LowerSubset.Verticies[0]].Position.Y > mesh[(int)UpperSubset.Verticies[0]].Position.Y, s);
-                Debug.Assert(mesh[(int)LowerSubset.Verticies[0]].Position.Y < mesh[(int)UpperSubset.Verticies[0]].Position.Y, s);
-            }
-            else
-            {
-                string s = string.Format("Vertical: Left | Right reversed {0} | {1}", LowerSubset, UpperSubset);
-                Trace.WriteLineIf(mesh[(int)LowerSubset.Verticies[0]].Position.X > mesh[(int)UpperSubset.Verticies[0]].Position.X, s);
-                Debug.Assert(mesh[(int)LowerSubset.Verticies[0]].Position.X < mesh[(int)UpperSubset.Verticies[0]].Position.X, s);
-            }
-#endif
-            LowerSubset.SortSecondAxis(mesh, true);
-            UpperSubset.SortSecondAxis(mesh, false);
-        }
-
-        /// <summary>
-        /// //Assuming the points are sorted along the cut axis already, the secondary sorting axis is correct for whether the half is above or below the cut line:
-        ///
-        ///      1 -- 5
-        ///      |    |
-        ///      2 -- 6
-        /// ---- |    | -- cut line --- 
-        ///      3 -- 7
-        ///      |    |
-        ///      4 -- 8
-        ///
-        ///  After cutting, the Y Sorting along the X axis (for points with the same X value) for each set should be:
-        ///
-        ///      2 -- 6
-        ///      |    |
-        ///      1 -- 5
-        /// ---- |    | -- cut line --- 
-        ///      3 -- 7
-        ///      |    |
-        ///      4 -- 8
-        /// </summary>
-        /// <param name="mesh"></param>
-        /// <param name="ascending"></param>
-        private void SortSecondAxis(IReadOnlyList<IVertex2D> mesh, bool ascending=true)
-        {
-            int v1;
-            int v2;
-            int temp; 
-            GridVector2 p1;
-            GridVector2 p2;
-
-            if (this.CutAxis == CutDirection.HORIZONTAL)
-            {
-                XSecondAxisAscending = ascending;
-                for (int i = 0; i < this.XSortedVerts.LongLength - 1; i++)
-                {
-                    v1 = (int)XSortedVerts[i];
-                    p1 = mesh[v1].Position;
-
-                    for (int j = i + 1; j < this.XSortedVerts.LongLength; j++)
-                    {
-                        v2 = (int)XSortedVerts[j];
-                        p2 = mesh[v2].Position;
-
-                        //Check if the first axis isn't equal, if it isn't then bail on this loop
-                        if (p1.X != p2.X)
-                        {
-                            break;
-                        }
-
-                        bool swap = ascending ? p1.Y > p2.Y : p2.Y > p1.Y;
-
-                        if (swap)
-                        {
-                            XSortedVerts[i] = v2;
-                            XSortedVerts[j] = v1;
-                            v1 = v2;
-                            p1 = p2;
-                            continue;
-                        }
-                        
-                        //continue checking while the cut axis value remains equal
-                    }
-                }
-            }
-            else
-            {
-                YSecondAxisAscending = ascending;
-                for (int i = 0; i < this.YSortedVerts.LongLength - 1; i++)
-                {
-                    v1 = (int)YSortedVerts[i];
-                    p1 = mesh[v1].Position;
-
-                    for (int j = i + 1; j < this.YSortedVerts.LongLength; j++)
-                    {
-                        v2 = (int)YSortedVerts[j];
-                        p2 = mesh[v2].Position;
-
-                        //Check if the first axis isn't equal, if it isn't then bail on this loop
-                        if (p1.Y != p2.Y)
-                        {
-                            break;
-                        }
-
-                        bool swap = ascending ? p1.X > p2.X : p2.X > p1.X;
-
-                        if (swap)
-                        {
-                            YSortedVerts[i] = v2;
-                            YSortedVerts[j] = v1;
-                            v1 = v2;
-                            p1 = p2;
-                            continue;
-                        }
-
-                        //continue checking while the cut axis value remains equal
-                    }
-                }
-            }
-        }
-        
-    }
 }
