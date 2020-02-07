@@ -6,8 +6,9 @@ using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 using Geometry;
 using System.Dynamic;
+using Geometry.Meshing;
 
-namespace MonogameTestbed
+namespace Geometry.JSON
 {
     /// <summary>
     /// Helper methods for serializing and deserializing geometry to JSON
@@ -53,6 +54,19 @@ namespace MonogameTestbed
         public static JArray ToJArray(this IEnumerable<GridVector2> points)
         {
             return new JArray(points.Select(p => p.ToJObject()));
+        }
+
+        public static JObject ToJObject(this GridLineSegment p)
+        {
+            dynamic jObj = new JObject();
+            jObj.A = p.A;
+            jObj.B = p.B;
+            return jObj;
+        }
+
+        public static JArray ToJArray(this IEnumerable<GridLineSegment> lines)
+        {
+            return new JArray(lines.Select(p => p.ToJObject()));
         }
 
         public static GridVector2[] PointsFromJSON(string json)

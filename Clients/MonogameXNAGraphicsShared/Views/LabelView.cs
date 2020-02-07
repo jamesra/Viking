@@ -121,7 +121,13 @@ namespace VikingXNAGraphics
         /// True if the label should change size as the user zooms in and out.  Used to keep the label proportional to other objects rendered in a scene.
         /// False if the label is a constant size regarless of the scene.  Used for informational labels that aren't attached to objects in the scene.
         /// </summary>
-        public bool ScaleFontWithScene {get; set;} 
+        public bool ScaleFontWithScene {get; set;}
+
+        public LabelView(string Text, GridVector2 VolumePosition, Color color, HorizontalAlignment hAlign = HorizontalAlignment.CENTER, VerticalAlignment vAlign = VerticalAlignment.CENTER, bool scaleFontWithScene = true, double fontSize = 16.0)
+            : this(Text, VolumePosition, Global.DefaultFont, hAlign, vAlign, scaleFontWithScene, fontSize)
+        {
+            this._Color = color;
+        }
 
         public LabelView(string Text, GridVector2 VolumePosition, HorizontalAlignment hAlign = HorizontalAlignment.CENTER, VerticalAlignment vAlign = VerticalAlignment.CENTER, bool scaleFontWithScene = true, double fontSize = 16.0)
             : this(Text, VolumePosition, Global.DefaultFont, hAlign, vAlign, scaleFontWithScene, fontSize)

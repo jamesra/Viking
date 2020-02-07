@@ -3,6 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Geometry.JSON;
+using Geometry;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace Geometry.Meshing
 {
@@ -124,8 +128,8 @@ namespace Geometry.Meshing
         }
 
         public RotationDirection Winding(IFace f)
-        {
-            return IsClockwise(f.iVerts) ? RotationDirection.CLOCKWISE : RotationDirection.COUNTERCLOCKWISE;
+        { 
+            return this[f].Select(v => v.Position).ToArray().Winding();
         }
 
         public bool IsClockwise(IFace f)
@@ -136,6 +140,68 @@ namespace Geometry.Meshing
         public bool IsClockwise(IEnumerable<int> verts)
         {
             return verts.Select(v => this[v].Position).ToArray().AreClockwise();
+        }
+
+        /// <summary>
+        /// A function provided to help debug.  Returns true if any edges intersect, other than at endpoints of course
+        /// </summary>
+        /// <param name="mesh"></param>
+        /// <returns></returns>
+        public bool AnyMeshEdgesIntersect()
+        {
+            RTree.RTree<IEdge> rTree = GenerateEdgeRTree();
+
+            foreach (var e in Edges.Keys)
+            {
+                GridLineSegment seg = this.ToGridLineSegment(e);
+                foreach (var intersection in rTree.IntersectionGenerator(seg.BoundingBox))
+                {
+                    if (intersection.Equals(e)) //Don't test for intersecting with ourselves
+                        continue;
+
+                    GridLineSegment testLine = this.ToGridLineSegment(intersection);
+                    if (seg.Intersects(testLine, intersection.A == e.A || intersection.B == e.A || intersection.A == e.B || intersection.B == e.B))
+                    {
+                        System.Diagnostics.Trace.WriteLine(string.Format("{0} intersects {1}", e, intersection));
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+         
+
+        internal RTree.RTree<IEdge> GenerateEdgeRTree()
+        {
+            RTree.RTree<IEdge> rTree = new RTree.RTree<IEdge>();
+            foreach (var e in Edges.Values)
+            {
+                GridLineSegment seg = this.ToGridLineSegment(e);
+                rTree.Add(seg.BoundingBox, e);
+            }
+
+            return rTree;
+        }
+
+
+        public virtual JObject ToJObject()
+        {
+            dynamic jObj = new JObject();
+            jObj.verts = this.Verticies.Select(v => v.Position).ToJArray();
+            jObj.edges = new JArray(this.Edges.Values.Select(e => e.ToJObject()));
+            jObj.faces = new JArray(this.Faces.Select(f => f.ToJObject()));
+            return jObj;
+        }
+
+        public virtual string ToJSON()
+        {
+            return this.ToJObject().ToString();
+        }
+
+        public override string ToString()
+        {
+            return string.Format("{0} Verts {1} Edges {2} Faces", this.Verticies.Count, this.Edges.Count, this.Faces.Count);
         }
     }
 }

@@ -4,6 +4,7 @@ using Microsoft.Xna.Framework.Input;
 using TriangleNet;
 using VikingXNA;
 using VikingXNAGraphics;
+using Geometry.JSON;
 
 
 namespace MonogameTestbed

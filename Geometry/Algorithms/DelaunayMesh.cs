@@ -975,7 +975,17 @@ namespace Geometry
                 Debug.WriteLine(string.Format("Remove Edge: {0}", edge));
                 Debug.WriteLine(string.Format("Add Edge: {0}-{1}", face_opposite_vert, other_opposite_vert));
 #endif
+                IEdge new_edge = new Edge(face_opposite_vert, other_opposite_vert);
+                var new_faces = TriangleFace.Flip(edge, new_edge);
+                mesh.RemoveEdge(edge);
+                mesh.AddEdge(new_edge);
 
+                System.Diagnostics.Debug.Assert(false == mesh.IsClockwise(new_faces.Item1));
+                System.Diagnostics.Debug.Assert(false == mesh.IsClockwise(new_faces.Item2));
+
+                mesh.AddFace(new_faces.Item1);
+                mesh.AddFace(new_faces.Item2);
+                /*
                 mesh.RemoveEdge(edge);
 
                 mesh.AddEdge(new Edge(face_opposite_vert, other_opposite_vert));
@@ -1006,7 +1016,8 @@ namespace Geometry
 
                 mesh.AddFace(A);
                 mesh.AddFace(B);
-                 
+                */
+
                 if (ReportProgress != null)
                 {
                     ReportProgress(mesh);
@@ -1023,9 +1034,9 @@ namespace Geometry
                 }
                 */
 
-                CheckEdgeFlip(mesh, A);
-                if (mesh.Contains(B)) //Check that the face wasn't removed when checking A for flips
-                    CheckEdgeFlip(mesh, B, ReportProgress);
+                CheckEdgeFlip(mesh, new_faces.Item1, ReportProgress);
+                if (mesh.Contains(new_faces.Item2)) //Check that the face wasn't removed when checking A for flips
+                    CheckEdgeFlip(mesh, new_faces.Item2, ReportProgress);
                     
             }
         } 

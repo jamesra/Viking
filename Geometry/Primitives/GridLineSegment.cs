@@ -589,39 +589,52 @@ namespace Geometry
             {
                 Intersection = GridVector2.Zero;
 
-                //Check if the distance to the endpoint of the other line is zero
+                //Find the bounding box of the overlapping region
                 GridRectangle? overlapRect = this.BoundingBox.Intersection(seg.BoundingBox);
                 if (!overlapRect.HasValue)
                 {
-                   
+                    //Should never occur because we test bounding box overlap at the beginning of this function
                     return false;
                 }
 
-                //Check if the lines perfectly overlap
-                GridVector2[] endpoints = new GridVector2[] { seg.A, seg.B, this.A, this.B }.Distinct().ToArray();
-                GridVector2[] endpointsOnLine = endpoints.Where(e => overlapRect.Value.Contains(e) && seg.DistanceToPoint(e) < Global.Epsilon).ToArray();
+                //If they perfectly overlap at least two endpoints must be on the line.
+                double[] distances = {overlapRect.Value.Contains(this.A) ? seg.DistanceToPoint(this.A) : double.MaxValue,
+                                      overlapRect.Value.Contains(this.B) ? seg.DistanceToPoint(this.B) : double.MaxValue,
+                                      overlapRect.Value.Contains(seg.A) ? this.DistanceToPoint(seg.A) : double.MaxValue,
+                                      overlapRect.Value.Contains(seg.B) ? this.DistanceToPoint(seg.B) : double.MaxValue};
 
-                //Debug.Assert(endpointsOnLine.Length > 0, "Must have intersecting points if the bounding boxes overlap for parallel line intersection test");
-                if(endpointsOnLine.Length == 0)
+                //If there are two points on the line, those are the intersecting points
+                if(distances.Count(d => d == 0) >= 2)
                 {
-                    return false;
+                    GridVector2[] endpoints = new GridVector2[] { seg.A, seg.B, this.A, this.B }.Distinct().ToArray();
+                    GridVector2[] endpointsOnLineCandidates = endpoints.Where(e => overlapRect.Value.Contains(e) && seg.DistanceToPoint(e) < Global.Epsilon).ToArray();
+
+                    //Debug.Assert(endpointsOnLine.Length > 0, "Must have intersecting points if the bounding boxes overlap for parallel line intersection test");
+                    if (endpointsOnLineCandidates.Length == 0)
+                    {
+                        return false;
+                    }
+                    else if (endpointsOnLineCandidates.Length == 1)
+                    {
+                        Intersection = endpointsOnLineCandidates[0];
+                        return true;
+                    }
+                    else if (endpointsOnLineCandidates.Length == 2)
+                    {
+                        Intersection = new GridLineSegment(endpointsOnLineCandidates[0], endpointsOnLineCandidates[1]);
+                        return true;
+                    }
+                    else
+                    {
+                        GridVector2[] endpointsOnOverlapRect = endpointsOnLineCandidates.Where(e => overlapRect.Value.Corners.Contains(e)).ToArray();
+                        Intersection = new GridLineSegment(endpointsOnOverlapRect[0], endpointsOnOverlapRect[1]);
+                        return true;
+                    }
                 }
-                else if(endpointsOnLine.Length == 1)
-                {
-                    Intersection = endpointsOnLine[0];
-                    return true;
-                }
-                else if(endpointsOnLine.Length == 2)
-                {
-                    Intersection = new GridLineSegment(endpointsOnLine[0], endpointsOnLine[1]);
-                    return true;
-                }
-                else
-                {
-                    GridVector2[] endpointsOnOverlapRect = endpointsOnLine.Where(e => overlapRect.Value.Corners.Contains(e)).ToArray();
-                    Intersection = new GridLineSegment(endpointsOnOverlapRect[0], endpointsOnOverlapRect[1]);
-                    return true;
-                }
+
+                //Parallel lines without a zero distance measurement do not intersect
+                return false;
+                
             }
             else
             {
@@ -630,26 +643,26 @@ namespace Geometry
 
                 Intersection = new GridVector2(x, y);
 
-                double minX = Math.Min(A.X, B.X) - Global.Epsilon;
-                double minSegX = Math.Min(seg.A.X, seg.B.X) - Global.Epsilon;
+                double minX = Math.Min(A.X, B.X) - Global.EpsilonSquared;
+                double minSegX = Math.Min(seg.A.X, seg.B.X) - Global.EpsilonSquared;
 
                 if (minX > x || minSegX > x)
                     return false;
 
-                double maxX = Math.Max(A.X, B.X) + Global.Epsilon; 
-                double maxSegX = Math.Max(seg.A.X, seg.B.X) + Global.Epsilon;
+                double maxX = Math.Max(A.X, B.X) + Global.EpsilonSquared; 
+                double maxSegX = Math.Max(seg.A.X, seg.B.X) + Global.EpsilonSquared;
 
                 if (maxX < x || maxSegX < x)
                     return false;
 
-                double minY = Math.Min(A.Y, B.Y)- Global.Epsilon;
-                double minSegY = Math.Min(seg.A.Y, seg.B.Y) - Global.Epsilon;
+                double minY = Math.Min(A.Y, B.Y)- Global.EpsilonSquared;
+                double minSegY = Math.Min(seg.A.Y, seg.B.Y) - Global.EpsilonSquared;
 
                 if (minY > y || minSegY > y)
                     return false;
 
-                double maxY = Math.Max(A.Y, B.Y) + Global.Epsilon;
-                double maxSegY = Math.Max(seg.A.Y, seg.B.Y) + Global.Epsilon;
+                double maxY = Math.Max(A.Y, B.Y) + Global.EpsilonSquared;
+                double maxSegY = Math.Max(seg.A.Y, seg.B.Y) + Global.EpsilonSquared;
 
                 if (maxY < y || maxSegY < y)
                     return false;

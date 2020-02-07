@@ -310,6 +310,73 @@ namespace Geometry.Meshing
 
             throw new ArgumentException("Vertex not found in face");
         }
+
+        /// <summary>
+        /// Returns two CCW triangles that would result from flipping edge.  Edge must have two faces
+        /// 
+        /// This function does not change the mesh, it indicates how the mesh would change
+        /// </summary>
+        /// <param name="edge"></param>
+        /// <param name="mesh"></param>
+        /// <returns></returns>
+        public static Tuple<TriangleFace, TriangleFace> Flip(IEdge edge)
+        {
+            if (edge.Faces.Count() != 2)
+                throw new ArgumentException(string.Format("Edge cannot flip unless it has two triangular faces. {0} has one face {1}", edge, edge.Faces.First()));
+            
+            if(!edge.Faces.All(f => f.IsTriangle()))
+                throw new ArgumentException(string.Format("Edge cannot flip unless it has two triangular faces. {0} has non-triangular face: {1} and/or {2}", edge, edge.Faces.First(), edge.Faces.Last()));
+
+            TriangleFace f1 = edge.Faces[0] as TriangleFace;
+            TriangleFace f2 = edge.Faces[1] as TriangleFace;
+
+            Edge newEdge = new Edge(f1.OppositeVertex(edge), f2.OppositeVertex(edge));
+
+            return Flip(edge, newEdge);
+        }
+
+        /// <summary>
+        /// Returns two CCW triangles that would result from flipping edge.  Edge must have two faces.
+        /// 
+        /// This function does not change the mesh, it indicates how the mesh would change
+        /// </summary>
+        /// <param name="edge"></param>
+        /// <param name="mesh"></param>
+        /// <returns></returns>
+        public static Tuple<TriangleFace, TriangleFace> Flip(IEdge existing, IEdge flipped)
+        {
+            if (existing.Faces.Count() != 2)
+                throw new ArgumentException(string.Format("Edge cannot flip unless it has two triangular faces. {0} has one face {1}", existing, flipped.Faces.First()));
+
+            if (!existing.Faces.All(f => f.IsTriangle()))
+                throw new ArgumentException(string.Format("Edge cannot flip unless it has two triangular faces. {0} has non-triangular face: {1} and/or {2}", existing, existing.Faces.First(), existing.Faces.Last()));
+
+            TriangleFace f1 = existing.Faces[0] as TriangleFace;
+            TriangleFace f2 = existing.Faces[1] as TriangleFace;
+
+            InfiniteWrappedIndexSet TriangleIndexer = new InfiniteWrappedIndexSet(0, 3, 0);
+
+            TriangleFace n1;
+            TriangleFace n2;
+
+            Debug.Assert(f1.iVerts.Contains(flipped.A) || f1.iVerts.Contains(flipped.B));
+            Debug.Assert(f2.iVerts.Contains(flipped.A) || f2.iVerts.Contains(flipped.B));
+
+            if (f1.iVerts.Contains(flipped.A))
+            {
+                int iFlipEndpointA = f1.iVerts.IndexOf(flipped.A);
+                n1 = new TriangleFace(f1.iVerts[iFlipEndpointA], f1.iVerts[(int)TriangleIndexer[iFlipEndpointA + 1]], flipped.B);
+                n2 = new TriangleFace(f1.iVerts[(int)TriangleIndexer[iFlipEndpointA -1]], f1.iVerts[iFlipEndpointA], flipped.B);
+            }
+            else
+            {
+                int iFlipEndpointB = f1.iVerts.IndexOf(flipped.B);
+                n1 = new TriangleFace(f1.iVerts[iFlipEndpointB], f1.iVerts[(int)TriangleIndexer[iFlipEndpointB + 1]], flipped.A);
+                n2 = new TriangleFace(f1.iVerts[(int)TriangleIndexer[iFlipEndpointB -1]], f1.iVerts[iFlipEndpointB], flipped.A);
+            }
+
+            return new Tuple<TriangleFace, TriangleFace>(n1, n2);
+        }
     }
 
 
@@ -445,14 +512,17 @@ namespace Geometry.Meshing
             if (IntersectedEdges.Count == 1)
             {
                 IEdgeKey intersectedEdge = IntersectedEdges[0];
+
+                var new_faces = TriangleFace.Flip(this[intersectedEdge], constrained_edge);
+
                 this.RemoveEdge(intersectedEdge);
                 this.AddEdge(constrained_edge);
 
-                Face A = new TriangleFace(intersectedEdge.A, constrained_edge.A, constrained_edge.B);
-                Face B = new TriangleFace(intersectedEdge.B, constrained_edge.A, constrained_edge.B);
+                System.Diagnostics.Debug.Assert(false == this.IsClockwise(new_faces.Item1));
+                System.Diagnostics.Debug.Assert(false == this.IsClockwise(new_faces.Item2));
 
-                this.AddFace(A);
-                this.AddFace(B);
+                this.AddFace(new_faces.Item1);
+                this.AddFace(new_faces.Item2);
                 return;
             }
             else
@@ -553,13 +623,13 @@ namespace Geometry.Meshing
                     
                     Edge e = new Edge(PolyVerts[A].Index, PolyVerts[C].Index);
                     AddEdge(e);
-                    int[] verts = new int[] { e.A, PolyVerts[i].Index, e.B };
+                    int[] verts = new int[] { PolyVerts[A].Index, PolyVerts[i].Index, PolyVerts[C].Index };
 
                     TriangleFace triFace;
 
                     if(LeftPoly)
                     {
-                        triFace = new TriangleFace(verts.Reverse());
+                        triFace = new TriangleFace(verts);
                         Trace.WriteLine("CW");
                     }
                     else

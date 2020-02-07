@@ -5,37 +5,56 @@ using System.Text;
 using System.Threading.Tasks;
 using FsCheck;
 using Geometry;
+using Geometry.Meshing;
 
 namespace GeometryTests
 {
-    public static class GlobalGenerators
+    public static class GeometryArbitraries
     {
-        static GlobalGenerators()
+        public static void Register()
         {
             Arb.Register<GridVector2Generators>();
-            Arb.Register<GridLineSegmentGenerators>();
+            //Arb.Register<GridLineSegmentGenerators>();
+            //Arb.Register<TriangulatedMeshGenerators>();
+        }
+
+        public static Arbitrary<GridVector2> PointGenerator()
+        {
+            return GridVector2Generators.ArbRandomPoint();
+        }
+
+        
+        public static Arbitrary<GridVector2[]> PointsGenerator()
+        {
+            return GridVector2Generators.ArbRandomPoints();
+        }
+        
+
+        public static Arbitrary<GridLineSegment> LineSegmentGenerator()
+        {
+            return GridLineSegmentGenerators.ArbRandomLine();
+        }
+
+        public static Arbitrary<TriangulationMesh<Vertex2D>> TriangulatedMeshGenerator()
+        {
+            return TriangulatedMeshGenerators.ArbRandomMesh();
         }
     }
 
     public class GridLineSegmentGenerators
     {
-        public static Arbitrary<GridLineSegment> RandomPoints()
+        public static Arbitrary<GridLineSegment> ArbRandomLine()
         {
-            return Arb.From(ChooseFrom(RandomLines(100)));
-            //return Arb.From(Fresh()); 
+            return Arb.From(GenLine());  
         }
 
-        private static GridLineSegment[] RandomLines(int size)
+        public static Gen<GridLineSegment> GenLine()
         {
-            GridLineSegment[] lines= new GridLineSegment[size];
-            for (int i = 0; i < size; i++)
-            {
-                lines[i] = new GridLineSegment(GridVector2.Random(), GridVector2.Random());
-            }
-
-            return lines;
+            var coords = Arb.Default.NormalFloat().Generator.Four();
+            return coords.Select(t => new GridLineSegment( new GridVector2((double)t.Item1, (double)t.Item2),
+                                                           new GridVector2((double)t.Item3, (double)t.Item4)));
         }
-
+         
         public static Gen<GridLineSegment> ChooseFrom(GridLineSegment[] items)
         {
             return from i in Gen.Choose(0, items.Length - 1)
@@ -43,29 +62,26 @@ namespace GeometryTests
         }
     }
 
-        public class GridVector2Generators
+    public class GridVector2Generators
     {
+        static Gen<GridVector2> GridPoints = ChooseFrom(PointsOnGrid1D(21, 21, new GridRectangle(-10, 10, -10, 10)));
 
-        static System.Random random = new System.Random();
-
-        public static Arbitrary<GridVector2> RandomPoints()
+        public static Arbitrary<GridVector2> ArbRandomPoint()
         {
-            Gen<GridVector2> RandPoints = ChooseFrom(RandomPoints(100));
-            List<GridVector2> l = new List<GridVector2>();
-            Gen<GridVector2> GridPoints = ChooseFrom(PointsOnGrid1D(21, 21, new GridRectangle(-10, 10, -10, 10)));
-            return Arb.From(Gen.OneOf(RandPoints, GridPoints));
-            //return Arb.From(Fresh()); 
+            return Arb.From(RandomPoint());
+        }
+        
+        public static Arbitrary<GridVector2[]> ArbRandomPoints()
+        {
+            return Arb.From(GenPoints(), Arb.Default.Array<GridVector2>().Shrinker );
         }
 
-        private static GridVector2[] RandomPoints(int size)
+        public static Gen<GridVector2> RandomPoint()
         {
-            GridVector2[] points = new GridVector2[size];
-            for (int i = 0; i < size; i++)
-            {
-                points[i] = GridVector2.Random();
-            }
-
-            return points; 
+            Gen<GridVector2> RandPoints = GenPoint();
+            return Gen.Frequency(
+                Tuple.Create(2, RandPoints),
+                Tuple.Create(1, GridPoints));
         }
 
         private static GridVector2[] PointsOnGrid1D(int GridDimX, int GridDimY, GridRectangle bounds)
@@ -105,26 +121,57 @@ namespace GeometryTests
 
             return points;
         }
-         
-
-        public static Gen<GridVector2> GenPoints(int size)
-        { 
-            return ChooseFrom(RandomPoints(size));
+        
+        public static Gen<GridVector2[]> GenPoints()
+        {
+            return Gen.Sized(size => GenPoints(size));
         }
-
+        
+        public static Gen<GridVector2[]> GenPoints(int nPoints)
+        {
+            return RandomPoint().ArrayOf(nPoints).Where(points => points.Distinct().Count() == nPoints);
+        }
+        
         public static Gen<GridVector2> ChooseFrom(GridVector2[] items)
         {
             return from i in Gen.Choose(0, items.Length-1)
                    select items[i];
         }
-       
 
-        public static Gen<GridVector2> Fresh()
+        public static Gen<GridVector2> GenPoint()
         {
-            System.Random random = new System.Random();
-            GridVector2 p = new GridVector2(random.NextDouble(), random.NextDouble());
-            System.Diagnostics.Trace.WriteLine(string.Format("{0}", p));
-            return Gen.Constant<GridVector2>(p);
+            var coords = Arb.Default.NormalFloat().Generator.Two();
+            return coords.Select(t => new GridVector2((double)t.Item1, (double)t.Item2));
+        } 
+    }
+    
+    
+    public class TriangulatedMeshGenerators
+    {
+        public static Gen<TriangulationMesh<Vertex2D>> GenMesh(int nVerts)
+        {
+            return GridVector2Generators.GenPoint().ArrayOf(nVerts).Select(verts => GenericDelaunayMeshGenerator2D<Vertex2D>.TriangulateToMesh(verts.Select(v => new Vertex2D(v)).ToArray()));            
+            //return GridVector2Generators.GenPoints().Select(verts => GenericDelaunayMeshGenerator2D<Vertex2D>.TriangulateToMesh(verts.Select(v => new Vertex2D(v)).ToArray()));
+        }
+
+        /*
+        public static Gen<TriangulationMesh<Vertex2D>> GenMesh(GridVector2[] points)
+        {
+            //return GridVector2Generators.GenPoint().ArrayOf(nVerts).Select(verts => GenericDelaunayMeshGenerator2D<Vertex2D>.TriangulateToMesh(verts.Select(v => new Vertex2D(v)).ToArray()));
+    
+            return GridVector2Generators.GenPoints().Select(verts => GenericDelaunayMeshGenerator2D<Vertex2D>.TriangulateToMesh(verts.Select(v => new Vertex2D(v)).ToArray()));
+        }
+        */
+
+        public static Gen<TriangulationMesh<Vertex2D>> RandomMesh()
+        {
+            return Gen.Sized(size => GenMesh(size)); 
+        }
+
+        public static Arbitrary<TriangulationMesh<Vertex2D>> ArbRandomMesh()
+        {
+            return Arb.From(RandomMesh());
         }
     }
+    
 }

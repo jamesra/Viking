@@ -397,6 +397,8 @@ namespace Geometry
                 if (index < 0 || index >= _Count)
                 {
                     index = index % _Count; //Force the index into range
+                    if (index < 0)
+                        index += _Count; //Wrap to a positive value
                 }
 
                 long value;

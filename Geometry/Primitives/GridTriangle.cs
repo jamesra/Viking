@@ -447,6 +447,40 @@ namespace Geometry
             return new GridTriangle(this.Points.Select(p => p + vector).ToArray());
         }
 
+        public RotationDirection Winding
+        {
+            get
+            {
+                double result = (_p2.Y - _p1.Y) * (_p3.X - _p2.X) -
+                                (_p2.X - _p1.X) * (_p3.Y - _p2.Y);
+
+                if (result == 0)
+                    return RotationDirection.COLINEAR;
+
+                return result > 0 ? RotationDirection.CLOCKWISE : RotationDirection.COUNTERCLOCKWISE;
+            }
+        }
+
+        public static RotationDirection GetWinding(GridVector2 _p1, GridVector2 _p2, GridVector2 _p3)
+        {
+            double result = (_p2.Y - _p1.Y) * (_p3.X - _p2.X) -
+                            (_p2.X - _p1.X) * (_p3.Y - _p2.Y);
+
+            if (result == 0)
+                return RotationDirection.COLINEAR;
+
+            return result > 0 ? RotationDirection.CLOCKWISE : RotationDirection.COUNTERCLOCKWISE;
+        }
+
+        public static RotationDirection GetWinding(GridVector2[] pts)
+        {
+            if (pts.Length > 3)
+                throw new ArgumentException("GridTriangle winding expects less than three points.");
+
+
+            return GridTriangle.GetWinding(pts[0], pts[1], pts[2]);
+        }
+
         bool IEquatable<GridTriangle>.Equals(GridTriangle other)
         {
             if (object.ReferenceEquals(other, null))

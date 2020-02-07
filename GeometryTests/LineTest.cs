@@ -286,6 +286,126 @@ namespace GeometryTests
         }
 
         [TestMethod]
+        public void GridLineSegmentInParallelIntersects2()
+        {
+            //
+            // TODO: Add test logic	here
+            //
+
+            GridLineSegment lineA = new GridLineSegment(new GridVector2(0, 10),
+                                                        new GridVector2(0, -10));
+            GridLineSegment lineB = new GridLineSegment(new GridVector2(0, 11),  //Total overlap, beyond both endpoints
+                                                        new GridVector2(0, -11));
+            GridLineSegment lineC = new GridLineSegment(new GridVector2(0, 3),  //Overlap, but not entirely
+                                                        new GridVector2(0, 15));
+            GridLineSegment lineD = new GridLineSegment(new GridVector2(0, 10),  //Endpoint Overlaps
+                                                        new GridVector2(0, 15));
+            GridLineSegment lineE = new GridLineSegment(new GridVector2(0, -10),    //Endpoint Overlaps
+                                                        new GridVector2(0, -15));
+            GridLineSegment lineF = new GridLineSegment(new GridVector2(1, 10), //Parrallel, but slightly right
+                                                        new GridVector2(1, -10));
+            GridLineSegment lineG = new GridLineSegment(new GridVector2(-1, 10), //Parallel, but slightly left
+                                                        new GridVector2(-1, -10));
+
+
+            GridLineSegment[] IntersectingLines = new GridLineSegment[] { lineB, lineC, lineD, lineE };
+            GridLineSegment[] NonIntersectingLines = new GridLineSegment[] { lineF, lineG };
+             
+            foreach (GridLineSegment other in IntersectingLines)
+            {
+                IShape2D intersection;
+                bool result = lineA.Intersects(other, out intersection);
+                Assert.IsTrue(result);
+            }
+
+            foreach (GridLineSegment other in NonIntersectingLines)
+            {
+                GridVector2 intersection;
+                bool result = lineA.Intersects(other, out intersection);
+                Assert.IsFalse(result);
+            }
+
+            GridLineSegment vertLine = new GridLineSegment(new GridVector2(lineA.A.Y, lineA.A.X), new GridVector2(lineA.B.Y, lineA.B.X));
+
+            GridLineSegment[] IntersectingVertical = IntersectingLines.Select(l => new GridLineSegment(new GridVector2(l.A.Y, l.A.X), new GridVector2(l.B.Y, l.B.X))).ToArray();
+            GridLineSegment[] NonIntersectingVertical = NonIntersectingLines.Select(l => new GridLineSegment(new GridVector2(l.A.Y, l.A.X), new GridVector2(l.B.Y, l.B.X))).ToArray();
+
+            foreach (GridLineSegment other in IntersectingVertical)
+            {
+                GridVector2 intersection;
+                bool result = vertLine.Intersects(other, out intersection);
+                Assert.IsTrue(result);
+            }
+
+            foreach (GridLineSegment other in NonIntersectingVertical)
+            {
+                GridVector2 intersection;
+                bool result = vertLine.Intersects(other, out intersection);
+                Assert.IsFalse(result);
+            }
+        }
+
+        [TestMethod]
+        public void GridLineSegmentInParallelIntersects3()
+        {
+            //
+            // TODO: Add test logic	here
+            //
+
+            GridLineSegment lineA = new GridLineSegment(new GridVector2(0, 0),
+                                                        new GridVector2(10, 10));
+            GridLineSegment lineB = new GridLineSegment(new GridVector2(-1, -1),  //Total overlap, beyond both endpoints
+                                                        new GridVector2(11, 11));
+            GridLineSegment lineC = new GridLineSegment(new GridVector2(3, 3),  //Overlap, but not entirely
+                                                        new GridVector2(15, 15));
+            GridLineSegment lineD = new GridLineSegment(new GridVector2(10, 10),  //Endpoint Overlaps
+                                                        new GridVector2(15, 15));
+            GridLineSegment lineE = new GridLineSegment(new GridVector2(-10, -10),    //Endpoint Overlaps
+                                                        new GridVector2(0, 0));
+            GridLineSegment lineF = new GridLineSegment(new GridVector2(0, -1), //Parrallel, but slightly right
+                                                        new GridVector2(10, 9));
+            GridLineSegment lineG = new GridLineSegment(new GridVector2(0, 1), //Parallel, but slightly left
+                                                        new GridVector2(10, 11));
+
+
+            GridLineSegment[] IntersectingLines = new GridLineSegment[] { lineB, lineC, lineD, lineE };
+            GridLineSegment[] NonIntersectingLines = new GridLineSegment[] { lineF, lineG };
+
+            foreach (GridLineSegment other in IntersectingLines)
+            {
+                IShape2D intersection;
+                bool result = lineA.Intersects(other, out intersection);
+                Assert.IsTrue(result);
+            }
+
+            foreach (GridLineSegment other in NonIntersectingLines)
+            {
+                GridVector2 intersection;
+                bool result = lineA.Intersects(other, out intersection);
+                Assert.IsFalse(result);
+            }
+
+            GridLineSegment vertLine = new GridLineSegment(new GridVector2(lineA.A.Y, lineA.A.X), new GridVector2(lineA.B.Y, lineA.B.X));
+
+            GridLineSegment[] IntersectingVertical = IntersectingLines.Select(l => new GridLineSegment(new GridVector2(l.A.Y, l.A.X), new GridVector2(l.B.Y, l.B.X))).ToArray();
+            GridLineSegment[] NonIntersectingVertical = NonIntersectingLines.Select(l => new GridLineSegment(new GridVector2(l.A.Y, l.A.X), new GridVector2(l.B.Y, l.B.X))).ToArray();
+
+            foreach (GridLineSegment other in IntersectingVertical)
+            {
+                GridVector2 intersection;
+                bool result = vertLine.Intersects(other, out intersection);
+                Assert.IsTrue(result);
+            }
+
+            foreach (GridLineSegment other in NonIntersectingVertical)
+            {
+                GridVector2 intersection;
+                bool result = vertLine.Intersects(other, out intersection);
+                Assert.IsFalse(result);
+            }
+        }
+
+        [TestMethod]
         public void GridLineIntersects()
         {
             //
@@ -470,6 +590,7 @@ namespace GeometryTests
                 GridLineSegment pq = new GridLineSegment(p, q);
                 GridLineSegment pr = new GridLineSegment(p, r);
 
+                Trace.WriteLine(string.Format("{0} , {1}", pq, pr));
                 int r_isleft = pq.IsLeft(r);
                 Assert.IsTrue(r_isleft >= -1);
                 Assert.IsTrue(r_isleft <= 1);
@@ -490,8 +611,38 @@ namespace GeometryTests
                 }
             };
 
-            Prop.ForAll<GridVector2, GridVector2, GridVector2>(IsLeftCheck).QuickCheck();
-       }
-        
+            Prop.ForAll<GridVector2, GridVector2, GridVector2>(IsLeftCheck).QuickCheckThrowOnFailure();
+        }
+
+        [TestMethod]
+        public void TestIsLeftWithFSCheckOnHorizontalLine()
+        {
+            Arb.Register<GridVector2Generators>();
+
+            Func<GridVector2, bool> IsLeftCheck = (p) =>
+            {
+                GridLineSegment qr = new GridLineSegment(new GridVector2(-10, 0), new GridVector2(10, 0));
+                GridLineSegment rq = new GridLineSegment(new GridVector2(10, 0), new GridVector2(-10, 0));
+
+                Trace.WriteLine(string.Format("{0} , {1}", qr, p));
+                int qr_p_isleft = qr.IsLeft(p);
+                int qr_p_ExpectedLeft = p.Y == 0 ? 0 : p.Y < 0 ? -1 : 1;
+                
+                Assert.AreEqual(qr_p_isleft, qr_p_ExpectedLeft);
+
+                //We expect the opposite result if we reverse the line
+                Trace.WriteLine(string.Format("{0} , {1}", rq, p));
+                int rq_p_isleft = rq.IsLeft(p);
+                int rq_p_ExpectedLeft = p.Y == 0 ? 0 : p.Y > 0 ? -1 : 1;
+
+                Assert.AreEqual(rq_p_isleft, rq_p_ExpectedLeft);
+
+                Assert.AreEqual(-qr_p_ExpectedLeft, rq_p_ExpectedLeft);
+                return rq_p_isleft == rq_p_ExpectedLeft;
+            };
+
+            Prop.ForAll<GridVector2>(IsLeftCheck).QuickCheckThrowOnFailure();
+        }
+
     }
 }

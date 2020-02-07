@@ -358,13 +358,53 @@ namespace Geometry
         public bool Intersects(GridRectangle rect)
         {
             //Find out if the rectangles can't possibly intersect
+            if (rect.Right < this.Left ||
+               rect.Top < this.Bottom ||
+               rect.Left > this.Right ||
+               rect.Bottom > this.Top)
+                return false;
+
+            return true;
+        }
+
+        public OverlapType IntersectionType(GridRectangle rect)
+        {
+            //Find out if the rectangles can't possibly intersect
             if(rect.Right < this.Left ||
                rect.Top < this.Bottom ||
                rect.Left > this.Right ||
                rect.Bottom > this.Top)
-                return false; 
+                return OverlapType.NONE;
 
-            return true;
+            if (rect.Right > this.Left &&
+               rect.Top > this.Bottom &&
+               rect.Left < this.Right &&
+               rect.Bottom < this.Top)
+                return OverlapType.CONTAINED;
+
+            GridRectangle? intersectionArea = this.Intersection(rect);
+
+            if(intersectionArea.Value.Area > 0)
+            {
+                return OverlapType.INTERSECTING;
+            }
+
+            /*
+
+            if (rect.Right > this.Left ||
+               rect.Top > this.Bottom ||
+               rect.Left < this.Right ||
+               rect.Bottom < this.Top)
+                return OverlapType.INTERSECTING;
+
+            if (rect.Right == this.Left ||
+               rect.Top == this.Bottom ||
+               rect.Left == this.Right ||
+               rect.Bottom == this.Top)
+               */
+            return OverlapType.TOUCHING;
+
+            //throw new ArgumentException(string.Format("Unexpected rectangle intersection case {0} {1}", rect, this));
         }
 
         public bool Intersects(IShape2D shape)
@@ -425,7 +465,7 @@ namespace Geometry
         /// <returns></returns>
         public GridRectangle? Intersection(GridRectangle other)
         {
-            if (!this.Intersects(other))
+            if (false == this.Intersects(other))
                 return new GridRectangle?();
 
             double minx = Math.Max(this.Left, other.Left);

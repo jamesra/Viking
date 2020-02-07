@@ -538,7 +538,32 @@ namespace Geometry
         /// <returns></returns>
         public static bool AreClockwise(this GridVector2[] points)
         {
-            return points.PolygonArea() < 0;
+            return points.Winding() == RotationDirection.CLOCKWISE;
+        }
+
+        /// <summary>
+        /// Return true if the points are placed in clockwise order.  Assumes points do not cross over themselves. 
+        /// </summary>
+        /// <param name="points"></param>
+        /// <returns></returns>
+        public static RotationDirection Winding(this GridVector2[] points)
+        {
+            if (points.Length <= 2)
+                return RotationDirection.COLINEAR;
+
+            double area = points.PolygonArea();
+            RotationDirection result = area == 0 ? RotationDirection.COLINEAR :
+                   area < 0 ? RotationDirection.CLOCKWISE : RotationDirection.COUNTERCLOCKWISE;
+            /*
+#if DEBUG
+            if(points.Length == 3)
+            {
+                RotationDirection TriResult = GridTriangle.GetWinding(points);
+                System.Diagnostics.Debug.Assert(result == TriResult);
+            }
+#endif
+*/
+            return result;
         }
 
         /// <summary>

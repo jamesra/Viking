@@ -89,6 +89,10 @@
     <Reference Include="MathNet.Numerics, Version=4.5.1.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\Packages\MathNet.Numerics.4.5.1\lib\net461\MathNet.Numerics.dll</HintPath>
     </Reference>
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="Newtonsoft.Json, Version=12.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\Packages\Newtonsoft.Json.12.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Collections.Immutable, Version=1.2.3.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <HintPath>..\Packages\System.Collections.Immutable.1.5.0\lib\netstandard2.0\System.Collections.Immutable.dll</HintPath>
@@ -107,6 +111,7 @@
   <ItemGroup>
     <Compile Include="AddTransformThreadObj.cs" />
     <Compile Include="Algorithms\DelaunayMesh.cs" />
+    <Compile Include="Algorithms\MeshCut.cs" />
     <Compile Include="Color.cs" />
     <Compile Include="Common.cs" />
     <Compile Include="Algorithms\ConvexHull.cs" />
@@ -124,6 +129,7 @@
     <Compile Include="DataStructures\QuadTreeNode.cs" />
     <Compile Include="DataStructures\RegionPyramid.cs" />
     <Compile Include="Extensions.cs" />
+    <Compile Include="GeometryJSONExtensions.cs" />
     <Compile Include="GlobalSuppressions.cs" />
     <Compile Include="IndexingExtensions.cs" />
     <Compile Include="Meshing\Algorithms\MeshPathing.cs" />
@@ -131,6 +137,7 @@
     <Compile Include="Meshing\Face.cs" />
     <Compile Include="Meshing\Edge.cs" />
     <Compile Include="Meshing\IndexSets.cs" />
+    <Compile Include="Meshing\JSONExtensions.cs" />
     <Compile Include="Meshing\MeshBase.cs" />
     <Compile Include="Meshing\Mesh2D.cs" />
     <Compile Include="Meshing\MeshExtensions.cs" />
