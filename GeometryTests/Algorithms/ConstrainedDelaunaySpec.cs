@@ -36,7 +36,7 @@ namespace GeometryTests.Algorithms
         /// <summary>
         /// Original input to model
         /// </summary>
-        private readonly int[] CandidateEdges;
+        internal readonly int[] OriginalCandidateEdges;
 
         /// <summary>
         /// A list of the serially linked edge constraints
@@ -47,6 +47,17 @@ namespace GeometryTests.Algorithms
         /// Indicates how far along the list of Edges we have added to the mesh.  i = 1 means Edge(Edges[0], Edges[1]) has been added
         /// </summary>
         public int EdgesAdded;
+
+        /// <summary>
+        /// Indicates the ConstraintEdges form a closed contour at some point, though where is undefined
+        /// </summary>
+        public bool IsClosed
+        {
+            get
+            {
+                return EdgeVerts.Length != EdgeVerts.Distinct().Count();
+            }
+        }
 
         /// <summary>
         /// Returns the edge we should add to the mesh next and increments EdgesAdded
@@ -77,9 +88,19 @@ namespace GeometryTests.Algorithms
         {
             mesh = Original;
 
-            CandidateEdges = candidateEdges;
+            OriginalCandidateEdges = candidateEdges;
 
-            EdgeVerts = SelectValidEdges(CandidateEdges);
+            EdgeVerts = SelectValidEdges(OriginalCandidateEdges, mesh);
+        }
+
+        public ConstrainedDelaunayModel(TriangulationMesh<Vertex2D> Original)
+        {
+            mesh = Original;
+
+            //Since the verticies aren't sorted, just test the edges in order
+            OriginalCandidateEdges = new int[mesh.Verticies.Count - 1].Select((v,i) => i).ToArray();
+
+            EdgeVerts = SelectValidEdges(OriginalCandidateEdges, mesh);
         }
 
         /// <summary>
@@ -87,7 +108,7 @@ namespace GeometryTests.Algorithms
         /// with other constraints if added to the mesh
         /// </summary>
         /// <param name="candidateEdges"></param>
-        private int[] SelectValidEdges(int[] candidateEdges)
+        private static int[] SelectValidEdges(int[] candidateEdges, TriangulationMesh<Vertex2D> mesh)
         {
             if (candidateEdges.Length == 0)
                 return new int[0];
@@ -102,18 +123,48 @@ namespace GeometryTests.Algorithms
             {
                 EdgeKey proposedEdge = new EdgeKey(EdgeStart, candidateEdges[i]);
 
-                GridLineSegment proposedSeg = mesh.ToGridLineSegment(proposedEdge);
+                if (TryCreateConstraint(proposedEdge, mesh, ConstrainedEdgeTree))
+                {
+                    EdgeStart = candidateEdges[i];
+                    AddedConstraints.Add(candidateEdges[i]);
+                }
+            }
 
-                if (IntersectsConstrainedLine(proposedEdge, ConstrainedEdgeTree, mesh))
-                    continue;
-
-                Edge new_edge = new Edge(proposedEdge.A, proposedEdge.B);
-                EdgeStart = CandidateEdges[i];
-                ConstrainedEdgeTree.Add(proposedSeg.BoundingBox, new_edge);
-                AddedConstraints.Add(candidateEdges[i]);
+            //Try to add one final edge to the list to create a closed shape
+            int lastVert = AddedConstraints.Last();
+            for (int i = 0; i < AddedConstraints.Count-2; i++)
+            {
+                EdgeKey proposedEdge = new EdgeKey(EdgeStart, candidateEdges[i]);
+               
+                if(TryCreateConstraint(proposedEdge, mesh, ConstrainedEdgeTree))
+                {
+                    AddedConstraints.Add(AddedConstraints[i]);
+                    break; //Once we find a single edge we can close the shape to, stop
+                }
             }
 
             return AddedConstraints.ToArray();
+        }
+
+        /// <summary>
+        /// Creates the constraint if it does not intersect any existing constraints
+        /// </summary>
+        /// <param name="proposedEdge"></param>
+        /// <param name="mesh"></param>
+        /// <param name="ConstrainedEdgeTree"></param>
+        /// <returns></returns>
+        private static bool TryCreateConstraint(EdgeKey proposedEdge, TriangulationMesh<Vertex2D> mesh, RTree.RTree<IEdgeKey> ConstrainedEdgeTree)
+        {
+            if (IntersectsConstrainedLine(proposedEdge, ConstrainedEdgeTree, mesh))
+                return false;
+
+            GridLineSegment proposedSeg = mesh.ToGridLineSegment(proposedEdge);
+
+            Edge new_edge = new Edge(proposedEdge.A, proposedEdge.B);
+            //EdgeStart = candidateEdges[i];
+            ConstrainedEdgeTree.Add(proposedSeg.BoundingBox, new_edge);
+            //AddedConstraints.Add(candidateEdges[i]);
+            return true;
         }
 
         /// <summary>
@@ -165,6 +216,32 @@ namespace GeometryTests.Algorithms
             int[] Edges = Arb.Default.UInt32().Generator.Sample(nVerts-1, nEdgesMax).Distinct().Select(u => (int)u).ToArray();
 
             InitialActual = TriangulatedMeshGenerators.RandomMesh().Sample(nVerts, 1).First();
+            InitialModel = new ConstrainedDelaunayModel(InitialActual, Edges);
+        }
+
+        public ConstrainedDelaunaySpec(GridVector2[] points, int[] Edges)
+        {
+            InitialActual = GenericDelaunayMeshGenerator2D<Vertex2D>.TriangulateToMesh(points.Select(v => new Vertex2D(v, null)).ToArray());
+            InitialModel = new ConstrainedDelaunayModel(InitialActual, Edges.Where(e => e < points.Length).Distinct().ToArray());
+        }
+
+        public ConstrainedDelaunaySpec(TriangulationMesh<Vertex2D> mesh)
+        {
+            int nEdgesMax = mesh.Edges.Count - 1;
+            int nVerts = mesh.Verticies.Count;
+
+            if (nEdgesMax > nVerts - 1)
+            {
+                nEdgesMax = nVerts - 1;
+
+                if (nEdgesMax < 0)
+                    nEdgesMax = 0;
+            }
+
+            //Generate a set of candidate edges
+            int[] Edges = Arb.Default.UInt32().Generator.Sample(nVerts - 1, nEdgesMax).Distinct().Select(u => (int)u).ToArray();
+
+            InitialActual = mesh;//TriangulatedMeshGenerators.RandomMesh().Sample(nVerts, 1).First();
             InitialModel = new ConstrainedDelaunayModel(InitialActual, Edges);
         }
 
@@ -233,7 +310,7 @@ namespace GeometryTests.Algorithms
                         .And(vertEdges.Label("Verts with 0 or 1 edges"))
                         .And(facesAreTriangles.Label("Faces aren't triangles"))
                         .And(HasConstrainedEdge.Label(string.Format("Missing Edge Constraint {0}", EdgeToAdd)))
-                        .Classify(mesh.Verticies.Count < 3, "Fewer than 3 verts")
+                        .ClassifyMeshSize(mesh.Verticies.Count)
                         .Classify(model.EdgeVerts.Length < 2, "Only one edge")
                         .Label(mesh.ToString());
 
@@ -247,7 +324,7 @@ namespace GeometryTests.Algorithms
 
             public override TriangulationMesh<Vertex2D> RunActual(TriangulationMesh<Vertex2D> value)
             {
-                value.AddContrainedEdge(new Edge(EdgeToAdd));
+                value.AddConstrainedEdge(new Edge(EdgeToAdd));
                 return value;
             }
 
