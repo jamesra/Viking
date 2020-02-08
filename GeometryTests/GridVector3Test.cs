@@ -169,7 +169,8 @@ namespace UtilitiesTests
 
             for (int i = 0; i < points.Length; i++)
             {
-                Assert.AreEqual(points[i], convertedPoints[i]);
+                Assert.AreEqual(points[i], convertedPoints[i], "Output of matrix conversion does not match input");
+                Assert.AreEqual(points[i].coords.Length, 3, "Expect a GridVector3 to have coords array of length 3");
             }
         }
     }

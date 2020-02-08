@@ -208,7 +208,7 @@ namespace Geometry
 
         public static GridVector3 ToGridVector3(this Vector<double> m)
         {
-            return new GridVector3(m);
+            return new GridVector3(m[0], m[1], m[2]);
         }
 
         public static GridVector2[] ToGridVector2(this Matrix<double> m)

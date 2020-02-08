@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -24,14 +25,18 @@ namespace Geometry
 
         public GridVector3(double[] input)
         {
-            _coords = new double[input.Length];
-            input.CopyTo(_coords, 0);
+            Debug.Assert(input != null, "Passed null to GridVector3(double[]) constructor");
+            Debug.Assert(input.Length != 3, string.Format("Passing an array of length {0} to GridVector3 constructor, expected 3 elements", input.Length));
+            _coords = new double[3];
+            Array.Copy(input, _coords, 3);
         }
 
         public GridVector3(IEnumerable<double> input)
         {
+            Debug.Assert(input != null, "Passed null to GridVector3(IEnumerable<double>) constructor");
             //Make sure we copy so we don't take a reference on the array
             _coords = input.ToArray();
+            Debug.Assert(_coords.Length == 3, string.Format("Passing an IEnumerable<double> of count {0} to GridVector3 constructor, expected 3 elements", _coords.Length));            
         }
 
         public GridVector3(double x, double y, double z)
@@ -131,6 +136,7 @@ namespace Geometry
 
         static public double Distance(GridVector3 A, GridVector3 B)
         {
+            Debug.Assert(A.coords.Length == B.coords.Length);
             double[] diff = A._coords.Select((Aval, i) => Aval - B._coords[i]).ToArray();
             return Math.Sqrt(diff.Sum((val) => (val * val)));
         }
