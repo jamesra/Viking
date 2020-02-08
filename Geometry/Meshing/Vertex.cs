@@ -11,7 +11,7 @@ namespace Geometry.Meshing
     /// <summary>
     /// A basic implementation of the IVertex class to inherit
     /// </summary>
-    public abstract class VertexBase : IVertex
+    public abstract class VertexBase : IVertex, IComparable<VertexBase>, IEquatable<VertexBase>
     {
         public virtual int Index { get; set; }
 
@@ -75,7 +75,17 @@ namespace Geometry.Meshing
             return this.Index.CompareTo(other.Index);
         }
 
+        public int CompareTo(VertexBase other)
+        {
+            return this.Index.CompareTo(other.Index);
+        }
+
         public bool Equals(IVertex other)
+        {
+            return this.Index == other.Index;
+        }
+
+        public bool Equals(VertexBase other)
         {
             return this.Index == other.Index;
         }
