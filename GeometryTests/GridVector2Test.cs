@@ -103,22 +103,23 @@ namespace UtilitiesTests
             GridVector2 G = new GridVector2(-0.5, -0.5);
             GridVector2 H = new GridVector2(0.5, -0.5);
 
-
-            //         B
-            //    F    |    E
-            //         |
-            // C---------------A
-            //         |
-            //    G    |    H
-            //         D
-
+            //     X = -1          X = 1
+            //
+            // Y = 1         B
+            //          F    |    E
+            //               |
+            //       C---------------A
+            //               |
+            //          G    |    H
+            // Y = -1        D
+            //
 
             //Start by testing angles on the axis
             double Degree90 = GridVector2.ArcAngle(Origin, A, B);
-            Assert.AreEqual(Degree90, Pi2);
+            Assert.AreEqual(Degree90, -Pi2);
 
             Degree90 = GridVector2.ArcAngle(Origin, B, A);
-            Assert.AreEqual(Degree90, -Pi2);
+            Assert.AreEqual(Degree90, Pi2);
 
             double Degree180 = GridVector2.ArcAngle(Origin, A, C);
             Assert.AreEqual(Degree180, Math.PI);
@@ -135,42 +136,42 @@ namespace UtilitiesTests
             //Check angles not on the axis
 
             Degree90 = GridVector2.ArcAngle(Origin, E, F);
-            Assert.AreEqual(Degree90, Pi2);
-
-            Degree90 = GridVector2.ArcAngle(Origin, F, E);
             Assert.AreEqual(Degree90, -Pi2);
 
-            Degree90 = GridVector2.ArcAngle(Origin, F, G);
+            Degree90 = GridVector2.ArcAngle(Origin, F, E);
             Assert.AreEqual(Degree90, Pi2);
 
+            Degree90 = GridVector2.ArcAngle(Origin, F, G);
+            Assert.AreEqual(Degree90, -Pi2);
+
             Degree90 = GridVector2.ArcAngle(Origin, G, H);
-            Assert.AreEqual(Degree90, Pi2);
+            Assert.AreEqual(Degree90, -Pi2);
 
             //Check 45 degree angles
             double Degree45 = GridVector2.ArcAngle(Origin, E, B);
-            Assert.AreEqual(Degree45, Pi4);
-
-            Degree45 = GridVector2.ArcAngle(Origin, E, A);
             Assert.AreEqual(Degree45, -Pi4);
 
-            Degree45 = GridVector2.ArcAngle(Origin, H, A);
+            Degree45 = GridVector2.ArcAngle(Origin, E, A);
             Assert.AreEqual(Degree45, Pi4);
+
+            Degree45 = GridVector2.ArcAngle(Origin, H, A);
+            Assert.AreEqual(Degree45, -Pi4);
 
             //Check 135 degree angles
             double Degree135 = GridVector2.ArcAngle(Origin, E, C);
-            Assert.AreEqual(Degree135, Pi4 + Pi2);
+            Assert.AreEqual(Degree135, -(Pi4 + Pi2));
 
             Degree135 = GridVector2.ArcAngle(Origin, C, E);
-            Assert.AreEqual(Degree135, -(Pi4 + Pi2));
+            Assert.AreEqual(Degree135, (Pi4 + Pi2));
 
             Degree135 = GridVector2.ArcAngle(Origin, G, A);
-            Assert.AreEqual(Degree135, (Pi4 + Pi2));
+            Assert.AreEqual(Degree135, -(Pi4 + Pi2));
 
             Degree135 = GridVector2.ArcAngle(Origin, B, G);
-            Assert.AreEqual(Degree135, (Pi4 + Pi2));
+            Assert.AreEqual(Degree135, -(Pi4 + Pi2));
 
             Degree135 = GridVector2.ArcAngle(Origin, G, B);
-            Assert.AreEqual(Degree135, -(Pi4 + Pi2));
+            Assert.AreEqual(Degree135, (Pi4 + Pi2));
 
             //Check 180 degree angles off-axis
 
@@ -194,10 +195,10 @@ namespace UtilitiesTests
             C += offset;
 
             Degree90 = GridVector2.ArcAngle(Origin, A, B);
-            Assert.AreEqual(Degree90, Pi2);
+            Assert.AreEqual(Degree90, -Pi2);
 
             Degree90 = GridVector2.ArcAngle(Origin, B, A);
-            Assert.AreEqual(Degree90, -Pi2);
+            Assert.AreEqual(Degree90, Pi2);
 
             Degree180 = GridVector2.ArcAngle(Origin, A, C);
             Assert.AreEqual(Degree180, Math.PI);
@@ -221,10 +222,16 @@ namespace UtilitiesTests
             GridVector2 C = new GridVector2(-1, 0);
             GridVector2 D = new GridVector2(Math.Cos(Pi4), Math.Sin(Pi4));
 
-            double degree45 = GridVector2.ArcAngle(Origin, A, D);
+            //Measure from D to A, which is on X-Axis
+            double degree45 = GridVector2.ArcAngle(Origin, D, A);
+
+            //Measure angle to D from origin, which is also on X-Axis
             double result = GridVector2.Angle(Origin, D);
+
+            Assert.AreEqual(result, degree45);
             Assert.AreEqual(degree45, Pi4);
             Assert.AreEqual(result,  Pi4);
+            
         }
 
         [TestMethod]

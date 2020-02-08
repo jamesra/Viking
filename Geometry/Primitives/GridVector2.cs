@@ -404,7 +404,8 @@ namespace Geometry
         }
 
         /// <summary>
-        /// Angle of arc between A & B with Origin
+        /// Angle of arc from A to B measured at Origin. 
+        /// A -negative value is a counter-clockwise arc
         /// </summary>
         /// <param name="Origin"></param>
         /// <param name="A"></param>
@@ -418,7 +419,7 @@ namespace Geometry
             double AngleB = Math.Atan2(B.Y, B.X); 
             double Angle = Clockwise ? AngleB - AngleA : AngleA - AngleB;
 
-            if (Angle < -Math.PI)
+            if (Angle <= -Math.PI)
                 Angle += Math.PI * 2;
             else if (Angle > Math.PI)
                 Angle -= Math.PI * 2;
