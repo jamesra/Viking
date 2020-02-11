@@ -9,6 +9,29 @@ using RTree;
 
 namespace GeometryTests.Algorithms
 {
+    public static class FSCheckMeshExtensions
+    {
+        /// <summary>
+        /// A helper function to add .Classify calls to a property according to size
+        /// </summary>
+        /// <param name="prop"></param>
+        /// <param name="nVerts"></param>
+        /// <returns></returns>
+        public static Property ClassifyMeshSize(this Property prop, int nVerts)
+        {
+
+            return prop.Classify(nVerts <= 3, "Trivial")
+               .Classify(nVerts > 3 && nVerts <= 10, "3 - 10 Verts")
+               .Classify(nVerts > 10 && nVerts <= 32, "11 - 32 Verts")
+               .Classify(nVerts > 32 && nVerts <= 64, "33 - 64 Verts")
+               .Classify(nVerts > 64 && nVerts <= 128, "65 - 128 Verts")
+               .Classify(nVerts > 128 && nVerts <= 256, "129 - 256 Verts")
+               .Classify(nVerts > 256 && nVerts <= 512, "257 - 512 Verts")
+               .Classify(nVerts > 512 && nVerts <= 1024, "513 - 1024 Verts")
+               .Classify(nVerts > 1024, "1024+ Verts");
+        }
+    }
+
     [TestClass]
     public class DelaunayTest
     {
@@ -40,11 +63,40 @@ namespace GeometryTests.Algorithms
             configuration.StartSize = 0;
             
             //Prop.ForAll<TriangulationMesh<Vertex2D>>((mesh) => IsDelaunay(mesh)).Check(configuration);
-            Prop.ForAll<GridVector2[]>((points) => IsDelaunay(GenericDelaunayMeshGenerator2D<Vertex2D>.TriangulateToMesh(points.Select(p => new Vertex2D(p)).ToArray()))).Check(configuration);
+            Prop.ForAll<GridVector2[]>((points) => IsDelaunay(GenericDelaunayMeshGenerator2D<IVertex2D>.TriangulateToMesh(points.Select(p => new Vertex2D(p)).ToArray()))).Check(configuration);
 
             //    .When(points.Distinct().Count() >= 3)
               //  .Classify(AllPointsColinear(points), "Colinear"))
                 //.QuickCheckThrowOnFailure();
+
+            /*
+            Prop.ForAll<GridVector2[]>((points) =>
+            GenAndTriangulateMesh(points, out TriangulationMesh<Vertex2D> mesh)
+            
+                .And(() => IsDelaunay(mesh))
+                .When(points.Distinct().Count() >= 3)
+                .Classify((points) => AllPointsColinear(points), "Colinear")
+                .QuickCheckThrowOnFailure();
+                */
+        }
+
+        [TestMethod]
+        public void DelaunayGeneratorParameterTest2()
+        {
+            //A second pass implementation that generates entire meshes as random parameters and not sets of points that I must convert to meshes
+            GeometryArbitraries.Register();
+
+            var configuration = Configuration.QuickThrowOnFailure;
+            configuration.MaxNbOfTest = 1000;
+            configuration.QuietOnSuccess = false;
+            configuration.StartSize = 0;
+
+            //Prop.ForAll<TriangulationMesh<Vertex2D>>((mesh) => IsDelaunay(mesh)).Check(configuration);
+            Prop.ForAll<TriangulationMesh<IVertex2D>>((mesh) => IsDelaunay(mesh)).Check(configuration);
+
+            //    .When(points.Distinct().Count() >= 3)
+            //  .Classify(AllPointsColinear(points), "Colinear"))
+            //.QuickCheckThrowOnFailure();
 
             /*
             Prop.ForAll<GridVector2[]>((points) =>
@@ -105,10 +157,80 @@ namespace GeometryTests.Algorithms
         {
             GeometryArbitraries.Register();
 
+            var configuration = Configuration.QuickThrowOnFailure;
+            configuration.MaxNbOfTest = 2;
+            configuration.QuietOnSuccess = false;
+            configuration.StartSize = 8;
+            
+
+            //Func<int, int, ConstrainedDelaunaySpec> func = (nVerts, nEdges) => new ConstrainedDelaunaySpec(nVerts, nEdges);
+            Prop.ForAll<GridVector2[], ushort[]>((points, edges) =>
+            {
+                var mesh = GenericDelaunayMeshGenerator2D<Vertex2D>.TriangulateToMesh(points.Select(v => new Vertex2D(v, null)).ToArray());
+                var edge_configuration = Configuration.QuickThrowOnFailure;
+                edge_configuration.MaxNbOfTest = 2;
+                edge_configuration.QuietOnSuccess = false;
+                edge_configuration.StartSize = edges.Length-1;
+
+
+                new ConstrainedDelaunaySpec(points, edges.Select(e => (int)e).Distinct().ToArray()).ToProperty().Check(edge_configuration);
+            }).Check(configuration);
+            
+            //Prop.ForAll<ushort, ushort>((nVerts, nEdges) => new ConstrainedDelaunaySpec(nVerts, nEdges).ToProperty().QuickCheckThrowOnFailure()).QuickCheckThrowOnFailure();
+            //Prop.ForAll<ushort>((nVerts) => new ConstrainedDelaunaySpec(nVerts, nVerts / 2).ToProperty().QuickCheck()).Check(configuration);
+            //Prop.ForAll<TriangulationMesh<Vertex2D>>((mesh) => new ConstrainedDelaunaySpec(mesh).ToProperty().QuickCheck()).Check(configuration);
+            //Prop.ForAll<ushort>((nVerts) => new ConstrainedDelaunaySpec(nVerts, nVerts / 2).ToProperty().QuickCheckThrowOnFailure()).QuickCheckThrowOnFailure();
+            //Prop.ForAll<ushort, ushort>((nVerts, nEdges) => new ConstrainedDelaunaySpec(nVerts < nEdges ? nEdges : nVerts, nEdges < nVerts ? nEdges : nVerts)).QuickCheck();
+            //Prop.ForAll<ushort, ushort>((nVerts,nEdges) => ).QuickCheck();
+            /*
+            Prop.ForAll<GridVector2[],int[]>((mesh, edges) => SplitFunc(mesh, edges.Distinct().ToArray())
+                .When( IsValidConstrainedDelaunayInput(points, edges))
+                .Classify(AllPointsColinear(points), "Colinear"))
+                .Check(new Configuration { Replay = FsCheck.Random.StdGen.NewStdGen(1279530810, 296702734), Runner = Config.QuickThrowOnFailure.Runner });
+            */
+            //new ConstrainedDelaunaySpec(16, 16 / 2).ToProperty().Check(new Configuration { Replay = FsCheck.Random.StdGen.NewStdGen(1616214556, 296703506), Runner = Config.QuickThrowOnFailure.Runner });
+
+        }
+
+        [TestMethod]
+        public void ConstrainedDelaunayTestWithArbModel()
+        {
+            GeometryArbitraries.Register();
+
+            var configuration = Configuration.VerboseThrowOnFailure;
+            configuration.MaxNbOfTest = 8;
+            configuration.QuietOnSuccess = false;
+            configuration.StartSize = 1;
+
             //Func<int, int, ConstrainedDelaunaySpec> func = (nVerts, nEdges) => new ConstrainedDelaunaySpec(nVerts, nEdges);
 
+            Prop.ForAll<ConstrainedDelaunayModel>((model) =>
+            {
+                var model_configuration = Configuration.VerboseThrowOnFailure;
+                model_configuration.MaxNbOfTest = 1;
+                model_configuration.QuietOnSuccess = false;
+                model_configuration.StartSize = model.ConstraintEdges.Count/2; //Set the number of edges so the correct number of Commands are generated
+
+                var spec = new ConstrainedDelaunaySpec(model);
+                var spec_prop = spec.ToProperty();
+                spec_prop.Check(model_configuration);
+                
+            }).Check(configuration);
+            
+            /*
+            Prop.ForAll<ConstrainedDelaunayModel>((model) =>
+            {
+                var model_configuration = Configuration.VerboseThrowOnFailure;
+                model_configuration.MaxNbOfTest = 1;
+                model_configuration.QuietOnSuccess = false;
+                model_configuration.StartSize = model.ConstraintEdges.Count / 2; //Set the number of edges so the correct number of Commands are generated
+
+                new ConstrainedDelaunaySpec(model).ToProperty().Check(model_configuration);
+            }).Check(configuration);
+            */
             //Prop.ForAll<ushort, ushort>((nVerts, nEdges) => new ConstrainedDelaunaySpec(nVerts, nEdges).ToProperty().QuickCheckThrowOnFailure()).QuickCheckThrowOnFailure();
-            Prop.ForAll<ushort>((nVerts) => new ConstrainedDelaunaySpec(nVerts, nVerts / 2).ToProperty().QuickCheck()).QuickCheck();
+            //Prop.ForAll<ushort>((nVerts) => new ConstrainedDelaunaySpec(nVerts, nVerts / 2).ToProperty().QuickCheck()).Check(configuration);
+            //Prop.ForAll<TriangulationMesh<Vertex2D>>((mesh) => new ConstrainedDelaunaySpec(mesh).ToProperty().QuickCheck()).Check(configuration);
             //Prop.ForAll<ushort>((nVerts) => new ConstrainedDelaunaySpec(nVerts, nVerts / 2).ToProperty().QuickCheckThrowOnFailure()).QuickCheckThrowOnFailure();
             //Prop.ForAll<ushort, ushort>((nVerts, nEdges) => new ConstrainedDelaunaySpec(nVerts < nEdges ? nEdges : nVerts, nEdges < nVerts ? nEdges : nVerts)).QuickCheck();
             //Prop.ForAll<ushort, ushort>((nVerts,nEdges) => ).QuickCheck();
@@ -153,21 +275,9 @@ namespace GeometryTests.Algorithms
 
             return false;
         }
+         
 
-        /*public Property Delaunay(GridVector2[] points)
-        {   
-            bool result = GenAndTriangulateMesh(points, out TriangulationMesh<Vertex2D> mesh);
-
-            bool TriangleVertexEdgesValid = AreTriangulatedVertexEdgesValid(mesh);
-            bool TriangleFacesValid = AreTriangulatedFacesValid(mesh);
-            bool TriangleEdgesDoNotIntersect = mesh.AnyMeshEdgesIntersect() == false;
-
-            return (new Func<bool>(() => TriangleVertexEdgesValid).When(TriangleVertexEdgesValid == false).Label("Vertex Edges Invalid"))
-                .And(new Func<bool>(() => TriangleFacesValid).When(TriangleFacesValid == false).Label("Vertex Faces Invalid"))
-                .And(new Func<bool>(() => TriangleEdgesDoNotIntersect).When(TriangleEdgesDoNotIntersect == false).Label("Edges intersect"));   
-        }*/
-
-        public Property IsDelaunay(TriangulationMesh<Vertex2D> mesh)
+        public Property IsDelaunay(TriangulationMesh<IVertex2D> mesh)
         {
             //System.Diagnostics.Trace.WriteLine(string.Format("{0}", mesh));
             bool edgesIntersect = mesh.AnyMeshEdgesIntersect();
@@ -177,22 +287,25 @@ namespace GeometryTests.Algorithms
             bool vertEdges = AreTriangulatedVertexEdgesValid(mesh) || mesh.Verticies.Count < 3;
             bool facesAreTriangles = DelaunayTest.AreFacesTriangles(mesh);
             bool success = (edgesIntersect == false) && facesDelaunay && facesCCW && vertEdges && facesAreTriangles;
+            int nVerts = mesh.Verticies.Count;
             return (edgesIntersect == false).Label("Edges intersect")
                .And(facesDelaunay.Label("Faces not Delaunay"))
                .And(facesCCW.Label("Faces Clockwise"))
                .And((facesColinear == false).Label("Faces colinear"))
                .And(facesAreTriangles.Label("Faces aren't triangles"))
                .And(vertEdges.Label("Verts with 0 or 1 edges"))
-               .Classify(mesh.Verticies.Count <= 3, "Trivial")
+               .ClassifyMeshSize(nVerts)
                .Label(mesh.ToJSON());
         }
 
+        
+
         public bool GenAndTriangulateMesh(GridVector2[] points)
         {
-            return GenAndTriangulateMesh(points, out TriangulationMesh<Vertex2D> mesh);
+            return GenAndTriangulateMesh(points, out TriangulationMesh<IVertex2D> mesh);
         }
 
-        public static bool GenAndTriangulateMesh(GridVector2[] points, out TriangulationMesh<Vertex2D> mesh)
+        public static bool GenAndTriangulateMesh(GridVector2[] points, out TriangulationMesh<IVertex2D> mesh)
         {
             mesh = null;
             points = points.Distinct().ToArray();
@@ -206,7 +319,7 @@ namespace GeometryTests.Algorithms
             try
             {
                 Vertex2D[] InputVerts = points.Select(p => new Vertex2D(p)).ToArray();
-                mesh = GenericDelaunayMeshGenerator2D<Vertex2D>.TriangulateToMesh(InputVerts, null);
+                mesh = GenericDelaunayMeshGenerator2D<IVertex2D>.TriangulateToMesh(InputVerts, null);
                 
                 if (AreTriangulatedVertexEdgesValid(mesh) == false)
                     return false;
@@ -299,7 +412,7 @@ namespace GeometryTests.Algorithms
         /// </summary>
         /// <param name="mesh"></param>
         /// <returns></returns>
-        public static bool AreTriangulatedVertexEdgesValid(TriangulationMesh<Vertex2D> mesh)
+        public static bool AreTriangulatedVertexEdgesValid(TriangulationMesh<IVertex2D> mesh)
         {
             foreach (var v in mesh.Verticies)
             {
@@ -316,7 +429,7 @@ namespace GeometryTests.Algorithms
         /// </summary>
         /// <param name="mesh"></param>
         /// <returns></returns>
-        public static bool AreTriangulatedFacesCCW(TriangulationMesh<Vertex2D> mesh)
+        public static bool AreTriangulatedFacesCCW(TriangulationMesh<IVertex2D> mesh)
         {
             foreach (Face f in mesh.Faces)
             { 
@@ -336,7 +449,7 @@ namespace GeometryTests.Algorithms
         /// </summary>
         /// <param name="mesh"></param>
         /// <returns></returns>
-        public static bool AreTriangulatedFacesColinear(TriangulationMesh<Vertex2D> mesh)
+        public static bool AreTriangulatedFacesColinear(TriangulationMesh<IVertex2D> mesh)
         {
             foreach (Face f in mesh.Faces)
             {
@@ -356,7 +469,7 @@ namespace GeometryTests.Algorithms
         /// </summary>
         /// <param name="mesh"></param>
         /// <returns></returns>
-        public static bool AreFacesTriangles(TriangulationMesh<Vertex2D> mesh)
+        public static bool AreFacesTriangles(TriangulationMesh<IVertex2D> mesh)
         {
             foreach (Face f in mesh.Faces)
             {
@@ -376,7 +489,7 @@ namespace GeometryTests.Algorithms
         /// </summary>
         /// <param name="mesh"></param>
         /// <returns></returns>
-        public static bool AreTriangulatedFacesDelaunay(TriangulationMesh<Vertex2D> mesh)
+        public static bool AreTriangulatedFacesDelaunay(TriangulationMesh<IVertex2D> mesh)
         {
             foreach (Face f in mesh.Faces)
             {
