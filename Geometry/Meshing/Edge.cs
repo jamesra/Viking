@@ -399,5 +399,12 @@ namespace Geometry.Meshing
         {
             return endpoint == A || endpoint == B;
         }
+
+        public virtual IEdge Clone()
+        {
+            var e = new Edge(this.Key);
+            e._ImmutableFaces = this.Faces.Select(f => f.Clone()).ToImmutableSortedSet();
+            return e;
+        }
     }
 }

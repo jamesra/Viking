@@ -47,7 +47,7 @@ namespace GeometryTests.Algorithms
         /// <summary>
         /// Indicates how far along the list of Edges we have added to the mesh.  i = 1 means Edge(Edges[0], Edges[1]) has been added
         /// </summary>
-        public int EdgesAdded;
+        public int EdgesAdded = 0;
 
         /// <summary>
         /// Indicates the ConstraintEdges form a closed contour at some point, though where is undefined
@@ -132,6 +132,12 @@ namespace GeometryTests.Algorithms
             OriginalCandidateEdges = new int[mesh.Verticies.Count - 1].Select((v, i) => i).ToArray();
              
             this.ConstraintEdges = constraints;
+        }
+
+        public ConstrainedDelaunayModel Clone()
+        {
+            var output = new ConstrainedDelaunayModel(this.mesh.Clone(), this.ConstraintEdges);
+            return output;
         }
 
         private List<EdgeKey> CreateEdges(int[] edge_seq)
@@ -251,6 +257,9 @@ namespace GeometryTests.Algorithms
         /// </summary>
         public bool Pass = true;
 
+        private ConstrainedDelaunayModel OriginalModel;
+        private TriangulationMesh<IVertex2D> OriginalMesh;
+
         public ConstrainedDelaunaySpec(int nVerts, int nEdgesMax)
         {
             if(nEdgesMax > nVerts-1)
@@ -264,8 +273,8 @@ namespace GeometryTests.Algorithms
             //Generate a set of candidate edges
             int[] Edges = Arb.Default.UInt32().Generator.Sample(nVerts-1, nEdgesMax).Distinct().Select(u => (int)u).ToArray();
 
-            InitialActual = TriangulatedMeshGenerators.RandomMesh().Sample(nVerts, 1).First();
-            InitialModel = new ConstrainedDelaunayModel(InitialActual, Edges);
+            OriginalMesh = TriangulatedMeshGenerators.RandomMesh().Sample(nVerts, 1).First();
+            OriginalModel = new ConstrainedDelaunayModel(InitialActual, Edges);
 
             ID = NextID;
             NextID = NextID + 1;
@@ -274,11 +283,11 @@ namespace GeometryTests.Algorithms
 
         public ConstrainedDelaunaySpec(ConstrainedDelaunayModel model)
         {
-            InitialActual = model.mesh;//GenericDelaunayMeshGenerator2D<IVertex2D>.TriangulateToMesh(model.mesh.Verticies.Select(v => new Vertex2D(v.Position)).ToArray());
+            OriginalMesh = model.mesh;//GenericDelaunayMeshGenerator2D<IVertex2D>.TriangulateToMesh(model.mesh.Verticies.Select(v => new Vertex2D(v.Position)).ToArray());
             if (TriangulatedMeshGenerators.OnProgress != null)
                 TriangulatedMeshGenerators.OnProgress(InitialActual);
 
-            InitialModel = model;
+            OriginalModel = model;
 
             ID = NextID;
             NextID = NextID + 1;
@@ -287,11 +296,11 @@ namespace GeometryTests.Algorithms
 
         public ConstrainedDelaunaySpec(GridVector2[] points, int[] Edges)
         {
-            InitialActual = GenericDelaunayMeshGenerator2D<IVertex2D>.TriangulateToMesh(points.Select(v => new Vertex2D(v, null)).ToArray());
+            OriginalMesh = GenericDelaunayMeshGenerator2D<IVertex2D>.TriangulateToMesh(points.Select(v => new Vertex2D(v, null)).ToArray());
             if (TriangulatedMeshGenerators.OnProgress != null)
                 TriangulatedMeshGenerators.OnProgress(InitialActual);
 
-            InitialModel = new ConstrainedDelaunayModel(InitialActual, Edges.Where(e => e < points.Length).Distinct().ToArray());
+            OriginalModel = new ConstrainedDelaunayModel(InitialActual, Edges.Where(e => e < points.Length).Distinct().ToArray());
 
             ID = NextID;
             NextID = NextID + 1;
@@ -314,13 +323,13 @@ namespace GeometryTests.Algorithms
             //Generate a set of candidate edges
             int[] Edges = Arb.Default.UInt32().Generator.Sample(nVerts - 1, nEdgesMax).Distinct().Select(u => (int)u).ToArray();
 
-            InitialActual = mesh;//TriangulatedMeshGenerators.RandomMesh().Sample(nVerts, 1).First();
-            InitialModel = new ConstrainedDelaunayModel(InitialActual, Edges);
+            OriginalMesh = mesh;//TriangulatedMeshGenerators.RandomMesh().Sample(nVerts, 1).First();
+            OriginalModel = new ConstrainedDelaunayModel(InitialActual, Edges);
         }
 
-        public ConstrainedDelaunayModel InitialModel { get; private set; }
+        public ConstrainedDelaunayModel InitialModel { get { return OriginalModel.Clone(); } }
 
-        public TriangulationMesh<IVertex2D> InitialActual { get; private set; }
+        public TriangulationMesh<IVertex2D> InitialActual { get { return OriginalMesh.Clone(); } }
 
         public Gen<Command<TriangulationMesh<IVertex2D>, ConstrainedDelaunayModel>> Next(ConstrainedDelaunayModel value)
         {

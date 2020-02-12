@@ -100,6 +100,16 @@ namespace Geometry.Meshing
             _Edges = CalculateEdges().ToImmutableArray();
         }
 
+        /// <summary>
+        /// Used only for creating copies
+        /// </summary>
+        /// <param name="vertex_indicies"></param>
+        /// <param name="edges"></param>
+        protected Face(IEnumerable<int> vertex_indicies, IEnumerable<IEdgeKey> edges) : this(vertex_indicies)
+        {
+            this._Edges = edges.ToImmutableArray();
+        }
+
 
         public Face(IEnumerable<int> vertex_indicies)
         {
@@ -236,6 +246,11 @@ namespace Geometry.Meshing
 
             return A.SetEquals(B);
         }
-        
+
+        public virtual IFace Clone()
+        {
+            var f = new Face(this.iVerts, this.Edges);
+            return f;
+        }
     }
 }

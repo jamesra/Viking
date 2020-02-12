@@ -107,12 +107,16 @@ namespace Geometry.Meshing
         void RemoveFace(IFace f);
 
         IFace OppositeFace(IFace f);
+
+        IEdge Clone();
     }
 
     public interface IFace : IComparable<IFace>, IEquatable<IFace>
     {
         ImmutableArray<int> iVerts { get; }
         ImmutableArray<IEdgeKey> Edges { get; }
+
+        IFace Clone();
     }
 
     /// <summary>

@@ -15,6 +15,7 @@ using TriangleNet;
 using TriangleNet.Meshing;
 using VikingXNA;
 using VikingXNAGraphics;
+using Geometry.JSON;
 //using OTVTable = System.Collections.Concurrent.ConcurrentDictionary<Geometry.PointIndex, Geometry.PointIndex>;
 //using SliceChordRTree = RTree.RTree<MorphologyMesh.ISliceChord>;
 
@@ -794,6 +795,11 @@ namespace MonogameTestbed
             133917
         };
 
+        long[] DelaunayTest8 = new long[] {
+            82601,
+            82599
+        };
+
         Scene scene;
         Scene3D scene3D;
         GamePadStateTracker Gamepad = new GamePadStateTracker();
@@ -839,8 +845,8 @@ namespace MonogameTestbed
 
             /////////////
             ///This is the major test of mesh generation that covers as many cases as I could think of
-            //AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromODataLocationIDs(NightmareTroubleIDS, DataSource.EndpointMap[ENDPOINT.TEST]);
-            AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromODataLocationIDs(DelaunayTest7, DataSource.EndpointMap[ENDPOINT.RPC1]);
+            //AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromODataLocationIDs(NightmareTroubleIDS, DataSource.EndpointMap[ENDPOINT.TEST]); 
+            AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromODataLocationIDs(DelaunayTest8, DataSource.EndpointMap[ENDPOINT.RPC1]);
             //////////////
 
             //BajajMeshGenerator.ConvertToMeshGraph(graph);

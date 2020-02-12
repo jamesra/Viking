@@ -53,8 +53,7 @@ namespace Geometry
     public static class GenericDelaunayMeshGenerator2D<VERTEX>
         where VERTEX : IVertex2D
     {
-        public delegate void ProgressUpdate(TriangulationMesh<VERTEX> mesh);
-
+        
         /// <summary>
         /// Generates the delaunay triangulation for a list of points. 
         /// Requires the points to be sorted on the X-axis coordinate!
@@ -64,7 +63,7 @@ namespace Geometry
         /// by Paul Bourke
         /// </summary>
         /// <returns>A Mesh2D whose vertex indicies match the input points</returns>
-        public static TriangulationMesh<VERTEX> TriangulateToMesh(VERTEX[] verts, ProgressUpdate ReportProgress = null)
+        public static TriangulationMesh<VERTEX> TriangulateToMesh(VERTEX[] verts, TriangulationMesh<VERTEX>.ProgressUpdate ReportProgress = null)
         {
             if (verts == null)
             {
@@ -93,7 +92,8 @@ namespace Geometry
                 }
             }
 
-#if DEBUG
+#if VERIFYDELAUNAY
+            
             Debug.Assert(mesh.AnyMeshEdgesIntersect() == false, "Mesh Edges Intersect");
 
             foreach(Face f in mesh.Faces)
@@ -114,7 +114,7 @@ namespace Geometry
         /// <param name="mesh"></param>
         /// <param name="VertSet">Indicies of verticies in the half.  Sorted on either X or Y axis</param>
         /// <returns></returns>
-        private static TriangulationMesh<VERTEX> RecursiveDivideAndConquerDelaunay(TriangulationMesh<VERTEX> mesh, MeshCut VertSet = null, IVertex2D[] verts = null, ProgressUpdate ReportProgress = null)
+        private static TriangulationMesh<VERTEX> RecursiveDivideAndConquerDelaunay(TriangulationMesh<VERTEX> mesh, MeshCut VertSet = null, IVertex2D[] verts = null, TriangulationMesh<VERTEX>.ProgressUpdate ReportProgress = null)
         {
             //The first recursion we populate variables to include all the verticies in the mesh
             if (VertSet == null)
@@ -836,7 +836,7 @@ namespace Geometry
             return null;
         }
 
-        static void CheckEdgeFlip(TriangulationMesh<VERTEX> mesh, TriangleFace f, ProgressUpdate ReportProgress = null)
+        static void CheckEdgeFlip(TriangulationMesh<VERTEX> mesh, TriangleFace f, TriangulationMesh<VERTEX>.ProgressUpdate ReportProgress = null)
         {
             //Check if the face has already been removed.
             if (mesh.Contains(f) == false)
@@ -941,7 +941,7 @@ namespace Geometry
             }
         }
 
-        static void CheckEdgeFlip(TriangulationMesh<VERTEX> mesh, Edge edge, ProgressUpdate ReportProgress = null)
+        static void CheckEdgeFlip(TriangulationMesh<VERTEX> mesh, Edge edge, TriangulationMesh<VERTEX>.ProgressUpdate ReportProgress = null)
         {
             if (edge.Faces.Count < 2)
                 return;

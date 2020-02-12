@@ -1,4 +1,6 @@
-﻿using System;
+﻿#define TRACEDDELAUNAY
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -170,6 +172,13 @@ namespace Geometry.Meshing
 
             return EdgesSortedAroundOrigin;
         }
+
+        public override IVertex ShallowCopy()
+        {
+            TriangulationVertex newVertex = new TriangulationVertex(Position);
+            newVertex.EdgeComparer = this.EdgeComparer;
+            return newVertex;
+        }
     }
 
     public class TriangulationVertex<T> : TriangulationVertex, IVertex2D<T>
@@ -187,7 +196,8 @@ namespace Geometry.Meshing
 
         public override IVertex ShallowCopy()
         {
-            Vertex2D<T> newVertex = new Vertex2D<T>(Position, Data, this.EdgeComparer);
+            TriangulationVertex<T> newVertex = new TriangulationVertex<T>(Position, Data);
+            newVertex.EdgeComparer = this.EdgeComparer;
             return newVertex;
         } 
     }
@@ -225,6 +235,28 @@ namespace Geometry.Meshing
         }
     }
 
+    public class ConstrainedEdge : Edge
+    {
+        public ConstrainedEdge(EdgeKey key) : base(key)
+        {
+        }
+
+        public ConstrainedEdge(IEdgeKey key) : base(key)
+        {
+        }
+
+        public ConstrainedEdge(int a, int b) : base(a, b)
+        {
+        }
+
+        public override IEdge Clone()
+        {
+            ConstrainedEdge e = new ConstrainedEdge(this.Key);
+            return e;
+        }
+    }
+
+
     public class TriangleFace : Face, ITriangleFace
     {
         public int A
@@ -256,8 +288,20 @@ namespace Geometry.Meshing
             get { return new EdgeKey(C,A); }
         }
 
+        public override IFace Clone()
+        {
+            var f = new TriangleFace(this.iVerts, this.Edges);
+            return f;
+        }
+
         public TriangleFace(int A, int B, int C) : base(A,B,C)
         {
+        }
+
+        protected TriangleFace(IEnumerable<int> vertex_indicies, IEnumerable<IEdgeKey> edges) : base(vertex_indicies, edges)
+        {
+            if (this.iVerts.Length != 3)
+                throw new ArgumentException(string.Format("Three verticies required for triangle face, got {0}", this.ToString()));
         }
 
         public TriangleFace(IEnumerable<int> vertex_indicies) : base(vertex_indicies)
@@ -346,7 +390,7 @@ namespace Geometry.Meshing
         public static Tuple<TriangleFace, TriangleFace> Flip(IEdge existing, IEdge flipped)
         {
             if (existing.Faces.Count() != 2)
-                throw new ArgumentException(string.Format("Edge cannot flip unless it has two triangular faces. {0} has one face {1}", existing, flipped.Faces.First()));
+                throw new ArgumentException(string.Format("Edge cannot flip unless it has two triangular faces. {0} has one face {1}", existing, existing.Faces.First()));
 
             if (!existing.Faces.All(f => f.IsTriangle()))
                 throw new ArgumentException(string.Format("Edge cannot flip unless it has two triangular faces. {0} has non-triangular face: {1} and/or {2}", existing, existing.Faces.First(), existing.Faces.Last()));
@@ -377,13 +421,13 @@ namespace Geometry.Meshing
 
             return new Tuple<TriangleFace, TriangleFace>(n1, n2);
         }
-    }
-
+    } 
 
     public class TriangulationMesh<VERTEX> : Mesh2D<VERTEX>
         where VERTEX : IVertex2D
     {
         //internal IComparer<IEdgeKey> edgeAngleComparer;
+        public delegate void ProgressUpdate(TriangulationMesh<VERTEX> mesh);
 
         internal SortedSet<long> _XSorted;
         internal SortedSet<long> _YSorted;
@@ -493,13 +537,15 @@ namespace Geometry.Meshing
             GridLine line = ToGridLine(e);
         }
 
-        public void AddContrainedEdge(IEdge constrained_edge)
+        public void AddConstrainedEdge(IEdge constrained_edge, ProgressUpdate ReportProgress = null)
         {
             //If the edge already exists, just return
-
+#if TRACEDDELAUNAY
+            Trace.WriteLine(string.Format("Add constrained edge {0}", constrained_edge));
+#endif
 
             //Delete all triangles that intersect the constrained edge
-            if(this.Contains(constrained_edge))
+            if (this.Contains(constrained_edge))
             {
                 return;
             }
@@ -508,21 +554,39 @@ namespace Geometry.Meshing
 
             List<IEdge> IntersectedEdges = FindIntersectingEdges(constrained_edge);
             //Special case: If there is only a single edge we can do an edge flip and be done
-            Debug.Assert(IntersectedEdges.Count != 0); //This should never be possible unless the edge is already in the triangulated mesh
-            if (IntersectedEdges.Count == 1)
+            
+            if (IntersectedEdges.Count == 0)
+            {
+                //Debug.Assert(IntersectedEdges.Count != 0, string.Format("Unexpected condition where adding constraint {0} intersected no edges but the constraint was not in the mesh already", constrained_edge)); //This should never be possible unless the edge is already in the triangulated mesh
+                throw new ArgumentException(string.Format("Unexpected condition where adding constraint {0} intersected no edges but the constraint was not in the mesh already", constrained_edge));
+                this.AddEdge(constrained_edge);
+                return;
+            }
+            else if (IntersectedEdges.Count == 1)
             {
                 IEdgeKey intersectedEdge = IntersectedEdges[0];
 
                 var new_faces = TriangleFace.Flip(this[intersectedEdge], constrained_edge);
-
+                 
                 this.RemoveEdge(intersectedEdge);
                 this.AddEdge(constrained_edge);
+
+                if (ReportProgress != null)
+                {
+                    ReportProgress(this);
+                }
 
                 System.Diagnostics.Debug.Assert(false == this.IsClockwise(new_faces.Item1));
                 System.Diagnostics.Debug.Assert(false == this.IsClockwise(new_faces.Item2));
 
                 this.AddFace(new_faces.Item1);
                 this.AddFace(new_faces.Item2);
+
+                if (ReportProgress != null)
+                {
+                    ReportProgress(this);
+                }
+
                 return;
             }
             else
@@ -543,18 +607,54 @@ namespace Geometry.Meshing
                     VERTEX A = this[edge.A];
                     VERTEX B = this[edge.B];
 
-                    if(ConstrainedEdge.IsLeft(A.Position) > 0)
-                    {
-                        if(Left.Last().Index != A.Index) Left.Add(A);
-                        if (Right.Last().Index != B.Index) Right.Add(B);
+#if TRACEDDELAUNAY
+                    Trace.WriteLine(string.Format("Remove edge {0}", edge));
+#endif
+                    
+                    if (ConstrainedEdge.IsLeft(A.Position) > 0)
+                    { 
+                        if (Left.Last().Index != A.Index)
+                        {
+                            if (Left.Contains(A) )
+                                throw new ArgumentException();
+
+                            Debug.Assert(Left.Contains(A) == false);
+                            Left.Add(A);
+                        }
+                        if (Right.Last().Index != B.Index)
+                        {
+                            if (Right.Contains(B) )
+                                throw new ArgumentException();
+
+                            Debug.Assert(Right.Contains(B) == false);
+                            Right.Add(B);
+                        }
                     }
                     else //TODO: Handle case of point exactly on the line...
                     {
-                        if (Left.Last().Index != B.Index) Left.Add(B);
-                        if (Right.Last().Index != A.Index) Right.Add(A);
-                    }
+                        if (Left.Last().Index != B.Index)
+                        {
+                            if (Left.Contains(B) )
+                                throw new ArgumentException();
 
+                            Debug.Assert(Left.Contains(B) == false);
+                            Left.Add(B);
+                        }
+                        if (Right.Last().Index != A.Index)
+                        {
+                            if (Right.Contains(A) )
+                                throw new ArgumentException();
+
+                            Debug.Assert(Right.Contains(A) == false);
+                            Right.Add(A);
+                        }
+                    }
+                    
                     this.RemoveEdge(edge);
+                    if (ReportProgress != null)
+                    {
+                        ReportProgress(this);
+                    }
                 }
 
                 Left.Add(this[constrained_edge.B]);
@@ -566,12 +666,17 @@ namespace Geometry.Meshing
                 //Add our constrained edge to the mesh
                 this.AddEdge(constrained_edge);
 
-                TriangulatePolygon(Left, true);
-                TriangulatePolygon(Right, false);
+                if (ReportProgress != null)
+                {
+                    ReportProgress(this);
+                }
+
+                TriangulatePolygon(Left, true, ReportProgress);
+                TriangulatePolygon(Right, false, ReportProgress);
             }           
         }
 
-        private void TriangulatePolygon(List<VERTEX> PolyVerts, bool LeftPoly)
+        private void TriangulatePolygon(List<VERTEX> PolyVerts, bool LeftPoly, ProgressUpdate ReportProgress = null)
         {
             //For a reason I don't have time to investigate at the moment even though
             //the left and right polygons passed to this function are both in CCW order,
@@ -580,7 +685,7 @@ namespace Geometry.Meshing
             //indicating which side the polygon originated.  I'm sure the reason for the
             //face ordering will make sense if I thought about it.
 
-#if DEBUG
+#if TRACEDDELAUNAY
             if(this.IsClockwise(PolyVerts.Select(v => v.Index).Distinct()))
             {
                 Trace.WriteLine("Clockwise input");
@@ -597,6 +702,10 @@ namespace Geometry.Meshing
                 TriangleFace f = this.IsClockwise(verts) ? new TriangleFace(verts.Reverse()) : new TriangleFace(verts);
 
                 this.AddFace(f);
+                if (ReportProgress != null)
+                {
+                    ReportProgress(this);
+                }
                 Debug.Assert(this.IsClockwise(f) == false);
                 return;
             }
@@ -606,8 +715,6 @@ namespace Geometry.Meshing
 
             List<Concavity> concavity = poly.VertexConcavity(out double[] AnglesOutput).ToList();
             List<double> angles = AnglesOutput.ToList();
-
-            Trace.WriteLine(string.Format("Loop"));
             
             //Quickly find some simple cases where convex verticies are flanked by two convex verticies. Create a triangle there.
             for (int i = 0; i < poly.TotalUniqueVerticies - 1; i++)
@@ -623,6 +730,10 @@ namespace Geometry.Meshing
                     
                     Edge e = new Edge(PolyVerts[A].Index, PolyVerts[C].Index);
                     AddEdge(e);
+                    if (ReportProgress != null)
+                    {
+                        ReportProgress(this);
+                    }
                     int[] verts = new int[] { PolyVerts[A].Index, PolyVerts[i].Index, PolyVerts[C].Index };
 
                     TriangleFace triFace;
@@ -630,18 +741,24 @@ namespace Geometry.Meshing
                     if(LeftPoly)
                     {
                         triFace = new TriangleFace(verts);
-                        Trace.WriteLine("CW");
+                        //Trace.WriteLine("CW");
                     }
                     else
                     {
                         triFace = new TriangleFace(verts);
-                        Trace.WriteLine("CCW");
+                        //Trace.WriteLine("CCW");
                     }
 
+#if TRACEDDELAUNAY
                     Trace.WriteLine(string.Format("Add face {0}", triFace));
+#endif
 
                     AddFace(triFace);
-                    //Debug.Assert(this.IsClockwise(triFace) == false);
+                    if (ReportProgress != null)
+                    {
+                        ReportProgress(this);
+                    }
+                    Debug.Assert(this.IsClockwise(triFace) == false);
 
                     PolyVerts.RemoveAt(i);
                     poly.RemoveVertex(i);
@@ -673,8 +790,9 @@ namespace Geometry.Meshing
                 }
             }
 
-
+#if TRACEDDELAUNAY
             Trace.WriteLine("Concave-Convex-Concave pattern triangulated");
+#endif
 
             //Now score each vertex based on the angle a triangle would make
             List<double> scores = new List<double>(poly.TotalUniqueVerticies);
@@ -709,24 +827,35 @@ namespace Geometry.Meshing
 
                 Edge e = new Edge(PolyVerts[A].Index, PolyVerts[C].Index);
                 AddEdge(e);
+                if (ReportProgress != null)
+                {
+                    ReportProgress(this);
+                }
                 int[] verts = new int[] { e.A, PolyVerts[iBest].Index, e.B };
                 TriangleFace triFace = null;
 
                 if (this.IsClockwise(verts)) //LeftPoly)
                 {
-                    Trace.WriteLine("CW");
+                    //Trace.WriteLine("CW");
                     triFace = new TriangleFace(verts.Reverse());
                 }
                 else
                 {
-                    Trace.WriteLine("CCW");
+                    //Trace.WriteLine("CCW");
                     triFace = new TriangleFace(verts);
                 }
 
+
+#if TRACEDDELAUNAY
                 Trace.WriteLine(string.Format("Add face {0} with score {1}", triFace, scores[iBest]));
+#endif
 
                 AddFace(triFace);
-               // Debug.Assert(this.IsClockwise(triFace) == false);
+                if (ReportProgress != null)
+                {
+                    ReportProgress(this);
+                }
+                // Debug.Assert(this.IsClockwise(triFace) == false);
                 //poly.RemoveVertex(iBest);
 
                 /*
@@ -785,17 +914,39 @@ namespace Geometry.Meshing
                 } 
             }
 
-            if (PolyVerts.Count == 4)
+            if (PolyVerts.Distinct().Count() == 3)
             {
                 int[] verts = PolyVerts.Distinct().Select(v => v.Index).ToArray();
                 TriangleFace f = this.IsClockwise(verts) ? new TriangleFace(verts.Reverse()) : new TriangleFace(verts);
 
+                /*Adding edges for the faces was a workaround and probably covers up a bug*/
+
+                foreach(IEdgeKey e in f.Edges)
+                {
+                    if(this.Contains(e) == false)
+                    {
+                        Debug.Assert(this.Contains(e), string.Format("Unexpected edge {0} found in face {1}", e, f));
+
+                        throw new ArgumentException(string.Format("Unexpected edge {0} found in face {1}", e, f));
+                        this.AddEdge(new Edge(e.A, e.B));
+                        if (ReportProgress != null)
+                        {
+                            ReportProgress(this);
+                        }
+                    }
+                }
+
                 this.AddFace(f);
+                if (ReportProgress != null)
+                {
+                    ReportProgress(this);
+                }
                 Debug.Assert(this.IsClockwise(f)==false);
                 return;
             }
-
-            Trace.WriteLine("Done!");
+#if TRACEDDELAUNAY
+            Trace.WriteLine("Done with triangulating polygon after adding constraint!");
+#endif
         }
 
         private void TriangulateConcavePolygon(List<VERTEX> PolyVerts)
@@ -885,8 +1036,10 @@ namespace Geometry.Meshing
                 IEdge oppEdge = this[face.OppositeEdge(v.Index)];
 
                 GridLineSegment oppEdgeSeg = this.ToGridLineSegment(oppEdge);
-                                
-                if(ConstrainedEdge.Intersects(oppEdgeSeg, EndpointsOnRingDoNotIntersect: false))
+
+                //We should never intersect an endpoint, but if the mesh is not correct and an edge passes through our endpoint we may. 
+                //if (ConstrainedEdge.Intersects(oppEdgeSeg, EndpointsOnRingDoNotIntersect: true)) 
+                if (ConstrainedEdge.Intersects(oppEdgeSeg, EndpointsOnRingDoNotIntersect: false))
                 {
                     intersected_edges.Add(oppEdge);
                     //Todo: Handle endpoint intersection case

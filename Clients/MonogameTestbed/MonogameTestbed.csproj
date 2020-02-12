@@ -24,9 +24,10 @@
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
     <OutputPath>bin\$(MonoGamePlatform)\$(Platform)\$(Configuration)\</OutputPath>
-    <DefineConstants>DEBUG;TRACE;WINDOWS</DefineConstants>
+    <DefineConstants>TRACE;DEBUG;WINDOWS</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|x86' ">
     <PlatformTarget>x64</PlatformTarget>
@@ -55,7 +56,6 @@
     <Compile Include="Delaunay3DTest.cs" />
     <Compile Include="Extensions.cs" />
     <Compile Include="GamePadStateTracker.cs" />
-    <Compile Include="GeometryJSONExtensions.cs" />
     <Compile Include="GeometryTest.cs" />
     <Compile Include="IGraphicsTest.cs" />
     <Compile Include="MeshingExperimentExtensions.cs" />
@@ -98,6 +98,12 @@
     </Reference>
     <Reference Include="EntityFramework.SqlServer, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
       <HintPath>..\..\Packages\EntityFramework.6.2.0\lib\net45\EntityFramework.SqlServer.dll</HintPath>
+    </Reference>
+    <Reference Include="FsCheck, Version=2.14.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\..\Packages\FsCheck.2.14.0\lib\net452\FsCheck.dll</HintPath>
+    </Reference>
+    <Reference Include="FSharp.Core, Version=4.4.1.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\..\Packages\FSharp.Core.4.2.3\lib\net45\FSharp.Core.dll</HintPath>
     </Reference>
     <Reference Include="MathNet.Numerics, Version=4.5.1.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\..\Packages\MathNet.Numerics.4.5.1\lib\net461\MathNet.Numerics.dll</HintPath>
@@ -204,6 +210,10 @@
     <ProjectReference Include="..\..\ColladaIO\ColladaIO.csproj">
       <Project>{09b914fb-7176-48e1-9b32-d84c8223cbcc}</Project>
       <Name>ColladaIO</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\GeometryTests\GeometryTests.csproj">
+      <Project>{5de6c405-b488-4dab-b18f-162979e084dd}</Project>
+      <Name>GeometryTests</Name>
     </ProjectReference>
     <ProjectReference Include="..\..\Geometry\Geometry.csproj">
       <Project>{eacb87e8-a5e3-417e-a9ef-b80c2a68c020}</Project>

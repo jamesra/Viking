@@ -84,8 +84,7 @@ namespace MorphologyMesh
             LowerPolyIndicies = LowerPolys.ToImmutableSortedSet<int>();
 
             UpperPolygons = UpperPolys.Select(i => polygons[i]).ToArray();
-            LowerPolygons = LowerPolys.Select(i => polygons[i]).ToArray();
-
+            LowerPolygons = LowerPolys.Select(i => polygons[i]).ToArray(); 
         }
 
         public GridPolygon[] GetSameLevelPolygons(PointIndex key)
