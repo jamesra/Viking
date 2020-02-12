@@ -150,7 +150,12 @@ namespace MorphologyMesh
 
                 if (PositionToIndex.ContainsKey(v.Position.XY()))
                 {
-                    MorphMeshEdge corresponding_edge = new MorphMeshEdge(EdgeType.CORRESPONDING, iV, PositionToIndex[v.Position.XY()]);
+                    int corresponding_vertex = PositionToIndex[v.Position.XY()];
+                    v.Corresponding = corresponding_vertex;
+                    
+                    mesh[corresponding_vertex].Corresponding = v.Index;
+                     
+                    MorphMeshEdge corresponding_edge = new MorphMeshEdge(EdgeType.CORRESPONDING, iV, corresponding_vertex);
                     mesh.AddEdge(corresponding_edge);
                 }
                 else
@@ -158,14 +163,42 @@ namespace MorphologyMesh
                     PositionToIndex.Add(v.Position.XY(), iV);
                 }
             }
-            
+
             //Add contours
             foreach (PointIndex i1 in PolyVerts)
             {
                 PointIndex next = i1.Next; //Next returns the next index in the ring, not in the list, so it will close the contour correctly
                 MorphMeshEdge edge = new MorphMeshEdge(EdgeType.CONTOUR, mesh[i1].Index, mesh[next].Index);
                 mesh.AddEdge(edge);
-            }            
+            }
+
+            HashSet<int> NudgedVerts = new HashSet<int>();
+
+            foreach(MorphMeshVertex v in mesh.Verticies.Where(v => v.Corresponding.HasValue))
+            {
+                if(NudgedVerts.Contains(v.Index))
+                {
+                    continue;
+                }
+
+                //Nudge the vertex and the corresponding vertex
+                //TODO: For sanity in using the geometry algorithms, nudge corresponding verticies so we don't have two sets of colinear points
+                //that create obscure floating point rounding errors
+                {
+                    GridVector2 originalPos = v.Position.XY();
+                    MorphMeshVertex corresponding = mesh[v.Corresponding.Value];
+                    double fudgeScale = Math.Min(v.Edges.Where(e => mesh[e].Type != EdgeType.CORRESPONDING).Select(e => mesh.ToSegment(e).Length).Min(),
+                                                 corresponding.Edges.Where(e => mesh[e].Type != EdgeType.CORRESPONDING).Select(e => mesh.ToSegment(e).Length).Min());
+                    fudgeScale = fudgeScale * 0.05;
+                    GridVector3 fudgeFactor = new GridVector3(fudgeScale, fudgeScale, 0);
+                    v.Position = v.Position + fudgeFactor;
+                    corresponding.Position = corresponding.Position + fudgeFactor;
+                    //PositionToIndex.Add(v.Position.XY(), corresponding.Index);
+                    NudgedVerts.Add(v.Index);
+                    NudgedVerts.Add(corresponding.Index);
+                }
+            }
+            
         }
 
         /// <summary>
@@ -517,7 +550,16 @@ namespace MorphologyMesh
                     //    continue; 
 
                     //int[] iMeshVerts = regionMesh.IndiciesForPointsXY(tri.Points);
-                    int[] iMeshVerts = tri.Points.Select(p => PointToMeshIndex[p]).ToArray();
+                    int[] iMeshVerts;
+                    //try
+                    //{
+                        iMeshVerts = tri.Points.Select(p => PointToMeshIndex[p]).ToArray();
+                    //}
+                    //catch(System.Collections.Generic.KeyNotFoundException e)
+                    //{
+                    //    Trace.WriteLine("Key not found when assigning triangulated faces to regions");
+                    //    continue;
+                    //}
 
                     //MorphMeshFace newFace = new MorphMeshFace(iMeshVerts.Select(i => Face[i]));
                     MorphMeshFace newFace = new MorphMeshFace(iMeshVerts);

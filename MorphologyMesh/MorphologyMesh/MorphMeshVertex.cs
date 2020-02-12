@@ -21,6 +21,12 @@ namespace MorphologyMesh
         public readonly MedialAxisIndex? MedialAxisIndex;
 
         /// <summary>
+        /// Contains ID of corresponding vertex if the vertex is part of a corresponding vertex pair 
+        /// Corresponding is same XY position, different Z levels)
+        /// </summary>
+        public int? Corresponding;
+
+        /// <summary>
         /// Set to true if this vertex has a continuous wall of faces to the adjacent verticies in the shape
         /// </summary>
         public bool FacesAreComplete = false;
