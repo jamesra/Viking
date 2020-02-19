@@ -96,6 +96,21 @@ namespace Geometry.Meshing
         int OppositeEnd(int A);
 
         long OppositeEnd(long A);
+
+        /// <summary>
+        /// Returns true if the index is part of the key
+        /// i.e. key.A == vertex || key.B == vertex
+        /// </summary>
+        /// <param name="vertex"></param>
+        /// <returns></returns>
+        bool Contains(long vertex);
+
+        /// <summary>
+        /// Returns true if the key shares an enpoint with the edge, but is not identical to the edge
+        /// </summary>
+        /// <param name="vertex"></param>
+        /// <returns></returns>
+        bool Adjacent(IEdgeKey edge);
     }
 
     public interface IEdge : IEdgeKey, IComparable<IEdge>, IEquatable<IEdge>

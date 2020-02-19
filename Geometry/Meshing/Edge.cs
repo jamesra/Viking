@@ -146,6 +146,24 @@ namespace Geometry.Meshing
                 throw new ArgumentException("Parameter to OppositeEnd must match one of the ends of the edge");
             }
         }
+
+        public bool Contains(long vertex)
+        {
+            return this.A == vertex || this.B == vertex;
+        }
+
+        /// <summary>
+        /// True if the edges share a vertex, but are not identical
+        /// </summary>
+        /// <param name="key"></param>
+        /// <returns></returns>
+        public bool Adjacent(IEdgeKey key)
+        {
+            return (this.A == key.A && this.B != key.B) ||
+                   (this.A == key.B && this.B != key.A) ||
+                   (this.B == key.A && this.A != key.B) ||
+                   (this.B == key.B && this.A != key.A);
+        }
     }
 
     public class Edge : IComparable<IEdge>, IEquatable<IEdge>, IEdge
@@ -162,19 +180,19 @@ namespace Geometry.Meshing
         {
             get { return Key.B; }
         }
-         
+
         IEdgeKey IEdge.Key
         {
             get { return this.Key; }
         }
 
-        private ImmutableSortedSet<IFace> _ImmutableFaces; 
+        private ImmutableSortedSet<IFace> _ImmutableFaces;
 
         public ImmutableSortedSet<IFace> Faces
         {
             get
             {
-                if(_ImmutableFaces == null)
+                if (_ImmutableFaces == null)
                 {
                     _ImmutableFaces = _Faces.ToImmutableSortedSet();
                 }
@@ -203,7 +221,7 @@ namespace Geometry.Meshing
 
         public static IEdge CreateOffsetCopy(IEdge oldEdge, int A, int B)
         {
-            Edge newEdge = new Meshing.Edge(A,B);
+            Edge newEdge = new Meshing.Edge(A, B);
             return newEdge;
         }
 
@@ -238,7 +256,7 @@ namespace Geometry.Meshing
             return e;
         }
 
-        public void AddFace(IFace f)
+        public virtual void AddFace(IFace f)
         {
             //Debug.Assert(Faces.Contains(f) == false);
             _Faces.Add(f);
@@ -278,7 +296,7 @@ namespace Geometry.Meshing
             }
 
             return A.Equals(B);
-        } 
+        }
 
         public static bool operator !=(Edge A, Edge B)
         {
@@ -292,7 +310,7 @@ namespace Geometry.Meshing
 
         public static bool operator ==(Edge A, IEdge B)
         {
-            if (object.ReferenceEquals(A,null))
+            if (object.ReferenceEquals(A, null))
             {
                 return object.ReferenceEquals(B, null);
             }
@@ -327,9 +345,9 @@ namespace Geometry.Meshing
 
         public bool Equals(Edge other)
         {
-            if(object.ReferenceEquals(null, other))
+            if (object.ReferenceEquals(null, other))
             {
-                return false; 
+                return false;
             }
 
             return this.Key.Equals(other.Key);
@@ -354,7 +372,7 @@ namespace Geometry.Meshing
 
             return this.Key.Equals(other);
         }
-           
+
         public override bool Equals(object obj)
         {
             if (object.ReferenceEquals(obj, null) || GetType() != obj.GetType())
@@ -400,11 +418,79 @@ namespace Geometry.Meshing
             return endpoint == A || endpoint == B;
         }
 
+        public bool Contains(long endpoint)
+        {
+            return endpoint == A || endpoint == B;
+        }
+
+        /// <summary>
+        /// True if the edges share a vertex, but are not identical
+        /// </summary>
+        /// <param name="key"></param>
+        /// <returns></returns>
+        public bool Adjacent(IEdgeKey key)
+        {
+            return (this.A == key.A && this.B != key.B) ||
+                   (this.A == key.B && this.B != key.A) ||
+                   (this.B == key.A && this.A != key.B) ||
+                   (this.B == key.B && this.A != key.A);
+        }
+
         public virtual IEdge Clone()
         {
             var e = new Edge(this.Key);
             e._ImmutableFaces = this.Faces.Select(f => f.Clone()).ToImmutableSortedSet();
             return e;
+        }
+
+        /// <summary>
+        /// Assuming a 2D mesh or an edge with no more than 2 faces attached, this function returns a CCW list of the verticies that form the faces this edge contributes to.
+        /// In the case of a triangulation, this will return a quadrilateral.
+        /// 
+        /// The beginning and end are not duplicates
+        /// </summary>
+        /// <returns></returns>
+        public int[] FacesBoundary()
+        {
+            Debug.Assert(this.Faces.Count == 2, "Expected a triangulation when I wrote this function, future uses may render this assert meaningless");
+            if (this.Faces.Count == 0)
+            {
+                return new int[0];
+            }
+            else if (this.Faces.Count == 1)
+            {
+                return this.Faces[0].iVerts.ToArray();
+            }
+            else if (this.Faces.Count > 2)
+            {
+                //This can never work
+                throw new ArgumentException("Cannot return counter-clockwise ordered boundary verts of an edge with three faces");
+            }
+
+            IFace FaceA = Faces[0] as IFace;
+            IFace FaceB = Faces[1] as IFace;
+
+            IIndexSet IndexerA = new InfiniteIndexSet(FaceA.iVerts.Select(i => (long)i).ToArray(), FaceA.iVerts.IndexOf(this.A));
+            IIndexSet IndexerB;
+            if (IndexerA[1] == B)
+            {
+                IndexerA = IndexerA.Reverse();
+                IndexerB = new InfiniteIndexSet(FaceB.iVerts.Select(i => (long)i).ToArray(), FaceB.iVerts.IndexOf(this.A));
+            }
+            else
+            {
+                IndexerB = new InfiniteIndexSet(FaceB.iVerts.Select(i => (long)i).ToArray(), FaceB.iVerts.IndexOf(this.B));
+            }
+
+            List<long> boundary = new List<long>(FaceA.iVerts.Length + FaceB.iVerts.Length);
+            boundary.AddRange(IndexerA);
+            boundary.AddRange(IndexerB);
+
+            //Remove the duplicate in the middle and end
+            boundary.RemoveAt(boundary.Count - 1);
+            boundary.RemoveAt(IndexerA.Count);
+
+            return boundary.Select(i => (int)i).ToArray();
         }
     }
 }
