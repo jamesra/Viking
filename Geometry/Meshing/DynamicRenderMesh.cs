@@ -242,6 +242,30 @@ namespace Geometry.Meshing
             return normal;
         }
 
+
+        /// <summary>
+        /// Return the distance to travel to each of the vertex indicies 
+        /// </summary>
+        /// <param name="iVerts"></param>
+        /// <returns></returns>
+        public double PathDistance(IReadOnlyList<int> iVerts)
+        {
+            if (iVerts.Count < 2)
+                return 0;
+
+            IVertex3D origin = this[iVerts[0]];
+            double totalDistance = 0;
+            for (int i = 1; i < iVerts.Count; i++)
+            {
+                IVertex3D next = this[iVerts[i]];
+
+                totalDistance += GridVector3.Distance(origin.Position, next.Position);
+                origin = next;
+            }
+
+            return totalDistance;
+        }
+
         /// <summary>
         /// Recalculate normals based on the faces touching each vertex
         /// </summary>
