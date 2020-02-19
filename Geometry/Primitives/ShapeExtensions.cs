@@ -641,42 +641,7 @@ namespace Geometry
 
             //Now check if the line is entirely inside the polygon without crossing a ring
             return poly.Contains(line);
-
-            /*
-            List<GridLineSegment> listCandidates = poly.ExteriorSegmentRTree.Intersects(line.BoundingBox.ToRTreeRect(0));
-                          
-            foreach (GridLineSegment poly_line in listCandidates)
-            {
-                GridVector2 intersection;
-                if (line.Intersects(poly_line, out intersection))
-                { 
-                        Intersections.Add(intersection);
-                }
-            }
-
-            GridVector2[] NonEndpointIntersections = Intersections.Where(i => !line.IsEndpoint(i)).ToArray();
-            if (NonEndpointIntersections.Length > 0)
-                return true; 
-
-            //Now we find out if the line is entirely inside the polygon
-            if (poly.Contains(line))
-                return true; 
-            
-            //Now check to see if the line intersects an inner polygon
-            foreach (GridPolygon inner in poly.InteriorPolygons)
-            {
-                List<GridVector2> InnerIntersections = new List<GridVector2>();
-                if (line.Intersects(inner, true, out InnerIntersections))
-                {
-                    Intersections.AddRange(InnerIntersections);
-                }                
-            }
-
-            NonEndpointIntersections = Intersections.Where(i => !line.IsEndpoint(i)).ToArray();
-            return NonEndpointIntersections.Length > 0; 
-            */
         }
-        
 
         /// <summary>
         /// Add a new point where line intersects any other line
@@ -762,6 +727,39 @@ namespace Geometry
                 default:
                     throw new ArgumentException("Unexpected LineSetOrdering provided to IsEndpointInteresectionExpected");
             }
+        }
+
+        /// <summary>
+        /// Return true if the passed test line intersects any of the set of other lines, which may be part of a closed or polyline.
+        /// In the case of a polyline or closed line, the test line is considered to be the last element of the set, and the set 
+        /// is assumed to not have any self-intersections already.
+        /// </summary>
+        /// <param name="test">The line being checked</param>
+        /// <param name="lines">A set of lines</param>
+        /// <param name="order">Information as to how the lines are connected. </param>
+        /// <returns></returns>
+        public static bool SelfIntersects(this GridLineSegment addition, IReadOnlyList<GridLineSegment> lines, LineSetOrdering order)
+        {
+            for (int iLine = 0; iLine < lines.Count; iLine++)
+            {
+                GridLineSegment line = lines[iLine];
+                //For polyline and closed loops for adjacent lines we only need to check that the endpoints aren't equal to know that the lines do not overlap
+                if (iLine + 1 == lines.Count && (order == LineSetOrdering.POLYLINE || order == LineSetOrdering.CLOSED))
+                {
+                    if ((line.A != addition.B && line.B == addition.A) ||
+                        (line.B != addition.A && line.A == addition.B) ||
+                        (line.A != addition.A && line.B == addition.B) ||
+                        (line.B != addition.B && line.A == addition.A))
+                        continue;
+                }
+
+                bool EndpointsOnRingDoNotIntersect = order.IsEndpointIntersectionExpected(iLine, lines.Count, lines.Count+1);
+
+                if (line.Intersects(addition, EndpointsOnRingDoNotIntersect: EndpointsOnRingDoNotIntersect))
+                    return true;
+            }
+
+            return false;
         }
 
         /// <summary>

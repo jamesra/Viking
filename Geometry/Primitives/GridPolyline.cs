@@ -1,4 +1,5 @@
 ﻿using System;
+using Geometry.JSON;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -6,33 +7,135 @@ using System.Threading.Tasks;
 
 namespace Geometry
 {
+    /// <summary>
+    /// A set of lines where the endpoint of each line in the set is the starting point of the next
+    /// </summary>
     public class GridPolyline : IPolyLine2D
     {
         protected List<IPoint2D> _Points;
 
-        public GridPolyline()
+        public readonly bool AllowsSelfIntersection = false;
+
+        private RTree.RTree<GridLineSegment> rTree = null;
+
+        public int PointCount { get { return _Points.Count; } }
+        public int LineCount { get { return LineSegments.Count; } }
+
+        public GridPolyline(bool AllowSelfIntersection= false)
         {
+            this.AllowsSelfIntersection = AllowSelfIntersection;
             _Points = new List<Geometry.IPoint2D>();
         }
 
-        public GridPolyline(int capacity)
+        public GridPolyline(int capacity, bool AllowSelfIntersection= false) : this(AllowSelfIntersection)
         {
             _Points = new List<Geometry.IPoint2D>(capacity);
         }
 
-        public GridPolyline(IEnumerable<IPoint2D> points)
+        public GridPolyline(IEnumerable<IPoint2D> points, bool AllowSelfIntersection = false)
         {
-            _Points = new List<Geometry.IPoint2D>(points);
+            this.AllowsSelfIntersection = AllowSelfIntersection;
+
+            if (!AllowSelfIntersection)
+            {
+                _Points = new List<IPoint2D>(points.Count());
+
+                foreach (var p in points)
+                {
+                    this.Add(p);
+                }
+            }
+            else
+            {
+                _Points = new List<Geometry.IPoint2D>(points);
+            }
         }
 
         public GridPolyline(IEnumerable<GridVector2> points)
         {
             _Points = new List<Geometry.IPoint2D>(points.Cast<IPoint2D>());
+            rTree = new RTree.RTree<GridLineSegment>();
+            foreach(GridLineSegment line in this.LineSegments)
+            {
+                rTree.Add(line.BoundingBox, line);
+            }
         }
 
-        public void Add(IPoint2D line)
+        /// <summary>
+        /// Returns true if the point can be added without violating self-intersection restrictions
+        /// </summary>
+        /// <param name="next"></param>
+        /// <returns></returns>
+        public bool CanAdd(IPoint2D next)
         {
-            _Points.Add(line);
+            if (_Points.Count == 0)
+                return true;
+
+            if (AllowsSelfIntersection)
+                return true;
+
+            if (_Points.Contains(next))
+                return false;
+
+            GridLineSegment line = new GridLineSegment(_Points.Last(), next);
+
+            if (_Points.Count == 1)
+                return true;
+
+            //var Existing = this.LineSegments;
+            List<GridLineSegment> intersectionCandidates = rTree.Intersects(line.BoundingBox);
+            if (line.SelfIntersects(this.LineSegments.Where(l => intersectionCandidates.Contains(l)).ToList(), LineSetOrdering.POLYLINE))
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        public void Add(IPoint2D next)
+        {
+            if (AllowsSelfIntersection)
+            {
+                _Points.Add(next);
+                return;
+            }
+            else
+            {
+                if (rTree == null)
+                    rTree = new RTree.RTree<GridLineSegment>();
+
+                if (_Points.Count == 0)
+                {
+                    _Points.Add(next);
+                    return;
+                }
+
+                //Figure out why we can't add and throw an exception
+                if (_Points.Contains(next))
+                    throw new ArgumentException("Point already in Polyline that does not allow self-intersection");
+
+                GridLineSegment line = new GridLineSegment(_Points.Last(), next);
+
+                if (_Points.Count == 1)
+                {
+                    _Points.Add(next);
+                    rTree.Add(line.BoundingBox, line);
+                }
+                else
+                {
+                    List<GridLineSegment> intersectionCandidates = rTree.Intersects(line.BoundingBox);
+                    if (line.SelfIntersects(this.LineSegments.Where(l => intersectionCandidates.Contains(l)).ToList(), LineSetOrdering.POLYLINE))
+                    {
+                        throw new ArgumentException("Added point created self-intersecting line in Polyline");
+                    } 
+
+                    _Points.Add(next);
+                    var Existing = this.LineSegments;
+                    Existing.Add(line);
+                    rTree.Add(line.BoundingBox, line);
+                    this._LineSegments = Existing;
+                }
+            }
         }
 
         public double Area
@@ -64,28 +167,42 @@ namespace Geometry
             }
         }
 
-        public ICollection<ILineSegment2D> LineSegments
+        private List<GridLineSegment> _LineSegments;
+
+        public List<GridLineSegment> LineSegments
         {
             get
             {
-                List<ILineSegment2D> listSegments = new List<ILineSegment2D>(this._Points.Count - 1);
-
-                for (int i = 0; i < _Points.Count - 1; i++)
+                if (_LineSegments == null || _LineSegments.Count != _Points.Count - 1)
                 {
-                    listSegments.Add(new GridLineSegment(_Points[i], _Points[i + 1] ));
+                    _LineSegments = new List<GridLineSegment>(this._Points.Count);
+
+                    for (int i = 0; i < _Points.Count - 1; i++)
+                    {
+                        _LineSegments.Add(new GridLineSegment(_Points[i], _Points[i + 1]));
+                    }
                 }
 
-                return listSegments;
+                return _LineSegments.ToList();
             }
         }
 
-        public ICollection<IPoint2D> Points
+        IReadOnlyList<ILineSegment2D> IPolyLine2D.LineSegments
+        {
+            get
+            {
+                return _LineSegments.Cast<ILineSegment2D>().ToList();
+            }
+        }
+        
+
+        public IReadOnlyList<IPoint2D> Points
         {
             get
             {
                 return this._Points;
             }
-        }
+        } 
 
         public bool Contains(IPoint2D p)
         {
@@ -104,6 +221,16 @@ namespace Geometry
             translatedPoints = this._Points.Select(p => new GridVector2(p.X + offset.X, p.Y + offset.Y)).Cast<IPoint2D>().ToList();
 
             return new GridPolyline(translatedPoints);
+        }
+
+        public override string ToString()
+        {
+            return string.Format("PolyLine: {0}", _Points.ToJSON());
+        }
+
+        public GridPolyline Clone()
+        {
+            return new GridPolyline(this.Points.ToArray(), this.AllowsSelfIntersection);
         }
     }
 }

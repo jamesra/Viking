@@ -629,8 +629,8 @@ namespace Geometry
             }
         }
 
-        
-        ICollection<ILineSegment2D> IPolyLine2D.LineSegments
+
+        IReadOnlyList<ILineSegment2D> IPolyLine2D.LineSegments
         {
             get
             {
@@ -645,7 +645,7 @@ namespace Geometry
             }
         }
 
-        ICollection<IPoint2D> IPolyLine2D.Points
+        IReadOnlyList<IPoint2D> IPolyLine2D.Points
         {
             get
             {

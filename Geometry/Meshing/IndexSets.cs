@@ -161,6 +161,7 @@ namespace Geometry
         }
     }
 
+    /*
     public class IndexSetEnumerator : IEnumerator<long>
     {
         long[] Indicies = null;
@@ -208,6 +209,7 @@ namespace Geometry
             index = -1;
         }
     }
+    */
 
     /// <summary>
     /// Represents a set of indicies with some helper functions added to translate the values.
@@ -255,7 +257,7 @@ namespace Geometry
 
         public IEnumerator<long> GetEnumerator()
         {
-            return new IndexSetEnumerator(this.Indicies);
+            return new IndexSetEnumerator(this);
         }
 
         public IIndexSet IncrementStartingIndex(long adjustment)
@@ -269,6 +271,56 @@ namespace Geometry
         }
     }
 
+
+    /// <summary>
+    /// Represents a set of index values that will loop back to the begining once the last value has been enumerated
+    /// </summary>
+    public class IndexSetEnumerator : IEnumerator<long>
+    {
+        long position = -1;
+        IIndexSet set;
+
+        public IndexSetEnumerator(IIndexSet set)
+        {
+            this.set = set;
+        }
+
+        public bool MoveNext()
+        {
+            if (position < 0)
+                position = 0;
+            else
+                position++;
+
+            return position < set.Count;
+        }
+
+        public void Reset()
+        {
+            position = -1;
+        }
+
+        public void Dispose()
+        {
+            return;
+        }
+
+        object IEnumerator.Current
+        {
+            get
+            {
+                return Current;
+            }
+        }
+
+        public long Current
+        {
+            get
+            {
+                return set[position];
+            }
+        }
+    }
 
     /// <summary>
     /// Represents a set of index values that will loop back to the begining once the last value has been enumerated
@@ -356,11 +408,95 @@ namespace Geometry
     }
 
     /// <summary>
+    /// An index set where the values are pulled from an arbitrary set of integers.
+    /// The integers are returned in order and indicies requested outside the bounds of the original set wrap around.
+    /// So if we have [7,11,1,4,32] and the start index is 3 this set will enumerate as [4,32,7,11,1,4,32,7,11,...].
+    /// This set has not limit to the index value, negative or positive.  The sequence loops until the bit-depth limit of the system.
+    /// </summary>
+    public class InfiniteIndexSet : InfiniteSequentialIndexSet, IEnumerable
+    { 
+        protected IReadOnlyList<long> set;
+
+        public override IIndexSet Reverse()
+        {
+            return new InfiniteIndexSet(set, MinIndex, MaxIndex, StartIndex, !this._Reverse);
+        }
+
+
+        public override long this[int index]
+        {
+            get
+            {
+                return this[(long)index];
+            }
+        }
+
+        public override long this[long index]
+        {
+            get
+            {
+                long adjusted_index = base[index];
+                return set[(int)adjusted_index];
+            }
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="startIndex"></param>
+        /// <param name="wrapIndex">The value we never reach, we wrap before</param>
+        /// <param name="count">Total number of values in the sequence</param>
+        public InfiniteIndexSet(IReadOnlyList<long> set, long startIndex=0, bool reverse = false)
+            : base(0, set.Count, startIndex, reverse)
+        {
+            this.set = set;
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="startIndex"></param>
+        /// <param name="wrapIndex">The value we never reach, we wrap before</param>
+        /// <param name="count">Total number of values in the sequence</param>
+        public InfiniteIndexSet(IReadOnlyList<long> set, long minIndex, long maxIndex, long startIndex, bool reverse = false)
+            : base(minIndex, maxIndex, startIndex, reverse)
+        {
+            this.set = set;
+        }
+
+        public override IEnumerator<long> GetEnumerator()
+        {
+            return new IndexSetEnumerator(this);
+        }
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return new IndexSetEnumerator(this);
+        }
+
+        /// <summary>
+        /// Returns a new IIndexSet that increments all indicies by a fixed amount.
+        /// 
+        /// </summary>
+        /// <param name="adjustment"></param>
+        /// <returns></returns>
+        public override IIndexSet IncrementStartingIndex(long adjustment)
+        {
+
+            InfiniteIndexSet indexSet = new InfiniteIndexSet(set.Select(v => v + adjustment).ToArray(), MinIndex, MaxIndex, StartIndex, this._Reverse);
+            return indexSet;
+            //MinIndex += adjustment;
+            //MaxIndex += adjustment;
+            //StartIndex += adjustment; 
+        }
+    }
+
+    /// <summary>
     /// An index set where the first element may be non-zero, and at some point the enumerator loops around back to zero
     /// So if we have [1,2,3,4,5] and the start index is 3 this set will index as [4,5,1,2,3].
     /// This set has not limit to the index value, negative or positive.  The sequence loops until the bit-depth limit of the system.
     /// </summary>
-    public class InfiniteWrappedIndexSet : IIndexSet
+    public class InfiniteSequentialIndexSet : IIndexSet
     {
         protected long MinIndex;
         protected long MaxIndex;
@@ -371,7 +507,7 @@ namespace Geometry
 
         public virtual IIndexSet Reverse()
         {
-            return new InfiniteWrappedIndexSet(MinIndex, MaxIndex, StartIndex, !this._Reverse);
+            return new InfiniteSequentialIndexSet(MinIndex, MaxIndex, StartIndex, !this._Reverse);
         }
 
         public int Count
@@ -382,7 +518,7 @@ namespace Geometry
             }
         }
 
-        public long this[int index]
+        public virtual long this[int index]
         {
             get
             {
@@ -431,7 +567,7 @@ namespace Geometry
         /// <param name="startIndex"></param>
         /// <param name="wrapIndex">The value we never reach, we wrap before</param>
         /// <param name="count">Total number of values in the sequence</param>
-        public InfiniteWrappedIndexSet(long minIndex, long maxIndex, long startIndex, bool reverse=false)
+        public InfiniteSequentialIndexSet(long minIndex, long maxIndex, long startIndex, bool reverse=false)
         {
             if (maxIndex < minIndex)
                 throw new ArgumentException("Max index must be greater or equal to min index");
@@ -446,14 +582,16 @@ namespace Geometry
             this._Count = this.MaxIndex - this.MinIndex;
         }
 
-        public IEnumerator<long> GetEnumerator()
+        public virtual IEnumerator<long> GetEnumerator()
         {
-            return new ContinuousWrappedIndexSetEnumerator(this.MinIndex, this.MaxIndex, this.StartIndex, this._Reverse);
+            return new IndexSetEnumerator(this);
+            //return new ContinuousWrappedIndexSetEnumerator(this.MinIndex, this.MaxIndex, this.StartIndex, this._Reverse);
         }
 
         IEnumerator IEnumerable.GetEnumerator()
         {
-            return new ContinuousWrappedIndexSetEnumerator(this.MinIndex, this.MaxIndex, this.StartIndex, this._Reverse);
+            return new IndexSetEnumerator(this);
+            //return new ContinuousWrappedIndexSetEnumerator(this.MinIndex, this.MaxIndex, this.StartIndex, this._Reverse);
         }
 
         /// <summary>
@@ -461,9 +599,9 @@ namespace Geometry
         /// </summary>
         /// <param name="adjustment"></param>
         /// <returns></returns>
-        public IIndexSet IncrementStartingIndex(long adjustment)
+        public virtual IIndexSet IncrementStartingIndex(long adjustment)
         {
-            FiniteWrappedIndexSet indexSet = new FiniteWrappedIndexSet(MinIndex + adjustment, MaxIndex + adjustment, StartIndex + adjustment, this._Reverse);
+            InfiniteSequentialIndexSet indexSet = new InfiniteSequentialIndexSet(MinIndex + adjustment, MaxIndex + adjustment, StartIndex + adjustment, this._Reverse);
             return indexSet;
             //MinIndex += adjustment;
             //MaxIndex += adjustment;
@@ -478,7 +616,7 @@ namespace Geometry
     /// FiniteWrappedIndexSet will throw an exception if it is indexed out of the normal array bounds, ex: this[-1] or this[_Count]
     /// 
     /// </summary>
-    public class FiniteWrappedIndexSet : InfiniteWrappedIndexSet
+    public class FiniteWrappedIndexSet : InfiniteSequentialIndexSet
     {
 
         public override IIndexSet Reverse()

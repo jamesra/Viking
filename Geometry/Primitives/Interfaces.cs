@@ -108,8 +108,8 @@ namespace Geometry
 
     public interface IPolyLine2D : IShape2D
     {
-        ICollection<IPoint2D> Points { get; }
-        ICollection<ILineSegment2D> LineSegments { get; }
+        IReadOnlyList<IPoint2D> Points { get; }
+        IReadOnlyList<ILineSegment2D> LineSegments { get; }
     }
 
     public interface ITriangle2D : IShape2D
