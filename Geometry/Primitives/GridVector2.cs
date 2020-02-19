@@ -74,7 +74,7 @@ namespace Geometry
         /// <summary>
         /// Sorts points on the X-Axis first, then Y-Axis
         /// 
-        
+
         /// </summary>
         /// <param name="A"></param>
         /// <param name="B"></param>
@@ -104,7 +104,7 @@ namespace Geometry
                     //Edge case. The points aren't equal by our standard, so check again and figure out which axis isn't equal first
                     /*if (diffX == 0)
                     {*/
-//                        return diffY > 0 ? 1 : -1;
+                    //                        return diffY > 0 ? 1 : -1;
                     /*}
                     else
                     {
@@ -270,7 +270,14 @@ namespace Geometry
 
         public override int GetHashCode()
         {
-            double prod = X * Y;
+            ///There have been bugs in the past where two points are within an epsilon distance
+            ///and should be equal, but they will not get the same hash value.
+            ///I believe rounding to a value that is an order of magnitude larger than the epsilon value 
+            ///should fix this... but I'm not feeling 100% certain today.
+            ///If my thinking is incorrec the fix is to 1) Avoid hashing or 2) Stop using epsilon and only use actual values.
+            ///Changing the behavior to 2 may be OK.  It would take a lot of careful testing and time is short
+            ///at the moment.  Hopefully this fixes the issue.
+            double prod = Math.Round(X, Global.SignificantDigits-1) * Math.Round(Y, Global.SignificantDigits-1);
             double code = Math.Abs(prod);
             if (code < 1)
             {

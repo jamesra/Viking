@@ -10,6 +10,12 @@ namespace Geometry
     {
         public const float Epsilon = 0.001f;
 
+        /// <summary>
+        /// Value used to round values.  Currently used to ensure points hash to the same value if they are
+        /// within an epsilon distance
+        /// </summary>
+        public const int SignificantDigits = 3;
+
         public const float EpsilonSquared = Global.Epsilon * Global.Epsilon;
 
         static Global()
