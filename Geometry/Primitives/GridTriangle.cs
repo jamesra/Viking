@@ -234,7 +234,14 @@ namespace Geometry
         public double Area
         {
             get{
-                return Math.Abs(this.VectorProducts) / 2.0;
+                double a = GridVector2.Distance(p1, p2);
+                double b = GridVector2.Distance(p2, p3);
+                double c = GridVector2.Distance(p3, p1);
+                double[] lengths = { a, b, c };
+                double s = (a + b + c) / 2.0;
+                double area = Math.Sqrt(s * (s - a) * (s - b) * (s - c));
+                return area;
+                //return Math.Abs(this.VectorProducts) / 2.0;
             }
         }
         
