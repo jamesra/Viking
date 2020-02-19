@@ -43,6 +43,26 @@ namespace Geometry.JSON
             return obj.ToString();
         }
 
+        public static JObject ToJObject(this IPoint2D p)
+        {
+            dynamic jObj = new JObject();
+            jObj.X = p.X;
+            jObj.Y = p.Y;
+            return jObj;
+        }
+
+        public static JArray ToJArray(this IEnumerable<IPoint2D> input)
+        {
+            JArray obj = new JArray(input.Select(p => p.ToJObject()));
+            return obj;
+        }
+
+        public static string ToJSON(this IEnumerable<IPoint2D> input)
+        {
+            JArray obj = input.ToJArray();
+            return obj.ToString();
+        }
+
         public static JObject ToJObject(this GridVector2 p)
         { 
             dynamic jObj = new JObject();
