@@ -1425,7 +1425,7 @@ namespace Geometry
             for(int i = 0; i < ExteriorRing.Length -1; i++)
             {
                 results[i] = IsVertexConcave(i, out Angles[i]);
-                Trace.WriteLine(string.Format("{0}: {1} {2}", i, results[i], Angles[i]));
+                //Trace.WriteLine(string.Format("{0}: {1} {2}", i, results[i], Angles[i]));
             }
 
             results[ExteriorRing.Length - 1] = results[0];
@@ -1997,7 +1997,19 @@ namespace Geometry
 
             return clone;
         }
-          
+
+        public override string ToString()
+        {
+            if(this.HasInteriorRings)
+            {
+                return string.Format("Poly with {0} verts, {1} interior rings", this.TotalUniqueVerticies, this.InteriorRings.Count);
+            }
+            else
+            {
+                return string.Format("Poly with {0} verts", this.TotalUniqueVerticies);
+            }
+        }
+
         public bool Intersects(IShape2D shape)
         {
             return ShapeExtensions.PolygonIntersects(this, shape);
@@ -2106,13 +2118,14 @@ namespace Geometry
         /// Add a vertex to our rings everywhere the other polygon intersects one of our segments
         /// </summary>
         /// <param name="other"></param>
-        public void AddPointsAtIntersections(GridPolygon other)
+        public List<GridVector2> AddPointsAtIntersections(GridPolygon other)
         {
+            List<GridVector2> added_intersections = new List<GridVector2>();
             GridRectangle? overlap = this.BoundingBox.Intersection(other.BoundingBox);
 
             //No work to do if there is no overlap
             if (!overlap.HasValue)
-                return;
+                return added_intersections;
 
             List<GridVector2> newRing = new List<Geometry.GridVector2>();
 
@@ -2126,15 +2139,74 @@ namespace Geometry
                 List<GridLineSegment> candidates = ls.Intersections(other.GetIntersectingSegments(ls.BoundingBox), out IntersectionPoints);
 
                 //Remove any duplicates of the existing endpoints 
-                foreach (GridVector2 p in IntersectionPoints)
+                for (int iInter = 0; iInter < IntersectionPoints.Length; iInter++)
                 {
+                    GridVector2 p = IntersectionPoints[iInter];
+
+                    //Nudge the corresponding point just a bit so we don't have two sets of colinear points which tends to expose 
+                    //floating point rounding errors in the geometry algorithms.  
+                    //TODO: Find the intersection of a curve using the exterior rings
+                    /*double minDist = Math.Min(ls.Length, candidates[iInter].Length);
+                    double fudgeDistance = minDist * 0.05;
+                    GridVector2 fudgeFactor = new GridVector2(fudgeDistance, fudgeDistance);
+
+                    GridVector2 fudged_p = p + fudgeFactor;
+                    */
                     System.Diagnostics.Debug.Assert(!newRing.Contains(p));
                     if (!newRing.Contains(p))
                     {
-                        newRing.Add(p);
+                        double other_vertex_distance = other.NearestVertex(p, out PointIndex other_vertex_index);
+
+                        //If we intersect close enough to another vertex on the other polygon, just add that point to ourselves.
+                        if (other_vertex_distance == 0)
+                        {
+                            //Vertex exists in the other polygon at exact position
+                            newRing.Add(p);
+                            added_intersections.Add(p);
+                        }
+                        else if (other_vertex_distance < Global.Epsilon)
+                        {
+                            //Use the position of the existing vertex in the other polygon for our own position
+                            newRing.Add(other_vertex_index.Point(other));
+                            added_intersections.Add(other_vertex_index.Point(other));
+                        }
+                        else
+                        {
+                            //Intersection point is not a  vertex on either polygon
+                            newRing.Add(p);
+                            other.AddVertex(p);
+                            added_intersections.Add(p);
+                        }
+                        
+
+                        //Trace.WriteLine(string.Format("Add Corresponding Point {0}", p));
                     }
-                
-                } 
+                    else
+                    {
+                        int existingIndex = newRing.IndexOf(p);
+                        //Ensure the intersection point occurs in the other polygon
+                        double other_vertex_distance = other.NearestVertex(p, out PointIndex other_vertex_index);
+
+                        //We need the point to be exact, so adjust our point accordingly
+                        if (other_vertex_distance == 0)
+                        {
+                            //No action needed.  Vertex exists in the other polygon at exact position
+                        }
+                        else if (other_vertex_distance < Global.Epsilon)
+                        {
+                            //Use the position of the existing vertex in the other polygon for our own position
+                            newRing[existingIndex] = other_vertex_index.Point(other);
+                            added_intersections.Add(other_vertex_index.Point(other));
+                        }
+                        else
+                        {
+                            //We have the vertex, but not the other polygon.  Add the vertex to the other polygon
+                            other.AddVertex(p);
+                            added_intersections.Add(p);
+                        }
+
+                    }
+                }
             }
 
             newRing.Add(ExteriorRing[ExteriorRing.Length - 1]);
@@ -2146,15 +2218,17 @@ namespace Geometry
 
             foreach (GridPolygon otherInnerPolygon in other.InteriorPolygons)
             {
-                this.AddPointsAtIntersections(otherInnerPolygon);
+                added_intersections.AddRange(this.AddPointsAtIntersections(otherInnerPolygon));
             }
 
             foreach (GridPolygon innerPolygon in this._InteriorPolygons)
             {
-                innerPolygon.AddPointsAtIntersections(other);
+                added_intersections.AddRange(innerPolygon.AddPointsAtIntersections(other));
             }
 
             this._SegmentRTree = null; //Reset our RTree since yanking a polygon and changing the indicies are a pain
+
+            return added_intersections;
         }
 
         /// <summary>
