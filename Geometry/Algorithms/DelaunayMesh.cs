@@ -52,18 +52,17 @@ namespace Geometry
     /// </summary>
     public static class GenericDelaunayMeshGenerator2D<VERTEX>
         where VERTEX : IVertex2D
-    {
-        
-        /// <summary>
-        /// Generates the delaunay triangulation for a list of points. 
-        /// Requires the points to be sorted on the X-axis coordinate!
-        /// Every the integers in the returned array are the indicies in the passes array of triangles. 
-        /// Implemented based upon: http://local.wasp.uwa.edu.au/~pbourke/papers/triangulate/
-        /// "Triangulate: Efficient Triangulation Algorithm Suitable for Terrain Modelling"
-        /// by Paul Bourke
-        /// </summary>
-        /// <returns>A Mesh2D whose vertex indicies match the input points</returns>
-        public static TriangulationMesh<VERTEX> TriangulateToMesh(VERTEX[] verts, TriangulationMesh<VERTEX>.ProgressUpdate ReportProgress = null)
+    { 
+            /// <summary>
+            /// Generates the delaunay triangulation for a list of points. 
+            /// Requires the points to be sorted on the X-axis coordinate!
+            /// Every the integers in the returned array are the indicies in the passes array of triangles. 
+            /// Implemented based upon: http://local.wasp.uwa.edu.au/~pbourke/papers/triangulate/
+            /// "Triangulate: Efficient Triangulation Algorithm Suitable for Terrain Modelling"
+            /// by Paul Bourke
+            /// </summary>
+            /// <returns>A Mesh2D whose vertex indicies match the input points</returns>
+            public static TriangulationMesh<VERTEX> TriangulateToMesh(VERTEX[] verts, TriangulationMesh<VERTEX>.ProgressUpdate ReportProgress = null)
         {
             if (verts == null)
             {
@@ -885,7 +884,7 @@ namespace Geometry
                     
                     mesh.AddEdge(new Edge(face_opposite_vert, other_opposite_vert));
 
-                    InfiniteWrappedIndexSet TriangleIndexer = new InfiniteWrappedIndexSet(0, 3, 0);
+                    InfiniteSequentialIndexSet TriangleIndexer = new InfiniteSequentialIndexSet(0, 3, 0);
 
                     int iA = f.iVerts.IndexOf(face_opposite_vert);
                     int iB = oppositeFace.iVerts.IndexOf(other_opposite_vert);

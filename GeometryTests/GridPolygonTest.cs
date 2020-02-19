@@ -4,6 +4,7 @@ using System.Linq;
 using Geometry;
 using System.Diagnostics;
 using System.Collections.Generic;
+using FsCheck;
 
 namespace GeometryTests
 {
@@ -89,6 +90,97 @@ namespace GeometryTests
             GridVector2[] ExteriorPointsScaled = ConcaveUVerticies(scale);
 
             return new GridPolygon(ExteriorPointsScaled);
+        }
+
+        [TestMethod]
+        public void TestGenerator()
+        {
+            GeometryArbitraries.Register();
+
+            Prop.ForAll<GridPolygon>((pl) =>
+            {
+                Trace.WriteLine(pl); return true;
+            }).QuickCheckThrowOnFailure(); 
+        }
+        /*
+        [TestMethod]
+        public void TestPolygonOverlap()
+        {
+            GeometryArbitraries.Register();
+
+            Prop.ForAll<GridPolygon[]>((polyArray) =>
+            {
+                List<GridVector2> listMissingIntersections = new List<GridVector2>();
+
+                foreach (var combo in polyArray.CombinationPairs())
+                {
+                    GridPolygon A = combo.A;
+                    GridPolygon B = combo.B;
+
+                    var added_intersections = A.AddPointsAtIntersections(B);
+#if DEBUG
+                    foreach (GridVector2 p in added_intersections)
+                    {
+                        if(A.IsVertex(p) == false)
+                        {
+                            listMissingIntersections.Add(p);
+                        }
+
+                        if(B.IsVertex(p) == false)
+                        {
+                            listMissingIntersections.Add(p);
+                        } 
+
+                        //Debug.Assert(A.IsVertex(p));
+                        //Debug.Assert(B.IsVertex(p));
+                    }
+#endif 
+                }
+
+                return listMissingIntersections.Count == 0;
+            }).QuickCheckThrowOnFailure();
+        }
+        */
+        [TestMethod]
+        public void TestPolygonOverlap()
+        {
+            GeometryArbitraries.Register();
+
+            Prop.ForAll<GridPolygon, GridPolygon>((A,B) =>
+            {
+                List<GridVector2> listMissingIntersections = new List<GridVector2>();
+
+                var added_intersections = A.AddPointsAtIntersections(B);
+#if DEBUG
+                foreach (GridVector2 p in added_intersections)
+                {
+                    if (A.IsVertex(p) == false)
+                    {
+                        listMissingIntersections.Add(p);
+                    }
+
+                    if (B.IsVertex(p) == false)
+                    {
+                        listMissingIntersections.Add(p);
+                    }
+
+                    //Debug.Assert(A.IsVertex(p));
+                    //Debug.Assert(B.IsVertex(p));
+                }
+#endif 
+                bool pass = PolygonContainsIntersections(A, listMissingIntersections) && PolygonContainsIntersections(B, listMissingIntersections);
+                return pass.Classify(listMissingIntersections.Count == 0, "Trivial");
+            }).QuickCheckThrowOnFailure();
+        }
+
+        private bool PolygonContainsIntersections(GridPolygon poly, List<GridVector2> points)
+        {
+            if (points == null)
+                return true;
+            if (points.Count == 0)
+                return true;
+
+            return points.All(p => poly.IsVertex(p));
         }
 
         /// <summary>

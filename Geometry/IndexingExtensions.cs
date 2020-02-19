@@ -8,6 +8,12 @@ namespace Geometry
 {
     public static class IndexingExtensions
     {
+        /// <summary>
+        /// Return all possible pairing of two elements from the passed array
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="array"></param>
+        /// <returns></returns>
         public static IEnumerable<Combo<T>> CombinationPairs<T>(this IReadOnlyList<T> array)
         {
             for (int i = 0; i < array.Count; i++)

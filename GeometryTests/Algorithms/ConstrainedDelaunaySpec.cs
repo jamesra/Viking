@@ -129,7 +129,14 @@ namespace GeometryTests.Algorithms
             mesh = Original;
 
             //Since the verticies aren't sorted, just test the edges in order
-            OriginalCandidateEdges = new int[mesh.Verticies.Count - 1].Select((v, i) => i).ToArray();
+            if (mesh.Verticies.Count < 2)
+            {
+                OriginalCandidateEdges = new int[0];
+            }
+            else
+            {
+                OriginalCandidateEdges = new int[mesh.Verticies.Count - 1].Select((v, i) => i).ToArray();
+            }
              
             this.ConstraintEdges = constraints;
         }
@@ -278,7 +285,7 @@ namespace GeometryTests.Algorithms
 
             ID = NextID;
             NextID = NextID + 1;
-            Trace.WriteLine(string.Format("New Spec {0}:{1}", ID, InitialModel));
+            //Trace.WriteLine(string.Format("New Spec {0}:{1}", ID, InitialModel));
         }
 
         public ConstrainedDelaunaySpec(ConstrainedDelaunayModel model)
@@ -291,7 +298,7 @@ namespace GeometryTests.Algorithms
 
             ID = NextID;
             NextID = NextID + 1;
-            Trace.WriteLine(string.Format("New Spec {0}:{1}", ID, InitialModel));
+            //Trace.WriteLine(string.Format("New Spec {0}:{1}", ID, InitialModel));
         }
 
         public ConstrainedDelaunaySpec(GridVector2[] points, int[] Edges)
@@ -304,7 +311,7 @@ namespace GeometryTests.Algorithms
 
             ID = NextID;
             NextID = NextID + 1;
-            Trace.WriteLine(string.Format("New Spec {0}:{1}", ID, InitialModel));
+            //Trace.WriteLine(string.Format("New Spec {0}:{1}", ID, InitialModel));
         }
 
         public ConstrainedDelaunaySpec(TriangulationMesh<IVertex2D> mesh)
@@ -343,7 +350,7 @@ namespace GeometryTests.Algorithms
             else
                 result = new AddConstraint(value);
 
-            Trace.WriteLine(string.Format("Yield {0} from {1}", result, ID));
+            //Trace.WriteLine(string.Format("Yield {0} from {1}", result, ID));
 
             return Gen.Constant<Command<TriangulationMesh<IVertex2D>, ConstrainedDelaunayModel>>(result);
                             
@@ -427,7 +434,7 @@ namespace GeometryTests.Algorithms
                 bool facesAreTriangles = DelaunayTest.AreFacesTriangles(mesh);
                 bool pass = !edgesIntersect && facesCCW && vertEdges && HasConstrainedEdges && facesAreTriangles;
 
-                Trace.WriteLine(pass ? "Pass" : "Fail");
+                //Trace.WriteLine(pass ? "Pass" : "Fail");
 
                 Property prop = (edgesIntersect == false).Label("Edges intersect")
                         .And(facesCCW.Label("Faces Clockwise"))

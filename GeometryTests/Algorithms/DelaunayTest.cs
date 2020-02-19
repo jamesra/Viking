@@ -56,6 +56,7 @@ namespace GeometryTests.Algorithms
         {
             //A second pass implementation that generates entire meshes as random parameters and not sets of points that I must convert to meshes
             GeometryArbitraries.Register();
+            GeometryMeshingArbitraries.Register();
 
             var configuration = Configuration.QuickThrowOnFailure;
             configuration.MaxNbOfTest = 1000;
@@ -85,6 +86,7 @@ namespace GeometryTests.Algorithms
         {
             //A second pass implementation that generates entire meshes as random parameters and not sets of points that I must convert to meshes
             GeometryArbitraries.Register();
+            GeometryMeshingArbitraries.Register();
 
             var configuration = Configuration.QuickThrowOnFailure;
             configuration.MaxNbOfTest = 1000;
@@ -156,11 +158,12 @@ namespace GeometryTests.Algorithms
         public void ConstrainedDelaunayParameterTest()
         {
             GeometryArbitraries.Register();
+            GeometryMeshingArbitraries.Register();
 
             var configuration = Configuration.QuickThrowOnFailure;
-            configuration.MaxNbOfTest = 2;
+            configuration.MaxNbOfTest =  100;
             configuration.QuietOnSuccess = false;
-            configuration.StartSize = 8;
+            configuration.StartSize = 1;
             
 
             //Func<int, int, ConstrainedDelaunaySpec> func = (nVerts, nEdges) => new ConstrainedDelaunaySpec(nVerts, nEdges);
@@ -169,7 +172,7 @@ namespace GeometryTests.Algorithms
                 var mesh = GenericDelaunayMeshGenerator2D<Vertex2D>.TriangulateToMesh(points.Select(v => new Vertex2D(v, null)).ToArray());
                 var edge_configuration = Configuration.QuickThrowOnFailure;
                 edge_configuration.MaxNbOfTest = 2;
-                edge_configuration.QuietOnSuccess = false;
+                edge_configuration.QuietOnSuccess = true;
                 edge_configuration.StartSize = edges.Length-1;
 
 
@@ -196,19 +199,21 @@ namespace GeometryTests.Algorithms
         public void ConstrainedDelaunayTestWithArbModel()
         {
             GeometryArbitraries.Register();
+            GeometryMeshingArbitraries.Register();
 
-            var configuration = Configuration.VerboseThrowOnFailure;
-            configuration.MaxNbOfTest = 8;
-            configuration.QuietOnSuccess = false;
+            var configuration = Configuration.QuickThrowOnFailure;
+            configuration.MaxNbOfTest = 100;
+            configuration.QuietOnSuccess = true;
             configuration.StartSize = 1;
+
 
             //Func<int, int, ConstrainedDelaunaySpec> func = (nVerts, nEdges) => new ConstrainedDelaunaySpec(nVerts, nEdges);
 
             Prop.ForAll<ConstrainedDelaunayModel>((model) =>
             {
-                var model_configuration = Configuration.VerboseThrowOnFailure;
+                var model_configuration = Configuration.QuickThrowOnFailure;
                 model_configuration.MaxNbOfTest = 1;
-                model_configuration.QuietOnSuccess = false;
+                model_configuration.QuietOnSuccess = true;
                 model_configuration.StartSize = model.ConstraintEdges.Count/2; //Set the number of edges so the correct number of Commands are generated
 
                 var spec = new ConstrainedDelaunaySpec(model);
