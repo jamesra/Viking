@@ -30,6 +30,27 @@ namespace GeometryTests.Algorithms
                .Classify(nVerts > 512 && nVerts <= 1024, "513 - 1024 Verts")
                .Classify(nVerts > 1024, "1024+ Verts");
         }
+
+        /// <summary>
+        /// A helper function to add .Classify calls to a property according to size
+        /// </summary>
+        /// <param name="prop"></param>
+        /// <param name="nVerts"></param>
+        /// <returns></returns>
+        public static Property ClassifySize(this Property prop, int nVerts)
+        {
+
+            return prop.Classify(nVerts == 0, "0")
+               .Classify(nVerts > 0 && nVerts <= 3, "1-3")
+               .Classify(nVerts > 3 && nVerts <= 10, "3 - 10")
+               .Classify(nVerts > 10 && nVerts <= 32, "11 - 32")
+               .Classify(nVerts > 32 && nVerts <= 64, "33 - 64")
+               .Classify(nVerts > 64 && nVerts <= 128, "65 - 128")
+               .Classify(nVerts > 128 && nVerts <= 256, "129 - 256")
+               .Classify(nVerts > 256 && nVerts <= 512, "257 - 512")
+               .Classify(nVerts > 512 && nVerts <= 1024, "513 - 1024")
+               .Classify(nVerts > 1024, "1024+");
+        }
     }
 
     [TestClass]
@@ -202,8 +223,8 @@ namespace GeometryTests.Algorithms
             GeometryMeshingArbitraries.Register();
 
             var configuration = Configuration.QuickThrowOnFailure;
-            configuration.MaxNbOfTest = 100;
-            configuration.QuietOnSuccess = true;
+            configuration.MaxNbOfTest = 500;
+            configuration.QuietOnSuccess = false;
             configuration.StartSize = 1;
 
 
@@ -218,7 +239,8 @@ namespace GeometryTests.Algorithms
 
                 var spec = new ConstrainedDelaunaySpec(model);
                 var spec_prop = spec.ToProperty();
-                spec_prop.Check(model_configuration);
+                //spec_prop.Check(model_configuration);
+                return spec_prop;
                 
             }).Check(configuration);
             

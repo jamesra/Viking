@@ -4,7 +4,8 @@ using System.Collections.Generic;
 using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Geometry;
-using System.Diagnostics; 
+using System.Diagnostics;
+using FsCheck;
 
 namespace GeometryTests
 {
@@ -131,7 +132,7 @@ namespace GeometryTests
             int numPoints = 1000;
             double BoundarySize = 1000; 
             int seed = 0; 
-            Random RandGen = new Random(seed);
+            System.Random RandGen = new System.Random(seed);
 
             QuadTree<int> Tree = new QuadTree<int>(new GridRectangle(-BoundarySize, BoundarySize, -BoundarySize, BoundarySize)); 
 
@@ -222,14 +223,36 @@ namespace GeometryTests
                 Assert.AreEqual(iFound, i, "Could not find previously inserted point");
             }
 
-            SortedList<double, int> foundPoints = Tree.FindNearestPoints(new GridVector2(BoundarySize * -2, BoundarySize * -2), Tree.Count * 2);
+            List<DistanceToPoint<int>> foundPoints = Tree.FindNearestPoints(new GridVector2(BoundarySize * -2, BoundarySize * -2), Tree.Count * 2);
             Assert.AreEqual(Tree.Count, foundPoints.Count);
 
             foundPoints = Tree.FindNearestPoints(GridVector2.Zero, Tree.Count * 2);
             Assert.AreEqual(Tree.Count, foundPoints.Count);
 
-            //The end
+            //The end 
+        }
 
+        [TestMethod]
+        public void QuadTreeFsCheck()
+        {
+            GeometryArbitraries.Register();
+
+            QuadTreeSpec spec = new QuadTreeSpec();
+            spec.ToProperty().QuickCheckThrowOnFailure();
+
+            /*
+            Prop.ForAll<GridVector2[]>(points =>
+            {
+                
+                QuadTree<int> qTree = new QuadTree<int>(points.BoundingBox());
+
+                for (int i = 0; i < points.Length; i++)
+                {
+                    //qTree.Add()
+                }
+            }
+            );
+            */
         }
     }
 }

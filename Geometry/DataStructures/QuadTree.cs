@@ -27,7 +27,13 @@ namespace Geometry
         /// <summary>
         /// Maps the values to the node containing the values. Populated by the QuadTreeNode class.
         /// </summary>
-        internal Dictionary<T, QuadTreeNode<T>> ValueToNodeTable = new Dictionary<T, QuadTreeNode<T>>(); 
+        internal Dictionary<T, QuadTreeNode<T>> ValueToNodeTable = new Dictionary<T, QuadTreeNode<T>>();
+
+        public QuadTree()
+        {
+            //Create a root centered at 0,0
+            this.Root = new QuadTreeNode<T>(this);
+        }
 
 
         public QuadTree(GridRectangle border)
@@ -105,30 +111,37 @@ namespace Geometry
         /// <param name="value"></param>
         public void Add(GridVector2 point, T value)
         {
+            /*
             try
             {
                 rwLock.EnterUpgradeableReadLock();
-
+                */
+                /*
                 if (Root.Border.Contains(point) == false)
                 {
                     throw new ArgumentOutOfRangeException("point", "The passed point for insertion was out of range of the QuadTree");
                 }
-
+                */
                 try
                 {
                     rwLock.EnterWriteLock();
+                    if (this.Root.ExpandBorder(point, out var new_root))
+                    {
+                        this.Root = new_root;
+                    }
+                     
                     this.Root.Insert(point, value);
                 }
                 finally
                 {
                     rwLock.ExitWriteLock();
                 }
-            }
+            /*}
             finally
             {
                 rwLock.ExitUpgradeableReadLock();
             }
-
+            */
         }
 
         /// <summary>
@@ -138,15 +151,16 @@ namespace Geometry
         /// <param name="value"></param>
         public bool TryAdd(GridVector2 point, T value)
         {
+            
             try
             {
                 rwLock.EnterUpgradeableReadLock();
 
-                if (Root.Border.Contains(point) == false)
+                /*if (Root.Border.Contains(point) == false)
                 {
                     return false;
                 }
-
+                */
                 //Do not add the value if we already have it in our data structure
                 if (ValueToNodeTable.ContainsKey(value))
                     return false; 
@@ -154,6 +168,11 @@ namespace Geometry
                 try
                 {
                     rwLock.EnterWriteLock();
+
+                    if (this.Root.ExpandBorder(point, out var new_root))
+                    {
+                        this.Root = new_root;
+                    }
 
                     this.Root.Insert(point, value);
                     return true;
@@ -200,12 +219,12 @@ namespace Geometry
             try
             {
                 rwLock.EnterUpgradeableReadLock();
-
+                /*
                 if (Root.Border.Contains(point) == false)
                 {
                     return false;
                 }
-                
+                */
                 //Remove the value if it exists and is not equal to the passed point.
                 if (ValueToNodeTable.ContainsKey(value))
                 {
@@ -220,6 +239,12 @@ namespace Geometry
                             rwLock.EnterWriteLock();
 
                             Remove(value);
+
+                            if (this.Root.ExpandBorder(point, out var new_root))
+                            {
+                                this.Root = new_root;
+                            }
+
                             this.Root.Insert(point, value); 
                             return true;
                         }
@@ -234,6 +259,11 @@ namespace Geometry
                     try
                     {
                         rwLock.EnterWriteLock();
+
+                        if (this.Root.ExpandBorder(point, out var new_root))
+                        {
+                            this.Root = new_root;
+                        }
 
                         QuadTreeNode<T> node = this.Root.Insert(point, value);
                         return true;
@@ -262,7 +292,7 @@ namespace Geometry
 
             T retVal = node.Value; 
 
-            if (node.Parent != null)
+            if (node.IsRoot == false)
                 node.Parent.Remove(node);
             else
             {
@@ -359,9 +389,9 @@ namespace Geometry
             }
         }
 
-        public SortedList<double, T> FindNearestPoints(GridVector2 point, int nPoints)
+        public List<DistanceToPoint<T>> FindNearestPoints(GridVector2 point, int nPoints)
         {
-            SortedList<double, T> pointList = new SortedList<double, T>(nPoints + 1);
+            List<DistanceToPoint<T>> listResults = null;
 
             try
             {
@@ -369,21 +399,32 @@ namespace Geometry
 
                 if (Root == null)
                 {
-                    return pointList;
+                    return new List<DistanceToPoint<T>>();
                 }
                 else if (Root.IsLeaf == true && Root.HasValue == false)
                 {
-                    return pointList;
+                    return new List<DistanceToPoint<T>>();
                 }
 
+                SortedList<double, List<DistanceToPoint<T>>> pointList = new SortedList<double, List<DistanceToPoint<T>>>(nPoints + 1);
                 Root.FindNearestPoints(point, nPoints, ref pointList);
+
+                listResults = new List<DistanceToPoint<T>>();
+                foreach(double distance in pointList.Keys)
+                {
+                    listResults.AddRange(pointList[distance]);
+                    if (listResults.Count >= nPoints)
+                        break; //Stop adding after we pass nPoints because the implementation of FindNearestPoints is unreliable after it reaches the requested number.
+                }
+
+                
             }
             finally
             {
                 rwLock.ExitReadLock();
             }
 
-            return pointList; 
+            return listResults;
         }
 
         public bool TryGetPosition(T value, out GridVector2 position)
