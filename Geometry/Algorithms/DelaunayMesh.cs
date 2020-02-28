@@ -1,4 +1,6 @@
 ﻿//#define TRACEDELAUNAY
+//#define VERIFYDELAUNAY
+
 
 using System;
 using System.Collections.Generic;
@@ -102,8 +104,22 @@ namespace Geometry
             }
             
 #endif
-            //return TriangleIndicies;
-            return mesh;
+
+#if DEBUG
+            foreach (Face f in mesh.Faces)
+            {
+                if (mesh.IsTriangleDelaunay(f) == false)
+                    throw new NonconformingTriangulationException(f, string.Format("{0} is not a delaunay triangle", f));
+
+#if VERIFYDELAUNAY
+                Debug.Assert(mesh.IsTriangleDelaunay(f), string.Format("{0} is not a delaunay triangle", f));
+                Debug.Assert(mesh.IsClockwise(f) == false);
+#endif
+
+            }
+#endif
+                //return TriangleIndicies;
+                return mesh;
         }
          
 

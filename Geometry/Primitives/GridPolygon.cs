@@ -1435,6 +1435,16 @@ namespace Geometry
         }
 
         /// <summary>
+        /// Returns true if the vertex on the exterior ring is concave
+        /// </summary>
+        /// <param name="iVert"></param>
+        /// <returns></returns>
+        public bool IsConvex()
+        {
+            return this.VertexConcavity(out double[] angles).All(c => c != Concavity.CONCAVE);
+        }
+
+        /// <summary>
         /// Returns the nearest segment to the point and the PointIndex of the line, use the Next function to obtain the vertex after the line
         /// </summary>
         /// <param name="polygon"></param>
@@ -2152,7 +2162,7 @@ namespace Geometry
 
                     GridVector2 fudged_p = p + fudgeFactor;
                     */
-                    System.Diagnostics.Debug.Assert(!newRing.Contains(p));
+                    //System.Diagnostics.Debug.Assert(!newRing.Contains(p));
                     if (!newRing.Contains(p))
                     {
                         double other_vertex_distance = other.NearestVertex(p, out PointIndex other_vertex_index);

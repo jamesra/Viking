@@ -9,23 +9,7 @@ using System.Diagnostics;
 
 namespace Geometry.Meshing
 {
-    /// <summary>
-    /// This exception is raised when a corresponding point perfectly a vertex that is not an endpoint of the edge.
-    /// </summary>
-    internal class CorrespondingEdgeIntersectsVertexException : Exception
-    {
-        public int Vertex;
-
-        public CorrespondingEdgeIntersectsVertexException(int iVert) : base()
-        {
-            Vertex = iVert;
-        }
-
-        public CorrespondingEdgeIntersectsVertexException(int iVert, string msg) : base(msg)
-        {
-            Vertex = iVert;
-        }
-    }
+    
     /// <summary>
     /// Closely related to the CompareAngle class.  In this version the vertex index can change and is determined by the 
     /// duplicate key in the compared IEdgeKeys
@@ -393,6 +377,8 @@ namespace Geometry.Meshing
 
             Edge newEdge = new Edge(f1.OppositeVertex(edge), f2.OppositeVertex(edge));
 
+            //TODO: We need to ensure that the edge we are flippig is convex.  We cannot flip a concave quad along the interior edge.
+
             return Flip(edge, newEdge);
         }
 
@@ -541,7 +527,9 @@ namespace Geometry.Meshing
             {
                 if (results[i] == OverlapType.CONTAINED)
                 {
+#if TRACEDDELAUNAY
                     Debug.WriteLine(string.Format("{0} is inside {1}, not a delaunay triangle", candidate_indicies[i], f));
+#endif
                     return false;
                 }
             }
@@ -638,7 +626,9 @@ namespace Geometry.Meshing
                 //VERTEX B = this[edge.B];
 
                 //Is the quad formed by the two faces of the edge convex?
-                Debug.Assert(edge.Faces.Count() == 2, "Expect two faces for any edge intersecting an edge constraint.");
+                if (edge.Faces.Count() != 2)
+                    throw new InvalidOperationException("Expect two faces for any edge removed for intersecting an edge constraint.");
+                //Debug.Assert(edge.Faces.Count() == 2, "Expect two faces for any edge intersecting an edge constraint.");
 
                 TriangleFace A = edge.Faces[0] as TriangleFace;
                 TriangleFace B = edge.Faces[1] as TriangleFace;
@@ -657,7 +647,7 @@ namespace Geometry.Meshing
                 {
 
 #if TRACEDDELAUNAY
-                    Trace.WriteLine(string.Format("Concave quad {0}, moving on", quadVerts));
+                    Trace.WriteLine(string.Format("Concave quad {0}, moving on", new Face(quadVerts)));
 #endif
                     iEdge -= 1;
                     continue;
@@ -696,7 +686,7 @@ namespace Geometry.Meshing
                     this.AddFace(NewFacesTuple.Item2);
                      
 #if TRACEDDELAUNAY
-                    Trace.WriteLine(string.Format("  Remove {0} Add {1}", edge, newEdge));
+                    Trace.WriteLine(string.Format("  Remove {0} Add {1} with faces {2} {3}", edge, newEdge, NewFacesTuple.Item1, NewFacesTuple.Item2));
 #endif
 
                     if (ReportProgress != null)
@@ -744,8 +734,30 @@ namespace Geometry.Meshing
                 TriangleFace B = edge.Faces[1] as TriangleFace;
 
                 int[] oppVerts = new int[] { A.OppositeVertex(edge), B.OppositeVertex(edge) };
-                if (GridCircle.Contains(this[A.iVerts].Select(v => v.Position).ToArray(), this[oppVerts[0]].Position) == OverlapType.CONTAINED)
+                int checkVert = oppVerts.Where(v => A.iVerts.Contains(v) == false).Single();
+                if (GridCircle.Contains(this[A.iVerts].Select(v => v.Position).ToArray(), this[checkVert].Position) == OverlapType.CONTAINED)
                 {
+                    //We need to ensure that the edge we are flippig is convex.  We cannot flip a concave quad along the interior edge or we get overlapping edges
+                    int[] quad = edge.FacesBoundary();
+                    var positionList = this[quad].Select(v => v.Position).ToList();
+                    positionList.Add(positionList.First());
+
+                    GridPolygon quadPoly = new GridPolygon(positionList);
+                    if(false == quadPoly.IsConvex())
+                    {
+#if TRACEDDELAUNAY
+                        Trace.WriteLine(string.Format("  Cannot flip convex face {0}.  It's OK, just can't make triangle prettier", new Face(quad)));
+#endif
+                        continue;
+                    }
+
+                    //TODO:  This check can be removed to have an assertion thrown instead.  It should be done at some point to debug.
+                    if(edge.Faces.Count != 2)
+                    {
+                        
+                        Trace.WriteLine(string.Format("Edge found without two faces when adding constrained edge", edge));
+                    }
+
                     //Flip the edge to improve the triangulation
                     var NewFacesTuple = TriangleFace.Flip(edge);
 

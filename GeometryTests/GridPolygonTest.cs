@@ -99,7 +99,7 @@ namespace GeometryTests
 
             Prop.ForAll<GridPolygon>((pl) =>
             {
-                Trace.WriteLine(pl); return true;
+                return pl.Area > 0;
             }).QuickCheckThrowOnFailure(); 
         }
         /*
@@ -141,6 +141,7 @@ namespace GeometryTests
             }).QuickCheckThrowOnFailure();
         }
         */
+
         [TestMethod]
         public void TestPolygonOverlap()
         {
@@ -151,29 +152,34 @@ namespace GeometryTests
                 List<GridVector2> listMissingIntersections = new List<GridVector2>();
 
                 var added_intersections = A.AddPointsAtIntersections(B);
-#if DEBUG
-                foreach (GridVector2 p in added_intersections)
-                {
-                    if (A.IsVertex(p) == false)
-                    {
-                        listMissingIntersections.Add(p);
-                    }
 
-                    if (B.IsVertex(p) == false)
-                    {
-                        listMissingIntersections.Add(p);
-                    }
+                bool PolysIntersect = A.Intersects(B);
 
-                    //Debug.Assert(A.IsVertex(p));
-                    //Debug.Assert(B.IsVertex(p));
-                }
-#endif 
-                bool pass = PolygonContainsIntersections(A, listMissingIntersections) && PolygonContainsIntersections(B, listMissingIntersections);
-                return pass.Classify(listMissingIntersections.Count == 0, "Trivial");
+                //Throw out tests where the polygons do not intersect
+                if (!PolysIntersect)
+                    return (PolysIntersect == false)
+                            .Trivial(true)
+                            .Classify(true, "Polygons do not intersect");
+
+                bool polysContainAddedIntersections = PolygonContainsIntersections(A, added_intersections) && PolygonContainsIntersections(B, added_intersections);
+                var IntersectionsIncludingEndpoints = A.ExteriorSegments.Intersections(B.ExteriorSegments, false);
+
+                //Ensure all of our intersection points are endpoints, there is an edge case of perfectly overlapped exterior rings that must be handled.
+                var IntersectionsExcludingEndpoints = GetPolygonIntersectionsExcludingEndpoings(A, B);
+
+                bool polysOnlyIntersectAtEndpoints = IntersectionsExcludingEndpoints.Count == 0 && IntersectionsIncludingEndpoints.Count > 0;
+                bool pass = false == PolysIntersect || (polysContainAddedIntersections && polysOnlyIntersectAtEndpoints);
+                return (PolysIntersect.Label("Polygons intersect"))
+                       .And((IntersectionsIncludingEndpoints.Count > 0).Label("Intersection points are all endpoints"))
+                       .And((IntersectionsExcludingEndpoints.Count == 0).Label("Intersections points are not all at endpoints"));
+                       
+                           
             }).QuickCheckThrowOnFailure();
         }
 
-        private bool PolygonContainsIntersections(GridPolygon poly, List<GridVector2> points)
+        
+
+        public static bool PolygonContainsIntersections(GridPolygon poly, List<GridVector2> points)
         {
             if (points == null)
                 return true;
@@ -181,6 +187,33 @@ namespace GeometryTests
                 return true;
 
             return points.All(p => poly.IsVertex(p));
+        }
+
+        /// <summary>
+        /// Returns all of the places two polygons intersect, excluding the endpoints
+        /// If we have added verticies at intersection points this function should return an empty list
+        /// </summary>
+        /// <param name="A"></param>
+        /// <param name="B"></param>
+        /// <returns></returns>
+        public static List<ArrayIntersection<GridLineSegment>> GetPolygonIntersectionsExcludingEndpoings(GridPolygon A, GridPolygon B)
+        {
+            return A.ExteriorSegments.Intersections(B.ExteriorSegments, true).Where(result =>
+            {
+                IPoint2D pt = result.Intersection as IPoint2D;
+                if (pt != null)
+                    return true;
+
+                ILineSegment2D line = result.Intersection as ILineSegment2D;
+                if (line != null)
+                {
+                    bool EndpointAMatched = result.A.A == line.A || result.A.B == line.A || result.B.A == line.A || result.B.B == line.A;
+                    bool EndpointBMatched = result.A.A == line.B || result.A.B == line.B || result.B.A == line.B || result.B.B == line.B;
+                    return !(EndpointAMatched && EndpointBMatched); //Exclude from the results if both endpoints match polygon verticies
+                }
+
+                return true;
+            }).ToList();
         }
 
         /// <summary>

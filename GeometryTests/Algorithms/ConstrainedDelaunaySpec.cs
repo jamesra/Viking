@@ -432,7 +432,7 @@ namespace GeometryTests.Algorithms
                 bool vertEdges = mesh.Verticies.Count < 3 || DelaunayTest.AreTriangulatedVertexEdgesValid(mesh);
                 bool HasConstrainedEdges = model.AddedConstraintEdges.All(added_edge => mesh.Contains(added_edge));
                 bool facesAreTriangles = DelaunayTest.AreFacesTriangles(mesh);
-                bool pass = !edgesIntersect && facesCCW && vertEdges && HasConstrainedEdges && facesAreTriangles;
+                bool pass = !edgesIntersect && !facesColinear && facesCCW && vertEdges && HasConstrainedEdges && facesAreTriangles;
 
                 //Trace.WriteLine(pass ? "Pass" : "Fail");
 

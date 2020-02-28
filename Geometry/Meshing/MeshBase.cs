@@ -407,7 +407,7 @@ namespace Geometry.Meshing
         /// <param name="face"></param>
         public void AddFace(IFace face)
         {
-            Debug.Assert(Faces.Contains(face) == false, string.Format("Mesh already contains {0}", face));
+            //Debug.Assert(Faces.Contains(face) == false, string.Format("Mesh already contains {0}", face));
 
             foreach (IEdgeKey e in face.Edges)
             {
