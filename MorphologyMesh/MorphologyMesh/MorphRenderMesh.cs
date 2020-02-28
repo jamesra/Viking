@@ -57,12 +57,27 @@ namespace MorphologyMesh
     /// <summary>
     /// A 3D mesh that records the polygons used to construct the mesh.  Tracks the original polygonal index
     /// of every vertex and the type of edge connecting verticies.
+    ///    
+    /// The MorphRenderMesh class was originally written to handle polygons at arbitrary Z levels.  However, when generating a full mesh it
+    /// is possible, if annotators are trying to be difficult, to have annotations with layouts in Z like this.  That have to be grouped 
+    /// into a single mesh in order to branch the mesh correctly.
     /// 
-     
+    ///  Z = 1:          A
+    ///                 / \ 
+    ///  Z = 2:        B   \   D
+    ///                     \ /
+    ///  Z = 3:              C
+    ///
+    /// In this case the "upper" polygons are A,D and the "lower" polygons are B,C.  Even though B & D are on the same Z level.
+    /// 
+    /// I originally only had the Upper and Lower Polygon concept in BajajMesh, but the system should be ported to MorphRenderMesh
+    /// </summary>
     /// 
     /// </summary>
     public class MorphRenderMesh : Mesh3D<MorphMeshVertex>
     {
+        
+
         public GridPolygon[] Polygons { get; private set; }
 
         public double[] PolyZ { get; private set; }
@@ -103,32 +118,70 @@ namespace MorphologyMesh
             }
 
             //Now that we have polygons organized by Z-level, add any corresponding verticies for polygons on adjacent Z levels.
-            AddCorrespondingVerticies(PolygonsByZ);
+            //AddCorrespondingVerticies(PolygonsByZ);
 
             PopulateMesh(this);
         }
 
         public static void AddCorrespondingVerticies(SortedList<double, SortedList<int, GridPolygon>> PolygonsByZ)
         {
-            var ZLevels = PolygonsByZ.Keys.ToArray();
-            for(int iZ = 0; iZ < PolygonsByZ.Count-1; iZ++)
+            double[] ZLevels = PolygonsByZ.Keys.ToArray();
+            foreach (var combo in ZLevels.CombinationPairs())
             {
-                double Z_A = ZLevels[iZ];
-                double Z_B = ZLevels[iZ+1];
+                double Z_A = combo.A;
+                double Z_B = combo.B;
 
                 SortedList<int, GridPolygon> APolys = PolygonsByZ[Z_A];
                 SortedList<int, GridPolygon> BPolys = PolygonsByZ[Z_B];
 
+                List<GridVector2> added_intersections;
+                foreach (GridPolygon A in APolys.Values)
+                {
+                    foreach (GridPolygon B in BPolys.Values)
+                    {
+                        added_intersections = A.AddPointsAtIntersections(B);
+# if DEBUG
+                        foreach (GridVector2 p in added_intersections)
+                        {
+                            Debug.Assert(A.IsVertex(p));
+                            Debug.Assert(B.IsVertex(p));
+                        }
+#endif
+                        //B.AddPointsAtIntersections(A);
+                    }
+                }
+            }
+        }
+
+        /*public static void AddCorrespondingVerticies(SortedList<double, SortedList<int, GridPolygon>> PolygonsByZ)
+        {
+            double[] ZLevels = PolygonsByZ.Keys.ToArray();
+            foreach (var combo in ZLevels.CombinationPairs())
+            {
+                double Z_A = combo.A;
+                double Z_B = combo.B;
+
+                SortedList<int, GridPolygon> APolys = PolygonsByZ[Z_A];
+                SortedList<int, GridPolygon> BPolys = PolygonsByZ[Z_B];
+
+                List<GridVector2> added_intersections = new List<GridVector2>();
                 foreach(GridPolygon A in APolys.Values)
                 {
                     foreach(GridPolygon B in BPolys.Values)
                     {
                         A.AddPointsAtIntersections(B);
-                        B.AddPointsAtIntersections(A);
+# if DEBUG
+                        foreach(GridVector2 p in added_intersections)
+                        {
+                            Debug.Assert(A.IsVertex(p));
+                            Debug.Assert(B.IsVertex(p));
+                        }
+#endif
+                        //B.AddPointsAtIntersections(A);
                     }
                 }
             }
-        }
+        }*/
 
         /// <summary>
         /// Creates a mesh without faces.  The mesh contains a vertex for every polygon vertex.  It also contains contour edges and corresponding edges for polygon intersection points
@@ -146,20 +199,28 @@ namespace MorphologyMesh
             foreach (PointIndex i1 in PolyVerts)
             {
                 MorphMeshVertex v = new MorphMeshVertex(i1, i1.Point(mesh.Polygons).ToGridVector3(mesh.PolyZ[i1.iPoly]));
-                int iV = mesh.AddVertex(v);
+                int iV;
 
                 if (PositionToIndex.ContainsKey(v.Position.XY()))
                 {
+                    //This vertex corresponds to where the polygon overlaps another polygon on another level.
+                    //Populate the correspoinding field, and ensure the positions are 100% identical
                     int corresponding_vertex = PositionToIndex[v.Position.XY()];
+                    MorphMeshVertex corresponding = mesh[corresponding_vertex];
+                    v = new MorphMeshVertex(i1, corresponding.Position.XY().ToGridVector3(v.Position.Z)); //Ensure the position is identical
                     v.Corresponding = corresponding_vertex;
+
+                    //Add new vert to mesh with matching position and create corresponding edge
+                    iV = mesh.AddVertex(v);
+                    corresponding.Corresponding = iV;
                     
-                    mesh[corresponding_vertex].Corresponding = v.Index;
-                     
                     MorphMeshEdge corresponding_edge = new MorphMeshEdge(EdgeType.CORRESPONDING, iV, corresponding_vertex);
                     mesh.AddEdge(corresponding_edge);
                 }
                 else
                 {
+                    //A new vert, add to mesh
+                    iV = mesh.AddVertex(v);
                     PositionToIndex.Add(v.Position.XY(), iV);
                 }
             }
@@ -212,17 +273,23 @@ namespace MorphologyMesh
         {
             throw new NotImplementedException();
         }
-
-        
-
-        public new MorphMeshVertex this[int key]
-        {
-            get { return (MorphMeshVertex)this.Verticies[key]; }
-        }
-
+          
         public new MorphMeshEdge this[IEdgeKey key]
         {
             get { return (MorphMeshEdge)this.Edges[key]; }
+        }
+
+        /// <summary>
+        /// Returns all of the verticies that match the indicies
+        /// </summary>
+        /// <param name="vertIndicies"></param>
+        /// <returns></returns>
+        public new IEnumerable<MorphMeshEdge> this[IEnumerable<IEdgeKey> keys]
+        {
+            get
+            {
+                return keys.Select(e => (MorphMeshEdge)this.Edges[e]);
+            }
         }
 
         public virtual MorphMeshVertex this[PointIndex key]
@@ -833,28 +900,6 @@ namespace MorphologyMesh
             return null;
         }
 
-        /// <summary>
-        /// Return the distance to travel to each of the vertex indicies 
-        /// </summary>
-        /// <param name="iVerts"></param>
-        /// <returns></returns>
-        public double PathDistance(IReadOnlyList<int> iVerts)
-        {
-            if (iVerts.Count < 2)
-                return 0;
-
-            Vertex3D origin = this[iVerts[0]];
-            double totalDistance = 0;
-            for(int i = 1; i < iVerts.Count; i++)
-            {
-                Vertex3D next = this[iVerts[i]];
-
-                totalDistance += GridVector3.Distance(origin.Position, next.Position);
-                origin = next; 
-            }
-
-            return totalDistance;
-        }
 
         /// <summary>
         /// Build an RTree using SliceChords in the mesh.  

@@ -29,13 +29,13 @@ namespace MorphologyMesh
     /// </summary>
     public class BajajGeneratorMesh : MorphRenderMesh
     {
-        private readonly bool[] IsUpperPolygon;
+        internal readonly bool[] IsUpperPolygon;
 
         public readonly ImmutableSortedSet<int> UpperPolyIndicies;
         public readonly ImmutableSortedSet<int> LowerPolyIndicies;
 
-        private GridPolygon[] UpperPolygons;
-        private GridPolygon[] LowerPolygons;
+        internal readonly GridPolygon[] UpperPolygons;
+        internal readonly GridPolygon[] LowerPolygons;
 
         private List<MorphMeshRegion> _Regions = new List<MorphMeshRegion>();
 
@@ -105,6 +105,54 @@ namespace MorphologyMesh
         public GridPolygon[] GetAdjacentLevelPolygons(SliceChord sc)
         {
             return IsUpperPolygon[sc.Origin.iPoly] ? LowerPolygons : UpperPolygons;
+        }
+
+        /// <summary>
+        /// Add verticies at intersection points for all intersection points between polygons in the two sets. 
+        /// Polygons intersecting in the same point will not have points added
+        /// </summary>
+        public static void AddCorrespondingVerticies(ICollection<GridPolygon> APolys, ICollection<GridPolygon> BPolys)
+        {
+            List<GridVector2> added_intersections;
+            foreach (GridPolygon A in APolys)
+            {
+                foreach (GridPolygon B in BPolys)
+                {
+                    added_intersections = A.AddPointsAtIntersections(B);
+# if DEBUG
+                    foreach (GridVector2 p in added_intersections)
+                    {
+                        Debug.Assert(A.IsVertex(p));
+                        Debug.Assert(B.IsVertex(p));
+                    }
+#endif
+                    //B.AddPointsAtIntersections(A);
+                }
+            } 
+        }
+
+        /// <summary>
+        /// Add verticies at intersection points for all intersection points
+        /// </summary>
+        /// <param name="Polys"></param>
+        public static void AddCorrespondingVerticies(IReadOnlyList<GridPolygon> Polys)
+        {
+            List<GridVector2> added_intersections;
+            foreach (var combo in Polys.CombinationPairs())
+            {
+                GridPolygon A = combo.A;
+                GridPolygon B = combo.B;
+                added_intersections = A.AddPointsAtIntersections(B);
+# if DEBUG
+                    foreach (GridVector2 p in added_intersections)
+                    {
+                        Debug.Assert(A.IsVertex(p));
+                        Debug.Assert(B.IsVertex(p));
+                    }
+#endif
+                    //B.AddPointsAtIntersections(A);
+                
+            }
         }
 
         public void IdentifyRegionsViaFaces()

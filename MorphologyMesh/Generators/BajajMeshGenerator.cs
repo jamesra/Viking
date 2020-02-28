@@ -7,6 +7,7 @@ using System;
 using System.Threading.Tasks;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
@@ -21,6 +22,49 @@ namespace MorphologyMesh
     {
 
     }
+
+    /// <summary>
+    /// Represents a quad tree for points in the above or below shape set for a mesh group
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    public struct MeshGroupQuadTrees<T>
+    {
+        public QuadTree<T> Above;
+        public QuadTree<T> Below;
+
+        public ImmutableArray<int> UpperPolyIndicies;
+        public ImmutableArray<int> LowerPolyIndicies;
+
+        public MeshGroupQuadTrees(QuadTree<T> aboveQuad, QuadTree<T> belowQuad, IEnumerable<int> upperPolyIndicies, IEnumerable<int> lowerPolyIndicies)
+        {
+            Above = aboveQuad;
+            Below = belowQuad;
+
+            UpperPolyIndicies = upperPolyIndicies.ToImmutableArray();
+            LowerPolyIndicies = lowerPolyIndicies.ToImmutableArray();
+        }
+
+        public MeshGroupQuadTrees(QuadTree<T> aboveQuad, QuadTree<T> belowQuad, ImmutableArray<int> upperPolyIndicies, ImmutableArray<int> lowerPolyIndicies)
+        {
+            Above = aboveQuad;
+            Below = belowQuad;
+
+            UpperPolyIndicies = upperPolyIndicies;
+            LowerPolyIndicies = lowerPolyIndicies;
+        }
+
+        /// <summary>
+        /// Return the QuadTree for the points on the opposite side of the polygon
+        /// </summary>
+        /// <param name="iPoly"></param>
+        /// <returns></returns>
+        public QuadTree<T> GetOppositeSide(int iPoly)
+        {
+            return UpperPolyIndicies.Contains(iPoly) ? Below : Above;
+        }
+          
+    }
+
 
     public class OTVTable : System.Collections.Concurrent.ConcurrentDictionary<Geometry.PointIndex, Geometry.PointIndex> { }
 
@@ -107,18 +151,116 @@ namespace MorphologyMesh
 
             return sb.ToString();
         }
+
+        public static void GeneratePolygonParameters(MeshingGroup group, out List<GridPolygon> Polygons, out List<bool> IsUpper, out List<double> PolyZ)
+        {
+            Polygons = new List<GridPolygon>();
+            IsUpper = new List<bool>();
+            PolyZ = new List<double>();
+
+            Polygons.AddRange(group.NodesAbove.Select(id => group.Graph[id].Geometry.ToPolygon()));
+            IsUpper.AddRange(group.NodesAbove.Select(id => true));
+            PolyZ.AddRange(group.NodesAbove.Select(id => group.Graph[id].Z));
+            Polygons.AddRange(group.NodesBelow.Select(id => group.Graph[id].Geometry.ToPolygon()));
+            IsUpper.AddRange(group.NodesBelow.Select(id => false));
+            PolyZ.AddRange(group.NodesBelow.Select(id => group.Graph[id].Z));
+        }
+
+        public static void GeneratePolygonParameters(MeshingGroup group, Dictionary<long, GridPolygon> polyLookup, out List<GridPolygon> Polygons, out List<bool> IsUpper, out List<double> PolyZ)
+        {
+            Polygons = new List<GridPolygon>();
+            IsUpper = new List<bool>();
+            PolyZ = new List<double>();
+
+            Polygons.AddRange(group.NodesAbove.Select(id => polyLookup.ContainsKey((long)id) ? polyLookup[(long)id] : group.Graph[id].Geometry.ToPolygon()));
+            IsUpper.AddRange(group.NodesAbove.Select(id => true));
+            PolyZ.AddRange(group.NodesAbove.Select(id => group.Graph[id].Z));
+            Polygons.AddRange(group.NodesBelow.Select(id => polyLookup.ContainsKey((long)id) ? polyLookup[(long)id] : group.Graph[id].Geometry.ToPolygon()));
+            IsUpper.AddRange(group.NodesBelow.Select(id => false));
+            PolyZ.AddRange(group.NodesBelow.Select(id => group.Graph[id].Z));
+        }
+
+        public override bool Equals(object obj)
+        {
+            var group = obj as MeshingGroup;
+            return group != null &&
+                   EqualityComparer<SortedSet<ulong>>.Default.Equals(NodesAbove, group.NodesAbove) &&
+                   EqualityComparer<SortedSet<ulong>>.Default.Equals(NodesBelow, group.NodesBelow) &&
+                   EqualityComparer<SortedSet<MorphologyEdge>>.Default.Equals(Edges, group.Edges);
+        }
+
+        public override int GetHashCode()
+        {
+            var hashCode = -668766393;
+            hashCode = hashCode * -1521134295 + EqualityComparer<SortedSet<ulong>>.Default.GetHashCode(NodesAbove);
+            hashCode = hashCode * -1521134295 + EqualityComparer<SortedSet<ulong>>.Default.GetHashCode(NodesBelow);
+            return hashCode;
+        }
     }
 
 
 
     public static class BajajMeshGenerator
     {
+
+        public delegate void OnMeshGeneratedEventHandler(BajajGeneratorMesh mesh);
+
+        /// <summary>
+        /// Generate a dictionary of polygons we can use as a lookup table.
+        /// </summary>
+        /// <param name="graph"></param>
+        /// <param name="tolerance"></param>
+        /// <returns></returns>
+        public static Dictionary<long, GridPolygon> CreateSimplerPolygonLookup(MorphologyGraph graph, double tolerance)
+        { 
+            Dictionary<long, GridPolygon> result = new Dictionary<long, GridPolygon>(graph.Nodes.Count);
+
+            List<Task<GridPolygon>> tasks = new List<Task<GridPolygon>>(graph.Nodes.Count);
+            foreach (var node in graph.Nodes.Values)
+            {
+                if (node.Geometry == null)
+                    continue;
+
+                SupportedGeometryType nodeType = node.Geometry.GeometryType();
+                if (nodeType != SupportedGeometryType.CURVEPOLYGON && nodeType != SupportedGeometryType.POLYGON)
+                {
+                    continue;
+                }
+
+                //Start a task to simplify the polygon
+                Task<GridPolygon> t = new Task<GridPolygon>((node_) => ((MorphologyNode)node_).Geometry.ToPolygon().Simplify(tolerance), node);
+               
+                t.Start();
+                tasks.Add(t);
+            }
+
+            foreach(var task in tasks)
+            {
+                try
+                {
+                    task.Wait();
+                }
+                catch(AggregateException e)
+                {
+                    //Oh well, we'll not simplify this one
+                    continue;
+                }
+
+                if(task.IsCompleted)
+                {
+                    result[(long)((MorphologyNode)(task.AsyncState)).ID] = task.Result;
+                }
+            }
+
+            return result;
+        }
+
         /// <summary>
         /// Convert a morphology graph to an unprocessed mesh graph
         /// </summary>
         /// <param name="graph"></param>
         /// <returns></returns>
-        public static List<BajajGeneratorMesh> ConvertToMesh(MorphologyGraph graph)
+        public static List<BajajGeneratorMesh> ConvertToMesh(MorphologyGraph graph, OnMeshGeneratedEventHandler OnMeshGenerated = null)
         {
 
             List<MeshingGroup> MeshingGroups = CalculateMeshingGroups(graph);
@@ -126,69 +268,123 @@ namespace MorphologyMesh
 
             List<Task<BajajGeneratorMesh>> meshGenTasks = new List<Task<BajajGeneratorMesh>>();
 
-            foreach(MeshingGroup group in MeshingGroups)
+            Trace.WriteLine("Begin Simplification of Polygons");
+            var SimplerPolygon = CreateSimplerPolygonLookup(graph, 2.0);
+            Trace.WriteLine("End Simplification of Polygons");
+
+            foreach (MeshingGroup group in MeshingGroups)
             {
                 //Trace.WriteLine(string.Format("Creating group {0}", group.ToString()));
 
-                List<GridPolygon> Polygons = new List<GridPolygon>();
-                List<bool> IsUpper = new List<bool>();
-                List<double> PolyZ = new List<double>();
+                List<GridPolygon> Polygons;
+                List<bool> IsUpper;
+                List<double> PolyZ;
 
-                Polygons.AddRange(group.NodesAbove.Select(id => graph[id].Geometry.ToPolygon()));
-                IsUpper.AddRange(group.NodesAbove.Select(id => true));
-                PolyZ.AddRange(group.NodesAbove.Select(id => graph[id].Z));
-                Polygons.AddRange(group.NodesBelow.Select(id => graph[id].Geometry.ToPolygon()));
-                IsUpper.AddRange(group.NodesBelow.Select(id => false));
-                PolyZ.AddRange(group.NodesBelow.Select(id => graph[id].Z));
+                MeshingGroup.GeneratePolygonParameters(group, SimplerPolygon, out Polygons, out IsUpper, out PolyZ);
 
-                meshGenTasks.Add(Task<BajajGeneratorMesh>.Factory.StartNew(() => new BajajGeneratorMesh(Polygons.Select(p => p/*p.Simplify(2.0)*/).ToList(), PolyZ, IsUpper, group)));
+                //We do this because any given polygon is likely to have corresponding verts added for intersections both above and below it.  We need
+                //all of those verts added before we generate a mesh
+                BajajGeneratorMesh.AddCorrespondingVerticies(Polygons);
+            }
+
+            foreach (MeshingGroup group in MeshingGroups)
+            {
+                //Trace.WriteLine(string.Format("Creating group {0}", group.ToString()));
+
+                List<GridPolygon> Polygons;
+                List<bool> IsUpper;
+                List<double> PolyZ;
+
+                MeshingGroup.GeneratePolygonParameters(group, SimplerPolygon, out Polygons, out IsUpper, out PolyZ);
+
+                meshGenTasks.Add(Task<BajajGeneratorMesh>.Factory.StartNew((g) => new BajajGeneratorMesh(Polygons.Select(p => p/*p.Simplify(2.0)*/).ToList(), PolyZ, IsUpper, group), group));
 
 //                BajajGeneratorMesh mesh = new BajajGeneratorMesh(Polygons.Select(p => p.Simplify(1.0)).ToList(), PolyZ, IsUpper);
   //              listBajajMeshGenerators.Add(mesh);
             }
 
-            listBajajMeshGenerators.AddRange(meshGenTasks.Select(t => t.Result));
+            foreach(var t in meshGenTasks)
+            {
+                try
+                {
+                    t.Wait();
+                    if(t.Status == TaskStatus.RanToCompletion)
+                        listBajajMeshGenerators.Add(t.Result);
+                }
+                catch(Exception e)
+                {
+                    Trace.WriteLine(string.Format("Exception generating {0}", t.AsyncState.ToString()));
+                }
+            }
+            //listBajajMeshGenerators.AddRange(meshGenTasks.Select(t => t.Result));
 
             List<Task> bajajTasks = new List<Task>();
 
-
+            BajajGeneratorMesh[] BajajGeneratorMeshArray = listBajajMeshGenerators.ToArray();
             //TODO: THis should be parallelizable
-            for(int iMesh = 0; iMesh < listBajajMeshGenerators.Count; iMesh++)
+            for (int iMesh = 0; iMesh < BajajGeneratorMeshArray.Length; iMesh++)
             {
-                BajajGeneratorMesh mesh = listBajajMeshGenerators[iMesh];
-                /*bajajTasks.Add(Task.Factory.StartNew(() =>
+                //BajajGeneratorMesh mesh = listBajajMeshGenerators[iMesh];
+                bajajTasks.Add(Task.Factory.StartNew((i) =>
                    {
-                       GenerateFaces(mesh);
-                   }));
-                   */
+                       GenerateFaces(BajajGeneratorMeshArray[(int)i]);
+                       if(OnMeshGenerated != null)
+                       {
+                           OnMeshGenerated(BajajGeneratorMeshArray[(int)i]);
+                       }
+                   }, iMesh));
+                   
                 //try
                 //{
-                GenerateFaces(mesh);
+                //GenerateFaces(mesh);
                 /*}
                 catch (Exception e)
                 {
                     Trace.WriteLine(string.Format("Exception building mesh {0}:\n{1}", listBajajMeshGenerators[iMesh].ToString(), e));
                     continue;
-                }*/
-                
-
+                }*/ 
             }
 
             //Task<BajajGeneratorMesh>.Factory.ContinueWhenAll(bajajTasks);
 
+            /*
+            int counter = 0;
             for(int iTask = 0; iTask < bajajTasks.Count; iTask++)
             {
                 var t = bajajTasks[iTask];
                 try
                 {
-                    t.Wait();
+                    t.Wait(500);
+                    counter++;
+                    Trace.WriteLine(string.Format("{0} completed", counter));
                 }
                 catch(Exception e)
                 {
                     Trace.WriteLine(string.Format("Exception building mesh {0}:\n{1}", listBajajMeshGenerators[iTask].ToString(), e));
                     continue; 
                 }
+            }*/
+
+
+            /*
+            int counter = 0;
+            for (int iTask = 0; iTask < bajajTasks.Count; iTask++)
+            {
+                var t = bajajTasks[iTask];
+                try
+                {
+                    t.Wait(500);
+                    counter++;
+                    Trace.WriteLine(string.Format("{0} completed", counter));
+                }
+                catch (Exception e)
+                {
+                    Trace.WriteLine(string.Format("Exception building mesh {0}:\n{1}", listBajajMeshGenerators[iTask].ToString(), e));
+                    continue;
+                }
             }
+            */
+
 
             //MeshGraph meshGraph = new MeshGraph();
             /*
@@ -221,7 +417,7 @@ namespace MorphologyMesh
 
         public static void GenerateFaces(BajajGeneratorMesh mesh)
         {
-            Trace.WriteLine(string.Format("Creating mesh {0}", mesh.ToString()));
+            //Trace.WriteLine(string.Format("Creating mesh {0}", mesh.ToString()));
 
             AddDelaunayEdges(mesh);
             var RegionPairingGraph = GenerateRegionGraph(mesh);
@@ -311,7 +507,7 @@ namespace MorphologyMesh
             {
                 int A = MeshToTriMesh[edge.A];
                 int B = MeshToTriMesh[edge.B];
-                triMesh.AddContrainedEdge(new Geometry.Meshing.Edge(A,B));
+                triMesh.AddConstrainedEdge(new Geometry.Meshing.ConstrainedEdge(A,B));
             }
             
             foreach(Face f in triMesh.Faces)
@@ -760,7 +956,7 @@ namespace MorphologyMesh
                 }
             }
 
-            Console.WriteLine(string.Format("*** Added {0} Chords this pass ***", numAdded));
+            //Console.WriteLine(string.Format("*** Added {0} Chords this pass ***", numAdded));
 
             return addedChord;
         }
@@ -1007,7 +1203,7 @@ namespace MorphologyMesh
         /// </summary>
         /// <param name="graph"></param>
         /// <returns></returns>
-        static List<MeshingGroup> CalculateMeshingGroups(MorphologyGraph graph)
+        internal static List<MeshingGroup> CalculateMeshingGroups(MorphologyGraph graph)
         {
             List<MeshingGroup> MeshingGroups = new List<MeshingGroup>();
             SortedSet<MorphologyEdge> Edges = new SortedSet<MorphologyEdge>(graph.Edges.Values);
@@ -1450,7 +1646,7 @@ namespace MorphologyMesh
             int iNextTest = 1;
             int BatchSize = 1;
             int BatchMultiple = 10;
-            SortedList<double, PointIndex> NearestList = null;
+            List<DistanceToPoint<PointIndex>> NearestList = null;
 
             while (true)
             {
@@ -1470,7 +1666,7 @@ namespace MorphologyMesh
 
                 if (iNextTest < NearestList.Count)
                 {
-                    PointIndex testPoint = NearestList.Values[iNextTest];
+                    PointIndex testPoint = NearestList[iNextTest].Value;
 
                     if (IsSliceChordValid(vertex, Polygons, SameLevelPolys, AdjacentLevelPolys, testPoint, chordTree, TestsToRun))
                         return testPoint;
@@ -1509,7 +1705,7 @@ namespace MorphologyMesh
             int iNextTest = 1;
             int BatchSize = 1;
             int BatchMultiple = 10;
-            SortedList<double, MorphMeshVertex> NearestList = null;
+            List<DistanceToPoint<MorphMeshVertex>> NearestList = null;
 
             while (true)
             {
@@ -1529,7 +1725,7 @@ namespace MorphologyMesh
 
                 if (iNextTest < NearestList.Count)
                 {
-                    MorphMeshVertex testPoint = NearestList.Values[iNextTest];
+                    MorphMeshVertex testPoint = NearestList[iNextTest].Value;
 
                     if (testPoint.FacesAreComplete == false) //An optimization from profiling. 
                     {
@@ -1579,36 +1775,21 @@ namespace MorphologyMesh
             return levels;
         }
 
-        public static void CreateOptimalTilingVertexTable(GridPolygon[] polygons, double[] PolyZ, SliceChordTestType TestsToRun, out OTVTable OTVTable)
-        {
-            SliceChordRTree chordTree = new SliceChordRTree();
-            CreateOptimalTilingVertexTable(new PolySetVertexEnum(polygons), polygons, PolyZ, TestsToRun, out OTVTable, ref chordTree);
-        }
-
-        public static void CreateOptimalTilingVertexTable(IEnumerable<PointIndex> VerticiesToMap, IEnumerable<PointIndex> CandidateVerticies, GridPolygon[] polygons, double[] PolyZ, SliceChordTestType TestsToRun, out OTVTable Table, ref SliceChordRTree chordTree)
+        public static void CreateOptimalTilingVertexTable(GridPolygon[] polygons, bool[] IsPolyAbove, SliceChordTestType TestsToRun, out OTVTable OTVTable)
         { 
-            SortedList<int, QuadTree<PointIndex>> LevelTree = CreateQuadTreesForVerticies(CandidateVerticies, polygons, PolyZ);
-
-            ////////////////////////////////////////////////////
-            CreateOptimalTilingVertexTable(VerticiesToMap, polygons, PolyZ, LevelTree, TestsToRun, out Table, ref chordTree);
+            SliceChordRTree chordTree = new SliceChordRTree();
+            CreateOptimalTilingVertexTable(new PolySetVertexEnum(polygons), polygons, IsPolyAbove, TestsToRun, out OTVTable, ref chordTree);
         }
 
-        /// <summary>
-        /// Find the optimal tiling vertex for the passed verticies
-        /// </summary>
-        /// <param name="VerticiesToMap"></param>
-        /// <param name="polygons"></param>
-        /// <param name="PolyZ"></param>
-        /// <param name="OTVTable"></param>
-        public static void CreateOptimalTilingVertexTable(IEnumerable<PointIndex> VerticiesToMap, GridPolygon[] polygons, double[] PolyZ, SliceChordTestType TestsToRun, out OTVTable OTVTable, ref SliceChordRTree chordTree)
-         {
-            SortedList<int, QuadTree<PointIndex>> LevelTree = CreateQuadTreesForPolygons(polygons, PolyZ);
+        public static void CreateOptimalTilingVertexTable(IEnumerable<PointIndex> VerticiesToMap, IEnumerable<PointIndex> CandidateVerticies, GridPolygon[] polygons, bool[] IsPolyAbove, SliceChordTestType TestsToRun, out OTVTable Table, ref SliceChordRTree chordTree)
+        { 
+            MeshGroupQuadTrees<PointIndex> LevelTree = CreateQuadTreesForVerticies(CandidateVerticies, polygons, IsPolyAbove);
 
             ////////////////////////////////////////////////////
-            CreateOptimalTilingVertexTable(VerticiesToMap, polygons, PolyZ, LevelTree, TestsToRun, out OTVTable, ref chordTree);
+            CreateOptimalTilingVertexTable(VerticiesToMap, polygons, IsPolyAbove, LevelTree, TestsToRun, out Table, ref chordTree);
         }
-
-        public static ConcurrentDictionary<PointIndex, List<SliceChord>> CreateFullOptimalTilingVertexTable(IEnumerable<PointIndex> VerticiesToMap, IEnumerable<PointIndex> MatchCandidates, GridPolygon[] polygons, double[] PolyZ, SortedList<int, QuadTree<PointIndex>> CandidateTreeByLevel, SliceChordTestType TestsToRun,
+        /*
+        public static ConcurrentDictionary<PointIndex, List<SliceChord>> CreateFullOptimalTilingVertexTable(IEnumerable<PointIndex> VerticiesToMap, IEnumerable<PointIndex> MatchCandidates, GridPolygon[] polygons, bool[] PolyZ, SortedList<int, QuadTree<PointIndex>> CandidateTreeByLevel, SliceChordTestType TestsToRun,
                                                          ref SliceChordRTree chordTree)
         {
             SortedList<int, List<GridPolygon>> levels = PolyByLevel(polygons, PolyZ);
@@ -1618,12 +1799,11 @@ namespace MorphologyMesh
 
             SortedList<double, PointIndex[]> CandidatesByLevel = new SortedList<double, PointIndex[]>();
 
-
-            foreach( var ZLevel  in MatchCandidates.GroupBy(v => PolyZ[v.iPoly]))
+            foreach (var ZLevel in MatchCandidates.GroupBy(v => PolyZ[v.iPoly]))
             {
                 CandidatesByLevel.Add(ZLevel.Key, MatchCandidates.ToArray());
             }
-             
+
             foreach (var polygroup in VerticiesToMap.GroupBy(v => v.iPoly))
             {
                 int iPoly = polygroup.Key;
@@ -1649,32 +1829,46 @@ namespace MorphologyMesh
 
             return OTVTable;
         }
+        */
+        /// <summary>
+        /// Find the optimal tiling vertex for the passed verticies
+        /// </summary>
+        /// <param name="VerticiesToMap"></param>
+        /// <param name="polygons"></param>
+        /// <param name="PolyZ"></param>
+        /// <param name="OTVTable"></param>
+        public static void CreateOptimalTilingVertexTable(IEnumerable<PointIndex> VerticiesToMap, GridPolygon[] polygons, bool[] IsUpperPolygon, SliceChordTestType TestsToRun, out OTVTable OTVTable, ref SliceChordRTree chordTree)
+         {
+            MeshGroupQuadTrees<PointIndex> LevelTree = CreateQuadTreesForPolygons(polygons, IsUpperPolygon);
 
-        public static void CreateOptimalTilingVertexTable(IEnumerable<PointIndex> VerticiesToMap, GridPolygon[] polygons, double[] PolyZ, SortedList<int, QuadTree<PointIndex>> CandidateTreeByLevel, SliceChordTestType TestsToRun,
+            ////////////////////////////////////////////////////
+            CreateOptimalTilingVertexTable(VerticiesToMap, polygons, IsUpperPolygon, LevelTree, TestsToRun, out OTVTable, ref chordTree);
+        }
+
+
+        public static void CreateOptimalTilingVertexTable(IEnumerable<PointIndex> VerticiesToMap, GridPolygon[] polygons, bool[] IsUpperPolygon, MeshGroupQuadTrees<PointIndex> CandidateTreeByLevel, SliceChordTestType TestsToRun,
                                                           out OTVTable Table, ref SliceChordRTree chordTree)
-        {
-            SortedList<int, List<GridPolygon>> levels = PolyByLevel(polygons, PolyZ);
-            Debug.Assert(levels.Keys.Count == 2);
-
+        { 
             Table = new OTVTable();
 
+            List<GridPolygon> UpperPolygons = polygons.Where((poly, i) => IsUpperPolygon[i]).ToList();
+            List<GridPolygon> LowerPolygons = polygons.Where((poly, i) => false == IsUpperPolygon[i]).ToList();
 
             foreach (var polygroup in VerticiesToMap.GroupBy(v => v.iPoly))
             {
                 int iPoly = polygroup.Key;
                 GridPolygon poly = polygons[iPoly];
-                int Z = (int)PolyZ[iPoly];
-                int AdjacentZ = (int)PolyZ.Where(adjz => adjz != Z).First();
 
-                QuadTree<PointIndex> tree = CandidateTreeByLevel[AdjacentZ];
+                QuadTree<PointIndex> oppositeTree = CandidateTreeByLevel.GetOppositeSide(iPoly);
 
-                List<GridPolygon> SameLevelPolys = levels[Z];
-                List<GridPolygon> AdjacentLevelPolys = levels[AdjacentZ];
+                bool IsUpper = IsUpperPolygon[iPoly];
+                List<GridPolygon> SameLevelPolys = IsUpper ? UpperPolygons : LowerPolygons;
+                List<GridPolygon> AdjacentLevelPolys = IsUpper ? LowerPolygons : UpperPolygons;
 
                 foreach (PointIndex i in polygroup)
                 {
                     GridVector2 p1 = i.Point(poly);
-                    PointIndex? NearestOnOtherLevel = FindOptimalTilingForVertexByDistance(i, polygons, SameLevelPolys, AdjacentLevelPolys, tree, chordTree, TestsToRun);
+                    PointIndex? NearestOnOtherLevel = FindOptimalTilingForVertexByDistance(i, polygons, SameLevelPolys, AdjacentLevelPolys, oppositeTree, chordTree, TestsToRun);
                     if (NearestOnOtherLevel.HasValue)
                     {
                         Table.TryAdd(i, NearestOnOtherLevel.Value);
@@ -1683,6 +1877,8 @@ namespace MorphologyMesh
             }
         }
 
+        
+
         /// <summary>
         /// Find the optimal tiling vertex for the passed verticies
         /// </summary>
@@ -1690,33 +1886,29 @@ namespace MorphologyMesh
         /// <param name="polygons"></param>
         /// <param name="PolyZ"></param>
         /// <param name="OTVTable"></param>
-        public static void CreateOptimalTilingVertexTable(this MorphRenderMesh mesh, IEnumerable<MorphMeshVertex> VerticiesToMap, SliceChordTestType TestsToRun, out ConcurrentDictionary<MorphMeshVertex, MorphMeshVertex> OTVTable, ref SliceChordRTree chordTree)
+        public static void CreateOptimalTilingVertexTable(this BajajGeneratorMesh mesh, IEnumerable<MorphMeshVertex> VerticiesToMap, SliceChordTestType TestsToRun, out ConcurrentDictionary<MorphMeshVertex, MorphMeshVertex> OTVTable, ref SliceChordRTree chordTree)
         {
-            SortedList<int, QuadTree<MorphMeshVertex>> LevelTree = mesh.CreateQuadTreesForContours();
+            var LevelTree = mesh.CreateQuadTreesForContours();
 
             ////////////////////////////////////////////////////
             CreateOptimalTilingVertexTable(mesh, VerticiesToMap, LevelTree, TestsToRun, out OTVTable, ref chordTree);
         }
 
-        public static void CreateOptimalTilingVertexTable(this MorphRenderMesh mesh, IEnumerable<MorphMeshVertex> VerticiesToMap, SortedList<int, QuadTree<MorphMeshVertex>> CandidateTreeByLevel, SliceChordTestType TestsToRun,
+        public static void CreateOptimalTilingVertexTable(this BajajGeneratorMesh mesh, IEnumerable<MorphMeshVertex> VerticiesToMap, MeshGroupQuadTrees<MorphMeshVertex> CandidateTreeByLevel, SliceChordTestType TestsToRun,
                                                           out ConcurrentDictionary<MorphMeshVertex, MorphMeshVertex> OTVTable, ref SliceChordRTree chordTree)
-        {
-            SortedList<int, List<GridPolygon>> levels = mesh.PolyByLevel();
-            Debug.Assert(levels.Keys.Count == 2);
-
+        { 
             OTVTable = new ConcurrentDictionary<MorphMeshVertex, MorphMeshVertex>();
                          
             foreach (var polygroup in VerticiesToMap.GroupBy(v => v.PolyIndex.Value.iPoly))
             {
                 int iPoly = polygroup.Key;
                 GridPolygon poly = mesh.Polygons[iPoly];
-                int Z = (int)mesh.PolyZ[iPoly];
-                int AdjacentZ = (int)mesh.PolyZ.Where(adjz => adjz != Z).First();
 
-                QuadTree<MorphMeshVertex> tree = CandidateTreeByLevel[AdjacentZ];
+                QuadTree<MorphMeshVertex> tree = CandidateTreeByLevel.GetOppositeSide(iPoly);
 
-                List<GridPolygon> SameLevelPolys = levels[Z];
-                List<GridPolygon> AdjacentLevelPolys = levels[AdjacentZ];
+                bool IsUpperPolygon = mesh.UpperPolyIndicies.Contains(iPoly);
+                GridPolygon[] SameLevelPolys = IsUpperPolygon ? mesh.UpperPolygons : mesh.LowerPolygons;
+                GridPolygon[] AdjacentLevelPolys = IsUpperPolygon ? mesh.LowerPolygons : mesh.UpperPolygons;
 
                 foreach (MorphMeshVertex v in polygroup.Where(v => v.FacesAreComplete == false))
                 {
@@ -1730,7 +1922,7 @@ namespace MorphologyMesh
                 }
             }
         }
-
+        /*
         public static SortedList<int, QuadTree<MorphMeshVertex>> CreateQuadTreesForContours(this MorphRenderMesh mesh)
         {
             SortedList<int, QuadTree<MorphMeshVertex>> LevelTree = new SortedList<int, QuadTree<MorphMeshVertex>>();
@@ -1739,7 +1931,9 @@ namespace MorphologyMesh
             foreach (double Z in mesh.PolyZ.Distinct())
             {
                 GridPolygon[] PolysOnLevel = mesh.Polygons.Where((p, i) => mesh.PolyZ[i] == Z).ToArray();
-                LevelTree.Add((int)Z, new QuadTree<MorphMeshVertex>(PolysOnLevel.BoundingBox()));
+                GridRectangle bbox = PolysOnLevel.BoundingBox();
+                bbox.Scale(1.05);
+                LevelTree.Add((int)Z, new QuadTree<MorphMeshVertex>(bbox));
             }
 
             var VertsByZLevel = mesh.MorphVerticies.Where(v => v.Type == VertexOrigin.CONTOUR).GroupBy(v => Math.Round(v.Position.Z));
@@ -1755,7 +1949,86 @@ namespace MorphologyMesh
 
             return LevelTree;
         }
+        */
 
+        public static MeshGroupQuadTrees<MorphMeshVertex> CreateQuadTreesForContours(this BajajGeneratorMesh mesh)
+        {
+            QuadTree<MorphMeshVertex> Above = BuildQuadTreeForPolyGroup(mesh, mesh.UpperPolyIndicies);
+            QuadTree<MorphMeshVertex> Below = BuildQuadTreeForPolyGroup(mesh, mesh.LowerPolyIndicies);
+
+            return new MeshGroupQuadTrees<MorphMeshVertex>(Above, Below, mesh.UpperPolyIndicies, mesh.LowerPolyIndicies); 
+        }
+
+        private static QuadTree<MorphMeshVertex> BuildQuadTreeForPolyGroup(BajajGeneratorMesh mesh,  IReadOnlyList<int> polyset)
+        {
+            GridPolygon[] PolysOnLevel = polyset.Select(iPoly => mesh.Polygons[iPoly]).ToArray();
+
+            GridRectangle bbox = PolysOnLevel.BoundingBox();
+            bbox.Scale(1.05);
+            QuadTree<MorphMeshVertex> quadTree = new QuadTree<MorphMeshVertex>(bbox);
+
+            var Verts = mesh.MorphVerticies.Where(v => v.Type == VertexOrigin.CONTOUR && v.PolyIndex.HasValue && polyset.Contains(v.PolyIndex.Value.iPoly));
+            foreach (var vertex in Verts)
+            {
+                quadTree.Add(vertex.Position.XY(), vertex);
+            } 
+
+            return quadTree;
+        }
+
+
+        /// <summary>
+        /// Build a QuadTree for each Z level containing all points in the polygons on that level
+        /// </summary>
+        /// <param name="polygons"></param>
+        /// <param name="PolyZ"></param>
+        /// <returns></returns>
+        public static MeshGroupQuadTrees<PointIndex> CreateQuadTreesForPolygons(IReadOnlyList<GridPolygon> polygons, bool[] IsUpperPolygon)
+        {
+            var polydata = polygons.Select((poly, i) => new { Polygon = poly, index = i }).ToArray();
+            var UpperPolyData = polydata.Where((data) => IsUpperPolygon[data.index]);
+            var LowerPolyData = polydata.Where((data) => false == IsUpperPolygon[data.index]);
+
+            var UpperPolyIndicies = UpperPolyData.Select(data => data.index).ToImmutableArray();
+            var LowerPolyIndicies = LowerPolyData.Select(data => data.index).ToImmutableArray();
+
+            QuadTree<PointIndex> Above = BuildQuadTreeForPolyGroup(UpperPolyData.Select(data => data.Polygon).ToArray(),
+                                                                                    UpperPolyIndicies);
+
+            QuadTree<PointIndex> Below = BuildQuadTreeForPolyGroup(LowerPolyData.Select(data => data.Polygon).ToArray(),
+                                                                                    LowerPolyIndicies);
+
+            return new MeshGroupQuadTrees<PointIndex>(Above, Below, UpperPolyIndicies, LowerPolyIndicies);
+        }
+        
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="PolysOnLevel"></param>
+        /// <param name="iPolyLookup">Index of polygon we should use for PointIndex creation</param>
+        /// <returns></returns>
+        private static QuadTree<PointIndex> BuildQuadTreeForPolyGroup(GridPolygon[] PolysOnLevel, IReadOnlyList<int> iPolyLookup)
+        {
+            GridRectangle bbox = PolysOnLevel.BoundingBox();
+            bbox.Scale(1.05);
+            QuadTree<PointIndex> quadTree = new QuadTree<PointIndex>(bbox);
+
+            for(int i = 0; i < PolysOnLevel.Length; i++)
+            {
+                int iPoly = iPolyLookup[i];
+                GridPolygon poly = PolysOnLevel[i];
+
+                foreach (PointIndex pIndex in new PolygonVertexEnum(poly, iPoly))
+                {
+                    GridVector2 p1 = pIndex.Point(poly);
+                    quadTree.Add(p1, pIndex);
+                }
+            }
+
+            return quadTree;
+        }
+        
+        /*
         /// <summary>
         /// Build a QuadTree for each Z level containing all points in the polygons on that level
         /// </summary>
@@ -1789,35 +2062,56 @@ namespace MorphologyMesh
 
             return LevelTree;
         }
+        */
 
-        public static SortedList<int, QuadTree<PointIndex>> CreateQuadTreesForVerticies(IEnumerable<PointIndex> Candidates, IReadOnlyList<GridPolygon> polygons, double[] PolyZ)
+        public static MeshGroupQuadTrees<PointIndex> CreateQuadTreesForVerticies(IEnumerable<PointIndex> Candidates, IReadOnlyList<GridPolygon> polygons, bool[] IsUpperPolygon)
         {
-            SortedList<int, QuadTree<PointIndex>> LevelTree = new SortedList<int, QuadTree<PointIndex>>();
+            //Figure out which polygons we are going to use
+            int[] usedPolyIndicies = Candidates.Select(c => c.iPoly).Distinct().ToArray();
+
+            var polydata = polygons.Select((poly, i) => new { Polygon = poly, index = i }).ToArray();
+            var UpperPolyData = polydata.Where((data) => IsUpperPolygon[data.index] && usedPolyIndicies.Contains(data.index));
+            var LowerPolyData = polydata.Where((data) => false == IsUpperPolygon[data.index] && usedPolyIndicies.Contains(data.index));
+
+            var UpperPolyIndicies = UpperPolyData.Select(data => data.index).ToImmutableArray();
+            var LowerPolyIndicies = LowerPolyData.Select(data => data.index).ToImmutableArray();
 
             //Build a quad tree of all points at a given level
-            foreach (double Z in Candidates.Select(pi => PolyZ[pi.iPoly]).Distinct())
-            {
-                LevelTree.Add((int)Z, new QuadTree<PointIndex>(polygons.Where((p, i) => PolyZ[i] == Z).ToArray().BoundingBox()));
-            }
+            QuadTree<PointIndex> Above = BuildQuadTreeForPolyGroup(Candidates, polygons, UpperPolyData.Select(data => data.Polygon).ToArray());
+            QuadTree<PointIndex> Below = BuildQuadTreeForPolyGroup(Candidates, polygons, LowerPolyData.Select(data => data.Polygon).ToArray());
+#if DEBUG 
+            Debug.Assert(Above.Count > 0, "We need at least one vertex in the tree for each level.");
+            Debug.Assert(Below.Count > 0, "We need at least one vertex in the tree for each level.");
+#endif
+             
+            return new MeshGroupQuadTrees<PointIndex>(Above, Below, UpperPolyIndicies, LowerPolyIndicies);  
+        }
 
-            foreach(var VertGroup in Candidates.GroupBy(p => PolyZ[p.iPoly]))
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="PolysOnLevel"></param>
+        /// <param name="iPolyLookup">Index of polygon we should use for PointIndex creation</param>
+        /// <returns></returns>
+        private static QuadTree<PointIndex> BuildQuadTreeForPolyGroup(IEnumerable<PointIndex> Candidates, IReadOnlyList<GridPolygon> PointIndexablePolygons,  GridPolygon[] PolysOnLevel)
+        {
+            GridRectangle bbox = PolysOnLevel.BoundingBox();
+            bbox.Scale(1.05);
+            QuadTree<PointIndex> quadTree = new QuadTree<PointIndex>(bbox);
+
+            foreach (var VertGroup in Candidates.GroupBy(p => p.iPoly))
             {
-                int Z = (int)VertGroup.Key;
-                QuadTree<PointIndex> tree = LevelTree[Z];
-                foreach(PointIndex i in VertGroup)
+                int iPoly = VertGroup.Key;
+                GridPolygon poly = PointIndexablePolygons[iPoly];
+
+                foreach (PointIndex i in VertGroup)
                 {
-                    GridVector2 p1 = i.Point(polygons);
-                    tree.Add(p1, i);
+                    GridVector2 p1 = i.Point(poly);
+                    quadTree.Add(p1, i);
                 }
             }
-#if DEBUG
-            foreach(int level in LevelTree.Keys)
-            {
-                Debug.Assert(LevelTree[level].Count > 0, "We need at least one vertex in the tree for each level.");
-            }
-#endif
 
-            return LevelTree;
+            return quadTree;
         }
 
         private static void CreatePortsForBranch(MeshNode node, MeshEdge[] edges)

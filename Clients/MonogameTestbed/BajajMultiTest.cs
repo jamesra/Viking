@@ -129,16 +129,43 @@ namespace MonogameTestbed
             GenerateMesh();
         }
 
+        MeshView<VertexPositionColor> wholeMesh = null;
+
+        object drawlock = new object();
+
+        private void OnSliceCompleted(BajajGeneratorMesh mesh)
+        {
+            this.AddMesh(mesh);
+        }
+
+        private void AddMesh(BajajGeneratorMesh mesh)
+        {
+            MeshModel<VertexPositionColor> meshViewModel = BajajOTVAssignmentView.CreateFaceView(mesh);
+
+            lock (drawlock)
+            {
+                wholeMesh.models.Add(meshViewModel);
+            }
+        }
+
         internal void GenerateMesh()
         {
+            wholeMesh = new MeshView<VertexPositionColor>();
+            wholeMesh.Name = "Whole Mesh";
+
             MorphologyGraph graph = this.Graph;
             this.RegionViews.Clear();
             this.listLineViews.Clear();
             this.MeshViews.Clear();
 
-            List<BajajGeneratorMesh> meshes = BajajMeshGenerator.ConvertToMesh(graph);
+            lock (drawlock)
+            {
+                MeshViews.Add(wholeMesh);
+            }
 
-            MeshViews.Add(BajajOTVAssignmentView.CreateMeshView(meshes.Select(m => (MorphRenderMesh)m).ToList(), "Completed meshes"));
+            List<BajajGeneratorMesh> meshes = BajajMeshGenerator.ConvertToMesh(graph, OnSliceCompleted);
+
+            //MeshViews.Add(BajajOTVAssignmentView.CreateMeshView(meshes.Select(m => (MorphRenderMesh)m).ToList(), "Completed meshes"));
             /*
             double MinZ = PolyZ.Min();
             //Create our mesh with only the verticies
@@ -227,7 +254,10 @@ namespace MonogameTestbed
 
             if (iShownMesh == null)
             {
-                iShownMesh = MeshViews.Count - 1;
+                lock (drawlock)
+                {
+                    iShownMesh = MeshViews.Count - 1;
+                }
             }
         }
         
@@ -243,10 +273,13 @@ namespace MonogameTestbed
                 ViewLabels.AppendLine("Region Pass #" + iShownRegion.Value);
             }
 
-            if (MeshViews != null && MeshViews.Count > 0 && ShowMesh)
+            lock (drawlock)
             {
-                MeshViews[iShownMesh.Value].Draw(window.GraphicsDevice, window.Scene, CullMode.None);
-                ViewLabels.AppendLine(MeshViews[iShownMesh.Value].Name);
+                if (MeshViews != null && MeshViews.Count > 0 && ShowMesh)
+                {
+                    MeshViews[iShownMesh.Value].Draw(window.GraphicsDevice, window.Scene, CullMode.None);
+                    ViewLabels.AppendLine(MeshViews[iShownMesh.Value].Name);
+                }
             }
 
 
@@ -336,9 +369,12 @@ namespace MonogameTestbed
             //window.GraphicsDevice.BlendState = BlendState.Opaque;
 
 
-            if (iShownMesh.HasValue)
+            lock (drawlock)
             {
-                MeshViews[iShownMesh.Value].Draw(window.GraphicsDevice, scene, CullMode.None);
+                if (iShownMesh.HasValue)
+                {
+                    MeshViews[iShownMesh.Value].Draw(window.GraphicsDevice, scene, CullMode.None);
+                }
             }
         }
     }
@@ -473,7 +509,10 @@ namespace MonogameTestbed
 
             //AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromOData(new long[] { 180 }, false, DataSource.EndpointMap[ENDPOINT.RC1]);
             //AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromOData(new long[] { 40429 }, false, DataSource.EndpointMap[ENDPOINT.RPC1]);
+            Trace.WriteLine("Begin OData fetch");
             AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromOData(new long[] { 2628 }, false, DataSource.EndpointMap[ENDPOINT.RPC1]);
+            Trace.WriteLine("End OData fetch");
+
             graph = graph.Subgraphs.Values.First();
 
             //AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromODataLocationIDs(BasicBranchInteriorHole, DataSource.EndpointMap[ENDPOINT.RPC1]);
@@ -493,17 +532,18 @@ namespace MonogameTestbed
             double MaxZ = graph.Nodes.Values.Max(n => n.Z);
             double MinZ = graph.Nodes.Values.Min(n => n.Z);
 
-            double Cutoff = (MaxZ - MinZ) / 10.0;
-            Cutoff = MaxZ - Cutoff;
-
+            double Cutoff = (MaxZ - MinZ);// / 20;
+            Cutoff = MinZ + Cutoff;
+            /*
             foreach(var node in graph.Nodes.Values.ToList())
             {
-                if(node.Z <= Cutoff)
+                if(node.Z > Cutoff)
                 {
                     graph.RemoveNode(node.ID);
                 }
             }
             
+            */
 
             AnnotationVizLib.MorphologyNode[] nodes = graph.Nodes.Values.ToArray();
             wrapView = new MonogameTestbed.BajajMultiOTVAssignmentView(graph);// (nodes.Select(n => n.Geometry.ToPolygon()).ToArray(), nodes.Select(n=> n.Z).ToArray());
@@ -549,7 +589,7 @@ namespace MonogameTestbed
                 if (wrapView.iShownMesh.HasValue && wrapView.iShownMesh.Value >= wrapView.MeshViews.Count)
                 {
                     wrapView.iShownMesh = null;
-                } 
+                }
             }
 
             if (Gamepad.B_Clicked)

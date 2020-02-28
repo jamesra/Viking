@@ -134,6 +134,35 @@ namespace MonogameTestbed
             }
         }
 
+        public BajajOTVAssignmentView(AnnotationVizLib.MorphologyGraph graph)
+        {
+            List<MeshingGroup> MeshingGroups = BajajMeshGenerator.CalculateMeshingGroups(graph);
+
+            Debug.Assert(MeshingGroups.Count == 1, "Test was written expecting a single slice");
+
+            MeshingGroup group = MeshingGroups[0];
+
+            List<GridPolygon> _polygons;
+            List<bool> IsUpper;
+            List<double> _polyZ;
+
+            Trace.WriteLine("Begin Simplification of Polygons");
+            var SimplerPolygon = BajajMeshGenerator.CreateSimplerPolygonLookup(graph, 3.0);
+            Trace.WriteLine("End Simplification of Polygons");
+
+            MeshingGroup.GeneratePolygonParameters(group, SimplerPolygon, out _polygons, out IsUpper, out _polyZ);
+
+            Polygons = _polygons.ToArray();
+            PolyZ = _polyZ.ToArray();
+
+            BajajGeneratorMesh.AddCorrespondingVerticies(Polygons);
+
+            //Create our mesh with only the verticies
+            FirstPassTriangulation = new BajajGeneratorMesh(Polygons, PolyZ, IsUpper, group);
+
+            GenerateMesh(FirstPassTriangulation);
+        }
+        
         public BajajOTVAssignmentView(GridPolygon[] polys, double[] Z)
         {
             ///Takes a set of polygons and Z values and generates a meshView
@@ -144,19 +173,18 @@ namespace MonogameTestbed
             //Bajaj Step 3
             //Polygons.AddPointsAtAllIntersections(Z);
 
-            GenerateMesh();
+            //Create our mesh with only the verticies
+            FirstPassTriangulation = new BajajGeneratorMesh(Polygons, PolyZ, PolyZ.Select(z_ => z_ != MinZ).ToArray());
+
+            GenerateMesh(FirstPassTriangulation);
         }
 
-        internal void GenerateMesh()
+        internal void GenerateMesh(BajajGeneratorMesh FirstPassTriangulation)
         {
             this.RegionViews.Clear();
             this.listLineViews.Clear();
             this.MeshViews.Clear();
-
-            double MinZ = PolyZ.Min();
-            //Create our mesh with only the verticies
-            FirstPassTriangulation = new BajajGeneratorMesh(Polygons, PolyZ, PolyZ.Select(Z => Z != MinZ).ToArray());
-
+              
             string JSONPolyString = Polygons.ToJArray().ToString();
             Trace.WriteLine(JSONPolyString); 
 
@@ -302,6 +330,7 @@ namespace MonogameTestbed
                 meshView.models.Add(meshViewModel);
             }
 
+            Trace.WriteLine(string.Format("{0} models rendered", meshView.models.Count));
             return meshView;
         }
 
@@ -476,7 +505,7 @@ namespace MonogameTestbed
         }
         */
 
-        public static OTVTable IdentifyChordCandidatesForRegionPair(MorphRenderMesh mesh, MorphMeshRegion source, MorphMeshRegion target, SliceChordTestType Tests, SliceChordRTree rTree = null)
+        public static OTVTable IdentifyChordCandidatesForRegionPair(BajajGeneratorMesh mesh, MorphMeshRegion source, MorphMeshRegion target, SliceChordTestType Tests, SliceChordRTree rTree = null)
         {
             if(rTree == null)
             {
@@ -486,7 +515,7 @@ namespace MonogameTestbed
             OTVTable Table = new OTVTable(); 
 
             //TODO: Add flags to this call to select which tests are used to built the OTV table
-            BajajMeshGenerator.CreateOptimalTilingVertexTable(source.Verticies.Select(i => ((MorphMeshVertex)mesh[i]).PolyIndex.Value), target.Verticies.Select(i => ((MorphMeshVertex)mesh[i]).PolyIndex.Value), mesh.Polygons, mesh.PolyZ,
+            BajajMeshGenerator.CreateOptimalTilingVertexTable(source.Verticies.Select(i => ((MorphMeshVertex)mesh[i]).PolyIndex.Value), target.Verticies.Select(i => ((MorphMeshVertex)mesh[i]).PolyIndex.Value), mesh.Polygons, mesh.IsUpperPolygon,
                                                                                             Tests, out Table, ref rTree);
              
             return Table;
@@ -800,6 +829,61 @@ namespace MonogameTestbed
             82599
         };
 
+        /// <summary>
+        /// The faces on edge after closing untiled region
+        /// </summary>
+        long[] DelaunayTest9 = new long[] {
+            58687,
+            58685
+        };
+
+        /// <summary>
+        /// Clockwise triangulation vert
+        /// </summary>
+        long[] DelaunayTest10 = new long[] {
+            108603,
+            108610,
+            108534
+        };
+
+        /// <summary>
+        /// Created line with duplicate points
+        /// FALSE POSITIVE HOLE DETECTION due to overlapping contours of thin process.
+        /// </summary>
+        long[] DelaunayTest11 = new long[]
+        {
+            102640,
+            102645,
+            102436
+        };
+
+        /// <summary>
+        /// 3 Z-levels.  OTV Tiling table assertion
+        /// </summary>
+        long[] DelaunayTest12 = new long[]
+        {
+            102557,
+            102564,
+            263477,
+            102410,
+            263476
+        };
+
+        /// <summary>
+        /// Adding correspoinding verticies, adding same point twice
+        /// </summary>
+        long[] DelaunayTest13 = new long[]
+        {
+            58685,
+            58682
+        };
+
+        long[] DelaunayTest14 = new long[]
+        {
+            58708,
+            58706
+        };
+
         Scene scene;
         Scene3D scene3D;
         GamePadStateTracker Gamepad = new GamePadStateTracker();
@@ -846,15 +930,16 @@ namespace MonogameTestbed
             /////////////
             ///This is the major test of mesh generation that covers as many cases as I could think of
             //AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromODataLocationIDs(NightmareTroubleIDS, DataSource.EndpointMap[ENDPOINT.TEST]); 
-            AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromODataLocationIDs(DelaunayTest8, DataSource.EndpointMap[ENDPOINT.RPC1]);
+            AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromODataLocationIDs(DelaunayTest14, DataSource.EndpointMap[ENDPOINT.RPC1]);
             //////////////
 
             //BajajMeshGenerator.ConvertToMeshGraph(graph);
 
             AnnotationVizLib.MorphologyNode[] nodes = graph.Nodes.Values.ToArray();
-            wrapView = new MonogameTestbed.BajajOTVAssignmentView(nodes.Select(n => n.Geometry.ToPolygon()).ToArray(), nodes.Select(n=> n.Z).ToArray());
+            //wrapView = new MonogameTestbed.BajajOTVAssignmentView(nodes.Select(n => n.Geometry.ToPolygon()).ToArray(), nodes.Select(n=> n.Z).ToArray());
+            wrapView = new MonogameTestbed.BajajOTVAssignmentView(graph);
 
-            if(window.Scene.RestoreCamera(TestMode.BAJAJTEST) == false)
+            if (window.Scene.RestoreCamera(TestMode.BAJAJTEST) == false)
             {
                 window.Scene.Camera.LookAt = graph.BoundingBox.CenterPoint.XY().ToXNAVector2();
                 window.Scene.Camera.Downsample = graph.BoundingBox.Width / window.GraphicsDevice.Viewport.Width;
@@ -933,7 +1018,7 @@ namespace MonogameTestbed
             if(Gamepad.Start_Clicked)
             {
                 //Recalculate the mesh from scratch
-                wrapView.GenerateMesh();
+                //wrapView.GenerateMesh();
             }
 
             if (Gamepad.RightShoulder_Clicked)

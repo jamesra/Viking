@@ -4,6 +4,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using TriangleNet;
+using System.Diagnostics;
 //using TriangleNet.Meshing;
 
 namespace MorphologyMesh
@@ -161,9 +162,11 @@ namespace MorphologyMesh
         private static OTVTable TryClosingSolidRegion(this BajajGeneratorMesh mesh, MorphMeshRegion region, SliceChordRTree rTree)
         {
             OTVTable OTVTable;
+            //TODO: This appears to only select verts without faces... shouldn't we look for any vert without a chord?
             List<int> vertsWithoutFaces = region.Verticies.Where(v => mesh[v].Edges.SelectMany(e => mesh[e].Faces).Count() == 0).ToList();
 
-            BajajMeshGenerator.CreateOptimalTilingVertexTable(vertsWithoutFaces.Select(v => mesh[v].PolyIndex.Value), mesh.Polygons, mesh.PolyZ,
+            BajajMeshGenerator.CreateOptimalTilingVertexTable(vertsWithoutFaces.Select(v => mesh[v].PolyIndex.Value), 
+                                                              mesh.Polygons, mesh.IsUpperPolygon,
                                                               SliceChordTestType.Correspondance | SliceChordTestType.ChordIntersection | SliceChordTestType.Theorem2 | SliceChordTestType.Theorem4,
                                                               out OTVTable, ref rTree);
 
@@ -286,6 +289,7 @@ namespace MorphologyMesh
                 {
                     EdgeType type = mesh.GetEdgeTypeWithOrientation(iA, iB);
                     MorphMeshEdge newEdge = new MorphMeshEdge(type, iA, iB);
+                    //Trace.WriteLine(string.Format("Add edge {0}", newEdge));
                     mesh.AddEdge(newEdge);
                     rTree.Add(mesh.ToSegment(newEdge).BoundingBox.ToRTreeRect(0), new MeshChord(mesh, iA, iB));
                 }

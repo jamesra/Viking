@@ -167,6 +167,7 @@ namespace MonogameTestbed
         {    
             PointSetView psv = new PointSetView(Color.Gray);
 
+            psv.LabelColor = Color.YellowGreen;
             psv.PointRadius = 0.5;
             psv.Points = mesh.Verticies.Select(p => p.Position.XY()).ToArray();
             psv.LabelIndex = true;

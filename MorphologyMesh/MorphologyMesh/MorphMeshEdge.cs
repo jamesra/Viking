@@ -23,6 +23,12 @@ namespace MorphologyMesh
             Type = type;
         }
 
+        public override void AddFace(IFace f)
+        {
+            base.AddFace(f);
+            //Debug.Assert(this.Faces.Count < 3, string.Format("{0} was extra face on {1}", f, this));
+        }
+
         public static new IEdge Create(int A, int B)
         {
             return new MorphMeshEdge(EdgeType.UNKNOWN, A, B);
@@ -45,7 +51,10 @@ namespace MorphologyMesh
         {
             get
             {
-                System.Diagnostics.Debug.Assert(this.Faces.Count < 3); // We cannot have more than two faces on an edge when meshing morphology
+                //System.Diagnostics.Debug.Assert(this.Faces.Count < 3); // We cannot have more than two faces on an edge when meshing morphology
+                if (this.Faces.Count > 2)
+                    return true;    //I don't know how we could have three, but that's enough faces for this edge
+
                 return Type == EdgeType.CONTOUR ? Faces.Count == 1 : Faces.Count == 2;
             }
         }
