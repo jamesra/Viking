@@ -190,9 +190,11 @@ namespace Viking.VolumeModel
         /// Returns the nearest available downsample level with a higher resolution than the viewers downsample.  Override when the section does not use the maximum X/Y Resolution of the volume.
         /// </summary>
         /// <param name="DownsampleLevel"></param>
-        /// <returns></returns>
+        /// <returns>MaxVal if there is no level available, otherwise the nearest value</returns>
         public virtual int NearestAvailableLevel(double requestedLevel)
         {
+            if (AvailableLevels.Length == 0)
+                return int.MaxValue;
             
             if (double.IsInfinity(requestedLevel))
             {

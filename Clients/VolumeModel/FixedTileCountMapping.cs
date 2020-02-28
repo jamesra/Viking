@@ -246,7 +246,10 @@ namespace Viking.VolumeModel
             //            int predictiveDownsample = DownSample * 4 > 64 ? 64 : (int)DownSample * 4;
 
             int roundedDownsample = NearestAvailableLevel(DownSample);
-            int roundedScaledDownsample = NearestAvailableLevel(scaledDownsampleLevel); 
+            int roundedScaledDownsample = NearestAvailableLevel(scaledDownsampleLevel);
+
+            if (roundedDownsample == int.MaxValue || roundedScaledDownsample == int.MaxValue)
+                return VisibleTiles;
            
             ITransform[] Tranforms = this.TileTransforms;
             if (TileTransforms == null)

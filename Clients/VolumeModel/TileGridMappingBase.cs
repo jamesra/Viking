@@ -278,7 +278,9 @@ namespace Viking.VolumeModel
 
             //double scaledDownsampleLevel = AdjustDownsampleForScale(DownSample);
 
-            int roundedDownsample = NearestAvailableLevel(DownSample); 
+            int roundedDownsample = NearestAvailableLevel(DownSample);
+            if (roundedDownsample == int.MaxValue)
+                return VisibleTiles;
 
             //Starting with low-res tiles, add tiles to the list until we reach desired resolution
 //            List<Tile> TilesToDraw = new List<Tile>(); 

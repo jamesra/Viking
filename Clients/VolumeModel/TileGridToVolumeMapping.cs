@@ -126,9 +126,13 @@ namespace Viking.VolumeModel
         public override TilePyramid VisibleTiles(GridRectangle VisibleBounds, double DownSample)
         {
             //double AdjustedDownSample = AdjustDownsampleForScale(DownSample);
-            int roundedDownsample = NearestAvailableLevel(DownSample);
-
             TilePyramid TilesToDraw = new TilePyramid(VisibleBounds);
+
+            int roundedDownsample = NearestAvailableLevel(DownSample);
+            if (roundedDownsample == int.MaxValue)
+                return TilesToDraw;
+
+            
             GridQuad VisibleQuad; 
             GridRectangle? visibleSection = VisibleBounds.ApproximateVisibleMosaicBounds(this);
             if(!visibleSection.HasValue)

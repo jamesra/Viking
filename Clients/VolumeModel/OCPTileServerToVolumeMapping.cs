@@ -47,8 +47,7 @@ namespace Viking.VolumeModel
 
         public override TilePyramid VisibleTiles(GridRectangle VisibleBounds, double DownSample)
         {
-            int roundedDownsample = NearestAvailableLevel(DownSample);
-
+            
             GridQuad VisibleQuad = null; 
 
             //Add any corners of the VisibleBounds that we can transform to the list of points
@@ -76,6 +75,9 @@ namespace Viking.VolumeModel
             //Starting with low-res tiles, add tiles to the list until we reach desired resolution
             //List<Tile> TilesToDraw = new List<Tile>();
             TilePyramid TilesToDraw = new TilePyramid(VisibleBounds);
+            int roundedDownsample = NearestAvailableLevel(DownSample);
+            if (roundedDownsample == int.MaxValue)
+                return TilesToDraw;
 
             if (VisiblePoints.Count < 3)
                 return TilesToDraw;
