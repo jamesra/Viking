@@ -70,5 +70,53 @@ namespace Geometry.Meshing
         {
             return face.iVerts.Length == 4;
         }
+
+        public static TriangulationMesh<Vertex2D<PointIndex>> Triangulate(this GridPolygon poly, int iPoly = 0, TriangulationMesh<Vertex2D<PointIndex>>.ProgressUpdate OnProgress=null)
+        {
+            var polyCopy = (GridPolygon)poly.Clone();
+
+            //Center the polygon on 0,0 to reduce floating point error
+            var centeredPoly = polyCopy.Translate(-polyCopy.Centroid);
+
+            PolygonVertexEnum vertEnumerator = new PolygonVertexEnum(centeredPoly, iPoly);
+
+            var meshVerts = vertEnumerator.Select(v => new Vertex2D<PointIndex>(v.Point(centeredPoly), v)).ToArray();
+
+            Dictionary<PointIndex, Vertex2D<PointIndex>> IndexToVert = meshVerts.ToDictionary(v => v.Data);
+
+            TriangulationMesh<Vertex2D<PointIndex>> mesh = GenericDelaunayMeshGenerator2D<Vertex2D<PointIndex>>.TriangulateToMesh(meshVerts, OnProgress);
+
+            PointIndex? lastVert = null;
+
+            SortedSet<IEdgeKey> constrainedEdges = new SortedSet<IEdgeKey>();
+
+            //Add constrained edges to the mesh
+            while (vertEnumerator.MoveNext() == true)
+            {
+                PointIndex currentVert = vertEnumerator.Current;
+                int A = IndexToVert[currentVert].Index;
+                int B = IndexToVert[currentVert.Next].Index;
+
+                Edge e = new Edge(A, B);
+                mesh.AddConstrainedEdge(e);
+                constrainedEdges.Add(e.Key);
+            }
+
+            //Remove edges that are not contained in the polygon, that means any edges that connect points on the same ring which are not constrained edges
+            var EdgesToCheck = mesh.Edges.Keys.Where(k => mesh[k.A].Data.AreOnSameRing(mesh[k.B].Data) && constrainedEdges.Contains(k) == false).ToArray();
+            foreach(EdgeKey key in EdgesToCheck)
+            {
+                GridLineSegment line = mesh.ToGridLineSegment(key);
+
+                if(false == centeredPoly.Contains(line.Bisect()))
+                {
+                    mesh.RemoveEdge(key);
+                }
+            }
+
+            System.Diagnostics.Debug.Assert(mesh.Faces.Count > 0, "Triangulation of polygon should create at least one face");
+            System.Diagnostics.Debug.Assert(constrainedEdges.All(e => mesh[e].Faces.Count == 1), "All constrained edges should have one face");
+            return mesh;
+        }
     }
 }
