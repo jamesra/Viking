@@ -298,7 +298,12 @@ namespace Geometry
 
         public override string ToString()
         {
-            //return string.Format("X: {0:F2} Y: {1:F2}", X, Y);
+            return string.Format("X: {0:F2} Y: {1:F2}", X, Y);
+            //return '{' + string.Format("\"X\":{0:F2},\"Y\":{1:F2}", X, Y) + '}';
+        }
+
+        public string ToJSON()
+        {
             return '{' + string.Format("\"X\":{0:F2},\"Y\":{1:F2}", X, Y) + '}';
         }
 

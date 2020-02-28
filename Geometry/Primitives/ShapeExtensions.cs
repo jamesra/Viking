@@ -7,6 +7,48 @@ using RTree;
 
 namespace Geometry
 {
+    /// <summary>
+    /// This is a helper struct used to describe exactly where intersections occurred when 
+    /// testing intersections on two arrays of shapes. 
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    public struct ArrayIntersection<T>
+        where T : IShape2D
+    {
+        ///
+        /// This struct is the Combo struct with an extra field
+        /// 
+
+        public readonly int iA;
+        public readonly int iB;
+        public readonly T A;
+        public readonly T B;
+        public readonly IShape2D Intersection;
+
+        public ArrayIntersection(T a, T b, int I, int J, IShape2D intersection)
+        {
+            iA = I;
+            iB = J;
+            A = a;
+            B = b;
+            Intersection = intersection;
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (object.ReferenceEquals(obj, null))
+                return false;
+
+            ArrayIntersection<T> other = (ArrayIntersection<T>)obj;
+            return other.iA == this.iA && other.iB == this.iB;
+        }
+
+        public override int GetHashCode()
+        {
+            return (iA * 23) + iB;
+        }
+    }
+
     public static class ShapeDecomposition
     {
         /// <summary>
@@ -712,6 +754,60 @@ namespace Geometry
             IntersectionPoints = sortedIndicies.Select(i => NewPoints[i]).ToArray();
 
             return sortedIndicies.Select(i => IntersectingLines[i]).ToList();
+        }
+
+        /// <summary>
+        /// Return a list of lines the passed line intersects and the intersection points
+        /// </summary>
+        /// <param name="line">Line we are checking</param>
+        /// <param name="lines">Lines we are testing for intersection</param>
+        /// <param name="EndpointsOnLineDoNotIntersect"></param>
+        /// <param name="IntersectionPoints">The intersection points on the line, in increasing order of distance from line.A to line.B</param>
+        /// <returns>The lines that intersect the line parameter</returns>
+        public static List<Tuple<GridLineSegment, GridLineSegment>> Intersections(this IEnumerable<GridLineSegment> ALines, IReadOnlyList<GridLineSegment> BLines, bool EndpointsOnLineDoNotIntersect, out GridVector2[] IntersectionPoints)
+        {
+            List< Tuple<GridLineSegment,GridLineSegment> > listLinePairIntersections = new List<Tuple<GridLineSegment, GridLineSegment>>();
+            List<GridVector2> listIntersections = new List<GridVector2>();
+            foreach(GridLineSegment line in ALines)
+            {
+                List<GridLineSegment> intersectedLines = line.Intersections(BLines, EndpointsOnLineDoNotIntersect, out GridVector2[] intersections);
+                listLinePairIntersections.AddRange(intersectedLines.Select(other => new Tuple<GridLineSegment, GridLineSegment>(line, other)));
+                listIntersections.AddRange(intersections);
+            }
+
+            IntersectionPoints = listIntersections.ToArray();
+            return listLinePairIntersections;
+        }
+
+        /// <summary>
+        /// Return a list of lines the passed line intersects and the intersection points
+        /// </summary>
+        /// <param name="line">Line we are checking</param>
+        /// <param name="lines">Lines we are testing for intersection</param>
+        /// <param name="EndpointsOnLineDoNotIntersect"></param>
+        /// <param name="IntersectionPoints">The intersection points on the line, in increasing order of distance from line.A to line.B</param>
+        /// <returns>The lines that intersect the line parameter</returns>
+        public static List<ArrayIntersection<GridLineSegment>> Intersections(this IReadOnlyList<GridLineSegment> ALines, IReadOnlyList<GridLineSegment> BLines, bool EndpointsOnLineDoNotIntersect)
+        {
+            var listLinePairIntersections = new List<ArrayIntersection<GridLineSegment>>();
+            List<GridVector2> listIntersections = new List<GridVector2>();
+
+            for (int iA = 0; iA < ALines.Count(); iA++)
+            {
+                GridLineSegment A = ALines[iA];
+                for (int iB = 0; iB < BLines.Count(); iB++)
+                {
+                    GridLineSegment B = BLines[iB];
+
+                    if(A.Intersects(B, EndpointsOnLineDoNotIntersect, out IShape2D Intersection))
+                    {
+                        var Result = new ArrayIntersection<GridLineSegment>(A, B, iA, iB, Intersection);
+                        listLinePairIntersections.Add(Result);
+                    }
+                }
+            }
+                     
+            return listLinePairIntersections;
         }
 
         public static bool IsEndpointIntersectionExpected(this LineSetOrdering order, int iLine, int jLine, int list_length)
