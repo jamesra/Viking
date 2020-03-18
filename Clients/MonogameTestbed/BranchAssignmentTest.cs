@@ -409,7 +409,8 @@ namespace MonogameTestbed
             IEdgeKey[] edgeKeys = mesh.Edges.Keys.ToArray();
             LineSetView TrianglesView = new LineSetView();
             List<LineView> lineViews = new List<LineView>(edgeKeys.Length);
-            List<CurveLabel> lineLabels = new List<CurveLabel>(edgeKeys.Length);
+            //List<CurveLabel> lineLabels = new List<CurveLabel>(edgeKeys.Length);
+            List<LabelView> lineLabels = new List<LabelView>(edgeKeys.Length);
 
             const double lineWidth = 1.0;
 
@@ -424,7 +425,8 @@ namespace MonogameTestbed
                 LineView lineView = new LineView(segment, lineWidth, edge.Type.GetColor(), LineStyle.Standard);
                 lineViews.Add(lineView);
 
-                CurveLabel lineLabel = CurveLabel.CreateLineLabel(edge.Type.ToString(), segment, Color.White, lineWidth: lineWidth);
+                /*CurveLabel lineLabel = CurveLabel.CreateLineLabel(edge.Type.ToString(), segment, Color.White, lineWidth: lineWidth);*/
+                LabelView lineLabel = new LabelView(edge.Type.ToString(), segment, Color.White, lineWidth: lineWidth, scaleFontWithScene: true);
                 lineLabels.Add(lineLabel);
             }
             

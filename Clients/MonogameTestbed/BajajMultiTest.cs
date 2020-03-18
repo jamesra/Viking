@@ -143,9 +143,9 @@ namespace MonogameTestbed
             MeshModel<VertexPositionColor> meshViewModel = BajajOTVAssignmentView.CreateFaceView(mesh);
 
             lock (drawlock)
-            {
+            { 
                 wholeMesh.models.Add(meshViewModel);
-            }
+            } 
         }
 
         internal void GenerateMesh()
@@ -292,7 +292,12 @@ namespace MonogameTestbed
                 LineView.Draw(window.GraphicsDevice, window.Scene, window.lineManager, lineView.LineViews.ToArray());
                 window.GraphicsDevice.Clear(ClearOptions.DepthBuffer | ClearOptions.Stencil, Color.Black, float.MaxValue, 0);
                 DeviceStateManager.SetDepthStencilValue(window.GraphicsDevice, window.GraphicsDevice.DepthStencilState.ReferenceStencil + 10);
-                CurveLabel.Draw(window.GraphicsDevice, window.Scene, window.spriteBatch, window.fontArial, window.curveManager, lineView.LineLables.ToArray());
+                //CurveLabel.Draw(window.GraphicsDevice, window.Scene, window.spriteBatch, window.fontArial, window.curveManager, lineView.LineLables.ToArray());
+                foreach (var labelsByFont in lineView.LineLables.GroupBy(l => l.font))
+                {
+                    LabelView.Draw(window.spriteBatch, labelsByFont.Key, window.Scene, labelsByFont.ToArray());
+                }
+
                 ViewLabels.AppendLine(lineView.Name);
             }
             /*

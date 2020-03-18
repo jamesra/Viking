@@ -134,11 +134,20 @@ namespace VikingXNAGraphics
         {
         }
 
-        public LabelView(string Text, GridLineSegment VolumePosition, HorizontalAlignment hAlign = HorizontalAlignment.CENTER, VerticalAlignment vAlign = VerticalAlignment.CENTER, bool scaleFontWithScene = true, double fontSize = 16.0)
-            : this(Text, VolumePosition.PointAlongLine(0.5), Global.DefaultFont, hAlign, vAlign, scaleFontWithScene, fontSize)
+        public LabelView(string Text, GridLineSegment VolumePosition,  HorizontalAlignment hAlign = HorizontalAlignment.CENTER, VerticalAlignment vAlign = VerticalAlignment.CENTER, bool scaleFontWithScene = true, double lineWidth = 16.0)
+            : this(Text, VolumePosition.PointAlongLine(0.5), Global.DefaultFont, hAlign, vAlign, scaleFontWithScene, lineWidth)
         {
             GridVector2 direction = VolumePosition.Direction;
             this.Rotation = (float)GridVector2.ArcAngle(GridVector2.Zero, GridVector2.UnitX, direction);
+            //this.Rotation = (float)Math.Atan2(direction.X, direction.Y);
+        }
+
+        public LabelView(string Text, GridLineSegment VolumePosition, Color color, HorizontalAlignment hAlign = HorizontalAlignment.CENTER, VerticalAlignment vAlign = VerticalAlignment.CENTER, bool scaleFontWithScene = true, double lineWidth = 16.0)
+            : this(Text, VolumePosition, hAlign, vAlign, scaleFontWithScene, lineWidth)
+        {
+            GridVector2 direction = VolumePosition.Direction;
+            this.Rotation = (float)GridVector2.ArcAngle(GridVector2.Zero, GridVector2.UnitX, direction);
+            this.Color = color;
             //this.Rotation = (float)Math.Atan2(direction.X, direction.Y);
         }
 

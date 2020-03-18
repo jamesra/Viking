@@ -147,10 +147,12 @@ namespace MonogameTestbed
             List<double> _polyZ;
 
             Trace.WriteLine("Begin Simplification of Polygons");
-            var SimplerPolygon = BajajMeshGenerator.CreateSimplerPolygonLookup(graph, 3.0);
+            var SimplerPolygon = BajajMeshGenerator.CreateSimplerPolygonLookup(graph, 2.0);
             Trace.WriteLine("End Simplification of Polygons");
 
             MeshingGroup.GeneratePolygonParameters(group, SimplerPolygon, out _polygons, out IsUpper, out _polyZ);
+
+            //MeshingGroup.GeneratePolygonParameters(group, out _polygons, out IsUpper, out _polyZ);
 
             Polygons = _polygons.ToArray();
             PolyZ = _polyZ.ToArray();
@@ -243,15 +245,16 @@ namespace MonogameTestbed
             // IMesh SecondPassMesh = FirstPassTriangulation.Triangulate();
             //IdentifyIncompleteVerticies(FirstPassTriangulation);
              
-            BajajMeshGenerator.FirstPassFaceGeneration(FirstPassTriangulation);
+            BajajMeshGenerator.FirstPassFaceGeneration(FirstPassTriangulation, FirstPassIncompleteVerticies);
+
+            FirstPassIncompleteVerticies = BajajMeshGenerator.IdentifyIncompleteVerticies(FirstPassTriangulation);
 
             MeshViews.Add(CreateMeshView(FirstPassTriangulation, "FirstPassFaceGeneration"));
 
-            
             MorphMeshRegionGraph SecondPassRegions = MorphRenderMesh.SecondPassRegionDetection(FirstPassTriangulation, FirstPassIncompleteVerticies);
             RegionViews.Add(CreateRegionPolygonViews(FirstPassTriangulation, SecondPassRegions.Nodes.Keys));
             
-            SecondPassRegions.MergeAndCloseRegionsPass(FirstPassTriangulation, rTree);
+            //SecondPassRegions.MergeAndCloseRegionsPass(FirstPassTriangulation, rTree);
             
             MeshViews.Add(CreateMeshView(FirstPassTriangulation, "Second MergeAndCloseRegionsPass"));
             
@@ -407,7 +410,7 @@ namespace MonogameTestbed
             double MinZ = mesh.BoundingBox.minVals[2];
             double MaxZ = mesh.BoundingBox.maxVals[2];
 
-            model.Verticies = mesh.Verticies.Select((v, i) => new VertexPositionColor(v.Position.ToXNAVector3(), ColorExtensions.CreateGrayscale((v.Position.Z - MinZ) / (MaxZ - MinZ)))).ToArray();
+            model.Verticies = mesh.Verticies.Select((v, i) => new VertexPositionColor(v.Position.ToXNAVector3(), Color.Orange.SetAlpha(0.5f) /*ColorExtensions.CreateGrayscale((v.Position.Z - MinZ) / (MaxZ - MinZ))*/)).ToArray();
 
             foreach (IFace face in mesh.Faces)
             {
@@ -570,7 +573,7 @@ namespace MonogameTestbed
             if (RegionViews != null && ShowRegionPolygons)
             {
                 RegionViews[iShownRegion.Value].Draw(window, scene);
-                ViewLabels.AppendLine("Region Pass #" + iShownRegion.Value);
+                ViewLabels.AppendLine("Y: Region Pass #" + iShownRegion.Value);
             }
 
             if (MeshViews != null && ShowMesh)
@@ -586,7 +589,7 @@ namespace MonogameTestbed
                 window.GraphicsDevice.DepthStencilState = dstate;
 
                 MeshViews[iShownMesh.Value].Draw(window.GraphicsDevice, window.Scene, CullMode.None);
-                ViewLabels.AppendLine(MeshViews[iShownMesh.Value].Name);
+                ViewLabels.AppendLine("A: " + MeshViews[iShownMesh.Value].Name);
                 DeviceStateManager.RestoreDeviceState(window.GraphicsDevice);
             }
 
@@ -600,8 +603,12 @@ namespace MonogameTestbed
                 LineView.Draw(window.GraphicsDevice, window.Scene, window.lineManager, lineView.LineViews.ToArray());
                 window.GraphicsDevice.Clear(ClearOptions.DepthBuffer | ClearOptions.Stencil, Color.Black, float.MaxValue, 0);
                 DeviceStateManager.SetDepthStencilValue(window.GraphicsDevice, window.GraphicsDevice.DepthStencilState.ReferenceStencil + 10);
-                CurveLabel.Draw(window.GraphicsDevice, window.Scene, window.spriteBatch, window.fontArial, window.curveManager, lineView.LineLables.ToArray());
-                ViewLabels.AppendLine(lineView.Name);
+                //CurveLabel.Draw(window.GraphicsDevice, window.Scene, window.spriteBatch, window.fontArial, window.curveManager, lineView.LineLables.ToArray());
+                foreach (var labelsByFont in lineView.LineLables.GroupBy(l => l.font))
+                {
+                    LabelView.Draw(window.spriteBatch, labelsByFont.Key, window.Scene, labelsByFont.ToArray());
+                }
+                ViewLabels.AppendLine("B: " + lineView.Name);
             }
             /*
             if (lineViews != null && ShowPolygons && !ShowRegionPolygons)
@@ -642,7 +649,7 @@ namespace MonogameTestbed
                 DeviceStateManager.SetDepthStencilValue(window.GraphicsDevice, window.GraphicsDevice.DepthStencilState.ReferenceStencil + 1);
                 LabelView.Draw(window.spriteBatch, window.fontArial, scene, RegionLabelViews);
                 DeviceStateManager.SetDepthStencilValue(window.GraphicsDevice, window.GraphicsDevice.DepthStencilState.ReferenceStencil + 1);
-                ViewLabels.AppendLine("Region Polygon Views");
+                ViewLabels.AppendLine("Y: Region Polygon Views");
             }
 
             if (OTVTableView != null)
@@ -884,6 +891,12 @@ namespace MonogameTestbed
             58706
         };
 
+        long[] DelaunayTest15 = new long[]
+        {
+            82356,
+            58677
+        };
+
         Scene scene;
         Scene3D scene3D;
         GamePadStateTracker Gamepad = new GamePadStateTracker();
@@ -902,7 +915,10 @@ namespace MonogameTestbed
 
         bool _initialized = false;
         public bool Initialized { get { return _initialized; } }
-         
+
+        AnnotationVizLib.MorphologyGraph Graph;
+
+
         public void Init(MonoTestbed window)
         {
             _initialized = true;
@@ -929,20 +945,20 @@ namespace MonogameTestbed
 
             /////////////
             ///This is the major test of mesh generation that covers as many cases as I could think of
-            //AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromODataLocationIDs(NightmareTroubleIDS, DataSource.EndpointMap[ENDPOINT.TEST]); 
-            AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromODataLocationIDs(DelaunayTest14, DataSource.EndpointMap[ENDPOINT.RPC1]);
+            //this.Graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromODataLocationIDs(NightmareTroubleIDS, DataSource.EndpointMap[ENDPOINT.TEST]);
+            Graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromODataLocationIDs(DelaunayTest15, DataSource.EndpointMap[ENDPOINT.RPC1]);
             //////////////
 
             //BajajMeshGenerator.ConvertToMeshGraph(graph);
 
-            AnnotationVizLib.MorphologyNode[] nodes = graph.Nodes.Values.ToArray();
+            AnnotationVizLib.MorphologyNode[] nodes = Graph.Nodes.Values.ToArray();
             //wrapView = new MonogameTestbed.BajajOTVAssignmentView(nodes.Select(n => n.Geometry.ToPolygon()).ToArray(), nodes.Select(n=> n.Z).ToArray());
-            wrapView = new MonogameTestbed.BajajOTVAssignmentView(graph);
+            wrapView = new MonogameTestbed.BajajOTVAssignmentView(Graph);
 
             if (window.Scene.RestoreCamera(TestMode.BAJAJTEST) == false)
             {
-                window.Scene.Camera.LookAt = graph.BoundingBox.CenterPoint.XY().ToXNAVector2();
-                window.Scene.Camera.Downsample = graph.BoundingBox.Width / window.GraphicsDevice.Viewport.Width;
+                window.Scene.Camera.LookAt = Graph.BoundingBox.CenterPoint.XY().ToXNAVector2();
+                window.Scene.Camera.Downsample = Graph.BoundingBox.Width / window.GraphicsDevice.Viewport.Width;
             }
             
             GridBox bbox = new GridBox(wrapView.Polygons.BoundingBox(), nodes.Min(n => n.Z), nodes.Max(n => n.Z));
@@ -1018,7 +1034,7 @@ namespace MonogameTestbed
             if(Gamepad.Start_Clicked)
             {
                 //Recalculate the mesh from scratch
-                //wrapView.GenerateMesh();
+                wrapView = new BajajOTVAssignmentView(Graph);
             }
 
             if (Gamepad.RightShoulder_Clicked)
