@@ -106,6 +106,7 @@ namespace MorphologyMesh
     /// 
     /// A mesh is then generated for the group, and then those meshes can be merged to make a single mesh for an entire structure.
     /// </summary>
+    [Serializable]
     public class MeshingGroup
     {
         MorphologyGraph Graph;
@@ -921,6 +922,7 @@ namespace MorphologyMesh
             */
 
             mesh.CloseFaces(IncompleteVerticies.Cast<Geometry.Meshing.IVertex>());
+            IncompleteVerticies = IncompleteVerticies.Where(v => false == v.IsFaceSurfaceComplete(mesh)).ToList();
             return IncompleteVerticies;
         }
 
@@ -964,10 +966,11 @@ namespace MorphologyMesh
         /// <summary>
         /// Using the existing slice chords determine if any faces can be added using existing edges
         /// </summary>
-        public static void FirstPassFaceGeneration(MorphRenderMesh mesh)
+        public static void FirstPassFaceGeneration(MorphRenderMesh mesh, List<MorphMeshVertex> incompleteVerts=null)
         {
             //We know that all faces have a contour as part of the triangle
-            List<MorphMeshVertex> incompleteVerts = IdentifyIncompleteVerticies(mesh);
+            if (incompleteVerts == null)
+                incompleteVerts = new List<MorphMeshVertex>(IdentifyIncompleteVerticies(mesh));
 
             while (incompleteVerts.Count > 0)
             {
