@@ -30,9 +30,9 @@ namespace Geometry.Meshing
         GridVector2 Position { get; }
     }
 
-    public interface IVertex2D<T> : IVertex2D
+    public interface IVertex2D<out T> : IVertex2D
     {
-        T Data { get; set; }
+        T Data { get; }
     }
 
 
@@ -42,9 +42,9 @@ namespace Geometry.Meshing
         GridVector3 Normal { get; set; }
     }
 
-    public interface IVertex3D<T> : IVertex3D
+    public interface IVertex3D<out T> : IVertex3D
     {
-        T Data { get; set; }
+        T Data { get; }
     }
 
     public struct EdgeAngle

@@ -51,10 +51,16 @@ namespace Geometry.Meshing
             _ImmutableEdges = null;
         }
 
+        
         public VertexBase(IComparer<IEdgeKey> edgeComparer=null)
         {
             _Edges = new SortedSet<IEdgeKey>(edgeComparer);
             _ImmutableEdges = null;
+        }
+
+        public VertexBase(int index, IComparer<IEdgeKey> edgeComparer = null) : this(edgeComparer)
+        {
+            this.Index = index;
         }
 
         public virtual bool AddEdge(IEdgeKey e)
@@ -246,7 +252,12 @@ namespace Geometry.Meshing
         {
             _Position = p;
         }
-        
+
+        public Vertex2D(int index, GridVector2 p, IComparer<IEdgeKey> edgeComparer = null) : base(index, edgeComparer)
+        {
+            _Position = p;
+        }
+
         public override string ToString()
         {
             return string.Format("I: {0} P: {1}", this.Index, Position);

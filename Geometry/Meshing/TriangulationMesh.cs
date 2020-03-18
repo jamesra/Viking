@@ -1,4 +1,4 @@
-﻿//#define TRACEDDELAUNAY
+﻿//#define TRACEDELAUNAY
 
 using System;
 using System.Collections.Generic;
@@ -506,6 +506,20 @@ namespace Geometry.Meshing
             return iNew;
         }
 
+        public override void AddFace(IFace face)
+        {
+            Debug.Assert(face.IsTriangle(), "Faces in TriangulationMesh must be triangles");
+#if DEBUG
+            GridTriangle tri = this.ToTriangle(face);
+            //Debug.Assert(tri.Area > 0, string.Format("Face {0} must have non-zero area", face));
+            if (tri.Area == 0)
+                throw new ArgumentException(string.Format("Face {0} must have non-zero area", face));
+            
+#endif
+            base.AddFace(face);
+
+        }
+
         public bool IsTriangleDelaunay(Face f)
         {
             if(f.IsTriangle == false)
@@ -527,7 +541,7 @@ namespace Geometry.Meshing
             {
                 if (results[i] == OverlapType.CONTAINED)
                 {
-#if TRACEDDELAUNAY
+#if TRACEDELAUNAY
                     Debug.WriteLine(string.Format("{0} is inside {1}, not a delaunay triangle", candidate_indicies[i], f));
 #endif
                     return false;
@@ -548,17 +562,35 @@ namespace Geometry.Meshing
         /// </summary>
         /// <param name="constrained_edge"></param>
         /// <param name="ReportProgress"></param>
-        public void AddConstrainedEdge(IEdge constrained_edge, ProgressUpdate ReportProgress = null)
+        /// <returns>A list of edges added.  This is empty if the edge was already in the mesh and a constrained edge.  It may have two or more entries if the constrained edge intersected verticies.</returns>
+        public List<IEdge> AddConstrainedEdge(IEdge constrained_edge, ProgressUpdate ReportProgress = null)
         {
+            List<IEdge> EdgesAdded = new List<IEdge>(1);
             //If the edge already exists, just return
-#if TRACEDDELAUNAY
+#if TRACEDELAUNAY
             Trace.WriteLine(string.Format("Add constrained edge {0}", constrained_edge));
 #endif
 
             //Delete all triangles that intersect the constrained edge
             if (this.Contains(constrained_edge))
             {
-                return;
+                IEdge existingEdge = this[constrained_edge.Key];
+                if (existingEdge as ConstrainedEdge != null)
+                {
+                    //The edge exists and is already a Constrained Edge
+                    return EdgesAdded;
+                }
+                else
+                {
+                    //Remove the non-constrained edge, and add back a constrained edge
+                    var faces = existingEdge.Faces;
+                    this.RemoveEdge(existingEdge);
+                    this.AddEdge(constrained_edge);
+                    foreach(var face in faces)
+                    {
+                        this.AddFace(face);
+                    }
+                }
             }
 
             GridLineSegment ConstrainedEdge = this.ToGridLineSegment(constrained_edge);
@@ -571,9 +603,9 @@ namespace Geometry.Meshing
             catch (CorrespondingEdgeIntersectsVertexException e)
             {
                 //If we intersect a vertex perfectly, break the constrained edge into two parts and add both
-                AddConstrainedEdge(new ConstrainedEdge(constrained_edge.A, e.Vertex), ReportProgress);
-                AddConstrainedEdge(new ConstrainedEdge(e.Vertex, constrained_edge.B), ReportProgress);
-                return;
+                EdgesAdded.AddRange(AddConstrainedEdge(new ConstrainedEdge(constrained_edge.A, e.Vertex), ReportProgress));
+                EdgesAdded.AddRange(AddConstrainedEdge(new ConstrainedEdge(e.Vertex, constrained_edge.B), ReportProgress));
+                return EdgesAdded;
             }
             //Special case: If there is only a single edge we can do an edge flip and be done
 
@@ -617,7 +649,7 @@ namespace Geometry.Meshing
 
                 Edge edge = IntersectedEdges[iEdge] as Edge;
 
-#if TRACEDDELAUNAY
+#if TRACEDELAUNAY
                 Trace.WriteLine(string.Format("Check intersecting edge {0}", edge));
 #endif
 
@@ -646,7 +678,7 @@ namespace Geometry.Meshing
                 if (false == concavity.All(c => c == Concavity.CONVEX || c == Concavity.PARALLEL))
                 {
 
-#if TRACEDDELAUNAY
+#if TRACEDELAUNAY
                     Trace.WriteLine(string.Format("Concave quad {0}, moving on", new Face(quadVerts)));
 #endif
                     iEdge -= 1;
@@ -672,7 +704,8 @@ namespace Geometry.Meshing
                     Edge newEdge = new Edge(oppVerts[0], oppVerts[1]);
                     if(newEdge == constrained_edge)
                     {
-                        newEdge = new ConstrainedEdge(oppVerts[0], oppVerts[1]); 
+                        newEdge = new ConstrainedEdge(oppVerts[0], oppVerts[1]);
+                        EdgesAdded.Add(constrained_edge);
                     }
                     
                     //We are safe flipping the edge so remove this edge from the list of intersecting edges
@@ -685,7 +718,7 @@ namespace Geometry.Meshing
                     this.AddFace(NewFacesTuple.Item1);
                     this.AddFace(NewFacesTuple.Item2);
                      
-#if TRACEDDELAUNAY
+#if TRACEDELAUNAY
                     Trace.WriteLine(string.Format("  Remove {0} Add {1} with faces {2} {3}", edge, newEdge, NewFacesTuple.Item1, NewFacesTuple.Item2));
 #endif
 
@@ -699,21 +732,21 @@ namespace Geometry.Meshing
                     GridLineSegment newEdgeSeg = this.ToGridLineSegment(newEdge);
                     if(newEdge == constrained_edge)
                     {
-#if TRACEDDELAUNAY
+#if TRACEDELAUNAY
                         Trace.WriteLine(string.Format(" {0} is constrained edge, moving on", newEdge));
 #endif
                         continue;
                     }
                     else if (newEdgeSeg.Intersects(ConstrainedEdge, true))
                     {
-#if TRACEDDELAUNAY
+#if TRACEDELAUNAY
                         Trace.WriteLine(string.Format("  {0} intersects constraint {1}, adding to intersect list", newEdge, constrained_edge));
 #endif
                         IntersectedEdges.Add(newEdge);
                     }
                     else
                     {
-#if TRACEDDELAUNAY
+#if TRACEDELAUNAY
                         Trace.WriteLine(string.Format("  {0} added to created list", newEdge, constrained_edge));
 #endif
                         CreatedEdges.Add(newEdge);
@@ -732,11 +765,20 @@ namespace Geometry.Meshing
 
                 TriangleFace A = edge.Faces[0] as TriangleFace;
                 TriangleFace B = edge.Faces[1] as TriangleFace;
+                
+                /*
+                bool CanAFlip = A.Edges.Count(e => this[e] as ConstrainedEdge != null) <= 1;
+                bool CanBFlip = B.Edges.Count(e => this[e] as ConstrainedEdge != null) <= 1;
+
+                if ((CanAFlip && CanBFlip) == false) //Don't check 
+                    continue; 
+                    */
 
                 int[] oppVerts = new int[] { A.OppositeVertex(edge), B.OppositeVertex(edge) };
                 int checkVert = oppVerts.Where(v => A.iVerts.Contains(v) == false).Single();
                 if (GridCircle.Contains(this[A.iVerts].Select(v => v.Position).ToArray(), this[checkVert].Position) == OverlapType.CONTAINED)
                 {
+                    
                     //We need to ensure that the edge we are flippig is convex.  We cannot flip a concave quad along the interior edge or we get overlapping edges
                     int[] quad = edge.FacesBoundary();
                     var positionList = this[quad].Select(v => v.Position).ToList();
@@ -745,7 +787,7 @@ namespace Geometry.Meshing
                     GridPolygon quadPoly = new GridPolygon(positionList);
                     if(false == quadPoly.IsConvex())
                     {
-#if TRACEDDELAUNAY
+#if TRACEDELAUNAY
                         Trace.WriteLine(string.Format("  Cannot flip convex face {0}.  It's OK, just can't make triangle prettier", new Face(quad)));
 #endif
                         continue;
@@ -753,8 +795,7 @@ namespace Geometry.Meshing
 
                     //TODO:  This check can be removed to have an assertion thrown instead.  It should be done at some point to debug.
                     if(edge.Faces.Count != 2)
-                    {
-                        
+                    { 
                         Trace.WriteLine(string.Format("Edge found without two faces when adding constrained edge", edge));
                     }
 
@@ -787,6 +828,8 @@ namespace Geometry.Meshing
 
                 iEdge = iEdge - 1;
             }
+
+            return EdgesAdded;
         }
 
         /// <summary>
