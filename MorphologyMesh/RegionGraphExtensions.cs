@@ -1,9 +1,9 @@
 ﻿using Geometry;
+using Geometry.Meshing;
 using MorphologyMesh;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using TriangleNet;
 using System.Diagnostics;
 //using TriangleNet.Meshing;
 
@@ -239,12 +239,15 @@ namespace MorphologyMesh
         private static void TryClosingUntiledRegion(BajajGeneratorMesh mesh, MorphMeshRegion region, SliceChordRTree rTree)
         {
             GridPolygon regionPolygon = region.Polygon;
-            var MedialAxis = MedialAxisFinder.ApproximateMedialAxis(regionPolygon);
+            GridVector2 regionPolygonCenter = regionPolygon.Centroid;
+            GridPolygon centeredRegionPolygon = regionPolygon.Translate(-regionPolygonCenter);
+            var MedialAxis = MedialAxisFinder.ApproximateMedialAxis(centeredRegionPolygon);
             MedialAxisVertex[] NewVerts = MedialAxis.Nodes.Values.ToArray();
+            System.Diagnostics.Debug.Assert(NewVerts.All(v => centeredRegionPolygon.Contains(v.Key)), "Interior points must be inside Face");
 
             //TODO: Split any edges with an existing face into two parts so we can better merge the medial axis with the existing shape
 
-            if(NewVerts.Length == 0)
+            if (NewVerts.Length == 0)
             {
                 return; 
             }
@@ -256,34 +259,37 @@ namespace MorphologyMesh
             double MaxZ = mesh.UpperPolyIndicies.Min(i => mesh.PolyZ[i]); //Pick the smallest of the high-end Z values
 
             //TODO: Adjust the Z level of the output based on the type of region and verticies we are connecting to.
-            int iNewVerts = mesh.AddVerticies(NewVerts.Select(mv => new MorphMeshVertex(new MedialAxisIndex(MedialAxis, mv), mv.Key.ToGridVector3((MinZ + MaxZ) / 2.0))).ToArray());
-             
-            Dictionary<GridVector2, int> VertexLookup = new Dictionary<GridVector2, int>(NewVerts.Length);
-            for(int i = 0; i < NewVerts.Length; i++)
-            {
-                VertexLookup.Add(NewVerts[i].Key, iNewVerts + i);
-            }
-            
+            var MedialAxisMeshVerts = NewVerts.Select(mv => new MorphMeshVertex(new MedialAxisIndex(MedialAxis, mv), (mv.Key + regionPolygonCenter).ToGridVector3((MinZ + MaxZ) / 2.0))).ToArray();
+            int iNewVerts = mesh.AddVerticies(MedialAxisMeshVerts);
+
+            /*
             foreach(var edge in MedialAxis.Edges)
             {
                 int iMeshVertA = VertexLookup[edge.Key.SourceNodeKey];
                 int iMeshVertB = VertexLookup[edge.Key.TargetNodeKey];
 
                 mesh.AddEdge(new MorphMeshEdge(EdgeType.MEDIALAXIS, iMeshVertA, iMeshVertB));
-            }
+            }*/
+
+            /*
 
             GridVector2[] regionVertPositions = region.VertPositions.Select(v => v.XY()).ToArray();
             for(int i = 0; i < region.Verticies.Length; i++)
             {
                 VertexLookup.Add(regionVertPositions[i], region.Verticies[i]);
             }
+            */
 
-            TriangleNet.Meshing.IMesh triangulation = regionPolygon.Triangulate(internalPoints: NewVerts.Select(v => v.Key).ToArray());
+            var polyMesh = Geometry.Meshing.MeshExtensions.Triangulate(region.RegionPerimeter.Cast<IVertex2D>().ToArray(),
+                                                                       MedialAxisMeshVerts.Cast<IVertex2D>().ToArray());
 
-            foreach(var e in triangulation.ToLines())
+            //var polyMesh = regionPolygon.Triangulate(iPoly: 0);
+            //TriangleNet.Meshing.IMesh triangulation = regionPolygon.Triangulate(internalPoints: NewVerts.Select(v => v.Key).ToArray());
+
+            foreach(var e in polyMesh.Edges.Values)
             {
-                int iA = VertexLookup[e.A];
-                int iB = VertexLookup[e.B];
+                int iA = polyMesh[e.A].Data; //Find vertex in the input mesh
+                int iB = polyMesh[e.B].Data; //Find vertex in the input mesh
 
                 if (mesh.Contains(iA, iB) == false)
                 {
@@ -295,13 +301,11 @@ namespace MorphologyMesh
                 }
             }
 
-            foreach(var t in triangulation.Triangles)
+            foreach(var polyFace in polyMesh.Faces)
             {
-                int iA = VertexLookup[TriangleExtensions.ToGridVector2(t.GetVertex(0))];
-                int iB = VertexLookup[TriangleExtensions.ToGridVector2(t.GetVertex(1))];
-                int iC = VertexLookup[TriangleExtensions.ToGridVector2(t.GetVertex(2))];
+                var MeshFaceVerts = polyFace.iVerts.Select(i => polyMesh[i].Data).ToArray();
 
-                mesh.AddFace(new MorphMeshFace(iA, iB, iC));
+                mesh.AddFace(new MorphMeshFace(MeshFaceVerts));
             }
         }
     }

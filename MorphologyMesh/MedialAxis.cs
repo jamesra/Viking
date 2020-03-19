@@ -73,7 +73,7 @@ namespace MorphologyMesh
             TriangleNet.Meshing.IMesh triangulationMesh = null;
             try
             {
-                triangulationMesh = shape.Triangulate();
+                triangulationMesh = TriangleExtensions.Triangulate(shape);// shape.Triangulate();
             }
             catch (ArgumentException)
             {

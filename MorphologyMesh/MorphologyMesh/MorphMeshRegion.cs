@@ -95,9 +95,10 @@ namespace MorphologyMesh
         }
 
         private MorphMeshVertex[] _RegionPerimeter = null; //The region indicies organized so they progress in order around the perimeter of the region
-                                                           /// <summary>
-                                                           /// Returns a closed loop of verticies that define the region's perimeter
-                                                           /// </summary>
+
+        /// <summary>
+        /// Returns a closed loop of verticies that define the region's perimeter
+        /// </summary>
         public MorphMeshVertex[] RegionPerimeter
         {
             get
