@@ -1742,6 +1742,8 @@ namespace Viking.UI.Controls
             }
 
             int roundedDownsample = Mapping.NearestAvailableLevel(downsample);
+            if (roundedDownsample == int.MaxValue)
+                return new int[0];
 
             //Find the index of the requested downsample level
             List<int> DownsamplesToRender = new List<int>(Mapping.AvailableLevels.Length);
