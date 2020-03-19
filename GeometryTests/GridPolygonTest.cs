@@ -18,12 +18,12 @@ namespace GeometryTests
         ///  |       |
         ///  *       |
         ///  |       |
-        ///  * - * - *
+        ///  * - - - *
         /// 
         /// </summary>
         /// <param name="scale"></param>
         /// <returns></returns>
-        GridVector2[] BoxVerticies(double scale)
+        public static GridVector2[] BoxVerticies(double scale)
         {
             GridVector2[] ExteriorPoints =
             {
@@ -40,7 +40,7 @@ namespace GeometryTests
         }
 
 
-        GridVector2[] ConcaveUVerticies(double scale)
+        public static GridVector2[] ConcaveUVerticies(double scale)
         {
             //  *--*    *--*
             //  |  |    |  |
@@ -58,6 +58,79 @@ namespace GeometryTests
                 new GridVector2(1,1),
                 new GridVector2(1,-1),
                 new GridVector2(-1,-1)
+            };
+
+            GridVector2[] ExteriorPointsScaled = ExteriorPoints.Scale(scale, new GridVector2(0, 0)).ToArray();
+            return ExteriorPointsScaled;
+        }
+
+        public static GridVector2[] ConcaveCheckVerticies(double scale)
+        {
+            //          *
+            //         /|
+            //  *_    / /
+            //   \ \ / /
+            //    \ * /
+            //     \ / 
+            //      *
+
+            GridVector2[] ExteriorPoints =
+            {
+                new GridVector2(-1, 0),
+                new GridVector2(0, -0.5),
+                new GridVector2(1, 1),
+                new GridVector2(0, -1),
+                new GridVector2(-1, 0)
+            };
+
+            GridVector2[] ExteriorPointsScaled = ExteriorPoints.Scale(scale, new GridVector2(0, 0)).ToArray();
+            return ExteriorPointsScaled;
+        }
+
+        public static GridVector2[] DiamondVerticies(double scale)
+        {
+            //          *
+            //        _/|  
+            //      _/  |
+            //    _/    |
+            //   *    _-*
+            //   | _--
+            //   *-  
+            //    
+
+            GridVector2[] ExteriorPoints =
+            {
+                new GridVector2(-1, 0),
+                new GridVector2(-1, -0.5),
+                new GridVector2(1, 0),
+                new GridVector2(1, 1),
+                new GridVector2(-1, 0)
+            };
+
+            GridVector2[] ExteriorPointsScaled = ExteriorPoints.Scale(scale, new GridVector2(0, 0)).ToArray();
+            return ExteriorPointsScaled;
+        }
+
+        public static GridVector2[] NotchedBoxVerticies(double scale)
+        {
+            /// 
+            ///  *     *
+            ///  |\   /|
+            ///  | \ / |
+            ///  *  *  |
+            ///  |     |
+            ///  *-----*
+            /// 
+
+            GridVector2[] ExteriorPoints =
+            {
+                new GridVector2(-1, -1),
+                new GridVector2(-1, 0),
+                new GridVector2(-1, 1),
+                new GridVector2(0, 0),
+                new GridVector2(1, 1),
+                new GridVector2(1, -1),
+                new GridVector2(-1, -1)
             };
 
             GridVector2[] ExteriorPointsScaled = ExteriorPoints.Scale(scale, new GridVector2(0, 0)).ToArray();
@@ -292,25 +365,49 @@ namespace GeometryTests
             Assert.IsTrue(box.Contains(new GridVector2(-5, 0)));
             Assert.IsTrue(box.Contains(new GridVector2(5, 0)));
             Assert.IsTrue(box.Contains(new GridVector2(0, -5)));
-            Assert.IsTrue(box.Contains(new GridVector2(0, 5)));
-
-
+            Assert.IsTrue(box.Contains(new GridVector2(0, 5))); 
         }
 
         [TestMethod]
         public void PolygonConcaveContainsTest()
         {
             GridPolygon box = CreateUPolygon(10);
+            Assert.IsFalse(box.Contains(new GridVector2(0, 10)));
             Assert.IsFalse(box.Contains(new GridVector2(-15, 5)));
             Assert.IsTrue(box.Contains(new GridVector2(-6.6, -6.6)));
             Assert.IsFalse(box.Contains(new GridVector2(0, 0)));
+            Assert.IsFalse(box.Contains(new GridVector2(20, 0)));
             Assert.IsTrue(box.Contains(box.ExteriorRing.First()));
+            Assert.IsTrue(box.Contains(new GridVector2(-7.5, 10)));
 
             GridPolygon outside = CreateUPolygon(1);
             Assert.IsFalse(box.Contains(outside));
 
             GridPolygon inside = outside.Translate(new GridVector2(0, -7.5));
             Assert.IsTrue(box.Contains(inside));
+        }
+
+        [TestMethod]
+        public void PolygonContainsReproTest()
+        {
+            //Test for an edge case I hit once 
+            GridPolygon diamond = new GridPolygon(DiamondVerticies(10));
+
+            Assert.IsFalse(diamond.Contains(new GridVector2(-11, 0)));
+            Assert.IsTrue(diamond.Contains(new GridVector2(-9, 0)));
+            Assert.IsTrue(diamond.Contains(new GridVector2(9, 0)));
+            Assert.IsFalse(diamond.Contains(new GridVector2(11, 0)));
+        }
+
+        [TestMethod]
+        public void PolygonContainsReproTest2()
+        {
+            //Test for an edge case I hit once 
+            GridPolygon shape = new GridPolygon(NotchedBoxVerticies(10));
+
+            Assert.IsFalse(shape.Contains(new GridVector2(0, 10)));
+            Assert.IsTrue(shape.Contains(new GridVector2(-10, 10)));
+            Assert.IsTrue(shape.Contains(new GridVector2(10, 10)));
         }
 
         [TestMethod]
@@ -628,8 +725,6 @@ namespace GeometryTests
             Assert.IsTrue(OuterBox.ExteriorRing.Contains(new GridVector2(10, -15)));
 
             //OK, now test from the other direction 
-
-            OriginalExteriorVertCount = box.ExteriorRing.Length;
             box.AddPointsAtIntersections(OuterBox);
 
             //We should add 5 new verticies since the box had an extra vertex at -1,0 originally.  See CreateBoxPolygon
@@ -769,7 +864,7 @@ namespace GeometryTests
             Assert.IsTrue(sorted[11].iVertex == 2);
 
         }
-
+        /*
         [TestMethod]
         public void Theorem4Test()
         {
@@ -787,7 +882,7 @@ namespace GeometryTests
             //Line crosses the exterior ring
             line = new GridLineSegment(new GridVector2(-9, -11), new GridVector2(-9, -9));
             Assert.IsFalse(Theorem4(U, line));
-        }
+        }*/
 
         /// <summary>
         ///

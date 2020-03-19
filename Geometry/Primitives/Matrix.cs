@@ -7,7 +7,10 @@ using System.Threading.Tasks;
 
 
 namespace Geometry
-{
+{    
+    /// <summary>
+    /// Depricated class.  There are better libraries available now in C#.
+    /// </summary>
     public class GridMatrix
     {
         public double[,] M;

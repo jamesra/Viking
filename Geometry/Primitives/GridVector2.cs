@@ -150,6 +150,7 @@ namespace Geometry
             this.Y = y;
         }
 
+        /*
         static System.Random random = new Random();
 
         public static GridVector2 Random()
@@ -160,6 +161,7 @@ namespace Geometry
 
             return p;
         }
+        */
 
         public GridVector3 ToGridVector3(double Z)
         {
@@ -208,6 +210,16 @@ namespace Geometry
                 return false;
              
             return DistanceSquared((IPoint2D)this, B) <= Global.EpsilonSquared;
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (object.ReferenceEquals(obj, null))
+                return false;
+
+            GridVector2 B = (GridVector2)obj;
+
+            return this == B;
         }
 
         /*
@@ -285,17 +297,7 @@ namespace Geometry
             }
             return (int)prod; 
         }
-
-        public override bool Equals(object obj)
-        {
-            if (object.ReferenceEquals(obj, null))
-                return false;
-
-            GridVector2 B = (GridVector2)obj;
-
-            return this == B; 
-        }
-
+        
         public override string ToString()
         {
             return string.Format("X: {0:F2} Y: {1:F2}", X, Y);

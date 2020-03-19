@@ -2,12 +2,12 @@
 //#define VERIFYDELAUNAY
 
 
+using Geometry.Meshing;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
-using System.Diagnostics;
-using Geometry.Meshing;
 
 
 namespace Geometry
@@ -48,23 +48,23 @@ namespace Geometry
         }
     }
 
-    internal enum CutDirection {NONE=0, HORIZONTAL, VERTICAL };
+    internal enum CutDirection { NONE = 0, HORIZONTAL, VERTICAL };
     /// <summary>
     /// Generates constrained Delaunay triangulations
     /// </summary>
     public static class GenericDelaunayMeshGenerator2D<VERTEX>
         where VERTEX : IVertex2D
-    { 
-            /// <summary>
-            /// Generates the delaunay triangulation for a list of points. 
-            /// Requires the points to be sorted on the X-axis coordinate!
-            /// Every the integers in the returned array are the indicies in the passes array of triangles. 
-            /// Implemented based upon: http://local.wasp.uwa.edu.au/~pbourke/papers/triangulate/
-            /// "Triangulate: Efficient Triangulation Algorithm Suitable for Terrain Modelling"
-            /// by Paul Bourke
-            /// </summary>
-            /// <returns>A Mesh2D whose vertex indicies match the input points</returns>
-            public static TriangulationMesh<VERTEX> TriangulateToMesh(VERTEX[] verts, TriangulationMesh<VERTEX>.ProgressUpdate ReportProgress = null)
+    {
+        /// <summary>
+        /// Generates the delaunay triangulation for a list of points. 
+        /// Requires the points to be sorted on the X-axis coordinate!
+        /// Every the integers in the returned array are the indicies in the passes array of triangles. 
+        /// Implemented based upon: http://local.wasp.uwa.edu.au/~pbourke/papers/triangulate/
+        /// "Triangulate: Efficient Triangulation Algorithm Suitable for Terrain Modelling"
+        /// by Paul Bourke
+        /// </summary>
+        /// <returns>A Mesh2D whose vertex indicies match the input points</returns>
+        public static TriangulationMesh<VERTEX> TriangulateToMesh(VERTEX[] verts, TriangulationMesh<VERTEX>.ProgressUpdate ReportProgress = null)
         {
             if (verts == null)
             {
@@ -84,10 +84,10 @@ namespace Geometry
             //{
             //    return mesh; 
             //}
-            
-            foreach(TriangleFace f in mesh.Faces.ToArray())
+
+            foreach (TriangleFace f in mesh.Faces.ToArray())
             {
-                if(mesh.Faces.Contains(f) && mesh.IsTriangleDelaunay(f) == false)
+                if (mesh.Faces.Contains(f) && mesh.IsTriangleDelaunay(f) == false)
                 {
                     CheckEdgeFlip(mesh, f, ReportProgress);
                 }
@@ -106,8 +106,12 @@ namespace Geometry
 #endif
 
 #if DEBUG
-            foreach (Face f in mesh.Faces)
+            foreach (Face f in mesh.Faces.ToArray())
             {
+                if (mesh.ToTriangle(f).Area <= 0)
+                    //mesh.RemoveFace(f);
+                    throw new NonconformingTriangulationException(f, string.Format("{0} is a colinear triangle", f));
+
                 if (mesh.IsTriangleDelaunay(f) == false)
                     throw new NonconformingTriangulationException(f, string.Format("{0} is not a delaunay triangle", f));
 
@@ -118,10 +122,10 @@ namespace Geometry
 
             }
 #endif
-                //return TriangleIndicies;
-                return mesh;
+            //return TriangleIndicies;
+            return mesh;
         }
-         
+
 
         /// <summary>
         /// Divides the mesh verticies into two halves and triangulates the halves
@@ -140,7 +144,7 @@ namespace Geometry
                 //YSortedVerts = mesh.YSorted;
             }
 
-            if(verts == null)
+            if (verts == null)
             {
                 verts = mesh.Verticies.Cast<IVertex2D>().ToArray();
             }
@@ -186,18 +190,21 @@ namespace Geometry
                 mesh.AddEdge(OneTwo);
 
                 //There is a case where all three points are on a perfect line, in this case don't create the final edge and face.
-                if (mesh.ToGridLineSegment(TwoZero).DistanceToPoint(mesh[VertSet[1]].Position) > 0)
+                if (mesh.ToGridLineSegment(TwoZero).IsLeft(mesh[VertSet[1]].Position) != 0)
                 {
                     mesh.AddEdge(new Edge((int)VertSet[2], (int)VertSet[0]));
 
+                    //If the points are not co-linear, create a face
+                    
                     TriangleFace newFace = new TriangleFace((int)VertSet[0], (int)VertSet[1], (int)VertSet[2]);
 
-                    if(mesh.IsClockwise(newFace))
+                    if (mesh.IsClockwise(newFace))
                     {
                         newFace = new TriangleFace((int)VertSet[0], (int)VertSet[2], (int)VertSet[1]);
                     }
 
-                    mesh.AddFace(newFace);                    
+                    if(mesh.ToTriangle(newFace).Area > 0) //Do not create a face for colinear points
+                        mesh.AddFace(newFace);
                 }
 
                 if (ReportProgress != null)
@@ -208,7 +215,7 @@ namespace Geometry
                 return mesh;
             }
 
-            VertSet.SplitIntoHalves(verts, out MeshCut FirstHalfSet, out MeshCut SecondHalfSet); 
+            VertSet.SplitIntoHalves(verts, out MeshCut FirstHalfSet, out MeshCut SecondHalfSet);
 
             TriangulationMesh<VERTEX> FirstHalfMesh = RecursiveDivideAndConquerDelaunay(mesh, FirstHalfSet, verts, ReportProgress);
             TriangulationMesh<VERTEX> SecondHalfMesh = RecursiveDivideAndConquerDelaunay(mesh, SecondHalfSet, verts, ReportProgress);
@@ -271,14 +278,14 @@ namespace Geometry
                 if (LeftCandidate == null)
                 {
                     LeftCandidate = TryGetNextCandidate(mesh, ref LCandidates, LRBaseline, Clockwise: false, angle: out LAngle, circle: out LCircle);
-                    if(LeftCandidate != null)
+                    if (LeftCandidate != null)
                         Debug.Assert(LeftCandidate.Index != LOrigin.Index);
                 }
 
                 if (RightCandidate == null)
                 {
                     RightCandidate = TryGetNextCandidate(mesh, ref RCandidates, RLBaseline, Clockwise: true, angle: out RAngle, circle: out RCircle);
-                    if(RightCandidate != null)
+                    if (RightCandidate != null)
                         Debug.Assert(RightCandidate.Index != ROrigin.Index);
                 }
 
@@ -332,11 +339,15 @@ namespace Geometry
 #if TRACEDELAUNAY
                     Trace.WriteLine(string.Format("Add Face: {0}", newFace));
 #endif
+                    //A quick sanity check to ensure we do not add a colinear triangle
+                    if (mesh.ToTriangle(newFace).Area > 0)
+                    {
+                        mesh.AddFace(newFace);
 
-                    mesh.AddFace(newFace);
+                        //CheckEdgeFlip(mesh, newFace);
+                        AddedFaces.Add(newFace);
+                    }
 
-                    //CheckEdgeFlip(mesh, newFace);
-                    AddedFaces.Add(newFace);
                     PastLeftOriginVerts.Add(LOrigin.Index);
                     LOrigin = LeftCandidate;
 
@@ -369,10 +380,14 @@ namespace Geometry
 #if TRACEDELAUNAY
                     Trace.WriteLine(string.Format("Add Face: {0}", newFace));
 #endif
-
-                    mesh.AddFace(newFace);
-                    //CheckEdgeFlip(mesh, newFace);
-                    AddedFaces.Add(newFace);
+                    //A quick sanity check to ensure we do not add a colinear triangle
+                    if (mesh.ToTriangle(newFace).Area > 0)
+                    {
+                        
+                        mesh.AddFace(newFace);
+                        //CheckEdgeFlip(mesh, newFace);
+                        AddedFaces.Add(newFace);
+                    }
 
                     Debug.Assert(mesh.IsClockwise(newFace) == false, "Face verts aren't counter-clockwise");
 
@@ -417,17 +432,17 @@ namespace Geometry
                 {
                     ReportProgress(mesh);
                 }
-            } 
+            }
 
             List<IEdgeKey> EdgesToCheck = AddedFaces.SelectMany(f => f.Edges).Distinct().ToList();
-            foreach(IEdgeKey edge in EdgesToCheck)
+            foreach (IEdgeKey edge in EdgesToCheck)
             {
                 if (mesh.Contains(edge))
                     CheckEdgeFlip(mesh, mesh[edge] as Edge, ReportProgress);
             }
 
-            
-             
+
+
             return null;
         }
 
@@ -544,7 +559,7 @@ namespace Geometry
         {
 
             //TODO: The first vertex needs to be the index sorted on the opposite axis as the cut. 
-            VERTEX L; 
+            VERTEX L;
             VERTEX R;
 
             if (LowerHalfSet.CutAxis == CutDirection.HORIZONTAL)
@@ -569,8 +584,18 @@ namespace Geometry
 
             //Create the base LR edge
 
+            int iLoopCount = 0;
+            SortedSet<int> RejectedCandidates = new SortedSet<int>();
+
             while (true)
             {
+                iLoopCount += 1;
+
+                Debug.Assert(iLoopCount <= (LowerHalfSet.Count + UpperHalfSet.Count) * 2, "FindBaselineByLeftOfLineTest: Taking an unreasonably long time to identify baseline.");
+                //if (iLoopCount > (LowerHalfSet.Count + UpperHalfSet.Count) * 2)
+                    //throw new ArgumentException("FindBaselineByLeftOfLineTest: Taking an unreasonably long time to identify baseline.");
+
+
                 //Edge case: Both sets of points are in opposite quadrants:
                 //
                 //Vertical cut:             Horizontal cut:
@@ -588,12 +613,10 @@ namespace Geometry
                 LR_baseline_candidate = mesh.ToGridLineSegment(L.Index, R.Index);
                 RL_baseline_candidate = mesh.ToGridLineSegment(R.Index, L.Index);
 
-                int[] L_Origin_Candidates = mesh[L.Index].Edges.Select(e => e.OppositeEnd(L.Index)).ToArray();
-                int[] R_Origin_Candidates = mesh[R.Index].Edges.Select(e => e.OppositeEnd(R.Index)).ToArray();
-
+                int[] L_Origin_Candidates = mesh[L.Index].Edges.Select(e => e.OppositeEnd(L.Index)).Where(id => RejectedCandidates.Contains(id) == false).ToArray();
+                //int[] L_Origin_Candidates = mesh[L.Index].Edges.Select(e => e.OppositeEnd(L.Index)).ToArray();
                 int[] L_Origin_Candidates_IsLeft = L_Origin_Candidates.Select(iVert => LR_baseline_candidate.IsLeft(mesh[iVert].Position)).ToArray();
-                //Reverse the IsLeft result for the Upper->Lower line
-                int[] R_Origin_Candidates_IsLeft = R_Origin_Candidates.Select(iVert => LR_baseline_candidate.IsLeft(mesh[iVert].Position)).ToArray();
+                
 
                 /*
                 if (LowerHalfSet.CutAxis == CutDirection.HORIZONTAL)
@@ -609,26 +632,27 @@ namespace Geometry
                 bool NewCandidateFound = false;
 
                 for (int i = 0; i < L_Origin_Candidates.Length; i++)
-                { 
+                {
                     //For the case of a point on the line we use the closer point to the R origin
-                    if(L_Origin_Candidates_IsLeft[i] == 0)
+                    if (L_Origin_Candidates_IsLeft[i] == 0)
                     {
                         int L_Candidate = L_Origin_Candidates[i];
                         double L_R_Distance = GridVector2.DistanceSquared(L.Position, R.Position);
                         double L_Candidate_Distance = GridVector2.DistanceSquared(mesh[L_Candidate].Position, R.Position);
-                        if(L_R_Distance > L_Candidate_Distance)
+                        if (L_R_Distance > L_Candidate_Distance)
                         {
                             //OK, the point on the L_R baseline is closer, switch to the new baseline.  Repeat the search.
 #if TRACEDELAUNAY
                             Trace.WriteLine(string.Format("Reject Left Baseline: {0}-{1} for {2}", L.Index, R.Index, L_Candidate));
 #endif
+                            RejectedCandidates.Add(L.Index);
                             L = mesh[L_Candidate];
                             NewCandidateFound = true;
 
                             break;
                         }
                     }
-                    else if(L_Origin_Candidates_IsLeft[i] < 0)
+                    else if (L_Origin_Candidates_IsLeft[i] < 0)
                     {
                         int L_Candidate = L_Origin_Candidates[i];
 #if TRACEDELAUNAY
@@ -644,6 +668,11 @@ namespace Geometry
                 if (NewCandidateFound)
                     continue;
 
+                //Reverse the IsLeft result for the Upper->Lower line
+                int[] R_Origin_Candidates = mesh[R.Index].Edges.Select(e => e.OppositeEnd(R.Index)).Where(id => RejectedCandidates.Contains(id) == false).ToArray();
+                //int[] R_Origin_Candidates = mesh[R.Index].Edges.Select(e => e.OppositeEnd(R.Index)).ToArray();
+                int[] R_Origin_Candidates_IsLeft = R_Origin_Candidates.Select(iVert => LR_baseline_candidate.IsLeft(mesh[iVert].Position)).ToArray();
+
                 for (int i = 0; i < R_Origin_Candidates.Length; i++)
                 {
                     //For the case of a point on the line we use the closer point to the R origin
@@ -658,6 +687,7 @@ namespace Geometry
 #if TRACEDELAUNAY
                             Trace.WriteLine(string.Format("Reject Right Baseline: {0}-{1} for {2}", L.Index, R.Index, R_Candidate));
 #endif
+                            RejectedCandidates.Add(R.Index);
                             R = mesh[R_Candidate];
                             NewCandidateFound = true;
                             break;
@@ -674,9 +704,10 @@ namespace Geometry
                         break;
                     }
                 }
-                 
+
                 if (NewCandidateFound)
                 {
+                    
                     continue;
                 }
 
@@ -778,7 +809,7 @@ namespace Geometry
             {
                 angle = candidate.Angle;
 
-                if(sortedCandidates.Count == 0)
+                if (sortedCandidates.Count == 0)
                 {
                     circle = new GridCircle?();
                     return candidateVert;
@@ -787,13 +818,13 @@ namespace Geometry
                 if (baseline.Segment.IsEndpoint(candidateVert.Position))
                 {
                     sortedCandidates.RemoveAt(0);
-                    continue; 
+                    continue;
                 }
 
                 //When the candidates would create a triangle with an angle sum over 180 degrees there are no more viable candidates on that side to check.
                 //However, a changing baseline may make the candidates viable again, so do not remove them.
                 if (angle >= Math.PI)
-                { 
+                {
                     circle = new GridCircle?();
                     return null;
                 }
@@ -811,7 +842,7 @@ namespace Geometry
                 //If there are no other candidates, then we can return this vertex
                 if (sortedCandidates.Count == 1)
                 {
-                    circle = new GridCircle?(); 
+                    circle = new GridCircle?();
                     return candidateVert;
                 }
 
@@ -825,7 +856,7 @@ namespace Geometry
                 if (circle.Value.Contains(nextCandidateVert.Position))
                 {
                     //Check edge case of a point exactly on the circle boundary
-                    if(GridVector2.Distance(nextCandidateVert.Position, circle.Value.Center) == circle.Value.Radius)
+                    if (GridVector2.Distance(nextCandidateVert.Position, circle.Value.Center) == circle.Value.Radius)
                     {
                         return candidateVert;
                     }
@@ -866,13 +897,13 @@ namespace Geometry
             GridVector2[] circlePoints = verts.Select(v => v.Position).ToArray();
 
             Debug.Assert(circlePoints.AreClockwise() == false, "Face verts aren't counter-clockwise");
-              
+
             foreach (var edge in f.Edges)
             {
                 TriangleFace oppositeFace = mesh[edge].Faces.Where(face => f != face as Face).FirstOrDefault() as TriangleFace;
                 if (oppositeFace == null)
                     continue;
-                 
+
                 int other_opposite_vert = oppositeFace.OppositeVertex(edge);
 
                 var flippedEdgeCandidate = mesh.ToGridLineSegment(f.OppositeVertex(edge), other_opposite_vert);
@@ -887,7 +918,7 @@ namespace Geometry
                 if (GridCircle.Contains(circlePoints, mesh[other_opposite_vert].Position) == OverlapType.CONTAINED)
                 {
                     //OK, need to flip the edge
-                     
+
                     int face_opposite_vert = f.OppositeVertex(edge);
 #if TRACEDELAUNAY 
                     Trace.WriteLine(string.Format("Flip {0} with {1}", f, oppositeFace));
@@ -897,7 +928,7 @@ namespace Geometry
                     Debug.Assert(FaceStartedAsDelaunay == false, string.Format("Edge flip found for a face that was already Delaunay {0}", f));
 #endif
                     mesh.RemoveEdge(edge);
-                    
+
                     mesh.AddEdge(new Edge(face_opposite_vert, other_opposite_vert));
 
                     InfiniteSequentialIndexSet TriangleIndexer = new InfiniteSequentialIndexSet(0, 3, 0);
@@ -912,13 +943,13 @@ namespace Geometry
                     TriangleFace A = new TriangleFace(AVerts);
                     TriangleFace B = new TriangleFace(BVerts);
                     */
-                    
+
                     int[] AVerts = new int[] { face_opposite_vert, other_opposite_vert, edge.A };
                     int[] BVerts = new int[] { face_opposite_vert, other_opposite_vert, edge.B };
 
                     TriangleFace A = mesh.IsClockwise(AVerts) ? new TriangleFace(AVerts.Reverse()) : new TriangleFace(AVerts);
                     TriangleFace B = mesh.IsClockwise(BVerts) ? new TriangleFace(BVerts.Reverse()) : new TriangleFace(BVerts);
-                    
+
 #if TRACEDELAUNAY
                     Trace.WriteLine(string.Format("Edge Flip Face {0} Clockwise = {1}", A, mesh.IsClockwise(AVerts)));
                     Trace.WriteLine(string.Format("Edge Flip Face {0} Clockwise = {1}", B, mesh.IsClockwise(BVerts)));
@@ -948,11 +979,11 @@ namespace Geometry
 
                     CheckEdgeFlip(mesh, A, ReportProgress);
 
-                    if(mesh.Contains(B)) //Check that the face wasn't removed when checking A for flips
+                    if (mesh.Contains(B)) //Check that the face wasn't removed when checking A for flips
                         CheckEdgeFlip(mesh, B, ReportProgress);
 
                     return;
-                } 
+                }
             }
         }
 
@@ -966,7 +997,7 @@ namespace Geometry
 
             VERTEX[] verts = f.iVerts.Select(v => mesh[v]).ToArray();
             GridVector2[] circlePoints = verts.Select(v => v.Position).ToArray();
-              
+
             int other_opposite_vert = oppositeFace.OppositeVertex(edge);
 
             Debug.Assert(f.Edges.All(e => mesh.Contains(e)), "Mesh does not contain face edges");
@@ -1052,10 +1083,10 @@ namespace Geometry
                 CheckEdgeFlip(mesh, new_faces.Item1, ReportProgress);
                 if (mesh.Contains(new_faces.Item2)) //Check that the face wasn't removed when checking A for flips
                     CheckEdgeFlip(mesh, new_faces.Item2, ReportProgress);
-                    
+
             }
-        } 
-        
+        }
+
     }
 
 }

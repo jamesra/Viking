@@ -306,7 +306,28 @@ namespace Geometry
         /// </returns>
         public int IsLeft(GridVector2 p)
         {
-            return Math.Sign((B.X - A.X) * (p.Y - A.Y) - (B.Y - A.Y) * (p.X - A.X));
+            double result = (B.X - A.X) * (p.Y - A.Y) - (B.Y - A.Y) * (p.X - A.X);
+            if (result == 0)
+                return 0; 
+
+            if(Math.Abs(result) < Global.EpsilonSquared)
+            {
+                GridTriangle tri;
+                try
+                {
+                    tri = new GridTriangle(A, B, p);
+                }
+                catch (ArgumentException e)
+                {
+                    return 0; //This means the points are on a line
+                }
+
+                if (double.IsNaN(tri.Area) || tri.Area == 0 )
+                    return 0; 
+
+            }
+
+            return Math.Sign(result);
         }
 
         public GridVector2 OppositeEndpoint(GridVector2 p)
@@ -314,6 +335,10 @@ namespace Geometry
             return A == p ? B : A;
         }
 
+        /// <summary>
+        /// Returns the midpoint of the segment
+        /// </summary>
+        /// <returns></returns>
         public GridVector2 Bisect()
         {
             double x = (A.X + B.X) / 2.0;

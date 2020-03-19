@@ -5,6 +5,7 @@ using System.Text;
 
 namespace Geometry
 {
+    [Serializable]
     internal struct IndexEdge
     {
         /// <summary>

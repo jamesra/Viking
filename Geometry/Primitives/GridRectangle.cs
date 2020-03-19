@@ -686,6 +686,7 @@ namespace Geometry
             return new GridRectangle(this.LowerLeft, this.Width, this.Height);
         }
 
+        [NonSerialized]
         private GridLineSegment[] _Segments;
         public GridLineSegment[] Segments
         {

@@ -1,9 +1,13 @@
-﻿using System;
+﻿
+//#define TRACEMESH
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Diagnostics;
+
 
 namespace Geometry.Meshing
 {
@@ -13,8 +17,14 @@ namespace Geometry.Meshing
         new IReadOnlyList<VERTEX> Verticies { get; }
     }
 
-    public interface IMesh2D<VERTEX> : IMesh<VERTEX>
+    public interface IMesh2D<VERTEX> : IReadOnlyMesh2D<VERTEX>, IMesh<VERTEX>
         where VERTEX : IVertex2D
+    {
+
+}
+
+    public interface IReadOnlyMesh2D<out VERTEX> : IReadOnlyMesh<VERTEX>
+    where VERTEX : IVertex2D
     {
         new IReadOnlyList<VERTEX> Verticies { get; }
 
@@ -35,9 +45,14 @@ namespace Geometry.Meshing
         /// <param name="Direction"></param>
         /// <returns></returns>
         GridLine ToGridLine(long Origin, long Direction);
+
+        bool IsClockwise(IFace f);
+
+        RotationDirection Winding(IFace f);
+
     }
 
-    public interface IMesh<VERTEX>
+    public interface IReadOnlyMesh<out VERTEX>
         where VERTEX : IVertex
     {
         IReadOnlyList<VERTEX> Verticies { get; }
@@ -56,7 +71,11 @@ namespace Geometry.Meshing
         bool Contains(IFace key);
 
         bool Contains(int A, int B);
+    }
 
+    public interface IMesh<VERTEX> : IReadOnlyMesh<VERTEX>
+        where VERTEX : IVertex
+    {  
         /// <summary>
         /// Add vertex to the mesh
         /// </summary>
@@ -355,6 +374,10 @@ namespace Geometry.Meshing
             if (e.B >= _Verticies.Count || e.B < 0)
                 throw new ArgumentException(string.Format("Edge vertex B references non-existent vertex {0}", e));
 
+#if TRACEMESH
+            Trace.WriteLine(string.Format("Add edge {0}", e));
+#endif
+
             IEdge newEdge = CreateEdge(e.A, e.B);
             Edges.Add(e, newEdge);
 
@@ -377,6 +400,10 @@ namespace Geometry.Meshing
             if (e.B >= _Verticies.Count || e.B < 0)
                 throw new ArgumentException(string.Format("Edge vertex B references non-existent vertex {0}", e));
 
+#if TRACEMESH
+            Trace.WriteLine(string.Format("Add edge {0}", e));
+#endif
+
             Edges.Add(e.Key, e);
 
             _Verticies[(int)e.A].AddEdge(e.Key);
@@ -385,6 +412,9 @@ namespace Geometry.Meshing
 
         public void RemoveEdge(IEdgeKey e)
         {
+#if TRACEMESH
+            Trace.WriteLine(string.Format("Remove edge {0}", e));
+#endif
             if (_Edges.ContainsKey(e))
             {
                 IEdge removedEdge = _Edges[e];
@@ -405,9 +435,12 @@ namespace Geometry.Meshing
         /// Add a face. Creates edges if they aren't in the face
         /// </summary>
         /// <param name="face"></param>
-        public void AddFace(IFace face)
+        public virtual void AddFace(IFace face)
         {
             //Debug.Assert(Faces.Contains(face) == false, string.Format("Mesh already contains {0}", face));
+#if TRACEMESH
+            Trace.WriteLine(string.Format("Add face {0}", face));
+#endif
 
             foreach (IEdgeKey e in face.Edges)
             {
@@ -438,6 +471,11 @@ namespace Geometry.Meshing
         {
             if (Faces.Contains(f))
             {
+
+#if TRACEMESH
+                Trace.WriteLine(string.Format("Remove face {0}", f));
+#endif
+
                 Faces.Remove(f);
             }
             foreach (IEdgeKey e in f.Edges)

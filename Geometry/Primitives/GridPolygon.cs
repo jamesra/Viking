@@ -925,6 +925,7 @@ namespace Geometry
         GridRectangle _BoundingRect; 
         GridLineSegment[] _ExteriorSegments;
 
+        [NonSerialized]
         RTree.RTree<PointIndex> _SegmentRTree = null;
 
         internal RTree.RTree<PointIndex> SegmentRTree
@@ -1079,6 +1080,11 @@ namespace Geometry
         {
             ExteriorRing = exteriorRing.ToArray();
 
+            if (!ExteriorRing.IsValidClosedRing())
+            {
+                throw new ArgumentException("Exterior polygon ring must be valid");
+            }
+              
             foreach(ICollection<GridVector2> interiorRing in interiorRings)
             {
                 AddInteriorRing(interiorRing);
@@ -1087,6 +1093,11 @@ namespace Geometry
 
         public GridPolygon(GridVector2[] exteriorRing, IEnumerable<GridVector2[]> interiorRings)
         {
+            if (!exteriorRing.IsValidClosedRing())
+            {
+                throw new ArgumentException("Exterior polygon ring must be valid");
+            }
+
             ExteriorRing = exteriorRing;
 
             foreach (GridVector2[] interiorRing in interiorRings)
@@ -1143,6 +1154,17 @@ namespace Geometry
             get
             {
                 return this.InteriorRings.Select(ir => ir.Select(p => p as IPoint2D).ToArray()).ToArray(); 
+            }
+        }
+
+        /// <summary>
+        /// All unique verticies.  This is calculated for every use
+        /// </summary>
+        public GridVector2[] AllVerticies
+        {
+            get
+            {
+                return ExteriorRing.Union(InteriorRings.SelectMany(i => i)).Distinct().ToArray();
             }
         }
 
@@ -1510,27 +1532,120 @@ namespace Geometry
 
         public bool Contains(IPoint2D point_param)
         {
+            return ContainsExt(point_param) != OverlapType.NONE;
+        }
+
+        public OverlapType ContainsExt(IPoint2D point_param)
+        {
+            if (!_BoundingRect.Contains(point_param))
+                return OverlapType.NONE;
+
+            GridVector2 p = new GridVector2(point_param.X, point_param.Y);
+
+            //Create a line we know must pass outside the polygon
+            //There is an edge case where the test line passes through a polygon vertex, so make sure the test line does not cross any verticies
+            //GridVector2 targetPoint = new GridLineSegment(this.ExteriorRing[0], this.ExteriorRing[1]).Bisect();
+            //GridVector2 targetPoint = new GridLineSegment(p.X, p.Y + this.ExteriorRing[0], this.ExteriorRing[1]).Bisect();
+
+            //GridLine test_ray = new GridLine(point_param, targetPoint - point_param);
+
+            //GridLineSegment test_line = test_ray.ToLine(Math.Max(BoundingBox.Width, BoundingBox.Height) * 2);
+
+            //Make a horizontal line
+            GridLine test_line = new GridLine(p, GridVector2.UnitX);
+
+            List<GridLineSegment> segmentsToTest;
+
+            if(_ExteriorSegments.Length > 32)// || HasInteriorRings)
+            {
+                segmentsToTest = _ExteriorSegments.ToList();
+
+                ///This doesn't work because rTree returns the points in arbitrary order, and the line list must be passed to IsPointInsidePolygon in the order they appear on the ring.
+                /*
+                GridVector2 line_endpoint_translation = new GridVector2(BoundingBox.Width * 1.5, 0);
+                GridLineSegment test_line_seg = new Geometry.GridLineSegment(p - line_endpoint_translation, p + line_endpoint_translation);
+                var intersectingSegments = this.GetIntersectingSegments(test_line_seg.BoundingBox);
+                segmentsToTest = this.AllSegments.Where(s => intersectingSegments.Contains(s)).ToList();
+                */
+            }
+            else
+            {
+                segmentsToTest = _ExteriorSegments.ToList();
+            }
+
+            //Test all of the line segments for both interior and exterior polygons
+            //return IsPointInsidePolygonByWindingTest(segmentsToTest, test_line); 
+            OverlapType result = IsPointInsidePolygonByWindingTest(segmentsToTest, test_line);
+            if(result == OverlapType.CONTAINED)
+            {
+                foreach(GridPolygon inner in this.InteriorPolygons)
+                {
+                    OverlapType inner_result = inner.ContainsExt(p);
+                    if (inner_result != OverlapType.NONE)
+                        return OverlapType.NONE; //The point is in the inner polygon, therefore not part of this polygon
+                }
+            }
+
+            return result;
+        }
+
+        /*
+        static Random random = new Random();
+        public bool ContainsWithPolyRayTest(IPoint2D point_param)
+        {
             if (!_BoundingRect.Contains(point_param))
                 return false;
 
             GridVector2 p = new GridVector2(point_param.X, point_param.Y);
+            GridLineSegment? test_line = new GridLineSegment?();
+            GridLine test_ray;
             //Create a line we know must pass outside the polygon
-            GridLineSegment test_line = new Geometry.GridLineSegment(p, new GridVector2(p.X + (BoundingBox.Width*2), p.Y));
+            //There is an edge case where the test line passes through a polygon vertex, so make sure the test line does not cross any verticies
+            double test_line_length = Math.Max(BoundingBox.Width, BoundingBox.Height) * 2;
+            GridVector2[] AllVerticies = this.AllVerticies;
+
+            if (AllVerticies.Any(v => v == point_param))
+                return true; 
+
+            while (test_line.HasValue == false)
+            {
+                foreach (GridLineSegment s in this.ExteriorSegments)
+                {
+                    
+                    GridVector2 targetPoint = s.PointAlongLine(random.NextDouble());
+                    if (targetPoint == point_param)
+                        continue;
+
+                    test_ray = new GridLine(point_param, targetPoint - point_param);
+
+                    test_line = test_ray.ToLine(test_line_length);
+                    if (AllVerticies.Any(v => test_line.Value.DistanceToPoint(v) <= Global.Epsilon))
+                    {
+                        test_line = null; 
+                        continue; //Too close to a vertex.  Try another target
+                    }
+
+                    break;
+                }
+            }
+            
+            
+            //GridLineSegment test_line = new Geometry.GridLineSegment(p, new GridVector2(p.X + (BoundingBox.Width*2), p.Y));
 
             List<GridLineSegment> segmentsToTest;
-            
-            if(_ExteriorSegments.Length > 32 || HasInteriorRings)
+
+            if (_ExteriorSegments.Length > 32 || HasInteriorRings)
             {
-                segmentsToTest = this.GetIntersectingSegments(test_line.BoundingBox);
+                segmentsToTest = this.GetIntersectingSegments(test_line.Value);
             }
             else
             {
-                segmentsToTest = _ExteriorSegments.ToList(); 
+                segmentsToTest = _ExteriorSegments.ToList();
             }
 
             //Test all of the line segments for both interior and exterior polygons
-            return IsPointInsidePolygon(segmentsToTest, test_line); 
-        }
+            return IsPointInsidePolygonByRayTest(segmentsToTest, test_line.Value);
+        }*/
 
         public bool Contains(GridLineSegment line)
         {
@@ -1543,7 +1658,7 @@ namespace Geometry
 
             if (_ExteriorSegments.Length > 32 || HasInteriorRings)
             {
-                segmentsToTest = this.GetIntersectingSegments(line.BoundingBox);
+                segmentsToTest = this.GetIntersectingSegments(line);
             }
             else
             {
@@ -1685,7 +1800,144 @@ namespace Geometry
             return new GridCircle(center, Radius);
         }
 
-        private static bool IsPointInsidePolygon(ICollection<GridLineSegment> polygonSegments, GridLineSegment test_line)
+        private static OverlapType IsPointInsidePolygonByWindingTest(List<GridLineSegment> polygonSegments, GridLine test_line)
+        {
+            GridVector2 test_point = test_line.Origin;
+
+            if (polygonSegments.Any(ps => ps.IsEndpoint(test_line.Origin)))
+                return OverlapType.TOUCHING;
+
+#if DEBUG
+            var OriginalSegments = polygonSegments.ToList(); //Create a copy so we can examine the debugger
+#endif
+
+            var IsLeft = polygonSegments.Select((s,i) => new { A = test_line.IsLeft(s.A), B = test_line.IsLeft(s.B), S = s, IsPLeftOfSeg=new int?()}).ToList();
+
+            //OK, now we need to condense any instance where IsLeft.A or IsLeft.B == 0.  That is, the segment does not cross the line, mearly touches it. 
+            //If we have opposite IsLeftValues we create a new edge that entirely crosses the line.  Otherwise we ignore the edge, which is the case where the segment touches the test_line but does not cross.
+            for(int i = 0; i < IsLeft.Count; i++)
+            {
+                var seg = IsLeft[i];
+                if (seg.A != seg.B || (seg.A == 0 && seg.B == 0))
+                {
+                    //Check the case of the point exactly on the line
+                    if (seg.S.DistanceToPoint(test_point) < Global.Epsilon)
+                        return OverlapType.TOUCHING;
+                }
+
+                if (seg.A == seg.B) //Remove all segments that are on the same side of the line or parallel to the line.  This leaves only segments that cross or touch the line
+                {
+                    //We can remove this segment entirely as it is perfectly parallel to our test line
+                    polygonSegments.RemoveAt(i); 
+                    IsLeft.RemoveAt(i);
+                    i = i - 1;
+                    continue;
+                }
+            }
+
+            if (IsLeft.Count == 0)
+                return OverlapType.NONE;
+
+            //Find all segments that touch the line.  Remove the endpoints that touch the line and create a virtual segment that runs between the endpoints that did not touch the line.  This prevents double-counting windings.
+            //InfiniteSequentialIndexSet SegEnumerator = new InfiniteSequentialIndexSet(0, IsLeft.Count, 0);
+            for (int i = 0; i < IsLeft.Count; i++)
+            {
+                int iNext = i + 1 >= IsLeft.Count ? 0 : i + 1; //The index of the next entry in the list
+                var seg = IsLeft[i];
+                if (seg.A != 0 && seg.B != 0)
+                {
+                    //Check the case of the point exactly on the line
+                    if (seg.S.DistanceToPoint(test_point) < Global.Epsilon)
+                        return OverlapType.TOUCHING;
+
+                    continue;   //Segment does not end on the line, continue;
+                }
+                  
+                if(seg.B == 0) //Seg.A == 0 will be caught by a later iteration
+                {
+                    var nextSeg = IsLeft[iNext];
+                    int nextSegIsLeft = nextSeg.A != 0 ? nextSeg.A : nextSeg.B; //Figure out which part of the next line is not on the test line.  Create a new virtual line or delete
+                    GridVector2 nextSegEndpoint = nextSeg.A != 0 ? nextSeg.S.A : nextSeg.S.B;
+
+                    Debug.Assert(nextSeg.S.OppositeEndpoint(nextSegEndpoint).Y == seg.S.B.Y, "We expect the lines to be input in the order they appear in the ring.  Lines sharing endpoints must be adjacent.");
+                    
+                    if (nextSegIsLeft == seg.A) //We touch the line and retreat.  We can remove both entries 
+                    { 
+                        polygonSegments.RemoveAt(Math.Max(i, iNext));
+                        polygonSegments.RemoveAt(Math.Min(i, iNext));
+                         
+                        IsLeft.RemoveAt(Math.Max(i, iNext));
+                        IsLeft.RemoveAt(Math.Min(i, iNext));
+
+                        i -= i < iNext ? 1 : 2; //Adjust for wraparound case
+                    }
+                    else  //We touch the line and then cross over it.  We can remove both entries and add a new one
+                    {
+                        GridLineSegment virtualPolySegment = new GridLineSegment(seg.S.A, nextSegEndpoint);
+                        polygonSegments.RemoveAt(i);
+                        polygonSegments.Insert(i, virtualPolySegment);
+                        polygonSegments.RemoveAt(iNext);
+
+                        var newEntry = new { A = seg.A, B = nextSegIsLeft, S = virtualPolySegment, IsPLeftOfSeg= new int?(seg.S.IsLeft(test_point))}; //Record whether the lines were left of the test_point in case the new line moves to the other side of the point.
+                        IsLeft.RemoveAt(i);
+                        IsLeft.Insert(i, newEntry);
+                        IsLeft.RemoveAt(iNext);
+
+                        //i = i; //Adjust to check the next record 
+                    }
+                }
+            }
+
+            var cross_or_parallel_segments = polygonSegments; //polygonSegments.Where((s, i) => (IsLeft[i].A != IsLeft[i].B) || (IsLeft[i].A == 0 || IsLeft[i].B == 0)).ToArray(); //Find all segments that span the testline or are parallel
+
+            //If we share endpoints then we are always inside the polygon.  Handles case where we ask if a polygon vertex is inside the polygon
+            //if (cross_or_parallel_segments.Any(ps => ps.IsEndpoint(test_line.A)))
+            //    return OverlapType.TOUCHING;
+
+            int wind_count = 0; 
+            for(int i = 0; i < cross_or_parallel_segments.Count; i++)
+            {
+                var SegData = IsLeft[i];
+                GridLineSegment polySeg = SegData.S;
+                int IsAboveToBelow;
+                int pIsLeft;
+
+                IsAboveToBelow = SegData.S.A.Y.CompareTo(SegData.S.B.Y);
+
+                if (SegData.IsPLeftOfSeg.HasValue == false)
+                {
+                    pIsLeft = polySeg.IsLeft(test_point);
+                }
+                else
+                {
+                    pIsLeft = SegData.IsPLeftOfSeg.Value;
+                }
+                
+                /*if(IsAboveToBelow == 0) //Case of parallel line
+                {
+                    if(polySeg.BoundingBox.Left <= test_point.X && polySeg.BoundingBox.Right >= test_point.X)
+                    {
+                        return OverlapType.TOUCHING; //Test point is within the line segment, return true   
+                                    //We aren't using epsilon here, perhaps we should?
+                    }
+                    continue;
+                }
+                else*/ if(IsAboveToBelow > 0)
+                {
+                    if (pIsLeft >= 0)
+                        wind_count += 1;
+                }
+                else //IsAbove < 0
+                {
+                    if (pIsLeft <= 0)
+                        wind_count -= 1;
+                }
+            }
+
+            return wind_count != 0 ? OverlapType.CONTAINED : OverlapType.NONE;
+        }
+
+        private static bool IsPointInsidePolygonByRayTest(ICollection<GridLineSegment> polygonSegments, GridLineSegment test_line)
         {
             //In cases where our test line passes exactly through a vertex on the other polygon we double count the line.  
             //This code removes duplicate intersection points to prevent duplicates
@@ -1733,15 +1985,23 @@ namespace Geometry
             }
 
             //Ensure the line doesn't pass through on a line endpoint
-            SortedSet<GridVector2> intersectionPoints = new SortedSet<GridVector2>();
-            intersectionPoints.UnionWith(intersections);
-
-            if (intersectionPoints.Any(p => test_line.IsEndpoint(p)))
+            //SortedSet<GridVector2> intersectionPoints = new SortedSet<GridVector2>();
+            GridVector2[] UniqueIntersections = intersections.Distinct().ToArray();
+            
+            if (UniqueIntersections.Any(p => test_line.IsEndpoint(p)))
                 return true; //If the point is exactly on the line then we can often have two intersections as the line leaves the polygon which results in a false negative.
                              //This test short-circuits that problem
+                           
+            //If the intersection point is exactly through a polygon vertex then two segments will be returned but we should count only one.
+            if(UniqueIntersections.Length != intersections.Count)
+            {
+                throw new NotImplementedException("This is an edge case where the line passes through a vertex of the polygon.");
+
+                //The fix is to create a new testline that does not pass through any verticies
+            }
             
             //Inside the polygon if we intersect line segments of the border an odd number of times
-            return intersectionPoints.Count % 2 == 1; 
+            return UniqueIntersections.Length % 2 == 1; 
         }
 
 
@@ -1789,11 +2049,27 @@ namespace Geometry
         /// </summary>
         /// <param name="bbox"></param>
         /// <returns></returns>
+        public List<GridLineSegment> GetIntersectingSegments(GridLineSegment line)
+        {
+            GridRectangle bbox = line.BoundingBox;
+            if (!this.BoundingBox.Intersects(bbox))
+            {
+                return new List<Geometry.GridLineSegment>(0);
+            }
+
+            return SegmentRTree.Intersects(bbox.ToRTreeRect(0)).Select(p => p.Segment(this)).Where(segment => line.Intersects(segment, false)).ToList();
+        }
+
+        /// <summary>
+        /// Return all segments, both interior and exterior, that fall within the bounding rectangle
+        /// </summary>
+        /// <param name="bbox"></param>
+        /// <returns></returns>
         public List<GridLineSegment> GetIntersectingSegments(GridRectangle bbox)
         {
             if(!this.BoundingBox.Intersects(bbox))
             {
-                return new List<Geometry.GridLineSegment>();
+                return new List<Geometry.GridLineSegment>(0);
             }
 
             return SegmentRTree.Intersects(bbox.ToRTreeRect(0)).Select(p => p.Segment(this)).Where(segment => bbox.Intersects(segment)).ToList();
@@ -2104,10 +2380,10 @@ namespace Geometry
 
             foreach (GridLineSegment candidate in CandidateSegments)
             {
-                List<GridLineSegment> OtherSegments = other.GetIntersectingSegments(candidate.BoundingBox);
+                List<GridLineSegment> OtherSegments = other.GetIntersectingSegments(candidate);
 
-                if (candidate.Intersects(OtherSegments))
-                    return true;
+                if (OtherSegments.Count > 0)
+                    return true; 
             }
 
             return false;
@@ -2146,7 +2422,8 @@ namespace Geometry
                 newRing.Add(ExteriorRing[i]);
 
                 GridVector2[] IntersectionPoints;
-                List<GridLineSegment> candidates = ls.Intersections(other.GetIntersectingSegments(ls.BoundingBox), out IntersectionPoints);
+                //Since we want the out parameter just get a quick list of candidates with the ls.bounding box in instead of running the full intersection test twice.
+                List<GridLineSegment> candidates = ls.Intersections(other.GetIntersectingSegments(ls.BoundingBox), out IntersectionPoints); 
 
                 //Remove any duplicates of the existing endpoints 
                 for (int iInter = 0; iInter < IntersectionPoints.Length; iInter++)

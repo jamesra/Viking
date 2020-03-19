@@ -20,10 +20,22 @@ namespace Geometry
     [Flags]
     public enum OverlapType
     {
-        NONE = 0,    //The tested geometry is entirely outside the shape
-        CONTAINED = 0x01,     //The tested geometry is entirely inside the shape
-        TOUCHING=0x02,          //The tested geometry only touches the borders of the shape, for example, a point that is exactly on a line
-        INTERSECTING=0x04       //The tested geometry is both inside and outside the shape
+        /// <summary>
+        /// The tested geometry is entirely outside the shape
+        /// </summary>
+        NONE = 0,    
+        /// <summary>
+        /// The tested geometry is entirely inside the shape
+        /// </summary>
+        CONTAINED = 0x01,     
+        /// <summary>
+        /// The tested geometry only touches the borders of the shape, for example, a point that is exactly on a line
+        /// </summary>
+        TOUCHING = 0x02,          
+        /// <summary>
+        /// The tested geometry is both inside and outside the shape
+        /// </summary>
+        INTERSECTING = 0x04       
     }
 
     public enum ShapeType2D

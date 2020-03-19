@@ -8,6 +8,7 @@ namespace Geometry
     /// <summary>
     /// A triangle class that uses indicies into a list of points to record it's node positions.
     /// </summary>
+    [Serializable]
     public class GridIndexTriangle
     {
         /// <summary>
