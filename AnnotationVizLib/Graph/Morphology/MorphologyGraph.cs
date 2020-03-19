@@ -45,7 +45,9 @@ namespace AnnotationVizLib
             get { return structure.Type; }
         }
 
+        [field: NonSerialized()]
         private RTree<ulong> _RTree = null;
+
         private RTree<ulong> RTree
         {
             get
