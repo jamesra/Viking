@@ -11,11 +11,19 @@ using System.Diagnostics;
 
 namespace Geometry.Meshing
 {
-    public interface IMesh3D<VERTEX> : IMesh<VERTEX>
+    public interface IMesh3D<VERTEX> : IReadOnlyMesh3D<VERTEX>, IMesh<VERTEX>
         where VERTEX : IVertex3D
     {
-        new IReadOnlyList<VERTEX> Verticies { get; }
+        //new IReadOnlyList<VERTEX> Verticies { get; }
+        
     }
+
+    public interface IReadOnlyMesh3D<out VERTEX> : IReadOnlyMesh<VERTEX>
+    where VERTEX : IVertex3D
+    {
+        GridBox BoundingBox { get; }
+    }
+
 
     public interface IMesh2D<VERTEX> : IReadOnlyMesh2D<VERTEX>, IMesh<VERTEX>
         where VERTEX : IVertex2D
@@ -26,7 +34,7 @@ namespace Geometry.Meshing
     public interface IReadOnlyMesh2D<out VERTEX> : IReadOnlyMesh<VERTEX>
     where VERTEX : IVertex2D
     {
-        new IReadOnlyList<VERTEX> Verticies { get; }
+        //new IReadOnlyList<VERTEX> Verticies { get; }
 
         GridLineSegment ToGridLineSegment(IEdgeKey key);
 
