@@ -5,9 +5,13 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using System.Runtime.Serialization;
+using System.Runtime.InteropServices;
 
 namespace VikingXNAGraphics
 {
+    [DataContract]
+    [StructLayout(LayoutKind.Sequential, Pack = 1)]
     public struct VertexPositionNormalColor : IVertexType
     {
         public static VertexDeclaration Declaration = new VertexDeclaration(new VertexElement[]
@@ -17,14 +21,16 @@ namespace VikingXNAGraphics
             new VertexElement(24, VertexElementFormat.Color, VertexElementUsage.Color, 0)
         });
 
+        [DataMember]
         Vector3 vPosition;
+        [DataMember]
         Vector3 vNormal;
+        [DataMember]
         Color vColor;
 
         public Vector3 Position
         {
             get { return vPosition; }
-            set { vPosition = value; }
         }
 
         public Vector3 Normal
