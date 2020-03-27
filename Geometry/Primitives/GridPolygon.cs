@@ -64,7 +64,7 @@ namespace Geometry
             iPoly = poly;
             iInnerPoly = new int?();
             this.iVertex = iV;
-            this.NumUniqueInRing = Polygons[poly].ExteriorRing.Length-1;
+            this.NumUniqueInRing = Polygons[poly].ExteriorRing.Length - 1;
             Debug.Assert(NumUniqueInRing > 0, "Must have at least 1 element in a ring");
             Debug.Assert(iVertex <= NumUniqueInRing);
         }
@@ -85,7 +85,7 @@ namespace Geometry
             iInnerPoly = innerPoly;
             this.iVertex = iV;
             this.NumUniqueInRing = 0; //Temp assignment so we can call GetRing
-            this.NumUniqueInRing = this.GetRing(Polygons).Length-1;
+            this.NumUniqueInRing = this.GetRing(Polygons).Length - 1;
             Debug.Assert(NumUniqueInRing > 0, "Must have at least 1 element in a ring");
             Debug.Assert(iVertex <= NumUniqueInRing);
         }
@@ -133,7 +133,7 @@ namespace Geometry
             return true;
         }
 
-        public static bool  operator ==(PointIndex A, PointIndex B)
+        public static bool operator ==(PointIndex A, PointIndex B)
         {
             bool ANull = object.ReferenceEquals(A, null);
             bool BNull = object.ReferenceEquals(B, null);
@@ -161,7 +161,7 @@ namespace Geometry
             if (A.NumUniqueInRing != B.NumUniqueInRing)
                 return false;
 
-            return true;  
+            return true;
         }
 
         public static bool operator !=(PointIndex A, PointIndex B)
@@ -189,15 +189,15 @@ namespace Geometry
 
             if (this.iInnerPoly != other.iInnerPoly)
             {
-                if(this.iInnerPoly.HasValue && other.iInnerPoly.HasValue)
+                if (this.iInnerPoly.HasValue && other.iInnerPoly.HasValue)
                 {
-                    return this.iInnerPoly.Value.CompareTo(other.iInnerPoly.Value); 
+                    return this.iInnerPoly.Value.CompareTo(other.iInnerPoly.Value);
                 }
 
                 return this.iInnerPoly.HasValue ? 1 : -1;
             }
-             
-            return this.iVertex.CompareTo(other.iVertex);  
+
+            return this.iVertex.CompareTo(other.iVertex);
         }
 
         public bool IsLastIndexInRing()
@@ -224,7 +224,7 @@ namespace Geometry
 
         public GridVector2 Point(IReadOnlyList<GridPolygon> Polygons)
         {
-            if(IsInner)
+            if (IsInner)
             {
                 return Polygons[iPoly].InteriorPolygons[this.iInnerPoly.Value].ExteriorRing[iVertex];
             }
@@ -321,10 +321,10 @@ namespace Geometry
             if (this.iInnerPoly != other.iInnerPoly)
                 return false;
 
-            if(this.iVertex == other.iVertex)
+            if (this.iVertex == other.iVertex)
                 return false;
 
-            if(Math.Abs(this.iVertex - other.iVertex) == 1)
+            if (Math.Abs(this.iVertex - other.iVertex) == 1)
             {
                 return true;
             }
@@ -339,7 +339,7 @@ namespace Geometry
         /// <param name="polygons"></param>
         /// <returns></returns>
         private GridVector2[] ConnectedVerticies(GridVector2[] ring)
-        {  
+        {
             int iPrevious = PreviousVertexInRing();
             int iNext = NextVertexInRing();
 
@@ -368,7 +368,7 @@ namespace Geometry
         }
 
         public GridLineSegment[] ConnectedSegments(GridVector2[] ring)
-        {  
+        {
             int iPrevious = PreviousVertexInRing();
             int iNext = PreviousVertexInRing();
 
@@ -401,7 +401,7 @@ namespace Geometry
                 return new PointIndex(this.iPoly, this.iInnerPoly, this.NextVertexInRing(), this.NumUniqueInRing);
             }
         }
-        
+
         /// <summary>
         /// Return the previous index after this one, staying within the same ring
         /// </summary>
@@ -417,7 +417,7 @@ namespace Geometry
         private int NextVertexInRing()
         {
             int iNext = iVertex + 1;
-            if(iNext >= this.NumUniqueInRing)
+            if (iNext >= this.NumUniqueInRing)
             {
                 return 0;
             }
@@ -447,8 +447,8 @@ namespace Geometry
         }
 
         internal GridVector2[] GetRing(GridPolygon polygon)
-        { 
-            if(this.IsInner)
+        {
+            if (this.IsInner)
             {
                 return polygon.InteriorPolygons[this.iInnerPoly.Value].ExteriorRing;
             }
@@ -460,11 +460,11 @@ namespace Geometry
         {
             if (this.iPoly != B.iPoly)
                 return false;
-            
+
             if (this.IsInner != B.IsInner)
                 return false;
 
-            if(this.IsInner && B.IsInner)
+            if (this.IsInner && B.IsInner)
             {
                 return this.iInnerPoly.Value == B.iInnerPoly.Value;
             }
@@ -480,7 +480,7 @@ namespace Geometry
         /// <param name="poly"></param>
         /// <returns></returns>
         public static bool IsBorderLine(PointIndex A, PointIndex B, GridPolygon poly)
-        { 
+        {
             //TODO: Add unit test
             System.Diagnostics.Debug.Assert(A.iPoly == B.iPoly, "LineIsOnBorder should only called for indicies into the same polygon");
 
@@ -490,7 +490,7 @@ namespace Geometry
                 return false;
             }
 
-            if(A.IsInner)
+            if (A.IsInner)
             {
                 //Check that the indicies are to the same interior polygon
                 if (A.iInnerPoly.Value != B.iInnerPoly.Value)
@@ -532,7 +532,7 @@ namespace Geometry
 
         public override string ToString()
         {
-            if(IsInner)
+            if (IsInner)
                 return string.Format("P:{0} I:{1} iVert:{2}", this.iPoly, this.iInnerPoly, this.iVertex);
             else
                 return string.Format("P:{0} iVert:{1}", this.iPoly, this.iVertex);
@@ -543,9 +543,9 @@ namespace Geometry
             Array.Sort(verts);
             List<PointIndex> listIndex = new List<PointIndex>(verts.Length);
 
-            foreach(var poly in verts.GroupBy(v => v.iPoly))
+            foreach (var poly in verts.GroupBy(v => v.iPoly))
             {
-                foreach(var ring in poly.GroupBy(v => v.iInnerPoly))
+                foreach (var ring in poly.GroupBy(v => v.iInnerPoly))
                 {
                     PointIndex[] ringArray = ring.ToArray();
                     Array.Sort(ringArray);
@@ -586,7 +586,15 @@ namespace Geometry
             return listIndex.ToArray();
         }
 
-        
+        /// <summary>
+        /// Return a copy of this PointIndex with iPoly value changed to point at a different polygon index
+        /// </summary>
+        /// <param name="old"></param>
+        /// <returns></returns>
+        public PointIndex Reindex(int iPoly)
+        {
+            return new PointIndex(iPoly, this.iInnerPoly, this.iVertex, this.NumUniqueInRing);
+        }
     }
 
     public class PolygonVertexEnum : IEnumerator<PointIndex>, IEnumerator, IEnumerable<PointIndex>, IEnumerable
@@ -1551,9 +1559,7 @@ namespace Geometry
 
             //GridLineSegment test_line = test_ray.ToLine(Math.Max(BoundingBox.Width, BoundingBox.Height) * 2);
 
-            //Make a horizontal line
-            GridLine test_line = new GridLine(p, GridVector2.UnitX);
-
+            
             List<GridLineSegment> segmentsToTest;
 
             if(_ExteriorSegments.Length > 32)// || HasInteriorRings)
@@ -1572,6 +1578,9 @@ namespace Geometry
             {
                 segmentsToTest = _ExteriorSegments.ToList();
             }
+
+            //Make a horizontal line
+            GridLine test_line = new GridLine(p, GridVector2.UnitX);
 
             //Test all of the line segments for both interior and exterior polygons
             //return IsPointInsidePolygonByWindingTest(segmentsToTest, test_line); 
