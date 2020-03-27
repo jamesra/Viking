@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using RTree;
+using System.Diagnostics;
 
 namespace Geometry
 {
@@ -1228,6 +1229,30 @@ namespace Geometry
             NonIntersecting.UnionWith(SplitIntersectionLines);
 
             return NonIntersecting;
+        }
+
+
+        /// <summary>
+        /// Add verticies at intersection points for all intersection points
+        /// </summary>
+        /// <param name="Polys"></param>
+        public static void AddCorrespondingVerticies(this IReadOnlyList<GridPolygon> Polys)
+        {
+            List<GridVector2> added_intersections;
+            foreach (var combo in Polys.CombinationPairs())
+            {
+                GridPolygon A = combo.A;
+                GridPolygon B = combo.B;
+                added_intersections = A.AddPointsAtIntersections(B);
+#if DEBUG
+                foreach (GridVector2 p in added_intersections)
+                {
+                    Debug.Assert(A.IsVertex(p));
+                    Debug.Assert(B.IsVertex(p));
+                }
+#endif
+                //B.AddPointsAtIntersections(A);
+            }
         }
     }
 }

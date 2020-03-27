@@ -66,6 +66,8 @@ namespace MonogameTestbed
 
         public List<RegionView> RegionViews = new List<RegionView>();
 
+        public CullMode CullMode = CullMode.CullCounterClockwiseFace;
+
         public int? iShownMesh = null;
         public List<MeshView<VertexPositionColor>> MeshViews = new List<MeshView<VertexPositionColor>>();
         public bool ShowMesh
@@ -136,31 +138,37 @@ namespace MonogameTestbed
 
         public BajajOTVAssignmentView(AnnotationVizLib.MorphologyGraph graph)
         {
-            List<MeshingGroup> MeshingGroups = BajajMeshGenerator.CalculateMeshingGroups(graph);
 
-            Debug.Assert(MeshingGroups.Count == 1, "Test was written expecting a single slice");
+            Trace.WriteLine("Begin Simplification of Polygons");
+            SliceGraph sliceGraph = SliceGraph.Create(graph, 2.0);
+            Trace.WriteLine("End Simplification of Polygons");
 
-            MeshingGroup group = MeshingGroups[0];
+            Debug.Assert(sliceGraph.Nodes.Count == 1, "Test was written expecting a single slice");
 
+            Slice slice = sliceGraph.Nodes.Values.First();
+
+            SliceTopology topology = sliceGraph.GetTopology(slice);
+
+            /*
             List<GridPolygon> _polygons;
             List<bool> IsUpper;
             List<double> _polyZ;
+            */
 
-            Trace.WriteLine("Begin Simplification of Polygons");
-            var SimplerPolygon = BajajMeshGenerator.CreateSimplerPolygonLookup(graph, 2.0);
-            Trace.WriteLine("End Simplification of Polygons");
+            //var SimplerPolygon = BajajMeshGenerator.CreateSimplerPolygonLookup(graph, 2.0);
 
-            MeshingGroup.GeneratePolygonParameters(group, SimplerPolygon, out _polygons, out IsUpper, out _polyZ);
+
+            //MeshingGroup.GeneratePolygonParameters(slice, SimplerPolygon, out _polygons, out IsUpper, out _polyZ);
 
             //MeshingGroup.GeneratePolygonParameters(group, out _polygons, out IsUpper, out _polyZ);
 
-            Polygons = _polygons.ToArray();
-            PolyZ = _polyZ.ToArray();
+            Polygons = topology.Polygons;
+            PolyZ = topology.PolyZ;
 
-            BajajGeneratorMesh.AddCorrespondingVerticies(Polygons);
+            //BajajGeneratorMesh.AddCorrespondingVerticies(Polygons);
 
             //Create our mesh with only the verticies
-            FirstPassTriangulation = new BajajGeneratorMesh(Polygons, PolyZ, IsUpper, group);
+            FirstPassTriangulation = new BajajGeneratorMesh(topology, slice);//Polygons, PolyZ, IsUpper, slice);
 
             GenerateMesh(FirstPassTriangulation);
         }
@@ -254,10 +262,11 @@ namespace MonogameTestbed
             MorphMeshRegionGraph SecondPassRegions = MorphRenderMesh.SecondPassRegionDetection(FirstPassTriangulation, FirstPassIncompleteVerticies);
             RegionViews.Add(CreateRegionPolygonViews(FirstPassTriangulation, SecondPassRegions.Nodes.Keys));
             
-            //SecondPassRegions.MergeAndCloseRegionsPass(FirstPassTriangulation, rTree);
+            SecondPassRegions.MergeAndCloseRegionsPass(FirstPassTriangulation, rTree);
             
             MeshViews.Add(CreateMeshView(FirstPassTriangulation, "Second MergeAndCloseRegionsPass"));
-            
+
+            FirstPassTriangulation.EnsureFacesHaveExternalNormals();
             FirstPassTriangulation.RecalculateNormals();
 
             listLineViews.Add(PolyBranchAssignmentView.UpdateMeshLines(FirstPassTriangulation, "Second MergeAndCloseRegionsPass"));
@@ -312,8 +321,11 @@ namespace MonogameTestbed
             return regionView;
         }
 
-        public static MeshView<VertexPositionColor> CreateMeshView(MorphRenderMesh mesh, string name)
-        {
+        public static MeshView<VertexPositionColor> CreateMeshView(BajajGeneratorMesh mesh, string name)
+        { 
+            mesh.EnsureFacesHaveExternalNormals();
+            mesh.RecalculateNormals();
+
             MeshModel<VertexPositionColor> meshViewModel = CreateFaceView(mesh);
             var meshView = new MeshView<VertexPositionColor>();
             meshView.Name = name;
@@ -404,11 +416,12 @@ namespace MonogameTestbed
         {
             if (mesh.Faces == null)
                 return null;
+
               
             MeshModel<VertexPositionColor> model = new MeshModel<VertexPositionColor>();
 
-            double MinZ = mesh.BoundingBox.minVals[2];
-            double MaxZ = mesh.BoundingBox.maxVals[2];
+            //double MinZ = mesh.BoundingBox.minVals[2];
+            //double MaxZ = mesh.BoundingBox.maxVals[2];
 
             model.Verticies = mesh.Verticies.Select((v, i) => new VertexPositionColor(v.Position.ToXNAVector3(), Color.Orange.SetAlpha(0.5f) /*ColorExtensions.CreateGrayscale((v.Position.Z - MinZ) / (MaxZ - MinZ))*/)).ToArray();
 
@@ -688,7 +701,7 @@ namespace MonogameTestbed
 
             if (iShownMesh.HasValue)
             {
-                MeshViews[iShownMesh.Value].Draw(window.GraphicsDevice, scene, CullMode.None);
+                MeshViews[iShownMesh.Value].Draw(window.GraphicsDevice, scene, CullMode);
 
                 ViewLabels.AppendLine(MeshViews[iShownMesh.Value].Name);
             }
@@ -945,8 +958,8 @@ namespace MonogameTestbed
 
             /////////////
             ///This is the major test of mesh generation that covers as many cases as I could think of
-            //this.Graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromODataLocationIDs(NightmareTroubleIDS, DataSource.EndpointMap[ENDPOINT.TEST]);
-            Graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromODataLocationIDs(DelaunayTest15, DataSource.EndpointMap[ENDPOINT.RPC1]);
+            this.Graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromODataLocationIDs(NightmareTroubleIDS, DataSource.EndpointMap[ENDPOINT.TEST]);
+            //Graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromODataLocationIDs(DelaunayTest15, DataSource.EndpointMap[ENDPOINT.RPC1]);
             //////////////
 
             //BajajMeshGenerator.ConvertToMeshGraph(graph);
@@ -1062,6 +1075,11 @@ namespace MonogameTestbed
             if(Gamepad.RightStick_Clicked)
             {
                 wrapView.VertexLabelType = wrapView.VertexLabelType ^ IndexLabelType.POSITION;
+            }
+
+            if(Gamepad.LeftStick_Clicked)
+            {
+                wrapView.CullMode = wrapView.CullMode == CullMode.None ? CullMode.CullCounterClockwiseFace : CullMode.None;
             }
 
             if(Gamepad.LeftShoulder_Clicked)

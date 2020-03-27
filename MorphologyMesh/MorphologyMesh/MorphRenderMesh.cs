@@ -76,47 +76,33 @@ namespace MorphologyMesh
     /// </summary>
     public class MorphRenderMesh : Mesh3D<MorphMeshVertex>
     {
-        
+        public virtual GridPolygon[] Polygons { get; }
 
-        public GridPolygon[] Polygons { get; private set; }
+        public virtual double[] PolyZ { get; }
 
-        public double[] PolyZ { get; private set; }
-        
+        internal virtual bool[] IsUpperPolygon { get; }
+
         private Dictionary<PointIndex, long> PolyIndexToVertex = new Dictionary<PointIndex, long>();
-
-        /// <summary>
-        /// Maps a Z level to a list of GridPolygons appearing at that Z level, keyed by index value in the Mesh's Polygons attribute.
-        /// </summary>
-        private SortedList<double, SortedList<int, GridPolygon>> PolygonsByZ = new SortedList<double, SortedList<int, GridPolygon>>();
-         
+    
         /// <summary>
         /// Generates a MorphRenderMesh for a set of polygons and ZLevels.
         /// </summary>
         /// <param name="polygons"></param>
         /// <param name="ZLevels"></param>
         /// <param name="IsUpperPolygon">True indicates the polygon</param>
-        public MorphRenderMesh(IReadOnlyList<GridPolygon> polygons, IReadOnlyList<double> ZLevels)
+        public MorphRenderMesh(IReadOnlyList<GridPolygon> polygons, IReadOnlyList<double> ZLevels, IReadOnlyList<bool> isUpperPolygon)
         {
             //TODO: I don't add corresponding verticies at overlap points due to how the original MonogameTestbed was written, but I probably should. 
             Debug.Assert(polygons.Count == ZLevels.Count);
             Polygons = polygons.ToArray();
             PolyZ = ZLevels.ToArray();
+            IsUpperPolygon = IsUpperPolygon;
             this.CreateOffsetEdge = MorphMeshEdge.Duplicate;
             this.CreateOffsetFace = MorphMeshFace.CreateOffsetCopy;
 
             this.CreateFace = MorphMeshFace.Create;
             this.CreateEdge = MorphMeshEdge.Create;
-
-            foreach (double Z in PolyZ.Distinct())
-            {
-                PolygonsByZ.Add(Z, new SortedList<int,GridPolygon>());
-            }
-
-            for(int i = 0; i < PolyZ.Length; i++)
-            {
-                PolygonsByZ[PolyZ[i]].Add(i, Polygons[i]);
-            }
-
+            
             //Now that we have polygons organized by Z-level, add any corresponding verticies for polygons on adjacent Z levels.
             //AddCorrespondingVerticies(PolygonsByZ);
 
@@ -152,36 +138,6 @@ namespace MorphologyMesh
                 }
             }
         }
-
-        /*public static void AddCorrespondingVerticies(SortedList<double, SortedList<int, GridPolygon>> PolygonsByZ)
-        {
-            double[] ZLevels = PolygonsByZ.Keys.ToArray();
-            foreach (var combo in ZLevels.CombinationPairs())
-            {
-                double Z_A = combo.A;
-                double Z_B = combo.B;
-
-                SortedList<int, GridPolygon> APolys = PolygonsByZ[Z_A];
-                SortedList<int, GridPolygon> BPolys = PolygonsByZ[Z_B];
-
-                List<GridVector2> added_intersections = new List<GridVector2>();
-                foreach(GridPolygon A in APolys.Values)
-                {
-                    foreach(GridPolygon B in BPolys.Values)
-                    {
-                        A.AddPointsAtIntersections(B);
-# if DEBUG
-                        foreach(GridVector2 p in added_intersections)
-                        {
-                            Debug.Assert(A.IsVertex(p));
-                            Debug.Assert(B.IsVertex(p));
-                        }
-#endif
-                        //B.AddPointsAtIntersections(A);
-                    }
-                }
-            }
-        }*/
 
         /// <summary>
         /// Creates a mesh without faces.  The mesh contains a vertex for every polygon vertex.  It also contains contour edges and corresponding edges for polygon intersection points
@@ -373,7 +329,18 @@ namespace MorphologyMesh
         {
             return (MorphMeshEdge)Edges[key];
         }
-        
+
+        public IEnumerable<MorphMeshFace> MorphFaces
+        {
+            get
+            {
+                foreach (IFace edge in this.Faces)
+                {
+                    yield return (MorphMeshFace)edge;
+                }
+            }
+        }
+
         public IEnumerable<MorphMeshEdge> MorphEdges
         {
             get
@@ -404,7 +371,7 @@ namespace MorphologyMesh
         { 
             GridPolygon[] Polygons = this.Polygons;
 
-            foreach (MorphMeshEdge edge in this.MorphEdges.Where(e => e.Type == EdgeType.UNKNOWN))
+            foreach (MorphMeshEdge edge in this.MorphEdges.Where(e => e.Type == EdgeType.UNKNOWN).ToArray())
             {
                 //if (edge.Type != EdgeType.UNKNOWN)
                     //continue;
@@ -424,7 +391,19 @@ namespace MorphologyMesh
             return;
         }
 
-         
+
+        /// <summary>
+        /// Remove old face from mesh, Reverse the order of verticies to make a new face. Add new face to mesh. Returns the new face.
+        /// </summary>
+        public MorphMeshFace ReverseFace(IFace f)
+        {
+            this.RemoveFace(f);
+            MorphMeshFace newFace = new MorphMeshFace(f.iVerts.Reverse());
+            this.AddFace(newFace);
+            return newFace;
+        }
+
+
         /// <summary>
         /// A helper function that ensures all faces have the same Z level
         /// </summary>
@@ -571,7 +550,7 @@ namespace MorphologyMesh
                 GridVector3[] region_border_points = Face.Select(iVert => mesh[iVert].Position).ToArray();
 
                 //Dictionary<GridVector2, long> PointToMeshIndex = new Dictionary<GridVector2, long>();
-                Dictionary<GridVector2, int> PointToMeshIndex = Face.ToDictionary<int, GridVector2>(iVert => mesh[iVert].Position.XY());
+                //Dictionary<GridVector2, int> PointToMeshIndex = Face.ToDictionary<int, GridVector2>(iVert => mesh[iVert].Position.XY());
 
                 //If there are any duplicate points that indicates a corresponding contour was involved.  In this case we cut the polygon into two halves and triangulate those
                 int[] countDuplicatesInstances = region_border_points.Select(v => region_border_points.Count(v2 => v2.XY() == v.XY())).ToArray();
@@ -580,22 +559,22 @@ namespace MorphologyMesh
                 if (countDuplicatesInstances.Max() > 1)
                 {
                     //Break the corresponding verticies into sub-polygons and build triangles for each
-
+                    throw new NotImplementedException("Corresponding points in region");
                 }
-
+                
                 //Create a polygon for the region
                 GridPolygon regionBorder = new GridPolygon(Face.EnsureClosedRing().Select(iVert => mesh[iVert].Position.XY()).ToArray());
+                PolygonVertexEnum vertEnumerator = new PolygonVertexEnum(regionBorder);
 
+                var IndexToVertex = vertEnumerator.ToDictionary(pIndex => pIndex, pIndex => pIndex.iVertex); //Converts a PointIndex to a Mesh Index
+                
                 //string json = regionBorder.ToJSON();
 
                 //GridPolygon loadedFromJSON = GeometryJSONExtensions.PolygonFromJSON(json);
                 //Triangulate the region
-                TriangleNet.Meshing.IMesh regionMesh = regionBorder.Triangulate(UseSteiner: false);
-
-                int[] indicies = regionMesh.IndiciesForPointsXY(regionBorder.ExteriorRing);
-
-                List<GridTriangle> listTriangles = regionMesh.ToTriangles();
-                List<MorphMeshFace> listRegionFaces = new List<MorphMeshFace>(listTriangles.Count);
+                var regionMesh = regionBorder.Triangulate(iPoly: 0);
+                                 
+                List<MorphMeshFace> listRegionFaces = new List<MorphMeshFace>(regionMesh.Faces.Count);
 
                 //Experimental: Handle the case where we had to add new points to the mesh.  It would be better if these points weren't added at all...
 
@@ -606,12 +585,12 @@ namespace MorphologyMesh
 
                 //List<int[]> listXYPointIndicies = listTriangles.Select(t => regionMesh.IndiciesForPointsXY(t.Points)).ToList();
                 //List<int[]> listMeshFaces = listXYPointIndicies.Select(iPoints => iPoints.Select(i => Face[i]).ToArray()).ToList();
-
+                /*
                 List<GridLineSegment> lines = regionMesh.ToLines();
 
                 List<int[]> listLineIndicies = lines.Select(l => regionMesh.IndiciesForPointsXY(new GridVector2[] { l.A, l.B })).ToList();
-                 
-                foreach (GridTriangle tri in listTriangles)
+                 */
+                foreach (Face f in regionMesh.Faces)
                 {
                     //if (false == tri.Points.All(p => PointToMeshIndex.ContainsKey(p)))
                     //    continue; 
@@ -620,7 +599,8 @@ namespace MorphologyMesh
                     int[] iMeshVerts;
                     //try
                     //{
-                        iMeshVerts = tri.Points.Select(p => PointToMeshIndex[p]).ToArray();
+                    //iMeshVerts = f.iVerts.Select(v => IndexToVertex[regionMesh[v].Data]).ToArray();
+                    iMeshVerts = f.iVerts.Select(v => Face[v]).ToArray();
                     //}
                     //catch(System.Collections.Generic.KeyNotFoundException e)
                     //{

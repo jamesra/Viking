@@ -11,7 +11,15 @@ namespace ColladaIO
 {
     class MeshSerializer
     {
-        public static geometry_type CreateGeometry(IMesh3D<IVertex3D> mesh, string name, string MaterialName)
+        /// <summary>
+        /// Generates geometry for mesh.  All meshes are translated so the center of the bounding box is at 0,0,0 before generating geometry.
+        /// Callers should translate geometry models as needed in the Collada Scene
+        /// </summary>
+        /// <param name="mesh"></param>
+        /// <param name="name"></param>
+        /// <param name="MaterialName"></param>
+        /// <returns></returns>
+        public static geometry_type CreateGeometry(IReadOnlyMesh3D<IVertex3D> mesh, string name, string MaterialName)
         {
             geometry_type geometry = new geometry_type();
             geometry.id = name + "-geometry";
@@ -26,12 +34,14 @@ namespace ColladaIO
             return geometry;
         }
 
-        private static mesh_type CreateMesh(IMesh3D<IVertex3D> mesh, string id, string MaterialName)
+        private static mesh_type CreateMesh(IReadOnlyMesh3D<IVertex3D> mesh, string id, string MaterialName)
         {
             mesh_type dae_mesh = new mesh_type();
 
+            GridVector3 center = -mesh.BoundingBox.CenterPoint;
+             
             List<source_type> listSources = new List<ColladaIO.source_type>(2);
-            listSources.Add(CreateSource(mesh.Verticies.Select(v => v.Position).ToArray(), id, "positions"));
+            listSources.Add(CreateSource(mesh.Verticies.Select(v => (v.Position + center) * 0.001).ToArray(), id, "positions"));
             listSources.Add(CreateSource(mesh.Verticies.Select(v => v.Normal).ToArray(), id, "normals"));
 
             dae_mesh.source = listSources.ToArray();
@@ -62,7 +72,7 @@ namespace ColladaIO
 
             float_array.Text = verticies.SelectMany(v => v.coords).ToArray();
 
-            source.Item = float_array; 
+            source.Item = float_array;
             source.technique_common = CreateStandardTechniqueForXYZ(verticies.LongLength, float_array.id);
 
             return source; 

@@ -84,6 +84,7 @@ namespace GeometryTests.Algorithms
             configuration.MaxNbOfTest = 10000;
             configuration.QuietOnSuccess = false;
             configuration.StartSize = 0;
+            configuration.Replay = Global.StdGenSeed;
             
             //Prop.ForAll<TriangulationMesh<Vertex2D>>((mesh) => IsDelaunay(mesh)).Check(configuration);
             Prop.ForAll<GridVector2[]>((points) => IsDelaunay(GenericDelaunayMeshGenerator2D<IVertex2D>.TriangulateToMesh(points.Select(p => new Vertex2D(p)).ToArray()))).Check(configuration);
@@ -492,11 +493,18 @@ namespace GeometryTests.Algorithms
 
                 var PosToVert = mesh.Verticies.ToDictionary(v => v.Position);
                 List<IEdgeKey> expectedConstrainedEdges = new List<IEdgeKey>();
+
+                //This test has false negative failures because when a corresponding edge perfectly intersects a vertex it is broken
+                //into two halves and the test does not capture that event.
+
                 foreach (GridLineSegment s in p.AllSegments)
                 {
                     EdgeKey key = new EdgeKey(PosToVert[s.A].Index, PosToVert[s.B].Index);
                     expectedConstrainedEdges.Add(key);
+
+                    
                 }
+
 
                 return ValidatePolygonTriangulation(p, mesh, expectedConstrainedEdges);
                 /*

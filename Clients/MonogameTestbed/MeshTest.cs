@@ -190,9 +190,12 @@ namespace MonogameTestbed
 
             //meshViewWithLighting.models.Add(BuildSmoothMeshTwoPolygons(GridVector3.Zero));
             //meshViewWithLighting.models.Add(BuildPolygonBranchCenter(GridVector3.Zero));
-            meshViewWithLighting.models.Add(BuildSmoothMeshFromSharedModel(GridVector3.Zero));
 
-            labelCamera = new LabelView("", new GridVector2(-70, 0));
+            meshView.models.Add(BuildSmoothMeshFromSharedModel_ColorOnly(new GridVector3(-25, 0, 0)));
+
+            meshViewWithLighting.models.Add(BuildSmoothMeshFromSharedModel(new GridVector3(0, 0, 0)));
+            
+            labelCamera = new LabelView("", new GridVector2(39950, 0));
         }
 
         public void UnloadContent(MonoTestbed window)
@@ -231,6 +234,16 @@ namespace MonogameTestbed
             Mesh3D<IVertex3D<ulong>> mesh = SmoothMeshGenerator.Generate(graph);
             List<MeshModel<VertexPositionNormalColor>> listMeshModels = new List<MeshModel<VertexPositionNormalColor>>();
             return mesh.ToVertexPositionNormalColorMeshModel(Color.Yellow);
+        }
+
+        private MeshModel<VertexPositionColor> BuildSmoothMeshFromSharedModel_ColorOnly(GridVector3 translate)
+        {
+            //Create three simple polygons and add them to the graph
+            MeshGraph graph = StandardModels.BuildMeshGraph(StandardModels.SharedModelPolygons, StandardModels.SharedModelZ, StandardModels.SharedModelEdges, 5.0, translate);
+
+            Mesh3D<IVertex3D<ulong>> mesh = SmoothMeshGenerator.Generate(graph);
+            List<MeshModel<VertexPositionNormalColor>> listMeshModels = new List<MeshModel<VertexPositionNormalColor>>();
+            return mesh.ToVertexPositionColorMeshModel(Color.Green);
         }
 
         private MeshModel<VertexPositionNormalColor> BuildSmoothMeshFromSharedModel(GridVector3 translate)
@@ -491,14 +504,19 @@ namespace MonogameTestbed
             dstate.DepthBufferEnable = true;
             dstate.StencilEnable = false;
             dstate.DepthBufferWriteEnable = true;
-            dstate.DepthBufferFunction = CompareFunction.LessEqual; 
-
+            dstate.DepthBufferFunction = CompareFunction.LessEqual;
+            
+            /*
+            RasterizerState rState = new RasterizerState();
+            rState.CullMode = CullMode.CullClockwiseFace;
+            rState.DepthClipEnable = true;
+            rState.FillMode = FillMode.Solid;
+            */
             window.GraphicsDevice.DepthStencilState = dstate;
             //window.GraphicsDevice.BlendState = BlendState.Opaque;
-            meshView.Draw(window.GraphicsDevice, this.Scene);
-            meshViewWithLighting.Draw(window.GraphicsDevice, this.Scene);
-
-            
+            meshView.Draw(window.GraphicsDevice, this.Scene, CullMode.CullCounterClockwiseFace);
+            meshViewWithLighting.Draw(window.GraphicsDevice, this.Scene, CullMode.CullCounterClockwiseFace);
+             
             window.spriteBatch.Begin();
             labelCamera.Draw(window.spriteBatch, window.fontArial, window.Scene);
             window.spriteBatch.End(); 

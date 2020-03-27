@@ -32,7 +32,7 @@ namespace Geometry.Meshing
     public abstract class MeshBase3D<VERTEX> : MeshBase<VERTEX> , IMesh3D<VERTEX>
         where VERTEX : IVertex3D
     { 
-        public GridBox BoundingBox = null;
+        public GridBox BoundingBox { get; private set; }
 
         public MeshBase3D()
         {
@@ -235,10 +235,19 @@ namespace Geometry.Meshing
             }
         }
 
+        /// <summary>
+        /// Returns the normal vector for a triangular face
+        /// </summary>
+        /// <param name="f"></param>
+        /// <returns></returns>
         public GridVector3 Normal(IFace f)
         {
+            if (f.IsTriangle() == false)
+                throw new NotImplementedException("Normal calculation for non-triangular faces not possible.");
+
             VERTEX[] verticies = this[f.iVerts].ToArray();
             GridVector3 normal = GridVector3.Cross(verticies[0].Position, verticies[1].Position, verticies[2].Position);
+            normal.Normalize();
             return normal;
         }
 
@@ -267,17 +276,32 @@ namespace Geometry.Meshing
         }
 
         /// <summary>
+        /// This cache needs more careful analysis in the profiler
+        /// </summary>
+        Dictionary<IFace, GridVector3> face_normals_cache = new Dictionary<Meshing.IFace, Geometry.GridVector3>();
+
+        /// <summary>
         /// Recalculate normals based on the faces touching each vertex
         /// </summary>
         public void RecalculateNormals()
         {
             //Calculate normals for all faces
-            Dictionary<IFace, GridVector3> normals = new Dictionary<Meshing.IFace, Geometry.GridVector3>(this.Faces.Count);
 
-            foreach(IFace f in this.Faces)
+            if (face_normals_cache.Count == 0)
             {
-                GridVector3 normal = Normal(f);
-                normals.Add(f, normal);
+                foreach (IFace f in this.Faces)
+                {
+                    GridVector3 normal = Normal(f);
+                    face_normals_cache.Add(f, normal);
+                }
+            }
+            else
+            {
+                foreach (IFace f in this.Faces.Where(face => face_normals_cache.ContainsKey(face) == false))
+                {
+                    GridVector3 normal = Normal(f);
+                    face_normals_cache.Add(f, normal);
+                }
             }
 
             /*
@@ -294,7 +318,7 @@ namespace Geometry.Meshing
             {
                 SortedSet<IFace> vertFaces = new SortedSet<Meshing.IFace>();
                 IVertex3D v = this[i];
-                
+                  
                 foreach(IEdgeKey ek in v.Edges)
                 {
                     vertFaces.UnionWith(Edges[ek].Faces);
@@ -303,12 +327,65 @@ namespace Geometry.Meshing
                 GridVector3 avgNormal = GridVector3.Zero;
                 foreach(IFace f in vertFaces)
                 {
-                    avgNormal += normals[f];
+                    avgNormal += face_normals_cache[f];
                 }
 
                 avgNormal.Normalize();
 
                 v.Normal = avgNormal;                
+            }
+        }
+
+        /// <summary>
+        /// Recalculate normals based on the faces touching each vertex
+        /// </summary>
+        public void RecalculateNormals(IEnumerable<int> verticies)
+        {
+            //Calculate normals for all faces
+            //Dictionary<IFace, GridVector3> normals = new Dictionary<Meshing.IFace, Geometry.GridVector3>(this.Faces.Count);
+            /*
+            foreach (IFace f in this.Faces)
+            {
+                GridVector3 normal = Normal(f);
+                normals.Add(f, normal);
+            }
+            */
+            /*
+             * Profiling showed this implementation to be much slower
+            for(int i = 0; i < Faces.Count; i++)
+            {
+                Face f = this.Faces.ElementAt(i);
+                GridVector3 normal = Normal(f);
+                normals.Add(f, normal);
+            }
+            */
+
+            for (int i = 0; i < _Verticies.Count; i++)
+            {
+                SortedSet<IFace> vertFaces = new SortedSet<Meshing.IFace>();
+                IVertex3D v = this[i];
+
+                foreach (IEdgeKey ek in v.Edges)
+                {
+                    vertFaces.UnionWith(Edges[ek].Faces);
+                }
+                
+                GridVector3 avgNormal = GridVector3.Zero;
+                foreach (IFace f in vertFaces)
+                {
+                    bool face_has_normal = face_normals_cache.TryGetValue(f, out GridVector3 normal);
+                    if(face_has_normal == false)
+                    {
+                        normal = Normal(f);
+                        face_normals_cache.Add(f, normal); //Populate the cache
+                    }
+
+                    avgNormal += normal;
+                }
+
+                avgNormal.Normalize();
+
+                v.Normal = avgNormal;
             }
         }
 

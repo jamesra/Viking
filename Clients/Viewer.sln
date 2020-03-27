@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 14
-VisualStudioVersion = 14.0.25420.1
+# Visual Studio 15
+VisualStudioVersion = 15.0.28307.271
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BifrostWpfControlLibrary", "Bifrost\BifrostWpfControlLibrary\BifrostWpfControlLibrary.csproj", "{1E17C1FD-2DCA-4554-982D-D4750ACB6E99}"
 EndProject
@@ -91,9 +91,6 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MIConvexHullExtensions", "..\MIConvexHullExtensions\MIConvexHullExtensions.csproj", "{F89734AB-4604-45FA-B17E-B6D040FA51B6}"
 EndProject
 Global
-	GlobalSection(Performance) = preSolution
-		HasPerformanceSessions = true
-	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Debug|x64 = Debug|x64
@@ -600,6 +597,7 @@ Global
 		{E46EB649-6221-482F-9FDF-1042CDD0AA5A}.Debug|x86.Build.0 = Debug|x86
 		{E46EB649-6221-482F-9FDF-1042CDD0AA5A}.Release|Any CPU.ActiveCfg = Release|x86
 		{E46EB649-6221-482F-9FDF-1042CDD0AA5A}.Release|x64.ActiveCfg = Release|x86
+		{E46EB649-6221-482F-9FDF-1042CDD0AA5A}.Release|x64.Build.0 = Release|x86
 		{E46EB649-6221-482F-9FDF-1042CDD0AA5A}.Release|x86.ActiveCfg = Release|x86
 		{E46EB649-6221-482F-9FDF-1042CDD0AA5A}.Release|x86.Build.0 = Release|x86
 		{E46EB649-6221-482F-9FDF-1042CDD0AA5A}.ReleaseWithSymbols|Any CPU.ActiveCfg = Release|x86
@@ -809,5 +807,11 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {F9607612-2CF2-4BF6-BA54-42F646BAA65D}
+	EndGlobalSection
+	GlobalSection(Performance) = preSolution
+		HasPerformanceSessions = true
 	EndGlobalSection
 EndGlobal

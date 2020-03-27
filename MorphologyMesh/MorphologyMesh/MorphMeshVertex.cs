@@ -70,7 +70,7 @@ namespace MorphologyMesh
             MedialAxisIndex = medialIndex;
         }
 
-        public static IVertex Duplicate(IVertex3D old)
+        public static MorphMeshVertex Duplicate(MorphMeshVertex old)
         {
             MorphMeshVertex vert = old as MorphMeshVertex;
             if (vert != null)
@@ -86,7 +86,34 @@ namespace MorphologyMesh
                 }
             }
 
-            return new Vertex3D(old.Position, old.Normal);
+            throw new ArgumentException("Vertex must be not null");
+            //return new Vertex3D(old.Position, old.Normal);
+        }
+
+        /// <summary>
+        /// Return a copy of this vertex with a PointIndex pointing at a different polygon index, if applicable
+        /// </summary>
+        /// <param name="old"></param>
+        /// <returns></returns>
+        public static MorphMeshVertex Reindex(MorphMeshVertex old, int iPoly)
+        {
+            MorphMeshVertex vert = old as MorphMeshVertex;
+            if (vert != null)
+            {
+                switch (vert.Type)
+                {
+                    case VertexOrigin.MEDIALAXIS:
+                        return new MorphMeshVertex(vert.MedialAxisIndex.Value, vert.Position, vert.Normal);
+                    case VertexOrigin.CONTOUR:
+                        return new MorphMeshVertex(vert.PolyIndex.Value.Reindex(iPoly), vert.Position, vert.Normal);
+                    default:
+                        throw new InvalidOperationException("Vertex must be either part of a contour or on a medial axis");
+                }
+            }
+
+            throw new ArgumentException("Vertex must be not null");
+
+            //return new Vertex3D(old.Position, old.Normal);
         }
 
         /// <summary>

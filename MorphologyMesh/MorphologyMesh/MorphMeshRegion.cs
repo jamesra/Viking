@@ -28,9 +28,12 @@ namespace MorphologyMesh
 
         public MorphMeshRegion(MorphRenderMesh mesh, IEnumerable<MorphMeshFace> faces, RegionType type)
         {
+
             ParentMesh = mesh;
             var f = new SortedSet<MorphMeshFace>(faces);
             _Faces = f.ToImmutableSortedSet();
+
+            Debug.Assert(_Faces.IsEmpty == false, "Region should not have zero faces otherwise it is not really a region is it?");
             Type = type;
         }
 

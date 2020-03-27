@@ -585,7 +585,9 @@ namespace Geometry
             //Create the base LR edge
 
             int iLoopCount = 0;
-            SortedSet<int> RejectedCandidates = new SortedSet<int>();
+
+            //This dictionary prevents rare endless loops in conditions where we have colinear points in one or both sets.
+            Dictionary<int, SortedSet<int>> RejectedBaselinePairs = new Dictionary<int, SortedSet<int>>();
 
             while (true)
             {
@@ -613,7 +615,9 @@ namespace Geometry
                 LR_baseline_candidate = mesh.ToGridLineSegment(L.Index, R.Index);
                 RL_baseline_candidate = mesh.ToGridLineSegment(R.Index, L.Index);
 
-                int[] L_Origin_Candidates = mesh[L.Index].Edges.Select(e => e.OppositeEnd(L.Index)).Where(id => RejectedCandidates.Contains(id) == false).ToArray();
+                SortedSet<int> L_Rejected_Candidates = RejectedBaselinePairs.ContainsKey(R.Index) ? RejectedBaselinePairs[R.Index] : new SortedSet<int>();
+
+                int[] L_Origin_Candidates = mesh[L.Index].Edges.Select(e => e.OppositeEnd(L.Index)).Where(id => L_Rejected_Candidates.Contains(id) == false).ToArray();
                 //int[] L_Origin_Candidates = mesh[L.Index].Edges.Select(e => e.OppositeEnd(L.Index)).ToArray();
                 int[] L_Origin_Candidates_IsLeft = L_Origin_Candidates.Select(iVert => LR_baseline_candidate.IsLeft(mesh[iVert].Position)).ToArray();
                 
@@ -645,7 +649,7 @@ namespace Geometry
 #if TRACEDELAUNAY
                             Trace.WriteLine(string.Format("Reject Left Baseline: {0}-{1} for {2}", L.Index, R.Index, L_Candidate));
 #endif
-                            RejectedCandidates.Add(L.Index);
+                            RejectedBaselinePairs.AddToSet(R.Index, L.Index); //Record that this baseline pairing does not work so we don't test it again
                             L = mesh[L_Candidate];
                             NewCandidateFound = true;
 
@@ -658,6 +662,8 @@ namespace Geometry
 #if TRACEDELAUNAY
                         Trace.WriteLine(string.Format("Reject Left Baseline: {0}-{1} for {2}-{1}", L.Index, R.Index, L_Candidate));
 #endif
+                        RejectedBaselinePairs.AddToSet(R.Index, L.Index); //Record that this baseline pairing does not work so we don't test it again
+
                         L = mesh[L_Candidate];
                         NewCandidateFound = true;
                         break;
@@ -668,8 +674,11 @@ namespace Geometry
                 if (NewCandidateFound)
                     continue;
 
+                
+                SortedSet<int> R_Rejected_Candidates = RejectedBaselinePairs.ContainsKey(L.Index) ? RejectedBaselinePairs[L.Index] : new SortedSet<int>();
+
                 //Reverse the IsLeft result for the Upper->Lower line
-                int[] R_Origin_Candidates = mesh[R.Index].Edges.Select(e => e.OppositeEnd(R.Index)).Where(id => RejectedCandidates.Contains(id) == false).ToArray();
+                int[] R_Origin_Candidates = mesh[R.Index].Edges.Select(e => e.OppositeEnd(R.Index)).Where(id => R_Rejected_Candidates.Contains(id) == false).ToArray();
                 //int[] R_Origin_Candidates = mesh[R.Index].Edges.Select(e => e.OppositeEnd(R.Index)).ToArray();
                 int[] R_Origin_Candidates_IsLeft = R_Origin_Candidates.Select(iVert => LR_baseline_candidate.IsLeft(mesh[iVert].Position)).ToArray();
 
@@ -687,7 +696,7 @@ namespace Geometry
 #if TRACEDELAUNAY
                             Trace.WriteLine(string.Format("Reject Right Baseline: {0}-{1} for {2}", L.Index, R.Index, R_Candidate));
 #endif
-                            RejectedCandidates.Add(R.Index);
+                            RejectedBaselinePairs.AddToSet(L.Index, R.Index); //Record that this baseline pairing does not work so we don't test it again
                             R = mesh[R_Candidate];
                             NewCandidateFound = true;
                             break;
@@ -699,6 +708,8 @@ namespace Geometry
 #if TRACEDELAUNAY
                         Trace.WriteLine(string.Format("Reject Right Baseline: {0}-{1} for {0}-{2}", L.Index, R.Index, R_Candidate));
 #endif
+                        RejectedBaselinePairs.AddToSet(L.Index, R.Index); //Record that this baseline pairing does not work so we don't test it again
+
                         R = mesh[R_Candidate];
                         NewCandidateFound = true;
                         break;

@@ -40,6 +40,7 @@ namespace VikingXNAGraphics
                 RasterizerState rstate = new RasterizerState();
                 rstate.CullMode = cullmode;
                 rstate.FillMode = FillMode.WireFrame;
+                rstate.DepthClipEnable = true;
                 device.RasterizerState = rstate;
             }
             else
@@ -47,18 +48,29 @@ namespace VikingXNAGraphics
                 RasterizerState rstate = new RasterizerState();
                 rstate.CullMode = cullmode;
                 rstate.FillMode = FillMode.Solid;
+                rstate.DepthClipEnable = true;
                 device.RasterizerState = rstate;
+
             }
 
             effect.SetScene(scene);
             effect.AmbientLightColor = Color.White.ToVector3();
-            effect.VertexColorEnabled = true;
+            effect.TextureEnabled = false;
+            effect.Alpha = 1f;
+            effect.DiffuseColor = Color.Wheat.ToVector3();
+
             //effect.CurrentTechnique = effect.Techniques[0];
 
             foreach (MeshModel<VERTEXTYPE> model in models)
             {
                 if (model == null)
-                    continue; 
+                    continue;
+
+                if (model.Edges == null)
+                    continue;
+
+                if (model.Verticies == null)
+                    continue;
 
                 effect.World = model.ModelMatrix;
                 if (model.Edges.Length == 0)
@@ -71,8 +83,10 @@ namespace VikingXNAGraphics
                 else
                 {
                     effect.LightingEnabled = false; 
-                } 
+                }
 
+                effect.VertexColorEnabled = VertexHasColor(model.Verticies);
+                
                 foreach (EffectPass pass in effect.CurrentTechnique.Passes)
                 {
                     pass.Apply();
@@ -90,6 +104,16 @@ namespace VikingXNAGraphics
             VertexElement[] elements = verticies[0].VertexDeclaration.GetVertexElements();
 
             return elements.Any(e => e.VertexElementUsage == VertexElementUsage.Normal);
+        }
+
+        public static bool VertexHasColor(VERTEXTYPE[] verticies)
+        {
+            if (verticies.Length == 0)
+                return false;
+
+            VertexElement[] elements = verticies[0].VertexDeclaration.GetVertexElements();
+
+            return elements.Any(e => e.VertexElementUsage == VertexElementUsage.Color);
         }
 
         public static void Draw(GraphicsDevice device, VikingXNA.Scene scene, ICollection<MeshView<VERTEXTYPE>> meshViews)

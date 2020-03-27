@@ -27,7 +27,7 @@ namespace MorphologyMesh
     /// Represents a quad tree for points in the above or below shape set for a mesh group
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    public struct MeshGroupQuadTrees<T>
+    public struct SliceTopologyQuadTrees<T>
     {
         public QuadTree<T> Above;
         public QuadTree<T> Below;
@@ -35,7 +35,7 @@ namespace MorphologyMesh
         public ImmutableArray<int> UpperPolyIndicies;
         public ImmutableArray<int> LowerPolyIndicies;
 
-        public MeshGroupQuadTrees(QuadTree<T> aboveQuad, QuadTree<T> belowQuad, IEnumerable<int> upperPolyIndicies, IEnumerable<int> lowerPolyIndicies)
+        public SliceTopologyQuadTrees(QuadTree<T> aboveQuad, QuadTree<T> belowQuad, IEnumerable<int> upperPolyIndicies, IEnumerable<int> lowerPolyIndicies)
         {
             Above = aboveQuad;
             Below = belowQuad;
@@ -44,7 +44,7 @@ namespace MorphologyMesh
             LowerPolyIndicies = lowerPolyIndicies.ToImmutableArray();
         }
 
-        public MeshGroupQuadTrees(QuadTree<T> aboveQuad, QuadTree<T> belowQuad, ImmutableArray<int> upperPolyIndicies, ImmutableArray<int> lowerPolyIndicies)
+        public SliceTopologyQuadTrees(QuadTree<T> aboveQuad, QuadTree<T> belowQuad, ImmutableArray<int> upperPolyIndicies, ImmutableArray<int> lowerPolyIndicies)
         {
             Above = aboveQuad;
             Below = belowQuad;
@@ -98,163 +98,13 @@ namespace MorphologyMesh
         Distance = 1, //Add chords shortest to longest
         Orientation = 2, //Add chords with the closest orientation of contours first
     }
-
-    /// <summary>
-    /// This represents a group of connected nodes that need to be meshed together as a single group.  They can 
-    /// span more than two Z levels depending on how annotation occurred but must still branch correctly.  For the 
-    /// meshing we simplify this to the set of annotations above and set of annotations below.
-    /// 
-    /// A mesh is then generated for the group, and then those meshes can be merged to make a single mesh for an entire structure.
-    /// </summary>
-    [Serializable]
-    public class MeshingGroup
-    {
-        MorphologyGraph Graph;
-        /// <summary>
-        /// Shapes on the top of our cross section
-        /// </summary>
-        public SortedSet<ulong> NodesAbove;
-
-        /// <summary>
-        /// Shapes on the bottom of our cross section
-        /// </summary>
-        public SortedSet<ulong> NodesBelow;
-
-
-        /// <summary>
-        /// The set of edges connecting nodes.  These edges can be used to give hints regarding which nodes can connect
-        /// </summary>
-        public SortedSet<MorphologyEdge> Edges; 
-
-        public MeshingGroup(MorphologyGraph graph, SortedSet<ulong> nodesAbove, SortedSet<ulong> nodesBelow, SortedSet<MorphologyEdge> edges)
-        {
-            this.Graph = graph;
-            this.NodesAbove = nodesAbove;
-            this.NodesBelow = nodesBelow;
-            this.Edges = edges;
-        }
-
-        public override string ToString()
-        {
-            StringBuilder sb = new StringBuilder();
-
-            sb.Append("U:");
-            foreach (ulong ID in NodesAbove)
-            {
-                sb.AppendFormat(" {0}", ID);
-            }
-
-            sb.AppendLine(" D:");
-            foreach (ulong ID in NodesBelow)
-            {
-                sb.AppendFormat(" {0}", ID);
-            }
-
-            return sb.ToString();
-        }
-
-        public static void GeneratePolygonParameters(MeshingGroup group, out List<GridPolygon> Polygons, out List<bool> IsUpper, out List<double> PolyZ)
-        {
-            Polygons = new List<GridPolygon>();
-            IsUpper = new List<bool>();
-            PolyZ = new List<double>();
-
-            Polygons.AddRange(group.NodesAbove.Select(id => group.Graph[id].Geometry.ToPolygon()));
-            IsUpper.AddRange(group.NodesAbove.Select(id => true));
-            PolyZ.AddRange(group.NodesAbove.Select(id => group.Graph[id].Z));
-            Polygons.AddRange(group.NodesBelow.Select(id => group.Graph[id].Geometry.ToPolygon()));
-            IsUpper.AddRange(group.NodesBelow.Select(id => false));
-            PolyZ.AddRange(group.NodesBelow.Select(id => group.Graph[id].Z));
-        }
-
-        public static void GeneratePolygonParameters(MeshingGroup group, Dictionary<long, GridPolygon> polyLookup, out List<GridPolygon> Polygons, out List<bool> IsUpper, out List<double> PolyZ)
-        {
-            Polygons = new List<GridPolygon>();
-            IsUpper = new List<bool>();
-            PolyZ = new List<double>();
-
-            Polygons.AddRange(group.NodesAbove.Select(id => polyLookup.ContainsKey((long)id) ? polyLookup[(long)id] : group.Graph[id].Geometry.ToPolygon()));
-            IsUpper.AddRange(group.NodesAbove.Select(id => true));
-            PolyZ.AddRange(group.NodesAbove.Select(id => group.Graph[id].Z));
-            Polygons.AddRange(group.NodesBelow.Select(id => polyLookup.ContainsKey((long)id) ? polyLookup[(long)id] : group.Graph[id].Geometry.ToPolygon()));
-            IsUpper.AddRange(group.NodesBelow.Select(id => false));
-            PolyZ.AddRange(group.NodesBelow.Select(id => group.Graph[id].Z));
-        }
-
-        public override bool Equals(object obj)
-        {
-            var group = obj as MeshingGroup;
-            return group != null &&
-                   EqualityComparer<SortedSet<ulong>>.Default.Equals(NodesAbove, group.NodesAbove) &&
-                   EqualityComparer<SortedSet<ulong>>.Default.Equals(NodesBelow, group.NodesBelow) &&
-                   EqualityComparer<SortedSet<MorphologyEdge>>.Default.Equals(Edges, group.Edges);
-        }
-
-        public override int GetHashCode()
-        {
-            var hashCode = -668766393;
-            hashCode = hashCode * -1521134295 + EqualityComparer<SortedSet<ulong>>.Default.GetHashCode(NodesAbove);
-            hashCode = hashCode * -1521134295 + EqualityComparer<SortedSet<ulong>>.Default.GetHashCode(NodesBelow);
-            return hashCode;
-        }
-    }
-
-
+    
 
     public static class BajajMeshGenerator
     {
 
         public delegate void OnMeshGeneratedEventHandler(BajajGeneratorMesh mesh);
 
-        /// <summary>
-        /// Generate a dictionary of polygons we can use as a lookup table.
-        /// </summary>
-        /// <param name="graph"></param>
-        /// <param name="tolerance"></param>
-        /// <returns></returns>
-        public static Dictionary<long, GridPolygon> CreateSimplerPolygonLookup(MorphologyGraph graph, double tolerance)
-        { 
-            Dictionary<long, GridPolygon> result = new Dictionary<long, GridPolygon>(graph.Nodes.Count);
-
-            List<Task<GridPolygon>> tasks = new List<Task<GridPolygon>>(graph.Nodes.Count);
-            foreach (var node in graph.Nodes.Values)
-            {
-                if (node.Geometry == null)
-                    continue;
-
-                SupportedGeometryType nodeType = node.Geometry.GeometryType();
-                if (nodeType != SupportedGeometryType.CURVEPOLYGON && nodeType != SupportedGeometryType.POLYGON)
-                {
-                    continue;
-                }
-
-                //Start a task to simplify the polygon
-                Task<GridPolygon> t = new Task<GridPolygon>((node_) => ((MorphologyNode)node_).Geometry.ToPolygon().Simplify(tolerance), node);
-               
-                t.Start();
-                tasks.Add(t);
-            }
-
-            foreach(var task in tasks)
-            {
-                try
-                {
-                    task.Wait();
-                }
-                catch(AggregateException e)
-                {
-                    //Oh well, we'll not simplify this one
-                    continue;
-                }
-
-                if(task.IsCompleted)
-                {
-                    result[(long)((MorphologyNode)(task.AsyncState)).ID] = task.Result;
-                }
-            }
-
-            return result;
-        }
 
         /// <summary>
         /// Convert a morphology graph to an unprocessed mesh graph
@@ -263,42 +113,34 @@ namespace MorphologyMesh
         /// <returns></returns>
         public static List<BajajGeneratorMesh> ConvertToMesh(MorphologyGraph graph, OnMeshGeneratedEventHandler OnMeshGenerated = null)
         {
+            Trace.WriteLine("Begin Slice graph construction");
+            SliceGraph sliceGraph = SliceGraph.Create(graph, 2.0);
+            Trace.WriteLine("End Slice graph construction");
 
-            List<MeshingGroup> MeshingGroups = CalculateMeshingGroups(graph);
+            return ConvertToMesh(sliceGraph, OnMeshGenerated);
+        }
+
+            /// Convert a morphology graph to an unprocessed mesh graph
+            /// </summary>
+            /// <param name="graph"></param>
+            /// <returns></returns>
+        public static List<BajajGeneratorMesh> ConvertToMesh(SliceGraph sliceGraph, OnMeshGeneratedEventHandler OnMeshGenerated = null)
+        { 
+            //List<MeshingGroup> MeshingGroups = CalculateMeshingGroups(graph);
             List<BajajGeneratorMesh> listBajajMeshGenerators = new List<BajajGeneratorMesh>();
 
             List<Task<BajajGeneratorMesh>> meshGenTasks = new List<Task<BajajGeneratorMesh>>();
 
-            Trace.WriteLine("Begin Simplification of Polygons");
-            var SimplerPolygon = CreateSimplerPolygonLookup(graph, 2.0);
-            Trace.WriteLine("End Simplification of Polygons");
-
-            foreach (MeshingGroup group in MeshingGroups)
+            
+            //var SimplerPolygon = CreateSimplerPolygonLookup(graph, 2.0);
+            
+            foreach (Slice slice in sliceGraph.Nodes.Values)
             {
                 //Trace.WriteLine(string.Format("Creating group {0}", group.ToString()));
 
-                List<GridPolygon> Polygons;
-                List<bool> IsUpper;
-                List<double> PolyZ;
-
-                MeshingGroup.GeneratePolygonParameters(group, SimplerPolygon, out Polygons, out IsUpper, out PolyZ);
-
-                //We do this because any given polygon is likely to have corresponding verts added for intersections both above and below it.  We need
-                //all of those verts added before we generate a mesh
-                BajajGeneratorMesh.AddCorrespondingVerticies(Polygons);
-            }
-
-            foreach (MeshingGroup group in MeshingGroups)
-            {
-                //Trace.WriteLine(string.Format("Creating group {0}", group.ToString()));
-
-                List<GridPolygon> Polygons;
-                List<bool> IsUpper;
-                List<double> PolyZ;
-
-                MeshingGroup.GeneratePolygonParameters(group, SimplerPolygon, out Polygons, out IsUpper, out PolyZ);
-
-                meshGenTasks.Add(Task<BajajGeneratorMesh>.Factory.StartNew((g) => new BajajGeneratorMesh(Polygons.Select(p => p/*p.Simplify(2.0)*/).ToList(), PolyZ, IsUpper, group), group));
+                var sliceTopology = sliceGraph.GetTopology(slice);
+                
+                meshGenTasks.Add(Task<BajajGeneratorMesh>.Factory.StartNew(() => new BajajGeneratorMesh(sliceTopology, slice)));
 
 //                BajajGeneratorMesh mesh = new BajajGeneratorMesh(Polygons.Select(p => p.Simplify(1.0)).ToList(), PolyZ, IsUpper);
   //              listBajajMeshGenerators.Add(mesh);
@@ -448,8 +290,9 @@ namespace MorphologyMesh
             {
                 Trace.WriteLine(string.Format("Exception building mesh {0}\n{1}", mesh.ToString(), e));
             }
-             
-            mesh.RecalculateNormals();
+
+            mesh.EnsureFacesHaveExternalNormals();
+            //mesh.RecalculateNormals();
         }
 
         private static Dictionary<GridVector2, List<int>> CreatePointToIndexMap(BajajGeneratorMesh mesh)
@@ -698,6 +541,9 @@ namespace MorphologyMesh
                 MorphMeshVertex vA = mesh[edge.A];
                 MorphMeshVertex vB = mesh[edge.B];
 
+                //MorphMeshVertex vUpper = mesh.IsUpperPolygon[vA.PolyIndex.Value.iPoly] ? vA : vB;
+                //MorphMeshVertex vLower = vUpper == vA ? vB : vA;
+
                 List<MorphMeshVertex> VertsToCheck = new List<MorphMeshVertex>(new MorphMeshVertex[] { vA, vB });
 
                 //TODO: I probably don't need the where statement below because I know the vertex is not face complete because the attached corresponding edge is not complete
@@ -714,10 +560,6 @@ namespace MorphologyMesh
                     if (Face == null)
                         continue; 
                     
-
-                    int iVa = Face.IndexOf(vA.Index);
-                    int iVb = Face.IndexOf(vB.Index);
-
                     if (Face.Count <= 4)
                     {
                         MorphMeshFace face = new MorphMeshFace(Face);
@@ -730,23 +572,32 @@ namespace MorphologyMesh
                     }
                     else
                     {
-                        Debug.Assert(Math.Abs(iVa - iVb) == 1 || (Math.Abs(iVa - iVb) == Face.Count - 1));
+                        //We cannot count on the order of the verticies returned in Face. 
+                        //If we want to get correct CCW winding it takes extra work
 
-                        int iOther = iVa - 1;
-                        bool CounterClockwise = true;
-                        if (iOther < 0 || iOther == iVb)
+                        int iVA = Face.IndexOf(vA.Index);
+                        int iVB = Face.IndexOf(vB.Index);
+
+                        int iVLower = mesh.IsUpperPolygon[vA.PolyIndex.Value.iPoly] ? iVB : iVA;
+                        int iVUpper = iVLower == iVB ? iVA : iVB;
+                        
+                        Debug.Assert(Math.Abs(iVLower - iVUpper) == 1 || (Math.Abs(iVLower - iVUpper) == Face.Count - 1));
+
+                        int iOther = iVLower - 1;
+                        //bool CounterClockwise = true;
+                        if (iOther < 0 || iOther == iVUpper)
                         {
-                            iOther = iVa + 1;
-                            CounterClockwise = false;
-                            if (iOther >= Face.Count || iOther == iVb)
+                            iOther = iVLower + 1;
+                            //CounterClockwise = false;
+                            if (iOther >= Face.Count || iOther == iVUpper)
                             {
-                                iOther = iVb - 1;
-                                CounterClockwise = true;
-                                if (iOther < 0 || iOther == iVa)
+                                iOther = iVUpper - 1;
+                              //  CounterClockwise = true;
+                                if (iOther < 0 || iOther == iVLower)
                                 {
-                                    iOther = iVb + 1;
-                                    CounterClockwise = false;
-                                    if (iOther < 0 || iOther == iVa)
+                                    iOther = iVUpper + 1;
+                                //    CounterClockwise = false;
+                                    if (iOther < 0 || iOther == iVLower)
                                     {
                                         throw new ArgumentException("Can't find third vertex to create face for corresponding edge");
                                     }
@@ -754,15 +605,14 @@ namespace MorphologyMesh
                             }
                         }
 
-                        int[] TriFace = CounterClockwise ? new int[] { iOther, iVa, iVb } : new int[] { iVa, iOther, iVb };
-                        MorphMeshFace face = new MorphMeshFace(TriFace.Select(i => Face[i]));
+                        //I used to try to get winding correct, the implementation wasn't correct.  Now I handle it at the end of mesh generation.
+                        //int[] TriFace = CounterClockwise ? new int[] { iOther, iVLower, iVUpper } : new int[] { iOther, iVUpper, iVLower};
+
+                        int[] TriFace = new int[] { iOther, iVLower, iVUpper };
+                        MorphMeshFace face = new MorphMeshFace(TriFace.Select(i => Face[i])); 
                         mesh.AddFace(face);
-
-
                     }
                 }
-
-
             }
         }
 
@@ -1179,118 +1029,6 @@ namespace MorphologyMesh
 
         #endregion
 
-        #region MeshingGroups
-        /// <summary>
-        /// We need to group sets of connected nodes so we do not miss any branches in the final mesh.  
-        /// The example belows shows lettered nodes that appear on each of 5 Z-Levels.  
-        ///
-        ///  Z = 1:               I
-        ///                      /|
-        ///  Z = 2:             / J
-        ///                    /    \
-        ///  Z = 3:   A   B   /       C
-        ///            \ / \ /       / \
-        ///  Z = 4:     D   E       /   F
-        ///                  \     /
-        ///  Z = 5:           G   H
-        ///
-        /// In this case we'd want to generate four meshing groups:
-        /// 1: A,B,D,E,I,J
-        /// 2: C,F,H
-        /// 3: E,G
-        /// 4: J,C
-        ///
-        /// To do this we pick a node, E, and a direction.  We build a list of all nodes above E -> B,I.  
-        ///Then we ask B,E for nodes below B,I -> D,J.  Then we ask for nodes above: D,J -> A.  Continuing 
-        ///until no new nodes are added.  These nodes are then combined and sent to the Bajaj generator
-        /// </summary>
-        /// <param name="graph"></param>
-        /// <returns></returns>
-        internal static List<MeshingGroup> CalculateMeshingGroups(MorphologyGraph graph)
-        {
-            List<MeshingGroup> MeshingGroups = new List<MeshingGroup>();
-            SortedSet<MorphologyEdge> Edges = new SortedSet<MorphologyEdge>(graph.Edges.Values);
-
-            while(Edges.Count > 0)
-            {
-                SortedSet<ulong> MeshGroupNodesAbove;
-                SortedSet<ulong> MeshGroupNodesBelow;
-                SortedSet<MorphologyEdge> MeshGroupEdges;
-
-                MorphologyEdge e = Edges.First();
-
-                MorphologyNode Source = graph[e.SourceNodeKey];
-                MorphologyNode Target = graph[e.TargetNodeKey];
-
-                ZDirection SearchDirection = Source.Z < Target.Z ? ZDirection.Increasing : ZDirection.Decreasing;
-
-                BuildMeshingCrossSection(graph, Source, SearchDirection, out MeshGroupNodesAbove, out MeshGroupNodesBelow, out MeshGroupEdges);
-
-                Debug.Assert(MeshGroupNodesAbove.Count > 0, "Search should have found at least one node above and below.");
-                Debug.Assert(MeshGroupNodesBelow.Count > 0, "Search should have found at least one node above and below.");
-                Debug.Assert(MeshGroupEdges.Contains(e), "The edge we used to start the search is not in the search results.");
-
-                MeshingGroup group = new MeshingGroup(graph, MeshGroupNodesAbove, MeshGroupNodesBelow, MeshGroupEdges);
-                MeshingGroups.Add(group);
-
-                Edges.ExceptWith(MeshGroupEdges);
-            }
-
-            return MeshingGroups;
-        }
-
-        static void BuildMeshingCrossSection(MorphologyGraph graph, MorphologyNode seed, ZDirection CheckDirection, out SortedSet<ulong> NodesAbove, out SortedSet<ulong> NodesBelow, out SortedSet<MorphologyEdge> FollowedEdges)
-        {
-            NodesAbove = new SortedSet<ulong>();
-            NodesBelow = new SortedSet<ulong>();
-            SortedSet<ulong> NewNodesAbove = new SortedSet<ulong>();
-            SortedSet<ulong> NewNodesBelow = new SortedSet<ulong>();
-
-            FollowedEdges = new SortedSet<MorphologyEdge>();
-
-            if (CheckDirection == ZDirection.Increasing)
-            {
-                NodesBelow.Add(seed.ID);
-                NewNodesAbove.UnionWith(seed.GetEdgesAbove(graph));
-                FollowedEdges.UnionWith(NewNodesAbove.Select(n => new MorphologyEdge(graph, n, seed.ID)));
-            }
-            else
-            {
-                NodesAbove.Add(seed.ID);
-                NewNodesBelow.UnionWith(seed.GetEdgesBelow(graph));
-                FollowedEdges.UnionWith(NewNodesBelow.Select(n => new MorphologyEdge(graph, n, seed.ID)));
-            }
-
-            BuildMeshingCrossSection(graph, ref NodesAbove, ref NodesBelow, NewNodesAbove, NewNodesBelow, ref FollowedEdges);
-        }
-
-        private static void BuildMeshingCrossSection(MorphologyGraph graph, ref SortedSet<ulong> NodesAbove, ref SortedSet<ulong> NodesBelow, SortedSet<ulong> NewNodesAbove, SortedSet<ulong> NewNodesBelow, ref SortedSet<MorphologyEdge> FollowedEdges)
-        {
-            NodesAbove.UnionWith(NewNodesAbove);
-            NodesBelow.UnionWith(NewNodesBelow);
-
-            FollowedEdges.UnionWith(NewNodesAbove.SelectMany(n => graph[n].GetEdgesBelow(graph).Select(other => new MorphologyEdge(graph, other, n))));
-            FollowedEdges.UnionWith(NewNodesBelow.SelectMany(n => graph[n].GetEdgesAbove(graph).Select(other => new MorphologyEdge(graph, other, n))));
-
-            NewNodesBelow = new SortedSet<ulong>(NewNodesAbove.SelectMany(n => graph[n].GetEdgesBelow(graph)));
-            NewNodesAbove = new SortedSet<ulong>(NewNodesBelow.SelectMany(n => graph[n].GetEdgesAbove(graph)));
-
-            NewNodesAbove.ExceptWith(NodesAbove);
-            NewNodesBelow.ExceptWith(NodesBelow);
-
-            if (NewNodesAbove.Count == 0 && NewNodesBelow.Count == 0)
-            {
-                return;
-            }
-            else
-            {
-                BuildMeshingCrossSection(graph, ref NodesAbove, ref NodesBelow, NewNodesAbove, NewNodesBelow, ref FollowedEdges);
-                return;
-            } 
-        }
-
-        #endregion
-               
         private static Dictionary<ulong, IShape2D> FindCorrespondences(MorphologyGraph graph)
         {  
             Dictionary<ulong, IShape2D> IDToShape = graph.Nodes.AsParallel().ToDictionary(n => n.Key,  n => n.Value.Geometry.ToShape2D());
@@ -1707,7 +1445,7 @@ namespace MorphologyMesh
             //OK, the closest point is not a match.  Expand the search.
             int iNextTest = 1;
             int BatchSize = 1;
-            int BatchMultiple = 10;
+            const int BatchMultiple = 10;
             List<DistanceToPoint<MorphMeshVertex>> NearestList = null;
 
             while (true)
@@ -1717,13 +1455,14 @@ namespace MorphologyMesh
 
                 if ((NearestList == null || iNextTest >= NearestList.Count))
                 {
-                    BatchSize *= BatchMultiple;
                     NearestList = OppositeVertexTree.FindNearestPoints(p, BatchSize);
 
                     if (NearestList.Count < BatchSize && iNextTest >= NearestList.Count)
                     {
                         return null;
                     }
+
+                    BatchSize *= BatchMultiple;
                 }
 
                 if (iNextTest < NearestList.Count)
@@ -1786,7 +1525,7 @@ namespace MorphologyMesh
 
         public static void CreateOptimalTilingVertexTable(IEnumerable<PointIndex> VerticiesToMap, IEnumerable<PointIndex> CandidateVerticies, GridPolygon[] polygons, bool[] IsPolyAbove, SliceChordTestType TestsToRun, out OTVTable Table, ref SliceChordRTree chordTree)
         { 
-            MeshGroupQuadTrees<PointIndex> LevelTree = CreateQuadTreesForVerticies(CandidateVerticies, polygons, IsPolyAbove);
+            SliceTopologyQuadTrees<PointIndex> LevelTree = CreateQuadTreesForVerticies(CandidateVerticies, polygons, IsPolyAbove);
 
             ////////////////////////////////////////////////////
             CreateOptimalTilingVertexTable(VerticiesToMap, polygons, IsPolyAbove, LevelTree, TestsToRun, out Table, ref chordTree);
@@ -1842,14 +1581,14 @@ namespace MorphologyMesh
         /// <param name="OTVTable"></param>
         public static void CreateOptimalTilingVertexTable(IEnumerable<PointIndex> VerticiesToMap, GridPolygon[] polygons, bool[] IsUpperPolygon, SliceChordTestType TestsToRun, out OTVTable OTVTable, ref SliceChordRTree chordTree)
          {
-            MeshGroupQuadTrees<PointIndex> LevelTree = CreateQuadTreesForPolygons(polygons, IsUpperPolygon);
+            SliceTopologyQuadTrees<PointIndex> LevelTree = CreateQuadTreesForPolygons(polygons, IsUpperPolygon);
 
             ////////////////////////////////////////////////////
             CreateOptimalTilingVertexTable(VerticiesToMap, polygons, IsUpperPolygon, LevelTree, TestsToRun, out OTVTable, ref chordTree);
         }
 
 
-        public static void CreateOptimalTilingVertexTable(IEnumerable<PointIndex> VerticiesToMap, GridPolygon[] polygons, bool[] IsUpperPolygon, MeshGroupQuadTrees<PointIndex> CandidateTreeByLevel, SliceChordTestType TestsToRun,
+        public static void CreateOptimalTilingVertexTable(IEnumerable<PointIndex> VerticiesToMap, GridPolygon[] polygons, bool[] IsUpperPolygon, SliceTopologyQuadTrees<PointIndex> CandidateTreeByLevel, SliceChordTestType TestsToRun,
                                                           out OTVTable Table, ref SliceChordRTree chordTree)
         { 
             Table = new OTVTable();
@@ -1897,7 +1636,7 @@ namespace MorphologyMesh
             CreateOptimalTilingVertexTable(mesh, VerticiesToMap, LevelTree, TestsToRun, out OTVTable, ref chordTree);
         }
 
-        public static void CreateOptimalTilingVertexTable(this BajajGeneratorMesh mesh, IEnumerable<MorphMeshVertex> VerticiesToMap, MeshGroupQuadTrees<MorphMeshVertex> CandidateTreeByLevel, SliceChordTestType TestsToRun,
+        public static void CreateOptimalTilingVertexTable(this BajajGeneratorMesh mesh, IEnumerable<MorphMeshVertex> VerticiesToMap, SliceTopologyQuadTrees<MorphMeshVertex> CandidateTreeByLevel, SliceChordTestType TestsToRun,
                                                           out ConcurrentDictionary<MorphMeshVertex, MorphMeshVertex> OTVTable, ref SliceChordRTree chordTree)
         { 
             OTVTable = new ConcurrentDictionary<MorphMeshVertex, MorphMeshVertex>();
@@ -1954,12 +1693,12 @@ namespace MorphologyMesh
         }
         */
 
-        public static MeshGroupQuadTrees<MorphMeshVertex> CreateQuadTreesForContours(this BajajGeneratorMesh mesh)
+        public static SliceTopologyQuadTrees<MorphMeshVertex> CreateQuadTreesForContours(this BajajGeneratorMesh mesh)
         {
             QuadTree<MorphMeshVertex> Above = BuildQuadTreeForPolyGroup(mesh, mesh.UpperPolyIndicies);
             QuadTree<MorphMeshVertex> Below = BuildQuadTreeForPolyGroup(mesh, mesh.LowerPolyIndicies);
 
-            return new MeshGroupQuadTrees<MorphMeshVertex>(Above, Below, mesh.UpperPolyIndicies, mesh.LowerPolyIndicies); 
+            return new SliceTopologyQuadTrees<MorphMeshVertex>(Above, Below, mesh.UpperPolyIndicies, mesh.LowerPolyIndicies); 
         }
 
         private static QuadTree<MorphMeshVertex> BuildQuadTreeForPolyGroup(BajajGeneratorMesh mesh,  IReadOnlyList<int> polyset)
@@ -1986,7 +1725,7 @@ namespace MorphologyMesh
         /// <param name="polygons"></param>
         /// <param name="PolyZ"></param>
         /// <returns></returns>
-        public static MeshGroupQuadTrees<PointIndex> CreateQuadTreesForPolygons(IReadOnlyList<GridPolygon> polygons, bool[] IsUpperPolygon)
+        public static SliceTopologyQuadTrees<PointIndex> CreateQuadTreesForPolygons(IReadOnlyList<GridPolygon> polygons, bool[] IsUpperPolygon)
         {
             var polydata = polygons.Select((poly, i) => new { Polygon = poly, index = i }).ToArray();
             var UpperPolyData = polydata.Where((data) => IsUpperPolygon[data.index]);
@@ -2001,7 +1740,7 @@ namespace MorphologyMesh
             QuadTree<PointIndex> Below = BuildQuadTreeForPolyGroup(LowerPolyData.Select(data => data.Polygon).ToArray(),
                                                                                     LowerPolyIndicies);
 
-            return new MeshGroupQuadTrees<PointIndex>(Above, Below, UpperPolyIndicies, LowerPolyIndicies);
+            return new SliceTopologyQuadTrees<PointIndex>(Above, Below, UpperPolyIndicies, LowerPolyIndicies);
         }
         
         /// <summary>
@@ -2067,7 +1806,7 @@ namespace MorphologyMesh
         }
         */
 
-        public static MeshGroupQuadTrees<PointIndex> CreateQuadTreesForVerticies(IEnumerable<PointIndex> Candidates, IReadOnlyList<GridPolygon> polygons, bool[] IsUpperPolygon)
+        public static SliceTopologyQuadTrees<PointIndex> CreateQuadTreesForVerticies(IEnumerable<PointIndex> Candidates, IReadOnlyList<GridPolygon> polygons, bool[] IsUpperPolygon)
         {
             //Figure out which polygons we are going to use
             int[] usedPolyIndicies = Candidates.Select(c => c.iPoly).Distinct().ToArray();
@@ -2087,7 +1826,7 @@ namespace MorphologyMesh
             Debug.Assert(Below.Count > 0, "We need at least one vertex in the tree for each level.");
 #endif
              
-            return new MeshGroupQuadTrees<PointIndex>(Above, Below, UpperPolyIndicies, LowerPolyIndicies);  
+            return new SliceTopologyQuadTrees<PointIndex>(Above, Below, UpperPolyIndicies, LowerPolyIndicies);  
         }
 
         /// <summary>

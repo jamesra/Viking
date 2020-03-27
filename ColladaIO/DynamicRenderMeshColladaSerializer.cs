@@ -14,7 +14,7 @@ namespace ColladaIO
     public class DynamicRenderMeshColladaSerializer
     {
 
-        public static void SerializeToFile(MorphologyColladaView scene, String Filename)
+        public static void SerializeToFile(IColladaScene scene, String Filename)
         {
             COLLADA dae = new COLLADA();
 
@@ -37,7 +37,7 @@ namespace ColladaIO
             dae.Save(Filename); 
         }
 
-        public static void SerializeToFolder(MorphologyColladaView scene, String Foldername)
+        public static void SerializeToFolder(IColladaScene scene, String Foldername)
         {
             if(!Directory.Exists(Foldername))
             {
@@ -117,20 +117,20 @@ namespace ColladaIO
             return scene;
         }
 
-        private static library_geometries_type CreateGeometryLibrary(ICollection<StructureModel> listModels)
+        private static library_geometries_type CreateGeometryLibrary(IEnumerable<StructureModel> listModels)
         {
             library_geometries_type geomLib = new library_geometries_type();
               
 #if DEBUG
-            geomLib.geometry = listModels.Select(model => MeshSerializer.CreateGeometry(model.Mesh as Geometry.Meshing.IMesh3D<IVertex3D>, model.Name, model.Material.Key)).Where(Geom => Geom != null).ToArray();
+            geomLib.geometry = listModels.Select(model => MeshSerializer.CreateGeometry(model.Mesh, model.Name, model.Material.Key)).Where(Geom => Geom != null).ToArray();
 #else
-            geomLib.geometry = listModels.Select(model => MeshSerializer.CreateGeometry(model.Mesh as Geometry.Meshing.IMesh3D<IVertex3D>, model.Name, model.Material.Key)).AsParallel().Where(Geom => Geom != null).ToArray();
+            geomLib.geometry = listModels.Select(model => MeshSerializer.CreateGeometry(model.Mesh, model.Name, model.Material.Key)).AsParallel().Where(Geom => Geom != null).ToArray();
 #endif
 
             return geomLib;
         }
 
-        private static library_nodes_type CreateNodeLibrary(ICollection<StructureModel> listModels, string MaterialURL = null)
+        private static library_nodes_type CreateNodeLibrary(IEnumerable<StructureModel> listModels, string MaterialURL = null)
         {
             library_nodes_type nodesLib = new library_nodes_type();
 
@@ -217,7 +217,7 @@ namespace ColladaIO
             return contributor;
         }
 
-        private static library_materials_type CreateMaterialsLibrary(ICollection<MaterialLighting> materials)
+        private static library_materials_type CreateMaterialsLibrary(IEnumerable<MaterialLighting> materials)
         {
             library_materials_type materials_library = new library_materials_type();
 
@@ -243,7 +243,7 @@ namespace ColladaIO
             return mat;
         }
 
-        private static library_effects_type CreateEffectsLibrary(ICollection<MaterialLighting> materials)
+        private static library_effects_type CreateEffectsLibrary(IEnumerable<MaterialLighting> materials)
         {
             library_effects_type effects_library = new ColladaIO.library_effects_type();
 
@@ -316,14 +316,14 @@ namespace ColladaIO
             return tech;
         }
 
-        private static library_visual_scenes_type CreateLibraryVisualScenes(MorphologyColladaView scene)
+        private static library_visual_scenes_type CreateLibraryVisualScenes(IColladaScene scene)
         {
             library_visual_scenes_type scene_library = new library_visual_scenes_type();
 
             visual_scene_type visual_scene = new ColladaIO.visual_scene_type();
 
             visual_scene.id = "VisualSceneNode";
-            visual_scene.name = scene.SceneTitle == null ? "untitled" : scene.SceneTitle;
+            visual_scene.name = scene.Title == null ? "untitled" : scene.Title;
 
             List<node_type> listNodes = new List<node_type>();
             foreach(StructureModel model in scene.RootModels.Values)

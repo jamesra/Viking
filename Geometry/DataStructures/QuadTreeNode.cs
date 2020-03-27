@@ -677,7 +677,7 @@ namespace Geometry
                 double maxDistance = double.MaxValue;
 
                 if (NumPointsFound(distanceList) >= nPoints)
-                    maxDistance = distanceList.Last().Key;
+                    maxDistance = distanceList.Keys.Last();
 
                 GridRectangle rect = new GridRectangle(point, maxDistance);
 
@@ -699,7 +699,7 @@ namespace Geometry
                             {
                                 PointFound = true;
 
-                                maxDistance = distanceList.Last().Key;
+                                maxDistance = distanceList.Keys.Last();
                                 //Determine the furthest point we have found and set the bounding rectangle of what we need to check accordingly
                                 rect = new GridRectangle(point, maxDistance);
                             }

@@ -29,13 +29,13 @@ namespace MorphologyMesh
     /// </summary>
     public class BajajGeneratorMesh : MorphRenderMesh
     {
-        internal readonly bool[] IsUpperPolygon;
+        internal override bool[] IsUpperPolygon { get { return Topology.IsUpper; } }
 
-        public readonly ImmutableSortedSet<int> UpperPolyIndicies;
-        public readonly ImmutableSortedSet<int> LowerPolyIndicies;
+        public ImmutableSortedSet<int> UpperPolyIndicies { get { return Topology.UpperPolyIndicies; } }
+        public ImmutableSortedSet<int> LowerPolyIndicies { get { return Topology.LowerPolyIndicies; } }
 
-        internal readonly GridPolygon[] UpperPolygons;
-        internal readonly GridPolygon[] LowerPolygons;
+        internal GridPolygon[] UpperPolygons { get { return Topology.UpperPolygons; } }
+        internal GridPolygon[] LowerPolygons { get { return Topology.LowerPolygons; } }
 
         private List<MorphMeshRegion> _Regions = new List<MorphMeshRegion>();
 
@@ -44,47 +44,34 @@ namespace MorphologyMesh
         /// <summary>
         /// An optional field that allows tracking of which annotations compose the mesh
         /// </summary>
-        public MeshingGroup AnnotationGroup = null;
+        public SliceTopology Topology;
+
+        /// <summary>
+        /// An optional field that allows tracking of which annotations compose the mesh
+        /// </summary>
+        public Slice Slice;
 
         public override string ToString()
         {
             string output = "";
-            if(AnnotationGroup != null)
+            if(Slice != null)
             {
-                output += AnnotationGroup.ToString() + ":\n\t";
+                output += Slice.ToString() + ":\n\t";
             }
 
             output += base.ToString();
             return output;
         }
 
-        public BajajGeneratorMesh(IReadOnlyList<GridPolygon> polygons, IReadOnlyList<double> ZLevels, IReadOnlyList<bool> IsUpperPolygon, MeshingGroup group) : this(polygons, ZLevels, IsUpperPolygon)
+        public BajajGeneratorMesh(SliceTopology topology, Slice slice = null) : base(topology.Polygons, topology.PolyZ, topology.IsUpper)
         {
-            AnnotationGroup = group;
+            Topology = topology;
+            Slice = slice;
         }
 
-        public BajajGeneratorMesh(IReadOnlyList<GridPolygon> polygons, IReadOnlyList<double> ZLevels, IReadOnlyList<bool> IsUpperPolygon) : base(polygons, ZLevels)
+        public BajajGeneratorMesh(IReadOnlyList<GridPolygon> polygons, IReadOnlyList<double> ZLevels, IReadOnlyList<bool> IsUpperPolygon) : this(new SliceTopology(polygons, IsUpperPolygon, ZLevels))
         {
-            Debug.Assert(polygons.Count == IsUpperPolygon.Count);
 
-            this.IsUpperPolygon = IsUpperPolygon.ToArray();
-
-            //Assign polys to sets for convienience later
-            List<int> UpperPolys = new List<int>(IsUpperPolygon.Count);
-            List<int> LowerPolys = new List<int>(IsUpperPolygon.Count);
-            for (int i = 0; i < IsUpperPolygon.Count; i++)
-            {
-                if (IsUpperPolygon[i])
-                    UpperPolys.Add(i);
-                else
-                    LowerPolys.Add(i);
-            }
-
-            UpperPolyIndicies = UpperPolys.ToImmutableSortedSet<int>();
-            LowerPolyIndicies = LowerPolys.ToImmutableSortedSet<int>();
-
-            UpperPolygons = UpperPolys.Select(i => polygons[i]).ToArray();
-            LowerPolygons = LowerPolys.Select(i => polygons[i]).ToArray(); 
         }
 
         public GridPolygon[] GetSameLevelPolygons(PointIndex key)
@@ -107,53 +94,6 @@ namespace MorphologyMesh
             return IsUpperPolygon[sc.Origin.iPoly] ? LowerPolygons : UpperPolygons;
         }
 
-        /// <summary>
-        /// Add verticies at intersection points for all intersection points between polygons in the two sets. 
-        /// Polygons intersecting in the same point will not have points added
-        /// </summary>
-        public static void AddCorrespondingVerticies(ICollection<GridPolygon> APolys, ICollection<GridPolygon> BPolys)
-        {
-            List<GridVector2> added_intersections;
-            foreach (GridPolygon A in APolys)
-            {
-                foreach (GridPolygon B in BPolys)
-                {
-                    added_intersections = A.AddPointsAtIntersections(B);
-# if DEBUG
-                    foreach (GridVector2 p in added_intersections)
-                    {
-                        Debug.Assert(A.IsVertex(p));
-                        Debug.Assert(B.IsVertex(p));
-                    }
-#endif
-                    //B.AddPointsAtIntersections(A);
-                }
-            } 
-        }
-
-        /// <summary>
-        /// Add verticies at intersection points for all intersection points
-        /// </summary>
-        /// <param name="Polys"></param>
-        public static void AddCorrespondingVerticies(IReadOnlyList<GridPolygon> Polys)
-        {
-            List<GridVector2> added_intersections;
-            foreach (var combo in Polys.CombinationPairs())
-            {
-                GridPolygon A = combo.A;
-                GridPolygon B = combo.B;
-                added_intersections = A.AddPointsAtIntersections(B);
-# if DEBUG
-                    foreach (GridVector2 p in added_intersections)
-                    {
-                        Debug.Assert(A.IsVertex(p));
-                        Debug.Assert(B.IsVertex(p));
-                    }
-#endif
-                    //B.AddPointsAtIntersections(A);
-                
-            }
-        }
 
         public void IdentifyRegionsViaFaces()
         {
@@ -199,8 +139,9 @@ namespace MorphologyMesh
                     Debug.Assert(Face.Count == 3 || Face.Count == 4);
                     if (Face.Count == 4)
                         continue;
-
+                     
                     IFace f = this.CreateFace(Face);
+
                     if (this.Faces.Contains(f) == false)
                         this.AddFace(f);
 
@@ -287,6 +228,115 @@ namespace MorphologyMesh
             Path.Pop();
 
             return null;
+        }
+
+        /// <summary>
+        /// Flip the winding of any faces that point internally to the slice.  Ensures correct lighting.
+        /// </summary>
+        public void EnsureFacesHaveExternalNormals()
+        {
+            MorphMeshFace[] faces = this.MorphFaces.ToArray();
+            for (int i = 0; i < faces.Length; i++)
+            {
+                MorphMeshFace f = faces[i];
+                if (this.FaceHasCCWWinding(f))
+                    this.ReverseFace(f);
+            }
+
+        }
+
+        /// <summary>
+        /// Return true if the face has CCW winding when viewed from the exterior of the mesh
+        /// </summary>
+        public bool FaceHasCCWWinding(IFace f)
+        {
+            MorphMeshVertex[] verts = this[f.iVerts].ToArray();
+
+            GridVector3 n = this.Normal(f);
+            GridVector2 face_center;
+
+            bool CheckAgainstUpperPolygons; //True if we check if the centroid is contained in upper polygons, false if centroid needs to be checked against lower polygons
+
+            //Check if the normal is oriented up or down.  If it is up, then check that the face centroid is not contained within the upper polygons, and vice versa.
+            if (n.Z == 0)
+            {
+                //Todo: Special case
+                if(f.IsTriangle())
+                {
+                    //First find the vertex that is not part of the corresponding pair that created this face.  Note that corresponding verts can be adjacent within a polygon,
+                    //so if the vertex is corresponding it could stil be the extra vertex of the triangle if its corresponding vertex is not part of the face.
+                    MorphMeshVertex noncorresponding = verts.Where(v => v.Corresponding.HasValue == false || f.iVerts.Contains(v.Corresponding.Value) == false).First();
+                    int iNonCorresponding = Array.IndexOf(verts, noncorresponding);
+                    bool NonCorrespondingIsUpper = IsUpperPolygon[noncorresponding.PolyIndex.Value.iPoly];
+
+                    InfiniteSequentialIndexSet faceIndexer = new InfiniteSequentialIndexSet(0, f.iVerts.Length, 0);
+
+                    MorphMeshVertex nextVert = verts[faceIndexer[iNonCorresponding + 1]];
+                    MorphMeshVertex prevVert = verts[faceIndexer[iNonCorresponding - 1]];
+                    //Find the line segment between the two adjacent verts on the same Z level
+                    GridLineSegment seg;
+                    bool output; 
+                    if (nextVert.PolyIndex.Value == noncorresponding.PolyIndex.Value.Next)
+                    {
+                        output = NonCorrespondingIsUpper == false;
+                        //seg = new GridLineSegment(noncorresponding.Position.XY(), verts[faceIndexer[iNonCorresponding + 1]].Position.XY());
+                    }
+                    else if(nextVert.PolyIndex.Value == noncorresponding.PolyIndex.Value.Previous)
+                    {
+                        output = NonCorrespondingIsUpper;
+                    }
+                    else if (prevVert.PolyIndex.Value == noncorresponding.PolyIndex.Value.Previous)
+                    {
+                        output = NonCorrespondingIsUpper == false;
+                    }
+                    else// if (prevVert.PolyIndex.Value == noncorresponding.PolyIndex.Value.Next)
+                    {
+                        output = NonCorrespondingIsUpper;
+                    }
+                    
+                    return noncorresponding.PolyIndex.Value.IsInner ? !output : output;
+                }
+                else
+                {
+                    return true; //Not implemented
+                } 
+            }
+            else if (n.Z < 0)
+            {
+                CheckAgainstUpperPolygons = false;
+                face_center = GetCentroid(f);
+            }
+            else //n.Z > 0
+            {
+                CheckAgainstUpperPolygons = true;
+                face_center = GetCentroid(f); 
+            }
+
+            if(CheckAgainstUpperPolygons == false)
+            { 
+                if (this.LowerPolygons.Any(p => p.ContainsExt(face_center) == OverlapType.CONTAINED))
+                    return false;
+
+                return true;
+            }
+            else
+            { 
+                if (this.UpperPolygons.Any(p => p.ContainsExt(face_center) == OverlapType.CONTAINED))
+                    return false;
+
+                return true;
+            }
+            /*
+            MorphMeshVertex[] verts = this[f.iVerts].ToArray();
+
+            //GridVector2 face_center = GetCentroid(f);
+            GridVector2[] positions = verts.Select(v => v.Position.XY()).Distinct().ToArray();
+
+            if (positions.Length < 3)
+                return true; //Not implemented
+
+            return positions.AreClockwise() == false;
+            */
         }
     }
 }

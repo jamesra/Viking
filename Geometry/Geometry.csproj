@@ -124,6 +124,7 @@
     <Compile Include="AddTransformThreadObj.cs" />
     <Compile Include="Algorithms\DelaunayMesh.cs" />
     <Compile Include="Algorithms\MeshCut.cs" />
+    <Compile Include="CollectionExtensions.cs" />
     <Compile Include="Color.cs" />
     <Compile Include="Common.cs" />
     <Compile Include="Algorithms\ConvexHull.cs" />

@@ -35,6 +35,33 @@ namespace VikingXNAGraphics
             get;set;
         }
 
+        /// <summary>
+        /// Adds the passed verticies to the model, returns index at which first vertex was added
+        /// </summary>
+        /// <param name="input"></param>
+        /// <returns></returns>
+        public int AppendVerticies(ICollection<VERTEXTYPE> input)
+        {
+            if (Verticies == null)
+            {
+                Verticies = input.ToArray();
+                return 0;
+            }
+
+            int iInsert = Verticies.Length;
+            
+            /////////////////////////
+            //Extend our vertex array
+            //VERTEXTYPE[] newVerts = new VERTEXTYPE[input.Count + Verticies.Length];
+            //Array.Copy(Verticies, newVerts, Verticies.Length);
+            Verticies = Verticies.AddRange(input.ToArray());
+            /////////////////////////
+
+            //Array.Copy(input.ToArray(), 0, Verticies, iInsert, input.Count);
+
+            return iInsert;
+        }
+
         public void AppendEdges(ICollection<int> newEdges)
         {
             if (Edges == null)
@@ -43,7 +70,8 @@ namespace VikingXNAGraphics
             }
             else
             {
-                Edges = Edges.Concat(newEdges).ToArray();
+                //Edges = Edges.Concat(newEdges).ToArray();
+                Edges = Edges.AddRange(newEdges.ToArray());
             }
         }
 
