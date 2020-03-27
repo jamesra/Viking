@@ -165,9 +165,20 @@ namespace Geometry.Meshing
             return shared;
         }
 
+        /// <summary>
+        /// Profiling indicated that pre-caching calculating the hashcode each call was 2.25% total program time.
+        /// </summary>
+        [NonSerialized]
+        private int? _hashcode;
+
         public override int GetHashCode()
         {
-            return iVerts.Sum();
+            if (_hashcode.HasValue == false)
+            {
+                _hashcode = _iVerts.Sum();
+            }
+
+            return _hashcode.Value;
         }
 
         public override string ToString()
