@@ -61,22 +61,21 @@ namespace Geometry.Meshing
 
         public int CompareTo(EdgeKey other)
         {
-            for(int i = 0; i < Verticies.Length; i++)
+            int comparison = other.A - this.A;
+            if (comparison == 0)
             {
-                int comparison = this.Verticies[i].CompareTo(other.Verticies[i]);
-                if (comparison != 0)
-                    return comparison;
+                comparison = other.B - this.B;
             }
 
-            return 0;
+            return comparison;
         }
 
         public int CompareTo(IEdgeKey other)
         {
-            int comparison = this.A.CompareTo(other.A);
+            int comparison = other.A - this.A;
             if(comparison == 0)
             {
-                comparison = this.B.CompareTo(other.B); 
+                comparison = other.B - this.B;
             }
 
             return comparison;
